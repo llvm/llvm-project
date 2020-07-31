@@ -953,8 +953,8 @@ define i32 @add_umin(i32 %x) {
 
 define i32 @add_umin_constant_limit(i32 %x) {
 ; CHECK-LABEL: @add_umin_constant_limit(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 41, i32 42
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[DOTNOT]], i32 41, i32 42
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add nuw i32 %x, 41
@@ -1165,8 +1165,8 @@ define <2 x i33> @add_umax_vec(<2 x i33> %x) {
 
 define i8 @PR14613_umin(i8 %x) {
 ; CHECK-LABEL: @PR14613_umin(
-; CHECK-NEXT:    [[U7:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X:%.*]], i8 15)
-; CHECK-NEXT:    ret i8 [[U7]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X:%.*]], i8 15)
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %u4 = zext i8 %x to i32
   %u5 = add nuw nsw i32 %u4, 15
@@ -1179,8 +1179,8 @@ define i8 @PR14613_umin(i8 %x) {
 define i8 @PR14613_umax(i8 %x) {
 ; CHECK-LABEL: @PR14613_umax(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[X:%.*]], -16
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 [[X]], i8 -16
-; CHECK-NEXT:    [[U7:%.*]] = add nsw i8 [[TMP2]], 15
+; CHECK-NEXT:    [[X_OP:%.*]] = add i8 [[X]], 15
+; CHECK-NEXT:    [[U7:%.*]] = select i1 [[TMP1]], i8 [[X_OP]], i8 -1
 ; CHECK-NEXT:    ret i8 [[U7]]
 ;
   %u4 = zext i8 %x to i32
@@ -1422,8 +1422,8 @@ define <2 x i33> @add_smax_vec(<2 x i33> %x) {
 define i8 @PR14613_smin(i8 %x) {
 ; CHECK-LABEL: @PR14613_smin(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[X:%.*]], 40
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 [[X]], i8 40
-; CHECK-NEXT:    [[U7:%.*]] = add nsw i8 [[TMP2]], 15
+; CHECK-NEXT:    [[X_OP:%.*]] = add i8 [[X]], 15
+; CHECK-NEXT:    [[U7:%.*]] = select i1 [[TMP1]], i8 [[X_OP]], i8 55
 ; CHECK-NEXT:    ret i8 [[U7]]
 ;
   %u4 = sext i8 %x to i32
@@ -1437,8 +1437,8 @@ define i8 @PR14613_smin(i8 %x) {
 define i8 @PR14613_smax(i8 %x) {
 ; CHECK-LABEL: @PR14613_smax(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i8 [[X:%.*]], 40
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 [[X]], i8 40
-; CHECK-NEXT:    [[U7:%.*]] = add nuw i8 [[TMP2]], 15
+; CHECK-NEXT:    [[X_OP:%.*]] = add i8 [[X]], 15
+; CHECK-NEXT:    [[U7:%.*]] = select i1 [[TMP1]], i8 [[X_OP]], i8 55
 ; CHECK-NEXT:    ret i8 [[U7]]
 ;
   %u4 = sext i8 %x to i32

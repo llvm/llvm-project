@@ -50,7 +50,7 @@
 #include <compression.h>
 #endif
 
-#if defined(HAVE_LIBZ)
+#if LLVM_ENABLE_ZLIB
 #include <zlib.h>
 #endif
 
@@ -284,7 +284,7 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
     LLDB_LOGV(log,
               "Read(buffer, sizeof(buffer), timeout = {0}, "
               "status = {1}, error = {2}) => bytes_read = {3}",
-              timeout, Communication::ConnectionStatusAsCString(status), error,
+              timeout, Communication::ConnectionStatusAsString(status), error,
               bytes_read);
 
     if (bytes_read > 0) {
@@ -582,7 +582,7 @@ bool GDBRemoteCommunication::DecompressPacket() {
   }
 #endif
 
-#if defined(HAVE_LIBZ)
+#if LLVM_ENABLE_ZLIB
   if (decompressed_bytes == 0 && decompressed_bufsize != ULONG_MAX &&
       decompressed_buffer != nullptr &&
       m_compression_type == CompressionType::ZlibDeflate) {

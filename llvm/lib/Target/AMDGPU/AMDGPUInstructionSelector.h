@@ -47,7 +47,7 @@ class SIInstrInfo;
 class SIMachineFunctionInfo;
 class SIRegisterInfo;
 
-class AMDGPUInstructionSelector : public InstructionSelector {
+class AMDGPUInstructionSelector final : public InstructionSelector {
 private:
   MachineRegisterInfo *MRI;
 
@@ -107,6 +107,8 @@ private:
   bool selectInterpP1F16(MachineInstr &MI) const;
   bool selectDivScale(MachineInstr &MI) const;
   bool selectIntrinsicIcmp(MachineInstr &MI) const;
+  bool selectBallot(MachineInstr &I) const;
+  bool selectRelocConstant(MachineInstr &I) const;
   bool selectG_INTRINSIC(MachineInstr &I) const;
 
   bool selectEndCfIntrinsic(MachineInstr &MI) const;

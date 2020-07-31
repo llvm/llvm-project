@@ -123,9 +123,6 @@ enum SpillOpcodeKey {
   SOK_VectorFloat8Spill,
   SOK_VectorFloat4Spill,
   SOK_VRSaveSpill,
-  SOK_QuadFloat8Spill,
-  SOK_QuadFloat4Spill,
-  SOK_QuadBitSpill,
   SOK_SpillToVSR,
   SOK_SPESpill,
   SOK_LastOpcodeSpill // This must be last on the enum.
@@ -136,32 +133,28 @@ enum SpillOpcodeKey {
   {                                                                            \
     PPC::LWZ, PPC::LD, PPC::LFD, PPC::LFS, PPC::RESTORE_CR,                    \
         PPC::RESTORE_CRBIT, PPC::LVX, PPC::LXVD2X, PPC::LXSDX, PPC::LXSSPX,    \
-        PPC::RESTORE_VRSAVE, PPC::QVLFDX, PPC::QVLFSXs, PPC::QVLFDXb,          \
-        PPC::SPILLTOVSR_LD, PPC::EVLDD                                         \
+        PPC::RESTORE_VRSAVE, PPC::SPILLTOVSR_LD, PPC::EVLDD                    \
   }
 
 #define Pwr9LoadOpcodes                                                        \
   {                                                                            \
     PPC::LWZ, PPC::LD, PPC::LFD, PPC::LFS, PPC::RESTORE_CR,                    \
         PPC::RESTORE_CRBIT, PPC::LVX, PPC::LXV, PPC::DFLOADf64,                \
-        PPC::DFLOADf32, PPC::RESTORE_VRSAVE, PPC::QVLFDX, PPC::QVLFSXs,        \
-        PPC::QVLFDXb, PPC::SPILLTOVSR_LD                                       \
+        PPC::DFLOADf32, PPC::RESTORE_VRSAVE, PPC::SPILLTOVSR_LD                \
   }
 
 #define Pwr8StoreOpcodes                                                       \
   {                                                                            \
     PPC::STW, PPC::STD, PPC::STFD, PPC::STFS, PPC::SPILL_CR, PPC::SPILL_CRBIT, \
         PPC::STVX, PPC::STXVD2X, PPC::STXSDX, PPC::STXSSPX, PPC::SPILL_VRSAVE, \
-        PPC::QVSTFDX, PPC::QVSTFSXs, PPC::QVSTFDXb, PPC::SPILLTOVSR_ST,        \
-        PPC::EVSTDD                                                            \
+        PPC::SPILLTOVSR_ST, PPC::EVSTDD                                        \
   }
 
 #define Pwr9StoreOpcodes                                                       \
   {                                                                            \
     PPC::STW, PPC::STD, PPC::STFD, PPC::STFS, PPC::SPILL_CR, PPC::SPILL_CRBIT, \
         PPC::STVX, PPC::STXV, PPC::DFSTOREf64, PPC::DFSTOREf32,                \
-        PPC::SPILL_VRSAVE, PPC::QVSTFDX, PPC::QVSTFSXs, PPC::QVSTFDXb,         \
-        PPC::SPILLTOVSR_ST                                                     \
+        PPC::SPILL_VRSAVE, PPC::SPILLTOVSR_ST                                  \
   }
 
 // Initialize arrays for load and store spill opcodes on supported subtargets.
@@ -273,10 +266,10 @@ public:
   }
 
   static bool isSameClassPhysRegCopy(unsigned Opcode) {
-    unsigned CopyOpcodes[] =
-      { PPC::OR, PPC::OR8, PPC::FMR, PPC::VOR, PPC::XXLOR, PPC::XXLORf,
-        PPC::XSCPSGNDP, PPC::MCRF, PPC::QVFMR, PPC::QVFMRs, PPC::QVFMRb,
-        PPC::CROR, PPC::EVOR, -1U };
+    unsigned CopyOpcodes[] = {PPC::OR,        PPC::OR8,   PPC::FMR,
+                              PPC::VOR,       PPC::XXLOR, PPC::XXLORf,
+                              PPC::XSCPSGNDP, PPC::MCRF,  PPC::CROR,
+                              PPC::EVOR,      -1U};
     for (int i = 0; CopyOpcodes[i] != -1U; i++)
       if (Opcode == CopyOpcodes[i])
         return true;
@@ -565,14 +558,18 @@ public:
                              int64_t OffsetImm) const;
 
   /// Fixup killed/dead flag for register \p RegNo between instructions [\p
-  /// StartMI, \p EndMI]. Some PostRA transformations may violate register
-  /// killed/dead flags semantics, this function can be called to fix up. Before
-  /// calling this function,
+  /// StartMI, \p EndMI]. Some pre-RA or post-RA transformations may violate
+  /// register killed/dead flags semantics, this function can be called to fix
+  /// up. Before calling this function,
   /// 1. Ensure that \p RegNo liveness is killed after instruction \p EndMI.
   /// 2. Ensure that there is no new definition between (\p StartMI, \p EndMI)
   ///    and possible definition for \p RegNo is \p StartMI or \p EndMI.
-  /// 3. Ensure that all instructions between [\p StartMI, \p EndMI] are in same
-  ///    basic block.
+  /// 3. We can do accurate fixup for the case when all instructions between
+  ///    [\p StartMI, \p EndMI] are in same basic block.
+  /// 4. For the case when \p StartMI and \p EndMI are not in same basic block,
+  ///    we conservatively clear kill flag for all uses of \p RegNo for pre-RA
+  ///    and for post-RA, we give an assertion as without reaching definition
+  ///    analysis post-RA, \p StartMI and \p EndMI are hard to keep right.
   void fixupIsDeadOrKill(MachineInstr &StartMI, MachineInstr &EndMI,
                          unsigned RegNo) const;
   void replaceInstrWithLI(MachineInstr &MI, const LoadImmediateInfo &LII) const;

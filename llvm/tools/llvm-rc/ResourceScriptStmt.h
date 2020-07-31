@@ -289,7 +289,9 @@ public:
       : RCResource(Flags),
         OptStatements(std::make_unique<OptionalStmtList>(std::move(Stmts))) {}
 
-  virtual Error applyStmts(Visitor *V) const { return OptStatements->visit(V); }
+  Error applyStmts(Visitor *V) const override {
+    return OptStatements->visit(V);
+  }
 };
 
 // LANGUAGE statement. It can occur both as a top-level statement (in such

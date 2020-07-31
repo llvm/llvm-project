@@ -568,4 +568,54 @@ TEST(STLExtras, hasNItemsOrLess) {
   EXPECT_FALSE(
       hasNItemsOrLess(V3.begin(), V3.end(), 2, [](int x) { return x < 10; }));
 }
+
+TEST(STLExtras, MoveRange) {
+  class Foo {
+    bool A;
+
+  public:
+    Foo() : A(true) {}
+    Foo(const Foo &) = delete;
+    Foo(Foo &&Other) : A(Other.A) { Other.A = false; }
+    Foo &operator=(const Foo &) = delete;
+    Foo &operator=(Foo &&Other) {
+      if (this != &Other) {
+        A = Other.A;
+        Other.A = false;
+      }
+      return *this;
+    }
+    operator bool() const { return A; }
+  };
+  SmallVector<Foo, 4U> V1, V2, V3, V4;
+  auto HasVal = [](const Foo &Item) { return static_cast<bool>(Item); };
+  auto Build = [&] {
+    SmallVector<Foo, 4U> Foos;
+    Foos.resize(4U);
+    return Foos;
+  };
+
+  V1.resize(4U);
+  EXPECT_TRUE(llvm::all_of(V1, HasVal));
+
+  llvm::move(V1, std::back_inserter(V2));
+
+  // Ensure input container is same size, but its contents were moved out.
+  EXPECT_EQ(V1.size(), 4U);
+  EXPECT_TRUE(llvm::none_of(V1, HasVal));
+
+  // Ensure output container has the contents of the input container.
+  EXPECT_EQ(V2.size(), 4U);
+  EXPECT_TRUE(llvm::all_of(V2, HasVal));
+
+  llvm::move(std::move(V2), std::back_inserter(V3));
+
+  EXPECT_TRUE(llvm::none_of(V2, HasVal));
+  EXPECT_EQ(V3.size(), 4U);
+  EXPECT_TRUE(llvm::all_of(V3, HasVal));
+
+  llvm::move(Build(), std::back_inserter(V4));
+  EXPECT_EQ(V4.size(), 4U);
+  EXPECT_TRUE(llvm::all_of(V4, HasVal));
+}
 } // namespace

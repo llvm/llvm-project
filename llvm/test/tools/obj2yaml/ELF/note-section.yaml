@@ -1,0 +1,98 @@
+## Check how obj2yaml dumps SHT_NOTE sections.
+
+## We can dump the Name, Desc and Type fields when the note section is valid.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: obj2yaml %t1 | FileCheck %s --check-prefix=VALID
+
+# VALID:      - Name: .note.foo
+# VALID-NEXT:   Type: SHT_NOTE
+# VALID-NEXT:   Notes:
+# VALID-NEXT:    - Name: ''
+# VALID-NEXT:      Desc: ''
+# VALID-NEXT:      Type: 0x00
+# VALID-NEXT: - Name: .note.bar
+# VALID-NEXT:   Type: SHT_NOTE
+# VALID-NEXT:   Notes:
+# VALID-NEXT:     - Name: ABC
+# VALID-NEXT:       Desc: '001122'
+# VALID-NEXT:       Type: 0xAABBCCDD
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .note.foo
+    Type: SHT_NOTE
+    Size: 12
+  - Name: .note.bar
+    Type: SHT_NOTE
+    Notes:
+      - Name: ABC
+        Desc: '001122'
+        Type: 0xAABBCCDD
+
+## Check we dump hex digit pairs if the note section is invalid.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=INVALID
+
+# INVALID:      - Name:    .note.tooShortNote
+# INVALID-NEXT:   Type:    SHT_NOTE
+# INVALID-NEXT:   Content: '0000000000000000000000'
+# INVALID-NEXT: - Name:    .note.tooLongNameSize
+# INVALID-NEXT:   Type:    SHT_NOTE
+# INVALID-NEXT:   Content: 0100000000000000FF00000000
+# INVALID-NEXT: - Name:    .note.tooLongDescSize
+# INVALID-NEXT:   Type:    SHT_NOTE
+# INVALID-NEXT:   Content: 0000000001000000FF00000000
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+## Content is less than 12 bytes in size.
+## (12 is the size of n_namesz, n_descsz and n_type 4-bytes fields that must always present).
+  - Name: .note.tooShortNote
+    Type: SHT_NOTE
+    Size: 11
+## We can't dump the Name, Desc and Type fields when the
+## content is shorter than the computed size.
+##
+## Too long name size.
+  - Name: .note.tooLongNameSize
+    Type: SHT_NOTE
+    Content: "0100000000000000ff00000000"
+## Too long description size.
+  - Name: .note.tooLongDescSize
+    Type: SHT_NOTE
+    Content: "0000000001000000ff00000000"
+
+## Check we do not crash when dumping a description that has bytes
+## on its bounds that do not fit into signed byte.
+## This is a completely normal case, but we had a crash before.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: obj2yaml %t3 | FileCheck %s --check-prefix=HEX-DESC
+
+# HEX-DESC: Desc: FE0000FE
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2MSB
+  Type:    ET_DYN
+  Machine: EM_MIPS
+Sections:
+  - Name:  .note.tag
+    Type:  SHT_NOTE
+    Flags: [ SHF_ALLOC ]
+    Notes:
+      - Desc: 'FE0000FE'
+        Type: 0

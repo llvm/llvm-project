@@ -180,29 +180,129 @@ def FillOp : LinalgStructured_Op<"fill", [NInputs<0>, NOutputs<1>]> {
   let hasFolder = 1;
 }
 
-def DotOp : LinalgStructured_Op<"dot", [NInputs<2>, NOutputs<1>]> {
+class ConvOpBase<string mnemonic, int N>
+  : LinalgStructured_Op<mnemonic, [NInputs<2>, NOutputs<1>]> {
+  let description = [{
+    Base operation for any N-D Convolution implemented as a linalg.generic op.
 
-  let arguments = (ins AnyStridedMemRefOfRank<1>,
-                       AnyStridedMemRefOfRank<1>,
-                       AnyStridedMemRefOfRank<0>);
+    Usage:
+
+    ```mlir
+    linalg.conv<N>D(%in, %filter, %out) : memref<(?x)+f32>,
+                                          memref<(?x)+f32>,
+                                          memref<(?x)+f32>
+    ```
+
+    where    %in:     input array
+             %filter: kernel or filter that will be applied on the input array
+             %out:    output array
+
+    and rank of the operands is *N*.
+
+    Every child convolution is expressed as:
+
+    ```mlir
+    #conv_trait = {
+      args_in = 2,
+      args_out = 1,
+      indexing_maps = #conv_accesses,
+      library_call  = "linalg_conv",
+      iterator_types = [("parallel", "parallel")+], // `2 * rank` iterators
+    }
+
+    linalg.generic #conv_trait %in, %filter, %out {
+      ^bb0(%a: f32, %b: f32, %c: f32) :
+        %d = mulf %a, %b : f32
+        %e = addf %c, %d : f32
+        linalg.yield %e : f32
+    } : memref<(?x)+f32>,
+        memref<(?x)+f32>,
+        memref<(?x)+f32>
+    ```
+
+    where #conv_accesses depend on the rank of the operands and thus
+    can be found in the documentation of each N-D case.
+    Please note that the input array is expected to be right-padded i.e.
+    the size of the input is greater than or equal to the size of the output
+    + size of the kernel - 1. If it is not padded the behavior of the op
+    is undefined.
+  }];
+
+  let arguments = (ins AnyStridedMemRefOfRank<N>,
+                       AnyStridedMemRefOfRank<N>,
+                       AnyStridedMemRefOfRank<N>);
 
   let extraClassDeclaration = libraryCallName # [{
     llvm::Optional<SmallVector<StringRef, 8>> referenceIterators() {
-      return SmallVector<StringRef, 8>{getReductionIteratorTypeName()};
+      // There are always 2 loops for each dimension of the convolution. First
+      // iterates output and second kernel. Since ranks of all 3 operands must
+      // be the same it does not matter which operand is picked to get the rank.
+      // Loops iterating the output can be parallelized and thus are marked as
+      // "parallel" while loops iterating the kernel are accumulating the
+      // products and therefore are marked as "reduction".
+      unsigned rank = getInputShapedType(0).getRank();
+      SmallVector<StringRef, 8> parallel(rank, getParallelIteratorTypeName());
+      SmallVector<StringRef, 8> reduction(rank, getReductionIteratorTypeName());
+      parallel.insert(parallel.end(), reduction.begin(), reduction.end());
+      return parallel;
     }
 
-    // A(r_i) * B(r_i) -> C()
+    // Generates indexing maps with the following structure:
+    // input:   (m_1, ..., m_r, n_1, ..., n_r) -> (m_1 + n_1, ..., m_r + n_r)
+    // kernel:  (m_1, ..., m_r, n_1, ..., n_r) -> (n_1, ..., n_r)
+    // output:  (m_1, ..., m_r, n_1, ..., n_r) -> (m_1, ..., m_r)
+    // where r is the rank of the input, kernel and output
     llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps() {
       MLIRContext *context = getContext();
-      auto r_i = getAffineDimExpr(0, context);
-      return SmallVector<AffineMap, 8>{
-        AffineMap::get(1, 0, {r_i}, context),
-        AffineMap::get(1, 0, {r_i}, context),
-        AffineMap::get(1, 0, {}, context)};
+      unsigned rank = getInputShapedType(0).getRank();
+      return createConvNDIndexingMaps(context, rank);
     }
   }];
 
   let hasFolder = 1;
+  let verifier = [{ return ::verify(*this); }];
+}
+
+def Conv1DOp : ConvOpBase<"conv1D", 1> {
+  let description = [{
+    *1D* convolution which uses following affine maps to access operands:
+
+    ```mlir
+    #conv_accesses = [
+      affine_map<(m, n) -> (m + n)>, // in
+      affine_map<(m, n) -> (n)>, // kernel
+      affine_map<(m, n) -> (m)> // out
+    ]
+    ```
+  }];
+}
+
+def Conv2DOp : ConvOpBase<"conv2D", 2> {
+  let description = [{
+    *2D* convolution which uses following affine maps to access operands:
+
+    ```mlir
+    #conv_accesses = [
+      affine_map<(m1, m2, n1, n2) -> (m1 + n1, m2 + n2)>, // in
+      affine_map<(m1, m2, n1, n2) -> (n1, n2)>, // kernel
+      affine_map<(m1, m2, n1, n2) -> (m1, m2) // out
+    ]
+    ```
+  }];
+}
+
+def Conv3DOp : ConvOpBase<"conv3D", 3> {
+  let description = [{
+    *3D* convolution which uses following affine maps to access operands:
+
+    ```mlir
+    #conv_accesses = [
+      affine_map<(m1, m2, m3, n1, n2, n3) -> (m1 + n1, m2 + n2, m3 + n3)>, // in
+      affine_map<(m1, m2, m3, n1, n2, n3) -> (n1, n2, n3)>, // kernel
+      affine_map<(m1, m2, m3, n1, n2, n3) -> (m1, m2, m3)> // out
+    ]
+    ```
+  }];
 }
 
 /// A base class for pooling operation such as conv. The arguments must contain
@@ -485,7 +585,9 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic,
                    AffineMapArrayAttr:$indexing_maps,
                    ArrayAttr:$iterator_types,
                    OptionalAttr<StrAttr>:$doc,
-                   OptionalAttr<StrAttr>:$library_call);
+                   OptionalAttr<StrAttr>:$library_call,
+                   Confined<OptionalAttr<I64Attr>,
+                     [IntMinValue<0>]>:$symbol_source);
   let results = (outs Variadic<AnyRankedTensor>:$output_tensors);
   let regions = (region AnyRegion:$region);
   let extraClassDeclaration = [{
@@ -493,7 +595,7 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic,
       return SmallVector<StringRef, 8>{
         getArgsInAttrName(), getArgsOutAttrName(), getDocAttrName(),
         getIndexingMapsAttrName(), getLibraryCallAttrName(),
-        getIteratorTypesAttrName()
+        getIteratorTypesAttrName(), getSymbolSourceAttrName()
       };
     }
 
@@ -508,12 +610,18 @@ class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic,
     llvm::Optional<SmallVector<StringRef, 8>> referenceIterators() {
       llvm_unreachable(
         "No such thing as reference iterator types for a generic op.");
-     }
+    }
 
     llvm::Optional<SmallVector<AffineMap, 8>> referenceIndexingMaps() {
       llvm_unreachable(
         "No such thing as reference indexing maps for a generic op.");
-     }
+    }
+
+    llvm::Optional<unsigned> getSymbolSource() {
+      auto ss = symbol_source();
+      return ss.hasValue() ?
+        llvm::Optional<unsigned>(ss.getValue().getLimitedValue()) : llvm::None;
+    }
   }];
 
   let printer = [{ return ::print(p, *this); }];
@@ -549,6 +657,10 @@ def GenericOp : GenericOpBase<"generic"> {
         Each element of the list represents and iterator of one of the following
         types:
           parallel, reduction, window
+      - symbol_source: index of the operand whose dimensions will be propagated
+        as symbols to the indexing maps. When specified the number of symbols
+        in each of the indexing maps has to be either 0 or the rank of the
+        specified operand.
 
     Example:
     Defining a #matmul_trait attribute in MLIR can be done as follows:
@@ -562,7 +674,8 @@ def GenericOp : GenericOpBase<"generic"> {
         doc = "C(m, n) += A(m, k) * B(k, n)",
         indexing_maps = #matmul_accesses,
         library_call = "linalg_matmul",
-        n_views = [2, 1],
+        args_in = 2,
+        args_out = 1,
         iterator_types = ["parallel", "parallel", "reduction"]
       }
       ```
@@ -629,12 +742,41 @@ def GenericOp : GenericOpBase<"generic"> {
     escape naturally. Still, transformations and rewrites that take advantage of
     tensor SSA values are expected to be useful and will be added in the near
     future.
+
+    Example of 1D convolution with symbols:
+    ```mlir
+    #conv_1d_accesses = [
+      affine_map<(m, n)[dimN] -> (m + n - dimN floordiv 2)>, // in
+      affine_map<(m, n)[dimN] -> (n)>, // filter
+      affine_map<(m, n)[dimN] -> (m)> // out
+    ]
+
+    #conv_1d_trait = {
+      doc = "O(m) += I(m + n - size(n) floordiv 2) * K(n)",
+      indexing_maps = #conv_1d_accesses,
+      library_call  = "linalg_conv_1d",
+      iterator_types = ["parallel", "parallel"],
+      symbol_source = 1
+    }
+
+    linalg.generic #conv_1d_trait %in, %filter, %out {
+      ^bb0(%a: f32, %b: f32, %c: f32) :
+        %d = mulf %a, %b : f32
+        %e = addf %c, %d : f32
+        linalg.yield %e : f32
+    } : memref<?xf32>,
+        memref<?xf32>,
+        memref<?xf32>
+    ```
+    where symbol s0 will be substituted with `dim %filter, %c0` i.e. the first
+    and only dimension of the second operand as specified by the symbol_source
+    attribute.
   }];
 
   let builders = [
     OpBuilder<
       "OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTypes, "
-      "ValueRange args, int64_t inputCount, int64_t outputCount, "
+      "ValueRange args, int64_t argsIn, int64_t argsOut, "
       "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
       "function_ref<void(OpBuilder &, Location, ValueRange)> = nullptr">
   ];
@@ -689,7 +831,8 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
       doc = "C(m, n) += A(m, k) * B(k, n)",
       indexing_maps = #matmul_accesses,
       library_call = "linalg_matmul",
-      n_views = [2, 1],
+      args_in = 2,
+      args_out = 1,
       iterator_types = ["parallel", "parallel", "reduction"]
     }
     ```
@@ -768,7 +911,7 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
   let builders = [
     OpBuilder<
       "OpBuilder &builder, OperationState &result, ArrayRef<Type> resultTypes, "
-      "ValueRange args, int64_t inputCount, int64_t outputCount, "
+      "ValueRange args, int64_t argsIn, int64_t argsOut, "
       "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
       "function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> "
       "= nullptr">

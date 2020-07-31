@@ -8,10 +8,14 @@
 ; but it is what is currently being emitted. Any change here needs to be
 ; intentional, so the test is very specific.
 ;
-; CHECK: DW_TAG_inlined_subroutine
-; CHECK: DW_TAG_variable
-; CHECK:   DW_AT_location ({{.*}}
-; CHECK-NEXT: [0x00000004, 0x00000014): DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x4)
+; The variable is given a single location instead of a location list entry
+; because the function validThroughout has a special code path for single
+; locations with a constant value that start in the prologue.
+;
+; CHECK:      DW_TAG_inlined_subroutine
+; CHECK:        DW_TAG_variable
+; CHECK-NEXT:     DW_AT_location (DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x4)
+; CHECK-NEXT      DW_AT_name ("i4")
 
 ; Created form the following test case (PR26163) with
 ; clang -cc1 -triple armv4t--freebsd11.0-gnueabi -emit-obj -debug-info-kind=standalone -O2 -x c test.c

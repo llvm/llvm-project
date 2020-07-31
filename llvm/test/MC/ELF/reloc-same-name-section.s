@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux %s -o - | llvm-readobj -r --expand-relocs | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux %s -o - | llvm-readobj -r --expand-relocs - | FileCheck %s
 
 // test that we produce one relocation against each section.
 

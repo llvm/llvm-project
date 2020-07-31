@@ -5,7 +5,7 @@
 define <4 x i64> @autogen_SD88863() {
 ; CHECK-LABEL: autogen_SD88863:
 ; CHECK:       # %bb.0: # %BB
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5],ymm1[6,7]

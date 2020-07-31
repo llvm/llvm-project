@@ -66,7 +66,7 @@ public:
   ProgramStateRef evalAssume(ProgramStateRef state, SVal Cond,
                              bool Assumption) const;
   void printState(raw_ostream &Out, ProgramStateRef State,
-                  const char *NL, const char *Sep) const;
+                  const char *NL, const char *Sep) const override;
 
 private:
   typedef std::pair<SymbolRef, const AllocationState*> AllocationPair;

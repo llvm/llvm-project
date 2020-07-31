@@ -763,6 +763,18 @@ TEST(CommandLineTest, DefaultOptions) {
 TEST(CommandLineTest, ArgumentLimit) {
   std::string args(32 * 4096, 'a');
   EXPECT_FALSE(llvm::sys::commandLineFitsWithinSystemLimits("cl", args.data()));
+  std::string args2(256, 'a');
+  EXPECT_TRUE(llvm::sys::commandLineFitsWithinSystemLimits("cl", args2.data()));
+  if (Triple(sys::getProcessTriple()).isOSWindows()) {
+    // We use 32000 as a limit for command line length. Program name ('cl'),
+    // separating spaces and termination null character occupy 5 symbols.
+    std::string long_arg(32000 - 5, 'b');
+    EXPECT_TRUE(
+        llvm::sys::commandLineFitsWithinSystemLimits("cl", long_arg.data()));
+    long_arg += 'b';
+    EXPECT_FALSE(
+        llvm::sys::commandLineFitsWithinSystemLimits("cl", long_arg.data()));
+  }
 }
 
 TEST(CommandLineTest, ResponseFileWindows) {

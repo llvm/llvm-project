@@ -227,7 +227,7 @@ TEST(DenseSetCustomTest, ConstTest) {
   Map.insert(B);
   EXPECT_EQ(Map.count(B), 1u);
   EXPECT_EQ(Map.count(C), 1u);
-  EXPECT_NE(Map.find(B), Map.end());
-  EXPECT_NE(Map.find(C), Map.end());
+  EXPECT_TRUE(Map.contains(B));
+  EXPECT_TRUE(Map.contains(C));
 }
 }

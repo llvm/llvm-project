@@ -105,14 +105,3 @@
 ; STOP-AFTER-BRANCH-COALESCING-NOT: "ppc-branch-coalescing" pass is not registered.
 ; STOP-AFTER-BRANCH-COALESCING: Branch Coalescing 
 
-
-; Test pass name: ppc-qpx-load-splat.
-; RUN: llc -mtriple=powerpc64le-unknown-unknown < %s -debug-pass=Structure -stop-before=ppc-qpx-load-splat -o /dev/null 2>&1 | FileCheck %s -check-prefix=STOP-BEFORE-QPX-LOAD-SPLAT
-; STOP-BEFORE-QPX-LOAD-SPLAT-NOT: -ppc-qpx-load-splat
-; STOP-BEFORE-QPX-LOAD-SPLAT-NOT: "ppc-qpx-load-splat" pass is not registered.
-; STOP-BEFORE-QPX-LOAD-SPLAT-NOT: PowerPC QPX Load Splat Simplification
-
-; RUN: llc -mtriple=powerpc64le-unknown-unknown < %s -debug-pass=Structure -stop-after=ppc-qpx-load-splat -o /dev/null 2>&1 | FileCheck %s -check-prefix=STOP-AFTER-QPX-LOAD-SPLAT
-; STOP-AFTER-QPX-LOAD-SPLAT: -ppc-qpx-load-splat
-; STOP-AFTER-QPX-LOAD-SPLAT-NOT: "ppc-qpx-load-splat" pass is not registered.
-; STOP-AFTER-QPX-LOAD-SPLAT: PowerPC QPX Load Splat Simplification

@@ -333,6 +333,11 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
 
     return TargetCPUName;
   }
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
+      return A->getValue();
+    return "";
 
   case llvm::Triple::bpfel:
   case llvm::Triple::bpfeb:
@@ -779,6 +784,9 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       !Args.hasArg(options::OPT_shared)) {
 
     addSanitizerRuntime(TC, Args, CmdArgs, "fuzzer", false, true);
+    if (SanArgs.needsFuzzerInterceptors())
+      addSanitizerRuntime(TC, Args, CmdArgs, "fuzzer_interceptors", false,
+                          true);
     if (!Args.hasArg(clang::driver::options::OPT_nostdlibxx))
       TC.AddCXXStdlibLibArgs(Args, CmdArgs);
   }

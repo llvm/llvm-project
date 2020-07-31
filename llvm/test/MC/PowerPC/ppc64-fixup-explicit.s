@@ -3,9 +3,9 @@
 # RUN: llvm-mc -triple powerpc64le-unknown-unknown --show-encoding %s | FileCheck -check-prefix=CHECK-LE %s
 
 # RUN: llvm-mc -triple powerpc64-unknown-unknown -filetype=obj %s | \
-# RUN: llvm-readobj -r | FileCheck %s -check-prefix=CHECK-BE-REL
+# RUN: llvm-readobj -r - | FileCheck %s -check-prefix=CHECK-BE-REL
 # RUN: llvm-mc -triple powerpc64le-unknown-unknown -filetype=obj %s | \
-# RUN: llvm-readobj -r | FileCheck %s -check-prefix=CHECK-LE-REL
+# RUN: llvm-readobj -r - | FileCheck %s -check-prefix=CHECK-LE-REL
 
 # GOT references must result in explicit relocations
 # even if the target symbol is local.

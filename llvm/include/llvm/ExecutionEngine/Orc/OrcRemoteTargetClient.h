@@ -453,20 +453,8 @@ public:
   public:
     RemoteTrampolinePool(OrcRemoteTargetClient &Client) : Client(Client) {}
 
-    Expected<JITTargetAddress> getTrampoline() override {
-      std::lock_guard<std::mutex> Lock(RTPMutex);
-      if (AvailableTrampolines.empty()) {
-        if (auto Err = grow())
-          return std::move(Err);
-      }
-      assert(!AvailableTrampolines.empty() && "Failed to grow trampoline pool");
-      auto TrampolineAddr = AvailableTrampolines.back();
-      AvailableTrampolines.pop_back();
-      return TrampolineAddr;
-    }
-
   private:
-    Error grow() {
+    Error grow() override {
       JITTargetAddress BlockAddr = 0;
       uint32_t NumTrampolines = 0;
       if (auto TrampolineInfoOrErr = Client.emitTrampolineBlock())
@@ -476,14 +464,12 @@ public:
 
       uint32_t TrampolineSize = Client.getTrampolineSize();
       for (unsigned I = 0; I < NumTrampolines; ++I)
-        this->AvailableTrampolines.push_back(BlockAddr + (I * TrampolineSize));
+        AvailableTrampolines.push_back(BlockAddr + (I * TrampolineSize));
 
       return Error::success();
     }
 
-    std::mutex RTPMutex;
     OrcRemoteTargetClient &Client;
-    std::vector<JITTargetAddress> AvailableTrampolines;
   };
 
   /// Remote compile callback manager.

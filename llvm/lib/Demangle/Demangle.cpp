@@ -31,6 +31,6 @@ std::string llvm::demangle(const std::string &MangledName) {
     return MangledName;
 
   std::string Ret = Demangled;
-  free(Demangled);
+  std::free(Demangled);
   return Ret;
 }

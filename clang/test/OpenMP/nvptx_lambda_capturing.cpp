@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
 
 // HOST-LABEL: @main
 
-// HOST-DAG: call i32 @__tgt_target(i64 -1, i8* @{{.+}}, i32 11, i8** [[BASES:%.+]], i8** [[PTRS:%.+]],
+// HOST-DAG: call i32 @__tgt_target_mapper(i64 -1, i8* @{{.+}}, i32 11, i8** [[BASES:%.+]], i8** [[PTRS:%.+]],
 // HOST-DAG: [[BASES:%.+]] = getelementptr inbounds [11 x i8*], [11 x i8*]* [[BASE_PTR:%.+]], i32 0, i32 0
 // HOST-DAG: [[PTRS:%.+]] = getelementptr inbounds [11 x i8*], [11 x i8*]* [[PTR_PTR:%.+]], i32 0, i32 0
 // HOST-DAG: [[BASE_REF:%.+]] = getelementptr inbounds [11 x i8*], [11 x i8*]* [[BASE_PTR]], i32 0, i32 6

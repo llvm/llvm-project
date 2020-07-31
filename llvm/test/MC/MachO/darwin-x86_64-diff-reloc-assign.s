@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-apple-darwin9 %s -filetype=obj -o - | llvm-readobj -r | FileCheck %s
+// RUN: llvm-mc -triple x86_64-apple-darwin9 %s -filetype=obj -o - | llvm-readobj -r - | FileCheck %s
 
 // Test case for rdar://10743265
 

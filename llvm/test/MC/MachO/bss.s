@@ -1,7 +1,7 @@
 // The purpose of this test is to verify that bss sections are emitted correctly.
 
-// RUN: llvm-mc -filetype=obj -triple i686-apple-darwin9 %s | llvm-readobj -S | FileCheck %s
-// RUN: llvm-mc -filetype=obj -triple x86_64-apple-darwin9 %s | llvm-readobj -S | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple i686-apple-darwin9 %s | llvm-readobj -S - | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-apple-darwin9 %s | llvm-readobj -S - | FileCheck %s
 
     .bss
     .globl _g0

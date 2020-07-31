@@ -329,12 +329,11 @@ static void setStaticAnalyzerCheckerOpts(const ClangTidyOptions &Opts,
                                          AnalyzerOptionsRef AnalyzerOptions) {
   StringRef AnalyzerPrefix(AnalyzerCheckNamePrefix);
   for (const auto &Opt : Opts.CheckOptions) {
-    StringRef OptName(Opt.first);
-    if (!OptName.startswith(AnalyzerPrefix))
+    StringRef OptName(Opt.getKey());
+    if (!OptName.consume_front(AnalyzerPrefix))
       continue;
     // Analyzer options are always local options so we can ignore priority.
-    AnalyzerOptions->Config[OptName.substr(AnalyzerPrefix.size())] =
-        Opt.second.Value;
+    AnalyzerOptions->Config[OptName] = Opt.getValue().Value;
   }
 }
 
@@ -450,8 +449,8 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
 std::vector<std::string> ClangTidyASTConsumerFactory::getCheckNames() {
   std::vector<std::string> CheckNames;
   for (const auto &CheckFactory : *CheckFactories) {
-    if (Context.isCheckEnabled(CheckFactory.first))
-      CheckNames.push_back(CheckFactory.first);
+    if (Context.isCheckEnabled(CheckFactory.getKey()))
+      CheckNames.emplace_back(CheckFactory.getKey());
   }
 
 #if CLANG_ENABLE_STATIC_ANALYZER

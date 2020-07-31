@@ -409,6 +409,9 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
         break;
       }
       break;
+    case PPC::fixup_ppc_imm34:
+      report_fatal_error("Unsupported Modifier for fixup_ppc_imm34.");
+      break;
     case FK_Data_8:
       switch (Modifier) {
       default: llvm_unreachable("Unsupported Modifier");

@@ -23,10 +23,6 @@ namespace Fortran::parser {
 constexpr auto startOmpLine = skipStuffBeforeStatement >> "!$OMP "_sptok;
 constexpr auto endOmpLine = space >> endOfLine;
 
-template <typename A> constexpr decltype(auto) verbatim(A x) {
-  return sourced(construct<Verbatim>(x));
-}
-
 // OpenMP Clauses
 // 2.15.3.1 DEFAULT (PRIVATE | FIRSTPRIVATE | SHARED | NONE)
 TYPE_PARSER(construct<OmpDefaultClause>(

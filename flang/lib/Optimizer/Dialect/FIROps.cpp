@@ -968,19 +968,12 @@ static mlir::LogicalResult verify(fir::ResultOp op) {
   auto results = parentOp->getResults();
   auto operands = op.getOperands();
 
-  if (isa<fir::WhereOp>(parentOp) || isa<fir::LoopOp>(parentOp) ||
-      isa<fir::IterWhileOp>(parentOp)) {
-    if (parentOp->getNumResults() != op.getNumOperands())
-      return op.emitOpError() << "parent of result must have same arity";
-    for (auto e : llvm::zip(results, operands)) {
-      if (std::get<0>(e).getType() != std::get<1>(e).getType())
-        return op.emitOpError()
-               << "types mismatch between result op and its parent";
-    }
-  } else {
-    return op.emitOpError()
-           << "result only terminates if, do_loop, or iterate_while regions";
-  }
+  if (parentOp->getNumResults() != op.getNumOperands())
+    return op.emitOpError() << "parent of result must have same arity";
+  for (auto e : llvm::zip(results, operands))
+    if (std::get<0>(e).getType() != std::get<1>(e).getType())
+      return op.emitOpError()
+             << "types mismatch between result op and its parent";
   return success();
 }
 
@@ -1395,15 +1388,28 @@ mlir::OpFoldResult fir::SubfOp::fold(llvm::ArrayRef<mlir::Attribute> opnds) {
 //===----------------------------------------------------------------------===//
 // WhereOp
 //===----------------------------------------------------------------------===//
-
 void fir::WhereOp::build(mlir::OpBuilder &builder, OperationState &result,
                          mlir::Value cond, bool withElseRegion) {
+  build(builder, result, llvm::None, cond, withElseRegion);
+}
+
+void fir::WhereOp::build(mlir::OpBuilder &builder, OperationState &result,
+                         mlir::TypeRange resultTypes, mlir::Value cond,
+                         bool withElseRegion) {
   result.addOperands(cond);
+  result.addTypes(resultTypes);
+
   mlir::Region *thenRegion = result.addRegion();
+  thenRegion->push_back(new mlir::Block());
+  if (resultTypes.empty())
+    WhereOp::ensureTerminator(*thenRegion, builder, result.location);
+
   mlir::Region *elseRegion = result.addRegion();
-  WhereOp::ensureTerminator(*thenRegion, builder, result.location);
-  if (withElseRegion)
-    WhereOp::ensureTerminator(*elseRegion, builder, result.location);
+  if (withElseRegion) {
+    elseRegion->push_back(new mlir::Block());
+    if (resultTypes.empty())
+      WhereOp::ensureTerminator(*elseRegion, builder, result.location);
+  }
 }
 
 static mlir::ParseResult parseWhereOp(OpAsmParser &parser,
@@ -1439,16 +1445,6 @@ static mlir::ParseResult parseWhereOp(OpAsmParser &parser,
 }
 
 static LogicalResult verify(fir::WhereOp op) {
-  // Verify that the entry of each child region does not have arguments.
-  for (auto &region : op.getOperation()->getRegions()) {
-    if (region.empty())
-      continue;
-
-    for (auto &b : region)
-      if (b.getNumArguments() != 0)
-        return op.emitOpError(
-            "requires that child entry blocks have no arguments");
-  }
   if (op.getNumResults() != 0 && op.otherRegion().empty())
     return op.emitOpError("must have an else block if defining values");
 

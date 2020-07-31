@@ -354,7 +354,7 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
         return error; // Success;
     }
 
-    error.SetErrorStringWithFormat("extracting data from value failed");
+    error.SetErrorString("extracting data from value failed");
     break;
   }
   case eValueTypeLoadAddress:
@@ -535,8 +535,7 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     if (address_type == eAddressTypeHost) {
       // The address is an address in this process, so just copy it.
       if (address == 0) {
-        error.SetErrorStringWithFormat(
-            "trying to read from host address of 0.");
+        error.SetErrorString("trying to read from host address of 0.");
         return error;
       }
       memcpy(dst, reinterpret_cast<uint8_t *>(address), byte_size);
@@ -580,7 +579,7 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
                                      address_type);
     }
   } else {
-    error.SetErrorStringWithFormat("out of memory");
+    error.SetErrorString("out of memory");
   }
 
   return error;
@@ -604,8 +603,9 @@ Scalar &Value::ResolveValue(ExecutionContext *exe_ctx) {
       Status error(GetValueAsData(exe_ctx, data, nullptr));
       if (error.Success()) {
         Scalar scalar;
-        if (compiler_type.GetValueAsScalar(data, 0, data.GetByteSize(),
-                                           scalar)) {
+        if (compiler_type.GetValueAsScalar(
+                data, 0, data.GetByteSize(), scalar,
+                exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr)) {
           m_value = scalar;
           m_value_type = eValueTypeScalar;
         } else {

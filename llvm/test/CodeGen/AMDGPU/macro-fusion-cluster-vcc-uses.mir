@@ -2,7 +2,7 @@
 
 # GCN-LABEL: name: cluster_add_addc
 # GCN: S_NOP 0, implicit-def $vcc
-# GCN: dead %2:vgpr_32, %3:sreg_64_xexec = V_ADD_I32_e64 %0, %1, 0, implicit $exec
+# GCN: dead %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0, %1, 0, implicit $exec
 # GCN: dead %4:vgpr_32, dead %5:sreg_64_xexec = V_ADDC_U32_e64 %6, %7, %3, 0, implicit $exec
 name: cluster_add_addc
 registers:
@@ -19,7 +19,7 @@ body: |
   bb.0:
     %0 = V_MOV_B32_e32 0, implicit $exec
     %1 = V_MOV_B32_e32 0, implicit $exec
-    %2, %3 = V_ADD_I32_e64 %0, %1, 0, implicit $exec
+    %2, %3 = V_ADD_CO_U32_e64 %0, %1, 0, implicit $exec
     %6 = V_MOV_B32_e32 0, implicit $exec
     %7 = V_MOV_B32_e32 0, implicit $exec
     S_NOP 0, implicit def $vcc
@@ -27,9 +27,9 @@ body: |
 ...
 
 # GCN-LABEL: name: interleave_add64s
-# GCN: dead %8:vgpr_32, %9:sreg_64_xexec = V_ADD_I32_e64 %0, %1, 0, implicit $exec
+# GCN: dead %8:vgpr_32, %9:sreg_64_xexec = V_ADD_CO_U32_e64 %0, %1, 0, implicit $exec
 # GCN-NEXT: dead %12:vgpr_32, dead %13:sreg_64_xexec = V_ADDC_U32_e64 %4, %5, %9, 0, implicit $exec
-# GCN-NEXT: dead %10:vgpr_32, %11:sreg_64_xexec = V_ADD_I32_e64 %2, %3, 0, implicit $exec
+# GCN-NEXT: dead %10:vgpr_32, %11:sreg_64_xexec = V_ADD_CO_U32_e64 %2, %3, 0, implicit $exec
 # GCN-NEXT: dead %14:vgpr_32, dead %15:sreg_64_xexec = V_ADDC_U32_e64 %6, %7, %11, 0, implicit $exec
 name: interleave_add64s
 registers:
@@ -61,8 +61,8 @@ body: |
     %6 = V_MOV_B32_e32 0, implicit $exec
     %7 = V_MOV_B32_e32 0, implicit $exec
 
-    %8, %9 = V_ADD_I32_e64 %0, %1, 0, implicit $exec
-    %10, %11 = V_ADD_I32_e64 %2, %3, 0, implicit $exec
+    %8, %9 = V_ADD_CO_U32_e64 %0, %1, 0, implicit $exec
+    %10, %11 = V_ADD_CO_U32_e64 %2, %3, 0, implicit $exec
 
 
     %12, %13 = V_ADDC_U32_e64 %4, %5, %9, 0, implicit $exec
@@ -93,7 +93,7 @@ body: |
 ...
 
 # GCN-LABEL: name: no_cluster_add_addc_diff_sgpr
-# GCN: dead %2:vgpr_32, dead %3:sreg_64_xexec = V_ADD_I32_e64 %0, %1, 0, implicit $exec
+# GCN: dead %2:vgpr_32, dead %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0, %1, 0, implicit $exec
 # GCN-NEXT: %6:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 # GCN-NEXT: %7:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 # GCN-NEXT: S_NOP 0, implicit-def $vcc
@@ -115,7 +115,7 @@ body: |
     %0 = V_MOV_B32_e32 0, implicit $exec
     %1 = V_MOV_B32_e32 0, implicit $exec
     %8 = S_MOV_B64 0
-    %2, %3 = V_ADD_I32_e64 %0, %1, 0, implicit $exec
+    %2, %3 = V_ADD_CO_U32_e64 %0, %1, 0, implicit $exec
     %6 = V_MOV_B32_e32 0, implicit $exec
     %7 = V_MOV_B32_e32 0, implicit $exec
     S_NOP 0, implicit def $vcc
@@ -123,7 +123,7 @@ body: |
 ...
 # GCN-LABEL: name: cluster_sub_subb
 # GCN: S_NOP 0, implicit-def $vcc
-# GCN: dead %2:vgpr_32, %3:sreg_64_xexec = V_SUB_I32_e64 %0, %1, 0, implicit $exec
+# GCN: dead %2:vgpr_32, %3:sreg_64_xexec = V_SUB_CO_U32_e64 %0, %1, 0, implicit $exec
 # GCN: dead %4:vgpr_32, dead %5:sreg_64_xexec = V_SUBB_U32_e64 %6, %7, %3, 0, implicit $exec
 name: cluster_sub_subb
 registers:
@@ -140,7 +140,7 @@ body: |
   bb.0:
     %0 = V_MOV_B32_e32 0, implicit $exec
     %1 = V_MOV_B32_e32 0, implicit $exec
-    %2, %3 = V_SUB_I32_e64 %0, %1, 0, implicit $exec
+    %2, %3 = V_SUB_CO_U32_e64 %0, %1, 0, implicit $exec
     %6 = V_MOV_B32_e32 0, implicit $exec
     %7 = V_MOV_B32_e32 0, implicit $exec
     S_NOP 0, implicit def $vcc
@@ -149,7 +149,7 @@ body: |
 
 # GCN-LABEL: name: cluster_subrev_subbrev
 # GCN: S_NOP 0, implicit-def $vcc
-# GCN: dead %2:vgpr_32, %3:sreg_64_xexec = V_SUBREV_I32_e64 %0, %1, 0, implicit $exec
+# GCN: dead %2:vgpr_32, %3:sreg_64_xexec = V_SUBREV_CO_U32_e64 %0, %1, 0, implicit $exec
 # GCN: dead %4:vgpr_32, dead %5:sreg_64_xexec = V_SUBBREV_U32_e64 %6, %7, %3, 0, implicit $exec
 name: cluster_subrev_subbrev
 registers:
@@ -166,7 +166,7 @@ body: |
   bb.0:
     %0 = V_MOV_B32_e32 0, implicit $exec
     %1 = V_MOV_B32_e32 0, implicit $exec
-    %2, %3 = V_SUBREV_I32_e64 %0, %1, 0, implicit $exec
+    %2, %3 = V_SUBREV_CO_U32_e64 %0, %1, 0, implicit $exec
     %6 = V_MOV_B32_e32 0, implicit $exec
     %7 = V_MOV_B32_e32 0, implicit $exec
     S_NOP 0, implicit def $vcc

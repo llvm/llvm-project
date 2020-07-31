@@ -95,6 +95,8 @@ exit:
   ret void
 }
 
+; TODO: rev16?
+
 define void @rotate16_in_place(i8* %p) {
 ; A53-LABEL: rotate16_in_place:
 ; A53:       // %bb.0:
@@ -111,6 +113,8 @@ define void @rotate16_in_place(i8* %p) {
   store i8 %i0, i8* %p1, align 1
   ret void
 }
+
+; TODO: rev16?
 
 define void @rotate16(i8* %p, i8* %q) {
 ; A53-LABEL: rotate16:
@@ -134,10 +138,9 @@ define void @rotate16(i8* %p, i8* %q) {
 define void @rotate32_in_place(i16* %p) {
 ; A53-LABEL: rotate32_in_place:
 ; A53:       // %bb.0:
-; A53-NEXT:    ldrh w8, [x0, #2]
-; A53-NEXT:    ldrh w9, [x0]
-; A53-NEXT:    strh w8, [x0]
-; A53-NEXT:    strh w9, [x0, #2]
+; A53-NEXT:    ldr w8, [x0]
+; A53-NEXT:    ror w8, w8, #16
+; A53-NEXT:    str w8, [x0]
 ; A53-NEXT:    ret
   %p0 = getelementptr i16, i16* %p, i64 0
   %p1 = getelementptr i16, i16* %p, i64 1
@@ -151,10 +154,9 @@ define void @rotate32_in_place(i16* %p) {
 define void @rotate32(i16* %p) {
 ; A53-LABEL: rotate32:
 ; A53:       // %bb.0:
-; A53-NEXT:    ldrh w8, [x0, #2]
-; A53-NEXT:    ldrh w9, [x0]
-; A53-NEXT:    strh w8, [x0, #84]
-; A53-NEXT:    strh w9, [x0, #86]
+; A53-NEXT:    ldr w8, [x0]
+; A53-NEXT:    ror w8, w8, #16
+; A53-NEXT:    str w8, [x0, #84]
 ; A53-NEXT:    ret
   %p0 = getelementptr i16, i16* %p, i64 0
   %p1 = getelementptr i16, i16* %p, i64 1
@@ -166,6 +168,8 @@ define void @rotate32(i16* %p) {
   store i16 %i0, i16* %p43, align 2
   ret void
 }
+
+; Prefer paired memops over rotate.
 
 define void @rotate64_in_place(i32* %p) {
 ; A53-LABEL: rotate64_in_place:
@@ -181,6 +185,8 @@ define void @rotate64_in_place(i32* %p) {
   store i32 %i0, i32* %p1, align 4
   ret void
 }
+
+; Prefer paired memops over rotate.
 
 define void @rotate64(i32* %p) {
 ; A53-LABEL: rotate64:

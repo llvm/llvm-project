@@ -108,9 +108,19 @@ namespace return_has_expr {
 namespace ctor_returns_void {
   void f() {}
   struct S { 
-    S() { return f(); }; // expected-error {{constructor 'S' must not return void expression}}
+    S() { return f(); } // expected-error {{constructor 'S' must not return void expression}}
     ~S() { return f(); } // expected-error {{destructor '~S' must not return void expression}}
   };
+
+  template <typename T> struct ST {
+    ST() { return f(); } // expected-error {{constructor 'ST<T>' must not return void expression}}
+                         // expected-error@-1 {{constructor 'ST' must not return void expression}}
+    ~ST() { return f(); } // expected-error {{destructor '~ST<T>' must not return void expression}}
+                          // expected-error@-1 {{destructor '~ST' must not return void expression}}
+  };
+
+  ST<int> st; // expected-note {{in instantiation of member function 'ctor_returns_void::ST<int>::ST'}}
+              // expected-note@-1 {{in instantiation of member function 'ctor_returns_void::ST<int>::~ST'}}
 }
 
 void cxx_unresolved_expr() {

@@ -62,6 +62,7 @@ void OptionValueDictionary::DumpValue(const ExecutionContext *exe_ctx,
       case eTypeBoolean:
       case eTypeChar:
       case eTypeEnum:
+      case eTypeFileLineColumn:
       case eTypeFileSpec:
       case eTypeFormat:
       case eTypeSInt64:

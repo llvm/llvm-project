@@ -2744,6 +2744,35 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  // Copy a Z register pair by copying the individual sub-registers.
+  if (AArch64::ZPR2RegClass.contains(DestReg) &&
+      AArch64::ZPR2RegClass.contains(SrcReg)) {
+    static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1};
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
+                     Indices);
+    return;
+  }
+
+  // Copy a Z register triple by copying the individual sub-registers.
+  if (AArch64::ZPR3RegClass.contains(DestReg) &&
+      AArch64::ZPR3RegClass.contains(SrcReg)) {
+    static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1,
+                                       AArch64::zsub2};
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
+                     Indices);
+    return;
+  }
+
+  // Copy a Z register quad by copying the individual sub-registers.
+  if (AArch64::ZPR4RegClass.contains(DestReg) &&
+      AArch64::ZPR4RegClass.contains(SrcReg)) {
+    static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1,
+                                       AArch64::zsub2, AArch64::zsub3};
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
+                     Indices);
+    return;
+  }
+
   if (AArch64::GPR64spRegClass.contains(DestReg) &&
       (AArch64::GPR64spRegClass.contains(SrcReg) || SrcReg == AArch64::XZR)) {
     if (DestReg == AArch64::SP || SrcReg == AArch64::SP) {
@@ -6818,10 +6847,9 @@ Optional<RegImmPair> AArch64InstrInfo::isAddImmediate(const MachineInstr &MI,
     if (!MI.getOperand(0).isReg() || !MI.getOperand(1).isReg() ||
         !MI.getOperand(2).isImm())
       return None;
-    Offset = MI.getOperand(2).getImm() * Sign;
     int Shift = MI.getOperand(3).getImm();
     assert((Shift == 0 || Shift == 12) && "Shift can be either 0 or 12");
-    Offset = Offset << Shift;
+    Offset = Sign * (MI.getOperand(2).getImm() << Shift);
   }
   }
   return RegImmPair{MI.getOperand(1).getReg(), Offset};

@@ -241,16 +241,21 @@ MachineBlockFrequencyInfo::getProfileCountFromFreq(uint64_t Freq) const {
   return MBFI ? MBFI->getProfileCountFromFreq(F, Freq) : None;
 }
 
-bool
-MachineBlockFrequencyInfo::isIrrLoopHeader(const MachineBasicBlock *MBB) {
+bool MachineBlockFrequencyInfo::isIrrLoopHeader(
+    const MachineBasicBlock *MBB) const {
   assert(MBFI && "Expected analysis to be available");
   return MBFI->isIrrLoopHeader(MBB);
 }
 
-void MachineBlockFrequencyInfo::setBlockFreq(const MachineBasicBlock *MBB,
-                                             uint64_t Freq) {
+void MachineBlockFrequencyInfo::onEdgeSplit(
+    const MachineBasicBlock &NewPredecessor,
+    const MachineBasicBlock &NewSuccessor,
+    const MachineBranchProbabilityInfo &MBPI) {
   assert(MBFI && "Expected analysis to be available");
-  MBFI->setBlockFreq(MBB, Freq);
+  auto NewSuccFreq = MBFI->getBlockFreq(&NewPredecessor) *
+                     MBPI.getEdgeProbability(&NewPredecessor, &NewSuccessor);
+
+  MBFI->setBlockFreq(&NewSuccessor, NewSuccFreq.getFrequency());
 }
 
 const MachineFunction *MachineBlockFrequencyInfo::getFunction() const {

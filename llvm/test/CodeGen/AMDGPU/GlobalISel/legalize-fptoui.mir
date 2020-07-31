@@ -171,7 +171,7 @@ body: |
     ; SI: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
     ; SI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
-    ; SI: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[C]](s32), [[C1]](s32)
+    ; SI: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[UV1]](s32), [[C]](s32), [[C1]](s32)
     ; SI: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1023
     ; SI: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[INT]], [[C2]]
     ; SI: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -188,18 +188,17 @@ body: |
     ; SI: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB]](s32), [[C7]]
     ; SI: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[MV]], [[AND1]]
     ; SI: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[COPY]], [[SELECT]]
-    ; SI: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[COPY]]
     ; SI: [[C8:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3DF0000000000000
     ; SI: [[C9:%[0-9]+]]:_(s64) = G_FCONSTANT double 0xC1F0000000000000
-    ; SI: [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[INTRINSIC_TRUNC]], [[C8]]
+    ; SI: [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[SELECT1]], [[C8]]
     ; SI: [[INT1:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[FMUL]](s64)
     ; SI: [[C10:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3FEFFFFFFFFFFFFF
     ; SI: [[FMINNUM_IEEE:%[0-9]+]]:_(s64) = G_FMINNUM_IEEE [[INT1]], [[C10]]
     ; SI: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ord), [[FMUL]](s64), [[FMUL]]
-    ; SI: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[FMUL]], [[FMINNUM_IEEE]]
-    ; SI: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[SELECT1]]
+    ; SI: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[FMUL]], [[FMINNUM_IEEE]]
+    ; SI: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[SELECT2]]
     ; SI: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[FMUL]], [[FNEG]]
-    ; SI: [[FMA:%[0-9]+]]:_(s64) = G_FMA [[FADD]], [[C9]], [[INTRINSIC_TRUNC]]
+    ; SI: [[FMA:%[0-9]+]]:_(s64) = G_FMA [[FADD]], [[C9]], [[SELECT1]]
     ; SI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FADD]](s64)
     ; SI: [[FPTOUI1:%[0-9]+]]:_(s32) = G_FPTOUI [[FMA]](s64)
     ; SI: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[FPTOUI1]](s32), [[FPTOUI]](s32)
@@ -232,7 +231,7 @@ body: |
     ; SI: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
     ; SI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
-    ; SI: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[C]](s32), [[C1]](s32)
+    ; SI: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[UV1]](s32), [[C]](s32), [[C1]](s32)
     ; SI: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1023
     ; SI: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[INT]], [[C2]]
     ; SI: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -249,16 +248,15 @@ body: |
     ; SI: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB]](s32), [[C7]]
     ; SI: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[MV]], [[AND1]]
     ; SI: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[COPY]], [[SELECT]]
-    ; SI: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s64) = nnan G_INTRINSIC_TRUNC [[COPY]]
     ; SI: [[C8:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3DF0000000000000
     ; SI: [[C9:%[0-9]+]]:_(s64) = G_FCONSTANT double 0xC1F0000000000000
-    ; SI: [[FMUL:%[0-9]+]]:_(s64) = nnan G_FMUL [[INTRINSIC_TRUNC]], [[C8]]
+    ; SI: [[FMUL:%[0-9]+]]:_(s64) = nnan G_FMUL [[SELECT1]], [[C8]]
     ; SI: [[INT1:%[0-9]+]]:_(s64) = nnan G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[FMUL]](s64)
     ; SI: [[C10:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3FEFFFFFFFFFFFFF
     ; SI: [[FMINNUM_IEEE:%[0-9]+]]:_(s64) = nnan G_FMINNUM_IEEE [[INT1]], [[C10]]
     ; SI: [[FNEG:%[0-9]+]]:_(s64) = nnan G_FNEG [[FMINNUM_IEEE]]
     ; SI: [[FADD:%[0-9]+]]:_(s64) = nnan G_FADD [[FMUL]], [[FNEG]]
-    ; SI: [[FMA:%[0-9]+]]:_(s64) = nnan G_FMA [[FADD]], [[C9]], [[INTRINSIC_TRUNC]]
+    ; SI: [[FMA:%[0-9]+]]:_(s64) = nnan G_FMA [[FADD]], [[C9]], [[SELECT1]]
     ; SI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FADD]](s64)
     ; SI: [[FPTOUI1:%[0-9]+]]:_(s32) = G_FPTOUI [[FMA]](s64)
     ; SI: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[FPTOUI1]](s32), [[FPTOUI]](s32)
@@ -292,7 +290,7 @@ body: |
     ; SI: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV]](s64)
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
     ; SI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
-    ; SI: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[C]](s32), [[C1]](s32)
+    ; SI: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[UV3]](s32), [[C]](s32), [[C1]](s32)
     ; SI: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1023
     ; SI: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[INT]], [[C2]]
     ; SI: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -309,23 +307,22 @@ body: |
     ; SI: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB]](s32), [[C7]]
     ; SI: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[MV]], [[AND1]]
     ; SI: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[UV]], [[SELECT]]
-    ; SI: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[UV]]
     ; SI: [[C8:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3DF0000000000000
     ; SI: [[C9:%[0-9]+]]:_(s64) = G_FCONSTANT double 0xC1F0000000000000
-    ; SI: [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[INTRINSIC_TRUNC]], [[C8]]
+    ; SI: [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[SELECT1]], [[C8]]
     ; SI: [[INT1:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[FMUL]](s64)
     ; SI: [[C10:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x3FEFFFFFFFFFFFFF
     ; SI: [[FMINNUM_IEEE:%[0-9]+]]:_(s64) = G_FMINNUM_IEEE [[INT1]], [[C10]]
     ; SI: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ord), [[FMUL]](s64), [[FMUL]]
-    ; SI: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[FMUL]], [[FMINNUM_IEEE]]
-    ; SI: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[SELECT1]]
+    ; SI: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[FCMP]](s1), [[FMUL]], [[FMINNUM_IEEE]]
+    ; SI: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[SELECT2]]
     ; SI: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[FMUL]], [[FNEG]]
-    ; SI: [[FMA:%[0-9]+]]:_(s64) = G_FMA [[FADD]], [[C9]], [[INTRINSIC_TRUNC]]
+    ; SI: [[FMA:%[0-9]+]]:_(s64) = G_FMA [[FADD]], [[C9]], [[SELECT1]]
     ; SI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[FADD]](s64)
     ; SI: [[FPTOUI1:%[0-9]+]]:_(s32) = G_FPTOUI [[FMA]](s64)
     ; SI: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[FPTOUI1]](s32), [[FPTOUI]](s32)
     ; SI: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV1]](s64)
-    ; SI: [[INT2:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[C]](s32), [[C1]](s32)
+    ; SI: [[INT2:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[UV5]](s32), [[C]](s32), [[C1]](s32)
     ; SI: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[INT2]], [[C2]]
     ; SI: [[AND2:%[0-9]+]]:_(s32) = G_AND [[UV5]], [[C3]]
     ; SI: [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C5]](s32), [[AND2]](s32)
@@ -334,17 +331,16 @@ body: |
     ; SI: [[AND3:%[0-9]+]]:_(s64) = G_AND [[UV1]], [[XOR1]]
     ; SI: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB1]](s32), [[C5]]
     ; SI: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB1]](s32), [[C7]]
-    ; SI: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP2]](s1), [[MV2]], [[AND3]]
-    ; SI: [[SELECT3:%[0-9]+]]:_(s64) = G_SELECT [[ICMP3]](s1), [[UV1]], [[SELECT2]]
-    ; SI: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[UV1]]
-    ; SI: [[FMUL1:%[0-9]+]]:_(s64) = G_FMUL [[INTRINSIC_TRUNC1]], [[C8]]
+    ; SI: [[SELECT3:%[0-9]+]]:_(s64) = G_SELECT [[ICMP2]](s1), [[MV2]], [[AND3]]
+    ; SI: [[SELECT4:%[0-9]+]]:_(s64) = G_SELECT [[ICMP3]](s1), [[UV1]], [[SELECT3]]
+    ; SI: [[FMUL1:%[0-9]+]]:_(s64) = G_FMUL [[SELECT4]], [[C8]]
     ; SI: [[INT3:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[FMUL1]](s64)
     ; SI: [[FMINNUM_IEEE1:%[0-9]+]]:_(s64) = G_FMINNUM_IEEE [[INT3]], [[C10]]
     ; SI: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(ord), [[FMUL1]](s64), [[FMUL1]]
-    ; SI: [[SELECT3:%[0-9]+]]:_(s64) = G_SELECT [[FCMP1]](s1), [[FMUL1]], [[FMINNUM_IEEE1]]
-    ; SI: [[FNEG1:%[0-9]+]]:_(s64) = G_FNEG [[SELECT3]]
+    ; SI: [[SELECT5:%[0-9]+]]:_(s64) = G_SELECT [[FCMP1]](s1), [[FMUL1]], [[FMINNUM_IEEE1]]
+    ; SI: [[FNEG1:%[0-9]+]]:_(s64) = G_FNEG [[SELECT5]]
     ; SI: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[FMUL1]], [[FNEG1]]
-    ; SI: [[FMA1:%[0-9]+]]:_(s64) = G_FMA [[FADD1]], [[C9]], [[INTRINSIC_TRUNC1]]
+    ; SI: [[FMA1:%[0-9]+]]:_(s64) = G_FMA [[FADD1]], [[C9]], [[SELECT4]]
     ; SI: [[FPTOUI2:%[0-9]+]]:_(s32) = G_FPTOUI [[FADD1]](s64)
     ; SI: [[FPTOUI3:%[0-9]+]]:_(s32) = G_FPTOUI [[FMA1]](s64)
     ; SI: [[MV3:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[FPTOUI3]](s32), [[FPTOUI2]](s32)
@@ -754,6 +750,67 @@ body: |
     ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[SELECT4]](s64), [[SELECT9]](s64)
     ; VI: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x s64>) = G_FPTOUI %0
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
+...
+
+---
+name: test_fptoui_s16_to_s64
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; SI-LABEL: name: test_fptoui_s16_to_s64
+    ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; SI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; SI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[TRUNC]](s16)
+    ; SI: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[FPTOUI]](s32)
+    ; SI: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
+    ; VI-LABEL: name: test_fptoui_s16_to_s64
+    ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; VI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; VI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[TRUNC]](s16)
+    ; VI: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[FPTOUI]](s32)
+    ; VI: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s16) = G_TRUNC %0
+    %2:_(s64) = G_FPTOUI %1
+    $vgpr0_vgpr1 = COPY %2
+...
+
+---
+name: test_fptoui_v2s16_to_v2s64
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; SI-LABEL: name: test_fptoui_v2s16_to_v2s64
+    ; SI: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; SI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; SI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
+    ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; SI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; SI: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; SI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[TRUNC]](s16)
+    ; SI: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[FPTOUI]](s32)
+    ; SI: [[FPTOUI1:%[0-9]+]]:_(s32) = G_FPTOUI [[TRUNC1]](s16)
+    ; SI: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[FPTOUI1]](s32)
+    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[ZEXT]](s64), [[ZEXT1]](s64)
+    ; SI: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
+    ; VI-LABEL: name: test_fptoui_v2s16_to_v2s64
+    ; VI: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; VI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; VI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
+    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; VI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+    ; VI: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; VI: [[FPTOUI:%[0-9]+]]:_(s32) = G_FPTOUI [[TRUNC]](s16)
+    ; VI: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[FPTOUI]](s32)
+    ; VI: [[FPTOUI1:%[0-9]+]]:_(s32) = G_FPTOUI [[TRUNC1]](s16)
+    ; VI: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[FPTOUI1]](s32)
+    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[ZEXT]](s64), [[ZEXT1]](s64)
+    ; VI: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
+    %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s64>) = G_FPTOUI %0
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
 ...

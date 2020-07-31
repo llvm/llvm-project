@@ -3,14 +3,10 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-if(NOT CLANG_BUILT_STANDALONE)
-  set(tablegen_deps intrinsics_gen)
-endif()
-
 add_clang_executable(clang-import-test
   clang-import-test.cpp
   DEPENDS
-  ${tablegen_deps}
+  intrinsics_gen
   )
 
 set(CLANG_IMPORT_TEST_LIB_DEPS

@@ -1,5 +1,5 @@
 @ RUN: llvm-mc < %s -triple armv7-linux-gnueabi -filetype=obj -o - \
-@ RUN:   | llvm-readobj -r | FileCheck %s
+@ RUN:   | llvm-readobj -r - | FileCheck %s
 
   .code  16
   .thumb_func

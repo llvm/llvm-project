@@ -495,8 +495,7 @@ bool AMDGPULibCalls::isUnsafeMath(const CallInst *CI) const {
 }
 
 bool AMDGPULibCalls::useNativeFunc(const StringRef F) const {
-  return AllNative ||
-         std::find(UseNative.begin(), UseNative.end(), F) != UseNative.end();
+  return AllNative || llvm::is_contained(UseNative, F);
 }
 
 void AMDGPULibCalls::initNativeFuncs() {

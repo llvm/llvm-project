@@ -55,7 +55,6 @@ private:
   static void
   accumulateCounterValues(const llvm::SmallVector<int64_t, 4> &NewValues,
                           llvm::SmallVector<int64_t, 4> *Result) {
-
     const size_t NumValues = std::max(NewValues.size(), Result->size());
     if (NumValues > Result->size())
       Result->resize(NumValues, 0);
@@ -106,10 +105,10 @@ private:
         if (Crashed)
           return make_error<SnippetCrash>("snippet crashed while running");
       }
-      auto ValueOrError = Counter->readOrError();
+
+      auto ValueOrError = Counter->readOrError(Function.getFunctionBytes());
       if (!ValueOrError)
         return ValueOrError.takeError();
-
       accumulateCounterValues(ValueOrError.get(), &CounterValues);
     }
     return CounterValues;

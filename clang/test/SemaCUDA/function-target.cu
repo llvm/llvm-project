@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -fcuda-is-device -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fcuda-is-device -verify=dev,expected %s
 
 #include "Inputs/cuda.h"
 
@@ -23,11 +23,11 @@ __host__ void h1(void) {
 __host__ void d1h(void); // expected-note {{candidate function not viable: call to __host__ function from __device__ function}}
 __device__ void d1d(void);
 __host__ __device__ void d1hd(void);
-__global__ void d1g(void); // expected-note {{'d1g' declared here}}
+__global__ void d1g(void); // dev-note {{'d1g' declared here}}
 
 __device__ void d1(void) {
   d1h(); // expected-error {{no matching function}}
   d1d();
   d1hd();
-  d1g<<<1, 1>>>(); // expected-error {{reference to __global__ function 'd1g' in __device__ function}}
+  d1g<<<1, 1>>>(); // dev-error {{reference to __global__ function 'd1g' in __device__ function}}
 }

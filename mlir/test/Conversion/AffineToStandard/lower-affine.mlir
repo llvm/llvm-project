@@ -620,3 +620,57 @@ func @affine_max(%arg0: index, %arg1: index) -> index{
   %0 = affine.max affine_map<(d0,d1) -> (d0 - d1, d1 - d0)>(%arg0, %arg1)
   return %0 : index
 }
+
+// CHECK-LABEL: func @affine_parallel(
+// CHECK-SAME: %[[ARG0:.*]]: memref<100x100xf32>, %[[ARG1:.*]]: memref<100x100xf32>) {
+func @affine_parallel(%o: memref<100x100xf32>, %a: memref<100x100xf32>) {
+  affine.parallel (%i, %j) = (0, 0) to (100, 100) {
+  }
+  return
+}
+
+// CHECK-DAG:    %[[C100:.*]] = constant 100
+// CHECK-DAG:    %[[C100_1:.*]] = constant 100
+// CHECK-DAG:    %[[C0:.*]] = constant 0
+// CHECK-DAG:    %[[C0_1:.*]] = constant 0
+// CHECK-DAG:    %[[C1:.*]] = constant 1
+// CHECK-DAG:    %[[C1_1:.*]] = constant 1
+// CHECK-DAG:    scf.parallel (%arg2, %arg3) = (%[[C0]], %[[C0_1]]) to (%[[C100]], %[[C100_1]]) step (%[[C1]], %[[C1_1]]) {
+
+// CHECK-LABEL: func @affine_parallel_tiled(
+// CHECK-SAME: %[[ARG0:.*]]: memref<100x100xf32>, %[[ARG1:.*]]: memref<100x100xf32>, %[[ARG2:.*]]: memref<100x100xf32>) {
+func @affine_parallel_tiled(%o: memref<100x100xf32>, %a: memref<100x100xf32>, %b: memref<100x100xf32>) {
+  affine.parallel (%i0, %j0, %k0) = (0, 0, 0) to (100, 100, 100) step (10, 10, 10) {
+    affine.parallel (%i1, %j1, %k1) = (%i0, %j0, %k0) to (%i0 + 10, %j0 + 10, %k0 + 10) {
+      %0 = affine.load %a[%i1, %k1] : memref<100x100xf32>
+      %1 = affine.load %b[%k1, %j1] : memref<100x100xf32>
+      %2 = mulf %0, %1 : f32
+    }
+  }
+  return
+}
+
+// CHECK-DAG:     %[[C100:.*]] = constant 100
+// CHECK-DAG:     %[[C100_0:.*]] = constant 100
+// CHECK-DAG:     %[[C100_1:.*]] = constant 100
+// CHECK-DAG:     %[[C0:.*]] = constant 0
+// CHECK-DAG:     %[[C0_2:.*]] = constant 0
+// CHECK-DAG:     %[[C0_3:.*]] = constant 0
+// CHECK-DAG:     %[[C10:.*]] = constant 10
+// CHECK-DAG:     %[[C10_4:.*]] = constant 10
+// CHECK-DAG:     %[[C10_5:.*]] = constant 10
+// CHECK:         scf.parallel (%[[arg3:.*]], %[[arg4:.*]], %[[arg5:.*]]) = (%[[C0]], %[[C0_2]], %[[C0_3]]) to (%[[C100]], %[[C100_0]], %[[C100_1]]) step (%[[C10]], %[[C10_4]], %[[C10_5]]) {
+// CHECK-DAG:       %[[C10_6:.*]] = constant 10
+// CHECK-DAG:       %[[A0:.*]] = addi %[[arg3]], %[[C10_6]]
+// CHECK-DAG:       %[[C10_7:.*]] = constant 10
+// CHECK-DAG:       %[[A1:.*]] = addi %[[arg4]], %[[C10_7]]
+// CHECK-DAG:       %[[C10_8:.*]] = constant 10
+// CHECK-DAG:       %[[A2:.*]] = addi %[[arg5]], %[[C10_8]]
+// CHECK-DAG:       %[[C1:.*]] = constant 1
+// CHECK-DAG:       %[[C1_9:.*]] = constant 1
+// CHECK-DAG:       %[[C1_10:.*]] = constant 1
+// CHECK:           scf.parallel (%[[arg6:.*]], %[[arg7:.*]], %[[arg8:.*]]) = (%[[arg3]], %[[arg4]], %[[arg5]]) to (%[[A0]], %[[A1]], %[[A2]]) step (%[[C1]], %[[C1_9]], %[[C1_10]]) {
+// CHECK:             %[[A3:.*]] = load %[[ARG1]][%[[arg6]], %[[arg8]]] : memref<100x100xf32>
+// CHECK:             %[[A4:.*]] = load %[[ARG2]][%[[arg8]], %[[arg7]]] : memref<100x100xf32>
+// CHECK:             mulf %[[A3]], %[[A4]] : f32
+// CHECK:             scf.yield

@@ -79,6 +79,22 @@
 // CHECK: Loaded summary for: int execv(const char *path, char *const argv[])
 // CHECK: Loaded summary for: int execvp(const char *file, char *const argv[])
 // CHECK: Loaded summary for: int getopt(int argc, char *const argv[], const char *optstring)
+// CHECK: Loaded summary for: int accept(int socket, __SOCKADDR_ARG address, socklen_t *restrict address_len)
+// CHECK: Loaded summary for: int bind(int socket, __CONST_SOCKADDR_ARG address, socklen_t address_len)
+// CHECK: Loaded summary for: int getpeername(int socket, __SOCKADDR_ARG address, socklen_t *restrict address_len)
+// CHECK: Loaded summary for: int getsockname(int socket, __SOCKADDR_ARG address, socklen_t *restrict address_len)
+// CHECK: Loaded summary for: int connect(int socket, __CONST_SOCKADDR_ARG address, socklen_t address_len)
+// CHECK: Loaded summary for: ssize_t recvfrom(int socket, void *restrict buffer, size_t length, int flags, __SOCKADDR_ARG address, socklen_t *restrict address_len)
+// CHECK: Loaded summary for: ssize_t sendto(int socket, const void *message, size_t length, int flags, __CONST_SOCKADDR_ARG dest_addr, socklen_t dest_len)
+// CHECK: Loaded summary for: int listen(int sockfd, int backlog)
+// CHECK: Loaded summary for: ssize_t recv(int sockfd, void *buf, size_t len, int flags)
+// CHECK: Loaded summary for: ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags)
+// CHECK: Loaded summary for: ssize_t sendmsg(int sockfd, const struct msghdr *msg, int flags)
+// CHECK: Loaded summary for: int setsockopt(int socket, int level, int option_name, const void *option_value, socklen_t option_len)
+// CHECK: Loaded summary for: int getsockopt(int socket, int level, int option_name, void *restrict option_value, socklen_t *restrict option_len)
+// CHECK: Loaded summary for: ssize_t send(int sockfd, const void *buf, size_t len, int flags)
+// CHECK: Loaded summary for: int socketpair(int domain, int type, int protocol, int sv[2])
+// CHECK: Loaded summary for: int getnameinfo(const struct sockaddr *restrict sa, socklen_t salen, char *restrict node, socklen_t nodelen, char *restrict service, socklen_t servicelen, int flags)
 
 long a64l(const char *str64);
 char *l64a(long value);
@@ -170,6 +186,46 @@ char *realpath(const char *restrict file_name, char *restrict resolved_name);
 int execv(const char *path, char *const argv[]);
 int execvp(const char *file, char *const argv[]);
 int getopt(int argc, char *const argv[], const char *optstring);
+
+// In some libc implementations, sockaddr parameter is a transparent
+// union of the underlying sockaddr_ pointers instead of being a
+// pointer to struct sockaddr.
+// We match that with the joker Irrelevant type.
+struct sockaddr;
+struct sockaddr_at;
+#define __SOCKADDR_ALLTYPES    \
+  __SOCKADDR_ONETYPE(sockaddr) \
+  __SOCKADDR_ONETYPE(sockaddr_at)
+#define __SOCKADDR_ONETYPE(type) struct type *__restrict __##type##__;
+typedef union {
+  __SOCKADDR_ALLTYPES
+} __SOCKADDR_ARG __attribute__((__transparent_union__));
+#undef __SOCKADDR_ONETYPE
+#define __SOCKADDR_ONETYPE(type) const struct type *__restrict __##type##__;
+typedef union {
+  __SOCKADDR_ALLTYPES
+} __CONST_SOCKADDR_ARG __attribute__((__transparent_union__));
+#undef __SOCKADDR_ONETYPE
+typedef unsigned socklen_t;
+
+int accept(int socket, __SOCKADDR_ARG address, socklen_t *restrict address_len);
+int bind(int socket, __CONST_SOCKADDR_ARG address, socklen_t address_len);
+int getpeername(int socket, __SOCKADDR_ARG address, socklen_t *restrict address_len);
+int getsockname(int socket, __SOCKADDR_ARG address, socklen_t *restrict address_len);
+int connect(int socket, __CONST_SOCKADDR_ARG address, socklen_t address_len);
+ssize_t recvfrom(int socket, void *restrict buffer, size_t length, int flags, __SOCKADDR_ARG address, socklen_t *restrict address_len);
+ssize_t sendto(int socket, const void *message, size_t length, int flags, __CONST_SOCKADDR_ARG dest_addr, socklen_t dest_len);
+
+int listen(int sockfd, int backlog);
+ssize_t recv(int sockfd, void *buf, size_t len, int flags);
+struct msghdr;
+ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags);
+ssize_t sendmsg(int sockfd, const struct msghdr *msg, int flags);
+int setsockopt(int socket, int level, int option_name, const void *option_value, socklen_t option_len);
+int getsockopt(int socket, int level, int option_name, void *restrict option_value, socklen_t *restrict option_len);
+ssize_t send(int sockfd, const void *buf, size_t len, int flags);
+int socketpair(int domain, int type, int protocol, int sv[2]);
+int getnameinfo(const struct sockaddr *restrict sa, socklen_t salen, char *restrict node, socklen_t nodelen, char *restrict service, socklen_t servicelen, int flags);
 
 // Must have at least one call expression to initialize the summary map.
 int bar(void);

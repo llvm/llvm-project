@@ -132,7 +132,8 @@ namespace {
       bool reachable = false;
 
       // Vregs that must be live in because they are used without being
-      // defined. Map value is the user.
+      // defined. Map value is the user. vregsLiveIn doesn't include regs
+      // that only are used by PHI nodes.
       RegMap vregsLiveIn;
 
       // Regs killed in MBB. They may be defined again, and will then be in both
@@ -2301,6 +2302,23 @@ void MachineVerifier::calcRegsRequired() {
       BBInfo &PInfo = MBBInfoMap[Pred];
       if (PInfo.addRequired(MInfo.vregsLiveIn))
         todo.insert(Pred);
+    }
+
+    // Handle the PHI node.
+    for (const MachineInstr &MI : MBB.phis()) {
+      for (unsigned i = 1, e = MI.getNumOperands(); i != e; i += 2) {
+        // Skip those Operands which are undef regs or not regs.
+        if (!MI.getOperand(i).isReg() || !MI.getOperand(i).readsReg())
+          continue;
+
+        // Get register and predecessor for one PHI edge.
+        Register Reg = MI.getOperand(i).getReg();
+        const MachineBasicBlock *Pred = MI.getOperand(i + 1).getMBB();
+
+        BBInfo &PInfo = MBBInfoMap[Pred];
+        if (PInfo.addRequired(Reg))
+          todo.insert(Pred);
+      }
     }
   }
 

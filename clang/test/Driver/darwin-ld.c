@@ -156,7 +156,7 @@
 // RUN: FileCheck -check-prefix=LINK_IOSSIM_PROFILE %s < %t.log
 // LINK_IOSSIM_PROFILE: {{ld(.exe)?"}}
 // LINK_IOSSIM_PROFILE: libclang_rt.profile_iossim.a
-// LINK_IOSSIM_PROFILE: libclang_rt.ios.a
+// LINK_IOSSIM_PROFILE: libclang_rt.iossim.a
 
 // RUN: %clang -target arm64-apple-tvos8.3 -mlinker-version=400 -mtvos-version-min=8.3 -resource-dir=%S/Inputs/resource_dir -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_TVOS_ARM64 %s < %t.log
@@ -351,7 +351,8 @@
 // RUN: FileCheck -check-prefix=GCOV_EXPORT %s < %t.log
 // RUN: %clang -target x86_64-apple-darwin12 -fprofile-arcs -Xlinker -exported_symbols_list -Xlinker /dev/null -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=GCOV_EXPORT %s < %t.log
-// GCOV_EXPORT: "-exported_symbol" "___gcov_flush"
+// GCOV_EXPORT: "-exported_symbol" "___gcov_dump"
+// GCOV_EXPORT: "-exported_symbol" "___gcov_reset"
 //
 // Check that we can pass the outliner down to the linker.
 // RUN: env IPHONEOS_DEPLOYMENT_TARGET=7.0 \

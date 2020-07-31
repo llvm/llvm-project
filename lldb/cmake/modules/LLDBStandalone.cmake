@@ -73,6 +73,7 @@ endif()
 # We append the directory in which LLVMConfig.cmake lives. We expect LLVM's
 # CMake modules to be in that directory as well.
 list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
+
 include(AddLLVM)
 include(TableGen)
 include(HandleLLVMOptions)

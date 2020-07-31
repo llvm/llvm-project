@@ -184,6 +184,10 @@ public:
   /// Parse an arbitrary attribute with an optional type.
   Attribute parseAttribute(Type type = {});
 
+  /// Parse an optional attribute with the provided type.
+  OptionalParseResult parseOptionalAttribute(Attribute &attribute,
+                                             Type type = {});
+
   /// Parse an attribute dictionary.
   ParseResult parseAttributeDict(NamedAttrList &attributes);
 

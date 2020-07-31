@@ -249,22 +249,7 @@ llvm::SmallVector<llvm::ArrayRef<syntax::Token>, 1>
 TokenBuffer::expandedForSpelled(llvm::ArrayRef<syntax::Token> Spelled) const {
   if (Spelled.empty())
     return {};
-  assert(Spelled.front().location().isFileID());
-
-  auto FID = sourceManager().getFileID(Spelled.front().location());
-  auto It = Files.find(FID);
-  assert(It != Files.end());
-
-  const MarkedFile &File = It->second;
-  // `Spelled` must be a subrange of `File.SpelledTokens`.
-  assert(File.SpelledTokens.data() <= Spelled.data());
-  assert(&Spelled.back() <=
-         File.SpelledTokens.data() + File.SpelledTokens.size());
-#ifndef NDEBUG
-  auto T1 = Spelled.back().location();
-  auto T2 = File.SpelledTokens.back().location();
-  assert(T1 == T2 || sourceManager().isBeforeInTranslationUnit(T1, T2));
-#endif
+  const auto &File = fileForSpelled(Spelled);
 
   auto *FrontMapping = mappingStartingBeforeSpelled(File, &Spelled.front());
   unsigned SpelledFrontI = &Spelled.front() - File.SpelledTokens.data();
@@ -395,16 +380,39 @@ TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
                   : LastSpelled + 1);
 }
 
+TokenBuffer::Expansion TokenBuffer::makeExpansion(const MarkedFile &F,
+                                                  const Mapping &M) const {
+  Expansion E;
+  E.Spelled = llvm::makeArrayRef(F.SpelledTokens.data() + M.BeginSpelled,
+                                 F.SpelledTokens.data() + M.EndSpelled);
+  E.Expanded = llvm::makeArrayRef(ExpandedTokens.data() + M.BeginExpanded,
+                                  ExpandedTokens.data() + M.EndExpanded);
+  return E;
+}
+
+const TokenBuffer::MarkedFile &
+TokenBuffer::fileForSpelled(llvm::ArrayRef<syntax::Token> Spelled) const {
+  assert(!Spelled.empty());
+  assert(Spelled.front().location().isFileID() && "not a spelled token");
+  auto FileIt = Files.find(SourceMgr->getFileID(Spelled.front().location()));
+  assert(FileIt != Files.end() && "file not tracked by token buffer");
+  const auto &File = FileIt->second;
+  assert(File.SpelledTokens.data() <= Spelled.data() &&
+         Spelled.end() <=
+             (File.SpelledTokens.data() + File.SpelledTokens.size()) &&
+         "Tokens not in spelled range");
+#ifndef NDEBUG
+  auto T1 = Spelled.back().location();
+  auto T2 = File.SpelledTokens.back().location();
+  assert(T1 == T2 || sourceManager().isBeforeInTranslationUnit(T1, T2));
+#endif
+  return File;
+}
+
 llvm::Optional<TokenBuffer::Expansion>
 TokenBuffer::expansionStartingAt(const syntax::Token *Spelled) const {
   assert(Spelled);
-  assert(Spelled->location().isFileID() && "not a spelled token");
-  auto FileIt = Files.find(SourceMgr->getFileID(Spelled->location()));
-  assert(FileIt != Files.end() && "file not tracked by token buffer");
-
-  auto &File = FileIt->second;
-  assert(File.SpelledTokens.data() <= Spelled &&
-         Spelled < (File.SpelledTokens.data() + File.SpelledTokens.size()));
+  const auto &File = fileForSpelled(*Spelled);
 
   unsigned SpelledIndex = Spelled - File.SpelledTokens.data();
   auto M = llvm::partition_point(File.Mappings, [&](const Mapping &M) {
@@ -412,14 +420,27 @@ TokenBuffer::expansionStartingAt(const syntax::Token *Spelled) const {
   });
   if (M == File.Mappings.end() || M->BeginSpelled != SpelledIndex)
     return llvm::None;
-
-  Expansion E;
-  E.Spelled = llvm::makeArrayRef(File.SpelledTokens.data() + M->BeginSpelled,
-                                 File.SpelledTokens.data() + M->EndSpelled);
-  E.Expanded = llvm::makeArrayRef(ExpandedTokens.data() + M->BeginExpanded,
-                                  ExpandedTokens.data() + M->EndExpanded);
-  return E;
+  return makeExpansion(File, *M);
 }
+
+std::vector<TokenBuffer::Expansion> TokenBuffer::expansionsOverlapping(
+    llvm::ArrayRef<syntax::Token> Spelled) const {
+  if (Spelled.empty())
+    return {};
+  const auto &File = fileForSpelled(Spelled);
+
+  // Find the first overlapping range, and then copy until we stop overlapping.
+  unsigned SpelledBeginIndex = Spelled.begin() - File.SpelledTokens.data();
+  unsigned SpelledEndIndex = Spelled.end() - File.SpelledTokens.data();
+  auto M = llvm::partition_point(File.Mappings, [&](const Mapping &M) {
+    return M.EndSpelled <= SpelledBeginIndex;
+  });
+  std::vector<TokenBuffer::Expansion> Expansions;
+  for (; M != File.Mappings.end() && M->BeginSpelled < SpelledEndIndex; ++M)
+    Expansions.push_back(makeExpansion(File, *M));
+  return Expansions;
+}
+
 llvm::ArrayRef<syntax::Token>
 syntax::spelledTokensTouching(SourceLocation Loc,
                               llvm::ArrayRef<syntax::Token> Tokens) {

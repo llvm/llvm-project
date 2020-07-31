@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -loop-distribute -enable-loop-distribute -loop-simplify -scoped-noalias \
+; RUN: opt -basic-aa -loop-distribute -enable-loop-distribute -loop-simplify -scoped-noalias-aa \
 ; RUN:     -loop-versioning -S < %s | FileCheck %s
 
 ; Test the metadata generated when versioning an already versioned loop.  Here

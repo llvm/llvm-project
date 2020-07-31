@@ -45,26 +45,8 @@ public:
 
 private:
   template <typename A> void CheckSpecExpr(const A &x) {
-    if (symbolBeingChecked_ && IsSaved(*symbolBeingChecked_)) {
-      if (!evaluate::IsConstantExpr(x)) {
-        messages_.Say(
-            "Specification expression must be constant in declaration of '%s' with the SAVE attribute"_err_en_US,
-            symbolBeingChecked_->name());
-      }
-    } else {
-      evaluate::CheckSpecificationExpr(
-          x, messages_, DEREF(scope_), context_.intrinsics());
-    }
-  }
-  template <typename A> void CheckSpecExpr(const std::optional<A> &x) {
-    if (x) {
-      CheckSpecExpr(*x);
-    }
-  }
-  template <typename A> void CheckSpecExpr(A &x) {
-    x = Fold(foldingContext_, std::move(x));
-    const A &constx{x};
-    CheckSpecExpr(constx);
+    evaluate::CheckSpecificationExpr(
+        x, messages_, DEREF(scope_), context_.intrinsics());
   }
   void CheckValue(const Symbol &, const DerivedTypeSpec *);
   void CheckVolatile(
@@ -120,7 +102,6 @@ private:
   // This symbol is the one attached to the innermost enclosing scope
   // that has a symbol.
   const Symbol *innermostSymbol_{nullptr};
-  const Symbol *symbolBeingChecked_{nullptr};
 };
 
 void CheckHelper::Check(const ParamValue &value, bool canBeAssumed) {
@@ -295,6 +276,12 @@ void CheckHelper::Check(const Symbol &symbol) {
     messages_.Say(
         "A CONTIGUOUS component must be an array with the POINTER attribute"_err_en_US);
   }
+  if (symbol.owner().IsModule() && IsAutomatic(symbol)) {
+    messages_.Say(
+        "Automatic data object '%s' may not appear in the specification part"
+        " of a module"_err_en_US,
+        symbol.name());
+  }
 }
 
 void CheckHelper::CheckValue(
@@ -388,13 +375,10 @@ void CheckHelper::CheckAssumedTypeEntity( // C709
 
 void CheckHelper::CheckObjectEntity(
     const Symbol &symbol, const ObjectEntityDetails &details) {
-  CHECK(!symbolBeingChecked_);
-  symbolBeingChecked_ = &symbol; // for specification expr checks
   CheckArraySpec(symbol, details.shape());
   Check(details.shape());
   Check(details.coshape());
   CheckAssumedTypeEntity(symbol, details);
-  symbolBeingChecked_ = nullptr;
   if (!details.coshape().empty()) {
     bool isDeferredShape{details.coshape().IsDeferredShape()};
     if (IsAllocatable(symbol)) {

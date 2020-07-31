@@ -4,8 +4,8 @@
 
 ; Check that we can roundtrip these names through our assembler,
 ; in both at&t and intel syntax.
-; RUN: llc -mtriple=i686-pc-win32 %s -o - | llvm-mc -triple i686-pc-win32 -filetype=obj | llvm-readobj --symbols | FileCheck %s --check-prefix=READOBJ
-; RUN: llc -mtriple=i686-pc-win32 -x86-asm-syntax=intel %s -o - | llvm-mc -triple i686-pc-win32 -filetype=obj | llvm-readobj --symbols | FileCheck %s --check-prefix=READOBJ
+; RUN: llc -mtriple=i686-pc-win32 %s -o - | llvm-mc -triple i686-pc-win32 -filetype=obj | llvm-readobj --symbols - | FileCheck %s --check-prefix=READOBJ
+; RUN: llc -mtriple=i686-pc-win32 -x86-asm-syntax=intel %s -o - | llvm-mc -triple i686-pc-win32 -filetype=obj | llvm-readobj --symbols - | FileCheck %s --check-prefix=READOBJ
 
 
 @"\01??__E_Generic_object@?$_Error_objects@H@std@@YAXXZ" = global i32 0

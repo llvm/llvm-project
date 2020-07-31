@@ -123,6 +123,7 @@ public:
   }
   void Analyze(const parser::Variable &);
   void Analyze(const parser::ActualArgSpec &, bool isSubroutine);
+  void ConvertBOZ(std::size_t i, std::optional<DynamicType> otherType);
 
   bool IsIntrinsicRelational(RelationalOperator) const;
   bool IsIntrinsicLogical() const;
@@ -141,6 +142,7 @@ public:
   // Find and return a user-defined assignment
   std::optional<ProcedureRef> TryDefinedAssignment();
   std::optional<ProcedureRef> GetDefinedAssignmentProc();
+  std::optional<DynamicType> GetType(std::size_t) const;
   void Dump(llvm::raw_ostream &);
 
 private:
@@ -153,7 +155,6 @@ private:
   void AddAssignmentConversion(
       const DynamicType &lhsType, const DynamicType &rhsType);
   bool OkLogicalIntegerAssignment(TypeCategory lhs, TypeCategory rhs);
-  std::optional<DynamicType> GetType(std::size_t) const;
   int GetRank(std::size_t) const;
   bool IsBOZLiteral(std::size_t i) const {
     return std::holds_alternative<BOZLiteralConstant>(GetExpr(i).u);
@@ -1159,8 +1160,12 @@ public:
   template <typename T> Result Test() {
     if (type_ && type_->category() == T::category) {
       if constexpr (T::category == TypeCategory::Derived) {
-        return AsMaybeExpr(ArrayConstructor<T>{
-            type_->GetDerivedTypeSpec(), MakeSpecific<T>(std::move(values_))});
+        if (type_->IsUnlimitedPolymorphic()) {
+          return std::nullopt;
+        } else {
+          return AsMaybeExpr(ArrayConstructor<T>{type_->GetDerivedTypeSpec(),
+              MakeSpecific<T>(std::move(values_))});
+        }
       } else if (type_->kind() == T::kind) {
         if constexpr (T::category == TypeCategory::Character) {
           if (auto len{type_->LEN()}) {
@@ -1295,6 +1300,13 @@ void ArrayConstructorContext::Add(const parser::AcValue &x) {
             auto restorer{exprAnalyzer_.GetContextualMessages().SetLocation(
                 expr.value().source)};
             if (MaybeExpr v{exprAnalyzer_.Analyze(expr.value())}) {
+              if (auto exprType{v->GetType()}) {
+                if (exprType->IsUnlimitedPolymorphic()) {
+                  exprAnalyzer_.Say(
+                      "Cannot have an unlimited polymorphic value in an "
+                      "array constructor"_err_en_US);
+                }
+              }
               Push(std::move(*v));
             }
           },
@@ -2326,12 +2338,16 @@ MaybeExpr RelationHelper(ExpressionAnalyzer &context, RelationalOperator opr,
   analyzer.Analyze(std::get<1>(x.t));
   if (analyzer.fatalErrors()) {
     return std::nullopt;
-  } else if (analyzer.IsIntrinsicRelational(opr)) {
-    return AsMaybeExpr(Relate(context.GetContextualMessages(), opr,
-        analyzer.MoveExpr(0), analyzer.MoveExpr(1)));
   } else {
-    return analyzer.TryDefinedOp(opr,
-        "Operands of %s must have comparable types; have %s and %s"_err_en_US);
+    analyzer.ConvertBOZ(0, analyzer.GetType(1));
+    analyzer.ConvertBOZ(1, analyzer.GetType(0));
+    if (analyzer.IsIntrinsicRelational(opr)) {
+      return AsMaybeExpr(Relate(context.GetContextualMessages(), opr,
+          analyzer.MoveExpr(0), analyzer.MoveExpr(1)));
+    } else {
+      return analyzer.TryDefinedOp(opr,
+          "Operands of %s must have comparable types; have %s and %s"_err_en_US);
+    }
   }
 }
 
@@ -3001,6 +3017,29 @@ std::optional<DynamicType> ArgumentAnalyzer::GetType(std::size_t i) const {
 }
 int ArgumentAnalyzer::GetRank(std::size_t i) const {
   return i < actuals_.size() ? actuals_[i].value().Rank() : 0;
+}
+
+// If the argument at index i is a BOZ literal, convert its type to match the
+// otherType.  It it's REAL convert to REAL, otherwise convert to INTEGER.
+// Note that IBM supports comparing BOZ literals to CHARACTER operands.  That
+// is not currently supported.
+void ArgumentAnalyzer::ConvertBOZ(
+    std::size_t i, std::optional<DynamicType> otherType) {
+  if (IsBOZLiteral(i)) {
+    Expr<SomeType> &&argExpr{MoveExpr(i)};
+    auto *boz{std::get_if<BOZLiteralConstant>(&argExpr.u)};
+    if (otherType && otherType->category() == TypeCategory::Real) {
+      MaybeExpr realExpr{ConvertToKind<TypeCategory::Real>(
+          context_.context().GetDefaultKind(TypeCategory::Real),
+          std::move(*boz))};
+      actuals_[i] = std::move(*realExpr);
+    } else {
+      MaybeExpr intExpr{ConvertToKind<TypeCategory::Integer>(
+          context_.context().GetDefaultKind(TypeCategory::Integer),
+          std::move(*boz))};
+      actuals_[i] = std::move(*intExpr);
+    }
+  }
 }
 
 // Report error resolving opr when there is a user-defined one available

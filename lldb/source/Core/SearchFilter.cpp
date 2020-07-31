@@ -89,7 +89,7 @@ SearchFilterSP SearchFilter::CreateFromStructuredData(
   bool success = filter_dict.GetValueForKeyAsString(
       GetSerializationSubclassKey(), subclass_name);
   if (!success) {
-    error.SetErrorStringWithFormat("Filter data missing subclass key");
+    error.SetErrorString("Filter data missing subclass key");
     return result_sp;
   }
 

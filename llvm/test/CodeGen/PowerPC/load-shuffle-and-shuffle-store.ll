@@ -132,8 +132,8 @@ define <4 x i32> @load_swap11(<4 x i32>* %vp1, <4 x i32>* %vp2) {
 ; CHECK-P9-BE-LABEL: load_swap11:
 ; CHECK-P9-BE:       # %bb.0:
 ; CHECK-P9-BE-NEXT:    addis r3, r2, .LCPI3_0@toc@ha
-; CHECK-P9-BE-NEXT:    addi r3, r3, .LCPI3_0@toc@l
 ; CHECK-P9-BE-NEXT:    lxv v2, 0(r4)
+; CHECK-P9-BE-NEXT:    addi r3, r3, .LCPI3_0@toc@l
 ; CHECK-P9-BE-NEXT:    lxvx v3, 0, r3
 ; CHECK-P9-BE-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P9-BE-NEXT:    blr
@@ -208,8 +208,8 @@ define <8 x i16> @load_swap21(<8 x i16>* %vp1, <8 x i16>* %vp2){
 ; CHECK-P9-BE-LABEL: load_swap21:
 ; CHECK-P9-BE:       # %bb.0:
 ; CHECK-P9-BE-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
-; CHECK-P9-BE-NEXT:    addi r3, r3, .LCPI5_0@toc@l
 ; CHECK-P9-BE-NEXT:    lxv v2, 0(r4)
+; CHECK-P9-BE-NEXT:    addi r3, r3, .LCPI5_0@toc@l
 ; CHECK-P9-BE-NEXT:    lxvx v3, 0, r3
 ; CHECK-P9-BE-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P9-BE-NEXT:    blr
@@ -382,8 +382,8 @@ define <4 x float> @load_swap51(<4 x float>* %vp1, <4 x float>* %vp2) {
 ; CHECK-P9-BE-LABEL: load_swap51:
 ; CHECK-P9-BE:       # %bb.0:
 ; CHECK-P9-BE-NEXT:    addis r3, r2, .LCPI10_0@toc@ha
-; CHECK-P9-BE-NEXT:    addi r3, r3, .LCPI10_0@toc@l
 ; CHECK-P9-BE-NEXT:    lxv v2, 0(r4)
+; CHECK-P9-BE-NEXT:    addi r3, r3, .LCPI10_0@toc@l
 ; CHECK-P9-BE-NEXT:    lxvx v3, 0, r3
 ; CHECK-P9-BE-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P9-BE-NEXT:    blr

@@ -104,7 +104,50 @@ def Shape_ValueShapeType : DialectType<ShapeDialect,
   }];
 }
 
-def Shape_ShapeOrSizeType: AnyTypeOf<[Shape_SizeType, Shape_ShapeType],
+def Shape_ExtentTensorType :
+    1DTensorOf<[Index]>,
+    BuildableType<"::mlir::RankedTensorType::get({ShapedType::kDynamicSize}, "
+                  "$_builder.getType<::mlir::IndexType>())"> {
+  let typeDescription = [{
+    The extent tensor is a tensor of rank one with arbitrarily many index
+    elements. Like `!shape.shape`, it is used to represent shapes with the
+    difference that it is guaranteed to be error-free.
+  }];
+}
+
+def Shape_ShapeOrSizeType : AnyTypeOf<[Shape_SizeType, Shape_ShapeType],
   "shape or size">;
+
+def Shape_ShapeOrExtentTensorType : AnyTypeOf<[Shape_ShapeType,
+                                               Shape_ExtentTensorType],
+                                              "shape or extent tensor">;
+
+def Shape_SizeOrIndexType : AnyTypeOf<[Shape_SizeType, Index], "size or index">;
+
+def Shape_WitnessType : DialectType<ShapeDialect,
+    CPred<"$_self.isa<::mlir::shape::WitnessType>()">, "witness">,
+    BuildableType<"$_builder.getType<::mlir::shape::WitnessType>()"> {
+  let typeDescription = [{
+    A witness is a structural device in the compiler to maintain ordering of
+    code relying on information obtained from passing assertions. Witnesses do
+    not represent any physical data.
+
+    "cstr_" operations will return witnesses and be lowered into assertion logic
+    when not resolvable at compile time.
+
+    "assuming_" operations will take witnesses as input and represent only
+    information to the compiler, so they do not exist in executing code. Code
+    that is dependent on "assuming_" operations can assume all cstr operations
+    transitively before are honored as true.
+
+    These abstractions are intended to allow the compiler more freedom with
+    assertions by merely showing the assertion through dataflow at this time
+    rather than a side effecting operation that acts as a barrier. This can be
+    viewed similarly to a compiler representation of promises from asynchronous,
+    possibly crashing assertions. Reliant code will not be reordered to before
+    the code and non-reliant code can be reordered freely, and there are no
+    guarantees on the final ordering of the assertions or their related code.
+  }];
+}
 
 #endif // SHAPE_BASE_TD

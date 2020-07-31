@@ -54,7 +54,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "falkor-hwpf-fix"
+#define DEBUG_TYPE "aarch64-falkor-hwpf-fix"
 
 STATISTIC(NumStridedLoadsMarked, "Number of strided loads marked");
 STATISTIC(NumCollisionsAvoided,
@@ -224,10 +224,10 @@ struct LoadInfo {
 
 char FalkorHWPFFix::ID = 0;
 
-INITIALIZE_PASS_BEGIN(FalkorHWPFFix, "falkor-hwpf-fix-late",
+INITIALIZE_PASS_BEGIN(FalkorHWPFFix, "aarch64-falkor-hwpf-fix-late",
                       "Falkor HW Prefetch Fix Late Phase", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_END(FalkorHWPFFix, "falkor-hwpf-fix-late",
+INITIALIZE_PASS_END(FalkorHWPFFix, "aarch64-falkor-hwpf-fix-late",
                     "Falkor HW Prefetch Fix Late Phase", false, false)
 
 static unsigned makeTag(unsigned Dest, unsigned Base, unsigned Offset) {

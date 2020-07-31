@@ -251,6 +251,7 @@ public:
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
   std::string getAsString(bool InAttrGrp) const;
   Type *getByValType() const;
+  Type *getByRefType() const;
   Type *getPreallocatedType() const;
 
   using iterator = const Attribute *;

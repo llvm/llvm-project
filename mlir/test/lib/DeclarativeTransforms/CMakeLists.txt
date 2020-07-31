@@ -1,3 +1,0 @@
-set(LLVM_TARGET_DEFINITIONS TestVectorTransformPatterns.td)
-mlir_tablegen(TestVectorTransformPatterns.h.inc -gen-rewriters)
-add_public_tablegen_target(MLIRTestVectorTransformPatternsIncGen)

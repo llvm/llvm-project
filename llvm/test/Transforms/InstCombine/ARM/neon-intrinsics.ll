@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -instcombine -mtriple=arm -S | FileCheck %s
 
 ; The alignment arguments for NEON load/store intrinsics can be increased
 ; by instcombine.  Check for this.

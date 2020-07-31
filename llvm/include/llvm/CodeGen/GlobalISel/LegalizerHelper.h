@@ -163,6 +163,8 @@ private:
   widenScalarExtract(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
   LegalizeResult
   widenScalarInsert(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
+  LegalizeResult widenScalarAddSubSat(MachineInstr &MI, unsigned TypeIdx,
+                                      LLT WideTy);
 
   /// Helper function to split a wide generic register into bitwise blocks with
   /// the given Type (which implies the number of blocks needed). The generic
@@ -226,7 +228,23 @@ private:
                          ArrayRef<Register> Src1Regs,
                          ArrayRef<Register> Src2Regs, LLT NarrowTy);
 
+  void changeOpcode(MachineInstr &MI, unsigned NewOpcode);
+
 public:
+  /// Return the alignment to use for a stack temporary object with the given
+  /// type.
+  Align getStackTemporaryAlignment(LLT Type, Align MinAlign = Align()) const;
+
+  /// Create a stack temporary based on the size in bytes and the alignment
+  MachineInstrBuilder createStackTemporary(TypeSize Bytes, Align Alignment,
+                                           MachinePointerInfo &PtrInfo);
+
+  /// Get a pointer to vector element \p Index located in memory for a vector of
+  /// type \p VecTy starting at a base address of \p VecPtr. If \p Index is out
+  /// of bounds the returned pointer is unspecified, but will be within the
+  /// vector bounds.
+  Register getVectorElementPointer(Register VecPtr, LLT VecTy, Register Index);
+
   LegalizeResult fewerElementsVectorImplicitDef(MachineInstr &MI,
                                                 unsigned TypeIdx, LLT NarrowTy);
 
@@ -300,6 +318,7 @@ public:
 
   LegalizeResult lowerFPTRUNC_F64_TO_F16(MachineInstr &MI);
   LegalizeResult lowerFPTRUNC(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LegalizeResult lowerFPOWI(MachineInstr &MI);
 
   LegalizeResult lowerMinMax(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult lowerFCopySign(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
@@ -309,11 +328,14 @@ public:
   LegalizeResult lowerFFloor(MachineInstr &MI);
   LegalizeResult lowerMergeValues(MachineInstr &MI);
   LegalizeResult lowerUnmergeValues(MachineInstr &MI);
+  LegalizeResult lowerExtractVectorElt(MachineInstr &MI);
   LegalizeResult lowerShuffleVector(MachineInstr &MI);
   LegalizeResult lowerDynStackAlloc(MachineInstr &MI);
   LegalizeResult lowerExtract(MachineInstr &MI);
   LegalizeResult lowerInsert(MachineInstr &MI);
   LegalizeResult lowerSADDO_SSUBO(MachineInstr &MI);
+  LegalizeResult lowerAddSubSatToMinMax(MachineInstr &MI);
+  LegalizeResult lowerAddSubSatToAddoSubo(MachineInstr &MI);
   LegalizeResult lowerBswap(MachineInstr &MI);
   LegalizeResult lowerBitreverse(MachineInstr &MI);
   LegalizeResult lowerReadWriteRegister(MachineInstr &MI);

@@ -18,7 +18,7 @@ include "mlir/IR/OpAsmInterface.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/Interfaces/VectorUnrollInterface.td"
+include "mlir/Interfaces/VectorInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
 def StandardOps_Dialect : Dialect {
@@ -379,7 +379,7 @@ def AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource> {
     operands. For example:
 
     ```mlir
-		%0 = alloca() : memref<8x64xf32>
+    %0 = alloca() : memref<8x64xf32>
     ```
 
     The optional list of dimension operands are bound to the dynamic dimensions
@@ -387,7 +387,7 @@ def AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource> {
     bound to the second dimension of the memref (which is dynamic).
 
     ```mlir
-		%0 = alloca(%d) : memref<8x?xf32>
+    %0 = alloca(%d) : memref<8x?xf32>
     ```
 
     The optional list of symbol operands are bound to the symbols of the
@@ -395,7 +395,7 @@ def AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource> {
     the symbol 's0' in the affine map specified in the allocs memref type.
 
     ```mlir
-		%0 = alloca()[%s] : memref<8x64xf32,
+    %0 = alloca()[%s] : memref<8x64xf32,
                                affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>>
     ```
 
@@ -439,6 +439,35 @@ def AndOp : IntArithmeticOp<"and", [Commutative]> {
     ```
   }];
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AssertOp
+//===----------------------------------------------------------------------===//
+
+def AssertOp : Std_Op<"assert"> {
+  let summary = "Assert operation with message attribute";
+  let description = [{
+    Assert operation with single boolean operand and an error message attribute.
+    If the argument is `true` this operation has no effect. Otherwise, the
+    program execution will abort. The provided error message may be used by a
+    runtime to propagate the error to the user.
+
+    Example:
+
+    ```mlir
+    assert %b, "Expected ... to be true"
+    ```
+  }];
+
+  let arguments = (ins I1:$arg, StrAttr:$msg);
+
+  let assemblyFormat = "$arg `,` $msg attr-dict";
+
+  // AssertOp is fully verified by its traits.
+  let verifier = ?;
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -553,7 +582,7 @@ def GenericAtomicRMWOp : Std_Op<"generic_atomic_rmw", [
   let extraClassDeclaration = [{
     // The value stored in memref[ivs].
     Value getCurrentValue() {
-      return body().front().getArgument(0);
+      return body().getArgument(0);
     }
     MemRefType getMemRefType() {
       return memref().getType().cast<MemRefType>();
@@ -1380,7 +1409,7 @@ def DimOp : Std_Op<"dim", [NoSideEffect]> {
     ```
   }];
 
-  let arguments = (ins AnyTypeOf<[AnyMemRef, AnyTensor],
+  let arguments = (ins AnyTypeOf<[AnyRankedOrUnrankedMemRef, AnyTensor],
                                  "any tensor or memref type">:$memrefOrTensor,
                        Index:$index);
   let results = (outs Index:$result);
@@ -1671,7 +1700,7 @@ def LoadOp : Std_Op<"load",
 
     In an `affine.if` or `affine.for` body, the indices of a load are restricted
     to SSA values bound to surrounding loop induction variables,
-    [symbols](../Affine.md#dimensions-and-symbols), results of a
+    [symbols](Affine.md#dimensions-and-symbols), results of a
     [`constant` operation](#stdconstant-constantop), or the result of an
     `affine.apply` operation that can in turn take as arguments all of the
     aforementioned SSA values or the recursively result of such an
@@ -1995,16 +2024,18 @@ def PrefetchOp : Std_Op<"prefetch"> {
 def RankOp : Std_Op<"rank", [NoSideEffect]> {
   let summary = "rank operation";
   let description = [{
-    The `rank` operation takes a tensor operand and returns its rank.
+    The `rank` operation takes a memref/tensor operand and returns its rank.
 
     Example:
 
     ```mlir
-    %1 = rank %0 : tensor<*xf32>
+    %1 = rank %arg0 : tensor<*xf32>
+    %2 = rank %arg1 : memref<*xf32>
     ```
   }];
 
-  let arguments = (ins AnyTensor);
+  let arguments = (ins AnyTypeOf<[AnyRankedOrUnrankedMemRef, AnyTensor],
+                                 "any tensor or memref type">:$memrefOrTensor);
   let results = (outs Index);
   let verifier = ?;
 
@@ -2015,7 +2046,7 @@ def RankOp : Std_Op<"rank", [NoSideEffect]> {
     }]>];
 
   let hasFolder = 1;
-  let assemblyFormat = "operands attr-dict `:` type(operands)";
+  let assemblyFormat = "$memrefOrTensor attr-dict `:` type($memrefOrTensor)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2538,15 +2569,16 @@ def SubViewOp : Std_Op<"subview", [
     the operation's offsets, sizes and strides arguments.
 
     The SubView operation supports the following arguments:
-    *) Memref: the "base" memref on which to create a "view" memref.
-    *) Offsets: memref-rank number of dynamic offsets or static integer
-                attributes into the "base" memref at which to create the "view"
-                memref.
-    *) Sizes: memref-rank number of dynamic sizes or static integer attributes
-              which specify the sizes of the result "view" memref type.
-    *) Strides: memref-rank number of dynamic strides or static integer
-                attributes multiplicatively to the base memref strides in each
-                dimension.
+
+    * Memref: the "base" memref on which to create a "view" memref.
+    * Offsets: memref-rank number of dynamic offsets or static integer
+               attributes into the "base" memref at which to create the "view"
+               memref.
+    * Sizes: memref-rank number of dynamic sizes or static integer attributes
+             which specify the sizes of the result "view" memref type.
+    * Strides: memref-rank number of dynamic strides or static integer
+               attributes multiplicatively to the base memref strides in each
+               dimension.
 
     Example 1:
 
@@ -3100,21 +3132,23 @@ def ViewOp : Std_Op<"view", [
     The "view" operation extracts an N-D contiguous memref with empty layout map
     with arbitrary element type from a 1-D contiguous memref with empty layout
     map of i8 element  type. The ViewOp supports the following arguments:
-    *) A single dynamic byte-shift operand must be specified which represents a
-       a shift of the base 1-D memref pointer from which to create the resulting
-       contiguous memref view with identity layout.
-    *) A dynamic size operand that must be specified for each dynamic dimension
-       in the resulting view memref type.
+
+    * A single dynamic byte-shift operand must be specified which represents a
+      a shift of the base 1-D memref pointer from which to create the resulting
+      contiguous memref view with identity layout.
+    * A dynamic size operand that must be specified for each dynamic dimension
+      in the resulting view memref type.
 
     The "view" operation gives a structured indexing form to a flat 1-D buffer.
     Unlike "subview" it can perform a type change. The type change behavior
     requires the op to have special semantics because, e.g. a byte shift of 3
     cannot be represented as an offset on f64.
     For now, a "view" op:
-      1) Only takes a contiguous source memref with 0 offset and empty layout.
-      2) Must specify a byte_shift operand (in the future, a special integer
-      attribute may be added to support the folded case).
-      3) Returns a contiguous memref with 0 offset and empty layout.
+
+    1. Only takes a contiguous source memref with 0 offset and empty layout.
+    2. Must specify a byte_shift operand (in the future, a special integer
+       attribute may be added to support the folded case).
+    3. Returns a contiguous memref with 0 offset and empty layout.
 
     Example:
 

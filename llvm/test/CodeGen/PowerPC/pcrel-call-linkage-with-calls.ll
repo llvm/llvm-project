@@ -1,5 +1,8 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=future -ppc-asm-full-reg-names < %s \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names < %s \
+; RUN:   | FileCheck %s --check-prefixes=CHECK-S,CHECK-ALL
+; RUN: llc -verify-machineinstrs -target-abi=elfv2 -mtriple=powerpc64-- \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names < %s \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK-S,CHECK-ALL
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr9 -ppc-asm-full-reg-names < %s \
@@ -64,6 +67,8 @@ define dso_local signext i32 @DirectCallLocal2(i32 signext %a, i32 signext %b) l
 ; CHECK-S-NEXT:    extsw r3, r3
 ; CHECK-S-NEXT:    bl localCall@notoc
 ; CHECK-S-NEXT:    pld r4, externGlobalVar@got@pcrel(0), 1
+; CHECK-S-NEXT: .Lpcrel:
+; CHECK-S-NEXT:    .reloc .Lpcrel-8,R_PPC64_PCREL_OPT,.-(.Lpcrel-8)
 ; CHECK-S-NEXT:    lwz r4, 0(r4)
 ; CHECK-S-NEXT:    mullw r3, r4, r3
 ; CHECK-S-NEXT:    extsw r3, r3
@@ -147,6 +152,8 @@ define dso_local signext i32 @DirectCallExtern2(i32 signext %a, i32 signext %b) 
 ; CHECK-S-NEXT:    extsw r3, r3
 ; CHECK-S-NEXT:    bl externCall@notoc
 ; CHECK-S-NEXT:    pld r4, externGlobalVar@got@pcrel(0), 1
+; CHECK-S-NEXT:  .Lpcrel0:
+; CHECK-S-NEXT:    .reloc .Lpcrel0-8,R_PPC64_PCREL_OPT,.-(.Lpcrel0-8)
 ; CHECK-S-NEXT:    lwz r4, 0(r4)
 ; CHECK-S-NEXT:    mullw r3, r4, r3
 ; CHECK-S-NEXT:    extsw r3, r3
@@ -209,6 +216,8 @@ define dso_local signext i32 @TailCallLocal2(i32 signext %a) local_unnamed_addr 
 ; CHECK-S:         .localentry     TailCallLocal2
 ; CHECK-S:       # %bb.0: # %entry
 ; CHECK-S:         pld r4, externGlobalVar@got@pcrel(0), 1
+; CHECK-S-NEXT:  .Lpcrel1:
+; CHECK-S-NEXT:    .reloc .Lpcrel1-8,R_PPC64_PCREL_OPT,.-(.Lpcrel1-8)
 ; CHECK-S-NEXT:    lwz r4, 0(r4)
 ; CHECK-S-NEXT:    add r3, r4, r3
 ; CHECK-S-NEXT:    extsw r3, r3
@@ -251,6 +260,8 @@ define dso_local signext i32 @TailCallExtern2(i32 signext %a) local_unnamed_addr
 ; CHECK-S:         .localentry     TailCallExtern2
 ; CHECK-S:       # %bb.0: # %entry
 ; CHECK-S:         pld r4, externGlobalVar@got@pcrel(0), 1
+; CHECK-S-NEXT:  .Lpcrel2:
+; CHECK-S-NEXT:    .reloc .Lpcrel2-8,R_PPC64_PCREL_OPT,.-(.Lpcrel2-8)
 ; CHECK-S-NEXT:    lwz r4, 0(r4)
 ; CHECK-S-NEXT:    add r3, r4, r3
 ; CHECK-S-NEXT:    extsw r3, r3
@@ -316,6 +327,8 @@ define dso_local signext i32 @IndirectCall2(i32 signext %a, i32 signext %b) loca
 ; CHECK-S-NEXT:    mtctr r12
 ; CHECK-S-NEXT:    bctrl
 ; CHECK-S-NEXT:    pld r4, externGlobalVar@got@pcrel(0), 1
+; CHECK-S-NEXT:  .Lpcrel3:
+; CHECK-S-NEXT:    .reloc .Lpcrel3-8,R_PPC64_PCREL_OPT,.-(.Lpcrel3-8)
 ; CHECK-S-NEXT:    lwz r4, 0(r4)
 ; CHECK-S-NEXT:    mullw r3, r4, r3
 ; CHECK-S-NEXT:    extsw r3, r3

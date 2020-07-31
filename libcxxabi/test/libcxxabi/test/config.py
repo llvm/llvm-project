@@ -83,6 +83,3 @@ class Configuration(LibcxxConfiguration):
                 self.lit_config.fatal("libunwind_headers='%s' is not a directory."
                                       % libunwind_headers)
             self.cxx.compile_flags += ['-I' + libunwind_headers]
-
-    def configure_compile_flags_rtti(self):
-        pass

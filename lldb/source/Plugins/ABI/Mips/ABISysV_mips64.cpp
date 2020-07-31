@@ -753,7 +753,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
   const ArchSpec target_arch = target->GetArchitecture();
   ByteOrder target_byte_order = target_arch.GetByteOrder();
   llvm::Optional<uint64_t> byte_size =
-      return_compiler_type.GetByteSize(nullptr);
+      return_compiler_type.GetByteSize(&thread);
   if (!byte_size)
     return return_valobj_sp;
   const uint32_t type_flags = return_compiler_type.GetTypeInfo(nullptr);
@@ -962,7 +962,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
                 return_compiler_type.GetFieldAtIndex(
                     idx, name, &field_bit_offset, nullptr, nullptr);
             llvm::Optional<uint64_t> field_byte_width =
-                field_compiler_type.GetByteSize(nullptr);
+                field_compiler_type.GetByteSize(&thread);
             if (!field_byte_width)
               return return_valobj_sp;
 
@@ -1034,7 +1034,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
         CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex(
             idx, name, &field_bit_offset, nullptr, nullptr);
         llvm::Optional<uint64_t> field_byte_width =
-            field_compiler_type.GetByteSize(nullptr);
+            field_compiler_type.GetByteSize(&thread);
 
         // if we don't know the size of the field (e.g. invalid type), just
         // bail out

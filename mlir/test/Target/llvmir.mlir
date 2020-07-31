@@ -61,7 +61,8 @@ llvm.mlir.global external @external() : !llvm.i32
 
 
 //
-// Declarations of the allocation functions to be linked against.
+// Declarations of the allocation functions to be linked against. These are
+// inserted before other functions in the module.
 //
 
 // CHECK: declare i8* @malloc(i64)
@@ -387,6 +388,17 @@ llvm.func @more_imperfectly_nested_loops() {
   %17 = llvm.add %2, %16 : !llvm.i64
   llvm.br ^bb2(%17 : !llvm.i64)
 ^bb12:	// pred: ^bb2
+  llvm.return
+}
+
+
+//
+// Check that linkage is translated for functions. No need to check all linkage
+// flags since the logic is the same as for globals.
+//
+
+// CHECK: define internal void @func_internal
+llvm.func internal @func_internal() {
   llvm.return
 }
 
@@ -1240,3 +1252,46 @@ llvm.mlir.global internal constant @taker_of_address() : !llvm<"void()*"> {
   %0 = llvm.mlir.addressof @address_taken : !llvm<"void()*">
   llvm.return %0 : !llvm<"void()*">
 }
+
+// -----
+
+// Check that branch weight attributes are exported properly as metadata.
+llvm.func @cond_br_weights(%cond : !llvm.i1, %arg0 : !llvm.i32,  %arg1 : !llvm.i32) -> !llvm.i32 {
+  // CHECK: !prof ![[NODE:[0-9]+]]
+  llvm.cond_br %cond weights(dense<[5, 10]> : vector<2xi32>), ^bb1, ^bb2
+^bb1:  // pred: ^bb0
+  llvm.return %arg0 : !llvm.i32
+^bb2:  // pred: ^bb0
+  llvm.return %arg1 : !llvm.i32
+}
+
+// CHECK: ![[NODE]] = !{!"branch_weights", i32 5, i32 10}
+
+// -----
+
+llvm.func @volatile_store_and_load() {
+  %val = llvm.mlir.constant(5 : i32) : !llvm.i32
+  %size = llvm.mlir.constant(1 : i64) : !llvm.i64
+  %0 = llvm.alloca %size x !llvm.i32 : (!llvm.i64) -> (!llvm<"i32*">)
+  // CHECK: store volatile i32 5, i32* %{{.*}}
+  llvm.store volatile %val, %0 : !llvm<"i32*">
+  // CHECK: %{{.*}} = load volatile i32, i32* %{{.*}}
+  %1 = llvm.load volatile %0: !llvm<"i32*">
+  llvm.return
+}
+
+// -----
+
+// Check that nontemporal attribute is exported as metadata node.
+llvm.func @nontemoral_store_and_load() {
+  %val = llvm.mlir.constant(5 : i32) : !llvm.i32
+  %size = llvm.mlir.constant(1 : i64) : !llvm.i64
+  %0 = llvm.alloca %size x !llvm.i32 : (!llvm.i64) -> (!llvm<"i32*">)
+  // CHECK: !nontemporal ![[NODE:[0-9]+]]
+  llvm.store %val, %0 {nontemporal} : !llvm<"i32*">
+  // CHECK: !nontemporal ![[NODE]]
+  %1 = llvm.load %0 {nontemporal} : !llvm<"i32*">
+  llvm.return
+}
+
+// CHECK: ![[NODE]] = !{i32 1}

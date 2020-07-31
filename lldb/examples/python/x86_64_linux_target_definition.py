@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #===-- x86_64_linux_target_definition.py -----------------------------*- C++ -*-===//
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.

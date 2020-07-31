@@ -39,9 +39,6 @@ PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
     if (!PI.runBeforePass<Loop>(*Pass, L))
       continue;
 
-    if (DebugLogging)
-      dbgs() << "Running pass: " << Pass->name() << " on " << L;
-
     PreservedAnalyses PassPA;
     {
       TimeTraceScope TimeScope(Pass->name(), L.getName());

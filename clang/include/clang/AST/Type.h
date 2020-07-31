@@ -480,6 +480,11 @@ public:
            // Otherwise in OpenCLC v2.0 s6.5.5: every address space except
            // for __constant can be used as __generic.
            (A == LangAS::opencl_generic && B != LangAS::opencl_constant) ||
+           // We also define global_device and global_host address spaces,
+           // to distinguish global pointers allocated on host from pointers
+           // allocated on device, which are a subset of __global.
+           (A == LangAS::opencl_global && (B == LangAS::opencl_global_device ||
+                                           B == LangAS::opencl_global_host)) ||
            // Consider pointer size address spaces to be equivalent to default.
            ((isPtrSizeAddressSpace(A) || A == LangAS::Default) &&
             (isPtrSizeAddressSpace(B) || B == LangAS::Default));
@@ -1924,6 +1929,14 @@ public:
   /// or layout.
   bool isSizelessType() const;
   bool isSizelessBuiltinType() const;
+
+  /// Determines if this is a vector-length-specific type (VLST), i.e. a
+  /// sizeless type with the 'arm_sve_vector_bits' attribute applied.
+  bool isVLST() const;
+  /// Determines if this is a sizeless type supported by the
+  /// 'arm_sve_vector_bits' type attribute, which can be applied to a single
+  /// SVE vector or predicate, excluding tuple types such as svint32x4_t.
+  bool isVLSTBuiltinType() const;
 
   /// Types are partitioned into 3 broad categories (C99 6.2.5p1):
   /// object types, function types, and incomplete types.
@@ -4375,11 +4388,7 @@ class TypedefType : public Type {
 protected:
   friend class ASTContext; // ASTContext creates these.
 
-  TypedefType(TypeClass tc, const TypedefNameDecl *D, QualType can)
-      : Type(tc, can, can->getDependence() & ~TypeDependence::UnexpandedPack),
-        Decl(const_cast<TypedefNameDecl *>(D)) {
-    assert(!isa<TypedefType>(can) && "Invalid canonical type");
-  }
+  TypedefType(TypeClass tc, const TypedefNameDecl *D, QualType can);
 
 public:
   TypedefNameDecl *getDecl() const { return Decl; }
@@ -5616,7 +5625,8 @@ class PackExpansionType : public Type, public llvm::FoldingSetNode {
   PackExpansionType(QualType Pattern, QualType Canon,
                     Optional<unsigned> NumExpansions)
       : Type(PackExpansion, Canon,
-             (Pattern->getDependence() | TypeDependence::Instantiation) &
+             (Pattern->getDependence() | TypeDependence::Dependent |
+              TypeDependence::Instantiation) &
                  ~TypeDependence::UnexpandedPack),
         Pattern(Pattern) {
     PackExpansionTypeBits.NumExpansions =
@@ -5637,8 +5647,8 @@ public:
     return None;
   }
 
-  bool isSugared() const { return !Pattern->isDependentType(); }
-  QualType desugar() const { return isSugared() ? Pattern : QualType(this, 0); }
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, getPattern(), getNumExpansions());

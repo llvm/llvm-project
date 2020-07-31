@@ -14,12 +14,12 @@
 #define LLVM_ANALYSIS_VECTORUTILS_H
 
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Support/CheckedArithmetic.h"
 
 namespace llvm {
+class TargetLibraryInfo;
 
 /// Describes the type of Parameters
 enum class VFParamKind {
@@ -224,6 +224,9 @@ class VFDatabase {
   /// a vector Function ABI.
   static void getVFABIMappings(const CallInst &CI,
                                SmallVectorImpl<VFInfo> &Mappings) {
+    if (!CI.getCalledFunction())
+      return;
+
     const StringRef ScalarName = CI.getCalledFunction()->getName();
 
     SmallVector<std::string, 8> ListOfStrings;

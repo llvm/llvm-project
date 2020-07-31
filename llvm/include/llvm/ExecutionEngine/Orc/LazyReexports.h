@@ -40,19 +40,24 @@ public:
   using NotifyResolvedFunction =
       unique_function<Error(JITTargetAddress ResolvedAddr)>;
 
+  LazyCallThroughManager(ExecutionSession &ES,
+                         JITTargetAddress ErrorHandlerAddr, TrampolinePool *TP);
+
   // Return a free call-through trampoline and bind it to look up and call
   // through to the given symbol.
   Expected<JITTargetAddress>
   getCallThroughTrampoline(JITDylib &SourceJD, SymbolStringPtr SymbolName,
                            NotifyResolvedFunction NotifyResolved);
 
+  void resolveTrampolineLandingAddress(
+      JITTargetAddress TrampolineAddr,
+      TrampolinePool::NotifyLandingResolvedFunction NotifyLandingResolved);
+
+  virtual ~LazyCallThroughManager() = default;
+
 protected:
   using NotifyLandingResolvedFunction =
       TrampolinePool::NotifyLandingResolvedFunction;
-
-  LazyCallThroughManager(ExecutionSession &ES,
-                         JITTargetAddress ErrorHandlerAddr,
-                         std::unique_ptr<TrampolinePool> TP);
 
   struct ReexportsEntry {
     JITDylib *SourceJD;
@@ -63,13 +68,7 @@ protected:
   Expected<ReexportsEntry> findReexport(JITTargetAddress TrampolineAddr);
   Error notifyResolved(JITTargetAddress TrampolineAddr,
                        JITTargetAddress ResolvedAddr);
-  void resolveTrampolineLandingAddress(
-      JITTargetAddress TrampolineAddr,
-      NotifyLandingResolvedFunction NotifyLandingResolved);
-
-  void setTrampolinePool(std::unique_ptr<TrampolinePool> TP) {
-    this->TP = std::move(TP);
-  }
+  void setTrampolinePool(TrampolinePool &TP) { this->TP = &TP; }
 
 private:
   using ReexportsMap = std::map<JITTargetAddress, ReexportsEntry>;
@@ -79,7 +78,7 @@ private:
   std::mutex LCTMMutex;
   ExecutionSession &ES;
   JITTargetAddress ErrorHandlerAddr;
-  std::unique_ptr<TrampolinePool> TP;
+  TrampolinePool *TP = nullptr;
   ReexportsMap Reexports;
   NotifiersMap Notifiers;
 };
@@ -105,9 +104,12 @@ private:
     if (!TP)
       return TP.takeError();
 
-    setTrampolinePool(std::move(*TP));
+    this->TP = std::move(*TP);
+    setTrampolinePool(*this->TP);
     return Error::success();
   }
+
+  std::unique_ptr<TrampolinePool> TP;
 
 public:
   /// Create a LocalLazyCallThroughManager using the given ABI. See

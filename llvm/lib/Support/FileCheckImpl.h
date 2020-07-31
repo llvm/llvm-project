@@ -261,6 +261,10 @@ private:
   /// Value of numeric variable, if defined, or None otherwise.
   Optional<ExpressionValue> Value;
 
+  /// The input buffer's string from which Value was parsed, or None.  See
+  /// comments on getStringValue for a discussion of the None case.
+  Optional<StringRef> StrValue;
+
   /// Line number where this variable is defined, or None if defined before
   /// input is parsed. Used to determine whether a variable is defined on the
   /// same line as a given use.
@@ -284,12 +288,28 @@ public:
   /// \returns this variable's value.
   Optional<ExpressionValue> getValue() const { return Value; }
 
-  /// Sets value of this numeric variable to \p NewValue.
-  void setValue(ExpressionValue NewValue) { Value = NewValue; }
+  /// \returns the input buffer's string from which this variable's value was
+  /// parsed, or None if the value is not yet defined or was not parsed from the
+  /// input buffer.  For example, the value of @LINE is not parsed from the
+  /// input buffer, and some numeric variables are parsed from the command
+  /// line instead.
+  Optional<StringRef> getStringValue() const { return StrValue; }
+
+  /// Sets value of this numeric variable to \p NewValue, and sets the input
+  /// buffer string from which it was parsed to \p NewStrValue.  See comments on
+  /// getStringValue for a discussion of when the latter can be None.
+  void setValue(ExpressionValue NewValue,
+                Optional<StringRef> NewStrValue = None) {
+    Value = NewValue;
+    StrValue = NewStrValue;
+  }
 
   /// Clears value of this numeric variable, regardless of whether it is
   /// currently defined or not.
-  void clearValue() { Value = None; }
+  void clearValue() {
+    Value = None;
+    StrValue = None;
+  }
 
   /// \returns the line number where this variable is defined, if any, or None
   /// if defined before input is parsed.
@@ -683,13 +703,16 @@ public:
   /// Prints the value of successful substitutions or the name of the undefined
   /// string or numeric variables preventing a successful substitution.
   void printSubstitutions(const SourceMgr &SM, StringRef Buffer,
-                          SMRange MatchRange = None) const;
+                          SMRange MatchRange, FileCheckDiag::MatchType MatchTy,
+                          std::vector<FileCheckDiag> *Diags) const;
   void printFuzzyMatch(const SourceMgr &SM, StringRef Buffer,
                        std::vector<FileCheckDiag> *Diags) const;
 
   bool hasVariable() const {
     return !(Substitutions.empty() && VariableDefs.empty());
   }
+  void printVariableDefs(const SourceMgr &SM, FileCheckDiag::MatchType MatchTy,
+                         std::vector<FileCheckDiag> *Diags) const;
 
   Check::FileCheckType getCheckTy() const { return CheckTy; }
 

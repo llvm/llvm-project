@@ -113,6 +113,7 @@ class DebugCommunication(object):
         self.initialize_body = None
         self.thread_stop_reasons = {}
         self.breakpoint_events = []
+        self.module_events = {}
         self.sequence = 1
         self.threads = None
         self.recv_thread.start()
@@ -133,6 +134,9 @@ class DebugCommunication(object):
         if command['seq'] != response['request_seq']:
             raise ValueError('seq mismatch in response')
 
+    def get_active_modules(self):
+        return self.module_events
+        
     def get_output(self, category, timeout=0.0, clear=True):
         self.output_condition.acquire()
         output = None
@@ -218,6 +222,15 @@ class DebugCommunication(object):
                 self.breakpoint_events.append(packet)
                 # no need to add 'breakpoint' event packets to our packets list
                 return keepGoing
+            elif event == 'module':
+                reason = body['reason']
+                if (reason == 'new' or reason == 'changed'):
+                    self.module_events[body['module']['name']] = body['module']
+                elif reason == 'removed':
+                    if body['module']['name'] in self.module_events:
+                        self.module_events.pop(body['module']['name'])
+                return keepGoing
+
         elif packet_type == 'response':
             if packet['command'] == 'disconnect':
                 keepGoing = False
@@ -747,6 +760,16 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
+    def request_getCompileUnits(self, moduleId):
+        args_dict = {'moduleId': moduleId}
+        command_dict = {
+            'command': 'getCompileUnits',
+            'type': 'request',
+            'arguments': args_dict
+        }
+        response = self.send_recv(command_dict)
+        return response
+        
     def request_completions(self, text):
         args_dict = {
             'text': text,

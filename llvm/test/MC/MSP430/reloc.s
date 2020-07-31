@@ -21,7 +21,7 @@
 ; CHECK: jmp    foo             ; encoding: [A,0b001111AA]
 ; CHECK:                        ;   fixup A - offset: 0, value: foo, kind: fixup_10_pcrel
 
-; RUN: llvm-mc -filetype=obj -triple msp430 < %s | llvm-readobj -r \
+; RUN: llvm-mc -filetype=obj -triple msp430 < %s | llvm-readobj -r - \
 ; RUN:   | FileCheck -check-prefix=RELOC %s
 .short  _ctype+3
 ; RELOC: R_MSP430_16_BYTE _ctype 0x3

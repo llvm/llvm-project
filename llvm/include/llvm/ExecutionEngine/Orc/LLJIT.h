@@ -29,6 +29,7 @@ namespace orc {
 
 class LLJITBuilderState;
 class LLLazyJITBuilderState;
+class TargetProcessControl;
 
 /// A pre-fabricated ORC JIT stack that can serve as an alternative to MCJIT.
 ///
@@ -272,6 +273,7 @@ public:
   CompileFunctionCreator CreateCompileFunction;
   PlatformSetupFunction SetUpPlatform;
   unsigned NumCompileThreads = 0;
+  TargetProcessControl *TPC = nullptr;
 
   /// Called prior to JIT class construcion to fix up defaults.
   Error prepareForConstruction();
@@ -351,6 +353,17 @@ public:
   /// a zero argument.
   SetterImpl &setNumCompileThreads(unsigned NumCompileThreads) {
     impl().NumCompileThreads = NumCompileThreads;
+    return impl();
+  }
+
+  /// Set a TargetProcessControl object.
+  ///
+  /// If the platform uses ObjectLinkingLayer by default and no
+  /// ObjectLinkingLayerCreator has been set then the TargetProcessControl
+  /// object will be used to supply the memory manager for the
+  /// ObjectLinkingLayer.
+  SetterImpl &setTargetProcessControl(TargetProcessControl &TPC) {
+    impl().TPC = &TPC;
     return impl();
   }
 

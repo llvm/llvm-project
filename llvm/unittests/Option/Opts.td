@@ -5,6 +5,7 @@ def OptFlag2 : OptionFlag;
 def OptFlag3 : OptionFlag;
 
 def A : Flag<["-"], "A">, HelpText<"The A option">, Flags<[OptFlag1]>;
+def AB : Flag<["-"], "AB">;
 def B : Joined<["-"], "B">, HelpText<"The B option">, MetaVarName<"B">, Flags<[OptFlag2]>;
 def C : Separate<["-"], "C">, HelpText<"The C option">, MetaVarName<"C">, Flags<[OptFlag1]>;
 def SLASH_C : Separate<["/", "-"], "C">, HelpText<"The C option">, MetaVarName<"C">, Flags<[OptFlag3]>;

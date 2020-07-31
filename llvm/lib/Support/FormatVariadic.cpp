@@ -91,27 +91,26 @@ formatv_object_base::parseReplacementItem(StringRef Spec) {
 
 std::pair<ReplacementItem, StringRef>
 formatv_object_base::splitLiteralAndReplacement(StringRef Fmt) {
-  std::size_t From = 0;
-  while (From < Fmt.size() && From != StringRef::npos) {
-    std::size_t BO = Fmt.find_first_of('{', From);
+  while (!Fmt.empty()) {
     // Everything up until the first brace is a literal.
-    if (BO != 0)
+    if (Fmt.front() != '{') {
+      std::size_t BO = Fmt.find_first_of('{');
       return std::make_pair(ReplacementItem{Fmt.substr(0, BO)}, Fmt.substr(BO));
+    }
 
-    StringRef Braces =
-        Fmt.drop_front(BO).take_while([](char C) { return C == '{'; });
+    StringRef Braces = Fmt.take_while([](char C) { return C == '{'; });
     // If there is more than one brace, then some of them are escaped.  Treat
     // these as replacements.
     if (Braces.size() > 1) {
       size_t NumEscapedBraces = Braces.size() / 2;
-      StringRef Middle = Fmt.substr(BO, NumEscapedBraces);
-      StringRef Right = Fmt.drop_front(BO + NumEscapedBraces * 2);
+      StringRef Middle = Fmt.take_front(NumEscapedBraces);
+      StringRef Right = Fmt.drop_front(NumEscapedBraces * 2);
       return std::make_pair(ReplacementItem{Middle}, Right);
     }
     // An unterminated open brace is undefined.  We treat the rest of the string
     // as a literal replacement, but we assert to indicate that this is
     // undefined and that we consider it an error.
-    std::size_t BC = Fmt.find_first_of('}', BO);
+    std::size_t BC = Fmt.find_first_of('}');
     if (BC == StringRef::npos) {
       assert(
           false &&
@@ -122,12 +121,12 @@ formatv_object_base::splitLiteralAndReplacement(StringRef Fmt) {
     // Even if there is a closing brace, if there is another open brace before
     // this closing brace, treat this portion as literal, and try again with the
     // next one.
-    std::size_t BO2 = Fmt.find_first_of('{', BO + 1);
+    std::size_t BO2 = Fmt.find_first_of('{', 1);
     if (BO2 < BC)
       return std::make_pair(ReplacementItem{Fmt.substr(0, BO2)},
                             Fmt.substr(BO2));
 
-    StringRef Spec = Fmt.slice(BO + 1, BC);
+    StringRef Spec = Fmt.slice(1, BC);
     StringRef Right = Fmt.substr(BC + 1);
 
     auto RI = parseReplacementItem(Spec);
@@ -136,7 +135,7 @@ formatv_object_base::splitLiteralAndReplacement(StringRef Fmt) {
 
     // If there was an error parsing the replacement item, treat it as an
     // invalid replacement spec, and just continue.
-    From = BC + 1;
+    Fmt = Fmt.drop_front(BC + 1);
   }
   return std::make_pair(ReplacementItem{Fmt}, StringRef());
 }

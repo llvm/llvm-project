@@ -751,14 +751,13 @@ define i1 @y_might_be_poison(float %x, float %y) {
   ret i1 %c3
 }
 
-; Negative tests to ensure we don't remove selects with undef true/false values.
+; FIXME: We shouldn't remove selects with undef true/false values.
 ; See https://bugs.llvm.org/show_bug.cgi?id=31633
 ; https://lists.llvm.org/pipermail/llvm-dev/2016-October/106182.html
 ; https://reviews.llvm.org/D83360
 define i32 @false_undef(i1 %cond, i32 %x) {
 ; CHECK-LABEL: @false_undef(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], i32 [[X:%.*]], i32 undef
-; CHECK-NEXT:    ret i32 [[S]]
+; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
   %s = select i1 %cond, i32 %x, i32 undef
   ret i32 %s
@@ -766,8 +765,7 @@ define i32 @false_undef(i1 %cond, i32 %x) {
 
 define i32 @true_undef(i1 %cond, i32 %x) {
 ; CHECK-LABEL: @true_undef(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], i32 undef, i32 [[X:%.*]]
-; CHECK-NEXT:    ret i32 [[S]]
+; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
   %s = select i1 %cond, i32 undef, i32 %x
   ret i32 %s
@@ -775,8 +773,7 @@ define i32 @true_undef(i1 %cond, i32 %x) {
 
 define <2 x i32> @false_undef_vec(i1 %cond, <2 x i32> %x) {
 ; CHECK-LABEL: @false_undef_vec(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], <2 x i32> [[X:%.*]], <2 x i32> undef
-; CHECK-NEXT:    ret <2 x i32> [[S]]
+; CHECK-NEXT:    ret <2 x i32> [[X:%.*]]
 ;
   %s = select i1 %cond, <2 x i32> %x, <2 x i32> undef
   ret <2 x i32> %s
@@ -784,8 +781,7 @@ define <2 x i32> @false_undef_vec(i1 %cond, <2 x i32> %x) {
 
 define <2 x i32> @true_undef_vec(i1 %cond, <2 x i32> %x) {
 ; CHECK-LABEL: @true_undef_vec(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], <2 x i32> undef, <2 x i32> [[X:%.*]]
-; CHECK-NEXT:    ret <2 x i32> [[S]]
+; CHECK-NEXT:    ret <2 x i32> [[X:%.*]]
 ;
   %s = select i1 %cond, <2 x i32> undef, <2 x i32> %x
   ret <2 x i32> %s
@@ -847,13 +843,12 @@ define i32 @false_undef_false_freeze(i1 %cond, i32 %x) {
 
 @g = external global i32, align 1
 
-; Make sure we don't fold partial undef vectors when constexprs are involved.
+; FIXME: We shouldn't fold partial undef vectors when constexprs are involved.
 ; We would need to prove the constexpr doesn't result in poison which we aren't
 ; equiped to do yet.
 define <2 x i32> @false_undef_true_constextpr_vec(i1 %cond) {
 ; CHECK-LABEL: @false_undef_true_constextpr_vec(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], <2 x i32> <i32 undef, i32 ptrtoint (i32* @g to i32)>, <2 x i32> <i32 ptrtoint (i32* @g to i32), i32 undef>
-; CHECK-NEXT:    ret <2 x i32> [[S]]
+; CHECK-NEXT:    ret <2 x i32> <i32 ptrtoint (i32* @g to i32), i32 ptrtoint (i32* @g to i32)>
 ;
   %s = select i1 %cond, <2 x i32> <i32 undef, i32 ptrtoint (i32* @g to i32)>, <2 x i32> <i32 ptrtoint (i32* @g to i32), i32 undef>
   ret <2 x i32> %s
@@ -891,11 +886,10 @@ define <2 x float> @all_constant_false_undef_vec() {
   ret <2 x float> %s
 }
 
-; Negative tests. Don't fold if the non-undef operand is a constexpr.
+; FIXME: We shouldn't fold if the non-undef operand is a constexpr.
 define i32 @all_constant_false_undef_true_constexpr() {
 ; CHECK-LABEL: @all_constant_false_undef_true_constexpr(
-; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (i32 ()* @all_constant_false_undef_true_constexpr to i1), i32 ptrtoint (i32 ()* @all_constant_false_undef_true_constexpr to i32), i32 undef
-; CHECK-NEXT:    ret i32 [[S]]
+; CHECK-NEXT:    ret i32 ptrtoint (i32 ()* @all_constant_false_undef_true_constexpr to i32)
 ;
   %s = select i1 ptrtoint (i32 ()* @all_constant_false_undef_true_constexpr to i1), i32 ptrtoint (i32 ()* @all_constant_false_undef_true_constexpr to i32), i32 undef
   ret i32 %s
@@ -903,18 +897,16 @@ define i32 @all_constant_false_undef_true_constexpr() {
 
 define i32 @all_constant_true_undef_false_constexpr() {
 ; CHECK-LABEL: @all_constant_true_undef_false_constexpr(
-; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (i32 ()* @all_constant_true_undef_false_constexpr to i1), i32 undef, i32 ptrtoint (i32 ()* @all_constant_true_undef_false_constexpr to i32)
-; CHECK-NEXT:    ret i32 [[S]]
+; CHECK-NEXT:    ret i32 ptrtoint (i32 ()* @all_constant_true_undef_false_constexpr to i32)
 ;
   %s = select i1 ptrtoint (i32 ()* @all_constant_true_undef_false_constexpr to i1), i32 undef, i32 ptrtoint (i32 ()* @all_constant_true_undef_false_constexpr to i32)
   ret i32 %s
 }
 
-; Negative tests. Don't fold if the non-undef operand is a vector containing a constexpr.
+; FIXME: We shouldn't fold if the non-undef operand is a vector containing a constexpr.
 define <2 x i32> @all_constant_false_undef_true_constexpr_vec() {
 ; CHECK-LABEL: @all_constant_false_undef_true_constexpr_vec(
-; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (<2 x i32> ()* @all_constant_false_undef_true_constexpr_vec to i1), <2 x i32> <i32 ptrtoint (<2 x i32> ()* @all_constant_false_undef_true_constexpr_vec to i32), i32 -1>, <2 x i32> undef
-; CHECK-NEXT:    ret <2 x i32> [[S]]
+; CHECK-NEXT:    ret <2 x i32> <i32 ptrtoint (<2 x i32> ()* @all_constant_false_undef_true_constexpr_vec to i32), i32 -1>
 ;
   %s = select i1 ptrtoint (<2 x i32> ()* @all_constant_false_undef_true_constexpr_vec to i1), <2 x i32> <i32 ptrtoint (<2 x i32> ()* @all_constant_false_undef_true_constexpr_vec to i32), i32 -1>, <2 x i32> undef
   ret <2 x i32> %s
@@ -922,8 +914,7 @@ define <2 x i32> @all_constant_false_undef_true_constexpr_vec() {
 
 define <2 x i32> @all_constant_true_undef_false_constexpr_vec() {
 ; CHECK-LABEL: @all_constant_true_undef_false_constexpr_vec(
-; CHECK-NEXT:    [[S:%.*]] = select i1 ptrtoint (<2 x i32> ()* @all_constant_true_undef_false_constexpr_vec to i1), <2 x i32> undef, <2 x i32> <i32 -1, i32 ptrtoint (<2 x i32> ()* @all_constant_true_undef_false_constexpr_vec to i32)>
-; CHECK-NEXT:    ret <2 x i32> [[S]]
+; CHECK-NEXT:    ret <2 x i32> <i32 -1, i32 ptrtoint (<2 x i32> ()* @all_constant_true_undef_false_constexpr_vec to i32)>
 ;
   %s = select i1 ptrtoint (<2 x i32> ()* @all_constant_true_undef_false_constexpr_vec to i1), <2 x i32> undef, <2 x i32><i32 -1, i32 ptrtoint (<2 x i32> ()* @all_constant_true_undef_false_constexpr_vec to i32)>
   ret <2 x i32> %s

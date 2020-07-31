@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux %s -o -| llvm-readobj --symbols | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux %s -o -| llvm-readobj --symbols - | FileCheck %s
 
 
 .globl f1

@@ -137,7 +137,13 @@ static void RawInternalFree(void *ptr, InternalAllocatorCache *cache) {
 
 #endif  // SANITIZER_GO || defined(SANITIZER_USE_MALLOC)
 
+namespace {
 const u64 kBlockMagic = 0x6A6CB03ABCEBC041ull;
+
+struct BlockHeader {
+  u64 magic;
+};
+}  // namespace
 
 static void NORETURN ReportInternalAllocatorOutOfMemory(uptr requested_size) {
   SetAllocatorOutOfMemory();
@@ -147,27 +153,28 @@ static void NORETURN ReportInternalAllocatorOutOfMemory(uptr requested_size) {
 }
 
 void *InternalAlloc(uptr size, InternalAllocatorCache *cache, uptr alignment) {
-  if (size + sizeof(u64) < size)
+  uptr s = size + sizeof(BlockHeader);
+  if (s < size)
     return nullptr;
-  void *p = RawInternalAlloc(size + sizeof(u64), cache, alignment);
+  BlockHeader *p = (BlockHeader *)RawInternalAlloc(s, cache, alignment);
   if (UNLIKELY(!p))
-    ReportInternalAllocatorOutOfMemory(size + sizeof(u64));
-  ((u64*)p)[0] = kBlockMagic;
-  return (char*)p + sizeof(u64);
+    ReportInternalAllocatorOutOfMemory(s);
+  p->magic = kBlockMagic;
+  return p + 1;
 }
 
 void *InternalRealloc(void *addr, uptr size, InternalAllocatorCache *cache) {
   if (!addr)
     return InternalAlloc(size, cache);
-  if (size + sizeof(u64) < size)
+  uptr s = size + sizeof(BlockHeader);
+  if (s < size)
     return nullptr;
-  addr = (char*)addr - sizeof(u64);
-  size = size + sizeof(u64);
-  CHECK_EQ(kBlockMagic, ((u64*)addr)[0]);
-  void *p = RawInternalRealloc(addr, size, cache);
+  BlockHeader *p = (BlockHeader *)addr - 1;
+  CHECK_EQ(kBlockMagic, p->magic);
+  p = (BlockHeader *)RawInternalRealloc(p, s, cache);
   if (UNLIKELY(!p))
-    ReportInternalAllocatorOutOfMemory(size);
-  return (char*)p + sizeof(u64);
+    ReportInternalAllocatorOutOfMemory(s);
+  return p + 1;
 }
 
 void *InternalReallocArray(void *addr, uptr count, uptr size,
@@ -198,10 +205,10 @@ void *InternalCalloc(uptr count, uptr size, InternalAllocatorCache *cache) {
 void InternalFree(void *addr, InternalAllocatorCache *cache) {
   if (!addr)
     return;
-  addr = (char*)addr - sizeof(u64);
-  CHECK_EQ(kBlockMagic, ((u64*)addr)[0]);
-  ((u64*)addr)[0] = 0;
-  RawInternalFree(addr, cache);
+  BlockHeader *p = (BlockHeader *)addr - 1;
+  CHECK_EQ(kBlockMagic, p->magic);
+  p->magic = 0;
+  RawInternalFree(p, cache);
 }
 
 // LowLevelAllocator

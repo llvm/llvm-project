@@ -137,7 +137,6 @@ class UniversalTestCase(TestBase):
             "Our main breakpoint has locations.")
 
         popen = self.spawnSubprocess(exe, ["keep_waiting"])
-        self.addTearDownHook(self.cleanupSubprocesses)
 
         error = lldb.SBError()
         empty_listener = lldb.SBListener()

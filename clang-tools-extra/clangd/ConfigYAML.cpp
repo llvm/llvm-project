@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ConfigFragment.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -63,6 +64,17 @@ private:
       if (auto Values = scalarValues(N))
         F.Add = std::move(*Values);
     });
+    Dict.handle("Remove", [&](Node &N) {
+      if (auto Values = scalarValues(N))
+        F.Remove = std::move(*Values);
+    });
+    Dict.parse(N);
+  }
+
+  void parse(Fragment::IndexBlock &F, Node &N) {
+    DictParser Dict("Index", this);
+    Dict.handle("Background",
+                [&](Node &N) { F.Background = scalarValue(N, "Background"); });
     Dict.parse(N);
   }
 

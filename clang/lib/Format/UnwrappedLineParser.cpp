@@ -472,19 +472,19 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
           // individual members in a type member list, which would normally
           // trigger BK_Block. In both cases, this must be parsed as an inline
           // braced init.
-          Tok->BlockKind = BK_BracedInit;
+          Tok->setBlockKind(BK_BracedInit);
         else if (PrevTok->is(tok::r_paren))
           // `) { }` can only occur in function or method declarations in JS.
-          Tok->BlockKind = BK_Block;
+          Tok->setBlockKind(BK_Block);
       } else {
-        Tok->BlockKind = BK_Unknown;
+        Tok->setBlockKind(BK_Unknown);
       }
       LBraceStack.push_back(Tok);
       break;
     case tok::r_brace:
       if (LBraceStack.empty())
         break;
-      if (LBraceStack.back()->BlockKind == BK_Unknown) {
+      if (LBraceStack.back()->is(BK_Unknown)) {
         bool ProbablyBracedList = false;
         if (Style.Language == FormatStyle::LK_Proto) {
           ProbablyBracedList = NextTok->isOneOf(tok::comma, tok::r_square);
@@ -524,11 +524,11 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
           }
         }
         if (ProbablyBracedList) {
-          Tok->BlockKind = BK_BracedInit;
-          LBraceStack.back()->BlockKind = BK_BracedInit;
+          Tok->setBlockKind(BK_BracedInit);
+          LBraceStack.back()->setBlockKind(BK_BracedInit);
         } else {
-          Tok->BlockKind = BK_Block;
-          LBraceStack.back()->BlockKind = BK_Block;
+          Tok->setBlockKind(BK_Block);
+          LBraceStack.back()->setBlockKind(BK_Block);
         }
       }
       LBraceStack.pop_back();
@@ -545,8 +545,8 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
     case tok::kw_switch:
     case tok::kw_try:
     case tok::kw___try:
-      if (!LBraceStack.empty() && LBraceStack.back()->BlockKind == BK_Unknown)
-        LBraceStack.back()->BlockKind = BK_Block;
+      if (!LBraceStack.empty() && LBraceStack.back()->is(BK_Unknown))
+        LBraceStack.back()->setBlockKind(BK_Block);
       break;
     default:
       break;
@@ -557,8 +557,8 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
 
   // Assume other blocks for all unclosed opening braces.
   for (unsigned i = 0, e = LBraceStack.size(); i != e; ++i) {
-    if (LBraceStack[i]->BlockKind == BK_Unknown)
-      LBraceStack[i]->BlockKind = BK_Block;
+    if (LBraceStack[i]->is(BK_Unknown))
+      LBraceStack[i]->setBlockKind(BK_Block);
   }
 
   FormatTok = Tokens->setPosition(StoredPosition);
@@ -584,7 +584,7 @@ void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, bool AddLevel,
   assert(FormatTok->isOneOf(tok::l_brace, TT_MacroBlockBegin) &&
          "'{' or macro block token expected");
   const bool MacroBlock = FormatTok->is(TT_MacroBlockBegin);
-  FormatTok->BlockKind = BK_Block;
+  FormatTok->setBlockKind(BK_Block);
 
   size_t PPStartHash = computePPHash();
 
@@ -614,7 +614,7 @@ void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, bool AddLevel,
   if (MacroBlock ? !FormatTok->is(TT_MacroBlockEnd)
                  : !FormatTok->is(tok::r_brace)) {
     Line->Level = InitialLevel;
-    FormatTok->BlockKind = BK_Block;
+    FormatTok->setBlockKind(BK_Block);
     return;
   }
 
@@ -690,7 +690,7 @@ static bool ShouldBreakBeforeBrace(const FormatStyle &Style,
 }
 
 void UnwrappedLineParser::parseChildBlock() {
-  FormatTok->BlockKind = BK_Block;
+  FormatTok->setBlockKind(BK_Block);
   nextToken();
   {
     bool SkipIndent = (Style.Language == FormatStyle::LK_JavaScript &&
@@ -1476,7 +1476,7 @@ void UnwrappedLineParser::parseStructuralElement() {
         // C# needs this change to ensure that array initialisers and object
         // initialisers are indented the same way.
         if (Style.isCSharp())
-          FormatTok->BlockKind = BK_BracedInit;
+          FormatTok->setBlockKind(BK_BracedInit);
         nextToken();
         parseBracedList();
       } else if (Style.Language == FormatStyle::LK_Proto &&
@@ -1747,10 +1747,10 @@ void UnwrappedLineParser::tryToParseJSFunction() {
 }
 
 bool UnwrappedLineParser::tryToParseBracedList() {
-  if (FormatTok->BlockKind == BK_Unknown)
+  if (FormatTok->is(BK_Unknown))
     calculateBraceTypes();
-  assert(FormatTok->BlockKind != BK_Unknown);
-  if (FormatTok->BlockKind == BK_Block)
+  assert(FormatTok->isNot(BK_Unknown));
+  if (FormatTok->is(BK_Block))
     return false;
   nextToken();
   parseBracedList();
@@ -1830,7 +1830,7 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
     case tok::l_brace:
       // Assume there are no blocks inside a braced init list apart
       // from the ones we explicitly parse out (like lambdas).
-      FormatTok->BlockKind = BK_BracedInit;
+      FormatTok->setBlockKind(BK_BracedInit);
       nextToken();
       parseBracedList();
       break;
@@ -2318,7 +2318,7 @@ bool UnwrappedLineParser::parseEnum() {
   // Just a declaration or something is wrong.
   if (FormatTok->isNot(tok::l_brace))
     return true;
-  FormatTok->BlockKind = BK_Block;
+  FormatTok->setBlockKind(BK_Block);
 
   if (Style.Language == FormatStyle::LK_Java) {
     // Java enums are different.
@@ -2726,7 +2726,7 @@ void UnwrappedLineParser::parseJavaScriptEs6ImportExport() {
       return;
     }
     if (FormatTok->is(tok::l_brace)) {
-      FormatTok->BlockKind = BK_Block;
+      FormatTok->setBlockKind(BK_Block);
       nextToken();
       parseBracedList();
     } else {

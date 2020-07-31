@@ -354,3 +354,57 @@ ProgramHeaders:
 ## Case 5: an arbitrary large offset that goes past the end of the file.
   - Type:   PT_INTERP
     Offset: 0xAABBCCDDEEFF1122
+
+## Check we report a warning when we are unable to read program headers.
+## Case A: the e_phentsize field is invalid.
+# RUN: yaml2obj --docnum=3 -DPHENTSIZE=1 %s -o %t.phdr.err
+# RUN: llvm-readelf --program-headers %t.phdr.err 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.phdr.err --check-prefix=WARN-PHENTSIZE
+
+# WARN-PHENTSIZE:      Program Headers:
+# WARN-PHENTSIZE-NEXT:   Type Offset VirtAddr PhysAddr FileSiz  MemSiz Flg Align
+# WARN-PHENTSIZE-NEXT: warning: '[[FILE]]': unable to dump program headers: invalid e_phentsize: 1
+# WARN-PHENTSIZE:      Section to Segment mapping:
+# WARN-PHENTSIZE-NEXT:   Segment Sections...
+# WARN-PHENTSIZE-NEXT: warning: '[[FILE]]': can't read program headers to build section to segment mapping: invalid e_phentsize: 1
+
+--- !ELF
+FileHeader:
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  Type:       ET_EXEC
+  Machine:    EM_X86_64
+  EPhEntSize: [[PHENTSIZE=56]]
+  EPhOff:     [[PHOFF=64]]
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+ProgramHeaders:
+  - Type: PT_PHDR
+    Sections:
+      - Section: .foo
+
+## Case B: the value of the e_phoff field is invalid.
+
+## Check that we do not report a warning when the program header table ends right before the end of the file.
+## 0x160 + size of headers (56) == file size.
+# RUN: yaml2obj --docnum=3 -DPHOFF=0x160 %s -o %t.phdr.no.err2
+# RUN: llvm-readelf %t.phdr.no.err2 --program-headers 2>&1 | FileCheck %s --implicit-check-not=warning:
+
+## Check we report a warning when e_phoff goes 1 byte past the end of the file.
+# RUN: yaml2obj --docnum=3 -DPHOFF=0x161 %s -o %t.phdr.err2
+# RUN: llvm-readelf --program-headers %t.phdr.err2 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.phdr.err2 --check-prefix=WARN-PHOFF -DOFF=0x161
+
+# WARN-PHOFF:      Program Headers:
+# WARN-PHOFF-NEXT:   Type Offset VirtAddr PhysAddr FileSiz MemSiz Flg Align
+# WARN-PHOFF-NEXT: warning: '[[FILE]]': unable to dump program headers: program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
+# WARN-PHOFF:      Section to Segment mapping:
+# WARN-PHOFF-NEXT:   Segment Sections...
+# WARN-PHOFF-NEXT: warning: '[[FILE]]': can't read program headers to build section to segment mapping: program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
+
+## Check we report a warning when the value of e_phoff is so large that
+## e_phoff + e_phnum * e_phentsize > UINT64_MAX.
+# RUN: yaml2obj --docnum=3 -DPHOFF=0xffffffffffffffff %s -o %t.phdr.err3
+# RUN: llvm-readelf --program-headers %t.phdr.err3 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.phdr.err3 --check-prefix=WARN-PHOFF -DOFF=0xffffffffffffffff

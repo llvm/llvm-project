@@ -40,6 +40,9 @@ using namespace lld;
 // This function spawns a background thread to remove the file.
 // The calling thread returns almost immediately.
 void lld::unlinkAsync(StringRef path) {
+  if (!sys::fs::exists(path) || !sys::fs::is_regular_file(path))
+    return;
+
 // Removing a file is async on windows.
 #if defined(_WIN32)
   // On Windows co-operative programs can be expected to open LLD's
@@ -71,8 +74,7 @@ void lld::unlinkAsync(StringRef path) {
   }
   sys::fs::remove(path);
 #else
-  if (parallel::strategy.ThreadsRequested == 1 || !sys::fs::exists(path) ||
-      !sys::fs::is_regular_file(path))
+  if (parallel::strategy.ThreadsRequested == 1)
     return;
 
   // We cannot just remove path from a different thread because we are now going

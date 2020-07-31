@@ -24,6 +24,44 @@ static inline T abs(T x) {
   return T(bits);
 }
 
+template <typename T,
+          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
+static inline T fmin(T x, T y) {
+  FPBits<T> bitx(x), bity(y);
+
+  if (bitx.isNaN()) {
+    return y;
+  } else if (bity.isNaN()) {
+    return x;
+  } else if (bitx.sign != bity.sign) {
+    // To make sure that fmin(+0, -0) == -0 == fmin(-0, +0), whenever x and
+    // y has different signs and both are not NaNs, we return the number
+    // with negative sign.
+    return (bitx.sign ? x : y);
+  } else {
+    return (x < y ? x : y);
+  }
+}
+
+template <typename T,
+          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
+static inline T fmax(T x, T y) {
+  FPBits<T> bitx(x), bity(y);
+
+  if (bitx.isNaN()) {
+    return y;
+  } else if (bity.isNaN()) {
+    return x;
+  } else if (bitx.sign != bity.sign) {
+    // To make sure that fmax(+0, -0) == +0 == fmax(-0, +0), whenever x and
+    // y has different signs and both are not NaNs, we return the number
+    // with positive sign.
+    return (bitx.sign ? y : x);
+  } else {
+    return (x > y ? x : y);
+  }
+}
+
 } // namespace fputil
 } // namespace __llvm_libc
 

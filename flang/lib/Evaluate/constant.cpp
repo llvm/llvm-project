@@ -244,19 +244,26 @@ std::size_t Constant<Type<TypeCategory::Character, KIND>>::CopyFrom(
     std::size_t count, ConstantSubscripts &resultSubscripts,
     const std::vector<int> *dimOrder) {
   CHECK(length_ == source.length_);
-  std::size_t copied{0};
-  std::size_t elementBytes{length_ * sizeof(decltype(values_[0]))};
-  ConstantSubscripts sourceSubscripts{source.lbounds()};
-  while (copied < count) {
-    auto *dest{&values_.at(SubscriptsToOffset(resultSubscripts) * length_)};
-    const auto *src{&source.values_.at(
-        source.SubscriptsToOffset(sourceSubscripts) * length_)};
-    std::memcpy(dest, src, elementBytes);
-    copied++;
-    source.IncrementSubscripts(sourceSubscripts);
-    IncrementSubscripts(resultSubscripts, dimOrder);
+  if (length_ == 0) {
+    // It's possible that the array of strings consists of all empty strings.
+    // If so, constant folding will result in a string that's completely empty
+    // and the length_ will be zero, and there's nothing to do.
+    return count;
+  } else {
+    std::size_t copied{0};
+    std::size_t elementBytes{length_ * sizeof(decltype(values_[0]))};
+    ConstantSubscripts sourceSubscripts{source.lbounds()};
+    while (copied < count) {
+      auto *dest{&values_.at(SubscriptsToOffset(resultSubscripts) * length_)};
+      const auto *src{&source.values_.at(
+          source.SubscriptsToOffset(sourceSubscripts) * length_)};
+      std::memcpy(dest, src, elementBytes);
+      copied++;
+      source.IncrementSubscripts(sourceSubscripts);
+      IncrementSubscripts(resultSubscripts, dimOrder);
+    }
+    return copied;
   }
-  return copied;
 }
 
 // Constant<SomeDerived> specialization

@@ -1,7 +1,7 @@
 ; FIXME: convert CHECK-INDIRECT into CHECK (and remove -check-prefixes) as soon
 ; FIXME: as new-pass-manager's handling of indirect_non_convergent_call is fixed
 ;
-; RUN: opt -functionattrs -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-INDIRECT
+; RUN: opt -function-attrs -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK-INDIRECT
 ; RUN: opt -passes=function-attrs -S < %s | FileCheck %s
 
 ; CHECK: Function Attrs

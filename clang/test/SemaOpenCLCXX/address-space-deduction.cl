@@ -5,6 +5,11 @@
 //CHECK: |-VarDecl {{.*}} foo 'const __global int'
 constexpr int foo = 0;
 
+//CHECK: |-VarDecl {{.*}} foo1 'T' cinit
+//CHECK: `-VarTemplateSpecializationDecl {{.*}} used foo1 '__global long':'__global long' cinit
+template <typename T>
+T foo1 = 0;
+
 class c {
 public:
   //CHECK: `-VarDecl {{.*}} foo2 'const __global int'
@@ -30,7 +35,7 @@ struct c2 {
 
 template <class T>
 struct x1 {
-//CHECK: -CXXMethodDecl {{.*}} operator= 'x1<T> &(const x1<T> &__private){{( __attribute__.*)?}} __generic'
+//CHECK: -CXXMethodDecl {{.*}} operator= 'x1<T> &(const x1<T> &){{( __attribute__.*)?}} __generic'
 //CHECK: -CXXMethodDecl {{.*}} operator= '__generic x1<int> &(const __generic x1<int> &__private){{( __attribute__.*)?}} __generic'
   x1<T>& operator=(const x1<T>& xx) {
     y = xx.y;
@@ -41,7 +46,7 @@ struct x1 {
 
 template <class T>
 struct x2 {
-//CHECK: -CXXMethodDecl {{.*}} foo 'void (x1<T> *__private){{( __attribute__.*)?}} __generic'
+//CHECK: -CXXMethodDecl {{.*}} foo 'void (x1<T> *){{( __attribute__.*)?}} __generic'
 //CHECK: -CXXMethodDecl {{.*}} foo 'void (__generic x1<int> *__private){{( __attribute__.*)?}} __generic'
   void foo(x1<T>* xx) {
     m[0] = *xx;
@@ -57,10 +62,10 @@ void bar(__global x1<int> *xx, __global x2<int> *bar) {
 template <typename T>
 class x3 : public T {
 public:
-  //CHECK: -CXXConstructorDecl {{.*}} x3<T> 'void (const x3<T> &__private){{( __attribute__.*)?}} __generic'
+  //CHECK: -CXXConstructorDecl {{.*}} x3<T> 'void (const x3<T> &){{( __attribute__.*)?}} __generic'
   x3(const x3 &t);
 };
-//CHECK: -CXXConstructorDecl {{.*}} x3<T> 'void (const x3<T> &__private){{( __attribute__.*)?}} __generic'
+//CHECK: -CXXConstructorDecl {{.*}} x3<T> 'void (const x3<T> &){{( __attribute__.*)?}} __generic'
 template <typename T>
 x3<T>::x3(const x3<T> &t) {}
 
@@ -68,7 +73,8 @@ template <class T>
 T xxx(T *in1, T in2) {
   // This pointer can't be deduced to generic because addr space
   // will be taken from the template argument.
-  //CHECK: `-VarDecl {{.*}} '__private T *__private' cinit
+  //CHECK: `-VarDecl {{.*}} 'T *' cinit
+  //CHECK: `-VarDecl {{.*}} i '__private int *__private' cinit
   T *i = in1;
   T ii;
   __private T *ptr = &ii;
@@ -111,4 +117,5 @@ __kernel void k() {
   t3(&x);
   t4(&p);
   t5(&p);
+  long f1 = foo1<long>;
 }

@@ -451,8 +451,7 @@ public:
         unsigned DstReg = CP.getDstReg();
         unsigned SrcReg = CP.getSrcReg();
 
-        const float Scale = 1.0f / MBFI.getEntryFreq();
-        PBQP::PBQPNum CBenefit = MBFI.getBlockFreq(&MBB).getFrequency() * Scale;
+        PBQP::PBQPNum CBenefit = MBFI.getBlockFreqRelativeToEntryBlock(&MBB);
 
         if (CP.isPhys()) {
           if (!MF.getRegInfo().isAllocatable(DstReg))

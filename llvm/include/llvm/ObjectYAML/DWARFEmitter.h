@@ -38,9 +38,11 @@ Error emitPubSection(raw_ostream &OS, const PubSection &Sect,
 Error emitDebugInfo(raw_ostream &OS, const Data &DI);
 Error emitDebugLine(raw_ostream &OS, const Data &DI);
 Error emitDebugAddr(raw_ostream &OS, const Data &DI);
+Error emitDebugStrOffsets(raw_ostream &OS, const Data &DI);
+Error emitDebugRnglists(raw_ostream &OS, const Data &DI);
 
 Expected<StringMap<std::unique_ptr<MemoryBuffer>>>
-emitDebugSections(StringRef YAMLString, bool ApplyFixups = false,
+emitDebugSections(StringRef YAMLString,
                   bool IsLittleEndian = sys::IsLittleEndianHost);
 } // end namespace DWARFYAML
 } // end namespace llvm

@@ -858,10 +858,10 @@ private:
   SourceLocation PointersToMembersPragmaLocation;
 
   /// The pragma float_control state.
-  Optional<unsigned> FpPragmaCurrentValue;
+  Optional<FPOptionsOverride::storage_type> FpPragmaCurrentValue;
   SourceLocation FpPragmaCurrentLocation;
   struct FpPragmaStackEntry {
-    unsigned Value;
+    FPOptionsOverride::storage_type Value;
     SourceLocation Location;
     SourceLocation PushLocation;
     StringRef SlotLabel;
@@ -2084,8 +2084,6 @@ public:
   ///
   /// Note: overrides method in ExternalASTSource
   Module *getModule(unsigned ID) override;
-
-  bool DeclIsFromPCHWithObjectFile(const Decl *D) override;
 
   /// Retrieve the module file with a given local ID within the specified
   /// ModuleFile.

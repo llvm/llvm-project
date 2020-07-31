@@ -439,65 +439,61 @@ void RestoreStack(int tid, const u64 epoch, VarSizeStackTrace *stk,
   ExtractTagFromStack(stk, tag);
 }
 
-static bool HandleRacyStacks(ThreadState *thr, VarSizeStackTrace traces[2],
-                             uptr addr_min, uptr addr_max) {
-  bool equal_stack = false;
+static bool FindRacyStacks(const RacyStacks &hash) {
+  for (uptr i = 0; i < ctx->racy_stacks.Size(); i++) {
+    if (hash == ctx->racy_stacks[i]) {
+      VPrintf(2, "ThreadSanitizer: suppressing report as doubled (stack)\n");
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool HandleRacyStacks(ThreadState *thr, VarSizeStackTrace traces[2]) {
+  if (!flags()->suppress_equal_stacks)
+    return false;
   RacyStacks hash;
-  bool equal_address = false;
+  hash.hash[0] = md5_hash(traces[0].trace, traces[0].size * sizeof(uptr));
+  hash.hash[1] = md5_hash(traces[1].trace, traces[1].size * sizeof(uptr));
+  {
+    ReadLock lock(&ctx->racy_mtx);
+    if (FindRacyStacks(hash))
+      return true;
+  }
+  Lock lock(&ctx->racy_mtx);
+  if (FindRacyStacks(hash))
+    return true;
+  ctx->racy_stacks.PushBack(hash);
+  return false;
+}
+
+static bool FindRacyAddress(const RacyAddress &ra0) {
+  for (uptr i = 0; i < ctx->racy_addresses.Size(); i++) {
+    RacyAddress ra2 = ctx->racy_addresses[i];
+    uptr maxbeg = max(ra0.addr_min, ra2.addr_min);
+    uptr minend = min(ra0.addr_max, ra2.addr_max);
+    if (maxbeg < minend) {
+      VPrintf(2, "ThreadSanitizer: suppressing report as doubled (addr)\n");
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool HandleRacyAddress(ThreadState *thr, uptr addr_min, uptr addr_max) {
+  if (!flags()->suppress_equal_addresses)
+    return false;
   RacyAddress ra0 = {addr_min, addr_max};
   {
     ReadLock lock(&ctx->racy_mtx);
-    if (flags()->suppress_equal_stacks) {
-      hash.hash[0] = md5_hash(traces[0].trace, traces[0].size * sizeof(uptr));
-      hash.hash[1] = md5_hash(traces[1].trace, traces[1].size * sizeof(uptr));
-      for (uptr i = 0; i < ctx->racy_stacks.Size(); i++) {
-        if (hash == ctx->racy_stacks[i]) {
-          VPrintf(2,
-              "ThreadSanitizer: suppressing report as doubled (stack)\n");
-          equal_stack = true;
-          break;
-        }
-      }
-    }
-    if (flags()->suppress_equal_addresses) {
-      for (uptr i = 0; i < ctx->racy_addresses.Size(); i++) {
-        RacyAddress ra2 = ctx->racy_addresses[i];
-        uptr maxbeg = max(ra0.addr_min, ra2.addr_min);
-        uptr minend = min(ra0.addr_max, ra2.addr_max);
-        if (maxbeg < minend) {
-          VPrintf(2, "ThreadSanitizer: suppressing report as doubled (addr)\n");
-          equal_address = true;
-          break;
-        }
-      }
-    }
+    if (FindRacyAddress(ra0))
+      return true;
   }
-  if (!equal_stack && !equal_address)
-    return false;
-  if (!equal_stack) {
-    Lock lock(&ctx->racy_mtx);
-    ctx->racy_stacks.PushBack(hash);
-  }
-  if (!equal_address) {
-    Lock lock(&ctx->racy_mtx);
-    ctx->racy_addresses.PushBack(ra0);
-  }
-  return true;
-}
-
-static void AddRacyStacks(ThreadState *thr, VarSizeStackTrace traces[2],
-                          uptr addr_min, uptr addr_max) {
   Lock lock(&ctx->racy_mtx);
-  if (flags()->suppress_equal_stacks) {
-    RacyStacks hash;
-    hash.hash[0] = md5_hash(traces[0].trace, traces[0].size * sizeof(uptr));
-    hash.hash[1] = md5_hash(traces[1].trace, traces[1].size * sizeof(uptr));
-    ctx->racy_stacks.PushBack(hash);
-  }
-  if (flags()->suppress_equal_addresses) {
-    RacyAddress ra0 = {addr_min, addr_max};
-    ctx->racy_addresses.PushBack(ra0);
-  }
+  if (FindRacyAddress(ra0))
+    return true;
+  ctx->racy_addresses.PushBack(ra0);
+  return false;
 }
 
 bool OutputReport(ThreadState *thr, const ScopedReport &srep) {
@@ -618,6 +614,8 @@ void ReportRace(ThreadState *thr) {
     if (IsExpectedReport(addr_min, addr_max - addr_min))
       return;
   }
+  if (HandleRacyAddress(thr, addr_min, addr_max))
+    return;
 
   ReportType typ = ReportTypeRace;
   if (thr->is_vptr_access && freed)
@@ -668,7 +666,7 @@ void ReportRace(ThreadState *thr) {
   if (IsFiredSuppression(ctx, typ, traces[1]))
     return;
 
-  if (HandleRacyStacks(thr, traces, addr_min, addr_max))
+  if (HandleRacyStacks(thr, traces))
     return;
 
   // If any of the accesses has a tag, treat this as an "external" race.
@@ -711,7 +709,6 @@ void ReportRace(ThreadState *thr) {
   if (!OutputReport(thr, rep))
     return;
 
-  AddRacyStacks(thr, traces, addr_min, addr_max);
 }
 
 void PrintCurrentStack(ThreadState *thr, uptr pc) {

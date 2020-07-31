@@ -24,7 +24,10 @@ RegisterContextPOSIXProcessMonitor_arm64::
     RegisterContextPOSIXProcessMonitor_arm64(
         lldb_private::Thread &thread,
         std::unique_ptr<RegisterInfoPOSIX_arm64> register_info)
-    : RegisterContextPOSIX_arm64(thread, std::move(register_info)) {}
+    : RegisterContextPOSIX_arm64(thread, std::move(register_info)) {
+  ::memset(&m_fpr, 0, sizeof m_gpr_arm64);
+  ::memset(&m_fpr, 0, sizeof m_fpr);
+}
 
 ProcessMonitor &RegisterContextPOSIXProcessMonitor_arm64::GetMonitor() {
   lldb::ProcessSP base = CalculateProcess();
@@ -226,11 +229,11 @@ bool RegisterContextPOSIXProcessMonitor_arm64::UpdateAfterBreakpoint() {
 unsigned RegisterContextPOSIXProcessMonitor_arm64::GetRegisterIndexFromOffset(
     unsigned offset) {
   unsigned reg;
-  for (reg = 0; reg < k_num_registers_arm64; reg++) {
+  for (reg = 0; reg < GetRegisterCount(); reg++) {
     if (GetRegisterInfo()[reg].byte_offset == offset)
       break;
   }
-  assert(reg < k_num_registers_arm64 && "Invalid register offset.");
+  assert(reg < GetRegisterCount() && "Invalid register offset.");
   return reg;
 }
 

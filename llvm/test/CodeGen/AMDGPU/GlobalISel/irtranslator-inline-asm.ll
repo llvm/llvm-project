@@ -174,7 +174,7 @@ define amdgpu_kernel void @test_input_vgpr_imm() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
   ; CHECK:   [[COPY:%[0-9]+]]:vgpr_32 = COPY [[C]](s32)
-  ; CHECK:   INLINEASM &"v_mov_b32 v0, $0", 1 /* sideeffect attdialect */, 9 /* reguse */, [[COPY]]
+  ; CHECK:   INLINEASM &"v_mov_b32 v0, $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[COPY]]
   ; CHECK:   S_ENDPGM 0
   call void asm sideeffect "v_mov_b32 v0, $0", "v"(i32 42)
   ret void
@@ -185,7 +185,7 @@ define amdgpu_kernel void @test_input_sgpr_imm() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
   ; CHECK:   [[COPY:%[0-9]+]]:sreg_32 = COPY [[C]](s32)
-  ; CHECK:   INLINEASM &"s_mov_b32 s0, $0", 1 /* sideeffect attdialect */, 9 /* reguse */, [[COPY]]
+  ; CHECK:   INLINEASM &"s_mov_b32 s0, $0", 1 /* sideeffect attdialect */, 1966089 /* reguse:SReg_32 */, [[COPY]]
   ; CHECK:   S_ENDPGM 0
   call void asm sideeffect "s_mov_b32 s0, $0", "s"(i32 42)
   ret void
@@ -209,7 +209,7 @@ define float @test_input_vgpr(i32 %src) nounwind {
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]](s32)
-  ; CHECK:   INLINEASM &"v_add_f32 $0, 1.0, $1", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def %2, 9 /* reguse */, [[COPY2]]
+  ; CHECK:   INLINEASM &"v_add_f32 $0, 1.0, $1", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def %2, 1835017 /* reguse:VGPR_32 */, [[COPY2]]
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY %2
   ; CHECK:   $vgpr0 = COPY [[COPY3]](s32)
   ; CHECK:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY1]]
@@ -264,7 +264,7 @@ define i32 @test_sgpr_matching_constraint() nounwind {
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY %3
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[COPY1]](s32)
   ; CHECK:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[COPY2]](s32)
-  ; CHECK:   INLINEASM &"s_add_u32 $0, $1, $2", 0 /* attdialect */, 1966090 /* regdef:SReg_32 */, def %5, 9 /* reguse */, [[COPY3]], 2147483657 /* reguse tiedto:$0 */, [[COPY4]](tied-def 3)
+  ; CHECK:   INLINEASM &"s_add_u32 $0, $1, $2", 0 /* attdialect */, 1966090 /* regdef:SReg_32 */, def %5, 1966089 /* reguse:SReg_32 */, [[COPY3]], 2147483657 /* reguse tiedto:$0 */, [[COPY4]](tied-def 3)
   ; CHECK:   [[COPY5:%[0-9]+]]:_(s32) = COPY %5
   ; CHECK:   $vgpr0 = COPY [[COPY5]](s32)
   ; CHECK:   [[COPY6:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY]]
@@ -324,6 +324,15 @@ entry:
   %asm0 = tail call i32 asm "s_mov_b32 $0, 7", "=s"() nounwind
   %asm1 = tail call i32 asm "v_mov_b32 $0, $1", "=v,0"(i32 %asm0) nounwind
   ret i32 %asm1
+}
+
+define amdgpu_kernel void @asm_constraint_n_n()  {
+  ; CHECK-LABEL: name: asm_constraint_n_n
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK:   INLINEASM &"s_trap ${0:n}", 1 /* sideeffect attdialect */, 13 /* imm */, 10
+  ; CHECK:   S_ENDPGM 0
+  tail call void asm sideeffect "s_trap ${0:n}", "n"(i32 10) #1
+  ret void
 }
 
 !0 = !{i32 70}

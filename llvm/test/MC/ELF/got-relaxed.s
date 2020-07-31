@@ -1,5 +1,5 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux %s -o - | llvm-readobj -r | FileCheck %s
-// RUN: llvm-mc -filetype=obj -relax-relocations=false -triple x86_64-pc-linux %s -o - | llvm-readobj -r | FileCheck --check-prefix=OLD %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux %s -o - | llvm-readobj -r - | FileCheck %s
+// RUN: llvm-mc -filetype=obj -relax-relocations=false -triple x86_64-pc-linux %s -o - | llvm-readobj -r - | FileCheck --check-prefix=OLD %s
 
 // these should produce R_X86_64_GOTPCRELX
 

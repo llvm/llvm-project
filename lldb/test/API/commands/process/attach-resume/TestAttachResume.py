@@ -33,7 +33,6 @@ class AttachResumeTestCase(TestBase):
         exe = self.getBuildArtifact(exe_name)
 
         popen = self.spawnSubprocess(exe)
-        self.addTearDownHook(self.cleanupSubprocesses)
 
         self.runCmd("process attach -p " + str(popen.pid))
 

@@ -261,7 +261,9 @@ void check_leak_noreturn_2() {
   if (!F1)
     return;
   if (Test == 1) {
-    return; // expected-warning {{Opened stream never closed. Potential resource leak}}
+    return; // no warning
   }
   rewind(F1);
-} // no warning
+} // expected-warning {{Opened stream never closed. Potential resource leak}}
+// FIXME: This warning should be placed at the `return` above.
+// See https://reviews.llvm.org/D83120 about details.

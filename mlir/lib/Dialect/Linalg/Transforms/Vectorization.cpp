@@ -43,18 +43,26 @@ static bool hasMultiplyAddBody(Region &r) {
     return false;
 
   using mlir::matchers::m_Val;
-  auto a = m_Val(r.front().getArgument(0));
-  auto b = m_Val(r.front().getArgument(1));
-  auto c = m_Val(r.front().getArgument(2));
+  auto a = m_Val(r.getArgument(0));
+  auto b = m_Val(r.getArgument(1));
+  auto c = m_Val(r.getArgument(2));
   // TODO: Update this detection once we have  matcher support for specifying
   // that any permutation of operands matches.
   auto pattern1 = m_Op<YieldOp>(m_Op<AddFOp>(m_Op<MulFOp>(a, b), c));
   auto pattern2 = m_Op<YieldOp>(m_Op<AddFOp>(c, m_Op<MulFOp>(a, b)));
   auto pattern3 = m_Op<YieldOp>(m_Op<AddFOp>(m_Op<MulFOp>(b, a), c));
   auto pattern4 = m_Op<YieldOp>(m_Op<AddFOp>(c, m_Op<MulFOp>(b, a)));
+  auto pattern5 = m_Op<YieldOp>(m_Op<AddIOp>(m_Op<MulIOp>(a, b), c));
+  auto pattern6 = m_Op<YieldOp>(m_Op<AddIOp>(c, m_Op<MulIOp>(a, b)));
+  auto pattern7 = m_Op<YieldOp>(m_Op<AddIOp>(m_Op<MulIOp>(b, a), c));
+  auto pattern8 = m_Op<YieldOp>(m_Op<AddIOp>(c, m_Op<MulIOp>(b, a)));
   return pattern1.match(&r.front().back()) ||
          pattern2.match(&r.front().back()) ||
-         pattern3.match(&r.front().back()) || pattern4.match(&r.front().back());
+         pattern3.match(&r.front().back()) ||
+         pattern4.match(&r.front().back()) ||
+         pattern5.match(&r.front().back()) ||
+         pattern6.match(&r.front().back()) ||
+         pattern7.match(&r.front().back()) || pattern8.match(&r.front().back());
 }
 
 // TODO: Should be Tablegen'd from a single source that generates the op itself.
@@ -88,7 +96,7 @@ LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
     if (!outputTensorType.cast<ShapedType>().hasStaticShape())
       return failure();
 
-  if (isa<linalg::FillOp>(op))
+  if (isa<linalg::FillOp, linalg::CopyOp>(op))
     return success();
 
   return isContraction(op);
@@ -111,12 +119,6 @@ void mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op) {
     return;
   }
 
-  assert(succeeded(isContraction(op)) && "Expected contraction");
-
-  // Vectorize other ops as vector contraction.
-  // TODO: interface.
-  LLVM_DEBUG(dbgs() << dbgPref
-                    << "Rewrite linalg op as vector.contract: " << *op);
   // In the case of 0-D memrefs, return null and special case to scalar load or
   // store later.
   auto extractVectorTypeFromScalarView = [](Value v) {
@@ -125,6 +127,49 @@ void mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op) {
                ? VectorType()
                : VectorType::get(mt.getShape(), mt.getElementType());
   };
+
+  if (auto copyOp = dyn_cast<linalg::CopyOp>(op)) {
+    // Vectorize copy as a vector.transfer_read+vector.transfer_write.
+    LLVM_DEBUG(dbgs() << dbgPref
+                      << "Rewrite linalg.copy as vector.transfer_read + "
+                         "vector.transfer_write: "
+                      << *op);
+    Value zero = std_constant_index(0);
+    Value viewInput = copyOp.input();
+    Value viewOutput = copyOp.output();
+    Value vector;
+    if (VectorType inputType = extractVectorTypeFromScalarView(viewInput)) {
+      SmallVector<Value, 4> indicesInput(inputType.getRank(), zero);
+      if (copyOp.inputPermutation())
+        vector = vector_transfer_read(
+            extractVectorTypeFromScalarView(viewInput), viewInput, indicesInput,
+            copyOp.inputPermutation().getValue());
+      else
+        vector =
+            vector_transfer_read(extractVectorTypeFromScalarView(viewInput),
+                                 viewInput, indicesInput);
+    } else {
+      vector = std_load(viewInput).value;
+    }
+    if (VectorType outputType = extractVectorTypeFromScalarView(viewOutput)) {
+      SmallVector<Value, 4> indicesOutput(outputType.getRank(), zero);
+      if (copyOp.outputPermutation())
+        vector_transfer_write(vector, viewOutput, indicesOutput,
+                              copyOp.outputPermutation().getValue());
+      else
+        vector_transfer_write(vector, viewOutput, indicesOutput);
+    } else {
+      std_store(vector, viewOutput);
+    }
+    return;
+  }
+
+  assert(succeeded(isContraction(op)) && "Expected contraction");
+
+  // Vectorize other ops as vector contraction.
+  // TODO: interface.
+  LLVM_DEBUG(dbgs() << dbgPref
+                    << "Rewrite linalg op as vector.contract: " << *op);
   auto linalgOp = cast<linalg::LinalgOp>(op);
   Value viewA = linalgOp.getInput(0);
   Value viewB = linalgOp.getInput(1);
@@ -260,10 +305,13 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
   // `in` is the subview that linalg.copy reads. Replace it.
   Value in = copyOp.getInput(0);
 
+  // linalg.copy + linalg.fill can be used to create a padded local buffer.
+  // The `masked` attribute is only valid on this padded buffer.
+  // When forwarding to vector.transfer_read, the attribute must be reset
+  // conservatively.
   Value res = rewriter.create<vector::TransferReadOp>(
       xferOp.getLoc(), xferOp.getVectorType(), in, xferOp.indices(),
-      xferOp.permutation_map(), xferOp.padding(),
-      xferOp.masked() ? *xferOp.masked() : ArrayAttr());
+      xferOp.permutation_map(), xferOp.padding(), ArrayAttr());
 
   if (maybeFillOp)
     rewriter.eraseOp(maybeFillOp);
@@ -308,10 +356,13 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
   Value out = copyOp.getOutputBuffer(0);
 
   // Forward vector.transfer into copy.
+  // linalg.copy + linalg.fill can be used to create a padded local buffer.
+  // The `masked` attribute is only valid on this padded buffer.
+  // When forwarding to vector.transfer_write, the attribute must be reset
+  // conservatively.
   rewriter.create<vector::TransferWriteOp>(
       xferOp.getLoc(), xferOp.vector(), out, xferOp.indices(),
-      xferOp.permutation_map(),
-      xferOp.masked() ? *xferOp.masked() : ArrayAttr());
+      xferOp.permutation_map(), ArrayAttr());
 
   rewriter.eraseOp(copyOp);
   rewriter.eraseOp(xferOp);

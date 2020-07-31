@@ -79,4 +79,10 @@
  */
 #cmakedefine01 LLVM_FORCE_ENABLE_STATS
 
+/* Define if LLVM was built with a dependency to the libtensorflow dynamic library */
+#cmakedefine LLVM_HAVE_TF_API
+
+/* Define if LLVM was built with a dependency to the tensorflow compiler */
+#cmakedefine LLVM_HAVE_TF_AOT
+
 #endif

@@ -128,6 +128,104 @@ static lldb::offset_t DumpAPInt(Stream *s, const DataExtractor &data,
   return offset;
 }
 
+/// Dumps decoded instructions to a stream.
+static lldb::offset_t DumpInstructions(const DataExtractor &DE, Stream *s,
+                                       ExecutionContextScope *exe_scope,
+                                       offset_t start_offset,
+                                       uint64_t base_addr,
+                                       size_t number_of_instructions) {
+  offset_t offset = start_offset;
+
+  TargetSP target_sp;
+  if (exe_scope)
+    target_sp = exe_scope->CalculateTarget();
+  if (target_sp) {
+    DisassemblerSP disassembler_sp(
+        Disassembler::FindPlugin(target_sp->GetArchitecture(),
+                                 target_sp->GetDisassemblyFlavor(), nullptr));
+    if (disassembler_sp) {
+      lldb::addr_t addr = base_addr + start_offset;
+      lldb_private::Address so_addr;
+      bool data_from_file = true;
+      if (target_sp->GetSectionLoadList().ResolveLoadAddress(addr, so_addr)) {
+        data_from_file = false;
+      } else {
+        if (target_sp->GetSectionLoadList().IsEmpty() ||
+            !target_sp->GetImages().ResolveFileAddress(addr, so_addr))
+          so_addr.SetRawAddress(addr);
+      }
+
+      size_t bytes_consumed = disassembler_sp->DecodeInstructions(
+          so_addr, DE, start_offset, number_of_instructions, false,
+          data_from_file);
+
+      if (bytes_consumed) {
+        offset += bytes_consumed;
+        const bool show_address = base_addr != LLDB_INVALID_ADDRESS;
+        const bool show_bytes = true;
+        ExecutionContext exe_ctx;
+        exe_scope->CalculateExecutionContext(exe_ctx);
+        disassembler_sp->GetInstructionList().Dump(s, show_address, show_bytes,
+                                                   &exe_ctx);
+      }
+    }
+  } else
+    s->Printf("invalid target");
+
+  return offset;
+}
+
+/// Prints the specific escape sequence of the given character to the stream.
+/// If the character doesn't have a known specific escape sequence (e.g., '\a',
+/// '\n' but not generic escape sequences such as'\x12'), this function will
+/// not modify the stream and return false.
+static bool TryDumpSpecialEscapedChar(Stream &s, const char c) {
+  switch (c) {
+  case '\033':
+    // Common non-standard escape code for 'escape'.
+    s.Printf("\\e");
+    return true;
+  case '\a':
+    s.Printf("\\a");
+    return true;
+  case '\b':
+    s.Printf("\\b");
+    return true;
+  case '\f':
+    s.Printf("\\f");
+    return true;
+  case '\n':
+    s.Printf("\\n");
+    return true;
+  case '\r':
+    s.Printf("\\r");
+    return true;
+  case '\t':
+    s.Printf("\\t");
+    return true;
+  case '\v':
+    s.Printf("\\v");
+    return true;
+  case '\0':
+    s.Printf("\\0");
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Dump the character to a stream. A character that is not printable will be
+/// represented by its escape sequence.
+static void DumpCharacter(Stream &s, const char c) {
+  if (TryDumpSpecialEscapedChar(s, c))
+    return;
+  if (llvm::isPrint(c)) {
+    s.PutChar(c);
+    return;
+  }
+  s.Printf("\\x%2.2x", c);
+}
+
 lldb::offset_t lldb_private::DumpDataExtractor(
     const DataExtractor &DE, Stream *s, offset_t start_offset,
     lldb::Format item_format, size_t item_byte_size, size_t item_count,
@@ -147,44 +245,9 @@ lldb::offset_t lldb_private::DumpDataExtractor(
 
   offset_t offset = start_offset;
 
-  if (item_format == eFormatInstruction) {
-    TargetSP target_sp;
-    if (exe_scope)
-      target_sp = exe_scope->CalculateTarget();
-    if (target_sp) {
-      DisassemblerSP disassembler_sp(Disassembler::FindPlugin(
-          target_sp->GetArchitecture(),
-          target_sp->GetDisassemblyFlavor(), nullptr));
-      if (disassembler_sp) {
-        lldb::addr_t addr = base_addr + start_offset;
-        lldb_private::Address so_addr;
-        bool data_from_file = true;
-        if (target_sp->GetSectionLoadList().ResolveLoadAddress(addr, so_addr)) {
-          data_from_file = false;
-        } else {
-          if (target_sp->GetSectionLoadList().IsEmpty() ||
-              !target_sp->GetImages().ResolveFileAddress(addr, so_addr))
-            so_addr.SetRawAddress(addr);
-        }
-
-        size_t bytes_consumed = disassembler_sp->DecodeInstructions(
-            so_addr, DE, start_offset, item_count, false, data_from_file);
-
-        if (bytes_consumed) {
-          offset += bytes_consumed;
-          const bool show_address = base_addr != LLDB_INVALID_ADDRESS;
-          const bool show_bytes = true;
-          ExecutionContext exe_ctx;
-          exe_scope->CalculateExecutionContext(exe_ctx);
-          disassembler_sp->GetInstructionList().Dump(s, show_address,
-                                                     show_bytes, &exe_ctx);
-        }
-      }
-    } else
-      s->Printf("invalid target");
-
-    return offset;
-  }
+  if (item_format == eFormatInstruction)
+    return DumpInstructions(DE, s, exe_scope, start_offset, base_addr,
+                            item_count);
 
   if ((item_format == eFormatOSType || item_format == eFormatAddressInfo) &&
       item_byte_size > 8)
@@ -287,40 +350,11 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       if (llvm::isPrint(ch))
         s->Printf("%c", (char)ch);
       else if (item_format != eFormatCharPrintable) {
-        switch (ch) {
-        case '\033':
-          s->Printf("\\e");
-          break;
-        case '\a':
-          s->Printf("\\a");
-          break;
-        case '\b':
-          s->Printf("\\b");
-          break;
-        case '\f':
-          s->Printf("\\f");
-          break;
-        case '\n':
-          s->Printf("\\n");
-          break;
-        case '\r':
-          s->Printf("\\r");
-          break;
-        case '\t':
-          s->Printf("\\t");
-          break;
-        case '\v':
-          s->Printf("\\v");
-          break;
-        case '\0':
-          s->Printf("\\0");
-          break;
-        default:
+        if (!TryDumpSpecialEscapedChar(*s, ch)) {
           if (item_byte_size == 1)
             s->Printf("\\x%2.2x", (uint8_t)ch);
           else
             s->Printf("%" PRIu64, ch);
-          break;
         }
       } else {
         s->PutChar(NON_PRINTABLE_CHAR);
@@ -375,42 +409,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
       s->PutChar('\'');
       for (uint32_t i = 0; i < item_byte_size; ++i) {
         uint8_t ch = (uint8_t)(uval64 >> ((item_byte_size - i - 1) * 8));
-        if (llvm::isPrint(ch))
-          s->Printf("%c", ch);
-        else {
-          switch (ch) {
-          case '\033':
-            s->Printf("\\e");
-            break;
-          case '\a':
-            s->Printf("\\a");
-            break;
-          case '\b':
-            s->Printf("\\b");
-            break;
-          case '\f':
-            s->Printf("\\f");
-            break;
-          case '\n':
-            s->Printf("\\n");
-            break;
-          case '\r':
-            s->Printf("\\r");
-            break;
-          case '\t':
-            s->Printf("\\t");
-            break;
-          case '\v':
-            s->Printf("\\v");
-            break;
-          case '\0':
-            s->Printf("\\0");
-            break;
-          default:
-            s->Printf("\\x%2.2x", ch);
-            break;
-          }
-        }
+        DumpCharacter(*s, ch);
       }
       s->PutChar('\'');
     } break;
@@ -425,40 +424,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
         s->PutChar('\"');
 
         while (const char c = *cstr) {
-          if (llvm::isPrint(c)) {
-            s->PutChar(c);
-          } else {
-            switch (c) {
-            case '\033':
-              s->Printf("\\e");
-              break;
-            case '\a':
-              s->Printf("\\a");
-              break;
-            case '\b':
-              s->Printf("\\b");
-              break;
-            case '\f':
-              s->Printf("\\f");
-              break;
-            case '\n':
-              s->Printf("\\n");
-              break;
-            case '\r':
-              s->Printf("\\r");
-              break;
-            case '\t':
-              s->Printf("\\t");
-              break;
-            case '\v':
-              s->Printf("\\v");
-              break;
-            default:
-              s->Printf("\\x%2.2x", c);
-              break;
-            }
-          }
-
+          DumpCharacter(*s, c);
           ++cstr;
         }
 

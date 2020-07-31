@@ -10,4 +10,4 @@
 type = Library
 name = ObjectYAML
 parent = Libraries
-required_libraries = Object Support DebugInfoCodeView MC
+required_libraries = BinaryFormat Object Support DebugInfoCodeView MC

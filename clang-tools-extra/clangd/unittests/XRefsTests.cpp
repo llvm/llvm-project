@@ -1197,7 +1197,14 @@ TEST(LocateSymbol, NearbyIdentifier) {
 
       // h^i
     )cpp",
-  };
+      R"cpp(
+      // prefer nearest occurrence even if several matched tokens
+      // have the same value of `floor(log2(<token line> - <word line>))`.
+      int hello;
+      int x = hello, y = hello;
+      int z = [[hello]];
+      // h^ello
+    )cpp"};
   for (const char *Test : Tests) {
     Annotations T(Test);
     auto AST = TestTU::withCode(T.code()).build();

@@ -330,11 +330,11 @@ public:
   LazyValueInfoAnnotatedWriter(LazyValueInfoImpl *L, DominatorTree &DTree)
       : LVIImpl(L), DT(DTree) {}
 
-  virtual void emitBasicBlockStartAnnot(const BasicBlock *BB,
-                                        formatted_raw_ostream &OS);
+  void emitBasicBlockStartAnnot(const BasicBlock *BB,
+                                formatted_raw_ostream &OS) override;
 
-  virtual void emitInstructionAnnot(const Instruction *I,
-                                    formatted_raw_ostream &OS);
+  void emitInstructionAnnot(const Instruction *I,
+                            formatted_raw_ostream &OS) override;
 };
 }
 namespace {
@@ -388,8 +388,8 @@ class LazyValueInfoImpl {
                                                        BasicBlock *BB);
   Optional<ValueLatticeElement> solveBlockValueSelect(SelectInst *S,
                                                       BasicBlock *BB);
-  Optional<ConstantRange> getRangeForOperand(unsigned Op, Instruction *I,
-                                             BasicBlock *BB);
+  Optional<ConstantRange> getRangeFor(Value *V, Instruction *CxtI,
+                                      BasicBlock *BB);
   Optional<ValueLatticeElement> solveBlockValueBinaryOpImpl(
       Instruction *I, BasicBlock *BB,
       std::function<ConstantRange(const ConstantRange &,
@@ -400,8 +400,6 @@ class LazyValueInfoImpl {
                                                     BasicBlock *BB);
   Optional<ValueLatticeElement> solveBlockValueOverflowIntrinsic(
       WithOverflowInst *WO, BasicBlock *BB);
-  Optional<ValueLatticeElement> solveBlockValueSaturatingIntrinsic(
-      SaturatingInst *SI, BasicBlock *BB);
   Optional<ValueLatticeElement> solveBlockValueIntrinsic(IntrinsicInst *II,
                                                          BasicBlock *BB);
   Optional<ValueLatticeElement> solveBlockValueExtractValue(
@@ -919,20 +917,19 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueSelect(
   return Result;
 }
 
-Optional<ConstantRange> LazyValueInfoImpl::getRangeForOperand(unsigned Op,
-                                                              Instruction *I,
-                                                              BasicBlock *BB) {
-  Optional<ValueLatticeElement> OptVal = getBlockValue(I->getOperand(Op), BB);
+Optional<ConstantRange> LazyValueInfoImpl::getRangeFor(Value *V,
+                                                       Instruction *CxtI,
+                                                       BasicBlock *BB) {
+  Optional<ValueLatticeElement> OptVal = getBlockValue(V, BB);
   if (!OptVal)
     return None;
 
   ValueLatticeElement &Val = *OptVal;
-  intersectAssumeOrGuardBlockValueConstantRange(I->getOperand(Op), Val, I);
+  intersectAssumeOrGuardBlockValueConstantRange(V, Val, CxtI);
   if (Val.isConstantRange())
     return Val.getConstantRange();
 
-  const unsigned OperandBitWidth =
-    DL.getTypeSizeInBits(I->getOperand(Op)->getType());
+  const unsigned OperandBitWidth = DL.getTypeSizeInBits(V->getType());
   return ConstantRange::getFull(OperandBitWidth);
 }
 
@@ -962,7 +959,7 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueCast(
   // Figure out the range of the LHS.  If that fails, we still apply the
   // transfer rule on the full set since we may be able to locally infer
   // interesting facts.
-  Optional<ConstantRange> LHSRes = getRangeForOperand(0, CI, BB);
+  Optional<ConstantRange> LHSRes = getRangeFor(CI->getOperand(0), CI, BB);
   if (!LHSRes.hasValue())
     // More work to do before applying this transfer rule.
     return None;
@@ -985,8 +982,8 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueBinaryOpImpl(
   // conservative range, but apply the transfer rule anyways.  This
   // lets us pick up facts from expressions like "and i32 (call i32
   // @foo()), 32"
-  Optional<ConstantRange> LHSRes = getRangeForOperand(0, I, BB);
-  Optional<ConstantRange> RHSRes = getRangeForOperand(1, I, BB);
+  Optional<ConstantRange> LHSRes = getRangeFor(I->getOperand(0), I, BB);
+  Optional<ConstantRange> RHSRes = getRangeFor(I->getOperand(1), I, BB);
   if (!LHSRes.hasValue() || !RHSRes.hasValue())
     // More work to do before applying this transfer rule.
     return None;
@@ -1036,43 +1033,24 @@ LazyValueInfoImpl::solveBlockValueOverflowIntrinsic(WithOverflowInst *WO,
       });
 }
 
-Optional<ValueLatticeElement>
-LazyValueInfoImpl::solveBlockValueSaturatingIntrinsic(SaturatingInst *SI,
-                                                      BasicBlock *BB) {
-  switch (SI->getIntrinsicID()) {
-  case Intrinsic::uadd_sat:
-    return solveBlockValueBinaryOpImpl(
-        SI, BB, [](const ConstantRange &CR1, const ConstantRange &CR2) {
-          return CR1.uadd_sat(CR2);
-        });
-  case Intrinsic::usub_sat:
-    return solveBlockValueBinaryOpImpl(
-        SI, BB, [](const ConstantRange &CR1, const ConstantRange &CR2) {
-          return CR1.usub_sat(CR2);
-        });
-  case Intrinsic::sadd_sat:
-    return solveBlockValueBinaryOpImpl(
-        SI, BB, [](const ConstantRange &CR1, const ConstantRange &CR2) {
-          return CR1.sadd_sat(CR2);
-        });
-  case Intrinsic::ssub_sat:
-    return solveBlockValueBinaryOpImpl(
-        SI, BB, [](const ConstantRange &CR1, const ConstantRange &CR2) {
-          return CR1.ssub_sat(CR2);
-        });
-  default:
-    llvm_unreachable("All llvm.sat intrinsic are handled.");
-  }
-}
-
 Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueIntrinsic(
     IntrinsicInst *II, BasicBlock *BB) {
-  if (auto *SI = dyn_cast<SaturatingInst>(II))
-    return solveBlockValueSaturatingIntrinsic(SI, BB);
+  if (!ConstantRange::isIntrinsicSupported(II->getIntrinsicID())) {
+    LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
+                      << "' - overdefined (unknown intrinsic).\n");
+    return ValueLatticeElement::getOverdefined();
+  }
 
-  LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
-                    << "' - overdefined (unknown intrinsic).\n");
-  return ValueLatticeElement::getOverdefined();
+  SmallVector<ConstantRange, 2> OpRanges;
+  for (Value *Op : II->args()) {
+    Optional<ConstantRange> Range = getRangeFor(Op, II, BB);
+    if (!Range)
+      return None;
+    OpRanges.push_back(*Range);
+  }
+
+  return ValueLatticeElement::getRange(
+      ConstantRange::intrinsic(II->getIntrinsicID(), OpRanges));
 }
 
 Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueExtractValue(

@@ -11,7 +11,7 @@
 // weak symbols to be undefined. That is a complication we don't want to expose
 // to clients right now.
 //===----------------------------------------------------------------------===//
-#include "FuzzerDefs.h"
+#include "FuzzerPlatform.h"
 #if LIBFUZZER_LINUX || LIBFUZZER_NETBSD || LIBFUZZER_FUCHSIA ||                \
     LIBFUZZER_FREEBSD || LIBFUZZER_OPENBSD || LIBFUZZER_EMSCRIPTEN
 

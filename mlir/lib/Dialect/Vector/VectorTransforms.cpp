@@ -30,7 +30,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Interfaces/VectorUnrollInterface.h"
+#include "mlir/Interfaces/VectorInterfaces.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -1581,6 +1581,9 @@ ContractionOpToMatmulOpLowering::match(vector::ContractionOp op) const {
       vector::VectorContractLowering::Matmul)
     return failure();
 
+  if (failed(filter(op)))
+    return failure();
+
   auto iteratorTypes = op.iterator_types().getValue();
   if (!isParallelIterator(iteratorTypes[0]) ||
       !isParallelIterator(iteratorTypes[1]) ||
@@ -1645,6 +1648,9 @@ ContractionOpToOuterProductOpLowering::match(vector::ContractionOp op) const {
 
   if (vectorTransformsOptions.vectorContractLowering !=
       vector::VectorContractLowering::OuterProduct)
+    return failure();
+
+  if (failed(filter(op)))
     return failure();
 
   // Determine if the parallel/reduction structure matches something
@@ -1808,6 +1814,10 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
   // TODO: implement masks.
   if (llvm::size(op.masks()) != 0)
     return failure();
+
+  if (failed(filter(op)))
+    return failure();
+
   // TODO: support mixed mode contract lowering.
   if (op.getLhsType().getElementType() !=
           getElementTypeOrSelf(op.getAccType()) ||

@@ -46,6 +46,8 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
     Constant, // opencl_constant
     Private,  // opencl_private
     Generic,  // opencl_generic
+    Global,   // opencl_global_device
+    Global,   // opencl_global_host
     Global,   // cuda_device
     Constant, // cuda_constant
     Local,    // cuda_shared
@@ -61,6 +63,8 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
     Constant, // opencl_constant
     Private,  // opencl_private
     Generic,  // opencl_generic
+    Global,   // opencl_global_device
+    Global,   // opencl_global_host
     Global,   // cuda_device
     Constant, // cuda_constant
     Local,    // cuda_shared

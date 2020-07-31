@@ -111,6 +111,9 @@ llvm::raw_ostream &operator<<(
     }
   }
   os << (sep == '(' ? "()" : ")");
+  if (x.stmtFunction_) {
+    os << " -> " << x.stmtFunction_->AsFortran();
+  }
   return os;
 }
 

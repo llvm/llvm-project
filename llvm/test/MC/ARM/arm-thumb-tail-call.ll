@@ -1,6 +1,6 @@
 ; RUN: llc -O0 < %s -mtriple armv7-linux-gnueabi -o - \
 ; RUN:   | llvm-mc -triple armv7-linux-gnueabi -filetype=obj -o - \
-; RUN:    | llvm-readobj -r | FileCheck %s
+; RUN:    | llvm-readobj -r - | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv7--linux-gnueabihf"

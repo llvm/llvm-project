@@ -4567,7 +4567,8 @@ void XLCXXABI::emitCXXStermFinalizer(const VarDecl &D, llvm::Function *dtorStub,
   CodeGenFunction CGF(CGM);
 
   CGF.StartFunction(GlobalDecl(), CGM.getContext().VoidTy, StermFinalizer, FI,
-                    FunctionArgList());
+                    FunctionArgList(), D.getLocation(),
+                    D.getInit()->getExprLoc());
 
   // The unatexit subroutine unregisters __dtor functions that were previously
   // registered by the atexit subroutine. If the referenced function is found,

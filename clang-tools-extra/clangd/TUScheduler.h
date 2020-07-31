@@ -313,7 +313,7 @@ public:
 
 private:
   const GlobalCompilationDatabase &CDB;
-  const Options Opts;
+  Options Opts;
   std::unique_ptr<ParsingCallbacks> Callbacks; // not nullptr
   Semaphore Barrier;
   llvm::StringMap<std::unique_ptr<FileData>> Files;

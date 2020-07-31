@@ -1,5 +1,5 @@
 @ RUN: llvm-mc -triple armv7-linux-eabi -filetype obj -o - %s \
-@ RUN:   | llvm-readobj -S --sd --sr > %t
+@ RUN:   | llvm-readobj -S --sd --sr - > %t
 @ RUN: FileCheck %s < %t
 @ RUN: FileCheck --check-prefix=RELOC %s < %t
 

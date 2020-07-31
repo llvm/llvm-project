@@ -44,7 +44,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "mve-gather-scatter-lowering"
+#define DEBUG_TYPE "arm-mve-gather-scatter-lowering"
 
 cl::opt<bool> EnableMaskedGatherScatters(
     "enable-arm-maskedgatscat", cl::Hidden, cl::init(false),
@@ -84,7 +84,7 @@ private:
   // Check for a getelementptr and deduce base and offsets from it, on success
   // returning the base directly and the offsets indirectly using the Offsets
   // argument
-  Value *checkGEP(Value *&Offsets, Type *Ty, GetElementPtrInst *GEP,
+  Value *checkGEP(Value *&Offsets, FixedVectorType *Ty, GetElementPtrInst *GEP,
                   IRBuilder<> &Builder);
   // Compute the scale of this gather/scatter instruction
   int computeScale(unsigned GEPElemSize, unsigned MemoryElemSize);
@@ -132,6 +132,11 @@ private:
   Value *tryCreateIncrementingWBGatScat(IntrinsicInst *I, Value *BasePtr,
                                         Value *Ptr, unsigned TypeScale,
                                         IRBuilder<> &Builder);
+
+  // Optimise the base and offsets of the given address
+  bool optimiseAddress(Value *Address, BasicBlock *BB, LoopInfo *LI);
+  // Try to fold consecutive geps together into one
+  Value *foldGEP(GetElementPtrInst *GEP, Value *&Offsets, IRBuilder<> &Builder);
   // Check whether these offsets could be moved out of the loop they're in
   bool optimiseOffsets(Value *Offsets, BasicBlock *BB, LoopInfo *LI);
   // Pushes the given add out of the loop
@@ -167,7 +172,49 @@ bool MVEGatherScatterLowering::isLegalTypeAndAlignment(unsigned NumElements,
   return false;
 }
 
-Value *MVEGatherScatterLowering::checkGEP(Value *&Offsets, Type *Ty,
+bool checkOffsetSize(Value *Offsets, unsigned TargetElemCount) {
+  // Offsets that are not of type <N x i32> are sign extended by the
+  // getelementptr instruction, and MVE gathers/scatters treat the offset as
+  // unsigned. Thus, if the element size is smaller than 32, we can only allow
+  // positive offsets - i.e., the offsets are not allowed to be variables we
+  // can't look into.
+  // Additionally, <N x i32> offsets have to either originate from a zext of a
+  // vector with element types smaller or equal the type of the gather we're
+  // looking at, or consist of constants that we can check are small enough
+  // to fit into the gather type.
+  // Thus we check that 0 < value < 2^TargetElemSize.
+  unsigned TargetElemSize = 128 / TargetElemCount;
+  unsigned OffsetElemSize = cast<FixedVectorType>(Offsets->getType())
+                                ->getElementType()
+                                ->getScalarSizeInBits();
+  if (OffsetElemSize != TargetElemSize || OffsetElemSize != 32) {
+    Constant *ConstOff = dyn_cast<Constant>(Offsets);
+    if (!ConstOff)
+      return false;
+    int64_t TargetElemMaxSize = (1ULL << TargetElemSize);
+    auto CheckValueSize = [TargetElemMaxSize](Value *OffsetElem) {
+      ConstantInt *OConst = dyn_cast<ConstantInt>(OffsetElem);
+      if (!OConst)
+        return false;
+      int SExtValue = OConst->getSExtValue();
+      if (SExtValue >= TargetElemMaxSize || SExtValue < 0)
+        return false;
+      return true;
+    };
+    if (isa<FixedVectorType>(ConstOff->getType())) {
+      for (unsigned i = 0; i < TargetElemCount; i++) {
+        if (!CheckValueSize(ConstOff->getAggregateElement(i)))
+          return false;
+      }
+    } else {
+      if (!CheckValueSize(ConstOff))
+        return false;
+    }
+  }
+  return true;
+}
+
+Value *MVEGatherScatterLowering::checkGEP(Value *&Offsets, FixedVectorType *Ty,
                                           GetElementPtrInst *GEP,
                                           IRBuilder<> &Builder) {
   if (!GEP) {
@@ -178,40 +225,43 @@ Value *MVEGatherScatterLowering::checkGEP(Value *&Offsets, Type *Ty,
   LLVM_DEBUG(dbgs() << "masked gathers/scatters: getelementpointer found."
                     << " Looking at intrinsic for base + vector of offsets\n");
   Value *GEPPtr = GEP->getPointerOperand();
-  if (GEPPtr->getType()->isVectorTy()) {
+  Offsets = GEP->getOperand(1);
+  if (GEPPtr->getType()->isVectorTy() ||
+      !isa<FixedVectorType>(Offsets->getType()))
     return nullptr;
-  }
+
   if (GEP->getNumOperands() != 2) {
     LLVM_DEBUG(dbgs() << "masked gathers/scatters: getelementptr with too many"
                       << " operands. Expanding.\n");
     return nullptr;
   }
   Offsets = GEP->getOperand(1);
+  unsigned OffsetsElemCount =
+      cast<FixedVectorType>(Offsets->getType())->getNumElements();
   // Paranoid check whether the number of parallel lanes is the same
-  assert(cast<FixedVectorType>(Ty)->getNumElements() ==
-         cast<FixedVectorType>(Offsets->getType())->getNumElements());
-  // Only <N x i32> offsets can be integrated into an arm gather, any smaller
-  // type would have to be sign extended by the gep - and arm gathers can only
-  // zero extend. Additionally, the offsets do have to originate from a zext of
-  // a vector with element types smaller or equal the type of the gather we're
-  // looking at
-  if (Offsets->getType()->getScalarSizeInBits() != 32)
-    return nullptr;
-  if (ZExtInst *ZextOffs = dyn_cast<ZExtInst>(Offsets))
-    Offsets = ZextOffs->getOperand(0);
-  else if (!(cast<FixedVectorType>(Offsets->getType())->getNumElements() == 4 &&
-             Offsets->getType()->getScalarSizeInBits() == 32))
-    return nullptr;
+  assert(Ty->getNumElements() == OffsetsElemCount);
 
-  if (Ty != Offsets->getType()) {
-    if ((Ty->getScalarSizeInBits() <
-         Offsets->getType()->getScalarSizeInBits())) {
-      LLVM_DEBUG(dbgs() << "masked gathers/scatters: no correct offset type."
-                        << " Can't create intrinsic.\n");
+  ZExtInst *ZextOffs = dyn_cast<ZExtInst>(Offsets);
+  if (ZextOffs)
+    Offsets = ZextOffs->getOperand(0);
+  FixedVectorType *OffsetType = cast<FixedVectorType>(Offsets->getType());
+
+  // If the offsets are already being zext-ed to <N x i32>, that relieves us of
+  // having to make sure that they won't overflow.
+  if (!ZextOffs || cast<FixedVectorType>(ZextOffs->getDestTy())
+                           ->getElementType()
+                           ->getScalarSizeInBits() != 32)
+    if (!checkOffsetSize(Offsets, OffsetsElemCount))
       return nullptr;
+
+  // The offset sizes have been checked; if any truncating or zext-ing is
+  // required to fix them, do that now
+  if (Ty != Offsets->getType()) {
+    if ((Ty->getElementType()->getScalarSizeInBits() <
+         OffsetType->getElementType()->getScalarSizeInBits())) {
+      Offsets = Builder.CreateTrunc(Offsets, Ty);
     } else {
-      Offsets = Builder.CreateZExt(
-          Offsets, VectorType::getInteger(cast<VectorType>(Ty)));
+      Offsets = Builder.CreateZExt(Offsets, VectorType::getInteger(Ty));
     }
   }
   // If none of the checks failed, return the gep's base pointer
@@ -426,7 +476,8 @@ Value *MVEGatherScatterLowering::tryCreateMaskedGatherOffset(
 
   GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr);
   Value *Offsets;
-  Value *BasePtr = checkGEP(Offsets, ResultTy, GEP, Builder);
+  Value *BasePtr =
+      checkGEP(Offsets, cast<FixedVectorType>(ResultTy), GEP, Builder);
   if (!BasePtr)
     return nullptr;
   // Check whether the offset is a constant increment that could be merged into
@@ -566,7 +617,8 @@ Value *MVEGatherScatterLowering::tryCreateMaskedScatterOffset(
 
   GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr);
   Value *Offsets;
-  Value *BasePtr = checkGEP(Offsets, InputTy, GEP, Builder);
+  Value *BasePtr =
+      checkGEP(Offsets, cast<FixedVectorType>(InputTy), GEP, Builder);
   if (!BasePtr)
     return nullptr;
   // Check whether the offset is a constant increment that could be merged into
@@ -978,6 +1030,128 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
   return true;
 }
 
+Value *CheckAndCreateOffsetAdd(Value *X, Value *Y, Value *GEP,
+                               IRBuilder<> &Builder) {
+
+  // Splat the non-vector value to a vector of the given type - if the value is
+  // a constant (and its value isn't too big), we can even use this opportunity
+  // to scale it to the size of the vector elements
+  auto FixSummands = [&Builder](FixedVectorType *&VT, Value *&NonVectorVal) {
+    ConstantInt *Const;
+    if ((Const = dyn_cast<ConstantInt>(NonVectorVal)) &&
+        VT->getElementType() != NonVectorVal->getType()) {
+      unsigned TargetElemSize = VT->getElementType()->getPrimitiveSizeInBits();
+      uint64_t N = Const->getZExtValue();
+      if (N < (unsigned)(1 << (TargetElemSize - 1))) {
+        NonVectorVal = Builder.CreateVectorSplat(
+            VT->getNumElements(), Builder.getIntN(TargetElemSize, N));
+        return;
+      }
+    }
+    NonVectorVal =
+        Builder.CreateVectorSplat(VT->getNumElements(), NonVectorVal);
+  };
+
+  FixedVectorType *XElType = dyn_cast<FixedVectorType>(X->getType());
+  FixedVectorType *YElType = dyn_cast<FixedVectorType>(Y->getType());
+  // If one of X, Y is not a vector, we have to splat it in order
+  // to add the two of them.
+  if (XElType && !YElType) {
+    FixSummands(XElType, Y);
+    YElType = cast<FixedVectorType>(Y->getType());
+  } else if (YElType && !XElType) {
+    FixSummands(YElType, X);
+    XElType = cast<FixedVectorType>(X->getType());
+  }
+  // Check that the summands are of compatible types
+  if (XElType != YElType) {
+    LLVM_DEBUG(dbgs() << "masked gathers/scatters: incompatible gep offsets\n");
+    return nullptr;
+  }
+
+  if (XElType->getElementType()->getScalarSizeInBits() != 32) {
+    // Check that by adding the vectors we do not accidentally
+    // create an overflow
+    Constant *ConstX = dyn_cast<Constant>(X);
+    Constant *ConstY = dyn_cast<Constant>(Y);
+    if (!ConstX || !ConstY)
+      return nullptr;
+    unsigned TargetElemSize = 128 / XElType->getNumElements();
+    for (unsigned i = 0; i < XElType->getNumElements(); i++) {
+      ConstantInt *ConstXEl =
+          dyn_cast<ConstantInt>(ConstX->getAggregateElement(i));
+      ConstantInt *ConstYEl =
+          dyn_cast<ConstantInt>(ConstY->getAggregateElement(i));
+      if (!ConstXEl || !ConstYEl ||
+          ConstXEl->getZExtValue() + ConstYEl->getZExtValue() >=
+              (unsigned)(1 << (TargetElemSize - 1)))
+        return nullptr;
+    }
+  }
+
+  Value *Add = Builder.CreateAdd(X, Y);
+
+  FixedVectorType *GEPType = cast<FixedVectorType>(GEP->getType());
+  if (checkOffsetSize(Add, GEPType->getNumElements()))
+    return Add;
+  else
+    return nullptr;
+}
+
+Value *MVEGatherScatterLowering::foldGEP(GetElementPtrInst *GEP,
+                                         Value *&Offsets,
+                                         IRBuilder<> &Builder) {
+  Value *GEPPtr = GEP->getPointerOperand();
+  Offsets = GEP->getOperand(1);
+  // We only merge geps with constant offsets, because only for those
+  // we can make sure that we do not cause an overflow
+  if (!isa<Constant>(Offsets))
+    return nullptr;
+  GetElementPtrInst *BaseGEP;
+  if ((BaseGEP = dyn_cast<GetElementPtrInst>(GEPPtr))) {
+    // Merge the two geps into one
+    Value *BaseBasePtr = foldGEP(BaseGEP, Offsets, Builder);
+    if (!BaseBasePtr)
+      return nullptr;
+    Offsets =
+        CheckAndCreateOffsetAdd(Offsets, GEP->getOperand(1), GEP, Builder);
+    if (Offsets == nullptr)
+      return nullptr;
+    return BaseBasePtr;
+  }
+  return GEPPtr;
+}
+
+bool MVEGatherScatterLowering::optimiseAddress(Value *Address, BasicBlock *BB,
+                                               LoopInfo *LI) {
+  GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Address);
+  if (!GEP)
+    return false;
+  bool Changed = false;
+  if (GEP->hasOneUse() &&
+      dyn_cast<GetElementPtrInst>(GEP->getPointerOperand())) {
+    IRBuilder<> Builder(GEP->getContext());
+    Builder.SetInsertPoint(GEP);
+    Builder.SetCurrentDebugLocation(GEP->getDebugLoc());
+    Value *Offsets;
+    Value *Base = foldGEP(GEP, Offsets, Builder);
+    // We only want to merge the geps if there is a real chance that they can be
+    // used by an MVE gather; thus the offset has to have the correct size
+    // (always i32 if it is not of vector type) and the base has to be a
+    // pointer.
+    if (Offsets && Base && Base != GEP) {
+      PointerType *BaseType = cast<PointerType>(Base->getType());
+      GetElementPtrInst *NewAddress = GetElementPtrInst::Create(
+          BaseType->getPointerElementType(), Base, Offsets, "gep.merged", GEP);
+      GEP->replaceAllUsesWith(NewAddress);
+      GEP = NewAddress;
+      Changed = true;
+    }
+  }
+  Changed |= optimiseOffsets(GEP->getOperand(1), GEP->getParent(), LI);
+  return Changed;
+}
+
 bool MVEGatherScatterLowering::runOnFunction(Function &F) {
   if (!EnableMaskedGatherScatters)
     return false;
@@ -995,22 +1169,17 @@ bool MVEGatherScatterLowering::runOnFunction(Function &F) {
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
-      if (II && II->getIntrinsicID() == Intrinsic::masked_gather) {
+      if (II && II->getIntrinsicID() == Intrinsic::masked_gather &&
+          isa<FixedVectorType>(II->getType())) {
         Gathers.push_back(II);
-        if (isa<GetElementPtrInst>(II->getArgOperand(0)))
-          Changed |= optimiseOffsets(
-              cast<Instruction>(II->getArgOperand(0))->getOperand(1),
-              II->getParent(), LI);
-      } else if (II && II->getIntrinsicID() == Intrinsic::masked_scatter) {
+        Changed |= optimiseAddress(II->getArgOperand(0), II->getParent(), LI);
+      } else if (II && II->getIntrinsicID() == Intrinsic::masked_scatter &&
+                 isa<FixedVectorType>(II->getArgOperand(0)->getType())) {
         Scatters.push_back(II);
-        if (isa<GetElementPtrInst>(II->getArgOperand(1)))
-          Changed |= optimiseOffsets(
-              cast<Instruction>(II->getArgOperand(1))->getOperand(1),
-              II->getParent(), LI);
+        Changed |= optimiseAddress(II->getArgOperand(1), II->getParent(), LI);
       }
     }
   }
-
   for (unsigned i = 0; i < Gathers.size(); i++) {
     IntrinsicInst *I = Gathers[i];
     Value *L = lowerGather(I);

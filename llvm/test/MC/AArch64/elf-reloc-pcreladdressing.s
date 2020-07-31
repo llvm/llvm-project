@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=aarch64-none-linux-gnu -filetype=obj %s -o - | \
-// RUN:   llvm-readobj -r | FileCheck -check-prefix=OBJ %s
+// RUN:   llvm-readobj -r - | FileCheck -check-prefix=OBJ %s
 
         adr x2, some_label
         adrp x5, some_label

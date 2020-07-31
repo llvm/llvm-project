@@ -304,7 +304,8 @@ void Writer::layoutMemory() {
   if (WasmSym::heapBase)
     WasmSym::heapBase->setVirtualAddress(memoryPtr);
 
-  uint64_t maxMemorySetting = 1ULL << (config->is64 ? 48 : 32);
+  uint64_t maxMemorySetting = 1ULL
+                              << (config->is64.getValueOr(false) ? 48 : 32);
 
   if (config->initialMemory != 0) {
     if (config->initialMemory != alignTo(config->initialMemory, WasmPageSize))

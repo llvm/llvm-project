@@ -1012,3 +1012,11 @@ namespace PR32638 {
     [](auto x) noexcept(noexcept(x)) { } (0);
  }
 }
+
+namespace PR46637 {
+  auto x = [](auto (*p)()) { return p(); };
+  auto y = [](auto (*p)() -> auto) { return p(); };
+  int f();
+  void *v = x(f); // expected-error {{cannot initialize a variable of type 'void *' with an rvalue of type 'int'}}
+  void *w = y(f); // expected-error {{cannot initialize a variable of type 'void *' with an rvalue of type 'int'}}
+}

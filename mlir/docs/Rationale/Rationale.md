@@ -202,32 +202,19 @@ and described in
 interest
 [starts here](https://www.google.com/url?q=https://youtu.be/Ntj8ab-5cvE?t%3D596&sa=D&ust=1529450150971000&usg=AFQjCNFQHEWL7m8q3eO-1DiKw9zqC2v24Q).
 
-### Index type disallowed in vector/memref types
+### Index type disallowed in vector types
 
-Index types are not allowed as elements of `vector` and `memref` types. Index
+Index types are not allowed as elements of `vector` types. Index
 types are intended to be used for platform-specific "size" values and may appear
 in subscripts, sizes of aggregate types and affine expressions. They are also
 tightly coupled with `affine.apply` and affine.load/store operations; having
 `index` type is a necessary precondition of a value to be acceptable by these
-operations. While it may be useful to have `memref<?xindex>` to express indirect
-accesses, e.g. sparse matrix manipulations or lookup tables, it creates problems
-MLIR is not ready to address yet. MLIR needs to internally store constants of
-aggregate types and emit code operating on values of those types, which are
-subject to target-specific size and alignment constraints. Since MLIR does not
-have a target description mechanism at the moment, it cannot reliably emit such
-code. Moreover, some platforms may not support vectors of type equivalent to
-`index`.
+operations.
 
-Indirect access use cases can be alternatively supported by providing and
-`index_cast` instruction that allows for conversion between `index` and
-fixed-width integer types, at the SSA value level. It has an additional benefit
-of supporting smaller integer types, e.g. `i8` or `i16`, for small indices
-instead of (presumably larger) `index` type.
-
-Index types are allowed as element types of `tensor` types. The `tensor` type
-specifically abstracts the target-specific aspects that intersect with the
-code-generation-related/lowering-related concerns explained above. In fact, the
-`tensor` type even allows dialect-specific types as element types.
+We allow `index` types in tensors and memrefs as a code generation strategy has
+to map `index` to an implementation type and hence needs to be able to
+materialize corresponding values. However, the target might lack support for
+`vector` values with the target specfic equivalent of the `index` type.
 
 ### Bit width of a non-primitive type and `index` is undefined
 

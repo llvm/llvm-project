@@ -251,6 +251,7 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
         Filename);
     return;
   }
+  WC->Writer.setInstrEntryBBEnabled(Reader->instrEntryBBEnabled());
 
   for (auto &I : *Reader) {
     if (Remapper)
@@ -383,6 +384,172 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
     exitWithError("No profiles could be merged.");
 
   writeInstrProfile(OutputFilename, OutputFormat, Contexts[0]->Writer);
+}
+
+/// The profile entry for a function in instrumentation profile.
+struct InstrProfileEntry {
+  uint64_t MaxCount = 0;
+  float ZeroCounterRatio = 0.0;
+  InstrProfRecord *ProfRecord;
+  InstrProfileEntry(InstrProfRecord *Record);
+  InstrProfileEntry() = default;
+};
+
+InstrProfileEntry::InstrProfileEntry(InstrProfRecord *Record) {
+  ProfRecord = Record;
+  uint64_t CntNum = Record->Counts.size();
+  uint64_t ZeroCntNum = 0;
+  for (size_t I = 0; I < CntNum; ++I) {
+    MaxCount = std::max(MaxCount, Record->Counts[I]);
+    ZeroCntNum += !Record->Counts[I];
+  }
+  ZeroCounterRatio = (float)ZeroCntNum / CntNum;
+}
+
+/// Either set all the counters in the instr profile entry \p IFE to -1
+/// in order to drop the profile or scale up the counters in \p IFP to
+/// be above hot threshold. We use the ratio of zero counters in the
+/// profile of a function to decide the profile is helpful or harmful
+/// for performance, and to choose whether to scale up or drop it.
+static void updateInstrProfileEntry(InstrProfileEntry &IFE,
+                                    uint64_t HotInstrThreshold,
+                                    float ZeroCounterThreshold) {
+  InstrProfRecord *ProfRecord = IFE.ProfRecord;
+  if (!IFE.MaxCount || IFE.ZeroCounterRatio > ZeroCounterThreshold) {
+    // If all or most of the counters of the function are zero, the
+    // profile is unaccountable and shuld be dropped. Reset all the
+    // counters to be -1 and PGO profile-use will drop the profile.
+    // All counters being -1 also implies that the function is hot so
+    // PGO profile-use will also set the entry count metadata to be
+    // above hot threshold.
+    for (size_t I = 0; I < ProfRecord->Counts.size(); ++I)
+      ProfRecord->Counts[I] = -1;
+    return;
+  }
+
+  // Scale up the MaxCount to be multiple times above hot threshold.
+  const unsigned MultiplyFactor = 3;
+  uint64_t Numerator = HotInstrThreshold * MultiplyFactor;
+  uint64_t Denominator = IFE.MaxCount;
+  ProfRecord->scale(Numerator, Denominator, [&](instrprof_error E) {
+    warn(toString(make_error<InstrProfError>(E)));
+  });
+}
+
+const uint64_t ColdPercentileIdx = 15;
+const uint64_t HotPercentileIdx = 11;
+
+/// Adjust the instr profile in \p WC based on the sample profile in
+/// \p Reader.
+static void
+adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
+                   std::unique_ptr<sampleprof::SampleProfileReader> &Reader,
+                   unsigned SupplMinSizeThreshold, float ZeroCounterThreshold,
+                   unsigned InstrProfColdThreshold) {
+  // Function to its entry in instr profile.
+  StringMap<InstrProfileEntry> InstrProfileMap;
+  InstrProfSummaryBuilder IPBuilder(ProfileSummaryBuilder::DefaultCutoffs);
+  for (auto &PD : WC->Writer.getProfileData()) {
+    // Populate IPBuilder.
+    for (const auto &PDV : PD.getValue()) {
+      InstrProfRecord Record = PDV.second;
+      IPBuilder.addRecord(Record);
+    }
+
+    // If a function has multiple entries in instr profile, skip it.
+    if (PD.getValue().size() != 1)
+      continue;
+
+    // Initialize InstrProfileMap.
+    InstrProfRecord *R = &PD.getValue().begin()->second;
+    InstrProfileMap[PD.getKey()] = InstrProfileEntry(R);
+  }
+
+  ProfileSummary InstrPS = *IPBuilder.getSummary();
+  ProfileSummary SamplePS = Reader->getSummary();
+
+  // Compute cold thresholds for instr profile and sample profile.
+  uint64_t ColdSampleThreshold =
+      ProfileSummaryBuilder::getEntryForPercentile(
+          SamplePS.getDetailedSummary(),
+          ProfileSummaryBuilder::DefaultCutoffs[ColdPercentileIdx])
+          .MinCount;
+  uint64_t HotInstrThreshold =
+      ProfileSummaryBuilder::getEntryForPercentile(
+          InstrPS.getDetailedSummary(),
+          ProfileSummaryBuilder::DefaultCutoffs[HotPercentileIdx])
+          .MinCount;
+  uint64_t ColdInstrThreshold =
+      InstrProfColdThreshold
+          ? InstrProfColdThreshold
+          : ProfileSummaryBuilder::getEntryForPercentile(
+                InstrPS.getDetailedSummary(),
+                ProfileSummaryBuilder::DefaultCutoffs[ColdPercentileIdx])
+                .MinCount;
+
+  // Find hot/warm functions in sample profile which is cold in instr profile
+  // and adjust the profiles of those functions in the instr profile.
+  for (const auto &PD : Reader->getProfiles()) {
+    StringRef FName = PD.getKey();
+    const sampleprof::FunctionSamples &FS = PD.getValue();
+    auto It = InstrProfileMap.find(FName);
+    if (FS.getHeadSamples() > ColdSampleThreshold &&
+        It != InstrProfileMap.end() &&
+        It->second.MaxCount <= ColdInstrThreshold &&
+        FS.getBodySamples().size() >= SupplMinSizeThreshold) {
+      updateInstrProfileEntry(It->second, HotInstrThreshold,
+                              ZeroCounterThreshold);
+    }
+  }
+}
+
+/// The main function to supplement instr profile with sample profile.
+/// \Inputs contains the instr profile. \p SampleFilename specifies the
+/// sample profile. \p OutputFilename specifies the output profile name.
+/// \p OutputFormat specifies the output profile format. \p OutputSparse
+/// specifies whether to generate sparse profile. \p SupplMinSizeThreshold
+/// specifies the minimal size for the functions whose profile will be
+/// adjusted. \p ZeroCounterThreshold is the threshold to check whether
+/// a function contains too many zero counters and whether its profile
+/// should be dropped. \p InstrProfColdThreshold is the user specified
+/// cold threshold which will override the cold threshold got from the
+/// instr profile summary.
+static void supplementInstrProfile(
+    const WeightedFileVector &Inputs, StringRef SampleFilename,
+    StringRef OutputFilename, ProfileFormat OutputFormat, bool OutputSparse,
+    unsigned SupplMinSizeThreshold, float ZeroCounterThreshold,
+    unsigned InstrProfColdThreshold) {
+  if (OutputFilename.compare("-") == 0)
+    exitWithError("Cannot write indexed profdata format to stdout.");
+  if (Inputs.size() != 1)
+    exitWithError("Expect one input to be an instr profile.");
+  if (Inputs[0].Weight != 1)
+    exitWithError("Expect instr profile doesn't have weight.");
+
+  StringRef InstrFilename = Inputs[0].Filename;
+
+  // Read sample profile.
+  LLVMContext Context;
+  auto ReaderOrErr =
+      sampleprof::SampleProfileReader::create(SampleFilename.str(), Context);
+  if (std::error_code EC = ReaderOrErr.getError())
+    exitWithErrorCode(EC, SampleFilename);
+  auto Reader = std::move(ReaderOrErr.get());
+  if (std::error_code EC = Reader->read())
+    exitWithErrorCode(EC, SampleFilename);
+
+  // Read instr profile.
+  std::mutex ErrorLock;
+  SmallSet<instrprof_error, 4> WriterErrorCodes;
+  auto WC = std::make_unique<WriterContext>(OutputSparse, ErrorLock,
+                                            WriterErrorCodes);
+  loadInput(Inputs[0], nullptr, WC.get());
+  if (WC->Errors.size() > 0)
+    exitWithError(std::move(WC->Errors[0].first), InstrFilename);
+
+  adjustInstrProfile(WC, Reader, SupplMinSizeThreshold, ZeroCounterThreshold,
+                     InstrProfColdThreshold);
+  writeInstrProfile(OutputFilename, OutputFormat, WC->Writer);
 }
 
 /// Make a copy of the given function samples with all symbol names remapped
@@ -679,6 +846,28 @@ static int merge_main(int argc, const char *argv[]) {
   cl::opt<bool> GenPartialProfile(
       "gen-partial-profile", cl::init(false), cl::Hidden,
       cl::desc("Generate a partial profile (only meaningful for -extbinary)"));
+  cl::opt<std::string> SupplInstrWithSample(
+      "supplement-instr-with-sample", cl::init(""), cl::Hidden,
+      cl::desc("Supplement an instr profile with sample profile, to correct "
+               "the profile unrepresentativeness issue. The sample "
+               "profile is the input of the flag. Output will be in instr "
+               "format (The flag only works with -instr)"));
+  cl::opt<float> ZeroCounterThreshold(
+      "zero-counter-threshold", cl::init(0.7), cl::Hidden,
+      cl::desc("For the function which is cold in instr profile but hot in "
+               "sample profile, if the ratio of the number of zero counters "
+               "divided by the the total number of counters is above the "
+               "threshold, the profile of the function will be regarded as "
+               "being harmful for performance and will be dropped. "));
+  cl::opt<unsigned> SupplMinSizeThreshold(
+      "suppl-min-size-threshold", cl::init(10), cl::Hidden,
+      cl::desc("If the size of a function is smaller than the threshold, "
+               "assume it can be inlined by PGO early inliner and it won't "
+               "be adjusted based on sample profile. "));
+  cl::opt<unsigned> InstrProfColdThreshold(
+      "instr-prof-cold-threshold", cl::init(0), cl::Hidden,
+      cl::desc("User specified cold threshold for instr profile which will "
+               "override the cold threshold got from profile summary. "));
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data merger\n");
 
@@ -706,6 +895,17 @@ static int merge_main(int argc, const char *argv[]) {
   std::unique_ptr<SymbolRemapper> Remapper;
   if (!RemappingFile.empty())
     Remapper = SymbolRemapper::create(RemappingFile);
+
+  if (!SupplInstrWithSample.empty()) {
+    if (ProfileKind != instr)
+      exitWithError(
+          "-supplement-instr-with-sample can only work with -instr. ");
+
+    supplementInstrProfile(WeightedInputs, SupplInstrWithSample, OutputFilename,
+                           OutputFormat, OutputSparse, SupplMinSizeThreshold,
+                           ZeroCounterThreshold, InstrProfColdThreshold);
+    return 0;
+  }
 
   if (ProfileKind == instr)
     mergeInstrProfile(WeightedInputs, Remapper.get(), OutputFilename,
@@ -903,6 +1103,8 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
     uint64_t FuncMax = 0;
     uint64_t FuncSum = 0;
     for (size_t I = 0, E = Func.Counts.size(); I < E; ++I) {
+      if (Func.Counts[I] == (uint64_t)-1)
+        continue;
       FuncMax = std::max(FuncMax, Func.Counts[I]);
       FuncSum += Func.Counts[I];
     }
@@ -977,8 +1179,11 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
   if (TextFormat)
     return 0;
   std::unique_ptr<ProfileSummary> PS(Builder.getSummary());
-  OS << "Instrumentation level: "
-     << (Reader->isIRLevelProfile() ? "IR" : "Front-end") << "\n";
+  bool IsIR = Reader->isIRLevelProfile();
+  OS << "Instrumentation level: " << (IsIR ? "IR" : "Front-end");
+  if (IsIR)
+    OS << "  entry_first = " << Reader->instrEntryBBEnabled();
+  OS << "\n";
   if (ShowAllFunctions || !ShowFunction.empty())
     OS << "Functions shown: " << ShownFunctions << "\n";
   OS << "Total functions: " << PS->getNumFunctions() << "\n";

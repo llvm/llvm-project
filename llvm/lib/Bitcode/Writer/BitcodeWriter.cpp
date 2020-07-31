@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Bitcode/BitcodeCommon.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
 #include "llvm/Bitstream/BitCodes.h"
@@ -394,6 +395,8 @@ private:
   unsigned getEncodedSyncScopeID(SyncScope::ID SSID) {
     return unsigned(SSID);
   }
+
+  unsigned getEncodedAlign(MaybeAlign Alignment) { return encode(Alignment); }
 };
 
 /// Class to manage the bitcode writing for a combined index.
@@ -733,6 +736,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_PREALLOCATED;
   case Attribute::NoUndef:
     return bitc::ATTR_KIND_NOUNDEF;
+  case Attribute::ByRef:
+    return bitc::ATTR_KIND_BYREF;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:
@@ -1179,10 +1184,14 @@ void ModuleBitcodeWriter::writeModuleInfo() {
   // compute the maximum alignment value.
   std::map<std::string, unsigned> SectionMap;
   std::map<std::string, unsigned> GCMap;
-  unsigned MaxAlignment = 0;
+  MaybeAlign MaxAlignment;
   unsigned MaxGlobalType = 0;
+  const auto UpdateMaxAlignment = [&MaxAlignment](const MaybeAlign A) {
+    if (A)
+      MaxAlignment = !MaxAlignment ? *A : std::max(*MaxAlignment, *A);
+  };
   for (const GlobalVariable &GV : M.globals()) {
-    MaxAlignment = std::max(MaxAlignment, GV.getAlignment());
+    UpdateMaxAlignment(GV.getAlign());
     MaxGlobalType = std::max(MaxGlobalType, VE.getTypeID(GV.getValueType()));
     if (GV.hasSection()) {
       // Give section names unique ID's.
@@ -1195,7 +1204,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     }
   }
   for (const Function &F : M) {
-    MaxAlignment = std::max(MaxAlignment, F.getAlignment());
+    UpdateMaxAlignment(F.getAlign());
     if (F.hasSection()) {
       // Give section names unique ID's.
       unsigned &Entry = SectionMap[std::string(F.getSection())];
@@ -1231,10 +1240,10 @@ void ModuleBitcodeWriter::writeModuleInfo() {
                                                            //| constant
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // Initializer.
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 5)); // Linkage.
-    if (MaxAlignment == 0)                                 // Alignment.
+    if (!MaxAlignment)                                     // Alignment.
       Abbv->Add(BitCodeAbbrevOp(0));
     else {
-      unsigned MaxEncAlignment = Log2_32(MaxAlignment)+1;
+      unsigned MaxEncAlignment = getEncodedAlign(MaxAlignment);
       Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed,
                                Log2_32_Ceil(MaxEncAlignment+1)));
     }
@@ -1287,7 +1296,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     Vals.push_back(GV.isDeclaration() ? 0 :
                    (VE.getValueID(GV.getInitializer()) + 1));
     Vals.push_back(getEncodedLinkage(GV));
-    Vals.push_back(Log2_32(GV.getAlignment())+1);
+    Vals.push_back(getEncodedAlign(GV.getAlign()));
     Vals.push_back(GV.hasSection() ? SectionMap[std::string(GV.getSection())]
                                    : 0);
     if (GV.isThreadLocal() ||
@@ -1333,7 +1342,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     Vals.push_back(F.isDeclaration());
     Vals.push_back(getEncodedLinkage(F));
     Vals.push_back(VE.getAttributeListID(F.getAttributes()));
-    Vals.push_back(Log2_32(F.getAlignment())+1);
+    Vals.push_back(getEncodedAlign(F.getAlign()));
     Vals.push_back(F.hasSection() ? SectionMap[std::string(F.getSection())]
                                   : 0);
     Vals.push_back(getEncodedVisibility(F));
@@ -1630,6 +1639,8 @@ void ModuleBitcodeWriter::writeDICompositeType(
   Record.push_back(VE.getMetadataOrNullID(N->getRawIdentifier()));
   Record.push_back(VE.getMetadataOrNullID(N->getDiscriminator()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawDataLocation()));
+  Record.push_back(VE.getMetadataOrNullID(N->getRawAssociated()));
+  Record.push_back(VE.getMetadataOrNullID(N->getRawAllocated()));
 
   Stream.EmitRecord(bitc::METADATA_COMPOSITE_TYPE, Record, Abbrev);
   Record.clear();
@@ -2941,14 +2952,13 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     Vals.push_back(VE.getTypeID(AI.getAllocatedType()));
     Vals.push_back(VE.getTypeID(I.getOperand(0)->getType()));
     Vals.push_back(VE.getValueID(I.getOperand(0))); // size.
-    unsigned AlignRecord = Log2_32(AI.getAlignment()) + 1;
-    assert(Log2_32(Value::MaximumAlignment) + 1 < 1 << 5 &&
-           "not enough bits for maximum alignment");
-    assert(AlignRecord < 1 << 5 && "alignment greater than 1 << 64");
-    AlignRecord |= AI.isUsedWithInAlloca() << 5;
-    AlignRecord |= 1 << 6;
-    AlignRecord |= AI.isSwiftError() << 7;
-    Vals.push_back(AlignRecord);
+    using APV = AllocaPackedValues;
+    unsigned Record = 0;
+    Bitfield::set<APV::Align>(Record, getEncodedAlign(AI.getAlign()));
+    Bitfield::set<APV::UsedWithInAlloca>(Record, AI.isUsedWithInAlloca());
+    Bitfield::set<APV::ExplicitType>(Record, true);
+    Bitfield::set<APV::SwiftError>(Record, AI.isSwiftError());
+    Vals.push_back(Record);
     break;
   }
 
@@ -2962,7 +2972,7 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
         AbbrevToUse = FUNCTION_INST_LOAD_ABBREV;
     }
     Vals.push_back(VE.getTypeID(I.getType()));
-    Vals.push_back(Log2_32(cast<LoadInst>(I).getAlignment())+1);
+    Vals.push_back(getEncodedAlign(cast<LoadInst>(I).getAlign()));
     Vals.push_back(cast<LoadInst>(I).isVolatile());
     if (cast<LoadInst>(I).isAtomic()) {
       Vals.push_back(getEncodedOrdering(cast<LoadInst>(I).getOrdering()));
@@ -2976,7 +2986,7 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
       Code = bitc::FUNC_CODE_INST_STORE;
     pushValueAndType(I.getOperand(1), InstID, Vals); // ptrty + ptr
     pushValueAndType(I.getOperand(0), InstID, Vals); // valty + val
-    Vals.push_back(Log2_32(cast<StoreInst>(I).getAlignment())+1);
+    Vals.push_back(getEncodedAlign(cast<StoreInst>(I).getAlign()));
     Vals.push_back(cast<StoreInst>(I).isVolatile());
     if (cast<StoreInst>(I).isAtomic()) {
       Vals.push_back(getEncodedOrdering(cast<StoreInst>(I).getOrdering()));

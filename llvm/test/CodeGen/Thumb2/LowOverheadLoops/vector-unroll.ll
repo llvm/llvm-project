@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=thumbv8.1m.main -mve-tail-predication -disable-mve-tail-predication=false -mattr=+mve,+lob %s -S -o - | FileCheck %s
+; RUN: opt -mtriple=thumbv8.1m.main -mve-tail-predication -tail-predication=enabled -mattr=+mve,+lob %s -S -o - | FileCheck %s
 
 ; TODO: The unrolled pattern is preventing the transform
 ; CHECK-LABEL: mul_v16i8_unroll

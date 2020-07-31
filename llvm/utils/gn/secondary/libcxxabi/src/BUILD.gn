@@ -52,16 +52,10 @@ if (libcxxabi_enable_exceptions) {
     "cxa_personality.cpp",
   ]
 } else {
-  cxxabi_sources += [
-    # Make `gn format` not collapse this, for sync_source_lists_from_cmake.py.
-    "cxa_noexception.cpp",
-  ]
+  cxxabi_sources += [ "cxa_noexception.cpp" ]
 }
 if (target_os == "linux" || target_os == "fuchsia") {
-  cxxabi_sources += [
-    # Make `gn format` not collapse this, for sync_source_lists_from_cmake.py.
-    "cxa_thread_atexit.cpp",
-  ]
+  cxxabi_sources += [ "cxa_thread_atexit.cpp" ]
 }
 
 config("cxxabi_config") {

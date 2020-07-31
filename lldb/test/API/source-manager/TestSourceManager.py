@@ -197,6 +197,14 @@ class SourceManagerTestCase(TestBase):
             SOURCE_DISPLAYED_CORRECTLY,
             substrs=['Hello world'])
 
+        # Do the same thing with a file & line spec:
+        self.expect(
+            "source list -y main-copy.c:%d" %
+            self.line,
+            SOURCE_DISPLAYED_CORRECTLY,
+            substrs=['Hello world'])
+
+        
         # The '-b' option shows the line table locations from the debug information
         # that indicates valid places to set source level breakpoints.
 

@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple i686-pc-mingw32 %s | llvm-readobj -S --sr --sd | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple i686-pc-mingw32 %s | llvm-readobj -S --sr --sd - | FileCheck %s
 
 // COFF resolves differences between labels in the same section, unless that
 // label is declared with function type.

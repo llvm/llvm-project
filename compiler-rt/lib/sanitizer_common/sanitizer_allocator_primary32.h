@@ -210,6 +210,7 @@ class SizeClassAllocator32 {
     uptr res = beg + (n * (u32)size);
     return reinterpret_cast<void*>(res);
   }
+  void *GetBlockBeginDebug(const void *p) { return GetBlockBegin(p); }
 
   uptr GetActuallyAllocatedSize(void *p) {
     CHECK(PointerIsMine(p));

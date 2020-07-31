@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=armv7-linux-gnueabi -filetype=obj %s -o - | \
-// RUN:   llvm-readobj -r | FileCheck -check-prefix=OBJ %s
+// RUN:   llvm-readobj -r - | FileCheck -check-prefix=OBJ %s
 
         bleq some_label
         bl some_label

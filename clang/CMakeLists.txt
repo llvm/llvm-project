@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.4.3)
+cmake_minimum_required(VERSION 3.13.4)
 
 if(POLICY CMP0075)
   cmake_policy(SET CMP0075 NEW)
@@ -531,7 +531,7 @@ list(APPEND LLVM_COMMON_DEPENDS clang-tablegen-targets)
 # Force target to be built as soon as possible. Clang modules builds depend
 # header-wise on it as they ship all headers from the umbrella folders. Building
 # an entire module might include header, which depends on intrinsics_gen.
-if(LLVM_ENABLE_MODULES AND NOT CLANG_BUILT_STANDALONE)
+if(LLVM_ENABLE_MODULES)
   list(APPEND LLVM_COMMON_DEPENDS intrinsics_gen)
 endif()
 
@@ -752,6 +752,14 @@ if (CLANG_ENABLE_BOOTSTRAP)
     -DCMAKE_C_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/${C_COMPILER}
     -DCMAKE_ASM_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/${C_COMPILER}
     -DCMAKE_ASM_COMPILER_ID=Clang)
+
+  # cmake requires CMAKE_LINKER to be specified if the compiler is MSVC-like,
+  # otherwise it defaults the linker to be link.exe.
+  if(BOOTSTRAP_LLVM_ENABLE_LLD)
+    if((WIN32 AND NOT BOOTSTRAP_CMAKE_SYSTEM_NAME) OR BOOTSTRAP_CMAKE_SYSTEM_NAME STREQUAL "Windows")
+      set(${CLANG_STAGE}_LINKER -DCMAKE_LINKER=${LLVM_RUNTIME_OUTPUT_INTDIR}/lld-link${CMAKE_EXECUTABLE_SUFFIX})
+    endif()
+  endif()
 
   if(BOOTSTRAP_CMAKE_SYSTEM_NAME)
     set(${CLANG_STAGE}_CONFIG -DLLVM_CONFIG_PATH=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-config)

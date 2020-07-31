@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple armv7k-apple-watchos %s -filetype=obj -o - | llvm-readobj --macho-version-min | FileCheck %s
+// RUN: llvm-mc -triple armv7k-apple-watchos %s -filetype=obj -o - | llvm-readobj --macho-version-min - | FileCheck %s
 
 
 // Test the formation of the version-min load command in the MachO.

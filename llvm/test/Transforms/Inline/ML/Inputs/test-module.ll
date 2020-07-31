@@ -62,3 +62,7 @@ define i32 @switcher(i32) {
   %13 = load i32, i32* %2, align 4
   ret i32 %13
 }
+
+; CHECK-NOT: @adder
+; DEFAULT-LABEL:        @adder
+; DEFAULT-NEXT:         %2 = mul

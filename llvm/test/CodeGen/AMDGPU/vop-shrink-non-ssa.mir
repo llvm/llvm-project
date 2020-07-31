@@ -2,7 +2,7 @@
 ...
 # GCN-LABEL: name: fold_imm_non_ssa{{$}}
 # GCN: %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
-# GCN: %2:vgpr_32 = V_ADD_I32_e32 456, %0, implicit-def $vcc, implicit $exec
+# GCN: %2:vgpr_32 = V_ADD_CO_U32_e32 456, %0, implicit-def $vcc, implicit $exec
 
 name: fold_imm_non_ssa
 tracksRegLiveness: true
@@ -16,13 +16,13 @@ body:             |
     %0 = COPY undef %0
     %0 = V_MOV_B32_e32 123, implicit $exec
     %1 = V_MOV_B32_e32 456, implicit $exec
-    %2, $vcc = V_ADD_I32_e64 %0, %1, 0, implicit $exec
+    %2, $vcc = V_ADD_CO_U32_e64 %0, %1, 0, implicit $exec
     S_ENDPGM 0
 
 ...
 # GCN-LABEL: name: fold_partially_defined_superreg{{$}}
 # GCN: %1:vgpr_32 = V_MOV_B32_e32 456, implicit $exec
-# GCN: %2:vgpr_32 = V_ADD_I32_e32 123, %1, implicit-def $vcc, implicit $exec
+# GCN: %2:vgpr_32 = V_ADD_CO_U32_e32 123, %1, implicit-def $vcc, implicit $exec
 name: fold_partially_defined_superreg
 tracksRegLiveness: true
 registers:
@@ -34,7 +34,7 @@ body:             |
   bb.0:
     undef %3.sub0 = V_MOV_B32_e32 123, implicit $exec, implicit-def %3
     %1 = V_MOV_B32_e32 456, implicit $exec
-    %2, $vcc = V_ADD_I32_e64 %3.sub0, %1, 0, implicit $exec
+    %2, $vcc = V_ADD_CO_U32_e64 %3.sub0, %1, 0, implicit $exec
     S_ENDPGM 0
 
 ...

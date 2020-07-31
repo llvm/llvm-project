@@ -16,6 +16,18 @@ void test1(int i, T... t) {
   //CHECK: [&] {
 }
 {
+  auto lambda = [k{i}] {};
+  //CHECK: [k{i}] {
+}
+{
+  auto lambda = [k(i)] {};
+  //CHECK: [k(i)] {
+}
+{
+  auto lambda = [k = i] {};
+  //CHECK: [k = i] {
+}
+{
   auto lambda = [t..., i]{};
   //CHECK: [t..., i] {
 }
@@ -30,6 +42,14 @@ void test1(int i, T... t) {
 {
   auto lambda = [t..., this]{};
   //CHECK: [t..., this] {
+}
+{
+  auto lambda = [k(t...)] {};
+  //CHECK: [k(t...)] {
+}
+{
+  auto lambda = [k{t...}] {};
+  //CHECK: [k{t...}] {
 }
 }
 

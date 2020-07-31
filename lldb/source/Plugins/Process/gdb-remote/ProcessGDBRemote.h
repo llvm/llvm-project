@@ -85,7 +85,7 @@ public:
   Status WillAttachToProcessWithName(const char *process_name,
                                      bool wait_for_launch) override;
 
-  Status DoConnectRemote(Stream *strm, llvm::StringRef remote_url) override;
+  Status DoConnectRemote(llvm::StringRef remote_url) override;
 
   Status WillLaunchOrAttach();
 

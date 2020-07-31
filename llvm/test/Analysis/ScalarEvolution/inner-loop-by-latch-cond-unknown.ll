@@ -1,4 +1,5 @@
-; RUN: opt < %s -analyze -iv-users -S | FileCheck %s
+; RUN: opt < %s -analyze -enable-new-pm=0 -iv-users -S | FileCheck %s
+; RUN: opt < %s -disable-output "-passes=print<iv-users>" -S 2>&1 | FileCheck %s
 
 ; This is a regression test for the commit rL327362.
 

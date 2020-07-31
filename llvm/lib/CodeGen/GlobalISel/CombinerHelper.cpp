@@ -576,6 +576,40 @@ bool CombinerHelper::dominates(const MachineInstr &DefMI,
   return isPredecessor(DefMI, UseMI);
 }
 
+bool CombinerHelper::matchSextTruncSextLoad(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_SEXT_INREG);
+  Register SrcReg = MI.getOperand(1).getReg();
+  Register LoadUser = SrcReg;
+
+  if (MRI.getType(SrcReg).isVector())
+    return false;
+
+  Register TruncSrc;
+  if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc))))
+    LoadUser = TruncSrc;
+
+  uint64_t SizeInBits = MI.getOperand(2).getImm();
+  // If the source is a G_SEXTLOAD from the same bit width, then we don't
+  // need any extend at all, just a truncate.
+  if (auto *LoadMI = getOpcodeDef(TargetOpcode::G_SEXTLOAD, LoadUser, MRI)) {
+    const auto &MMO = **LoadMI->memoperands_begin();
+    // If truncating more than the original extended value, abort.
+    if (TruncSrc && MRI.getType(TruncSrc).getSizeInBits() < MMO.getSizeInBits())
+      return false;
+    if (MMO.getSizeInBits() == SizeInBits)
+      return true;
+  }
+  return false;
+}
+
+bool CombinerHelper::applySextTruncSextLoad(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_SEXT_INREG);
+  Builder.setInstrAndDebugLoc(MI);
+  Builder.buildCopy(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
+  MI.eraseFromParent();
+  return true;
+}
+
 bool CombinerHelper::findPostIndexCandidate(MachineInstr &MI, Register &Addr,
                                             Register &Base, Register &Offset) {
   auto &MF = *MI.getParent()->getParent();

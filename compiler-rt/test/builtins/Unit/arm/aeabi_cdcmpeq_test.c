@@ -1,6 +1,5 @@
 // REQUIRES: arm-target-arch || armv6m-target-arch
-// RUN: %arm_call_apsr -o %t.aspr.o
-// RUN: %clang_builtins %s %t.aspr.o %librt -o %t && %run %t
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 
 #include <stdint.h>
 #include <stdio.h>

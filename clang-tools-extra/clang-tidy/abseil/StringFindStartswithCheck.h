@@ -35,9 +35,8 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
-  std::unique_ptr<clang::tidy::utils::IncludeInserter> IncludeInserter;
   const std::vector<std::string> StringLikeClasses;
-  const utils::IncludeSorter::IncludeStyle IncludeStyle;
+  utils::IncludeInserter IncludeInserter;
   const std::string AbseilStringsMatchHeader;
 };
 

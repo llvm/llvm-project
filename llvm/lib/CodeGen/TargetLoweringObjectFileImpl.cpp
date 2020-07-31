@@ -2027,8 +2027,8 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForExternalReference(
 
 MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
-  assert(!TM.getFunctionSections() && !TM.getDataSections() &&
-         "XCOFF unique sections not yet implemented.");
+  assert(!TM.getDataSections() &&
+         "XCOFF unique data sections not yet implemented.");
 
   // Common symbols go into a csect with matching name which will get mapped
   // into the .bss section.
@@ -2057,8 +2057,13 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
         Kind, /* BeginSymbolName */ nullptr);
   }
 
-  if (Kind.isText())
+  if (Kind.isText()) {
+    if (TM.getFunctionSections()) {
+      return cast<MCSymbolXCOFF>(getFunctionEntryPointSymbol(GO, TM))
+          ->getRepresentedCsect();
+    }
     return TextSection;
+  }
 
   if (Kind.isData() || Kind.isReadOnlyWithRel())
     // TODO: We may put this under option control, because user may want to
@@ -2125,9 +2130,11 @@ const MCExpr *TargetLoweringObjectFileXCOFF::lowerRelativeReference(
   report_fatal_error("XCOFF not yet implemented.");
 }
 
-XCOFF::StorageClass TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(
-    const GlobalObject *GO) {
-  switch (GO->getLinkage()) {
+XCOFF::StorageClass
+TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(const GlobalValue *GV) {
+  assert(!isa<GlobalIFunc>(GV) && "GlobalIFunc is not supported on AIX.");
+
+  switch (GV->getLinkage()) {
   case GlobalValue::InternalLinkage:
   case GlobalValue::PrivateLinkage:
     return XCOFF::C_HIDEXT;
@@ -2149,10 +2156,32 @@ XCOFF::StorageClass TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(
 }
 
 MCSymbol *TargetLoweringObjectFileXCOFF::getFunctionEntryPointSymbol(
-    const Function *F, const TargetMachine &TM) const {
+    const GlobalValue *Func, const TargetMachine &TM) const {
+  assert(
+      (isa<Function>(Func) ||
+       (isa<GlobalAlias>(Func) &&
+        isa_and_nonnull<Function>(cast<GlobalAlias>(Func)->getBaseObject()))) &&
+      "Func must be a function or an alias which has a function as base "
+      "object.");
   SmallString<128> NameStr;
   NameStr.push_back('.');
-  getNameWithPrefix(NameStr, F, TM);
+  getNameWithPrefix(NameStr, Func, TM);
+
+  // When -function-sections is enabled, it's not necessary to emit
+  // function entry point label any more. We will use function entry
+  // point csect instead. For function delcarations, it's okay to continue
+  // using label semantic because undefined symbols gets treated as csect with
+  // XTY_ER property anyway.
+  if (TM.getFunctionSections() && !Func->isDeclaration() &&
+      isa<Function>(Func)) {
+    XCOFF::StorageClass SC =
+        TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(Func);
+    return cast<MCSectionXCOFF>(getContext().getXCOFFSection(
+                                    NameStr, XCOFF::XMC_PR, XCOFF::XTY_SD, SC,
+                                    SectionKind::getText()))
+        ->getQualNameSymbol();
+  }
+
   return getContext().getOrCreateSymbol(NameStr);
 }
 

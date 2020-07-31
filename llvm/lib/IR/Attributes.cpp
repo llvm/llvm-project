@@ -172,6 +172,10 @@ Attribute Attribute::getWithByValType(LLVMContext &Context, Type *Ty) {
   return get(Context, ByVal, Ty);
 }
 
+Attribute Attribute::getWithByRefType(LLVMContext &Context, Type *Ty) {
+  return get(Context, ByRef, Ty);
+}
+
 Attribute Attribute::getWithPreallocatedType(LLVMContext &Context, Type *Ty) {
   return get(Context, Preallocated, Ty);
 }
@@ -459,9 +463,9 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return Result;
   }
 
-  if (hasAttribute(Attribute::Preallocated)) {
-    std::string Result;
-    Result += "preallocated";
+  const bool IsByRef = hasAttribute(Attribute::ByRef);
+  if (IsByRef || hasAttribute(Attribute::Preallocated)) {
+    std::string Result = IsByRef ? "byref" : "preallocated";
     raw_string_ostream OS(Result);
     Result += '(';
     getValueAsType()->print(OS, false, true);
@@ -742,6 +746,10 @@ uint64_t AttributeSet::getDereferenceableOrNullBytes() const {
   return SetNode ? SetNode->getDereferenceableOrNullBytes() : 0;
 }
 
+Type *AttributeSet::getByRefType() const {
+  return SetNode ? SetNode->getByRefType() : nullptr;
+}
+
 Type *AttributeSet::getByValType() const {
   return SetNode ? SetNode->getByValType() : nullptr;
 }
@@ -842,6 +850,9 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C, const AttrBuilder &B) {
     case Attribute::ByVal:
       Attr = Attribute::getWithByValType(C, B.getByValType());
       break;
+    case Attribute::ByRef:
+      Attr = Attribute::getWithByRefType(C, B.getByRefType());
+      break;
     case Attribute::Preallocated:
       Attr = Attribute::getWithPreallocatedType(C, B.getPreallocatedType());
       break;
@@ -925,14 +936,19 @@ MaybeAlign AttributeSetNode::getStackAlignment() const {
 Type *AttributeSetNode::getByValType() const {
   if (auto A = findEnumAttribute(Attribute::ByVal))
     return A->getValueAsType();
-  return 0;
+  return nullptr;
+}
+
+Type *AttributeSetNode::getByRefType() const {
+  if (auto A = findEnumAttribute(Attribute::ByRef))
+    return A->getValueAsType();
+  return nullptr;
 }
 
 Type *AttributeSetNode::getPreallocatedType() const {
-  for (const auto &I : *this)
-    if (I.hasAttribute(Attribute::Preallocated))
-      return I.getValueAsType();
-  return 0;
+  if (auto A = findEnumAttribute(Attribute::Preallocated))
+    return A->getValueAsType();
+  return nullptr;
 }
 
 uint64_t AttributeSetNode::getDereferenceableBytes() const {
@@ -970,7 +986,7 @@ std::string AttributeSetNode::getAsString(bool InAttrGrp) const {
 
 /// Map from AttributeList index to the internal array index. Adding one happens
 /// to work, because -1 wraps around to 0.
-static constexpr unsigned attrIdxToArrayIdx(unsigned Index) {
+static unsigned attrIdxToArrayIdx(unsigned Index) {
   return Index + 1;
 }
 
@@ -983,9 +999,7 @@ AttributeListImpl::AttributeListImpl(ArrayRef<AttributeSet> Sets)
 
   // Initialize AvailableFunctionAttrs and AvailableSomewhereAttrs
   // summary bitsets.
-  static_assert(attrIdxToArrayIdx(AttributeList::FunctionIndex) == 0U,
-                "function should be stored in slot 0");
-  for (const auto &I : Sets[0])
+  for (const auto &I : Sets[attrIdxToArrayIdx(AttributeList::FunctionIndex)])
     if (!I.isStringAttribute())
       AvailableFunctionAttrs.addAttribute(I.getKindAsEnum());
 
@@ -1452,6 +1466,10 @@ Type *AttributeList::getParamByValType(unsigned Index) const {
   return getAttributes(Index+FirstArgIndex).getByValType();
 }
 
+Type *AttributeList::getParamByRefType(unsigned Index) const {
+  return getAttributes(Index + FirstArgIndex).getByRefType();
+}
+
 Type *AttributeList::getParamPreallocatedType(unsigned Index) const {
   return getAttributes(Index + FirstArgIndex).getPreallocatedType();
 }
@@ -1537,6 +1555,7 @@ void AttrBuilder::clear() {
   DerefBytes = DerefOrNullBytes = 0;
   AllocSizeArgs = 0;
   ByValType = nullptr;
+  ByRefType = nullptr;
   PreallocatedType = nullptr;
 }
 
@@ -1563,6 +1582,8 @@ AttrBuilder &AttrBuilder::addAttribute(Attribute Attr) {
     StackAlignment = Attr.getStackAlignment();
   else if (Kind == Attribute::ByVal)
     ByValType = Attr.getValueAsType();
+  else if (Kind == Attribute::ByRef)
+    ByRefType = Attr.getValueAsType();
   else if (Kind == Attribute::Preallocated)
     PreallocatedType = Attr.getValueAsType();
   else if (Kind == Attribute::Dereferenceable)
@@ -1589,6 +1610,8 @@ AttrBuilder &AttrBuilder::removeAttribute(Attribute::AttrKind Val) {
     StackAlignment.reset();
   else if (Val == Attribute::ByVal)
     ByValType = nullptr;
+  else if (Val == Attribute::ByRef)
+    ByRefType = nullptr;
   else if (Val == Attribute::Preallocated)
     PreallocatedType = nullptr;
   else if (Val == Attribute::Dereferenceable)
@@ -1679,6 +1702,12 @@ AttrBuilder &AttrBuilder::addByValAttr(Type *Ty) {
   return *this;
 }
 
+AttrBuilder &AttrBuilder::addByRefAttr(Type *Ty) {
+  Attrs[Attribute::ByRef] = true;
+  ByRefType = Ty;
+  return *this;
+}
+
 AttrBuilder &AttrBuilder::addPreallocatedAttr(Type *Ty) {
   Attrs[Attribute::Preallocated] = true;
   PreallocatedType = Ty;
@@ -1704,6 +1733,9 @@ AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {
 
   if (!ByValType)
     ByValType = B.ByValType;
+
+  if (!ByRefType)
+    ByRefType = B.ByRefType;
 
   if (!PreallocatedType)
     PreallocatedType = B.PreallocatedType;
@@ -1735,6 +1767,9 @@ AttrBuilder &AttrBuilder::remove(const AttrBuilder &B) {
 
   if (B.ByValType)
     ByValType = nullptr;
+
+  if (B.ByRefType)
+    ByRefType = nullptr;
 
   if (B.PreallocatedType)
     PreallocatedType = nullptr;
@@ -1799,7 +1834,7 @@ bool AttrBuilder::operator==(const AttrBuilder &B) {
 
   return Alignment == B.Alignment && StackAlignment == B.StackAlignment &&
          DerefBytes == B.DerefBytes && ByValType == B.ByValType &&
-         PreallocatedType == B.PreallocatedType;
+         ByRefType == B.ByRefType && PreallocatedType == B.PreallocatedType;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1828,7 +1863,8 @@ AttrBuilder AttributeFuncs::typeIncompatible(Type *Ty) {
         .addAttribute(Attribute::StructRet)
         .addAttribute(Attribute::InAlloca)
         .addPreallocatedAttr(Ty)
-        .addByValAttr(Ty);
+        .addByValAttr(Ty)
+        .addByRefAttr(Ty);
 
   return Incompatible;
 }

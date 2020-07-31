@@ -68,7 +68,7 @@ struct Cluster {
 
   int next;
   int prev;
-  size_t size = 0;
+  uint64_t size;
   uint64_t weight = 0;
   uint64_t initialWeight = 0;
   Edge bestPred = {-1, 0};
@@ -223,14 +223,14 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
 
   DenseMap<const InputSectionBase *, int> orderMap;
   int curOrder = 1;
-  for (int leader : sorted)
+  for (int leader : sorted) {
     for (int i = leader;;) {
       orderMap[sections[i]] = curOrder++;
       i = clusters[i].next;
       if (i == leader)
         break;
     }
-
+  }
   if (!config->printSymbolOrder.empty()) {
     std::error_code ec;
     raw_fd_ostream os(config->printSymbolOrder, ec, sys::fs::OF_None);

@@ -99,6 +99,12 @@ Property::Property(const PropertyDefinition &definition)
     }
     break;
 
+  case OptionValue::eTypeFileLineColumn:
+    // "definition.default_uint_value" is not used for a
+    // OptionValue::eTypeFileSpecList
+    m_value_sp = std::make_shared<OptionValueFileColonLine>();
+    break;
+
   case OptionValue::eTypeFileSpec: {
     // "definition.default_uint_value" represents if the
     // "definition.default_cstr_value" should be resolved or not

@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.13.4)
 
 # Tell cmake 3.0+ that it's safe to clear the PROJECT_VERSION variable in the
 # call to project() below.
@@ -154,6 +154,10 @@ else()
   add_cxx_compiler_flag(-fstrict-aliasing)
   if (NOT BENCHMARK_ENABLE_EXCEPTIONS)
     add_cxx_compiler_flag(-fno-exceptions)
+  endif()
+
+  if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
+    add_cxx_compiler_flag(-Wno-suggest-override)
   endif()
 
   if (HAVE_CXX_FLAG_FSTRICT_ALIASING)

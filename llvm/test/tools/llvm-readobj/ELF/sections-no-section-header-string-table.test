@@ -92,11 +92,11 @@
 
 --- !ELF
 FileHeader:
-  Class:    ELFCLASS64
-  Data:     ELFDATA2LSB
-  Type:     ET_DYN
-  Machine:  EM_X86_64
-  SHStrNdx: 0
+  Class:     ELFCLASS64
+  Data:      ELFDATA2LSB
+  Type:      ET_DYN
+  Machine:   EM_X86_64
+  EShStrNdx: 0
 Sections:
   - Name:   .foo
     Type:   SHT_PROGBITS

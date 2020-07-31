@@ -107,6 +107,10 @@ constexpr RegsetDesc FPR_Desc[] = {
     {llvm::Triple::OpenBSD, llvm::Triple::UnknownArch, OPENBSD::NT_FPREGS},
 };
 
+constexpr RegsetDesc AARCH64_SVE_Desc[] = {
+    {llvm::Triple::Linux, llvm::Triple::aarch64, llvm::ELF::NT_ARM_SVE},
+};
+
 constexpr RegsetDesc PPC_VMX_Desc[] = {
     {llvm::Triple::FreeBSD, llvm::Triple::UnknownArch, llvm::ELF::NT_PPC_VMX},
     {llvm::Triple::Linux, llvm::Triple::UnknownArch, llvm::ELF::NT_PPC_VMX},

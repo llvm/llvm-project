@@ -1,11 +1,11 @@
 // 32 bit big endian
-// RUN: llvm-mc -filetype=obj -triple mips-unknown-linux %s -o - | llvm-readobj -h | FileCheck -check-prefix=CHECK-BE32 %s
+// RUN: llvm-mc -filetype=obj -triple mips-unknown-linux %s -o - | llvm-readobj -h - | FileCheck -check-prefix=CHECK-BE32 %s
 // 32 bit little endian
-// RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux %s -o - | llvm-readobj -h | FileCheck -check-prefix=CHECK-LE32 %s
+// RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux %s -o - | llvm-readobj -h - | FileCheck -check-prefix=CHECK-LE32 %s
 // 64 bit big endian
-// RUN: llvm-mc -filetype=obj -arch=mips64 -triple mips64-unknown-linux %s -o - | llvm-readobj -h | FileCheck -check-prefix=CHECK-BE64 %s
+// RUN: llvm-mc -filetype=obj -arch=mips64 -triple mips64-unknown-linux %s -o - | llvm-readobj -h - | FileCheck -check-prefix=CHECK-BE64 %s
 // 64 bit little endian
-// RUN: llvm-mc -filetype=obj -arch=mips64el -triple mips64el-unknown-linux %s -o - | llvm-readobj -h | FileCheck -check-prefix=CHECK-LE64 %s
+// RUN: llvm-mc -filetype=obj -arch=mips64el -triple mips64el-unknown-linux %s -o - | llvm-readobj -h - | FileCheck -check-prefix=CHECK-LE64 %s
 
 // Check that we produce 32 bit with each endian.
 

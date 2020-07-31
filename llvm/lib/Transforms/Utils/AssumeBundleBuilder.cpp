@@ -6,9 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define DEBUG_TYPE "assume-builder"
+
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -19,6 +22,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
@@ -32,6 +36,16 @@ cl::opt<bool> EnableKnowledgeRetention(
     "enable-knowledge-retention", cl::init(false), cl::Hidden,
     cl::desc(
         "enable preservation of attributes throughout code transformation"));
+
+STATISTIC(NumAssumeBuilt, "Number of assume built by the assume builder");
+STATISTIC(NumBundlesInAssumes, "Total number of Bundles in the assume built");
+STATISTIC(NumAssumesMerged,
+          "Number of assume merged by the assume simplify pass");
+STATISTIC(NumAssumesRemoved,
+          "Number of assume removed by the assume simplify pass");
+
+DEBUG_COUNTER(BuildAssumeCounter, "assume-builder-counter",
+              "Controls which assumes gets created");
 
 namespace {
 
@@ -204,6 +218,8 @@ struct AssumeBuilderState {
   IntrinsicInst *build() {
     if (AssumedKnowledgeMap.empty())
       return nullptr;
+    if (!DebugCounter::shouldExecute(BuildAssumeCounter))
+      return nullptr;
     Function *FnAssume = Intrinsic::getDeclaration(M, Intrinsic::assume);
     LLVMContext &C = M->getContext();
     SmallVector<OperandBundleDef, 8> OpBundle;
@@ -220,7 +236,9 @@ struct AssumeBuilderState {
       OpBundle.push_back(OperandBundleDefT<Value *>(
           std::string(Attribute::getNameFromAttrKind(MapElem.first.second)),
           Args));
+      NumBundlesInAssumes++;
     }
+    NumAssumeBuilt++;
     return cast<IntrinsicInst>(CallInst::Create(
         FnAssume, ArrayRef<Value *>({ConstantInt::getTrue(C)}), OpBundle));
   }
@@ -328,6 +346,10 @@ struct AssumeSimplify {
           (!ForceCleanup && !isAssumeWithEmptyBundle(*Assume)))
         continue;
       MadeChange = true;
+      if (ForceCleanup)
+        NumAssumesMerged++;
+      else
+        NumAssumesRemoved++;
       Assume->eraseFromParent();
     }
     CleanupToDo.clear();

@@ -1,5 +1,5 @@
-// RUN: llvm-mc -filetype=obj -triple mipsel-pc-Linux-gnu %s -o - | llvm-readobj  -S --sd | FileCheck %s -check-prefix=CHECK-LE
-// RUN: llvm-mc -filetype=obj -triple mips-pc-linux-gnu %s -o - | llvm-readobj -S --sd | FileCheck %s -check-prefix=CHECK-BE
+// RUN: llvm-mc -filetype=obj -triple mipsel-pc-Linux-gnu %s -o - | llvm-readobj  -S --sd - | FileCheck %s -check-prefix=CHECK-LE
+// RUN: llvm-mc -filetype=obj -triple mips-pc-linux-gnu %s -o - | llvm-readobj -S --sd - | FileCheck %s -check-prefix=CHECK-BE
 
 // test that this produces a correctly encoded cfi_advance_loc for both endians.
 

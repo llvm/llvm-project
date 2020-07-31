@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 // Misc utils implementation for Windows.
 //===----------------------------------------------------------------------===//
-#include "FuzzerDefs.h"
+#include "FuzzerPlatform.h"
 #if LIBFUZZER_WINDOWS
 #include "FuzzerCommand.h"
 #include "FuzzerIO.h"

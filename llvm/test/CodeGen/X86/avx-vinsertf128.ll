@@ -29,7 +29,7 @@ define void @insert_crash() nounwind {
 ; CHECK-NEXT:    vminpd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vminsd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,2,0]
+; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; CHECK-NEXT:    vmovups %xmm0, (%rax)
 ; CHECK-NEXT:    retq
 allocas:

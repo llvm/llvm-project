@@ -67,6 +67,12 @@ cl::opt<bool> UseRegistersForDeoptValues(
     "use-registers-for-deopt-values", cl::Hidden, cl::init(false),
     cl::desc("Allow using registers for non pointer deopt args"));
 
+cl::opt<unsigned> MaxRegistersForGCPointers(
+    "max-registers-for-gc-values", cl::Hidden, cl::init(0),
+    cl::desc("Max number of VRegs allowed to pass GC pointer meta args in"));
+
+typedef FunctionLoweringInfo::StatepointRelocationRecord RecordType;
+
 static void pushStackMapConstant(SmallVectorImpl<SDValue>& Ops,
                                  SelectionDAGBuilder &Builder, uint64_t Value) {
   SDLoc L = Builder.getCurSDLoc();
@@ -156,14 +162,18 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
 
   // Spill location is known for gc relocates
   if (const auto *Relocate = dyn_cast<GCRelocateInst>(Val)) {
-    const auto &SpillMap =
-        Builder.FuncInfo.StatepointSpillMaps[Relocate->getStatepoint()];
+    const auto &RelocationMap =
+        Builder.FuncInfo.StatepointRelocationMaps[Relocate->getStatepoint()];
 
-    auto It = SpillMap.find(Relocate->getDerivedPtr());
-    if (It == SpillMap.end())
+    auto It = RelocationMap.find(Relocate->getDerivedPtr());
+    if (It == RelocationMap.end())
       return None;
 
-    return It->second;
+    auto &Record = It->second;
+    if (Record.type != RecordType::Spill)
+      return None;
+
+    return Record.payload.FI;
   }
 
   // Look through bitcast instructions.
@@ -221,7 +231,6 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
   return None;
 }
 
-
 /// Return true if-and-only-if the given SDValue can be lowered as either a
 /// constant argument or a stack reference.  The key point is that the value
 /// doesn't need to be spilled or tracked as a vreg use.
@@ -241,7 +250,6 @@ static bool willLowerDirectly(SDValue Incoming) {
   return (isa<ConstantSDNode>(Incoming) || isa<ConstantFPSDNode>(Incoming) ||
           Incoming.isUndef());
 }
-
 
 /// Try to find existing copies of the incoming values in stack slots used for
 /// statepoint spilling.  If we can find a spill slot for the incoming value,
@@ -388,7 +396,7 @@ spillIncomingStatepointValue(SDValue Incoming, SDValue Chain,
                                  StoreMMO);
 
     MMO = getMachineMemOperand(MF, *cast<FrameIndexSDNode>(Loc));
-    
+
     Builder.StatepointLowering.setLocation(Incoming, Loc);
   }
 
@@ -485,7 +493,9 @@ lowerIncomingStatepointValue(SDValue Incoming, bool RequireSpillSlot,
 /// will be set to the last value spilled (if any were).
 static void
 lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
-                        SmallVectorImpl<MachineMemOperand*> &MemRefs,                                    SelectionDAGBuilder::StatepointLoweringInfo &SI,
+                        SmallVectorImpl<MachineMemOperand *> &MemRefs,
+                        DenseMap<SDValue, int> &LowerAsVReg,
+                        SelectionDAGBuilder::StatepointLoweringInfo &SI,
                         SelectionDAGBuilder &Builder) {
   // Lower the deopt and gc arguments for this statepoint.  Layout will be:
   // deopt argument length, deopt arguments.., gc arguments...
@@ -531,6 +541,27 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   const bool LiveInDeopt =
     SI.StatepointFlags & (uint64_t)StatepointFlags::DeoptLiveIn;
 
+  // Decide which deriver pointers will go on VRegs
+  const unsigned MaxTiedRegs = 15; // Max  number of tied regs MI can have.
+  unsigned MaxVRegPtrs =
+      std::min(MaxTiedRegs, MaxRegistersForGCPointers.getValue());
+
+  LLVM_DEBUG(dbgs() << "Desiding how to lower GC Pointers:\n");
+  unsigned CurNumVRegs = 0;
+  for (const Value *P : SI.Ptrs) {
+    if (LowerAsVReg.size() == MaxVRegPtrs)
+      break;
+    SDValue PtrSD = Builder.getValue(P);
+    if (willLowerDirectly(PtrSD) || P->getType()->isVectorTy()) {
+      LLVM_DEBUG(dbgs() << "direct/spill "; PtrSD.dump(&Builder.DAG));
+      continue;
+    }
+    LLVM_DEBUG(dbgs() << "vreg "; PtrSD.dump(&Builder.DAG));
+    LowerAsVReg[PtrSD] = CurNumVRegs++;
+  }
+  LLVM_DEBUG(dbgs() << LowerAsVReg.size()
+                    << " derived pointers will go in vregs\n");
+
   auto isGCValue = [&](const Value *V) {
     auto *Ty = V->getType();
     if (!Ty->isPtrOrPtrVectorTy())
@@ -542,7 +573,9 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   };
 
   auto requireSpillSlot = [&](const Value *V) {
-    return !(LiveInDeopt || UseRegistersForDeoptValues) || isGCValue(V);
+    if (isGCValue(V))
+      return !LowerAsVReg.count(Builder.getValue(V));
+    return !(LiveInDeopt || UseRegistersForDeoptValues);
   };
 
   // Before we actually start lowering (and allocating spill slots for values),
@@ -554,9 +587,14 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
     if (requireSpillSlot(V))
       reservePreviousStackSlotForValue(V, Builder);
   }
+
   for (unsigned i = 0; i < SI.Bases.size(); ++i) {
-    reservePreviousStackSlotForValue(SI.Bases[i], Builder);
-    reservePreviousStackSlotForValue(SI.Ptrs[i], Builder);
+    SDValue SDV = Builder.getValue(SI.Bases[i]);
+    if (!LowerAsVReg.count(SDV))
+      reservePreviousStackSlotForValue(SI.Bases[i], Builder);
+    SDV = Builder.getValue(SI.Ptrs[i]);
+    if (!LowerAsVReg.count(SDV))
+      reservePreviousStackSlotForValue(SI.Ptrs[i], Builder);
   }
 
   // First, prefix the list with the number of unique values to be
@@ -567,6 +605,7 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
 
   // The vm state arguments are lowered in an opaque manner.  We do not know
   // what type of values are contained within.
+  LLVM_DEBUG(dbgs() << "Lowering deopt state\n");
   for (const Value *V : SI.DeoptState) {
     SDValue Incoming;
     // If this is a function argument at a static frame index, generate it as
@@ -578,6 +617,8 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
     }
     if (!Incoming.getNode())
       Incoming = Builder.getValue(V);
+    LLVM_DEBUG(dbgs() << "Value " << *V
+                      << " requireSpillSlot = " << requireSpillSlot(V) << "\n");
     lowerIncomingStatepointValue(Incoming, requireSpillSlot(V), Ops, MemRefs,
                                  Builder);
   }
@@ -588,14 +629,15 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
   // it's (lowered) derived pointer.  i.e
   // (base[0], ptr[0], base[1], ptr[1], ...)
   for (unsigned i = 0; i < SI.Bases.size(); ++i) {
-    const Value *Base = SI.Bases[i];
-    lowerIncomingStatepointValue(Builder.getValue(Base),
-                                 /*RequireSpillSlot*/ true, Ops, MemRefs,
+    bool RequireSpillSlot;
+    SDValue Base = Builder.getValue(SI.Bases[i]);
+    RequireSpillSlot = !LowerAsVReg.count(Base);
+    lowerIncomingStatepointValue(Base, RequireSpillSlot, Ops, MemRefs,
                                  Builder);
 
-    const Value *Ptr = SI.Ptrs[i];
-    lowerIncomingStatepointValue(Builder.getValue(Ptr),
-                                 /*RequireSpillSlot*/ true, Ops, MemRefs,
+    SDValue Derived = Builder.getValue(SI.Ptrs[i]);
+    RequireSpillSlot = !LowerAsVReg.count(Derived);
+    lowerIncomingStatepointValue(Derived, RequireSpillSlot, Ops, MemRefs,
                                  Builder);
   }
 
@@ -618,39 +660,6 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
       MemRefs.push_back(MMO);
     }
   }
-
-  // Record computed locations for all lowered values.
-  // This can not be embedded in lowering loops as we need to record *all*
-  // values, while previous loops account only values with unique SDValues.
-  const Instruction *StatepointInstr = SI.StatepointInstr;
-  auto &SpillMap = Builder.FuncInfo.StatepointSpillMaps[StatepointInstr];
-
-  for (const GCRelocateInst *Relocate : SI.GCRelocates) {
-    const Value *V = Relocate->getDerivedPtr();
-    SDValue SDV = Builder.getValue(V);
-    SDValue Loc = Builder.StatepointLowering.getLocation(SDV);
-
-    if (Loc.getNode()) {
-      SpillMap[V] = cast<FrameIndexSDNode>(Loc)->getIndex();
-    } else {
-      // Record value as visited, but not spilled. This is case for allocas
-      // and constants. For this values we can avoid emitting spill load while
-      // visiting corresponding gc_relocate.
-      // Actually we do not need to record them in this map at all.
-      // We do this only to check that we are not relocating any unvisited
-      // value.
-      SpillMap[V] = None;
-
-      // Default llvm mechanisms for exporting values which are used in
-      // different basic blocks does not work for gc relocates.
-      // Note that it would be incorrect to teach llvm that all relocates are
-      // uses of the corresponding values so that it would automatically
-      // export them. Relocates of the spilled values does not use original
-      // value.
-      if (Relocate->getParent() != StatepointInstr->getParent())
-        Builder.ExportFromCurrentBlock(V);
-    }
-  }
 }
 
 SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
@@ -665,6 +674,7 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   assert(SI.Bases.size() == SI.Ptrs.size() &&
          SI.Ptrs.size() <= SI.GCRelocates.size());
 
+  LLVM_DEBUG(dbgs() << "Lowering statepoint " << *SI.StatepointInstr << "\n");
 #ifndef NDEBUG
   for (auto *Reloc : SI.GCRelocates)
     if (Reloc->getParent() == SI.StatepointInstr->getParent())
@@ -674,7 +684,9 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   // Lower statepoint vmstate and gcstate arguments
   SmallVector<SDValue, 10> LoweredMetaArgs;
   SmallVector<MachineMemOperand*, 16> MemRefs;
-  lowerStatepointMetaArgs(LoweredMetaArgs, MemRefs, SI, *this);
+  // Maps derived pointer SDValue to statepoint result of relocated pointer.
+  DenseMap<SDValue, int> LowerAsVReg;
+  lowerStatepointMetaArgs(LoweredMetaArgs, MemRefs, LowerAsVReg, SI, *this);
 
   // Now that we've emitted the spills, we need to update the root so that the
   // call sequence is ordered correctly.
@@ -788,11 +800,80 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
 
   // Compute return values.  Provide a glue output since we consume one as
   // input.  This allows someone else to chain off us as needed.
-  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
+  SmallVector<EVT, 8> NodeTys;
+  for (auto &Ptr : SI.Ptrs) {
+    SDValue SD = getValue(Ptr);
+    if (!LowerAsVReg.count(SD))
+      continue;
+    NodeTys.push_back(SD.getValueType());
+  }
+  LLVM_DEBUG(dbgs() << "Statepoint has " << NodeTys.size() << " results\n");
+  assert(NodeTys.size() == LowerAsVReg.size() && "Inconsistent GC Ptr lowering");
+  NodeTys.push_back(MVT::Other);
+  NodeTys.push_back(MVT::Glue);
 
+  unsigned NumResults = NodeTys.size();
   MachineSDNode *StatepointMCNode =
     DAG.getMachineNode(TargetOpcode::STATEPOINT, getCurSDLoc(), NodeTys, Ops);
   DAG.setNodeMemRefs(StatepointMCNode, MemRefs);
+
+
+  // For values lowered to tied-defs, create the virtual registers.  Note that
+  // for simplicity, we *always* create a vreg even within a single block. 
+  DenseMap<const Value *, Register> VirtRegs;
+  for (const auto *Relocate : SI.GCRelocates) {
+    Value *Derived = Relocate->getDerivedPtr();
+    SDValue SD = getValue(Derived);
+    if (!LowerAsVReg.count(SD))
+      continue;
+
+    // Handle multiple gc.relocates of the same input efficiently.
+    if (VirtRegs.count(Derived))
+      continue;
+
+    SDValue Relocated = SDValue(StatepointMCNode, LowerAsVReg[SD]);
+
+    auto *RetTy = Relocate->getType();
+    Register Reg = FuncInfo.CreateRegs(RetTy);
+    RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
+                     DAG.getDataLayout(), Reg, RetTy, None);
+    SDValue Chain = DAG.getEntryNode();
+    RFV.getCopyToRegs(Relocated, DAG, getCurSDLoc(), Chain, nullptr);
+    PendingExports.push_back(Chain);
+    
+    VirtRegs[Derived] = Reg; 
+  }
+
+  // Record for later use how each relocation was lowered.  This is needed to
+  // allow later gc.relocates to mirror the lowering chosen.
+  const Instruction *StatepointInstr = SI.StatepointInstr;
+  auto &RelocationMap = FuncInfo.StatepointRelocationMaps[StatepointInstr];
+  for (const GCRelocateInst *Relocate : SI.GCRelocates) {
+    const Value *V = Relocate->getDerivedPtr();
+    SDValue SDV = getValue(V);
+    SDValue Loc = StatepointLowering.getLocation(SDV);
+
+    RecordType Record;
+    if (Loc.getNode()) {
+      Record.type = RecordType::Spill;
+      Record.payload.FI = cast<FrameIndexSDNode>(Loc)->getIndex();
+    } else if (LowerAsVReg.count(SDV)) {
+      Record.type = RecordType::VReg;
+      assert(VirtRegs.count(V));
+      Record.payload.Reg = VirtRegs[V];
+    } else {
+      Record.type = RecordType::NoRelocate;
+      // If we didn't relocate a value, we'll essentialy end up inserting an
+      // additional use of the original value when lowering the gc.relocate.
+      // We need to make sure the value is available at the new use, which
+      // might be in another block.
+      if (Relocate->getParent() != StatepointInstr->getParent())
+        ExportFromCurrentBlock(V);
+    }
+    RelocationMap[V] = Record;
+  }
+
+  
 
   SDNode *SinkNode = StatepointMCNode;
 
@@ -804,7 +885,7 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     SmallVector<SDValue, 8> TEOps;
 
     // Add chain
-    TEOps.push_back(SDValue(StatepointMCNode, 0));
+    TEOps.push_back(SDValue(StatepointMCNode, NumResults - 2));
 
     // Add GC transition arguments
     for (const Value *V : SI.GCTransitionArgs) {
@@ -814,7 +895,7 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     }
 
     // Add glue
-    TEOps.push_back(SDValue(StatepointMCNode, 1));
+    TEOps.push_back(SDValue(StatepointMCNode, NumResults - 1));
 
     SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
@@ -825,7 +906,12 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   }
 
   // Replace original call
-  DAG.ReplaceAllUsesWith(CallNode, SinkNode); // This may update Root
+  // Call: ch,glue = CALL ...
+  // Statepoint: [gc relocates],ch,glue = STATEPOINT ...
+  unsigned NumSinkValues = SinkNode->getNumValues();
+  SDValue StatepointValues[2] = {SDValue(SinkNode, NumSinkValues - 2),
+                                 SDValue(SinkNode, NumSinkValues - 1)};
+  DAG.ReplaceAllUsesWith(CallNode, StatepointValues);
   // Remove original call node
   DAG.DeleteNode(CallNode);
 
@@ -927,7 +1013,7 @@ SelectionDAGBuilder::LowerStatepoint(const GCStatepointInst &I,
     setValue(&I, ReturnValue);
     return;
   }
-  
+
   // Result value will be used in a different basic block so we need to export
   // it now.  Default exporting mechanism will not work here because statepoint
   // call has a different type than the actual call. It means that by default
@@ -1024,6 +1110,25 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
 #endif
 
   const Value *DerivedPtr = Relocate.getDerivedPtr();
+  auto &RelocationMap =
+    FuncInfo.StatepointRelocationMaps[Relocate.getStatepoint()];
+  auto SlotIt = RelocationMap.find(DerivedPtr);
+  assert(SlotIt != RelocationMap.end() && "Relocating not lowered gc value");
+  const RecordType &Record = SlotIt->second;
+
+  // If relocation was done via virtual register..
+  if (Record.type == RecordType::VReg) {
+    Register InReg = Record.payload.Reg;
+    RegsForValue RFV(*DAG.getContext(), DAG.getTargetLoweringInfo(),
+                     DAG.getDataLayout(), InReg, Relocate.getType(),
+                     None); // This is not an ABI copy.
+    SDValue Chain = DAG.getEntryNode();
+    SDValue Relocation = RFV.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(),
+                                             Chain, nullptr, nullptr);
+    setValue(&Relocate, Relocation);
+    return;
+  }
+  
   SDValue SD = getValue(DerivedPtr);
 
   if (SD.isUndef() && SD.getValueType().getSizeInBits() <= 64) {
@@ -1033,19 +1138,17 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
     return;
   }
 
-  auto &SpillMap = FuncInfo.StatepointSpillMaps[Relocate.getStatepoint()];
-  auto SlotIt = SpillMap.find(DerivedPtr);
-  assert(SlotIt != SpillMap.end() && "Relocating not lowered gc value");
-  Optional<int> DerivedPtrLocation = SlotIt->second;
 
   // We didn't need to spill these special cases (constants and allocas).
   // See the handling in spillIncomingValueForStatepoint for detail.
-  if (!DerivedPtrLocation) {
+  if (Record.type == RecordType::NoRelocate) {
     setValue(&Relocate, SD);
     return;
   }
 
-  unsigned Index = *DerivedPtrLocation;
+  assert(Record.type == RecordType::Spill);
+
+  unsigned Index = Record.payload.FI;;
   SDValue SpillSlot = DAG.getTargetFrameIndex(Index, getFrameIndexTy());
 
   // All the reloads are independent and are reading memory only modified by

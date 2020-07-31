@@ -38,6 +38,7 @@ inline void registerFIR() {
   [[maybe_unused]] static bool init_once = [] {
     mlir::registerDialect<mlir::AffineDialect>();
     mlir::registerDialect<mlir::LLVM::LLVMDialect>();
+    mlir::registerDialect<mlir::omp::OpenMPDialect>();
     mlir::registerDialect<mlir::scf::SCFDialect>();
     mlir::registerDialect<mlir::StandardOpsDialect>();
     mlir::registerDialect<mlir::vector::VectorDialect>();

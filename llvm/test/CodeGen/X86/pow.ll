@@ -152,7 +152,7 @@ define <4 x float> @pow_v4f32_one_fourth_not_enough_fmf(<4 x float> %x) nounwind
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $56, %rsp
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq powf
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
@@ -168,7 +168,7 @@ define <4 x float> @pow_v4f32_one_fourth_not_enough_fmf(<4 x float> %x) nounwind
 ; CHECK-NEXT:    callq powf
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    callq powf
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload

@@ -1,0 +1,7 @@
+executable("llvm-libtool-darwin") {
+  deps = [
+    "//llvm/lib/Object",
+    "//llvm/lib/Support",
+  ]
+  sources = [ "llvm-libtool-darwin.cpp" ]
+}

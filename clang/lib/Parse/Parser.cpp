@@ -1691,9 +1691,8 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC) {
     return ANK_Success;
   }
 
-  case Sema::NC_ContextIndependentExpr:
-    Tok.setKind(Actions.isUnevaluatedContext() ? tok::annot_uneval_primary_expr
-                                               : tok::annot_primary_expr);
+  case Sema::NC_OverloadSet:
+    Tok.setKind(tok::annot_overload_set);
     setExprAnnotation(Tok, Classification.getExpression());
     Tok.setAnnotationEndLoc(NameLoc);
     if (SS.isNotEmpty())

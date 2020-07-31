@@ -73,7 +73,7 @@ entry:
 ; GCN-LABEL: {{^}}mul_v2i16:
 ; NOSDWA: v_lshrrev_b32_e32 v[[DST0:[0-9]+]], 16, v{{[0-9]+}}
 ; NOSDWA: v_lshrrev_b32_e32 v[[DST1:[0-9]+]], 16, v{{[0-9]+}}
-; NOSDWA: v_mul_u32_u24_e32 v[[DST_MUL:[0-9]+]], v[[DST1]], v[[DST0]]
+; NOSDWA: v_mul_u32_u24_e32 v[[DST_MUL:[0-9]+]], v[[DST0]], v[[DST1]]
 ; NOSDWA: v_lshlrev_b32_e32 v[[DST_SHL:[0-9]+]], 16, v[[DST_MUL]]
 ; NOSDWA: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v[[DST_SHL]]
 ; NOSDWA-NOT: v_mul_u32_u24_sdwa

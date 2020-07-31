@@ -1,4 +1,5 @@
-; RUN: opt -S -analyze -scalar-evolution < %s 2>&1 | FileCheck %s
+; RUN: opt -S -analyze -enable-new-pm=0 -scalar-evolution < %s 2>&1 | FileCheck %s
+; RUN: opt -S -disable-output "-passes=print<scalar-evolution>" < %s 2>&1 2>&1 | FileCheck %s
 
 ; umin is represented using -1 * umax in scalar evolution. -1 is considered as the
 ; constant of the multiply expression (-1 * ((-1 + (-1 * %a)) umax (-1 + (-1 * %b)))).

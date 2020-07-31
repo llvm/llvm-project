@@ -40,7 +40,7 @@ body:             |
 
   ; CHECK-LABEL: testEarlyRet
   ; CHECK: bb.0.entry:
-  ; CHECK:   BCLR undef renamable $cr5lt, implicit $lr, implicit $rm, implicit $lr, implicit $rm
+  ; CHECK:   BCLR undef renamable $cr5lt, implicit $lr, implicit $rm
   ; CHECK: bb.1:
   ; CHECK:   renamable $r3 = IMPLICIT_DEF
   ; CHECK:   renamable $r4 = IMPLICIT_DEF

@@ -47,7 +47,7 @@ int main() {
   // LAMBDA: call void [[OUTER_LAMBDA:@.+]](
   [&]() {
     // LAMBDA: define{{.*}} internal{{.*}} void [[OUTER_LAMBDA]](
-    // LAMBDA: call i32 @__tgt_target_teams(
+    // LAMBDA: call i32 @__tgt_target_teams_mapper(
     // LAMBDA: call void @[[LOFFL1:.+]](
     // LAMBDA:  ret
 #pragma omp target
@@ -115,7 +115,7 @@ int main() {
 }
 
 // CHECK: define {{.*}}i{{[0-9]+}} @main()
-// CHECK: call i32 @__tgt_target_teams(
+// CHECK: call i32 @__tgt_target_teams_mapper(
 // CHECK: call void @[[OFFL1:.+]](i{{64|32}} %{{.+}})
 // CHECK: {{%.+}} = call{{.*}} i32 @[[TMAIN_INT:.+]]()
 // CHECK:  ret
@@ -161,7 +161,7 @@ int main() {
 // CHECK: ret void
 
 // CHECK: define{{.*}} i{{[0-9]+}} @[[TMAIN_INT]]()
-// CHECK: call i32 @__tgt_target_teams(
+// CHECK: call i32 @__tgt_target_teams_mapper(
 // CHECK: call void @[[TOFFL1:.+]](
 // CHECK:  ret
 

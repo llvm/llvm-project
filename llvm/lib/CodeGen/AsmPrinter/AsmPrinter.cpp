@@ -1390,16 +1390,7 @@ void AsmPrinter::emitGlobalGOTEquivs() {
 void AsmPrinter::emitGlobalIndirectSymbol(Module &M,
                                           const GlobalIndirectSymbol& GIS) {
   MCSymbol *Name = getSymbol(&GIS);
-
-  if (GIS.hasExternalLinkage() || !MAI->getWeakRefDirective())
-    OutStreamer->emitSymbolAttribute(Name, MCSA_Global);
-  else if (GIS.hasWeakLinkage() || GIS.hasLinkOnceLinkage())
-    OutStreamer->emitSymbolAttribute(Name, MCSA_WeakReference);
-  else
-    assert(GIS.hasLocalLinkage() && "Invalid alias or ifunc linkage");
-
   bool IsFunction = GIS.getValueType()->isFunctionTy();
-
   // Treat bitcasts of functions as functions also. This is important at least
   // on WebAssembly where object and function addresses can't alias each other.
   if (!IsFunction)
@@ -1407,6 +1398,30 @@ void AsmPrinter::emitGlobalIndirectSymbol(Module &M,
       if (CE->getOpcode() == Instruction::BitCast)
         IsFunction =
           CE->getOperand(0)->getType()->getPointerElementType()->isFunctionTy();
+
+  // AIX's assembly directive `.set` is not usable for aliasing purpose,
+  // so AIX has to use the extra-label-at-definition strategy. At this
+  // point, all the extra label is emitted, we just have to emit linkage for
+  // those labels.
+  if (TM.getTargetTriple().isOSBinFormatXCOFF()) {
+    assert(!isa<GlobalIFunc>(GIS) && "IFunc is not supported on AIX.");
+    assert(MAI->hasVisibilityOnlyWithLinkage() &&
+           "Visibility should be handled with emitLinkage() on AIX.");
+    emitLinkage(&GIS, Name);
+    // If it's a function, also emit linkage for aliases of function entry
+    // point.
+    if (IsFunction)
+      emitLinkage(&GIS,
+                  getObjFileLowering().getFunctionEntryPointSymbol(&GIS, TM));
+    return;
+  }
+
+  if (GIS.hasExternalLinkage() || !MAI->getWeakRefDirective())
+    OutStreamer->emitSymbolAttribute(Name, MCSA_Global);
+  else if (GIS.hasWeakLinkage() || GIS.hasLinkOnceLinkage())
+    OutStreamer->emitSymbolAttribute(Name, MCSA_WeakReference);
+  else
+    assert(GIS.hasLocalLinkage() && "Invalid alias or ifunc linkage");
 
   // Set the symbol type to function if the alias has a function type.
   // This affects codegen when the aliasee is not a function.
@@ -3057,25 +3072,40 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
 
   if (MBB.pred_empty() ||
       (!MF->hasBBLabels() && isBlockOnlyReachableByFallthrough(&MBB) &&
-       !MBB.isEHFuncletEntry())) {
+       !MBB.isEHFuncletEntry() && !MBB.hasLabelMustBeEmitted())) {
     if (isVerbose()) {
       // NOTE: Want this comment at start of line, don't emit with AddComment.
       OutStreamer->emitRawComment(" %bb." + Twine(MBB.getNumber()) + ":",
                                   false);
     }
   } else {
+    if (isVerbose() && MBB.hasLabelMustBeEmitted()) {
+      OutStreamer->AddComment("Label of block must be emitted");
+    }
+    auto *BBSymbol = MBB.getSymbol();
     // Switch to a new section if this basic block must begin a section.
     if (MBB.isBeginSection()) {
       OutStreamer->SwitchSection(
           getObjFileLowering().getSectionForMachineBasicBlock(MF->getFunction(),
                                                               MBB, TM));
-      CurrentSectionBeginSym = MBB.getSymbol();
+      CurrentSectionBeginSym = BBSymbol;
     }
-    OutStreamer->emitLabel(MBB.getSymbol());
+    OutStreamer->emitLabel(BBSymbol);
+    // With BB sections, each basic block must handle CFI information on its own
+    // if it begins a section.
+    if (MBB.isBeginSection())
+      for (const HandlerInfo &HI : Handlers)
+        HI.Handler->beginBasicBlock(MBB);
   }
 }
 
-void AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {}
+void AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
+  // Check if CFI information needs to be updated for this MBB with basic block
+  // sections.
+  if (MBB.isEndSection())
+    for (const HandlerInfo &HI : Handlers)
+      HI.Handler->endBasicBlock(MBB);
+}
 
 void AsmPrinter::emitVisibility(MCSymbol *Sym, unsigned Visibility,
                                 bool IsDefinition) const {

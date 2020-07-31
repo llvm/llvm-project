@@ -198,11 +198,17 @@ static void printDynamicSection(const ELFFile<ELFT> *Elf, StringRef Filename) {
   }
 }
 
-template <class ELFT> static void printProgramHeaders(const ELFFile<ELFT> *o) {
+template <class ELFT>
+static void printProgramHeaders(const ELFFile<ELFT> *Obj, StringRef FileName) {
   outs() << "Program Header:\n";
-  auto ProgramHeaderOrError = o->program_headers();
-  if (!ProgramHeaderOrError)
-    report_fatal_error(toString(ProgramHeaderOrError.takeError()));
+  auto ProgramHeaderOrError = Obj->program_headers();
+  if (!ProgramHeaderOrError) {
+    reportWarning("unable to read program headers: " +
+                      toString(ProgramHeaderOrError.takeError()),
+                  FileName);
+    return;
+  }
+
   for (const typename ELFT::Phdr &Phdr : *ProgramHeaderOrError) {
     switch (Phdr.p_type) {
     case ELF::PT_DYNAMIC:
@@ -346,13 +352,13 @@ static void printSymbolVersionInfo(const ELFFile<ELFT> *Elf,
 
 void objdump::printELFFileHeader(const object::ObjectFile *Obj) {
   if (const auto *ELFObj = dyn_cast<ELF32LEObjectFile>(Obj))
-    printProgramHeaders(ELFObj->getELFFile());
+    printProgramHeaders(ELFObj->getELFFile(), Obj->getFileName());
   else if (const auto *ELFObj = dyn_cast<ELF32BEObjectFile>(Obj))
-    printProgramHeaders(ELFObj->getELFFile());
+    printProgramHeaders(ELFObj->getELFFile(), Obj->getFileName());
   else if (const auto *ELFObj = dyn_cast<ELF64LEObjectFile>(Obj))
-    printProgramHeaders(ELFObj->getELFFile());
+    printProgramHeaders(ELFObj->getELFFile(), Obj->getFileName());
   else if (const auto *ELFObj = dyn_cast<ELF64BEObjectFile>(Obj))
-    printProgramHeaders(ELFObj->getELFFile());
+    printProgramHeaders(ELFObj->getELFFile(), Obj->getFileName());
 }
 
 void objdump::printELFDynamicSection(const object::ObjectFile *Obj) {

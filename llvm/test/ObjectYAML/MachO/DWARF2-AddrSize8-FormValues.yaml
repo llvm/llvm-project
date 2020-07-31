@@ -415,7 +415,7 @@ DWARF:
 ...
 
 #CHECK:   debug_info:      
-#CHECK:     - Length:          168
+#CHECK:     - Length:          0x00000000000000A8
 #CHECK:       Version:         2
 #CHECK:       AbbrOffset:      0
 #CHECK:       AddrSize:        8

@@ -259,13 +259,13 @@ void CudaInstallationDetector::AddCudaIncludeArgs(
 void CudaInstallationDetector::CheckCudaVersionSupportsArch(
     CudaArch Arch) const {
   if (Arch == CudaArch::UNKNOWN || Version == CudaVersion::UNKNOWN ||
-      ArchsWithBadVersion.count(Arch) > 0)
+      ArchsWithBadVersion[(int)Arch])
     return;
 
   auto MinVersion = MinVersionForCudaArch(Arch);
   auto MaxVersion = MaxVersionForCudaArch(Arch);
   if (Version < MinVersion || Version > MaxVersion) {
-    ArchsWithBadVersion.insert(Arch);
+    ArchsWithBadVersion[(int)Arch] = true;
     D.Diag(diag::err_drv_cuda_version_unsupported)
         << CudaArchToString(Arch) << CudaVersionToString(MinVersion)
         << CudaVersionToString(MaxVersion) << InstallPath

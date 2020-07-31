@@ -233,6 +233,58 @@ entry:
   ret void
 }
 
+define arm_aapcs_vfpcc void @ext_scaled_i16_i32_2gep(i16* %base, <4 x i32>* %offptr, <4 x i32> %input) {
+; CHECK-LABEL: ext_scaled_i16_i32_2gep:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q2, [r1]
+; CHECK-NEXT:    vmov.i32 q1, #0xa
+; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    vshl.i32 q2, q2, #1
+; CHECK-NEXT:    vadd.i32 q2, q2, r0
+; CHECK-NEXT:    vadd.i32 q1, q2, q1
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    strh r1, [r0]
+; CHECK-NEXT:    vmov r0, s5
+; CHECK-NEXT:    vmov r1, s1
+; CHECK-NEXT:    strh r1, [r0]
+; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    strh r1, [r0]
+; CHECK-NEXT:    vmov r0, s7
+; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    strh r1, [r0]
+; CHECK-NEXT:    bx lr
+entry:
+  %offs = load <4 x i32>, <4 x i32>* %offptr, align 4
+  %ptrs = getelementptr inbounds i16, i16* %base, <4 x i32> %offs
+  %ptrs2 = getelementptr inbounds i16, <4 x i16*> %ptrs, i16 5
+  %t = trunc <4 x i32> %input to <4 x i16>
+  call void @llvm.masked.scatter.v4i16.v4p0i16(<4 x i16> %t, <4 x i16*> %ptrs2, i32 2, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  ret void
+}
+
+define arm_aapcs_vfpcc void @ext_scaled_i16_i32_2gep2(i16* %base, <4 x i32>* %offptr, <4 x i32> %input) {
+; CHECK-LABEL: ext_scaled_i16_i32_2gep2:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    adr r1, .LCPI16_0
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    vstrh.32 q0, [r0, q1, uxtw #1]
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI16_0:
+; CHECK-NEXT:    .long 5 @ 0x5
+; CHECK-NEXT:    .long 8 @ 0x8
+; CHECK-NEXT:    .long 11 @ 0xb
+; CHECK-NEXT:    .long 14 @ 0xe
+entry:
+  %ptrs = getelementptr inbounds i16, i16* %base, <4 x i16> <i16 0, i16 3, i16 6, i16 9>
+  %ptrs2 = getelementptr inbounds i16, <4 x i16*> %ptrs, i16 5
+  %t = trunc <4 x i32> %input to <4 x i16>
+  call void @llvm.masked.scatter.v4i16.v4p0i16(<4 x i16> %t, <4 x i16*> %ptrs2, i32 2, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  ret void
+}
+
 declare void @llvm.masked.scatter.v4i8.v4p0i8(<4 x i8>, <4 x i8*>, i32, <4 x i1>)
 declare void @llvm.masked.scatter.v4i16.v4p0i16(<4 x i16>, <4 x i16*>, i32, <4 x i1>)
 declare void @llvm.masked.scatter.v4f16.v4p0f16(<4 x half>, <4 x half*>, i32, <4 x i1>)

@@ -1,5 +1,4 @@
 ; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr7 < %s | FileCheck  %s -check-prefix=CHECK -check-prefix=CHECK-PWR
-; RUN: llc -verify-machineinstrs -O3 -mcpu=a2q < %s | FileCheck  %s -check-prefix=CHECK -check-prefix=CHECK-QPX
 ; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr9 < %s | FileCheck  %s -check-prefix=FIXPOINT
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
@@ -93,9 +92,6 @@ define float @reassociate_adds5(float %x0, float %x1, float %x2, float %x3, floa
 define <4 x float> @vector_reassociate_adds1(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, <4 x float> %x3) {
 ; CHECK-LABEL: vector_reassociate_adds1:
 ; CHECK:       # %bb.0:
-; CHECK-QPX:       qvfadds [[REG0:[0-9]+]], 1, 2
-; CHECK-QPX:       qvfadds [[REG1:[0-9]+]], 3, 4
-; CHECK-QPX:       qvfadds 1, [[REG0]], [[REG1]]
 ; CHECK-PWR:       xvaddsp [[REG0:[0-9]+]], 34, 35
 ; CHECK-PWR:       xvaddsp [[REG1:[0-9]+]], 36, 37
 ; CHECK-PWR:       xvaddsp 34, [[REG0]], [[REG1]]
@@ -110,9 +106,6 @@ define <4 x float> @vector_reassociate_adds1(<4 x float> %x0, <4 x float> %x1, <
 define <4 x float> @vector_reassociate_adds2(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, <4 x float> %x3) {
 ; CHECK-LABEL: vector_reassociate_adds2:
 ; CHECK:       # %bb.0:
-; CHECK-QPX:       qvfadds [[REG0:[0-9]+]], 1, 2
-; CHECK-QPX:       qvfadds [[REG1:[0-9]+]], 3, 4
-; CHECK-QPX:       qvfadds 1, [[REG0]], [[REG1]]
 ; CHECK-PWR:       xvaddsp [[REG0:[0-9]+]], 34, 35
 ; CHECK-PWR:       xvaddsp [[REG1:[0-9]+]], 36, 37
 ; CHECK-PWR:       xvaddsp 34, [[REG0]], [[REG1]]
@@ -127,9 +120,6 @@ define <4 x float> @vector_reassociate_adds2(<4 x float> %x0, <4 x float> %x1, <
 define <4 x float> @vector_reassociate_adds3(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, <4 x float> %x3) {
 ; CHECK-LABEL: vector_reassociate_adds3:
 ; CHECK:       # %bb.0:
-; CHECK-QPX:       qvfadds [[REG0:[0-9]+]], 1, 2
-; CHECK-QPX:       qvfadds [[REG1:[0-9]+]], 3, 4
-; CHECK-QPX:       qvfadds 1, [[REG0]], [[REG1]]
 ; CHECK-PWR:       xvaddsp [[REG0:[0-9]+]], 34, 35
 ; CHECK-PWR:       xvaddsp [[REG1:[0-9]+]], 36, 37
 ; CHECK-PWR:       xvaddsp 34, [[REG0]], [[REG1]]
@@ -144,9 +134,6 @@ define <4 x float> @vector_reassociate_adds3(<4 x float> %x0, <4 x float> %x1, <
 define <4 x float> @vector_reassociate_adds4(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, <4 x float> %x3) {
 ; CHECK-LABEL: vector_reassociate_adds4:
 ; CHECK:       # %bb.0:
-; CHECK-QPX:       qvfadds [[REG0:[0-9]+]], 1, 2
-; CHECK-QPX:       qvfadds [[REG1:[0-9]+]], 3, 4
-; CHECK-QPX:       qvfadds 1, [[REG0]], [[REG1]]
 ; CHECK-PWR:       xvaddsp [[REG0:[0-9]+]], 34, 35
 ; CHECK-PWR:       xvaddsp [[REG1:[0-9]+]], 36, 37
 ; CHECK-PWR:       xvaddsp 34, [[REG0]], [[REG1]]
@@ -217,9 +204,6 @@ define i64 @reassociate_mulld(i64 %x0, i64 %x1, i64 %x2, i64 %x3) {
 define double @reassociate_mamaa_double(double %0, double %1, double %2, double %3, double %4, double %5) {
 ; CHECK-LABEL: reassociate_mamaa_double:
 ; CHECK:       # %bb.0:
-; CHECK-QPX-DAG:   fmadd [[REG0:[0-9]+]], 4, 3, 2
-; CHECK-QPX-DAG:   fmadd [[REG1:[0-9]+]], 6, 5, 1
-; CHECK-QPX:       fadd 1, [[REG0]], [[REG1]]
 ; CHECK-PWR-DAG:   xsmaddadp 1, 6, 5
 ; CHECK-PWR-DAG:   xsmaddadp 2, 4, 3
 ; CHECK-PWR:       xsadddp 1, 2, 1
@@ -250,9 +234,6 @@ define float @reassociate_mamaa_float(float %0, float %1, float %2, float %3, fl
 define <4 x float> @reassociate_mamaa_vec(<4 x float> %0, <4 x float> %1, <4 x float> %2, <4 x float> %3, <4 x float> %4, <4 x float> %5) {
 ; CHECK-LABEL: reassociate_mamaa_vec:
 ; CHECK:       # %bb.0:
-; CHECK-QPX-DAG:   qvfmadds [[REG0:[0-9]+]], 4, 3, 2
-; CHECK-QPX-DAG:   qvfmadds [[REG1:[0-9]+]], 6, 5, 1
-; CHECK-QPX:       qvfadds 1, [[REG0]], [[REG1]]
 ; CHECK-PWR-DAG:   xvmaddasp [[REG0:[0-9]+]], 39, 38
 ; CHECK-PWR-DAG:   xvmaddasp [[REG1:[0-9]+]], 37, 36
 ; CHECK-PWR:       xvaddsp 34, [[REG1]], [[REG0]]
@@ -268,11 +249,6 @@ define <4 x float> @reassociate_mamaa_vec(<4 x float> %0, <4 x float> %1, <4 x f
 define double @reassociate_mamama_double(double %0, double %1, double %2, double %3, double %4, double %5, double %6, double %7, double %8) {
 ; CHECK-LABEL: reassociate_mamama_double:
 ; CHECK:       # %bb.0:
-; CHECK-QPX:       fmadd [[REG0:[0-9]+]], 2, 1, 7
-; CHECK-QPX-DAG:   fmul [[REG1:[0-9]+]], 4, 3
-; CHECK-QPX-DAG:   fmadd [[REG2:[0-9]+]], 6, 5, [[REG0]]
-; CHECK-QPX-DAG:   fmadd [[REG3:[0-9]+]], 9, 8, [[REG1]]
-; CHECK-QPX:       fadd 1, [[REG2]], [[REG3]]
 ; CHECK-PWR:       xsmaddadp 7, 2, 1
 ; CHECK-PWR-DAG:   xsmuldp [[REG0:[0-9]+]], 4, 3
 ; CHECK-PWR-DAG:   xsmaddadp 7, 6, 5

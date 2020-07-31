@@ -56,6 +56,11 @@ RangeSelector before(RangeSelector Selector);
 /// * the TokenRange [B,E'] where the token at E' spans the range [E',E).
 RangeSelector after(RangeSelector Selector);
 
+/// Selects the range between `R1` and `R2.
+inline RangeSelector between(RangeSelector R1, RangeSelector R2) {
+  return enclose(after(std::move(R1)), before(std::move(R2)));
+}
+
 /// Selects a node, including trailing semicolon (for non-expression
 /// statements). \p ID is the node's binding in the match result.
 RangeSelector node(std::string ID);

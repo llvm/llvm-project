@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify %s
 
 void h() {
   int i1 = 0;
@@ -16,4 +16,16 @@ void h() {
   const int i4 = 0;
   extern void h4(int x = sizeof(i4));         // ok, not odr-use
   extern void h5(int x = decltype(i4 + 4)()); // ok, not odr-use
+
+  union {
+    int i5;
+  };
+
+  extern void h6(int = i5);
+  // expected-error@-1 {{default argument references local variable '' of enclosing function}}
+
+  struct S { int i; };
+  auto [x] = S();
+
+  extern void h7(int = x); // FIXME: reject
 }

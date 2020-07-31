@@ -1401,6 +1401,9 @@ public:
   /// Whether target allows to overalign ABI-specified preferred alignment
   virtual bool allowsLargerPreferedTypeAlignment() const { return true; }
 
+  /// Whether target defaults to the `power` alignment rules of AIX.
+  virtual bool defaultsToAIXPowerAlignment() const { return false; }
+
   /// Set supported OpenCL extensions and optional core features.
   virtual void setSupportedOpenCLOpts() {}
 

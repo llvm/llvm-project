@@ -1,4 +1,4 @@
-// RUN: llvm-mc < %s -triple=aarch64-none-linux-gnu -filetype=obj | llvm-readobj -r | FileCheck %s
+// RUN: llvm-mc < %s -triple=aarch64-none-linux-gnu -filetype=obj | llvm-readobj -r - | FileCheck %s
 
 	.file	"<stdin>"
 	.text

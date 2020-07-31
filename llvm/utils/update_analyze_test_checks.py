@@ -122,7 +122,7 @@ def main():
       for raw_tool_output in re.split(r'Printing analysis ', raw_tool_outputs):
         common.build_function_body_dictionary(
           common.ANALYZE_FUNCTION_RE, common.scrub_body, [],
-          raw_tool_output, prefixes, func_dict, args.verbose, False)
+          raw_tool_output, prefixes, func_dict, args.verbose, False, False)
 
     is_in_function = False
     is_in_function_start = False

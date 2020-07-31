@@ -41,6 +41,9 @@ public:
       : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
+  Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
+                                               IntrinsicInst &II) const;
+
   /// \name Scalar TTI Implementations
   /// @{
 
@@ -103,7 +106,7 @@ public:
       const Instruction *CxtI = nullptr);
   int getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index, Type *SubTp);
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-                       TTI::TargetCostKind CostKind,
+                       TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
                        const Instruction *I = nullptr);
   int getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind);
   int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,

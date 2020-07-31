@@ -1,5 +1,5 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux %s -o - | llvm-readobj -r | FileCheck --check-prefix=ELF %s
-// RUN: llvm-mc -filetype=obj -triple x86_64-apple-darwin %s -o - | llvm-readobj -r | FileCheck --check-prefix=MACHO %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux %s -o - | llvm-readobj -r - | FileCheck --check-prefix=ELF %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-apple-darwin %s -o - | llvm-readobj -r - | FileCheck --check-prefix=MACHO %s
 
 
 bar = foo + 4

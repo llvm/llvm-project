@@ -27,6 +27,8 @@
 #include <unistd.h>
 #include <errno.h>
 
+#define CALLERPC (__builtin_return_address(0))
+
 using namespace __tsan;
 
 static __thread bool expect_report;
@@ -249,22 +251,42 @@ void ScopedThread::Impl::HandleEvent(Event *ev) {
   switch (ev->type) {
   case Event::READ:
   case Event::WRITE: {
-    void (*tsan_mop)(void *addr) = 0;
+    void (*tsan_mop)(void *addr, void *pc) = 0;
     if (ev->type == Event::READ) {
       switch (ev->arg /*size*/) {
-        case 1: tsan_mop = __tsan_read1; break;
-        case 2: tsan_mop = __tsan_read2; break;
-        case 4: tsan_mop = __tsan_read4; break;
-        case 8: tsan_mop = __tsan_read8; break;
-        case 16: tsan_mop = __tsan_read16; break;
+        case 1:
+          tsan_mop = __tsan_read1_pc;
+          break;
+        case 2:
+          tsan_mop = __tsan_read2_pc;
+          break;
+        case 4:
+          tsan_mop = __tsan_read4_pc;
+          break;
+        case 8:
+          tsan_mop = __tsan_read8_pc;
+          break;
+        case 16:
+          tsan_mop = __tsan_read16_pc;
+          break;
       }
     } else {
       switch (ev->arg /*size*/) {
-        case 1: tsan_mop = __tsan_write1; break;
-        case 2: tsan_mop = __tsan_write2; break;
-        case 4: tsan_mop = __tsan_write4; break;
-        case 8: tsan_mop = __tsan_write8; break;
-        case 16: tsan_mop = __tsan_write16; break;
+        case 1:
+          tsan_mop = __tsan_write1_pc;
+          break;
+        case 2:
+          tsan_mop = __tsan_write2_pc;
+          break;
+        case 4:
+          tsan_mop = __tsan_write4_pc;
+          break;
+        case 8:
+          tsan_mop = __tsan_write8_pc;
+          break;
+        case 16:
+          tsan_mop = __tsan_write16_pc;
+          break;
       }
     }
     CHECK_NE(tsan_mop, 0);
@@ -274,7 +296,7 @@ void ScopedThread::Impl::HandleEvent(Event *ev) {
     const int ErrCode = ECHRNG;
 #endif
     errno = ErrCode;
-    tsan_mop(ev->ptr);
+    tsan_mop(ev->ptr, (void *)ev->arg2);
     CHECK_EQ(ErrCode, errno);  // In no case must errno be changed.
     break;
   }
@@ -327,7 +349,7 @@ void ScopedThread::Impl::HandleEvent(Event *ev) {
 }
 
 void *ScopedThread::Impl::ScopedThreadCallback(void *arg) {
-  __tsan_func_entry(__builtin_return_address(0));
+  __tsan_func_entry(CALLERPC);
   Impl *impl = (Impl*)arg;
   for (;;) {
     Event* ev = (Event*)atomic_load(&impl->event, memory_order_acquire);
@@ -392,7 +414,8 @@ void ScopedThread::Detach() {
 
 void ScopedThread::Access(void *addr, bool is_write,
                           int size, bool expect_race) {
-  Event event(is_write ? Event::WRITE : Event::READ, addr, size);
+  Event event(is_write ? Event::WRITE : Event::READ, addr, size,
+              (uptr)CALLERPC);
   if (expect_race)
     event.ExpectReport(ReportTypeRace);
   impl_->send(&event);

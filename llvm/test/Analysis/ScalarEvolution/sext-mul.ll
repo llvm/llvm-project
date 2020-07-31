@@ -1,4 +1,5 @@
-; RUN: opt < %s -analyze -scalar-evolution | FileCheck %s
+; RUN: opt < %s -analyze -enable-new-pm=0 -scalar-evolution | FileCheck %s
+; RUN: opt < %s -disable-output "-passes=print<scalar-evolution>" 2>&1 | FileCheck %s
 
 ; CHECK: %tmp9 = shl i64 %tmp8, 33
 ; CHECK-NEXT: --> {{.*}} Exits: (-8589934592 + (8589934592 * (zext i32 %arg2 to i64)))

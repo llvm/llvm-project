@@ -114,14 +114,15 @@ public:
   // Type instances. They can store a weak pointer to the Module;
   lldb::ModuleSP GetModule();
 
-  void GetDescription(Stream *s, lldb::DescriptionLevel level, bool show_name);
+  void GetDescription(Stream *s, lldb::DescriptionLevel level, bool show_name,
+                      ExecutionContextScope *exe_scope);
 
   SymbolFile *GetSymbolFile() { return m_symbol_file; }
   const SymbolFile *GetSymbolFile() const { return m_symbol_file; }
 
   ConstString GetName();
 
-  llvm::Optional<uint64_t> GetByteSize();
+  llvm::Optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope);
 
   uint32_t GetNumChildren(bool omit_empty_base_classes);
 

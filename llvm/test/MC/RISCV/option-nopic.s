@@ -1,22 +1,22 @@
 # RUN: llvm-mc -triple riscv32 -mattr=-relax -riscv-no-aliases < %s \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
-# RUN:     | llvm-readobj -r | FileCheck -check-prefix=CHECK-RELOC %s
+# RUN:     | llvm-readobj -r - | FileCheck -check-prefix=CHECK-RELOC %s
 
 # RUN: llvm-mc -triple riscv32 -mattr=-relax -riscv-no-aliases \
 # RUN:     -position-independent < %s | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -position-independent < %s \
-# RUN:     | llvm-readobj -r | FileCheck -check-prefix=CHECK-RELOC %s
+# RUN:     | llvm-readobj -r - | FileCheck -check-prefix=CHECK-RELOC %s
 
 # RUN: llvm-mc -triple riscv64 -mattr=-relax -riscv-no-aliases < %s \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
-# RUN:     | llvm-readobj -r | FileCheck -check-prefix=CHECK-RELOC %s
+# RUN:     | llvm-readobj -r - | FileCheck -check-prefix=CHECK-RELOC %s
 
 # RUN: llvm-mc -triple riscv64 -mattr=-relax -riscv-no-aliases \
 # RUN:     -position-independent < %s | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -position-independent < %s \
-# RUN:     | llvm-readobj -r | FileCheck -check-prefix=CHECK-RELOC %s
+# RUN:     | llvm-readobj -r - | FileCheck -check-prefix=CHECK-RELOC %s
 
 .option nopic
 # CHECK-INST: .option nopic

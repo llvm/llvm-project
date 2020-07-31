@@ -100,7 +100,7 @@ static void addByteCountSuffix(raw_ostream &OS, const Function *F,
   for (Function::const_arg_iterator AI = F->arg_begin(), AE = F->arg_end();
        AI != AE; ++AI) {
     // 'Dereference' type in case of byval or inalloca parameter attribute.
-    uint64_t AllocSize = AI->hasPassPointeeByValueAttr() ?
+    uint64_t AllocSize = AI->hasPassPointeeByValueCopyAttr() ?
       AI->getPassPointeeByValueCopySize(DL) :
       DL.getTypeAllocSize(AI->getType());
 

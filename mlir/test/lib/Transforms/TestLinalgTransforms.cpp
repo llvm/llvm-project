@@ -144,6 +144,7 @@ static void applyPatterns(FuncOp funcOp) {
   //===--------------------------------------------------------------------===//
   patterns.insert<LinalgVectorizationPattern<MatmulOp>,
                   LinalgVectorizationPattern<FillOp>,
+                  LinalgVectorizationPattern<CopyOp>,
                   LinalgVectorizationPattern<GenericOp>>(
       ctx, LinalgMarker(Identifier::get("VECTORIZE", ctx)));
 

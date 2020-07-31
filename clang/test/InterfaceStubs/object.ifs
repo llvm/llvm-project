@@ -1,7 +1,7 @@
 # RUN: %clang -emit-interface-stubs -o - -emit-merged-ifs %s | \
 # RUN: FileCheck %s --check-prefixes=CHECK-IFS
 
-# RUN: %clang -emit-interface-stubs -o - %s | llvm-readelf --all | \
+# RUN: %clang -emit-interface-stubs -o - %s | llvm-readelf --all - | \
 # RUN: FileCheck %s --check-prefixes=CHECK-ELF
 
 # CHECK-IFS: --- !experimental-ifs-v2

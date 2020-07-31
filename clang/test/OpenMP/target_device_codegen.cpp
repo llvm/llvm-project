@@ -18,7 +18,7 @@ void foo(int n) {
   // CHECK:       store i32 [[N]], i32* [[DEVICE_CAP:%.+]],
   // CHECK:       [[DEV:%.+]] = load i32, i32* [[DEVICE_CAP]],
   // CHECK:       [[DEVICE:%.+]] = sext i32 [[DEV]] to i64
-  // CHECK:       [[RET:%.+]] = call i32 @__tgt_target(i64 [[DEVICE]], i8* @{{[^,]+}}, i32 0, i8** null, i8** null, i64* null, i64* null)
+  // CHECK:       [[RET:%.+]] = call i32 @__tgt_target_mapper(i64 [[DEVICE]], i8* @{{[^,]+}}, i32 0, i8** null, i8** null, i64* null, i64* null, i8** null)
   // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
   // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
   // CHECK:       [[FAIL]]
@@ -31,7 +31,7 @@ void foo(int n) {
   // CHECK:       store i32 [[N]], i32* [[DEVICE_CAP:%.+]],
   // CHECK:       [[DEV:%.+]] = load i32, i32* [[DEVICE_CAP]],
   // CHECK:       [[DEVICE:%.+]] = sext i32 [[DEV]] to i64
-  // CHECK:       [[RET:%.+]] = call i32 @__tgt_target(i64 [[DEVICE]], i8* @{{[^,]+}}, i32 0, i8** null, i8** null, i64* null, i64* null)
+  // CHECK:       [[RET:%.+]] = call i32 @__tgt_target_mapper(i64 [[DEVICE]], i8* @{{[^,]+}}, i32 0, i8** null, i8** null, i64* null, i64* null, i8** null)
   // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
   // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
   // CHECK:       [[FAIL]]
@@ -40,9 +40,9 @@ void foo(int n) {
   // CHECK:       [[END]]
   #pragma omp target device(device_num: n)
   ;
-  // CHECK-NOT:   call i32 @__tgt_target(
+  // CHECK-NOT:   call i32 @__tgt_target_mapper(
   // CHECK:       call void @__omp_offloading_{{.+}}_l46()
-  // CHECK-NOT:   call i32 @__tgt_target(
+  // CHECK-NOT:   call i32 @__tgt_target_mapper(
   #pragma omp target device(ancestor: n)
   ;
 }

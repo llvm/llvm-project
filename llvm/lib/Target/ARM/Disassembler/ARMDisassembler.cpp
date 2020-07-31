@@ -4529,12 +4529,14 @@ static DecodeStatus DecodeCoprocessor(MCInst &Inst, unsigned Val,
 static DecodeStatus
 DecodeThumbTableBranch(MCInst &Inst, unsigned Insn,
                        uint64_t Address, const void *Decoder) {
+  const FeatureBitset &FeatureBits =
+    ((const MCDisassembler*)Decoder)->getSubtargetInfo().getFeatureBits();
   DecodeStatus S = MCDisassembler::Success;
 
   unsigned Rn = fieldFromInstruction(Insn, 16, 4);
   unsigned Rm = fieldFromInstruction(Insn, 0, 4);
 
-  if (Rn == ARM::SP) S = MCDisassembler::SoftFail;
+  if (Rn == 13 && !FeatureBits[ARM::HasV8Ops]) S = MCDisassembler::SoftFail;
   if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
     return MCDisassembler::Fail;
   if (!Check(S, DecoderGPRRegisterClass(Inst, Rm, Address, Decoder)))

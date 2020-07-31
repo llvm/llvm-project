@@ -29,6 +29,20 @@ define i32 @fshl_i32(i32 %x, i32 %y, i32 %z) {
   ret i32 %f
 }
 
+define i64 @fshl_i64(i64 %x, i64 %y, i64 %z) {
+; CHECK-LABEL: fshl_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi. 5, 5, 63
+; CHECK-NEXT:    subfic 6, 5, 64
+; CHECK-NEXT:    sld 5, 3, 5
+; CHECK-NEXT:    srd 4, 4, 6
+; CHECK-NEXT:    or 4, 5, 4
+; CHECK-NEXT:    iseleq 3, 3, 4
+; CHECK-NEXT:    blr
+  %f = call i64 @llvm.fshl.i64(i64 %x, i64 %y, i64 %z)
+  ret i64 %f
+}
+
 ; Verify that weird types are minimally supported.
 declare i37 @llvm.fshl.i37(i37, i37, i37)
 define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
@@ -133,6 +147,20 @@ define i32 @fshr_i32(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    blr
   %f = call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %z)
   ret i32 %f
+}
+
+define i64 @fshr_i64(i64 %x, i64 %y, i64 %z) {
+; CHECK-LABEL: fshr_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi. 5, 5, 63
+; CHECK-NEXT:    subfic 6, 5, 64
+; CHECK-NEXT:    srd 5, 4, 5
+; CHECK-NEXT:    sld 3, 3, 6
+; CHECK-NEXT:    or 3, 3, 5
+; CHECK-NEXT:    iseleq 3, 4, 3
+; CHECK-NEXT:    blr
+  %f = call i64 @llvm.fshr.i64(i64 %x, i64 %y, i64 %z)
+  ret i64 %f
 }
 
 ; Verify that weird types are minimally supported.

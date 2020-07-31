@@ -1,5 +1,5 @@
 
-; RUN: opt -mtriple=thumbv8.1m.main -mve-tail-predication -disable-mve-tail-predication=false -mattr=+mve %s -S -o - | FileCheck %s
+; RUN: opt -mtriple=thumbv8.1m.main -mve-tail-predication -tail-predication=enabled -mattr=+mve %s -S -o - | FileCheck %s
 
 ; CHECK-LABEL: vec_mul_reduce_add
 

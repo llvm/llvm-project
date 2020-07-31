@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-pc-linux -filetype=obj %s -o - | llvm-readobj -S | FileCheck %s
+// RUN: llvm-mc -triple x86_64-pc-linux -filetype=obj %s -o - | llvm-readobj -S - | FileCheck %s
 
 .bss
 .zero 0x10000000000000

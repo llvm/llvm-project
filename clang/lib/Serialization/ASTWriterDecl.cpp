@@ -1031,8 +1031,10 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
       // that module interface unit, not by its users. (Inline variables are
       // still emitted in module users.)
       ModulesCodegen =
-          (Writer.WritingModule->Kind == Module::ModuleInterfaceUnit &&
-           Writer.Context->GetGVALinkageForVariable(D) == GVA_StrongExternal);
+          (Writer.WritingModule->Kind == Module::ModuleInterfaceUnit ||
+           (D->hasAttr<DLLExportAttr>() &&
+            Writer.Context->getLangOpts().BuildingPCHWithObjectFile)) &&
+          Writer.Context->GetGVALinkageForVariable(D) == GVA_StrongExternal;
     }
     Record.push_back(ModulesCodegen);
     if (ModulesCodegen)
@@ -2469,7 +2471,10 @@ void ASTRecordWriter::AddFunctionDefinition(const FunctionDecl *FD) {
       Linkage = Writer->Context->GetGVALinkageForFunction(FD);
       ModulesCodegen = *Linkage == GVA_StrongExternal;
     }
-    if (Writer->Context->getLangOpts().ModulesCodegen) {
+    if (Writer->Context->getLangOpts().ModulesCodegen ||
+        (FD->hasAttr<DLLExportAttr>() &&
+         Writer->Context->getLangOpts().BuildingPCHWithObjectFile)) {
+
       // Under -fmodules-codegen, codegen is performed for all non-internal,
       // non-always_inline functions, unless they are available elsewhere.
       if (!FD->hasAttr<AlwaysInlineAttr>()) {

@@ -187,6 +187,40 @@ Attribute Parser::parseAttribute(Type type) {
   }
 }
 
+/// Parse an optional attribute with the provided type.
+OptionalParseResult Parser::parseOptionalAttribute(Attribute &attribute,
+                                                   Type type) {
+  switch (getToken().getKind()) {
+  case Token::at_identifier:
+  case Token::floatliteral:
+  case Token::integer:
+  case Token::hash_identifier:
+  case Token::kw_affine_map:
+  case Token::kw_affine_set:
+  case Token::kw_dense:
+  case Token::kw_false:
+  case Token::kw_loc:
+  case Token::kw_opaque:
+  case Token::kw_sparse:
+  case Token::kw_true:
+  case Token::kw_unit:
+  case Token::l_brace:
+  case Token::l_square:
+  case Token::minus:
+  case Token::string:
+    attribute = parseAttribute(type);
+    return success(attribute != nullptr);
+
+  default:
+    // Parse an optional type attribute.
+    Type type;
+    OptionalParseResult result = parseOptionalType(type);
+    if (result.hasValue() && succeeded(*result))
+      attribute = TypeAttr::get(type);
+    return result;
+  }
+}
+
 /// Attribute dictionary.
 ///
 ///   attribute-dict ::= `{` `}`

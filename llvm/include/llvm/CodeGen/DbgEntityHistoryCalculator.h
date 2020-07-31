@@ -12,6 +12,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/LexicalScopes.h"
 #include <utility>
 
 namespace llvm {
@@ -52,6 +53,8 @@ public:
   ///   register-described debug values that have their end index
   ///   set to this entry's position in the entry vector.
   class Entry {
+    friend DbgValueHistoryMap;
+
   public:
     enum EntryKind { DbgValue, Clobber };
 
@@ -89,6 +92,8 @@ public:
     return Entries[Index];
   }
 
+  /// Drop location ranges which exist entirely outside each variable's scope.
+  void trimLocationRanges(const MachineFunction &MF, LexicalScopes &LScopes);
   bool empty() const { return VarEntries.empty(); }
   void clear() { VarEntries.clear(); }
   EntriesMap::const_iterator begin() const { return VarEntries.begin(); }

@@ -857,3 +857,12 @@ define <4 x i32> @combine_mul_nabs_v4i32(<4 x i32> %0) {
   %m = mul <4 x i32> %r, %r
   ret <4 x i32> %m
 }
+
+; z * splat(0) = splat(0), even for scalable vectors
+define <vscale x 2 x i64> @mul_scalable_splat_zero(<vscale x 2 x i64> %z) {
+; CHECK-LABEL: @mul_scalable_splat_zero(
+; CHECK-NEXT:    ret <vscale x 2 x i64> zeroinitializer
+  %shuf = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 0, i32 0), <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %t3 = mul <vscale x 2 x i64> %shuf, %z
+  ret <vscale x 2 x i64> %t3
+}

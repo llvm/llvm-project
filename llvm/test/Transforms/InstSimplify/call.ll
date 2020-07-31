@@ -1038,3 +1038,20 @@ define i32 @call_undef_musttail() {
   %x = musttail call i32 undef()
   ret i32 %x
 }
+
+; This is not the builtin fmax, so we don't know anything about its behavior.
+
+define float @nobuiltin_fmax() {
+; CHECK-LABEL: @nobuiltin_fmax(
+; CHECK-NEXT:    [[M:%.*]] = call float @fmaxf(float 0.000000e+00, float 1.000000e+00) #3
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fabs.f32(float [[M]])
+; CHECK-NEXT:    ret float [[R]]
+;
+  %m = call float @fmaxf(float 0.0, float 1.0) #0
+  %r = call float @llvm.fabs.f32(float %m)
+  ret float %r
+}
+
+declare float @fmaxf(float, float)
+
+attributes #0 = { nobuiltin readnone }

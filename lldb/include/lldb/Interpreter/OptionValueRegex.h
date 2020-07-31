@@ -36,10 +36,9 @@ public:
   SetValueFromString(const char *,
                      VarSetOperationType = eVarSetOperationAssign) = delete;
 
-  bool Clear() override {
+  void Clear() override {
     m_regex = RegularExpression(m_default_regex_str);
     m_value_was_set = false;
-    return true;
   }
 
   lldb::OptionValueSP DeepCopy() const override;

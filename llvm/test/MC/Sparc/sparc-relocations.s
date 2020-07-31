@@ -1,5 +1,5 @@
 ! RUN: llvm-mc %s -arch=sparcv9 -show-encoding | FileCheck %s
-! RUN: llvm-mc %s -arch=sparcv9 -filetype=obj | llvm-readobj -r | FileCheck %s --check-prefix=CHECK-OBJ
+! RUN: llvm-mc %s -arch=sparcv9 -filetype=obj | llvm-readobj -r - | FileCheck %s --check-prefix=CHECK-OBJ
 
         ! CHECK-OBJ: Format: elf64-sparc
         ! CHECK-OBJ: Relocations [

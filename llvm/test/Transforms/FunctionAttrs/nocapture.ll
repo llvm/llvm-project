@@ -1,4 +1,4 @@
-; RUN: opt -functionattrs -S < %s | FileCheck %s --check-prefixes=FNATTR
+; RUN: opt -function-attrs -S < %s | FileCheck %s --check-prefixes=FNATTR
 ; RUN: opt -passes=function-attrs -S < %s | FileCheck %s --check-prefixes=FNATTR
 
 @g = global i32* null		; <i32**> [#uses=1]

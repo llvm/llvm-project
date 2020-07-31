@@ -926,6 +926,15 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
     } else if (Tok.is(tok::kw_this)) {
       Kind = LCK_This;
       Loc = ConsumeToken();
+    } else if (Tok.isOneOf(tok::amp, tok::equal) &&
+               NextToken().isOneOf(tok::comma, tok::r_square) &&
+               Intro.Default == LCD_None) {
+      // We have a lone "&" or "=" which is either a misplaced capture-default
+      // or the start of a capture (in the "&" case) with the rest of the
+      // capture missing. Both are an error but a misplaced capture-default
+      // is more likely if we don't already have a capture default.
+      return Invalid(
+          [&] { Diag(Tok.getLocation(), diag::err_capture_default_first); });
     } else {
       TryConsumeToken(tok::ellipsis, EllipsisLocs[0]);
 

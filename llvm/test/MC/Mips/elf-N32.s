@@ -1,11 +1,11 @@
 // Check generation of N32 ABI relocations.
 
 // RUN: llvm-mc -filetype=obj -triple=mips64-linux-gnu -mcpu=mips3 \
-// RUN:         -target-abi=n32  %s -o - | llvm-readobj -r | FileCheck %s
+// RUN:         -target-abi=n32  %s -o - | llvm-readobj -r - | FileCheck %s
 // RUN: llvm-mc -filetype=obj -triple=mips64-linux-gnuabin32 -mcpu=mips3 \
-// RUN:          %s -o - | llvm-readobj -r | FileCheck %s
+// RUN:          %s -o - | llvm-readobj -r - | FileCheck %s
 // RUN: llvm-mc -filetype=obj -triple=mipsn32 -mcpu=mips3 \
-// RUN:          %s -o - | llvm-readobj -r | FileCheck %s
+// RUN:          %s -o - | llvm-readobj -r - | FileCheck %s
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section (3) .rela.text {

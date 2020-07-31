@@ -1,8 +1,8 @@
 
 # RUN: llvm-mc -triple powerpc64-unknown-unknown -filetype=obj %s | \
-# RUN: llvm-readobj -h -r --symbols | FileCheck %s
+# RUN: llvm-readobj -h -r --symbols - | FileCheck %s
 # RUN: llvm-mc -triple powerpc64le-unknown-unknown -filetype=obj %s | \
-# RUN: llvm-readobj -h -r --symbols | FileCheck %s
+# RUN: llvm-readobj -h -r --symbols - | FileCheck %s
 
 	.type callee1, @function
 callee1:

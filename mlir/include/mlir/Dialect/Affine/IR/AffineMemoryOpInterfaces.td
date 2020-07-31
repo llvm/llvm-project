@@ -81,6 +81,16 @@ def AffineReadOpInterface : OpInterface<"AffineReadOpInterface"> {
                 op.getAffineMapAttr()};
       }]
     >,
+    InterfaceMethod<
+      /*desc=*/"Returns the value read by this operation.",
+      /*retTy=*/"Value",
+      /*methodName=*/"getValue",
+      /*args=*/(ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        return cast<ConcreteOp>(this->getOperation());
+      }]
+    >,
   ];
 }
 
@@ -148,6 +158,17 @@ def AffineWriteOpInterface : OpInterface<"AffineWriteOpInterface"> {
         assert(memref == getMemRef());
         return {Identifier::get(op.getMapAttrName(), op.getContext()),
                 op.getAffineMapAttr()};
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Returns the value to store.",
+      /*retTy=*/"Value",
+      /*methodName=*/"getValueToStore",
+      /*args=*/(ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        ConcreteOp op = cast<ConcreteOp>(this->getOperation());
+        return op.getOperand(op.getStoredValOperandIndex());
       }]
     >,
   ];

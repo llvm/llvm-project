@@ -1,0 +1,13 @@
+#ifndef PROC
+#define PROC(ENUM, NAME, FEATURES, DEFAULT_MARCH)
+#endif
+
+PROC(INVALID, {"invalid"}, FK_INVALID, {""})
+PROC(GENERIC_RV32, {"generic-rv32"}, FK_NONE, {""})
+PROC(GENERIC_RV64, {"generic-rv64"}, FK_64BIT, {""})
+PROC(ROCKET_RV32, {"rocket-rv32"}, FK_NONE, {""})
+PROC(ROCKET_RV64, {"rocket-rv64"}, FK_64BIT, {""})
+PROC(SIFIVE_E31, {"sifive-e31"}, FK_NONE, {"rv32imac"})
+PROC(SIFIVE_U54, {"sifive-u54"}, FK_64BIT, {"rv64gc"})
+
+#undef PROC
