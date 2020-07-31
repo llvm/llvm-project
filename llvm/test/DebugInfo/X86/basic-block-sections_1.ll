@@ -1,7 +1,7 @@
 ; RUN: llc -O0 %s -mtriple=x86_64-* -filetype=obj -o %t && llvm-dwarfdump  -debug-info -v %t | FileCheck --check-prefix=NO-SECTIONS %s
-; RUN: llc -O0 %s --basicblock-sections=all --unique-bb-section-names -mtriple=x86_64-* -filetype=obj -o %t && llvm-dwarfdump  -debug-info -v %t | FileCheck --check-prefix=BB-SECTIONS %s
-; RUN: llc -O0 %s --basicblock-sections=all --unique-bb-section-names -mtriple=x86_64-* -filetype=obj -split-dwarf-file=%t.dwo -o %t && llvm-dwarfdump  -debug-info -v %t | FileCheck --check-prefix=BB-SECTIONS %s
-; RUN: llc -O0 %s --basicblock-sections=all -mtriple=x86_64-* -filetype=asm -o - | FileCheck --check-prefix=BB-SECTIONS-ASM %s
+; RUN: llc -O0 %s --basic-block-sections=all --unique-basic-block-section-names -mtriple=x86_64-* -filetype=obj -o %t && llvm-dwarfdump  -debug-info -v %t | FileCheck --check-prefix=BB-SECTIONS %s
+; RUN: llc -O0 %s --basic-block-sections=all --unique-basic-block-section-names -mtriple=x86_64-* -filetype=obj -split-dwarf-file=%t.dwo -o %t && llvm-dwarfdump  -debug-info -v %t | FileCheck --check-prefix=BB-SECTIONS %s
+; RUN: llc -O0 %s --basic-block-sections=all -mtriple=x86_64-* -filetype=asm -o - | FileCheck --check-prefix=BB-SECTIONS-ASM %s
 
 ; From:
 ; int foo(int a) {

@@ -965,10 +965,10 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
   config->ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
   config->ltoBasicBlockSections =
-      args.getLastArgValue(OPT_lto_basicblock_sections);
+      args.getLastArgValue(OPT_lto_basic_block_sections);
   config->ltoUniqueBasicBlockSectionNames =
-      args.hasFlag(OPT_lto_unique_bb_section_names,
-                   OPT_no_lto_unique_bb_section_names, false);
+      args.hasFlag(OPT_lto_unique_basic_block_section_names,
+                   OPT_no_lto_unique_basic_block_section_names, false);
   config->mapFile = args.getLastArgValue(OPT_Map);
   config->mipsGotSize = args::getInteger(args, OPT_mips_got_size, 0xfff0);
   config->mergeArmExidx =

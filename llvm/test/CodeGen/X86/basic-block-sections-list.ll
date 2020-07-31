@@ -1,6 +1,6 @@
 ; Check the basic block sections list option.
 ; RUN: echo '!_Z3foob' > %t
-; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basicblock-sections=%t -unique-bb-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
+; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
 
 define i32 @_Z3foob(i1 zeroext %0) nounwind {
   %2 = alloca i32, align 4

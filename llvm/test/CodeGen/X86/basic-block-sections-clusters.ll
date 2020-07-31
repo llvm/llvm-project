@@ -6,13 +6,13 @@
 ; RUN: echo '!foo' > %t1
 ; RUN: echo '!!0 2' >> %t1
 ; RUN: echo '!!1' >> %t1
-; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basicblock-sections=%t1 | FileCheck %s -check-prefix=LINUX-SECTIONS1
+; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t1 | FileCheck %s -check-prefix=LINUX-SECTIONS1
 ;
 ; Test2: Basic blocks #1 and #3 will be placed in the same section.
 ; All other BBs (including the entry block) go into the function's section.
 ; RUN: echo '!foo' > %t2
 ; RUN: echo '!!1 3' >> %t2
-; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basicblock-sections=%t2 | FileCheck %s -check-prefix=LINUX-SECTIONS2
+; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t2 | FileCheck %s -check-prefix=LINUX-SECTIONS2
 
 define void @foo(i1 zeroext) nounwind {
   %2 = alloca i8, align 1

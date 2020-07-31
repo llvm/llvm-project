@@ -2,7 +2,7 @@
 ; Only basic block with id 2 must get a section.
 ; RUN: echo '!_Z3bazb' > %t
 ; RUN: echo '!!2' >> %t
-; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basicblock-sections=%t -unique-bb-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
+; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
 
 define void @_Z3bazb(i1 zeroext) nounwind {
   %2 = alloca i8, align 1

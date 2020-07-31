@@ -10,7 +10,7 @@
 # }
 #
 # clang -O0 -S -emit-llvm foo.cc
-# llc < foo.ll -stop-after=bbsections-prepare -basicblock-sections=all
+# llc < foo.ll -stop-after=bbsections-prepare -basic-block-sections=all
 
 --- |
   ; Function Attrs: noinline nounwind optnone uwtable

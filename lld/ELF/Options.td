@@ -545,9 +545,9 @@ def opt_remarks_with_hotness: FF<"opt-remarks-with-hotness">,
 def opt_remarks_format: Separate<["--"], "opt-remarks-format">,
   HelpText<"The format used for serializing remarks (default: YAML)">;
 def save_temps: F<"save-temps">;
-def lto_basicblock_sections: JJ<"lto-basicblock-sections=">,
+def lto_basic_block_sections: JJ<"lto-basic-block-sections=">,
   HelpText<"Enable basic block sections for LTO">;
-defm lto_unique_bb_section_names: BB<"lto-unique-bb-section-names",
+defm lto_unique_basic_block_section_names: BB<"lto-unique-basic-block-section-names",
     "Give unique names to every basic block section for LTO",
     "Do not give unique names to every basic block section for LTO (default)">;
 def shuffle_sections: JJ<"shuffle-sections=">, MetaVarName<"<seed>">,
