@@ -573,7 +573,7 @@ body:             |
 # CHECK-NEXT:       stack-id: sve-vec, callee-saved-register: '$z23',
 # CHECK:        - { id: 8, name: '', type: spill-slot, offset: -34, size: 2, alignment: 2,
 # CHECK-NEXT:       stack-id: sve-vec, callee-saved-register: '$p4',
-# CHECK:        - { id: 9, name: '', type: spill-slot, offset: -48, size: 2, alignment: 16,
+# CHECK:        - { id: 9, name: '', type: spill-slot, offset: -36, size: 2, alignment: 2,
 # CHECK-NEXT:       stack-id: sve-vec, callee-saved-register: '$p15',
 # CHECK:        - { id: 10, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16,
 # CHECK-NEXT:       stack-id: default, callee-saved-register: '$fp',

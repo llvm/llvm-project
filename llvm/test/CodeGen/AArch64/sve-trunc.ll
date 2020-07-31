@@ -117,7 +117,7 @@ define <vscale x 16 x i1> @trunc_i64toi1_split3(<vscale x 16 x i64> %in) {
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset p4, -16
+; CHECK-NEXT:    .cfi_offset p4, -2
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and z7.d, z7.d, #0x1
