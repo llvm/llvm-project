@@ -46,19 +46,19 @@ NO:
 
 define i32 @pre_freeze(i1 %cond, i32 %n) {
 ; CHECK-LABEL: @pre_freeze(
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[C:%.*]]
-; CHECK:       A:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[C_THREAD:%.*]], label [[C:%.*]]
+; CHECK:       C.thread:
 ; CHECK-NEXT:    store i32 0, i32* @x, align 4
-; CHECK-NEXT:    br label [[C]]
+; CHECK-NEXT:    br label [[YES:%.*]]
 ; CHECK:       C:
-; CHECK-NEXT:    [[PTR:%.*]] = phi i32* [ @x, [[A]] ], [ @y, [[TMP0:%.*]] ]
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[PTR]], align 4
-; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    [[A_PR:%.*]] = load i32, i32* @y, align 4
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i32 [[A_PR]], 0
 ; CHECK-NEXT:    [[COND2_FR:%.*]] = freeze i1 [[COND2]]
-; CHECK-NEXT:    br i1 [[COND2_FR]], label [[YES:%.*]], label [[NO:%.*]]
+; CHECK-NEXT:    br i1 [[COND2_FR]], label [[YES]], label [[NO:%.*]]
 ; CHECK:       YES:
+; CHECK-NEXT:    [[A5:%.*]] = phi i32 [ 0, [[C_THREAD]] ], [ [[A_PR]], [[C]] ]
 ; CHECK-NEXT:    call void @f()
-; CHECK-NEXT:    ret i32 [[A]]
+; CHECK-NEXT:    ret i32 [[A5]]
 ; CHECK:       NO:
 ; CHECK-NEXT:    call void @g()
 ; CHECK-NEXT:    ret i32 1
