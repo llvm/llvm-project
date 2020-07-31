@@ -76,7 +76,7 @@ static lto::Config createConfig() {
   c.Options.DataSections = true;
 
   // Check if basic block sections must be used.
-  // Allowed values for --lto-basicblock-sections are "all", "labels",
+  // Allowed values for --lto-basic-block-sections are "all", "labels",
   // "<file name specifying basic block ids>", or none.  This is the equivalent
   // of -fbasic-block-sections= flag in clang.
   if (!config->ltoBasicBlockSections.empty()) {

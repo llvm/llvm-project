@@ -1,5 +1,5 @@
 ; Check the basic block sections labels option
-; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basicblock-sections=labels | FileCheck %s -check-prefix=LINUX-LABELS
+; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=labels | FileCheck %s -check-prefix=LINUX-LABELS
 
 define void @_Z3bazb(i1 zeroext) {
   %2 = alloca i8, align 1
