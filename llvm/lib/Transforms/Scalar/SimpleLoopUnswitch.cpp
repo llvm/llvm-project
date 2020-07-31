@@ -26,6 +26,7 @@
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/MustExecute.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -2070,12 +2071,16 @@ static void unswitchNontrivialInvariants(
         DominatingSucc, *VMaps.back(), DTUpdates, AC, DT, LI, MSSAU);
   }
 
-  // Drop metadata if we may break its semantics by moving this branch into the
+  // Drop metadata if we may break its semantics by moving this instr into the
   // split block.
-  // TODO: We can keep make.implicit metadata if we prove that TI always
-  // executes and we cannot leave unswitched loop before getting to null check
-  // block. See @test_may_keep_make_implicit_non_trivial.
-  TI.setMetadata(LLVMContext::MD_make_implicit, nullptr);
+  if (TI.getMetadata(LLVMContext::MD_make_implicit)) {
+    // It is only legal to preserve make.implicit metadata if we are guaranteed
+    // to reach implicit null check block after following this branch.
+    ICFLoopSafetyInfo SafetyInfo;
+    SafetyInfo.computeLoopSafetyInfo(&L);
+    if (!SafetyInfo.isGuaranteedToExecute(TI, &DT, &L))
+      TI.setMetadata(LLVMContext::MD_make_implicit, nullptr);
+  }
 
   // The stitching of the branched code back together depends on whether we're
   // doing full unswitching or not with the exception that we always want to
