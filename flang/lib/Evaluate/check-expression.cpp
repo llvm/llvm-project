@@ -43,7 +43,10 @@ public:
   }
   template <typename T> bool operator()(const FunctionRef<T> &call) const {
     if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&call.proc().u)}) {
-      return intrinsic->name == "kind";
+      // kind is always a constant, and we avoid cascading errors by calling
+      // invalid calls to intrinsics constant
+      return intrinsic->name == "kind" ||
+          intrinsic->name == IntrinsicProcTable::InvalidName;
       // TODO: other inquiry intrinsics
     } else {
       return false;

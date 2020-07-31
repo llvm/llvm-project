@@ -92,6 +92,11 @@ public:
   std::optional<SpecificIntrinsicFunctionInterface> IsSpecificIntrinsicFunction(
       const std::string &) const;
 
+  // Illegal name for an intrinsic used to avoid cascading error messages when
+  // constant folding.
+  static const inline std::string InvalidName{
+      "(invalid intrinsic function call)"};
+
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:

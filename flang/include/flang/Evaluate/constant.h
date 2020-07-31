@@ -54,7 +54,7 @@ std::size_t TotalElementCount(const ConstantSubscripts &);
 std::optional<std::vector<int>> ValidateDimensionOrder(
     int rank, const std::vector<int> &order);
 
-bool IsValidShape(const ConstantSubscripts &);
+bool HasNegativeExtent(const ConstantSubscripts &);
 
 class ConstantBounds {
 public:
