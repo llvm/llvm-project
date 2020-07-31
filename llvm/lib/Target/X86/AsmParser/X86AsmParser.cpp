@@ -886,11 +886,6 @@ private:
     return Parser.Error(L, Msg, Range);
   }
 
-  std::nullptr_t ErrorOperand(SMLoc Loc, StringRef Msg, SMRange R = SMRange()) {
-    Error(Loc, Msg, R);
-    return nullptr;
-  }
-
   bool MatchRegisterByName(unsigned &RegNo, StringRef RegName, SMLoc StartLoc,
                            SMLoc EndLoc);
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc,
@@ -908,13 +903,13 @@ private:
                                OperandVector &FinalOperands);
   bool ParseOperand(OperandVector &Operands);
   bool ParseATTOperand(OperandVector &Operands);
-  std::unique_ptr<X86Operand> ParseIntelOperand();
+  bool ParseIntelOperand(OperandVector &Operands);
   bool ParseIntelOffsetOperator(const MCExpr *&Val, StringRef &ID,
                                 InlineAsmIdentifierInfo &Info, SMLoc &End);
   bool ParseIntelDotOperator(IntelExprStateMachine &SM, SMLoc &End);
   unsigned IdentifyIntelInlineAsmOperator(StringRef Name);
   unsigned ParseIntelInlineAsmOperator(unsigned OpKind);
-  std::unique_ptr<X86Operand> ParseRoundingModeOp(SMLoc Start);
+  bool ParseRoundingModeOp(SMLoc Start, OperandVector &Operands);
   bool ParseIntelNamedOperator(StringRef Name, IntelExprStateMachine &SM,
                                bool &ParseError, SMLoc &End);
   void RewriteIntelExpression(IntelExprStateMachine &SM, SMLoc Start,
@@ -931,11 +926,12 @@ private:
   X86::CondCode ParseConditionCode(StringRef CCode);
 
   bool ParseIntelMemoryOperandSize(unsigned &Size);
-  std::unique_ptr<X86Operand>
-  CreateMemForMSInlineAsm(unsigned SegReg, const MCExpr *Disp, unsigned BaseReg,
-                          unsigned IndexReg, unsigned Scale, SMLoc Start,
-                          SMLoc End, unsigned Size, StringRef Identifier,
-                          const InlineAsmIdentifierInfo &Info);
+  bool CreateMemForMSInlineAsm(unsigned SegReg, const MCExpr *Disp,
+                               unsigned BaseReg, unsigned IndexReg,
+                               unsigned Scale, SMLoc Start, SMLoc End,
+                               unsigned Size, StringRef Identifier,
+                               const InlineAsmIdentifierInfo &Info,
+                               OperandVector &Operands);
 
   bool parseDirectiveArch();
   bool parseDirectiveEven(SMLoc L);
@@ -1531,21 +1527,16 @@ bool X86AsmParser::VerifyAndAdjustOperands(OperandVector &OrigOperands,
 }
 
 bool X86AsmParser::ParseOperand(OperandVector &Operands) {
-  if (isParsingIntelSyntax()) {
-    if (std::unique_ptr<X86Operand> Op = ParseIntelOperand()) {
-      Operands.push_back(std::move(Op));
-      return false;
-    }
-    return true;
-  }
+  if (isParsingIntelSyntax())
+    return ParseIntelOperand(Operands);
 
   return ParseATTOperand(Operands);
 }
 
-std::unique_ptr<X86Operand> X86AsmParser::CreateMemForMSInlineAsm(
+bool X86AsmParser::CreateMemForMSInlineAsm(
     unsigned SegReg, const MCExpr *Disp, unsigned BaseReg, unsigned IndexReg,
     unsigned Scale, SMLoc Start, SMLoc End, unsigned Size, StringRef Identifier,
-    const InlineAsmIdentifierInfo &Info) {
+    const InlineAsmIdentifierInfo &Info, OperandVector &Operands) {
   // If we found a decl other than a VarDecl, then assume it is a FuncDecl or
   // some other label reference.
   if (Info.isKind(InlineAsmIdentifierInfo::IK_Label)) {
@@ -1557,8 +1548,10 @@ std::unique_ptr<X86Operand> X86AsmParser::CreateMemForMSInlineAsm(
     }
     // Create an absolute memory reference in order to match against
     // instructions taking a PC relative operand.
-    return X86Operand::CreateMem(getPointerWidth(), Disp, Start, End, Size,
-                                 Identifier, Info.Label.Decl);
+    Operands.push_back(X86Operand::CreateMem(getPointerWidth(), Disp, Start,
+                                             End, Size, Identifier,
+                                             Info.Label.Decl));
+    return false;
   }
   // We either have a direct symbol reference, or an offset from a symbol.  The
   // parser always puts the symbol on the LHS, so look there for size
@@ -1575,17 +1568,19 @@ std::unique_ptr<X86Operand> X86AsmParser::CreateMemForMSInlineAsm(
   // It is widely common for MS InlineAsm to use a global variable and one/two
   // registers in a mmory expression, and though unaccessible via rip/eip.
   if (IsGlobalLV && (BaseReg || IndexReg)) {
-    return X86Operand::CreateMem(getPointerWidth(), Disp, Start, End);
+    Operands.push_back(
+        X86Operand::CreateMem(getPointerWidth(), Disp, Start, End));
+    return false;
+  }
   // Otherwise, we set the base register to a non-zero value
   // if we don't know the actual value at this time.  This is necessary to
   // get the matching correct in some cases.
-  } else {
-    BaseReg = BaseReg ? BaseReg : 1;
-    return X86Operand::CreateMem(getPointerWidth(), SegReg, Disp, BaseReg,
-                                 IndexReg, Scale, Start, End, Size,
-                                 /*DefaultBaseReg=*/X86::RIP, Identifier, Decl,
-                                 FrontendSize);
-  }
+  BaseReg = BaseReg ? BaseReg : 1;
+  Operands.push_back(X86Operand::CreateMem(
+      getPointerWidth(), SegReg, Disp, BaseReg, IndexReg, Scale, Start, End,
+      Size,
+      /*DefaultBaseReg=*/X86::RIP, Identifier, Decl, FrontendSize));
+  return false;
 }
 
 // Some binary bitwise operators have a named synonymous
@@ -1916,14 +1911,13 @@ bool X86AsmParser::ParseIntelInlineAsmIdentifier(
 }
 
 //ParseRoundingModeOp - Parse AVX-512 rounding mode operand
-std::unique_ptr<X86Operand>
-X86AsmParser::ParseRoundingModeOp(SMLoc Start) {
+bool X86AsmParser::ParseRoundingModeOp(SMLoc Start, OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
   // Eat "{" and mark the current place.
   const SMLoc consumedToken = consumeToken();
   if (Tok.isNot(AsmToken::Identifier))
-    return ErrorOperand(Tok.getLoc(), "Expected an identifier after {");
+    return Error(Tok.getLoc(), "Expected an identifier after {");
   if (Tok.getIdentifier().startswith("r")){
     int rndMode = StringSwitch<int>(Tok.getIdentifier())
       .Case("rn", X86::STATIC_ROUNDING::TO_NEAREST_INT)
@@ -1932,28 +1926,30 @@ X86AsmParser::ParseRoundingModeOp(SMLoc Start) {
       .Case("rz", X86::STATIC_ROUNDING::TO_ZERO)
       .Default(-1);
     if (-1 == rndMode)
-      return ErrorOperand(Tok.getLoc(), "Invalid rounding mode.");
+      return Error(Tok.getLoc(), "Invalid rounding mode.");
      Parser.Lex();  // Eat "r*" of r*-sae
     if (!getLexer().is(AsmToken::Minus))
-      return ErrorOperand(Tok.getLoc(), "Expected - at this point");
+      return Error(Tok.getLoc(), "Expected - at this point");
     Parser.Lex();  // Eat "-"
     Parser.Lex();  // Eat the sae
     if (!getLexer().is(AsmToken::RCurly))
-      return ErrorOperand(Tok.getLoc(), "Expected } at this point");
+      return Error(Tok.getLoc(), "Expected } at this point");
     SMLoc End = Tok.getEndLoc();
     Parser.Lex();  // Eat "}"
     const MCExpr *RndModeOp =
       MCConstantExpr::create(rndMode, Parser.getContext());
-    return X86Operand::CreateImm(RndModeOp, Start, End);
+    Operands.push_back(X86Operand::CreateImm(RndModeOp, Start, End));
+    return false;
   }
   if(Tok.getIdentifier().equals("sae")){
     Parser.Lex();  // Eat the sae
     if (!getLexer().is(AsmToken::RCurly))
-      return ErrorOperand(Tok.getLoc(), "Expected } at this point");
+      return Error(Tok.getLoc(), "Expected } at this point");
     Parser.Lex();  // Eat "}"
-    return X86Operand::CreateToken("{sae}", consumedToken);
+    Operands.push_back(X86Operand::CreateToken("{sae}", consumedToken));
+    return false;
   }
-  return ErrorOperand(Tok.getLoc(), "unknown token in expression");
+  return Error(Tok.getLoc(), "unknown token in expression");
 }
 
 /// Parse the '.' operator.
@@ -2088,7 +2084,7 @@ bool X86AsmParser::ParseIntelMemoryOperandSize(unsigned &Size) {
   return false;
 }
 
-std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
+bool X86AsmParser::ParseIntelOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
   SMLoc Start, End;
@@ -2096,28 +2092,31 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
   // Parse optional Size directive.
   unsigned Size;
   if (ParseIntelMemoryOperandSize(Size))
-    return nullptr;
+    return true;
   bool PtrInOperand = bool(Size);
 
   Start = Tok.getLoc();
 
   // Rounding mode operand.
   if (getLexer().is(AsmToken::LCurly))
-    return ParseRoundingModeOp(Start);
+    return ParseRoundingModeOp(Start, Operands);
 
   // Register operand.
   unsigned RegNo = 0;
   if (Tok.is(AsmToken::Identifier) && !ParseRegister(RegNo, Start, End)) {
     if (RegNo == X86::RIP)
-      return ErrorOperand(Start, "rip can only be used as a base register");
+      return Error(Start, "rip can only be used as a base register");
     // A Register followed by ':' is considered a segment override
-    if (Tok.isNot(AsmToken::Colon))
-      return !PtrInOperand ? X86Operand::CreateReg(RegNo, Start, End) :
-        ErrorOperand(Start, "expected memory operand after 'ptr', "
+    if (Tok.isNot(AsmToken::Colon)) {
+      if (PtrInOperand)
+        return Error(Start, "expected memory operand after 'ptr', "
                             "found register operand instead");
+      Operands.push_back(X86Operand::CreateReg(RegNo, Start, End));
+      return false;
+    }
     // An alleged segment override. check if we have a valid segment register
     if (!X86MCRegisterClasses[X86::SEGMENT_REGRegClassID].contains(RegNo))
-      return ErrorOperand(Start, "invalid segment register");
+      return Error(Start, "invalid segment register");
     // Eat ':' and update Start location
     Start = Lex().getLoc();
   }
@@ -2125,7 +2124,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
   // Immediates and Memory
   IntelExprStateMachine SM;
   if (ParseIntelExpression(SM, End))
-    return nullptr;
+    return true;
 
   if (isParsingMSInlineAsm())
     RewriteIntelExpression(SM, Start, Tok.getLoc());
@@ -2146,12 +2145,15 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
       if (Info.isKind(InlineAsmIdentifierInfo::IK_Var)) {
         // Disp includes the address of a variable; make sure this is recorded
         // for later handling.
-        return X86Operand::CreateImm(Disp, Start, End, SM.getSymName(),
-                                     Info.Var.Decl, Info.Var.IsGlobalLV);
+        Operands.push_back(X86Operand::CreateImm(Disp, Start, End,
+                                                 SM.getSymName(), Info.Var.Decl,
+                                                 Info.Var.IsGlobalLV));
+        return false;
       }
     }
 
-    return X86Operand::CreateImm(Disp, Start, End);
+    Operands.push_back(X86Operand::CreateImm(Disp, Start, End));
+    return false;
   }
 
   StringRef ErrMsg;
@@ -2176,7 +2178,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
 
   if (Scale != 0 &&
       X86MCRegisterClasses[X86::GR16RegClassID].contains(IndexReg))
-    return ErrorOperand(Start, "16-bit addresses cannot have a scale");
+    return Error(Start, "16-bit addresses cannot have a scale");
 
   // If there was no explicit scale specified, change it to 1.
   if (Scale == 0)
@@ -2192,23 +2194,30 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
   if ((BaseReg || IndexReg) &&
       CheckBaseRegAndIndexRegAndScale(BaseReg, IndexReg, Scale, is64BitMode(),
                                       ErrMsg))
-    return ErrorOperand(Start, ErrMsg);
+    return Error(Start, ErrMsg);
   if (isParsingMSInlineAsm())
     return CreateMemForMSInlineAsm(RegNo, Disp, BaseReg, IndexReg, Scale, Start,
                                    End, Size, SM.getSymName(),
-                                   SM.getIdentifierInfo());
+                                   SM.getIdentifierInfo(), Operands);
 
   // When parsing x64 MS-style assembly, all memory operands default to
   // RIP-relative when interpreted as non-absolute references.
-  if (Parser.isParsingMasm() && is64BitMode())
-    return X86Operand::CreateMem(getPointerWidth(), RegNo, Disp, BaseReg,
-                                 IndexReg, Scale, Start, End, Size,
-                                 /*DefaultBaseReg=*/X86::RIP);
+  if (Parser.isParsingMasm() && is64BitMode()) {
+    Operands.push_back(X86Operand::CreateMem(getPointerWidth(), RegNo, Disp,
+                                             BaseReg, IndexReg, Scale, Start,
+                                             End, Size,
+                                             /*DefaultBaseReg=*/X86::RIP));
+    return false;
+  }
 
-  if (!(BaseReg || IndexReg || RegNo))
-    return X86Operand::CreateMem(getPointerWidth(), Disp, Start, End, Size);
-  return X86Operand::CreateMem(getPointerWidth(), RegNo, Disp,
-                               BaseReg, IndexReg, Scale, Start, End, Size);
+  if ((BaseReg || IndexReg || RegNo))
+    Operands.push_back(X86Operand::CreateMem(getPointerWidth(), RegNo, Disp,
+                                             BaseReg, IndexReg, Scale, Start,
+                                             End, Size));
+  else
+    Operands.push_back(
+        X86Operand::CreateMem(getPointerWidth(), Disp, Start, End, Size));
+  return false;
 }
 
 bool X86AsmParser::ParseATTOperand(OperandVector &Operands) {
@@ -2232,11 +2241,7 @@ bool X86AsmParser::ParseATTOperand(OperandVector &Operands) {
   }
   case AsmToken::LCurly: {
     SMLoc Start = Parser.getTok().getLoc();
-    if (std::unique_ptr<X86Operand> Op = ParseRoundingModeOp(Start)) {
-      Operands.push_back(std::move(Op));
-      return false;
-    }
-    return true;
+    return ParseRoundingModeOp(Start, Operands);
   }
   default: {
     // This a memory operand or a register. We have some parsing complications
