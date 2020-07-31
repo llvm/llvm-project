@@ -86,6 +86,14 @@ add_entrypoint_object(
     memrchr.h
 )
 
+add_entrypoint_object(
+  strrchr
+  SRCS
+    strrchr.cpp
+  HDRS
+    strrchr.h
+)
+
 # Helper to define a function with multiple implementations
 # - Computes flags to satisfy required/rejected features and arch,
 # - Declares an entry point,
