@@ -11,42 +11,38 @@
 
 TEST(StrRChrTest, FindsFirstCharacter) {
   const char *src = "abcde";
-  const char *src_copy = src;
 
   // Should return original string since 'a' is the first character.
   ASSERT_STREQ(__llvm_libc::strrchr(src, 'a'), "abcde");
   // Source string should not change.
-  ASSERT_STREQ(src, src_copy);
+  ASSERT_STREQ(src, "abcde");
 }
 
 TEST(StrRChrTest, FindsMiddleCharacter) {
   const char *src = "abcde";
-  const char *src_copy = src;
 
   // Should return characters after (and including) 'c'.
   ASSERT_STREQ(__llvm_libc::strrchr(src, 'c'), "cde");
   // Source string should not change.
-  ASSERT_STREQ(src, src_copy);
+  ASSERT_STREQ(src, "abcde");
 }
 
 TEST(StrRChrTest, FindsLastCharacterThatIsNotNullTerminator) {
   const char *src = "abcde";
-  const char *src_copy = src;
 
   // Should return 'e' and null-terminator.
   ASSERT_STREQ(__llvm_libc::strrchr(src, 'e'), "e");
   // Source string should not change.
-  ASSERT_STREQ(src, src_copy);
+  ASSERT_STREQ(src, "abcde");
 }
 
 TEST(StrRChrTest, FindsNullTerminator) {
   const char *src = "abcde";
-  const char *src_copy = src;
 
   // Should return null terminator.
   ASSERT_STREQ(__llvm_libc::strrchr(src, '\0'), "");
   // Source string should not change.
-  ASSERT_STREQ(src, src_copy);
+  ASSERT_STREQ(src, "abcde");
 }
 
 TEST(StrRChrTest, FindsLastBehindFirstNullTerminator) {
