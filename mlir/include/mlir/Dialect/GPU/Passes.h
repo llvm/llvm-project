@@ -13,20 +13,22 @@
 #ifndef MLIR_DIALECT_GPU_PASSES_H_
 #define MLIR_DIALECT_GPU_PASSES_H_
 
-#include <memory>
+#include "mlir/Pass/Pass.h"
 
 namespace mlir {
-
-class MLIRContext;
-class ModuleOp;
-template <typename T> class OperationPass;
-class OwningRewritePatternList;
-
 std::unique_ptr<OperationPass<ModuleOp>> createGpuKernelOutliningPass();
 
 /// Collect a set of patterns to rewrite ops within the GPU dialect.
 void populateGpuRewritePatterns(MLIRContext *context,
                                 OwningRewritePatternList &patterns);
+
+//===----------------------------------------------------------------------===//
+// Registration
+//===----------------------------------------------------------------------===//
+
+/// Generate the code for registering passes.
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/GPU/Passes.h.inc"
 
 } // namespace mlir
 
