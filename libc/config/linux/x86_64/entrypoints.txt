@@ -38,6 +38,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strcpy
     libc.src.string.strlen
     libc.src.string.strnlen
+    libc.src.string.strrchr
     libc.src.string.strstr
 
     # sys/mman.h entrypoints
