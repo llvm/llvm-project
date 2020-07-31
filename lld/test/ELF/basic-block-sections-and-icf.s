@@ -1,5 +1,5 @@
 # REQUIRES: x86
-## basicblock-sections tests.
+## basic-block-sections tests.
 ## This simple test checks foo is folded into bar with bb sections
 ## and the jumps are deleted.
 

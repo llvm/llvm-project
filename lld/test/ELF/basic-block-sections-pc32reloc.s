@@ -1,5 +1,5 @@
 # REQUIRES: x86
-## basicblock-sections tests.
+## basic-block-sections tests.
 ## This simple test checks if redundant direct jumps are converted to
 ## implicit fallthrus when PC32 reloc is present.  The jcc's must be converted
 ## to their inverted opcode, for instance jne to je and jmp must be deleted.
