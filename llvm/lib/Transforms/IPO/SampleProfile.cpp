@@ -995,6 +995,8 @@ bool SampleProfileLoader::inlineHotFunctions(
         const FunctionSamples *FS = nullptr;
         if (auto *CB = dyn_cast<CallBase>(&I)) {
           if (!isa<IntrinsicInst>(I) && (FS = findCalleeFunctionSamples(*CB))) {
+            assert((!FunctionSamples::UseMD5 || FS->GUIDToFuncNameMap) &&
+                   "GUIDToFuncNameMap has to be populated");
             AllCandidates.push_back(CB);
             if (FS->getEntrySamples() > 0)
               localNotInlinedCallSites.try_emplace(CB, FS);
