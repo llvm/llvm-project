@@ -576,7 +576,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     // looking for a clobber in many cases; that's an alias property and is
     // handled by BasicAA.
     if (isa<AllocaInst>(Inst) || isNoAliasFn(Inst, &TLI)) {
-      const Value *AccessPtr = GetUnderlyingObject(MemLoc.Ptr, DL);
+      const Value *AccessPtr = getUnderlyingObject(MemLoc.Ptr, DL);
       if (AccessPtr == Inst || AA.isMustAlias(Inst, AccessPtr))
         return MemDepResult::getDef(Inst);
     }

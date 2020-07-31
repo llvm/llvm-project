@@ -461,8 +461,8 @@ static bool memOpsHaveSameBasePtr(const MachineInstr &MI1,
     return false;
   const MachineFunction &MF = *MI1.getParent()->getParent();
   const DataLayout &DL = MF.getFunction().getParent()->getDataLayout();
-  Base1 = GetUnderlyingObject(Base1, DL);
-  Base2 = GetUnderlyingObject(Base2, DL);
+  Base1 = getUnderlyingObject(Base1, DL);
+  Base2 = getUnderlyingObject(Base2, DL);
 
   if (isa<UndefValue>(Base1) || isa<UndefValue>(Base2))
     return false;

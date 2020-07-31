@@ -169,7 +169,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
       if (AS == AMDGPUAS::PRIVATE_ADDRESS) {
         const Value *Ptr = GEP->getPointerOperand();
         const AllocaInst *Alloca =
-            dyn_cast<AllocaInst>(GetUnderlyingObject(Ptr, DL));
+            dyn_cast<AllocaInst>(getUnderlyingObject(Ptr, DL));
         if (!Alloca || !Alloca->isStaticAlloca())
           continue;
         Type *Ty = Alloca->getAllocatedType();

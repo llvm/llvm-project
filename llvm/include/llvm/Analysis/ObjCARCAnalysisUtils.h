@@ -67,7 +67,7 @@ inline bool ModuleHasARC(const Module &M) {
 inline const Value *GetUnderlyingObjCPtr(const Value *V,
                                                 const DataLayout &DL) {
   for (;;) {
-    V = GetUnderlyingObject(V, DL);
+    V = getUnderlyingObject(V, DL);
     if (!IsForwarding(GetBasicARCInstKind(V)))
       break;
     V = cast<CallInst>(V)->getArgOperand(0);
