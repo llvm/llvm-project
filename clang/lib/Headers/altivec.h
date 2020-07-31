@@ -16933,6 +16933,28 @@ vec_cnttzm(vector unsigned long long __a, vector unsigned long long __b) {
   return __builtin_altivec_vctzdm(__a, __b);
 }
 
+/* vec_mod */
+
+static __inline__ vector signed int __ATTRS_o_ai
+vec_mod(vector signed int __a, vector signed int __b) {
+  return __a % __b;
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai
+vec_mod(vector unsigned int __a, vector unsigned int __b) {
+  return __a % __b;
+}
+
+static __inline__ vector signed long long __ATTRS_o_ai
+vec_mod(vector signed long long __a, vector signed long long __b) {
+  return __a % __b;
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_mod(vector unsigned long long __a, vector unsigned long long __b) {
+  return __a % __b;
+}
+
 /* vec_sldbi */
 
 #define vec_sldb(__a, __b, __c) __builtin_altivec_vsldbi(__a, __b, (__c & 0x7))
