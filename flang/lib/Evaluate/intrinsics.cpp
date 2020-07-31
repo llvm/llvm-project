@@ -1258,7 +1258,11 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         break;
       case Rank::shape:
         CHECK(!shapeArgSize);
-        if (rank == 1) {
+        if (rank != 1) {
+          messages.Say(
+              "'shape=' argument must be an array of rank 1"_err_en_US);
+          return std::nullopt;
+        } else {
           if (auto shape{GetShape(context, *arg)}) {
             if (auto constShape{AsConstantShape(context, *shape)}) {
               shapeArgSize = constShape->At(ConstantSubscripts{1}).ToInt64();
