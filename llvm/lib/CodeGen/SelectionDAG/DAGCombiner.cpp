@@ -11372,9 +11372,10 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       // Stop if more than one members are non-undef.
       if (NumDefs > 1)
         break;
+
       VTs.push_back(EVT::getVectorVT(*DAG.getContext(),
                                      VT.getVectorElementType(),
-                                     X.getValueType().getVectorNumElements()));
+                                     X.getValueType().getVectorElementCount()));
     }
 
     if (NumDefs == 0)
@@ -18795,6 +18796,11 @@ static SDValue combineConcatVectorOfScalars(SDNode *N, SelectionDAG &DAG) {
 static SDValue combineConcatVectorOfExtracts(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   EVT OpVT = N->getOperand(0).getValueType();
+
+  // We currently can't generate an appropriate shuffle for a scalable vector.
+  if (VT.isScalableVector())
+    return SDValue();
+
   int NumElts = VT.getVectorNumElements();
   int NumOpElts = OpVT.getVectorNumElements();
 
@@ -19055,11 +19061,14 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
     return V;
 
   // Type legalization of vectors and DAG canonicalization of SHUFFLE_VECTOR
-  // nodes often generate nop CONCAT_VECTOR nodes.
-  // Scan the CONCAT_VECTOR operands and look for a CONCAT operations that
-  // place the incoming vectors at the exact same location.
+  // nodes often generate nop CONCAT_VECTOR nodes. Scan the CONCAT_VECTOR
+  // operands and look for a CONCAT operations that place the incoming vectors
+  // at the exact same location.
+  //
+  // For scalable vectors, EXTRACT_SUBVECTOR indexes are implicitly scaled.
   SDValue SingleSource = SDValue();
-  unsigned PartNumElem = N->getOperand(0).getValueType().getVectorNumElements();
+  unsigned PartNumElem =
+      N->getOperand(0).getValueType().getVectorMinNumElements();
 
   for (unsigned i = 0, e = N->getNumOperands(); i != e; ++i) {
     SDValue Op = N->getOperand(i);
@@ -19181,7 +19190,10 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
 
   // The binop must be a vector type, so we can extract some fraction of it.
   EVT WideBVT = BinOp.getValueType();
-  if (!WideBVT.isVector())
+  // The optimisations below currently assume we are dealing with fixed length
+  // vectors. It is possible to add support for scalable vectors, but at the
+  // moment we've done no analysis to prove whether they are profitable or not.
+  if (!WideBVT.isFixedLengthVector())
     return SDValue();
 
   EVT VT = Extract->getValueType(0);

@@ -2151,7 +2151,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_UnaryOp(SDNode *N) {
   EVT InVT = Lo.getValueType();
 
   EVT OutVT = EVT::getVectorVT(*DAG.getContext(), ResVT.getVectorElementType(),
-                               InVT.getVectorNumElements());
+                               InVT.getVectorElementCount());
 
   if (N->isStrictFPOpcode()) {
     Lo = DAG.getNode(N->getOpcode(), dl, { OutVT, MVT::Other }, 
@@ -2197,13 +2197,19 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_SUBVECTOR(SDNode *N) {
   SDValue Idx = N->getOperand(1);
   SDLoc dl(N);
   SDValue Lo, Hi;
+
+  if (SubVT.isScalableVector() !=
+      N->getOperand(0).getValueType().isScalableVector())
+    report_fatal_error("Extracting a fixed-length vector from an illegal "
+                       "scalable vector is not yet supported");
+
   GetSplitVector(N->getOperand(0), Lo, Hi);
 
-  uint64_t LoElts = Lo.getValueType().getVectorNumElements();
+  uint64_t LoElts = Lo.getValueType().getVectorMinNumElements();
   uint64_t IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
 
   if (IdxVal < LoElts) {
-    assert(IdxVal + SubVT.getVectorNumElements() <= LoElts &&
+    assert(IdxVal + SubVT.getVectorMinNumElements() <= LoElts &&
            "Extracted subvector crosses vector split!");
     return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, SubVT, Lo, Idx);
   } else {
@@ -2559,12 +2565,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_TruncateHelper(SDNode *N) {
   SDValue InVec = N->getOperand(OpNo);
   EVT InVT = InVec->getValueType(0);
   EVT OutVT = N->getValueType(0);
-  unsigned NumElements = OutVT.getVectorNumElements();
+  ElementCount NumElements = OutVT.getVectorElementCount();
   bool IsFloat = OutVT.isFloatingPoint();
-
-  // Widening should have already made sure this is a power-two vector
-  // if we're trying to split it at all. assert() that's true, just in case.
-  assert(!(NumElements & 1) && "Splitting vector, but not in half!");
 
   unsigned InElementSize = InVT.getScalarSizeInBits();
   unsigned OutElementSize = OutVT.getScalarSizeInBits();
@@ -2595,6 +2597,9 @@ SDValue DAGTypeLegalizer::SplitVecOp_TruncateHelper(SDNode *N) {
   GetSplitVector(InVec, InLoVec, InHiVec);
 
   // Truncate them to 1/2 the element size.
+  //
+  // This assumes the number of elements is a power of two; any vector that
+  // isn't should be widened, not split.
   EVT HalfElementVT = IsFloat ?
     EVT::getFloatingPointVT(InElementSize/2) :
     EVT::getIntegerVT(*DAG.getContext(), InElementSize/2);
@@ -3605,16 +3610,15 @@ SDValue DAGTypeLegalizer::WidenVecRes_CONCAT_VECTORS(SDNode *N) {
   EVT InVT = N->getOperand(0).getValueType();
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDLoc dl(N);
-  unsigned WidenNumElts = WidenVT.getVectorNumElements();
-  unsigned NumInElts = InVT.getVectorNumElements();
   unsigned NumOperands = N->getNumOperands();
 
   bool InputWidened = false; // Indicates we need to widen the input.
   if (getTypeAction(InVT) != TargetLowering::TypeWidenVector) {
-    if (WidenVT.getVectorNumElements() % InVT.getVectorNumElements() == 0) {
+    unsigned WidenNumElts = WidenVT.getVectorMinNumElements();
+    unsigned NumInElts = InVT.getVectorMinNumElements();
+    if (WidenNumElts % NumInElts == 0) {
       // Add undef vectors to widen to correct length.
-      unsigned NumConcat = WidenVT.getVectorNumElements() /
-                           InVT.getVectorNumElements();
+      unsigned NumConcat = WidenNumElts / NumInElts;
       SDValue UndefVal = DAG.getUNDEF(InVT);
       SmallVector<SDValue, 16> Ops(NumConcat);
       for (unsigned i=0; i < NumOperands; ++i)
@@ -3638,6 +3642,11 @@ SDValue DAGTypeLegalizer::WidenVecRes_CONCAT_VECTORS(SDNode *N) {
         return GetWidenedVector(N->getOperand(0));
 
       if (NumOperands == 2) {
+        assert(!WidenVT.isScalableVector() &&
+               "Cannot use vector shuffles to widen CONCAT_VECTOR result");
+        unsigned WidenNumElts = WidenVT.getVectorNumElements();
+        unsigned NumInElts = InVT.getVectorNumElements();
+
         // Replace concat of two operands with a shuffle.
         SmallVector<int, 16> MaskOps(WidenNumElts, -1);
         for (unsigned i = 0; i < NumInElts; ++i) {
@@ -3651,6 +3660,11 @@ SDValue DAGTypeLegalizer::WidenVecRes_CONCAT_VECTORS(SDNode *N) {
       }
     }
   }
+
+  assert(!WidenVT.isScalableVector() &&
+         "Cannot use build vectors to widen CONCAT_VECTOR result");
+  unsigned WidenNumElts = WidenVT.getVectorNumElements();
+  unsigned NumInElts = InVT.getVectorNumElements();
 
   // Fall back to use extracts and build vector.
   EVT EltVT = WidenVT.getVectorElementType();

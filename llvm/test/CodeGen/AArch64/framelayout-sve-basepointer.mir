@@ -1,0 +1,23 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=prologepilog -mattr=+sve %s -o - | FileCheck %s
+---
+# This test verifies that the basepointer is available in presence of SVE stack objects.
+name: hasBasepointer
+# CHECK-LABEL: name: hasBasepointer
+# CHECK: bb.0:
+# CHECK:      $sp = frame-setup ADDVL_XXI $sp, -1
+# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 16, 0
+# CHECK-NEXT: $x19 = ADDXri $sp, 0, 0
+# CHECK:      STRXui $x0, $x19, 0
+tracksRegLiveness: true
+frameInfo:
+  isFrameAddressTaken: true
+stack:
+  - { id: 0, type: variable-sized,  alignment: 1 }
+  - { id: 1, name: '', size: 16, alignment: 8 }
+  - { id: 2, stack-id: sve-vec, size: 16, alignment: 16 }
+body: |
+  bb.0:
+    liveins: $x0
+    STRXui $x0, %stack.1, 0
+    RET_ReallyLR
+...
