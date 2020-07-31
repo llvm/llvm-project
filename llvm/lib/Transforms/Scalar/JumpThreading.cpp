@@ -1190,11 +1190,14 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
   if (ProcessThreadableEdges(CondInst, BB, Preference, Terminator))
     return true;
 
-  // If this is an otherwise-unfoldable branch on a phi node in the current
-  // block, see if we can simplify.
-  if (PHINode *PN = dyn_cast<PHINode>(CondInst))
-    if (PN->getParent() == BB && isa<BranchInst>(BB->getTerminator()))
-      return ProcessBranchOnPHI(PN);
+  // If this is an otherwise-unfoldable branch on a phi node or freeze(phi) in
+  // the current block, see if we can simplify.
+  PHINode *PN = dyn_cast<PHINode>(
+      isa<FreezeInst>(CondInst) ? cast<FreezeInst>(CondInst)->getOperand(0)
+                                : CondInst);
+
+  if (PN && PN->getParent() == BB && isa<BranchInst>(BB->getTerminator()))
+    return ProcessBranchOnPHI(PN);
 
   // If this is an otherwise-unfoldable branch on a XOR, see if we can simplify.
   if (CondInst->getOpcode() == Instruction::Xor &&
@@ -1750,8 +1753,8 @@ bool JumpThreadingPass::ProcessThreadableEdges(Value *Cond, BasicBlock *BB,
 }
 
 /// ProcessBranchOnPHI - We have an otherwise unthreadable conditional branch on
-/// a PHI node in the current block.  See if there are any simplifications we
-/// can do based on inputs to the phi node.
+/// a PHI node (or freeze PHI) in the current block.  See if there are any
+/// simplifications we can do based on inputs to the phi node.
 bool JumpThreadingPass::ProcessBranchOnPHI(PHINode *PN) {
   BasicBlock *BB = PN->getParent();
 
@@ -1764,6 +1767,9 @@ bool JumpThreadingPass::ProcessBranchOnPHI(PHINode *PN) {
   // *duplicate* the conditional branch into that block in order to further
   // encourage jump threading and to eliminate cases where we have branch on a
   // phi of an icmp (branch on icmp is much better).
+  // This is still beneficial when a frozen phi is used as the branch condition
+  // because it allows CodeGenPrepare to further canonicalize br(freeze(icmp))
+  // to br(icmp(freeze ...)).
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
     BasicBlock *PredBB = PN->getIncomingBlock(i);
     if (BranchInst *PredBr = dyn_cast<BranchInst>(PredBB->getTerminator()))
