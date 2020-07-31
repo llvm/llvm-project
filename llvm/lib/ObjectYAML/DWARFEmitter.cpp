@@ -126,7 +126,8 @@ Error DWARFYAML::emitDebugAbbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
 }
 
 Error DWARFYAML::emitDebugAranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
-  for (auto Range : DI.ARanges) {
+  assert(DI.DebugAranges && "unexpected emitDebugAranges() call");
+  for (auto Range : *DI.DebugAranges) {
     uint8_t AddrSize;
     if (Range.AddrSize)
       AddrSize = *Range.AddrSize;
