@@ -604,4 +604,3 @@ func @drop_duplicate_bounds(%N : index) {
   }
   return
 }
-

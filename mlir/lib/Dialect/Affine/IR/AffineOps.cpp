@@ -2893,7 +2893,7 @@ static ParseResult parseAffineParallelOp(OpAsmParser &parser,
   }
 
   // Parse optional clause of the form: `reduce ("addf", "maxf")`, where the
-  // quoted strings a member of the enum AtomicRMWKind.
+  // quoted strings are a member of the enum AtomicRMWKind.
   SmallVector<Attribute, 4> reductions;
   if (succeeded(parser.parseOptionalKeyword("reduce"))) {
     if (parser.parseLParen())
