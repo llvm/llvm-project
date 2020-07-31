@@ -1859,6 +1859,7 @@ void DFSanVisitor::visitPHINode(PHINode &PN) {
   DFSF.setShadow(&PN, ShadowPN);
 }
 
+namespace {
 class DataFlowSanitizerLegacyPass : public ModulePass {
 private:
   std::vector<std::string> ABIListFiles;
@@ -1874,6 +1875,7 @@ public:
     return DataFlowSanitizer(ABIListFiles).runImpl(M);
   }
 };
+} // namespace
 
 char DataFlowSanitizerLegacyPass::ID;
 
