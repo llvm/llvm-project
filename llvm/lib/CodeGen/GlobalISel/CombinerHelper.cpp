@@ -1545,6 +1545,39 @@ bool CombinerHelper::tryCombineShiftToUnmerge(MachineInstr &MI,
   return false;
 }
 
+bool CombinerHelper::matchCombineI2PToP2I(MachineInstr &MI, Register &Reg) {
+  assert(MI.getOpcode() == TargetOpcode::G_INTTOPTR && "Expected a G_INTTOPTR");
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  Register SrcReg = MI.getOperand(1).getReg();
+  return mi_match(SrcReg, MRI,
+                  m_GPtrToInt(m_all_of(m_SpecificType(DstTy), m_Reg(Reg))));
+}
+
+bool CombinerHelper::applyCombineI2PToP2I(MachineInstr &MI, Register &Reg) {
+  assert(MI.getOpcode() == TargetOpcode::G_INTTOPTR && "Expected a G_INTTOPTR");
+  Register DstReg = MI.getOperand(0).getReg();
+  Builder.setInstr(MI);
+  Builder.buildCopy(DstReg, Reg);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool CombinerHelper::matchCombineP2IToI2P(MachineInstr &MI, Register &Reg) {
+  assert(MI.getOpcode() == TargetOpcode::G_PTRTOINT && "Expected a G_PTRTOINT");
+  Register SrcReg = MI.getOperand(1).getReg();
+  return mi_match(SrcReg, MRI, m_GIntToPtr(m_Reg(Reg)));
+}
+
+bool CombinerHelper::applyCombineP2IToI2P(MachineInstr &MI, Register &Reg) {
+  assert(MI.getOpcode() == TargetOpcode::G_PTRTOINT && "Expected a G_PTRTOINT");
+  Register DstReg = MI.getOperand(0).getReg();
+  Builder.setInstr(MI);
+  Builder.buildZExtOrTrunc(DstReg, Reg);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool CombinerHelper::matchAnyExplicitUseIsUndef(MachineInstr &MI) {
   return any_of(MI.explicit_uses(), [this](const MachineOperand &MO) {
     return MO.isReg() &&
