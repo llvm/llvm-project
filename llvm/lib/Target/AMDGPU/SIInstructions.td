@@ -1471,8 +1471,13 @@ def : GCNPat <
 >;
 
 def : GCNPat <
- (i32 frameindex:$fi),
- (V_MOV_B32_e32 (i32 (frameindex_to_targetframeindex $fi)))
+  (p5 frameindex:$fi),
+  (V_MOV_B32_e32 (p5 (frameindex_to_targetframeindex $fi)))
+>;
+
+def : GCNPat <
+  (p5 frameindex:$fi),
+  (S_MOV_B32 (p5 (frameindex_to_targetframeindex $fi)))
 >;
 
 def : GCNPat <
