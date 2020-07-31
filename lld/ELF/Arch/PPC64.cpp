@@ -1035,11 +1035,6 @@ bool PPC64::needsThunk(RelExpr expr, RelType type, const InputFile *file,
       type != R_PPC64_REL24_NOTOC)
     return false;
 
-  // FIXME: Remove the fatal error once the call protocol is implemented.
-  if (type == R_PPC64_REL24_NOTOC && s.isInPlt())
-    fatal("unimplemented feature: external function call with the reltype"
-          " R_PPC64_REL24_NOTOC");
-
   // If a function is in the Plt it needs to be called with a call-stub.
   if (s.isInPlt())
     return true;

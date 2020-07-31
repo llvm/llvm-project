@@ -25,7 +25,7 @@ using namespace lldb_private;
 
 Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
                        const CompilerType *type, bool hardware)
-    : StoppointLocation(0, addr, size, hardware), m_target(target),
+    : StoppointSite(0, addr, size, hardware), m_target(target),
       m_enabled(false), m_is_hardware(hardware), m_is_watch_variable(false),
       m_is_ephemeral(false), m_disabled_count(0), m_watch_read(0),
       m_watch_write(0), m_watch_was_read(0), m_watch_was_written(0),
@@ -93,9 +93,10 @@ void Watchpoint::SetWatchSpec(const std::string &str) {
   m_watch_spec_str = str;
 }
 
-// Override default impl of StoppointLocation::IsHardware() since m_is_hardware
-// member field is more accurate.
-bool Watchpoint::IsHardware() const { return m_is_hardware; }
+bool Watchpoint::IsHardware() const {
+  lldbassert(m_is_hardware || !HardwareRequired());
+  return m_is_hardware;
+}
 
 bool Watchpoint::IsWatchVariable() const { return m_is_watch_variable; }
 
@@ -123,12 +124,12 @@ bool Watchpoint::CaptureWatchedValue(const ExecutionContext &exe_ctx) {
 void Watchpoint::IncrementFalseAlarmsAndReviseHitCount() {
   ++m_false_alarms;
   if (m_false_alarms) {
-    if (m_hit_count >= m_false_alarms) {
-      m_hit_count -= m_false_alarms;
+    if (m_hit_counter.GetValue() >= m_false_alarms) {
+      m_hit_counter.Decrement(m_false_alarms);
       m_false_alarms = 0;
     } else {
-      m_false_alarms -= m_hit_count;
-      m_hit_count = 0;
+      m_false_alarms -= m_hit_counter.GetValue();
+      m_hit_counter.Reset();
     }
   }
 }
@@ -137,7 +138,7 @@ void Watchpoint::IncrementFalseAlarmsAndReviseHitCount() {
 // should continue.
 
 bool Watchpoint::ShouldStop(StoppointCallbackContext *context) {
-  IncrementHitCount();
+  m_hit_counter.Increment();
 
   return IsEnabled();
 }

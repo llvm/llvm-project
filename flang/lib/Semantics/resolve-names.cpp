@@ -909,6 +909,7 @@ private:
   void AddSaveName(std::set<SourceName> &, const SourceName &);
   void SetSaveAttr(Symbol &);
   bool HandleUnrestrictedSpecificIntrinsicFunction(const parser::Name &);
+  bool IsUplevelReference(const Symbol &);
   const parser::Name *FindComponent(const parser::Name *, const parser::Name &);
   bool CheckInitialDataTarget(const Symbol &, const SomeExpr &, SourceName);
   void CheckInitialProcTarget(const Symbol &, const parser::Name &, SourceName);
@@ -5429,7 +5430,10 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
     if (CheckUseError(name)) {
       return nullptr; // reported an error
     }
-    if (IsDummy(*symbol) ||
+    if (IsUplevelReference(*symbol)) {
+      name.symbol = nullptr;
+      MakeSymbol(name, HostAssocDetails{*symbol});
+    } else if (IsDummy(*symbol) ||
         (!symbol->GetType() && FindCommonBlockContaining(*symbol))) {
       ConvertToObjectEntity(*symbol);
       ApplyImplicitRules(*symbol);
@@ -5451,6 +5455,16 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
   ConvertToObjectEntity(*symbol);
   ApplyImplicitRules(*symbol);
   return &name;
+}
+
+bool DeclarationVisitor::IsUplevelReference(const Symbol &symbol) {
+  const Scope *symbolUnit{FindProgramUnitContaining(symbol)};
+  if (symbolUnit == FindProgramUnitContaining(currScope())) {
+    return false;
+  } else {
+    Scope::Kind kind{DEREF(symbolUnit).kind()};
+    return kind == Scope::Kind::Subprogram || kind == Scope::Kind::MainProgram;
+  }
 }
 
 // base is a part-ref of a derived type; find the named component in its type.
@@ -5666,22 +5680,25 @@ void DeclarationVisitor::NonPointerInitialization(const parser::Name &name,
     const parser::ConstantExpr &expr, bool inComponentDecl) {
   if (name.symbol) {
     Symbol &ultimate{name.symbol->GetUltimate()};
-    if (IsPointer(ultimate)) {
-      Say(name, "'%s' is a pointer but is not initialized like one"_err_en_US);
-    } else if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
-      CHECK(!details->init());
-      Walk(expr);
-      // TODO: check C762 - all bounds and type parameters of component
-      // are colons or constant expressions if component is initialized
-      if (inComponentDecl) {
-        // Can't convert to type of component, which might not yet
-        // be known; that's done later during instantiation.
-        if (MaybeExpr value{EvaluateExpr(expr)}) {
-          details->set_init(std::move(*value));
+    if (!context().HasError(ultimate)) {
+      if (IsPointer(ultimate)) {
+        Say(name,
+            "'%s' is a pointer but is not initialized like one"_err_en_US);
+      } else if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
+        CHECK(!details->init());
+        Walk(expr);
+        // TODO: check C762 - all bounds and type parameters of component
+        // are colons or constant expressions if component is initialized
+        if (inComponentDecl) {
+          // Can't convert to type of component, which might not yet
+          // be known; that's done later during instantiation.
+          if (MaybeExpr value{EvaluateExpr(expr)}) {
+            details->set_init(std::move(*value));
+          }
+        } else if (MaybeExpr folded{EvaluateConvertedExpr(
+                       ultimate, expr, expr.thing.value().source)}) {
+          details->set_init(std::move(*folded));
         }
-      } else if (MaybeExpr folded{EvaluateConvertedExpr(
-                     ultimate, expr, expr.thing.value().source)}) {
-        details->set_init(std::move(*folded));
       }
     }
   }

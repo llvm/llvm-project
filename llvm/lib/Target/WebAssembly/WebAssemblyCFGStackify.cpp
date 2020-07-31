@@ -24,6 +24,7 @@
 #include "WebAssembly.h"
 #include "WebAssemblyExceptionInfo.h"
 #include "WebAssemblyMachineFunctionInfo.h"
+#include "WebAssemblySortRegion.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/Statistic.h"
@@ -33,6 +34,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
+using WebAssembly::SortRegionInfo;
 
 #define DEBUG_TYPE "wasm-cfg-stackify"
 
@@ -382,6 +384,8 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
 void WebAssemblyCFGStackify::placeLoopMarker(MachineBasicBlock &MBB) {
   MachineFunction &MF = *MBB.getParent();
   const auto &MLI = getAnalysis<MachineLoopInfo>();
+  const auto &WEI = getAnalysis<WebAssemblyExceptionInfo>();
+  SortRegionInfo SRI(MLI, WEI);
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
   MachineLoop *Loop = MLI.getLoopFor(&MBB);
@@ -390,7 +394,7 @@ void WebAssemblyCFGStackify::placeLoopMarker(MachineBasicBlock &MBB) {
 
   // The operand of a LOOP is the first block after the loop. If the loop is the
   // bottom of the function, insert a dummy block at the end.
-  MachineBasicBlock *Bottom = WebAssembly::getBottom(Loop);
+  MachineBasicBlock *Bottom = SRI.getBottom(Loop);
   auto Iter = std::next(Bottom->getIterator());
   if (Iter == MF.end()) {
     getAppendixBlock(MF);
@@ -450,7 +454,9 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   MachineFunction &MF = *MBB.getParent();
   auto &MDT = getAnalysis<MachineDominatorTree>();
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+  const auto &MLI = getAnalysis<MachineLoopInfo>();
   const auto &WEI = getAnalysis<WebAssemblyExceptionInfo>();
+  SortRegionInfo SRI(MLI, WEI);
   const auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
 
   // Compute the nearest common dominator of all unwind predecessors
@@ -470,7 +476,7 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   // end.
   WebAssemblyException *WE = WEI.getExceptionFor(&MBB);
   assert(WE);
-  MachineBasicBlock *Bottom = WebAssembly::getBottom(WE);
+  MachineBasicBlock *Bottom = SRI.getBottom(WE);
 
   auto Iter = std::next(Bottom->getIterator());
   if (Iter == MF.end()) {

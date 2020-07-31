@@ -40,7 +40,9 @@ protected:
     // x86_64 Linux and Darwin.
     return (Host.isOSWindows() && llvm_is_multithreaded()) ||
            (Host.isX86() &&
-            (Host.isOSDarwin() || Host.getOS() == Triple::Linux));
+            (Host.isOSDarwin() || Host.getOS() == Triple::Linux)) ||
+           (Host.getOS() == Triple::Linux &&
+            (Host.isPPC64() || Host.isSystemZ()));
   }
 
   HostTest() : Host(Triple::normalize(sys::getProcessTriple())) {}

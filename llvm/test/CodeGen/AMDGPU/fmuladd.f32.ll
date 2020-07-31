@@ -69,6 +69,24 @@ define amdgpu_kernel void @fmul_fadd_f32(float addrspace(1)* %out, float addrspa
   ret void
 }
 
+; GCN-LABEL: {{^}}fmul_fadd_contract_f32:
+; GCN-FLUSH-FMAC: v_fmac_f32_e32
+
+; GCN-DENORM-SLOWFMA-CONTRACT: v_mul_f32_e32
+; GCN-DENORM-SLOWFMA-CONTRACT: v_add_f32_e32
+
+; GCN-DENORM-FASTFMA: v_fma_f32
+define amdgpu_kernel void @fmul_fadd_contract_f32(float addrspace(1)* %out, float addrspace(1)* %in1,
+                           float addrspace(1)* %in2, float addrspace(1)* %in3) #0 {
+  %r0 = load volatile float, float addrspace(1)* %in1
+  %r1 = load volatile float, float addrspace(1)* %in2
+  %r2 = load volatile float, float addrspace(1)* %in3
+  %mul = fmul float %r0, %r1
+  %add = fadd contract float %mul, %r2
+  store float %add, float addrspace(1)* %out
+  ret void
+}
+
 ; GCN-LABEL: {{^}}fmuladd_2.0_a_b_f32
 ; GCN: {{buffer|flat|global}}_load_dword [[R1:v[0-9]+]],
 ; GCN: {{buffer|flat|global}}_load_dword [[R2:v[0-9]+]],

@@ -8,6 +8,7 @@
 
 #include "Symbols.h"
 #include "InputFiles.h"
+#include "SyntheticSections.h"
 
 using namespace llvm;
 using namespace lld;
@@ -21,3 +22,9 @@ std::string lld::toString(const Symbol &sym) {
     return *s;
   return std::string(sym.getName());
 }
+
+uint64_t DSOHandle::getVA() const { return header->addr; }
+
+uint64_t DSOHandle::getFileOffset() const { return header->fileOff; }
+
+constexpr StringRef DSOHandle::name;

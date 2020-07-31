@@ -8,6 +8,7 @@
 
 #include "PPCTargetTransformInfo.h"
 #include "llvm/Analysis/CodeMetrics.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
@@ -18,6 +19,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "ppctti"

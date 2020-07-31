@@ -19,6 +19,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -930,6 +931,7 @@ bool Attributor::checkForAllReadWriteInstructions(
 }
 
 void Attributor::runTillFixpoint() {
+  TimeTraceScope TimeScope("Attributor::runTillFixpoint");
   LLVM_DEBUG(dbgs() << "[Attributor] Identified and initialized "
                     << DG.SyntheticRoot.Deps.size()
                     << " abstract attributes.\n");
@@ -1066,6 +1068,7 @@ void Attributor::runTillFixpoint() {
 }
 
 ChangeStatus Attributor::manifestAttributes() {
+  TimeTraceScope TimeScope("Attributor::manifestAttributes");
   size_t NumFinalAAs = DG.SyntheticRoot.Deps.size();
 
   unsigned NumManifested = 0;
@@ -1128,6 +1131,7 @@ ChangeStatus Attributor::manifestAttributes() {
 }
 
 ChangeStatus Attributor::cleanupIR() {
+  TimeTraceScope TimeScope("Attributor::cleanupIR");
   // Delete stuff at the end to avoid invalid references and a nice order.
   LLVM_DEBUG(dbgs() << "\n[Attributor] Delete at least "
                     << ToBeDeletedFunctions.size() << " functions and "
@@ -1296,6 +1300,8 @@ ChangeStatus Attributor::cleanupIR() {
 }
 
 ChangeStatus Attributor::run() {
+  TimeTraceScope TimeScope("Attributor::run");
+
   SeedingPeriod = false;
   runTillFixpoint();
 
@@ -1315,6 +1321,8 @@ ChangeStatus Attributor::run() {
 }
 
 ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
+  TimeTraceScope TimeScope(AA.getName() + "::updateAA");
+
   // Use a new dependence vector for this update.
   DependenceVector DV;
   DependenceStack.push_back(&DV);

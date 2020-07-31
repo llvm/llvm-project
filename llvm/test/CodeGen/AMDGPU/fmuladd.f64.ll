@@ -1,4 +1,4 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICTSI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,SI %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde  -fp-contract=on -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-STRICT,SI %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tahiti -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,SI %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=verde  -fp-contract=fast -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GCN-CONTRACT,SI %s
@@ -29,6 +29,20 @@ define amdgpu_kernel void @fmul_fadd_f64(double addrspace(1)* %out, double addrs
   %r2 = load double, double addrspace(1)* %in3
   %tmp = fmul double %r0, %r1
   %r3 = fadd double %tmp, %r2
+  store double %r3, double addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}fmul_fadd_contract_f64:
+; GCN: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
+
+define amdgpu_kernel void @fmul_fadd_contract_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
+                           double addrspace(1)* %in2, double addrspace(1)* %in3) #0 {
+  %r0 = load double, double addrspace(1)* %in1
+  %r1 = load double, double addrspace(1)* %in2
+  %r2 = load double, double addrspace(1)* %in3
+  %tmp = fmul double %r0, %r1
+  %r3 = fadd contract double %tmp, %r2
   store double %r3, double addrspace(1)* %out
   ret void
 }

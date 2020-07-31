@@ -177,13 +177,13 @@ define amdgpu_kernel void @v_cttz_zero_undef_i32_with_select(i32 addrspace(1)* n
 ; SI-NOSDWA: v_or_b32_e32 [[VAL2:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
 ; SI-NOSDWA: v_ffbl_b32_e32 v{{[0-9]+}}, [[VAL1]]
 ; SI-NOSDWA: v_ffbl_b32_e32 v{{[0-9]+}}, [[VAL2]]
+; SI-SDWA: v_or_b32_e32
 ; SI-SDWA: v_or_b32_sdwa
 ; SI-SDWA: v_or_b32_e32
-; SI-SDWA: v_or_b32_e32
+; SI-SDWA: v_or_b32_sdwa
 ; SI-SDWA: v_or_b32_e32 [[VAL1:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
-; SI-SDWA: v_ffbl_b32_e32 v{{[0-9]+}}, [[VAL1]]
-; SI-SDWA: v_or_b32_sdwa
 ; SI-SDWA: v_or_b32_e32 [[VAL2:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}
+; SI-SDWA: v_ffbl_b32_e32 v{{[0-9]+}}, [[VAL1]]
 ; SI-SDWA: v_ffbl_b32_e32 v{{[0-9]+}}, [[VAL2]]
 ; SI: v_cmp_eq_u32_e32 vcc, 0
 ; SI: v_cmp_ne_u64_e32 vcc, 0

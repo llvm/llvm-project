@@ -424,10 +424,9 @@ Type LLVMTypeConverter::convertVectorType(VectorType type) {
 ConvertToLLVMPattern::ConvertToLLVMPattern(StringRef rootOpName,
                                            MLIRContext *context,
                                            LLVMTypeConverter &typeConverter,
-                                           const LowerToLLVMOptions &options,
                                            PatternBenefit benefit)
     : ConversionPattern(rootOpName, benefit, typeConverter, context),
-      typeConverter(typeConverter), options(options) {}
+      typeConverter(typeConverter) {}
 
 /*============================================================================*/
 /* StructBuilder implementation                                               */
@@ -925,6 +924,52 @@ Value ConvertToLLVMPattern::getDataPtr(Location loc, MemRefType type,
                               offset, rewriter);
 }
 
+Type ConvertToLLVMPattern::getElementPtrType(MemRefType type) const {
+  auto elementType = type.getElementType();
+  auto structElementType = typeConverter.convertType(elementType);
+  return structElementType.cast<LLVM::LLVMType>().getPointerTo(
+      type.getMemorySpace());
+}
+
+void ConvertToLLVMPattern::getMemRefDescriptorSizes(
+    Location loc, MemRefType memRefType, ArrayRef<Value> dynSizes,
+    ConversionPatternRewriter &rewriter, SmallVectorImpl<Value> &sizes) const {
+  sizes.reserve(memRefType.getRank());
+  unsigned i = 0;
+  for (int64_t s : memRefType.getShape())
+    sizes.push_back(s == ShapedType::kDynamicSize
+                        ? dynSizes[i++]
+                        : createIndexConstant(rewriter, loc, s));
+}
+
+Value ConvertToLLVMPattern::getCumulativeSizeInBytes(
+    Location loc, Type elementType, ArrayRef<Value> sizes,
+    ConversionPatternRewriter &rewriter) const {
+  // Compute the total number of memref elements.
+  Value cumulativeSizeInBytes =
+      sizes.empty() ? createIndexConstant(rewriter, loc, 1) : sizes.front();
+  for (unsigned i = 1, e = sizes.size(); i < e; ++i)
+    cumulativeSizeInBytes = rewriter.create<LLVM::MulOp>(
+        loc, getIndexType(), ArrayRef<Value>{cumulativeSizeInBytes, sizes[i]});
+
+  // Compute the size of an individual element. This emits the MLIR equivalent
+  // of the following sizeof(...) implementation in LLVM IR:
+  //   %0 = getelementptr %elementType* null, %indexType 1
+  //   %1 = ptrtoint %elementType* %0 to %indexType
+  // which is a common pattern of getting the size of a type in bytes.
+  auto convertedPtrType = typeConverter.convertType(elementType)
+                              .cast<LLVM::LLVMType>()
+                              .getPointerTo();
+  auto nullPtr = rewriter.create<LLVM::NullOp>(loc, convertedPtrType);
+  auto gep = rewriter.create<LLVM::GEPOp>(
+      loc, convertedPtrType,
+      ArrayRef<Value>{nullPtr, createIndexConstant(rewriter, loc, 1)});
+  auto elementSize =
+      rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gep);
+  return rewriter.create<LLVM::MulOp>(
+      loc, getIndexType(), ArrayRef<Value>{cumulativeSizeInBytes, elementSize});
+}
+
 /// Only retain those attributes that are not constructed by
 /// `LLVMFuncOp::build`. If `filterArgAttrs` is set, also filter out argument
 /// attributes.
@@ -1124,10 +1169,8 @@ protected:
 /// information.
 static constexpr StringRef kEmitIfaceAttrName = "llvm.emit_c_interface";
 struct FuncOpConversion : public FuncOpConversionBase {
-  FuncOpConversion(LLVMTypeConverter &converter,
-                   const LowerToLLVMOptions &options)
-      : FuncOpConversionBase(converter, options) {}
-  using ConvertOpToLLVMPattern<FuncOp>::options;
+  FuncOpConversion(LLVMTypeConverter &converter)
+      : FuncOpConversionBase(converter) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -1138,7 +1181,7 @@ struct FuncOpConversion : public FuncOpConversionBase {
     if (!newFuncOp)
       return failure();
 
-    if (options.emitCWrappers ||
+    if (typeConverter.getOptions().emitCWrappers ||
         funcOp.getAttrOfType<UnitAttr>(kEmitIfaceAttrName)) {
       if (newFuncOp.isExternal())
         wrapExternalFunction(rewriter, op->getLoc(), typeConverter, funcOp,
@@ -1652,11 +1695,9 @@ struct AllocLikeOpLowering : public ConvertOpToLLVMPattern<AllocLikeOp> {
   using ConvertOpToLLVMPattern<AllocLikeOp>::getIndexType;
   using ConvertOpToLLVMPattern<AllocLikeOp>::typeConverter;
   using ConvertOpToLLVMPattern<AllocLikeOp>::getVoidPtrType;
-  using ConvertOpToLLVMPattern<AllocLikeOp>::options;
 
-  explicit AllocLikeOpLowering(LLVMTypeConverter &converter,
-                               const LowerToLLVMOptions &options)
-      : ConvertOpToLLVMPattern<AllocLikeOp>(converter, options) {}
+  explicit AllocLikeOpLowering(LLVMTypeConverter &converter)
+      : ConvertOpToLLVMPattern<AllocLikeOp>(converter) {}
 
   LogicalResult match(Operation *op) const override {
     MemRefType memRefType = cast<AllocLikeOp>(op).getType();
@@ -1698,7 +1739,7 @@ struct AllocLikeOpLowering : public ConvertOpToLLVMPattern<AllocLikeOp> {
       Location loc, ConversionPatternRewriter &rewriter, MemRefType memRefType,
       Value allocatedTypePtr, Value allocatedBytePtr, Value accessAlignment,
       uint64_t offset, ArrayRef<int64_t> strides, ArrayRef<Value> sizes) const {
-    auto elementPtrType = getElementPtrType(memRefType);
+    auto elementPtrType = this->getElementPtrType(memRefType);
     auto structType = typeConverter.convertType(memRefType);
     auto memRefDescriptor = MemRefDescriptor::undef(rewriter, loc, structType);
 
@@ -1756,52 +1797,6 @@ struct AllocLikeOpLowering : public ConvertOpToLLVMPattern<AllocLikeOp> {
     return memRefDescriptor;
   }
 
-  /// Determines sizes to be used in the memref descriptor.
-  void getSizes(Location loc, MemRefType memRefType, ArrayRef<Value> operands,
-                ConversionPatternRewriter &rewriter,
-                SmallVectorImpl<Value> &sizes, Value &cumulativeSize,
-                Value &one) const {
-    sizes.reserve(memRefType.getRank());
-    unsigned i = 0;
-    for (int64_t s : memRefType.getShape())
-      sizes.push_back(s == -1 ? operands[i++]
-                              : createIndexConstant(rewriter, loc, s));
-    if (sizes.empty())
-      sizes.push_back(createIndexConstant(rewriter, loc, 1));
-
-    // Compute the total number of memref elements.
-    cumulativeSize = sizes.front();
-    for (unsigned i = 1, e = sizes.size(); i < e; ++i)
-      cumulativeSize = rewriter.create<LLVM::MulOp>(
-          loc, getIndexType(), ArrayRef<Value>{cumulativeSize, sizes[i]});
-
-    // Compute the size of an individual element. This emits the MLIR equivalent
-    // of the following sizeof(...) implementation in LLVM IR:
-    //   %0 = getelementptr %elementType* null, %indexType 1
-    //   %1 = ptrtoint %elementType* %0 to %indexType
-    // which is a common pattern of getting the size of a type in bytes.
-    auto elementType = memRefType.getElementType();
-    auto convertedPtrType = typeConverter.convertType(elementType)
-                                .template cast<LLVM::LLVMType>()
-                                .getPointerTo();
-    auto nullPtr = rewriter.create<LLVM::NullOp>(loc, convertedPtrType);
-    one = createIndexConstant(rewriter, loc, 1);
-    auto gep = rewriter.create<LLVM::GEPOp>(loc, convertedPtrType,
-                                            ArrayRef<Value>{nullPtr, one});
-    auto elementSize =
-        rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gep);
-    cumulativeSize = rewriter.create<LLVM::MulOp>(
-        loc, getIndexType(), ArrayRef<Value>{cumulativeSize, elementSize});
-  }
-
-  /// Returns the type of a pointer to an element of the memref.
-  Type getElementPtrType(MemRefType memRefType) const {
-    auto elementType = memRefType.getElementType();
-    auto structElementType = typeConverter.convertType(elementType);
-    return structElementType.template cast<LLVM::LLVMType>().getPointerTo(
-        memRefType.getMemorySpace());
-  }
-
   /// Returns the memref's element size in bytes.
   // TODO: there are other places where this is used. Expose publicly?
   static unsigned getMemRefEltSizeInBytes(MemRefType memRefType) {
@@ -1823,7 +1818,7 @@ struct AllocLikeOpLowering : public ConvertOpToLLVMPattern<AllocLikeOp> {
   /// allocation size to be a multiple of alignment,
   Optional<int64_t> getAllocationAlignment(AllocOp allocOp) const {
     // No alignment can be used for the 'malloc' call itself.
-    if (!options.useAlignedAlloc)
+    if (!typeConverter.getOptions().useAlignedAlloc)
       return None;
 
     if (allocOp.alignment())
@@ -1856,7 +1851,7 @@ struct AllocLikeOpLowering : public ConvertOpToLLVMPattern<AllocLikeOp> {
                        MemRefType memRefType, Value one, Value &accessAlignment,
                        Value &allocatedBytePtr,
                        ConversionPatternRewriter &rewriter) const {
-    auto elementPtrType = getElementPtrType(memRefType);
+    auto elementPtrType = this->getElementPtrType(memRefType);
 
     // With alloca, one gets a pointer to the element type right away.
     // For stack allocations.
@@ -1959,9 +1954,10 @@ struct AllocLikeOpLowering : public ConvertOpToLLVMPattern<AllocLikeOp> {
     // values and dynamic sizes are passed to 'alloc' as operands.  In case of
     // zero-dimensional memref, assume a scalar (size 1).
     SmallVector<Value, 4> sizes;
-    Value cumulativeSize, one;
-    getSizes(loc, memRefType, operands, rewriter, sizes, cumulativeSize, one);
+    this->getMemRefDescriptorSizes(loc, memRefType, operands, rewriter, sizes);
 
+    Value cumulativeSize = this->getCumulativeSizeInBytes(
+        loc, memRefType.getElementType(), sizes, rewriter);
     // Allocate the underlying buffer.
     // Value holding the alignment that has to be performed post allocation
     // (in conjunction with allocators that do not support alignment, eg.
@@ -1970,8 +1966,9 @@ struct AllocLikeOpLowering : public ConvertOpToLLVMPattern<AllocLikeOp> {
     // Byte pointer to the allocated buffer.
     Value allocatedBytePtr;
     Value allocatedTypePtr =
-        allocateBuffer(loc, cumulativeSize, op, memRefType, one,
-                       accessAlignment, allocatedBytePtr, rewriter);
+        allocateBuffer(loc, cumulativeSize, op, memRefType,
+                       createIndexConstant(rewriter, loc, 1), accessAlignment,
+                       allocatedBytePtr, rewriter);
 
     int64_t offset;
     SmallVector<int64_t, 4> strides;
@@ -2002,9 +1999,8 @@ protected:
 };
 
 struct AllocOpLowering : public AllocLikeOpLowering<AllocOp> {
-  explicit AllocOpLowering(LLVMTypeConverter &converter,
-                           const LowerToLLVMOptions &options)
-      : AllocLikeOpLowering<AllocOp>(converter, options) {}
+  explicit AllocOpLowering(LLVMTypeConverter &converter)
+      : AllocLikeOpLowering<AllocOp>(converter) {}
 };
 
 using AllocaOpLowering = AllocLikeOpLowering<AllocaOp>;
@@ -2174,9 +2170,8 @@ struct CallIndirectOpLowering : public CallOpInterfaceLowering<CallIndirectOp> {
 struct DeallocOpLowering : public ConvertOpToLLVMPattern<DeallocOp> {
   using ConvertOpToLLVMPattern<DeallocOp>::ConvertOpToLLVMPattern;
 
-  explicit DeallocOpLowering(LLVMTypeConverter &converter,
-                             const LowerToLLVMOptions &options)
-      : ConvertOpToLLVMPattern<DeallocOp>(converter, options) {}
+  explicit DeallocOpLowering(LLVMTypeConverter &converter)
+      : ConvertOpToLLVMPattern<DeallocOp>(converter) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -3200,8 +3195,7 @@ private:
 
 /// Collect a set of patterns to convert from the Standard dialect to LLVM.
 void mlir::populateStdToLLVMNonMemoryConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
-    const LowerToLLVMOptions &options) {
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
   // FIXME: this should be tablegen'ed
   // clang-format off
   patterns.insert<
@@ -3265,13 +3259,12 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       UnsignedRemIOpLowering,
       UnsignedShiftRightOpLowering,
       XOrOpLowering,
-      ZeroExtendIOpLowering>(converter, options);
+      ZeroExtendIOpLowering>(converter);
   // clang-format on
 }
 
 void mlir::populateStdToLLVMMemoryConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
-    const LowerToLLVMOptions &options) {
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
   // clang-format off
   patterns.insert<
       AssumeAlignmentOpLowering,
@@ -3282,25 +3275,23 @@ void mlir::populateStdToLLVMMemoryConversionPatterns(
       StoreOpLowering,
       SubViewOpLowering,
       ViewOpLowering,
-      AllocOpLowering>(converter, options);
+      AllocOpLowering>(converter);
   // clang-format on
 }
 
 void mlir::populateStdToLLVMFuncOpConversionPattern(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
-    const LowerToLLVMOptions &options) {
-  if (options.useBarePtrCallConv)
-    patterns.insert<BarePtrFuncOpConversion>(converter, options);
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+  if (converter.getOptions().useBarePtrCallConv)
+    patterns.insert<BarePtrFuncOpConversion>(converter);
   else
-    patterns.insert<FuncOpConversion>(converter, options);
+    patterns.insert<FuncOpConversion>(converter);
 }
 
 void mlir::populateStdToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
-    const LowerToLLVMOptions &options) {
-  populateStdToLLVMFuncOpConversionPattern(converter, patterns, options);
-  populateStdToLLVMNonMemoryConversionPatterns(converter, patterns, options);
-  populateStdToLLVMMemoryConversionPatterns(converter, patterns, options);
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+  populateStdToLLVMFuncOpConversionPattern(converter, patterns);
+  populateStdToLLVMNonMemoryConversionPatterns(converter, patterns);
+  populateStdToLLVMMemoryConversionPatterns(converter, patterns);
 }
 
 // Create an LLVM IR structure type if there is more than one result.
@@ -3395,7 +3386,7 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
     LLVMTypeConverter typeConverter(&getContext(), options);
 
     OwningRewritePatternList patterns;
-    populateStdToLLVMConversionPatterns(typeConverter, patterns, options);
+    populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
     LLVMConversionTarget target(getContext());
     if (failed(applyPartialConversion(m, target, patterns)))

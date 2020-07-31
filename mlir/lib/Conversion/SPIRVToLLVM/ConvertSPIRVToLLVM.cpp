@@ -91,6 +91,21 @@ static Value createConstantAllBitsSet(Location loc, Type srcType, Type dstType,
       loc, dstType, minusOneIntegerAttribute(srcType, rewriter));
 }
 
+/// Creates `llvm.mlir.constant` with a floating-point scalar or vector value.
+static Value createFPConstant(Location loc, Type srcType, Type dstType,
+                              PatternRewriter &rewriter, double value) {
+  if (auto vecType = srcType.dyn_cast<VectorType>()) {
+    auto floatType = vecType.getElementType().cast<FloatType>();
+    return rewriter.create<LLVM::ConstantOp>(
+        loc, dstType,
+        SplatElementsAttr::get(vecType,
+                               rewriter.getFloatAttr(floatType, value)));
+  }
+  auto floatType = srcType.cast<FloatType>();
+  return rewriter.create<LLVM::ConstantOp>(
+      loc, dstType, rewriter.getFloatAttr(floatType, value));
+}
+
 /// Utility function for bitfiled ops:
 ///   - `BitFieldInsert`
 ///   - `BitFieldSExtract`
@@ -590,6 +605,27 @@ public:
   }
 };
 
+class InverseSqrtPattern
+    : public SPIRVToLLVMConversion<spirv::GLSLInverseSqrtOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::GLSLInverseSqrtOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::GLSLInverseSqrtOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = op.getType();
+    auto dstType = typeConverter.convertType(srcType);
+    if (!dstType)
+      return failure();
+
+    Location loc = op.getLoc();
+    Value one = createFPConstant(loc, srcType, dstType, rewriter, 1.0);
+    Value sqrt = rewriter.create<LLVM::SqrtOp>(loc, dstType, op.operand());
+    rewriter.replaceOpWithNewOp<LLVM::FDivOp>(op, dstType, one, sqrt);
+    return success();
+  }
+};
+
 /// Converts `spv.Load` and `spv.Store` to LLVM dialect.
 template <typename SPIRVop>
 class LoadStorePattern : public SPIRVToLLVMConversion<SPIRVop> {
@@ -798,6 +834,59 @@ public:
     Value result = rewriter.template create<LLVMOp>(
         loc, dstType, operation.operand1(), extended);
     rewriter.replaceOp(operation, result);
+    return success();
+  }
+};
+
+class TanPattern : public SPIRVToLLVMConversion<spirv::GLSLTanOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::GLSLTanOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::GLSLTanOp tanOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = typeConverter.convertType(tanOp.getType());
+    if (!dstType)
+      return failure();
+
+    Location loc = tanOp.getLoc();
+    Value sin = rewriter.create<LLVM::SinOp>(loc, dstType, tanOp.operand());
+    Value cos = rewriter.create<LLVM::CosOp>(loc, dstType, tanOp.operand());
+    rewriter.replaceOpWithNewOp<LLVM::FDivOp>(tanOp, dstType, sin, cos);
+    return success();
+  }
+};
+
+/// Convert `spv.Tanh` to
+///
+///   exp(2x) - 1
+///   -----------
+///   exp(2x) + 1
+///
+class TanhPattern : public SPIRVToLLVMConversion<spirv::GLSLTanhOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::GLSLTanhOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::GLSLTanhOp tanhOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = tanhOp.getType();
+    auto dstType = typeConverter.convertType(srcType);
+    if (!dstType)
+      return failure();
+
+    Location loc = tanhOp.getLoc();
+    Value two = createFPConstant(loc, srcType, dstType, rewriter, 2.0);
+    Value multiplied =
+        rewriter.create<LLVM::FMulOp>(loc, dstType, two, tanhOp.operand());
+    Value exponential = rewriter.create<LLVM::ExpOp>(loc, dstType, multiplied);
+    Value one = createFPConstant(loc, srcType, dstType, rewriter, 1.0);
+    Value numerator =
+        rewriter.create<LLVM::FSubOp>(loc, dstType, exponential, one);
+    Value denominator =
+        rewriter.create<LLVM::FAddOp>(loc, dstType, exponential, one);
+    rewriter.replaceOpWithNewOp<LLVM::FDivOp>(tanhOp, dstType, numerator,
+                                              denominator);
     return success();
   }
 };
@@ -1025,6 +1114,21 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
 
       // Function Call op
       FunctionCallPattern,
+
+      // GLSL extended instruction set ops
+      DirectConversionPattern<spirv::GLSLCeilOp, LLVM::FCeilOp>,
+      DirectConversionPattern<spirv::GLSLCosOp, LLVM::CosOp>,
+      DirectConversionPattern<spirv::GLSLExpOp, LLVM::ExpOp>,
+      DirectConversionPattern<spirv::GLSLFAbsOp, LLVM::FAbsOp>,
+      DirectConversionPattern<spirv::GLSLFloorOp, LLVM::FFloorOp>,
+      DirectConversionPattern<spirv::GLSLFMaxOp, LLVM::MaxNumOp>,
+      DirectConversionPattern<spirv::GLSLFMinOp, LLVM::MinNumOp>,
+      DirectConversionPattern<spirv::GLSLLogOp, LLVM::LogOp>,
+      DirectConversionPattern<spirv::GLSLSinOp, LLVM::SinOp>,
+      DirectConversionPattern<spirv::GLSLSMaxOp, LLVM::SMaxOp>,
+      DirectConversionPattern<spirv::GLSLSMinOp, LLVM::SMinOp>,
+      DirectConversionPattern<spirv::GLSLSqrtOp, LLVM::SqrtOp>,
+      InverseSqrtPattern, TanPattern, TanhPattern,
 
       // Logical ops
       DirectConversionPattern<spirv::LogicalAndOp, LLVM::AndOp>,

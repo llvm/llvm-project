@@ -153,6 +153,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -2692,9 +2693,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleLifetimeStart(IntrinsicInst &I) {
     if (!PoisonStack)
       return;
-    DenseMap<Value *, AllocaInst *> AllocaForValue;
-    AllocaInst *AI =
-        llvm::findAllocaForValue(I.getArgOperand(1), AllocaForValue);
+    AllocaInst *AI = llvm::findAllocaForValue(I.getArgOperand(1));
     if (!AI)
       InstrumentLifetimeStart = false;
     LifetimeStartList.push_back(std::make_pair(&I, AI));

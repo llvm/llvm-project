@@ -64,7 +64,7 @@ Error dumpDebugARanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
                                  DCtx.isLittleEndian(), 0);
   uint64_t Offset = 0;
   DWARFDebugArangeSet Set;
-
+  std::vector<DWARFYAML::ARange> DebugAranges;
   while (ArangesData.isValidOffset(Offset)) {
     if (Error E = Set.extract(ArangesData, &Offset))
       return E;
@@ -81,8 +81,10 @@ Error dumpDebugARanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
       Desc.Length = Descriptor.Length;
       Range.Descriptors.push_back(Desc);
     }
-    Y.ARanges.push_back(Range);
+    DebugAranges.push_back(Range);
   }
+
+  Y.DebugAranges = DebugAranges;
   return ErrorSuccess();
 }
 

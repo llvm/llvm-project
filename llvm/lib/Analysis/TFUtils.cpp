@@ -86,8 +86,8 @@ private:
 class TFModelEvaluatorImpl {
 public:
   TFModelEvaluatorImpl(StringRef SavedModelPath,
-                       const std::vector<std::string> &InputNames,
-                       const std::vector<std::string> &OutputNames,
+                       const std::vector<TensorSpec> &InputSpecs,
+                       const std::vector<TensorSpec> &OutputSpecs,
                        const char *Tags);
 
   bool isValid() const { return IsValid; }
@@ -132,16 +132,17 @@ private:
 
   /// Reusable utility for ensuring we can bind the requested Name to a node in
   /// the SavedModel Graph.
-  bool checkReportAndInvalidate(const TF_Output &Output, StringRef Name);
+  bool checkReportAndInvalidate(const TF_Output &Output,
+                                const TensorSpec &OutputSpec);
 };
 } // namespace llvm
 
 TFModelEvaluatorImpl::TFModelEvaluatorImpl(
-    StringRef SavedModelPath, const std::vector<std::string> &InputNames,
-    const std::vector<std::string> &OutputNames, const char *Tags)
+    StringRef SavedModelPath, const std::vector<TensorSpec> &InputSpecs,
+    const std::vector<TensorSpec> &OutputSpecs, const char *Tags)
     : Graph(createTFGraph()), Options(createTFSessionOptions()),
-      InputFeed(InputNames.size()), Input(InputNames.size()),
-      OutputFeed(OutputNames.size()) {
+      InputFeed(InputSpecs.size()), Input(InputSpecs.size()),
+      OutputFeed(OutputSpecs.size()) {
   if (!ensureInitTF()) {
     errs() << "Tensorflow should have been initialized";
     return;
@@ -155,25 +156,31 @@ TFModelEvaluatorImpl::TFModelEvaluatorImpl(
     errs() << TF_Message(Status.get());
     invalidate();
   }
-  for (size_t I = 0; I < InputNames.size(); ++I) {
+  for (size_t I = 0; I < InputSpecs.size(); ++I) {
+    auto &InputSpec = InputSpecs[I];
     InputFeed[I] = {
-        TF_GraphOperationByName(Graph.get(), (InputNames[I]).c_str()), 0};
-    if (!checkReportAndInvalidate(InputFeed[I], InputNames[I]))
+        TF_GraphOperationByName(Graph.get(), (InputSpec.name()).c_str()),
+        InputSpec.port()};
+    if (!checkReportAndInvalidate(InputFeed[I], InputSpec))
       return;
+    initInput(I, static_cast<TF_DataType>(InputSpec.typeIndex()),
+              InputSpec.shape());
   }
-  for (size_t I = 0; I < OutputNames.size(); ++I) {
+  for (size_t I = 0; I < OutputSpecs.size(); ++I) {
+    auto &OutputSpec = OutputSpecs[I];
     OutputFeed[I] = {
-        TF_GraphOperationByName(Graph.get(), (OutputNames[I]).c_str()), 0};
-    if (!checkReportAndInvalidate(OutputFeed[I], OutputNames[I]))
+        TF_GraphOperationByName(Graph.get(), (OutputSpec.name()).c_str()),
+        OutputSpec.port()};
+    if (!checkReportAndInvalidate(OutputFeed[I], OutputSpec))
       return;
   }
 }
 
 TFModelEvaluator::TFModelEvaluator(StringRef SavedModelPath,
-                                   const std::vector<std::string> &InputNames,
-                                   const std::vector<std::string> &OutputNames,
+                                   const std::vector<TensorSpec> &InputSpecs,
+                                   const std::vector<TensorSpec> &OutputSpecs,
                                    const char *Tags)
-    : Impl(new TFModelEvaluatorImpl(SavedModelPath, InputNames, OutputNames,
+    : Impl(new TFModelEvaluatorImpl(SavedModelPath, InputSpecs, OutputSpecs,
                                     Tags)) {
   if (!Impl->isValid())
     Impl.reset();
@@ -192,11 +199,11 @@ TFModelEvaluatorImpl::~TFModelEvaluatorImpl() {
     errs() << "Could not delete TF session";
 }
 
-bool TFModelEvaluatorImpl::checkReportAndInvalidate(const TF_Output &Output,
-                                                    StringRef Name) {
+bool TFModelEvaluatorImpl::checkReportAndInvalidate(
+    const TF_Output &Output, const TensorSpec &OutputSpec) {
   if (Output.oper)
     return true;
-  errs() << "Could not find TF_Output named: " + Name;
+  errs() << "Could not find TF_Output named: " + OutputSpec.name();
   IsValid = false;
   return IsValid;
 }
@@ -242,50 +249,25 @@ void *TFModelEvaluator::EvaluationResult::getUntypedTensorValue(size_t Index) {
   return TF_TensorData(Impl->getOutput()[Index]);
 }
 
-void TFModelEvaluator::initInput(size_t Index, int TypeIndex,
-                                 const std::vector<int64_t> &Dimensions) {
-  Impl->initInput(Index, static_cast<TF_DataType>(TypeIndex), Dimensions);
-}
+template <> int TensorSpec::getDataType<float>() { return TF_FLOAT; }
 
-template <> int TFModelEvaluator::getModelTypeIndex<float>() {
-  return TF_FLOAT;
-}
+template <> int TensorSpec::getDataType<double>() { return TF_DOUBLE; }
 
-template <> int TFModelEvaluator::getModelTypeIndex<double>() {
-  return TF_DOUBLE;
-}
+template <> int TensorSpec::getDataType<int8_t>() { return TF_INT8; }
 
-template <> int TFModelEvaluator::getModelTypeIndex<int8_t>() {
-  return TF_INT8;
-}
+template <> int TensorSpec::getDataType<uint8_t>() { return TF_UINT8; }
 
-template <> int TFModelEvaluator::getModelTypeIndex<uint8_t>() {
-  return TF_UINT8;
-}
+template <> int TensorSpec::getDataType<int16_t>() { return TF_INT16; }
 
-template <> int TFModelEvaluator::getModelTypeIndex<int16_t>() {
-  return TF_INT16;
-}
+template <> int TensorSpec::getDataType<uint16_t>() { return TF_UINT16; }
 
-template <> int TFModelEvaluator::getModelTypeIndex<uint16_t>() {
-  return TF_UINT16;
-}
+template <> int TensorSpec::getDataType<int32_t>() { return TF_INT32; }
 
-template <> int TFModelEvaluator::getModelTypeIndex<int32_t>() {
-  return TF_INT32;
-}
+template <> int TensorSpec::getDataType<uint32_t>() { return TF_UINT32; }
 
-template <> int TFModelEvaluator::getModelTypeIndex<uint32_t>() {
-  return TF_UINT32;
-}
+template <> int TensorSpec::getDataType<int64_t>() { return TF_INT64; }
 
-template <> int TFModelEvaluator::getModelTypeIndex<int64_t>() {
-  return TF_INT64;
-}
-
-template <> int TFModelEvaluator::getModelTypeIndex<uint64_t>() {
-  return TF_UINT64;
-}
+template <> int TensorSpec::getDataType<uint64_t>() { return TF_UINT64; }
 
 TFModelEvaluator::EvaluationResult::~EvaluationResult() {}
 TFModelEvaluator::~TFModelEvaluator() {}

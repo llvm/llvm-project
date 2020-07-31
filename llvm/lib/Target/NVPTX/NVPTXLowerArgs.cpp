@@ -214,8 +214,7 @@ bool NVPTXLowerArgs::runOnKernelFunction(Function &F) {
       for (auto &I : B) {
         if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
           if (LI->getType()->isPointerTy()) {
-            Value *UO = GetUnderlyingObject(LI->getPointerOperand(),
-                                            F.getParent()->getDataLayout());
+            Value *UO = getUnderlyingObject(LI->getPointerOperand());
             if (Argument *Arg = dyn_cast<Argument>(UO)) {
               if (Arg->hasByValAttr()) {
                 // LI is a load from a pointer within a byval kernel parameter.

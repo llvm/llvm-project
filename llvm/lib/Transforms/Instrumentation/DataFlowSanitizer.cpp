@@ -46,6 +46,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -78,6 +79,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -174,6 +176,14 @@ static cl::opt<bool> ClDebugNonzeroLabels(
 static cl::opt<bool> ClEventCallbacks(
     "dfsan-event-callbacks",
     cl::desc("Insert calls to __dfsan_*_callback functions on data events."),
+    cl::Hidden, cl::init(false));
+
+// Use a distinct bit for each base label, enabling faster unions with less
+// instrumentation.  Limits the max number of base labels to 16.
+static cl::opt<bool> ClFast16Labels(
+    "dfsan-fast-16-labels",
+    cl::desc("Use more efficient instrumentation, limiting the number of "
+             "labels to 16."),
     cl::Hidden, cl::init(false));
 
 static StringRef GetGlobalTypeString(const GlobalValue &G) {
@@ -292,7 +302,7 @@ AttributeList TransformFunctionAttributes(
       llvm::makeArrayRef(ArgumentAttributes));
 }
 
-class DataFlowSanitizer : public ModulePass {
+class DataFlowSanitizer {
   friend struct DFSanFunction;
   friend class DFSanVisitor;
 
@@ -360,6 +370,7 @@ class DataFlowSanitizer : public ModulePass {
   FunctionCallee DFSanUnionFn;
   FunctionCallee DFSanCheckedUnionFn;
   FunctionCallee DFSanUnionLoadFn;
+  FunctionCallee DFSanUnionLoadFast16LabelsFn;
   FunctionCallee DFSanUnimplementedFn;
   FunctionCallee DFSanSetLabelFn;
   FunctionCallee DFSanNonzeroLabelFn;
@@ -390,14 +401,12 @@ class DataFlowSanitizer : public ModulePass {
   void initializeCallbackFunctions(Module &M);
   void initializeRuntimeFunctions(Module &M);
 
+  bool init(Module &M);
+
 public:
-  static char ID;
+  DataFlowSanitizer(const std::vector<std::string> &ABIListFiles);
 
-  DataFlowSanitizer(const std::vector<std::string> &ABIListFiles =
-                        std::vector<std::string>());
-
-  bool doInitialization(Module &M) override;
-  bool runOnModule(Module &M) override;
+  bool runImpl(Module &M);
 };
 
 struct DFSanFunction {
@@ -482,19 +491,8 @@ public:
 
 } // end anonymous namespace
 
-char DataFlowSanitizer::ID;
-
-INITIALIZE_PASS(DataFlowSanitizer, "dfsan",
-                "DataFlowSanitizer: dynamic data flow analysis.", false, false)
-
-ModulePass *llvm::createDataFlowSanitizerPass(
-    const std::vector<std::string> &ABIListFiles) {
-  return new DataFlowSanitizer(ABIListFiles);
-}
-
 DataFlowSanitizer::DataFlowSanitizer(
-    const std::vector<std::string> &ABIListFiles)
-    : ModulePass(ID) {
+    const std::vector<std::string> &ABIListFiles) {
   std::vector<std::string> AllABIListFiles(std::move(ABIListFiles));
   AllABIListFiles.insert(AllABIListFiles.end(), ClABIListFiles.begin(),
                          ClABIListFiles.end());
@@ -559,7 +557,7 @@ TransformedFunction DataFlowSanitizer::getCustomFunctionType(FunctionType *T) {
       ArgumentIndexMapping);
 }
 
-bool DataFlowSanitizer::doInitialization(Module &M) {
+bool DataFlowSanitizer::init(Module &M) {
   Triple TargetTriple(M.getTargetTriple());
   bool IsX86_64 = TargetTriple.getArch() == Triple::x86_64;
   bool IsMIPS64 = TargetTriple.isMIPS64();
@@ -759,6 +757,17 @@ void DataFlowSanitizer::initializeRuntimeFunctions(Module &M) {
     DFSanUnionLoadFn =
         Mod->getOrInsertFunction("__dfsan_union_load", DFSanUnionLoadFnTy, AL);
   }
+  {
+    AttributeList AL;
+    AL = AL.addAttribute(M.getContext(), AttributeList::FunctionIndex,
+                         Attribute::NoUnwind);
+    AL = AL.addAttribute(M.getContext(), AttributeList::FunctionIndex,
+                         Attribute::ReadOnly);
+    AL = AL.addAttribute(M.getContext(), AttributeList::ReturnIndex,
+                         Attribute::ZExt);
+    DFSanUnionLoadFast16LabelsFn = Mod->getOrInsertFunction(
+        "__dfsan_union_load_fast16labels", DFSanUnionLoadFnTy, AL);
+  }
   DFSanUnimplementedFn =
       Mod->getOrInsertFunction("__dfsan_unimplemented", DFSanUnimplementedFnTy);
   {
@@ -785,7 +794,9 @@ void DataFlowSanitizer::initializeCallbackFunctions(Module &M) {
                                                 DFSanLoadStoreCmpCallbackFnTy);
 }
 
-bool DataFlowSanitizer::runOnModule(Module &M) {
+bool DataFlowSanitizer::runImpl(Module &M) {
+  init(M);
+
   if (ABIList.isIn(M, "skip"))
     return false;
 
@@ -819,6 +830,7 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
         &i != DFSanUnionFn.getCallee()->stripPointerCasts() &&
         &i != DFSanCheckedUnionFn.getCallee()->stripPointerCasts() &&
         &i != DFSanUnionLoadFn.getCallee()->stripPointerCasts() &&
+        &i != DFSanUnionLoadFast16LabelsFn.getCallee()->stripPointerCasts() &&
         &i != DFSanUnimplementedFn.getCallee()->stripPointerCasts() &&
         &i != DFSanSetLabelFn.getCallee()->stripPointerCasts() &&
         &i != DFSanNonzeroLabelFn.getCallee()->stripPointerCasts() &&
@@ -1153,7 +1165,10 @@ Value *DFSanFunction::combineShadows(Value *V1, Value *V2, Instruction *Pos) {
     return CCS.Shadow;
 
   IRBuilder<> IRB(Pos);
-  if (AvoidNewBlocks) {
+  if (ClFast16Labels) {
+    CCS.Block = Pos->getParent();
+    CCS.Shadow = IRB.CreateOr(V1, V2);
+  } else if (AvoidNewBlocks) {
     CallInst *Call = IRB.CreateCall(DFS.DFSanCheckedUnionFn, {V1, V2});
     Call->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
     Call->addParamAttr(0, Attribute::ZExt);
@@ -1231,7 +1246,7 @@ Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
 
   const llvm::Align ShadowAlign(Align * DFS.ShadowWidthBytes);
   SmallVector<const Value *, 2> Objs;
-  GetUnderlyingObjects(Addr, Objs, Pos->getModule()->getDataLayout());
+  getUnderlyingObjects(Addr, Objs);
   bool AllConstants = true;
   for (const Value *Obj : Objs) {
     if (isa<Function>(Obj) || isa<BlockAddress>(Obj))
@@ -1262,6 +1277,30 @@ Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
         IRB.CreateAlignedLoad(DFS.ShadowTy, ShadowAddr, ShadowAlign),
         IRB.CreateAlignedLoad(DFS.ShadowTy, ShadowAddr1, ShadowAlign), Pos);
   }
+  }
+
+  if (ClFast16Labels && Size % (64 / DFS.ShadowWidthBits) == 0) {
+    // First OR all the WideShadows, then OR individual shadows within the
+    // combined WideShadow.  This is fewer instructions than ORing shadows
+    // individually.
+    IRBuilder<> IRB(Pos);
+    Value *WideAddr =
+        IRB.CreateBitCast(ShadowAddr, Type::getInt64PtrTy(*DFS.Ctx));
+    Value *CombinedWideShadow =
+        IRB.CreateAlignedLoad(IRB.getInt64Ty(), WideAddr, ShadowAlign);
+    for (uint64_t Ofs = 64 / DFS.ShadowWidthBits; Ofs != Size;
+         Ofs += 64 / DFS.ShadowWidthBits) {
+      WideAddr = IRB.CreateGEP(Type::getInt64Ty(*DFS.Ctx), WideAddr,
+                               ConstantInt::get(DFS.IntptrTy, 1));
+      Value *NextWideShadow =
+          IRB.CreateAlignedLoad(IRB.getInt64Ty(), WideAddr, ShadowAlign);
+      CombinedWideShadow = IRB.CreateOr(CombinedWideShadow, NextWideShadow);
+    }
+    for (unsigned Width = 32; Width >= DFS.ShadowWidthBits; Width >>= 1) {
+      Value *ShrShadow = IRB.CreateLShr(CombinedWideShadow, Width);
+      CombinedWideShadow = IRB.CreateOr(CombinedWideShadow, ShrShadow);
+    }
+    return IRB.CreateTrunc(CombinedWideShadow, DFS.ShadowTy);
   }
   if (!AvoidNewBlocks && Size % (64 / DFS.ShadowWidthBits) == 0) {
     // Fast path for the common case where each byte has identical shadow: load
@@ -1329,8 +1368,10 @@ Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
   }
 
   IRBuilder<> IRB(Pos);
+  FunctionCallee &UnionLoadFn =
+      ClFast16Labels ? DFS.DFSanUnionLoadFast16LabelsFn : DFS.DFSanUnionLoadFn;
   CallInst *FallbackCall = IRB.CreateCall(
-      DFS.DFSanUnionLoadFn, {ShadowAddr, ConstantInt::get(DFS.IntptrTy, Size)});
+      UnionLoadFn, {ShadowAddr, ConstantInt::get(DFS.IntptrTy, Size)});
   FallbackCall->addAttribute(AttributeList::ReturnIndex, Attribute::ZExt);
   return FallbackCall;
 }
@@ -1816,4 +1857,40 @@ void DFSanVisitor::visitPHINode(PHINode &PN) {
 
   DFSF.PHIFixups.push_back(std::make_pair(&PN, ShadowPN));
   DFSF.setShadow(&PN, ShadowPN);
+}
+
+namespace {
+class DataFlowSanitizerLegacyPass : public ModulePass {
+private:
+  std::vector<std::string> ABIListFiles;
+
+public:
+  static char ID;
+
+  DataFlowSanitizerLegacyPass(
+      const std::vector<std::string> &ABIListFiles = std::vector<std::string>())
+      : ModulePass(ID), ABIListFiles(ABIListFiles) {}
+
+  bool runOnModule(Module &M) override {
+    return DataFlowSanitizer(ABIListFiles).runImpl(M);
+  }
+};
+} // namespace
+
+char DataFlowSanitizerLegacyPass::ID;
+
+INITIALIZE_PASS(DataFlowSanitizerLegacyPass, "dfsan",
+                "DataFlowSanitizer: dynamic data flow analysis.", false, false)
+
+ModulePass *llvm::createDataFlowSanitizerLegacyPassPass(
+    const std::vector<std::string> &ABIListFiles) {
+  return new DataFlowSanitizerLegacyPass(ABIListFiles);
+}
+
+PreservedAnalyses DataFlowSanitizerPass::run(Module &M,
+                                             ModuleAnalysisManager &AM) {
+  if (DataFlowSanitizer(ABIListFiles).runImpl(M)) {
+    return PreservedAnalyses::none();
+  }
+  return PreservedAnalyses::all();
 }

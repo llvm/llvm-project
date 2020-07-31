@@ -224,7 +224,7 @@ else()
     PARENT_TARGET asan)
 
   foreach(arch ${ASAN_SUPPORTED_ARCH})
-    if (UNIX AND COMPILER_RT_HAS_VERSION_SCRIPT)
+    if (COMPILER_RT_HAS_VERSION_SCRIPT)
       add_sanitizer_rt_version_list(clang_rt.asan-dynamic-${arch}
                                     LIBS clang_rt.asan-${arch} clang_rt.asan_cxx-${arch}
                                     EXTRA asan.syms.extra)

@@ -400,8 +400,6 @@ class LazyValueInfoImpl {
                                                     BasicBlock *BB);
   Optional<ValueLatticeElement> solveBlockValueOverflowIntrinsic(
       WithOverflowInst *WO, BasicBlock *BB);
-  Optional<ValueLatticeElement> solveBlockValueSaturatingIntrinsic(
-      SaturatingInst *SI, BasicBlock *BB);
   Optional<ValueLatticeElement> solveBlockValueIntrinsic(IntrinsicInst *II,
                                                          BasicBlock *BB);
   Optional<ValueLatticeElement> solveBlockValueExtractValue(
@@ -608,13 +606,11 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueImpl(
 static bool InstructionDereferencesPointer(Instruction *I, Value *Ptr) {
   if (LoadInst *L = dyn_cast<LoadInst>(I)) {
     return L->getPointerAddressSpace() == 0 &&
-           GetUnderlyingObject(L->getPointerOperand(),
-                               L->getModule()->getDataLayout()) == Ptr;
+           getUnderlyingObject(L->getPointerOperand()) == Ptr;
   }
   if (StoreInst *S = dyn_cast<StoreInst>(I)) {
     return S->getPointerAddressSpace() == 0 &&
-           GetUnderlyingObject(S->getPointerOperand(),
-                               S->getModule()->getDataLayout()) == Ptr;
+           getUnderlyingObject(S->getPointerOperand()) == Ptr;
   }
   if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I)) {
     if (MI->isVolatile()) return false;
@@ -624,13 +620,11 @@ static bool InstructionDereferencesPointer(Instruction *I, Value *Ptr) {
     if (!Len || Len->isZero()) return false;
 
     if (MI->getDestAddressSpace() == 0)
-      if (GetUnderlyingObject(MI->getRawDest(),
-                              MI->getModule()->getDataLayout()) == Ptr)
+      if (getUnderlyingObject(MI->getRawDest()) == Ptr)
         return true;
     if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI))
       if (MTI->getSourceAddressSpace() == 0)
-        if (GetUnderlyingObject(MTI->getRawSource(),
-                                MTI->getModule()->getDataLayout()) == Ptr)
+        if (getUnderlyingObject(MTI->getRawSource()) == Ptr)
           return true;
   }
   return false;
@@ -643,11 +637,10 @@ static bool InstructionDereferencesPointer(Instruction *I, Value *Ptr) {
 static bool isObjectDereferencedInBlock(Value *Val, BasicBlock *BB) {
   assert(Val->getType()->isPointerTy());
 
-  const DataLayout &DL = BB->getModule()->getDataLayout();
-  Value *UnderlyingVal = GetUnderlyingObject(Val, DL);
-  // If 'GetUnderlyingObject' didn't converge, skip it. It won't converge
+  Value *UnderlyingVal = getUnderlyingObject(Val);
+  // If 'getUnderlyingObject' didn't converge, skip it. It won't converge
   // inside InstructionDereferencesPointer either.
-  if (UnderlyingVal == GetUnderlyingObject(UnderlyingVal, DL, 1))
+  if (UnderlyingVal == getUnderlyingObject(UnderlyingVal, 1))
     for (Instruction &I : *BB)
       if (InstructionDereferencesPointer(&I, UnderlyingVal))
         return true;
@@ -1035,43 +1028,24 @@ LazyValueInfoImpl::solveBlockValueOverflowIntrinsic(WithOverflowInst *WO,
       });
 }
 
-Optional<ValueLatticeElement>
-LazyValueInfoImpl::solveBlockValueSaturatingIntrinsic(SaturatingInst *SI,
-                                                      BasicBlock *BB) {
-  switch (SI->getIntrinsicID()) {
-  case Intrinsic::uadd_sat:
-    return solveBlockValueBinaryOpImpl(
-        SI, BB, [](const ConstantRange &CR1, const ConstantRange &CR2) {
-          return CR1.uadd_sat(CR2);
-        });
-  case Intrinsic::usub_sat:
-    return solveBlockValueBinaryOpImpl(
-        SI, BB, [](const ConstantRange &CR1, const ConstantRange &CR2) {
-          return CR1.usub_sat(CR2);
-        });
-  case Intrinsic::sadd_sat:
-    return solveBlockValueBinaryOpImpl(
-        SI, BB, [](const ConstantRange &CR1, const ConstantRange &CR2) {
-          return CR1.sadd_sat(CR2);
-        });
-  case Intrinsic::ssub_sat:
-    return solveBlockValueBinaryOpImpl(
-        SI, BB, [](const ConstantRange &CR1, const ConstantRange &CR2) {
-          return CR1.ssub_sat(CR2);
-        });
-  default:
-    llvm_unreachable("All llvm.sat intrinsic are handled.");
-  }
-}
-
 Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueIntrinsic(
     IntrinsicInst *II, BasicBlock *BB) {
-  if (auto *SI = dyn_cast<SaturatingInst>(II))
-    return solveBlockValueSaturatingIntrinsic(SI, BB);
+  if (!ConstantRange::isIntrinsicSupported(II->getIntrinsicID())) {
+    LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
+                      << "' - overdefined (unknown intrinsic).\n");
+    return ValueLatticeElement::getOverdefined();
+  }
 
-  LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
-                    << "' - overdefined (unknown intrinsic).\n");
-  return ValueLatticeElement::getOverdefined();
+  SmallVector<ConstantRange, 2> OpRanges;
+  for (Value *Op : II->args()) {
+    Optional<ConstantRange> Range = getRangeFor(Op, II, BB);
+    if (!Range)
+      return None;
+    OpRanges.push_back(*Range);
+  }
+
+  return ValueLatticeElement::getRange(
+      ConstantRange::intrinsic(II->getIntrinsicID(), OpRanges));
 }
 
 Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueExtractValue(

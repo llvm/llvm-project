@@ -4624,7 +4624,8 @@ bool PPCInstrInfo::getMemOperandWithOffsetWidth(
   // Handle only loads/stores with base register followed by immediate offset.
   if (LdSt.getNumExplicitOperands() != 3)
     return false;
-  if (!LdSt.getOperand(1).isImm() || !LdSt.getOperand(2).isReg())
+  if (!LdSt.getOperand(1).isImm() ||
+      (!LdSt.getOperand(2).isReg() && !LdSt.getOperand(2).isFI()))
     return false;
 
   if (!LdSt.hasOneMemOperand())

@@ -15,6 +15,7 @@
 #include "support/Trace.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 
@@ -82,7 +83,7 @@ private:
   grpc::Status Lookup(grpc::ServerContext *Context,
                       const LookupRequest *Request,
                       grpc::ServerWriter<LookupReply> *Reply) override {
-    trace::Span Tracer(LookupRequest::descriptor()->name());
+    trace::Span Tracer("LookupRequest");
     auto Req = ProtobufMarshaller->fromProtobuf(Request);
     if (!Req) {
       elog("Can not parse LookupRequest from protobuf: {0}", Req.takeError());
@@ -90,9 +91,11 @@ private:
     }
     unsigned Sent = 0;
     unsigned FailedToSend = 0;
-    Index->lookup(*Req, [&](const auto &Item) {
+    Index->lookup(*Req, [&](const clangd::Symbol &Item) {
       auto SerializedItem = ProtobufMarshaller->toProtobuf(Item);
       if (!SerializedItem) {
+        elog("Unable to convert Symbol to protobuf: {0}",
+             SerializedItem.takeError());
         ++FailedToSend;
         return;
       }
@@ -112,7 +115,7 @@ private:
   grpc::Status FuzzyFind(grpc::ServerContext *Context,
                          const FuzzyFindRequest *Request,
                          grpc::ServerWriter<FuzzyFindReply> *Reply) override {
-    trace::Span Tracer(FuzzyFindRequest::descriptor()->name());
+    trace::Span Tracer("FuzzyFindRequest");
     auto Req = ProtobufMarshaller->fromProtobuf(Request);
     if (!Req) {
       elog("Can not parse FuzzyFindRequest from protobuf: {0}",
@@ -121,9 +124,11 @@ private:
     }
     unsigned Sent = 0;
     unsigned FailedToSend = 0;
-    bool HasMore = Index->fuzzyFind(*Req, [&](const auto &Item) {
+    bool HasMore = Index->fuzzyFind(*Req, [&](const clangd::Symbol &Item) {
       auto SerializedItem = ProtobufMarshaller->toProtobuf(Item);
       if (!SerializedItem) {
+        elog("Unable to convert Symbol to protobuf: {0}",
+             SerializedItem.takeError());
         ++FailedToSend;
         return;
       }
@@ -142,7 +147,7 @@ private:
 
   grpc::Status Refs(grpc::ServerContext *Context, const RefsRequest *Request,
                     grpc::ServerWriter<RefsReply> *Reply) override {
-    trace::Span Tracer(RefsRequest::descriptor()->name());
+    trace::Span Tracer("RefsRequest");
     auto Req = ProtobufMarshaller->fromProtobuf(Request);
     if (!Req) {
       elog("Can not parse RefsRequest from protobuf: {0}", Req.takeError());
@@ -150,9 +155,11 @@ private:
     }
     unsigned Sent = 0;
     unsigned FailedToSend = 0;
-    bool HasMore = Index->refs(*Req, [&](const auto &Item) {
+    bool HasMore = Index->refs(*Req, [&](const clangd::Ref &Item) {
       auto SerializedItem = ProtobufMarshaller->toProtobuf(Item);
       if (!SerializedItem) {
+        elog("Unable to convert Ref to protobuf: {0}",
+             SerializedItem.takeError());
         ++FailedToSend;
         return;
       }
@@ -163,6 +170,40 @@ private:
     });
     RefsReply LastMessage;
     LastMessage.set_final_result(HasMore);
+    Reply->Write(LastMessage);
+    SPAN_ATTACH(Tracer, "Sent", Sent);
+    SPAN_ATTACH(Tracer, "Failed to send", FailedToSend);
+    return grpc::Status::OK;
+  }
+
+  grpc::Status Relations(grpc::ServerContext *Context,
+                         const RelationsRequest *Request,
+                         grpc::ServerWriter<RelationsReply> *Reply) override {
+    trace::Span Tracer("RelationsRequest");
+    auto Req = ProtobufMarshaller->fromProtobuf(Request);
+    if (!Req) {
+      elog("Can not parse RelationsRequest from protobuf: {0}",
+           Req.takeError());
+      return grpc::Status::CANCELLED;
+    }
+    unsigned Sent = 0;
+    unsigned FailedToSend = 0;
+    Index->relations(
+        *Req, [&](const SymbolID &Subject, const clangd::Symbol &Object) {
+          auto SerializedItem = ProtobufMarshaller->toProtobuf(Subject, Object);
+          if (!SerializedItem) {
+            elog("Unable to convert Relation to protobuf: {0}",
+                 SerializedItem.takeError());
+            ++FailedToSend;
+            return;
+          }
+          RelationsReply NextMessage;
+          *NextMessage.mutable_stream_result() = *SerializedItem;
+          Reply->Write(NextMessage);
+          ++Sent;
+        });
+    RelationsReply LastMessage;
+    LastMessage.set_final_result(true);
     Reply->Write(LastMessage);
     SPAN_ATTACH(Tracer, "Sent", Sent);
     SPAN_ATTACH(Tracer, "Failed to send", FailedToSend);

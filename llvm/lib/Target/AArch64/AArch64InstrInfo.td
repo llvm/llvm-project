@@ -994,8 +994,8 @@ let Predicates = [HasPA] in {
   defm PAC : SignAuth<0b000, 0b010, "pac">;
   defm AUT : SignAuth<0b001, 0b011, "aut">;
 
-  def XPACI : SignAuthZero<0b100, 0b00, "xpaci">;
-  def XPACD : SignAuthZero<0b100, 0b01, "xpacd">;
+  def XPACI : ClearAuth<0, "xpaci">;
+  def XPACD : ClearAuth<1, "xpacd">;
   def PACGA : SignAuthTwoOperand<0b1100, "pacga", null_frag>;
 
   // Combined Instructions

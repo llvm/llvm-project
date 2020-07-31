@@ -711,7 +711,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
        .scalarize(0)
        .lower();
 
-  getActionDefinitionsBuilder(G_INTRINSIC_ROUND)
+  // Lower roundeven into G_FRINT
+  getActionDefinitionsBuilder({G_INTRINSIC_ROUND, G_INTRINSIC_ROUNDEVEN})
     .scalarize(0)
     .lower();
 
@@ -1286,7 +1287,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         })
       .clampScalar(EltTypeIdx, S32, S64)
       .clampScalar(VecTypeIdx, S32, S64)
-      .clampScalar(IdxTypeIdx, S32, S32);
+      .clampScalar(IdxTypeIdx, S32, S32)
+      // TODO: Clamp the number of elements before resorting to stack lowering.
+      // It should only be necessary with variable indexes.
+      // As a last resort, lower to the stack
+      .lower();
   }
 
   getActionDefinitionsBuilder(G_EXTRACT_VECTOR_ELT)
@@ -1672,8 +1677,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   const AMDGPUTargetMachine &TM
     = static_cast<const AMDGPUTargetMachine &>(MF.getTarget());
 
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  if (ST.getTargetLowering()->isNoopAddrSpaceCast(SrcAS, DestAS)) {
+  if (TM.isNoopAddrSpaceCast(SrcAS, DestAS)) {
     MI.setDesc(B.getTII().get(TargetOpcode::G_BITCAST));
     return true;
   }
@@ -2246,8 +2250,7 @@ bool AMDGPULegalizerInfo::legalizeAtomicCmpXChg(
   Register CmpVal = MI.getOperand(2).getReg();
   Register NewVal = MI.getOperand(3).getReg();
 
-  assert(SITargetLowering::isFlatGlobalAddrSpace(
-           MRI.getType(PtrReg).getAddressSpace()) &&
+  assert(AMDGPU::isFlatGlobalAddrSpace(MRI.getType(PtrReg).getAddressSpace()) &&
          "this should not have been custom lowered");
 
   LLT ValTy = MRI.getType(CmpVal);

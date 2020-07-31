@@ -51,7 +51,7 @@ Breakpoint::Breakpoint(Target &target, SearchFilterSP &filter_sp,
     : m_being_created(true), m_hardware(hardware), m_target(target),
       m_filter_sp(filter_sp), m_resolver_sp(resolver_sp),
       m_options_up(new BreakpointOptions(true)), m_locations(*this),
-      m_resolve_indirect_symbols(resolve_indirect_symbols), m_hit_count(0) {
+      m_resolve_indirect_symbols(resolve_indirect_symbols), m_hit_counter() {
   m_being_created = false;
 }
 
@@ -61,7 +61,7 @@ Breakpoint::Breakpoint(Target &new_target, const Breakpoint &source_bp)
       m_options_up(new BreakpointOptions(*source_bp.m_options_up)),
       m_locations(*this),
       m_resolve_indirect_symbols(source_bp.m_resolve_indirect_symbols),
-      m_hit_count(0) {}
+      m_hit_counter() {}
 
 // Destructor
 Breakpoint::~Breakpoint() = default;
@@ -341,7 +341,7 @@ bool Breakpoint::IgnoreCountShouldStop() {
     return true;
 }
 
-uint32_t Breakpoint::GetHitCount() const { return m_hit_count; }
+uint32_t Breakpoint::GetHitCount() const { return m_hit_counter.GetValue(); }
 
 bool Breakpoint::IsOneShot() const { return m_options_up->IsOneShot(); }
 

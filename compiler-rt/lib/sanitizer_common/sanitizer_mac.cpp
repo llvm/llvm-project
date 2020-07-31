@@ -606,6 +606,14 @@ HandleSignalMode GetHandleSignalMode(int signum) {
   return result;
 }
 
+// Offset example:
+// XNU 17 -- macOS 10.13 -- iOS 11 -- tvOS 11 -- watchOS 4
+constexpr u16 GetOSMajorKernelOffset() {
+  if (TARGET_OS_OSX) return 4;
+  if (SANITIZER_IOS || SANITIZER_TVOS) return 6;
+  if (SANITIZER_WATCHOS) return 13;
+}
+
 using VersStr = char[64];
 
 static void GetOSVersion(VersStr vers) {
@@ -621,7 +629,18 @@ static void GetOSVersion(VersStr vers) {
   } else {
     int res =
         internal_sysctlbyname("kern.osproductversion", vers, &len, nullptr, 0);
-    CHECK_EQ(res, 0);
+    if (res) {
+      // Fallback for XNU 17 (macOS 10.13) and below that do not provide the
+      // `kern.osproductversion` property.
+      u16 kernel_major = GetDarwinKernelVersion().major;
+      u16 offset = GetOSMajorKernelOffset();
+      CHECK_LE(kernel_major, 17);
+      CHECK_GE(kernel_major, offset);
+      u16 os_major = kernel_major - offset;
+
+      auto format = TARGET_OS_OSX ? "10.%d" : "%d.0";
+      len = internal_snprintf(vers, len, format, os_major);
+    }
   }
   CHECK_LT(len, sizeof(VersStr));
 }
@@ -831,6 +850,19 @@ void SignalContext::InitPcSpBp() {
   GetPcSpBp(context, &pc, &sp, &bp);
 }
 
+// ASan/TSan use mmap in a way that creates “deallocation gaps” which triggers
+// EXC_GUARD exceptions on macOS 10.15+ (XNU 19.0+).
+static void DisableMmapExcGuardExceptions() {
+  using task_exc_guard_behavior_t = uint32_t;
+  using task_set_exc_guard_behavior_t =
+      kern_return_t(task_t task, task_exc_guard_behavior_t behavior);
+  auto *set_behavior = (task_set_exc_guard_behavior_t *)dlsym(
+      RTLD_DEFAULT, "task_set_exc_guard_behavior");
+  if (set_behavior == nullptr) return;
+  const task_exc_guard_behavior_t task_exc_guard_none = 0;
+  set_behavior(mach_task_self(), task_exc_guard_none);
+}
+
 void InitializePlatformEarly() {
   // Only use xnu_fast_mmap when on x86_64 and the kernel supports it.
   use_xnu_fast_mmap =
@@ -839,6 +871,8 @@ void InitializePlatformEarly() {
 #else
       false;
 #endif
+  if (GetDarwinKernelVersion() >= DarwinKernelVersion(19, 0))
+    DisableMmapExcGuardExceptions();
 }
 
 #if !SANITIZER_GO

@@ -99,21 +99,17 @@
 
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
-#include "llvm/Analysis/CallGraph.h"
-#include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/PassManager.h"
@@ -121,6 +117,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
 namespace llvm {
@@ -1005,8 +1002,10 @@ struct Attributor {
       return AA;
     }
 
-    AA.initialize(*this);
-
+    {
+      TimeTraceScope TimeScope(AA.getName() + "::initialize");
+      AA.initialize(*this);
+    }
     // We can initialize (=look at) code outside the current function set but
     // not call update because that would again spawn new abstract attributes in
     // potentially unconnected code regions (=SCCs).

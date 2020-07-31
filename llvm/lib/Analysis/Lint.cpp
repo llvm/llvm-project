@@ -673,7 +673,7 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
   // TODO: Look through eliminable cast pairs.
   // TODO: Look through calls with unique return values.
   // TODO: Look through vector insert/extract/shuffle.
-  V = OffsetOk ? GetUnderlyingObject(V, *DL) : V->stripPointerCasts();
+  V = OffsetOk ? getUnderlyingObject(V) : V->stripPointerCasts();
   if (LoadInst *L = dyn_cast<LoadInst>(V)) {
     BasicBlock::iterator BBI = L->getIterator();
     BasicBlock *BB = L->getParent();

@@ -1,7 +1,5 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -show-mc-encoding -verify-machineinstrs < %s | FileCheck %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() readnone
-
 ;;;==========================================================================;;;
 ;;; MUBUF LOAD TESTS
 ;;;==========================================================================;;;
@@ -60,10 +58,10 @@ main_body:
   %tmp0 = getelementptr [6 x <4 x i32>], [6 x <4 x i32>] addrspace(4)* %0, i32 0, i32 0
   %tmp1 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp0
   %tmp2 = shl i32 %6, 2
-  %tmp3 = call i32 @llvm.amdgcn.raw.buffer.load.dword.i32(<4 x i32> %tmp1, i32 %tmp2, i32 64, i32 1)
+  %tmp3 = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> %tmp1, i32 %tmp2, i32 64, i32 1)
   %tmp4 = add i32 %6, 16
   %tmp1.4xi32 = bitcast <4 x i32> %tmp1 to <4 x i32>
-  call void @llvm.amdgcn.tbuffer.store.i32(i32 %tmp3, <4 x i32> %tmp1.4xi32, i32 0, i32 %tmp4, i32 %4, i32 0, i32 4, i32 4, i1 1, i1 1)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 %tmp3, <4 x i32> %tmp1.4xi32, i32 %tmp4, i32 %4, i32 68, i32 3)
   ret void
 }
 
@@ -79,10 +77,10 @@ main_body:
   %tmp0 = getelementptr [6 x <4 x i32>], [6 x <4 x i32>] addrspace(4)* %0, i32 0, i32 0
   %tmp1 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp0
   %tmp2 = shl i32 %6, 2
-  %tmp3 = call i32 @llvm.amdgcn.raw.buffer.load.dword.i32(<4 x i32> %tmp1, i32 %tmp2, i32 65, i32 1)
+  %tmp3 = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> %tmp1, i32 %tmp2, i32 65, i32 1)
   %tmp4 = add i32 %6, 16
   %tmp1.4xi32 = bitcast <4 x i32> %tmp1 to <4 x i32>
-  call void @llvm.amdgcn.tbuffer.store.i32(i32 %tmp3, <4 x i32> %tmp1.4xi32, i32 0, i32 %tmp4, i32 %4, i32 0, i32 4, i32 4, i1 1, i1 1)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 %tmp3, <4 x i32> %tmp1.4xi32, i32 %tmp4, i32 %4, i32 68, i32 3)
   ret void
 }
 
@@ -136,14 +134,14 @@ entry:
 
 ; CHECK-LABEL: {{^}}store_sgpr_ptr:
 ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0
-define amdgpu_kernel void @store_sgpr_ptr(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @store_sgpr_ptr(i32 addrspace(1)* %out) {
   store i32 99, i32 addrspace(1)* %out, align 4
   ret void
 }
 
 ; CHECK-LABEL: {{^}}store_sgpr_ptr_offset:
 ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:40
-define amdgpu_kernel void @store_sgpr_ptr_offset(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @store_sgpr_ptr_offset(i32 addrspace(1)* %out) {
   %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 10
   store i32 99, i32 addrspace(1)* %out.gep, align 4
   ret void
@@ -152,7 +150,7 @@ define amdgpu_kernel void @store_sgpr_ptr_offset(i32 addrspace(1)* %out) #0 {
 ; CHECK-LABEL: {{^}}store_sgpr_ptr_large_offset:
 ; CHECK: s_mov_b32 [[SOFFSET:s[0-9]+]], 0x20000
 ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, [[SOFFSET]]
-define amdgpu_kernel void @store_sgpr_ptr_large_offset(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @store_sgpr_ptr_large_offset(i32 addrspace(1)* %out) {
   %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 32768
   store i32 99, i32 addrspace(1)* %out.gep, align 4
   ret void
@@ -161,7 +159,7 @@ define amdgpu_kernel void @store_sgpr_ptr_large_offset(i32 addrspace(1)* %out) #
 ; CHECK-LABEL: {{^}}store_sgpr_ptr_large_offset_atomic:
 ; CHECK: s_mov_b32 [[SOFFSET:s[0-9]+]], 0x20000
 ; CHECK: buffer_atomic_add v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, [[SOFFSET]]
-define amdgpu_kernel void @store_sgpr_ptr_large_offset_atomic(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @store_sgpr_ptr_large_offset_atomic(i32 addrspace(1)* %out) {
   %gep = getelementptr i32, i32 addrspace(1)* %out, i32 32768
   %val = atomicrmw volatile add i32 addrspace(1)* %gep, i32 5 seq_cst
   ret void
@@ -169,14 +167,20 @@ define amdgpu_kernel void @store_sgpr_ptr_large_offset_atomic(i32 addrspace(1)* 
 
 ; CHECK-LABEL: {{^}}store_vgpr_ptr:
 ; CHECK: buffer_store_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64
-define amdgpu_kernel void @store_vgpr_ptr(i32 addrspace(1)* %out) #0 {
+define amdgpu_kernel void @store_vgpr_ptr(i32 addrspace(1)* %out) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() readnone
   %out.gep = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
   store i32 99, i32 addrspace(1)* %out.gep, align 4
   ret void
 }
 
-declare i32 @llvm.amdgcn.raw.buffer.load.dword.i32(<4 x i32>, i32, i32, i32) #0
-declare void @llvm.amdgcn.tbuffer.store.i32(i32, <4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1)
+
+declare i32 @llvm.amdgcn.workitem.id.x() #1
+declare void @llvm.amdgcn.raw.tbuffer.store.i32(i32, <4 x i32>, i32, i32, i32 immarg, i32 immarg) #2
+declare i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32>, i32, i32, i32 immarg) #3
 
 attributes #0 = { nounwind readonly }
+attributes #1 = { nounwind readnone speculatable willreturn }
+attributes #2 = { nounwind willreturn writeonly }
+attributes #3 = { nounwind readonly willreturn }
+attributes #4 = { readnone }

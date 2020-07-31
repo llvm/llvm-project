@@ -20,6 +20,7 @@ namespace macho {
 class ArchiveFile;
 class DylibFile;
 class InputSection;
+class MachHeaderSection;
 class Symbol;
 
 /*
@@ -39,6 +40,8 @@ public:
 
   Symbol *addLazy(StringRef name, ArchiveFile *file,
                   const llvm::object::Archive::Symbol &sym);
+
+  Symbol *addDSOHandle(const MachHeaderSection *);
 
   ArrayRef<Symbol *> getSymbols() const { return symVector; }
   Symbol *find(StringRef name);

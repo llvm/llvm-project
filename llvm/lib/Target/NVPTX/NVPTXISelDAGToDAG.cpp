@@ -700,12 +700,11 @@ static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
 
   bool IsKernelFn = isKernelFunction(F->getFunction());
 
-  // We use GetUnderlyingObjects() here instead of GetUnderlyingObject() mainly
+  // We use getUnderlyingObjects() here instead of getUnderlyingObject() mainly
   // because the former looks through phi nodes while the latter does not. We
   // need to look through phi nodes to handle pointer induction variables.
   SmallVector<const Value *, 8> Objs;
-  GetUnderlyingObjects(N->getMemOperand()->getValue(),
-                       Objs, F->getDataLayout());
+  getUnderlyingObjects(N->getMemOperand()->getValue(), Objs);
 
   return all_of(Objs, [&](const Value *V) {
     if (auto *A = dyn_cast<const Argument>(V))

@@ -1,10 +1,8 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s --mtriple=wasm64-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs | FileCheck %s
 
 ; Test switch instructions. Block placement is disabled because it reorders
 ; the blocks in a way that isn't interesting here.
-
-target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
-target triple = "wasm32-unknown-unknown"
 
 declare void @foo0()
 declare void @foo1()
@@ -14,28 +12,28 @@ declare void @foo4()
 declare void @foo5()
 
 ; CHECK-LABEL: bar32:
-; CHECK: block   {{$}}
-; CHECK: block   {{$}}
-; CHECK: block   {{$}}
-; CHECK: block   {{$}}
-; CHECK: block   {{$}}
-; CHECK: block   {{$}}
-; CHECK: block   {{$}}
-; CHECK: br_table {{[^,]+}}, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 4, 5, 6{{$}}
-; CHECK: .LBB{{[0-9]+}}_1:
-; CHECK:   call foo0{{$}}
-; CHECK: .LBB{{[0-9]+}}_2:
-; CHECK:   call foo1{{$}}
-; CHECK: .LBB{{[0-9]+}}_3:
-; CHECK:   call foo2{{$}}
-; CHECK: .LBB{{[0-9]+}}_4:
-; CHECK:   call foo3{{$}}
-; CHECK: .LBB{{[0-9]+}}_5:
-; CHECK:   call foo4{{$}}
-; CHECK: .LBB{{[0-9]+}}_6:
-; CHECK:   call foo5{{$}}
-; CHECK: .LBB{{[0-9]+}}_7:
-; CHECK:   return{{$}}
+; CHECK:      block   {{$}}
+; CHECK:      block   {{$}}
+; CHECK:      block   {{$}}
+; CHECK:      block   {{$}}
+; CHECK:      block   {{$}}
+; CHECK:      block   {{$}}
+; CHECK:      block   {{$}}
+; CHECK-NEXT: br_table {{[^,]+}}, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 4, 5, 6{{$}}
+; CHECK:      .LBB{{[0-9]+}}_1:
+; CHECK:        call foo0{{$}}
+; CHECK:      .LBB{{[0-9]+}}_2:
+; CHECK:        call foo1{{$}}
+; CHECK:      .LBB{{[0-9]+}}_3:
+; CHECK:        call foo2{{$}}
+; CHECK:      .LBB{{[0-9]+}}_4:
+; CHECK:        call foo3{{$}}
+; CHECK:      .LBB{{[0-9]+}}_5:
+; CHECK:        call foo4{{$}}
+; CHECK:      .LBB{{[0-9]+}}_6:
+; CHECK:        call foo5{{$}}
+; CHECK:      .LBB{{[0-9]+}}_7:
+; CHECK:        return{{$}}
 define void @bar32(i32 %n) {
 entry:
   switch i32 %n, label %sw.epilog [
@@ -94,32 +92,32 @@ sw.epilog:                                        ; preds = %entry, %sw.bb.5, %s
 }
 
 ; CHECK-LABEL: bar64:
-; CHECK: block   {{$}}
-; CHECK: i64.const
-; CHECK: i64.gt_u
-; CHECK: br_if 0
-; CHECK: block   {{$}}
-; CHECK: block   {{$}}
-; CHECK: block   {{$}}
-; CHECK: block   {{$}}
-; CHECK: block   {{$}}
-; CHECK: block   {{$}}
-; CHECK: i32.wrap_i64
-; CHECK: br_table {{[^,]+}}, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 4, 5, 0{{$}}
-; CHECK: .LBB{{[0-9]+}}_2:
-; CHECK:   call foo0{{$}}
-; CHECK: .LBB{{[0-9]+}}_3:
-; CHECK:   call foo1{{$}}
-; CHECK: .LBB{{[0-9]+}}_4:
-; CHECK:   call foo2{{$}}
-; CHECK: .LBB{{[0-9]+}}_5:
-; CHECK:   call foo3{{$}}
-; CHECK: .LBB{{[0-9]+}}_6:
-; CHECK:   call foo4{{$}}
-; CHECK: .LBB{{[0-9]+}}_7:
-; CHECK:   call foo5{{$}}
-; CHECK: .LBB{{[0-9]+}}_8:
-; CHECK:   return{{$}}
+; CHECK:      block   {{$}}
+; CHECK:      i64.const
+; CHECK:      i64.gt_u
+; CHECK:      br_if 0
+; CHECK:      block   {{$}}
+; CHECK:      block   {{$}}
+; CHECK:      block   {{$}}
+; CHECK:      block   {{$}}
+; CHECK:      block   {{$}}
+; CHECK:      block   {{$}}
+; CHECK:      i32.wrap_i64
+; CHECK-NEXT: br_table {{[^,]+}}, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 4, 5, 0{{$}}
+; CHECK:      .LBB{{[0-9]+}}_2:
+; CHECK:        call foo0{{$}}
+; CHECK:      .LBB{{[0-9]+}}_3:
+; CHECK:        call foo1{{$}}
+; CHECK:      .LBB{{[0-9]+}}_4:
+; CHECK:        call foo2{{$}}
+; CHECK:      .LBB{{[0-9]+}}_5:
+; CHECK:        call foo3{{$}}
+; CHECK:      .LBB{{[0-9]+}}_6:
+; CHECK:        call foo4{{$}}
+; CHECK:      .LBB{{[0-9]+}}_7:
+; CHECK:        call foo5{{$}}
+; CHECK:      .LBB{{[0-9]+}}_8:
+; CHECK:        return{{$}}
 define void @bar64(i64 %n) {
 entry:
   switch i64 %n, label %sw.epilog [
@@ -178,24 +176,24 @@ sw.epilog:                                        ; preds = %entry, %sw.bb.5, %s
 }
 
 ; CHECK-LABEL: truncated:
-; CHECK:   block
-; CHECK:   block
-; CHECK:   block
-; CHECK:   i32.wrap_i64
-; CHECK:   br_table {{[^,]+}}, 0, 1, 2{{$}}
-; CHECK: .LBB{{[0-9]+}}_1
-; CHECK:   end_block
-; CHECK:   call foo0{{$}}
-; CHECK:   return{{$}}
-; CHECK: .LBB{{[0-9]+}}_2
-; CHECK:   end_block
-; CHECK:   call foo1{{$}}
-; CHECK:   return{{$}}
-; CHECK: .LBB{{[0-9]+}}_3
-; CHECK:   end_block
-; CHECK:   call foo2{{$}}
-; CHECK:   return{{$}}
-; CHECK:   end_function
+; CHECK:        block
+; CHECK:        block
+; CHECK:        block
+; CHECK:        i32.wrap_i64
+; CHECK-NEXT:   br_table {{[^,]+}}, 0, 1, 2{{$}}
+; CHECK:      .LBB{{[0-9]+}}_1
+; CHECK:        end_block
+; CHECK:        call foo0{{$}}
+; CHECK:        return{{$}}
+; CHECK:      .LBB{{[0-9]+}}_2
+; CHECK:        end_block
+; CHECK:        call foo1{{$}}
+; CHECK:        return{{$}}
+; CHECK:      .LBB{{[0-9]+}}_3
+; CHECK:        end_block
+; CHECK:        call foo2{{$}}
+; CHECK:        return{{$}}
+; CHECK:        end_function
 define void @truncated(i64 %n) {
 entry:
   %m = trunc i64 %n to i32

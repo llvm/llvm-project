@@ -37,15 +37,14 @@ TEST(TFUtilsTest, NoModel) {
 TEST(TFUtilsTest, LoadAndExecuteTest) {
   // We use the ir2native model for test. We know it has one feature of
   // dimension (1, 214)
-  std::vector<std::string> InputNames{"serving_default_input_1"};
-  std::vector<std::string> OutputName{"StatefulPartitionedCall"};
   const static int64_t KnownSize = 214;
+  std::vector<TensorSpec> InputSpecs{TensorSpec::createSpec<int32_t>(
+      "serving_default_input_1", {1, KnownSize})};
+  std::vector<TensorSpec> OutputSpecs{
+      TensorSpec::createSpec<float>("StatefulPartitionedCall", {1})};
 
-  TFModelEvaluator Evaluator(getModelPath(), InputNames, OutputName);
-  static const std::vector<int64_t> Dim{1, KnownSize};
-
+  TFModelEvaluator Evaluator(getModelPath(), InputSpecs, OutputSpecs);
   EXPECT_TRUE(Evaluator.isValid());
-  Evaluator.initInput<int32_t>(0, Dim);
 
   int32_t *V = Evaluator.getInput<int32_t>(0);
   // Fill it up with 1's, we know the output.
@@ -77,15 +76,14 @@ TEST(TFUtilsTest, LoadAndExecuteTest) {
 TEST(TFUtilsTest, EvalError) {
   // We use the ir2native model for test. We know it has one feature of
   // dimension (1, 214)
-  std::vector<std::string> InputNames{"serving_default_input_1"};
-  std::vector<std::string> OutputName{"StatefulPartitionedCall"};
   const static int64_t KnownSize = 213;
+  std::vector<TensorSpec> InputSpecs{TensorSpec::createSpec<int32_t>(
+      "serving_default_input_1", {1, KnownSize})};
+  std::vector<TensorSpec> OutputSpecs{
+      TensorSpec::createSpec<float>("StatefulPartitionedCall", {1})};
 
-  TFModelEvaluator Evaluator(getModelPath(), InputNames, OutputName);
-  static const std::vector<int64_t> Dim{1, KnownSize};
-
+  TFModelEvaluator Evaluator(getModelPath(), InputSpecs, OutputSpecs);
   EXPECT_TRUE(Evaluator.isValid());
-  Evaluator.initInput<int32_t>(0, Dim);
 
   int32_t *V = Evaluator.getInput<int32_t>(0);
   // Fill it up with 1's, we know the output.

@@ -57,6 +57,12 @@ public:
                                 SMDiagnostic &Error,
                                 SMRange &SourceRange) const override;
 
+  /// Returns true if a cast between SrcAS and DestAS is a noop.
+  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
+    // Addrspacecasts are always noops.
+    return true;
+  }
+
 private:
   bool isLittle;
 };

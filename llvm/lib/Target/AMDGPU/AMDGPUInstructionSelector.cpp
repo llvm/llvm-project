@@ -904,6 +904,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     return selectIntrinsicIcmp(I);
   case Intrinsic::amdgcn_ballot:
     return selectBallot(I);
+  case Intrinsic::amdgcn_reloc_constant:
+    return selectRelocConstant(I);
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -1079,6 +1081,31 @@ bool AMDGPUInstructionSelector::selectBallot(MachineInstr &I) const {
     Register SrcReg = I.getOperand(2).getReg();
     BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), DstReg).addReg(SrcReg);
   }
+
+  I.eraseFromParent();
+  return true;
+}
+
+bool AMDGPUInstructionSelector::selectRelocConstant(MachineInstr &I) const {
+  Register DstReg = I.getOperand(0).getReg();
+  const RegisterBank *DstBank = RBI.getRegBank(DstReg, *MRI, TRI);
+  const TargetRegisterClass *DstRC =
+    TRI.getRegClassForSizeOnBank(32, *DstBank, *MRI);
+  if (!DstRC || !RBI.constrainGenericRegister(DstReg, *DstRC, *MRI))
+    return false;
+
+  const bool IsVALU = DstBank->getID() == AMDGPU::VGPRRegBankID;
+
+  Module *M = MF->getFunction().getParent();
+  const MDNode *Metadata = I.getOperand(2).getMetadata();
+  auto SymbolName = cast<MDString>(Metadata->getOperand(0))->getString();
+  auto RelocSymbol = cast<GlobalVariable>(
+    M->getOrInsertGlobal(SymbolName, Type::getInt32Ty(M->getContext())));
+
+  MachineBasicBlock *BB = I.getParent();
+  BuildMI(*BB, &I, I.getDebugLoc(),
+          TII.get(IsVALU ? AMDGPU::V_MOV_B32_e32 : AMDGPU::S_MOV_B32), DstReg)
+    .addGlobalAddress(RelocSymbol, 0, SIInstrInfo::MO_ABS32_LO);
 
   I.eraseFromParent();
   return true;
@@ -2515,7 +2542,7 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
     BuildMI(*BB, &MI, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
       .addReg(IdxReg);
     BuildMI(*BB, &MI, DL, TII.get(AMDGPU::V_MOVRELS_B32_e32), DstReg)
-      .addReg(SrcReg, RegState::Undef, SubReg)
+      .addReg(SrcReg, 0, SubReg)
       .addReg(SrcReg, RegState::Implicit);
     MI.eraseFromParent();
     return true;
@@ -2525,7 +2552,7 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
     .addReg(IdxReg)
     .addImm(AMDGPU::VGPRIndexMode::SRC0_ENABLE);
   BuildMI(*BB, MI, DL, TII.get(AMDGPU::V_MOV_B32_e32), DstReg)
-    .addReg(SrcReg, RegState::Undef, SubReg)
+    .addReg(SrcReg, 0, SubReg)
     .addReg(SrcReg, RegState::Implicit)
     .addReg(AMDGPU::M0, RegState::Implicit);
   BuildMI(*BB, MI, DL, TII.get(AMDGPU::S_SET_GPR_IDX_OFF));

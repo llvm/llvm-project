@@ -995,6 +995,8 @@ bool SampleProfileLoader::inlineHotFunctions(
         const FunctionSamples *FS = nullptr;
         if (auto *CB = dyn_cast<CallBase>(&I)) {
           if (!isa<IntrinsicInst>(I) && (FS = findCalleeFunctionSamples(*CB))) {
+            assert((!FunctionSamples::UseMD5 || FS->GUIDToFuncNameMap) &&
+                   "GUIDToFuncNameMap has to be populated");
             AllCandidates.push_back(CB);
             if (FS->getEntrySamples() > 0)
               localNotInlinedCallSites.try_emplace(CB, FS);
@@ -1104,16 +1106,26 @@ bool SampleProfileLoader::inlineHotFunctions(
     }
 
     if (ProfileMergeInlinee) {
-      // Use entry samples as head samples during the merge, as inlinees
-      // don't have head samples.
-      assert(FS->getHeadSamples() == 0 && "Expect 0 head sample for inlinee");
-      const_cast<FunctionSamples *>(FS)->addHeadSamples(FS->getEntrySamples());
+      // A function call can be replicated by optimizations like callsite
+      // splitting or jump threading and the replicates end up sharing the
+      // sample nested callee profile instead of slicing the original inlinee's
+      // profile. We want to do merge exactly once by filtering out callee
+      // profiles with a non-zero head sample count.
+      if (FS->getHeadSamples() == 0) {
+        // Use entry samples as head samples during the merge, as inlinees
+        // don't have head samples.
+        const_cast<FunctionSamples *>(FS)->addHeadSamples(
+            FS->getEntrySamples());
 
-      // Note that we have to do the merge right after processing function.
-      // This allows OutlineFS's profile to be used for annotation during
-      // top-down processing of functions' annotation.
-      FunctionSamples *OutlineFS = Reader->getOrCreateSamplesFor(*Callee);
-      OutlineFS->merge(*FS);
+        // Note that we have to do the merge right after processing function.
+        // This allows OutlineFS's profile to be used for annotation during
+        // top-down processing of functions' annotation.
+        FunctionSamples *OutlineFS = Reader->getOrCreateSamplesFor(*Callee);
+        OutlineFS->merge(*FS);
+      } else
+        assert(FS->getHeadSamples() == FS->getEntrySamples() &&
+               "Expect same head and entry sample counts for profiles already "
+               "merged.");
     } else {
       auto pair =
           notInlinedCallInfo.try_emplace(Callee, NotInlinedProfileInfo{0});

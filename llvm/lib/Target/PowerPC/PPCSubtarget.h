@@ -145,6 +145,7 @@ protected:
   bool VectorsUseTwoUnits;
   bool UsePPCPreRASchedStrategy;
   bool UsePPCPostRASchedStrategy;
+  bool PairedVectorMemops;
   bool PredictableSelectIsExpensive;
 
   POPCNTDKind HasPOPCNTD;
@@ -259,6 +260,7 @@ public:
   bool hasP10Vector() const { return HasP10Vector; }
   bool hasPrefixInstrs() const { return HasPrefixInstrs; }
   bool hasPCRelativeMemops() const { return HasPCRelativeMemops; }
+  bool pairedVectorMemops() const { return PairedVectorMemops; }
   bool hasMFOCRF() const { return HasMFOCRF; }
   bool hasISEL() const { return HasISEL; }
   bool hasBPERMD() const { return HasBPERMD; }

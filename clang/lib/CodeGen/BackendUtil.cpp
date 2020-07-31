@@ -350,7 +350,8 @@ static void addDataFlowSanitizerPass(const PassManagerBuilder &Builder,
   const PassManagerBuilderWrapper &BuilderWrapper =
       static_cast<const PassManagerBuilderWrapper&>(Builder);
   const LangOptions &LangOpts = BuilderWrapper.getLangOpts();
-  PM.add(createDataFlowSanitizerPass(LangOpts.SanitizerBlacklistFiles));
+  PM.add(
+      createDataFlowSanitizerLegacyPassPass(LangOpts.SanitizerBlacklistFiles));
 }
 
 static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,

@@ -732,6 +732,25 @@ struct Allocator {
     return reinterpret_cast<AsanChunk *>(alloc_beg);
   }
 
+  AsanChunk *GetAsanChunkDebug(void *alloc_beg) {
+    if (!alloc_beg) return nullptr;
+    if (!allocator.FromPrimary(alloc_beg)) {
+      uptr *meta = reinterpret_cast<uptr *>(allocator.GetMetaData(alloc_beg));
+      AsanChunk *m = reinterpret_cast<AsanChunk *>(meta[1]);
+      Printf("GetAsanChunkDebug1 alloc_beg %p meta %p m %p\n", alloc_beg, meta, m);
+      return m;
+    }
+    uptr *alloc_magic = reinterpret_cast<uptr *>(alloc_beg);
+    Printf(
+        "GetAsanChunkDebug2 alloc_beg %p  alloc_magic %p alloc_magic[0] %p "
+        "alloc_magic[1] %p\n",
+        alloc_beg, alloc_magic, alloc_magic[0], alloc_magic[1]);
+    if (alloc_magic[0] == kAllocBegMagic)
+      return reinterpret_cast<AsanChunk *>(alloc_magic[1]);
+    return reinterpret_cast<AsanChunk *>(alloc_beg);
+  }
+
+
   AsanChunk *GetAsanChunkByAddr(uptr p) {
     void *alloc_beg = allocator.GetBlockBegin(reinterpret_cast<void *>(p));
     return GetAsanChunk(alloc_beg);
@@ -742,6 +761,13 @@ struct Allocator {
     void *alloc_beg =
         allocator.GetBlockBeginFastLocked(reinterpret_cast<void *>(p));
     return GetAsanChunk(alloc_beg);
+  }
+
+  AsanChunk *GetAsanChunkByAddrFastLockedDebug(uptr p) {
+    void *alloc_beg =
+        allocator.GetBlockBeginFastLockedDebug(reinterpret_cast<void *>(p));
+    Printf("GetAsanChunkByAddrFastLockedDebug p %p alloc_beg %p\n", p, alloc_beg);
+    return GetAsanChunkDebug(alloc_beg);
   }
 
   uptr AllocationSize(uptr p) {
@@ -1040,16 +1066,25 @@ uptr PointsIntoChunk(void* p) {
 // Debug code. Delete once issue #1193 is chased down.
 extern "C" SANITIZER_WEAK_ATTRIBUTE const char *__lsan_current_stage;
 
+void GetUserBeginDebug(uptr chunk) {
+  Printf("GetUserBeginDebug1 chunk %p\n", chunk);
+  __asan::AsanChunk *m = __asan::instance.GetAsanChunkByAddrFastLockedDebug(chunk);
+  Printf("GetUserBeginDebug2 m     %p\n", m);
+}
+
 uptr GetUserBegin(uptr chunk) {
   __asan::AsanChunk *m = __asan::instance.GetAsanChunkByAddrFastLocked(chunk);
-  if (!m)
+  if (!m) {
     Printf(
         "ASAN is about to crash with a CHECK failure.\n"
         "The ASAN developers are trying to chase down this bug,\n"
         "so if you've encountered this bug please let us know.\n"
         "See also: https://github.com/google/sanitizers/issues/1193\n"
+        "Internal ref b/149237057\n"
         "chunk: %p caller %p __lsan_current_stage %s\n",
         chunk, GET_CALLER_PC(), __lsan_current_stage);
+    GetUserBeginDebug(chunk);
+  }
   CHECK(m);
   return m->Beg();
 }

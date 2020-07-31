@@ -17,7 +17,7 @@
 namespace llvm {
 
 bool DWARFYAML::Data::isEmpty() const {
-  return DebugStrings.empty() && AbbrevDecls.empty() && ARanges.empty() &&
+  return DebugStrings.empty() && AbbrevDecls.empty() && DebugAranges &&
          DebugRanges.empty() && !PubNames && !PubTypes && !GNUPubNames &&
          !GNUPubTypes && CompileUnits.empty() && DebugLines.empty();
 }
@@ -26,7 +26,7 @@ SetVector<StringRef> DWARFYAML::Data::getNonEmptySectionNames() const {
   SetVector<StringRef> SecNames;
   if (!DebugStrings.empty())
     SecNames.insert("debug_str");
-  if (!ARanges.empty())
+  if (DebugAranges)
     SecNames.insert("debug_aranges");
   if (!DebugRanges.empty())
     SecNames.insert("debug_ranges");
@@ -61,8 +61,7 @@ void MappingTraits<DWARFYAML::Data>::mapping(IO &IO, DWARFYAML::Data &DWARF) {
   IO.setContext(&DWARFCtx);
   IO.mapOptional("debug_str", DWARF.DebugStrings);
   IO.mapOptional("debug_abbrev", DWARF.AbbrevDecls);
-  if (!DWARF.ARanges.empty() || !IO.outputting())
-    IO.mapOptional("debug_aranges", DWARF.ARanges);
+  IO.mapOptional("debug_aranges", DWARF.DebugAranges);
   if (!DWARF.DebugRanges.empty() || !IO.outputting())
     IO.mapOptional("debug_ranges", DWARF.DebugRanges);
   IO.mapOptional("debug_pubnames", DWARF.PubNames);
@@ -103,11 +102,11 @@ void MappingTraits<DWARFYAML::ARangeDescriptor>::mapping(
 void MappingTraits<DWARFYAML::ARange>::mapping(IO &IO,
                                                DWARFYAML::ARange &ARange) {
   IO.mapOptional("Format", ARange.Format, dwarf::DWARF32);
-  IO.mapRequired("Length", ARange.Length);
+  IO.mapOptional("Length", ARange.Length);
   IO.mapRequired("Version", ARange.Version);
   IO.mapRequired("CuOffset", ARange.CuOffset);
-  IO.mapRequired("AddressSize", ARange.AddrSize);
-  IO.mapRequired("SegmentSelectorSize", ARange.SegSize);
+  IO.mapOptional("AddressSize", ARange.AddrSize);
+  IO.mapOptional("SegmentSelectorSize", ARange.SegSize, 0);
   IO.mapRequired("Descriptors", ARange.Descriptors);
 }
 

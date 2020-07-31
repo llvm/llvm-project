@@ -134,6 +134,19 @@ define <vscale x 2 x i32> @sve_splat_2xi32(i32 %val) {
   ret <vscale x 2 x i32> %splat
 }
 
+;; Widen/split splats of wide vector types.
+
+define <vscale x 12 x i32> @sve_splat_12xi32(i32 %val) {
+; CHECK-LABEL: @sve_splat_12xi32
+; CHECK: mov z0.s, w0
+; CHECK-NEXT: mov z1.d, z0.d
+; CHECK-NEXT: mov z2.d, z0.d
+; CHECK-NEXT: ret
+  %ins = insertelement <vscale x 12 x i32> undef, i32 %val, i32 0
+  %splat = shufflevector <vscale x 12 x i32> %ins, <vscale x 12 x i32> undef, <vscale x 12 x i32> zeroinitializer
+  ret <vscale x 12 x i32> %splat
+}
+
 define <vscale x 2 x i1> @sve_splat_2xi1(i1 %val) {
 ; CHECK-LABEL: @sve_splat_2xi1
 ; CHECK: sbfx x8, x0, #0, #1

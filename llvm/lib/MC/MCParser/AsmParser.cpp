@@ -1499,8 +1499,6 @@ static unsigned getDarwinBinOpPrecedence(AsmToken::TokenKind K,
     return 1;
 
   // Low Precedence: |, &, ^
-  //
-  // FIXME: gas seems to support '!' as an infix operator?
   case AsmToken::Pipe:
     Kind = MCBinaryExpr::Or;
     return 2;
@@ -1561,7 +1559,8 @@ static unsigned getDarwinBinOpPrecedence(AsmToken::TokenKind K,
   }
 }
 
-static unsigned getGNUBinOpPrecedence(AsmToken::TokenKind K,
+static unsigned getGNUBinOpPrecedence(const MCAsmInfo &MAI,
+                                      AsmToken::TokenKind K,
                                       MCBinaryExpr::Opcode &Kind,
                                       bool ShouldUseLogicalShr) {
   switch (K) {
@@ -1605,11 +1604,17 @@ static unsigned getGNUBinOpPrecedence(AsmToken::TokenKind K,
     Kind = MCBinaryExpr::Sub;
     return 4;
 
-  // High Intermediate Precedence: |, &, ^
+  // High Intermediate Precedence: |, !, &, ^
   //
-  // FIXME: gas seems to support '!' as an infix operator?
   case AsmToken::Pipe:
     Kind = MCBinaryExpr::Or;
+    return 5;
+  case AsmToken::Exclaim:
+    // Hack to support ARM compatible aliases (implied 'sp' operand in 'srs*'
+    // instructions like 'srsda #31!') and not parse ! as an infix operator.
+    if (MAI.getCommentString() == "@")
+      return 0;
+    Kind = MCBinaryExpr::OrNot;
     return 5;
   case AsmToken::Caret:
     Kind = MCBinaryExpr::Xor;
@@ -1641,7 +1646,7 @@ unsigned AsmParser::getBinOpPrecedence(AsmToken::TokenKind K,
                                        MCBinaryExpr::Opcode &Kind) {
   bool ShouldUseLogicalShr = MAI.shouldUseLogicalShr();
   return IsDarwin ? getDarwinBinOpPrecedence(K, Kind, ShouldUseLogicalShr)
-                  : getGNUBinOpPrecedence(K, Kind, ShouldUseLogicalShr);
+                  : getGNUBinOpPrecedence(MAI, K, Kind, ShouldUseLogicalShr);
 }
 
 /// Parse all binary operators with precedence >= 'Precedence'.

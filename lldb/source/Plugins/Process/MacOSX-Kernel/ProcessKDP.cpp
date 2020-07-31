@@ -644,6 +644,9 @@ Status ProcessKDP::DoDeallocateMemory(lldb::addr_t addr) {
 }
 
 Status ProcessKDP::EnableBreakpointSite(BreakpointSite *bp_site) {
+  if (bp_site->HardwareRequired())
+    return Status("Hardware breakpoints are not supported.");
+
   if (m_comm.LocalBreakpointsAreSupported()) {
     Status error;
     if (!bp_site->IsEnabled()) {

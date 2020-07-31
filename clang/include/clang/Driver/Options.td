@@ -699,7 +699,7 @@ def emit_merged_ifs : Flag<["-"], "emit-merged-ifs">,
   HelpText<"Generate Interface Stub Files, emit merged text not binary.">;
 def interface_stub_version_EQ : JoinedOrSeparate<["-"], "interface-stub-version=">, Flags<[CC1Option]>;
 def exported__symbols__list : Separate<["-"], "exported_symbols_list">;
-def e : JoinedOrSeparate<["-"], "e">, Group<Link_Group>;
+def e : JoinedOrSeparate<["-"], "e">, Flags<[LinkerInput]>, Group<Link_Group>;
 def fmax_tokens_EQ : Joined<["-"], "fmax-tokens=">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Max total number of preprocessed tokens for -Wmax-tokens.">;
 def fPIC : Flag<["-"], "fPIC">, Group<f_Group>;
@@ -2458,6 +2458,10 @@ def mnopower8_crypto : Flag<["-"], "mno-crypto">,
 def mdirect_move : Flag<["-"], "mdirect-move">,
     Group<m_ppc_Features_Group>;
 def mnodirect_move : Flag<["-"], "mno-direct-move">,
+    Group<m_ppc_Features_Group>;
+def mpaired_vector_memops: Flag<["-"], "mpaired-vector-memops">,
+    Group<m_ppc_Features_Group>;
+def mnopaired_vector_memops: Flag<["-"], "mno-paired-vector-memops">,
     Group<m_ppc_Features_Group>;
 def mhtm : Flag<["-"], "mhtm">, Group<m_ppc_Features_Group>;
 def mno_htm : Flag<["-"], "mno-htm">, Group<m_ppc_Features_Group>;

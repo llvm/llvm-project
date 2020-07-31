@@ -222,8 +222,9 @@ ArrayRef<Register> IRTranslator::getOrCreateVRegs(const Value &Val) {
 }
 
 int IRTranslator::getOrCreateFrameIndex(const AllocaInst &AI) {
-  if (FrameIndices.find(&AI) != FrameIndices.end())
-    return FrameIndices[&AI];
+  auto MapEntry = FrameIndices.find(&AI);
+  if (MapEntry != FrameIndices.end())
+    return MapEntry->second;
 
   uint64_t ElementSize = DL->getTypeAllocSize(AI.getAllocatedType());
   uint64_t Size =
@@ -1280,6 +1281,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_FRINT;
     case Intrinsic::round:
       return TargetOpcode::G_INTRINSIC_ROUND;
+    case Intrinsic::roundeven:
+      return TargetOpcode::G_INTRINSIC_ROUNDEVEN;
     case Intrinsic::sin:
       return TargetOpcode::G_FSIN;
     case Intrinsic::sqrt:
@@ -1290,6 +1293,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_READCYCLECOUNTER;
     case Intrinsic::ptrmask:
       return TargetOpcode::G_PTRMASK;
+    case Intrinsic::lrint:
+      return TargetOpcode::G_INTRINSIC_LRINT;
   }
   return Intrinsic::not_intrinsic;
 }
@@ -1382,7 +1387,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     // Get the underlying objects for the location passed on the lifetime
     // marker.
     SmallVector<const Value *, 4> Allocas;
-    GetUnderlyingObjects(CI.getArgOperand(1), Allocas, *DL);
+    getUnderlyingObjects(CI.getArgOperand(1), Allocas);
 
     // Iterate over each underlying object, creating lifetime markers for each
     // static alloca. Quit if we find a non-static alloca.
@@ -1641,6 +1646,16 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   }
   case Intrinsic::invariant_end:
     return true;
+  case Intrinsic::expect:
+  case Intrinsic::annotation:
+  case Intrinsic::ptr_annotation:
+  case Intrinsic::launder_invariant_group:
+  case Intrinsic::strip_invariant_group: {
+    // Drop the intrinsic, but forward the value.
+    MIRBuilder.buildCopy(getOrCreateVReg(CI),
+                         getOrCreateVReg(*CI.getArgOperand(0)));
+    return true;
+  }
   case Intrinsic::assume:
   case Intrinsic::var_annotation:
   case Intrinsic::sideeffect:

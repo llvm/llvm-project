@@ -65,6 +65,8 @@ public:
   NameToRecordMapping MacroDefsMap;
   NameToRecordMapping TypeDeclsMap;
 
+  std::unordered_map<std::string, std::string> FunctionToHeaderMap;
+
   NameSet Structs;
   NameSet Enumerations;
   NameSet Functions;

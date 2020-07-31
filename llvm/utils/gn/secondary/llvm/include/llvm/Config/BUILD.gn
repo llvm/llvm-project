@@ -125,7 +125,6 @@ write_cmake_config("config") {
     "RETSIGTYPE=void",
     "LLVM_GISEL_COV_ENABLED=",
     "LLVM_GISEL_COV_PREFIX=",
-    "LLVM_WITH_Z3=",
 
     # FIXME: Set to 1 on mac once the 10.14 SDK is in common use.
     "LLVM_SUPPORT_XCODE_SIGNPOSTS=",
@@ -315,6 +314,7 @@ write_cmake_config("llvm-config") {
   values = [
     "LLVM_ENABLE_DUMP=",
     "LLVM_DEFAULT_TARGET_TRIPLE=$llvm_target_triple",
+    "LLVM_FORCE_ENABLE_STATS=",
     "LLVM_HAS_ATOMICS=1",
     "LLVM_HAVE_TF_AOT=",
     "LLVM_HAVE_TF_API=",
@@ -332,8 +332,8 @@ write_cmake_config("llvm-config") {
     "LLVM_VERSION_MAJOR=$llvm_version_major",
     "LLVM_VERSION_MINOR=$llvm_version_minor",
     "LLVM_VERSION_PATCH=$llvm_version_patch",
+    "LLVM_WITH_Z3=",
     "PACKAGE_VERSION=${llvm_version}git",
-    "LLVM_FORCE_ENABLE_STATS=",
   ]
 
   if (current_os == "win") {

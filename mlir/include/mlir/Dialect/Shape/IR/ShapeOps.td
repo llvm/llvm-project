@@ -19,32 +19,6 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 
-def Shape_WitnessType : DialectType<ShapeDialect,
-    CPred<"$_self.isa<::mlir::shape::WitnessType>()">, "witness">,
-    BuildableType<"$_builder.getType<::mlir::shape::WitnessType>()"> {
-  let typeDescription = [{
-    A witness is a structural device in the compiler to maintain ordering of
-    code relying on information obtained from passing assertions. Witnesses do
-    not represent any physical data.
-
-    "cstr_" operations will return witnesses and be lowered into assertion logic
-    when not resolvable at compile time.
-
-    "assuming_" operations will take witnesses as input and represent only
-    information to the compiler, so they do not exist in executing code. Code
-    that is dependent on "assuming_" operations can assume all cstr operations
-    transitively before are honored as true.
-
-    These abstractions are intended to allow the compiler more freedom with
-    assertions by merely showing the assertion through dataflow at this time
-    rather than a side effecting operation that acts as a barrier. This can be
-    viewed similarly to a compiler representation of promises from asynchronous,
-    possibly crashing assertions. Reliant code will not be reordered to before
-    the code and non-reliant code can be reordered freely, and there are no
-    guarantees on the final ordering of the assertions or their related code.
-  }];
-}
-
 //===----------------------------------------------------------------------===//
 // Shape op definitions
 //===----------------------------------------------------------------------===//
@@ -75,25 +49,24 @@ def Shape_AddOp : Shape_Op<"add", [Commutative, NoSideEffect]> {
 def Shape_BroadcastOp : Shape_Op<"broadcast", [Commutative]> {
   let summary = "Returns the broadcasted output shape of two inputs";
   let description = [{
-    Computes the broadcasted output shape following:
-    1. If any inputs are unranked, output is unranked;
-    2. Else the input array with number of dimensions smaller than the max
-       input dimension, has 1’s prepended to its shapes and the output shape is
-       calculated as follows:
+    Returns the broadcasted shape for two input shapes or extent tensors. Both
+    operands can be of type `shape.shape` or `tensor<?xindex>`. The result is of
+    type `shape.shape` and, if both operands are tensors, may be of type
+    `tensor<?xindex>`.
 
-           output[i] = lhs[i] if lhs[i] == rhs[i] or rhs[i] is unknown/undefined
-                     = rhs[i] if lhs[i] is unknown/undefined
-                     = lhs[i] if rhs[i] == 1
-                     = rhs[i] if lhs[i] == 1
-                     = error  if lhs[i] != rhs[i]
+    If the two operand shapes are of different rank the smaller one is padded
+    with 1's from the left. The resulting broadcasted shape is then defined as
 
-    Op has an optional string attribute for the error case where there is no
-    broadcastable output shape possible for the given inputs.
+        result[i] = lhs[i] if lhs[i] == rhs[i]
+                  = lhs[i] if rhs[i] == 1
+                  = rhs[i] if lhs[i] == 1.
 
-    Op may also return an ExtentTensor, but this should only be done when this
-    is statically guaranteed to never fail, either because of a dependency on a
-    cstr_broadcastable operation or other details of the construction of the
-    program.
+    In case the resulting shape is undefined, i.e. if corresponding extents are
+    different from each other but none is 1, the result is an error shape.
+    Likewise error values are propagated if any of the operands holds an error
+    value. If the result type is an extent tensor (and can therefore not hold
+    the error value) the behavior may be undefined. The optional string
+    attribute can be used to describe the error case.
   }];
 
   let arguments = (ins Shape_ShapeOrExtentTensorType:$lhs,
@@ -101,8 +74,11 @@ def Shape_BroadcastOp : Shape_Op<"broadcast", [Commutative]> {
                        OptionalAttr<StrAttr>:$error);
   let results = (outs Shape_ShapeOrExtentTensorType:$result);
 
-  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs) `->` type($result)";
+  let assemblyFormat = [{
+    $lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs) `->` type($result)
+  }];
 
+  let verifier = [{ return ::verifyShapeOrExtentTensorOp(*this); }];
   let hasFolder = 1;
 
   let verifier = [{ return ::verifyShapeOrExtentTensorOp(*this); }];

@@ -186,8 +186,8 @@ ShapeOfOpConverter::matchAndRewrite(ShapeOfOp op, ArrayRef<Value> operands,
   // Allocate stack memory.
   auto loc = op.getLoc();
   Value rank = rewriter.create<mlir::RankOp>(loc, arg);
-  Type i64Ty = rewriter.getI64Type();
-  Type memTy = MemRefType::get({ShapedType::kDynamicSize}, i64Ty);
+  Type indexTy = rewriter.getIndexType();
+  Type memTy = MemRefType::get({ShapedType::kDynamicSize}, indexTy);
   Value mem = rewriter.create<AllocaOp>(loc, memTy, ValueRange{rank});
 
   // Copy shape extents to stack-allocated memory.
@@ -197,15 +197,12 @@ ShapeOfOpConverter::matchAndRewrite(ShapeOfOp op, ArrayRef<Value> operands,
       loc, zero, rank, one, llvm::None,
       [&](OpBuilder &b, Location loc, Value iv, ValueRange args) {
         Value dim = rewriter.create<DimOp>(loc, arg, iv);
-        Value dimInt = rewriter.create<IndexCastOp>(loc, dim, i64Ty);
-        rewriter.create<StoreOp>(loc, dimInt, mem, ValueRange{iv});
+        rewriter.create<StoreOp>(loc, dim, mem, ValueRange{iv});
         rewriter.create<scf::YieldOp>(loc);
       });
 
   // Load extents to tensor value.
-  Value extentTensorInt = rewriter.create<TensorLoadOp>(loc, mem);
-  rewriter.replaceOpWithNewOp<IndexCastOp>(op.getOperation(), extentTensorInt,
-                                           op.getType());
+  rewriter.replaceOpWithNewOp<TensorLoadOp>(op.getOperation(), mem);
   return success();
 }
 

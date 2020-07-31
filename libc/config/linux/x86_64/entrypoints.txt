@@ -3,7 +3,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.assert.__assert_fail
     
     # ctype.h entrypoints
+    libc.src.ctype.isalnum
     libc.src.ctype.isalpha
+    libc.src.ctype.isdigit
 
     # errno.h entrypoints
     libc.src.errno.__errno_location
