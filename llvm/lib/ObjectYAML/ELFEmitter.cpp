@@ -949,39 +949,9 @@ Expected<uint64_t> emitDWARF(typename ELFT::Shdr &SHeader, StringRef Name,
     return 0;
 
   uint64_t BeginOffset = CBA.tell();
-  Error Err = Error::success();
-  cantFail(std::move(Err));
 
-  if (Name == ".debug_str")
-    Err = DWARFYAML::emitDebugStr(*OS, DWARF);
-  else if (Name == ".debug_aranges")
-    Err = DWARFYAML::emitDebugAranges(*OS, DWARF);
-  else if (Name == ".debug_ranges")
-    Err = DWARFYAML::emitDebugRanges(*OS, DWARF);
-  else if (Name == ".debug_line")
-    Err = DWARFYAML::emitDebugLine(*OS, DWARF);
-  else if (Name == ".debug_addr")
-    Err = DWARFYAML::emitDebugAddr(*OS, DWARF);
-  else if (Name == ".debug_abbrev")
-    Err = DWARFYAML::emitDebugAbbrev(*OS, DWARF);
-  else if (Name == ".debug_info")
-    Err = DWARFYAML::emitDebugInfo(*OS, DWARF);
-  else if (Name == ".debug_pubnames")
-    Err = DWARFYAML::emitDebugPubnames(*OS, DWARF);
-  else if (Name == ".debug_pubtypes")
-    Err = DWARFYAML::emitDebugPubtypes(*OS, DWARF);
-  else if (Name == ".debug_gnu_pubnames")
-    Err = DWARFYAML::emitDebugGNUPubnames(*OS, DWARF);
-  else if (Name == ".debug_gnu_pubtypes")
-    Err = DWARFYAML::emitDebugGNUPubtypes(*OS, DWARF);
-  else if (Name == ".debug_str_offsets")
-    Err = DWARFYAML::emitDebugStrOffsets(*OS, DWARF);
-  else if (Name == ".debug_rnglists")
-    Err = DWARFYAML::emitDebugRnglists(*OS, DWARF);
-  else
-    llvm_unreachable("unexpected emitDWARF() call");
-
-  if (Err)
+  auto EmitFunc = DWARFYAML::getDWARFEmitterByName(Name.substr(1));
+  if (Error Err = EmitFunc(*OS, DWARF))
     return std::move(Err);
 
   return CBA.tell() - BeginOffset;
