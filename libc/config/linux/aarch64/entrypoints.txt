@@ -3,6 +3,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.isalnum
     libc.src.ctype.isalpha
     libc.src.ctype.isdigit
+    libc.src.ctype.islower
+    libc.src.ctype.isupper
     
     # errno.h entrypoints
     libc.src.errno.__errno_location

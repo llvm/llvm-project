@@ -33,3 +33,19 @@ add_entrypoint_object(
   DEPENDS
     .ctype_utils
 )
+
+add_entrypoint_object(
+  islower
+  SRCS
+    islower.cpp
+  HDRS
+    islower.h
+)
+
+add_entrypoint_object(
+  isupper
+  SRCS
+    isupper.cpp
+  HDRS
+    isupper.h
+)
