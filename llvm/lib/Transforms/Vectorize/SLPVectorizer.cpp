@@ -7397,8 +7397,17 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       // Look for the next elements with the same type.
       SmallVector<Value *, 4>::iterator SameTypeIt = IncIt;
       Type *EltTy = (*IncIt)->getType();
-      unsigned EltSize = EltTy->isSized() ? DL->getTypeSizeInBits(EltTy)
-                                          : MaxVecRegSize;
+
+      assert(EltTy->isSized() &&
+             "Instructions should all be sized at this point");
+      TypeSize EltTS = DL->getTypeSizeInBits(EltTy);
+      if (EltTS.isScalable()) {
+        // For now, just ignore vectorizing scalable types.
+        ++IncIt;
+        continue;
+      }
+
+      unsigned EltSize = EltTS.getFixedSize();
       unsigned MaxNumElts = MaxVecRegSize / EltSize;
       if (MaxNumElts < 2) {
         ++IncIt;
