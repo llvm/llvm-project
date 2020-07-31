@@ -763,7 +763,7 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
 }
 
 static ChainID getChainID(const Value *Ptr, const DataLayout &DL) {
-  const Value *ObjPtr = GetUnderlyingObject(Ptr, DL);
+  const Value *ObjPtr = getUnderlyingObject(Ptr, DL);
   if (const auto *Sel = dyn_cast<SelectInst>(ObjPtr)) {
     // The select's themselves are distinct instructions even if they share the
     // same condition and evaluate to consecutive pointers for true and false

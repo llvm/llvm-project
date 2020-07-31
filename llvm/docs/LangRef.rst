@@ -4310,14 +4310,9 @@ PowerPC:
 - ``r``: A 32 or 64-bit integer register.
 - ``b``: A 32 or 64-bit integer register, excluding ``R0`` (that is:
   ``R1-R31``).
-- ``f``: A 32 or 64-bit float register (``F0-F31``), or when QPX is enabled, a
-  128 or 256-bit QPX register (``Q0-Q31``; aliases the ``F`` registers).
-- ``v``: For ``4 x f32`` or ``4 x f64`` types, when QPX is enabled, a
-  128 or 256-bit QPX register (``Q0-Q31``), otherwise a 128-bit
-  altivec vector register (``V0-V31``).
-
-  .. FIXME: is this a bug that v accepts QPX registers? I think this
-     is supposed to only use the altivec vector registers?
+- ``f``: A 32 or 64-bit float register (``F0-F31``), 
+- ``v``: For ``4 x f32`` or ``4 x f64`` types, a 128-bit altivec vector
+   register (``V0-V31``).
 
 - ``y``: Condition register (``CR0-CR7``).
 - ``wc``: An individual CR bit in a CR register.

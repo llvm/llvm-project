@@ -10,6 +10,7 @@
 #include "TestFS.h"
 #include "index/Index.h"
 #include "index/Ref.h"
+#include "index/Relation.h"
 #include "index/Serialization.h"
 #include "index/Symbol.h"
 #include "index/SymbolID.h"
@@ -18,6 +19,7 @@
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
@@ -36,6 +38,51 @@ const char *testPathURI(llvm::StringRef Path,
                         llvm::UniqueStringSaver &Strings) {
   auto URI = URI::createFile(testPath(Path));
   return Strings.save(URI.toString()).begin();
+}
+
+clangd::Symbol createSymbol(llvm::StringRef PathPrefix,
+                            llvm::UniqueStringSaver &Strings) {
+  clangd::Symbol Sym;
+  Sym.ID = llvm::cantFail(SymbolID::fromStr("057557CEBF6E6B2D"));
+
+  index::SymbolInfo Info;
+  Info.Kind = index::SymbolKind::Function;
+  Info.SubKind = index::SymbolSubKind::AccessorGetter;
+  Info.Lang = index::SymbolLanguage::CXX;
+  Info.Properties = static_cast<index::SymbolPropertySet>(
+      index::SymbolProperty::TemplateSpecialization);
+  Sym.SymInfo = Info;
+
+  Sym.Name = Strings.save("Foo");
+  Sym.Scope = Strings.save("llvm::foo::bar::");
+
+  clangd::SymbolLocation Location;
+  Location.Start.setLine(1);
+  Location.Start.setColumn(15);
+  Location.End.setLine(3);
+  Location.End.setColumn(121);
+  Location.FileURI = testPathURI(PathPrefix.str() + "Definition.cpp", Strings);
+  Sym.Definition = Location;
+
+  Location.Start.setLine(42);
+  Location.Start.setColumn(31);
+  Location.End.setLine(20);
+  Location.End.setColumn(400);
+  Location.FileURI = testPathURI(PathPrefix.str() + "Declaration.h", Strings);
+  Sym.CanonicalDeclaration = Location;
+
+  Sym.References = 9000;
+  Sym.Origin = clangd::SymbolOrigin::Static;
+  Sym.Signature = Strings.save("(int X, char Y, Type T)");
+  Sym.TemplateSpecializationArgs = Strings.save("<int, char, bool, Type>");
+  Sym.CompletionSnippetSuffix =
+      Strings.save("({1: int X}, {2: char Y}, {3: Type T})");
+  Sym.Documentation = Strings.save("This is my amazing Foo constructor!");
+  Sym.ReturnType = Strings.save("Foo");
+
+  Sym.Flags = clangd::Symbol::SymbolFlag::IndexedForCodeCompletion;
+
+  return Sym;
 }
 
 TEST(RemoteMarshallingTest, URITranslation) {
@@ -86,52 +133,10 @@ TEST(RemoteMarshallingTest, URITranslation) {
 }
 
 TEST(RemoteMarshallingTest, SymbolSerialization) {
-  clangd::Symbol Sym;
-
-  auto ID = SymbolID::fromStr("057557CEBF6E6B2D");
-  ASSERT_TRUE(bool(ID));
-  Sym.ID = *ID;
-
-  index::SymbolInfo Info;
-  Info.Kind = index::SymbolKind::Function;
-  Info.SubKind = index::SymbolSubKind::AccessorGetter;
-  Info.Lang = index::SymbolLanguage::CXX;
-  Info.Properties = static_cast<index::SymbolPropertySet>(
-      index::SymbolProperty::TemplateSpecialization);
-  Sym.SymInfo = Info;
-
   llvm::BumpPtrAllocator Arena;
   llvm::UniqueStringSaver Strings(Arena);
 
-  Sym.Name = Strings.save("Foo");
-  Sym.Scope = Strings.save("llvm::foo::bar::");
-
-  clangd::SymbolLocation Location;
-  Location.Start.setLine(1);
-  Location.Start.setColumn(15);
-  Location.End.setLine(3);
-  Location.End.setColumn(121);
-  Location.FileURI = testPathURI("home/Definition.cpp", Strings);
-  Sym.Definition = Location;
-
-  Location.Start.setLine(42);
-  Location.Start.setColumn(31);
-  Location.End.setLine(20);
-  Location.End.setColumn(400);
-  Location.FileURI = testPathURI("home/Declaration.h", Strings);
-  Sym.CanonicalDeclaration = Location;
-
-  Sym.References = 9000;
-  Sym.Origin = clangd::SymbolOrigin::Static;
-  Sym.Signature = Strings.save("(int X, char Y, Type T)");
-  Sym.TemplateSpecializationArgs = Strings.save("<int, char, bool, Type>");
-  Sym.CompletionSnippetSuffix =
-      Strings.save("({1: int X}, {2: char Y}, {3: Type T})");
-  Sym.Documentation = Strings.save("This is my amazing Foo constructor!");
-  Sym.ReturnType = Strings.save("Foo");
-
-  Sym.Flags = clangd::Symbol::SymbolFlag::IndexedForCodeCompletion;
-
+  clangd::Symbol Sym = createSymbol("home/", Strings);
   Marshaller ProtobufMarshaller(testPath("home/"), testPath("home/"));
 
   // Check that symbols are exactly the same if the path to indexed project is
@@ -160,20 +165,17 @@ TEST(RemoteMarshallingTest, SymbolSerialization) {
   EXPECT_FALSE(ProtobufMarshaller.fromProtobuf(*Serialized));
 
   // Fail with an invalid URI.
-  Location.FileURI = "Not A URI";
-  Sym.Definition = Location;
+  Sym.Definition.FileURI = "Not A URI";
   EXPECT_FALSE(ProtobufMarshaller.toProtobuf(Sym));
 
   // Schemes other than "file" can not be used.
   auto UnittestURI = URI::create(testPath("home/SomePath.h"), "unittest");
   ASSERT_TRUE(bool(UnittestURI));
-  Location.FileURI = Strings.save(UnittestURI->toString()).begin();
-  Sym.Definition = Location;
+  Sym.Definition.FileURI = Strings.save(UnittestURI->toString()).begin();
   EXPECT_FALSE(ProtobufMarshaller.toProtobuf(Sym));
 
   // Passing root that is not prefix of the original file path.
-  Location.FileURI = testPathURI("home/File.h", Strings);
-  Sym.Definition = Location;
+  Sym.Definition.FileURI = testPathURI("home/File.h", Strings);
   // Check that the symbol is valid and passing the correct path works.
   Serialized = ProtobufMarshaller.toProtobuf(Sym);
   ASSERT_TRUE(Serialized);
@@ -340,6 +342,55 @@ TEST(RemoteMarshallingTest, RefsRequestFailingSerialization) {
   auto Deserialized = ProtobufMarshaller.fromProtobuf(&Serialized);
   EXPECT_FALSE(Deserialized);
   llvm::consumeError(Deserialized.takeError());
+}
+
+TEST(RemoteMarshallingTest, RelationsRequestSerialization) {
+  clangd::RelationsRequest Request;
+  Request.Subjects.insert(
+      llvm::cantFail(SymbolID::fromStr("0000000000000001")));
+  Request.Subjects.insert(
+      llvm::cantFail(SymbolID::fromStr("0000000000000002")));
+
+  Request.Limit = 9000;
+  Request.Predicate = RelationKind::BaseOf;
+
+  Marshaller ProtobufMarshaller(testPath("remote/"), testPath("local/"));
+
+  auto Serialized = ProtobufMarshaller.toProtobuf(Request);
+  EXPECT_EQ(static_cast<unsigned>(Serialized.subjects_size()),
+            Request.Subjects.size());
+  EXPECT_EQ(Serialized.limit(), Request.Limit);
+  EXPECT_EQ(static_cast<RelationKind>(Serialized.predicate()),
+            Request.Predicate);
+  auto Deserialized = ProtobufMarshaller.fromProtobuf(&Serialized);
+  ASSERT_TRUE(bool(Deserialized));
+  EXPECT_EQ(Deserialized->Subjects, Request.Subjects);
+  ASSERT_TRUE(Deserialized->Limit);
+  EXPECT_EQ(*Deserialized->Limit, Request.Limit);
+  EXPECT_EQ(Deserialized->Predicate, Request.Predicate);
+}
+
+TEST(RemoteMarshallingTest, RelationsRequestFailingSerialization) {
+  RelationsRequest Serialized;
+  Serialized.add_subjects("ZZZZZZZZZZZZZZZZ");
+  Marshaller ProtobufMarshaller(testPath("remote/"), testPath("local/"));
+  auto Deserialized = ProtobufMarshaller.fromProtobuf(&Serialized);
+  EXPECT_FALSE(Deserialized);
+  llvm::consumeError(Deserialized.takeError());
+}
+
+TEST(RemoteMarshallingTest, RelationsSerializion) {
+  llvm::BumpPtrAllocator Arena;
+  llvm::UniqueStringSaver Strings(Arena);
+
+  clangd::Symbol Sym = createSymbol("remote/", Strings);
+  SymbolID ID = llvm::cantFail(SymbolID::fromStr("0000000000000002"));
+  Marshaller ProtobufMarshaller(testPath("remote/"), testPath("local/"));
+  auto Serialized = ProtobufMarshaller.toProtobuf(ID, Sym);
+  auto Deserialized = ProtobufMarshaller.fromProtobuf(*Serialized);
+  ASSERT_TRUE(Deserialized);
+  EXPECT_THAT(Deserialized->first, ID);
+  EXPECT_THAT(Deserialized->second.ID, Sym.ID);
 }
 
 TEST(RemoteMarshallingTest, RelativePathToURITranslation) {

@@ -13,6 +13,7 @@
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
 
@@ -213,6 +214,15 @@ static void addFile(StringRef path) {
   }
 }
 
+static void addFileList(StringRef path) {
+  Optional<MemoryBufferRef> buffer = readFile(path);
+  if (!buffer)
+    return;
+  MemoryBufferRef mbref = *buffer;
+  for (StringRef path : args::getLines(mbref))
+    addFile(path);
+}
+
 static std::array<StringRef, 6> archNames{"arm",    "arm64", "i386",
                                           "x86_64", "ppc",   "ppc64"};
 static bool isArchString(StringRef s) {
@@ -386,6 +396,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
   config->installName =
       args.getLastArgValue(OPT_install_name, config->outputFile);
+  config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
   getLibrarySearchPaths(config->librarySearchPaths, args);
   getFrameworkSearchPaths(config->frameworkSearchPaths, args);
   config->outputType = args.hasArg(OPT_dylib) ? MH_DYLIB : MH_EXECUTE;
@@ -410,6 +421,9 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     switch (arg->getOption().getID()) {
     case OPT_INPUT:
       addFile(arg->getValue());
+      break;
+    case OPT_filelist:
+      addFileList(arg->getValue());
       break;
     case OPT_l: {
       StringRef name = arg->getValue();
@@ -437,6 +451,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     case OPT_e:
     case OPT_F:
     case OPT_L:
+    case OPT_headerpad:
     case OPT_install_name:
     case OPT_Z:
     case OPT_arch:
@@ -467,6 +482,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   }
 
   createSyntheticSections();
+  symtab->addDSOHandle(in.header);
 
   // Initialize InputSections.
   for (InputFile *file : inputFiles) {

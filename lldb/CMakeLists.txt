@@ -85,170 +85,22 @@ add_subdirectory(source)
 add_subdirectory(tools)
 add_subdirectory(docs)
 
+if (LLDB_ENABLE_PYTHON OR LLDB_ENABLE_LUA)
+  if(LLDB_BUILD_FRAMEWORK)
+    set(lldb_python_target_dir "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/Resources/Python/lldb")
+  else()
+    set(lldb_python_target_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_PYTHON_RELATIVE_PATH}/lldb")
+  endif()
+  get_target_property(lldb_bindings_dir swig_wrapper BINARY_DIR)
+  finish_swig("finish_swig" "${lldb_bindings_dir}" "${lldb_python_target_dir}")
+endif()
+
 option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests." ${LLVM_INCLUDE_TESTS})
 if(LLDB_INCLUDE_TESTS)
   add_subdirectory(test)
   add_subdirectory(unittests)
   add_subdirectory(utils)
 endif()
-
-if (LLDB_ENABLE_PYTHON)
-  get_target_property(lldb_bindings_dir swig_wrapper BINARY_DIR)
-
-  if(LLDB_BUILD_FRAMEWORK)
-    set(lldb_python_build_path "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/Resources/Python/lldb")
-  else()
-    set(lldb_python_build_path "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_PYTHON_RELATIVE_PATH}/lldb")
-  endif()
-
-  # Add a Post-Build Event to copy over Python files and create the symlink
-  # to liblldb.so for the Python API(hardlink on Windows).
-  add_custom_target(finish_swig ALL VERBATIM
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${lldb_python_build_path}
-    DEPENDS ${lldb_bindings_dir}/lldb.py
-    COMMENT "Python script sym-linking LLDB Python API")
-
-  if(NOT LLDB_USE_SYSTEM_SIX)
-    add_custom_command(TARGET finish_swig POST_BUILD VERBATIM
-      COMMAND ${CMAKE_COMMAND} -E copy
-        "${LLDB_SOURCE_DIR}/third_party/Python/module/six/six.py"
-        "${lldb_python_build_path}/../six.py")
-  endif()
-
-  add_custom_command(TARGET finish_swig POST_BUILD VERBATIM
-    COMMAND ${CMAKE_COMMAND} -E copy
-      "${lldb_bindings_dir}/lldb.py"
-      "${lldb_python_build_path}/__init__.py")
-
-  function(create_python_package pkg_dir)
-    cmake_parse_arguments(ARG "NOINIT" "" "FILES" ${ARGN})
-    if(ARG_FILES)
-      set(copy_cmd COMMAND ${CMAKE_COMMAND} -E copy ${ARG_FILES} ${pkg_dir})
-    endif()
-    if(NOT ARG_NOINIT)
-      set(init_cmd COMMAND ${PYTHON_EXECUTABLE}
-          "${LLDB_SOURCE_DIR}/bindings/python/createPythonInit.py"
-          "${pkg_dir}" ${ARG_FILES})
-    endif()
-    add_custom_command(TARGET finish_swig POST_BUILD VERBATIM
-      COMMAND ${CMAKE_COMMAND} -E make_directory ${pkg_dir}
-      ${copy_cmd}
-      ${init_cmd}
-      WORKING_DIRECTORY ${lldb_python_build_path})
-  endfunction()
-
-  add_custom_command(TARGET finish_swig POST_BUILD VERBATIM
-    COMMAND ${CMAKE_COMMAND} -E copy
-      "${LLDB_SOURCE_DIR}/source/Interpreter/embedded_interpreter.py" ${lldb_python_build_path})
-
-  # Distribute the examples as python packages.
-  create_python_package("formatters/cpp"
-    FILES "${LLDB_SOURCE_DIR}/examples/synthetic/gnu_libstdcpp.py"
-          "${LLDB_SOURCE_DIR}/examples/synthetic/libcxx.py")
-
-  create_python_package("formatters"
-    FILES "${LLDB_SOURCE_DIR}/examples/summaries/cocoa/cache.py"
-          "${LLDB_SOURCE_DIR}/examples/summaries/synth.py"
-          "${LLDB_SOURCE_DIR}/examples/summaries/cocoa/metrics.py"
-          "${LLDB_SOURCE_DIR}/examples/summaries/cocoa/attrib_fromdict.py"
-          "${LLDB_SOURCE_DIR}/examples/summaries/cocoa/Logger.py")
-
-  create_python_package("utils"
-    FILES "${LLDB_SOURCE_DIR}/examples/python/in_call_stack.py"
-          "${LLDB_SOURCE_DIR}/examples/python/symbolication.py")
-
-  if(APPLE)
-    create_python_package("macosx"
-      FILES "${LLDB_SOURCE_DIR}/examples/python/crashlog.py"
-            "${LLDB_SOURCE_DIR}/examples/darwin/heap_find/heap.py")
-
-    create_python_package("macosx/heap"
-      FILES "${LLDB_SOURCE_DIR}/examples/darwin/heap_find/heap/heap_find.cpp"
-            "${LLDB_SOURCE_DIR}/examples/darwin/heap_find/heap/Makefile"
-            NOINIT)
-
-    create_python_package("diagnose"
-      FILES "${LLDB_SOURCE_DIR}/examples/python/diagnose_unwind.py"
-            "${LLDB_SOURCE_DIR}/examples/python/diagnose_nsstring.py")
-  endif()
-
-  function(create_relative_symlink target dest_file output_dir output_name)
-    get_filename_component(dest_file ${dest_file} ABSOLUTE)
-    get_filename_component(output_dir ${output_dir} ABSOLUTE)
-    file(RELATIVE_PATH rel_dest_file ${output_dir} ${dest_file})
-    if(CMAKE_HOST_UNIX)
-      set(LLVM_LINK_OR_COPY create_symlink)
-    else()
-      set(LLVM_LINK_OR_COPY copy)
-    endif()
-    add_custom_command(TARGET ${target} POST_BUILD VERBATIM
-      COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} ${rel_dest_file} ${output_name}
-      WORKING_DIRECTORY ${output_dir})
-  endfunction()
-
-  if(LLDB_BUILD_FRAMEWORK)
-    set(LIBLLDB_SYMLINK_DEST "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/LLDB")
-  else()
-    set(LIBLLDB_SYMLINK_DEST "${LLVM_SHLIB_OUTPUT_INTDIR}/liblldb${CMAKE_SHARED_LIBRARY_SUFFIX}")
-  endif()
-  if(WIN32)
-    if(CMAKE_BUILD_TYPE STREQUAL Debug)
-      set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb_d.pyd")
-    else()
-      set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb.pyd")
-    endif()
-  else()
-    set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb.so")
-  endif()
-  create_relative_symlink(finish_swig ${LIBLLDB_SYMLINK_DEST}
-                          ${lldb_python_build_path} ${LIBLLDB_SYMLINK_OUTPUT_FILE})
-
-  if(NOT LLDB_BUILD_FRAMEWORK)
-    set(LLDB_ARGDUMPER_FILENAME "lldb-argdumper${CMAKE_EXECUTABLE_SUFFIX}")
-    create_relative_symlink(finish_swig "${LLVM_RUNTIME_OUTPUT_INTDIR}/${LLDB_ARGDUMPER_FILENAME}"
-                            ${lldb_python_build_path} ${LLDB_ARGDUMPER_FILENAME})
-  endif()
-
-  add_dependencies(finish_swig swig_wrapper liblldb lldb-argdumper)
-  set_target_properties(finish_swig swig_wrapper PROPERTIES FOLDER "lldb misc")
-
-  # Ensure we do the python post-build step when building lldb.
-  add_dependencies(lldb finish_swig)
-
-  # Install the LLDB python module
-  if(LLDB_BUILD_FRAMEWORK)
-    set(LLDB_PYTHON_INSTALL_PATH ${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Resources/Python)
-  else()
-    set(LLDB_PYTHON_INSTALL_PATH ${LLDB_PYTHON_RELATIVE_PATH})
-  endif()
-  if (NOT CMAKE_CFG_INTDIR STREQUAL  ".")
-    string(REPLACE ${CMAKE_CFG_INTDIR} "\$\{CMAKE_INSTALL_CONFIG_NAME\}" LLDB_PYTHON_INSTALL_PATH ${LLDB_PYTHON_INSTALL_PATH})
-    string(REPLACE ${CMAKE_CFG_INTDIR} "\$\{CMAKE_INSTALL_CONFIG_NAME\}" lldb_python_build_path ${lldb_python_build_path})
-  endif()
-  add_custom_target(lldb-python-scripts)
-  add_dependencies(lldb-python-scripts finish_swig)
-  install(DIRECTORY ${lldb_python_build_path}/../
-          DESTINATION ${LLDB_PYTHON_INSTALL_PATH}
-          COMPONENT lldb-python-scripts)
-  if (NOT LLVM_ENABLE_IDE)
-    add_llvm_install_targets(install-lldb-python-scripts
-                             COMPONENT lldb-python-scripts
-                             DEPENDS lldb-python-scripts)
-  endif()
-
-  # Add a Post-Build Event to copy the custom Python DLL to the lldb binaries dir so that Windows can find it when launching
-  # lldb.exe or any other executables that were linked with liblldb.
-  if (WIN32 AND NOT "${PYTHON_DLL}" STREQUAL "")
-    # When using the Visual Studio CMake generator the lldb binaries end up in Release/bin, Debug/bin etc.
-    file(TO_NATIVE_PATH "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin" LLDB_BIN_DIR)
-    file(TO_NATIVE_PATH "${PYTHON_DLL}" PYTHON_DLL_NATIVE_PATH)
-    add_custom_command(
-      TARGET finish_swig
-      POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy ${PYTHON_DLL_NATIVE_PATH} ${LLDB_BIN_DIR} VERBATIM
-      COMMENT "Copying Python DLL to LLDB binaries directory.")
-  endif ()
-endif ()
 
 if(LLDB_BUILT_STANDALONE AND NOT LLVM_ENABLE_IDE)
   llvm_distribution_add_targets()

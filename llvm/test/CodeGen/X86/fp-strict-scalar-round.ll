@@ -591,19 +591,17 @@ define float @froundeven32(float %f) #0 {
 ; SSE41-X86-NEXT:    pushl %eax
 ; SSE41-X86-NEXT:    .cfi_def_cfa_offset 8
 ; SSE41-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-X86-NEXT:    roundss $8, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movss %xmm0, (%esp)
-; SSE41-X86-NEXT:    calll roundevenf
+; SSE41-X86-NEXT:    flds (%esp)
+; SSE41-X86-NEXT:    wait
 ; SSE41-X86-NEXT:    popl %eax
 ; SSE41-X86-NEXT:    .cfi_def_cfa_offset 4
 ; SSE41-X86-NEXT:    retl
 ;
 ; SSE41-X64-LABEL: froundeven32:
 ; SSE41-X64:       # %bb.0:
-; SSE41-X64-NEXT:    pushq %rax
-; SSE41-X64-NEXT:    .cfi_def_cfa_offset 16
-; SSE41-X64-NEXT:    callq roundevenf
-; SSE41-X64-NEXT:    popq %rax
-; SSE41-X64-NEXT:    .cfi_def_cfa_offset 8
+; SSE41-X64-NEXT:    roundss $8, %xmm0, %xmm0
 ; SSE41-X64-NEXT:    retq
 ;
 ; AVX-X86-LABEL: froundeven32:
@@ -611,19 +609,17 @@ define float @froundeven32(float %f) #0 {
 ; AVX-X86-NEXT:    pushl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-X86-NEXT:    vroundss $8, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
-; AVX-X86-NEXT:    calll roundevenf
+; AVX-X86-NEXT:    flds (%esp)
+; AVX-X86-NEXT:    wait
 ; AVX-X86-NEXT:    popl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 4
 ; AVX-X86-NEXT:    retl
 ;
 ; AVX-X64-LABEL: froundeven32:
 ; AVX-X64:       # %bb.0:
-; AVX-X64-NEXT:    pushq %rax
-; AVX-X64-NEXT:    .cfi_def_cfa_offset 16
-; AVX-X64-NEXT:    callq roundevenf
-; AVX-X64-NEXT:    popq %rax
-; AVX-X64-NEXT:    .cfi_def_cfa_offset 8
+; AVX-X64-NEXT:    vroundss $8, %xmm0, %xmm0, %xmm0
 ; AVX-X64-NEXT:    retq
   %res = call float @llvm.experimental.constrained.roundeven.f32(
                         float %f, metadata !"fpexcept.strict") #0
@@ -633,42 +629,50 @@ define float @froundeven32(float %f) #0 {
 define double @froundevenf64(double %f) #0 {
 ; SSE41-X86-LABEL: froundevenf64:
 ; SSE41-X86:       # %bb.0:
+; SSE41-X86-NEXT:    pushl %ebp
+; SSE41-X86-NEXT:    .cfi_def_cfa_offset 8
+; SSE41-X86-NEXT:    .cfi_offset %ebp, -8
+; SSE41-X86-NEXT:    movl %esp, %ebp
+; SSE41-X86-NEXT:    .cfi_def_cfa_register %ebp
+; SSE41-X86-NEXT:    andl $-8, %esp
 ; SSE41-X86-NEXT:    subl $8, %esp
-; SSE41-X86-NEXT:    .cfi_def_cfa_offset 12
 ; SSE41-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE41-X86-NEXT:    roundsd $8, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movsd %xmm0, (%esp)
-; SSE41-X86-NEXT:    calll roundeven
-; SSE41-X86-NEXT:    addl $8, %esp
-; SSE41-X86-NEXT:    .cfi_def_cfa_offset 4
+; SSE41-X86-NEXT:    fldl (%esp)
+; SSE41-X86-NEXT:    wait
+; SSE41-X86-NEXT:    movl %ebp, %esp
+; SSE41-X86-NEXT:    popl %ebp
+; SSE41-X86-NEXT:    .cfi_def_cfa %esp, 4
 ; SSE41-X86-NEXT:    retl
 ;
 ; SSE41-X64-LABEL: froundevenf64:
 ; SSE41-X64:       # %bb.0:
-; SSE41-X64-NEXT:    pushq %rax
-; SSE41-X64-NEXT:    .cfi_def_cfa_offset 16
-; SSE41-X64-NEXT:    callq roundeven
-; SSE41-X64-NEXT:    popq %rax
-; SSE41-X64-NEXT:    .cfi_def_cfa_offset 8
+; SSE41-X64-NEXT:    roundsd $8, %xmm0, %xmm0
 ; SSE41-X64-NEXT:    retq
 ;
 ; AVX-X86-LABEL: froundevenf64:
 ; AVX-X86:       # %bb.0:
+; AVX-X86-NEXT:    pushl %ebp
+; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
+; AVX-X86-NEXT:    .cfi_offset %ebp, -8
+; AVX-X86-NEXT:    movl %esp, %ebp
+; AVX-X86-NEXT:    .cfi_def_cfa_register %ebp
+; AVX-X86-NEXT:    andl $-8, %esp
 ; AVX-X86-NEXT:    subl $8, %esp
-; AVX-X86-NEXT:    .cfi_def_cfa_offset 12
 ; AVX-X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-X86-NEXT:    vroundsd $8, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
-; AVX-X86-NEXT:    calll roundeven
-; AVX-X86-NEXT:    addl $8, %esp
-; AVX-X86-NEXT:    .cfi_def_cfa_offset 4
+; AVX-X86-NEXT:    fldl (%esp)
+; AVX-X86-NEXT:    wait
+; AVX-X86-NEXT:    movl %ebp, %esp
+; AVX-X86-NEXT:    popl %ebp
+; AVX-X86-NEXT:    .cfi_def_cfa %esp, 4
 ; AVX-X86-NEXT:    retl
 ;
 ; AVX-X64-LABEL: froundevenf64:
 ; AVX-X64:       # %bb.0:
-; AVX-X64-NEXT:    pushq %rax
-; AVX-X64-NEXT:    .cfi_def_cfa_offset 16
-; AVX-X64-NEXT:    callq roundeven
-; AVX-X64-NEXT:    popq %rax
-; AVX-X64-NEXT:    .cfi_def_cfa_offset 8
+; AVX-X64-NEXT:    vroundsd $8, %xmm0, %xmm0, %xmm0
 ; AVX-X64-NEXT:    retq
   %res = call double @llvm.experimental.constrained.roundeven.f64(
                         double %f, metadata !"fpexcept.strict") #0

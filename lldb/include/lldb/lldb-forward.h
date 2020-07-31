@@ -192,7 +192,6 @@ class Status;
 class StopInfo;
 class Stoppoint;
 class StoppointCallbackContext;
-class StoppointLocation;
 class Stream;
 class StreamFile;
 class StreamString;
@@ -405,7 +404,6 @@ typedef std::shared_ptr<lldb_private::StackFrameRecognizer>
 typedef std::unique_ptr<lldb_private::StackFrameRecognizerManager>
     StackFrameRecognizerManagerUP;
 typedef std::shared_ptr<lldb_private::StopInfo> StopInfoSP;
-typedef std::shared_ptr<lldb_private::StoppointLocation> StoppointLocationSP;
 typedef std::shared_ptr<lldb_private::Stream> StreamSP;
 typedef std::weak_ptr<lldb_private::Stream> StreamWP;
 typedef std::shared_ptr<lldb_private::StreamFile> StreamFileSP;

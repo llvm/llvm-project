@@ -198,7 +198,7 @@ define <4 x double> @combine_vec_fcopysign_fpext_sgn(<4 x double> %x, <4 x float
 ; SSE-NEXT:    movshdup {{.*#+}} xmm4 = xmm2[1,1,3,3]
 ; SSE-NEXT:    cvtss2sd %xmm2, %xmm5
 ; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,1,2,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3,3,3]
 ; SSE-NEXT:    movaps {{.*#+}} xmm6 = [NaN,NaN]
 ; SSE-NEXT:    cvtss2sd %xmm3, %xmm3
 ; SSE-NEXT:    movaps %xmm6, %xmm7
@@ -267,7 +267,7 @@ define <4 x float> @combine_vec_fcopysign_fptrunc_sgn(<4 x float> %x, <4 x doubl
 ; SSE-NEXT:    orps %xmm5, %xmm1
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
 ; SSE-NEXT:    insertps {{.*#+}} xmm3 = xmm3[0,1],xmm6[0],xmm3[3]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE-NEXT:    andps %xmm4, %xmm0
 ; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE-NEXT:    xorps %xmm1, %xmm1

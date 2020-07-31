@@ -48,9 +48,12 @@ int setupterm(char *term, int fildes, int *errret);
 // understand the relationship between DisplayInput(), MoveCursor(),
 // SetCurrentLine(), and SaveEditedLine() before making changes.
 
+/// https://www.ecma-international.org/publications/files/ECMA-ST/Ecma-048.pdf
 #define ESCAPE "\x1b"
+/// Faint, decreased intensity or second colour.
 #define ANSI_FAINT ESCAPE "[2m"
-#define ANSI_UNFAINT ESCAPE "[22m"
+/// Normal colour or normal intensity (neither bold nor faint).
+#define ANSI_UNFAINT ESCAPE "[0m"
 #define ANSI_CLEAR_BELOW ESCAPE "[J"
 #define ANSI_CLEAR_RIGHT ESCAPE "[K"
 #define ANSI_SET_COLUMN_N ESCAPE "[%dG"

@@ -21,7 +21,7 @@ define void @convert_v7i16_v7f32(<7 x float>* %dst.addr, <7 x i16> %src) nounwin
 ; X86-SSE2-NEXT:    movaps %xmm2, %xmm0
 ; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm2[1]
 ; X86-SSE2-NEXT:    movss %xmm0, 24(%eax)
-; X86-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,2,3]
+; X86-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
 ; X86-SSE2-NEXT:    movss %xmm2, 20(%eax)
 ; X86-SSE2-NEXT:    retl
 ;
@@ -94,7 +94,7 @@ define void @convert_v3i8_to_v3f32(<3 x float>* %dst.addr, <3 x i8>* %src.addr) 
 ; X86-SSE2-NEXT:    movaps %xmm0, %xmm1
 ; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; X86-SSE2-NEXT:    movss %xmm1, 8(%eax)
-; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X86-SSE2-NEXT:    movss %xmm0, 4(%eax)
 ; X86-SSE2-NEXT:    retl
 ;

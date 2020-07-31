@@ -15,11 +15,11 @@ define <4 x double> @foo(double* %p, <4 x i32>* %i, <4 x i32>* %h) nounwind {
 ; LIN-SSE2-NEXT:    movdqa (%rsi), %xmm0
 ; LIN-SSE2-NEXT:    pand (%rdx), %xmm0
 ; LIN-SSE2-NEXT:    movd %xmm0, %eax
-; LIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; LIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; LIN-SSE2-NEXT:    movd %xmm1, %ecx
 ; LIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; LIN-SSE2-NEXT:    movd %xmm1, %edx
-; LIN-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; LIN-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; LIN-SSE2-NEXT:    movd %xmm0, %esi
 ; LIN-SSE2-NEXT:    cltq
 ; LIN-SSE2-NEXT:    movslq %ecx, %rcx
@@ -54,11 +54,11 @@ define <4 x double> @foo(double* %p, <4 x i32>* %i, <4 x i32>* %h) nounwind {
 ; WIN-SSE2-NEXT:    movdqa (%rdx), %xmm0
 ; WIN-SSE2-NEXT:    pand (%r8), %xmm0
 ; WIN-SSE2-NEXT:    movd %xmm0, %r8d
-; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; WIN-SSE2-NEXT:    movd %xmm1, %r9d
 ; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; WIN-SSE2-NEXT:    movd %xmm1, %r10d
-; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; WIN-SSE2-NEXT:    movd %xmm0, %edx
 ; WIN-SSE2-NEXT:    movslq %r8d, %rax
 ; WIN-SSE2-NEXT:    movslq %r9d, %r8
@@ -139,11 +139,11 @@ define <4 x i64> @old(double* %p, <4 x i32>* %i, <4 x i32>* %h, i64 %f) nounwind
 ; LIN-SSE2-NEXT:    movdqa (%rsi), %xmm0
 ; LIN-SSE2-NEXT:    pand (%rdx), %xmm0
 ; LIN-SSE2-NEXT:    movd %xmm0, %eax
-; LIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; LIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; LIN-SSE2-NEXT:    movd %xmm1, %edx
 ; LIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; LIN-SSE2-NEXT:    movd %xmm1, %esi
-; LIN-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; LIN-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; LIN-SSE2-NEXT:    movd %xmm0, %edi
 ; LIN-SSE2-NEXT:    andl %ecx, %eax
 ; LIN-SSE2-NEXT:    andl %ecx, %edx
@@ -182,11 +182,11 @@ define <4 x i64> @old(double* %p, <4 x i32>* %i, <4 x i32>* %h, i64 %f) nounwind
 ; WIN-SSE2-NEXT:    movdqa (%rdx), %xmm0
 ; WIN-SSE2-NEXT:    pand (%r8), %xmm0
 ; WIN-SSE2-NEXT:    movd %xmm0, %eax
-; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
+; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; WIN-SSE2-NEXT:    movd %xmm1, %ecx
 ; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; WIN-SSE2-NEXT:    movd %xmm1, %r8d
-; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; WIN-SSE2-NEXT:    movd %xmm0, %edx
 ; WIN-SSE2-NEXT:    andl %r9d, %eax
 ; WIN-SSE2-NEXT:    andl %r9d, %ecx

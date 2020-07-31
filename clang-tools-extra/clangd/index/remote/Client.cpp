@@ -91,11 +91,16 @@ public:
     return streamRPC(Request, &remote::SymbolIndex::Stub::Refs, Callback);
   }
 
-  // FIXME(kirillbobyrev): Implement this.
   void
-  relations(const clangd::RelationsRequest &,
-            llvm::function_ref<void(const SymbolID &, const clangd::Symbol &)>)
-      const {}
+  relations(const clangd::RelationsRequest &Request,
+            llvm::function_ref<void(const SymbolID &, const clangd::Symbol &)>
+                Callback) const {
+    streamRPC(Request, &remote::SymbolIndex::Stub::Relations,
+              // Unpack protobuf Relation.
+              [&](std::pair<SymbolID, clangd::Symbol> SubjectAndObject) {
+                Callback(SubjectAndObject.first, SubjectAndObject.second);
+              });
+  }
 
   // IndexClient does not take any space since the data is stored on the
   // server.

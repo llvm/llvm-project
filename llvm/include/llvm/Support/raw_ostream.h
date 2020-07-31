@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -30,12 +31,14 @@ class format_object_base;
 class FormattedString;
 class FormattedNumber;
 class FormattedBytes;
+template <class T> class LLVM_NODISCARD Expected;
 
 namespace sys {
 namespace fs {
 enum FileAccess : unsigned;
 enum OpenFlags : unsigned;
 enum CreationDisposition : unsigned;
+class FileLocker;
 } // end namespace fs
 } // end namespace sys
 
@@ -468,7 +471,7 @@ public:
   /// fsync.
   void close();
 
-  bool supportsSeeking() { return SupportsSeeking; }
+  bool supportsSeeking() const { return SupportsSeeking; }
 
   /// Flushes the stream and repositions the underlying file descriptor position
   /// to the offset specified from the beginning of the file.
@@ -496,6 +499,38 @@ public:
   ///      - from The Zen of Python, by Tim Peters
   ///
   void clear_error() { EC = std::error_code(); }
+
+  /// Locks the underlying file.
+  ///
+  /// @returns RAII object that releases the lock upon leaving the scope, if the
+  ///          locking was successful. Otherwise returns corresponding
+  ///          error code.
+  ///
+  /// The function blocks the current thread until the lock become available or
+  /// error occurs.
+  ///
+  /// Possible use of this function may be as follows:
+  ///
+  ///   @code{.cpp}
+  ///   if (auto L = stream.lock()) {
+  ///     // ... do action that require file to be locked.
+  ///   } else {
+  ///     handleAllErrors(std::move(L.takeError()), [&](ErrorInfoBase &EIB) {
+  ///       // ... handle lock error.
+  ///     });
+  ///   }
+  ///   @endcode
+  LLVM_NODISCARD Expected<sys::fs::FileLocker> lock();
+
+  /// Tries to lock the underlying file within the specified period.
+  ///
+  /// @returns RAII object that releases the lock upon leaving the scope, if the
+  ///          locking was successful. Otherwise returns corresponding
+  ///          error code.
+  ///
+  /// It is used as @ref lock.
+  LLVM_NODISCARD
+  Expected<sys::fs::FileLocker> tryLockFor(std::chrono::milliseconds Timeout);
 };
 
 /// This returns a reference to a raw_fd_ostream for standard output. Use it

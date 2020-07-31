@@ -57,7 +57,7 @@ EXTERN void *omp_target_alloc(size_t size, int device_num) {
     return NULL;
   }
 
-  rc = Devices[device_num].data_alloc(size);
+  rc = Devices[device_num].allocData(size);
   DP("omp_target_alloc returns device ptr " DPxMOD "\n", DPxPTR(rc));
   return rc;
 }
@@ -82,7 +82,7 @@ EXTERN void omp_target_free(void *device_ptr, int device_num) {
     return;
   }
 
-  Devices[device_num].data_delete(device_ptr);
+  Devices[device_num].deleteData(device_ptr);
   DP("omp_target_free deallocated device ptr\n");
 }
 
@@ -159,11 +159,11 @@ EXTERN int omp_target_memcpy(void *dst, void *src, size_t length,
   } else if (src_device == omp_get_initial_device()) {
     DP("copy from host to device\n");
     DeviceTy& DstDev = Devices[dst_device];
-    rc = DstDev.data_submit(dstAddr, srcAddr, length, nullptr);
+    rc = DstDev.submitData(dstAddr, srcAddr, length, nullptr);
   } else if (dst_device == omp_get_initial_device()) {
     DP("copy from device to host\n");
     DeviceTy& SrcDev = Devices[src_device];
-    rc = SrcDev.data_retrieve(dstAddr, srcAddr, length, nullptr);
+    rc = SrcDev.retrieveData(dstAddr, srcAddr, length, nullptr);
   } else {
     DP("copy from device to device\n");
     DeviceTy &SrcDev = Devices[src_device];
@@ -177,9 +177,9 @@ EXTERN int omp_target_memcpy(void *dst, void *src, size_t length,
     }
 
     void *buffer = malloc(length);
-    rc = SrcDev.data_retrieve(buffer, srcAddr, length, nullptr);
+    rc = SrcDev.retrieveData(buffer, srcAddr, length, nullptr);
     if (rc == OFFLOAD_SUCCESS)
-      rc = DstDev.data_submit(dstAddr, buffer, length, nullptr);
+      rc = DstDev.submitData(dstAddr, buffer, length, nullptr);
     free(buffer);
   }
 

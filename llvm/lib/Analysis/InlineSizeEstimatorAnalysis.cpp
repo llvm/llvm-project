@@ -244,19 +244,18 @@ InlineSizeEstimatorAnalysis::InlineSizeEstimatorAnalysis() {
   if (!isEvaluatorRequested()) {
     return;
   }
-  std::vector<std::string> InputNames{"serving_default_input_1"};
-  std::vector<std::string> OutputName{"StatefulPartitionedCall"};
+  std::vector<TensorSpec> InputSpecs{TensorSpec::createSpec<int32_t>(
+      "serving_default_input_1",
+      {1, static_cast<int64_t>(
+              IRToNativeSizeLearning::FunctionFeatures::FeatureCount)})};
+  std::vector<TensorSpec> OutputSpecs{
+      TensorSpec::createSpec<float>("StatefulPartitionedCall", {1})};
   Evaluator = std::make_unique<TFModelEvaluator>(
-      TFIR2NativeModelPath.getValue().c_str(), InputNames, OutputName);
+      TFIR2NativeModelPath.getValue().c_str(), InputSpecs, OutputSpecs);
   if (!Evaluator || !Evaluator->isValid()) {
     Evaluator.reset();
     return;
   }
-  static const std::vector<int64_t> Dim{
-      1, static_cast<int64_t>(
-             IRToNativeSizeLearning::FunctionFeatures::FeatureCount)};
-
-  Evaluator->initInput<int32_t>(0, Dim);
 }
 
 InlineSizeEstimatorAnalysis::Result

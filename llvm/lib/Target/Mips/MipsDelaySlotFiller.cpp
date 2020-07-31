@@ -542,7 +542,7 @@ getUnderlyingObjects(const MachineInstr &MI,
 
   if (const Value *V = MMO.getValue()) {
     SmallVector<const Value *, 4> Objs;
-    GetUnderlyingObjects(V, Objs, DL);
+    ::getUnderlyingObjects(V, Objs, DL);
 
     for (const Value *UValue : Objs) {
       if (!isIdentifiedObject(V))

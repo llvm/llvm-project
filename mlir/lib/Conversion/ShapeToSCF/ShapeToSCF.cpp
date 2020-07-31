@@ -121,7 +121,7 @@ LogicalResult
 ReduceOpConverter::matchAndRewrite(shape::ReduceOp op, ArrayRef<Value> operands,
                                    ConversionPatternRewriter &rewriter) const {
   // For now, this lowering is only defined on `tensor<?xindex>` operands.
-  if (!op.shape().getType().isa<RankedTensorType>())
+  if (op.shape().getType().isa<ShapeType>())
     return failure();
 
   auto loc = op.getLoc();
@@ -171,20 +171,23 @@ public:
 LogicalResult
 ShapeOfOpConverter::matchAndRewrite(ShapeOfOp op, ArrayRef<Value> operands,
                                     ConversionPatternRewriter &rewriter) const {
-  ShapeOfOp::Adaptor transformed(operands);
-  Value arg = transformed.arg();
-  Type argTy = arg.getType();
+  // For now, this lowering supports only error-free arguments.
+  if (op.getType().isa<ShapeType>())
+    return failure();
 
   // For ranked tensors `shape_of` lowers to `std` and the pattern can be
   // found in the corresponding pass.
+  ShapeOfOp::Adaptor transformed(operands);
+  Value arg = transformed.arg();
+  Type argTy = arg.getType();
   if (argTy.isa<RankedTensorType>())
     return failure();
 
   // Allocate stack memory.
   auto loc = op.getLoc();
   Value rank = rewriter.create<mlir::RankOp>(loc, arg);
-  Type i64Ty = rewriter.getI64Type();
-  Type memTy = MemRefType::get({ShapedType::kDynamicSize}, i64Ty);
+  Type indexTy = rewriter.getIndexType();
+  Type memTy = MemRefType::get({ShapedType::kDynamicSize}, indexTy);
   Value mem = rewriter.create<AllocaOp>(loc, memTy, ValueRange{rank});
 
   // Copy shape extents to stack-allocated memory.
@@ -194,15 +197,12 @@ ShapeOfOpConverter::matchAndRewrite(ShapeOfOp op, ArrayRef<Value> operands,
       loc, zero, rank, one, llvm::None,
       [&](OpBuilder &b, Location loc, Value iv, ValueRange args) {
         Value dim = rewriter.create<DimOp>(loc, arg, iv);
-        Value dimInt = rewriter.create<IndexCastOp>(loc, dim, i64Ty);
-        rewriter.create<StoreOp>(loc, dimInt, mem, ValueRange{iv});
+        rewriter.create<StoreOp>(loc, dim, mem, ValueRange{iv});
         rewriter.create<scf::YieldOp>(loc);
       });
 
   // Load extents to tensor value.
-  Value extentTensorInt = rewriter.create<TensorLoadOp>(loc, mem);
-  rewriter.replaceOpWithNewOp<IndexCastOp>(op.getOperation(), extentTensorInt,
-                                           op.getType());
+  rewriter.replaceOpWithNewOp<TensorLoadOp>(op.getOperation(), mem);
   return success();
 }
 

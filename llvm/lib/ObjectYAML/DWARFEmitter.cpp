@@ -126,27 +126,47 @@ Error DWARFYAML::emitDebugAbbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
 
 Error DWARFYAML::emitDebugAranges(raw_ostream &OS, const DWARFYAML::Data &DI) {
   for (auto Range : DI.ARanges) {
-    auto HeaderStart = OS.tell();
-    writeInitialLength(Range.Format, Range.Length, OS, DI.IsLittleEndian);
+    uint8_t AddrSize;
+    if (Range.AddrSize)
+      AddrSize = *Range.AddrSize;
+    else
+      AddrSize = DI.Is64BitAddrSize ? 8 : 4;
+
+    uint64_t Length = 4; // sizeof(version) 2 + sizeof(address_size) 1 +
+                         // sizeof(segment_selector_size) 1
+    Length +=
+        Range.Format == dwarf::DWARF64 ? 8 : 4; // sizeof(debug_info_offset)
+
+    const uint64_t HeaderLength =
+        Length + (Range.Format == dwarf::DWARF64
+                      ? 12
+                      : 4); // sizeof(unit_header) = 12 (DWARF64) or 4 (DWARF32)
+    const uint64_t PaddedHeaderLength = alignTo(HeaderLength, AddrSize * 2);
+
+    if (Range.Length) {
+      Length = *Range.Length;
+    } else {
+      Length += PaddedHeaderLength - HeaderLength;
+      Length += AddrSize * 2 * (Range.Descriptors.size() + 1);
+    }
+
+    writeInitialLength(Range.Format, Length, OS, DI.IsLittleEndian);
     writeInteger((uint16_t)Range.Version, OS, DI.IsLittleEndian);
     writeDWARFOffset(Range.CuOffset, Range.Format, OS, DI.IsLittleEndian);
-    writeInteger((uint8_t)Range.AddrSize, OS, DI.IsLittleEndian);
+    writeInteger((uint8_t)AddrSize, OS, DI.IsLittleEndian);
     writeInteger((uint8_t)Range.SegSize, OS, DI.IsLittleEndian);
-
-    auto HeaderSize = OS.tell() - HeaderStart;
-    auto FirstDescriptor = alignTo(HeaderSize, Range.AddrSize * 2);
-    ZeroFillBytes(OS, FirstDescriptor - HeaderSize);
+    ZeroFillBytes(OS, PaddedHeaderLength - HeaderLength);
 
     for (auto Descriptor : Range.Descriptors) {
-      if (Error Err = writeVariableSizedInteger(
-              Descriptor.Address, Range.AddrSize, OS, DI.IsLittleEndian))
+      if (Error Err = writeVariableSizedInteger(Descriptor.Address, AddrSize,
+                                                OS, DI.IsLittleEndian))
         return createStringError(errc::not_supported,
                                  "unable to write debug_aranges address: %s",
                                  toString(std::move(Err)).c_str());
-      cantFail(writeVariableSizedInteger(Descriptor.Length, Range.AddrSize, OS,
+      cantFail(writeVariableSizedInteger(Descriptor.Length, AddrSize, OS,
                                          DI.IsLittleEndian));
     }
-    ZeroFillBytes(OS, Range.AddrSize * 2);
+    ZeroFillBytes(OS, AddrSize * 2);
   }
 
   return Error::success();
@@ -543,9 +563,9 @@ Error DWARFYAML::emitDebugStrOffsets(raw_ostream &OS, const Data &DI) {
   return Error::success();
 }
 
-static Error checkListEntryOperands(StringRef EncodingString,
-                                    ArrayRef<yaml::Hex64> Values,
-                                    uint64_t ExpectedOperands) {
+static Error checkOperandCount(StringRef EncodingString,
+                               ArrayRef<yaml::Hex64> Values,
+                               uint64_t ExpectedOperands) {
   if (Values.size() != ExpectedOperands)
     return createStringError(
         errc::invalid_argument,
@@ -578,7 +598,7 @@ static Expected<uint64_t> writeListEntry(raw_ostream &OS,
   StringRef EncodingName = dwarf::RangeListEncodingString(Entry.Operator);
 
   auto CheckOperands = [&](uint64_t ExpectedOperands) -> Error {
-    return checkListEntryOperands(EncodingName, Entry.Values, ExpectedOperands);
+    return checkOperandCount(EncodingName, Entry.Values, ExpectedOperands);
   };
 
   auto WriteAddress = [&](uint64_t Addr) -> Error {
@@ -658,12 +678,17 @@ Error writeDWARFLists(raw_ostream &OS,
 
     for (const DWARFYAML::ListEntries<EntryType> &List : Table.Lists) {
       Offsets.push_back(ListBufferOS.tell());
-      for (const EntryType &Entry : List.Entries) {
-        Expected<uint64_t> EntrySize =
-            writeListEntry(ListBufferOS, Entry, AddrSize, IsLittleEndian);
-        if (!EntrySize)
-          return EntrySize.takeError();
-        Length += *EntrySize;
+      if (List.Content) {
+        List.Content->writeAsBinary(ListBufferOS, UINT64_MAX);
+        Length += List.Content->binary_size();
+      } else if (List.Entries) {
+        for (const EntryType &Entry : *List.Entries) {
+          Expected<uint64_t> EntrySize =
+              writeListEntry(ListBufferOS, Entry, AddrSize, IsLittleEndian);
+          if (!EntrySize)
+            return EntrySize.takeError();
+          Length += *EntrySize;
+        }
       }
     }
 

@@ -148,7 +148,7 @@ define float @signbits_ashr_extract_sitofp_0(<2 x i64> %a0) nounwind {
 ; X86-LABEL: signbits_ashr_extract_sitofp_0:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X86-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X86-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
@@ -157,7 +157,7 @@ define float @signbits_ashr_extract_sitofp_0(<2 x i64> %a0) nounwind {
 ;
 ; X64-LABEL: signbits_ashr_extract_sitofp_0:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = ashr <2 x i64> %a0, <i64 32, i64 32>
@@ -170,7 +170,7 @@ define float @signbits_ashr_extract_sitofp_1(<2 x i64> %a0) nounwind {
 ; X86-LABEL: signbits_ashr_extract_sitofp_1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X86-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X86-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
@@ -179,7 +179,7 @@ define float @signbits_ashr_extract_sitofp_1(<2 x i64> %a0) nounwind {
 ;
 ; X64-LABEL: signbits_ashr_extract_sitofp_1:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = ashr <2 x i64> %a0, <i64 32, i64 63>

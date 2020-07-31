@@ -283,7 +283,7 @@ class Export : public Command {
   };
 
 public:
-  void run() {
+  void run() override {
     using namespace clang::clangd;
     // Read input file (as specified in global option)
     auto Buffer = llvm::MemoryBuffer::getFile(IndexLocation);

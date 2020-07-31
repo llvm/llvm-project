@@ -1,5 +1,5 @@
 ; RUN: opt -tbaa -basic-aa -licm -S < %s | FileCheck %s
-; RUN: opt -aa-pipeline=type-based-aa,basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' -S %s | FileCheck %s
+; RUN: opt -aa-pipeline=tbaa,basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop(licm)' -S %s | FileCheck %s
 
 ; If we can prove a local is thread local, we can insert stores during
 ; promotion which wouldn't be legal otherwise.

@@ -6,39 +6,34 @@
 ; RUN: opt -S -passes='loop(require<access-info>),loop-unroll,loop(print-access-info)' -debug-pass-manager < %s 2>&1 | FileCheck %s
 ;
 ; CHECK: Starting llvm::Function pass manager run.
-; CHECK: Running pass: FunctionToLoopPassAdaptor
 ; CHECK: Running analysis: LoopAnalysis
 ; CHECK: Running analysis: InnerAnalysisManagerProxy<
 ; CHECK: Starting Loop pass manager run.
 ; CHECK: Running pass: RequireAnalysisPass<{{.*}}LoopAccessAnalysis
-; CHECK: Running analysis: LoopAccessAnalysis on inner1.header
+; CHECK: Running analysis: LoopAccessAnalysis on Loop at depth 2 containing: %inner1.header
 ; CHECK: Finished Loop pass manager run.
 ; CHECK: Starting Loop pass manager run.
 ; CHECK: Running pass: RequireAnalysisPass<{{.*}}LoopAccessAnalysis
-; CHECK: Running analysis: LoopAccessAnalysis on inner2.header
+; CHECK: Running analysis: LoopAccessAnalysis on Loop at depth 2 containing: %inner2.header
 ; CHECK: Finished Loop pass manager run.
 ; CHECK: Starting Loop pass manager run.
 ; CHECK: Running pass: RequireAnalysisPass<{{.*}}LoopAccessAnalysis
-; CHECK: Running analysis: LoopAccessAnalysis on outer.header
+; CHECK: Running analysis: LoopAccessAnalysis on Loop at depth 1 containing: %outer.header
 ; CHECK: Finished Loop pass manager run.
 ; CHECK: Running pass: LoopUnrollPass
 ; CHECK: Clearing all analysis results for: inner2.header
 ; CHECK: Clearing all analysis results for: outer.header
-; CHECK: Invalidating all non-preserved analyses for: test
-; CHECK: Invalidating all non-preserved analyses for: inner1.header
 ; CHECK: Invalidating analysis: LoopAccessAnalysis on inner1.header
-; CHECK: Invalidating all non-preserved analyses for: inner1.header.1
 ; CHECK-NOT: Invalidating analysis: LoopAccessAnalysis on inner1.header.1
-; CHECK: Running pass: FunctionToLoopPassAdaptor
 ; CHECK: Starting Loop pass manager run.
 ; CHECK: Running pass: LoopAccessInfoPrinterPass
-; CHECK: Running analysis: LoopAccessAnalysis on inner1.header
+; CHECK: Running analysis: LoopAccessAnalysis on Loop at depth 1 containing: %inner1.header
 ; CHECK: Loop access info in function 'test':
 ; CHECK:   inner1.header:
 ; CHECK: Finished Loop pass manager run.
 ; CHECK: Starting Loop pass manager run.
 ; CHECK: Running pass: LoopAccessInfoPrinterPass
-; CHECK: Running analysis: LoopAccessAnalysis on inner1.header.1
+; CHECK: Running analysis: LoopAccessAnalysis on Loop at depth 1 containing: %inner1.header.1
 ; CHECK: Loop access info in function 'test':
 ; CHECK:   inner1.header.1:
 ; CHECK: Finished Loop pass manager run.

@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify %s
 int g(int);
 
 void f() {
@@ -113,6 +114,14 @@ void test8(int& const,// expected-error{{'const' qualifier may not be applied to
   void restrict_ref(__restrict intref); // ok
   void restrict_ref(int &__restrict); // ok
 }
+
+namespace var_template {
+#if __cplusplus >= 201402L
+int i;
+template <typename> int &ref = i; // ok
+template <> int &ref<float>;      // expected-error {{declaration of reference variable 'ref<float>' requires an initializer}}
+#endif
+} // namespace var_template
 
 template<typename T> int const_param(const T) {}
 int const_ref_param = const_param<int&>(const_ref_param); // no-warning

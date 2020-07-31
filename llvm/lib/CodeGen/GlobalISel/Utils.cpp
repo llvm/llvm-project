@@ -604,3 +604,24 @@ LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
   unsigned GCD = greatestCommonDivisor(OrigSize, TargetSize);
   return LLT::scalar(GCD);
 }
+
+Optional<int> llvm::getSplatIndex(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR &&
+         "Only G_SHUFFLE_VECTOR can have a splat index!");
+  ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
+  auto FirstDefinedIdx = find_if(Mask, [](int Elt) { return Elt >= 0; });
+
+  // If all elements are undefined, this shuffle can be considered a splat.
+  // Return 0 for better potential for callers to simplify.
+  if (FirstDefinedIdx == Mask.end())
+    return 0;
+
+  // Make sure all remaining elements are either undef or the same
+  // as the first non-undef value.
+  int SplatValue = *FirstDefinedIdx;
+  if (any_of(make_range(std::next(FirstDefinedIdx), Mask.end()),
+             [&SplatValue](int Elt) { return Elt >= 0 && Elt != SplatValue; }))
+    return None;
+
+  return SplatValue;
+}

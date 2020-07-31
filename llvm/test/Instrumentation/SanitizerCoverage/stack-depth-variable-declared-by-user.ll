@@ -1,7 +1,7 @@
 ; Ensure that we terminate with a useful error message (instead of crash) if the
 ; user declares `__sancov_lowest_stack` with an unexpected type.
 ; RUN: not opt < %s -sancov -sanitizer-coverage-level=1 \
-; RUN:         -sanitizer-coverage-stack-depth -S 2>&1 | FileCheck %s
+; RUN:         -sanitizer-coverage-stack-depth -S 2>&1 -enable-new-pm=0 | FileCheck %s
 ; RUN: not opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=1 \
 ; RUN:         -sanitizer-coverage-stack-depth -S 2>&1 | FileCheck %s
 

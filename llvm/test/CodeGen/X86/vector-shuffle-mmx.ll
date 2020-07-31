@@ -9,14 +9,14 @@ define void @test0(<1 x i64>* %x) {
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X32-NEXT:    movlps %xmm0, (%eax)
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test0:
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X64-NEXT:    movq %xmm0, (%rdi)
 ; X64-NEXT:    retq
 entry:

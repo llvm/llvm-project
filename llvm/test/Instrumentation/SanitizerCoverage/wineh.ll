@@ -1,4 +1,4 @@
-; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc -S | FileCheck %s --check-prefix=CHECK
+; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc -S -enable-new-pm=0 | FileCheck %s --check-prefix=CHECK
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc -S | FileCheck %s --check-prefix=CHECK
 
 ; Generated from this C++ source:

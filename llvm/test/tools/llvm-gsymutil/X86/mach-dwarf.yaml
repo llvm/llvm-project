@@ -539,11 +539,11 @@ DWARF:
         - Attribute:       DW_AT_type
           Form:            DW_FORM_ref_addr
   debug_aranges:
-    - Length:          60
-      Version:         2
-      CuOffset:        0
-      AddrSize:        8
-      SegSize:         0
+    - Length:              60
+      Version:             2
+      CuOffset:            0
+      AddressSize:         8
+      SegmentSelectorSize: 0
       Descriptors:
         - Address:         0x0000000100000F70
           Length:          17

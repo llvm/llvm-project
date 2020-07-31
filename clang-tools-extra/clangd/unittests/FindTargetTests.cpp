@@ -627,6 +627,20 @@ TEST_F(TargetDeclTest, DependentExprs) {
         };
       )cpp";
   EXPECT_DECLS("CXXDependentScopeMemberExpr", "int aaaa");
+
+  Code = R"cpp(
+        class Foo {
+        public:
+          static Foo k(int);
+          template <typename T> T convert() const;
+        };
+        template <typename T>
+        void test() {
+          Foo::k(T()).template [[convert]]<T>();
+        }
+      )cpp";
+  EXPECT_DECLS("CXXDependentScopeMemberExpr",
+               "template <typename T> T convert() const");
 }
 
 TEST_F(TargetDeclTest, ObjC) {

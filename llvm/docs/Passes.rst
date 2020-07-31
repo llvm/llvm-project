@@ -522,9 +522,9 @@ instructions that are obviously dead.
 A trivial dead store elimination that only considers basic-block local
 redundant stores.
 
-.. _passes-functionattrs:
+.. _passes-function-attrs:
 
-``-functionattrs``: Deduce function attributes
+``-function-attrs``: Deduce function attributes
 ----------------------------------------------
 
 A simple interprocedural pass which walks the call-graph, looking for functions
@@ -651,7 +651,7 @@ This pass can also simplify calls to specific well-known function calls (e.g.
 runtime library functions).  For example, a call ``exit(3)`` that occurs within
 the ``main()`` function can be transformed into simply ``return 3``. Whether or
 not library calls are simplified is controlled by the
-:ref:`-functionattrs <passes-functionattrs>` pass and LLVM's knowledge of
+:ref:`-function-attrs <passes-function-attrs>` pass and LLVM's knowledge of
 library calls on different targets.
 
 .. _passes-aggressive-instcombine:

@@ -231,30 +231,20 @@ void TimePassesHandler::stopTimer(StringRef PassID) {
     MyTimer->stopTimer();
 }
 
-static bool matchPassManager(StringRef PassID) {
-  size_t prefix_pos = PassID.find('<');
-  if (prefix_pos == StringRef::npos)
-    return false;
-  StringRef Prefix = PassID.substr(0, prefix_pos);
-  return Prefix.endswith("PassManager") || Prefix.endswith("PassAdaptor") ||
-         Prefix.endswith("AnalysisManagerProxy");
-}
-
-bool TimePassesHandler::runBeforePass(StringRef PassID) {
-  if (matchPassManager(PassID))
-    return true;
+void TimePassesHandler::runBeforePass(StringRef PassID) {
+  if (isSpecialPass(PassID,
+                    {"PassManager", "PassAdaptor", "AnalysisManagerProxy"}))
+    return;
 
   startTimer(PassID);
 
   LLVM_DEBUG(dbgs() << "after runBeforePass(" << PassID << ")\n");
   LLVM_DEBUG(dump());
-
-  // we are not going to skip this pass, thus return true.
-  return true;
 }
 
 void TimePassesHandler::runAfterPass(StringRef PassID) {
-  if (matchPassManager(PassID))
+  if (isSpecialPass(PassID,
+                    {"PassManager", "PassAdaptor", "AnalysisManagerProxy"}))
     return;
 
   stopTimer(PassID);
@@ -267,8 +257,8 @@ void TimePassesHandler::registerCallbacks(PassInstrumentationCallbacks &PIC) {
   if (!Enabled)
     return;
 
-  PIC.registerBeforePassCallback(
-      [this](StringRef P, Any) { return this->runBeforePass(P); });
+  PIC.registerBeforeNonSkippedPassCallback(
+      [this](StringRef P, Any) { this->runBeforePass(P); });
   PIC.registerAfterPassCallback(
       [this](StringRef P, Any) { this->runAfterPass(P); });
   PIC.registerAfterPassInvalidatedCallback(

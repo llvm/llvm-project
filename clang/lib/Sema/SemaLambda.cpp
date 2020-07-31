@@ -803,7 +803,8 @@ QualType Sema::buildLambdaInitCaptureInitialization(
       Diag(EllipsisLoc, getLangOpts().CPlusPlus20
                             ? diag::warn_cxx17_compat_init_capture_pack
                             : diag::ext_init_capture_pack);
-      DeductType = Context.getPackExpansionType(DeductType, NumExpansions);
+      DeductType = Context.getPackExpansionType(DeductType, NumExpansions,
+                                                /*ExpectPackInType=*/false);
       TLB.push<PackExpansionTypeLoc>(DeductType).setEllipsisLoc(EllipsisLoc);
     } else {
       // Just ignore the ellipsis for now and form a non-pack variable. We'll
@@ -1623,8 +1624,9 @@ FieldDecl *Sema::BuildCaptureField(RecordDecl *RD,
 
   // Build the non-static data member.
   FieldDecl *Field =
-      FieldDecl::Create(Context, RD, Loc, Loc, nullptr, FieldType, TSI, nullptr,
-                        false, ICIS_NoInit);
+      FieldDecl::Create(Context, RD, /*StartLoc=*/Loc, /*IdLoc=*/Loc,
+                        /*Id=*/nullptr, FieldType, TSI, /*BW=*/nullptr,
+                        /*Mutable=*/false, ICIS_NoInit);
   // If the variable being captured has an invalid type, mark the class as
   // invalid as well.
   if (!FieldType->isDependentType()) {
@@ -1784,7 +1786,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
         CUDACheckLambdaCapture(CallOperator, From);
     }
 
-    Class->setCaptures(Captures);
+    Class->setCaptures(Context, Captures);
 
     // C++11 [expr.prim.lambda]p6:
     //   The closure type for a lambda-expression with no lambda-capture

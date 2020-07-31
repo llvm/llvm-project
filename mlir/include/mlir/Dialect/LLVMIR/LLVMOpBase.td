@@ -134,11 +134,9 @@ class ListIntSubst<string pattern, list<int> values> {
 // or result in the operation.
 def LLVM_IntrPatterns {
   string operand =
-    [{opInst.getOperand($0).getType()
-      .cast<LLVM::LLVMType>().getUnderlyingType()}];
+    [{convertType(opInst.getOperand($0).getType().cast<LLVM::LLVMType>())}];
   string result =
-    [{opInst.getResult($0).getType()
-      .cast<LLVM::LLVMType>().getUnderlyingType()}];
+    [{convertType(opInst.getResult($0).getType().cast<LLVM::LLVMType>())}];
 }
 
 

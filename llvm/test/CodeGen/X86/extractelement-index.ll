@@ -249,7 +249,7 @@ define i32 @extractelement_v4i32_0(<4 x i32> %a) nounwind {
 define i32 @extractelement_v4i32_3(<4 x i32> %a) nounwind {
 ; SSE2-LABEL: extractelement_v4i32_3:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
@@ -315,7 +315,7 @@ define i32 @extractelement_v8i32_4(<8 x i32> %a) nounwind {
 define i32 @extractelement_v8i32_7(<8 x i32> %a) nounwind {
 ; SSE2-LABEL: extractelement_v8i32_7:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;

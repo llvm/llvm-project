@@ -97,29 +97,33 @@
 #ifndef LLVM_TRANSFORMS_IPO_ATTRIBUTOR_H
 #define LLVM_TRANSFORMS_IPO_ATTRIBUTOR_H
 
+#include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
-#include "llvm/Analysis/CallGraph.h"
-#include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/DOTGraphTraits.h"
+#include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
 namespace llvm {
 
+struct AADepGraphNode;
+struct AADepGraph;
 struct Attributor;
 struct AbstractAttribute;
 struct InformationCache;
@@ -143,6 +147,70 @@ enum class DepClassTy {
   OPTIONAL,
 };
 ///}
+
+/// The data structure for the nodes of a dependency graph
+struct AADepGraphNode {
+public:
+  virtual ~AADepGraphNode(){};
+  using DepTy = PointerIntPair<AADepGraphNode *, 1>;
+
+protected:
+  /// Set of dependency graph nodes which this one depends on.
+  /// The bit encodes if it is optional.
+  TinyPtrVector<DepTy> Deps;
+
+  static AADepGraphNode *DepGetVal(DepTy &DT) { return DT.getPointer(); }
+  static AbstractAttribute *DepGetValAA(DepTy &DT) {
+    return cast<AbstractAttribute>(DT.getPointer());
+  }
+
+  operator AbstractAttribute *() { return cast<AbstractAttribute>(this); }
+
+public:
+  using iterator =
+      mapped_iterator<TinyPtrVector<DepTy>::iterator, decltype(&DepGetVal)>;
+  using aaiterator =
+      mapped_iterator<TinyPtrVector<DepTy>::iterator, decltype(&DepGetValAA)>;
+
+  aaiterator begin() { return aaiterator(Deps.begin(), &DepGetValAA); }
+  aaiterator end() { return aaiterator(Deps.end(), &DepGetValAA); }
+  iterator child_begin() { return iterator(Deps.begin(), &DepGetVal); }
+  iterator child_end() { return iterator(Deps.end(), &DepGetVal); }
+
+  virtual void print(raw_ostream &OS) const { OS << "AADepNode Impl\n"; }
+  TinyPtrVector<DepTy> &getDeps() { return Deps; }
+
+  friend struct Attributor;
+  friend struct AADepGraph;
+};
+
+struct AADepGraph {
+  AADepGraph() {}
+  ~AADepGraph() {}
+
+  using DepTy = AADepGraphNode::DepTy;
+  static AADepGraphNode *DepGetVal(DepTy &DT) { return DT.getPointer(); }
+  using iterator =
+      mapped_iterator<TinyPtrVector<DepTy>::iterator, decltype(&DepGetVal)>;
+
+  /// There is no root node for the dependency graph. But the SCCIterator
+  /// requires a single entry point, so we maintain a fake("synthetic") root
+  /// node that depends on every node.
+  AADepGraphNode SyntheticRoot;
+
+  AADepGraphNode *GetEntryNode() { return &SyntheticRoot; }
+
+  iterator begin() { return SyntheticRoot.child_begin(); }
+  iterator end() { return SyntheticRoot.child_end(); }
+
+  void viewGraph();
+
+  /// Dump graph to file
+  void dumpGraph();
+
+  /// Print dependency graph
+  void print();
+};
 
 /// Helper to describe and deal with positions in the LLVM-IR.
 ///
@@ -934,8 +1002,10 @@ struct Attributor {
       return AA;
     }
 
-    AA.initialize(*this);
-
+    {
+      TimeTraceScope TimeScope(AA.getName() + "::initialize");
+      AA.initialize(*this);
+    }
     // We can initialize (=look at) code outside the current function set but
     // not call update because that would again spawn new abstract attributes in
     // potentially unconnected code regions (=SCCs).
@@ -1020,7 +1090,9 @@ struct Attributor {
     assert(!AAPtr && "Attribute already in map!");
     AAPtr = &AA;
 
-    AllAbstractAttributes.push_back(&AA);
+    DG.SyntheticRoot.Deps.push_back(
+        AADepGraphNode::DepTy(&AA, unsigned(DepClassTy::REQUIRED)));
+
     return AA;
   }
 
@@ -1382,12 +1454,6 @@ private:
   /// See getOrCreateAAFor.
   bool shouldSeedAttribute(AbstractAttribute &AA);
 
-  /// The set of all abstract attributes.
-  ///{
-  using AAVector = SmallVector<AbstractAttribute *, 64>;
-  AAVector AllAbstractAttributes;
-  ///}
-
   /// A nested map to lookup abstract attributes based on the argument position
   /// on the outer level, and the addresses of the static member (AAType::ID) on
   /// the inner level.
@@ -1408,6 +1474,9 @@ private:
 
   /// Helper to update an underlying call graph.
   CallGraphUpdater &CGUpdater;
+
+  /// Abstract Attribute dependency graph
+  AADepGraph DG;
 
   /// Set of functions for which we modified the content such that it might
   /// impact the call graph.
@@ -1458,6 +1527,8 @@ private:
   SmallPtrSet<BasicBlock *, 8> ToBeDeletedBlocks;
   SmallDenseSet<WeakVH, 8> ToBeDeletedInsts;
   ///}
+
+  friend AADepGraph;
 };
 
 /// An interface to query the internal state of an abstract attribute.
@@ -2030,13 +2101,21 @@ struct IRAttribute : public BaseType {
 ///       both directions will be added in the future.
 /// NOTE: The mechanics of adding a new "concrete" abstract attribute are
 ///       described in the file comment.
-struct AbstractAttribute : public IRPosition {
+struct AbstractAttribute : public IRPosition, public AADepGraphNode {
   using StateType = AbstractState;
 
   AbstractAttribute(const IRPosition &IRP) : IRPosition(IRP) {}
 
   /// Virtual destructor.
   virtual ~AbstractAttribute() {}
+
+  /// This function is used to identify if an \p DGN is of type
+  /// AbstractAttribute so that the dyn_cast and cast can use such information
+  /// to cast an AADepGraphNode to an AbstractAttribute.
+  ///
+  /// We eagerly return true here because all AADepGraphNodes except for the
+  /// Synthethis Node are of type AbstractAttribute
+  static bool classof(const AADepGraphNode *DGN) { return true; }
 
   /// Initialize the state with the information in the Attributor \p A.
   ///
@@ -2058,7 +2137,8 @@ struct AbstractAttribute : public IRPosition {
 
   /// Helper functions, for debug purposes only.
   ///{
-  virtual void print(raw_ostream &OS) const;
+  void print(raw_ostream &OS) const override;
+  virtual void printWithDeps(raw_ostream &OS) const;
   void dump() const { print(dbgs()); }
 
   /// This function should return the "summarized" assumed state as string.
@@ -2106,12 +2186,6 @@ protected:
   ///
   /// \Return CHANGED if the internal state changed, otherwise UNCHANGED.
   virtual ChangeStatus updateImpl(Attributor &A) = 0;
-
-private:
-  /// Set of abstract attributes which were queried by this one. The bit encodes
-  /// if there is an optional of required dependence.
-  using DepTy = PointerIntPair<AbstractAttribute *, 1>;
-  TinyPtrVector<DepTy> Deps;
 };
 
 /// Forward declarations of output streams for debug purposes.

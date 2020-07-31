@@ -67,7 +67,7 @@ struct S {
 
   template <typename T>
   void tf() {}                  // expected-warning{{unused function template 'tf'}}
-  template <> void tf<int>() {} // expected-warning{{unused function 'tf'}}
+  template <> void tf<int>() {} // expected-warning{{unused function 'tf<int>'}}
 
   struct VS {
     virtual void vm() { }
@@ -102,7 +102,7 @@ struct S2 {
 
   template <typename T, typename U> int vt = 0; // expected-warning {{unused variable template 'vt'}}
   template <typename T> int vt<T, void> = 0;
-  template <> int vt<void, void> = 0; // expected-warning {{unused variable 'vt'}}
+  template <> int vt<void, void> = 0; // expected-warning {{unused variable 'vt<void, void>'}}
 }
 
 namespace PR8841 {
@@ -132,7 +132,7 @@ namespace test4 {
 namespace rdar8733476 {
 static void foo() {}                         // expected-warning {{function 'foo' is not needed and will not be emitted}}
 template <typename T> static void foo_t() {} // expected-warning {{unused function template 'foo_t'}}
-template <> void foo_t<int>() {}             // expected-warning {{function 'foo_t' is not needed and will not be emitted}}
+template <> void foo_t<int>() {}             // expected-warning {{function 'foo_t<int>' is not needed and will not be emitted}}
 
 template <int>
 void bar() {
@@ -157,7 +157,7 @@ namespace test5 {
   namespace {
   // FIXME: Should be "unused variable template 'var_t'" instead.
   template <typename T> const double var_t = 0; // expected-warning {{unused variable 'var_t'}}
-  template <> const double var_t<int> = 0;      // expected-warning {{variable 'var_t' is not needed and will not be emitted}}
+  template <> const double var_t<int> = 0;      // expected-warning {{variable 'var_t<int>' is not needed and will not be emitted}}
   int z = sizeof(var_t<int>);                   // expected-warning {{unused variable 'z'}}
   }                                             // namespace
 }

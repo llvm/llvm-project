@@ -17,15 +17,14 @@
 
 #include <cstdint>
 
-extern int target_data_begin(DeviceTy &Device, int32_t arg_num,
-                             void **args_base, void **args, int64_t *arg_sizes,
-                             int64_t *arg_types, void **arg_mappers,
-                             __tgt_async_info *async_info_ptr);
-
-extern int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
+extern int targetDataBegin(DeviceTy &Device, int32_t arg_num, void **args_base,
                            void **args, int64_t *arg_sizes, int64_t *arg_types,
                            void **arg_mappers,
                            __tgt_async_info *async_info_ptr);
+
+extern int targetDataEnd(DeviceTy &Device, int32_t ArgNum, void **ArgBases,
+                         void **Args, int64_t *ArgSizes, int64_t *ArgTypes,
+                         void **ArgMappers, __tgt_async_info *AsyncInfo);
 
 extern int target_data_update(DeviceTy &Device, int32_t arg_num,
                               void **args_base, void **args,
@@ -33,10 +32,10 @@ extern int target_data_update(DeviceTy &Device, int32_t arg_num,
                               void **arg_mappers,
                               __tgt_async_info *async_info_ptr = nullptr);
 
-extern int target(int64_t device_id, void *host_ptr, int32_t arg_num,
-                  void **args_base, void **args, int64_t *arg_sizes,
-                  int64_t *arg_types, void **arg_mappers, int32_t team_num,
-                  int32_t thread_limit, int IsTeamConstruct);
+extern int target(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
+                  void **ArgBases, void **Args, int64_t *ArgSizes,
+                  int64_t *ArgTypes, void **ArgMappers, int32_t TeamNum,
+                  int32_t ThreadLimit, int IsTeamConstruct);
 
 extern int CheckDeviceAndCtors(int64_t device_id);
 
@@ -74,10 +73,11 @@ struct MapperComponentsTy {
 //                                           size_t size, int64_t type);
 typedef void (*MapperFuncPtrTy)(void *, void *, void *, int64_t, int64_t);
 
-// Function pointer type for target_data_* functions (target_data_begin,
-// target_data_end and target_data_update).
+// Function pointer type for target_data_* functions (targetDataBegin,
+// targetDataEnd and target_data_update).
 typedef int (*TargetDataFuncPtrTy)(DeviceTy &, int32_t, void **, void **,
-    int64_t *, int64_t *, void **, __tgt_async_info *);
+                                   int64_t *, int64_t *, void **,
+                                   __tgt_async_info *);
 
 ////////////////////////////////////////////////////////////////////////////////
 // implementation for messages

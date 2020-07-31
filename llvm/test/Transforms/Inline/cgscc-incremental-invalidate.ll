@@ -10,19 +10,14 @@
 ; CHECK: Running pass: InlinerPass on (test1_f, test1_g, test1_h)
 ; CHECK: Running analysis: DominatorTreeAnalysis on test1_f
 ; CHECK: Running analysis: DominatorTreeAnalysis on test1_g
-; CHECK: Invalidating all non-preserved analyses for: (test1_f)
-; CHECK: Invalidating all non-preserved analyses for: test1_f
 ; CHECK: Invalidating analysis: DominatorTreeAnalysis on test1_f
 ; CHECK: Invalidating analysis: LoopAnalysis on test1_f
 ; CHECK: Invalidating analysis: BranchProbabilityAnalysis on test1_f
 ; CHECK: Invalidating analysis: BlockFrequencyAnalysis on test1_f
-; CHECK: Invalidating all non-preserved analyses for: (test1_g, test1_h)
-; CHECK: Invalidating all non-preserved analyses for: test1_g
 ; CHECK: Invalidating analysis: DominatorTreeAnalysis on test1_g
 ; CHECK: Invalidating analysis: LoopAnalysis on test1_g
 ; CHECK: Invalidating analysis: BranchProbabilityAnalysis on test1_g
 ; CHECK: Invalidating analysis: BlockFrequencyAnalysis on test1_g
-; CHECK: Invalidating all non-preserved analyses for: test1_h
 ; CHECK: Invalidating analysis: DominatorTreeAnalysis on test1_h
 ; CHECK: Invalidating analysis: LoopAnalysis on test1_h
 ; CHECK: Invalidating analysis: BranchProbabilityAnalysis on test1_h

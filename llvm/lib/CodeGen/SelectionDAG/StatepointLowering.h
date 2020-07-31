@@ -103,10 +103,6 @@ public:
     return AllocatedStackSlots.test(Offset);
   }
 
-  /// For each statepoint keep mapping from original derived pointer to
-  /// the statepoint node result defining its new value.
-  DenseMap<const Value *, SDValue> DerivedPtrMap;
-
 private:
   /// Maps pre-relocation value (gc pointer directly incoming into statepoint)
   /// into it's location (currently only stack slots)

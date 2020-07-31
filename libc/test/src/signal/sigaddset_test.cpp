@@ -10,7 +10,7 @@
 #include "include/signal.h"
 #include "src/signal/sigaddset.h"
 
-#include "utils/UnitTest/ErrnoSetterMatcher.h"
+#include "test/ErrnoSetterMatcher.h"
 #include "utils/UnitTest/Test.h"
 
 // This tests invalid inputs and ensures errno is properly set.

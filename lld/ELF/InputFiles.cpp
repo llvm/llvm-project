@@ -110,6 +110,7 @@ Optional<MemoryBufferRef> elf::readFile(StringRef path) {
     path = saver.save(config->chroot + path);
 
   log(path);
+  config->dependencyFiles.insert(path);
 
   auto mbOrErr = MemoryBuffer::getFile(path, -1, false);
   if (auto ec = mbOrErr.getError()) {

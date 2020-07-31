@@ -549,9 +549,6 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
         if (Subtarget->hasSPE()) {
           if (PPC::F4RCRegClass.contains(Reg) ||
               PPC::F8RCRegClass.contains(Reg) ||
-              PPC::QBRCRegClass.contains(Reg) ||
-              PPC::QFRCRegClass.contains(Reg) ||
-              PPC::QSRCRegClass.contains(Reg) ||
               PPC::VFRCRegClass.contains(Reg) ||
               PPC::VRRCRegClass.contains(Reg) ||
               PPC::VSFRCRegClass.contains(Reg) ||
@@ -1782,7 +1779,11 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
 }
 
 void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
-  PPCAsmPrinter::emitFunctionEntryLabel();
+  // It's not necessary to emit the label when we have individual
+  // function in its own csect.
+  if (!TM.getFunctionSections())
+    PPCAsmPrinter::emitFunctionEntryLabel();
+
   // Emit aliasing label for function entry point label.
   llvm::for_each(
       GOAliasMap[&MF->getFunction()], [this](const GlobalAlias *Alias) {

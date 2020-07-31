@@ -66,16 +66,14 @@ spv.module Logical GLSL450 {
   ^inner_false(%arg3: i32, %arg4: i32):
     spv.Return
   }
-}
 
-// -----
-
-spv.module Logical GLSL450 {
   spv.func @cond_branch_with_weights(%cond: i1) -> () "None" {
-    // expected-error@+1 {{failed to legalize operation 'spv.BranchConditional' that was explicitly marked illegal}}
+    // CHECK: llvm.cond_br %{{.*}} weights(dense<[1, 2]> : vector<2xi32>), ^bb1, ^bb2
     spv.BranchConditional %cond [1, 2], ^true, ^false
+  // CHECK: ^bb1:
   ^true:
     spv.Return
+  // CHECK: ^bb2:
   ^false:
     spv.Return
   }

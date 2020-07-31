@@ -50,6 +50,7 @@ static inline Error createError(const Twine &Err) {
 
 enum PPCInstrMasks : uint64_t {
   PADDI_R12_NO_DISP = 0x0610000039800000,
+  PLD_R12_NO_DISP = 0x04100000E5800000,
   MTCTR_R12 = 0x7D8903A6,
   BCTR = 0x4E800420,
 };

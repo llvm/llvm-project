@@ -1391,6 +1391,16 @@ define float @test_intrinsic_round(float %a) {
   ret float %res
 }
 
+declare i32 @llvm.lrint.i32.f32(float)
+define i32 @test_intrinsic_lrint(float %a) {
+; CHECK-LABEL: name: test_intrinsic_lrint
+; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $s0
+; CHECK: [[RES:%[0-9]+]]:_(s32) = G_INTRINSIC_LRINT [[A]]
+; CHECK: $w0 = COPY [[RES]]
+  %res = call i32 @llvm.lrint.i32.f32(float %a)
+  ret i32 %res
+}
+
 declare i32 @llvm.ctlz.i32(i32, i1)
 define i32 @test_ctlz_intrinsic_zero_not_undef(i32 %a) {
 ; CHECK-LABEL: name: test_ctlz_intrinsic_zero_not_undef

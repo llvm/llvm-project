@@ -737,54 +737,6 @@ i16x8 narrow_u_i16x8_i32x4(i32x4 low, i32x4 high) {
   // WEBASSEMBLY: ret
 }
 
-i16x8 widen_low_s_i16x8_i8x16(i8x16 v) {
-  return __builtin_wasm_widen_low_s_i16x8_i8x16(v);
-  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.widen.low.signed.v8i16.v16i8(<16 x i8> %v)
-  // WEBASSEMBLY: ret
-}
-
-i16x8 widen_high_s_i16x8_i8x16(i8x16 v) {
-  return __builtin_wasm_widen_high_s_i16x8_i8x16(v);
-  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.widen.high.signed.v8i16.v16i8(<16 x i8> %v)
-  // WEBASSEMBLY: ret
-}
-
-i16x8 widen_low_u_i16x8_i8x16(i8x16 v) {
-  return __builtin_wasm_widen_low_u_i16x8_i8x16(v);
-  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.widen.low.unsigned.v8i16.v16i8(<16 x i8> %v)
-  // WEBASSEMBLY: ret
-}
-
-i16x8 widen_high_u_i16x8_i8x16(i8x16 v) {
-  return __builtin_wasm_widen_high_u_i16x8_i8x16(v);
-  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.widen.high.unsigned.v8i16.v16i8(<16 x i8> %v)
-  // WEBASSEMBLY: ret
-}
-
-i32x4 widen_low_s_i32x4_i16x8(i16x8 v) {
-  return __builtin_wasm_widen_low_s_i32x4_i16x8(v);
-  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.widen.low.signed.v4i32.v8i16(<8 x i16> %v)
-  // WEBASSEMBLY: ret
-}
-
-i32x4 widen_high_s_i32x4_i16x8(i16x8 v) {
-  return __builtin_wasm_widen_high_s_i32x4_i16x8(v);
-  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.widen.high.signed.v4i32.v8i16(<8 x i16> %v)
-  // WEBASSEMBLY: ret
-}
-
-i32x4 widen_low_u_i32x4_i16x8(i16x8 v) {
-  return __builtin_wasm_widen_low_u_i32x4_i16x8(v);
-  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.widen.low.unsigned.v4i32.v8i16(<8 x i16> %v)
-  // WEBASSEMBLY: ret
-}
-
-i32x4 widen_high_u_i32x4_i16x8(i16x8 v) {
-  return __builtin_wasm_widen_high_u_i32x4_i16x8(v);
-  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.widen.high.unsigned.v4i32.v8i16(<8 x i16> %v)
-  // WEBASSEMBLY: ret
-}
-
 i8x16 swizzle_v8x16(i8x16 x, i8x16 y) {
   return __builtin_wasm_swizzle_v8x16(x, y);
   // WEBASSEMBLY: call <16 x i8> @llvm.wasm.swizzle(<16 x i8> %x, <16 x i8> %y)

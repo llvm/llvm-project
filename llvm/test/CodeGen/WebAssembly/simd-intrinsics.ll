@@ -294,46 +294,6 @@ define <8 x i16> @narrow_unsigned_v8i16(<4 x i32> %low, <4 x i32> %high) {
   ret <8 x i16> %a
 }
 
-; CHECK-LABEL: widen_low_signed_v8i16:
-; SIMD128-NEXT: .functype widen_low_signed_v8i16 (v128) -> (v128){{$}}
-; SIMD128-NEXT: i16x8.widen_low_i8x16_s $push[[R:[0-9]+]]=, $0{{$}}
-; SIMD128-NEXT: return $pop[[R]]{{$}}
-declare <8 x i16> @llvm.wasm.widen.low.signed.v8i16.v16i8(<16 x i8>)
-define <8 x i16> @widen_low_signed_v8i16(<16 x i8> %v) {
-  %a = call <8 x i16> @llvm.wasm.widen.low.signed.v8i16.v16i8(<16 x i8> %v)
-  ret <8 x i16> %a
-}
-
-; CHECK-LABEL: widen_high_signed_v8i16:
-; SIMD128-NEXT: .functype widen_high_signed_v8i16 (v128) -> (v128){{$}}
-; SIMD128-NEXT: i16x8.widen_high_i8x16_s $push[[R:[0-9]+]]=, $0{{$}}
-; SIMD128-NEXT: return $pop[[R]]{{$}}
-declare <8 x i16> @llvm.wasm.widen.high.signed.v8i16.v16i8(<16 x i8>)
-define <8 x i16> @widen_high_signed_v8i16(<16 x i8> %v) {
-  %a = call <8 x i16> @llvm.wasm.widen.high.signed.v8i16.v16i8(<16 x i8> %v)
-  ret <8 x i16> %a
-}
-
-; CHECK-LABEL: widen_low_unsigned_v8i16:
-; SIMD128-NEXT: .functype widen_low_unsigned_v8i16 (v128) -> (v128){{$}}
-; SIMD128-NEXT: i16x8.widen_low_i8x16_u $push[[R:[0-9]+]]=, $0{{$}}
-; SIMD128-NEXT: return $pop[[R]]{{$}}
-declare <8 x i16> @llvm.wasm.widen.low.unsigned.v8i16.v16i8(<16 x i8>)
-define <8 x i16> @widen_low_unsigned_v8i16(<16 x i8> %v) {
-  %a = call <8 x i16> @llvm.wasm.widen.low.unsigned.v8i16.v16i8(<16 x i8> %v)
-  ret <8 x i16> %a
-}
-
-; CHECK-LABEL: widen_high_unsigned_v8i16:
-; SIMD128-NEXT: .functype widen_high_unsigned_v8i16 (v128) -> (v128){{$}}
-; SIMD128-NEXT: i16x8.widen_high_i8x16_u $push[[R:[0-9]+]]=, $0{{$}}
-; SIMD128-NEXT: return $pop[[R]]{{$}}
-declare <8 x i16> @llvm.wasm.widen.high.unsigned.v8i16.v16i8(<16 x i8>)
-define <8 x i16> @widen_high_unsigned_v8i16(<16 x i8> %v) {
-  %a = call <8 x i16> @llvm.wasm.widen.high.unsigned.v8i16.v16i8(<16 x i8> %v)
-  ret <8 x i16> %a
-}
-
 ; ==============================================================================
 ; 4 x i32
 ; ==============================================================================
@@ -408,46 +368,6 @@ define <4 x i32> @trunc_sat_s_v4i32(<4 x float> %x) {
 declare <4 x i32> @llvm.wasm.trunc.saturate.unsigned.v4i32.v4f32(<4 x float>)
 define <4 x i32> @trunc_sat_u_v4i32(<4 x float> %x) {
   %a = call <4 x i32> @llvm.wasm.trunc.saturate.unsigned.v4i32.v4f32(<4 x float> %x)
-  ret <4 x i32> %a
-}
-
-; CHECK-LABEL: widen_low_signed_v4i32:
-; SIMD128-NEXT: .functype widen_low_signed_v4i32 (v128) -> (v128){{$}}
-; SIMD128-NEXT: i32x4.widen_low_i16x8_s $push[[R:[0-9]+]]=, $0{{$}}
-; SIMD128-NEXT: return $pop[[R]]{{$}}
-declare <4 x i32> @llvm.wasm.widen.low.signed.v4i32.v8i16(<8 x i16>)
-define <4 x i32> @widen_low_signed_v4i32(<8 x i16> %v) {
-  %a = call <4 x i32> @llvm.wasm.widen.low.signed.v4i32.v8i16(<8 x i16> %v)
-  ret <4 x i32> %a
-}
-
-; CHECK-LABEL: widen_high_signed_v4i32:
-; SIMD128-NEXT: .functype widen_high_signed_v4i32 (v128) -> (v128){{$}}
-; SIMD128-NEXT: i32x4.widen_high_i16x8_s $push[[R:[0-9]+]]=, $0{{$}}
-; SIMD128-NEXT: return $pop[[R]]{{$}}
-declare <4 x i32> @llvm.wasm.widen.high.signed.v4i32.v8i16(<8 x i16>)
-define <4 x i32> @widen_high_signed_v4i32(<8 x i16> %v) {
-  %a = call <4 x i32> @llvm.wasm.widen.high.signed.v4i32.v8i16(<8 x i16> %v)
-  ret <4 x i32> %a
-}
-
-; CHECK-LABEL: widen_low_unsigned_v4i32:
-; SIMD128-NEXT: .functype widen_low_unsigned_v4i32 (v128) -> (v128){{$}}
-; SIMD128-NEXT: i32x4.widen_low_i16x8_u $push[[R:[0-9]+]]=, $0{{$}}
-; SIMD128-NEXT: return $pop[[R]]{{$}}
-declare <4 x i32> @llvm.wasm.widen.low.unsigned.v4i32.v8i16(<8 x i16>)
-define <4 x i32> @widen_low_unsigned_v4i32(<8 x i16> %v) {
-  %a = call <4 x i32> @llvm.wasm.widen.low.unsigned.v4i32.v8i16(<8 x i16> %v)
-  ret <4 x i32> %a
-}
-
-; CHECK-LABEL: widen_high_unsigned_v4i32:
-; SIMD128-NEXT: .functype widen_high_unsigned_v4i32 (v128) -> (v128){{$}}
-; SIMD128-NEXT: i32x4.widen_high_i16x8_u $push[[R:[0-9]+]]=, $0{{$}}
-; SIMD128-NEXT: return $pop[[R]]{{$}}
-declare <4 x i32> @llvm.wasm.widen.high.unsigned.v4i32.v8i16(<8 x i16>)
-define <4 x i32> @widen_high_unsigned_v4i32(<8 x i16> %v) {
-  %a = call <4 x i32> @llvm.wasm.widen.high.unsigned.v4i32.v8i16(<8 x i16> %v)
   ret <4 x i32> %a
 }
 

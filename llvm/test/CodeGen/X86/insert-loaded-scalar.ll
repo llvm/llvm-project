@@ -191,7 +191,7 @@ define <4 x float> @load32_ins_eltc_v4f32(float* %p) nounwind {
 ; SSE-LABEL: load32_ins_eltc_v4f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,2,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load32_ins_eltc_v4f32:
@@ -376,7 +376,7 @@ define <8 x i32> @load32_ins_eltc_v8i32(i32* %p) nounwind {
 ; SSE-LABEL: load32_ins_eltc_v8i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,2,0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,0,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load32_ins_eltc_v8i32:

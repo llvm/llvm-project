@@ -31,7 +31,7 @@
 #include <sys/times.h>
 #include <unistd.h>
 
-#if KMP_OS_LINUX && !KMP_OS_CNK
+#if KMP_OS_LINUX
 #include <sys/sysinfo.h>
 #if KMP_USE_FUTEX
 // We should really include <futex.h>, but that causes compatibility problems on

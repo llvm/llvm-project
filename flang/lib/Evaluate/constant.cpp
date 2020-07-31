@@ -93,13 +93,13 @@ std::optional<std::vector<int>> ValidateDimensionOrder(
   }
 }
 
-bool IsValidShape(const ConstantSubscripts &shape) {
+bool HasNegativeExtent(const ConstantSubscripts &shape) {
   for (ConstantSubscript extent : shape) {
     if (extent < 0) {
-      return false;
+      return true;
     }
   }
-  return shape.size() <= common::maxRank;
+  return false;
 }
 
 template <typename RESULT, typename ELEMENT>

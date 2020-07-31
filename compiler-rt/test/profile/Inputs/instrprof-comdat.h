@@ -18,6 +18,6 @@ template <class T> T FOO<T>::DoIt(T ti) { // HEADER: [[@LINE]]|  2|template
     if (I > ti / 2)                       // HEADER: [[@LINE]]| 20|    if (I > ti
       t -= 1;                             // HEADER: [[@LINE]]|  8|      t -= 1;
   }                                       // HEADER: [[@LINE]]| 10|  }
-                                          // HEADER: [[@LINE]]|  1|
+                                          // HEADER: [[@LINE]]|   |
   return t;                               // HEADER: [[@LINE]]|  1|  return t;
 }

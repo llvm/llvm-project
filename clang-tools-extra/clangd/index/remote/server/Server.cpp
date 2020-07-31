@@ -39,6 +39,15 @@ llvm::cl::opt<std::string> IndexPath(llvm::cl::desc("<INDEX FILE>"),
 llvm::cl::opt<std::string> IndexRoot(llvm::cl::desc("<PROJECT ROOT>"),
                                      llvm::cl::Positional, llvm::cl::Required);
 
+llvm::cl::opt<Logger::Level> LogLevel{
+    "log",
+    llvm::cl::desc("Verbosity of log messages written to stderr"),
+    values(clEnumValN(Logger::Error, "error", "Error messages only"),
+           clEnumValN(Logger::Info, "info", "High level execution tracing"),
+           clEnumValN(Logger::Debug, "verbose", "Low level details")),
+    llvm::cl::init(Logger::Info),
+};
+
 llvm::cl::opt<std::string> TraceFile(
     "trace-file",
     llvm::cl::desc("Path to the file where tracer logs will be stored"));
@@ -81,7 +90,7 @@ private:
     }
     unsigned Sent = 0;
     unsigned FailedToSend = 0;
-    Index->lookup(*Req, [&](const auto &Item) {
+    Index->lookup(*Req, [&](const clangd::Symbol &Item) {
       auto SerializedItem = ProtobufMarshaller->toProtobuf(Item);
       if (!SerializedItem) {
         ++FailedToSend;
@@ -112,7 +121,7 @@ private:
     }
     unsigned Sent = 0;
     unsigned FailedToSend = 0;
-    bool HasMore = Index->fuzzyFind(*Req, [&](const auto &Item) {
+    bool HasMore = Index->fuzzyFind(*Req, [&](const clangd::Symbol &Item) {
       auto SerializedItem = ProtobufMarshaller->toProtobuf(Item);
       if (!SerializedItem) {
         ++FailedToSend;
@@ -141,7 +150,7 @@ private:
     }
     unsigned Sent = 0;
     unsigned FailedToSend = 0;
-    bool HasMore = Index->refs(*Req, [&](const auto &Item) {
+    bool HasMore = Index->refs(*Req, [&](const clangd::Ref &Item) {
       auto SerializedItem = ProtobufMarshaller->toProtobuf(Item);
       if (!SerializedItem) {
         ++FailedToSend;
@@ -154,6 +163,38 @@ private:
     });
     RefsReply LastMessage;
     LastMessage.set_final_result(HasMore);
+    Reply->Write(LastMessage);
+    SPAN_ATTACH(Tracer, "Sent", Sent);
+    SPAN_ATTACH(Tracer, "Failed to send", FailedToSend);
+    return grpc::Status::OK;
+  }
+
+  grpc::Status Relations(grpc::ServerContext *Context,
+                         const RelationsRequest *Request,
+                         grpc::ServerWriter<RelationsReply> *Reply) override {
+    trace::Span Tracer(RelationsRequest::descriptor()->name());
+    auto Req = ProtobufMarshaller->fromProtobuf(Request);
+    if (!Req) {
+      elog("Can not parse RelationsRequest from protobuf: {0}",
+           Req.takeError());
+      return grpc::Status::CANCELLED;
+    }
+    unsigned Sent = 0;
+    unsigned FailedToSend = 0;
+    Index->relations(
+        *Req, [&](const SymbolID &Subject, const clangd::Symbol &Object) {
+          auto SerializedItem = ProtobufMarshaller->toProtobuf(Subject, Object);
+          if (!SerializedItem) {
+            ++FailedToSend;
+            return;
+          }
+          RelationsReply NextMessage;
+          *NextMessage.mutable_stream_result() = *SerializedItem;
+          Reply->Write(NextMessage);
+          ++Sent;
+        });
+    RelationsReply LastMessage;
+    LastMessage.set_final_result(true);
     Reply->Write(LastMessage);
     SPAN_ATTACH(Tracer, "Sent", Sent);
     SPAN_ATTACH(Tracer, "Failed to send", FailedToSend);
@@ -173,7 +214,7 @@ void runServer(std::unique_ptr<clangd::SymbolIndex> Index,
   Builder.AddListeningPort(ServerAddress, grpc::InsecureServerCredentials());
   Builder.RegisterService(&Service);
   std::unique_ptr<grpc::Server> Server(Builder.BuildAndStart());
-  llvm::outs() << "Server listening on " << ServerAddress << '\n';
+  log("Server listening on {0}", ServerAddress);
 
   Server->Wait();
 }
@@ -191,9 +232,15 @@ int main(int argc, char *argv[]) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   if (!llvm::sys::path::is_absolute(IndexRoot)) {
-    elog("Index root should be an absolute path.");
+    llvm::errs() << "Index root should be an absolute path.\n";
     return -1;
   }
+
+  llvm::errs().SetBuffered();
+  // Don't flush stdout when logging for thread safety.
+  llvm::errs().tie(nullptr);
+  clang::clangd::StreamLogger Logger(llvm::errs(), LogLevel);
+  clang::clangd::LoggingSession LoggingSession(Logger);
 
   llvm::Optional<llvm::raw_fd_ostream> TracerStream;
   std::unique_ptr<clang::clangd::trace::EventTracer> Tracer;
@@ -220,7 +267,7 @@ int main(int argc, char *argv[]) {
   std::unique_ptr<clang::clangd::SymbolIndex> Index = openIndex(IndexPath);
 
   if (!Index) {
-    elog("Failed to open the index.");
+    llvm::errs() << "Failed to open the index.\n";
     return -1;
   }
 

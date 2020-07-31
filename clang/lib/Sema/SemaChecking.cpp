@@ -1274,11 +1274,8 @@ static bool SemaBuiltinPipePackets(Sema &S, CallExpr *Call) {
 // \return True if a semantic error has been found, false otherwise.
 static bool SemaOpenCLBuiltinToAddr(Sema &S, unsigned BuiltinID,
                                     CallExpr *Call) {
-  if (Call->getNumArgs() != 1) {
-    S.Diag(Call->getBeginLoc(), diag::err_opencl_builtin_to_addr_arg_num)
-        << Call->getDirectCallee() << Call->getSourceRange();
+  if (checkArgCount(S, Call, 1))
     return true;
-  }
 
   auto RT = Call->getArg(0)->getType();
   if (!RT->isPointerType() || RT->getPointeeType()
@@ -5572,21 +5569,8 @@ bool Sema::SemaBuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall) {
   if (checkVAStartABI(*this, BuiltinID, Fn))
     return true;
 
-  if (TheCall->getNumArgs() > 2) {
-    Diag(TheCall->getArg(2)->getBeginLoc(),
-         diag::err_typecheck_call_too_many_args)
-        << 0 /*function call*/ << 2 << TheCall->getNumArgs()
-        << Fn->getSourceRange()
-        << SourceRange(TheCall->getArg(2)->getBeginLoc(),
-                       (*(TheCall->arg_end() - 1))->getEndLoc());
+  if (checkArgCount(*this, TheCall, 2))
     return true;
-  }
-
-  if (TheCall->getNumArgs() < 2) {
-    return Diag(TheCall->getEndLoc(),
-                diag::err_typecheck_call_too_few_args_at_least)
-           << 0 /*function call*/ << 2 << TheCall->getNumArgs();
-  }
 
   // Type-check the first argument normally.
   if (checkBuiltinArgument(*this, TheCall, 0))
@@ -5696,15 +5680,8 @@ bool Sema::SemaBuiltinVAStartARMMicrosoft(CallExpr *Call) {
 /// SemaBuiltinUnorderedCompare - Handle functions like __builtin_isgreater and
 /// friends.  This is declared to take (...), so we have to check everything.
 bool Sema::SemaBuiltinUnorderedCompare(CallExpr *TheCall) {
-  if (TheCall->getNumArgs() < 2)
-    return Diag(TheCall->getEndLoc(), diag::err_typecheck_call_too_few_args)
-           << 0 << 2 << TheCall->getNumArgs() /*function call*/;
-  if (TheCall->getNumArgs() > 2)
-    return Diag(TheCall->getArg(2)->getBeginLoc(),
-                diag::err_typecheck_call_too_many_args)
-           << 0 /*function call*/ << 2 << TheCall->getNumArgs()
-           << SourceRange(TheCall->getArg(2)->getBeginLoc(),
-                          (*(TheCall->arg_end() - 1))->getEndLoc());
+  if (checkArgCount(*this, TheCall, 2))
+    return true;
 
   ExprResult OrigArg0 = TheCall->getArg(0);
   ExprResult OrigArg1 = TheCall->getArg(1);
@@ -5742,15 +5719,8 @@ bool Sema::SemaBuiltinUnorderedCompare(CallExpr *TheCall) {
 /// to check everything. We expect the last argument to be a floating point
 /// value.
 bool Sema::SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs) {
-  if (TheCall->getNumArgs() < NumArgs)
-    return Diag(TheCall->getEndLoc(), diag::err_typecheck_call_too_few_args)
-           << 0 << NumArgs << TheCall->getNumArgs() /*function call*/;
-  if (TheCall->getNumArgs() > NumArgs)
-    return Diag(TheCall->getArg(NumArgs)->getBeginLoc(),
-                diag::err_typecheck_call_too_many_args)
-           << 0 /*function call*/ << NumArgs << TheCall->getNumArgs()
-           << SourceRange(TheCall->getArg(NumArgs)->getBeginLoc(),
-                          (*(TheCall->arg_end() - 1))->getEndLoc());
+  if (checkArgCount(*this, TheCall, NumArgs))
+    return true;
 
   // __builtin_fpclassify is the only case where NumArgs != 1, so we can count
   // on all preceding parameters just being int.  Try all of those.
@@ -5854,17 +5824,8 @@ bool Sema::SemaBuiltinComplex(CallExpr *TheCall) {
 // vector short vec_xxsldwi(vector short, vector short, int);
 bool Sema::SemaBuiltinVSX(CallExpr *TheCall) {
   unsigned ExpectedNumArgs = 3;
-  if (TheCall->getNumArgs() < ExpectedNumArgs)
-    return Diag(TheCall->getEndLoc(),
-                diag::err_typecheck_call_too_few_args_at_least)
-           << 0 /*function call*/ << ExpectedNumArgs << TheCall->getNumArgs()
-           << TheCall->getSourceRange();
-
-  if (TheCall->getNumArgs() > ExpectedNumArgs)
-    return Diag(TheCall->getEndLoc(),
-                diag::err_typecheck_call_too_many_args_at_most)
-           << 0 /*function call*/ << ExpectedNumArgs << TheCall->getNumArgs()
-           << TheCall->getSourceRange();
+  if (checkArgCount(*this, TheCall, ExpectedNumArgs))
+    return true;
 
   // Check the third argument is a compile time constant
   if (!TheCall->getArg(2)->isIntegerConstantExpr(Context))
@@ -13962,8 +13923,7 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
 
   if (ND)
     DiagRuntimeBehavior(ND->getBeginLoc(), BaseExpr,
-                        PDiag(diag::note_array_declared_here)
-                            << ND->getDeclName());
+                        PDiag(diag::note_array_declared_here) << ND);
 }
 
 void Sema::CheckArrayAccess(const Expr *expr) {

@@ -17,10 +17,10 @@ add_header(
     __llvm-libc-stdc-types.h
 )
 
-add_header(
+add_gen_header(
   ctype
-  HDR
-   ctype.h
+  DEF_FILE ctype.h.def
+  GEN_HDR ctype.h
   DEPENDS
     .llvm_libc_common_h
 )

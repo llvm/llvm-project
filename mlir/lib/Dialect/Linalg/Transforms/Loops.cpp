@@ -295,16 +295,59 @@ void emitScalarImplementation(ArrayRef<Value> allIvs, FillOp fillOp) {
   nPar > 0 ? O(ivs) = fillOp.value() : O() = fillOp.value();
 }
 
+/// Following functions emit scalar part of the N-D convolution op.
+/// N-D convolution has 2N loops:
+///   1-N: Iterate over the output array *O* with iterators *m1, ..., mN*.
+///   N-2N:. Iterate over the kernel *K* with iterators *n1, ..., nN*.
+///
+/// The scalar part accumulates products of input array *I* values with kernel
+/// ones. The accumulation expression therefore looks like:
+///   O[m1, ..., mN] += I[m1 + n1, ..., mN + nN] * K[n1, ..., nN].
+/// Note that the input array has to be padded in order to prevent
+/// out of bounds accesses.
 template <typename IndexedValueType>
-void emitScalarImplementation(ArrayRef<Value> allIvs, DotOp dotOp) {
-  assert(dotOp.hasBufferSemantics() &&
+void emitScalarImplementation(ArrayRef<Value> allIvs, Conv1DOp convOp) {
+  assert(convOp.hasBufferSemantics() &&
          "expected linalg op with buffer semantics");
-  assert(allIvs.size() == 1);
-  Value r_i(allIvs[0]);
-  IndexedValueType A(dotOp.getInput(0)), B(dotOp.getInput(1)),
-      C(dotOp.getOutputBuffer(0));
-  // Emit scalar form.
-  C() = C() + A(r_i) * B(r_i);
+  assert(allIvs.size() == 2);
+  Value m1(allIvs[0]);
+  Value n1(allIvs[1]);
+  IndexedValueType I(convOp.getInput(0)), K(convOp.getInput(1)),
+      O(convOp.getOutputBuffer(0));
+  // Emit scalar form for the 1D conv case.
+  Value i1 = m1 + n1;
+  O(m1) = O(m1) + I(i1) * K(n1);
+}
+
+template <typename IndexedValueType>
+void emitScalarImplementation(ArrayRef<Value> allIvs, Conv2DOp convOp) {
+  assert(convOp.hasBufferSemantics() &&
+         "expected linalg op with buffer semantics");
+  assert(allIvs.size() == 4);
+  Value m1(allIvs[0]), m2(allIvs[1]);
+  Value n1(allIvs[2]), n2(allIvs[3]);
+  IndexedValueType I(convOp.getInput(0)), K(convOp.getInput(1)),
+      O(convOp.getOutputBuffer(0));
+  // Emit scalar form for the 2D conv case.
+  Value i1 = m1 + n1;
+  Value i2 = m2 + n2;
+  O(m1, m2) = O(m1, m2) + I(i1, i2) * K(n1, n2);
+}
+
+template <typename IndexedValueType>
+void emitScalarImplementation(ArrayRef<Value> allIvs, Conv3DOp convOp) {
+  assert(convOp.hasBufferSemantics() &&
+         "expected linalg op with buffer semantics");
+  assert(allIvs.size() == 6);
+  Value m1(allIvs[0]), m2(allIvs[1]), m3(allIvs[2]);
+  Value n1(allIvs[3]), n2(allIvs[4]), n3(allIvs[5]);
+  IndexedValueType I(convOp.getInput(0)), K(convOp.getInput(1)),
+      O(convOp.getOutputBuffer(0));
+  // Emit scalar form for the 3D conv case.
+  Value i1 = m1 + n1;
+  Value i2 = m2 + n2;
+  Value i3 = m3 + n3;
+  O(m1, m2, m3) = O(m1, m2, m3) + I(i1, i2, i3) * K(n1, n2, n3);
 }
 
 template <typename IndexedValueType>
@@ -673,8 +716,6 @@ static Optional<LinalgLoops> linalgOpToLoopsImplSwitch(Operation *op,
     return linalgOpToLoopsImpl<LoopTy, CopyOp>(op, builder);
   if (isa<FillOp>(op))
     return linalgOpToLoopsImpl<LoopTy, FillOp>(op, builder);
-  if (isa<DotOp>(op))
-    return linalgOpToLoopsImpl<LoopTy, DotOp>(op, builder);
   if (isa<ConvOp>(op))
     return linalgOpToLoopsImpl<LoopTy, ConvOp>(op, builder);
   if (isa<PoolingMaxOp>(op))
@@ -693,6 +734,8 @@ static Optional<LinalgLoops> linalgOpToLoopsImplSwitch(Operation *op,
     return linalgOpToLoopsImpl<LoopTy, MatmulOp>(op, builder);
   if (isa<MatvecOp>(op))
     return linalgOpToLoopsImpl<LoopTy, MatvecOp>(op, builder);
+  if (isa<DotOp>(op))
+    return linalgOpToLoopsImpl<LoopTy, DotOp>(op, builder);
   if (isa<BatchMatmulOp>(op))
     return linalgOpToLoopsImpl<LoopTy, BatchMatmulOp>(op, builder);
   llvm_unreachable("Unexpected op in linalgOpToLoopsImpl");

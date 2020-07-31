@@ -14975,6 +14975,11 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
     if (isa<ScalableVectorType>(Inst.getOperand(i)->getType()))
       return true;
 
+  if (const AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
+    if (isa<ScalableVectorType>(AI->getAllocatedType()))
+      return true;
+  }
+
   return false;
 }
 

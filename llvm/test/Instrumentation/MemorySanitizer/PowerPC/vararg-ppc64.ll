@@ -55,21 +55,6 @@ define i32 @bar2() {
 ; CHECK: store <2 x i64> zeroinitializer, <2 x i64>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_va_arg_tls to i64), i64 8) to <2 x i64>*), align 8
 ; CHECK: store {{.*}} 24, {{.*}} @__msan_va_arg_overflow_size_tls
 
-; Check QPX vector argument.
-define i32 @bar3() "target-features"="+qpx" {
-  %1 = call i32 (i32, ...) @foo(i32 0, i32 1, i32 2, <4 x double> <double 1.0, double 2.0, double 3.0, double 4.0>)
-  ret i32 %1
-}
-
-; That one is even stranger: the parameter save area starts at offset 48 from
-; (32-byte aligned) stack pointer, the vector parameter is at 96 bytes from
-; the stack pointer, so its offset from parameter save area is misaligned.
-; CHECK-LABEL: @bar3
-; CHECK: store i32 0, i32* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_va_arg_tls to i64), i64 4) to i32*), align 8
-; CHECK: store i32 0, i32* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_va_arg_tls to i64), i64 12) to i32*), align 8
-; CHECK: store <4 x i64> zeroinitializer, <4 x i64>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_va_arg_tls to i64), i64 40) to <4 x i64>*), align 8
-; CHECK: store {{.*}} 72, {{.*}} @__msan_va_arg_overflow_size_tls
-
 ; Check i64 array.
 define i32 @bar4() {
   %1 = call i32 (i32, ...) @foo(i32 0, [2 x i64] [i64 1, i64 2])

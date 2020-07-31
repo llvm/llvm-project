@@ -8,7 +8,7 @@ define void @any_extend_load_v8i64(<8 x i8> * %ptr) {
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; KNL-NEXT:    vpmovzxbq {{.*#+}} ymm1 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero
-; KNL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; KNL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; KNL-NEXT:    vpmovzxbq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero
 ; KNL-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; KNL-NEXT:    vpaddq {{.*}}(%rip){1to8}, %zmm0, %zmm0

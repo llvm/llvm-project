@@ -22,6 +22,7 @@
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/formatting.h"
+#include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"
@@ -600,9 +601,9 @@ std::optional<std::vector<A>> GetIntegerVector(const B &x) {
 // gets re-folded.
 template <typename T> Expr<T> MakeInvalidIntrinsic(FunctionRef<T> &&funcRef) {
   SpecificIntrinsic invalid{std::get<SpecificIntrinsic>(funcRef.proc().u)};
-  invalid.name = "(invalid intrinsic function call)";
+  invalid.name = IntrinsicProcTable::InvalidName;
   return Expr<T>{FunctionRef<T>{ProcedureDesignator{std::move(invalid)},
-      ActualArguments{ActualArgument{AsGenericExpr(std::move(funcRef))}}}};
+      ActualArguments{std::move(funcRef.arguments())}}};
 }
 
 template <typename T> Expr<T> Folder<T>::Reshape(FunctionRef<T> &&funcRef) {
@@ -615,8 +616,13 @@ template <typename T> Expr<T> Folder<T>::Reshape(FunctionRef<T> &&funcRef) {
   std::optional<std::vector<int>> order{GetIntegerVector<int>(args[3])};
   if (!source || !shape || (args[2] && !pad) || (args[3] && !order)) {
     return Expr<T>{std::move(funcRef)}; // Non-constant arguments
-  } else if (!IsValidShape(shape.value())) {
-    context_.messages().Say("Invalid SHAPE in RESHAPE"_en_US);
+  } else if (shape.value().size() > common::maxRank) {
+    context_.messages().Say(
+        "Size of 'shape=' argument must not be greater than %d"_err_en_US,
+        common::maxRank);
+  } else if (HasNegativeExtent(shape.value())) {
+    context_.messages().Say(
+        "'shape=' argument must not have a negative extent"_err_en_US);
   } else {
     int rank{GetRank(shape.value())};
     std::size_t resultElements{TotalElementCount(shape.value())};
@@ -626,12 +632,13 @@ template <typename T> Expr<T> Folder<T>::Reshape(FunctionRef<T> &&funcRef) {
     }
     std::vector<int> *dimOrderPtr{dimOrder ? &dimOrder.value() : nullptr};
     if (order && !dimOrder) {
-      context_.messages().Say("Invalid ORDER in RESHAPE"_en_US);
+      context_.messages().Say("Invalid 'order=' argument in RESHAPE"_err_en_US);
     } else if (resultElements > source->size() && (!pad || pad->empty())) {
-      context_.messages().Say("Too few SOURCE elements in RESHAPE and PAD"
-                              "is not present or has null size"_en_US);
+      context_.messages().Say(
+          "Too few elements in 'source=' argument and 'pad=' "
+          "argument is not present or has null size"_err_en_US);
     } else {
-      Constant<T> result{!source->empty()
+      Constant<T> result{!source->empty() || !pad
               ? source->Reshape(std::move(shape.value()))
               : pad->Reshape(std::move(shape.value()))};
       ConstantSubscripts subscripts{result.lbounds()};

@@ -21,7 +21,7 @@
 
 # RUN: llvm-objdump --section=__const --full-contents -d %t | FileCheck %s --check-prefix=NONPCREL
 # NONPCREL:      Contents of section __const:
-# NONPCREL-NEXT: 100001000 b0030000 01000000 b0030000 01000000
+# NONPCREL-NEXT: 100001000 d0030000 01000000 d0030000 01000000
 
 .section __TEXT,__text
 .globl _main, _f

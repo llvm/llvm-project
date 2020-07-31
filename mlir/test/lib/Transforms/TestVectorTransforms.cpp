@@ -18,16 +18,16 @@ using namespace mlir;
 using namespace mlir::vector;
 namespace {
 
-#include "TestVectorTransformPatterns.h.inc"
-
 struct TestVectorToVectorConversion
     : public PassWrapper<TestVectorToVectorConversion, FunctionPass> {
   void runOnFunction() override {
     OwningRewritePatternList patterns;
-    auto *context = &getContext();
-    populateWithGenerated(context, &patterns);
-    populateVectorToVectorCanonicalizationPatterns(patterns, context);
-    populateVectorToVectorTransformationPatterns(patterns, context);
+    auto *ctx = &getContext();
+    patterns.insert<UnrollVectorPattern<AddFOp>>(ArrayRef<int64_t>{2, 2}, ctx);
+    patterns.insert<UnrollVectorPattern<vector::ContractionOp>>(
+        ArrayRef<int64_t>{2, 2, 2}, ctx);
+    populateVectorToVectorCanonicalizationPatterns(patterns, ctx);
+    populateVectorToVectorTransformationPatterns(patterns, ctx);
     applyPatternsAndFoldGreedily(getFunction(), patterns);
   }
 };

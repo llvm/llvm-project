@@ -19,8 +19,8 @@ entry:
 
 ; AFTER-FINALIZE-ISEL:  test_setrndi
 ; AFTER-FINALIZE-ISEL:  MFFS implicit $rm
-; AFTER-FINALIZE-ISEL:  MTFSB0 31, implicit-def $rm, implicit $rm
-; AFTER-FINALIZE-ISEL:  MTFSB1 30, implicit-def $rm, implicit $rm
+; AFTER-FINALIZE-ISEL:  MTFSB0 31, implicit-def $rm
+; AFTER-FINALIZE-ISEL:  MTFSB1 30, implicit-def $rm
 
 ; CHECK-LABEL: @test_setrndi
 ; CHECK:      # %bb.0:
@@ -40,7 +40,7 @@ entry:
 
 ; AFTER-FINALIZE-ISEL: test_setrnd
 ; AFTER-FINALIZE-ISEL: MFFS implicit $rm
-; AFTER-FINALIZE-ISEL: MTFSF 255, %7, 0, 0
+; AFTER-FINALIZE-ISEL: MTFSF 255, %7, 0, 0, implicit-def $rm
 
 ; CHECK-LABEL: @test_setrnd
 ; CHECK:      # %bb.0:

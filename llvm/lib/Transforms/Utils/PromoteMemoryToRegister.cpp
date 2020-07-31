@@ -311,31 +311,16 @@ static void removeIntrinsicUsers(AllocaInst *AI) {
   // Knowing that this alloca is promotable, we know that it's safe to kill all
   // instructions except for load and store.
 
-  // Helper to drop the uses of \p I in \p UserI.
-  auto DropUsesIn = [](Instruction *UserI, Instruction *I,
-                       Instruction::user_iterator &UI,
-                       const Instruction::user_iterator &UE) {
-    // TODO For now we forget assumed information, this can be improved.
-    assert(isa<IntrinsicInst>(UserI) &&
-           cast<IntrinsicInst>(UserI)->getIntrinsicID() == Intrinsic::assume &&
-           "Expected assume");
-
-    // Skip ahead if User has multiple uses of I.
-    while (UI != UE && *UI == UserI)
-      ++UI;
-
-    I->dropDroppableUsesByUser(*UserI);
-  };
-
-  for (auto UI = AI->user_begin(), UE = AI->user_end(); UI != UE;) {
-    Instruction *I = cast<Instruction>(*UI);
+  for (auto UI = AI->use_begin(), UE = AI->use_end(); UI != UE;) {
+    Instruction *I = cast<Instruction>(UI->getUser());
+    Use &U = *UI;
     ++UI;
     if (isa<LoadInst>(I) || isa<StoreInst>(I))
       continue;
 
     // Drop the use of AI in droppable instructions.
     if (I->isDroppable()) {
-      DropUsesIn(I, AI, UI, UE);
+      I->dropDroppableUse(U);
       continue;
     }
 
@@ -343,13 +328,14 @@ static void removeIntrinsicUsers(AllocaInst *AI) {
       // The only users of this bitcast/GEP instruction are lifetime intrinsics.
       // Follow the use/def chain to erase them now instead of leaving it for
       // dead code elimination later.
-      for (auto UUI = I->user_begin(), UUE = I->user_end(); UUI != UUE;) {
-        Instruction *Inst = cast<Instruction>(*UUI);
+      for (auto UUI = I->use_begin(), UUE = I->use_end(); UUI != UUE;) {
+        Instruction *Inst = cast<Instruction>(UUI->getUser());
+        Use &UU = *UUI;
         ++UUI;
 
         // Drop the use of I in droppable instructions.
         if (Inst->isDroppable()) {
-          DropUsesIn(Inst, I, UUI, UUE);
+          Inst->dropDroppableUse(UU);
           continue;
         }
         Inst->eraseFromParent();

@@ -274,18 +274,18 @@
 // GLIO_ONLY_DWARF2: "-dwarf-version=2"
 //
 // G_ONLY: "-cc1"
-// G_ONLY: "-debug-info-kind=constructor"
+// G_ONLY: "-debug-info-kind=limited"
 //
 // These tests assert that "-gline-tables-only" "-g" uses the latter,
 // but otherwise not caring about the DebugInfoKind.
 // G_ONLY_DWARF2: "-cc1"
-// G_ONLY_DWARF2: "-debug-info-kind={{standalone|constructor}}"
+// G_ONLY_DWARF2: "-debug-info-kind={{standalone|limited}}"
 // G_ONLY_DWARF2: "-dwarf-version=2"
 //
 // G_STANDALONE: "-cc1"
 // G_STANDALONE: "-debug-info-kind=standalone"
 // G_LIMITED: "-cc1"
-// G_LIMITED: "-debug-info-kind=constructor"
+// G_LIMITED: "-debug-info-kind=limited"
 // G_DWARF2: "-dwarf-version=2"
 // G_DWARF4: "-dwarf-version=4"
 //
@@ -339,7 +339,7 @@
 // NOCI: "-gno-column-info"
 //
 // GEXTREFS: "-dwarf-ext-refs" "-fmodule-format=obj"
-// GEXTREFS: "-debug-info-kind={{standalone|constructor}}"
+// GEXTREFS: "-debug-info-kind={{standalone|limited}}"
 
 // RUN: not %clang -cc1 -debug-info-kind=watkind 2>&1 | FileCheck -check-prefix=BADSTRING1 %s
 // BADSTRING1: error: invalid value 'watkind' in '-debug-info-kind=watkind'
