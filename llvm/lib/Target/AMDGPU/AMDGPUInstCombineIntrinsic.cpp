@@ -723,10 +723,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 ///
 /// Note: This only supports non-TFE/LWE image intrinsic calls; those have
 ///       struct returns.
-Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
-                                             IntrinsicInst &II,
-                                             APInt DemandedElts,
-                                             int DMaskIdx = -1) {
+static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
+                                                    IntrinsicInst &II,
+                                                    APInt DemandedElts,
+                                                    int DMaskIdx = -1) {
 
   auto *IIVTy = cast<VectorType>(II.getType());
   unsigned VWidth = IIVTy->getNumElements();
