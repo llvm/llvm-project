@@ -3001,6 +3001,19 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
              "Failed to determine minimum sign bits");
       return Tmp;
     }
+    case Instruction::Call: {
+      if (const auto *II = dyn_cast<IntrinsicInst>(U)) {
+        switch (II->getIntrinsicID()) {
+        default: break;
+        case Intrinsic::abs:
+          Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+          if (Tmp == 1) break;
+
+          // Absolute value reduces number of sign bits by at most 1.
+          return Tmp - 1;
+        }
+      }
+    }
     }
   }
 
