@@ -271,6 +271,8 @@ add_compile_flags_if_supported(-Wunused-variable)
 add_compile_flags_if_supported(-Wwrite-strings)
 add_compile_flags_if_supported(-Wundef)
 
+add_compile_flags_if_supported(-Wno-suggest-override)
+
 if (LIBUNWIND_ENABLE_WERROR)
   add_compile_flags_if_supported(-Werror)
   add_compile_flags_if_supported(-WX)
