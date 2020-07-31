@@ -15,6 +15,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/Support/Errc.h"
@@ -762,14 +763,40 @@ Error DWARFYAML::emitDebugRnglists(raw_ostream &OS, const Data &DI) {
       OS, *DI.DebugRnglists, DI.IsLittleEndian, DI.Is64BitAddrSize);
 }
 
-using EmitFuncType = Error (*)(raw_ostream &, const DWARFYAML::Data &);
+std::function<Error(raw_ostream &, const DWARFYAML::Data &)>
+DWARFYAML::getDWARFEmitterByName(StringRef SecName) {
+  auto EmitFunc =
+      StringSwitch<
+          std::function<Error(raw_ostream &, const DWARFYAML::Data &)>>(SecName)
+          .Case("debug_abbrev", DWARFYAML::emitDebugAbbrev)
+          .Case("debug_addr", DWARFYAML::emitDebugAddr)
+          .Case("debug_aranges", DWARFYAML::emitDebugAranges)
+          .Case("debug_gnu_pubnames", DWARFYAML::emitDebugGNUPubnames)
+          .Case("debug_gnu_pubtypes", DWARFYAML::emitDebugGNUPubtypes)
+          .Case("debug_info", DWARFYAML::emitDebugInfo)
+          .Case("debug_line", DWARFYAML::emitDebugLine)
+          .Case("debug_pubnames", DWARFYAML::emitDebugPubnames)
+          .Case("debug_pubtypes", DWARFYAML::emitDebugPubtypes)
+          .Case("debug_ranges", DWARFYAML::emitDebugRanges)
+          .Case("debug_rnglists", DWARFYAML::emitDebugRnglists)
+          .Case("debug_str", DWARFYAML::emitDebugStr)
+          .Case("debug_str_offsets", DWARFYAML::emitDebugStrOffsets)
+          .Default([&](raw_ostream &, const DWARFYAML::Data &) {
+            return createStringError(errc::not_supported,
+                                     SecName + " is not supported");
+          });
+
+  return EmitFunc;
+}
 
 static Error
-emitDebugSectionImpl(const DWARFYAML::Data &DI, EmitFuncType EmitFunc,
-                     StringRef Sec,
+emitDebugSectionImpl(const DWARFYAML::Data &DI, StringRef Sec,
                      StringMap<std::unique_ptr<MemoryBuffer>> &OutputBuffers) {
   std::string Data;
   raw_string_ostream DebugInfoStream(Data);
+
+  auto EmitFunc = DWARFYAML::getDWARFEmitterByName(Sec);
+
   if (Error Err = EmitFunc(DebugInfoStream, DI))
     return Err;
   DebugInfoStream.flush();
@@ -796,23 +823,12 @@ DWARFYAML::emitDebugSections(StringRef YAMLString, bool IsLittleEndian) {
     return createStringError(YIn.error(), GeneratedDiag.getMessage());
 
   StringMap<std::unique_ptr<MemoryBuffer>> DebugSections;
-  Error Err = emitDebugSectionImpl(DI, &DWARFYAML::emitDebugInfo, "debug_info",
-                                   DebugSections);
-  Err = joinErrors(std::move(Err),
-                   emitDebugSectionImpl(DI, &DWARFYAML::emitDebugLine,
-                                        "debug_line", DebugSections));
-  Err = joinErrors(std::move(Err),
-                   emitDebugSectionImpl(DI, &DWARFYAML::emitDebugStr,
-                                        "debug_str", DebugSections));
-  Err = joinErrors(std::move(Err),
-                   emitDebugSectionImpl(DI, &DWARFYAML::emitDebugAbbrev,
-                                        "debug_abbrev", DebugSections));
-  Err = joinErrors(std::move(Err),
-                   emitDebugSectionImpl(DI, &DWARFYAML::emitDebugAranges,
-                                        "debug_aranges", DebugSections));
-  Err = joinErrors(std::move(Err),
-                   emitDebugSectionImpl(DI, &DWARFYAML::emitDebugRanges,
-                                        "debug_ranges", DebugSections));
+  Error Err = Error::success();
+  cantFail(std::move(Err));
+
+  for (StringRef SecName : DI.getNonEmptySectionNames())
+    Err = joinErrors(std::move(Err),
+                     emitDebugSectionImpl(DI, SecName, DebugSections));
 
   if (Err)
     return std::move(Err);
