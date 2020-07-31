@@ -27,6 +27,7 @@ static_library("Object") {
     "IRSymtab.cpp",
     "MachOObjectFile.cpp",
     "MachOUniversal.cpp",
+    "MachOUniversalWriter.cpp",
     "Minidump.cpp",
     "ModuleSymbolTable.cpp",
     "Object.cpp",
