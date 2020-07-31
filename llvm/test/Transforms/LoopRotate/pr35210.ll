@@ -23,9 +23,7 @@
 ; CHECK-NEXT: Starting Loop pass manager run.
 ; CHECK-NEXT: Running pass: LoopRotatePass on Loop at depth 1 containing: %bb<header><exiting>,%bb4<latch>
 ; CHECK-NEXT: Folding loop latch bb4 into bb
-; CHECK-NEXT: Invalidating all non-preserved analyses for: bb
 ; CHECK-NEXT: Finished Loop pass manager run.
-; CHECK-NEXT: Invalidating all non-preserved analyses for: f
 ; CHECK-NEXT: Invalidating analysis: PostDominatorTreeAnalysis on f
 ; CHECK-NEXT: Running pass: ADCEPass on f
 ; CHECK-NEXT: Running analysis: PostDominatorTreeAnalysis on f
@@ -50,9 +48,7 @@
 ; MSSA-NEXT: Starting Loop pass manager run.
 ; MSSA-NEXT: Running pass: LoopRotatePass on Loop at depth 1 containing: %bb<header><exiting>,%bb4<latch>
 ; MSSA-NEXT: Folding loop latch bb4 into bb
-; MSSA-NEXT: Invalidating all non-preserved analyses for: bb
 ; MSSA-NEXT: Finished Loop pass manager run.
-; MSSA-NEXT: Invalidating all non-preserved analyses for: f
 ; MSSA-NEXT: Invalidating analysis: PostDominatorTreeAnalysis on f
 ; MSSA-NEXT: Running pass: ADCEPass on f
 ; MSSA-NEXT: Running analysis: PostDominatorTreeAnalysis on f
