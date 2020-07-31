@@ -4313,9 +4313,8 @@ bool llvm::getUnderlyingObjectsForCodeGen(const Value *V,
   return true;
 }
 
-AllocaInst *
-llvm::findAllocaForValue(Value *V,
-                         DenseMap<Value *, AllocaInst *> &AllocaForValue) {
+static AllocaInst *
+findAllocaForValue(Value *V, DenseMap<Value *, AllocaInst *> &AllocaForValue) {
   if (AllocaInst *AI = dyn_cast<AllocaInst>(V))
     return AI;
   // See if we've already calculated (or started to calculate) alloca for a
@@ -4346,6 +4345,11 @@ llvm::findAllocaForValue(Value *V,
   if (Res)
     AllocaForValue[V] = Res;
   return Res;
+}
+
+AllocaInst *llvm::findAllocaForValue(Value *V) {
+  DenseMap<Value *, AllocaInst *> AllocaForValue;
+  return ::findAllocaForValue(V, AllocaForValue);
 }
 
 static bool onlyUsedByLifetimeMarkersOrDroppableInstsHelper(

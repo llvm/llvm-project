@@ -911,10 +911,6 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
   AllocaInst *DynamicAllocaLayout = nullptr;
   IntrinsicInst *LocalEscapeCall = nullptr;
 
-  // Maps Value to an AllocaInst from which the Value is originated.
-  using AllocaForValueMapTy = DenseMap<Value *, AllocaInst *>;
-  AllocaForValueMapTy AllocaForValue;
-
   bool HasInlineAsm = false;
   bool HasReturnsTwiceCall = false;
 
@@ -1065,8 +1061,7 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
         !ConstantInt::isValueValidForType(IntptrTy, SizeValue))
       return;
     // Find alloca instruction that corresponds to llvm.lifetime argument.
-    AllocaInst *AI =
-        llvm::findAllocaForValue(II.getArgOperand(1), AllocaForValue);
+    AllocaInst *AI = findAllocaForValue(II.getArgOperand(1));
     if (!AI) {
       HasUntracedLifetimeIntrinsic = true;
       return;
