@@ -100,7 +100,11 @@ def Shape_ValueShapeType : DialectType<ShapeDialect,
     corresponds to `Value` in the compiler) and a shape. Conceptually this is a
     tuple of a value (potentially unknown) and `shape.type`. The value and shape
     can either or both be unknown. If both the `value` and `shape` are known,
-    then the shape of `value` is conformant with `shape`.
+    then the shape of `value` is conformant with `shape`. That is, the shape of
+    the value conforms to the shape of the ValueShape, so that if we have
+    ValueShape `(value, shape)` then `join(shape_of(value), shape)` would be
+    error free and in particular it means that if both are statically known,
+    then they are equal.
   }];
 }
 
