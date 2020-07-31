@@ -209,9 +209,8 @@ Error DWARFYAML::emitDebugRanges(raw_ostream &OS, const DWARFYAML::Data &DI) {
   return Error::success();
 }
 
-Error DWARFYAML::emitPubSection(raw_ostream &OS,
-                                const DWARFYAML::PubSection &Sect,
-                                bool IsLittleEndian, bool IsGNUPubSec) {
+static Error emitPubSection(raw_ostream &OS, const DWARFYAML::PubSection &Sect,
+                            bool IsLittleEndian, bool IsGNUPubSec = false) {
   writeInitialLength(Sect.Length, OS, IsLittleEndian);
   writeInteger((uint16_t)Sect.Version, OS, IsLittleEndian);
   writeInteger((uint32_t)Sect.UnitOffset, OS, IsLittleEndian);
@@ -225,6 +224,28 @@ Error DWARFYAML::emitPubSection(raw_ostream &OS,
   }
 
   return Error::success();
+}
+
+Error DWARFYAML::emitDebugPubnames(raw_ostream &OS, const Data &DI) {
+  assert(DI.PubNames && "unexpected emitDebugPubnames() call");
+  return emitPubSection(OS, *DI.PubNames, DI.IsLittleEndian);
+}
+
+Error DWARFYAML::emitDebugPubtypes(raw_ostream &OS, const Data &DI) {
+  assert(DI.PubTypes && "unexpected emitDebugPubtypes() call");
+  return emitPubSection(OS, *DI.PubTypes, DI.IsLittleEndian);
+}
+
+Error DWARFYAML::emitDebugGNUPubnames(raw_ostream &OS, const Data &DI) {
+  assert(DI.GNUPubNames && "unexpected emitDebugGNUPubnames() call");
+  return emitPubSection(OS, *DI.GNUPubNames, DI.IsLittleEndian,
+                        /*IsGNUStyle=*/true);
+}
+
+Error DWARFYAML::emitDebugGNUPubtypes(raw_ostream &OS, const Data &DI) {
+  assert(DI.GNUPubTypes && "unexpected emitDebugGNUPubtypes() call");
+  return emitPubSection(OS, *DI.GNUPubTypes, DI.IsLittleEndian,
+                        /*IsGNUStyle=*/true);
 }
 
 static Expected<uint64_t> writeDIE(ArrayRef<DWARFYAML::Abbrev> AbbrevDecls,
