@@ -368,11 +368,10 @@ class Value;
   /// that the returned value has pointer type if the specified value does. If
   /// the MaxLookup value is non-zero, it limits the number of instructions to
   /// be stripped off.
-  Value *getUnderlyingObject(Value *V, const DataLayout &DL,
-                             unsigned MaxLookup = 6);
-  inline const Value *getUnderlyingObject(const Value *V, const DataLayout &DL,
+  Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6);
+  inline const Value *getUnderlyingObject(const Value *V,
                                           unsigned MaxLookup = 6) {
-    return getUnderlyingObject(const_cast<Value *>(V), DL, MaxLookup);
+    return getUnderlyingObject(const_cast<Value *>(V), MaxLookup);
   }
 
   /// This method is similar to getUnderlyingObject except that it can
@@ -405,14 +404,12 @@ class Value;
   /// it shouldn't look through the phi above.
   void getUnderlyingObjects(const Value *V,
                             SmallVectorImpl<const Value *> &Objects,
-                            const DataLayout &DL, LoopInfo *LI = nullptr,
-                            unsigned MaxLookup = 6);
+                            LoopInfo *LI = nullptr, unsigned MaxLookup = 6);
 
   /// This is a wrapper around getUnderlyingObjects and adds support for basic
   /// ptrtoint+arithmetic+inttoptr sequences.
   bool getUnderlyingObjectsForCodeGen(const Value *V,
-                            SmallVectorImpl<Value *> &Objects,
-                            const DataLayout &DL);
+                                      SmallVectorImpl<Value *> &Objects);
 
   /// Finds alloca where the value comes from.
   AllocaInst *findAllocaForValue(Value *V);
