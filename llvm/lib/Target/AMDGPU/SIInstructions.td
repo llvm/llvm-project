@@ -2163,6 +2163,11 @@ def : GCNPat <
   (S_MOV_B32 $ga)
 >;
 
+def : GCNPat <
+  (VGPRImm<(i16 imm)>:$imm),
+  (V_MOV_B32_e32 imm:$imm)
+>;
+
 // FIXME: Workaround for ordering issue with peephole optimizer where
 // a register class copy interferes with immediate folding.  Should
 // use s_mov_b32, which can be shrunk to s_movk_i32
@@ -2229,20 +2234,15 @@ def : GCNPat <
   (S_MOV_B64 InlineImm64:$imm)
 >;
 
-// XXX - Should this use a s_cmp to set SCC?
-
 // Set to sign-extended 64-bit value (true = -1, false = 0)
-def : GCNPat <
-  (i1 imm:$imm),
-  (S_MOV_B64 (i64 (as_i64imm $imm)))
-> {
+// Set to sign-extended 64-bit value (true = -1, false = 0)
+def : GCNPat <(i1 imm:$imm),
+              (S_MOV_B64 imm:$imm)> {
   let WaveSizePredicate = isWave64;
 }
 
-def : GCNPat <
-  (i1 imm:$imm),
-  (S_MOV_B32 (i32 (as_i32imm $imm)))
-> {
+def : GCNPat <(i1 imm:$imm),
+              (S_MOV_B32 imm:$imm)> {
   let WaveSizePredicate = isWave32;
 }
 

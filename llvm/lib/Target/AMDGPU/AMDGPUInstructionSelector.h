@@ -333,8 +333,17 @@ private:
   void renderNegateImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
 
-  void renderBitcastImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx) const;
+  void renderBitcastFPImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                          int OpIdx) const;
+
+  void renderBitcastFPImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                            int OpIdx) const {
+    renderBitcastFPImm(MIB, MI, OpIdx);
+  }
+  void renderBitcastFPImm64(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                            int OpIdx) const {
+    renderBitcastFPImm(MIB, MI, OpIdx);
+  }
 
   void renderPopcntImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
