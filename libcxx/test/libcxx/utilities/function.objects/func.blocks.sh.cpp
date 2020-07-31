@@ -21,6 +21,8 @@
 #include <cstdlib>
 #include <cassert>
 
+#include <Block.h>
+
 #include "test_macros.h"
 #include "count_new.h"
 
