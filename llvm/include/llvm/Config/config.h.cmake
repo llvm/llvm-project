@@ -1,6 +1,9 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+// Include this header only under the llvm source tree.
+// This is a private header.
+
 /* Exported configuration */
 #include "llvm/Config/llvm-config.h"
 
@@ -334,9 +337,6 @@
 
 /* Whether GlobalISel rule coverage is being collected */
 #cmakedefine01 LLVM_GISEL_COV_ENABLED
-
-/* Define if we have z3 and want to build it */
-#cmakedefine LLVM_WITH_Z3 ${LLVM_WITH_Z3}
 
 /* Define to the default GlobalISel coverage file prefix */
 #cmakedefine LLVM_GISEL_COV_PREFIX "${LLVM_GISEL_COV_PREFIX}"
