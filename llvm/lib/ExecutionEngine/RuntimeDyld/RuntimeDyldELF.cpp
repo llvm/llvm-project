@@ -269,7 +269,7 @@ void RuntimeDyldELF::resolveX86_64Relocation(const SectionEntry &Section,
                                              uint64_t SymOffset) {
   switch (Type) {
   default:
-    llvm_unreachable("Relocation type not implemented yet!");
+    report_fatal_error("Relocation type not implemented yet!");
     break;
   case ELF::R_X86_64_NONE:
     break;
@@ -359,7 +359,7 @@ void RuntimeDyldELF::resolveX86Relocation(const SectionEntry &Section,
   default:
     // There are other relocation types, but it appears these are the
     // only ones currently used by the LLVM ELF object writer
-    llvm_unreachable("Relocation type not implemented yet!");
+    report_fatal_error("Relocation type not implemented yet!");
     break;
   }
 }
@@ -382,7 +382,7 @@ void RuntimeDyldELF::resolveAArch64Relocation(const SectionEntry &Section,
 
   switch (Type) {
   default:
-    llvm_unreachable("Relocation type not implemented yet!");
+    report_fatal_error("Relocation type not implemented yet!");
     break;
   case ELF::R_AARCH64_ABS16: {
     uint64_t Result = Value + Addend;
@@ -721,7 +721,7 @@ void RuntimeDyldELF::resolvePPC32Relocation(const SectionEntry &Section,
   uint8_t *LocalAddress = Section.getAddressWithOffset(Offset);
   switch (Type) {
   default:
-    llvm_unreachable("Relocation type not implemented yet!");
+    report_fatal_error("Relocation type not implemented yet!");
     break;
   case ELF::R_PPC_ADDR16_LO:
     writeInt16BE(LocalAddress, applyPPClo(Value + Addend));
@@ -741,7 +741,7 @@ void RuntimeDyldELF::resolvePPC64Relocation(const SectionEntry &Section,
   uint8_t *LocalAddress = Section.getAddressWithOffset(Offset);
   switch (Type) {
   default:
-    llvm_unreachable("Relocation type not implemented yet!");
+    report_fatal_error("Relocation type not implemented yet!");
     break;
   case ELF::R_PPC64_ADDR16:
     writeInt16BE(LocalAddress, applyPPClo(Value + Addend));
@@ -835,7 +835,7 @@ void RuntimeDyldELF::resolveSystemZRelocation(const SectionEntry &Section,
   uint8_t *LocalAddress = Section.getAddressWithOffset(Offset);
   switch (Type) {
   default:
-    llvm_unreachable("Relocation type not implemented yet!");
+    report_fatal_error("Relocation type not implemented yet!");
     break;
   case ELF::R_390_PC16DBL:
   case ELF::R_390_PLT16DBL: {
@@ -890,7 +890,7 @@ void RuntimeDyldELF::resolveBPFRelocation(const SectionEntry &Section,
 
   switch (Type) {
   default:
-    llvm_unreachable("Relocation type not implemented yet!");
+    report_fatal_error("Relocation type not implemented yet!");
     break;
   case ELF::R_BPF_NONE:
     break;
