@@ -305,10 +305,6 @@ bool replaceDbgDeclare(Value *Address, Value *NewAddress, DIBuilder &Builder,
 void replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                               DIBuilder &Builder, int Offset = 0);
 
-/// Finds alloca where the value comes from.
-AllocaInst *findAllocaForValue(Value *V,
-                               DenseMap<Value *, AllocaInst *> &AllocaForValue);
-
 /// Assuming the instruction \p I is going to be deleted, attempt to salvage
 /// debug users of \p I by writing the effect of \p I in a DIExpression. If it
 /// cannot be salvaged changes its debug uses to undef.
