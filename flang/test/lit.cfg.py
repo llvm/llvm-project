@@ -48,6 +48,12 @@ config.test_exec_root = os.path.join(config.flang_obj_root, 'test')
 llvm_config.with_environment('PATH', config.flang_tools_dir, append_path=True)
 llvm_config.with_environment('PATH', config.llvm_tools_dir, append_path=True)
 
+# For builds with FIR, set path for tco and enable related tests
+if config.flang_llvm_tools_dir != "" :
+  config.available_features.add('fir')
+  if config.llvm_tools_dir != config.flang_llvm_tools_dir :
+    llvm_config.with_environment('PATH', config.flang_llvm_tools_dir, append_path=True)
+
 # For each occurrence of a flang tool name, replace it with the full path to
 # the build directory holding that tool.
 tools = [
@@ -55,7 +61,7 @@ tools = [
     extra_args=["-intrinsic-module-directory "+config.flang_intrinsic_modules_dir],
     unresolved='fatal')
 ]
-llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)
+llvm_config.add_tool_substitutions(tools, [config.flang_llvm_tools_dir])
 
 # Enable libpgmath testing
 result = lit_config.params.get("LIBPGMATH")
