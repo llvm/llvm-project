@@ -206,6 +206,7 @@ public:
   //===--------------------------------------------------------------------===//
   // Argument Handling
   //===--------------------------------------------------------------------===//
+  using BlockArgListType = Region::BlockArgListType;
 
   unsigned getNumArguments() {
     return static_cast<ConcreteType *>(this)->getNumFuncArguments();
@@ -223,6 +224,10 @@ public:
   args_iterator args_begin() { return getBody().args_begin(); }
   args_iterator args_end() { return getBody().args_end(); }
   Block::BlockArgListType getArguments() { return getBody().getArguments(); }
+
+  ValueTypeRange<BlockArgListType> getArgumentTypes() {
+    return getBody().getArgumentTypes();
+  }
 
   //===--------------------------------------------------------------------===//
   // Argument Attributes
