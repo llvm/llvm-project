@@ -714,85 +714,82 @@ static bool isLambdaMapping(int64_t Mapping) {
   return (Mapping & LambdaMapping) == LambdaMapping;
 }
 
-/// performs the same actions as data_begin in case arg_num is
-/// non-zero and initiates run of the offloaded region on the target platform;
-/// if arg_num is non-zero after the region execution is done it also
-/// performs the same action as data_update and data_end above. This function
-/// returns 0 if it was able to transfer the execution to a target and an
-/// integer different from zero otherwise.
-int target(int64_t DeviceId, void *HostPtr, int32_t ArgNum, void **ArgBases,
-           void **Args, int64_t *ArgSizes, int64_t *ArgTypes, void **ArgMappers,
-           int32_t TeamNum, int32_t ThreadLimit, int IsTeamConstruct) {
-  DeviceTy &Device = Devices[DeviceId];
+namespace {
+/// Find the table information in the map or look it up in the translation
+/// tables.
+TableMap *getTableMap(void *HostPtr) {
+  std::lock_guard<std::mutex> TblMapLock(*TblMapMtx);
+  HostPtrToTableMapTy::iterator TableMapIt = HostPtrToTableMap->find(HostPtr);
 
-  // Find the table information in the map or look it up in the translation
-  // tables.
-  TableMap *TM = 0;
-  {
-    std::lock_guard<std::mutex> TblMapLock(*TblMapMtx);
-    HostPtrToTableMapTy::iterator TableMapIt = HostPtrToTableMap->find(HostPtr);
-    if (TableMapIt == HostPtrToTableMap->end()) {
-      // We don't have a map. So search all the registered libraries.
-      std::lock_guard<std::mutex> TrlTblLock(*TrlTblMtx);
-      for (HostEntriesBeginToTransTableTy::iterator
-               II = HostEntriesBeginToTransTable->begin(),
-               IE = HostEntriesBeginToTransTable->end();
-           !TM && II != IE; ++II) {
-        // get the translation table (which contains all the good info).
-        TranslationTable *TransTable = &II->second;
-        // iterate over all the host table entries to see if we can locate the
-        // host_ptr.
-        __tgt_offload_entry *Begin = TransTable->HostTable.EntriesBegin;
-        __tgt_offload_entry *End = TransTable->HostTable.EntriesEnd;
-        __tgt_offload_entry *Cur = Begin;
-        for (uint32_t I = 0; Cur < End; ++Cur, ++I) {
-          if (Cur->addr != HostPtr)
-            continue;
-          // we got a match, now fill the HostPtrToTableMap so that we
-          // may avoid this search next time.
-          TM = &(*HostPtrToTableMap)[HostPtr];
-          TM->Table = TransTable;
-          TM->Index = I;
-          break;
-        }
-      }
-    } else {
-      TM = &TableMapIt->second;
+  if (TableMapIt != HostPtrToTableMap->end())
+    return &TableMapIt->second;
+
+  // We don't have a map. So search all the registered libraries.
+  TableMap *TM = nullptr;
+  std::lock_guard<std::mutex> TrlTblLock(*TrlTblMtx);
+  for (HostEntriesBeginToTransTableTy::iterator Itr =
+           HostEntriesBeginToTransTable->begin();
+       Itr != HostEntriesBeginToTransTable->end(); ++Itr) {
+    // get the translation table (which contains all the good info).
+    TranslationTable *TransTable = &Itr->second;
+    // iterate over all the host table entries to see if we can locate the
+    // host_ptr.
+    __tgt_offload_entry *Cur = TransTable->HostTable.EntriesBegin;
+    for (uint32_t I = 0; Cur < TransTable->HostTable.EntriesEnd; ++Cur, ++I) {
+      if (Cur->addr != HostPtr)
+        continue;
+      // we got a match, now fill the HostPtrToTableMap so that we
+      // may avoid this search next time.
+      TM = &(*HostPtrToTableMap)[HostPtr];
+      TM->Table = TransTable;
+      TM->Index = I;
+      return TM;
     }
   }
 
-  // No map for this host pointer found!
-  if (!TM) {
-    DP("Host ptr " DPxMOD " does not have a matching target pointer.\n",
-       DPxPTR(HostPtr));
-    return OFFLOAD_FAIL;
-  }
+  return nullptr;
+}
 
-  // get target table.
-  __tgt_target_table *TargetTable = nullptr;
+/// Get loop trip count
+/// FIXME: This function will not work right if calling
+/// __kmpc_push_target_tripcount in one thread but doing offloading in another
+/// thread, which might occur when we call task yield.
+uint64_t getLoopTripCount(int64_t DeviceId) {
+  DeviceTy &Device = Devices[DeviceId];
+  uint64_t LoopTripCount = 0;
+
   {
-    std::lock_guard<std::mutex> TrlTblLock(*TrlTblMtx);
-    assert(TM->Table->TargetsTable.size() > (size_t)DeviceId &&
-           "Not expecting a device ID outside the table's bounds!");
-    TargetTable = TM->Table->TargetsTable[DeviceId];
+    std::lock_guard<std::mutex> TblMapLock(*TblMapMtx);
+    auto I = Device.LoopTripCnt.find(__kmpc_global_thread_num(NULL));
+    if (I != Device.LoopTripCnt.end()) {
+      LoopTripCount = I->second;
+      Device.LoopTripCnt.erase(I);
+      DP("loop trip count is %lu.\n", LoopTripCount);
+    }
   }
-  assert(TargetTable && "Global data has not been mapped\n");
 
-  __tgt_async_info AsyncInfo;
+  return LoopTripCount;
+}
 
-  // Move data to device.
+/// Process data before launching the kernel, including calling targetDataBegin
+/// to map and transfer data to target device, transferring (first-)private
+/// variables.
+int processDataBefore(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
+                      void **ArgBases, void **Args, int64_t *ArgSizes,
+                      int64_t *ArgTypes, void **ArgMappers,
+                      std::vector<void *> &TgtArgs,
+                      std::vector<ptrdiff_t> &TgtOffsets,
+                      std::vector<void *> &FPArrays,
+                      __tgt_async_info *AsyncInfo) {
+  DeviceTy &Device = Devices[DeviceId];
   int Ret = targetDataBegin(Device, ArgNum, ArgBases, Args, ArgSizes, ArgTypes,
-                            ArgMappers, &AsyncInfo);
+                            ArgMappers, AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
     DP("Call to targetDataBegin failed, abort target.\n");
     return OFFLOAD_FAIL;
   }
 
-  std::vector<void *> TgtArgs;
-  std::vector<ptrdiff_t> TgtOffsets;
-
   // List of (first-)private arrays allocated for this target region
-  std::vector<void *> FPArrays;
   std::vector<int> TgtArgsPositions(ArgNum, -1);
 
   for (int32_t I = 0; I < ArgNum; ++I) {
@@ -833,7 +830,7 @@ int target(int64_t DeviceId, void *HostPtr, int32_t ArgNum, void **ArgBases,
         DP("Update lambda reference (" DPxMOD ") -> [" DPxMOD "]\n",
            DPxPTR(PointerTgtPtrBegin), DPxPTR(TgtPtrBegin));
         Ret = Device.submitData(TgtPtrBegin, &PointerTgtPtrBegin,
-                                sizeof(void *), &AsyncInfo);
+                                sizeof(void *), AsyncInfo);
         if (Ret != OFFLOAD_SUCCESS) {
           DP("Copying data to device failed.\n");
           return OFFLOAD_FAIL;
@@ -873,8 +870,8 @@ int target(int64_t DeviceId, void *HostPtr, int32_t ArgNum, void **ArgBases,
 #endif
       // If first-private, copy data from host
       if (ArgTypes[I] & OMP_TGT_MAPTYPE_TO) {
-        Ret = Device.submitData(TgtPtrBegin, HstPtrBegin, ArgSizes[I],
-                                &AsyncInfo);
+        Ret =
+            Device.submitData(TgtPtrBegin, HstPtrBegin, ArgSizes[I], AsyncInfo);
         if (Ret != OFFLOAD_SUCCESS) {
           DP("Copying data to device failed, failed.\n");
           return OFFLOAD_FAIL;
@@ -900,50 +897,112 @@ int target(int64_t DeviceId, void *HostPtr, int32_t ArgNum, void **ArgBases,
   assert(TgtArgs.size() == TgtOffsets.size() &&
          "Size mismatch in arguments and offsets");
 
-  // Pop loop trip count
-  uint64_t LoopTripCount = 0;
-  {
-    std::lock_guard<std::mutex> TblMapLock(*TblMapMtx);
-    auto I = Device.LoopTripCnt.find(__kmpc_global_thread_num(NULL));
-    if (I != Device.LoopTripCnt.end()) {
-      LoopTripCount = I->second;
-      Device.LoopTripCnt.erase(I);
-      DP("loop trip count is %lu.\n", LoopTripCount);
-    }
-  }
+  return OFFLOAD_SUCCESS;
+}
 
-  // Launch device execution.
-  DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",
-     TargetTable->EntriesBegin[TM->Index].name,
-     DPxPTR(TargetTable->EntriesBegin[TM->Index].addr), TM->Index);
-  if (IsTeamConstruct) {
-    Ret = Device.runTeamRegion(TargetTable->EntriesBegin[TM->Index].addr,
-                               &TgtArgs[0], &TgtOffsets[0], TgtArgs.size(),
-                               TeamNum, ThreadLimit, LoopTripCount, &AsyncInfo);
-  } else {
-    Ret =
-        Device.runRegion(TargetTable->EntriesBegin[TM->Index].addr, &TgtArgs[0],
-                         &TgtOffsets[0], TgtArgs.size(), &AsyncInfo);
-  }
+/// Process data after launching the kernel, including transferring data back to
+/// host if needed and deallocating target memory of (first-)private variables.
+/// FIXME: This function has correctness issue that target memory might be
+/// deallocated when they're being used.
+int processDataAfter(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
+                     void **ArgBases, void **Args, int64_t *ArgSizes,
+                     int64_t *ArgTypes, void **ArgMappers,
+                     std::vector<void *> &FPArrays,
+                     __tgt_async_info *AsyncInfo) {
+  DeviceTy &Device = Devices[DeviceId];
+
+  // Move data from device.
+  int Ret = targetDataEnd(Device, ArgNum, ArgBases, Args, ArgSizes, ArgTypes,
+                          ArgMappers, AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
-    DP("Executing target region abort target.\n");
+    DP("Call to targetDataEnd failed, abort targe.\n");
     return OFFLOAD_FAIL;
   }
 
   // Deallocate (first-)private arrays
-  for (auto Itr : FPArrays) {
-    Ret = Device.deleteData(Itr);
+  for (void *P : FPArrays) {
+    Ret = Device.deleteData(P);
     if (Ret != OFFLOAD_SUCCESS) {
       DP("Deallocation of (first-)private arrays failed.\n");
       return OFFLOAD_FAIL;
     }
   }
 
-  // Move data from device.
-  Ret = targetDataEnd(Device, ArgNum, ArgBases, Args, ArgSizes, ArgTypes,
-                      ArgMappers, &AsyncInfo);
+  return OFFLOAD_SUCCESS;
+}
+} // namespace
+
+/// performs the same actions as data_begin in case arg_num is
+/// non-zero and initiates run of the offloaded region on the target platform;
+/// if arg_num is non-zero after the region execution is done it also
+/// performs the same action as data_update and data_end above. This function
+/// returns 0 if it was able to transfer the execution to a target and an
+/// integer different from zero otherwise.
+int target(int64_t DeviceId, void *HostPtr, int32_t ArgNum, void **ArgBases,
+           void **Args, int64_t *ArgSizes, int64_t *ArgTypes, void **ArgMappers,
+           int32_t TeamNum, int32_t ThreadLimit, int IsTeamConstruct) {
+  DeviceTy &Device = Devices[DeviceId];
+
+  TableMap *TM = getTableMap(HostPtr);
+  // No map for this host pointer found!
+  if (!TM) {
+    DP("Host ptr " DPxMOD " does not have a matching target pointer.\n",
+       DPxPTR(HostPtr));
+    return OFFLOAD_FAIL;
+  }
+
+  // get target table.
+  __tgt_target_table *TargetTable = nullptr;
+  {
+    std::lock_guard<std::mutex> TrlTblLock(*TrlTblMtx);
+    assert(TM->Table->TargetsTable.size() > (size_t)DeviceId &&
+           "Not expecting a device ID outside the table's bounds!");
+    TargetTable = TM->Table->TargetsTable[DeviceId];
+  }
+  assert(TargetTable && "Global data has not been mapped\n");
+
+  __tgt_async_info AsyncInfo;
+
+  std::vector<void *> TgtArgs;
+  std::vector<ptrdiff_t> TgtOffsets;
+  std::vector<void *> FPArrays;
+
+  // Process data, such as data mapping, before launching the kernel
+  int Ret = processDataBefore(DeviceId, HostPtr, ArgNum, ArgBases, Args,
+                              ArgSizes, ArgTypes, ArgMappers, TgtArgs,
+                              TgtOffsets, FPArrays, &AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
-    DP("Call to targetDataEnd failed, abort targe.\n");
+    DP("Failed to process data before launching the kernel.\n");
+    return OFFLOAD_FAIL;
+  }
+
+  // Get loop trip count
+  uint64_t LoopTripCount = getLoopTripCount(DeviceId);
+
+  // Launch device execution.
+  void *TgtEntryPtr = TargetTable->EntriesBegin[TM->Index].addr;
+  DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",
+     TargetTable->EntriesBegin[TM->Index].name, DPxPTR(TgtEntryPtr), TM->Index);
+
+  if (IsTeamConstruct)
+    Ret = Device.runTeamRegion(TgtEntryPtr, &TgtArgs[0], &TgtOffsets[0],
+                               TgtArgs.size(), TeamNum, ThreadLimit,
+                               LoopTripCount, &AsyncInfo);
+  else
+    Ret = Device.runRegion(TgtEntryPtr, &TgtArgs[0], &TgtOffsets[0],
+                           TgtArgs.size(), &AsyncInfo);
+
+  if (Ret != OFFLOAD_SUCCESS) {
+    DP("Executing target region abort target.\n");
+    return OFFLOAD_FAIL;
+  }
+
+  // Transfer data back and deallocate target memory for (first-)private
+  // variables
+  Ret = processDataAfter(DeviceId, HostPtr, ArgNum, ArgBases, Args, ArgSizes,
+                         ArgTypes, ArgMappers, FPArrays, &AsyncInfo);
+  if (Ret != OFFLOAD_SUCCESS) {
+    DP("Failed to process data after launching the kernel.\n");
     return OFFLOAD_FAIL;
   }
 
