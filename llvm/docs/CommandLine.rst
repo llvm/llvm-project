@@ -1369,29 +1369,6 @@ The ``cl::ParseCommandLineOptions`` function requires two parameters (``argc``
 and ``argv``), but may also take an optional third parameter which holds
 `additional extra text`_ to emit when the ``-help`` option is invoked.
 
-.. _cl::ParseEnvironmentOptions:
-
-The ``cl::ParseEnvironmentOptions`` function
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The ``cl::ParseEnvironmentOptions`` function has mostly the same effects as
-`cl::ParseCommandLineOptions`_, except that it is designed to take values for
-options from an environment variable, for those cases in which reading the
-command line is not convenient or desired. It fills in the values of all the
-command line option variables just like `cl::ParseCommandLineOptions`_ does.
-
-It takes four parameters: the name of the program (since ``argv`` may not be
-available, it can't just look in ``argv[0]``), the name of the environment
-variable to examine, and the optional `additional extra text`_ to emit when the
-``-help`` option is invoked.
-
-``cl::ParseEnvironmentOptions`` will break the environment variable's value up
-into words and then process them using `cl::ParseCommandLineOptions`_.
-**Note:** Currently ``cl::ParseEnvironmentOptions`` does not support quoting, so
-an environment variable containing ``-option "foo bar"`` will be parsed as three
-words, ``-option``, ``"foo``, and ``bar"``, which is different from what you
-would get from the shell with the same input.
-
 The ``cl::SetVersionPrinter`` function
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

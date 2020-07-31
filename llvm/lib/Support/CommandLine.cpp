@@ -1271,36 +1271,6 @@ bool cl::readConfigFile(StringRef CfgFile, StringSaver &Saver,
                              /*MarkEOLs*/ false, /*RelativeNames*/ true);
 }
 
-/// ParseEnvironmentOptions - An alternative entry point to the
-/// CommandLine library, which allows you to read the program's name
-/// from the caller (as PROGNAME) and its command-line arguments from
-/// an environment variable (whose name is given in ENVVAR).
-///
-void cl::ParseEnvironmentOptions(const char *progName, const char *envVar,
-                                 const char *Overview) {
-  // Check args.
-  assert(progName && "Program name not specified");
-  assert(envVar && "Environment variable name missing");
-
-  // Get the environment variable they want us to parse options out of.
-  llvm::Optional<std::string> envValue = sys::Process::GetEnv(StringRef(envVar));
-  if (!envValue)
-    return;
-
-  // Get program's "name", which we wouldn't know without the caller
-  // telling us.
-  SmallVector<const char *, 20> newArgv;
-  BumpPtrAllocator A;
-  StringSaver Saver(A);
-  newArgv.push_back(Saver.save(progName).data());
-
-  // Parse the value of the environment variable into a "command line"
-  // and hand it off to ParseCommandLineOptions().
-  TokenizeGNUCommandLine(*envValue, Saver, newArgv);
-  int newArgc = static_cast<int>(newArgv.size());
-  ParseCommandLineOptions(newArgc, &newArgv[0], StringRef(Overview));
-}
-
 bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
                                  StringRef Overview, raw_ostream *Errs,
                                  const char *EnvVar,
