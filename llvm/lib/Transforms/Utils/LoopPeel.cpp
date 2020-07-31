@@ -1,4 +1,4 @@
-//===- UnrollLoopPeel.cpp - Loop peeling utilities ------------------------===//
+//===- LoopPeel.cpp -------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements some loop unrolling utilities for peeling loops
-// with dynamically inferred (from PGO) trip counts. See LoopUnroll.cpp for
-// unrolling loops with compile-time constant trip counts.
-//
+// Loop Peeling Utilities.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
@@ -49,9 +47,23 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
-#define DEBUG_TYPE "loop-unroll"
+#define DEBUG_TYPE "loop-peel"
 
 STATISTIC(NumPeeled, "Number of loops peeled");
+
+static cl::opt<unsigned> UnrollPeelCount(
+    "unroll-peel-count", cl::Hidden,
+    cl::desc("Set the unroll peeling count, for testing purposes"));
+
+static cl::opt<bool>
+    UnrollAllowPeeling("unroll-allow-peeling", cl::init(true), cl::Hidden,
+                       cl::desc("Allows loops to be peeled when the dynamic "
+                                "trip count is known to be low."));
+
+static cl::opt<bool>
+    UnrollAllowLoopNestsPeeling("unroll-allow-loop-nests-peeling",
+                                cl::init(false), cl::Hidden,
+                                cl::desc("Allows loop nests to be peeled."));
 
 static cl::opt<unsigned> UnrollPeelMaxCount(
     "unroll-peel-max-count", cl::init(7), cl::Hidden,
@@ -278,9 +290,9 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
 
 // Return the number of iterations we want to peel off.
 void llvm::computePeelCount(Loop *L, unsigned LoopSize,
-                            TargetTransformInfo::UnrollingPreferences &UP,
                             TargetTransformInfo::PeelingPreferences &PP,
-                            unsigned &TripCount, ScalarEvolution &SE) {
+                            unsigned &TripCount, ScalarEvolution &SE,
+                            unsigned Threshold) {
   assert(LoopSize > 0 && "Zero loop size is not allowed!");
   // Save the PP.PeelCount value set by the target in
   // TTI.getPeelingPreferences or by the flag -unroll-peel-count.
@@ -322,7 +334,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // maximum number of iterations among these values, thus turning all those
   // Phis into invariants.
   // First, check that we can peel at least one iteration.
-  if (2 * LoopSize <= UP.Threshold && UnrollPeelMaxCount > 0) {
+  if (2 * LoopSize <= Threshold && UnrollPeelMaxCount > 0) {
     // Store the pre-calculated values here.
     SmallDenseMap<PHINode *, unsigned> IterationsToInvariance;
     // Now go through all Phis to calculate their the number of iterations they
@@ -342,7 +354,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
 
     // Pay respect to limitations implied by loop size and the max peel count.
     unsigned MaxPeelCount = UnrollPeelMaxCount;
-    MaxPeelCount = std::min(MaxPeelCount, UP.Threshold / LoopSize - 1);
+    MaxPeelCount = std::min(MaxPeelCount, Threshold / LoopSize - 1);
 
     DesiredPeelCount = std::max(DesiredPeelCount,
                                 countToEliminateCompares(*L, MaxPeelCount, SE));
@@ -385,7 +397,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
 
     if (*PeelCount) {
       if ((*PeelCount + AlreadyPeeled <= UnrollPeelMaxCount) &&
-          (LoopSize * (*PeelCount + 1) <= UP.Threshold)) {
+          (LoopSize * (*PeelCount + 1) <= Threshold)) {
         LLVM_DEBUG(dbgs() << "Peeling first " << *PeelCount
                           << " iterations.\n");
         PP.PeelCount = *PeelCount;
@@ -396,7 +408,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
       LLVM_DEBUG(dbgs() << "Max peel count: " << UnrollPeelMaxCount << "\n");
       LLVM_DEBUG(dbgs() << "Peel cost: " << LoopSize * (*PeelCount + 1)
                         << "\n");
-      LLVM_DEBUG(dbgs() << "Max peel cost: " << UP.Threshold << "\n");
+      LLVM_DEBUG(dbgs() << "Max peel cost: " << Threshold << "\n");
     }
   }
 }
@@ -491,7 +503,7 @@ static void fixupBranchWeights(BasicBlock *Header, BranchInst *LatchBR,
 /// instructions in the last peeled-off iteration.
 static void cloneLoopBlocks(
     Loop *L, unsigned IterNumber, BasicBlock *InsertTop, BasicBlock *InsertBot,
-    SmallVectorImpl<std::pair<BasicBlock *, BasicBlock *> > &ExitEdges,
+    SmallVectorImpl<std::pair<BasicBlock *, BasicBlock *>> &ExitEdges,
     SmallVectorImpl<BasicBlock *> &NewBlocks, LoopBlocksDFS &LoopBlocks,
     ValueToValueMapTy &VMap, ValueToValueMapTy &LVMap, DominatorTree *DT,
     LoopInfo *LI) {
@@ -599,6 +611,40 @@ static void cloneLoopBlocks(
     LVMap[KV.first] = KV.second;
 }
 
+TargetTransformInfo::PeelingPreferences llvm::gatherPeelingPreferences(
+    Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI,
+    Optional<bool> UserAllowPeeling,
+    Optional<bool> UserAllowProfileBasedPeeling, bool UnrollingSpecficValues) {
+  TargetTransformInfo::PeelingPreferences PP;
+
+  // Set the default values.
+  PP.PeelCount = 0;
+  PP.AllowPeeling = true;
+  PP.AllowLoopNestsPeeling = false;
+  PP.PeelProfiledIterations = true;
+
+  // Get the target specifc values.
+  TTI.getPeelingPreferences(L, SE, PP);
+
+  // User specified values using cl::opt.
+  if (UnrollingSpecficValues) {
+    if (UnrollPeelCount.getNumOccurrences() > 0)
+      PP.PeelCount = UnrollPeelCount;
+    if (UnrollAllowPeeling.getNumOccurrences() > 0)
+      PP.AllowPeeling = UnrollAllowPeeling;
+    if (UnrollAllowLoopNestsPeeling.getNumOccurrences() > 0)
+      PP.AllowLoopNestsPeeling = UnrollAllowLoopNestsPeeling;
+  }
+
+  // User specifed values provided by argument.
+  if (UserAllowPeeling.hasValue())
+    PP.AllowPeeling = *UserAllowPeeling;
+  if (UserAllowProfileBasedPeeling.hasValue())
+    PP.PeelProfiledIterations = *UserAllowProfileBasedPeeling;
+
+  return PP;
+}
+
 /// Peel off the first \p PeelCount iterations of loop \p L.
 ///
 /// Note that this does not peel them off as a single straight-line block.
@@ -609,8 +655,8 @@ static void cloneLoopBlocks(
 /// for the bulk of dynamic execution, can be further simplified by scalar
 /// optimizations.
 bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
-                    ScalarEvolution *SE, DominatorTree *DT,
-                    AssumptionCache *AC, bool PreserveLCSSA) {
+                    ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
+                    bool PreserveLCSSA) {
   assert(PeelCount > 0 && "Attempt to peel out zero iterations?");
   assert(canPeel(L) && "Attempt to peel a loop which is not peelable?");
 

@@ -56,6 +56,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
@@ -115,10 +116,6 @@ static cl::opt<unsigned> UnrollFullMaxCount(
     cl::desc(
         "Set the max unroll count for full unrolling, for testing purposes"));
 
-static cl::opt<unsigned> UnrollPeelCount(
-    "unroll-peel-count", cl::Hidden,
-    cl::desc("Set the unroll peeling count, for testing purposes"));
-
 static cl::opt<bool>
     UnrollAllowPartial("unroll-allow-partial", cl::Hidden,
                        cl::desc("Allows loops to be partially unrolled until "
@@ -148,15 +145,6 @@ static cl::opt<unsigned> FlatLoopTripCountThreshold(
     cl::desc("If the runtime tripcount for the loop is lower than the "
              "threshold, the loop is considered as flat and will be less "
              "aggressively unrolled."));
-
-static cl::opt<bool>
-    UnrollAllowPeeling("unroll-allow-peeling", cl::init(true), cl::Hidden,
-                       cl::desc("Allows loops to be peeled when the dynamic "
-                                "trip count is known to be low."));
-
-static cl::opt<bool> UnrollAllowLoopNestsPeeling(
-    "unroll-allow-loop-nests-peeling", cl::init(false), cl::Hidden,
-    cl::desc("Allows loop nests to be peeled."));
 
 static cl::opt<bool> UnrollUnrollRemainder(
   "unroll-remainder", cl::Hidden,
@@ -273,39 +261,6 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
     UP.FullUnrollMaxCount = *UserFullUnrollMaxCount;
 
   return UP;
-}
-
-TargetTransformInfo::PeelingPreferences
-llvm::gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                               const TargetTransformInfo &TTI,
-                               Optional<bool> UserAllowPeeling,
-                               Optional<bool> UserAllowProfileBasedPeeling) {
-  TargetTransformInfo::PeelingPreferences PP;
-
-  // Default values
-  PP.PeelCount = 0;
-  PP.AllowPeeling = true;
-  PP.AllowLoopNestsPeeling = false;
-  PP.PeelProfiledIterations = true;
-
-  // Get Target Specifc Values
-  TTI.getPeelingPreferences(L, SE, PP);
-
-  // User Specified Values using cl::opt
-  if (UnrollPeelCount.getNumOccurrences() > 0)
-    PP.PeelCount = UnrollPeelCount;
-  if (UnrollAllowPeeling.getNumOccurrences() > 0)
-    PP.AllowPeeling = UnrollAllowPeeling;
-  if (UnrollAllowLoopNestsPeeling.getNumOccurrences() > 0)
-    PP.AllowLoopNestsPeeling = UnrollAllowLoopNestsPeeling;
-
-  // User Specifed values provided by argument
-  if (UserAllowPeeling.hasValue())
-    PP.AllowPeeling = *UserAllowPeeling;
-  if (UserAllowProfileBasedPeeling.hasValue())
-    PP.PeelProfiledIterations = *UserAllowProfileBasedPeeling;
-
-  return PP;
 }
 
 namespace {
@@ -881,7 +836,7 @@ bool llvm::computeUnrollCount(
   }
 
   // 4th priority is loop peeling.
-  computePeelCount(L, LoopSize, UP, PP, TripCount, SE);
+  computePeelCount(L, LoopSize, PP, TripCount, SE, UP.Threshold);
   if (PP.PeelCount) {
     UP.Runtime = false;
     UP.Count = 1;
@@ -1087,7 +1042,7 @@ static LoopUnrollResult tryToUnrollLoop(
       ProvidedAllowPartial, ProvidedRuntime, ProvidedUpperBound,
       ProvidedFullUnrollMaxCount);
   TargetTransformInfo::PeelingPreferences PP = gatherPeelingPreferences(
-      L, SE, TTI, ProvidedAllowPeeling, ProvidedAllowProfileBasedPeeling);
+      L, SE, TTI, ProvidedAllowPeeling, ProvidedAllowProfileBasedPeeling, true);
 
   // Exit early if unrolling is disabled. For OptForSize, we pick the loop size
   // as threshold later on.
