@@ -4413,6 +4413,8 @@ static void GeneratePreprocessorOutputArgs(
     GenerateArg(Args, OPT_dM, SA);
   if (!Generate_dM && Opts.ShowMacros)
     GenerateArg(Args, OPT_dD, SA);
+  if (Opts.DirectivesOnly)
+    GenerateArg(Args, OPT_fdirectives_only, SA);
 }
 
 static bool ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
@@ -4435,6 +4437,7 @@ static bool ParsePreprocessorOutputArgs(PreprocessorOutputOptions &Opts,
 
   Opts.ShowCPP = isStrictlyPreprocessorAction(Action) && !Args.hasArg(OPT_dM);
   Opts.ShowMacros = Args.hasArg(OPT_dM) || Args.hasArg(OPT_dD);
+  Opts.DirectivesOnly = Args.hasArg(OPT_fdirectives_only);
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }

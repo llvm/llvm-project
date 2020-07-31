@@ -25,6 +25,7 @@ public:
   unsigned RewriteIncludes : 1;    ///< Preprocess include directives only.
   unsigned RewriteImports  : 1;    ///< Include contents of transitively-imported modules.
   unsigned MinimizeWhitespace : 1; ///< Ignore whitespace from input.
+  unsigned DirectivesOnly : 1; ///< Process directives but do not expand macros.
 
 public:
   PreprocessorOutputOptions() {
@@ -38,6 +39,7 @@ public:
     RewriteIncludes = 0;
     RewriteImports = 0;
     MinimizeWhitespace = 0;
+    DirectivesOnly = 0;
   }
 };
 
