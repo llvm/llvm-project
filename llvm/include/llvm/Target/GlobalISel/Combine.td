@@ -257,6 +257,24 @@ def simplify_add_to_sub: GICombineRule <
   (apply [{ return Helper.applySimplifyAddToSub(*${root}, ${info});}])
 >;
 
+// Fold int2ptr(ptr2int(x)) -> x
+def p2i_to_i2p_matchinfo: GIDefMatchData<"Register">;
+def p2i_to_i2p: GICombineRule<
+  (defs root:$root, p2i_to_i2p_matchinfo:$info),
+  (match (wip_match_opcode G_INTTOPTR):$root,
+    [{ return Helper.matchCombineI2PToP2I(*${root}, ${info}); }]),
+  (apply [{ return Helper.applyCombineI2PToP2I(*${root}, ${info}); }])
+>;
+
+// Fold ptr2int(int2ptr(x)) -> x
+def i2p_to_p2i_matchinfo: GIDefMatchData<"Register">;
+def i2p_to_p2i: GICombineRule<
+  (defs root:$root, i2p_to_p2i_matchinfo:$info),
+  (match (wip_match_opcode G_PTRTOINT):$root,
+    [{ return Helper.matchCombineP2IToI2P(*${root}, ${info}); }]),
+  (apply [{ return Helper.applyCombineP2IToI2P(*${root}, ${info}); }])
+>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -267,7 +285,8 @@ def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
 
 def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         binop_same_val, binop_left_to_zero,
-                                        binop_right_to_zero]>;
+                                        binop_right_to_zero, p2i_to_i2p, 
+                                        i2p_to_p2i]>;
 
 def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl]>;
 def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
