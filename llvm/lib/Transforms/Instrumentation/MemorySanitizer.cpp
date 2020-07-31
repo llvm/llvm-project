@@ -2693,9 +2693,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleLifetimeStart(IntrinsicInst &I) {
     if (!PoisonStack)
       return;
-    DenseMap<Value *, AllocaInst *> AllocaForValue;
-    AllocaInst *AI =
-        llvm::findAllocaForValue(I.getArgOperand(1), AllocaForValue);
+    AllocaInst *AI = llvm::findAllocaForValue(I.getArgOperand(1));
     if (!AI)
       InstrumentLifetimeStart = false;
     LifetimeStartList.push_back(std::make_pair(&I, AI));
