@@ -394,36 +394,37 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
     target_sp.reset(new Target(debugger, arch, platform_sp, is_dummy_target));
   }
 
-  if (target_sp) {
-    // Set argv0 with what the user typed, unless the user specified a
-    // directory. If the user specified a directory, then it is probably a
-    // bundle that was resolved and we need to use the resolved bundle path
-    if (!user_exe_path.empty()) {
-      // Use exactly what the user typed as the first argument when we exec or
-      // posix_spawn
-      if (user_exe_path_is_bundle && resolved_bundle_exe_path[0]) {
-        target_sp->SetArg0(resolved_bundle_exe_path);
-      } else {
-        // Use resolved path
-        target_sp->SetArg0(file.GetPath().c_str());
-      }
-    }
-    if (file.GetDirectory()) {
-      FileSpec file_dir;
-      file_dir.GetDirectory() = file.GetDirectory();
-      target_sp->AppendExecutableSearchPaths(file_dir);
-    }
+  if (!target_sp)
+    return error;
 
-    // Don't put the dummy target in the target list, it's held separately.
-    if (!is_dummy_target) {
-      std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-      m_selected_target_idx = m_target_list.size();
-      m_target_list.push_back(target_sp);
-      // Now prime this from the dummy target:
-      target_sp->PrimeFromDummyTarget(debugger.GetDummyTarget());
+  // Set argv0 with what the user typed, unless the user specified a
+  // directory. If the user specified a directory, then it is probably a
+  // bundle that was resolved and we need to use the resolved bundle path
+  if (!user_exe_path.empty()) {
+    // Use exactly what the user typed as the first argument when we exec or
+    // posix_spawn
+    if (user_exe_path_is_bundle && resolved_bundle_exe_path[0]) {
+      target_sp->SetArg0(resolved_bundle_exe_path);
     } else {
-      m_dummy_target_sp = target_sp;
+      // Use resolved path
+      target_sp->SetArg0(file.GetPath().c_str());
     }
+  }
+  if (file.GetDirectory()) {
+    FileSpec file_dir;
+    file_dir.GetDirectory() = file.GetDirectory();
+    target_sp->AppendExecutableSearchPaths(file_dir);
+  }
+
+  // Don't put the dummy target in the target list, it's held separately.
+  if (!is_dummy_target) {
+    std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+    m_selected_target_idx = m_target_list.size();
+    m_target_list.push_back(target_sp);
+    // Now prime this from the dummy target:
+    target_sp->PrimeFromDummyTarget(debugger.GetDummyTarget());
+  } else {
+    m_dummy_target_sp = target_sp;
   }
 
   return error;
