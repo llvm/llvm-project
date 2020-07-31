@@ -229,7 +229,13 @@ public:
   /// Find `symbol` and return its value if it appears in the current mappings.
   SymbolBox lookupSymbol(semantics::SymbolRef sym) {
     auto iter = symbolMap.find(&*sym);
-    return (iter == symbolMap.end()) ? SymbolBox() : iter->second;
+    if (iter != symbolMap.end())
+      return iter->second;
+    // Follow host association
+    if (const auto *details =
+            sym->detailsIf<Fortran::semantics::HostAssocDetails>())
+      return lookupSymbol(details->symbol());
+    return SymbolBox::None{};
   }
 
   /// Remove `sym` from the map.
