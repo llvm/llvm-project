@@ -967,15 +967,13 @@ Expected<uint64_t> emitDWARF(typename ELFT::Shdr &SHeader, StringRef Name,
   else if (Name == ".debug_info")
     Err = DWARFYAML::emitDebugInfo(*OS, DWARF);
   else if (Name == ".debug_pubnames")
-    Err = DWARFYAML::emitPubSection(*OS, *DWARF.PubNames, DWARF.IsLittleEndian);
+    Err = DWARFYAML::emitDebugPubnames(*OS, DWARF);
   else if (Name == ".debug_pubtypes")
-    Err = DWARFYAML::emitPubSection(*OS, *DWARF.PubTypes, DWARF.IsLittleEndian);
+    Err = DWARFYAML::emitDebugPubtypes(*OS, DWARF);
   else if (Name == ".debug_gnu_pubnames")
-    Err = DWARFYAML::emitPubSection(*OS, *DWARF.GNUPubNames,
-                                    DWARF.IsLittleEndian, /*IsGNUStyle=*/true);
+    Err = DWARFYAML::emitDebugGNUPubnames(*OS, DWARF);
   else if (Name == ".debug_gnu_pubtypes")
-    Err = DWARFYAML::emitPubSection(*OS, *DWARF.GNUPubTypes,
-                                    DWARF.IsLittleEndian, /*IsGNUStyle=*/true);
+    Err = DWARFYAML::emitDebugGNUPubtypes(*OS, DWARF);
   else if (Name == ".debug_str_offsets")
     Err = DWARFYAML::emitDebugStrOffsets(*OS, DWARF);
   else if (Name == ".debug_rnglists")

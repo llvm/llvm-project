@@ -33,8 +33,10 @@ Error emitDebugStr(raw_ostream &OS, const Data &DI);
 
 Error emitDebugAranges(raw_ostream &OS, const Data &DI);
 Error emitDebugRanges(raw_ostream &OS, const Data &DI);
-Error emitPubSection(raw_ostream &OS, const PubSection &Sect,
-                     bool IsLittleEndian, bool IsGNUPubSec = false);
+Error emitDebugPubnames(raw_ostream &OS, const Data &DI);
+Error emitDebugPubtypes(raw_ostream &OS, const Data &DI);
+Error emitDebugGNUPubnames(raw_ostream &OS, const Data &DI);
+Error emitDebugGNUPubtypes(raw_ostream &OS, const Data &DI);
 Error emitDebugInfo(raw_ostream &OS, const Data &DI);
 Error emitDebugLine(raw_ostream &OS, const Data &DI);
 Error emitDebugAddr(raw_ostream &OS, const Data &DI);
