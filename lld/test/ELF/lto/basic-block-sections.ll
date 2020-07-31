@@ -4,7 +4,7 @@
 ; RUN: llvm-readobj -s %t.lto.o | FileCheck --check-prefix=SECNAMES %s
 ; RUN: ld.lld %t.o -o %t --lto-basic-block-sections=all --lto-unique-basic-block-section-names --lto-O0 --save-temps
 ; RUN: llvm-readobj -s %t.lto.o | FileCheck --check-prefix=SECNAMES-FULL %s
-; RUN: llvm-nm %t.out | FileCheck --check-prefix=SYMS %s
+; RUN: llvm-nm %t | FileCheck --check-prefix=SYMS %s
 
 ; SECNAMES: Name: .text.foo {{.*}}
 ; SECNAMES: Name: .text.foo {{.*}}
