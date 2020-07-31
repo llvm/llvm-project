@@ -61,6 +61,16 @@ def StdC : StandardSpec<"stdc"> {
               RetValSpec<IntType>,
               [ArgSpec<IntType>]
           >,
+          FunctionSpec<
+              "islower",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "isupper",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
       ]
   >;
      
