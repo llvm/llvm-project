@@ -2070,6 +2070,13 @@ static void unswitchNontrivialInvariants(
         DominatingSucc, *VMaps.back(), DTUpdates, AC, DT, LI, MSSAU);
   }
 
+  // Drop metadata if we may break its semantics by moving this branch into the
+  // split block.
+  // TODO: We can keep make.implicit metadata if we prove that TI always
+  // executes and we cannot leave unswitched loop before getting to null check
+  // block. See @test_may_keep_make_implicit_non_trivial.
+  TI.setMetadata(LLVMContext::MD_make_implicit, nullptr);
+
   // The stitching of the branched code back together depends on whether we're
   // doing full unswitching or not with the exception that we always want to
   // nuke the initial terminator placed in the split block.
