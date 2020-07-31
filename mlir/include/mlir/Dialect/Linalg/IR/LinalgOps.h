@@ -85,14 +85,6 @@ AffineMap extractOrIdentityMap(Optional<AffineMap> maybeMap, unsigned rank,
 SmallVector<AffineExpr, 4> concat(ArrayRef<AffineExpr> a,
                                   ArrayRef<AffineExpr> b);
 
-/// Generates indexing maps for convolution with the following structure:
-/// input:   (m_1, ..., m_r, n_1, ..., n_r) -> (m_1 + n_1, ..., m_r + n_r)
-/// kernel:  (m_1, ..., m_r, n_1, ..., n_r) -> (n_1, ..., n_r)
-/// output:  (m_1, ..., m_r, n_1, ..., n_r) -> (m_1, ..., m_r)
-/// where r is the rank of the input, kernel and output
-llvm::Optional<SmallVector<AffineMap, 8>>
-createConvNDIndexingMaps(MLIRContext *context, unsigned rank);
-
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOpsInterfaces.h.inc"
 
 #define GET_OP_CLASSES
