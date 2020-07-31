@@ -322,7 +322,8 @@ public:
     return fir::getBase(lookupSymbol(sym));
   }
 
-  bool lookupLabelSet(Fortran::lower::SymbolRef sym, Fortran::lower::pft::LabelSet &labelSet) override final {
+  bool lookupLabelSet(Fortran::lower::SymbolRef sym,
+                      Fortran::lower::pft::LabelSet &labelSet) override final {
     auto &owningProc = *getEval().getOwningProcedure();
     auto iter = owningProc.assignSymbolLabelMap.find(sym);
     if (iter == owningProc.assignSymbolLabelMap.end()) {
@@ -332,7 +333,8 @@ public:
     return true;
   }
 
-  Fortran::lower::pft::Evaluation* lookupLabel(Fortran::lower::pft::Label label) override final {
+  Fortran::lower::pft::Evaluation *
+  lookupLabel(Fortran::lower::pft::Label label) override final {
     auto &owningProc = *getEval().getOwningProcedure();
     auto iter = owningProc.labelEvaluationMap.find(label);
     if (iter == owningProc.labelEvaluationMap.end()) {
@@ -570,11 +572,10 @@ private:
     builder->create<mlir::ReturnOp>(loc, resultVal);
   }
 
-  /// Argument \p funit is a subroutine that has alternate return specifiers.
-  /// Return the variable that contains the result value of a call to \p funit.
+  /// Get the return value of a call to \p symbol, which is a subroutine entry
+  /// point that has alternative return specifiers.
   const mlir::Value
-  getAltReturnResult(const Fortran::lower::pft::FunctionLikeUnit &funit) {
-    const auto &symbol = funit.getSubprogramSymbol();
+  getAltReturnResult(const Fortran::semantics::Symbol &symbol) {
     assert(Fortran::semantics::HasAlternateReturns(symbol) &&
            "subroutine does not have alternate returns");
     const auto returnValue = lookupSymbol(symbol);
@@ -594,8 +595,8 @@ private:
     if (Fortran::semantics::IsFunction(symbol)) {
       genReturnSymbol(symbol);
     } else if (Fortran::semantics::HasAlternateReturns(symbol)) {
-      mlir::Value retval =
-          builder->create<fir::LoadOp>(toLocation(), getAltReturnResult(funit));
+      mlir::Value retval = builder->create<fir::LoadOp>(
+          toLocation(), getAltReturnResult(symbol));
       builder->create<mlir::ReturnOp>(toLocation(), retval);
     } else {
       genExitRoutine();
@@ -1581,10 +1582,8 @@ private:
     genStopStatement(*this, stmt);
   }
 
-  // gen expression, if any; share code with END of procedure
   void genFIR(const Fortran::parser::ReturnStmt &stmt) {
-    auto &eval = getEval();
-    auto *funit = eval.getOwningProcedure();
+    auto *funit = getEval().getOwningProcedure();
     assert(funit && "not inside main program, function or subroutine");
     if (funit->isMainProgram()) {
       genExitRoutine();
@@ -1592,13 +1591,19 @@ private:
     }
     auto loc = toLocation();
     if (stmt.v) {
-      // Alternate return statement -- assign alternate return index.
-      auto expr = Fortran::semantics::GetExpr(*stmt.v);
-      assert(expr && "missing alternate return expression");
-      auto altReturnIndex = builder->createConvert(loc, builder->getIndexType(),
-                                                   genExprValue(*expr));
-      builder->create<fir::StoreOp>(loc, altReturnIndex,
-                                    getAltReturnResult(*funit));
+      // Alternate return statement - If this is a subroutine where some
+      // alternate entries have alternate returns, but the active entry point
+      // does not, ignore the alternate return value.  Otherwise, assign it
+      // to the compiler-generated result variable.
+      const auto &symbol = funit->getSubprogramSymbol();
+      if (Fortran::semantics::HasAlternateReturns(symbol)) {
+        auto expr = Fortran::semantics::GetExpr(*stmt.v);
+        assert(expr && "missing alternate return expression");
+        auto altReturnIndex = builder->createConvert(
+            loc, builder->getIndexType(), genExprValue(*expr));
+        builder->create<fir::StoreOp>(loc, altReturnIndex,
+                                      getAltReturnResult(symbol));
+      }
     }
     // Branch to the last block of the SUBROUTINE, which has the actual return.
     if (!funit->finalBlock) {

@@ -1,5 +1,19 @@
 ! RUN: bbc -emit-fir -o - %s | FileCheck %s
 
+program entries
+  character(10) hh, qq, m
+  integer mm
+  call ss(mm);     print*, mm
+  call e1(mm, 17); print*, mm
+  call e2(17, mm); print*, mm
+  call e3(mm);     print*, mm
+  print*, jj(11)
+  print*, rr(22)
+  m = 'abcd efgh'
+  print*, hh(m)
+  print*, qq(m)
+end
+
 ! CHECK-LABEL: func @_QPss(%arg0: !fir.ref<i32>)
 subroutine ss(n1)
   ! CHECK: fir.alloca i32 {name = "nx"}
@@ -41,20 +55,6 @@ entry rr(n2)
   ! CHECK: fir.alloca i32 {name = "jj"}
   rr = 200.0
   rr = rr + n2
-end
-
-program entries
-  character(10) hh, qq, m
-  integer mm
-  call ss(mm);     print*, mm
-  call e1(mm, 17); print*, mm
-  call e2(17, mm); print*, mm
-  call e3(mm);     print*, mm
-  print*, jj(11)
-  print*, rr(22)
-  m = 'abcd efgh'
-  print*, hh(m)
-  print*, qq(m)
 end
 
 ! CHECK-LABEL: func @_QPhh(%arg0: !fir.ref<!fir.char<1>>, %arg1: index, %arg2:

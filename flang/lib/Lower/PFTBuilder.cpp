@@ -787,9 +787,6 @@ private:
     for (auto arg : dummyCountMap)
       if (arg.second < entryCount)
         unit->nonUniversalDummyArguments.push_back(arg.first);
-    // Sort to provide generated code order stability.
-    std::sort(unit->nonUniversalDummyArguments.begin(),
-              unit->nonUniversalDummyArguments.end(), std::greater<>());
   }
 
   std::unique_ptr<lower::pft::Program> pgm;
@@ -1300,7 +1297,7 @@ void Fortran::lower::pft::Variable::dump() const {
                  << std::get<1>(*store) << "]:";
   else
     llvm_unreachable("not a Variable");
-  
+
   llvm::errs() << " depth: " << depth;
   if (global)
     llvm::errs() << ", global";
