@@ -2,6 +2,55 @@
 ; RUN: opt < %s -instsimplify -S | FileCheck %s
 ; RUN: opt < %s -passes=instsimplify -S | FileCheck %s
 
+declare i32 @llvm.abs.i32(i32, i1)
+declare <3 x i82> @llvm.abs.v3i82(<3 x i82>, i1)
+
+; TODO: If the sign bit is known zero, the abs is not needed.
+
+define i32 @zext_abs(i31 %x) {
+; CHECK-LABEL: @zext_abs(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i31 [[X:%.*]] to i32
+; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[ZEXT]], i1 false)
+; CHECK-NEXT:    ret i32 [[ABS]]
+;
+  %zext = zext i31 %x to i32
+  %abs = call i32 @llvm.abs.i32(i32 %zext, i1 false)
+  ret i32 %abs
+}
+
+define <3 x i82> @lshr_abs(<3 x i82> %x) {
+; CHECK-LABEL: @lshr_abs(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i82> [[X:%.*]], <i82 1, i82 1, i82 1>
+; CHECK-NEXT:    [[ABS:%.*]] = call <3 x i82> @llvm.abs.v3i82(<3 x i82> [[LSHR]], i1 true)
+; CHECK-NEXT:    ret <3 x i82> [[ABS]]
+;
+  %lshr = lshr <3 x i82> %x, <i82 1, i82 1, i82 1>
+  %abs = call <3 x i82> @llvm.abs.v3i82(<3 x i82> %lshr, i1 true)
+  ret <3 x i82> %abs
+}
+
+define i32 @and_abs(i32 %x) {
+; CHECK-LABEL: @and_abs(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 2147483644
+; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[AND]], i1 true)
+; CHECK-NEXT:    ret i32 [[ABS]]
+;
+  %and = and i32 %x, 2147483644
+  %abs = call i32 @llvm.abs.i32(i32 %and, i1 true)
+  ret i32 %abs
+}
+
+define <3 x i82> @select_abs(<3 x i1> %cond) {
+; CHECK-LABEL: @select_abs(
+; CHECK-NEXT:    [[SEL:%.*]] = select <3 x i1> [[COND:%.*]], <3 x i82> zeroinitializer, <3 x i82> <i82 2147483647, i82 42, i82 1>
+; CHECK-NEXT:    [[ABS:%.*]] = call <3 x i82> @llvm.abs.v3i82(<3 x i82> [[SEL]], i1 false)
+; CHECK-NEXT:    ret <3 x i82> [[ABS]]
+;
+  %sel = select <3 x i1> %cond, <3 x i82> zeroinitializer, <3 x i82> <i82 2147483647, i82 42, i82 1>
+  %abs = call <3 x i82> @llvm.abs.v3i82(<3 x i82> %sel, i1 false)
+  ret <3 x i82> %abs
+}
+
 declare {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a, i8 %b)
 declare {i8, i1} @llvm.sadd.with.overflow.i8(i8 %a, i8 %b)
 declare {i8, i1} @llvm.usub.with.overflow.i8(i8 %a, i8 %b)
