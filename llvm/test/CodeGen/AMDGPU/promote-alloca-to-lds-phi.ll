@@ -129,7 +129,7 @@ endif:
 ; }
 
 ; FIXME: This should be promotable. We need to use
-; GetUnderlyingObjects when looking at the icmp user.
+; getUnderlyingObjects when looking at the icmp user.
 
 ; CHECK-LABEL: @ptr_induction_var_same_alloca(
 ; CHECK: %alloca = alloca [64 x i32], align 4

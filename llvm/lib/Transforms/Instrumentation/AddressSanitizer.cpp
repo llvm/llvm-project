@@ -1556,7 +1556,7 @@ void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
   if (ClOpt && ClOptGlobals) {
     // If initialization order checking is disabled, a simple access to a
     // dynamically initialized global is always valid.
-    GlobalVariable *G = dyn_cast<GlobalVariable>(GetUnderlyingObject(Addr, DL));
+    GlobalVariable *G = dyn_cast<GlobalVariable>(getUnderlyingObject(Addr, DL));
     if (G && (!ClInitializers || GlobalIsLinkerInitialized(G)) &&
         isSafeAccess(ObjSizeVis, Addr, O.TypeSize)) {
       NumOptimizedAccessesToGlobalVar++;
@@ -1566,7 +1566,7 @@ void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
 
   if (ClOpt && ClOptStack) {
     // A direct inbounds access to a stack variable is always valid.
-    if (isa<AllocaInst>(GetUnderlyingObject(Addr, DL)) &&
+    if (isa<AllocaInst>(getUnderlyingObject(Addr, DL)) &&
         isSafeAccess(ObjSizeVis, Addr, O.TypeSize)) {
       NumOptimizedAccessesToStackVar++;
       return;

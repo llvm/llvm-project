@@ -2849,8 +2849,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         return replaceOperand(SI, 1, TrueSI->getTrueValue());
       }
       // select(C0, select(C1, a, b), b) -> select(C0&C1, a, b)
-      // We choose this as normal form to enable folding on the And and shortening
-      // paths for the values (this helps GetUnderlyingObjects() for example).
+      // We choose this as normal form to enable folding on the And and
+      // shortening paths for the values (this helps getUnderlyingObjects() for
+      // example).
       if (TrueSI->getFalseValue() == FalseVal && TrueSI->hasOneUse()) {
         Value *And = Builder.CreateAnd(CondVal, TrueSI->getCondition());
         replaceOperand(SI, 0, And);

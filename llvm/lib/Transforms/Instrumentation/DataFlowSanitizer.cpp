@@ -1246,7 +1246,7 @@ Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
 
   const llvm::Align ShadowAlign(Align * DFS.ShadowWidthBytes);
   SmallVector<const Value *, 2> Objs;
-  GetUnderlyingObjects(Addr, Objs, Pos->getModule()->getDataLayout());
+  getUnderlyingObjects(Addr, Objs, Pos->getModule()->getDataLayout());
   bool AllConstants = true;
   for (const Value *Obj : Objs) {
     if (isa<Function>(Obj) || isa<BlockAddress>(Obj))

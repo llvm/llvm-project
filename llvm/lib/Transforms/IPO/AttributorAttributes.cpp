@@ -5422,7 +5422,7 @@ struct AAPrivatizablePtrFloating : public AAPrivatizablePtrImpl {
   /// See AAPrivatizablePtrImpl::identifyPrivatizableType(...)
   Optional<Type *> identifyPrivatizableType(Attributor &A) override {
     Value *Obj =
-        GetUnderlyingObject(&getAssociatedValue(), A.getInfoCache().getDL());
+        getUnderlyingObject(&getAssociatedValue(), A.getInfoCache().getDL());
     if (!Obj) {
       LLVM_DEBUG(dbgs() << "[AAPrivatizablePtr] No underlying object found!\n");
       return nullptr;

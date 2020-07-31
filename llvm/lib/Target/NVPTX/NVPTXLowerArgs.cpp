@@ -214,7 +214,7 @@ bool NVPTXLowerArgs::runOnKernelFunction(Function &F) {
       for (auto &I : B) {
         if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
           if (LI->getType()->isPointerTy()) {
-            Value *UO = GetUnderlyingObject(LI->getPointerOperand(),
+            Value *UO = getUnderlyingObject(LI->getPointerOperand(),
                                             F.getParent()->getDataLayout());
             if (Argument *Arg = dyn_cast<Argument>(UO)) {
               if (Arg->hasByValAttr()) {

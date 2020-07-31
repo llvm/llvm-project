@@ -2,9 +2,9 @@
 ; RUN: opt -passes='require<scalar-evolution>,require<aa>,loop(print-access-info)' -disable-output  < %s 2>&1 | FileCheck %s
 
 ; Test that the loop accesses are proven safe in this case.
-; The analyzer uses to be confused by the "diamond" because GetUnderlyingObjects
+; The analyzer uses to be confused by the "diamond" because getUnderlyingObjects
 ; is saying that the two pointers can both points to null. The loop analyzer
-; needs to ignore null in the results returned by GetUnderlyingObjects.
+; needs to ignore null in the results returned by getUnderlyingObjects.
 
 ; CHECK: Memory dependences are safe with run-time checks
 
