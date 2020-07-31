@@ -11156,6 +11156,11 @@ static SDValue performANDCombine(SDNode *N,
   if (VT.isScalableVector())
     return performSVEAndCombine(N, DCI);
 
+  // The combining code below works only for NEON vectors. In particular, it
+  // does not work for SVE when dealing with vectors wider than 128 bits.
+  if (!(VT.is64BitVector() || VT.is128BitVector()))
+    return SDValue();
+
   BuildVectorSDNode *BVN =
       dyn_cast<BuildVectorSDNode>(N->getOperand(1).getNode());
   if (!BVN)
