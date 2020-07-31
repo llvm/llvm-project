@@ -606,12 +606,12 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueImpl(
 static bool InstructionDereferencesPointer(Instruction *I, Value *Ptr) {
   if (LoadInst *L = dyn_cast<LoadInst>(I)) {
     return L->getPointerAddressSpace() == 0 &&
-           GetUnderlyingObject(L->getPointerOperand(),
+           getUnderlyingObject(L->getPointerOperand(),
                                L->getModule()->getDataLayout()) == Ptr;
   }
   if (StoreInst *S = dyn_cast<StoreInst>(I)) {
     return S->getPointerAddressSpace() == 0 &&
-           GetUnderlyingObject(S->getPointerOperand(),
+           getUnderlyingObject(S->getPointerOperand(),
                                S->getModule()->getDataLayout()) == Ptr;
   }
   if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I)) {
@@ -622,12 +622,12 @@ static bool InstructionDereferencesPointer(Instruction *I, Value *Ptr) {
     if (!Len || Len->isZero()) return false;
 
     if (MI->getDestAddressSpace() == 0)
-      if (GetUnderlyingObject(MI->getRawDest(),
+      if (getUnderlyingObject(MI->getRawDest(),
                               MI->getModule()->getDataLayout()) == Ptr)
         return true;
     if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI))
       if (MTI->getSourceAddressSpace() == 0)
-        if (GetUnderlyingObject(MTI->getRawSource(),
+        if (getUnderlyingObject(MTI->getRawSource(),
                                 MTI->getModule()->getDataLayout()) == Ptr)
           return true;
   }
@@ -642,10 +642,10 @@ static bool isObjectDereferencedInBlock(Value *Val, BasicBlock *BB) {
   assert(Val->getType()->isPointerTy());
 
   const DataLayout &DL = BB->getModule()->getDataLayout();
-  Value *UnderlyingVal = GetUnderlyingObject(Val, DL);
-  // If 'GetUnderlyingObject' didn't converge, skip it. It won't converge
+  Value *UnderlyingVal = getUnderlyingObject(Val, DL);
+  // If 'getUnderlyingObject' didn't converge, skip it. It won't converge
   // inside InstructionDereferencesPointer either.
-  if (UnderlyingVal == GetUnderlyingObject(UnderlyingVal, DL, 1))
+  if (UnderlyingVal == getUnderlyingObject(UnderlyingVal, DL, 1))
     for (Instruction &I : *BB)
       if (InstructionDereferencesPointer(&I, UnderlyingVal))
         return true;

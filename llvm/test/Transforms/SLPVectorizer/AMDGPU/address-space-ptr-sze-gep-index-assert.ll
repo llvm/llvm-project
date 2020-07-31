@@ -65,7 +65,7 @@ bb:
   ret void
 }
 
-; This should vectorize if using GetUnderlyingObject
+; This should vectorize if using getUnderlyingObject
 define void @multi_as_reduction_same_size(i32 addrspace(1)* %global, i64 %idx0, i64 %idx1) #0 {
 ; CHECK-LABEL: @multi_as_reduction_same_size(
 ; CHECK-NEXT:  bb:
@@ -106,7 +106,7 @@ bb:
   ret void
 }
 
-; This should vectorize if using GetUnderlyingObject
+; This should vectorize if using getUnderlyingObject
 ; The add is done in the same width, even though the address space size is smaller
 define void @multi_as_reduction_different_sized_noncanon(i32 addrspace(3)* %lds, i64 %idx0, i64 %idx1) #0 {
 ; CHECK-LABEL: @multi_as_reduction_different_sized_noncanon(

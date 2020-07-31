@@ -353,7 +353,7 @@ class LoadVtxId1 <PatFrag load> : PatFrag <
   const MemSDNode *LD = cast<MemSDNode>(N);
   return LD->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
          (LD->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
-           !isa<GlobalValue>(GetUnderlyingObject(
+           !isa<GlobalValue>(getUnderlyingObject(
            LD->getMemOperand()->getValue(), CurDAG->getDataLayout())));
 }]>;
 
@@ -365,7 +365,7 @@ class LoadVtxId2 <PatFrag load> : PatFrag <
   (ops node:$ptr), (load node:$ptr), [{
   const MemSDNode *LD = cast<MemSDNode>(N);
   return LD->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
-         isa<GlobalValue>(GetUnderlyingObject(
+         isa<GlobalValue>(getUnderlyingObject(
          LD->getMemOperand()->getValue(), CurDAG->getDataLayout()));
 }]>;
 

@@ -712,7 +712,7 @@ static void getUnderlyingObjects(const MachineInstr *MI,
   MachineMemOperand *MM = *MI->memoperands_begin();
   if (!MM->getValue())
     return;
-  GetUnderlyingObjects(MM->getValue(), Objs, DL);
+  getUnderlyingObjects(MM->getValue(), Objs, DL);
   for (const Value *V : Objs) {
     if (!isIdentifiedObject(V)) {
       Objs.clear();
@@ -736,7 +736,7 @@ void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
       PendingLoads.clear();
     else if (MI.mayLoad()) {
       SmallVector<const Value *, 4> Objs;
-      getUnderlyingObjects(&MI, Objs, MF.getDataLayout());
+      ::getUnderlyingObjects(&MI, Objs, MF.getDataLayout());
       if (Objs.empty())
         Objs.push_back(UnknownValue);
       for (auto V : Objs) {
@@ -745,7 +745,7 @@ void SwingSchedulerDAG::addLoopCarriedDependences(AliasAnalysis *AA) {
       }
     } else if (MI.mayStore()) {
       SmallVector<const Value *, 4> Objs;
-      getUnderlyingObjects(&MI, Objs, MF.getDataLayout());
+      ::getUnderlyingObjects(&MI, Objs, MF.getDataLayout());
       if (Objs.empty())
         Objs.push_back(UnknownValue);
       for (auto V : Objs) {

@@ -415,8 +415,8 @@ static OverwriteResult isOverwrite(const MemoryLocation &Later,
   // Check to see if the later store is to the entire object (either a global,
   // an alloca, or a byval/inalloca argument).  If so, then it clearly
   // overwrites any other store to the same object.
-  const Value *UO1 = GetUnderlyingObject(P1, DL),
-              *UO2 = GetUnderlyingObject(P2, DL);
+  const Value *UO1 = getUnderlyingObject(P1, DL),
+              *UO2 = getUnderlyingObject(P2, DL);
 
   // If we can't resolve the same pointers to the same object, then we can't
   // analyze them at all.
@@ -755,7 +755,7 @@ static bool handleFree(CallInst *F, AliasAnalysis *AA,
         break;
 
       Value *DepPointer =
-          GetUnderlyingObject(getStoredPointerOperand(Dependency), DL);
+          getUnderlyingObject(getStoredPointerOperand(Dependency), DL);
 
       // Check for aliasing.
       if (!AA->isMustAlias(F->getArgOperand(0), DepPointer))
@@ -795,7 +795,7 @@ static void removeAccessedObjects(const MemoryLocation &LoadedLoc,
                                   const DataLayout &DL, AliasAnalysis *AA,
                                   const TargetLibraryInfo *TLI,
                                   const Function *F) {
-  const Value *UnderlyingPointer = GetUnderlyingObject(LoadedLoc.Ptr, DL);
+  const Value *UnderlyingPointer = getUnderlyingObject(LoadedLoc.Ptr, DL);
 
   // A constant can't be in the dead pointer set.
   if (isa<Constant>(UnderlyingPointer))
@@ -861,7 +861,7 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
     if (hasAnalyzableMemoryWrite(&*BBI, *TLI) && isRemovable(&*BBI)) {
       // See through pointer-to-pointer bitcasts
       SmallVector<const Value *, 4> Pointers;
-      GetUnderlyingObjects(getStoredPointerOperand(&*BBI), Pointers, DL);
+      getUnderlyingObjects(getStoredPointerOperand(&*BBI), Pointers, DL);
 
       // Stores to stack values are valid candidates for removal.
       bool AllDead = true;
@@ -1134,7 +1134,7 @@ static bool eliminateNoopStore(Instruction *Inst, BasicBlock::iterator &BBI,
   Constant *StoredConstant = dyn_cast<Constant>(SI->getValueOperand());
   if (StoredConstant && StoredConstant->isNullValue() && isRemovable(SI)) {
     Instruction *UnderlyingPointer =
-        dyn_cast<Instruction>(GetUnderlyingObject(SI->getPointerOperand(), DL));
+        dyn_cast<Instruction>(getUnderlyingObject(SI->getPointerOperand(), DL));
 
     if (UnderlyingPointer && isCallocLikeFn(UnderlyingPointer, TLI) &&
         memoryIsNotModifiedBetween(UnderlyingPointer, SI, AA, DL, DT)) {
@@ -1289,7 +1289,7 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
       // to it is dead along the unwind edge. Otherwise, we need to preserve
       // the store.
       if (LastThrowing && DepWrite->comesBefore(LastThrowing)) {
-        const Value* Underlying = GetUnderlyingObject(DepLoc.Ptr, DL);
+        const Value *Underlying = getUnderlyingObject(DepLoc.Ptr, DL);
         bool IsStoreDeadOnUnwind = isa<AllocaInst>(Underlying);
         if (!IsStoreDeadOnUnwind) {
             // We're looking for a call to an allocation function
@@ -1715,7 +1715,7 @@ struct DSEState {
     // object can be considered terminated.
     if (MaybeTermLoc->second) {
       DataLayout DL = MaybeTerm->getParent()->getModule()->getDataLayout();
-      DefLoc = MemoryLocation(GetUnderlyingObject(DefLoc.Ptr, DL));
+      DefLoc = MemoryLocation(getUnderlyingObject(DefLoc.Ptr, DL));
     }
     return AA.isMustAlias(MaybeTermLoc->first, DefLoc);
   }
@@ -2047,7 +2047,7 @@ struct DSEState {
         Instruction *DefI = Def->getMemoryInst();
         // See through pointer-to-pointer bitcasts
         SmallVector<const Value *, 4> Pointers;
-        GetUnderlyingObjects(getLocForWriteEx(DefI)->Ptr, Pointers, DL);
+        getUnderlyingObjects(getLocForWriteEx(DefI)->Ptr, Pointers, DL);
 
         LLVM_DEBUG(dbgs() << "   ... MemoryDef is not accessed until the end "
                              "of the function\n");
@@ -2130,7 +2130,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
     }
     MemoryLocation SILoc = *MaybeSILoc;
     assert(SILoc.Ptr && "SILoc should not be null");
-    const Value *SILocUnd = GetUnderlyingObject(SILoc.Ptr, DL);
+    const Value *SILocUnd = getUnderlyingObject(SILoc.Ptr, DL);
 
     // Check if the store is a no-op.
     if (isRemovable(SI) && State.storeIsNoop(KillingDef, SILoc, SILocUnd)) {
@@ -2231,7 +2231,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
       MemoryLocation NILoc = *State.getLocForWriteEx(NI);
 
       if (State.isMemTerminatorInst(SI)) {
-        const Value *NIUnd = GetUnderlyingObject(NILoc.Ptr, DL);
+        const Value *NIUnd = getUnderlyingObject(NILoc.Ptr, DL);
         if (!SILocUnd || SILocUnd != NIUnd)
           continue;
         LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: " << *NI
