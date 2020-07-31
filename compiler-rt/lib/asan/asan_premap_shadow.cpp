@@ -32,22 +32,8 @@ uptr PremapShadowSize() {
 // Returns an address aligned to 8 pages, such that one page on the left and
 // PremapShadowSize() bytes on the right of it are mapped r/o.
 uptr PremapShadow() {
-  uptr granularity = GetMmapGranularity();
-  uptr alignment = granularity * 8;
-  uptr left_padding = granularity;
-  uptr shadow_size = PremapShadowSize();
-  uptr map_size = shadow_size + left_padding + alignment;
-
-  uptr map_start = (uptr)MmapNoAccess(map_size);
-  CHECK_NE(map_start, ~(uptr)0);
-
-  uptr shadow_start = RoundUpTo(map_start + left_padding, alignment);
-  uptr shadow_end = shadow_start + shadow_size;
-  internal_munmap(reinterpret_cast<void *>(map_start),
-                  shadow_start - left_padding - map_start);
-  internal_munmap(reinterpret_cast<void *>(shadow_end),
-                  map_start + map_size - shadow_end);
-  return shadow_start;
+  return MapDynamicShadow(PremapShadowSize(), /*mmap_alignment_scale*/ 3,
+                          /*min_shadow_base_alignment*/ 0, kHighMemEnd);
 }
 
 bool PremapShadowFailed() {

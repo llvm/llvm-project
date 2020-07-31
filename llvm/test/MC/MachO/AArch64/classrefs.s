@@ -1,4 +1,4 @@
-; RUN: llvm-mc -triple arm64-apple-darwin10 %s -filetype=obj -o - | llvm-readobj -r --expand-relocs | FileCheck %s
+; RUN: llvm-mc -triple arm64-apple-darwin10 %s -filetype=obj -o - | llvm-readobj -r --expand-relocs - | FileCheck %s
 
 ; Test that we produce an external relocation with Lbar. We could also produce
 ; an internal relocation. We just have to be careful to not use another symbol.

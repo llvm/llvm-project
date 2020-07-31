@@ -663,6 +663,9 @@ int main(int argc, const char *argv[]) {
   NSDate *date_1970_plus_05 = [NSDate dateWithTimeIntervalSince1970:0.5];
   NSDate *date_1970_plus_04 = [NSDate dateWithTimeIntervalSince1970:0.4];
 
+  NSDate *distant_past = [NSDate distantPast];
+  NSDate *distant_future = [NSDate distantFuture];
+
   CFAbsoluteTime date1_abs = CFDateGetAbsoluteTime(date1);
   CFAbsoluteTime date2_abs = CFDateGetAbsoluteTime(date2);
   CFAbsoluteTime date3_abs = CFDateGetAbsoluteTime(date3);

@@ -3652,14 +3652,10 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(AArch64::BRK))
         .addImm(1);
     return true;
-  case Intrinsic::debugtrap: {
-    if (Subtarget->isTargetWindows()) {
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(AArch64::BRK))
-          .addImm(0xF000);
-      return true;
-    }
-    break;
-  }
+  case Intrinsic::debugtrap:
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(AArch64::BRK))
+        .addImm(0xF000);
+    return true;
 
   case Intrinsic::sqrt: {
     Type *RetTy = II->getCalledFunction()->getReturnType();

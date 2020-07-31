@@ -69,9 +69,9 @@ public:
 
     static void Clear();
 
-    static void
-    ForEach(std::function<bool(ConstString, const lldb::TypeSummaryImplSP &)>
-                callback);
+    static void ForEach(std::function<bool(const TypeMatcher &,
+                                           const lldb::TypeSummaryImplSP &)>
+                            callback);
 
     static uint32_t GetCount();
   };

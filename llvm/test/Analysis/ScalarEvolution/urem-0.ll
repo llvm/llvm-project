@@ -1,4 +1,5 @@
-; RUN: opt < %s -scalar-evolution -analyze | FileCheck %s
+; RUN: opt < %s -scalar-evolution -analyze -enable-new-pm=0 | FileCheck %s
+; RUN: opt < %s "-passes=print<scalar-evolution>" -disable-output 2>&1 | FileCheck %s
 
 define i8 @foo(i8 %a) {
 ; CHECK-LABEL: @foo

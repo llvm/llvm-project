@@ -1,4 +1,4 @@
-// RUN: llvm-mc -n -triple i386-apple-darwin9 %s -filetype=obj -o - | llvm-readobj -r -S --sd | FileCheck %s
+// RUN: llvm-mc -n -triple i386-apple-darwin9 %s -filetype=obj -o - | llvm-readobj -r -S --sd - | FileCheck %s
 
         .data
         .long 0

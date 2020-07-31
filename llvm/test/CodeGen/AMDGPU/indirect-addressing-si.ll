@@ -273,8 +273,8 @@ entry:
 ; MOVREL: s_add_i32 m0, s{{[0-9]+}}, 0xfffffe{{[0-9a-z]+}}
 ; MOVREL: v_movreld_b32_e32 v0, 5
 
-; IDXMODE: s_addk_i32 [[ADD_IDX:s[0-9]+]], 0xfe00{{$}}
-; IDXMODE: s_set_gpr_idx_on [[ADD_IDX]], gpr_idx(DST)
+; IDXMODE: s_add_i32 s{{[0-9]+}}, s{{[0-9]+}}, 0xfffffe00{{$}}
+; IDXMODE: s_set_gpr_idx_on s{{[0-9]+}}, gpr_idx(DST)
 ; IDXMODE-NEXT: v_mov_b32_e32 v0, 5
 ; IDXMODE-NEXT: s_set_gpr_idx_off
 define amdgpu_kernel void @insert_neg_offset_sgpr_loadreg(i32 addrspace(1)* %in, <16 x i32> addrspace(1)* %out, <16 x i32> %vec, i32 %offset) {
@@ -524,7 +524,7 @@ define amdgpu_kernel void @insertelement_v16f32_or_index(<16 x float> addrspace(
 
 ; GCN: {{^; %bb.[0-9]}}:
 ; GCN: s_mov_b64 exec,
-; GCN: s_cbranch_vccnz [[BB2]]
+; GCN: s_cbranch_execnz [[BB2]]
 
 define amdgpu_kernel void @broken_phi_bb(i32 %arg, i32 %arg1) #0 {
 bb:

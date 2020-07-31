@@ -28,7 +28,7 @@ protected:
 public:
   virtual ~MCWasmObjectTargetWriter();
 
-  virtual Triple::ObjectFormatType getFormat() const { return Triple::Wasm; }
+  Triple::ObjectFormatType getFormat() const override { return Triple::Wasm; }
   static bool classof(const MCObjectTargetWriter *W) {
     return W->getFormat() == Triple::Wasm;
   }

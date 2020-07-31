@@ -22,6 +22,20 @@ namespace {
 struct Builder : RecursiveASTVisitor<Builder> {
   ASTImporterLookupTable &LT;
   Builder(ASTImporterLookupTable &LT) : LT(LT) {}
+
+  bool VisitTypedefNameDecl(TypedefNameDecl *D) {
+    QualType Ty = D->getUnderlyingType();
+    Ty = Ty.getCanonicalType();
+    if (const auto *RTy = dyn_cast<RecordType>(Ty)) {
+      LT.add(RTy->getAsRecordDecl());
+      // iterate over the field decls, adding them
+      for (auto *it : RTy->getAsRecordDecl()->fields()) {
+        LT.add(it);
+      }
+    }
+    return true;
+  }
+
   bool VisitNamedDecl(NamedDecl *D) {
     LT.add(D);
     return true;

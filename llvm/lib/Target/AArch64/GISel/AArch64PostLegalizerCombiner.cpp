@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -42,29 +43,6 @@ struct ShuffleVectorPseudo {
       : Opc(Opc), Dst(Dst), SrcOps(SrcOps){};
   ShuffleVectorPseudo() {}
 };
-
-/// \returns The splat index of a G_SHUFFLE_VECTOR \p MI when \p MI is a splat.
-/// If \p MI is not a splat, returns None.
-static Optional<int> getSplatIndex(MachineInstr &MI) {
-  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR &&
-         "Only G_SHUFFLE_VECTOR can have a splat index!");
-  ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
-  auto FirstDefinedIdx = find_if(Mask, [](int Elt) { return Elt >= 0; });
-
-  // If all elements are undefined, this shuffle can be considered a splat.
-  // Return 0 for better potential for callers to simplify.
-  if (FirstDefinedIdx == Mask.end())
-    return 0;
-
-  // Make sure all remaining elements are either undef or the same
-  // as the first non-undef value.
-  int SplatValue = *FirstDefinedIdx;
-  if (any_of(make_range(std::next(FirstDefinedIdx), Mask.end()),
-             [&SplatValue](int Elt) { return Elt >= 0 && Elt != SplatValue; }))
-    return None;
-
-  return SplatValue;
-}
 
 /// Check if a vector shuffle corresponds to a REV instruction with the
 /// specified blocksize.

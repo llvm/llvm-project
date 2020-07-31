@@ -11,12 +11,14 @@
 
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileCollector.h"
 #include "llvm/Support/YAMLTraits.h"
 
 #include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace lldb_private {
@@ -99,7 +101,8 @@ public:
     return m_collector;
   }
 
-  void recordInterestingDirectory(const llvm::Twine &dir);
+  void RecordInterestingDirectory(const llvm::Twine &dir);
+  void RecordInterestingDirectoryRecursive(const llvm::Twine &dir);
 
   void Keep() override {
     auto mapping = GetRoot().CopyByAppendingPathComponent(Info::file);
@@ -149,6 +152,7 @@ public:
   }
 
   void Update(llvm::StringRef path) { m_cwd = std::string(path); }
+  llvm::StringRef GetWorkingDirectory() { return m_cwd; }
 
   struct Info {
     static const char *name;
@@ -432,7 +436,7 @@ private:
 /// return the path to the files in the index.
 template <typename T> class MultiLoader {
 public:
-  MultiLoader(std::vector<std::string> files) : m_files(files) {}
+  MultiLoader(std::vector<std::string> files) : m_files(std::move(files)) {}
 
   static std::unique_ptr<MultiLoader> Create(Loader *loader) {
     if (!loader)

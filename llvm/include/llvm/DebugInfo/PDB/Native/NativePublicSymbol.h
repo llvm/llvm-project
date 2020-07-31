@@ -30,7 +30,6 @@ public:
   uint32_t getAddressOffset() const override;
   uint32_t getAddressSection() const override;
   std::string getName() const override;
-  PDB_SymType getSymTag() const override;
   uint32_t getRelativeVirtualAddress() const override;
   uint64_t getVirtualAddress() const override;
 

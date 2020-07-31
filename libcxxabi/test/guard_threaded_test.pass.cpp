@@ -36,7 +36,7 @@ constexpr int TestSamples = 50;
 
 
 void BusyWait() {
-    std::this_thread::yield();
+  std::this_thread::yield();
 }
 
 void YieldAfterBarrier() {

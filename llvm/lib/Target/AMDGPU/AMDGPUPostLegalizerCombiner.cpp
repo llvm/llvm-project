@@ -234,7 +234,7 @@ namespace {
 #include "AMDGPUGenPostLegalizeGICombiner.inc"
 #undef AMDGPUPOSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_H
 
-class AMDGPUPostLegalizerCombinerInfo : public CombinerInfo {
+class AMDGPUPostLegalizerCombinerInfo final : public CombinerInfo {
   GISelKnownBits *KB;
   MachineDominatorTree *MDT;
 

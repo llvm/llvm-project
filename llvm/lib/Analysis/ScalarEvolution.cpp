@@ -3317,10 +3317,7 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
   }
 
   // Add the total offset from all the GEP indices to the base.
-  auto *GEPExpr = getAddExpr(BaseExpr, TotalOffset, Wrap);
-  assert(BaseExpr->getType() == GEPExpr->getType() &&
-         "GEP should not change type mid-flight.");
-  return GEPExpr;
+  return getAddExpr(BaseExpr, TotalOffset, Wrap);
 }
 
 std::tuple<SCEV *, FoldingSetNodeID, void *>
@@ -11937,6 +11934,11 @@ ScalarEvolutionVerifierPass::run(Function &F, FunctionAnalysisManager &AM) {
 
 PreservedAnalyses
 ScalarEvolutionPrinterPass::run(Function &F, FunctionAnalysisManager &AM) {
+  // For compatibility with opt's -analyze feature under legacy pass manager
+  // which was not ported to NPM. This keeps tests using
+  // update_analyze_test_checks.py working.
+  OS << "Printing analysis 'Scalar Evolution Analysis' for function '"
+     << F.getName() << "':\n";
   AM.getResult<ScalarEvolutionAnalysis>(F).print(OS);
   return PreservedAnalyses::all();
 }

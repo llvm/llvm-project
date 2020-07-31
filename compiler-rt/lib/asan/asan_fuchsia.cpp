@@ -198,6 +198,10 @@ bool HandleDlopenInit() {
   return false;
 }
 
+void FlushUnneededASanShadowMemory(uptr p, uptr size) {
+  __sanitizer_fill_shadow(p, size, 0, 0);
+}
+
 }  // namespace __asan
 
 // These are declared (in extern "C") by <zircon/sanitizer.h>.

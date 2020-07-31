@@ -32,7 +32,7 @@ body:             |
     ; GFX8: BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr4, 0, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into %stack.3, addrspace 5)
     ; GFX8: $vgpr3 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; GFX8: $vcc_lo = S_MOV_B32 8192
-    ; GFX8: $vgpr3, dead $vcc = V_ADD_I32_e64 killed $vcc_lo, killed $vgpr3, 0, implicit $exec
+    ; GFX8: $vgpr3, dead $vcc = V_ADD_CO_U32_e64 killed $vcc_lo, killed $vgpr3, 0, implicit $exec
     ; GFX8: $vgpr0 = V_OR_B32_e32 killed $vgpr3, $vgpr1, implicit $exec
     ; GFX8: $sgpr32 = frame-destroy S_SUB_U32 $sgpr32, 1572864, implicit-def $scc
     ; GFX8: $sgpr33 = V_READLANE_B32_vi $vgpr2, 0

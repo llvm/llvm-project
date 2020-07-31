@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn-sink -simplifycfg -simplifycfg-sink-common=false -S | FileCheck %s
+; RUN: opt < %s -gvn-sink -simplifycfg -hoist-common-insts=true -simplifycfg-sink-common=false -S | FileCheck %s
 
 define zeroext i1 @test1(i1 zeroext %flag, i32 %blksA, i32 %blksB, i32 %nblks) {
 entry:

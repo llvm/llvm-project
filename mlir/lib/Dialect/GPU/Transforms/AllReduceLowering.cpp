@@ -181,8 +181,8 @@ private:
 
       // Insert accumulator body between split block.
       BlockAndValueMapping mapping;
-      mapping.map(body.front().getArgument(0), lhs);
-      mapping.map(body.front().getArgument(1), rhs);
+      mapping.map(body.getArgument(0), lhs);
+      mapping.map(body.getArgument(1), rhs);
       rewriter.cloneRegionBefore(body, *split->getParent(),
                                  split->getIterator(), mapping);
 

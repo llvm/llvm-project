@@ -67,6 +67,9 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   prescanner.set_fixedForm(options.isFixedForm)
       .set_fixedFormColumnLimit(options.fixedFormColumns)
       .AddCompilerDirectiveSentinel("dir$");
+  if (options.features.IsEnabled(LanguageFeature::OpenACC)) {
+    prescanner.AddCompilerDirectiveSentinel("$acc");
+  }
   if (options.features.IsEnabled(LanguageFeature::OpenMP)) {
     prescanner.AddCompilerDirectiveSentinel("$omp");
     prescanner.AddCompilerDirectiveSentinel("$"); // OMP conditional line

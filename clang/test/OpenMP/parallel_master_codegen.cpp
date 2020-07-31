@@ -18,7 +18,7 @@
 // CK1-DAG: [[DEF_LOC:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 // CK1-LABEL: foo
-void foo() {}
+void foo() { extern void mayThrow(); mayThrow(); }
 
 void parallel_master() {
 #pragma omp parallel master

@@ -402,8 +402,15 @@ Value *HardwareLoop::InitLoopCount() {
 
   BasicBlock *BB = L->getLoopPreheader();
   if (UseLoopGuard && BB->getSinglePredecessor() &&
-      cast<BranchInst>(BB->getTerminator())->isUnconditional())
-    BB = BB->getSinglePredecessor();
+      cast<BranchInst>(BB->getTerminator())->isUnconditional()) {
+    BasicBlock *Predecessor = BB->getSinglePredecessor();
+    // If it's not safe to create a while loop then don't force it and create a
+    // do-while loop instead
+    if (!isSafeToExpandAt(ExitCount, Predecessor->getTerminator(), SE))
+        UseLoopGuard = false;
+    else
+        BB = Predecessor;
+  }
 
   if (!isSafeToExpandAt(ExitCount, BB->getTerminator(), SE)) {
     LLVM_DEBUG(dbgs() << "- Bailing, unsafe to expand ExitCount "

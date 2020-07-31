@@ -1,4 +1,5 @@
-; RUN: opt %s -always-inline | opt -analyze -scalar-evolution
+; RUN: opt %s -always-inline | opt -analyze -enable-new-pm=0 -scalar-evolution
+; RUN: opt %s -always-inline 2>&1 | opt -disable-output -scalar-evolution
 ; There was optimization bug in ScalarEvolution, that causes too long 
 ; compute time and stack overflow crash.
 

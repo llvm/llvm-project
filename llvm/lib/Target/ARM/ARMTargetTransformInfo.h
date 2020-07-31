@@ -38,6 +38,16 @@ class ScalarEvolution;
 class Type;
 class Value;
 
+namespace TailPredication {
+  enum Mode {
+    Disabled = 0,
+    EnabledNoReductions,
+    Enabled,
+    ForceEnabledNoReductions,
+    ForceEnabled
+  };
+}
+
 class ARMTTIImpl : public BasicTTIImplBase<ARMTTIImpl> {
   using BaseT = BasicTTIImplBase<ARMTTIImpl>;
   using TTI = TargetTransformInfo;
@@ -102,6 +112,9 @@ public:
   bool isFPVectorizationPotentiallyUnsafe() {
     return !ST->isTargetDarwin() && !ST->hasMVEFloatOps();
   }
+
+  Optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
+                                               IntrinsicInst &II) const;
 
   /// \name Scalar TTI Implementations
   /// @{
@@ -197,7 +210,7 @@ public:
   }
 
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
-                       TTI::TargetCostKind CostKind,
+                       TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
                        const Instruction *I = nullptr);
 
   int getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,

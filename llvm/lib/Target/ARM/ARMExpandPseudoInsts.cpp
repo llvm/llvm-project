@@ -873,16 +873,27 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
     // FIXME Windows CE supports older ARM CPUs
     assert(!STI->isTargetWindows() && "Windows on ARM requires ARMv7+");
 
-    // Expand into a movi + orr.
-    LO16 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::MOVi), DstReg);
-    HI16 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::ORRri))
-      .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
-      .addReg(DstReg);
-
     assert (MO.isImm() && "MOVi32imm w/ non-immediate source operand!");
     unsigned ImmVal = (unsigned)MO.getImm();
-    unsigned SOImmValV1 = ARM_AM::getSOImmTwoPartFirst(ImmVal);
-    unsigned SOImmValV2 = ARM_AM::getSOImmTwoPartSecond(ImmVal);
+    unsigned SOImmValV1 = 0, SOImmValV2 = 0;
+
+    if (ARM_AM::isSOImmTwoPartVal(ImmVal)) { // Expand into a movi + orr.
+      LO16 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::MOVi), DstReg);
+      HI16 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::ORRri))
+          .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
+          .addReg(DstReg);
+      SOImmValV1 = ARM_AM::getSOImmTwoPartFirst(ImmVal);
+      SOImmValV2 = ARM_AM::getSOImmTwoPartSecond(ImmVal);
+    } else { // Expand into a mvn + sub.
+      LO16 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::MVNi), DstReg);
+      HI16 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::SUBri))
+          .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
+          .addReg(DstReg);
+      SOImmValV1 = ARM_AM::getSOImmTwoPartFirst(-ImmVal);
+      SOImmValV2 = ARM_AM::getSOImmTwoPartSecond(-ImmVal);
+      SOImmValV1 = ~(-SOImmValV1);
+    }
+
     unsigned MIFlags = MI.getFlags();
     LO16 = LO16.addImm(SOImmValV1);
     HI16 = HI16.addImm(SOImmValV2);
@@ -1859,6 +1870,66 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   switch (Opcode) {
     default:
       return false;
+
+    case ARM::VBSPd:
+    case ARM::VBSPq: {
+      Register DstReg = MI.getOperand(0).getReg();
+      if (DstReg == MI.getOperand(3).getReg()) {
+        // Expand to VBIT
+        unsigned NewOpc = Opcode == ARM::VBSPd ? ARM::VBITd : ARM::VBITq;
+        BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(NewOpc))
+            .add(MI.getOperand(0))
+            .add(MI.getOperand(3))
+            .add(MI.getOperand(2))
+            .add(MI.getOperand(1))
+            .addImm(MI.getOperand(4).getImm())
+            .add(MI.getOperand(5));
+      } else if (DstReg == MI.getOperand(2).getReg()) {
+        // Expand to VBIF
+        unsigned NewOpc = Opcode == ARM::VBSPd ? ARM::VBIFd : ARM::VBIFq;
+        BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(NewOpc))
+            .add(MI.getOperand(0))
+            .add(MI.getOperand(2))
+            .add(MI.getOperand(3))
+            .add(MI.getOperand(1))
+            .addImm(MI.getOperand(4).getImm())
+            .add(MI.getOperand(5));
+      } else {
+        // Expand to VBSL
+        unsigned NewOpc = Opcode == ARM::VBSPd ? ARM::VBSLd : ARM::VBSLq;
+        if (DstReg == MI.getOperand(1).getReg()) {
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(NewOpc))
+              .add(MI.getOperand(0))
+              .add(MI.getOperand(1))
+              .add(MI.getOperand(2))
+              .add(MI.getOperand(3))
+              .addImm(MI.getOperand(4).getImm())
+              .add(MI.getOperand(5));
+        } else {
+          // Use move to satisfy constraints
+          unsigned MoveOpc = Opcode == ARM::VBSPd ? ARM::VORRd : ARM::VORRq;
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MoveOpc))
+              .addReg(DstReg,
+                      RegState::Define |
+                          getRenamableRegState(MI.getOperand(0).isRenamable()))
+              .add(MI.getOperand(1))
+              .add(MI.getOperand(1))
+              .addImm(MI.getOperand(4).getImm())
+              .add(MI.getOperand(5));
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(NewOpc))
+              .add(MI.getOperand(0))
+              .addReg(DstReg,
+                      RegState::Kill |
+                          getRenamableRegState(MI.getOperand(0).isRenamable()))
+              .add(MI.getOperand(2))
+              .add(MI.getOperand(3))
+              .addImm(MI.getOperand(4).getImm())
+              .add(MI.getOperand(5));
+        }
+      }
+      MI.eraseFromParent();
+      return true;
+    }
 
     case ARM::TCRETURNdi:
     case ARM::TCRETURNri: {

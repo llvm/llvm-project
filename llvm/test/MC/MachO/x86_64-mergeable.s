@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-apple-darwin14 %s -filetype=obj -o - | llvm-readobj -r --expand-relocs | FileCheck %s
+// RUN: llvm-mc -triple x86_64-apple-darwin14 %s -filetype=obj -o - | llvm-readobj -r --expand-relocs - | FileCheck %s
 
 // Test that we "S + K" produce a relocation with a symbol, but just S produces
 // a relocation with the section.

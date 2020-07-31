@@ -1229,7 +1229,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
       unsigned NewSize = 0;
       for (std::string &Name : FunctionNames) {
         Function *Fn = BD.getProgram().getFunction(Name);
-        assert(Fn && "Could not find funcion?");
+        assert(Fn && "Could not find function?");
 
         std::vector<Attribute> Attrs;
         for (Attribute A : Fn->getAttributes().getFnAttributes())

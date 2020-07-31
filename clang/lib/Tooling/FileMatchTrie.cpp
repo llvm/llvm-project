@@ -105,8 +105,13 @@ public:
                            StringRef FileName,
                            bool &IsAmbiguous,
                            unsigned ConsumedLength = 0) const {
+    // Note: we support only directory symlinks for performance reasons.
     if (Children.empty()) {
-      if (Comparator.equivalent(StringRef(Path), FileName))
+      // As far as we do not support file symlinks, compare
+      // basenames here to avoid request to file system.
+      if (llvm::sys::path::filename(Path) ==
+              llvm::sys::path::filename(FileName) &&
+          Comparator.equivalent(StringRef(Path), FileName))
         return StringRef(Path);
       return {};
     }
@@ -121,6 +126,13 @@ public:
       if (!Result.empty() || IsAmbiguous)
         return Result;
     }
+
+    // If `ConsumedLength` is zero, this is the root and we have no filename
+    // match. Give up in this case, we don't try to find symlinks with
+    // different names.
+    if (ConsumedLength == 0)
+      return {};
+
     std::vector<StringRef> AllChildren;
     getAll(AllChildren, MatchingChild);
     StringRef Result;

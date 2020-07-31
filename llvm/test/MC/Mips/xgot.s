@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux  %s -o - | llvm-readobj -r | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux  %s -o - | llvm-readobj -r - | FileCheck %s
 
 // Check that the appropriate relocations were created.
 // For the xgot case we want to see R_MIPS_[GOT|CALL]_[HI|LO]16.

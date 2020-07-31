@@ -2,9 +2,9 @@
 ; one version with a no-op loop pass to make sure that the loop doesn't get
 ; simplified away.
 ;
-; RUN: opt < %s -passes='require<ivusers>,no-op-loop,require<ivusers>' -S \
+; RUN: opt < %s -passes='require<iv-users>,no-op-loop,require<iv-users>' -S \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,BEFORE
-; RUN: opt < %s -passes='require<ivusers>,loop-deletion,require<ivusers>' -S \
+; RUN: opt < %s -passes='require<iv-users>,loop-deletion,require<iv-users>' -S \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,AFTER
 
 

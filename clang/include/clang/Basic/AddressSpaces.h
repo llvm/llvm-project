@@ -36,6 +36,8 @@ enum class LangAS : unsigned {
   opencl_constant,
   opencl_private,
   opencl_generic,
+  opencl_global_device,
+  opencl_global_host,
 
   // CUDA specific address spaces.
   cuda_device,

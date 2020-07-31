@@ -126,6 +126,10 @@ public:
       return Op;
     }
 
+    iterator skipBytes(uint64_t Add) {
+      return iterator(Expr, Op.EndOffset + Add);
+    }
+
     // Comparison operators are provided out of line.
     friend bool operator==(const iterator &, const iterator &);
   };

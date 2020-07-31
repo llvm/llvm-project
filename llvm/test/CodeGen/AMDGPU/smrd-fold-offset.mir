@@ -17,7 +17,7 @@ body:             |
     %5:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
     %6:sreg_32_xm0 = S_MOV_B32 4095
     %8:vgpr_32 = COPY %6
-    %7:vgpr_32 = V_ADD_I32_e32 %4, killed %8, implicit-def dead $vcc, implicit $exec
+    %7:vgpr_32 = V_ADD_CO_U32_e32 %4, killed %8, implicit-def dead $vcc, implicit $exec
     %10:sreg_32 = COPY %7
     %9:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR killed %5, killed %10, 0, 0
     $vgpr0 = COPY %9

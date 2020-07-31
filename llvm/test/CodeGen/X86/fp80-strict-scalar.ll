@@ -2,35 +2,35 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -O3 | FileCheck %s --check-prefixes=CHECK,X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -O3 | FileCheck %s --check-prefixes=CHECK,X64
 
-declare x86_fp80 @llvm.experimental.constrained.fadd.x86_fp80(x86_fp80, x86_fp80, metadata, metadata)
-declare x86_fp80 @llvm.experimental.constrained.fsub.x86_fp80(x86_fp80, x86_fp80, metadata, metadata)
-declare x86_fp80 @llvm.experimental.constrained.fmul.x86_fp80(x86_fp80, x86_fp80, metadata, metadata)
-declare x86_fp80 @llvm.experimental.constrained.fdiv.x86_fp80(x86_fp80, x86_fp80, metadata, metadata)
-declare x86_fp80 @llvm.experimental.constrained.fpext.x86_fp80.f32(float, metadata)
-declare x86_fp80 @llvm.experimental.constrained.fpext.x86_fp80.f64(double, metadata)
-declare x86_fp80 @llvm.experimental.constrained.sqrt.x86_fp80(x86_fp80, metadata, metadata)
-declare float @llvm.experimental.constrained.fptrunc.f32.x86_fp80(x86_fp80, metadata, metadata)
-declare double @llvm.experimental.constrained.fptrunc.f64.x86_fp80(x86_fp80, metadata, metadata)
-declare i1  @llvm.experimental.constrained.fptosi.i1.x86_fp80(x86_fp80, metadata)
-declare i8  @llvm.experimental.constrained.fptosi.i8.x86_fp80(x86_fp80, metadata)
-declare i16 @llvm.experimental.constrained.fptosi.i16.x86_fp80(x86_fp80, metadata)
-declare i32 @llvm.experimental.constrained.fptosi.i32.x86_fp80(x86_fp80, metadata)
-declare i64 @llvm.experimental.constrained.fptosi.i64.x86_fp80(x86_fp80, metadata)
-declare i1 @llvm.experimental.constrained.fptoui.i1.x86_fp80(x86_fp80, metadata)
-declare i8  @llvm.experimental.constrained.fptoui.i8.x86_fp80(x86_fp80, metadata)
-declare i16 @llvm.experimental.constrained.fptoui.i16.x86_fp80(x86_fp80, metadata)
-declare i32 @llvm.experimental.constrained.fptoui.i32.x86_fp80(x86_fp80, metadata)
-declare i64 @llvm.experimental.constrained.fptoui.i64.x86_fp80(x86_fp80, metadata)
-declare x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i1(i1, metadata, metadata)
-declare x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i8(i8, metadata, metadata)
-declare x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i16(i16, metadata, metadata)
-declare x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i32(i32, metadata, metadata)
-declare x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i64(i64, metadata, metadata)
-declare x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i1(i1, metadata, metadata)
-declare x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i8(i8, metadata, metadata)
-declare x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i16(i16, metadata, metadata)
-declare x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i32(i32, metadata, metadata)
-declare x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i64(i64, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80, x86_fp80, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.fsub.f80(x86_fp80, x86_fp80, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80, x86_fp80, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80, x86_fp80, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.fpext.f80.f32(float, metadata)
+declare x86_fp80 @llvm.experimental.constrained.fpext.f80.f64(double, metadata)
+declare x86_fp80 @llvm.experimental.constrained.sqrt.f80(x86_fp80, metadata, metadata)
+declare float @llvm.experimental.constrained.fptrunc.f32.f80(x86_fp80, metadata, metadata)
+declare double @llvm.experimental.constrained.fptrunc.f64.f80(x86_fp80, metadata, metadata)
+declare i1  @llvm.experimental.constrained.fptosi.i1.f80(x86_fp80, metadata)
+declare i8  @llvm.experimental.constrained.fptosi.i8.f80(x86_fp80, metadata)
+declare i16 @llvm.experimental.constrained.fptosi.i16.f80(x86_fp80, metadata)
+declare i32 @llvm.experimental.constrained.fptosi.i32.f80(x86_fp80, metadata)
+declare i64 @llvm.experimental.constrained.fptosi.i64.f80(x86_fp80, metadata)
+declare i1 @llvm.experimental.constrained.fptoui.i1.f80(x86_fp80, metadata)
+declare i8  @llvm.experimental.constrained.fptoui.i8.f80(x86_fp80, metadata)
+declare i16 @llvm.experimental.constrained.fptoui.i16.f80(x86_fp80, metadata)
+declare i32 @llvm.experimental.constrained.fptoui.i32.f80(x86_fp80, metadata)
+declare i64 @llvm.experimental.constrained.fptoui.i64.f80(x86_fp80, metadata)
+declare x86_fp80 @llvm.experimental.constrained.sitofp.f80.i1(i1, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.sitofp.f80.i8(i8, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.sitofp.f80.i16(i16, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.sitofp.f80.i32(i32, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.sitofp.f80.i64(i64, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.uitofp.f80.i1(i1, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.uitofp.f80.i8(i8, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.uitofp.f80.i16(i16, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.uitofp.f80.i32(i32, metadata, metadata)
+declare x86_fp80 @llvm.experimental.constrained.uitofp.f80.i64(i64, metadata, metadata)
 
 define x86_fp80 @fadd_fp80(x86_fp80 %a, x86_fp80 %b) nounwind strictfp {
 ; X86-LABEL: fadd_fp80:
@@ -48,7 +48,7 @@ define x86_fp80 @fadd_fp80(x86_fp80 %a, x86_fp80 %b) nounwind strictfp {
 ; X64-NEXT:    faddp %st, %st(1)
 ; X64-NEXT:    wait
 ; X64-NEXT:    retq
-  %ret = call x86_fp80 @llvm.experimental.constrained.fadd.x86_fp80(x86_fp80 %a, x86_fp80 %b,
+  %ret = call x86_fp80 @llvm.experimental.constrained.fadd.f80(x86_fp80 %a, x86_fp80 %b,
                                                                     metadata !"round.dynamic",
                                                                     metadata !"fpexcept.strict") #0
   ret x86_fp80 %ret
@@ -70,7 +70,7 @@ define x86_fp80 @fsub_fp80(x86_fp80 %a, x86_fp80 %b) nounwind strictfp {
 ; X64-NEXT:    fsubp %st, %st(1)
 ; X64-NEXT:    wait
 ; X64-NEXT:    retq
-  %ret = call x86_fp80 @llvm.experimental.constrained.fsub.x86_fp80(x86_fp80 %a, x86_fp80 %b,
+  %ret = call x86_fp80 @llvm.experimental.constrained.fsub.f80(x86_fp80 %a, x86_fp80 %b,
                                                                     metadata !"round.dynamic",
                                                                     metadata !"fpexcept.strict") #0
   ret x86_fp80 %ret
@@ -92,7 +92,7 @@ define x86_fp80 @fmul_fp80(x86_fp80 %a, x86_fp80 %b) nounwind strictfp {
 ; X64-NEXT:    fmulp %st, %st(1)
 ; X64-NEXT:    wait
 ; X64-NEXT:    retq
-  %ret = call x86_fp80 @llvm.experimental.constrained.fmul.x86_fp80(x86_fp80 %a, x86_fp80 %b,
+  %ret = call x86_fp80 @llvm.experimental.constrained.fmul.f80(x86_fp80 %a, x86_fp80 %b,
                                                                     metadata !"round.dynamic",
                                                                     metadata !"fpexcept.strict") #0
   ret x86_fp80 %ret
@@ -114,7 +114,7 @@ define x86_fp80 @fdiv_fp80(x86_fp80 %a, x86_fp80 %b) nounwind strictfp {
 ; X64-NEXT:    fdivp %st, %st(1)
 ; X64-NEXT:    wait
 ; X64-NEXT:    retq
-  %ret = call x86_fp80 @llvm.experimental.constrained.fdiv.x86_fp80(x86_fp80 %a, x86_fp80 %b,
+  %ret = call x86_fp80 @llvm.experimental.constrained.fdiv.f80(x86_fp80 %a, x86_fp80 %b,
                                                                     metadata !"round.dynamic",
                                                                     metadata !"fpexcept.strict") #0
   ret x86_fp80 %ret
@@ -133,7 +133,7 @@ define x86_fp80 @fpext_f32_to_fp80(float %a) nounwind strictfp {
 ; X64-NEXT:    flds -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    wait
 ; X64-NEXT:    retq
-  %ret = call x86_fp80 @llvm.experimental.constrained.fpext.x86_fp80.f32(float %a,
+  %ret = call x86_fp80 @llvm.experimental.constrained.fpext.f80.f32(float %a,
                                                                          metadata !"fpexcept.strict") #0
   ret x86_fp80 %ret
 }
@@ -151,7 +151,7 @@ define x86_fp80 @fpext_f64_to_fp80(double %a) nounwind strictfp {
 ; X64-NEXT:    fldl -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    wait
 ; X64-NEXT:    retq
-  %ret = call x86_fp80 @llvm.experimental.constrained.fpext.x86_fp80.f64(double %a,
+  %ret = call x86_fp80 @llvm.experimental.constrained.fpext.f80.f64(double %a,
                                                                          metadata !"fpexcept.strict") #0
   ret x86_fp80 %ret
 }
@@ -174,7 +174,7 @@ define float @fptrunc_fp80_to_f32(x86_fp80 %a) nounwind strictfp {
 ; X64-NEXT:    wait
 ; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    retq
-  %ret = call float @llvm.experimental.constrained.fptrunc.f32.x86_fp80(x86_fp80 %a,
+  %ret = call float @llvm.experimental.constrained.fptrunc.f32.f80(x86_fp80 %a,
                                                                         metadata !"round.dynamic",
                                                                         metadata !"fpexcept.strict") #0
   ret float %ret
@@ -202,7 +202,7 @@ define double @fptrunc_fp80_to_f64(x86_fp80 %a) nounwind strictfp {
 ; X64-NEXT:    wait
 ; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    retq
-  %ret = call double @llvm.experimental.constrained.fptrunc.f64.x86_fp80(x86_fp80 %a,
+  %ret = call double @llvm.experimental.constrained.fptrunc.f64.f80(x86_fp80 %a,
                                                                          metadata !"round.dynamic",
                                                                          metadata !"fpexcept.strict") #0
   ret double %ret
@@ -222,7 +222,7 @@ define x86_fp80 @fsqrt_fp80(x86_fp80 %a) nounwind strictfp {
 ; X64-NEXT:    fsqrt
 ; X64-NEXT:    wait
 ; X64-NEXT:    retq
-  %ret = call x86_fp80 @llvm.experimental.constrained.sqrt.x86_fp80(x86_fp80 %a,
+  %ret = call x86_fp80 @llvm.experimental.constrained.sqrt.f80(x86_fp80 %a,
                                                                     metadata !"round.dynamic",
                                                                     metadata !"fpexcept.strict") #0
   ret x86_fp80 %ret
@@ -260,7 +260,7 @@ define i1 @fp80_to_sint1(x86_fp80 %x) #0 {
 ; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movb -{{[0-9]+}}(%rsp), %al
 ; X64-NEXT:    retq
-  %result = call i1 @llvm.experimental.constrained.fptosi.i1.x86_fp80(x86_fp80 %x,
+  %result = call i1 @llvm.experimental.constrained.fptosi.i1.f80(x86_fp80 %x,
                                                metadata !"fpexcept.strict") #0
   ret i1 %result
 }
@@ -297,7 +297,7 @@ define i8 @fp80_to_sint8(x86_fp80 %x) #0 {
 ; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movb -{{[0-9]+}}(%rsp), %al
 ; X64-NEXT:    retq
-  %result = call i8 @llvm.experimental.constrained.fptosi.i8.x86_fp80(x86_fp80 %x,
+  %result = call i8 @llvm.experimental.constrained.fptosi.i8.f80(x86_fp80 %x,
                                                metadata !"fpexcept.strict") #0
   ret i8 %result
 }
@@ -334,7 +334,7 @@ define i16 @fp80_to_sint16(x86_fp80 %x) #0 {
 ; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    retq
-  %result = call i16 @llvm.experimental.constrained.fptosi.i16.x86_fp80(x86_fp80 %x,
+  %result = call i16 @llvm.experimental.constrained.fptosi.i16.f80(x86_fp80 %x,
                                                metadata !"fpexcept.strict") #0
   ret i16 %result
 }
@@ -372,7 +372,7 @@ define i32 @fp80_to_sint32(x86_fp80 %x) #0 {
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    retq
 entry:
-  %result = call i32 @llvm.experimental.constrained.fptosi.i32.x86_fp80(x86_fp80 %x,
+  %result = call i32 @llvm.experimental.constrained.fptosi.i32.f80(x86_fp80 %x,
                                                metadata !"fpexcept.strict") #0
   ret i32 %result
 }
@@ -416,7 +416,7 @@ define i64 @fp80_to_sint64(x86_fp80 %x) #0 {
 ; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    retq
-  %result = call i64 @llvm.experimental.constrained.fptosi.i64.x86_fp80(x86_fp80 %x,
+  %result = call i64 @llvm.experimental.constrained.fptosi.i64.f80(x86_fp80 %x,
                                                metadata !"fpexcept.strict") #0
   ret i64 %result
 }
@@ -453,7 +453,7 @@ define i1 @fp80_to_uint1(x86_fp80 %x) #0 {
 ; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movb -{{[0-9]+}}(%rsp), %al
 ; X64-NEXT:    retq
-  %result = call i1 @llvm.experimental.constrained.fptoui.i1.x86_fp80(x86_fp80 %x,
+  %result = call i1 @llvm.experimental.constrained.fptoui.i1.f80(x86_fp80 %x,
                                                metadata !"fpexcept.strict") #0
   ret i1 %result
 }
@@ -490,7 +490,7 @@ define i8 @fp80_to_uint8(x86_fp80 %x) #0 {
 ; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movb -{{[0-9]+}}(%rsp), %al
 ; X64-NEXT:    retq
-  %result = call i8 @llvm.experimental.constrained.fptoui.i8.x86_fp80(x86_fp80 %x,
+  %result = call i8 @llvm.experimental.constrained.fptoui.i8.f80(x86_fp80 %x,
                                                metadata !"fpexcept.strict") #0
   ret i8 %result
 }
@@ -529,7 +529,7 @@ define i16 @fp80_to_uint16(x86_fp80 %x) #0 {
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
-  %result = call i16 @llvm.experimental.constrained.fptoui.i16.x86_fp80(x86_fp80 %x,
+  %result = call i16 @llvm.experimental.constrained.fptoui.i16.f80(x86_fp80 %x,
                                                metadata !"fpexcept.strict") #0
   ret i16 %result
 }
@@ -572,7 +572,7 @@ define i32 @fp80_to_uint32(x86_fp80 %x) #0 {
 ; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    retq
-  %result = call i32 @llvm.experimental.constrained.fptoui.i32.x86_fp80(x86_fp80 %x,
+  %result = call i32 @llvm.experimental.constrained.fptoui.i32.f80(x86_fp80 %x,
                                                metadata !"fpexcept.strict") #0
   ret i32 %result
 }
@@ -647,7 +647,7 @@ define i64 @fp80_to_uint64(x86_fp80 %x) #0 {
 ; X64-NEXT:    shlq $63, %rax
 ; X64-NEXT:    xorq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    retq
-  %result = call i64 @llvm.experimental.constrained.fptoui.i64.x86_fp80(x86_fp80 %x,
+  %result = call i64 @llvm.experimental.constrained.fptoui.i64.f80(x86_fp80 %x,
                                                metadata !"fpexcept.strict") #0
   ret i64 %result
 }
@@ -677,7 +677,7 @@ define x86_fp80 @sint1_to_fp80(i1 %x) #0 {
 ; X64-NEXT:    filds -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    wait
 ; X64-NEXT:    retq
-  %result = call x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i1(i1 %x,
+  %result = call x86_fp80 @llvm.experimental.constrained.sitofp.f80.i1(i1 %x,
                                                metadata !"round.dynamic",
                                                metadata !"fpexcept.strict") #0
   ret x86_fp80 %result
@@ -703,7 +703,7 @@ define x86_fp80 @sint8_to_fp80(i8 %x) #0 {
 ; X64-NEXT:    filds -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    wait
 ; X64-NEXT:    retq
-  %result = call x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i8(i8 %x,
+  %result = call x86_fp80 @llvm.experimental.constrained.sitofp.f80.i8(i8 %x,
                                                metadata !"round.dynamic",
                                                metadata !"fpexcept.strict") #0
   ret x86_fp80 %result
@@ -728,7 +728,7 @@ define x86_fp80 @sint16_to_fp80(i16 %x) #0 {
 ; X64-NEXT:    filds -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    wait
 ; X64-NEXT:    retq
-  %result = call x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i16(i16 %x,
+  %result = call x86_fp80 @llvm.experimental.constrained.sitofp.f80.i16(i16 %x,
                                                metadata !"round.dynamic",
                                                metadata !"fpexcept.strict") #0
   ret x86_fp80 %result
@@ -753,7 +753,7 @@ define x86_fp80 @sint32_to_fp80(i32 %x) #0 {
 ; X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    wait
 ; X64-NEXT:    retq
-  %result = call x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i32(i32 %x,
+  %result = call x86_fp80 @llvm.experimental.constrained.sitofp.f80.i32(i32 %x,
                                                metadata !"round.dynamic",
                                                metadata !"fpexcept.strict") #0
   ret x86_fp80 %result
@@ -772,7 +772,7 @@ define x86_fp80 @sint64_to_fp80(i64 %x) #0 {
 ; X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    wait
 ; X64-NEXT:    retq
-  %result = call x86_fp80 @llvm.experimental.constrained.sitofp.x86_fp80.i64(i64 %x,
+  %result = call x86_fp80 @llvm.experimental.constrained.sitofp.f80.i64(i64 %x,
                                                metadata !"round.dynamic",
                                                metadata !"fpexcept.strict") #0
   ret x86_fp80 %result
@@ -800,7 +800,7 @@ define x86_fp80 @uint1_to_fp80(i1 %x) #0 {
 ; X64-NEXT:    filds -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    wait
 ; X64-NEXT:    retq
-  %result = call x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i1(i1 %x,
+  %result = call x86_fp80 @llvm.experimental.constrained.uitofp.f80.i1(i1 %x,
                                                metadata !"round.dynamic",
                                                metadata !"fpexcept.strict") #0
   ret x86_fp80 %result
@@ -826,7 +826,7 @@ define x86_fp80 @uint8_to_fp80(i8 %x) #0 {
 ; X64-NEXT:    filds -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    wait
 ; X64-NEXT:    retq
-  %result = call x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i8(i8 %x,
+  %result = call x86_fp80 @llvm.experimental.constrained.uitofp.f80.i8(i8 %x,
                                                metadata !"round.dynamic",
                                                metadata !"fpexcept.strict") #0
   ret x86_fp80 %result
@@ -852,7 +852,7 @@ define x86_fp80 @uint16_to_fp80(i16 %x) #0 {
 ; X64-NEXT:    fildl -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    wait
 ; X64-NEXT:    retq
-  %result = call x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i16(i16 %x,
+  %result = call x86_fp80 @llvm.experimental.constrained.uitofp.f80.i16(i16 %x,
                                                metadata !"round.dynamic",
                                                metadata !"fpexcept.strict") #0
   ret x86_fp80 %result
@@ -885,7 +885,7 @@ define x86_fp80 @uint32_to_fp80(i32 %x) #0 {
 ; X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    wait
 ; X64-NEXT:    retq
-  %result = call x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i32(i32 %x,
+  %result = call x86_fp80 @llvm.experimental.constrained.uitofp.f80.i32(i32 %x,
                                                metadata !"round.dynamic",
                                                metadata !"fpexcept.strict") #0
   ret x86_fp80 %result
@@ -924,7 +924,7 @@ define x86_fp80 @uint64_to_fp80(i64 %x) #0 {
 ; X64-NEXT:    fadds {{\.LCPI.*}}(,%rax,4)
 ; X64-NEXT:    wait
 ; X64-NEXT:    retq
-  %result = call x86_fp80 @llvm.experimental.constrained.uitofp.x86_fp80.i64(i64 %x,
+  %result = call x86_fp80 @llvm.experimental.constrained.uitofp.f80.i64(i64 %x,
                                                metadata !"round.dynamic",
                                                metadata !"fpexcept.strict") #0
   ret x86_fp80 %result

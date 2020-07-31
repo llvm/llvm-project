@@ -202,24 +202,19 @@ protected:
 
 LanguageRuntime *LanguageRuntime::FindPlugin(Process *process,
                                              lldb::LanguageType language) {
-  std::unique_ptr<LanguageRuntime> language_runtime_up;
   LanguageRuntimeCreateInstance create_callback;
-
   for (uint32_t idx = 0;
        (create_callback =
             PluginManager::GetLanguageRuntimeCreateCallbackAtIndex(idx)) !=
        nullptr;
        ++idx) {
-    language_runtime_up.reset(create_callback(process, language));
-
-    if (language_runtime_up)
-      return language_runtime_up.release();
+    if (LanguageRuntime *runtime = create_callback(process, language))
+      return runtime;
   }
-
   return nullptr;
 }
 
-LanguageRuntime::LanguageRuntime(Process *process) : m_process(process) {}
+LanguageRuntime::LanguageRuntime(Process *process) : Runtime(process) {}
 
 LanguageRuntime::~LanguageRuntime() = default;
 

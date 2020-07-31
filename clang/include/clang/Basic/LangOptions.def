@@ -382,6 +382,8 @@ LANGOPT(SpeculativeLoadHardening, 1, 0, "Speculative load hardening enabled")
 LANGOPT(RelativeCXXABIVTables, 1, 0,
         "Use an ABI-incompatible v-table layout that uses relative references")
 
+LANGOPT(ArmSveVectorBits, 32, 0, "SVE vector size in bits")
+
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT
 #undef BENIGN_LANGOPT

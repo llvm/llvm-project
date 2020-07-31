@@ -218,6 +218,7 @@ void X86_64::prepareSymbolRelocation(lld::macho::Symbol &sym,
     in.got->addEntry(sym);
     break;
   case X86_64_RELOC_BRANCH: {
+    // TODO: weak dysyms should go into the weak binding section instead
     if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
       in.stubs->addEntry(*dysym);
     break;

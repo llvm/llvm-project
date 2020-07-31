@@ -558,8 +558,8 @@ let SchedModel = SwiftModel in {
         (instregex "VADDv", "VSUBv", "VNEG(s|f|v)", "VADDL", "VSUBL",
                    "VADDW", "VSUBW", "VHADD", "VHSUB", "VRHADD", "VPADDi",
                    "VPADDL", "VAND", "VBIC", "VEOR", "VORN", "VORR", "VTST",
-                   "VSHL", "VSHR(s|u)", "VSHLL", "VQSHL(s|u)", "VBIF",
-                   "VBIT", "VBSL", "VSLI", "VSRI", "VCLS", "VCLZ", "VCNT")>;
+                   "VSHL", "VSHR(s|u)", "VSHLL", "VQSHL(s|u)", "VBIF", "VBIT",
+                   "VBSL", "VBSP", "VSLI", "VSRI", "VCLS", "VCLZ", "VCNT")>;
 
   def : InstRW<[SwiftWriteP1TwoCycle],
         (instregex "VEXT", "VREV16", "VREV32", "VREV64")>;

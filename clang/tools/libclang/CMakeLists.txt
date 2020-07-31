@@ -68,7 +68,12 @@ endif ()
 
 if (HAVE_LIBDL)
   list(APPEND LIBS ${CMAKE_DL_LIBS})
-endif()
+elseif (CLANG_BUILT_STANDALONE)
+  find_library(DL_LIBRARY_PATH dl)
+  if (DL_LIBRARY_PATH)
+    list(APPEND LIBS dl)
+  endif ()
+endif ()
 
 option(LIBCLANG_BUILD_STATIC
   "Build libclang as a static library (in addition to a shared one)" OFF)

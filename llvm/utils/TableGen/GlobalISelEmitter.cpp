@@ -1043,6 +1043,28 @@ public:
     for (const auto &Predicate : predicates())
       Predicate->emitPredicateOpcodes(Table, std::forward<Args>(args)...);
   }
+
+  /// Provide a function to avoid emitting certain predicates. This is used to
+  /// defer some predicate checks until after others
+  using PredicateFilterFunc = std::function<bool(const PredicateTy&)>;
+
+  /// Emit MatchTable opcodes for predicates which satisfy \p
+  /// ShouldEmitPredicate. This should be called multiple times to ensure all
+  /// predicates are eventually added to the match table.
+  template <class... Args>
+  void emitFilteredPredicateListOpcodes(PredicateFilterFunc ShouldEmitPredicate,
+                                        MatchTable &Table, Args &&... args) {
+    if (Predicates.empty() && !Optimized) {
+      Table << MatchTable::Comment(getNoPredicateComment())
+            << MatchTable::LineBreak;
+      return;
+    }
+
+    for (const auto &Predicate : predicates()) {
+      if (ShouldEmitPredicate(*Predicate))
+        Predicate->emitPredicateOpcodes(Table, std::forward<Args>(args)...);
+    }
+  }
 };
 
 class PredicateMatcher {
@@ -1099,6 +1121,13 @@ public:
                                     RuleMatcher &Rule) const = 0;
 
   PredicateKind getKind() const { return Kind; }
+
+  bool dependsOnOperands() const {
+    // Custom predicates really depend on the context pattern of the
+    // instruction, not just the individual instruction. This therefore
+    // implicitly depends on all other pattern constraints.
+    return Kind == IPM_GenericPredicate;
+  }
 
   virtual bool isIdentical(const PredicateMatcher &B) const {
     return B.getKind() == getKind() && InsnVarID == B.InsnVarID &&
@@ -2127,10 +2156,23 @@ public:
       InstructionNumOperandsMatcher(InsnVarID, getNumOperands())
           .emitPredicateOpcodes(Table, Rule);
 
-    emitPredicateListOpcodes(Table, Rule);
+    // First emit all instruction level predicates need to be verified before we
+    // can verify operands.
+    emitFilteredPredicateListOpcodes(
+      [](const PredicateMatcher &P) {
+        return !P.dependsOnOperands();
+      }, Table, Rule);
 
+    // Emit all operand constraints.
     for (const auto &Operand : Operands)
       Operand->emitPredicateOpcodes(Table, Rule);
+
+    // All of the tablegen defined predicates should now be matched. Now emit
+    // any custom predicates that rely on all generated checks.
+    emitFilteredPredicateListOpcodes(
+      [](const PredicateMatcher &P) {
+        return P.dependsOnOperands();
+      }, Table, Rule);
   }
 
   /// Compare the priority of this object and B.
@@ -2586,12 +2628,14 @@ protected:
   unsigned TempRegID;
   const CodeGenSubRegIndex *SubRegIdx;
   bool IsDef;
+  bool IsDead;
 
 public:
   TempRegRenderer(unsigned InsnID, unsigned TempRegID, bool IsDef = false,
-                  const CodeGenSubRegIndex *SubReg = nullptr)
+                  const CodeGenSubRegIndex *SubReg = nullptr,
+                  bool IsDead = false)
       : OperandRenderer(OR_Register), InsnID(InsnID), TempRegID(TempRegID),
-        SubRegIdx(SubReg), IsDef(IsDef) {}
+        SubRegIdx(SubReg), IsDef(IsDef), IsDead(IsDead) {}
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_TempRegister;
@@ -2608,9 +2652,13 @@ public:
           << MatchTable::Comment("TempRegID") << MatchTable::IntValue(TempRegID)
           << MatchTable::Comment("TempRegFlags");
 
-    if (IsDef)
-      Table << MatchTable::NamedValue("RegState::Define");
-    else
+    if (IsDef) {
+      SmallString<32> RegFlags;
+      RegFlags += "RegState::Define";
+      if (IsDead)
+        RegFlags += "|RegState::Dead";
+      Table << MatchTable::NamedValue(RegFlags);
+    } else
       Table << MatchTable::IntValue(0);
 
     if (SubRegIdx)
@@ -2960,8 +3008,8 @@ public:
     Table << MatchTable::Opcode("GIR_ConstrainOperandRC")
           << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
           << MatchTable::Comment("Op") << MatchTable::IntValue(OpIdx)
-          << MatchTable::Comment("RC " + RC.getName())
-          << MatchTable::IntValue(RC.EnumValue) << MatchTable::LineBreak;
+          << MatchTable::NamedValue(RC.getQualifiedName() + "RegClassID")
+          << MatchTable::LineBreak;
   }
 };
 
@@ -3352,7 +3400,11 @@ private:
   Expected<action_iterator>
   createInstructionRenderer(action_iterator InsertPt, RuleMatcher &M,
                             const TreePatternNode *Dst);
-  void importExplicitDefRenderers(BuildMIAction &DstMIBuilder);
+
+  Expected<action_iterator>
+  importExplicitDefRenderers(action_iterator InsertPt, RuleMatcher &M,
+                             BuildMIAction &DstMIBuilder,
+                             const TreePatternNode *Dst);
 
   Expected<action_iterator>
   importExplicitUseRenderers(action_iterator InsertPt, RuleMatcher &M,
@@ -4178,7 +4230,9 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
     CopyToPhysRegMIBuilder.addRenderer<CopyPhysRegRenderer>(PhysInput.first);
   }
 
-  importExplicitDefRenderers(DstMIBuilder);
+  if (auto Error = importExplicitDefRenderers(InsertPt, M, DstMIBuilder, Dst)
+                       .takeError())
+    return std::move(Error);
 
   if (auto Error = importExplicitUseRenderers(InsertPt, M, DstMIBuilder, Dst)
                        .takeError())
@@ -4330,13 +4384,39 @@ Expected<action_iterator> GlobalISelEmitter::createInstructionRenderer(
                                        DstI);
 }
 
-void GlobalISelEmitter::importExplicitDefRenderers(
-    BuildMIAction &DstMIBuilder) {
+Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
+    action_iterator InsertPt, RuleMatcher &M, BuildMIAction &DstMIBuilder,
+    const TreePatternNode *Dst) {
   const CodeGenInstruction *DstI = DstMIBuilder.getCGI();
-  for (unsigned I = 0; I < DstI->Operands.NumDefs; ++I) {
-    const CGIOperandList::OperandInfo &DstIOperand = DstI->Operands[I];
-    DstMIBuilder.addRenderer<CopyRenderer>(DstIOperand.Name);
+  const unsigned NumDefs = DstI->Operands.NumDefs;
+  if (NumDefs == 0)
+    return InsertPt;
+
+  DstMIBuilder.addRenderer<CopyRenderer>(DstI->Operands[0].Name);
+
+  // Some instructions have multiple defs, but are missing a type entry
+  // (e.g. s_cc_out operands).
+  if (Dst->getExtTypes().size() < NumDefs)
+    return failedImport("unhandled discarded def");
+
+  // Patterns only handle a single result, so any result after the first is an
+  // implicitly dead def.
+  for (unsigned I = 1; I < NumDefs; ++I) {
+    const TypeSetByHwMode &ExtTy = Dst->getExtType(I);
+    if (!ExtTy.isMachineValueType())
+      return failedImport("unsupported typeset");
+
+    auto OpTy = MVTToLLT(ExtTy.getMachineValueType().SimpleTy);
+    if (!OpTy)
+      return failedImport("unsupported type");
+
+    unsigned TempRegID = M.allocateTempRegID();
+    InsertPt =
+      M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTy, TempRegID);
+    DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID, true, nullptr, true);
   }
+
+  return InsertPt;
 }
 
 Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
@@ -4772,8 +4852,8 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   auto &DstI = Target.getInstruction(DstOp);
   StringRef DstIName = DstI.TheDef->getName();
 
-  if (DstI.Operands.NumDefs != Src->getExtTypes().size())
-    return failedImport("Src pattern results and dst MI defs are different (" +
+  if (DstI.Operands.NumDefs < Src->getExtTypes().size())
+    return failedImport("Src pattern result has more defs than dst MI (" +
                         to_string(Src->getExtTypes().size()) + " def(s) vs " +
                         to_string(DstI.Operands.NumDefs) + " def(s))");
 

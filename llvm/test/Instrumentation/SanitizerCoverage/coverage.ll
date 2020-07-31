@@ -1,5 +1,5 @@
-; RUN: opt < %s -sancov -sanitizer-coverage-level=4 -sanitizer-coverage-trace-pc  -S | FileCheck %s --check-prefix=CHECK_TRACE_PC
-; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-prune-blocks=1 -S | FileCheck %s --check-prefix=CHECKPRUNE
+; RUN: opt < %s -sancov -sanitizer-coverage-level=4 -sanitizer-coverage-trace-pc  -S -enable-new-pm=0 | FileCheck %s --check-prefix=CHECK_TRACE_PC
+; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-prune-blocks=1 -S -enable-new-pm=0 | FileCheck %s --check-prefix=CHECKPRUNE
 
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=4 -sanitizer-coverage-trace-pc  -S | FileCheck %s --check-prefix=CHECK_TRACE_PC
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=3 -sanitizer-coverage-prune-blocks=1 -S | FileCheck %s --check-prefix=CHECKPRUNE

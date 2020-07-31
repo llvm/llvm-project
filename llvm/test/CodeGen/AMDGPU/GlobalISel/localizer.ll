@@ -8,9 +8,9 @@ define amdgpu_kernel void @localize_constants(i1 %cond) {
 ; GFX9-LABEL: localize_constants:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_load_dword s1, s[4:5], 0x0
-; GFX9-NEXT:    s_mov_b32 s0, 1
+; GFX9-NEXT:    s_mov_b32 s0, -1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_xor_b32 s1, s1, 1
+; GFX9-NEXT:    s_xor_b32 s1, s1, -1
 ; GFX9-NEXT:    s_and_b32 s1, s1, 1
 ; GFX9-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX9-NEXT:    s_cbranch_scc0 BB0_2
@@ -83,9 +83,9 @@ define amdgpu_kernel void @localize_globals(i1 %cond) {
 ; GFX9-LABEL: localize_globals:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_load_dword s1, s[4:5], 0x0
-; GFX9-NEXT:    s_mov_b32 s0, 1
+; GFX9-NEXT:    s_mov_b32 s0, -1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_xor_b32 s1, s1, 1
+; GFX9-NEXT:    s_xor_b32 s1, s1, -1
 ; GFX9-NEXT:    s_and_b32 s1, s1, 1
 ; GFX9-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX9-NEXT:    s_cbranch_scc0 BB1_2
@@ -96,8 +96,8 @@ define amdgpu_kernel void @localize_globals(i1 %cond) {
 ; GFX9-NEXT:    s_getpc_b64 s[4:5]
 ; GFX9-NEXT:    s_add_u32 s4, s4, gv3@gotpcrel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s5, s5, gv3@gotpcrel32@hi+4
-; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_mov_b32 s0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -116,10 +116,10 @@ define amdgpu_kernel void @localize_globals(i1 %cond) {
 ; GFX9-NEXT:    s_getpc_b64 s[0:1]
 ; GFX9-NEXT:    s_add_u32 s0, s0, gv0@gotpcrel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s1, s1, gv0@gotpcrel32@hi+4
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX9-NEXT:    s_getpc_b64 s[2:3]
 ; GFX9-NEXT:    s_add_u32 s2, s2, gv1@gotpcrel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s3, s3, gv1@gotpcrel32@hi+4
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v3, 1

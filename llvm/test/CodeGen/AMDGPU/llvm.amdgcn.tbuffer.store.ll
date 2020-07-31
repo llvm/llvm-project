@@ -2,10 +2,10 @@
 ;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}tbuffer_store:
-; GCN: tbuffer_store_format_xyzw v[0:3], off, s[0:3], dfmt:12, nfmt:2, 0
-; GCN: tbuffer_store_format_xyzw v[4:7], off, s[0:3], dfmt:13, nfmt:3, 0 glc
-; GCN: tbuffer_store_format_xyzw v[8:11], off, s[0:3], dfmt:14, nfmt:4, 0 slc
-; GCN: tbuffer_store_format_xyzw v[8:11], off, s[0:3], dfmt:14, nfmt:4, 0
+; GCN: tbuffer_store_format_xyzw v[0:3], off, s[0:3], 0 format:[BUF_DATA_FORMAT_16_16_16_16,BUF_NUM_FORMAT_USCALED]
+; GCN: tbuffer_store_format_xyzw v[4:7], off, s[0:3], 0 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_SSCALED] glc
+; GCN: tbuffer_store_format_xyzw v[8:11], off, s[0:3], 0 format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_UINT] slc
+; GCN: tbuffer_store_format_xyzw v[8:11], off, s[0:3], 0 format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_UINT]
 define amdgpu_ps void @tbuffer_store(<4 x i32> inreg, <4 x float>, <4 x float>, <4 x float>) {
 main_body:
   %in1 = bitcast <4 x float> %1 to <4 x i32>
@@ -19,7 +19,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}tbuffer_store_immoffs:
-; GCN: tbuffer_store_format_xyzw v[0:3], off, s[0:3], dfmt:5, nfmt:7, 0 offset:42
+; GCN: tbuffer_store_format_xyzw v[0:3], off, s[0:3], 0 format:[BUF_DATA_FORMAT_16_16,BUF_NUM_FORMAT_FLOAT] offset:42
 define amdgpu_ps void @tbuffer_store_immoffs(<4 x i32> inreg, <4 x float>) {
 main_body:
   %in1 = bitcast <4 x float> %1 to <4 x i32>
@@ -28,7 +28,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}tbuffer_store_scalar_and_imm_offs:
-; GCN: tbuffer_store_format_xyzw v[0:3], off, s[0:3], dfmt:5, nfmt:7, {{s[0-9]+}} offset:42
+; GCN: tbuffer_store_format_xyzw v[0:3], off, s[0:3], {{s[0-9]+}} format:[BUF_DATA_FORMAT_16_16,BUF_NUM_FORMAT_FLOAT] offset:42
 define amdgpu_ps void @tbuffer_store_scalar_and_imm_offs(<4 x i32> inreg, <4 x float> %vdata, i32 inreg %soffset) {
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
@@ -37,7 +37,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}buffer_store_idx:
-; GCN: tbuffer_store_format_xyzw v[0:3], v4, s[0:3], dfmt:15, nfmt:2, 0 idxen
+; GCN: tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_USCALED] idxen
 define amdgpu_ps void @buffer_store_idx(<4 x i32> inreg, <4 x float> %vdata, i32 %vindex) {
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
@@ -46,7 +46,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}buffer_store_ofs:
-; GCN: tbuffer_store_format_xyzw v[0:3], v4, s[0:3], dfmt:3, nfmt:7, 0 offen
+; GCN: tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_DATA_FORMAT_8_8,BUF_NUM_FORMAT_FLOAT] offen
 define amdgpu_ps void @buffer_store_ofs(<4 x i32> inreg, <4 x float> %vdata, i32 %voffset) {
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
@@ -55,7 +55,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}buffer_store_both:
-; GCN: tbuffer_store_format_xyzw v[0:3], v[4:5], s[0:3], dfmt:6, nfmt:4, 0 idxen offen
+; GCN: tbuffer_store_format_xyzw v[0:3], v[4:5], s[0:3], 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_UINT] idxen offen
 define amdgpu_ps void @buffer_store_both(<4 x i32> inreg, <4 x float> %vdata, i32 %vindex, i32 %voffset) {
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
@@ -66,11 +66,11 @@ main_body:
 ; Ideally, the register allocator would avoid the wait here
 ;
 ; GCN-LABEL: {{^}}buffer_store_wait:
-; GCN: tbuffer_store_format_xyzw v[0:3], v4, s[0:3], dfmt:15, nfmt:3, 0 idxen
+; GCN: tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_DATA_FORMAT_RESERVED_15,BUF_NUM_FORMAT_SSCALED] idxen
 ; VERDE: s_waitcnt expcnt(0)
 ; GCN: buffer_load_format_xyzw v[0:3], v5, s[0:3], 0 idxen
 ; GCN: s_waitcnt vmcnt(0)
-; GCN: tbuffer_store_format_xyzw v[0:3], v6, s[0:3], dfmt:14, nfmt:2, 0 idxen
+; GCN: tbuffer_store_format_xyzw v[0:3], v6, s[0:3], 0 format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_USCALED] idxen
 define amdgpu_ps void @buffer_store_wait(<4 x i32> inreg, <4 x float> %vdata, i32 %vindex.1, i32 %vindex.2, i32 %vindex.3) {
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
@@ -82,7 +82,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}buffer_store_x1:
-; GCN: tbuffer_store_format_x v0, v1, s[0:3], dfmt:13, nfmt:7, 0 idxen
+; GCN: tbuffer_store_format_x v0, v1, s[0:3], 0 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_FLOAT] idxen
 define amdgpu_ps void @buffer_store_x1(<4 x i32> inreg %rsrc, float %data, i32 %vindex) {
 main_body:
   %data.i = bitcast float %data to i32
@@ -91,7 +91,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}buffer_store_x2:
-; GCN: tbuffer_store_format_xy v[0:1], v2, s[0:3], dfmt:1, nfmt:2, 0 idxen
+; GCN: tbuffer_store_format_xy v[0:1], v2, s[0:3], 0 format:[BUF_NUM_FORMAT_USCALED] idxen
 define amdgpu_ps void @buffer_store_x2(<4 x i32> inreg %rsrc, <2 x float> %data, i32 %vindex) {
 main_body:
   %data.i = bitcast <2 x float> %data to <2 x i32>

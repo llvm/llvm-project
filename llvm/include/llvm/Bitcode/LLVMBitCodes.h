@@ -644,6 +644,7 @@ enum AttributeKindCodes {
   ATTR_KIND_NO_MERGE = 66,
   ATTR_KIND_NULL_POINTER_IS_VALID = 67,
   ATTR_KIND_NOUNDEF = 68,
+  ATTR_KIND_BYREF = 69,
 };
 
 enum ComdatSelectionKindCodes {

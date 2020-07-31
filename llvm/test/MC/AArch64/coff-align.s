@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple aarch64-windows-gnu %s | llvm-readobj -S --sd | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple aarch64-windows-gnu %s | llvm-readobj -S --sd - | FileCheck %s
     .text
     .align 5
 f0:

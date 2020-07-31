@@ -14,7 +14,8 @@
 
 
 #include "lldb/Breakpoint/BreakpointLocationCollection.h"
-#include "lldb/Breakpoint/StoppointLocation.h"
+#include "lldb/Breakpoint/StoppointSite.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-forward.h"
 
@@ -32,7 +33,7 @@ namespace lldb_private {
 /// by the process.
 
 class BreakpointSite : public std::enable_shared_from_this<BreakpointSite>,
-                       public StoppointLocation {
+                       public StoppointSite {
 public:
   enum Type {
     eSoftware, // Breakpoint opcode has been written to memory and
@@ -59,8 +60,6 @@ public:
 
   /// Sets the trap opcode
   bool SetTrapOpcode(const uint8_t *trap_opcode, uint32_t trap_opcode_size);
-
-  void SetHardwareIndex(uint32_t index) override;
 
   /// Gets the original instruction bytes that were overwritten by the trap
   uint8_t *GetSavedOpcodeBytes();
@@ -183,6 +182,12 @@ public:
   ///     \b true if all breakpoint locations are owned by internal breakpoints,
   ///     \b false otherwise.
   bool IsInternal() const;
+
+  bool IsHardware() const override {
+    lldbassert(BreakpointSite::Type::eHardware == GetType() ||
+               !HardwareRequired());
+    return BreakpointSite::Type::eHardware == GetType();
+  }
 
   BreakpointSite::Type GetType() const { return m_type; }
 

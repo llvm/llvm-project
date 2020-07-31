@@ -878,6 +878,8 @@ static struct option g_long_options[] = {
            // -F localhost:1234 -- /bin/ls"
     {NULL, 0, NULL, 0}};
 
+int communication_fd = -1;
+
 // main
 int main(int argc, char *argv[]) {
   // If debugserver is launched with DYLD_INSERT_LIBRARIES, unset it so we
@@ -944,7 +946,6 @@ int main(int argc, char *argv[]) {
   int ch;
   int long_option_index = 0;
   int debug = 0;
-  int communication_fd = -1;
   std::string compile_options;
   std::string waitfor_pid_name; // Wait for a process that starts with this name
   std::string attach_pid_name;

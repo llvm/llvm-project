@@ -249,6 +249,38 @@ func @generic_op_constant_fusion(%arg0 : tensor<5x?x?xf32>) -> tensor<5x?x?xf32>
 
 // -----
 
+#map0 = affine_map<(d0, d1, d2) -> (d0)>
+#map1 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+func @indexed_generic_op_constant_fusion(%arg0 : tensor<5x?x?xf32>)
+                                         -> tensor<5x?x?xf32>
+{
+  %0 = constant dense<42.0> : tensor<5xf32>
+  %1 = linalg.indexed_generic
+       {args_in = 2 : i64, args_out = 1 : i64,
+         indexing_maps = [#map0, #map1, #map1],
+         iterator_types = ["parallel", "parallel", "parallel"]}
+       %0, %arg0 {
+       ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: f32, %arg5 : f32):
+         %2 = mulf %arg4, %arg5 : f32
+         linalg.yield %2 : f32
+       }: tensor<5xf32>, tensor<5x?x?xf32> -> tensor<5x?x?xf32>
+  return %1 : tensor<5x?x?xf32>
+}
+//   CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+// CHECK-LABEL: func @indexed_generic_op_constant_fusion
+//       CHECK:   %[[CST:.*]] = constant {{.*}} : f32
+//       CHECK:   linalg.indexed_generic
+//  CHECK-SAME:     args_in = 1 : i64
+//  CHECK-SAME:     args_out = 1 : i64
+//       CHECK:   ^{{[a-zA-Z0-9_]*}}
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]*]]: index
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]*]]: index
+//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]*]]: index
+//  CHECK-SAME:     %[[ARG4:.*]]: f32)
+//       CHECK:     mulf %[[CST]], %[[ARG4]]
+
+// -----
+
 #map0 = affine_map<(d0, d1, d2) -> ()>
 #map1 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 func @generic_op_zero_dim_constant_fusion(%arg0 : tensor<5x?x?xf32>)
@@ -274,6 +306,38 @@ func @generic_op_zero_dim_constant_fusion(%arg0 : tensor<5x?x?xf32>)
 //  CHECK-SAME:     args_out = 1 : i64
 //       CHECK:   ^{{.*}}(%[[ARG1:.*]]: f32)
 //       CHECK:     mulf %[[CST]], %[[ARG1]]
+
+// -----
+
+#map0 = affine_map<(d0, d1, d2) -> ()>
+#map1 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+func @indexed_generic_op_zero_dim_constant_fusion
+  (%arg0 : tensor<5x?x?xf32>) -> tensor<5x?x?xf32>
+{
+  %0 = constant dense<42.0> : tensor<f32>
+  %1 = linalg.indexed_generic
+       {args_in = 2 : i64, args_out = 1 : i64,
+         indexing_maps = [#map0, #map1, #map1],
+         iterator_types = ["parallel", "parallel", "parallel"]}
+       %0, %arg0 {
+       ^bb0(%arg1 : index, %arg2 : index, %arg3 : index, %arg4: f32, %arg5: f32):
+         %2 = mulf %arg4, %arg5 : f32
+         linalg.yield %2 : f32
+       }: tensor<f32>, tensor<5x?x?xf32> -> tensor<5x?x?xf32>
+  return %1 : tensor<5x?x?xf32>
+}
+//   CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+// CHECK-LABEL: func @indexed_generic_op_zero_dim_constant_fusion
+//       CHECK:   %[[CST:.*]] = constant {{.*}} : f32
+//       CHECK:   linalg.indexed_generic
+//  CHECK-SAME:     args_in = 1 : i64
+//  CHECK-SAME:     args_out = 1 : i64
+//       CHECK:   ^{{[a-zA-Z0-9_]*}}
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]*]]: index
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]*]]: index
+//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]*]]: index
+//  CHECK-SAME:     %[[ARG4:.*]]: f32)
+//       CHECK:     mulf %[[CST]], %[[ARG4]]
 
 // -----
 

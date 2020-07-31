@@ -68,6 +68,7 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-EMPTY:
 // IMPL-NEXT:  #include "llvm/ADT/StringRef.h"
 // IMPL-NEXT:  #include "llvm/ADT/StringSwitch.h"
+// IMPL-NEXT:  #include "llvm/Support/ErrorHandling.h"
 // IMPL-EMPTY:
 // IMPL-NEXT:  using namespace llvm;
 // IMPL-NEXT:  using namespace tdl;

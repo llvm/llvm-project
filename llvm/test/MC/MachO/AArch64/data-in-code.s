@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple arm64-apple-darwin10 -filetype=obj -o - < %s | llvm-readobj --macho-data-in-code | FileCheck %s
+// RUN: llvm-mc -triple arm64-apple-darwin10 -filetype=obj -o - < %s | llvm-readobj --macho-data-in-code - | FileCheck %s
         .text
 _foo:
 .data_region

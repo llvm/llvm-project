@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -wasm-keep-registers %s -o - | llvm-readobj --symbols | FileCheck %s
+; RUN: llc -filetype=obj -wasm-keep-registers %s -o - | llvm-readobj --symbols - | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 

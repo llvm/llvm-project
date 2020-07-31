@@ -458,6 +458,9 @@ def warn_drv_msvc_not_found : Warning<
   "try running Clang from a developer command prompt">,
   InGroup<DiagGroup<"msvc-not-found">>;
 
+def warn_drv_use_ld_non_word : Warning<
+  "'-fuse-ld=' taking a path is deprecated. Use '--ld-path=' instead">;
+
 def warn_drv_fine_grained_bitfield_accesses_ignored : Warning<
   "option '-ffine-grained-bitfield-accesses' cannot be enabled together with a sanitizer; flag ignored">,
   InGroup<OptionIgnored>;
@@ -511,4 +514,7 @@ def warn_drv_libstdcxx_not_found : Warning<
 def err_drv_cannot_mix_options : Error<"cannot specify '%1' along with '%0'">;
 
 def err_drv_invalid_object_mode : Error<"OBJECT_MODE setting %0 is not recognized and is not a valid setting.">;
+
+def err_drv_invalid_sve_vector_bits : Error<
+  "'-msve-vector-bits' is not supported without SVE enabled">;
 }

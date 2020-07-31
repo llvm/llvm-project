@@ -12,8 +12,10 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Log.h"
+#include "Utility/UuidCompatibility.h"
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -456,4 +458,65 @@ llvm::StringRef HostInfoMacOSX::GetXcodeSDKPath(XcodeSDK sdk) {
     return it->second;
   auto it_new = g_sdk_path.insert({sdk.GetString(), GetXcodeSDK(sdk)});
   return it_new.first->second;
+}
+
+namespace {
+struct dyld_shared_cache_dylib_text_info {
+  uint64_t version; // current version 1
+  // following fields all exist in version 1
+  uint64_t loadAddressUnslid;
+  uint64_t textSegmentSize;
+  uuid_t dylibUuid;
+  const char *path; // pointer invalid at end of iterations
+  // following fields all exist in version 2
+  uint64_t textSegmentOffset; // offset from start of cache
+};
+typedef struct dyld_shared_cache_dylib_text_info
+    dyld_shared_cache_dylib_text_info;
+}
+
+extern "C" int dyld_shared_cache_iterate_text(
+    const uuid_t cacheUuid,
+    void (^callback)(const dyld_shared_cache_dylib_text_info *info));
+extern "C" uint8_t *_dyld_get_shared_cache_range(size_t *length);
+extern "C" bool _dyld_get_shared_cache_uuid(uuid_t uuid);
+
+namespace {
+class SharedCacheInfo {
+public:
+  const UUID &GetUUID() const { return m_uuid; };
+  const llvm::StringMap<SharedCacheImageInfo> &GetImages() const {
+    return m_images;
+  };
+
+  SharedCacheInfo();
+
+private:
+  llvm::StringMap<SharedCacheImageInfo> m_images;
+  UUID m_uuid;
+};
+}
+
+SharedCacheInfo::SharedCacheInfo() {
+  size_t shared_cache_size;
+  uint8_t *shared_cache_start =
+      _dyld_get_shared_cache_range(&shared_cache_size);
+  uuid_t dsc_uuid;
+  _dyld_get_shared_cache_uuid(dsc_uuid);
+  m_uuid = UUID::fromData(dsc_uuid);
+
+  dyld_shared_cache_iterate_text(
+      dsc_uuid, ^(const dyld_shared_cache_dylib_text_info *info) {
+        m_images[info->path] = SharedCacheImageInfo{
+            UUID::fromData(info->dylibUuid, 16),
+            std::make_shared<DataBufferUnowned>(
+                shared_cache_start + info->textSegmentOffset,
+                shared_cache_size - info->textSegmentOffset)};
+      });
+}
+
+SharedCacheImageInfo
+HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name) {
+  static SharedCacheInfo g_shared_cache_info;
+  return g_shared_cache_info.GetImages().lookup(image_name);
 }

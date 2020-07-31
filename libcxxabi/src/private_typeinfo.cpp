@@ -641,6 +641,7 @@ __dynamic_cast(const void *static_ptr, const __class_type_info *static_type,
         {
             // We get here only if there is some kind of visibility problem
             //   in client code.
+            static_assert(std::atomic<size_t>::is_always_lock_free, "");
             static std::atomic<size_t> error_count(0);
             size_t error_count_snapshot = error_count.fetch_add(1, std::memory_order_relaxed);
             if ((error_count_snapshot & (error_count_snapshot-1)) == 0)
@@ -667,6 +668,7 @@ __dynamic_cast(const void *static_ptr, const __class_type_info *static_type,
         if (info.path_dst_ptr_to_static_ptr == unknown &&
             info.path_dynamic_ptr_to_static_ptr == unknown)
         {
+            static_assert(std::atomic<size_t>::is_always_lock_free, "");
             static std::atomic<size_t> error_count(0);
             size_t error_count_snapshot = error_count.fetch_add(1, std::memory_order_relaxed);
             if ((error_count_snapshot & (error_count_snapshot-1)) == 0)

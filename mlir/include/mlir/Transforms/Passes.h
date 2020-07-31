@@ -24,7 +24,9 @@ class AffineForOp;
 class FuncOp;
 class ModuleOp;
 class Pass;
-template <typename T> class OperationPass;
+
+template <typename T>
+class OperationPass;
 
 /// Creates an instance of the BufferPlacement pass.
 std::unique_ptr<Pass> createBufferPlacementPass();
@@ -57,7 +59,7 @@ std::unique_ptr<OperationPass<FuncOp>> createPipelineDataTransferPass();
 /// Lowers affine control flow operations (ForStmt, IfStmt and AffineApplyOp)
 /// to equivalent lower-level constructs (flow of basic blocks and arithmetic
 /// primitives).
-std::unique_ptr<OperationPass<FuncOp>> createLowerAffinePass();
+std::unique_ptr<Pass> createLowerAffinePass();
 
 /// Creates a pass that transforms perfectly nested loops with independent
 /// bounds into a single loop.
@@ -89,6 +91,10 @@ std::unique_ptr<Pass> createSCCPPass();
 /// Creates a pass which delete symbol operations that are unreachable. This
 /// pass may *only* be scheduled on an operation that defines a SymbolTable.
 std::unique_ptr<Pass> createSymbolDCEPass();
+
+/// Creates an interprocedural pass to normalize memrefs to have a trivial
+/// (identity) layout map.
+std::unique_ptr<OperationPass<ModuleOp>> createNormalizeMemRefsPass();
 } // end namespace mlir
 
 #endif // MLIR_TRANSFORMS_PASSES_H

@@ -2,7 +2,7 @@
 # RUN:   FileCheck %s -check-prefix=ASMOUT
 
 # RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 -filetype=obj -o - | \
-# RUN:   llvm-readobj -S --section-data -r | \
+# RUN:   llvm-readobj -S --section-data -r - | \
 # RUN:     FileCheck %s -check-prefix=OBJOUT
 
 # ASMOUT: .text

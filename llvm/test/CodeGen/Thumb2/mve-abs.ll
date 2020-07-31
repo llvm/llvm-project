@@ -42,33 +42,30 @@ define arm_aapcs_vfpcc <2 x i64> @abs_v2i64(<2 x i64> %s1) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    vmov q1, q0
+; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    vmov lr, s4
-; CHECK-NEXT:    vmov r0, s5
-; CHECK-NEXT:    rsbs.w r3, lr, #0
+; CHECK-NEXT:    vmov r0, s1
+; CHECK-NEXT:    rsbs.w lr, r1, #0
 ; CHECK-NEXT:    sbc.w r2, r12, r0
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    cset r1, mi
-; CHECK-NEXT:    ands r1, r1, #1
-; CHECK-NEXT:    itt eq
-; CHECK-NEXT:    moveq r2, r0
-; CHECK-NEXT:    moveq r3, lr
-; CHECK-NEXT:    vmov lr, s6
-; CHECK-NEXT:    vmov.32 q0[0], r3
-; CHECK-NEXT:    vmov r0, s7
-; CHECK-NEXT:    vmov.32 q0[1], r2
-; CHECK-NEXT:    rsbs.w r2, lr, #0
-; CHECK-NEXT:    sbc.w r3, r12, r0
+; CHECK-NEXT:    cset r3, mi
+; CHECK-NEXT:    ands r3, r3, #1
+; CHECK-NEXT:    csel r1, lr, r1, ne
+; CHECK-NEXT:    csel r0, r2, r0, ne
+; CHECK-NEXT:    vmov.32 q1[0], r1
+; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    vmov.32 q1[1], r0
+; CHECK-NEXT:    vmov r0, s3
+; CHECK-NEXT:    rsbs r2, r1, #0
+; CHECK-NEXT:    sbc.w r12, r12, r0
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    cset r1, mi
-; CHECK-NEXT:    ands r1, r1, #1
-; CHECK-NEXT:    it eq
-; CHECK-NEXT:    moveq r2, lr
-; CHECK-NEXT:    vmov.32 q0[2], r2
-; CHECK-NEXT:    it eq
-; CHECK-NEXT:    moveq r3, r0
-; CHECK-NEXT:    vmov.32 q0[3], r3
+; CHECK-NEXT:    cset r3, mi
+; CHECK-NEXT:    ands r3, r3, #1
+; CHECK-NEXT:    csel r1, r2, r1, ne
+; CHECK-NEXT:    csel r0, r12, r0, ne
+; CHECK-NEXT:    vmov.32 q1[2], r1
+; CHECK-NEXT:    vmov.32 q1[3], r0
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %0 = icmp slt <2 x i64> %s1, zeroinitializer

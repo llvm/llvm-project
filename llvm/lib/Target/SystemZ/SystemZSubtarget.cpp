@@ -39,6 +39,14 @@ SystemZSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   if (HasSoftFloat)
     HasVector = false;
 
+  // -mno-vx implicitly disables all vector-related features.
+  if (!HasVector) {
+    HasVectorEnhancements1 = false;
+    HasVectorEnhancements2 = false;
+    HasVectorPackedDecimal = false;
+    HasVectorPackedDecimalEnhancement = false;
+  }
+
   return *this;
 }
 

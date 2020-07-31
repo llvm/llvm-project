@@ -49,6 +49,27 @@ public:
   const StringRef segname;
 };
 
+// All sections in __LINKEDIT should inherit from this.
+class LinkEditSection : public SyntheticSection {
+public:
+  LinkEditSection(const char *segname, const char *name)
+      : SyntheticSection(segname, name) {
+    align = WordSize;
+  }
+
+  virtual uint64_t getRawSize() const = 0;
+
+  // codesign (or more specifically libstuff) checks that each section in
+  // __LINKEDIT ends where the next one starts -- no gaps are permitted. We
+  // therefore align every section's start and end points to WordSize.
+  //
+  // NOTE: This assumes that the extra bytes required for alignment can be
+  // zero-valued bytes.
+  uint64_t getSize() const override final {
+    return llvm::alignTo(getRawSize(), WordSize);
+  }
+};
+
 // The header of the Mach-O file, which must have a file offset of zero.
 class MachHeaderSection : public SyntheticSection {
 public:
@@ -105,11 +126,11 @@ struct BindingEntry {
 };
 
 // Stores bind opcodes for telling dyld which symbols to load non-lazily.
-class BindingSection : public SyntheticSection {
+class BindingSection : public LinkEditSection {
 public:
   BindingSection();
   void finalizeContents();
-  uint64_t getSize() const override { return contents.size(); }
+  uint64_t getRawSize() const override { return contents.size(); }
   // Like other sections in __LINKEDIT, the binding section is special: its
   // offsets are recorded in the LC_DYLD_INFO_ONLY load command, instead of in
   // section headers.
@@ -194,11 +215,11 @@ public:
   void writeTo(uint8_t *buf) const override;
 };
 
-class LazyBindingSection : public SyntheticSection {
+class LazyBindingSection : public LinkEditSection {
 public:
   LazyBindingSection();
   void finalizeContents();
-  uint64_t getSize() const override { return contents.size(); }
+  uint64_t getRawSize() const override { return contents.size(); }
   uint32_t encode(const DylibSymbol &);
   // Like other sections in __LINKEDIT, the lazy binding section is special: its
   // offsets are recorded in the LC_DYLD_INFO_ONLY load command, instead of in
@@ -213,11 +234,11 @@ private:
 };
 
 // Stores a trie that describes the set of exported symbols.
-class ExportSection : public SyntheticSection {
+class ExportSection : public LinkEditSection {
 public:
   ExportSection();
   void finalizeContents();
-  uint64_t getSize() const override { return size; }
+  uint64_t getRawSize() const override { return size; }
   // Like other sections in __LINKEDIT, the export section is special: its
   // offsets are recorded in the LC_DYLD_INFO_ONLY load command, instead of in
   // section headers.
@@ -230,12 +251,12 @@ private:
 };
 
 // Stores the strings referenced by the symbol table.
-class StringTableSection : public SyntheticSection {
+class StringTableSection : public LinkEditSection {
 public:
   StringTableSection();
   // Returns the start offset of the added string.
   uint32_t addString(StringRef);
-  uint64_t getSize() const override { return size; }
+  uint64_t getRawSize() const override { return size; }
   // Like other sections in __LINKEDIT, the string table section is special: its
   // offsets are recorded in the LC_SYMTAB load command, instead of in section
   // headers.
@@ -273,6 +294,7 @@ private:
 };
 
 struct InStruct {
+  MachHeaderSection *header = nullptr;
   BindingSection *binding = nullptr;
   GotSection *got = nullptr;
   LazyPointerSection *lazyPointers = nullptr;

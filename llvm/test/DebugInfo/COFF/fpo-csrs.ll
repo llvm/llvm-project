@@ -1,5 +1,5 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
-; RUN: llc -filetype=obj < %s | llvm-readobj --codeview | FileCheck %s --check-prefix=OBJ
+; RUN: llc -filetype=obj < %s | llvm-readobj --codeview - | FileCheck %s --check-prefix=OBJ
 
 ; C source:
 ; int getval(void);

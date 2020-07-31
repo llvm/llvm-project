@@ -11,10 +11,10 @@ define i1 @test_eq(i1 %cond) {
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[COMPARE:%.*]] = phi i1 [ true, [[IF_FALSE]] ], [ false, [[IF_TRUE]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i1 [[COMPARE]]
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
+; CHECK-NEXT:    ret i1 [[TMP0]]
 ;
 entry:
   br i1 %cond, label %if.true, label %if.false
@@ -43,10 +43,9 @@ define i1 @test_slt(i1 %cond) {
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[COMPARE:%.*]] = phi i1 [ false, [[IF_FALSE]] ], [ true, [[IF_TRUE]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i1 [[COMPARE]]
+; CHECK-NEXT:    ret i1 [[COND]]
 ;
 entry:
   br i1 %cond, label %if.true, label %if.false
@@ -106,10 +105,9 @@ define i1 @test_ne(i1 %cond) {
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[COMPARE:%.*]] = phi i1 [ false, [[IF_FALSE]] ], [ true, [[IF_TRUE]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i1 [[COMPARE]]
+; CHECK-NEXT:    ret i1 [[COND]]
 ;
 entry:
   br i1 %cond, label %if.true, label %if.false

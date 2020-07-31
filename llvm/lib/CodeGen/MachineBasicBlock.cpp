@@ -338,39 +338,7 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
   if (Indexes && PrintSlotIndexes)
     OS << Indexes->getMBBStartIdx(this) << '\t';
 
-  OS << "bb." << getNumber();
-  bool HasAttributes = false;
-  if (const auto *BB = getBasicBlock()) {
-    if (BB->hasName()) {
-      OS << "." << BB->getName();
-    } else {
-      HasAttributes = true;
-      OS << " (";
-      int Slot = MST.getLocalSlot(BB);
-      if (Slot == -1)
-        OS << "<ir-block badref>";
-      else
-        OS << (Twine("%ir-block.") + Twine(Slot)).str();
-    }
-  }
-
-  if (hasAddressTaken()) {
-    OS << (HasAttributes ? ", " : " (");
-    OS << "address-taken";
-    HasAttributes = true;
-  }
-  if (isEHPad()) {
-    OS << (HasAttributes ? ", " : " (");
-    OS << "landing-pad";
-    HasAttributes = true;
-  }
-  if (getAlignment() != Align(1)) {
-    OS << (HasAttributes ? ", " : " (");
-    OS << "align " << Log2(getAlignment());
-    HasAttributes = true;
-  }
-  if (HasAttributes)
-    OS << ")";
+  printName(OS, PrintNameIr | PrintNameAttributes, &MST);
   OS << ":\n";
 
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
@@ -478,9 +446,99 @@ void MachineBasicBlock::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
 }
 
+/// Print the basic block's name as:
+///
+///    bb.{number}[.{ir-name}] [(attributes...)]
+///
+/// The {ir-name} is only printed when the \ref PrintNameIr flag is passed
+/// (which is the default). If the IR block has no name, it is identified
+/// numerically using the attribute syntax as "(%ir-block.{ir-slot})".
+///
+/// When the \ref PrintNameAttributes flag is passed, additional attributes
+/// of the block are printed when set.
+///
+/// \param printNameFlags Combination of \ref PrintNameFlag flags indicating
+///                       the parts to print.
+/// \param moduleSlotTracker Optional ModuleSlotTracker. This method will
+///                          incorporate its own tracker when necessary to
+///                          determine the block's IR name.
+void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
+                                  ModuleSlotTracker *moduleSlotTracker) const {
+  os << "bb." << getNumber();
+  bool hasAttributes = false;
+
+  if (printNameFlags & PrintNameIr) {
+    if (const auto *bb = getBasicBlock()) {
+      if (bb->hasName()) {
+        os << '.' << bb->getName();
+      } else {
+        hasAttributes = true;
+        os << " (";
+
+        int slot = -1;
+
+        if (moduleSlotTracker) {
+          slot = moduleSlotTracker->getLocalSlot(bb);
+        } else if (bb->getParent()) {
+          ModuleSlotTracker tmpTracker(bb->getModule(), false);
+          tmpTracker.incorporateFunction(*bb->getParent());
+          slot = tmpTracker.getLocalSlot(bb);
+        }
+
+        if (slot == -1)
+          os << "<ir-block badref>";
+        else
+          os << (Twine("%ir-block.") + Twine(slot)).str();
+      }
+    }
+  }
+
+  if (printNameFlags & PrintNameAttributes) {
+    if (hasAddressTaken()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "address-taken";
+      hasAttributes = true;
+    }
+    if (isEHPad()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "landing-pad";
+      hasAttributes = true;
+    }
+    if (isEHFuncletEntry()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "ehfunclet-entry";
+      hasAttributes = true;
+    }
+    if (getAlignment() != Align(1)) {
+      os << (hasAttributes ? ", " : " (");
+      os << "align " << getAlignment().value();
+      hasAttributes = true;
+    }
+    if (getSectionID() != MBBSectionID(0)) {
+      os << (hasAttributes ? ", " : " (");
+      os << "bbsections ";
+      switch (getSectionID().Type) {
+      case MBBSectionID::SectionType::Exception:
+        os << "Exception";
+        break;
+      case MBBSectionID::SectionType::Cold:
+        os << "Cold";
+        break;
+      default:
+        os << getSectionID().Number;
+      }
+      hasAttributes = true;
+    }
+  }
+
+  if (hasAttributes)
+    os << ')';
+}
+
 void MachineBasicBlock::printAsOperand(raw_ostream &OS,
                                        bool /*PrintType*/) const {
-  OS << "%bb." << getNumber();
+  OS << '%';
+  printName(OS, 0);
 }
 
 void MachineBasicBlock::removeLiveIn(MCPhysReg Reg, LaneBitmask LaneMask) {

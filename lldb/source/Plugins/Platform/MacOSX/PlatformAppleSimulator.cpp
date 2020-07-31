@@ -253,3 +253,11 @@ CoreSimulatorSupport::Device PlatformAppleSimulator::GetSimulatorDevice() {
     return CoreSimulatorSupport::Device();
 }
 #endif
+
+bool PlatformAppleSimulator::GetSupportedArchitectureAtIndex(uint32_t idx,
+                                                             ArchSpec &arch) {
+  if (idx >= m_supported_triples.size())
+    return false;
+  arch = ArchSpec(m_supported_triples[idx]);
+  return true;
+}

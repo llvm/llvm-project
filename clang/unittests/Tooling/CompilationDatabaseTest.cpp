@@ -281,6 +281,15 @@ TEST_F(FileMatchTrieTest, CannotResolveRelativePath) {
   EXPECT_EQ("Cannot resolve relative paths", Error);
 }
 
+TEST_F(FileMatchTrieTest, SingleFile) {
+  Trie.insert("/root/RootFile.cc");
+  EXPECT_EQ("", find("/root/rootfile.cc"));
+  // Add subpath to avoid `if (Children.empty())` special case
+  // which we hit at previous `find()`.
+  Trie.insert("/root/otherpath/OtherFile.cc");
+  EXPECT_EQ("", find("/root/rootfile.cc"));
+}
+
 TEST(findCompileArgsInJsonDatabase, FindsNothingIfEmpty) {
   std::string ErrorMessage;
   CompileCommand NotFound = findCompileArgsInJsonDatabase(

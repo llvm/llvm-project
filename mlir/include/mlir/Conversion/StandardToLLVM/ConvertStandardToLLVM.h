@@ -87,6 +87,8 @@ public:
   /// Returns the LLVM dialect.
   LLVM::LLVMDialect *getDialect() { return llvmDialect; }
 
+  const LowerToLLVMOptions &getOptions() const { return options; }
+
   /// Promote the LLVM struct representation of all MemRef descriptors to stack
   /// and use pointers to struct to avoid the complexity of the
   /// platform-specific C/C++ ABI lowering related to struct argument passing.
@@ -390,8 +392,6 @@ class ConvertToLLVMPattern : public ConversionPattern {
 public:
   ConvertToLLVMPattern(StringRef rootOpName, MLIRContext *context,
                        LLVMTypeConverter &typeConverter,
-                       const LowerToLLVMOptions &options =
-                           LowerToLLVMOptions::getDefaultOptions(),
                        PatternBenefit benefit = 1);
 
   /// Returns the LLVM dialect.
@@ -440,12 +440,23 @@ public:
                    ValueRange indices, ConversionPatternRewriter &rewriter,
                    llvm::Module &module) const;
 
+  /// Returns the type of a pointer to an element of the memref.
+  Type getElementPtrType(MemRefType type) const;
+
+  /// Determines sizes to be used in the memref descriptor.
+  void getMemRefDescriptorSizes(Location loc, MemRefType memRefType,
+                                ArrayRef<Value> dynSizes,
+                                ConversionPatternRewriter &rewriter,
+                                SmallVectorImpl<Value> &sizes) const;
+
+  /// Computes total size in bytes of to store the given shape.
+  Value getCumulativeSizeInBytes(Location loc, Type elementType,
+                                 ArrayRef<Value> shape,
+                                 ConversionPatternRewriter &rewriter) const;
+
 protected:
   /// Reference to the type converter, with potential extensions.
   LLVMTypeConverter &typeConverter;
-
-  /// Reference to the llvm lowering options.
-  const LowerToLLVMOptions &options;
 };
 
 /// Utility class for operation conversions targeting the LLVM dialect that
@@ -454,11 +465,10 @@ template <typename OpTy>
 class ConvertOpToLLVMPattern : public ConvertToLLVMPattern {
 public:
   ConvertOpToLLVMPattern(LLVMTypeConverter &typeConverter,
-                         const LowerToLLVMOptions &options,
                          PatternBenefit benefit = 1)
       : ConvertToLLVMPattern(OpTy::getOperationName(),
                              &typeConverter.getContext(), typeConverter,
-                             options, benefit) {}
+                             benefit) {}
 };
 
 namespace LLVM {

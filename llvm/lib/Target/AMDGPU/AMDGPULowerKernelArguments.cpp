@@ -108,16 +108,33 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   uint64_t ExplicitArgOffset = 0;
 
   for (Argument &Arg : F.args()) {
-    Type *ArgTy = Arg.getType();
-    Align ABITypeAlign = DL.getABITypeAlign(ArgTy);
-    unsigned Size = DL.getTypeSizeInBits(ArgTy);
-    unsigned AllocSize = DL.getTypeAllocSize(ArgTy);
+    const bool IsByRef = Arg.hasByRefAttr();
+    Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
+    MaybeAlign ABITypeAlign = IsByRef ? Arg.getParamAlign() : None;
+    if (!ABITypeAlign)
+      ABITypeAlign = DL.getABITypeAlign(ArgTy);
+
+    uint64_t Size = DL.getTypeSizeInBits(ArgTy);
+    uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
 
     uint64_t EltOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + BaseOffset;
     ExplicitArgOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + AllocSize;
 
     if (Arg.use_empty())
       continue;
+
+    // If this is byval, the loads are already explicit in the function. We just
+    // need to rewrite the pointer values.
+    if (IsByRef) {
+      Value *ArgOffsetPtr = Builder.CreateConstInBoundsGEP1_64(
+          Builder.getInt8Ty(), KernArgSegment, EltOffset,
+          Arg.getName() + ".byval.kernarg.offset");
+
+      Value *CastOffsetPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
+          ArgOffsetPtr, Arg.getType());
+      Arg.replaceAllUsesWith(CastOffsetPtr);
+      continue;
+    }
 
     if (PointerType *PT = dyn_cast<PointerType>(ArgTy)) {
       // FIXME: Hack. We rely on AssertZext to be able to fold DS addressing

@@ -13,6 +13,7 @@
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcessControl.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
@@ -973,10 +974,15 @@ Error LLJITBuilderState::prepareForConstruction() {
       JTMB->setRelocationModel(Reloc::PIC_);
       JTMB->setCodeModel(CodeModel::Small);
       CreateObjectLinkingLayer =
-          [](ExecutionSession &ES,
-             const Triple &) -> std::unique_ptr<ObjectLayer> {
-        auto ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
-            ES, std::make_unique<jitlink::InProcessMemoryManager>());
+          [TPC = this->TPC](ExecutionSession &ES,
+                            const Triple &) -> std::unique_ptr<ObjectLayer> {
+        std::unique_ptr<ObjectLinkingLayer> ObjLinkingLayer;
+        if (TPC)
+          ObjLinkingLayer =
+              std::make_unique<ObjectLinkingLayer>(ES, TPC->getMemMgr());
+        else
+          ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
+              ES, std::make_unique<jitlink::InProcessMemoryManager>());
         ObjLinkingLayer->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
             jitlink::InProcessEHFrameRegistrar::getInstance()));
         return std::move(ObjLinkingLayer);

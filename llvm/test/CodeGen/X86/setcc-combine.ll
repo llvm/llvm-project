@@ -6,7 +6,7 @@ define i32 @test_eq_1(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_eq_1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    notl %eax
 ; SSE2-NEXT:    retq
@@ -29,7 +29,7 @@ define i32 @test_ne_1(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_ne_1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
@@ -63,7 +63,7 @@ define i32 @test_ge_1(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_ge_1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    notl %eax
 ; SSE2-NEXT:    retq
@@ -86,7 +86,7 @@ define i32 @test_lt_1(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_lt_1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
@@ -120,7 +120,7 @@ define i32 @test_eq_2(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_eq_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    notl %eax
 ; SSE2-NEXT:    retq
@@ -143,7 +143,7 @@ define i32 @test_ne_2(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_ne_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
@@ -164,7 +164,7 @@ define i32 @test_le_2(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_le_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    notl %eax
 ; SSE2-NEXT:    retq
@@ -200,7 +200,7 @@ define i32 @test_lt_2(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_lt_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
@@ -221,7 +221,7 @@ define i32 @test_gt_2(<4 x i32> %A, <4 x i32> %B) {
 ; SSE2-LABEL: test_gt_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;

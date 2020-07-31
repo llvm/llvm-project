@@ -1,4 +1,5 @@
-; RUN: opt -analyze -scalar-evolution -S < %s | FileCheck %s
+; RUN: opt -analyze -enable-new-pm=0 -scalar-evolution -S < %s | FileCheck %s
+; RUN: opt -disable-output "-passes=print<scalar-evolution>" -S < %s 2>&1 | FileCheck %s
 
 define i16 @test1(i8 %x) {
   %A = zext i8 %x to i12

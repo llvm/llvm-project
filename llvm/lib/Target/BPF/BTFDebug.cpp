@@ -22,6 +22,7 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/LineIterator.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 
 using namespace llvm;
 
@@ -1124,6 +1125,20 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
 
     if (ProcessingMapDef != SecName.startswith(".maps"))
       continue;
+
+    // Create a .rodata datasec if the global variable is an initialized
+    // constant with private linkage and if it won't be in .rodata.str<#>
+    // and .rodata.cst<#> sections.
+    if (SecName == ".rodata" && Global.hasPrivateLinkage() &&
+        DataSecEntries.find(std::string(SecName)) == DataSecEntries.end()) {
+      SectionKind GVKind =
+          TargetLoweringObjectFile::getKindForGlobal(&Global, Asm->TM);
+      // skip .rodata.str<#> and .rodata.cst<#> sections
+      if (!GVKind.isMergeableCString() && !GVKind.isMergeableConst()) {
+        DataSecEntries[std::string(SecName)] =
+            std::make_unique<BTFKindDataSec>(Asm, std::string(SecName));
+      }
+    }
 
     SmallVector<DIGlobalVariableExpression *, 1> GVs;
     Global.getDebugInfo(GVs);

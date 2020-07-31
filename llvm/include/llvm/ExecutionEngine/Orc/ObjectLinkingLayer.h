@@ -90,8 +90,14 @@ public:
   using ReturnObjectBufferFunction =
       std::function<void(std::unique_ptr<MemoryBuffer>)>;
 
-  /// Construct an ObjectLinkingLayer with the given NotifyLoaded,
-  /// and NotifyEmitted functors.
+  /// Construct an ObjectLinkingLayer.
+  ObjectLinkingLayer(ExecutionSession &ES,
+                     jitlink::JITLinkMemoryManager &MemMgr);
+
+  /// Construct an ObjectLinkingLayer. Takes ownership of the given
+  /// JITLinkMemoryManager. This method is a temporary hack to simplify
+  /// co-existence with RTDyldObjectLinkingLayer (which also owns its
+  /// allocators).
   ObjectLinkingLayer(ExecutionSession &ES,
                      std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr);
 
@@ -159,7 +165,8 @@ private:
   Error removeAllModules();
 
   mutable std::mutex LayerMutex;
-  std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr;
+  jitlink::JITLinkMemoryManager &MemMgr;
+  std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgrOwnership;
   bool OverrideObjectFlags = false;
   bool AutoClaimObjectSymbols = false;
   ReturnObjectBufferFunction ReturnObjectBuffer;

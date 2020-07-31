@@ -53,9 +53,9 @@
 #endif
 
 #if COMPILER_RT_HAS_ATOMICS == 1
-#ifdef _MSC_VER
+#ifdef _WIN32
 #include <windows.h>
-#if _MSC_VER < 1900
+#if defined(_MSC_VER) && _MSC_VER < 1900
 #define snprintf _snprintf
 #endif
 #if defined(_WIN64)
@@ -73,7 +73,7 @@
   (DomType *)InterlockedExchangeAdd((LONG volatile *)&PtrVar,                  \
                                     (LONG)sizeof(DomType) * PtrIncr)
 #endif
-#else /* !defined(_MSC_VER) */
+#else /* !defined(_WIN32) */
 #define COMPILER_RT_BOOL_CMPXCHG(Ptr, OldV, NewV)                              \
   __sync_bool_compare_and_swap(Ptr, OldV, NewV)
 #define COMPILER_RT_PTR_FETCH_ADD(DomType, PtrVar, PtrIncr)                    \

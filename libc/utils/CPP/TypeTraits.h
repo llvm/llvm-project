@@ -26,27 +26,12 @@ struct FalseValue {
   static constexpr bool Value = false;
 };
 
-template <typename Type> struct IsIntegral : public FalseValue {};
-template <> struct IsIntegral<char> : public TrueValue {};
-template <> struct IsIntegral<signed char> : public TrueValue {};
-template <> struct IsIntegral<unsigned char> : public TrueValue {};
-template <> struct IsIntegral<short> : public TrueValue {};
-template <> struct IsIntegral<unsigned short> : public TrueValue {};
-template <> struct IsIntegral<int> : public TrueValue {};
-template <> struct IsIntegral<unsigned int> : public TrueValue {};
-template <> struct IsIntegral<long> : public TrueValue {};
-template <> struct IsIntegral<unsigned long> : public TrueValue {};
-template <> struct IsIntegral<long long> : public TrueValue {};
-template <> struct IsIntegral<unsigned long long> : public TrueValue {};
-template <> struct IsIntegral<bool> : public TrueValue {};
-
-template <typename T> struct IsPointerType : public FalseValue {};
-template <typename T> struct IsPointerType<T *> : public TrueValue {};
+template <typename T> struct TypeIdentity { typedef T Type; };
 
 template <typename T1, typename T2> struct IsSame : public FalseValue {};
 template <typename T> struct IsSame<T, T> : public TrueValue {};
-
-template <typename T> struct TypeIdentity { typedef T Type; };
+template <typename T1, typename T2>
+static constexpr bool IsSameV = IsSame<T1, T2>::Value;
 
 template <typename T> struct RemoveCV : public TypeIdentity<T> {};
 template <typename T> struct RemoveCV<const T> : public TypeIdentity<T> {};
@@ -56,10 +41,34 @@ struct RemoveCV<const volatile T> : public TypeIdentity<T> {};
 
 template <typename T> using RemoveCVType = typename RemoveCV<T>::Type;
 
+template <typename Type> struct IsIntegral {
+  using TypeNoCV = RemoveCVType<Type>;
+  static constexpr bool Value =
+      IsSameV<char, TypeNoCV> || IsSameV<signed char, TypeNoCV> ||
+      IsSameV<unsigned char, TypeNoCV> || IsSameV<short, TypeNoCV> ||
+      IsSameV<unsigned short, TypeNoCV> || IsSameV<int, TypeNoCV> ||
+      IsSameV<unsigned int, TypeNoCV> || IsSameV<long, TypeNoCV> ||
+      IsSameV<unsigned long, TypeNoCV> || IsSameV<long long, TypeNoCV> ||
+      IsSameV<unsigned long long, TypeNoCV> || IsSameV<bool, TypeNoCV> ||
+      IsSameV<__uint128_t, TypeNoCV>;
+};
+
+template <typename T> struct IsPointerTypeNoCV : public FalseValue {};
+template <typename T> struct IsPointerTypeNoCV<T *> : public TrueValue {};
+template <typename T> struct IsPointerType {
+  static constexpr bool Value = IsPointerTypeNoCV<RemoveCVType<T>>::Value;
+};
+
 template <typename Type> struct IsFloatingPointType {
-  static constexpr bool Value = IsSame<float, RemoveCVType<Type>>::Value ||
-                                IsSame<double, RemoveCVType<Type>>::Value ||
-                                IsSame<long double, RemoveCVType<Type>>::Value;
+  using TypeNoCV = RemoveCVType<Type>;
+  static constexpr bool Value = IsSame<float, TypeNoCV>::Value ||
+                                IsSame<double, TypeNoCV>::Value ||
+                                IsSame<long double, TypeNoCV>::Value;
+};
+
+template <typename Type> struct IsArithmetic {
+  static constexpr bool Value =
+      IsIntegral<Type>::Value || IsFloatingPointType<Type>::Value;
 };
 
 } // namespace cpp

@@ -1,9 +1,9 @@
 // REQUIRES: powerpc-registered-target
 // REQUIRES: x86-registered-target
 // RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu -large-code-model %s \
-// RUN:   -o - | llvm-readobj -S --sd | FileCheck --check-prefix=CHECK-X86 %s
+// RUN:   -o - | llvm-readobj -S --sd - | FileCheck --check-prefix=CHECK-X86 %s
 // RUN: llvm-mc -filetype=obj -triple powerpc64le-linux-gnu -large-code-model %s \
-// RUN:   -o - | llvm-readobj -S --sd | FileCheck --check-prefix=CHECK-PPC %s
+// RUN:   -o - | llvm-readobj -S --sd - | FileCheck --check-prefix=CHECK-PPC %s
 
 
 // CHECK-X86:      Section {

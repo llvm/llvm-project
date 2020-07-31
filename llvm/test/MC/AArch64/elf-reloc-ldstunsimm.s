@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=aarch64-none-linux-gnu -mattr=+fp-armv8 -filetype=obj %s -o - | \
-// RUN:   llvm-readobj -r | FileCheck -check-prefix=OBJ %s
+// RUN:   llvm-readobj -r - | FileCheck -check-prefix=OBJ %s
 
         ldrb w0, [sp, #:lo12:some_label]
         ldrh w0, [sp, #:lo12:some_label]

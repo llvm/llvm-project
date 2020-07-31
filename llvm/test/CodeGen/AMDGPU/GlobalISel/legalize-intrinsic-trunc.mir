@@ -79,7 +79,7 @@ body: |
     ; SI: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
     ; SI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
-    ; SI: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[C]](s32), [[C1]](s32)
+    ; SI: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[UV1]](s32), [[C]](s32), [[C1]](s32)
     ; SI: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1023
     ; SI: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[INT]], [[C2]]
     ; SI: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -96,8 +96,7 @@ body: |
     ; SI: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB]](s32), [[C7]]
     ; SI: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[MV]], [[AND1]]
     ; SI: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[COPY]], [[SELECT]]
-    ; SI: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[COPY]]
-    ; SI: $vgpr0_vgpr1 = COPY [[INTRINSIC_TRUNC]](s64)
+    ; SI: $vgpr0_vgpr1 = COPY [[SELECT1]](s64)
     ; CI-LABEL: name: test_intrinsic_trunc_s64
     ; CI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CI: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[COPY]]
@@ -189,7 +188,7 @@ body: |
     ; SI: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV]](s64)
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
     ; SI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
-    ; SI: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[C]](s32), [[C1]](s32)
+    ; SI: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[UV3]](s32), [[C]](s32), [[C1]](s32)
     ; SI: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1023
     ; SI: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[INT]], [[C2]]
     ; SI: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -206,9 +205,8 @@ body: |
     ; SI: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB]](s32), [[C7]]
     ; SI: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[MV]], [[AND1]]
     ; SI: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[UV]], [[SELECT]]
-    ; SI: [[INTRINSIC_TRUNC:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[UV]]
     ; SI: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV1]](s64)
-    ; SI: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[C]](s32), [[C1]](s32)
+    ; SI: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[UV5]](s32), [[C]](s32), [[C1]](s32)
     ; SI: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[INT1]], [[C2]]
     ; SI: [[AND2:%[0-9]+]]:_(s32) = G_AND [[UV5]], [[C3]]
     ; SI: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C5]](s32), [[AND2]](s32)
@@ -217,10 +215,9 @@ body: |
     ; SI: [[AND3:%[0-9]+]]:_(s64) = G_AND [[UV1]], [[XOR1]]
     ; SI: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(slt), [[SUB1]](s32), [[C5]]
     ; SI: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(sgt), [[SUB1]](s32), [[C7]]
-    ; SI: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP2]](s1), [[MV1]], [[AND3]]
-    ; SI: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP3]](s1), [[UV1]], [[SELECT1]]
-    ; SI: [[INTRINSIC_TRUNC1:%[0-9]+]]:_(s64) = G_INTRINSIC_TRUNC [[UV1]]
-    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[INTRINSIC_TRUNC]](s64), [[INTRINSIC_TRUNC1]](s64)
+    ; SI: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP2]](s1), [[MV1]], [[AND3]]
+    ; SI: [[SELECT3:%[0-9]+]]:_(s64) = G_SELECT [[ICMP3]](s1), [[UV1]], [[SELECT2]]
+    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[SELECT1]](s64), [[SELECT3]](s64)
     ; SI: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
     ; CI-LABEL: name: test_intrinsic_trunc_v2s64
     ; CI: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3

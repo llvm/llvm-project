@@ -1241,5 +1241,24 @@ llvm::json::Value toJSON(const DocumentLink &DocumentLink) {
   };
 }
 
+bool fromJSON(const llvm::json::Value &Params, FoldingRangeParams &R) {
+  llvm::json::ObjectMapper O(Params);
+  return O && O.map("textDocument", R.textDocument);
+}
+
+llvm::json::Value toJSON(const FoldingRange &Range) {
+  llvm::json::Object Result{
+      {"startLine", Range.startLine},
+      {"endLine", Range.endLine},
+  };
+  if (Range.startCharacter)
+    Result["startCharacter"] = Range.startCharacter;
+  if (Range.endCharacter)
+    Result["endCharacter"] = Range.endCharacter;
+  if (Range.kind)
+    Result["kind"] = *Range.kind;
+  return Result;
+}
+
 } // namespace clangd
 } // namespace clang

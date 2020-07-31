@@ -184,11 +184,6 @@ testing::AssertionResult matchesC(const Twine &Code, const T &AMatcher) {
 }
 
 template <typename T>
-testing::AssertionResult notMatchesC(const Twine &Code, const T &AMatcher) {
-  return matchesConditionally(Code, AMatcher, false, {Lang_C89});
-}
-
-template <typename T>
 testing::AssertionResult notMatchesObjC(const Twine &Code, const T &AMatcher) {
   return matchesObjC(Code, AMatcher, false);
 }

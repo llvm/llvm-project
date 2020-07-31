@@ -1050,7 +1050,7 @@ static std::vector<std::pair<SmallString<128>, bool>> runLTO() {
   if (!options::obj_path.empty())
     Filename = options::obj_path;
   else if (options::TheOutputType == options::OT_SAVE_TEMPS)
-    Filename = output_name + ".o";
+    Filename = output_name + ".lto.o";
   else if (options::TheOutputType == options::OT_ASM_ONLY)
     Filename = output_name;
   bool SaveTemps = !Filename.empty();

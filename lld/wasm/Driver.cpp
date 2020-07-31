@@ -380,7 +380,6 @@ static void readConfigs(opt::InputArgList &args) {
       args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, config->shared);
 
   // Parse wasm32/64.
-  config->is64 = false;
   if (auto *arg = args.getLastArg(OPT_m)) {
     StringRef s = arg->getValue();
     if (s == "wasm32")
@@ -528,7 +527,7 @@ createUndefinedGlobal(StringRef name, llvm::wasm::WasmGlobalType *type) {
 static GlobalSymbol *createGlobalVariable(StringRef name, bool isMutable,
                                           int value) {
   llvm::wasm::WasmGlobal wasmGlobal;
-  if (config->is64) {
+  if (config->is64.getValueOr(false)) {
     wasmGlobal.Type = {WASM_TYPE_I64, isMutable};
     wasmGlobal.InitExpr.Value.Int64 = value;
     wasmGlobal.InitExpr.Opcode = WASM_OPCODE_I64_CONST;
@@ -570,16 +569,18 @@ static void createSyntheticSymbols() {
 
 
   if (config->isPic) {
-    WasmSym::stackPointer = createUndefinedGlobal(
-        "__stack_pointer",
-        config->is64 ? &mutableGlobalTypeI64 : &mutableGlobalTypeI32);
+    WasmSym::stackPointer =
+        createUndefinedGlobal("__stack_pointer", config->is64.getValueOr(false)
+                                                     ? &mutableGlobalTypeI64
+                                                     : &mutableGlobalTypeI32);
     // For PIC code, we import two global variables (__memory_base and
     // __table_base) from the environment and use these as the offset at
     // which to load our static data and function table.
     // See:
     // https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md
     WasmSym::memoryBase = createUndefinedGlobal(
-        "__memory_base", config->is64 ? &globalTypeI64 : &globalTypeI32);
+        "__memory_base",
+        config->is64.getValueOr(false) ? &globalTypeI64 : &globalTypeI32);
     WasmSym::tableBase = createUndefinedGlobal("__table_base", &globalTypeI32);
     WasmSym::memoryBase->markLive();
     WasmSym::tableBase->markLive();
@@ -604,9 +605,9 @@ static void createSyntheticSymbols() {
     WasmSym::tlsAlign = createGlobalVariable("__tls_align", false, 1);
     WasmSym::initTLS = symtab->addSyntheticFunction(
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
-        make<SyntheticFunction>(config->is64 ? i64ArgSignature
-                                             : i32ArgSignature,
-                                "__wasm_init_tls"));
+        make<SyntheticFunction>(
+            config->is64.getValueOr(false) ? i64ArgSignature : i32ArgSignature,
+            "__wasm_init_tls"));
   }
 }
 

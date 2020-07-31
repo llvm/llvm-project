@@ -22,8 +22,8 @@ define <2 x i32> @test_v2f32_ogt_s(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; SSE-32-NEXT:    movl $0, %edx
 ; SSE-32-NEXT:    cmoval %ecx, %edx
 ; SSE-32-NEXT:    movd %edx, %xmm4
-; SSE-32-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,2,3]
-; SSE-32-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,2,3]
+; SSE-32-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,1,1]
+; SSE-32-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
 ; SSE-32-NEXT:    comiss %xmm3, %xmm2
 ; SSE-32-NEXT:    cmoval %ecx, %eax
 ; SSE-32-NEXT:    movd %eax, %xmm2
@@ -43,8 +43,8 @@ define <2 x i32> @test_v2f32_ogt_s(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; SSE-64-NEXT:    movl $0, %edx
 ; SSE-64-NEXT:    cmoval %ecx, %edx
 ; SSE-64-NEXT:    movd %edx, %xmm4
-; SSE-64-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,2,3]
-; SSE-64-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,2,3]
+; SSE-64-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,1,1]
+; SSE-64-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
 ; SSE-64-NEXT:    comiss %xmm3, %xmm2
 ; SSE-64-NEXT:    cmoval %ecx, %eax
 ; SSE-64-NEXT:    movd %eax, %xmm2
@@ -210,8 +210,8 @@ define <2 x i32> @test_v2f32_oeq_q(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; SSE-32-NEXT:    cmovnel %eax, %edx
 ; SSE-32-NEXT:    cmovpl %eax, %edx
 ; SSE-32-NEXT:    movd %edx, %xmm4
-; SSE-32-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,2,3]
-; SSE-32-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,2,3]
+; SSE-32-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,1,1]
+; SSE-32-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
 ; SSE-32-NEXT:    ucomiss %xmm3, %xmm2
 ; SSE-32-NEXT:    cmovnel %eax, %ecx
 ; SSE-32-NEXT:    cmovpl %eax, %ecx
@@ -233,8 +233,8 @@ define <2 x i32> @test_v2f32_oeq_q(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; SSE-64-NEXT:    cmovnel %eax, %edx
 ; SSE-64-NEXT:    cmovpl %eax, %edx
 ; SSE-64-NEXT:    movd %edx, %xmm4
-; SSE-64-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,2,3]
-; SSE-64-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,2,3]
+; SSE-64-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,1,1]
+; SSE-64-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
 ; SSE-64-NEXT:    ucomiss %xmm3, %xmm2
 ; SSE-64-NEXT:    cmovnel %eax, %ecx
 ; SSE-64-NEXT:    cmovpl %eax, %ecx

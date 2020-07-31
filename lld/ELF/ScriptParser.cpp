@@ -29,6 +29,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <cassert>
@@ -1310,7 +1311,10 @@ Expr ScriptParser::readPrimary() {
   }
   if (tok == "DEFINED") {
     StringRef name = readParenLiteral();
-    return [=] { return symtab->find(name) ? 1 : 0; };
+    return [=] {
+      Symbol *b = symtab->find(name);
+      return (b && b->isDefined()) ? 1 : 0;
+    };
   }
   if (tok == "LENGTH") {
     StringRef name = readParenLiteral();
@@ -1327,6 +1331,15 @@ Expr ScriptParser::readPrimary() {
     return [=] {
       checkIfExists(cmd, location);
       return cmd->getLMA();
+    };
+  }
+  if (tok == "LOG2CEIL") {
+    expect("(");
+    Expr a = readExpr();
+    expect(")");
+    return [=] {
+      // LOG2CEIL(0) is defined to be 0.
+      return llvm::Log2_64_Ceil(std::max(a().getValue(), UINT64_C(1)));
     };
   }
   if (tok == "MAX" || tok == "MIN") {

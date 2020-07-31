@@ -9,6 +9,8 @@
 #ifndef LLDB_UNITTESTS_TESTINGSUPPORT_TESTUTILITIES_H
 #define LLDB_UNITTESTS_TESTINGSUPPORT_TESTUTILITIES_H
 
+#include "lldb/Core/ModuleSpec.h"
+#include "lldb/Utility/DataBuffer.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
@@ -34,22 +36,24 @@ public:
   static llvm::Expected<TestFile> fromYaml(llvm::StringRef Yaml);
   static llvm::Expected<TestFile> fromYamlFile(const llvm::Twine &Name);
 
-  TestFile(TestFile &&RHS) : Name(std::move(RHS.Name)) {
-    RHS.Name = llvm::None;
+  ~TestFile() = default;
+
+  ModuleSpec moduleSpec() {
+    return ModuleSpec(FileSpec(), UUID(), dataBuffer());
   }
-
-  ~TestFile();
-
-  llvm::StringRef name() { return *Name; }
 
 private:
-  TestFile(llvm::StringRef Name, llvm::FileRemover &&Remover)
-      : Name(std::string(Name)) {
-    Remover.releaseFile();
-  }
+  TestFile(std::string &&Buffer) : Buffer(std::move(Buffer)) {}
+
   void operator=(const TestFile &) = delete;
 
-  llvm::Optional<std::string> Name;
+  lldb::DataBufferSP dataBuffer() {
+    auto *Data = reinterpret_cast<const uint8_t *>(Buffer.data());
+    return std::make_shared<DataBufferUnowned>(const_cast<uint8_t *>(Data),
+                                               Buffer.size());
+  }
+
+  std::string Buffer;
 };
 }
 

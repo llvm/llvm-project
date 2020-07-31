@@ -322,7 +322,7 @@ that model LLVM IR constants. These operations do not correspond to LLVM IR
 instructions and are therefore prefixed with `llvm.mlir`.
 
 Inline constants can be created by `llvm.mlir.constant`, which currently
-supports integer, float, string or elements attributes (constant sturcts are not
+supports integer, float, string or elements attributes (constant structs are not
 currently supported). LLVM IR constant expressions are expected to be
 constructed as sequences of regular operations on SSA values produced by
 `llvm.mlir.constant`. Additionally, MLIR provides semantically-charged

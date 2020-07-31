@@ -53,4 +53,23 @@ TEST_F(StringSetTest, EmptyString) {
   EXPECT_EQ(Count, 1UL);
 }
 
+TEST_F(StringSetTest, Contains) {
+  StringSet<> Set;
+  EXPECT_FALSE(Set.contains(""));
+  EXPECT_FALSE(Set.contains("test"));
+
+  Set.insert("");
+  Set.insert("test");
+  EXPECT_TRUE(Set.contains(""));
+  EXPECT_TRUE(Set.contains("test"));
+
+  Set.insert("test");
+  EXPECT_TRUE(Set.contains(""));
+  EXPECT_TRUE(Set.contains("test"));
+
+  Set.erase("test");
+  EXPECT_TRUE(Set.contains(""));
+  EXPECT_FALSE(Set.contains("test"));
+}
+
 } // end anonymous namespace

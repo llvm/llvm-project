@@ -119,7 +119,6 @@ std::unique_ptr<GlobalCompilationDatabase>
 getQueryDriverDatabase(llvm::ArrayRef<std::string> QueryDriverGlobs,
                        std::unique_ptr<GlobalCompilationDatabase> Base);
 
-
 /// Wraps another compilation database, and supports overriding the commands
 /// using an in-memory mapping.
 class OverlayCDB : public GlobalCompilationDatabase {
@@ -134,6 +133,8 @@ public:
   llvm::Optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
+  /// Project info is gathered purely from the inner compilation database to
+  /// ensure consistency.
   llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override;
 
   /// Sets or clears the compilation command for a particular file.

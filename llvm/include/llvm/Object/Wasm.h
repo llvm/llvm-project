@@ -282,6 +282,7 @@ private:
   bool HasLinkingSection = false;
   bool HasDylinkSection = false;
   bool SeenCodeSection = false;
+  bool HasMemory64 = false;
   wasm::WasmLinkingData LinkingData;
   uint32_t NumImportedGlobals = 0;
   uint32_t NumImportedFunctions = 0;

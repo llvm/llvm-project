@@ -1110,8 +1110,9 @@ class TentativeParseCCC final : public CorrectionCandidateCallback {
 public:
   TentativeParseCCC(const Token &Next) {
     WantRemainingKeywords = false;
-    WantTypeSpecifiers = Next.isOneOf(tok::l_paren, tok::r_paren, tok::greater,
-                                      tok::l_brace, tok::identifier);
+    WantTypeSpecifiers =
+        Next.isOneOf(tok::l_paren, tok::r_paren, tok::greater, tok::l_brace,
+                     tok::identifier, tok::comma);
   }
 
   bool ValidateCandidate(const TypoCorrection &Candidate) override {
@@ -1275,15 +1276,6 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
       // this is ambiguous. Typo-correct to type and expression keywords and
       // to types and identifiers, in order to try to recover from errors.
       TentativeParseCCC CCC(Next);
-      // Tentative parsing may not be done in the right evaluation context
-      // for the ultimate expression.  Enter an unevaluated context to prevent
-      // Sema from immediately e.g. treating this lookup as a potential ODR-use.
-      // If we generate an expression annotation token and the parser actually
-      // claims it as an expression, we'll transform the expression to a
-      // potentially-evaluated one then.
-      EnterExpressionEvaluationContext Unevaluated(
-          Actions, Sema::ExpressionEvaluationContext::Unevaluated,
-          Sema::ReuseLambdaContextDecl);
       switch (TryAnnotateName(&CCC)) {
       case ANK_Error:
         return TPResult::Error;

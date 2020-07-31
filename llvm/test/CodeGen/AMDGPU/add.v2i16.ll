@@ -89,7 +89,7 @@ define amdgpu_kernel void @v_test_add_v2i16_constant(<2 x i16> addrspace(1)* %ou
 ; GFX9: s_mov_b32 [[CONST:s[0-9]+]], 0xfc21fcb3{{$}}
 ; GFX9: v_pk_add_u16 v{{[0-9]+}}, v{{[0-9]+}}, [[CONST]]
 
-; VI-DAG: v_add_u16_e32 v{{[0-9]+}}, 0xfffffcb3, v{{[0-9]+}}
+; VI-DAG: v_add_u16_e32 v{{[0-9]+}}, 0xfcb3, v{{[0-9]+}}
 ; VI-DAG: v_mov_b32_e32 v[[SCONST:[0-9]+]], 0xfffffc21
 ; VI-DAG: v_add_u16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v[[SCONST]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 define amdgpu_kernel void @v_test_add_v2i16_neg_constant(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in0) #1 {
@@ -105,8 +105,8 @@ define amdgpu_kernel void @v_test_add_v2i16_neg_constant(<2 x i16> addrspace(1)*
 ; GCN-LABEL: {{^}}v_test_add_v2i16_inline_neg1:
 ; GFX9: v_pk_sub_u16 v{{[0-9]+}}, v{{[0-9]+}}, 1 op_sel_hi:[1,0]{{$}}
 
-; VI: v_mov_b32_e32 v[[SCONST:[0-9]+]], -1
-; VI: flat_load_dword [[LOAD:v[0-9]+]]
+; VI-DAG: v_mov_b32_e32 v[[SCONST:[0-9]+]], -1
+; VI-DAG: flat_load_dword [[LOAD:v[0-9]+]]
 ; VI-DAG: v_add_u16_sdwa v{{[0-9]+}}, [[LOAD]], v[[SCONST]] dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-DAG: v_add_u16_e32 v{{[0-9]+}}, -1, [[LOAD]]
 ; VI: v_or_b32_e32

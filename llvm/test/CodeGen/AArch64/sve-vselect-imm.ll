@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve < %s 2>%t | FileCheck %s
 ; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
 
+; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
 ; WARN-NOT: warning
 
 define <vscale x 16 x i8> @sel_8_positive(<vscale x 16 x i1> %p) {

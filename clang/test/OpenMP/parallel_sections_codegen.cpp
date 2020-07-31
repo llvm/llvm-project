@@ -10,9 +10,9 @@
 #ifndef HEADER
 #define HEADER
 // CHECK-LABEL: foo
-void foo() {};
+void foo() { extern void mayThrow(); mayThrow(); };
 // CHECK-LABEL: bar
-void bar() {};
+void bar() { extern void mayThrow(); mayThrow(); };
 
 template <class T>
 T tmain() {

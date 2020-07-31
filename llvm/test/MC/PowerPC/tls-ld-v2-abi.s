@@ -1,8 +1,8 @@
 // RUN: llvm-mc -triple=powerpc64le-pc-linux -filetype=obj %s -o - | \
-// RUN: llvm-readobj -r | FileCheck %s
+// RUN: llvm-readobj -r - | FileCheck %s
 
 // RUN: llvm-mc -triple=powerpc64-pc-linux -filetype=obj %s -o - | \
-// RUN: llvm-readobj -r | FileCheck %s
+// RUN: llvm-readobj -r - | FileCheck %s
 
 // Verify we can handle all the dtprel symbol modifiers for local-dynamic tls.
 // Tests a 16 bit offset on both DS-form and D-form instructions, 32 bit

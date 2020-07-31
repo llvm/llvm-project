@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -r --symbols | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -r --symbols - | FileCheck %s
 
 // Test that this produces the correct relocations R_X86_64_GOT32 and that we,
 // unlike gas, don't create a _GLOBAL_OFFSET_TABLE_ symbol as a side effect.

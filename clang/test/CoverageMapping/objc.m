@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name objc.m -triple x86_64-apple-darwin -fobjc-runtime=macosx-fragile-10.5 -w %s | FileCheck %s
+// RUN: %strip_comments > %t.stripped.m
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name objc.m -triple x86_64-apple-darwin -fobjc-runtime=macosx-fragile-10.5 -w %t.stripped.m | FileCheck %s
 
 @interface A
 - (void)bork:(int)msg;

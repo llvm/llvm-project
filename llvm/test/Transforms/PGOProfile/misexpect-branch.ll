@@ -1,19 +1,28 @@
-
 ; RUN: llvm-profdata merge %S/Inputs/misexpect-branch.proftext -o %t.profdata
 
-
-; RUN: opt < %s -lower-expect -pgo-instr-use -pgo-test-profile-file=%t.profdata -S -pgo-warn-misexpect 2>&1 | FileCheck %s --check-prefix=WARNING
-; RUN: opt < %s -lower-expect -pgo-instr-use -pgo-test-profile-file=%t.profdata -S -pass-remarks=misexpect 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: opt < %s -lower-expect -pgo-instr-use -pgo-test-profile-file=%t.profdata -S -pgo-warn-misexpect -pass-remarks=misexpect 2>&1 | FileCheck %s --check-prefix=BOTH
-; RUN: opt < %s -lower-expect -pgo-instr-use -pgo-test-profile-file=%t.profdata -S 2>&1 | FileCheck %s --check-prefix=DISABLED
+; RUN: opt < %s -lower-expect -pgo-instr-use -pgo-instrument-entry=false -pgo-test-profile-file=%t.profdata -S -pgo-warn-misexpect 2>&1 | FileCheck %s --check-prefix=WARNING
+; RUN: opt < %s -lower-expect -pgo-instr-use -pgo-instrument-entry=false -pgo-test-profile-file=%t.profdata -S -pass-remarks=misexpect 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN: opt < %s -lower-expect -pgo-instr-use -pgo-instrument-entry=false -pgo-test-profile-file=%t.profdata -S -pgo-warn-misexpect -pass-remarks=misexpect 2>&1 | FileCheck %s --check-prefix=BOTH
+; RUN: opt < %s -lower-expect -pgo-instr-use -pgo-instrument-entry=false -pgo-test-profile-file=%t.profdata -S 2>&1 | FileCheck %s --check-prefix=DISABLED
 
 ; New PM
-; RUN: opt < %s -passes="function(lower-expect),pgo-instr-use" -pgo-test-profile-file=%t.profdata -pgo-warn-misexpect -S 2>&1 | FileCheck %s --check-prefix=WARNING
-; RUN: opt < %s -passes="function(lower-expect),pgo-instr-use" -pgo-test-profile-file=%t.profdata -pass-remarks=misexpect -S 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: opt < %s -passes="function(lower-expect),pgo-instr-use" -pgo-test-profile-file=%t.profdata -pgo-warn-misexpect -pass-remarks=misexpect -S 2>&1 | FileCheck %s --check-prefix=BOTH
-; RUN: opt < %s -passes="function(lower-expect),pgo-instr-use" -pgo-test-profile-file=%t.profdata -S 2>&1 | FileCheck %s --check-prefix=DISABLED
+; RUN: opt < %s -passes="function(lower-expect),pgo-instr-use" -pgo-instrument-entry=false -pgo-test-profile-file=%t.profdata -pgo-warn-misexpect -S 2>&1 | FileCheck %s --check-prefix=WARNING
+; RUN: opt < %s -passes="function(lower-expect),pgo-instr-use" -pgo-instrument-entry=false -pgo-test-profile-file=%t.profdata -pass-remarks=misexpect -S 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN: opt < %s -passes="function(lower-expect),pgo-instr-use" -pgo-instrument-entry=false -pgo-test-profile-file=%t.profdata -pgo-warn-misexpect -pass-remarks=misexpect -S 2>&1 | FileCheck %s --check-prefix=BOTH
+; RUN: opt < %s -passes="function(lower-expect),pgo-instr-use" -pgo-instrument-entry=false -pgo-test-profile-file=%t.profdata -S 2>&1 | FileCheck %s --check-prefix=DISABLED
 
+; RUN: llvm-profdata merge %S/Inputs/misexpect-branch_entry.proftext -o %t2.profdata
 
+; RUN: opt < %s -lower-expect -pgo-instr-use -pgo-instrument-entry=true -pgo-test-profile-file=%t2.profdata -S -pgo-warn-misexpect 2>&1 | FileCheck %s --check-prefix=WARNING
+; RUN: opt < %s -lower-expect -pgo-instr-use -pgo-instrument-entry=true -pgo-test-profile-file=%t2.profdata -S -pass-remarks=misexpect 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN: opt < %s -lower-expect -pgo-instr-use -pgo-instrument-entry=true -pgo-test-profile-file=%t2.profdata -S -pgo-warn-misexpect -pass-remarks=misexpect 2>&1 | FileCheck %s --check-prefix=BOTH
+; RUN: opt < %s -lower-expect -pgo-instr-use -pgo-instrument-entry=true -pgo-test-profile-file=%t2.profdata -S 2>&1 | FileCheck %s --check-prefix=DISABLED
+
+; New PM
+; RUN: opt < %s -passes="function(lower-expect),pgo-instr-use" -pgo-instrument-entry=true -pgo-test-profile-file=%t2.profdata -pgo-warn-misexpect -S 2>&1 | FileCheck %s --check-prefix=WARNING
+; RUN: opt < %s -passes="function(lower-expect),pgo-instr-use" -pgo-instrument-entry=true -pgo-test-profile-file=%t2.profdata -pass-remarks=misexpect -S 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN: opt < %s -passes="function(lower-expect),pgo-instr-use" -pgo-instrument-entry=true -pgo-test-profile-file=%t2.profdata -pgo-warn-misexpect -pass-remarks=misexpect -S 2>&1 | FileCheck %s --check-prefix=BOTH
+; RUN: opt < %s -passes="function(lower-expect),pgo-instr-use" -pgo-instrument-entry=true -pgo-test-profile-file=%t2.profdata -S 2>&1 | FileCheck %s --check-prefix=DISABLED
 
 ; WARNING-DAG: warning: misexpect-branch.c:22:0: 19.98%
 ; WARNING-NOT: remark: misexpect-branch.c:22:0: Potential performance regression from use of the llvm.expect intrinsic: Annotation was correct on 19.98% (399668 / 2000000) of profiled executions.

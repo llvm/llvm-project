@@ -12,7 +12,7 @@ export template x;      // expected-error {{expected '<' after 'template'}}
 export template<class T> class x0; // expected-warning {{exported templates are unsupported}}
 template < ;            // expected-error {{expected template parameter}} \
 // expected-error{{expected ',' or '>' in template-parameter-list}} \
-// expected-warning {{declaration does not declare anything}}
+// expected-error {{declaration does not declare anything}}
 template <int +> struct x1; // expected-error {{expected ',' or '>' in template-parameter-list}}
 
 // verifies that we only walk to the ',' & still produce errors on the rest of the template parameters
@@ -287,16 +287,11 @@ namespace PR45239 {
   template<int> auto f() -> b<0>; // expected-error +{{}}
 }
 
-namespace NoCrashOnNullNNSTypoCorrection {
-
-int AddObservation(); // expected-note {{declared here}}
-
-template <typename T, typename... Args> // expected-note {{template parameter is declared here}}
-class UsingImpl {};
-class AddObservation {
-  using Using =
-    UsingImpl<AddObservationFn, const int>; // expected-error {{use of undeclared identifier 'AddObservationFn'; did you mean}} \
-                                               expected-error {{template argument for template type parameter must be a type}}
-};
-
+namespace PR46231 {
+  template; // expected-error {{declaration does not declare anything}}
+  template<>; // expected-error {{declaration does not declare anything}}
+  template<int>; // expected-error {{declaration does not declare anything}}
+  template int; // expected-error {{declaration does not declare anything}}
+  template<> int; // expected-error {{declaration does not declare anything}}
+  template<int> int; // expected-error {{declaration does not declare anything}}
 }

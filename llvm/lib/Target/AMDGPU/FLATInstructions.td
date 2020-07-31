@@ -662,7 +662,7 @@ defm GLOBAL_ATOMIC_DEC_X2 : FLAT_Global_Atomic_Pseudo <"global_atomic_dec_x2",
 
 let SubtargetPredicate = HasGFX10_BEncoding in
 defm GLOBAL_ATOMIC_CSUB : FLAT_Global_Atomic_Pseudo_RTN <"global_atomic_csub",
-                              VGPR_32, i32, atomic_csub_global_32>;
+                              VGPR_32, i32, int_amdgcn_global_atomic_csub>;
 } // End is_flat_global = 1
 
 
@@ -959,7 +959,7 @@ def : FlatSignedAtomicPat <GLOBAL_ATOMIC_OR_RTN, atomic_load_or_global_32, i32>;
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_SWAP_RTN, atomic_swap_global_32, i32>;
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_CMPSWAP_RTN, AMDGPUatomic_cmp_swap_global_32, i32, v2i32>;
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_XOR_RTN, atomic_load_xor_global_32, i32>;
-def : FlatSignedAtomicPat <GLOBAL_ATOMIC_CSUB_RTN, atomic_csub_global_32, i32>;
+def : FlatSignedAtomicPat <GLOBAL_ATOMIC_CSUB_RTN, int_amdgcn_global_atomic_csub, i32>;
 
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_ADD_X2_RTN, atomic_load_add_global_64, i64>;
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_SUB_X2_RTN, atomic_load_sub_global_64, i64>;

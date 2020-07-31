@@ -22,13 +22,11 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/AsmParser/Parser.h"
-#include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
-#include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -325,48 +323,6 @@ cl::opt<std::string> CSProfileGenFile(
     cl::desc("Path to the instrumented context sensitive profile."),
     cl::Hidden);
 
-class OptCustomPassManager : public legacy::PassManager {
-  DebugifyStatsMap DIStatsMap;
-
-public:
-  using super = legacy::PassManager;
-
-  void add(Pass *P) override {
-    // Wrap each pass with (-check)-debugify passes if requested, making
-    // exceptions for passes which shouldn't see -debugify instrumentation.
-    bool WrapWithDebugify = DebugifyEach && !P->getAsImmutablePass() &&
-                            !isIRPrintingPass(P) && !isBitcodeWriterPass(P);
-    if (!WrapWithDebugify) {
-      super::add(P);
-      return;
-    }
-
-    // Apply -debugify/-check-debugify before/after each pass and collect
-    // debug info loss statistics.
-    PassKind Kind = P->getPassKind();
-    StringRef Name = P->getPassName();
-
-    // TODO: Implement Debugify for LoopPass.
-    switch (Kind) {
-      case PT_Function:
-        super::add(createDebugifyFunctionPass());
-        super::add(P);
-        super::add(createCheckDebugifyFunctionPass(true, Name, &DIStatsMap));
-        break;
-      case PT_Module:
-        super::add(createDebugifyModulePass());
-        super::add(P);
-        super::add(createCheckDebugifyModulePass(true, Name, &DIStatsMap));
-        break;
-      default:
-        super::add(P);
-        break;
-    }
-  }
-
-  const DebugifyStatsMap &getDebugifyStatsMap() const { return DIStatsMap; }
-};
-
 static inline void addPass(legacy::PassManagerBase &PM, Pass *P) {
   // Add the pass to the pass manager...
   PM.add(P);
@@ -529,6 +485,41 @@ struct TimeTracerRAII {
     }
   }
 };
+
+// For use in NPM transition.
+// TODO: use a codegen version of PassRegistry.def/PassBuilder::is*Pass() once
+// it exists.
+static bool IsCodegenPass(StringRef Pass) {
+  std::vector<StringRef> PassNamePrefix = {
+      "x86-",    "xcore-", "wasm-",  "systemz-", "ppc-",    "nvvm-",
+      "nvptx-",  "mips-",  "lanai-", "hexagon-", "bpf-",    "avr-",
+      "thumb2-", "arm-",   "si-",    "gcn-",     "amdgpu-", "aarch64-"};
+  std::vector<StringRef> PassNameContain = {"ehprepare"};
+  std::vector<StringRef> PassNameExact = {
+      "safe-stack",           "cost-model",
+      "codegenprepare",       "interleaved-load-combine",
+      "unreachableblockelim", "sclaraized-masked-mem-intrin"};
+  for (const auto &P : PassNamePrefix)
+    if (Pass.startswith(P))
+      return true;
+  for (const auto &P : PassNameContain)
+    if (Pass.contains(P))
+      return true;
+  for (const auto &P : PassNameExact)
+    if (Pass == P)
+      return true;
+  return false;
+}
+
+// For use in NPM transition.
+static bool CodegenPassSpecifiedInPassList() {
+  for (const auto &P : PassList) {
+    StringRef Arg = P->getPassArgument();
+    if (IsCodegenPass(Arg))
+      return true;
+  }
+  return false;
+}
 
 //===----------------------------------------------------------------------===//
 // main for opt
@@ -729,7 +720,12 @@ int main(int argc, char **argv) {
   if (OutputThinLTOBC)
     M->addModuleFlag(Module::Error, "EnableSplitLTOUnit", SplitLTOUnit);
 
-  if (EnableNewPassManager || PassPipeline.getNumOccurrences() > 0) {
+  // If `-passes=` is specified, use NPM.
+  // If `-enable-new-pm` is specified and there are no codegen passes, use NPM.
+  // e.g. `-enable-new-pm -sroa` will use NPM.
+  // but `-enable-new-pm -codegenprepare` will still revert to legacy PM.
+  if ((EnableNewPassManager && !CodegenPassSpecifiedInPassList()) ||
+      PassPipeline.getNumOccurrences() > 0) {
     if (PassPipeline.getNumOccurrences() > 0 && PassList.size() > 0) {
       errs()
           << "Cannot specify passes via both -foo-pass and --passes=foo-pass";
@@ -776,8 +772,12 @@ int main(int argc, char **argv) {
   }
 
   // Create a PassManager to hold and optimize the collection of passes we are
-  // about to build.
-  OptCustomPassManager Passes;
+  // about to build. If the -debugify-each option is set, wrap each pass with
+  // the (-check)-debugify passes.
+  DebugifyCustomPassManager Passes;
+  if (DebugifyEach)
+    Passes.enableDebugifyEach();
+
   bool AddOneTimeDebugifyPasses = EnableDebugify && !DebugifyEach;
 
   // Add an appropriate TargetLibraryInfo pass for the module's triple.

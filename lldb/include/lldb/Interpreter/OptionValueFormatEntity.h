@@ -34,7 +34,7 @@ public:
   SetValueFromString(const char *,
                      VarSetOperationType = eVarSetOperationAssign) = delete;
 
-  bool Clear() override;
+  void Clear() override;
 
   lldb::OptionValueSP DeepCopy() const override;
 

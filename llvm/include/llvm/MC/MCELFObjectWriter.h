@@ -65,7 +65,7 @@ protected:
 public:
   virtual ~MCELFObjectTargetWriter() = default;
 
-  virtual Triple::ObjectFormatType getFormat() const { return Triple::ELF; }
+  Triple::ObjectFormatType getFormat() const override { return Triple::ELF; }
   static bool classof(const MCObjectTargetWriter *W) {
     return W->getFormat() == Triple::ELF;
   }

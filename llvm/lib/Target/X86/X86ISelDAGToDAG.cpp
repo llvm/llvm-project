@@ -160,10 +160,6 @@ namespace {
     /// make the right decision when generating code for different targets.
     const X86Subtarget *Subtarget;
 
-    /// If true, selector should try to optimize for code size instead of
-    /// performance.
-    bool OptForSize;
-
     /// If true, selector should try to optimize for minimum code size.
     bool OptForMinSize;
 
@@ -172,7 +168,7 @@ namespace {
 
   public:
     explicit X86DAGToDAGISel(X86TargetMachine &tm, CodeGenOpt::Level OptLevel)
-        : SelectionDAGISel(tm, OptLevel), Subtarget(nullptr), OptForSize(false),
+        : SelectionDAGISel(tm, OptLevel), Subtarget(nullptr),
           OptForMinSize(false), IndirectTlsSegRefs(false) {}
 
     StringRef getPassName() const override {
@@ -186,9 +182,8 @@ namespace {
                              "indirect-tls-seg-refs");
 
       // OptFor[Min]Size are used in pattern predicates that isel is matching.
-      OptForSize = MF.getFunction().hasOptSize();
       OptForMinSize = MF.getFunction().hasMinSize();
-      assert((!OptForMinSize || OptForSize) &&
+      assert((!OptForMinSize || MF.getFunction().hasOptSize()) &&
              "OptForMinSize implies OptForSize");
 
       SelectionDAGISel::runOnMachineFunction(MF);
@@ -1010,6 +1005,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     case ISD::STRICT_FFLOOR:
     case ISD::FTRUNC:
     case ISD::STRICT_FTRUNC:
+    case ISD::FROUNDEVEN:
+    case ISD::STRICT_FROUNDEVEN:
     case ISD::FNEARBYINT:
     case ISD::STRICT_FNEARBYINT:
     case ISD::FRINT:
@@ -1025,6 +1022,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       case ISD::FFLOOR:     Imm = 0x9; break;
       case ISD::STRICT_FTRUNC:
       case ISD::FTRUNC:     Imm = 0xB; break;
+      case ISD::STRICT_FROUNDEVEN:
+      case ISD::FROUNDEVEN: Imm = 0x8; break;
       case ISD::STRICT_FNEARBYINT:
       case ISD::FNEARBYINT: Imm = 0xC; break;
       case ISD::STRICT_FRINT:
@@ -3945,29 +3944,38 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   if (!(Subtarget->hasVLX() || NVT.is512BitVector()))
     return false;
 
-  unsigned Opc1 = N->getOpcode();
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
-  auto isLogicOp = [](unsigned Opc) {
-    return Opc == ISD::AND || Opc == ISD::OR || Opc == ISD::XOR ||
-           Opc == X86ISD::ANDNP;
+  auto getFoldableLogicOp = [](SDValue Op) {
+    // Peek through single use bitcast.
+    if (Op.getOpcode() == ISD::BITCAST && Op.hasOneUse())
+      Op = Op.getOperand(0);
+
+    if (!Op.hasOneUse())
+      return SDValue();
+
+    unsigned Opc = Op.getOpcode();
+    if (Opc == ISD::AND || Opc == ISD::OR || Opc == ISD::XOR ||
+        Opc == X86ISD::ANDNP)
+      return Op;
+
+    return SDValue();
   };
 
-  SDValue A, B, C;
-  unsigned Opc2;
-  if (isLogicOp(N1.getOpcode()) && N1.hasOneUse()) {
-    Opc2 = N1.getOpcode();
+  SDValue A, FoldableOp;
+  if ((FoldableOp = getFoldableLogicOp(N1))) {
     A = N0;
-    B = N1.getOperand(0);
-    C = N1.getOperand(1);
-  } else if (isLogicOp(N0.getOpcode()) && N0.hasOneUse()) {
-    Opc2 = N0.getOpcode();
+  } else if ((FoldableOp = getFoldableLogicOp(N0))) {
     A = N1;
-    B = N0.getOperand(0);
-    C = N0.getOperand(1);
   } else
     return false;
+
+  SDValue B = FoldableOp.getOperand(0);
+  SDValue C = FoldableOp.getOperand(1);
+
+  unsigned Opc1 = N->getOpcode();
+  unsigned Opc2 = FoldableOp.getOpcode();
 
   uint64_t Imm;
   switch (Opc1) {
@@ -4001,11 +4009,117 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
     break;
   }
 
+  auto tryFoldLoadOrBCast =
+      [this](SDNode *Root, SDNode *P, SDValue &L, SDValue &Base, SDValue &Scale,
+             SDValue &Index, SDValue &Disp, SDValue &Segment) {
+        if (tryFoldLoad(Root, P, L, Base, Scale, Index, Disp, Segment))
+          return true;
+
+        // Not a load, check for broadcast which may be behind a bitcast.
+        if (L.getOpcode() == ISD::BITCAST && L.hasOneUse()) {
+          P = L.getNode();
+          L = L.getOperand(0);
+        }
+
+        if (L.getOpcode() != X86ISD::VBROADCAST_LOAD)
+          return false;
+
+        // Only 32 and 64 bit broadcasts are supported.
+        auto *MemIntr = cast<MemIntrinsicSDNode>(L);
+        unsigned Size = MemIntr->getMemoryVT().getSizeInBits();
+        if (Size != 32 && Size != 64)
+          return false;
+
+        return tryFoldBroadcast(Root, P, L, Base, Scale, Index, Disp, Segment);
+      };
+
+  bool FoldedLoad = false;
+  SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
+  if (tryFoldLoadOrBCast(N, FoldableOp.getNode(), C, Tmp0, Tmp1, Tmp2, Tmp3,
+                         Tmp4)) {
+    FoldedLoad = true;
+  } else if (tryFoldLoadOrBCast(N, N, A, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4)) {
+    FoldedLoad = true;
+    std::swap(A, C);
+    // Swap bits 1/4 and 3/6.
+    uint8_t OldImm = Imm;
+    Imm = OldImm & 0xa5;
+    if (OldImm & 0x02) Imm |= 0x10;
+    if (OldImm & 0x10) Imm |= 0x02;
+    if (OldImm & 0x08) Imm |= 0x40;
+    if (OldImm & 0x40) Imm |= 0x08;
+  } else if (tryFoldLoadOrBCast(N, FoldableOp.getNode(), B, Tmp0, Tmp1, Tmp2,
+                                Tmp3, Tmp4)) {
+    FoldedLoad = true;
+    std::swap(B, C);
+    // Swap bits 1/2 and 5/6.
+    uint8_t OldImm = Imm;
+    Imm = OldImm & 0x99;
+    if (OldImm & 0x02) Imm |= 0x04;
+    if (OldImm & 0x04) Imm |= 0x02;
+    if (OldImm & 0x20) Imm |= 0x40;
+    if (OldImm & 0x40) Imm |= 0x20;
+  }
+
   SDLoc DL(N);
-  SDValue New = CurDAG->getNode(X86ISD::VPTERNLOG, DL, NVT, A, B, C,
-                                CurDAG->getTargetConstant(Imm, DL, MVT::i8));
-  ReplaceNode(N, New.getNode());
-  SelectCode(New.getNode());
+
+  SDValue TImm = CurDAG->getTargetConstant(Imm, DL, MVT::i8);
+
+  MachineSDNode *MNode;
+  if (FoldedLoad) {
+    SDVTList VTs = CurDAG->getVTList(NVT, MVT::Other);
+
+    unsigned Opc;
+    if (C.getOpcode() == X86ISD::VBROADCAST_LOAD) {
+      auto *MemIntr = cast<MemIntrinsicSDNode>(C);
+      unsigned EltSize = MemIntr->getMemoryVT().getSizeInBits();
+      assert((EltSize == 32 || EltSize == 64) && "Unexpected broadcast size!");
+
+      bool UseD = EltSize == 32;
+      if (NVT.is128BitVector())
+        Opc = UseD ? X86::VPTERNLOGDZ128rmbi : X86::VPTERNLOGQZ128rmbi;
+      else if (NVT.is256BitVector())
+        Opc = UseD ? X86::VPTERNLOGDZ256rmbi : X86::VPTERNLOGQZ256rmbi;
+      else if (NVT.is512BitVector())
+        Opc = UseD ? X86::VPTERNLOGDZrmbi : X86::VPTERNLOGQZrmbi;
+      else
+        llvm_unreachable("Unexpected vector size!");
+    } else {
+      bool UseD = NVT.getVectorElementType() == MVT::i32;
+      if (NVT.is128BitVector())
+        Opc = UseD ? X86::VPTERNLOGDZ128rmi : X86::VPTERNLOGQZ128rmi;
+      else if (NVT.is256BitVector())
+        Opc = UseD ? X86::VPTERNLOGDZ256rmi : X86::VPTERNLOGQZ256rmi;
+      else if (NVT.is512BitVector())
+        Opc = UseD ? X86::VPTERNLOGDZrmi : X86::VPTERNLOGQZrmi;
+      else
+        llvm_unreachable("Unexpected vector size!");
+    }
+
+    SDValue Ops[] = {A, B, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, TImm, C.getOperand(0)};
+    MNode = CurDAG->getMachineNode(Opc, DL, VTs, Ops);
+
+    // Update the chain.
+    ReplaceUses(C.getValue(1), SDValue(MNode, 1));
+    // Record the mem-refs
+    CurDAG->setNodeMemRefs(MNode, {cast<MemSDNode>(C)->getMemOperand()});
+  } else {
+    bool UseD = NVT.getVectorElementType() == MVT::i32;
+    unsigned Opc;
+    if (NVT.is128BitVector())
+      Opc = UseD ? X86::VPTERNLOGDZ128rri : X86::VPTERNLOGQZ128rri;
+    else if (NVT.is256BitVector())
+      Opc = UseD ? X86::VPTERNLOGDZ256rri : X86::VPTERNLOGQZ256rri;
+    else if (NVT.is512BitVector())
+      Opc = UseD ? X86::VPTERNLOGDZrri : X86::VPTERNLOGQZrri;
+    else
+      llvm_unreachable("Unexpected vector size!");
+
+    MNode = CurDAG->getMachineNode(Opc, DL, NVT, {A, B, C, TImm});
+  }
+
+  ReplaceUses(SDValue(N, 0), SDValue(MNode, 0));
+  CurDAG->RemoveDeadNode(N);
   return true;
 }
 
@@ -4557,7 +4671,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     // the patterns on the add/sub/and/or/xor with immediate paterns in the
     // tablegen files to check immediate use count without making the patterns
     // unavailable to the fast-isel table.
-    if (!OptForSize)
+    if (!CurDAG->shouldOptForSize())
       break;
 
     // Only handle i8/i16/i32/i64.

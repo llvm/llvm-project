@@ -245,7 +245,8 @@ public:
                          unsigned SubRegIdx);
   void SelectLoadLane(SDNode *N, unsigned NumVecs, unsigned Opc);
   void SelectPostLoadLane(SDNode *N, unsigned NumVecs, unsigned Opc);
-  void SelectPredicatedLoad(SDNode *N, unsigned NumVecs, const unsigned Opc);
+  void SelectPredicatedLoad(SDNode *N, unsigned NumVecs, unsigned Scale,
+                            unsigned Opc_rr, unsigned Opc_ri);
 
   bool SelectAddrModeFrameIndexSVE(SDValue N, SDValue &Base, SDValue &OffImm);
   /// SVE Reg+Imm addressing mode.
@@ -262,14 +263,12 @@ public:
   void SelectPostStore(SDNode *N, unsigned NumVecs, unsigned Opc);
   void SelectStoreLane(SDNode *N, unsigned NumVecs, unsigned Opc);
   void SelectPostStoreLane(SDNode *N, unsigned NumVecs, unsigned Opc);
-  template <unsigned Scale>
-  void SelectPredicatedStore(SDNode *N, unsigned NumVecs, const unsigned Opc_rr,
-                             const unsigned Opc_ri);
-  template <unsigned Scale>
+  void SelectPredicatedStore(SDNode *N, unsigned NumVecs, unsigned Scale,
+                             unsigned Opc_rr, unsigned Opc_ri);
   std::tuple<unsigned, SDValue, SDValue>
-  findAddrModeSVELoadStore(SDNode *N, const unsigned Opc_rr,
-                           const unsigned Opc_ri, const SDValue &OldBase,
-                           const SDValue &OldOffset);
+  findAddrModeSVELoadStore(SDNode *N, unsigned Opc_rr, unsigned Opc_ri,
+                           const SDValue &OldBase, const SDValue &OldOffset,
+                           unsigned Scale);
 
   bool tryBitfieldExtractOp(SDNode *N);
   bool tryBitfieldExtractOpFromSExt(SDNode *N);
@@ -1414,12 +1413,12 @@ void AArch64DAGToDAGISel::SelectPostLoad(SDNode *N, unsigned NumVecs,
 /// Optimize \param OldBase and \param OldOffset selecting the best addressing
 /// mode. Returns a tuple consisting of an Opcode, an SDValue representing the
 /// new Base and an SDValue representing the new offset.
-template <unsigned Scale>
 std::tuple<unsigned, SDValue, SDValue>
-AArch64DAGToDAGISel::findAddrModeSVELoadStore(SDNode *N, const unsigned Opc_rr,
-                                              const unsigned Opc_ri,
+AArch64DAGToDAGISel::findAddrModeSVELoadStore(SDNode *N, unsigned Opc_rr,
+                                              unsigned Opc_ri,
                                               const SDValue &OldBase,
-                                              const SDValue &OldOffset) {
+                                              const SDValue &OldOffset,
+                                              unsigned Scale) {
   SDValue NewBase = OldBase;
   SDValue NewOffset = OldOffset;
   // Detect a possible Reg+Imm addressing mode.
@@ -1429,21 +1428,30 @@ AArch64DAGToDAGISel::findAddrModeSVELoadStore(SDNode *N, const unsigned Opc_rr,
   // Detect a possible reg+reg addressing mode, but only if we haven't already
   // detected a Reg+Imm one.
   const bool IsRegReg =
-      !IsRegImm && SelectSVERegRegAddrMode<Scale>(OldBase, NewBase, NewOffset);
+      !IsRegImm && SelectSVERegRegAddrMode(OldBase, Scale, NewBase, NewOffset);
 
   // Select the instruction.
   return std::make_tuple(IsRegReg ? Opc_rr : Opc_ri, NewBase, NewOffset);
 }
 
 void AArch64DAGToDAGISel::SelectPredicatedLoad(SDNode *N, unsigned NumVecs,
-                                               const unsigned Opc) {
+                                               unsigned Scale, unsigned Opc_ri,
+                                               unsigned Opc_rr) {
+  assert(Scale < 4 && "Invalid scaling value.");
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue Chain = N->getOperand(0);
 
+  // Optimize addressing mode.
+  SDValue Base, Offset;
+  unsigned Opc;
+  std::tie(Opc, Base, Offset) = findAddrModeSVELoadStore(
+      N, Opc_rr, Opc_ri, N->getOperand(2),
+      CurDAG->getTargetConstant(0, DL, MVT::i64), Scale);
+
   SDValue Ops[] = {N->getOperand(1), // Predicate
-                   N->getOperand(2), // Memory operand
-                   CurDAG->getTargetConstant(0, DL, MVT::i64), Chain};
+                   Base,             // Memory operand
+                   Offset, Chain};
 
   const EVT ResTys[] = {MVT::Untyped, MVT::Other};
 
@@ -1479,10 +1487,9 @@ void AArch64DAGToDAGISel::SelectStore(SDNode *N, unsigned NumVecs,
   ReplaceNode(N, St);
 }
 
-template <unsigned Scale>
 void AArch64DAGToDAGISel::SelectPredicatedStore(SDNode *N, unsigned NumVecs,
-                                                const unsigned Opc_rr,
-                                                const unsigned Opc_ri) {
+                                                unsigned Scale, unsigned Opc_rr,
+                                                unsigned Opc_ri) {
   SDLoc dl(N);
 
   // Form a REG_SEQUENCE to force register allocation.
@@ -1492,9 +1499,9 @@ void AArch64DAGToDAGISel::SelectPredicatedStore(SDNode *N, unsigned NumVecs,
   // Optimize addressing mode.
   unsigned Opc;
   SDValue Offset, Base;
-  std::tie(Opc, Base, Offset) = findAddrModeSVELoadStore<Scale>(
+  std::tie(Opc, Base, Offset) = findAddrModeSVELoadStore(
       N, Opc_rr, Opc_ri, N->getOperand(NumVecs + 3),
-      CurDAG->getTargetConstant(0, dl, MVT::i64));
+      CurDAG->getTargetConstant(0, dl, MVT::i64), Scale);
 
   SDValue Ops[] = {RegSeq, N->getOperand(NumVecs + 2), // predicate
                    Base,                               // address
@@ -4085,63 +4092,51 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     }
     case Intrinsic::aarch64_sve_st2: {
       if (VT == MVT::nxv16i8) {
-        SelectPredicatedStore</*Scale=*/0>(Node, 2, AArch64::ST2B,
-                                           AArch64::ST2B_IMM);
+        SelectPredicatedStore(Node, 2, 0, AArch64::ST2B, AArch64::ST2B_IMM);
         return;
       } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
                  (VT == MVT::nxv8bf16 && Subtarget->hasBF16())) {
-        SelectPredicatedStore</*Scale=*/1>(Node, 2, AArch64::ST2H,
-                                           AArch64::ST2H_IMM);
+        SelectPredicatedStore(Node, 2, 1, AArch64::ST2H, AArch64::ST2H_IMM);
         return;
       } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
-        SelectPredicatedStore</*Scale=*/2>(Node, 2, AArch64::ST2W,
-                                           AArch64::ST2W_IMM);
+        SelectPredicatedStore(Node, 2, 2, AArch64::ST2W, AArch64::ST2W_IMM);
         return;
       } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-        SelectPredicatedStore</*Scale=*/3>(Node, 2, AArch64::ST2D,
-                                           AArch64::ST2D_IMM);
+        SelectPredicatedStore(Node, 2, 3, AArch64::ST2D, AArch64::ST2D_IMM);
         return;
       }
       break;
     }
     case Intrinsic::aarch64_sve_st3: {
       if (VT == MVT::nxv16i8) {
-        SelectPredicatedStore</*Scale=*/0>(Node, 3, AArch64::ST3B,
-                                           AArch64::ST3B_IMM);
+        SelectPredicatedStore(Node, 3, 0, AArch64::ST3B, AArch64::ST3B_IMM);
         return;
       } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
                  (VT == MVT::nxv8bf16 && Subtarget->hasBF16())) {
-        SelectPredicatedStore</*Scale=*/1>(Node, 3, AArch64::ST3H,
-                                           AArch64::ST3H_IMM);
+        SelectPredicatedStore(Node, 3, 1, AArch64::ST3H, AArch64::ST3H_IMM);
         return;
       } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
-        SelectPredicatedStore</*Scale=*/2>(Node, 3, AArch64::ST3W,
-                                           AArch64::ST3W_IMM);
+        SelectPredicatedStore(Node, 3, 2, AArch64::ST3W, AArch64::ST3W_IMM);
         return;
       } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-        SelectPredicatedStore</*Scale=*/3>(Node, 3, AArch64::ST3D,
-                                           AArch64::ST3D_IMM);
+        SelectPredicatedStore(Node, 3, 3, AArch64::ST3D, AArch64::ST3D_IMM);
         return;
       }
       break;
     }
     case Intrinsic::aarch64_sve_st4: {
       if (VT == MVT::nxv16i8) {
-        SelectPredicatedStore</*Scale=*/0>(Node, 4, AArch64::ST4B,
-                                           AArch64::ST4B_IMM);
+        SelectPredicatedStore(Node, 4, 0, AArch64::ST4B, AArch64::ST4B_IMM);
         return;
       } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
                  (VT == MVT::nxv8bf16 && Subtarget->hasBF16())) {
-        SelectPredicatedStore</*Scale=*/1>(Node, 4, AArch64::ST4H,
-                                           AArch64::ST4H_IMM);
+        SelectPredicatedStore(Node, 4, 1, AArch64::ST4H, AArch64::ST4H_IMM);
         return;
       } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
-        SelectPredicatedStore</*Scale=*/2>(Node, 4, AArch64::ST4W,
-                                           AArch64::ST4W_IMM);
+        SelectPredicatedStore(Node, 4, 2, AArch64::ST4W, AArch64::ST4W_IMM);
         return;
       } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-        SelectPredicatedStore</*Scale=*/3>(Node, 4, AArch64::ST4D,
-                                           AArch64::ST4D_IMM);
+        SelectPredicatedStore(Node, 4, 3, AArch64::ST4D, AArch64::ST4D_IMM);
         return;
       }
       break;
@@ -4741,51 +4736,51 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
   }
   case AArch64ISD::SVE_LD2_MERGE_ZERO: {
     if (VT == MVT::nxv16i8) {
-      SelectPredicatedLoad(Node, 2, AArch64::LD2B_IMM);
+      SelectPredicatedLoad(Node, 2, 0, AArch64::LD2B_IMM, AArch64::LD2B);
       return;
     } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
                (VT == MVT::nxv8bf16 && Subtarget->hasBF16())) {
-      SelectPredicatedLoad(Node, 2, AArch64::LD2H_IMM);
+      SelectPredicatedLoad(Node, 2, 1, AArch64::LD2H_IMM, AArch64::LD2H);
       return;
     } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
-      SelectPredicatedLoad(Node, 2, AArch64::LD2W_IMM);
+      SelectPredicatedLoad(Node, 2, 2, AArch64::LD2W_IMM, AArch64::LD2W);
       return;
     } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-      SelectPredicatedLoad(Node, 2, AArch64::LD2D_IMM);
+      SelectPredicatedLoad(Node, 2, 3, AArch64::LD2D_IMM, AArch64::LD2D);
       return;
     }
     break;
   }
   case AArch64ISD::SVE_LD3_MERGE_ZERO: {
     if (VT == MVT::nxv16i8) {
-      SelectPredicatedLoad(Node, 3, AArch64::LD3B_IMM);
+      SelectPredicatedLoad(Node, 3, 0, AArch64::LD3B_IMM, AArch64::LD3B);
       return;
     } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
                (VT == MVT::nxv8bf16 && Subtarget->hasBF16())) {
-      SelectPredicatedLoad(Node, 3, AArch64::LD3H_IMM);
+      SelectPredicatedLoad(Node, 3, 1, AArch64::LD3H_IMM, AArch64::LD3H);
       return;
     } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
-      SelectPredicatedLoad(Node, 3, AArch64::LD3W_IMM);
+      SelectPredicatedLoad(Node, 3, 2, AArch64::LD3W_IMM, AArch64::LD3W);
       return;
     } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-      SelectPredicatedLoad(Node, 3, AArch64::LD3D_IMM);
+      SelectPredicatedLoad(Node, 3, 3, AArch64::LD3D_IMM, AArch64::LD3D);
       return;
     }
     break;
   }
   case AArch64ISD::SVE_LD4_MERGE_ZERO: {
     if (VT == MVT::nxv16i8) {
-      SelectPredicatedLoad(Node, 4, AArch64::LD4B_IMM);
+      SelectPredicatedLoad(Node, 4, 0, AArch64::LD4B_IMM, AArch64::LD4B);
       return;
     } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
                (VT == MVT::nxv8bf16 && Subtarget->hasBF16())) {
-      SelectPredicatedLoad(Node, 4, AArch64::LD4H_IMM);
+      SelectPredicatedLoad(Node, 4, 1, AArch64::LD4H_IMM, AArch64::LD4H);
       return;
     } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
-      SelectPredicatedLoad(Node, 4, AArch64::LD4W_IMM);
+      SelectPredicatedLoad(Node, 4, 2, AArch64::LD4W_IMM, AArch64::LD4W);
       return;
     } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-      SelectPredicatedLoad(Node, 4, AArch64::LD4D_IMM);
+      SelectPredicatedLoad(Node, 4, 3, AArch64::LD4D_IMM, AArch64::LD4D);
       return;
     }
     break;
@@ -4805,10 +4800,14 @@ FunctionPass *llvm::createAArch64ISelDag(AArch64TargetMachine &TM,
 
 /// When \p PredVT is a scalable vector predicate in the form
 /// MVT::nx<M>xi1, it builds the correspondent scalable vector of
-/// integers MVT::nx<M>xi<bits> s.t. M x bits = 128. If the input
+/// integers MVT::nx<M>xi<bits> s.t. M x bits = 128. When targeting
+/// structured vectors (NumVec >1), the output data type is
+/// MVT::nx<M*NumVec>xi<bits> s.t. M x bits = 128. If the input
 /// PredVT is not in the form MVT::nx<M>xi1, it returns an invalid
 /// EVT.
-static EVT getPackedVectorTypeFromPredicateType(LLVMContext &Ctx, EVT PredVT) {
+static EVT getPackedVectorTypeFromPredicateType(LLVMContext &Ctx, EVT PredVT,
+                                                unsigned NumVec) {
+  assert(NumVec > 0 && NumVec < 5 && "Invalid number of vectors.");
   if (!PredVT.isScalableVector() || PredVT.getVectorElementType() != MVT::i1)
     return EVT();
 
@@ -4818,7 +4817,8 @@ static EVT getPackedVectorTypeFromPredicateType(LLVMContext &Ctx, EVT PredVT) {
 
   ElementCount EC = PredVT.getVectorElementCount();
   EVT ScalarVT = EVT::getIntegerVT(Ctx, AArch64::SVEBitsPerBlock / EC.Min);
-  EVT MemVT = EVT::getVectorVT(Ctx, ScalarVT, EC);
+  EVT MemVT = EVT::getVectorVT(Ctx, ScalarVT, EC * NumVec);
+
   return MemVT;
 }
 
@@ -4842,6 +4842,15 @@ static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
     return cast<VTSDNode>(Root->getOperand(3))->getVT();
   case AArch64ISD::ST1_PRED:
     return cast<VTSDNode>(Root->getOperand(4))->getVT();
+  case AArch64ISD::SVE_LD2_MERGE_ZERO:
+    return getPackedVectorTypeFromPredicateType(
+        Ctx, Root->getOperand(1)->getValueType(0), /*NumVec=*/2);
+  case AArch64ISD::SVE_LD3_MERGE_ZERO:
+    return getPackedVectorTypeFromPredicateType(
+        Ctx, Root->getOperand(1)->getValueType(0), /*NumVec=*/3);
+  case AArch64ISD::SVE_LD4_MERGE_ZERO:
+    return getPackedVectorTypeFromPredicateType(
+        Ctx, Root->getOperand(1)->getValueType(0), /*NumVec=*/4);
   default:
     break;
   }
@@ -4857,7 +4866,7 @@ static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
   // We are using an SVE prefetch intrinsic. Type must be inferred
   // from the width of the predicate.
   return getPackedVectorTypeFromPredicateType(
-      Ctx, Root->getOperand(2)->getValueType(0));
+      Ctx, Root->getOperand(2)->getValueType(0), /*NumVec=*/1);
 }
 
 /// SelectAddrModeIndexedSVE - Attempt selection of the addressing mode:

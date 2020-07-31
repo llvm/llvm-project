@@ -965,6 +965,7 @@ void ASTWorker::startTask(llvm::StringRef Name,
   if (RunSync) {
     assert(!Done && "running a task after stop()");
     trace::Span Tracer(Name + ":" + llvm::sys::path::filename(FileName));
+    WithContext WithProvidedContext(ContextProvider(FileName));
     Task();
     return;
   }
@@ -1062,9 +1063,7 @@ void ASTWorker::run() {
         Status.ASTActivity.K = ASTAction::RunningAction;
         Status.ASTActivity.Name = CurrentRequest->Name;
       });
-      llvm::Optional<WithContext> WithProvidedContext;
-      if (ContextProvider)
-        WithProvidedContext.emplace(ContextProvider(FileName));
+      WithContext WithProvidedContext(ContextProvider(FileName));
       CurrentRequest->Action();
     }
 
@@ -1238,6 +1237,12 @@ TUScheduler::TUScheduler(const GlobalCompilationDatabase &CDB,
       Barrier(Opts.AsyncThreadsCount),
       IdleASTs(
           std::make_unique<ASTCache>(Opts.RetentionPolicy.MaxRetainedASTs)) {
+  // Avoid null checks everywhere.
+  if (!Opts.ContextProvider) {
+    this->Opts.ContextProvider = [](llvm::StringRef) {
+      return Context::current().clone();
+    };
+  }
   if (0 < Opts.AsyncThreadsCount) {
     PreambleTasks.emplace();
     WorkerThreads.emplace();
@@ -1300,16 +1305,16 @@ llvm::StringMap<std::string> TUScheduler::getAllFileContents() const {
 
 void TUScheduler::run(llvm::StringRef Name, llvm::StringRef Path,
                       llvm::unique_function<void()> Action) {
-  if (!PreambleTasks)
+  if (!PreambleTasks) {
+    WithContext WithProvidedContext(Opts.ContextProvider(Path));
     return Action();
+  }
   PreambleTasks->runAsync(Name, [this, Ctx = Context::current().clone(),
                                  Path(Path.str()),
                                  Action = std::move(Action)]() mutable {
     std::lock_guard<Semaphore> BarrierLock(Barrier);
     WithContext WC(std::move(Ctx));
-    llvm::Optional<WithContext> WithProvidedContext;
-    if (Opts.ContextProvider)
-      WithProvidedContext.emplace(Opts.ContextProvider(Path));
+    WithContext WithProvidedContext(Opts.ContextProvider(Path));
     Action();
   });
 }
@@ -1344,6 +1349,7 @@ void TUScheduler::runWithPreamble(llvm::StringRef Name, PathRef File,
     SPAN_ATTACH(Tracer, "file", File);
     std::shared_ptr<const PreambleData> Preamble =
         It->second->Worker->getPossiblyStalePreamble();
+    WithContext WithProvidedContext(Opts.ContextProvider(File));
     Action(InputsAndPreamble{It->second->Contents,
                              It->second->Worker->getCurrentCompileCommand(),
                              Preamble.get()});
@@ -1370,9 +1376,7 @@ void TUScheduler::runWithPreamble(llvm::StringRef Name, PathRef File,
         WithContext Guard(std::move(Ctx));
         trace::Span Tracer(Name);
         SPAN_ATTACH(Tracer, "file", File);
-        llvm::Optional<WithContext> WithProvidedContext;
-        if (Opts.ContextProvider)
-          WithProvidedContext.emplace(Opts.ContextProvider(File));
+        WithContext WithProvidedContext(Opts.ContextProvider(File));
         Action(InputsAndPreamble{Contents, Command, Preamble.get()});
       };
 

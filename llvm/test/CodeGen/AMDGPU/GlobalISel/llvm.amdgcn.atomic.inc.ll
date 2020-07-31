@@ -1555,40 +1555,40 @@ define amdgpu_kernel void @nocse_lds_atomic_inc_ret_i32(i32 addrspace(1)* %out0,
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; CI-NEXT:    s_load_dword s4, s[4:5], 0x4
-; CI-NEXT:    v_mov_b32_e32 v2, 42
+; CI-NEXT:    v_mov_b32_e32 v0, 42
 ; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    v_mov_b32_e32 v0, s2
-; CI-NEXT:    v_mov_b32_e32 v3, s4
-; CI-NEXT:    ds_inc_rtn_u32 v4, v3, v2
-; CI-NEXT:    ds_inc_rtn_u32 v5, v3, v2
-; CI-NEXT:    v_mov_b32_e32 v3, s1
-; CI-NEXT:    v_mov_b32_e32 v2, s0
-; CI-NEXT:    v_mov_b32_e32 v1, s3
+; CI-NEXT:    v_mov_b32_e32 v2, s2
+; CI-NEXT:    v_mov_b32_e32 v1, s4
+; CI-NEXT:    ds_inc_rtn_u32 v4, v1, v0
+; CI-NEXT:    ds_inc_rtn_u32 v5, v1, v0
+; CI-NEXT:    v_mov_b32_e32 v0, s0
+; CI-NEXT:    v_mov_b32_e32 v1, s1
+; CI-NEXT:    v_mov_b32_e32 v3, s3
 ; CI-NEXT:    s_waitcnt lgkmcnt(1)
-; CI-NEXT:    flat_store_dword v[2:3], v4
+; CI-NEXT:    flat_store_dword v[0:1], v4
 ; CI-NEXT:    s_waitcnt lgkmcnt(1)
-; CI-NEXT:    flat_store_dword v[0:1], v5
+; CI-NEXT:    flat_store_dword v[2:3], v5
 ; CI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: nocse_lds_atomic_inc_ret_i32:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; VI-NEXT:    s_load_dword s4, s[4:5], 0x10
-; VI-NEXT:    v_mov_b32_e32 v2, 42
+; VI-NEXT:    v_mov_b32_e32 v0, 42
 ; VI-NEXT:    s_mov_b32 m0, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s2
-; VI-NEXT:    v_mov_b32_e32 v3, s4
-; VI-NEXT:    ds_inc_rtn_u32 v4, v3, v2
-; VI-NEXT:    ds_inc_rtn_u32 v5, v3, v2
-; VI-NEXT:    v_mov_b32_e32 v3, s1
-; VI-NEXT:    v_mov_b32_e32 v2, s0
-; VI-NEXT:    v_mov_b32_e32 v1, s3
+; VI-NEXT:    v_mov_b32_e32 v2, s2
+; VI-NEXT:    v_mov_b32_e32 v1, s4
+; VI-NEXT:    ds_inc_rtn_u32 v4, v1, v0
+; VI-NEXT:    ds_inc_rtn_u32 v5, v1, v0
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_mov_b32_e32 v3, s3
 ; VI-NEXT:    s_waitcnt lgkmcnt(1)
-; VI-NEXT:    flat_store_dword v[2:3], v4
+; VI-NEXT:    flat_store_dword v[0:1], v4
 ; VI-NEXT:    s_waitcnt lgkmcnt(1)
-; VI-NEXT:    flat_store_dword v[0:1], v5
+; VI-NEXT:    flat_store_dword v[2:3], v5
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: nocse_lds_atomic_inc_ret_i32:

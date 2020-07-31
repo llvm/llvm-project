@@ -8,16 +8,19 @@
 // RUN: rm -f gcov-dump-and-remove.gcda && %run %t
 // RUN: llvm-cov gcov -t gcov-dump-and-remove.gcda | FileCheck %s
 
-extern void __gcov_flush(void);
+extern void __gcov_dump(void);
+extern void __gcov_reset(void);
 extern int remove(const char *);   // CHECK:          -: [[#@LINE]]:extern int remove
 int main(void) {                   // CHECK-NEXT: #####: [[#@LINE]]:
-  __gcov_flush();                  // CHECK-NEXT: #####: [[#@LINE]]:
+  __gcov_dump();                   // CHECK-NEXT: #####: [[#@LINE]]:
+  __gcov_reset();                  // CHECK-NEXT: #####: [[#@LINE]]:
   if (remove("gcov-dump-and-remove.gcda") != 0) // CHECK-NEXT: #####: [[#@LINE]]:
     return 1;                      // CHECK-NEXT: #####: [[#@LINE]]: return 1;
                                    // CHECK-NEXT:     -: [[#@LINE]]:
-  __gcov_flush();                  // CHECK-NEXT: #####: [[#@LINE]]:
-  __gcov_flush();                  // CHECK-NEXT: #####: [[#@LINE]]:
-  if (remove("gcov-dump-and-remove.gcda") != 0) // CHECK-NEXT: #####: [[#@LINE]]:
+  __gcov_dump();                   // CHECK-NEXT:     1: [[#@LINE]]:
+  __gcov_reset();                  // CHECK-NEXT:     1: [[#@LINE]]:
+  __gcov_dump();                   // CHECK-NEXT:     1: [[#@LINE]]:
+  if (remove("gcov-dump-and-remove.gcda") != 0) // CHECK-NEXT:     1: [[#@LINE]]:
     return 1;                      // CHECK-NEXT: #####: [[#@LINE]]: return 1;
 
   return 0;

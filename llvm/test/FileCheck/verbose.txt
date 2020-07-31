@@ -55,6 +55,31 @@ VV-NEXT: verbose.txt:[[@LINE-22]]:1: note: scanning from here
 VV-NEXT: {{^}}bar{{$}}
 VV-NEXT: {{^}}^{{$}}
 
+STRVAR=foobar
+STRVAR:foobar
+CHECK: STRVAR=[[STRVAR:[a-z]+]]
+CHECK-NEXT: STRVAR:[[STRVAR]]
+
+     V: verbose.txt:[[#@LINE-3]]:8: remark: {{C}}HECK: expected string found in input
+V-NEXT: {{C}}HECK: {{STRVAR=\[\[STRVAR:\[a-z\]\+\]\]}}
+V-NEXT:  {{^}}       ^{{$}}
+V-NEXT: verbose.txt:[[#@LINE-8]]:1: note: found here
+V-NEXT: {{^}}STRVAR=foobar{{$}}
+V-NEXT: {{^}}^~~~~~~~~~~~~{{$}}
+V-NEXT: verbose.txt:[[#@LINE-11]]:8: note: captured var "STRVAR"
+V-NEXT: {{^}}STRVAR=foobar{{$}}
+V-NEXT: {{^}}       ^~~~~~{{$}}
+
+V-NEXT: verbose.txt:[[#@LINE-12]]:13: remark: {{C}}HECK-NEXT: expected string found in input
+V-NEXT: {{C}}HECK-NEXT: {{STRVAR:\[\[STRVAR\]\]}}
+V-NEXT:  {{^}}            ^{{$}}
+V-NEXT: verbose.txt:[[#@LINE-17]]:1: note: found here
+V-NEXT: {{^}}STRVAR:foobar{{$}}
+V-NEXT: {{^}}^~~~~~~~~~~~~{{$}}
+V-NEXT: verbose.txt:[[#@LINE-20]]:1: note: with "STRVAR" equal to "foobar"
+V-NEXT: {{^}}STRVAR:foobar{{$}}
+V-NEXT: {{^}}^{{$}}
+
 NUMVAR=42
 NUMVAR - 1:41
 CHECK: NUMVAR=[[#NUMVAR:]]
@@ -67,21 +92,24 @@ V-NEXT:  {{^}}       ^{{$}}
 V-NEXT: verbose.txt:[[#@LINE-9]]:1: note: found here
 V-NEXT: {{^}}NUMVAR=42{{$}}
 V-NEXT: {{^}}^~~~~~~~~{{$}}
+V-NEXT: verbose.txt:[[#@LINE-12]]:8: note: captured var "NUMVAR"
+V-NEXT: NUMVAR=42
+V-NEXT:        ^~
 
-V-NEXT: verbose.txt:[[#@LINE-9]]:13: remark: {{C}}HECK-NEXT: expected string found in input
+V-NEXT: verbose.txt:[[#@LINE-12]]:13: remark: {{C}}HECK-NEXT: expected string found in input
 V-NEXT: {{C}}HECK-NEXT: {{NUMVAR - 1:[[][[]#NUMVAR - 1[]][]]$}}
 V-NEXT:  {{^}}            ^{{$}}
-V-NEXT: verbose.txt:[[#@LINE-15]]:1: note: found here
+V-NEXT: verbose.txt:[[#@LINE-18]]:1: note: found here
 V-NEXT: {{^}}NUMVAR - 1:41{{$}}
 V-NEXT: {{^}}^~~~~~~~~~~~~{{$}}
-V-NEXT: verbose.txt:[[#@LINE-18]]:1: note: with "NUMVAR - 1" equal to "41"
+V-NEXT: verbose.txt:[[#@LINE-21]]:1: note: with "NUMVAR - 1" equal to "41"
 V-NEXT: {{^}}NUMVAR - 1:41{{$}}
-V-NEXT: {{^}}^~~~~~~~~~~~~{{$}}
+V-NEXT: {{^}}^{{$}}
 
-VV-NEXT: verbose.txt:[[#@LINE-20]]:12: remark: {{C}}HECK-NOT: excluded string not found in input
+VV-NEXT: verbose.txt:[[#@LINE-23]]:12: remark: {{C}}HECK-NOT: excluded string not found in input
 VV-NEXT: {{C}}HECK-NOT: {{[[][[]#NUMVAR [+] 1[]][]]$}}
 VV-NEXT:   {{^}}           ^{{$}}
-VV-NEXT: verbose.txt:[[#@LINE-25]]:1: note: scanning from here
+VV-NEXT: verbose.txt:[[#@LINE-28]]:1: note: scanning from here
 VV-NEXT: {{^}}NUMVAR - 1:41{{$}}
 VV-NEXT: {{^}}^{{$}}
 

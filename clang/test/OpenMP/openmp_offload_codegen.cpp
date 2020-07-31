@@ -35,8 +35,9 @@ void target_maps_parallel_integer(int a){
 // CK1: [[GEPOP:%.+]] = getelementptr inbounds {{.*}}
 // CK1: [[GEPOPBIT:%.+]] = bitcast i8** [[GEPOP]]
 // CK1: store i32* %ParamToKernel, i32** [[GEPOPBIT]]
+// CK1: [[GEPMAPPERARG:%.+]] = getelementptr inbounds {{.*}}
 // CK1: [[GEPOBPARG:%.+]] = getelementptr inbounds {{.*}}
 // CK1: [[GEPOPARG:%.+]] = getelementptr inbounds {{.*}}
-// CK1: call {{.*}}tgt_target({{.*}}i8** [[GEPOBPARG]], i8** [[GEPOPARG]]
+// CK1: call {{.*}}tgt_target_mapper({{.*}}i8** [[GEPOBPARG]], i8** [[GEPOPARG]]{{.*}}, i8** null)
 
 #endif

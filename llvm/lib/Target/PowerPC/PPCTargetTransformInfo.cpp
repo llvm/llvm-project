@@ -8,13 +8,18 @@
 
 #include "PPCTargetTransformInfo.h"
 #include "llvm/Analysis/CodeMetrics.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSchedule.h"
+#include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/InstCombine/InstCombiner.h"
+#include "llvm/Transforms/Utils/Local.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "ppctti"
@@ -22,8 +27,7 @@ using namespace llvm;
 static cl::opt<bool> DisablePPCConstHoist("disable-ppc-constant-hoisting",
 cl::desc("disable constant hoisting on PPC"), cl::init(false), cl::Hidden);
 
-// This is currently only used for the data prefetch pass which is only enabled
-// for BG/Q by default.
+// This is currently only used for the data prefetch pass
 static cl::opt<unsigned>
 CacheLineSize("ppc-loop-prefetch-cache-line", cl::Hidden, cl::init(64),
               cl::desc("The loop prefetch cache line size"));
@@ -57,6 +61,109 @@ PPCTTIImpl::getPopcntSupport(unsigned TyWidth) {
     return ST->hasPOPCNTD() == PPCSubtarget::POPCNTD_Slow ?
              TTI::PSK_SlowHardware : TTI::PSK_FastHardware;
   return TTI::PSK_Software;
+}
+
+Optional<Instruction *>
+PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
+  Intrinsic::ID IID = II.getIntrinsicID();
+  switch (IID) {
+  default:
+    break;
+  case Intrinsic::ppc_altivec_lvx:
+  case Intrinsic::ppc_altivec_lvxl:
+    // Turn PPC lvx -> load if the pointer is known aligned.
+    if (getOrEnforceKnownAlignment(
+            II.getArgOperand(0), Align(16), IC.getDataLayout(), &II,
+            &IC.getAssumptionCache(), &IC.getDominatorTree()) >= 16) {
+      Value *Ptr = IC.Builder.CreateBitCast(
+          II.getArgOperand(0), PointerType::getUnqual(II.getType()));
+      return new LoadInst(II.getType(), Ptr, "", false, Align(16));
+    }
+    break;
+  case Intrinsic::ppc_vsx_lxvw4x:
+  case Intrinsic::ppc_vsx_lxvd2x: {
+    // Turn PPC VSX loads into normal loads.
+    Value *Ptr = IC.Builder.CreateBitCast(II.getArgOperand(0),
+                                          PointerType::getUnqual(II.getType()));
+    return new LoadInst(II.getType(), Ptr, Twine(""), false, Align(1));
+  }
+  case Intrinsic::ppc_altivec_stvx:
+  case Intrinsic::ppc_altivec_stvxl:
+    // Turn stvx -> store if the pointer is known aligned.
+    if (getOrEnforceKnownAlignment(
+            II.getArgOperand(1), Align(16), IC.getDataLayout(), &II,
+            &IC.getAssumptionCache(), &IC.getDominatorTree()) >= 16) {
+      Type *OpPtrTy = PointerType::getUnqual(II.getArgOperand(0)->getType());
+      Value *Ptr = IC.Builder.CreateBitCast(II.getArgOperand(1), OpPtrTy);
+      return new StoreInst(II.getArgOperand(0), Ptr, false, Align(16));
+    }
+    break;
+  case Intrinsic::ppc_vsx_stxvw4x:
+  case Intrinsic::ppc_vsx_stxvd2x: {
+    // Turn PPC VSX stores into normal stores.
+    Type *OpPtrTy = PointerType::getUnqual(II.getArgOperand(0)->getType());
+    Value *Ptr = IC.Builder.CreateBitCast(II.getArgOperand(1), OpPtrTy);
+    return new StoreInst(II.getArgOperand(0), Ptr, false, Align(1));
+  }
+  case Intrinsic::ppc_altivec_vperm:
+    // Turn vperm(V1,V2,mask) -> shuffle(V1,V2,mask) if mask is a constant.
+    // Note that ppc_altivec_vperm has a big-endian bias, so when creating
+    // a vectorshuffle for little endian, we must undo the transformation
+    // performed on vec_perm in altivec.h.  That is, we must complement
+    // the permutation mask with respect to 31 and reverse the order of
+    // V1 and V2.
+    if (Constant *Mask = dyn_cast<Constant>(II.getArgOperand(2))) {
+      assert(cast<VectorType>(Mask->getType())->getNumElements() == 16 &&
+             "Bad type for intrinsic!");
+
+      // Check that all of the elements are integer constants or undefs.
+      bool AllEltsOk = true;
+      for (unsigned i = 0; i != 16; ++i) {
+        Constant *Elt = Mask->getAggregateElement(i);
+        if (!Elt || !(isa<ConstantInt>(Elt) || isa<UndefValue>(Elt))) {
+          AllEltsOk = false;
+          break;
+        }
+      }
+
+      if (AllEltsOk) {
+        // Cast the input vectors to byte vectors.
+        Value *Op0 =
+            IC.Builder.CreateBitCast(II.getArgOperand(0), Mask->getType());
+        Value *Op1 =
+            IC.Builder.CreateBitCast(II.getArgOperand(1), Mask->getType());
+        Value *Result = UndefValue::get(Op0->getType());
+
+        // Only extract each element once.
+        Value *ExtractedElts[32];
+        memset(ExtractedElts, 0, sizeof(ExtractedElts));
+
+        for (unsigned i = 0; i != 16; ++i) {
+          if (isa<UndefValue>(Mask->getAggregateElement(i)))
+            continue;
+          unsigned Idx =
+              cast<ConstantInt>(Mask->getAggregateElement(i))->getZExtValue();
+          Idx &= 31; // Match the hardware behavior.
+          if (DL.isLittleEndian())
+            Idx = 31 - Idx;
+
+          if (!ExtractedElts[Idx]) {
+            Value *Op0ToUse = (DL.isLittleEndian()) ? Op1 : Op0;
+            Value *Op1ToUse = (DL.isLittleEndian()) ? Op0 : Op1;
+            ExtractedElts[Idx] = IC.Builder.CreateExtractElement(
+                Idx < 16 ? Op0ToUse : Op1ToUse, IC.Builder.getInt32(Idx & 15));
+          }
+
+          // Insert this value into the result vector.
+          Result = IC.Builder.CreateInsertElement(Result, ExtractedElts[Idx],
+                                                  IC.Builder.getInt32(i));
+        }
+        return CastInst::Create(Instruction::BitCast, Result, II.getType());
+      }
+    }
+    break;
+  }
+  return None;
 }
 
 int PPCTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
@@ -581,10 +688,7 @@ bool PPCTTIImpl::useColdCCForColdCall(Function &F) {
 }
 
 bool PPCTTIImpl::enableAggressiveInterleaving(bool LoopHasReductions) {
-  // On the A2, always unroll aggressively. For QPX unaligned loads, we depend
-  // on combining the loads generated for consecutive accesses, and failure to
-  // do so is particularly expensive. This makes it much more likely (compared
-  // to only using concatenation unrolling).
+  // On the A2, always unroll aggressively.
   if (ST->getCPUDirective() == PPC::DIR_A2)
     return true;
 
@@ -644,7 +748,6 @@ const char* PPCTTIImpl::getRegisterClassName(unsigned ClassID) const {
 
 unsigned PPCTTIImpl::getRegisterBitWidth(bool Vector) const {
   if (Vector) {
-    if (ST->hasQPX()) return 256;
     if (ST->hasAltivec()) return 128;
     return 0;
   }
@@ -673,8 +776,6 @@ unsigned PPCTTIImpl::getCacheLineSize() const {
 }
 
 unsigned PPCTTIImpl::getPrefetchDistance() const {
-  // This seems like a reasonable default for the BG/Q (this pass is enabled, by
-  // default, only on the BG/Q).
   return 300;
 }
 
@@ -763,7 +864,7 @@ int PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
   // Legalize the type.
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
 
-  // PPC, for both Altivec/VSX and QPX, support cheap arbitrary permutations
+  // PPC, for both Altivec/VSX, support cheap arbitrary permutations
   // (at least in the sense that there need only be one non-loop-invariant
   // instruction). We need one such shuffle instruction for each actual
   // register (this is not true for arbitrary shuffles, but is true for the
@@ -780,11 +881,12 @@ int PPCTTIImpl::getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind) {
 }
 
 int PPCTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                                 TTI::CastContextHint CCH,
                                  TTI::TargetCostKind CostKind,
                                  const Instruction *I) {
   assert(TLI->InstructionOpcodeToISD(Opcode) && "Invalid opcode");
 
-  int Cost = BaseT::getCastInstrCost(Opcode, Dst, Src, CostKind, I);
+  int Cost = BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
   Cost = vectorCostAdjustment(Cost, Opcode, Dst, Src);
   // TODO: Allow non-throughput costs that aren't binary.
   if (CostKind != TTI::TCK_RecipThroughput)
@@ -819,13 +921,6 @@ int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
 
     return Cost;
 
-  } else if (ST->hasQPX() && Val->getScalarType()->isFloatingPointTy()) {
-    // Floating point scalars are already located in index #0.
-    if (Index == 0)
-      return 0;
-
-    return Cost;
-
   } else if (Val->getScalarType()->isIntegerTy() && Index != -1U) {
     if (ST->hasP9Altivec()) {
       if (ISD == ISD::INSERT_VECTOR_ELT)
@@ -849,7 +944,7 @@ int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
       // The cost of the load constant for a vector extract is disregarded
       // (invariant, easily schedulable).
       return vectorCostAdjustment(1, Opcode, Val, nullptr);
-      
+
     } else if (ST->hasDirectMove())
       // Assume permute has standard cost.
       // Assume move-to/move-from VSR have 2x standard cost.
@@ -900,8 +995,6 @@ int PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                         LT.second == MVT::v4i32 || LT.second == MVT::v4f32);
   bool IsVSXType = ST->hasVSX() &&
                    (LT.second == MVT::v2f64 || LT.second == MVT::v2i64);
-  bool IsQPXType = ST->hasQPX() &&
-                   (LT.second == MVT::v4f64 || LT.second == MVT::v4f32);
 
   // VSX has 32b/64b load instructions. Legalization can handle loading of
   // 32b/64b to VSR correctly and cheaply. But BaseT::getMemoryOpCost and
@@ -924,8 +1017,7 @@ int PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // for Altivec types using the VSX instructions, but that's more expensive
   // than using the permutation-based load sequence. On the P8, that's no
   // longer true.
-  if (Opcode == Instruction::Load &&
-      ((!ST->hasP8Vector() && IsAltivecType) || IsQPXType) &&
+  if (Opcode == Instruction::Load && (!ST->hasP8Vector() && IsAltivecType) &&
       *Alignment >= LT.second.getScalarType().getStoreSize())
     return Cost + LT.first; // Add the cost of the permutations.
 
@@ -978,7 +1070,7 @@ int PPCTTIImpl::getInterleavedMemoryOpCost(
       getMemoryOpCost(Opcode, VecTy, MaybeAlign(Alignment), AddressSpace,
                       CostKind);
 
-  // PPC, for both Altivec/VSX and QPX, support cheap arbitrary permutations
+  // PPC, for both Altivec/VSX, support cheap arbitrary permutations
   // (at least in the sense that there need only be one non-loop-invariant
   // instruction). For each result vector, we need one shuffle per incoming
   // vector (except that the first shuffle can take two incoming vectors

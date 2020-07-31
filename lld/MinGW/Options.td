@@ -34,6 +34,7 @@ def exclude_all_symbols: F<"exclude-all-symbols">,
     HelpText<"Don't automatically export any symbols">;
 def export_all_symbols: F<"export-all-symbols">,
     HelpText<"Export all symbols even if a def file or dllexport attributes are used">;
+defm file_alignment: Eq<"file-alignment", "Set file alignment">;
 def gc_sections: F<"gc-sections">, HelpText<"Remove unused sections">;
 def help: F<"help">, HelpText<"Print option help">;
 def icf: J<"icf=">, HelpText<"Identical code folding">;
@@ -55,6 +56,7 @@ defm minor_subsystem_version: EqLong<"minor-subsystem-version",
      "Set the OS and subsystem minor version">;
 def no_insert_timestamp: F<"no-insert-timestamp">,
     HelpText<"Don't include PE header timestamp">;
+def no_seh: F<"no-seh">, HelpText<"Set the 'no SEH' flag in the executable">;
 def no_whole_archive: F<"no-whole-archive">,
     HelpText<"No longer include all object files for following archives">;
 def large_address_aware: Flag<["--"], "large-address-aware">,
@@ -64,6 +66,7 @@ def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 defm out_implib: Eq<"out-implib", "Import library name">;
 defm output_def: Eq<"output-def", "Output def file">;
+defm section_alignment: Eq<"section-alignment", "Set section alignment">;
 def shared: F<"shared">, HelpText<"Build a shared object">;
 defm subs: Eq<"subsystem", "Specify subsystem">;
 def stack: S<"stack">;
@@ -109,7 +112,6 @@ def: Flag<["--"], "full-shutdown">;
 def: F<"high-entropy-va">;
 def: S<"major-image-version">;
 def: S<"minor-image-version">;
-def: F<"no-seh">;
 def: F<"nxcompat">;
 def: F<"pic-executable">;
 def: S<"plugin">;

@@ -1,0 +1,28 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=prologepilog -mattr=+sve %s -o - | FileCheck %s
+---
+# This test verifies that the emergency scavenging slot is located near the SP/BP.
+name: LateScavengingSlot
+# CHECK-LABEL: name: LateScavengingSlot
+# CHECK: bb.0:
+# CHECK:      $sp = frame-setup ADDVL_XXI $sp, -1
+# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 8, 12
+# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 16, 0
+# CHECK:      STRXui killed $[[SCRATCH:x[0-9]+]], $sp, 1
+# CHECK-NEXT: $[[SCRATCH]] = ADDVL_XXI $fp, -1
+# CHECK-NEXT: STRXui $x0, killed $[[SCRATCH]], 0
+# CHECK: bb.1:
+tracksRegLiveness: true
+frameInfo:
+  isFrameAddressTaken: true
+stack:
+  - { id: 0, name: '', size: 32761, alignment: 8 }
+  - { id: 1, stack-id: sve-vec, size: 16, alignment: 16 }
+body: |
+  bb.0:
+    liveins: $x0, $x8
+    STRXui $x0, %stack.1, 0
+    B %bb.1
+  bb.1:
+    liveins: $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $lr
+    RET_ReallyLR implicit $x19, implicit $x20, implicit $x21, implicit $x22, implicit $x23, implicit $x24, implicit $x25, implicit $x26, implicit $x27, implicit $x28, implicit $lr
+...

@@ -1,4 +1,5 @@
-; RUN: opt < %s -S -analyze -scalar-evolution | FileCheck %s
+; RUN: opt < %s -S -analyze -enable-new-pm=0 -scalar-evolution | FileCheck %s
+; RUN: opt < %s -S -disable-output "-passes=print<scalar-evolution>" 2>&1 | FileCheck %s
 
 ; Positive and negative tests for inferring flags like nsw from
 ; reasoning about how a poison value from overflow would trigger

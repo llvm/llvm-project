@@ -287,11 +287,11 @@ LoadCommands:
         reserved3:       0x00000000
 DWARF:
   debug_aranges:
-    - Length:          45
-      Version:         2
-      CuOffset:        0
-      AddrSize:        8
-      SegSize:         0
+    - Length:              45
+      Version:             2
+      CuOffset:            0
+      AddressSize:         8
+      SegmentSelectorSize: 0
       Descriptors:
         - Address:         0x0000000100000F50
           Length:          52

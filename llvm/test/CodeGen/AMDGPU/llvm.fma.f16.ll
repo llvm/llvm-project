@@ -173,8 +173,8 @@ define amdgpu_kernel void @fma_v2f16(
 ; SI-DAG:  v_cvt_f16_f32_e32 v[[R_F16_0:[0-9]+]], v[[R_F32_0]]
 ; SI-DAG:  v_cvt_f16_f32_e32 v[[R_F16_1:[0-9]+]], v[[R_F32_1]]
 
-; VI-DAG:  v_fma_f16 v[[R_F16_1:[0-9]+]], v[[C_F16_1]], s[[A_F16]], v[[B_F16_1]]
-; VI-DAG:  v_fma_f16 v[[R_F16_0:[0-9]+]], v[[C_V2_F16]], s[[A_F16]], v[[B_V2_F16]]
+; VI-DAG:  v_fma_f16 v[[R_F16_1:[0-9]+]], v[[B_F16_1]], s[[A_F16]], v[[C_F16_1]]
+; VI-DAG:  v_fma_f16 v[[R_F16_0:[0-9]+]], v[[B_V2_F16]], s[[A_F16]], v[[C_V2_F16]]
 
 ; GFX9: v_pk_fma_f16 v[[R_V2_F16:[0-9]+]], v[[C_V2_F16]], s[[A_F16]], v[[B_V2_F16]]
 
@@ -198,8 +198,9 @@ define amdgpu_kernel void @fma_v2f16_imm_a(
 ; SI: buffer_load_dword v[[C_V2_F16:[0-9]+]]
 ; SI: buffer_load_dword v[[A_V2_F16:[0-9]+]]
 
-; VIGFX9: buffer_load_dword v[[A_V2_F16:[0-9]+]]
-; VIGFX9: buffer_load_dword v[[C_V2_F16:[0-9]+]]
+; VI:      buffer_load_dword v[[C_V2_F16:[0-9]+]]
+; VIGFX9:  buffer_load_dword v[[A_V2_F16:[0-9]+]]
+; GFX9:    buffer_load_dword v[[C_V2_F16:[0-9]+]]
 
 ; SI:  s_mov_b32 s[[B_F32:[0-9]+]], 0x40400000{{$}}
 ; VIGFX9:  s_movk_i32 s[[B_F16:[0-9]+]], 0x4200{{$}}
@@ -243,8 +244,9 @@ define amdgpu_kernel void @fma_v2f16_imm_b(
 ; SI: buffer_load_dword v[[B_V2_F16:[0-9]+]]
 ; SI: buffer_load_dword v[[A_V2_F16:[0-9]+]]
 
-; VIGFX9: buffer_load_dword v[[A_V2_F16:[0-9]+]]
+; GFX9:   buffer_load_dword v[[A_V2_F16:[0-9]+]]
 ; VIGFX9: buffer_load_dword v[[B_V2_F16:[0-9]+]]
+; VI:     buffer_load_dword v[[A_V2_F16:[0-9]+]]
 
 ; SI:  s_mov_b32 s[[C_F32:[0-9]+]], 0x40400000{{$}}
 ; VIGFX9:  s_movk_i32 s[[C_F16:[0-9]+]], 0x4200{{$}}

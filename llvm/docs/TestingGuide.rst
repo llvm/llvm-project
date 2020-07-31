@@ -47,6 +47,9 @@ Unit tests
 Unit tests are written using `Google Test <https://github.com/google/googletest/blob/master/googletest/docs/primer.md>`_
 and `Google Mock <https://github.com/google/googletest/blob/master/googlemock/docs/for_dummies.md>`_
 and are located in the ``llvm/unittests`` directory.
+In general unit tests are reserved for targeting the support library and other
+generic data structure, we prefer relying on regression tests for testing
+transformations and analysis on the IR.
 
 Regression tests
 ----------------
@@ -61,6 +64,17 @@ Typically when a bug is found in LLVM, a regression test containing just
 enough code to reproduce the problem should be written and placed
 somewhere underneath this directory. For example, it can be a small
 piece of LLVM IR distilled from an actual application or benchmark.
+
+Testing Analysis
+----------------
+
+An analysis is a pass that infer properties on some part of the IR and not
+transforming it. They are tested in general using the same infrastructure as the
+regression tests, by creating a separate "Printer" pass to consume the analysis
+result and print it on the standard output in a textual format suitable for
+FileCheck.
+See `llvm/test/Analysis/BranchProbabilityInfo/loop.ll <https://github.com/llvm/llvm-project/blob/master/llvm/test/Analysis/BranchProbabilityInfo/loop.ll>`_
+for an example of such test.
 
 ``test-suite``
 --------------
@@ -151,7 +165,7 @@ script which is built as part of LLVM. For example, to run the
 
 .. code-block:: bash
 
-    % llvm-lit ~/llvm/test/Integer/BitPacked.ll 
+    % llvm-lit ~/llvm/test/Integer/BitPacked.ll
 
 or to run all of the ARM CodeGen tests:
 
@@ -184,7 +198,7 @@ Writing new regression tests
 ----------------------------
 
 The regression test structure is very simple, but does require some
-information to be set. This information is gathered via ``configure``
+information to be set. This information is gathered via ``cmake``
 and is written to a file, ``test/lit.site.cfg`` in the build directory.
 The ``llvm/test`` Makefile does this work for you.
 
@@ -426,7 +440,7 @@ will be a failure if its execution succeeds.
 ``REQUIRES`` and ``UNSUPPORTED`` and ``XFAIL`` all accept a comma-separated
 list of boolean expressions. The values in each expression may be:
 
-- Features added to ``config.available_features`` by 
+- Features added to ``config.available_features`` by
   configuration files such as ``lit.cfg``.
 - Substrings of the target triple (``UNSUPPORTED`` and ``XFAIL`` only).
 
@@ -491,7 +505,7 @@ RUN lines:
   character with a ``/``. This is useful to normalize path separators.
 
    Example: ``%s:  C:\Desktop Files/foo_test.s.tmp``
-   
+
    Example: ``%/s: C:/Desktop Files/foo_test.s.tmp``
 
 ``%:s, %:S, %:t, %:T:``

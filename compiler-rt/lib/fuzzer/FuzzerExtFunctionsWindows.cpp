@@ -9,7 +9,7 @@
 // compiled with MSVC. Uses weak aliases when compiled with clang. Unfortunately
 // the method each compiler supports is not supported by the other.
 //===----------------------------------------------------------------------===//
-#include "FuzzerDefs.h"
+#include "FuzzerPlatform.h"
 #if LIBFUZZER_WINDOWS
 
 #include "FuzzerExtFunctions.h"

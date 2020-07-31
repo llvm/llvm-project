@@ -18023,7 +18023,7 @@ float64x1_t test_vneg_f64(float64x1_t a) {
 
 // CHECK-LABEL: @test_vcvt_s64_f64(
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x double> %a to <8 x i8>
-// CHECK:   [[TMP1:%.*]] = fptosi <1 x double> %a to <1 x i64>
+// CHECK:   [[TMP1:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtzs.v1i64.v1f64(<1 x double> %a)
 // CHECK:   ret <1 x i64> [[TMP1]]
 int64x1_t test_vcvt_s64_f64(float64x1_t a) {
   return vcvt_s64_f64(a);
@@ -18031,7 +18031,7 @@ int64x1_t test_vcvt_s64_f64(float64x1_t a) {
 
 // CHECK-LABEL: @test_vcvt_u64_f64(
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x double> %a to <8 x i8>
-// CHECK:   [[TMP1:%.*]] = fptoui <1 x double> %a to <1 x i64>
+// CHECK:   [[TMP1:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtzu.v1i64.v1f64(<1 x double> %a)
 // CHECK:   ret <1 x i64> [[TMP1]]
 uint64x1_t test_vcvt_u64_f64(float64x1_t a) {
   return vcvt_u64_f64(a);

@@ -191,7 +191,7 @@ def FeatureUseTCCInDIV : SubtargetFeature<
                                "UseTCCInDIV", "false",
                                "Force the assembler to use trapping">;
 
-def FeatureMadd4
+def FeatureNoMadd4
     : SubtargetFeature<"nomadd4", "DisableMadd4", "true",
                        "Disable 4-operand madd.fmt and related instructions">;
 

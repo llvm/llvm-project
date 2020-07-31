@@ -453,21 +453,24 @@ bool llvm::wouldInstructionBeTriviallyDead(Instruction *I,
 /// trivially dead, delete them too, recursively.  Return true if any
 /// instructions were deleted.
 bool llvm::RecursivelyDeleteTriviallyDeadInstructions(
-    Value *V, const TargetLibraryInfo *TLI, MemorySSAUpdater *MSSAU) {
+    Value *V, const TargetLibraryInfo *TLI, MemorySSAUpdater *MSSAU,
+    std::function<void(Value *)> AboutToDeleteCallback) {
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I || !isInstructionTriviallyDead(I, TLI))
     return false;
 
   SmallVector<WeakTrackingVH, 16> DeadInsts;
   DeadInsts.push_back(I);
-  RecursivelyDeleteTriviallyDeadInstructions(DeadInsts, TLI, MSSAU);
+  RecursivelyDeleteTriviallyDeadInstructions(DeadInsts, TLI, MSSAU,
+                                             AboutToDeleteCallback);
 
   return true;
 }
 
 bool llvm::RecursivelyDeleteTriviallyDeadInstructionsPermissive(
     SmallVectorImpl<WeakTrackingVH> &DeadInsts, const TargetLibraryInfo *TLI,
-    MemorySSAUpdater *MSSAU) {
+    MemorySSAUpdater *MSSAU,
+    std::function<void(Value *)> AboutToDeleteCallback) {
   unsigned S = 0, E = DeadInsts.size(), Alive = 0;
   for (; S != E; ++S) {
     auto *I = cast<Instruction>(DeadInsts[S]);
@@ -478,13 +481,15 @@ bool llvm::RecursivelyDeleteTriviallyDeadInstructionsPermissive(
   }
   if (Alive == E)
     return false;
-  RecursivelyDeleteTriviallyDeadInstructions(DeadInsts, TLI, MSSAU);
+  RecursivelyDeleteTriviallyDeadInstructions(DeadInsts, TLI, MSSAU,
+                                             AboutToDeleteCallback);
   return true;
 }
 
 void llvm::RecursivelyDeleteTriviallyDeadInstructions(
     SmallVectorImpl<WeakTrackingVH> &DeadInsts, const TargetLibraryInfo *TLI,
-    MemorySSAUpdater *MSSAU) {
+    MemorySSAUpdater *MSSAU,
+    std::function<void(Value *)> AboutToDeleteCallback) {
   // Process the dead instruction list until empty.
   while (!DeadInsts.empty()) {
     Value *V = DeadInsts.pop_back_val();
@@ -497,6 +502,9 @@ void llvm::RecursivelyDeleteTriviallyDeadInstructions(
 
     // Don't lose the debug info while deleting the instructions.
     salvageDebugInfo(*I);
+
+    if (AboutToDeleteCallback)
+      AboutToDeleteCallback(I);
 
     // Null out all of the instruction's operands to see if any operand becomes
     // dead as we go.
@@ -3018,44 +3026,6 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
         return false;
     return true;
   }
-}
-
-using AllocaForValueMapTy = DenseMap<Value *, AllocaInst *>;
-AllocaInst *llvm::findAllocaForValue(Value *V,
-                                     AllocaForValueMapTy &AllocaForValue) {
-  if (AllocaInst *AI = dyn_cast<AllocaInst>(V))
-    return AI;
-  // See if we've already calculated (or started to calculate) alloca for a
-  // given value.
-  AllocaForValueMapTy::iterator I = AllocaForValue.find(V);
-  if (I != AllocaForValue.end())
-    return I->second;
-  // Store 0 while we're calculating alloca for value V to avoid
-  // infinite recursion if the value references itself.
-  AllocaForValue[V] = nullptr;
-  AllocaInst *Res = nullptr;
-  if (CastInst *CI = dyn_cast<CastInst>(V))
-    Res = findAllocaForValue(CI->getOperand(0), AllocaForValue);
-  else if (PHINode *PN = dyn_cast<PHINode>(V)) {
-    for (Value *IncValue : PN->incoming_values()) {
-      // Allow self-referencing phi-nodes.
-      if (IncValue == PN)
-        continue;
-      AllocaInst *IncValueAI = findAllocaForValue(IncValue, AllocaForValue);
-      // AI for incoming values should exist and should all be equal.
-      if (IncValueAI == nullptr || (Res != nullptr && IncValueAI != Res))
-        return nullptr;
-      Res = IncValueAI;
-    }
-  } else if (GetElementPtrInst *EP = dyn_cast<GetElementPtrInst>(V)) {
-    Res = findAllocaForValue(EP->getPointerOperand(), AllocaForValue);
-  } else {
-    LLVM_DEBUG(dbgs() << "Alloca search cancelled on unknown instruction: "
-                      << *V << "\n");
-  }
-  if (Res)
-    AllocaForValue[V] = Res;
-  return Res;
 }
 
 Value *llvm::invertCondition(Value *Condition) {

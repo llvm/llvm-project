@@ -21,10 +21,10 @@ def update_reference_results(project: ProjectInfo):
     project_dir = tester.get_project_dir()
 
     tester.is_reference_build = True
-    ref_results_path = os.path.join(project_dir, tester.get_output_dir())
+    ref_results_path = tester.get_output_dir()
 
     tester.is_reference_build = False
-    created_results_path = os.path.join(project_dir, tester.get_output_dir())
+    created_results_path = tester.get_output_dir()
 
     if not os.path.exists(created_results_path):
         print("New results not found, was SATestBuild.py previously run?",

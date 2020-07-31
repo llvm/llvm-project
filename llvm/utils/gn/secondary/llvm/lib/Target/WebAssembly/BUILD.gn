@@ -95,6 +95,7 @@ static_library("LLVMWebAssemblyCodeGen") {
     "WebAssemblyRuntimeLibcallSignatures.cpp",
     "WebAssemblySelectionDAGInfo.cpp",
     "WebAssemblySetP2AlignOperands.cpp",
+    "WebAssemblySortRegion.cpp",
     "WebAssemblySubtarget.cpp",
     "WebAssemblyTargetMachine.cpp",
     "WebAssemblyTargetObjectFile.cpp",

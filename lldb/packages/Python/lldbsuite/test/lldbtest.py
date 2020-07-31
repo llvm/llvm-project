@@ -426,7 +426,7 @@ def system(commands, **kwargs):
         process = Popen(
             shellCommand,
             stdout=PIPE,
-            stderr=PIPE,
+            stderr=STDOUT,
             shell=True,
             **kwargs)
         pid = process.pid
@@ -440,14 +440,12 @@ def system(commands, **kwargs):
             cpe = CalledProcessError(retcode, cmd)
             # Ensure caller can access the stdout/stderr.
             cpe.lldb_extensions = {
-                "stdout_content": this_output,
-                "stderr_content": this_error,
+                "combined_output": this_output,
                 "command": shellCommand
             }
             raise cpe
         output = output + this_output.decode("utf-8")
-        error = error + this_error.decode("utf-8")
-    return (output, error)
+    return output
 
 
 def getsource_if_available(obj):
@@ -576,6 +574,7 @@ class Base(unittest2.TestCase):
         # confirm that the file is writeable
         host_log_path = "{}-host.log".format(log_basename)
         open(host_log_path, 'w').close()
+        self.log_files.append(host_log_path)
 
         log_enable = "log enable -Tpn -f {} ".format(host_log_path)
         for channel_with_categories in lldbtest_config.channels:
@@ -602,6 +601,7 @@ class Base(unittest2.TestCase):
         if lldb.remote_platform is None:
             server_log_path = "{}-server.log".format(log_basename)
             open(server_log_path, 'w').close()
+            self.log_files.append(server_log_path)
             os.environ["LLDB_DEBUGSERVER_LOG_FILE"] = server_log_path
 
             # Communicate channels to lldb-server
@@ -623,12 +623,13 @@ class Base(unittest2.TestCase):
         # Retrieve the server log (if any) from the remote system. It is assumed the server log
         # is writing to the "server.log" file in the current test directory. This can be
         # achieved by setting LLDB_DEBUGSERVER_LOG_FILE="server.log" when starting remote
-        # platform. If the remote logging is not enabled, then just let the Get() command silently
-        # fail.
+        # platform.
         if lldb.remote_platform:
-            lldb.remote_platform.Get(
-                lldb.SBFileSpec("server.log"), lldb.SBFileSpec(
-                    self.getLogBasenameForCurrentTest() + "-server.log"))
+            server_log_path = self.getLogBasenameForCurrentTest() + "-server.log"
+            if lldb.remote_platform.Get(
+                lldb.SBFileSpec("server.log"),
+                lldb.SBFileSpec(server_log_path)).Success():
+                self.log_files.append(server_log_path)
 
     def setPlatformWorkingDir(self):
         if not lldb.remote_platform or not configuration.lldb_platform_working_dir:
@@ -797,14 +798,12 @@ class Base(unittest2.TestCase):
         # List of spawned subproces.Popen objects
         self.subprocesses = []
 
-        # List of forked process PIDs
-        self.forkedProcessPids = []
+        # List of log files produced by the current test.
+        self.log_files = []
 
-        # Create a string buffer to record the session info, to be dumped into a
-        # test case specific file if test failure is encountered.
-        self.log_basename = self.getLogBasenameForCurrentTest()
+        session_file = self.getLogBasenameForCurrentTest()+".log"
+        self.log_files.append(session_file)
 
-        session_file = "{}.log".format(self.log_basename)
         # Python 3 doesn't support unbuffered I/O in text mode.  Open buffered.
         self.session = encoded_file.open(session_file, "utf-8", mode="w")
 
@@ -883,54 +882,21 @@ class Base(unittest2.TestCase):
         self.addTearDownHook(lambda: self.dbg.SetAsync(old_async))
 
     def cleanupSubprocesses(self):
-        # Ensure any subprocesses are cleaned up
-        for p in self.subprocesses:
+        # Terminate subprocesses in reverse order from how they were created.
+        for p in reversed(self.subprocesses):
             p.terminate()
             del p
         del self.subprocesses[:]
-        # Ensure any forked processes are cleaned up
-        for pid in self.forkedProcessPids:
-            try:
-                os.kill(pid, signal.SIGTERM)
-            except OSError:
-                pass
 
     def spawnSubprocess(self, executable, args=[], install_remote=True):
         """ Creates a subprocess.Popen object with the specified executable and arguments,
             saves it in self.subprocesses, and returns the object.
-            NOTE: if using this function, ensure you also call:
-
-              self.addTearDownHook(self.cleanupSubprocesses)
-
-            otherwise the test suite will leak processes.
         """
         proc = _RemoteProcess(
             install_remote) if lldb.remote_platform else _LocalProcess(self.TraceOn())
         proc.launch(executable, args)
         self.subprocesses.append(proc)
         return proc
-
-    def forkSubprocess(self, executable, args=[]):
-        """ Fork a subprocess with its own group ID.
-            NOTE: if using this function, ensure you also call:
-
-              self.addTearDownHook(self.cleanupSubprocesses)
-
-            otherwise the test suite will leak processes.
-        """
-        child_pid = os.fork()
-        if child_pid == 0:
-            # If more I/O support is required, this can be beefed up.
-            fd = os.open(os.devnull, os.O_RDWR)
-            os.dup2(fd, 1)
-            os.dup2(fd, 2)
-            # This call causes the child to have its of group ID
-            os.setpgid(0, 0)
-            os.execvp(executable, [executable] + args)
-        # Give the child time to get through the execvp() call
-        time.sleep(0.1)
-        self.forkedProcessPids.append(child_pid)
-        return child_pid
 
     def HideStdout(self):
         """Hide output to stdout from the user.
@@ -1020,9 +986,6 @@ class Base(unittest2.TestCase):
 
     def tearDown(self):
         """Fixture for unittest test case teardown."""
-        #import traceback
-        # traceback.print_stack()
-
         self.deletePexpectChild()
 
         # Check and run any hook functions.
@@ -1048,6 +1011,9 @@ class Base(unittest2.TestCase):
             if self.dicts:
                 for dict in reversed(self.dicts):
                     self.cleanup(dictionary=dict)
+
+        # Remove subprocesses created by the test.
+        self.cleanupSubprocesses()
 
         # This must be the last statement, otherwise teardown hooks or other
         # lines might depend on this still being active.
@@ -1218,14 +1184,13 @@ class Base(unittest2.TestCase):
         del self.session
 
         # process the log files
-        log_files_for_this_test = glob.glob(self.log_basename + "*")
-
         if prefix != 'Success' or lldbtest_config.log_success:
             # keep all log files, rename them to include prefix
+            src_log_basename = self.getLogBasenameForCurrentTest(None)
             dst_log_basename = self.getLogBasenameForCurrentTest(prefix)
-            for src in log_files_for_this_test:
+            for src in self.log_files:
                 if os.path.isfile(src):
-                    dst = src.replace(self.log_basename, dst_log_basename)
+                    dst = src.replace(src_log_basename, dst_log_basename)
                     if os.name == "nt" and os.path.isfile(dst):
                         # On Windows, renaming a -> b will throw an exception if
                         # b exists.  On non-Windows platforms it silently
@@ -1239,8 +1204,9 @@ class Base(unittest2.TestCase):
                     os.rename(src, dst)
         else:
             # success!  (and we don't want log files) delete log files
-            for log_file in log_files_for_this_test:
-                remove_file(log_file)
+            for log_file in self.log_files:
+                if os.path.isfile(log_file):
+                    remove_file(log_file)
 
     # ====================================================
     # Config. methods supported through a plugin interface
@@ -1312,7 +1278,7 @@ class Base(unittest2.TestCase):
         version = 'unknown'
 
         compiler = self.getCompilerBinary()
-        version_output = system([[compiler, "-v"]])[1]
+        version_output = system([[compiler, "-v"]])
         for line in version_output.split(os.linesep):
             m = re.search('version ([0-9\.]+)', line)
             if m:
@@ -1642,7 +1608,7 @@ class Base(unittest2.TestCase):
         """
         yaml2obj_bin = configuration.get_yaml2obj_path()
         if not yaml2obj_bin:
-            self.assertTrue(False, "No valid FileCheck executable specified")
+            self.assertTrue(False, "No valid yaml2obj executable specified")
         command = [yaml2obj_bin, "-o=%s" % obj_path, yaml_path]
         system([command])
 
@@ -1873,9 +1839,6 @@ class TestBase(Base):
         self.addTearDownHook(lambda: os.remove(src))
 
     def setUp(self):
-        #import traceback
-        # traceback.print_stack()
-
         # Works with the test driver to conditionally skip tests via
         # decorators.
         Base.setUp(self)
@@ -1916,8 +1879,7 @@ class TestBase(Base):
         shlib_prefix = self.platformContext.shlib_prefix
         shlib_extension = '.' + self.platformContext.shlib_extension
 
-        working_dir = self.get_process_working_directory()
-        environment = ['%s=%s' % (shlib_environment_var, working_dir)]
+        dirs = []
         # Add any shared libraries to our target if remote so they get
         # uploaded into the working directory on the remote side
         for name in shlibs:
@@ -1940,6 +1902,7 @@ class TestBase(Base):
                 # Make sure we found the local shared library in the above code
                 self.assertTrue(os.path.exists(local_shlib_path))
 
+
             # Add the shared library to our target
             shlib_module = target.AddModule(local_shlib_path, None, None, None)
             if lldb.remote_platform:
@@ -1949,8 +1912,15 @@ class TestBase(Base):
                     os.path.basename(local_shlib_path))
                 shlib_module.SetRemoteInstallFileSpec(
                     lldb.SBFileSpec(remote_shlib_path, False))
+                dir_to_add = self.get_process_working_directory()
+            else:
+                dir_to_add = os.path.dirname(local_shlib_path)
 
-        return environment
+            if dir_to_add not in dirs:
+                dirs.append(dir_to_add)
+
+        env_value = self.platformContext.shlib_path_separator.join(dirs)
+        return ['%s=%s' % (shlib_environment_var, env_value)]
 
     def registerSanitizerLibrariesWithTarget(self, target):
         runtimes = []
@@ -1994,9 +1964,6 @@ class TestBase(Base):
             return self.getBuildDir()
 
     def tearDown(self):
-        #import traceback
-        # traceback.print_stack()
-
         # Ensure all the references to SB objects have gone away so that we can
         # be sure that all test-specific resources have been freed before we
         # attempt to delete the targets.
@@ -2467,7 +2434,12 @@ FileCheck output:
             options.SetLanguage(frame.GuessLanguage())
             eval_result = self.frame().EvaluateExpression(expr, options)
         else:
-            eval_result = self.target().EvaluateExpression(expr, options)
+            target = self.target()
+            # If there is no selected target, run the expression in the dummy
+            # target.
+            if not target.IsValid():
+                target = self.dbg.GetDummyTarget()
+            eval_result = target.EvaluateExpression(expr, options)
 
         self.assertSuccess(eval_result.GetError())
 

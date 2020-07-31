@@ -108,7 +108,7 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
   success =
       options_dict.GetValueForKeyAsInteger(GetKey(OptionNames::Offset), offset);
   if (!success) {
-    error.SetErrorStringWithFormat("BRN::CFSD: Missing offset entry.");
+    error.SetErrorString("BRN::CFSD: Missing offset entry.");
     return nullptr;
   }
 
@@ -116,7 +116,7 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
   success = options_dict.GetValueForKeyAsBoolean(
       GetKey(OptionNames::SkipPrologue), skip_prologue);
   if (!success) {
-    error.SetErrorStringWithFormat("BRN::CFSD: Missing Skip prologue entry.");
+    error.SetErrorString("BRN::CFSD: Missing Skip prologue entry.");
     return nullptr;
   }
 
@@ -131,15 +131,14 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
     success = options_dict.GetValueForKeyAsArray(
         GetKey(OptionNames::SymbolNameArray), names_array);
     if (!success) {
-      error.SetErrorStringWithFormat("BRN::CFSD: Missing symbol names entry.");
+      error.SetErrorString("BRN::CFSD: Missing symbol names entry.");
       return nullptr;
     }
     StructuredData::Array *names_mask_array;
     success = options_dict.GetValueForKeyAsArray(
         GetKey(OptionNames::NameMaskArray), names_mask_array);
     if (!success) {
-      error.SetErrorStringWithFormat(
-          "BRN::CFSD: Missing symbol names mask entry.");
+      error.SetErrorString("BRN::CFSD: Missing symbol names mask entry.");
       return nullptr;
     }
 

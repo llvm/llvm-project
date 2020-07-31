@@ -1,8 +1,9 @@
 # IR level Instrumentation Flag
 :ir
+:entry_first
 hot
 # Func Hash:
-12884901887
+742261418966908927
 # Num Counters:
 1
 # Counter Values:
@@ -10,7 +11,7 @@ hot
 
 cold
 # Func Hash:
-12884901887
+742261418966908927
 # Num Counters:
 1
 # Counter Values:
@@ -18,7 +19,7 @@ cold
 
 med
 # Func Hash:
-12884901887
+742261418966908927
 # Num Counters:
 1
 # Counter Values:

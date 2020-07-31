@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=i686-windows-msvc -filetype=obj < %s | llvm-readobj --codeview | FileCheck %s
+# RUN: llvm-mc -triple=i686-windows-msvc -filetype=obj < %s | llvm-readobj --codeview - | FileCheck %s
 
 # Test for .cv_fpo_stackalign. We should generate FPO data that restores CSRs
 # at each instruction, and in the last FrameData we should use the '@'

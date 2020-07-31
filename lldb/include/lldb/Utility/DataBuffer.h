@@ -79,6 +79,20 @@ public:
   }
 };
 
+class DataBufferUnowned : public DataBuffer {
+public:
+  DataBufferUnowned(uint8_t *bytes, lldb::offset_t size)
+      : m_bytes(bytes), m_size(size) {}
+
+  uint8_t *GetBytes() override { return m_bytes; }
+  const uint8_t *GetBytes() const override { return m_bytes; }
+  lldb::offset_t GetByteSize() const override { return m_size; }
+
+private:
+  uint8_t *m_bytes;
+  lldb::offset_t m_size;
+};
+
 } // namespace lldb_private
 
 #endif /// #if defined(__cplusplus)

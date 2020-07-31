@@ -1,0 +1,16 @@
+## Test how we handle the case when the e_phoff field is invalid.
+# RUN: yaml2obj %s -o %t
+# RUN: not llvm-objdump --private-headers %t 2>&1 | \
+# RUN:   FileCheck -DFILE=%t %s --check-prefix=INVALID-PHOFF
+
+# INVALID-PHOFF:      Program Header:
+# INVALID-PHOFF-NEXT: warning: '[[FILE]]': unable to read program headers: program headers are longer than binary of size 280: e_phoff = 0xffffff, e_phnum = 0, e_phentsize = 0
+# INVALID-PHOFF-NEXT: error: '[[FILE]]': program headers are longer than binary of size 280: e_phoff = 0xffffff, e_phnum = 0, e_phentsize = 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+  EPhOff:  0xffffff

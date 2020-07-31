@@ -13,15 +13,10 @@
 #include "CodeViewDebug.h"
 #include "DwarfExpression.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/Triple.h"
@@ -40,7 +35,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
-#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/CodeViewRecordIO.h"
 #include "llvm/DebugInfo/CodeView/ContinuationRecordBuilder.h"
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
@@ -48,14 +42,12 @@
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
-#include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeTableCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -71,7 +63,6 @@
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -85,12 +76,8 @@
 #include <cassert>
 #include <cctype>
 #include <cstddef>
-#include <cstdint>
 #include <iterator>
 #include <limits>
-#include <string>
-#include <utility>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -101,21 +88,21 @@ public:
   CVMCAdapter(MCStreamer &OS, TypeCollection &TypeTable)
       : OS(&OS), TypeTable(TypeTable) {}
 
-  void emitBytes(StringRef Data) { OS->emitBytes(Data); }
+  void emitBytes(StringRef Data) override { OS->emitBytes(Data); }
 
-  void emitIntValue(uint64_t Value, unsigned Size) {
+  void emitIntValue(uint64_t Value, unsigned Size) override {
     OS->emitIntValueInHex(Value, Size);
   }
 
-  void emitBinaryData(StringRef Data) { OS->emitBinaryData(Data); }
+  void emitBinaryData(StringRef Data) override { OS->emitBinaryData(Data); }
 
-  void AddComment(const Twine &T) { OS->AddComment(T); }
+  void AddComment(const Twine &T) override { OS->AddComment(T); }
 
-  void AddRawComment(const Twine &T) { OS->emitRawComment(T); }
+  void AddRawComment(const Twine &T) override { OS->emitRawComment(T); }
 
-  bool isVerboseAsm() { return OS->isVerboseAsm(); }
+  bool isVerboseAsm() override { return OS->isVerboseAsm(); }
 
-  std::string getTypeName(TypeIndex TI) {
+  std::string getTypeName(TypeIndex TI) override {
     std::string TypeName;
     if (!TI.isNoneType()) {
       if (TI.isSimple())

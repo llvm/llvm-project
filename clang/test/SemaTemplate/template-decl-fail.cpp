@@ -4,7 +4,7 @@ template<typename T> typedef T X; // expected-error{{typedef cannot be a templat
 
 template<typename T>
 enum t0 { A = T::x }; // expected-error{{enumeration cannot be a template}} \
-                      // expected-warning{{declaration does not declare anything}}
+                      // expected-error{{declaration does not declare anything}}
 
 enum e0 {};
 template<int x> enum e0 f0(int a=x) {}

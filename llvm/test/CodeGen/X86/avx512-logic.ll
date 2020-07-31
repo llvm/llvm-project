@@ -887,35 +887,157 @@ define <16 x i32> @ternlog_xor_andn(<16 x i32> %x, <16 x i32> %y, <16 x i32> %z)
 }
 
 define <16 x i32> @ternlog_or_and_mask(<16 x i32> %x, <16 x i32> %y) {
-; KNL-LABEL: ternlog_or_and_mask:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
-; KNL-NEXT:    vpord %zmm1, %zmm0, %zmm0
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: ternlog_or_and_mask:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
-; SKX-NEXT:    vorps %zmm1, %zmm0, %zmm0
-; SKX-NEXT:    retq
+; ALL-LABEL: ternlog_or_and_mask:
+; ALL:       ## %bb.0:
+; ALL-NEXT:    vpternlogd $236, {{.*}}(%rip), %zmm1, %zmm0
+; ALL-NEXT:    retq
   %a = and <16 x i32> %x, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %b = or <16 x i32> %a, %y
   ret <16 x i32> %b
 }
 
 define <8 x i64> @ternlog_xor_and_mask(<8 x i64> %x, <8 x i64> %y) {
-; KNL-LABEL: ternlog_xor_and_mask:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    vpandd {{.*}}(%rip), %zmm0, %zmm0
-; KNL-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: ternlog_xor_and_mask:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
-; SKX-NEXT:    vxorps %zmm1, %zmm0, %zmm0
-; SKX-NEXT:    retq
+; ALL-LABEL: ternlog_xor_and_mask:
+; ALL:       ## %bb.0:
+; ALL-NEXT:    vpternlogq $108, {{.*}}(%rip), %zmm1, %zmm0
+; ALL-NEXT:    retq
   %a = and <8 x i64> %x, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
   %b = xor <8 x i64> %a, %y
   ret <8 x i64> %b
+}
+
+define <16 x i32> @ternlog_maskz_or_and_mask(<16 x i32> %x, <16 x i32> %y, <16 x i32> %mask) {
+; KNL-LABEL: ternlog_maskz_or_and_mask:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; KNL-NEXT:    vpcmpgtd %zmm2, %zmm3, %k1
+; KNL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
+; KNL-NEXT:    vpord %zmm1, %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: ternlog_maskz_or_and_mask:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovd2m %zmm2, %k1
+; SKX-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
+; SKX-NEXT:    vorps %zmm1, %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+  %m = icmp slt <16 x i32> %mask, zeroinitializer
+  %a = and <16 x i32> %x, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
+  %b = or <16 x i32> %a, %y
+  %c = select <16 x i1> %m, <16 x i32> %b, <16 x i32> zeroinitializer
+  ret <16 x i32> %c
+}
+
+define <8 x i64> @ternlog_maskz_xor_and_mask(<8 x i64> %x, <8 x i64> %y, <8 x i64> %mask) {
+; KNL-LABEL: ternlog_maskz_xor_and_mask:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; KNL-NEXT:    vpcmpgtq %zmm2, %zmm3, %k1
+; KNL-NEXT:    vpandd {{.*}}(%rip), %zmm0, %zmm0
+; KNL-NEXT:    vpxorq %zmm1, %zmm0, %zmm0 {%k1} {z}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: ternlog_maskz_xor_and_mask:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovq2m %zmm2, %k1
+; SKX-NEXT:    vandpd {{.*}}(%rip), %zmm0, %zmm0
+; SKX-NEXT:    vxorpd %zmm1, %zmm0, %zmm0 {%k1} {z}
+; SKX-NEXT:    retq
+  %m = icmp slt <8 x i64> %mask, zeroinitializer
+  %a = and <8 x i64> %x, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+  %b = xor <8 x i64> %a, %y
+  %c = select <8 x i1> %m, <8 x i64> %b, <8 x i64> zeroinitializer
+  ret <8 x i64> %c
+}
+
+define <16 x i32> @ternlog_maskx_or_and_mask(<16 x i32> %x, <16 x i32> %y, <16 x i32> %mask) {
+; KNL-LABEL: ternlog_maskx_or_and_mask:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; KNL-NEXT:    vpcmpgtd %zmm2, %zmm3, %k1
+; KNL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm2
+; KNL-NEXT:    vpord %zmm1, %zmm2, %zmm0 {%k1}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: ternlog_maskx_or_and_mask:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovd2m %zmm2, %k1
+; SKX-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm2
+; SKX-NEXT:    vorps %zmm1, %zmm2, %zmm0 {%k1}
+; SKX-NEXT:    retq
+  %m = icmp slt <16 x i32> %mask, zeroinitializer
+  %a = and <16 x i32> %x, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
+  %b = or <16 x i32> %a, %y
+  %c = select <16 x i1> %m, <16 x i32> %b, <16 x i32> %x
+  ret <16 x i32> %c
+}
+
+define <16 x i32> @ternlog_masky_or_and_mask(<16 x i32> %x, <16 x i32> %y, <16 x i32> %mask) {
+; KNL-LABEL: ternlog_masky_or_and_mask:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; KNL-NEXT:    vpcmpgtd %zmm2, %zmm3, %k1
+; KNL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
+; KNL-NEXT:    vpord %zmm1, %zmm0, %zmm1 {%k1}
+; KNL-NEXT:    vmovdqa64 %zmm1, %zmm0
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: ternlog_masky_or_and_mask:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovd2m %zmm2, %k1
+; SKX-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
+; SKX-NEXT:    vorps %zmm1, %zmm0, %zmm1 {%k1}
+; SKX-NEXT:    vmovaps %zmm1, %zmm0
+; SKX-NEXT:    retq
+  %m = icmp slt <16 x i32> %mask, zeroinitializer
+  %a = and <16 x i32> %x, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
+  %b = or <16 x i32> %a, %y
+  %c = select <16 x i1> %m, <16 x i32> %b, <16 x i32> %y
+  ret <16 x i32> %c
+}
+
+define <8 x i64> @ternlog_maskx_xor_and_mask(<8 x i64> %x, <8 x i64> %y, <8 x i64> %mask) {
+; KNL-LABEL: ternlog_maskx_xor_and_mask:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; KNL-NEXT:    vpcmpgtq %zmm2, %zmm3, %k1
+; KNL-NEXT:    vpandd {{.*}}(%rip), %zmm0, %zmm2
+; KNL-NEXT:    vpxorq %zmm1, %zmm2, %zmm0 {%k1}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: ternlog_maskx_xor_and_mask:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovq2m %zmm2, %k1
+; SKX-NEXT:    vandpd {{.*}}(%rip), %zmm0, %zmm2
+; SKX-NEXT:    vxorpd %zmm1, %zmm2, %zmm0 {%k1}
+; SKX-NEXT:    retq
+  %m = icmp slt <8 x i64> %mask, zeroinitializer
+  %a = and <8 x i64> %x, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+  %b = xor <8 x i64> %a, %y
+  %c = select <8 x i1> %m, <8 x i64> %b, <8 x i64> %x
+  ret <8 x i64> %c
+}
+
+define <8 x i64> @ternlog_masky_xor_and_mask(<8 x i64> %x, <8 x i64> %y, <8 x i64> %mask) {
+; KNL-LABEL: ternlog_masky_xor_and_mask:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; KNL-NEXT:    vpcmpgtq %zmm2, %zmm3, %k1
+; KNL-NEXT:    vpandd {{.*}}(%rip), %zmm0, %zmm0
+; KNL-NEXT:    vpxorq %zmm1, %zmm0, %zmm1 {%k1}
+; KNL-NEXT:    vmovdqa64 %zmm1, %zmm0
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: ternlog_masky_xor_and_mask:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovq2m %zmm2, %k1
+; SKX-NEXT:    vandpd {{.*}}(%rip), %zmm0, %zmm0
+; SKX-NEXT:    vxorpd %zmm1, %zmm0, %zmm1 {%k1}
+; SKX-NEXT:    vmovapd %zmm1, %zmm0
+; SKX-NEXT:    retq
+  %m = icmp slt <8 x i64> %mask, zeroinitializer
+  %a = and <8 x i64> %x, <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+  %b = xor <8 x i64> %a, %y
+  %c = select <8 x i1> %m, <8 x i64> %b, <8 x i64> %y
+  ret <8 x i64> %c
 }

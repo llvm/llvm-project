@@ -14,8 +14,8 @@ define dso_local void @h() local_unnamed_addr #0 {
 ; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -64(1)
 ; CHECK-NEXT:    addis 3, 2, g@toc@ha
-; CHECK-NEXT:    lwz 3, g@toc@l(3)
 ; CHECK-NEXT:    std 30, 48(1) # 8-byte Folded Spill
+; CHECK-NEXT:    lwz 3, g@toc@l(3)
 ; CHECK-NEXT:    extswsli 30, 3, 2
 ; CHECK-NEXT:    addis 3, 2, f@got@tlsld@ha
 ; CHECK-NEXT:    addi 3, 3, f@got@tlsld@l

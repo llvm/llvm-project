@@ -146,7 +146,7 @@ Language Selection and Mode Options
 
    ISO C 2017 with GNU extensions
 
- The default C language standard is ``gnu11``, except on PS4, where it is
+ The default C language standard is ``gnu17``, except on PS4, where it is
  ``gnu99``.
 
  Supported values for the C++ language are:

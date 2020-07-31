@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -mtriple x86_64-pc-linux-gnu %s -o - | llvm-readobj -S | FileCheck -check-prefix=64 %s
+; RUN: llc -filetype=obj -mtriple x86_64-pc-linux-gnu %s -o - | llvm-readobj -S - | FileCheck -check-prefix=64 %s
 
 ; Test that constant mergeable strings have sh_entsize set.
 

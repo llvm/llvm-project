@@ -136,6 +136,10 @@ typedef unsigned int kmp_hwloc_depth_t;
 #include "ompt-internal.h"
 #endif
 
+#ifndef UNLIKELY
+#define UNLIKELY(x) (x)
+#endif
+
 // Affinity format function
 #include "kmp_str.h"
 
@@ -1112,9 +1116,6 @@ extern kmp_uint64 __kmp_now_nsec();
 #if KMP_OS_WINDOWS
 #define KMP_INIT_WAIT 64U /* initial number of spin-tests   */
 #define KMP_NEXT_WAIT 32U /* susequent number of spin-tests */
-#elif KMP_OS_CNK
-#define KMP_INIT_WAIT 16U /* initial number of spin-tests   */
-#define KMP_NEXT_WAIT 8U /* susequent number of spin-tests */
 #elif KMP_OS_LINUX
 #define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
@@ -3076,6 +3077,11 @@ static inline kmp_info_t *__kmp_thread_from_gtid(int gtid) {
 static inline kmp_team_t *__kmp_team_from_gtid(int gtid) {
   KMP_DEBUG_ASSERT(gtid >= 0);
   return __kmp_threads[gtid]->th.th_team;
+}
+
+static inline void __kmp_assert_valid_gtid(kmp_int32 gtid) {
+  if (UNLIKELY(gtid < 0 || gtid >= __kmp_threads_capacity))
+    KMP_FATAL(ThreadIdentInvalid);
 }
 
 /* ------------------------------------------------------------------------- */

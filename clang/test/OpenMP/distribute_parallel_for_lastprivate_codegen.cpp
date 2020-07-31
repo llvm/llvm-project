@@ -70,7 +70,7 @@ int main() {
   [&]() {
     static float sfvar;
     // LAMBDA: define{{.*}} internal{{.*}} void [[OUTER_LAMBDA]](
-    // LAMBDA: call i{{[0-9]+}} @__tgt_target_teams(
+    // LAMBDA: call i{{[0-9]+}} @__tgt_target_teams_mapper(
     // LAMBDA: call void [[OFFLOADING_FUN:@.+]](
 
     // LAMBDA: define{{.+}} void [[OFFLOADING_FUN]](
@@ -269,7 +269,7 @@ int main() {
 // CHECK: define{{.*}} i{{[0-9]+}} @main()
 // CHECK: [[TEST:%.+]] = alloca [[S_FLOAT_TY]],
 // CHECK: call {{.*}} [[S_FLOAT_TY_DEF_CONSTR:@.+]]([[S_FLOAT_TY]]* [[TEST]])
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
 // CHECK: call void [[OFFLOAD_FUN:@.+]](i{{[0-9]+}} {{.+}}, [2 x i{{[0-9]+}}]* {{.+}}, [2 x [[S_FLOAT_TY]]]* {{.+}}, [[S_FLOAT_TY]]* {{.+}}, i{{[0-9]+}} {{.+}})
 // CHECK: ret
 
@@ -484,7 +484,7 @@ int main() {
 // CHECK: define{{.*}} i{{[0-9]+}} [[TMAIN_INT:@.+]]()
 // CHECK: [[TEST:%.+]] = alloca [[S_INT_TY]],
 // CHECK: call {{.*}} [[S_INT_TY_DEF_CONSTR:@.+]]([[S_INT_TY]]* [[TEST]])
-// CHECK: call i{{[0-9]+}} @__tgt_target_teams(
+// CHECK: call i{{[0-9]+}} @__tgt_target_teams_mapper(
 // CHECK: call void [[OFFLOAD_FUN_1:@.+]](i{{[0-9]+}} {{.+}}, [2 x i{{[0-9]+}}]* {{.+}}, [2 x [[S_INT_TY]]]* {{.+}}, [[S_INT_TY]]* {{.+}})
 // CHECK: ret
 

@@ -274,9 +274,10 @@ public:
 
   void MarkVirtRegAliveInBlock(VarInfo& VRInfo, MachineBasicBlock* DefBlock,
                                MachineBasicBlock *BB);
-  void MarkVirtRegAliveInBlock(VarInfo& VRInfo, MachineBasicBlock* DefBlock,
+  void MarkVirtRegAliveInBlock(VarInfo &VRInfo, MachineBasicBlock *DefBlock,
                                MachineBasicBlock *BB,
-                               std::vector<MachineBasicBlock*> &WorkList);
+                               SmallVectorImpl<MachineBasicBlock *> &WorkList);
+
   void HandleVirtRegDef(unsigned reg, MachineInstr &MI);
   void HandleVirtRegUse(unsigned reg, MachineBasicBlock *MBB, MachineInstr &MI);
 

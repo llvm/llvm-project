@@ -125,7 +125,7 @@ using ParamType = std::tuple<Form, uint16_t, uint8_t, DwarfFormat,
                              ArrayRef<uint8_t>, uint64_t, bool>;
 
 struct FormSkipValueFixtureBase : public testing::TestWithParam<ParamType> {
-  void SetUp() {
+  void SetUp() override {
     std::tie(Fm, Version, AddrSize, Dwarf, InitialData, ExpectedSkipped,
              ExpectedResult) = GetParam();
   }

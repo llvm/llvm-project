@@ -202,3 +202,29 @@ def ExampleOpInterface : OpInterface<"ExampleOpInterface"> {
   ];
 }
 ```
+
+#### Operation Interface List
+
+MLIR includes standard interfaces providing functionality that is
+likely to be common across many different operations. Below is a list
+of some key interfaces that may be used directly by any dialect. The
+format of the header for each interface section goes as follows:
+
+*   `Interface class name`
+    -   (`C++ class` -- `ODS class`(if applicable))
+
+##### CallInterfaces
+
+*   `CallOpInterface` - Used to represent operations like 'call'
+    -   `CallInterfaceCallable getCallableForCallee()`
+*   `CallableOpInterface` - Used to represent the target callee of call.
+    -   `Region * getCallableRegion()`
+    -   `ArrayRef<Type> getCallableResults()`
+
+##### RegionKindInterfaces
+
+*   `RegionKindInterface` - Used to describe the abstract semantics of regions.
+     - `RegionKind getRegionKind(unsigned index)` - Return the kind of the region with the given index inside this operation.
+         - RegionKind::Graph - represents a graph region without control flow semantics
+         - RegionKind::SSACFG - represents an [SSA-style control flow](LangRef.md#modeling-control-flow) region with basic blocks and reachability
+     - `hasSSADominance(unsigned index)` - Return true if the region with the given index inside this operation requires dominance.

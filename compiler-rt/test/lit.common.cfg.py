@@ -70,6 +70,8 @@ if config.android:
     # to link. In r19 and later we just use the default which is libc++.
     config.cxx_mode_flags.append('-stdlib=libstdc++')
 
+config.environment = dict(os.environ)
+
 # Clear some environment variables that might affect Clang.
 possibly_dangerous_env_vars = ['ASAN_OPTIONS', 'DFSAN_OPTIONS', 'LSAN_OPTIONS',
                                'MSAN_OPTIONS', 'UBSAN_OPTIONS',
@@ -414,19 +416,18 @@ if os.path.exists(sancovcc_path):
 def is_darwin_lto_supported():
   return os.path.exists(os.path.join(config.llvm_shlib_dir, 'libLTO.dylib'))
 
-def is_linux_lto_supported():
-  if config.use_lld:
-    return True
-
+def is_binutils_lto_supported():
   if not os.path.exists(os.path.join(config.llvm_shlib_dir, 'LLVMgold.so')):
     return False
 
-  ld_cmd = subprocess.Popen([config.gold_executable, '--help'], stdout = subprocess.PIPE, env={'LANG': 'C'})
-  ld_out = ld_cmd.stdout.read().decode()
-  ld_cmd.wait()
-
-  if not '-plugin' in ld_out:
-    return False
+  # We require both ld.bfd and ld.gold exist and support plugins. They are in
+  # the same repository 'binutils-gdb' and usually built together.
+  for exe in (config.gnu_ld_executable, config.gold_executable):
+    ld_cmd = subprocess.Popen([exe, '--help'], stdout=subprocess.PIPE, env={'LANG': 'C'})
+    ld_out = ld_cmd.stdout.read().decode()
+    ld_cmd.wait()
+    if not '-plugin' in ld_out:
+      return False
 
   return True
 
@@ -437,13 +438,20 @@ if config.host_os == 'Darwin' and is_darwin_lto_supported():
   config.lto_supported = True
   config.lto_launch = ["env", "DYLD_LIBRARY_PATH=" + config.llvm_shlib_dir]
   config.lto_flags = []
-elif config.host_os in ['Linux', 'FreeBSD', 'NetBSD'] and is_linux_lto_supported():
-  config.lto_supported = True
-  config.lto_launch = []
+elif config.host_os in ['Linux', 'FreeBSD', 'NetBSD']:
+  config.lto_supported = False
   if config.use_lld:
-    config.lto_flags = ["-fuse-ld=lld"]
-  else:
-    config.lto_flags = ["-fuse-ld=gold"]
+    config.lto_supported = True
+  if is_binutils_lto_supported():
+    config.available_features.add('binutils_lto')
+    config.lto_supported = True
+
+  if config.lto_supported:
+    config.lto_launch = []
+    if config.use_lld:
+      config.lto_flags = ["-fuse-ld=lld"]
+    else:
+      config.lto_flags = ["-fuse-ld=gold"]
 elif config.host_os == 'Windows' and is_windows_lto_supported():
   config.lto_supported = True
   config.lto_launch = []

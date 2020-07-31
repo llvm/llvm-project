@@ -178,7 +178,8 @@ void MachineModuleInfo::finalize() {
 MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
     : TM(std::move(MMI.TM)),
       Context(MMI.TM.getMCAsmInfo(), MMI.TM.getMCRegisterInfo(),
-              MMI.TM.getObjFileLowering(), nullptr, nullptr, false) {
+              MMI.TM.getObjFileLowering(), nullptr, nullptr, false),
+      MachineFunctions(std::move(MMI.MachineFunctions)) {
   ObjFileMMI = MMI.ObjFileMMI;
   CurCallSite = MMI.CurCallSite;
   UsesMSVCFloatingPoint = MMI.UsesMSVCFloatingPoint;

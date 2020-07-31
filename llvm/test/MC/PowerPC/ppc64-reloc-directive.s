@@ -1,8 +1,8 @@
 # RUN: llvm-mc -triple=powerpc64-linux-musl %s | FileCheck --check-prefix=PRINT %s
 # RUN: llvm-mc -triple=powerpc64le-linux-musl %s | FileCheck --check-prefix=PRINT %s
 
-# RUN: llvm-mc -filetype=obj -triple=powerpc64-linux-musl %s | llvm-readobj -r | FileCheck %s
-# RUN: llvm-mc -filetype=obj -triple=powerpc64le-linux-musl %s | llvm-readobj -r | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=powerpc64-linux-musl %s | llvm-readobj -r - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=powerpc64le-linux-musl %s | llvm-readobj -r - | FileCheck %s
 
 # PRINT: .reloc 8, R_PPC64_NONE, .data
 # PRINT: .reloc 4, R_PPC64_NONE, foo+4

@@ -962,6 +962,8 @@ InitListChecker::InitListChecker(Sema &S, const InitializedEntity &Entity,
       FillInEmptyInitializations(Entity, FullyStructuredList,
                                  RequiresSecondPass, nullptr, 0);
   }
+  if (hadError && FullyStructuredList)
+    FullyStructuredList->markError();
 }
 
 int InitListChecker::numArrayElements(QualType DeclType) {

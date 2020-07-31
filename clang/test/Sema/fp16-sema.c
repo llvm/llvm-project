@@ -28,3 +28,9 @@ extern __fp16 *(*gf1) (void);
 typedef __fp16 (*tf1) (void); // expected-error {{function return value cannot have __fp16 type; did you forget * ?}}
 typedef __fp16 *(*tg1) (void);
 
+void testComplex() {
+  // FIXME: Should these be valid?
+  _Complex __fp16 a; // expected-error {{'_Complex half' is invalid}}
+  __fp16 b;
+  a = __builtin_complex(b, b); // expected-error {{'_Complex half' is invalid}}
+}

@@ -36,11 +36,25 @@
 // RUN: FileCheck --check-prefix=WITHATEXIT %s
 // RUN: %clang -target x86_64-apple-darwin -c -mkernel -### %s 2>&1 | \
 // RUN: FileCheck --check-prefix=WITHOUTATEXIT %s
+
 // RUN: %clang -target x86_64-pc-linux-gnu -fregister-global-dtors-with-atexit -fno-register-global-dtors-with-atexit -c -### %s 2>&1 | \
 // RUN: FileCheck --check-prefix=WITHOUTATEXIT %s
 // RUN: %clang -target x86_64-pc-linux-gnu -fno-register-global-dtors-with-atexit -fregister-global-dtors-with-atexit -c -### %s 2>&1 | \
 // RUN: FileCheck --check-prefix=WITHATEXIT %s
 // RUN: %clang -target x86_64-pc-linux-gnu -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=WITHOUTATEXIT %s
+
+// RUN: %clang -target powerpc-ibm-aix-xcoff -fregister-global-dtors-with-atexit -fno-register-global-dtors-with-atexit -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=WITHOUTATEXIT %s
+// RUN: %clang -target powerpc-ibm-aix-xcoff -fno-register-global-dtors-with-atexit -fregister-global-dtors-with-atexit -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=WITHATEXIT %s
+// RUN: %clang -target powerpc-ibm-aix-xcoff -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=WITHOUTATEXIT %s
+// RUN: %clang -target powerpc64-ibm-aix-xcoff -fregister-global-dtors-with-atexit -fno-register-global-dtors-with-atexit -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=WITHOUTATEXIT %s
+// RUN: %clang -target powerpc64-ibm-aix-xcoff -fno-register-global-dtors-with-atexit -fregister-global-dtors-with-atexit -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=WITHATEXIT %s
+// RUN: %clang -target powerpc64-ibm-aix-xcoff -c -### %s 2>&1 | \
 // RUN: FileCheck --check-prefix=WITHOUTATEXIT %s
 
 // WITHATEXIT: -fregister-global-dtors-with-atexit

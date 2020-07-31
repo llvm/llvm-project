@@ -7,7 +7,7 @@
 ; RUN:     -function-sections -data-sections \
 ; RUN:     -relocation-model=pic -filetype=obj \
 ; RUN:     -generate-type-units -o - %s | \
-; RUN:     llvm-readelf --sections | \
+; RUN:     llvm-readelf --sections - | \
 ; RUN:     FileCheck %s --check-prefix=CHECK-ELF
 ; Created from `clang++ -fxray-instrument -gsplit-dwarf -fdebug-types-section
 ; -ffunction-sections -fdata-sections -emit-llvm -S input.cc`:

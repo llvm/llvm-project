@@ -147,3 +147,50 @@ entry:
   ret i64 %v
 }
 
+; CHECK: ********** MI Scheduling **********
+; CHECK-LABEL: stp_i64_with_ld:%bb.0
+; CHECK:Cluster ld/st SU(5) - SU(10)
+; CHECK:Cluster ld/st SU(15) - SU(20)
+; CHECK:SU(5):   STRXui %7:gpr64, %0:gpr64common, 0 ::
+; CHECK:SU(10):   STRXui %12:gpr64, %0:gpr64common, 1 ::
+; CHECK:SU(15):   STRXui %17:gpr64, %0:gpr64common, 2 ::
+; CHECK:SU(20):   STRXui %22:gpr64, %0:gpr64common, 3 ::
+define void @stp_i64_with_ld(i64* noalias nocapture %a, i64* noalias nocapture readnone %b, i64* noalias nocapture readnone %c) {
+entry:
+  %arrayidx = getelementptr inbounds i64, i64* %a, i64 8
+  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx3 = getelementptr inbounds i64, i64* %a, i64 16
+  %1 = load i64, i64* %arrayidx3, align 8
+  %mul = mul nsw i64 %1, %0
+  %2 = load i64, i64* %a, align 8
+  %add6 = add nsw i64 %2, %mul
+  store i64 %add6, i64* %a, align 8
+  %arrayidx.1 = getelementptr inbounds i64, i64* %a, i64 9
+  %3 = load i64, i64* %arrayidx.1, align 8
+  %arrayidx3.1 = getelementptr inbounds i64, i64* %a, i64 17
+  %4 = load i64, i64* %arrayidx3.1, align 8
+  %mul.1 = mul nsw i64 %4, %3
+  %arrayidx5.1 = getelementptr inbounds i64, i64* %a, i64 1
+  %5 = load i64, i64* %arrayidx5.1, align 8
+  %add6.1 = add nsw i64 %5, %mul.1
+  store i64 %add6.1, i64* %arrayidx5.1, align 8
+  %arrayidx.2 = getelementptr inbounds i64, i64* %a, i64 10
+  %6 = load i64, i64* %arrayidx.2, align 8
+  %arrayidx3.2 = getelementptr inbounds i64, i64* %a, i64 18
+  %7 = load i64, i64* %arrayidx3.2, align 8
+  %mul.2 = mul nsw i64 %7, %6
+  %arrayidx5.2 = getelementptr inbounds i64, i64* %a, i64 2
+  %8 = load i64, i64* %arrayidx5.2, align 8
+  %add6.2 = add nsw i64 %8, %mul.2
+  store i64 %add6.2, i64* %arrayidx5.2, align 8
+  %arrayidx.3 = getelementptr inbounds i64, i64* %a, i64 11
+  %9 = load i64, i64* %arrayidx.3, align 8
+  %arrayidx3.3 = getelementptr inbounds i64, i64* %a, i64 19
+  %10 = load i64, i64* %arrayidx3.3, align 8
+  %mul.3 = mul nsw i64 %10, %9
+  %arrayidx5.3 = getelementptr inbounds i64, i64* %a, i64 3
+  %11 = load i64, i64* %arrayidx5.3, align 8
+  %add6.3 = add nsw i64 %11, %mul.3
+  store i64 %add6.3, i64* %arrayidx5.3, align 8
+  ret void
+}

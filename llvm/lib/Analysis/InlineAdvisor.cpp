@@ -84,7 +84,8 @@ private:
 
 } // namespace
 
-std::unique_ptr<InlineAdvice> DefaultInlineAdvisor::getAdvice(CallBase &CB) {
+llvm::Optional<llvm::InlineCost> static getDefaultInlineAdvice(
+    CallBase &CB, FunctionAnalysisManager &FAM, const InlineParams &Params) {
   Function &Caller = *CB.getCaller();
   ProfileSummaryInfo *PSI =
       FAM.getResult<ModuleAnalysisManagerFunctionProxy>(Caller)
@@ -111,10 +112,16 @@ std::unique_ptr<InlineAdvice> DefaultInlineAdvisor::getAdvice(CallBase &CB) {
     return getInlineCost(CB, Params, CalleeTTI, GetAssumptionCache, GetTLI,
                          GetBFI, PSI, RemarksEnabled ? &ORE : nullptr);
   };
-  auto OIC = llvm::shouldInline(CB, GetInlineCost, ORE,
-                                Params.EnableDeferral.hasValue() &&
-                                    Params.EnableDeferral.getValue());
-  return std::make_unique<DefaultInlineAdvice>(this, CB, OIC, ORE);
+  return llvm::shouldInline(CB, GetInlineCost, ORE,
+                            Params.EnableDeferral.hasValue() &&
+                                Params.EnableDeferral.getValue());
+}
+
+std::unique_ptr<InlineAdvice> DefaultInlineAdvisor::getAdvice(CallBase &CB) {
+  auto OIC = getDefaultInlineAdvice(CB, FAM, Params);
+  return std::make_unique<DefaultInlineAdvice>(
+      this, CB, OIC,
+      FAM.getResult<OptimizationRemarkEmitterAnalysis>(*CB.getCaller()));
 }
 
 InlineAdvice::InlineAdvice(InlineAdvisor *Advisor, CallBase &CB,
@@ -152,7 +159,13 @@ bool InlineAdvisorAnalysis::Result::tryCreate(InlineParams Params,
     Advisor.reset(new DefaultInlineAdvisor(FAM, Params));
     break;
   case InliningAdvisorMode::Development:
-    // To be added subsequently under conditional compilation.
+#ifdef LLVM_HAVE_TF_API
+    Advisor =
+        llvm::getDevelopmentModeAdvisor(M, MAM, [&FAM, Params](CallBase &CB) {
+          auto OIC = getDefaultInlineAdvice(CB, FAM, Params);
+          return OIC.hasValue();
+        });
+#endif
     break;
   case InliningAdvisorMode::Release:
 #ifdef LLVM_HAVE_TF_AOT

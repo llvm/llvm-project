@@ -27,7 +27,8 @@ using namespace llvm::opt;
 static const SanitizerMask NeedsUbsanRt =
     SanitizerKind::Undefined | SanitizerKind::Integer |
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
-    SanitizerKind::CFI | SanitizerKind::FloatDivideByZero;
+    SanitizerKind::CFI | SanitizerKind::FloatDivideByZero |
+    SanitizerKind::ObjCCast;
 static const SanitizerMask NeedsUbsanCxxRt =
     SanitizerKind::Vptr | SanitizerKind::CFI;
 static const SanitizerMask NotAllowedWithTrap = SanitizerKind::Vptr;
@@ -48,11 +49,11 @@ static const SanitizerMask SupportsCoverage =
     SanitizerKind::DataFlow | SanitizerKind::Fuzzer |
     SanitizerKind::FuzzerNoLink | SanitizerKind::FloatDivideByZero |
     SanitizerKind::SafeStack | SanitizerKind::ShadowCallStack |
-    SanitizerKind::Thread;
+    SanitizerKind::Thread | SanitizerKind::ObjCCast;
 static const SanitizerMask RecoverableByDefault =
     SanitizerKind::Undefined | SanitizerKind::Integer |
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
-    SanitizerKind::FloatDivideByZero;
+    SanitizerKind::FloatDivideByZero | SanitizerKind::ObjCCast;
 static const SanitizerMask Unrecoverable =
     SanitizerKind::Unreachable | SanitizerKind::Return;
 static const SanitizerMask AlwaysRecoverable =
@@ -62,7 +63,8 @@ static const SanitizerMask TrappingSupported =
     (SanitizerKind::Undefined & ~SanitizerKind::Vptr) |
     SanitizerKind::UnsignedIntegerOverflow | SanitizerKind::ImplicitConversion |
     SanitizerKind::Nullability | SanitizerKind::LocalBounds |
-    SanitizerKind::CFI | SanitizerKind::FloatDivideByZero;
+    SanitizerKind::CFI | SanitizerKind::FloatDivideByZero |
+    SanitizerKind::ObjCCast;
 static const SanitizerMask TrappingDefault = SanitizerKind::CFI;
 static const SanitizerMask CFIClasses =
     SanitizerKind::CFIVCall | SanitizerKind::CFINVCall |
@@ -236,6 +238,10 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
   TrappingKinds |= TrappingDefault & ~TrapRemove;
 
   return TrappingKinds;
+}
+
+bool SanitizerArgs::needsFuzzerInterceptors() const {
+  return needsFuzzer() && !needsAsanRt() && !needsTsanRt() && !needsMsanRt();
 }
 
 bool SanitizerArgs::needsUbsanRt() const {
@@ -1081,6 +1087,23 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (Sanitizers.has(SanitizerKind::Memory) ||
       Sanitizers.has(SanitizerKind::Address))
     CmdArgs.push_back("-fno-assume-sane-operator-new");
+
+  // libFuzzer wants to intercept calls to certain library functions, so the
+  // following -fno-builtin-* flags force the compiler to emit interposable
+  // libcalls to these functions. Other sanitizers effectively do the same thing
+  // by marking all library call sites with NoBuiltin attribute in their LLVM
+  // pass. (see llvm::maybeMarkSanitizerLibraryCallNoBuiltin)
+  if (Sanitizers.has(SanitizerKind::FuzzerNoLink)) {
+    CmdArgs.push_back("-fno-builtin-bcmp");
+    CmdArgs.push_back("-fno-builtin-memcmp");
+    CmdArgs.push_back("-fno-builtin-strncmp");
+    CmdArgs.push_back("-fno-builtin-strcmp");
+    CmdArgs.push_back("-fno-builtin-strncasecmp");
+    CmdArgs.push_back("-fno-builtin-strcasecmp");
+    CmdArgs.push_back("-fno-builtin-strstr");
+    CmdArgs.push_back("-fno-builtin-strcasestr");
+    CmdArgs.push_back("-fno-builtin-memmem");
+  }
 
   // Require -fvisibility= flag on non-Windows when compiling if vptr CFI is
   // enabled.

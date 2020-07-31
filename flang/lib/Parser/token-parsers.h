@@ -664,5 +664,9 @@ constexpr auto logicalFALSE{
 constexpr auto rawHollerithLiteral{
     deprecated<LanguageFeature::Hollerith>(HollerithLiteral{})};
 
+template <typename A> constexpr decltype(auto) verbatim(A x) {
+  return sourced(construct<Verbatim>(x));
+}
+
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_TOKEN_PARSERS_H_

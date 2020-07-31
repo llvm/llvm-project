@@ -2,7 +2,7 @@
 # RUN: llvm-mc -triple s390x-unknown-unknown -mcpu=zEC12 --show-encoding %s | FileCheck %s
 
 # RUN: llvm-mc -triple s390x-unknown-unknown -mcpu=zEC12 -filetype=obj %s | \
-# RUN: llvm-readobj -r | FileCheck %s -check-prefix=CHECK-REL
+# RUN: llvm-readobj -r - | FileCheck %s -check-prefix=CHECK-REL
 
 # CHECK: bpp 12, branch, 0                      # encoding: [0xc7,0xc0,0x00,0x00,A,A]
 # CHECK:                                        # fixup A - offset: 4, value: branch+4, kind: FK_390_PC16DBL

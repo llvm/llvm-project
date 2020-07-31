@@ -1,5 +1,5 @@
 // RUN: llvm-mc -filetype=obj -triple i686-pc-win32 %s -o - \
-// RUN:   | llvm-readobj --symbols -r | FileCheck %s
+// RUN:   | llvm-readobj --symbols -r - | FileCheck %s
 
 local1:
 external_aliased_to_local = local1

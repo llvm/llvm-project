@@ -95,7 +95,7 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X64-AVX-NEXT:    andq $-32, %rsp
 ; X64-AVX-NEXT:    subq $160, %rsp
 ; X64-AVX-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-AVX-NEXT:    vpermq {{.*#+}} ymm0 = ymm3[3,1,2,3]
+; X64-AVX-NEXT:    vpermq {{.*#+}} ymm0 = ymm3[3,3,3,3]
 ; X64-AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; X64-AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-AVX-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%rsp)

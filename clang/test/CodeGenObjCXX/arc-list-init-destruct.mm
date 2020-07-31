@@ -16,6 +16,8 @@ struct Container {
 };
 
 bool getBool() {
+  extern void mayThrow();
+  mayThrow();
   return false;
 }
 

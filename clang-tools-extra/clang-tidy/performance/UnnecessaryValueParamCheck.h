@@ -41,8 +41,7 @@ private:
 
   llvm::DenseMap<const FunctionDecl *, FunctionParmMutationAnalyzer>
       MutationAnalyzers;
-  std::unique_ptr<utils::IncludeInserter> Inserter;
-  const utils::IncludeSorter::IncludeStyle IncludeStyle;
+  utils::IncludeInserter Inserter;
   const std::vector<std::string> AllowedTypes;
 };
 

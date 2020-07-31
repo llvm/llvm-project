@@ -1,4 +1,5 @@
-; RUN: opt -S -analyze -scalar-evolution < %s | FileCheck %s
+; RUN: opt -S -analyze -enable-new-pm=0 -scalar-evolution < %s | FileCheck %s
+; RUN: opt -S -disable-output "-passes=print<scalar-evolution>" < %s 2>&1 | FileCheck %s
 
 define void @u_0(i8 %rhs) {
 ; E.g.: %rhs = 255, %start = 99, backedge taken 156 times

@@ -135,17 +135,17 @@ define void @constrained_if_register_class() {
 ; CHECK-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
-; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
-; CHECK-NEXT:    s_xor_b32 s4, s4, 1
-; CHECK-NEXT:    s_and_b32 s4, s4, 1
-; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
+; CHECK-NEXT:    s_cselect_b32 s5, 1, 0
+; CHECK-NEXT:    s_xor_b32 s5, s5, -1
+; CHECK-NEXT:    s_and_b32 s5, s5, 1
+; CHECK-NEXT:    s_mov_b32 s4, -1
+; CHECK-NEXT:    s_cmp_lg_u32 s5, 0
 ; CHECK-NEXT:    s_cbranch_scc0 BB4_6
 ; CHECK-NEXT:  ; %bb.1: ; %bb2
 ; CHECK-NEXT:    s_getpc_b64 s[6:7]
 ; CHECK-NEXT:    s_add_u32 s6, s6, const.ptr@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s7, s7, const.ptr@gotpcrel32@hi+4
 ; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
-; CHECK-NEXT:    s_mov_b32 s4, -1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)

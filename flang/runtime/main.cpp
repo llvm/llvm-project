@@ -33,4 +33,14 @@ void RTNAME(ProgramStart)(int argc, const char *argv[], const char *envp[]) {
   ConfigureFloatingPoint();
   // I/O is initialized on demand so that it works for non-Fortran main().
 }
+
+void RTNAME(ByteswapOption)() {
+  if (Fortran::runtime::executionEnvironment.conversion ==
+      Fortran::runtime::Convert::Unknown) {
+    // The environment variable overrides the command-line option;
+    // either of them take precedence over explicit OPEN(CONVERT=) specifiers.
+    Fortran::runtime::executionEnvironment.conversion =
+        Fortran::runtime::Convert::Swap;
+  }
+}
 }

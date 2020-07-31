@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu -filetype=asm < %s | FileCheck %s --check-prefix=DIRECTIVE
-; RUN: llc -mtriple=x86_64-linux-gnu -filetype=obj < %s | llvm-readobj --symbols | FileCheck %s --check-prefix=STT-FILE
+; RUN: llc -mtriple=x86_64-linux-gnu -filetype=obj < %s | llvm-readobj --symbols - | FileCheck %s --check-prefix=STT-FILE
 
 ; DIRECTIVE: .file "foobar"
 ; STT-FILE: Name: foobar

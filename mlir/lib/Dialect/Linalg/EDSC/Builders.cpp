@@ -69,7 +69,8 @@ Operation *mlir::edsc::makeGenericLinalgOp(
               builder.getAffineMapArrayAttr(maps),
               builder.getStrArrayAttr(iteratorStrTypes),
               StringAttr() /*doc*/,
-              StringAttr() /*library_call*/
+              StringAttr() /*library_call*/,
+              IntegerAttr() /*symbol_source*/
               /* TODO: other attributes in op */
               )
           .getOperation();

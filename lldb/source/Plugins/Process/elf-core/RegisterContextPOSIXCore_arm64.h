@@ -9,7 +9,9 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_ARM64_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_ARM64_H
 
+#include "Plugins/Process/Utility/LinuxPTraceDefines_arm64sve.h"
 #include "Plugins/Process/Utility/RegisterContextPOSIX_arm64.h"
+
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -49,6 +51,18 @@ private:
   lldb::DataBufferSP m_gpr_buffer;
   lldb_private::DataExtractor m_gpr;
   lldb_private::DataExtractor m_fpregset;
+  lldb_private::DataExtractor m_sveregset;
+
+  SVEState m_sve_state;
+  uint16_t m_sve_vector_length = 0;
+
+  const uint8_t *GetSVEBuffer(uint64_t offset = 0);
+
+  void ConfigureRegisterContext();
+
+  uint32_t CalculateSVEOffset(const lldb_private::RegisterInfo *reg_info);
+
+  uint64_t GetSVERegVG() { return m_sve_vector_length / 8; }
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_ARM64_H

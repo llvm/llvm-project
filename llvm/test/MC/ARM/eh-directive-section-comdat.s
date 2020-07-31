@@ -1,5 +1,5 @@
 @ RUN: llvm-mc %s -triple=armv7-unknown-linux-gnueabi -filetype=obj -o - \
-@ RUN:   | llvm-readobj -S --sd --sr --symbols | FileCheck %s
+@ RUN:   | llvm-readobj -S --sd --sr --symbols - | FileCheck %s
 
 @ Check the .group section for the function in comdat section.
 

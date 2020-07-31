@@ -13,6 +13,7 @@
 
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/RegionKindInterface.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
 
@@ -23,6 +24,14 @@ template class llvm::DominatorTreeBase<Block, /*IsPostDom=*/false>;
 template class llvm::DominatorTreeBase<Block, /*IsPostDom=*/true>;
 template class llvm::DomTreeNodeBase<Block>;
 
+/// Return true if the region with the given index inside the operation
+/// has SSA dominance.
+static bool hasSSADominance(Operation *op, unsigned index) {
+  auto kindInterface = dyn_cast<RegionKindInterface>(op);
+  return op->isRegistered() &&
+         (!kindInterface || kindInterface.hasSSADominance(index));
+}
+
 //===----------------------------------------------------------------------===//
 // DominanceInfoBase
 //===----------------------------------------------------------------------===//
@@ -31,15 +40,30 @@ template <bool IsPostDom>
 void DominanceInfoBase<IsPostDom>::recalculate(Operation *op) {
   dominanceInfos.clear();
 
-  /// Build the dominance for each of the operation regions.
+  // Build the dominance for each of the operation regions.
   op->walk([&](Operation *op) {
-    for (auto &region : op->getRegions()) {
+    auto kindInterface = dyn_cast<RegionKindInterface>(op);
+    unsigned numRegions = op->getNumRegions();
+    for (unsigned i = 0; i < numRegions; i++) {
+      Region &region = op->getRegion(i);
       // Don't compute dominance if the region is empty.
       if (region.empty())
         continue;
-      auto opDominance = std::make_unique<base>();
-      opDominance->recalculate(region);
-      dominanceInfos.try_emplace(&region, std::move(opDominance));
+
+      // Dominance changes based on the region type. Avoid the helper
+      // function here so we don't do the region cast repeatedly.
+      bool hasSSADominance =
+          op->isRegistered() &&
+          (!kindInterface || kindInterface.hasSSADominance(i));
+      // If a region has SSADominance, then compute detailed dominance
+      // info.  Otherwise, all values in the region are live anywhere
+      // in the region, which is represented as an empty entry in the
+      // dominanceInfos map.
+      if (hasSSADominance) {
+        auto opDominance = std::make_unique<base>();
+        opDominance->recalculate(region);
+        dominanceInfos.try_emplace(&region, std::move(opDominance));
+      }
     }
   });
 }
@@ -132,7 +156,7 @@ DominanceInfoBase<IsPostDom>::findNearestCommonDominator(Block *a,
 
 template <bool IsPostDom>
 DominanceInfoNode *DominanceInfoBase<IsPostDom>::getNode(Block *a) {
-  auto *region = a->getParent();
+  Region *region = a->getParent();
   assert(dominanceInfos.count(region) != 0);
   return dominanceInfos[region]->getNode(a);
 }
@@ -151,7 +175,7 @@ bool DominanceInfoBase<IsPostDom>::properlyDominates(Block *a, Block *b) const {
   // If both blocks are not in the same region, 'a' properly dominates 'b' if
   // 'b' is defined in an operation region that (recursively) ends up being
   // dominated by 'a'. Walk up the list of containers enclosing B.
-  auto *regionA = a->getParent();
+  Region *regionA = a->getParent();
   if (regionA != b->getParent()) {
     b = traverseAncestors(
         b, [&](Block *block) { return block->getParent() == regionA; });
@@ -180,15 +204,15 @@ bool DominanceInfoBase<IsPostDom>::properlyDominates(Block *a, Block *b) const {
 /// region.
 template <bool IsPostDom>
 bool DominanceInfoBase<IsPostDom>::isReachableFromEntry(Block *a) const {
-  auto *regionA = a->getParent();
+  Region *regionA = a->getParent();
   auto baseInfoIt = dominanceInfos.find(regionA);
   if (baseInfoIt == dominanceInfos.end())
     return true;
   return baseInfoIt->second->isReachableFromEntry(a);
 }
 
-template class mlir::detail::DominanceInfoBase</*IsPostDom=*/true>;
-template class mlir::detail::DominanceInfoBase</*IsPostDom=*/false>;
+template class detail::DominanceInfoBase</*IsPostDom=*/true>;
+template class detail::DominanceInfoBase</*IsPostDom=*/false>;
 
 //===----------------------------------------------------------------------===//
 // DominanceInfo
@@ -196,15 +220,25 @@ template class mlir::detail::DominanceInfoBase</*IsPostDom=*/false>;
 
 /// Return true if operation A properly dominates operation B.
 bool DominanceInfo::properlyDominates(Operation *a, Operation *b) const {
-  auto *aBlock = a->getBlock(), *bBlock = b->getBlock();
+  Block *aBlock = a->getBlock(), *bBlock = b->getBlock();
+  Region *aRegion = a->getParentRegion();
+  unsigned aRegionNum = aRegion->getRegionNumber();
+  Operation *ancestor = aRegion->getParentOp();
 
   // If a or b are not within a block, then a does not dominate b.
   if (!aBlock || !bBlock)
     return false;
 
-  // If the blocks are the same, then check if b is before a in the block.
-  if (aBlock == bBlock)
-    return a->isBeforeInBlock(b);
+  if (aBlock == bBlock) {
+    // Dominance changes based on the region type. In a region with SSA
+    // dominance, uses inside the same block must follow defs. In other
+    // regions kinds, uses and defs can come in any order inside a block.
+    if (hasSSADominance(ancestor, aRegionNum)) {
+      // If the blocks are the same, then check if b is before a in the block.
+      return a->isBeforeInBlock(b);
+    }
+    return true;
+  }
 
   // Traverse up b's hierarchy to check if b's block is contained in a's.
   if (auto *bAncestor = aBlock->findAncestorOpInBlock(*b)) {
@@ -221,10 +255,19 @@ bool DominanceInfo::properlyDominates(Operation *a, Operation *b) const {
 /// Return true if value A properly dominates operation B.
 bool DominanceInfo::properlyDominates(Value a, Operation *b) const {
   if (auto *aOp = a.getDefiningOp()) {
-    // The values defined by an operation do *not* dominate any nested
-    // operations.
-    if (aOp->getParentRegion() != b->getParentRegion() && aOp->isAncestor(b))
-      return false;
+    // Dominance changes based on the region type.
+    auto *aRegion = aOp->getParentRegion();
+    unsigned aRegionNum = aRegion->getRegionNumber();
+    Operation *ancestor = aRegion->getParentOp();
+    // Dominance changes based on the region type. In a region with SSA
+    // dominance, values defined by an operation cannot be used by the
+    // operation. In other regions kinds they can be used the operation.
+    if (hasSSADominance(ancestor, aRegionNum)) {
+      // The values defined by an operation do *not* dominate any nested
+      // operations.
+      if (aOp->getParentRegion() != b->getParentRegion() && aOp->isAncestor(b))
+        return false;
+    }
     return properlyDominates(aOp, b);
   }
 
@@ -245,14 +288,23 @@ void DominanceInfo::updateDFSNumbers() {
 /// Returns true if statement 'a' properly postdominates statement b.
 bool PostDominanceInfo::properlyPostDominates(Operation *a, Operation *b) {
   auto *aBlock = a->getBlock(), *bBlock = b->getBlock();
+  auto *aRegion = a->getParentRegion();
+  unsigned aRegionNum = aRegion->getRegionNumber();
+  Operation *ancestor = aRegion->getParentOp();
 
   // If a or b are not within a block, then a does not post dominate b.
   if (!aBlock || !bBlock)
     return false;
 
   // If the blocks are the same, check if b is before a in the block.
-  if (aBlock == bBlock)
-    return b->isBeforeInBlock(a);
+  if (aBlock == bBlock) {
+    // Dominance changes based on the region type.
+    if (hasSSADominance(ancestor, aRegionNum)) {
+      // If the blocks are the same, then check if b is before a in the block.
+      return b->isBeforeInBlock(a);
+    }
+    return true;
+  }
 
   // Traverse up b's hierarchy to check if b's block is contained in a's.
   if (auto *bAncestor = a->getBlock()->findAncestorOpInBlock(*b))

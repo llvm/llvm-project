@@ -52,10 +52,10 @@ AArch64CallLowering::AArch64CallLowering(const AArch64TargetLowering &TLI)
   : CallLowering(&TLI) {}
 
 namespace {
-struct IncomingArgHandler : public CallLowering::ValueHandler {
+struct IncomingArgHandler : public CallLowering::IncomingValueHandler {
   IncomingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                      CCAssignFn *AssignFn)
-      : ValueHandler(MIRBuilder, MRI, AssignFn), StackUsed(0) {}
+      : IncomingValueHandler(MIRBuilder, MRI, AssignFn), StackUsed(0) {}
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -96,9 +96,7 @@ struct IncomingArgHandler : public CallLowering::ValueHandler {
   /// How the physical register gets marked varies between formal
   /// parameters (it's a basic-block live-in), and a call instruction
   /// (it's an implicit-def of the BL).
-  virtual void markPhysRegUsed(unsigned PhysReg) = 0;
-
-  bool isIncomingArgumentHandler() const override { return true; }
+  virtual void markPhysRegUsed(MCRegister PhysReg) = 0;
 
   uint64_t StackUsed;
 };
@@ -108,7 +106,7 @@ struct FormalArgHandler : public IncomingArgHandler {
                    CCAssignFn *AssignFn)
     : IncomingArgHandler(MIRBuilder, MRI, AssignFn) {}
 
-  void markPhysRegUsed(unsigned PhysReg) override {
+  void markPhysRegUsed(MCRegister PhysReg) override {
     MIRBuilder.getMRI()->addLiveIn(PhysReg);
     MIRBuilder.getMBB().addLiveIn(PhysReg);
   }
@@ -119,23 +117,21 @@ struct CallReturnHandler : public IncomingArgHandler {
                     MachineInstrBuilder MIB, CCAssignFn *AssignFn)
     : IncomingArgHandler(MIRBuilder, MRI, AssignFn), MIB(MIB) {}
 
-  void markPhysRegUsed(unsigned PhysReg) override {
+  void markPhysRegUsed(MCRegister PhysReg) override {
     MIB.addDef(PhysReg, RegState::Implicit);
   }
 
   MachineInstrBuilder MIB;
 };
 
-struct OutgoingArgHandler : public CallLowering::ValueHandler {
+struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
   OutgoingArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
                      MachineInstrBuilder MIB, CCAssignFn *AssignFn,
                      CCAssignFn *AssignFnVarArg, bool IsTailCall = false,
                      int FPDiff = 0)
-      : ValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB),
+      : OutgoingValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB),
         AssignFnVarArg(AssignFnVarArg), IsTailCall(IsTailCall), FPDiff(FPDiff),
         StackSize(0), SPReg(0) {}
-
-  bool isIncomingArgumentHandler() const override { return false; }
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
@@ -185,6 +181,8 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
     // we disable setting a max.
     if (!Arg.IsFixed)
       MaxSize = 0;
+
+    assert(Arg.Regs.size() == 1);
 
     Register ValVReg = VA.getLocInfo() != CCValAssign::LocInfo::FPExt
                            ? extendRegister(Arg.Regs[0], VA, MaxSize)
@@ -416,7 +414,7 @@ static void handleMustTailForwardedRegisters(MachineIRBuilder &MIRBuilder,
   // Conservatively forward X8, since it might be used for an aggregate
   // return.
   if (!CCInfo.isAllocated(AArch64::X8)) {
-    unsigned X8VReg = MF.addLiveIn(AArch64::X8, &AArch64::GPR64RegClass);
+    Register X8VReg = MF.addLiveIn(AArch64::X8, &AArch64::GPR64RegClass);
     Forwards.push_back(ForwardedRegister(X8VReg, AArch64::X8, MVT::i64));
   }
 

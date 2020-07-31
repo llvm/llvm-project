@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # This creates a CSV file from the output of the debug output of subtarget:
 #   llvm-tblgen --gen-subtarget --debug-only=subtarget-emitter

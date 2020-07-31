@@ -168,3 +168,27 @@ ProgramHeaders:
   - Type: 0x65a3dbe6 ## PT_OPENBSD_RANDOMIZE
   - Type: 0x65a3dbe7 ## PT_OPENBSD_WXNEEDED
   - Type: 0x65a41be6 ## PT_OPENBSD_BOOTDATA
+
+## Check we report a warning when we are unable to read program headers.
+# RUN: yaml2obj --docnum=2 %s -o %t.err
+# RUN: llvm-readobj --program-headers %t.err 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err --check-prefix=WARN-PHENTSIZE
+
+# WARN-PHENTSIZE:      ProgramHeaders [
+# WARN-PHENTSIZE-NEXT: warning: '[[FILE]]': unable to dump program headers: invalid e_phentsize: 1
+# WARN-PHENTSIZE-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:      ELFCLASS64
+  Data:       ELFDATA2LSB
+  Type:       ET_EXEC
+  Machine:    EM_X86_64
+  EPhEntSize: 1
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+ProgramHeaders:
+  - Type: PT_PHDR
+    Sections:
+      - Section: .foo

@@ -40,7 +40,7 @@ define <4 x double> @mask_ucvt_4i32_4f64(<4 x i32> %a) {
 ; X32-SSE:       # %bb.0:
 ; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X32-SSE-NEXT:    cvtdq2pd %xmm0, %xmm2
-; X32-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X32-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; X32-SSE-NEXT:    cvtdq2pd %xmm0, %xmm1
 ; X32-SSE-NEXT:    movaps %xmm2, %xmm0
 ; X32-SSE-NEXT:    retl
@@ -55,7 +55,7 @@ define <4 x double> @mask_ucvt_4i32_4f64(<4 x i32> %a) {
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    pand {{.*}}(%rip), %xmm0
 ; X64-SSE-NEXT:    cvtdq2pd %xmm0, %xmm2
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; X64-SSE-NEXT:    cvtdq2pd %xmm0, %xmm1
 ; X64-SSE-NEXT:    movaps %xmm2, %xmm0
 ; X64-SSE-NEXT:    retq

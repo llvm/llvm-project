@@ -1158,6 +1158,71 @@ The [Code organization](#code-organization) section gives an overview of how
 SPIR-V related functionalities are implemented in MLIR. This section gives more
 concrete steps on how to contribute.
 
+## Rationale
+
+## Lowering `memref`s to `!spv.array<..>` and `!spv.rtarray<..>`.
+
+The LLVM dialect lowers `memref` types to a `MemrefDescriptor`:
+
+```
+struct MemrefDescriptor {
+  void *allocated_ptr; // Pointer to the base allocation.
+  void *aligned_ptr;   // Pointer within base allocation which is aligned to
+                       // the value set in the memref.
+  size_t offset;       // Offset from aligned_ptr from where to get values
+                       // corresponding to the memref.
+  size_t shape[rank];  // Shape of the memref.
+  size_t stride[rank]; // Strides used while accessing elements of the memref.
+};
+```
+
+In SPIR-V dialect, we chose not to use a `MemrefDescriptor`. Instead a `memref`
+is lowered directly to a `!spv.ptr<!spv.array<nelts x elem_type>>` when the
+`memref` is statically shaped, and `!spv.ptr<!spv.rtarray<elem_type>>` when the
+`memref` is dynamically shaped. The rationale behind this choice is described
+below.
+
+1.  Inputs/output buffers to a SPIR-V kernel are specified using
+    [`OpVariable`][SpirvOpVariable] inside
+    [interface storage classes][VulkanShaderInterfaceStorageClass] (e.g.,
+    Uniform, StorageBuffer, etc.), while kernel private variables reside in
+    non-interface storage classes (e.g., Function, Workgroup, etc.). By default,
+    Vulkan-flavored SPIR-V requires logical addressing mode: one cannot
+    load/store pointers from/to variables and cannot perform pointer arithmetic.
+    Expressing a struct like `MemrefDescriptor` in interface storage class
+    requires special addressing mode
+    ([PhysicalStorageBuffer][VulkanExtensionPhysicalStorageBuffer]) and
+    manipulating such a struct in non-interface storage classes requires special
+    capabilities ([VariablePointers][VulkanExtensionVariablePointers]).
+    Requiring these two extensions together will significantly limit the
+    Vulkan-capable device we can target; basically ruling out mobile support..
+
+1.  An alternative to having one level of indirection (as is the case with
+    `MemrefDescriptor`s), is to embed the `!spv.array` or `!spv.rtarray`
+    directly in the `MemrefDescriptor`, Having such a descriptor at the ABI
+    boundary implies that the first few bytes of the input/output buffers would
+    need to be reserved for shape/stride information. This adds an unnecessary
+    burden on the host side.
+
+1.  A more performant approach would be to have the data be an `OpVariable`,
+    with the shape and strides passed using a separate `OpVariable`. This has
+    further advantages:
+
+    *   All the dynamic shape/stride information of the `memref` can be combined
+        into a single descriptor. Descriptors are
+        [limited resources on many Vulkan hardware][VulkanGPUInfoMaxPerStageDescriptorStorageBuffers].
+        So combining them would help make the generated code more portable
+        across devices.
+    *   If the shape/stride information is small enough, they could be accessed
+        using [PushConstants][VulkanPushConstants] that are faster to access and
+        avoid buffer allocation overheads. These would be unnecessary if all
+        shapes are static. In the dynamic shape cases, a few parameters are
+        typically enough to compute the shape of all `memref`s used/referenced
+        within the kernel making the use of PushConstants possible.
+    *   The shape/stride information (typically) needs to be update less
+        frequently than the data stored in the buffers. They could be part of
+        different descriptor sets.
+
 ### Automated development flow
 
 One of the goals of SPIR-V dialect development is to leverage both the SPIR-V
@@ -1303,6 +1368,7 @@ dialect.
 [SpirvLogicalLayout]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#_a_id_logicallayout_a_logical_layout_of_a_module
 [SpirvGrammar]: https://raw.githubusercontent.com/KhronosGroup/SPIRV-Headers/master/include/spirv/unified1/spirv.core.grammar.json
 [SpirvShaderValidation]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#_a_id_shadervalidation_a_validation_rules_for_shader_a_href_capability_capabilities_a
+[SpirvOpVariable]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#OpVariable
 [GlslStd450]: https://www.khronos.org/registry/spir-v/specs/1.0/GLSL.std.450.html
 [ArrayType]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#OpTypeArray
 [ImageType]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#OpTypeImage
@@ -1346,6 +1412,11 @@ dialect.
 [GitHubLoweringTracking]: https://github.com/tensorflow/mlir/issues/303
 [GenSpirvUtilsPy]: https://github.com/llvm/llvm-project/blob/master/mlir/utils/spirv/gen_spirv_dialect.py
 [CustomTypeAttrTutorial]: ../Tutorials/DefiningAttributesAndTypes.md
+[VulkanExtensionPhysicalStorageBuffer]: https://github.com/KhronosGroup/SPIRV-Registry/blob/master/extensions/KHR/SPV_KHR_physical_storage_buffer.html
+[VulkanExtensionVariablePointers]: https://github.com/KhronosGroup/SPIRV-Registry/blob/master/extensions/KHR/SPV_KHR_variable_pointers.html
 [VulkanSpirv]: https://renderdoc.org/vkspec_chunked/chap40.html#spirvenv
 [VulkanShaderInterface]: https://renderdoc.org/vkspec_chunked/chap14.html#interfaces-resources
+[VulkanShaderInterfaceStorageClass]: https://renderdoc.org/vkspec_chunked/chap15.html#interfaces
 [VulkanResourceLimits]: https://renderdoc.org/vkspec_chunked/chap36.html#limits
+[VulkanGPUInfoMaxPerStageDescriptorStorageBuffers]: https://vulkan.gpuinfo.org/displaydevicelimit.php?name=maxPerStageDescriptorStorageBuffers&platform=android
+[VulkanPushConstants]: https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/vkCmdPushConstants.html

@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple arm64-linux -filetype obj -o - %s | llvm-readobj -u | FileCheck %s
+# RUN: llvm-mc -triple arm64-linux -filetype obj -o - %s | llvm-readobj -u - | FileCheck %s
 
 # CHECK:      [0x0] CIE length=16
 # CHECK-NEXT:   version: 1

@@ -1,4 +1,5 @@
-; RUN: opt -analyze -scalar-evolution -scalar-evolution-max-add-rec-size=3 < %s | FileCheck %s
+; RUN: opt -analyze -enable-new-pm=0 -scalar-evolution -scalar-evolution-max-add-rec-size=3 < %s | FileCheck %s
+; RUN: opt -disable-output "-passes=print<scalar-evolution>" -scalar-evolution-max-add-rec-size=3 < %s 2>&1 | FileCheck %s
 
 ; Show that we are able to avoid creation of huge SCEVs by capping the max
 ; AddRec size.

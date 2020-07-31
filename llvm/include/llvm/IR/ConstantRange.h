@@ -150,6 +150,14 @@ public:
                                              const APInt &Other,
                                              unsigned NoWrapKind);
 
+  /// Returns true if ConstantRange calculations are supported for intrinsic
+  /// with \p IntrinsicID.
+  static bool isIntrinsicSupported(Intrinsic::ID IntrinsicID);
+
+  /// Compute range of intrinsic result for the given operand ranges.
+  static ConstantRange intrinsic(Intrinsic::ID IntrinsicID,
+                                 ArrayRef<ConstantRange> Ops);
+
   /// Set up \p Pred and \p RHS such that
   /// ConstantRange::makeExactICmpRegion(Pred, RHS) == *this.  Return true if
   /// successful.
@@ -456,8 +464,9 @@ public:
   ConstantRange inverse() const;
 
   /// Calculate absolute value range. If the original range contains signed
-  /// min, then the resulting range will also contain signed min.
-  ConstantRange abs() const;
+  /// min, then the resulting range will contain signed min if and only if
+  /// \p IntMinIsPoison is false.
+  ConstantRange abs(bool IntMinIsPoison = false) const;
 
   /// Represents whether an operation on the given constant range is known to
   /// always or never overflow.

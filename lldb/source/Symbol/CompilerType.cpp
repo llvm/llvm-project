@@ -317,9 +317,10 @@ unsigned CompilerType::GetTypeQualifiers() const {
 
 // Creating related types
 
-CompilerType CompilerType::GetArrayElementType(uint64_t *stride) const {
+CompilerType CompilerType::GetArrayElementType(ExecutionContextScope *exe_scope,
+                                               uint64_t *stride) const {
   if (IsValid()) {
-    return m_type_system->GetArrayElementType(m_type, stride);
+    return m_type_system->GetArrayElementType(m_type, stride, exe_scope);
   }
   return CompilerType();
 }
@@ -766,8 +767,8 @@ LLVM_DUMP_METHOD void CompilerType::dump() const {
 
 bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
                                     lldb::offset_t data_byte_offset,
-                                    size_t data_byte_size,
-                                    Scalar &value) const {
+                                    size_t data_byte_size, Scalar &value,
+                                    ExecutionContextScope *exe_scope) const {
   if (!IsValid())
     return false;
 
@@ -780,7 +781,7 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
     if (encoding == lldb::eEncodingInvalid || count != 1)
       return false;
 
-    llvm::Optional<uint64_t> byte_size = GetByteSize(nullptr);
+    llvm::Optional<uint64_t> byte_size = GetByteSize(exe_scope);
     if (!byte_size)
       return false;
     lldb::offset_t offset = data_byte_offset;

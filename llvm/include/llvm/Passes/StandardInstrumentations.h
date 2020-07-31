@@ -16,6 +16,7 @@
 #define LLVM_PASSES_STANDARDINSTRUMENTATIONS_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassTimingInfo.h"
 
@@ -38,7 +39,7 @@ public:
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
 private:
-  bool printBeforePass(StringRef PassID, Any IR);
+  void printBeforePass(StringRef PassID, Any IR);
   void printAfterPass(StringRef PassID, Any IR);
   void printAfterPassInvalidated(StringRef PassID);
 
@@ -53,14 +54,37 @@ private:
   bool StoreModuleDesc = false;
 };
 
+class OptNoneInstrumentation {
+public:
+  OptNoneInstrumentation(bool DebugLogging) : DebugLogging(DebugLogging) {}
+  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+
+private:
+  bool skip(StringRef PassID, Any IR);
+  bool DebugLogging;
+};
+
+// Debug logging for transformation and analysis passes.
+class PrintPassInstrumentation {
+public:
+  PrintPassInstrumentation(bool DebugLogging) : DebugLogging(DebugLogging) {}
+  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+
+private:
+  bool DebugLogging;
+};
+
 /// This class provides an interface to register all the standard pass
 /// instrumentations and manages their state (if any).
 class StandardInstrumentations {
   PrintIRInstrumentation PrintIR;
+  PrintPassInstrumentation PrintPass;
   TimePassesHandler TimePasses;
+  OptNoneInstrumentation OptNone;
 
 public:
-  StandardInstrumentations() = default;
+  StandardInstrumentations(bool DebugLogging)
+      : PrintPass(DebugLogging), OptNone(DebugLogging) {}
 
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 

@@ -32,7 +32,7 @@
 #  define _GNUC_VER_NEW 0
 #endif
 
-#define _LIBCPP_VERSION 11000
+#define _LIBCPP_VERSION 12000
 
 #ifndef _LIBCPP_ABI_VERSION
 #  define _LIBCPP_ABI_VERSION 1
@@ -105,6 +105,10 @@
 // Re-worked external template instantiations for std::string with a focus on
 // performance and fast-path inlining.
 #  define _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
+// Enable clang::trivial_abi on std::unique_ptr.
+#  define _LIBCPP_ABI_ENABLE_UNIQUE_PTR_TRIVIAL_ABI
+// Enable clang::trivial_abi on std::shared_ptr and std::weak_ptr
+#  define _LIBCPP_ABI_ENABLE_SHARED_PTR_TRIVIAL_ABI
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !defined(_LIBCPP_OBJECT_FORMAT_COFF)
 // Enable compiling copies of now inline methods into the dylib to support
@@ -344,13 +348,11 @@
 #  if defined(__FreeBSD__)
 #    define _LIBCPP_HAS_ALIGNED_ALLOC
 #    define _LIBCPP_HAS_QUICK_EXIT
-#    define _LIBCPP_HAS_C11_FEATURES
 #    if __FreeBSD_version >= 1300064 || \
        (__FreeBSD_version >= 1201504 && __FreeBSD_version < 1300000)
 #      define _LIBCPP_HAS_TIMESPEC_GET
 #    endif
 #  elif defined(__BIONIC__)
-#    define _LIBCPP_HAS_C11_FEATURES
 #    if __ANDROID_API__ >= 21
 #      define _LIBCPP_HAS_QUICK_EXIT
 #    endif
@@ -364,7 +366,6 @@
 #    define _LIBCPP_HAS_ALIGNED_ALLOC
 #    define _LIBCPP_HAS_QUICK_EXIT
 #    define _LIBCPP_HAS_TIMESPEC_GET
-#    define _LIBCPP_HAS_C11_FEATURES
 #  elif defined(__linux__)
 #    if !defined(_LIBCPP_HAS_MUSL_LIBC)
 #      if _LIBCPP_GLIBC_PREREQ(2, 15) || defined(__BIONIC__)
@@ -372,16 +373,24 @@
 #      endif
 #      if _LIBCPP_GLIBC_PREREQ(2, 17)
 #        define _LIBCPP_HAS_ALIGNED_ALLOC
-#        define _LIBCPP_HAS_C11_FEATURES
 #        define _LIBCPP_HAS_TIMESPEC_GET
 #      endif
 #    else // defined(_LIBCPP_HAS_MUSL_LIBC)
 #      define _LIBCPP_HAS_ALIGNED_ALLOC
 #      define _LIBCPP_HAS_QUICK_EXIT
 #      define _LIBCPP_HAS_TIMESPEC_GET
-#      define _LIBCPP_HAS_C11_FEATURES
 #    endif
-#  endif // __linux__
+#  elif defined(__APPLE__)
+     // timespec_get and aligned_alloc were introduced in macOS 10.15 and
+     // aligned releases
+#    if (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101500 || \
+         __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ >= 130000 || \
+         __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ >= 130000 || \
+         __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ >= 60000)
+#      define _LIBCPP_HAS_ALIGNED_ALLOC
+#      define _LIBCPP_HAS_TIMESPEC_GET
+#    endif
+#  endif // __APPLE__
 #endif
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -421,10 +430,6 @@ typedef __char32_t char32_t;
 
 #if !__has_feature(cxx_exceptions)
 #  define _LIBCPP_NO_EXCEPTIONS
-#endif
-
-#if !(__has_feature(cxx_rtti)) && !defined(_LIBCPP_NO_RTTI)
-#define _LIBCPP_NO_RTTI
 #endif
 
 #if !(__has_feature(cxx_strong_enums))
@@ -1109,13 +1114,12 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #endif
 
 // Try to find out if RTTI is disabled.
-// g++ and cl.exe have RTTI on by default and define a macro when it is.
-#if !defined(_LIBCPP_NO_RTTI)
-#  if defined(__GNUC__) && !defined(__GXX_RTTI)
-#    define _LIBCPP_NO_RTTI
-#  elif defined(_LIBCPP_COMPILER_MSVC) && !defined(_CPPRTTI)
-#    define _LIBCPP_NO_RTTI
-#  endif
+#if defined(_LIBCPP_COMPILER_CLANG) && !__has_feature(cxx_rtti)
+#  define _LIBCPP_NO_RTTI
+#elif defined(__GNUC__) && !defined(__GXX_RTTI)
+#  define _LIBCPP_NO_RTTI
+#elif defined(_LIBCPP_COMPILER_MSVC) && !defined(_CPPRTTI)
+#  define _LIBCPP_NO_RTTI
 #endif
 
 #ifndef _LIBCPP_WEAK

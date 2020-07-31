@@ -2213,7 +2213,7 @@ def : GCNPat<
 
 def : GCNPat<
   (add i32:$src0, (i32 NegSubInlineConst32:$src1)),
-  (V_SUB_I32_e64 VS_32:$src0, NegSubInlineConst32:$src1)> {
+  (V_SUB_CO_U32_e64 VS_32:$src0, NegSubInlineConst32:$src1)> {
   let SubtargetPredicate = NotHasAddNoCarryInsts;
 }
 

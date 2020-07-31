@@ -22,10 +22,10 @@ define void @print_res() nounwind {
 ; CHECK-NEXT:    isellt 3, 3, 4
 ; CHECK-NEXT:    li 4, 0
 ; CHECK-NEXT:    addi 3, 3, 1
-; CHECK-NEXT:    mtctr 3
-; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    li 7, -1
 ; CHECK-NEXT:    li 5, 0
+; CHECK-NEXT:    mtctr 3
+; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:    lbz 5, 0(5)
 ; CHECK-NEXT:    bdz .LBB0_6
 ; CHECK-NEXT:  # %bb.1:
@@ -62,23 +62,23 @@ define void @print_res() nounwind {
 ; CHECK-NEXT:    add 4, 4, 6
 ; CHECK-NEXT:  .LBB0_6:
 ; CHECK-NEXT:    xori 5, 5, 84
-; CHECK-NEXT:    cntlzw 5, 5
 ; CHECK-NEXT:    clrldi 3, 3, 32
-; CHECK-NEXT:    std 3, 104(1)
-; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
-; CHECK-NEXT:    ld 3, .LC0@toc@l(3)
 ; CHECK-NEXT:    li 7, 0
 ; CHECK-NEXT:    li 8, 3
+; CHECK-NEXT:    std 3, 104(1)
+; CHECK-NEXT:    cntlzw 5, 5
+; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
+; CHECK-NEXT:    li 10, 0
+; CHECK-NEXT:    ld 3, .LC0@toc@l(3)
 ; CHECK-NEXT:    srwi 5, 5, 5
 ; CHECK-NEXT:    add 4, 4, 5
 ; CHECK-NEXT:    li 5, 0
 ; CHECK-NEXT:    std 5, 120(1)
 ; CHECK-NEXT:    li 5, 3
-; CHECK-NEXT:    std 5, 96(1)
 ; CHECK-NEXT:    clrldi 6, 4, 32
 ; CHECK-NEXT:    li 4, 3
+; CHECK-NEXT:    std 5, 96(1)
 ; CHECK-NEXT:    li 5, 0
-; CHECK-NEXT:    li 10, 0
 ; CHECK-NEXT:    bl printf
 ; CHECK-NEXT:    nop
   %1 = load i32, i32* undef, align 4

@@ -112,16 +112,14 @@ define i32 @no_sink_readonly_call(i32 %x, i32 %y, i32* %p) {
 ; CHECK-NEXT: i32.const   $push[[L11:[0-9]+]]=, 2{{$}}
 ; CHECK-NEXT: i32.lt_s    $push[[L4:[0-9]+]]=, $3, $pop[[L11]]{{$}}
 ; CHECK-NEXT: i32.xor     $push[[L6:[0-9]+]]=, $pop[[L3]], $pop[[L4]]{{$}}
-; CHECK-NEXT: i32.xor     $push[[L7:[0-9]+]]=, $pop[[L5]], $pop[[L6]]{{$}}
-; CHECK-NEXT: i32.const   $push10=, 1{{$}}
-; CHECK-NEXT: i32.ne      $push8=, $pop7, $pop10{{$}}
-; CHECK-NEXT: br_if       0, $pop8{{$}}
-; CHECK-NEXT: i32.const   $push9=, 0{{$}}
-; CHECK-NEXT: return      $pop9{{$}}
+; CHECK-NEXT: i32.eq      $push7=, $pop[[L5]], $pop[[L6]]{{$}}
+; CHECK-NEXT: br_if       0, $pop7{{$}}
+; CHECK-NEXT: i32.const   $push8=, 0{{$}}
+; CHECK-NEXT: return      $pop8{{$}}
 ; CHECK-NEXT: .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT: end_block{{$}}
-; CHECK-NEXT: i32.const   $push14=, 1{{$}}
-; CHECK-NEXT: return      $pop14{{$}}
+; CHECK-NEXT: i32.const   $push12=, 1{{$}}
+; CHECK-NEXT: return      $pop12{{$}}
 ; NOREGS-LABEL: stack_uses:
 ; NOREGS: .functype stack_uses (i32, i32, i32, i32) -> (i32){{$}}
 ; NOREGS-NEXT: block {{$}}
@@ -139,9 +137,7 @@ define i32 @no_sink_readonly_call(i32 %x, i32 %y, i32* %p) {
 ; NOREGS-NEXT: i32.const   2{{$}}
 ; NOREGS-NEXT: i32.lt_s
 ; NOREGS-NEXT: i32.xor {{$}}
-; NOREGS-NEXT: i32.xor {{$}}
-; NOREGS-NEXT: i32.const   1{{$}}
-; NOREGS-NEXT: i32.ne {{$}}
+; NOREGS-NEXT: i32.eq {{$}}
 ; NOREGS-NEXT: br_if       0{{$}}
 ; NOREGS-NEXT: i32.const   0{{$}}
 ; NOREGS-NEXT: return{{$}}

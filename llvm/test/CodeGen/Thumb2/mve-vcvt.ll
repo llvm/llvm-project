@@ -45,8 +45,8 @@ define arm_aapcs_vfpcc <4 x i32> @foo_int32_float(<4 x float> %src) {
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    vcvt.s32.f32 s4, s0
 ; CHECK-MVE-NEXT:    vcvt.s32.f32 s6, s1
-; CHECK-MVE-NEXT:    vcvt.s32.f32 s8, s3
 ; CHECK-MVE-NEXT:    vcvt.s32.f32 s10, s2
+; CHECK-MVE-NEXT:    vcvt.s32.f32 s8, s3
 ; CHECK-MVE-NEXT:    vmov r0, s4
 ; CHECK-MVE-NEXT:    vmov.32 q0[0], r0
 ; CHECK-MVE-NEXT:    vmov r0, s6
@@ -71,8 +71,8 @@ define arm_aapcs_vfpcc <4 x i32> @foo_uint32_float(<4 x float> %src) {
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s4, s0
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s6, s1
-; CHECK-MVE-NEXT:    vcvt.u32.f32 s8, s3
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s10, s2
+; CHECK-MVE-NEXT:    vcvt.u32.f32 s8, s3
 ; CHECK-MVE-NEXT:    vmov r0, s4
 ; CHECK-MVE-NEXT:    vmov.32 q0[0], r0
 ; CHECK-MVE-NEXT:    vmov r0, s6

@@ -13,7 +13,6 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Triple.h"
@@ -103,10 +102,6 @@ private:
            CorrectlyRoundedSqrt.isValid();
   }
 
-  // GPU architectures for which we have raised an error in
-  // CheckRocmVersionSupportsArch.
-  mutable llvm::SmallSet<CudaArch, 4> ArchsWithBadVersion;
-
   void scanLibDevicePath(llvm::StringRef Path);
   void ParseHIPVersionFile(llvm::StringRef V);
   SmallVector<Candidate, 4> getInstallationPathCandidates();
@@ -123,12 +118,6 @@ public:
                                   StringRef LibDeviceFile, bool Wave64,
                                   bool DAZ, bool FiniteOnly, bool UnsafeMathOpt,
                                   bool FastRelaxedMath, bool CorrectSqrt) const;
-
-  /// Emit an error if Version does not support the given Arch.
-  ///
-  /// If either Version or Arch is unknown, does not emit an error.  Emits at
-  /// most one error per Arch.
-  void CheckRocmVersionSupportsArch(CudaArch Arch) const;
 
   /// Check whether we detected a valid HIP runtime.
   bool hasHIPRuntime() const { return HasHIPRuntime; }

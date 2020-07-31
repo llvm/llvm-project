@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Writer.h"
+#include "CallGraphSort.h"
 #include "Config.h"
 #include "DLL.h"
 #include "InputFiles.h"
@@ -229,6 +230,7 @@ private:
   void setSectionPermissions();
   void writeSections();
   void writeBuildId();
+  void sortSections();
   void sortExceptionTable();
   void sortCRTSectionChunks(std::vector<Chunk *> &chunks);
   void addSyntheticIdata();
@@ -798,6 +800,19 @@ static bool shouldStripSectionSuffix(SectionChunk *sc, StringRef name) {
          name.startswith(".xdata$") || name.startswith(".eh_frame$");
 }
 
+void Writer::sortSections() {
+  if (!config->callGraphProfile.empty()) {
+    DenseMap<const SectionChunk *, int> order = computeCallGraphProfileOrder();
+    for (auto it : order) {
+      if (DefinedRegular *sym = it.first->sym)
+        config->order[sym->getName()] = it.second;
+    }
+  }
+  if (!config->order.empty())
+    for (auto it : partialSections)
+      sortBySectionOrder(it.second->chunks);
+}
+
 // Create output section objects and add them to OutputSections.
 void Writer::createSections() {
   // First, create the builtin sections.
@@ -861,10 +876,7 @@ void Writer::createSections() {
   if (hasIdata)
     addSyntheticIdata();
 
-  // Process an /order option.
-  if (!config->order.empty())
-    for (auto it : partialSections)
-      sortBySectionOrder(it.second->chunks);
+  sortSections();
 
   if (hasIdata)
     locateImportTables();
@@ -1393,7 +1405,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     pe->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_GUARD_CF;
   if (config->integrityCheck)
     pe->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_FORCE_INTEGRITY;
-  if (setNoSEHCharacteristic)
+  if (setNoSEHCharacteristic || config->noSEH)
     pe->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_NO_SEH;
   if (config->terminalServerAware)
     pe->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE;
@@ -1864,6 +1876,10 @@ void Writer::sortExceptionTable() {
   uint8_t *end = bufAddr(lastPdata) + lastPdata->getSize();
   if (config->machine == AMD64) {
     struct Entry { ulittle32_t begin, end, unwind; };
+    if ((end - begin) % sizeof(Entry) != 0) {
+      fatal("unexpected .pdata size: " + Twine(end - begin) +
+            " is not a multiple of " + Twine(sizeof(Entry)));
+    }
     parallelSort(
         MutableArrayRef<Entry>((Entry *)begin, (Entry *)end),
         [](const Entry &a, const Entry &b) { return a.begin < b.begin; });
@@ -1871,6 +1887,10 @@ void Writer::sortExceptionTable() {
   }
   if (config->machine == ARMNT || config->machine == ARM64) {
     struct Entry { ulittle32_t begin, unwind; };
+    if ((end - begin) % sizeof(Entry) != 0) {
+      fatal("unexpected .pdata size: " + Twine(end - begin) +
+            " is not a multiple of " + Twine(sizeof(Entry)));
+    }
     parallelSort(
         MutableArrayRef<Entry>((Entry *)begin, (Entry *)end),
         [](const Entry &a, const Entry &b) { return a.begin < b.begin; });

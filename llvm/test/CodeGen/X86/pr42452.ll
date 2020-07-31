@@ -8,7 +8,7 @@ define void @foo(i1 %c, <2 x i64> %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $dil killed $dil killed $edi
 ; CHECK-NEXT:    movq %xmm0, %rax
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; CHECK-NEXT:    movq %xmm0, %rcx
 ; CHECK-NEXT:    movb %dil, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; CHECK-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill

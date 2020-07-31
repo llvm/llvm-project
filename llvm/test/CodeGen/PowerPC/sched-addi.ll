@@ -18,9 +18,9 @@ define void @test([0 x %_elem_type_of_x]* noalias %.x, [0 x %_elem_type_of_a]* %
 ; CHECK-P9-NEXT:    addi 6, 6, 16
 ; CHECK-P9-NEXT:    rldicr 5, 5, 0, 58
 ; CHECK-P9-NEXT:    addi 5, 5, -32
+; CHECK-P9-NEXT:    lxvdsx 0, 0, 6
 ; CHECK-P9-NEXT:    rldicl 5, 5, 59, 5
 ; CHECK-P9-NEXT:    addi 5, 5, 1
-; CHECK-P9-NEXT:    lxvdsx 0, 0, 6
 ; CHECK-P9-NEXT:    mtctr 5
 ; CHECK-P9-NEXT:    .p2align 4
 ; CHECK-P9-NEXT:  .LBB0_1: # %vector.body
@@ -36,13 +36,13 @@ define void @test([0 x %_elem_type_of_x]* noalias %.x, [0 x %_elem_type_of_a]* %
 ; CHECK-P9-NEXT:    xvmuldp 4, 4, 0
 ; CHECK-P9-NEXT:    xvmuldp 3, 3, 0
 ; CHECK-P9-NEXT:    xvmuldp 5, 5, 0
+; CHECK-P9-NEXT:    addi 4, 4, 256
+; CHECK-P9-NEXT:    xvmuldp 6, 6, 0
 ; CHECK-P9-NEXT:    stxv 1, 16(3)
+; CHECK-P9-NEXT:    stxv 2, 0(3)
 ; CHECK-P9-NEXT:    stxv 3, 48(3)
 ; CHECK-P9-NEXT:    stxv 4, 32(3)
 ; CHECK-P9-NEXT:    stxv 5, 240(3)
-; CHECK-P9-NEXT:    addi 4, 4, 256
-; CHECK-P9-NEXT:    xvmuldp 6, 6, 0
-; CHECK-P9-NEXT:    stxv 2, 0(3)
 ; CHECK-P9-NEXT:    stxv 6, 224(3)
 ; CHECK-P9-NEXT:    addi 3, 3, 256
 ; CHECK-P9-NEXT:    bdnz .LBB0_1
@@ -57,9 +57,9 @@ define void @test([0 x %_elem_type_of_x]* noalias %.x, [0 x %_elem_type_of_a]* %
 ; CHECK-P9-NO-HEURISTIC-NEXT:    rldicr 5, 5, 0, 58
 ; CHECK-P9-NO-HEURISTIC-NEXT:    addi 6, 6, 16
 ; CHECK-P9-NO-HEURISTIC-NEXT:    addi 5, 5, -32
+; CHECK-P9-NO-HEURISTIC-NEXT:    lxvdsx 0, 0, 6
 ; CHECK-P9-NO-HEURISTIC-NEXT:    rldicl 5, 5, 59, 5
 ; CHECK-P9-NO-HEURISTIC-NEXT:    addi 5, 5, 1
-; CHECK-P9-NO-HEURISTIC-NEXT:    lxvdsx 0, 0, 6
 ; CHECK-P9-NO-HEURISTIC-NEXT:    mtctr 5
 ; CHECK-P9-NO-HEURISTIC-NEXT:    .p2align 4
 ; CHECK-P9-NO-HEURISTIC-NEXT:  .LBB0_1: # %vector.body
@@ -76,13 +76,13 @@ define void @test([0 x %_elem_type_of_x]* noalias %.x, [0 x %_elem_type_of_a]* %
 ; CHECK-P9-NO-HEURISTIC-NEXT:    xvmuldp 3, 3, 0
 ; CHECK-P9-NO-HEURISTIC-NEXT:    xvmuldp 6, 6, 0
 ; CHECK-P9-NO-HEURISTIC-NEXT:    xvmuldp 5, 5, 0
+; CHECK-P9-NO-HEURISTIC-NEXT:    addi 4, 4, 256
 ; CHECK-P9-NO-HEURISTIC-NEXT:    stxv 1, 16(3)
 ; CHECK-P9-NO-HEURISTIC-NEXT:    stxv 2, 0(3)
 ; CHECK-P9-NO-HEURISTIC-NEXT:    stxv 3, 48(3)
 ; CHECK-P9-NO-HEURISTIC-NEXT:    stxv 4, 32(3)
 ; CHECK-P9-NO-HEURISTIC-NEXT:    stxv 5, 240(3)
 ; CHECK-P9-NO-HEURISTIC-NEXT:    stxv 6, 224(3)
-; CHECK-P9-NO-HEURISTIC-NEXT:    addi 4, 4, 256
 ; CHECK-P9-NO-HEURISTIC-NEXT:    addi 3, 3, 256
 ; CHECK-P9-NO-HEURISTIC-NEXT:    bdnz .LBB0_1
 ; CHECK-P9-NO-HEURISTIC-NEXT:  # %bb.2: # %return.block

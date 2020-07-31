@@ -448,8 +448,8 @@ define i32 @test25(i1 %c)  {
 ; CHECK:       jump:
 ; CHECK-NEXT:    br label [[RET]]
 ; CHECK:       ret:
-; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 10, [[JUMP]] ], [ 20, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32 [[A]]
+; CHECK-NEXT:    [[B:%.*]] = phi i32 [ 10, [[JUMP]] ], [ 20, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[B]]
 ;
 entry:
   br i1 %c, label %jump, label %ret
@@ -468,8 +468,8 @@ define i32 @test26(i1 %cond)  {
 ; CHECK:       jump:
 ; CHECK-NEXT:    br label [[RET]]
 ; CHECK:       ret:
-; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 20, [[ENTRY:%.*]] ], [ 10, [[JUMP]] ]
-; CHECK-NEXT:    ret i32 [[A]]
+; CHECK-NEXT:    [[B:%.*]] = phi i32 [ 10, [[JUMP]] ], [ 20, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[B]]
 ;
 entry:
   br i1 %cond, label %jump, label %ret
@@ -489,8 +489,8 @@ define i32 @test27(i1 %c, i32 %A, i32 %B)  {
 ; CHECK:       jump:
 ; CHECK-NEXT:    br label [[RET]]
 ; CHECK:       ret:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[A:%.*]], [[JUMP]] ], [ [[B:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32 [[P]]
+; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[A:%.*]], [[JUMP]] ], [ [[B:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[S]]
 ;
 entry:
   br i1 %c, label %jump, label %ret
@@ -509,8 +509,8 @@ define i32 @test28(i1 %cond, i32 %A, i32 %B)  {
 ; CHECK:       jump:
 ; CHECK-NEXT:    br label [[RET]]
 ; CHECK:       ret:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[A:%.*]], [[JUMP]] ], [ [[B:%.*]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32 [[P]]
+; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[A:%.*]], [[JUMP]] ], [ [[B:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[S]]
 ;
 entry:
   br i1 %cond, label %jump, label %ret
@@ -530,10 +530,10 @@ define i32 @test29(i1 %cond, i32 %A, i32 %B)  {
 ; CHECK:       jump:
 ; CHECK-NEXT:    br label [[RET]]
 ; CHECK:       ret:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[A:%.*]], [[JUMP]] ], [ [[B:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[A:%.*]], [[JUMP]] ], [ [[B:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
-; CHECK-NEXT:    ret i32 [[P]]
+; CHECK-NEXT:    ret i32 [[S]]
 ;
 entry:
   br i1 %cond, label %jump, label %ret
@@ -2000,6 +2000,21 @@ merge:
   ret i32 %s
 }
 
+define i32 @select_dominating_cond_same_labels(i1 %cond) {
+; CHECK-LABEL: @select_dominating_cond_same_labels(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND:%.*]], i32 123, i32 456
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  %result = select i1 %cond, i32 123, i32 456
+  br i1 %cond, label %exit, label %exit
+exit:
+  ret i32 %result
+}
+
 define i32 @select_phi_same_condition(i1 %cond, i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @select_phi_same_condition(
 ; CHECK-NEXT:  entry:
@@ -2437,14 +2452,13 @@ exit:
   ret i32 %sel
 }
 
-; Negative tests to ensure we don't remove selects with undef true/false values.
+; FIXME: We shouldn't remove selects with undef true/false values.
 ; See https://bugs.llvm.org/show_bug.cgi?id=31633
 ; https://lists.llvm.org/pipermail/llvm-dev/2016-October/106182.html
 ; https://reviews.llvm.org/D83360
 define i32 @false_undef(i1 %cond, i32 %x) {
 ; CHECK-LABEL: @false_undef(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], i32 [[X:%.*]], i32 undef
-; CHECK-NEXT:    ret i32 [[S]]
+; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
   %s = select i1 %cond, i32 %x, i32 undef
   ret i32 %s
@@ -2452,8 +2466,7 @@ define i32 @false_undef(i1 %cond, i32 %x) {
 
 define i32 @true_undef(i1 %cond, i32 %x) {
 ; CHECK-LABEL: @true_undef(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], i32 undef, i32 [[X:%.*]]
-; CHECK-NEXT:    ret i32 [[S]]
+; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
   %s = select i1 %cond, i32 undef, i32 %x
   ret i32 %s
@@ -2461,8 +2474,7 @@ define i32 @true_undef(i1 %cond, i32 %x) {
 
 define <2 x i32> @false_undef_vec(i1 %cond, <2 x i32> %x) {
 ; CHECK-LABEL: @false_undef_vec(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], <2 x i32> [[X:%.*]], <2 x i32> undef
-; CHECK-NEXT:    ret <2 x i32> [[S]]
+; CHECK-NEXT:    ret <2 x i32> [[X:%.*]]
 ;
   %s = select i1 %cond, <2 x i32> %x, <2 x i32> undef
   ret <2 x i32> %s
@@ -2470,9 +2482,47 @@ define <2 x i32> @false_undef_vec(i1 %cond, <2 x i32> %x) {
 
 define <2 x i32> @true_undef_vec(i1 %cond, <2 x i32> %x) {
 ; CHECK-LABEL: @true_undef_vec(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], <2 x i32> undef, <2 x i32> [[X:%.*]]
-; CHECK-NEXT:    ret <2 x i32> [[S]]
+; CHECK-NEXT:    ret <2 x i32> [[X:%.*]]
 ;
   %s = select i1 %cond, <2 x i32> undef, <2 x i32> %x
   ret <2 x i32> %s
+}
+
+define i8 @cond_freeze(i8 %x, i8 %y) {
+; CHECK-LABEL: @cond_freeze(
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 undef
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND_FR]], i8 [[X:%.*]], i8 [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %cond.fr = freeze i1 undef
+  %s = select i1 %cond.fr, i8 %x, i8 %y
+  ret i8 %s
+}
+
+define i8 @cond_freeze2(i8 %x, i8 %y) {
+; CHECK-LABEL: @cond_freeze2(
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 undef
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND_FR]], i8 [[X:%.*]], i8 1
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %cond.fr = freeze i1 undef
+  %s = select i1 %cond.fr, i8 %x, i8 1
+  ret i8 %s
+}
+
+declare void @foo2(i8, i8)
+
+define void @cond_freeze_multipleuses(i8 %x, i8 %y) {
+; CHECK-LABEL: @cond_freeze_multipleuses(
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 undef
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND_FR]], i8 [[X:%.*]], i8 [[Y:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[COND_FR]], i8 [[Y]], i8 [[X]]
+; CHECK-NEXT:    call void @foo2(i8 [[S]], i8 [[S2]])
+; CHECK-NEXT:    ret void
+;
+  %cond.fr = freeze i1 undef
+  %s = select i1 %cond.fr, i8 %x, i8 %y
+  %s2 = select i1 %cond.fr, i8 %y, i8 %x
+  call void @foo2(i8 %s, i8 %s2)
+  ret void
 }

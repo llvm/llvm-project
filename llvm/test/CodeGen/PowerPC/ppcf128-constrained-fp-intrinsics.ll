@@ -1397,10 +1397,10 @@ define void @test_constrained_libcall_multichain(float* %firstptr, ppc_fp128* %r
 ; PC64LE9-NEXT:    li 3, 0
 ; PC64LE9-NEXT:    xxlxor 2, 2, 2
 ; PC64LE9-NEXT:    xxlxor 4, 4, 4
+; PC64LE9-NEXT:    mr 30, 4
 ; PC64LE9-NEXT:    std 3, 8(4)
 ; PC64LE9-NEXT:    fmr 1, 31
 ; PC64LE9-NEXT:    fmr 3, 31
-; PC64LE9-NEXT:    mr 30, 4
 ; PC64LE9-NEXT:    stfd 31, 0(4)
 ; PC64LE9-NEXT:    bl __gcc_qadd
 ; PC64LE9-NEXT:    nop

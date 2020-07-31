@@ -1,12 +1,6 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=bonaire -enable-amdgpu-aa=0 -verify-machineinstrs -enable-misched -enable-aa-sched-mi < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx900 -enable-amdgpu-aa=0 -verify-machineinstrs -enable-misched -enable-aa-sched-mi -amdgpu-enable-global-sgpr-addr < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
-declare void @llvm.amdgcn.tbuffer.store.i32(i32, <4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1)
-declare void @llvm.amdgcn.tbuffer.store.v4i32(<4 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i1, i1)
-declare void @llvm.amdgcn.s.barrier() #1
-declare i32 @llvm.amdgcn.workitem.id.x() #2
-
-
 @stored_lds_ptr = addrspace(3) global i32 addrspace(3)* undef, align 4
 @stored_constant_ptr = addrspace(3) global i32 addrspace(4)* undef, align 8
 @stored_global_ptr = addrspace(3) global i32 addrspace(1)* undef, align 8
@@ -296,30 +290,33 @@ define amdgpu_kernel void @reorder_global_offsets_addr64_soffset0(i32 addrspace(
   ret void
 }
 
-; XGCN-LABEL: {{^}}reorder_local_load_tbuffer_store_local_load:
-; XCI: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}}, 0x4
-; XCI: TBUFFER_STORE_FORMAT
-; XCI: ds_read_b32 {{v[0-9]+}}, {{v[0-9]+}}, 0x8
-; define amdgpu_vs void @reorder_local_load_tbuffer_store_local_load(i32 addrspace(1)* %out, i32 %a1, i32 %vaddr) #0 {
-;   %ptr0 = load i32 addrspace(3)*, i32 addrspace(3)* addrspace(3)* @stored_lds_ptr, align 4
+; GCN-LABEL: {{^}}reorder_local_load_tbuffer_store_local_load:
+; GCN: tbuffer_store_format
+; GCN: ds_read2_b32 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}} offset0:1 offset1:2
+define amdgpu_vs void @reorder_local_load_tbuffer_store_local_load(i32 addrspace(1)* %out, i32 %a1, i32 %vaddr) #0 {
+  %ptr0 = load i32 addrspace(3)*, i32 addrspace(3)* addrspace(3)* @stored_lds_ptr, align 4
 
-;   %ptr1 = getelementptr inbounds i32, i32 addrspace(3)* %ptr0, i32 1
-;   %ptr2 = getelementptr inbounds i32, i32 addrspace(3)* %ptr0, i32 2
+  %ptr1 = getelementptr inbounds i32, i32 addrspace(3)* %ptr0, i32 1
+  %ptr2 = getelementptr inbounds i32, i32 addrspace(3)* %ptr0, i32 2
 
-;   %tmp1 = load i32, i32 addrspace(3)* %ptr1, align 4
+  %tmp1 = load i32, i32 addrspace(3)* %ptr1, align 4
 
-;   %vdata = insertelement <4 x i32> undef, i32 %a1, i32 0
-;   call void @llvm.amdgcn.tbuffer.store.v4i32(<4 x i32> %vdata, <4 x i32> undef,
-;         i32 %vaddr, i32 0, i32 0, i32 32, i32 14, i32 4, i1 1, i1 1)
+  %vdata = insertelement <4 x i32> undef, i32 %a1, i32 0
+  %vaddr.add = add i32 %vaddr, 32
+  call void @llvm.amdgcn.struct.tbuffer.store.v4i32(<4 x i32> %vdata, <4 x i32> undef, i32 %vaddr.add, i32 0, i32 0, i32 228, i32 3)
 
-;   %tmp2 = load i32, i32 addrspace(3)* %ptr2, align 4
+  %tmp2 = load i32, i32 addrspace(3)* %ptr2, align 4
 
-;   %add = add nsw i32 %tmp1, %tmp2
+  %add = add nsw i32 %tmp1, %tmp2
+  store i32 %add, i32 addrspace(1)* %out, align 4
+  ret void
+}
 
-;   store i32 %add, i32 addrspace(1)* %out, align 4
-;   ret void
-; }
+declare void @llvm.amdgcn.s.barrier() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #2
+declare void @llvm.amdgcn.struct.tbuffer.store.v4i32(<4 x i32>, <4 x i32>, i32, i32, i32, i32 immarg, i32 immarg) #3
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind convergent }
-attributes #2 = { nounwind readnone }
+attributes #1 = { convergent nounwind willreturn }
+attributes #2 = { nounwind readnone speculatable willreturn }
+attributes #3 = { nounwind willreturn writeonly }

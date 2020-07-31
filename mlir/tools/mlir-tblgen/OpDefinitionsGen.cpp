@@ -943,26 +943,71 @@ void OpEmitter::genSeparateArgParamBuilder() {
              << ");\n";
       }
       return;
-    case TypeParamKind::Collective:
-      body << "  "
-           << "assert(resultTypes.size() "
-           << (op.getNumVariableLengthResults() == 0 ? "==" : ">=") << " "
-           << (op.getNumResults() - op.getNumVariableLengthResults())
-           << "u && \"mismatched number of results\");\n";
+    case TypeParamKind::Collective: {
+      int numResults = op.getNumResults();
+      int numVariadicResults = op.getNumVariableLengthResults();
+      int numNonVariadicResults = numResults - numVariadicResults;
+      bool hasVariadicResult = numVariadicResults != 0;
+
+      // Avoid emitting "resultTypes.size() >= 0u" which is always true.
+      if (!(hasVariadicResult && numNonVariadicResults == 0))
+        body << "  "
+             << "assert(resultTypes.size() "
+             << (hasVariadicResult ? ">=" : "==") << " "
+             << numNonVariadicResults
+             << "u && \"mismatched number of results\");\n";
       body << "  " << builderOpState << ".addTypes(resultTypes);\n";
+    }
       return;
     }
     llvm_unreachable("unhandled TypeParamKind");
   };
 
+  // A separate arg param builder method will have a signature which is
+  // ambiguous with the collective params build method (generated in
+  // `genCollectiveParamBuilder` function below) if it has a single
+  // `ArrayReg<Type>` parameter for result types and a single `ArrayRef<Value>`
+  // parameter for the operands, no parameters after that, and the collective
+  // params build method has `attributes` as its last parameter (with
+  // a default value). This will happen when all of the following are true:
+  // 1. [`attributes` as last parameter in collective params build method]:
+  //    getNumVariadicRegions must be 0 (otherwise the collective params build
+  //    method ends with a `numRegions` param, and we don't specify default
+  //    value for attributes).
+  // 2. [single `ArrayRef<Value>` parameter for operands, and no parameters
+  //    after that]: numArgs() must be 1 (if not, each arg gets a separate param
+  //    in the build methods generated here) and the single arg must be a
+  //    non-attribute variadic argument.
+  // 3. [single `ArrayReg<Type>` parameter for result types]:
+  //      3a. paramKind should be Collective, or
+  //      3b. paramKind should be Separate and there should be a single variadic
+  //          result
+  //
+  // In that case, skip generating such ambiguous build methods here.
+  bool hasSingleVariadicResult =
+      op.getNumResults() == 1 && op.getResult(0).isVariadic();
+
+  bool hasSingleVariadicArg =
+      op.getNumArgs() == 1 &&
+      op.getArg(0).is<tblgen::NamedTypeConstraint *>() &&
+      op.getOperand(0).isVariadic();
+  bool hasNoVariadicRegions = op.getNumVariadicRegions() == 0;
+
   for (auto attrType : attrBuilderType) {
-    emit(attrType, TypeParamKind::Separate, /*inferType=*/false);
+    // Case 3b above.
+    if (!(hasNoVariadicRegions && hasSingleVariadicArg &&
+          hasSingleVariadicResult))
+      emit(attrType, TypeParamKind::Separate, /*inferType=*/false);
     if (canInferType(op))
       emit(attrType, TypeParamKind::None, /*inferType=*/true);
-    // Emit separate arg build with collective type, unless there is only one
-    // variadic result, in which case the above would have already generated
-    // the same build method.
-    if (!(op.getNumResults() == 1 && op.getResult(0).isVariableLength()))
+    // The separate arg + collective param kind method will be:
+    // (a) Same as the separate arg + separate param kind method if there is
+    //     only one variadic result.
+    // (b) Ambiguous with the collective params method under conditions in (3a)
+    //     above.
+    // In either case, skip generating such build method.
+    if (!hasSingleVariadicResult &&
+        !(hasNoVariadicRegions && hasSingleVariadicArg))
       emit(attrType, TypeParamKind::Collective, /*inferType=*/false);
   }
 }
@@ -981,8 +1026,12 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
       builderOpState +
       ", ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> "
       "attributes";
-  if (op.getNumVariadicRegions())
+  if (op.getNumVariadicRegions()) {
     params += ", unsigned numRegions";
+  } else {
+    // Provide default value for `attributes` since its the last parameter
+    params += " = {}";
+  }
   auto &m = opClass.newMethod("void", "build", params, OpMethod::MP_Static);
   auto &body = m.body();
 
@@ -1008,13 +1057,12 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
 
 void OpEmitter::genInferredTypeCollectiveParamBuilder() {
   // TODO: Expand to support regions.
-  const char *params =
-      "::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &{0}, "
-      "::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> "
-      "attributes";
-  auto &m =
-      opClass.newMethod("void", "build", formatv(params, builderOpState).str(),
-                        OpMethod::MP_Static);
+  std::string params =
+      std::string("::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &") +
+      builderOpState +
+      ", ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> "
+      "attributes = {}";
+  auto &m = opClass.newMethod("void", "build", params, OpMethod::MP_Static);
   auto &body = m.body();
 
   int numResults = op.getNumResults();
@@ -1184,8 +1232,12 @@ void OpEmitter::genCollectiveParamBuilder() {
       ", ::llvm::ArrayRef<::mlir::Type> resultTypes, ::mlir::ValueRange "
       "operands, "
       "::llvm::ArrayRef<::mlir::NamedAttribute> attributes";
-  if (op.getNumVariadicRegions())
+  if (op.getNumVariadicRegions()) {
     params += ", unsigned numRegions";
+  } else {
+    // Provide default value for `attributes` since its the last parameter
+    params += " = {}";
+  }
   auto &m = opClass.newMethod("void", "build", params, OpMethod::MP_Static);
   auto &body = m.body();
 
@@ -2088,15 +2140,19 @@ void OpOperandAdaptorEmitter::emitDef(const Operator &op, raw_ostream &os) {
 // Emits the opcode enum and op classes.
 static void emitOpClasses(const std::vector<Record *> &defs, raw_ostream &os,
                           bool emitDecl) {
-  IfDefScope scope("GET_OP_CLASSES", os);
   // First emit forward declaration for each class, this allows them to refer
   // to each others in traits for example.
   if (emitDecl) {
+    os << "#if defined(GET_OP_CLASSES) || defined(GET_OP_FWD_DEFINES)\n";
+    os << "#undef GET_OP_FWD_DEFINES\n";
     for (auto *def : defs) {
       Operator op(*def);
       os << "class " << op.getCppClassName() << ";\n";
     }
+    os << "#endif\n\n";
   }
+
+  IfDefScope scope("GET_OP_CLASSES", os);
   for (auto *def : defs) {
     Operator op(*def);
     if (emitDecl) {

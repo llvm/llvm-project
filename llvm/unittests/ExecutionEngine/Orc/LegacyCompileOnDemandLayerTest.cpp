@@ -16,10 +16,8 @@ using namespace llvm::orc;
 namespace {
 
 class DummyTrampolinePool : public orc::TrampolinePool {
-public:
-  Expected<JITTargetAddress> getTrampoline() {
-    llvm_unreachable("Unimplemented");
-  }
+protected:
+  Error grow() override { llvm_unreachable("Unimplemented"); }
 };
 
 class DummyCallbackManager : public JITCompileCallbackManager {

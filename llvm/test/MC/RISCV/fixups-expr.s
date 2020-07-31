@@ -1,12 +1,12 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+relax %s \
-# RUN:     | llvm-readobj -r | FileCheck -check-prefix=RELAX %s
+# RUN:     | llvm-readobj -r - | FileCheck -check-prefix=RELAX %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=-relax %s \
-# RUN:     | llvm-readobj -r | FileCheck -check-prefix=NORELAX %s
+# RUN:     | llvm-readobj -r - | FileCheck -check-prefix=NORELAX %s
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+relax %s \
-# RUN:     | llvm-readobj -r | FileCheck -check-prefix=RELAX %s
+# RUN:     | llvm-readobj -r - | FileCheck -check-prefix=RELAX %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=-relax %s \
-# RUN:     | llvm-readobj -r | FileCheck -check-prefix=NORELAX %s
+# RUN:     | llvm-readobj -r - | FileCheck -check-prefix=NORELAX %s
 
 # Check that subtraction expressions are emitted as two relocations
 # only when relaxation is enabled

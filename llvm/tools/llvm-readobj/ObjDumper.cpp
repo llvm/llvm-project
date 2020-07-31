@@ -155,8 +155,9 @@ void ObjDumper::printSectionsAsHex(const object::ObjectFile *Obj,
       // Least, if we cut in a middle of a row, we add the remaining characters,
       // which is (8 - (k * 2)).
       if (i < 4)
-        W.startLine() << format("%*c", (4 - i) * 8 + (4 - i) + (8 - (k * 2)),
-                                ' ');
+        W.startLine() << format("%*c", (4 - i) * 8 + (4 - i), ' ');
+      if (k < 4)
+        W.startLine() << format("%*c", 8 - k * 2, ' ');
 
       TmpSecPtr = SecPtr;
       for (i = 0; TmpSecPtr + i < SecEnd && i < 16; ++i)

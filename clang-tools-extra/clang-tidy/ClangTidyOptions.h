@@ -16,7 +16,6 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <functional>
-#include <map>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -108,7 +107,7 @@ struct ClangTidyOptions {
     unsigned Priority;
   };
   typedef std::pair<std::string, std::string> StringPair;
-  typedef std::map<std::string, ClangTidyValue> OptionMap;
+  typedef llvm::StringMap<ClangTidyValue> OptionMap;
 
   /// Key-value mapping used to store check-specific options.
   OptionMap CheckOptions;

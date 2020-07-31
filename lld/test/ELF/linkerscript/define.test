@@ -3,13 +3,17 @@
 # RUN: ld.lld -o %t --script %s %t.o
 # RUN: llvm-objdump --section-headers %t | FileCheck %s
 
+EXTERN(extern_defined)
 SECTIONS {
   . = DEFINED(defined) ? 0x11000 : .;
   .foo : { *(.foo*) }
   . = DEFINED(notdefined) ? 0x12000 : 0x13000;
   .bar : { *(.bar*) }
+  . = DEFINED(extern_defined) ? 0x14000 : 0x15000;
+  .test : { *(.test*) }
 }
 
 # CHECK: 1 .foo  00000008 0000000000011000 DATA
 # CHECK: 2 .bar  00000008 0000000000013000 DATA
-# CHECK: 3 .text 00000000 0000000000013008 TEXT
+# CHECK: 3 .test  00000008 0000000000015000 DATA
+# CHECK: 4 .text 00000000 0000000000015008 TEXT

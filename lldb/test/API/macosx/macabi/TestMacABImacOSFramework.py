@@ -15,6 +15,7 @@ class TestMacABImacOSFramework(TestBase):
     @skipIfDarwinEmbedded
     # There is a Clang driver change missing on llvm.org.
     @expectedFailureAll(bugnumber="rdar://problem/54986190>")
+    @skipIfReproducer # This is hitting https://bugs.python.org/issue22393
     def test_macabi(self):
         """Test the x86_64-apple-ios-macabi target linked against a macos dylib"""
         self.build()

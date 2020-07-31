@@ -32,6 +32,46 @@ define amdgpu_kernel void @fmuladd_f16(half addrspace(1)* %out, half addrspace(1
   ret void
 }
 
+; GCN-LABEL: {{^}}fmul_fadd_f16:
+; VI-FLUSH: v_mac_f16_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}
+
+; VI-DENORM-CONTRACT: v_fma_f16 {{v[0-9]+, v[0-9]+, v[0-9]+}}
+
+; GFX10-FLUSH:  v_mul_f16_e32
+; GFX10-FLUSH:  v_add_f16_e32
+; GFX10-DENORM-CONTRACT: v_fmac_f16_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}
+
+define amdgpu_kernel void @fmul_fadd_f16(half addrspace(1)* %out, half addrspace(1)* %in1,
+                         half addrspace(1)* %in2, half addrspace(1)* %in3) #0 {
+  %r0 = load half, half addrspace(1)* %in1
+  %r1 = load half, half addrspace(1)* %in2
+  %r2 = load half, half addrspace(1)* %in3
+  %mul = fmul half %r0, %r1
+  %add = fadd half %mul, %r2
+  store half %add, half addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}fmul_fadd_contract_f16:
+; VI-FLUSH: v_mac_f16_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}
+
+; VI-DENORM: v_fma_f16 {{v[0-9]+, v[0-9]+, v[0-9]+}}
+
+; GFX10-FLUSH:  v_mul_f16_e32
+; GFX10-FLUSH:  v_add_f16_e32
+; GFX10-DENORM: v_fmac_f16_e32 {{v[0-9]+, v[0-9]+, v[0-9]+}}
+
+define amdgpu_kernel void @fmul_fadd_contract_f16(half addrspace(1)* %out, half addrspace(1)* %in1,
+                         half addrspace(1)* %in2, half addrspace(1)* %in3) #0 {
+  %r0 = load half, half addrspace(1)* %in1
+  %r1 = load half, half addrspace(1)* %in2
+  %r2 = load half, half addrspace(1)* %in3
+  %mul = fmul half %r0, %r1
+  %add = fadd contract half %mul, %r2
+  store half %add, half addrspace(1)* %out
+  ret void
+}
+
 ; GCN-LABEL: {{^}}fmuladd_2.0_a_b_f16
 ; GCN: {{buffer|flat|global}}_load_ushort [[R1:v[0-9]+]],
 ; GCN: {{buffer|flat|global}}_load_ushort [[R2:v[0-9]+]],

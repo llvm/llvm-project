@@ -138,6 +138,7 @@ elif [ "`uname -a | grep Darwin`" != "" ]; then
 		$SRCS
 		../rtl/tsan_platform_mac.cpp
 		../../sanitizer_common/sanitizer_mac.cpp
+		../../sanitizer_common/sanitizer_mac_libcdep.cpp
 		../../sanitizer_common/sanitizer_posix.cpp
 		../../sanitizer_common/sanitizer_posix_libcdep.cpp
 		../../sanitizer_common/sanitizer_procmaps_mac.cpp

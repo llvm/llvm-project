@@ -15,7 +15,7 @@ int main() {
 
   char buffer[4][32];
   int j{0};
-  for (const char *p : {"1 2 2*3  ,", ",6,,8,123*",
+  for (const char *p : {"1 2 2*3  ,", ",6,,8,1*",
            "2*'abcdefghijklmnopqrstuvwxyzABC", "DEFGHIJKLMNOPQRSTUVWXYZ'"}) {
     SetCharacter(buffer[j++], sizeof buffer[0], p);
   }
