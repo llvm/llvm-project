@@ -3515,7 +3515,8 @@ LegalizerHelper::reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx,
   if (NumParts == -1)
     return UnableToLegalize;
 
-  const LLT OffsetTy = LLT::scalar(MRI.getType(AddrReg).getScalarSizeInBits());
+  LLT PtrTy = MRI.getType(AddrReg);
+  const LLT OffsetTy = LLT::scalar(PtrTy.getSizeInBits());
 
   unsigned TotalSize = ValTy.getSizeInBits();
 
