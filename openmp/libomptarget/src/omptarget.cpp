@@ -56,7 +56,7 @@ int DebugLevel = 0;
  * device will start at 0x200 with the padding (4 bytes), then &s1.b=0x204 and
  * &s1.p=0x208, as they should be to satisfy the alignment requirements.
  */
-static const int64_t alignment = 8;
+static const int64_t Alignment = 8;
 
 /// Map global data and execute pending ctors
 static int InitLibrary(DeviceTy& Device) {
@@ -216,9 +216,9 @@ static int32_t getParentIndex(int64_t type) {
 
 /// Call the user-defined mapper function followed by the appropriate
 // target_data_* function (target_data_{begin,end,update}).
-int target_data_mapper(DeviceTy &Device, void *arg_base,
-    void *arg, int64_t arg_size, int64_t arg_type, void *arg_mapper,
-    TargetDataFuncPtrTy target_data_function) {
+int targetDataMapper(DeviceTy &Device, void *arg_base, void *arg,
+                     int64_t arg_size, int64_t arg_type, void *arg_mapper,
+                     TargetDataFuncPtrTy target_data_function) {
   DP("Calling the mapper function " DPxMOD "\n", DPxPTR(arg_mapper));
 
   // The mapper function fills up Components.
@@ -263,16 +263,15 @@ int targetDataBegin(DeviceTy &Device, int32_t arg_num, void **args_base,
 
     if (arg_mappers && arg_mappers[i]) {
       // Instead of executing the regular path of targetDataBegin, call the
-      // target_data_mapper variant which will call targetDataBegin again
+      // targetDataMapper variant which will call targetDataBegin again
       // with new arguments.
-      DP("Calling target_data_mapper for the %dth argument\n", i);
+      DP("Calling targetDataMapper for the %dth argument\n", i);
 
-      int rc =
-          target_data_mapper(Device, args_base[i], args[i], arg_sizes[i],
-                             arg_types[i], arg_mappers[i], targetDataBegin);
+      int rc = targetDataMapper(Device, args_base[i], args[i], arg_sizes[i],
+                                arg_types[i], arg_mappers[i], targetDataBegin);
 
       if (rc != OFFLOAD_SUCCESS) {
-        DP("Call to targetDataBegin via target_data_mapper for custom mapper"
+        DP("Call to targetDataBegin via targetDataMapper for custom mapper"
            " failed.\n");
         return OFFLOAD_FAIL;
       }
@@ -292,7 +291,7 @@ int targetDataBegin(DeviceTy &Device, int32_t arg_num, void **args_base,
     const int next_i = i+1;
     if (getParentIndex(arg_types[i]) < 0 && next_i < arg_num &&
         getParentIndex(arg_types[next_i]) == i) {
-      padding = (int64_t)HstPtrBegin % alignment;
+      padding = (int64_t)HstPtrBegin % Alignment;
       if (padding) {
         DP("Using a padding of %" PRId64 " bytes for begin address " DPxMOD
             "\n", padding, DPxPTR(HstPtrBegin));
@@ -423,28 +422,29 @@ int targetDataBegin(DeviceTy &Device, int32_t arg_num, void **args_base,
 }
 
 /// Internal function to undo the mapping and retrieve the data from the device.
-int targetDataEnd(DeviceTy &Device, int32_t arg_num, void **args_base,
-                  void **args, int64_t *arg_sizes, int64_t *arg_types,
-                  void **arg_mappers, __tgt_async_info *async_info_ptr) {
+int targetDataEnd(DeviceTy &Device, int32_t ArgNum, void **ArgBases,
+                  void **Args, int64_t *ArgSizes, int64_t *ArgTypes,
+                  void **ArgMappers, __tgt_async_info *AsyncInfo) {
+  int Ret;
   // process each input.
-  for (int32_t i = arg_num - 1; i >= 0; --i) {
+  for (int32_t I = ArgNum - 1; I >= 0; --I) {
     // Ignore private variables and arrays - there is no mapping for them.
     // Also, ignore the use_device_ptr directive, it has no effect here.
-    if ((arg_types[i] & OMP_TGT_MAPTYPE_LITERAL) ||
-        (arg_types[i] & OMP_TGT_MAPTYPE_PRIVATE))
+    if ((ArgTypes[I] & OMP_TGT_MAPTYPE_LITERAL) ||
+        (ArgTypes[I] & OMP_TGT_MAPTYPE_PRIVATE))
       continue;
 
-    if (arg_mappers && arg_mappers[i]) {
+    if (ArgMappers && ArgMappers[I]) {
       // Instead of executing the regular path of targetDataEnd, call the
-      // target_data_mapper variant which will call targetDataEnd again
+      // targetDataMapper variant which will call targetDataEnd again
       // with new arguments.
-      DP("Calling target_data_mapper for the %dth argument\n", i);
+      DP("Calling targetDataMapper for the %dth argument\n", I);
 
-      int rc = target_data_mapper(Device, args_base[i], args[i], arg_sizes[i],
-                                  arg_types[i], arg_mappers[i], targetDataEnd);
+      Ret = targetDataMapper(Device, ArgBases[I], Args[I], ArgSizes[I],
+                             ArgTypes[I], ArgMappers[I], targetDataEnd);
 
-      if (rc != OFFLOAD_SUCCESS) {
-        DP("Call to targetDataEnd via target_data_mapper for custom mapper"
+      if (Ret != OFFLOAD_SUCCESS) {
+        DP("Call to targetDataEnd via targetDataMapper for custom mapper"
            " failed.\n");
         return OFFLOAD_FAIL;
       }
@@ -453,35 +453,35 @@ int targetDataEnd(DeviceTy &Device, int32_t arg_num, void **args_base,
       continue;
     }
 
-    void *HstPtrBegin = args[i];
-    int64_t data_size = arg_sizes[i];
+    void *HstPtrBegin = Args[I];
+    int64_t DataSize = ArgSizes[I];
     // Adjust for proper alignment if this is a combined entry (for structs).
     // Look at the next argument - if that is MEMBER_OF this one, then this one
     // is a combined entry.
-    int64_t padding = 0;
-    const int next_i = i+1;
-    if (getParentIndex(arg_types[i]) < 0 && next_i < arg_num &&
-        getParentIndex(arg_types[next_i]) == i) {
-      padding = (int64_t)HstPtrBegin % alignment;
-      if (padding) {
-        DP("Using a padding of %" PRId64 " bytes for begin address " DPxMOD
-            "\n", padding, DPxPTR(HstPtrBegin));
-        HstPtrBegin = (char *) HstPtrBegin - padding;
-        data_size += padding;
+    const int NextI = I + 1;
+    if (getParentIndex(ArgTypes[I]) < 0 && NextI < ArgNum &&
+        getParentIndex(ArgTypes[NextI]) == I) {
+      int64_t Padding = (int64_t)HstPtrBegin % Alignment;
+      if (Padding) {
+        DP("Using a Padding of %" PRId64 " bytes for begin address " DPxMOD
+           "\n",
+           Padding, DPxPTR(HstPtrBegin));
+        HstPtrBegin = (char *)HstPtrBegin - Padding;
+        DataSize += Padding;
       }
     }
 
     bool IsLast, IsHostPtr;
-    bool UpdateRef = !(arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF) ||
-        (arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ);
-    bool ForceDelete = arg_types[i] & OMP_TGT_MAPTYPE_DELETE;
-    bool HasCloseModifier = arg_types[i] & OMP_TGT_MAPTYPE_CLOSE;
-    bool HasPresentModifier = arg_types[i] & OMP_TGT_MAPTYPE_PRESENT;
+    bool UpdateRef = !(ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) ||
+                     (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ);
+    bool ForceDelete = ArgTypes[I] & OMP_TGT_MAPTYPE_DELETE;
+    bool HasCloseModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_CLOSE;
+    bool HasPresentModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_PRESENT;
 
     // If PTR_AND_OBJ, HstPtrBegin is address of pointee
-    void *TgtPtrBegin = Device.getTgtPtrBegin(HstPtrBegin, data_size, IsLast,
-        UpdateRef, IsHostPtr);
-    if (!TgtPtrBegin && (data_size || HasPresentModifier)) {
+    void *TgtPtrBegin = Device.getTgtPtrBegin(HstPtrBegin, DataSize, IsLast,
+                                              UpdateRef, IsHostPtr);
+    if (!TgtPtrBegin && (DataSize || HasPresentModifier)) {
       DP("Mapping does not exist (%s)\n",
          (HasPresentModifier ? "'present' map type modifier" : "ignored"));
       if (HasPresentModifier) {
@@ -489,38 +489,37 @@ int targetDataEnd(DeviceTy &Device, int32_t arg_num, void **args_base,
         // but it should be an error upon entering an "omp target exit data".
         MESSAGE("device mapping required by 'present' map type modifier does "
                 "not exist for host address " DPxMOD " (%ld bytes)",
-                DPxPTR(HstPtrBegin), data_size);
+                DPxPTR(HstPtrBegin), DataSize);
         return OFFLOAD_FAIL;
       }
     } else {
       DP("There are %" PRId64 " bytes allocated at target address " DPxMOD
          " - is%s last\n",
-         data_size, DPxPTR(TgtPtrBegin), (IsLast ? "" : " not"));
+         DataSize, DPxPTR(TgtPtrBegin), (IsLast ? "" : " not"));
     }
 
     bool DelEntry = IsLast || ForceDelete;
 
-    if ((arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
-        !(arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) {
+    if ((ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
+        !(ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) {
       DelEntry = false; // protect parent struct from being deallocated
     }
 
-    if ((arg_types[i] & OMP_TGT_MAPTYPE_FROM) || DelEntry) {
+    if ((ArgTypes[I] & OMP_TGT_MAPTYPE_FROM) || DelEntry) {
       // Move data back to the host
-      if (arg_types[i] & OMP_TGT_MAPTYPE_FROM) {
-        bool Always = arg_types[i] & OMP_TGT_MAPTYPE_ALWAYS;
+      if (ArgTypes[I] & OMP_TGT_MAPTYPE_FROM) {
+        bool Always = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
         bool CopyMember = false;
         if (!(RTLs->RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
             HasCloseModifier) {
-          if ((arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
-              !(arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) {
+          if ((ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
+              !(ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) {
             // Copy data only if the "parent" struct has RefCount==1.
-            int32_t parent_idx = getParentIndex(arg_types[i]);
-            uint64_t parent_rc = Device.getMapEntryRefCnt(args[parent_idx]);
-            assert(parent_rc > 0 && "parent struct not found");
-            if (parent_rc == 1) {
+            int32_t ParentIdx = getParentIndex(ArgTypes[I]);
+            uint64_t ParentRC = Device.getMapEntryRefCnt(Args[ParentIdx]);
+            assert(ParentRC > 0 && "parent struct not found");
+            if (ParentRC == 1)
               CopyMember = true;
-            }
           }
         }
 
@@ -528,10 +527,10 @@ int targetDataEnd(DeviceTy &Device, int32_t arg_num, void **args_base,
             !(RTLs->RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
               TgtPtrBegin == HstPtrBegin)) {
           DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
-             data_size, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
-          int rt = Device.data_retrieve(HstPtrBegin, TgtPtrBegin, data_size,
-                                        async_info_ptr);
-          if (rt != OFFLOAD_SUCCESS) {
+             DataSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
+          Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, DataSize,
+                                    AsyncInfo);
+          if (Ret != OFFLOAD_SUCCESS) {
             DP("Copying data from device failed.\n");
             return OFFLOAD_FAIL;
           }
@@ -542,44 +541,44 @@ int targetDataEnd(DeviceTy &Device, int32_t arg_num, void **args_base,
       // need to restore the original host pointer values from their shadow
       // copies. If the struct is going to be deallocated, remove any remaining
       // shadow pointer entries for this struct.
-      uintptr_t lb = (uintptr_t) HstPtrBegin;
-      uintptr_t ub = (uintptr_t) HstPtrBegin + data_size;
+      uintptr_t LB = (uintptr_t)HstPtrBegin;
+      uintptr_t UB = (uintptr_t)HstPtrBegin + DataSize;
       Device.ShadowMtx.lock();
-      for (ShadowPtrListTy::iterator it = Device.ShadowPtrMap.begin();
-           it != Device.ShadowPtrMap.end();) {
-        void **ShadowHstPtrAddr = (void**) it->first;
+      for (ShadowPtrListTy::iterator Itr = Device.ShadowPtrMap.begin();
+           Itr != Device.ShadowPtrMap.end();) {
+        void **ShadowHstPtrAddr = (void **)Itr->first;
 
         // An STL map is sorted on its keys; use this property
         // to quickly determine when to break out of the loop.
-        if ((uintptr_t) ShadowHstPtrAddr < lb) {
-          ++it;
+        if ((uintptr_t)ShadowHstPtrAddr < LB) {
+          ++Itr;
           continue;
         }
-        if ((uintptr_t) ShadowHstPtrAddr >= ub)
+        if ((uintptr_t)ShadowHstPtrAddr >= UB)
           break;
 
         // If we copied the struct to the host, we need to restore the pointer.
-        if (arg_types[i] & OMP_TGT_MAPTYPE_FROM) {
+        if (ArgTypes[I] & OMP_TGT_MAPTYPE_FROM) {
           DP("Restoring original host pointer value " DPxMOD " for host "
-              "pointer " DPxMOD "\n", DPxPTR(it->second.HstPtrVal),
-              DPxPTR(ShadowHstPtrAddr));
-          *ShadowHstPtrAddr = it->second.HstPtrVal;
+             "pointer " DPxMOD "\n",
+             DPxPTR(Itr->second.HstPtrVal), DPxPTR(ShadowHstPtrAddr));
+          *ShadowHstPtrAddr = Itr->second.HstPtrVal;
         }
         // If the struct is to be deallocated, remove the shadow entry.
         if (DelEntry) {
           DP("Removing shadow pointer " DPxMOD "\n", DPxPTR(ShadowHstPtrAddr));
-          it = Device.ShadowPtrMap.erase(it);
+          Itr = Device.ShadowPtrMap.erase(Itr);
         } else {
-          ++it;
+          ++Itr;
         }
       }
       Device.ShadowMtx.unlock();
 
       // Deallocate map
       if (DelEntry) {
-        int rt = Device.deallocTgtPtr(HstPtrBegin, data_size, ForceDelete,
-                                      HasCloseModifier);
-        if (rt != OFFLOAD_SUCCESS) {
+        Ret = Device.deallocTgtPtr(HstPtrBegin, DataSize, ForceDelete,
+                                   HasCloseModifier);
+        if (Ret != OFFLOAD_SUCCESS) {
           DP("Deallocating data from device failed.\n");
           return OFFLOAD_FAIL;
         }
@@ -604,16 +603,17 @@ int target_data_update(DeviceTy &Device, int32_t arg_num,
 
     if (arg_mappers && arg_mappers[i]) {
       // Instead of executing the regular path of target_data_update, call the
-      // target_data_mapper variant which will call target_data_update again
+      // targetDataMapper variant which will call target_data_update again
       // with new arguments.
-      DP("Calling target_data_mapper for the %dth argument\n", i);
+      DP("Calling targetDataMapper for the %dth argument\n", i);
 
-      int rc = target_data_mapper(Device, args_base[i], args[i], arg_sizes[i],
-          arg_types[i], arg_mappers[i], target_data_update);
+      int rc =
+          targetDataMapper(Device, args_base[i], args[i], arg_sizes[i],
+                           arg_types[i], arg_mappers[i], target_data_update);
 
       if (rc != OFFLOAD_SUCCESS) {
-        DP("Call to target_data_update via target_data_mapper for custom mapper"
-            " failed.\n");
+        DP("Call to target_data_update via targetDataMapper for custom mapper"
+           " failed.\n");
         return OFFLOAD_FAIL;
       }
 
@@ -647,7 +647,7 @@ int target_data_update(DeviceTy &Device, int32_t arg_num,
     if (arg_types[i] & OMP_TGT_MAPTYPE_FROM) {
       DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
           arg_sizes[i], DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
-      int rt = Device.data_retrieve(HstPtrBegin, TgtPtrBegin, MapSize, nullptr);
+      int rt = Device.retrieveData(HstPtrBegin, TgtPtrBegin, MapSize, nullptr);
       if (rt != OFFLOAD_SUCCESS) {
         DP("Copying data from device failed.\n");
         return OFFLOAD_FAIL;
