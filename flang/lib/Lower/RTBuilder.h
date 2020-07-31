@@ -102,22 +102,42 @@ constexpr TypeBuilderFunc getModel<void **>() {
   };
 }
 template <>
-constexpr TypeBuilderFunc getModel<std::int64_t>() {
+constexpr TypeBuilderFunc getModel<long>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return mlir::IntegerType::get(context, 64);
+    return mlir::IntegerType::get(context, 8 * sizeof(long));
   };
 }
 template <>
-constexpr TypeBuilderFunc getModel<std::int64_t &>() {
+constexpr TypeBuilderFunc getModel<long &>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    TypeBuilderFunc f{getModel<std::int64_t>()};
+    TypeBuilderFunc f{getModel<long>()};
     return fir::ReferenceType::get(f(context));
   };
 }
 template <>
-constexpr TypeBuilderFunc getModel<std::size_t>() {
+constexpr TypeBuilderFunc getModel<long long>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::IntegerType::get(context, 8 * sizeof(std::size_t));
+  };
+}
+template <>
+constexpr TypeBuilderFunc getModel<long long &>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    TypeBuilderFunc f{getModel<long long>()};
+    return fir::ReferenceType::get(f(context));
+  };
+}
+template <>
+constexpr TypeBuilderFunc getModel<unsigned long>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return mlir::IntegerType::get(context, 8 * sizeof(unsigned long));
+  };
+}
+template <>
+constexpr TypeBuilderFunc getModel<unsigned long long>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return mlir::IntegerType::get(context, 8 * sizeof(unsigned long long));
+>>>>>>> f97c932814ff... make the distinction between "long" and "long long" explicit. fixes compilation on MacOS.
   };
 }
 template <>
