@@ -131,6 +131,20 @@ public:
     return { MinSize / RHS, IsScalable };
   }
 
+  TypeSize &operator-=(TypeSize RHS) {
+    assert(IsScalable == RHS.IsScalable &&
+           "Subtraction using mixed scalable and fixed types");
+    MinSize -= RHS.MinSize;
+    return *this;
+  }
+
+  TypeSize &operator+=(TypeSize RHS) {
+    assert(IsScalable == RHS.IsScalable &&
+           "Addition using mixed scalable and fixed types");
+    MinSize += RHS.MinSize;
+    return *this;
+  }
+
   // Return the minimum size with the assumption that the size is exact.
   // Use in places where a scalable size doesn't make sense (e.g. non-vector
   // types, or vectors in backends which don't support scalable vectors).
