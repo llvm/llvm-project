@@ -1785,10 +1785,6 @@ Optional<Value *> X86TTIImpl::simplifyDemandedUseBitsIntrinsic(
     KnownBitsComputed = true;
     break;
   }
-  case Intrinsic::x86_sse42_crc32_64_64:
-    Known.Zero.setBitsFrom(32);
-    KnownBitsComputed = true;
-    break;
   }
   return None;
 }
