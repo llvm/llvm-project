@@ -4336,18 +4336,6 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
     }
   }
 
-  auto getMaskRC = [](MVT MaskVT) {
-    switch (MaskVT.SimpleTy) {
-    default: llvm_unreachable("Unexpected VT!");
-    case MVT::v2i1:  return X86::VK2RegClassID;
-    case MVT::v4i1:  return X86::VK4RegClassID;
-    case MVT::v8i1:  return X86::VK8RegClassID;
-    case MVT::v16i1: return X86::VK16RegClassID;
-    case MVT::v32i1: return X86::VK32RegClassID;
-    case MVT::v64i1: return X86::VK64RegClassID;
-    }
-  };
-
   bool IsMasked = InMask.getNode() != nullptr;
 
   SDLoc dl(Root);
@@ -4371,7 +4359,7 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
 
     if (IsMasked) {
       // Widen the mask.
-      unsigned RegClass = getMaskRC(MaskVT);
+      unsigned RegClass = TLI->getRegClassFor(MaskVT)->getID();
       SDValue RC = CurDAG->getTargetConstant(RegClass, dl, MVT::i32);
       InMask = SDValue(CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS,
                                               dl, MaskVT, InMask, RC), 0);
@@ -4409,7 +4397,7 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
 
   // If we widened, we need to shrink the mask VT.
   if (Widen) {
-    unsigned RegClass = getMaskRC(ResVT);
+    unsigned RegClass = TLI->getRegClassFor(ResVT)->getID();
     SDValue RC = CurDAG->getTargetConstant(RegClass, dl, MVT::i32);
     CNode = CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS,
                                    dl, ResVT, SDValue(CNode, 0), RC);
