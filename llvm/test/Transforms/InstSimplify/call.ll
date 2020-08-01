@@ -5,6 +5,46 @@
 declare i32 @llvm.abs.i32(i32, i1)
 declare <3 x i82> @llvm.abs.v3i82(<3 x i82>, i1)
 
+define i32 @test_abs_abs_0(i32 %x) {
+; CHECK-LABEL: @test_abs_abs_0(
+; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    ret i32 [[A]]
+;
+  %a = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %b = call i32 @llvm.abs.i32(i32 %a, i1 false)
+  ret i32 %b
+}
+
+define i32 @test_abs_abs_1(i32 %x) {
+; CHECK-LABEL: @test_abs_abs_1(
+; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    ret i32 [[A]]
+;
+  %a = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  %b = call i32 @llvm.abs.i32(i32 %a, i1 false)
+  ret i32 %b
+}
+
+define i32 @test_abs_abs_2(i32 %x) {
+; CHECK-LABEL: @test_abs_abs_2(
+; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    ret i32 [[A]]
+;
+  %a = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %b = call i32 @llvm.abs.i32(i32 %a, i1 true)
+  ret i32 %b
+}
+
+define i32 @test_abs_abs_3(i32 %x) {
+; CHECK-LABEL: @test_abs_abs_3(
+; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    ret i32 [[A]]
+;
+  %a = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  %b = call i32 @llvm.abs.i32(i32 %a, i1 true)
+  ret i32 %b
+}
+
 ; If the sign bit is known zero, the abs is not needed.
 
 define i32 @zext_abs(i31 %x) {
