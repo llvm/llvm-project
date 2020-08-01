@@ -50,6 +50,14 @@ std::unique_ptr<OperationPass<spirv::ModuleOp>> createLowerABIAttributesPass();
 /// spv.CompositeInsert into spv.CompositeConstruct.
 std::unique_ptr<OperationPass<spirv::ModuleOp>> createRewriteInsertsPass();
 
+//===----------------------------------------------------------------------===//
+// Registration
+//===----------------------------------------------------------------------===//
+
+/// Generate the code for registering passes.
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/SPIRV/Passes.h.inc"
+
 } // namespace spirv
 } // namespace mlir
 

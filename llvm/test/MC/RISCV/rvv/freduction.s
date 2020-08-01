@@ -79,3 +79,9 @@ vfwredsum.vs v8, v4, v20
 # CHECK-ENCODING: [0x57,0x14,0x4a,0xc6]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 57 14 4a c6 <unknown>
+
+vfredosum.vs v0, v4, v20, v0.t
+# CHECK-INST: vfredosum.vs v0, v4, v20, v0.t
+# CHECK-ENCODING: [0x57,0x10,0x4a,0x0c]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 57 10 4a 0c <unknown>

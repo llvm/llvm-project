@@ -3425,7 +3425,7 @@ void SelectionDAGBuilder::visitAddrSpaceCast(const User &I) {
   unsigned SrcAS = SV->getType()->getPointerAddressSpace();
   unsigned DestAS = I.getType()->getPointerAddressSpace();
 
-  if (!TLI.isNoopAddrSpaceCast(SrcAS, DestAS))
+  if (!TM.isNoopAddrSpaceCast(SrcAS, DestAS))
     N = DAG.getAddrSpaceCast(getCurSDLoc(), DestVT, N, SrcAS, DestAS);
 
   setValue(&I, N);
@@ -6636,7 +6636,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         cast<ConstantInt>(I.getArgOperand(0))->getSExtValue();
     Value *const ObjectPtr = I.getArgOperand(1);
     SmallVector<const Value *, 4> Allocas;
-    getUnderlyingObjects(ObjectPtr, Allocas, *DL);
+    getUnderlyingObjects(ObjectPtr, Allocas);
 
     for (SmallVectorImpl<const Value*>::iterator Object = Allocas.begin(),
            E = Allocas.end(); Object != E; ++Object) {

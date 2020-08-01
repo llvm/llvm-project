@@ -61,7 +61,7 @@ struct Abbrev {
 
 struct ARangeDescriptor {
   llvm::yaml::Hex64 Address;
-  uint64_t Length;
+  yaml::Hex64 Length;
 };
 
 struct ARange {
@@ -211,7 +211,7 @@ struct Data {
   std::vector<Abbrev> AbbrevDecls;
   std::vector<StringRef> DebugStrings;
   Optional<std::vector<StringOffsetsTable>> DebugStrOffsets;
-  std::vector<ARange> ARanges;
+  Optional<std::vector<ARange>> DebugAranges;
   std::vector<Ranges> DebugRanges;
   std::vector<AddrTableEntry> DebugAddr;
   Optional<PubSection> PubNames;

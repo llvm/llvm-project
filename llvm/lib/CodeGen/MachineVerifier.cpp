@@ -2230,63 +2230,28 @@ public:
 // can pass through an MBB live, but may not be live every time. It is assumed
 // that all vregsPassed sets are empty before the call.
 void MachineVerifier::calcRegsPassed() {
-  // This is a forward dataflow, doing it in RPO. A standard map serves as a
-  // priority (sorting by RPO number) queue, deduplicating worklist, and an RPO
-  // number to MBB mapping all at once.
-  std::map<unsigned, const MachineBasicBlock *> RPOWorklist;
-  DenseMap<const MachineBasicBlock *, unsigned> RPONumbers;
-  if (MF->empty()) {
+  if (MF->empty())
     // ReversePostOrderTraversal doesn't handle empty functions.
     return;
-  }
-  std::vector<FilteringVRegSet> VRegsPassedSets(MF->size());
-  for (const MachineBasicBlock *MBB :
-       ReversePostOrderTraversal<const MachineFunction *>(MF)) {
-    // Careful with the evaluation order, fetch next number before allocating.
-    unsigned Number = RPONumbers.size();
-    RPONumbers[MBB] = Number;
-    // Set-up the transfer functions for all blocks.
-    const BBInfo &MInfo = MBBInfoMap[MBB];
-    VRegsPassedSets[Number].addToFilter(MInfo.regsKilled);
-    VRegsPassedSets[Number].addToFilter(MInfo.regsLiveOut);
-  }
-  // First push live-out regs to successors' vregsPassed. Remember the MBBs that
-  // have any vregsPassed.
-  for (const MachineBasicBlock &MBB : *MF) {
-    const BBInfo &MInfo = MBBInfoMap[&MBB];
-    if (!MInfo.reachable)
-      continue;
-    for (const MachineBasicBlock *Succ : MBB.successors()) {
-      unsigned SuccNumber = RPONumbers[Succ];
-      FilteringVRegSet &SuccSet = VRegsPassedSets[SuccNumber];
-      if (SuccSet.add(MInfo.regsLiveOut))
-        RPOWorklist.emplace(SuccNumber, Succ);
-    }
-  }
 
-  // Iteratively push vregsPassed to successors.
-  while (!RPOWorklist.empty()) {
-    auto Next = RPOWorklist.begin();
-    const MachineBasicBlock *MBB = Next->second;
-    RPOWorklist.erase(Next);
-    FilteringVRegSet &MSet = VRegsPassedSets[RPONumbers[MBB]];
-    for (const MachineBasicBlock *Succ : MBB->successors()) {
-      if (Succ == MBB)
+  for (const MachineBasicBlock *MB :
+       ReversePostOrderTraversal<const MachineFunction *>(MF)) {
+    FilteringVRegSet VRegs;
+    BBInfo &Info = MBBInfoMap[MB];
+    assert(Info.reachable);
+
+    VRegs.addToFilter(Info.regsKilled);
+    VRegs.addToFilter(Info.regsLiveOut);
+    for (const MachineBasicBlock *Pred : MB->predecessors()) {
+      const BBInfo &PredInfo = MBBInfoMap[Pred];
+      if (!PredInfo.reachable)
         continue;
-      unsigned SuccNumber = RPONumbers[Succ];
-      FilteringVRegSet &SuccSet = VRegsPassedSets[SuccNumber];
-      if (SuccSet.add(MSet))
-        RPOWorklist.emplace(SuccNumber, Succ);
+
+      VRegs.add(PredInfo.regsLiveOut);
+      VRegs.add(PredInfo.vregsPassed);
     }
-  }
-  // Copy the results back to BBInfos.
-  for (const MachineBasicBlock &MBB : *MF) {
-    BBInfo &MInfo = MBBInfoMap[&MBB];
-    if (!MInfo.reachable)
-      continue;
-    const FilteringVRegSet &MSet = VRegsPassedSets[RPONumbers[&MBB]];
-    MInfo.vregsPassed.reserve(MSet.size());
-    MInfo.vregsPassed.insert(MSet.begin(), MSet.end());
+    Info.vregsPassed.reserve(VRegs.size());
+    Info.vregsPassed.insert(VRegs.begin(), VRegs.end());
   }
 }
 

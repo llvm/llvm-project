@@ -2537,17 +2537,6 @@ Value *X86TargetLowering::getSafeStackPointerLocation(IRBuilder<> &IRB) const {
   return TargetLowering::getSafeStackPointerLocation(IRB);
 }
 
-bool X86TargetLowering::isNoopAddrSpaceCast(unsigned SrcAS,
-                                            unsigned DestAS) const {
-  assert(SrcAS != DestAS && "Expected different address spaces!");
-
-  const TargetMachine &TM = getTargetMachine();
-  if (TM.getPointerSize(SrcAS) != TM.getPointerSize(DestAS))
-    return false;
-
-  return SrcAS < 256 && DestAS < 256;
-}
-
 //===----------------------------------------------------------------------===//
 //               Return Value Calling Convention Implementation
 //===----------------------------------------------------------------------===//
@@ -36155,15 +36144,16 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     }
 
     // vbroadcast(vector load X) -> vbroadcast_load
-    if (SrcVT == MVT::v2f64 && Src.hasOneUse() &&
-        ISD::isNormalLoad(Src.getNode())) {
+    if ((SrcVT == MVT::v2f64 || SrcVT == MVT::v4f32 || SrcVT == MVT::v2i64 ||
+         SrcVT == MVT::v4i32) &&
+        Src.hasOneUse() && ISD::isNormalLoad(Src.getNode())) {
       LoadSDNode *LN = cast<LoadSDNode>(Src);
       // Unless the load is volatile or atomic.
       if (LN->isSimple()) {
         SDVTList Tys = DAG.getVTList(VT, MVT::Other);
-        SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
+        SDValue Ops[] = {LN->getChain(), LN->getBasePtr()};
         SDValue BcastLd = DAG.getMemIntrinsicNode(
-            X86ISD::VBROADCAST_LOAD, DL, Tys, Ops, MVT::f64,
+            X86ISD::VBROADCAST_LOAD, DL, Tys, Ops, SrcVT.getScalarType(),
             LN->getPointerInfo(), LN->getOriginalAlign(),
             LN->getMemOperand()->getFlags());
         DCI.CombineTo(N.getNode(), BcastLd);

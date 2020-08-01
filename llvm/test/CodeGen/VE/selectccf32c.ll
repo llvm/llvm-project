@@ -3,12 +3,10 @@
 define float @selectccsgti8(i8, i8, float, float) {
 ; CHECK-LABEL: selectccsgti8:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sf3 killed $sf3 def $sx3
-; CHECK-NEXT:    # kill: def $sf2 killed $sf2 def $sx2
-; CHECK-NEXT:    sla.w.sx %s1, %s1, 24
-; CHECK-NEXT:    sra.w.sx %s1, %s1, 24
-; CHECK-NEXT:    sla.w.sx %s0, %s0, 24
-; CHECK-NEXT:    sra.w.sx %s0, %s0, 24
+; CHECK-NEXT:    sll %s1, %s1, 56
+; CHECK-NEXT:    sra.l %s1, %s1, 56
+; CHECK-NEXT:    sll %s0, %s0, 56
+; CHECK-NEXT:    sra.l %s0, %s0, 56
 ; CHECK-NEXT:    cmps.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.gt %s3, %s2, %s0
 ; CHECK-NEXT:    or %s0, 0, %s3
@@ -21,12 +19,10 @@ define float @selectccsgti8(i8, i8, float, float) {
 define float @selectccsgti16(i16, i16, float, float) {
 ; CHECK-LABEL: selectccsgti16:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sf3 killed $sf3 def $sx3
-; CHECK-NEXT:    # kill: def $sf2 killed $sf2 def $sx2
-; CHECK-NEXT:    sla.w.sx %s1, %s1, 16
-; CHECK-NEXT:    sra.w.sx %s1, %s1, 16
-; CHECK-NEXT:    sla.w.sx %s0, %s0, 16
-; CHECK-NEXT:    sra.w.sx %s0, %s0, 16
+; CHECK-NEXT:    sll %s1, %s1, 48
+; CHECK-NEXT:    sra.l %s1, %s1, 48
+; CHECK-NEXT:    sll %s0, %s0, 48
+; CHECK-NEXT:    sra.l %s0, %s0, 48
 ; CHECK-NEXT:    cmps.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.gt %s3, %s2, %s0
 ; CHECK-NEXT:    or %s0, 0, %s3
@@ -39,8 +35,8 @@ define float @selectccsgti16(i16, i16, float, float) {
 define float @selectccsgti32(i32, i32, float, float) {
 ; CHECK-LABEL: selectccsgti32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sf3 killed $sf3 def $sx3
-; CHECK-NEXT:    # kill: def $sf2 killed $sf2 def $sx2
+; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    cmps.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.gt %s3, %s2, %s0
 ; CHECK-NEXT:    or %s0, 0, %s3
@@ -53,8 +49,6 @@ define float @selectccsgti32(i32, i32, float, float) {
 define float @selectccsgti64(i64, i64, float, float) {
 ; CHECK-LABEL: selectccsgti64:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sf3 killed $sf3 def $sx3
-; CHECK-NEXT:    # kill: def $sf2 killed $sf2 def $sx2
 ; CHECK-NEXT:    cmps.l %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.l.gt %s3, %s2, %s0
 ; CHECK-NEXT:    or %s0, 0, %s3
@@ -67,8 +61,6 @@ define float @selectccsgti64(i64, i64, float, float) {
 define float @selectccsgti128(i128, i128, float, float) {
 ; CHECK-LABEL: selectccsgti128:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sf5 killed $sf5 def $sx5
-; CHECK-NEXT:    # kill: def $sf4 killed $sf4 def $sx4
 ; CHECK-NEXT:    or %s6, 0, (0)1
 ; CHECK-NEXT:    cmps.l %s1, %s1, %s3
 ; CHECK-NEXT:    or %s3, 0, %s6
@@ -89,8 +81,6 @@ define float @selectccsgti128(i128, i128, float, float) {
 define float @selectccogtf32(float, float, float, float) {
 ; CHECK-LABEL: selectccogtf32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sf3 killed $sf3 def $sx3
-; CHECK-NEXT:    # kill: def $sf2 killed $sf2 def $sx2
 ; CHECK-NEXT:    fcmp.s %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.s.gt %s3, %s2, %s0
 ; CHECK-NEXT:    or %s0, 0, %s3
@@ -103,8 +93,6 @@ define float @selectccogtf32(float, float, float, float) {
 define float @selectccogtf64(double, double, float, float) {
 ; CHECK-LABEL: selectccogtf64:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sf3 killed $sf3 def $sx3
-; CHECK-NEXT:    # kill: def $sf2 killed $sf2 def $sx2
 ; CHECK-NEXT:    fcmp.d %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.d.gt %s3, %s2, %s0
 ; CHECK-NEXT:    or %s0, 0, %s3

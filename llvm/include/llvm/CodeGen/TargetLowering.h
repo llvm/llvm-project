@@ -1759,17 +1759,10 @@ public:
     return "";
   }
 
-  /// Returns true if a cast between SrcAS and DestAS is a noop.
-  virtual bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const {
-    return false;
-  }
-
   /// Returns true if a cast from SrcAS to DestAS is "cheap", such that e.g. we
   /// are happy to sink it into basic blocks. A cast may be free, but not
   /// necessarily a no-op. e.g. a free truncate from a 64-bit to 32-bit pointer.
-  virtual bool isFreeAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const {
-    return isNoopAddrSpaceCast(SrcAS, DestAS);
-  }
+  virtual bool isFreeAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const;
 
   /// Return true if the pointer arguments to CI should be aligned by aligning
   /// the object whose address is being passed. If so then MinSize is set to the

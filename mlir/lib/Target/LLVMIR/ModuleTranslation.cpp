@@ -399,13 +399,13 @@ ModuleTranslation::convertOmpParallel(Operation &opInst,
     llvm::Instruction *codeGenIPBBTI = codeGenIPBB->getTerminator();
 
     builder.SetInsertPoint(codeGenIPBB);
-
-    for (auto &region : opInst.getRegions()) {
-      for (auto &bb : region) {
-        auto *llvmBB = llvm::BasicBlock::Create(
-            llvmContext, "omp.par.region", codeGenIP.getBlock()->getParent());
-        blockMapping[&bb] = llvmBB;
-      }
+    // ParallelOp has only `1` region associated with it.
+    auto &region = cast<omp::ParallelOp>(opInst).getRegion();
+    for (auto &bb : region) {
+      auto *llvmBB = llvm::BasicBlock::Create(
+          llvmContext, "omp.par.region", codeGenIP.getBlock()->getParent());
+      blockMapping[&bb] = llvmBB;
+    }
 
       // Then, convert blocks one by one in topological order to ensure
       // defs are converted before uses.
@@ -433,7 +433,6 @@ ModuleTranslation::convertOmpParallel(Operation &opInst,
       // Finally, after all blocks have been traversed and values mapped,
       // connect the PHI nodes to the results of preceding blocks.
       connectPHINodes(region, valueMapping, blockMapping);
-    }
   };
 
   // TODO: Perform appropriate actions according to the data-sharing

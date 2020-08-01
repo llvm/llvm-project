@@ -21,6 +21,7 @@
 #include "llvm/IR/User.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 
 using namespace llvm;

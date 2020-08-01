@@ -595,3 +595,22 @@ DWARF:
       Descriptors:
         - Address: 0x1234
           Length:  0x4321
+
+## l) Test that the .debug_aranges section header is emitted if the "debug_aranges"
+## entry is empty.
+
+# RUN: yaml2obj --docnum=12 %s -o %t12.o
+# RUN: llvm-readobj --sections --section-data %t12.o | \
+# RUN:   FileCheck -DSIZE=0 -DADDRALIGN=1 %s --check-prefixes=DWARF-HEADER,EMPTY-CONTENT
+
+# EMPTY-CONTENT-NEXT: SectionData (
+# EMPTY-CONTENT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_aranges: []

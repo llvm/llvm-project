@@ -19,3 +19,8 @@ shared_ptr<int> spi = shared_ptr<int>::allocate_shared(1, 2);
 template<int> struct A {};
 template<int> struct B {};
 outer<int, int>::inner<1, 2, A, B> i(A<1>{}, B<2>{});
+
+void test_nondependent_pack() {
+  take_nondependent_pack<int, int>(nullptr, nullptr);
+  take_nondependent_pack_2<int, int>({});
+}

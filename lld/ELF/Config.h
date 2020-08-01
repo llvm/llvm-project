@@ -11,7 +11,6 @@
 
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -91,13 +90,11 @@ struct Configuration {
   uint8_t osabi = 0;
   uint32_t andFeatures = 0;
   llvm::CachePruningPolicy thinLTOCachePolicy;
-  llvm::SetVector<StringRef> dependencyFiles; // for --dependency-file
   llvm::StringMap<uint64_t> sectionStartMap;
   llvm::StringRef bfdname;
   llvm::StringRef chroot;
-  llvm::StringRef dependencyFile;
-  llvm::StringRef dwoDir;
   llvm::StringRef dynamicLinker;
+  llvm::StringRef dwoDir;
   llvm::StringRef entry;
   llvm::StringRef emulation;
   llvm::StringRef fini;

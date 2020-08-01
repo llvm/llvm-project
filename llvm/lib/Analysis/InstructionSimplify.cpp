@@ -2524,8 +2524,8 @@ computePointerICmp(const DataLayout &DL, const TargetLibraryInfo *TLI,
     // memory within the lifetime of the current function (allocas, byval
     // arguments, globals), then determine the comparison result here.
     SmallVector<const Value *, 8> LHSUObjs, RHSUObjs;
-    getUnderlyingObjects(LHS, LHSUObjs, DL);
-    getUnderlyingObjects(RHS, RHSUObjs, DL);
+    getUnderlyingObjects(LHS, LHSUObjs);
+    getUnderlyingObjects(RHS, RHSUObjs);
 
     // Is the set of underlying objects all noalias calls?
     auto IsNAC = [](ArrayRef<const Value *> Objects) {
@@ -5255,6 +5255,12 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
   Type *ReturnType = F->getReturnType();
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
+  case Intrinsic::abs:
+    // If the sign bit is clear already, then abs does not do anything.
+    if (isKnownNonNegative(Op0, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+      return Op0;
+    break;
+
   case Intrinsic::smax:
   case Intrinsic::smin:
   case Intrinsic::umax:

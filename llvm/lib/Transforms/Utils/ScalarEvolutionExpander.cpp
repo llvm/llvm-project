@@ -1187,6 +1187,14 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
       if (!SE.isSCEVable(PN.getType()))
         continue;
 
+      // We should not look for a incomplete PHI. Getting SCEV for a incomplete
+      // PHI has no meaning at all.
+      if (!PN.isComplete()) {
+        DEBUG_WITH_TYPE(
+            DebugType, dbgs() << "One incomplete PHI is found: " << PN << "\n");
+        continue;
+      }
+
       const SCEVAddRecExpr *PhiSCEV = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(&PN));
       if (!PhiSCEV)
         continue;
@@ -1771,10 +1779,12 @@ Value *SCEVExpander::expandCodeForImpl(const SCEV *SH, Type *Ty, bool Root) {
       // instruction.
       Instruction *Tmp;
       if (Inst->getType()->isIntegerTy())
-        Tmp = cast<Instruction>(Builder.CreateAdd(Inst, Inst));
+        Tmp =
+            cast<Instruction>(Builder.CreateAdd(Inst, Inst, "tmp.lcssa.user"));
       else {
         assert(Inst->getType()->isPointerTy());
-        Tmp = cast<Instruction>(Builder.CreateGEP(Inst, Builder.getInt32(1)));
+        Tmp = cast<Instruction>(
+            Builder.CreateGEP(Inst, Builder.getInt32(1), "tmp.lcssa.user"));
       }
       V = fixupLCSSAFormFor(Tmp, 0);
 
@@ -2100,6 +2110,8 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
     }
     DEBUG_WITH_TYPE(DebugType, dbgs() << "INDVARS: Eliminated congruent iv: "
                                       << *Phi << '\n');
+    DEBUG_WITH_TYPE(DebugType, dbgs() << "INDVARS: Original iv: "
+                                      << *OrigPhiRef << '\n');
     ++NumElim;
     Value *NewIV = OrigPhiRef;
     if (OrigPhiRef->getType() != Phi->getType()) {

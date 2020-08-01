@@ -437,17 +437,15 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_char(i8* nocapture readonly
 ; CHECK-NEXT:    smlabb r7, r7, r8, r2
 ; CHECK-NEXT:    str r7, [r4, #-8]
 ; CHECK-NEXT:    ldrb r8, [r5, #-2]
-; CHECK-NEXT:    ldrb r7, [r6]
+; CHECK-NEXT:    ldrb r7, [r6], #4
 ; CHECK-NEXT:    smlabb r7, r7, r8, r2
 ; CHECK-NEXT:    str r7, [r4, #-4]
 ; CHECK-NEXT:    ldrb r8, [r5, #-1]
-; CHECK-NEXT:    ldrb r7, [r6, #1]
+; CHECK-NEXT:    ldrb r7, [r6, #-3]
 ; CHECK-NEXT:    smlabb r7, r7, r8, r2
 ; CHECK-NEXT:    str r7, [r4]
-; CHECK-NEXT:    ldrb.w r8, [r5]
-; CHECK-NEXT:    adds r5, #4
-; CHECK-NEXT:    ldrb r7, [r6, #2]
-; CHECK-NEXT:    adds r6, #4
+; CHECK-NEXT:    ldrb r8, [r5], #4
+; CHECK-NEXT:    ldrb r7, [r6, #-2]
 ; CHECK-NEXT:    smlabb r7, r7, r8, r2
 ; CHECK-NEXT:    str r7, [r4, #4]
 ; CHECK-NEXT:    adds r4, #16
@@ -740,17 +738,15 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_uchar(i8* nocapture readonl
 ; CHECK-NEXT:    smlabb r7, r7, r8, r2
 ; CHECK-NEXT:    str r7, [r4, #-8]
 ; CHECK-NEXT:    ldrb r8, [r5, #-2]
-; CHECK-NEXT:    ldrb r7, [r6]
+; CHECK-NEXT:    ldrb r7, [r6], #4
 ; CHECK-NEXT:    smlabb r7, r7, r8, r2
 ; CHECK-NEXT:    str r7, [r4, #-4]
 ; CHECK-NEXT:    ldrb r8, [r5, #-1]
-; CHECK-NEXT:    ldrb r7, [r6, #1]
+; CHECK-NEXT:    ldrb r7, [r6, #-3]
 ; CHECK-NEXT:    smlabb r7, r7, r8, r2
 ; CHECK-NEXT:    str r7, [r4]
-; CHECK-NEXT:    ldrb.w r8, [r5]
-; CHECK-NEXT:    adds r5, #4
-; CHECK-NEXT:    ldrb r7, [r6, #2]
-; CHECK-NEXT:    adds r6, #4
+; CHECK-NEXT:    ldrb r8, [r5], #4
+; CHECK-NEXT:    ldrb r7, [r6, #-2]
 ; CHECK-NEXT:    smlabb r7, r7, r8, r2
 ; CHECK-NEXT:    str r7, [r4, #4]
 ; CHECK-NEXT:    adds r4, #16

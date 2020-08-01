@@ -8,13 +8,13 @@
 
 /// -T is reordered to the last to make sure -L takes precedence.
 // RUN: %clang -target x86_64-pc-linux-gnu -### \
-// RUN:   -T a.lds -Xlinker one -Xlinker --no-demangle \
+// RUN:   -e _start -T a.lds -Xlinker one -Xlinker --no-demangle \
 // RUN:   -Wl,two,--no-demangle,three -Xlinker four -z five -r %s 2> %t
 // RUN: FileCheck -check-prefix=LINUX < %t %s
 //
 // DARWIN-NOT: --no-demangle
 // DARWIN: "one" "two" "three" "four" "-z" "five" "-r"
-// LINUX: "--no-demangle" "one" "two" "three" "four" "-z" "five" "-r" {{.*}} "-T" "a.lds"
+// LINUX: "--no-demangle" "-e" "_start" "one" "two" "three" "four" "-z" "five" "-r" {{.*}} "-T" "a.lds"
 
 // Check that we forward '-Xlinker' and '-Wl,' on Windows.
 // RUN: %clang -target i686-pc-win32 -### \

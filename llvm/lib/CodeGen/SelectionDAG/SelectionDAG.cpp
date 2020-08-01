@@ -6394,7 +6394,7 @@ static void checkAddrSpaceIsValidForLibcall(const TargetLowering *TLI,
                                             unsigned AS) {
   // Lowering memcpy / memset / memmove intrinsics to calls is only valid if all
   // pointer operands can be losslessly bitcasted to pointers of address space 0
-  if (AS != 0 && !TLI->isNoopAddrSpaceCast(AS, 0)) {
+  if (AS != 0 && !TLI->getTargetMachine().isNoopAddrSpaceCast(AS, 0)) {
     report_fatal_error("cannot lower memory intrinsic in address space " +
                        Twine(AS));
   }

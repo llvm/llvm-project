@@ -1,6 +1,6 @@
 ;; This test checks if CFI instructions for all callee saved registers are emitted
 ;; correctly with basic block sections.
-; RUN: llc  %s -mtriple=x86_64 -filetype=asm --basicblock-sections=all --frame-pointer=all -o - | FileCheck --check-prefix=SECTIONS_CFI %s
+; RUN: llc  %s -mtriple=x86_64 -filetype=asm --basic-block-sections=all --frame-pointer=all -o - | FileCheck --check-prefix=SECTIONS_CFI %s
 
 ; SECTIONS_CFI:       _Z3foob:
 ; SECTIONS_CFI:      .cfi_offset %rbp, -16

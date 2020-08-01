@@ -756,15 +756,15 @@ entry:
 
 ; 32BIT:      bb.0.entry:
 ; 32BIT-NEXT:   liveins: $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r10
+; 32BIT:        STW killed renamable $r8,  20, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 20
 ; 32BIT-DAG:    STW killed renamable $r3,   0, %fixed-stack.0 :: (store 4 into %fixed-stack.0
 ; 32BIT-DAG:    STW killed renamable $r4,   4, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 4
 ; 32BIT-DAG:    STW killed renamable $r5,   8, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 8
 ; 32BIT-DAG:    STW killed renamable $r6,  12, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 12
 ; 32BIT-DAG:    STW killed renamable $r7,  16, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 16
-; 32BIT-DAG:    STW killed renamable $r8,  20, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 20
+; 32BIT:        renamable $r3 = LBZ 21, %fixed-stack.0 :: (dereferenceable load 1
 ; 32BIT-DAG:    STW killed renamable $r9,  24, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 24
 ; 32BIT-DAG:    STW killed renamable $r10, 28, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 28
-; 32BIT:        renamable $r3 = LBZ 21, %fixed-stack.0 :: (dereferenceable load 1
 ; 32BIT:        BLR
 
 ; 64BIT:      fixedStack:
@@ -773,11 +773,11 @@ entry:
 
 ; 64BIT:      bb.0.entry:
 ; 64BIT-NEXT:   liveins: $x3, $x4, $x5, $x6
+; 64BIT:        STD killed renamable $x5, 16, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 16
 ; 64BIT-DAG:    STD killed renamable $x3, 0, %fixed-stack.0 :: (store 8 into %fixed-stack.0
-; 64BIT-DAG:    STD killed renamable $x4, 8, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 8
-; 64BIT-DAG:    STD killed renamable $x5, 16, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 16
-; 64BIT-DAG:    STD killed renamable $x6, 24, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 24
 ; 64BIT-NEXT:   renamable $x3 = LBZ8 21, %fixed-stack.0 :: (dereferenceable load 1
+; 64BIT-DAG:    STD killed renamable $x4, 8, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 8
+; 64BIT-DAG:    STD killed renamable $x6, 24, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 24
 ; 64BIT-NEXT:   BLR8
 
 ; ASM-LABEL: .test_byval_32Byte:
@@ -901,9 +901,9 @@ entry:
 ; 32BIT-DAG:    STW killed renamable $r6,  12, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 12
 ; 32BIT-DAG:    STW killed renamable $r7,  16, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 16
 ; 32BIT-DAG:    STW killed renamable $r8,  20, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 20
+; 32BIT-NEXT:   renamable $f1 = LFD 16, %fixed-stack.0 :: (dereferenceable load 8
 ; 32BIT-DAG:    STW killed renamable $r9,  24, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 24
 ; 32BIT-DAG:    STW killed renamable $r10, 28, %fixed-stack.0 :: (store 4 into %fixed-stack.0 + 28
-; 32BIT-NEXT:   renamable $f1 = LFD 16, %fixed-stack.0 :: (dereferenceable load 8
 ; 32BIT-NEXT:   BLR
 
 ; 64BIT:      fixedStack:
@@ -913,10 +913,10 @@ entry:
 ; 64BIT:      bb.0.entry:
 ; 64BIT-NEXT:   liveins: $x3, $x4, $x5, $x6
 ; 64BIT-DAG:    STD killed renamable $x3,  0, %fixed-stack.0 :: (store 8 into %fixed-stack.0
-; 64BIT-DAG:    STD killed renamable $x4,  8, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 8
 ; 64BIT-DAG:    STD killed renamable $x5, 16, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 16
-; 64BIT-DAG:    STD killed renamable $x6, 24, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 24
 ; 64BIT-NEXT:   renamable $f1 = LFD 16, %fixed-stack.0 :: (dereferenceable load 8
+; 64BIT-DAG:    STD killed renamable $x4,  8, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 8
+; 64BIT-DAG:    STD killed renamable $x6, 24, %fixed-stack.0 :: (store 8 into %fixed-stack.0 + 24
 ; 64BIT-NEXT:   BLR8
 
 ; ASM32-LABEL: .test_byval_31Byte:

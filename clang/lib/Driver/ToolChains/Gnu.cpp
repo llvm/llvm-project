@@ -38,6 +38,9 @@ using tools::addMultilibFlag;
 using tools::addPathIfExists;
 
 static bool forwardToGCC(const Option &O) {
+  // LinkerInput options have been forwarded. Don't duplicate.
+  if (O.hasFlag(options::LinkerInput))
+    return false;
   return O.matches(options::OPT_Link_Group) || O.hasFlag(options::LinkOption);
 }
 

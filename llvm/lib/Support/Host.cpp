@@ -1271,11 +1271,14 @@ int computeHostNumPhysicalCores() {
   }
   return CPU_COUNT(&Enabled);
 }
-#elif (defined(__linux__) &&                                                   \
-       (defined(__ppc__) || defined(__powerpc__) || defined(__s390x__)))
-#include <unistd.h>
-
-// Gets the number of *physical cores* on the machine.
+#elif defined(__linux__) && defined(__powerpc__)
+int computeHostNumPhysicalCores() {
+  cpu_set_t Affinity;
+  if (sched_getaffinity(0, sizeof(Affinity), &Affinity) != 0)
+    return -1;
+  return CPU_COUNT(&Affinity);
+}
+#elif defined(__linux__) && defined(__s390x__)
 int computeHostNumPhysicalCores() { return sysconf(_SC_NPROCESSORS_ONLN); }
 #elif defined(__APPLE__) && defined(__x86_64__)
 #include <sys/param.h>

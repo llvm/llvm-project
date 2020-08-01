@@ -14,10 +14,9 @@ declare i64 @llvm.ctlz.i64(i64, i1)
 define i32 @func2(i32 %p) {
 ; CHECK-LABEL: func2:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw0 killed $sw0 def $sx0
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    sll %s0, %s0, 32
 ; CHECK-NEXT:    ldz %s0, %s0
-; CHECK-NEXT:    # kill: def $sw0 killed $sw0 killed $sx0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = tail call i32 @llvm.ctlz.i32(i32 %p, i1 true)
   ret i32 %r

@@ -661,7 +661,7 @@ bool BasicAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
   SmallVector<const Value *, 16> Worklist;
   Worklist.push_back(Loc.Ptr);
   do {
-    const Value *V = getUnderlyingObject(Worklist.pop_back_val(), DL);
+    const Value *V = getUnderlyingObject(Worklist.pop_back_val());
     if (!Visited.insert(V).second) {
       Visited.clear();
       return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
@@ -875,7 +875,7 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   assert(notDifferentParent(Call, Loc.Ptr) &&
          "AliasAnalysis query involving multiple functions!");
 
-  const Value *Object = getUnderlyingObject(Loc.Ptr, DL);
+  const Value *Object = getUnderlyingObject(Loc.Ptr);
 
   // Calls marked 'tail' cannot read or write allocas from the current frame
   // because the current frame might be destroyed by the time they run. However,
@@ -1309,7 +1309,7 @@ bool BasicAAResult::isGEPBaseAtNegativeOffset(const GEPOperator *GEPOp,
 /// another pointer.
 ///
 /// We know that V1 is a GEP, but we don't know anything about V2.
-/// UnderlyingV1 is getUnderlyingObject(GEP1, DL), UnderlyingV2 is the same for
+/// UnderlyingV1 is getUnderlyingObject(GEP1), UnderlyingV2 is the same for
 /// V2.
 AliasResult BasicAAResult::aliasGEP(
     const GEPOperator *GEP1, LocationSize V1Size, const AAMDNodes &V1AAInfo,
@@ -1782,10 +1782,10 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
 
   // Figure out what objects these things are pointing to if we can.
   if (O1 == nullptr)
-    O1 = getUnderlyingObject(V1, DL, MaxLookupSearchDepth);
+    O1 = getUnderlyingObject(V1, MaxLookupSearchDepth);
 
   if (O2 == nullptr)
-    O2 = getUnderlyingObject(V2, DL, MaxLookupSearchDepth);
+    O2 = getUnderlyingObject(V2, MaxLookupSearchDepth);
 
   // Null values in the default address space don't point to any object, so they
   // don't alias any other pointer.

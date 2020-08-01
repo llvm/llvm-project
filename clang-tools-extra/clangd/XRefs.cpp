@@ -405,15 +405,17 @@ locateSymbolTextually(const SpelledWord &Word, ParsedAST &AST,
       log("locateSymbolNamedTextuallyAt: {0}", MaybeDeclLoc.takeError());
       return;
     }
-    Location DeclLoc = *MaybeDeclLoc;
-    Location DefLoc;
+    LocatedSymbol Located;
+    Located.PreferredDeclaration = *MaybeDeclLoc;
+    Located.Name = (Sym.Name + Sym.TemplateSpecializationArgs).str();
     if (Sym.Definition) {
       auto MaybeDefLoc = indexToLSPLocation(Sym.Definition, MainFilePath);
       if (!MaybeDefLoc) {
         log("locateSymbolNamedTextuallyAt: {0}", MaybeDefLoc.takeError());
         return;
       }
-      DefLoc = *MaybeDefLoc;
+      Located.PreferredDeclaration = *MaybeDefLoc;
+      Located.Definition = *MaybeDefLoc;
     }
 
     if (ScoredResults.size() >= 3) {
@@ -423,11 +425,6 @@ locateSymbolTextually(const SpelledWord &Word, ParsedAST &AST,
       TooMany = true;
       return;
     }
-
-    LocatedSymbol Located;
-    Located.Name = (Sym.Name + Sym.TemplateSpecializationArgs).str();
-    Located.PreferredDeclaration = bool(Sym.Definition) ? DefLoc : DeclLoc;
-    Located.Definition = DefLoc;
 
     SymbolQualitySignals Quality;
     Quality.merge(Sym);
