@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IDENTIFIERNAMINGCHECK_H
 
 #include "../utils/RenamerClangTidyCheck.h"
+#include "llvm/ADT/Optional.h"
 namespace clang {
 
 class MacroInfo;
@@ -69,7 +70,17 @@ private:
   DiagInfo GetDiagInfo(const NamingCheckId &ID,
                        const NamingCheckFailure &Failure) const override;
 
-  std::vector<llvm::Optional<NamingStyle>> NamingStyles;
+  ArrayRef<llvm::Optional<NamingStyle>>
+  getStyleForFile(StringRef FileName) const;
+
+  /// Stores the style options as a vector, indexed by the specified \ref
+  /// StyleKind, for a given directory.
+  mutable llvm::StringMap<std::vector<llvm::Optional<NamingStyle>>>
+      NamingStylesCache;
+  ArrayRef<llvm::Optional<NamingStyle>> MainFileStyle;
+  ClangTidyContext *const Context;
+  const std::string CheckName;
+  const bool GetConfigPerFile;
   const bool IgnoreFailedSplit;
   const bool IgnoreMainLikeFunctions;
 };

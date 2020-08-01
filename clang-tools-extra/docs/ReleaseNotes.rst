@@ -67,7 +67,14 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-The improvements are...
+Changes in existing checks
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Improved :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability-identifier-naming>` check.
+
+  Added an option `GetConfigPerFile` to support including files which use
+  different naming styles.
 
 Improvements to include-fixer
 -----------------------------
