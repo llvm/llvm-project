@@ -76,7 +76,7 @@ bool formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
 /// Returns true if any modifications are made.
 bool formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
                               const DominatorTree &DT, const LoopInfo &LI,
-                              ScalarEvolution *SE);
+                              ScalarEvolution *SE, IRBuilderBase &Builder);
 
 /// Put loop into LCSSA form.
 ///
