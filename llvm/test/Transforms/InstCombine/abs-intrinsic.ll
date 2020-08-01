@@ -165,3 +165,23 @@ define <4 x i1> @abs_known_not_int_min_vec(<4 x i32> %x) {
   %c2 = icmp sge <4 x i32> %abs, zeroinitializer
   ret <4 x i1> %c2
 }
+
+define i32 @abs_of_neg(i32 %x) {
+; CHECK-LABEL: @abs_of_neg(
+; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    ret i32 [[B]]
+;
+  %a = sub i32 0, %x
+  %b = call i32 @llvm.abs.i32(i32 %a, i1 false)
+  ret i32 %b
+}
+
+define <4 x i32> @abs_of_neg_vec(<4 x i32> %x) {
+; CHECK-LABEL: @abs_of_neg_vec(
+; CHECK-NEXT:    [[B:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[X:%.*]], i1 false)
+; CHECK-NEXT:    ret <4 x i32> [[B]]
+;
+  %a = sub nsw <4 x i32> zeroinitializer, %x
+  %b = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a, i1 false)
+  ret <4 x i32> %b
+}
