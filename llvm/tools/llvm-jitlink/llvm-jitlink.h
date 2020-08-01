@@ -86,6 +86,7 @@ struct Session {
   StringSet<> HarnessFiles;
   StringSet<> HarnessExternals;
   StringSet<> HarnessDefinitions;
+  DenseMap<StringRef, StringRef> CanonicalWeakDefs;
 
 private:
   Session(Triple TT, Error &Err);
