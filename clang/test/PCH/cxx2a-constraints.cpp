@@ -24,6 +24,8 @@ template <SizedLike<char> T> void h(T) {}
 template <SizedLike<int> T> void i(T) {}
 template <SizedLike T> void i(T) {}
 
+void j(SizedLike<int> auto ...ints) {}
+
 #else /*included pch*/
 
 int main() {
@@ -35,6 +37,7 @@ int main() {
   (void)h(1);
   (void)i('1');
   (void)i(1);
+  (void)j(1, 2, 3);
 }
 
 #endif // HEADER
