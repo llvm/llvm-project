@@ -2013,7 +2013,7 @@ struct StateWrapper : public BaseType, public StateTy {
   StateType &getState() override { return *this; }
 
   /// See AbstractAttribute::getState(...).
-  const AbstractState &getState() const override { return *this; }
+  const StateType &getState() const override { return *this; }
 };
 
 /// Helper class that provides common functionality to manifest IR attributes.
@@ -3302,7 +3302,7 @@ struct AAValueConstantRange
 
   /// See AbstractAttribute::getState(...).
   IntegerRangeState &getState() override { return *this; }
-  const AbstractState &getState() const override { return *this; }
+  const IntegerRangeState &getState() const override { return *this; }
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAValueConstantRange &createForPosition(const IRPosition &IRP,
