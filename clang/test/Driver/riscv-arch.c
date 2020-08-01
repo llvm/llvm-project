@@ -380,6 +380,6 @@
 // RV32-EXPERIMENTAL-V-BADVERS: error: invalid arch name 'rv32iv0p1'
 // RV32-EXPERIMENTAL-V-BADVERS: unsupported version number 0.1 for experimental extension
 
-// RUN: %clang -target riscv32-unknown-elf -march=rv32iv0p8 -menable-experimental-extensions -### %s -c 2>&1 | \
+// RUN: %clang -target riscv32-unknown-elf -march=rv32iv0p9 -menable-experimental-extensions -### %s -c 2>&1 | \
 // RUN:   FileCheck -check-prefix=RV32-EXPERIMENTAL-V-GOODVERS %s
 // RV32-EXPERIMENTAL-V-GOODVERS: "-target-feature" "+experimental-v"
