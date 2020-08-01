@@ -67,8 +67,6 @@ define float @min2f32(float, float) {
 define float @minuf32(float, float) {
 ; CHECK-LABEL: minuf32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sf1 killed $sf1 def $sx1
-; CHECK-NEXT:    # kill: def $sf0 killed $sf0 def $sx0
 ; CHECK-NEXT:    fcmp.s %s2, %s0, %s1
 ; CHECK-NEXT:    cmov.s.ltnan %s1, %s0, %s2
 ; CHECK-NEXT:    or %s0, 0, %s1
@@ -81,8 +79,6 @@ define float @minuf32(float, float) {
 define float @min2uf32(float, float) {
 ; CHECK-LABEL: min2uf32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sf1 killed $sf1 def $sx1
-; CHECK-NEXT:    # kill: def $sf0 killed $sf0 def $sx0
 ; CHECK-NEXT:    fcmp.s %s2, %s0, %s1
 ; CHECK-NEXT:    cmov.s.lenan %s1, %s0, %s2
 ; CHECK-NEXT:    or %s0, 0, %s1
@@ -139,6 +135,8 @@ define i64 @min2u64(i64, i64) {
 define i32 @mini32(i32, i32) {
 ; CHECK-LABEL: mini32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    mins.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %3 = icmp slt i32 %0, %1
@@ -149,6 +147,8 @@ define i32 @mini32(i32, i32) {
 define i32 @min2i32(i32, i32) {
 ; CHECK-LABEL: min2i32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    mins.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %3 = icmp sle i32 %0, %1
@@ -159,11 +159,10 @@ define i32 @min2i32(i32, i32) {
 define i32 @minu32(i32, i32) {
 ; CHECK-LABEL: minu32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw1 killed $sw1 def $sx1
-; CHECK-NEXT:    # kill: def $sw0 killed $sw0 def $sx0
-; CHECK-NEXT:    cmpu.w %s2, %s0, %s1
-; CHECK-NEXT:    cmov.w.lt %s1, %s0, %s2
-; CHECK-NEXT:    or %s0, 0, %s1
+; CHECK-NEXT:    adds.w.sx %s2, %s0, (0)1
+; CHECK-NEXT:    adds.w.sx %s0, %s1, (0)1
+; CHECK-NEXT:    cmpu.w %s1, %s2, %s0
+; CHECK-NEXT:    cmov.w.lt %s0, %s2, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %3 = icmp ult i32 %0, %1
   %4 = select i1 %3, i32 %0, i32 %1
@@ -173,11 +172,10 @@ define i32 @minu32(i32, i32) {
 define i32 @min2u32(i32, i32) {
 ; CHECK-LABEL: min2u32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw1 killed $sw1 def $sx1
-; CHECK-NEXT:    # kill: def $sw0 killed $sw0 def $sx0
-; CHECK-NEXT:    cmpu.w %s2, %s0, %s1
-; CHECK-NEXT:    cmov.w.le %s1, %s0, %s2
-; CHECK-NEXT:    or %s0, 0, %s1
+; CHECK-NEXT:    adds.w.sx %s2, %s0, (0)1
+; CHECK-NEXT:    adds.w.sx %s0, %s1, (0)1
+; CHECK-NEXT:    cmpu.w %s1, %s2, %s0
+; CHECK-NEXT:    cmov.w.le %s0, %s2, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %3 = icmp ule i32 %0, %1
   %4 = select i1 %3, i32 %0, i32 %1
@@ -187,10 +185,11 @@ define i32 @min2u32(i32, i32) {
 define zeroext i1 @mini1(i1 zeroext, i1 zeroext) {
 ; CHECK-LABEL: mini1:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw1 killed $sw1 def $sx1
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
 ; CHECK-NEXT:    and %s2, %s1, %s0
 ; CHECK-NEXT:    cmov.w.ne %s2, %s1, %s0
-; CHECK-NEXT:    or %s0, 0, %s2
+; CHECK-NEXT:    adds.w.zx %s0, %s2, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %3 = xor i1 %0, true
   %4 = and i1 %3, %1
