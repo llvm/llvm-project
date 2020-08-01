@@ -162,17 +162,16 @@ void IdentifierNamingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   RenamerClangTidyCheck::storeOptions(Opts);
   ArrayRef<llvm::Optional<NamingStyle>> NamingStyles =
       getStyleForFile(Context->getCurrentFile());
-  for (size_t i = 0; i < SK_Count; ++i) {
-    if (NamingStyles[i]) {
-      if (NamingStyles[i]->Case) {
-        Options.store(Opts, (StyleNames[i] + "Case").str(),
-                      *NamingStyles[i]->Case);
-      }
-      Options.store(Opts, (StyleNames[i] + "Prefix").str(),
-                    NamingStyles[i]->Prefix);
-      Options.store(Opts, (StyleNames[i] + "Suffix").str(),
-                    NamingStyles[i]->Suffix);
-    }
+  for (size_t I = 0; I < SK_Count; ++I) {
+    if (!NamingStyles[I])
+      continue;
+    if (NamingStyles[I]->Case)
+      Options.store(Opts, (StyleNames[I] + "Case").str(),
+                    *NamingStyles[I]->Case);
+    Options.store(Opts, (StyleNames[I] + "Prefix").str(),
+                  NamingStyles[I]->Prefix);
+    Options.store(Opts, (StyleNames[I] + "Suffix").str(),
+                  NamingStyles[I]->Suffix);
   }
   Options.store(Opts, "GetConfigPerFile", GetConfigPerFile);
   Options.store(Opts, "IgnoreFailedSplit", IgnoreFailedSplit);
@@ -191,14 +190,9 @@ static bool matchesStyle(StringRef Name,
       llvm::Regex("^[a-z]([a-z0-9]*(_[A-Z])?)*"),
   };
 
-  if (Name.startswith(Style.Prefix))
-    Name = Name.drop_front(Style.Prefix.size());
-  else
+  if (!Name.consume_front(Style.Prefix))
     return false;
-
-  if (Name.endswith(Style.Suffix))
-    Name = Name.drop_back(Style.Suffix.size());
-  else
+  if (!Name.consume_back(Style.Suffix))
     return false;
 
   // Ensure the name doesn't have any extra underscores beyond those specified
@@ -221,9 +215,10 @@ static std::string fixupWithCase(StringRef Name,
   Name.split(Substrs, "_", -1, false);
 
   SmallVector<StringRef, 8> Words;
+  SmallVector<StringRef, 8> Groups;
   for (auto Substr : Substrs) {
     while (!Substr.empty()) {
-      SmallVector<StringRef, 8> Groups;
+      Groups.clear();
       if (!Splitter.match(Substr, &Groups))
         break;
 
@@ -241,12 +236,12 @@ static std::string fixupWithCase(StringRef Name,
   }
 
   if (Words.empty())
-    return std::string(Name);
+    return Name.str();
 
-  std::string Fixup;
+  SmallString<128> Fixup;
   switch (Case) {
   case IdentifierNamingCheck::CT_AnyCase:
-    Fixup += Name;
+    return Name.str();
     break;
 
   case IdentifierNamingCheck::CT_LowerCase:
@@ -267,7 +262,7 @@ static std::string fixupWithCase(StringRef Name,
 
   case IdentifierNamingCheck::CT_CamelCase:
     for (auto const &Word : Words) {
-      Fixup += Word.substr(0, 1).upper();
+      Fixup += toupper(Word.front());
       Fixup += Word.substr(1).lower();
     }
     break;
@@ -277,7 +272,7 @@ static std::string fixupWithCase(StringRef Name,
       if (&Word == &Words.front()) {
         Fixup += Word.lower();
       } else {
-        Fixup += Word.substr(0, 1).upper();
+        Fixup += toupper(Word.front());
         Fixup += Word.substr(1).lower();
       }
     }
@@ -287,7 +282,7 @@ static std::string fixupWithCase(StringRef Name,
     for (auto const &Word : Words) {
       if (&Word != &Words.front())
         Fixup += "_";
-      Fixup += Word.substr(0, 1).upper();
+      Fixup += toupper(Word.front());
       Fixup += Word.substr(1).lower();
     }
     break;
@@ -296,16 +291,16 @@ static std::string fixupWithCase(StringRef Name,
     for (auto const &Word : Words) {
       if (&Word != &Words.front()) {
         Fixup += "_";
-        Fixup += Word.substr(0, 1).upper();
+        Fixup += toupper(Word.front());
       } else {
-        Fixup += Word.substr(0, 1).lower();
+        Fixup += tolower(Word.front());
       }
       Fixup += Word.substr(1).lower();
     }
     break;
   }
 
-  return Fixup;
+  return Fixup.str().str();
 }
 
 static bool isParamInMainLikeFunction(const ParmVarDecl &ParmDecl,
@@ -715,8 +710,8 @@ RenamerClangTidyCheck::DiagInfo
 IdentifierNamingCheck::GetDiagInfo(const NamingCheckId &ID,
                                    const NamingCheckFailure &Failure) const {
   return DiagInfo{"invalid case style for %0 '%1'",
-                  [&](DiagnosticBuilder &diag) {
-                    diag << Failure.Info.KindName << ID.second;
+                  [&](DiagnosticBuilder &Diag) {
+                    Diag << Failure.Info.KindName << ID.second;
                   }};
 }
 
