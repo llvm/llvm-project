@@ -96,7 +96,6 @@ using namespace clang::driver;
 using namespace clang;
 using namespace llvm::opt;
 
-// static
 std::string Driver::GetResourcesPath(StringRef BinaryPath,
                                      StringRef CustomResourceDir) {
   // Since the resource directory is embedded in the module hash, it's important
@@ -2775,12 +2774,6 @@ class OffloadingActionBuilder final {
       // backend and assemble phases to output LLVM IR. Except for generating
       // non-relocatable device coee, where we generate fat binary for device
       // code and pass to host in Backend phase.
-#if 0
-      if (CudaDeviceActions.empty() ||
-          (CurPhase == phases::Backend && Relocatable) ||
-          CurPhase == phases::Assemble)
-        return CompileDeviceOnly ? ABRT_Ignore_Host : ABRT_Success;
-#endif
       if (CudaDeviceActions.empty())
         return ABRT_Success;
 
@@ -2860,9 +2853,10 @@ class OffloadingActionBuilder final {
       }
 
       // By default, we produce an action for each device arch.
-      for (Action *&A : CudaDeviceActions)
+      for (Action *&A : CudaDeviceActions) {
         A = C.getDriver().ConstructPhaseAction(C, Args, CurPhase, A,
                                                AssociatedOffloadKind);
+      }
 
       return (CompileDeviceOnly && CurPhase == FinalPhase) ? ABRT_Ignore_Host
                                                            : ABRT_Success;
@@ -3025,19 +3019,6 @@ class OffloadingActionBuilder final {
         }
 
         for (unsigned I = 0; I < ToolChains.size(); ++I) {
-          // fails lib_bundled_cmdline, rejecting archives on cmdline
-          if (!Args.getLastArg(options::OPT_fopenmp_targets_EQ)) {
-            bool foundDeviceCode = false;
-            for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I) {
-              StringRef Extension =
-                  llvm::sys::path::extension(FileName).drop_front();
-              if (Extension != "a") {
-               foundDeviceCode = true;
-              }
-            }
-            if (!foundDeviceCode)
-              return ABRT_Inactive;
-          }
           OpenMPDeviceActions.push_back(UA);
           if (GpuArchList.size())
             for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I) {
@@ -4610,14 +4591,18 @@ InputInfo Driver::BuildJobsForActionNoCache(
           UI.DependentOffloadKind,
           UI.DependentToolChain->getTriple().normalize(),
           /*CreatePrefixForHost=*/true);
-      auto CurI = InputInfo(
-          UA,
-          GetNamedOutputPath(C, *UA, BaseInput, UI.DependentBoundArch,
-                             /*AtTopLevel=*/false,
-                             MultipleArchs ||
-                                 UI.DependentOffloadKind == Action::OFK_HIP,
-                             OffloadingPrefix),
-          BaseInput);
+      auto CurI =
+	(UI.DependentOffloadKind == Action::OFK_Host &&
+	 llvm::sys::path::extension(InputInfos[0].getFilename()) == ".a")
+              ? InputInfos[0]
+              : InputInfo(UA,
+                          GetNamedOutputPath(
+                              C, *UA, BaseInput, UI.DependentBoundArch,
+                              /*AtTopLevel=*/false,
+                              MultipleArchs ||
+                                  UI.DependentOffloadKind == Action::OFK_HIP,
+                              OffloadingPrefix),
+                          BaseInput);
       // Save the unbundling result.
       UnbundlingResults.push_back(CurI);
 

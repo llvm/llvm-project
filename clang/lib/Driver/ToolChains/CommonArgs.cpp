@@ -1553,20 +1553,6 @@ bool tools::SDLSearch(const Driver &D, const llvm::opt::ArgList &DriverArgs,
   return FoundSDL;
 }
 
-static bool archiveContainsDeviceCode(const char *UBProgram,
-                                      std::string Archive,
-                                      std::string GpuName) {
-  std::vector<StringRef> UBArgs;
-  std::string InputArg("-input=" + Archive);
-  std::string OffloadArg("-offload-arch=" + GpuName);
-  UBArgs.push_back("clang-unbundle-archive");
-  UBArgs.push_back("-dry-run");
-  UBArgs.push_back(InputArg);
-  UBArgs.push_back(OffloadArg);
-  int ExecResult = llvm::sys::ExecuteAndWait(UBProgram, UBArgs);
-  return ExecResult == 0;
-}
-
 bool tools::SDLSearch(Compilation &C, const Driver &D, const Tool &T,
                       const JobAction &JA, const InputInfoList &Inputs,
                       const llvm::opt::ArgList &DriverArgs,
@@ -1603,11 +1589,8 @@ bool tools::SDLSearch(Compilation &C, const Driver &D, const Tool &T,
         break;
       }
     }
-    const char *UBProgram = DriverArgs.MakeArgString(
-        T.getToolChain().GetProgramPath("clang-unbundle-archive"));
 
-    if (ArchiveOfBundles != "" &&
-        archiveContainsDeviceCode(UBProgram, ArchiveOfBundles, gpuname)) {
+    if (ArchiveOfBundles != "") {
       std::string Err;
       llvm::SmallString<128> TmpDirString;
       llvm::sys::path::system_temp_directory(true, TmpDirString);
@@ -1622,17 +1605,30 @@ bool tools::SDLSearch(Compilation &C, const Driver &D, const Tool &T,
       C.addTempFile(C.getArgs().MakeArgString(OutputLib.c_str()));
 
       ArgStringList CmdArgs;
+      SmallString<128> DeviceTriple;
+      DeviceTriple += Action::GetOffloadKindName(JA.getOffloadingDeviceKind());
+      DeviceTriple += '-';
+      DeviceTriple += T.getToolChain().getTriple().normalize();
+      DeviceTriple += '-';
+      DeviceTriple += gpuname;
 
-      std::string InputArg("-input=" + ArchiveOfBundles);
-      std::string OffloadArg("-offload-arch=" + gpuname);
-      std::string OutputArg("-output=" + OutputLib);
+      std::string UnbundleArg("-unbundle");
+      std::string TypeArg("-type=a");
+      std::string InputArg("-inputs=" + ArchiveOfBundles);
+      std::string OffloadArg("-targets=" + std::string(DeviceTriple));
+      std::string OutputArg("-outputs=" + OutputLib);
+
+      const char *UBProgram = DriverArgs.MakeArgString(
+          T.getToolChain().GetProgramPath("clang-offload-bundler"));
 
       ArgStringList UBArgs;
+      UBArgs.push_back(C.getArgs().MakeArgString(UnbundleArg.c_str()));
+      UBArgs.push_back(C.getArgs().MakeArgString(TypeArg.c_str()));
       UBArgs.push_back(C.getArgs().MakeArgString(InputArg.c_str()));
       UBArgs.push_back(C.getArgs().MakeArgString(OffloadArg.c_str()));
       UBArgs.push_back(C.getArgs().MakeArgString(OutputArg.c_str()));
       C.addCommand(std::make_unique<Command>(
-          JA, T, ResponseFileSupport::AtFileCurCP(), UBProgram, UBArgs, Inputs));
+        JA, T, ResponseFileSupport::AtFileCurCP(), UBProgram, UBArgs, Inputs));
       if (postClangLink)
         CC1Args.push_back("-mlink-builtin-bitcode");
 

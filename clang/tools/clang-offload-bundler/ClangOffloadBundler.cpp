@@ -22,6 +22,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Object/Archive.h"
+#include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Casting.h"
@@ -29,6 +31,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -80,6 +83,7 @@ static cl::opt<std::string>
                        "  bc  - llvm-bc\n"
                        "  s   - assembler\n"
                        "  o   - object\n"
+                       "  a   - archive of objects\n"
                        "  gch - precompiled-header\n"
                        "  ast - clang AST file"),
               cl::cat(ClangOffloadBundlerCategory));
@@ -118,6 +122,22 @@ static bool hasHostKind(StringRef Target) {
   return OffloadKind == "host";
 }
 
+static StringRef getTriple(StringRef Target) {
+  StringRef OffloadKind;
+  StringRef Triple;
+  getOffloadKindAndTriple(Target, OffloadKind, Triple);
+  return Triple;
+}
+
+static StringRef getDevice(StringRef Triple) {
+  if (Triple.contains("-")) {
+    auto Split = Triple.rsplit('-');
+    return Split.second;
+  } else {
+    return Triple;
+  }
+}
+
 /// Generic file handler interface.
 class FileHandler {
 public:
@@ -139,7 +159,7 @@ public:
   virtual Error ReadBundleEnd(MemoryBuffer &Input) = 0;
 
   /// Read the current bundle and write the result into the stream \a OS.
-  virtual Error ReadBundle(raw_fd_ostream &OS, MemoryBuffer &Input) = 0;
+  virtual Error ReadBundle(raw_ostream &OS, MemoryBuffer &Input) = 0;
 
   /// Write the header of the bundled file to \a OS based on the information
   /// gathered from \a Inputs.
@@ -308,7 +328,7 @@ public:
     return Error::success();
   }
 
-  Error ReadBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
+  Error ReadBundle(raw_ostream &OS, MemoryBuffer &Input) final {
     assert(CurBundleInfo != BundlesInfo.end() && "Invalid reader info!");
     StringRef FC = Input.getBuffer();
     OS.write(FC.data() + CurBundleInfo->second.Offset,
@@ -466,7 +486,7 @@ public:
 
   Error ReadBundleEnd(MemoryBuffer &Input) final { return Error::success(); }
 
-  Error ReadBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
+  Error ReadBundle(raw_ostream &OS, MemoryBuffer &Input) final {
     Expected<StringRef> ContentOrErr = CurrentSection->getContents();
     if (!ContentOrErr)
       return ContentOrErr.takeError();
@@ -660,7 +680,7 @@ protected:
     return Error::success();
   }
 
-  Error ReadBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
+  Error ReadBundle(raw_ostream &OS, MemoryBuffer &Input) final {
     StringRef FC = Input.getBuffer();
     size_t BundleStart = ReadChars;
 
@@ -742,6 +762,8 @@ CreateFileHandler(MemoryBuffer &FirstInput) {
   if (FilesType == "s")
     return std::make_unique<TextFileHandler>(/*Comment=*/"#");
   if (FilesType == "o")
+    return CreateObjectFileHandler(FirstInput);
+  if (FilesType == "a")
     return CreateObjectFileHandler(FirstInput);
   if (FilesType == "gch")
     return std::make_unique<BinaryFileHandler>();
@@ -902,6 +924,157 @@ static Error UnbundleFiles() {
   return Error::success();
 }
 
+static Archive::Kind getDefaultArchiveKindForHost() {
+  return Triple(sys::getDefaultTargetTriple()).isOSDarwin()
+             ? Archive::K_DARWIN
+             : Archive::K_GNU;
+}
+
+static StringRef getDeviceFileExtension(StringRef Device) {
+  if (Device.contains("gfx"))
+    return ".bc";
+  if (Device.contains("sm_"))
+    return ".cubin";
+  else {
+    WithColor::warning() << "Could not determine extension for archive"
+                            "members, using \".o\"\n";
+    return ".o";
+  }
+}
+
+static StringRef removeExtension(StringRef FileName) {
+  StringRef NoExtFileName;
+  if (FileName.contains("."))
+    NoExtFileName = FileName.rsplit('.').first;
+  else
+    NoExtFileName = FileName;
+
+  return NoExtFileName;
+}
+
+static std::string getDeviceLibraryFileName(StringRef BundleFileName,
+                                            StringRef Device) {
+  StringRef LibName = removeExtension(BundleFileName);
+  StringRef Extension = getDeviceFileExtension(Device);
+
+  std::string Result;
+  Result += LibName;
+  Result += Extension;
+  return Result;
+}
+
+static bool checkDeviceOptions(StringRef Device, std::string OffloadArch) {
+  return !OffloadArch.empty() && OffloadArch == Device;
+}
+
+
+// UnbundleArchive takes an archive file (".a") as input containing bundled
+// object files, and an offload target (not host), and extracts the device code
+// into a new archive file. The resulting archive file contains the same number
+// of files, with the same names, except the file extension have been modified
+// depending on the target (either ".cubin" or ".bc") The created archive file
+// does not contain an index of the symbols.
+static Error UnbundleArchive() {
+  std::vector<std::unique_ptr<MemoryBuffer>> ArchiveBuffers;
+  std::string OffloadArch = getDevice(TargetNames.front()).str();
+  std::vector<NewArchiveMember> ArchiveMembers;
+
+  StringRef IFName = InputFileNames.front();
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+      MemoryBuffer::getFileOrSTDIN(IFName, -1, false);
+  if (std::error_code EC = BufOrErr.getError())
+    return createFileError(InputFileNames.front(), EC);
+
+  ArchiveBuffers.push_back(std::move(*BufOrErr));
+  auto LibOrErr =
+      Archive::create(ArchiveBuffers.back()->getMemBufferRef());
+  if (!LibOrErr)
+    return LibOrErr.takeError();
+
+  auto Archive = std::move(*LibOrErr);
+
+  Error ArchiveErr = Error::success();
+  auto ChildEnd = Archive->child_end();
+  for (auto ChildIter = Archive->child_begin(ArchiveErr);
+       ChildIter != ChildEnd; ++ChildIter) {
+    if (ArchiveErr)
+      return ArchiveErr;
+    auto ChildNameOrErr = (*ChildIter).getName();
+    if (!ChildNameOrErr)
+      return ChildNameOrErr.takeError();
+
+    StringRef ChildName = sys::path::filename(*ChildNameOrErr);
+
+    auto ChildBufferRefOrErr = (*ChildIter).getMemoryBufferRef();
+    if (!ChildBufferRefOrErr)
+      return ChildBufferRefOrErr.takeError();
+
+    auto ChildBuffer =
+        MemoryBuffer::getMemBuffer(*ChildBufferRefOrErr, false);
+
+    Expected<std::unique_ptr<FileHandler>> FileHandlerOrErr =
+      CreateFileHandler(*ChildBuffer);
+    if (!FileHandlerOrErr)
+      return FileHandlerOrErr.takeError();
+
+    std::unique_ptr<FileHandler> &FileHandler = *FileHandlerOrErr;
+    assert(FileHandler);
+
+    if (Error ReadErr = FileHandler.get()->ReadHeader(*ChildBuffer))
+      return ReadErr;
+
+    Expected<Optional<StringRef>> CurTripleOrErr =
+      FileHandler->ReadBundleStart(*ChildBuffer);
+    if (!CurTripleOrErr)
+      return  CurTripleOrErr.takeError();
+
+    Optional<StringRef> OptionalCurKindTriple = *CurTripleOrErr;
+    // No device code in this child, skip
+    if(!OptionalCurKindTriple.hasValue())
+      continue;
+    StringRef CurKindTriple = *OptionalCurKindTriple;
+    assert(!CurKindTriple.empty());
+
+    while (!CurKindTriple.empty()) {
+      if (hasHostKind(CurKindTriple)) {
+        // Do nothing, we don't extract host code yet
+      } else if (checkDeviceOptions(getDevice(getTriple(CurKindTriple)),
+                                    OffloadArch)) {
+        std::string BundleData;
+        raw_string_ostream DataStream(BundleData);
+        if (Error Err = FileHandler.get()->ReadBundle(DataStream, *ChildBuffer))
+          return Err;
+
+        std::string *LibraryName =
+            new std::string(getDeviceLibraryFileName(ChildName, OffloadArch));
+        auto MemBuf =
+            MemoryBuffer::getMemBufferCopy(DataStream.str(), *LibraryName);
+        ArchiveBuffers.push_back(std::move(MemBuf));
+        auto MemBufRef = MemoryBufferRef(*(ArchiveBuffers.back()));
+        ArchiveMembers.push_back(NewArchiveMember(MemBufRef));
+      }
+      if (Error Err = FileHandler.get()->ReadBundleEnd(*ChildBuffer))
+        return Err;
+
+      Expected<Optional<StringRef>> NextTripleOrErr =
+        FileHandler->ReadBundleStart(*ChildBuffer);
+      if (!NextTripleOrErr)
+        return NextTripleOrErr.takeError();
+
+      CurKindTriple = ((*NextTripleOrErr).hasValue()) ? **NextTripleOrErr : "";
+    }
+  }
+  assert(!ArchiveErr);
+
+    std::string FileName = OutputFileNames.front();
+  if (Error WriteErr =
+      writeArchive(FileName, ArchiveMembers, true,
+                   getDefaultArchiveKindForHost(), true, false, nullptr))
+    return WriteErr;
+
+  return Error::success();
+}
+
 static void PrintVersion(raw_ostream &OS) {
   OS << clang::getClangToolFullVersion("clang-offload-bundler") << '\n';
 }
@@ -935,13 +1108,25 @@ int main(int argc, const char **argv) {
           errc::invalid_argument,
           "only one input file supported in unbundling mode"));
     }
-    if (OutputFileNames.size() != TargetNames.size()) {
+    if (FilesType == "a" && (OutputFileNames.size() != 1 ||
+                             TargetNames.size() != 1)) {
+      Error = true;
+      reportError(createStringError(errc::invalid_argument,
+                                    "number of output files and targets should "
+                                    "be 1 when unbundling an archive"));
+    } else if (OutputFileNames.size() != TargetNames.size()) {
       Error = true;
       reportError(createStringError(errc::invalid_argument,
                                     "number of output files and targets should "
                                     "match in unbundling mode"));
     }
   } else {
+    if (FilesType == "a") {
+      reportError(createStringError(errc::invalid_argument,
+                                    "Archive files are only supported "
+                                    "for unbundling"));
+      Error = true;
+    }
     if (OutputFileNames.size() != 1) {
       Error = true;
       reportError(createStringError(
@@ -1014,7 +1199,11 @@ int main(int argc, const char **argv) {
   // tools.
   BundlerExecutable = sys::fs::getMainExecutable(argv[0], &BundlerExecutable);
 
-  if (llvm::Error Err = Unbundle ? UnbundleFiles() : BundleFiles()) {
+  llvm::Error Err = (Unbundle && FilesType == "a") ?  UnbundleArchive()
+    : (Unbundle) ? UnbundleFiles()
+    : BundleFiles();
+
+  if (Err) {
     reportError(std::move(Err));
     return 1;
   }
