@@ -339,6 +339,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::FMA  , MVT::f32, Legal);
   }
 
+  if (Subtarget.hasSPE())
+    setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
+
   setOperationAction(ISD::FLT_ROUNDS_, MVT::i32, Custom);
 
   // If we're enabling GP optimizations, use hardware square root
