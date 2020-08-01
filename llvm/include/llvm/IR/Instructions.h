@@ -27,6 +27,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -2742,6 +2743,15 @@ public:
   /// together the same value, assuming undefs are equal to a unique
   /// non-undef value.
   bool hasConstantOrUndefValue() const;
+
+  /// If the PHI node is complete which means all of its parent's predecessors
+  /// have incoming value in this PHI, return true, otherwise return false.
+  bool isComplete() const {
+    return llvm::all_of(predecessors(getParent()),
+                        [this](const BasicBlock *Pred) {
+                          return getBasicBlockIndex(Pred) >= 0;
+                        });
+  }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
