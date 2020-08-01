@@ -1707,7 +1707,7 @@ void ContractionOpToOuterProductOpLowering::rewrite(
   auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
   AffineExpr m, n, k;
   bindDims(rewriter.getContext(), m, n, k);
-  SmallVector<int64_t, 2> perm{1, 0};
+  static constexpr std::array<int64_t, 2> perm = {1, 0};
   auto iteratorTypes = op.iterator_types().getValue();
   SmallVector<AffineMap, 4> maps = op.getIndexingMaps();
   if (isParallelIterator(iteratorTypes[0]) &&
@@ -1911,10 +1911,10 @@ Value ContractionOpLowering::lowerParallel(vector::ContractionOp op,
   assert(lookup.hasValue() && "parallel index not listed in reduction");
   int64_t resIndex = lookup.getValue();
   // Construct new iterator types and affine map array attribute.
-  SmallVector<AffineMap, 4> lowIndexingMaps;
-  lowIndexingMaps.push_back(adjustMap(iMap[0], iterIndex, rewriter));
-  lowIndexingMaps.push_back(adjustMap(iMap[1], iterIndex, rewriter));
-  lowIndexingMaps.push_back(adjustMap(iMap[2], iterIndex, rewriter));
+  std::array<AffineMap, 3> lowIndexingMaps = {
+      adjustMap(iMap[0], iterIndex, rewriter),
+      adjustMap(iMap[1], iterIndex, rewriter),
+      adjustMap(iMap[2], iterIndex, rewriter)};
   auto lowAffine = rewriter.getAffineMapArrayAttr(lowIndexingMaps);
   auto lowIter =
       rewriter.getArrayAttr(adjustIter(op.iterator_types(), iterIndex));
@@ -1962,10 +1962,10 @@ Value ContractionOpLowering::lowerReduction(vector::ContractionOp op,
                                                 op.acc());
   }
   // Construct new iterator types and affine map array attribute.
-  SmallVector<AffineMap, 4> lowIndexingMaps;
-  lowIndexingMaps.push_back(adjustMap(iMap[0], iterIndex, rewriter));
-  lowIndexingMaps.push_back(adjustMap(iMap[1], iterIndex, rewriter));
-  lowIndexingMaps.push_back(adjustMap(iMap[2], iterIndex, rewriter));
+  std::array<AffineMap, 3> lowIndexingMaps = {
+      adjustMap(iMap[0], iterIndex, rewriter),
+      adjustMap(iMap[1], iterIndex, rewriter),
+      adjustMap(iMap[2], iterIndex, rewriter)};
   auto lowAffine = rewriter.getAffineMapArrayAttr(lowIndexingMaps);
   auto lowIter =
       rewriter.getArrayAttr(adjustIter(op.iterator_types(), iterIndex));
