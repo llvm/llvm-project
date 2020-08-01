@@ -829,6 +829,10 @@ inline bool isLegalAddressImm(unsigned Opcode, int Imm,
     return std::abs(Imm) < (((1 << 7) * 2) - 1) && Imm % 2 == 0;
   case ARMII::AddrModeT2_i7s4:
     return std::abs(Imm) < (((1 << 7) * 4) - 1) && Imm % 4 == 0;
+  case ARMII::AddrModeT2_i8:
+    return std::abs(Imm) < (((1 << 8) * 1) - 1);
+  case ARMII::AddrModeT2_i12:
+    return Imm >= 0 && Imm < (((1 << 12) * 1) - 1);
   default:
     llvm_unreachable("Unhandled Addressing mode");
   }
