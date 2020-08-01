@@ -8,6 +8,12 @@
 # RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+experimental-v %s \
 # RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
+vmslt.vv v0, v4, v20, v0.t
+# CHECK-INST: vmslt.vv v0, v4, v20, v0.t
+# CHECK-ENCODING: [0x57,0x00,0x4a,0x6c]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 57 00 4a 6c <unknown>
+
 vmseq.vv v8, v4, v20, v0.t
 # CHECK-INST: vmseq.vv v8, v4, v20, v0.t
 # CHECK-ENCODING: [0x57,0x04,0x4a,0x60]

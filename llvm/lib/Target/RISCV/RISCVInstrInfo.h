@@ -138,14 +138,53 @@ namespace RISCV {
 // Match with the definitions in RISCVInstrFormatsV.td
 enum RVVConstraintType {
   NoConstraint = 0,
-  WidenV = 1,
-  WidenW = 2,
-  WidenCvt = 3,
-  Narrow = 4,
-  Iota = 5,
-  SlideUp = 6,
-  Vrgather = 7,
-  Vcompress = 8,
+  VS2Constraint = 0b0001,
+  VS1Constraint = 0b0010,
+  VMConstraint = 0b0100,
+  OneInput = 0b1000,
+
+  // Illegal instructions:
+  //
+  // * The destination vector register group for a masked vector instruction
+  // cannot overlap the source mask register (v0), unless the destination vector
+  // register is being written with a mask value (e.g., comparisons) or the
+  // scalar result of a reduction.
+  //
+  // * Widening: The destination vector register group cannot overlap a source
+  // vector register group of a different EEW
+  //
+  // * Narrowing: The destination vector register group cannot overlap the
+  // first source vector register group
+  //
+  // * For vadc and vsbc, an illegal instruction exception is raised if the
+  // destination vector register is v0.
+  //
+  // * For vmadc and vmsbc, an illegal instruction exception is raised if the
+  // destination vector register overlaps a source vector register group.
+  //
+  // * viota: An illegal instruction exception is raised if the destination
+  // vector register group overlaps the source vector mask register. If the
+  // instruction is masked, an illegal instruction exception is issued if the
+  // destination vector register group overlaps v0.
+  //
+  // * v[f]slide[1]up: The destination vector register group for vslideup cannot
+  // overlap the source vector register group.
+  //
+  // * vrgather: The destination vector register group cannot overlap with the
+  // source vector register groups.
+  //
+  // * vcompress: The destination vector register group cannot overlap the
+  // source vector register group or the source mask register
+  WidenV = VS2Constraint | VS1Constraint | VMConstraint,
+  WidenW = VS1Constraint | VMConstraint,
+  WidenCvt = VS2Constraint | VMConstraint | OneInput,
+  Narrow = VS2Constraint | VMConstraint,
+  NarrowCvt = VS2Constraint | VMConstraint | OneInput,
+  Vmadc = VS2Constraint | VS1Constraint,
+  Iota = VS2Constraint | VMConstraint | OneInput,
+  SlideUp = VS2Constraint | VMConstraint,
+  Vrgather = VS2Constraint | VS1Constraint | VMConstraint,
+  Vcompress = VS2Constraint | VS1Constraint,
 
   ConstraintOffset = 5,
   ConstraintMask = 0b1111
