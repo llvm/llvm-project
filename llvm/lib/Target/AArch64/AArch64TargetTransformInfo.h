@@ -166,6 +166,9 @@ public:
       return false;
 
     Type *Ty = cast<ScalableVectorType>(DataType)->getElementType();
+    if (Ty->isPointerTy())
+      return true;
+
     if (Ty->isBFloatTy() || Ty->isHalfTy() ||
         Ty->isFloatTy() || Ty->isDoubleTy())
       return true;
