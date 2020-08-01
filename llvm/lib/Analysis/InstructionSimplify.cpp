@@ -5255,6 +5255,12 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
   Type *ReturnType = F->getReturnType();
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
+  case Intrinsic::abs:
+    // If the sign bit is clear already, then abs does not do anything.
+    if (isKnownNonNegative(Op0, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
+      return Op0;
+    break;
+
   case Intrinsic::smax:
   case Intrinsic::smin:
   case Intrinsic::umax:
