@@ -55,13 +55,57 @@ define float @matching_fp_vector(<4 x float>* align 16 dereferenceable(16) %p) {
   ret float %r
 }
 
-define float @matching_fp_vector_gep0(<4 x float>* align 16 dereferenceable(16) %p) {
-; CHECK-LABEL: @matching_fp_vector_gep0(
+define float @matching_fp_vector_gep00(<4 x float>* align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @matching_fp_vector_gep00(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[P:%.*]], i64 0, i64 0
 ; CHECK-NEXT:    [[R:%.*]] = load float, float* [[GEP]], align 16
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %gep = getelementptr inbounds <4 x float>, <4 x float>* %p, i64 0, i64 0
+  %r = load float, float* %gep, align 16
+  ret float %r
+}
+
+define float @matching_fp_vector_gep01(<4 x float>* align 16 dereferenceable(20) %p) {
+; CHECK-LABEL: @matching_fp_vector_gep01(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[P:%.*]], i64 0, i64 1
+; CHECK-NEXT:    [[R:%.*]] = load float, float* [[GEP]], align 4
+; CHECK-NEXT:    ret float [[R]]
+;
+  %gep = getelementptr inbounds <4 x float>, <4 x float>* %p, i64 0, i64 1
+  %r = load float, float* %gep, align 4
+  ret float %r
+}
+
+define float @matching_fp_vector_gep01_deref(<4 x float>* align 16 dereferenceable(19) %p) {
+; CHECK-LABEL: @matching_fp_vector_gep01_deref(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[P:%.*]], i64 0, i64 1
+; CHECK-NEXT:    [[R:%.*]] = load float, float* [[GEP]], align 4
+; CHECK-NEXT:    ret float [[R]]
+;
+  %gep = getelementptr inbounds <4 x float>, <4 x float>* %p, i64 0, i64 1
+  %r = load float, float* %gep, align 4
+  ret float %r
+}
+
+define float @matching_fp_vector_gep10(<4 x float>* align 16 dereferenceable(32) %p) {
+; CHECK-LABEL: @matching_fp_vector_gep10(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[P:%.*]], i64 1, i64 0
+; CHECK-NEXT:    [[R:%.*]] = load float, float* [[GEP]], align 16
+; CHECK-NEXT:    ret float [[R]]
+;
+  %gep = getelementptr inbounds <4 x float>, <4 x float>* %p, i64 1, i64 0
+  %r = load float, float* %gep, align 16
+  ret float %r
+}
+
+define float @matching_fp_vector_gep10_deref(<4 x float>* align 16 dereferenceable(31) %p) {
+; CHECK-LABEL: @matching_fp_vector_gep10_deref(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[P:%.*]], i64 1, i64 0
+; CHECK-NEXT:    [[R:%.*]] = load float, float* [[GEP]], align 16
+; CHECK-NEXT:    ret float [[R]]
+;
+  %gep = getelementptr inbounds <4 x float>, <4 x float>* %p, i64 1, i64 0
   %r = load float, float* %gep, align 16
   ret float %r
 }
