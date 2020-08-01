@@ -3974,39 +3974,26 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   SDValue B = FoldableOp.getOperand(0);
   SDValue C = FoldableOp.getOperand(1);
 
-  unsigned Opc1 = N->getOpcode();
-  unsigned Opc2 = FoldableOp.getOpcode();
+  // We can build the appropriate control immediate by performing the logic
+  // operation we're matching using these constants for A, B, and C.
+  const uint8_t TernlogMagicA = 0xf0;
+  const uint8_t TernlogMagicB = 0xcc;
+  const uint8_t TernlogMagicC = 0xaa;
 
-  uint64_t Imm;
-  switch (Opc1) {
+  uint8_t Imm;
+  switch (FoldableOp.getOpcode()) {
   default: llvm_unreachable("Unexpected opcode!");
-  case ISD::AND:
-    switch (Opc2) {
-    default: llvm_unreachable("Unexpected opcode!");
-    case ISD::AND:      Imm = 0x80; break;
-    case ISD::OR:       Imm = 0xe0; break;
-    case ISD::XOR:      Imm = 0x60; break;
-    case X86ISD::ANDNP: Imm = 0x20; break;
-    }
-    break;
-  case ISD::OR:
-    switch (Opc2) {
-    default: llvm_unreachable("Unexpected opcode!");
-    case ISD::AND:      Imm = 0xf8; break;
-    case ISD::OR:       Imm = 0xfe; break;
-    case ISD::XOR:      Imm = 0xf6; break;
-    case X86ISD::ANDNP: Imm = 0xf2; break;
-    }
-    break;
-  case ISD::XOR:
-    switch (Opc2) {
-    default: llvm_unreachable("Unexpected opcode!");
-    case ISD::AND:      Imm = 0x78; break;
-    case ISD::OR:       Imm = 0x1e; break;
-    case ISD::XOR:      Imm = 0x96; break;
-    case X86ISD::ANDNP: Imm = 0xd2; break;
-    }
-    break;
+  case ISD::AND:      Imm = TernlogMagicB & TernlogMagicC; break;
+  case ISD::OR:       Imm = TernlogMagicB | TernlogMagicC; break;
+  case ISD::XOR:      Imm = TernlogMagicB ^ TernlogMagicC; break;
+  case X86ISD::ANDNP: Imm = ~(TernlogMagicB) & TernlogMagicC; break;
+  }
+
+  switch (N->getOpcode()) {
+  default: llvm_unreachable("Unexpected opcode!");
+  case ISD::AND: Imm &= TernlogMagicA; break;
+  case ISD::OR:  Imm |= TernlogMagicA; break;
+  case ISD::XOR: Imm ^= TernlogMagicA; break;
   }
 
   auto tryFoldLoadOrBCast =
