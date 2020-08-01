@@ -78,10 +78,10 @@ static bool isExitBlock(BasicBlock *BB,
 /// rewrite the uses.
 bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
                                     const DominatorTree &DT, const LoopInfo &LI,
-                                    ScalarEvolution *SE,
-                                    IRBuilderBase &Builder) {
+                                    ScalarEvolution *SE, IRBuilderBase &Builder,
+                                    SmallVectorImpl<PHINode *> *PHIsToRemove) {
   SmallVector<Use *, 16> UsesToRewrite;
-  SmallSetVector<PHINode *, 16> PHIsToRemove;
+  SmallSetVector<PHINode *, 16> LocalPHIsToRemove;
   PredIteratorCache PredCache;
   bool Changed = false;
 
@@ -257,22 +257,28 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     SmallVector<PHINode *, 2> NeedDbgValues;
     for (PHINode *PN : AddedPHIs)
       if (PN->use_empty())
-        PHIsToRemove.insert(PN);
+        LocalPHIsToRemove.insert(PN);
       else
         NeedDbgValues.push_back(PN);
     insertDebugValuesForPHIs(InstBB, NeedDbgValues);
     Changed = true;
   }
-  // Remove PHI nodes that did not have any uses rewritten. We need to redo the
-  // use_empty() check here, because even if the PHI node wasn't used when added
-  // to PHIsToRemove, later added PHI nodes can be using it.  This cleanup is
-  // not guaranteed to handle trees/cycles of PHI nodes that only are used by
-  // each other. Such situations has only been noticed when the input IR
-  // contains unreachable code, and leaving some extra redundant PHI nodes in
-  // such situations is considered a minor problem.
-  for (PHINode *PN : PHIsToRemove)
-    if (PN->use_empty())
-      PN->eraseFromParent();
+
+  // Remove PHI nodes that did not have any uses rewritten or add them to
+  // PHIsToRemove, so the caller can remove them after some additional cleanup.
+  // We need to redo the use_empty() check here, because even if the PHI node
+  // wasn't used when added to LocalPHIsToRemove, later added PHI nodes can be
+  // using it.  This cleanup is not guaranteed to handle trees/cycles of PHI
+  // nodes that only are used by each other. Such situations has only been
+  // noticed when the input IR contains unreachable code, and leaving some extra
+  // redundant PHI nodes in such situations is considered a minor problem.
+  if (PHIsToRemove) {
+    PHIsToRemove->append(LocalPHIsToRemove.begin(), LocalPHIsToRemove.end());
+  } else {
+    for (PHINode *PN : LocalPHIsToRemove)
+      if (PN->use_empty())
+        PN->eraseFromParent();
+  }
   return Changed;
 }
 
