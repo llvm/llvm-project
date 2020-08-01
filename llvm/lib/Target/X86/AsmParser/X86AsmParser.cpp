@@ -3572,6 +3572,12 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   if (ForcedVEXEncoding == VEXEncoding_VEX3)
     Prefixes |= X86::IP_USE_VEX3;
 
+  // Set encoded flags for {disp8} and {disp32}.
+  if (ForcedDispEncoding == DispEncoding_Disp8)
+    Prefixes |= X86::IP_USE_DISP8;
+  else if (ForcedDispEncoding == DispEncoding_Disp32)
+    Prefixes |= X86::IP_USE_DISP32;
+
   if (Prefixes)
     Inst.setFlags(Prefixes);
 
@@ -3805,6 +3811,12 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
   // encoder.
   if (ForcedVEXEncoding == VEXEncoding_VEX3)
     Prefixes |= X86::IP_USE_VEX3;
+
+  // Set encoded flags for {disp8} and {disp32}.
+  if (ForcedDispEncoding == DispEncoding_Disp8)
+    Prefixes |= X86::IP_USE_DISP8;
+  else if (ForcedDispEncoding == DispEncoding_Disp32)
+    Prefixes |= X86::IP_USE_DISP32;
 
   if (Prefixes)
     Inst.setFlags(Prefixes);
