@@ -956,8 +956,8 @@ define <2 x i32> @abspattern1(<2 x i32> %a) nounwind {
 ; DAG: abs.2s
 ; DAG-NEXT: ret
 
+; GISEL: neg.2s
 ; GISEL: cmge.2s
-; GISEL: sub.2s
 ; GISEL: fcsel
 ; GISEL: fcsel
         %tmp1neg = sub <2 x i32> zeroinitializer, %a
@@ -1038,8 +1038,8 @@ define <2 x i64> @abspattern7(<2 x i64> %a) nounwind {
 ; DAG: abs.2d
 ; DAG-NEXT: ret
 
+; GISEL: neg.2d
 ; GISEL: cmge.2d
-; GISEL: sub.2d
 ; GISEL: fcsel
 ; GISEL: fcsel
         %tmp1neg = sub <2 x i64> zeroinitializer, %a
