@@ -14,10 +14,12 @@
 
 namespace mlir {
 
+class LLVMTypeConverter;
 class Location;
 struct LogicalResult;
 class ModuleOp;
 class Operation;
+class OwningRewritePatternList;
 
 template <typename T>
 class OperationPass;
@@ -45,6 +47,11 @@ using LoweringCallback =
 std::unique_ptr<OperationPass<ModuleOp>>
 createConvertGpuLaunchFuncToGpuRuntimeCallsPass(
     StringRef gpuBinaryAnnotation = "");
+
+/// Collect a set of patterns to convert from the GPU dialect to LLVM.
+void populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
+                                         OwningRewritePatternList &patterns,
+                                         StringRef gpuBinaryAnnotation);
 
 /// Creates a pass to convert kernel functions into GPU target object blobs.
 ///
