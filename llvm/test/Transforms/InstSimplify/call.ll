@@ -51,6 +51,21 @@ define <3 x i82> @select_abs(<3 x i1> %cond) {
   ret <3 x i82> %abs
 }
 
+declare void @llvm.assume(i1)
+
+define i32 @assume_abs(i32 %x) {
+; CHECK-LABEL: @assume_abs(
+; CHECK-NEXT:    [[ASSUME:%.*]] = icmp sge i32 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME]])
+; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X]], i1 true)
+; CHECK-NEXT:    ret i32 [[ABS]]
+;
+  %assume = icmp sge i32 %x, 0
+  call void @llvm.assume(i1 %assume)
+  %abs = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  ret i32 %abs
+}
+
 declare {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a, i8 %b)
 declare {i8, i1} @llvm.sadd.with.overflow.i8(i8 %a, i8 %b)
 declare {i8, i1} @llvm.usub.with.overflow.i8(i8 %a, i8 %b)
@@ -1092,7 +1107,7 @@ define i32 @call_undef_musttail() {
 
 define float @nobuiltin_fmax() {
 ; CHECK-LABEL: @nobuiltin_fmax(
-; CHECK-NEXT:    [[M:%.*]] = call float @fmaxf(float 0.000000e+00, float 1.000000e+00) #3
+; CHECK-NEXT:    [[M:%.*]] = call float @fmaxf(float 0.000000e+00, float 1.000000e+00) #4
 ; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fabs.f32(float [[M]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
