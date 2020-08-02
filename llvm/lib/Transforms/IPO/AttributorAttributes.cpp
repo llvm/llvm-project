@@ -6374,6 +6374,13 @@ protected:
   using AccessSet = SmallSet<AccessInfo, 2, AccessInfo>;
   AccessSet *AccessKind2Accesses[llvm::CTLog2<VALID_STATE>()];
 
+  /// Categorize the pointer arguments of CB that might access memory in
+  /// AccessedLoc and update the state and access map accordingly.
+  void
+  categorizeArgumentPointerLocations(Attributor &A, CallBase &CB,
+                                     AAMemoryLocation::StateType &AccessedLocs,
+                                     bool &Changed);
+
   /// Return the kind(s) of location that may be accessed by \p V.
   AAMemoryLocation::MemoryLocationsKind
   categorizeAccessedLocations(Attributor &A, Instruction &I, bool &Changed);
@@ -6495,6 +6502,30 @@ void AAMemoryLocationImpl::categorizePtrValue(
   }
 }
 
+void AAMemoryLocationImpl::categorizeArgumentPointerLocations(
+    Attributor &A, CallBase &CB, AAMemoryLocation::StateType &AccessedLocs,
+    bool &Changed) {
+  for (unsigned ArgNo = 0, E = CB.getNumArgOperands(); ArgNo < E; ++ArgNo) {
+
+    // Skip non-pointer arguments.
+    const Value *ArgOp = CB.getArgOperand(ArgNo);
+    if (!ArgOp->getType()->isPtrOrPtrVectorTy())
+      continue;
+
+    // Skip readnone arguments.
+    const IRPosition &ArgOpIRP = IRPosition::callsite_argument(CB, ArgNo);
+    const auto &ArgOpMemLocationAA = A.getAAFor<AAMemoryBehavior>(
+        *this, ArgOpIRP, /* TrackDependence */ true, DepClassTy::OPTIONAL);
+
+    if (ArgOpMemLocationAA.isAssumedReadNone())
+      continue;
+
+    // Categorize potentially accessed pointer arguments as if there was an
+    // access instruction with them as pointer.
+    categorizePtrValue(A, CB, *ArgOp, AccessedLocs, Changed);
+  }
+}
+
 AAMemoryLocation::MemoryLocationsKind
 AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
                                                   bool &Changed) {
@@ -6556,28 +6587,8 @@ AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
 
     // Now handle argument memory if it might be accessed.
     bool HasArgAccesses = ((~CBAssumedNotAccessedLocs) & NO_ARGUMENT_MEM);
-    if (HasArgAccesses) {
-      for (unsigned ArgNo = 0, E = CB->getNumArgOperands(); ArgNo < E;
-           ++ArgNo) {
-
-        // Skip non-pointer arguments.
-        const Value *ArgOp = CB->getArgOperand(ArgNo);
-        if (!ArgOp->getType()->isPtrOrPtrVectorTy())
-          continue;
-
-        // Skip readnone arguments.
-        const IRPosition &ArgOpIRP = IRPosition::callsite_argument(*CB, ArgNo);
-        const auto &ArgOpMemLocationAA = A.getAAFor<AAMemoryBehavior>(
-            *this, ArgOpIRP, /* TrackDependence */ true, DepClassTy::OPTIONAL);
-
-        if (ArgOpMemLocationAA.isAssumedReadNone())
-          continue;
-
-        // Categorize potentially accessed pointer arguments as if there was an
-        // access instruction with them as pointer.
-        categorizePtrValue(A, I, *ArgOp, AccessedLocs, Changed);
-      }
-    }
+    if (HasArgAccesses)
+      categorizeArgumentPointerLocations(A, *CB, AccessedLocs, Changed);
 
     LLVM_DEBUG(
         dbgs() << "[AAMemoryLocation] Accessed state after argument handling: "
