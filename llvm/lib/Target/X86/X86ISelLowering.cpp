@@ -42744,7 +42744,22 @@ static SDValue combineAndLoadToBZHI(SDNode *Node, SelectionDAG &DAG,
 // Turn it into series of XORs and a setnp.
 static SDValue combineParity(SDNode *N, SelectionDAG &DAG,
                              const X86Subtarget &Subtarget) {
-  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  // RHS needs to be 1.
+  if (!isOneConstant(N1))
+    return SDValue();
+
+  // Popcnt may be truncated.
+  if (N0.getOpcode() == ISD::TRUNCATE && N0.hasOneUse())
+    N0 = N0.getOperand(0);
+
+  // LHS needs to be a single use CTPOP.
+  if (N0.getOpcode() != ISD::CTPOP || !N0.hasOneUse())
+    return SDValue();
+
+  EVT VT = N0.getValueType();
 
   // We only support 64-bit and 32-bit. 64-bit requires special handling
   // unless the 64-bit popcnt instruction is legal.
@@ -42753,17 +42768,6 @@ static SDValue combineParity(SDNode *N, SelectionDAG &DAG,
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (TLI.isTypeLegal(VT) && TLI.isOperationLegal(ISD::CTPOP, VT))
-    return SDValue();
-
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-
-  // LHS needs to be a single use CTPOP.
-  if (N0.getOpcode() != ISD::CTPOP || !N0.hasOneUse())
-    return SDValue();
-
-  // RHS needs to be 1.
-  if (!isOneConstant(N1))
     return SDValue();
 
   SDLoc DL(N);
@@ -42782,7 +42786,7 @@ static SDValue combineParity(SDNode *N, SelectionDAG &DAG,
     SDValue Parity = DAG.getNode(ISD::AND, DL, MVT::i32,
                                  DAG.getNode(ISD::CTPOP, DL, MVT::i32, X),
                                  DAG.getConstant(1, DL, MVT::i32));
-    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Parity);
+    return DAG.getZExtOrTrunc(Parity, DL, N->getValueType(0));
   }
   assert(VT == MVT::i32 && "Unexpected VT!");
 
@@ -42803,8 +42807,8 @@ static SDValue combineParity(SDNode *N, SelectionDAG &DAG,
 
   // Copy the inverse of the parity flag into a register with setcc.
   SDValue Setnp = getSETCC(X86::COND_NP, Flags, DL, DAG);
-  // Zero extend to original type.
-  return DAG.getNode(ISD::ZERO_EXTEND, DL, N->getValueType(0), Setnp);
+  // Extend or truncate to the original type.
+  return DAG.getZExtOrTrunc(Setnp, DL, N->getValueType(0));
 }
 
 
