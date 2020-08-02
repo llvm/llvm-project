@@ -32,7 +32,6 @@ func (pm PassManager) AddFunctionAttrsPass()         { C.LLVMAddFunctionAttrsPas
 func (pm PassManager) AddFunctionInliningPass()      { C.LLVMAddFunctionInliningPass(pm.C) }
 func (pm PassManager) AddGlobalDCEPass()             { C.LLVMAddGlobalDCEPass(pm.C) }
 func (pm PassManager) AddGlobalOptimizerPass()       { C.LLVMAddGlobalOptimizerPass(pm.C) }
-func (pm PassManager) AddIPConstantPropagationPass() { C.LLVMAddIPConstantPropagationPass(pm.C) }
 func (pm PassManager) AddPruneEHPass()               { C.LLVMAddPruneEHPass(pm.C) }
 func (pm PassManager) AddIPSCCPPass()                { C.LLVMAddIPSCCPPass(pm.C) }
 func (pm PassManager) AddInternalizePass(allButMain bool) {
