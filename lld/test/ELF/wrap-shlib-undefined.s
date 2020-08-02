@@ -12,12 +12,11 @@
 # RUN: ld.lld %t.o %t.so --wrap=foo -o %t
 # RUN: llvm-readelf --dyn-syms %t | FileCheck %s
 
-## FIXME GNU ld does not export __wrap_foo
 ## The reference __real_foo from %t.so causes foo to be exported.
-# CHECK:      Symbol table '.dynsym' contains 4 entries:
+## __wrap_foo is not used, thus not exported.
+# CHECK:      Symbol table '.dynsym' contains 3 entries:
 # CHECK:      NOTYPE  LOCAL  DEFAULT  UND
 # CHECK-NEXT: NOTYPE  GLOBAL DEFAULT  UND bar
-# CHECK-NEXT: NOTYPE  GLOBAL DEFAULT  UND __wrap_foo
 # CHECK-NEXT: NOTYPE  GLOBAL DEFAULT    6 foo
 
 .globl _start, foo
