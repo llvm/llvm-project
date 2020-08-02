@@ -184,16 +184,15 @@ define i8 @parity_32_trunc(i32 %x) {
 define i32 @parity_8_zext(i8 %x) {
 ; X86-NOPOPCNT-LABEL: parity_8_zext:
 ; X86-NOPOPCNT:       # %bb.0:
-; X86-NOPOPCNT-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NOPOPCNT-NEXT:    xorl %eax, %eax
-; X86-NOPOPCNT-NEXT:    xorb $0, %cl
+; X86-NOPOPCNT-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NOPOPCNT-NEXT:    setnp %al
 ; X86-NOPOPCNT-NEXT:    retl
 ;
 ; X64-NOPOPCNT-LABEL: parity_8_zext:
 ; X64-NOPOPCNT:       # %bb.0:
 ; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
-; X64-NOPOPCNT-NEXT:    xorb $0, %dil
+; X64-NOPOPCNT-NEXT:    testb %dil, %dil
 ; X64-NOPOPCNT-NEXT:    setnp %al
 ; X64-NOPOPCNT-NEXT:    retq
 ;
@@ -219,16 +218,15 @@ define i32 @parity_8_zext(i8 %x) {
 define i32 @parity_8_mask(i32 %x) {
 ; X86-NOPOPCNT-LABEL: parity_8_mask:
 ; X86-NOPOPCNT:       # %bb.0:
-; X86-NOPOPCNT-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NOPOPCNT-NEXT:    xorl %eax, %eax
-; X86-NOPOPCNT-NEXT:    xorb $0, %cl
+; X86-NOPOPCNT-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NOPOPCNT-NEXT:    setnp %al
 ; X86-NOPOPCNT-NEXT:    retl
 ;
 ; X64-NOPOPCNT-LABEL: parity_8_mask:
 ; X64-NOPOPCNT:       # %bb.0:
 ; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
-; X64-NOPOPCNT-NEXT:    xorb $0, %dil
+; X64-NOPOPCNT-NEXT:    testb %dil, %dil
 ; X64-NOPOPCNT-NEXT:    setnp %al
 ; X64-NOPOPCNT-NEXT:    retq
 ;
