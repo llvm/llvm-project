@@ -15,6 +15,7 @@
 
 #include "llvm/Support/FileCheck.h"
 #include "FileCheckImpl.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CheckedArithmetic.h"
@@ -1578,9 +1579,7 @@ FindCheckType(const FileCheckRequest &Req, StringRef Buffer, StringRef Prefix) {
   StringRef Rest = Buffer.drop_front(Prefix.size() + 1);
 
   // Check for comment.
-  if (Req.CommentPrefixes.end() != std::find(Req.CommentPrefixes.begin(),
-                                             Req.CommentPrefixes.end(),
-                                             Prefix)) {
+  if (llvm::is_contained(Req.CommentPrefixes, Prefix)) {
     if (NextChar == ':')
       return {Check::CheckComment, Rest};
     // Ignore a comment prefix if it has a suffix like "-NOT".

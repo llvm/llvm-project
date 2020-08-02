@@ -692,8 +692,7 @@ computeUnlikelySuccessors(const BasicBlock *BB, Loop *L,
       // we can constant-evaluate the compare to see if it makes the branch be
       // taken or not.
       Constant *CmpLHSConst = dyn_cast<Constant>(V);
-      if (!CmpLHSConst ||
-          std::find(succ_begin(BB), succ_end(BB), B) == succ_end(BB))
+      if (!CmpLHSConst || !llvm::is_contained(successors(BB), B))
         continue;
       // First collapse InstChain
       for (Instruction *I : llvm::reverse(InstChain)) {

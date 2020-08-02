@@ -319,8 +319,7 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
   bool DefBeforeSameBlock = false;
   if (DefBefore->getBlock() == MD->getBlock() &&
       !(isa<MemoryPhi>(DefBefore) &&
-        std::find(InsertedPHIs.begin(), InsertedPHIs.end(), DefBefore) !=
-            InsertedPHIs.end()))
+        llvm::is_contained(InsertedPHIs, DefBefore)))
     DefBeforeSameBlock = true;
 
   // There is a def before us, which means we can replace any store/phi uses

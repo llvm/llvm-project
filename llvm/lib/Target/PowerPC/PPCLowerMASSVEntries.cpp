@@ -16,6 +16,7 @@
 #include "PPC.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Instructions.h"
@@ -64,8 +65,7 @@ private:
 /// Checks if the specified function name represents an entry in the MASSV
 /// library.
 bool PPCLowerMASSVEntries::isMASSVFunc(StringRef Name) {
-  auto Iter = std::find(std::begin(MASSVFuncs), std::end(MASSVFuncs), Name);
-  return Iter != std::end(MASSVFuncs);
+  return llvm::is_contained(MASSVFuncs, Name);
 }
 
 // FIXME:
