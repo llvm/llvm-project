@@ -156,12 +156,6 @@ Pass *createArgumentPromotionPass(unsigned maxElements = 3);
 Pass *createOpenMPOptLegacyPass();
 
 //===----------------------------------------------------------------------===//
-/// createIPConstantPropagationPass - This pass propagates constants from call
-/// sites into the bodies of functions.
-///
-ModulePass *createIPConstantPropagationPass();
-
-//===----------------------------------------------------------------------===//
 /// createIPSCCPPass - This pass propagates constants from call sites into the
 /// bodies of functions, and keeps track of whether basic blocks are executable
 /// in the process.
