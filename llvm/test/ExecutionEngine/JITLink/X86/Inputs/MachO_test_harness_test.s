@@ -27,6 +27,7 @@ _used_weak:
 	.p2align	4, 0x90
 _public_func_to_test:
   callq _used_weak
+  callq _used_unresolved_external
 	jmp	_public_func_to_interpose
 
 	.p2align	4, 0x90
