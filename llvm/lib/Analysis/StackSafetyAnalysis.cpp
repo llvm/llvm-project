@@ -928,7 +928,7 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
   for (auto &GVS : Index) {
     for (auto &GV : GVS.second.SummaryList) {
       FunctionSummary *FS = dyn_cast<FunctionSummary>(GV.get());
-      if (!FS)
+      if (!FS || FS->paramAccesses().empty())
         continue;
       if (FS->isLive() && FS->isDSOLocal()) {
         FunctionInfo<FunctionSummary> FI;
