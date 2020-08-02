@@ -34464,6 +34464,10 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   assert((Inputs.size() == 1 || Inputs.size() == 2) &&
          "Unexpected number of shuffle inputs!");
 
+  MVT RootVT = Root.getSimpleValueType();
+  unsigned RootSizeInBits = RootVT.getSizeInBits();
+  unsigned NumRootElts = RootVT.getVectorNumElements();
+
   // Find the inputs that enter the chain. Note that multiple uses are OK
   // here, we're not going to remove the operands we find.
   bool UnaryShuffle = (Inputs.size() == 1);
@@ -34473,10 +34477,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
 
   MVT VT1 = V1.getSimpleValueType();
   MVT VT2 = V2.getSimpleValueType();
-  MVT RootVT = Root.getSimpleValueType();
-  assert(VT1.getSizeInBits() == RootVT.getSizeInBits() &&
-         VT2.getSizeInBits() == RootVT.getSizeInBits() &&
-         "Vector size mismatch");
+  assert(VT1.getSizeInBits() == RootSizeInBits &&
+         VT2.getSizeInBits() == RootSizeInBits && "Vector size mismatch");
 
   SDLoc DL(Root);
   SDValue Res;
@@ -34488,8 +34490,6 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
   }
 
   bool OptForSize = DAG.shouldOptForSize();
-  unsigned RootSizeInBits = RootVT.getSizeInBits();
-  unsigned NumRootElts = RootVT.getVectorNumElements();
   unsigned BaseMaskEltSizeInBits = RootSizeInBits / NumBaseMaskElts;
   bool FloatDomain = VT1.isFloatingPoint() || VT2.isFloatingPoint() ||
                      (RootVT.isFloatingPoint() && Depth >= 1) ||
