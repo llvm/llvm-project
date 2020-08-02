@@ -280,6 +280,7 @@ define void @f7_2(i1 %c) {
 ; CHECK-SAME: (i1 [[C:%.*]])
 ; CHECK-NEXT:    [[PTR:%.*]] = tail call nonnull align 4 dereferenceable(4) i32* @unkown_ptr()
 ; CHECK-NEXT:    [[A:%.*]] = tail call i32 @unkown_f(i32* nonnull align 4 dereferenceable(4) [[PTR]])
+; CHECK-NEXT:    [[ARG_A_0:%.*]] = load i32, i32* [[PTR]], align 4
 ; CHECK-NEXT:    [[B:%.*]] = tail call i32 @unkown_f(i32* nonnull align 4 dereferenceable(4) [[PTR]])
 ; CHECK-NEXT:    br i1 [[C]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
