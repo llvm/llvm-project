@@ -377,7 +377,7 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
   SmallVector<int, 8> ShiftAmts;
   for (int I = 0; I < NumElts; ++I) {
     auto *CElt = CShift->getAggregateElement(I);
-    if (CElt && isa<UndefValue>(CElt)) {
+    if (isa_and_nonnull<UndefValue>(CElt)) {
       ShiftAmts.push_back(-1);
       continue;
     }
