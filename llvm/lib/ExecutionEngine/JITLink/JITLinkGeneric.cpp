@@ -337,12 +337,6 @@ void JITLinkerBase::applyLookupResult(AsyncLookupResult Result) {
       dbgs() << "  " << Sym->getName() << ": "
              << formatv("{0:x16}", Sym->getAddress()) << "\n";
   });
-  assert(llvm::all_of(G->external_symbols(),
-                      [](Symbol *Sym) {
-                        return Sym->getAddress() != 0 ||
-                               Sym->getLinkage() == Linkage::Weak;
-                      }) &&
-         "All strong external symbols should have been resolved by now");
 }
 
 void JITLinkerBase::copyBlockContentToWorkingMemory(
