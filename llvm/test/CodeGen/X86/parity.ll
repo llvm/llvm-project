@@ -181,5 +181,75 @@ define i8 @parity_32_trunc(i32 %x) {
   ret i8 %3
 }
 
+define i32 @parity_8_zext(i8 %x) {
+; X86-NOPOPCNT-LABEL: parity_8_zext:
+; X86-NOPOPCNT:       # %bb.0:
+; X86-NOPOPCNT-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X86-NOPOPCNT-NEXT:    xorb $0, %cl
+; X86-NOPOPCNT-NEXT:    setnp %al
+; X86-NOPOPCNT-NEXT:    retl
+;
+; X64-NOPOPCNT-LABEL: parity_8_zext:
+; X64-NOPOPCNT:       # %bb.0:
+; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X64-NOPOPCNT-NEXT:    xorb $0, %dil
+; X64-NOPOPCNT-NEXT:    setnp %al
+; X64-NOPOPCNT-NEXT:    retq
+;
+; X86-POPCNT-LABEL: parity_8_zext:
+; X86-POPCNT:       # %bb.0:
+; X86-POPCNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-POPCNT-NEXT:    popcntl %eax, %eax
+; X86-POPCNT-NEXT:    andl $1, %eax
+; X86-POPCNT-NEXT:    retl
+;
+; X64-POPCNT-LABEL: parity_8_zext:
+; X64-POPCNT:       # %bb.0:
+; X64-POPCNT-NEXT:    movzbl %dil, %eax
+; X64-POPCNT-NEXT:    popcntl %eax, %eax
+; X64-POPCNT-NEXT:    andl $1, %eax
+; X64-POPCNT-NEXT:    retq
+  %a = zext i8 %x to i32
+  %b = tail call i32 @llvm.ctpop.i32(i32 %a)
+  %c = and i32 %b, 1
+  ret i32 %c
+}
+
+define i32 @parity_8_mask(i32 %x) {
+; X86-NOPOPCNT-LABEL: parity_8_mask:
+; X86-NOPOPCNT:       # %bb.0:
+; X86-NOPOPCNT-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X86-NOPOPCNT-NEXT:    xorb $0, %cl
+; X86-NOPOPCNT-NEXT:    setnp %al
+; X86-NOPOPCNT-NEXT:    retl
+;
+; X64-NOPOPCNT-LABEL: parity_8_mask:
+; X64-NOPOPCNT:       # %bb.0:
+; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
+; X64-NOPOPCNT-NEXT:    xorb $0, %dil
+; X64-NOPOPCNT-NEXT:    setnp %al
+; X64-NOPOPCNT-NEXT:    retq
+;
+; X86-POPCNT-LABEL: parity_8_mask:
+; X86-POPCNT:       # %bb.0:
+; X86-POPCNT-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-POPCNT-NEXT:    popcntl %eax, %eax
+; X86-POPCNT-NEXT:    andl $1, %eax
+; X86-POPCNT-NEXT:    retl
+;
+; X64-POPCNT-LABEL: parity_8_mask:
+; X64-POPCNT:       # %bb.0:
+; X64-POPCNT-NEXT:    movzbl %dil, %eax
+; X64-POPCNT-NEXT:    popcntl %eax, %eax
+; X64-POPCNT-NEXT:    andl $1, %eax
+; X64-POPCNT-NEXT:    retq
+  %a = and i32 %x, 255
+  %b = tail call i32 @llvm.ctpop.i32(i32 %a)
+  %c = and i32 %b, 1
+  ret i32 %c
+}
+
 declare i32 @llvm.ctpop.i32(i32 %x)
 declare i64 @llvm.ctpop.i64(i64 %x)
