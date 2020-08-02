@@ -42773,6 +42773,17 @@ static SDValue combineParity(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
   SDValue X = N0.getOperand(0);
 
+  // Special case. If the input fits in 8-bits we can use a single 8-bit TEST.
+  if (DAG.MaskedValueIsZero(X, APInt::getBitsSetFrom(VT.getSizeInBits(), 8))) {
+    X = DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, X);
+    SDValue Flags = DAG.getNode(X86ISD::CMP, DL, MVT::i32, X,
+                                DAG.getConstant(0, DL, MVT::i8));
+    // Copy the inverse of the parity flag into a register with setcc.
+    SDValue Setnp = getSETCC(X86::COND_NP, Flags, DL, DAG);
+    // Extend or truncate to the original type.
+    return DAG.getZExtOrTrunc(Setnp, DL, N->getValueType(0));
+  }
+
   // If this is 64-bit, its always best to xor the two 32-bit pieces together
   // even if we have popcnt.
   if (VT == MVT::i64) {
