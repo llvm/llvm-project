@@ -93,6 +93,9 @@ TEST_F(BasicTest, isSplat) {
   Value *SplatC = IRB.CreateVectorSplat(5, ScalarC);
   EXPECT_TRUE(isSplatValue(SplatC));
 
+  Value *SplatC_SVE = IRB.CreateVectorSplat(ElementCount(5, true), ScalarC);
+  EXPECT_TRUE(isSplatValue(SplatC_SVE));
+
   // FIXME: Constant splat analysis does not allow undef elements.
   Constant *SplatWithUndefC = ConstantVector::get({ScalarC, UndefScalar});
   EXPECT_FALSE(isSplatValue(SplatWithUndefC));
