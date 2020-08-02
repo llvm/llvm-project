@@ -1197,13 +1197,13 @@ public:
     ConstString broadcaster_class_process(Process::GetStaticBroadcasterClass());
     debugger.EnableForwardEvents(listener_sp);
 
-    bool update = true;
+    m_update_screen = true;
 #if defined(__APPLE__)
     std::deque<int> escape_chars;
 #endif
 
     while (!done) {
-      if (update) {
+      if (m_update_screen) {
         m_window_sp->Draw(false);
         // All windows should be calling Window::DeferredRefresh() instead of
         // Window::Refresh() so we can do a single update and avoid any screen
@@ -1215,7 +1215,7 @@ public:
         m_window_sp->MoveCursor(0, 0);
 
         doupdate();
-        update = false;
+        m_update_screen = false;
       }
 
 #if defined(__APPLE__)
@@ -1277,7 +1277,7 @@ public:
                 if (broadcaster_class == broadcaster_class_process) {
                   debugger.GetCommandInterpreter().UpdateExecutionContext(
                       nullptr);
-                  update = true;
+                  m_update_screen = true;
                   continue; // Don't get any key, just update our view
                 }
               }
@@ -1289,12 +1289,12 @@ public:
         switch (key_result) {
         case eKeyHandled:
           debugger.GetCommandInterpreter().UpdateExecutionContext(nullptr);
-          update = true;
+          m_update_screen = true;
           break;
         case eKeyNotHandled:
           if (ch == 12) { // Ctrl+L, force full redraw
             redrawwin(m_window_sp->get());
-            update = true;
+            m_update_screen = true;
           }
           break;
         case eQuitApplication:
@@ -1313,12 +1313,65 @@ public:
     return m_window_sp;
   }
 
+  void TerminalSizeChanged() {
+    ::endwin();
+    ::refresh();
+    Rect content_bounds = m_window_sp->GetFrame();
+    m_window_sp->SetBounds(content_bounds);
+    if (WindowSP menubar_window_sp = m_window_sp->FindSubWindow("Menubar"))
+      menubar_window_sp->SetBounds(content_bounds.MakeMenuBar());
+    if (WindowSP status_window_sp = m_window_sp->FindSubWindow("Status"))
+      status_window_sp->SetBounds(content_bounds.MakeStatusBar());
+
+    WindowSP source_window_sp = m_window_sp->FindSubWindow("Source");
+    WindowSP variables_window_sp = m_window_sp->FindSubWindow("Variables");
+    WindowSP registers_window_sp = m_window_sp->FindSubWindow("Registers");
+    WindowSP threads_window_sp = m_window_sp->FindSubWindow("Threads");
+
+    Rect threads_bounds;
+    Rect source_variables_bounds;
+    content_bounds.VerticalSplitPercentage(0.80, source_variables_bounds,
+                                           threads_bounds);
+    if (threads_window_sp)
+      threads_window_sp->SetBounds(threads_bounds);
+    else
+      source_variables_bounds = content_bounds;
+
+    Rect source_bounds;
+    Rect variables_registers_bounds;
+    source_variables_bounds.HorizontalSplitPercentage(
+        0.70, source_bounds, variables_registers_bounds);
+    if (variables_window_sp || registers_window_sp) {
+      if (variables_window_sp && registers_window_sp) {
+        Rect variables_bounds;
+        Rect registers_bounds;
+        variables_registers_bounds.VerticalSplitPercentage(
+            0.50, variables_bounds, registers_bounds);
+        variables_window_sp->SetBounds(variables_bounds);
+        registers_window_sp->SetBounds(registers_bounds);
+      } else if (variables_window_sp) {
+        variables_window_sp->SetBounds(variables_registers_bounds);
+      } else {
+        registers_window_sp->SetBounds(variables_registers_bounds);
+      }
+    } else {
+      source_bounds = source_variables_bounds;
+    }
+
+    source_window_sp->SetBounds(source_bounds);
+
+    touchwin(stdscr);
+    redrawwin(m_window_sp->get());
+    m_update_screen = true;
+  }
+
 protected:
   WindowSP m_window_sp;
   WindowDelegates m_window_delegates;
   SCREEN *m_screen;
   FILE *m_in;
   FILE *m_out;
+  bool m_update_screen = false;
 };
 
 } // namespace curses
@@ -3082,7 +3135,7 @@ public:
                                                    new_registers_rect);
           registers_window_sp->SetBounds(new_registers_rect);
         } else {
-          // No variables window, grab the bottom part of the source window
+          // No registers window, grab the bottom part of the source window
           Rect new_source_rect;
           source_bounds.HorizontalSplitPercentage(0.70, new_source_rect,
                                                   new_variables_rect);
@@ -3133,7 +3186,7 @@ public:
                                                    new_regs_rect);
           variables_window_sp->SetBounds(new_vars_rect);
         } else {
-          // No registers window, grab the bottom part of the source window
+          // No variables window, grab the bottom part of the source window
           Rect new_source_rect;
           source_bounds.HorizontalSplitPercentage(0.70, new_source_rect,
                                                   new_regs_rect);
@@ -4087,5 +4140,9 @@ void IOHandlerCursesGUI::Cancel() {}
 bool IOHandlerCursesGUI::Interrupt() { return false; }
 
 void IOHandlerCursesGUI::GotEOF() {}
+
+void IOHandlerCursesGUI::TerminalSizeChanged() {
+  m_app_ap->TerminalSizeChanged();
+}
 
 #endif // LLDB_ENABLE_CURSES
