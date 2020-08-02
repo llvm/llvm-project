@@ -33,9 +33,6 @@ external add_global_dce
 external add_global_optimizer
   : [ `Module ] Llvm.PassManager.t -> unit
   = "llvm_add_global_optimizer"
-external add_ipc_propagation
-  : [ `Module ] Llvm.PassManager.t -> unit
-  = "llvm_add_ip_constant_propagation"
 external add_prune_eh
   : [ `Module ] Llvm.PassManager.t -> unit
   = "llvm_add_prune_eh"
