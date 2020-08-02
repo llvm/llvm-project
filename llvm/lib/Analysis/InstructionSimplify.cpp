@@ -5239,6 +5239,17 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
         return ConstantInt::get(ReturnType, APInt::getMinValue(BitWidth));
     }
 
+    // For 4 commuted variants of each intrinsic:
+    // max (max X, Y), X --> max X, Y
+    if (auto *MinMax0 = dyn_cast<IntrinsicInst>(Op0))
+      if (MinMax0->getIntrinsicID() == IID &&
+          (MinMax0->getOperand(0) == Op1 || MinMax0->getOperand(1) == Op1))
+        return MinMax0;
+    if (auto *MinMax1 = dyn_cast<IntrinsicInst>(Op1))
+      if (MinMax1->getIntrinsicID() == IID &&
+          (MinMax1->getOperand(0) == Op0 || MinMax1->getOperand(1) == Op0))
+        return MinMax1;
+
     const APInt *C;
     if (!match(Op1, m_APIntAllowUndef(C)))
       break;
