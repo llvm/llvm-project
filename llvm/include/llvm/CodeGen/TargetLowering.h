@@ -4263,7 +4263,7 @@ public:
   /// \param RL Low bits of the RHS of the MUL.  See LL for meaning
   /// \param RH High bits of the RHS of the MUL.  See LL for meaning.
   /// \returns true if the node has been expanded, false if it has not
-  bool expandMUL_LOHI(unsigned Opcode, EVT VT, SDLoc dl, SDValue LHS,
+  bool expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl, SDValue LHS,
                       SDValue RHS, SmallVectorImpl<SDValue> &Result, EVT HiLoVT,
                       SelectionDAG &DAG, MulExpansionKind Kind,
                       SDValue LL = SDValue(), SDValue LH = SDValue(),
