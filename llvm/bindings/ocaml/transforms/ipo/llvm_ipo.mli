@@ -56,11 +56,6 @@ external add_global_optimizer
   : [ `Module ] Llvm.PassManager.t -> unit
   = "llvm_add_global_optimizer"
 
-(** See the [llvm::createIPConstantPropagationPass] function. *)
-external add_ipc_propagation
-  : [ `Module ] Llvm.PassManager.t -> unit
-  = "llvm_add_ip_constant_propagation"
-
 (** See the [llvm::createPruneEHPass] function. *)
 external add_prune_eh
   : [ `Module ] Llvm.PassManager.t -> unit

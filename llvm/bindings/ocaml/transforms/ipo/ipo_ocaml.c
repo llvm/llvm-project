@@ -74,12 +74,6 @@ CAMLprim value llvm_add_global_optimizer(LLVMPassManagerRef PM) {
 }
 
 /* [`Module] Llvm.PassManager.t -> unit */
-CAMLprim value llvm_add_ip_constant_propagation(LLVMPassManagerRef PM) {
-  LLVMAddIPConstantPropagationPass(PM);
-  return Val_unit;
-}
-
-/* [`Module] Llvm.PassManager.t -> unit */
 CAMLprim value llvm_add_prune_eh(LLVMPassManagerRef PM) {
   LLVMAddPruneEHPass(PM);
   return Val_unit;
