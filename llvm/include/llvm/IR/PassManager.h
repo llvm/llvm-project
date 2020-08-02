@@ -38,6 +38,7 @@
 #define LLVM_IR_PASSMANAGER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
@@ -1137,9 +1138,7 @@ public:
       // analyses that all trigger invalidation on the same outer analysis,
       // this entire system should be changed to some other deterministic
       // data structure such as a `SetVector` of a pair of pointers.
-      auto InvalidatedIt = std::find(InvalidatedIDList.begin(),
-                                     InvalidatedIDList.end(), InvalidatedID);
-      if (InvalidatedIt == InvalidatedIDList.end())
+      if (!llvm::is_contained(InvalidatedIDList, InvalidatedID))
         InvalidatedIDList.push_back(InvalidatedID);
     }
 
