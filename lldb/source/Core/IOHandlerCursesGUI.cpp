@@ -3837,37 +3837,7 @@ public:
       return eKeyHandled;
 
     case 'b': // 'b' == toggle breakpoint on currently selected line
-      if (m_selected_line < GetNumSourceLines()) {
-        ExecutionContext exe_ctx =
-            m_debugger.GetCommandInterpreter().GetExecutionContext();
-        if (exe_ctx.HasTargetScope()) {
-          BreakpointSP bp_sp = exe_ctx.GetTargetRef().CreateBreakpoint(
-              nullptr, // Don't limit the breakpoint to certain modules
-              m_file_sp->GetFileSpec(), // Source file
-              m_selected_line +
-                  1, // Source line number (m_selected_line is zero based)
-              0,     // No column specified.
-              0,     // No offset
-              eLazyBoolCalculate,  // Check inlines using global setting
-              eLazyBoolCalculate,  // Skip prologue using global setting,
-              false,               // internal
-              false,               // request_hardware
-              eLazyBoolCalculate); // move_to_nearest_code
-        }
-      } else if (m_selected_line < GetNumDisassemblyLines()) {
-        const Instruction *inst = m_disassembly_sp->GetInstructionList()
-                                      .GetInstructionAtIndex(m_selected_line)
-                                      .get();
-        ExecutionContext exe_ctx =
-            m_debugger.GetCommandInterpreter().GetExecutionContext();
-        if (exe_ctx.HasTargetScope()) {
-          Address addr = inst->GetAddress();
-          BreakpointSP bp_sp = exe_ctx.GetTargetRef().CreateBreakpoint(
-              addr,   // lldb_private::Address
-              false,  // internal
-              false); // request_hardware
-        }
-      }
+      ToggleBreakpointOnSelectedLine();
       return eKeyHandled;
 
     case 'D': // 'D' == detach and keep stopped
@@ -3955,6 +3925,85 @@ public:
       break;
     }
     return eKeyNotHandled;
+  }
+
+  void ToggleBreakpointOnSelectedLine() {
+    ExecutionContext exe_ctx =
+        m_debugger.GetCommandInterpreter().GetExecutionContext();
+    if (!exe_ctx.HasTargetScope())
+      return;
+    if (GetNumSourceLines() > 0) {
+      // Source file breakpoint.
+      BreakpointList &bp_list = exe_ctx.GetTargetRef().GetBreakpointList();
+      const size_t num_bps = bp_list.GetSize();
+      for (size_t bp_idx = 0; bp_idx < num_bps; ++bp_idx) {
+        BreakpointSP bp_sp = bp_list.GetBreakpointAtIndex(bp_idx);
+        const size_t num_bps_locs = bp_sp->GetNumLocations();
+        for (size_t bp_loc_idx = 0; bp_loc_idx < num_bps_locs; ++bp_loc_idx) {
+          BreakpointLocationSP bp_loc_sp =
+              bp_sp->GetLocationAtIndex(bp_loc_idx);
+          LineEntry bp_loc_line_entry;
+          if (bp_loc_sp->GetAddress().CalculateSymbolContextLineEntry(
+                  bp_loc_line_entry)) {
+            if (m_file_sp->GetFileSpec() == bp_loc_line_entry.file &&
+                m_selected_line + 1 == bp_loc_line_entry.line) {
+              bool removed =
+                  exe_ctx.GetTargetRef().RemoveBreakpointByID(bp_sp->GetID());
+              assert(removed);
+              UNUSED_IF_ASSERT_DISABLED(removed);
+              return; // Existing breakpoint removed.
+            }
+          }
+        }
+      }
+      // No breakpoint found on the location, add it.
+      BreakpointSP bp_sp = exe_ctx.GetTargetRef().CreateBreakpoint(
+          nullptr, // Don't limit the breakpoint to certain modules
+          m_file_sp->GetFileSpec(), // Source file
+          m_selected_line +
+              1, // Source line number (m_selected_line is zero based)
+          0,     // No column specified.
+          0,     // No offset
+          eLazyBoolCalculate,  // Check inlines using global setting
+          eLazyBoolCalculate,  // Skip prologue using global setting,
+          false,               // internal
+          false,               // request_hardware
+          eLazyBoolCalculate); // move_to_nearest_code
+    } else {
+      // Disassembly breakpoint.
+      assert(GetNumDisassemblyLines() > 0);
+      assert(m_selected_line < GetNumDisassemblyLines());
+      const Instruction *inst = m_disassembly_sp->GetInstructionList()
+                                    .GetInstructionAtIndex(m_selected_line)
+                                    .get();
+      Address addr = inst->GetAddress();
+      // Try to find it.
+      BreakpointList &bp_list = exe_ctx.GetTargetRef().GetBreakpointList();
+      const size_t num_bps = bp_list.GetSize();
+      for (size_t bp_idx = 0; bp_idx < num_bps; ++bp_idx) {
+        BreakpointSP bp_sp = bp_list.GetBreakpointAtIndex(bp_idx);
+        const size_t num_bps_locs = bp_sp->GetNumLocations();
+        for (size_t bp_loc_idx = 0; bp_loc_idx < num_bps_locs; ++bp_loc_idx) {
+          BreakpointLocationSP bp_loc_sp =
+              bp_sp->GetLocationAtIndex(bp_loc_idx);
+          LineEntry bp_loc_line_entry;
+          const lldb::addr_t file_addr =
+              bp_loc_sp->GetAddress().GetFileAddress();
+          if (file_addr == addr.GetFileAddress()) {
+            bool removed =
+                exe_ctx.GetTargetRef().RemoveBreakpointByID(bp_sp->GetID());
+            assert(removed);
+            UNUSED_IF_ASSERT_DISABLED(removed);
+            return; // Existing breakpoint removed.
+          }
+        }
+      }
+      // No breakpoint found on the address, add it.
+      BreakpointSP bp_sp =
+          exe_ctx.GetTargetRef().CreateBreakpoint(addr, // lldb_private::Address
+                                                  false,  // internal
+                                                  false); // request_hardware
+    }
   }
 
 protected:
