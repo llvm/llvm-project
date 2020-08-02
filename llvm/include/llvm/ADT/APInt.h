@@ -15,7 +15,6 @@
 #ifndef LLVM_ADT_APINT_H
 #define LLVM_ADT_APINT_H
 
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
@@ -97,7 +96,7 @@ private:
 
   unsigned BitWidth; ///< The number of bits in this APInt.
 
-  friend struct DenseMapInfo<APInt>;
+  friend struct DenseMapAPIntKeyInfo;
 
   friend class APSInt;
 
@@ -2288,29 +2287,6 @@ void StoreIntToMemory(const APInt &IntVal, uint8_t *Dst, unsigned StoreBytes);
 /// LoadIntFromMemory - Loads the integer stored in the LoadBytes bytes starting
 /// from Src into IntVal, which is assumed to be wide enough and to hold zero.
 void LoadIntFromMemory(APInt &IntVal, const uint8_t *Src, unsigned LoadBytes);
-
-/// Provide DenseMapInfo for APInt.
-template <> struct DenseMapInfo<APInt> {
-  static inline APInt getEmptyKey() {
-    APInt V(nullptr, 0);
-    V.U.VAL = 0;
-    return V;
-  }
-
-  static inline APInt getTombstoneKey() {
-    APInt V(nullptr, 0);
-    V.U.VAL = 1;
-    return V;
-  }
-
-  static unsigned getHashValue(const APInt &Key) {
-    return static_cast<unsigned>(hash_value(Key));
-  }
-
-  static bool isEqual(const APInt &LHS, const APInt &RHS) {
-    return LHS.getBitWidth() == RHS.getBitWidth() && LHS == RHS;
-  }
-};
 
 } // namespace llvm
 
