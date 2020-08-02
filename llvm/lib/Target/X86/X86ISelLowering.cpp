@@ -6686,7 +6686,7 @@ static bool getTargetShuffleMaskIndices(SDValue MaskNode,
     return false;
 
   // Insert the extracted elements into the mask.
-  for (APInt Elt : EltBits)
+  for (const APInt &Elt : EltBits)
     RawMask.push_back(Elt.getZExtValue());
 
   return true;
