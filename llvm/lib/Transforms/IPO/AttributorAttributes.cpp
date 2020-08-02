@@ -3292,18 +3292,23 @@ ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
     const Instruction *I = Worklist.pop_back_val();
     LLVM_DEBUG(dbgs() << "[AAIsDead] Exploration inst: " << *I << "\n");
 
+    // Fast forward for uninteresting instructions. We could look for UB here
+    // though.
+    while(!I->isTerminator() && !isa<CallBase>(I)) {
+      Change = ChangeStatus::CHANGED;
+      I = I->getNextNode();
+    }
+
     AliveSuccessors.clear();
 
     bool UsedAssumedInformation = false;
     switch (I->getOpcode()) {
     // TODO: look for (assumed) UB to backwards propagate "deadness".
     default:
-      if (I->isTerminator()) {
-        for (const BasicBlock *SuccBB : successors(I->getParent()))
-          AliveSuccessors.push_back(&SuccBB->front());
-      } else {
-        AliveSuccessors.push_back(I->getNextNode());
-      }
+      assert(I->isTerminator() &&
+             "Expected non-terminators to be handled already!");
+      for (const BasicBlock *SuccBB : successors(I->getParent()))
+        AliveSuccessors.push_back(&SuccBB->front());
       break;
     case Instruction::Call:
       UsedAssumedInformation = identifyAliveSuccessors(A, cast<CallInst>(*I),
