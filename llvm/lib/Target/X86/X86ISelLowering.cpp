@@ -28119,8 +28119,8 @@ bool X86TargetLowering::lowerAtomicLoadAsLoadSDNode(const LoadInst &LI) const {
 /// a) very likely accessed only by a single thread to minimize cache traffic,
 /// and b) definitely dereferenceable.  Returns the new Chain result.
 static SDValue emitLockedStackOp(SelectionDAG &DAG,
-                                 const X86Subtarget &Subtarget,
-                                 SDValue Chain, SDLoc DL) {
+                                 const X86Subtarget &Subtarget, SDValue Chain,
+                                 const SDLoc &DL) {
   // Implementation notes:
   // 1) LOCK prefix creates a full read/write reordering barrier for memory
   // operations issued by the current processor.  As such, the location
@@ -38298,7 +38298,7 @@ static SDValue createMMXBuildVector(BuildVectorSDNode *BV, SelectionDAG &DAG,
 // a vector/float/double that got truncated/extended/bitcast to/from a scalar
 // integer. If so, replace the scalar ops with bool vector equivalents back down
 // the chain.
-static SDValue combineBitcastToBoolVector(EVT VT, SDValue V, SDLoc DL,
+static SDValue combineBitcastToBoolVector(EVT VT, SDValue V, const SDLoc &DL,
                                           SelectionDAG &DAG,
                                           const X86Subtarget &Subtarget) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
