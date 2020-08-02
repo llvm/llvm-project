@@ -132,6 +132,11 @@ static cl::opt<bool> ShowRelocatedSectionContents(
     cl::desc("show section contents after fixups have been applied"),
     cl::init(false));
 
+static cl::opt<bool> PhonyExternals(
+    "phony-externals",
+    cl::desc("resolve all otherwise unresolved externals to null"),
+    cl::init(false));
+
 ExitOnError ExitOnErr;
 
 namespace llvm {
@@ -179,9 +184,9 @@ static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
 
   LLVM_DEBUG(dbgs() << "Appling promotions to graph " << G.getName() << "\n");
 
-  // If it isn't then promote any symbols referenced by the harness to default
-  // scope, remove all symbols that clash with harness definitions, and demote
-  // all others.
+  // If this graph is part of the test then promote any symbols referenced by
+  // the harness to default scope, remove all symbols that clash with harness
+  // definitions, demote all other definitions.
   std::vector<Symbol *> DefinitionsToRemove;
   for (auto *Sym : G.defined_symbols()) {
 
@@ -560,6 +565,18 @@ Error LLVMJITLinkObjectLinkingLayer::add(JITDylib &JD,
   return JD.define(std::move(MU));
 }
 
+class PhonyExternalsGenerator : public JITDylib::DefinitionGenerator {
+public:
+  Error tryToGenerate(LookupKind K, JITDylib &JD,
+                      JITDylibLookupFlags JDLookupFlags,
+                      const SymbolLookupSet &LookupSet) override {
+    SymbolMap PhonySymbols;
+    for (auto &KV : LookupSet)
+      PhonySymbols[KV.first] = JITEvaluatedSymbol(0, JITSymbolFlags::Exported);
+    return JD.define(absoluteSymbols(std::move(PhonySymbols)));
+  }
+};
+
 Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
   Error Err = Error::success();
   std::unique_ptr<Session> S(new Session(std::move(TT), Err));
@@ -813,6 +830,10 @@ Error loadDylibs() {
   return Error::success();
 }
 
+void addPhonyExternalsGenerator(Session &S) {
+  S.MainJD->addGenerator(std::make_unique<PhonyExternalsGenerator>());
+}
+
 Error loadObjects(Session &S) {
 
   std::map<unsigned, JITDylib *> IdxToJLD;
@@ -1038,6 +1059,9 @@ int main(int argc, char *argv[]) {
   if (!NoProcessSymbols)
     ExitOnErr(loadProcessSymbols(*S));
   ExitOnErr(loadDylibs());
+
+  if (PhonyExternals)
+    addPhonyExternalsGenerator(*S);
 
   {
     TimeRegion TR(Timers ? &Timers->LoadObjectsTimer : nullptr);
