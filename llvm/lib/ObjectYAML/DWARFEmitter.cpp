@@ -749,7 +749,7 @@ Error writeDWARFLists(raw_ostream &OS,
       EmitOffsets(ArrayRef<uint64_t>((const uint64_t *)Table.Offsets->data(),
                                      Table.Offsets->size()),
                   0);
-    else
+    else if (OffsetEntryCount != 0)
       EmitOffsets(Offsets, OffsetsSize);
 
     OS.write(ListBuffer.data(), ListBuffer.size());
