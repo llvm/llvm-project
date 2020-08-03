@@ -6,6 +6,7 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
+#include <assert.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -93,8 +94,8 @@ static int allocateValueProfileCounters(__llvm_profile_data *Data) {
   for (VKI = IPVK_First; VKI <= IPVK_Last; ++VKI)
     NumVSites += Data->NumValueSites[VKI];
 
-  if (NumVSites == 0)
-    return 0;
+  // If NumVSites = 0, calloc is allowed to return a non-null pointer.
+  assert(NumVSites > 0 && "NumVSites can't be zero");
   ValueProfNode **Mem =
       (ValueProfNode **)calloc(NumVSites, sizeof(ValueProfNode *));
   if (!Mem)
