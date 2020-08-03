@@ -174,9 +174,10 @@ body: |
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
   ; CHECK:   [[PHI:%[0-9]+]]:_(<4 x s16>) = G_PHI [[INSERT]](<4 x s16>), %bb.0, [[INSERT3]](<4 x s16>), %bb.1
-  ; CHECK:   [[EXTRACT2:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[PHI]](<4 x s16>), 0
+  ; CHECK:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[PHI]](<4 x s16>), %7(<4 x s16>), %7(<4 x s16>)
+  ; CHECK:   [[UV4:%[0-9]+]]:_(<3 x s16>), [[UV5:%[0-9]+]]:_(<3 x s16>), [[UV6:%[0-9]+]]:_(<3 x s16>), [[UV7:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS1]](<12 x s16>)
   ; CHECK:   [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-  ; CHECK:   [[INSERT4:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT2]](<3 x s16>), 0
+  ; CHECK:   [[INSERT4:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[UV4]](<3 x s16>), 0
   ; CHECK:   $vgpr0_vgpr1 = COPY [[INSERT4]](<4 x s16>)
   ; CHECK:   S_SETPC_B64 undef $sgpr30_sgpr31
   bb.0:
