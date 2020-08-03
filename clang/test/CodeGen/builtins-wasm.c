@@ -737,6 +737,18 @@ i16x8 narrow_u_i16x8_i32x4(i32x4 low, i32x4 high) {
   // WEBASSEMBLY: ret
 }
 
+i32x4 load32_zero(int *p) {
+  return __builtin_wasm_load32_zero(p);
+  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.load32.zero(i32* %p)
+  // WEBASSEMBLY: ret
+}
+
+i64x2 load64_zero(long long *p) {
+  return __builtin_wasm_load64_zero(p);
+  // WEBASSEMBLY: call <2 x i64> @llvm.wasm.load64.zero(i64* %p)
+  // WEBASSEMBLY: ret
+}
+
 i8x16 swizzle_v8x16(i8x16 x, i8x16 y) {
   return __builtin_wasm_swizzle_v8x16(x, y);
   // WEBASSEMBLY: call <16 x i8> @llvm.wasm.swizzle(<16 x i8> %x, <16 x i8> %y)
