@@ -3001,28 +3001,16 @@ Register LegalizerHelper::getVectorElementPointer(Register VecPtr, LLT VecTy,
 
 LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorImplicitDef(
     MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy) {
-  SmallVector<Register, 2> DstRegs;
-
-  unsigned NarrowSize = NarrowTy.getSizeInBits();
   Register DstReg = MI.getOperand(0).getReg();
-  unsigned Size = MRI.getType(DstReg).getSizeInBits();
-  int NumParts = Size / NarrowSize;
-  // FIXME: Don't know how to handle the situation where the small vectors
-  // aren't all the same size yet.
-  if (Size % NarrowSize != 0)
-    return UnableToLegalize;
+  LLT DstTy = MRI.getType(DstReg);
+  LLT LCMTy = getLCMType(DstTy, NarrowTy);
 
-  for (int i = 0; i < NumParts; ++i) {
-    Register TmpReg = MRI.createGenericVirtualRegister(NarrowTy);
-    MIRBuilder.buildUndef(TmpReg);
-    DstRegs.push_back(TmpReg);
-  }
+  unsigned NumParts = LCMTy.getSizeInBits() / NarrowTy.getSizeInBits();
 
-  if (NarrowTy.isVector())
-    MIRBuilder.buildConcatVectors(DstReg, DstRegs);
-  else
-    MIRBuilder.buildBuildVector(DstReg, DstRegs);
+  auto NewUndef = MIRBuilder.buildUndef(NarrowTy);
+  SmallVector<Register, 8> Parts(NumParts, NewUndef.getReg(0));
 
+  buildWidenedRemergeToDst(DstReg, LCMTy, Parts);
   MI.eraseFromParent();
   return Legalized;
 }
