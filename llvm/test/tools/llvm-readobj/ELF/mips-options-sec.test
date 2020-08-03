@@ -12,3 +12,39 @@
 # CHECK-NEXT:     Co-Proc Mask3: 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT: }
+
+## Check that we try to dump the .MIPS.options section when we are able to locate it by name.
+# RUN: yaml2obj --docnum=1 -DNAME=0xffff %s -o %t.err1
+# RUN: llvm-readelf -A %t.err1 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err1 --check-prefix=NAME-ERR-FOUND --implicit-check-not=warning:
+# RUN: llvm-readobj -A %t.err1 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err1 --check-prefix=NAME-ERR-FOUND --implicit-check-not=warning:
+
+# NAME-ERR-FOUND:      warning: '[[FILE]]': unable to read the name of SHT_PROGBITS section with index 1: a section [index 1] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+# NAME-ERR-FOUND-NEXT: warning: '[[FILE]]': unable to read the name of SHT_PROGBITS section with index 3: a section [index 3] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+# NAME-ERR-FOUND:      MIPS Options {
+# NAME-ERR-FOUND-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+Sections:
+  - Type:   SHT_PROGBITS
+    ShName: [[NAME=<none>]]
+  - Name:   .MIPS.options
+    Type:   SHT_MIPS_OPTIONS
+    ShName: [[OPTNAME=<none>]]
+  - Type:   SHT_PROGBITS
+    ShName: [[NAME=<none>]]
+
+## Check we report a warning when we are unable to find the .MIPS.options section due to an error.
+# RUN: yaml2obj --docnum=1 -DOPTNAME=0xffff %s -o %t.err2
+# RUN: llvm-readelf -A %t.err2 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err2 --check-prefix=NAME-ERR-NOTFOUND --implicit-check-not=warning: --implicit-check-not="MIPS Options"
+# RUN: llvm-readobj -A %t.err2 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err2 --check-prefix=NAME-ERR-NOTFOUND --implicit-check-not=warning: --implicit-check-not="MIPS Options"
+
+# NAME-ERR-NOTFOUND: warning: '[[FILE]]': unable to read the name of SHT_MIPS_OPTIONS section with index 2: a section [index 2] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
