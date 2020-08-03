@@ -439,8 +439,8 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
             true});
         DIELoc *Loc = new (DIEValueAllocator) DIELoc;
         addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_WASM_location);
-        addSInt(*Loc, dwarf::DW_FORM_sdata, FrameBase.Location.WasmLoc.Kind);
-        addLabel(*Loc, dwarf::DW_FORM_udata, SPSym);
+        addSInt(*Loc, dwarf::DW_FORM_sdata, TI_GLOBAL_RELOC);
+        addLabel(*Loc, dwarf::DW_FORM_data4, SPSym);
         DD->addArangeLabel(SymbolCU(this, SPSym));
         addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_stack_value);
         addBlock(*SPDie, dwarf::DW_AT_frame_base, Loc);
