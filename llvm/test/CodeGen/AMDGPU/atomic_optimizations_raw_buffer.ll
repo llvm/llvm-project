@@ -19,7 +19,8 @@ declare i32 @llvm.amdgcn.raw.buffer.atomic.sub(i32, <4 x i32>, i32, i32, i32)
 ; GCN: s_and_saveexec_b{{32|64}} s[[exec:\[?[0-9:]+\]?]], vcc
 ; GCN32: s_bcnt1_i32_b32 s[[popcount:[0-9]+]], s[[exec_lo]]
 ; GCN64: s_bcnt1_i32_b64 s[[popcount:[0-9]+]], s{{\[}}[[exec_lo]]:[[exec_hi]]{{\]}}
-; GCN: v_mul_u32_u24{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[popcount]], 5
+; GCN: s_mul_i32 s[[popcount]], s[[popcount]], 5
+; GCN: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[popcount]]
 ; GCN: buffer_atomic_add v[[value]]
 define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:
@@ -90,7 +91,8 @@ entry:
 ; GCN: s_and_saveexec_b{{32|64}} s[[exec:\[?[0-9:]+\]?]], vcc
 ; GCN32: s_bcnt1_i32_b32 s[[popcount:[0-9]+]], s[[exec_lo]]
 ; GCN64: s_bcnt1_i32_b64 s[[popcount:[0-9]+]], s{{\[}}[[exec_lo]]:[[exec_hi]]{{\]}}
-; GCN: v_mul_u32_u24{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[popcount]], 5
+; GCN: s_mul_i32 s[[popcount]], s[[popcount]], 5
+; GCN: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[popcount]]
 ; GCN: buffer_atomic_sub v[[value]]
 define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:
