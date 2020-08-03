@@ -1391,6 +1391,17 @@ def FormatInferVariadicTypeFromNonVariadic
   let assemblyFormat = "$operands attr-dict `:` type($result)";
 }
 
+def FormatOptionalUnitAttr : TEST_Op<"format_optional_unit_attribute"> {
+  let arguments = (ins UnitAttr:$is_optional);
+  let assemblyFormat = "(`is_optional` $is_optional^)? attr-dict";
+}
+
+def FormatOptionalUnitAttrNoElide
+    : TEST_Op<"format_optional_unit_attribute_no_elide"> {
+  let arguments = (ins UnitAttr:$is_optional);
+  let assemblyFormat = "($is_optional^)? attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // AllTypesMatch type inference
 //===----------------------------------------------------------------------===//
