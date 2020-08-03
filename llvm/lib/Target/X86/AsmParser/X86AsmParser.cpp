@@ -934,6 +934,7 @@ private:
                                OperandVector &Operands);
 
   bool parseDirectiveArch();
+  bool parseDirectiveNops(SMLoc L);
   bool parseDirectiveEven(SMLoc L);
   bool ParseDirectiveCode(StringRef IDVal, SMLoc L);
 
@@ -4037,7 +4038,9 @@ bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
                                            "a '%' prefix in .intel_syntax");
     }
     return false;
-  } else if (IDVal == ".even")
+  } else if (IDVal == ".nops")
+    return parseDirectiveNops(DirectiveID.getLoc());
+  else if (IDVal == ".even")
     return parseDirectiveEven(DirectiveID.getLoc());
   else if (IDVal == ".cv_fpo_proc")
     return parseDirectiveFPOProc(DirectiveID.getLoc());
@@ -4070,6 +4073,42 @@ bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
 bool X86AsmParser::parseDirectiveArch() {
   // Ignore .arch for now.
   getParser().parseStringToEndOfStatement();
+  return false;
+}
+
+/// parseDirectiveNops
+///  ::= .nops size[, control]
+bool X86AsmParser::parseDirectiveNops(SMLoc L) {
+  int64_t NumBytes = 0, Control = 0;
+  SMLoc NumBytesLoc, ControlLoc;
+  const MCSubtargetInfo STI = getSTI();
+  NumBytesLoc = getTok().getLoc();
+  if (getParser().checkForValidSection() ||
+      getParser().parseAbsoluteExpression(NumBytes))
+    return true;
+
+  if (parseOptionalToken(AsmToken::Comma)) {
+    ControlLoc = getTok().getLoc();
+    if (getParser().parseAbsoluteExpression(Control))
+      return true;
+  }
+  if (getParser().parseToken(AsmToken::EndOfStatement,
+                             "unexpected token in '.nops' directive"))
+    return true;
+
+  if (NumBytes <= 0) {
+    Error(NumBytesLoc, "'.nops' directive with non-positive size");
+    return false;
+  }
+
+  if (Control < 0) {
+    Error(ControlLoc, "'.nops' directive with negative NOP size");
+    return false;
+  }
+
+  /// Emit nops
+  getParser().getStreamer().emitNops(NumBytes, Control, L);
+
   return false;
 }
 
