@@ -161,19 +161,6 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
         "return $_op.getMemRefType().getRank() - $_op.getTransferRank();"
     >,
     InterfaceMethod<
-      /*desc=*/[{ Returns true if at least one of the dimensions is masked.}],
-      /*retTy=*/"bool",
-      /*methodName=*/"hasMaskedDim",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        for (unsigned idx = 0, e = $_op.getTransferRank(); idx < e; ++idx)
-          if ($_op.isMaskedDim(idx))
-            return true;
-        return false;
-      }]
-    >,
-    InterfaceMethod<
       /*desc=*/[{
       Helper function to account for the fact that `permutationMap` results and
       `op.indices` sizes may not match and may not be aligned. The first
