@@ -78,7 +78,7 @@ def update(parser, args):
 
     project_map = ProjectMap()
     for project in project_map.projects:
-        SATestUpdateDiffs.update_reference_results(project)
+        SATestUpdateDiffs.update_reference_results(project, args.git)
 
 
 def benchmark(parser, args):
@@ -277,7 +277,8 @@ def main():
         "update",
         help="Update static analyzer reference results based on the previous "
         "run of SATest build. Assumes that SATest build was just run.")
-    # TODO: add option to decide whether we should use git
+    upd_parser.add_argument("--git", action="store_true",
+                            help="Stage updated results using git.")
     upd_parser.set_defaults(func=update)
 
     # docker subcommand
