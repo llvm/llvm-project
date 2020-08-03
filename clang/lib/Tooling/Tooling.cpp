@@ -258,22 +258,23 @@ void addTargetAndModeForProgramName(std::vector<std::string> &CommandLine,
   // --driver-mode=X
   const std::string DriverModeOPT =
       Table.getOption(driver::options::OPT_driver_mode).getPrefixedName();
-  bool AlreadyHasTarget = false;
-  bool AlreadyHasMode = false;
+  auto TargetMode =
+      driver::ToolChain::getTargetAndModeFromProgramName(InvokedAs);
+  // No need to search for target args if we don't have a target/mode to insert.
+  bool ShouldAddTarget = TargetMode.TargetIsValid;
+  bool ShouldAddMode = TargetMode.DriverMode != nullptr;
   // Skip CommandLine[0].
   for (auto Token = ++CommandLine.begin(); Token != CommandLine.end();
        ++Token) {
     StringRef TokenRef(*Token);
-    AlreadyHasTarget |=
-        TokenRef.startswith(TargetOPT) || TokenRef.equals(TargetOPTLegacy);
-    AlreadyHasMode |= TokenRef.startswith(DriverModeOPT);
+    ShouldAddTarget = ShouldAddTarget && !TokenRef.startswith(TargetOPT) &&
+                      !TokenRef.equals(TargetOPTLegacy);
+    ShouldAddMode = ShouldAddMode && !TokenRef.startswith(DriverModeOPT);
   }
-  auto TargetMode =
-      driver::ToolChain::getTargetAndModeFromProgramName(InvokedAs);
-  if (!AlreadyHasMode && TargetMode.DriverMode) {
+  if (ShouldAddMode) {
     CommandLine.insert(++CommandLine.begin(), TargetMode.DriverMode);
   }
-  if (!AlreadyHasTarget && TargetMode.TargetIsValid) {
+  if (ShouldAddTarget) {
     CommandLine.insert(++CommandLine.begin(),
                        TargetOPT + TargetMode.TargetPrefix);
   }
