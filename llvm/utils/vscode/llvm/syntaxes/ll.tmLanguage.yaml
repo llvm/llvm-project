@@ -216,6 +216,7 @@ patterns:
             \\bnorecurse\\b|\
             \\bnoredzone\\b|\
             \\bnoreturn\\b|\
+            \\bnoundef\\b|\
             \\bnounwind\\b|\
             \\boptnone\\b|\
             \\boptsize\\b|\
