@@ -38,7 +38,7 @@
 
 // In x86 32 bit named symbols are used for temporary symbols in merge
 // sections, so make sure we handle symbols inside compressed sections
-// 386-SYMBOLS-GNU: Name: .Linfo_string0
+// 386-SYMBOLS-GNU: Name: .zdebug_str
 // 386-SYMBOLS-GNU-NOT: }
 // 386-SYMBOLS-GNU: Section: .zdebug_str
 
@@ -73,7 +73,7 @@
 // ZLIB-STYLE-FLAGS32-NEXT: AddressAlignment: 4
 // ZLIB-STYLE-FLAGS64-NEXT: AddressAlignment: 8
 
-// 386-SYMBOLS-ZLIB: Name: .Linfo_string0
+// 386-SYMBOLS-ZLIB: Name: .debug_str
 // 386-SYMBOLS-ZLIB-NOT: }
 // 386-SYMBOLS-ZLIB: Section: .debug_str
 

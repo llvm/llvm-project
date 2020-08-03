@@ -1389,11 +1389,6 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
     if (Flags & ELF::SHF_MERGE) {
       if (C != 0)
         return true;
-
-      // It looks like gold has a bug (http://sourceware.org/PR16794) and can
-      // only handle section relocations to mergeable sections if using RELA.
-      if (!hasRelocationAddend())
-        return true;
     }
 
     // Most TLS relocations use a got, so they need the symbol. Even those that
