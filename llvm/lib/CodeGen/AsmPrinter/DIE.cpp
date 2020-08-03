@@ -809,13 +809,17 @@ void DIEBlock::print(raw_ostream &O) const {
 //===----------------------------------------------------------------------===//
 
 unsigned DIELocList::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
-  if (Form == dwarf::DW_FORM_loclistx)
+  switch (Form) {
+  case dwarf::DW_FORM_loclistx:
     return getULEB128Size(Index);
-  if (Form == dwarf::DW_FORM_data4)
+  case dwarf::DW_FORM_data4:
     return 4;
-  if (Form == dwarf::DW_FORM_sec_offset)
+  case dwarf::DW_FORM_sec_offset:
+    // FIXME: add support for DWARF64
     return 4;
-  return AP->MAI->getCodePointerSize();
+  default:
+    llvm_unreachable("DIE Value form not supported yet");
+  }
 }
 
 /// EmitValue - Emit label value.
