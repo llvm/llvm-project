@@ -429,6 +429,40 @@ TEST(DocumentSymbols, ExternSymbol) {
   EXPECT_THAT(getSymbols(TU.build()), IsEmpty());
 }
 
+TEST(DocumentSymbols, ExternContext) {
+  TestTU TU;
+  TU.Code = R"cpp(
+      extern "C" {
+      void foo();
+      class Foo {};
+      }
+      namespace ns {
+        extern "C" {
+        void bar();
+        class Bar {};
+        }
+      })cpp";
+
+  EXPECT_THAT(getSymbols(TU.build()),
+              ElementsAre(WithName("foo"), WithName("Foo"),
+                          AllOf(WithName("ns"),
+                                Children(WithName("bar"), WithName("Bar")))));
+}
+
+TEST(DocumentSymbols, ExportContext) {
+  TestTU TU;
+  TU.ExtraArgs = {"-std=c++20"};
+  TU.Code = R"cpp(
+      export module test;
+      export {
+      void foo();
+      class Foo {};
+      })cpp";
+
+  EXPECT_THAT(getSymbols(TU.build()),
+              ElementsAre(WithName("foo"), WithName("Foo")));
+}
+
 TEST(DocumentSymbols, NoLocals) {
   TestTU TU;
   TU.Code = R"cpp(
