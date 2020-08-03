@@ -1,4 +1,4 @@
-//===----- CGOpenMPRuntimeNVPTX.h - Interface to OpenMP NVPTX Runtimes ----===//
+//===--- CGOpenMPRuntimeAMDGCN.h - Interface to OpenMP AMDGCN Runtimes ---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This provides a class for OpenMP runtime code generation specialized to NVPTX
-// targets from generalized CGOpenMPRuntimeGPU class.
+// This provides a class for OpenMP runtime code generation specialized to
+// AMDGCN targets from generalized CGOpenMPRuntimeGPU class.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_CODEGEN_CGOPENMPRUNTIMENVPTX_H
-#define LLVM_CLANG_LIB_CODEGEN_CGOPENMPRUNTIMENVPTX_H
+#ifndef LLVM_CLANG_LIB_CODEGEN_CGOPENMPRUNTIMEAMDGCN_H
+#define LLVM_CLANG_LIB_CODEGEN_CGOPENMPRUNTIMEAMDGCN_H
 
 #include "CGOpenMPRuntime.h"
 #include "CGOpenMPRuntimeGPU.h"
@@ -22,10 +22,10 @@
 namespace clang {
 namespace CodeGen {
 
-class CGOpenMPRuntimeNVPTX final : public CGOpenMPRuntimeGPU {
+class CGOpenMPRuntimeAMDGCN final : public CGOpenMPRuntimeGPU {
 
 public:
-  explicit CGOpenMPRuntimeNVPTX(CodeGenModule &CGM);
+  explicit CGOpenMPRuntimeAMDGCN(CodeGenModule &CGM);
 
   /// Get the GPU warp size.
   llvm::Value *getGPUWarpSize(CodeGenFunction &CGF) override;
@@ -37,7 +37,7 @@ public:
   llvm::Value *getGPUNumThreads(CodeGenFunction &CGF) override;
 };
 
-} // CodeGen namespace.
-} // clang namespace.
+} // namespace CodeGen
+} // namespace clang
 
-#endif // LLVM_CLANG_LIB_CODEGEN_CGOPENMPRUNTIMENVPTX_H
+#endif // LLVM_CLANG_LIB_CODEGEN_CGOPENMPRUNTIMEAMDGCN_H
