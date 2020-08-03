@@ -10,24 +10,6 @@ import lit.TestRunner
 import lit.util
 from lit.formats.base import TestFormat
 
-def getBuildDir(cmd):
-    found = False
-    for arg in cmd:
-        if found:
-            return arg
-        if arg == '--build-dir':
-            found = True
-    return None
-
-def mkdir_p(path):
-    import errno
-    try:
-        os.makedirs(path)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise
-    if not os.path.isdir(path):
-        raise OSError(errno.ENOTDIR, "%s is not a directory"%path)
 
 class LLDBTest(TestFormat):
     def __init__(self, dotest_cmd):
@@ -63,31 +45,15 @@ class LLDBTest(TestFormat):
             return (lit.Test.UNSUPPORTED, 'Test is unsupported')
 
         testPath, testFile = os.path.split(test.getSourcePath())
+
+        # The Python used to run lit can be different from the Python LLDB was
+        # build with.
+        executable = test.config.python_executable
+
         # On Windows, the system does not always correctly interpret
         # shebang lines.  To make sure we can execute the tests, add
         # python exe as the first parameter of the command.
-        cmd = [sys.executable] + self.dotest_cmd + [testPath, '-p', testFile]
-
-        # On macOS, we can't do the DYLD_INSERT_LIBRARIES trick with a shim
-        # python binary as the ASan interceptors get loaded too late. Also,
-        # when SIP is enabled, we can't inject libraries into system binaries
-        # at all, so we need a copy of the "real" python to work with.
-        #
-        # Find the "real" python binary, copy it, and invoke it.
-        if 'DYLD_INSERT_LIBRARIES' in test.config.environment and \
-                platform.system() == 'Darwin':
-            builddir = getBuildDir(cmd)
-            mkdir_p(builddir)
-            copied_python = os.path.join(builddir, 'copied-system-python')
-            if not os.path.isfile(copied_python):
-                import shutil, subprocess
-                python = subprocess.check_output([
-                    sys.executable,
-                    os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                        'get_darwin_real_python.py')
-                ]).decode('utf-8').strip()
-                shutil.copy(python, copied_python)
-            cmd[0] = copied_python
+        cmd = [executable] + self.dotest_cmd + [testPath, '-p', testFile]
 
         timeoutInfo = None
         try:
