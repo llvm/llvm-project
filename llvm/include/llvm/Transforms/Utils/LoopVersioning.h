@@ -16,6 +16,7 @@
 #define LLVM_TRANSFORMS_UTILS_LOOPVERSIONING_H
 
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
@@ -147,6 +148,14 @@ private:
   LoopInfo *LI;
   DominatorTree *DT;
   ScalarEvolution *SE;
+};
+
+/// Expose LoopVersioning as a pass.  Currently this is only used for
+/// unit-testing.  It adds all memchecks necessary to remove all may-aliasing
+/// array accesses from the loop.
+class LoopVersioningPass : public PassInfoMixin<LoopVersioningPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 }
 
