@@ -274,7 +274,7 @@ define amdgpu_kernel void @fmuladd_neg_2.0_neg_a_b_f32(float addrspace(1)* %out,
   %r1 = load volatile float, float addrspace(1)* %gep.0
   %r2 = load volatile float, float addrspace(1)* %gep.1
 
-  %r1.fneg = fsub float -0.000000e+00, %r1
+  %r1.fneg = fneg float %r1
 
   %r3 = tail call float @llvm.fmuladd.f32(float -2.0, float %r1.fneg, float %r2)
   store float %r3, float addrspace(1)* %gep.out
@@ -307,7 +307,7 @@ define amdgpu_kernel void @fmuladd_2.0_neg_a_b_f32(float addrspace(1)* %out, flo
   %r1 = load volatile float, float addrspace(1)* %gep.0
   %r2 = load volatile float, float addrspace(1)* %gep.1
 
-  %r1.fneg = fsub float -0.000000e+00, %r1
+  %r1.fneg = fneg float %r1
 
   %r3 = tail call float @llvm.fmuladd.f32(float 2.0, float %r1.fneg, float %r2)
   store float %r3, float addrspace(1)* %gep.out
@@ -339,7 +339,7 @@ define amdgpu_kernel void @fmuladd_2.0_a_neg_b_f32(float addrspace(1)* %out, flo
   %r1 = load volatile float, float addrspace(1)* %gep.0
   %r2 = load volatile float, float addrspace(1)* %gep.1
 
-  %r2.fneg = fsub float -0.000000e+00, %r2
+  %r2.fneg = fneg float %r2
 
   %r3 = tail call float @llvm.fmuladd.f32(float 2.0, float %r1, float %r2.fneg)
   store float %r3, float addrspace(1)* %gep.out
@@ -517,8 +517,8 @@ define amdgpu_kernel void @neg_neg_mad_f32(float addrspace(1)* noalias nocapture
   %a = load volatile float, float addrspace(1)* %gep0, align 4
   %b = load volatile float, float addrspace(1)* %gep1, align 4
   %c = load volatile float, float addrspace(1)* %gep2, align 4
-  %nega = fsub float -0.000000e+00, %a
-  %negb = fsub float -0.000000e+00, %b
+  %nega = fneg float %a
+  %negb = fneg float %b
   %mul = fmul float %nega, %negb
   %sub = fadd float %mul, %c
   store float %sub, float addrspace(1)* %outgep, align 4
