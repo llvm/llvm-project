@@ -30,6 +30,52 @@ define internal void @bar(%p_t %p)  {
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
+
+; Test case where the promoted argument has uses in @callee and we need to
+; retain a reference to the original function, because it is stored in @storer.
+define void @storer({i32, i32}* %ptr) {
+; CHECK-LABEL: define {{[^@]+}}@storer
+; CHECK-SAME: ({ i32, i32 }* [[PTR:%.*]])
+; CHECK-NEXT:    ret void
+;
+  %tmp = alloca i32 ({i32, i32}*)*
+  store i32 ({i32, i32}*)* @callee,  i32 ({i32, i32}*)** %tmp
+  ret void
+}
+
+define i32 @caller() {
+; CHECK-LABEL: define {{[^@]+}}@caller()
+; CHECK-NEXT:    [[TMP:%.*]] = alloca { i32, i32 }, align 8
+; CHECK-NEXT:    [[F_1:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[TMP]], i32 0, i32 1
+; CHECK-NEXT:    store i32 10, i32* [[F_1]], align 4
+; CHECK-NEXT:    [[TMP_IDX:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[TMP]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP_IDX_VAL:%.*]] = load i32, i32* [[TMP_IDX]], align 4
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @callee(i32 [[TMP_IDX_VAL]])
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %tmp = alloca {i32, i32}
+  %f.1 = getelementptr {i32, i32}, {i32, i32}* %tmp, i32 0, i32 1
+  store i32 10, i32* %f.1
+  %res = call i32 @callee({i32, i32}* %tmp)
+  ret i32 %res
+}
+
+define internal i32 @callee({i32, i32}* %ptr)  !dbg !7 {
+; CHECK-LABEL: define {{[^@]+}}@callee
+; CHECK-SAME: (i32 [[PTR_0_1_VAL:%.*]]) !dbg !6
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata { i32, i32 }* undef, metadata !7, metadata !DIExpression()), !dbg !8
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[PTR_0_1_VAL]], metadata !7, metadata !DIExpression()), !dbg !8
+; CHECK-NEXT:    ret i32 [[PTR_0_1_VAL]]
+;
+  call void @llvm.dbg.value(metadata {i32, i32}* %ptr, metadata !8, metadata !9), !dbg !10
+  %f.1 = getelementptr {i32, i32}, {i32, i32}* %ptr, i32 0, i32 1
+  %l.1 = load i32, i32* %f.1
+  call void @llvm.dbg.value(metadata i32 %l.1, metadata !8, metadata !9), !dbg !10
+  ret i32 %l.1
+}
+
+
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2}
 
@@ -40,3 +86,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !4 = !DILocalVariable(name: "p", scope: !3)
 !5 = !DIExpression()
 !6 = !DILocation(line: 1, column: 1, scope: !3)
+!7 = distinct !DISubprogram(name: "callee", unit: !0)
+!8 = !DILocalVariable(name: "c", scope: !7)
+!9 = !DIExpression()
+!10 = !DILocation(line: 2, column: 2, scope: !7)
