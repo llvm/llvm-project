@@ -149,9 +149,6 @@ Cookie BeginExternalListIO(
   unit.SetDirection(DIR, handler);
   IoStatementState &io{unit.BeginIoStatement<ExternalListIoStatementState<DIR>>(
       unit, sourceFile, sourceLine)};
-  if constexpr (DIR == Direction::Input) {
-    unit.BeginReadingRecord(handler);
-  }
   return &io;
 }
 
@@ -185,9 +182,6 @@ Cookie BeginExternalFormattedIO(const char *format, std::size_t formatLength,
   IoStatementState &io{
       unit.BeginIoStatement<ExternalFormattedIoStatementState<DIR>>(
           unit, format, formatLength, sourceFile, sourceLine)};
-  if constexpr (DIR == Direction::Input) {
-    unit.BeginReadingRecord(handler);
-  }
   return &io;
 }
 
@@ -218,9 +212,7 @@ Cookie BeginUnformattedIO(
       unit, sourceFile, sourceLine)};
   IoErrorHandler handler{terminator};
   unit.SetDirection(DIR, handler);
-  if constexpr (DIR == Direction::Input) {
-    unit.BeginReadingRecord(handler);
-  } else {
+  if constexpr (DIR == Direction::Output) {
     if (unit.access == Access::Sequential && !unit.isFixedRecordLength) {
       // Create space for (sub)record header to be completed by
       // UnformattedIoStatementState<Direction::Output>::EndIoStatement()
@@ -838,6 +830,7 @@ bool IONAME(OutputDescriptor)(Cookie cookie, const Descriptor &) {
 
 bool IONAME(InputDescriptor)(Cookie cookie, const Descriptor &) {
   IoStatementState &io{*cookie};
+  io.BeginReadingRecord();
   io.GetIoErrorHandler().Crash("InputDescriptor: not yet implemented"); // TODO
 }
 
@@ -855,6 +848,7 @@ bool IONAME(OutputUnformattedBlock)(Cookie cookie, const char *x,
 bool IONAME(InputUnformattedBlock)(
     Cookie cookie, char *x, std::size_t length, std::size_t elementBytes) {
   IoStatementState &io{*cookie};
+  io.BeginReadingRecord();
   if (auto *unf{io.get_if<UnformattedIoStatementState<Direction::Input>>()}) {
     return unf->Receive(x, length, elementBytes);
   }
@@ -883,6 +877,7 @@ bool IONAME(InputInteger)(Cookie cookie, std::int64_t &n, int kind) {
         "InputInteger64() called for a non-input I/O statement");
     return false;
   }
+  io.BeginReadingRecord();
   if (auto edit{io.GetNextDataEdit()}) {
     if (edit->descriptor == DataEdit::ListDirectedNullValue) {
       return true;
@@ -922,6 +917,7 @@ static bool InputReal(Cookie cookie, REAL &x) {
         "InputReal() called for a non-input I/O statement");
     return false;
   }
+  io.BeginReadingRecord();
   if (auto edit{io.GetNextDataEdit()}) {
     if (edit->descriptor == DataEdit::ListDirectedNullValue) {
       return true;
@@ -968,6 +964,7 @@ static bool InputComplex(Cookie cookie, REAL x[2]) {
         "InputComplex() called for a non-input I/O statement");
     return false;
   }
+  io.BeginReadingRecord();
   for (int j{0}; j < 2; ++j) {
     if (auto edit{io.GetNextDataEdit()}) {
       if (edit->descriptor == DataEdit::ListDirectedNullValue) {
@@ -1012,6 +1009,7 @@ bool IONAME(InputAscii)(Cookie cookie, char *x, std::size_t length) {
         "InputAscii() called for a non-input I/O statement");
     return false;
   }
+  io.BeginReadingRecord();
   if (auto edit{io.GetNextDataEdit()}) {
     if (edit->descriptor == DataEdit::ListDirectedNullValue) {
       return true;
@@ -1044,6 +1042,7 @@ bool IONAME(InputLogical)(Cookie cookie, bool &truth) {
         "InputLogical() called for a non-input I/O statement");
     return false;
   }
+  io.BeginReadingRecord();
   if (auto edit{io.GetNextDataEdit()}) {
     if (edit->descriptor == DataEdit::ListDirectedNullValue) {
       return true;

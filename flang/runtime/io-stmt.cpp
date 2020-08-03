@@ -185,7 +185,10 @@ int NoopCloseStatementState::EndIoStatement() {
 }
 
 template <Direction DIR> int ExternalIoStatementState<DIR>::EndIoStatement() {
-  if (!unit().nonAdvancing) {
+  if constexpr (DIR == Direction::Input) {
+    BeginReadingRecord(); // in case of READ with no data items
+  }
+  if (!unit().nonAdvancing && GetIoStat() != IostatEnd) {
     unit().AdvanceRecord(*this);
   }
   if constexpr (DIR == Direction::Output) {
@@ -260,6 +263,16 @@ void ExternalIoStatementState<DIR>::HandleRelativePosition(std::int64_t n) {
   return unit().HandleRelativePosition(n);
 }
 
+template <Direction DIR>
+void ExternalIoStatementState<DIR>::BeginReadingRecord() {
+  if constexpr (DIR == Direction::Input) {
+    if (!beganReading_) {
+      beganReading_ = true;
+      unit().BeginReadingRecord(*this);
+    }
+  }
+}
+
 template <Direction DIR, typename CHAR>
 ExternalFormattedIoStatementState<DIR, CHAR>::ExternalFormattedIoStatementState(
     ExternalFileUnit &unit, const CHAR *format, std::size_t formatLength,
@@ -313,6 +326,10 @@ ConnectionState &IoStatementState::GetConnectionState() {
 MutableModes &IoStatementState::mutableModes() {
   return std::visit(
       [](auto &x) -> MutableModes & { return x.get().mutableModes(); }, u_);
+}
+
+void IoStatementState::BeginReadingRecord() {
+  std::visit([](auto &x) { return x.get().BeginReadingRecord(); }, u_);
 }
 
 IoErrorHandler &IoStatementState::GetIoErrorHandler() const {

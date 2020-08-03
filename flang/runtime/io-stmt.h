@@ -59,6 +59,7 @@ public:
   IoErrorHandler &GetIoErrorHandler() const;
   ExternalFileUnit *GetExternalFileUnit() const; // null if internal unit
   MutableModes &mutableModes();
+  void BeginReadingRecord();
 
   // N.B.: this also works with base classes
   template <typename A> A *get_if() const {
@@ -108,6 +109,7 @@ struct IoStatementBase : public DefaultFormatControlCallbacks {
   int EndIoStatement();
   std::optional<DataEdit> GetNextDataEdit(IoStatementState &, int = 1);
   ExternalFileUnit *GetExternalFileUnit() const { return nullptr; }
+  void BeginReadingRecord() {}
 };
 
 struct InputStatementState {};
@@ -247,6 +249,10 @@ public:
   void BackspaceRecord();
   void HandleRelativePosition(std::int64_t);
   void HandleAbsolutePosition(std::int64_t);
+  void BeginReadingRecord();
+
+private:
+  bool beganReading_{false};
 };
 
 template <Direction DIR, typename CHAR>
