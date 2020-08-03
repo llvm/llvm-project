@@ -91,9 +91,9 @@ define <4 x i64> @combine_shuffle_zero_pmuludq_256(<8 x i32> %a0, <8 x i32> %a1)
 define <8 x i64> @combine_zext_pmuludq_256(<8 x i32> %a) {
 ; SSE-LABEL: combine_zext_pmuludq_256:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,2,3,3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,1,3,3]
 ; SSE-NEXT:    pmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,2,3,3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,1,3,3]
 ; SSE-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [715827883,715827883]
 ; SSE-NEXT:    pmuludq %xmm4, %xmm0
