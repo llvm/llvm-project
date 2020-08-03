@@ -915,9 +915,9 @@ define <2 x i32> @test51vec(<2 x i32> %x, <2 x i32> %y) {
 
 define i4 @or_or_xor(i4 %x, i4 %y, i4 %z) {
 ; CHECK-LABEL: @or_or_xor(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i4 [[Z:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i4 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[O1:%.*]] = or i4 [[Z:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[O2:%.*]] = or i4 [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i4 [[O1]], [[O2]]
 ; CHECK-NEXT:    ret i4 [[R]]
 ;
   %o1 = or i4 %z, %x
@@ -928,9 +928,9 @@ define i4 @or_or_xor(i4 %x, i4 %y, i4 %z) {
 
 define i4 @or_or_xor_commute1(i4 %x, i4 %y, i4 %z) {
 ; CHECK-LABEL: @or_or_xor_commute1(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i4 [[Z:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i4 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[O1:%.*]] = or i4 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[O2:%.*]] = or i4 [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i4 [[O1]], [[O2]]
 ; CHECK-NEXT:    ret i4 [[R]]
 ;
   %o1 = or i4 %x, %z
@@ -941,9 +941,9 @@ define i4 @or_or_xor_commute1(i4 %x, i4 %y, i4 %z) {
 
 define i4 @or_or_xor_commute2(i4 %x, i4 %y, i4 %z) {
 ; CHECK-LABEL: @or_or_xor_commute2(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i4 [[Z:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i4 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[O1:%.*]] = or i4 [[Z:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[O2:%.*]] = or i4 [[Y:%.*]], [[Z]]
+; CHECK-NEXT:    [[R:%.*]] = xor i4 [[O1]], [[O2]]
 ; CHECK-NEXT:    ret i4 [[R]]
 ;
   %o1 = or i4 %z, %x
@@ -954,9 +954,9 @@ define i4 @or_or_xor_commute2(i4 %x, i4 %y, i4 %z) {
 
 define <2 x i4> @or_or_xor_commute3(<2 x i4> %x, <2 x i4> %y, <2 x i4> %z) {
 ; CHECK-LABEL: @or_or_xor_commute3(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i4> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i4> [[Z:%.*]], <i4 -1, i4 -1>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i4> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[O1:%.*]] = or <2 x i4> [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[O2:%.*]] = or <2 x i4> [[Y:%.*]], [[Z]]
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i4> [[O1]], [[O2]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %o1 = or <2 x i4> %x, %z
