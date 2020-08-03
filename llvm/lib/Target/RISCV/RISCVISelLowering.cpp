@@ -1003,7 +1003,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::BITCAST: {
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            Subtarget.hasStdExtF() && "Unexpected custom legalisation");
-    SDLoc DL(N);
     SDValue Op0 = N->getOperand(0);
     if (Op0.getValueType() != MVT::f32)
       return;

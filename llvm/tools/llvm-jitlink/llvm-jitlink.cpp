@@ -132,6 +132,11 @@ static cl::opt<bool> ShowRelocatedSectionContents(
     cl::desc("show section contents after fixups have been applied"),
     cl::init(false));
 
+static cl::opt<bool> PhonyExternals(
+    "phony-externals",
+    cl::desc("resolve all otherwise unresolved externals to null"),
+    cl::init(false));
+
 ExitOnError ExitOnErr;
 
 namespace llvm {
@@ -179,19 +184,37 @@ static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
 
   LLVM_DEBUG(dbgs() << "Appling promotions to graph " << G.getName() << "\n");
 
-  // If it isn't then promote any symbols referenced by the harness to default
-  // scope, remove all symbols that clash with harness definitions, and demote
-  // all others.
+  // If this graph is part of the test then promote any symbols referenced by
+  // the harness to default scope, remove all symbols that clash with harness
+  // definitions, demote all other definitions.
   std::vector<Symbol *> DefinitionsToRemove;
   for (auto *Sym : G.defined_symbols()) {
 
     if (!Sym->hasName())
       continue;
 
-    if (S.HarnessExternals.count(Sym->getName())) {
+    if (Sym->getLinkage() == Linkage::Weak) {
+      if (!S.CanonicalWeakDefs.count(Sym->getName()) ||
+          S.CanonicalWeakDefs[Sym->getName()] != G.getName()) {
+        LLVM_DEBUG({
+          dbgs() << "  Externalizing weak symbol " << Sym->getName() << "\n";
+        });
+        DefinitionsToRemove.push_back(Sym);
+      } else {
+        LLVM_DEBUG({
+          dbgs() << "  Making weak symbol " << Sym->getName() << " strong\n";
+        });
+        if (S.HarnessExternals.count(Sym->getName()))
+          Sym->setScope(Scope::Default);
+        else
+          Sym->setScope(Scope::Hidden);
+        Sym->setLinkage(Linkage::Strong);
+      }
+    } else if (S.HarnessExternals.count(Sym->getName())) {
       LLVM_DEBUG(dbgs() << "  Promoting " << Sym->getName() << "\n");
       Sym->setScope(Scope::Default);
       Sym->setLive(true);
+      continue;
     } else if (S.HarnessDefinitions.count(Sym->getName())) {
       LLVM_DEBUG(dbgs() << "  Externalizing " << Sym->getName() << "\n");
       DefinitionsToRemove.push_back(Sym);
@@ -504,10 +527,6 @@ Error LLVMJITLinkObjectLinkingLayer::add(JITDylib &JD,
     if (!Name)
       return Name.takeError();
 
-    // Skip symbols that aren't in the HarnessExternals set.
-    if (!S.HarnessExternals.count(*Name))
-      continue;
-
     // Skip symbols that have type SF_File.
     if (auto SymType = Sym.getType()) {
       if (*SymType == object::SymbolRef::ST_File)
@@ -515,13 +534,28 @@ Error LLVMJITLinkObjectLinkingLayer::add(JITDylib &JD,
     } else
       return SymType.takeError();
 
-    auto InternedName = S.ES.intern(*Name);
     auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
     if (!SymFlags)
       return SymFlags.takeError();
 
-    *SymFlags |= JITSymbolFlags::Exported;
+    if (SymFlags->isWeak()) {
+      // If this is a weak symbol that's not defined in the harness then we
+      // need to either mark it as strong (if this is the first definition
+      // that we've seen) or discard it.
+      if (S.HarnessDefinitions.count(*Name) || S.CanonicalWeakDefs.count(*Name))
+        continue;
+      S.CanonicalWeakDefs[*Name] = O->getBufferIdentifier();
+      *SymFlags &= ~JITSymbolFlags::Weak;
+      if (!S.HarnessExternals.count(*Name))
+        *SymFlags &= ~JITSymbolFlags::Exported;
+    } else if (S.HarnessExternals.count(*Name)) {
+      *SymFlags |= JITSymbolFlags::Exported;
+    } else {
+      // Skip symbols that aren't in the HarnessExternals set.
+      continue;
+    }
 
+    auto InternedName = S.ES.intern(*Name);
     SymbolFlags[InternedName] = std::move(*SymFlags);
   }
 
@@ -530,6 +564,18 @@ Error LLVMJITLinkObjectLinkingLayer::add(JITDylib &JD,
 
   return JD.define(std::move(MU));
 }
+
+class PhonyExternalsGenerator : public JITDylib::DefinitionGenerator {
+public:
+  Error tryToGenerate(LookupKind K, JITDylib &JD,
+                      JITDylibLookupFlags JDLookupFlags,
+                      const SymbolLookupSet &LookupSet) override {
+    SymbolMap PhonySymbols;
+    for (auto &KV : LookupSet)
+      PhonySymbols[KV.first] = JITEvaluatedSymbol(0, JITSymbolFlags::Exported);
+    return JD.define(absoluteSymbols(std::move(PhonySymbols)));
+  }
+};
 
 Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
   Error Err = Error::success();
@@ -784,6 +830,10 @@ Error loadDylibs() {
   return Error::success();
 }
 
+void addPhonyExternalsGenerator(Session &S) {
+  S.MainJD->addGenerator(std::make_unique<PhonyExternalsGenerator>());
+}
+
 Error loadObjects(Session &S) {
 
   std::map<unsigned, JITDylib *> IdxToJLD;
@@ -1009,6 +1059,9 @@ int main(int argc, char *argv[]) {
   if (!NoProcessSymbols)
     ExitOnErr(loadProcessSymbols(*S));
   ExitOnErr(loadDylibs());
+
+  if (PhonyExternals)
+    addPhonyExternalsGenerator(*S);
 
   {
     TimeRegion TR(Timers ? &Timers->LoadObjectsTimer : nullptr);

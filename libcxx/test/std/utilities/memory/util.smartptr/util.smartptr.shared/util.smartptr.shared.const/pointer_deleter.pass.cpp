@@ -28,6 +28,9 @@ struct A
 
 int A::count = 0;
 
+struct Base { };
+struct Derived : Base { };
+
 int main(int, char**)
 {
     {
@@ -45,6 +48,12 @@ int main(int, char**)
     assert(A::count == 0);
     assert(test_deleter<A>::count == 0);
     assert(test_deleter<A>::dealloc_count == 1);
+
+    {
+        // Make sure that we can construct a shared_ptr where the element type and pointer type
+        // aren't "convertible" but are "compatible".
+        static_assert(!std::is_constructible<std::shared_ptr<Derived[4]>, Base[4], test_deleter<Derived[4]> >::value, "");
+    }
 
   return 0;
 }

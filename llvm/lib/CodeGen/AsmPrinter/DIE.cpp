@@ -495,19 +495,25 @@ void DIEExpr::print(raw_ostream &O) const { O << "Expr: " << *Expr; }
 /// EmitValue - Emit label value.
 ///
 void DIELabel::emitValue(const AsmPrinter *AP, dwarf::Form Form) const {
-  AP->emitLabelReference(
-      Label, SizeOf(AP, Form),
-      Form == dwarf::DW_FORM_strp || Form == dwarf::DW_FORM_sec_offset ||
-          Form == dwarf::DW_FORM_ref_addr || Form == dwarf::DW_FORM_data4);
+  bool IsSectionRelative = Form != dwarf::DW_FORM_addr;
+  AP->emitLabelReference(Label, SizeOf(AP, Form), IsSectionRelative);
 }
 
 /// SizeOf - Determine size of label value in bytes.
 ///
 unsigned DIELabel::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
-  if (Form == dwarf::DW_FORM_data4) return 4;
-  if (Form == dwarf::DW_FORM_sec_offset) return 4;
-  if (Form == dwarf::DW_FORM_strp) return 4;
-  return AP->MAI->getCodePointerSize();
+  switch (Form) {
+  case dwarf::DW_FORM_data4:
+    return 4;
+  case dwarf::DW_FORM_sec_offset:
+  case dwarf::DW_FORM_strp:
+    // FIXME: add support for DWARF64
+    return 4;
+  case dwarf::DW_FORM_addr:
+    return AP->MAI->getCodePointerSize();
+  default:
+    llvm_unreachable("DIE Value form not supported yet");
+  }
 }
 
 LLVM_DUMP_METHOD
@@ -543,10 +549,15 @@ void DIEDelta::emitValue(const AsmPrinter *AP, dwarf::Form Form) const {
 /// SizeOf - Determine size of delta value in bytes.
 ///
 unsigned DIEDelta::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
-  if (Form == dwarf::DW_FORM_data4) return 4;
-  if (Form == dwarf::DW_FORM_sec_offset) return 4;
-  if (Form == dwarf::DW_FORM_strp) return 4;
-  return AP->MAI->getCodePointerSize();
+  switch (Form) {
+  case dwarf::DW_FORM_data4:
+    return 4;
+  case dwarf::DW_FORM_sec_offset:
+    // FIXME: add support for DWARF64
+    return 4;
+  default:
+    llvm_unreachable("DIE Value form not supported yet");
+  }
 }
 
 LLVM_DUMP_METHOD
@@ -809,13 +820,17 @@ void DIEBlock::print(raw_ostream &O) const {
 //===----------------------------------------------------------------------===//
 
 unsigned DIELocList::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
-  if (Form == dwarf::DW_FORM_loclistx)
+  switch (Form) {
+  case dwarf::DW_FORM_loclistx:
     return getULEB128Size(Index);
-  if (Form == dwarf::DW_FORM_data4)
+  case dwarf::DW_FORM_data4:
     return 4;
-  if (Form == dwarf::DW_FORM_sec_offset)
+  case dwarf::DW_FORM_sec_offset:
+    // FIXME: add support for DWARF64
     return 4;
-  return AP->MAI->getCodePointerSize();
+  default:
+    llvm_unreachable("DIE Value form not supported yet");
+  }
 }
 
 /// EmitValue - Emit label value.

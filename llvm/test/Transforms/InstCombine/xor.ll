@@ -912,3 +912,85 @@ define <2 x i32> @test51vec(<2 x i32> %x, <2 x i32> %y) {
   %e = xor <2 x i32> %d, <i32 -1, i32 -1>
   ret <2 x i32> %e
 }
+
+define i4 @or_or_xor(i4 %x, i4 %y, i4 %z) {
+; CHECK-LABEL: @or_or_xor(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[Z:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i4 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %o1 = or i4 %z, %x
+  %o2 = or i4 %z, %y
+  %r = xor i4 %o1, %o2
+  ret i4 %r
+}
+
+define i4 @or_or_xor_commute1(i4 %x, i4 %y, i4 %z) {
+; CHECK-LABEL: @or_or_xor_commute1(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[Z:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i4 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %o1 = or i4 %x, %z
+  %o2 = or i4 %z, %y
+  %r = xor i4 %o1, %o2
+  ret i4 %r
+}
+
+define i4 @or_or_xor_commute2(i4 %x, i4 %y, i4 %z) {
+; CHECK-LABEL: @or_or_xor_commute2(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[Z:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i4 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %o1 = or i4 %z, %x
+  %o2 = or i4 %y, %z
+  %r = xor i4 %o1, %o2
+  ret i4 %r
+}
+
+define <2 x i4> @or_or_xor_commute3(<2 x i4> %x, <2 x i4> %y, <2 x i4> %z) {
+; CHECK-LABEL: @or_or_xor_commute3(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i4> [[Z:%.*]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i4> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i4> [[R]]
+;
+  %o1 = or <2 x i4> %x, %z
+  %o2 = or <2 x i4> %y, %z
+  %r = xor <2 x i4> %o1, %o2
+  ret <2 x i4> %r
+}
+
+define i4 @or_or_xor_use1(i4 %x, i4 %y, i4 %z, i4* %p) {
+; CHECK-LABEL: @or_or_xor_use1(
+; CHECK-NEXT:    [[O1:%.*]] = or i4 [[Z:%.*]], [[X:%.*]]
+; CHECK-NEXT:    store i4 [[O1]], i4* [[P:%.*]], align 1
+; CHECK-NEXT:    [[O2:%.*]] = or i4 [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i4 [[O1]], [[O2]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %o1 = or i4 %z, %x
+  store i4 %o1, i4* %p
+  %o2 = or i4 %z, %y
+  %r = xor i4 %o1, %o2
+  ret i4 %r
+}
+
+define i4 @or_or_xor_use2(i4 %x, i4 %y, i4 %z, i4* %p) {
+; CHECK-LABEL: @or_or_xor_use2(
+; CHECK-NEXT:    [[O1:%.*]] = or i4 [[Z:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[O2:%.*]] = or i4 [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    store i4 [[O2]], i4* [[P:%.*]], align 1
+; CHECK-NEXT:    [[R:%.*]] = xor i4 [[O1]], [[O2]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %o1 = or i4 %z, %x
+  %o2 = or i4 %z, %y
+  store i4 %o2, i4* %p
+  %r = xor i4 %o1, %o2
+  ret i4 %r
+}

@@ -508,10 +508,6 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 
 #include <__functional_base>
 
-#if defined(_LIBCPP_HAS_BLOCKS_RUNTIME) && !defined(_LIBCPP_HAS_OBJC_ARC)
-#include <Block.h>
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
@@ -2257,6 +2253,9 @@ template <class _Rp, class... _ArgTypes> class __policy_func<_Rp(_ArgTypes...)>
 
 #if defined(_LIBCPP_HAS_BLOCKS_RUNTIME) && !defined(_LIBCPP_HAS_OBJC_ARC)
 
+extern "C" void *_Block_copy(const void *);
+extern "C" void _Block_release(const void *);
+
 template<class _Rp1, class ..._ArgTypes1, class _Alloc, class _Rp, class ..._ArgTypes>
 class __func<_Rp1(^)(_ArgTypes1...), _Alloc, _Rp(_ArgTypes...)>
     : public  __base<_Rp(_ArgTypes...)>
@@ -2267,14 +2266,14 @@ class __func<_Rp1(^)(_ArgTypes1...), _Alloc, _Rp(_ArgTypes...)>
 public:
     _LIBCPP_INLINE_VISIBILITY
     explicit __func(__block_type const& __f)
-        : __f_(__f ? Block_copy(__f) : (__block_type)0)
+        : __f_(reinterpret_cast<__block_type>(__f ? _Block_copy(__f) : nullptr))
     { }
 
     // [TODO] add && to save on a retain
 
     _LIBCPP_INLINE_VISIBILITY
     explicit __func(__block_type __f, const _Alloc& /* unused */)
-        : __f_(__f ? Block_copy(__f) : (__block_type)0)
+        : __f_(reinterpret_cast<__block_type>(__f ? _Block_copy(__f) : nullptr))
     { }
 
     virtual __base<_Rp(_ArgTypes...)>* __clone() const {
@@ -2291,7 +2290,7 @@ public:
 
     virtual void destroy() _NOEXCEPT {
         if (__f_)
-            Block_release(__f_);
+            _Block_release(__f_);
         __f_ = 0;
     }
 

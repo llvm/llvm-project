@@ -338,7 +338,7 @@ Sections: []
 # RUN: llvm-readelf -A %t.err1 2>&1 | FileCheck %s -DFILE=%t.err1 --check-prefix=CONTENT-ERR
 # RUN: llvm-readobj -A %t.err1 2>&1 | FileCheck %s -DFILE=%t.err1 --check-prefix=CONTENT-ERR
 
-# CONTENT-ERR:      warning: '[[FILE]]': unable to read the .MIPS.abiflags section: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x18) that is greater than the file size (0x240)
+# CONTENT-ERR:      warning: '[[FILE]]': unable to read the .MIPS.abiflags section: section [index 2] has a sh_offset (0xffffffff) + sh_size (0x18) that is greater than the file size (0x2c0)
 # CONTENT-ERR-NEXT: There is no .MIPS.options section in the file.
 # CONTENT-ERR-NEXT: There is no .reginfo section in the file.
 
@@ -349,12 +349,17 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_MIPS
 Sections:
+  - Type:   SHT_PROGBITS
+    ShName: [[NAME=<none>]]
   - Name:     .MIPS.abiflags
     Type:     SHT_MIPS_ABIFLAGS
     ISA:      MIPS32
     Offset:   0x100
     ShOffset: [[SHOFFSET=0x100]]
     ShSize:   [[SHSIZE=24]]
+    ShName: [[ABIFLAGSNAME=<none>]]
+  - Type:   SHT_PROGBITS
+    ShName: [[NAME=<none>]]
 
 ## Check we report a warning when the .MIPS.abiflags section has an unexpected size.
 # RUN: yaml2obj --docnum=3 -DSHSIZE=23 %s -o %t.err2
@@ -364,3 +369,24 @@ Sections:
 # SIZE-ERR:      warning: '[[FILE]]': unable to read the .MIPS.abiflags section: it has a wrong size (23)
 # SIZE-ERR-NEXT: There is no .MIPS.options section in the file.
 # SIZE-ERR-NEXT: There is no .reginfo section in the file.
+
+## Check that we try to dump the .MIPS.abiflags section when we are able to locate it by name.
+# RUN: yaml2obj --docnum=3 -DNAME=0xffff %s -o %t.err3
+# RUN: llvm-readelf -A %t.err3 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err3 --check-prefixes=NAME-ERR-FOUND,NAME-ERR-FOUND-GNU --implicit-check-not=warning:
+# RUN: llvm-readobj -A %t.err3 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err3 --check-prefixes=NAME-ERR-FOUND,NAME-ERR-FOUND-LLVM --implicit-check-not=warning:
+
+# NAME-ERR-FOUND:           warning: '[[FILE]]': unable to read the name of SHT_PROGBITS section with index 1: a section [index 1] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+# NAME-ERR-FOUND-GNU-NEXT:  MIPS ABI Flags Version: 0
+# NAME-ERR-FOUND-LLVM-NEXT: MIPS ABI Flags {
+# NAME-ERR-FOUND:           warning: '[[FILE]]': unable to read the name of SHT_PROGBITS section with index 3: a section [index 3] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+
+## Check we report a warning when we are unable to find the .MIPS.abiflags section due to an error.
+# RUN: yaml2obj --docnum=3 -DABIFLAGSNAME=0xffff %s -o %t.err4
+# RUN: llvm-readelf -A %t.err4 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err4 --check-prefix=NAME-ERR-NOTFOUND --implicit-check-not=warning: --implicit-check-not="MIPS ABI Flags"
+# RUN: llvm-readobj -A %t.err4 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err4 --check-prefix=NAME-ERR-NOTFOUND --implicit-check-not=warning: --implicit-check-not="MIPS ABI Flags"
+
+# NAME-ERR-NOTFOUND: warning: '[[FILE]]': unable to read the name of SHT_MIPS_ABIFLAGS section with index 2: a section [index 2] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table

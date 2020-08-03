@@ -70,6 +70,13 @@ static LegalityPredicate isSmallOddVector(unsigned TypeIdx) {
   };
 }
 
+static LegalityPredicate sizeIsMultipleOf32(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    const LLT Ty = Query.Types[TypeIdx];
+    return Ty.getSizeInBits() % 32 == 0;
+  };
+}
+
 static LegalityPredicate isWideVec16(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
@@ -115,20 +122,32 @@ static LegalizeMutation moreEltsToNext32Bit(unsigned TypeIdx) {
   };
 }
 
+static LLT getBitcastRegisterType(const LLT Ty) {
+  const unsigned Size = Ty.getSizeInBits();
+
+  LLT CoercedTy;
+  if (Size <= 32) {
+    // <2 x s8> -> s16
+    // <4 x s8> -> s32
+    return LLT::scalar(Size);
+  }
+
+  return LLT::scalarOrVector(Size / 32, 32);
+}
+
 static LegalizeMutation bitcastToRegisterType(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
+    return std::make_pair(TypeIdx, getBitcastRegisterType(Ty));
+  };
+}
+
+static LegalizeMutation bitcastToVectorElement32(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    const LLT Ty = Query.Types[TypeIdx];
     unsigned Size = Ty.getSizeInBits();
-
-    LLT CoercedTy;
-    if (Size <= 32) {
-      // <2 x s8> -> s16
-      // <4 x s8> -> s32
-      CoercedTy = LLT::scalar(Size);
-    } else
-      CoercedTy = LLT::scalarOrVector(Size / 32, 32);
-
-    return std::make_pair(TypeIdx, CoercedTy);
+    assert(Size % 32 == 0);
+    return std::make_pair(TypeIdx, LLT::scalarOrVector(Size / 32, 32));
   };
 }
 
@@ -317,6 +336,20 @@ static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query,
   const LLT Ty = Query.Types[0];
   return isRegisterType(Ty) && isLoadStoreSizeLegal(ST, Query, Opcode) &&
          !loadStoreBitcastWorkaround(Ty);
+}
+
+/// Return true if a load or store of the type should be lowered with a bitcast
+/// to a different type.
+static bool shouldBitcastLoadStoreType(const GCNSubtarget &ST, const LLT Ty,
+                                       const unsigned MemSizeInBits) {
+  const unsigned Size = Ty.getSizeInBits();
+    if (Size != MemSizeInBits)
+      return Size <= 32 && Ty.isVector();
+
+  if (loadStoreBitcastWorkaround(Ty) && isRegisterType(Ty))
+    return true;
+  return Ty.isVector() && (Size <= 32 || isRegisterSize(Size)) &&
+         !isRegisterVectorElementType(Ty.getElementType());
 }
 
 AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
@@ -1032,16 +1065,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     // 16-bit vector parts.
     Actions.bitcastIf(
       [=](const LegalityQuery &Query) -> bool {
-        const LLT Ty = Query.Types[0];
-        const unsigned Size = Ty.getSizeInBits();
-
-        if (Size != Query.MMODescrs[0].SizeInBits)
-          return Size <= 32 && Ty.isVector();
-
-        if (loadStoreBitcastWorkaround(Ty) && isRegisterType(Ty))
-          return true;
-        return Ty.isVector() && (Size <= 32 || isRegisterSize(Size)) &&
-               !isRegisterVectorElementType(Ty.getElementType());
+        return shouldBitcastLoadStoreType(ST, Query.Types[0],
+                                          Query.MMODescrs[0].SizeInBits);
       }, bitcastToRegisterType(0));
 
     Actions
@@ -1279,11 +1304,29 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           const LLT EltTy = Query.Types[EltTypeIdx];
           const LLT VecTy = Query.Types[VecTypeIdx];
           const LLT IdxTy = Query.Types[IdxTypeIdx];
-          return (EltTy.getSizeInBits() == 16 ||
-                  EltTy.getSizeInBits() % 32 == 0) &&
-                 VecTy.getSizeInBits() % 32 == 0 &&
-                 VecTy.getSizeInBits() <= MaxRegisterSize &&
-                 IdxTy.getSizeInBits() == 32;
+          const unsigned EltSize = EltTy.getSizeInBits();
+          return (EltSize == 32 || EltSize == 64) &&
+                  VecTy.getSizeInBits() % 32 == 0 &&
+                  VecTy.getSizeInBits() <= MaxRegisterSize &&
+                  IdxTy.getSizeInBits() == 32;
+        })
+      .bitcastIf(all(sizeIsMultipleOf32(1), scalarOrEltNarrowerThan(1, 32)),
+                 bitcastToVectorElement32(1))
+      //.bitcastIf(vectorSmallerThan(1, 32), bitcastToScalar(1))
+      .bitcastIf(
+        all(sizeIsMultipleOf32(1), scalarOrEltWiderThan(1, 64)),
+        [=](const LegalityQuery &Query) {
+          // For > 64-bit element types, try to turn this into a 64-bit
+          // element vector since we may be able to do better indexing
+          // if this is scalar. If not, fall back to 32.
+          const LLT EltTy = Query.Types[EltTypeIdx];
+          const LLT VecTy = Query.Types[VecTypeIdx];
+          const unsigned DstEltSize = EltTy.getSizeInBits();
+          const unsigned VecSize = VecTy.getSizeInBits();
+
+          const unsigned TargetEltSize = DstEltSize % 64 == 0 ? 64 : 32;
+          return std::make_pair(
+            VecTypeIdx, LLT::vector(VecSize / TargetEltSize, TargetEltSize));
         })
       .clampScalar(EltTypeIdx, S32, S64)
       .clampScalar(VecTypeIdx, S32, S64)
@@ -4103,14 +4146,23 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
 }
 
 bool AMDGPULegalizerInfo::legalizeSBufferLoad(
-  MachineInstr &MI, MachineIRBuilder &B,
-  GISelChangeObserver &Observer) const {
+  LegalizerHelper &Helper, MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  GISelChangeObserver &Observer = Helper.Observer;
+
   Register Dst = MI.getOperand(0).getReg();
   LLT Ty = B.getMRI()->getType(Dst);
   unsigned Size = Ty.getSizeInBits();
   MachineFunction &MF = B.getMF();
 
   Observer.changingInstr(MI);
+
+  if (shouldBitcastLoadStoreType(ST, Ty, Size)) {
+    Ty = getBitcastRegisterType(Ty);
+    Helper.bitcastDst(MI, Ty, 0);
+    Dst = MI.getOperand(0).getReg();
+    B.setInsertPt(B.getMBB(), MI);
+  }
 
   // FIXME: We don't really need this intermediate instruction. The intrinsic
   // should be fixed to have a memory operand. Since it's readnone, we're not
@@ -4133,8 +4185,6 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(
   // always be legal. We may need to restore this to a 96-bit result if it turns
   // out this needs to be converted to a vector load during RegBankSelect.
   if (!isPowerOf2_32(Size)) {
-    LegalizerHelper Helper(MF, *this, Observer, B);
-
     if (Ty.isVector())
       Helper.moreElementsVectorDst(MI, getPow2VectorType(Ty), 0);
     else
@@ -4326,7 +4376,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return true;
   }
   case Intrinsic::amdgcn_s_buffer_load:
-    return legalizeSBufferLoad(MI, B, Helper.Observer);
+    return legalizeSBufferLoad(Helper, MI);
   case Intrinsic::amdgcn_raw_buffer_store:
   case Intrinsic::amdgcn_struct_buffer_store:
     return legalizeBufferStore(MI, MRI, B, false, false);

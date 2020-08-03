@@ -692,7 +692,7 @@ private:
   void visitAdd(const User &I)  { visitBinary(I, ISD::ADD); }
   void visitFAdd(const User &I) { visitBinary(I, ISD::FADD); }
   void visitSub(const User &I)  { visitBinary(I, ISD::SUB); }
-  void visitFSub(const User &I);
+  void visitFSub(const User &I) { visitBinary(I, ISD::FSUB); }
   void visitMul(const User &I)  { visitBinary(I, ISD::MUL); }
   void visitFMul(const User &I) { visitBinary(I, ISD::FMUL); }
   void visitURem(const User &I) { visitBinary(I, ISD::UREM); }

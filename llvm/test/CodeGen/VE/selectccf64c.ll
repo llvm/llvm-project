@@ -3,10 +3,10 @@
 define double @selectccsgti8(i8, i8, double, double) {
 ; CHECK-LABEL: selectccsgti8:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    sla.w.sx %s1, %s1, 24
-; CHECK-NEXT:    sra.w.sx %s1, %s1, 24
-; CHECK-NEXT:    sla.w.sx %s0, %s0, 24
-; CHECK-NEXT:    sra.w.sx %s0, %s0, 24
+; CHECK-NEXT:    sll %s1, %s1, 56
+; CHECK-NEXT:    sra.l %s1, %s1, 56
+; CHECK-NEXT:    sll %s0, %s0, 56
+; CHECK-NEXT:    sra.l %s0, %s0, 56
 ; CHECK-NEXT:    cmps.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.gt %s3, %s2, %s0
 ; CHECK-NEXT:    or %s0, 0, %s3
@@ -19,10 +19,10 @@ define double @selectccsgti8(i8, i8, double, double) {
 define double @selectccsgti16(i16, i16, double, double) {
 ; CHECK-LABEL: selectccsgti16:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    sla.w.sx %s1, %s1, 16
-; CHECK-NEXT:    sra.w.sx %s1, %s1, 16
-; CHECK-NEXT:    sla.w.sx %s0, %s0, 16
-; CHECK-NEXT:    sra.w.sx %s0, %s0, 16
+; CHECK-NEXT:    sll %s1, %s1, 48
+; CHECK-NEXT:    sra.l %s1, %s1, 48
+; CHECK-NEXT:    sll %s0, %s0, 48
+; CHECK-NEXT:    sra.l %s0, %s0, 48
 ; CHECK-NEXT:    cmps.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.gt %s3, %s2, %s0
 ; CHECK-NEXT:    or %s0, 0, %s3
@@ -35,6 +35,8 @@ define double @selectccsgti16(i16, i16, double, double) {
 define double @selectccsgti32(i32, i32, double, double) {
 ; CHECK-LABEL: selectccsgti32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    cmps.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.gt %s3, %s2, %s0
 ; CHECK-NEXT:    or %s0, 0, %s3

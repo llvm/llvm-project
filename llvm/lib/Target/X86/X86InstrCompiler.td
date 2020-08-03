@@ -1698,6 +1698,16 @@ def : Pat<(store (i8 (trunc_su (srl_su GR16:$src, (i8 8)))), addr:$dst),
             (EXTRACT_SUBREG GR16:$src, sub_8bit_hi))>,
       Requires<[In64BitMode]>;
 
+// Special pattern to catch the last step of __builtin_parity handling. Our
+// goal is to use an xor of an h-register with the corresponding l-register.
+// The above patterns would handle this on non 64-bit targets, but for 64-bit
+// we need to be more careful. We're using a NOREX instruction here in case
+// register allocation fails to keep the two registers together. So we need to
+// make sure we can't accidentally mix R8-R15 with an h-register.
+def : Pat<(X86xor_flag (i8 (trunc GR32:$src)),
+                       (i8 (trunc (srl_su GR32:$src, (i8 8))))),
+          (XOR8rr_NOREX (EXTRACT_SUBREG GR32:$src, sub_8bit),
+                        (EXTRACT_SUBREG GR32:$src, sub_8bit_hi))>;
 
 // (shl x, 1) ==> (add x, x)
 // Note that if x is undef (immediate or otherwise), we could theoretically

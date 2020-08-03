@@ -94,3 +94,32 @@ TEST(TFUtilsTest, EvalError) {
   EXPECT_FALSE(ER.hasValue());
   EXPECT_FALSE(Evaluator.isValid());
 }
+
+TEST(TFUtilsTest, JSONParsing) {
+  auto Value = json::parse(
+      R"({"name": "tensor_name", 
+        "port": 2, 
+        "type": "int32", 
+        "shape":[1,4]
+        })");
+  EXPECT_TRUE(!!Value);
+  LLVMContext Ctx;
+  Optional<TensorSpec> Spec = getTensorSpecFromJSON(Ctx, *Value);
+  EXPECT_TRUE(Spec.hasValue());
+  EXPECT_EQ(*Spec, TensorSpec::createSpec<int32_t>("tensor_name", {1, 4}, 2));
+}
+
+TEST(TFUtilsTest, JSONParsingInvalidTensorType) {
+  auto Value = json::parse(
+      R"(
+        {"name": "tensor_name", 
+        "port": 2, 
+        "type": "no such type", 
+        "shape":[1,4]
+        }
+      )");
+  EXPECT_TRUE(!!Value);
+  LLVMContext Ctx;
+  auto Spec = getTensorSpecFromJSON(Ctx, *Value);
+  EXPECT_FALSE(Spec.hasValue());
+}

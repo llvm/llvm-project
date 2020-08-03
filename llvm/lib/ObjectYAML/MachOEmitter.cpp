@@ -29,7 +29,7 @@ namespace {
 
 class MachOWriter {
 public:
-  MachOWriter(MachOYAML::Object &Obj) : Obj(Obj), is64Bit(true), fileStart(0) {
+  MachOWriter(MachOYAML::Object &Obj) : Obj(Obj), fileStart(0) {
     is64Bit = Obj.Header.magic == MachO::MH_MAGIC_64 ||
               Obj.Header.magic == MachO::MH_CIGAM_64;
     memset(reinterpret_cast<void *>(&Header), 0, sizeof(MachO::mach_header_64));

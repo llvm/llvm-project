@@ -222,8 +222,13 @@ function(add_link_opts target_name)
     # Pass -O3 to the linker. This enabled different optimizations on different
     # linkers.
     if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin|SunOS|AIX" OR WIN32))
-      set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                   LINK_FLAGS " -Wl,-O3")
+      # Before binutils 2.34, gold -O2 and above did not correctly handle R_386_GOTOFF to
+      # SHF_MERGE|SHF_STRINGS sections: https://sourceware.org/bugzilla/show_bug.cgi?id=16794
+      if(LLVM_LINKER_IS_GOLD)
+        set_property(TARGET ${target_name} APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-O1")
+      else()
+        set_property(TARGET ${target_name} APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-O3")
+      endif()
     endif()
 
     if(LLVM_LINKER_IS_GOLD)
@@ -1399,13 +1404,6 @@ function(add_unittest test_suite test_name)
   if( NOT LLVM_BUILD_TESTS )
     set(EXCLUDE_FROM_ALL ON)
   endif()
-
-  # Our current version of gtest does not properly recognize C++11 support
-  # with MSVC, so it falls back to tr1 / experimental classes.  Since LLVM
-  # itself requires C++11, we can safely force it on unconditionally so that
-  # we don't have to fight with the buggy gtest check.
-  add_definitions(-DGTEST_LANG_CXX11=1)
-  add_definitions(-DGTEST_HAS_TR1_TUPLE=0)
 
   include_directories(${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include)
   include_directories(${LLVM_MAIN_SRC_DIR}/utils/unittest/googlemock/include)

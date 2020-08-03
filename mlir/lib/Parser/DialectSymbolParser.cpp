@@ -237,6 +237,17 @@ public:
     return success(parser.consumeIf(Token::star));
   }
 
+  /// Parses a quoted string token if present.
+  ParseResult parseOptionalString(StringRef *string) override {
+    if (!parser.getToken().is(Token::string))
+      return failure();
+
+    if (string)
+      *string = parser.getTokenSpelling().drop_front().drop_back();
+    parser.consumeToken();
+    return success();
+  }
+
   /// Returns if the current token corresponds to a keyword.
   bool isCurrentTokenAKeyword() const {
     return parser.getToken().is(Token::bare_identifier) ||
@@ -295,6 +306,10 @@ public:
   ParseResult parseDimensionList(SmallVectorImpl<int64_t> &dimensions,
                                  bool allowDynamic) override {
     return parser.parseDimensionListRanked(dimensions, allowDynamic);
+  }
+
+  OptionalParseResult parseOptionalType(Type &result) override {
+    return parser.parseOptionalType(result);
   }
 
 private:

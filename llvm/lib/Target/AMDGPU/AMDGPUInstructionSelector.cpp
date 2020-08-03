@@ -170,19 +170,6 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
     if (RC && !RBI.constrainGenericRegister(DstReg, *RC, *MRI))
       return false;
 
-    // Don't constrain the source register to a class so the def instruction
-    // handles it (unless it's undef).
-    //
-    // FIXME: This is a hack. When selecting the def, we neeed to know
-    // specifically know that the result is VCCRegBank, and not just an SGPR
-    // with size 1. An SReg_32 with size 1 is ambiguous with wave32.
-    if (Src.isUndef()) {
-      const TargetRegisterClass *SrcRC =
-        TRI.getConstrainedRegClassForOperand(Src, *MRI);
-      if (SrcRC && !RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
-        return false;
-    }
-
     return true;
   }
 
@@ -286,50 +273,24 @@ static unsigned getLogicalBitOpcode(unsigned Opc, bool Is64) {
 }
 
 bool AMDGPUInstructionSelector::selectG_AND_OR_XOR(MachineInstr &I) const {
-  MachineOperand &Dst = I.getOperand(0);
-  MachineOperand &Src0 = I.getOperand(1);
-  MachineOperand &Src1 = I.getOperand(2);
-  Register DstReg = Dst.getReg();
+  Register DstReg = I.getOperand(0).getReg();
   unsigned Size = RBI.getSizeInBits(DstReg, *MRI, TRI);
 
   const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
-  if (DstRB->getID() == AMDGPU::VCCRegBankID) {
-    const TargetRegisterClass *RC = TRI.getBoolRC();
-    unsigned InstOpc = getLogicalBitOpcode(I.getOpcode(),
-                                           RC == &AMDGPU::SReg_64RegClass);
-    I.setDesc(TII.get(InstOpc));
-    // Dead implicit-def of scc
-    I.addOperand(MachineOperand::CreateReg(AMDGPU::SCC, true, // isDef
-                                           true, // isImp
-                                           false, // isKill
-                                           true)); // isDead
+  if (DstRB->getID() != AMDGPU::SGPRRegBankID &&
+      DstRB->getID() != AMDGPU::VCCRegBankID)
+    return false;
 
-    // FIXME: Hack to avoid turning the register bank into a register class.
-    // The selector for G_ICMP relies on seeing the register bank for the result
-    // is VCC. In wave32 if we constrain the registers to SReg_32 here, it will
-    // be ambiguous whether it's a scalar or vector bool.
-    if (Src0.isUndef() && !MRI->getRegClassOrNull(Src0.getReg()))
-      MRI->setRegClass(Src0.getReg(), RC);
-    if (Src1.isUndef() && !MRI->getRegClassOrNull(Src1.getReg()))
-      MRI->setRegClass(Src1.getReg(), RC);
+  bool Is64 = Size > 32 || (DstRB->getID() == AMDGPU::VCCRegBankID &&
+                            STI.isWave64());
+  I.setDesc(TII.get(getLogicalBitOpcode(I.getOpcode(), Is64)));
 
-    return RBI.constrainGenericRegister(DstReg, *RC, *MRI);
-  }
-
-  // TODO: Should this allow an SCC bank result, and produce a copy from SCC for
-  // the result?
-  if (DstRB->getID() == AMDGPU::SGPRRegBankID) {
-    unsigned InstOpc = getLogicalBitOpcode(I.getOpcode(), Size > 32);
-    I.setDesc(TII.get(InstOpc));
-    // Dead implicit-def of scc
-    I.addOperand(MachineOperand::CreateReg(AMDGPU::SCC, true, // isDef
-                                           true, // isImp
-                                           false, // isKill
-                                           true)); // isDead
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-  }
-
-  return false;
+  // Dead implicit-def of scc
+  I.addOperand(MachineOperand::CreateReg(AMDGPU::SCC, true, // isDef
+                                         true, // isImp
+                                         false, // isKill
+                                         true)); // isDead
+  return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
 }
 
 bool AMDGPUInstructionSelector::selectG_ADD_SUB(MachineInstr &I) const {
@@ -1894,11 +1855,32 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
   if (!DstTy.isScalar())
     return false;
 
-  if (I.getOpcode() == AMDGPU::G_ANYEXT)
-    return selectCOPY(I);
-
   // Artifact casts should never use vcc.
   const RegisterBank *SrcBank = getArtifactRegBank(SrcReg, *MRI, TRI);
+
+  // FIXME: This should probably be illegal and split earlier.
+  if (I.getOpcode() == AMDGPU::G_ANYEXT) {
+    if (DstSize <= 32)
+      return selectCOPY(I);
+
+    const TargetRegisterClass *SrcRC =
+        TRI.getRegClassForTypeOnBank(SrcTy, *SrcBank, *MRI);
+    const RegisterBank *DstBank = RBI.getRegBank(DstReg, *MRI, TRI);
+    const TargetRegisterClass *DstRC =
+        TRI.getRegClassForSizeOnBank(DstSize, *DstBank, *MRI);
+
+    Register UndefReg = MRI->createVirtualRegister(SrcRC);
+    BuildMI(MBB, I, DL, TII.get(AMDGPU::IMPLICIT_DEF), UndefReg);
+    BuildMI(MBB, I, DL, TII.get(AMDGPU::REG_SEQUENCE), DstReg)
+      .addReg(SrcReg)
+      .addImm(AMDGPU::sub0)
+      .addReg(UndefReg)
+      .addImm(AMDGPU::sub1);
+    I.eraseFromParent();
+
+    return RBI.constrainGenericRegister(DstReg, *DstRC, *MRI) &&
+           RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI);
+  }
 
   if (SrcBank->getID() == AMDGPU::VGPRRegBankID && DstSize <= 32) {
     // 64-bit should have been split up in RegBankSelect
@@ -2317,8 +2299,7 @@ bool AMDGPUInstructionSelector::selectG_BRCOND(MachineInstr &I) const {
 
     CondPhysReg = AMDGPU::SCC;
     BrOpcode = AMDGPU::S_CBRANCH_SCC1;
-    // FIXME: Hack for isSCC tests
-    ConstrainRC = &AMDGPU::SGPR_32RegClass;
+    ConstrainRC = &AMDGPU::SReg_32RegClass;
   } else {
     // FIXME: Do we have to insert an and with exec here, like in SelectionDAG?
     // We sort of know that a VCC producer based on the register bank, that ands

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This provides a generalized class for OpenMP runtime code generation
-// specialized by GPU target NVPTX.
+// specialized by GPU targets NVPTX and AMDGCN.
 //
 //===----------------------------------------------------------------------===//
 
@@ -636,20 +636,6 @@ public:
 };
 } // anonymous namespace
 
-/// Get the id of the current thread on the GPU.
-static llvm::Value *getNVPTXThreadID(CodeGenFunction &CGF) {
-  CGBuilderTy &Bld = CGF.Builder;
-  llvm::Module *M = &CGF.CGM.getModule();
-  llvm::Function *F;
-  if (CGF.getTarget().getTriple().isAMDGCN()) {
-    F = CGF.CGM.getIntrinsic(llvm::Intrinsic::amdgcn_workitem_id_x);
-  } else {
-    F = llvm::Intrinsic::getDeclaration(
-        M, llvm::Intrinsic::nvvm_read_ptx_sreg_tid_x);
-  }
-  return Bld.CreateCall(F, llvm::None, "nvptx_tid");
-}
-
 /// Get the id of the warp in the block.
 /// We assume that the warp size is 32, which is always the case
 /// on the NVPTX device, to generate more efficient code.
@@ -657,7 +643,8 @@ static llvm::Value *getNVPTXWarpID(CodeGenFunction &CGF) {
   CGBuilderTy &Bld = CGF.Builder;
   unsigned LaneIDBits =
       CGF.getTarget().getGridValue(llvm::omp::GV_Warp_Size_Log2);
-  return Bld.CreateAShr(getNVPTXThreadID(CGF), LaneIDBits, "nvptx_warp_id");
+  auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
+  return Bld.CreateAShr(RT.getGPUThreadID(CGF), LaneIDBits, "nvptx_warp_id");
 }
 
 /// Get the id of the current lane in the Warp.
@@ -667,29 +654,9 @@ static llvm::Value *getNVPTXLaneID(CodeGenFunction &CGF) {
   CGBuilderTy &Bld = CGF.Builder;
   unsigned LaneIDMask = CGF.getContext().getTargetInfo().getGridValue(
       llvm::omp::GV_Warp_Size_Log2_Mask);
-  return Bld.CreateAnd(getNVPTXThreadID(CGF), Bld.getInt32(LaneIDMask),
+  auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
+  return Bld.CreateAnd(RT.getGPUThreadID(CGF), Bld.getInt32(LaneIDMask),
                        "nvptx_lane_id");
-}
-
-/// Get the maximum number of threads in a block of the GPU.
-static llvm::Value *getNVPTXNumThreads(CodeGenFunction &CGF) {
-  CGBuilderTy &Bld = CGF.Builder;
-  llvm::Module *M = &CGF.CGM.getModule();
-  if (CGF.getTarget().getTriple().isAMDGCN()) {
-    const char *n = "__ockl_get_local_size";
-    llvm::Function *F = M->getFunction(n);
-    if (!F) {
-      F = llvm::Function::Create(
-          llvm::FunctionType::get(CGF.Int64Ty, {CGF.Int32Ty}, false),
-          llvm::GlobalVariable::ExternalLinkage, n, M);
-    }
-    return Bld.CreateTrunc(
-        Bld.CreateCall(F, {Bld.getInt32(0)}, "nvptx_num_threads"), CGF.Int32Ty);
-  }
-
-  llvm::Function *F = llvm::Intrinsic::getDeclaration(
-      M, llvm::Intrinsic::nvvm_read_ptx_sreg_ntid_x);
-  return Bld.CreateCall(F, llvm::None, "nvptx_num_threads");
 }
 
 /// Get the value of the thread_limit clause in the teams directive.
@@ -702,9 +669,9 @@ static llvm::Value *getThreadLimit(CodeGenFunction &CGF,
   CGBuilderTy &Bld = CGF.Builder;
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
   return IsInSPMDExecutionMode
-             ? getNVPTXNumThreads(CGF)
-             : Bld.CreateNUWSub(getNVPTXNumThreads(CGF), RT.getGPUWarpSize(CGF),
-                                "thread_limit");
+             ? RT.getGPUNumThreads(CGF)
+             : Bld.CreateNUWSub(RT.getGPUNumThreads(CGF),
+                                RT.getGPUWarpSize(CGF), "thread_limit");
 }
 
 /// Get the thread id of the OMP master thread.
@@ -716,8 +683,8 @@ static llvm::Value *getThreadLimit(CodeGenFunction &CGF,
 ///      If NumThreads is 1024, master id is 992.
 static llvm::Value *getMasterThreadID(CodeGenFunction &CGF) {
   CGBuilderTy &Bld = CGF.Builder;
-  llvm::Value *NumThreads = getNVPTXNumThreads(CGF);
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
+  llvm::Value *NumThreads = RT.getGPUNumThreads(CGF);
   // We assume that the warp size is a power of 2.
   llvm::Value *Mask = Bld.CreateNUWSub(RT.getGPUWarpSize(CGF), Bld.getInt32(1));
 
@@ -1377,8 +1344,9 @@ void CGOpenMPRuntimeGPU::emitNonSPMDEntryHeader(CodeGenFunction &CGF,
   llvm::BasicBlock *MasterBB = CGF.createBasicBlock(".master");
   EST.ExitBB = CGF.createBasicBlock(".exit");
 
+  auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
   llvm::Value *IsWorker =
-      Bld.CreateICmpULT(getNVPTXThreadID(CGF), getThreadLimit(CGF));
+      Bld.CreateICmpULT(RT.getGPUThreadID(CGF), getThreadLimit(CGF));
   Bld.CreateCondBr(IsWorker, WorkerBB, MasterCheckBB);
 
   CGF.EmitBlock(WorkerBB);
@@ -1387,7 +1355,7 @@ void CGOpenMPRuntimeGPU::emitNonSPMDEntryHeader(CodeGenFunction &CGF,
 
   CGF.EmitBlock(MasterCheckBB);
   llvm::Value *IsMaster =
-      Bld.CreateICmpEQ(getNVPTXThreadID(CGF), getMasterThreadID(CGF));
+      Bld.CreateICmpEQ(RT.getGPUThreadID(CGF), getMasterThreadID(CGF));
   Bld.CreateCondBr(IsMaster, MasterBB, EST.ExitBB);
 
   CGF.EmitBlock(MasterBB);
@@ -3128,14 +3096,16 @@ void CGOpenMPRuntimeGPU::emitCriticalRegion(
   llvm::BasicBlock *BodyBB = CGF.createBasicBlock("omp.critical.body");
   llvm::BasicBlock *ExitBB = CGF.createBasicBlock("omp.critical.exit");
 
+  auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
+
   // Get the mask of active threads in the warp.
   llvm::Value *Mask = CGF.EmitRuntimeCall(
       createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_warp_active_thread_mask));
   // Fetch team-local id of the thread.
-  llvm::Value *ThreadID = getNVPTXThreadID(CGF);
+  llvm::Value *ThreadID = RT.getGPUThreadID(CGF);
 
   // Get the width of the team.
-  llvm::Value *TeamWidth = getNVPTXNumThreads(CGF);
+  llvm::Value *TeamWidth = RT.getGPUNumThreads(CGF);
 
   // Initialize the counter variable for the loop.
   QualType Int32Ty =
@@ -3609,8 +3579,9 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
     CGM.addCompilerUsedGlobal(TransferMedium);
   }
 
+  auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
   // Get the CUDA thread id of the current OpenMP thread on the GPU.
-  llvm::Value *ThreadID = getNVPTXThreadID(CGF);
+  llvm::Value *ThreadID = RT.getGPUThreadID(CGF);
   // nvptx_lane_id = nvptx_id % warpsize
   llvm::Value *LaneID = getNVPTXLaneID(CGF);
   // nvptx_warp_id = nvptx_id / warpsize
@@ -5226,9 +5197,11 @@ void CGOpenMPRuntimeGPU::getDefaultDistScheduleAndChunk(
     CodeGenFunction &CGF, const OMPLoopDirective &S,
     OpenMPDistScheduleClauseKind &ScheduleKind,
     llvm::Value *&Chunk) const {
+  auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
   if (getExecutionMode() == CGOpenMPRuntimeGPU::EM_SPMD) {
     ScheduleKind = OMPC_DIST_SCHEDULE_static;
-    Chunk = CGF.EmitScalarConversion(getNVPTXNumThreads(CGF),
+    Chunk = CGF.EmitScalarConversion(
+        RT.getGPUNumThreads(CGF),
         CGF.getContext().getIntTypeForBitwidth(32, /*Signed=*/0),
         S.getIterationVariable()->getType(), S.getBeginLoc());
     return;

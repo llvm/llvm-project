@@ -184,9 +184,9 @@ static ParseResult parseContractionOp(OpAsmParser &parser,
   auto lhsType = types[0].cast<VectorType>();
   auto rhsType = types[1].cast<VectorType>();
   auto maskElementType = parser.getBuilder().getI1Type();
-  SmallVector<Type, 2> maskTypes;
-  maskTypes.push_back(VectorType::get(lhsType.getShape(), maskElementType));
-  maskTypes.push_back(VectorType::get(rhsType.getShape(), maskElementType));
+  std::array<Type, 2> maskTypes = {
+      VectorType::get(lhsType.getShape(), maskElementType),
+      VectorType::get(rhsType.getShape(), maskElementType)};
   if (parser.resolveOperands(masksInfo, maskTypes, loc, result.operands))
     return failure();
   return success();
@@ -462,12 +462,10 @@ std::vector<std::pair<int64_t, int64_t>> ContractionOp::getBatchDimMap() {
 }
 
 SmallVector<AffineMap, 4> ContractionOp::getIndexingMaps() {
-  SmallVector<AffineMap, 4> res;
-  auto mapAttrs = indexing_maps().getValue();
-  res.reserve(mapAttrs.size());
-  for (auto mapAttr : mapAttrs)
-    res.push_back(mapAttr.cast<AffineMapAttr>().getValue());
-  return res;
+  return llvm::to_vector<4>(
+      llvm::map_range(indexing_maps().getValue(), [](Attribute mapAttr) {
+        return mapAttr.cast<AffineMapAttr>().getValue();
+      }));
 }
 
 Optional<SmallVector<int64_t, 4>> ContractionOp::getShapeForUnroll() {
@@ -1854,8 +1852,7 @@ LogicalResult TransferWriteOp::fold(ArrayRef<Attribute>,
 }
 
 Optional<SmallVector<int64_t, 4>> TransferWriteOp::getShapeForUnroll() {
-  auto s = getVectorType().getShape();
-  return SmallVector<int64_t, 4>{s.begin(), s.end()};
+  return llvm::to_vector<4>(getVectorType().getShape());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2014,11 +2011,8 @@ static SmallVector<int64_t, 8> extractShape(MemRefType memRefType) {
   auto vectorType = memRefType.getElementType().dyn_cast<VectorType>();
   SmallVector<int64_t, 8> res(memRefType.getShape().begin(),
                               memRefType.getShape().end());
-  if (vectorType) {
-    res.reserve(memRefType.getRank() + vectorType.getRank());
-    for (auto s : vectorType.getShape())
-      res.push_back(s);
-  }
+  if (vectorType)
+    res.append(vectorType.getShape().begin(), vectorType.getShape().end());
   return res;
 }
 

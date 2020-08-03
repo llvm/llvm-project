@@ -264,12 +264,15 @@ private:
       opInterface.getEffects(effects);
 
       SmallVector<MemoryEffects::EffectInstance, 2> allocateResultEffects;
-      llvm::copy_if(effects, std::back_inserter(allocateResultEffects),
-                    [=](MemoryEffects::EffectInstance &it) {
-                      Value value = it.getValue();
-                      return isa<MemoryEffects::Allocate>(it.getEffect()) &&
-                             value && value.isa<OpResult>();
-                    });
+      llvm::copy_if(
+          effects, std::back_inserter(allocateResultEffects),
+          [=](MemoryEffects::EffectInstance &it) {
+            Value value = it.getValue();
+            return isa<MemoryEffects::Allocate>(it.getEffect()) && value &&
+                   value.isa<OpResult>() &&
+                   it.getResource() !=
+                       SideEffects::AutomaticAllocationScopeResource::get();
+          });
       // If there is one result only, we will be able to move the allocation and
       // (possibly existing) deallocation ops.
       if (allocateResultEffects.size() != 1)

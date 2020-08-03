@@ -7,21 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/ctype/isalnum.h"
-#include "utils/UnitTest/Test.h"
 
-// Helper function that makes a call to isalnum a bit cleaner
-// for use with testing utilities, since it explicitly requires
-// a boolean value for EXPECT_TRUE and EXPECT_FALSE.
-bool call_isalnum(int c) { return __llvm_libc::isalnum(c); }
+#include "utils/UnitTest/Test.h"
 
 TEST(IsAlNum, DefaultLocale) {
   // Loops through all characters, verifying that numbers and letters
-  // return true and everything else returns false.
+  // return non-zero integer and everything else returns a zero.
   for (int c = 0; c < 255; ++c) {
     if (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') ||
         ('0' <= c && c <= '9'))
-      EXPECT_TRUE(call_isalnum(c));
+      EXPECT_NE(__llvm_libc::isalnum(c), 0);
     else
-      EXPECT_FALSE(call_isalnum(c));
+      EXPECT_EQ(__llvm_libc::isalnum(c), 0);
   }
 }

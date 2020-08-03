@@ -13,17 +13,9 @@
 #ifndef MLIR_DIALECT_LINALG_PASSES_H_
 #define MLIR_DIALECT_LINALG_PASSES_H_
 
-#include "mlir/Support/LLVM.h"
-#include "llvm/ADT/ArrayRef.h"
+#include "mlir/Pass/Pass.h"
 
 namespace mlir {
-class FuncOp;
-class MLIRContext;
-class ModuleOp;
-template <typename T> class OperationPass;
-class OwningRewritePatternList;
-class Pass;
-
 std::unique_ptr<OperationPass<FuncOp>> createLinalgFoldUnitExtentDimsPass();
 
 std::unique_ptr<OperationPass<FuncOp>> createLinalgFusionPass();
@@ -65,6 +57,14 @@ void populateLinalgTensorOpsFusionPatterns(MLIRContext *context,
 /// tensors.
 void populateLinalgFoldUnitExtentDimsPatterns(
     MLIRContext *context, OwningRewritePatternList &patterns);
+
+//===----------------------------------------------------------------------===//
+// Registration
+//===----------------------------------------------------------------------===//
+
+/// Generate the code for registering passes.
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/Linalg/Passes.h.inc"
 
 } // namespace mlir
 

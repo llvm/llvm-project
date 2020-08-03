@@ -91,6 +91,8 @@ def CTypeAPI : PublicAPI<"ctype.h"> {
     "isalnum",
     "isalpha",
     "isdigit",
+    "islower",
+    "isupper",
   ];
 }
 

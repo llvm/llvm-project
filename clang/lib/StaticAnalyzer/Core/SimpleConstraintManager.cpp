@@ -57,7 +57,7 @@ ProgramStateRef SimpleConstraintManager::assumeAux(ProgramStateRef State,
   // SymIntExprs.
   if (!canReasonAbout(Cond)) {
     // Just add the constraint to the expression without trying to simplify.
-    SymbolRef Sym = Cond.getAsSymExpr();
+    SymbolRef Sym = Cond.getAsSymbol();
     assert(Sym);
     return assumeSymUnsupported(State, Sym, Assumption);
   }
@@ -101,7 +101,7 @@ ProgramStateRef SimpleConstraintManager::assumeInclusiveRange(
 
   if (!canReasonAbout(Value)) {
     // Just add the constraint to the expression without trying to simplify.
-    SymbolRef Sym = Value.getAsSymExpr();
+    SymbolRef Sym = Value.getAsSymbol();
     assert(Sym);
     return assumeSymInclusiveRange(State, Sym, From, To, InRange);
   }

@@ -8,200 +8,296 @@
 # RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+experimental-v %s \
 # RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
-vsb.v v24, (a0), v0.t
-# CHECK-INST: vsb.v v24, (a0), v0.t
+vse8.v v24, (a0), v0.t
+# CHECK-INST: vse8.v v24, (a0), v0.t
 # CHECK-ENCODING: [0x27,0x0c,0x05,0x00]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 0c 05 00 <unknown>
 
-vsb.v v24, (a0)
-# CHECK-INST: vsb.v v24, (a0)
+vse8.v v24, (a0)
+# CHECK-INST: vse8.v v24, (a0)
 # CHECK-ENCODING: [0x27,0x0c,0x05,0x02]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 0c 05 02 <unknown>
 
-vsh.v v24, (a0), v0.t
-# CHECK-INST: vsh.v v24, (a0), v0.t
+vse16.v v24, (a0), v0.t
+# CHECK-INST: vse16.v v24, (a0), v0.t
 # CHECK-ENCODING: [0x27,0x5c,0x05,0x00]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 5c 05 00 <unknown>
 
-vsh.v v24, (a0)
-# CHECK-INST: vsh.v v24, (a0)
+vse16.v v24, (a0)
+# CHECK-INST: vse16.v v24, (a0)
 # CHECK-ENCODING: [0x27,0x5c,0x05,0x02]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 5c 05 02 <unknown>
 
-vsw.v v24, (a0), v0.t
-# CHECK-INST: vsw.v v24, (a0), v0.t
+vse32.v v24, (a0), v0.t
+# CHECK-INST: vse32.v v24, (a0), v0.t
 # CHECK-ENCODING: [0x27,0x6c,0x05,0x00]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 6c 05 00 <unknown>
 
-vsw.v v24, (a0)
-# CHECK-INST: vsw.v v24, (a0)
+vse32.v v24, (a0)
+# CHECK-INST: vse32.v v24, (a0)
 # CHECK-ENCODING: [0x27,0x6c,0x05,0x02]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 6c 05 02 <unknown>
 
-vse.v v24, (a0), v0.t
-# CHECK-INST: vse.v v24, (a0), v0.t
+vse64.v v24, (a0), v0.t
+# CHECK-INST: vse64.v v24, (a0), v0.t
 # CHECK-ENCODING: [0x27,0x7c,0x05,0x00]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 7c 05 00 <unknown>
 
-vse.v v24, (a0)
-# CHECK-INST: vse.v v24, (a0)
+vse64.v v24, (a0)
+# CHECK-INST: vse64.v v24, (a0)
 # CHECK-ENCODING: [0x27,0x7c,0x05,0x02]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 7c 05 02 <unknown>
 
-vssb.v v24, (a0), a1, v0.t
-# CHECK-INST: vssb.v v24, (a0), a1, v0.t
+vse128.v v24, (a0), v0.t
+# CHECK-INST: vse128.v v24, (a0), v0.t
+# CHECK-ENCODING: [0x27,0x0c,0x05,0x10]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 27 0c 05 10 <unknown>
+
+vse128.v v24, (a0)
+# CHECK-INST: vse128.v v24, (a0)
+# CHECK-ENCODING: [0x27,0x0c,0x05,0x12]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 27 0c 05 12 <unknown>
+
+vse256.v v24, (a0), v0.t
+# CHECK-INST: vse256.v v24, (a0), v0.t
+# CHECK-ENCODING: [0x27,0x5c,0x05,0x10]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 27 5c 05 10 <unknown>
+
+vse256.v v24, (a0)
+# CHECK-INST: vse256.v v24, (a0)
+# CHECK-ENCODING: [0x27,0x5c,0x05,0x12]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 27 5c 05 12 <unknown>
+
+vse512.v v24, (a0), v0.t
+# CHECK-INST: vse512.v v24, (a0), v0.t
+# CHECK-ENCODING: [0x27,0x6c,0x05,0x10]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 27 6c 05 10 <unknown>
+
+vse512.v v24, (a0)
+# CHECK-INST: vse512.v v24, (a0)
+# CHECK-ENCODING: [0x27,0x6c,0x05,0x12]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 27 6c 05 12 <unknown>
+
+vse1024.v v24, (a0), v0.t
+# CHECK-INST: vse1024.v v24, (a0), v0.t
+# CHECK-ENCODING: [0x27,0x7c,0x05,0x10]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 27 7c 05 10 <unknown>
+
+vse1024.v v24, (a0)
+# CHECK-INST: vse1024.v v24, (a0)
+# CHECK-ENCODING: [0x27,0x7c,0x05,0x12]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 27 7c 05 12 <unknown>
+
+vsse8.v v24, (a0), a1, v0.t
+# CHECK-INST: vsse8.v v24, (a0), a1, v0.t
 # CHECK-ENCODING: [0x27,0x0c,0xb5,0x08]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 0c b5 08 <unknown>
 
-vssb.v v24, (a0), a1
-# CHECK-INST: vssb.v v24, (a0), a1
+vsse8.v v24, (a0), a1
+# CHECK-INST: vsse8.v v24, (a0), a1
 # CHECK-ENCODING: [0x27,0x0c,0xb5,0x0a]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 0c b5 0a <unknown>
 
-vssh.v v24, (a0), a1, v0.t
-# CHECK-INST: vssh.v v24, (a0), a1, v0.t
+vsse16.v v24, (a0), a1, v0.t
+# CHECK-INST: vsse16.v v24, (a0), a1, v0.t
 # CHECK-ENCODING: [0x27,0x5c,0xb5,0x08]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 5c b5 08 <unknown>
 
-vssh.v v24, (a0), a1
-# CHECK-INST: vssh.v v24, (a0), a1
+vsse16.v v24, (a0), a1
+# CHECK-INST: vsse16.v v24, (a0), a1
 # CHECK-ENCODING: [0x27,0x5c,0xb5,0x0a]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 5c b5 0a <unknown>
 
-vssw.v v24, (a0), a1, v0.t
-# CHECK-INST: vssw.v v24, (a0), a1, v0.t
+vsse32.v v24, (a0), a1, v0.t
+# CHECK-INST: vsse32.v v24, (a0), a1, v0.t
 # CHECK-ENCODING: [0x27,0x6c,0xb5,0x08]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 6c b5 08 <unknown>
 
-vssw.v v24, (a0), a1
-# CHECK-INST: vssw.v v24, (a0), a1
+vsse32.v v24, (a0), a1
+# CHECK-INST: vsse32.v v24, (a0), a1
 # CHECK-ENCODING: [0x27,0x6c,0xb5,0x0a]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 6c b5 0a <unknown>
 
-vsse.v v24, (a0), a1, v0.t
-# CHECK-INST: vsse.v v24, (a0), a1, v0.t
+vsse64.v v24, (a0), a1, v0.t
+# CHECK-INST: vsse64.v v24, (a0), a1, v0.t
 # CHECK-ENCODING: [0x27,0x7c,0xb5,0x08]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 7c b5 08 <unknown>
 
-vsse.v v24, (a0), a1
-# CHECK-INST: vsse.v v24, (a0), a1
+vsse64.v v24, (a0), a1
+# CHECK-INST: vsse64.v v24, (a0), a1
 # CHECK-ENCODING: [0x27,0x7c,0xb5,0x0a]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 7c b5 0a <unknown>
 
-vsxb.v v24, (a0), v4, v0.t
-# CHECK-INST: vsxb.v v24, (a0), v4, v0.t
+vsse128.v v24, (a0), a1, v0.t
+# CHECK-INST: vsse128.v v24, (a0), a1, v0.t
+# CHECK-ENCODING: [0x27,0x0c,0xb5,0x18]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 27 0c b5 18 <unknown>
+
+vsse128.v v24, (a0), a1
+# CHECK-INST: vsse128.v v24, (a0), a1
+# CHECK-ENCODING: [0x27,0x0c,0xb5,0x1a]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 27 0c b5 1a <unknown>
+
+vsse256.v v24, (a0), a1, v0.t
+# CHECK-INST: vsse256.v v24, (a0), a1, v0.t
+# CHECK-ENCODING: [0x27,0x5c,0xb5,0x18]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 27 5c b5 18 <unknown>
+
+vsse256.v v24, (a0), a1
+# CHECK-INST: vsse256.v v24, (a0), a1
+# CHECK-ENCODING: [0x27,0x5c,0xb5,0x1a]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 27 5c b5 1a <unknown>
+
+vsse512.v v24, (a0), a1, v0.t
+# CHECK-INST: vsse512.v v24, (a0), a1, v0.t
+# CHECK-ENCODING: [0x27,0x6c,0xb5,0x18]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 27 6c b5 18 <unknown>
+
+vsse512.v v24, (a0), a1
+# CHECK-INST: vsse512.v v24, (a0), a1
+# CHECK-ENCODING: [0x27,0x6c,0xb5,0x1a]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 27 6c b5 1a <unknown>
+
+vsse1024.v v24, (a0), a1, v0.t
+# CHECK-INST: vsse1024.v v24, (a0), a1, v0.t
+# CHECK-ENCODING: [0x27,0x7c,0xb5,0x18]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 27 7c b5 18 <unknown>
+
+vsse1024.v v24, (a0), a1
+# CHECK-INST: vsse1024.v v24, (a0), a1
+# CHECK-ENCODING: [0x27,0x7c,0xb5,0x1a]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 27 7c b5 1a <unknown>
+
+vsxei8.v v24, (a0), v4, v0.t
+# CHECK-INST: vsxei8.v v24, (a0), v4, v0.t
 # CHECK-ENCODING: [0x27,0x0c,0x45,0x0c]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 0c 45 0c <unknown>
 
-vsxb.v v24, (a0), v4
-# CHECK-INST: vsxb.v v24, (a0), v4
+vsxei8.v v24, (a0), v4
+# CHECK-INST: vsxei8.v v24, (a0), v4
 # CHECK-ENCODING: [0x27,0x0c,0x45,0x0e]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 0c 45 0e <unknown>
 
-vsxh.v v24, (a0), v4, v0.t
-# CHECK-INST: vsxh.v v24, (a0), v4, v0.t
+vsxei16.v v24, (a0), v4, v0.t
+# CHECK-INST: vsxei16.v v24, (a0), v4, v0.t
 # CHECK-ENCODING: [0x27,0x5c,0x45,0x0c]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 5c 45 0c <unknown>
 
-vsxh.v v24, (a0), v4
-# CHECK-INST: vsxh.v v24, (a0), v4
+vsxei16.v v24, (a0), v4
+# CHECK-INST: vsxei16.v v24, (a0), v4
 # CHECK-ENCODING: [0x27,0x5c,0x45,0x0e]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 5c 45 0e <unknown>
 
-vsxw.v v24, (a0), v4, v0.t
-# CHECK-INST: vsxw.v v24, (a0), v4, v0.t
+vsxei32.v v24, (a0), v4, v0.t
+# CHECK-INST: vsxei32.v v24, (a0), v4, v0.t
 # CHECK-ENCODING: [0x27,0x6c,0x45,0x0c]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 6c 45 0c <unknown>
 
-vsxw.v v24, (a0), v4
-# CHECK-INST: vsxw.v v24, (a0), v4
+vsxei32.v v24, (a0), v4
+# CHECK-INST: vsxei32.v v24, (a0), v4
 # CHECK-ENCODING: [0x27,0x6c,0x45,0x0e]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 6c 45 0e <unknown>
 
-vsxe.v v24, (a0), v4, v0.t
-# CHECK-INST: vsxe.v v24, (a0), v4, v0.t
+vsxei64.v v24, (a0), v4, v0.t
+# CHECK-INST: vsxei64.v v24, (a0), v4, v0.t
 # CHECK-ENCODING: [0x27,0x7c,0x45,0x0c]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 7c 45 0c <unknown>
 
-vsxe.v v24, (a0), v4
-# CHECK-INST: vsxe.v v24, (a0), v4
+vsxei64.v v24, (a0), v4
+# CHECK-INST: vsxei64.v v24, (a0), v4
 # CHECK-ENCODING: [0x27,0x7c,0x45,0x0e]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 7c 45 0e <unknown>
 
-vsuxb.v v24, (a0), v4, v0.t
-# CHECK-INST: vsuxb.v v24, (a0), v4, v0.t
+vsxei128.v v24, (a0), v4, v0.t
+# CHECK-INST: vsxei128.v v24, (a0), v4, v0.t
 # CHECK-ENCODING: [0x27,0x0c,0x45,0x1c]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 0c 45 1c <unknown>
 
-vsuxb.v v24, (a0), v4
-# CHECK-INST: vsuxb.v v24, (a0), v4
+vsxei128.v v24, (a0), v4
+# CHECK-INST: vsxei128.v v24, (a0), v4
 # CHECK-ENCODING: [0x27,0x0c,0x45,0x1e]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 0c 45 1e <unknown>
 
-vsuxh.v v24, (a0), v4, v0.t
-# CHECK-INST: vsuxh.v v24, (a0), v4, v0.t
+vsxei256.v v24, (a0), v4, v0.t
+# CHECK-INST: vsxei256.v v24, (a0), v4, v0.t
 # CHECK-ENCODING: [0x27,0x5c,0x45,0x1c]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 5c 45 1c <unknown>
 
-vsuxh.v v24, (a0), v4
-# CHECK-INST: vsuxh.v v24, (a0), v4
+vsxei256.v v24, (a0), v4
+# CHECK-INST: vsxei256.v v24, (a0), v4
 # CHECK-ENCODING: [0x27,0x5c,0x45,0x1e]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 5c 45 1e <unknown>
 
-vsuxw.v v24, (a0), v4, v0.t
-# CHECK-INST: vsuxw.v v24, (a0), v4, v0.t
+vsxei512.v v24, (a0), v4, v0.t
+# CHECK-INST: vsxei512.v v24, (a0), v4, v0.t
 # CHECK-ENCODING: [0x27,0x6c,0x45,0x1c]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 6c 45 1c <unknown>
 
-vsuxw.v v24, (a0), v4
-# CHECK-INST: vsuxw.v v24, (a0), v4
+vsxei512.v v24, (a0), v4
+# CHECK-INST: vsxei512.v v24, (a0), v4
 # CHECK-ENCODING: [0x27,0x6c,0x45,0x1e]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 6c 45 1e <unknown>
 
-vsuxe.v v24, (a0), v4, v0.t
-# CHECK-INST: vsuxe.v v24, (a0), v4, v0.t
+vsxei1024.v v24, (a0), v4, v0.t
+# CHECK-INST: vsxei1024.v v24, (a0), v4, v0.t
 # CHECK-ENCODING: [0x27,0x7c,0x45,0x1c]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 7c 45 1c <unknown>
 
-vsuxe.v v24, (a0), v4
-# CHECK-INST: vsuxe.v v24, (a0), v4
+vsxei1024.v v24, (a0), v4
+# CHECK-INST: vsxei1024.v v24, (a0), v4
 # CHECK-ENCODING: [0x27,0x7c,0x45,0x1e]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 27 7c 45 1e <unknown>
 
 vs1r.v v24, (a0)
 # CHECK-INST: vs1r.v v24, (a0)
-# CHECK-ENCODING: [0x27,0x7c,0x85,0x02]
+# CHECK-ENCODING: [0x27,0x0c,0x85,0x02]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
-# CHECK-UNKNOWN: 27 7c 85 02 <unknown>
+# CHECK-UNKNOWN: 27 0c 85 02 <unknown>

@@ -39,9 +39,8 @@ body: |
 
     ; CHECK-LABEL: name: test_freeze_v4s64
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY [[DEF]](<2 x s64>)
     ; CHECK: [[FREEZE:%[0-9]+]]:_(<2 x s64>) = G_FREEZE [[DEF]]
-    ; CHECK: [[FREEZE1:%[0-9]+]]:_(<2 x s64>) = G_FREEZE [[COPY]]
+    ; CHECK: [[FREEZE1:%[0-9]+]]:_(<2 x s64>) = G_FREEZE [[DEF]]
     ; CHECK: $q0 = COPY [[FREEZE]](<2 x s64>)
     ; CHECK: $q1 = COPY [[FREEZE1]](<2 x s64>)
     %undef:_(<4 x s64>) = G_IMPLICIT_DEF

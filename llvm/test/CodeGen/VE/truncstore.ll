@@ -33,7 +33,6 @@ define void @func2(i8 signext %p, i32* %a) {
 define void @func3(i8 signext %p, i64* %a) {
 ; CHECK-LABEL: func3:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    st %s0, (, %s1)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %p.conv = sext i8 %p to i64
@@ -54,7 +53,6 @@ define void @func5(i16 signext %p, i32* %a) {
 define void @func6(i16 signext %p, i64* %a) {
 ; CHECK-LABEL: func6:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    st %s0, (, %s1)
 ; CHECK-NEXT:    or %s11, 0, %s9
   %p.conv = sext i16 %p to i64

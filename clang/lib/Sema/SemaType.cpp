@@ -5114,7 +5114,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             // is an incomplete type (C99 6.2.5p19) and function decls cannot
             // have parameters of incomplete type.
             if (FTI.NumParams != 1 || FTI.isVariadic) {
-              S.Diag(DeclType.Loc, diag::err_void_only_param);
+              S.Diag(FTI.Params[i].IdentLoc, diag::err_void_only_param);
               ParamTy = Context.IntTy;
               Param->setType(ParamTy);
             } else if (FTI.Params[i].Ident) {

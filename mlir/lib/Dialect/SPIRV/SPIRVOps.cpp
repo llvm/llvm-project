@@ -36,6 +36,7 @@ static constexpr const char kSourceAlignmentAttrName[] = "source_alignment";
 static constexpr const char kBranchWeightAttrName[] = "branch_weights";
 static constexpr const char kCallee[] = "callee";
 static constexpr const char kClusterSize[] = "cluster_size";
+static constexpr const char kControl[] = "control";
 static constexpr const char kDefaultValueAttrName[] = "default_value";
 static constexpr const char kExecutionScopeAttrName[] = "execution_scope";
 static constexpr const char kEqualSemanticsAttrName[] = "equal_semantics";
@@ -158,6 +159,25 @@ parseEnumKeywordAttr(EnumClass &value, OpAsmParser &parser,
   }
   state.addAttribute(attrName, parser.getBuilder().getI32IntegerAttr(
                                    llvm::bit_cast<int32_t>(value)));
+  return success();
+}
+
+/// Parses Function, Selection and Loop control attributes. If no control is
+/// specified, "None" is used as a default.
+template <typename EnumClass>
+static ParseResult
+parseControlAttribute(OpAsmParser &parser, OperationState &state,
+                      StringRef attrName = spirv::attributeName<EnumClass>()) {
+  if (succeeded(parser.parseOptionalKeyword(kControl))) {
+    EnumClass control;
+    if (parser.parseLParen() || parseEnumKeywordAttr(control, parser, state) ||
+        parser.parseRParen())
+      return failure();
+    return success();
+  }
+  // Set control to "None" otherwise.
+  Builder builder = parser.getBuilder();
+  state.addAttribute(attrName, builder.getI32IntegerAttr(0));
   return success();
 }
 
@@ -2082,12 +2102,8 @@ void spirv::LoopOp::build(OpBuilder &builder, OperationState &state) {
 }
 
 static ParseResult parseLoopOp(OpAsmParser &parser, OperationState &state) {
-  // TODO: support loop control properly
-  Builder builder = parser.getBuilder();
-  state.addAttribute("loop_control",
-                     builder.getI32IntegerAttr(
-                         static_cast<uint32_t>(spirv::LoopControl::None)));
-
+  if (parseControlAttribute<spirv::LoopControl>(parser, state))
+    return failure();
   return parser.parseRegion(*state.addRegion(), /*arguments=*/{},
                             /*argTypes=*/{});
 }
@@ -2096,6 +2112,9 @@ static void print(spirv::LoopOp loopOp, OpAsmPrinter &printer) {
   auto *op = loopOp.getOperation();
 
   printer << spirv::LoopOp::getOperationName();
+  auto control = loopOp.loop_control();
+  if (control != spirv::LoopControl::None)
+    printer << " control(" << spirv::stringifyLoopControl(control) << ")";
   printer.printRegion(op->getRegion(0), /*printEntryBlockArgs=*/false,
                       /*printBlockTerminators=*/true);
 }
@@ -2445,12 +2464,8 @@ static LogicalResult verify(spirv::SelectOp op) {
 
 static ParseResult parseSelectionOp(OpAsmParser &parser,
                                     OperationState &state) {
-  // TODO: support selection control properly
-  Builder builder = parser.getBuilder();
-  state.addAttribute("selection_control",
-                     builder.getI32IntegerAttr(
-                         static_cast<uint32_t>(spirv::SelectionControl::None)));
-
+  if (parseControlAttribute<spirv::SelectionControl>(parser, state))
+    return failure();
   return parser.parseRegion(*state.addRegion(), /*arguments=*/{},
                             /*argTypes=*/{});
 }
@@ -2459,6 +2474,9 @@ static void print(spirv::SelectionOp selectionOp, OpAsmPrinter &printer) {
   auto *op = selectionOp.getOperation();
 
   printer << spirv::SelectionOp::getOperationName();
+  auto control = selectionOp.selection_control();
+  if (control != spirv::SelectionControl::None)
+    printer << " control(" << spirv::stringifySelectionControl(control) << ")";
   printer.printRegion(op->getRegion(0), /*printEntryBlockArgs=*/false,
                       /*printBlockTerminators=*/true);
 }

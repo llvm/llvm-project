@@ -4068,6 +4068,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getCleanOrigin());
   }
 
+  void visitFreezeInst(FreezeInst &I) {
+    // Freeze always returns a fully defined value.
+    setShadow(&I, getCleanShadow(&I));
+    setOrigin(&I, getCleanOrigin());
+  }
+
   void visitInstruction(Instruction &I) {
     // Everything else: stop propagating and check for poisoned shadow.
     if (ClDumpStrictInstructions)

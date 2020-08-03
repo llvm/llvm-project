@@ -3005,20 +3005,6 @@ void SelectionDAGBuilder::visitUnreachable(const UnreachableInst &I) {
   DAG.setRoot(DAG.getNode(ISD::TRAP, getCurSDLoc(), MVT::Other, DAG.getRoot()));
 }
 
-void SelectionDAGBuilder::visitFSub(const User &I) {
-  // -0.0 - X --> fneg
-  Type *Ty = I.getType();
-  if (isa<Constant>(I.getOperand(0)) &&
-      I.getOperand(0) == ConstantFP::getZeroValueForNegation(Ty)) {
-    SDValue Op2 = getValue(I.getOperand(1));
-    setValue(&I, DAG.getNode(ISD::FNEG, getCurSDLoc(),
-                             Op2.getValueType(), Op2));
-    return;
-  }
-
-  visitBinary(I, ISD::FSUB);
-}
-
 void SelectionDAGBuilder::visitUnary(const User &I, unsigned Opcode) {
   SDNodeFlags Flags;
 

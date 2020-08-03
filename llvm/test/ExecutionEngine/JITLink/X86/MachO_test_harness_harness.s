@@ -3,7 +3,9 @@
 # RUN:   -o %t/file_to_test.o %S/Inputs/MachO_test_harness_test.s
 # RUN: llvm-mc -triple=x86_64-apple-macosx10.9 -filetype=obj \
 # RUN:   -o %t/test_harness.o %s
-# RUN: llvm-jitlink -noexec -check %s %t/file_to_test.o \
+# RUN: not llvm-jitlink -noexec -check %s %t/file_to_test.o \
+# RUN:    -harness %t/test_harness.o
+# RUN: llvm-jitlink -noexec -phony-externals -check %s %t/file_to_test.o \
 # RUN:    -harness %t/test_harness.o
 #
 # Check that we

@@ -255,12 +255,6 @@ namespace {
       }
     }
 
-    bool mayNeedRelaxation(const MCInst &Inst,
-                           const MCSubtargetInfo &STI) const override {
-      // FIXME.
-      return false;
-    }
-
     /// fixupNeedsRelaxation - Target specific predicate for whether a given
     /// fixup requires the associated instruction to be relaxed.
     bool fixupNeedsRelaxation(const MCFixup &Fixup,

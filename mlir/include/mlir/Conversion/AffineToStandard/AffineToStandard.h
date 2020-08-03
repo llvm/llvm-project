@@ -20,6 +20,7 @@ class Location;
 struct LogicalResult;
 class MLIRContext;
 class OpBuilder;
+class Pass;
 class RewritePattern;
 class Value;
 class ValueRange;
@@ -57,6 +58,12 @@ Value lowerAffineLowerBound(AffineForOp op, OpBuilder &builder);
 /// Emit code that computes the upper bound of the given affine loop using
 /// standard arithmetic operations.
 Value lowerAffineUpperBound(AffineForOp op, OpBuilder &builder);
+
+/// Lowers affine control flow operations (ForStmt, IfStmt and AffineApplyOp)
+/// to equivalent lower-level constructs (flow of basic blocks and arithmetic
+/// primitives).
+std::unique_ptr<Pass> createLowerAffinePass();
+
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_AFFINETOSTANDARD_AFFINETOSTANDARD_H

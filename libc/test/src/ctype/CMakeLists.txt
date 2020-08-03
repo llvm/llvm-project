@@ -29,3 +29,23 @@ add_libc_unittest(
   DEPENDS
     libc.src.ctype.isdigit
 )
+
+add_libc_unittest(
+  islower
+  SUITE
+    libc_ctype_unittests
+  SRCS
+    islower_test.cpp
+  DEPENDS
+    libc.src.ctype.islower
+)
+
+add_libc_unittest(
+  isupper
+  SUITE
+    libc_ctype_unittests
+  SRCS
+    isupper_test.cpp
+  DEPENDS
+    libc.src.ctype.isupper
+)

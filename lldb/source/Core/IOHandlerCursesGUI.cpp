@@ -1287,6 +1287,10 @@ public:
           update = true;
           break;
         case eKeyNotHandled:
+          if (ch == 12) { // Ctrl+L, force full redraw
+            redrawwin(m_window_sp->get());
+            update = true;
+          }
           break;
         case eQuitApplication:
           done = true;

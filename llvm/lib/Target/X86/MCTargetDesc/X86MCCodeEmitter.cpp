@@ -505,12 +505,18 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
     return;
   }
 
-  // Determine whether a SIB byte is needed.
-  // If no BaseReg, issue a RIP relative instruction only if the MCE can
-  // resolve addresses on-the-fly, otherwise use SIB (Intel Manual 2A, table
-  // 2-7) and absolute references.
+  // Check for presence of {disp8} or {disp32} pseudo prefixes.
+  bool UseDisp8 = MI.getFlags() & X86::IP_USE_DISP8;
+  bool UseDisp32 = MI.getFlags() & X86::IP_USE_DISP32;
 
-  if ( // The SIB byte must be used if there is an index register.
+  // We only allow no displacement if no pseudo prefix is present.
+  bool AllowNoDisp = !UseDisp8 && !UseDisp32;
+  // Disp8 is allowed unless the {disp32} prefix is present.
+  bool AllowDisp8 = !UseDisp32;
+
+  // Determine whether a SIB byte is needed.
+  if (// The SIB byte must be used if there is an index register or the
+      // encoding requires a SIB byte.
       !ForceSIB && IndexReg.getReg() == 0 &&
       // The SIB byte must be used if the base is ESP/RSP/R12, all of which
       // encode to an R/M value of 4, which indicates that a SIB byte is
@@ -526,12 +532,12 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
       return;
     }
 
-    // If the base is not EBP/ESP and there is no displacement, use simple
-    // indirect register encoding, this handles addresses like [EAX].  The
-    // encoding for [EBP] with no displacement means [disp32] so we handle it
-    // by emitting a displacement of 0 below.
+    // If the base is not EBP/ESP/R12/R13 and there is no displacement, use
+    // simple indirect register encoding, this handles addresses like [EAX].
+    // The encoding for [EBP] or[R13] with no displacement means [disp32] so we
+    // handle it by emitting a displacement of 0 later.
     if (BaseRegNo != N86::EBP) {
-      if (Disp.isImm() && Disp.getImm() == 0) {
+      if (Disp.isImm() && Disp.getImm() == 0 && AllowNoDisp) {
         emitByte(modRMByte(0, RegOpcodeField, BaseRegNo), OS);
         return;
       }
@@ -550,7 +556,10 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
     }
 
     // Otherwise, if the displacement fits in a byte, encode as [REG+disp8].
-    if (Disp.isImm()) {
+    // Including a compressed disp8 for EVEX instructions that support it.
+    // This also handles the 0 displacement for [EBP] or [R13]. We can't use
+    // disp8 if the {disp32} pseudo prefix is present.
+    if (Disp.isImm() && AllowDisp8) {
       int ImmOffset = 0;
       if (isDispOrCDisp8(TSFlags, Disp.getImm(), ImmOffset)) {
         emitByte(modRMByte(1, RegOpcodeField, BaseRegNo), OS);
@@ -560,7 +569,9 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
       }
     }
 
-    // Otherwise, emit the most general non-SIB encoding: [REG+disp32]
+    // Otherwise, emit the most general non-SIB encoding: [REG+disp32].
+    // Displacement may be 0 for [EBP] or [R13] case if {disp32} pseudo prefix
+    // prevented using disp8 above.
     emitByte(modRMByte(2, RegOpcodeField, BaseRegNo), OS);
     unsigned Opcode = MI.getOpcode();
     unsigned FixupKind = Opcode == X86::MOV32rm ? X86::reloc_signed_4byte_relax
@@ -580,21 +591,26 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
   if (BaseReg == 0) {
     // If there is no base register, we emit the special case SIB byte with
     // MOD=0, BASE=5, to JUST get the index, scale, and displacement.
+    BaseRegNo = 5;
     emitByte(modRMByte(0, RegOpcodeField, 4), OS);
     ForceDisp32 = true;
-  } else if (Disp.isImm() && Disp.getImm() == 0 &&
-             // Base reg can't be anything that ends up with '5' as the base
-             // reg, it is the magic [*] nomenclature that indicates no base.
+  } else if (Disp.isImm() && Disp.getImm() == 0 && AllowNoDisp &&
+             // Base reg can't be EBP/RBP/R13 as that would end up with '5' as
+             // the base field, but that is the magic [*] nomenclature that
+             // indicates no base when mod=0. For these cases we'll emit a 0
+             // displacement instead.
              BaseRegNo != N86::EBP) {
     // Emit no displacement ModR/M byte
     emitByte(modRMByte(0, RegOpcodeField, 4), OS);
-  } else if (Disp.isImm() &&
+  } else if (Disp.isImm() && AllowDisp8 &&
              isDispOrCDisp8(TSFlags, Disp.getImm(), ImmOffset)) {
-    // Emit the disp8 encoding.
+    // Displacement fits in a byte or matches an EVEX compressed disp8, use
+    // disp8 encoding. This also handles EBP/R13 base with 0 displacement unless
+    // {disp32} pseudo prefix was used.
     emitByte(modRMByte(1, RegOpcodeField, 4), OS);
-    ForceDisp8 = true; // Make sure to force 8 bit disp if Base=EBP
+    ForceDisp8 = true;
   } else {
-    // Emit the normal disp32 encoding.
+    // Otherwise, emit the normal disp32 encoding.
     emitByte(modRMByte(2, RegOpcodeField, 4), OS);
     ForceDisp32 = true;
   }
@@ -604,11 +620,6 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
   unsigned SS = SSTable[Scale.getImm()];
 
   unsigned IndexRegNo = IndexReg.getReg() ? getX86RegNum(IndexReg) : 4;
-
-  // Handle the SIB byte for the case where there is no base, see Intel
-  // Manual 2A, table 2-7. The displacement has already been output.
-  if (BaseReg == 0)
-    BaseRegNo = 5;
 
   emitSIBByte(SS, IndexRegNo, BaseRegNo, OS);
 

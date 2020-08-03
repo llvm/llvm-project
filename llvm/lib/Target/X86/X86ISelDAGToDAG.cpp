@@ -3974,39 +3974,26 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   SDValue B = FoldableOp.getOperand(0);
   SDValue C = FoldableOp.getOperand(1);
 
-  unsigned Opc1 = N->getOpcode();
-  unsigned Opc2 = FoldableOp.getOpcode();
+  // We can build the appropriate control immediate by performing the logic
+  // operation we're matching using these constants for A, B, and C.
+  const uint8_t TernlogMagicA = 0xf0;
+  const uint8_t TernlogMagicB = 0xcc;
+  const uint8_t TernlogMagicC = 0xaa;
 
-  uint64_t Imm;
-  switch (Opc1) {
+  uint8_t Imm;
+  switch (FoldableOp.getOpcode()) {
   default: llvm_unreachable("Unexpected opcode!");
-  case ISD::AND:
-    switch (Opc2) {
-    default: llvm_unreachable("Unexpected opcode!");
-    case ISD::AND:      Imm = 0x80; break;
-    case ISD::OR:       Imm = 0xe0; break;
-    case ISD::XOR:      Imm = 0x60; break;
-    case X86ISD::ANDNP: Imm = 0x20; break;
-    }
-    break;
-  case ISD::OR:
-    switch (Opc2) {
-    default: llvm_unreachable("Unexpected opcode!");
-    case ISD::AND:      Imm = 0xf8; break;
-    case ISD::OR:       Imm = 0xfe; break;
-    case ISD::XOR:      Imm = 0xf6; break;
-    case X86ISD::ANDNP: Imm = 0xf2; break;
-    }
-    break;
-  case ISD::XOR:
-    switch (Opc2) {
-    default: llvm_unreachable("Unexpected opcode!");
-    case ISD::AND:      Imm = 0x78; break;
-    case ISD::OR:       Imm = 0x1e; break;
-    case ISD::XOR:      Imm = 0x96; break;
-    case X86ISD::ANDNP: Imm = 0xd2; break;
-    }
-    break;
+  case ISD::AND:      Imm = TernlogMagicB & TernlogMagicC; break;
+  case ISD::OR:       Imm = TernlogMagicB | TernlogMagicC; break;
+  case ISD::XOR:      Imm = TernlogMagicB ^ TernlogMagicC; break;
+  case X86ISD::ANDNP: Imm = ~(TernlogMagicB) & TernlogMagicC; break;
+  }
+
+  switch (N->getOpcode()) {
+  default: llvm_unreachable("Unexpected opcode!");
+  case ISD::AND: Imm &= TernlogMagicA; break;
+  case ISD::OR:  Imm |= TernlogMagicA; break;
+  case ISD::XOR: Imm ^= TernlogMagicA; break;
   }
 
   auto tryFoldLoadOrBCast =
@@ -4220,15 +4207,15 @@ VPTESTM_CASE(v16i16, WZ256##SUFFIX) \
 VPTESTM_CASE(v64i8, BZ##SUFFIX) \
 VPTESTM_CASE(v32i16, WZ##SUFFIX)
 
-  if (FoldedLoad) {
-    switch (TestVT.SimpleTy) {
-    VPTESTM_FULL_CASES(rm)
-    }
-  }
-
   if (FoldedBCast) {
     switch (TestVT.SimpleTy) {
     VPTESTM_BROADCAST_CASES(rmb)
+    }
+  }
+
+  if (FoldedLoad) {
+    switch (TestVT.SimpleTy) {
+    VPTESTM_FULL_CASES(rm)
     }
   }
 
@@ -4287,79 +4274,56 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
     }
   }
 
-  // Without VLX we need to widen the load.
+  // Without VLX we need to widen the operation.
   bool Widen = !Subtarget->hasVLX() && !CmpVT.is512BitVector();
+
+  auto tryFoldLoadOrBCast = [&](SDNode *Root, SDNode *P, SDValue &L,
+                                SDValue &Base, SDValue &Scale, SDValue &Index,
+                                SDValue &Disp, SDValue &Segment) {
+    // If we need to widen, we can't fold the load.
+    if (!Widen)
+      if (tryFoldLoad(Root, P, L, Base, Scale, Index, Disp, Segment))
+        return true;
+
+    // If we didn't fold a load, try to match broadcast. No widening limitation
+    // for this. But only 32 and 64 bit types are supported.
+    if (CmpSVT != MVT::i32 && CmpSVT != MVT::i64)
+      return false;
+
+    // Look through single use bitcasts.
+    if (L.getOpcode() == ISD::BITCAST && L.hasOneUse()) {
+      P = L.getNode();
+      L = L.getOperand(0);
+    }
+
+    if (L.getOpcode() != X86ISD::VBROADCAST_LOAD)
+      return false;
+
+    auto *MemIntr = cast<MemIntrinsicSDNode>(L);
+    if (MemIntr->getMemoryVT().getSizeInBits() != CmpSVT.getSizeInBits())
+      return false;
+
+    return tryFoldBroadcast(Root, P, L, Base, Scale, Index, Disp, Segment);
+  };
 
   // We can only fold loads if the sources are unique.
   bool CanFoldLoads = Src0 != Src1;
 
-  // Try to fold loads unless we need to widen.
   bool FoldedLoad = false;
-  SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, Load;
-  if (!Widen && CanFoldLoads) {
-    Load = Src1;
-    FoldedLoad = tryFoldLoad(Root, N0.getNode(), Load, Tmp0, Tmp1, Tmp2, Tmp3,
-                             Tmp4);
+  SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
+  if (CanFoldLoads) {
+    FoldedLoad = tryFoldLoadOrBCast(Root, N0.getNode(), Src1, Tmp0, Tmp1, Tmp2,
+                                    Tmp3, Tmp4);
     if (!FoldedLoad) {
-      // And is computative.
-      Load = Src0;
-      FoldedLoad = tryFoldLoad(Root, N0.getNode(), Load, Tmp0, Tmp1, Tmp2,
-                               Tmp3, Tmp4);
+      // And is commutative.
+      FoldedLoad = tryFoldLoadOrBCast(Root, N0.getNode(), Src0, Tmp0, Tmp1,
+                                      Tmp2, Tmp3, Tmp4);
       if (FoldedLoad)
         std::swap(Src0, Src1);
     }
   }
 
-  auto findBroadcastedOp = [](SDValue Src, MVT CmpSVT, SDNode *&Parent) {
-    // Look through single use bitcasts.
-    if (Src.getOpcode() == ISD::BITCAST && Src.hasOneUse()) {
-      Parent = Src.getNode();
-      Src = Src.getOperand(0);
-    }
-
-    if (Src.getOpcode() == X86ISD::VBROADCAST_LOAD && Src.hasOneUse()) {
-      auto *MemIntr = cast<MemIntrinsicSDNode>(Src);
-      if (MemIntr->getMemoryVT().getSizeInBits() == CmpSVT.getSizeInBits())
-        return Src;
-    }
-
-    return SDValue();
-  };
-
-  // If we didn't fold a load, try to match broadcast. No widening limitation
-  // for this. But only 32 and 64 bit types are supported.
-  bool FoldedBCast = false;
-  if (!FoldedLoad && CanFoldLoads &&
-      (CmpSVT == MVT::i32 || CmpSVT == MVT::i64)) {
-    SDNode *ParentNode = N0.getNode();
-    if ((Load = findBroadcastedOp(Src1, CmpSVT, ParentNode))) {
-      FoldedBCast = tryFoldBroadcast(Root, ParentNode, Load, Tmp0,
-                                     Tmp1, Tmp2, Tmp3, Tmp4);
-    }
-
-    // Try the other operand.
-    if (!FoldedBCast) {
-      SDNode *ParentNode = N0.getNode();
-      if ((Load = findBroadcastedOp(Src0, CmpSVT, ParentNode))) {
-        FoldedBCast = tryFoldBroadcast(Root, ParentNode, Load, Tmp0,
-                                       Tmp1, Tmp2, Tmp3, Tmp4);
-        if (FoldedBCast)
-          std::swap(Src0, Src1);
-      }
-    }
-  }
-
-  auto getMaskRC = [](MVT MaskVT) {
-    switch (MaskVT.SimpleTy) {
-    default: llvm_unreachable("Unexpected VT!");
-    case MVT::v2i1:  return X86::VK2RegClassID;
-    case MVT::v4i1:  return X86::VK4RegClassID;
-    case MVT::v8i1:  return X86::VK8RegClassID;
-    case MVT::v16i1: return X86::VK16RegClassID;
-    case MVT::v32i1: return X86::VK32RegClassID;
-    case MVT::v64i1: return X86::VK64RegClassID;
-    }
-  };
+  bool FoldedBCast = FoldedLoad && Src1.getOpcode() == X86ISD::VBROADCAST_LOAD;
 
   bool IsMasked = InMask.getNode() != nullptr;
 
@@ -4378,13 +4342,12 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
                                                      CmpVT), 0);
     Src0 = CurDAG->getTargetInsertSubreg(SubReg, dl, CmpVT, ImplDef, Src0);
 
-    assert(!FoldedLoad && "Shouldn't have folded the load");
     if (!FoldedBCast)
       Src1 = CurDAG->getTargetInsertSubreg(SubReg, dl, CmpVT, ImplDef, Src1);
 
     if (IsMasked) {
       // Widen the mask.
-      unsigned RegClass = getMaskRC(MaskVT);
+      unsigned RegClass = TLI->getRegClassFor(MaskVT)->getID();
       SDValue RC = CurDAG->getTargetConstant(RegClass, dl, MVT::i32);
       InMask = SDValue(CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS,
                                               dl, MaskVT, InMask, RC), 0);
@@ -4396,23 +4359,23 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
                                IsMasked);
 
   MachineSDNode *CNode;
-  if (FoldedLoad || FoldedBCast) {
+  if (FoldedLoad) {
     SDVTList VTs = CurDAG->getVTList(MaskVT, MVT::Other);
 
     if (IsMasked) {
       SDValue Ops[] = { InMask, Src0, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4,
-                        Load.getOperand(0) };
+                        Src1.getOperand(0) };
       CNode = CurDAG->getMachineNode(Opc, dl, VTs, Ops);
     } else {
       SDValue Ops[] = { Src0, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4,
-                        Load.getOperand(0) };
+                        Src1.getOperand(0) };
       CNode = CurDAG->getMachineNode(Opc, dl, VTs, Ops);
     }
 
     // Update the chain.
-    ReplaceUses(Load.getValue(1), SDValue(CNode, 1));
+    ReplaceUses(Src1.getValue(1), SDValue(CNode, 1));
     // Record the mem-refs
-    CurDAG->setNodeMemRefs(CNode, {cast<MemSDNode>(Load)->getMemOperand()});
+    CurDAG->setNodeMemRefs(CNode, {cast<MemSDNode>(Src1)->getMemOperand()});
   } else {
     if (IsMasked)
       CNode = CurDAG->getMachineNode(Opc, dl, MaskVT, InMask, Src0, Src1);
@@ -4422,7 +4385,7 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
 
   // If we widened, we need to shrink the mask VT.
   if (Widen) {
-    unsigned RegClass = getMaskRC(ResVT);
+    unsigned RegClass = TLI->getRegClassFor(ResVT)->getID();
     SDValue RC = CurDAG->getTargetConstant(RegClass, dl, MVT::i32);
     CNode = CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS,
                                    dl, ResVT, SDValue(CNode, 0), RC);
