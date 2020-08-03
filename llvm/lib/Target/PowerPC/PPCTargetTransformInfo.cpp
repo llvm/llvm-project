@@ -113,7 +113,7 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // the permutation mask with respect to 31 and reverse the order of
     // V1 and V2.
     if (Constant *Mask = dyn_cast<Constant>(II.getArgOperand(2))) {
-      assert(cast<VectorType>(Mask->getType())->getNumElements() == 16 &&
+      assert(cast<FixedVectorType>(Mask->getType())->getNumElements() == 16 &&
              "Bad type for intrinsic!");
 
       // Check that all of the elements are integer constants or undefs.
