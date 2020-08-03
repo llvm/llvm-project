@@ -33,6 +33,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -153,10 +154,6 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
     } else if (I->use_empty()) {
       // Dead argument (which are always marked as promotable)
       ++NumArgumentsDead;
-
-      // There may be remaining metadata uses of the argument for things like
-      // llvm.dbg.value. Replace them with undef.
-      I->replaceAllUsesWith(UndefValue::get(I->getType()));
     } else {
       // Okay, this is being promoted. This means that the only uses are loads
       // or GEPs which are only used by loads
@@ -414,6 +411,11 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
       continue;
     }
 
+    // There potentially are metadata uses for things like llvm.dbg.value.
+    // Replace them with undef, after handling the other regular uses.
+    auto RauwUndefMetadata = make_scope_exit(
+        [&]() { I->replaceAllUsesWith(UndefValue::get(I->getType())); });
+
     if (I->use_empty())
       continue;
 
@@ -465,7 +467,6 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
         GEP->eraseFromParent();
       }
     }
-
     // Increment I2 past all of the arguments added for this promoted pointer.
     std::advance(I2, ArgIndices.size());
   }
