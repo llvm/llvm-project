@@ -97,6 +97,7 @@ namespace llvm {
     SpecificBumpPtrAllocator<MCSectionMachO> MachOAllocator;
     SpecificBumpPtrAllocator<MCSectionWasm> WasmAllocator;
     SpecificBumpPtrAllocator<MCSectionXCOFF> XCOFFAllocator;
+    SpecificBumpPtrAllocator<MCInst> MCInstAllocator;
 
     /// Bindings of names to symbols.
     SymbolTable Symbols;
@@ -379,6 +380,11 @@ namespace llvm {
     void reset();
 
     /// @}
+
+    /// \name McInst Management
+
+    /// Create and return a new MC instruction.
+    MCInst *createMCInst();
 
     /// \name Symbol Management
     /// @{

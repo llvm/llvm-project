@@ -90,6 +90,7 @@ void MCContext::reset() {
   ELFAllocator.DestroyAll();
   MachOAllocator.DestroyAll();
   XCOFFAllocator.DestroyAll();
+  MCInstAllocator.DestroyAll();
 
   MCSubtargetAllocator.DestroyAll();
   InlineAsmUsedLabelNames.clear();
@@ -124,6 +125,14 @@ void MCContext::reset() {
   GenDwarfFileNumber = 0;
 
   HadError = false;
+}
+
+//===----------------------------------------------------------------------===//
+// MCInst Management
+//===----------------------------------------------------------------------===//
+
+MCInst *MCContext::createMCInst() {
+  return new (MCInstAllocator.Allocate()) MCInst;
 }
 
 //===----------------------------------------------------------------------===//
