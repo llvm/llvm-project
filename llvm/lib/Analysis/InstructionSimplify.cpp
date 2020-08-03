@@ -5198,6 +5198,16 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   return nullptr;
 }
 
+static Intrinsic::ID getMaxMinOpposite(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::smax: return Intrinsic::smin;
+  case Intrinsic::smin: return Intrinsic::smax;
+  case Intrinsic::umax: return Intrinsic::umin;
+  case Intrinsic::umin: return Intrinsic::umax;
+  default: llvm_unreachable("Unexpected intrinsic");
+  }
+}
+
 static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
                                       const SimplifyQuery &Q) {
   Intrinsic::ID IID = F->getIntrinsicID();
@@ -5239,16 +5249,27 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
         return ConstantInt::get(ReturnType, APInt::getMinValue(BitWidth));
     }
 
+    auto hasSpecificOperand = [](IntrinsicInst *II, Value *V) {
+      return II->getOperand(0) == V || II->getOperand(1) == V;
+    };
+
     // For 4 commuted variants of each intrinsic:
     // max (max X, Y), X --> max X, Y
-    if (auto *MinMax0 = dyn_cast<IntrinsicInst>(Op0))
-      if (MinMax0->getIntrinsicID() == IID &&
-          (MinMax0->getOperand(0) == Op1 || MinMax0->getOperand(1) == Op1))
+    // max (min X, Y), X --> X
+    if (auto *MinMax0 = dyn_cast<IntrinsicInst>(Op0)) {
+      Intrinsic::ID InnerID = MinMax0->getIntrinsicID();
+      if (InnerID == IID && hasSpecificOperand(MinMax0, Op1))
         return MinMax0;
-    if (auto *MinMax1 = dyn_cast<IntrinsicInst>(Op1))
-      if (MinMax1->getIntrinsicID() == IID &&
-          (MinMax1->getOperand(0) == Op0 || MinMax1->getOperand(1) == Op0))
+      if (InnerID == getMaxMinOpposite(IID) && hasSpecificOperand(MinMax0, Op1))
+        return Op1;
+    }
+    if (auto *MinMax1 = dyn_cast<IntrinsicInst>(Op1)) {
+      Intrinsic::ID InnerID = MinMax1->getIntrinsicID();
+      if (InnerID == IID && hasSpecificOperand(MinMax1, Op0))
         return MinMax1;
+      if (InnerID == getMaxMinOpposite(IID) && hasSpecificOperand(MinMax1, Op0))
+        return Op0;
+    }
 
     const APInt *C;
     if (!match(Op1, m_APIntAllowUndef(C)))
