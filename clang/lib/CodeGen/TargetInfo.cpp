@@ -2404,10 +2404,8 @@ public:
   }
 
   /// Disable tail call on x86-64. The epilogue code before the tail jump blocks
-  /// the autoreleaseRV/retainRV optimization.
-  bool shouldSuppressTailCallsOfRetainAutoreleasedReturnValue() const override {
-    return true;
-  }
+  /// autoreleaseRV/retainRV and autoreleaseRV/unsafeClaimRV optimizations.
+  bool markARCOptimizedReturnCallsAsNoTail() const override { return true; }
 
   int getDwarfEHStackPointer(CodeGen::CodeGenModule &CGM) const override {
     return 7;
