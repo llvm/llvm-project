@@ -14,6 +14,7 @@
 
 #include "llvm-jitlink.h"
 
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -887,13 +888,20 @@ Error loadObjects(Session &S) {
        InputFileItr != InputFileEnd; ++InputFileItr) {
     unsigned InputFileArgIdx =
         InputFiles.getPosition(InputFileItr - InputFiles.begin());
-    StringRef InputFile = *InputFileItr;
+    const std::string &InputFile = *InputFileItr;
     auto &JD = *std::prev(IdxToJLD.lower_bound(InputFileArgIdx))->second;
     LLVM_DEBUG(dbgs() << "  " << InputFileArgIdx << ": \"" << InputFile
                       << "\" to " << JD.getName() << "\n";);
     auto ObjBuffer =
         ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(InputFile)));
-    ExitOnErr(S.ObjLayer.add(JD, std::move(ObjBuffer)));
+
+    auto Magic = identify_magic(ObjBuffer->getBuffer());
+    if (Magic == file_magic::archive ||
+        Magic == file_magic::macho_universal_binary)
+      JD.addGenerator(ExitOnErr(StaticLibraryDefinitionGenerator::Load(
+          S.ObjLayer, InputFile.c_str(), S.TT)));
+    else
+      ExitOnErr(S.ObjLayer.add(JD, std::move(ObjBuffer)));
   }
 
   // Define absolute symbols.
@@ -1056,6 +1064,11 @@ int main(int argc, char *argv[]) {
 
   ExitOnErr(sanitizeArguments(*S));
 
+  {
+    TimeRegion TR(Timers ? &Timers->LoadObjectsTimer : nullptr);
+    ExitOnErr(loadObjects(*S));
+  }
+
   if (!NoProcessSymbols)
     ExitOnErr(loadProcessSymbols(*S));
   ExitOnErr(loadDylibs());
@@ -1063,10 +1076,6 @@ int main(int argc, char *argv[]) {
   if (PhonyExternals)
     addPhonyExternalsGenerator(*S);
 
-  {
-    TimeRegion TR(Timers ? &Timers->LoadObjectsTimer : nullptr);
-    ExitOnErr(loadObjects(*S));
-  }
 
   if (ShowInitialExecutionSessionState)
     S->ES.dump(outs());
