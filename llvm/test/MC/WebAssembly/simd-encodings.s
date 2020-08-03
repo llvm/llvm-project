@@ -463,9 +463,6 @@ main:
     # CHECK: i32x4.sub # encoding: [0xfd,0xb1,0x01]
     i32x4.sub
 
-    # CHECK: i32x4.dot_i16x8_s # encoding: [0xfd,0xb4,0x01]
-    i32x4.dot_i16x8_s
-
     # CHECK: i32x4.mul # encoding: [0xfd,0xb5,0x01]
     i32x4.mul
 
@@ -480,6 +477,9 @@ main:
 
     # CHECK: i32x4.max_u # encoding: [0xfd,0xb9,0x01]
     i32x4.max_u
+
+    # CHECK: i32x4.dot_i16x8_s # encoding: [0xfd,0xba,0x01]
+    i32x4.dot_i16x8_s
 
     # CHECK: i64x2.neg # encoding: [0xfd,0xc1,0x01]
     i64x2.neg
@@ -610,10 +610,16 @@ main:
     # CHECK: f32x4.convert_i32x4_u # encoding: [0xfd,0xfb,0x01]
     f32x4.convert_i32x4_u
 
-    # CHECK: f32x4.qfma # encoding: [0xfd,0xfc,0x01]
+    # CHECK: v128.load32_zero 32 # encoding: [0xfd,0xfc,0x01,0x02,0x20]
+    v128.load32_zero 32
+
+    # CHECK: v128.load64_zero 32 # encoding: [0xfd,0xfd,0x01,0x03,0x20]
+    v128.load64_zero 32
+
+    # CHECK: f32x4.qfma # encoding: [0xfd,0xb4,0x01]
     f32x4.qfma
 
-    # CHECK: f32x4.qfms # encoding: [0xfd,0xfd,0x01]
+    # CHECK: f32x4.qfms # encoding: [0xfd,0xd4,0x01]
     f32x4.qfms
 
     # CHECK: f64x2.qfma # encoding: [0xfd,0xfe,0x01]
