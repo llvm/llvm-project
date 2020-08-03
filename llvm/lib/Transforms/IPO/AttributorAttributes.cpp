@@ -1983,6 +1983,61 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
       return true;
     };
 
+    auto InspectCallSiteForUB = [&](Instruction &I) {
+      // Check whether a callsite always cause UB or not
+
+      // Skip instructions that are already saved.
+      if (AssumedNoUBInsts.count(&I) || KnownUBInsts.count(&I))
+        return true;
+
+      // Check nonnull and noundef argument attribute violation for each
+      // callsite.
+      CallBase &CB = cast<CallBase>(I);
+      Function *Callee = CB.getCalledFunction();
+      if (!Callee)
+        return true;
+      for (unsigned idx = 0; idx < CB.getNumArgOperands(); idx++) {
+        // If current argument is known to be simplified to null pointer and the
+        // corresponding argument position is known to have nonnull attribute,
+        // the argument is poison. Furthermore, if the argument is poison and
+        // the position is known to have noundef attriubte, this callsite is
+        // considered UB.
+        // TODO: Check also nopoison attribute if it is introduced.
+        if (idx >= Callee->arg_size())
+          break;
+        Value *ArgVal = CB.getArgOperand(idx);
+        if(!ArgVal)
+          continue;
+        IRPosition CalleeArgumentIRP =
+            IRPosition::argument(*Callee->getArg(idx));
+        if (!CalleeArgumentIRP.hasAttr({Attribute::NoUndef}))
+          continue;
+        auto &NonNullAA = A.getAAFor<AANonNull>(*this, CalleeArgumentIRP);
+        if (!NonNullAA.isKnownNonNull())
+          continue;
+        const auto &ValueSimplifyAA =
+            A.getAAFor<AAValueSimplify>(*this, IRPosition::value(*ArgVal));
+        Optional<Value *> SimplifiedVal =
+            ValueSimplifyAA.getAssumedSimplifiedValue(A);
+
+        if (!ValueSimplifyAA.isKnown())
+          continue;
+        // Here, we handle three cases.
+        //   (1) Not having a value means it is dead. (we can replace the value
+        //       with undef)
+        //   (2) Simplified to null pointer. The argument is a poison value and
+        //       violate noundef attribute.
+        //   (3) Simplified to undef. The argument violate noundef attriubte.
+        if (!SimplifiedVal.hasValue() ||
+            isa<ConstantPointerNull>(*SimplifiedVal.getValue()) ||
+            isa<UndefValue>(*SimplifiedVal.getValue())) {
+          KnownUBInsts.insert(&I);
+          return true;
+        }
+      }
+      return true;
+    };
+
     A.checkForAllInstructions(InspectMemAccessInstForUB, *this,
                               {Instruction::Load, Instruction::Store,
                                Instruction::AtomicCmpXchg,
@@ -1990,6 +2045,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
                               /* CheckBBLivenessOnly */ true);
     A.checkForAllInstructions(InspectBrInstForUB, *this, {Instruction::Br},
                               /* CheckBBLivenessOnly */ true);
+    A.checkForAllCallLikeInstructions(InspectCallSiteForUB, *this);
     if (NoUBPrevSize != AssumedNoUBInsts.size() ||
         UBPrevSize != KnownUBInsts.size())
       return ChangeStatus::CHANGED;
