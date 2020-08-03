@@ -1,3 +1,5 @@
+! RUN: %f18 -E %s 2>&1 | FileCheck %s
+! CHECK: res=kwm
 * KWM split across continuation, clipped after column 72
       integer, parameter :: KWM = 666
 #define KWM 777
@@ -8,8 +10,8 @@
       res = KW                                                          comment
      +M
       if (res .eq. 777) then
-        print *, 'pp007.F pass'
+        print *, 'pp007.F yes'
       else
-        print *, 'pp007.F FAIL: ', res
+        print *, 'pp007.F no: ', res
       end if
       end
