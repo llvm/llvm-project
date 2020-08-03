@@ -24,4 +24,13 @@ struct Foo {
   // CHECK-NEXT: `-ConceptSpecializationExpr {{.*}} <col:13> 'bool'
   template <unary_concept R>
   Foo(R);
+
+  // CHECK:      FunctionTemplateDecl {{.*}} <line:29:3, line:30:39> {{.*}} Foo<T>
+  template <typename R>
+  Foo(R, int) requires unary_concept<R>;
+
+  // CHECK:      FunctionTemplateDecl {{.*}} <line:33:3, line:35:3> {{.*}} Foo<T>
+  template <typename R>
+  Foo(R, char) requires unary_concept<R> {
+  }
 };

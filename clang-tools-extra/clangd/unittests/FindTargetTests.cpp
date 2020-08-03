@@ -405,6 +405,11 @@ TEST_F(TargetDeclTest, ClassTemplate) {
 }
 
 TEST_F(TargetDeclTest, Concept) {
+  Flags.push_back("-std=c++20");
+
+  // FIXME: Should we truncate the pretty-printed form of a concept decl
+  // somewhere?
+
   Code = R"cpp(
     template <typename T>
     concept Fooable = requires (T t) { t.foo(); };
@@ -414,12 +419,20 @@ TEST_F(TargetDeclTest, Concept) {
       t.foo();
     }
   )cpp";
-  Flags.push_back("-std=c++20");
   EXPECT_DECLS(
       "ConceptSpecializationExpr",
-      // FIXME: Should we truncate the pretty-printed form of a concept decl
-      // somewhere?
       {"template <typename T> concept Fooable = requires (T t) { t.foo(); };"});
+
+  // trailing requires clause
+  Code = R"cpp(
+      template <typename T>
+      concept Fooable = true;
+
+      template <typename T>
+      void foo() requires [[Fooable]]<T>;
+  )cpp";
+  EXPECT_DECLS("ConceptSpecializationExpr",
+               {"template <typename T> concept Fooable = true;"});
 }
 
 TEST_F(TargetDeclTest, FunctionTemplate) {
