@@ -86,9 +86,7 @@ SwiftExpressionParser::SwiftExpressionParser(
     ExecutionContextScope *exe_scope, Expression &expr,
     const EvaluateExpressionOptions &options)
     : ExpressionParser(exe_scope, expr, options.GetGenerateDebugInfo()),
-      m_expr(expr), m_triple(), m_llvm_context(), m_module(),
-      m_execution_unit_sp(), m_sc(), m_exe_scope(exe_scope), m_stack_frame_wp(),
-      m_options(options) {
+      m_expr(expr), m_exe_scope(exe_scope), m_options(options) {
   assert(expr.Language() == lldb::eLanguageTypeSwift);
 
   // TODO: This code is copied from ClangExpressionParser.cpp.
@@ -106,24 +104,6 @@ SwiftExpressionParser::SwiftExpressionParser(
     } else {
       m_sc.target_sp = target_sp;
     }
-  }
-
-  if (target_sp && target_sp->GetArchitecture().IsValid()) {
-    std::string triple = target_sp->GetArchitecture().GetTriple().str();
-
-    int dash_count = 0;
-    for (size_t i = 0; i < triple.size(); ++i) {
-      if (triple[i] == '-')
-        dash_count++;
-      if (dash_count == 3) {
-        triple.resize(i);
-        break;
-      }
-    }
-
-    m_triple = triple;
-  } else {
-    m_triple = llvm::sys::getDefaultTargetTriple();
   }
 
   if (target_sp) {
