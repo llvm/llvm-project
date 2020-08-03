@@ -54,10 +54,6 @@ public:
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved,
                   const MCSubtargetInfo *STI) const override;
-  bool mayNeedRelaxation(const MCInst &Inst,
-                         const MCSubtargetInfo &STI) const override {
-    return false;
-  }
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *Fragment,
                             const MCAsmLayout &Layout) const override {

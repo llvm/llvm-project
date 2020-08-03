@@ -144,7 +144,9 @@ public:
   /// \param STI - The MCSubtargetInfo in effect when the instruction was
   /// encoded.
   virtual bool mayNeedRelaxation(const MCInst &Inst,
-                                 const MCSubtargetInfo &STI) const = 0;
+                                 const MCSubtargetInfo &STI) const {
+    return false;
+  }
 
   /// Target specific predicate for whether a given fixup requires the
   /// associated instruction to be relaxed.
