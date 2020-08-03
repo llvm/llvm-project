@@ -19,3 +19,13 @@ program p1
  !REF: /p1/x
  y = f(x)
 end program
+
+!DEF: /f2 (Function) Subprogram REAL(4)
+!DEF: /f2/cos EXTERNAL (Function, Implicit) ProcEntity REAL(4)
+!DEF: /f2/x (Implicit) ObjectEntity REAL(4)
+function f2(cos, x)
+ !DEF: /f2/f2 (Implicit) ObjectEntity REAL(4)
+ !REF: /f2/cos
+ !REF: /f2/x
+ f2 = cos(x)
+end function
