@@ -119,8 +119,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
 
 // CHECK:        spv.Branch ^bb1
 // CHECK-NEXT: ^bb1:
-// CHECK-NEXT:   spv.loop
-    spv.loop {
+// CHECK-NEXT:   spv.loop control(Unroll)
+    spv.loop control(Unroll) {
 // CHECK-NEXT:     spv.Branch ^bb1
       spv.Branch ^header
 
@@ -140,8 +140,8 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
       spv.Store "Function" %jvar, %zero : i32
 // CHECK-NEXT:     spv.Branch ^bb3
 // CHECK-NEXT:   ^bb3:
-// CHECK-NEXT:     spv.loop
-      spv.loop {
+// CHECK-NEXT:     spv.loop control(DontUnroll)
+      spv.loop control(DontUnroll) {
 // CHECK-NEXT:       spv.Branch ^bb1
         spv.Branch ^header
 
