@@ -1,4 +1,6 @@
 // Test that there was an illegal WRITE memory access.
+// Fails with debug checks: https://bugs.llvm.org/show_bug.cgi?id=46860
+// XFAIL: !compiler-rt-optimized && tsan
 // RUN: %clangxx -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: stable-runtime
