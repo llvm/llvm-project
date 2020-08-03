@@ -125,10 +125,23 @@ struct TestVectorUnrollingPatterns
 struct TestVectorTransferFullPartialSplitPatterns
     : public PassWrapper<TestVectorTransferFullPartialSplitPatterns,
                          FunctionPass> {
+  TestVectorTransferFullPartialSplitPatterns() = default;
+  TestVectorTransferFullPartialSplitPatterns(
+      const TestVectorTransferFullPartialSplitPatterns &pass) {}
+  Option<bool> useLinalgOps{
+      *this, "use-linalg-copy",
+      llvm::cl::desc("Split using a unmasked vector.transfer + linalg.fill + "
+                     "linalg.copy operations."),
+      llvm::cl::init(false)};
   void runOnFunction() override {
     MLIRContext *ctx = &getContext();
     OwningRewritePatternList patterns;
-    patterns.insert<VectorTransferFullPartialRewriter>(ctx);
+    VectorTransformsOptions options;
+    if (useLinalgOps)
+      options.setVectorTransferSplit(VectorTransferSplit::LinalgCopy);
+    else
+      options.setVectorTransferSplit(VectorTransferSplit::VectorTransfer);
+    patterns.insert<VectorTransferFullPartialRewriter>(ctx, options);
     applyPatternsAndFoldGreedily(getFunction(), patterns);
   }
 };
