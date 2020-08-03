@@ -335,7 +335,7 @@ void DwarfUnit::addOpAddress(DIELoc &Die, const MCSymbol *Sym) {
   }
 
   addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_addr);
-  addLabel(Die, dwarf::DW_FORM_udata, Sym);
+  addLabel(Die, dwarf::DW_FORM_addr, Sym);
 }
 
 void DwarfUnit::addLabelDelta(DIE &Die, dwarf::Attribute Attribute,
