@@ -13,10 +13,10 @@
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Host/TaskPool.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
+#include "llvm/Support/ThreadPool.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -55,25 +55,29 @@ void ManualDWARFIndex::Index() {
     clear_cu_dies[cu_idx] = units_to_index[cu_idx]->ExtractDIEsScoped();
   };
 
+  // Share one thread pool across operations to avoid the overhead of
+  // recreating the threads.
+  llvm::ThreadPool pool;
+
   // Create a task runner that extracts dies for each DWARF unit in a
-  // separate thread
+  // separate thread.
   // First figure out which units didn't have their DIEs already
   // parsed and remember this.  If no DIEs were parsed prior to this index
   // function call, we are going to want to clear the CU dies after we are
   // done indexing to make sure we don't pull in all DWARF dies, but we need
-  // to wait until all compile units have been indexed in case a DIE in one
-  // compile unit refers to another and the indexes accesses those DIEs.
-  //----------------------------------------------------------------------
-  for (int i=0; i<units_to_index.size(); ++i) {
-     extract_fn(i);
-  }
-  // This call can deadlock because we are sometimes holding the module lock.
-  //TaskMapOverInt(0, units_to_index.size(), extract_fn);
+  // to wait until all units have been indexed in case a DIE in one
+  // unit refers to another and the indexes accesses those DIEs.
+  //
+  // This call can deadlock because we are sometimes holding the module lock so
+  // don't do it asynchronously.
+  for (size_t i = 0; i < units_to_index.size(); ++i)
+    extract_fn(i);
 
   // Now create a task runner that can index each DWARF unit in a
   // separate thread so we can index quickly.
-
-  TaskMapOverInt(0, units_to_index.size(), parser_fn);
+  for (size_t i = 0; i < units_to_index.size(); ++i)
+    pool.async(parser_fn, i);
+  pool.wait();
 
   auto finalize_fn = [this, &sets](NameToDIE(IndexSet::*index)) {
     NameToDIE &result = m_set.*index;
@@ -82,14 +86,15 @@ void ManualDWARFIndex::Index() {
     result.Finalize();
   };
 
-  TaskPool::RunTasks([&]() { finalize_fn(&IndexSet::function_basenames); },
-                     [&]() { finalize_fn(&IndexSet::function_fullnames); },
-                     [&]() { finalize_fn(&IndexSet::function_methods); },
-                     [&]() { finalize_fn(&IndexSet::function_selectors); },
-                     [&]() { finalize_fn(&IndexSet::objc_class_selectors); },
-                     [&]() { finalize_fn(&IndexSet::globals); },
-                     [&]() { finalize_fn(&IndexSet::types); },
-                     [&]() { finalize_fn(&IndexSet::namespaces); });
+  pool.async(finalize_fn, &IndexSet::function_basenames);
+  pool.async(finalize_fn, &IndexSet::function_fullnames);
+  pool.async(finalize_fn, &IndexSet::function_methods);
+  pool.async(finalize_fn, &IndexSet::function_selectors);
+  pool.async(finalize_fn, &IndexSet::objc_class_selectors);
+  pool.async(finalize_fn, &IndexSet::globals);
+  pool.async(finalize_fn, &IndexSet::types);
+  pool.async(finalize_fn, &IndexSet::namespaces);
+  pool.wait();
 }
 
 void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, IndexSet &set) {
