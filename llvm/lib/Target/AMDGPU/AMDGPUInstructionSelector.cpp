@@ -1894,11 +1894,32 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
   if (!DstTy.isScalar())
     return false;
 
-  if (I.getOpcode() == AMDGPU::G_ANYEXT)
-    return selectCOPY(I);
-
   // Artifact casts should never use vcc.
   const RegisterBank *SrcBank = getArtifactRegBank(SrcReg, *MRI, TRI);
+
+  // FIXME: This should probably be illegal and split earlier.
+  if (I.getOpcode() == AMDGPU::G_ANYEXT) {
+    if (DstSize <= 32)
+      return selectCOPY(I);
+
+    const TargetRegisterClass *SrcRC =
+        TRI.getRegClassForTypeOnBank(SrcTy, *SrcBank, *MRI);
+    const RegisterBank *DstBank = RBI.getRegBank(DstReg, *MRI, TRI);
+    const TargetRegisterClass *DstRC =
+        TRI.getRegClassForSizeOnBank(DstSize, *DstBank, *MRI);
+
+    Register UndefReg = MRI->createVirtualRegister(SrcRC);
+    BuildMI(MBB, I, DL, TII.get(AMDGPU::IMPLICIT_DEF), UndefReg);
+    BuildMI(MBB, I, DL, TII.get(AMDGPU::REG_SEQUENCE), DstReg)
+      .addReg(SrcReg)
+      .addImm(AMDGPU::sub0)
+      .addReg(UndefReg)
+      .addImm(AMDGPU::sub1);
+    I.eraseFromParent();
+
+    return RBI.constrainGenericRegister(DstReg, *DstRC, *MRI) &&
+           RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI);
+  }
 
   if (SrcBank->getID() == AMDGPU::VGPRRegBankID && DstSize <= 32) {
     // 64-bit should have been split up in RegBankSelect
