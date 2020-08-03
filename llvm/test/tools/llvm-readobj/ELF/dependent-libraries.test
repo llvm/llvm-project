@@ -30,7 +30,17 @@ FileHeader:
 Sections:
   - Name:      .deplibs
     Type:      SHT_LLVM_DEPENDENT_LIBRARIES
+    ShType:    [[TYPE=<none>]]
     Libraries: [ foo, bar, foo ]
+
+## Show the output when there are no dependent library sections. Check that we are
+## locating dependent library sections by type. To do this we change the type to an arbitrary one.
+# RUN: yaml2obj --docnum=1 -DTYPE=SHT_PROGBITS %s -o %t3
+# RUN: llvm-readobj --dependent-libraries %t3 2>&1 | FileCheck %s --check-prefix=NONE
+# RUN: llvm-readelf --dependent-libraries %t3 2>&1 | FileCheck %s --allow-empty --implicit-check-not={{.}}
+
+# NONE:      DependentLibs [
+# NONE-NEXT: ]
 
 ## Now, check how we dump a mix of valid, empty and invalid SHT_LLVM_DEPENDENT_LIBRARIES sections.
 
@@ -98,18 +108,3 @@ Sections:
   - ShName:    0x10000
     Type:      SHT_LLVM_DEPENDENT_LIBRARIES
     Libraries: [ baz ]
-
-## Show the output when there are no dependent library sections.
-# RUN: yaml2obj --docnum=3 %s -o %t3
-# RUN: llvm-readobj --dependent-libraries %t3 2>&1 | FileCheck %s --check-prefix=NONE
-# RUN: llvm-readelf --dependent-libraries %t3 2>&1 | FileCheck %s --allow-empty --implicit-check-not={{.}}
-
-# NONE:      DependentLibs [
-# NONE-NEXT: ]
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
