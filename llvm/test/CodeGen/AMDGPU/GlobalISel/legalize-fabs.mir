@@ -209,13 +209,15 @@ body: |
 
     ; SI-LABEL: name: test_fabs_v3s16
     ; SI: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; SI: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
-    ; SI: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT]](<3 x s16>), 0
-    ; SI: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT]](<4 x s16>)
-    ; SI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
+    ; SI: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; SI: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[DEF]](<4 x s16>), [[DEF1]](<4 x s16>), [[DEF1]](<4 x s16>)
+    ; SI: [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>), [[UV2:%[0-9]+]]:_(<3 x s16>), [[UV3:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s16>)
+    ; SI: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[UV]](<3 x s16>), 0
+    ; SI: [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT]](<4 x s16>)
+    ; SI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV4]](<2 x s16>)
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; SI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; SI: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
+    ; SI: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV5]](<2 x s16>)
     ; SI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; SI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
@@ -231,21 +233,23 @@ body: |
     ; SI: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[C2]], [[C]](s32)
     ; SI: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL1]]
     ; SI: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-    ; SI: [[DEF1:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+    ; SI: [[DEF2:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; SI: [[FABS:%[0-9]+]]:_(<2 x s16>) = G_FABS [[BITCAST2]]
     ; SI: [[FABS1:%[0-9]+]]:_(<2 x s16>) = G_FABS [[BITCAST3]]
-    ; SI: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[FABS]](<2 x s16>), [[FABS1]](<2 x s16>), [[DEF1]](<2 x s16>)
-    ; SI: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<6 x s16>), 0
-    ; SI: S_NOP 0, implicit [[EXTRACT1]](<3 x s16>)
+    ; SI: [[CONCAT_VECTORS1:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[FABS]](<2 x s16>), [[FABS1]](<2 x s16>), [[DEF2]](<2 x s16>)
+    ; SI: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS1]](<6 x s16>), 0
+    ; SI: S_NOP 0, implicit [[EXTRACT]](<3 x s16>)
     ; VI-LABEL: name: test_fabs_v3s16
     ; VI: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; VI: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
-    ; VI: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT]](<3 x s16>), 0
-    ; VI: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT]](<4 x s16>)
-    ; VI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
+    ; VI: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; VI: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[DEF]](<4 x s16>), [[DEF1]](<4 x s16>), [[DEF1]](<4 x s16>)
+    ; VI: [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>), [[UV2:%[0-9]+]]:_(<3 x s16>), [[UV3:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s16>)
+    ; VI: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[UV]](<3 x s16>), 0
+    ; VI: [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT]](<4 x s16>)
+    ; VI: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV4]](<2 x s16>)
     ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; VI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; VI: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
+    ; VI: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV5]](<2 x s16>)
     ; VI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; VI: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
@@ -261,34 +265,36 @@ body: |
     ; VI: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[C2]], [[C]](s32)
     ; VI: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL1]]
     ; VI: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-    ; VI: [[DEF1:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+    ; VI: [[DEF2:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; VI: [[FABS:%[0-9]+]]:_(<2 x s16>) = G_FABS [[BITCAST2]]
     ; VI: [[FABS1:%[0-9]+]]:_(<2 x s16>) = G_FABS [[BITCAST3]]
-    ; VI: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[FABS]](<2 x s16>), [[FABS1]](<2 x s16>), [[DEF1]](<2 x s16>)
-    ; VI: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<6 x s16>), 0
-    ; VI: S_NOP 0, implicit [[EXTRACT1]](<3 x s16>)
+    ; VI: [[CONCAT_VECTORS1:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[FABS]](<2 x s16>), [[FABS1]](<2 x s16>), [[DEF2]](<2 x s16>)
+    ; VI: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS1]](<6 x s16>), 0
+    ; VI: S_NOP 0, implicit [[EXTRACT]](<3 x s16>)
     ; GFX9-LABEL: name: test_fabs_v3s16
     ; GFX9: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; GFX9: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
-    ; GFX9: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT]](<3 x s16>), 0
-    ; GFX9: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT]](<4 x s16>)
-    ; GFX9: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
+    ; GFX9: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[DEF]](<4 x s16>), [[DEF1]](<4 x s16>), [[DEF1]](<4 x s16>)
+    ; GFX9: [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>), [[UV2:%[0-9]+]]:_(<3 x s16>), [[UV3:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s16>)
+    ; GFX9: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[UV]](<3 x s16>), 0
+    ; GFX9: [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT]](<4 x s16>)
+    ; GFX9: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV4]](<2 x s16>)
     ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; GFX9: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; GFX9: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
+    ; GFX9: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV5]](<2 x s16>)
     ; GFX9: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; GFX9: [[COPY:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
     ; GFX9: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
     ; GFX9: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY]](s32), [[COPY1]](s32)
     ; GFX9: [[COPY2:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
-    ; GFX9: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; GFX9: [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY2]](s32), [[DEF1]](s32)
-    ; GFX9: [[DEF2:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX9: [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[COPY2]](s32), [[DEF2]](s32)
+    ; GFX9: [[DEF3:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
     ; GFX9: [[FABS:%[0-9]+]]:_(<2 x s16>) = G_FABS [[BUILD_VECTOR_TRUNC]]
     ; GFX9: [[FABS1:%[0-9]+]]:_(<2 x s16>) = G_FABS [[BUILD_VECTOR_TRUNC1]]
-    ; GFX9: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[FABS]](<2 x s16>), [[FABS1]](<2 x s16>), [[DEF2]](<2 x s16>)
-    ; GFX9: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<6 x s16>), 0
-    ; GFX9: S_NOP 0, implicit [[EXTRACT1]](<3 x s16>)
+    ; GFX9: [[CONCAT_VECTORS1:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[FABS]](<2 x s16>), [[FABS1]](<2 x s16>), [[DEF3]](<2 x s16>)
+    ; GFX9: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS1]](<6 x s16>), 0
+    ; GFX9: S_NOP 0, implicit [[EXTRACT]](<3 x s16>)
     %0:_(<3 x s16>) = G_IMPLICIT_DEF
     %1:_(<3 x s16>) = G_FABS %0
     S_NOP 0, implicit %1
