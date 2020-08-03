@@ -71,10 +71,12 @@ subroutine s3
    !DEF: /s3/Block1/y TARGET AssocEntity TYPE(t2)
    !REF: /s3/t2/a2
    i = y%a2
-  type is (integer(kind=8))
+  !REF: /s3/t1
+  type is (t1)
    !REF: /s3/i
-   !DEF: /s3/Block2/y TARGET AssocEntity INTEGER(8)
-   i = y
+   !DEF: /s3/Block2/y TARGET AssocEntity TYPE(t1)
+   !REF: /s3/t1/a1
+   i = y%a1
   class default
    !DEF: /s3/Block3/y TARGET AssocEntity CLASS(t1)
    print *, y
