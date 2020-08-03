@@ -7401,8 +7401,8 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
 
     // Handle OR(SHUFFLE,SHUFFLE) case where one source is zero and the other
     // is a valid shuffle index.
-    SDValue N0 = peekThroughOneUseBitcasts(N.getOperand(0));
-    SDValue N1 = peekThroughOneUseBitcasts(N.getOperand(1));
+    SDValue N0 = peekThroughBitcasts(N.getOperand(0));
+    SDValue N1 = peekThroughBitcasts(N.getOperand(1));
     if (!N0.getValueType().isVector() || !N1.getValueType().isVector())
       return false;
     SmallVector<int, 64> SrcMask0, SrcMask1;
@@ -7413,34 +7413,24 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
                                 true))
       return false;
 
-    // Shuffle inputs must be the same size as the result.
-    if (llvm::any_of(SrcInputs0, [VT](SDValue Op) {
-          return VT.getSizeInBits() != Op.getValueSizeInBits();
-        }))
-      return false;
-    if (llvm::any_of(SrcInputs1, [VT](SDValue Op) {
-          return VT.getSizeInBits() != Op.getValueSizeInBits();
-        }))
-      return false;
-
     size_t MaskSize = std::max(SrcMask0.size(), SrcMask1.size());
     SmallVector<int, 64> Mask0, Mask1;
     narrowShuffleMaskElts(MaskSize / SrcMask0.size(), SrcMask0, Mask0);
     narrowShuffleMaskElts(MaskSize / SrcMask1.size(), SrcMask1, Mask1);
-    for (size_t i = 0; i != MaskSize; ++i) {
+    for (int i = 0; i != (int)MaskSize; ++i) {
       if (Mask0[i] == SM_SentinelUndef && Mask1[i] == SM_SentinelUndef)
         Mask.push_back(SM_SentinelUndef);
       else if (Mask0[i] == SM_SentinelZero && Mask1[i] == SM_SentinelZero)
         Mask.push_back(SM_SentinelZero);
       else if (Mask1[i] == SM_SentinelZero)
-        Mask.push_back(Mask0[i]);
+        Mask.push_back(i);
       else if (Mask0[i] == SM_SentinelZero)
-        Mask.push_back(Mask1[i] + (int)(MaskSize * SrcInputs0.size()));
+        Mask.push_back(i + MaskSize);
       else
         return false;
     }
-    Ops.append(SrcInputs0.begin(), SrcInputs0.end());
-    Ops.append(SrcInputs1.begin(), SrcInputs1.end());
+    Ops.push_back(N0);
+    Ops.push_back(N1);
     return true;
   }
   case ISD::INSERT_SUBVECTOR: {
@@ -34219,6 +34209,7 @@ static bool matchBinaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
                                SelectionDAG &DAG, const X86Subtarget &Subtarget,
                                unsigned &Shuffle, MVT &SrcVT, MVT &DstVT,
                                bool IsUnary) {
+  unsigned NumMaskElts = Mask.size();
   unsigned EltSizeInBits = MaskVT.getScalarSizeInBits();
 
   if (MaskVT.is128BitVector()) {
@@ -34272,6 +34263,46 @@ static bool matchBinaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
       SrcVT = DstVT = MaskVT;
       if (MaskVT.is256BitVector() && !Subtarget.hasAVX2())
         SrcVT = DstVT = (32 == EltSizeInBits ? MVT::v8f32 : MVT::v4f64);
+      return true;
+    }
+  }
+
+  // Attempt to match against a OR if we're performing a blend shuffle and the
+  // non-blended source element is zero in each case.
+  if ((EltSizeInBits % V1.getScalarValueSizeInBits()) == 0 &&
+      (EltSizeInBits % V2.getScalarValueSizeInBits()) == 0) {
+    bool IsBlend = true;
+    unsigned NumV1Elts = V1.getValueType().getVectorNumElements();
+    unsigned NumV2Elts = V2.getValueType().getVectorNumElements();
+    unsigned Scale1 = NumV1Elts / NumMaskElts;
+    unsigned Scale2 = NumV2Elts / NumMaskElts;
+    APInt DemandedZeroV1 = APInt::getNullValue(NumV1Elts);
+    APInt DemandedZeroV2 = APInt::getNullValue(NumV2Elts);
+    for (unsigned i = 0; i != NumMaskElts; ++i) {
+      int M = Mask[i];
+      if (M == SM_SentinelUndef)
+        continue;
+      if (M == SM_SentinelZero) {
+        DemandedZeroV1.setBits(i * Scale1, (i + 1) * Scale1);
+        DemandedZeroV2.setBits(i * Scale2, (i + 1) * Scale2);
+        continue;
+      }
+      if (M == i) {
+        DemandedZeroV2.setBits(i * Scale2, (i + 1) * Scale2);
+        continue;
+      }
+      if (M == (i + NumMaskElts)) {
+        DemandedZeroV1.setBits(i * Scale1, (i + 1) * Scale1);
+        continue;
+      }
+      IsBlend = false;
+      break;
+    }
+    if (IsBlend &&
+        DAG.computeKnownBits(V1, DemandedZeroV1).isZero() &&
+        DAG.computeKnownBits(V2, DemandedZeroV2).isZero()) {
+      Shuffle = ISD::OR;
+      SrcVT = DstVT = EVT(MaskVT).changeTypeToInteger().getSimpleVT();
       return true;
     }
   }

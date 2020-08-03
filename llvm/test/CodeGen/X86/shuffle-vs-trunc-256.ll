@@ -1314,10 +1314,10 @@ define void @trunc_v4i64_to_v4i8(<32 x i8>* %L, <4 x i8>* %S) nounwind {
 define <16 x i8> @negative(<32 x i8> %v, <32 x i8> %w) nounwind {
 ; AVX1-LABEL: negative:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm2 = xmm0[u,2,4,6,8,10,12,14],zero,zero,zero,zero,zero,zero,zero,zero
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u],zero,zero,zero,zero,zero,zero,zero,xmm0[0,2,4,6,8,10,12,14]
-; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[u,u,u,u,u,u,u,u,0,2,4,6,8,10,12,14]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; AVX1-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vzeroupper
