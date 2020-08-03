@@ -74,9 +74,14 @@ bool formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
 /// changes to CFG, preserved.
 ///
 /// Returns true if any modifications are made.
-bool formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
-                              const DominatorTree &DT, const LoopInfo &LI,
-                              ScalarEvolution *SE);
+///
+/// This function may introduce unused PHI nodes. If \p PHIsToRemove is not
+/// nullptr, those are added to it (before removing, the caller has to check if
+/// they still do not have any uses). Otherwise the PHIs are directly removed.
+bool formLCSSAForInstructions(
+    SmallVectorImpl<Instruction *> &Worklist, const DominatorTree &DT,
+    const LoopInfo &LI, ScalarEvolution *SE, IRBuilderBase &Builder,
+    SmallVectorImpl<PHINode *> *PHIsToRemove = nullptr);
 
 /// Put loop into LCSSA form.
 ///

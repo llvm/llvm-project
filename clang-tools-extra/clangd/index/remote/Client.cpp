@@ -16,6 +16,7 @@
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 
 #include <chrono>
 
@@ -53,7 +54,9 @@ class IndexClient : public clangd::SymbolIndex {
       }
       auto Response = ProtobufMarshaller->fromProtobuf(Reply.stream_result());
       if (!Response) {
-        elog("Received invalid {0}", ReplyT::descriptor()->name());
+        elog("Received invalid {0}: {1}. Reason: {2}",
+             ReplyT::descriptor()->name(), Reply.stream_result().DebugString(),
+             Response.takeError());
         ++FailedToParse;
         continue;
       }

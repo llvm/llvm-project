@@ -1547,7 +1547,7 @@ bool AttrsVisitor::IsConflictingAttr(Attr attrName) {
   return HaveAttrConflict(attrName, Attr::INTENT_IN, Attr::INTENT_INOUT) ||
       HaveAttrConflict(attrName, Attr::INTENT_IN, Attr::INTENT_OUT) ||
       HaveAttrConflict(attrName, Attr::INTENT_INOUT, Attr::INTENT_OUT) ||
-      HaveAttrConflict(attrName, Attr::PASS, Attr::NOPASS) ||
+      HaveAttrConflict(attrName, Attr::PASS, Attr::NOPASS) || // C781
       HaveAttrConflict(attrName, Attr::PURE, Attr::IMPURE) ||
       HaveAttrConflict(attrName, Attr::PUBLIC, Attr::PRIVATE) ||
       HaveAttrConflict(attrName, Attr::RECURSIVE, Attr::NON_RECURSIVE);
@@ -5680,22 +5680,25 @@ void DeclarationVisitor::NonPointerInitialization(const parser::Name &name,
     const parser::ConstantExpr &expr, bool inComponentDecl) {
   if (name.symbol) {
     Symbol &ultimate{name.symbol->GetUltimate()};
-    if (IsPointer(ultimate)) {
-      Say(name, "'%s' is a pointer but is not initialized like one"_err_en_US);
-    } else if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
-      CHECK(!details->init());
-      Walk(expr);
-      // TODO: check C762 - all bounds and type parameters of component
-      // are colons or constant expressions if component is initialized
-      if (inComponentDecl) {
-        // Can't convert to type of component, which might not yet
-        // be known; that's done later during instantiation.
-        if (MaybeExpr value{EvaluateExpr(expr)}) {
-          details->set_init(std::move(*value));
+    if (!context().HasError(ultimate)) {
+      if (IsPointer(ultimate)) {
+        Say(name,
+            "'%s' is a pointer but is not initialized like one"_err_en_US);
+      } else if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
+        CHECK(!details->init());
+        Walk(expr);
+        // TODO: check C762 - all bounds and type parameters of component
+        // are colons or constant expressions if component is initialized
+        if (inComponentDecl) {
+          // Can't convert to type of component, which might not yet
+          // be known; that's done later during instantiation.
+          if (MaybeExpr value{EvaluateExpr(expr)}) {
+            details->set_init(std::move(*value));
+          }
+        } else if (MaybeExpr folded{EvaluateConvertedExpr(
+                       ultimate, expr, expr.thing.value().source)}) {
+          details->set_init(std::move(*folded));
         }
-      } else if (MaybeExpr folded{EvaluateConvertedExpr(
-                     ultimate, expr, expr.thing.value().source)}) {
-        details->set_init(std::move(*folded));
       }
     }
   }

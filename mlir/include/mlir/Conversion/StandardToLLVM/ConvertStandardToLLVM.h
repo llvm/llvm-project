@@ -440,6 +440,20 @@ public:
                    ValueRange indices, ConversionPatternRewriter &rewriter,
                    llvm::Module &module) const;
 
+  /// Returns the type of a pointer to an element of the memref.
+  Type getElementPtrType(MemRefType type) const;
+
+  /// Determines sizes to be used in the memref descriptor.
+  void getMemRefDescriptorSizes(Location loc, MemRefType memRefType,
+                                ArrayRef<Value> dynSizes,
+                                ConversionPatternRewriter &rewriter,
+                                SmallVectorImpl<Value> &sizes) const;
+
+  /// Computes total size in bytes of to store the given shape.
+  Value getCumulativeSizeInBytes(Location loc, Type elementType,
+                                 ArrayRef<Value> shape,
+                                 ConversionPatternRewriter &rewriter) const;
+
 protected:
   /// Reference to the type converter, with potential extensions.
   LLVMTypeConverter &typeConverter;

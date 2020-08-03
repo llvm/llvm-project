@@ -101,7 +101,8 @@ bool blockEndsInUnreachable(const BasicBlock &BB) {
   return !(isa<ReturnInst>(I) || isa<IndirectBrInst>(I));
 }
 
-bool unlikelyExecuted(BasicBlock &BB) {
+bool unlikelyExecuted(BasicBlock &BB, ProfileSummaryInfo *PSI,
+                      BlockFrequencyInfo *BFI) {
   // Exception handling blocks are unlikely executed.
   if (BB.isEHPad() || isa<ResumeInst>(BB.getTerminator()))
     return true;
@@ -114,12 +115,19 @@ bool unlikelyExecuted(BasicBlock &BB) {
         return true;
 
   // The block is cold if it has an unreachable terminator, unless it's
-  // preceded by a call to a (possibly warm) noreturn call (e.g. longjmp).
+  // preceded by a call to a (possibly warm) noreturn call (e.g. longjmp);
+  // in the case of a longjmp, if the block is cold according to
+  // profile information, we mark it as unlikely to be executed as well.
   if (blockEndsInUnreachable(BB)) {
     if (auto *CI =
             dyn_cast_or_null<CallInst>(BB.getTerminator()->getPrevNode()))
-      if (CI->hasFnAttr(Attribute::NoReturn))
-        return false;
+      if (CI->hasFnAttr(Attribute::NoReturn)) {
+        if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI))
+          return (II->getIntrinsicID() != Intrinsic::eh_sjlj_longjmp) ||
+                 (BFI && PSI->isColdBlock(&BB, BFI));
+        return !CI->getCalledFunction()->getName().contains("longjmp") ||
+               (BFI && PSI->isColdBlock(&BB, BFI));
+      }
     return true;
   }
 
@@ -575,7 +583,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
       continue;
 
     bool Cold = (BFI && PSI->isColdBlock(BB, BFI)) ||
-                (EnableStaticAnalyis && unlikelyExecuted(*BB));
+                (EnableStaticAnalyis && unlikelyExecuted(*BB, PSI, BFI));
     if (!Cold)
       continue;
 

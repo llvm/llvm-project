@@ -762,8 +762,8 @@ Vectorizer::getVectorizablePrefix(ArrayRef<Instruction *> Chain) {
   return Chain.slice(0, ChainIdx);
 }
 
-static ChainID getChainID(const Value *Ptr, const DataLayout &DL) {
-  const Value *ObjPtr = GetUnderlyingObject(Ptr, DL);
+static ChainID getChainID(const Value *Ptr) {
+  const Value *ObjPtr = getUnderlyingObject(Ptr);
   if (const auto *Sel = dyn_cast<SelectInst>(ObjPtr)) {
     // The select's themselves are distinct instructions even if they share the
     // same condition and evaluate to consecutive pointers for true and false
@@ -830,7 +830,7 @@ Vectorizer::collectInstructions(BasicBlock *BB) {
         continue;
 
       // Save the load locations.
-      const ChainID ID = getChainID(Ptr, DL);
+      const ChainID ID = getChainID(Ptr);
       LoadRefs[ID].push_back(LI);
     } else if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
       if (!SI->isSimple())
@@ -876,7 +876,7 @@ Vectorizer::collectInstructions(BasicBlock *BB) {
         continue;
 
       // Save store location.
-      const ChainID ID = getChainID(Ptr, DL);
+      const ChainID ID = getChainID(Ptr);
       StoreRefs[ID].push_back(SI);
     }
   }

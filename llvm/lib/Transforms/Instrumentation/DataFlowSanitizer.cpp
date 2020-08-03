@@ -1246,7 +1246,7 @@ Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
 
   const llvm::Align ShadowAlign(Align * DFS.ShadowWidthBytes);
   SmallVector<const Value *, 2> Objs;
-  GetUnderlyingObjects(Addr, Objs, Pos->getModule()->getDataLayout());
+  getUnderlyingObjects(Addr, Objs);
   bool AllConstants = true;
   for (const Value *Obj : Objs) {
     if (isa<Function>(Obj) || isa<BlockAddress>(Obj))
@@ -1859,6 +1859,7 @@ void DFSanVisitor::visitPHINode(PHINode &PN) {
   DFSF.setShadow(&PN, ShadowPN);
 }
 
+namespace {
 class DataFlowSanitizerLegacyPass : public ModulePass {
 private:
   std::vector<std::string> ABIListFiles;
@@ -1874,6 +1875,7 @@ public:
     return DataFlowSanitizer(ABIListFiles).runImpl(M);
   }
 };
+} // namespace
 
 char DataFlowSanitizerLegacyPass::ID;
 

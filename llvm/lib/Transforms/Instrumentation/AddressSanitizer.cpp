@@ -911,10 +911,6 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
   AllocaInst *DynamicAllocaLayout = nullptr;
   IntrinsicInst *LocalEscapeCall = nullptr;
 
-  // Maps Value to an AllocaInst from which the Value is originated.
-  using AllocaForValueMapTy = DenseMap<Value *, AllocaInst *>;
-  AllocaForValueMapTy AllocaForValue;
-
   bool HasInlineAsm = false;
   bool HasReturnsTwiceCall = false;
 
@@ -1065,8 +1061,7 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
         !ConstantInt::isValueValidForType(IntptrTy, SizeValue))
       return;
     // Find alloca instruction that corresponds to llvm.lifetime argument.
-    AllocaInst *AI =
-        llvm::findAllocaForValue(II.getArgOperand(1), AllocaForValue);
+    AllocaInst *AI = findAllocaForValue(II.getArgOperand(1));
     if (!AI) {
       HasUntracedLifetimeIntrinsic = true;
       return;
@@ -1561,7 +1556,7 @@ void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
   if (ClOpt && ClOptGlobals) {
     // If initialization order checking is disabled, a simple access to a
     // dynamically initialized global is always valid.
-    GlobalVariable *G = dyn_cast<GlobalVariable>(GetUnderlyingObject(Addr, DL));
+    GlobalVariable *G = dyn_cast<GlobalVariable>(getUnderlyingObject(Addr));
     if (G && (!ClInitializers || GlobalIsLinkerInitialized(G)) &&
         isSafeAccess(ObjSizeVis, Addr, O.TypeSize)) {
       NumOptimizedAccessesToGlobalVar++;
@@ -1571,7 +1566,7 @@ void AddressSanitizer::instrumentMop(ObjectSizeOffsetVisitor &ObjSizeVis,
 
   if (ClOpt && ClOptStack) {
     // A direct inbounds access to a stack variable is always valid.
-    if (isa<AllocaInst>(GetUnderlyingObject(Addr, DL)) &&
+    if (isa<AllocaInst>(getUnderlyingObject(Addr)) &&
         isSafeAccess(ObjSizeVis, Addr, O.TypeSize)) {
       NumOptimizedAccessesToStackVar++;
       return;

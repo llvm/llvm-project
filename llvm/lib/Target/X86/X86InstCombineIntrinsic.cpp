@@ -377,7 +377,7 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
   SmallVector<int, 8> ShiftAmts;
   for (int I = 0; I < NumElts; ++I) {
     auto *CElt = CShift->getAggregateElement(I);
-    if (CElt && isa<UndefValue>(CElt)) {
+    if (isa_and_nonnull<UndefValue>(CElt)) {
       ShiftAmts.push_back(-1);
       continue;
     }
@@ -1785,10 +1785,6 @@ Optional<Value *> X86TTIImpl::simplifyDemandedUseBitsIntrinsic(
     KnownBitsComputed = true;
     break;
   }
-  case Intrinsic::x86_sse42_crc32_64_64:
-    Known.Zero.setBitsFrom(32);
-    KnownBitsComputed = true;
-    break;
   }
   return None;
 }

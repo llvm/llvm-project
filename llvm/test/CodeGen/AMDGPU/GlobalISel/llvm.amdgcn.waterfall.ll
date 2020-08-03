@@ -279,10 +279,10 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img_single_read(<8 x i3
 ; VI-NEXT:    v_mov_b32_e32 v5, s0
 ; VI-NEXT:    v_add_u32_e32 v3, vcc, v5, v3
 ; VI-NEXT:    v_addc_u32_e32 v4, vcc, v6, v4, vcc
+; VI-NEXT:    v_add_u32_e32 v10, vcc, 16, v3
+; VI-NEXT:    v_addc_u32_e32 v11, vcc, 0, v4, vcc
 ; VI-NEXT:    flat_load_dwordx4 v[6:9], v[3:4]
-; VI-NEXT:    v_add_u32_e32 v3, vcc, 16, v3
-; VI-NEXT:    v_addc_u32_e32 v4, vcc, 0, v4, vcc
-; VI-NEXT:    flat_load_dwordx4 v[10:13], v[3:4]
+; VI-NEXT:    flat_load_dwordx4 v[10:13], v[10:11]
 ; VI-NEXT:    s_mov_b32 s8, s2
 ; VI-NEXT:    s_mov_b32 s9, s3
 ; VI-NEXT:    s_mov_b32 s10, s4
@@ -979,11 +979,11 @@ define amdgpu_ps void @test_waterfall_non_uniform_img_single_store(<8 x i32> add
 ; VI-NEXT:    v_mov_b32_e32 v10, s1
 ; VI-NEXT:    v_lshlrev_b64 v[7:8], 5, v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v9, s0
-; VI-NEXT:    v_add_u32_e32 v11, vcc, v9, v7
-; VI-NEXT:    v_addc_u32_e32 v12, vcc, v10, v8, vcc
-; VI-NEXT:    flat_load_dwordx4 v[7:10], v[11:12]
-; VI-NEXT:    v_add_u32_e32 v11, vcc, 16, v11
-; VI-NEXT:    v_addc_u32_e32 v12, vcc, 0, v12, vcc
+; VI-NEXT:    v_add_u32_e32 v7, vcc, v9, v7
+; VI-NEXT:    v_addc_u32_e32 v8, vcc, v10, v8, vcc
+; VI-NEXT:    v_add_u32_e32 v11, vcc, 16, v7
+; VI-NEXT:    v_addc_u32_e32 v12, vcc, 0, v8, vcc
+; VI-NEXT:    flat_load_dwordx4 v[7:10], v[7:8]
 ; VI-NEXT:    flat_load_dwordx4 v[11:14], v[11:12]
 ; VI-NEXT:    s_mov_b64 s[0:1], exec
 ; VI-NEXT:  BB6_1: ; =>This Inner Loop Header: Depth=1

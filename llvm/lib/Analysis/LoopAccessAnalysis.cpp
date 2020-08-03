@@ -393,7 +393,10 @@ void RuntimePointerChecking::groupChecks(
     // equivalence class, the iteration order is deterministic.
     for (auto MI = DepCands.member_begin(LeaderI), ME = DepCands.member_end();
          MI != ME; ++MI) {
-      unsigned Pointer = PositionMap[MI->getPointer()];
+      auto PointerI = PositionMap.find(MI->getPointer());
+      assert(PointerI != PositionMap.end() &&
+             "pointer in equivalence class not found in PositionMap");
+      unsigned Pointer = PointerI->second;
       bool Merged = false;
       // Mark this pointer as seen.
       Seen.insert(Pointer);
@@ -505,10 +508,10 @@ public:
   typedef PointerIntPair<Value *, 1, bool> MemAccessInfo;
   typedef SmallVector<MemAccessInfo, 8> MemAccessInfoList;
 
-  AccessAnalysis(const DataLayout &Dl, Loop *TheLoop, AAResults *AA,
-                 LoopInfo *LI, MemoryDepChecker::DepCandidates &DA,
+  AccessAnalysis(Loop *TheLoop, AAResults *AA, LoopInfo *LI,
+                 MemoryDepChecker::DepCandidates &DA,
                  PredicatedScalarEvolution &PSE)
-      : DL(Dl), TheLoop(TheLoop), AST(*AA), LI(LI), DepCands(DA),
+      : TheLoop(TheLoop), AST(*AA), LI(LI), DepCands(DA),
         IsRTCheckAnalysisNeeded(false), PSE(PSE) {}
 
   /// Register a load  and whether it is only read from.
@@ -581,8 +584,6 @@ private:
 
   /// Set of all accesses.
   PtrAccessSet Accesses;
-
-  const DataLayout &DL;
 
   /// The loop being checked.
   const Loop *TheLoop;
@@ -726,52 +727,55 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
 
     SmallVector<MemAccessInfo, 4> Retries;
 
+    // First, count how many write and read accesses are in the alias set. Also
+    // collect MemAccessInfos for later.
+    SmallVector<MemAccessInfo, 4> AccessInfos;
     for (auto A : AS) {
       Value *Ptr = A.getValue();
       bool IsWrite = Accesses.count(MemAccessInfo(Ptr, true));
-      MemAccessInfo Access(Ptr, IsWrite);
 
       if (IsWrite)
         ++NumWritePtrChecks;
       else
         ++NumReadPtrChecks;
+      AccessInfos.emplace_back(Ptr, IsWrite);
+    }
 
+    // We do not need runtime checks for this alias set, if there are no writes
+    // or a single write and no reads.
+    if (NumWritePtrChecks == 0 ||
+        (NumWritePtrChecks == 1 && NumReadPtrChecks == 0)) {
+      assert((AS.size() <= 1 ||
+              all_of(AS,
+                     [this](auto AC) {
+                       MemAccessInfo AccessWrite(AC.getValue(), true);
+                       return DepCands.findValue(AccessWrite) == DepCands.end();
+                     })) &&
+             "Can only skip updating CanDoRT below, if all entries in AS "
+             "are reads or there is at most 1 entry");
+      continue;
+    }
+
+    for (auto &Access : AccessInfos) {
       if (!createCheckForAccess(RtCheck, Access, StridesMap, DepSetId, TheLoop,
                                 RunningDepId, ASId, ShouldCheckWrap, false)) {
-        LLVM_DEBUG(dbgs() << "LAA: Can't find bounds for ptr:" << *Ptr << '\n');
+        LLVM_DEBUG(dbgs() << "LAA: Can't find bounds for ptr:"
+                          << *Access.getPointer() << '\n');
         Retries.push_back(Access);
         CanDoAliasSetRT = false;
       }
     }
 
-    // If we have at least two writes or one write and a read then we need to
-    // check them.  But there is no need to checks if there is only one
-    // dependence set for this alias set.
-    //
     // Note that this function computes CanDoRT and MayNeedRTCheck
     // independently. For example CanDoRT=false, MayNeedRTCheck=false means that
     // we have a pointer for which we couldn't find the bounds but we don't
     // actually need to emit any checks so it does not matter.
-    bool NeedsAliasSetRTCheck = false;
-    if (!(IsDepCheckNeeded && CanDoAliasSetRT && RunningDepId == 2)) {
-      NeedsAliasSetRTCheck = (NumWritePtrChecks >= 2 ||
-                             (NumReadPtrChecks >= 1 && NumWritePtrChecks >= 1));
-      // For alias sets without at least 2 writes or 1 write and 1 read, there
-      // is no need to generate RT checks and CanDoAliasSetRT for this alias set
-      // does not impact whether runtime checks can be generated.
-      if (!NeedsAliasSetRTCheck) {
-        assert((AS.size() <= 1 ||
-                all_of(AS,
-                       [this](auto AC) {
-                         MemAccessInfo AccessWrite(AC.getValue(), true);
-                         return DepCands.findValue(AccessWrite) ==
-                                DepCands.end();
-                       })) &&
-               "Can only skip updating CanDoRT below, if all entries in AS "
-               "are reads or there is at most 1 entry");
-        continue;
-      }
-    }
+    //
+    // We need runtime checks for this alias set, if there are at least 2
+    // dependence sets (in which case RunningDepId > 2) or if we need to re-try
+    // any bound checks (because in that case the number of dependence sets is
+    // incomplete).
+    bool NeedsAliasSetRTCheck = RunningDepId > 2 || !Retries.empty();
 
     // We need to perform run-time alias checks, but some pointers had bounds
     // that couldn't be checked.
@@ -932,7 +936,7 @@ void AccessAnalysis::processMemAccesses() {
           typedef SmallVector<const Value *, 16> ValueVector;
           ValueVector TempObjects;
 
-          GetUnderlyingObjects(Ptr, TempObjects, DL, LI);
+          getUnderlyingObjects(Ptr, TempObjects, LI);
           LLVM_DEBUG(dbgs()
                      << "Underlying objects for pointer " << *Ptr << "\n");
           for (const Value *UnderlyingObj : TempObjects) {
@@ -1136,7 +1140,7 @@ bool llvm::sortPtrAccesses(ArrayRef<Value *> VL, const DataLayout &DL,
   // first pointer in the array.
   Value *Ptr0 = VL[0];
   const SCEV *Scev0 = SE.getSCEV(Ptr0);
-  Value *Obj0 = GetUnderlyingObject(Ptr0, DL);
+  Value *Obj0 = getUnderlyingObject(Ptr0);
 
   llvm::SmallSet<int64_t, 4> Offsets;
   for (auto *Ptr : VL) {
@@ -1147,7 +1151,7 @@ bool llvm::sortPtrAccesses(ArrayRef<Value *> VL, const DataLayout &DL,
       return false;
     // If a pointer refers to a different underlying object, bail - the
     // pointers are by definition incomparable.
-    Value *CurrObj = GetUnderlyingObject(Ptr, DL);
+    Value *CurrObj = getUnderlyingObject(Ptr);
     if (CurrObj != Obj0)
       return false;
 
@@ -1941,10 +1945,9 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   }
 
   MemoryDepChecker::DepCandidates DependentAccesses;
-  AccessAnalysis Accesses(TheLoop->getHeader()->getModule()->getDataLayout(),
-                          TheLoop, AA, LI, DependentAccesses, *PSE);
+  AccessAnalysis Accesses(TheLoop, AA, LI, DependentAccesses, *PSE);
 
-  // Holds the analyzed pointers. We don't want to call GetUnderlyingObjects
+  // Holds the analyzed pointers. We don't want to call getUnderlyingObjects
   // multiple times on the same object. If the ptr is accessed twice, once
   // for read and once for write, it will only appear once (on the write
   // list). This is okay, since we are going to check for conflicts between

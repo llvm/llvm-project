@@ -45,11 +45,25 @@ else()
       # system path.
       if (GRPC_HOMEBREW_RETURN_CODE EQUAL "0")
         include_directories(${GRPC_HOMEBREW_PATH}/include)
-        link_directories(${GRPC_HOMEBREW_PATH}/lib)
+        find_library(GRPC_LIBRARY
+                     grpc++
+                     PATHS ${GRPC_HOMEBREW_PATH}/lib
+                     NO_DEFAULT_PATH
+                     REQUIRED)
+        add_library(grpc++ UNKNOWN IMPORTED GLOBAL)
+        set_target_properties(grpc++ PROPERTIES
+                              IMPORTED_LOCATION ${GRPC_LIBRARY})
       endif()
       if (PROTOBUF_HOMEBREW_RETURN_CODE EQUAL "0")
         include_directories(${PROTOBUF_HOMEBREW_PATH}/include)
-        link_directories(${PROTOBUF_HOMEBREW_PATH}/lib)
+        find_library(PROTOBUF_LIBRARY
+                     protobuf
+                     PATHS ${PROTOBUF_HOMEBREW_PATH}/lib
+                     NO_DEFAULT_PATH
+                     REQUIRED)
+        add_library(protobuf UNKNOWN IMPORTED GLOBAL)
+        set_target_properties(protobuf PROPERTIES
+                              IMPORTED_LOCATION ${PROTOBUF_LIBRARY})
       endif()
     endif()
   endif()

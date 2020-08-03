@@ -19,6 +19,7 @@ namespace lld {
 namespace macho {
 
 class InputSection;
+class MachHeaderSection;
 class DylibFile;
 class ArchiveFile;
 
@@ -37,6 +38,7 @@ public:
     UndefinedKind,
     DylibKind,
     LazyKind,
+    DSOHandleKind,
   };
 
   virtual ~Symbol() {}
@@ -45,9 +47,11 @@ public:
 
   StringRef getName() const { return {name.data, name.size}; }
 
-  uint64_t getVA() const;
+  virtual uint64_t getVA() const { return 0; }
 
-  uint64_t getFileOffset() const;
+  virtual uint64_t getFileOffset() const {
+    llvm_unreachable("attempt to get an offset from a non-defined symbol");
+  }
 
   virtual bool isWeakDef() const { llvm_unreachable("cannot be weak"); }
 
@@ -69,6 +73,12 @@ public:
   bool isWeakDef() const override { return weakDef; }
 
   static bool classof(const Symbol *s) { return s->kind() == DefinedKind; }
+
+  uint64_t getVA() const override { return isec->getVA() + value; }
+
+  uint64_t getFileOffset() const override {
+    return isec->getFileOffset() + value;
+  }
 
   InputSection *isec;
   uint32_t value;
@@ -115,17 +125,32 @@ private:
   const llvm::object::Archive::Symbol sym;
 };
 
-inline uint64_t Symbol::getVA() const {
-  if (auto *d = dyn_cast<Defined>(this))
-    return d->isec->getVA() + d->value;
-  return 0;
-}
+// The Itanium C++ ABI requires dylibs to pass a pointer to __cxa_atexit which
+// does e.g. cleanup of static global variables. The ABI document says that the
+// pointer can point to any address in one of the dylib's segments, but in
+// practice ld64 seems to set it to point to the header, so that's what's
+// implemented here.
+//
+// The ARM C++ ABI uses __dso_handle similarly, but I (int3) have not yet
+// tested this on an ARM platform.
+//
+// DSOHandle effectively functions like a Defined symbol, but it doesn't belong
+// to an InputSection.
+class DSOHandle : public Symbol {
+public:
+  DSOHandle(const MachHeaderSection *header)
+      : Symbol(DSOHandleKind, name), header(header) {}
 
-inline uint64_t Symbol::getFileOffset() const {
-  if (auto *d = dyn_cast<Defined>(this))
-    return d->isec->getFileOffset() + d->value;
-  llvm_unreachable("attempt to get an offset from an undefined symbol");
-}
+  const MachHeaderSection *header;
+
+  uint64_t getVA() const override;
+
+  uint64_t getFileOffset() const override;
+
+  static constexpr StringRef name = "___dso_handle";
+
+  static bool classof(const Symbol *s) { return s->kind() == DefinedKind; }
+};
 
 union SymbolUnion {
   alignas(Defined) char a[sizeof(Defined)];

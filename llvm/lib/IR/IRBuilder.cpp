@@ -996,17 +996,22 @@ Value *IRBuilderBase::CreateStripInvariantGroup(Value *Ptr) {
 
 Value *IRBuilderBase::CreateVectorSplat(unsigned NumElts, Value *V,
                                         const Twine &Name) {
-  assert(NumElts > 0 && "Cannot splat to an empty vector!");
+  ElementCount EC(NumElts, false);
+  return CreateVectorSplat(EC, V, Name);
+}
+
+Value *IRBuilderBase::CreateVectorSplat(ElementCount EC, Value *V,
+                                        const Twine &Name) {
+  assert(EC.Min > 0 && "Cannot splat to an empty vector!");
 
   // First insert it into an undef vector so we can shuffle it.
   Type *I32Ty = getInt32Ty();
-  Value *Undef = UndefValue::get(FixedVectorType::get(V->getType(), NumElts));
+  Value *Undef = UndefValue::get(VectorType::get(V->getType(), EC));
   V = CreateInsertElement(Undef, V, ConstantInt::get(I32Ty, 0),
                           Name + ".splatinsert");
 
   // Shuffle the value across the desired number of elements.
-  Value *Zeros =
-      ConstantAggregateZero::get(FixedVectorType::get(I32Ty, NumElts));
+  Value *Zeros = ConstantAggregateZero::get(VectorType::get(I32Ty, EC));
   return CreateShuffleVector(V, Undef, Zeros, Name + ".splat");
 }
 

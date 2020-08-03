@@ -1147,31 +1147,30 @@ define void @fir(%struct.arm_fir_instance_f32* nocapture readonly %S, half* noca
 ; CHECK-NEXT:  .LBB16_6: @ %for.body
 ; CHECK-NEXT:    @ Parent Loop BB16_4 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    ldrh r0, [r6]
+; CHECK-NEXT:    ldrh r0, [r6], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r5]
 ; CHECK-NEXT:    adds r1, r5, #2
 ; CHECK-NEXT:    vfma.f16 q0, q1, r0
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    ldrh r0, [r6, #2]
+; CHECK-NEXT:    ldrh r0, [r6, #-14]
 ; CHECK-NEXT:    adds r1, r5, #6
 ; CHECK-NEXT:    vfma.f16 q0, q1, r0
-; CHECK-NEXT:    ldrh r0, [r6, #4]
+; CHECK-NEXT:    ldrh r0, [r6, #-12]
 ; CHECK-NEXT:    vldrw.u32 q1, [r5, #4]
 ; CHECK-NEXT:    vfma.f16 q0, q1, r0
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    ldrh r0, [r6, #6]
+; CHECK-NEXT:    ldrh r0, [r6, #-10]
 ; CHECK-NEXT:    add.w r1, r5, #10
 ; CHECK-NEXT:    vfma.f16 q0, q1, r0
-; CHECK-NEXT:    ldrh r0, [r6, #8]
+; CHECK-NEXT:    ldrh r0, [r6, #-8]
 ; CHECK-NEXT:    vldrw.u32 q1, [r5, #8]
 ; CHECK-NEXT:    vfma.f16 q0, q1, r0
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
-; CHECK-NEXT:    ldrh r0, [r6, #10]
-; CHECK-NEXT:    ldrh r1, [r6, #14]
+; CHECK-NEXT:    ldrh r0, [r6, #-6]
+; CHECK-NEXT:    ldrh r1, [r6, #-2]
 ; CHECK-NEXT:    vfma.f16 q0, q1, r0
-; CHECK-NEXT:    ldrh r0, [r6, #12]
+; CHECK-NEXT:    ldrh r0, [r6, #-4]
 ; CHECK-NEXT:    vldrw.u32 q1, [r5, #12]
-; CHECK-NEXT:    adds r6, #16
 ; CHECK-NEXT:    vfma.f16 q0, q1, r0
 ; CHECK-NEXT:    add.w r0, r5, #14
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]

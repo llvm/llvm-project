@@ -75,6 +75,36 @@ genOMP(Fortran::lower::AbstractConverter &absConv,
       standaloneConstruct.u);
 }
 
+static void
+genOMP(Fortran::lower::AbstractConverter &absConv,
+       Fortran::lower::pft::Evaluation &eval,
+       const Fortran::parser::OpenMPBlockConstruct &blockConstruct) {
+  const auto &blockDirective =
+      std::get<Fortran::parser::OmpBeginBlockDirective>(blockConstruct.t);
+  const auto &parallelDirective =
+      std::get<Fortran::parser::OmpBlockDirective>(blockDirective.t);
+  if (parallelDirective.v == llvm::omp::OMPD_parallel) {
+    auto &firOpBuilder = absConv.getFirOpBuilder();
+    auto currentLocation = absConv.getCurrentLocation();
+    auto insertPt = firOpBuilder.saveInsertionPoint();
+    llvm::ArrayRef<mlir::Type> argTy;
+    mlir::ValueRange range;
+    llvm::SmallVector<int32_t, 6> operandSegmentSizes(6 /*Size=*/,
+                                                      0 /*Value=*/);
+    // create and insert the operation.
+    auto parallelOp = firOpBuilder.create<mlir::omp::ParallelOp>(
+        currentLocation, argTy, range);
+    parallelOp.setAttr(mlir::omp::ParallelOp::getOperandSegmentSizeAttr(),
+                       firOpBuilder.getI32VectorAttr(operandSegmentSizes));
+    parallelOp.getRegion().push_back(new Block{});
+    auto &block = parallelOp.getRegion().back();
+    firOpBuilder.setInsertionPointToStart(&block);
+    // ensure the block is well-formed.
+    firOpBuilder.create<mlir::omp::TerminatorOp>(currentLocation);
+    firOpBuilder.restoreInsertionPoint(insertPt);
+  }
+}
+
 void Fortran::lower::genOpenMPConstruct(
     Fortran::lower::AbstractConverter &absConv,
     Fortran::lower::pft::Evaluation &eval,
@@ -92,7 +122,7 @@ void Fortran::lower::genOpenMPConstruct(
             TODO();
           },
           [&](const Fortran::parser::OpenMPBlockConstruct &blockConstruct) {
-            TODO();
+            genOMP(absConv, eval, blockConstruct);
           },
           [&](const Fortran::parser::OpenMPAtomicConstruct &atomicConstruct) {
             TODO();

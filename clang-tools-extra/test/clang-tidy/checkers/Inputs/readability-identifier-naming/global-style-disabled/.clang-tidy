@@ -1,0 +1,5 @@
+Checks: -readability-identifier-naming
+CheckOptions:
+  - key:             readability-identifier-naming.GlobalFunctionCase
+    value:           lower_case
+

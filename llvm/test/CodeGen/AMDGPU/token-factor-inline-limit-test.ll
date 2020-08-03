@@ -9,14 +9,14 @@
 ; GCN-TFILD: v_mov_b32_e32 [[REG10:v[0-9]+]], 10
 ; GCN-TFILD: v_mov_b32_e32 [[REG11:v[0-9]+]], 11
 ; GCN-TFILD: v_mov_b32_e32 [[REG12:v[0-9]+]], 12
+; GCN-TFILD: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
+; GCN-TFILD: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
+; GCN-TFILD: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
 ; GCN-TFILD: buffer_store_dword [[REG8]], {{.*$}}
 ; GCN-TFILD: buffer_store_dword [[REG9]], {{.*}} offset:4
 ; GCN-TFILD: buffer_store_dword [[REG10]], {{.*}} offset:8
 ; GCN-TFILD: buffer_store_dword [[REG11]], {{.*}} offset:12
 ; GCN-TFILD: buffer_store_dword [[REG12]], {{.*}} offset:16
-; GCN-TFILD: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
-; GCN-TFILD: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
-; GCN-TFILD: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
 ; GCN-TFILD: buffer_store_dword [[REG13]], {{.*}} offset:20
 ; GCN-TFILD: buffer_store_dword [[REG14]], {{.*}} offset:24
 ; GCN-TFILD: buffer_store_dword [[REG15]], {{.*}} offset:28
@@ -24,14 +24,14 @@
 ; GCN-TFIL7: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
 ; GCN-TFIL7: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
 ; GCN-TFIL7: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
-; GCN-TFIL7: buffer_store_dword [[REG15]], {{.*}} offset:28
-; GCN-TFIL7: buffer_store_dword [[REG14]], {{.*}} offset:24
-; GCN-TFIL7: buffer_store_dword [[REG13]], {{.*}} offset:20
 ; GCN-TFIL7: v_mov_b32_e32 [[REG12:v[0-9]+]], 12
 ; GCN-TFIL7: v_mov_b32_e32 [[REG11:v[0-9]+]], 11
 ; GCN-TFIL7: v_mov_b32_e32 [[REG10:v[0-9]+]], 10
 ; GCN-TFIL7: v_mov_b32_e32 [[REG9:v[0-9]+]], 9
 ; GCN-TFIL7: v_mov_b32_e32 [[REG8:v[0-9]+]], 8
+; GCN-TFIL7: buffer_store_dword [[REG15]], {{.*}} offset:28
+; GCN-TFIL7: buffer_store_dword [[REG14]], {{.*}} offset:24
+; GCN-TFIL7: buffer_store_dword [[REG13]], {{.*}} offset:20
 ; GCN-TFIL7: buffer_store_dword [[REG12]], {{.*}} offset:16
 ; GCN-TFIL7: buffer_store_dword [[REG11]], {{.*}} offset:12
 ; GCN-TFIL7: buffer_store_dword [[REG10]], {{.*}} offset:8

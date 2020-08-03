@@ -3232,7 +3232,7 @@ AMDGPURegisterBankInfo::getValueMappingForPtr(const MachineRegisterInfo &MRI,
   LLT PtrTy = MRI.getType(PtrReg);
   unsigned Size = PtrTy.getSizeInBits();
   if (Subtarget.useFlatForGlobal() ||
-      !SITargetLowering::isFlatGlobalAddrSpace(PtrTy.getAddressSpace()))
+      !AMDGPU::isFlatGlobalAddrSpace(PtrTy.getAddressSpace()))
     return AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
 
   // If we're using MUBUF instructions for global memory, an SGPR base register
@@ -3258,8 +3258,7 @@ AMDGPURegisterBankInfo::getInstrMappingForLoad(const MachineInstr &MI) const {
 
   const RegisterBank *PtrBank = getRegBank(PtrReg, MRI, *TRI);
 
-  if (PtrBank == &AMDGPU::SGPRRegBank &&
-      SITargetLowering::isFlatGlobalAddrSpace(AS)) {
+  if (PtrBank == &AMDGPU::SGPRRegBank && AMDGPU::isFlatGlobalAddrSpace(AS)) {
     if (isScalarLoadLegal(MI)) {
       // We have a uniform instruction so we want to use an SMRD load
       ValMapping = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);

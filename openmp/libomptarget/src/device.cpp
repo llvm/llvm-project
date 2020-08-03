@@ -370,8 +370,8 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
 }
 
 // Retrieve data from device
-int32_t DeviceTy::data_retrieve(void *HstPtrBegin, void *TgtPtrBegin,
-                                int64_t Size, __tgt_async_info *AsyncInfoPtr) {
+int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
+                               int64_t Size, __tgt_async_info *AsyncInfoPtr) {
   if (!AsyncInfoPtr || !RTL->data_retrieve_async || !RTL->synchronize)
     return RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size);
   else

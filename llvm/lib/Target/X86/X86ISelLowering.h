@@ -1116,7 +1116,8 @@ namespace llvm {
     }
 
     /// Handle Lowering flag assembly outputs.
-    SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue &Flag, SDLoc DL,
+    SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue &Flag,
+                                        const SDLoc &DL,
                                         const AsmOperandInfo &Constraint,
                                         SelectionDAG &DAG) const override;
 
@@ -1348,8 +1349,6 @@ namespace llvm {
                                           MachinePointerInfo PtrInfo,
                                           Align Alignment,
                                           SelectionDAG &DAG) const;
-
-    bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
 
     /// Customize the preferred legalization strategy for certain types.
     LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;

@@ -64,10 +64,9 @@ inline bool ModuleHasARC(const Module &M) {
 /// This is a wrapper around getUnderlyingObject which also knows how to
 /// look through objc_retain and objc_autorelease calls, which we know to return
 /// their argument verbatim.
-inline const Value *GetUnderlyingObjCPtr(const Value *V,
-                                                const DataLayout &DL) {
+inline const Value *GetUnderlyingObjCPtr(const Value *V) {
   for (;;) {
-    V = GetUnderlyingObject(V, DL);
+    V = getUnderlyingObject(V);
     if (!IsForwarding(GetBasicARCInstKind(V)))
       break;
     V = cast<CallInst>(V)->getArgOperand(0);
@@ -78,12 +77,12 @@ inline const Value *GetUnderlyingObjCPtr(const Value *V,
 
 /// A wrapper for GetUnderlyingObjCPtr used for results memoization.
 inline const Value *
-GetUnderlyingObjCPtrCached(const Value *V, const DataLayout &DL,
+GetUnderlyingObjCPtrCached(const Value *V,
                            DenseMap<const Value *, WeakTrackingVH> &Cache) {
   if (auto InCache = Cache.lookup(V))
     return InCache;
 
-  const Value *Computed = GetUnderlyingObjCPtr(V, DL);
+  const Value *Computed = GetUnderlyingObjCPtr(V);
   Cache[V] = const_cast<Value *>(Computed);
   return Computed;
 }

@@ -24,7 +24,10 @@ JITLinkerBase::~JITLinkerBase() {}
 
 void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
 
-  LLVM_DEBUG({ dbgs() << "Building jitlink graph for new input...\n"; });
+  LLVM_DEBUG({
+    dbgs() << "Building jitlink graph for new input "
+           << Ctx->getObjectBuffer().getBufferIdentifier() << "...\n";
+  });
 
   // Build the link graph.
   if (auto GraphOrErr = buildGraph(Ctx->getObjectBuffer()))
@@ -67,7 +70,9 @@ void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
   // Notify client that the defined symbols have been assigned addresses.
   LLVM_DEBUG(
       { dbgs() << "Resolving symbols defined in " << G->getName() << "\n"; });
-  Ctx->notifyResolved(*G);
+
+  if (auto Err = Ctx->notifyResolved(*G))
+    return Ctx->notifyFailed(std::move(Err));
 
   auto ExternalSymbols = getExternalSymbolNames();
 
@@ -332,12 +337,6 @@ void JITLinkerBase::applyLookupResult(AsyncLookupResult Result) {
       dbgs() << "  " << Sym->getName() << ": "
              << formatv("{0:x16}", Sym->getAddress()) << "\n";
   });
-  assert(llvm::all_of(G->external_symbols(),
-                      [](Symbol *Sym) {
-                        return Sym->getAddress() != 0 ||
-                               Sym->getLinkage() == Linkage::Weak;
-                      }) &&
-         "All strong external symbols should have been resolved by now");
 }
 
 void JITLinkerBase::copyBlockContentToWorkingMemory(
@@ -445,16 +444,19 @@ void prune(LinkGraph &G) {
     VisitedBlocks.insert(&B);
 
     for (auto &E : Sym->getBlock().edges()) {
-      if (E.getTarget().isDefined() && !E.getTarget().isLive()) {
-        E.getTarget().setLive(true);
+      // If the edge target is a defined symbol that is being newly marked live
+      // then add it to the worklist.
+      if (E.getTarget().isDefined() && !E.getTarget().isLive())
         Worklist.push_back(&E.getTarget());
-      }
+
+      // Mark the target live.
+      E.getTarget().setLive(true);
     }
   }
 
-  // Collect all the symbols to remove, then remove them.
+  // Collect all defined symbols to remove, then remove them.
   {
-    LLVM_DEBUG(dbgs() << "Dead-stripping symbols:\n");
+    LLVM_DEBUG(dbgs() << "Dead-stripping defined symbols:\n");
     std::vector<Symbol *> SymbolsToRemove;
     for (auto *Sym : G.defined_symbols())
       if (!Sym->isLive())
@@ -475,6 +477,19 @@ void prune(LinkGraph &G) {
     for (auto *B : BlocksToRemove) {
       LLVM_DEBUG(dbgs() << "  " << *B << "...\n");
       G.removeBlock(*B);
+    }
+  }
+
+  // Collect all external symbols to remove, then remove them.
+  {
+    LLVM_DEBUG(dbgs() << "Removing unused external symbols:\n");
+    std::vector<Symbol *> SymbolsToRemove;
+    for (auto *Sym : G.external_symbols())
+      if (!Sym->isLive())
+        SymbolsToRemove.push_back(Sym);
+    for (auto *Sym : SymbolsToRemove) {
+      LLVM_DEBUG(dbgs() << "  " << *Sym << "...\n");
+      G.removeExternalSymbol(*Sym);
     }
   }
 }

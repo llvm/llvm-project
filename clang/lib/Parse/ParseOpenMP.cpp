@@ -3191,7 +3191,6 @@ static void parseMapType(Parser &P, Parser::OpenMPVarListDataTy &Data) {
 
 /// Parses simple expression in parens for single-expression clauses of OpenMP
 /// constructs.
-/// \param RLoc Returned location of right paren.
 ExprResult Parser::ParseOpenMPIteratorsExpr() {
   assert(Tok.is(tok::identifier) && PP.getSpelling(Tok) == "iterator" &&
          "Expected 'iterator' token.");

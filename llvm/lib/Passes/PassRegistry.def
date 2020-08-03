@@ -158,7 +158,7 @@ FUNCTION_ALIAS_ANALYSIS("cfl-anders-aa", CFLAndersAA())
 FUNCTION_ALIAS_ANALYSIS("cfl-steens-aa", CFLSteensAA())
 FUNCTION_ALIAS_ANALYSIS("scev-aa", SCEVAA())
 FUNCTION_ALIAS_ANALYSIS("scoped-noalias-aa", ScopedNoAliasAA())
-FUNCTION_ALIAS_ANALYSIS("type-based-aa", TypeBasedAA())
+FUNCTION_ALIAS_ANALYSIS("tbaa", TypeBasedAA())
 #undef FUNCTION_ALIAS_ANALYSIS
 #undef FUNCTION_ANALYSIS
 

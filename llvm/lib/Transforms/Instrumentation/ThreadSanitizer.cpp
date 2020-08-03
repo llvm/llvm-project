@@ -478,7 +478,7 @@ void ThreadSanitizer::chooseInstructionsToInstrument(
       }
     }
 
-    if (isa<AllocaInst>(GetUnderlyingObject(Addr, DL)) &&
+    if (isa<AllocaInst>(getUnderlyingObject(Addr)) &&
         !PointerMayBeCaptured(Addr, true, true)) {
       // The variable is addressable but not captured, so it cannot be
       // referenced from a different thread and participate in a data race

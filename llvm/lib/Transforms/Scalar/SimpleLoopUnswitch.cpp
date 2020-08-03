@@ -26,6 +26,7 @@
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/MustExecute.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -2068,6 +2069,17 @@ static void unswitchNontrivialInvariants(
     ClonedPHs[SuccBB] = buildClonedLoopBlocks(
         L, LoopPH, SplitBB, ExitBlocks, ParentBB, SuccBB, RetainedSuccBB,
         DominatingSucc, *VMaps.back(), DTUpdates, AC, DT, LI, MSSAU);
+  }
+
+  // Drop metadata if we may break its semantics by moving this instr into the
+  // split block.
+  if (TI.getMetadata(LLVMContext::MD_make_implicit)) {
+    // It is only legal to preserve make.implicit metadata if we are guaranteed
+    // to reach implicit null check block after following this branch.
+    ICFLoopSafetyInfo SafetyInfo;
+    SafetyInfo.computeLoopSafetyInfo(&L);
+    if (!SafetyInfo.isGuaranteedToExecute(TI, &DT, &L))
+      TI.setMetadata(LLVMContext::MD_make_implicit, nullptr);
   }
 
   // The stitching of the branched code back together depends on whether we're

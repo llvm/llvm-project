@@ -52,7 +52,7 @@ define i32 @main() {
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, dst@gotoff_hi(, %s0)
 ; CHECK-NEXT:    ldl.sx %s1, (%s0, %s15)
-; CHECK-NEXT:    stl %s1, 184(, %s11)
+; CHECK-NEXT:    st %s1, 184(, %s11)
 ; CHECK-NEXT:    lea %s0, .L.str@gotoff_lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, .L.str@gotoff_hi(, %s0)

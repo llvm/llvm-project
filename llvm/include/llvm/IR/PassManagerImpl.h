@@ -64,9 +64,6 @@ AnalysisManager<IRUnitT, ExtraArgTs...>::getResultImpl(
   // run it to produce a result, which we then add to the cache.
   if (Inserted) {
     auto &P = this->lookUpPass(ID);
-    if (DebugLogging)
-      dbgs() << "Running analysis: " << P.name() << " on " << IR.getName()
-             << "\n";
 
     PassInstrumentation PI;
     if (ID != PassInstrumentationAnalysis::ID()) {
@@ -96,10 +93,6 @@ inline void AnalysisManager<IRUnitT, ExtraArgTs...>::invalidate(
   // We're done if all analyses on this IR unit are preserved.
   if (PA.allAnalysesInSetPreserved<AllAnalysesOn<IRUnitT>>())
     return;
-
-  if (DebugLogging)
-    dbgs() << "Invalidating all non-preserved analyses for: " << IR.getName()
-           << "\n";
 
   // Track whether each analysis's result is invalidated in
   // IsResultInvalidated.

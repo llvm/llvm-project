@@ -3,6 +3,7 @@ tablegen(LLVM Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(COFFOptionsTableGen)
 
 add_lld_library(lldCOFF
+  CallGraphSort.cpp
   Chunks.cpp
   DebugTypes.cpp
   DLL.cpp

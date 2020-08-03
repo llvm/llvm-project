@@ -150,6 +150,7 @@ public:
     using iterator = std::vector<SymbolUse>::const_iterator;
     iterator begin() const { return uses.begin(); }
     iterator end() const { return uses.end(); }
+    bool empty() const { return uses.empty(); }
 
   private:
     std::vector<SymbolUse> uses;

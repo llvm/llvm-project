@@ -18,15 +18,15 @@ namespace tidy {
 
 void ClangTidyCheckFactories::registerCheckFactory(StringRef Name,
                                                    CheckFactory Factory) {
-  Factories[std::string(Name)] = std::move(Factory);
+  Factories.insert_or_assign(Name, std::move(Factory));
 }
 
 std::vector<std::unique_ptr<ClangTidyCheck>>
 ClangTidyCheckFactories::createChecks(ClangTidyContext *Context) {
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks;
   for (const auto &Factory : Factories) {
-    if (Context->isCheckEnabled(Factory.first))
-      Checks.emplace_back(Factory.second(Factory.first, Context));
+    if (Context->isCheckEnabled(Factory.getKey()))
+      Checks.emplace_back(Factory.getValue()(Factory.getKey(), Context));
   }
   return Checks;
 }

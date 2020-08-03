@@ -6,6 +6,7 @@ namespace clang {
 namespace tidy {
 namespace test {
 
+namespace {
 class TestCheck : public ClangTidyCheck {
 public:
   TestCheck(StringRef Name, ClangTidyContext *Context)
@@ -20,17 +21,8 @@ public:
     diag(Var->getTypeSpecStartLoc(), "type specifier");
   }
 };
+} // namespace
 
-// FIXME: This test seems to cause a strange linking interference
-// with the ValidConfiguration.ValidEnumOptions test on macOS.
-// If both tests are enabled, this test will fail as if
-// runCheckOnCode() is not invoked at all. Looks like a linker bug.
-// For now both tests are disabled on macOS. It is not sufficient
-// to only disable the other test because this test keeps failing
-// under Address Sanitizer, which may be an indication of more
-// such linking interference with other tests and this test
-// seems to be in the center of it.
-#ifndef __APPLE__
 TEST(ClangTidyDiagnosticConsumer, SortsErrors) {
   std::vector<ClangTidyError> Errors;
   runCheckOnCode<TestCheck>("int a;", &Errors);
@@ -38,7 +30,6 @@ TEST(ClangTidyDiagnosticConsumer, SortsErrors) {
   EXPECT_EQ("type specifier", Errors[0].Message.Message);
   EXPECT_EQ("variable", Errors[1].Message.Message);
 }
-#endif
 
 } // namespace test
 } // namespace tidy

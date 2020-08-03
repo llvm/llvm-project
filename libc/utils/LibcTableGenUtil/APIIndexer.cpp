@@ -97,8 +97,9 @@ void APIIndexer::indexStandardSpecDef(llvm::Record *StandardSpec) {
 
       auto FunctionSpecList = HeaderSpec->getValueAsListOfDefs("Functions");
       for (llvm::Record *FunctionSpec : FunctionSpecList) {
-        FunctionSpecMap[std::string(FunctionSpec->getValueAsString("Name"))] =
-            FunctionSpec;
+        auto FunctionName = std::string(FunctionSpec->getValueAsString("Name"));
+        FunctionSpecMap[FunctionName] = FunctionSpec;
+        FunctionToHeaderMap[FunctionName] = std::string(Header);
       }
 
       auto EnumerationSpecList =

@@ -21,7 +21,9 @@ define zeroext i8 @func8z(i8 zeroext %a, i8 zeroext %b) {
 define signext i8 @funci8s(i8 signext %a) {
 ; CHECK-LABEL: funci8s:
 ; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    xor %s0, 5, %s0
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %res = xor i8 %a, 5
   ret i8 %res
@@ -30,8 +32,10 @@ define signext i8 @funci8s(i8 signext %a) {
 define zeroext i8 @funci8z(i8 zeroext %a) {
 ; CHECK-LABEL: funci8z:
 ; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    lea %s1, 251
 ; CHECK-NEXT:    xor %s0, %s0, %s1
+; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %res = xor i8 -5, %a
   ret i8 %res
@@ -58,7 +62,9 @@ define zeroext i16 @func16z(i16 zeroext %a, i16 zeroext %b) {
 define signext i16 @funci16s(i16 signext %a) {
 ; CHECK-LABEL: funci16s:
 ; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    xor %s0, -1, %s0
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %res = xor i16 %a, 65535
   ret i16 %res
@@ -67,7 +73,9 @@ define signext i16 @funci16s(i16 signext %a) {
 define zeroext i16 @funci16z(i16 zeroext %a) {
 ; CHECK-LABEL: funci16z:
 ; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    xor %s0, %s0, (52)0
+; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %res = xor i16 4095, %a
   ret i16 %res
@@ -94,7 +102,9 @@ define zeroext i32 @func32z(i32 zeroext %a, i32 zeroext %b) {
 define signext i32 @funci32s(i32 signext %a) {
 ; CHECK-LABEL: funci32s:
 ; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    xor %s0, %s0, (36)0
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %res = xor i32 %a, 268435455
   ret i32 %res
@@ -103,7 +113,9 @@ define signext i32 @funci32s(i32 signext %a) {
 define zeroext i32 @funci32z(i32 zeroext %a) {
 ; CHECK-LABEL: funci32z:
 ; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    xor %s0, %s0, (36)0
+; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %res = xor i32 %a, 268435455
   ret i32 %res
@@ -112,6 +124,7 @@ define zeroext i32 @funci32z(i32 zeroext %a) {
 define i32 @funci32_another(i32 %0) {
 ; CHECK-LABEL: funci32_another:
 ; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    xor %s0, %s0, (33)1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = xor i32 %0, -2147483648

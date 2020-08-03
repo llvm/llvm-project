@@ -610,8 +610,8 @@ HandleSignalMode GetHandleSignalMode(int signum) {
 // XNU 17 -- macOS 10.13 -- iOS 11 -- tvOS 11 -- watchOS 4
 constexpr u16 GetOSMajorKernelOffset() {
   if (TARGET_OS_OSX) return 4;
-  if (SANITIZER_IOS || SANITIZER_TVOS) return 6;
-  if (SANITIZER_WATCHOS) return 13;
+  if (TARGET_OS_IOS || TARGET_OS_TV) return 6;
+  if (TARGET_OS_WATCH) return 13;
 }
 
 using VersStr = char[64];
@@ -661,9 +661,9 @@ static void MapToMacos(u16 *major, u16 *minor) {
   if (TARGET_OS_OSX)
     return;
 
-  if (SANITIZER_IOS || SANITIZER_TVOS)
+  if (TARGET_OS_IOS || TARGET_OS_TV)
     *major += 2;
-  else if (SANITIZER_WATCHOS)
+  else if (TARGET_OS_WATCH)
     *major += 9;
   else
     UNREACHABLE("unsupported platform");

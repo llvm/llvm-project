@@ -118,6 +118,7 @@ TEST(ParseConfiguration, MergeConfigurations) {
   EXPECT_TRUE(*Options.UseColor);
 }
 
+namespace {
 class TestCheck : public ClangTidyCheck {
 public:
   TestCheck(ClangTidyContext *Context) : ClangTidyCheck("test", Context) {}
@@ -140,6 +141,7 @@ public:
     return Options.getLocalOrGlobal<IntType>(std::forward<Args>(Arguments)...);
   }
 };
+} // namespace
 
 #define CHECK_VAL(Value, Expected)                                             \
   do {                                                                         \
@@ -222,9 +224,6 @@ TEST(CheckOptionsValidation, ValidIntOptions) {
 #undef CHECK_ERROR_INT
 }
 
-// FIXME: Figure out why this test causes crashes on mac os.
-// See also comments around the ClangTidyDiagnosticConsumer.SortsErrors test.
-#ifndef __APPLE__
 TEST(ValidConfiguration, ValidEnumOptions) {
 
   ClangTidyOptions Options;
@@ -276,7 +275,6 @@ TEST(ValidConfiguration, ValidEnumOptions) {
 
 #undef CHECK_ERROR_ENUM
 }
-#endif
 
 #undef CHECK_VAL
 #undef CHECK_ERROR

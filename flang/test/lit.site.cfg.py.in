@@ -7,6 +7,7 @@ config.flang_obj_root = "@FLANG_BINARY_DIR@"
 config.flang_src_dir = "@FLANG_SOURCE_DIR@"
 config.flang_tools_dir = "@FLANG_TOOLS_DIR@"
 config.flang_intrinsic_modules_dir = "@FLANG_INTRINSIC_MODULES_DIR@"
+config.flang_llvm_tools_dir = "@CMAKE_BINARY_DIR@/bin"
 config.python_executable = "@PYTHON_EXECUTABLE@"
 
 # Support substitution of the tools_dir with user parameters. This is

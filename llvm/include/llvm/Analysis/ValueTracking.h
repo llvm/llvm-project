@@ -28,6 +28,7 @@
 namespace llvm {
 
 class AddOperator;
+class AllocaInst;
 class APInt;
 class AssumptionCache;
 class DominatorTree;
@@ -367,14 +368,13 @@ class Value;
   /// that the returned value has pointer type if the specified value does. If
   /// the MaxLookup value is non-zero, it limits the number of instructions to
   /// be stripped off.
-  Value *GetUnderlyingObject(Value *V, const DataLayout &DL,
-                             unsigned MaxLookup = 6);
-  inline const Value *GetUnderlyingObject(const Value *V, const DataLayout &DL,
+  Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6);
+  inline const Value *getUnderlyingObject(const Value *V,
                                           unsigned MaxLookup = 6) {
-    return GetUnderlyingObject(const_cast<Value *>(V), DL, MaxLookup);
+    return getUnderlyingObject(const_cast<Value *>(V), MaxLookup);
   }
 
-  /// This method is similar to GetUnderlyingObject except that it can
+  /// This method is similar to getUnderlyingObject except that it can
   /// look through phi and select instructions and return multiple objects.
   ///
   /// If LoopInfo is passed, loop phis are further analyzed.  If a pointer
@@ -402,16 +402,20 @@ class Value;
   /// Since A[i] and A[i-1] are independent pointers, getUnderlyingObjects
   /// should not assume that Curr and Prev share the same underlying object thus
   /// it shouldn't look through the phi above.
-  void GetUnderlyingObjects(const Value *V,
+  void getUnderlyingObjects(const Value *V,
                             SmallVectorImpl<const Value *> &Objects,
-                            const DataLayout &DL, LoopInfo *LI = nullptr,
-                            unsigned MaxLookup = 6);
+                            LoopInfo *LI = nullptr, unsigned MaxLookup = 6);
 
-  /// This is a wrapper around GetUnderlyingObjects and adds support for basic
+  /// This is a wrapper around getUnderlyingObjects and adds support for basic
   /// ptrtoint+arithmetic+inttoptr sequences.
   bool getUnderlyingObjectsForCodeGen(const Value *V,
-                            SmallVectorImpl<Value *> &Objects,
-                            const DataLayout &DL);
+                                      SmallVectorImpl<Value *> &Objects);
+
+  /// Finds alloca where the value comes from.
+  AllocaInst *findAllocaForValue(Value *V);
+  inline const AllocaInst *findAllocaForValue(const Value *V) {
+    return findAllocaForValue(const_cast<Value *>(V));
+  }
 
   /// Return true if the only users of this pointer are lifetime markers.
   bool onlyUsedByLifetimeMarkers(const Value *V);
