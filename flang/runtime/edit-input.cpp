@@ -13,6 +13,8 @@
 
 namespace Fortran::runtime::io {
 
+// For fixed-width fields, initialize the number of remaining characters.
+// Skip over leading blanks, then return the first non-blank character (if any).
 static std::optional<char32_t> PrepareInput(
     IoStatementState &io, const DataEdit &edit, std::optional<int> &remaining) {
   remaining.reset();
@@ -61,7 +63,8 @@ static bool EditBOZInput(IoStatementState &io, const DataEdit &edit, void *n,
   return true;
 }
 
-// Returns false if there's a '-' sign
+// Prepares input from a field, and consumes the sign, if any.
+// Returns true if there's a '-' sign.
 static bool ScanNumericPrefix(IoStatementState &io, const DataEdit &edit,
     std::optional<char32_t> &next, std::optional<int> &remaining) {
   next = PrepareInput(io, edit, remaining);
@@ -69,6 +72,7 @@ static bool ScanNumericPrefix(IoStatementState &io, const DataEdit &edit,
   if (next) {
     negative = *next == '-';
     if (negative || *next == '+') {
+      io.SkipSpaces(remaining);
       next = io.NextInField(remaining);
     }
   }
@@ -126,39 +130,44 @@ bool EditIntegerInput(
   return true;
 }
 
+// Parses a REAL input number from the input source as a normalized
+// fraction into a supplied buffer -- there's an optional '-', a
+// decimal point, and at least one digit.  The adjusted exponent value
+// is returned in a reference argument.  The returned value is the number
+// of characters that (should) have been written to the buffer -- this can
+// be larger than the buffer size and can indicate overflow.  Replaces
+// blanks with zeroes if appropriate.
 static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
     const DataEdit &edit, int &exponent) {
   std::optional<int> remaining;
   std::optional<char32_t> next;
   int got{0};
   std::optional<int> decimalPoint;
-  if (ScanNumericPrefix(io, edit, next, remaining) && next) {
+  auto Put{[&](char ch) -> void {
     if (got < bufferSize) {
-      buffer[got++] = '-';
+      buffer[got] = ch;
     }
+    ++got;
+  }};
+  if (ScanNumericPrefix(io, edit, next, remaining)) {
+    Put('-');
   }
   if (!next) { // empty field means zero
-    if (got < bufferSize) {
-      buffer[got++] = '0';
-    }
+    Put('0');
     return got;
   }
-  if (got < bufferSize) {
-    buffer[got++] = '.'; // input field is normalized to a fraction
-  }
   char32_t decimal = edit.modes.editingFlags & decimalComma ? ',' : '.';
-  auto start{got};
-  if ((*next >= 'a' && *next <= 'z') || (*next >= 'A' && *next <= 'Z')) {
+  char32_t first{*next >= 'a' && *next <= 'z' ? *next + 'A' - 'a' : *next};
+  if (first == 'N' || first == 'I') {
     // NaN or infinity - convert to upper case
+    // Subtle: a blank field of digits could be followed by 'E' or 'D',
     for (; next &&
          ((*next >= 'a' && *next <= 'z') || (*next >= 'A' && *next <= 'Z'));
          next = io.NextInField(remaining)) {
-      if (got < bufferSize) {
-        if (*next >= 'a' && *next <= 'z') {
-          buffer[got++] = *next - 'a' + 'A';
-        } else {
-          buffer[got++] = *next;
-        }
+      if (*next >= 'a' && *next <= 'z') {
+        Put(*next - 'a' + 'A');
+      } else {
+        Put(*next);
       }
     }
     if (next && *next == '(') { // NaN(...)
@@ -167,7 +176,10 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       }
     }
     exponent = 0;
-  } else if (*next == decimal || (*next >= '0' && *next <= '9')) {
+  } else if (first == decimal || (first >= '0' && first <= '9') ||
+      first == 'E' || first == 'D' || first == 'Q') {
+    Put('.'); // input field is normalized to a fraction
+    auto start{got};
     for (; next; next = io.NextInField(remaining)) {
       char32_t ch{*next};
       if (ch == ' ' || ch == '\t') {
@@ -180,9 +192,7 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       if (ch == '0' && got == start && !decimalPoint) {
         // omit leading zeroes before the decimal
       } else if (ch >= '0' && ch <= '9') {
-        if (got < bufferSize) {
-          buffer[got++] = ch;
-        }
+        Put(ch);
       } else if (ch == decimal && !decimalPoint) {
         // the decimal point is *not* copied to the buffer
         decimalPoint = got - start; // # of digits before the decimal point
@@ -190,8 +200,8 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
         break;
       }
     }
-    if (got == start && got < bufferSize) {
-      buffer[got++] = '0'; // all digits were zeroes
+    if (got == start) {
+      Put('0'); // emit at least one digit
     }
     if (next &&
         (*next == 'e' || *next == 'E' || *next == 'd' || *next == 'D' ||
