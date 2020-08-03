@@ -100,7 +100,10 @@ future versions of Clang.
 Modified Compiler Flags
 -----------------------
 
-- ...
+- On ELF, ``-gz`` now defaults to ``-gz=zlib`` with the integrated assembler.
+  It produces ``SHF_COMPRESSED`` style compression of debug information. GNU
+  binutils 2.26 or newer, or lld is required to link produced object files. Use
+  ``-gz=zlib-gnu`` to get the old behavior.
 
 New Pragmas in Clang
 --------------------
