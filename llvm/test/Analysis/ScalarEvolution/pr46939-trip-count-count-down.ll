@@ -6,13 +6,13 @@ define void @reverse_loop(i32 %n) {
 ; CHECK-LABEL: 'reverse_loop'
 ; CHECK-NEXT:  Classifying expressions for: @reverse_loop
 ; CHECK-NEXT:    %i.011 = phi i32 [ %n, %for.body.lr.ph ], [ %dec, %for.body ]
-; CHECK-NEXT:    --> {%n,+,-1}<nsw><%for.body> U: full-set S: full-set Exits: (0 smin %n) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {%n,+,-1}<nsw><%for.body> U: full-set S: full-set Exits: 0 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %dec = add nsw i32 %i.011, -1
-; CHECK-NEXT:    --> {(-1 + %n),+,-1}<nw><%for.body> U: full-set S: full-set Exits: (-1 + (0 smin %n)) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {(-1 + %n),+,-1}<nw><%for.body> U: full-set S: full-set Exits: -1 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @reverse_loop
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1 * (0 smin %n)) + %n)
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is %n
 ; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 2147483647
-; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((-1 * (0 smin %n)) + %n)
+; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is %n
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 1
 ;
