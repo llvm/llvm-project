@@ -1,6 +1,6 @@
 // UNSUPPORTED: android
 // RUN: %clang -w -fsanitize=nullability-arg,nullability-assign,nullability-return %s -O3 -o %t
-// RUN: %run %t foo 2>&1 | count 0
+// RUN: %run %t foo 2>&1 | FileCheck %s --check-prefix=NOERROR --allow-empty --implicit-check-not='runtime error'
 // RUN: %run %t 2>&1 | FileCheck %s
 
 // RUN: echo "nullability-arg:nullability.c" > %t.supp
@@ -67,3 +67,5 @@ int main(int argc, char **argv) {
   nonnull_init2(p);
   return 0;
 }
+
+// NOERROR-NOT: runtime error
