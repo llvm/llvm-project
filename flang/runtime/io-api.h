@@ -29,6 +29,26 @@ using ExternalUnit = int;
 using AsynchronousId = int;
 static constexpr ExternalUnit DefaultUnit{-1}; // READ(*), WRITE(*), PRINT
 
+// INQUIRE specifiers are encoded as simple base-26 packings of
+// the spellings of their keywords.
+using InquiryKeywordHash = std::uint64_t;
+constexpr InquiryKeywordHash HashInquiryKeyword(const char *p) {
+  InquiryKeywordHash hash{1};
+  while (char ch{*p++}) {
+    std::uint64_t letter{0};
+    if (ch >= 'a' && ch <= 'z') {
+      letter = ch - 'a';
+    } else {
+      letter = ch - 'A';
+    }
+    hash = 26 * hash + letter;
+  }
+  return hash;
+}
+
+const char *InquiryKeywordHashDecode(
+    char *buffer, std::size_t, InquiryKeywordHash);
+
 extern "C" {
 
 #define IONAME(name) RTNAME(io##name)
@@ -150,7 +170,7 @@ Cookie IONAME(BeginOpenNewUnit)(
 // BeginInquireIoLength() is basically a no-op output statement.
 Cookie IONAME(BeginInquireUnit)(
     ExternalUnit, const char *sourceFile = nullptr, int sourceLine = 0);
-Cookie IONAME(BeginInquireFile)(const char *, std::size_t, int kind = 1,
+Cookie IONAME(BeginInquireFile)(const char *, std::size_t,
     const char *sourceFile = nullptr, int sourceLine = 0);
 Cookie IONAME(BeginInquireIoLength)(
     const char *sourceFile = nullptr, int sourceLine = 0);
@@ -255,10 +275,7 @@ bool IONAME(SetRecl)(Cookie, std::size_t); // RECL=
 // For CLOSE: STATUS=KEEP, DELETE
 bool IONAME(SetStatus)(Cookie, const char *, std::size_t);
 
-// SetFile() may pass a CHARACTER argument of non-default kind,
-// and such filenames are converted to UTF-8 before being
-// presented to the filesystem.
-bool IONAME(SetFile)(Cookie, const char *, std::size_t chars, int kind = 1);
+bool IONAME(SetFile)(Cookie, const char *, std::size_t chars);
 
 // Acquires the runtime-created unit number for OPEN(NEWUNIT=)
 bool IONAME(GetNewUnit)(Cookie, int &, int kind = 4);
@@ -275,18 +292,17 @@ void IONAME(GetIoMsg)(Cookie, char *, std::size_t); // IOMSG=
 
 // INQUIRE() specifiers are mostly identified by their NUL-terminated
 // case-insensitive names.
-// ACCESS, ACTION, ASYNCHRONOUS, BLANK, DECIMAL, DELIM, DIRECT, ENCODING,
-// FORM, FORMATTED, NAME, PAD, POSITION, READ, READWRITE, ROUND,
+// ACCESS, ACTION, ASYNCHRONOUS, BLANK, CONVERT, DECIMAL, DELIM, DIRECT,
+// ENCODING, FORM, FORMATTED, NAME, PAD, POSITION, READ, READWRITE, ROUND,
 // SEQUENTIAL, SIGN, STREAM, UNFORMATTED, WRITE:
-bool IONAME(InquireCharacter)(
-    Cookie, const char *specifier, char *, std::size_t);
+bool IONAME(InquireCharacter)(Cookie, InquiryKeywordHash, char *, std::size_t);
 // EXIST, NAMED, OPENED, and PENDING (without ID):
-bool IONAME(InquireLogical)(Cookie, const char *specifier, bool &);
+bool IONAME(InquireLogical)(Cookie, InquiryKeywordHash, bool &);
 // PENDING with ID
 bool IONAME(InquirePendingId)(Cookie, std::int64_t, bool &);
 // NEXTREC, NUMBER, POS, RECL, SIZE
 bool IONAME(InquireInteger64)(
-    Cookie, const char *specifier, std::int64_t &, int kind = 8);
+    Cookie, InquiryKeywordHash, std::int64_t &, int kind = 8);
 
 // This function must be called to end an I/O statement, and its
 // cookie value may not be used afterwards unless it is recycled

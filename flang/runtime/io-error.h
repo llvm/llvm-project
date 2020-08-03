@@ -38,7 +38,7 @@ public:
 
   void SignalError(int iostatOrErrno, const char *msg, ...);
   void SignalError(int iostatOrErrno);
-  template <typename... X> void SignalError(const char *msg, X &&... xs) {
+  template <typename... X> void SignalError(const char *msg, X &&...xs) {
     SignalError(IostatGenericError, msg, std::forward<X>(xs)...);
   }
 
