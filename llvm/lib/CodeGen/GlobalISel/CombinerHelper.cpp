@@ -1385,13 +1385,11 @@ bool CombinerHelper::optimizeMemmove(MachineInstr &MI, Register Dst,
 }
 
 bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
+  const unsigned Opc = MI.getOpcode();
   // This combine is fairly complex so it's not written with a separate
   // matcher function.
-  assert(MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS);
-  Intrinsic::ID ID = (Intrinsic::ID)MI.getIntrinsicID();
-  assert((ID == Intrinsic::memcpy || ID == Intrinsic::memmove ||
-          ID == Intrinsic::memset) &&
-         "Expected a memcpy like intrinsic");
+  assert((Opc == TargetOpcode::G_MEMCPY || Opc == TargetOpcode::G_MEMMOVE ||
+          Opc == TargetOpcode::G_MEMSET) && "Expected memcpy like instruction");
 
   auto MMOIt = MI.memoperands_begin();
   const MachineMemOperand *MemOp = *MMOIt;
@@ -1402,11 +1400,11 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
 
   Align DstAlign = MemOp->getBaseAlign();
   Align SrcAlign;
-  Register Dst = MI.getOperand(1).getReg();
-  Register Src = MI.getOperand(2).getReg();
-  Register Len = MI.getOperand(3).getReg();
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  Register Len = MI.getOperand(2).getReg();
 
-  if (ID != Intrinsic::memset) {
+  if (Opc != TargetOpcode::G_MEMSET) {
     assert(MMOIt != MI.memoperands_end() && "Expected a second MMO on MI");
     MemOp = *(++MMOIt);
     SrcAlign = MemOp->getBaseAlign();
@@ -1426,11 +1424,11 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   if (MaxLen && KnownLen > MaxLen)
     return false;
 
-  if (ID == Intrinsic::memcpy)
+  if (Opc == TargetOpcode::G_MEMCPY)
     return optimizeMemcpy(MI, Dst, Src, KnownLen, DstAlign, SrcAlign, IsVolatile);
-  if (ID == Intrinsic::memmove)
+  if (Opc == TargetOpcode::G_MEMMOVE)
     return optimizeMemmove(MI, Dst, Src, KnownLen, DstAlign, SrcAlign, IsVolatile);
-  if (ID == Intrinsic::memset)
+  if (Opc == TargetOpcode::G_MEMSET)
     return optimizeMemset(MI, Dst, Src, KnownLen, DstAlign, IsVolatile);
   return false;
 }
