@@ -78,7 +78,7 @@ cl::opt<bool> UseOldMemOpValueProf(
     "use-old-memop-value-prof",
     cl::desc("Use the old memop value profiling buckets. This is "
              "transitional and to be removed after switching. "),
-    cl::init(true));
+    cl::init(false));
 
 namespace {
 
