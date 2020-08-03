@@ -518,7 +518,7 @@ const syntax::Token *findNearbyIdentifier(const SpelledWord &Word,
   // Find where the word occurred in the token stream, to search forward & back.
   auto *I = llvm::partition_point(SpelledTokens, [&](const syntax::Token &T) {
     assert(SM.getFileID(T.location()) == SM.getFileID(Word.Location));
-    return T.location() >= Word.Location; // Comparison OK: same file.
+    return T.location() < Word.Location; // Comparison OK: same file.
   });
   // Search for matches after the cursor.
   for (const syntax::Token &Tok : llvm::makeArrayRef(I, SpelledTokens.end()))
