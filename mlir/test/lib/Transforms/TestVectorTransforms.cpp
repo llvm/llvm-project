@@ -122,6 +122,17 @@ struct TestVectorUnrollingPatterns
   }
 };
 
+struct TestVectorTransferFullPartialSplitPatterns
+    : public PassWrapper<TestVectorTransferFullPartialSplitPatterns,
+                         FunctionPass> {
+  void runOnFunction() override {
+    MLIRContext *ctx = &getContext();
+    OwningRewritePatternList patterns;
+    patterns.insert<VectorTransferFullPartialRewriter>(ctx);
+    applyPatternsAndFoldGreedily(getFunction(), patterns);
+  }
+};
+
 } // end anonymous namespace
 
 namespace mlir {
@@ -141,5 +152,10 @@ void registerTestVectorConversions() {
   PassRegistration<TestVectorUnrollingPatterns> contractionUnrollingPass(
       "test-vector-unrolling-patterns",
       "Test conversion patterns to unroll contract ops in the vector dialect");
+
+  PassRegistration<TestVectorTransferFullPartialSplitPatterns>
+      vectorTransformFullPartialPass("test-vector-transfer-full-partial-split",
+                                     "Test conversion patterns to split "
+                                     "transfer ops via scf.if + linalg ops");
 }
 } // namespace mlir
