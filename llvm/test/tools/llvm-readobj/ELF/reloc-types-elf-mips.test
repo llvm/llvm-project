@@ -61,18 +61,11 @@
 FileHeader:
   Class:   ELFCLASS32
   Data:    ELFDATA2MSB
-  OSABI:   ELFOSABI_GNU
   Type:    ET_REL
   Machine: EM_MIPS
 Sections:
-  - Name:    .text
-    Type:    SHT_PROGBITS
-    Content: 00
-  - Name:         .rel.text
-    Type:         SHT_REL
-    AddressAlign: 0x0000000000000004
-    EntSize:      0x0000000000000008
-    Info:         .text
+  - Name: .rel.text
+    Type: SHT_REL
     Relocations:
       - Type: R_MIPS_NONE
       - Type: R_MIPS_16

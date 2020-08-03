@@ -21,88 +21,69 @@
 # LLVM-NEXT: ]
 
 --- !ELF
-FileHeader:      
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_EXEC
-  Machine:         EM_X86_64
-  Entry:           0x0000000000000000
-Sections:        
-  - Name:            .gnu.version
-    Type:            SHT_GNU_versym
-    Flags:           [ SHF_ALLOC ]
-    Link:            .dynsym
-    AddressAlign:    0x0000000000000002
-    EntSize:         0x0000000000000002
-    Entries:         [ 0, 2, 3, 4, 2 ]
-  - Name:            .gnu.version_r
-    Type:            SHT_GNU_verneed
-    Flags:           [ SHF_ALLOC ]
-    Link:            .dynstr
-    AddressAlign:    0x0000000000000004
-    Info:            0x0000000000000002
-    Dependencies:    
-      - Version:         1
-        File:            verneed1.so.0
-        Entries:         
-          - Name:            v2
-            Hash:            1938
-            Flags:           0
-            Other:           3
-          - Name:            v3
-            Hash:            1939
-            Flags:           0
-            Other:           2
-      - Version:         1
-        File:            verneed2.so.0
-        Entries:         
-          - Name:            v1
-            Hash:            1937
-            Flags:           0
-            Other:           4
-  - Name:            .rela.plt
-    Type:            SHT_RELA
-    Flags:           [ SHF_ALLOC ]
-    Info:            0
-    Link:            .dynsym
-    AddressAlign:    0x0000000000000008
-    EntSize:         0x0000000000000018
-    Relocations:     
-      - Offset:          0x0000000000013018
-        Symbol:          f1
-        Type:            R_X86_64_JUMP_SLOT
-      - Offset:          0x0000000000013020
-        Symbol:          f2
-        Type:            R_X86_64_JUMP_SLOT
-      - Offset:          0x0000000000013028
-        Symbol:          g1
-        Type:            R_X86_64_JUMP_SLOT
-      - Offset:          0x0000000000013040
-        Symbol:          _Z2f1v
-        Type:            R_X86_64_JUMP_SLOT
-      - Offset:          0x0000000000013058
-        Symbol:          f3
-        Type:            R_X86_64_JUMP_SLOT
-Symbols:
-  - Name:            f1
-    Binding:         STB_GLOBAL
-  - Name:            f2
-    Binding:         STB_GLOBAL
-  - Name:            g1
-    Binding:         STB_GLOBAL
-  - Name:            _Z2f1v
-    Binding:         STB_GLOBAL
-  - Name:            f3
-    Binding:         STB_GLOBAL
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .gnu.version
+    Type:    SHT_GNU_versym
+    Flags:   [ SHF_ALLOC ]
+    Entries: [ 0, 2, 3, 4, 2 ]
+  - Name:         .gnu.version_r
+    Type:         SHT_GNU_verneed
+    Flags:        [ SHF_ALLOC ]
+    Link:         .dynstr
+    AddressAlign: 0x0000000000000004
+    Info:         0x0000000000000002
+    Dependencies:
+      - Version: 1
+        File:    verneed1.so.0
+        Entries:
+          - Name:  v2
+            Hash:  1938
+            Flags: 0
+            Other: 3
+          - Name:  v3
+            Hash:  1939
+            Flags: 0
+            Other: 2
+      - Version: 1
+        File:    verneed2.so.0
+        Entries:
+          - Name:  v1
+            Hash:  1937
+            Flags: 0
+            Other: 4
+  - Name:  .rela.plt
+    Type:  SHT_RELA
+    Flags: [ SHF_ALLOC ]
+    Link:  .dynsym
+    Relocations:
+      - Offset: 0x0000000000013018
+        Symbol: f1
+        Type:   R_X86_64_JUMP_SLOT
+      - Offset: 0x0000000000013020
+        Symbol: f2
+        Type:   R_X86_64_JUMP_SLOT
+      - Offset: 0x0000000000013028
+        Symbol: g1
+        Type:   R_X86_64_JUMP_SLOT
+      - Offset: 0x0000000000013040
+        Symbol: _Z2f1v
+        Type:   R_X86_64_JUMP_SLOT
+      - Offset: 0x0000000000013058
+        Symbol: f3
+        Type:   R_X86_64_JUMP_SLOT
 DynamicSymbols:  
-  - Name:            f1
-    Binding:         STB_GLOBAL
-  - Name:            f2
-    Binding:         STB_GLOBAL
-  - Name:            g1
-    Binding:         STB_GLOBAL
-  - Name:            _Z2f1v
-    Binding:         STB_GLOBAL
-  - Name:            f3
-    Binding:         STB_GLOBAL
-...
+  - Name:    f1
+    Binding: STB_GLOBAL
+  - Name:    f2
+    Binding: STB_GLOBAL
+  - Name:    g1
+    Binding: STB_GLOBAL
+  - Name:    _Z2f1v
+    Binding: STB_GLOBAL
+  - Name:    f3
+    Binding: STB_GLOBAL

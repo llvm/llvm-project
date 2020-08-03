@@ -109,7 +109,6 @@ FileHeader:
   Data:    ELFDATA2LSB
   Type:    ET_EXEC
   Machine: [[MACHINE]]
-  Entry:   0x12345678
 Sections:
   - Name:    .foo.begin
     Type:    SHT_PROGBITS
@@ -374,8 +373,8 @@ FileHeader:
   Data:       ELFDATA2LSB
   Type:       ET_EXEC
   Machine:    EM_X86_64
-  EPhEntSize: [[PHENTSIZE=56]]
-  EPhOff:     [[PHOFF=64]]
+  EPhEntSize: [[PHENTSIZE=<none>]]
+  EPhOff:     [[PHOFF=<none>]]
 Sections:
   - Name: .foo
     Type: SHT_PROGBITS
