@@ -4074,6 +4074,99 @@ const int X::* b;
 )txt"));
 }
 
+TEST_P(SyntaxTreeTest, MemberFunctionPointer) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+struct X {
+  struct Y {};
+};
+void (X::*xp)();
+void (X::**xpp)(const int*);
+// FIXME: Generate the right syntax tree for this type,
+// i.e. create a syntax node for the outer member pointer
+void (X::Y::*xyp)(const int*, char);
+)cpp",
+      R"txt(
+*: TranslationUnit
+|-SimpleDeclaration
+| |-struct
+| |-X
+| |-{
+| |-SimpleDeclaration
+| | |-struct
+| | |-Y
+| | |-{
+| | |-}
+| | `-;
+| |-}
+| `-;
+|-SimpleDeclaration
+| |-void
+| |-SimpleDeclarator
+| | |-ParenDeclarator
+| | | |-(
+| | | |-MemberPointer
+| | | | |-X
+| | | | |-::
+| | | | `-*
+| | | |-xp
+| | | `-)
+| | `-ParametersAndQualifiers
+| |   |-(
+| |   `-)
+| `-;
+|-SimpleDeclaration
+| |-void
+| |-SimpleDeclarator
+| | |-ParenDeclarator
+| | | |-(
+| | | |-MemberPointer
+| | | | |-X
+| | | | |-::
+| | | | `-*
+| | | |-*
+| | | |-xpp
+| | | `-)
+| | `-ParametersAndQualifiers
+| |   |-(
+| |   |-SimpleDeclaration
+| |   | |-const
+| |   | |-int
+| |   | `-SimpleDeclarator
+| |   |   `-*
+| |   `-)
+| `-;
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-ParenDeclarator
+  | | |-(
+  | | |-X
+  | | |-::
+  | | |-MemberPointer
+  | | | |-Y
+  | | | |-::
+  | | | `-*
+  | | |-xyp
+  | | `-)
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   |-SimpleDeclaration
+  |   | |-const
+  |   | |-int
+  |   | `-SimpleDeclarator
+  |   |   `-*
+  |   |-,
+  |   |-SimpleDeclaration
+  |   | `-char
+  |   `-)
+  `-;
+)txt"));
+}
+
 TEST_P(SyntaxTreeTest, ComplexDeclarator) {
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
