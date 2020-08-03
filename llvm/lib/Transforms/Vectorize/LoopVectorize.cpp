@@ -6463,7 +6463,7 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
              "Expected a load or a store!");
 
-      if (VF == 1)
+      if (VF == 1 || !TheLoop->contains(I))
         return TTI::CastContextHint::Normal;
 
       switch (getWideningDecision(I, VF)) {
