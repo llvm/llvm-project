@@ -675,6 +675,15 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = Align(8);
     Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
     return true;
+  case Intrinsic::wasm_load32_zero:
+  case Intrinsic::wasm_load64_zero:
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = Intrinsic == Intrinsic::wasm_load32_zero ? MVT::i32 : MVT::i64;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.align = Info.memVT == MVT::i32 ? Align(4) : Align(8);
+    Info.flags = MachineMemOperand::MOLoad;
+    return true;
   default:
     return false;
   }
