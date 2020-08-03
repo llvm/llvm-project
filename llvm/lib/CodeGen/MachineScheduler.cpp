@@ -1298,7 +1298,7 @@ void ScheduleDAGMILive::computeDFSResult() {
 /// The cyclic path estimation identifies a def-use pair that crosses the back
 /// edge and considers the depth and height of the nodes. For example, consider
 /// the following instruction sequence where each instruction has unit latency
-/// and defines an epomymous virtual register:
+/// and defines an eponymous virtual register:
 ///
 /// a->b(a,c)->c(b)->d(c)->exit
 ///
