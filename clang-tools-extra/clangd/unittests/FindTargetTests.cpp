@@ -535,6 +535,7 @@ TEST_F(TargetDeclTest, OverloadExpr) {
   // FIXME: Auto-completion in a template requires disabling delayed template
   // parsing.
   Flags = {"-fno-delayed-template-parsing"};
+  Flags.push_back("--target=x86_64-pc-linux-gnu");
 
   Code = R"cpp(
     void func(int*);
@@ -559,6 +560,36 @@ TEST_F(TargetDeclTest, OverloadExpr) {
     };
   )cpp";
   EXPECT_DECLS("UnresolvedMemberExpr", "void func(int *)", "void func(char *)");
+
+  Code = R"cpp(
+    struct X {
+      static void *operator new(unsigned long);
+    };
+    auto* k = [[new]] X();
+  )cpp";
+  EXPECT_DECLS("CXXNewExpr", "static void *operator new(unsigned long)");
+  Code = R"cpp(
+    void *operator new(unsigned long);
+    auto* k = [[new]] int();
+  )cpp";
+  EXPECT_DECLS("CXXNewExpr", "void *operator new(unsigned long)");
+
+  Code = R"cpp(
+    struct X {
+      static void operator delete(void *) noexcept;
+    };
+    void k(X* x) {
+      [[delete]] x;
+    }
+  )cpp";
+  EXPECT_DECLS("CXXDeleteExpr", "static void operator delete(void *) noexcept");
+  Code = R"cpp(
+    void operator delete(void *) noexcept;
+    void k(int* x) {
+      [[delete]] x;
+    }
+  )cpp";
+  EXPECT_DECLS("CXXDeleteExpr", "void operator delete(void *) noexcept");
 }
 
 TEST_F(TargetDeclTest, DependentExprs) {
