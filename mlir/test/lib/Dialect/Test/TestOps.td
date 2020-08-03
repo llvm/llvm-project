@@ -1163,6 +1163,16 @@ def TestTypeConsumerOp : TEST_Op<"type_consumer">,
 def TestValidOp : TEST_Op<"valid", [Terminator]>,
   Arguments<(ins Variadic<AnyType>)>;
 
+def TestMergeBlocksOp : TEST_Op<"merge_blocks"> {
+  let summary = "merge_blocks operation";
+  let description = [{
+    Test op with multiple blocks that are merged with Dialect Conversion"
+  }];
+
+  let regions = (region AnyRegion:$body);
+  let results = (outs Variadic<AnyType>:$result);
+}
+
 //===----------------------------------------------------------------------===//
 // Test parser.
 //===----------------------------------------------------------------------===//
