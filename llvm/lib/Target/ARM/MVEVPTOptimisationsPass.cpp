@@ -462,6 +462,8 @@ bool MVEVPTOptimisations::ConvertVPSEL(MachineBasicBlock &MBB) {
             .addImm(ARMVCC::Then)
             .add(MI.getOperand(4))
             .add(MI.getOperand(2));
+    // Silence unused variable warning in release builds.
+    (void)MIBuilder;
     LLVM_DEBUG(dbgs() << "Replacing VPSEL: "; MI.dump();
                dbgs() << "     with VMOVT: "; MIBuilder.getInstr()->dump());
     DeadInstructions.push_back(&MI);
