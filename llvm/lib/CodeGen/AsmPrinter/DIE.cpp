@@ -549,10 +549,15 @@ void DIEDelta::emitValue(const AsmPrinter *AP, dwarf::Form Form) const {
 /// SizeOf - Determine size of delta value in bytes.
 ///
 unsigned DIEDelta::SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
-  if (Form == dwarf::DW_FORM_data4) return 4;
-  if (Form == dwarf::DW_FORM_sec_offset) return 4;
-  if (Form == dwarf::DW_FORM_strp) return 4;
-  return AP->MAI->getCodePointerSize();
+  switch (Form) {
+  case dwarf::DW_FORM_data4:
+    return 4;
+  case dwarf::DW_FORM_sec_offset:
+    // FIXME: add support for DWARF64
+    return 4;
+  default:
+    llvm_unreachable("DIE Value form not supported yet");
+  }
 }
 
 LLVM_DUMP_METHOD
