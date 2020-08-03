@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This provides a generalized class for OpenMP runtime code generation
-// specialized by GPU target NVPTX.
+// specialized by GPU targets NVPTX and AMDGCN.
 //
 //===----------------------------------------------------------------------===//
 
@@ -199,8 +199,17 @@ public:
   void clear() override;
 
   /// Declare generalized virtual functions which need to be defined
-  /// by all specializations of OpenMPGPURuntime Targets.
+  /// by all specializations of OpenMPGPURuntime Targets like AMDGCN
+  /// and NVPTX.
+
+  /// Get the GPU warp size.
   virtual llvm::Value *getGPUWarpSize(CodeGenFunction &CGF) = 0;
+
+  /// Get the id of the current thread on the GPU.
+  virtual llvm::Value *getGPUThreadID(CodeGenFunction &CGF) = 0;
+
+  /// Get the maximum number of threads in a block of the GPU.
+  virtual llvm::Value *getGPUNumThreads(CodeGenFunction &CGF) = 0;
 
   /// Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
   /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.
