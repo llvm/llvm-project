@@ -44,12 +44,11 @@ struct ConversionToDecimalResult {
 };
 
 enum FortranRounding {
-  RoundNearest, /* RN */
+  RoundNearest, /* RN and RP */
   RoundUp, /* RU */
   RoundDown, /* RD */
   RoundToZero, /* RZ - no rounding */
   RoundCompatible, /* RC: like RN, but ties go away from 0 */
-  RoundDefault, /* RP: maps to one of the above */
 };
 
 /* The "minimize" flag causes the fewest number of output digits
