@@ -778,6 +778,9 @@ protected:
   virtual void printRelrReloc(const Elf_Relr &R) = 0;
   void printRelocationsHelper(const ELFFile<ELFT> *Obj, const Elf_Shdr &Sec);
 
+  StringRef getPrintableSectionName(const ELFFile<ELFT> *Obj,
+                                    const Elf_Shdr &Sec) const;
+
   void reportUniqueWarning(Error Err) const;
   StringRef FileName;
 
@@ -3732,7 +3735,6 @@ template <class ELFT> void GNUStyle<ELFT>::printRelocations(const ELFO *Obj) {
       continue;
     HasRelocSections = true;
 
-    StringRef Name = unwrapOrError(this->FileName, Obj->getSectionName(&Sec));
     unsigned Entries;
     // Android's packed relocation section needs to be unpacked first
     // to get the actual number of entries.
@@ -3748,6 +3750,7 @@ template <class ELFT> void GNUStyle<ELFT>::printRelocations(const ELFO *Obj) {
     }
 
     uintX_t Offset = Sec.sh_offset;
+    StringRef Name = this->getPrintableSectionName(Obj, Sec);
     OS << "\nRelocation section '" << Name << "' at offset 0x"
        << to_hexString(Offset, false) << " contains " << Entries
        << " entries:\n";
@@ -3877,17 +3880,8 @@ void GNUStyle<ELFT>::printSymtabMessage(const ELFO *Obj, const Elf_Shdr *Symtab,
                                         size_t Entries,
                                         bool NonVisibilityBitsUsed) {
   StringRef Name;
-  if (Symtab) {
-    if (Expected<StringRef> NameOrErr = Obj->getSectionName(Symtab)) {
-      Name = *NameOrErr;
-    } else {
-      this->reportUniqueWarning(createError("unable to get the name of " +
-                                            describe(Obj, *Symtab) + ": " +
-                                            toString(NameOrErr.takeError())));
-      Name = "<?>";
-    }
-  }
-
+  if (Symtab)
+    Name = this->getPrintableSectionName(Obj, *Symtab);
   if (!Name.empty())
     OS << "\nSymbol table '" << Name << "'";
   else
@@ -5520,6 +5514,20 @@ void DumpStyle<ELFT>::printRelocationsHelper(const ELFFile<ELFT> *Obj,
 }
 
 template <class ELFT>
+StringRef DumpStyle<ELFT>::getPrintableSectionName(const ELFFile<ELFT> *Obj,
+                                                   const Elf_Shdr &Sec) const {
+  StringRef Name = "<?>";
+  if (Expected<StringRef> SecNameOrErr =
+          Obj->getSectionName(&Sec, this->dumper()->WarningHandler))
+    Name = *SecNameOrErr;
+  else
+    this->reportUniqueWarning(createError("unable to get the name of " +
+                                          describe(Obj, Sec) + ": " +
+                                          toString(SecNameOrErr.takeError())));
+  return Name;
+}
+
+template <class ELFT>
 void GNUStyle<ELFT>::printDependentLibs(const ELFFile<ELFT> *Obj) {
   bool SectionStarted = false;
   struct NameOffset {
@@ -5544,16 +5552,7 @@ void GNUStyle<ELFT>::printDependentLibs(const ELFFile<ELFT> *Obj) {
       PrintSection();
     SectionStarted = true;
     Current.Offset = Shdr.sh_offset;
-    Expected<StringRef> Name = Obj->getSectionName(&Shdr);
-    if (!Name) {
-      Current.Name = "<?>";
-      this->reportUniqueWarning(
-          createError("cannot get section name of "
-                      "SHT_LLVM_DEPENDENT_LIBRARIES section: " +
-                      toString(Name.takeError())));
-    } else {
-      Current.Name = *Name;
-    }
+    Current.Name = this->getPrintableSectionName(Obj, Shdr);
   };
   auto OnLibEntry = [&](StringRef Lib, uint64_t Offset) {
     SecEntries.push_back(NameOffset{Lib, Offset});
@@ -6135,7 +6134,7 @@ template <class ELFT> void LLVMStyle<ELFT>::printRelocations(const ELFO *Obj) {
     if (!isRelocationSec<ELFT>(Sec))
       continue;
 
-    StringRef Name = unwrapOrError(this->FileName, Obj->getSectionName(&Sec));
+    StringRef Name = this->getPrintableSectionName(Obj, Sec);
     unsigned SecNdx = &Sec - &cantFail(Obj->sections()).front();
     W.startLine() << "Section (" << SecNdx << ") " << Name << " {\n";
     W.indent();
@@ -6205,16 +6204,9 @@ void LLVMStyle<ELFT>::printSectionHeaders(const ELFO *Obj) {
   std::vector<EnumEntry<unsigned>> FlagsList =
       getSectionFlagsForTarget(Obj->getHeader()->e_machine);
   for (const Elf_Shdr &Sec : cantFail(Obj->sections())) {
-    StringRef Name = "<?>";
-    if (Expected<StringRef> SecNameOrErr =
-            Obj->getSectionName(&Sec, this->dumper()->WarningHandler))
-      Name = *SecNameOrErr;
-    else
-      this->reportUniqueWarning(SecNameOrErr.takeError());
-
     DictScope SectionD(W, "Section");
     W.printNumber("Index", ++SectionIndex);
-    W.printNumber("Name", Name, Sec.sh_name);
+    W.printNumber("Name", this->getPrintableSectionName(Obj, Sec), Sec.sh_name);
     W.printHex(
         "Type",
         object::getELFSectionTypeName(Obj->getHeader()->e_machine, Sec.sh_type),
