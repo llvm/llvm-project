@@ -21,6 +21,7 @@ class IndexType;
 class IntegerType;
 class MLIRContext;
 class TypeStorage;
+class TypeRange;
 
 namespace detail {
 struct FunctionTypeStorage;
@@ -259,21 +260,17 @@ class FunctionType
 public:
   using Base::Base;
 
-  static FunctionType get(ArrayRef<Type> inputs, ArrayRef<Type> results,
+  static FunctionType get(TypeRange inputs, TypeRange results,
                           MLIRContext *context);
 
   // Input types.
   unsigned getNumInputs() const { return getSubclassData(); }
-
   Type getInput(unsigned i) const { return getInputs()[i]; }
-
   ArrayRef<Type> getInputs() const;
 
   // Result types.
   unsigned getNumResults() const;
-
   Type getResult(unsigned i) const { return getResults()[i]; }
-
   ArrayRef<Type> getResults() const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.

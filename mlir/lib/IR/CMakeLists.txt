@@ -22,6 +22,7 @@ add_mlir_library(MLIRIR
   StandardTypes.cpp
   SymbolTable.cpp
   Types.cpp
+  TypeRange.cpp
   TypeUtilities.cpp
   Value.cpp
   Verifier.cpp
