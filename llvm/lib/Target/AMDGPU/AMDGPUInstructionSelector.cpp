@@ -567,6 +567,11 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
     BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::COPY), Dst.getReg())
       .addReg(SrcReg, SrcFlags, SubRegs[I]);
 
+    // Make sure the subregister index is valid for the source register.
+    SrcRC = TRI.getSubClassWithSubReg(SrcRC, SubRegs[I]);
+    if (!SrcRC || !RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
+      return false;
+
     const TargetRegisterClass *DstRC =
       TRI.getConstrainedRegClassForOperand(Dst, *MRI);
     if (DstRC && !RBI.constrainGenericRegister(Dst.getReg(), *DstRC, *MRI))
