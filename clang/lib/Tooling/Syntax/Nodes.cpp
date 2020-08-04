@@ -152,6 +152,10 @@ raw_ostream &syntax::operator<<(raw_ostream &OS, NodeRole R) {
     return OS << "TemplateKeyword";
   case syntax::NodeRole::BodyStatement:
     return OS << "BodyStatement";
+  case syntax::NodeRole::List_element:
+    return OS << "List_element";
+  case syntax::NodeRole::List_delimiter:
+    return OS << "List_delimiter";
   case syntax::NodeRole::CaseStatement_value:
     return OS << "CaseStatement_value";
   case syntax::NodeRole::IfStatement_thenStatement:
