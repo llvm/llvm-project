@@ -525,7 +525,7 @@ redundant stores.
 .. _passes-function-attrs:
 
 ``-function-attrs``: Deduce function attributes
-----------------------------------------------
+-----------------------------------------------
 
 A simple interprocedural pass which walks the call-graph, looking for functions
 which do not access or only read non-local memory, and marking them
