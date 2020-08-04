@@ -1087,7 +1087,7 @@ Currently, only the following parameter attributes are defined:
     ``byval``. If the alignment is not specified, then the code generator
     makes a target-specific assumption.
 
-     This is intended for representing ABI constraints, and is not
+    This is intended for representing ABI constraints, and is not
     intended to be inferred for optimization use.
 
 .. _attr_preallocated:
