@@ -5614,11 +5614,6 @@ static bool scaleShuffleElements(ArrayRef<int> Mask, unsigned NumDstElts,
   return false;
 }
 
-static bool canScaleShuffleElements(ArrayRef<int> Mask, unsigned NumDstElts) {
-  SmallVector<int, 32> WidenedMask;
-  return scaleShuffleElements(Mask, NumDstElts, WidenedMask);
-}
-
 /// Returns true if Elt is a constant zero or a floating point constant +0.0.
 bool X86::isZeroNode(SDValue Elt) {
   return isNullConstant(Elt) || isNullFPConstant(Elt);
