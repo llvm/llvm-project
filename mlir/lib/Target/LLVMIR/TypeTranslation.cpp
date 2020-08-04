@@ -72,7 +72,7 @@ public:
                   LLVM::LLVMFunctionType, LLVM::LLVMPointerType,
                   LLVM::LLVMStructType, LLVM::LLVMFixedVectorType,
                   LLVM::LLVMScalableVectorType>(
-                [this](auto array) { return translate(array); })
+                [this](auto type) { return this->translate(type); })
             .Default([](LLVM::LLVMType t) -> llvm::Type * {
               llvm_unreachable("unknown LLVM dialect type");
             });
@@ -187,7 +187,7 @@ public:
             .Case<llvm::ArrayType, llvm::FunctionType, llvm::IntegerType,
                   llvm::PointerType, llvm::StructType, llvm::FixedVectorType,
                   llvm::ScalableVectorType>(
-                [this](auto *type) { return translate(type); })
+                [this](auto *type) { return this->translate(type); })
             .Default([this](llvm::Type *type) {
               return translatePrimitiveType(type);
             });
