@@ -578,3 +578,8 @@ void Foo() {
 #undef M1
 #undef DUP
 } // namespace scratchspace
+
+template<typename type_t>
+auto GetRes(type_t& Param) -> decltype(Param.res());
+// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: invalid case style for parameter 'Param'
+// CHECK-FIXES: auto GetRes(type_t& a_param) -> decltype(a_param.res());
