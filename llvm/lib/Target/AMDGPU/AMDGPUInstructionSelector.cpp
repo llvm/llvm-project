@@ -1094,8 +1094,6 @@ bool AMDGPUInstructionSelector::selectReturnAddress(MachineInstr &I) const {
       !RBI.constrainGenericRegister(DstReg, *RC, *MRI))
     return false;
 
-  MachineBasicBlock &EntryMBB = MF.front();
-
   // Check for kernel and shader functions
   if (Depth != 0 ||
       MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction()) {
@@ -1105,22 +1103,14 @@ bool AMDGPUInstructionSelector::selectReturnAddress(MachineInstr &I) const {
     return true;
   }
 
-  Register ReturnAddrReg = TRI.getReturnAddressReg(MF);
-
   MachineFrameInfo &MFI = MF.getFrameInfo();
   // There is a call to @llvm.returnaddress in this function
   MFI.setReturnAddressIsTaken(true);
 
   // Get the return address reg and mark it as an implicit live-in
-  Register LiveIn = MRI->getLiveInVirtReg(ReturnAddrReg);
-  if (!LiveIn) {
-    LiveIn = MF.addLiveIn(ReturnAddrReg, RC);
-    BuildMI(EntryMBB, EntryMBB.begin(), DL, TII.get(AMDGPU::COPY), LiveIn)
-      .addReg(ReturnAddrReg);
-    if (!EntryMBB.isLiveIn(ReturnAddrReg))
-      EntryMBB.addLiveIn(ReturnAddrReg);
-  }
-
+  Register ReturnAddrReg = TRI.getReturnAddressReg(MF);
+  Register LiveIn = getFunctionLiveInPhysReg(MF, TII, ReturnAddrReg,
+                                             AMDGPU::SReg_64RegClass);
   BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), DstReg)
     .addReg(LiveIn);
   I.eraseFromParent();
