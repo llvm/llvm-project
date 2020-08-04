@@ -5,7 +5,7 @@
 ## License. See LICENSE.TXT for details.
 ##===--------------------------------------------------------------------------
 
-cmake_minimum_required(VERSION 3.4.3)
+cmake_minimum_required(VERSION 3.13.4)
 
 project(ROCm-Device-Libs VERSION "1.0.0")
 cmake_policy(SET CMP0011 NEW)
