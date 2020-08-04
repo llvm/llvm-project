@@ -1368,6 +1368,7 @@ multiclass BufferAtomicPatterns<SDPatternOperator name, ValueType vt,
 }
 
 defm : BufferAtomicPatterns<SIbuffer_atomic_swap, i32, "BUFFER_ATOMIC_SWAP">;
+defm : BufferAtomicPatterns<SIbuffer_atomic_swap, f32, "BUFFER_ATOMIC_SWAP">;
 defm : BufferAtomicPatterns<SIbuffer_atomic_add, i32, "BUFFER_ATOMIC_ADD">;
 defm : BufferAtomicPatterns<SIbuffer_atomic_sub, i32, "BUFFER_ATOMIC_SUB">;
 defm : BufferAtomicPatterns<SIbuffer_atomic_smin, i32, "BUFFER_ATOMIC_SMIN">;
