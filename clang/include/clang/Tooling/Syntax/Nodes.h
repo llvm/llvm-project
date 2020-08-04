@@ -95,9 +95,13 @@ enum class NodeKind : uint16_t {
   TrailingReturnType,
   ParametersAndQualifiers,
   MemberPointer,
+  UnqualifiedId,
+  // Nested Name Specifiers.
   NestedNameSpecifier,
-  NameSpecifier,
-  UnqualifiedId
+  GlobalNameSpecifier,
+  DecltypeNameSpecifier,
+  IdentifierNameSpecifier,
+  SimpleTemplateNameSpecifier
 };
 /// For debugging purposes.
 raw_ostream &operator<<(raw_ostream &OS, NodeKind K);
@@ -138,6 +142,7 @@ enum class NodeRole : uint8_t {
   /// Tokens or Keywords
   ArrowToken,
   ExternKeyword,
+  TemplateKeyword,
   /// An inner statement for those that have only a single child of kind
   /// statement, e.g. loop body for while, for, etc; inner statement for case,
   /// default, etc.
@@ -167,6 +172,7 @@ enum class NodeRole : uint8_t {
   IdExpression_id,
   IdExpression_qualifier,
   NestedNameSpecifier_specifier,
+  NestedNameSpecifier_delimiter,
   ParenExpression_subExpression
 };
 /// For debugging purposes.
@@ -195,12 +201,60 @@ public:
 };
 
 /// A sequence of these specifiers make a `nested-name-specifier`.
-/// e.g. the `std::` or `vector<int>::` in `std::vector<int>::size`.
-class NameSpecifier final : public Tree {
+/// e.g. the `std` or `vector<int>` in `std::vector<int>::size`.
+class NameSpecifier : public Tree {
 public:
-  NameSpecifier() : Tree(NodeKind::NameSpecifier) {}
+  NameSpecifier(NodeKind K) : Tree(K) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::NameSpecifier;
+    return N->kind() == NodeKind::GlobalNameSpecifier ||
+           N->kind() == NodeKind::DecltypeNameSpecifier ||
+           N->kind() == NodeKind::IdentifierNameSpecifier ||
+           N->kind() == NodeKind::SimpleTemplateNameSpecifier;
+  }
+};
+
+/// The global namespace name specifier, this specifier doesn't correspond to a
+/// token instead an absence of tokens before a `::` characterizes it, in
+/// `::std::vector<int>` it would be characterized by the absence of a token
+/// before the first `::`
+class GlobalNameSpecifier final : public NameSpecifier {
+public:
+  GlobalNameSpecifier() : NameSpecifier(NodeKind::GlobalNameSpecifier) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::GlobalNameSpecifier;
+  }
+};
+
+/// A name specifier holding a decltype, of the form: `decltype ( expression ) `
+/// e.g. the `decltype(s)` in `decltype(s)::size`.
+class DecltypeNameSpecifier final : public NameSpecifier {
+public:
+  DecltypeNameSpecifier() : NameSpecifier(NodeKind::DecltypeNameSpecifier) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::DecltypeNameSpecifier;
+  }
+};
+
+/// A identifier name specifier, of the form `identifier`
+/// e.g. the `std` in `std::vector<int>::size`.
+class IdentifierNameSpecifier final : public NameSpecifier {
+public:
+  IdentifierNameSpecifier()
+      : NameSpecifier(NodeKind::IdentifierNameSpecifier) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::IdentifierNameSpecifier;
+  }
+};
+
+/// A name specifier with a simple-template-id, of the form `template_opt
+/// identifier < template-args >` e.g. the `vector<int>` in
+/// `std::vector<int>::size`.
+class SimpleTemplateNameSpecifier final : public NameSpecifier {
+public:
+  SimpleTemplateNameSpecifier()
+      : NameSpecifier(NodeKind::SimpleTemplateNameSpecifier) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::SimpleTemplateNameSpecifier;
   }
 };
 
@@ -213,6 +267,7 @@ public:
     return N->kind() <= NodeKind::NestedNameSpecifier;
   }
   std::vector<NameSpecifier *> specifiers();
+  std::vector<Leaf *> delimiters();
 };
 
 /// Models an `unqualified-id`. C++ [expr.prim.id.unqual]
@@ -239,8 +294,7 @@ public:
     return N->kind() == NodeKind::IdExpression;
   }
   NestedNameSpecifier *qualifier();
-  // TODO after expose `id-expression` from `DependentScopeDeclRefExpr`:
-  // Add accessor for `template_opt`.
+  Leaf *templateKeyword();
   UnqualifiedId *unqualifiedId();
 };
 

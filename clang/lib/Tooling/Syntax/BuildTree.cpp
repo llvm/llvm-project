@@ -286,6 +286,11 @@ public:
     foldNode(Range, New, nullptr);
   }
 
+  void foldNode(ArrayRef<syntax::Token> Range, syntax::Tree *New,
+                NestedNameSpecifierLoc L) {
+    // FIXME: add mapping for NestedNameSpecifierLoc
+    foldNode(Range, New, nullptr);
+  }
   /// Notifies that we should not consume trailing semicolon when computing
   /// token range of \p D.
   void noticeDeclWithoutSemicolon(Decl *D);
@@ -690,21 +695,6 @@ public:
     return true;
   }
 
-  syntax::NestedNameSpecifier *
-  BuildNestedNameSpecifier(NestedNameSpecifierLoc QualifierLoc) {
-    if (!QualifierLoc)
-      return nullptr;
-    for (auto it = QualifierLoc; it; it = it.getPrefix()) {
-      auto *NS = new (allocator()) syntax::NameSpecifier;
-      Builder.foldNode(Builder.getRange(it.getLocalSourceRange()), NS, nullptr);
-      Builder.markChild(NS, syntax::NodeRole::NestedNameSpecifier_specifier);
-    }
-    auto *NNS = new (allocator()) syntax::NestedNameSpecifier;
-    Builder.foldNode(Builder.getRange(QualifierLoc.getSourceRange()), NNS,
-                     nullptr);
-    return NNS;
-  }
-
   bool TraverseUserDefinedLiteral(UserDefinedLiteral *S) {
     // The semantic AST node `UserDefinedLiteral` (UDL) may have one child node
     // referencing the location of the UDL suffix (`_w` in `1.2_w`). The
@@ -754,23 +744,118 @@ public:
     return true;
   }
 
+  syntax::NameSpecifier *BuildNameSpecifier(const NestedNameSpecifier &NNS) {
+    switch (NNS.getKind()) {
+    case NestedNameSpecifier::Global:
+      return new (allocator()) syntax::GlobalNameSpecifier;
+    case NestedNameSpecifier::Namespace:
+    case NestedNameSpecifier::NamespaceAlias:
+    case NestedNameSpecifier::Identifier:
+      return new (allocator()) syntax::IdentifierNameSpecifier;
+    case NestedNameSpecifier::TypeSpecWithTemplate:
+      return new (allocator()) syntax::SimpleTemplateNameSpecifier;
+    case NestedNameSpecifier::TypeSpec: {
+      const auto *NNSType = NNS.getAsType();
+      assert(NNSType);
+      if (isa<DecltypeType>(NNSType))
+        return new (allocator()) syntax::DecltypeNameSpecifier;
+      if (isa<TemplateSpecializationType, DependentTemplateSpecializationType>(
+              NNSType))
+        return new (allocator()) syntax::SimpleTemplateNameSpecifier;
+      return new (allocator()) syntax::IdentifierNameSpecifier;
+    }
+    case NestedNameSpecifier::Super:
+      // FIXME: Support Microsoft's __super
+      llvm::report_fatal_error("We don't yet support the __super specifier",
+                               true);
+    }
+  }
+
+  // FIXME: Fix `NestedNameSpecifierLoc::getLocalSourceRange` for the
+  // `DependentTemplateSpecializationType` case.
+  /// Given a nested-name-specifier return the range for the last name specifier
+  ///
+  /// e.g. `std::T::template X<U>::` => `template X<U>::`
+  SourceRange getLocalSourceRange(const NestedNameSpecifierLoc &NNSLoc) {
+    auto SR = NNSLoc.getLocalSourceRange();
+
+    // The method `NestedNameSpecifierLoc::getLocalSourceRange` *should* return
+    // the desired `SourceRange`, but there is a corner
+    // case. For a `DependentTemplateSpecializationType` this method returns its
+    // qualifiers as well, in other words in the example above this method
+    // returns `T::template X<U>::` instead of only `template X<U>::`
+    if (auto TL = NNSLoc.getTypeLoc()) {
+      if (auto DependentTL =
+              TL.getAs<DependentTemplateSpecializationTypeLoc>()) {
+        // The 'template' keyword is always present in dependent template
+        // specializations. Except in the case of incorrect code
+        // TODO: Treat the case of incorrect code.
+        SR.setBegin(DependentTL.getTemplateKeywordLoc());
+      }
+    }
+
+    return SR;
+  }
+
+  syntax::NestedNameSpecifier *
+  BuildNestedNameSpecifier(const NestedNameSpecifierLoc &QualifierLoc) {
+    if (!QualifierLoc)
+      return nullptr;
+    for (auto it = QualifierLoc; it; it = it.getPrefix()) {
+      assert(it.hasQualifier());
+      auto *NS = BuildNameSpecifier(*it.getNestedNameSpecifier());
+      assert(NS);
+      if (!isa<syntax::GlobalNameSpecifier>(NS))
+        Builder.foldNode(Builder.getRange(getLocalSourceRange(it)).drop_back(),
+                         NS, it);
+      Builder.markChild(NS, syntax::NodeRole::NestedNameSpecifier_specifier);
+      Builder.markChildToken(it.getEndLoc(),
+                             syntax::NodeRole::NestedNameSpecifier_delimiter);
+    }
+    auto *NNS = new (allocator()) syntax::NestedNameSpecifier;
+    Builder.foldNode(Builder.getRange(QualifierLoc.getSourceRange()), NNS,
+                     QualifierLoc);
+    return NNS;
+  }
+
   bool WalkUpFromDeclRefExpr(DeclRefExpr *S) {
-    if (auto *NNS = BuildNestedNameSpecifier(S->getQualifierLoc()))
-      Builder.markChild(NNS, syntax::NodeRole::IdExpression_qualifier);
+    auto *Qualifier = BuildNestedNameSpecifier(S->getQualifierLoc());
+    if (Qualifier)
+      Builder.markChild(Qualifier, syntax::NodeRole::IdExpression_qualifier);
+
+    auto TemplateKeywordLoc = S->getTemplateKeywordLoc();
+    if (TemplateKeywordLoc.isValid())
+      Builder.markChildToken(TemplateKeywordLoc,
+                             syntax::NodeRole::TemplateKeyword);
 
     auto *unqualifiedId = new (allocator()) syntax::UnqualifiedId;
-    // Get `UnqualifiedId` from `DeclRefExpr`.
-    // FIXME: Extract this logic so that it can be used by `MemberExpr`,
-    // and other semantic constructs, now it is tied to `DeclRefExpr`.
-    if (!S->hasExplicitTemplateArgs()) {
-      Builder.foldNode(Builder.getRange(S->getNameInfo().getSourceRange()),
-                       unqualifiedId, nullptr);
-    } else {
-      auto templateIdSourceRange =
-          SourceRange(S->getNameInfo().getBeginLoc(), S->getRAngleLoc());
-      Builder.foldNode(Builder.getRange(templateIdSourceRange), unqualifiedId,
-                       nullptr);
-    }
+
+    Builder.foldNode(Builder.getRange(S->getLocation(), S->getEndLoc()),
+                     unqualifiedId, nullptr);
+
+    Builder.markChild(unqualifiedId, syntax::NodeRole::IdExpression_id);
+
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::IdExpression, S);
+    return true;
+  }
+
+  // Same logic as DeclRefExpr.
+  bool WalkUpFromDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *S) {
+    auto *Qualifier = BuildNestedNameSpecifier(S->getQualifierLoc());
+    if (Qualifier)
+      Builder.markChild(Qualifier, syntax::NodeRole::IdExpression_qualifier);
+
+    auto TemplateKeywordLoc = S->getTemplateKeywordLoc();
+    if (TemplateKeywordLoc.isValid())
+      Builder.markChildToken(TemplateKeywordLoc,
+                             syntax::NodeRole::TemplateKeyword);
+
+    auto *unqualifiedId = new (allocator()) syntax::UnqualifiedId;
+
+    Builder.foldNode(Builder.getRange(S->getLocation(), S->getEndLoc()),
+                     unqualifiedId, nullptr);
+
     Builder.markChild(unqualifiedId, syntax::NodeRole::IdExpression_id);
 
     Builder.foldNode(Builder.getExprRange(S),
