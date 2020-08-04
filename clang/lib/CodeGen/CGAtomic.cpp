@@ -807,10 +807,20 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   bool Oversized = getContext().toBits(sizeChars) > MaxInlineWidthInBits;
   bool Misaligned = (Ptr.getAlignment() % sizeChars) != 0;
   bool UseLibcall = Misaligned | Oversized;
+  CharUnits MaxInlineWidth =
+      getContext().toCharUnitsFromBits(MaxInlineWidthInBits);
 
-  if (UseLibcall) {
-    CGM.getDiags().Report(E->getBeginLoc(), diag::warn_atomic_op_misaligned)
-        << !Oversized;
+  DiagnosticsEngine &Diags = CGM.getDiags();
+
+  if (Misaligned) {
+    Diags.Report(E->getBeginLoc(), diag::warn_atomic_op_misaligned)
+        << (int)sizeChars.getQuantity()
+        << (int)Ptr.getAlignment().getQuantity();
+  }
+
+  if (Oversized) {
+    Diags.Report(E->getBeginLoc(), diag::warn_atomic_op_oversized)
+        << (int)sizeChars.getQuantity() << (int)MaxInlineWidth.getQuantity();
   }
 
   llvm::Value *Order = EmitScalarExpr(E->getOrder());
