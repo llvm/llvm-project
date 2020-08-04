@@ -15,7 +15,9 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Identifier.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/TypeRange.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/TrailingObjects.h"
 
@@ -105,7 +107,7 @@ struct FunctionTypeStorage : public TypeStorage {
         inputsAndResults(inputsAndResults) {}
 
   /// The hash key used for uniquing.
-  using KeyTy = std::pair<ArrayRef<Type>, ArrayRef<Type>>;
+  using KeyTy = std::pair<TypeRange, TypeRange>;
   bool operator==(const KeyTy &key) const {
     return key == KeyTy(getInputs(), getResults());
   }
@@ -113,7 +115,7 @@ struct FunctionTypeStorage : public TypeStorage {
   /// Construction.
   static FunctionTypeStorage *construct(TypeStorageAllocator &allocator,
                                         const KeyTy &key) {
-    ArrayRef<Type> inputs = key.first, results = key.second;
+    TypeRange inputs = key.first, results = key.second;
 
     // Copy the inputs and results into the bump pointer.
     SmallVector<Type, 16> types;
@@ -320,13 +322,13 @@ struct ComplexTypeStorage : public TypeStorage {
 struct TupleTypeStorage final
     : public TypeStorage,
       public llvm::TrailingObjects<TupleTypeStorage, Type> {
-  using KeyTy = ArrayRef<Type>;
+  using KeyTy = TypeRange;
 
   TupleTypeStorage(unsigned numTypes) : TypeStorage(numTypes) {}
 
   /// Construction.
   static TupleTypeStorage *construct(TypeStorageAllocator &allocator,
-                                     ArrayRef<Type> key) {
+                                     TypeRange key) {
     // Allocate a new storage instance.
     auto byteSize = TupleTypeStorage::totalSizeToAlloc<Type>(key.size());
     auto rawMem = allocator.allocate(byteSize, alignof(TupleTypeStorage));
