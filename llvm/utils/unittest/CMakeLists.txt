@@ -19,6 +19,9 @@ include_directories(
   googlemock
   )
 
+# Gtest 1.8.0 uses tr1/tuple which is deprecated on MSVC, so we force it off.
+add_definitions(-DGTEST_HAS_TR1_TUPLE=0)
+
 if(WIN32)
   add_definitions(-DGTEST_OS_WINDOWS=1)
 endif()
