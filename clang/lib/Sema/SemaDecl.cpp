@@ -10029,11 +10029,16 @@ static bool CheckMultiVersionValue(Sema &S, const FunctionDecl *FD) {
 // multiversion functions.
 static bool AttrCompatibleWithMultiVersion(attr::Kind Kind,
                                            MultiVersionKind MVType) {
+  // Note: this list/diagnosis must match the list in
+  // checkMultiversionAttributesAllSame.
   switch (Kind) {
   default:
     return false;
   case attr::Used:
     return MVType == MultiVersionKind::Target;
+  case attr::NonNull:
+  case attr::NoThrow:
+    return true;
   }
 }
 
@@ -10201,8 +10206,6 @@ static bool CheckMultiVersionAdditionalRules(Sema &S, const FunctionDecl *OldFD,
       MVType == MultiVersionKind::CPUDispatch ||
       MVType == MultiVersionKind::CPUSpecific;
 
-  // For now, disallow all other attributes.  These should be opt-in, but
-  // an analysis of all of them is a future FIXME.
   if (CausesMV && OldFD &&
       checkNonMultiVersionCompatAttributes(S, OldFD, NewFD, MVType))
     return true;

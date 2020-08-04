@@ -10754,6 +10754,9 @@ def err_multiversion_noproto : Error<
 def err_multiversion_disallowed_other_attr : Error<
   "attribute '%select{target|cpu_specific|cpu_dispatch}0' multiversioning cannot be combined"
   " with attribute %1">;
+def err_multiversion_mismatched_attrs
+    : Error<"attributes on multiversioned functions must all match, attribute "
+            "%0 %select{is missing|has different arguments}1">;
 def err_multiversion_diff : Error<
   "multiversioned function declaration has a different %select{calling convention"
   "|return type|constexpr specification|inline specification|storage class|"
