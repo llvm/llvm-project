@@ -35,7 +35,7 @@ def getCompiler():
     """Returns the compiler in effect the test suite is running with."""
     compiler = configuration.compiler if configuration.compiler else "clang"
     compiler = lldbutil.which(compiler)
-    return os.path.realpath(compiler)
+    return os.path.abspath(compiler)
 
 
 def getArchFlag():
