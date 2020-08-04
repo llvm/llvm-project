@@ -1341,18 +1341,13 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                     : getVGPRSpillSaveOpcode(SpillSize);
   MFI->setHasSpilledVGPRs();
 
-  auto MIB = BuildMI(MBB, MI, DL, get(Opcode));
-  if (RI.hasAGPRs(RC)) {
-    MachineRegisterInfo &MRI = MF->getRegInfo();
-    Register Tmp = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    MIB.addReg(Tmp, RegState::Define);
-  }
-  MIB.addReg(SrcReg, getKillRegState(isKill)) // data
-     .addFrameIndex(FrameIndex)               // addr
-     .addReg(MFI->getScratchRSrcReg())        // scratch_rsrc
-     .addReg(MFI->getStackPtrOffsetReg())     // scratch_offset
-     .addImm(0)                               // offset
-     .addMemOperand(MMO);
+  BuildMI(MBB, MI, DL, get(Opcode))
+    .addReg(SrcReg, getKillRegState(isKill)) // data
+    .addFrameIndex(FrameIndex)               // addr
+    .addReg(MFI->getScratchRSrcReg())        // scratch_rsrc
+    .addReg(MFI->getStackPtrOffsetReg())     // scratch_offset
+    .addImm(0)                               // offset
+    .addMemOperand(MMO);
 }
 
 static unsigned getSGPRSpillRestoreOpcode(unsigned Size) {
@@ -1466,17 +1461,12 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
   unsigned Opcode = RI.hasAGPRs(RC) ? getAGPRSpillRestoreOpcode(SpillSize)
                                     : getVGPRSpillRestoreOpcode(SpillSize);
-  auto MIB = BuildMI(MBB, MI, DL, get(Opcode), DestReg);
-  if (RI.hasAGPRs(RC)) {
-    MachineRegisterInfo &MRI = MF->getRegInfo();
-    Register Tmp = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    MIB.addReg(Tmp, RegState::Define);
-  }
-  MIB.addFrameIndex(FrameIndex)        // vaddr
-     .addReg(MFI->getScratchRSrcReg()) // scratch_rsrc
-     .addReg(MFI->getStackPtrOffsetReg()) // scratch_offset
-     .addImm(0)                           // offset
-     .addMemOperand(MMO);
+  BuildMI(MBB, MI, DL, get(Opcode), DestReg)
+    .addFrameIndex(FrameIndex)        // vaddr
+    .addReg(MFI->getScratchRSrcReg()) // scratch_rsrc
+    .addReg(MFI->getStackPtrOffsetReg()) // scratch_offset
+    .addImm(0)                           // offset
+    .addMemOperand(MMO);
 }
 
 /// \param @Offset Offset in bytes of the FrameIndex being spilled
