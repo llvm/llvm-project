@@ -194,10 +194,12 @@ size_t ForEachNonZeroByte(const uint8_t *Begin, const uint8_t *End,
 
   // Iterate by Step bytes at a time.
   for (; P < End; P += Step)
-    if (LargeType Bundle = *reinterpret_cast<const LargeType *>(P))
+    if (LargeType Bundle = *reinterpret_cast<const LargeType *>(P)) {
+      Bundle = HostToLE(Bundle);
       for (size_t I = 0; I < Step; I++, Bundle >>= 8)
         if (uint8_t V = Bundle & 0xff)
           Handle8bitCounter(FirstFeature, P - Begin + I, V);
+    }
 
   // Iterate by 1 byte until the end.
   for (; P < End; P++)
