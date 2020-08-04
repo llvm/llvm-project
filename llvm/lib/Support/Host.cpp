@@ -1274,9 +1274,21 @@ int computeHostNumPhysicalCores() {
 #elif defined(__linux__) && defined(__powerpc__)
 int computeHostNumPhysicalCores() {
   cpu_set_t Affinity;
-  if (sched_getaffinity(0, sizeof(Affinity), &Affinity) != 0)
-    return -1;
-  return CPU_COUNT(&Affinity);
+  if (sched_getaffinity(0, sizeof(Affinity), &Affinity) == 0)
+    return CPU_COUNT(&Affinity);
+
+  // The call to sched_getaffinity() may have failed because the Affinity
+  // mask is too small for the number of CPU's on the system (i.e. the
+  // system has more than 1024 CPUs). Allocate a mask large enough for
+  // twice as many CPUs.
+  cpu_set_t *DynAffinity;
+  DynAffinity = CPU_ALLOC(2048);
+  if (sched_getaffinity(0, CPU_ALLOC_SIZE(2048), DynAffinity) == 0) {
+    int NumCPUs = CPU_COUNT(DynAffinity);
+    CPU_FREE(DynAffinity);
+    return NumCPUs;
+  }
+  return -1;
 }
 #elif defined(__linux__) && defined(__s390x__)
 int computeHostNumPhysicalCores() { return sysconf(_SC_NPROCESSORS_ONLN); }
