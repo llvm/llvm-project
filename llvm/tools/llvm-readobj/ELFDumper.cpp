@@ -3356,10 +3356,11 @@ readMipsOptions(const uint8_t *SecBegin, ArrayRef<uint8_t> &SecData,
 
   const Elf_Mips_Options<ELFT> *O =
       reinterpret_cast<const Elf_Mips_Options<ELFT> *>(SecData.data());
-  if (O->size > SecData.size()) {
+  const uint8_t Size = O->size;
+  if (Size > SecData.size()) {
     const uint64_t Offset = SecData.data() - SecBegin;
     const uint64_t SecSize = Offset + SecData.size();
-    return createError("a descriptor of size 0x" + Twine::utohexstr(O->size) +
+    return createError("a descriptor of size 0x" + Twine::utohexstr(Size) +
                        " at offset 0x" + Twine::utohexstr(Offset) +
                        " goes past the end of the .MIPS.options "
                        "section of size 0x" +
@@ -3371,14 +3372,14 @@ readMipsOptions(const uint8_t *SecBegin, ArrayRef<uint8_t> &SecData,
       sizeof(Elf_Mips_Options<ELFT>) + sizeof(Elf_Mips_RegInfo<ELFT>);
 
   if (IsSupported)
-    if (O->size < ExpectedSize)
+    if (Size < ExpectedSize)
       return createError(
           "a .MIPS.options entry of kind " +
           Twine(getElfMipsOptionsOdkType(O->kind)) +
-          " has an invalid size (0x" + Twine::utohexstr(O->size) +
+          " has an invalid size (0x" + Twine::utohexstr(Size) +
           "), the expected size is 0x" + Twine::utohexstr(ExpectedSize));
 
-  SecData = SecData.drop_front(O->size);
+  SecData = SecData.drop_front(Size);
   return O;
 }
 
