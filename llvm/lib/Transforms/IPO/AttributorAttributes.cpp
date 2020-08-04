@@ -2006,7 +2006,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
         if (idx >= Callee->arg_size())
           break;
         Value *ArgVal = CB.getArgOperand(idx);
-        if(!ArgVal)
+        if (!ArgVal)
           continue;
         IRPosition CalleeArgumentIRP =
             IRPosition::argument(*Callee->getArg(idx));
