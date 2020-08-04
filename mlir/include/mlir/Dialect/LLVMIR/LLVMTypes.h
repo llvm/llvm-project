@@ -26,6 +26,8 @@ class DialectAsmParser;
 class DialectAsmPrinter;
 
 namespace LLVM {
+class LLVMDialect;
+
 namespace detail {
 struct LLVMFunctionTypeStorage;
 struct LLVMIntegerTypeStorage;
@@ -33,6 +35,12 @@ struct LLVMPointerTypeStorage;
 struct LLVMStructTypeStorage;
 struct LLVMTypeAndSizeStorage;
 } // namespace detail
+
+class LLVMBFloatType;
+class LLVMHalfType;
+class LLVMFloatType;
+class LLVMDoubleType;
+class LLVMIntegerType;
 
 //===----------------------------------------------------------------------===//
 // LLVMTypeNew.
@@ -95,6 +103,150 @@ public:
   /// Support for isa/cast.
   static bool kindof(unsigned kind) {
     return FIRST_NEW_LLVM_TYPE <= kind && kind <= LAST_NEW_LLVM_TYPE;
+  }
+
+  LLVMDialect &getDialect();
+
+  /// Floating-point type utilities.
+  bool isBFloatTy() { return isa<LLVMBFloatType>(); }
+  bool isHalfTy() { return isa<LLVMHalfType>(); }
+  bool isFloatTy() { return isa<LLVMFloatType>(); }
+  bool isDoubleTy() { return isa<LLVMDoubleType>(); }
+  bool isFloatingPointTy() {
+    return isa<LLVMHalfType>() || isa<LLVMBFloatType>() ||
+           isa<LLVMFloatType>() || isa<LLVMDoubleType>();
+  }
+
+  /// Array type utilities.
+  LLVMTypeNew getArrayElementType();
+  unsigned getArrayNumElements();
+  bool isArrayTy();
+
+  /// Integer type utilities.
+  bool isIntegerTy() { return isa<LLVMIntegerType>(); }
+  bool isIntegerTy(unsigned bitwidth);
+  unsigned getIntegerBitWidth();
+
+  /// Vector type utilities.
+  LLVMTypeNew getVectorElementType();
+  unsigned getVectorNumElements();
+  llvm::ElementCount getVectorElementCount();
+  bool isVectorTy();
+
+  /// Function type utilities.
+  LLVMTypeNew getFunctionParamType(unsigned argIdx);
+  unsigned getFunctionNumParams();
+  LLVMTypeNew getFunctionResultType();
+  bool isFunctionTy();
+  bool isFunctionVarArg();
+
+  /// Pointer type utilities.
+  LLVMTypeNew getPointerTo(unsigned addrSpace = 0);
+  LLVMTypeNew getPointerElementTy();
+  bool isPointerTy();
+  static bool isValidPointerElementType(LLVMTypeNew type);
+
+  /// Struct type utilities.
+  LLVMTypeNew getStructElementType(unsigned i);
+  unsigned getStructNumElements();
+  bool isStructTy();
+
+  /// Utilities used to generate floating point types.
+  static LLVMTypeNew getDoubleTy(LLVMDialect *dialect);
+  static LLVMTypeNew getFloatTy(LLVMDialect *dialect);
+  static LLVMTypeNew getBFloatTy(LLVMDialect *dialect);
+  static LLVMTypeNew getHalfTy(LLVMDialect *dialect);
+  static LLVMTypeNew getFP128Ty(LLVMDialect *dialect);
+  static LLVMTypeNew getX86_FP80Ty(LLVMDialect *dialect);
+
+  /// Utilities used to generate integer types.
+  static LLVMTypeNew getIntNTy(LLVMDialect *dialect, unsigned numBits);
+  static LLVMTypeNew getInt1Ty(LLVMDialect *dialect) {
+    return getIntNTy(dialect, /*numBits=*/1);
+  }
+  static LLVMTypeNew getInt8Ty(LLVMDialect *dialect) {
+    return getIntNTy(dialect, /*numBits=*/8);
+  }
+  static LLVMTypeNew getInt8PtrTy(LLVMDialect *dialect) {
+    return getInt8Ty(dialect).getPointerTo();
+  }
+  static LLVMTypeNew getInt16Ty(LLVMDialect *dialect) {
+    return getIntNTy(dialect, /*numBits=*/16);
+  }
+  static LLVMTypeNew getInt32Ty(LLVMDialect *dialect) {
+    return getIntNTy(dialect, /*numBits=*/32);
+  }
+  static LLVMTypeNew getInt64Ty(LLVMDialect *dialect) {
+    return getIntNTy(dialect, /*numBits=*/64);
+  }
+
+  /// Utilities used to generate other miscellaneous types.
+  static LLVMTypeNew getArrayTy(LLVMTypeNew elementType, uint64_t numElements);
+  static LLVMTypeNew getFunctionTy(LLVMTypeNew result,
+                                   ArrayRef<LLVMTypeNew> params, bool isVarArg);
+  static LLVMTypeNew getFunctionTy(LLVMTypeNew result, bool isVarArg) {
+    return getFunctionTy(result, llvm::None, isVarArg);
+  }
+  static LLVMTypeNew getStructTy(LLVMDialect *dialect,
+                                 ArrayRef<LLVMTypeNew> elements,
+                                 bool isPacked = false);
+  static LLVMTypeNew getStructTy(LLVMDialect *dialect, bool isPacked = false) {
+    return getStructTy(dialect, llvm::None, isPacked);
+  }
+  template <typename... Args>
+  static typename std::enable_if<llvm::are_base_of<LLVMTypeNew, Args...>::value,
+                                 LLVMTypeNew>::type
+  getStructTy(LLVMTypeNew elt1, Args... elts) {
+    SmallVector<LLVMTypeNew, 8> fields({elt1, elts...});
+    return getStructTy(&elt1.getDialect(), fields);
+  }
+  static LLVMTypeNew getVectorTy(LLVMTypeNew elementType, unsigned numElements);
+
+  /// Void type utilities.
+  static LLVMTypeNew getVoidTy(LLVMDialect *dialect);
+  bool isVoidTy();
+
+  // Creation and setting of LLVM's identified struct types
+  static LLVMTypeNew createStructTy(LLVMDialect *dialect,
+                                    ArrayRef<LLVMTypeNew> elements,
+                                    Optional<StringRef> name,
+                                    bool isPacked = false);
+
+  static LLVMTypeNew createStructTy(LLVMDialect *dialect,
+                                    Optional<StringRef> name) {
+    return createStructTy(dialect, llvm::None, name);
+  }
+
+  static LLVMTypeNew createStructTy(ArrayRef<LLVMTypeNew> elements,
+                                    Optional<StringRef> name,
+                                    bool isPacked = false) {
+    assert(!elements.empty() &&
+           "This method may not be invoked with an empty list");
+    LLVMTypeNew ele0 = elements.front();
+    return createStructTy(&ele0.getDialect(), elements, name, isPacked);
+  }
+
+  template <typename... Args>
+  static
+      typename std::enable_if_t<llvm::are_base_of<LLVMTypeNew, Args...>::value,
+                                LLVMTypeNew>
+      createStructTy(StringRef name, LLVMTypeNew elt1, Args... elts) {
+    SmallVector<LLVMTypeNew, 8> fields({elt1, elts...});
+    Optional<StringRef> opt_name(name);
+    return createStructTy(&elt1.getDialect(), fields, opt_name);
+  }
+
+  static LLVMTypeNew setStructTyBody(LLVMTypeNew structType,
+                                     ArrayRef<LLVMTypeNew> elements,
+                                     bool isPacked = false);
+
+  template <typename... Args>
+  static
+      typename std::enable_if_t<llvm::are_base_of<LLVMTypeNew, Args...>::value,
+                                LLVMTypeNew>
+      setStructTyBody(LLVMTypeNew structType, LLVMTypeNew elt1, Args... elts) {
+    SmallVector<LLVMTypeNew, 8> fields({elt1, elts...});
+    return setStructTyBody(structType, fields);
   }
 };
 
@@ -322,6 +474,9 @@ public:
 
   /// Checks if a struct is opaque.
   bool isOpaque();
+
+  /// Checks if a struct is initialized.
+  bool isInitialized();
 
   /// Returns the name of an identified struct.
   StringRef getName();
