@@ -13,7 +13,7 @@ func @iadd_scalar(%arg0: i32, %arg1: i32) {
 
 // CHECK-LABEL: @iadd_vector
 func @iadd_vector(%arg0: vector<4xi64>, %arg1: vector<4xi64>) {
-  // CHECK: llvm.add %{{.*}}, %{{.*}} : !llvm<"<4 x i64>">
+  // CHECK: llvm.add %{{.*}}, %{{.*}} : !llvm.vec<4 x i64>
   %0 = spv.IAdd %arg0, %arg1 : vector<4xi64>
   return
 }
@@ -31,7 +31,7 @@ func @isub_scalar(%arg0: i8, %arg1: i8) {
 
 // CHECK-LABEL: @isub_vector
 func @isub_vector(%arg0: vector<2xi16>, %arg1: vector<2xi16>) {
-  // CHECK: llvm.sub %{{.*}}, %{{.*}} : !llvm<"<2 x i16>">
+  // CHECK: llvm.sub %{{.*}}, %{{.*}} : !llvm.vec<2 x i16>
   %0 = spv.ISub %arg0, %arg1 : vector<2xi16>
   return
 }
@@ -49,7 +49,7 @@ func @imul_scalar(%arg0: i32, %arg1: i32) {
 
 // CHECK-LABEL: @imul_vector
 func @imul_vector(%arg0: vector<3xi32>, %arg1: vector<3xi32>) {
-  // CHECK: llvm.mul %{{.*}}, %{{.*}} : !llvm<"<3 x i32>">
+  // CHECK: llvm.mul %{{.*}}, %{{.*}} : !llvm.vec<3 x i32>
   %0 = spv.IMul %arg0, %arg1 : vector<3xi32>
   return
 }
@@ -67,7 +67,7 @@ func @fadd_scalar(%arg0: f16, %arg1: f16) {
 
 // CHECK-LABEL: @fadd_vector
 func @fadd_vector(%arg0: vector<4xf32>, %arg1: vector<4xf32>) {
-  // CHECK: llvm.fadd %{{.*}}, %{{.*}} : !llvm<"<4 x float>">
+  // CHECK: llvm.fadd %{{.*}}, %{{.*}} : !llvm.vec<4 x float>
   %0 = spv.FAdd %arg0, %arg1 : vector<4xf32>
   return
 }
@@ -85,7 +85,7 @@ func @fsub_scalar(%arg0: f32, %arg1: f32) {
 
 // CHECK-LABEL: @fsub_vector
 func @fsub_vector(%arg0: vector<2xf32>, %arg1: vector<2xf32>) {
-  // CHECK: llvm.fsub %{{.*}}, %{{.*}} : !llvm<"<2 x float>">
+  // CHECK: llvm.fsub %{{.*}}, %{{.*}} : !llvm.vec<2 x float>
   %0 = spv.FSub %arg0, %arg1 : vector<2xf32>
   return
 }
@@ -103,7 +103,7 @@ func @fdiv_scalar(%arg0: f32, %arg1: f32) {
 
 // CHECK-LABEL: @fdiv_vector
 func @fdiv_vector(%arg0: vector<3xf64>, %arg1: vector<3xf64>) {
-  // CHECK: llvm.fdiv %{{.*}}, %{{.*}} : !llvm<"<3 x double>">
+  // CHECK: llvm.fdiv %{{.*}}, %{{.*}} : !llvm.vec<3 x double>
   %0 = spv.FDiv %arg0, %arg1 : vector<3xf64>
   return
 }
@@ -121,7 +121,7 @@ func @fmul_scalar(%arg0: f32, %arg1: f32) {
 
 // CHECK-LABEL: @fmul_vector
 func @fmul_vector(%arg0: vector<2xf32>, %arg1: vector<2xf32>) {
-  // CHECK: llvm.fmul %{{.*}}, %{{.*}} : !llvm<"<2 x float>">
+  // CHECK: llvm.fmul %{{.*}}, %{{.*}} : !llvm.vec<2 x float>
   %0 = spv.FMul %arg0, %arg1 : vector<2xf32>
   return
 }
@@ -139,7 +139,7 @@ func @frem_scalar(%arg0: f32, %arg1: f32) {
 
 // CHECK-LABEL: @frem_vector
 func @frem_vector(%arg0: vector<3xf64>, %arg1: vector<3xf64>) {
-  // CHECK: llvm.frem %{{.*}}, %{{.*}} : !llvm<"<3 x double>">
+  // CHECK: llvm.frem %{{.*}}, %{{.*}} : !llvm.vec<3 x double>
   %0 = spv.FRem %arg0, %arg1 : vector<3xf64>
   return
 }
@@ -157,7 +157,7 @@ func @fneg_scalar(%arg: f64) {
 
 // CHECK-LABEL: @fneg_vector
 func @fneg_vector(%arg: vector<2xf32>) {
-  // CHECK: llvm.fneg %{{.*}} : !llvm<"<2 x float>">
+  // CHECK: llvm.fneg %{{.*}} : !llvm.vec<2 x float>
   %0 = spv.FNegate %arg : vector<2xf32>
   return
 }
@@ -175,7 +175,7 @@ func @udiv_scalar(%arg0: i32, %arg1: i32) {
 
 // CHECK-LABEL: @udiv_vector
 func @udiv_vector(%arg0: vector<3xi64>, %arg1: vector<3xi64>) {
-  // CHECK: llvm.udiv %{{.*}}, %{{.*}} : !llvm<"<3 x i64>">
+  // CHECK: llvm.udiv %{{.*}}, %{{.*}} : !llvm.vec<3 x i64>
   %0 = spv.UDiv %arg0, %arg1 : vector<3xi64>
   return
 }
@@ -193,7 +193,7 @@ func @umod_scalar(%arg0: i32, %arg1: i32) {
 
 // CHECK-LABEL: @umod_vector
 func @umod_vector(%arg0: vector<3xi64>, %arg1: vector<3xi64>) {
-  // CHECK: llvm.urem %{{.*}}, %{{.*}} : !llvm<"<3 x i64>">
+  // CHECK: llvm.urem %{{.*}}, %{{.*}} : !llvm.vec<3 x i64>
   %0 = spv.UMod %arg0, %arg1 : vector<3xi64>
   return
 }
@@ -211,7 +211,7 @@ func @sdiv_scalar(%arg0: i16, %arg1: i16) {
 
 // CHECK-LABEL: @sdiv_vector
 func @sdiv_vector(%arg0: vector<2xi64>, %arg1: vector<2xi64>) {
-  // CHECK: llvm.sdiv %{{.*}}, %{{.*}} : !llvm<"<2 x i64>">
+  // CHECK: llvm.sdiv %{{.*}}, %{{.*}} : !llvm.vec<2 x i64>
   %0 = spv.SDiv %arg0, %arg1 : vector<2xi64>
   return
 }
@@ -229,7 +229,7 @@ func @srem_scalar(%arg0: i32, %arg1: i32) {
 
 // CHECK-LABEL: @srem_vector
 func @srem_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) {
-  // CHECK: llvm.srem %{{.*}}, %{{.*}} : !llvm<"<4 x i32>">
+  // CHECK: llvm.srem %{{.*}}, %{{.*}} : !llvm.vec<4 x i32>
   %0 = spv.SRem %arg0, %arg1 : vector<4xi32>
   return
 }

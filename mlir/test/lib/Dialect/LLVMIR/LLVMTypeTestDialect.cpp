@@ -11,25 +11,25 @@ class LLVMDialectNewTypes : public Dialect {
 public:
   LLVMDialectNewTypes(MLIRContext *ctx) : Dialect(getDialectNamespace(), ctx) {
     // clang-format off
-    addTypes<LLVMVoidType,
-             LLVMHalfType,
-             LLVMBFloatType,
-             LLVMFloatType,
-             LLVMDoubleType,
-             LLVMFP128Type,
-             LLVMX86FP80Type,
-             LLVMPPCFP128Type,
-             LLVMX86MMXType,
-             LLVMTokenType,
-             LLVMLabelType,
-             LLVMMetadataType,
-             LLVMFunctionType,
-             LLVMIntegerType,
-             LLVMPointerType,
-             LLVMFixedVectorType,
-             LLVMScalableVectorType,
-             LLVMArrayType,
-             LLVMStructType>();
+    // addTypes<LLVMVoidType,
+    //          LLVMHalfType,
+    //          LLVMBFloatType,
+    //          LLVMFloatType,
+    //          LLVMDoubleType,
+    //          LLVMFP128Type,
+    //          LLVMX86FP80Type,
+    //          LLVMPPCFP128Type,
+    //          LLVMX86MMXType,
+    //          LLVMTokenType,
+    //          LLVMLabelType,
+    //          LLVMMetadataType,
+    //          LLVMFunctionType,
+    //          LLVMIntegerType,
+    //          LLVMPointerType,
+    //          LLVMFixedVectorType,
+    //          LLVMScalableVectorType,
+    //          LLVMArrayType,
+    //          LLVMStructType>();
     // clang-format on
   }
   static StringRef getDialectNamespace() { return "llvm2"; }
@@ -38,7 +38,7 @@ public:
     return detail::parseType(parser);
   }
   void printType(Type type, DialectAsmPrinter &printer) const override {
-    detail::printType(type.cast<LLVMTypeNew>(), printer);
+    detail::printType(type.cast<LLVMType>(), printer);
   }
 };
 } // namespace

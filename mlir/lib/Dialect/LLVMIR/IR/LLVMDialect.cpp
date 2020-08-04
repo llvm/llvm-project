@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/FunctionImplementation.h"
@@ -1691,12 +1692,6 @@ struct LLVMDialectImpl {
   llvm::LLVMContext llvmContext;
   llvm::Module module;
 
-  /// A set of LLVMTypes that are cached on construction to avoid any lookups or
-  /// locking.
-  LLVMType int1Ty, int8Ty, int16Ty, int32Ty, int64Ty, int128Ty;
-  LLVMType doubleTy, floatTy, bfloatTy, halfTy, fp128Ty, x86_fp80Ty;
-  LLVMType voidTy;
-
   /// A smart mutex to lock access to the llvm context. Unlike MLIR, LLVM is not
   /// multi-threaded and requires locked access to prevent race conditions.
   llvm::sys::SmartMutex<true> mutex;
@@ -1708,7 +1703,27 @@ struct LLVMDialectImpl {
 LLVMDialect::LLVMDialect(MLIRContext *context)
     : Dialect(getDialectNamespace(), context),
       impl(new detail::LLVMDialectImpl()) {
-  addTypes<LLVMType>();
+  // clang-format off
+  addTypes<LLVMVoidType,
+           LLVMHalfType,
+           LLVMBFloatType,
+           LLVMFloatType,
+           LLVMDoubleType,
+           LLVMFP128Type,
+           LLVMX86FP80Type,
+           LLVMPPCFP128Type,
+           LLVMX86MMXType,
+           LLVMTokenType,
+           LLVMLabelType,
+           LLVMMetadataType,
+           LLVMFunctionType,
+           LLVMIntegerType,
+           LLVMPointerType,
+           LLVMFixedVectorType,
+           LLVMScalableVectorType,
+           LLVMArrayType,
+           LLVMStructType>();
+  // clang-format on
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/LLVMIR/LLVMOps.cpp.inc"
@@ -1716,26 +1731,6 @@ LLVMDialect::LLVMDialect(MLIRContext *context)
 
   // Support unknown operations because not all LLVM operations are registered.
   allowUnknownOperations();
-
-  // Cache some of the common LLVM types to avoid the need for lookups/locking.
-  auto &llvmContext = impl->llvmContext;
-  /// Integer Types.
-  impl->int1Ty = LLVMType::get(context, llvm::Type::getInt1Ty(llvmContext));
-  impl->int8Ty = LLVMType::get(context, llvm::Type::getInt8Ty(llvmContext));
-  impl->int16Ty = LLVMType::get(context, llvm::Type::getInt16Ty(llvmContext));
-  impl->int32Ty = LLVMType::get(context, llvm::Type::getInt32Ty(llvmContext));
-  impl->int64Ty = LLVMType::get(context, llvm::Type::getInt64Ty(llvmContext));
-  impl->int128Ty = LLVMType::get(context, llvm::Type::getInt128Ty(llvmContext));
-  /// Float Types.
-  impl->doubleTy = LLVMType::get(context, llvm::Type::getDoubleTy(llvmContext));
-  impl->floatTy = LLVMType::get(context, llvm::Type::getFloatTy(llvmContext));
-  impl->bfloatTy = LLVMType::get(context, llvm::Type::getBFloatTy(llvmContext));
-  impl->halfTy = LLVMType::get(context, llvm::Type::getHalfTy(llvmContext));
-  impl->fp128Ty = LLVMType::get(context, llvm::Type::getFP128Ty(llvmContext));
-  impl->x86_fp80Ty =
-      LLVMType::get(context, llvm::Type::getX86_FP80Ty(llvmContext));
-  /// Other Types.
-  impl->voidTy = LLVMType::get(context, llvm::Type::getVoidTy(llvmContext));
 }
 
 LLVMDialect::~LLVMDialect() {}
@@ -1751,25 +1746,12 @@ llvm::sys::SmartMutex<true> &LLVMDialect::getLLVMContextMutex() {
 
 /// Parse a type registered to this dialect.
 Type LLVMDialect::parseType(DialectAsmParser &parser) const {
-  StringRef tyData = parser.getFullSymbolSpec();
-
-  // LLVM is not thread-safe, so lock access to it.
-  llvm::sys::SmartScopedLock<true> lock(impl->mutex);
-
-  llvm::SMDiagnostic errorMessage;
-  llvm::Type *type = llvm::parseType(tyData, errorMessage, impl->module);
-  if (!type)
-    return (parser.emitError(parser.getNameLoc(), errorMessage.getMessage()),
-            nullptr);
-  return LLVMType::get(getContext(), type);
+  return detail::parseType(parser);
 }
 
 /// Print a type registered to this dialect.
 void LLVMDialect::printType(Type type, DialectAsmPrinter &os) const {
-  auto llvmType = type.dyn_cast<LLVMType>();
-  assert(llvmType && "printing wrong type");
-  assert(llvmType.getUnderlyingType() && "no underlying LLVM type");
-  llvmType.getUnderlyingType()->print(os.getStream());
+  return detail::printType(type.cast<LLVMType>(), os);
 }
 
 /// Verify LLVMIR function argument attributes.
@@ -1786,242 +1768,6 @@ LogicalResult LLVMDialect::verifyRegionArgAttribute(Operation *op,
     return op->emitError()
            << "llvm.align argument attribute of non integer type";
   return success();
-}
-
-//===----------------------------------------------------------------------===//
-// LLVMType.
-//===----------------------------------------------------------------------===//
-
-namespace mlir {
-namespace LLVM {
-namespace detail {
-struct LLVMTypeStorage : public ::mlir::TypeStorage {
-  LLVMTypeStorage(llvm::Type *ty) : underlyingType(ty) {}
-
-  // LLVM types are pointer-unique.
-  using KeyTy = llvm::Type *;
-  bool operator==(const KeyTy &key) const { return key == underlyingType; }
-
-  static LLVMTypeStorage *construct(TypeStorageAllocator &allocator,
-                                    llvm::Type *ty) {
-    return new (allocator.allocate<LLVMTypeStorage>()) LLVMTypeStorage(ty);
-  }
-
-  llvm::Type *underlyingType;
-};
-} // end namespace detail
-} // end namespace LLVM
-} // end namespace mlir
-
-LLVMType LLVMType::get(MLIRContext *context, llvm::Type *llvmType) {
-  return Base::get(context, FIRST_LLVM_TYPE, llvmType);
-}
-
-/// Get an LLVMType with an llvm type that may cause changes to the underlying
-/// llvm context when constructed.
-LLVMType LLVMType::getLocked(LLVMDialect *dialect,
-                             function_ref<llvm::Type *()> typeBuilder) {
-  // Lock access to the llvm context and build the type.
-  llvm::sys::SmartScopedLock<true> lock(dialect->impl->mutex);
-  return get(dialect->getContext(), typeBuilder());
-}
-
-LLVMDialect &LLVMType::getDialect() {
-  return static_cast<LLVMDialect &>(Type::getDialect());
-}
-
-llvm::Type *LLVMType::getUnderlyingType() const {
-  return getImpl()->underlyingType;
-}
-
-void LLVMType::getUnderlyingTypes(ArrayRef<LLVMType> types,
-                                  SmallVectorImpl<llvm::Type *> &result) {
-  result.reserve(result.size() + types.size());
-  for (LLVMType ty : types)
-    result.push_back(ty.getUnderlyingType());
-}
-
-/// Array type utilities.
-LLVMType LLVMType::getArrayElementType() {
-  return get(getContext(), getUnderlyingType()->getArrayElementType());
-}
-unsigned LLVMType::getArrayNumElements() {
-  return getUnderlyingType()->getArrayNumElements();
-}
-bool LLVMType::isArrayTy() { return getUnderlyingType()->isArrayTy(); }
-
-/// Vector type utilities.
-LLVMType LLVMType::getVectorElementType() {
-  return get(
-      getContext(),
-      llvm::cast<llvm::VectorType>(getUnderlyingType())->getElementType());
-}
-unsigned LLVMType::getVectorNumElements() {
-  return llvm::cast<llvm::FixedVectorType>(getUnderlyingType())
-      ->getNumElements();
-}
-llvm::ElementCount LLVMType::getVectorElementCount() {
-  return llvm::cast<llvm::VectorType>(getUnderlyingType())->getElementCount();
-}
-bool LLVMType::isVectorTy() { return getUnderlyingType()->isVectorTy(); }
-
-/// Function type utilities.
-LLVMType LLVMType::getFunctionParamType(unsigned argIdx) {
-  return get(getContext(), getUnderlyingType()->getFunctionParamType(argIdx));
-}
-unsigned LLVMType::getFunctionNumParams() {
-  return getUnderlyingType()->getFunctionNumParams();
-}
-LLVMType LLVMType::getFunctionResultType() {
-  return get(
-      getContext(),
-      llvm::cast<llvm::FunctionType>(getUnderlyingType())->getReturnType());
-}
-bool LLVMType::isFunctionTy() { return getUnderlyingType()->isFunctionTy(); }
-bool LLVMType::isFunctionVarArg() {
-  return getUnderlyingType()->isFunctionVarArg();
-}
-
-/// Pointer type utilities.
-LLVMType LLVMType::getPointerTo(unsigned addrSpace) {
-  // Lock access to the dialect as this may modify the LLVM context.
-  return getLocked(&getDialect(), [=] {
-    return getUnderlyingType()->getPointerTo(addrSpace);
-  });
-}
-LLVMType LLVMType::getPointerElementTy() {
-  return get(getContext(), getUnderlyingType()->getPointerElementType());
-}
-bool LLVMType::isPointerTy() { return getUnderlyingType()->isPointerTy(); }
-bool LLVMType::isValidPointerElementType(LLVMType type) {
-  return llvm::PointerType::isValidElementType(type.getUnderlyingType());
-}
-
-/// Struct type utilities.
-LLVMType LLVMType::getStructElementType(unsigned i) {
-  return get(getContext(), getUnderlyingType()->getStructElementType(i));
-}
-unsigned LLVMType::getStructNumElements() {
-  return getUnderlyingType()->getStructNumElements();
-}
-bool LLVMType::isStructTy() { return getUnderlyingType()->isStructTy(); }
-
-/// Utilities used to generate floating point types.
-LLVMType LLVMType::getDoubleTy(LLVMDialect *dialect) {
-  return dialect->impl->doubleTy;
-}
-LLVMType LLVMType::getFloatTy(LLVMDialect *dialect) {
-  return dialect->impl->floatTy;
-}
-LLVMType LLVMType::getBFloatTy(LLVMDialect *dialect) {
-  return dialect->impl->bfloatTy;
-}
-LLVMType LLVMType::getHalfTy(LLVMDialect *dialect) {
-  return dialect->impl->halfTy;
-}
-LLVMType LLVMType::getFP128Ty(LLVMDialect *dialect) {
-  return dialect->impl->fp128Ty;
-}
-LLVMType LLVMType::getX86_FP80Ty(LLVMDialect *dialect) {
-  return dialect->impl->x86_fp80Ty;
-}
-
-/// Utilities used to generate integer types.
-LLVMType LLVMType::getIntNTy(LLVMDialect *dialect, unsigned numBits) {
-  switch (numBits) {
-  case 1:
-    return dialect->impl->int1Ty;
-  case 8:
-    return dialect->impl->int8Ty;
-  case 16:
-    return dialect->impl->int16Ty;
-  case 32:
-    return dialect->impl->int32Ty;
-  case 64:
-    return dialect->impl->int64Ty;
-  case 128:
-    return dialect->impl->int128Ty;
-  default:
-    break;
-  }
-
-  // Lock access to the dialect as this may modify the LLVM context.
-  return getLocked(dialect, [=] {
-    return llvm::Type::getIntNTy(dialect->getLLVMContext(), numBits);
-  });
-}
-
-/// Utilities used to generate other miscellaneous types.
-LLVMType LLVMType::getArrayTy(LLVMType elementType, uint64_t numElements) {
-  // Lock access to the dialect as this may modify the LLVM context.
-  return getLocked(&elementType.getDialect(), [=] {
-    return llvm::ArrayType::get(elementType.getUnderlyingType(), numElements);
-  });
-}
-LLVMType LLVMType::getFunctionTy(LLVMType result, ArrayRef<LLVMType> params,
-                                 bool isVarArg) {
-  SmallVector<llvm::Type *, 8> llvmParams;
-  for (auto param : params)
-    llvmParams.push_back(param.getUnderlyingType());
-
-  // Lock access to the dialect as this may modify the LLVM context.
-  return getLocked(&result.getDialect(), [=] {
-    return llvm::FunctionType::get(result.getUnderlyingType(), llvmParams,
-                                   isVarArg);
-  });
-}
-LLVMType LLVMType::getStructTy(LLVMDialect *dialect,
-                               ArrayRef<LLVMType> elements, bool isPacked) {
-  SmallVector<llvm::Type *, 8> llvmElements;
-  for (auto elt : elements)
-    llvmElements.push_back(elt.getUnderlyingType());
-
-  // Lock access to the dialect as this may modify the LLVM context.
-  return getLocked(dialect, [=] {
-    return llvm::StructType::get(dialect->getLLVMContext(), llvmElements,
-                                 isPacked);
-  });
-}
-LLVMType LLVMType::createStructTy(LLVMDialect *dialect,
-                                  ArrayRef<LLVMType> elements,
-                                  Optional<StringRef> name, bool isPacked) {
-  StringRef sr = name.hasValue() ? *name : "";
-  SmallVector<llvm::Type *, 8> llvmElements;
-  getUnderlyingTypes(elements, llvmElements);
-  return getLocked(dialect, [=] {
-    auto *rv = llvm::StructType::create(dialect->getLLVMContext(), sr);
-    if (!llvmElements.empty())
-      rv->setBody(llvmElements, isPacked);
-    return rv;
-  });
-}
-LLVMType LLVMType::setStructTyBody(LLVMType structType,
-                                   ArrayRef<LLVMType> elements, bool isPacked) {
-  llvm::StructType *st =
-      llvm::cast<llvm::StructType>(structType.getUnderlyingType());
-  SmallVector<llvm::Type *, 8> llvmElements;
-  getUnderlyingTypes(elements, llvmElements);
-  return getLocked(&structType.getDialect(), [=] {
-    st->setBody(llvmElements, isPacked);
-    return st;
-  });
-}
-LLVMType LLVMType::getVectorTy(LLVMType elementType, unsigned numElements) {
-  // Lock access to the dialect as this may modify the LLVM context.
-  return getLocked(&elementType.getDialect(), [=] {
-    return llvm::FixedVectorType::get(elementType.getUnderlyingType(),
-                                      numElements);
-  });
-}
-
-LLVMType LLVMType::getVoidTy(LLVMDialect *dialect) {
-  return dialect->impl->voidTy;
-}
-
-bool LLVMType::isVoidTy() { return getUnderlyingType()->isVoidTy(); }
-
-llvm::Type *mlir::LLVM::convertLLVMType(LLVMType type) {
-  return type.getUnderlyingType();
 }
 
 //===----------------------------------------------------------------------===//

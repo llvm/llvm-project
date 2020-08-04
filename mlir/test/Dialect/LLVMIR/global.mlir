@@ -13,7 +13,7 @@ llvm.mlir.global internal @global(42 : i64) : !llvm.i64
 llvm.mlir.global internal constant @constant(37.0) : !llvm.float
 
 // CHECK: llvm.mlir.global internal constant @".string"("foobar")
-llvm.mlir.global internal constant @".string"("foobar") : !llvm<"[6 x i8]">
+llvm.mlir.global internal constant @".string"("foobar") : !llvm.array<6 x i8>
 
 // CHECK: llvm.mlir.global internal @string_notype("1234567")
 llvm.mlir.global internal @string_notype("1234567")
@@ -54,11 +54,11 @@ llvm.mlir.global weak_odr @weak_odr() : !llvm.i64
 
 // CHECK-LABEL: references
 func @references() {
-  // CHECK: llvm.mlir.addressof @global : !llvm<"i64*">
-  %0 = llvm.mlir.addressof @global : !llvm<"i64*">
+  // CHECK: llvm.mlir.addressof @global : !llvm.ptr<i64>
+  %0 = llvm.mlir.addressof @global : !llvm.ptr<i64>
 
-  // CHECK: llvm.mlir.addressof @".string" : !llvm<"[6 x i8]*">
-  %1 = llvm.mlir.addressof @".string" : !llvm<"[6 x i8]*">
+  // CHECK: llvm.mlir.addressof @".string" : !llvm.ptr<array<6 x i8>>
+  %1 = llvm.mlir.addressof @".string" : !llvm.ptr<array<6 x i8>>
 
   llvm.return
 }
@@ -76,7 +76,7 @@ func @references() {
 // -----
 
 // expected-error @+1 {{expects type to be a valid element type for an LLVM pointer}}
-llvm.mlir.global internal constant @constant(37.0) : !llvm<"label">
+llvm.mlir.global internal constant @constant(37.0) : !llvm.label
 
 // -----
 
@@ -98,7 +98,7 @@ func @foo() {
 // -----
 
 // expected-error @+1 {{requires an i8 array type of the length equal to that of the string}}
-llvm.mlir.global internal constant @string("foobar") : !llvm<"[42 x i8]">
+llvm.mlir.global internal constant @string("foobar") : !llvm.array<42 x i8>
 
 // -----
 
@@ -125,14 +125,14 @@ func @foo() {
   // The attribute parser will consume the first colon-type, so we put two of
   // them to trigger the attribute type mismatch error.
   // expected-error @+1 {{invalid kind of attribute specified}}
-  llvm.mlir.addressof "foo" : i64 : !llvm<"void ()*">
+  llvm.mlir.addressof "foo" : i64 : !llvm.ptr<func<void ()>>
 }
 
 // -----
 
 func @foo() {
   // expected-error @+1 {{must reference a global defined by 'llvm.mlir.global'}}
-  llvm.mlir.addressof @foo : !llvm<"void ()*">
+  llvm.mlir.addressof @foo : !llvm.ptr<func<void ()>>
 }
 
 // -----
@@ -141,7 +141,7 @@ llvm.mlir.global internal @foo(0: i32) : !llvm.i32
 
 func @bar() {
   // expected-error @+1 {{the type must be a pointer to the type of the referenced global}}
-  llvm.mlir.addressof @foo : !llvm<"i64*">
+  llvm.mlir.addressof @foo : !llvm.ptr<i64>
 }
 
 // -----
@@ -150,7 +150,7 @@ llvm.func @foo()
 
 llvm.func @bar() {
   // expected-error @+1 {{the type must be a pointer to the type of the referenced function}}
-  llvm.mlir.addressof @foo : !llvm<"i8*">
+  llvm.mlir.addressof @foo : !llvm.ptr<i8>
 }
 
 // -----
@@ -182,7 +182,7 @@ llvm.mlir.global internal @g(43 : i64) : !llvm.i64 {
 llvm.mlir.global internal @g(32 : i64) {addr_space = 3: i32} : !llvm.i64
 func @mismatch_addr_space_implicit_global() {
   // expected-error @+1 {{op the type must be a pointer to the type of the referenced global}}
-  llvm.mlir.addressof @g : !llvm<"i64*">
+  llvm.mlir.addressof @g : !llvm.ptr<i64>
 }
 
 // -----
@@ -190,5 +190,5 @@ func @mismatch_addr_space_implicit_global() {
 llvm.mlir.global internal @g(32 : i64) {addr_space = 3: i32} : !llvm.i64
 func @mismatch_addr_space() {
   // expected-error @+1 {{op the type must be a pointer to the type of the referenced global}}
-  llvm.mlir.addressof @g : !llvm<"i64 addrspace(4)*">
+  llvm.mlir.addressof @g : !llvm.ptr<i64, 4>
 }
