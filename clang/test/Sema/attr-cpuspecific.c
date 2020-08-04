@@ -115,3 +115,5 @@ int use3(void) {
 
 // expected-warning@+1 {{CPU list contains duplicate entries; attribute ignored}}
 int __attribute__((cpu_dispatch(pentium_iii, pentium_iii_no_xmm_regs))) dupe_p3(void);
+
+void __attribute__((cpu_specific(atom), nothrow, nonnull(1))) addtl_attrs(int*);
