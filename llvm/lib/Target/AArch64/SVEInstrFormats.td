@@ -2382,11 +2382,19 @@ multiclass sve_int_bin_pred_arit_0<bits<3> opc, string asm, string Ps,
   def : SVE_3_Op_Pat<nxv2i64, op, nxv2i1, nxv2i64, nxv2i64, !cast<Instruction>(NAME # _D)>;
 }
 
-multiclass sve_int_bin_pred_arit_1<bits<3> opc, string asm, SDPatternOperator op> {
-  def _B : sve_int_bin_pred_arit_log<0b00, 0b01, opc, asm, ZPR8>;
-  def _H : sve_int_bin_pred_arit_log<0b01, 0b01, opc, asm, ZPR16>;
-  def _S : sve_int_bin_pred_arit_log<0b10, 0b01, opc, asm, ZPR32>;
-  def _D : sve_int_bin_pred_arit_log<0b11, 0b01, opc, asm, ZPR64>;
+multiclass sve_int_bin_pred_arit_1<bits<3> opc, string asm, string Ps,
+                                   SDPatternOperator op,
+                                   DestructiveInstTypeEnum flags> {
+  let DestructiveInstType = flags in {
+  def _B : sve_int_bin_pred_arit_log<0b00, 0b01, opc, asm, ZPR8>,
+             SVEPseudo2Instr<Ps # _B, 1>;
+  def _H : sve_int_bin_pred_arit_log<0b01, 0b01, opc, asm, ZPR16>,
+             SVEPseudo2Instr<Ps # _H, 1>;
+  def _S : sve_int_bin_pred_arit_log<0b10, 0b01, opc, asm, ZPR32>,
+             SVEPseudo2Instr<Ps # _S, 1>;
+  def _D : sve_int_bin_pred_arit_log<0b11, 0b01, opc, asm, ZPR64>,
+             SVEPseudo2Instr<Ps # _D, 1>;
+  }
 
   def : SVE_3_Op_Pat<nxv16i8, op, nxv16i1, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _B)>;
   def : SVE_3_Op_Pat<nxv8i16, op, nxv8i1, nxv8i16, nxv8i16, !cast<Instruction>(NAME # _H)>;
