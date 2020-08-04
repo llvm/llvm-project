@@ -3346,6 +3346,41 @@ template <class ELFT> void ELFDumper<ELFT>::printMipsReginfo() {
   printMipsReginfoData(W, *Reginfo);
 }
 
+template <class ELFT>
+static Expected<const Elf_Mips_Options<ELFT> *>
+readMipsOptions(const uint8_t *SecBegin, ArrayRef<uint8_t> &SecData,
+                bool &IsSupported) {
+  if (SecData.size() < sizeof(Elf_Mips_Options<ELFT>))
+    return createError("the .MIPS.options section has an invalid size (0x" +
+                       Twine::utohexstr(SecData.size()) + ")");
+
+  auto *O = reinterpret_cast<const Elf_Mips_Options<ELFT> *>(SecData.data());
+  if (O->size > SecData.size()) {
+    const uint64_t Offset = SecData.data() - SecBegin;
+    const uint64_t SecSize = Offset + SecData.size();
+    return createError("a descriptor of size 0x" + Twine::utohexstr(O->size) +
+                       " at offset 0x" + Twine::utohexstr(Offset) +
+                       " goes past the end of the .MIPS.options "
+                       "section of size 0x" +
+                       Twine::utohexstr(SecSize));
+  }
+
+  IsSupported = O->kind == ODK_REGINFO;
+  size_t ExpectedSize =
+      sizeof(Elf_Mips_Options<ELFT>) + sizeof(Elf_Mips_RegInfo<ELFT>);
+
+  if (IsSupported)
+    if (O->size < ExpectedSize)
+      return createError(
+          "a .MIPS.options entry of kind " +
+          Twine(getElfMipsOptionsOdkType(O->kind)) +
+          " has an invalid size (0x" + Twine::utohexstr(O->size) +
+          "), the expected size is 0x" + Twine::utohexstr(ExpectedSize));
+
+  SecData = SecData.drop_front(O->size);
+  return O;
+}
+
 template <class ELFT> void ELFDumper<ELFT>::printMipsOptions() {
   const ELFFile<ELFT> *Obj = ObjF->getELFFile();
   const Elf_Shdr *MipsOpts = findSectionByName(".MIPS.options");
@@ -3356,24 +3391,31 @@ template <class ELFT> void ELFDumper<ELFT>::printMipsOptions() {
 
   DictScope GS(W, "MIPS Options");
 
-  ArrayRef<uint8_t> Sec =
+  ArrayRef<uint8_t> Data =
       unwrapOrError(ObjF->getFileName(), Obj->getSectionContents(MipsOpts));
-  while (!Sec.empty()) {
-    if (Sec.size() < sizeof(Elf_Mips_Options<ELFT>)) {
-      W.startLine() << "The .MIPS.options section has a wrong size.\n";
-      return;
-    }
-    auto *O = reinterpret_cast<const Elf_Mips_Options<ELFT> *>(Sec.data());
-    DictScope GS(W, getElfMipsOptionsOdkType(O->kind));
-    switch (O->kind) {
-    case ODK_REGINFO:
-      printMipsReginfoData(W, O->getRegInfo());
-      break;
-    default:
-      W.startLine() << "Unsupported MIPS options tag.\n";
+  const uint8_t *const SecBegin = Data.begin();
+  while (!Data.empty()) {
+    bool IsSupported;
+    Expected<const Elf_Mips_Options<ELFT> *> OptsOrErr =
+        readMipsOptions<ELFT>(SecBegin, Data, IsSupported);
+    if (!OptsOrErr) {
+      reportUniqueWarning(OptsOrErr.takeError());
       break;
     }
-    Sec = Sec.slice(O->size);
+
+    unsigned Kind = (*OptsOrErr)->kind;
+    const char *Type = getElfMipsOptionsOdkType(Kind);
+    if (!IsSupported) {
+      W.startLine() << "Unsupported MIPS options tag: " << Type << " (" << Kind
+                    << ")\n";
+      continue;
+    }
+
+    DictScope GS(W, Type);
+    if (Kind == ODK_REGINFO)
+      printMipsReginfoData(W, (*OptsOrErr)->getRegInfo());
+    else
+      llvm_unreachable("unexpected .MIPS.options section descriptor kind");
   }
 }
 
