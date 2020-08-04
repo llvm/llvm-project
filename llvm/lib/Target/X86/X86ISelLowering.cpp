@@ -38351,6 +38351,10 @@ static SDValue combineBitcastToBoolVector(EVT VT, SDValue V, const SDLoc &DL,
   case ISD::SHL: {
     // If we find a suitable source, a SHL becomes a KSHIFTL.
     SDValue Src0 = V.getOperand(0);
+    if ((VT == MVT::v8i1 && !Subtarget.hasDQI()) ||
+        ((VT == MVT::v32i1 || VT == MVT::v64i1) && !Subtarget.hasBWI()))
+      break;
+
     if (auto *Amt = dyn_cast<ConstantSDNode>(V.getOperand(1)))
       if (SDValue N0 = combineBitcastToBoolVector(VT, Src0, DL, DAG, Subtarget))
         return DAG.getNode(
