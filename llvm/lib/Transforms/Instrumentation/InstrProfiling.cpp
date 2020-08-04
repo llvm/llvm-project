@@ -885,7 +885,8 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   std::string DataVarName = getVarName(Inc, getInstrProfDataVarPrefix());
   auto MaybeSetComdat = [=](GlobalVariable *GV) {
     if (NeedComdat)
-      GV->setComdat(M->getOrInsertComdat(DataVarName));
+      GV->setComdat(M->getOrInsertComdat(TT.isOSBinFormatCOFF() ? GV->getName()
+                                                                : DataVarName));
   };
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
