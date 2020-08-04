@@ -2049,10 +2049,10 @@ LogicalResult mlir::vector::splitFullAndPartialTransferPrecondition(
   // Must have some masked dimension to be a candidate for splitting.
   if (!xferOp.hasMaskedDim())
     return failure();
-  // Don't split transfer operations under IfOp, this avoids applying the
-  // pattern recursively.
-  // TODO: improve the condition to make it more applicable.
-  if (xferOp.getParentOfType<scf::IfOp>())
+  // Don't split transfer operations directly under IfOp, this avoids applying
+  // the pattern recursively.
+  // TODO: improve the filtering condition to make it more applicable.
+  if (isa<scf::IfOp>(xferOp.getOperation()->getParentOp()))
     return failure();
   return success();
 }
