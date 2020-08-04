@@ -5198,8 +5198,8 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   return nullptr;
 }
 
-static Intrinsic::ID getMaxMinOpposite(Intrinsic::ID ID) {
-  switch (ID) {
+static Intrinsic::ID getMaxMinOpposite(Intrinsic::ID IID) {
+  switch (IID) {
   case Intrinsic::smax: return Intrinsic::smin;
   case Intrinsic::smin: return Intrinsic::smax;
   case Intrinsic::umax: return Intrinsic::umin;
@@ -5208,14 +5208,42 @@ static Intrinsic::ID getMaxMinOpposite(Intrinsic::ID ID) {
   }
 }
 
-static APInt getMaxMinLimit(Intrinsic::ID ID, unsigned BitWidth) {
-  switch (ID) {
+static APInt getMaxMinLimit(Intrinsic::ID IID, unsigned BitWidth) {
+  switch (IID) {
   case Intrinsic::smax: return APInt::getSignedMaxValue(BitWidth);
   case Intrinsic::smin: return APInt::getSignedMinValue(BitWidth);
   case Intrinsic::umax: return APInt::getMaxValue(BitWidth);
   case Intrinsic::umin: return APInt::getMinValue(BitWidth);
   default: llvm_unreachable("Unexpected intrinsic");
   }
+}
+
+static bool isMinMax(Intrinsic::ID IID) {
+  return IID == Intrinsic::smax || IID == Intrinsic::smin ||
+         IID == Intrinsic::umax || IID == Intrinsic::umin;
+}
+
+/// Given a min/max intrinsic, see if it can be removed based on having an
+/// operand that is another min/max intrinsic with shared operand(s). The caller
+/// is expected to swap the operand arguments to handle commutation.
+static Value *foldMinMaxSharedOp(Intrinsic::ID IID, Value *Op0, Value *Op1) {
+  assert(isMinMax(IID) && "Expected min/max intrinsic");
+  auto *InnerMM = dyn_cast<IntrinsicInst>(Op0);
+  if (!InnerMM)
+    return nullptr;
+  Intrinsic::ID InnerID = InnerMM->getIntrinsicID();
+  if (!isMinMax(InnerID))
+    return nullptr;
+
+  if (Op1 == InnerMM->getOperand(0) || Op1 == InnerMM->getOperand(1)) {
+    // max (max X, Y), X --> max X, Y
+    if (InnerID == IID)
+      return InnerMM;
+    // max (min X, Y), X --> X
+    if (InnerID == getMaxMinOpposite(IID))
+      return Op1;
+  }
+  return nullptr;
 }
 
 static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
@@ -5251,28 +5279,6 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     if (isa<UndefValue>(Op1))
       return ConstantInt::get(ReturnType, getMaxMinLimit(IID, BitWidth));
 
-    auto hasSpecificOperand = [](IntrinsicInst *II, Value *V) {
-      return II->getOperand(0) == V || II->getOperand(1) == V;
-    };
-
-    // For 4 commuted variants of each intrinsic:
-    // max (max X, Y), X --> max X, Y
-    // max (min X, Y), X --> X
-    if (auto *MinMax0 = dyn_cast<IntrinsicInst>(Op0)) {
-      Intrinsic::ID InnerID = MinMax0->getIntrinsicID();
-      if (InnerID == IID && hasSpecificOperand(MinMax0, Op1))
-        return MinMax0;
-      if (InnerID == getMaxMinOpposite(IID) && hasSpecificOperand(MinMax0, Op1))
-        return Op1;
-    }
-    if (auto *MinMax1 = dyn_cast<IntrinsicInst>(Op1)) {
-      Intrinsic::ID InnerID = MinMax1->getIntrinsicID();
-      if (InnerID == IID && hasSpecificOperand(MinMax1, Op0))
-        return MinMax1;
-      if (InnerID == getMaxMinOpposite(IID) && hasSpecificOperand(MinMax1, Op0))
-        return Op0;
-    }
-
     const APInt *C;
     if (match(Op1, m_APIntAllowUndef(C))) {
       // Clamp to limit value. For example:
@@ -5301,6 +5307,11 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
           return Op0;
       }
     }
+
+    if (Value *V = foldMinMaxSharedOp(IID, Op0, Op1))
+      return V;
+    if (Value *V = foldMinMaxSharedOp(IID, Op1, Op0))
+      return V;
 
     break;
   }
