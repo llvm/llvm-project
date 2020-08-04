@@ -882,9 +882,10 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
       Visibility = GlobalValue::HiddenVisibility;
     }
   }
+  std::string DataVarName = getVarName(Inc, getInstrProfDataVarPrefix());
   auto MaybeSetComdat = [=](GlobalVariable *GV) {
     if (NeedComdat)
-      GV->setComdat(M->getOrInsertComdat(GV->getName()));
+      GV->setComdat(M->getOrInsertComdat(DataVarName));
   };
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
@@ -949,9 +950,9 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Init,
 #include "llvm/ProfileData/InstrProfData.inc"
   };
-  auto *Data = new GlobalVariable(*M, DataTy, false, Linkage,
-                                  ConstantStruct::get(DataTy, DataVals),
-                                  getVarName(Inc, getInstrProfDataVarPrefix()));
+  auto *Data =
+      new GlobalVariable(*M, DataTy, false, Linkage,
+                         ConstantStruct::get(DataTy, DataVals), DataVarName);
   Data->setVisibility(Visibility);
   Data->setSection(getInstrProfSectionName(IPSK_data, TT.getObjectFormat()));
   Data->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
