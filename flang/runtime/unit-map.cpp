@@ -72,6 +72,20 @@ void UnitMap::FlushAll(IoErrorHandler &handler) {
   }
 }
 
+ExternalFileUnit *UnitMap::Find(const char *path) {
+  if (path) {
+    // TODO: Faster data structure
+    for (int j{0}; j < buckets_; ++j) {
+      for (Chain *p{bucket_[j].get()}; p; p = p->next.get()) {
+        if (p->unit.path() && std::strcmp(p->unit.path(), path) == 0) {
+          return &p->unit;
+        }
+      }
+    }
+  }
+  return nullptr;
+}
+
 ExternalFileUnit &UnitMap::Create(int n, const Terminator &terminator) {
   Chain &chain{*New<Chain>{terminator}(n).release()};
   chain.next.reset(&chain);
