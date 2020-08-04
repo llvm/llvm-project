@@ -1629,7 +1629,9 @@ void IO::processKeyWithDefault(const char *Key, Optional<T> &Val,
     bool IsNone = false;
     if (!outputting())
       if (auto *Node = dyn_cast<ScalarNode>(((Input *)this)->getCurrentNode()))
-        IsNone = Node->getRawValue() == "<none>";
+        // We use rtrim to ignore possible white spaces that might exist when a
+        // comment is present on the same line.
+        IsNone = Node->getRawValue().rtrim(' ') == "<none>";
 
     if (IsNone)
       Val = DefaultValue;
