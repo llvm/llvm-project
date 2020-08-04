@@ -155,7 +155,7 @@ public:
     ret->ValueUpdated();
 
     if (variable) {
-      const size_t pvar_byte_size = ret->GetByteSize();
+      const size_t pvar_byte_size = ret->GetByteSize().getValueOr(0);
       uint8_t *pvar_data = ret->GetValueBytes();
 
       Status read_error;
@@ -408,7 +408,7 @@ public:
         // FIXME: This may not work if the value is not bitwise-takable.
         execution_unit->ReadMemory(
             m_persistent_variable_sp->GetValueBytes(), var_addr,
-            m_persistent_variable_sp->GetByteSize(), read_error);
+            m_persistent_variable_sp->GetByteSize().getValueOr(0), read_error);
 
         if (!read_error.Success()) {
           err.SetErrorStringWithFormat(
@@ -470,10 +470,12 @@ public:
       if (!err.Success()) {
         dump_stream.Printf("  <could not be read>\n");
       } else {
-        DataBufferHeap data(m_persistent_variable_sp->GetByteSize(), 0);
+        DataBufferHeap data(
+            m_persistent_variable_sp->GetByteSize().getValueOr(0), 0);
 
         map.ReadMemory(data.GetBytes(), target_address,
-                       m_persistent_variable_sp->GetByteSize(), err);
+                       m_persistent_variable_sp->GetByteSize().getValueOr(0),
+                       err);
 
         if (!err.Success()) {
           dump_stream.Printf("  <could not be read>\n");
