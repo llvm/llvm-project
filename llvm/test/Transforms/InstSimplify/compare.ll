@@ -725,9 +725,7 @@ define i1 @urem7(i32 %X) {
 
 define i1 @urem8(i8 %X, i8 %Y) {
 ; CHECK-LABEL: @urem8(
-; CHECK-NEXT:    [[A:%.*]] = urem i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = icmp ule i8 [[A]], [[X]]
-; CHECK-NEXT:    ret i1 [[B]]
+; CHECK-NEXT:    ret i1 true
 ;
   %A = urem i8 %X, %Y
   %B = icmp ule i8 %A, %X
@@ -736,9 +734,7 @@ define i1 @urem8(i8 %X, i8 %Y) {
 
 define i1 @urem9(i8 %X, i8 %Y) {
 ; CHECK-LABEL: @urem9(
-; CHECK-NEXT:    [[A:%.*]] = urem i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = icmp ugt i8 [[A]], [[X]]
-; CHECK-NEXT:    ret i1 [[B]]
+; CHECK-NEXT:    ret i1 false
 ;
   %A = urem i8 %X, %Y
   %B = icmp ugt i8 %A, %X
@@ -747,9 +743,7 @@ define i1 @urem9(i8 %X, i8 %Y) {
 
 define i1 @urem10(i8 %X, i8 %Y) {
 ; CHECK-LABEL: @urem10(
-; CHECK-NEXT:    [[A:%.*]] = urem i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = icmp uge i8 [[X]], [[A]]
-; CHECK-NEXT:    ret i1 [[B]]
+; CHECK-NEXT:    ret i1 true
 ;
   %A = urem i8 %X, %Y
   %B = icmp uge i8 %X, %A
@@ -758,9 +752,7 @@ define i1 @urem10(i8 %X, i8 %Y) {
 
 define i1 @urem11(i8 %X, i8 %Y) {
 ; CHECK-LABEL: @urem11(
-; CHECK-NEXT:    [[A:%.*]] = urem i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = icmp ult i8 [[X]], [[A]]
-; CHECK-NEXT:    ret i1 [[B]]
+; CHECK-NEXT:    ret i1 false
 ;
   %A = urem i8 %X, %Y
   %B = icmp ult i8 %X, %A
