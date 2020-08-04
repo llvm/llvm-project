@@ -64,11 +64,9 @@ define <8 x float> @hadd_reverse_v8f32(<8 x float> %a0, <8 x float> %a1) {
 ;
 ; AVX1-LABEL: hadd_reverse_v8f32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vshufps {{.*#+}} ymm2 = ymm0[3,1],ymm1[3,1],ymm0[7,5],ymm1[7,5]
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm2[2,3,0,1]
-; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[2,0],ymm1[2,0],ymm0[6,4],ymm1[6,4]
+; AVX1-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6]
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,0,1]
-; AVX1-NEXT:    vaddps %ymm0, %ymm2, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: hadd_reverse_v8f32:
