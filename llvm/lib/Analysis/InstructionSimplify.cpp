@@ -5285,6 +5285,21 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
       // umin(i8 %x, i8 255) --> %x
       if (*C == getMaxMinLimit(getMaxMinOpposite(IID), BitWidth))
         return Op0;
+
+      // Remove nested call if constant operands allow it. Example:
+      // max (max X, 7), 5 -> max X, 7
+      auto *MinMax0 = dyn_cast<IntrinsicInst>(Op0);
+      if (MinMax0 && MinMax0->getIntrinsicID() == IID) {
+        // TODO: loosen undef/splat restrictions for vector constants.
+        Value *M00 = MinMax0->getOperand(0), *M01 = MinMax0->getOperand(1);
+        const APInt *InnerC;
+        if ((match(M00, m_APInt(InnerC)) || match(M01, m_APInt(InnerC))) &&
+            ((IID == Intrinsic::smax && InnerC->sge(*C)) ||
+             (IID == Intrinsic::smin && InnerC->sle(*C)) ||
+             (IID == Intrinsic::umax && InnerC->uge(*C)) ||
+             (IID == Intrinsic::umin && InnerC->ule(*C))))
+          return Op0;
+      }
     }
 
     break;
