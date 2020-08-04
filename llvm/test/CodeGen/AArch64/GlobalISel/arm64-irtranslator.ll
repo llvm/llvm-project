@@ -704,26 +704,6 @@ define float @test_frem(float %arg1, float %arg2) {
   ret float %res
 }
 
-; CHECK-LABEL: name: test_fneg
-; CHECK: [[ARG1:%[0-9]+]]:_(s32) = COPY $s0
-; CHECK-NEXT: [[RES:%[0-9]+]]:_(s32) = G_FNEG [[ARG1]]
-; CHECK-NEXT: $s0 = COPY [[RES]]
-; CHECK-NEXT: RET_ReallyLR implicit $s0
-define float @test_fneg(float %arg1) {
-  %res = fneg float %arg1
-  ret float %res
-}
-
-; CHECK-LABEL: name: test_fneg_fmf
-; CHECK: [[ARG1:%[0-9]+]]:_(s32) = COPY $s0
-; CHECK-NEXT: [[RES:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FNEG [[ARG1]]
-; CHECK-NEXT: $s0 = COPY [[RES]]
-; CHECK-NEXT: RET_ReallyLR implicit $s0
-define float @test_fneg_fmf(float %arg1) {
-  %res = fneg fast float %arg1
-  ret float %res
-}
-
 ; CHECK-LABEL: name: test_sadd_overflow
 ; CHECK: [[LHS:%[0-9]+]]:_(s32) = COPY $w0
 ; CHECK: [[RHS:%[0-9]+]]:_(s32) = COPY $w1
