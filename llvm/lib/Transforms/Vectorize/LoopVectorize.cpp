@@ -410,8 +410,11 @@ public:
 
   virtual ~InnerLoopVectorizer() = default;
 
-  /// Create a new empty loop. Unlink the old loop and connect the new one.
-  /// Return the pre-header block of the new loop.
+  /// Create a new empty loop that will contain vectorized instructions later
+  /// on, while the old loop will be used as the scalar remainder. Control flow
+  /// is generated around the vectorized (and scalar epilogue) loops consisting
+  /// of various checks and bypasses. Return the pre-header block of the new
+  /// loop.
   BasicBlock *createVectorizedLoopSkeleton();
 
   /// Widen a single instruction within the innermost loop.
@@ -661,6 +664,22 @@ protected:
   Value *emitTransformedIndex(IRBuilder<> &B, Value *Index, ScalarEvolution *SE,
                               const DataLayout &DL,
                               const InductionDescriptor &ID) const;
+
+  /// Emit basic blocks (prefixed with \p Prefix) for the iteration check,
+  /// vector loop preheader, middle block and scalar preheader. Also
+  /// allocate a loop object for the new vector loop and return it.
+  Loop *createVectorLoopSkeleton(StringRef Prefix);
+
+  /// Create new phi nodes for the induction variables to resume iteration count
+  /// in the scalar epilogue, from where the vectorized loop left off (given by
+  /// \p VectorTripCount).
+  void createInductionResumeValues(Loop *L, Value *VectorTripCount);
+
+  /// Complete the loop skeleton by adding debug MDs, creating appropriate
+  /// conditional branches in the middle block, preparing the builder and
+  /// running the verifier. Take in the vector loop \p L as argument, and return
+  /// the preheader of the completed vector loop.
+  BasicBlock *completeLoopSkeleton(Loop *L, MDNode *OrigLoopID);
 
   /// Add additional metadata to \p To that was not present on \p Orig.
   ///
@@ -2957,6 +2976,163 @@ Value *InnerLoopVectorizer::emitTransformedIndex(
   llvm_unreachable("invalid enum");
 }
 
+Loop *InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
+  LoopScalarBody = OrigLoop->getHeader();
+  LoopVectorPreHeader = OrigLoop->getLoopPreheader();
+  LoopExitBlock = OrigLoop->getExitBlock();
+  assert(LoopExitBlock && "Must have an exit block");
+  assert(LoopVectorPreHeader && "Invalid loop structure");
+
+  LoopMiddleBlock =
+      SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
+                 LI, nullptr, Twine(Prefix) + "middle.block");
+  LoopScalarPreHeader =
+      SplitBlock(LoopMiddleBlock, LoopMiddleBlock->getTerminator(), DT, LI,
+                 nullptr, Twine(Prefix) + "scalar.ph");
+  // We intentionally don't let SplitBlock to update LoopInfo since
+  // LoopVectorBody should belong to another loop than LoopVectorPreHeader.
+  // LoopVectorBody is explicitly added to the correct place few lines later.
+  LoopVectorBody =
+      SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
+                 nullptr, nullptr, Twine(Prefix) + "vector.body");
+
+  // Update dominator for loop exit.
+  DT->changeImmediateDominator(LoopExitBlock, LoopMiddleBlock);
+
+  // Create and register the new vector loop.
+  Loop *Lp = LI->AllocateLoop();
+  Loop *ParentLoop = OrigLoop->getParentLoop();
+
+  // Insert the new loop into the loop nest and register the new basic blocks
+  // before calling any utilities such as SCEV that require valid LoopInfo.
+  if (ParentLoop) {
+    ParentLoop->addChildLoop(Lp);
+  } else {
+    LI->addTopLevelLoop(Lp);
+  }
+  Lp->addBasicBlockToLoop(LoopVectorBody, *LI);
+  return Lp;
+}
+
+void InnerLoopVectorizer::createInductionResumeValues(Loop *L,
+                                                      Value *VectorTripCount) {
+  assert(VectorTripCount && L && "Expected valid arguments");
+  // We are going to resume the execution of the scalar loop.
+  // Go over all of the induction variables that we found and fix the
+  // PHIs that are left in the scalar version of the loop.
+  // The starting values of PHI nodes depend on the counter of the last
+  // iteration in the vectorized loop.
+  // If we come from a bypass edge then we need to start from the original
+  // start value.
+  for (auto &InductionEntry : Legal->getInductionVars()) {
+    PHINode *OrigPhi = InductionEntry.first;
+    InductionDescriptor II = InductionEntry.second;
+
+    // Create phi nodes to merge from the  backedge-taken check block.
+    PHINode *BCResumeVal =
+        PHINode::Create(OrigPhi->getType(), 3, "bc.resume.val",
+                        LoopScalarPreHeader->getTerminator());
+    // Copy original phi DL over to the new one.
+    BCResumeVal->setDebugLoc(OrigPhi->getDebugLoc());
+    Value *&EndValue = IVEndValues[OrigPhi];
+    if (OrigPhi == OldInduction) {
+      // We know what the end value is.
+      EndValue = VectorTripCount;
+    } else {
+      IRBuilder<> B(L->getLoopPreheader()->getTerminator());
+      Type *StepType = II.getStep()->getType();
+      Instruction::CastOps CastOp =
+          CastInst::getCastOpcode(VectorTripCount, true, StepType, true);
+      Value *CRD = B.CreateCast(CastOp, VectorTripCount, StepType, "cast.crd");
+      const DataLayout &DL = LoopScalarBody->getModule()->getDataLayout();
+      EndValue = emitTransformedIndex(B, CRD, PSE.getSE(), DL, II);
+      EndValue->setName("ind.end");
+    }
+
+    // The new PHI merges the original incoming value, in case of a bypass,
+    // or the value at the end of the vectorized loop.
+    BCResumeVal->addIncoming(EndValue, LoopMiddleBlock);
+
+    // Fix the scalar body counter (PHI node).
+    // The old induction's phi node in the scalar body needs the truncated
+    // value.
+    for (BasicBlock *BB : LoopBypassBlocks)
+      BCResumeVal->addIncoming(II.getStartValue(), BB);
+    OrigPhi->setIncomingValueForBlock(LoopScalarPreHeader, BCResumeVal);
+  }
+}
+
+BasicBlock *InnerLoopVectorizer::completeLoopSkeleton(Loop *L,
+                                                      MDNode *OrigLoopID) {
+  assert(L && "Expected valid loop.");
+
+  // The trip counts should be cached by now.
+  Value *Count = getOrCreateTripCount(L);
+  Value *VectorTripCount = getOrCreateVectorTripCount(L);
+
+  // We need the OrigLoop (scalar loop part) latch terminator to help
+  // produce correct debug info for the middle block BB instructions.
+  // The legality check stage guarantees that the loop will have a single
+  // latch.
+  assert(isa<BranchInst>(OrigLoop->getLoopLatch()->getTerminator()) &&
+         "Scalar loop latch terminator isn't a branch");
+  BranchInst *ScalarLatchBr =
+      cast<BranchInst>(OrigLoop->getLoopLatch()->getTerminator());
+
+  // Add a check in the middle block to see if we have completed
+  // all of the iterations in the first vector loop.
+  // If (N - N%VF) == N, then we *don't* need to run the remainder.
+  // If tail is to be folded, we know we don't need to run the remainder.
+  Value *CmpN = Builder.getTrue();
+  if (!Cost->foldTailByMasking()) {
+    CmpN = CmpInst::Create(Instruction::ICmp, CmpInst::ICMP_EQ, Count,
+                           VectorTripCount, "cmp.n",
+                           LoopMiddleBlock->getTerminator());
+
+    // Here we use the same DebugLoc as the scalar loop latch branch instead
+    // of the corresponding compare because they may have ended up with
+    // different line numbers and we want to avoid awkward line stepping while
+    // debugging. Eg. if the compare has got a line number inside the loop.
+    cast<Instruction>(CmpN)->setDebugLoc(ScalarLatchBr->getDebugLoc());
+  }
+
+  BranchInst *BrInst =
+      BranchInst::Create(LoopExitBlock, LoopScalarPreHeader, CmpN);
+  BrInst->setDebugLoc(ScalarLatchBr->getDebugLoc());
+  ReplaceInstWithInst(LoopMiddleBlock->getTerminator(), BrInst);
+
+  // Get ready to start creating new instructions into the vectorized body.
+  assert(LoopVectorPreHeader == L->getLoopPreheader() &&
+         "Inconsistent vector loop preheader");
+  Builder.SetInsertPoint(&*LoopVectorBody->getFirstInsertionPt());
+
+  Optional<MDNode *> VectorizedLoopID =
+      makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
+                                      LLVMLoopVectorizeFollowupVectorized});
+  if (VectorizedLoopID.hasValue()) {
+    L->setLoopID(VectorizedLoopID.getValue());
+
+    // Do not setAlreadyVectorized if loop attributes have been defined
+    // explicitly.
+    return LoopVectorPreHeader;
+  }
+
+  // Keep all loop hints from the original loop on the vector loop (we'll
+  // replace the vectorizer-specific hints below).
+  if (MDNode *LID = OrigLoop->getLoopID())
+    L->setLoopID(LID);
+
+  LoopVectorizeHints Hints(L, true, *ORE);
+  Hints.setAlreadyVectorized();
+
+#ifdef EXPENSIVE_CHECKS
+  assert(DT->verify(DominatorTree::VerificationLevel::Fast));
+  LI->verify(*DT);
+#endif
+
+  return LoopVectorPreHeader;
+}
+
 BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   /*
    In this function we generate a new loop. The new loop will contain
@@ -2990,62 +3166,12 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
    ...
    */
 
+  // Get the metadata of the original loop before it gets modified.
   MDNode *OrigLoopID = OrigLoop->getLoopID();
 
-  // Some loops have a single integer induction variable, while other loops
-  // don't. One example is c++ iterators that often have multiple pointer
-  // induction variables. In the code below we also support a case where we
-  // don't have a single induction variable.
-  //
-  // We try to obtain an induction variable from the original loop as hard
-  // as possible. However if we don't find one that:
-  //   - is an integer
-  //   - counts from zero, stepping by one
-  //   - is the size of the widest induction variable type
-  // then we create a new one.
-  OldInduction = Legal->getPrimaryInduction();
-  Type *IdxTy = Legal->getWidestInductionType();
-
-  // Split the single block loop into the two loop structure described above.
-  LoopScalarBody = OrigLoop->getHeader();
-  LoopVectorPreHeader = OrigLoop->getLoopPreheader();
-  LoopExitBlock = OrigLoop->getExitBlock();
-  assert(LoopExitBlock && "Must have an exit block");
-  assert(LoopVectorPreHeader && "Invalid loop structure");
-
-  LoopMiddleBlock =
-      SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
-                 LI, nullptr, "middle.block");
-  LoopScalarPreHeader =
-      SplitBlock(LoopMiddleBlock, LoopMiddleBlock->getTerminator(), DT, LI,
-                 nullptr, "scalar.ph");
-  // We intentionally don't let SplitBlock to update LoopInfo since
-  // LoopVectorBody should belong to another loop than LoopVectorPreHeader.
-  // LoopVectorBody is explicitly added to the correct place few lines later.
-  LoopVectorBody =
-      SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
-                 nullptr, nullptr, "vector.body");
-
-  // Update dominator for loop exit.
-  DT->changeImmediateDominator(LoopExitBlock, LoopMiddleBlock);
-
-  // Create and register the new vector loop.
-  Loop *Lp = LI->AllocateLoop();
-  Loop *ParentLoop = OrigLoop->getParentLoop();
-
-  // Insert the new loop into the loop nest and register the new basic blocks
-  // before calling any utilities such as SCEV that require valid LoopInfo.
-  if (ParentLoop) {
-    ParentLoop->addChildLoop(Lp);
-  } else {
-    LI->addTopLevelLoop(Lp);
-  }
-  Lp->addBasicBlockToLoop(LoopVectorBody, *LI);
-
-  // Find the loop boundaries.
-  Value *Count = getOrCreateTripCount(Lp);
-
-  Value *StartIdx = ConstantInt::get(IdxTy, 0);
+  // Create an empty vector loop, and prepare basic blocks for the runtime
+  // checks.
+  Loop *Lp = createVectorLoopSkeleton("");
 
   // Now, compare the new count to zero. If it is zero skip the vector loop and
   // jump to the scalar loop. This check also covers the case where the
@@ -3063,124 +3189,32 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   // faster.
   emitMemRuntimeChecks(Lp, LoopScalarPreHeader);
 
-  // Generate the induction variable.
+  // Some loops have a single integer induction variable, while other loops
+  // don't. One example is c++ iterators that often have multiple pointer
+  // induction variables. In the code below we also support a case where we
+  // don't have a single induction variable.
+  //
+  // We try to obtain an induction variable from the original loop as hard
+  // as possible. However if we don't find one that:
+  //   - is an integer
+  //   - counts from zero, stepping by one
+  //   - is the size of the widest induction variable type
+  // then we create a new one.
+  OldInduction = Legal->getPrimaryInduction();
+  Type *IdxTy = Legal->getWidestInductionType();
+  Value *StartIdx = ConstantInt::get(IdxTy, 0);
   // The loop step is equal to the vectorization factor (num of SIMD elements)
   // times the unroll factor (num of SIMD instructions).
-  Value *CountRoundDown = getOrCreateVectorTripCount(Lp);
   Constant *Step = ConstantInt::get(IdxTy, VF * UF);
+  Value *CountRoundDown = getOrCreateVectorTripCount(Lp);
   Induction =
       createInductionVariable(Lp, StartIdx, CountRoundDown, Step,
                               getDebugLocFromInstOrOperands(OldInduction));
 
-  // We are going to resume the execution of the scalar loop.
-  // Go over all of the induction variables that we found and fix the
-  // PHIs that are left in the scalar version of the loop.
-  // The starting values of PHI nodes depend on the counter of the last
-  // iteration in the vectorized loop.
-  // If we come from a bypass edge then we need to start from the original
-  // start value.
+  // Emit phis for the new starting index of the scalar loop.
+  createInductionResumeValues(Lp, CountRoundDown);
 
-  // This variable saves the new starting index for the scalar loop. It is used
-  // to test if there are any tail iterations left once the vector loop has
-  // completed.
-  for (auto &InductionEntry : Legal->getInductionVars()) {
-    PHINode *OrigPhi = InductionEntry.first;
-    InductionDescriptor II = InductionEntry.second;
-
-    // Create phi nodes to merge from the  backedge-taken check block.
-    PHINode *BCResumeVal =
-        PHINode::Create(OrigPhi->getType(), 3, "bc.resume.val",
-                        LoopScalarPreHeader->getTerminator());
-    // Copy original phi DL over to the new one.
-    BCResumeVal->setDebugLoc(OrigPhi->getDebugLoc());
-    Value *&EndValue = IVEndValues[OrigPhi];
-    if (OrigPhi == OldInduction) {
-      // We know what the end value is.
-      EndValue = CountRoundDown;
-    } else {
-      IRBuilder<> B(Lp->getLoopPreheader()->getTerminator());
-      Type *StepType = II.getStep()->getType();
-      Instruction::CastOps CastOp =
-          CastInst::getCastOpcode(CountRoundDown, true, StepType, true);
-      Value *CRD = B.CreateCast(CastOp, CountRoundDown, StepType, "cast.crd");
-      const DataLayout &DL = LoopScalarBody->getModule()->getDataLayout();
-      EndValue = emitTransformedIndex(B, CRD, PSE.getSE(), DL, II);
-      EndValue->setName("ind.end");
-    }
-
-    // The new PHI merges the original incoming value, in case of a bypass,
-    // or the value at the end of the vectorized loop.
-    BCResumeVal->addIncoming(EndValue, LoopMiddleBlock);
-
-    // Fix the scalar body counter (PHI node).
-    // The old induction's phi node in the scalar body needs the truncated
-    // value.
-    for (BasicBlock *BB : LoopBypassBlocks)
-      BCResumeVal->addIncoming(II.getStartValue(), BB);
-    OrigPhi->setIncomingValueForBlock(LoopScalarPreHeader, BCResumeVal);
-  }
-
-  // We need the OrigLoop (scalar loop part) latch terminator to help
-  // produce correct debug info for the middle block BB instructions.
-  // The legality check stage guarantees that the loop will have a single
-  // latch.
-  assert(isa<BranchInst>(OrigLoop->getLoopLatch()->getTerminator()) &&
-         "Scalar loop latch terminator isn't a branch");
-  BranchInst *ScalarLatchBr =
-      cast<BranchInst>(OrigLoop->getLoopLatch()->getTerminator());
-
-  // Add a check in the middle block to see if we have completed
-  // all of the iterations in the first vector loop.
-  // If (N - N%VF) == N, then we *don't* need to run the remainder.
-  // If tail is to be folded, we know we don't need to run the remainder.
-  Value *CmpN = Builder.getTrue();
-  if (!Cost->foldTailByMasking()) {
-    CmpN = CmpInst::Create(Instruction::ICmp, CmpInst::ICMP_EQ, Count,
-                           CountRoundDown, "cmp.n",
-                           LoopMiddleBlock->getTerminator());
-
-    // Here we use the same DebugLoc as the scalar loop latch branch instead
-    // of the corresponding compare because they may have ended up with
-    // different line numbers and we want to avoid awkward line stepping while
-    // debugging. Eg. if the compare has got a line number inside the loop.
-    cast<Instruction>(CmpN)->setDebugLoc(ScalarLatchBr->getDebugLoc());
-  }
-
-  BranchInst *BrInst =
-      BranchInst::Create(LoopExitBlock, LoopScalarPreHeader, CmpN);
-  BrInst->setDebugLoc(ScalarLatchBr->getDebugLoc());
-  ReplaceInstWithInst(LoopMiddleBlock->getTerminator(), BrInst);
-
-  // Get ready to start creating new instructions into the vectorized body.
-  assert(LoopVectorPreHeader == Lp->getLoopPreheader() &&
-         "Inconsistent vector loop preheader");
-  Builder.SetInsertPoint(&*LoopVectorBody->getFirstInsertionPt());
-
-  Optional<MDNode *> VectorizedLoopID =
-      makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
-                                      LLVMLoopVectorizeFollowupVectorized});
-  if (VectorizedLoopID.hasValue()) {
-    Lp->setLoopID(VectorizedLoopID.getValue());
-
-    // Do not setAlreadyVectorized if loop attributes have been defined
-    // explicitly.
-    return LoopVectorPreHeader;
-  }
-
-  // Keep all loop hints from the original loop on the vector loop (we'll
-  // replace the vectorizer-specific hints below).
-  if (MDNode *LID = OrigLoop->getLoopID())
-    Lp->setLoopID(LID);
-
-  LoopVectorizeHints Hints(Lp, true, *ORE);
-  Hints.setAlreadyVectorized();
-
-#ifdef EXPENSIVE_CHECKS
-  assert(DT->verify(DominatorTree::VerificationLevel::Fast));
-  LI->verify(*DT);
-#endif
-
-  return LoopVectorPreHeader;
+  return completeLoopSkeleton(Lp, OrigLoopID);
 }
 
 // Fix up external users of the induction variable. At this point, we are
