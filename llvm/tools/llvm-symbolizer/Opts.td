@@ -58,3 +58,7 @@ def : Flag<["-"], "i">, Alias<inlines>, HelpText<"Alias for --inlines">;
 def : F<"inlining", "Alias for --inlines">, Alias<inlines>;
 def : Flag<["-"], "p">, Alias<pretty_print>, HelpText<"Alias for --pretty-print">;
 def : Flag<["-"], "s">, Alias<basenames>, HelpText<"Alias for --basenames">;
+
+// Compatibility aliases for old asan_symbolize.py and sanitizer binaries (before 2020-08).
+def : Flag<["--"], "inlining=true">, Alias<inlines>, HelpText<"Alias for --inlines">;
+def : Flag<["--"], "inlining=false">, Alias<no_inlines>, HelpText<"Alias for --no-inlines">;

@@ -26,6 +26,10 @@ RUN: llvm-symbolizer -inlines -print-address -pretty-print -obj=%p/Inputs/addr.e
 RUN: llvm-symbolizer -inlines -print-address -p -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix="PRETTY" %s
 RUN: llvm-symbolizer -i -print-address -pretty-print -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix="PRETTY" %s
 RUN: llvm-symbolizer -i -print-address -p -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix="PRETTY" %s
+## Before 2020-08-04, asan_symbolize.py passed --inlining=true.
+## Support this compatibility alias for a while.
+RUN: llvm-symbolizer --inlining=true --print-address -p --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix="PRETTY" %s
+
 RUN: echo "0x1" > %t.input
 RUN: llvm-symbolizer -obj=%p/Inputs/zero < %t.input | FileCheck -check-prefix="ZERO" %s
 
