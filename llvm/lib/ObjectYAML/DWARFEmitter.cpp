@@ -945,7 +945,8 @@ emitDebugSectionImpl(const DWARFYAML::Data &DI, StringRef Sec,
 }
 
 Expected<StringMap<std::unique_ptr<MemoryBuffer>>>
-DWARFYAML::emitDebugSections(StringRef YAMLString, bool IsLittleEndian) {
+DWARFYAML::emitDebugSections(StringRef YAMLString, bool IsLittleEndian,
+                             bool Is64BitAddrSize) {
   auto CollectDiagnostic = [](const SMDiagnostic &Diag, void *DiagContext) {
     *static_cast<SMDiagnostic *>(DiagContext) = Diag;
   };
@@ -956,6 +957,8 @@ DWARFYAML::emitDebugSections(StringRef YAMLString, bool IsLittleEndian) {
 
   DWARFYAML::Data DI;
   DI.IsLittleEndian = IsLittleEndian;
+  DI.Is64BitAddrSize = Is64BitAddrSize;
+
   YIn >> DI;
   if (YIn.error())
     return createStringError(YIn.error(), GeneratedDiag.getMessage());
