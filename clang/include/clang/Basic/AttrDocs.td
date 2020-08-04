@@ -3134,11 +3134,12 @@ distinguish USM (Unified Shared Memory) pointers that access global device
 memory from those that access global host memory. These new address spaces are
 a subset of the ``__global/opencl_global`` address space, the full address space
 set model for OpenCL 2.0 with the extension looks as follows:
-  generic->global->host
-                 ->device
-         ->private
-         ->local
-  constant
+
+  | generic->global->host
+  |                ->device
+  |        ->private
+  |        ->local
+  | constant
 
 As ``global_device`` and ``global_host`` are a subset of
 ``__global/opencl_global`` address spaces it is allowed to convert
