@@ -142,9 +142,8 @@ hsa_status_t atmi_hostcall_version_check(unsigned int device_vrm) {
 // These three external functions are called by atmi.
 // ATMI uses the header atmi_hostcall.h to reference these.
 //
-unsigned long hostrpc_assign_buffer(hsa_agent_t agent,
-                                    hsa_queue_t *this_Q,
-                                    uint32_t device_id) {
+unsigned long atmi_hostcall_assign_buffer(hsa_queue_t *this_Q,
+                                          uint32_t device_id) {
   atl_hcq_element_t *llq_elem;
   llq_elem = atl_hcq_find_by_hsa_q(this_Q);
   if (!llq_elem) {
@@ -155,7 +154,12 @@ unsigned long hostrpc_assign_buffer(hsa_agent_t agent,
       amd_hostcall_launch_consumer(atl_hcq_consumer);
     }
 
+    hsa_agent_t agent;
+    atmi_place_t place = ATMI_PLACE_GPU(0, device_id);
     // FIXME: error check for this function
+    // atmi_status_t atmi_err =
+    atmi_interop_hsa_get_agent(place, &agent);
+    // ATMIErrorCheck(Could not get agent from place, atmi_err);
     uint32_t numCu;
     // hsa_status_t err =
     hsa_agent_get_info(
