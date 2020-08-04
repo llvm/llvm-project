@@ -12,4 +12,4 @@ entry:
 ; CHECK:  store i8 %1, i8* getelementptr inbounds ([1 x i8], [1 x i8]* @__sancov_gen_, i64 0, i64 0), align 1, !nosanitize
   ret void
 }
-; CHECK: call void @__sanitizer_cov_8bit_counters_init(i8* bitcast (i8** @__start___sancov_cntrs to i8*), i8* bitcast (i8** @__stop___sancov_cntrs to i8*))
+; CHECK: call void @__sanitizer_cov_8bit_counters_init(i8* @__start___sancov_cntrs, i8* @__stop___sancov_cntrs)
