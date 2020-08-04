@@ -101,3 +101,10 @@ __vectorcall int __attribute__((target("arch=sandybridge")))  diff_cc(void);
 int __attribute__((target("sse4.2"))) diff_ret(void);
 // expected-error@+1 {{multiversioned function declaration has a different return type}}
 short __attribute__((target("arch=sandybridge")))  diff_ret(void);
+
+void __attribute__((target("sse4.2"), nothrow, used, nonnull(1))) addtl_attrs5(int*);
+void __attribute__((target("arch=sandybridge"))) addtl_attrs5(int*);
+
+void __attribute__((target("sse4.2"))) addtl_attrs6(int*);
+void __attribute__((target("arch=sandybridge"), nothrow, used, nonnull)) addtl_attrs6(int*);
+
