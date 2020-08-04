@@ -52,7 +52,7 @@ spv.func @scalar_types(%arg0: i32, %arg1: i1, %arg2: f64, %arg3: f32) -> () "Non
 	spv.Return
 }
 
-// CHECK-LABEL: llvm.func @vector_types(%arg0: !llvm<"<2 x i64>">, %arg1: !llvm<"<2 x i64>">) -> !llvm<"<2 x i64>">
+// CHECK-LABEL: llvm.func @vector_types(%arg0: !llvm.vec<2 x i64>, %arg1: !llvm.vec<2 x i64>) -> !llvm.vec<2 x i64>
 spv.func @vector_types(%arg0: vector<2xi64>, %arg1: vector<2xi64>) -> vector<2xi64> "None" {
 	%0 = spv.IAdd %arg0, %arg1 : vector<2xi64>
 	spv.ReturnValue %0 : vector<2xi64>
@@ -63,15 +63,15 @@ spv.func @vector_types(%arg0: vector<2xi64>, %arg1: vector<2xi64>) -> vector<2xi
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: llvm.func @function_calls
-// CHECK-SAME: %[[ARG0:.*]]: !llvm.i32, %[[ARG1:.*]]: !llvm.i1, %[[ARG2:.*]]: !llvm.double, %[[ARG3:.*]]: !llvm<"<2 x i64>">, %[[ARG4:.*]]: !llvm<"<2 x float>">
+// CHECK-SAME: %[[ARG0:.*]]: !llvm.i32, %[[ARG1:.*]]: !llvm.i1, %[[ARG2:.*]]: !llvm.double, %[[ARG3:.*]]: !llvm.vec<2 x i64>, %[[ARG4:.*]]: !llvm.vec<2 x float>
 spv.func @function_calls(%arg0: i32, %arg1: i1, %arg2: f64, %arg3: vector<2xi64>, %arg4: vector<2xf32>) -> () "None" {
 	// CHECK: llvm.call @void_1() : () -> ()
 	spv.FunctionCall @void_1() : () -> ()
-	// CHECK: llvm.call @void_2(%[[ARG3]]) : (!llvm<"<2 x i64>">) -> ()
+	// CHECK: llvm.call @void_2(%[[ARG3]]) : (!llvm.vec<2 x i64>) -> ()
 	spv.FunctionCall @void_2(%arg3) : (vector<2xi64>) -> ()
 	// CHECK: %{{.*}} = llvm.call @value_scalar(%[[ARG0]], %[[ARG1]], %[[ARG2]]) : (!llvm.i32, !llvm.i1, !llvm.double) -> !llvm.i32
 	%0 = spv.FunctionCall @value_scalar(%arg0, %arg1, %arg2) : (i32, i1, f64) -> i32
-	// CHECK: %{{.*}} = llvm.call @value_vector(%[[ARG3]], %[[ARG4]]) : (!llvm<"<2 x i64>">, !llvm<"<2 x float>">) -> !llvm<"<2 x float>">
+	// CHECK: %{{.*}} = llvm.call @value_vector(%[[ARG3]], %[[ARG4]]) : (!llvm.vec<2 x i64>, !llvm.vec<2 x float>) -> !llvm.vec<2 x float>
 	%1 = spv.FunctionCall @value_vector(%arg3, %arg4) : (vector<2xi64>, vector<2xf32>) -> vector<2xf32>
 	spv.Return
 }

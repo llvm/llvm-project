@@ -25,10 +25,10 @@ class MLIRContext;
 
 namespace LLVM {
 
-class LLVMTypeNew;
+class LLVMType;
 
-llvm::Type *translateTypeToLLVMIR(LLVMTypeNew type, llvm::LLVMContext &context);
-LLVMTypeNew translateTypeFromLLVMIR(llvm::Type *type, MLIRContext &context);
+llvm::Type *translateTypeToLLVMIR(LLVMType type, llvm::LLVMContext &context);
+LLVMType translateTypeFromLLVMIR(llvm::Type *type, MLIRContext &context);
 
 } // namespace LLVM
 } // namespace mlir

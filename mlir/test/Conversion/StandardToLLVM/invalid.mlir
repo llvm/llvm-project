@@ -24,8 +24,8 @@ func @mlir_cast_to_llvm_int(%0 : i32) -> !llvm.i64 {
 
 // -----
 
-func @mlir_cast_to_llvm_vec(%0 : vector<1x1xf32>) -> !llvm<"<1 x float>"> {
+func @mlir_cast_to_llvm_vec(%0 : vector<1x1xf32>) -> !llvm.vec<1 x float> {
   // expected-error@+1 {{'llvm.mlir.cast' op only 1-d vector is allowed}}
-  %1 = llvm.mlir.cast %0 : vector<1x1xf32> to !llvm<"<1 x float>">
-  return %1 : !llvm<"<1 x float>">
+  %1 = llvm.mlir.cast %0 : vector<1x1xf32> to !llvm.vec<1 x float>
+  return %1 : !llvm.vec<1 x float>
 }

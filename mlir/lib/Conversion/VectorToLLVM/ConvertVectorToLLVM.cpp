@@ -23,6 +23,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Target/LLVMIR/TypeTranslation.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -126,8 +127,10 @@ LogicalResult getMemRefAlignment(LLVMTypeConverter &typeConverter, T op,
     return failure();
 
   auto dataLayout = typeConverter.getDialect()->getLLVMModule().getDataLayout();
-  align = dataLayout.getPrefTypeAlignment(
-      LLVM::convertLLVMType(elementTy.cast<LLVM::LLVMType>()));
+  // TODO: this should be abstracted away to avoid depending on translation.
+  align = dataLayout.getPrefTypeAlignment(LLVM::translateTypeToLLVMIR(
+      elementTy.cast<LLVM::LLVMType>(),
+      typeConverter.getDialect()->getLLVMContext()));
   return success();
 }
 
