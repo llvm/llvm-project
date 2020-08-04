@@ -921,21 +921,17 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
   // Build an AffineMap to remap access functions based on lower bound offsets.
   SmallVector<AffineExpr, 4> remapExprs;
   remapExprs.reserve(rank);
-  unsigned zeroOffsetCount = 0;
   for (unsigned i = 0; i < rank; i++) {
-    if (auto constExpr = offsets[i].dyn_cast<AffineConstantExpr>())
-      if (constExpr.getValue() == 0)
-        ++zeroOffsetCount;
     auto dimExpr = b.getAffineDimExpr(outerIVs.size() + i);
 
     auto remapExpr =
         simplifyAffineExpr(dimExpr - offsets[i], outerIVs.size() + rank, 0);
     remapExprs.push_back(remapExpr);
   }
-  auto indexRemap = zeroOffsetCount == rank
-                        ? AffineMap()
-                        : AffineMap::get(outerIVs.size() + rank, 0, remapExprs,
-                                         forOp.getContext());
+
+  auto indexRemap =
+      AffineMap::get(outerIVs.size() + rank, 0, remapExprs, forOp.getContext());
+
   // Replace all users of 'oldMemRef' with 'newMemRef'.
   LogicalResult res =
       replaceAllMemRefUsesWith(oldMemRef, newMemRef, {}, indexRemap,
