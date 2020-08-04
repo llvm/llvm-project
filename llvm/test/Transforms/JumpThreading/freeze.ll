@@ -42,20 +42,14 @@ F2:
 
 define i32 @test1_cast(i1 %cond) {
 ; CHECK-LABEL: @test1_cast(
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[MERGE_THREAD:%.*]], label [[MERGE:%.*]]
-; CHECK:       Merge.thread:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[T2:%.*]], label [[F2:%.*]]
+; CHECK:       T2:
 ; CHECK-NEXT:    [[V1:%.*]] = call i32 @f1()
-; CHECK-NEXT:    br label [[T2:%.*]]
-; CHECK:       Merge:
+; CHECK-NEXT:    call void @f3()
+; CHECK-NEXT:    ret i32 [[V1]]
+; CHECK:       F2:
 ; CHECK-NEXT:    [[V2:%.*]] = call i32 @f2()
 ; CHECK-NEXT:    [[A:%.*]] = trunc i32 0 to i1
-; CHECK-NEXT:    [[A_FR:%.*]] = freeze i1 [[A]]
-; CHECK-NEXT:    br i1 [[A_FR]], label [[T2]], label [[F2:%.*]]
-; CHECK:       T2:
-; CHECK-NEXT:    [[B5:%.*]] = phi i32 [ [[V1]], [[MERGE_THREAD]] ], [ [[V2]], [[MERGE]] ]
-; CHECK-NEXT:    call void @f3()
-; CHECK-NEXT:    ret i32 [[B5]]
-; CHECK:       F2:
 ; CHECK-NEXT:    ret i32 [[V2]]
 ;
   br i1 %cond, label %T1, label %F1
