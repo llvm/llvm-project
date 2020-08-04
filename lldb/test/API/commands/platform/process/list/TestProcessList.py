@@ -18,6 +18,7 @@ class ProcessListTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows  # https://bugs.llvm.org/show_bug.cgi?id=43702
+    @skipIfRemote   # rdar://problem/66542336
     def test_process_list_with_args(self):
         """Test process list show process args"""
         self.build()
