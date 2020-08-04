@@ -15,7 +15,7 @@ concept binary_concept = true;
 template <typename T>
 struct Foo {
   // CHECK:      TemplateTypeParmDecl {{.*}} referenced Concept {{.*}} 'binary_concept'
-  // CHECK-NEXT: |-ConceptSpecializationExpr {{.*}} <col:13, col:31> 'bool'
+  // CHECK-NEXT: |-ConceptSpecializationExpr {{.*}} <col:13, col:31> 'bool' Concept {{.*}} 'binary_concept'
   // CHECK-NEXT: `-TemplateArgument {{.*}} type 'int'
   template <binary_concept<int> R>
   Foo(R);
