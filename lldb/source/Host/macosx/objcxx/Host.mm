@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/Host.h"
+#include "PosixSpawnResponsible.h"
 
 #include <AvailabilityMacros.h>
 #include <TargetConditionals.h>
@@ -1081,6 +1082,29 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
              "error: {0}, ::posix_spawnattr_setflags ( &attr, flags={1:x} )",
              error, flags);
     return error;
+  }
+
+  bool is_graphical = true;
+
+#if TARGET_OS_OSX
+  SecuritySessionId session_id;
+  SessionAttributeBits session_attributes;
+  OSStatus status =
+      SessionGetInfo(callerSecuritySession, &session_id, &session_attributes);
+  if (status == errSessionSuccess)
+    is_graphical = session_attributes & sessionHasGraphicAccess;
+#endif
+
+  //  When lldb is ran through a graphical session, this makes the debuggee
+  //  process responsible for the TCC prompts. Otherwise, lldb will use the
+  //  launching process privileges.
+  if (is_graphical && launch_info.GetFlags().Test(eLaunchFlagDebug)) {
+    error.SetError(setup_posix_spawn_responsible_flag(&attr), eErrorTypePOSIX);
+    if (error.Fail()) {
+      LLDB_LOG(log, "error: {0}, setup_posix_spawn_responsible_flag(&attr)",
+               error);
+      return error;
+    }
   }
 
   const char *tmp_argv[2];
