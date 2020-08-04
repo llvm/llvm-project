@@ -1042,6 +1042,16 @@ def LLVM_masked_scatter
     "type($value) `,` type($mask) `into` type($ptrs)";
 }
 
+/// Create a call to Masked Expand Load intrinsic.
+def LLVM_masked_expandload
+    : LLVM_IntrOp<"masked.expandload", [0], [], [], 1>,
+      Arguments<(ins LLVM_Type, LLVM_Type, LLVM_Type)>;
+
+/// Create a call to Masked Compress Store intrinsic.
+def LLVM_masked_compressstore
+    : LLVM_IntrOp<"masked.compressstore", [], [0], [], 0>,
+    Arguments<(ins LLVM_Type, LLVM_Type, LLVM_Type)>;
+
 //
 // Atomic operations.
 //
