@@ -3423,24 +3423,30 @@ template <class ELFT> void ELFDumper<ELFT>::printMipsOptions() {
 
 template <class ELFT> void ELFDumper<ELFT>::printStackMap() const {
   const ELFFile<ELFT> *Obj = ObjF->getELFFile();
-  const Elf_Shdr *StackMapSection = nullptr;
-  for (const Elf_Shdr &Sec : cantFail(Obj->sections())) {
-    StringRef Name =
-        unwrapOrError(ObjF->getFileName(), Obj->getSectionName(&Sec));
-    if (Name == ".llvm_stackmaps") {
-      StackMapSection = &Sec;
-      break;
-    }
-  }
-
+  const Elf_Shdr *StackMapSection = findSectionByName(".llvm_stackmaps");
   if (!StackMapSection)
     return;
 
-  ArrayRef<uint8_t> StackMapContentsArray = unwrapOrError(
-      ObjF->getFileName(), Obj->getSectionContents(StackMapSection));
+  auto Warn = [&](Error &&E) {
+    this->reportUniqueWarning(createError("unable to read the stack map from " +
+                                          describe(*StackMapSection) + ": " +
+                                          toString(std::move(E))));
+  };
 
-  prettyPrintStackMap(
-      W, StackMapParser<ELFT::TargetEndianness>(StackMapContentsArray));
+  Expected<ArrayRef<uint8_t>> ContentOrErr =
+      Obj->getSectionContents(StackMapSection);
+  if (!ContentOrErr) {
+    Warn(ContentOrErr.takeError());
+    return;
+  }
+
+  if (Error E = StackMapParser<ELFT::TargetEndianness>::validateHeader(
+          *ContentOrErr)) {
+    Warn(std::move(E));
+    return;
+  }
+
+  prettyPrintStackMap(W, StackMapParser<ELFT::TargetEndianness>(*ContentOrErr));
 }
 
 template <class ELFT> void ELFDumper<ELFT>::printGroupSections() {

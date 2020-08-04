@@ -404,7 +404,7 @@ void StackMaps::recordStatepoint(const MCSymbol &L, const MachineInstr &MI) {
 /// Emit the stackmap header.
 ///
 /// Header {
-///   uint8  : Stack Map Version (currently 2)
+///   uint8  : Stack Map Version (currently 3)
 ///   uint8  : Reserved (expected to be 0)
 ///   uint16 : Reserved (expected to be 0)
 /// }
