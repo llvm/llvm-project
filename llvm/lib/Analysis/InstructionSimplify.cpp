@@ -2814,6 +2814,14 @@ static Value *simplifyICmpWithBinOpOnLHS(
     }
   }
 
+  // icmp pred (urem X, Y), X
+  if (match(LBO, m_URem(m_Specific(RHS), m_Value()))) {
+    if (Pred == ICmpInst::ICMP_ULE)
+      return getTrue(ITy);
+    if (Pred == ICmpInst::ICMP_UGT)
+      return getFalse(ITy);
+  }
+
   // x >> y <=u x
   // x udiv y <=u x.
   if (match(LBO, m_LShr(m_Specific(RHS), m_Value())) ||
