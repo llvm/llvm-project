@@ -1,3 +1,5 @@
+! RUN: %f18 -E %s 2>&1 | FileCheck %s
+! CHECK: res=((111)+666)
 * ## token pasting works in FLM
       integer function IFLM(x)
         integer :: x
@@ -12,8 +14,8 @@
       integer :: res
       res = IFLM(KWM)
       if (res .eq. 777) then
-        print *, 'pp026.F pass'
+        print *, 'pp026.F yes'
       else
-        print *, 'pp026.F FAIL: ', res
+        print *, 'pp026.F no: ', res
       end if
       end

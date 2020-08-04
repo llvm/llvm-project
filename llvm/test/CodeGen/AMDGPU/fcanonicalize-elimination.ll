@@ -311,7 +311,7 @@ define amdgpu_kernel void @test_no_fold_canonicalize_fneg_value_f32(float addrsp
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, float addrspace(1)* %arg, i32 %id
   %load = load float, float addrspace(1)* %gep, align 4
-  %v = fsub float -0.0, %load
+  %v = fneg float %load
   %canonicalized = tail call float @llvm.canonicalize.f32(float %v)
   store float %canonicalized, float addrspace(1)* %gep, align 4
   ret void
@@ -327,7 +327,7 @@ define amdgpu_kernel void @test_fold_canonicalize_fneg_value_f32(float addrspace
   %gep = getelementptr inbounds float, float addrspace(1)* %arg, i32 %id
   %load = load float, float addrspace(1)* %gep, align 4
   %v0 = fadd float %load, 0.0
-  %v = fsub float -0.0, %v0
+  %v = fneg float %v0
   %canonicalized = tail call float @llvm.canonicalize.f32(float %v)
   store float %canonicalized, float addrspace(1)* %gep, align 4
   ret void

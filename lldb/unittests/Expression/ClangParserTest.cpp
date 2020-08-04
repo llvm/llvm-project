@@ -11,6 +11,7 @@
 #include "Plugins/ExpressionParser/Clang/ClangHost.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/FileSpec.h"
@@ -36,7 +37,7 @@ static std::string ComputeClangResourceDir(std::string lldb_shlib_path,
 TEST_F(ClangHostTest, ComputeClangResourceDirectory) {
 #if !defined(_WIN32)
   std::string path_to_liblldb = "/foo/bar/lib/";
-  std::string path_to_clang_dir = "/foo/bar/lib/clang/" CLANG_VERSION_STRING;
+  std::string path_to_clang_dir = "/foo/bar/lib" LLDB_LIBDIR_SUFFIX "/clang/" CLANG_VERSION_STRING;
 #else
   std::string path_to_liblldb = "C:\\foo\\bar\\lib";
   std::string path_to_clang_dir = "C:\\foo\\bar\\lib\\clang\\" CLANG_VERSION_STRING;

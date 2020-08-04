@@ -230,37 +230,7 @@ syntax::Leaf *syntax::ParenExpression::closeParen() {
       findChild(syntax::NodeRole::CloseParen));
 }
 
-syntax::Leaf *syntax::IntegerLiteralExpression::literalToken() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::LiteralToken));
-}
-
-syntax::Leaf *syntax::CharacterLiteralExpression::literalToken() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::LiteralToken));
-}
-
-syntax::Leaf *syntax::FloatingLiteralExpression::literalToken() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::LiteralToken));
-}
-
-syntax::Leaf *syntax::StringLiteralExpression::literalToken() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::LiteralToken));
-}
-
-syntax::Leaf *syntax::BoolLiteralExpression::literalToken() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::LiteralToken));
-}
-
-syntax::Leaf *syntax::CxxNullPtrExpression::nullPtrKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::LiteralToken));
-}
-
-syntax::Leaf *syntax::UserDefinedLiteralExpression::literalToken() {
+syntax::Leaf *syntax::LiteralExpression::literalToken() {
   return llvm::cast_or_null<syntax::Leaf>(
       findChild(syntax::NodeRole::LiteralToken));
 }

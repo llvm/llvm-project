@@ -5749,7 +5749,8 @@ void ResolveNamesVisitor::HandleProcedureName(
     // error was reported
   } else {
     symbol = &Resolve(name, symbol)->GetUltimate();
-    if (ConvertToProcEntity(*symbol) && IsIntrinsic(symbol->name())) {
+    if (ConvertToProcEntity(*symbol) && IsIntrinsic(symbol->name()) &&
+        !IsDummy(*symbol)) {
       symbol->attrs().set(Attr::INTRINSIC);
       // 8.2(3): ignore type from intrinsic in type-declaration-stmt
       symbol->get<ProcEntityDetails>().set_interface(ProcInterface{});

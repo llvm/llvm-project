@@ -2404,10 +2404,8 @@ public:
   }
 
   /// Disable tail call on x86-64. The epilogue code before the tail jump blocks
-  /// the autoreleaseRV/retainRV optimization.
-  bool shouldSuppressTailCallsOfRetainAutoreleasedReturnValue() const override {
-    return true;
-  }
+  /// autoreleaseRV/retainRV and autoreleaseRV/unsafeClaimRV optimizations.
+  bool markARCOptimizedReturnCallsAsNoTail() const override { return true; }
 
   int getDwarfEHStackPointer(CodeGen::CodeGenModule &CGM) const override {
     return 7;
@@ -10745,21 +10743,24 @@ private:
 } // end anonymous namespace
 
 ABIArgInfo VEABIInfo::classifyReturnType(QualType Ty) const {
-  if (Ty->isAnyComplexType()) {
+  if (Ty->isAnyComplexType())
     return ABIArgInfo::getDirect();
-  }
+  uint64_t Size = getContext().getTypeSize(Ty);
+  if (Size < 64 && Ty->isIntegerType())
+    return ABIArgInfo::getExtend(Ty);
   return DefaultABIInfo::classifyReturnType(Ty);
 }
 
 ABIArgInfo VEABIInfo::classifyArgumentType(QualType Ty) const {
-  if (Ty->isAnyComplexType()) {
+  if (Ty->isAnyComplexType())
     return ABIArgInfo::getDirect();
-  }
+  uint64_t Size = getContext().getTypeSize(Ty);
+  if (Size < 64 && Ty->isIntegerType())
+    return ABIArgInfo::getExtend(Ty);
   return DefaultABIInfo::classifyArgumentType(Ty);
 }
 
 void VEABIInfo::computeInfo(CGFunctionInfo &FI) const {
-
   FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
   for (auto &Arg : FI.arguments())
     Arg.info = classifyArgumentType(Arg.type);

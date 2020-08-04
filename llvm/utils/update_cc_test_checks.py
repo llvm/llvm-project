@@ -112,6 +112,20 @@ def str_to_commandline(value):
     return []
   return shlex.split(value)
 
+
+def infer_dependent_args(args):
+  if not args.clang:
+    if not args.llvm_bin:
+      args.clang = 'clang'
+    else:
+      args.clang = os.path.join(args.llvm_bin, 'clang')
+  if not args.opt:
+    if not args.llvm_bin:
+      args.opt = 'opt'
+    else:
+      args.opt = os.path.join(args.llvm_bin, 'opt')
+
+
 def config():
   parser = argparse.ArgumentParser(
       description=__doc__,
@@ -135,12 +149,8 @@ def config():
                       help='Check "Function Attributes" for functions')
   parser.add_argument('tests', nargs='+')
   args = common.parse_commandline_args(parser)
+  infer_dependent_args(args)
 
-  if args.clang is None:
-    if args.llvm_bin is None:
-      args.clang = 'clang'
-    else:
-      args.clang = os.path.join(args.llvm_bin, 'clang')
   if not distutils.spawn.find_executable(args.clang):
     print('Please specify --llvm-bin or --clang', file=sys.stderr)
     sys.exit(1)
@@ -157,11 +167,6 @@ def config():
     common.warn('Could not determine clang builtins directory, some tests '
                 'might not update correctly.')
 
-  if args.opt is None:
-    if args.llvm_bin is None:
-      args.opt = 'opt'
-    else:
-      args.opt = os.path.join(args.llvm_bin, 'opt')
   if not distutils.spawn.find_executable(args.opt):
     # Many uses of this tool will not need an opt binary, because it's only
     # needed for updating a test that runs clang | opt | FileCheck. So we
@@ -203,7 +208,7 @@ def main():
   script_name = os.path.basename(__file__)
 
   for ti in common.itertests(initial_args.tests, parser, 'utils/' + script_name,
-                             comment_prefix='//'):
+                             comment_prefix='//', argparse_callback=infer_dependent_args):
     # Build a list of clang command lines and check prefixes from RUN lines.
     run_list = []
     line2spell_and_mangled_list = collections.defaultdict(list)

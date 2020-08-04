@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_LLVMIR_LLVMDIALECT_H_
 #define MLIR_DIALECT_LLVMIR_LLVMDIALECT_H_
 
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/OpDefinition.h"
@@ -47,186 +48,11 @@ struct LLVMTypeStorage;
 struct LLVMDialectImpl;
 } // namespace detail
 
-class LLVMType;
-
 /// Converts an MLIR LLVM dialect type to LLVM IR type. Note that this function
 /// exists exclusively for the purpose of gradual transition to the first-party
 /// modeling of LLVM types. It should not be used outside MLIR-to-LLVM
 /// translation.
 llvm::Type *convertLLVMType(LLVMType type);
-
-class LLVMType : public mlir::Type::TypeBase<LLVMType, mlir::Type,
-                                             detail::LLVMTypeStorage> {
-public:
-  enum Kind {
-    LLVM_TYPE = FIRST_LLVM_TYPE,
-  };
-
-  using Base::Base;
-
-  static bool kindof(unsigned kind) { return kind == LLVM_TYPE; }
-
-  LLVMDialect &getDialect();
-
-  /// Utilities to identify types.
-  bool isBFloatTy() { return getUnderlyingType()->isBFloatTy(); }
-  bool isHalfTy() { return getUnderlyingType()->isHalfTy(); }
-  bool isFloatTy() { return getUnderlyingType()->isFloatTy(); }
-  bool isDoubleTy() { return getUnderlyingType()->isDoubleTy(); }
-  bool isFloatingPointTy() { return getUnderlyingType()->isFloatingPointTy(); }
-
-  /// Array type utilities.
-  LLVMType getArrayElementType();
-  unsigned getArrayNumElements();
-  bool isArrayTy();
-
-  /// Integer type utilities.
-  unsigned getIntegerBitWidth() {
-    return getUnderlyingType()->getIntegerBitWidth();
-  }
-  bool isIntegerTy() { return getUnderlyingType()->isIntegerTy(); }
-  bool isIntegerTy(unsigned bitwidth) {
-    return getUnderlyingType()->isIntegerTy(bitwidth);
-  }
-
-  /// Vector type utilities.
-  LLVMType getVectorElementType();
-  unsigned getVectorNumElements();
-  llvm::ElementCount getVectorElementCount();
-  bool isVectorTy();
-
-  /// Function type utilities.
-  LLVMType getFunctionParamType(unsigned argIdx);
-  unsigned getFunctionNumParams();
-  LLVMType getFunctionResultType();
-  bool isFunctionTy();
-  bool isFunctionVarArg();
-
-  /// Pointer type utilities.
-  LLVMType getPointerTo(unsigned addrSpace = 0);
-  LLVMType getPointerElementTy();
-  bool isPointerTy();
-  static bool isValidPointerElementType(LLVMType type);
-
-  /// Struct type utilities.
-  LLVMType getStructElementType(unsigned i);
-  unsigned getStructNumElements();
-  bool isStructTy();
-
-  /// Utilities used to generate floating point types.
-  static LLVMType getDoubleTy(LLVMDialect *dialect);
-  static LLVMType getFloatTy(LLVMDialect *dialect);
-  static LLVMType getBFloatTy(LLVMDialect *dialect);
-  static LLVMType getHalfTy(LLVMDialect *dialect);
-  static LLVMType getFP128Ty(LLVMDialect *dialect);
-  static LLVMType getX86_FP80Ty(LLVMDialect *dialect);
-
-  /// Utilities used to generate integer types.
-  static LLVMType getIntNTy(LLVMDialect *dialect, unsigned numBits);
-  static LLVMType getInt1Ty(LLVMDialect *dialect) {
-    return getIntNTy(dialect, /*numBits=*/1);
-  }
-  static LLVMType getInt8Ty(LLVMDialect *dialect) {
-    return getIntNTy(dialect, /*numBits=*/8);
-  }
-  static LLVMType getInt8PtrTy(LLVMDialect *dialect) {
-    return getInt8Ty(dialect).getPointerTo();
-  }
-  static LLVMType getInt16Ty(LLVMDialect *dialect) {
-    return getIntNTy(dialect, /*numBits=*/16);
-  }
-  static LLVMType getInt32Ty(LLVMDialect *dialect) {
-    return getIntNTy(dialect, /*numBits=*/32);
-  }
-  static LLVMType getInt64Ty(LLVMDialect *dialect) {
-    return getIntNTy(dialect, /*numBits=*/64);
-  }
-
-  /// Utilities used to generate other miscellaneous types.
-  static LLVMType getArrayTy(LLVMType elementType, uint64_t numElements);
-  static LLVMType getFunctionTy(LLVMType result, ArrayRef<LLVMType> params,
-                                bool isVarArg);
-  static LLVMType getFunctionTy(LLVMType result, bool isVarArg) {
-    return getFunctionTy(result, llvm::None, isVarArg);
-  }
-  static LLVMType getStructTy(LLVMDialect *dialect, ArrayRef<LLVMType> elements,
-                              bool isPacked = false);
-  static LLVMType getStructTy(LLVMDialect *dialect, bool isPacked = false) {
-    return getStructTy(dialect, llvm::None, isPacked);
-  }
-  template <typename... Args>
-  static typename std::enable_if<llvm::are_base_of<LLVMType, Args...>::value,
-                                 LLVMType>::type
-  getStructTy(LLVMType elt1, Args... elts) {
-    SmallVector<LLVMType, 8> fields({elt1, elts...});
-    return getStructTy(&elt1.getDialect(), fields);
-  }
-  static LLVMType getVectorTy(LLVMType elementType, unsigned numElements);
-
-  /// Void type utilities.
-  static LLVMType getVoidTy(LLVMDialect *dialect);
-  bool isVoidTy();
-
-  // Creation and setting of LLVM's identified struct types
-  static LLVMType createStructTy(LLVMDialect *dialect,
-                                 ArrayRef<LLVMType> elements,
-                                 Optional<StringRef> name,
-                                 bool isPacked = false);
-
-  static LLVMType createStructTy(LLVMDialect *dialect,
-                                 Optional<StringRef> name) {
-    return createStructTy(dialect, llvm::None, name);
-  }
-
-  static LLVMType createStructTy(ArrayRef<LLVMType> elements,
-                                 Optional<StringRef> name,
-                                 bool isPacked = false) {
-    assert(!elements.empty() &&
-           "This method may not be invoked with an empty list");
-    LLVMType ele0 = elements.front();
-    return createStructTy(&ele0.getDialect(), elements, name, isPacked);
-  }
-
-  template <typename... Args>
-  static typename std::enable_if_t<llvm::are_base_of<LLVMType, Args...>::value,
-                                   LLVMType>
-  createStructTy(StringRef name, LLVMType elt1, Args... elts) {
-    SmallVector<LLVMType, 8> fields({elt1, elts...});
-    Optional<StringRef> opt_name(name);
-    return createStructTy(&elt1.getDialect(), fields, opt_name);
-  }
-
-  static LLVMType setStructTyBody(LLVMType structType,
-                                  ArrayRef<LLVMType> elements,
-                                  bool isPacked = false);
-
-  template <typename... Args>
-  static typename std::enable_if_t<llvm::are_base_of<LLVMType, Args...>::value,
-                                   LLVMType>
-  setStructTyBody(LLVMType structType, LLVMType elt1, Args... elts) {
-    SmallVector<LLVMType, 8> fields({elt1, elts...});
-    return setStructTyBody(structType, fields);
-  }
-
-private:
-  friend LLVMDialect;
-  friend llvm::Type *convertLLVMType(LLVMType type);
-
-  /// Get the underlying LLVM IR type.
-  llvm::Type *getUnderlyingType() const;
-
-  /// Get the underlying LLVM IR types for the given array of types.
-  static void getUnderlyingTypes(ArrayRef<LLVMType> types,
-                                 SmallVectorImpl<llvm::Type *> &result);
-
-  /// Get an LLVMType with a pre-existing llvm type.
-  static LLVMType get(MLIRContext *context, llvm::Type *llvmType);
-
-  /// Get an LLVMType with an llvm type that may cause changes to the underlying
-  /// llvm context when constructed.
-  static LLVMType getLocked(LLVMDialect *dialect,
-                            function_ref<llvm::Type *()> typeBuilder);
-};
 
 ///// Ops /////
 #define GET_OP_CLASSES

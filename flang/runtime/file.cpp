@@ -18,6 +18,7 @@
 #include <io.h>
 #include <windows.h>
 #else
+#include <sys/stat.h>
 #include <unistd.h>
 #endif
 
@@ -84,8 +85,7 @@ void OpenFile::Open(OpenStatus status, std::optional<Action> action,
     fd_ = openfile_mkstemp(handler);
   } else {
     if (!path_.get()) {
-      handler.SignalError(
-          "FILE= is required unless STATUS='OLD' and unit is connected");
+      handler.SignalError("FILE= is required");
       return;
     }
     int flags{0};
@@ -134,8 +134,18 @@ void OpenFile::Open(OpenStatus status, std::optional<Action> action,
   mayWrite_ = *action != Action::Read;
   if (status == OpenStatus::Old || status == OpenStatus::Unknown) {
     knownSize_.reset();
+#ifndef _WIN32
+    struct stat buf;
+    if (::fstat(fd_, &buf) == 0) {
+      mayPosition_ = S_ISREG(buf.st_mode);
+      knownSize_ = buf.st_size;
+    }
+#else // TODO: _WIN32
+    mayPosition_ = true;
+#endif
   } else {
     knownSize_ = 0;
+    mayPosition_ = true;
   }
 }
 
@@ -385,4 +395,11 @@ int OpenFile::PendingResult(const Terminator &terminator, int iostat) {
 }
 
 bool IsATerminal(int fd) { return ::isatty(fd); }
+
+bool IsExtant(const char *path) { return ::access(path, F_OK) == 0; }
+bool MayRead(const char *path) { return ::access(path, R_OK) == 0; }
+bool MayWrite(const char *path) { return ::access(path, W_OK) == 0; }
+bool MayReadAndWrite(const char *path) {
+  return ::access(path, R_OK | W_OK) == 0;
+}
 } // namespace Fortran::runtime::io

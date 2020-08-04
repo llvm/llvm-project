@@ -1,4 +1,6 @@
 // Test __sanitizer_set_report_fd:
+// Fails with debug checks: https://bugs.llvm.org/show_bug.cgi?id=46860
+// XFAIL: !compiler-rt-optimized && tsan
 // RUN: %clangxx -O2 %s -o %t
 // RUN: not %run %t 2>&1   | FileCheck %s
 // RUN: not %run %t stdout | FileCheck %s

@@ -669,3 +669,67 @@ DWARF:
     - Lists:
         - Entries: []
           Content: ''
+
+## u) Test that when the "OffsetEntryCount" is specified to be 0 and "Offsets" is not specified,
+## the offsets array is not emitted.
+
+# RUN: yaml2obj --docnum=19 -DENTRYCOUNT=0 %s -o %t19.o
+# RUN: llvm-readelf --hex-dump=.debug_rnglists %t19.o | \
+# RUN:   FileCheck %s --check-prefix=NO-OFFSETS
+
+#      NO-OFFSETS: Hex dump of section '.debug_rnglists':
+# NO-OFFSETS-NEXT: 0x00000000 0e000000 05000800 00000000 02010202 ................
+##                                              ^-------          offset_entry_count (4-byte)
+##                                                       ^-       DW_RLE_startx_endx
+##                                                         ^-     operands[0] (ULEB128) 0x01
+##                                                           ^-   operands[1] (ULEB128) 0x02
+##                                                             ^- DW_RLE_startx_endx
+# NO-OFFSETS-NEXT: 0x00000010 0102                                ..
+##                            ^-                                  operands[0] (ULEB128) 0x01
+##                              ^-                                operands[1] (ULEB128) 0x02
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_rnglists:
+    - OffsetEntryCount: [[ENTRYCOUNT=<none>]]
+      Offsets:          [[OFFSETS=<none>]]
+      Lists:
+        - Entries:
+            - Operator: DW_RLE_startx_endx
+              Values:   [ 0x01, 0x02 ]
+        - Entries:
+            - Operator: DW_RLE_startx_endx
+              Values:   [ 0x01, 0x02 ]
+
+## v) Test that when the "Offsets" entry is specified to be empty and the "OffsetEntryCount" is not specified,
+## the offsets array will be omitted.
+
+# RUN: yaml2obj --docnum=19 -DOFFSETS=[] %s -o %t20.o
+# RUN: llvm-readelf --hex-dump=.debug_rnglists %t20.o | \
+# RUN:   FileCheck %s --check-prefix=NO-OFFSETS
+
+## w) Test that if "Offsets" is specified, the offsets array will be emitted accordingly, even when
+## the "OffsetEntryCount" is specified to be 0.
+
+# RUN: yaml2obj --docnum=19 -DOFFSETS=[0x01,0x02,0x03] -DENTRYCOUNT=0 %s -o %t21.o
+# RUN: llvm-readelf --hex-dump=.debug_rnglists %t21.o | \
+# RUN:   FileCheck %s --check-prefix=OFFSETS
+
+#      OFFSETS: Hex dump of section '.debug_rnglists':
+# OFFSETS-NEXT: 0x00000000 0e000000 05000800 00000000 01000000 ................
+##                                           ^-------          offset_entry_count (4-byte)
+##                                                    ^------- offsets[0] (4-byte)
+# OFFSETS-NEXT: 0x00000010 02000000 03000000 02010202 0102     ..............
+##                         ^-------                            offsets[1] (4-byte)
+##                                  ^-------                   offsets[2] (4-byte)
+##                                           ^-                DW_RLE_startx_endx
+##                                             ^-              operands[0] (ULEB128) 0x01
+##                                               ^-            operands[1] (ULEB128) 0x02
+##                                                 ^-          DW_RLE_startx_endx
+##                                                    ^-       operands[0] (ULEB128) 0x01
+##                                                      ^-     operands[1] (ULEB128) 0x02

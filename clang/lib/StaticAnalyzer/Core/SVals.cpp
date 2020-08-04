@@ -116,8 +116,6 @@ SymbolRef SVal::getLocSymbolInBase() const {
   return nullptr;
 }
 
-// TODO: The next 3 functions have to be simplified.
-
 /// If this SVal wraps a symbol return that SymbolRef.
 /// Otherwise, return 0.
 ///
@@ -130,22 +128,6 @@ SymbolRef SVal::getAsSymbol(bool IncludeBaseRegions) const {
     return X->getSymbol();
 
   return getAsLocSymbol(IncludeBaseRegions);
-}
-
-/// getAsSymbolicExpression - If this Sval wraps a symbolic expression then
-///  return that expression.  Otherwise return NULL.
-const SymExpr *SVal::getAsSymbolicExpression() const {
-  if (Optional<nonloc::SymbolVal> X = getAs<nonloc::SymbolVal>())
-    return X->getSymbol();
-
-  return getAsSymbol();
-}
-
-const SymExpr* SVal::getAsSymExpr() const {
-  const SymExpr* Sym = getAsSymbol();
-  if (!Sym)
-    Sym = getAsSymbolicExpression();
-  return Sym;
 }
 
 const MemRegion *SVal::getAsRegion() const {

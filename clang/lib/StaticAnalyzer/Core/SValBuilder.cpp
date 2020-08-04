@@ -377,8 +377,8 @@ Optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
 SVal SValBuilder::makeSymExprValNN(BinaryOperator::Opcode Op,
                                    NonLoc LHS, NonLoc RHS,
                                    QualType ResultTy) {
-  const SymExpr *symLHS = LHS.getAsSymExpr();
-  const SymExpr *symRHS = RHS.getAsSymExpr();
+  SymbolRef symLHS = LHS.getAsSymbol();
+  SymbolRef symRHS = RHS.getAsSymbol();
 
   // TODO: When the Max Complexity is reached, we should conjure a symbol
   // instead of generating an Unknown value and propagate the taint info to it.
@@ -492,7 +492,7 @@ SVal SValBuilder::evalIntegralCast(ProgramStateRef state, SVal val,
   if (getContext().getTypeSize(castTy) >= getContext().getTypeSize(originalTy))
     return evalCast(val, castTy, originalTy);
 
-  const SymExpr *se = val.getAsSymbolicExpression();
+  SymbolRef se = val.getAsSymbol();
   if (!se) // Let evalCast handle non symbolic expressions.
     return evalCast(val, castTy, originalTy);
 

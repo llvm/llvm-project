@@ -46,7 +46,7 @@
 # LLVM: Type: R_X86_64_GOTPCRELX (41)
 # LLVM: Type: R_X86_64_REX_GOTPCRELX (42)
 
-# GNU:      Relocation section '.rela.text' at offset 0x48 contains 40 entries:
+# GNU:      Relocation section '.rela.text' at offset 0x40 contains 40 entries:
 # GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
 # GNU-NEXT: 0000000000000003  0000000100000000 R_X86_64_NONE          0000000000000000 foo + 0
 # GNU-NEXT: 000000000000000a  0000000100000001 R_X86_64_64            0000000000000000 foo + 0
@@ -93,19 +93,11 @@
 FileHeader:
   Class:   ELFCLASS64
   Data:    ELFDATA2LSB
-  OSABI:   ELFOSABI_GNU
   Type:    ET_REL
   Machine: EM_X86_64
 Sections:
-  - Name:    .text
-    Type:    SHT_PROGBITS
-    Content: 00
-  - Name:         .rela.text
-    Type:         SHT_RELA
-    Link:         .symtab
-    AddressAlign: 0x0000000000000008
-    EntSize:      0x0000000000000018
-    Info:         .text
+  - Name: .rela.text
+    Type: SHT_RELA
     Relocations:
       - Offset: 0x0000000000000003
         Type:   R_X86_64_NONE

@@ -317,6 +317,16 @@ func @empty_region() -> () {
 
 // -----
 
+// CHECK-LABEL: @loop_with_control
+func @loop_with_control() -> () {
+  // CHECK: spv.loop control(Unroll)
+  spv.loop control(Unroll) {
+  }
+  return
+}
+
+// -----
+
 func @wrong_merge_block() -> () {
   // expected-error @+1 {{last block must be the merge block with only one 'spv._merge' op}}
   spv.loop {
@@ -712,6 +722,16 @@ func @selection(%cond: i1) -> () {
 func @empty_region() -> () {
   // CHECK: spv.selection
   spv.selection {
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @selection_with_control
+func @selection_with_control() -> () {
+  // CHECK: spv.selection control(Flatten)
+  spv.selection control(Flatten) {
   }
   return
 }

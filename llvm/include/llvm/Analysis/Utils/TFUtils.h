@@ -13,6 +13,7 @@
 
 #ifdef LLVM_HAVE_TF_API
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/Support/JSON.h"
 
 #include <memory>
 #include <vector>
@@ -58,6 +59,13 @@ public:
   int typeIndex() const { return TypeIndex; }
   const std::vector<int64_t> &shape() const { return Shape; }
 
+  bool operator==(const TensorSpec &Other) const {
+    return Name == Other.Name && Port == Other.Port &&
+           TypeIndex == Other.TypeIndex && Shape == Other.Shape;
+  }
+
+  bool operator!=(const TensorSpec &Other) const { return !(*this == Other); }
+
 private:
   TensorSpec(const std::string &Name, int Port, int TypeIndex,
              const std::vector<int64_t> &Shape)
@@ -72,6 +80,9 @@ private:
   int TypeIndex = 0;
   std::vector<int64_t> Shape;
 };
+
+Optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
+                                           const json::Value &Value);
 
 class TFModelEvaluator final {
 public:
@@ -124,17 +135,28 @@ private:
   std::unique_ptr<TFModelEvaluatorImpl> Impl;
 };
 
-template <> int TensorSpec::getDataType<float>();
-template <> int TensorSpec::getDataType<double>();
-template <> int TensorSpec::getDataType<int8_t>();
-template <> int TensorSpec::getDataType<uint8_t>();
-template <> int TensorSpec::getDataType<int16_t>();
-template <> int TensorSpec::getDataType<uint16_t>();
-template <> int TensorSpec::getDataType<int32_t>();
-template <> int TensorSpec::getDataType<uint32_t>();
-template <> int TensorSpec::getDataType<int64_t>();
-template <> int TensorSpec::getDataType<uint64_t>();
+/// List of supported types, as a triple:
+/// C++ type
+/// short name (for strings, for instance)
+/// capitalized short name (for enums, for instance)
+#define TFUTILS_SUPPORTED_TYPES(M)                                             \
+  M(float, float, FLOAT)                                                       \
+  M(double, double, DOUBLE)                                                    \
+  M(int8_t, int8, INT8)                                                        \
+  M(uint8_t, uint8, UINT8)                                                     \
+  M(int16_t, int16, INT16)                                                     \
+  M(uint16_t, uint16, UINT16)                                                  \
+  M(int32_t, int32, INT32)                                                     \
+  M(uint32_t, uint32, UINT32)                                                  \
+  M(int64_t, int64, INT64)                                                     \
+  M(uint64_t, uint64, UINT64)
 
+#define TFUTILS_GETDATATYPE_DEF(T, S, C)                                       \
+  template <> int TensorSpec::getDataType<T>();
+
+TFUTILS_SUPPORTED_TYPES(TFUTILS_GETDATATYPE_DEF)
+
+#undef TFUTILS_GETDATATYPE_DEF
 } // namespace llvm
 
 #endif // LLVM_HAVE_TF_API

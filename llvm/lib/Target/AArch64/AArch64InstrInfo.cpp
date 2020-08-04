@@ -3861,7 +3861,7 @@ static bool isCombineInstrCandidate64(unsigned Opc) {
   return false;
 }
 
-// FP Opcodes that can be combined with a FMUL
+// FP Opcodes that can be combined with a FMUL.
 static bool isCombineInstrCandidateFP(const MachineInstr &Inst) {
   switch (Inst.getOpcode()) {
   default:
@@ -3883,8 +3883,12 @@ static bool isCombineInstrCandidateFP(const MachineInstr &Inst) {
   case AArch64::FSUBv2f64:
   case AArch64::FSUBv4f32:
     TargetOptions Options = Inst.getParent()->getParent()->getTarget().Options;
-    return (Options.UnsafeFPMath ||
-            Options.AllowFPOpFusion == FPOpFusion::Fast);
+    // We can fuse FADD/FSUB with FMUL, if fusion is either allowed globally by
+    // the target options or if FADD/FSUB has the contract fast-math flag.
+    return Options.UnsafeFPMath ||
+           Options.AllowFPOpFusion == FPOpFusion::Fast ||
+           Inst.getFlag(MachineInstr::FmContract);
+    return true;
   }
   return false;
 }

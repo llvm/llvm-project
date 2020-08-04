@@ -728,7 +728,7 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
                                                     APInt DemandedElts,
                                                     int DMaskIdx = -1) {
 
-  auto *IIVTy = cast<VectorType>(II.getType());
+  auto *IIVTy = cast<FixedVectorType>(II.getType());
   unsigned VWidth = IIVTy->getNumElements();
   if (VWidth == 1)
     return nullptr;

@@ -73,8 +73,8 @@ public:
   IntegerType getI64Type();
   IntegerType getIntegerType(unsigned width);
   IntegerType getIntegerType(unsigned width, bool isSigned);
-  FunctionType getFunctionType(ArrayRef<Type> inputs, ArrayRef<Type> results);
-  TupleType getTupleType(ArrayRef<Type> elementTypes);
+  FunctionType getFunctionType(TypeRange inputs, TypeRange results);
+  TupleType getTupleType(TypeRange elementTypes);
   NoneType getNoneType();
 
   /// Get or construct an instance of the type 'ty' with provided arguments.

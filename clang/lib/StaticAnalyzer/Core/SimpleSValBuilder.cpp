@@ -86,7 +86,7 @@ SVal SimpleSValBuilder::evalCastFromNonLoc(NonLoc val, QualType castTy) {
     return makeLocAsInteger(LI->getLoc(), castSize);
   }
 
-  if (const SymExpr *se = val.getAsSymbolicExpression()) {
+  if (SymbolRef se = val.getAsSymbol()) {
     QualType T = Context.getCanonicalType(se->getType());
     // If types are the same or both are integers, ignore the cast.
     // FIXME: Remove this hack when we support symbolic truncation/extension.

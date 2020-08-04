@@ -142,16 +142,9 @@ FileHeader:
   Data:    ELFDATA2LSB
   Type:    ET_REL
   Machine: EM_ARM
-  Flags:   [ EF_ARM_EABI_VER5 ]
 Sections:
-  - Name:    .text
-    Type:    SHT_PROGBITS
-    Content: 00
-  - Name:         .rel.text
-    Type:         SHT_REL
-    AddressAlign: 0x0000000000000004
-    EntSize:      0x0000000000000008
-    Info:         .text
+  - Name: .rel.text
+    Type: SHT_REL
     Relocations:
       - Type: R_ARM_NONE
       - Type: R_ARM_PC24

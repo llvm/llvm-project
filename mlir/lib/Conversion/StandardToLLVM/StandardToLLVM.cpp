@@ -3352,7 +3352,7 @@ LLVMTypeConverter::promoteMemRefDescriptors(Location loc, ValueRange opOperands,
       continue;
     }
 
-    promotedOperands.push_back(operand);
+    promotedOperands.push_back(llvmOperand);
   }
   return promotedOperands;
 }

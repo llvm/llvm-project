@@ -275,8 +275,8 @@ class LLVMSymbolizerProcess : public SymbolizerProcess {
 #endif
 
     const char *const inline_flag = common_flags()->symbolize_inline_frames
-                                        ? "--inlining=true"
-                                        : "--inlining=false";
+                                        ? "--inlines"
+                                        : "--no-inlines";
     int i = 0;
     argv[i++] = path_to_binary;
     argv[i++] = inline_flag;

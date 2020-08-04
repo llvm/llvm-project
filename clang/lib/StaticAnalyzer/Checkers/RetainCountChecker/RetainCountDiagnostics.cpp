@@ -177,7 +177,7 @@ static Optional<unsigned> findArgIdxOfSymbol(ProgramStateRef CurrSt,
   for (unsigned Idx = 0; Idx < (*CE)->getNumArgs(); Idx++)
     if (const MemRegion *MR = (*CE)->getArgSVal(Idx).getAsRegion())
       if (const auto *TR = dyn_cast<TypedValueRegion>(MR))
-        if (CurrSt->getSVal(MR, TR->getValueType()).getAsSymExpr() == Sym)
+        if (CurrSt->getSVal(MR, TR->getValueType()).getAsSymbol() == Sym)
           return Idx;
 
   return None;

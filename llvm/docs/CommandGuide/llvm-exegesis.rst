@@ -196,7 +196,7 @@ OPTIONS
 
  `latency` mode can be  make use of either RDTSC or LBR.
  `latency[LBR]` is only available on X86 (at least `Skylake`).
-  To run in this mode, a positive value  must be specified for `x86-lbr-sample-period` and `--repetition-mode=loop`
+ To run in `latency` mode, a positive value must be specified for `x86-lbr-sample-period` and `--repetition-mode=loop`.
 
  In `analysis` mode, you also need to specify at least one of the
  `-analysis-clusters-output-file=` and `-analysis-inconsistencies-output-file=`.

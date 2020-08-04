@@ -9,6 +9,7 @@ unittest("ProfileDataTests") {
   ]
   sources = [
     "CoverageMappingTest.cpp",
+    "InstrProfDataTest.cpp",
     "InstrProfTest.cpp",
     "SampleProfTest.cpp",
   ]

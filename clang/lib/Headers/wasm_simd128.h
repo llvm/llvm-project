@@ -18,8 +18,7 @@ typedef int32_t v128_t __attribute__((__vector_size__(16), __aligned__(16)));
 
 // Internal types determined by clang builtin definitions
 typedef int32_t __v128_u __attribute__((__vector_size__(16), __aligned__(1)));
-typedef char __i8x16 __attribute__((__vector_size__(16), __aligned__(16)));
-typedef signed char __s8x16
+typedef signed char __i8x16
     __attribute__((__vector_size__(16), __aligned__(16)));
 typedef unsigned char __u8x16
     __attribute__((__vector_size__(16), __aligned__(16)));
@@ -340,17 +339,17 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_splat(double __a) {
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_eq(v128_t __a,
                                                           v128_t __b) {
-  return (v128_t)((__s8x16)__a == (__s8x16)__b);
+  return (v128_t)((__i8x16)__a == (__i8x16)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_ne(v128_t __a,
                                                           v128_t __b) {
-  return (v128_t)((__s8x16)__a != (__s8x16)__b);
+  return (v128_t)((__i8x16)__a != (__i8x16)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_lt(v128_t __a,
                                                           v128_t __b) {
-  return (v128_t)((__s8x16)__a < (__s8x16)__b);
+  return (v128_t)((__i8x16)__a < (__i8x16)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_u8x16_lt(v128_t __a,
@@ -360,7 +359,7 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_u8x16_lt(v128_t __a,
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_gt(v128_t __a,
                                                           v128_t __b) {
-  return (v128_t)((__s8x16)__a > (__s8x16)__b);
+  return (v128_t)((__i8x16)__a > (__i8x16)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_u8x16_gt(v128_t __a,
@@ -370,7 +369,7 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_u8x16_gt(v128_t __a,
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_le(v128_t __a,
                                                           v128_t __b) {
-  return (v128_t)((__s8x16)__a <= (__s8x16)__b);
+  return (v128_t)((__i8x16)__a <= (__i8x16)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_u8x16_le(v128_t __a,
@@ -380,7 +379,7 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_u8x16_le(v128_t __a,
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_ge(v128_t __a,
                                                           v128_t __b) {
-  return (v128_t)((__s8x16)__a >= (__s8x16)__b);
+  return (v128_t)((__i8x16)__a >= (__i8x16)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_u8x16_ge(v128_t __a,
@@ -602,7 +601,7 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_shl(v128_t __a,
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_shr(v128_t __a,
                                                            int32_t __b) {
-  return (v128_t)((__s8x16)__a >> __b);
+  return (v128_t)((__i8x16)__a >> __b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_u8x16_shr(v128_t __a,

@@ -768,13 +768,14 @@ define amdgpu_ps <3 x half> @image_load_v3f16_dmask_0000(<8 x i32> inreg %rsrc, 
   ; UNPACKED:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; UNPACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; UNPACKED:   [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-  ; UNPACKED:   [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
+  ; UNPACKED:   [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[DEF]](<4 x s16>), %16(<4 x s16>), %16(<4 x s16>)
+  ; UNPACKED:   [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>), [[UV2:%[0-9]+]]:_(<3 x s16>), [[UV3:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s16>)
   ; UNPACKED:   [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-  ; UNPACKED:   [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
-  ; UNPACKED:   [[EXTRACT1:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 0
-  ; UNPACKED:   [[EXTRACT2:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 32
-  ; UNPACKED:   $vgpr0 = COPY [[EXTRACT1]](<2 x s16>)
-  ; UNPACKED:   $vgpr1 = COPY [[EXTRACT2]](<2 x s16>)
+  ; UNPACKED:   [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[UV]](<3 x s16>), 0
+  ; UNPACKED:   [[EXTRACT:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 0
+  ; UNPACKED:   [[EXTRACT1:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 32
+  ; UNPACKED:   $vgpr0 = COPY [[EXTRACT]](<2 x s16>)
+  ; UNPACKED:   $vgpr1 = COPY [[EXTRACT1]](<2 x s16>)
   ; UNPACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   ; PACKED-LABEL: name: image_load_v3f16_dmask_0000
   ; PACKED: bb.1 (%ir-block.0):
@@ -790,13 +791,14 @@ define amdgpu_ps <3 x half> @image_load_v3f16_dmask_0000(<8 x i32> inreg %rsrc, 
   ; PACKED:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; PACKED:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; PACKED:   [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-  ; PACKED:   [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
+  ; PACKED:   [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[DEF]](<4 x s16>), %16(<4 x s16>), %16(<4 x s16>)
+  ; PACKED:   [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>), [[UV2:%[0-9]+]]:_(<3 x s16>), [[UV3:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s16>)
   ; PACKED:   [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-  ; PACKED:   [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
-  ; PACKED:   [[EXTRACT1:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 0
-  ; PACKED:   [[EXTRACT2:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 32
-  ; PACKED:   $vgpr0 = COPY [[EXTRACT1]](<2 x s16>)
-  ; PACKED:   $vgpr1 = COPY [[EXTRACT2]](<2 x s16>)
+  ; PACKED:   [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[UV]](<3 x s16>), 0
+  ; PACKED:   [[EXTRACT:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 0
+  ; PACKED:   [[EXTRACT1:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 32
+  ; PACKED:   $vgpr0 = COPY [[EXTRACT]](<2 x s16>)
+  ; PACKED:   $vgpr1 = COPY [[EXTRACT1]](<2 x s16>)
   ; PACKED:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   %tex = call <3 x half> @llvm.amdgcn.image.load.2d.v3f16.i32(i32 0, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret <3 x half> %tex

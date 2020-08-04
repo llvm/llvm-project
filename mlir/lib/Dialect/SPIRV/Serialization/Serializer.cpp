@@ -1573,10 +1573,9 @@ LogicalResult Serializer::processSelectionOp(spirv::SelectionOp selectionOp) {
   auto emitSelectionMerge = [&]() {
     emitDebugLine(functionBody, loc);
     lastProcessedWasMergeInst = true;
-    // TODO: properly support selection control here
     encodeInstructionInto(
         functionBody, spirv::Opcode::OpSelectionMerge,
-        {mergeID, static_cast<uint32_t>(spirv::SelectionControl::None)});
+        {mergeID, static_cast<uint32_t>(selectionOp.selection_control())});
   };
   // For structured selection, we cannot have blocks in the selection construct
   // branching to the selection header block. Entering the selection (and
@@ -1636,10 +1635,9 @@ LogicalResult Serializer::processLoopOp(spirv::LoopOp loopOp) {
   auto emitLoopMerge = [&]() {
     emitDebugLine(functionBody, loc);
     lastProcessedWasMergeInst = true;
-    // TODO: properly support loop control here
     encodeInstructionInto(
         functionBody, spirv::Opcode::OpLoopMerge,
-        {mergeID, continueID, static_cast<uint32_t>(spirv::LoopControl::None)});
+        {mergeID, continueID, static_cast<uint32_t>(loopOp.loop_control())});
   };
   if (failed(processBlock(headerBlock, /*omitLabel=*/false, emitLoopMerge)))
     return failure();

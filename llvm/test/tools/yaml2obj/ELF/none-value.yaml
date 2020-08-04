@@ -1,0 +1,46 @@
+## We have a special "<none>" value for all keys that are implemented
+## as Optional<> in the code. Setting a key to "<none>" means no-op and
+## works in the same way as when a field was not specified at all.
+
+## Test a few keys for which the "<none>" value is supported.
+## We do not test all possible keys, because it would be too verbose.
+## It reasonable to test all keys for a section, because normally many
+## of them would conflict or intersect when specified together.
+# RUN: yaml2obj %s --docnum=1 -o %t-none
+# RUN: yaml2obj %s --docnum=2 -o %t-base
+# RUN: cmp %t-none %t-base
+
+## We do not use the TEST macro. It exists to
+## demonstrate the expected use case for the <none> word.
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:         .bar
+    Type:         SHT_PROGBITS
+    Flags:        [[TEST=<none>]] ## Comment
+    Offset:       [[TEST=<none>]]
+    Address:      [[TEST=<none>]]
+    Content:      [[TEST=<none>]]
+    Size:         [[TEST=<none>]]
+    ContentArray: [[TEST=<none>]]
+    Info:         [[TEST=<none>]]
+    EntSize:      [[TEST=<none>]]
+    ShName:       [[TEST=<none>]]
+    ShOffset:     [[TEST=<none>]]
+    ShSize:       [[TEST=<none>]]
+    ShFlags:      [[TEST=<none>]]
+
+## The same document, but all fields that were set to <none> are removed.
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .bar
+    Type: SHT_PROGBITS

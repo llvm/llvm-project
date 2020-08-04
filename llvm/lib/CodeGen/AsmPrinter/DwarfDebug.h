@@ -114,7 +114,7 @@ public:
 ///
 /// Variables that have been optimized out use none of these fields.
 class DbgVariable : public DbgEntity {
-  /// Offset in DebugLocs.
+  /// Index of the entry list in DebugLocs.
   unsigned DebugLocListIndex = ~0u;
   /// DW_OP_LLVM_tag_offset value from DebugLocs.
   Optional<uint8_t> DebugLocListTagOffset;

@@ -107,6 +107,11 @@ struct AttributeVariable
     Optional<Type> attrType = var->attr.getValueType();
     return attrType ? attrType->getBuilderCall() : llvm::None;
   }
+
+  /// Return if this attribute refers to a UnitAttr.
+  bool isUnitAttr() const {
+    return var->attr.getBaseAttr().getAttrDefName() == "UnitAttr";
+  }
 };
 
 /// This class represents a variable that refers to an operand argument.
@@ -645,9 +650,23 @@ static void genElementParser(Element *element, OpMethodBody &body,
       body << "  if (!" << opVar->getVar()->name << "Operands.empty()) {\n";
     }
 
+    // If the anchor is a unit attribute, we don't need to print it. When
+    // parsing, we will add this attribute if this group is present.
+    Element *elidedAnchorElement = nullptr;
+    auto *anchorAttr = dyn_cast<AttributeVariable>(optional->getAnchor());
+    if (anchorAttr && anchorAttr != firstElement && anchorAttr->isUnitAttr()) {
+      elidedAnchorElement = anchorAttr;
+
+      // Add the anchor unit attribute to the operation state.
+      body << "    result.addAttribute(\"" << anchorAttr->getVar()->name
+           << "\", parser.getBuilder().getUnitAttr());\n";
+    }
+
     // Generate the rest of the elements normally.
-    for (auto &childElement : llvm::drop_begin(elements, 1))
-      genElementParser(&childElement, body, attrTypeCtx);
+    for (Element &childElement : llvm::drop_begin(elements, 1)) {
+      if (&childElement != elidedAnchorElement)
+        genElementParser(&childElement, body, attrTypeCtx);
+    }
     body << "  }\n";
 
     /// Literals.
@@ -1058,10 +1077,23 @@ static void genElementPrinter(Element *element, OpMethodBody &body,
            << cast<AttributeVariable>(anchor)->getVar()->name << "\")) {\n";
     }
 
+    // If the anchor is a unit attribute, we don't need to print it. When
+    // parsing, we will add this attribute if this group is present.
+    auto elements = optional->getElements();
+    Element *elidedAnchorElement = nullptr;
+    auto *anchorAttr = dyn_cast<AttributeVariable>(anchor);
+    if (anchorAttr && anchorAttr != &*elements.begin() &&
+        anchorAttr->isUnitAttr()) {
+      elidedAnchorElement = anchorAttr;
+    }
+
     // Emit each of the elements.
-    for (Element &childElement : optional->getElements())
-      genElementPrinter(&childElement, body, fmt, op, shouldEmitSpace,
-                        lastWasPunctuation);
+    for (Element &childElement : elements) {
+      if (&childElement != elidedAnchorElement) {
+        genElementPrinter(&childElement, body, fmt, op, shouldEmitSpace,
+                          lastWasPunctuation);
+      }
+    }
     body << "  }\n";
     return;
   }

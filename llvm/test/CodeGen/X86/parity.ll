@@ -21,10 +21,8 @@ define i32 @parity_32(i32 %x) {
 ; X64-NOPOPCNT-NEXT:    movl %edi, %ecx
 ; X64-NOPOPCNT-NEXT:    shrl $16, %ecx
 ; X64-NOPOPCNT-NEXT:    xorl %edi, %ecx
-; X64-NOPOPCNT-NEXT:    movl %ecx, %edx
-; X64-NOPOPCNT-NEXT:    shrl $8, %edx
 ; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
-; X64-NOPOPCNT-NEXT:    xorb %cl, %dl
+; X64-NOPOPCNT-NEXT:    xorb %ch, %cl
 ; X64-NOPOPCNT-NEXT:    setnp %al
 ; X64-NOPOPCNT-NEXT:    retq
 ;
@@ -66,10 +64,8 @@ define i64 @parity_64(i64 %x) {
 ; X64-NOPOPCNT-NEXT:    movl %eax, %ecx
 ; X64-NOPOPCNT-NEXT:    shrl $16, %ecx
 ; X64-NOPOPCNT-NEXT:    xorl %eax, %ecx
-; X64-NOPOPCNT-NEXT:    movl %ecx, %edx
-; X64-NOPOPCNT-NEXT:    shrl $8, %edx
 ; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
-; X64-NOPOPCNT-NEXT:    xorb %cl, %dl
+; X64-NOPOPCNT-NEXT:    xorb %ch, %cl
 ; X64-NOPOPCNT-NEXT:    setnp %al
 ; X64-NOPOPCNT-NEXT:    retq
 ;
@@ -113,10 +109,8 @@ define i32 @parity_64_trunc(i64 %x) {
 ; X64-NOPOPCNT-NEXT:    movl %eax, %ecx
 ; X64-NOPOPCNT-NEXT:    shrl $16, %ecx
 ; X64-NOPOPCNT-NEXT:    xorl %eax, %ecx
-; X64-NOPOPCNT-NEXT:    movl %ecx, %edx
-; X64-NOPOPCNT-NEXT:    shrl $8, %edx
 ; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
-; X64-NOPOPCNT-NEXT:    xorb %cl, %dl
+; X64-NOPOPCNT-NEXT:    xorb %ch, %cl
 ; X64-NOPOPCNT-NEXT:    setnp %al
 ; X64-NOPOPCNT-NEXT:    retq
 ;
@@ -156,9 +150,7 @@ define i8 @parity_32_trunc(i32 %x) {
 ; X64-NOPOPCNT-NEXT:    movl %edi, %eax
 ; X64-NOPOPCNT-NEXT:    shrl $16, %eax
 ; X64-NOPOPCNT-NEXT:    xorl %edi, %eax
-; X64-NOPOPCNT-NEXT:    movl %eax, %ecx
-; X64-NOPOPCNT-NEXT:    shrl $8, %ecx
-; X64-NOPOPCNT-NEXT:    xorb %al, %cl
+; X64-NOPOPCNT-NEXT:    xorb %ah, %al
 ; X64-NOPOPCNT-NEXT:    setnp %al
 ; X64-NOPOPCNT-NEXT:    retq
 ;

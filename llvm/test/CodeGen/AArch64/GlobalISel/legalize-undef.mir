@@ -54,9 +54,8 @@ body: |
 
     ; CHECK-LABEL: name: test_implicit_def_v4s64
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY [[DEF]](<2 x s64>)
     ; CHECK: $q0 = COPY [[DEF]](<2 x s64>)
-    ; CHECK: $q1 = COPY [[COPY]](<2 x s64>)
+    ; CHECK: $q1 = COPY [[DEF]](<2 x s64>)
     %0:_(<4 x s64>) = G_IMPLICIT_DEF
     %1:_(<2 x s64> ), %2:_(<2 x s64>) = G_UNMERGE_VALUES %0
     $q0 = COPY %1

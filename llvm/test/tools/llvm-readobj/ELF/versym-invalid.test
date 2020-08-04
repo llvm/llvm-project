@@ -2,11 +2,11 @@
 
 ## Check that we report a warning when sh_link references a non-existent section.
 
-# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: yaml2obj --docnum=1 -DLINK=0xFF %s -o %t1
 # RUN: llvm-readelf -V %t1 2>&1 | FileCheck -DFILE=%t1 %s --check-prefix=GNU-INVALID-LINK
 # RUN: llvm-readobj -V %t1 2>&1 | FileCheck -DFILE=%t1 %s --check-prefix=LLVM-INVALID-LINK
 
-# GNU-INVALID-LINK:      Version symbols section '.gnu.version' contains 0 entries:
+# GNU-INVALID-LINK:      Version symbols section '.gnu.version' contains 1 entries:
 # GNU-INVALID-LINK-NEXT: warning: '[[FILE]]': invalid section linked to SHT_GNU_versym section with index 1: invalid section index: 255
 # GNU-INVALID-LINK-NEXT:  Addr: 0000000000000000  Offset: 0x000040  Link: 255 (<corrupt>)
 
@@ -23,13 +23,13 @@ FileHeader:
 Sections:
   - Name:    .gnu.version
     Type:    SHT_GNU_versym
-    Link:    0xFF
-    Entries: [ ]
+    Link:    [[LINK]]
+    Entries: [ 0 ]
 
 ## Check that we report a warning when the sh_link field of a SHT_GNU_versym section does not reference
 ## a dynamic symbol table section.
 
-# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: yaml2obj --docnum=1 -DLINK=0x0 %s -o %t2
 # RUN: llvm-readelf -V %t2 2>&1 | FileCheck -DFILE=%t2 %s --check-prefix=INVALID-SYMBOL-TABLE-GNU
 # RUN: llvm-readobj -V %t2 2>&1 | FileCheck -DFILE=%t2 %s --check-prefix=INVALID-SYMBOL-TABLE-LLVM
 
@@ -42,23 +42,11 @@ Sections:
 # INVALID-SYMBOL-TABLE-LLVM-NEXT: warning: '[[FILE]]': invalid section linked to SHT_GNU_versym section with index 1: expected SHT_DYNSYM, but got SHT_NULL
 # INVALID-SYMBOL-TABLE-LLVM-NEXT: ]
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
-Sections:
-  - Name:    .gnu.version
-    Type:    SHT_GNU_versym
-    Link:    0x0
-    Entries: [ 0 ]
-
 ## Check we report a warning when something is wrong with a string table linked to a symbol table that
 ## is linked with SHT_GNU_versym. In this case we are unable to produce LLVM style output,
 ## but GNU style is fine because it does not need that string table.
 
-# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: yaml2obj --docnum=2 %s -o %t3
 # RUN: llvm-readelf -V %t3 2>&1 | FileCheck -DFILE=%t3 %s --check-prefix=INVALID-STRING-TABLE-GNU
 # RUN: llvm-readobj -V %t3 2>&1 | FileCheck -DFILE=%t3 %s --check-prefix=INVALID-STRING-TABLE-LLVM
 
@@ -88,7 +76,7 @@ DynamicSymbols: []
 
 ## Check we report a warning when a SHT_GNU_versym section is not correctly aligned in memory.
 
-# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: yaml2obj --docnum=3 %s -o %t4
 # RUN: llvm-readelf -V %t4 2>&1 | FileCheck -DFILE=%t4 %s --check-prefix=MISALIGNED-GNU
 # RUN: llvm-readobj -V %t4 2>&1 | FileCheck -DFILE=%t4 %s --check-prefix=MISALIGNED-LLVM
 
@@ -114,7 +102,7 @@ Sections:
 
 ## Check we report a warning when a SHT_GNU_versym section has an invalid entry size.
 
-# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: yaml2obj --docnum=4 %s -o %t5
 # RUN: llvm-readelf -V --dyn-syms %t5 2>&1 | FileCheck -DFILE=%t5 %s --check-prefix=INVALID-ENT-SIZE-GNU
 # RUN: llvm-readobj -V --dyn-syms %t5 2>&1 | FileCheck -DFILE=%t5 %s --check-prefix=INVALID-ENT-SIZE-LLVM
 
@@ -168,7 +156,7 @@ DynamicSymbols:
 
 ## Check we report a warning when the number of version entries does not match the number of symbols in the associated symbol table.
 
-# RUN: yaml2obj --docnum=6 %s -o %t6
+# RUN: yaml2obj --docnum=5 %s -o %t6
 # RUN: llvm-readelf -V %t6 2>&1 | FileCheck -DFILE=%t6 %s --check-prefix=SYMBOLS-NUM-MISMATCH-GNU
 # RUN: llvm-readobj -V %t6 2>&1 | FileCheck -DFILE=%t6 %s --check-prefix=SYMBOLS-NUM-MISMATCH-LLVM
 
@@ -199,7 +187,7 @@ DynamicSymbols:
 ## Check we can dump a SHT_GNU_versym section when it is linked to a custom dynamic symbol
 ## table that is not called ".dynsym".
 
-# RUN: yaml2obj --docnum=7 %s -o %t7
+# RUN: yaml2obj --docnum=6 %s -o %t7
 # RUN: llvm-readelf -V %t7 2>&1 | FileCheck -DFILE=%t7 %s --check-prefix=CUSTOM-SYMTAB-GNU
 # RUN: llvm-readobj -V %t7 2>&1 | FileCheck -DFILE=%t7 %s --check-prefix=CUSTOM-SYMTAB-LLVM
 
@@ -238,7 +226,7 @@ DynamicSymbols:
 ## Version index in a SHT_GNU_versym section overflows the version map.
 ## Check we report it when trying to dump dynamic symbols.
 
-# RUN: yaml2obj %s --docnum=8 -o %t8
+# RUN: yaml2obj %s --docnum=7 -o %t8
 # RUN: llvm-readobj --dyn-syms %t8 2>&1 \
 # RUN:   | FileCheck -DFILE=%t8 --implicit-check-not=warning --check-prefix=VERSION-OVERFLOW-LLVM %s
 # RUN: llvm-readelf --dyn-syms %t8 2>&1 \

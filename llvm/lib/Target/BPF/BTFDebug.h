@@ -251,7 +251,7 @@ class BTFDebug : public DebugHandlerBase {
   StringMap<std::vector<std::string>> FileContent;
   std::map<std::string, std::unique_ptr<BTFKindDataSec>> DataSecEntries;
   std::vector<BTFTypeStruct *> StructTypes;
-  std::map<const GlobalVariable *, uint32_t> PatchImms;
+  std::map<const GlobalVariable *, std::pair<int64_t, uint32_t>> PatchImms;
   std::map<StringRef, std::pair<bool, std::vector<BTFTypeDerived *>>>
       FixupDerivedTypes;
   std::set<const Function *>ProtoFunctions;

@@ -166,7 +166,7 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       if (auto *CI = dyn_cast<ConstantInt>(XorMask)) {
         if (CI->getValue().trunc(16).isAllOnesValue()) {
           auto TrueVector = IC.Builder.CreateVectorSplat(
-              cast<VectorType>(II.getType())->getNumElements(),
+              cast<FixedVectorType>(II.getType())->getNumElements(),
               IC.Builder.getTrue());
           return BinaryOperator::Create(Instruction::Xor, ArgArg, TrueVector);
         }

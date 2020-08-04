@@ -6,6 +6,7 @@ For efficiency, we copy all data needed to execute all tests into each worker
 and store it in global variables. This reduces the cost of each task.
 """
 import contextlib
+import os
 import signal
 import time
 import traceback
@@ -65,6 +66,8 @@ def _execute(test, lit_config):
     start = time.time()
     result = _execute_test_handle_errors(test, lit_config)
     result.elapsed = time.time() - start
+    result.start = start
+    result.pid = os.getpid()
     return result
 
 

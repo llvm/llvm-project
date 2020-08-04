@@ -450,7 +450,7 @@ C<--target-architecture=I<str>> and C<--target-os=I<str>> options. Typical usage
         Platform::target_options(),  # Let script recognize --target-os and --target-arch options.
         ...
     );
-    # Initialize variabls after parsing command line.
+    # Initialize variables after parsing command line.
     ( $os, $arch, $platform ) = ( Platform::target_os(), Platform::target_arch(), Platform::target_platform() );
 
 =back

@@ -238,6 +238,10 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
   llvm::DenseMap<SymbolID, size_t> ResultIndex;
 
   auto AddResultDecl = [&](const NamedDecl *D) {
+    // FIXME: Canonical declarations of some symbols might refer to built-in
+    // decls with possibly-invalid source locations (e.g. global new operator).
+    // In such cases we should pick up a redecl with valid source location
+    // instead of failing.
     D = llvm::cast<NamedDecl>(D->getCanonicalDecl());
     auto Loc =
         makeLocation(AST.getASTContext(), nameLocation(*D, SM), MainFilePath);

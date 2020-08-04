@@ -2814,6 +2814,14 @@ static Value *simplifyICmpWithBinOpOnLHS(
     }
   }
 
+  // icmp pred (urem X, Y), X
+  if (match(LBO, m_URem(m_Specific(RHS), m_Value()))) {
+    if (Pred == ICmpInst::ICMP_ULE)
+      return getTrue(ITy);
+    if (Pred == ICmpInst::ICMP_UGT)
+      return getFalse(ITy);
+  }
+
   // x >> y <=u x
   // x udiv y <=u x.
   if (match(LBO, m_LShr(m_Specific(RHS), m_Value())) ||
@@ -5198,6 +5206,54 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   return nullptr;
 }
 
+static Intrinsic::ID getMaxMinOpposite(Intrinsic::ID IID) {
+  switch (IID) {
+  case Intrinsic::smax: return Intrinsic::smin;
+  case Intrinsic::smin: return Intrinsic::smax;
+  case Intrinsic::umax: return Intrinsic::umin;
+  case Intrinsic::umin: return Intrinsic::umax;
+  default: llvm_unreachable("Unexpected intrinsic");
+  }
+}
+
+static APInt getMaxMinLimit(Intrinsic::ID IID, unsigned BitWidth) {
+  switch (IID) {
+  case Intrinsic::smax: return APInt::getSignedMaxValue(BitWidth);
+  case Intrinsic::smin: return APInt::getSignedMinValue(BitWidth);
+  case Intrinsic::umax: return APInt::getMaxValue(BitWidth);
+  case Intrinsic::umin: return APInt::getMinValue(BitWidth);
+  default: llvm_unreachable("Unexpected intrinsic");
+  }
+}
+
+static bool isMinMax(Intrinsic::ID IID) {
+  return IID == Intrinsic::smax || IID == Intrinsic::smin ||
+         IID == Intrinsic::umax || IID == Intrinsic::umin;
+}
+
+/// Given a min/max intrinsic, see if it can be removed based on having an
+/// operand that is another min/max intrinsic with shared operand(s). The caller
+/// is expected to swap the operand arguments to handle commutation.
+static Value *foldMinMaxSharedOp(Intrinsic::ID IID, Value *Op0, Value *Op1) {
+  assert(isMinMax(IID) && "Expected min/max intrinsic");
+  auto *InnerMM = dyn_cast<IntrinsicInst>(Op0);
+  if (!InnerMM)
+    return nullptr;
+  Intrinsic::ID InnerID = InnerMM->getIntrinsicID();
+  if (!isMinMax(InnerID))
+    return nullptr;
+
+  if (Op1 == InnerMM->getOperand(0) || Op1 == InnerMM->getOperand(1)) {
+    // max (max X, Y), X --> max X, Y
+    if (InnerID == IID)
+      return InnerMM;
+    // max (min X, Y), X --> X
+    if (InnerID == getMaxMinOpposite(IID))
+      return Op1;
+  }
+  return nullptr;
+}
+
 static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
                                       const SimplifyQuery &Q) {
   Intrinsic::ID IID = F->getIntrinsicID();
@@ -5228,48 +5284,42 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
       std::swap(Op0, Op1);
 
     // Assume undef is the limit value.
-    if (isa<UndefValue>(Op1)) {
-      if (IID == Intrinsic::smax)
-        return ConstantInt::get(ReturnType, APInt::getSignedMaxValue(BitWidth));
-      if (IID == Intrinsic::smin)
-        return ConstantInt::get(ReturnType, APInt::getSignedMinValue(BitWidth));
-      if (IID == Intrinsic::umax)
-        return ConstantInt::get(ReturnType, APInt::getMaxValue(BitWidth));
-      if (IID == Intrinsic::umin)
-        return ConstantInt::get(ReturnType, APInt::getMinValue(BitWidth));
-    }
-
-    // For 4 commuted variants of each intrinsic:
-    // max (max X, Y), X --> max X, Y
-    if (auto *MinMax0 = dyn_cast<IntrinsicInst>(Op0))
-      if (MinMax0->getIntrinsicID() == IID &&
-          (MinMax0->getOperand(0) == Op1 || MinMax0->getOperand(1) == Op1))
-        return MinMax0;
-    if (auto *MinMax1 = dyn_cast<IntrinsicInst>(Op1))
-      if (MinMax1->getIntrinsicID() == IID &&
-          (MinMax1->getOperand(0) == Op0 || MinMax1->getOperand(1) == Op0))
-        return MinMax1;
+    if (isa<UndefValue>(Op1))
+      return ConstantInt::get(ReturnType, getMaxMinLimit(IID, BitWidth));
 
     const APInt *C;
-    if (!match(Op1, m_APIntAllowUndef(C)))
-      break;
+    if (match(Op1, m_APIntAllowUndef(C))) {
+      // Clamp to limit value. For example:
+      // umax(i8 %x, i8 255) --> 255
+      if (*C == getMaxMinLimit(IID, BitWidth))
+        return ConstantInt::get(ReturnType, *C);
 
-    // Clamp to limit value. For example:
-    // umax(i8 %x, i8 255) --> 255
-    if ((IID == Intrinsic::smax && C->isMaxSignedValue()) ||
-        (IID == Intrinsic::smin && C->isMinSignedValue()) ||
-        (IID == Intrinsic::umax && C->isMaxValue()) ||
-        (IID == Intrinsic::umin && C->isMinValue()))
-      return ConstantInt::get(ReturnType, *C);
+      // If the constant op is the opposite of the limit value, the other must
+      // be larger/smaller or equal. For example:
+      // umin(i8 %x, i8 255) --> %x
+      if (*C == getMaxMinLimit(getMaxMinOpposite(IID), BitWidth))
+        return Op0;
 
-    // If the constant op is the opposite of the limit value, the other must be
-    // larger/smaller or equal. For example:
-    // umin(i8 %x, i8 255) --> %x
-    if ((IID == Intrinsic::smax && C->isMinSignedValue()) ||
-        (IID == Intrinsic::smin && C->isMaxSignedValue()) ||
-        (IID == Intrinsic::umax && C->isMinValue()) ||
-        (IID == Intrinsic::umin && C->isMaxValue()))
-      return Op0;
+      // Remove nested call if constant operands allow it. Example:
+      // max (max X, 7), 5 -> max X, 7
+      auto *MinMax0 = dyn_cast<IntrinsicInst>(Op0);
+      if (MinMax0 && MinMax0->getIntrinsicID() == IID) {
+        // TODO: loosen undef/splat restrictions for vector constants.
+        Value *M00 = MinMax0->getOperand(0), *M01 = MinMax0->getOperand(1);
+        const APInt *InnerC;
+        if ((match(M00, m_APInt(InnerC)) || match(M01, m_APInt(InnerC))) &&
+            ((IID == Intrinsic::smax && InnerC->sge(*C)) ||
+             (IID == Intrinsic::smin && InnerC->sle(*C)) ||
+             (IID == Intrinsic::umax && InnerC->uge(*C)) ||
+             (IID == Intrinsic::umin && InnerC->ule(*C))))
+          return Op0;
+      }
+    }
+
+    if (Value *V = foldMinMaxSharedOp(IID, Op0, Op1))
+      return V;
+    if (Value *V = foldMinMaxSharedOp(IID, Op1, Op0))
+      return V;
 
     break;
   }

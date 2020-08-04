@@ -122,6 +122,30 @@ struct TestVectorUnrollingPatterns
   }
 };
 
+struct TestVectorTransferFullPartialSplitPatterns
+    : public PassWrapper<TestVectorTransferFullPartialSplitPatterns,
+                         FunctionPass> {
+  TestVectorTransferFullPartialSplitPatterns() = default;
+  TestVectorTransferFullPartialSplitPatterns(
+      const TestVectorTransferFullPartialSplitPatterns &pass) {}
+  Option<bool> useLinalgOps{
+      *this, "use-linalg-copy",
+      llvm::cl::desc("Split using a unmasked vector.transfer + linalg.fill + "
+                     "linalg.copy operations."),
+      llvm::cl::init(false)};
+  void runOnFunction() override {
+    MLIRContext *ctx = &getContext();
+    OwningRewritePatternList patterns;
+    VectorTransformsOptions options;
+    if (useLinalgOps)
+      options.setVectorTransferSplit(VectorTransferSplit::LinalgCopy);
+    else
+      options.setVectorTransferSplit(VectorTransferSplit::VectorTransfer);
+    patterns.insert<VectorTransferFullPartialRewriter>(ctx, options);
+    applyPatternsAndFoldGreedily(getFunction(), patterns);
+  }
+};
+
 } // end anonymous namespace
 
 namespace mlir {
@@ -141,5 +165,10 @@ void registerTestVectorConversions() {
   PassRegistration<TestVectorUnrollingPatterns> contractionUnrollingPass(
       "test-vector-unrolling-patterns",
       "Test conversion patterns to unroll contract ops in the vector dialect");
+
+  PassRegistration<TestVectorTransferFullPartialSplitPatterns>
+      vectorTransformFullPartialPass("test-vector-transfer-full-partial-split",
+                                     "Test conversion patterns to split "
+                                     "transfer ops via scf.if + linalg ops");
 }
 } // namespace mlir

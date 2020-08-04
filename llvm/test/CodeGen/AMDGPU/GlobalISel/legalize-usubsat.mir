@@ -403,9 +403,11 @@ body: |
     ; GFX6: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
     ; GFX6: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>)
     ; GFX6: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
-    ; GFX6: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
-    ; GFX6: [[CONCAT_VECTORS1:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[EXTRACT]](<3 x s16>), [[EXTRACT1]](<3 x s16>)
-    ; GFX6: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS1]](<6 x s16>)
+    ; GFX6: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX6: [[CONCAT_VECTORS1:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[DEF1]](<4 x s16>), [[DEF]](<4 x s16>), [[DEF]](<4 x s16>)
+    ; GFX6: [[UV6:%[0-9]+]]:_(<3 x s16>), [[UV7:%[0-9]+]]:_(<3 x s16>), [[UV8:%[0-9]+]]:_(<3 x s16>), [[UV9:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS1]](<12 x s16>)
+    ; GFX6: [[CONCAT_VECTORS2:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[EXTRACT]](<3 x s16>), [[UV6]](<3 x s16>)
+    ; GFX6: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS2]](<6 x s16>)
     ; GFX8-LABEL: name: usubsat_v3s16
     ; GFX8: [[COPY:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
     ; GFX8: [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[COPY]](<6 x s16>)
@@ -444,9 +446,11 @@ body: |
     ; GFX8: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
     ; GFX8: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>)
     ; GFX8: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
-    ; GFX8: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
-    ; GFX8: [[CONCAT_VECTORS1:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[EXTRACT]](<3 x s16>), [[EXTRACT1]](<3 x s16>)
-    ; GFX8: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS1]](<6 x s16>)
+    ; GFX8: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX8: [[CONCAT_VECTORS1:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[DEF1]](<4 x s16>), [[DEF]](<4 x s16>), [[DEF]](<4 x s16>)
+    ; GFX8: [[UV6:%[0-9]+]]:_(<3 x s16>), [[UV7:%[0-9]+]]:_(<3 x s16>), [[UV8:%[0-9]+]]:_(<3 x s16>), [[UV9:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS1]](<12 x s16>)
+    ; GFX8: [[CONCAT_VECTORS2:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[EXTRACT]](<3 x s16>), [[UV6]](<3 x s16>)
+    ; GFX8: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS2]](<6 x s16>)
     ; GFX9-LABEL: name: usubsat_v3s16
     ; GFX9: [[COPY:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
     ; GFX9: [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[COPY]](<6 x s16>)
@@ -480,9 +484,11 @@ body: |
     ; GFX9: [[USUBSAT1:%[0-9]+]]:_(<2 x s16>) = G_USUBSAT [[BUILD_VECTOR_TRUNC1]], [[BUILD_VECTOR_TRUNC3]]
     ; GFX9: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[USUBSAT]](<2 x s16>), [[USUBSAT1]](<2 x s16>), [[DEF2]](<2 x s16>)
     ; GFX9: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<6 x s16>), 0
-    ; GFX9: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
-    ; GFX9: [[CONCAT_VECTORS1:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[EXTRACT]](<3 x s16>), [[EXTRACT1]](<3 x s16>)
-    ; GFX9: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS1]](<6 x s16>)
+    ; GFX9: [[DEF3:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[CONCAT_VECTORS1:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[DEF3]](<4 x s16>), [[DEF]](<4 x s16>), [[DEF]](<4 x s16>)
+    ; GFX9: [[UV6:%[0-9]+]]:_(<3 x s16>), [[UV7:%[0-9]+]]:_(<3 x s16>), [[UV8:%[0-9]+]]:_(<3 x s16>), [[UV9:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS1]](<12 x s16>)
+    ; GFX9: [[CONCAT_VECTORS2:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[EXTRACT]](<3 x s16>), [[UV6]](<3 x s16>)
+    ; GFX9: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS2]](<6 x s16>)
     %0:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
     %1:_(<3 x s16>), %2:_(<3 x s16>) = G_UNMERGE_VALUES %0
     %3:_(<3 x s16>) = G_USUBSAT %1, %2

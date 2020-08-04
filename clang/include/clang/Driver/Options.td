@@ -677,6 +677,9 @@ def dependency_dot : Separate<["-"], "dependency-dot">, Flags<[CC1Option]>,
   HelpText<"Filename to write DOT-formatted header dependencies to">;
 def module_dependency_dir : Separate<["-"], "module-dependency-dir">,
   Flags<[CC1Option]>, HelpText<"Directory to dump module dependencies to">;
+def dsym_dir : JoinedOrSeparate<["-"], "dsym-dir">,
+  Flags<[DriverOption, RenderAsInput]>,
+  HelpText<"Directory to output dSYM's (if any) to">, MetaVarName<"<dir>">;
 def dumpmachine : Flag<["-"], "dumpmachine">;
 def dumpspecs : Flag<["-"], "dumpspecs">, Flags<[Unsupported]>;
 def dumpversion : Flag<["-"], "dumpversion">;

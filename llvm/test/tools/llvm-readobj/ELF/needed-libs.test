@@ -46,7 +46,7 @@ Sections:
       - Tag:   DT_NEEDED
         Value: 0x1111111
       - Tag:   DT_STRSZ
-        Value: 0xD
+        Value: [[SIZE=0xD]]
       - Tag:   DT_NULL
         Value: 0x0
 ProgramHeaders:

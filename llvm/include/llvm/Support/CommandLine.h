@@ -2085,6 +2085,14 @@ bool ExpandResponseFiles(
     llvm::vfs::FileSystem &FS = *llvm::vfs::getRealFileSystem(),
     llvm::Optional<llvm::StringRef> CurrentDir = llvm::None);
 
+/// A convenience helper which concatenates the options specified by the
+/// environment variable EnvVar and command line options, then expands response
+/// files recursively. The tokenizer is a predefined GNU or Windows one.
+/// \return true if all @files were expanded successfully or there were none.
+bool expandResponseFiles(int Argc, const char *const *Argv, const char *EnvVar,
+                         StringSaver &Saver,
+                         SmallVectorImpl<const char *> &NewArgv);
+
 /// Mark all options not part of this category as cl::ReallyHidden.
 ///
 /// \param Category the category of options to keep displaying

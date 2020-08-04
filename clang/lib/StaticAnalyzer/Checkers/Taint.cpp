@@ -148,7 +148,7 @@ bool taint::isTainted(ProgramStateRef State, const Stmt *S,
 }
 
 bool taint::isTainted(ProgramStateRef State, SVal V, TaintTagType Kind) {
-  if (const SymExpr *Sym = V.getAsSymExpr())
+  if (SymbolRef Sym = V.getAsSymbol())
     return isTainted(State, Sym, Kind);
   if (const MemRegion *Reg = V.getAsRegion())
     return isTainted(State, Reg, Kind);

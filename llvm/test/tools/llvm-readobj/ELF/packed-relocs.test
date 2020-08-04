@@ -27,25 +27,21 @@
 # elf-packed-relocs1.s
 --- !ELF
 FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_DYN
-  Machine:         EM_X86_64
-  Entry:           0x0000000000001000
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
 Sections:
-  - Name:            .rela.dyn
-    Type:            SHT_ANDROID_RELA
-    Flags:           [ SHF_ALLOC ]
-    Address:         0x00000000000001C8
-    Link:            .symtab
-    AddressAlign:    0x0000000000000001
-    Content:         41505332088020020108800280010202088180808010818080802002080181808080100802818080802004020C7E048180808010088180808020
+  - Name:    .rela.dyn
+    Type:    SHT_ANDROID_RELA
+    Flags:   [ SHF_ALLOC ]
+    Link:    .symtab
+    Content: 41505332088020020108800280010202088180808010818080802002080181808080100802818080802004020C7E048180808010088180808020
 Symbols:
-  - Name:            sym1
-    Binding:         STB_GLOBAL
-  - Name:            sym2
-    Binding:         STB_GLOBAL
-...
+  - Name:    sym1
+    Binding: STB_GLOBAL
+  - Name:    sym2
+    Binding: STB_GLOBAL
 
 # RUN: yaml2obj --docnum=2 %s | llvm-readobj --relocations - | FileCheck --check-prefix=LLVM2 %s
 # LLVM2:      Section (1) .rel.dyn {
@@ -77,25 +73,21 @@ Symbols:
 # elf-packed-relocs2.s
 --- !ELF
 FileHeader:
-  Class:           ELFCLASS32
-  Data:            ELFDATA2LSB
-  Type:            ET_DYN
-  Machine:         EM_386
-  Entry:           0x0000000000001000
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
 Sections:
-  - Name:            .rel.dyn
-    Type:            SHT_ANDROID_REL
-    Flags:           [ SHF_ALLOC ]
-    Address:         0x00000000000001C8
-    Link:            .symtab
-    AddressAlign:    0x0000000000000001
-    Content:         415053320A80200202088102830408037C08
+  - Name:    .rel.dyn
+    Type:    SHT_ANDROID_REL
+    Flags:   [ SHF_ALLOC ]
+    Link:    .symtab
+    Content: 415053320A80200202088102830408037C08
 Symbols:
-  - Name:            sym1
-    Binding:         STB_GLOBAL
-  - Name:            sym2
-    Binding:         STB_GLOBAL
-...
+  - Name:    sym1
+    Binding: STB_GLOBAL
+  - Name:    sym2
+    Binding: STB_GLOBAL
 
 # RUN: yaml2obj --docnum=3 %s | llvm-readobj --relocations - | FileCheck --check-prefix=LLVM3 %s
 #
@@ -120,22 +112,18 @@ Symbols:
 # elf-packed-relocs3.s
 --- !ELF
 FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_DYN
-  Machine:         EM_X86_64
-  Entry:           0x0000000000001000
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
 Sections:
-  - Name:            .rela.dyn
-    Type:            SHT_ANDROID_RELA
-    Flags:           [ SHF_ALLOC ]
-    Address:         0x00000000000001C8
-    Link:            .symtab
-    AddressAlign:    0x0000000000000001
-    Content:         415053320680200208800208008001080802008001818080801008818080802002080881808080100008818080802008
+  - Name:    .rela.dyn
+    Type:    SHT_ANDROID_RELA
+    Flags:   [ SHF_ALLOC ]
+    Link:    .symtab
+    Content: 415053320680200208800208008001080802008001818080801008818080802002080881808080100008818080802008
 Symbols:
-  - Name:            sym1
-    Binding:         STB_GLOBAL
-  - Name:            sym2
-    Binding:         STB_GLOBAL
-...
+  - Name:    sym1
+    Binding: STB_GLOBAL
+  - Name:    sym2
+    Binding: STB_GLOBAL

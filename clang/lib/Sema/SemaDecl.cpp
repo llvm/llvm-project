@@ -10029,31 +10029,50 @@ static bool CheckMultiVersionValue(Sema &S, const FunctionDecl *FD) {
 // multiversion functions.
 static bool AttrCompatibleWithMultiVersion(attr::Kind Kind,
                                            MultiVersionKind MVType) {
+  // Note: this list/diagnosis must match the list in
+  // checkMultiversionAttributesAllSame.
   switch (Kind) {
   default:
     return false;
   case attr::Used:
     return MVType == MultiVersionKind::Target;
+  case attr::NonNull:
+  case attr::NoThrow:
+    return true;
   }
 }
 
-static bool HasNonMultiVersionAttributes(const FunctionDecl *FD,
-                                         MultiVersionKind MVType) {
+static bool checkNonMultiVersionCompatAttributes(Sema &S,
+                                                 const FunctionDecl *FD,
+                                                 const FunctionDecl *CausedFD,
+                                                 MultiVersionKind MVType) {
+  bool IsCPUSpecificCPUDispatchMVType =
+      MVType == MultiVersionKind::CPUDispatch ||
+      MVType == MultiVersionKind::CPUSpecific;
+  const auto Diagnose = [FD, CausedFD, IsCPUSpecificCPUDispatchMVType](
+                            Sema &S, const Attr *A) {
+    S.Diag(FD->getLocation(), diag::err_multiversion_disallowed_other_attr)
+        << IsCPUSpecificCPUDispatchMVType << A;
+    if (CausedFD)
+      S.Diag(CausedFD->getLocation(), diag::note_multiversioning_caused_here);
+    return true;
+  };
+
   for (const Attr *A : FD->attrs()) {
     switch (A->getKind()) {
     case attr::CPUDispatch:
     case attr::CPUSpecific:
       if (MVType != MultiVersionKind::CPUDispatch &&
           MVType != MultiVersionKind::CPUSpecific)
-        return true;
+        return Diagnose(S, A);
       break;
     case attr::Target:
       if (MVType != MultiVersionKind::Target)
-        return true;
+        return Diagnose(S, A);
       break;
     default:
       if (!AttrCompatibleWithMultiVersion(A->getKind(), MVType))
-        return true;
+        return Diagnose(S, A);
       break;
     }
   }
@@ -10187,18 +10206,12 @@ static bool CheckMultiVersionAdditionalRules(Sema &S, const FunctionDecl *OldFD,
       MVType == MultiVersionKind::CPUDispatch ||
       MVType == MultiVersionKind::CPUSpecific;
 
-  // For now, disallow all other attributes.  These should be opt-in, but
-  // an analysis of all of them is a future FIXME.
-  if (CausesMV && OldFD && HasNonMultiVersionAttributes(OldFD, MVType)) {
-    S.Diag(OldFD->getLocation(), diag::err_multiversion_no_other_attrs)
-        << IsCPUSpecificCPUDispatchMVType;
-    S.Diag(NewFD->getLocation(), diag::note_multiversioning_caused_here);
+  if (CausesMV && OldFD &&
+      checkNonMultiVersionCompatAttributes(S, OldFD, NewFD, MVType))
     return true;
-  }
 
-  if (HasNonMultiVersionAttributes(NewFD, MVType))
-    return S.Diag(NewFD->getLocation(), diag::err_multiversion_no_other_attrs)
-           << IsCPUSpecificCPUDispatchMVType;
+  if (checkNonMultiVersionCompatAttributes(S, NewFD, nullptr, MVType))
+    return true;
 
   // Only allow transition to MultiVersion if it hasn't been used.
   if (OldFD && CausesMV && OldFD->isUsed(false))

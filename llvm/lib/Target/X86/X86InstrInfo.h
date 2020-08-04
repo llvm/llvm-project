@@ -409,6 +409,13 @@ public:
   bool areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2, int64_t &Offset1,
                                int64_t &Offset2) const override;
 
+  /// isSchedulingBoundary - Overrides the isSchedulingBoundary from
+  ///	Codegen/TargetInstrInfo.cpp to make it capable of identifying ENDBR
+  /// intructions and prevent it from being re-scheduled.
+  bool isSchedulingBoundary(const MachineInstr &MI,
+                            const MachineBasicBlock *MBB,
+                            const MachineFunction &MF) const override;
+
   /// shouldScheduleLoadsNear - This is a used by the pre-regalloc scheduler to
   /// determine (in conjunction with areLoadsFromSameBasePtr) if two loads
   /// should be scheduled togther. On some targets if two loads are loading from

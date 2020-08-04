@@ -602,14 +602,29 @@ struct OpReplacement {
 
 /// The kind of the block action performed during the rewrite.  Actions can be
 /// undone if the conversion fails.
-enum class BlockActionKind { Create, Erase, Move, Split, TypeConversion };
+enum class BlockActionKind {
+  Create,
+  Erase,
+  Merge,
+  Move,
+  Split,
+  TypeConversion
+};
 
-/// Original position of the given block in its parent region.  We cannot use
-/// a region iterator because it could have been invalidated by other region
-/// operations since the position was stored.
+/// Original position of the given block in its parent region. During undo
+/// actions, the block needs to be placed after `insertAfterBlock`.
 struct BlockPosition {
   Region *region;
-  Region::iterator::difference_type position;
+  Block *insertAfterBlock;
+};
+
+/// Information needed to undo the merge actions.
+/// - the source block, and
+/// - the Operation that was the last operation in the dest block before the
+///   merge (could be null if the dest block was empty).
+struct MergeInfo {
+  Block *sourceBlock;
+  Operation *destBlockLastInst;
 };
 
 /// The storage class for an undoable block action (one of BlockActionKind),
@@ -618,11 +633,16 @@ struct BlockAction {
   static BlockAction getCreate(Block *block) {
     return {BlockActionKind::Create, block, {}};
   }
-  static BlockAction getErase(Block *block, BlockPosition originalPos) {
-    return {BlockActionKind::Erase, block, {originalPos}};
+  static BlockAction getErase(Block *block, BlockPosition originalPosition) {
+    return {BlockActionKind::Erase, block, {originalPosition}};
   }
-  static BlockAction getMove(Block *block, BlockPosition originalPos) {
-    return {BlockActionKind::Move, block, {originalPos}};
+  static BlockAction getMerge(Block *block, Block *sourceBlock) {
+    BlockAction action{BlockActionKind::Merge, block, {}};
+    action.mergeInfo = {sourceBlock, block->empty() ? nullptr : &block->back()};
+    return action;
+  }
+  static BlockAction getMove(Block *block, BlockPosition originalPosition) {
+    return {BlockActionKind::Move, block, {originalPosition}};
   }
   static BlockAction getSplit(Block *block, Block *originalBlock) {
     BlockAction action{BlockActionKind::Split, block, {}};
@@ -647,6 +667,9 @@ struct BlockAction {
     // In use if kind == BlockActionKind::Split and contains a pointer to the
     // block that was split into two parts.
     Block *originalBlock;
+    // In use if kind == BlockActionKind::Merge, and contains the information
+    // needed to undo the merge.
+    MergeInfo mergeInfo;
   };
 };
 } // end anonymous namespace
@@ -737,6 +760,9 @@ struct ConversionPatternRewriterImpl {
 
   /// Notifies that a block was split.
   void notifySplitBlock(Block *block, Block *continuation);
+
+  /// Notifies that `block` is being merged with `srcBlock`.
+  void notifyBlocksBeingMerged(Block *block, Block *srcBlock);
 
   /// Notifies that the blocks of a region are about to be moved.
   void notifyRegionIsBeingInlinedBefore(Region &region, Region &parent,
@@ -961,16 +987,34 @@ void ConversionPatternRewriterImpl::undoBlockActions(
     // Put the block (owned by action) back into its original position.
     case BlockActionKind::Erase: {
       auto &blockList = action.originalPosition.region->getBlocks();
-      blockList.insert(
-          std::next(blockList.begin(), action.originalPosition.position),
-          action.block);
+      Block *insertAfterBlock = action.originalPosition.insertAfterBlock;
+      blockList.insert((insertAfterBlock
+                            ? std::next(Region::iterator(insertAfterBlock))
+                            : blockList.end()),
+                       action.block);
+      break;
+    }
+    // Split the block at the position which was originally the end of the
+    // destination block (owned by action), and put the instructions back into
+    // the block used before the merge.
+    case BlockActionKind::Merge: {
+      Block *sourceBlock = action.mergeInfo.sourceBlock;
+      Block::iterator splitPoint =
+          (action.mergeInfo.destBlockLastInst
+               ? ++Block::iterator(action.mergeInfo.destBlockLastInst)
+               : action.block->begin());
+      sourceBlock->getOperations().splice(sourceBlock->begin(),
+                                          action.block->getOperations(),
+                                          splitPoint, action.block->end());
       break;
     }
     // Move the block back to its original position.
     case BlockActionKind::Move: {
       Region *originalRegion = action.originalPosition.region;
+      Block *insertAfterBlock = action.originalPosition.insertAfterBlock;
       originalRegion->getBlocks().splice(
-          std::next(originalRegion->begin(), action.originalPosition.position),
+          (insertAfterBlock ? std::next(Region::iterator(insertAfterBlock))
+                            : originalRegion->end()),
           action.block->getParent()->getBlocks(), action.block);
       break;
     }
@@ -1148,8 +1192,8 @@ void ConversionPatternRewriterImpl::notifyOpReplaced(Operation *op,
 
 void ConversionPatternRewriterImpl::notifyBlockIsBeingErased(Block *block) {
   Region *region = block->getParent();
-  auto position = std::distance(region->begin(), Region::iterator(block));
-  blockActions.push_back(BlockAction::getErase(block, {region, position}));
+  Block *origPrevBlock = block->getPrevNode();
+  blockActions.push_back(BlockAction::getErase(block, {region, origPrevBlock}));
 }
 
 void ConversionPatternRewriterImpl::notifyCreatedBlock(Block *block) {
@@ -1161,12 +1205,19 @@ void ConversionPatternRewriterImpl::notifySplitBlock(Block *block,
   blockActions.push_back(BlockAction::getSplit(continuation, block));
 }
 
+void ConversionPatternRewriterImpl::notifyBlocksBeingMerged(Block *block,
+                                                            Block *srcBlock) {
+  blockActions.push_back(BlockAction::getMerge(block, srcBlock));
+}
+
 void ConversionPatternRewriterImpl::notifyRegionIsBeingInlinedBefore(
     Region &region, Region &parent, Region::iterator before) {
+  Block *origPrevBlock = nullptr;
   for (auto &pair : llvm::enumerate(region)) {
     Block &block = pair.value();
-    Region::iterator::difference_type position = pair.index();
-    blockActions.push_back(BlockAction::getMove(&block, {&region, position}));
+    blockActions.push_back(
+        BlockAction::getMove(&block, {&region, origPrevBlock}));
+    origPrevBlock = &block;
   }
 }
 
@@ -1283,9 +1334,16 @@ Block *ConversionPatternRewriter::splitBlock(Block *block,
 /// PatternRewriter hook for merging a block into another.
 void ConversionPatternRewriter::mergeBlocks(Block *source, Block *dest,
                                             ValueRange argValues) {
-  // TODO: This requires fixing the implementation of
-  // 'replaceUsesOfBlockArgument', which currently isn't undoable.
-  llvm_unreachable("block merging updates are currently not supported");
+  impl->notifyBlocksBeingMerged(dest, source);
+  assert(llvm::all_of(source->getPredecessors(),
+                      [dest](Block *succ) { return succ == dest; }) &&
+         "expected 'source' to have no predecessors or only 'dest'");
+  assert(argValues.size() == source->getNumArguments() &&
+         "incorrect # of argument replacement values");
+  for (auto it : llvm::zip(source->getArguments(), argValues))
+    replaceUsesOfBlockArgument(std::get<0>(it), std::get<1>(it));
+  dest->getOperations().splice(dest->end(), source->getOperations());
+  eraseBlock(source);
 }
 
 /// PatternRewriter hook for moving blocks out of a region.

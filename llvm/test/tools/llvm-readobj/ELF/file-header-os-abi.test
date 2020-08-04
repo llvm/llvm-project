@@ -1,7 +1,7 @@
 ## This is a test to test how the OS/ABI identification field (EI_OSABI) of an ELF file header is dumped.
 
 ## EI_OSABI is set to ELFOSABI_NONE.
-# RUN: yaml2obj %s --docnum=1 -o %t.osabi.none
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_NONE -o %t.osabi.none
 # RUN: llvm-readobj --file-headers %t.osabi.none | FileCheck %s --match-full-lines --check-prefix=OSABI-NONE-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.none | FileCheck %s --match-full-lines --check-prefix=OSABI-NONE-GNU
 
@@ -14,292 +14,148 @@ FileHeader:
   Data:    ELFDATA2LSB
   Type:    ET_REL
   Machine: EM_X86_64
-  OSABI:   ELFOSABI_NONE
+  OSABI:   [[OSABI]]
 
 ## EI_OSABI is set to ELFOSABI_HPUX.
-# RUN: yaml2obj %s --docnum=2 -o %t.osabi.hpux
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_HPUX -o %t.osabi.hpux
 # RUN: llvm-readobj --file-headers %t.osabi.hpux | FileCheck %s --match-full-lines --check-prefix=OSABI-HPUX-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.hpux | FileCheck %s --match-full-lines --check-prefix=OSABI-HPUX-GNU
 
 # OSABI-HPUX-LLVM: OS/ABI: HPUX (0x1)
 # OSABI-HPUX-GNU:  OS/ABI: UNIX - HP-UX
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_HPUX
-
 ## EI_OSABI is set to ELFOSABI_NETBSD.
-# RUN: yaml2obj %s --docnum=3 -o %t.osabi.netbsd
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_NETBSD -o %t.osabi.netbsd
 # RUN: llvm-readobj --file-headers %t.osabi.netbsd | FileCheck %s --match-full-lines --check-prefix=OSABI-NETBSD-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.netbsd | FileCheck %s --match-full-lines --check-prefix=OSABI-NETBSD-GNU
 
 # OSABI-NETBSD-LLVM: OS/ABI: NetBSD (0x2)
 # OSABI-NETBSD-GNU:  OS/ABI: UNIX - NetBSD
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_NETBSD
-
 ## EI_OSABI is set to ELFOSABI_LINUX.
-# RUN: yaml2obj %s --docnum=4 -o %t.osabi.linux
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_LINUX -o %t.osabi.linux
 # RUN: llvm-readobj --file-headers %t.osabi.linux | FileCheck %s --match-full-lines --check-prefix=OSABI-LINUX-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.linux | FileCheck %s --match-full-lines --check-prefix=OSABI-LINUX-GNU
 
 # OSABI-LINUX-LLVM: OS/ABI: GNU/Linux (0x3)
 # OSABI-LINUX-GNU:  OS/ABI: UNIX - GNU
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_LINUX
-
 ## EI_OSABI is set to ELFOSABI_HURD.
-# RUN: yaml2obj %s --docnum=5 -o %t.osabi.hurd
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_HURD -o %t.osabi.hurd
 # RUN: llvm-readobj --file-headers %t.osabi.hurd | FileCheck %s --match-full-lines --check-prefix=OSABI-HURD-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.hurd | FileCheck %s --match-full-lines --check-prefix=OSABI-HURD-GNU
 
 # OSABI-HURD-LLVM: OS/ABI: GNU/Hurd (0x4)
 # OSABI-HURD-GNU:  OS/ABI: GNU/Hurd
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_HURD
-
 ## EI_OSABI is set to ELFOSABI_SOLARIS.
-# RUN: yaml2obj %s --docnum=6 -o %t.osabi.solaris
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_SOLARIS -o %t.osabi.solaris
 # RUN: llvm-readobj --file-headers %t.osabi.solaris | FileCheck %s --match-full-lines --check-prefix=OSABI-SOLARIS-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.solaris | FileCheck %s --match-full-lines --check-prefix=OSABI-SOLARIS-GNU
 
 # OSABI-SOLARIS-LLVM: OS/ABI: Solaris (0x6)
 # OSABI-SOLARIS-GNU:  OS/ABI: UNIX - Solaris
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_SOLARIS
-
 ## EI_OSABI is set to ELFOSABI_AIX.
-# RUN: yaml2obj %s --docnum=7 -o %t.osabi.aix
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_AIX -o %t.osabi.aix
 # RUN: llvm-readobj --file-headers %t.osabi.aix | FileCheck %s --match-full-lines --check-prefix=OSABI-AIX-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.aix | FileCheck %s --match-full-lines --check-prefix=OSABI-AIX-GNU
 
 # OSABI-AIX-LLVM: OS/ABI: AIX (0x7)
 # OSABI-AIX-GNU:  OS/ABI: UNIX - AIX
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_AIX
-
 ## EI_OSABI is set to ELFOSABI_IRIX.
-# RUN: yaml2obj %s --docnum=8 -o %t.osabi.irix
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_IRIX -o %t.osabi.irix
 # RUN: llvm-readobj --file-headers %t.osabi.irix | FileCheck %s --match-full-lines --check-prefix=OSABI-IRIX-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.irix | FileCheck %s --match-full-lines --check-prefix=OSABI-IRIX-GNU
 
 # OSABI-IRIX-LLVM: OS/ABI: IRIX (0x8)
 # OSABI-IRIX-GNU:  OS/ABI: UNIX - IRIX
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_IRIX
-
 ## EI_OSABI is set to ELFOSABI_FREEBSD.
-# RUN: yaml2obj %s --docnum=9 -o %t.osabi.freebsd
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_FREEBSD -o %t.osabi.freebsd
 # RUN: llvm-readobj --file-headers %t.osabi.freebsd | FileCheck %s --match-full-lines --check-prefix=OSABI-FREEBSD-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.freebsd | FileCheck %s --match-full-lines --check-prefix=OSABI-FREEBSD-GNU
 
 # OSABI-FREEBSD-LLVM: OS/ABI: FreeBSD (0x9)
 # OSABI-FREEBSD-GNU:  OS/ABI: UNIX - FreeBSD
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_FREEBSD
-
 ## EI_OSABI is set to ELFOSABI_TRU64.
-# RUN: yaml2obj %s --docnum=10 -o %t.osabi.tru64
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_TRU64 -o %t.osabi.tru64
 # RUN: llvm-readobj --file-headers %t.osabi.tru64 | FileCheck %s --match-full-lines --check-prefix=OSABI-TRU64-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.tru64 | FileCheck %s --match-full-lines --check-prefix=OSABI-TRU64-GNU
 
 # OSABI-TRU64-LLVM: OS/ABI: TRU64 (0xA)
 # OSABI-TRU64-GNU:  OS/ABI: UNIX - TRU64
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_TRU64
-
 ## EI_OSABI is set to ELFOSABI_MODESTO.
-# RUN: yaml2obj %s --docnum=11 -o %t.osabi.modesto
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_MODESTO -o %t.osabi.modesto
 # RUN: llvm-readobj --file-headers %t.osabi.modesto | FileCheck %s --match-full-lines --check-prefix=OSABI-MODESTO-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.modesto | FileCheck %s --match-full-lines --check-prefix=OSABI-MODESTO-GNU
 
 # OSABI-MODESTO-LLVM: OS/ABI: Modesto (0xB)
 # OSABI-MODESTO-GNU:  OS/ABI: Novell - Modesto
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_MODESTO
-
 ## EI_OSABI is set to ELFOSABI_OPENBSD.
-# RUN: yaml2obj %s --docnum=12 -o %t.osabi.openbsd
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_OPENBSD -o %t.osabi.openbsd
 # RUN: llvm-readobj --file-headers %t.osabi.openbsd | FileCheck %s --match-full-lines --check-prefix=OSABI-OPENBSD-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.openbsd | FileCheck %s --match-full-lines --check-prefix=OSABI-OPENBSD-GNU
 
 # OSABI-OPENBSD-LLVM: OS/ABI: OpenBSD (0xC)
 # OSABI-OPENBSD-GNU:  OS/ABI: UNIX - OpenBSD
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_OPENBSD
-
 ## EI_OSABI is set to ELFOSABI_OPENVMS.
-# RUN: yaml2obj %s --docnum=13 -o %t.osabi.openvms
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_OPENVMS -o %t.osabi.openvms
 # RUN: llvm-readobj --file-headers %t.osabi.openvms | FileCheck %s --match-full-lines --check-prefix=OSABI-OPENVMS-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.openvms | FileCheck %s --match-full-lines --check-prefix=OSABI-OPENVMS-GNU
 
 # OSABI-OPENVMS-LLVM: OS/ABI: OpenVMS (0xD)
 # OSABI-OPENVMS-GNU:  OS/ABI: VMS - OpenVMS
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_OPENVMS
-
 ## EI_OSABI is set to ELFOSABI_NSK.
-# RUN: yaml2obj %s --docnum=14 -o %t.osabi.nsk
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_NSK -o %t.osabi.nsk
 # RUN: llvm-readobj --file-headers %t.osabi.nsk | FileCheck %s --match-full-lines --check-prefix=OSABI-NSK-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.nsk | FileCheck %s --match-full-lines --check-prefix=OSABI-NSK-GNU
 
 # OSABI-NSK-LLVM: OS/ABI: NSK (0xE)
 # OSABI-NSK-GNU:  OS/ABI: HP - Non-Stop Kernel
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_NSK
-
 ## EI_OSABI is set to ELFOSABI_AROS.
-# RUN: yaml2obj %s --docnum=15 -o %t.osabi.aros
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_AROS -o %t.osabi.aros
 # RUN: llvm-readobj --file-headers %t.osabi.aros | FileCheck %s --match-full-lines --check-prefix=OSABI-AROS-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.aros | FileCheck %s --match-full-lines --check-prefix=OSABI-AROS-GNU
 
 # OSABI-AROS-LLVM: OS/ABI: AROS (0xF)
 # OSABI-AROS-GNU:  OS/ABI: AROS
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_AROS
-
 ## EI_OSABI is set to ELFOSABI_FENIXOS.
-# RUN: yaml2obj %s --docnum=16 -o %t.osabi.fenixos
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_FENIXOS -o %t.osabi.fenixos
 # RUN: llvm-readobj --file-headers %t.osabi.fenixos | FileCheck %s --match-full-lines --check-prefix=OSABI-FENIXOS-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.fenixos | FileCheck %s --match-full-lines --check-prefix=OSABI-FENIXOS-GNU
 
 # OSABI-FENIXOS-LLVM: OS/ABI: FenixOS (0x10)
 # OSABI-FENIXOS-GNU:  OS/ABI: FenixOS
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_FENIXOS
-
 ## EI_OSABI is set to ELFOSABI_CLOUDABI.
-# RUN: yaml2obj %s --docnum=17 -o %t.osabi.cloudabi
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_CLOUDABI -o %t.osabi.cloudabi
 # RUN: llvm-readobj --file-headers %t.osabi.cloudabi | FileCheck %s --match-full-lines --check-prefix=OSABI-CLOUDABI-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.cloudabi | FileCheck %s --match-full-lines --check-prefix=OSABI-CLOUDABI-GNU
 
 # OSABI-CLOUDABI-LLVM: OS/ABI: CloudABI (0x11)
 # OSABI-CLOUDABI-GNU:  OS/ABI: CloudABI
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_CLOUDABI
-
 ## EI_OSABI is set to ELFOSABI_STANDALONE.
-# RUN: yaml2obj %s --docnum=18 -o %t.osabi.standalone
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_STANDALONE -o %t.osabi.standalone
 # RUN: llvm-readobj --file-headers %t.osabi.standalone | FileCheck %s --match-full-lines --check-prefix=OSABI-STANDALONE-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.standalone | FileCheck %s --match-full-lines --check-prefix=OSABI-STANDALONE-GNU
 
 # OSABI-STANDALONE-LLVM: OS/ABI: Standalone (0xFF)
 # OSABI-STANDALONE-GNU:  OS/ABI: Standalone App
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_STANDALONE
-
 ## EI_OSABI is set to an arbitrary value which is not supported by llvm-readobj/llvm-readelf.
-# RUN: yaml2obj %s --docnum=19 -o %t.osabi.unknown
+# RUN: yaml2obj %s -DOSABI=0xFE -o %t.osabi.unknown
 # RUN: llvm-readobj --file-headers %t.osabi.unknown | FileCheck %s --match-full-lines --check-prefix=OSABI-UNKNOWN-LLVM
 # RUN: llvm-readelf --file-headers %t.osabi.unknown | FileCheck %s --match-full-lines --check-prefix=OSABI-UNKNOWN-GNU
 
 # OSABI-UNKNOWN-LLVM: OS/ABI: 0xFE
 # OSABI-UNKNOWN-GNU:  OS/ABI: fe
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   0xFE

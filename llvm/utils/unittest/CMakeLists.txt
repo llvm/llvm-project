@@ -19,9 +19,7 @@ include_directories(
   googlemock
   )
 
-# LLVM requires C++11 but gtest doesn't correctly detect the availability
-# of C++11 on MSVC, so we force it on.
-add_definitions(-DGTEST_LANG_CXX11=1)
+# Gtest 1.8.0 uses tr1/tuple which is deprecated on MSVC, so we force it off.
 add_definitions(-DGTEST_HAS_TR1_TUPLE=0)
 
 if(WIN32)

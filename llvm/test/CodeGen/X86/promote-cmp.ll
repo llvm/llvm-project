@@ -30,20 +30,19 @@ define <4 x i64> @PR45808(<4 x i64> %0, <4 x i64> %1) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm7[1,1,3,3]
 ; SSE2-NEXT:    por %xmm4, %xmm5
 ; SSE2-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,2],xmm6[0,2]
-; SSE2-NEXT:    pcmpeqd %xmm4, %xmm4
-; SSE2-NEXT:    movaps %xmm5, %xmm6
-; SSE2-NEXT:    shufps {{.*#+}} xmm6 = xmm6[2,1],xmm5[3,3]
-; SSE2-NEXT:    psllq $63, %xmm6
-; SSE2-NEXT:    psrad $31, %xmm6
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[1,1,3,3]
-; SSE2-NEXT:    pand %xmm6, %xmm1
-; SSE2-NEXT:    pandn %xmm3, %xmm6
-; SSE2-NEXT:    por %xmm6, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,1,1,3]
-; SSE2-NEXT:    xorps %xmm4, %xmm5
+; SSE2-NEXT:    movaps {{.*#+}} xmm4 = <1,1,u,0>
+; SSE2-NEXT:    xorps %xmm5, %xmm4
+; SSE2-NEXT:    shufps {{.*#+}} xmm5 = xmm5[2,1,3,3]
 ; SSE2-NEXT:    psllq $63, %xmm5
 ; SSE2-NEXT:    psrad $31, %xmm5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm5[1,1,3,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,3,3]
+; SSE2-NEXT:    pand %xmm5, %xmm1
+; SSE2-NEXT:    pandn %xmm3, %xmm5
+; SSE2-NEXT:    por %xmm5, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[0,1,1,3]
+; SSE2-NEXT:    psllq $63, %xmm3
+; SSE2-NEXT:    psrad $31, %xmm3
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
 ; SSE2-NEXT:    pand %xmm3, %xmm0
 ; SSE2-NEXT:    pandn %xmm2, %xmm3
 ; SSE2-NEXT:    por %xmm3, %xmm0

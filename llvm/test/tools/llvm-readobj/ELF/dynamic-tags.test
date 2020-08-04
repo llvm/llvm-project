@@ -140,11 +140,11 @@
 
 --- !ELF
 FileHeader:
-  Class:      ELFCLASS64
+  Class:      ELFCLASS[[BITS=64]]
   Data:       ELFDATA2LSB
   Type:       ET_EXEC
-  Machine:    EM_X86_64
-  EPhEntSize: [[PHENTSIZE=56]]
+  Machine:    EM_NONE
+  EPhEntSize: [[PHENTSIZE=<none>]]
 Sections:
   - Name:    .dynstr
     Type:    SHT_STRTAB
@@ -186,7 +186,7 @@ Sections:
       - Tag:   DT_RPATH
         Value: 0x5
       - Tag:   DT_SYMBOLIC
-        Value: 0x1234567890abcdef
+        Value: [[SYMBOLIC=0x1234567890abcdef]]
       - Tag:   DT_REL
         Value: 0x1000
       - Tag:   DT_RELSZ
@@ -196,13 +196,13 @@ Sections:
       - Tag:   DT_PLTREL
         Value: 0x7
       - Tag:   DT_DEBUG
-        Value: 0xfedcba0987654321
+        Value: [[DEBUG=0xfedcba0987654321]]
       - Tag:   DT_TEXTREL
-        Value: 0x1122334455667788
+        Value: [[TEXTREL=0x1122334455667788]]
       - Tag:   DT_JMPREL
         Value: 0x1000
       - Tag:   DT_BIND_NOW
-        Value: 0x8877665544332211
+        Value: [[BINDNOW=0x8877665544332211]]
       - Tag:   DT_INIT_ARRAY
         Value: 0x1000
       - Tag:   DT_FINI_ARRAY
@@ -214,7 +214,7 @@ Sections:
       - Tag:   DT_RUNPATH
         Value: 0x7
       - Tag:   DT_FLAGS
-        Value: 0xffffffffffffffff
+        Value: [[FLAGS=0xffffffffffffffff]]
       - Tag:   DT_PREINIT_ARRAY
         Value: 0x1000
       - Tag:   DT_PREINIT_ARRAYSZ
@@ -252,7 +252,7 @@ Sections:
       - Tag:   DT_RELCOUNT
         Value: 0x0
       - Tag:   DT_FLAGS_1
-        Value: 0xffffffffffffffff
+        Value: [[FLAGS=0xffffffffffffffff]]
       - Tag:   DT_VERSYM
         Value: 0x1000
       - Tag:   DT_VERDEF
@@ -272,13 +272,13 @@ Sections:
 ## Show behaviour for unknown values in special and un-marked ranges.
 ## An arbitrary unknown value outside of the special ranges.
       - Tag:   0x12345678
-        Value: 0x8765432187654321
+        Value: [[UNKNOWN=0x8765432187654321]]
 ## An OS specific tag.
       - Tag:   0x6abcdef0
-        Value: 0x9988776655443322
+        Value: [[OSSPEC=0x9988776655443322]]
 ## A processor specific tags.
       - Tag:   0x76543210
-        Value: 0x5555666677778888
+        Value: [[PROCSPEC=0x5555666677778888]]
       - Tag:   DT_NULL
         Value: 0x0
 ProgramHeaders:
@@ -292,7 +292,9 @@ ProgramHeaders:
     Sections:
       - Section: .dynamic
 
-# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: yaml2obj %s --docnum=1 -DBITS=32 -DSYMBOLIC=0x12345678 -DDEBUG=0xfedcba09 \
+# RUN:   -DTEXTREL=0x11223344 -DBINDNOW=0x88776655 -DFLAGS=0xffffffff \
+# RUN:   -DUNKNOWN=0x87654321 -DOSSPEC=0x99887766 -DPROCSPEC=0x55556666 -o %t2
 # RUN: llvm-readobj --dynamic-table %t2 \
 # RUN:   | FileCheck %s --check-prefix=LLVM32 --strict-whitespace --match-full-lines
 # RUN: llvm-readobj -d %t2 | FileCheck %s --check-prefix=LLVM32 --strict-whitespace --match-full-lines
@@ -429,169 +431,16 @@ ProgramHeaders:
 # GNU32-NEXT:  0x76543210 (<unknown:>0x76543210) 0x55556666
 # GNU32-NEXT:  0x00000000 (NULL)                 0x0
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_386
-Sections:
-  - Name:    .dynstr
-    Type:    SHT_STRTAB
-    Address: 0x1000
-    Size:    0x10
-    Content: "004400550066007700"
-  - Name:    .dynamic
-    Type:    SHT_DYNAMIC
-    Address: 0x1010
-    Entries:
-      - Tag:   DT_NEEDED
-        Value: 0x1
-      - Tag:   DT_PLTRELSZ
-        Value: 0x10
-      - Tag:   DT_PLTGOT
-        Value: 0x1000
-      - Tag:   DT_HASH
-        Value: 0x1000
-      - Tag:   DT_STRTAB
-        Value: 0x1000
-      - Tag:   DT_SYMTAB
-        Value: 0x1000
-      - Tag:   DT_RELA
-        Value: 0x1000
-      - Tag:   DT_RELASZ
-        Value: 0x10
-      - Tag:   DT_RELAENT
-        Value: 0x789
-      - Tag:   DT_STRSZ
-        Value: 0x10
-      - Tag:   DT_SYMENT
-        Value: 0x987
-      - Tag:   DT_INIT
-        Value: 0x1000
-      - Tag:   DT_FINI
-        Value: 0x1000
-      - Tag:   DT_SONAME
-        Value: 0x3
-      - Tag:   DT_RPATH
-        Value: 0x5
-      - Tag:   DT_SYMBOLIC
-        Value: 0x12345678
-      - Tag:   DT_REL
-        Value: 0x1000
-      - Tag:   DT_RELSZ
-        Value: 0x10
-      - Tag:   DT_RELENT
-        Value: 0x123
-      - Tag:   DT_PLTREL
-        Value: 0x7
-      - Tag:   DT_DEBUG
-        Value: 0xfedcba09
-      - Tag:   DT_TEXTREL
-        Value: 0x11223344
-      - Tag:   DT_JMPREL
-        Value: 0x1000
-      - Tag:   DT_BIND_NOW
-        Value: 0x88776655
-      - Tag:   DT_INIT_ARRAY
-        Value: 0x1000
-      - Tag:   DT_FINI_ARRAY
-        Value: 0x1000
-      - Tag:   DT_INIT_ARRAYSZ
-        Value: 0x10
-      - Tag:   DT_FINI_ARRAYSZ
-        Value: 0x10
-      - Tag:   DT_RUNPATH
-        Value: 0x7
-      - Tag:   DT_FLAGS
-        Value: 0xffffffff
-      - Tag:   DT_PREINIT_ARRAY
-        Value: 0x1000
-      - Tag:   DT_PREINIT_ARRAYSZ
-        Value: 0x10
-      - Tag:   DT_SYMTAB_SHNDX
-        Value: 0x1000
-      - Tag:   DT_RELRSZ
-        Value: 0x10
-      - Tag:   DT_RELR
-        Value: 0x1000
-      - Tag:   DT_RELRENT
-        Value: 0x4321
-      - Tag:   DT_ANDROID_REL
-        Value: 0x1000
-      - Tag:   DT_ANDROID_RELSZ
-        Value: 0x10
-      - Tag:   DT_ANDROID_RELA
-        Value: 0x1000
-      - Tag:   DT_ANDROID_RELASZ
-        Value: 0x10
-      - Tag:   DT_ANDROID_RELR
-        Value: 0x1000
-      - Tag:   DT_ANDROID_RELRSZ
-        Value: 0x10
-      - Tag:   DT_ANDROID_RELRENT
-        Value: 0x1234
-      - Tag:   DT_GNU_HASH
-        Value: 0x1000
-      - Tag:   DT_TLSDESC_PLT
-        Value: 0x1000
-      - Tag:   DT_TLSDESC_GOT
-        Value: 0x1000
-      - Tag:   DT_RELACOUNT
-        Value: 0x0
-      - Tag:   DT_RELCOUNT
-        Value: 0x0
-      - Tag:   DT_FLAGS_1
-        Value: 0xffffffff
-      - Tag:   DT_VERSYM
-        Value: 0x1000
-      - Tag:   DT_VERDEF
-        Value: 0x1000
-      - Tag:   DT_VERDEFNUM
-        Value: 0x0
-      - Tag:   DT_VERNEED
-        Value: 0x1000
-      - Tag:   DT_VERNEEDNUM
-        Value: 0x0
-      - Tag:   DT_AUXILIARY
-        Value: 0x1
-      - Tag:   DT_USED
-        Value: 0x3
-      - Tag:   DT_FILTER
-        Value: 0x3
-## Show behaviour for unknown values in special and un-marked ranges.
-## An arbitrary unknown value outside of the special ranges.
-      - Tag:   0x12345678
-        Value: 0x87654321
-## An OS specific tag.
-      - Tag:   0x6abcdef0
-        Value: 0x99887766
-## A processor specific tags.
-      - Tag:   0x76543210
-        Value: 0x55556666
-      - Tag:   DT_NULL
-        Value: 0x0
-ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynstr
-      - Section: .dynamic
-  - Type: PT_DYNAMIC
-    VAddr: 0x1010
-    Sections:
-      - Section: .dynamic
-
 ## When printing the "Name/Value" column we want to have the minimal possible indentation.
 ## Use an arbitrary dynamic tag to demonstrate this.
 
-# RUN: yaml2obj %s --docnum=3 -o %t3
+# RUN: yaml2obj %s --docnum=2 -o %t3
 # RUN: llvm-readobj --dynamic-table %t3 \
 # RUN:   | FileCheck %s --check-prefix=INDENT-LLVM-64 --strict-whitespace
 # RUN: llvm-readelf --dynamic-table %t3 \
 # RUN:   | FileCheck %s --check-prefix=INDENT-GNU-64 --strict-whitespace
 
-# RUN: yaml2obj %s --docnum=4 -o %t4
+# RUN: yaml2obj %s --docnum=2 -DBITS=32 -o %t4
 # RUN: llvm-readobj --dynamic-table %t4 \
 # RUN:   | FileCheck %s --check-prefix=INDENT-LLVM-32 --strict-whitespace
 # RUN: llvm-readelf --dynamic-table %t4 \
@@ -611,25 +460,10 @@ ProgramHeaders:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
+  Class:   ELFCLASS[[BITS=64]]
   Data:    ELFDATA2LSB
   Type:    ET_EXEC
-  Machine: EM_X86_64
-Sections:
-  - Name: .dynamic
-    Type: SHT_DYNAMIC
-    Entries:
-     - Tag:   DT_NEEDED
-       Value: 0x1
-     - Tag:   DT_NULL
-       Value: 0x0
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_386
+  Machine: EM_NONE
 Sections:
   - Name: .dynamic
     Type: SHT_DYNAMIC

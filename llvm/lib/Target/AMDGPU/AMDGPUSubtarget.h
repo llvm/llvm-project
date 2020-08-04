@@ -1215,6 +1215,10 @@ public:
     return getWavefrontSize() == 32;
   }
 
+  bool isWave64() const {
+    return getWavefrontSize() == 64;
+  }
+
   const TargetRegisterClass *getBoolRC() const {
     return getRegisterInfo()->getBoolRC();
   }

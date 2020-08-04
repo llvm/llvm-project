@@ -55,7 +55,7 @@ define linkonce_odr void @foo_inline() {
   ret void
 }
 
-; LINUX: @__profc_foo_extern = linkonce_odr hidden global {{.*}}section "__llvm_prf_cnts", comdat, align 8
+; LINUX: @__profc_foo_extern = linkonce_odr hidden global {{.*}}section "__llvm_prf_cnts", comdat($__profd_foo_extern), align 8
 ; LINUX: @__profd_foo_extern = linkonce_odr hidden global {{.*}}section "__llvm_prf_data", comdat, align 8
 ; MACHO: @__profc_foo_extern = linkonce_odr hidden global
 ; MACHO: @__profd_foo_extern = linkonce_odr hidden global

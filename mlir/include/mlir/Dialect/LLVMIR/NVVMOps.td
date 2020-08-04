@@ -112,7 +112,8 @@ def NVVM_ShflBflyOp :
     if (!type.isStructTy() || type.getStructNumElements() != 2 ||
         !type.getStructElementType(1).isIntegerTy(
             /*Bitwidth=*/1))
-      return emitError("expected return type !llvm<\"{ ?, i1 }\">");
+      return emitError("expected return type to be a two-element struct with "
+                       "i1 as the second element");
     return success();
   }];
 }

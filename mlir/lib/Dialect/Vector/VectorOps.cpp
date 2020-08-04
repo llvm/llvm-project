@@ -1899,6 +1899,41 @@ static LogicalResult verify(ScatterOp op) {
 }
 
 //===----------------------------------------------------------------------===//
+// ExpandLoadOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(ExpandLoadOp op) {
+  VectorType maskVType = op.getMaskVectorType();
+  VectorType passVType = op.getPassThruVectorType();
+  VectorType resVType = op.getResultVectorType();
+
+  if (resVType.getElementType() != op.getMemRefType().getElementType())
+    return op.emitOpError("base and result element type should match");
+
+  if (resVType.getDimSize(0) != maskVType.getDimSize(0))
+    return op.emitOpError("expected result dim to match mask dim");
+  if (resVType != passVType)
+    return op.emitOpError("expected pass_thru of same type as result type");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// CompressStoreOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(CompressStoreOp op) {
+  VectorType maskVType = op.getMaskVectorType();
+  VectorType valueVType = op.getValueVectorType();
+
+  if (valueVType.getElementType() != op.getMemRefType().getElementType())
+    return op.emitOpError("base and value element type should match");
+
+  if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
+    return op.emitOpError("expected value dim to match mask dim");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ShapeCastOp
 //===----------------------------------------------------------------------===//
 

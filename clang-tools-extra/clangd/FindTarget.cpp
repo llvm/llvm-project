@@ -460,6 +460,12 @@ public:
       void VisitPseudoObjectExpr(const PseudoObjectExpr *POE) {
         Outer.add(POE->getSyntacticForm(), Flags);
       }
+      void VisitCXXNewExpr(const CXXNewExpr *CNE) {
+        Outer.add(CNE->getOperatorNew(), Flags);
+      }
+      void VisitCXXDeleteExpr(const CXXDeleteExpr *CDE) {
+        Outer.add(CDE->getOperatorDelete(), Flags);
+      }
     };
     Visitor(*this, Flags).Visit(S);
   }

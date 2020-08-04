@@ -291,8 +291,9 @@ body: |
     ; CHECK: [[SELECT3:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[ANYEXT6]], [[ANYEXT7]]
     ; CHECK: [[TRUNC5:%[0-9]+]]:_(s8) = G_TRUNC [[SELECT3]](s16)
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s8>) = G_BUILD_VECTOR [[TRUNC2]](s8), [[TRUNC3]](s8), [[TRUNC4]](s8), [[TRUNC5]](s8)
-    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<3 x s8>) = G_EXTRACT [[BUILD_VECTOR]](<4 x s8>), 0
-    ; CHECK: [[ANYEXT8:%[0-9]+]]:_(<3 x s32>) = G_ANYEXT [[EXTRACT]](<3 x s8>)
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s8>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<4 x s8>), [[DEF]](<4 x s8>), [[DEF]](<4 x s8>)
+    ; CHECK: [[UV8:%[0-9]+]]:_(<3 x s8>), [[UV9:%[0-9]+]]:_(<3 x s8>), [[UV10:%[0-9]+]]:_(<3 x s8>), [[UV11:%[0-9]+]]:_(<3 x s8>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s8>)
+    ; CHECK: [[ANYEXT8:%[0-9]+]]:_(<3 x s32>) = G_ANYEXT [[UV8]](<3 x s8>)
     ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[ANYEXT8]](<3 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 0
@@ -399,8 +400,9 @@ body: |
     ; CHECK: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT]](<3 x s16>), 0
     ; CHECK: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT1]](<3 x s16>), 0
     ; CHECK: [[SELECT:%[0-9]+]]:_(<4 x s16>) = G_SELECT [[ICMP]](s1), [[INSERT]], [[INSERT1]]
-    ; CHECK: [[EXTRACT2:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[SELECT]](<4 x s16>), 0
-    ; CHECK: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT2]](<3 x s16>), 0
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[SELECT]](<4 x s16>), [[DEF]](<4 x s16>), [[DEF]](<4 x s16>)
+    ; CHECK: [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>), [[UV2:%[0-9]+]]:_(<3 x s16>), [[UV3:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s16>)
+    ; CHECK: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[UV]](<3 x s16>), 0
     ; CHECK: $vgpr0_vgpr1 = COPY [[INSERT2]](<4 x s16>)
     %0:_(s32) = COPY $vgpr0
     %1:_(<4 x s16>) = COPY $vgpr1_vgpr2

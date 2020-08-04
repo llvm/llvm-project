@@ -50,6 +50,8 @@ SetVector<StringRef> DWARFYAML::Data::getNonEmptySectionNames() const {
     SecNames.insert("debug_str_offsets");
   if (DebugRnglists)
     SecNames.insert("debug_rnglists");
+  if (DebugLoclists)
+    SecNames.insert("debug_loclists");
   return SecNames;
 }
 
@@ -74,6 +76,7 @@ void MappingTraits<DWARFYAML::Data>::mapping(IO &IO, DWARFYAML::Data &DWARF) {
   IO.mapOptional("debug_addr", DWARF.DebugAddr);
   IO.mapOptional("debug_str_offsets", DWARF.DebugStrOffsets);
   IO.mapOptional("debug_rnglists", DWARF.DebugRnglists);
+  IO.mapOptional("debug_loclists", DWARF.DebugLoclists);
   IO.setContext(OldContext);
 }
 
@@ -235,10 +238,24 @@ void MappingTraits<DWARFYAML::StringOffsetsTable>::mapping(
   IO.mapOptional("Offsets", StrOffsetsTable.Offsets);
 }
 
+void MappingTraits<DWARFYAML::DWARFOperation>::mapping(
+    IO &IO, DWARFYAML::DWARFOperation &DWARFOperation) {
+  IO.mapRequired("Operator", DWARFOperation.Operator);
+  IO.mapOptional("Values", DWARFOperation.Values);
+}
+
 void MappingTraits<DWARFYAML::RnglistEntry>::mapping(
     IO &IO, DWARFYAML::RnglistEntry &RnglistEntry) {
   IO.mapRequired("Operator", RnglistEntry.Operator);
   IO.mapOptional("Values", RnglistEntry.Values);
+}
+
+void MappingTraits<DWARFYAML::LoclistEntry>::mapping(
+    IO &IO, DWARFYAML::LoclistEntry &LoclistEntry) {
+  IO.mapRequired("Operator", LoclistEntry.Operator);
+  IO.mapOptional("Values", LoclistEntry.Values);
+  IO.mapOptional("DescriptionsLength", LoclistEntry.DescriptionsLength);
+  IO.mapOptional("Descriptions", LoclistEntry.Descriptions);
 }
 
 template <typename EntryType>

@@ -3041,11 +3041,10 @@ TEST_F(AArch64GISelMITest, MoreElementsFreeze) {
   const auto *CheckStr = R"(
   CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
   CHECK: [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[COPY]]
-
   CHECK: [[UNDEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
   CHECK: [[CV:%[0-9]+]]:_(<4 x s32>) = G_CONCAT_VECTORS [[BITCAST]]:_(<2 x s32>), [[UNDEF]]
   CHECK: [[FREEZE:%[0-9]+]]:_(<4 x s32>) = G_FREEZE [[CV]]
-  CHECK: [[EXTR:%[0-9]+]]:_(<2 x s32>) = G_EXTRACT [[FREEZE]]:_(<4 x s32>), 0
+  CHECK: [[EXTR0:%[0-9]+]]:_(<2 x s32>), [[EXTR1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[FREEZE]]:_(<4 x s32>)
   )";
 
   // Check

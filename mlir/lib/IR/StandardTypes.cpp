@@ -638,9 +638,12 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
 
 /// Get or create a new TupleType with the provided element types. Assumes the
 /// arguments define a well-formed type.
-TupleType TupleType::get(ArrayRef<Type> elementTypes, MLIRContext *context) {
+TupleType TupleType::get(TypeRange elementTypes, MLIRContext *context) {
   return Base::get(context, StandardTypes::Tuple, elementTypes);
 }
+
+/// Get or create an empty tuple type.
+TupleType TupleType::get(MLIRContext *context) { return get({}, context); }
 
 /// Return the elements types for this tuple.
 ArrayRef<Type> TupleType::getTypes() const { return getImpl()->getTypes(); }

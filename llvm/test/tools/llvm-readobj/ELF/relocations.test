@@ -125,9 +125,10 @@ Sections:
   - Name: .text
     Type: SHT_PROGBITS
     Content: '00FFFFFFFF020000001234567890ABCDEF'
-  - Name: .rel.text
-    Type: SHT_REL
-    Info: .text
+  - Name:   .rel.text
+    Type:   SHT_REL
+    Info:   .text
+    ShName: [[SHNAME=<none>]]
     Relocations:
       - Symbol: rel_0
         Type:   R_X86_64_NONE
@@ -143,6 +144,7 @@ Sections:
   - Name: .rela.text
     Type: SHT_RELA
     Info: .text
+    ShName: [[SHNAME=<none>]]
     Relocations:
       - Symbol: rela_0
         Type:   R_X86_64_NONE
@@ -369,3 +371,42 @@ Symbols:
   - Name:    rela_maxpos
     Section: .text
     Value:   0xFFFFFFFF
+
+## Check we report a warning when the name of a relocation section can't be read. Check we continue dumping.
+# RUN: yaml2obj %s --docnum=1 -DSHNAME=0xffffffff -o %tshname
+# RUN: llvm-readobj --relocs %tshname 2>&1 | FileCheck %s -DFILE=%tshname --check-prefix=LLVM-SHNAME
+# RUN: llvm-readelf --relocs %tshname 2>&1 | FileCheck %s -DFILE=%tshname --check-prefix=GNU-SHNAME
+
+# LLVM-SHNAME:      Relocations [
+# LLVM-SHNAME-NEXT: warning: '[[FILE]]': unable to get the name of SHT_REL section with index 2: a section [index 2] has an invalid sh_name (0xffffffff) offset which goes past the end of the section name string table
+# LLVM-SHNAME-NEXT:   Section (2) <?> {
+# LLVM-SHNAME-NEXT:     0x0 R_X86_64_NONE rel_0 0x0
+# LLVM-SHNAME-NEXT:     0x1 R_X86_64_PC32 rel_neg 0x0
+# LLVM-SHNAME-NEXT:     0x5 R_X86_64_PLT32 rel_pos 0x0
+# LLVM-SHNAME-NEXT:     0x9 R_X86_64_64 rel_64 0x0
+# LLVM-SHNAME-NEXT:   }
+# LLVM-SHNAME-NEXT: warning: '[[FILE]]': unable to get the name of SHT_RELA section with index 3: a section [index 3] has an invalid sh_name (0xffffffff) offset which goes past the end of the section name string table
+# LLVM-SHNAME-NEXT:   Section (3) <?> {
+# LLVM-SHNAME-NEXT:     0x0 R_X86_64_NONE rela_0 0x0
+# LLVM-SHNAME-NEXT:     0x1 R_X86_64_PC32 rela_neg 0xFFFFFFFFFFFFFFFF
+# LLVM-SHNAME-NEXT:     0x5 R_X86_64_PLT32 rela_pos 0x2
+# LLVM-SHNAME-NEXT:     0xFFFFFFFFFFFFFFFF R_X86_64_64 rela_minneg 0x8000000000000000
+# LLVM-SHNAME-NEXT:     0x9 R_X86_64_32S rela_maxpos 0x7FFFFFFFFFFFFFFF
+# LLVM-SHNAME-NEXT:   }
+# LLVM-SHNAME-NEXT: ]
+
+# GNU-SHNAME:      warning: '[[FILE]]': unable to get the name of SHT_REL section with index 2: a section [index 2] has an invalid sh_name (0xffffffff) offset which goes past the end of the section name string table
+# GNU-SHNAME:      Relocation section '<?>' at offset 0x51 contains 4 entries:
+# GNU-SHNAME-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name
+# GNU-SHNAME-NEXT: 0000000000000000  0000000100000000 R_X86_64_NONE          0000000000000000 rel_0
+# GNU-SHNAME-NEXT: 0000000000000001  0000000200000002 R_X86_64_PC32          0000000000000001 rel_neg
+# GNU-SHNAME-NEXT: 0000000000000005  0000000300000004 R_X86_64_PLT32         0000000000000002 rel_pos
+# GNU-SHNAME-NEXT: 0000000000000009  0000000400000001 R_X86_64_64            ffffffffffffffff rel_64
+# GNU-SHNAME:      warning: '[[FILE]]': unable to get the name of SHT_RELA section with index 3: a section [index 3] has an invalid sh_name (0xffffffff) offset which goes past the end of the section name string table
+# GNU-SHNAME:      Relocation section '<?>' at offset 0x91 contains 5 entries:
+# GNU-SHNAME-NEXT:     Offset             Info             Type       Symbol's Value  Symbol's Name + Addend
+# GNU-SHNAME-NEXT: 0000000000000000  0000000500000000 R_X86_64_NONE  0000000000000000 rela_0 + 0
+# GNU-SHNAME-NEXT: 0000000000000001  0000000600000002 R_X86_64_PC32  0000000000000001 rela_neg - 1
+# GNU-SHNAME-NEXT: 0000000000000005  0000000700000004 R_X86_64_PLT32 0000000000000002 rela_pos + 2
+# GNU-SHNAME-NEXT: ffffffffffffffff  0000000800000001 R_X86_64_64    0000000000000003 rela_minneg - 8000000000000000
+# GNU-SHNAME-NEXT: 0000000000000009  000000090000000b R_X86_64_32S   ffffffffffffffff rela_maxpos + 7fffffffffffffff

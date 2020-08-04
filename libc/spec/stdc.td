@@ -57,12 +57,32 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<IntType>]
           >,
           FunctionSpec<
+              "isblank",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "iscntrl",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
               "isdigit",
               RetValSpec<IntType>,
               [ArgSpec<IntType>]
           >,
           FunctionSpec<
+              "isgraph",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
               "islower",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "ispunct",
               RetValSpec<IntType>,
               [ArgSpec<IntType>]
           >,

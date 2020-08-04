@@ -21,6 +21,26 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  isblank
+  SUITE
+    libc_ctype_unittests
+  SRCS
+    isblank_test.cpp
+  DEPENDS
+    libc.src.ctype.isblank
+)
+
+add_libc_unittest(
+  iscntrl
+  SUITE
+    libc_ctype_unittests
+  SRCS
+    iscntrl_test.cpp
+  DEPENDS
+    libc.src.ctype.iscntrl
+)
+
+add_libc_unittest(
   isdigit
   SUITE
     libc_ctype_unittests
@@ -31,6 +51,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  isgraph
+  SUITE
+    libc_ctype_unittests
+  SRCS
+    isgraph_test.cpp
+  DEPENDS
+    libc.src.ctype.isgraph
+)
+
+add_libc_unittest(
   islower
   SUITE
     libc_ctype_unittests
@@ -38,6 +68,16 @@ add_libc_unittest(
     islower_test.cpp
   DEPENDS
     libc.src.ctype.islower
+)
+
+add_libc_unittest(
+  ispunct
+  SUITE
+    libc_ctype_unittests
+  SRCS
+    ispunct_test.cpp
+  DEPENDS
+    libc.src.ctype.ispunct
 )
 
 add_libc_unittest(

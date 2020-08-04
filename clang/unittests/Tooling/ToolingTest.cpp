@@ -621,7 +621,7 @@ TEST(addTargetAndModeForProgramName, AddsTargetAndMode) {
   addTargetAndModeForProgramName(Args, "");
   EXPECT_EQ((std::vector<std::string>{"clang", "-foo"}), Args);
   addTargetAndModeForProgramName(Args, Target + "-g++");
-  EXPECT_EQ((std::vector<std::string>{"clang", "-target", Target,
+  EXPECT_EQ((std::vector<std::string>{"clang", "--target=" + Target,
                                       "--driver-mode=g++", "-foo"}),
             Args);
 }
@@ -635,7 +635,7 @@ TEST(addTargetAndModeForProgramName, PathIgnored) {
 
   std::vector<std::string> Args = {"clang", "-foo"};
   addTargetAndModeForProgramName(Args, ToolPath);
-  EXPECT_EQ((std::vector<std::string>{"clang", "-target", Target,
+  EXPECT_EQ((std::vector<std::string>{"clang", "--target=" + Target,
                                       "--driver-mode=g++", "-foo"}),
             Args);
 }
@@ -650,10 +650,10 @@ TEST(addTargetAndModeForProgramName, IgnoresExistingTarget) {
                                       "-target", "something"}),
             Args);
 
-  std::vector<std::string> ArgsAlt = {"clang", "-foo", "-target=something"};
+  std::vector<std::string> ArgsAlt = {"clang", "-foo", "--target=something"};
   addTargetAndModeForProgramName(ArgsAlt, Target + "-g++");
   EXPECT_EQ((std::vector<std::string>{"clang", "--driver-mode=g++", "-foo",
-                                      "-target=something"}),
+                                      "--target=something"}),
             ArgsAlt);
 }
 
@@ -663,15 +663,9 @@ TEST(addTargetAndModeForProgramName, IgnoresExistingMode) {
 
   std::vector<std::string> Args = {"clang", "-foo", "--driver-mode=abc"};
   addTargetAndModeForProgramName(Args, Target + "-g++");
-  EXPECT_EQ((std::vector<std::string>{"clang", "-target", Target, "-foo",
+  EXPECT_EQ((std::vector<std::string>{"clang", "--target=" + Target, "-foo",
                                       "--driver-mode=abc"}),
             Args);
-
-  std::vector<std::string> ArgsAlt = {"clang", "-foo", "--driver-mode", "abc"};
-  addTargetAndModeForProgramName(ArgsAlt, Target + "-g++");
-  EXPECT_EQ((std::vector<std::string>{"clang", "-target", Target, "-foo",
-                                      "--driver-mode", "abc"}),
-            ArgsAlt);
 }
 
 #ifndef _WIN32

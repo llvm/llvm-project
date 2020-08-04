@@ -76,18 +76,14 @@ while.end:
 ; CHECK-GUARD:   br i1 %cmp4, label %while.end, label %while.body.preheader
 ; CHECK-GUARD: while.body.preheader:
 ; CHECK-GUARD:   [[ADD:%[^ ]+]] = add i32 %i, 1
-; CHECK-GUARD:   [[SEL:%[^ ]+]] = icmp slt i32 %N, %i
-; CHECK-GUARD:   [[MIN:%[^ ]+]] = select i1 [[SEL]], i32 %N, i32 %i
-; CHECK-GUARD:   [[COUNT:%[^ ]+]] = sub i32 [[ADD]], [[MIN]]
+; CHECK-GUARD:   [[COUNT:%[^ ]+]] = sub i32 [[ADD]], %N
 ; CHECK-GUARD:   call void @llvm.set.loop.iterations.i32(i32 [[COUNT]])
 ; CHECK-GUARD:   br label %while.body
 
 ; CHECK-LABEL: while_gte
 ; CHECK: while.body.preheader:
 ; CHECK: [[ADD:%[^ ]+]] = add i32 %i, 1
-; CHECK: [[SEL:%[^ ]+]] = icmp slt i32 %N, %i
-; CHECK: [[MIN:%[^ ]+]] = select i1 [[SEL]], i32 %N, i32 %i
-; CHECK: [[COUNT:%[^ ]+]] = sub i32 [[ADD]], [[MIN]]
+; CHECK: [[COUNT:%[^ ]+]] = sub i32 [[ADD]], %N
 ; CHECK: call void @llvm.set.loop.iterations.i32(i32 [[COUNT]])
 ; CHECK: br label %while.body
 

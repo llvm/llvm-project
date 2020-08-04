@@ -50,7 +50,7 @@ ProgramHeaders:
       - Section: .dynamic
 
 ## Show we print a warning for an invalid relocation table size stored in a DT_RELASZ entry.
-# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: yaml2obj --docnum=2 -DRELTYPE=RELA -DTAG1=DT_RELASZ -DTAG1VAL=0xFF -DTAG2=DT_RELAENT %s -o %t2
 # RUN: llvm-readobj --dyn-relocations %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=INVALID-DT-RELASZ
 # RUN: llvm-readelf --dyn-relocations %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=INVALID-DT-RELASZ
 
@@ -63,277 +63,73 @@ FileHeader:
   Type:    ET_DYN
   Machine: EM_X86_64
 Sections:
-  - Name:    .rela.dyn
-    Type:    SHT_RELA
-    Relocations:
-      - Type:   R_X86_64_NONE
+  - Name:  .relx.dyn
+    Type:  SHT_[[RELTYPE]]
   - Name: .dynamic
     Type: SHT_DYNAMIC
     Entries:
-      - Tag:   DT_RELA
+      - Tag:   DT_[[RELTYPE]]
         Value: 0x0
-      - Tag:   DT_RELASZ
-        Value: 0xFF
-      - Tag:   DT_RELAENT
-        Value: 0x18
+      - Tag:   [[TAG1]]
+        Value: [[TAG1VAL=0x18]]
+      - Tag:   [[TAG2]]
+        Value: [[TAG2VAL=0x18]]
       - Tag:   DT_NULL
         Value: 0x0
 DynamicSymbols: []
 ProgramHeaders:
   - Type:  PT_LOAD
     Sections:
-      - Section: .rela.dyn
+      - Section: .relx.dyn
       - Section: .dynamic
 
 ## Show we print a warning for an invalid relocation table entry size stored in a DT_RELAENT entry.
-# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: yaml2obj --docnum=2 -DRELTYPE=RELA -DTAG1=DT_RELASZ -DTAG2=DT_RELAENT -DTAG2VAL=0xFF %s -o %t3
 # RUN: llvm-readobj --dyn-relocations %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=INVALID-DT-RELAENT
 # RUN: llvm-readelf --dyn-relocations %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=INVALID-DT-RELAENT
 
 ## INVALID-DT-RELAENT: warning: '[[FILE]]': invalid DT_RELASZ value (0x18) or DT_RELAENT value (0xff)
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
-Sections:
-  - Name:    .rela.dyn
-    Type:    SHT_RELA
-    Relocations:
-      - Type:   R_X86_64_NONE
-  - Name: .dynamic
-    Type: SHT_DYNAMIC
-    Entries:
-      - Tag:   DT_RELA
-        Value: 0x0
-      - Tag:   DT_RELASZ
-        Value: 0x18
-      - Tag:   DT_RELAENT
-        Value: 0xFF
-      - Tag:   DT_NULL
-        Value: 0x0
-DynamicSymbols: []
-ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .rela.dyn
-      - Section: .dynamic
-
 ## Show we print a warning for an invalid relocation table size stored in a DT_RELSZ entry.
-# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: yaml2obj --docnum=2 -DRELTYPE=REL -DTAG1=DT_RELSZ -DTAG1VAL=0xFF -DTAG2=DT_RELENT %s -o %t4
 # RUN: llvm-readobj --dyn-relocations %t4 2>&1 | FileCheck %s -DFILE=%t4 --check-prefix=INVALID-DT-RELSZ
 # RUN: llvm-readelf --dyn-relocations %t4 2>&1 | FileCheck %s -DFILE=%t4 --check-prefix=INVALID-DT-RELSZ
 
 ## INVALID-DT-RELSZ: warning: '[[FILE]]': invalid DT_RELSZ value (0xff) or DT_RELENT value (0x18)
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_386
-Sections:
-  - Name:    .rela.dyn
-    Type:    SHT_REL
-    Relocations:
-      - Type:   R_386_NONE
-  - Name: .dynamic
-    Type: SHT_DYNAMIC
-    Entries:
-      - Tag:   DT_REL
-        Value: 0x0
-      - Tag:   DT_RELSZ
-        Value: 0xFF
-      - Tag:   DT_RELENT
-        Value: 0x18
-      - Tag:   DT_NULL
-        Value: 0x0
-DynamicSymbols: []
-ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .rela.dyn
-      - Section: .dynamic
-
 ## Show we print a warning for an invalid relocation table entry size stored in a DT_RELENT entry.
-# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: yaml2obj --docnum=2 -DRELTYPE=REL -DTAG1=DT_RELSZ -DTAG2=DT_RELENT -DTAG2VAL=0xFF %s -o %t5
 # RUN: llvm-readobj --dyn-relocations %t5 2>&1 | FileCheck %s -DFILE=%t5 --check-prefix=INVALID-DT-RELENT
 # RUN: llvm-readelf --dyn-relocations %t5 2>&1 | FileCheck %s -DFILE=%t5 --check-prefix=INVALID-DT-RELENT
 
 ## INVALID-DT-RELENT: warning: '[[FILE]]': invalid DT_RELSZ value (0x18) or DT_RELENT value (0xff)
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_386
-Sections:
-  - Name:    .rela.dyn
-    Type:    SHT_REL
-    Relocations:
-      - Type:   R_386_NONE
-  - Name: .dynamic
-    Type: SHT_DYNAMIC
-    Entries:
-      - Tag:   DT_REL
-        Value: 0x0
-      - Tag:   DT_RELSZ
-        Value: 0x18
-      - Tag:   DT_RELENT
-        Value: 0xFF
-      - Tag:   DT_NULL
-        Value: 0x0
-DynamicSymbols: []
-ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .rela.dyn
-      - Section: .dynamic
-
 ## Show we print a warning for an invalid relocation table size stored in a DT_RELRSZ/DT_ANDROID_RELRSZ entry.
-# RUN: yaml2obj --docnum=6 %s -o %t6
+# RUN: yaml2obj --docnum=2 -DRELTYPE=RELR -DTAG1=DT_RELRSZ -DTAG1VAL=0xFF -DTAG2=DT_RELRENT %s -o %t6
 # RUN: llvm-readobj --dyn-relocations %t6 2>&1 | FileCheck %s -DFILE=%t6 --check-prefix=INVALID-DT-RELRSZ
 # RUN: llvm-readelf --dyn-relocations %t6 2>&1 | FileCheck %s -DFILE=%t6 --check-prefix=INVALID-DT-RELRSZ
-# RUN: yaml2obj --docnum=7 %s -o %t7
+
+# RUN: yaml2obj --docnum=2 -DRELTYPE=RELR -DTAG1=DT_ANDROID_RELRSZ -DTAG1VAL=0xFF -DTAG2=DT_ANDROID_RELRENT %s -o %t7
 # RUN: llvm-readobj --dyn-relocations %t7 2>&1 | FileCheck %s -DFILE=%t7 --check-prefix=INVALID-DT-ANDROID-RELRSZ
 # RUN: llvm-readelf --dyn-relocations %t7 2>&1 | FileCheck %s -DFILE=%t7 --check-prefix=INVALID-DT-ANDROID-RELRSZ
 
 ## INVALID-DT-RELRSZ:         warning: '[[FILE]]': invalid DT_RELRSZ value (0xff) or DT_RELRENT value (0x18)
 ## INVALID-DT-ANDROID-RELRSZ: warning: '[[FILE]]': invalid DT_ANDROID_RELRSZ value (0xff) or DT_ANDROID_RELRENT value (0x18)
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
-Sections:
-  - Name:    .relr.dyn
-    Type:    SHT_RELR
-    Flags:   [ SHF_ALLOC ]
-    Content: ""
-  - Name: .dynamic
-    Type: SHT_DYNAMIC
-    Entries:
-      - Tag:   DT_RELR
-        Value: 0x0
-      - Tag:   DT_RELRSZ
-        Value: 0xFF
-      - Tag:   DT_RELRENT
-        Value: 0x18
-      - Tag:   DT_NULL
-        Value: 0x0
-DynamicSymbols: []
-ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .relr.dyn
-      - Section: .dynamic
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
-Sections:
-  - Name:    .relr.dyn
-    Type:    SHT_RELR
-    Flags:   [ SHF_ALLOC ]
-    Content: ""
-  - Name: .dynamic
-    Type: SHT_DYNAMIC
-    Entries:
-      - Tag:   DT_RELR
-        Value: 0x0
-      - Tag:   DT_ANDROID_RELRSZ
-        Value: 0xFF
-      - Tag:   DT_ANDROID_RELRENT
-        Value: 0x18
-      - Tag:   DT_NULL
-        Value: 0x0
-DynamicSymbols: []
-ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .relr.dyn
-      - Section: .dynamic
-
 ## Show we print a warning for an invalid relocation table entry size stored in a DT_RELRENT/DT_ANDROID_RELRENT entry.
-# RUN: yaml2obj --docnum=8 %s -o %t8
+# RUN: yaml2obj --docnum=2 -DRELTYPE=RELR -DTAG1=DT_RELRSZ -DTAG2=DT_RELRENT -DTAG2VAL=0xFF %s -o %t8
 # RUN: llvm-readobj --dyn-relocations %t8 2>&1 | FileCheck %s -DFILE=%t8 --check-prefix=INVALID-DT-RELRENT
 # RUN: llvm-readelf --dyn-relocations %t8 2>&1 | FileCheck %s -DFILE=%t8 --check-prefix=INVALID-DT-RELRENT
-# RUN: yaml2obj --docnum=9 %s -o %t9
+# RUN: yaml2obj --docnum=2 -DRELTYPE=RELR -DTAG1=DT_ANDROID_RELRSZ -DTAG2=DT_ANDROID_RELRENT -DTAG2VAL=0xFF %s -o %t9
 # RUN: llvm-readobj --dyn-relocations %t9 2>&1 | FileCheck %s -DFILE=%t9 --check-prefix=INVALID-DT-ANDROID-RELRENT
 # RUN: llvm-readelf --dyn-relocations %t9 2>&1 | FileCheck %s -DFILE=%t9 --check-prefix=INVALID-DT-ANDROID-RELRENT
 
 ## INVALID-DT-RELRENT:         invalid DT_RELRSZ value (0x18) or DT_RELRENT value (0xff)
 ## INVALID-DT-ANDROID-RELRENT: invalid DT_ANDROID_RELRSZ value (0x18) or DT_ANDROID_RELRENT value (0xff)
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
-Sections:
-  - Name:    .relr.dyn
-    Type:    SHT_RELR
-    Flags:   [ SHF_ALLOC ]
-    Content: ""
-  - Name: .dynamic
-    Type: SHT_DYNAMIC
-    Entries:
-      - Tag:   DT_RELR
-        Value: 0x0
-      - Tag:   DT_RELRSZ
-        Value: 0x18
-      - Tag:   DT_RELRENT
-        Value: 0xFF
-      - Tag:   DT_NULL
-        Value: 0x0
-DynamicSymbols: []
-ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .relr.dyn
-      - Section: .dynamic
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
-Sections:
-  - Name:    .relr.dyn
-    Type:    SHT_RELR
-    Flags:   [ SHF_ALLOC ]
-    Content: ""
-  - Name: .dynamic
-    Type: SHT_DYNAMIC
-    Entries:
-      - Tag:   DT_RELR
-        Value: 0x0
-      - Tag:   DT_ANDROID_RELRSZ
-        Value: 0x18
-      - Tag:   DT_ANDROID_RELRENT
-        Value: 0xFF
-      - Tag:   DT_NULL
-        Value: 0x0
-DynamicSymbols: []
-ProgramHeaders:
-  - Type:  PT_LOAD
-    Sections:
-      - Section: .relr.dyn
-      - Section: .dynamic
-
 ## Show we print a warning for an invalid value of DT_PLTRELSZ, which describes the total size
 ## of the relocation entries associated with the procedure linkage table.
-# RUN: yaml2obj --docnum=10 %s -o %t10
+# RUN: yaml2obj --docnum=3 %s -o %t10
 # RUN: llvm-readobj --dyn-relocations %t10 2>&1 | FileCheck %s -DFILE=%t10 --check-prefix=INVALID-DT-PLTRELSZ
 # RUN: llvm-readelf --dyn-relocations %t10 2>&1 | FileCheck %s -DFILE=%t10 --check-prefix=INVALID-DT-PLTRELSZ
 
@@ -369,7 +165,7 @@ ProgramHeaders:
       - Section: .dynamic
 
 ## Show we print a warning when dumping dynamic relocations if there is no dynamic symbol table.
-# RUN: yaml2obj --docnum=11 %s -o %t11
+# RUN: yaml2obj --docnum=4 %s -o %t11
 # RUN: llvm-readobj --dyn-relocations %t11 2>&1 | FileCheck %s -DFILE=%t11 --check-prefix=LLVM-NO-DYNSYM
 # RUN: llvm-readelf --dyn-relocations %t11 2>&1 | FileCheck %s -DFILE=%t11 --check-prefix=GNU-NO-DYNSYM
 
@@ -419,7 +215,7 @@ ProgramHeaders:
 
 ## Show we print a warning when the symbol index of a dynamic relocation is too
 ## large (goes past the end of the dynamic symbol table).
-# RUN: yaml2obj --docnum=12 %s -o %t12
+# RUN: yaml2obj --docnum=5 %s -o %t12
 # RUN: llvm-readobj --dyn-relocations %t12 2>&1 | FileCheck %s -DFILE=%t12 --check-prefix=LLVM-INVALID-DYNSYM
 # RUN: llvm-readelf --dyn-relocations %t12 2>&1 | FileCheck %s -DFILE=%t12 --check-prefix=GNU-INVALID-DYNSYM
 
@@ -465,7 +261,7 @@ ProgramHeaders:
       - Section: .dynamic
 
 ## Show that when we have both REL and RELA relocations, we dump both sets.
-# RUN: yaml2obj --docnum=13 %s -o %t13
+# RUN: yaml2obj --docnum=6 %s -o %t13
 # RUN: llvm-readobj --dyn-relocations %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=BOTH-RELA-REL-LLVM
 # RUN: llvm-readelf --dyn-relocations %t13 2>&1 | FileCheck %s -DFILE=%t13 --check-prefix=BOTH-RELA-REL-GNU
 

@@ -1,4 +1,6 @@
 // Test line numbers in signal handlers
+// Fails with debug checks: https://bugs.llvm.org/show_bug.cgi?id=46860
+// XFAIL: !compiler-rt-optimized && tsan
 
 // RUN: %clangxx %s -o %t -O0
 // RUN: %env_tool_opts=handle_segv=1:print_stacktrace=1 not %run %t 1 2>&1 | FileCheck --check-prefixes=CHECK1,CHECK %s

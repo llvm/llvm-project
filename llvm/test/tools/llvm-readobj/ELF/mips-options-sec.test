@@ -1,14 +1,138 @@
 ## Check that we are able to dump the SHT_MIPS_OPTIONS section using -A properly.
 
-# RUN: llvm-readobj -A %p/Inputs/options.obj.elf-mipsel | FileCheck %s
+## Check we are able to dump multiple MIPS options properly.
+# RUN: yaml2obj %s -o %t1
+# RUN: llvm-readobj -A %t1 | FileCheck %s
+# RUN: llvm-readelf -A %t1 | FileCheck %s
 
 # CHECK:      MIPS Options {
 # CHECK-NEXT:   ODK_REGINFO {
+# CHECK-NEXT:     GP: 0x807060504030201
+# CHECK-NEXT:     General Mask: 0xD0C0B0A
+# CHECK-NEXT:     Co-Proc Mask0: 0x88776655
+# CHECK-NEXT:     Co-Proc Mask1: 0xCCBBAA99
+# CHECK-NEXT:     Co-Proc Mask2: 0x1EFFEEDD
+# CHECK-NEXT:     Co-Proc Mask3: 0x5E4E3E2E
+# CHECK-NEXT:   }
+# CHECK-NEXT:   ODK_REGINFO {
 # CHECK-NEXT:     GP: 0x0
-# CHECK-NEXT:     General Mask: 0xF2000017
+# CHECK-NEXT:     General Mask: 0x0
 # CHECK-NEXT:     Co-Proc Mask0: 0x0
 # CHECK-NEXT:     Co-Proc Mask1: 0x0
 # CHECK-NEXT:     Co-Proc Mask2: 0x0
 # CHECK-NEXT:     Co-Proc Mask3: 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT: }
+
+## Check that we try to dump the .MIPS.options section when we are able to locate it by name.
+# RUN: yaml2obj -DNAME=0xffff %s -o %t.err1
+# RUN: llvm-readelf -A %t.err1 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err1 --check-prefix=NAME-ERR-FOUND --implicit-check-not=warning:
+# RUN: llvm-readobj -A %t.err1 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err1 --check-prefix=NAME-ERR-FOUND --implicit-check-not=warning:
+
+# NAME-ERR-FOUND:      warning: '[[FILE]]': unable to read the name of SHT_PROGBITS section with index 1: a section [index 1] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+# NAME-ERR-FOUND-NEXT: warning: '[[FILE]]': unable to read the name of SHT_PROGBITS section with index 3: a section [index 3] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+# NAME-ERR-FOUND:      MIPS Options {
+# NAME-ERR-FOUND-NEXT:  ODK_REGINFO {
+# NAME-ERR-FOUND-NEXT:    GP: 0x807060504030201
+# NAME-ERR-FOUND-NEXT:    General Mask: 0xD0C0B0A
+# NAME-ERR-FOUND-NEXT:    Co-Proc Mask0: 0x88776655
+# NAME-ERR-FOUND-NEXT:    Co-Proc Mask1: 0xCCBBAA99
+# NAME-ERR-FOUND-NEXT:    Co-Proc Mask2: 0x1EFFEEDD
+# NAME-ERR-FOUND-NEXT:    Co-Proc Mask3: 0x5E4E3E2E
+# NAME-ERR-FOUND-NEXT:  }
+# NAME-ERR-FOUND-NEXT:  ODK_REGINFO {
+# NAME-ERR-FOUND-NEXT:    GP: 0x0
+# NAME-ERR-FOUND-NEXT:    General Mask: 0x0
+# NAME-ERR-FOUND-NEXT:    Co-Proc Mask0: 0x0
+# NAME-ERR-FOUND-NEXT:    Co-Proc Mask1: 0x0
+# NAME-ERR-FOUND-NEXT:    Co-Proc Mask2: 0x0
+# NAME-ERR-FOUND-NEXT:    Co-Proc Mask3: 0x0
+# NAME-ERR-FOUND-NEXT:  }
+# NAME-ERR-FOUND-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+Sections:
+  - Type:   SHT_PROGBITS
+    ShName: [[NAME=<none>]]
+  - Name:   .MIPS.options
+    Type:   SHT_MIPS_OPTIONS
+    ShName: [[OPTNAME=<none>]]
+    ShSize: [[SECSIZE=<none>]]
+    ContentArray: [ [[KIND=0x1]],           ## Kind. ODK_REGINFO == 1.
+                    [[DESCSIZE=0x28]],      ## Byte size of descriptor, including this header.
+                    0x0, 0x0,               ## Section header index of section affected or 0 for global options.
+                    0x0, 0x0, 0x0, 0x0,     ## Kind-specific information.
+                    0xA, 0xB, 0xC, 0xD,     ## ODK_REGINFO: bit-mask of used general registers.
+                    0x11, 0x22, 0x33, 0x44, ## ODK_REGINFO: unused padding field.
+                    0x55, 0x66, 0x77, 0x88, ## ODK_REGINFO: bit-mask of used co-processor registers (0).
+                    0x99, 0xAA, 0xBB, 0xCC, ## ODK_REGINFO: bit-mask of used co-processor registers (1).
+                    0xDD, 0xEE, 0xFF, 0x1E, ## ODK_REGINFO: bit-mask of used co-processor registers (2).
+                    0x2E, 0x3E, 0x4E, 0x5E, ## ODK_REGINFO: bit-mask of used co-processor registers (3).
+                    0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, ## ODK_REGINFO: gp register value.
+## A descriptor for one more arbirtary supported option.
+                    0x1, 0x28, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                    0x0, 0x0,  0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                    0x0, 0x0,  0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                    0x0, 0x0,  0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  - Type:   SHT_PROGBITS
+    ShName: [[NAME=<none>]]
+
+## Check we report a warning when we are unable to find the .MIPS.options section due to an error.
+# RUN: yaml2obj -DOPTNAME=0xffff %s -o %t.err2
+# RUN: llvm-readelf -A %t.err2 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err2 --check-prefix=NAME-ERR-NOTFOUND --implicit-check-not=warning: --implicit-check-not="MIPS Options"
+# RUN: llvm-readobj -A %t.err2 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err2 --check-prefix=NAME-ERR-NOTFOUND --implicit-check-not=warning: --implicit-check-not="MIPS Options"
+
+# NAME-ERR-NOTFOUND: warning: '[[FILE]]': unable to read the name of SHT_MIPS_OPTIONS section with index 2: a section [index 2] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+
+## Check we report a warning when the .MIPS.options section has a size that is less than the
+## size of the .MIPS.options description header.
+
+# RUN: yaml2obj %s -DSECSIZE=0x1 -o %t2
+# RUN: llvm-readelf -A %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=SEC-SIZE
+# RUN: llvm-readobj -A %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=SEC-SIZE
+
+# SEC-SIZE:      MIPS Options {
+# SEC-SIZE-NEXT: warning: '[[FILE]]': the .MIPS.options section has an invalid size (0x1)
+# SEC-SIZE-NEXT: }
+
+## Check we report a warning when the .MIPS.options description header has a size
+## that goes past the end of the section.
+
+# RUN: yaml2obj %s -DDESCSIZE=0x51 -o %t3
+# RUN: llvm-readelf -A %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=DESC-SIZE
+# RUN: llvm-readobj -A %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=DESC-SIZE
+
+# DESC-SIZE:      IPS Options {
+# DESC-SIZE-NEXT: warning: '[[FILE]]':  a descriptor of size 0x51 at offset 0x0 goes past the end of the .MIPS.options section of size 0x50
+# DESC-SIZE-NEXT: }
+
+## Check we are able to skip unsupported options and continue dumping.
+
+# RUN: yaml2obj %s -DKIND=0x2 -o %t4
+# RUN: llvm-readelf -A %t4 2>&1 | FileCheck %s -DFILE=%t4 -DTAG="ODK_EXCEPTIONS (2)" --check-prefix=KIND
+# RUN: llvm-readobj -A %t4 2>&1 | FileCheck %s -DFILE=%t4 -DTAG="ODK_EXCEPTIONS (2)" --check-prefix=KIND
+
+# RUN: yaml2obj %s -DKIND=0xFF -o %t5
+# RUN: llvm-readelf -A %t5 2>&1 | FileCheck %s -DFILE=%t5 -DTAG="Unknown (255)" --check-prefix=KIND
+# RUN: llvm-readobj -A %t5 2>&1 | FileCheck %s -DFILE=%t5 -DTAG="Unknown (255)" --check-prefix=KIND
+
+# KIND:      MIPS Options {
+# KIND-NEXT:   Unsupported MIPS options tag: [[TAG]]
+# KIND-NEXT:   ODK_REGINFO {
+# KIND-NEXT:     GP: 0x0
+# KIND-NEXT:     General Mask: 0x0
+# KIND-NEXT:     Co-Proc Mask0: 0x0
+# KIND-NEXT:     Co-Proc Mask1: 0x0
+# KIND-NEXT:     Co-Proc Mask2: 0x0
+# KIND-NEXT:     Co-Proc Mask3: 0x0
+# KIND-NEXT:   }
+# KIND-NEXT: }

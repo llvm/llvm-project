@@ -47,7 +47,7 @@
 # LLVM: Type: R_386_IRELATIVE (42)
 # LLVM: Type: R_386_GOT32X (43)
 
-# GNU:      Relocation section '.rel.text' at offset 0x38 contains 41 entries:
+# GNU:      Relocation section '.rel.text' at offset 0x34 contains 41 entries:
 # GNU-NEXT:  Offset     Info    Type                Sym. Value  Symbol's Name
 # GNU-NEXT: 00000002  00000100 R_386_NONE             00000000   foo
 # GNU-NEXT: 00000008  00000101 R_386_32               00000000   foo
@@ -93,21 +93,14 @@
 
 --- !ELF
 FileHeader:
-  Class:    ELFCLASS32
-  Data:     ELFDATA2LSB
-  OSABI:    ELFOSABI_GNU
-  Type:     ET_REL
-  Machine:  EM_386
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
 Sections:
-  - Name:    .text
-    Type:    SHT_PROGBITS
-    Content: 00
-  - Name:         .rel.text
-    Type:         SHT_REL
-    Link:         .symtab
-    AddressAlign: 0x0000000000000004
-    EntSize:      0x0000000000000008
-    Info:         .text
+  - Name: .rel.text
+    Type: SHT_REL
+    Link: .symtab
     Relocations:
       - Offset: 0x0000000000000002
         Type:   R_386_NONE

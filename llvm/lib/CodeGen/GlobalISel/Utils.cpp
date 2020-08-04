@@ -180,6 +180,14 @@ bool llvm::canReplaceReg(Register DstReg, Register SrcReg,
 
 bool llvm::isTriviallyDead(const MachineInstr &MI,
                            const MachineRegisterInfo &MRI) {
+  // FIXME: This logical is mostly duplicated with
+  // DeadMachineInstructionElim::isDead. Why is LOCAL_ESCAPE not considered in
+  // MachineInstr::isLabel?
+
+  // Don't delete frame allocation labels.
+  if (MI.getOpcode() == TargetOpcode::LOCAL_ESCAPE)
+    return false;
+
   // If we can move an instruction, we can remove it.  Otherwise, it has
   // a side-effect of some sort.
   bool SawStore = false;

@@ -421,6 +421,12 @@ if( MSVC )
 
   append("/Zc:inline" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
+  # Some projects use the __cplusplus preprocessor macro to check support for
+  # a particular version of the C++ standard. When this option is not specified
+  # explicitly, macro's value is "199711L" that implies C++98 Standard.
+  # https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus/
+  append("/Zc:__cplusplus" CMAKE_CXX_FLAGS)
+
   # Allow users to request PDBs in release mode. CMake offeres the
   # RelWithDebInfo configuration, but it uses different optimization settings
   # (/Ob1 vs /Ob2 or -O2 vs -O3). LLVM provides this flag so that users can get

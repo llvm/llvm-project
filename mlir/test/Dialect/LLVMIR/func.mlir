@@ -4,19 +4,19 @@
 module {
   // GENERIC: "llvm.func"
   // GENERIC: sym_name = "foo"
-  // GENERIC-SAME: type = !llvm<"void ()">
+  // GENERIC-SAME: type = !llvm.func<void ()>
   // GENERIC-SAME: () -> ()
   // CHECK: llvm.func @foo()
   "llvm.func"() ({
-  }) {sym_name = "foo", type = !llvm<"void ()">} : () -> ()
+  }) {sym_name = "foo", type = !llvm.func<void ()>} : () -> ()
 
   // GENERIC: "llvm.func"
   // GENERIC: sym_name = "bar"
-  // GENERIC-SAME: type = !llvm<"i64 (i64, i64)">
+  // GENERIC-SAME: type = !llvm.func<i64 (i64, i64)>
   // GENERIC-SAME: () -> ()
   // CHECK: llvm.func @bar(!llvm.i64, !llvm.i64) -> !llvm.i64
   "llvm.func"() ({
-  }) {sym_name = "bar", type = !llvm<"i64 (i64, i64)">} : () -> ()
+  }) {sym_name = "bar", type = !llvm.func<i64 (i64, i64)>} : () -> ()
 
   // GENERIC: "llvm.func"
   // CHECK: llvm.func @baz(%{{.*}}: !llvm.i64) -> !llvm.i64
@@ -27,14 +27,14 @@ module {
     llvm.return %arg0 : !llvm.i64
 
   // GENERIC: sym_name = "baz"
-  // GENERIC-SAME: type = !llvm<"i64 (i64)">
+  // GENERIC-SAME: type = !llvm.func<i64 (i64)>
   // GENERIC-SAME: () -> ()
-  }) {sym_name = "baz", type = !llvm<"i64 (i64)">} : () -> ()
+  }) {sym_name = "baz", type = !llvm.func<i64 (i64)>} : () -> ()
 
-  // CHECK: llvm.func @qux(!llvm<"i64*"> {llvm.noalias = true}, !llvm.i64)
+  // CHECK: llvm.func @qux(!llvm.ptr<i64> {llvm.noalias = true}, !llvm.i64)
   // CHECK: attributes {xxx = {yyy = 42 : i64}}
   "llvm.func"() ({
-  }) {sym_name = "qux", type = !llvm<"void (i64*, i64)">,
+  }) {sym_name = "qux", type = !llvm.func<void (ptr<i64>, i64)>,
       arg0 = {llvm.noalias = true}, xxx = {yyy = 42}} : () -> ()
 
   // CHECK: llvm.func @roundtrip1()
@@ -69,20 +69,20 @@ module {
   // CHECK: llvm.func @roundtrip8() -> !llvm.i32
   llvm.func @roundtrip8() -> !llvm.i32 attributes {}
 
-  // CHECK: llvm.func @roundtrip9(!llvm<"i32*"> {llvm.noalias = true})
-  llvm.func @roundtrip9(!llvm<"i32*"> {llvm.noalias = true})
+  // CHECK: llvm.func @roundtrip9(!llvm.ptr<i32> {llvm.noalias = true})
+  llvm.func @roundtrip9(!llvm.ptr<i32> {llvm.noalias = true})
 
-  // CHECK: llvm.func @roundtrip10(!llvm<"i32*"> {llvm.noalias = true})
-  llvm.func @roundtrip10(%arg0: !llvm<"i32*"> {llvm.noalias = true})
+  // CHECK: llvm.func @roundtrip10(!llvm.ptr<i32> {llvm.noalias = true})
+  llvm.func @roundtrip10(%arg0: !llvm.ptr<i32> {llvm.noalias = true})
 
-  // CHECK: llvm.func @roundtrip11(%{{.*}}: !llvm<"i32*"> {llvm.noalias = true}) {
-  llvm.func @roundtrip11(%arg0: !llvm<"i32*"> {llvm.noalias = true}) {
+  // CHECK: llvm.func @roundtrip11(%{{.*}}: !llvm.ptr<i32> {llvm.noalias = true}) {
+  llvm.func @roundtrip11(%arg0: !llvm.ptr<i32> {llvm.noalias = true}) {
     llvm.return
   }
 
-  // CHECK: llvm.func @roundtrip12(%{{.*}}: !llvm<"i32*"> {llvm.noalias = true})
+  // CHECK: llvm.func @roundtrip12(%{{.*}}: !llvm.ptr<i32> {llvm.noalias = true})
   // CHECK: attributes {foo = 42 : i32}
-  llvm.func @roundtrip12(%arg0: !llvm<"i32*"> {llvm.noalias = true})
+  llvm.func @roundtrip12(%arg0: !llvm.ptr<i32> {llvm.noalias = true})
   attributes {foo = 42 : i32} {
     llvm.return
   }
@@ -119,7 +119,7 @@ module {
 
 module {
   // expected-error@+1 {{requires one region}}
-  "llvm.func"() {sym_name = "no_region", type = !llvm<"void ()">} : () -> ()
+  "llvm.func"() {sym_name = "no_region", type = !llvm.func<void ()>} : () -> ()
 }
 
 // -----
@@ -140,7 +140,7 @@ module {
 
 module {
   // expected-error@+1 {{requires 'type' attribute of wrapped LLVM function type}}
-  "llvm.func"() ({}) {sym_name = "non_function_type", type = !llvm<"i64">} : () -> ()
+  "llvm.func"() ({}) {sym_name = "non_function_type", type = !llvm.i64} : () -> ()
 }
 
 // -----
@@ -150,7 +150,7 @@ module {
   "llvm.func"() ({
   ^bb0(%arg0: !llvm.i64):
     llvm.return
-  }) {sym_name = "wrong_arg_number", type = !llvm<"void ()">} : () -> ()
+  }) {sym_name = "wrong_arg_number", type = !llvm.func<void ()>} : () -> ()
 }
 
 // -----
@@ -160,7 +160,7 @@ module {
   "llvm.func"() ({
   ^bb0(%arg0: i64):
     llvm.return
-  }) {sym_name = "wrong_arg_number", type = !llvm<"void (i64)">} : () -> ()
+  }) {sym_name = "wrong_arg_number", type = !llvm.func<void (i64)>} : () -> ()
 }
 
 // -----
@@ -170,7 +170,7 @@ module {
   "llvm.func"() ({
   ^bb0(%arg0: !llvm.i32):
     llvm.return
-  }) {sym_name = "wrong_arg_number", type = !llvm<"void (i64)">} : () -> ()
+  }) {sym_name = "wrong_arg_number", type = !llvm.func<void (i64)>} : () -> ()
 }
 
 // -----

@@ -244,7 +244,16 @@ void mlir::populateLinalgToStandardConversionPatterns(
       LinalgOpConversion<DotOp>,
       LinalgOpConversion<BatchMatmulOp>,
       LinalgOpConversion<MatvecOp>,
-      LinalgOpConversion<MatmulOp>>(ctx);
+      LinalgOpConversion<MatmulOp>,
+      LinalgOpConversion<ConvWOp>,
+      LinalgOpConversion<ConvNWCOp>,
+      LinalgOpConversion<ConvNCWOp>,
+      LinalgOpConversion<ConvHWOp>,
+      LinalgOpConversion<ConvNHWCOp>,
+      LinalgOpConversion<ConvNCHWOp>,
+      LinalgOpConversion<ConvDHWOp>,
+      LinalgOpConversion<ConvNDHWCOp>,
+      LinalgOpConversion<ConvNCDHWOp>>(ctx);
   // clang-format on
 }
 

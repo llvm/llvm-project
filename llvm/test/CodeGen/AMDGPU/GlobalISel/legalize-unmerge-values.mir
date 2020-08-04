@@ -60,13 +60,15 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: test_unmerge_s16_v3s16
     ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
-    ; CHECK: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT]](<3 x s16>), 0
-    ; CHECK: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT]](<4 x s16>)
-    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
+    ; CHECK: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[DEF]](<4 x s16>), [[DEF1]](<4 x s16>), [[DEF1]](<4 x s16>)
+    ; CHECK: [[UV:%[0-9]+]]:_(<3 x s16>), [[UV1:%[0-9]+]]:_(<3 x s16>), [[UV2:%[0-9]+]]:_(<3 x s16>), [[UV3:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s16>)
+    ; CHECK: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[UV]](<3 x s16>), 0
+    ; CHECK: [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT]](<4 x s16>)
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV4]](<2 x s16>)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
+    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV5]](<2 x s16>)
     ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
@@ -1121,5 +1123,31 @@ body: |
     %6:_(s32) = G_ANYEXT %4
     $vgpr0 = COPY %5
     $vgpr1 = COPY %6
+
+...
+
+---
+name: test_unmerge_v3s32_v12s32
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5, $vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+
+    ; CHECK-LABEL: name: test_unmerge_v3s32_v12s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(<6 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<6 x s32>) = COPY $vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK: [[UV:%[0-9]+]]:_(<3 x s32>), [[UV1:%[0-9]+]]:_(<3 x s32>) = G_UNMERGE_VALUES [[COPY]](<6 x s32>)
+    ; CHECK: [[UV2:%[0-9]+]]:_(<3 x s32>), [[UV3:%[0-9]+]]:_(<3 x s32>) = G_UNMERGE_VALUES [[COPY1]](<6 x s32>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[UV]](<3 x s32>)
+    ; CHECK: $vgpr3_vgpr4_vgpr5 = COPY [[UV1]](<3 x s32>)
+    ; CHECK: $vgpr6_vgpr7_vgpr8 = COPY [[UV2]](<3 x s32>)
+    ; CHECK: $vgpr9_vgpr10_vgpr11 = COPY [[UV3]](<3 x s32>)
+    %0:_(<6 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    %1:_(<6 x s32>) = COPY $vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+    %2:_(<12 x s32>) = G_CONCAT_VECTORS %0, %1
+    %3:_(<3 x s32>), %4:_(<3 x s32>), %5:_(<3 x s32>), %6:_(<3 x s32>) = G_UNMERGE_VALUES %2
+    $vgpr0_vgpr1_vgpr2 = COPY %3
+    $vgpr3_vgpr4_vgpr5 = COPY %4
+    $vgpr6_vgpr7_vgpr8 = COPY %5
+    $vgpr9_vgpr10_vgpr11 = COPY %6
 
 ...

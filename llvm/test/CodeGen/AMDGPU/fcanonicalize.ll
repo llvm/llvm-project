@@ -57,7 +57,7 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_f32(float addrspace(1)* 
 define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f32(float addrspace(1)* %out) #1 {
   %val = load float, float addrspace(1)* %out
   %val.fabs = call float @llvm.fabs.f32(float %val)
-  %val.fabs.fneg = fsub float -0.0, %val.fabs
+  %val.fabs.fneg = fneg float %val.fabs
   %canonicalized = call float @llvm.canonicalize.f32(float %val.fabs.fneg)
   store float %canonicalized, float addrspace(1)* %out
   ret void
@@ -69,7 +69,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f32(float addrspace
 ; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[REG]]
 define amdgpu_kernel void @v_test_canonicalize_fneg_var_f32(float addrspace(1)* %out) #1 {
   %val = load float, float addrspace(1)* %out
-  %val.fneg = fsub float -0.0, %val
+  %val.fneg = fneg float %val
   %canonicalized = call float @llvm.canonicalize.f32(float %val.fneg)
   store float %canonicalized, float addrspace(1)* %out
   ret void
@@ -264,7 +264,7 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_f64(double addrspace(1)*
 define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f64(double addrspace(1)* %out) #1 {
   %val = load double, double addrspace(1)* %out
   %val.fabs = call double @llvm.fabs.f64(double %val)
-  %val.fabs.fneg = fsub double -0.0, %val.fabs
+  %val.fabs.fneg = fneg double %val.fabs
   %canonicalized = call double @llvm.canonicalize.f64(double %val.fabs.fneg)
   store double %canonicalized, double addrspace(1)* %out
   ret void
@@ -275,7 +275,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f64(double addrspac
 ; GCN: {{flat|global}}_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, [[REG]]
 define amdgpu_kernel void @v_test_canonicalize_fneg_var_f64(double addrspace(1)* %out) #1 {
   %val = load double, double addrspace(1)* %out
-  %val.fneg = fsub double -0.0, %val
+  %val.fneg = fneg double %val
   %canonicalized = call double @llvm.canonicalize.f64(double %val.fneg)
   store double %canonicalized, double addrspace(1)* %out
   ret void

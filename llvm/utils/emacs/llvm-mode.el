@@ -25,7 +25,7 @@
        '("alwaysinline" "argmemonly" "builtin" "cold" "convergent" "inaccessiblememonly"
          "inaccessiblemem_or_argmemonly" "inlinehint" "jumptable" "minsize" "naked" "nobuiltin"
          "noduplicate" "noimplicitfloat" "noinline" "nonlazybind" "noredzone" "noreturn"
-         "norecurse" "nounwind" "optnone" "optsize" "readnone" "readonly" "returns_twice"
+         "norecurse" "noundef" "nounwind" "optnone" "optsize" "readnone" "readonly" "returns_twice"
          "speculatable" "ssp" "sspreq" "sspstrong" "safestack" "sanitize_address" "sanitize_hwaddress" "sanitize_memtag"
          "sanitize_thread" "sanitize_memory" "strictfp" "uwtable" "writeonly" "immarg") 'symbols) . font-lock-constant-face)
    ;; Variables

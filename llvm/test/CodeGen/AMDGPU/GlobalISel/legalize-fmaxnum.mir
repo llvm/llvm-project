@@ -506,8 +506,9 @@ body: |
     ; GFX9: [[FCANONICALIZE3:%[0-9]+]]:_(<2 x s16>) = G_FCANONICALIZE [[UV3]]
     ; GFX9: [[FMAXNUM_IEEE1:%[0-9]+]]:_(<2 x s16>) = G_FMAXNUM_IEEE [[FCANONICALIZE2]], [[FCANONICALIZE3]]
     ; GFX9: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[FMAXNUM_IEEE]](<2 x s16>), [[FMAXNUM_IEEE1]](<2 x s16>)
-    ; GFX9: [[EXTRACT2:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
-    ; GFX9: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT2]](<3 x s16>), 0
+    ; GFX9: [[CONCAT_VECTORS1:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[CONCAT_VECTORS]](<4 x s16>), [[DEF]](<4 x s16>), [[DEF]](<4 x s16>)
+    ; GFX9: [[UV4:%[0-9]+]]:_(<3 x s16>), [[UV5:%[0-9]+]]:_(<3 x s16>), [[UV6:%[0-9]+]]:_(<3 x s16>), [[UV7:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS1]](<12 x s16>)
+    ; GFX9: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[UV4]](<3 x s16>), 0
     ; GFX9: $vgpr0_vgpr1 = COPY [[INSERT2]](<4 x s16>)
     %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
     %1:_(<4 x s16>) = COPY $vgpr2_vgpr3

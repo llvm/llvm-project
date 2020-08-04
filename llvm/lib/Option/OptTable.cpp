@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Option/OptTable.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Option/Option.h"
 #include "llvm/Option/OptSpecifier.h"
-#include "llvm/Option/OptTable.h"
+#include "llvm/Option/Option.h"
+#include "llvm/Support/CommandLine.h" // for expandResponseFiles
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -487,6 +488,33 @@ InputArgList OptTable::ParseArgs(ArrayRef<const char *> ArgArr,
     Args.append(A);
   }
 
+  return Args;
+}
+
+InputArgList OptTable::parseArgs(int Argc, char *const *Argv,
+                                 OptSpecifier Unknown, StringSaver &Saver,
+                                 function_ref<void(StringRef)> ErrorFn) const {
+  SmallVector<const char *, 0> NewArgv;
+  // The environment variable specifies initial options which can be overridden
+  // by commnad line options.
+  cl::expandResponseFiles(Argc, Argv, EnvVar, Saver, NewArgv);
+
+  unsigned MAI, MAC;
+  opt::InputArgList Args = ParseArgs(makeArrayRef(NewArgv), MAI, MAC);
+  if (MAC)
+    ErrorFn((Twine(Args.getArgString(MAI)) + ": missing argument").str());
+
+  // For each unknwon option, call ErrorFn with a formatted error message. The
+  // message includes a suggested alternative option spelling if available.
+  std::string Nearest;
+  for (const opt::Arg *A : Args.filtered(Unknown)) {
+    std::string Spelling = A->getAsString(Args);
+    if (findNearest(Spelling, Nearest) > 1)
+      ErrorFn("unknown argument '" + A->getAsString(Args) + "'");
+    else
+      ErrorFn("unknown argument '" + A->getAsString(Args) +
+              "', did you mean '" + Nearest + "'?");
+  }
   return Args;
 }
 

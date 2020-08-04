@@ -19,16 +19,8 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_LANAI
 Sections:
-  - Name:         .text
-    Type:         SHT_PROGBITS
-    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
-    AddressAlign: 0x0000000000000004
-    Content:      00
-  - Name:         .rela.text
-    Type:         SHT_RELA
-    AddressAlign: 0x0000000000000004
-    EntSize:      0x000000000000000C
-    Info:         .text
+  - Name: .rela.text
+    Type: SHT_RELA
     Relocations:
       - Type: R_LANAI_NONE
       - Type: R_LANAI_21

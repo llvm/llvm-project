@@ -1,9 +1,9 @@
 ## Check how llvm-readobj prints sections with --sections.
 ## We test the --sections flag for llvm-readelf in the gnu-sections.test.
 
-# RUN: yaml2obj --docnum=1 %s -o %t64
+# RUN: yaml2obj %s -o %t64
 # RUN: llvm-readobj --sections %t64 | FileCheck %s --check-prefixes=ELF,ELF64
-# RUN: yaml2obj --docnum=2 %s -o %t32
+# RUN: yaml2obj -DBITS=32 %s -o %t32
 # RUN: llvm-readobj --sections %t32 | FileCheck %s --check-prefixes=ELF,ELF32
 
 ## Check flag aliases produce identical output.
@@ -89,27 +89,10 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
+  Class:   ELFCLASS[[BITS=64]]
   Data:    ELFDATA2LSB
   Type:    ET_REL
-  Machine: EM_X86_64
-Sections:
-  - Name:         .foo
-    Type:         SHT_PROGBITS
-    Info:         1
-    Address:      0x2
-    Size:         0x3
-    Flags:        [ SHF_WRITE, SHF_ALLOC ]
-    Link:         4
-    AddressAlign: 5
-    EntSize:      6
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_386
+  Machine: EM_NONE
 Sections:
   - Name:         .foo
     Type:         SHT_PROGBITS

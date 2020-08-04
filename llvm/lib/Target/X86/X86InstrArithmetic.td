@@ -1182,6 +1182,15 @@ defm SUB : ArithBinOp_RF<0x28, 0x2A, 0x2C, "sub", MRM5r, MRM5m,
                          X86sub_flag, sub, 0, 1, 0>;
 }
 
+// Version of XOR8rr_NOREX that use GR8_NOREX. This is used by the handling of
+// __builtin_parity where the last step xors an h-register with an l-register.
+let isCodeGenOnly = 1, hasSideEffects = 0, Constraints = "$src1 = $dst",
+    Defs = [EFLAGS], isCommutable = 1 in
+def XOR8rr_NOREX : I<0x30, MRMDestReg, (outs GR8_NOREX:$dst),
+                     (ins GR8_NOREX:$src1, GR8_NOREX:$src2),
+                     "xor{b}\t{$src2, $dst|$dst, $src2}", []>,
+                     Sched<[WriteALU]>;
+
 // Arithmetic.
 defm ADC : ArithBinOp_RFF<0x10, 0x12, 0x14, "adc", MRM2r, MRM2m, X86adc_flag,
                           1, 0>;

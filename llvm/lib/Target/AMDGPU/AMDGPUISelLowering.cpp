@@ -2097,7 +2097,7 @@ SDValue AMDGPUTargetLowering::LowerSDIVREM(SDValue Op,
   return DAG.getMergeValues(Res, DL);
 }
 
-// (frem x, y) -> (fsub x, (fmul (ftrunc (fdiv x, y)), y))
+// (frem x, y) -> (fma (fneg (ftrunc (fdiv x, y))), y, x)
 SDValue AMDGPUTargetLowering::LowerFREM(SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   EVT VT = Op.getValueType();
@@ -2107,10 +2107,10 @@ SDValue AMDGPUTargetLowering::LowerFREM(SDValue Op, SelectionDAG &DAG) const {
   // TODO: Should this propagate fast-math-flags?
 
   SDValue Div = DAG.getNode(ISD::FDIV, SL, VT, X, Y);
-  SDValue Floor = DAG.getNode(ISD::FTRUNC, SL, VT, Div);
-  SDValue Mul = DAG.getNode(ISD::FMUL, SL, VT, Floor, Y);
-
-  return DAG.getNode(ISD::FSUB, SL, VT, X, Mul);
+  SDValue Trunc = DAG.getNode(ISD::FTRUNC, SL, VT, Div);
+  SDValue Neg = DAG.getNode(ISD::FNEG, SL, VT, Trunc);
+  // TODO: For f32 use FMAD instead if !hasFastFMA32?
+  return DAG.getNode(ISD::FMA, SL, VT, Neg, Y, X);
 }
 
 SDValue AMDGPUTargetLowering::LowerFCEIL(SDValue Op, SelectionDAG &DAG) const {
@@ -3813,8 +3813,15 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     SDValue Res = DAG.getNode(AMDGPUISD::FMED3, SL, VT, Ops, N0->getFlags());
     if (Res.getOpcode() != AMDGPUISD::FMED3)
       return SDValue(); // Op got folded away.
-    if (!N0.hasOneUse())
-      DAG.ReplaceAllUsesWith(N0, DAG.getNode(ISD::FNEG, SL, VT, Res));
+
+    if (!N0.hasOneUse()) {
+      SDValue Neg = DAG.getNode(ISD::FNEG, SL, VT, Res);
+      DAG.ReplaceAllUsesWith(N0, Neg);
+
+      for (SDNode *U : Neg->uses())
+        DCI.AddToWorklist(U);
+    }
+
     return Res;
   }
   case ISD::FP_EXTEND:

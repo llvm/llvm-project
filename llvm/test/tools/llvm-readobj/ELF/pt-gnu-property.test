@@ -2,6 +2,8 @@
 # RUN: llvm-readelf --program-headers %t | FileCheck %s --check-prefix=GNU
 # RUN: llvm-readobj --program-headers %t | FileCheck %s --check-prefix=LLVM
 
+## TODO: merge this test with program-headers.test.
+
 # GNU: {{ }}GNU_PROPERTY{{ }}
 
 # LLVM:        ProgramHeader {

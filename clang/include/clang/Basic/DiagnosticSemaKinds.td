@@ -10751,9 +10751,12 @@ def err_multiversion_duplicate : Error<
   "multiversioned function redeclarations require identical target attributes">;
 def err_multiversion_noproto : Error<
   "multiversioned function must have a prototype">;
-def err_multiversion_no_other_attrs : Error<
+def err_multiversion_disallowed_other_attr : Error<
   "attribute '%select{target|cpu_specific|cpu_dispatch}0' multiversioning cannot be combined"
-  " with other attributes">;
+  " with attribute %1">;
+def err_multiversion_mismatched_attrs
+    : Error<"attributes on multiversioned functions must all match, attribute "
+            "%0 %select{is missing|has different arguments}1">;
 def err_multiversion_diff : Error<
   "multiversioned function declaration has a different %select{calling convention"
   "|return type|constexpr specification|inline specification|storage class|"
@@ -10862,6 +10865,14 @@ def err_preserve_field_info_not_const: Error<
   "__builtin_preserve_field_info argument %0 not a constant">;
 def err_btf_type_id_not_const: Error<
   "__builtin_btf_type_id argument %0 not a constant">;
+def err_preserve_type_info_invalid : Error<
+  "__builtin_preserve_type_info argument %0 invalid">;
+def err_preserve_type_info_not_const: Error<
+  "__builtin_preserve_type_info argument %0 not a constant">;
+def err_preserve_enum_value_invalid : Error<
+  "__builtin_preserve_enum_value argument %0 invalid">;
+def err_preserve_enum_value_not_const: Error<
+  "__builtin_preserve_enum_value argument %0 not a constant">;
 
 def err_bit_cast_non_trivially_copyable : Error<
   "__builtin_bit_cast %select{source|destination}0 type must be trivially copyable">;

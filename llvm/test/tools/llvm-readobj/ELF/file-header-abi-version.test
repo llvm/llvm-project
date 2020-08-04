@@ -1,23 +1,25 @@
 ## This is a test to test how the ABI version field (EI_ABIVERSION) of an ELF file header is dumped.
 
 ## EI_ABIVERSION is set to zero.
-# RUN: yaml2obj %s --docnum=1 -o %t.abiver.zero
+# RUN: yaml2obj %s -DABIVERSION=0 -o %t.abiver.zero
 # RUN: llvm-readobj --file-headers %t.abiver.zero | FileCheck %s --match-full-lines --check-prefix=ABIVER-ZERO-LLVM
 # RUN: llvm-readelf --file-headers %t.abiver.zero | FileCheck %s --match-full-lines --check-prefix=ABIVER-ZERO-GNU
-## EI_ABIVERSION is set to an arbitrary number.
-# RUN: yaml2obj %s --docnum=2 -o %t.abiver.any
-# RUN: llvm-readobj --file-headers %t.abiver.any | FileCheck %s --match-full-lines --check-prefix=ABIVER-ANY-LLVM
-# RUN: llvm-readelf --file-headers %t.abiver.any | FileCheck %s --match-full-lines --check-prefix=ABIVER-ANY-GNU
-## EI_ABIVERSION is set to the maximum possible value.
-# RUN: yaml2obj %s --docnum=3 -o %t.abiver.max
-# RUN: llvm-readobj --file-headers %t.abiver.max | FileCheck %s --match-full-lines --check-prefix=ABIVER-MAX-LLVM
-# RUN: llvm-readelf --file-headers %t.abiver.max | FileCheck %s --match-full-lines --check-prefix=ABIVER-MAX-GNU
 
 # ABIVER-ZERO-LLVM: ABIVersion: 0
 # ABIVER-ZERO-GNU:  ABI Version: 0
 
+## EI_ABIVERSION is set to an arbitrary number.
+# RUN: yaml2obj %s -DABIVERSION=52 -o %t.abiver.any
+# RUN: llvm-readobj --file-headers %t.abiver.any | FileCheck %s --match-full-lines --check-prefix=ABIVER-ANY-LLVM
+# RUN: llvm-readelf --file-headers %t.abiver.any | FileCheck %s --match-full-lines --check-prefix=ABIVER-ANY-GNU
+
 # ABIVER-ANY-LLVM: ABIVersion: 52
 # ABIVER-ANY-GNU:  ABI Version: 52
+
+## EI_ABIVERSION is set to the maximum possible value.
+# RUN: yaml2obj %s -DABIVERSION=255 -o %t.abiver.max
+# RUN: llvm-readobj --file-headers %t.abiver.max | FileCheck %s --match-full-lines --check-prefix=ABIVER-MAX-LLVM
+# RUN: llvm-readelf --file-headers %t.abiver.max | FileCheck %s --match-full-lines --check-prefix=ABIVER-MAX-GNU
 
 # ABIVER-MAX-LLVM: ABIVersion: 255
 # ABIVER-MAX-GNU:  ABI Version: 255
@@ -28,20 +30,4 @@ FileHeader:
   Data:       ELFDATA2LSB
   Type:       ET_REL
   Machine:    EM_X86_64
-  ABIVersion: 0x0
-
---- !ELF
-FileHeader:
-  Class:      ELFCLASS64
-  Data:       ELFDATA2LSB
-  Type:       ET_REL
-  Machine:    EM_X86_64
-  ABIVersion: 0x34
-
---- !ELF
-FileHeader:
-  Class:      ELFCLASS64
-  Data:       ELFDATA2LSB
-  Type:       ET_REL
-  Machine:    EM_X86_64
-  ABIVersion: 0xFF
+  ABIVersion: [[ABIVERSION]]

@@ -188,7 +188,7 @@ public:
   }
 
 private:
-  enum class VisitKind { No, OnlyDecl, DeclAndChildren };
+  enum class VisitKind { No, OnlyDecl, OnlyChildren, DeclAndChildren };
 
   void traverseDecl(Decl *D, std::vector<DocumentSymbol> &Results) {
     if (auto *Templ = llvm::dyn_cast<TemplateDecl>(D)) {
@@ -196,18 +196,25 @@ private:
       if (auto *TD = Templ->getTemplatedDecl())
         D = TD;
     }
-    auto *ND = llvm::dyn_cast<NamedDecl>(D);
-    if (!ND)
-      return;
-    VisitKind Visit = shouldVisit(ND);
+
+    VisitKind Visit = shouldVisit(D);
     if (Visit == VisitKind::No)
       return;
-    llvm::Optional<DocumentSymbol> Sym = declToSym(AST.getASTContext(), *ND);
+
+    if (Visit == VisitKind::OnlyChildren)
+      return traverseChildren(D, Results);
+
+    auto *ND = llvm::cast<NamedDecl>(D);
+    auto Sym = declToSym(AST.getASTContext(), *ND);
     if (!Sym)
       return;
-    if (Visit == VisitKind::DeclAndChildren)
-      traverseChildren(D, Sym->children);
     Results.push_back(std::move(*Sym));
+
+    if (Visit == VisitKind::OnlyDecl)
+      return;
+
+    assert(Visit == VisitKind::DeclAndChildren && "Unexpected VisitKind");
+    traverseChildren(ND, Results.back().children);
   }
 
   void traverseChildren(Decl *D, std::vector<DocumentSymbol> &Results) {
@@ -218,8 +225,14 @@ private:
       traverseDecl(C, Results);
   }
 
-  VisitKind shouldVisit(NamedDecl *D) {
+  VisitKind shouldVisit(Decl *D) {
     if (D->isImplicit())
+      return VisitKind::No;
+
+    if (llvm::isa<LinkageSpecDecl>(D) || llvm::isa<ExportDecl>(D))
+      return VisitKind::OnlyChildren;
+
+    if (!llvm::isa<NamedDecl>(D))
       return VisitKind::No;
 
     if (auto Func = llvm::dyn_cast<FunctionDecl>(D)) {

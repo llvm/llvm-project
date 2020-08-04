@@ -547,3 +547,35 @@ Sections:
       - Tag:   DT_PLTGOT
         Value: [[VAL2=0]]
 DynamicSymbols: []
+
+## Check that we do not report a warning about the .got section when we are able to locate it by name.
+# RUN: yaml2obj --docnum=3 -DNAME=0xffff %s -o %t.err6.o
+# RUN: llvm-readobj -A %t.err6.o 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err6.o -check-prefix=NAME-ERR-FOUND --implicit-check-not=warning:
+# RUN: llvm-readelf -A %t.err6.o 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err6.o -check-prefix=NAME-ERR-FOUND --implicit-check-not=warning:
+
+# NAME-ERR-FOUND:      warning: '[[FILE]]': unable to read the name of SHT_PROGBITS section with index 1: a section [index 1] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+# NAME-ERR-FOUND-NEXT: warning: '[[FILE]]': unable to read the name of SHT_PROGBITS section with index 3: a section [index 3] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+Sections:
+  - Type:   SHT_PROGBITS
+    ShName: [[NAME=<none>]]
+  - Name:   .got
+    Type:   SHT_PROGBITS
+    ShName: [[GOTNAME=<none>]]
+  - Type:   SHT_PROGBITS
+    ShName: [[NAME=<none>]]
+
+## Check we report a warning when we are unable to find the .got section due to an error.
+# RUN: yaml2obj --docnum=3 -DGOTNAME=0xffff %s -o %t.err7.o
+# RUN: llvm-readelf -A %t.err7.o 2>&1 | FileCheck %s -DFILE=%t.err7.o --check-prefix=NAME-ERR-NOTFOUND --implicit-check-not=warning:
+# RUN: llvm-readobj -A %t.err7.o 2>&1 | FileCheck %s -DFILE=%t.err7.o --check-prefix=NAME-ERR-NOTFOUND --implicit-check-not=warning:
+
+# NAME-ERR-NOTFOUND:      warning: '[[FILE]]': unable to read the name of SHT_PROGBITS section with index 2: a section [index 2] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table

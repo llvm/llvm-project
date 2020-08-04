@@ -2,8 +2,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     # ctype.h entrypoints
     libc.src.ctype.isalnum
     libc.src.ctype.isalpha
+    libc.src.ctype.isblank
+    libc.src.ctype.iscntrl
     libc.src.ctype.isdigit
+    libc.src.ctype.isgraph
     libc.src.ctype.islower
+    libc.src.ctype.ispunct
     libc.src.ctype.isupper
     
     # errno.h entrypoints

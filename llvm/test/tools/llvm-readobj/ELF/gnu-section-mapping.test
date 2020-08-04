@@ -18,7 +18,7 @@ FileHeader:
   Data:       ELFDATA2LSB
   Type:       ET_EXEC
   Machine:    EM_X86_64
-  EPhEntSize: [[PHENTSIZE=56]]
+  EPhEntSize: [[PHENTSIZE=<none>]]
 Sections:
   - Name:    .foo.begin
     Type:    SHT_PROGBITS

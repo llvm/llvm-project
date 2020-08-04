@@ -343,7 +343,7 @@ FileHeader:
 # RUN: yaml2obj %s --docnum=16 -o %t16
 # RUN: llvm-readobj --sections %t16 2>&1 | FileCheck -DFILE=%t16 --check-prefix=BROKEN-SECNAME %s
 
-## BROKEN-SECNAME: warning: '[[FILE]]': a section [index 2] has an invalid sh_name (0xb) offset which goes past the end of the section name string table
+## BROKEN-SECNAME: warning: '[[FILE]]': unable to get the name of SHT_STRTAB section with index 2: a section [index 2] has an invalid sh_name (0xb) offset which goes past the end of the section name string table
 
 --- !ELF
 FileHeader:

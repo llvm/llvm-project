@@ -1,11 +1,11 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -convert-std-to-llvm -split-input-file -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL: func @address_space(
-// CHECK-SAME:    !llvm<"float addrspace(7)*">
+// CHECK-SAME:    !llvm.ptr<float, 7>
 func @address_space(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>, 7>) {
   %0 = alloc() : memref<32xf32, affine_map<(d0) -> (d0)>, 5>
   %1 = constant 7 : index
-  // CHECK: llvm.load %{{.*}} : !llvm<"float addrspace(5)*">
+  // CHECK: llvm.load %{{.*}} : !llvm.ptr<float, 5>
   %2 = load %0[%1] : memref<32xf32, affine_map<(d0) -> (d0)>, 5>
   std.return
 }
@@ -53,11 +53,11 @@ func @rsqrt_double(%arg0 : f64) {
 // -----
 
 // CHECK-LABEL: func @rsqrt_vector(
-// CHECK-SAME: !llvm<"<4 x float>">
+// CHECK-SAME: !llvm.vec<4 x float>
 func @rsqrt_vector(%arg0 : vector<4xf32>) {
-  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : !llvm<"<4 x float>">
-  // CHECK: %[[SQRT:.*]] = "llvm.intr.sqrt"(%arg0) : (!llvm<"<4 x float>">) -> !llvm<"<4 x float>">
-  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] : !llvm<"<4 x float>">
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : !llvm.vec<4 x float>
+  // CHECK: %[[SQRT:.*]] = "llvm.intr.sqrt"(%arg0) : (!llvm.vec<4 x float>) -> !llvm.vec<4 x float>
+  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] : !llvm.vec<4 x float>
   %0 = rsqrt %arg0 : vector<4xf32>
   std.return
 }
@@ -65,13 +65,13 @@ func @rsqrt_vector(%arg0 : vector<4xf32>) {
 // -----
 
 // CHECK-LABEL: func @rsqrt_multidim_vector(
-// CHECK-SAME: !llvm<"[4 x <3 x float>]">
+// CHECK-SAME: !llvm.array<4 x vec<3 x float>>
 func @rsqrt_multidim_vector(%arg0 : vector<4x3xf32>) {
-  // CHECK: %[[EXTRACT:.*]] = llvm.extractvalue %arg0[0] : !llvm<"[4 x <3 x float>]">
-  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<3xf32>) : !llvm<"<3 x float>">
-  // CHECK: %[[SQRT:.*]] = "llvm.intr.sqrt"(%[[EXTRACT]]) : (!llvm<"<3 x float>">) -> !llvm<"<3 x float>">
-  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] : !llvm<"<3 x float>">
-  // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[DIV]], %0[0] : !llvm<"[4 x <3 x float>]">
+  // CHECK: %[[EXTRACT:.*]] = llvm.extractvalue %arg0[0] : !llvm.array<4 x vec<3 x float>>
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<3xf32>) : !llvm.vec<3 x float>
+  // CHECK: %[[SQRT:.*]] = "llvm.intr.sqrt"(%[[EXTRACT]]) : (!llvm.vec<3 x float>) -> !llvm.vec<3 x float>
+  // CHECK: %[[DIV:.*]] = llvm.fdiv %[[ONE]], %[[SQRT]] : !llvm.vec<3 x float>
+  // CHECK: %[[INSERT:.*]] = llvm.insertvalue %[[DIV]], %0[0] : !llvm.array<4 x vec<3 x float>>
   %0 = rsqrt %arg0 : vector<4x3xf32>
   std.return
 }

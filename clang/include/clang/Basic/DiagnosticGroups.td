@@ -699,6 +699,7 @@ def ReorderInitList : DiagGroup<"reorder-init-list">;
 def Reorder : DiagGroup<"reorder", [ReorderCtor, ReorderInitList]>;
 def UndeclaredSelector : DiagGroup<"undeclared-selector">;
 def ImplicitAtomic : DiagGroup<"implicit-atomic-properties">;
+def AtomicAlignment : DiagGroup<"atomic-alignment">;
 def CustomAtomic : DiagGroup<"custom-atomic-properties">;
 def AtomicProperties : DiagGroup<"atomic-properties",
                                  [ImplicitAtomic, CustomAtomic]>;

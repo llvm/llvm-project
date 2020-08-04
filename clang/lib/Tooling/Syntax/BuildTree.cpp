@@ -939,6 +939,8 @@ public:
     return true;
   }
 
+  // FIXME: Deleting the `TraverseParenTypeLoc` override doesn't change test
+  // results. Find test coverage or remove it.
   bool TraverseParenTypeLoc(ParenTypeLoc L) {
     // We reverse order of traversal to get the proper syntax structure.
     if (!WalkUpFromParenTypeLoc(L))
@@ -985,6 +987,16 @@ public:
     Builder.markChild(TrailingReturnTokens,
                       syntax::NodeRole::ParametersAndQualifiers_trailingReturn);
     return WalkUpFromFunctionTypeLoc(L);
+  }
+
+  bool TraverseMemberPointerTypeLoc(MemberPointerTypeLoc L) {
+    // In the source code "void (Y::*mp)()" `MemberPointerTypeLoc` corresponds
+    // to "Y::*" but it points to a `ParenTypeLoc` that corresponds to
+    // "(Y::*mp)" We thus reverse the order of traversal to get the proper
+    // syntax structure.
+    if (!WalkUpFromMemberPointerTypeLoc(L))
+      return false;
+    return TraverseTypeLoc(L.getPointeeLoc());
   }
 
   bool WalkUpFromMemberPointerTypeLoc(MemberPointerTypeLoc L) {

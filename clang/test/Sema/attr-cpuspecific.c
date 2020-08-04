@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu  -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu  -fsyntax-only -verify %s -Wnonnull
 
 void __attribute__((cpu_specific(ivybridge))) no_default(void);
 void __attribute__((cpu_specific(sandybridge)))  no_default(void);
@@ -80,7 +80,7 @@ int __attribute((cpu_dispatch())) no_dispatch(void) {}
 // expected-error@+1 {{'cpu_specific' attribute takes at least 1 argument}}
 int __attribute((cpu_specific())) no_specific(void) {}
 
-//expected-error@+1 {{attribute 'cpu_specific' multiversioning cannot be combined}}
+//expected-error@+1 {{attribute 'cpu_specific' multiversioning cannot be combined with attribute 'used'}}
 void __attribute__((used,cpu_specific(sandybridge)))  addtl_attrs(void);
 
 void __attribute__((target("default"))) addtl_attrs2(void);
@@ -115,3 +115,5 @@ int use3(void) {
 
 // expected-warning@+1 {{CPU list contains duplicate entries; attribute ignored}}
 int __attribute__((cpu_dispatch(pentium_iii, pentium_iii_no_xmm_regs))) dupe_p3(void);
+
+void __attribute__((cpu_specific(atom), nothrow, nonnull(1))) addtl_attrs(int*);
