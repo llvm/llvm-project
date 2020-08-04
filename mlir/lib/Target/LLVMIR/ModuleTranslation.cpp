@@ -20,6 +20,7 @@
 #include "mlir/IR/Module.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Target/LLVMIR/TypeTranslation.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include "llvm/ADT/SetVector.h"
@@ -932,7 +933,9 @@ LogicalResult ModuleTranslation::convertFunctions() {
 }
 
 llvm::Type *ModuleTranslation::convertType(LLVMType type) {
-  return LLVM::convertLLVMType(type);
+  // Lock the LLVM context as we create types in it.
+  llvm::sys::SmartScopedLock<true> lock(llvmDialect->getLLVMContextMutex());
+  return LLVM::translateTypeToLLVMIR(type, llvmDialect->getLLVMContext());
 }
 
 /// A helper to look up remapped operands in the value remapping table.`

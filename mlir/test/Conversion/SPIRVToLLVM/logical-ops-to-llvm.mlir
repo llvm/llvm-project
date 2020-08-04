@@ -13,7 +13,7 @@ func @logical_equal_scalar(%arg0: i1, %arg1: i1) {
 
 // CHECK-LABEL: @logical_equal_vector
 func @logical_equal_vector(%arg0: vector<4xi1>, %arg1: vector<4xi1>) {
-  // CHECK: llvm.icmp "eq" %{{.*}}, %{{.*}} : !llvm<"<4 x i1>">
+  // CHECK: llvm.icmp "eq" %{{.*}}, %{{.*}} : !llvm.vec<4 x i1>
   %0 = spv.LogicalEqual %arg0, %arg0 : vector<4xi1>
   return
 }
@@ -31,7 +31,7 @@ func @logical_not_equal_scalar(%arg0: i1, %arg1: i1) {
 
 // CHECK-LABEL: @logical_not_equal_vector
 func @logical_not_equal_vector(%arg0: vector<4xi1>, %arg1: vector<4xi1>) {
-  // CHECK: llvm.icmp "ne" %{{.*}}, %{{.*}} : !llvm<"<4 x i1>">
+  // CHECK: llvm.icmp "ne" %{{.*}}, %{{.*}} : !llvm.vec<4 x i1>
   %0 = spv.LogicalNotEqual %arg0, %arg0 : vector<4xi1>
   return
 }
@@ -50,8 +50,8 @@ func @logical_not_scalar(%arg0: i1) {
 
 // CHECK-LABEL: @logical_not_vector
 func @logical_not_vector(%arg0: vector<4xi1>) {
-  // CHECK: %[[CONST:.*]] = llvm.mlir.constant(dense<true> : vector<4xi1>) : !llvm<"<4 x i1>">
-  // CHECK: llvm.xor %{{.*}}, %[[CONST]] : !llvm<"<4 x i1>">
+  // CHECK: %[[CONST:.*]] = llvm.mlir.constant(dense<true> : vector<4xi1>) : !llvm.vec<4 x i1>
+  // CHECK: llvm.xor %{{.*}}, %[[CONST]] : !llvm.vec<4 x i1>
   %0 = spv.LogicalNot %arg0 : vector<4xi1>
   return
 }
@@ -69,7 +69,7 @@ func @logical_and_scalar(%arg0: i1, %arg1: i1) {
 
 // CHECK-LABEL: @logical_and_vector
 func @logical_and_vector(%arg0: vector<4xi1>, %arg1: vector<4xi1>) {
-  // CHECK: llvm.and %{{.*}}, %{{.*}} : !llvm<"<4 x i1>">
+  // CHECK: llvm.and %{{.*}}, %{{.*}} : !llvm.vec<4 x i1>
   %0 = spv.LogicalAnd %arg0, %arg0 : vector<4xi1>
   return
 }
@@ -87,7 +87,7 @@ func @logical_or_scalar(%arg0: i1, %arg1: i1) {
 
 // CHECK-LABEL: @logical_or_vector
 func @logical_or_vector(%arg0: vector<4xi1>, %arg1: vector<4xi1>) {
-  // CHECK: llvm.or %{{.*}}, %{{.*}} : !llvm<"<4 x i1>">
+  // CHECK: llvm.or %{{.*}}, %{{.*}} : !llvm.vec<4 x i1>
   %0 = spv.LogicalOr %arg0, %arg0 : vector<4xi1>
   return
 }

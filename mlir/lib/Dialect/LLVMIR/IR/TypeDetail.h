@@ -72,7 +72,7 @@ public:
     Key(StringRef name, bool opaque)
         : name(name), identified(true), packed(false), opaque(opaque) {}
     /// Constructs a key for a literal struct.
-    Key(ArrayRef<LLVMTypeNew> types, bool packed)
+    Key(ArrayRef<LLVMType> types, bool packed)
         : types(types), identified(false), packed(packed), opaque(false) {}
 
     /// Checks a specific property of the struct.
@@ -96,7 +96,7 @@ public:
     }
 
     /// Returns the list of type contained in the key of a literal struct.
-    ArrayRef<LLVMTypeNew> getTypeList() const {
+    ArrayRef<LLVMType> getTypeList() const {
       assert(!isIdentified() &&
              "identified struct key cannot have a type list");
       return types;
@@ -138,7 +138,7 @@ public:
     }
 
   private:
-    ArrayRef<LLVMTypeNew> types;
+    ArrayRef<LLVMType> types;
     StringRef name;
     bool identified;
     bool packed;
@@ -153,19 +153,18 @@ public:
   }
 
   /// Returns the list of types (partially) identifying a literal struct.
-  ArrayRef<LLVMTypeNew> getTypeList() const {
+  ArrayRef<LLVMType> getTypeList() const {
     // If this triggers, use getIdentifiedStructBody() instead.
     assert(!isIdentified() && "requested typelist on an identified struct");
-    return ArrayRef<LLVMTypeNew>(static_cast<const LLVMTypeNew *>(keyPtr),
-                                 keySize());
+    return ArrayRef<LLVMType>(static_cast<const LLVMType *>(keyPtr), keySize());
   }
 
   /// Returns the list of types contained in an identified struct.
-  ArrayRef<LLVMTypeNew> getIdentifiedStructBody() const {
+  ArrayRef<LLVMType> getIdentifiedStructBody() const {
     // If this triggers, use getTypeList() instead.
     assert(isIdentified() &&
            "requested struct body on a non-identified struct");
-    return ArrayRef<LLVMTypeNew>(identifiedBodyArray, identifiedBodySize());
+    return ArrayRef<LLVMType>(identifiedBodyArray, identifiedBodySize());
   }
 
   /// Checks whether the struct is identified.
@@ -200,7 +199,7 @@ public:
   /// as initalized and can no longer be mutated.
   LLVMStructTypeStorage(const KeyTy &key) {
     if (!key.isIdentified()) {
-      ArrayRef<LLVMTypeNew> types = key.getTypeList();
+      ArrayRef<LLVMType> types = key.getTypeList();
       keyPtr = static_cast<const void *>(types.data());
       setKeySize(types.size());
       llvm::Bitfield::set<KeyFlagPacked>(keySizeAndFlags, key.isPacked());
@@ -233,8 +232,8 @@ public:
   /// initialized, succeeds only if the body is equal to the current body. Fails
   /// if the struct is marked as intentionally opaque. The struct will be marked
   /// as initialized as a result of this operation and can no longer be changed.
-  LogicalResult mutate(TypeStorageAllocator &allocator,
-                       ArrayRef<LLVMTypeNew> body, bool packed) {
+  LogicalResult mutate(TypeStorageAllocator &allocator, ArrayRef<LLVMType> body,
+                       bool packed) {
     if (!isIdentified())
       return failure();
     if (isInitialized())
@@ -245,7 +244,7 @@ public:
                                                 true);
     llvm::Bitfield::set<MutableFlagPacked>(identifiedBodySizeAndFlags, packed);
 
-    ArrayRef<LLVMTypeNew> typesInAllocator = allocator.copyInto(body);
+    ArrayRef<LLVMType> typesInAllocator = allocator.copyInto(body);
     identifiedBodyArray = typesInAllocator.data();
     setIdentifiedBodySize(typesInAllocator.size());
 
@@ -311,7 +310,7 @@ private:
   const void *keyPtr = nullptr;
 
   /// Pointer to the first type contained in an identified struct.
-  const LLVMTypeNew *identifiedBodyArray = nullptr;
+  const LLVMType *identifiedBodyArray = nullptr;
 
   /// Size of the uniquing key combined with identified/literal and
   /// packedness bits. Must only be used through the Key* bitfields.
@@ -329,11 +328,11 @@ private:
 /// Type storage for LLVM dialect function types. These are uniqued using the
 /// list of types they contain and the vararg bit.
 struct LLVMFunctionTypeStorage : public TypeStorage {
-  using KeyTy = std::tuple<LLVMTypeNew, ArrayRef<LLVMTypeNew>, bool>;
+  using KeyTy = std::tuple<LLVMType, ArrayRef<LLVMType>, bool>;
 
   /// Construct a storage from the given components. The list is expected to be
   /// allocated in the context.
-  LLVMFunctionTypeStorage(LLVMTypeNew result, ArrayRef<LLVMTypeNew> arguments,
+  LLVMFunctionTypeStorage(LLVMType result, ArrayRef<LLVMType> arguments,
                           bool variadic)
       : argumentTypes(arguments) {
     returnTypeAndVariadic.setPointerAndInt(result, variadic);
@@ -360,21 +359,19 @@ struct LLVMFunctionTypeStorage : public TypeStorage {
   }
 
   /// Returns the list of function argument types.
-  ArrayRef<LLVMTypeNew> getArgumentTypes() const { return argumentTypes; }
+  ArrayRef<LLVMType> getArgumentTypes() const { return argumentTypes; }
 
   /// Checks whether the function type is variadic.
   bool isVariadic() const { return returnTypeAndVariadic.getInt(); }
 
   /// Returns the function result type.
-  LLVMTypeNew getReturnType() const {
-    return returnTypeAndVariadic.getPointer();
-  }
+  LLVMType getReturnType() const { return returnTypeAndVariadic.getPointer(); }
 
 private:
   /// Function result type packed with the variadic bit.
-  llvm::PointerIntPair<LLVMTypeNew, 1, bool> returnTypeAndVariadic;
+  llvm::PointerIntPair<LLVMType, 1, bool> returnTypeAndVariadic;
   /// Argument types.
-  ArrayRef<LLVMTypeNew> argumentTypes;
+  ArrayRef<LLVMType> argumentTypes;
 };
 
 //===----------------------------------------------------------------------===//
@@ -405,7 +402,7 @@ struct LLVMIntegerTypeStorage : public TypeStorage {
 /// Storage type for LLVM dialect pointer types. These are uniqued by a pair of
 /// element type and address space.
 struct LLVMPointerTypeStorage : public TypeStorage {
-  using KeyTy = std::tuple<LLVMTypeNew, unsigned>;
+  using KeyTy = std::tuple<LLVMType, unsigned>;
 
   LLVMPointerTypeStorage(const KeyTy &key)
       : pointeeType(std::get<0>(key)), addressSpace(std::get<1>(key)) {}
@@ -420,7 +417,7 @@ struct LLVMPointerTypeStorage : public TypeStorage {
     return std::make_tuple(pointeeType, addressSpace) == key;
   }
 
-  LLVMTypeNew pointeeType;
+  LLVMType pointeeType;
   unsigned addressSpace;
 };
 
@@ -432,7 +429,7 @@ struct LLVMPointerTypeStorage : public TypeStorage {
 /// number: arrays, fixed and scalable vectors. The actual semantics of the
 /// type is defined by its kind.
 struct LLVMTypeAndSizeStorage : public TypeStorage {
-  using KeyTy = std::tuple<LLVMTypeNew, unsigned>;
+  using KeyTy = std::tuple<LLVMType, unsigned>;
 
   LLVMTypeAndSizeStorage(const KeyTy &key)
       : elementType(std::get<0>(key)), numElements(std::get<1>(key)) {}
@@ -447,7 +444,7 @@ struct LLVMTypeAndSizeStorage : public TypeStorage {
     return std::make_tuple(elementType, numElements) == key;
   }
 
-  LLVMTypeNew elementType;
+  LLVMType elementType;
   unsigned numElements;
 };
 

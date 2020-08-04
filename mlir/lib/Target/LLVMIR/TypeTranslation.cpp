@@ -24,14 +24,14 @@ public:
   TypeToLLVMIRTranslator(llvm::LLVMContext &context) : context(context) {}
 
   /// Translates a single type.
-  llvm::Type *translateType(LLVM::LLVMTypeNew type) {
+  llvm::Type *translateType(LLVM::LLVMType type) {
     // If the conversion is already known, just return it.
     if (knownTranslations.count(type))
       return knownTranslations.lookup(type);
 
     // Dispatch to an appropriate function.
     llvm::Type *translated =
-        llvm::TypeSwitch<LLVM::LLVMTypeNew, llvm::Type *>(type)
+        llvm::TypeSwitch<LLVM::LLVMType, llvm::Type *>(type)
             .Case([this](LLVM::LLVMVoidType) {
               return llvm::Type::getVoidTy(context);
             })
@@ -73,7 +73,7 @@ public:
                   LLVM::LLVMStructType, LLVM::LLVMFixedVectorType,
                   LLVM::LLVMScalableVectorType>(
                 [this](auto array) { return translate(array); })
-            .Default([](LLVM::LLVMTypeNew t) -> llvm::Type * {
+            .Default([](LLVM::LLVMType t) -> llvm::Type * {
               llvm_unreachable("unknown LLVM dialect type");
             });
 
@@ -144,7 +144,7 @@ private:
   }
 
   /// Translates a list of types.
-  void translateTypes(ArrayRef<LLVM::LLVMTypeNew> types,
+  void translateTypes(ArrayRef<LLVM::LLVMType> types,
                       SmallVectorImpl<llvm::Type *> &result) {
     result.reserve(result.size() + types.size());
     for (auto type : types)
@@ -158,14 +158,14 @@ private:
   /// results to avoid repeated recursive calls and makes sure identified
   /// structs with the same name (that is, equal) are resolved to an existing
   /// type instead of creating a new type.
-  llvm::DenseMap<LLVM::LLVMTypeNew, llvm::Type *> knownTranslations;
+  llvm::DenseMap<LLVM::LLVMType, llvm::Type *> knownTranslations;
 };
 } // end namespace
 
 /// Translates a type from MLIR LLVM dialect to LLVM IR. This does not maintain
 /// the mapping for identified structs so new structs will be created with
 /// auto-renaming on each call. This is intended exclusively for testing.
-llvm::Type *mlir::LLVM::translateTypeToLLVMIR(LLVM::LLVMTypeNew type,
+llvm::Type *mlir::LLVM::translateTypeToLLVMIR(LLVM::LLVMType type,
                                               llvm::LLVMContext &context) {
   return TypeToLLVMIRTranslator(context).translateType(type);
 }
@@ -178,12 +178,12 @@ public:
   TypeFromLLVMIRTranslator(MLIRContext &context) : context(context) {}
 
   /// Translates the given type.
-  LLVM::LLVMTypeNew translateType(llvm::Type *type) {
+  LLVM::LLVMType translateType(llvm::Type *type) {
     if (knownTranslations.count(type))
       return knownTranslations.lookup(type);
 
-    LLVM::LLVMTypeNew translated =
-        llvm::TypeSwitch<llvm::Type *, LLVM::LLVMTypeNew>(type)
+    LLVM::LLVMType translated =
+        llvm::TypeSwitch<llvm::Type *, LLVM::LLVMType>(type)
             .Case<llvm::ArrayType, llvm::FunctionType, llvm::IntegerType,
                   llvm::PointerType, llvm::StructType, llvm::FixedVectorType,
                   llvm::ScalableVectorType>(
@@ -198,7 +198,7 @@ public:
 private:
   /// Translates the given primitive, i.e. non-parametric in MLIR nomenclature,
   /// type.
-  LLVM::LLVMTypeNew translatePrimitiveType(llvm::Type *type) {
+  LLVM::LLVMType translatePrimitiveType(llvm::Type *type) {
     if (type->isVoidTy())
       return LLVM::LLVMVoidType::get(&context);
     if (type->isHalfTy())
@@ -225,33 +225,33 @@ private:
   }
 
   /// Translates the given array type.
-  LLVM::LLVMTypeNew translate(llvm::ArrayType *type) {
+  LLVM::LLVMType translate(llvm::ArrayType *type) {
     return LLVM::LLVMArrayType::get(translateType(type->getElementType()),
                                     type->getNumElements());
   }
 
   /// Translates the given function type.
-  LLVM::LLVMTypeNew translate(llvm::FunctionType *type) {
-    SmallVector<LLVM::LLVMTypeNew, 8> paramTypes;
+  LLVM::LLVMType translate(llvm::FunctionType *type) {
+    SmallVector<LLVM::LLVMType, 8> paramTypes;
     translateTypes(type->params(), paramTypes);
     return LLVM::LLVMFunctionType::get(translateType(type->getReturnType()),
                                        paramTypes, type->isVarArg());
   }
 
   /// Translates the given integer type.
-  LLVM::LLVMTypeNew translate(llvm::IntegerType *type) {
+  LLVM::LLVMType translate(llvm::IntegerType *type) {
     return LLVM::LLVMIntegerType::get(&context, type->getBitWidth());
   }
 
   /// Translates the given pointer type.
-  LLVM::LLVMTypeNew translate(llvm::PointerType *type) {
+  LLVM::LLVMType translate(llvm::PointerType *type) {
     return LLVM::LLVMPointerType::get(translateType(type->getElementType()),
                                       type->getAddressSpace());
   }
 
   /// Translates the given structure type.
-  LLVM::LLVMTypeNew translate(llvm::StructType *type) {
-    SmallVector<LLVM::LLVMTypeNew, 8> subtypes;
+  LLVM::LLVMType translate(llvm::StructType *type) {
+    SmallVector<LLVM::LLVMType, 8> subtypes;
     if (type->isLiteral()) {
       translateTypes(type->subtypes(), subtypes);
       return LLVM::LLVMStructType::getLiteral(&context, subtypes,
@@ -273,20 +273,20 @@ private:
   }
 
   /// Translates the given fixed-vector type.
-  LLVM::LLVMTypeNew translate(llvm::FixedVectorType *type) {
+  LLVM::LLVMType translate(llvm::FixedVectorType *type) {
     return LLVM::LLVMFixedVectorType::get(translateType(type->getElementType()),
                                           type->getNumElements());
   }
 
   /// Translates the given scalable-vector type.
-  LLVM::LLVMTypeNew translate(llvm::ScalableVectorType *type) {
+  LLVM::LLVMType translate(llvm::ScalableVectorType *type) {
     return LLVM::LLVMScalableVectorType::get(
         translateType(type->getElementType()), type->getMinNumElements());
   }
 
   /// Translates a list of types.
   void translateTypes(ArrayRef<llvm::Type *> types,
-                      SmallVectorImpl<LLVM::LLVMTypeNew> &result) {
+                      SmallVectorImpl<LLVM::LLVMType> &result) {
     result.reserve(result.size() + types.size());
     for (llvm::Type *type : types)
       result.push_back(translateType(type));
@@ -294,7 +294,7 @@ private:
 
   /// Map of known translations. Serves as a cache and as recursion stopper for
   /// translating recursive structs.
-  llvm::DenseMap<llvm::Type *, LLVM::LLVMTypeNew> knownTranslations;
+  llvm::DenseMap<llvm::Type *, LLVM::LLVMType> knownTranslations;
 
   /// The context in which MLIR types are created.
   MLIRContext &context;
@@ -303,7 +303,7 @@ private:
 
 /// Translates a type from LLVM IR to MLIR LLVM dialect. This is intended
 /// exclusively for testing.
-LLVM::LLVMTypeNew mlir::LLVM::translateTypeFromLLVMIR(llvm::Type *type,
-                                                      MLIRContext &context) {
+LLVM::LLVMType mlir::LLVM::translateTypeFromLLVMIR(llvm::Type *type,
+                                                   MLIRContext &context) {
   return TypeFromLLVMIRTranslator(context).translateType(type);
 }

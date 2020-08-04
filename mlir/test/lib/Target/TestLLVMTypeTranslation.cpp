@@ -34,7 +34,7 @@ protected:
     if (op.getName().getStringRef() == "llvm.test_introduce_func") {
       auto attr = op.getAttrOfType<TypeAttr>("type");
       assert(attr && "expected 'type' attribute");
-      auto type = attr.getValue().cast<LLVM::LLVMTypeNew>();
+      auto type = attr.getValue().cast<LLVM::LLVMType>();
 
       auto nameAttr = op.getAttrOfType<StringAttr>("name");
       assert(nameAttr && "expected 'name' attributes");
@@ -49,7 +49,7 @@ protected:
         module->getOrInsertFunction(nameAttr.getValue(), translated);
 
       std::string roundtripName = (Twine(nameAttr.getValue()) + "_round").str();
-      LLVM::LLVMTypeNew translatedBack =
+      LLVM::LLVMType translatedBack =
           LLVM::translateTypeFromLLVMIR(translated, *op.getContext());
       llvm::Type *translatedBackAndForth =
           LLVM::translateTypeToLLVMIR(translatedBack, builder.getContext());

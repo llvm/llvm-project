@@ -22,18 +22,18 @@ func @shift_right_arithmetic_scalar(%arg0: i32, %arg1: si32, %arg2 : i16, %arg3 
 }
 
 func @shift_right_arithmetic_vector(%arg0: vector<4xi64>, %arg1: vector<4xui64>, %arg2: vector<4xi32>, %arg3: vector<4xui32>) {
-	// CHECK: %{{.*}} = llvm.ashr %{{.*}}, %{{.*}} : !llvm<"<4 x i64>">
+	// CHECK: %{{.*}} = llvm.ashr %{{.*}}, %{{.*}} : !llvm.vec<4 x i64>
 	%0 = spv.ShiftRightArithmetic %arg0, %arg0 : vector<4xi64>, vector<4xi64>
 
-    // CHECK: %{{.*}} = llvm.ashr %{{.*}}, %{{.*}} : !llvm<"<4 x i64>">
+    // CHECK: %{{.*}} = llvm.ashr %{{.*}}, %{{.*}} : !llvm.vec<4 x i64>
 	%1 = spv.ShiftRightArithmetic %arg0, %arg1 : vector<4xi64>, vector<4xui64>
 
-    // CHECK: %[[EXT1:.*]] = llvm.sext %{{.*}} : !llvm<"<4 x i32>"> to !llvm<"<4 x i64>">
-    // CHECK: %{{.*}} = llvm.ashr %{{.*}}, %[[EXT1:.*]]: !llvm<"<4 x i64>">
+    // CHECK: %[[EXT1:.*]] = llvm.sext %{{.*}} : !llvm.vec<4 x i32> to !llvm.vec<4 x i64>
+    // CHECK: %{{.*}} = llvm.ashr %{{.*}}, %[[EXT1:.*]]: !llvm.vec<4 x i64>
 	%2 = spv.ShiftRightArithmetic %arg0, %arg2 : vector<4xi64>,  vector<4xi32>
 
-    // CHECK: %[[EXT2:.*]] = llvm.zext %{{.*}} : !llvm<"<4 x i32>"> to !llvm<"<4 x i64>">
-    // CHECK: %{{.*}} = llvm.ashr %{{.*}}, %[[EXT2:.*]]: !llvm<"<4 x i64>">
+    // CHECK: %[[EXT2:.*]] = llvm.zext %{{.*}} : !llvm.vec<4 x i32> to !llvm.vec<4 x i64>
+    // CHECK: %{{.*}} = llvm.ashr %{{.*}}, %[[EXT2:.*]]: !llvm.vec<4 x i64>
 	%3 = spv.ShiftRightArithmetic %arg0, %arg3 : vector<4xi64>, vector<4xui32>
 	return
 }
@@ -60,18 +60,18 @@ func @shift_right_logical_scalar(%arg0: i32, %arg1: si32, %arg2 : si16, %arg3 : 
 }
 
 func @shift_right_logical_vector(%arg0: vector<4xi64>, %arg1: vector<4xsi64>, %arg2: vector<4xi32>, %arg3: vector<4xui32>) {
-	// CHECK: %{{.*}} = llvm.lshr %{{.*}}, %{{.*}} : !llvm<"<4 x i64>">
+	// CHECK: %{{.*}} = llvm.lshr %{{.*}}, %{{.*}} : !llvm.vec<4 x i64>
 	%0 = spv.ShiftRightLogical %arg0, %arg0 : vector<4xi64>, vector<4xi64>
 
-    // CHECK: %{{.*}} = llvm.lshr %{{.*}}, %{{.*}} : !llvm<"<4 x i64>">
+    // CHECK: %{{.*}} = llvm.lshr %{{.*}}, %{{.*}} : !llvm.vec<4 x i64>
 	%1 = spv.ShiftRightLogical %arg0, %arg1 : vector<4xi64>, vector<4xsi64>
 
-    // CHECK: %[[EXT1:.*]] = llvm.sext %{{.*}} : !llvm<"<4 x i32>"> to !llvm<"<4 x i64>">
-    // CHECK: %{{.*}} = llvm.lshr %{{.*}}, %[[EXT1:.*]]: !llvm<"<4 x i64>">
+    // CHECK: %[[EXT1:.*]] = llvm.sext %{{.*}} : !llvm.vec<4 x i32> to !llvm.vec<4 x i64>
+    // CHECK: %{{.*}} = llvm.lshr %{{.*}}, %[[EXT1:.*]]: !llvm.vec<4 x i64>
 	%2 = spv.ShiftRightLogical %arg0, %arg2 : vector<4xi64>,  vector<4xi32>
 
-    // CHECK: %[[EXT2:.*]] = llvm.zext %{{.*}} : !llvm<"<4 x i32>"> to !llvm<"<4 x i64>">
-    // CHECK: %{{.*}} = llvm.lshr %{{.*}}, %[[EXT2:.*]]: !llvm<"<4 x i64>">
+    // CHECK: %[[EXT2:.*]] = llvm.zext %{{.*}} : !llvm.vec<4 x i32> to !llvm.vec<4 x i64>
+    // CHECK: %{{.*}} = llvm.lshr %{{.*}}, %[[EXT2:.*]]: !llvm.vec<4 x i64>
 	%3 = spv.ShiftRightLogical %arg0, %arg3 : vector<4xi64>, vector<4xui32>
 	return
 }
@@ -98,18 +98,18 @@ func @shift_left_logical_scalar(%arg0: i32, %arg1: si32, %arg2 : i16, %arg3 : ui
 }
 
 func @shift_left_logical_vector(%arg0: vector<4xi64>, %arg1: vector<4xsi64>, %arg2: vector<4xi32>, %arg3: vector<4xui32>) {
-	// CHECK: %{{.*}} = llvm.shl %{{.*}}, %{{.*}} : !llvm<"<4 x i64>">
+	// CHECK: %{{.*}} = llvm.shl %{{.*}}, %{{.*}} : !llvm.vec<4 x i64>
 	%0 = spv.ShiftLeftLogical %arg0, %arg0 : vector<4xi64>, vector<4xi64>
 
-    // CHECK: %{{.*}} = llvm.shl %{{.*}}, %{{.*}} : !llvm<"<4 x i64>">
+    // CHECK: %{{.*}} = llvm.shl %{{.*}}, %{{.*}} : !llvm.vec<4 x i64>
 	%1 = spv.ShiftLeftLogical %arg0, %arg1 : vector<4xi64>, vector<4xsi64>
 
-    // CHECK: %[[EXT1:.*]] = llvm.sext %{{.*}} : !llvm<"<4 x i32>"> to !llvm<"<4 x i64>">
-    // CHECK: %{{.*}} = llvm.shl %{{.*}}, %[[EXT1:.*]]: !llvm<"<4 x i64>">
+    // CHECK: %[[EXT1:.*]] = llvm.sext %{{.*}} : !llvm.vec<4 x i32> to !llvm.vec<4 x i64>
+    // CHECK: %{{.*}} = llvm.shl %{{.*}}, %[[EXT1:.*]]: !llvm.vec<4 x i64>
 	%2 = spv.ShiftLeftLogical %arg0, %arg2 : vector<4xi64>,  vector<4xi32>
 
-    // CHECK: %[[EXT2:.*]] = llvm.zext %{{.*}} : !llvm<"<4 x i32>"> to !llvm<"<4 x i64>">
-    // CHECK: %{{.*}} = llvm.shl %{{.*}}, %[[EXT2:.*]]: !llvm<"<4 x i64>">
+    // CHECK: %[[EXT2:.*]] = llvm.zext %{{.*}} : !llvm.vec<4 x i32> to !llvm.vec<4 x i64>
+    // CHECK: %{{.*}} = llvm.shl %{{.*}}, %[[EXT2:.*]]: !llvm.vec<4 x i64>
 	%3 = spv.ShiftLeftLogical %arg0, %arg3 : vector<4xi64>, vector<4xui32>
 	return
 }
