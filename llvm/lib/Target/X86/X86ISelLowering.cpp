@@ -10661,6 +10661,35 @@ static bool is128BitLaneCrossingShuffleMask(MVT VT, ArrayRef<int> Mask) {
   return isLaneCrossingShuffleMask(128, VT.getScalarSizeInBits(), Mask);
 }
 
+/// Test whether elements in each LaneSizeInBits lane in this shuffle mask come
+/// from multiple lanes - this is different to isLaneCrossingShuffleMask to
+/// better support 'repeated mask + lane permute' style shuffles.
+static bool isMultiLaneShuffleMask(unsigned LaneSizeInBits,
+                                   unsigned ScalarSizeInBits,
+                                   ArrayRef<int> Mask) {
+  assert(LaneSizeInBits && ScalarSizeInBits &&
+         (LaneSizeInBits % ScalarSizeInBits) == 0 &&
+         "Illegal shuffle lane size");
+  int NumElts = Mask.size();
+  int NumEltsPerLane = LaneSizeInBits / ScalarSizeInBits;
+  int NumLanes = NumElts / NumEltsPerLane;
+  if (NumLanes > 1) {
+    for (int i = 0; i != NumLanes; ++i) {
+      int SrcLane = -1;
+      for (int j = 0; j != NumEltsPerLane; ++j) {
+        int M = Mask[(i * NumEltsPerLane) + j];
+        if (M < 0)
+          continue;
+        int Lane = (M % NumElts) / NumEltsPerLane;
+        if (SrcLane >= 0 && SrcLane != Lane)
+          return true;
+        SrcLane = Lane;
+      }
+    }
+  }
+  return false;
+}
+
 /// Test whether a shuffle mask is equivalent within each sub-lane.
 ///
 /// This checks a shuffle mask to see if it is performing the same
@@ -44598,12 +44627,9 @@ static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, SelectionDAG &DAG,
   if (IsIdentityPostShuffle)
     PostShuffleMask.clear();
 
-  // Avoid 128-bit lane crossing if pre-AVX2 and FP (integer will split), unless
-  // the shuffle can widen to shuffle entire lanes, which should still be quick.
+  // Avoid 128-bit multi lane shuffles if pre-AVX2 and FP (integer will split).
   if (!IsIdentityPostShuffle && !Subtarget.hasAVX2() && VT.isFloatingPoint() &&
-      isLaneCrossingShuffleMask(128, VT.getScalarSizeInBits(),
-                                PostShuffleMask) &&
-      !canScaleShuffleElements(PostShuffleMask, 2))
+      isMultiLaneShuffleMask(128, VT.getScalarSizeInBits(), PostShuffleMask))
     return false;
 
   // Assume a SingleSource HOP if we only shuffle one input and don't need to
