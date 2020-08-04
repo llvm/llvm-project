@@ -994,12 +994,13 @@ void BTFDebug::generatePatchImmReloc(const MCSymbol *ORSym, uint32_t RootId,
 
     FieldReloc.OffsetNameOff = addString(IndexPattern);
     FieldReloc.RelocKind = std::stoull(std::string(RelocKindStr));
-    PatchImms[GVar] = std::stoul(std::string(PatchImmStr));
+    PatchImms[GVar] = std::make_pair(std::stoll(std::string(PatchImmStr)),
+                                     FieldReloc.RelocKind);
   } else {
     StringRef RelocStr = AccessPattern.substr(FirstDollar + 1);
     FieldReloc.OffsetNameOff = addString("0");
     FieldReloc.RelocKind = std::stoull(std::string(RelocStr));
-    PatchImms[GVar] = RootId;
+    PatchImms[GVar] = std::make_pair(RootId, FieldReloc.RelocKind);
   }
   FieldRelocTable[SecNameOff].push_back(FieldReloc);
 }
@@ -1209,14 +1210,21 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
       auto *GVar = dyn_cast<GlobalVariable>(GVal);
       if (GVar) {
         // Emit "mov ri, <imm>"
-        uint32_t Imm;
+        int64_t Imm;
+        uint32_t Reloc;
         if (GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr) ||
-            GVar->hasAttribute(BPFCoreSharedInfo::TypeIdAttr))
-          Imm = PatchImms[GVar];
-        else
+            GVar->hasAttribute(BPFCoreSharedInfo::TypeIdAttr)) {
+          Imm = PatchImms[GVar].first;
+          Reloc = PatchImms[GVar].second;
+        } else {
           return false;
+        }
 
-        OutMI.setOpcode(BPF::MOV_ri);
+        if (Reloc == BPFCoreSharedInfo::ENUM_VALUE_EXISTENCE ||
+            Reloc == BPFCoreSharedInfo::ENUM_VALUE)
+          OutMI.setOpcode(BPF::LD_imm64);
+        else
+          OutMI.setOpcode(BPF::MOV_ri);
         OutMI.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
         OutMI.addOperand(MCOperand::createImm(Imm));
         return true;
@@ -1230,7 +1238,7 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
       const GlobalValue *GVal = MO.getGlobal();
       auto *GVar = dyn_cast<GlobalVariable>(GVal);
       if (GVar && GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr)) {
-        uint32_t Imm = PatchImms[GVar];
+        uint32_t Imm = PatchImms[GVar].first;
         OutMI.setOpcode(MI->getOperand(1).getImm());
         if (MI->getOperand(0).isImm())
           OutMI.addOperand(MCOperand::createImm(MI->getOperand(0).getImm()));

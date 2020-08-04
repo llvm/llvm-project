@@ -24,6 +24,10 @@ public:
     FIELD_RSHIFT_U64,
     BTF_TYPE_ID_LOCAL,
     BTF_TYPE_ID_REMOTE,
+    TYPE_EXISTENCE,
+    TYPE_SIZE,
+    ENUM_VALUE_EXISTENCE,
+    ENUM_VALUE,
 
     MAX_FIELD_RELOC_KIND,
   };
@@ -33,6 +37,20 @@ public:
     BTF_TYPE_ID_REMOTE_RELOC,
 
     MAX_BTF_TYPE_ID_FLAG,
+  };
+
+  enum PreserveTypeInfo : uint32_t {
+    PRESERVE_TYPE_INFO_EXISTENCE = 0,
+    PRESERVE_TYPE_INFO_SIZE,
+
+    MAX_PRESERVE_TYPE_INFO_FLAG,
+  };
+
+  enum PreserveEnumValue : uint32_t {
+    PRESERVE_ENUM_VALUE_EXISTENCE = 0,
+    PRESERVE_ENUM_VALUE,
+
+    MAX_PRESERVE_ENUM_VALUE_FLAG,
   };
 
   /// The attribute attached to globals representing a field access
