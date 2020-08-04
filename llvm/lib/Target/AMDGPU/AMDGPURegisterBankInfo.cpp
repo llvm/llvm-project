@@ -2957,6 +2957,11 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     executeInWaterfallLoop(MI, MRI, {2, 5});
     return;
   }
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD: {
+    applyDefaultMapping(OpdMapper);
+    executeInWaterfallLoop(MI, MRI, {1, 4});
+    return;
+  }
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_CMPSWAP: {
     applyDefaultMapping(OpdMapper);
     executeInWaterfallLoop(MI, MRI, {3, 6});
@@ -3931,6 +3936,23 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     // Any remaining operands are immediates and were correctly null
     // initialized.
+    break;
+  }
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD: {
+    // vdata_in
+    OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+
+    // rsrc
+    OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
+
+    // vindex
+    OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+
+    // voffset
+    OpdsMapping[3] = getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
+
+    // soffset
+    OpdsMapping[4] = getSGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
     break;
   }
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_CMPSWAP: {

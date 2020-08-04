@@ -1082,8 +1082,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.flags |= MachineMemOperand::MOStore;
     } else {
       // Atomic
-      Info.opc = ISD::INTRINSIC_W_CHAIN;
-      Info.memVT = MVT::getVT(CI.getType());
+      Info.opc = CI.getType()->isVoidTy() ? ISD::INTRINSIC_VOID :
+                                            ISD::INTRINSIC_W_CHAIN;
+      Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
       Info.flags = MachineMemOperand::MOLoad |
                    MachineMemOperand::MOStore |
                    MachineMemOperand::MODereferenceable;
@@ -7062,7 +7063,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_INC);
   case Intrinsic::amdgcn_raw_buffer_atomic_dec:
     return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_DEC);
-
   case Intrinsic::amdgcn_struct_buffer_atomic_swap:
     return lowerStructBufferAtomicIntrin(Op, DAG,
                                          AMDGPUISD::BUFFER_ATOMIC_SWAP);
@@ -7485,7 +7485,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getMemIntrinsicNode(Opc, DL, Op->getVTList(), Ops,
                                    M->getMemoryVT(), M->getMemOperand());
   }
-
+  case Intrinsic::amdgcn_raw_buffer_atomic_fadd:
+    return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FADD);
+  case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
+    return lowerStructBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FADD);
   case Intrinsic::amdgcn_buffer_atomic_fadd: {
     unsigned Slc = cast<ConstantSDNode>(Op.getOperand(6))->getZExtValue();
     unsigned IdxEn = 1;

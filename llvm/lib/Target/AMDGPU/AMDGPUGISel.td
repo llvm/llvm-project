@@ -204,6 +204,7 @@ def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_OR, SIbuffer_atomic_or>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_XOR, SIbuffer_atomic_xor>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_INC, SIbuffer_atomic_inc>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_DEC, SIbuffer_atomic_dec>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FADD, SIbuffer_atomic_fadd>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_CMPSWAP, SIbuffer_atomic_cmpswap>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD, SIsbuffer_load>;
 
