@@ -132,6 +132,10 @@ namespace rdf {
       return MaskInfos[Register::stackSlot2Index(MaskId)].Units;
     }
 
+    const BitVector &getUnitAliases(uint32_t U) const {
+      return AliasInfos[U].Regs;
+    }
+
     RegisterRef mapTo(RegisterRef RR, unsigned R) const;
     const TargetRegisterInfo &getTRI() const { return TRI; }
 
@@ -146,12 +150,16 @@ namespace rdf {
     struct MaskInfo {
       BitVector Units;
     };
+    struct AliasInfo {
+      BitVector Regs;
+    };
 
     const TargetRegisterInfo &TRI;
     IndexedSet<const uint32_t*> RegMasks;
     std::vector<RegInfo> RegInfos;
     std::vector<UnitInfo> UnitInfos;
     std::vector<MaskInfo> MaskInfos;
+    std::vector<AliasInfo> AliasInfos;
 
     bool aliasRR(RegisterRef RA, RegisterRef RB) const;
     bool aliasRM(RegisterRef RR, RegisterRef RM) const;
