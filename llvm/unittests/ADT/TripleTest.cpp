@@ -1235,8 +1235,8 @@ TEST(TripleTest, getOSVersion) {
   T = Triple("x86_64-apple-macos10.16");
   EXPECT_TRUE(T.isMacOSX());
   T.getMacOSXVersion(Major, Minor, Micro);
-  EXPECT_EQ((unsigned)11, Major);
-  EXPECT_EQ((unsigned)0, Minor);
+  EXPECT_EQ((unsigned)10, Major);
+  EXPECT_EQ((unsigned)16, Minor);
   EXPECT_EQ((unsigned)0, Micro);
 
   T = Triple("x86_64-apple-darwin20");
