@@ -617,6 +617,15 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::SRL_PARTS, MVT::i32, Custom);
   }
 
+  // PowerPC has better expansions for funnel shifts than the generic
+  // TargetLowering::expandFunnelShift.
+  if (Subtarget.has64BitSupport()) {
+    setOperationAction(ISD::FSHL, MVT::i64, Custom);
+    setOperationAction(ISD::FSHR, MVT::i64, Custom);
+  }
+  setOperationAction(ISD::FSHL, MVT::i32, Custom);
+  setOperationAction(ISD::FSHR, MVT::i32, Custom);
+
   if (Subtarget.hasVSX()) {
     setOperationAction(ISD::FMAXNUM_IEEE, MVT::f64, Legal);
     setOperationAction(ISD::FMAXNUM_IEEE, MVT::f32, Legal);
@@ -8626,6 +8635,31 @@ SDValue PPCTargetLowering::LowerSRA_PARTS(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getMergeValues(OutOps, dl);
 }
 
+SDValue PPCTargetLowering::LowerFunnelShift(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+  EVT VT = Op.getValueType();
+  unsigned BitWidth = VT.getSizeInBits();
+
+  bool IsFSHL = Op.getOpcode() == ISD::FSHL;
+  SDValue X = Op.getOperand(0);
+  SDValue Y = Op.getOperand(1);
+  SDValue Z = Op.getOperand(2);
+  EVT AmtVT = Z.getValueType();
+
+  // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
+  // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+  // This is simpler than TargetLowering::expandFunnelShift because we can rely
+  // on PowerPC shift by BW being well defined.
+  Z = DAG.getNode(ISD::AND, dl, AmtVT, Z,
+                  DAG.getConstant(BitWidth - 1, dl, AmtVT));
+  SDValue SubZ =
+      DAG.getNode(ISD::SUB, dl, AmtVT, DAG.getConstant(BitWidth, dl, AmtVT), Z);
+  X = DAG.getNode(PPCISD::SHL, dl, VT, X, IsFSHL ? Z : SubZ);
+  Y = DAG.getNode(PPCISD::SRL, dl, VT, Y, IsFSHL ? SubZ : Z);
+  return DAG.getNode(ISD::OR, dl, VT, X, Y);
+}
+
 //===----------------------------------------------------------------------===//
 // Vector related lowering.
 //
@@ -10420,6 +10454,9 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SHL_PARTS:          return LowerSHL_PARTS(Op, DAG);
   case ISD::SRL_PARTS:          return LowerSRL_PARTS(Op, DAG);
   case ISD::SRA_PARTS:          return LowerSRA_PARTS(Op, DAG);
+
+  case ISD::FSHL:               return LowerFunnelShift(Op, DAG);
+  case ISD::FSHR:               return LowerFunnelShift(Op, DAG);
 
   // Vector-related lowering.
   case ISD::BUILD_VECTOR:       return LowerBUILD_VECTOR(Op, DAG);
