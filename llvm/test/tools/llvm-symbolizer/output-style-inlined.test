@@ -6,6 +6,10 @@ the option is not specified.
 
 RUN: llvm-symbolizer --no-inlines -e %p/Inputs/addr.exe 0x40054d \
 RUN:   | FileCheck %s --check-prefix=LLVM --implicit-check-not=inctwo
+## Before 2020-08-04, asan_symbolize.py passed --inlining=false if 'symbolize_inline_frames'
+## is set to false. Support this compatibility alias for a while.
+RUN: llvm-symbolizer --inlining=false -e %p/Inputs/addr.exe 0x40054d \
+RUN:   | FileCheck %s --check-prefix=LLVM --implicit-check-not=inctwo
 
 RUN: llvm-symbolizer --output-style=LLVM --no-inlines -e %p/Inputs/addr.exe 0x40054d \
 RUN:   | FileCheck %s --check-prefix=LLVM --implicit-check-not=inctwo
