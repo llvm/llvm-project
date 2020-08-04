@@ -8,14 +8,20 @@ define void @_ZN1m1nEv(%struct.m.2.5.8.11* %this) local_unnamed_addr nounwind al
 ; CHECK-LABEL: _ZN1m1nEv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r0, 16(r1)
-; CHECK-NEXT:    stdu r1, -48(r1)
+; CHECK-NEXT:    stdu r1, -64(r1)
 ; CHECK-NEXT:    mr r30, r3
-; CHECK-NEXT:    ld r4, 8(r30)
+; CHECK-NEXT:    li r3, 4
+; CHECK-NEXT:    ld r4, 16(r30)
+; CHECK-NEXT:    ld r5, 8(r30)
+; CHECK-NEXT:    subfic r29, r3, 64
+; CHECK-NEXT:    rldicl r3, r5, 60, 4
+; CHECK-NEXT:    sld r4, r4, r29
 ; CHECK-NEXT:    lwz r5, 36(r30)
-; CHECK-NEXT:    rldicl r4, r4, 60, 4
-; CHECK-NEXT:    rlwinm r3, r4, 31, 0, 0
+; CHECK-NEXT:    or r3, r4, r3
+; CHECK-NEXT:    rlwinm r3, r3, 31, 0, 0
 ; CHECK-NEXT:    clrlwi r4, r5, 31
 ; CHECK-NEXT:    or r4, r4, r3
 ; CHECK-NEXT:    bl _ZN1llsE1d
@@ -23,15 +29,16 @@ define void @_ZN1m1nEv(%struct.m.2.5.8.11* %this) local_unnamed_addr nounwind al
 ; CHECK-NEXT:    ld r3, 16(r30)
 ; CHECK-NEXT:    ld r4, 8(r30)
 ; CHECK-NEXT:    rldicl r4, r4, 60, 4
-; CHECK-NEXT:    sldi r3, r3, 60
-; CHECK-NEXT:    or r3, r4, r3
+; CHECK-NEXT:    sld r3, r3, r29
+; CHECK-NEXT:    or r3, r3, r4
 ; CHECK-NEXT:    sldi r3, r3, 31
 ; CHECK-NEXT:    clrldi r4, r3, 32
 ; CHECK-NEXT:    bl _ZN1llsE1d
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    addi r1, r1, 48
+; CHECK-NEXT:    addi r1, r1, 64
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 entry:
