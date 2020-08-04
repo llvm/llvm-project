@@ -71,54 +71,19 @@ struct InlineEvent {
 /// lines up with how TF SequenceExample represents it.
 class TrainingLogger final {
 public:
-  TrainingLogger() {
-    for (size_t I = 0; I < NumberOfFeatures; ++I) {
-      Features.push_back(InlineFeatures());
-    }
-  }
+  TrainingLogger();
 
   /// Log one inlining event.
   void logInlineEvent(const InlineEvent &Event,
-                      const MLModelRunner &ModelRunner) {
-    for (size_t I = 0; I < NumberOfFeatures; ++I) {
-      Features[I].push_back(ModelRunner.getFeature(I));
-    }
-    Decisions.push_back(Event.AdvisedDecision);
-    Effects.push_back(Event.Effect);
-    Rewards.push_back(Event.Reward);
-    DefaultDecisions.push_back(Event.DefaultDecision);
-  }
+                      const MLModelRunner &ModelRunner);
 
-  void printTensor(raw_fd_ostream &OutFile) {
-    if (DefaultDecisions.empty())
-      return;
-    OutFile << "feature_lists: {\n";
-
-    for (size_t I = 0; I < Features.size(); I++) {
-      writeTensor(OutFile, FeatureNameMap.at(I), Features[I]);
-    }
-    writeTensor(OutFile, DefaultDecisionName, DefaultDecisions);
-    writeTensor(OutFile, DecisionName, Decisions);
-    writeTensor(OutFile, RewardName, Rewards);
-
-    OutFile << "}\n";
-  }
+  /// Print the stored tensors.
+  void print(raw_fd_ostream &OutFile);
 
 private:
   template <typename T>
   void writeTensor(raw_fd_ostream &OutFile, StringRef TensorName,
-                   const std::vector<T> &Tensor) {
-    OutFile << "  feature_list: {\n";
-    OutFile << "    key: "
-            << "\"" << TensorName << "\" ";
-    OutFile << "value: {\n";
-    for (const auto &Feature : Tensor) {
-      OutFile << "      feature: { int64_list: { value: [" << Feature
-              << "] } }\n";
-    }
-    OutFile << "    }\n";
-    OutFile << "  }\n";
-  }
+                   const std::vector<T> &Tensor);
 
   std::vector<InlineFeatures> Features;
   std::vector<bool> DefaultDecisions;
@@ -307,6 +272,54 @@ private:
 };
 } // namespace
 
+TrainingLogger::TrainingLogger() {
+  for (size_t I = 0; I < NumberOfFeatures; ++I) {
+    Features.push_back(InlineFeatures());
+  }
+}
+
+/// Log one inlining event.
+void TrainingLogger::logInlineEvent(const InlineEvent &Event,
+                                    const MLModelRunner &ModelRunner) {
+  for (size_t I = 0; I < NumberOfFeatures; ++I) {
+    Features[I].push_back(ModelRunner.getFeature(I));
+  }
+  Decisions.push_back(Event.AdvisedDecision);
+  Effects.push_back(Event.Effect);
+  Rewards.push_back(Event.Reward);
+  DefaultDecisions.push_back(Event.DefaultDecision);
+}
+
+void TrainingLogger::print(raw_fd_ostream &OutFile) {
+  if (DefaultDecisions.empty())
+    return;
+  OutFile << "feature_lists: {\n";
+
+  for (size_t I = 0; I < Features.size(); I++) {
+    writeTensor(OutFile, FeatureNameMap.at(I), Features[I]);
+  }
+  writeTensor(OutFile, DefaultDecisionName, DefaultDecisions);
+  writeTensor(OutFile, DecisionName, Decisions);
+  writeTensor(OutFile, RewardName, Rewards);
+
+  OutFile << "}\n";
+}
+
+template <typename T>
+void TrainingLogger::writeTensor(raw_fd_ostream &OutFile, StringRef TensorName,
+                                 const std::vector<T> &Tensor) {
+  OutFile << "  feature_list: {\n";
+  OutFile << "    key: "
+          << "\"" << TensorName << "\" ";
+  OutFile << "value: {\n";
+  for (const auto &Feature : Tensor) {
+    OutFile << "      feature: { int64_list: { value: [" << Feature
+            << "] } }\n";
+  }
+  OutFile << "    }\n";
+  OutFile << "  }\n";
+}
+
 DevelopmentModeMLInlineAdvisor::DevelopmentModeMLInlineAdvisor(
     Module &M, ModuleAnalysisManager &MAM,
     std::unique_ptr<MLModelRunner> ModelRunner,
@@ -324,7 +337,7 @@ DevelopmentModeMLInlineAdvisor::~DevelopmentModeMLInlineAdvisor() {
     return;
   std::error_code ErrorCode;
   raw_fd_ostream OutFile(TrainingLog, ErrorCode);
-  Logger.printTensor(OutFile);
+  Logger.print(OutFile);
 }
 
 size_t
