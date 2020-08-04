@@ -7360,40 +7360,6 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     return true;
   }
   case ISD::OR: {
-    // Inspect each operand at the byte level. We can merge these into a
-    // blend shuffle mask if for each byte at least one is masked out (zero).
-    KnownBits Known0 =
-        DAG.computeKnownBits(N.getOperand(0), DemandedElts, Depth + 1);
-    KnownBits Known1 =
-        DAG.computeKnownBits(N.getOperand(1), DemandedElts, Depth + 1);
-    if (Known0.One.isNullValue() && Known1.One.isNullValue()) {
-      bool IsByteMask = true;
-      APInt ZeroMask = APInt::getNullValue(NumBytesPerElt);
-      APInt SelectMask = APInt::getNullValue(NumBytesPerElt);
-      for (unsigned i = 0; i != NumBytesPerElt && IsByteMask; ++i) {
-        unsigned LHS = Known0.Zero.extractBits(8, i * 8).getZExtValue();
-        unsigned RHS = Known1.Zero.extractBits(8, i * 8).getZExtValue();
-        if (LHS == 255 && RHS == 0)
-          SelectMask.setBit(i);
-        else if (LHS == 255 && RHS == 255)
-          ZeroMask.setBit(i);
-        else if (!(LHS == 0 && RHS == 255))
-          IsByteMask = false;
-      }
-      if (IsByteMask) {
-        for (unsigned i = 0; i != NumSizeInBytes; i += NumBytesPerElt) {
-          for (unsigned j = 0; j != NumBytesPerElt; ++j) {
-            unsigned Ofs = (SelectMask[j] ? NumSizeInBytes : 0);
-            int Idx = (ZeroMask[j] ? (int)SM_SentinelZero : (i + j + Ofs));
-            Mask.push_back(Idx);
-          }
-        }
-        Ops.push_back(N.getOperand(0));
-        Ops.push_back(N.getOperand(1));
-        return true;
-      }
-    }
-
     // Handle OR(SHUFFLE,SHUFFLE) case where one source is zero and the other
     // is a valid shuffle index.
     SDValue N0 = peekThroughBitcasts(N.getOperand(0));
