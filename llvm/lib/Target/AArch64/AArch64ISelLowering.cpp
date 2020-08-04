@@ -1397,14 +1397,14 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::TLSDESC_CALLSEQ)
     MAKE_CASE(AArch64ISD::ADD_PRED)
     MAKE_CASE(AArch64ISD::SDIV_PRED)
+    MAKE_CASE(AArch64ISD::SHL_PRED)
+    MAKE_CASE(AArch64ISD::SMAX_PRED)
+    MAKE_CASE(AArch64ISD::SMIN_PRED)
+    MAKE_CASE(AArch64ISD::SRA_PRED)
+    MAKE_CASE(AArch64ISD::SRL_PRED)
     MAKE_CASE(AArch64ISD::UDIV_PRED)
-    MAKE_CASE(AArch64ISD::SMIN_MERGE_OP1)
-    MAKE_CASE(AArch64ISD::UMIN_MERGE_OP1)
-    MAKE_CASE(AArch64ISD::SMAX_MERGE_OP1)
-    MAKE_CASE(AArch64ISD::UMAX_MERGE_OP1)
-    MAKE_CASE(AArch64ISD::SHL_MERGE_OP1)
-    MAKE_CASE(AArch64ISD::SRL_MERGE_OP1)
-    MAKE_CASE(AArch64ISD::SRA_MERGE_OP1)
+    MAKE_CASE(AArch64ISD::UMAX_PRED)
+    MAKE_CASE(AArch64ISD::UMIN_PRED)
     MAKE_CASE(AArch64ISD::SETCC_MERGE_ZERO)
     MAKE_CASE(AArch64ISD::ADC)
     MAKE_CASE(AArch64ISD::SBC)
@@ -3540,13 +3540,13 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::UDIV:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::UDIV_PRED);
   case ISD::SMIN:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMIN_MERGE_OP1);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMIN_PRED);
   case ISD::UMIN:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::UMIN_MERGE_OP1);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::UMIN_PRED);
   case ISD::SMAX:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMAX_MERGE_OP1);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMAX_PRED);
   case ISD::UMAX:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::UMAX_MERGE_OP1);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::UMAX_PRED);
   case ISD::SRA:
   case ISD::SRL:
   case ISD::SHL:
@@ -8914,7 +8914,7 @@ SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
 
   case ISD::SHL:
     if (VT.isScalableVector())
-      return LowerToPredicatedOp(Op, DAG, AArch64ISD::SHL_MERGE_OP1);
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::SHL_PRED);
 
     if (isVShiftLImm(Op.getOperand(1), VT, false, Cnt) && Cnt < EltSize)
       return DAG.getNode(AArch64ISD::VSHL, DL, VT, Op.getOperand(0),
@@ -8926,8 +8926,8 @@ SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
   case ISD::SRA:
   case ISD::SRL:
     if (VT.isScalableVector()) {
-      unsigned Opc = Op.getOpcode() == ISD::SRA ? AArch64ISD::SRA_MERGE_OP1
-                                                : AArch64ISD::SRL_MERGE_OP1;
+      unsigned Opc = Op.getOpcode() == ISD::SRA ? AArch64ISD::SRA_PRED
+                                                : AArch64ISD::SRL_PRED;
       return LowerToPredicatedOp(Op, DAG, Opc);
     }
 
@@ -11940,6 +11940,25 @@ static SDValue combineSVEReductionOrderedFP(SDNode *N, unsigned Opc,
                      Zero);
 }
 
+// If a merged operation has no inactive lanes we can relax it to a predicated
+// or unpredicated operation, which potentially allows better isel (perhaps
+// using immediate forms) or relaxing register reuse requirements.
+static SDValue convertMergedOpToPredOp(SDNode *N, unsigned PredOpc,
+                                       SelectionDAG &DAG) {
+  assert(N->getOpcode() == ISD::INTRINSIC_WO_CHAIN && "Expected intrinsic!");
+  assert(N->getNumOperands() == 4 && "Expected 3 operand intrinsic!");
+  SDValue Pg = N->getOperand(1);
+
+  // ISD way to specify an all active predicate.
+  if ((Pg.getOpcode() == AArch64ISD::PTRUE) &&
+      (Pg.getConstantOperandVal(0) == AArch64SVEPredPattern::all))
+    return DAG.getNode(PredOpc, SDLoc(N), N->getValueType(0), Pg,
+                       N->getOperand(2), N->getOperand(3));
+
+  // FUTURE: SplatVector(true)
+  return SDValue();
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -12018,26 +12037,19 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_ext:
     return LowerSVEIntrinsicEXT(N, DAG);
   case Intrinsic::aarch64_sve_smin:
-    return DAG.getNode(AArch64ISD::SMIN_MERGE_OP1, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
+    return convertMergedOpToPredOp(N, AArch64ISD::SMIN_PRED, DAG);
   case Intrinsic::aarch64_sve_umin:
-    return DAG.getNode(AArch64ISD::UMIN_MERGE_OP1, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
+    return convertMergedOpToPredOp(N, AArch64ISD::UMIN_PRED, DAG);
   case Intrinsic::aarch64_sve_smax:
-    return DAG.getNode(AArch64ISD::SMAX_MERGE_OP1, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
+    return convertMergedOpToPredOp(N, AArch64ISD::SMAX_PRED, DAG);
   case Intrinsic::aarch64_sve_umax:
-    return DAG.getNode(AArch64ISD::UMAX_MERGE_OP1, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
+    return convertMergedOpToPredOp(N, AArch64ISD::UMAX_PRED, DAG);
   case Intrinsic::aarch64_sve_lsl:
-    return DAG.getNode(AArch64ISD::SHL_MERGE_OP1, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
+    return convertMergedOpToPredOp(N, AArch64ISD::SHL_PRED, DAG);
   case Intrinsic::aarch64_sve_lsr:
-    return DAG.getNode(AArch64ISD::SRL_MERGE_OP1, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
+    return convertMergedOpToPredOp(N, AArch64ISD::SRL_PRED, DAG);
   case Intrinsic::aarch64_sve_asr:
-    return DAG.getNode(AArch64ISD::SRA_MERGE_OP1, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
+    return convertMergedOpToPredOp(N, AArch64ISD::SRA_PRED, DAG);
   case Intrinsic::aarch64_sve_cmphs:
     if (!N->getOperand(2).getValueType().isFloatingPoint())
       return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, SDLoc(N),
