@@ -1039,10 +1039,6 @@ def run_suite():
             (configuration.suite.countTestCases(),
              configuration.suite.countTestCases() != 1 and "s" or ""))
 
-    if configuration.suite.countTestCases() == 0:
-        logging.error("did not discover any matching tests")
-        exitTestSuite(1)
-
     # Invoke the test runner.
     if configuration.count == 1:
         result = unittest2.TextTestRunner(
