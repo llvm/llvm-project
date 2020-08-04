@@ -133,6 +133,9 @@ def NZCV  : AArch64Reg<0, "nzcv">;
 // First fault status register
 def FFR : AArch64Reg<0, "ffr">, DwarfRegNum<[47]>;
 
+// Purely virtual Vector Granule (VG) Dwarf register
+def VG : AArch64Reg<0, "vg">, DwarfRegNum<[46]>;
+
 // GPR register classes with the intersections of GPR32/GPR32sp and
 // GPR64/GPR64sp for use by the coalescer.
 def GPR32common : RegisterClass<"AArch64", [i32], 32, (sequence "W%u", 0, 30)> {
