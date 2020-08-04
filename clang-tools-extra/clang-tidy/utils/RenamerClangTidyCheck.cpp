@@ -157,6 +157,9 @@ void RenamerClangTidyCheck::addUsage(
   RenamerClangTidyCheck::NamingCheckFailure &Failure =
       NamingCheckFailures[Decl];
 
+  if (!Failure.RawUsageLocs.insert(FixLocation.getRawEncoding()).second)
+    return;
+
   if (!Failure.ShouldFix())
     return;
 
@@ -165,8 +168,6 @@ void RenamerClangTidyCheck::addUsage(
 
   if (!utils::rangeCanBeFixed(Range, SourceMgr))
     Failure.FixStatus = RenamerClangTidyCheck::ShouldFixStatus::InsideMacro;
-
-  Failure.RawUsageLocs.insert(FixLocation.getRawEncoding());
 }
 
 void RenamerClangTidyCheck::addUsage(const NamedDecl *Decl, SourceRange Range,
