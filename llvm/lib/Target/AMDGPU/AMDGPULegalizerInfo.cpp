@@ -2494,53 +2494,6 @@ static MachineInstr *verifyCFIntrinsic(MachineInstr &MI,
   return &UseMI;
 }
 
-Register AMDGPULegalizerInfo::insertLiveInCopy(MachineIRBuilder &B,
-                                               MachineRegisterInfo &MRI,
-                                               Register LiveIn,
-                                               Register PhyReg) const {
-  assert(PhyReg.isPhysical() && "Physical register expected");
-
-  // Insert the live-in copy, if required, by defining destination virtual
-  // register.
-  // FIXME: It seems EmitLiveInCopies isn't called anywhere?
-  if (!MRI.getVRegDef(LiveIn)) {
-    // FIXME: Should have scoped insert pt
-    MachineBasicBlock &OrigInsBB = B.getMBB();
-    auto OrigInsPt = B.getInsertPt();
-
-    MachineBasicBlock &EntryMBB = B.getMF().front();
-    EntryMBB.addLiveIn(PhyReg);
-    B.setInsertPt(EntryMBB, EntryMBB.begin());
-    B.buildCopy(LiveIn, PhyReg);
-
-    B.setInsertPt(OrigInsBB, OrigInsPt);
-  }
-
-  return LiveIn;
-}
-
-Register AMDGPULegalizerInfo::getLiveInRegister(MachineIRBuilder &B,
-                                                MachineRegisterInfo &MRI,
-                                                Register PhyReg, LLT Ty,
-                                                bool InsertLiveInCopy) const {
-  assert(PhyReg.isPhysical() && "Physical register expected");
-
-  // Get or create virtual live-in regester
-  Register LiveIn = MRI.getLiveInVirtReg(PhyReg);
-  if (!LiveIn) {
-    LiveIn = MRI.createGenericVirtualRegister(Ty);
-    MRI.addLiveIn(PhyReg, LiveIn);
-  }
-
-  // When the actual true copy required is from virtual register to physical
-  // register (to be inserted later), live-in copy insertion from physical
-  // to register virtual register is not required
-  if (!InsertLiveInCopy)
-    return LiveIn;
-
-  return insertLiveInCopy(B, MRI, LiveIn, PhyReg);
-}
-
 bool AMDGPULegalizerInfo::loadInputValue(Register DstReg, MachineIRBuilder &B,
                                          const ArgDescriptor *Arg,
                                          const TargetRegisterClass *ArgRC,
@@ -2549,9 +2502,8 @@ bool AMDGPULegalizerInfo::loadInputValue(Register DstReg, MachineIRBuilder &B,
   assert(SrcReg.isPhysical() && "Physical register expected");
   assert(DstReg.isVirtual() && "Virtual register expected");
 
-  MachineRegisterInfo &MRI = *B.getMRI();
-  Register LiveIn = getLiveInRegister(B, MRI, SrcReg, ArgTy);
-
+  Register LiveIn = getFunctionLiveInPhysReg(B.getMF(), B.getTII(), SrcReg, *ArgRC,
+                                             ArgTy);
   if (Arg->isMasked()) {
     // TODO: Should we try to emit this once in the entry block?
     const LLT S32 = LLT::scalar(32);
@@ -4195,6 +4147,7 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(
   return true;
 }
 
+// TODO: Move to selection
 bool AMDGPULegalizerInfo::legalizeTrapIntrinsic(MachineInstr &MI,
                                                 MachineRegisterInfo &MRI,
                                                 MachineIRBuilder &B) const {
@@ -4206,12 +4159,13 @@ bool AMDGPULegalizerInfo::legalizeTrapIntrinsic(MachineInstr &MI,
     // Pass queue pointer to trap handler as input, and insert trap instruction
     // Reference: https://llvm.org/docs/AMDGPUUsage.html#trap-handler-abi
     MachineRegisterInfo &MRI = *B.getMRI();
-    Register SGPR01(AMDGPU::SGPR0_SGPR1);
-    Register LiveIn = getLiveInRegister(
-        B, MRI, SGPR01, LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64),
-        /*InsertLiveInCopy=*/false);
+
+    Register LiveIn =
+      MRI.createGenericVirtualRegister(LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
     if (!loadInputValue(LiveIn, B, AMDGPUFunctionArgInfo::QUEUE_PTR))
       return false;
+
+    Register SGPR01(AMDGPU::SGPR0_SGPR1);
     B.buildCopy(SGPR01, LiveIn);
     B.buildInstr(AMDGPU::S_TRAP)
         .addImm(GCNSubtarget::TrapIDLLVMTrap)

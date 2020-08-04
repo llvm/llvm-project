@@ -142,7 +142,7 @@ define void @test_func_call_external_void_func_void() #0 {
   ; CHECK-LABEL: name: test_func_call_external_void_func_void
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
   ; CHECK:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr14
   ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr13
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr12
@@ -4369,7 +4369,7 @@ define void @stack_12xv3i32() #0 {
   ; CHECK-LABEL: name: stack_12xv3i32
   ; CHECK: bb.1.entry:
   ; CHECK:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
   ; CHECK:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr14
   ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr13
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr12
@@ -4510,7 +4510,7 @@ define void @stack_12xv3f32() #0 {
   ; CHECK-LABEL: name: stack_12xv3f32
   ; CHECK: bb.1.entry:
   ; CHECK:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
   ; CHECK:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr14
   ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr13
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr12
@@ -4651,7 +4651,7 @@ define void @stack_8xv5i32() #0 {
   ; CHECK-LABEL: name: stack_8xv5i32
   ; CHECK: bb.1.entry:
   ; CHECK:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
   ; CHECK:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr14
   ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr13
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr12
@@ -4792,7 +4792,7 @@ define void @stack_8xv5f32() #0 {
   ; CHECK-LABEL: name: stack_8xv5f32
   ; CHECK: bb.1.entry:
   ; CHECK:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
   ; CHECK:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr14
   ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr13
   ; CHECK:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr12
