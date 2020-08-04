@@ -7915,36 +7915,41 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   return Op;
 }
 
-void PPCTargetLowering::LowerFP_TO_INTForReuse(SDValue Op, ReuseLoadInfo &RLI,
-                                               SelectionDAG &DAG,
-                                               const SDLoc &dl) const {
-  assert(Op.getOperand(0).getValueType().isFloatingPoint());
+static SDValue convertFPToInt(SDValue Op, SelectionDAG &DAG,
+                              const PPCSubtarget &Subtarget) {
+  SDLoc dl(Op);
+  bool IsSigned = Op.getOpcode() == ISD::FP_TO_SINT;
   SDValue Src = Op.getOperand(0);
+  assert(Src.getValueType().isFloatingPoint());
   if (Src.getValueType() == MVT::f32)
     Src = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Src);
-
-  SDValue Tmp;
+  SDValue Conv;
   switch (Op.getSimpleValueType().SimpleTy) {
   default: llvm_unreachable("Unhandled FP_TO_INT type in custom expander!");
   case MVT::i32:
-    Tmp = DAG.getNode(
-        Op.getOpcode() == ISD::FP_TO_SINT
-            ? PPCISD::FCTIWZ
-            : (Subtarget.hasFPCVT() ? PPCISD::FCTIWUZ : PPCISD::FCTIDZ),
+    Conv = DAG.getNode(
+        IsSigned ? PPCISD::FCTIWZ
+                 : (Subtarget.hasFPCVT() ? PPCISD::FCTIWUZ : PPCISD::FCTIDZ),
         dl, MVT::f64, Src);
     break;
   case MVT::i64:
-    assert((Op.getOpcode() == ISD::FP_TO_SINT || Subtarget.hasFPCVT()) &&
+    assert((IsSigned || Subtarget.hasFPCVT()) &&
            "i64 FP_TO_UINT is supported only with FPCVT");
-    Tmp = DAG.getNode(Op.getOpcode()==ISD::FP_TO_SINT ? PPCISD::FCTIDZ :
-                                                        PPCISD::FCTIDUZ,
-                      dl, MVT::f64, Src);
-    break;
+    Conv = DAG.getNode(IsSigned ? PPCISD::FCTIDZ : PPCISD::FCTIDUZ, dl,
+                       MVT::f64, Src);
   }
+  return Conv;
+}
+
+void PPCTargetLowering::LowerFP_TO_INTForReuse(SDValue Op, ReuseLoadInfo &RLI,
+                                               SelectionDAG &DAG,
+                                               const SDLoc &dl) const {
+  SDValue Tmp = convertFPToInt(Op, DAG, Subtarget);
+  bool IsSigned = Op.getOpcode() == ISD::FP_TO_SINT;
 
   // Convert the FP value to an int value through memory.
   bool i32Stack = Op.getValueType() == MVT::i32 && Subtarget.hasSTFIWX() &&
-    (Op.getOpcode() == ISD::FP_TO_SINT || Subtarget.hasFPCVT());
+                  (IsSigned || Subtarget.hasFPCVT());
   SDValue FIPtr = DAG.CreateStackTemporary(i32Stack ? MVT::i32 : MVT::f64);
   int FI = cast<FrameIndexSDNode>(FIPtr)->getIndex();
   MachinePointerInfo MPI =
@@ -7985,51 +7990,25 @@ SDValue PPCTargetLowering::LowerFP_TO_INTDirectMove(SDValue Op,
                                                     SelectionDAG &DAG,
                                                     const SDLoc &dl) const {
   assert(Op.getOperand(0).getValueType().isFloatingPoint());
-  SDValue Src = Op.getOperand(0);
-
-  if (Src.getValueType() == MVT::f32)
-    Src = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Src);
-
-  SDValue Tmp;
-  switch (Op.getSimpleValueType().SimpleTy) {
-  default: llvm_unreachable("Unhandled FP_TO_INT type in custom expander!");
-  case MVT::i32:
-    Tmp = DAG.getNode(
-        Op.getOpcode() == ISD::FP_TO_SINT
-            ? PPCISD::FCTIWZ
-            : (Subtarget.hasFPCVT() ? PPCISD::FCTIWUZ : PPCISD::FCTIDZ),
-        dl, MVT::f64, Src);
-    Tmp = DAG.getNode(PPCISD::MFVSR, dl, MVT::i32, Tmp);
-    break;
-  case MVT::i64:
-    assert((Op.getOpcode() == ISD::FP_TO_SINT || Subtarget.hasFPCVT()) &&
-           "i64 FP_TO_UINT is supported only with FPCVT");
-    Tmp = DAG.getNode(Op.getOpcode()==ISD::FP_TO_SINT ? PPCISD::FCTIDZ :
-                                                        PPCISD::FCTIDUZ,
-                      dl, MVT::f64, Src);
-    Tmp = DAG.getNode(PPCISD::MFVSR, dl, MVT::i64, Tmp);
-    break;
-  }
-  return Tmp;
+  return DAG.getNode(PPCISD::MFVSR, dl, Op.getSimpleValueType().SimpleTy,
+                     convertFPToInt(Op, DAG, Subtarget));
 }
 
 SDValue PPCTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG,
                                           const SDLoc &dl) const {
-
+  SDValue Src = Op.getOperand(0);
   // FP to INT conversions are legal for f128.
-  if (Op->getOperand(0).getValueType() == MVT::f128)
+  if (Src.getValueType() == MVT::f128)
     return Op;
 
   // Expand ppcf128 to i32 by hand for the benefit of llvm-gcc bootstrap on
   // PPC (the libcall is not available).
-  if (Op.getOperand(0).getValueType() == MVT::ppcf128) {
+  if (Src.getValueType() == MVT::ppcf128) {
     if (Op.getValueType() == MVT::i32) {
       if (Op.getOpcode() == ISD::FP_TO_SINT) {
-        SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl,
-                                 MVT::f64, Op.getOperand(0),
+        SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::f64, Src,
                                  DAG.getIntPtrConstant(0, dl));
-        SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl,
-                                 MVT::f64, Op.getOperand(0),
+        SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::f64, Src,
                                  DAG.getIntPtrConstant(1, dl));
 
         // Add the two halves of the long double in round-to-zero mode.
@@ -8045,15 +8024,12 @@ SDValue PPCTargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG,
         //  X>=2^31 ? (int)(X-2^31)+0x80000000 : (int)X
         // FIXME: generated code sucks.
         // TODO: Are there fast-math-flags to propagate to this FSUB?
-        SDValue True = DAG.getNode(ISD::FSUB, dl, MVT::ppcf128,
-                                   Op.getOperand(0), Tmp);
+        SDValue True = DAG.getNode(ISD::FSUB, dl, MVT::ppcf128, Src, Tmp);
         True = DAG.getNode(ISD::FP_TO_SINT, dl, MVT::i32, True);
         True = DAG.getNode(ISD::ADD, dl, MVT::i32, True,
                            DAG.getConstant(0x80000000, dl, MVT::i32));
-        SDValue False = DAG.getNode(ISD::FP_TO_SINT, dl, MVT::i32,
-                                    Op.getOperand(0));
-        return DAG.getSelectCC(dl, Op.getOperand(0), Tmp, True, False,
-                               ISD::SETGE);
+        SDValue False = DAG.getNode(ISD::FP_TO_SINT, dl, MVT::i32, Src);
+        return DAG.getSelectCC(dl, Src, Tmp, True, False, ISD::SETGE);
       }
     }
 
@@ -8172,6 +8148,19 @@ bool PPCTargetLowering::directMoveIsProfitable(const SDValue &Op) const {
   return false;
 }
 
+static SDValue convertIntToFP(SDValue Op, SDValue Src, SelectionDAG &DAG,
+                              const PPCSubtarget &Subtarget) {
+  bool IsSigned = Op.getOpcode() == ISD::SINT_TO_FP;
+  SDLoc dl(Op);
+  // If we have FCFIDS, then use it when converting to single-precision.
+  // Otherwise, convert to double-precision and then round.
+  bool IsSingle = Op.getValueType() == MVT::f32 && Subtarget.hasFPCVT();
+  unsigned ConvOpc = IsSingle ? (IsSigned ? PPCISD::FCFIDS : PPCISD::FCFIDUS)
+                              : (IsSigned ? PPCISD::FCFID : PPCISD::FCFIDU);
+  EVT ConvTy = IsSingle ? MVT::f32 : MVT::f64;
+  return DAG.getNode(ConvOpc, dl, ConvTy, Src);
+}
+
 /// Custom lowers integer to floating point conversions to use
 /// the direct move instructions available in ISA 2.07 to avoid the
 /// need for load/store combinations.
@@ -8183,25 +8172,12 @@ SDValue PPCTargetLowering::LowerINT_TO_FPDirectMove(SDValue Op,
          "Invalid floating point type as target of conversion");
   assert(Subtarget.hasFPCVT() &&
          "Int to FP conversions with direct moves require FPCVT");
-  SDValue FP;
   SDValue Src = Op.getOperand(0);
-  bool SinglePrec = Op.getValueType() == MVT::f32;
   bool WordInt = Src.getSimpleValueType().SimpleTy == MVT::i32;
   bool Signed = Op.getOpcode() == ISD::SINT_TO_FP;
-  unsigned ConvOp = Signed ? (SinglePrec ? PPCISD::FCFIDS : PPCISD::FCFID) :
-                             (SinglePrec ? PPCISD::FCFIDUS : PPCISD::FCFIDU);
-
-  if (WordInt) {
-    FP = DAG.getNode(Signed ? PPCISD::MTVSRA : PPCISD::MTVSRZ,
-                     dl, MVT::f64, Src);
-    FP = DAG.getNode(ConvOp, dl, SinglePrec ? MVT::f32 : MVT::f64, FP);
-  }
-  else {
-    FP = DAG.getNode(PPCISD::MTVSRA, dl, MVT::f64, Src);
-    FP = DAG.getNode(ConvOp, dl, SinglePrec ? MVT::f32 : MVT::f64, FP);
-  }
-
-  return FP;
+  unsigned MovOpc = (WordInt && !Signed) ? PPCISD::MTVSRZ : PPCISD::MTVSRA;
+  SDValue Mov = DAG.getNode(MovOpc, dl, MVT::f64, Src);
+  return convertIntToFP(Op, Mov, DAG, Subtarget);
 }
 
 static SDValue widenVec(SelectionDAG &DAG, SDValue Vec, const SDLoc &dl) {
@@ -8277,8 +8253,10 @@ SDValue PPCTargetLowering::LowerINT_TO_FPVector(SDValue Op, SelectionDAG &DAG,
 SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
                                           SelectionDAG &DAG) const {
   SDLoc dl(Op);
+  SDValue Src = Op.getOperand(0);
+  bool IsSigned = Op.getOpcode() == ISD::SINT_TO_FP;
 
-  EVT InVT = Op.getOperand(0).getValueType();
+  EVT InVT = Src.getValueType();
   EVT OutVT = Op.getValueType();
   if (OutVT.isVector() && OutVT.isFloatingPoint() &&
       isOperationCustom(Op.getOpcode(), InVT))
@@ -8292,8 +8270,8 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
   if (Op.getValueType() != MVT::f32 && Op.getValueType() != MVT::f64)
     return SDValue();
 
-  if (Op.getOperand(0).getValueType() == MVT::i1)
-    return DAG.getNode(ISD::SELECT, dl, Op.getValueType(), Op.getOperand(0),
+  if (Src.getValueType() == MVT::i1)
+    return DAG.getNode(ISD::SELECT, dl, Op.getValueType(), Src,
                        DAG.getConstantFP(1.0, dl, Op.getValueType()),
                        DAG.getConstantFP(0.0, dl, Op.getValueType()));
 
@@ -8303,22 +8281,11 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
       Subtarget.isPPC64() && Subtarget.hasFPCVT())
     return LowerINT_TO_FPDirectMove(Op, DAG, dl);
 
-  assert((Op.getOpcode() == ISD::SINT_TO_FP || Subtarget.hasFPCVT()) &&
+  assert((IsSigned || Subtarget.hasFPCVT()) &&
          "UINT_TO_FP is supported only with FPCVT");
 
-  // If we have FCFIDS, then use it when converting to single-precision.
-  // Otherwise, convert to double-precision and then round.
-  unsigned FCFOp = (Subtarget.hasFPCVT() && Op.getValueType() == MVT::f32)
-                       ? (Op.getOpcode() == ISD::UINT_TO_FP ? PPCISD::FCFIDUS
-                                                            : PPCISD::FCFIDS)
-                       : (Op.getOpcode() == ISD::UINT_TO_FP ? PPCISD::FCFIDU
-                                                            : PPCISD::FCFID);
-  MVT FCFTy = (Subtarget.hasFPCVT() && Op.getValueType() == MVT::f32)
-                  ? MVT::f32
-                  : MVT::f64;
-
-  if (Op.getOperand(0).getValueType() == MVT::i64) {
-    SDValue SINT = Op.getOperand(0);
+  if (Src.getValueType() == MVT::i64) {
+    SDValue SINT = Src;
     // When converting to single-precision, we actually need to convert
     // to double-precision first and then round to single-precision.
     // To avoid double-rounding effects during that operation, we have
@@ -8431,7 +8398,7 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
     } else
       Bits = DAG.getNode(ISD::BITCAST, dl, MVT::f64, SINT);
 
-    SDValue FP = DAG.getNode(FCFOp, dl, FCFTy, Bits);
+    SDValue FP = convertIntToFP(Op, Bits, DAG, Subtarget);
 
     if (Op.getValueType() == MVT::f32 && !Subtarget.hasFPCVT())
       FP = DAG.getNode(ISD::FP_ROUND, dl,
@@ -8439,7 +8406,7 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
     return FP;
   }
 
-  assert(Op.getOperand(0).getValueType() == MVT::i32 &&
+  assert(Src.getValueType() == MVT::i32 &&
          "Unhandled INT_TO_FP type in custom expander!");
   // Since we only generate this in 64-bit mode, we can take advantage of
   // 64-bit registers.  In particular, sign extend the input value into the
@@ -8453,15 +8420,13 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
   if (Subtarget.hasLFIWAX() || Subtarget.hasFPCVT()) {
     ReuseLoadInfo RLI;
     bool ReusingLoad;
-    if (!(ReusingLoad = canReuseLoadAddress(Op.getOperand(0), MVT::i32, RLI,
-                                            DAG))) {
+    if (!(ReusingLoad = canReuseLoadAddress(Src, MVT::i32, RLI, DAG))) {
       int FrameIdx = MFI.CreateStackObject(4, Align(4), false);
       SDValue FIdx = DAG.getFrameIndex(FrameIdx, PtrVT);
 
-      SDValue Store =
-          DAG.getStore(DAG.getEntryNode(), dl, Op.getOperand(0), FIdx,
-                       MachinePointerInfo::getFixedStack(
-                           DAG.getMachineFunction(), FrameIdx));
+      SDValue Store = DAG.getStore(DAG.getEntryNode(), dl, Src, FIdx,
+                                   MachinePointerInfo::getFixedStack(
+                                       DAG.getMachineFunction(), FrameIdx));
 
       assert(cast<StoreSDNode>(Store)->getMemoryVT() == MVT::i32 &&
              "Expected an i32 store");
@@ -8477,10 +8442,9 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
       MF.getMachineMemOperand(RLI.MPI, MachineMemOperand::MOLoad, 4,
                               RLI.Alignment, RLI.AAInfo, RLI.Ranges);
     SDValue Ops[] = { RLI.Chain, RLI.Ptr };
-    Ld = DAG.getMemIntrinsicNode(Op.getOpcode() == ISD::UINT_TO_FP ?
-                                   PPCISD::LFIWZX : PPCISD::LFIWAX,
-                                 dl, DAG.getVTList(MVT::f64, MVT::Other),
-                                 Ops, MVT::i32, MMO);
+    Ld = DAG.getMemIntrinsicNode(IsSigned ? PPCISD::LFIWAX : PPCISD::LFIWZX, dl,
+                                 DAG.getVTList(MVT::f64, MVT::Other), Ops,
+                                 MVT::i32, MMO);
     if (ReusingLoad)
       spliceIntoChain(RLI.ResChain, Ld.getValue(1), DAG);
   } else {
@@ -8490,8 +8454,7 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
     int FrameIdx = MFI.CreateStackObject(8, Align(8), false);
     SDValue FIdx = DAG.getFrameIndex(FrameIdx, PtrVT);
 
-    SDValue Ext64 = DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::i64,
-                                Op.getOperand(0));
+    SDValue Ext64 = DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::i64, Src);
 
     // STD the extended value into the stack slot.
     SDValue Store = DAG.getStore(
@@ -8505,7 +8468,7 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
   }
 
   // FCFID it and return it.
-  SDValue FP = DAG.getNode(FCFOp, dl, FCFTy, Ld);
+  SDValue FP = convertIntToFP(Op, Ld, DAG, Subtarget);
   if (Op.getValueType() == MVT::f32 && !Subtarget.hasFPCVT())
     FP = DAG.getNode(ISD::FP_ROUND, dl, MVT::f32, FP,
                      DAG.getIntPtrConstant(0, dl));
