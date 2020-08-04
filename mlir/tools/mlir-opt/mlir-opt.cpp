@@ -31,7 +31,6 @@ namespace mlir {
 // Defined in the test directory, no public header.
 void registerConvertToTargetEnvPass();
 void registerInliner();
-void registerLLVMTypeTestDialect();
 void registerMemRefBoundCheck();
 void registerPassManagerTestPass();
 void registerPatternsTestPass();
@@ -105,7 +104,6 @@ static cl::opt<bool> allowUnregisteredDialects(
 void registerTestPasses() {
   registerConvertToTargetEnvPass();
   registerInliner();
-  registerLLVMTypeTestDialect();
   registerMemRefBoundCheck();
   registerPassManagerTestPass();
   registerPatternsTestPass();
