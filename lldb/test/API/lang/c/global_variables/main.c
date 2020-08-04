@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 int g_common_1; // Not initialized on purpose to cause it to be undefined external in .o file
 int g_file_global_int = 42;
 static const int g_file_static_int = 2;
