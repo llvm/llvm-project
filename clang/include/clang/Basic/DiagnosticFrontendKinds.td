@@ -270,8 +270,16 @@ def err_ifunc_resolver_return : Error<
   "ifunc resolver function must return a pointer">;
 
 def warn_atomic_op_misaligned : Warning<
-  "%select{large|misaligned}0 atomic operation may incur "
-  "significant performance penalty">, InGroup<DiagGroup<"atomic-alignment">>;
+  "misaligned atomic operation may incur "
+  "significant performance penalty"
+  "; the expected alignment (%0 bytes) exceeds the actual alignment (%1 bytes)">,
+  InGroup<AtomicAlignment>;
+
+def warn_atomic_op_oversized : Warning<
+  "large atomic operation may incur "
+  "significant performance penalty"
+  "; the access size (%0 bytes) exceeds the max lock-free size (%1  bytes)">,
+InGroup<AtomicAlignment>;
 
 def warn_alias_with_section : Warning<
   "%select{alias|ifunc}1 will not be in section '%0' but in the same section "
