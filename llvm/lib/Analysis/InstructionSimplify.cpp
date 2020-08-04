@@ -5208,6 +5208,16 @@ static Intrinsic::ID getMaxMinOpposite(Intrinsic::ID ID) {
   }
 }
 
+static APInt getMaxMinLimit(Intrinsic::ID ID, unsigned BitWidth) {
+  switch (ID) {
+  case Intrinsic::smax: return APInt::getSignedMaxValue(BitWidth);
+  case Intrinsic::smin: return APInt::getSignedMinValue(BitWidth);
+  case Intrinsic::umax: return APInt::getMaxValue(BitWidth);
+  case Intrinsic::umin: return APInt::getMinValue(BitWidth);
+  default: llvm_unreachable("Unexpected intrinsic");
+  }
+}
+
 static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
                                       const SimplifyQuery &Q) {
   Intrinsic::ID IID = F->getIntrinsicID();
@@ -5238,16 +5248,8 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
       std::swap(Op0, Op1);
 
     // Assume undef is the limit value.
-    if (isa<UndefValue>(Op1)) {
-      if (IID == Intrinsic::smax)
-        return ConstantInt::get(ReturnType, APInt::getSignedMaxValue(BitWidth));
-      if (IID == Intrinsic::smin)
-        return ConstantInt::get(ReturnType, APInt::getSignedMinValue(BitWidth));
-      if (IID == Intrinsic::umax)
-        return ConstantInt::get(ReturnType, APInt::getMaxValue(BitWidth));
-      if (IID == Intrinsic::umin)
-        return ConstantInt::get(ReturnType, APInt::getMinValue(BitWidth));
-    }
+    if (isa<UndefValue>(Op1))
+      return ConstantInt::get(ReturnType, getMaxMinLimit(IID, BitWidth));
 
     auto hasSpecificOperand = [](IntrinsicInst *II, Value *V) {
       return II->getOperand(0) == V || II->getOperand(1) == V;
@@ -5272,25 +5274,18 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     }
 
     const APInt *C;
-    if (!match(Op1, m_APIntAllowUndef(C)))
-      break;
+    if (match(Op1, m_APIntAllowUndef(C))) {
+      // Clamp to limit value. For example:
+      // umax(i8 %x, i8 255) --> 255
+      if (*C == getMaxMinLimit(IID, BitWidth))
+        return ConstantInt::get(ReturnType, *C);
 
-    // Clamp to limit value. For example:
-    // umax(i8 %x, i8 255) --> 255
-    if ((IID == Intrinsic::smax && C->isMaxSignedValue()) ||
-        (IID == Intrinsic::smin && C->isMinSignedValue()) ||
-        (IID == Intrinsic::umax && C->isMaxValue()) ||
-        (IID == Intrinsic::umin && C->isMinValue()))
-      return ConstantInt::get(ReturnType, *C);
-
-    // If the constant op is the opposite of the limit value, the other must be
-    // larger/smaller or equal. For example:
-    // umin(i8 %x, i8 255) --> %x
-    if ((IID == Intrinsic::smax && C->isMinSignedValue()) ||
-        (IID == Intrinsic::smin && C->isMaxSignedValue()) ||
-        (IID == Intrinsic::umax && C->isMinValue()) ||
-        (IID == Intrinsic::umin && C->isMaxValue()))
-      return Op0;
+      // If the constant op is the opposite of the limit value, the other must
+      // be larger/smaller or equal. For example:
+      // umin(i8 %x, i8 255) --> %x
+      if (*C == getMaxMinLimit(getMaxMinOpposite(IID), BitWidth))
+        return Op0;
+    }
 
     break;
   }
