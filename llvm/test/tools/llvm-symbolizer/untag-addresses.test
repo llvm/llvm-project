@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: echo DATA %t.o 0 | llvm-symbolizer | FileCheck --check-prefix=UNTAG %s
-# RUN: echo DATA %t.o 0 | llvm-symbolizer -untag-addresses=0 | FileCheck --check-prefix=NOUNTAG %s
+# RUN: echo DATA %t.o 0 | llvm-symbolizer --no-untag-addresses | FileCheck --check-prefix=NOUNTAG %s
 # RUN: echo DATA %t.o 0 | llvm-addr2line | FileCheck --check-prefix=NOUNTAG %s
 
 # UNTAG: foo
