@@ -132,7 +132,7 @@ def skipTestIfFn(expected_fn, bugnumber=None):
             if reason is not None:
                 self.skipTest(reason)
             else:
-                func(*args, **kwargs)
+                return func(*args, **kwargs)
         return wrapper
 
     # Some decorators can be called both with no arguments (e.g. @expectedFailureWindows)
