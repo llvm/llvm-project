@@ -51,14 +51,10 @@ define void @nonnull(i32* %v) {
 ; CHECK-LABEL: @nonnull(
 ; CHECK-NEXT:    [[A:%.*]] = icmp ne i32* [[V:%.*]], null
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32* [[V]], null
-; CHECK-NEXT:    call void @use(i1 [[C1]])
-; CHECK-NEXT:    [[C2:%.*]] = icmp ne i32* [[V]], null
-; CHECK-NEXT:    call void @use(i1 [[C2]])
-; CHECK-NEXT:    [[C3:%.*]] = icmp eq i32* null, [[V]]
-; CHECK-NEXT:    call void @use(i1 [[C3]])
-; CHECK-NEXT:    [[C4:%.*]] = icmp ne i32* null, [[V]]
-; CHECK-NEXT:    call void @use(i1 [[C4]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
   %a = icmp ne i32* %v, null

@@ -48,14 +48,10 @@ define void @load_nonnull(i32** %p, i32** %p2) {
 ; CHECK-LABEL: @load_nonnull(
 ; CHECK-NEXT:    [[V:%.*]] = load i32*, i32** [[P:%.*]], align 8, !nonnull !2
 ; CHECK-NEXT:    [[V2:%.*]] = load i32*, i32** [[P2:%.*]], align 8, !nonnull !2
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32* [[V]], null
-; CHECK-NEXT:    call void @use(i1 [[C1]])
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32* [[V]], null
-; CHECK-NEXT:    call void @use(i1 [[C2]])
-; CHECK-NEXT:    [[C3:%.*]] = icmp ne i32* null, [[V]]
-; CHECK-NEXT:    call void @use(i1 [[C3]])
-; CHECK-NEXT:    [[C4:%.*]] = icmp eq i32* null, [[V]]
-; CHECK-NEXT:    call void @use(i1 [[C4]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    [[C5:%.*]] = icmp eq i32* [[V]], [[V2]]
 ; CHECK-NEXT:    call void @use(i1 [[C5]])
 ; CHECK-NEXT:    [[C6:%.*]] = icmp ne i32* [[V]], [[V2]]
