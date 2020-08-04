@@ -294,24 +294,6 @@ bool IRTranslator::translateBinaryOp(unsigned Opcode, const User &U,
   return true;
 }
 
-bool IRTranslator::translateFSub(const User &U, MachineIRBuilder &MIRBuilder) {
-  // -0.0 - X --> G_FNEG
-  if (isa<Constant>(U.getOperand(0)) &&
-      U.getOperand(0) == ConstantFP::getZeroValueForNegation(U.getType())) {
-    Register Op1 = getOrCreateVReg(*U.getOperand(1));
-    Register Res = getOrCreateVReg(U);
-    uint16_t Flags = 0;
-    if (isa<Instruction>(U)) {
-      const Instruction &I = cast<Instruction>(U);
-      Flags = MachineInstr::copyFlagsFromInstruction(I);
-    }
-    // Negate the last operand of the FSUB
-    MIRBuilder.buildFNeg(Res, Op1, Flags);
-    return true;
-  }
-  return translateBinaryOp(TargetOpcode::G_FSUB, U, MIRBuilder);
-}
-
 bool IRTranslator::translateFNeg(const User &U, MachineIRBuilder &MIRBuilder) {
   Register Op0 = getOrCreateVReg(*U.getOperand(0));
   Register Res = getOrCreateVReg(U);
