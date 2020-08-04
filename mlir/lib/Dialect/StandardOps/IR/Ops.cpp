@@ -749,8 +749,7 @@ static LogicalResult verify(CallOp op) {
 }
 
 FunctionType CallOp::getCalleeType() {
-  SmallVector<Type, 8> argTypes(getOperandTypes());
-  return FunctionType::get(argTypes, getResultTypes(), getContext());
+  return FunctionType::get(getOperandTypes(), getResultTypes(), getContext());
 }
 
 //===----------------------------------------------------------------------===//

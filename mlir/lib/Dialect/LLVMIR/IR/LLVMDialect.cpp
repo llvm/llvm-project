@@ -549,15 +549,13 @@ static void printCallOp(OpAsmPrinter &p, CallOp &op) {
   else
     p << op.getOperand(0);
 
-  p << '(' << op.getOperands().drop_front(isDirect ? 0 : 1) << ')';
+  auto args = op.getOperands().drop_front(isDirect ? 0 : 1);
+  p << '(' << args << ')';
   p.printOptionalAttrDict(op.getAttrs(), {"callee"});
 
   // Reconstruct the function MLIR function type from operand and result types.
-  SmallVector<Type, 8> argTypes(
-      llvm::drop_begin(op.getOperandTypes(), isDirect ? 0 : 1));
-
   p << " : "
-    << FunctionType::get(argTypes, op.getResultTypes(), op.getContext());
+    << FunctionType::get(args.getTypes(), op.getResultTypes(), op.getContext());
 }
 
 // <operation> ::= `llvm.call` (function-id | ssa-use) `(` ssa-use-list `)`
