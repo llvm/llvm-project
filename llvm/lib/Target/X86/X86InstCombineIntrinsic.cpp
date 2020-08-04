@@ -202,7 +202,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
 
   auto Vec = II.getArgOperand(0);
   auto Amt = II.getArgOperand(1);
-  auto VT = cast<VectorType>(Vec->getType());
+  auto VT = cast<FixedVectorType>(Vec->getType());
   auto SVT = VT->getElementType();
   auto AmtVT = Amt->getType();
   unsigned VWidth = VT->getNumElements();
@@ -234,7 +234,7 @@ static Value *simplifyX86immShift(const IntrinsicInst &II,
     assert(AmtVT->isVectorTy() && AmtVT->getPrimitiveSizeInBits() == 128 &&
            cast<VectorType>(AmtVT)->getElementType() == SVT &&
            "Unexpected shift-by-scalar type");
-    unsigned NumAmtElts = cast<VectorType>(AmtVT)->getNumElements();
+    unsigned NumAmtElts = cast<FixedVectorType>(AmtVT)->getNumElements();
     APInt DemandedLower = APInt::getOneBitSet(NumAmtElts, 0);
     APInt DemandedUpper = APInt::getBitsSet(NumAmtElts, 1, NumAmtElts / 2);
     KnownBits KnownLowerBits = llvm::computeKnownBits(
@@ -350,7 +350,7 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
 
   auto Vec = II.getArgOperand(0);
   auto Amt = II.getArgOperand(1);
-  auto VT = cast<VectorType>(II.getType());
+  auto VT = cast<FixedVectorType>(II.getType());
   auto SVT = VT->getElementType();
   int NumElts = VT->getNumElements();
   int BitWidth = SVT->getIntegerBitWidth();
@@ -448,10 +448,10 @@ static Value *simplifyX86pack(IntrinsicInst &II,
   if (isa<UndefValue>(Arg0) && isa<UndefValue>(Arg1))
     return UndefValue::get(ResTy);
 
-  auto *ArgTy = cast<VectorType>(Arg0->getType());
+  auto *ArgTy = cast<FixedVectorType>(Arg0->getType());
   unsigned NumLanes = ResTy->getPrimitiveSizeInBits() / 128;
   unsigned NumSrcElts = ArgTy->getNumElements();
-  assert(cast<VectorType>(ResTy)->getNumElements() == (2 * NumSrcElts) &&
+  assert(cast<FixedVectorType>(ResTy)->getNumElements() == (2 * NumSrcElts) &&
          "Unexpected packing types");
 
   unsigned NumSrcEltsPerLane = NumSrcElts / NumLanes;
@@ -513,7 +513,7 @@ static Value *simplifyX86movmsk(const IntrinsicInst &II,
   if (isa<UndefValue>(Arg))
     return Constant::getNullValue(ResTy);
 
-  auto *ArgTy = dyn_cast<VectorType>(Arg->getType());
+  auto *ArgTy = dyn_cast<FixedVectorType>(Arg->getType());
   // We can't easily peek through x86_mmx types.
   if (!ArgTy)
     return nullptr;
@@ -567,7 +567,7 @@ static Value *simplifyX86insertps(const IntrinsicInst &II,
   if (!CInt)
     return nullptr;
 
-  VectorType *VecTy = cast<VectorType>(II.getType());
+  auto *VecTy = cast<FixedVectorType>(II.getType());
   assert(VecTy->getNumElements() == 4 && "insertps with wrong vector type");
 
   // The immediate permute control byte looks like this:
@@ -810,7 +810,7 @@ static Value *simplifyX86pshufb(const IntrinsicInst &II,
   if (!V)
     return nullptr;
 
-  auto *VecTy = cast<VectorType>(II.getType());
+  auto *VecTy = cast<FixedVectorType>(II.getType());
   unsigned NumElts = VecTy->getNumElements();
   assert((NumElts == 16 || NumElts == 32 || NumElts == 64) &&
          "Unexpected number of elements in shuffle mask!");
@@ -855,7 +855,7 @@ static Value *simplifyX86vpermilvar(const IntrinsicInst &II,
   if (!V)
     return nullptr;
 
-  auto *VecTy = cast<VectorType>(II.getType());
+  auto *VecTy = cast<FixedVectorType>(II.getType());
   unsigned NumElts = VecTy->getNumElements();
   bool IsPD = VecTy->getScalarType()->isDoubleTy();
   unsigned NumLaneElts = IsPD ? 2 : 4;
@@ -903,7 +903,7 @@ static Value *simplifyX86vpermv(const IntrinsicInst &II,
   if (!V)
     return nullptr;
 
-  auto *VecTy = cast<VectorType>(II.getType());
+  auto *VecTy = cast<FixedVectorType>(II.getType());
   unsigned Size = VecTy->getNumElements();
   assert((Size == 4 || Size == 8 || Size == 16 || Size == 32 || Size == 64) &&
          "Unexpected shuffle mask size");
@@ -1084,7 +1084,7 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // These intrinsics only demand the 0th element of their input vectors. If
     // we can simplify the input based on that, do so now.
     Value *Arg = II.getArgOperand(0);
-    unsigned VWidth = cast<VectorType>(Arg->getType())->getNumElements();
+    unsigned VWidth = cast<FixedVectorType>(Arg->getType())->getNumElements();
     if (Value *V = SimplifyDemandedVectorEltsLow(Arg, VWidth, 1)) {
       return IC.replaceOperand(II, 0, V);
     }
@@ -1136,7 +1136,7 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     bool MadeChange = false;
     Value *Arg0 = II.getArgOperand(0);
     Value *Arg1 = II.getArgOperand(1);
-    unsigned VWidth = cast<VectorType>(Arg0->getType())->getNumElements();
+    unsigned VWidth = cast<FixedVectorType>(Arg0->getType())->getNumElements();
     if (Value *V = SimplifyDemandedVectorEltsLow(Arg0, VWidth, 1)) {
       IC.replaceOperand(II, 0, V);
       MadeChange = true;
@@ -1362,7 +1362,7 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Value *Arg1 = II.getArgOperand(1);
     assert(Arg1->getType()->getPrimitiveSizeInBits() == 128 &&
            "Unexpected packed shift size");
-    unsigned VWidth = cast<VectorType>(Arg1->getType())->getNumElements();
+    unsigned VWidth = cast<FixedVectorType>(Arg1->getType())->getNumElements();
 
     if (Value *V = SimplifyDemandedVectorEltsLow(Arg1, VWidth, VWidth / 2)) {
       return IC.replaceOperand(II, 1, V);
@@ -1433,7 +1433,8 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       bool MadeChange = false;
       Value *Arg0 = II.getArgOperand(0);
       Value *Arg1 = II.getArgOperand(1);
-      unsigned VWidth = cast<VectorType>(Arg0->getType())->getNumElements();
+      unsigned VWidth =
+          cast<FixedVectorType>(Arg0->getType())->getNumElements();
 
       APInt UndefElts1(VWidth, 0);
       APInt DemandedElts1 =
@@ -1476,8 +1477,8 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::x86_sse4a_extrq: {
     Value *Op0 = II.getArgOperand(0);
     Value *Op1 = II.getArgOperand(1);
-    unsigned VWidth0 = cast<VectorType>(Op0->getType())->getNumElements();
-    unsigned VWidth1 = cast<VectorType>(Op1->getType())->getNumElements();
+    unsigned VWidth0 = cast<FixedVectorType>(Op0->getType())->getNumElements();
+    unsigned VWidth1 = cast<FixedVectorType>(Op1->getType())->getNumElements();
     assert(Op0->getType()->getPrimitiveSizeInBits() == 128 &&
            Op1->getType()->getPrimitiveSizeInBits() == 128 && VWidth0 == 2 &&
            VWidth1 == 16 && "Unexpected operand sizes");
@@ -1517,7 +1518,7 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // EXTRQI: Extract Length bits starting from Index. Zero pad the remaining
     // bits of the lower 64-bits. The upper 64-bits are undefined.
     Value *Op0 = II.getArgOperand(0);
-    unsigned VWidth = cast<VectorType>(Op0->getType())->getNumElements();
+    unsigned VWidth = cast<FixedVectorType>(Op0->getType())->getNumElements();
     assert(Op0->getType()->getPrimitiveSizeInBits() == 128 && VWidth == 2 &&
            "Unexpected operand size");
 
@@ -1541,10 +1542,10 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::x86_sse4a_insertq: {
     Value *Op0 = II.getArgOperand(0);
     Value *Op1 = II.getArgOperand(1);
-    unsigned VWidth = cast<VectorType>(Op0->getType())->getNumElements();
+    unsigned VWidth = cast<FixedVectorType>(Op0->getType())->getNumElements();
     assert(Op0->getType()->getPrimitiveSizeInBits() == 128 &&
            Op1->getType()->getPrimitiveSizeInBits() == 128 && VWidth == 2 &&
-           cast<VectorType>(Op1->getType())->getNumElements() == 2 &&
+           cast<FixedVectorType>(Op1->getType())->getNumElements() == 2 &&
            "Unexpected operand size");
 
     // See if we're dealing with constant values.
@@ -1577,8 +1578,8 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // undefined.
     Value *Op0 = II.getArgOperand(0);
     Value *Op1 = II.getArgOperand(1);
-    unsigned VWidth0 = cast<VectorType>(Op0->getType())->getNumElements();
-    unsigned VWidth1 = cast<VectorType>(Op1->getType())->getNumElements();
+    unsigned VWidth0 = cast<FixedVectorType>(Op0->getType())->getNumElements();
+    unsigned VWidth1 = cast<FixedVectorType>(Op1->getType())->getNumElements();
     assert(Op0->getType()->getPrimitiveSizeInBits() == 128 &&
            Op1->getType()->getPrimitiveSizeInBits() == 128 && VWidth0 == 2 &&
            VWidth1 == 2 && "Unexpected operand sizes");
@@ -1650,9 +1651,9 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
              "Not expecting mask and operands with different sizes");
 
       unsigned NumMaskElts =
-          cast<VectorType>(Mask->getType())->getNumElements();
+          cast<FixedVectorType>(Mask->getType())->getNumElements();
       unsigned NumOperandElts =
-          cast<VectorType>(II.getType())->getNumElements();
+          cast<FixedVectorType>(II.getType())->getNumElements();
       if (NumMaskElts == NumOperandElts) {
         return SelectInst::Create(BoolVec, Op1, Op0);
       }
@@ -1768,7 +1769,7 @@ Optional<Value *> X86TTIImpl::simplifyDemandedUseBitsIntrinsic(
       ArgWidth = 8; // Arg is x86_mmx, but treated as <8 x i8>.
     } else {
       auto Arg = II.getArgOperand(0);
-      auto ArgType = cast<VectorType>(Arg->getType());
+      auto ArgType = cast<FixedVectorType>(Arg->getType());
       ArgWidth = ArgType->getNumElements();
     }
 
@@ -1934,7 +1935,7 @@ Optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
   case Intrinsic::x86_avx512_packusdw_512:
   case Intrinsic::x86_avx512_packuswb_512: {
     auto *Ty0 = II.getArgOperand(0)->getType();
-    unsigned InnerVWidth = cast<VectorType>(Ty0)->getNumElements();
+    unsigned InnerVWidth = cast<FixedVectorType>(Ty0)->getNumElements();
     assert(VWidth == (InnerVWidth * 2) && "Unexpected input size");
 
     unsigned NumLanes = Ty0->getPrimitiveSizeInBits() / 128;
