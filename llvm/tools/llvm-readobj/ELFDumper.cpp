@@ -3354,7 +3354,8 @@ readMipsOptions(const uint8_t *SecBegin, ArrayRef<uint8_t> &SecData,
     return createError("the .MIPS.options section has an invalid size (0x" +
                        Twine::utohexstr(SecData.size()) + ")");
 
-  const auto *O = reinterpret_cast<const Elf_Mips_Options<ELFT> *>(SecData.data());
+  const Elf_Mips_Options<ELFT> *O =
+      reinterpret_cast<const Elf_Mips_Options<ELFT> *>(SecData.data());
   if (O->size > SecData.size()) {
     const uint64_t Offset = SecData.data() - SecBegin;
     const uint64_t SecSize = Offset + SecData.size();
