@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/StackProtector.h"
@@ -1656,6 +1657,33 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     MIRBuilder.buildInstr(TargetOpcode::G_WRITE_REGISTER)
       .addMetadata(cast<MDNode>(cast<MetadataAsValue>(Arg)->getMetadata()))
       .addUse(getOrCreateVReg(*CI.getArgOperand(1)));
+    return true;
+  }
+  case Intrinsic::localescape: {
+    MachineBasicBlock &EntryMBB = MF->front();
+    StringRef EscapedName = GlobalValue::dropLLVMManglingEscape(MF->getName());
+
+    // Directly emit some LOCAL_ESCAPE machine instrs. Label assignment emission
+    // is the same on all targets.
+    for (unsigned Idx = 0, E = CI.getNumArgOperands(); Idx < E; ++Idx) {
+      Value *Arg = CI.getArgOperand(Idx)->stripPointerCasts();
+      if (isa<ConstantPointerNull>(Arg))
+        continue; // Skip null pointers. They represent a hole in index space.
+
+      int FI = getOrCreateFrameIndex(*cast<AllocaInst>(Arg));
+      MCSymbol *FrameAllocSym =
+          MF->getMMI().getContext().getOrCreateFrameAllocSymbol(EscapedName,
+                                                                Idx);
+
+      // This should be inserted at the start of the entry block.
+      auto LocalEscape =
+          MIRBuilder.buildInstrNoInsert(TargetOpcode::LOCAL_ESCAPE)
+              .addSym(FrameAllocSym)
+              .addFrameIndex(FI);
+
+      EntryMBB.insert(EntryMBB.begin(), LocalEscape);
+    }
+
     return true;
   }
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)  \
