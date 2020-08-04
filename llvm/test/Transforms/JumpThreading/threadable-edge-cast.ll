@@ -11,20 +11,14 @@ define i32 @test(i1 %cond0) {
 ; CHECK-NEXT:    br i1 [[COND0:%.*]], label [[T1:%.*]], label [[F1:%.*]]
 ; CHECK:       T1:
 ; CHECK-NEXT:    [[V1:%.*]] = call i32 @f1()
-; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK-NEXT:    br label [[F2:%.*]]
 ; CHECK:       F1:
 ; CHECK-NEXT:    [[V2:%.*]] = call i32 @f2()
-; CHECK-NEXT:    br label [[MERGE]]
-; CHECK:       Merge:
+; CHECK-NEXT:    br label [[F2]]
+; CHECK:       F2:
 ; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 10, [[T1]] ], [ 0, [[F1]] ]
 ; CHECK-NEXT:    [[B:%.*]] = phi i32 [ [[V1]], [[T1]] ], [ [[V2]], [[F1]] ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A]], 1
-; CHECK-NEXT:    [[COND:%.*]] = trunc i32 [[AND]] to i1
-; CHECK-NEXT:    br i1 [[COND]], label [[T2:%.*]], label [[F2:%.*]]
-; CHECK:       T2:
-; CHECK-NEXT:    call void @f3()
-; CHECK-NEXT:    ret i32 [[B]]
-; CHECK:       F2:
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   br i1 %cond0, label %T1, label %F1
@@ -57,21 +51,15 @@ define i32 @test2(i1 %cond0) {
 ; CHECK-NEXT:    br i1 [[COND0:%.*]], label [[T1:%.*]], label [[F1:%.*]]
 ; CHECK:       T1:
 ; CHECK-NEXT:    [[V1:%.*]] = call i32 @f1()
-; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK-NEXT:    br label [[F2:%.*]]
 ; CHECK:       F1:
 ; CHECK-NEXT:    [[V2:%.*]] = call i32 @f2()
-; CHECK-NEXT:    br label [[MERGE]]
-; CHECK:       Merge:
+; CHECK-NEXT:    br label [[F2]]
+; CHECK:       F2:
 ; CHECK-NEXT:    [[A:%.*]] = phi i1 [ true, [[T1]] ], [ false, [[F1]] ]
 ; CHECK-NEXT:    [[B:%.*]] = phi i32 [ [[V1]], [[T1]] ], [ [[V2]], [[F1]] ]
 ; CHECK-NEXT:    [[A2:%.*]] = xor i1 [[A]], true
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[A2]], i32 10, i32 0
-; CHECK-NEXT:    [[COND:%.*]] = trunc i32 [[SEL]] to i1
-; CHECK-NEXT:    br i1 [[COND]], label [[T2:%.*]], label [[F2:%.*]]
-; CHECK:       T2:
-; CHECK-NEXT:    call void @f3()
-; CHECK-NEXT:    ret i32 [[B]]
-; CHECK:       F2:
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   br i1 %cond0, label %T1, label %F1

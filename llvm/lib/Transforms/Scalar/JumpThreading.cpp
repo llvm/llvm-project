@@ -674,13 +674,9 @@ bool JumpThreadingPass::ComputeValueKnownInPredecessorsImpl(
     return !Result.empty();
   }
 
-  // Handle Cast instructions.  Only see through Cast when the source operand is
-  // PHI, Cmp, or Freeze to save the compilation time.
+  // Handle Cast instructions.
   if (CastInst *CI = dyn_cast<CastInst>(I)) {
     Value *Source = CI->getOperand(0);
-    if (!isa<PHINode>(Source) && !isa<CmpInst>(Source) &&
-        !isa<FreezeInst>(Source))
-      return false;
     ComputeValueKnownInPredecessorsImpl(Source, BB, Result, Preference,
                                         RecursionSet, CxtI);
     if (Result.empty())
