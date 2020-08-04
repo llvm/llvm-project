@@ -449,7 +449,7 @@ body:             |
 # CHECK: frame-setup STR_PXI killed $p5, $sp, 6
 # CHECK: frame-setup STR_PXI killed $p4, $sp, 7
 # CHECK: $sp = frame-setup SUBXri $sp, 32, 0
-# CHECK-COUNT-5: frame-setup CFI_INSTRUCTION
+# CHECK-COUNT-2: frame-setup CFI_INSTRUCTION
 
 # CHECK: $sp = frame-destroy ADDXri $sp, 32, 0
 # CHECK: $p6 = frame-destroy LDR_PXI $sp, 5
@@ -460,11 +460,9 @@ body:             |
 #
 # ASM-LABEL: save_restore_pregs_sve:
 # ASM:       .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x30, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 48 + 8 * VG
-# ASM-COUNT-3: .cfi_offset
 # ASM-NEXT:  .cfi_offset w29, -16
 #
 # UNWINDINFO:         DW_CFA_def_cfa_expression: DW_OP_breg31 +0, DW_OP_consts +48, DW_OP_plus, DW_OP_consts +8, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
-# UNWINDINFO-COUNT-3: DW_CFA_offset
 # UNWINDINFO-NEXT:    DW_CFA_offset: reg29 -16
 name: save_restore_pregs_sve
 stack:
@@ -498,11 +496,16 @@ body:             |
 #
 # ASM-LABEL: save_restore_zregs_sve:
 # ASM:       .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x30, 0x22, 0x11, 0x18, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 48 + 24 * VG
-# ASM-COUNT-3: .cfi_offset
-#
-# UNWINDINFO:         DW_CFA_def_cfa_expression: DW_OP_breg31 +0, DW_OP_consts +48, DW_OP_plus, DW_OP_consts +24, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
-# UNWINDINFO-COUNT-3: DW_CFA_offset
-# UNWINDINFO-NEXT:    DW_CFA_offset: reg29 -16
+# ASM-NEXT:  .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8  @ cfa - 16 - 8 * VG
+# ASM-NEXT:  .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9  @ cfa - 16 - 16 * VG
+# ASM-NEXT:  .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10  @ cfa - 16 - 24 * VG
+
+# UNWINDINFO:      DW_CFA_def_cfa_expression: DW_OP_breg31 +0, DW_OP_consts +48, DW_OP_plus, DW_OP_consts +24, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_expression: reg72 DW_OP_consts -16, DW_OP_plus, DW_OP_consts -8, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_expression: reg73 DW_OP_consts -16, DW_OP_plus, DW_OP_consts -16, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_expression: reg74 DW_OP_consts -16, DW_OP_plus, DW_OP_consts -24, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_offset: reg29 -16
+
 name: save_restore_zregs_sve
 stack:
   - { id: 0, stack-id: default, size: 32, alignment: 16 }
@@ -536,7 +539,7 @@ body:             |
 # CHECK: frame-setup STR_ZXI killed $z8, $sp, 17
 # CHECK: $sp = frame-setup ADDVL_XXI $sp, -1
 # CHECK: $sp = frame-setup SUBXri $sp, 32, 0
-# CHECK-COUNT-33: frame-setup CFI_INSTRUCTION
+# CHECK-COUNT-13: frame-setup CFI_INSTRUCTION
 
 # CHECK: $sp = frame-destroy ADDXri $sp, 32, 0
 # CHECK: $sp = frame-destroy ADDVL_XXI $sp, 1
@@ -555,18 +558,32 @@ body:             |
 #
 # ASM-LABEL: save_restore_sve:
 # ASM:       .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xc0, 0x00, 0x22, 0x11, 0x98, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 64 + 152 * VG
-# ASM-COUNT-28: .cfi_offset
+# ASM-NEXT:  .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x60, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 32 - 8 * VG
+# ASM-NEXT:  .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x60, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 32 - 16 * VG
+# ASM-NEXT:  .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x60, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 32 - 24 * VG
+# ASM-NEXT:  .cfi_escape 0x10, 0x4b, 0x0a, 0x11, 0x60, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 32 - 32 * VG
+# ASM-NEXT:  .cfi_escape 0x10, 0x4c, 0x0a, 0x11, 0x60, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 32 - 40 * VG
+# ASM-NEXT:  .cfi_escape 0x10, 0x4d, 0x0a, 0x11, 0x60, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 32 - 48 * VG
+# ASM-NEXT:  .cfi_escape 0x10, 0x4e, 0x0a, 0x11, 0x60, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 32 - 56 * VG
+# ASM-NEXT:  .cfi_escape 0x10, 0x4f, 0x0a, 0x11, 0x60, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 32 - 64 * VG
 # ASM-NEXT:  .cfi_offset w19, -8
 # ASM-NEXT:  .cfi_offset w20, -16
 # ASM-NEXT:  .cfi_offset w21, -24
 # ASM-NEXT:  .cfi_offset w29, -32
 #
-# UNWINDINFO:          DW_CFA_def_cfa_expression: DW_OP_breg31 +0, DW_OP_consts +64, DW_OP_plus, DW_OP_consts +152, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
-# UNWINDINFO-COUNT-28: DW_CFA_offset
-# UNWINDINFO-NEXT:     DW_CFA_offset: reg19 -8
-# UNWINDINFO-NEXT:     DW_CFA_offset: reg20 -16
-# UNWINDINFO-NEXT:     DW_CFA_offset: reg21 -24
-# UNWINDINFO-NEXT:     DW_CFA_offset: reg29 -32
+# UNWINDINFO:      DW_CFA_def_cfa_expression: DW_OP_breg31 +0, DW_OP_consts +64, DW_OP_plus, DW_OP_consts +152, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_expression: reg72 DW_OP_consts -32, DW_OP_plus, DW_OP_consts -8, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_expression: reg73 DW_OP_consts -32, DW_OP_plus, DW_OP_consts -16, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_expression: reg74 DW_OP_consts -32, DW_OP_plus, DW_OP_consts -24, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_expression: reg75 DW_OP_consts -32, DW_OP_plus, DW_OP_consts -32, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_expression: reg76 DW_OP_consts -32, DW_OP_plus, DW_OP_consts -40, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_expression: reg77 DW_OP_consts -32, DW_OP_plus, DW_OP_consts -48, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_expression: reg78 DW_OP_consts -32, DW_OP_plus, DW_OP_consts -56, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_expression: reg79 DW_OP_consts -32, DW_OP_plus, DW_OP_consts -64, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_offset: reg19 -8
+# UNWINDINFO-NEXT: DW_CFA_offset: reg20 -16
+# UNWINDINFO-NEXT: DW_CFA_offset: reg21 -24
+# UNWINDINFO-NEXT: DW_CFA_offset: reg29 -32
 
 name: save_restore_sve
 stack:
@@ -620,7 +637,7 @@ body:             |
 # CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -1
 # CHECK-NEXT: $[[TMP:x[0-9]+]] = frame-setup SUBXri $sp, 16, 0
 # CHECK-NEXT: $sp = ANDXri killed $[[TMP]]
-# CHECK-COUNT-31: frame-setup CFI_INSTRUCTION
+# CHECK-COUNT-11: frame-setup CFI_INSTRUCTION
 
 # CHECK:      $sp = frame-destroy ADDVL_XXI $fp, -18
 # CHECK-NEXT: $p15 = frame-destroy LDR_PXI $sp, 4
@@ -635,10 +652,30 @@ body:             |
 # CHECK-NEXT: $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2
 # CHECK-NEXT: RET_ReallyLR
 #
-# UNWINDINFO:          DW_CFA_def_cfa: reg29 +16
-# UNWINDINFO-COUNT-28: DW_CFA_offset
-# UNWINDINFO-NEXT:     DW_CFA_offset: reg30 -8
-# UNWINDINFO-NEXT:     DW_CFA_offset: reg29 -16
+# ASM-LABEL: save_restore_sve_realign:
+# ASM:       .cfi_def_cfa w29, 16
+# ASM-NEXT:  .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8  @ cfa - 16 - 8 * VG
+# ASM-NEXT:  .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9  @ cfa - 16 - 16 * VG
+# ASM-NEXT:  .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10  @ cfa - 16 - 24 * VG
+# ASM-NEXT:  .cfi_escape 0x10, 0x4b, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11  @ cfa - 16 - 32 * VG
+# ASM-NEXT:  .cfi_escape 0x10, 0x4c, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12  @ cfa - 16 - 40 * VG
+# ASM-NEXT:  .cfi_escape 0x10, 0x4d, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13  @ cfa - 16 - 48 * VG
+# ASM-NEXT:  .cfi_escape 0x10, 0x4e, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14  @ cfa - 16 - 56 * VG
+# ASM-NEXT:  .cfi_escape 0x10, 0x4f, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15  @ cfa - 16 - 64 * VG
+# ASM-NEXT:  .cfi_offset w30, -8
+# ASM-NEXT:  .cfi_offset w29, -16
+#
+# UNWINDINFO:      DW_CFA_def_cfa: reg29 +16
+# UNWINDINFO-NEXT: DW_CFA_expression: reg72 DW_OP_consts -16, DW_OP_plus, DW_OP_consts -8, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_expression: reg73 DW_OP_consts -16, DW_OP_plus, DW_OP_consts -16, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_expression: reg74 DW_OP_consts -16, DW_OP_plus, DW_OP_consts -24, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_expression: reg75 DW_OP_consts -16, DW_OP_plus, DW_OP_consts -32, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_expression: reg76 DW_OP_consts -16, DW_OP_plus, DW_OP_consts -40, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_expression: reg77 DW_OP_consts -16, DW_OP_plus, DW_OP_consts -48, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_expression: reg78 DW_OP_consts -16, DW_OP_plus, DW_OP_consts -56, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_expression: reg79 DW_OP_consts -16, DW_OP_plus, DW_OP_consts -64, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_offset: reg30 -8
+# UNWINDINFO-NEXT: DW_CFA_offset: reg29 -16
 name: save_restore_sve_realign
 stack:
   - { id: 0, stack-id: sve-vec, size: 16, alignment: 16 }
@@ -713,15 +750,15 @@ body:             |
 # CHECK-NEXT: STR_ZXI killed $z23, $sp, 1
 # CHECK-NEXT: STR_ZXI killed $z8, $sp, 2
 # CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -7
-# CHECK-COUNT-6: frame-setup CFI_INSTRUCTION
+# CHECK-COUNT-3: frame-setup CFI_INSTRUCTION
 # ASM-LABEL: frame_layout:
 # ASM:       .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0xd0, 0x00, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 80 * VG
-# ASM-COUNT-4: .cfi_offset
+# ASM-NEXT:  .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8  @ cfa - 16 - 8 * VG
 # ASM-NEXT:  .cfi_offset w29, -16
 #
-# UNWINDINFO:         DW_CFA_def_cfa_expression: DW_OP_breg31 +0, DW_OP_consts +16, DW_OP_plus, DW_OP_consts +80, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
-# UNWINDINFO-COUNT-4: DW_CFA_offset
-# UNWINDINFO-NEXT:    DW_CFA_offset: reg29 -16
+# UNWINDINFO:      DW_CFA_def_cfa_expression: DW_OP_breg31 +0, DW_OP_consts +16, DW_OP_plus, DW_OP_consts +80, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_expression: reg72 DW_OP_consts -16, DW_OP_plus, DW_OP_consts -8, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_offset: reg29 -16
 name: frame_layout
 stack:
   - { id: 0, type: default,    size:  32, alignment: 16, stack-id: sve-vec }
