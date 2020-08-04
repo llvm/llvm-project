@@ -916,9 +916,9 @@ void Menu::DrawMenuTitle(Window &window, bool highlight) {
   } else {
     const int shortcut_key = m_key_value;
     bool underlined_shortcut = false;
-    const attr_t hilgight_attr = A_REVERSE;
+    const attr_t highlight_attr = A_REVERSE;
     if (highlight)
-      window.AttributeOn(hilgight_attr);
+      window.AttributeOn(highlight_attr);
     if (llvm::isPrint(shortcut_key)) {
       size_t lower_pos = m_name.find(tolower(shortcut_key));
       size_t upper_pos = m_name.find(toupper(shortcut_key));
@@ -945,7 +945,7 @@ void Menu::DrawMenuTitle(Window &window, bool highlight) {
     }
 
     if (highlight)
-      window.AttributeOff(hilgight_attr);
+      window.AttributeOff(highlight_attr);
 
     if (m_key_name.empty()) {
       if (!underlined_shortcut && llvm::isPrint(m_key_value)) {
