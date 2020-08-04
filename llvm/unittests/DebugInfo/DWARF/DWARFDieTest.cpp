@@ -65,7 +65,8 @@ TEST(DWARFDie, getLocations) {
   )";
   Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
       DWARFYAML::emitDebugSections(StringRef(yamldata),
-                                   /*IsLittleEndian=*/true);
+                                   /*IsLittleEndian=*/true,
+                                   /*Is64BitAddrSize=*/false);
   ASSERT_THAT_EXPECTED(Sections, Succeeded());
   std::unique_ptr<DWARFContext> Ctx =
       DWARFContext::create(*Sections, 4, /*isLittleEndian=*/true);
