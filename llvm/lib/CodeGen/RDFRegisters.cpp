@@ -94,10 +94,6 @@ PhysicalRegisterInfo::PhysicalRegisterInfo(const TargetRegisterInfo &tri,
   }
 }
 
-RegisterRef PhysicalRegisterInfo::normalize(RegisterRef RR) const {
-  return RR;
-}
-
 std::set<RegisterId> PhysicalRegisterInfo::getAliasSet(RegisterId Reg) const {
   // Do not include RR in the alias set.
   std::set<RegisterId> AS;

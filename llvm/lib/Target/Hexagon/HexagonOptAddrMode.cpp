@@ -246,7 +246,7 @@ void HexagonOptAddrMode::getAllRealUses(NodeAddr<StmtNode *> SA,
   for (NodeAddr<DefNode *> DA : SA.Addr->members_if(DFG->IsDef, *DFG)) {
     LLVM_DEBUG(dbgs() << "\t\t[DefNode]: "
                       << Print<NodeAddr<DefNode *>>(DA, *DFG) << "\n");
-    RegisterRef DR = DFG->getPRI().normalize(DA.Addr->getRegRef(*DFG));
+    RegisterRef DR = DA.Addr->getRegRef(*DFG);
 
     auto UseSet = LV->getAllReachedUses(DR, DA);
 
