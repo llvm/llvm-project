@@ -136,3 +136,35 @@ class XunitReport(object):
         if features:
             return 'Missing required feature(s): ' + ', '.join(features)
         return 'Unsupported configuration'
+
+
+class TimeTraceReport(object):
+    def __init__(self, output_file):
+        self.output_file = output_file
+        self.skipped_codes = {lit.Test.EXCLUDED,
+                              lit.Test.SKIPPED, lit.Test.UNSUPPORTED}
+
+    def write_results(self, tests, elapsed):
+        # Find when first test started so we can make start times relative.
+        first_start_time = min([t.result.start for t in tests])
+        events = [self._get_test_event(
+            x, first_start_time) for x in tests if x.result.code not in self.skipped_codes]
+
+        json_data = {'traceEvents': events}
+
+        with open(self.output_file, "w") as time_trace_file:
+            json.dump(json_data, time_trace_file, indent=2, sort_keys=True)
+
+    def _get_test_event(self, test, first_start_time):
+        test_name = test.getFullName()
+        elapsed_time = test.result.elapsed or 0.0
+        start_time = test.result.start - first_start_time if test.result.start else 0.0
+        pid = test.result.pid or 0
+        return {
+            'pid': pid,
+            'tid': 1,
+            'ph': 'X',
+            'ts': int(start_time * 1000000.),
+            'dur': int(elapsed_time * 1000000.),
+            'name': test_name,
+        }
