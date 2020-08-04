@@ -514,7 +514,7 @@ void Liveness::computePhiInfo() {
         NodeAddr<UseNode*> A = DFG.addr<UseNode*>(UN);
         uint16_t F = A.Addr->getFlags();
         if ((F & (NodeAttrs::Undef | NodeAttrs::PhiRef)) == 0) {
-          RegisterRef R = PRI.normalize(A.Addr->getRegRef(DFG));
+          RegisterRef R = A.Addr->getRegRef(DFG);
           RealUses[R.Reg].insert({A.Id,R.Mask});
         }
         UN = A.Addr->getSibling();
@@ -659,7 +659,7 @@ void Liveness::computePhiInfo() {
 
     for (NodeAddr<UseNode*> UA : PUs) {
       std::map<NodeId,RegisterAggr> &PUM = PhiUp[UA.Id];
-      RegisterRef UR = PRI.normalize(UA.Addr->getRegRef(DFG));
+      RegisterRef UR = UA.Addr->getRegRef(DFG);
       for (const std::pair<const NodeId, RegisterAggr> &P : PUM) {
         bool Changed = false;
         const RegisterAggr &MidDefs = P.second;
@@ -1113,7 +1113,7 @@ void Liveness::traverse(MachineBasicBlock *B, RefMap &LiveIn) {
     for (NodeAddr<UseNode*> UA : IA.Addr->members_if(DFG.IsUse, DFG)) {
       if (UA.Addr->getFlags() & NodeAttrs::Undef)
         continue;
-      RegisterRef RR = PRI.normalize(UA.Addr->getRegRef(DFG));
+      RegisterRef RR = UA.Addr->getRegRef(DFG);
       for (NodeAddr<DefNode*> D : getAllReachingDefs(UA))
         if (getBlockWithRef(D.Id) != B)
           LiveIn[RR.Reg].insert({D.Id,RR.Mask});
