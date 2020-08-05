@@ -47,6 +47,7 @@
 #include <cstdint>
 #include <iterator>
 #include <map>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -476,7 +477,7 @@ void Liveness::computePhiInfo() {
   // phi use -> (map: reaching phi -> set of registers defined in between)
   std::map<NodeId,std::map<NodeId,RegisterAggr>> PhiUp;
   std::vector<NodeId> PhiUQ;  // Work list of phis for upward propagation.
-  std::map<NodeId,RegisterAggr> PhiDRs;  // Phi -> registers defined by it.
+  std::unordered_map<NodeId,RegisterAggr> PhiDRs;  // Phi -> registers defined by it.
 
   // Go over all phis.
   for (NodeAddr<PhiNode*> PhiA : Phis) {
@@ -652,6 +653,23 @@ void Liveness::computePhiInfo() {
   // is covered, or until reaching the final phi. Only assume that the
   // reference reaches the phi in the latter case.
 
+  // The operation "clearIn" can be expensive. For a given set of intervening
+  // defs, cache the result of subtracting these defs from a given register
+  // ref.
+  using SubMap = std::unordered_map<RegisterRef, RegisterRef>;
+  std::unordered_map<RegisterAggr, SubMap> Subs;
+  auto ClearIn = [] (RegisterRef RR, const RegisterAggr &Mid, SubMap &SM) {
+    if (Mid.empty())
+      return RR;
+    auto F = SM.find(RR);
+    if (F != SM.end())
+      return F->second;
+    RegisterRef S = Mid.clearIn(RR);
+    SM.insert({RR, S});
+    return S;
+  };
+
+  // Go over all phis.
   for (unsigned i = 0; i < PhiUQ.size(); ++i) {
     auto PA = DFG.addr<PhiNode*>(PhiUQ[i]);
     NodeList PUs = PA.Addr->members_if(DFG.IsRef<NodeAttrs::Use>, DFG);
@@ -663,13 +681,13 @@ void Liveness::computePhiInfo() {
       for (const std::pair<const NodeId, RegisterAggr> &P : PUM) {
         bool Changed = false;
         const RegisterAggr &MidDefs = P.second;
-
         // Collect the set PropUp of uses that are reached by the current
         // phi PA, and are not covered by any intervening def between the
         // currently visited use UA and the upward phi P.
 
         if (MidDefs.hasCoverOf(UR))
           continue;
+        SubMap &SM = Subs[MidDefs];
 
         // General algorithm:
         //   for each (R,U) : U is use node of R, U is reached by PA
@@ -689,7 +707,7 @@ void Liveness::computePhiInfo() {
             LaneBitmask M = R.Mask & V.second;
             if (M.none())
               continue;
-            if (RegisterRef SS = MidDefs.clearIn(RegisterRef(R.Reg, M))) {
+            if (RegisterRef SS = ClearIn(RegisterRef(R.Reg, M), MidDefs, SM)) {
               NodeRefSet &RS = RealUseMap[P.first][SS.Reg];
               Changed |= RS.insert({V.first,SS.Mask}).second;
             }
