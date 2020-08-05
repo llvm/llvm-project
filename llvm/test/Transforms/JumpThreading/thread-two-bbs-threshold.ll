@@ -6,30 +6,31 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @a = global i32 0, align 4
 
+; Show that freeze is not counted when comparing the cost with the threshold
 define void @foo(i32 %cond1, i32 %cond2) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[COND1:%.*]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL]], label [[BB_COND2:%.*]], label [[BB_F1:%.*]]
-; CHECK:       bb.f1:
-; CHECK-NEXT:    call void @f1()
-; CHECK-NEXT:    br label [[BB_COND2]]
+; CHECK-NEXT:    br i1 [[TOBOOL]], label [[BB_COND2_THREAD:%.*]], label [[BB_COND2:%.*]]
 ; CHECK:       bb.cond2:
-; CHECK-NEXT:    [[PTR:%.*]] = phi i32* [ null, [[BB_F1]] ], [ @a, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    call void @f1()
 ; CHECK-NEXT:    [[COND2_FR:%.*]] = freeze i32 [[COND2:%.*]]
 ; CHECK-NEXT:    [[X:%.*]] = add i32 [[COND2_FR]], 1
 ; CHECK-NEXT:    [[TOBOOL1:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL1]], label [[BB_FILE:%.*]], label [[BB_F2:%.*]]
+; CHECK-NEXT:    br i1 [[TOBOOL1]], label [[BB_F4:%.*]], label [[BB_F2:%.*]]
+; CHECK:       bb.cond2.thread:
+; CHECK-NEXT:    [[COND2_FR2:%.*]] = freeze i32 [[COND2]]
+; CHECK-NEXT:    [[X3:%.*]] = add i32 [[COND2_FR2]], 1
+; CHECK-NEXT:    [[TOBOOL14:%.*]] = icmp eq i32 [[X3]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL14]], label [[BB_F3:%.*]], label [[BB_F2]]
 ; CHECK:       bb.f2:
 ; CHECK-NEXT:    call void @f2()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       bb.file:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32* [[PTR]], null
-; CHECK-NEXT:    br i1 [[CMP]], label [[BB_F4:%.*]], label [[BB_F3:%.*]]
 ; CHECK:       bb.f3:
 ; CHECK-NEXT:    call void @f3()
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       bb.f4:
+; CHECK-NEXT:    [[PTR5:%.*]] = phi i32* [ null, [[BB_COND2]] ]
 ; CHECK-NEXT:    call void @f4()
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
