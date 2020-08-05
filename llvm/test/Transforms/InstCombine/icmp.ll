@@ -512,8 +512,7 @@ define i1 @test24(i64 %i) {
 ; unsigned overflow does not happen during offset computation
 define i1 @test24_neg_offs(i32* %p, i64 %offs) {
 ; CHECK-LABEL: @test24_neg_offs(
-; CHECK-NEXT:    [[P1_IDX_NEG:%.*]] = mul i64 [[OFFS:%.*]], -4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[P1_IDX_NEG]], 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OFFS:%.*]], -2
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %p1 = getelementptr inbounds i32, i32* %p, i64 %offs
