@@ -22,7 +22,7 @@ namespace clang {
       public:
         P2ToolChain(const Driver &D, const llvm::Triple &Triple,
                      const llvm::opt::ArgList &Args);
-        bool IsIntegratedAssemblerDefault() const { return true; }
+        bool IsIntegratedAssemblerDefault() const override { return true; }
 
       protected:
         Tool *buildLinker() const override;
@@ -48,10 +48,10 @@ namespace clang {
         //                     const char *LinkingOutput) const override;
         // };
 
-        class LLVM_LIBRARY_VISIBILITY Linker : public GnuTool {
+        class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
         public:
           Linker(const llvm::Triple &Triple, const ToolChain &TC)
-              : GnuTool("P2::Linker", "P2-ld", TC), Triple(Triple) {}
+              : Tool("P2::Linker", "P2-ld", TC), Triple(Triple) {}
 
           bool hasIntegratedCPP() const override { return false; }
           bool isLinkJob() const override { return true; }
