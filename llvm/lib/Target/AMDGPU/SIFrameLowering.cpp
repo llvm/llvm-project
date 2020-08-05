@@ -920,6 +920,9 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   if (TRI.isCFISavedRegsSpillEnabled()) {
     MCRegister ReturnAddressReg = TRI.getReturnAddressReg(MF);
+    if (!MBB.isLiveIn(ReturnAddressReg))
+      MBB.addLiveIn(ReturnAddressReg);
+
     ArrayRef<SIMachineFunctionInfo::SpilledReg> ReturnAddressSpill =
         FuncInfo->getSGPRToVGPRSpills(FuncInfo->ReturnAddressSaveIndex);
     assert(ReturnAddressSpill.size() == 2);

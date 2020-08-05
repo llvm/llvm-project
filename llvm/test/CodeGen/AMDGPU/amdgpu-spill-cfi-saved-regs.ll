@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=asm -amdgpu-spill-cfi-saved-regs -o - %s | FileCheck --check-prefixes=CHECK,WAVE64 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -filetype=asm -amdgpu-spill-cfi-saved-regs -o - %s | FileCheck --check-prefixes=CHECK,WAVE32 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-spill-cfi-saved-regs -verify-machineinstrs -o - %s | FileCheck --check-prefixes=CHECK,WAVE64 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -amdgpu-spill-cfi-saved-regs -verify-machineinstrs -o - %s | FileCheck --check-prefixes=CHECK,WAVE32 %s
 
 ; CHECK-LABEL: kern:
 ; CHECK: .cfi_startproc
@@ -120,6 +120,15 @@ entry:
     ,~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29}
     ,~{v30},~{v31},~{v32},~{v33},~{v34},~{v35},~{v36},~{v37},~{v38},~{v39}"()
   ret void
+}
+
+; There's no return here, so the return address live in was
+; deleted. It needs to be re-added as a live in to the entry block.
+; CHECK-LABEL: {{^}}empty_func:
+; CHECK: v_writelane_b32 v0, s30, 0
+; CHECK: v_writelane_b32 v0, s31, 1
+define void @empty_func() {
+  unreachable
 }
 
 attributes #0 = { nounwind }
