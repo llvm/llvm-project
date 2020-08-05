@@ -15,9 +15,6 @@ target_link_libraries(mlir-translate
   ${translation_libs}
   ${test_libs}
   MLIRIR
-  # TODO: remove after LLVM dialect transition is complete; translation uses a
-  # registration function defined in this library unconditionally.
-  MLIRLLVMTypeTestDialect
   MLIRParser
   MLIRPass
   MLIRSPIRV
