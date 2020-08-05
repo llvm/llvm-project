@@ -10,8 +10,13 @@
 #include "lldb/Host/Config.h"
 
 #if LLDB_ENABLE_CURSES
+#if CURSES_HAVE_NCURSES_CURSES_H
+#include <ncurses/curses.h>
+#include <ncurses/panel.h>
+#else
 #include <curses.h>
 #include <panel.h>
+#endif
 #endif
 
 #if defined(__APPLE__)
