@@ -506,8 +506,14 @@ int targetDataEnd(DeviceTy &Device, int32_t ArgNum, void **ArgBases,
       DP("Mapping does not exist (%s)\n",
          (HasPresentModifier ? "'present' map type modifier" : "ignored"));
       if (HasPresentModifier) {
-        // FIXME: This should not be an error on exit from "omp target data",
-        // but it should be an error upon entering an "omp target exit data".
+        // This should be an error upon entering an "omp target exit data".  It
+        // should not be an error upon exiting an "omp target data" or "omp
+        // target".  For "omp target data", Clang thus doesn't include present
+        // modifiers for end calls.  For "omp target", we have not found a valid
+        // OpenMP program for which the error matters: it appears that, if a
+        // program can guarantee that data is present at the beginning of an
+        // "omp target" region so that there's no error there, that data is also
+        // guaranteed to be present at the end.
         MESSAGE("device mapping required by 'present' map type modifier does "
                 "not exist for host address " DPxMOD " (%ld bytes)",
                 DPxPTR(HstPtrBegin), DataSize);
