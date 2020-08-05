@@ -111,6 +111,9 @@ let Definition = "target" in {
   def DisableSTDIO: Property<"disable-stdio", "Boolean">,
     DefaultFalse,
     Desc<"Disable stdin/stdout for process (e.g. for a GUI application)">;
+  def InheritTCC: Property<"inherit-tcc", "Boolean">,
+    DefaultFalse,
+    Desc<"Inherit the TCC permissions from the inferior's parent instead of making the process itself responsible.">;
   def InlineStrategy: Property<"inline-breakpoint-strategy", "Enum">,
     DefaultEnumValue<"eInlineBreakpointsAlways">,
     EnumValues<"OptionEnumValues(g_inline_breakpoint_enums)">,
