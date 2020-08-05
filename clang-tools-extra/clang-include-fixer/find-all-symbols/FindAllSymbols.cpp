@@ -99,7 +99,7 @@ CreateSymbolInfo(const NamedDecl *ND, const SourceManager &SM,
 
   SourceLocation Loc = SM.getExpansionLoc(ND->getLocation());
   if (!Loc.isValid()) {
-    llvm::errs() << "Declaration " << ND->getNameAsString() << "("
+    llvm::errs() << "Declaration " << ND->getDeclName() << "("
                  << ND->getDeclKindName()
                  << ") has invalid declaration location.";
     return llvm::None;
