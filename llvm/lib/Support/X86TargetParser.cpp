@@ -37,6 +37,10 @@ public:
       set(I);
   }
 
+  bool any() const {
+    return llvm::any_of(Bits, [](uint64_t V) { return V != 0; });
+  }
+
   constexpr FeatureBitset &set(unsigned I) {
     // GCC <6.2 crashes if this is written in a single statement.
     uint32_t NewBits = Bits[I / 32] | (uint32_t(1) << (I % 32));
@@ -88,6 +92,13 @@ public:
     for (unsigned I = 0, E = array_lengthof(Bits); I != E; ++I)
       Result.Bits[I] = ~Bits[I];
     return Result;
+  }
+
+  constexpr bool operator!=(const FeatureBitset &RHS) const {
+    for (unsigned I = 0, E = array_lengthof(Bits); I != E; ++I)
+      if (Bits[I] != RHS.Bits[I])
+        return true;
+    return false;
   }
 };
 
@@ -552,11 +563,17 @@ void llvm::X86::getFeaturesForCPU(StringRef CPU,
 // For each feature that is (transitively) implied by this feature, set it.
 static void getImpliedEnabledFeatures(FeatureBitset &Bits,
                                       const FeatureBitset &Implies) {
+  // Fast path: Implies is often empty.
+  if (!Implies.any())
+    return;
+  FeatureBitset Prev;
   Bits |= Implies;
-  for (unsigned i = 0; i != CPU_FEATURE_MAX; ++i) {
-    if (Implies[i])
-      getImpliedEnabledFeatures(Bits, FeatureInfos[i].ImpliedFeatures);
-  }
+  do {
+    Prev = Bits;
+    for (unsigned i = CPU_FEATURE_MAX; i;)
+      if (Bits[--i])
+        Bits |= FeatureInfos[i].ImpliedFeatures;
+  } while (Prev != Bits);
 }
 
 /// Create bit vector of features that are implied disabled if the feature
@@ -564,12 +581,14 @@ static void getImpliedEnabledFeatures(FeatureBitset &Bits,
 static void getImpliedDisabledFeatures(FeatureBitset &Bits, unsigned Value) {
   // Check all features looking for any dependent on this feature. If we find
   // one, mark it and recursively find any feature that depend on it.
-  for (unsigned i = 0; i != CPU_FEATURE_MAX; ++i) {
-    if (FeatureInfos[i].ImpliedFeatures[Value]) {
-      Bits.set(i);
-      getImpliedDisabledFeatures(Bits, i);
-    }
-  }
+  FeatureBitset Prev;
+  Bits.set(Value);
+  do {
+    Prev = Bits;
+    for (unsigned i = 0; i != CPU_FEATURE_MAX; ++i)
+      if ((FeatureInfos[i].ImpliedFeatures & Bits).any())
+        Bits.set(i);
+  } while (Prev != Bits);
 }
 
 void llvm::X86::getImpliedFeatures(
