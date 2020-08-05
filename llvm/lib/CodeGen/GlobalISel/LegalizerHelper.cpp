@@ -921,7 +921,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   case TargetOpcode::G_INSERT:
     return narrowScalarInsert(MI, TypeIdx, NarrowTy);
   case TargetOpcode::G_LOAD: {
-    const auto &MMO = **MI.memoperands_begin();
+    auto &MMO = **MI.memoperands_begin();
     Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
     if (DstTy.isVector())
@@ -929,7 +929,6 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
     if (8 * MMO.getSize() != DstTy.getSizeInBits()) {
       Register TmpReg = MRI.createGenericVirtualRegister(NarrowTy);
-      auto &MMO = **MI.memoperands_begin();
       MIRBuilder.buildLoad(TmpReg, MI.getOperand(1), MMO);
       MIRBuilder.buildAnyExt(DstReg, TmpReg);
       MI.eraseFromParent();
