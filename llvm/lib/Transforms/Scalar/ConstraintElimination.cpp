@@ -182,6 +182,21 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
       continue;
     }
 
+    // If the condition is an AND of 2 compares and the true successor only has
+    // the current block as predecessor, queue both conditions for the true
+    // successor.
+    if (match(Br->getCondition(), m_And(m_Cmp(), m_Cmp()))) {
+      BasicBlock *TrueSuccessor = Br->getSuccessor(0);
+      if (TrueSuccessor->getSinglePredecessor()) {
+        auto *AndI = cast<Instruction>(Br->getCondition());
+        WorkList.emplace_back(DT.getNode(TrueSuccessor),
+                              cast<CmpInst>(AndI->getOperand(0)), false);
+        WorkList.emplace_back(DT.getNode(TrueSuccessor),
+                              cast<CmpInst>(AndI->getOperand(1)), false);
+      }
+      continue;
+    }
+
     auto *CmpI = dyn_cast<CmpInst>(Br->getCondition());
     if (!CmpI)
       continue;
