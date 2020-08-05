@@ -126,9 +126,12 @@ static Value emulateSignedRemainder(Location loc, Value lhs, Value rhs,
   return builder.create<spirv::SelectOp>(loc, type, isPositive, abs, absNegate);
 }
 
-/// Returns the offset of the value in `targetBits` representation. `srcIdx` is
-/// an index into a 1-D array with each element having `sourceBits`. When
-/// accessing an element in the array treating as having elements of
+/// Returns the offset of the value in `targetBits` representation.
+///
+/// `srcIdx` is an index into a 1-D array with each element having `sourceBits`.
+/// It's assumed to be non-negative.
+///
+/// When accessing an element in the array treating as having elements of
 /// `targetBits`, multiple values are loaded in the same time. The method
 /// returns the offset where the `srcIdx` locates in the value. For example, if
 /// `sourceBits` equals to 8 and `targetBits` equals to 32, the x-th element is
@@ -144,7 +147,7 @@ static Value getOffsetForBitwidth(Location loc, Value srcIdx, int sourceBits,
   IntegerAttr srcBitsAttr = builder.getIntegerAttr(targetType, sourceBits);
   auto srcBitsValue =
       builder.create<spirv::ConstantOp>(loc, targetType, srcBitsAttr);
-  auto m = builder.create<spirv::SModOp>(loc, srcIdx, idx);
+  auto m = builder.create<spirv::UModOp>(loc, srcIdx, idx);
   return builder.create<spirv::IMulOp>(loc, targetType, m, srcBitsValue);
 }
 
