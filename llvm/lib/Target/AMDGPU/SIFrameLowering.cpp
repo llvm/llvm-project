@@ -928,12 +928,12 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     assert(ReturnAddressSpill.size() == 2);
     BuildMI(MBB, MBBI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
             ReturnAddressSpill[0].VGPR)
-        .addReg(TRI.getSubReg(ReturnAddressReg, TRI.getSubRegFromChannel(0)))
+        .addReg(TRI.getSubReg(ReturnAddressReg, AMDGPU::sub0))
         .addImm(ReturnAddressSpill[0].Lane)
         .addReg(ReturnAddressSpill[0].VGPR, RegState::Undef);
     BuildMI(MBB, MBBI, DL, TII->getMCOpcodeFromPseudo(AMDGPU::V_WRITELANE_B32),
             ReturnAddressSpill[1].VGPR)
-        .addReg(TRI.getSubReg(ReturnAddressReg, TRI.getSubRegFromChannel(1)))
+        .addReg(TRI.getSubReg(ReturnAddressReg, AMDGPU::sub1))
         .addImm(ReturnAddressSpill[1].Lane)
         .addReg(ReturnAddressSpill[1].VGPR, RegState::Undef);
     buildCFIForSGPRToVGPRSpill(MBB, MBBI, DL, AMDGPU::PC_REG,
