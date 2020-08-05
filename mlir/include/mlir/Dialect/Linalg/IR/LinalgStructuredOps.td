@@ -443,8 +443,7 @@ def PoolingSumOp: SingleInputPoolingBase_Op<"pooling_sum"> {
 //===----------------------------------------------------------------------===//
 // Generic Linalg ops.
 //===----------------------------------------------------------------------===//
-def LinalgOperand: Type<
-  Or<[AnyRankedTensor.predicate, AnyStridedMemRef.predicate]>>;
+def LinalgOperand: AnyTypeOf<[AnyRankedTensor, AnyStridedMemRef]>;
 
 class LinalgOperandOfRank<int rank>: Type<
   And<[
