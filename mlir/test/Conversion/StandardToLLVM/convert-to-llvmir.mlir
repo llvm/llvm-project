@@ -1291,3 +1291,26 @@ func @bfloat(%arg0: bf16) -> bf16 {
 func @memref_index(%arg0: memref<32xindex>) -> memref<32xindex> {
   return %arg0 : memref<32xindex>
 }
+
+// -----
+
+// CHECK-LABEL: func @rank_of_unranked
+// CHECK32-LABEL: func @rank_of_unranked
+func @rank_of_unranked(%unranked: memref<*xi32>) {
+  %rank = rank %unranked : memref<*xi32>
+  return
+}
+// CHECK-NEXT: llvm.mlir.undef
+// CHECK-NEXT: llvm.insertvalue
+// CHECK-NEXT: llvm.insertvalue
+// CHECK-NEXT: llvm.extractvalue %{{.*}}[0] : !llvm<"{ i64, i8* }">
+// CHECK32: llvm.extractvalue %{{.*}}[0] : !llvm<"{ i64, i8* }">
+
+// CHECK-LABEL: func @rank_of_ranked
+// CHECK32-LABEL: func @rank_of_ranked
+func @rank_of_ranked(%ranked: memref<?xi32>) {
+  %rank = rank %ranked : memref<?xi32>
+  return
+}
+// CHECK: llvm.mlir.constant(1 : index) : !llvm.i64
+// CHECK32: llvm.mlir.constant(1 : index) : !llvm.i32
