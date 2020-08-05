@@ -400,7 +400,7 @@ static constexpr unsigned kRankInUnrankedMemRefDescriptor = 0;
 static constexpr unsigned kPtrInUnrankedMemRefDescriptor = 1;
 
 Type LLVMTypeConverter::convertUnrankedMemRefType(UnrankedMemRefType type) {
-  auto rankTy = LLVM::LLVMType::getInt64Ty(llvmDialect);
+  auto rankTy = getIndexType();
   auto ptrTy = LLVM::LLVMType::getInt8PtrTy(llvmDialect);
   return LLVM::LLVMType::getStructTy(rankTy, ptrTy);
 }
