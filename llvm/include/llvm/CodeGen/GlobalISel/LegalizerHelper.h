@@ -316,6 +316,8 @@ public:
                                          LLT CastTy);
 
   LegalizeResult lowerBitcast(MachineInstr &MI);
+  LegalizeResult lowerLoad(MachineInstr &MI);
+  LegalizeResult lowerStore(MachineInstr &MI);
   LegalizeResult lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
 
   LegalizeResult lowerU64ToF32BitOps(MachineInstr &MI);
