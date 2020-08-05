@@ -1849,8 +1849,8 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
                                         << *PossibleMatch);
       if (Verbose && POK == POK_VarAccess) {
         PartialDiagnosticAt VNote(D->getLocation(),
-                                 S.PDiag(diag::note_guarded_by_declared_here)
-                                     << D->getNameAsString());
+                                  S.PDiag(diag::note_guarded_by_declared_here)
+                                      << D->getDeclName());
         Warnings.emplace_back(std::move(Warning), getNotes(Note, VNote));
       } else
         Warnings.emplace_back(std::move(Warning), getNotes(Note));

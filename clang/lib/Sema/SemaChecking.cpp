@@ -11356,7 +11356,7 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
         BitfieldEnumDecl->getNumPositiveBits() > 0 &&
         BitfieldEnumDecl->getNumNegativeBits() == 0) {
       S.Diag(InitLoc, diag::warn_no_underlying_type_specified_for_enum_bitfield)
-        << BitfieldEnumDecl->getNameAsString();
+          << BitfieldEnumDecl;
     }
   }
 

@@ -6,8 +6,8 @@ void test0() {
   enum F { F1, F2 };
   struct { E e1 : 1; E e2; F f1 : 1; F f2; } s;
 
-  s.e1 = E1; // expected-warning {{enums in the Microsoft ABI are signed integers by default; consider giving the enum E an unsigned underlying type to make this code portable}}
-  s.f1 = F1; // expected-warning {{enums in the Microsoft ABI are signed integers by default; consider giving the enum F an unsigned underlying type to make this code portable}}
+  s.e1 = E1; // expected-warning {{enums in the Microsoft ABI are signed integers by default; consider giving the enum 'E' an unsigned underlying type to make this code portable}}
+  s.f1 = F1; // expected-warning {{enums in the Microsoft ABI are signed integers by default; consider giving the enum 'F' an unsigned underlying type to make this code portable}}
 
   s.e2 = E2;
   s.f2 = F2;
