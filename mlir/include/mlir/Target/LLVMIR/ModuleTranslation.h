@@ -19,6 +19,7 @@
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Target/LLVMIR/TypeTranslation.h"
 
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
@@ -126,6 +127,9 @@ private:
 
   /// Mappings between llvm.mlir.global definitions and corresponding globals.
   DenseMap<Operation *, llvm::GlobalValue *> globalsMapping;
+
+  /// A stateful object used to translate types.
+  TypeToLLVMIRTranslator typeTranslator;
 
 protected:
   /// Mappings between original and translated values, used for lookups.

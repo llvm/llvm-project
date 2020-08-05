@@ -11,17 +11,20 @@
 #include "mlir/IR/MLIRContext.h"
 
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
 
 using namespace mlir;
 
-namespace {
+namespace mlir {
+namespace LLVM {
+namespace detail {
 /// Support for translating MLIR LLVM dialect types to LLVM IR.
-class TypeToLLVMIRTranslator {
+class TypeToLLVMIRTranslatorImpl {
 public:
   /// Constructs a class creating types in the given LLVM context.
-  TypeToLLVMIRTranslator(llvm::LLVMContext &context) : context(context) {}
+  TypeToLLVMIRTranslatorImpl(llvm::LLVMContext &context) : context(context) {}
 
   /// Translates a single type.
   llvm::Type *translateType(LLVM::LLVMType type) {
@@ -160,22 +163,32 @@ private:
   /// type instead of creating a new type.
   llvm::DenseMap<LLVM::LLVMType, llvm::Type *> knownTranslations;
 };
-} // end namespace
+} // end namespace detail
+} // end namespace LLVM
+} // end namespace mlir
 
-/// Translates a type from MLIR LLVM dialect to LLVM IR. This does not maintain
-/// the mapping for identified structs so new structs will be created with
-/// auto-renaming on each call. This is intended exclusively for testing.
-llvm::Type *mlir::LLVM::translateTypeToLLVMIR(LLVM::LLVMType type,
-                                              llvm::LLVMContext &context) {
-  return TypeToLLVMIRTranslator(context).translateType(type);
+LLVM::TypeToLLVMIRTranslator::TypeToLLVMIRTranslator(llvm::LLVMContext &context)
+    : impl(new detail::TypeToLLVMIRTranslatorImpl(context)) {}
+
+LLVM::TypeToLLVMIRTranslator::~TypeToLLVMIRTranslator() {}
+
+llvm::Type *LLVM::TypeToLLVMIRTranslator::translateType(LLVM::LLVMType type) {
+  return impl->translateType(type);
 }
 
-namespace {
+unsigned LLVM::TypeToLLVMIRTranslator::getPreferredAlignment(
+    LLVM::LLVMType type, const llvm::DataLayout &layout) {
+  return layout.getPrefTypeAlignment(translateType(type));
+}
+
+namespace mlir {
+namespace LLVM {
+namespace detail {
 /// Support for translating LLVM IR types to MLIR LLVM dialect types.
-class TypeFromLLVMIRTranslator {
+class TypeFromLLVMIRTranslatorImpl {
 public:
   /// Constructs a class creating types in the given MLIR context.
-  TypeFromLLVMIRTranslator(MLIRContext &context) : context(context) {}
+  TypeFromLLVMIRTranslatorImpl(MLIRContext &context) : context(context) {}
 
   /// Translates the given type.
   LLVM::LLVMType translateType(llvm::Type *type) {
@@ -299,11 +312,15 @@ private:
   /// The context in which MLIR types are created.
   MLIRContext &context;
 };
-} // end namespace
+} // end namespace detail
+} // end namespace LLVM
+} // end namespace mlir
 
-/// Translates a type from LLVM IR to MLIR LLVM dialect. This is intended
-/// exclusively for testing.
-LLVM::LLVMType mlir::LLVM::translateTypeFromLLVMIR(llvm::Type *type,
-                                                   MLIRContext &context) {
-  return TypeFromLLVMIRTranslator(context).translateType(type);
+LLVM::TypeFromLLVMIRTranslator::TypeFromLLVMIRTranslator(MLIRContext &context)
+    : impl(new detail::TypeFromLLVMIRTranslatorImpl(context)) {}
+
+LLVM::TypeFromLLVMIRTranslator::~TypeFromLLVMIRTranslator() {}
+
+LLVM::LLVMType LLVM::TypeFromLLVMIRTranslator::translateType(llvm::Type *type) {
+  return impl->translateType(type);
 }

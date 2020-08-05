@@ -3,7 +3,7 @@
 %struct.t = type {}
 %struct.s = type { %struct.t, i64 }
 
-; CHECK: llvm.mlir.global external @g1() : !llvm.struct<(struct<()>, i64)>
+; CHECK: llvm.mlir.global external @g1() : !llvm.struct<"struct.s", (struct<"struct.t", ()>, i64)>
 @g1 = external global %struct.s, align 8
 ; CHECK: llvm.mlir.global external @g2() : !llvm.double
 @g2 = external global double, align 8

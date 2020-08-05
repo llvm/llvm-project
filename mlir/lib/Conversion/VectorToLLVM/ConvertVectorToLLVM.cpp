@@ -126,11 +126,12 @@ LogicalResult getMemRefAlignment(LLVMTypeConverter &typeConverter, T op,
   if (!elementTy)
     return failure();
 
-  auto dataLayout = typeConverter.getDialect()->getLLVMModule().getDataLayout();
-  // TODO: this should be abstracted away to avoid depending on translation.
-  align = dataLayout.getPrefTypeAlignment(LLVM::translateTypeToLLVMIR(
-      elementTy.cast<LLVM::LLVMType>(),
-      typeConverter.getDialect()->getLLVMContext()));
+  // TODO: this should use the MLIR data layout when it becomes available and
+  // stop depending on translation.
+  LLVM::LLVMDialect *dialect = typeConverter.getDialect();
+  align = LLVM::TypeToLLVMIRTranslator(dialect->getLLVMContext())
+              .getPreferredAlignment(elementTy.cast<LLVM::LLVMType>(),
+                                     dialect->getLLVMModule().getDataLayout());
   return success();
 }
 
