@@ -717,6 +717,9 @@ class Base(unittest2.TestCase):
             # differ in the debug info, which is not being hashed.
             "settings set symbols.enable-external-lookup false",
 
+            # Inherit the TCC permissions from the inferior's parent.
+            "settings set target.inherit-tcc true",
+
             # Disable fix-its by default so that incorrect expressions in tests don't
             # pass just because Clang thinks it has a fix-it.
             "settings set target.auto-apply-fixits false",

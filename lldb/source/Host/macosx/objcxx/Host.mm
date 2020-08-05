@@ -1095,10 +1095,11 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
     is_graphical = session_attributes & sessionHasGraphicAccess;
 #endif
 
-  //  When lldb is ran through a graphical session, this makes the debuggee
-  //  process responsible for the TCC prompts. Otherwise, lldb will use the
-  //  launching process privileges.
-  if (is_graphical && launch_info.GetFlags().Test(eLaunchFlagDebug)) {
+  //  When lldb is ran through a graphical session, make the debuggee process
+  //  responsible for its own TCC permissions instead of inheriting them from
+  //  its parent.
+  if (is_graphical && launch_info.GetFlags().Test(eLaunchFlagDebug) &&
+      !launch_info.GetFlags().Test(eLaunchFlagInheritTCCFromParent)) {
     error.SetError(setup_posix_spawn_responsible_flag(&attr), eErrorTypePOSIX);
     if (error.Fail()) {
       LLDB_LOG(log, "error: {0}, setup_posix_spawn_responsible_flag(&attr)",
