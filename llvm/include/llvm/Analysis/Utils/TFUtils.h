@@ -66,10 +66,18 @@ public:
 
   bool operator!=(const TensorSpec &Other) const { return !(*this == Other); }
 
+  /// Get the number of elements in a tensor with this shape.
+  size_t getElementCount() const { return ElementCount; }
+  /// Get the size, in bytes, of one element.
+  size_t getElementByteSize() const;
+
+  template <typename T> bool isElementType() const {
+    return getDataType<T>() == TypeIndex;
+  }
+
 private:
   TensorSpec(const std::string &Name, int Port, int TypeIndex,
-             const std::vector<int64_t> &Shape)
-      : Name(Name), Port(Port), TypeIndex(TypeIndex), Shape(Shape) {}
+             const std::vector<int64_t> &Shape);
 
   template <typename T> static int getDataType() {
     llvm_unreachable("Undefined tensor type");
@@ -79,6 +87,7 @@ private:
   int Port = 0;
   int TypeIndex = 0;
   std::vector<int64_t> Shape;
+  size_t ElementCount = 0;
 };
 
 Optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
