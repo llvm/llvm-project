@@ -1093,6 +1093,11 @@ TEST_F(DefineInlineTest, TemplateSpec) {
     template<> void f^oo<int>() {
       bar();
     })cpp");
+  EXPECT_UNAVAILABLE(R"cpp(
+    namespace bar {
+      template <typename T> void f^oo() {}
+      template void foo<int>();
+    })cpp");
 }
 
 TEST_F(DefineInlineTest, CheckForCanonDecl) {
