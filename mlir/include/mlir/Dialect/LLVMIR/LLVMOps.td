@@ -151,8 +151,7 @@ def LLVM_ICmpOp : LLVM_OneResultOp<"icmp", [NoSideEffect]>,
   let builders = [OpBuilder<
     "OpBuilder &b, OperationState &result, ICmpPredicate predicate, Value lhs, "
     "Value rhs", [{
-      LLVMDialect *dialect = &lhs.getType().cast<LLVMType>().getDialect();
-      build(b, result, LLVMType::getInt1Ty(dialect),
+      build(b, result, LLVMType::getInt1Ty(lhs.getType().getContext()),
             b.getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs);
     }]>];
   let parser = [{ return parseCmpOp<ICmpPredicate>(parser, result); }];
@@ -198,8 +197,7 @@ def LLVM_FCmpOp : LLVM_OneResultOp<"fcmp", [NoSideEffect]>,
   let builders = [OpBuilder<
     "OpBuilder &b, OperationState &result, FCmpPredicate predicate, Value lhs, "
     "Value rhs", [{
-      LLVMDialect *dialect = &lhs.getType().cast<LLVMType>().getDialect();
-      build(b, result, LLVMType::getInt1Ty(dialect),
+      build(b, result, LLVMType::getInt1Ty(lhs.getType().getContext()),
             b.getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs);
     }]>];
   let parser = [{ return parseCmpOp<FCmpPredicate>(parser, result); }];

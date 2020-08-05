@@ -715,7 +715,7 @@ public:
 
     // Remaining extraction of element from 1-D LLVM vector
     auto position = positionAttrs.back().cast<IntegerAttr>();
-    auto i64Type = LLVM::LLVMType::getInt64Ty(typeConverter.getDialect());
+    auto i64Type = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
     auto constant = rewriter.create<LLVM::ConstantOp>(loc, i64Type, position);
     extracted =
         rewriter.create<LLVM::ExtractElementOp>(loc, extracted, constant);
@@ -832,7 +832,7 @@ public:
     }
 
     // Insertion of an element into a 1-D LLVM vector.
-    auto i64Type = LLVM::LLVMType::getInt64Ty(typeConverter.getDialect());
+    auto i64Type = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
     auto constant = rewriter.create<LLVM::ConstantOp>(loc, i64Type, position);
     Value inserted = rewriter.create<LLVM::InsertElementOp>(
         loc, typeConverter.convertType(oneDVectorType), extracted,
@@ -1074,7 +1074,7 @@ public:
     if (failed(successStrides) || !isContiguous)
       return failure();
 
-    auto int64Ty = LLVM::LLVMType::getInt64Ty(typeConverter.getDialect());
+    auto int64Ty = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
 
     // Create descriptor.
     auto desc = MemRefDescriptor::undef(rewriter, loc, llvmTargetDescriptorTy);
@@ -1263,11 +1263,10 @@ private:
                  int64_t rank) const {
     Location loc = op->getLoc();
     if (rank == 0) {
-      if (value.getType() ==
-          LLVM::LLVMType::getInt1Ty(typeConverter.getDialect())) {
+      if (value.getType() == LLVM::LLVMType::getInt1Ty(rewriter.getContext())) {
         // Convert i1 (bool) to i32 so we can use the print_i32 method.
         // This avoids the need for a print_i1 method with an unclear ABI.
-        auto i32Type = LLVM::LLVMType::getInt32Ty(typeConverter.getDialect());
+        auto i32Type = LLVM::LLVMType::getInt32Ty(rewriter.getContext());
         auto trueVal = rewriter.create<ConstantOp>(
             loc, i32Type, rewriter.getI32IntegerAttr(1));
         auto falseVal = rewriter.create<ConstantOp>(
@@ -1303,8 +1302,8 @@ private:
   }
 
   // Helper for printer method declaration (first hit) and lookup.
-  static Operation *getPrint(Operation *op, LLVM::LLVMDialect *dialect,
-                             StringRef name, ArrayRef<LLVM::LLVMType> params) {
+  static Operation *getPrint(Operation *op, StringRef name,
+                             ArrayRef<LLVM::LLVMType> params) {
     auto module = op->getParentOfType<ModuleOp>();
     auto func = module.lookupSymbol<LLVM::LLVMFuncOp>(name);
     if (func)
@@ -1312,42 +1311,39 @@ private:
     OpBuilder moduleBuilder(module.getBodyRegion());
     return moduleBuilder.create<LLVM::LLVMFuncOp>(
         op->getLoc(), name,
-        LLVM::LLVMType::getFunctionTy(LLVM::LLVMType::getVoidTy(dialect),
-                                      params, /*isVarArg=*/false));
+        LLVM::LLVMType::getFunctionTy(
+            LLVM::LLVMType::getVoidTy(op->getContext()), params,
+            /*isVarArg=*/false));
   }
 
   // Helpers for method names.
   Operation *getPrintI32(Operation *op) const {
-    LLVM::LLVMDialect *dialect = typeConverter.getDialect();
-    return getPrint(op, dialect, "print_i32",
-                    LLVM::LLVMType::getInt32Ty(dialect));
+    return getPrint(op, "print_i32",
+                    LLVM::LLVMType::getInt32Ty(op->getContext()));
   }
   Operation *getPrintI64(Operation *op) const {
-    LLVM::LLVMDialect *dialect = typeConverter.getDialect();
-    return getPrint(op, dialect, "print_i64",
-                    LLVM::LLVMType::getInt64Ty(dialect));
+    return getPrint(op, "print_i64",
+                    LLVM::LLVMType::getInt64Ty(op->getContext()));
   }
   Operation *getPrintFloat(Operation *op) const {
-    LLVM::LLVMDialect *dialect = typeConverter.getDialect();
-    return getPrint(op, dialect, "print_f32",
-                    LLVM::LLVMType::getFloatTy(dialect));
+    return getPrint(op, "print_f32",
+                    LLVM::LLVMType::getFloatTy(op->getContext()));
   }
   Operation *getPrintDouble(Operation *op) const {
-    LLVM::LLVMDialect *dialect = typeConverter.getDialect();
-    return getPrint(op, dialect, "print_f64",
-                    LLVM::LLVMType::getDoubleTy(dialect));
+    return getPrint(op, "print_f64",
+                    LLVM::LLVMType::getDoubleTy(op->getContext()));
   }
   Operation *getPrintOpen(Operation *op) const {
-    return getPrint(op, typeConverter.getDialect(), "print_open", {});
+    return getPrint(op, "print_open", {});
   }
   Operation *getPrintClose(Operation *op) const {
-    return getPrint(op, typeConverter.getDialect(), "print_close", {});
+    return getPrint(op, "print_close", {});
   }
   Operation *getPrintComma(Operation *op) const {
-    return getPrint(op, typeConverter.getDialect(), "print_comma", {});
+    return getPrint(op, "print_comma", {});
   }
   Operation *getPrintNewline(Operation *op) const {
-    return getPrint(op, typeConverter.getDialect(), "print_newline", {});
+    return getPrint(op, "print_newline", {});
   }
 };
 
