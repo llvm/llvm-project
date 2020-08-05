@@ -14,15 +14,20 @@
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
+#include "llvm/Object/MachOUniversalWriter.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TextAPI/MachO/Architecture.h"
+#include <map>
 
 using namespace llvm;
 using namespace llvm::object;
+
+typedef std::map<uint64_t, std::vector<NewArchiveMember>>
+    MembersPerArchitectureMap;
 
 cl::OptionCategory LibtoolCategory("llvm-libtool-darwin Options");
 
@@ -63,6 +68,8 @@ static cl::opt<std::string>
 
 struct Config {
   bool Deterministic = true; // Updated by 'D' and 'U' modifiers.
+  uint32_t ArchCPUType;
+  uint32_t ArchCPUSubtype;
 };
 
 static Error processFileList() {
@@ -113,36 +120,47 @@ static Error validateArchitectureName(StringRef ArchitectureName) {
   return Error::success();
 }
 
+static uint64_t getCPUID(uint32_t CPUType, uint32_t CPUSubtype) {
+  switch (CPUType) {
+  case MachO::CPU_TYPE_ARM:
+  case MachO::CPU_TYPE_ARM64:
+  case MachO::CPU_TYPE_ARM64_32:
+  case MachO::CPU_TYPE_X86_64:
+    // We consider CPUSubtype only for the above 4 CPUTypes to match cctools'
+    // libtool behavior.
+    return static_cast<uint64_t>(CPUType) << 32 | CPUSubtype;
+  default:
+    return CPUType;
+  }
+}
+
 // Check that a file's architecture [FileCPUType, FileCPUSubtype]
 // matches the architecture specified under -arch_only flag.
-static bool acceptFileArch(uint32_t FileCPUType, uint32_t FileCPUSubtype) {
-  uint32_t ArchCPUType, ArchCPUSubtype;
-  std::tie(ArchCPUType, ArchCPUSubtype) = MachO::getCPUTypeFromArchitecture(
-      MachO::getArchitectureFromName(ArchType));
-
-  if (ArchCPUType != FileCPUType)
+static bool acceptFileArch(uint32_t FileCPUType, uint32_t FileCPUSubtype,
+                           const Config &C) {
+  if (C.ArchCPUType != FileCPUType)
     return false;
 
-  switch (ArchCPUType) {
+  switch (C.ArchCPUType) {
   case MachO::CPU_TYPE_ARM:
   case MachO::CPU_TYPE_ARM64_32:
   case MachO::CPU_TYPE_X86_64:
-    return ArchCPUSubtype == FileCPUSubtype;
+    return C.ArchCPUSubtype == FileCPUSubtype;
 
   case MachO::CPU_TYPE_ARM64:
-    if (ArchCPUSubtype == MachO::CPU_SUBTYPE_ARM64_ALL)
+    if (C.ArchCPUSubtype == MachO::CPU_SUBTYPE_ARM64_ALL)
       return FileCPUSubtype == MachO::CPU_SUBTYPE_ARM64_ALL ||
              FileCPUSubtype == MachO::CPU_SUBTYPE_ARM64_V8;
     else
-      return ArchCPUSubtype == FileCPUSubtype;
+      return C.ArchCPUSubtype == FileCPUSubtype;
 
   default:
     return true;
   }
 }
 
-static Error verifyAndAddMachOObject(std::vector<NewArchiveMember> &Members,
-                                     NewArchiveMember Member) {
+static Error verifyAndAddMachOObject(MembersPerArchitectureMap &Members,
+                                     NewArchiveMember Member, const Config &C) {
   auto MBRef = Member.Buf->getMemBufferRef();
   Expected<std::unique_ptr<object::ObjectFile>> ObjOrErr =
       object::ObjectFile::createObjectFile(MBRef);
@@ -164,28 +182,29 @@ static Error verifyAndAddMachOObject(std::vector<NewArchiveMember> &Members,
 
   // If -arch_only is specified then skip this file if it doesn't match
   // the architecture specified.
-  if (!ArchType.empty() && !acceptFileArch(FileCPUType, FileCPUSubtype)) {
+  if (!ArchType.empty() && !acceptFileArch(FileCPUType, FileCPUSubtype, C)) {
     return Error::success();
   }
 
-  Members.push_back(std::move(Member));
+  uint64_t FileCPUID = getCPUID(FileCPUType, FileCPUSubtype);
+  Members[FileCPUID].push_back(std::move(Member));
   return Error::success();
 }
 
-static Error addChildMember(std::vector<NewArchiveMember> &Members,
+static Error addChildMember(MembersPerArchitectureMap &Members,
                             const object::Archive::Child &M, const Config &C) {
   Expected<NewArchiveMember> NMOrErr =
       NewArchiveMember::getOldMember(M, C.Deterministic);
   if (!NMOrErr)
     return NMOrErr.takeError();
 
-  if (Error E = verifyAndAddMachOObject(Members, std::move(*NMOrErr)))
+  if (Error E = verifyAndAddMachOObject(Members, std::move(*NMOrErr), C))
     return E;
 
   return Error::success();
 }
 
-static Error processArchive(std::vector<NewArchiveMember> &Members,
+static Error processArchive(MembersPerArchitectureMap &Members,
                             object::Archive &Lib, StringRef FileName,
                             const Config &C) {
   Error Err = Error::success();
@@ -199,7 +218,7 @@ static Error processArchive(std::vector<NewArchiveMember> &Members,
 }
 
 static Error
-addArchiveMembers(std::vector<NewArchiveMember> &Members,
+addArchiveMembers(MembersPerArchitectureMap &Members,
                   std::vector<std::unique_ptr<MemoryBuffer>> &ArchiveBuffers,
                   NewArchiveMember NM, StringRef FileName, const Config &C) {
   Expected<std::unique_ptr<Archive>> LibOrErr =
@@ -217,7 +236,7 @@ addArchiveMembers(std::vector<NewArchiveMember> &Members,
 }
 
 static Error addUniversalMembers(
-    std::vector<NewArchiveMember> &Members,
+    MembersPerArchitectureMap &Members,
     std::vector<std::unique_ptr<MemoryBuffer>> &UniversalBuffers,
     NewArchiveMember NM, StringRef FileName, const Config &C) {
   Expected<std::unique_ptr<MachOUniversalBinary>> BinaryOrErr =
@@ -235,7 +254,7 @@ static Error addUniversalMembers(
           NewArchiveMember(MachOObjOrErr->get()->getMemoryBufferRef());
       NewMember.MemberName = sys::path::filename(NewMember.MemberName);
 
-      if (Error E = verifyAndAddMachOObject(Members, std::move(NewMember)))
+      if (Error E = verifyAndAddMachOObject(Members, std::move(NewMember), C))
         return E;
       continue;
     }
@@ -264,7 +283,7 @@ static Error addUniversalMembers(
   return Error::success();
 }
 
-static Error addMember(std::vector<NewArchiveMember> &Members,
+static Error addMember(MembersPerArchitectureMap &Members,
                        std::vector<std::unique_ptr<MemoryBuffer>> &FileBuffers,
                        StringRef FileName, const Config &C) {
   Expected<NewArchiveMember> NMOrErr =
@@ -287,30 +306,80 @@ static Error addMember(std::vector<NewArchiveMember> &Members,
     return addUniversalMembers(Members, FileBuffers, std::move(*NMOrErr),
                                FileName, C);
 
-  if (Error E = verifyAndAddMachOObject(Members, std::move(*NMOrErr)))
+  if (Error E = verifyAndAddMachOObject(Members, std::move(*NMOrErr), C))
     return E;
   return Error::success();
 }
 
+static Expected<SmallVector<Slice, 2>>
+buildSlices(ArrayRef<OwningBinary<Archive>> OutputBinaries) {
+  SmallVector<Slice, 2> Slices;
+
+  for (const auto &OB : OutputBinaries) {
+    const Archive *A = OB.getBinary();
+    Expected<Slice> ArchiveSlice = Slice::create(A);
+    if (!ArchiveSlice)
+      return ArchiveSlice.takeError();
+    Slices.push_back(*ArchiveSlice);
+  }
+  return Slices;
+}
+
 static Error createStaticLibrary(const Config &C) {
-  std::vector<NewArchiveMember> NewMembers;
+  MembersPerArchitectureMap NewMembers;
   std::vector<std::unique_ptr<MemoryBuffer>> FileBuffers;
   for (StringRef FileName : InputFiles)
     if (Error E = addMember(NewMembers, FileBuffers, FileName, C))
       return E;
 
-  if (NewMembers.empty() && !ArchType.empty())
-    return createStringError(std::errc::invalid_argument,
-                             "no library created (no object files in input "
-                             "files matching -arch_only %s)",
-                             ArchType.c_str());
+  if (!ArchType.empty()) {
+    uint64_t ArchCPUID = getCPUID(C.ArchCPUType, C.ArchCPUSubtype);
+    if (NewMembers.find(ArchCPUID) == NewMembers.end())
+      return createStringError(std::errc::invalid_argument,
+                               "no library created (no object files in input "
+                               "files matching -arch_only %s)",
+                               ArchType.c_str());
+  }
 
-  if (Error E =
-          writeArchive(OutputFile, NewMembers,
-                       /*WriteSymtab=*/true,
-                       /*Kind=*/object::Archive::K_DARWIN, C.Deterministic,
-                       /*Thin=*/false))
-    return E;
+  if (NewMembers.size() == 1) {
+    if (Error E =
+            writeArchive(OutputFile, NewMembers.begin()->second,
+                         /*WriteSymtab=*/true,
+                         /*Kind=*/object::Archive::K_DARWIN, C.Deterministic,
+                         /*Thin=*/false))
+      return E;
+  } else {
+    SmallVector<OwningBinary<Archive>, 2> OutputBinaries;
+    for (const std::pair<const uint64_t, std::vector<NewArchiveMember>> &M :
+         NewMembers) {
+      Expected<std::unique_ptr<MemoryBuffer>> OutputBufferOrErr =
+          writeArchiveToBuffer(M.second,
+                               /*WriteSymtab=*/true,
+                               /*Kind=*/object::Archive::K_DARWIN,
+                               C.Deterministic,
+                               /*Thin=*/false);
+      if (!OutputBufferOrErr)
+        return OutputBufferOrErr.takeError();
+      std::unique_ptr<MemoryBuffer> &OutputBuffer = OutputBufferOrErr.get();
+
+      Expected<std::unique_ptr<Archive>> ArchiveOrError =
+          Archive::create(OutputBuffer->getMemBufferRef());
+      if (!ArchiveOrError)
+        return ArchiveOrError.takeError();
+      std::unique_ptr<Archive> &A = ArchiveOrError.get();
+
+      OutputBinaries.push_back(
+          OwningBinary<Archive>(std::move(A), std::move(OutputBuffer)));
+    }
+
+    Expected<SmallVector<Slice, 2>> Slices = buildSlices(OutputBinaries);
+    if (!Slices)
+      return Slices.takeError();
+
+    llvm::stable_sort(*Slices);
+    if (Error E = writeUniversalBinary(*Slices, OutputFile))
+      return E;
+  }
   return Error::success();
 }
 
@@ -332,9 +401,14 @@ static Expected<Config> parseCommandLine(int Argc, char **Argv) {
     return createStringError(std::errc::invalid_argument,
                              "no input files specified");
 
-  if (ArchType.getNumOccurrences())
+  if (ArchType.getNumOccurrences()) {
     if (Error E = validateArchitectureName(ArchType))
       return std::move(E);
+
+    std::tie(C.ArchCPUType, C.ArchCPUSubtype) =
+        MachO::getCPUTypeFromArchitecture(
+            MachO::getArchitectureFromName(ArchType));
+  }
 
   return C;
 }
