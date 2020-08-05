@@ -770,6 +770,7 @@ enum {
 // ELF Relocation type for VE.
 enum {
 #include "ELFRelocs/VE.def"
+};
 
 // ELF Relocation types for P2
 enum {
