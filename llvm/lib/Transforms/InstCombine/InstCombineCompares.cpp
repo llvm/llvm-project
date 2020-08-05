@@ -1981,6 +1981,21 @@ Instruction *InstCombinerImpl::foldICmpMulConstant(ICmpInst &Cmp,
                         Constant::getNullValue(Mul->getType()));
   }
 
+  // If the multiply does not wrap, try to divide the compare constant by the
+  // multiplication factor.
+  if (Cmp.isEquality() && !MulC->isNullValue()) {
+    // (mul nsw X, MulC) == C --> X == C /s MulC
+    if (Mul->hasNoSignedWrap() && C.srem(*MulC).isNullValue()) {
+      Constant *NewC = ConstantInt::get(Mul->getType(), C.sdiv(*MulC));
+      return new ICmpInst(Pred, Mul->getOperand(0), NewC);
+    }
+    // (mul nuw X, MulC) == C --> X == C /u MulC
+    if (Mul->hasNoUnsignedWrap() && C.urem(*MulC).isNullValue()) {
+      Constant *NewC = ConstantInt::get(Mul->getType(), C.udiv(*MulC));
+      return new ICmpInst(Pred, Mul->getOperand(0), NewC);
+    }
+  }
+
   return nullptr;
 }
 
@@ -3051,17 +3066,6 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
     }
     break;
   }
-  case Instruction::Mul:
-    if (C.isNullValue() && BO->hasNoSignedWrap()) {
-      const APInt *BOC;
-      if (match(BOp1, m_APInt(BOC)) && !BOC->isNullValue()) {
-        // The trivial case (mul X, 0) is handled by InstSimplify.
-        // General case : (mul X, C) != 0 iff X != 0
-        //                (mul X, C) == 0 iff X == 0
-        return new ICmpInst(Pred, BOp0, Constant::getNullValue(RHS->getType()));
-      }
-    }
-    break;
   case Instruction::UDiv:
     if (C.isNullValue()) {
       // (icmp eq/ne (udiv A, B), 0) -> (icmp ugt/ule i32 B, A)
