@@ -324,16 +324,10 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
   }
   case Instruction::Shl: {
     // `shl` is negatible if the first operand is negatible.
-    if (Value *NegOp0 = negate(I->getOperand(0), Depth + 1))
-      return Builder.CreateShl(NegOp0, I->getOperand(1), I->getName() + ".neg");
-    // Otherwise, `shl %x, C` can be interpreted as `mul %x, 1<<C`.
-    auto *Op1C = dyn_cast<Constant>(I->getOperand(1));
-    if (!Op1C) // Early return.
+    Value *NegOp0 = negate(I->getOperand(0), Depth + 1);
+    if (!NegOp0) // Early return.
       return nullptr;
-    return Builder.CreateMul(
-        I->getOperand(0),
-        ConstantExpr::getShl(Constant::getAllOnesValue(Op1C->getType()), Op1C),
-        I->getName() + ".neg");
+    return Builder.CreateShl(NegOp0, I->getOperand(1), I->getName() + ".neg");
   }
   case Instruction::Or:
     if (!haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1), DL, &AC, I,
