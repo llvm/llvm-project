@@ -5524,33 +5524,54 @@ void DumpStyle<ELFT>::printRelocationsHelper(const ELFFile<ELFT> *Obj,
   unsigned SecNdx = &Sec - &cantFail(Obj->sections()).front();
   unsigned RelNdx = 0;
 
+  auto Warn = [&](Error &&E) {
+    this->reportUniqueWarning(createError("unable to read relocations from " +
+                                          describe(Obj, Sec) + ": " +
+                                          toString(std::move(E))));
+  };
+
   switch (Sec.sh_type) {
   case ELF::SHT_REL:
-    for (const Elf_Rel &R : unwrapOrError(this->FileName, Obj->rels(&Sec)))
-      printRelReloc(Obj, SecNdx, SymTab, R, ++RelNdx);
+    if (Expected<Elf_Rel_Range> RangeOrErr = Obj->rels(&Sec)) {
+      for (const Elf_Rel &R : *RangeOrErr)
+        printRelReloc(Obj, SecNdx, SymTab, R, ++RelNdx);
+    } else {
+      Warn(RangeOrErr.takeError());
+    }
     break;
   case ELF::SHT_RELA:
-    for (const Elf_Rela &R : unwrapOrError(this->FileName, Obj->relas(&Sec)))
-      printRelaReloc(Obj, SecNdx, SymTab, R, ++RelNdx);
+    if (Expected<Elf_Rela_Range> RangeOrErr = Obj->relas(&Sec)) {
+      for (const Elf_Rela &R : *RangeOrErr)
+        printRelaReloc(Obj, SecNdx, SymTab, R, ++RelNdx);
+    } else {
+      Warn(RangeOrErr.takeError());
+    }
     break;
   case ELF::SHT_RELR:
   case ELF::SHT_ANDROID_RELR: {
-    Elf_Relr_Range Relrs = unwrapOrError(this->FileName, Obj->relrs(&Sec));
+    Expected<Elf_Relr_Range> RangeOrErr = Obj->relrs(&Sec);
+    if (!RangeOrErr) {
+      Warn(RangeOrErr.takeError());
+      break;
+    }
     if (opts::RawRelr) {
-      for (const Elf_Relr &R : Relrs)
+      for (const Elf_Relr &R : *RangeOrErr)
         printRelrReloc(R);
       break;
     }
 
-    for (const Elf_Rel &R : Obj->decode_relrs(Relrs))
+    for (const Elf_Rel &R : Obj->decode_relrs(*RangeOrErr))
       printRelReloc(Obj, SecNdx, SymTab, R, ++RelNdx);
     break;
   }
   case ELF::SHT_ANDROID_REL:
   case ELF::SHT_ANDROID_RELA:
-    for (const Elf_Rela &R :
-         unwrapOrError(this->FileName, Obj->android_relas(&Sec)))
-      printRelaReloc(Obj, SecNdx, SymTab, R, ++RelNdx);
+    if (Expected<std::vector<Elf_Rela>> RelasOrErr = Obj->android_relas(&Sec)) {
+      for (const Elf_Rela &R : *RelasOrErr)
+        printRelaReloc(Obj, SecNdx, SymTab, R, ++RelNdx);
+    } else {
+      Warn(RelasOrErr.takeError());
+    }
     break;
   }
 }
