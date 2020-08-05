@@ -1287,7 +1287,7 @@ static void allocateCFISave(MachineFunction &MF, int &FI, Register Reg) {
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
   int NewFI = MF.getFrameInfo().CreateStackObject(
-      TRI->getSpillSize(*RC), TRI->getSpillAlignment(*RC), true);
+      TRI->getSpillSize(*RC), TRI->getSpillAlign(*RC), true);
   if (!MFI->allocateSGPRSpillToVGPR(MF, NewFI))
     llvm_unreachable("allocate SGPR spill should have worked");
   FI = NewFI;
