@@ -692,42 +692,44 @@ public:
 
   void SelectNextWindowAsActive() {
     // Move active focus to next window
-    const size_t num_subwindows = m_subwindows.size();
-    if (m_curr_active_window_idx == UINT32_MAX) {
-      uint32_t idx = 0;
-      for (auto subwindow_sp : m_subwindows) {
-        if (subwindow_sp->GetCanBeActive()) {
-          m_curr_active_window_idx = idx;
-          break;
-        }
-        ++idx;
-      }
-    } else if (m_curr_active_window_idx + 1 < num_subwindows) {
-      bool handled = false;
+    const int num_subwindows = m_subwindows.size();
+    int start_idx = 0;
+    if (m_curr_active_window_idx != UINT32_MAX) {
       m_prev_active_window_idx = m_curr_active_window_idx;
-      for (size_t idx = m_curr_active_window_idx + 1; idx < num_subwindows;
-           ++idx) {
-        if (m_subwindows[idx]->GetCanBeActive()) {
-          m_curr_active_window_idx = idx;
-          handled = true;
-          break;
-        }
+      start_idx = m_curr_active_window_idx + 1;
+    }
+    for (int idx = start_idx; idx < num_subwindows; ++idx) {
+      if (m_subwindows[idx]->GetCanBeActive()) {
+        m_curr_active_window_idx = idx;
+        return;
       }
-      if (!handled) {
-        for (size_t idx = 0; idx <= m_prev_active_window_idx; ++idx) {
-          if (m_subwindows[idx]->GetCanBeActive()) {
-            m_curr_active_window_idx = idx;
-            break;
-          }
-        }
+    }
+    for (int idx = 0; idx < start_idx; ++idx) {
+      if (m_subwindows[idx]->GetCanBeActive()) {
+        m_curr_active_window_idx = idx;
+        break;
       }
-    } else {
+    }
+  }
+
+  void SelectPreviousWindowAsActive() {
+    // Move active focus to previous window
+    const int num_subwindows = m_subwindows.size();
+    int start_idx = num_subwindows - 1;
+    if (m_curr_active_window_idx != UINT32_MAX) {
       m_prev_active_window_idx = m_curr_active_window_idx;
-      for (size_t idx = 0; idx < num_subwindows; ++idx) {
-        if (m_subwindows[idx]->GetCanBeActive()) {
-          m_curr_active_window_idx = idx;
-          break;
-        }
+      start_idx = m_curr_active_window_idx - 1;
+    }
+    for (int idx = start_idx; idx >= 0; --idx) {
+      if (m_subwindows[idx]->GetCanBeActive()) {
+        m_curr_active_window_idx = idx;
+        return;
+      }
+    }
+    for (int idx = num_subwindows - 1; idx > start_idx; --idx) {
+      if (m_subwindows[idx]->GetCanBeActive()) {
+        m_curr_active_window_idx = idx;
+        break;
       }
     }
   }
@@ -2928,6 +2930,10 @@ public:
       window.SelectNextWindowAsActive();
       return eKeyHandled;
 
+    case KEY_BTAB:
+      window.SelectPreviousWindowAsActive();
+      return eKeyHandled;
+
     case 'h':
       window.CreateHelpSubwindow();
       return eKeyHandled;
@@ -2952,6 +2958,7 @@ public:
   KeyHelp *WindowDelegateGetKeyHelp() override {
     static curses::KeyHelp g_source_view_key_help[] = {
         {'\t', "Select next view"},
+        {KEY_BTAB, "Select previous view"},
         {'h', "Show help dialog with view specific key bindings"},
         {',', "Page up"},
         {'.', "Page down"},
