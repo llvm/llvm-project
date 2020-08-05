@@ -26,6 +26,9 @@ class PatternRewriter;
 
 namespace shape {
 
+/// Alias type for extent tensors.
+RankedTensorType getExtentTensorType(MLIRContext *ctx);
+
 namespace ShapeTypes {
 enum Kind {
   Component = Type::FIRST_SHAPE_TYPE,
