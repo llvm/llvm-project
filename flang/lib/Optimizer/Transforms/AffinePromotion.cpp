@@ -236,7 +236,7 @@ bool analyzeCoordinate(mlir::Value coordinate) {
 bool AffineLoopAnalysis::analyzeArrayReference(mlir::Value arrayRef) {
   bool canPromote = true;
   if (auto acoOp = arrayRef.getDefiningOp<ArrayCoorOp>()) {
-    for (auto coordinate : acoOp.getIndices())
+    for (auto coordinate : acoOp.indices())
       canPromote = canPromote && analyzeCoordinate(coordinate);
   } else {
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: cannot promote loop, "
@@ -311,12 +311,12 @@ mlir::Type coordinateArrayElement(fir::ArrayCoorOp op) {
 std::pair<mlir::AffineApplyOp, fir::ConvertOp>
 createAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter) {
   auto acoOp = arrayRef.getDefiningOp<ArrayCoorOp>();
-  assert(acoOp.getShape() && isa<ShapeOp>(acoOp.getShape().getDefiningOp()));
-  auto genDim = acoOp.getShape().getDefiningOp<ShapeOp>();
+  assert(acoOp.shape() && isa<ShapeOp>(acoOp.shape().getDefiningOp()));
+  auto genDim = acoOp.shape().getDefiningOp<ShapeOp>();
   auto affineMap =
-      createArrayIndexAffineMap(acoOp.getIndices().size(), acoOp.getContext());
+      createArrayIndexAffineMap(acoOp.indices().size(), acoOp.getContext());
   SmallVector<mlir::Value, 4> indexArgs;
-  indexArgs.append(acoOp.getIndices().begin(), acoOp.getIndices().end());
+  indexArgs.append(acoOp.indices().begin(), acoOp.indices().end());
 
   // FIXME: quick hack for now (assumes 1 for the shift and stride)
   auto iter = genDim.extents().begin();
