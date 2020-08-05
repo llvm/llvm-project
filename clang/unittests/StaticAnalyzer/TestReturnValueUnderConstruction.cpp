@@ -23,8 +23,8 @@ class TestReturnValueUnderConstructionChecker
   : public Checker<check::PostCall> {
 public:
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const {
-    // Only calls with origin expression are checked. These are `returnC()`
-    // and C::C().
+    // Only calls with origin expression are checked. These are `returnC()`,
+    // `returnD()`, C::C() and D::D().
     if (!Call.getOriginExpr())
       return;
 
@@ -35,6 +35,10 @@ public:
     Optional<SVal> RetVal = Call.getReturnValueUnderConstruction();
     ASSERT_TRUE(RetVal);
     ASSERT_TRUE(RetVal->getAsRegion());
+
+    const auto *RetReg = cast<TypedValueRegion>(RetVal->getAsRegion());
+    const Expr *OrigExpr = Call.getOriginExpr();
+    ASSERT_EQ(OrigExpr->getType(), RetReg->getValueType());
   }
 };
 
@@ -51,22 +55,65 @@ void addTestReturnValueUnderConstructionChecker(
 TEST(TestReturnValueUnderConstructionChecker,
      ReturnValueUnderConstructionChecker) {
   EXPECT_TRUE(runCheckerOnCode<addTestReturnValueUnderConstructionChecker>(
-                  R"(class C {
-                     public:
-                       C(int nn): n(nn) {}
-                       virtual ~C() {}
-                     private:
-                       int n;
-                     };
+      R"(class C {
+         public:
+           C(int nn): n(nn) {}
+           virtual ~C() {}
+         private:
+           int n;
+         };
 
-                     C returnC(int m) {
-                       C c(m);
-                       return c;
-                     }
+         C returnC(int m) {
+           C c(m);
+           return c;
+         }
 
-                     void foo() {
-                       C c = returnC(1); 
-                     })"));
+         void foo() {
+           C c = returnC(1);
+         })"));
+
+  EXPECT_TRUE(runCheckerOnCode<addTestReturnValueUnderConstructionChecker>(
+      R"(class C {
+         public:
+           C(int nn): n(nn) {}
+           explicit C(): C(0) {}
+           virtual ~C() {}
+         private:
+           int n;
+         };
+
+         C returnC() {
+           C c;
+           return c;
+         }
+
+         void foo() {
+           C c = returnC();
+         })"));
+
+  EXPECT_TRUE(runCheckerOnCode<addTestReturnValueUnderConstructionChecker>(
+      R"(class C {
+         public:
+           C(int nn): n(nn) {}
+           virtual ~C() {}
+         private:
+           int n;
+         };
+
+         class D: public C {
+         public:
+           D(int nn): C(nn) {}
+           virtual ~D() {}
+         };
+
+         D returnD(int m) {
+           D d(m);
+           return d;
+         }
+
+         void foo() {
+           D d = returnD(1); 
+         })"));
 }
 
 } // namespace
