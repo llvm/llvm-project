@@ -49,13 +49,11 @@ static llvm::cl::opt<bool> verifyDiagnostics(
 
 namespace mlir {
 // Defined in the test directory, no public header.
-void registerTestLLVMTypeTranslation();
 void registerTestRoundtripSPIRV();
 void registerTestRoundtripDebugSPIRV();
 } // namespace mlir
 
 static void registerTestTranslations() {
-  registerTestLLVMTypeTranslation();
   registerTestRoundtripSPIRV();
   registerTestRoundtripDebugSPIRV();
 }
