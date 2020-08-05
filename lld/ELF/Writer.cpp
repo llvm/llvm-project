@@ -2547,11 +2547,24 @@ static uint64_t setFileOffset(OutputSection *os, uint64_t off) {
 }
 
 template <class ELFT> void Writer<ELFT>::assignFileOffsetsBinary() {
-  uint64_t off = 0;
+  // Compute the minimum LMA of all non-empty non-NOBITS sections as minAddr.
+  auto needsOffset = [](OutputSection &sec) {
+    return sec.type != SHT_NOBITS && (sec.flags & SHF_ALLOC) && sec.size > 0;
+  };
+  uint64_t minAddr = UINT64_MAX;
   for (OutputSection *sec : outputSections)
-    if (sec->flags & SHF_ALLOC)
-      off = setFileOffset(sec, off);
-  fileSize = alignTo(off, config->wordsize);
+    if (needsOffset(*sec)) {
+      sec->offset = sec->getLMA();
+      minAddr = std::min(minAddr, sec->offset);
+    }
+
+  // Sections are laid out at LMA minus minAddr.
+  fileSize = 0;
+  for (OutputSection *sec : outputSections)
+    if (needsOffset(*sec)) {
+      sec->offset -= minAddr;
+      fileSize = std::max(fileSize, sec->offset + sec->size);
+    }
 }
 
 static std::string rangeToString(uint64_t addr, uint64_t len) {
