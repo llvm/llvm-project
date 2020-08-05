@@ -2960,8 +2960,10 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<ViewOp> {
 
     // Field 1: Copy the allocated pointer, used for malloc/free.
     Value allocatedPtr = sourceMemRef.allocatedPtr(rewriter, loc);
+    auto srcMemRefType = viewOp.source().getType().cast<MemRefType>();
     Value bitcastPtr = rewriter.create<LLVM::BitcastOp>(
-        loc, targetElementTy.getPointerTo(), allocatedPtr);
+        loc, targetElementTy.getPointerTo(srcMemRefType.getMemorySpace()),
+        allocatedPtr);
     targetMemRef.setAllocatedPtr(rewriter, loc, bitcastPtr);
 
     // Field 2: Copy the actual aligned pointer to payload.
@@ -2969,7 +2971,8 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<ViewOp> {
     alignedPtr = rewriter.create<LLVM::GEPOp>(loc, alignedPtr.getType(),
                                               alignedPtr, adaptor.byte_shift());
     bitcastPtr = rewriter.create<LLVM::BitcastOp>(
-        loc, targetElementTy.getPointerTo(), alignedPtr);
+        loc, targetElementTy.getPointerTo(srcMemRefType.getMemorySpace()),
+        alignedPtr);
     targetMemRef.setAlignedPtr(rewriter, loc, bitcastPtr);
 
     // Field 3: The offset in the resulting type must be 0. This is because of
