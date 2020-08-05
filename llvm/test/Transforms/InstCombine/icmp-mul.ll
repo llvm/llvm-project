@@ -194,9 +194,7 @@ define i1 @ugt_rem_zero_nonuw(i8 %x) {
 
 define i1 @sgt_minnum(i8 %x) {
 ; CHECK-LABEL: @sgt_minnum(
-; CHECK-NEXT:    [[A:%.*]] = mul nsw i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i8 [[A]], -128
-; CHECK-NEXT:    ret i1 [[B]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = mul nsw i8 %x, 7
   %b = icmp sgt i8 %a, -128
