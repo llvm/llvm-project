@@ -276,8 +276,9 @@ void InputSectionBase::parseCompressedHeader() {
 }
 
 InputSection *InputSectionBase::getLinkOrderDep() const {
-  assert(link);
   assert(flags & SHF_LINK_ORDER);
+  if (!link)
+    return nullptr;
   return cast<InputSection>(file->getSections()[link]);
 }
 
