@@ -12,25 +12,22 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
-#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
-
 #include <cstdint>
 #include <map>
 #include <set>
 
 namespace llvm {
 class raw_ostream;
+struct DWARFAddressRange;
 struct DWARFAttribute;
 class DWARFContext;
-class DWARFDie;
-class DWARFUnit;
-class DWARFCompileUnit;
 class DWARFDataExtractor;
 class DWARFDebugAbbrev;
 class DataExtractor;
 struct DWARFSection;
+class DWARFUnit;
 
 /// A class that verifies DWARF debug information given a DWARF Context.
 class DWARFVerifier {
