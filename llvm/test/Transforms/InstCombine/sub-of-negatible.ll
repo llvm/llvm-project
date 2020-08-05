@@ -1136,3 +1136,67 @@ define i8 @negate_add_with_single_negatible_operand_non_negation(i8 %x, i8 %y) {
   %t1 = sub i8 %y, %t0
   ret i8 %t1
 }
+
+; abs/nabs can be negated
+define i8 @negate_abs(i8 %x, i8 %y) {
+; CHECK-LABEL: @negate_abs(
+; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = icmp slt i8 [[X]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[T1]], i8 [[X]], i8 [[T0]], !prof !0
+; CHECK-NEXT:    [[T3:%.*]] = add i8 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[T3]]
+;
+  %t0 = sub i8 0, %x
+  call void @use8(i8 %t0)
+  %t1 = icmp slt i8 %x, 0
+  %t2 = select i1 %t1, i8 %t0, i8 %x, !prof !0
+  %t3 = sub i8 %y, %t2
+  ret i8 %t3
+}
+define i8 @negate_nabs(i8 %x, i8 %y) {
+; CHECK-LABEL: @negate_nabs(
+; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = icmp slt i8 [[X]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[T1]], i8 [[T0]], i8 [[X]], !prof !0
+; CHECK-NEXT:    [[T3:%.*]] = add i8 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[T3]]
+;
+  %t0 = sub i8 0, %x
+  call void @use8(i8 %t0)
+  %t1 = icmp slt i8 %x, 0
+  %t2 = select i1 %t1, i8 %x, i8 %t0, !prof !0
+  %t3 = sub i8 %y, %t2
+  ret i8 %t3
+}
+
+; And in general, if hands of select are known to be negation of each other,
+; we can negate the select
+define i8 @negate_select_of_op_vs_negated_op(i8 %x, i8 %y, i1 %c) {
+; CHECK-LABEL: @negate_select_of_op_vs_negated_op(
+; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = select i1 [[C:%.*]], i8 [[T0]], i8 [[X]], !prof !0
+; CHECK-NEXT:    [[T2:%.*]] = sub i8 [[Y:%.*]], [[T1]]
+; CHECK-NEXT:    ret i8 [[T2]]
+;
+  %t0 = sub i8 0, %x
+  call void @use8(i8 %t0)
+  %t1 = select i1 %c, i8 %t0, i8 %x, !prof !0
+  %t2 = sub i8 %y, %t1
+  ret i8 %t2
+}
+define i8 @dont_negate_ordinary_select(i8 %x, i8 %y, i8 %z, i1 %c) {
+; CHECK-LABEL: @dont_negate_ordinary_select(
+; CHECK-NEXT:    [[T0:%.*]] = select i1 [[C:%.*]], i8 [[X:%.*]], i8 [[Y:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = sub i8 [[Z:%.*]], [[T0]]
+; CHECK-NEXT:    ret i8 [[T1]]
+;
+  %t0 = select i1 %c, i8 %x, i8 %y
+  %t1 = sub i8 %z, %t0
+  ret i8 %t1
+}
+
+; CHECK: !0 = !{!"branch_weights", i32 40, i32 1}
+!0 = !{!"branch_weights", i32 40, i32 1}
