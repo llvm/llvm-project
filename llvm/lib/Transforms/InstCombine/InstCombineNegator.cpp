@@ -347,13 +347,32 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     LLVM_FALLTHROUGH;
   case Instruction::Add: {
     // `add` is negatible if both of its operands are negatible.
-    Value *NegOp0 = negate(I->getOperand(0), Depth + 1);
-    if (!NegOp0) // Early return.
+    SmallVector<Value *, 2> NegatedOps, NonNegatedOps;
+    for (Value *Op : I->operands()) {
+      // Can we sink the negation into this operand?
+      if (Value *NegOp = negate(Op, Depth + 1)) {
+        NegatedOps.emplace_back(NegOp); // Successfully negated operand!
+        continue;
+      }
+      // Failed to sink negation into this operand. IFF we started from negation
+      // and we manage to sink negation into one operand, we can still do this.
+      if (!IsTrulyNegation)
+        return nullptr;
+      NonNegatedOps.emplace_back(Op); // Just record which operand that was.
+    }
+    assert((NegatedOps.size() + NonNegatedOps.size()) == 2 &&
+           "Internal consistency sanity check.");
+    // Did we manage to sink negation into both of the operands?
+    if (NegatedOps.size() == 2) // Then we get to keep the `add`!
+      return Builder.CreateAdd(NegatedOps[0], NegatedOps[1],
+                               I->getName() + ".neg");
+    assert(IsTrulyNegation && "We should have early-exited then.");
+    // Completely failed to sink negation?
+    if (NonNegatedOps.size() == 2)
       return nullptr;
-    Value *NegOp1 = negate(I->getOperand(1), Depth + 1);
-    if (!NegOp1)
-      return nullptr;
-    return Builder.CreateAdd(NegOp0, NegOp1, I->getName() + ".neg");
+    // 0-(a+b) --> (-a)-b
+    return Builder.CreateSub(NegatedOps[0], NonNegatedOps[0],
+                             I->getName() + ".neg");
   }
   case Instruction::Xor:
     // `xor` is negatible if one of its operands is invertible.
