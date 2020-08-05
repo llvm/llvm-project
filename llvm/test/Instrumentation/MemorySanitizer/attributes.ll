@@ -13,24 +13,28 @@ declare void @e_() sanitize_memory speculatable
 define void @a() sanitize_memory readnone {
 entry:
   call void @a_()
+  call void @a_() readnone
   ret void
 }
 
 define void @b() sanitize_memory readonly {
 entry:
   call void @b_()
+  call void @b_() readonly
   ret void
 }
 
 define void @c() sanitize_memory writeonly {
 entry:
   call void @c_()
+  call void @c_() writeonly
   ret void
 }
 
 define void @d(i32* %p) sanitize_memory writeonly argmemonly {
 entry:
   call void @d_(i32* %p)
+  call void @d_(i32* %p) writeonly argmemonly
   ret void
 }
 

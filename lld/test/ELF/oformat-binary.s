@@ -3,8 +3,8 @@
 
 # RUN: ld.lld -o %t.out %t --oformat binary
 # RUN: od -t x1 -v %t.out | FileCheck %s
-# CHECK: 000000 90 11 22 00 00 00 00 00
-# CHECK-NOT: 00000010
+# CHECK:      0000000 90 11 22
+# CHECK-NEXT: 0000003
 
 ## Check case when linkerscript is used.
 # RUN: echo "SECTIONS { . = 0x1000; }" > %t.script
@@ -14,6 +14,31 @@
 # RUN: echo "SECTIONS { }" > %t.script
 # RUN: ld.lld -o %t2.out --script %t.script %t --oformat binary
 # RUN: od -t x1 -v %t2.out | FileCheck %s
+
+## LMA(.text)=0x100, LMA(.mysec)=0x108. The minimum LMA of all non-empty sections is 0x100.
+## We place an output section at its LMA minus 0x100.
+# RUN: echo 'SECTIONS { .text 0x100 : {*(.text)} .mysec ALIGN(8) : {*(.mysec*)} }' > %talign.lds
+# RUN: ld.lld -T %talign.lds %t --oformat binary -o %talign
+# RUN: od -Ax -t x1 %talign | FileCheck %s --check-prefix=ALIGN --ignore-case
+
+# ALIGN:      000000 90 00 00 00 00 00 00 00 11 22
+# ALIGN-NEXT: 00000a
+
+## The empty section .data is ignored when computing the file size.
+# RUN: echo 'SECTIONS { .text : {*(.text .mysec*)} .data 0x100 : {keep = .;}}' > %tempty.lds
+# RUN: ld.lld -T %tempty.lds %t --oformat binary -o %tempty
+# RUN: od -t x1 %tempty | FileCheck %s
+
+## NOBITS sections are ignored as well.
+# RUN: echo 'SECTIONS { .text : {*(.text .mysec*)} .data 0x100 (NOLOAD) : {BYTE(0)}}' > %tnobits.lds
+# RUN: ld.lld -T %tnobits.lds %t --oformat binary -o %tnobits
+# RUN: od -t x1 %tnobits | FileCheck %s
+
+## FIXME .mysec should be placed at file offset 1.
+## This does not work because for a section without PT_LOAD, we consider LMA = VMA.
+# RUN: echo 'SECTIONS { .text : {*(.text)} .mysec 0x8 : AT(1) {*(.mysec*)} }' > %tlma.lds
+# RUN: ld.lld -T %tlma.lds %t --oformat binary -o %tlma
+# RUN: od -Ax -t x1 %tlma | FileCheck %s --check-prefix=ALIGN --ignore-case
 
 # RUN: not ld.lld -o /dev/null %t --oformat foo 2>&1 \
 # RUN:   | FileCheck %s --check-prefix ERR

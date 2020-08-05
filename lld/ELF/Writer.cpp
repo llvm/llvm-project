@@ -1234,7 +1234,13 @@ static bool shouldSkip(BaseCommand *cmd) {
 static std::vector<BaseCommand *>::iterator
 findOrphanPos(std::vector<BaseCommand *>::iterator b,
               std::vector<BaseCommand *>::iterator e) {
+  // OutputSections without the SHF_ALLOC flag are not part of the memory image
+  // and their addresses usually don't matter. Place any orphan sections without
+  // the SHF_ALLOC flag at the end so that these do not affect the address
+  // assignment of OutputSections with the SHF_ALLOC flag.
   OutputSection *sec = cast<OutputSection>(*e);
+  if (!(sec->flags & SHF_ALLOC))
+    return e;
 
   // Find the first element that has as close a rank as possible.
   auto i = std::max_element(b, e, [=](BaseCommand *a, BaseCommand *b) {
@@ -2326,8 +2332,6 @@ std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs(Partition &part) {
   }
 
   for (OutputSection *sec : outputSections) {
-    if (!(sec->flags & SHF_ALLOC))
-      break;
     if (!needsPtLoad(sec))
       continue;
 
@@ -2547,11 +2551,24 @@ static uint64_t setFileOffset(OutputSection *os, uint64_t off) {
 }
 
 template <class ELFT> void Writer<ELFT>::assignFileOffsetsBinary() {
-  uint64_t off = 0;
+  // Compute the minimum LMA of all non-empty non-NOBITS sections as minAddr.
+  auto needsOffset = [](OutputSection &sec) {
+    return sec.type != SHT_NOBITS && (sec.flags & SHF_ALLOC) && sec.size > 0;
+  };
+  uint64_t minAddr = UINT64_MAX;
   for (OutputSection *sec : outputSections)
-    if (sec->flags & SHF_ALLOC)
-      off = setFileOffset(sec, off);
-  fileSize = alignTo(off, config->wordsize);
+    if (needsOffset(*sec)) {
+      sec->offset = sec->getLMA();
+      minAddr = std::min(minAddr, sec->offset);
+    }
+
+  // Sections are laid out at LMA minus minAddr.
+  fileSize = 0;
+  for (OutputSection *sec : outputSections)
+    if (needsOffset(*sec)) {
+      sec->offset -= minAddr;
+      fileSize = std::max(fileSize, sec->offset + sec->size);
+    }
 }
 
 static std::string rangeToString(uint64_t addr, uint64_t len) {
