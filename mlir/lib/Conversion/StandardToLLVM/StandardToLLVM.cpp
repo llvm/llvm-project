@@ -2402,6 +2402,28 @@ struct DimOpLowering : public ConvertOpToLLVMPattern<DimOp> {
   }
 };
 
+struct RankOpLowering : public ConvertOpToLLVMPattern<RankOp> {
+  using ConvertOpToLLVMPattern<RankOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    Type operandType = cast<RankOp>(op).memrefOrTensor().getType();
+    if (auto unrankedMemRefType = operandType.dyn_cast<UnrankedMemRefType>()) {
+      UnrankedMemRefDescriptor desc(RankOp::Adaptor(operands).memrefOrTensor());
+      rewriter.replaceOp(op, {desc.rank(rewriter, loc)});
+      return success();
+    }
+    if (auto rankedMemRefType = operandType.dyn_cast<MemRefType>()) {
+      rewriter.replaceOp(
+          op, {createIndexConstant(rewriter, loc, rankedMemRefType.getRank())});
+      return success();
+    }
+    return failure();
+  }
+};
+
 // Common base for load and store operations on MemRefs.  Restricts the match
 // to supported MemRef types.  Provides functionality to emit code accessing a
 // specific element of the underlying data buffer.
@@ -3272,6 +3294,7 @@ void mlir::populateStdToLLVMMemoryConversionPatterns(
       DimOpLowering,
       LoadOpLowering,
       MemRefCastOpLowering,
+      RankOpLowering,
       StoreOpLowering,
       SubViewOpLowering,
       ViewOpLowering,
