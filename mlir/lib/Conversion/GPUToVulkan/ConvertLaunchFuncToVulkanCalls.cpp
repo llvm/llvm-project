@@ -59,10 +59,6 @@ class VulkanLaunchFuncToVulkanCallsPass
 private:
   LLVM::LLVMDialect *getLLVMDialect() { return llvmDialect; }
 
-  llvm::LLVMContext &getLLVMContext() {
-    return getLLVMDialect()->getLLVMContext();
-  }
-
   void initializeCachedTypes() {
     llvmDialect = getContext().getRegisteredDialect<LLVM::LLVMDialect>();
     llvmFloatType = LLVM::LLVMType::getFloatTy(llvmDialect);

@@ -118,8 +118,7 @@ public:
   unsigned getPointerBitwidth(unsigned addressSpace = 0);
 
 protected:
-  /// LLVM IR module used to parse/create types.
-  llvm::Module *module;
+  /// Pointer to the LLVM dialect.
   LLVM::LLVMDialect *llvmDialect;
 
 private:
@@ -400,9 +399,6 @@ public:
   /// Returns the LLVM IR context.
   llvm::LLVMContext &getContext() const;
 
-  /// Returns the LLVM IR module associated with the LLVM dialect.
-  llvm::Module &getModule() const;
-
   /// Gets the MLIR type wrapping the LLVM integer type whose bit width is
   /// defined by the used type converter.
   LLVM::LLVMType getIndexType() const;
@@ -437,8 +433,8 @@ public:
                              ConversionPatternRewriter &rewriter) const;
 
   Value getDataPtr(Location loc, MemRefType type, Value memRefDesc,
-                   ValueRange indices, ConversionPatternRewriter &rewriter,
-                   llvm::Module &module) const;
+                   ValueRange indices,
+                   ConversionPatternRewriter &rewriter) const;
 
   /// Returns the type of a pointer to an element of the memref.
   Type getElementPtrType(MemRefType type) const;
