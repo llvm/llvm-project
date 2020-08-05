@@ -2750,12 +2750,14 @@ static Value *simplifyICmpWithConstant(CmpInst::Predicate Pred, Value *LHS,
       return ConstantInt::getFalse(ITy);
   }
 
-  // (mul nuw X, MulC) != C --> true  (if C is not a multiple of MulC)
-  // (mul nuw X, MulC) == C --> false (if C is not a multiple of MulC)
+  // (mul nuw/nsw X, MulC) != C --> true  (if C is not a multiple of MulC)
+  // (mul nuw/nsw X, MulC) == C --> false (if C is not a multiple of MulC)
   const APInt *MulC;
   if (ICmpInst::isEquality(Pred) &&
-      match(LHS, m_NUWMul(m_Value(), m_APIntAllowUndef(MulC))) &&
-      C->urem(*MulC) != 0)
+      ((match(LHS, m_NUWMul(m_Value(), m_APIntAllowUndef(MulC))) &&
+        C->urem(*MulC) != 0) ||
+       (match(LHS, m_NSWMul(m_Value(), m_APIntAllowUndef(MulC))) &&
+        C->srem(*MulC) != 0)))
     return ConstantInt::get(ITy, Pred == ICmpInst::ICMP_NE);
 
   return nullptr;
