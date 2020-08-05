@@ -496,8 +496,12 @@ class Base(unittest2.TestCase):
             mydir = TestBase.compute_mydir(__file__)
         '''
         # /abs/path/to/packages/group/subdir/mytest.py -> group/subdir
-        rel_prefix = test_file[len(configuration.test_src_root) + 1:]
-        return os.path.dirname(rel_prefix)
+        lldb_test_src = configuration.test_src_root
+        if not test_file.startswith(lldb_test_src):
+          raise Exception(
+              "Test file '%s' must reside within lldb_test_src "
+              "(which is '%s')." % (test_file, lldb_test_src))
+        return os.path.dirname(os.path.relpath(test_file, start=lldb_test_src))
 
     def TraceOn(self):
         """Returns True if we are in trace mode (tracing detailed test execution)."""
