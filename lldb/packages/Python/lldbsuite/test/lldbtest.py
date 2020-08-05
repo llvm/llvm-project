@@ -1325,25 +1325,35 @@ class Base(unittest2.TestCase):
            Use compiler_version[0] to specify the operator used to determine if a match has occurred.
            Any operator other than the following defaults to an equality test:
              '>', '>=', "=>", '<', '<=', '=<', '!=', "!" or 'not'
+
+           If the current compiler version cannot be determined, we assume it is close to the top
+           of trunk, so any less-than or equal-to comparisons will return False, and any
+           greater-than or not-equal-to comparisons will return True.
         """
-        if (compiler_version is None):
+        if compiler_version is None:
             return True
         operator = str(compiler_version[0])
         version = compiler_version[1]
 
-        if (version is None):
+        if version is None:
             return True
-        if (operator == '>'):
-            return LooseVersion(self.getCompilerVersion()) > LooseVersion(version)
-        if (operator == '>=' or operator == '=>'):
-            return LooseVersion(self.getCompilerVersion()) >= LooseVersion(version)
-        if (operator == '<'):
-            return LooseVersion(self.getCompilerVersion()) < LooseVersion(version)
-        if (operator == '<=' or operator == '=<'):
-            return LooseVersion(self.getCompilerVersion()) <= LooseVersion(version)
-        if (operator == '!=' or operator == '!' or operator == 'not'):
-            return str(version) not in str(self.getCompilerVersion())
-        return str(version) in str(self.getCompilerVersion())
+
+        test_compiler_version = self.getCompilerVersion()
+        if test_compiler_version == 'unknown':
+            # Assume the compiler version is at or near the top of trunk.
+            return operator in ['>', '>=', '!', '!=', 'not']
+
+        if operator == '>':
+            return LooseVersion(test_compiler_version) > LooseVersion(version)
+        if operator == '>=' or operator == '=>':
+            return LooseVersion(test_compiler_version) >= LooseVersion(version)
+        if operator == '<':
+            return LooseVersion(test_compiler_version) < LooseVersion(version)
+        if operator == '<=' or operator == '=<':
+            return LooseVersion(test_compiler_version) <= LooseVersion(version)
+        if operator == '!=' or operator == '!' or operator == 'not':
+            return str(version) not in str(test_compiler_version)
+        return str(version) in str(test_compiler_version)
 
     def expectedCompiler(self, compilers):
         """Returns True iff any element of compilers is a sub-string of the current compiler."""
