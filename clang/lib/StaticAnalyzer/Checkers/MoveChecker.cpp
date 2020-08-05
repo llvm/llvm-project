@@ -580,7 +580,7 @@ void MoveChecker::explainObject(llvm::raw_ostream &OS, const MemRegion *MR,
   if (const auto DR =
           dyn_cast_or_null<DeclRegion>(unwrapRValueReferenceIndirection(MR))) {
     const auto *RegionDecl = cast<NamedDecl>(DR->getDecl());
-    OS << " '" << RegionDecl->getNameAsString() << "'";
+    OS << " '" << RegionDecl->getDeclName() << "'";
   }
 
   ObjectKind OK = classifyObject(MR, RD);
