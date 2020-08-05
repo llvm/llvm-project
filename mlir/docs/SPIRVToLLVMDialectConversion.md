@@ -36,7 +36,7 @@ SPIR-V Dialect                       | LLVM Dialect
 
 SPIR-V Dialect                       | LLVM Dialect
 :----------------------------------: | :----------------------------------:
-`vector<<count> x <scalar-type>>`    | `!llvm<"<<count> x <scalar-type>>">`
+`vector<<count> x <scalar-type>>`    | `!llvm.vec<<count> x <scalar-type>>`
 
 ### Pointer types
 
@@ -45,7 +45,7 @@ A SPIR-V pointer also takes a Storage Class. At the moment, conversion does
 
 SPIR-V Dialect                                | LLVM Dialect
 :-------------------------------------------: | :-------------------------:
-`!spv.ptr< <element-type>, <storage-class> >` | `!llvm.element-type*`
+`!spv.ptr< <element-type>, <storage-class> >` | `!llvm.ptr<<element-type>>`
 
 ### Array types
 
@@ -59,8 +59,8 @@ supported by type conversion at the moment.
 
 SPIR-V Dialect                        | LLVM Dialect
 :-----------------------------------: | :-----------------------------------:
-`!spv.array<<count> x <element-type>>`| `!llvm<"[<count> x <element-type>]">`
-`!spv.rtarray< <element-type> >`      | `!llvm<"[0 x <element-type>]">`
+`!spv.array<<count> x <element-type>>`| `!llvm.array<<count> x <element-type>>`
+`!spv.rtarray< <element-type> >`      | `!llvm.array<0 x <element-type>>`
 
 ### Struct types
 
@@ -88,8 +88,8 @@ at the moment. Hence, we adhere to the following mapping:
 
 Examples of SPIR-V struct conversion are:
 ```mlir
-!spv.struct<i8, i32>          =>  !llvm<"<{ i8, i32 }>">
-!spv.struct<i8 [0], i32 [4]>  =>  !llvm<"{ i8, i32 }">
+!spv.struct<i8, i32>          =>  !llvm.struct<packed (i8, i32)>
+!spv.struct<i8 [0], i32 [4]>  =>  !llvm.struct<(i8, i32)>
 
 // error
 !spv.struct<i8 [0], i32 [8]>
@@ -188,11 +188,11 @@ to note:
 
     ```mlir
     // Broadcasting offset
-    %offset0 = llvm.mlir.undef : !llvm<"<2 x i8>">
+    %offset0 = llvm.mlir.undef : !llvm.vec<2 x i8>
     %zero = llvm.mlir.constant(0 : i32) : !llvm.i32
-    %offset1 = llvm.insertelement %offset, %offset0[%zero : !llvm.i32] : !llvm<"<2 x i8>">
+    %offset1 = llvm.insertelement %offset, %offset0[%zero : !llvm.i32] : !llvm.vec<2 x i8>
     %one = llvm.mlir.constant(1 : i32) : !llvm.i32
-    %vec_offset = llvm.insertelement  %offset, %offset1[%one : !llvm.i32] : !llvm<"<2 x i8>">
+    %vec_offset = llvm.insertelement  %offset, %offset1[%one : !llvm.i32] : !llvm.vec<2 x i8>
 
     // Broadcasting count
     // ...
@@ -205,7 +205,7 @@ to note:
 
     ```mlir
     // Zero extending offest after broadcasting
-    %res_offset = llvm.zext %vec_offset: !llvm<"<2 x i8>"> to !llvm<"<2 x i32>">
+    %res_offset = llvm.zext %vec_offset: !llvm.vec<2 x i8> to !llvm.vec<2 x i32>
     ```
 
     Also, note that if the bitwidth of `offset` or `count` is greater than the
@@ -386,19 +386,19 @@ following cases, based on the value of the attribute:
 
 * **Aligned**: alignment is passed on to LLVM op builder, for example:
   ```mlir
-  // llvm.store %ptr, %val {alignment = 4 : i64} : !llvm<"float*">
+  // llvm.store %ptr, %val {alignment = 4 : i64} : !llvm.ptr<float>
   spv.Store "Function" %ptr, %val ["Aligned", 4] : f32
   ```
 * **None**: same case as if there is no memory access attribute.
 
 * **Nontemporal**: set `nontemporal` flag, for example:
   ```mlir
-  // %res = llvm.load %ptr {nontemporal} : !llvm<"float*">
+  // %res = llvm.load %ptr {nontemporal} : !llvm.ptr<float>
   %res = spv.Load "Function" %ptr ["Nontemporal"] : f32
   ```
 * **Volatile**: mark the op as `volatile`, for example:
   ```mlir
-  // %res = llvm.load volatile %ptr : !llvm<"float*">
+  // %res = llvm.load volatile %ptr : !llvm.ptr<float>
   %res = spv.Load "Function" %ptr ["Volatile"] : f32
   ```
 Otherwise the conversion fails as other cases (`MakePointerAvailable`,
@@ -426,9 +426,9 @@ spv.module Logical GLSL450 {
 
 // Converted result
 module {
-  llvm.mlir.global private @struct() : !llvm<"<{ float, [10 x float] }>">
+  llvm.mlir.global private @struct() : !llvm.struct<packed (float, [10 x float])>
   llvm.func @func() {
-    %0 = llvm.mlir.addressof @struct : !llvm<"<{ float, [10 x float] }>*">
+    %0 = llvm.mlir.addressof @struct : !llvm.ptr<struct<packed (float, [10 x float])>>
     llvm.return
   }
 }
@@ -469,13 +469,13 @@ Also, at the moment initialization is only possible via `spv.constant`.
 ```mlir
 // Conversion of VariableOp without initialization
                                                                %size = llvm.mlir.constant(1 : i32) : !llvm.i32
-%res = spv.Variable : !spv.ptr<vector<3xf32>, Function>   =>   %res  = llvm.alloca  %size x !llvm<"<3 x float>"> : (!llvm.i32) -> !llvm<"<3 x float>*">
+%res = spv.Variable : !spv.ptr<vector<3xf32>, Function>   =>   %res  = llvm.alloca  %size x !llvm.vec<3 x float> : (!llvm.i32) -> !llvm.ptr<vec<3 x float>>
 
 // Conversion of VariableOp with initialization
                                                                %c    = llvm.mlir.constant(0 : i64) : !llvm.i64
 %c   = spv.constant 0 : i64                                    %size = llvm.mlir.constant(1 : i32) : !llvm.i32
-%res = spv.Variable init(%c) : !spv.ptr<i64, Function>    =>   %res	 = llvm.alloca %[[SIZE]] x !llvm.i64 : (!llvm.i32) -> !llvm<"i64*">
-																															 llvm.store %c, %res : !llvm<"i64*">
+%res = spv.Variable init(%c) : !spv.ptr<i64, Function>    =>   %res	 = llvm.alloca %[[SIZE]] x !llvm.i64 : (!llvm.i32) -> !llvm.ptr<i64>
+                                                               llvm.store %c, %res : !llvm.ptr<i64>
 ```
 
 Note that simple conversion to `alloca` may not be sufficent if the code has
@@ -545,7 +545,7 @@ cover all possible corner cases.
 // %0 = llvm.mlir.constant(0 : i8) : !llvm.i8
 %0 = spv.constant  0 : i8
 
-// %1 = llvm.mlir.constant(dense<[2, 3, 4]> : vector<3xi32>) : !llvm<"<3 x i32>">
+// %1 = llvm.mlir.constant(dense<[2, 3, 4]> : vector<3xi32>) : !llvm.vec<3 x i32>
 %1 = spv.constant dense<[2, 3, 4]> : vector<3xui32>
 ```
 
@@ -606,23 +606,23 @@ blocks being reachable. Moreover, selection and loop control attributes (such as
 
 ```mlir
 // Conversion of selection
-%cond = spv.constant true															%cond = llvm.mlir.constant(true) : !llvm.i1
+%cond = spv.constant true                               %cond = llvm.mlir.constant(true) : !llvm.i1
 spv.selection {
-	spv.BranchConditional %cond, ^true, ^false					llvm.cond_br %cond, ^true, ^false
+  spv.BranchConditional %cond, ^true, ^false            llvm.cond_br %cond, ^true, ^false
 
 ^true:																								^true:
-	// True block code																		// True block code
-	spv.Branch ^merge															=>			llvm.br ^merge
+  // True block code                                    // True block code
+  spv.Branch ^merge                             =>      llvm.br ^merge
 
-^false:																								^false:
-	// False block code																		// False block code
-	spv.Branch ^merge																			llvm.br ^merge
+^false:                                               ^false:
+  // False block code                                   // False block code
+  spv.Branch ^merge                                     llvm.br ^merge
 
-^merge:																								^merge:
-	spv._merge																						llvm.br ^continue
+^merge:                                               ^merge:
+  spv._merge                                            llvm.br ^continue
 }
 // Remaining code																			^continue:
-																												// Remaining code
+                                                        // Remaining code
 ```
 
 ```mlir
