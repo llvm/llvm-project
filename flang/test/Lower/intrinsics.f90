@@ -181,8 +181,14 @@ end subroutine iand_test
 ! CHECK-LABEL: ichar_test
 subroutine ichar_test(c)
   character(1) :: c
+  character :: str(10)
+  ! CHECK: fir.load {{.*}} : !fir.ref<!fir.char<1>>
   ! CHECK: fir.convert {{.*}} : (!fir.char<1>) -> i32
   print *, ichar(c)
+
+  ! CHECK: fir.extract_value {{.*}} : (!fir.array<1x!fir.char<1>>, i32) -> !fir.char<1>
+  ! CHECK: fir.convert {{.*}} : (!fir.char<1>) -> i32
+  print *, ichar(str(J))
 end subroutine
 
 ! IEOR
