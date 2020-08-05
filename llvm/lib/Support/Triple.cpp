@@ -1069,12 +1069,6 @@ void Triple::getOSVersion(unsigned &Major, unsigned &Minor,
     OSName.consume_front("macos");
 
   parseVersionFromName(OSName, Major, Minor, Micro);
-  if (getOS() == MacOSX && Major == 10 && Minor == 16 && Micro == 0) {
-    // macOS 10.16 is canonicalized to macOS 11.
-    Major = 11;
-    Minor = 0;
-    Micro = 0;
-  }
 }
 
 bool Triple::getMacOSXVersion(unsigned &Major, unsigned &Minor,
