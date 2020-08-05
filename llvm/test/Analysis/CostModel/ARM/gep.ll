@@ -21,18 +21,57 @@ define void @testi8(i8* %a, i32 %i) {
 ; CHECK-V6M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i8, i8* %a, i32 %i
 ; CHECK-V6M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-; CHECK-V7M-LABEL: 'testi8'
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i8, i8* %a, i32 0
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i8, i8* %a, i32 1
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i8, i8* %a, i32 -1
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i8, i8* %a, i32 31
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i8, i8* %a, i32 32
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a4095 = getelementptr inbounds i8, i8* %a, i32 4095
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4096 = getelementptr inbounds i8, i8* %a, i32 4096
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i8, i8* %a, i32 -255
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i8, i8* %a, i32 -256
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i8, i8* %a, i32 %i
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-V7M-NOFP-LABEL: 'testi8'
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i8, i8* %a, i32 0
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i8, i8* %a, i32 1
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i8, i8* %a, i32 -1
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i8, i8* %a, i32 31
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i8, i8* %a, i32 32
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a4095 = getelementptr inbounds i8, i8* %a, i32 4095
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4096 = getelementptr inbounds i8, i8* %a, i32 4096
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i8, i8* %a, i32 -255
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i8, i8* %a, i32 -256
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i8, i8* %a, i32 %i
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; CHECK-V7M-FP-LABEL: 'testi8'
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i8, i8* %a, i32 0
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i8, i8* %a, i32 1
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i8, i8* %a, i32 -1
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i8, i8* %a, i32 31
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i8, i8* %a, i32 32
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a4095 = getelementptr inbounds i8, i8* %a, i32 4095
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4096 = getelementptr inbounds i8, i8* %a, i32 4096
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i8, i8* %a, i32 -255
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i8, i8* %a, i32 -256
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i8, i8* %a, i32 %i
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'testi8'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i8, i8* %a, i32 0
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i8, i8* %a, i32 1
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i8, i8* %a, i32 -1
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i8, i8* %a, i32 31
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i8, i8* %a, i32 32
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a4095 = getelementptr inbounds i8, i8* %a, i32 4095
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4096 = getelementptr inbounds i8, i8* %a, i32 4096
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i8, i8* %a, i32 -255
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i8, i8* %a, i32 -256
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i8, i8* %a, i32 %i
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVEFP-LABEL: 'testi8'
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i8, i8* %a, i32 0
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i8, i8* %a, i32 1
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i8, i8* %a, i32 -1
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i8, i8* %a, i32 31
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i8, i8* %a, i32 32
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a4095 = getelementptr inbounds i8, i8* %a, i32 4095
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4096 = getelementptr inbounds i8, i8* %a, i32 4096
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i8, i8* %a, i32 -255
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i8, i8* %a, i32 -256
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i8, i8* %a, i32 %i
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-T32-LABEL: 'testi8'
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i8, i8* %a, i32 0
@@ -45,7 +84,7 @@ define void @testi8(i8* %a, i32 %i) {
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i8, i8* %a, i32 -255
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i8, i8* %a, i32 -256
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i8, i8* %a, i32 %i
-; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-A32-LABEL: 'testi8'
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i8, i8* %a, i32 0
@@ -58,7 +97,7 @@ define void @testi8(i8* %a, i32 %i) {
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i8, i8* %a, i32 -255
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am256 = getelementptr inbounds i8, i8* %a, i32 -256
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i8, i8* %a, i32 %i
-; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %a0 = getelementptr inbounds i8, i8* %a, i32 0
   %a1 = getelementptr inbounds i8, i8* %a, i32 1
@@ -88,18 +127,57 @@ define void @testi16(i16* %a, i32 %i) {
 ; CHECK-V6M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds i16, i16* %a, i32 %i
 ; CHECK-V6M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-; CHECK-V7M-LABEL: 'testi16'
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i16, i16* %a, i32 0
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i16, i16* %a, i32 1
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i16, i16* %a, i32 -1
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i16, i16* %a, i32 31
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i16, i16* %a, i32 32
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a4095 = getelementptr inbounds i16, i16* %a, i32 2046
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4096 = getelementptr inbounds i16, i16* %a, i32 2048
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i16, i16* %a, i32 -127
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i16, i16* %a, i32 -128
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i16, i16* %a, i32 %i
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-V7M-NOFP-LABEL: 'testi16'
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i16, i16* %a, i32 0
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i16, i16* %a, i32 1
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i16, i16* %a, i32 -1
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i16, i16* %a, i32 31
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i16, i16* %a, i32 32
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a4095 = getelementptr inbounds i16, i16* %a, i32 2046
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4096 = getelementptr inbounds i16, i16* %a, i32 2048
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i16, i16* %a, i32 -127
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i16, i16* %a, i32 -128
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i16, i16* %a, i32 %i
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; CHECK-V7M-FP-LABEL: 'testi16'
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i16, i16* %a, i32 0
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i16, i16* %a, i32 1
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i16, i16* %a, i32 -1
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i16, i16* %a, i32 31
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i16, i16* %a, i32 32
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a4095 = getelementptr inbounds i16, i16* %a, i32 2046
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4096 = getelementptr inbounds i16, i16* %a, i32 2048
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i16, i16* %a, i32 -127
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i16, i16* %a, i32 -128
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i16, i16* %a, i32 %i
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'testi16'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i16, i16* %a, i32 0
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i16, i16* %a, i32 1
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i16, i16* %a, i32 -1
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i16, i16* %a, i32 31
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i16, i16* %a, i32 32
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a4095 = getelementptr inbounds i16, i16* %a, i32 2046
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4096 = getelementptr inbounds i16, i16* %a, i32 2048
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i16, i16* %a, i32 -127
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i16, i16* %a, i32 -128
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i16, i16* %a, i32 %i
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVEFP-LABEL: 'testi16'
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i16, i16* %a, i32 0
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i16, i16* %a, i32 1
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i16, i16* %a, i32 -1
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i16, i16* %a, i32 31
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i16, i16* %a, i32 32
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a4095 = getelementptr inbounds i16, i16* %a, i32 2046
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4096 = getelementptr inbounds i16, i16* %a, i32 2048
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i16, i16* %a, i32 -127
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i16, i16* %a, i32 -128
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i16, i16* %a, i32 %i
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-T32-LABEL: 'testi16'
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i16, i16* %a, i32 0
@@ -112,7 +190,7 @@ define void @testi16(i16* %a, i32 %i) {
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i16, i16* %a, i32 -127
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i16, i16* %a, i32 -128
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i16, i16* %a, i32 %i
-; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-A32-LABEL: 'testi16'
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i16, i16* %a, i32 0
@@ -125,7 +203,7 @@ define void @testi16(i16* %a, i32 %i) {
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i16, i16* %a, i32 -127
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i16, i16* %a, i32 -128
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds i16, i16* %a, i32 %i
-; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %a0 = getelementptr inbounds i16, i16* %a, i32 0
   %a1 = getelementptr inbounds i16, i16* %a, i32 1
@@ -155,18 +233,57 @@ define void @testi32(i32* %a, i32 %i) {
 ; CHECK-V6M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds i32, i32* %a, i32 %i
 ; CHECK-V6M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-; CHECK-V7M-LABEL: 'testi32'
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i32, i32* %a, i32 0
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i32, i32* %a, i32 1
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i32, i32* %a, i32 -1
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i32, i32* %a, i32 31
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i32, i32* %a, i32 32
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1023 = getelementptr inbounds i32, i32* %a, i32 1023
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a1024 = getelementptr inbounds i32, i32* %a, i32 1024
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i32, i32* %a, i32 -63
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i32, i32* %a, i32 -64
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i32, i32* %a, i32 %i
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-V7M-NOFP-LABEL: 'testi32'
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i32, i32* %a, i32 0
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i32, i32* %a, i32 1
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i32, i32* %a, i32 -1
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i32, i32* %a, i32 31
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i32, i32* %a, i32 32
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1023 = getelementptr inbounds i32, i32* %a, i32 1023
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a1024 = getelementptr inbounds i32, i32* %a, i32 1024
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i32, i32* %a, i32 -63
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i32, i32* %a, i32 -64
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i32, i32* %a, i32 %i
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; CHECK-V7M-FP-LABEL: 'testi32'
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i32, i32* %a, i32 0
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i32, i32* %a, i32 1
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i32, i32* %a, i32 -1
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i32, i32* %a, i32 31
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i32, i32* %a, i32 32
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1023 = getelementptr inbounds i32, i32* %a, i32 1023
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a1024 = getelementptr inbounds i32, i32* %a, i32 1024
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i32, i32* %a, i32 -63
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i32, i32* %a, i32 -64
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i32, i32* %a, i32 %i
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'testi32'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i32, i32* %a, i32 0
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i32, i32* %a, i32 1
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i32, i32* %a, i32 -1
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i32, i32* %a, i32 31
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i32, i32* %a, i32 32
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1023 = getelementptr inbounds i32, i32* %a, i32 1023
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a1024 = getelementptr inbounds i32, i32* %a, i32 1024
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i32, i32* %a, i32 -63
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i32, i32* %a, i32 -64
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i32, i32* %a, i32 %i
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVEFP-LABEL: 'testi32'
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i32, i32* %a, i32 0
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i32, i32* %a, i32 1
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i32, i32* %a, i32 -1
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i32, i32* %a, i32 31
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i32, i32* %a, i32 32
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1023 = getelementptr inbounds i32, i32* %a, i32 1023
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a1024 = getelementptr inbounds i32, i32* %a, i32 1024
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i32, i32* %a, i32 -63
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i32, i32* %a, i32 -64
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i32, i32* %a, i32 %i
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-T32-LABEL: 'testi32'
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i32, i32* %a, i32 0
@@ -179,7 +296,7 @@ define void @testi32(i32* %a, i32 %i) {
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i32, i32* %a, i32 -63
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i32, i32* %a, i32 -64
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i32, i32* %a, i32 %i
-; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-A32-LABEL: 'testi32'
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i32, i32* %a, i32 0
@@ -192,7 +309,7 @@ define void @testi32(i32* %a, i32 %i) {
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i32, i32* %a, i32 -63
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am256 = getelementptr inbounds i32, i32* %a, i32 -64
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ai = getelementptr inbounds i32, i32* %a, i32 %i
-; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %a0 = getelementptr inbounds i32, i32* %a, i32 0
   %a1 = getelementptr inbounds i32, i32* %a, i32 1
@@ -224,20 +341,65 @@ define void @testi64(i64* %a, i32 %i) {
 ; CHECK-V6M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds i64, i64* %a, i32 %i
 ; CHECK-V6M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-; CHECK-V7M-LABEL: 'testi64'
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i64, i64* %a, i32 0
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i64, i64* %a, i32 1
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i64, i64* %a, i32 -1
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a15 = getelementptr inbounds i64, i64* %a, i32 15
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a16 = getelementptr inbounds i64, i64* %a, i32 16
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i64, i64* %a, i32 31
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i64, i64* %a, i32 32
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4095 = getelementptr inbounds i64, i64* %a, i32 1023
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4096 = getelementptr inbounds i64, i64* %a, i32 1024
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i64, i64* %a, i32 -63
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am256 = getelementptr inbounds i64, i64* %a, i32 -64
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds i64, i64* %a, i32 %i
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-V7M-NOFP-LABEL: 'testi64'
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i64, i64* %a, i32 0
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i64, i64* %a, i32 1
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i64, i64* %a, i32 -1
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a15 = getelementptr inbounds i64, i64* %a, i32 15
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a16 = getelementptr inbounds i64, i64* %a, i32 16
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i64, i64* %a, i32 31
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i64, i64* %a, i32 32
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4095 = getelementptr inbounds i64, i64* %a, i32 1023
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4096 = getelementptr inbounds i64, i64* %a, i32 1024
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i64, i64* %a, i32 -63
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am256 = getelementptr inbounds i64, i64* %a, i32 -64
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds i64, i64* %a, i32 %i
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; CHECK-V7M-FP-LABEL: 'testi64'
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i64, i64* %a, i32 0
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i64, i64* %a, i32 1
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i64, i64* %a, i32 -1
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a15 = getelementptr inbounds i64, i64* %a, i32 15
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a16 = getelementptr inbounds i64, i64* %a, i32 16
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i64, i64* %a, i32 31
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i64, i64* %a, i32 32
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4095 = getelementptr inbounds i64, i64* %a, i32 1023
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4096 = getelementptr inbounds i64, i64* %a, i32 1024
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i64, i64* %a, i32 -63
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am256 = getelementptr inbounds i64, i64* %a, i32 -64
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds i64, i64* %a, i32 %i
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'testi64'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i64, i64* %a, i32 0
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i64, i64* %a, i32 1
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i64, i64* %a, i32 -1
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a15 = getelementptr inbounds i64, i64* %a, i32 15
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a16 = getelementptr inbounds i64, i64* %a, i32 16
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i64, i64* %a, i32 31
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i64, i64* %a, i32 32
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4095 = getelementptr inbounds i64, i64* %a, i32 1023
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4096 = getelementptr inbounds i64, i64* %a, i32 1024
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i64, i64* %a, i32 -63
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am256 = getelementptr inbounds i64, i64* %a, i32 -64
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds i64, i64* %a, i32 %i
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVEFP-LABEL: 'testi64'
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i64, i64* %a, i32 0
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds i64, i64* %a, i32 1
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am4 = getelementptr inbounds i64, i64* %a, i32 -1
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a15 = getelementptr inbounds i64, i64* %a, i32 15
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a16 = getelementptr inbounds i64, i64* %a, i32 16
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a31 = getelementptr inbounds i64, i64* %a, i32 31
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a32 = getelementptr inbounds i64, i64* %a, i32 32
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4095 = getelementptr inbounds i64, i64* %a, i32 1023
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a4096 = getelementptr inbounds i64, i64* %a, i32 1024
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i64, i64* %a, i32 -63
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am256 = getelementptr inbounds i64, i64* %a, i32 -64
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds i64, i64* %a, i32 %i
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-T32-LABEL: 'testi64'
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i64, i64* %a, i32 0
@@ -252,7 +414,7 @@ define void @testi64(i64* %a, i32 %i) {
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds i64, i64* %a, i32 -63
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am256 = getelementptr inbounds i64, i64* %a, i32 -64
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds i64, i64* %a, i32 %i
-; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-A32-LABEL: 'testi64'
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds i64, i64* %a, i32 0
@@ -267,7 +429,7 @@ define void @testi64(i64* %a, i32 %i) {
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am255 = getelementptr inbounds i64, i64* %a, i32 -63
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds i64, i64* %a, i32 -64
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds i64, i64* %a, i32 %i
-; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %a0 = getelementptr inbounds i64, i64* %a, i32 0
   %a1 = getelementptr inbounds i64, i64* %a, i32 1
@@ -344,7 +506,7 @@ define void @testhalf(half* %a, i32 %i) {
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am63 = getelementptr inbounds half, half* %a, i32 -63
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am64 = getelementptr inbounds half, half* %a, i32 -64
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds half, half* %a, i32 %i
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-MVEFP-LABEL: 'testhalf'
 ; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds half, half* %a, i32 0
@@ -359,7 +521,7 @@ define void @testhalf(half* %a, i32 %i) {
 ; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am63 = getelementptr inbounds half, half* %a, i32 -63
 ; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am64 = getelementptr inbounds half, half* %a, i32 -64
 ; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds half, half* %a, i32 %i
-; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-T32-LABEL: 'testhalf'
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds half, half* %a, i32 0
@@ -374,7 +536,7 @@ define void @testhalf(half* %a, i32 %i) {
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am63 = getelementptr inbounds half, half* %a, i32 -63
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am64 = getelementptr inbounds half, half* %a, i32 -64
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds half, half* %a, i32 %i
-; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-A32-LABEL: 'testhalf'
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds half, half* %a, i32 0
@@ -389,7 +551,7 @@ define void @testhalf(half* %a, i32 %i) {
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am63 = getelementptr inbounds half, half* %a, i32 -63
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am64 = getelementptr inbounds half, half* %a, i32 -64
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds half, half* %a, i32 %i
-; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %a0 = getelementptr inbounds half, half* %a, i32 0
   %a1 = getelementptr inbounds half, half* %a, i32 1
@@ -466,7 +628,7 @@ define void @testfloat(float* %a, i32 %i) {
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am63 = getelementptr inbounds float, float* %a, i32 -63
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am64 = getelementptr inbounds float, float* %a, i32 -64
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds float, float* %a, i32 %i
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-MVEFP-LABEL: 'testfloat'
 ; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds float, float* %a, i32 0
@@ -481,7 +643,7 @@ define void @testfloat(float* %a, i32 %i) {
 ; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am63 = getelementptr inbounds float, float* %a, i32 -63
 ; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am64 = getelementptr inbounds float, float* %a, i32 -64
 ; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds float, float* %a, i32 %i
-; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-T32-LABEL: 'testfloat'
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds float, float* %a, i32 0
@@ -496,7 +658,7 @@ define void @testfloat(float* %a, i32 %i) {
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am63 = getelementptr inbounds float, float* %a, i32 -63
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am64 = getelementptr inbounds float, float* %a, i32 -64
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds float, float* %a, i32 %i
-; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-A32-LABEL: 'testfloat'
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds float, float* %a, i32 0
@@ -511,7 +673,7 @@ define void @testfloat(float* %a, i32 %i) {
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am63 = getelementptr inbounds float, float* %a, i32 -63
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am64 = getelementptr inbounds float, float* %a, i32 -64
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds float, float* %a, i32 %i
-; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %a0 = getelementptr inbounds float, float* %a, i32 0
   %a1 = getelementptr inbounds float, float* %a, i32 1
@@ -545,20 +707,65 @@ define void @testdouble(double* %a, i32 %i) {
 ; CHECK-V6M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds double, double* %a, i32 %i
 ; CHECK-V6M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-; CHECK-V7M-LABEL: 'testdouble'
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds double, double* %a, i32 0
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds double, double* %a, i32 1
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am1 = getelementptr inbounds double, double* %a, i32 -1
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a255 = getelementptr inbounds double, double* %a, i32 127
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a256 = getelementptr inbounds double, double* %a, i32 128
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds double, double* %a, i32 -127
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds double, double* %a, i32 -128
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a1023 = getelementptr inbounds double, double* %a, i32 511
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a1024 = getelementptr inbounds double, double* %a, i32 512
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am63 = getelementptr inbounds double, double* %a, i32 -31
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am64 = getelementptr inbounds double, double* %a, i32 -32
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds double, double* %a, i32 %i
-; CHECK-V7M-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-V7M-NOFP-LABEL: 'testdouble'
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds double, double* %a, i32 0
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds double, double* %a, i32 1
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am1 = getelementptr inbounds double, double* %a, i32 -1
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a255 = getelementptr inbounds double, double* %a, i32 127
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a256 = getelementptr inbounds double, double* %a, i32 128
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds double, double* %a, i32 -127
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds double, double* %a, i32 -128
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a1023 = getelementptr inbounds double, double* %a, i32 511
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a1024 = getelementptr inbounds double, double* %a, i32 512
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am63 = getelementptr inbounds double, double* %a, i32 -31
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am64 = getelementptr inbounds double, double* %a, i32 -32
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds double, double* %a, i32 %i
+; CHECK-V7M-NOFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; CHECK-V7M-FP-LABEL: 'testdouble'
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds double, double* %a, i32 0
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds double, double* %a, i32 1
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am1 = getelementptr inbounds double, double* %a, i32 -1
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a255 = getelementptr inbounds double, double* %a, i32 127
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a256 = getelementptr inbounds double, double* %a, i32 128
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds double, double* %a, i32 -127
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds double, double* %a, i32 -128
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a1023 = getelementptr inbounds double, double* %a, i32 511
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a1024 = getelementptr inbounds double, double* %a, i32 512
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am63 = getelementptr inbounds double, double* %a, i32 -31
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am64 = getelementptr inbounds double, double* %a, i32 -32
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds double, double* %a, i32 %i
+; CHECK-V7M-FP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; CHECK-MVE-LABEL: 'testdouble'
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds double, double* %a, i32 0
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds double, double* %a, i32 1
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am1 = getelementptr inbounds double, double* %a, i32 -1
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a255 = getelementptr inbounds double, double* %a, i32 127
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a256 = getelementptr inbounds double, double* %a, i32 128
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds double, double* %a, i32 -127
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds double, double* %a, i32 -128
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a1023 = getelementptr inbounds double, double* %a, i32 511
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a1024 = getelementptr inbounds double, double* %a, i32 512
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am63 = getelementptr inbounds double, double* %a, i32 -31
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am64 = getelementptr inbounds double, double* %a, i32 -32
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds double, double* %a, i32 %i
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVEFP-LABEL: 'testdouble'
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds double, double* %a, i32 0
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a1 = getelementptr inbounds double, double* %a, i32 1
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am1 = getelementptr inbounds double, double* %a, i32 -1
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a255 = getelementptr inbounds double, double* %a, i32 127
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a256 = getelementptr inbounds double, double* %a, i32 128
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am255 = getelementptr inbounds double, double* %a, i32 -127
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %am256 = getelementptr inbounds double, double* %a, i32 -128
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a1023 = getelementptr inbounds double, double* %a, i32 511
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a1024 = getelementptr inbounds double, double* %a, i32 512
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am63 = getelementptr inbounds double, double* %a, i32 -31
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am64 = getelementptr inbounds double, double* %a, i32 -32
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds double, double* %a, i32 %i
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-T32-LABEL: 'testdouble'
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds double, double* %a, i32 0
@@ -573,7 +780,7 @@ define void @testdouble(double* %a, i32 %i) {
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am63 = getelementptr inbounds double, double* %a, i32 -31
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am64 = getelementptr inbounds double, double* %a, i32 -32
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds double, double* %a, i32 %i
-; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-A32-LABEL: 'testdouble'
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a0 = getelementptr inbounds double, double* %a, i32 0
@@ -588,7 +795,7 @@ define void @testdouble(double* %a, i32 %i) {
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am63 = getelementptr inbounds double, double* %a, i32 -31
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %am64 = getelementptr inbounds double, double* %a, i32 -32
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %ai = getelementptr inbounds double, double* %a, i32 %i
-; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %a0 = getelementptr inbounds double, double* %a, i32 0
   %a1 = getelementptr inbounds double, double* %a, i32 1
@@ -845,7 +1052,7 @@ define void @testvecs(i32 %i) {
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c12 = getelementptr inbounds <4 x float>, <4 x float>* undef, i32 %i
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c13 = getelementptr inbounds <4 x double>, <4 x double>* undef, i32 %i
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %d0 = getelementptr inbounds i8, i8* undef, i32 -1
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-MVEFP-LABEL: 'testvecs'
 ; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a7 = getelementptr inbounds <4 x i8>, <4 x i8>* undef, i32 0
@@ -905,7 +1112,7 @@ define void @testvecs(i32 %i) {
 ; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c12 = getelementptr inbounds <4 x float>, <4 x float>* undef, i32 %i
 ; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c13 = getelementptr inbounds <4 x double>, <4 x double>* undef, i32 %i
 ; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %d0 = getelementptr inbounds i8, i8* undef, i32 -1
-; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-MVEFP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-T32-LABEL: 'testvecs'
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a7 = getelementptr inbounds <4 x i8>, <4 x i8>* undef, i32 0
@@ -965,7 +1172,7 @@ define void @testvecs(i32 %i) {
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c12 = getelementptr inbounds <4 x float>, <4 x float>* undef, i32 %i
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c13 = getelementptr inbounds <4 x double>, <4 x double>* undef, i32 %i
 ; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %d0 = getelementptr inbounds i8, i8* undef, i32 -1
-; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-T32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-A32-LABEL: 'testvecs'
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %a7 = getelementptr inbounds <4 x i8>, <4 x i8>* undef, i32 0
@@ -1025,7 +1232,7 @@ define void @testvecs(i32 %i) {
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c12 = getelementptr inbounds <4 x float>, <4 x float>* undef, i32 %i
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c13 = getelementptr inbounds <4 x double>, <4 x double>* undef, i32 %i
 ; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %d0 = getelementptr inbounds i8, i8* undef, i32 -1
-; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-A32-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %a7 = getelementptr inbounds <4 x i8>, <4 x i8>* undef, i32 0
   %a8 = getelementptr inbounds <4 x i16>, <4 x i16>* undef, i32 0
