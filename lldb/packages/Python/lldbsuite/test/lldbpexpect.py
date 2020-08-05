@@ -11,6 +11,7 @@ import six
 import lldb
 from .lldbtest import *
 from . import lldbutil
+from lldbsuite.test.decorators import *
 
 if sys.platform.startswith('win32'):
     # llvm.org/pr22274: need a pexpect replacement for windows
@@ -19,6 +20,7 @@ if sys.platform.startswith('win32'):
 else:
     import pexpect
 
+    @skipIfRemote
     class PExpectTest(TestBase):
 
         NO_DEBUG_INFO_TESTCASE = True
