@@ -824,6 +824,28 @@ func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
   %5 = view %0[%arg2][] : memref<2048xi8> to memref<64x4xf32>
 
+  // Test view memory space.
+  // CHECK: llvm.mlir.constant(2048 : index) : !llvm.i64
+  // CHECK: llvm.mlir.undef : !llvm.struct<(ptr<i8, 4>, ptr<i8, 4>, i64, array<1 x i64>, array<1 x i64>)>
+  %6 = alloc() : memref<2048xi8, 4>
+
+  // CHECK: llvm.mlir.undef : !llvm.struct<(ptr<float, 4>, ptr<float, 4>, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK: %[[BASE_PTR_4:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<i8, 4>, ptr<i8, 4>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[SHIFTED_BASE_PTR_4:.*]] = llvm.getelementptr %[[BASE_PTR_4]][%[[ARG2]]] : (!llvm.ptr<i8, 4>, !llvm.i64) -> !llvm.ptr<i8, 4>
+  // CHECK: %[[CAST_SHIFTED_BASE_PTR_4:.*]] = llvm.bitcast %[[SHIFTED_BASE_PTR_4]] : !llvm.ptr<i8, 4> to !llvm.ptr<float, 4>
+  // CHECK: llvm.insertvalue %[[CAST_SHIFTED_BASE_PTR_4]], %{{.*}}[1] : !llvm.struct<(ptr<float, 4>, ptr<float, 4>, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK: %[[C0_4:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
+  // CHECK: llvm.insertvalue %[[C0_4]], %{{.*}}[2] : !llvm.struct<(ptr<float, 4>, ptr<float, 4>, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK: llvm.mlir.constant(4 : index) : !llvm.i64
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[3, 1] : !llvm.struct<(ptr<float, 4>, ptr<float, 4>, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK: llvm.mlir.constant(1 : index) : !llvm.i64
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[4, 1] : !llvm.struct<(ptr<float, 4>, ptr<float, 4>, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK: llvm.mlir.constant(64 : index) : !llvm.i64
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[3, 0] : !llvm.struct<(ptr<float, 4>, ptr<float, 4>, i64, array<2 x i64>, array<2 x i64>)>
+  // CHECK: llvm.mlir.constant(4 : index) : !llvm.i64
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm.struct<(ptr<float, 4>, ptr<float, 4>, i64, array<2 x i64>, array<2 x i64>)>
+  %7 = view %6[%arg2][] : memref<2048xi8, 4> to memref<64x4xf32, 4>
+
   return
 }
 
