@@ -718,6 +718,98 @@ public:
   }
 };
 
+/// Converts `spv.loop` to LLVM dialect. All blocks within selection should be
+/// reachable for conversion to succeed.
+/// The structure of the loop in LLVM dialect will be the following:
+///
+///      +------------------------------------+
+///      | <code before spv.loop>             |
+///      | llvm.br ^header                    |
+///      +------------------------------------+
+///                           |
+///   +----------------+      |
+///   |                |      |
+///   |                V      V
+///   |  +------------------------------------+
+///   |  | ^header:                           |
+///   |  |   <header code>                    |
+///   |  |   llvm.cond_br %cond, ^body, ^exit |
+///   |  +------------------------------------+
+///   |                    |
+///   |                    |----------------------+
+///   |                    |                      |
+///   |                    V                      |
+///   |  +------------------------------------+   |
+///   |  | ^body:                             |   |
+///   |  |   <body code>                      |   |
+///   |  |   llvm.br ^continue                |   |
+///   |  +------------------------------------+   |
+///   |                    |                      |
+///   |                    V                      |
+///   |  +------------------------------------+   |
+///   |  | ^continue:                         |   |
+///   |  |   <continue code>                  |   |
+///   |  |   llvm.br ^header                  |   |
+///   |  +------------------------------------+   |
+///   |               |                           |
+///   +---------------+    +----------------------+
+///                        |
+///                        V
+///      +------------------------------------+
+///      | ^exit:                             |
+///      |   llvm.br ^remaining               |
+///      +------------------------------------+
+///                        |
+///                        V
+///      +------------------------------------+
+///      | ^remaining:                        |
+///      |   <code after spv.loop>            |
+///      +------------------------------------+
+///
+class LoopPattern : public SPIRVToLLVMConversion<spirv::LoopOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::LoopOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::LoopOp loopOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    // There is no support of loop control at the moment.
+    if (loopOp.loop_control() != spirv::LoopControl::None)
+      return failure();
+
+    Location loc = loopOp.getLoc();
+
+    // Split the current block after `spv.loop`. The remaing ops will be used in
+    // `endBlock`.
+    Block *currentBlock = rewriter.getBlock();
+    auto position = Block::iterator(loopOp);
+    Block *endBlock = rewriter.splitBlock(currentBlock, position);
+
+    // Remove entry block and create a branch in the current block going to the
+    // header block.
+    Block *entryBlock = loopOp.getEntryBlock();
+    assert(entryBlock->getOperations().size() == 1);
+    auto brOp = dyn_cast<spirv::BranchOp>(entryBlock->getOperations().front());
+    if (!brOp)
+      return failure();
+    Block *headerBlock = loopOp.getHeaderBlock();
+    rewriter.setInsertionPointToEnd(currentBlock);
+    rewriter.create<LLVM::BrOp>(loc, brOp.getBlockArguments(), headerBlock);
+    rewriter.eraseBlock(entryBlock);
+
+    // Branch from merge block to end block.
+    Block *mergeBlock = loopOp.getMergeBlock();
+    Operation *terminator = mergeBlock->getTerminator();
+    ValueRange terminatorOperands = terminator->getOperands();
+    rewriter.setInsertionPointToEnd(mergeBlock);
+    rewriter.create<LLVM::BrOp>(loc, terminatorOperands, endBlock);
+
+    rewriter.inlineRegionBefore(loopOp.body(), endBlock);
+    rewriter.replaceOp(loopOp, endBlock->getArguments());
+    return success();
+  }
+};
+
 class MergePattern : public SPIRVToLLVMConversion<spirv::MergeOp> {
 public:
   using SPIRVToLLVMConversion<spirv::MergeOp>::SPIRVToLLVMConversion;
@@ -1109,7 +1201,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       ConstantScalarAndVectorPattern,
 
       // Control Flow ops
-      BranchConversionPattern, BranchConditionalConversionPattern,
+      BranchConversionPattern, BranchConditionalConversionPattern, LoopPattern,
       SelectionPattern, MergePattern,
 
       // Function Call op
