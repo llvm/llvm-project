@@ -465,18 +465,7 @@ void GenerateDirectiveClauseMap(const std::vector<Record *> &Directives,
   IfDefScope Scope("GEN_FLANG_DIRECTIVE_CLAUSE_MAP", OS);
 
   OS << "\n";
-  OS << "struct " << DirLang.getName() << "DirectiveClauses {\n";
-  OS << "  const " << DirLang.getClauseEnumSetClass() << " allowed;\n";
-  OS << "  const " << DirLang.getClauseEnumSetClass() << " allowedOnce;\n";
-  OS << "  const " << DirLang.getClauseEnumSetClass() << " allowedExclusive;\n";
-  OS << "  const " << DirLang.getClauseEnumSetClass() << " requiredOneOf;\n";
-  OS << "};\n";
-
-  OS << "\n";
-
-  OS << "std::unordered_map<llvm::" << DirLang.getCppNamespace()
-     << "::Directive, " << DirLang.getName() << "DirectiveClauses>\n";
-  OS << "    directiveClausesTable = {\n";
+  OS << "{\n";
 
   for (const auto &D : Directives) {
     Directive Dir{D};
@@ -497,7 +486,7 @@ void GenerateDirectiveClauseMap(const std::vector<Record *> &Directives,
     OS << "  },\n";
   }
 
-  OS << "};\n";
+  OS << "}\n";
 }
 
 // Generate the implemenation section for the enumeration in the directive

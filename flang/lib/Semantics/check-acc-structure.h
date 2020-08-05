@@ -14,12 +14,11 @@
 #ifndef FORTRAN_SEMANTICS_CHECK_ACC_STRUCTURE_H_
 #define FORTRAN_SEMANTICS_CHECK_ACC_STRUCTURE_H_
 
+#include "check-directive-structure.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/semantics.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
-
-#include <unordered_map>
 
 using AccDirectiveSet = Fortran::common::EnumSet<llvm::acc::Directive,
     llvm::acc::Directive_enumSize>;
@@ -32,9 +31,16 @@ using AccClauseSet =
 
 namespace Fortran::semantics {
 
-class AccStructureChecker : public virtual BaseChecker {
+class AccStructureChecker
+    : public DirectiveStructureChecker<llvm::acc::Directive, llvm::acc::Clause,
+          parser::AccClause, llvm::acc::Clause_enumSize> {
 public:
-  AccStructureChecker(SemanticsContext &context) : context_{context} {}
+  AccStructureChecker(SemanticsContext &context)
+      : DirectiveStructureChecker(context,
+#define GEN_FLANG_DIRECTIVE_CLAUSE_MAP
+#include "llvm/Frontend/OpenACC/ACC.cpp.inc"
+        ) {
+  }
 
   // Construct and directives
   void Enter(const parser::OpenACCBlockConstruct &);
@@ -100,103 +106,13 @@ public:
   void Enter(const parser::AccClause::Write &);
 
 private:
-#define GEN_FLANG_DIRECTIVE_CLAUSE_MAP
-#include "llvm/Frontend/OpenACC/ACC.cpp.inc"
-
-  struct AccContext {
-    AccContext(parser::CharBlock source, llvm::acc::Directive d)
-        : directiveSource{source}, directive{d} {}
-
-    parser::CharBlock directiveSource{nullptr};
-    parser::CharBlock clauseSource{nullptr};
-    llvm::acc::Directive directive;
-    AccClauseSet allowedClauses{};
-    AccClauseSet allowedOnceClauses{};
-    AccClauseSet allowedExclusiveClauses{};
-    AccClauseSet requiredClauses{};
-
-    const parser::AccClause *clause{nullptr};
-    std::multimap<llvm::acc::Clause, const parser::AccClause *> clauseInfo;
-    std::list<llvm::acc::Clause> actualClauses;
-  };
-
-  // back() is the top of the stack
-  AccContext &GetContext() {
-    CHECK(!accContext_.empty());
-    return accContext_.back();
-  }
-
-  void SetContextClause(const parser::AccClause &clause) {
-    GetContext().clauseSource = clause.source;
-    GetContext().clause = &clause;
-  }
-
-  void SetContextClauseInfo(llvm::acc::Clause type) {
-    GetContext().clauseInfo.emplace(type, GetContext().clause);
-  }
-
-  void AddClauseToCrtContext(llvm::acc::Clause type) {
-    GetContext().actualClauses.push_back(type);
-  }
-
-  const parser::AccClause *FindClause(llvm::acc::Clause type) {
-    auto it{GetContext().clauseInfo.find(type)};
-    if (it != GetContext().clauseInfo.end()) {
-      return it->second;
-    }
-    return nullptr;
-  }
-
-  void PushContext(const parser::CharBlock &source, llvm::acc::Directive dir) {
-    accContext_.emplace_back(source, dir);
-  }
-
-  void SetClauseSets(llvm::acc::Directive dir) {
-    accContext_.back().allowedClauses = directiveClausesTable[dir].allowed;
-    accContext_.back().allowedOnceClauses =
-        directiveClausesTable[dir].allowedOnce;
-    accContext_.back().allowedExclusiveClauses =
-        directiveClausesTable[dir].allowedExclusive;
-    accContext_.back().requiredClauses =
-        directiveClausesTable[dir].requiredOneOf;
-  }
-  void PushContextAndClauseSets(
-      const parser::CharBlock &source, llvm::acc::Directive dir) {
-    PushContext(source, dir);
-    SetClauseSets(dir);
-  }
-
-  void SayNotMatching(const parser::CharBlock &, const parser::CharBlock &);
-
-  template <typename B> void CheckMatching(const B &beginDir, const B &endDir) {
-    const auto &begin{beginDir.v};
-    const auto &end{endDir.v};
-    if (begin != end) {
-      SayNotMatching(beginDir.source, endDir.source);
-    }
-  }
-
-  // Check that only clauses in set are after the specific clauses.
-  void CheckOnlyAllowedAfter(llvm::acc::Clause clause, AccClauseSet set);
-  void CheckRequireAtLeastOneOf();
-  void CheckAllowed(llvm::acc::Clause clause);
-  void CheckAtLeastOneClause();
-  void CheckNotAllowedIfClause(llvm::acc::Clause clause, AccClauseSet set);
-  std::string ContextDirectiveAsFortran();
 
   void CheckNoBranching(const parser::Block &block,
       const llvm::acc::Directive directive,
       const parser::CharBlock &directiveSource) const;
 
-  void RequiresConstantPositiveParameter(
-      const llvm::acc::Clause &clause, const parser::ScalarIntConstantExpr &i);
-  void OptionalConstantPositiveParameter(const llvm::acc::Clause &clause,
-      const std::optional<parser::ScalarIntConstantExpr> &o);
-
-  SemanticsContext &context_;
-  std::vector<AccContext> accContext_; // used as a stack
-
-  std::string ClauseSetToString(const AccClauseSet set);
+  llvm::StringRef getClauseName(llvm::acc::Clause clause) override;
+  llvm::StringRef getDirectiveName(llvm::acc::Directive directive) override;
 };
 
 } // namespace Fortran::semantics
