@@ -13,8 +13,8 @@ STRINGTABLE {
 STRINGTABLE
 VERSION 100
 LANGUAGE 4, 7 {
-  16 "hello"
-  17 "world"
+  16 "hel" "lo"
+  17 "wor" L"ld"
 }
 
 STRINGTABLE
