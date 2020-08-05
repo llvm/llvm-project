@@ -191,7 +191,15 @@ void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
     rc = (void *)tp;
   } else if ((lr.Flags.ExtendsBefore || lr.Flags.ExtendsAfter) && !IsImplicit) {
     // Explicit extension of mapped data - not allowed.
-    DP("Explicit extension of mapping is not allowed.\n");
+    MESSAGE("explicit extension not allowed: host address specified is " DPxMOD
+            " (%" PRId64 " bytes), but device allocation maps to host at "
+            DPxMOD " (%" PRId64 " bytes)",
+            DPxPTR(HstPtrBegin), Size, DPxPTR(lr.Entry->HstPtrBegin),
+            lr.Entry->HstPtrEnd - lr.Entry->HstPtrBegin);
+    if (HasPresentModifier)
+      MESSAGE("device mapping required by 'present' map type modifier does not "
+              "exist for host address " DPxMOD " (%" PRId64 " bytes)",
+              DPxPTR(HstPtrBegin), Size);
   } else if (RTLs->RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
              !HasCloseModifier) {
     // If unified shared memory is active, implicitly mapped variables that are
