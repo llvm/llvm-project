@@ -1,9 +1,10 @@
-; RUN: opt -disable-output -licm -print-memoryssa -enable-mssa-loop-dependency=true < %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -loop-simplify -licm -enable-new-pm=0 -print-memoryssa -enable-mssa-loop-dependency=true < %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -aa-pipeline=basic-aa -passes='loop-mssa(licm),print<memoryssa>' < %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: @f()
-; CHECK: 8 = MemoryPhi(
 ; CHECK: 7 = MemoryPhi(
-; CHECK: 9 = MemoryPhi(
+; CHECK: 6 = MemoryPhi(
+; CHECK: 8 = MemoryPhi(
 define void @f() {
 entry:
   %e = alloca i16, align 1
