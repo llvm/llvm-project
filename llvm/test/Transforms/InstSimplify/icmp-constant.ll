@@ -810,3 +810,83 @@ define i1 @eq_shl_by_variable_produces_poison(i8 %x) {
   ret i1 %cmp
 }
 
+define i1 @mul_nuw_urem_cmp_constant1(i8 %x) {
+; CHECK-LABEL: @mul_nuw_urem_cmp_constant1(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], 43
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[M]], 42
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, 43
+  %r = icmp eq i8 %m, 42
+  ret i1 %r
+}
+
+; Invert predicate and check vector type.
+
+define <2 x i1> @mul_nuw_urem_cmp_constant2(<2 x i8> %x) {
+; CHECK-LABEL: @mul_nuw_urem_cmp_constant2(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw <2 x i8> [[X:%.*]], <i8 45, i8 45>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[M]], <i8 15, i8 15>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %m = mul nuw <2 x i8> %x, <i8 45, i8 45>
+  %r = icmp ne <2 x i8> %m, <i8 15, i8 15>
+  ret <2 x i1> %r
+}
+
+; Check "negative" numbers (constants should be analyzed as unsigned).
+
+define i1 @mul_nuw_smaller_cmp_constant_vec_splat(i8 %x) {
+; CHECK-LABEL: @mul_nuw_smaller_cmp_constant_vec_splat(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], -42
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[M]], -84
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, -42
+  %r = icmp eq i8 %m, -84
+  ret i1 %r
+}
+
+define i1 @mul_urem_cmp_constant1(i8 %x) {
+; CHECK-LABEL: @mul_urem_cmp_constant1(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], 43
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[M]], 42
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul i8 %x, 43
+  %r = icmp eq i8 %m, 42
+  ret i1 %r
+}
+
+define i1 @mul_nuw_urem_cmp_constant0(i8 %x) {
+; CHECK-LABEL: @mul_nuw_urem_cmp_constant0(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], 23
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[M]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, 23
+  %r = icmp eq i8 %m, 0
+  ret i1 %r
+}
+
+define i1 @mul_nuw_urem_cmp_constant_is_0(i8 %x) {
+; CHECK-LABEL: @mul_nuw_urem_cmp_constant_is_0(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], 42
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[M]], 84
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, 42
+  %r = icmp eq i8 %m, 84
+  ret i1 %r
+}
+
+define i1 @mul_nuw_urem_cmp_neg_constant_is_0(i8 %x) {
+; CHECK-LABEL: @mul_nuw_urem_cmp_neg_constant_is_0(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], 43
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[M]], -127
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, 43
+  %r = icmp eq i8 %m, -127
+  ret i1 %r
+}
