@@ -579,11 +579,9 @@ define <8 x i32> @avx2_vphadd_d_test(<8 x i32> %A, <8 x i32> %B) {
 ;
 ; AVX2-LABEL: avx2_vphadd_d_test:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-NEXT:    vphaddd %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-NEXT:    vphaddd %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vphaddd %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
   %vecext = extractelement <8 x i32> %A, i32 0
   %vecext1 = extractelement <8 x i32> %A, i32 1
@@ -737,11 +735,9 @@ define <16 x i16> @avx2_vphadd_w_test(<16 x i16> %a, <16 x i16> %b) nounwind {
 ;
 ; AVX2-LABEL: avx2_vphadd_w_test:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-NEXT:    vphaddw %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-NEXT:    vphaddw %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vphaddw %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
   %vecext = extractelement <16 x i16> %a, i32 0
   %vecext1 = extractelement <16 x i16> %a, i32 1
