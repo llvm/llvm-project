@@ -101,18 +101,29 @@ public:
   class EvaluationResult {
   public:
     EvaluationResult(const EvaluationResult &) = delete;
+    EvaluationResult &operator=(const EvaluationResult &Other) = delete;
+
     EvaluationResult(EvaluationResult &&Other);
+    EvaluationResult &operator=(EvaluationResult &&Other);
+
     ~EvaluationResult();
 
-    /// Get a pointer to the first element of the tensor at Index.
+    /// Get a (const) pointer to the first element of the tensor at Index.
     template <typename T> T *getTensorValue(size_t Index) {
       return static_cast<T *>(getUntypedTensorValue(Index));
     }
 
+    template <typename T> const T *getTensorValue(size_t Index) const {
+      return static_cast<T *>(getUntypedTensorValue(Index));
+    }
+
+    /// Get a (const) pointer to the untyped data of the tensor.
+    void *getUntypedTensorValue(size_t Index);
+    const void *getUntypedTensorValue(size_t Index) const;
+
   private:
     friend class TFModelEvaluator;
     EvaluationResult(std::unique_ptr<EvaluationResultImpl> Impl);
-    void *getUntypedTensorValue(size_t Index);
     std::unique_ptr<EvaluationResultImpl> Impl;
   };
 
