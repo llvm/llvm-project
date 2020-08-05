@@ -272,11 +272,12 @@ private:
             return make_error<JITLinkError>(
                 "Invalid relocation pair: Addend + " +
                 getMachOARM64RelocationKindName(*Kind));
-          else
-            LLVM_DEBUG({
-              dbgs() << "  pair is " << getMachOARM64RelocationKindName(*Kind)
-                     << "`\n";
-            });
+
+          LLVM_DEBUG({
+            dbgs() << "    Addend: value = " << formatv("{0:x6}", Addend)
+                   << ", pair is " << getMachOARM64RelocationKindName(*Kind)
+                   << "\n";
+          });
 
           // Find the address of the value to fix up.
           JITTargetAddress PairedFixupAddress =
