@@ -3174,55 +3174,38 @@ static Value *simplifyICmpWithMinMax(CmpInst::Predicate Pred, Value *LHS,
       break;
     }
     case CmpInst::ICMP_UGE:
-      // Always true.
       return getTrue(ITy);
     case CmpInst::ICMP_ULT:
-      // Always false.
       return getFalse(ITy);
     }
   }
 
-  // Variants on "max(x,y) >= min(x,z)".
+  // Comparing 1 each of min/max with a common operand?
+  // Canonicalize min operand to RHS.
+  if (match(LHS, m_UMin(m_Value(), m_Value())) ||
+      match(LHS, m_SMin(m_Value(), m_Value()))) {
+    std::swap(LHS, RHS);
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+  }
+
   Value *C, *D;
   if (match(LHS, m_SMax(m_Value(A), m_Value(B))) &&
       match(RHS, m_SMin(m_Value(C), m_Value(D))) &&
       (A == C || A == D || B == C || B == D)) {
-    // max(x, ?) pred min(x, ?).
+    // smax(A, B) >=s smin(A, D) --> true
     if (Pred == CmpInst::ICMP_SGE)
-      // Always true.
       return getTrue(ITy);
+    // smax(A, B) <s smin(A, D) --> false
     if (Pred == CmpInst::ICMP_SLT)
-      // Always false.
-      return getFalse(ITy);
-  } else if (match(LHS, m_SMin(m_Value(A), m_Value(B))) &&
-             match(RHS, m_SMax(m_Value(C), m_Value(D))) &&
-             (A == C || A == D || B == C || B == D)) {
-    // min(x, ?) pred max(x, ?).
-    if (Pred == CmpInst::ICMP_SLE)
-      // Always true.
-      return getTrue(ITy);
-    if (Pred == CmpInst::ICMP_SGT)
-      // Always false.
       return getFalse(ITy);
   } else if (match(LHS, m_UMax(m_Value(A), m_Value(B))) &&
              match(RHS, m_UMin(m_Value(C), m_Value(D))) &&
              (A == C || A == D || B == C || B == D)) {
-    // max(x, ?) pred min(x, ?).
+    // umax(A, B) >=u umin(A, D) --> true
     if (Pred == CmpInst::ICMP_UGE)
-      // Always true.
       return getTrue(ITy);
+    // umax(A, B) <u umin(A, D) --> false
     if (Pred == CmpInst::ICMP_ULT)
-      // Always false.
-      return getFalse(ITy);
-  } else if (match(LHS, m_UMin(m_Value(A), m_Value(B))) &&
-             match(RHS, m_UMax(m_Value(C), m_Value(D))) &&
-             (A == C || A == D || B == C || B == D)) {
-    // min(x, ?) pred max(x, ?).
-    if (Pred == CmpInst::ICMP_ULE)
-      // Always true.
-      return getTrue(ITy);
-    if (Pred == CmpInst::ICMP_UGT)
-      // Always false.
       return getFalse(ITy);
   }
 
