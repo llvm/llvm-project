@@ -1,6 +1,7 @@
+# REQUIRES: x86
 ## Test that we allow SHF_LINK_ORDER sections with sh_link=0.
 ## SHF_LINK_ORDER sections with sh_link!=0 are ordered before others.
-# RUN: llvm-mc -filetype=obj %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-readelf -S -x .linkorder %t | FileCheck %s
 
