@@ -810,11 +810,11 @@ define i1 @eq_shl_by_variable_produces_poison(i8 %x) {
   ret i1 %cmp
 }
 
+; No overflow, so mul constant must be a factor of cmp constant.
+
 define i1 @mul_nuw_urem_cmp_constant1(i8 %x) {
 ; CHECK-LABEL: @mul_nuw_urem_cmp_constant1(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], 43
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[M]], 42
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = mul nuw i8 %x, 43
   %r = icmp eq i8 %m, 42
@@ -825,31 +825,29 @@ define i1 @mul_nuw_urem_cmp_constant1(i8 %x) {
 
 define <2 x i1> @mul_nuw_urem_cmp_constant_vec_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @mul_nuw_urem_cmp_constant_vec_splat(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw <2 x i8> [[X:%.*]], <i8 45, i8 45>
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[M]], <i8 15, i8 15>
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %m = mul nuw <2 x i8> %x, <i8 45, i8 45>
   %r = icmp ne <2 x i8> %m, <i8 15, i8 15>
   ret <2 x i1> %r
 }
 
+; Undefs in vector constants are ok.
+
 define <2 x i1> @mul_nuw_urem_cmp_constant_vec_splat_undef1(<2 x i8> %x) {
 ; CHECK-LABEL: @mul_nuw_urem_cmp_constant_vec_splat_undef1(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw <2 x i8> [[X:%.*]], <i8 45, i8 45>
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[M]], <i8 15, i8 undef>
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %m = mul nuw <2 x i8> %x, <i8 45, i8 45>
   %r = icmp ne <2 x i8> %m, <i8 15, i8 undef>
   ret <2 x i1> %r
 }
 
+; Undefs in vector constants are ok.
+
 define <2 x i1> @mul_nuw_urem_cmp_constant_vec_splat_undef2(<2 x i8> %x) {
 ; CHECK-LABEL: @mul_nuw_urem_cmp_constant_vec_splat_undef2(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw <2 x i8> [[X:%.*]], <i8 undef, i8 45>
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[M]], <i8 15, i8 15>
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %m = mul nuw <2 x i8> %x, <i8 undef, i8 45>
   %r = icmp ne <2 x i8> %m, <i8 15, i8 15>
@@ -860,14 +858,14 @@ define <2 x i1> @mul_nuw_urem_cmp_constant_vec_splat_undef2(<2 x i8> %x) {
 
 define i1 @mul_nuw_urem_cmp_constant2(i8 %x) {
 ; CHECK-LABEL: @mul_nuw_urem_cmp_constant2(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], -42
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[M]], -84
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = mul nuw i8 %x, -42
   %r = icmp eq i8 %m, -84
   ret i1 %r
 }
+
+; Negative test - require nuw.
 
 define i1 @mul_urem_cmp_constant1(i8 %x) {
 ; CHECK-LABEL: @mul_urem_cmp_constant1(
@@ -880,6 +878,8 @@ define i1 @mul_urem_cmp_constant1(i8 %x) {
   ret i1 %r
 }
 
+; Negative test - x could be 0.
+
 define i1 @mul_nuw_urem_cmp_constant0(i8 %x) {
 ; CHECK-LABEL: @mul_nuw_urem_cmp_constant0(
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], 23
@@ -891,6 +891,8 @@ define i1 @mul_nuw_urem_cmp_constant0(i8 %x) {
   ret i1 %r
 }
 
+; Negative test - cmp constant is multiple of mul constant.
+
 define i1 @mul_nuw_urem_cmp_constant_is_0(i8 %x) {
 ; CHECK-LABEL: @mul_nuw_urem_cmp_constant_is_0(
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], 42
@@ -901,6 +903,8 @@ define i1 @mul_nuw_urem_cmp_constant_is_0(i8 %x) {
   %r = icmp eq i8 %m, 84
   ret i1 %r
 }
+
+; Negative test - cmp constant is multiple (treated as unsigned).
 
 define i1 @mul_nuw_urem_cmp_neg_constant_is_0(i8 %x) {
 ; CHECK-LABEL: @mul_nuw_urem_cmp_neg_constant_is_0(
