@@ -6077,10 +6077,8 @@ Process::AdvanceAddressToNextBranchInstruction(Address default_stop_addr,
     return retval;
   }
 
-  uint32_t branch_index =
-      insn_list->GetIndexOfNextBranchInstruction(insn_offset, target,
-                                                 false /* ignore_calls*/,
-                                                 nullptr);
+  uint32_t branch_index = insn_list->GetIndexOfNextBranchInstruction(
+      insn_offset, false /* ignore_calls*/, nullptr);
   if (branch_index == UINT32_MAX) {
     return retval;
   }
