@@ -1106,9 +1106,8 @@ define i8 @negate_left_shift_by_constant_extrause(i8 %x, i8 %y, i8 %z, i8 %k) {
 ; `add` with single negatible operand is still negatible
 define i8 @negate_add_with_single_negatible_operand(i8 %x, i8 %y) {
 ; CHECK-LABEL: @negate_add_with_single_negatible_operand(
-; CHECK-NEXT:    [[T0:%.*]] = add i8 [[X:%.*]], 42
-; CHECK-NEXT:    [[T1:%.*]] = sub i8 0, [[T0]]
-; CHECK-NEXT:    ret i8 [[T1]]
+; CHECK-NEXT:    [[T0_NEG:%.*]] = sub i8 -42, [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[T0_NEG]]
 ;
   %t0 = add i8 %x, 42
   %t1 = sub i8 0, %t0
@@ -1126,6 +1125,7 @@ define i8 @negate_add_with_single_negatible_operand_extrause(i8 %x, i8 %y) {
   %t1 = sub i8 0, %t0
   ret i8 %t1
 }
+; But don't do this if that means just sinking the negation.
 define i8 @negate_add_with_single_negatible_operand_non_negation(i8 %x, i8 %y) {
 ; CHECK-LABEL: @negate_add_with_single_negatible_operand_non_negation(
 ; CHECK-NEXT:    [[T0:%.*]] = add i8 [[X:%.*]], 42
