@@ -374,3 +374,8 @@ RegisterAggr::rr_iterator::rr_iterator(const RegisterAggr &RG,
   Pos = End ? Masks.end() : Masks.begin();
   Index = End ? Masks.size() : 0;
 }
+
+raw_ostream &rdf::operator<<(raw_ostream &OS, const RegisterAggr &A) {
+  A.print(OS);
+  return OS;
+}

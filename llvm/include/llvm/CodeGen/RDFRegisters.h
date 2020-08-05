@@ -258,6 +258,8 @@ namespace rdf {
     LaneBitmask Mask;
   };
   raw_ostream &operator<< (raw_ostream &OS, const PrintLaneMaskOpt &P);
+
+  raw_ostream &operator<< (raw_ostream &OS, const RegisterAggr &A);
 } // end namespace rdf
 
 } // end namespace llvm
