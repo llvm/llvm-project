@@ -203,7 +203,7 @@ public:
     return getSectionContentsAsArray<Elf_Relr>(Sec);
   }
 
-  Expected<std::vector<Elf_Rel>> decode_relrs(Elf_Relr_Range relrs) const;
+  std::vector<Elf_Rel> decode_relrs(Elf_Relr_Range relrs) const;
 
   Expected<std::vector<Elf_Rela>> android_relas(const Elf_Shdr *Sec) const;
 

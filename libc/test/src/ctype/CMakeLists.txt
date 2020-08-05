@@ -71,6 +71,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  isprint
+  SUITE
+    libc_ctype_unittests
+  SRCS
+    isprint_test.cpp
+  DEPENDS
+    libc.src.ctype.isprint
+)
+
+add_libc_unittest(
   ispunct
   SUITE
     libc_ctype_unittests
@@ -81,6 +91,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  isspace
+  SUITE
+    libc_ctype_unittests
+  SRCS
+    isspace_test.cpp
+  DEPENDS
+    libc.src.ctype.isspace
+)
+
+add_libc_unittest(
   isupper
   SUITE
     libc_ctype_unittests
@@ -88,4 +108,14 @@ add_libc_unittest(
     isupper_test.cpp
   DEPENDS
     libc.src.ctype.isupper
+)
+
+add_libc_unittest(
+  isxdigit
+  SUITE
+    libc_ctype_unittests
+  SRCS
+    isxdigit_test.cpp
+  DEPENDS
+    libc.src.ctype.isxdigit
 )

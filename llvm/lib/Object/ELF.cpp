@@ -278,7 +278,7 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
 }
 
 template <class ELFT>
-Expected<std::vector<typename ELFT::Rel>>
+std::vector<typename ELFT::Rel>
 ELFFile<ELFT>::decode_relrs(Elf_Relr_Range relrs) const {
   // This function decodes the contents of an SHT_RELR packed relocation
   // section.

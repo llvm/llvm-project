@@ -82,12 +82,27 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<IntType>]
           >,
           FunctionSpec<
+              "isprint",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
               "ispunct",
               RetValSpec<IntType>,
               [ArgSpec<IntType>]
           >,
           FunctionSpec<
+              "isspace",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
               "isupper",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "isxdigit",
               RetValSpec<IntType>,
               [ArgSpec<IntType>]
           >,

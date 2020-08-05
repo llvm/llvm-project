@@ -3779,7 +3779,7 @@ template <class ELFT> void GNUStyle<ELFT>::printRelocations(const ELFO *Obj) {
     } else if (!opts::RawRelr && (Sec.sh_type == ELF::SHT_RELR ||
                                   Sec.sh_type == ELF::SHT_ANDROID_RELR)) {
       Elf_Relr_Range Relrs = unwrapOrError(this->FileName, Obj->relrs(&Sec));
-      Entries = unwrapOrError(this->FileName, Obj->decode_relrs(Relrs)).size();
+      Entries = Obj->decode_relrs(Relrs).size();
     } else {
       Entries = Sec.getEntityCount();
     }
@@ -4507,9 +4507,7 @@ void GNUStyle<ELFT>::printDynamicRelocations(const ELFO *Obj) {
        << " contains " << DynRelrRegion.Size << " bytes:\n";
     printRelocHeader(ELF::SHT_REL);
     Elf_Relr_Range Relrs = this->dumper()->dyn_relrs();
-    std::vector<Elf_Rel> RelrRels =
-        unwrapOrError(this->FileName, Obj->decode_relrs(Relrs));
-    for (const Elf_Rel &R : RelrRels)
+    for (const Elf_Rel &R : Obj->decode_relrs(Relrs))
       printDynamicRelocation(Obj, R);
   }
   if (DynPLTRelRegion.Size) {
@@ -5533,9 +5531,8 @@ void DumpStyle<ELFT>::printRelocationsHelper(const ELFFile<ELFT> *Obj,
         printRelrReloc(R);
       break;
     }
-    std::vector<Elf_Rel> RelrRels =
-        unwrapOrError(this->FileName, Obj->decode_relrs(Relrs));
-    for (const Elf_Rel &R : RelrRels)
+
+    for (const Elf_Rel &R : Obj->decode_relrs(Relrs))
       printRelReloc(Obj, SecNdx, SymTab, R, ++RelNdx);
     break;
   }
@@ -6426,9 +6423,7 @@ void LLVMStyle<ELFT>::printDynamicRelocations(const ELFO *Obj) {
 
   if (DynRelrRegion.Size > 0) {
     Elf_Relr_Range Relrs = this->dumper()->dyn_relrs();
-    std::vector<Elf_Rel> RelrRels =
-        unwrapOrError(this->FileName, Obj->decode_relrs(Relrs));
-    for (const Elf_Rel &R : RelrRels)
+    for (const Elf_Rel &R : Obj->decode_relrs(Relrs))
       printDynamicRelocation(Obj, R);
   }
   if (DynPLTRelRegion.EntSize == sizeof(Elf_Rela))
