@@ -979,7 +979,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Protocol(
     return false;
 
   if (use_local_buffer)
-    PushLocalBuffer(existential_address, in_value.GetByteSize());
+    PushLocalBuffer(existential_address, in_value.GetByteSize().getValueOr(0));
 
   swift::remote::RemoteAddress remote_existential(existential_address);
   auto result = remote_ast.getDynamicTypeAndAddressForExistential(
