@@ -63,7 +63,7 @@ bool AArch64RegisterInfo::regNeedsCFI(unsigned Reg,
   return true;
 }
 
-static bool hasSVEArgsOrReturn(const MachineFunction *MF) {
+bool AArch64RegisterInfo::hasSVEArgsOrReturn(const MachineFunction *MF) {
   const Function &F = MF->getFunction();
   return isa<ScalableVectorType>(F.getReturnType()) ||
          any_of(F.args(), [](const Argument &Arg) {
