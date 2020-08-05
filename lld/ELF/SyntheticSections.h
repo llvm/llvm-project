@@ -23,6 +23,7 @@
 #include "DWARF.h"
 #include "EhFrame.h"
 #include "InputSection.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Endian.h"
@@ -88,6 +89,8 @@ public:
 
   std::vector<FdeData> getFdeData() const;
   ArrayRef<CieRecord *> getCieRecords() const { return cieRecords; }
+  template <class ELFT>
+  void iterateFDEWithLSDA(llvm::function_ref<void(InputSection &)> fn);
 
 private:
   // This is used only when parsing EhInputSection. We keep it here to avoid
@@ -98,14 +101,17 @@ private:
 
   template <class ELFT, class RelTy>
   void addRecords(EhInputSection *s, llvm::ArrayRef<RelTy> rels);
-  template <class ELFT>
-  void addSectionAux(EhInputSection *s);
+  template <class ELFT> void addSectionAux(EhInputSection *s);
+  template <class ELFT, class RelTy>
+  void iterateFDEWithLSDAAux(EhInputSection &sec, ArrayRef<RelTy> rels,
+                             llvm::DenseSet<size_t> &ciesWithLSDA,
+                             llvm::function_ref<void(InputSection &)> fn);
 
   template <class ELFT, class RelTy>
   CieRecord *addCie(EhSectionPiece &piece, ArrayRef<RelTy> rels);
 
   template <class ELFT, class RelTy>
-  bool isFdeLive(EhSectionPiece &piece, ArrayRef<RelTy> rels);
+  Defined *isFdeLive(EhSectionPiece &piece, ArrayRef<RelTy> rels);
 
   uint64_t getFdePc(uint8_t *buf, size_t off, uint8_t enc) const;
 
