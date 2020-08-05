@@ -191,7 +191,9 @@ else()
   set(LIBFUZZER_SHARED_LINK_LIBS ${SANITIZER_COMMON_LINK_LIBS})
   list(APPEND LIBFUZZER_SHARED_LINK_LIBS "-lstdc++")
   list(APPEND LIBFUZZER_SHARED_LINK_LIBS "-lm")
-  list(APPEND LIBFUZZER_SHARED_LINK_LIBS "-lpthread")
+  if(NOT ANDROID)
+    list(APPEND LIBFUZZER_SHARED_LINK_LIBS "-lpthread")
+  endif()
 
   # If we aren't statically linking libc++ into the fuzzer, we can build the shared object directly
   add_compiler_rt_runtime(clang_rt.fuzzer_no_main
