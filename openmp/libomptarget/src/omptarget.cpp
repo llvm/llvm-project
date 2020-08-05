@@ -670,8 +670,8 @@ int target_data_update(DeviceTy &Device, int32_t arg_num,
     void *HstPtrBegin = args[i];
     int64_t MapSize = arg_sizes[i];
     bool IsLast, IsHostPtr;
-    void *TgtPtrBegin = Device.getTgtPtrBegin(HstPtrBegin, MapSize, IsLast,
-        false, IsHostPtr);
+    void *TgtPtrBegin = Device.getTgtPtrBegin(
+        HstPtrBegin, MapSize, IsLast, false, IsHostPtr, /*MustContain=*/true);
     if (!TgtPtrBegin) {
       DP("hst data:" DPxMOD " not found, becomes a noop\n", DPxPTR(HstPtrBegin));
       if (arg_types[i] & OMP_TGT_MAPTYPE_PRESENT) {
