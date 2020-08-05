@@ -1872,7 +1872,7 @@ struct AllocLikeOpLowering : public ConvertOpToLLVMPattern<AllocLikeOp> {
     bool useAlignedAlloc = allocationAlignment.hasValue();
 
     // Insert the malloc/aligned_alloc declaration if it is not already present.
-    auto allocFuncName = useAlignedAlloc ? "aligned_alloc" : "malloc";
+    const auto *allocFuncName = useAlignedAlloc ? "aligned_alloc" : "malloc";
     auto module = allocOp.getParentOfType<ModuleOp>();
     auto allocFunc = module.lookupSymbol<LLVM::LLVMFuncOp>(allocFuncName);
     if (!allocFunc) {
@@ -3190,7 +3190,7 @@ struct GenericAtomicRMWOpLowering
                                     loopBlock, newLoaded);
 
     rewriter.setInsertionPointToEnd(endBlock);
-    MoveOpsRange(atomicOp.getResult(), newLoaded, std::next(opsToMoveStart),
+    moveOpsRange(atomicOp.getResult(), newLoaded, std::next(opsToMoveStart),
                  std::next(opsToMoveEnd), rewriter);
 
     // The 'result' of the atomic_rmw op is the newly loaded value.
@@ -3201,7 +3201,7 @@ struct GenericAtomicRMWOpLowering
 
 private:
   // Clones a segment of ops [start, end) and erases the original.
-  void MoveOpsRange(ValueRange oldResult, ValueRange newResult,
+  void moveOpsRange(ValueRange oldResult, ValueRange newResult,
                     Block::iterator start, Block::iterator end,
                     ConversionPatternRewriter &rewriter) const {
     BlockAndValueMapping mapping;
