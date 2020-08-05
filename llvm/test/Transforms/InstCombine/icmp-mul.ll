@@ -141,9 +141,7 @@ define i1 @ne_rem_zero(i8 %x) {
 
 define i1 @eq_rem_nz(i8 %x) {
 ; CHECK-LABEL: @eq_rem_nz(
-; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[B:%.*]] = icmp eq i8 [[A]], 31
-; CHECK-NEXT:    ret i1 [[B]]
+; CHECK-NEXT:    ret i1 false
 ;
   %a = mul nuw i8 %x, 5
   %b = icmp eq i8 %a, 31
@@ -152,9 +150,7 @@ define i1 @eq_rem_nz(i8 %x) {
 
 define i1 @ne_rem_nz(i8 %x) {
 ; CHECK-LABEL: @ne_rem_nz(
-; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i8 [[A]], 31
-; CHECK-NEXT:    ret i1 [[B]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = mul nuw i8 %x, 5
   %b = icmp ne i8 %a, 31
@@ -198,9 +194,7 @@ define i1 @ugt_rem_zero_nonuw(i8 %x) {
 
 define i1 @sgt_minnum(i8 %x) {
 ; CHECK-LABEL: @sgt_minnum(
-; CHECK-NEXT:    [[A:%.*]] = mul nsw i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i8 [[A]], -128
-; CHECK-NEXT:    ret i1 [[B]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = mul nsw i8 %x, 7
   %b = icmp sgt i8 %a, -128

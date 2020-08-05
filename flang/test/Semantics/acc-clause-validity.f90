@@ -82,7 +82,7 @@ program openacc_clause_validity
   !$acc end parallel
 
   !$acc parallel
-  !ERROR: The parameter of the COLLAPSE clause on the LOOP directive must be a constant positive integer expression
+  !ERROR: The parameter of the COLLAPSE clause must be a constant positive integer expression
   !$acc loop collapse(-1)
   do i = 1, N
     do j = 1, N

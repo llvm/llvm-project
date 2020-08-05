@@ -132,7 +132,7 @@ void AccStructureChecker::Leave(const parser::OpenACCBlockConstruct &x) {
   default:
     break;
   }
-  accContext_.pop_back();
+  dirContext_.pop_back();
 }
 
 void AccStructureChecker::CheckNoBranching(const parser::Block &block,
@@ -152,7 +152,7 @@ void AccStructureChecker::Leave(
     const parser::OpenACCStandaloneDeclarativeConstruct &) {
   // Restriction - 2075
   CheckAtLeastOneClause();
-  accContext_.pop_back();
+  dirContext_.pop_back();
 }
 
 void AccStructureChecker::Enter(const parser::OpenACCCombinedConstruct &x) {
@@ -185,12 +185,7 @@ void AccStructureChecker::Leave(const parser::OpenACCCombinedConstruct &x) {
   default:
     break;
   }
-  accContext_.pop_back();
-}
-
-std::string AccStructureChecker::ContextDirectiveAsFortran() {
-  return parser::ToUpperCaseLetters(
-      llvm::acc::getOpenACCDirectiveName(GetContext().directive).str());
+  dirContext_.pop_back();
 }
 
 void AccStructureChecker::Enter(const parser::OpenACCLoopConstruct &x) {
@@ -211,7 +206,7 @@ void AccStructureChecker::Leave(const parser::OpenACCLoopConstruct &x) {
         {llvm::acc::Clause::ACCC_gang, llvm::acc::Clause::ACCC_vector,
             llvm::acc::Clause::ACCC_worker});
   }
-  accContext_.pop_back();
+  dirContext_.pop_back();
 }
 
 void AccStructureChecker::Enter(const parser::OpenACCStandaloneConstruct &x) {
@@ -238,7 +233,7 @@ void AccStructureChecker::Leave(const parser::OpenACCStandaloneConstruct &x) {
   default:
     break;
   }
-  accContext_.pop_back();
+  dirContext_.pop_back();
 }
 
 void AccStructureChecker::Enter(const parser::OpenACCRoutineConstruct &x) {
@@ -250,7 +245,7 @@ void AccStructureChecker::Leave(const parser::OpenACCRoutineConstruct &) {
   // Restriction - 2407-2408
   CheckOnlyAllowedAfter(llvm::acc::Clause::ACCC_device_type,
       routineOnlyAllowedAfterDeviceTypeClauses);
-  accContext_.pop_back();
+  dirContext_.pop_back();
 }
 
 // Clause checkers
@@ -348,154 +343,13 @@ void AccStructureChecker::Enter(const parser::AccClause::Copyout &c) {
   }
 }
 
-void AccStructureChecker::CheckAllowed(llvm::acc::Clause clause) {
-  if (!GetContext().allowedClauses.test(clause) &&
-      !GetContext().allowedOnceClauses.test(clause) &&
-      !GetContext().allowedExclusiveClauses.test(clause) &&
-      !GetContext().requiredClauses.test(clause)) {
-    context_.Say(GetContext().clauseSource,
-        "%s clause is not allowed on the %s directive"_err_en_US,
-        parser::ToUpperCaseLetters(
-            llvm::acc::getOpenACCClauseName(clause).str()),
-        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()));
-    return;
-  }
-  if ((GetContext().allowedOnceClauses.test(clause) ||
-          GetContext().allowedExclusiveClauses.test(clause)) &&
-      FindClause(clause)) {
-    context_.Say(GetContext().clauseSource,
-        "At most one %s clause can appear on the %s directive"_err_en_US,
-        parser::ToUpperCaseLetters(
-            llvm::acc::getOpenACCClauseName(clause).str()),
-        parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()));
-    return;
-  }
-  if (GetContext().allowedExclusiveClauses.test(clause)) {
-    std::vector<llvm::acc::Clause> others;
-    GetContext().allowedExclusiveClauses.IterateOverMembers(
-        [&](llvm::acc::Clause o) {
-          if (FindClause(o)) {
-            others.emplace_back(o);
-          }
-        });
-    for (const auto &e : others) {
-      context_.Say(GetContext().clauseSource,
-          "%s and %s clauses are mutually exclusive and may not appear on the "
-          "same %s directive"_err_en_US,
-          parser::ToUpperCaseLetters(
-              llvm::acc::getOpenACCClauseName(clause).str()),
-          parser::ToUpperCaseLetters(llvm::acc::getOpenACCClauseName(e).str()),
-          parser::ToUpperCaseLetters(GetContext().directiveSource.ToString()));
-    }
-    if (!others.empty()) {
-      return;
-    }
-  }
-  SetContextClauseInfo(clause);
-  AddClauseToCrtContext(clause);
+llvm::StringRef AccStructureChecker::getClauseName(llvm::acc::Clause clause) {
+  return llvm::acc::getOpenACCClauseName(clause);
 }
 
-void AccStructureChecker::CheckOnlyAllowedAfter(
-    llvm::acc::Clause clause, AccClauseSet set) {
-  bool enforceCheck = false;
-  for (auto cl : GetContext().actualClauses) {
-    if (cl == clause) {
-      enforceCheck = true;
-      continue;
-    } else if (enforceCheck && !set.test(cl)) {
-      auto parserClause = GetContext().clauseInfo.find(cl);
-      context_.Say(parserClause->second->source,
-          "Clause %s is not allowed after clause %s on the %s "
-          "directive"_err_en_US,
-          parser::ToUpperCaseLetters(llvm::acc::getOpenACCClauseName(cl).str()),
-          parser::ToUpperCaseLetters(
-              llvm::acc::getOpenACCClauseName(clause).str()),
-          ContextDirectiveAsFortran());
-    }
-  }
-}
-
-void AccStructureChecker::CheckRequireAtLeastOneOf() {
-  for (auto cl : GetContext().actualClauses) {
-    if (GetContext().requiredClauses.test(cl))
-      return;
-  }
-  // No clause matched in the actual clauses list
-  context_.Say(GetContext().directiveSource,
-      "At least one of %s clause must appear on the %s directive"_err_en_US,
-      ClauseSetToString(GetContext().requiredClauses),
-      ContextDirectiveAsFortran());
-}
-
-void AccStructureChecker::CheckAtLeastOneClause() {
-  if (GetContext().actualClauses.empty()) {
-    context_.Say(GetContext().directiveSource,
-        "At least one clause is required on the %s directive"_err_en_US,
-        ContextDirectiveAsFortran());
-  }
-}
-
-// Enforce restriction where clauses in the given set are not allowed if the
-// given clause appears.
-void AccStructureChecker::CheckNotAllowedIfClause(
-    llvm::acc::Clause clause, AccClauseSet set) {
-  if (std::find(GetContext().actualClauses.begin(),
-          GetContext().actualClauses.end(),
-          clause) == GetContext().actualClauses.end()) {
-    return; // Clause is not present
-  }
-
-  for (auto cl : GetContext().actualClauses) {
-    if (set.test(cl)) {
-      context_.Say(GetContext().directiveSource,
-          "Clause %s is not allowed if clause %s appears on the %s directive"_err_en_US,
-          parser::ToUpperCaseLetters(llvm::acc::getOpenACCClauseName(cl).str()),
-          parser::ToUpperCaseLetters(
-              llvm::acc::getOpenACCClauseName(clause).str()),
-          ContextDirectiveAsFortran());
-    }
-  }
-}
-
-void AccStructureChecker::RequiresConstantPositiveParameter(
-    const llvm::acc::Clause &clause, const parser::ScalarIntConstantExpr &i) {
-  if (const auto v{GetIntValue(i)}) {
-    if (*v <= 0) {
-      context_.Say(GetContext().clauseSource,
-          "The parameter of the %s clause on the %s directive must be "
-          "a constant positive integer expression"_err_en_US,
-          parser::ToUpperCaseLetters(
-              llvm::acc::getOpenACCClauseName(clause).str()),
-          ContextDirectiveAsFortran());
-    }
-  }
-}
-
-void AccStructureChecker::OptionalConstantPositiveParameter(
-    const llvm::acc::Clause &clause,
-    const std::optional<parser::ScalarIntConstantExpr> &o) {
-  if (o != std::nullopt) {
-    RequiresConstantPositiveParameter(clause, o.value());
-  }
-}
-
-std::string AccStructureChecker::ClauseSetToString(const AccClauseSet set) {
-  std::string list;
-  set.IterateOverMembers([&](llvm::acc::Clause o) {
-    if (!list.empty())
-      list.append(", ");
-    list.append(
-        parser::ToUpperCaseLetters(llvm::acc::getOpenACCClauseName(o).str()));
-  });
-  return list;
-}
-
-void AccStructureChecker::SayNotMatching(
-    const parser::CharBlock &beginSource, const parser::CharBlock &endSource) {
-  context_
-      .Say(endSource, "Unmatched %s directive"_err_en_US,
-          parser::ToUpperCaseLetters(endSource.ToString()))
-      .Attach(beginSource, "Does not match directive"_en_US);
+llvm::StringRef AccStructureChecker::getDirectiveName(
+    llvm::acc::Directive directive) {
+  return llvm::acc::getOpenACCDirectiveName(directive);
 }
 
 } // namespace Fortran::semantics

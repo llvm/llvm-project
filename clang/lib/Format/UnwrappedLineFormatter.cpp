@@ -309,7 +309,8 @@ private:
     // Try to merge a control statement block with left brace wrapped
     if (I[1]->First->is(tok::l_brace) &&
         (TheLine->First->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for,
-                                 tok::kw_switch, tok::kw_try, tok::kw_do) ||
+                                 tok::kw_switch, tok::kw_try, tok::kw_do,
+                                 TT_ForEachMacro) ||
          (TheLine->First->is(tok::r_brace) && TheLine->First->Next &&
           TheLine->First->Next->isOneOf(tok::kw_else, tok::kw_catch))) &&
         Style.BraceWrapping.AfterControlStatement ==

@@ -762,7 +762,7 @@ func @load_i8(%arg0: memref<i8>) {
   //     CHECK: %[[LOAD:.+]] = spv.Load  "StorageBuffer" %[[PTR]]
   //     CHECK: %[[FOUR2:.+]] = spv.constant 4 : i32
   //     CHECK: %[[EIGHT:.+]] = spv.constant 8 : i32
-  //     CHECK: %[[IDX:.+]] = spv.SMod %[[ZERO]], %[[FOUR2]] : i32
+  //     CHECK: %[[IDX:.+]] = spv.UMod %[[ZERO]], %[[FOUR2]] : i32
   //     CHECK: %[[BITS:.+]] = spv.IMul %[[IDX]], %[[EIGHT]] : i32
   //     CHECK: %[[VALUE:.+]] = spv.ShiftRightArithmetic %[[LOAD]], %[[BITS]] : i32, i32
   //     CHECK: %[[MASK:.+]] = spv.constant 255 : i32
@@ -788,7 +788,7 @@ func @load_i16(%arg0: memref<10xi16>, %index : index) {
   //     CHECK: %[[LOAD:.+]] = spv.Load  "StorageBuffer" %[[PTR]]
   //     CHECK: %[[TWO2:.+]] = spv.constant 2 : i32
   //     CHECK: %[[SIXTEEN:.+]] = spv.constant 16 : i32
-  //     CHECK: %[[IDX:.+]] = spv.SMod %[[FLAT_IDX]], %[[TWO2]] : i32
+  //     CHECK: %[[IDX:.+]] = spv.UMod %[[FLAT_IDX]], %[[TWO2]] : i32
   //     CHECK: %[[BITS:.+]] = spv.IMul %[[IDX]], %[[SIXTEEN]] : i32
   //     CHECK: %[[VALUE:.+]] = spv.ShiftRightArithmetic %[[LOAD]], %[[BITS]] : i32, i32
   //     CHECK: %[[MASK:.+]] = spv.constant 65535 : i32
@@ -824,7 +824,7 @@ func @store_i8(%arg0: memref<i8>, %value: i8) {
   //     CHECK: %[[ZERO:.+]] = spv.constant 0 : i32
   //     CHECK: %[[FOUR:.+]] = spv.constant 4 : i32
   //     CHECK: %[[EIGHT:.+]] = spv.constant 8 : i32
-  //     CHECK: %[[IDX:.+]] = spv.SMod %[[ZERO]], %[[FOUR]] : i32
+  //     CHECK: %[[IDX:.+]] = spv.UMod %[[ZERO]], %[[FOUR]] : i32
   //     CHECK: %[[OFFSET:.+]] = spv.IMul %[[IDX]], %[[EIGHT]] : i32
   //     CHECK: %[[MASK1:.+]] = spv.constant 255 : i32
   //     CHECK: %[[TMP1:.+]] = spv.ShiftLeftLogical %[[MASK1]], %[[OFFSET]] : i32, i32
@@ -850,7 +850,7 @@ func @store_i16(%arg0: memref<10xi16>, %index: index, %value: i16) {
   //     CHECK: %[[FLAT_IDX:.+]] = spv.IAdd %[[OFFSET]], %[[UPDATE]] : i32
   //     CHECK: %[[TWO:.+]] = spv.constant 2 : i32
   //     CHECK: %[[SIXTEEN:.+]] = spv.constant 16 : i32
-  //     CHECK: %[[IDX:.+]] = spv.SMod %[[FLAT_IDX]], %[[TWO]] : i32
+  //     CHECK: %[[IDX:.+]] = spv.UMod %[[FLAT_IDX]], %[[TWO]] : i32
   //     CHECK: %[[OFFSET:.+]] = spv.IMul %[[IDX]], %[[SIXTEEN]] : i32
   //     CHECK: %[[MASK1:.+]] = spv.constant 65535 : i32
   //     CHECK: %[[TMP1:.+]] = spv.ShiftLeftLogical %[[MASK1]], %[[OFFSET]] : i32, i32
@@ -907,7 +907,7 @@ func @load_i8(%arg0: memref<i8>) {
   //     CHECK: %[[LOAD:.+]] = spv.Load  "StorageBuffer" %[[PTR]]
   //     CHECK: %[[FOUR2:.+]] = spv.constant 4 : i32
   //     CHECK: %[[EIGHT:.+]] = spv.constant 8 : i32
-  //     CHECK: %[[IDX:.+]] = spv.SMod %[[ZERO]], %[[FOUR2]] : i32
+  //     CHECK: %[[IDX:.+]] = spv.UMod %[[ZERO]], %[[FOUR2]] : i32
   //     CHECK: %[[BITS:.+]] = spv.IMul %[[IDX]], %[[EIGHT]] : i32
   //     CHECK: %[[VALUE:.+]] = spv.ShiftRightArithmetic %[[LOAD]], %[[BITS]] : i32, i32
   //     CHECK: %[[MASK:.+]] = spv.constant 255 : i32
@@ -934,7 +934,7 @@ func @store_i8(%arg0: memref<i8>, %value: i8) {
   //     CHECK: %[[ZERO:.+]] = spv.constant 0 : i32
   //     CHECK: %[[FOUR:.+]] = spv.constant 4 : i32
   //     CHECK: %[[EIGHT:.+]] = spv.constant 8 : i32
-  //     CHECK: %[[IDX:.+]] = spv.SMod %[[ZERO]], %[[FOUR]] : i32
+  //     CHECK: %[[IDX:.+]] = spv.UMod %[[ZERO]], %[[FOUR]] : i32
   //     CHECK: %[[OFFSET:.+]] = spv.IMul %[[IDX]], %[[EIGHT]] : i32
   //     CHECK: %[[MASK1:.+]] = spv.constant 255 : i32
   //     CHECK: %[[TMP1:.+]] = spv.ShiftLeftLogical %[[MASK1]], %[[OFFSET]] : i32, i32

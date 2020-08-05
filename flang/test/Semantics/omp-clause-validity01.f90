@@ -364,7 +364,7 @@
      a = 3.14
   enddo
 
-  !ERROR: GRAINSIZE and NUM_TASKS are mutually exclusive and may not appear on the same TASKLOOP directive
+  !ERROR: GRAINSIZE and NUM_TASKS clauses are mutually exclusive and may not appear on the same TASKLOOP directive
   !$omp taskloop num_tasks(3) grainsize(2)
   do i = 1,N
      a = 3.14
@@ -468,7 +468,7 @@
   !ERROR: Unmatched END TASKLOOP directive
   !$omp end taskloop
 
-  !ERROR: GRAINSIZE and NUM_TASKS are mutually exclusive and may not appear on the same TASKLOOP SIMD directive
+  !ERROR: GRAINSIZE and NUM_TASKS clauses are mutually exclusive and may not appear on the same TASKLOOP SIMD directive
   !$omp taskloop simd num_tasks(3) grainsize(2)
   do i = 1,N
      a = 3.14
