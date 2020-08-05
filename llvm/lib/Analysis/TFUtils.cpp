@@ -292,7 +292,18 @@ TFModelEvaluator::EvaluationResult::EvaluationResult(
 TFModelEvaluator::EvaluationResult::EvaluationResult(EvaluationResult &&Other)
     : Impl(std::move(Other.Impl)) {}
 
+TFModelEvaluator::EvaluationResult &
+TFModelEvaluator::EvaluationResult::operator=(EvaluationResult &&Other) {
+  Impl = std::move(Other.Impl);
+  return *this;
+}
+
 void *TFModelEvaluator::EvaluationResult::getUntypedTensorValue(size_t Index) {
+  return TF_TensorData(Impl->getOutput()[Index]);
+}
+
+const void *
+TFModelEvaluator::EvaluationResult::getUntypedTensorValue(size_t Index) const {
   return TF_TensorData(Impl->getOutput()[Index]);
 }
 

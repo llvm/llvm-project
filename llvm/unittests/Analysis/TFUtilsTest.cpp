@@ -56,6 +56,8 @@ TEST(TFUtilsTest, LoadAndExecuteTest) {
     EXPECT_TRUE(ER.hasValue());
     float Ret = *ER->getTensorValue<float>(0);
     EXPECT_EQ(static_cast<size_t>(Ret), 80);
+    EXPECT_EQ(ER->getUntypedTensorValue(0),
+              reinterpret_cast<const void *>(ER->getTensorValue<float>(0)));
   }
   // The input vector should be unchanged
   for (auto I = 0; I < KnownSize; ++I) {
