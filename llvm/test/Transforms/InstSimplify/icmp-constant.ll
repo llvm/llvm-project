@@ -823,8 +823,8 @@ define i1 @mul_nuw_urem_cmp_constant1(i8 %x) {
 
 ; Invert predicate and check vector type.
 
-define <2 x i1> @mul_nuw_urem_cmp_constant2(<2 x i8> %x) {
-; CHECK-LABEL: @mul_nuw_urem_cmp_constant2(
+define <2 x i1> @mul_nuw_urem_cmp_constant_vec_splat(<2 x i8> %x) {
+; CHECK-LABEL: @mul_nuw_urem_cmp_constant_vec_splat(
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw <2 x i8> [[X:%.*]], <i8 45, i8 45>
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[M]], <i8 15, i8 15>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
@@ -834,10 +834,32 @@ define <2 x i1> @mul_nuw_urem_cmp_constant2(<2 x i8> %x) {
   ret <2 x i1> %r
 }
 
+define <2 x i1> @mul_nuw_urem_cmp_constant_vec_splat_undef1(<2 x i8> %x) {
+; CHECK-LABEL: @mul_nuw_urem_cmp_constant_vec_splat_undef1(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw <2 x i8> [[X:%.*]], <i8 45, i8 45>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[M]], <i8 15, i8 undef>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %m = mul nuw <2 x i8> %x, <i8 45, i8 45>
+  %r = icmp ne <2 x i8> %m, <i8 15, i8 undef>
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @mul_nuw_urem_cmp_constant_vec_splat_undef2(<2 x i8> %x) {
+; CHECK-LABEL: @mul_nuw_urem_cmp_constant_vec_splat_undef2(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw <2 x i8> [[X:%.*]], <i8 undef, i8 45>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[M]], <i8 15, i8 15>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %m = mul nuw <2 x i8> %x, <i8 undef, i8 45>
+  %r = icmp ne <2 x i8> %m, <i8 15, i8 15>
+  ret <2 x i1> %r
+}
+
 ; Check "negative" numbers (constants should be analyzed as unsigned).
 
-define i1 @mul_nuw_smaller_cmp_constant_vec_splat(i8 %x) {
-; CHECK-LABEL: @mul_nuw_smaller_cmp_constant_vec_splat(
+define i1 @mul_nuw_urem_cmp_constant2(i8 %x) {
+; CHECK-LABEL: @mul_nuw_urem_cmp_constant2(
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], -42
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[M]], -84
 ; CHECK-NEXT:    ret i1 [[R]]
