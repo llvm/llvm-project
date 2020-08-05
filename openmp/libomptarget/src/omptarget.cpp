@@ -505,7 +505,8 @@ int targetDataEnd(DeviceTy &Device, int32_t ArgNum, void **ArgBases,
 
     // If PTR_AND_OBJ, HstPtrBegin is address of pointee
     void *TgtPtrBegin = Device.getTgtPtrBegin(HstPtrBegin, DataSize, IsLast,
-                                              UpdateRef, IsHostPtr);
+                                              UpdateRef, IsHostPtr,
+                                              /*MustContain=*/true);
     if (!TgtPtrBegin && (DataSize || HasPresentModifier)) {
       DP("Mapping does not exist (%s)\n",
          (HasPresentModifier ? "'present' map type modifier" : "ignored"));
