@@ -121,6 +121,8 @@ public:
 
     bool hasFileAtIndex(uint64_t FileIndex) const;
 
+    Optional<uint64_t> getLastValidFileIndex() const;
+
     bool
     getFileNameByIndex(uint64_t FileIndex, StringRef CompDir,
                        DILineInfoSpecifier::FileLineInfoKind Kind,
@@ -249,6 +251,10 @@ public:
 
     bool hasFileAtIndex(uint64_t FileIndex) const {
       return Prologue.hasFileAtIndex(FileIndex);
+    }
+
+    Optional<uint64_t> getLastValidFileIndex() const {
+      return Prologue.getLastValidFileIndex();
     }
 
     /// Extracts filename by its index in filename table in prologue.
