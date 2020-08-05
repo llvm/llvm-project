@@ -1326,7 +1326,7 @@ func @rank_of_unranked(%unranked: memref<*xi32>) {
 // CHECK-NEXT: llvm.insertvalue
 // CHECK-NEXT: llvm.insertvalue
 // CHECK-NEXT: llvm.extractvalue %{{.*}}[0] : !llvm.struct<(i64, ptr<i8>)>
-// CHECK32: llvm.extractvalue %{{.*}}[0] : !llvm.struct<(i64, ptr<i8>)>
+// CHECK32: llvm.extractvalue %{{.*}}[0] : !llvm.struct<(i32, ptr<i8>)>
 
 // CHECK-LABEL: func @rank_of_ranked
 // CHECK32-LABEL: func @rank_of_ranked
