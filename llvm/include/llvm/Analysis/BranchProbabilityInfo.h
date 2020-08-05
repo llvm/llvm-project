@@ -32,6 +32,7 @@
 namespace llvm {
 
 class Function;
+class Loop;
 class LoopInfo;
 class raw_ostream;
 class PostDominatorTree;
@@ -230,6 +231,32 @@ private:
         : CallbackVH(const_cast<Value *>(V)), BPI(BPI) {}
   };
 
+  /// Pair of Loop and SCC ID number. Used to unify handling of normal and
+  /// SCC based loop representations.
+  using LoopData = std::pair<Loop *, int>;
+  /// Helper class to keep basic block along with its loop data information.
+  class LoopBlock {
+  public:
+    explicit LoopBlock(const BasicBlock *BB, const LoopInfo &LI,
+                       const SccInfo &SccI);
+
+    const BasicBlock *getBlock() const { return BB; }
+    Loop *getLoop() const { return LD.first; }
+    int getSccNum() const { return LD.second; }
+
+    bool belongsToLoop() const { return getLoop() || getSccNum() != -1; }
+    bool belongsToSameLoop(const LoopBlock &LB) const {
+      return (LB.getLoop() && getLoop() == LB.getLoop()) ||
+             (LB.getSccNum() != -1 && getSccNum() == LB.getSccNum());
+    }
+
+  private:
+    const BasicBlock *const BB = nullptr;
+    LoopData LD = {nullptr, -1};
+  };
+  // Pair of LoopBlocks representing an edge from first to second block.
+  using LoopEdge = std::pair<const LoopBlock &, const LoopBlock &>;
+
   DenseSet<BasicBlockCallbackVH, DenseMapInfo<Value*>> Handles;
 
   // Since we allow duplicate edges from one basic block to another, we use
@@ -257,6 +284,27 @@ private:
 
   /// Track the set of blocks that always lead to a cold call.
   SmallPtrSet<const BasicBlock *, 16> PostDominatedByColdCall;
+
+  /// Returns true if destination block belongs to some loop and source block is
+  /// either doesn't belong to any loop or belongs to a loop which is not inner
+  /// relative to the destination block.
+  bool isLoopEnteringEdge(const LoopEdge &Edge) const;
+  /// Returns true if source block belongs to some loop and destination block is
+  /// either doesn't belong to any loop or belongs to a loop which is not inner
+  /// relative to the source block.
+  bool isLoopExitingEdge(const LoopEdge &Edge) const;
+  /// Returns true if \p Edge is either enters to or exits from some loop, false
+  /// in all other cases.
+  bool isLoopEnteringExitingEdge(const LoopEdge &Edge) const;
+  /// Returns true if source and destination blocks belongs to the same loop and
+  /// destination block is loop header.
+  bool isLoopBackEdge(const LoopEdge &Edge) const;
+  // Fills in \p Enters vector with all "enter" blocks to a loop \LB belongs to.
+  void getLoopEnterBlocks(const LoopBlock &LB,
+                          SmallVectorImpl<BasicBlock *> &Enters) const;
+  // Fills in \p Exits vector with all "exit" blocks from a loop \LB belongs to.
+  void getLoopExitBlocks(const LoopBlock &LB,
+                         SmallVectorImpl<BasicBlock *> &Exits) const;
 
   void computePostDominatedByUnreachable(const Function &F,
                                          PostDominatorTree *PDT);
