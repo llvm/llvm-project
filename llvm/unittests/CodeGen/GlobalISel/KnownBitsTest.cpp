@@ -463,3 +463,51 @@ TEST_F(AMDGPUGISelMITest, TestTargetKnownAlign) {
   EXPECT_EQ(Align(4), Info.computeKnownAlignment(CopyImplicitArgPtr));
   EXPECT_EQ(Align(4), Info.computeKnownAlignment(CopyImplicitBufferPtr));
 }
+
+TEST_F(AArch64GISelMITest, TestMetadata) {
+  StringRef MIRString = "  %imp:_(p0) = G_IMPLICIT_DEF\n"
+                        "  %load:_(s8) = G_LOAD %imp(p0) :: (load 1)\n"
+                        "  %ext:_(s32) = G_ZEXT %load(s8)\n"
+                        "  %cst:_(s32) = G_CONSTANT i32 1\n"
+                        "  %and:_(s32) = G_AND %ext, %cst\n"
+                        "  %copy:_(s32) = COPY %and(s32)\n";
+  setUp(MIRString);
+  if (!TM)
+    return;
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  // We need a load with a metadata range for this to break. Fudge the load in
+  // the string and replace it with something we can work with.
+  MachineInstr *And = MRI->getVRegDef(SrcReg);
+  MachineInstr *Ext = MRI->getVRegDef(And->getOperand(1).getReg());
+  MachineInstr *Load = MRI->getVRegDef(Ext->getOperand(1).getReg());
+  IntegerType *Int8Ty = Type::getInt8Ty(Context);
+
+  // Value must be in [0, 2)
+  Metadata *LowAndHigh[] = {
+      ConstantAsMetadata::get(ConstantInt::get(Int8Ty, 0)),
+      ConstantAsMetadata::get(ConstantInt::get(Int8Ty, 2))};
+  auto NewMDNode = MDNode::get(Context, LowAndHigh);
+  const MachineMemOperand *OldMMO = *Load->memoperands_begin();
+  MachineMemOperand NewMMO(OldMMO->getPointerInfo(), OldMMO->getFlags(),
+                           OldMMO->getSizeInBits(), OldMMO->getAlign(),
+                           OldMMO->getAAInfo(), NewMDNode);
+  MachineIRBuilder MIB(*Load);
+  MIB.buildLoad(Load->getOperand(0), Load->getOperand(1), NewMMO);
+  Load->eraseFromParent();
+
+  GISelKnownBits Info(*MF);
+  KnownBits Res = Info.getKnownBits(And->getOperand(1).getReg());
+
+  // We don't know what the result of the load is, so we don't know any ones.
+  EXPECT_TRUE(Res.One.isNullValue());
+
+  // We know that the value is in [0, 2). So, we don't know if the first bit
+  // is 0 or not. However, we do know that every other bit must be 0.
+  APInt Mask(Res.getBitWidth(), 1);
+  Mask.flipAllBits();
+  EXPECT_EQ(Mask.getZExtValue(), Res.Zero.getZExtValue());
+}
