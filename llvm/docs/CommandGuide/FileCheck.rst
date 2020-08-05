@@ -379,8 +379,57 @@ For example, the following works like you'd expect:
    ; CHECK-SAME:              scope: ![[SCOPE:[0-9]+]]
 
 "``CHECK-SAME:``" directives reject the input if there are any newlines between
-it and the previous directive.  A "``CHECK-SAME:``" cannot be the first
-directive in a file.
+it and the previous directive.
+
+"``CHECK-SAME:``" is also useful to avoid writing matchers for irrelevant
+fields. For example, suppose you're writing a test which parses a tool that
+generates output like this:
+
+.. code-block:: text
+
+   Name: foo
+   Field1: ...
+   Field2: ...
+   Field3: ...
+   Value: 1
+
+   Name: bar
+   Field1: ...
+   Field2: ...
+   Field3: ...
+   Value: 2
+
+   Name: baz
+   Field1: ...
+   Field2: ...
+   Field3: ...
+   Value: 1
+
+To write a test that verifies ``foo`` has the value ``1``, you might first
+write this:
+
+.. code-block:: text
+
+   CHECK: Name: foo
+   CHECK: Value: 1{{$}}
+
+However, this would be a bad test: if the value for ``foo`` changes, the test
+would still pass because the "``CHECK: Value: 1``" line would match the value
+from ``baz``. To fix this, you could add ``CHECK-NEXT`` matchers for every
+``FieldN:`` line, but that would be verbose, and need to be updated when
+``Field4`` is added. A more succint way to write the test using the
+"``CHECK-SAME:``" matcher would be as follows:
+
+.. code-block:: text
+
+   CHECK:      Name: foo
+   CHECK:      Value:
+   CHECK-SAME:        {{ 1$}}
+
+This verifies that the *next* time "``Value:``" appears in the ouput, it has
+the value ``1``.
+
+Note: a "``CHECK-SAME:``" cannot be the first directive in a file.
 
 The "CHECK-EMPTY:" directive
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

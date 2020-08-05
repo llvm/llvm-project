@@ -62,3 +62,6 @@ def : Flag<["-"], "s">, Alias<basenames>, HelpText<"Alias for --basenames">;
 // Compatibility aliases for old asan_symbolize.py and sanitizer binaries (before 2020-08).
 def : Flag<["--"], "inlining=true">, Alias<inlines>, HelpText<"Alias for --inlines">;
 def : Flag<["--"], "inlining=false">, Alias<no_inlines>, HelpText<"Alias for --no-inlines">;
+// Compatibility aliases for pprof's symbolizer.
+def : Flag<["-"], "demangle=true">, Alias<demangle>, HelpText<"Alias for --demangle">;
+def : Flag<["-"], "demangle=false">, Alias<no_demangle>, HelpText<"Alias for --no-demangle">;

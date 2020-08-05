@@ -28,7 +28,7 @@ define i32 @masked_gather() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %V8I8 = call <8 x i8> @llvm.masked.gather.v8i8.v8p0i8(<8 x i8*> undef, i32 1, <8 x i1> undef, <8 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V4I8 = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*> undef, i32 1, <4 x i1> undef, <4 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2I8 = call <2 x i8> @llvm.masked.gather.v2i8.v2p0i8(<2 x i8*> undef, i32 1, <2 x i1> undef, <2 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
   %V4F64 = call <4 x double> @llvm.masked.gather.v4f64.v4p0f64(<4 x double*> undef, i32 4, <4 x i1> undef, <4 x double> undef)
   %V2F64 = call <2 x double> @llvm.masked.gather.v2f64.v2p0f64(<2 x double*> undef, i32 4, <2 x i1> undef, <2 x double> undef)
@@ -92,7 +92,7 @@ define i32 @masked_scatter() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: call void @llvm.masked.scatter.v8i8.v8p0i8(<8 x i8> undef, <8 x i8*> undef, i32 1, <8 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: call void @llvm.masked.scatter.v4i8.v4p0i8(<4 x i8> undef, <4 x i8*> undef, i32 1, <4 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: call void @llvm.masked.scatter.v2i8.v2p0i8(<2 x i8> undef, <2 x i8*> undef, i32 1, <2 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 0
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 0
 ;
   call void @llvm.masked.scatter.v4f64.v4p0f64(<4 x double> undef, <4 x double*> undef, i32 4, <4 x i1> undef)
   call void @llvm.masked.scatter.v2f64.v2p0f64(<2 x double> undef, <2 x double*> undef, i32 4, <2 x i1> undef)
@@ -153,7 +153,7 @@ define void @gep_v4i32(i32* %base, i16* %base16, i8* %base8, <4 x i32> %ind32, <
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gepbsb = bitcast <4 x i16*> %gepbs to <4 x i32*>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %resbs = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %gepbsb, i32 4, <4 x i1> %mask, <4 x i32> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %resbs, <4 x i32*> %gepbsb, i32 4, <4 x i1> %mask)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %gep1 = getelementptr i32, i32* %base, <4 x i32> %ind32
   %res1 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %gep1, i32 4, <4 x i1> %mask, <4 x i32> undef)
@@ -212,7 +212,7 @@ define void @gep_v4f32(float* %base, i16* %base16, i8* %base8, <4 x i32> %ind32,
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gepbsb = bitcast <4 x i16*> %gepbs to <4 x float*>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %resbs = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %gepbsb, i32 4, <4 x i1> %mask, <4 x float> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.masked.scatter.v4f32.v4p0f32(<4 x float> %resbs, <4 x float*> %gepbsb, i32 4, <4 x i1> %mask)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %gep1 = getelementptr float, float* %base, <4 x i32> %ind32
   %res1 = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> %gep1, i32 4, <4 x i1> %mask, <4 x float> undef)
@@ -269,7 +269,7 @@ define void @gep_v4i16(i16* %base, <4 x i32> %ind32, <4 x i16> %ind16, <4 x i1> 
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res6sext = sext <4 x i16> %res6 to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res6trunc = trunc <4 x i32> %res6sext to <4 x i16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.masked.scatter.v4i16.v4p0i16(<4 x i16> %res6trunc, <4 x i16*> %gep5, i32 4, <4 x i1> %mask)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %gep1 = getelementptr i16, i16* %base, <4 x i32> %ind32
   %res1 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0i16(<4 x i16*> %gep1, i32 2, <4 x i1> %mask, <4 x i16> undef)
@@ -312,7 +312,7 @@ define void @gep_v4i8(i8* %base, <4 x i8> %ind8, <4 x i1> %mask)  {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %res6sext = sext <4 x i8> %res6 to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res6trunc = trunc <4 x i32> %res6sext to <4 x i8>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.masked.scatter.v4i8.v4p0i8(<4 x i8> %res6trunc, <4 x i8*> %gep5, i32 4, <4 x i1> %mask)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   ; result zext
   %gep5 = getelementptr i8, i8* %base, <4 x i8> %ind8
@@ -361,7 +361,7 @@ define void @gep_v8i16(i16* %base, i8* %base8, i32* %base32, <8 x i32> %ind32, <
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %ressext = sext <8 x i16> %res to <8 x i32>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %restrunc = trunc <8 x i32> %ressext to <8 x i16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.scatter.v8i16.v8p0i16(<8 x i16> %restrunc, <8 x i16*> %gep4, i32 4, <8 x i1> %mask)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   ; no offset ext
   %gep1 = getelementptr i16, i16* %base, <8 x i32> %ind32
@@ -434,7 +434,7 @@ define void @gep_v8f16(half* %base, i8* %base8, i32* %base32, <8 x i32> %ind32, 
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gepbsb = bitcast <8 x i32*> %gepbs to <8 x half*>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %resbs = call <8 x half> @llvm.masked.gather.v8f16.v8p0f16(<8 x half*> %gepbsb, i32 2, <8 x i1> %mask, <8 x half> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: call void @llvm.masked.scatter.v8f16.v8p0f16(<8 x half> %resbs, <8 x half*> %gepbsb, i32 2, <8 x i1> %mask)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   ; no offset ext
   %gep1 = getelementptr half, half* %base, <8 x i32> %ind32
@@ -484,7 +484,7 @@ define void @gep_v8i8(i8* %base, <8 x i8> %ind8, <8 x i1> %mask)  {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res6sext = sext <8 x i8> %res6 to <8 x i16>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %res6trunc = trunc <8 x i16> %res6sext to <8 x i8>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.scatter.v8i8.v8p0i8(<8 x i8> %res6trunc, <8 x i8*> %gep5, i32 4, <8 x i1> %mask)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   ; result zext
   %indzext = zext <8 x i8> %ind8 to <8 x i32>
@@ -524,7 +524,7 @@ define void @gep_v16i8(i8* %base, i16* %base16, <16 x i8> %ind8, <16 x i32> %ind
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gep4 = getelementptr i8, i8* %base, <16 x i32> %indzext
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %indtrunc = trunc <16 x i32> %ind32 to <16 x i8>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.scatter.v16i8.v16p0i8(<16 x i8> %indtrunc, <16 x i8*> %gep4, i32 2, <16 x i1> %mask)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   ; no offset ext
   %gep1 = getelementptr i8, i8* %base, <16 x i32> %ind32
@@ -563,7 +563,7 @@ define void @gep_v16i8p(<16 x i8*> %base, i32 %off, <16 x i1> %mask)  {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %gepbs = getelementptr i8, <16 x i8*> %base, i32 %off
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 528 for instruction: %resbs = call <16 x i8> @llvm.masked.gather.v16i8.v16p0i8(<16 x i8*> %gepbs, i32 2, <16 x i1> %mask, <16 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 528 for instruction: call void @llvm.masked.scatter.v16i8.v16p0i8(<16 x i8> %resbs, <16 x i8*> %gepbs, i32 2, <16 x i1> %mask)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %gepbs = getelementptr i8, <16 x i8*> %base, i32 %off
   %resbs = call <16 x i8> @llvm.masked.gather.v16i8.v16p0i8(<16 x i8*> %gepbs, i32 2, <16 x i1> %mask, <16 x i8> undef)
