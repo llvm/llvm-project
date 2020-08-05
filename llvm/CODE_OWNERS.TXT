@@ -168,10 +168,6 @@ N: Diego Novillo
 E: dnovillo@google.com
 D: SampleProfile and related parts of ProfileData
 
-N: Jakob Olesen
-E: stoklund@2pi.dk
-D: TableGen
-
 N: Krzysztof Parzyszek
 E: kparzysz@quicinc.com
 D: Hexagon Backend
