@@ -43,6 +43,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
+#include <cassert>
+#include <cstdint>
 #include <functional>
 #include <tuple>
 #include <type_traits>
