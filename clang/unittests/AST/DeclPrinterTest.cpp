@@ -153,8 +153,7 @@ PrintedDeclCXX98Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
                                   StringRef Code,
                                   const DeclarationMatcher &NodeMatch,
                                   StringRef ExpectedPrinted) {
-  std::vector<std::string> Args(1, "-std=c++11");
-  Args.push_back("-fno-delayed-template-parsing");
+  std::vector<std::string> Args{"-std=c++11", "-fno-delayed-template-parsing"};
   return PrintedDeclMatches(Code,
                             Args,
                             NodeMatch,
@@ -166,7 +165,7 @@ PrintedDeclCXX98Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
 PrintedDeclCXX17Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
                         StringRef ExpectedPrinted,
                         PrintingPolicyModifier PolicyModifier = nullptr) {
-  std::vector<std::string> Args(1, "-std=c++17");
+  std::vector<std::string> Args{"-std=c++17", "-fno-delayed-template-parsing"};
   return PrintedDeclMatches(Code, Args, NodeMatch, ExpectedPrinted, "input.cc",
                             PolicyModifier);
 }
