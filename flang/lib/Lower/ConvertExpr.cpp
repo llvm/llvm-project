@@ -29,10 +29,16 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define TODO() llvm_unreachable("not yet implemented")
+
+static llvm::cl::opt<bool> generateArrayCoordinate(
+    "gen-array-coor",
+    llvm::cl::desc("in lowering create ArrayCoorOp instead of CoordinateOp"),
+    llvm::cl::init(false));
 
 namespace {
 
@@ -1101,11 +1107,78 @@ private:
         si.box);
   }
 
+  fir::ExtendedValue genArrayCoorOp(const Fortran::lower::SymbolBox &si,
+                                    const Fortran::evaluate::ArrayRef &aref) {
+    auto loc = getLoc();
+    auto addr = si.getAddr();
+    auto arrTy = fir::dyn_cast_ptrEleTy(addr.getType());
+    auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+    auto refTy = builder.getRefType(eleTy);
+    auto arrShape = [&](const auto &arr) -> mlir::Value {
+      if (arr.getLBounds().empty()) {
+        auto shapeType =
+            fir::ShapeType::get(builder.getContext(), arr.getExtents().size());
+        return builder.create<fir::ShapeOp>(loc, shapeType, arr.getExtents());
+      }
+      auto shapeType = fir::ShapeShiftType::get(builder.getContext(),
+                                                arr.getExtents().size());
+      SmallVector<mlir::Value, 8> shapeArgs;
+      for (const auto &pair : llvm::zip(arr.getLBounds(), arr.getExtents())) {
+        shapeArgs.push_back(std::get<0>(pair));
+        shapeArgs.push_back(std::get<1>(pair));
+      }
+      return builder.create<fir::ShapeShiftOp>(loc, shapeType, shapeArgs);
+    };
+    auto genWithShape = [&](const auto &arr) -> mlir::Value {
+      auto shape = arrShape(arr);
+      llvm::SmallVector<mlir::Value, 8> arrayCoorArgs;
+      for (const auto &sub : aref.subscript()) {
+        auto subVal = genComponent(sub);
+        if (auto *ev = std::get_if<fir::ExtendedValue>(&subVal)) {
+          if (auto *sval = ev->getUnboxed()) {
+            arrayCoorArgs.push_back(*sval);
+          } else {
+            TODO();
+          }
+        } else {
+          // RangedBoxValue
+          TODO();
+        }
+      }
+      return builder.create<fir::ArrayCoorOp>(
+          loc, refTy, addr, shape, mlir::Value{}, arrayCoorArgs, ValueRange());
+    };
+    return std::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::lower::SymbolBox::FullDim &arr) {
+              if (!inArrayContext() && isSlice(aref)) {
+                TODO();
+                return mlir::Value{};
+              }
+              return genWithShape(arr);
+            },
+            [&](const Fortran::lower::SymbolBox::CharFullDim &arr) {
+              TODO();
+              return mlir::Value{};
+            },
+            [&](const Fortran::lower::SymbolBox::Derived &arr) {
+              TODO();
+              return mlir::Value{};
+            },
+            [&](const auto &) {
+              TODO();
+              return mlir::Value{};
+            }},
+        si.box);
+  }
+
   // Return the coordinate of the array reference
   fir::ExtendedValue gen(const Fortran::evaluate::ArrayRef &aref) {
     if (aref.base().IsSymbol()) {
       auto &symbol = aref.base().GetFirstSymbol();
       auto si = symMap.lookupSymbol(symbol);
+      if (generateArrayCoordinate)
+        return genArrayCoorOp(si, aref);
       if (!si.hasConstantShape())
         return gen(si, aref);
       auto box = gen(symbol);

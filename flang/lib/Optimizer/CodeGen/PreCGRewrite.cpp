@@ -140,7 +140,7 @@ public:
   matchAndRewrite(ArrayCoorOp arrCoor,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = arrCoor.getLoc();
-    auto shapeVal = arrCoor.getShape();
+    auto shapeVal = arrCoor.shape();
     auto shapeOp = dyn_cast<ShapeOp>(shapeVal.getDefiningOp());
     llvm::SmallVector<mlir::Value, 8> shapeOpers;
     llvm::SmallVector<mlir::Value, 8> shiftOpers;
@@ -157,11 +157,11 @@ public:
     auto rankAttr = rewriter.getIntegerAttr(idxTy, rank);
     attrs.push_back(
         rewriter.getNamedAttr(XArrayCoorOp::rankAttrName(), rankAttr));
-    auto lenParamSize = arrCoor.getLenParams().size();
+    auto lenParamSize = arrCoor.lenParams().size();
     auto lenParamAttr = rewriter.getIntegerAttr(idxTy, lenParamSize);
     attrs.push_back(
         rewriter.getNamedAttr(XArrayCoorOp::lenParamAttrName(), lenParamAttr));
-    auto indexSize = arrCoor.getIndices().size();
+    auto indexSize = arrCoor.indices().size();
     auto idxAttr = rewriter.getIntegerAttr(idxTy, indexSize);
     attrs.push_back(
         rewriter.getNamedAttr(XArrayCoorOp::indexAttrName(), idxAttr));
@@ -170,7 +170,7 @@ public:
     attrs.push_back(
         rewriter.getNamedAttr(XArrayCoorOp::shapeAttrName(), dimAttr));
     llvm::SmallVector<mlir::Value, 8> sliceOpers;
-    if (auto s = arrCoor.getSlice())
+    if (auto s = arrCoor.slice())
       if (auto sliceOp = dyn_cast_or_null<SliceOp>(s.getDefiningOp()))
         sliceOpers.append(sliceOp.triples().begin(), sliceOp.triples().end());
     auto sliceAttr = rewriter.getIntegerAttr(idxTy, sliceOpers.size());
@@ -178,7 +178,7 @@ public:
         rewriter.getNamedAttr(XArrayCoorOp::sliceAttrName(), sliceAttr));
     auto xArrCoor = rewriter.create<XArrayCoorOp>(
         loc, arrCoor.getType(), arrCoor.memref(), shapeOpers, shiftOpers,
-        sliceOpers, arrCoor.getIndices(), arrCoor.getLenParams(), attrs);
+        sliceOpers, arrCoor.indices(), arrCoor.lenParams(), attrs);
     rewriter.replaceOp(arrCoor, xArrCoor.getOperation()->getResults());
     return mlir::success();
   }
