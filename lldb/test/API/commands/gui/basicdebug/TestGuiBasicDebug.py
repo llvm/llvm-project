@@ -16,6 +16,7 @@ class TestGuiBasicDebugCommandTest(PExpectTest):
     @skipIfAsan
     @skipIfCursesSupportMissing
     @skipIfRemote # "run" command will not work correctly for remote debug
+    @expectedFailureAll(archs=["aarch64"], oslist=["linux"])
     def test_gui(self):
         self.build()
 
