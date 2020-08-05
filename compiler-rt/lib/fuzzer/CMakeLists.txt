@@ -170,7 +170,39 @@ if(OS_NAME MATCHES "Linux|Fuchsia" AND
     partially_link_libcxx(fuzzer_no_main ${LIBCXX_${arch}_PREFIX} ${arch})
     partially_link_libcxx(fuzzer_interceptors ${LIBCXX_${arch}_PREFIX} ${arch})
     partially_link_libcxx(fuzzer ${LIBCXX_${arch}_PREFIX} ${arch})
+    if(NOT ${arch} MATCHES "i386") # i386 unsupported for .so version.
+      add_custom_command(
+        OUTPUT clang_rt.fuzzer_no_main-${arch}.so
+        DEPENDS clang_rt.fuzzer_no_main-${arch}
+       COMMAND ${CMAKE_CXX_COMPILER} ${EMULATION_ARGUMENT} -Wl,--whole-archive -rdynamic "$<TARGET_LINKER_FILE:clang_rt.fuzzer_no_main-${arch}>" -Wl,--no-whole-archive -shared -fPIC -o "$<TARGET_FILE_DIR:clang_rt.fuzzer_no_main-${arch}>/libclang_rt.fuzzer_no_main-${arch}.so"
+        COMMENT "Building clang_rt.fuzzer_no_main-${arch}.so"
+      )
+      get_compiler_rt_install_dir(${arch} install_dir)
+      install(FILES "$<TARGET_FILE_DIR:clang_rt.fuzzer_no_main-${arch}>/libclang_rt.fuzzer_no_main-${arch}.so"
+        DESTINATION ${install_dir}
+      )
+      add_custom_target(
+        clang_rt.fuzzer_no_main-${arch}-so ALL
+        DEPENDS clang_rt.fuzzer_no_main-${arch}.so
+      )
+    endif()
   endforeach()
+else()
+  set(LIBFUZZER_SHARED_LINK_LIBS ${SANITIZER_COMMON_LINK_LIBS})
+  list(APPEND LIBFUZZER_SHARED_LINK_LIBS "-lstdc++")
+  list(APPEND LIBFUZZER_SHARED_LINK_LIBS "-lm")
+  list(APPEND LIBFUZZER_SHARED_LINK_LIBS "-lpthread")
+
+  # If we aren't statically linking libc++ into the fuzzer, we can build the shared object directly
+  add_compiler_rt_runtime(clang_rt.fuzzer_no_main
+    SHARED
+    OS ${FUZZER_SUPPORTED_OS}
+    ARCHS ${FUZZER_SUPPORTED_ARCH}
+    OBJECT_LIBS RTfuzzer
+    CFLAGS ${LIBFUZZER_CFLAGS}
+    LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS}
+    LINK_LIBS ${LIBFUZZER_SHARED_LINK_LIBS}
+    PARENT_TARGET fuzzer)
 endif()
 
 if(COMPILER_RT_INCLUDE_TESTS)
