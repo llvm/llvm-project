@@ -10,8 +10,13 @@
 #include "lldb/Host/Config.h"
 
 #if LLDB_ENABLE_CURSES
+#if CURSES_HAVE_NCURSES_CURSES_H
+#include <ncurses/curses.h>
+#include <ncurses/panel.h>
+#else
 #include <curses.h>
 #include <panel.h>
+#endif
 #endif
 
 #if defined(__APPLE__)
@@ -687,42 +692,44 @@ public:
 
   void SelectNextWindowAsActive() {
     // Move active focus to next window
-    const size_t num_subwindows = m_subwindows.size();
-    if (m_curr_active_window_idx == UINT32_MAX) {
-      uint32_t idx = 0;
-      for (auto subwindow_sp : m_subwindows) {
-        if (subwindow_sp->GetCanBeActive()) {
-          m_curr_active_window_idx = idx;
-          break;
-        }
-        ++idx;
-      }
-    } else if (m_curr_active_window_idx + 1 < num_subwindows) {
-      bool handled = false;
+    const int num_subwindows = m_subwindows.size();
+    int start_idx = 0;
+    if (m_curr_active_window_idx != UINT32_MAX) {
       m_prev_active_window_idx = m_curr_active_window_idx;
-      for (size_t idx = m_curr_active_window_idx + 1; idx < num_subwindows;
-           ++idx) {
-        if (m_subwindows[idx]->GetCanBeActive()) {
-          m_curr_active_window_idx = idx;
-          handled = true;
-          break;
-        }
+      start_idx = m_curr_active_window_idx + 1;
+    }
+    for (int idx = start_idx; idx < num_subwindows; ++idx) {
+      if (m_subwindows[idx]->GetCanBeActive()) {
+        m_curr_active_window_idx = idx;
+        return;
       }
-      if (!handled) {
-        for (size_t idx = 0; idx <= m_prev_active_window_idx; ++idx) {
-          if (m_subwindows[idx]->GetCanBeActive()) {
-            m_curr_active_window_idx = idx;
-            break;
-          }
-        }
+    }
+    for (int idx = 0; idx < start_idx; ++idx) {
+      if (m_subwindows[idx]->GetCanBeActive()) {
+        m_curr_active_window_idx = idx;
+        break;
       }
-    } else {
+    }
+  }
+
+  void SelectPreviousWindowAsActive() {
+    // Move active focus to previous window
+    const int num_subwindows = m_subwindows.size();
+    int start_idx = num_subwindows - 1;
+    if (m_curr_active_window_idx != UINT32_MAX) {
       m_prev_active_window_idx = m_curr_active_window_idx;
-      for (size_t idx = 0; idx < num_subwindows; ++idx) {
-        if (m_subwindows[idx]->GetCanBeActive()) {
-          m_curr_active_window_idx = idx;
-          break;
-        }
+      start_idx = m_curr_active_window_idx - 1;
+    }
+    for (int idx = start_idx; idx >= 0; --idx) {
+      if (m_subwindows[idx]->GetCanBeActive()) {
+        m_curr_active_window_idx = idx;
+        return;
+      }
+    }
+    for (int idx = num_subwindows - 1; idx > start_idx; --idx) {
+      if (m_subwindows[idx]->GetCanBeActive()) {
+        m_curr_active_window_idx = idx;
+        break;
       }
     }
   }
@@ -1192,13 +1199,13 @@ public:
     ConstString broadcaster_class_process(Process::GetStaticBroadcasterClass());
     debugger.EnableForwardEvents(listener_sp);
 
-    bool update = true;
+    m_update_screen = true;
 #if defined(__APPLE__)
     std::deque<int> escape_chars;
 #endif
 
     while (!done) {
-      if (update) {
+      if (m_update_screen) {
         m_window_sp->Draw(false);
         // All windows should be calling Window::DeferredRefresh() instead of
         // Window::Refresh() so we can do a single update and avoid any screen
@@ -1210,7 +1217,7 @@ public:
         m_window_sp->MoveCursor(0, 0);
 
         doupdate();
-        update = false;
+        m_update_screen = false;
       }
 
 #if defined(__APPLE__)
@@ -1272,7 +1279,7 @@ public:
                 if (broadcaster_class == broadcaster_class_process) {
                   debugger.GetCommandInterpreter().UpdateExecutionContext(
                       nullptr);
-                  update = true;
+                  m_update_screen = true;
                   continue; // Don't get any key, just update our view
                 }
               }
@@ -1284,12 +1291,12 @@ public:
         switch (key_result) {
         case eKeyHandled:
           debugger.GetCommandInterpreter().UpdateExecutionContext(nullptr);
-          update = true;
+          m_update_screen = true;
           break;
         case eKeyNotHandled:
           if (ch == 12) { // Ctrl+L, force full redraw
             redrawwin(m_window_sp->get());
-            update = true;
+            m_update_screen = true;
           }
           break;
         case eQuitApplication:
@@ -1308,12 +1315,65 @@ public:
     return m_window_sp;
   }
 
+  void TerminalSizeChanged() {
+    ::endwin();
+    ::refresh();
+    Rect content_bounds = m_window_sp->GetFrame();
+    m_window_sp->SetBounds(content_bounds);
+    if (WindowSP menubar_window_sp = m_window_sp->FindSubWindow("Menubar"))
+      menubar_window_sp->SetBounds(content_bounds.MakeMenuBar());
+    if (WindowSP status_window_sp = m_window_sp->FindSubWindow("Status"))
+      status_window_sp->SetBounds(content_bounds.MakeStatusBar());
+
+    WindowSP source_window_sp = m_window_sp->FindSubWindow("Source");
+    WindowSP variables_window_sp = m_window_sp->FindSubWindow("Variables");
+    WindowSP registers_window_sp = m_window_sp->FindSubWindow("Registers");
+    WindowSP threads_window_sp = m_window_sp->FindSubWindow("Threads");
+
+    Rect threads_bounds;
+    Rect source_variables_bounds;
+    content_bounds.VerticalSplitPercentage(0.80, source_variables_bounds,
+                                           threads_bounds);
+    if (threads_window_sp)
+      threads_window_sp->SetBounds(threads_bounds);
+    else
+      source_variables_bounds = content_bounds;
+
+    Rect source_bounds;
+    Rect variables_registers_bounds;
+    source_variables_bounds.HorizontalSplitPercentage(
+        0.70, source_bounds, variables_registers_bounds);
+    if (variables_window_sp || registers_window_sp) {
+      if (variables_window_sp && registers_window_sp) {
+        Rect variables_bounds;
+        Rect registers_bounds;
+        variables_registers_bounds.VerticalSplitPercentage(
+            0.50, variables_bounds, registers_bounds);
+        variables_window_sp->SetBounds(variables_bounds);
+        registers_window_sp->SetBounds(registers_bounds);
+      } else if (variables_window_sp) {
+        variables_window_sp->SetBounds(variables_registers_bounds);
+      } else {
+        registers_window_sp->SetBounds(variables_registers_bounds);
+      }
+    } else {
+      source_bounds = source_variables_bounds;
+    }
+
+    source_window_sp->SetBounds(source_bounds);
+
+    touchwin(stdscr);
+    redrawwin(m_window_sp->get());
+    m_update_screen = true;
+  }
+
 protected:
   WindowSP m_window_sp;
   WindowDelegates m_window_delegates;
   SCREEN *m_screen;
   FILE *m_in;
   FILE *m_out;
+  bool m_update_screen = false;
 };
 
 } // namespace curses
@@ -2870,6 +2930,10 @@ public:
       window.SelectNextWindowAsActive();
       return eKeyHandled;
 
+    case KEY_BTAB:
+      window.SelectPreviousWindowAsActive();
+      return eKeyHandled;
+
     case 'h':
       window.CreateHelpSubwindow();
       return eKeyHandled;
@@ -2894,6 +2958,7 @@ public:
   KeyHelp *WindowDelegateGetKeyHelp() override {
     static curses::KeyHelp g_source_view_key_help[] = {
         {'\t', "Select next view"},
+        {KEY_BTAB, "Select previous view"},
         {'h', "Show help dialog with view specific key bindings"},
         {',', "Page up"},
         {'.', "Page down"},
@@ -3077,7 +3142,7 @@ public:
                                                    new_registers_rect);
           registers_window_sp->SetBounds(new_registers_rect);
         } else {
-          // No variables window, grab the bottom part of the source window
+          // No registers window, grab the bottom part of the source window
           Rect new_source_rect;
           source_bounds.HorizontalSplitPercentage(0.70, new_source_rect,
                                                   new_variables_rect);
@@ -3128,7 +3193,7 @@ public:
                                                    new_regs_rect);
           variables_window_sp->SetBounds(new_vars_rect);
         } else {
-          // No registers window, grab the bottom part of the source window
+          // No variables window, grab the bottom part of the source window
           Rect new_source_rect;
           source_bounds.HorizontalSplitPercentage(0.70, new_source_rect,
                                                   new_regs_rect);
@@ -3772,37 +3837,7 @@ public:
       return eKeyHandled;
 
     case 'b': // 'b' == toggle breakpoint on currently selected line
-      if (m_selected_line < GetNumSourceLines()) {
-        ExecutionContext exe_ctx =
-            m_debugger.GetCommandInterpreter().GetExecutionContext();
-        if (exe_ctx.HasTargetScope()) {
-          BreakpointSP bp_sp = exe_ctx.GetTargetRef().CreateBreakpoint(
-              nullptr, // Don't limit the breakpoint to certain modules
-              m_file_sp->GetFileSpec(), // Source file
-              m_selected_line +
-                  1, // Source line number (m_selected_line is zero based)
-              0,     // No column specified.
-              0,     // No offset
-              eLazyBoolCalculate,  // Check inlines using global setting
-              eLazyBoolCalculate,  // Skip prologue using global setting,
-              false,               // internal
-              false,               // request_hardware
-              eLazyBoolCalculate); // move_to_nearest_code
-        }
-      } else if (m_selected_line < GetNumDisassemblyLines()) {
-        const Instruction *inst = m_disassembly_sp->GetInstructionList()
-                                      .GetInstructionAtIndex(m_selected_line)
-                                      .get();
-        ExecutionContext exe_ctx =
-            m_debugger.GetCommandInterpreter().GetExecutionContext();
-        if (exe_ctx.HasTargetScope()) {
-          Address addr = inst->GetAddress();
-          BreakpointSP bp_sp = exe_ctx.GetTargetRef().CreateBreakpoint(
-              addr,   // lldb_private::Address
-              false,  // internal
-              false); // request_hardware
-        }
-      }
+      ToggleBreakpointOnSelectedLine();
       return eKeyHandled;
 
     case 'D': // 'D' == detach and keep stopped
@@ -3890,6 +3925,85 @@ public:
       break;
     }
     return eKeyNotHandled;
+  }
+
+  void ToggleBreakpointOnSelectedLine() {
+    ExecutionContext exe_ctx =
+        m_debugger.GetCommandInterpreter().GetExecutionContext();
+    if (!exe_ctx.HasTargetScope())
+      return;
+    if (GetNumSourceLines() > 0) {
+      // Source file breakpoint.
+      BreakpointList &bp_list = exe_ctx.GetTargetRef().GetBreakpointList();
+      const size_t num_bps = bp_list.GetSize();
+      for (size_t bp_idx = 0; bp_idx < num_bps; ++bp_idx) {
+        BreakpointSP bp_sp = bp_list.GetBreakpointAtIndex(bp_idx);
+        const size_t num_bps_locs = bp_sp->GetNumLocations();
+        for (size_t bp_loc_idx = 0; bp_loc_idx < num_bps_locs; ++bp_loc_idx) {
+          BreakpointLocationSP bp_loc_sp =
+              bp_sp->GetLocationAtIndex(bp_loc_idx);
+          LineEntry bp_loc_line_entry;
+          if (bp_loc_sp->GetAddress().CalculateSymbolContextLineEntry(
+                  bp_loc_line_entry)) {
+            if (m_file_sp->GetFileSpec() == bp_loc_line_entry.file &&
+                m_selected_line + 1 == bp_loc_line_entry.line) {
+              bool removed =
+                  exe_ctx.GetTargetRef().RemoveBreakpointByID(bp_sp->GetID());
+              assert(removed);
+              UNUSED_IF_ASSERT_DISABLED(removed);
+              return; // Existing breakpoint removed.
+            }
+          }
+        }
+      }
+      // No breakpoint found on the location, add it.
+      BreakpointSP bp_sp = exe_ctx.GetTargetRef().CreateBreakpoint(
+          nullptr, // Don't limit the breakpoint to certain modules
+          m_file_sp->GetFileSpec(), // Source file
+          m_selected_line +
+              1, // Source line number (m_selected_line is zero based)
+          0,     // No column specified.
+          0,     // No offset
+          eLazyBoolCalculate,  // Check inlines using global setting
+          eLazyBoolCalculate,  // Skip prologue using global setting,
+          false,               // internal
+          false,               // request_hardware
+          eLazyBoolCalculate); // move_to_nearest_code
+    } else {
+      // Disassembly breakpoint.
+      assert(GetNumDisassemblyLines() > 0);
+      assert(m_selected_line < GetNumDisassemblyLines());
+      const Instruction *inst = m_disassembly_sp->GetInstructionList()
+                                    .GetInstructionAtIndex(m_selected_line)
+                                    .get();
+      Address addr = inst->GetAddress();
+      // Try to find it.
+      BreakpointList &bp_list = exe_ctx.GetTargetRef().GetBreakpointList();
+      const size_t num_bps = bp_list.GetSize();
+      for (size_t bp_idx = 0; bp_idx < num_bps; ++bp_idx) {
+        BreakpointSP bp_sp = bp_list.GetBreakpointAtIndex(bp_idx);
+        const size_t num_bps_locs = bp_sp->GetNumLocations();
+        for (size_t bp_loc_idx = 0; bp_loc_idx < num_bps_locs; ++bp_loc_idx) {
+          BreakpointLocationSP bp_loc_sp =
+              bp_sp->GetLocationAtIndex(bp_loc_idx);
+          LineEntry bp_loc_line_entry;
+          const lldb::addr_t file_addr =
+              bp_loc_sp->GetAddress().GetFileAddress();
+          if (file_addr == addr.GetFileAddress()) {
+            bool removed =
+                exe_ctx.GetTargetRef().RemoveBreakpointByID(bp_sp->GetID());
+            assert(removed);
+            UNUSED_IF_ASSERT_DISABLED(removed);
+            return; // Existing breakpoint removed.
+          }
+        }
+      }
+      // No breakpoint found on the address, add it.
+      BreakpointSP bp_sp =
+          exe_ctx.GetTargetRef().CreateBreakpoint(addr, // lldb_private::Address
+                                                  false,  // internal
+                                                  false); // request_hardware
+    }
   }
 
 protected:
@@ -4082,5 +4196,9 @@ void IOHandlerCursesGUI::Cancel() {}
 bool IOHandlerCursesGUI::Interrupt() { return false; }
 
 void IOHandlerCursesGUI::GotEOF() {}
+
+void IOHandlerCursesGUI::TerminalSizeChanged() {
+  m_app_ap->TerminalSizeChanged();
+}
 
 #endif // LLDB_ENABLE_CURSES

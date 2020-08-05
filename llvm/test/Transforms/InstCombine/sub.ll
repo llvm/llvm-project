@@ -376,42 +376,42 @@ define i64 @test18(i64 %Y) {
 ; CHECK-LABEL: @test18(
 ; CHECK-NEXT:    ret i64 0
 ;
-  %tmp.4 = shl i64 %Y, 2
-  %tmp.12 = shl i64 %Y, 2
-  %tmp.8 = sub i64 %tmp.4, %tmp.12
-  ret i64 %tmp.8
+  %i.4 = shl i64 %Y, 2
+  %i.12 = shl i64 %Y, 2
+  %i.8 = sub i64 %i.4, %i.12
+  ret i64 %i.8
 }
 
 define i1 @test20(i32 %g, i32 %h) {
 ; CHECK-LABEL: @test20(
-; CHECK-NEXT:    [[TMP_4:%.*]] = icmp ne i32 [[H:%.*]], 0
-; CHECK-NEXT:    ret i1 [[TMP_4]]
+; CHECK-NEXT:    [[I_4:%.*]] = icmp ne i32 [[H:%.*]], 0
+; CHECK-NEXT:    ret i1 [[I_4]]
 ;
-  %tmp.2 = sub i32 %g, %h
-  %tmp.4 = icmp ne i32 %tmp.2, %g
-  ret i1 %tmp.4
+  %i.2 = sub i32 %g, %h
+  %i.4 = icmp ne i32 %i.2, %g
+  ret i1 %i.4
 }
 
 define i1 @test21(i32 %g, i32 %h) {
 ; CHECK-LABEL: @test21(
-; CHECK-NEXT:    [[TMP_4:%.*]] = icmp ne i32 [[H:%.*]], 0
-; CHECK-NEXT:    ret i1 [[TMP_4]]
+; CHECK-NEXT:    [[I_4:%.*]] = icmp ne i32 [[H:%.*]], 0
+; CHECK-NEXT:    ret i1 [[I_4]]
 ;
-  %tmp.2 = sub i32 %g, %h
-  %tmp.4 = icmp ne i32 %tmp.2, %g
-  ret i1 %tmp.4
+  %i.2 = sub i32 %g, %h
+  %i.4 = icmp ne i32 %i.2, %g
+  ret i1 %i.4
 }
 
 ; PR2298
 define zeroext i1 @test22(i32 %a, i32 %b)  nounwind  {
 ; CHECK-LABEL: @test22(
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[I5:%.*]] = icmp eq i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i1 [[I5]]
 ;
-  %tmp2 = sub i32 0, %a
-  %tmp4 = sub i32 0, %b
-  %tmp5 = icmp eq i32 %tmp2, %tmp4
-  ret i1 %tmp5
+  %i2 = sub i32 0, %a
+  %i4 = sub i32 0, %b
+  %i5 = icmp eq i32 %i2, %i4
+  ret i1 %i5
 }
 
 ; rdar://7362831

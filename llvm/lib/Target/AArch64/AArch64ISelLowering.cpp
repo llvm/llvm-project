@@ -3536,9 +3536,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::INSERT_SUBVECTOR:
     return LowerINSERT_SUBVECTOR(Op, DAG);
   case ISD::SDIV:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SDIV_PRED);
   case ISD::UDIV:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::UDIV_PRED);
+    return LowerDIV(Op, DAG);
   case ISD::SMIN:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMIN_PRED);
   case ISD::UMIN:
@@ -4133,6 +4132,7 @@ static bool canGuaranteeTCO(CallingConv::ID CC) {
 static bool mayTailCallThisCC(CallingConv::ID CC) {
   switch (CC) {
   case CallingConv::C:
+  case CallingConv::AArch64_SVE_VectorCall:
   case CallingConv::PreserveMost:
   case CallingConv::Swift:
     return true;
@@ -4152,6 +4152,15 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   MachineFunction &MF = DAG.getMachineFunction();
   const Function &CallerF = MF.getFunction();
   CallingConv::ID CallerCC = CallerF.getCallingConv();
+
+  // If this function uses the C calling convention but has an SVE signature,
+  // then it preserves more registers and should assume the SVE_VectorCall CC.
+  // The check for matching callee-saved regs will determine whether it is
+  // eligible for TCO.
+  if (CallerCC == CallingConv::C &&
+      AArch64RegisterInfo::hasSVEArgsOrReturn(&MF))
+    CallerCC = CallingConv::AArch64_SVE_VectorCall;
+
   bool CCMatch = CallerCC == CalleeCC;
 
   // When using the Windows calling convention on a non-windows OS, we want
@@ -4338,6 +4347,20 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   bool TailCallOpt = MF.getTarget().Options.GuaranteedTailCallOpt;
   bool IsSibCall = false;
+
+  // Check callee args/returns for SVE registers and set calling convention
+  // accordingly.
+  if (CallConv == CallingConv::C) {
+    bool CalleeOutSVE = any_of(Outs, [](ISD::OutputArg &Out){
+      return Out.VT.isScalableVector();
+    });
+    bool CalleeInSVE = any_of(Ins, [](ISD::InputArg &In){
+      return In.VT.isScalableVector();
+    });
+
+    if (CalleeInSVE || CalleeOutSVE)
+      CallConv = CallingConv::AArch64_SVE_VectorCall;
+  }
 
   if (IsTailCall) {
     // Check if it's really possible to do a tail call.
@@ -4691,20 +4714,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   for (auto &RegToPass : RegsToPass)
     Ops.push_back(DAG.getRegister(RegToPass.first,
                                   RegToPass.second.getValueType()));
-
-  // Check callee args/returns for SVE registers and set calling convention
-  // accordingly.
-  if (CallConv == CallingConv::C) {
-    bool CalleeOutSVE = any_of(Outs, [](ISD::OutputArg &Out){
-      return Out.VT.isScalableVector();
-    });
-    bool CalleeInSVE = any_of(Ins, [](ISD::InputArg &In){
-      return In.VT.isScalableVector();
-    });
-
-    if (CalleeInSVE || CalleeOutSVE)
-      CallConv = CallingConv::AArch64_SVE_VectorCall;
-  }
 
   // Add a register mask operand representing the call-preserved registers.
   const uint32_t *Mask;
@@ -8789,6 +8798,35 @@ SDValue AArch64TargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,
     return Op;
 
   return SDValue();
+}
+
+SDValue AArch64TargetLowering::LowerDIV(SDValue Op, SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  bool Signed = Op.getOpcode() == ISD::SDIV;
+  unsigned PredOpcode = Signed ? AArch64ISD::SDIV_PRED : AArch64ISD::UDIV_PRED;
+  if (VT == MVT::nxv4i32 || VT == MVT::nxv2i64)
+    return LowerToPredicatedOp(Op, DAG, PredOpcode);
+
+  // SVE doesn't have i8 and i16 DIV operations; widen them to 32-bit
+  // operations, and truncate the result.
+  EVT WidenedVT;
+  if (VT == MVT::nxv16i8)
+    WidenedVT = MVT::nxv8i16;
+  else if (VT == MVT::nxv8i16)
+    WidenedVT = MVT::nxv4i32;
+  else
+    llvm_unreachable("Unexpected Custom DIV operation");
+
+  SDLoc dl(Op);
+  unsigned UnpkLo = Signed ? AArch64ISD::SUNPKLO : AArch64ISD::UUNPKLO;
+  unsigned UnpkHi = Signed ? AArch64ISD::SUNPKHI : AArch64ISD::UUNPKHI;
+  SDValue Op0Lo = DAG.getNode(UnpkLo, dl, WidenedVT, Op.getOperand(0));
+  SDValue Op1Lo = DAG.getNode(UnpkLo, dl, WidenedVT, Op.getOperand(1));
+  SDValue Op0Hi = DAG.getNode(UnpkHi, dl, WidenedVT, Op.getOperand(0));
+  SDValue Op1Hi = DAG.getNode(UnpkHi, dl, WidenedVT, Op.getOperand(1));
+  SDValue ResultLo = DAG.getNode(Op.getOpcode(), dl, WidenedVT, Op0Lo, Op1Lo);
+  SDValue ResultHi = DAG.getNode(Op.getOpcode(), dl, WidenedVT, Op0Hi, Op1Hi);
+  return DAG.getNode(AArch64ISD::UZP1, dl, VT, ResultLo, ResultHi);
 }
 
 bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {

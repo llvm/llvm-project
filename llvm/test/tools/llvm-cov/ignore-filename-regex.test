@@ -22,7 +22,7 @@ REPORT_IGNORE_DIR-NOT: {{.*}}extra{{[/\\]}}dec.h{{.*}}
 REPORT_IGNORE_DIR-NOT: {{.*}}extra{{[/\\]}}inc.h{{.*}}
 REPORT_IGNORE_DIR: {{.*}}abs.h{{.*}}
 REPORT_IGNORE_DIR: {{.*}}main.cc{{.*}}
-REPORT_IGNORE_DIR: {{^}}TOTAL 5{{.*}}100.00%{{$}}
+REPORT_IGNORE_DIR: {{^}}TOTAL 5{{.*}}90.00%{{$}}
 
 # Ignore all files from "extra" directory even when SOURCES specified.
 RUN: llvm-cov report -instr-profile %S/Inputs/sources_specified/main.profdata \
@@ -35,7 +35,7 @@ REPORT_IGNORE_DIR_WITH_SOURCES-NOT: {{.*}}extra{{[/\\]}}dec.h{{.*}}
 REPORT_IGNORE_DIR_WITH_SOURCES-NOT: {{.*}}extra{{[/\\]}}inc.h{{.*}}
 REPORT_IGNORE_DIR_WITH_SOURCES-NOT: {{.*}}main.cc{{.*}}
 REPORT_IGNORE_DIR_WITH_SOURCES: {{.*}}abs.h{{.*}}
-REPORT_IGNORE_DIR_WITH_SOURCES: {{^}}TOTAL 4{{.*}}100.00%{{$}}
+REPORT_IGNORE_DIR_WITH_SOURCES: {{^}}TOTAL 4{{.*}}80.00%{{$}}
 
 ########################
 # Test "show" command.

@@ -497,6 +497,40 @@ Align llvm::inferAlignFromPtrInfo(MachineFunction &MF,
   return Align(1);
 }
 
+Register llvm::getFunctionLiveInPhysReg(MachineFunction &MF,
+                                        const TargetInstrInfo &TII,
+                                        MCRegister PhysReg,
+                                        const TargetRegisterClass &RC,
+                                        LLT RegTy) {
+  DebugLoc DL; // FIXME: Is no location the right choice?
+  MachineBasicBlock &EntryMBB = MF.front();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  Register LiveIn = MRI.getLiveInVirtReg(PhysReg);
+  if (LiveIn) {
+    MachineInstr *Def = MRI.getVRegDef(LiveIn);
+    if (Def) {
+      // FIXME: Should the verifier check this is in the entry block?
+      assert(Def->getParent() == &EntryMBB && "live-in copy not in entry block");
+      return LiveIn;
+    }
+
+    // It's possible the incoming argument register and copy was added during
+    // lowering, but later deleted due to being/becoming dead. If this happens,
+    // re-insert the copy.
+  } else {
+    // The live in register was not present, so add it.
+    LiveIn = MF.addLiveIn(PhysReg, &RC);
+    if (RegTy.isValid())
+      MRI.setType(LiveIn, RegTy);
+  }
+
+  BuildMI(EntryMBB, EntryMBB.begin(), DL, TII.get(TargetOpcode::COPY), LiveIn)
+    .addReg(PhysReg);
+  if (!EntryMBB.isLiveIn(PhysReg))
+    EntryMBB.addLiveIn(PhysReg);
+  return LiveIn;
+}
+
 Optional<APInt> llvm::ConstantFoldExtOp(unsigned Opcode, const Register Op1,
                                         uint64_t Imm,
                                         const MachineRegisterInfo &MRI) {

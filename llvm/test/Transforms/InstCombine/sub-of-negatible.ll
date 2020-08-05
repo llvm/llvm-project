@@ -1040,3 +1040,65 @@ define <2 x i4> @negate_insertelement_nonnegatible_insert(<2 x i4> %src, i4 %a, 
   %t3 = sub <2 x i4> %b, %t2
   ret <2 x i4> %t3
 }
+
+; left-shift by constant can always be negated
+define i8 @negate_left_shift_by_constant_prefer_keeping_shl(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @negate_left_shift_by_constant_prefer_keeping_shl(
+; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[Z:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[T0]])
+; CHECK-NEXT:    [[T1_NEG:%.*]] = shl i8 [[Z]], 4
+; CHECK-NEXT:    [[T2:%.*]] = add i8 [[T1_NEG]], [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[T2]]
+;
+  %t0 = sub i8 0, %z
+  call void @use8(i8 %t0)
+  %t1 = shl i8 %t0, 4
+  %t2 = sub i8 %x, %t1
+  ret i8 %t2
+}
+define i8 @negate_left_shift_by_constant_prefer_keeping_shl_extrause(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @negate_left_shift_by_constant_prefer_keeping_shl_extrause(
+; CHECK-NEXT:    [[T0:%.*]] = sub i8 0, [[Z:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = shl i8 [[T0]], 4
+; CHECK-NEXT:    call void @use8(i8 [[T1]])
+; CHECK-NEXT:    [[T2:%.*]] = sub i8 [[X:%.*]], [[T1]]
+; CHECK-NEXT:    ret i8 [[T2]]
+;
+  %t0 = sub i8 0, %z
+  call void @use8(i8 %t0)
+  %t1 = shl i8 %t0, 4
+  call void @use8(i8 %t1)
+  %t2 = sub i8 %x, %t1
+  ret i8 %t2
+}
+define i8 @negate_left_shift_by_constant(i8 %x, i8 %y, i8 %z, i8 %k) {
+; CHECK-LABEL: @negate_left_shift_by_constant(
+; CHECK-NEXT:    [[T0:%.*]] = sub i8 [[K:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = shl i8 [[T0]], 4
+; CHECK-NEXT:    [[T2:%.*]] = sub i8 [[X:%.*]], [[T1]]
+; CHECK-NEXT:    ret i8 [[T2]]
+;
+  %t0 = sub i8 %k, %z
+  call void @use8(i8 %t0)
+  %t1 = shl i8 %t0, 4
+  %t2 = sub i8 %x, %t1
+  ret i8 %t2
+}
+define i8 @negate_left_shift_by_constant_extrause(i8 %x, i8 %y, i8 %z, i8 %k) {
+; CHECK-LABEL: @negate_left_shift_by_constant_extrause(
+; CHECK-NEXT:    [[T0:%.*]] = sub i8 [[K:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[T0]])
+; CHECK-NEXT:    [[T1:%.*]] = shl i8 [[T0]], 4
+; CHECK-NEXT:    call void @use8(i8 [[T1]])
+; CHECK-NEXT:    [[T2:%.*]] = sub i8 [[X:%.*]], [[T1]]
+; CHECK-NEXT:    ret i8 [[T2]]
+;
+  %t0 = sub i8 %k, %z
+  call void @use8(i8 %t0)
+  %t1 = shl i8 %t0, 4
+  call void @use8(i8 %t1)
+  %t2 = sub i8 %x, %t1
+  ret i8 %t2
+}

@@ -123,3 +123,18 @@ TEST(TFUtilsTest, JSONParsingInvalidTensorType) {
   auto Spec = getTensorSpecFromJSON(Ctx, *Value);
   EXPECT_FALSE(Spec.hasValue());
 }
+
+TEST(TFUtilsTest, TensorSpecSizesAndTypes) {
+  auto Spec1D = TensorSpec::createSpec<int16_t>("Hi1", {1});
+  auto Spec2D = TensorSpec::createSpec<int16_t>("Hi2", {1, 1});
+  auto Spec1DLarge = TensorSpec::createSpec<float>("Hi3", {10});
+  auto Spec3DLarge = TensorSpec::createSpec<float>("Hi3", {2, 4, 10});
+  EXPECT_TRUE(Spec1D.isElementType<int16_t>());
+  EXPECT_FALSE(Spec3DLarge.isElementType<double>());
+  EXPECT_EQ(Spec1D.getElementCount(), 1);
+  EXPECT_EQ(Spec2D.getElementCount(), 1);
+  EXPECT_EQ(Spec1DLarge.getElementCount(), 10);
+  EXPECT_EQ(Spec3DLarge.getElementCount(), 80);
+  EXPECT_EQ(Spec3DLarge.getElementByteSize(), sizeof(float));
+  EXPECT_EQ(Spec1D.getElementByteSize(), sizeof(int16_t));
+}

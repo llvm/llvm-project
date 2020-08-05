@@ -151,6 +151,8 @@ struct SemiNCAInfo {
     }
   };
 
+  using NodeOrderMap = DenseMap<NodePtr, unsigned>;
+
   // Custom DFS implementation which can skip nodes based on a provided
   // predicate. It also collects ReverseChildren so that we don't have to spend
   // time getting predecessors in SemiNCA.
@@ -158,9 +160,13 @@ struct SemiNCAInfo {
   // If IsReverse is set to true, the DFS walk will be performed backwards
   // relative to IsPostDom -- using reverse edges for dominators and forward
   // edges for postdominators.
+  //
+  // If SuccOrder is specified then in this order the DFS traverses the children
+  // otherwise the order is implied by the results of getChildren().
   template <bool IsReverse = false, typename DescendCondition>
   unsigned runDFS(NodePtr V, unsigned LastNum, DescendCondition Condition,
-                  unsigned AttachToNum) {
+                  unsigned AttachToNum,
+                  const NodeOrderMap *SuccOrder = nullptr) {
     assert(V);
     SmallVector<NodePtr, 64> WorkList = {V};
     if (NodeToInfo.count(V) != 0) NodeToInfo[V].Parent = AttachToNum;
@@ -176,7 +182,14 @@ struct SemiNCAInfo {
       NumToNode.push_back(BB);
 
       constexpr bool Direction = IsReverse != IsPostDom;  // XOR.
-      for (const NodePtr Succ : getChildren<Direction>(BB, BatchUpdates)) {
+      auto Successors = getChildren<Direction>(BB, BatchUpdates);
+      if (SuccOrder && Successors.size() > 1)
+        llvm::sort(
+            Successors.begin(), Successors.end(), [=](NodePtr A, NodePtr B) {
+              return SuccOrder->find(A)->second < SuccOrder->find(B)->second;
+            });
+
+      for (const NodePtr Succ : Successors) {
         const auto SIT = NodeToInfo.find(Succ);
         // Don't visit nodes more than once but remember to collect
         // ReverseChildren.
@@ -372,6 +385,32 @@ struct SemiNCAInfo {
     // nodes.
     if (Total + 1 != Num) {
       HasNonTrivialRoots = true;
+
+      // SuccOrder is the order of blocks in the function. It is needed to make
+      // the calculation of the FurthestAway node and the whole PostDomTree
+      // immune to swap successors transformation (e.g. canonicalizing branch
+      // predicates). SuccOrder is initialized lazily only for successors of
+      // reverse unreachable nodes.
+      Optional<NodeOrderMap> SuccOrder;
+      auto InitSuccOrderOnce = [&]() {
+        SuccOrder = NodeOrderMap();
+        for (const auto Node : nodes(DT.Parent))
+          if (SNCA.NodeToInfo.count(Node) == 0)
+            for (const auto Succ : getChildren<false>(Node, SNCA.BatchUpdates))
+              SuccOrder->try_emplace(Succ, 0);
+
+        // Add mapping for all entries of SuccOrder.
+        unsigned NodeNum = 0;
+        for (const auto Node : nodes(DT.Parent)) {
+          ++NodeNum;
+          auto Order = SuccOrder->find(Node);
+          if (Order != SuccOrder->end()) {
+            assert(Order->second == 0);
+            Order->second = NodeNum;
+          }
+        }
+      };
+
       // Make another DFS pass over all other nodes to find the
       // reverse-unreachable blocks, and find the furthest paths we'll be able
       // to make.
@@ -396,7 +435,12 @@ struct SemiNCAInfo {
           // expensive and does not always lead to a minimal set of roots.
           LLVM_DEBUG(dbgs() << "\t\t\tRunning forward DFS\n");
 
-          const unsigned NewNum = SNCA.runDFS<true>(I, Num, AlwaysDescend, Num);
+          if (!SuccOrder)
+            InitSuccOrderOnce();
+          assert(SuccOrder);
+
+          const unsigned NewNum =
+              SNCA.runDFS<true>(I, Num, AlwaysDescend, Num, &*SuccOrder);
           const NodePtr FurthestAway = SNCA.NumToNode[NewNum];
           LLVM_DEBUG(dbgs() << "\t\t\tFound a new furthest away node "
                             << "(non-trivial root): "

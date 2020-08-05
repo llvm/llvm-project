@@ -92,10 +92,15 @@ PhysicalRegisterInfo::PhysicalRegisterInfo(const TargetRegisterInfo &tri,
     }
     MaskInfos[M].Units = PU.flip();
   }
-}
 
-RegisterRef PhysicalRegisterInfo::normalize(RegisterRef RR) const {
-  return RR;
+  AliasInfos.resize(TRI.getNumRegUnits());
+  for (uint32_t U = 0, NU = TRI.getNumRegUnits(); U != NU; ++U) {
+    BitVector AS(TRI.getNumRegs());
+    for (MCRegUnitRootIterator R(U, &TRI); R.isValid(); ++R)
+      for (MCSuperRegIterator S(*R, &TRI, true); S.isValid(); ++S)
+        AS.set(*S);
+    AliasInfos[U].Regs = AS;
+  }
 }
 
 std::set<RegisterId> PhysicalRegisterInfo::getAliasSet(RegisterId Reg) const {
@@ -321,26 +326,17 @@ RegisterRef RegisterAggr::makeRegRef() const {
   if (U < 0)
     return RegisterRef();
 
-  auto AliasedRegs = [this] (uint32_t Unit, BitVector &Regs) {
-    for (MCRegUnitRootIterator R(Unit, &PRI.getTRI()); R.isValid(); ++R)
-      for (MCSuperRegIterator S(*R, &PRI.getTRI(), true); S.isValid(); ++S)
-        Regs.set(*S);
-  };
-
   // Find the set of all registers that are aliased to all the units
   // in this aggregate.
 
   // Get all the registers aliased to the first unit in the bit vector.
-  BitVector Regs(PRI.getTRI().getNumRegs());
-  AliasedRegs(U, Regs);
+  BitVector Regs = PRI.getUnitAliases(U);
   U = Units.find_next(U);
 
   // For each other unit, intersect it with the set of all registers
   // aliased that unit.
   while (U >= 0) {
-    BitVector AR(PRI.getTRI().getNumRegs());
-    AliasedRegs(U, AR);
-    Regs &= AR;
+    Regs &= PRI.getUnitAliases(U);
     U = Units.find_next(U);
   }
 
@@ -377,4 +373,9 @@ RegisterAggr::rr_iterator::rr_iterator(const RegisterAggr &RG,
   }
   Pos = End ? Masks.end() : Masks.begin();
   Index = End ? Masks.size() : 0;
+}
+
+raw_ostream &rdf::operator<<(raw_ostream &OS, const RegisterAggr &A) {
+  A.print(OS);
+  return OS;
 }
