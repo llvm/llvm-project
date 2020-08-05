@@ -48,13 +48,13 @@ static const unsigned P = sizeof(char *);
 
 static void verifyFormatResults(const char *format, unsigned n,
                                 const std::vector<unsigned> &computed_sizes,
-                                va_list expected_sizes) {
-  // "+ 1" because of format string
+                                const std::vector<unsigned> &expected_sizes) {
+  // "+ 1" because of the format string
   ASSERT_EQ(n + 1,
             computed_sizes.size()) << "Unexpected number of format arguments: '"
                                    << format << "'";
   for (unsigned i = 0; i < n; ++i)
-    EXPECT_EQ(va_arg(expected_sizes, unsigned), computed_sizes[i + 1])
+    EXPECT_EQ(expected_sizes[i], computed_sizes[i + 1])
         << "Unexpect write size for argument " << i << ", format string '"
         << format << "'";
 }
@@ -74,8 +74,11 @@ static void testScanf3(void *ctx, int result, bool allowGnuMalloc,
 
 static void testScanf2(const char *format, int scanf_result,
                        bool allowGnuMalloc, unsigned n,
-                       va_list expected_sizes) {
-  std::vector<unsigned> scanf_sizes;
+                       va_list expected_sizes_va) {
+  std::vector<unsigned> scanf_sizes, expected_sizes;
+  for (unsigned i = 0; i < n; ++i)
+    expected_sizes.push_back(va_arg(expected_sizes_va, unsigned));
+
   // 16 args should be enough.
   testScanf3((void *)&scanf_sizes, scanf_result, allowGnuMalloc, format,
              test_buf, test_buf, test_buf, test_buf, test_buf, test_buf,
@@ -151,7 +154,6 @@ TEST(SanitizerCommonInterceptors, Scanf) {
   testScanf("%c%d", 2, C, I);
   testScanf("%A%lf", 2, F, D);
 
-  testScanf("%ms %Lf", 2, P, LD);
   testScanf("s%Las", 1, LD);
   testScanf("%ar", 1, F);
 
@@ -202,6 +204,26 @@ TEST(SanitizerCommonInterceptors, Scanf) {
                    test_buf_size);
 }
 
+TEST(SanitizerCommonInterceptors, ScanfAllocate) {
+  const char *buf = "123456";
+
+  // Can not use testScanf() because this case needs a valid pointer to a string
+  // in the scanf argument.
+  {
+    std::vector<unsigned> scanf_sizes;
+    testScanf3((void *)&scanf_sizes, 2, /*allowGnuMalloc=*/false, "%ms", &buf);
+    verifyFormatResults("%ms", 2, scanf_sizes,
+                        {P, (unsigned)(strlen(buf) + 1)});
+  }
+
+  {
+    std::vector<unsigned> scanf_sizes;
+    testScanf3((void *)&scanf_sizes, 2, /*allowGnuMalloc=*/false, "%mc", &buf);
+    verifyFormatResults("%mc", 2, scanf_sizes,
+                        {P, (unsigned)(strlen(buf) + 1)});
+  }
+}
+
 static void testPrintf3(void *ctx, const char *format, ...) {
   va_list ap;
   va_start(ap, format);
@@ -210,8 +232,11 @@ static void testPrintf3(void *ctx, const char *format, ...) {
 }
 
 static void testPrintf2(const char *format, unsigned n,
-                       va_list expected_sizes) {
-  std::vector<unsigned> printf_sizes;
+                        va_list expected_sizes_va) {
+  std::vector<unsigned> printf_sizes, expected_sizes;
+  for (unsigned i = 0; i < n; ++i)
+    expected_sizes.push_back(va_arg(expected_sizes_va, unsigned));
+
   // 16 args should be enough.
   testPrintf3((void *)&printf_sizes, format,
              test_buf, test_buf, test_buf, test_buf, test_buf, test_buf,
