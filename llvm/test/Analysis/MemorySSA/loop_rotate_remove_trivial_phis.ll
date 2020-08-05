@@ -1,4 +1,5 @@
-; RUN: opt -loop-rotate -print-memoryssa -disable-output -enable-mssa-loop-dependency -verify-memoryssa %s 2>&1 |  FileCheck %s
+; RUN: opt -loop-rotate -enable-new-pm=0 -print-memoryssa -disable-output -enable-mssa-loop-dependency -verify-memoryssa %s 2>&1 |  FileCheck %s
+; RUN: opt -passes='loop-mssa(loop-rotate),print<memoryssa>' -disable-output -verify-memoryssa %s 2>&1 |  FileCheck %s
 ; REQUIRES: asserts
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
