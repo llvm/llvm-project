@@ -121,8 +121,7 @@ define i1 @ugt_rem_nz(i8 %x) {
 
 define i1 @eq_nsw_rem_zero(i8 %x) {
 ; CHECK-LABEL: @eq_nsw_rem_zero(
-; CHECK-NEXT:    [[A:%.*]] = mul nsw i8 [[X:%.*]], -5
-; CHECK-NEXT:    [[B:%.*]] = icmp eq i8 [[A]], 20
+; CHECK-NEXT:    [[B:%.*]] = icmp eq i8 [[X:%.*]], -4
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = mul nsw i8 %x, -5
@@ -132,14 +131,15 @@ define i1 @eq_nsw_rem_zero(i8 %x) {
 
 define <2 x i1> @ne_nsw_rem_zero(<2 x i8> %x) {
 ; CHECK-LABEL: @ne_nsw_rem_zero(
-; CHECK-NEXT:    [[A:%.*]] = mul nsw <2 x i8> [[X:%.*]], <i8 5, i8 5>
-; CHECK-NEXT:    [[B:%.*]] = icmp ne <2 x i8> [[A]], <i8 -30, i8 -30>
+; CHECK-NEXT:    [[B:%.*]] = icmp ne <2 x i8> [[X:%.*]], <i8 -6, i8 -6>
 ; CHECK-NEXT:    ret <2 x i1> [[B]]
 ;
   %a = mul nsw <2 x i8> %x, <i8 5, i8 5>
   %b = icmp ne <2 x i8> %a, <i8 -30, i8 -30>
   ret <2 x i1> %b
 }
+
+; TODO: Missed fold with undef.
 
 define <2 x i1> @ne_nsw_rem_zero_undef1(<2 x i8> %x) {
 ; CHECK-LABEL: @ne_nsw_rem_zero_undef1(
@@ -151,6 +151,8 @@ define <2 x i1> @ne_nsw_rem_zero_undef1(<2 x i8> %x) {
   %b = icmp ne <2 x i8> %a, <i8 -30, i8 -30>
   ret <2 x i1> %b
 }
+
+; TODO: Missed fold with undef.
 
 define <2 x i1> @ne_nsw_rem_zero_undef2(<2 x i8> %x) {
 ; CHECK-LABEL: @ne_nsw_rem_zero_undef2(
@@ -167,7 +169,7 @@ define i1 @eq_nsw_rem_zero_uses(i8 %x) {
 ; CHECK-LABEL: @eq_nsw_rem_zero_uses(
 ; CHECK-NEXT:    [[A:%.*]] = mul nsw i8 [[X:%.*]], -5
 ; CHECK-NEXT:    call void @use(i8 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = icmp eq i8 [[A]], 20
+; CHECK-NEXT:    [[B:%.*]] = icmp eq i8 [[X]], -4
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = mul nsw i8 %x, -5
@@ -200,14 +202,15 @@ define i1 @ne_nsw_rem_nz(i8 %x) {
 
 define <2 x i1> @eq_nuw_rem_zero(<2 x i8> %x) {
 ; CHECK-LABEL: @eq_nuw_rem_zero(
-; CHECK-NEXT:    [[A:%.*]] = mul nuw <2 x i8> [[X:%.*]], <i8 5, i8 5>
-; CHECK-NEXT:    [[B:%.*]] = icmp eq <2 x i8> [[A]], <i8 20, i8 20>
+; CHECK-NEXT:    [[B:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 4, i8 4>
 ; CHECK-NEXT:    ret <2 x i1> [[B]]
 ;
   %a = mul nuw <2 x i8> %x, <i8 5, i8 5>
   %b = icmp eq <2 x i8> %a, <i8 20, i8 20>
   ret <2 x i1> %b
 }
+
+; TODO: Missed fold with undef.
 
 define <2 x i1> @eq_nuw_rem_zero_undef1(<2 x i8> %x) {
 ; CHECK-LABEL: @eq_nuw_rem_zero_undef1(
@@ -219,6 +222,8 @@ define <2 x i1> @eq_nuw_rem_zero_undef1(<2 x i8> %x) {
   %b = icmp eq <2 x i8> %a, <i8 20, i8 20>
   ret <2 x i1> %b
 }
+
+; TODO: Missed fold with undef.
 
 define <2 x i1> @eq_nuw_rem_zero_undef2(<2 x i8> %x) {
 ; CHECK-LABEL: @eq_nuw_rem_zero_undef2(
@@ -233,8 +238,7 @@ define <2 x i1> @eq_nuw_rem_zero_undef2(<2 x i8> %x) {
 
 define i1 @ne_nuw_rem_zero(i8 %x) {
 ; CHECK-LABEL: @ne_nuw_rem_zero(
-; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i8 [[A]], -126
+; CHECK-NEXT:    [[B:%.*]] = icmp ne i8 [[X:%.*]], 26
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = mul nuw i8 %x, 5
@@ -246,7 +250,7 @@ define i1 @ne_nuw_rem_zero_uses(i8 %x) {
 ; CHECK-LABEL: @ne_nuw_rem_zero_uses(
 ; CHECK-NEXT:    [[A:%.*]] = mul nuw i8 [[X:%.*]], 5
 ; CHECK-NEXT:    call void @use(i8 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i8 [[A]], -126
+; CHECK-NEXT:    [[B:%.*]] = icmp ne i8 [[X]], 26
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
   %a = mul nuw i8 %x, 5
