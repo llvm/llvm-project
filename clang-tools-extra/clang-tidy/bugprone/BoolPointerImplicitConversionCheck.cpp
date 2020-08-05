@@ -20,53 +20,68 @@ void BoolPointerImplicitConversionCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       traverse(
           ast_type_traits::TK_AsIs,
-          ifStmt(hasCondition(findAll(implicitCastExpr(
-                     unless(hasParent(unaryOperator(hasOperatorName("!")))),
-                     hasSourceExpression(expr(
-                         hasType(pointerType(pointee(booleanType()))),
-                         ignoringParenImpCasts(declRefExpr().bind("expr")))),
-                     hasCastKind(CK_PointerToBoolean)))),
-                 unless(isInTemplateInstantiation()))
+          ifStmt(
+              hasCondition(findAll(implicitCastExpr(
+                  unless(hasParent(unaryOperator(hasOperatorName("!")))),
+                  hasSourceExpression(expr(
+                      hasType(pointerType(pointee(booleanType()))),
+                      ignoringParenImpCasts(anyOf(declRefExpr().bind("expr"),
+                                                  memberExpr().bind("expr"))))),
+                  hasCastKind(CK_PointerToBoolean)))),
+              unless(isInTemplateInstantiation()))
               .bind("if")),
       this);
 }
 
-void BoolPointerImplicitConversionCheck::check(
-    const MatchFinder::MatchResult &Result) {
-  auto *If = Result.Nodes.getNodeAs<IfStmt>("if");
-  auto *Var = Result.Nodes.getNodeAs<DeclRefExpr>("expr");
-
+static void checkImpl(const MatchFinder::MatchResult &Result, const Expr *Ref,
+                      const IfStmt *If,
+                      const ast_matchers::internal::Matcher<Expr> &RefMatcher,
+                      ClangTidyCheck &Check) {
   // Ignore macros.
-  if (Var->getBeginLoc().isMacroID())
+  if (Ref->getBeginLoc().isMacroID())
     return;
 
-  // Only allow variable accesses for now, no function calls or member exprs.
+  // Only allow variable accesses and member exprs for now, no function calls.
   // Check that we don't dereference the variable anywhere within the if. This
   // avoids false positives for checks of the pointer for nullptr before it is
   // dereferenced. If there is a dereferencing operator on this variable don't
   // emit a diagnostic. Also ignore array subscripts.
-  const Decl *D = Var->getDecl();
-  auto DeclRef = ignoringParenImpCasts(declRefExpr(to(equalsNode(D))));
-  if (!match(findAll(
-                 unaryOperator(hasOperatorName("*"), hasUnaryOperand(DeclRef))),
+  if (!match(findAll(unaryOperator(hasOperatorName("*"),
+                                   hasUnaryOperand(RefMatcher))),
              *If, *Result.Context)
            .empty() ||
-      !match(findAll(arraySubscriptExpr(hasBase(DeclRef))), *If,
+      !match(findAll(arraySubscriptExpr(hasBase(RefMatcher))), *If,
              *Result.Context)
            .empty() ||
       // FIXME: We should still warn if the paremater is implicitly converted to
       // bool.
-      !match(findAll(callExpr(hasAnyArgument(ignoringParenImpCasts(DeclRef)))),
-             *If, *Result.Context)
+      !match(
+           findAll(callExpr(hasAnyArgument(ignoringParenImpCasts(RefMatcher)))),
+           *If, *Result.Context)
            .empty() ||
-      !match(findAll(cxxDeleteExpr(has(ignoringParenImpCasts(expr(DeclRef))))),
-             *If, *Result.Context)
+      !match(
+           findAll(cxxDeleteExpr(has(ignoringParenImpCasts(expr(RefMatcher))))),
+           *If, *Result.Context)
            .empty())
     return;
 
-  diag(Var->getBeginLoc(), "dubious check of 'bool *' against 'nullptr', did "
-                           "you mean to dereference it?")
-      << FixItHint::CreateInsertion(Var->getBeginLoc(), "*");
+  Check.diag(Ref->getBeginLoc(),
+             "dubious check of 'bool *' against 'nullptr', did "
+             "you mean to dereference it?")
+      << FixItHint::CreateInsertion(Ref->getBeginLoc(), "*");
+}
+
+void BoolPointerImplicitConversionCheck::check(
+    const MatchFinder::MatchResult &Result) {
+  const auto *If = Result.Nodes.getNodeAs<IfStmt>("if");
+  if (const auto *E = Result.Nodes.getNodeAs<Expr>("expr")) {
+    const Decl *D = isa<DeclRefExpr>(E) ? cast<DeclRefExpr>(E)->getDecl()
+                                        : cast<MemberExpr>(E)->getMemberDecl();
+    const auto M =
+        ignoringParenImpCasts(anyOf(declRefExpr(to(equalsNode(D))),
+                                    memberExpr(hasDeclaration(equalsNode(D)))));
+    checkImpl(Result, E, If, M, *this);
+  }
 }
 
 } // namespace bugprone
