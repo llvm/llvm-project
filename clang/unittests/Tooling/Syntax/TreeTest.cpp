@@ -2329,16 +2329,17 @@ struct X {
   friend bool operator<(const X&, const X&);
   friend X operator<<(X&, const X&);
   X operator,(X&);
-  // TODO: Fix crash on member function pointer and add a test for `->*`
-  // TODO: Unbox operators in syntax tree. 
+  X operator->*(int);
+  // TODO: Unbox operators in syntax tree.
   // Represent operators by `+` instead of `IdExpression-UnqualifiedId-+`
 };
-void test(X x, X y) {
+void test(X x, X y, X* xp, int X::* pmi) {
   x = y;
   x + y;
   x < y;
   x << y;
   x, y;
+  xp->*pmi;
 }
 )cpp",
       R"txt(
@@ -2437,6 +2438,17 @@ void test(X x, X y) {
 | | |   |   `-&
 | | |   `-)
 | | `-;
+| |-SimpleDeclaration
+| | |-X
+| | |-SimpleDeclarator
+| | | |-operator
+| | | |-->*
+| | | `-ParametersAndQualifiers
+| | |   |-(
+| | |   |-SimpleDeclaration
+| | |   | `-int
+| | |   `-)
+| | `-;
 | |-}
 | `-;
 `-SimpleDeclaration
@@ -2454,6 +2466,21 @@ void test(X x, X y) {
   |   | |-X
   |   | `-SimpleDeclarator
   |   |   `-y
+  |   |-,
+  |   |-SimpleDeclaration
+  |   | |-X
+  |   | `-SimpleDeclarator
+  |   |   |-*
+  |   |   `-xp
+  |   |-,
+  |   |-SimpleDeclaration
+  |   | |-int
+  |   | `-SimpleDeclarator
+  |   |   |-MemberPointer
+  |   |   | |-X
+  |   |   | |-::
+  |   |   | `-*
+  |   |   `-pmi
   |   `-)
   `-CompoundStatement
     |-{
@@ -2517,6 +2544,16 @@ void test(X x, X y) {
     | | `-IdExpression
     | |   `-UnqualifiedId
     | |     `-y
+    | `-;
+    |-ExpressionStatement
+    | |-BinaryOperatorExpression
+    | | |-IdExpression
+    | | | `-UnqualifiedId
+    | | |   `-xp
+    | | |-->*
+    | | `-IdExpression
+    | |   `-UnqualifiedId
+    | |     `-pmi
     | `-;
     `-}
 )txt"));
