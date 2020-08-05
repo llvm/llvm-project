@@ -300,6 +300,18 @@ int ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Im
   return getIntImmCost(Imm, Ty, CostKind);
 }
 
+int ARMTTIImpl::getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind) {
+  if (CostKind == TTI::TCK_RecipThroughput &&
+      (ST->hasNEON() || ST->hasMVEIntegerOps())) {
+    // FIXME: The vectorizer is highly sensistive to the cost of these
+    // instructions, which suggests that it may be using the costs incorrectly.
+    // But, for now, just make them free to avoid performance regressions for
+    // vector targets.
+    return 0;
+  }
+  return BaseT::getCFInstrCost(Opcode, CostKind);
+}
+
 int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                  TTI::CastContextHint CCH,
                                  TTI::TargetCostKind CostKind,
