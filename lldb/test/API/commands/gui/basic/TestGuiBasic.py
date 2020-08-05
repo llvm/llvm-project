@@ -16,8 +16,6 @@ class BasicGuiCommandTest(PExpectTest):
     @skipIfAsan
     @skipIfCursesSupportMissing
     @skipIfLinux #rdar://problem/55757360
-    @skipIfDarwinEmbedded # "run" command will not work correctly for remote debug
-    @skipIfRemote # "run" command will not work correctly for remote debug
     def test_gui(self):
         self.build()
 
