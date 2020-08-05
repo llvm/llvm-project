@@ -2551,7 +2551,7 @@ LegalizerHelper::lowerLoad(MachineInstr &MI) {
     default:
       llvm_unreachable("Unexpected opcode");
     case TargetOpcode::G_LOAD:
-      MIRBuilder.buildExtOrTrunc(TargetOpcode::G_ANYEXT, DstReg, TmpReg);
+      MIRBuilder.buildAnyExtOrTrunc(DstReg, TmpReg);
       break;
     case TargetOpcode::G_SEXTLOAD:
       MIRBuilder.buildSExt(DstReg, TmpReg);
