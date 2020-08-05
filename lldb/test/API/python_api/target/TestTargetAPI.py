@@ -152,6 +152,7 @@ class TargetAPITestCase(TestBase):
 
 
     @add_test_categories(['pyapi'])
+    @skipIfWindows  # stdio manipulation unsupported on Windows
     def test_launch_simple(self):
         d = {'EXE': 'b.out'}
         self.build(dictionary=d)
