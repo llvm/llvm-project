@@ -7531,10 +7531,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     auto *M = cast<MemSDNode>(Op);
     M->getMemOperand()->setOffset(Offset);
-    unsigned Opcode = VT.isVector() ? AMDGPUISD::BUFFER_ATOMIC_PK_FADD
-                                    : AMDGPUISD::BUFFER_ATOMIC_FADD;
 
-    return DAG.getMemIntrinsicNode(Opcode, DL, Op->getVTList(), Ops, VT,
+    return DAG.getMemIntrinsicNode(AMDGPUISD::BUFFER_ATOMIC_FADD, DL,
+                                   Op->getVTList(), Ops, VT,
                                    M->getMemOperand());
   }
 
