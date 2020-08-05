@@ -7,8 +7,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.isdigit
     libc.src.ctype.isgraph
     libc.src.ctype.islower
+    libc.src.ctype.isprint
     libc.src.ctype.ispunct
+    libc.src.ctype.isspace
     libc.src.ctype.isupper
+    libc.src.ctype.isxdigit
     
     # errno.h entrypoints
     libc.src.errno.__errno_location
