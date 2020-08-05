@@ -48,12 +48,6 @@ struct LLVMTypeStorage;
 struct LLVMDialectImpl;
 } // namespace detail
 
-/// Converts an MLIR LLVM dialect type to LLVM IR type. Note that this function
-/// exists exclusively for the purpose of gradual transition to the first-party
-/// modeling of LLVM types. It should not be used outside MLIR-to-LLVM
-/// translation.
-llvm::Type *convertLLVMType(LLVMType type);
-
 ///// Ops /////
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMOps.h.inc"
