@@ -188,8 +188,8 @@ const char *__asan_get_report_description(void);
 /// \param addr Address to locate.
 /// \param name Buffer to store the variable's name.
 /// \param name_size Size in bytes of the variable's name buffer.
-/// \param region_address [out] Address of the region.
-/// \param region_size [out] Size of the region in bytes.
+/// \param[out] region_address Address of the region.
+/// \param[out] region_size Size of the region in bytes.
 ///
 /// \returns Returns the category of the given pointer as a constant string.
 const char *__asan_locate_address(void *addr, char *name, size_t name_size,
@@ -204,7 +204,7 @@ const char *__asan_locate_address(void *addr, char *name, size_t name_size,
 /// \param addr A heap address.
 /// \param trace A buffer to store the stack trace.
 /// \param size Size in bytes of the trace buffer.
-/// \param thread_id [out] The thread ID of the address.
+/// \param[out] thread_id The thread ID of the address.
 ///
 /// \returns Returns the number of stored frames or 0 on error.
 size_t __asan_get_alloc_stack(void *addr, void **trace, size_t size,
@@ -219,7 +219,7 @@ size_t __asan_get_alloc_stack(void *addr, void **trace, size_t size,
 /// \param addr A heap address.
 /// \param trace A buffer to store the stack trace.
 /// \param size Size in bytes of the trace buffer.
-/// \param thread_id [out] The thread ID of the address.
+/// \param[out] thread_id The thread ID of the address.
 ///
 /// \returns Returns the number of stored frames or 0 on error.
 size_t __asan_get_free_stack(void *addr, void **trace, size_t size,
@@ -228,8 +228,8 @@ size_t __asan_get_free_stack(void *addr, void **trace, size_t size,
 /// Gets the current shadow memory mapping (useful for calling from the
 /// debugger).
 ///
-/// \param shadow_scale [out] Shadow scale value.
-/// \param shadow_offset [out] Offset value.
+/// \param[out] shadow_scale Shadow scale value.
+/// \param[out] shadow_offset Offset value.
 void __asan_get_shadow_mapping(size_t *shadow_scale, size_t *shadow_offset);
 
 /// This is an internal function that is called to report an error. However,
@@ -302,8 +302,8 @@ void *__asan_get_current_fake_stack(void);
 ///
 /// \param fake_stack An opaque handler to a fake stack.
 /// \param addr Address to test.
-/// \param beg [out] Beginning of fake frame.
-/// \param end [out] End of fake frame.
+/// \param[out] beg Beginning of fake frame.
+/// \param[out] end End of fake frame.
 /// \returns Stack address or NULL.
 void *__asan_addr_is_in_fake_stack(void *fake_stack, void *addr, void **beg,
                                    void **end);
