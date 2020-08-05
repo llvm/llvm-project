@@ -3772,6 +3772,8 @@ TargetProperties::TargetProperties(Target *target)
     m_collection_sp->SetValueChangedCallback(
         ePropertyDisableASLR, [this] { DisableASLRValueChangedCallback(); });
     m_collection_sp->SetValueChangedCallback(
+        ePropertyInheritTCC, [this] { InheritTCCValueChangedCallback(); });
+    m_collection_sp->SetValueChangedCallback(
         ePropertyDisableSTDIO, [this] { DisableSTDIOValueChangedCallback(); });
 
     m_experimental_properties_up =
@@ -3809,6 +3811,7 @@ void TargetProperties::UpdateLaunchInfoFromProperties() {
   ErrorPathValueChangedCallback();
   DetachOnErrorValueChangedCallback();
   DisableASLRValueChangedCallback();
+  InheritTCCValueChangedCallback();
   DisableSTDIOValueChangedCallback();
 }
 
@@ -3900,6 +3903,17 @@ bool TargetProperties::GetDisableASLR() const {
 
 void TargetProperties::SetDisableASLR(bool b) {
   const uint32_t idx = ePropertyDisableASLR;
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+}
+
+bool TargetProperties::GetInheritTCC() const {
+  const uint32_t idx = ePropertyInheritTCC;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
+}
+
+void TargetProperties::SetInheritTCC(bool b) {
+  const uint32_t idx = ePropertyInheritTCC;
   m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
 }
 
@@ -4333,6 +4347,8 @@ void TargetProperties::SetProcessLaunchInfo(
   }
   SetDetachOnError(launch_info.GetFlags().Test(lldb::eLaunchFlagDetachOnError));
   SetDisableASLR(launch_info.GetFlags().Test(lldb::eLaunchFlagDisableASLR));
+  SetInheritTCC(
+      launch_info.GetFlags().Test(lldb::eLaunchFlagInheritTCCFromParent));
   SetDisableSTDIO(launch_info.GetFlags().Test(lldb::eLaunchFlagDisableSTDIO));
 }
 
@@ -4394,6 +4410,13 @@ void TargetProperties::DisableASLRValueChangedCallback() {
     m_launch_info.GetFlags().Set(lldb::eLaunchFlagDisableASLR);
   else
     m_launch_info.GetFlags().Clear(lldb::eLaunchFlagDisableASLR);
+}
+
+void TargetProperties::InheritTCCValueChangedCallback() {
+  if (GetInheritTCC())
+    m_launch_info.GetFlags().Set(lldb::eLaunchFlagInheritTCCFromParent);
+  else
+    m_launch_info.GetFlags().Clear(lldb::eLaunchFlagInheritTCCFromParent);
 }
 
 void TargetProperties::DisableSTDIOValueChangedCallback() {
