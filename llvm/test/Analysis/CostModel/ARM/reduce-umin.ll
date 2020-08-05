@@ -18,7 +18,7 @@ define i32 @reduce_i64(i32 %arg) {
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: %V4 = call i64 @llvm.experimental.vector.reduce.umin.v4i64(<4 x i64> undef)
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %V8 = call i64 @llvm.experimental.vector.reduce.umin.v8i64(<8 x i64> undef)
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 178 for instruction: %V16 = call i64 @llvm.experimental.vector.reduce.umin.v16i64(<16 x i64> undef)
-; NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; MVE-LABEL: 'reduce_i64'
 ; MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1 = call i64 @llvm.experimental.vector.reduce.umin.v1i64(<1 x i64> undef)
@@ -26,7 +26,7 @@ define i32 @reduce_i64(i32 %arg) {
 ; MVE-NEXT:  Cost Model: Found an estimated cost of 98 for instruction: %V4 = call i64 @llvm.experimental.vector.reduce.umin.v4i64(<4 x i64> undef)
 ; MVE-NEXT:  Cost Model: Found an estimated cost of 282 for instruction: %V8 = call i64 @llvm.experimental.vector.reduce.umin.v8i64(<8 x i64> undef)
 ; MVE-NEXT:  Cost Model: Found an estimated cost of 970 for instruction: %V16 = call i64 @llvm.experimental.vector.reduce.umin.v16i64(<16 x i64> undef)
-; MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %V1  = call i64 @llvm.experimental.vector.reduce.umin.v1i64(<1 x i64> undef)
   %V2  = call i64 @llvm.experimental.vector.reduce.umin.v2i64(<2 x i64> undef)
@@ -51,7 +51,7 @@ define i32 @reduce_i32(i32 %arg) {
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 81 for instruction: %V8 = call i32 @llvm.experimental.vector.reduce.umin.v8i32(<8 x i32> undef)
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 133 for instruction: %V16 = call i32 @llvm.experimental.vector.reduce.umin.v16i32(<16 x i32> undef)
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 237 for instruction: %V32 = call i32 @llvm.experimental.vector.reduce.umin.v32i32(<32 x i32> undef)
-; NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; MVE-LABEL: 'reduce_i32'
 ; MVE-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %V2 = call i32 @llvm.experimental.vector.reduce.umin.v2i32(<2 x i32> undef)
@@ -59,7 +59,7 @@ define i32 @reduce_i32(i32 %arg) {
 ; MVE-NEXT:  Cost Model: Found an estimated cost of 240 for instruction: %V8 = call i32 @llvm.experimental.vector.reduce.umin.v8i32(<8 x i32> undef)
 ; MVE-NEXT:  Cost Model: Found an estimated cost of 632 for instruction: %V16 = call i32 @llvm.experimental.vector.reduce.umin.v16i32(<16 x i32> undef)
 ; MVE-NEXT:  Cost Model: Found an estimated cost of 2184 for instruction: %V32 = call i32 @llvm.experimental.vector.reduce.umin.v32i32(<32 x i32> undef)
-; MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %V2  = call i32 @llvm.experimental.vector.reduce.umin.v2i32(<2 x i32> undef)
   %V4  = call i32 @llvm.experimental.vector.reduce.umin.v4i32(<4 x i32> undef)
@@ -86,7 +86,7 @@ define i32 @reduce_i16(i32 %arg) {
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 203 for instruction: %V16 = call i16 @llvm.experimental.vector.reduce.umin.v16i16(<16 x i16> undef)
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 303 for instruction: %V32 = call i16 @llvm.experimental.vector.reduce.umin.v32i16(<32 x i16> undef)
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 503 for instruction: %V64 = call i16 @llvm.experimental.vector.reduce.umin.v64i16(<64 x i16> undef)
-; NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; MVE-LABEL: 'reduce_i16'
 ; MVE-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %V2 = call i16 @llvm.experimental.vector.reduce.umin.v2i16(<2 x i16> undef)
@@ -95,7 +95,7 @@ define i32 @reduce_i16(i32 %arg) {
 ; MVE-NEXT:  Cost Model: Found an estimated cost of 1176 for instruction: %V16 = call i16 @llvm.experimental.vector.reduce.umin.v16i16(<16 x i16> undef)
 ; MVE-NEXT:  Cost Model: Found an estimated cost of 2720 for instruction: %V32 = call i16 @llvm.experimental.vector.reduce.umin.v32i16(<32 x i16> undef)
 ; MVE-NEXT:  Cost Model: Found an estimated cost of 8880 for instruction: %V64 = call i16 @llvm.experimental.vector.reduce.umin.v64i16(<64 x i16> undef)
-; MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %V2  = call i16 @llvm.experimental.vector.reduce.umin.v2i16(<2 x i16> undef)
   %V4  = call i16 @llvm.experimental.vector.reduce.umin.v4i16(<4 x i16> undef)
@@ -125,7 +125,7 @@ define i32 @reduce_i8(i32 %arg) {
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 493 for instruction: %V32 = call i8 @llvm.experimental.vector.reduce.umin.v32i8(<32 x i8> undef)
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 689 for instruction: %V64 = call i8 @llvm.experimental.vector.reduce.umin.v64i8(<64 x i8> undef)
 ; NEON-NEXT:  Cost Model: Found an estimated cost of 1081 for instruction: %V128 = call i8 @llvm.experimental.vector.reduce.umin.v128i8(<128 x i8> undef)
-; NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; MVE-LABEL: 'reduce_i8'
 ; MVE-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %V2 = call i8 @llvm.experimental.vector.reduce.umin.v2i8(<2 x i8> undef)
@@ -135,7 +135,7 @@ define i32 @reduce_i8(i32 %arg) {
 ; MVE-NEXT:  Cost Model: Found an estimated cost of 5668 for instruction: %V32 = call i8 @llvm.experimental.vector.reduce.umin.v32i8(<32 x i8> undef)
 ; MVE-NEXT:  Cost Model: Found an estimated cost of 11820 for instruction: %V64 = call i8 @llvm.experimental.vector.reduce.umin.v64i8(<64 x i8> undef)
 ; MVE-NEXT:  Cost Model: Found an estimated cost of 36412 for instruction: %V128 = call i8 @llvm.experimental.vector.reduce.umin.v128i8(<128 x i8> undef)
-; MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %V2   = call i8 @llvm.experimental.vector.reduce.umin.v2i8(<2 x i8> undef)
   %V4   = call i8 @llvm.experimental.vector.reduce.umin.v4i8(<4 x i8> undef)
