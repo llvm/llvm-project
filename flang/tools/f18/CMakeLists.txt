@@ -59,8 +59,24 @@ add_custom_target(module_files ALL DEPENDS ${MODULE_FILES})
 install(TARGETS f18 DESTINATION bin)
 
 set(FLANG_INTRINSIC_MODULES_DIR ${FLANG_BINARY_DIR}/include/flang)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/flang.sh.in ${CMAKE_BINARY_DIR}/tools/flang/bin/flang @ONLY)
-file(COPY ${CMAKE_BINARY_DIR}/tools/flang/bin/flang DESTINATION ${CMAKE_BINARY_DIR}/bin FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE)
+
+# This flang shell script will only work in a POSIX shell.
+if (NOT WIN32)
+  if (FLANG_STANDALONE_BUILD)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/flang.sh.in ${CMAKE_BINARY_DIR}/tools/flang/bin/flang @ONLY)
+    file(COPY ${CMAKE_BINARY_DIR}/tools/flang/bin/flang DESTINATION ${CMAKE_BINARY_DIR}/bin FILE_PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE)
+  else()
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/flang.sh.in
+      ${CMAKE_CURRENT_BINARY_DIR}/tools/flang/bin/flang @ONLY)
+    add_custom_command(TARGET f18
+        POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy
+          ${CMAKE_CURRENT_BINARY_DIR}/tools/flang/bin/flang
+          ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang
+            COMMAND chmod +x ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang)
+  endif()
+endif()
+
 # The flang script to be installed needs a different path to the headers.
 set(FLANG_INTRINSIC_MODULES_DIR ${CMAKE_INSTALL_PREFIX}/include/flang)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/flang.sh.in ${FLANG_BINARY_DIR}/bin/flang-install.sh @ONLY)
