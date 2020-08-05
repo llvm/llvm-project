@@ -311,12 +311,8 @@ enum {
   EM_RISCV = 243,         // RISC-V
   EM_LANAI = 244,         // Lanai 32-bit processor
   EM_BPF = 247,           // Linux kernel bpf virtual machine
-<<<<<<< HEAD
   EM_VE = 251,            // NEC SX-Aurora VE
-=======
-
   EM_P2 = 300,
->>>>>>> a54cdc85693... Squashing all commits -- P2 Target for LLVM
 };
 
 // Object file classes.
