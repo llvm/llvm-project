@@ -480,17 +480,6 @@ CapturedZoneInfo captureZoneInfo(const ExtractionZone &ExtZone) {
         CurNumberOfSwitch += Increment;
     }
 
-    // Decrement CurNumberOf{NestedLoops,Switch} if statement is {Loop,Switch}
-    // and inside Extraction Zone.
-    void decrementLoopSwitchCounters(Stmt *S) {
-      if (CurrentLocation != ZoneRelative::Inside)
-        return;
-      if (isLoop(S))
-        CurNumberOfNestedLoops--;
-      else if (isa<SwitchStmt>(S))
-        CurNumberOfSwitch--;
-    }
-
     bool VisitDecl(Decl *D) {
       Info.createDeclInfo(D, CurrentLocation);
       return true;
