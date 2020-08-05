@@ -587,10 +587,12 @@ private:
     }
     case Page21:
     case GOTPage21: {
-      assert(E.getAddend() == 0 && "PAGE21/GOTPAGE21 with non-zero addend");
+      assert((E.getKind() != GOTPage21 || E.getAddend() == 0) &&
+             "GOTPAGE21 with non-zero addend");
       uint64_t TargetPage =
-          E.getTarget().getAddress() & ~static_cast<uint64_t>(4096 - 1);
-      uint64_t PCPage = B.getAddress() & ~static_cast<uint64_t>(4096 - 1);
+          (E.getTarget().getAddress() + E.getAddend()) &
+            ~static_cast<uint64_t>(4096 - 1);
+      uint64_t PCPage = FixupAddress & ~static_cast<uint64_t>(4096 - 1);
 
       int64_t PageDelta = TargetPage - PCPage;
       if (PageDelta < -(1 << 30) || PageDelta > ((1 << 30) - 1))
@@ -606,8 +608,8 @@ private:
       break;
     }
     case PageOffset12: {
-      assert(E.getAddend() == 0 && "PAGEOFF12 with non-zero addend");
-      uint64_t TargetOffset = E.getTarget().getAddress() & 0xfff;
+      uint64_t TargetOffset =
+        (E.getTarget().getAddress() + E.getAddend()) & 0xfff;
 
       uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
       unsigned ImmShift = getPageOffset12Shift(RawInstr);
