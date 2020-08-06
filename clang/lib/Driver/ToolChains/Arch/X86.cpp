@@ -20,7 +20,7 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
-const char *x86::getX86TargetCPU(const ArgList &Args,
+std::string x86::getX86TargetCPU(const ArgList &Args,
                                  const llvm::Triple &Triple) {
   if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ)) {
     if (StringRef(A->getValue()) != "native")
@@ -33,7 +33,7 @@ const char *x86::getX86TargetCPU(const ArgList &Args,
     // with -native.
     std::string CPU = std::string(llvm::sys::getHostCPUName());
     if (!CPU.empty() && CPU != "generic")
-      return Args.MakeArgString(CPU);
+      return CPU;
   }
 
   if (const Arg *A = Args.getLastArgNoClaim(options::OPT__SLASH_arch)) {
@@ -64,7 +64,7 @@ const char *x86::getX86TargetCPU(const ArgList &Args,
   // Select the default CPU if none was given (or detection failed).
 
   if (!Triple.isX86())
-    return nullptr; // This routine is only handling x86 targets.
+    return ""; // This routine is only handling x86 targets.
 
   bool Is64Bit = Triple.getArch() == llvm::Triple::x86_64;
 
