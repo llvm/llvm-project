@@ -568,9 +568,6 @@ Parser::ParseOpenMPDeclareMapperDirective(AccessSpecifier AS) {
   }
 
   // Enter scope.
-  OMPDeclareMapperDecl *DMD = Actions.ActOnOpenMPDeclareMapperDirectiveStart(
-      getCurScope(), Actions.getCurLexicalContext(), MapperId, MapperType,
-      Range.getBegin(), VName, AS);
   DeclarationNameInfo DirName;
   SourceLocation Loc = Tok.getLocation();
   unsigned ScopeFlags = Scope::FnScope | Scope::DeclScope |
@@ -579,8 +576,8 @@ Parser::ParseOpenMPDeclareMapperDirective(AccessSpecifier AS) {
   Actions.StartOpenMPDSABlock(OMPD_declare_mapper, DirName, getCurScope(), Loc);
 
   // Add the mapper variable declaration.
-  Actions.ActOnOpenMPDeclareMapperDirectiveVarDecl(
-      DMD, getCurScope(), MapperType, Range.getBegin(), VName);
+  ExprResult MapperVarRef = Actions.ActOnOpenMPDeclareMapperDirectiveVarDecl(
+      getCurScope(), MapperType, Range.getBegin(), VName);
 
   // Parse map clauses.
   SmallVector<OMPClause *, 6> Clauses;
@@ -590,7 +587,7 @@ Parser::ParseOpenMPDeclareMapperDirective(AccessSpecifier AS) {
                                  : getOpenMPClauseKind(PP.getSpelling(Tok));
     Actions.StartOpenMPClause(CKind);
     OMPClause *Clause =
-        ParseOpenMPClause(OMPD_declare_mapper, CKind, Clauses.size() == 0);
+        ParseOpenMPClause(OMPD_declare_mapper, CKind, Clauses.empty());
     if (Clause)
       Clauses.push_back(Clause);
     else
@@ -609,12 +606,13 @@ Parser::ParseOpenMPDeclareMapperDirective(AccessSpecifier AS) {
   // Exit scope.
   Actions.EndOpenMPDSABlock(nullptr);
   OMPDirectiveScope.Exit();
-
-  DeclGroupPtrTy DGP =
-      Actions.ActOnOpenMPDeclareMapperDirectiveEnd(DMD, getCurScope(), Clauses);
+  DeclGroupPtrTy DG = Actions.ActOnOpenMPDeclareMapperDirective(
+      getCurScope(), Actions.getCurLexicalContext(), MapperId, MapperType,
+      Range.getBegin(), VName, AS, MapperVarRef.get(), Clauses);
   if (!IsCorrect)
     return DeclGroupPtrTy();
-  return DGP;
+
+  return DG;
 }
 
 TypeResult Parser::parseOpenMPDeclareMapperVarDecl(SourceRange &Range,

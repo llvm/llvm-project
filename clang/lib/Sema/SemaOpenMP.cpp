@@ -184,6 +184,7 @@ private:
     llvm::DenseSet<CanonicalDeclPtr<Decl>> UsedInScanDirective;
     llvm::DenseMap<CanonicalDeclPtr<const Decl>, UsesAllocatorsDeclKind>
         UsesAllocatorsDecls;
+    Expr *DeclareMapperVar = nullptr;
     SharingMapTy(OpenMPDirectiveKind DKind, DeclarationNameInfo Name,
                  Scope *CurScope, SourceLocation Loc)
         : Directive(DKind), DirectiveName(Name), CurScope(CurScope),
@@ -1071,6 +1072,15 @@ public:
     if (I == StackElem.UsesAllocatorsDecls.end())
       return None;
     return I->getSecond();
+  }
+
+  void addDeclareMapperVarRef(Expr *Ref) {
+    SharingMapTy &StackElem = getTopOfStack();
+    StackElem.DeclareMapperVar = Ref;
+  }
+  const Expr *getDeclareMapperVarRef() const {
+    const SharingMapTy *Top = getTopOfStackOrNull();
+    return Top ? Top->DeclareMapperVar : nullptr;
   }
 };
 
@@ -17978,10 +17988,10 @@ QualType Sema::ActOnOpenMPDeclareMapperType(SourceLocation TyLoc,
   return MapperType;
 }
 
-OMPDeclareMapperDecl *Sema::ActOnOpenMPDeclareMapperDirectiveStart(
+Sema::DeclGroupPtrTy Sema::ActOnOpenMPDeclareMapperDirective(
     Scope *S, DeclContext *DC, DeclarationName Name, QualType MapperType,
     SourceLocation StartLoc, DeclarationName VN, AccessSpecifier AS,
-    Decl *PrevDeclInScope) {
+    Expr *MapperVarRef, ArrayRef<OMPClause *> Clauses, Decl *PrevDeclInScope) {
   LookupResult Lookup(*this, Name, SourceLocation(), LookupOMPMapperName,
                       forRedeclarationInCurContext());
   // [OpenMP 5.0], 2.19.7.3 declare mapper Directive, Restrictions
@@ -18041,48 +18051,51 @@ OMPDeclareMapperDecl *Sema::ActOnOpenMPDeclareMapperDirectiveStart(
     Invalid = true;
   }
   auto *DMD = OMPDeclareMapperDecl::Create(Context, DC, StartLoc, Name,
-                                           MapperType, VN, PrevDMD);
-  DC->addDecl(DMD);
+                                           MapperType, VN, Clauses, PrevDMD);
+  if (S)
+    PushOnScopeChains(DMD, S);
+  else
+    DC->addDecl(DMD);
   DMD->setAccess(AS);
   if (Invalid)
     DMD->setInvalidDecl();
 
-  // Enter new function scope.
-  PushFunctionScope();
-  setFunctionHasBranchProtectedScope();
+  auto *VD = cast<DeclRefExpr>(MapperVarRef)->getDecl();
+  VD->setDeclContext(DMD);
+  VD->setLexicalDeclContext(DMD);
+  DMD->addDecl(VD);
+  DMD->setMapperVarRef(MapperVarRef);
 
-  CurContext = DMD;
-
-  return DMD;
+  return DeclGroupPtrTy::make(DeclGroupRef(DMD));
 }
 
-void Sema::ActOnOpenMPDeclareMapperDirectiveVarDecl(OMPDeclareMapperDecl *DMD,
-                                                    Scope *S,
-                                                    QualType MapperType,
-                                                    SourceLocation StartLoc,
-                                                    DeclarationName VN) {
-  VarDecl *VD = buildVarDecl(*this, StartLoc, MapperType, VN.getAsString());
+ExprResult
+Sema::ActOnOpenMPDeclareMapperDirectiveVarDecl(Scope *S, QualType MapperType,
+                                               SourceLocation StartLoc,
+                                               DeclarationName VN) {
+  TypeSourceInfo *TInfo =
+      Context.getTrivialTypeSourceInfo(MapperType, StartLoc);
+  auto *VD = VarDecl::Create(Context, Context.getTranslationUnitDecl(),
+                             StartLoc, StartLoc, VN.getAsIdentifierInfo(),
+                             MapperType, TInfo, SC_None);
   if (S)
-    PushOnScopeChains(VD, S);
-  else
-    DMD->addDecl(VD);
-  Expr *MapperVarRefExpr = buildDeclRefExpr(*this, VD, MapperType, StartLoc);
-  DMD->setMapperVarRef(MapperVarRefExpr);
+    PushOnScopeChains(VD, S, /*AddToContext=*/false);
+  Expr *E = buildDeclRefExpr(*this, VD, MapperType, StartLoc);
+  DSAStack->addDeclareMapperVarRef(E);
+  return E;
 }
 
-Sema::DeclGroupPtrTy
-Sema::ActOnOpenMPDeclareMapperDirectiveEnd(OMPDeclareMapperDecl *D, Scope *S,
-                                           ArrayRef<OMPClause *> ClauseList) {
-  PopDeclContext();
-  PopFunctionScopeInfo();
+bool Sema::isOpenMPDeclareMapperVarDeclAllowed(const VarDecl *VD) const {
+  assert(LangOpts.OpenMP && "Expected OpenMP mode.");
+  const Expr *Ref = DSAStack->getDeclareMapperVarRef();
+  if (const auto *DRE = cast_or_null<DeclRefExpr>(Ref))
+    return VD->getCanonicalDecl() == DRE->getDecl()->getCanonicalDecl();
+  return true;
+}
 
-  if (D) {
-    if (S)
-      PushOnScopeChains(D, S, /*AddToContext=*/false);
-    D->CreateClauses(Context, ClauseList);
-  }
-
-  return DeclGroupPtrTy::make(DeclGroupRef(D));
+const ValueDecl *Sema::getOpenMPDeclareMapperVarName() const {
+  assert(LangOpts.OpenMP && "Expected OpenMP mode.");
+  return cast<DeclRefExpr>(DSAStack->getDeclareMapperVarRef())->getDecl();
 }
 
 OMPClause *Sema::ActOnOpenMPNumTeamsClause(Expr *NumTeams,

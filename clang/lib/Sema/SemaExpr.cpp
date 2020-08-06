@@ -339,11 +339,10 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
   //  List-items in map clauses on this construct may only refer to the declared
   //  variable var and entities that could be referenced by a procedure defined
   //  at the same location
-  auto *DMD = dyn_cast<OMPDeclareMapperDecl>(CurContext);
-  if (LangOpts.OpenMP && DMD && !CurContext->containsDecl(D) &&
-      isa<VarDecl>(D)) {
+  if (LangOpts.OpenMP && isa<VarDecl>(D) &&
+      !isOpenMPDeclareMapperVarDeclAllowed(cast<VarDecl>(D))) {
     Diag(Loc, diag::err_omp_declare_mapper_wrong_var)
-        << DMD->getVarName().getAsString();
+        << getOpenMPDeclareMapperVarName();
     Diag(D->getLocation(), diag::note_entity_declared_at) << D;
     return true;
   }
