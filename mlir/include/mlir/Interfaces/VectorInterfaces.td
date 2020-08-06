@@ -137,8 +137,9 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*methodName=*/"getVectorType",
       /*args=*/(ins),
       /*methodBody=*/"",
-      /*defaultImplementation=*/
-        "return $_op.vector().getType().template cast<VectorType>();"
+      /*defaultImplementation=*/[{
+        return $_op.vector().getType().template dyn_cast<VectorType>();
+        }]
     >,
     InterfaceMethod<
       /*desc=*/[{ Return the number of dimensions that participate in the
