@@ -44,7 +44,7 @@ define <2 x i8> @t3_vec_splat(<2 x i8> %x) {
 
 define <2 x i8> @t4_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @t4_vec(
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact <2 x i8> [[X:%.*]], <i8 32, i8 16>
+; CHECK-NEXT:    [[DIV:%.*]] = ashr exact <2 x i8> [[X:%.*]], <i8 5, i8 4>
 ; CHECK-NEXT:    ret <2 x i8> [[DIV]]
 ;
   %div = sdiv exact <2 x i8> %x, <i8 32, i8 16>
