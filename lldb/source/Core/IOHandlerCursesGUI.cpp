@@ -396,11 +396,11 @@ public:
     ::wbkgd(m_window, COLOR_PAIR(color_pair_idx));
   }
 
-  void PutCStringTruncated(int right_pad, const char *s) {
+  void PutCStringTruncated(int right_pad, const char *s, int len = -1) {
     int bytes_left = GetWidth() - GetCursorX();
     if (bytes_left > right_pad) {
       bytes_left -= right_pad;
-      ::waddnstr(m_window, s, bytes_left);
+      ::waddnstr(m_window, s, len < 0 ? bytes_left : std::min(bytes_left, len));
     }
   }
 
@@ -450,6 +450,62 @@ public:
 
   size_t LimitLengthToRestOfLine(size_t length) const {
     return std::min<size_t>(length, std::max(0, GetWidth() - GetCursorX() - 1));
+  }
+
+  // Curses doesn't allow direct output of color escape sequences, but that's
+  // how we get source lines from the Highligher class. Read the line and
+  // convert color escape sequences to curses color attributes.
+  void OutputColoredStringTruncated(int right_pad, StringRef string,
+                                    bool use_blue_background) {
+    attr_t saved_attr;
+    short saved_pair;
+    int saved_opts;
+    ::wattr_get(m_window, &saved_attr, &saved_pair, &saved_opts);
+    if (use_blue_background)
+      ::wattron(m_window, COLOR_PAIR(16));
+    while (!string.empty()) {
+      size_t esc_pos = string.find('\x1b');
+      if (esc_pos == StringRef::npos) {
+        PutCStringTruncated(right_pad, string.data(), string.size());
+        break;
+      }
+      if (esc_pos > 0) {
+        PutCStringTruncated(right_pad, string.data(), esc_pos);
+        string = string.drop_front(esc_pos);
+      }
+      bool consumed = string.consume_front("\x1b");
+      assert(consumed);
+      UNUSED_IF_ASSERT_DISABLED(consumed);
+      // This is written to match our Highlighter classes, which seem to
+      // generate only foreground color escape sequences. If necessary, this
+      // will need to be extended.
+      if (!string.consume_front("[")) {
+        llvm::errs() << "Missing '[' in color escape sequence.\n";
+        continue;
+      }
+      // Only 8 basic foreground colors and reset, our Highlighter doesn't use
+      // anything else.
+      int value;
+      if (!!string.consumeInteger(10, value) || // Returns false on success.
+          !(value == 0 || (value >= 30 && value <= 37))) {
+        llvm::errs() << "No valid color code in color escape sequence.\n";
+        continue;
+      }
+      if (!string.consume_front("m")) {
+        llvm::errs() << "Missing 'm' in color escape sequence.\n";
+        continue;
+      }
+      if (value == 0) { // Reset.
+        ::wattr_set(m_window, saved_attr, saved_pair, &saved_opts);
+        if (use_blue_background)
+          ::wattron(m_window, COLOR_PAIR(16));
+      } else {
+        // Mapped directly to first 16 color pairs (black/blue background).
+        ::wattron(m_window,
+                  COLOR_PAIR(value - 30 + 1 + (use_blue_background ? 8 : 0)));
+      }
+    }
+    ::wattr_set(m_window, saved_attr, saved_pair, &saved_opts);
   }
 
   void Touch() {
@@ -540,7 +596,7 @@ public:
   void DrawTitleBox(const char *title, const char *bottom_message = nullptr) {
     attr_t attr = 0;
     if (IsActive())
-      attr = A_BOLD | COLOR_PAIR(2);
+      attr = A_BOLD | COLOR_PAIR(18);
     else
       attr = 0;
     if (attr)
@@ -970,14 +1026,14 @@ void Menu::DrawMenuTitle(Window &window, bool highlight) {
 
     if (m_key_name.empty()) {
       if (!underlined_shortcut && llvm::isPrint(m_key_value)) {
-        window.AttributeOn(COLOR_PAIR(3));
+        window.AttributeOn(COLOR_PAIR(19));
         window.Printf(" (%c)", m_key_value);
-        window.AttributeOff(COLOR_PAIR(3));
+        window.AttributeOff(COLOR_PAIR(19));
       }
     } else {
-      window.AttributeOn(COLOR_PAIR(3));
+      window.AttributeOn(COLOR_PAIR(19));
       window.Printf(" (%s)", m_key_name.c_str());
-      window.AttributeOff(COLOR_PAIR(3));
+      window.AttributeOff(COLOR_PAIR(19));
     }
   }
 }
@@ -989,7 +1045,7 @@ bool Menu::WindowDelegateDraw(Window &window, bool force) {
   Menu::Type menu_type = GetType();
   switch (menu_type) {
   case Menu::Type::Bar: {
-    window.SetBackground(2);
+    window.SetBackground(18);
     window.MoveCursor(0, 0);
     for (size_t i = 0; i < num_submenus; ++i) {
       Menu *menu = submenus[i].get();
@@ -1009,7 +1065,7 @@ bool Menu::WindowDelegateDraw(Window &window, bool force) {
     int cursor_x = 0;
     int cursor_y = 0;
     window.Erase();
-    window.SetBackground(2);
+    window.SetBackground(18);
     window.Box();
     for (size_t i = 0; i < num_submenus; ++i) {
       const bool is_selected = (i == static_cast<size_t>(selected_idx));
@@ -2384,7 +2440,7 @@ protected:
 
     attr_t changd_attr = 0;
     if (valobj->GetValueDidChange())
-      changd_attr = COLOR_PAIR(5) | A_BOLD;
+      changd_attr = COLOR_PAIR(2) | A_BOLD;
 
     if (value && value[0]) {
       window.PutCStringTruncated(1, " = ");
@@ -3253,7 +3309,7 @@ public:
     Thread *thread = exe_ctx.GetThreadPtr();
     StackFrame *frame = exe_ctx.GetFramePtr();
     window.Erase();
-    window.SetBackground(2);
+    window.SetBackground(18);
     window.MoveCursor(0, 0);
     if (process) {
       const StateType state = process->GetState();
@@ -3525,7 +3581,7 @@ public:
       }
 
       const attr_t selected_highlight_attr = A_REVERSE;
-      const attr_t pc_highlight_attr = COLOR_PAIR(1);
+      const attr_t pc_highlight_attr = COLOR_PAIR(9);
 
       for (size_t i = 0; i < num_visible_lines; ++i) {
         const uint32_t curr_line = m_first_visible_line + i;
@@ -3544,7 +3600,7 @@ public:
             highlight_attr = selected_highlight_attr;
 
           if (bp_lines.find(curr_line + 1) != bp_lines.end())
-            bp_attr = COLOR_PAIR(2);
+            bp_attr = COLOR_PAIR(18);
 
           if (bp_attr)
             window.AttributeOn(bp_attr);
@@ -3563,10 +3619,13 @@ public:
 
           if (highlight_attr)
             window.AttributeOn(highlight_attr);
-          const uint32_t line_len = window.LimitLengthToRestOfLine(
-              m_file_sp->GetLineLength(curr_line + 1, false));
-          if (line_len > 0)
-            window.PutCString(m_file_sp->PeekLineData(curr_line + 1), line_len);
+
+          StreamString lineStream;
+          m_file_sp->DisplaySourceLines(curr_line + 1, {}, 0, 0, &lineStream);
+          StringRef line = lineStream.GetString();
+          if (line.endswith("\n"))
+            line = line.drop_back();
+          window.OutputColoredStringTruncated(1, line, is_pc_line);
 
           if (is_pc_line && frame_sp &&
               frame_sp->GetConcreteFrameIndex() == 0) {
@@ -3580,10 +3639,13 @@ public:
                 int desc_x = window_width - stop_description_len - 16;
                 if (desc_x - window.GetCursorX() > 0)
                   window.Printf("%*s", desc_x - window.GetCursorX(), "");
-                window.MoveCursor(window_width - stop_description_len - 15,
+                window.MoveCursor(window_width - stop_description_len - 16,
                                   line_y);
-                window.PrintfTruncated(1, "<<< Thread %u: %s ",
+                const attr_t stop_reason_attr = COLOR_PAIR(17);
+                window.AttributeOn(stop_reason_attr);
+                window.PrintfTruncated(1, " <<< Thread %u: %s ",
                                        thread->GetIndexID(), stop_description);
+                window.AttributeOff(stop_reason_attr);
               }
             } else {
               window.Printf("%*s", window_width - window.GetCursorX() - 1, "");
@@ -3623,7 +3685,7 @@ public:
         }
 
         const attr_t selected_highlight_attr = A_REVERSE;
-        const attr_t pc_highlight_attr = COLOR_PAIR(1);
+        const attr_t pc_highlight_attr = COLOR_PAIR(17);
 
         StreamString strm;
 
@@ -3671,7 +3733,7 @@ public:
 
           if (bp_file_addrs.find(inst->GetAddress().GetFileAddress()) !=
               bp_file_addrs.end())
-            bp_attr = COLOR_PAIR(2);
+            bp_attr = COLOR_PAIR(18);
 
           if (bp_attr)
             window.AttributeOn(bp_attr);
@@ -4190,11 +4252,28 @@ void IOHandlerCursesGUI::Activate() {
       main_window_sp->CreateHelpSubwindow();
     }
 
-    init_pair(1, COLOR_WHITE, COLOR_BLUE);
-    init_pair(2, COLOR_BLACK, COLOR_WHITE);
-    init_pair(3, COLOR_MAGENTA, COLOR_WHITE);
-    init_pair(4, COLOR_MAGENTA, COLOR_BLACK);
-    init_pair(5, COLOR_RED, COLOR_BLACK);
+    // All colors with black background.
+    init_pair(1, COLOR_BLACK, COLOR_BLACK);
+    init_pair(2, COLOR_RED, COLOR_BLACK);
+    init_pair(3, COLOR_GREEN, COLOR_BLACK);
+    init_pair(4, COLOR_YELLOW, COLOR_BLACK);
+    init_pair(5, COLOR_BLUE, COLOR_BLACK);
+    init_pair(6, COLOR_MAGENTA, COLOR_BLACK);
+    init_pair(7, COLOR_CYAN, COLOR_BLACK);
+    init_pair(8, COLOR_WHITE, COLOR_BLACK);
+    // All colors with blue background.
+    init_pair(9, COLOR_BLACK, COLOR_BLUE);
+    init_pair(10, COLOR_RED, COLOR_BLUE);
+    init_pair(11, COLOR_GREEN, COLOR_BLUE);
+    init_pair(12, COLOR_YELLOW, COLOR_BLUE);
+    init_pair(13, COLOR_BLUE, COLOR_BLUE);
+    init_pair(14, COLOR_MAGENTA, COLOR_BLUE);
+    init_pair(15, COLOR_CYAN, COLOR_BLUE);
+    init_pair(16, COLOR_WHITE, COLOR_BLUE);
+
+    init_pair(17, COLOR_WHITE, COLOR_BLUE);
+    init_pair(18, COLOR_BLACK, COLOR_WHITE);
+    init_pair(19, COLOR_MAGENTA, COLOR_WHITE);
   }
 }
 
