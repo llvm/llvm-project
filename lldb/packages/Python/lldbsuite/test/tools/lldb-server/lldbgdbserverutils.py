@@ -12,6 +12,7 @@ import six
 import socket_packet_pump
 import subprocess
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import configuration
 
 from six.moves import queue
 
@@ -88,6 +89,10 @@ def get_debugserver_exe():
     """
     if "LLDB_DEBUGSERVER_PATH" in os.environ:
         return os.environ["LLDB_DEBUGSERVER_PATH"]
+
+    if configuration.arch and configuration.arch == "x86_64" and \
+       platform.machine().startswith("arm64"):
+        return '/Library/Apple/usr/libexec/oah/debugserver'
 
     return _get_debug_monitor_from_lldb(
         lldbtest_config.lldbExec, "debugserver")
