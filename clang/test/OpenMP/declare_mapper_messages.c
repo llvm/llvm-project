@@ -23,7 +23,7 @@ struct vec {                                                            // expec
 #pragma omp declare mapper(cc:struct vec v) map(v) (                    // expected-warning {{extra tokens at the end of '#pragma omp declare mapper' are ignored}}
 
 #pragma omp declare mapper(++: struct vec v) map(v.len)                 // expected-error {{illegal OpenMP user-defined mapper identifier}}
-#pragma omp declare mapper(id1: struct vec v) map(v.len, temp)          // expected-error {{only variable v is allowed in map clauses of this 'omp declare mapper' directive}}
+#pragma omp declare mapper(id1: struct vec v) map(v.len, temp)          // expected-error {{only variable 'v' is allowed in map clauses of this 'omp declare mapper' directive}}
 #pragma omp declare mapper(default : struct vec kk) map(kk.data[0:2])   // expected-note {{previous definition is here}}
 #pragma omp declare mapper(struct vec v) map(v.len)                     // expected-error {{redefinition of user-defined mapper for type 'struct vec' with name 'default'}}
 #pragma omp declare mapper(int v) map(v)                                // expected-error {{mapper type must be of struct, union or class type}}
