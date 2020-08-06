@@ -1,0 +1,14 @@
+// -*- mode: swift; -*-
+// Test that the REPL is launched with the current OS as availability target.
+// REQUIRES: system-darwin
+
+// RUN: mkdir -p %t.dir
+// RUN: echo '@available(macOS '>%t.dir/NewModule.swift
+// RUN: sw_vers | grep ProductVersion | cut -d : -f 2 >>%t.dir/NewModule.swift
+// RUN: echo ', *) public let message = "Hello"' >>%t.dir/NewModule.swift
+// RUN: %target-swiftc -module-name NewModule -emit-module -emit-library -o %t.dir/libNewModule%target-shared-library-suffix %t.dir/NewModule.swift
+
+// RUN: %lldb --repl="-I%t.dir -L%t.dir -lNewModule" --repl-language swift < %s | FileCheck %s
+import NewModule
+message
+// CHECK: $R0{{.*}}Hello
