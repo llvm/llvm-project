@@ -1234,7 +1234,13 @@ static bool shouldSkip(BaseCommand *cmd) {
 static std::vector<BaseCommand *>::iterator
 findOrphanPos(std::vector<BaseCommand *>::iterator b,
               std::vector<BaseCommand *>::iterator e) {
+  // OutputSections without the SHF_ALLOC flag are not part of the memory image
+  // and their addresses usually don't matter. Place any orphan sections without
+  // the SHF_ALLOC flag at the end so that these do not affect the address
+  // assignment of OutputSections with the SHF_ALLOC flag.
   OutputSection *sec = cast<OutputSection>(*e);
+  if (!(sec->flags & SHF_ALLOC))
+    return e;
 
   // Find the first element that has as close a rank as possible.
   auto i = std::max_element(b, e, [=](BaseCommand *a, BaseCommand *b) {
@@ -2329,8 +2335,6 @@ std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs(Partition &part) {
   }
 
   for (OutputSection *sec : outputSections) {
-    if (!(sec->flags & SHF_ALLOC))
-      break;
     if (!needsPtLoad(sec))
       continue;
 

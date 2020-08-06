@@ -128,6 +128,12 @@ public:
   bool legalizeFDIVFastIntrin(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &B) const;
 
+  bool legalizeRsqClampIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                 MachineIRBuilder &B) const;
+
+  bool legalizeDSAtomicFPIntrinsic(LegalizerHelper &Helper,
+                                   MachineInstr &MI, Intrinsic::ID IID) const;
+
   bool getImplicitArgPtr(Register DstReg, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B) const;
 

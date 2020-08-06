@@ -1246,6 +1246,44 @@ TEST_F(PatternMatchTest, WithOverflowInst) {
   EXPECT_EQ(Add, WOI);
 }
 
+TEST_F(PatternMatchTest, MinMaxIntrinsics) {
+  Type *Ty = IRB.getInt32Ty();
+  Value *L = ConstantInt::get(Ty, 1);
+  Value *R = ConstantInt::get(Ty, 2);
+  Value *MatchL, *MatchR;
+
+  // Check for intrinsic ID match and capture of operands.
+  EXPECT_TRUE(m_SMax(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateBinaryIntrinsic(Intrinsic::smax, L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  EXPECT_TRUE(m_SMin(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateBinaryIntrinsic(Intrinsic::smin, L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  EXPECT_TRUE(m_UMax(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateBinaryIntrinsic(Intrinsic::umax, L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  EXPECT_TRUE(m_UMin(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateBinaryIntrinsic(Intrinsic::umin, L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  // Check for intrinsic ID mismatch.
+  EXPECT_FALSE(m_SMax(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateBinaryIntrinsic(Intrinsic::smin, L, R)));
+  EXPECT_FALSE(m_SMin(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateBinaryIntrinsic(Intrinsic::umax, L, R)));
+  EXPECT_FALSE(m_UMax(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateBinaryIntrinsic(Intrinsic::umin, L, R)));
+  EXPECT_FALSE(m_UMin(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateBinaryIntrinsic(Intrinsic::smax, L, R)));
+}
+
 TEST_F(PatternMatchTest, IntrinsicMatcher) {
   Value *Name = IRB.CreateAlloca(IRB.getInt8Ty());
   Value *Hash = IRB.getInt64(0);

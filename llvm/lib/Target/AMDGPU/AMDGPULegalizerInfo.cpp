@@ -60,12 +60,19 @@ static LLT getPow2ScalarType(LLT Ty) {
   return LLT::scalar(Pow2Bits);
 }
 
+/// \returs true if this is an odd sized vector which should widen by adding an
+/// additional element. This is mostly to handle <3 x s16> -> <4 x s16>. This
+/// excludes s1 vectors, which should always be scalarized.
 static LegalityPredicate isSmallOddVector(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
-    return Ty.isVector() &&
-           Ty.getNumElements() % 2 != 0 &&
-           Ty.getElementType().getSizeInBits() < 32 &&
+    if (!Ty.isVector())
+      return false;
+
+    const LLT EltTy = Ty.getElementType();
+    const unsigned EltSize = EltTy.getSizeInBits();
+    return Ty.getNumElements() % 2 != 0 &&
+           EltSize > 1 && EltSize < 32 &&
            Ty.getSizeInBits() % 32 != 0;
   };
 }
@@ -467,7 +474,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT, G_SADDSAT, G_SSUBSAT})
       .legalFor({S32, S16, V2S16}) // Clamp modifier
-      .minScalar(0, S16)
+      .minScalarOrElt(0, S16)
       .clampMaxNumElements(0, S16, 2)
       .scalarize(0)
       .widenScalarToNextPow2(0, 32)
@@ -3153,6 +3160,86 @@ bool AMDGPULegalizerInfo::legalizeFDIVFastIntrin(MachineInstr &MI,
   return true;
 }
 
+// Expand llvm.amdgcn.rsq.clamp on targets that don't support the instruction.
+// FIXME: Why do we handle this one but not other removed instructions?
+//
+// Reciprocal square root.  The clamp prevents infinite results, clamping
+// infinities to max_float.  D.f = 1.0 / sqrt(S0.f), result clamped to
+// +-max_float.
+bool AMDGPULegalizerInfo::legalizeRsqClampIntrinsic(MachineInstr &MI,
+                                                    MachineRegisterInfo &MRI,
+                                                    MachineIRBuilder &B) const {
+  if (ST.getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS)
+    return true;
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(2).getReg();
+  auto Flags = MI.getFlags();
+
+  LLT Ty = MRI.getType(Dst);
+
+  const fltSemantics *FltSemantics;
+  if (Ty == LLT::scalar(32))
+    FltSemantics = &APFloat::IEEEsingle();
+  else if (Ty == LLT::scalar(64))
+    FltSemantics = &APFloat::IEEEdouble();
+  else
+    return false;
+
+  auto Rsq = B.buildIntrinsic(Intrinsic::amdgcn_rsq, {Ty}, false)
+    .addUse(Src)
+    .setMIFlags(Flags);
+
+  // We don't need to concern ourselves with the snan handling difference, since
+  // the rsq quieted (or not) so use the one which will directly select.
+  const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
+  const bool UseIEEE = MFI->getMode().IEEE;
+
+  auto MaxFlt = B.buildFConstant(Ty, APFloat::getLargest(*FltSemantics));
+  auto ClampMax = UseIEEE ? B.buildFMinNumIEEE(Ty, Rsq, MaxFlt, Flags) :
+                            B.buildFMinNum(Ty, Rsq, MaxFlt, Flags);
+
+  auto MinFlt = B.buildFConstant(Ty, APFloat::getLargest(*FltSemantics, true));
+
+  if (UseIEEE)
+    B.buildFMaxNumIEEE(Dst, ClampMax, MinFlt, Flags);
+  else
+    B.buildFMaxNum(Dst, ClampMax, MinFlt, Flags);
+  MI.eraseFromParent();
+  return true;
+}
+
+static unsigned getDSFPAtomicOpcode(Intrinsic::ID IID) {
+  switch (IID) {
+  case Intrinsic::amdgcn_ds_fadd:
+    return AMDGPU::G_ATOMICRMW_FADD;
+  case Intrinsic::amdgcn_ds_fmin:
+    return AMDGPU::G_AMDGPU_ATOMIC_FMIN;
+  case Intrinsic::amdgcn_ds_fmax:
+    return AMDGPU::G_AMDGPU_ATOMIC_FMAX;
+  default:
+    llvm_unreachable("not a DS FP intrinsic");
+  }
+}
+
+bool AMDGPULegalizerInfo::legalizeDSAtomicFPIntrinsic(LegalizerHelper &Helper,
+                                                      MachineInstr &MI,
+                                                      Intrinsic::ID IID) const {
+  GISelChangeObserver &Observer = Helper.Observer;
+  Observer.changingInstr(MI);
+
+  MI.setDesc(ST.getInstrInfo()->get(getDSFPAtomicOpcode(IID)));
+
+  // The remaining operands were used to set fields in the MemOperand on
+  // construction.
+  for (int I = 6; I > 3; --I)
+    MI.RemoveOperand(I);
+
+  MI.RemoveOperand(1); // Remove the intrinsic ID.
+  Observer.changedInstr(MI);
+  return true;
+}
+
 bool AMDGPULegalizerInfo::getImplicitArgPtr(Register DstReg,
                                             MachineRegisterInfo &MRI,
                                             MachineIRBuilder &B) const {
@@ -4387,6 +4474,12 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return legalizeTrapIntrinsic(MI, MRI, B);
   case Intrinsic::debugtrap:
     return legalizeDebugTrapIntrinsic(MI, MRI, B);
+  case Intrinsic::amdgcn_rsq_clamp:
+    return legalizeRsqClampIntrinsic(MI, MRI, B);
+  case Intrinsic::amdgcn_ds_fadd:
+  case Intrinsic::amdgcn_ds_fmin:
+  case Intrinsic::amdgcn_ds_fmax:
+    return legalizeDSAtomicFPIntrinsic(Helper, MI, IntrID);
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))
