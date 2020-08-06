@@ -186,6 +186,11 @@ def : GINodeEquiv<G_AMDGPU_ATOMIC_INC, SIatomic_inc>;
 def : GINodeEquiv<G_AMDGPU_ATOMIC_DEC, SIatomic_dec>;
 def : GINodeEquiv<G_AMDGPU_ATOMIC_INC, atomic_inc_glue>;
 def : GINodeEquiv<G_AMDGPU_ATOMIC_DEC, atomic_dec_glue>;
+def : GINodeEquiv<G_AMDGPU_ATOMIC_FMIN, SIatomic_fmin>;
+def : GINodeEquiv<G_AMDGPU_ATOMIC_FMAX, SIatomic_fmax>;
+def : GINodeEquiv<G_AMDGPU_ATOMIC_FMIN, atomic_load_fmin_glue>;
+def : GINodeEquiv<G_AMDGPU_ATOMIC_FMAX, atomic_load_fmax_glue>;
+
 
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_SWAP, SIbuffer_atomic_swap>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_ADD, SIbuffer_atomic_add>;
