@@ -8,11 +8,11 @@
 # RUN: llvm-objdump -s %t | FileCheck %s
 
 # CHECK:      Contents of section .debug_loc:
-# CHECK-NEXT:  0000 feffffff
+# CHECK-NEXT:  0000 01000000
 # CHECK-NEXT: Contents of section .debug_ranges:
-# CHECK-NEXT:  0000 feffffff
+# CHECK-NEXT:  0000 01000000
 # CHECK-NEXT: Contents of section .debug_addr:
-# CHECK-NEXT:  0000 ffffffff
+# CHECK-NEXT:  0000 00000000
 
 .section .text.1,"axe"
   .byte 0
@@ -24,6 +24,6 @@
 .section .debug_ranges
   .long .text.1+16
 
-## Resolved to UINT32_C(-1), with the addend ignored.
+## Resolved to UINT32_C(0), with the addend ignored.
 .section .debug_addr
   .long .text.1+8
