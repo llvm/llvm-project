@@ -1,7 +1,3 @@
-"""Test aspects of lldb commands on universal binaries."""
-
-
-
 import unittest2
 import os
 import lldb
@@ -14,6 +10,7 @@ def haswellOrLater():
     return "AVX2" in features.split()
 
 class UniversalTestCase(TestBase):
+    """Test aspects of lldb commands on universal binaries."""
 
     NO_DEBUG_INFO_TESTCASE = True
     mydir = TestBase.compute_mydir(__file__)
@@ -39,9 +36,10 @@ class UniversalTestCase(TestBase):
 
         # Create a target by the debugger.
         target = self.dbg.CreateTargetWithFileAndTargetTriple(
-            exe, "x86_64-apple-macosx")
+            exe, "x86_64-apple-macosx10.10")
         self.assertTrue(target, VALID_TARGET)
-        self.expect("image list -A -b", substrs=["x86_64 testit"])
+        self.expect("image list -t -b", substrs=["x86_64-apple-macosx10.9.0 testit"])
+        self.expect("target list", substrs=["testit", "arch=x86_64-apple-macosx10.10"])
 
         # Now launch the process, and do not stop at entry point.
         process = target.LaunchSimple(
