@@ -68,7 +68,7 @@ fir::CharBoxValue Fortran::lower::CharacterExprHelper::materializeValue(
 fir::CharBoxValue
 Fortran::lower::CharacterExprHelper::toDataLengthPair(mlir::Value character) {
   // TODO: get rid of toDataLengthPair when adding support for arrays
-  auto charBox = toExtendedValue(character).getCharBox();
+  auto *charBox = toExtendedValue(character).getCharBox();
   assert(charBox && "Array unsupported in character lowering helper");
   return *charBox;
 }
@@ -438,6 +438,30 @@ Fortran::lower::CharacterExprHelper::materializeCharacter(mlir::Value str) {
   if (needToMaterialize(box))
     box = materializeValue(box);
   return {box.getBuffer(), box.getLen()};
+}
+
+std::pair<mlir::Value, mlir::Value>
+Fortran::lower::CharacterExprHelper::materializeCharacterOrSequence(
+    mlir::Value str) {
+  if (auto ptrToTy = fir::dyn_cast_ptrEleTy(str.getType()))
+    if (auto seqTy = ptrToTy.dyn_cast<fir::SequenceType>()) {
+      // Handle linearization of an array in a scalar context.
+      auto eleTy = seqTy.getEleTy();
+      assert(eleTy.isa<fir::CharacterType>() && seqTy.hasConstantShape());
+      // Linearize the shape.
+      fir::SequenceType::Extent size = 1;
+      for (auto e : seqTy.getShape())
+        size *= e;
+      fir::SequenceType::Shape newShape = {size};
+      auto newTy = builder.getRefType(fir::SequenceType::get(newShape, eleTy));
+      // Recast the buffer ref to look like a scalar.
+      auto buffer = builder.createConvert(loc, newTy, str);
+      // Cons the new cumulative length.
+      auto length =
+          builder.createIntegerConstant(loc, builder.getIndexType(), size);
+      return {buffer, length};
+    }
+  return materializeCharacter(str);
 }
 
 bool Fortran::lower::CharacterExprHelper::isCharacterLiteral(mlir::Type type) {
