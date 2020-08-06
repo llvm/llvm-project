@@ -1384,7 +1384,7 @@ bool SITargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT,
 }
 
 bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
-    unsigned Size, unsigned AddrSpace, unsigned Align,
+    unsigned Size, unsigned AddrSpace, Align Alignment,
     MachineMemOperand::Flags Flags, bool *IsFast) const {
   if (IsFast)
     *IsFast = false;
@@ -1394,7 +1394,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
     // ds_read/write_b64 require 8-byte alignment, but we can do a 4 byte
     // aligned, 8 byte access in a single operation using ds_read2/write2_b32
     // with adjacent offsets.
-    bool AlignedBy4 = (Align % 4 == 0);
+    bool AlignedBy4 = Alignment >= Align(4);
     if (IsFast)
       *IsFast = AlignedBy4;
 
@@ -1407,7 +1407,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
   if (!Subtarget->hasUnalignedScratchAccess() &&
       (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ||
        AddrSpace == AMDGPUAS::FLAT_ADDRESS)) {
-    bool AlignedBy4 = Align >= 4;
+    bool AlignedBy4 = Alignment >= Align(4);
     if (IsFast)
       *IsFast = AlignedBy4;
 
@@ -1422,7 +1422,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
       // 2-byte alignment is worse than 1 unless doing a 2-byte accesss.
       *IsFast = (AddrSpace == AMDGPUAS::CONSTANT_ADDRESS ||
                  AddrSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT) ?
-        Align >= 4 : Align != 2;
+        Alignment >= Align(4) : Alignment != Align(2);
     }
 
     return true;
@@ -1438,12 +1438,12 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
   if (IsFast)
     *IsFast = true;
 
-  return Size >= 32 && Align >= 4;
+  return Size >= 32 && Alignment >= Align(4);
 }
 
 bool SITargetLowering::allowsMisalignedMemoryAccesses(
-    EVT VT, unsigned AddrSpace, unsigned Align, MachineMemOperand::Flags Flags,
-    bool *IsFast) const {
+    EVT VT, unsigned AddrSpace, unsigned Alignment,
+    MachineMemOperand::Flags Flags, bool *IsFast) const {
   if (IsFast)
     *IsFast = false;
 
@@ -1457,7 +1457,7 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(
   }
 
   return allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AddrSpace,
-                                            Align, Flags, IsFast);
+                                            Align(Alignment), Flags, IsFast);
 }
 
 EVT SITargetLowering::getOptimalMemOpType(
