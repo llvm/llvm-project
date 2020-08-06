@@ -19,9 +19,6 @@ list(APPEND PLUGIN_PLATFORM_MACOSX_SOURCES
 
 list(APPEND PLUGIN_PLATFORM_MACOSX_DARWIN_ONLY_SOURCES
   PlatformAppleSimulator.cpp
-  PlatformiOSSimulator.cpp
-  PlatformAppleTVSimulator.cpp
-  PlatformAppleWatchSimulator.cpp
   )
 
 if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
