@@ -1130,14 +1130,13 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
   if (match(Op1, m_SignMask()))
     return new ZExtInst(Builder.CreateICmpEQ(Op0, Op1), I.getType());
 
+  // sdiv exact X,  1<<C  -->    ashr exact X, C   iff  1<<C  is non-negative
+  if (I.isExact() && match(Op1, m_Power2()) && match(Op1, m_NonNegative()))
+    return BinaryOperator::CreateExactAShr(
+        Op0, getLogBase2(I.getType(), cast<Constant>(Op1)), I.getName());
+
   const APInt *Op1C;
   if (match(Op1, m_APInt(Op1C))) {
-    // sdiv exact X, C  -->  ashr exact X, log2(C)
-    if (I.isExact() && Op1C->isNonNegative() && Op1C->isPowerOf2()) {
-      Value *ShAmt = ConstantInt::get(Op1->getType(), Op1C->exactLogBase2());
-      return BinaryOperator::CreateExactAShr(Op0, ShAmt, I.getName());
-    }
-
     // If the dividend is sign-extended and the constant divisor is small enough
     // to fit in the source type, shrink the division to the narrower type:
     // (sext X) sdiv C --> sext (X sdiv C)
