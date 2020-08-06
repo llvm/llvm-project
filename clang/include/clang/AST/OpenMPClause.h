@@ -7884,8 +7884,8 @@ private:
 /// any.
 class OMPChildren final
     : private llvm::TrailingObjects<OMPChildren, OMPClause *, Stmt *> {
+  friend TrailingObjects;
   friend class OMPClauseReader;
-  friend class TrailingObjects;
   friend class OMPExecutableDirective;
   template <typename T> friend class OMPDeclarativeDirective;
 
