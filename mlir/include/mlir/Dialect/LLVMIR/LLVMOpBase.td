@@ -25,6 +25,7 @@ def LLVM_Dialect : Dialect {
     llvm::LLVMContext &getLLVMContext();
     llvm::Module &getLLVMModule();
     llvm::sys::SmartMutex<true> &getLLVMContextMutex();
+    const llvm::DataLayout &getDataLayout();
 
   private:
     friend LLVMType;
