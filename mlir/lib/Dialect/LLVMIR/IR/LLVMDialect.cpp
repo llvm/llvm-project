@@ -101,8 +101,7 @@ static ParseResult parseCmpOp(OpAsmParser &parser, OperationState &result) {
 
   // The result type is either i1 or a vector type <? x i1> if the inputs are
   // vectors.
-  auto *dialect = builder.getContext()->getRegisteredDialect<LLVMDialect>();
-  auto resultType = LLVMType::getInt1Ty(dialect);
+  auto resultType = LLVMType::getInt1Ty(builder.getContext());
   auto argType = type.dyn_cast<LLVM::LLVMType>();
   if (!argType)
     return parser.emitError(trailingTypeLoc, "expected LLVM IR dialect type");
@@ -393,11 +392,9 @@ static ParseResult parseInvokeOp(OpAsmParser &parser, OperationState &result) {
       return parser.emitError(trailingTypeLoc,
                               "expected function with 0 or 1 result");
 
-    auto *llvmDialect =
-        builder.getContext()->getRegisteredDialect<LLVM::LLVMDialect>();
     LLVM::LLVMType llvmResultType;
     if (funcType.getNumResults() == 0) {
-      llvmResultType = LLVM::LLVMType::getVoidTy(llvmDialect);
+      llvmResultType = LLVM::LLVMType::getVoidTy(builder.getContext());
     } else {
       llvmResultType = funcType.getResult(0).dyn_cast<LLVM::LLVMType>();
       if (!llvmResultType)
@@ -601,11 +598,9 @@ static ParseResult parseCallOp(OpAsmParser &parser, OperationState &result) {
                               "expected function with 0 or 1 result");
 
     Builder &builder = parser.getBuilder();
-    auto *llvmDialect =
-        builder.getContext()->getRegisteredDialect<LLVM::LLVMDialect>();
     LLVM::LLVMType llvmResultType;
     if (funcType.getNumResults() == 0) {
-      llvmResultType = LLVM::LLVMType::getVoidTy(llvmDialect);
+      llvmResultType = LLVM::LLVMType::getVoidTy(builder.getContext());
     } else {
       llvmResultType = funcType.getResult(0).dyn_cast<LLVM::LLVMType>();
       if (!llvmResultType)
@@ -1101,9 +1096,8 @@ static ParseResult parseGlobalOp(OpAsmParser &parser, OperationState &result) {
   if (types.empty()) {
     if (auto strAttr = value.dyn_cast_or_null<StringAttr>()) {
       MLIRContext *context = parser.getBuilder().getContext();
-      auto *dialect = context->getRegisteredDialect<LLVMDialect>();
       auto arrayType = LLVM::LLVMType::getArrayTy(
-          LLVM::LLVMType::getInt8Ty(dialect), strAttr.getValue().size());
+          LLVM::LLVMType::getInt8Ty(context), strAttr.getValue().size());
       types.push_back(arrayType);
     } else {
       return parser.emitError(parser.getNameLoc(),
@@ -1265,14 +1259,8 @@ static Type buildLLVMFunctionType(OpAsmParser &parser, llvm::SMLoc loc,
     llvmInputs.push_back(llvmTy);
   }
 
-  // Get the dialect from the input type, if any exist.  Look it up in the
-  // context otherwise.
-  LLVMDialect *dialect =
-      llvmInputs.empty() ? b.getContext()->getRegisteredDialect<LLVMDialect>()
-                         : &llvmInputs.front().getDialect();
-
   // No output is denoted as "void" in LLVM type system.
-  LLVMType llvmOutput = outputs.empty() ? LLVMType::getVoidTy(dialect)
+  LLVMType llvmOutput = outputs.empty() ? LLVMType::getVoidTy(b.getContext())
                                         : outputs.front().dyn_cast<LLVMType>();
   if (!llvmOutput) {
     parser.emitError(loc, "failed to construct function type: expected LLVM "
@@ -1605,8 +1593,7 @@ static ParseResult parseAtomicCmpXchgOp(OpAsmParser &parser,
       parser.resolveOperand(val, type, result.operands))
     return failure();
 
-  auto *dialect = builder.getContext()->getRegisteredDialect<LLVMDialect>();
-  auto boolType = LLVMType::getInt1Ty(dialect);
+  auto boolType = LLVMType::getInt1Ty(builder.getContext());
   auto resultType = LLVMType::getStructTy(type, boolType);
   result.addTypes(resultType);
 
@@ -1777,8 +1764,7 @@ LogicalResult LLVMDialect::verifyRegionArgAttribute(Operation *op,
 
 Value mlir::LLVM::createGlobalString(Location loc, OpBuilder &builder,
                                      StringRef name, StringRef value,
-                                     LLVM::Linkage linkage,
-                                     LLVM::LLVMDialect *llvmDialect) {
+                                     LLVM::Linkage linkage) {
   assert(builder.getInsertionBlock() &&
          builder.getInsertionBlock()->getParentOp() &&
          "expected builder to point to a block constrained in an op");
@@ -1788,8 +1774,9 @@ Value mlir::LLVM::createGlobalString(Location loc, OpBuilder &builder,
 
   // Create the global at the entry of the module.
   OpBuilder moduleBuilder(module.getBodyRegion());
-  auto type = LLVM::LLVMType::getArrayTy(LLVM::LLVMType::getInt8Ty(llvmDialect),
-                                         value.size());
+  MLIRContext *ctx = builder.getContext();
+  auto type =
+      LLVM::LLVMType::getArrayTy(LLVM::LLVMType::getInt8Ty(ctx), value.size());
   auto global = moduleBuilder.create<LLVM::GlobalOp>(
       loc, type, /*isConstant=*/true, linkage, name,
       builder.getStringAttr(value));
@@ -1797,10 +1784,9 @@ Value mlir::LLVM::createGlobalString(Location loc, OpBuilder &builder,
   // Get the pointer to the first character in the global string.
   Value globalPtr = builder.create<LLVM::AddressOfOp>(loc, global);
   Value cst0 = builder.create<LLVM::ConstantOp>(
-      loc, LLVM::LLVMType::getInt64Ty(llvmDialect),
+      loc, LLVM::LLVMType::getInt64Ty(ctx),
       builder.getIntegerAttr(builder.getIndexType(), 0));
-  return builder.create<LLVM::GEPOp>(loc,
-                                     LLVM::LLVMType::getInt8PtrTy(llvmDialect),
+  return builder.create<LLVM::GEPOp>(loc, LLVM::LLVMType::getInt8PtrTy(ctx),
                                      globalPtr, ArrayRef<Value>({cst0, cst0}));
 }
 
