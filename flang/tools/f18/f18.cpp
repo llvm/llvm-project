@@ -503,6 +503,12 @@ int main(int argc, char *const argv[]) {
       options.features.Enable(
           Fortran::parser::LanguageFeature::LogicalAbbreviations,
           arg == "-flogical-abbreviations");
+    } else if (arg == "-fimplicit-none-type-always") {
+      options.features.Enable(
+          Fortran::common::LanguageFeature::ImplicitNoneTypeAlways);
+    } else if (arg == "-fimplicit-none-type-never") {
+      options.features.Enable(
+          Fortran::common::LanguageFeature::ImplicitNoneTypeNever);
     } else if (arg == "-fdebug-dump-provenance") {
       driver.dumpProvenance = true;
       options.needProvenanceRangeToCharBlockMappings = true;
@@ -603,7 +609,8 @@ int main(int argc, char *const argv[]) {
       driver.getSymbolsSources = true;
     } else if (arg == "-byteswapio") {
       driver.byteswapio = true; // TODO: Pass to lowering, generate call
-    } else if (arg == "-h" || arg == "-help" || arg == "--help" || arg == "-?") {
+    } else if (arg == "-h" || arg == "-help" || arg == "--help" ||
+        arg == "-?") {
       llvm::errs()
           << "f18: LLVM Fortran compiler\n"
           << "\n"

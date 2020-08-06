@@ -1,3 +1,5 @@
+# FIXME: Fails to find BINGO with ASAN on s390x, work fine without ASAN.
+XFAIL: s390x
 RUN: %cpp_compiler %S/SwapCmpTest.cpp -o %t-SwapCmpTest
 CHECK: BINGO
 RUN: not %run %t-SwapCmpTest -seed=1 -runs=10000000 2>&1 | FileCheck %s

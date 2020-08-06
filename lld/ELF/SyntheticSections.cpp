@@ -370,10 +370,10 @@ CieRecord *EhFrameSection::addCie(EhSectionPiece &cie, ArrayRef<RelTy> rels) {
   return rec;
 }
 
-// There is one FDE per function. Returns true if a given FDE
-// points to a live function.
+// There is one FDE per function. Returns a non-null pointer to the function
+// symbol if the given FDE points to a live function.
 template <class ELFT, class RelTy>
-bool EhFrameSection::isFdeLive(EhSectionPiece &fde, ArrayRef<RelTy> rels) {
+Defined *EhFrameSection::isFdeLive(EhSectionPiece &fde, ArrayRef<RelTy> rels) {
   auto *sec = cast<EhInputSection>(fde.sec);
   unsigned firstRelI = fde.firstRelocation;
 
@@ -383,7 +383,7 @@ bool EhFrameSection::isFdeLive(EhSectionPiece &fde, ArrayRef<RelTy> rels) {
   // corresponding FDEs, which results in creating bad .eh_frame sections.
   // To deal with that, we ignore such FDEs.
   if (firstRelI == (unsigned)-1)
-    return false;
+    return nullptr;
 
   const RelTy &rel = rels[firstRelI];
   Symbol &b = sec->template getFile<ELFT>()->getRelocTargetSym(rel);
@@ -391,9 +391,9 @@ bool EhFrameSection::isFdeLive(EhSectionPiece &fde, ArrayRef<RelTy> rels) {
   // FDEs for garbage-collected or merged-by-ICF sections, or sections in
   // another partition, are dead.
   if (auto *d = dyn_cast<Defined>(&b))
-    if (SectionBase *sec = d->section)
-      return sec->partition == partition;
-  return false;
+    if (d->section && d->section->partition == partition)
+      return d;
+  return nullptr;
 }
 
 // .eh_frame is a sequence of CIE or FDE records. In general, there
@@ -445,6 +445,51 @@ void EhFrameSection::addSection(EhInputSection *sec) {
 
   for (auto *ds : sec->dependentSections)
     dependentSections.push_back(ds);
+}
+
+// Used by ICF<ELFT>::handleLSDA(). This function is very similar to
+// EhFrameSection::addRecords().
+template <class ELFT, class RelTy>
+void EhFrameSection::iterateFDEWithLSDAAux(
+    EhInputSection &sec, ArrayRef<RelTy> rels, DenseSet<size_t> &ciesWithLSDA,
+    llvm::function_ref<void(InputSection &)> fn) {
+  for (EhSectionPiece &piece : sec.pieces) {
+    // Skip ZERO terminator.
+    if (piece.size == 4)
+      continue;
+
+    size_t offset = piece.inputOff;
+    uint32_t id =
+        endian::read32<ELFT::TargetEndianness>(piece.data().data() + 4);
+    if (id == 0) {
+      if (hasLSDA(piece))
+        ciesWithLSDA.insert(offset);
+      continue;
+    }
+    uint32_t cieOffset = offset + 4 - id;
+    if (ciesWithLSDA.count(cieOffset) == 0)
+      continue;
+
+    // The CIE has a LSDA argument. Call fn with d's section.
+    if (Defined *d = isFdeLive<ELFT>(piece, rels))
+      if (auto *s = dyn_cast_or_null<InputSection>(d->section))
+        fn(*s);
+  }
+}
+
+template <class ELFT>
+void EhFrameSection::iterateFDEWithLSDA(
+    llvm::function_ref<void(InputSection &)> fn) {
+  DenseSet<size_t> ciesWithLSDA;
+  for (EhInputSection *sec : sections) {
+    ciesWithLSDA.clear();
+    if (sec->areRelocsRela)
+      iterateFDEWithLSDAAux<ELFT>(*sec, sec->template relas<ELFT>(),
+                                  ciesWithLSDA, fn);
+    else
+      iterateFDEWithLSDAAux<ELFT>(*sec, sec->template rels<ELFT>(),
+                                  ciesWithLSDA, fn);
+  }
 }
 
 static void writeCieFde(uint8_t *buf, ArrayRef<uint8_t> d) {
@@ -3758,6 +3803,15 @@ template class elf::MipsOptionsSection<ELF32LE>;
 template class elf::MipsOptionsSection<ELF32BE>;
 template class elf::MipsOptionsSection<ELF64LE>;
 template class elf::MipsOptionsSection<ELF64BE>;
+
+template void EhFrameSection::iterateFDEWithLSDA<ELF32LE>(
+    function_ref<void(InputSection &)>);
+template void EhFrameSection::iterateFDEWithLSDA<ELF32BE>(
+    function_ref<void(InputSection &)>);
+template void EhFrameSection::iterateFDEWithLSDA<ELF64LE>(
+    function_ref<void(InputSection &)>);
+template void EhFrameSection::iterateFDEWithLSDA<ELF64BE>(
+    function_ref<void(InputSection &)>);
 
 template class elf::MipsReginfoSection<ELF32LE>;
 template class elf::MipsReginfoSection<ELF32BE>;

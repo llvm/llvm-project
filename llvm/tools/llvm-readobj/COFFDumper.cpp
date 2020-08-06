@@ -60,10 +60,6 @@ using namespace llvm::codeview;
 using namespace llvm::support;
 using namespace llvm::Win64EH;
 
-static inline Error createError(const Twine &Err) {
-  return make_error<StringError>(Err, object_error::parse_failed);
-}
-
 namespace {
 
 struct LoadConfigTables {

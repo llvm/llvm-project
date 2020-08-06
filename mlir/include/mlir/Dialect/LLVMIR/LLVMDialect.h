@@ -48,12 +48,6 @@ struct LLVMTypeStorage;
 struct LLVMDialectImpl;
 } // namespace detail
 
-/// Converts an MLIR LLVM dialect type to LLVM IR type. Note that this function
-/// exists exclusively for the purpose of gradual transition to the first-party
-/// modeling of LLVM types. It should not be used outside MLIR-to-LLVM
-/// translation.
-llvm::Type *convertLLVMType(LLVMType type);
-
 ///// Ops /////
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMOps.h.inc"
@@ -65,8 +59,7 @@ llvm::Type *convertLLVMType(LLVMType type);
 /// global and use it to compute the address of the first character in the
 /// string (operations inserted at the builder insertion point).
 Value createGlobalString(Location loc, OpBuilder &builder, StringRef name,
-                         StringRef value, LLVM::Linkage linkage,
-                         LLVM::LLVMDialect *llvmDialect);
+                         StringRef value, LLVM::Linkage linkage);
 
 /// LLVM requires some operations to be inside of a Module operation. This
 /// function confirms that the Operation has the desired properties.

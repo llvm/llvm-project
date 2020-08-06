@@ -40,6 +40,7 @@ public:
   Expected<Effect> apply(const Selection &Inputs) override;
   std::string title() const override { return "Swap if branches"; }
   Intent intent() const override { return Refactor; }
+  bool hidden() const override { return true; }
 
 private:
   const IfStmt *If = nullptr;

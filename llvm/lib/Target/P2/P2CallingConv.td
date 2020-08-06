@@ -30,8 +30,8 @@ def CC_P2_Vararg : CallingConv <[
 
 def RetCC_P2 : CallingConv <[
     CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
-    // i32 are returned in R15 and R14 (two registers to 64 bit numbers if needed)
-    CCIfType<[i32], CCAssignToReg<[R15, R14]>>,
+    // i32 are returned in R31 and R30 (two registers to 64 bit numbers if needed)
+    CCIfType<[i32], CCAssignToReg<[R31, R30]>>,
 
     CCIfByVal<CCAssignToStack<4, 1>>,
 ]>;

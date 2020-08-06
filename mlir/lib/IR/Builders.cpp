@@ -67,12 +67,11 @@ IntegerType Builder::getIntegerType(unsigned width, bool isSigned) {
       width, isSigned ? IntegerType::Signed : IntegerType::Unsigned, context);
 }
 
-FunctionType Builder::getFunctionType(ArrayRef<Type> inputs,
-                                      ArrayRef<Type> results) {
+FunctionType Builder::getFunctionType(TypeRange inputs, TypeRange results) {
   return FunctionType::get(inputs, results, context);
 }
 
-TupleType Builder::getTupleType(ArrayRef<Type> elementTypes) {
+TupleType Builder::getTupleType(TypeRange elementTypes) {
   return TupleType::get(elementTypes, context);
 }
 

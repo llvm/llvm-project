@@ -41,5 +41,6 @@ struct Data;
 }
 
 llvm::Error dwarf2yaml(llvm::DWARFContext &DCtx, llvm::DWARFYAML::Data &Y);
-
+llvm::Error dumpDebugARanges(llvm::DWARFContext &DCtx,
+                             llvm::DWARFYAML::Data &Y);
 #endif

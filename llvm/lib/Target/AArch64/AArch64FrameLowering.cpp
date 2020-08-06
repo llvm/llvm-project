@@ -442,7 +442,7 @@ MCCFIInstruction AArch64FrameLowering::createDefCFAExpressionFromSP(
 
   // Build up the expression (SP + NumBytes + NumVGScaledBytes * AArch64::VG)
   SmallString<64> Expr;
-  Expr.push_back(dwarf::DW_OP_breg0 + /*SP*/ 31);
+  Expr.push_back((uint8_t)(dwarf::DW_OP_breg0 + /*SP*/ 31));
   Expr.push_back(0);
   appendVGScaledOffsetExpr(Expr, NumBytes, NumVGScaledBytes,
                            TRI.getDwarfRegNum(AArch64::VG, true), Comment);

@@ -14,6 +14,7 @@
 #define LLVM_SUPPORT_X86TARGETPARSERCOMMON_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 
 namespace llvm {
 class StringRef;
@@ -137,10 +138,10 @@ ProcessorFeatures getKeyFeature(CPUKind Kind);
 /// Fill in the features that \p CPU supports into \p Features.
 void getFeaturesForCPU(StringRef CPU, SmallVectorImpl<StringRef> &Features);
 
-/// Fill \p Features with the features that are implied to be enabled/disabled
+/// Set or clear entries in \p Features that are implied to be enabled/disabled
 /// by the provided \p Feature.
-void getImpliedFeatures(StringRef Feature, bool Enabled,
-                        SmallVectorImpl<StringRef> &Features);
+void updateImpliedFeatures(StringRef Feature, bool Enabled,
+                           StringMap<bool> &Features);
 
 } // namespace X86
 } // namespace llvm

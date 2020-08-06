@@ -152,32 +152,32 @@ public:
   bool isStructTy();
 
   /// Utilities used to generate floating point types.
-  static LLVMType getDoubleTy(LLVMDialect *dialect);
-  static LLVMType getFloatTy(LLVMDialect *dialect);
-  static LLVMType getBFloatTy(LLVMDialect *dialect);
-  static LLVMType getHalfTy(LLVMDialect *dialect);
-  static LLVMType getFP128Ty(LLVMDialect *dialect);
-  static LLVMType getX86_FP80Ty(LLVMDialect *dialect);
+  static LLVMType getDoubleTy(MLIRContext *context);
+  static LLVMType getFloatTy(MLIRContext *context);
+  static LLVMType getBFloatTy(MLIRContext *context);
+  static LLVMType getHalfTy(MLIRContext *context);
+  static LLVMType getFP128Ty(MLIRContext *context);
+  static LLVMType getX86_FP80Ty(MLIRContext *context);
 
   /// Utilities used to generate integer types.
-  static LLVMType getIntNTy(LLVMDialect *dialect, unsigned numBits);
-  static LLVMType getInt1Ty(LLVMDialect *dialect) {
-    return getIntNTy(dialect, /*numBits=*/1);
+  static LLVMType getIntNTy(MLIRContext *context, unsigned numBits);
+  static LLVMType getInt1Ty(MLIRContext *context) {
+    return getIntNTy(context, /*numBits=*/1);
   }
-  static LLVMType getInt8Ty(LLVMDialect *dialect) {
-    return getIntNTy(dialect, /*numBits=*/8);
+  static LLVMType getInt8Ty(MLIRContext *context) {
+    return getIntNTy(context, /*numBits=*/8);
   }
-  static LLVMType getInt8PtrTy(LLVMDialect *dialect) {
-    return getInt8Ty(dialect).getPointerTo();
+  static LLVMType getInt8PtrTy(MLIRContext *context) {
+    return getInt8Ty(context).getPointerTo();
   }
-  static LLVMType getInt16Ty(LLVMDialect *dialect) {
-    return getIntNTy(dialect, /*numBits=*/16);
+  static LLVMType getInt16Ty(MLIRContext *context) {
+    return getIntNTy(context, /*numBits=*/16);
   }
-  static LLVMType getInt32Ty(LLVMDialect *dialect) {
-    return getIntNTy(dialect, /*numBits=*/32);
+  static LLVMType getInt32Ty(MLIRContext *context) {
+    return getIntNTy(context, /*numBits=*/32);
   }
-  static LLVMType getInt64Ty(LLVMDialect *dialect) {
-    return getIntNTy(dialect, /*numBits=*/64);
+  static LLVMType getInt64Ty(MLIRContext *context) {
+    return getIntNTy(context, /*numBits=*/64);
   }
 
   /// Utilities used to generate other miscellaneous types.
@@ -187,33 +187,33 @@ public:
   static LLVMType getFunctionTy(LLVMType result, bool isVarArg) {
     return getFunctionTy(result, llvm::None, isVarArg);
   }
-  static LLVMType getStructTy(LLVMDialect *dialect, ArrayRef<LLVMType> elements,
+  static LLVMType getStructTy(MLIRContext *context, ArrayRef<LLVMType> elements,
                               bool isPacked = false);
-  static LLVMType getStructTy(LLVMDialect *dialect, bool isPacked = false) {
-    return getStructTy(dialect, llvm::None, isPacked);
+  static LLVMType getStructTy(MLIRContext *context, bool isPacked = false) {
+    return getStructTy(context, llvm::None, isPacked);
   }
   template <typename... Args>
   static typename std::enable_if<llvm::are_base_of<LLVMType, Args...>::value,
                                  LLVMType>::type
   getStructTy(LLVMType elt1, Args... elts) {
     SmallVector<LLVMType, 8> fields({elt1, elts...});
-    return getStructTy(&elt1.getDialect(), fields);
+    return getStructTy(elt1.getContext(), fields);
   }
   static LLVMType getVectorTy(LLVMType elementType, unsigned numElements);
 
   /// Void type utilities.
-  static LLVMType getVoidTy(LLVMDialect *dialect);
+  static LLVMType getVoidTy(MLIRContext *context);
   bool isVoidTy();
 
   // Creation and setting of LLVM's identified struct types
-  static LLVMType createStructTy(LLVMDialect *dialect,
+  static LLVMType createStructTy(MLIRContext *context,
                                  ArrayRef<LLVMType> elements,
                                  Optional<StringRef> name,
                                  bool isPacked = false);
 
-  static LLVMType createStructTy(LLVMDialect *dialect,
+  static LLVMType createStructTy(MLIRContext *context,
                                  Optional<StringRef> name) {
-    return createStructTy(dialect, llvm::None, name);
+    return createStructTy(context, llvm::None, name);
   }
 
   static LLVMType createStructTy(ArrayRef<LLVMType> elements,
@@ -222,7 +222,7 @@ public:
     assert(!elements.empty() &&
            "This method may not be invoked with an empty list");
     LLVMType ele0 = elements.front();
-    return createStructTy(&ele0.getDialect(), elements, name, isPacked);
+    return createStructTy(ele0.getContext(), elements, name, isPacked);
   }
 
   template <typename... Args>
@@ -231,7 +231,7 @@ public:
   createStructTy(StringRef name, LLVMType elt1, Args... elts) {
     SmallVector<LLVMType, 8> fields({elt1, elts...});
     Optional<StringRef> opt_name(name);
-    return createStructTy(&elt1.getDialect(), fields, opt_name);
+    return createStructTy(elt1.getContext(), fields, opt_name);
   }
 
   static LLVMType setStructTyBody(LLVMType structType,

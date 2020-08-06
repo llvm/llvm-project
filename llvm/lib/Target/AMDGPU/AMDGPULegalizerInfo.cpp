@@ -60,12 +60,19 @@ static LLT getPow2ScalarType(LLT Ty) {
   return LLT::scalar(Pow2Bits);
 }
 
+/// \returs true if this is an odd sized vector which should widen by adding an
+/// additional element. This is mostly to handle <3 x s16> -> <4 x s16>. This
+/// excludes s1 vectors, which should always be scalarized.
 static LegalityPredicate isSmallOddVector(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
-    return Ty.isVector() &&
-           Ty.getNumElements() % 2 != 0 &&
-           Ty.getElementType().getSizeInBits() < 32 &&
+    if (!Ty.isVector())
+      return false;
+
+    const LLT EltTy = Ty.getElementType();
+    const unsigned EltSize = EltTy.getSizeInBits();
+    return Ty.getNumElements() % 2 != 0 &&
+           EltSize > 1 && EltSize < 32 &&
            Ty.getSizeInBits() % 32 != 0;
   };
 }
@@ -262,7 +269,7 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
 
   unsigned RegSize = Ty.getSizeInBits();
   unsigned MemSize = Query.MMODescrs[0].SizeInBits;
-  unsigned Align = Query.MMODescrs[0].AlignInBits;
+  unsigned AlignBits = Query.MMODescrs[0].AlignInBits;
   unsigned AS = Query.Types[1].getAddressSpace();
 
   // All of these need to be custom lowered to cast the pointer operand.
@@ -305,9 +312,10 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
 
   assert(RegSize >= MemSize);
 
-  if (Align < MemSize) {
+  if (AlignBits < MemSize) {
     const SITargetLowering *TLI = ST.getTargetLowering();
-    if (!TLI->allowsMisalignedMemoryAccessesImpl(MemSize, AS, Align / 8))
+    if (!TLI->allowsMisalignedMemoryAccessesImpl(MemSize, AS,
+                                                 Align(AlignBits / 8)))
       return false;
   }
 
@@ -443,13 +451,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // TODO: All multiples of 32, vectors of pointers, all v2s16 pairs, more
   // elements for v3s16
   getActionDefinitionsBuilder(G_PHI)
-    .legalFor({S32, S64, V2S16, V4S16, S1, S128, S256})
+    .legalFor({S32, S64, V2S16, S16, V4S16, S1, S128, S256})
     .legalFor(AllS32Vectors)
     .legalFor(AllS64Vectors)
     .legalFor(AddrSpaces64)
     .legalFor(AddrSpaces32)
     .legalIf(isPointer(0))
-    .clampScalar(0, S32, S256)
+    .clampScalar(0, S16, S256)
     .widenScalarToNextPow2(0, 32)
     .clampMaxNumElements(0, S32, 16)
     .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
@@ -466,7 +474,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT, G_SADDSAT, G_SSUBSAT})
       .legalFor({S32, S16, V2S16}) // Clamp modifier
-      .minScalar(0, S16)
+      .minScalarOrElt(0, S16)
       .clampMaxNumElements(0, S16, 2)
       .scalarize(0)
       .widenScalarToNextPow2(0, 32)
@@ -954,10 +962,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     // Split vector extloads.
     unsigned MemSize = Query.MMODescrs[0].SizeInBits;
-    unsigned Align = Query.MMODescrs[0].AlignInBits;
+    unsigned AlignBits = Query.MMODescrs[0].AlignInBits;
 
     if (MemSize < DstTy.getSizeInBits())
-      MemSize = std::max(MemSize, Align);
+      MemSize = std::max(MemSize, AlignBits);
 
     if (DstTy.isVector() && DstTy.getSizeInBits() > MemSize)
       return true;
@@ -979,9 +987,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         return true;
     }
 
-    if (Align < MemSize) {
+    if (AlignBits < MemSize) {
       const SITargetLowering *TLI = ST.getTargetLowering();
-      return !TLI->allowsMisalignedMemoryAccessesImpl(MemSize, AS, Align / 8);
+      return !TLI->allowsMisalignedMemoryAccessesImpl(MemSize, AS,
+                                                      Align(AlignBits / 8));
     }
 
     return false;
@@ -2494,53 +2503,6 @@ static MachineInstr *verifyCFIntrinsic(MachineInstr &MI,
   return &UseMI;
 }
 
-Register AMDGPULegalizerInfo::insertLiveInCopy(MachineIRBuilder &B,
-                                               MachineRegisterInfo &MRI,
-                                               Register LiveIn,
-                                               Register PhyReg) const {
-  assert(PhyReg.isPhysical() && "Physical register expected");
-
-  // Insert the live-in copy, if required, by defining destination virtual
-  // register.
-  // FIXME: It seems EmitLiveInCopies isn't called anywhere?
-  if (!MRI.getVRegDef(LiveIn)) {
-    // FIXME: Should have scoped insert pt
-    MachineBasicBlock &OrigInsBB = B.getMBB();
-    auto OrigInsPt = B.getInsertPt();
-
-    MachineBasicBlock &EntryMBB = B.getMF().front();
-    EntryMBB.addLiveIn(PhyReg);
-    B.setInsertPt(EntryMBB, EntryMBB.begin());
-    B.buildCopy(LiveIn, PhyReg);
-
-    B.setInsertPt(OrigInsBB, OrigInsPt);
-  }
-
-  return LiveIn;
-}
-
-Register AMDGPULegalizerInfo::getLiveInRegister(MachineIRBuilder &B,
-                                                MachineRegisterInfo &MRI,
-                                                Register PhyReg, LLT Ty,
-                                                bool InsertLiveInCopy) const {
-  assert(PhyReg.isPhysical() && "Physical register expected");
-
-  // Get or create virtual live-in regester
-  Register LiveIn = MRI.getLiveInVirtReg(PhyReg);
-  if (!LiveIn) {
-    LiveIn = MRI.createGenericVirtualRegister(Ty);
-    MRI.addLiveIn(PhyReg, LiveIn);
-  }
-
-  // When the actual true copy required is from virtual register to physical
-  // register (to be inserted later), live-in copy insertion from physical
-  // to register virtual register is not required
-  if (!InsertLiveInCopy)
-    return LiveIn;
-
-  return insertLiveInCopy(B, MRI, LiveIn, PhyReg);
-}
-
 bool AMDGPULegalizerInfo::loadInputValue(Register DstReg, MachineIRBuilder &B,
                                          const ArgDescriptor *Arg,
                                          const TargetRegisterClass *ArgRC,
@@ -2549,9 +2511,8 @@ bool AMDGPULegalizerInfo::loadInputValue(Register DstReg, MachineIRBuilder &B,
   assert(SrcReg.isPhysical() && "Physical register expected");
   assert(DstReg.isVirtual() && "Virtual register expected");
 
-  MachineRegisterInfo &MRI = *B.getMRI();
-  Register LiveIn = getLiveInRegister(B, MRI, SrcReg, ArgTy);
-
+  Register LiveIn = getFunctionLiveInPhysReg(B.getMF(), B.getTII(), SrcReg, *ArgRC,
+                                             ArgTy);
   if (Arg->isMasked()) {
     // TODO: Should we try to emit this once in the entry block?
     const LLT S32 = LLT::scalar(32);
@@ -3196,6 +3157,86 @@ bool AMDGPULegalizerInfo::legalizeFDIVFastIntrin(MachineInstr &MI,
   B.buildFMul(Res, Sel, Mul1, Flags);
 
   MI.eraseFromParent();
+  return true;
+}
+
+// Expand llvm.amdgcn.rsq.clamp on targets that don't support the instruction.
+// FIXME: Why do we handle this one but not other removed instructions?
+//
+// Reciprocal square root.  The clamp prevents infinite results, clamping
+// infinities to max_float.  D.f = 1.0 / sqrt(S0.f), result clamped to
+// +-max_float.
+bool AMDGPULegalizerInfo::legalizeRsqClampIntrinsic(MachineInstr &MI,
+                                                    MachineRegisterInfo &MRI,
+                                                    MachineIRBuilder &B) const {
+  if (ST.getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS)
+    return true;
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(2).getReg();
+  auto Flags = MI.getFlags();
+
+  LLT Ty = MRI.getType(Dst);
+
+  const fltSemantics *FltSemantics;
+  if (Ty == LLT::scalar(32))
+    FltSemantics = &APFloat::IEEEsingle();
+  else if (Ty == LLT::scalar(64))
+    FltSemantics = &APFloat::IEEEdouble();
+  else
+    return false;
+
+  auto Rsq = B.buildIntrinsic(Intrinsic::amdgcn_rsq, {Ty}, false)
+    .addUse(Src)
+    .setMIFlags(Flags);
+
+  // We don't need to concern ourselves with the snan handling difference, since
+  // the rsq quieted (or not) so use the one which will directly select.
+  const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
+  const bool UseIEEE = MFI->getMode().IEEE;
+
+  auto MaxFlt = B.buildFConstant(Ty, APFloat::getLargest(*FltSemantics));
+  auto ClampMax = UseIEEE ? B.buildFMinNumIEEE(Ty, Rsq, MaxFlt, Flags) :
+                            B.buildFMinNum(Ty, Rsq, MaxFlt, Flags);
+
+  auto MinFlt = B.buildFConstant(Ty, APFloat::getLargest(*FltSemantics, true));
+
+  if (UseIEEE)
+    B.buildFMaxNumIEEE(Dst, ClampMax, MinFlt, Flags);
+  else
+    B.buildFMaxNum(Dst, ClampMax, MinFlt, Flags);
+  MI.eraseFromParent();
+  return true;
+}
+
+static unsigned getDSFPAtomicOpcode(Intrinsic::ID IID) {
+  switch (IID) {
+  case Intrinsic::amdgcn_ds_fadd:
+    return AMDGPU::G_ATOMICRMW_FADD;
+  case Intrinsic::amdgcn_ds_fmin:
+    return AMDGPU::G_AMDGPU_ATOMIC_FMIN;
+  case Intrinsic::amdgcn_ds_fmax:
+    return AMDGPU::G_AMDGPU_ATOMIC_FMAX;
+  default:
+    llvm_unreachable("not a DS FP intrinsic");
+  }
+}
+
+bool AMDGPULegalizerInfo::legalizeDSAtomicFPIntrinsic(LegalizerHelper &Helper,
+                                                      MachineInstr &MI,
+                                                      Intrinsic::ID IID) const {
+  GISelChangeObserver &Observer = Helper.Observer;
+  Observer.changingInstr(MI);
+
+  MI.setDesc(ST.getInstrInfo()->get(getDSFPAtomicOpcode(IID)));
+
+  // The remaining operands were used to set fields in the MemOperand on
+  // construction.
+  for (int I = 6; I > 3; --I)
+    MI.RemoveOperand(I);
+
+  MI.RemoveOperand(1); // Remove the intrinsic ID.
+  Observer.changedInstr(MI);
   return true;
 }
 
@@ -4195,6 +4236,7 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(
   return true;
 }
 
+// TODO: Move to selection
 bool AMDGPULegalizerInfo::legalizeTrapIntrinsic(MachineInstr &MI,
                                                 MachineRegisterInfo &MRI,
                                                 MachineIRBuilder &B) const {
@@ -4206,12 +4248,13 @@ bool AMDGPULegalizerInfo::legalizeTrapIntrinsic(MachineInstr &MI,
     // Pass queue pointer to trap handler as input, and insert trap instruction
     // Reference: https://llvm.org/docs/AMDGPUUsage.html#trap-handler-abi
     MachineRegisterInfo &MRI = *B.getMRI();
-    Register SGPR01(AMDGPU::SGPR0_SGPR1);
-    Register LiveIn = getLiveInRegister(
-        B, MRI, SGPR01, LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64),
-        /*InsertLiveInCopy=*/false);
+
+    Register LiveIn =
+      MRI.createGenericVirtualRegister(LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
     if (!loadInputValue(LiveIn, B, AMDGPUFunctionArgInfo::QUEUE_PTR))
       return false;
+
+    Register SGPR01(AMDGPU::SGPR0_SGPR1);
     B.buildCopy(SGPR01, LiveIn);
     B.buildInstr(AMDGPU::S_TRAP)
         .addImm(GCNSubtarget::TrapIDLLVMTrap)
@@ -4430,6 +4473,12 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return legalizeTrapIntrinsic(MI, MRI, B);
   case Intrinsic::debugtrap:
     return legalizeDebugTrapIntrinsic(MI, MRI, B);
+  case Intrinsic::amdgcn_rsq_clamp:
+    return legalizeRsqClampIntrinsic(MI, MRI, B);
+  case Intrinsic::amdgcn_ds_fadd:
+  case Intrinsic::amdgcn_ds_fmin:
+  case Intrinsic::amdgcn_ds_fmax:
+    return legalizeDSAtomicFPIntrinsic(Helper, MI, IntrID);
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))

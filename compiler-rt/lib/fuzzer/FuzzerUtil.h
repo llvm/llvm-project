@@ -106,6 +106,12 @@ inline uint8_t *RoundDownByPage(uint8_t *P) {
   return reinterpret_cast<uint8_t *>(X);
 }
 
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+template <typename T> T HostToLE(T X) { return X; }
+#else
+template <typename T> T HostToLE(T X) { return Bswap(X); }
+#endif
+
 }  // namespace fuzzer
 
 #endif  // LLVM_FUZZER_UTIL_H

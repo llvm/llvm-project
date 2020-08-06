@@ -339,7 +339,7 @@ renameParameters(const FunctionDecl *Dest, const FunctionDecl *Source) {
 // specialization.
 const FunctionDecl *findTarget(const FunctionDecl *FD) {
   auto CanonDecl = FD->getCanonicalDecl();
-  if (!FD->isFunctionTemplateSpecialization())
+  if (!FD->isFunctionTemplateSpecialization() || CanonDecl == FD)
     return CanonDecl;
   // For specializations CanonicalDecl is the TemplatedDecl, which is not the
   // target we want to inline into. Instead we traverse previous decls to find

@@ -79,6 +79,7 @@ enum NodeType : unsigned {
   FMA_PRED,
   FMUL_PRED,
   FSUB_PRED,
+  MUL_PRED,
   SDIV_PRED,
   SHL_PRED,
   SMAX_PRED,
@@ -859,10 +860,13 @@ private:
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSPLAT_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDUPQLane(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerToPredicatedOp(SDValue Op, SelectionDAG &DAG,
-                              unsigned NewOp) const;
+  SDValue LowerToPredicatedOp(SDValue Op, SelectionDAG &DAG, unsigned NewOp,
+                              bool OverrideNEON = false) const;
+  SDValue LowerToScalableOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerDIV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorSRA_SRL_SHL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;
@@ -877,6 +881,7 @@ private:
   SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerXOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVSCALE(SDValue Op, SelectionDAG &DAG) const;
@@ -961,7 +966,10 @@ private:
                       const TargetTransformInfo *TTI) const override;
 
   bool useSVEForFixedLengthVectors() const;
-  bool useSVEForFixedLengthVectorVT(EVT VT) const;
+  // Normally SVE is only used for byte size vectors that do not fit within a
+  // NEON vector. This changes when OverrideNEON is true, allowing SVE to be
+  // used for 64bit and 128bit vectors as well.
+  bool useSVEForFixedLengthVectorVT(EVT VT, bool OverrideNEON = false) const;
 };
 
 namespace AArch64 {

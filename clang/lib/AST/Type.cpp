@@ -308,10 +308,8 @@ ConstantMatrixType::ConstantMatrixType(QualType matrixType, unsigned nRows,
 ConstantMatrixType::ConstantMatrixType(TypeClass tc, QualType matrixType,
                                        unsigned nRows, unsigned nColumns,
                                        QualType canonType)
-    : MatrixType(tc, matrixType, canonType) {
-  ConstantMatrixTypeBits.NumRows = nRows;
-  ConstantMatrixTypeBits.NumColumns = nColumns;
-}
+    : MatrixType(tc, matrixType, canonType), NumRows(nRows),
+      NumColumns(nColumns) {}
 
 DependentSizedMatrixType::DependentSizedMatrixType(
     const ASTContext &CTX, QualType ElementType, QualType CanonicalType,

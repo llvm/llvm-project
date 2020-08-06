@@ -25,9 +25,9 @@ class UbsanUserExpressionTestCase(TestBase):
     def ubsan_tests(self):
         # Load the test
         exe = self.getBuildArtifact("a.out")
-        self.expect(
-            "file " + exe,
-            patterns=["Current executable set to .*a.out"])
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+        self.registerSanitizerLibrariesWithTarget(target)
 
         self.runCmd("breakpoint set -f main.c -l %d" % self.line_breakpoint)
 

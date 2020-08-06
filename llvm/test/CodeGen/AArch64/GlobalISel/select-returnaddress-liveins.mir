@@ -17,10 +17,11 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   liveins: $w0, $x0, $lr
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY $lr
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr64sp = COPY $lr
   ; CHECK:   B %bb.1
   ; CHECK: bb.1:
-  ; CHECK:   $x0 = COPY [[COPY]]
+  ; CHECK:   [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
+  ; CHECK:   $x0 = COPY [[COPY1]]
   ; CHECK:   RET_ReallyLR implicit $x0
   ; LR should be added as a livein to the entry block.
 
@@ -44,10 +45,11 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   liveins: $w0, $x0, $lr
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY $lr
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr64sp = COPY $lr
   ; CHECK:   B %bb.1
   ; CHECK: bb.1:
-  ; CHECK:   $x0 = COPY [[COPY]]
+  ; CHECK:   [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
+  ; CHECK:   $x0 = COPY [[COPY1]]
   ; CHECK:   RET_ReallyLR implicit $x0
   ; We should not have LR listed as a livein twice.
 

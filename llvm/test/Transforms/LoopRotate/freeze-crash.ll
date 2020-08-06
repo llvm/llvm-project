@@ -1,5 +1,5 @@
 ; RUN: opt -loop-rotate -disable-output %s
-; RUN: opt -passes=rotate -disable-output %s
+; RUN: opt -passes=loop-rotate -disable-output %s
 
 ; Make sure we don't crash on this test.
 define void @foo(i32* %arg) {

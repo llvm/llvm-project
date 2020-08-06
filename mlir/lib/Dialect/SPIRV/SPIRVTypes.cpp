@@ -772,8 +772,12 @@ void ScalarType::getCapabilities(
       ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));              \
       capabilities.push_back(ref);                                             \
     }                                                                          \
-  } break
+    /* No requirements for other bitwidths */                                  \
+    return;                                                                    \
+  }
 
+  // This part only handles the cases where special bitwidths appearing in
+  // interface storage classes.
   if (storage) {
     switch (*storage) {
       STORAGE_CASE(PushConstant, StoragePushConstant8, StoragePushConstant16);
@@ -782,17 +786,17 @@ void ScalarType::getCapabilities(
       STORAGE_CASE(Uniform, UniformAndStorageBuffer8BitAccess,
                    StorageUniform16);
     case StorageClass::Input:
-    case StorageClass::Output:
+    case StorageClass::Output: {
       if (bitwidth == 16) {
         static const Capability caps[] = {Capability::StorageInputOutput16};
         ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));
         capabilities.push_back(ref);
       }
-      break;
+      return;
+    }
     default:
       break;
     }
-    return;
   }
 #undef STORAGE_CASE
 

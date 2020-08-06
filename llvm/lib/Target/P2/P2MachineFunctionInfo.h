@@ -63,8 +63,8 @@ public:
         VarArgsFrameOffset(0),
         VarArgsFrameIndex(0),
         IncomingArgSize(0),
-        EmitNOAT(false),
         CalleeSavedFrameSize(0),
+        EmitNOAT(false),
         MaxCallFrameSize(0)
         {}
 

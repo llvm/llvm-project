@@ -86,11 +86,6 @@ public:
   bool legalizeBuildVector(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B) const;
 
-  Register getLiveInRegister(MachineIRBuilder &B, MachineRegisterInfo &MRI,
-                             Register PhyReg, LLT Ty,
-                             bool InsertLiveInCopy = true) const;
-  Register insertLiveInCopy(MachineIRBuilder &B, MachineRegisterInfo &MRI,
-                            Register LiveIn, Register PhyReg) const;
   bool loadInputValue(Register DstReg, MachineIRBuilder &B,
                       const ArgDescriptor *Arg,
                       const TargetRegisterClass *ArgRC, LLT ArgTy) const;
@@ -132,6 +127,12 @@ public:
                               MachineIRBuilder &B) const;
   bool legalizeFDIVFastIntrin(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &B) const;
+
+  bool legalizeRsqClampIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                 MachineIRBuilder &B) const;
+
+  bool legalizeDSAtomicFPIntrinsic(LegalizerHelper &Helper,
+                                   MachineInstr &MI, Intrinsic::ID IID) const;
 
   bool getImplicitArgPtr(Register DstReg, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B) const;

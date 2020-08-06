@@ -150,6 +150,40 @@ class TargetAPITestCase(TestBase):
         self.assertTrue(error.Success(), "Make sure memory read succeeded")
         self.assertEqual(len(content), 1)
 
+
+    @add_test_categories(['pyapi'])
+    @skipIfWindows  # stdio manipulation unsupported on Windows
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    def test_launch_simple(self):
+        d = {'EXE': 'b.out'}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(dictionary=d)
+        target = self.create_simple_target('b.out')
+
+        process = target.LaunchSimple(
+            ['foo', 'bar'], ['baz'], self.get_process_working_directory())
+        self.runCmd("run")
+        output = process.GetSTDOUT(9999)
+        self.assertIn('arg: foo', output)
+        self.assertIn('arg: bar', output)
+        self.assertIn('env: baz', output)
+
+        self.runCmd("setting set target.run-args foo")
+        self.runCmd("setting set target.env-vars bar=baz")
+        process = target.LaunchSimple(None, None,
+                                      self.get_process_working_directory())
+        self.runCmd("run")
+        output = process.GetSTDOUT(9999)
+        self.assertIn('arg: foo', output)
+        self.assertIn('env: bar=baz', output)
+
+        self.runCmd("settings set target.disable-stdio true")
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
+        self.runCmd("run")
+        output = process.GetSTDOUT(9999)
+        self.assertEqual(output, "")
+
     def create_simple_target(self, fn):
         exe = self.getBuildArtifact(fn)
         target = self.dbg.CreateTarget(exe)
@@ -250,6 +284,10 @@ class TargetAPITestCase(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
+        # Try it with a null name:
+        list = target.FindFunctions(None, lldb.eFunctionNameTypeAuto)
+        self.assertTrue(list.GetSize() == 0)
+        
         list = target.FindFunctions('c', lldb.eFunctionNameTypeAuto)
         self.assertTrue(list.GetSize() == 1)
 

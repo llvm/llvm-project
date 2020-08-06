@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -basic-aa -print-memoryssa %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -basic-aa -enable-new-pm=0 -print-memoryssa %s 2>&1 | FileCheck %s
 
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 

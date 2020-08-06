@@ -338,25 +338,24 @@ PreservedAnalyses ModuleSanitizerCoveragePass::run(Module &M,
 std::pair<Value *, Value *>
 ModuleSanitizerCoverage::CreateSecStartEnd(Module &M, const char *Section,
                                            Type *Ty) {
-  GlobalVariable *SecStart =
-      new GlobalVariable(M, Ty, false, GlobalVariable::ExternalLinkage, nullptr,
-                         getSectionStart(Section));
+  GlobalVariable *SecStart = new GlobalVariable(
+      M, Ty->getPointerElementType(), false, GlobalVariable::ExternalLinkage,
+      nullptr, getSectionStart(Section));
   SecStart->setVisibility(GlobalValue::HiddenVisibility);
-  GlobalVariable *SecEnd =
-      new GlobalVariable(M, Ty, false, GlobalVariable::ExternalLinkage,
-                         nullptr, getSectionEnd(Section));
+  GlobalVariable *SecEnd = new GlobalVariable(
+      M, Ty->getPointerElementType(), false, GlobalVariable::ExternalLinkage,
+      nullptr, getSectionEnd(Section));
   SecEnd->setVisibility(GlobalValue::HiddenVisibility);
   IRBuilder<> IRB(M.getContext());
-  Value *SecEndPtr = IRB.CreatePointerCast(SecEnd, Ty);
   if (!TargetTriple.isOSBinFormatCOFF())
-    return std::make_pair(IRB.CreatePointerCast(SecStart, Ty), SecEndPtr);
+    return std::make_pair(SecStart, SecEnd);
 
   // Account for the fact that on windows-msvc __start_* symbols actually
   // point to a uint64_t before the start of the array.
   auto SecStartI8Ptr = IRB.CreatePointerCast(SecStart, Int8PtrTy);
   auto GEP = IRB.CreateGEP(Int8Ty, SecStartI8Ptr,
                            ConstantInt::get(IntptrTy, sizeof(uint64_t)));
-  return std::make_pair(IRB.CreatePointerCast(GEP, Ty), SecEndPtr);
+  return std::make_pair(IRB.CreatePointerCast(GEP, Ty), SecEnd);
 }
 
 Function *ModuleSanitizerCoverage::CreateInitCallsForSections(

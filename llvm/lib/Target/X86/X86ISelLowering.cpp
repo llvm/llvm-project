@@ -1929,8 +1929,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UDIV, MVT::i128, Custom);
     setOperationAction(ISD::SREM, MVT::i128, Custom);
     setOperationAction(ISD::UREM, MVT::i128, Custom);
-    setOperationAction(ISD::SDIVREM, MVT::i128, Custom);
-    setOperationAction(ISD::UDIVREM, MVT::i128, Custom);
   }
 
   // On 32 bit MSVC, `fmodf(f32)` is not defined - only `fmod(f64)`
@@ -3203,13 +3201,23 @@ X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
     return DAG.getFrameIndex(FI, PtrVT);
   }
 
+  EVT ArgVT = Ins[i].ArgVT;
+
+  // If this is a vector that has been split into multiple parts, and the
+  // scalar size of the parts don't match the vector element size, then we can't
+  // elide the copy. The parts will have padding between them instead of being
+  // packed like a vector.
+  bool ScalarizedAndExtendedVector =
+      ArgVT.isVector() && !VA.getLocVT().isVector() &&
+      VA.getLocVT().getSizeInBits() != ArgVT.getScalarSizeInBits();
+
   // This is an argument in memory. We might be able to perform copy elision.
   // If the argument is passed directly in memory without any extension, then we
   // can perform copy elision. Large vector types, for example, may be passed
   // indirectly by pointer.
   if (Flags.isCopyElisionCandidate() &&
-      VA.getLocInfo() != CCValAssign::Indirect && !ExtendedInMem) {
-    EVT ArgVT = Ins[i].ArgVT;
+      VA.getLocInfo() != CCValAssign::Indirect && !ExtendedInMem &&
+      !ScalarizedAndExtendedVector) {
     SDValue PartAddr;
     if (Ins[i].PartOffset == 0) {
       // If this is a one-part value or the first part of a multi-part value,
@@ -26889,8 +26897,6 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
   case ISD::UDIV:      isSigned = false; LC = RTLIB::UDIV_I128;    break;
   case ISD::SREM:      isSigned = true;  LC = RTLIB::SREM_I128;    break;
   case ISD::UREM:      isSigned = false; LC = RTLIB::UREM_I128;    break;
-  case ISD::SDIVREM:   isSigned = true;  LC = RTLIB::SDIVREM_I128; break;
-  case ISD::UDIVREM:   isSigned = false; LC = RTLIB::UDIVREM_I128; break;
   }
 
   SDLoc dl(Op);
@@ -29525,10 +29531,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
 
-    LLVM_FALLTHROUGH;
-  }
-  case ISD::SDIVREM:
-  case ISD::UDIVREM: {
     SDValue V = LowerWin64_i128OP(SDValue(N,0), DAG);
     Results.push_back(V);
     return;
@@ -42129,6 +42131,28 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Try to fold PACK(EXTEND(X),EXTEND(Y)) -> CONCAT(X,Y) subvectors.
+  if (VT.is128BitVector()) {
+    unsigned ExtOpc = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+    SDValue Src0, Src1;
+    if (N0.getOpcode() == ExtOpc &&
+        N0.getOperand(0).getValueType().is64BitVector() &&
+        N0.getOperand(0).getScalarValueSizeInBits() == DstBitsPerElt) {
+      Src0 = N0.getOperand(0);
+    }
+    if (N1.getOpcode() == ExtOpc &&
+        N1.getOperand(0).getValueType().is64BitVector() &&
+        N1.getOperand(0).getScalarValueSizeInBits() == DstBitsPerElt) {
+      Src1 = N1.getOperand(0);
+    }
+    if ((Src0 || N0.isUndef()) && (Src1 || N1.isUndef())) {
+      assert((Src0 || Src1) && "Found PACK(UNDEF,UNDEF)");
+      Src0 = Src0 ? Src0 : DAG.getUNDEF(Src1.getValueType());
+      Src1 = Src1 ? Src1 : DAG.getUNDEF(Src0.getValueType());
+      return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT, Src0, Src1);
+    }
+  }
+
   // Attempt to combine as shuffle.
   SDValue Op(N, 0);
   if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
@@ -44580,8 +44604,8 @@ static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, SelectionDAG &DAG,
     }
   }
 
-  LHS = A.getNode() ? A : B; // If A is 'UNDEF', use B for it.
-  RHS = B.getNode() ? B : A; // If B is 'UNDEF', use A for it.
+  SDValue NewLHS = A.getNode() ? A : B; // If A is 'UNDEF', use B for it.
+  SDValue NewRHS = B.getNode() ? B : A; // If B is 'UNDEF', use A for it.
 
   bool IsIdentityPostShuffle =
       isSequentialOrUndefInRange(PostShuffleMask, 0, NumElts, 0);
@@ -44595,13 +44619,13 @@ static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, SelectionDAG &DAG,
 
   // Assume a SingleSource HOP if we only shuffle one input and don't need to
   // shuffle the result.
-  if (!shouldUseHorizontalOp(LHS == RHS &&
+  if (!shouldUseHorizontalOp(NewLHS == NewRHS &&
                                  (NumShuffles < 2 || !IsIdentityPostShuffle),
                              DAG, Subtarget))
     return false;
 
-  LHS = DAG.getBitcast(VT, LHS);
-  RHS = DAG.getBitcast(VT, RHS);
+  LHS = DAG.getBitcast(VT, NewLHS);
+  RHS = DAG.getBitcast(VT, NewRHS);
   return true;
 }
 
@@ -44626,8 +44650,6 @@ static SDValue combineFaddFsub(SDNode *N, SelectionDAG &DAG,
                                         DAG.getUNDEF(VT), PostShuffleMask);
     return HorizBinOp;
   }
-
-  // NOTE: isHorizontalBinOp may have changed LHS/RHS variables.
 
   return SDValue();
 }
@@ -48146,10 +48168,11 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                            DAG.getNode(ISD::CONCAT_VECTORS, DL, SrcVT, RHS));
       }
       break;
+    case X86ISD::HADD:
+    case X86ISD::HSUB:
     case X86ISD::PACKSS:
     case X86ISD::PACKUS:
-      if (!IsSplat && NumOps == 2 && VT.is256BitVector() &&
-          Subtarget.hasInt256()) {
+      if (!IsSplat && VT.is256BitVector() && Subtarget.hasInt256()) {
         SmallVector<SDValue, 2> LHS, RHS;
         for (unsigned i = 0; i != NumOps; ++i) {
           LHS.push_back(Ops[i].getOperand(0));

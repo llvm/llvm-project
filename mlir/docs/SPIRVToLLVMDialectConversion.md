@@ -36,7 +36,7 @@ SPIR-V Dialect                       | LLVM Dialect
 
 SPIR-V Dialect                       | LLVM Dialect
 :----------------------------------: | :----------------------------------:
-`vector<<count> x <scalar-type>>`    | `!llvm<"<<count> x <scalar-type>>">`
+`vector<<count> x <scalar-type>>`    | `!llvm.vec<<count> x <scalar-type>>`
 
 ### Pointer types
 
@@ -45,7 +45,7 @@ A SPIR-V pointer also takes a Storage Class. At the moment, conversion does
 
 SPIR-V Dialect                                | LLVM Dialect
 :-------------------------------------------: | :-------------------------:
-`!spv.ptr< <element-type>, <storage-class> >` | `!llvm.element-type*`
+`!spv.ptr< <element-type>, <storage-class> >` | `!llvm.ptr<<element-type>>`
 
 ### Array types
 
@@ -59,8 +59,8 @@ supported by type conversion at the moment.
 
 SPIR-V Dialect                        | LLVM Dialect
 :-----------------------------------: | :-----------------------------------:
-`!spv.array<<count> x <element-type>>`| `!llvm<"[<count> x <element-type>]">`
-`!spv.rtarray< <element-type> >`      | `!llvm<"[0 x <element-type>]">`
+`!spv.array<<count> x <element-type>>`| `!llvm.array<<count> x <element-type>>`
+`!spv.rtarray< <element-type> >`      | `!llvm.array<0 x <element-type>>`
 
 ### Struct types
 
@@ -88,8 +88,8 @@ at the moment. Hence, we adhere to the following mapping:
 
 Examples of SPIR-V struct conversion are:
 ```mlir
-!spv.struct<i8, i32>          =>  !llvm<"<{ i8, i32> }>">
-!spv.struct<i8 [0], i32 [4]>  =>  !llvm<"{ i8, i32> }">
+!spv.struct<i8, i32>          =>  !llvm.struct<packed (i8, i32)>
+!spv.struct<i8 [0], i32 [4]>  =>  !llvm.struct<(i8, i32)>
 
 // error
 !spv.struct<i8 [0], i32 [8]>
@@ -188,11 +188,11 @@ to note:
 
     ```mlir
     // Broadcasting offset
-    %offset0 = llvm.mlir.undef : !llvm<"<2 x i8>">
+    %offset0 = llvm.mlir.undef : !llvm.vec<2 x i8>
     %zero = llvm.mlir.constant(0 : i32) : !llvm.i32
-    %offset1 = llvm.insertelement %offset, %offset0[%zero : !llvm.i32] : !llvm<"<2 x i8>">
+    %offset1 = llvm.insertelement %offset, %offset0[%zero : !llvm.i32] : !llvm.vec<2 x i8>
     %one = llvm.mlir.constant(1 : i32) : !llvm.i32
-    %vec_offset = llvm.insertelement  %offset, %offset1[%one : !llvm.i32] : !llvm<"<2 x i8>">
+    %vec_offset = llvm.insertelement  %offset, %offset1[%one : !llvm.i32] : !llvm.vec<2 x i8>
 
     // Broadcasting count
     // ...
@@ -205,7 +205,7 @@ to note:
 
     ```mlir
     // Zero extending offest after broadcasting
-    %res_offset = llvm.zext %vec_offset: !llvm<"<2 x i8>"> to !llvm<"<2 x i32>">
+    %res_offset = llvm.zext %vec_offset: !llvm.vec<2 x i8> to !llvm.vec<2 x i32>
     ```
 
     Also, note that if the bitwidth of `offset` or `count` is greater than the
@@ -373,6 +373,116 @@ modelled with `xor` operation with a mask with all bits set.
 %0 = spv.LogicalNot %op : i1  =>  %0    = llvm.xor %op, %mask : !llvm.i1
 ```
 
+### Memory ops
+
+This section describes the conversion patterns for SPIR-V dialect operations
+that concern memory.
+
+#### `spv.Load` and `spv.Store`
+
+These ops are converted to their LLVM counterparts: `llvm.load` and
+`llvm.store`. If the op has a memory access attribute, then there are the
+following cases, based on the value of the attribute:
+
+* **Aligned**: alignment is passed on to LLVM op builder, for example:
+  ```mlir
+  // llvm.store %ptr, %val {alignment = 4 : i64} : !llvm.ptr<float>
+  spv.Store "Function" %ptr, %val ["Aligned", 4] : f32
+  ```
+* **None**: same case as if there is no memory access attribute.
+
+* **Nontemporal**: set `nontemporal` flag, for example:
+  ```mlir
+  // %res = llvm.load %ptr {nontemporal} : !llvm.ptr<float>
+  %res = spv.Load "Function" %ptr ["Nontemporal"] : f32
+  ```
+* **Volatile**: mark the op as `volatile`, for example:
+  ```mlir
+  // %res = llvm.load volatile %ptr : !llvm.ptr<float>
+  %res = spv.Load "Function" %ptr ["Volatile"] : f32
+  ```
+Otherwise the conversion fails as other cases (`MakePointerAvailable`,
+`MakePointerVisible`, `NonPrivatePointer`) are not supported yet.
+
+#### `spv.globalVariable` and `spv._address_of`
+
+`spv.globalVariable` is modelled with `llvm.mlir.global` op. However, there
+is a difference that has to be pointed out.
+
+In SPIR-V dialect, the global variable returns a pointer, whereas in LLVM
+dialect the global holds an actual value. This difference is handled by
+`spv._address_of` and `llvm.mlir.addressof` ops that both return a pointer and
+are used to reference the global.
+
+```mlir
+// Original SPIR-V module
+spv.module Logical GLSL450 {
+  spv.globalVariable @struct : !spv.ptr<!spv.struct<f32, !spv.array<10xf32>>, Private>
+  spv.func @func() -> () "None" {
+    %0 = spv._address_of @struct : !spv.ptr<!spv.struct<f32, !spv.array<10xf32>>, Private>
+    spv.Return
+  }
+}
+
+// Converted result
+module {
+  llvm.mlir.global private @struct() : !llvm.struct<packed (float, [10 x float])>
+  llvm.func @func() {
+    %0 = llvm.mlir.addressof @struct : !llvm.ptr<struct<packed (float, [10 x float])>>
+    llvm.return
+  }
+}
+```
+
+At the moment, only current invocation is in conversion's scope. This means that
+global variables with pointers of `Input`, `Output` and `Private` storage
+classes are supported. Moreover, `bind` that specifies the descriptor set and
+binding number and `built_in` that specifies SPIR-V `BuiltIn` decoration have
+also no conversion.
+
+Currently `llvm.mlir.global`s are created with `private` linkage for
+`Private` storage class and `External` for `Input`/`Output` storage classes,
+based on SPIR-V spec:
+
+> By default, functions and global variables are private to a module and cannot
+be accessed by other modules. However, a module may be written to export or
+import functions and global (module scope) variables.
+
+If the global variable's pointer has `Input` storage class, then a `constant`
+flag is added to LLVM op:
+
+```mlir
+spv.globalVariable @var : !spv.ptr<f32, Input>    =>    llvm.mlir.global external constant @var() : !llvm.float
+```
+
+#### `spv.Variable`
+
+Per SPIR-V dialect spec, `spv.Variable` allocates an object in memory, resulting
+in a pointer to it, which can be used with `spv.Load` and `spv.Store`. It is
+also a function-level variable.
+
+`spv.Variable` is modelled as `llvm.alloca` op. If initialized, an additional
+store instruction is used. Note that there is no initialization for arrays and
+structs since constants of these types are not supported in LLVM dialect (TODO).
+Also, at the moment initialization is only possible via `spv.constant`.
+
+```mlir
+// Conversion of VariableOp without initialization
+                                                               %size = llvm.mlir.constant(1 : i32) : !llvm.i32
+%res = spv.Variable : !spv.ptr<vector<3xf32>, Function>   =>   %res  = llvm.alloca  %size x !llvm.vec<3 x float> : (!llvm.i32) -> !llvm.ptr<vec<3 x float>>
+
+// Conversion of VariableOp with initialization
+                                                               %c    = llvm.mlir.constant(0 : i64) : !llvm.i64
+%c   = spv.constant 0 : i64                                    %size = llvm.mlir.constant(1 : i32) : !llvm.i32
+%res = spv.Variable init(%c) : !spv.ptr<i64, Function>    =>   %res	 = llvm.alloca %[[SIZE]] x !llvm.i64 : (!llvm.i32) -> !llvm.ptr<i64>
+                                                               llvm.store %c, %res : !llvm.ptr<i64>
+```
+
+Note that simple conversion to `alloca` may not be sufficent if the code has
+some scoping. For example, if converting ops executed in a loop into `alloca`s,
+a stack overflow may occur. For this case, `stacksave`/`stackrestore` pair can
+be used (TODO).
+
 ### Miscellaneous ops with direct conversions
 
 There are multiple SPIR-V ops that do not fit in a particular group but can be
@@ -435,7 +545,7 @@ cover all possible corner cases.
 // %0 = llvm.mlir.constant(0 : i8) : !llvm.i8
 %0 = spv.constant  0 : i8
 
-// %1 = llvm.mlir.constant(dense<[2, 3, 4]> : vector<3xi32>) : !llvm<"<3 x i32>">
+// %1 = llvm.mlir.constant(dense<[2, 3, 4]> : vector<3xi32>) : !llvm.vec<3 x i32>
 %1 = spv.constant dense<[2, 3, 4]> : vector<3xui32>
 ```
 
@@ -445,12 +555,11 @@ There is no support of the following ops:
 
 *   All Atomic ops
 *   All matrix ops
-*   All GLSL ops
 *   All GroupNonUniform ops
+
+As well as:
+
 *   spv.AccessChain
-*   spv._address_of
-*   spv.Branch
-*   spv.BranchConditional
 *   spv.CompositeConstruct
 *   spv.CompositeExtract
 *   spv.CompositeInsert
@@ -459,31 +568,93 @@ There is no support of the following ops:
 *   spv.EntryPoint
 *   spv.ExecutionMode
 *   spv.FMod
-*   spv.globalVariable
-*   spv.Load
-*   spv.loop
+*   spv.GLSL.SAbs
+*   spv.GLSL.SSign
+*   spv.GLSL.FSign
 *   spv.MemoryBarrier
-*   spv._merge
 *   spv._reference_of
-*   spv.selection
 *   spv.SMod
 *   spv.specConstant
-*   spv.Store
 *   spv.SubgroupBallotKHR
-*   spv.Variable
 *   spv.Unreachable
 
 ## Control flow conversion
 
-**Note: these conversions have not been implemented yet**
+### Branch ops
+
+`spv.Branch` and `spv.BranchConditional` are mapped to `llvm.br` and
+`llvm.cond_br`. Branch weigths for `spv.BranchConditional` are mapped to
+coresponding `branch_weights` attribute of `llvm.cond_br`. When translated to
+proper LLVM, `branch_weights` are converted into LLVM metadata associated with
+the conditional branch.
+
+### `spv.FunctionCall`
+
+`spv.FunctionCall` maps to `llvm.call`. For example:
+
+```mlir
+%0 = spv.FunctionCall @foo() : () -> i32    =>    %0 = llvm.call @foo() : () -> !llvm.float
+spv.FunctionCall @bar(%0) : (i32) -> ()     =>    llvm.call @bar(%0) : (!llvm.float) -> ()
+```
+
+### `spv.selection` and `spv.loop`
+
+Control flow within `spv.selection` and `spv.loop` is lowered directly to LLVM
+via branch ops. The conversion can only be applied to selection or loop with all
+blocks being reachable. Moreover, selection and loop control attributes (such as
+`Flatten` or `Unroll`) are not supported at the moment.
+
+```mlir
+// Conversion of selection
+%cond = spv.constant true                               %cond = llvm.mlir.constant(true) : !llvm.i1
+spv.selection {
+  spv.BranchConditional %cond, ^true, ^false            llvm.cond_br %cond, ^true, ^false
+
+^true:																								^true:
+  // True block code                                    // True block code
+  spv.Branch ^merge                             =>      llvm.br ^merge
+
+^false:                                               ^false:
+  // False block code                                   // False block code
+  spv.Branch ^merge                                     llvm.br ^merge
+
+^merge:                                               ^merge:
+  spv._merge                                            llvm.br ^continue
+}
+// Remaining code																			^continue:
+                                                        // Remaining code
+```
+
+```mlir
+// Conversion of loop
+%cond = spv.constant true                               %cond = llvm.mlir.constant(true) : !llvm.i1
+spv.loop {
+  spv.Branch ^header                                    llvm.br ^header
+
+^header:                                              ^header:
+  // Header code                                        // Header code
+  spv.BranchConditional %cond, ^body, ^merge    =>      llvm.cond_br %cond, ^body, ^merge
+
+^body:                                                ^body:
+  // Body code                                          // Body code
+  spv.Branch ^continue                                  llvm.br ^continue
+
+^continue:                                            ^continue:
+  // Continue code                                      // Continue code
+  spv.Branch ^header                                    llvm.br ^header
+
+^merge:                                               ^merge:
+  spv._merge                                            llvm.br ^remaining
+}
+// Remaining code                                     ^remaining:
+                                                        // Remaining code
+```
 
 ## Decorations conversion
 
 **Note: these conversions have not been implemented yet**
 
 ## GLSL extended instruction set
-
-**Note: these conversions have not been implemented yet**
 
 This section describes how SPIR-V ops from GLSL extended instructions set are
 mapped to LLVM Dialect.
@@ -502,16 +673,34 @@ SPIR-V Dialect op                     | LLVM Dialect op
 `spv.GLSL.Log`                        | `llvm.intr.log`
 `spv.GLSL.Sin`                        | `llvm.intr.sin`
 `spv.GLSL.Sqrt`                       | `llvm.intr.sqrt`
+`spv.GLSL.SMax`                       | `llvm.intr.smax`
+`spv.GLSL.SMin`                       | `llvm.intr.smin`
 
 ### Special cases
 
-TODO: add more patterns for special cases.
+`spv.InverseSqrt` is mapped to:
+```mlir
+                                           %one  = llvm.mlir.constant(1.0 : f32) : !llvm.float
+%res = spv.InverseSqrt %arg : f32    =>    %sqrt = "llvm.intr.sqrt"(%arg) : (!llvm.float) -> !llvm.float
+                                           %res  = fdiv %one, %sqrt : !llvm.float
+```
 
 `spv.Tan` is mapped to:
 ```mlir
-                               %sin = "llvm.intr.sin"(%arg) : (!llvm.float) -> !llvm.float
-                               %cos = "llvm.intr.cos"(%arg) : (!llvm.float) -> !llvm.float
-%res = spv.Tan %arg : f32  =>  %res = fdiv %sin, %cos : !llvm.float
+                                   %sin = "llvm.intr.sin"(%arg) : (!llvm.float) -> !llvm.float
+%res = spv.Tan %arg : f32    =>    %cos = "llvm.intr.cos"(%arg) : (!llvm.float) -> !llvm.float
+                                   %res = fdiv %sin, %cos : !llvm.float
+```
+
+`spv.Tanh` is modelled using the equality `tanh(x) = {exp(2x) - 1}/{exp(2x) + 1}`:
+```mlir
+                                     %two   = llvm.mlir.constant(2.0: f32) : !llvm.float
+                                     %2xArg = llvm.fmul %two, %arg : !llvm.float
+                                     %exp   = "llvm.intr.exp"(%2xArg) : (!llvm.float) -> !llvm.float
+%res = spv.Tanh %arg : f32     =>    %one   = llvm.mlir.constant(1.0 : f32) : !llvm.float
+                                     %num   = llvm.fsub %exp, %one : !llvm.float
+                                     %den   = llvm.fadd %exp, %one : !llvm.float
+                                     %res   = llvm.fdiv %num, %den : !llvm.float
 ```
 
 ## Function conversion and related ops
@@ -535,15 +724,6 @@ DontInline                            | `noinline`
 Pure                                  | `readonly`
 Const                                 | `readnone`
 
-### `spv.FunctionCall`
-
-`spv.FunctionCall` maps to `llvm.call`. For example:
-
-```mlir
-%0 = spv.FunctionCall @foo() : () -> i32  =>  %0 = llvm.call @foo() : () -> !llvm.float
-spv.FunctionCall @bar(%0) : (i32) -> ()   =>  llvm.call @bar(%0) : (!llvm.float) -> ()
-```
-
 ### `spv.Return` and `spv.ReturnValue`
 
 In LLVM IR, functions may return either 1 or 0 value. Hence, we map both ops to
@@ -562,6 +742,13 @@ Module in SPIR-V has one region that contains one block. It is defined via
 to LLVM ops. At the moment, SPIR-V module attributes are ignored.
 
 `spv._module_end` is mapped to an equivalent terminator `ModuleTerminatorOp`.
+
+## SPIR-V special ops
+
+**Note: this section is due to be implemented in August**
+
+This section describes how SPIR-V specific ops, *e.g* `spv.specConstant`, are
+modelled in LLVM. It also provides information on `mlir-spirv-runner`.
 
 [LLVMFunctionAttributes]: https://llvm.org/docs/LangRef.html#function-attributes
 [SPIRVFunctionAttributes]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#_a_id_function_control_a_function_control

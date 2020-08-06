@@ -11,6 +11,17 @@
 # CHECK-NEXT: DW_AT_comp_dir [DW_FORM_strp]	( .debug_str[0x0000003f] = "/Users/sgravani/Development/tests")
 # CHECK-NEXT: DW_AT_low_pc [DW_FORM_addr]	(0x0000000000000000)
 # CHECK-NEXT: DW_AT_high_pc [DW_FORM_data4]	(0x00000016){{[[:space:]]}}
+# CHECK-NEXT: error: DIE has DW_AT_decl_file that references a file with index 1 and the compile unit has no line table{{[[:space:]]}}
+# CHECK-NEXT: 0x0000002b: DW_TAG_subprogram [2] *
+# CHECK-NEXT: DW_AT_low_pc [DW_FORM_addr]	(0x0000000000000000)
+# CHECK-NEXT: DW_AT_high_pc [DW_FORM_data4]	(0x00000016)
+# CHECK-NEXT: DW_AT_frame_base [DW_FORM_exprloc]	(DW_OP_reg6)
+# CHECK-NEXT: DW_AT_name [DW_FORM_strp]	( .debug_str[0x00000061] = "main")
+# CHECK-NEXT: DW_AT_decl_file [DW_FORM_data1]	(0x01)
+# CHECK-NEXT: DW_AT_decl_line [DW_FORM_data1]	(1)
+# CHECK-NEXT: DW_AT_prototyped [DW_FORM_flag_present]	(true)
+# CHECK-NEXT: DW_AT_type [DW_FORM_ref4]	(cu + 0x0052 => {0x00000052} "")
+# CHECK-NEXT: DW_AT_external [DW_FORM_flag_present]	(true){{[[:space:]]}}
 # CHECK-NEXT: error: DIE has DW_AT_type with incompatible tag DW_TAG_null{{[[:space:]]}}
 # CHECK-NEXT: 0x0000002b: DW_TAG_subprogram [2] *
 # CHECK-NEXT: DW_AT_low_pc [DW_FORM_addr]       (0x0000000000000000)
@@ -22,6 +33,13 @@
 # CHECK-NEXT: DW_AT_prototyped [DW_FORM_flag_present]   (true)
 # CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x0052 => {0x00000052} "")
 # CHECK-NEXT: DW_AT_external [DW_FORM_flag_present]     (true){{[[:space:]]}}
+# CHECK-NEXT: error: DIE has DW_AT_decl_file that references a file with index 1 and the compile unit has no line table{{[[:space:]]}}
+# CHECK-NEXT: 0x00000044: DW_TAG_variable [3]
+# CHECK-NEXT: DW_AT_location [DW_FORM_exprloc]	(DW_OP_fbreg -8)
+# CHECK-NEXT: DW_AT_name [DW_FORM_strp]	( .debug_str[0x0000006a] = "a")
+# CHECK-NEXT: DW_AT_decl_file [DW_FORM_data1]	(0x01)
+# CHECK-NEXT: DW_AT_decl_line [DW_FORM_data1]	(2)
+# CHECK-NEXT: DW_AT_use_location [DW_FORM_ref4]	(cu + 0x0053 => {0x00000053}){{[[:space:]]}}
 # CHECK-NEXT: error: Compilation unit root DIE is not a unit DIE: DW_TAG_null.
 # CHECK-NEXT: error: Compilation unit type (DW_UT_compile) and root DIE (DW_TAG_null) do not match.
 # CHECK-NEXT: error: Units[2] - start offset: 0x00000068

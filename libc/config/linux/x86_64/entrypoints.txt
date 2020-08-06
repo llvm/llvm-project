@@ -5,9 +5,16 @@ set(TARGET_LIBC_ENTRYPOINTS
     # ctype.h entrypoints
     libc.src.ctype.isalnum
     libc.src.ctype.isalpha
+    libc.src.ctype.isblank
+    libc.src.ctype.iscntrl
     libc.src.ctype.isdigit
+    libc.src.ctype.isgraph
     libc.src.ctype.islower
+    libc.src.ctype.isprint
+    libc.src.ctype.ispunct
+    libc.src.ctype.isspace
     libc.src.ctype.isupper
+    libc.src.ctype.isxdigit
 
     # errno.h entrypoints
     libc.src.errno.__errno_location
@@ -39,6 +46,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strlen
     libc.src.string.strnlen
     libc.src.string.strrchr
+    libc.src.string.strspn
     libc.src.string.strstr
 
     # sys/mman.h entrypoints

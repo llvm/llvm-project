@@ -25,6 +25,7 @@ def LLVM_Dialect : Dialect {
     llvm::LLVMContext &getLLVMContext();
     llvm::Module &getLLVMModule();
     llvm::sys::SmartMutex<true> &getLLVMContextMutex();
+    const llvm::DataLayout &getDataLayout();
 
   private:
     friend LLVMType;
@@ -57,8 +58,7 @@ class LLVMI<int width>
          "$_self.cast<::mlir::LLVM::LLVMType>().isIntegerTy(" # width # ")">]>,
          "LLVM dialect " # width # "-bit integer">,
       BuildableType<
-        "::mlir::LLVM::LLVMType::getIntNTy("
-        "$_builder.getContext()->getRegisteredDialect<LLVM::LLVMDialect>(),"
+        "::mlir::LLVM::LLVMType::getIntNTy($_builder.getContext(),"
          # width # ")">;
 
 def LLVMI1 : LLVMI<1>;

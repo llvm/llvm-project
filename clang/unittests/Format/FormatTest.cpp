@@ -1663,6 +1663,20 @@ TEST_F(FormatTest, MultiLineControlStatements) {
             "  foo();\n"
             "}",
             format("for(int i=0;i<10;++i){foo();}", Style));
+  EXPECT_EQ("foreach (int i,\n"
+            "         list)\n"
+            "{\n"
+            "  foo();\n"
+            "}",
+            format("foreach(int i, list){foo();}", Style));
+  Style.ColumnLimit =
+      40; // to concentrate at brace wrapping, not line wrap due to column limit
+  EXPECT_EQ("foreach (int i, list) {\n"
+            "  foo();\n"
+            "}",
+            format("foreach(int i, list){foo();}", Style));
+  Style.ColumnLimit =
+      20; // to concentrate at brace wrapping, not line wrap due to column limit
   EXPECT_EQ("while (foo || bar ||\n"
             "       baz)\n"
             "{\n"

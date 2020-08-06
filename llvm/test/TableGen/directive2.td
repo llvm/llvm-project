@@ -152,15 +152,7 @@ def TDL_DirA : Directive<"dira"> {
 // GEN-NEXT: #ifdef GEN_FLANG_DIRECTIVE_CLAUSE_MAP
 // GEN-NEXT: #undef GEN_FLANG_DIRECTIVE_CLAUSE_MAP
 // GEN-EMPTY:
-// GEN-NEXT: struct TdlDirectiveClauses {
-// GEN-NEXT:   const  allowed;
-// GEN-NEXT:   const  allowedOnce;
-// GEN-NEXT:   const  allowedExclusive;
-// GEN-NEXT:   const  requiredOneOf;
-// GEN-NEXT: };
-// GEN-EMPTY:
-// GEN-NEXT: std::unordered_map<llvm::tdl::Directive, TdlDirectiveClauses>
-// GEN-NEXT:     directiveClausesTable = {
+// GEN-NEXT: {
 // GEN-NEXT:   {llvm::tdl::Directive::TDLD_dira,
 // GEN-NEXT:     {
 // GEN-NEXT:       llvm::tdl::allowedClauses_TDLD_dira,
@@ -169,6 +161,6 @@ def TDL_DirA : Directive<"dira"> {
 // GEN-NEXT:       llvm::tdl::requiredClauses_TDLD_dira,
 // GEN-NEXT:     }
 // GEN-NEXT:   },
-// GEN-NEXT: };
+// GEN-NEXT: }
 // GEN-EMPTY:
 // GEN-NEXT: #endif // GEN_FLANG_DIRECTIVE_CLAUSE_MAP

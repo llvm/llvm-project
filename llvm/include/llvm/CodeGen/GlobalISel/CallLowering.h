@@ -26,7 +26,6 @@
 
 namespace llvm {
 
-class CCState;
 class CallBase;
 class DataLayout;
 class Function;

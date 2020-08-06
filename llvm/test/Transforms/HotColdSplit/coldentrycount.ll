@@ -1,7 +1,8 @@
+; REQUIRES: x86-registered-target
+; RUN: opt -hotcoldsplit -hotcoldsplit-threshold=0 -codegenprepare -S < %s | FileCheck %s
+
 ; Test to ensure that split cold function gets 0 entry count profile
 ; metadata when compiling with pgo.
-
-; RUN: opt -hotcoldsplit -hotcoldsplit-threshold=0 -codegenprepare -S < %s | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.14.0"

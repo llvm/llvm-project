@@ -1380,7 +1380,9 @@ SDValue SelectionDAG::getConstantFP(const ConstantFP &V, const SDLoc &DL,
   }
 
   SDValue Result(N, 0);
-  if (VT.isVector())
+  if (VT.isScalableVector())
+    Result = getSplatVector(VT, DL, Result);
+  else if (VT.isVector())
     Result = getSplatBuildVector(VT, DL, Result);
   NewSDValueDbgMsg(Result, "Creating fp constant: ", this);
   return Result;
@@ -9893,6 +9895,9 @@ SDNode *SelectionDAG::isConstantIntBuildVectorOrConstantInt(SDValue N) {
     if (GA->getOpcode() == ISD::GlobalAddress &&
         TLI->isOffsetFoldingLegal(GA))
       return GA;
+  if ((N.getOpcode() == ISD::SPLAT_VECTOR) &&
+      isa<ConstantSDNode>(N.getOperand(0)))
+    return N.getNode();
   return nullptr;
 }
 

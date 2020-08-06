@@ -25,11 +25,37 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  isblank
+  SRCS
+    isblank.cpp
+  HDRS
+    isblank.h
+)
+
+add_entrypoint_object(
+  iscntrl
+  SRCS
+    iscntrl.cpp
+  HDRS
+    iscntrl.h
+)
+
+add_entrypoint_object(
   isdigit
   SRCS
     isdigit.cpp
   HDRS
     isdigit.h
+  DEPENDS
+    .ctype_utils
+)
+
+add_entrypoint_object(
+  isgraph
+  SRCS
+    isgraph.cpp
+  HDRS
+    isgraph.h
   DEPENDS
     .ctype_utils
 )
@@ -43,9 +69,45 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  isprint
+  SRCS
+    isprint.cpp
+  HDRS
+    isprint.h
+)
+
+add_entrypoint_object(
+  ispunct
+  SRCS
+    ispunct.cpp
+  HDRS
+    ispunct.h
+  DEPENDS
+    .ctype_utils
+)
+
+add_entrypoint_object(
+  isspace
+  SRCS
+    isspace.cpp
+  HDRS
+    isspace.h
+)
+
+add_entrypoint_object(
   isupper
   SRCS
     isupper.cpp
   HDRS
     isupper.h
+)
+
+add_entrypoint_object(
+  isxdigit
+  SRCS
+    isxdigit.cpp
+  HDRS
+    isxdigit.h
+  DEPENDS
+    .ctype_utils
 )

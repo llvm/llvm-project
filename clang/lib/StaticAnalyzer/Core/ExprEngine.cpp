@@ -169,7 +169,7 @@ public:
     if (S) {
       S->printJson(Out, Helper, PP, /*AddQuotes=*/true);
     } else {
-      Out << '\"' << I->getAnyMember()->getNameAsString() << '\"';
+      Out << '\"' << I->getAnyMember()->getDeclName() << '\"';
     }
   }
 

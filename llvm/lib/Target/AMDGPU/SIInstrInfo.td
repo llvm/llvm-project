@@ -173,10 +173,9 @@ class SDBufferAtomic<string opcode> : SDNode <opcode,
   [SDNPMemOperand, SDNPHasChain, SDNPMayLoad, SDNPMayStore]
 >;
 
-class SDBufferAtomicNoRtn<string opcode, ValueType ty> : SDNode <opcode,
+class SDBufferAtomicNoRtn<string opcode> : SDNode <opcode,
   SDTypeProfile<0, 8,
-      [SDTCisVT<0, ty>,    // vdata
-       SDTCisVT<1, v4i32>, // rsrc
+      [SDTCisVT<1, v4i32>, // rsrc
        SDTCisVT<2, i32>,   // vindex(VGPR)
        SDTCisVT<3, i32>,   // voffset(VGPR)
        SDTCisVT<4, i32>,   // soffset(SGPR)
@@ -199,8 +198,7 @@ def SIbuffer_atomic_xor : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_XOR">;
 def SIbuffer_atomic_inc : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_INC">;
 def SIbuffer_atomic_dec : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_DEC">;
 def SIbuffer_atomic_csub : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_CSUB">;
-def SIbuffer_atomic_fadd : SDBufferAtomicNoRtn <"AMDGPUISD::BUFFER_ATOMIC_FADD", f32>;
-def SIbuffer_atomic_pk_fadd : SDBufferAtomicNoRtn <"AMDGPUISD::BUFFER_ATOMIC_PK_FADD", v2f16>;
+def SIbuffer_atomic_fadd : SDBufferAtomicNoRtn <"AMDGPUISD::BUFFER_ATOMIC_FADD">;
 
 def SIbuffer_atomic_cmpswap : SDNode <"AMDGPUISD::BUFFER_ATOMIC_CMPSWAP",
   SDTypeProfile<1, 9,
@@ -223,8 +221,6 @@ class SDGlobalAtomicNoRtn<string opcode, ValueType ty> : SDNode <opcode,
        SDTCisVT<1, ty>]>,  // vdata
   [SDNPMemOperand, SDNPHasChain, SDNPMayLoad, SDNPMayStore]
 >;
-
-def SIglobal_atomic_pk_fadd : SDGlobalAtomicNoRtn <"AMDGPUISD::ATOMIC_PK_FADD", v2f16>;
 
 def SIpc_add_rel_offset : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET",
   SDTypeProfile<1, 2, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>, SDTCisSameAs<0,2>]>
@@ -331,7 +327,7 @@ def atomic_fadd_global_noret : PatFrag<
 
 def atomic_pk_fadd_global_noret : PatFrag<
     (ops node:$ptr, node:$value),
-    (SIglobal_atomic_pk_fadd node:$ptr, node:$value)> {
+    (atomic_load_fadd node:$ptr, node:$value)> {
   // FIXME: Move this
   let MemoryVT = v2f16;
   let IsAtomic = 1;

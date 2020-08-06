@@ -144,19 +144,19 @@ void MappingTraits<DWARFYAML::PubSection>::mapping(
 }
 
 void MappingTraits<DWARFYAML::Unit>::mapping(IO &IO, DWARFYAML::Unit &Unit) {
-  IO.mapOptional("Format", Unit.FormParams.Format, dwarf::DWARF32);
+  IO.mapOptional("Format", Unit.Format, dwarf::DWARF32);
   IO.mapOptional("Length", Unit.Length);
-  IO.mapRequired("Version", Unit.FormParams.Version);
-  if (Unit.FormParams.Version >= 5)
+  IO.mapRequired("Version", Unit.Version);
+  if (Unit.Version >= 5)
     IO.mapRequired("UnitType", Unit.Type);
   IO.mapRequired("AbbrOffset", Unit.AbbrOffset);
-  IO.mapRequired("AddrSize", Unit.FormParams.AddrSize);
+  IO.mapRequired("AddrSize", Unit.AddrSize);
   IO.mapOptional("Entries", Unit.Entries);
 }
 
 void MappingTraits<DWARFYAML::Entry>::mapping(IO &IO, DWARFYAML::Entry &Entry) {
   IO.mapRequired("AbbrCode", Entry.AbbrCode);
-  IO.mapRequired("Values", Entry.Values);
+  IO.mapOptional("Values", Entry.Values);
 }
 
 void MappingTraits<DWARFYAML::FormValue>::mapping(

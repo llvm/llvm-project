@@ -32,6 +32,24 @@
 		"vsce": "^1.36.3"
 	},
 	"contributes": {
+		"languages": [
+			{
+                "id": "lldb.disassembly",
+                "aliases": [
+                "Disassembly"
+                ],
+                "extensions": [
+                ".disasm"
+                ]
+			}
+		],
+		"grammars": [
+			{
+                "language": "lldb.disassembly",
+                "scopeName": "source.disassembly",
+                "path": "./syntaxes/disassembly.json"
+            }
+        ],
 		"debuggers": [
 			{
 				"type": "lldb-vscode",

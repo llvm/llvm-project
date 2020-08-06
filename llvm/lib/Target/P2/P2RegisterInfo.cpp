@@ -53,7 +53,8 @@ BitVector P2RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     Reserved.set(P2::DIRB);
     Reserved.set(P2::QX);
     Reserved.set(P2::QY);
-    Reserved.set(P2::R15); // reserve R15 since it's the one used for returns
+    Reserved.set(P2::R30); // reserve R30 since it's the one used for returns
+    Reserved.set(P2::R31); // reserve R31 since it's the one used for returns
     return Reserved;
 }
 
@@ -67,7 +68,7 @@ void P2RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II, int SPA
     //P2FunctionInfo *P2FI = MF.getInfo<P2FunctionInfo>();
     const P2TargetMachine &TM = (const P2TargetMachine &)MF.getTarget();
     const TargetInstrInfo &inst_info = *TM.getInstrInfo();
-    const TargetFrameLowering *TFI = TM.getFrameLowering();
+    //const TargetFrameLowering *TFI = TM.getFrameLowering();
 
     LLVM_DEBUG(
         errs() << "\nFunction : " << MF.getFunction().getName() << "\n";
@@ -91,7 +92,7 @@ void P2RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II, int SPA
     int op = MI.getOpcode();
 
     // if the op code using the frame index is rdlong or wrlong, we can use a special immediate to read/write PTRA
-    bool can_use_ptr_off = (op == P2::WRLONGri) || (op == P2::RDLONGri);
+    // bool can_use_ptr_off = (op == P2::WRLONGri) || (op == P2::RDLONGri);
 
     if (MI.getOpcode() == P2::FRMIDX) {
         MI.setDesc(inst_info.get(P2::MOVrr)); // change our psesudo instruction to a mov

@@ -18,15 +18,13 @@ namespace internal {
 // of a function call by inlining them.
 // ------------------------------------------------------
 
-static inline int isdigit(int c) {
-  const unsigned ch = c;
-  return (ch - '0') < 10;
-}
+static inline int isdigit(unsigned ch) { return (ch - '0') < 10; }
 
-static inline int isalpha(int c) {
-  const unsigned ch = c;
-  return (ch | 32) - 'a' < 26;
-}
+static inline int isalpha(unsigned ch) { return (ch | 32) - 'a' < 26; }
+
+static inline int isalnum(unsigned ch) { return isalpha(ch) || isdigit(ch); }
+
+static inline int isgraph(unsigned ch) { return 0x20 < ch && ch < 0x7f; }
 
 } // namespace internal
 } // namespace __llvm_libc
