@@ -57,9 +57,8 @@ void P2MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS, Small
     uint32_t bin = getBinaryCodeForInstr(MI, Fixups, STI);
 
     // Check for unimplemented opcodes.
-    unsigned op_code = MI.getOpcode();
-
-    const MCInstrDesc &Desc = MCII.get(op_code);
+    //unsigned op_code = MI.getOpcode();
+    //const MCInstrDesc &Desc = MCII.get(op_code);
 
     LLVM_DEBUG(errs() << "emitting instruction binary: ");
     for (int i = 0; i < 32; i++) {
