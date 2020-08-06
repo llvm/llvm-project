@@ -68,6 +68,20 @@ class JsonReport(object):
             file.write('\n')
 
 
+_invalid_xml_chars_dict = {c: None for c in range(32) if chr(c) not in ('\t', '\n', '\r')}
+
+
+def remove_invalid_xml_chars(s):
+    # According to the XML 1.0 spec, control characters other than
+    # \t,\r, and \n are not permitted anywhere in the document
+    # (https://www.w3.org/TR/xml/#charsets) and therefore this function
+    # removes them to produce a valid XML document.
+    #
+    # Note: In XML 1.1 only \0 is illegal (https://www.w3.org/TR/xml11/#charsets)
+    # but lit currently produces XML 1.0 output.
+    return s.translate(_invalid_xml_chars_dict)
+
+
 class XunitReport(object):
     def __init__(self, output_file):
         self.output_file = output_file
@@ -113,7 +127,15 @@ class XunitReport(object):
             # terminator we wrap it by creating a new CDATA block.
             output = test.result.output.replace(']]>', ']]]]><![CDATA[>')
             if isinstance(output, bytes):
-                output.decode("utf-8", 'ignore')
+                output = output.decode("utf-8", 'ignore')
+
+            # Failing test  output sometimes contains control characters like
+            # \x1b (e.g. if there was some -fcolor-diagnostics output) which are
+            # not allowed inside XML files.
+            # This causes problems with CI systems: for example, the Jenkins
+            # JUnit XML will throw an exception when ecountering those
+            # characters and similar problems also occur with GitLab CI.
+            output = remove_invalid_xml_chars(output)
             file.write(output)
             file.write(']]></failure>\n</testcase>\n')
         elif test.result.code in self.skipped_codes:
