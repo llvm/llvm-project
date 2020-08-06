@@ -61,7 +61,9 @@ test_gotpageoff12:
 # jitlink-check: decode_operand(test_page21, 1) = ((named_data + 256) - test_page21)[32:12]
 # jitlink-check: decode_operand(test_pageoff12add, 2) = (named_data + 256)[11:0]
 # jitlink-check: decode_operand(test_pageoff12gpr8, 2) = (named_data + 256)[11:0]
+# jitlink-cherk: decode_operand(test_pageoff12gpr8s, 2) = (named_data + 256)[11:0]
 # jitlink-check: decode_operand(test_pageoff12gpr16, 2) = (named_data + 256)[11:1]
+# jitlink-check: decode_operand(test_pageoff12gpr16s, 2) = (named_data + 256)[11:1]
 # jitlink-check: decode_operand(test_pageoff12gpr32, 2) = (named_data + 256)[11:2]
 # jitlink-check: decode_operand(test_pageoff12gpr64, 2) = (named_data + 256)[11:3]
 # jitlink-check: decode_operand(test_pageoff12neon8, 2) = (named_data + 256)[11:0]
@@ -82,9 +84,17 @@ test_pageoff12add:
 test_pageoff12gpr8:
         ldrb  w0, [x0, named_data@PAGEOFF + 256]
 
+        .globl  test_pageoff12gpr8s
+test_pageoff12gpr8s:
+        ldrsb w0, [x0, named_data@PAGEOFF + 256]
+
         .globl  test_pageoff12gpr16
 test_pageoff12gpr16:
         ldrh  w0, [x0, named_data@PAGEOFF + 256]
+
+        .globl  test_pageoff12gpr16s
+test_pageoff12gpr16s:
+        ldrsh w0, [x0, named_data@PAGEOFF + 256]
 
         .globl  test_pageoff12gpr32
 test_pageoff12gpr32:
