@@ -139,6 +139,10 @@ Extensions supported when enabled by options
   `FINDLOC`, `MAXLOC`, and `MINLOC` in the absence of an explicit
   `KIND=` actual argument.  We return `INTEGER(KIND=8)` by default in
   these cases when the `-flarge-sizes` option is enabled.
+* Treat each specification-part like is has `IMPLICIT NONE`
+  [-fimplicit-none-type-always]
+* Ignore occurrences of `IMPLICIT NONE` and `IMPLICIT NONE(TYPE)`
+  [-fimplicit-none-type-never]
 
 Extensions and legacy features deliberately not supported
 ---------------------------------------------------------
