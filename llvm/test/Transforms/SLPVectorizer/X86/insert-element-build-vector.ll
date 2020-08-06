@@ -126,13 +126,16 @@ define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> 
 ; doesn't matter
 define <4 x float> @simple_select_insert_out_of_order(<4 x float> %a, <4 x float> %b, <4 x i32> %c) #0 {
 ; ANY-LABEL: @simple_select_insert_out_of_order(
-; ANY-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[C:%.*]], zeroinitializer
-; ANY-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[A:%.*]], <4 x float> [[B:%.*]]
-; ANY-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
+; ANY-NEXT:    [[REORDER_SHUFFLE:%.*]] = shufflevector <4 x i32> [[C:%.*]], <4 x i32> undef, <4 x i32> <i32 2, i32 1, i32 0, i32 3>
+; ANY-NEXT:    [[REORDER_SHUFFLE1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> undef, <4 x i32> <i32 2, i32 1, i32 0, i32 3>
+; ANY-NEXT:    [[REORDER_SHUFFLE2:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> undef, <4 x i32> <i32 2, i32 1, i32 0, i32 3>
+; ANY-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[REORDER_SHUFFLE]], zeroinitializer
+; ANY-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[REORDER_SHUFFLE1]], <4 x float> [[REORDER_SHUFFLE2]]
+; ANY-NEXT:    [[TMP3:%.*]] = extractelement <4 x float> [[TMP2]], i32 2
 ; ANY-NEXT:    [[RA:%.*]] = insertelement <4 x float> undef, float [[TMP3]], i32 2
 ; ANY-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[TMP2]], i32 1
 ; ANY-NEXT:    [[RB:%.*]] = insertelement <4 x float> [[RA]], float [[TMP4]], i32 1
-; ANY-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP2]], i32 2
+; ANY-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP2]], i32 0
 ; ANY-NEXT:    [[RC:%.*]] = insertelement <4 x float> [[RB]], float [[TMP5]], i32 0
 ; ANY-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP2]], i32 3
 ; ANY-NEXT:    [[RD:%.*]] = insertelement <4 x float> [[RC]], float [[TMP6]], i32 3
@@ -447,19 +450,19 @@ define <4 x float> @take_credit(<4 x float> %a, <4 x float> %b) {
 ; Make sure we handle multiple trees that feed one build vector correctly.
 define <4 x double> @multi_tree(double %w, double %x, double %y, double %z) {
 ; ANY-LABEL: @multi_tree(
-; ANY-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> undef, double [[W:%.*]], i32 0
-; ANY-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[X:%.*]], i32 1
-; ANY-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[Y:%.*]], i32 2
-; ANY-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[Z:%.*]], i32 3
-; ANY-NEXT:    [[TMP5:%.*]] = fadd <4 x double> [[TMP4]], <double 0.000000e+00, double 1.000000e+00, double 2.000000e+00, double 3.000000e+00>
+; ANY-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> undef, double [[Z:%.*]], i32 0
+; ANY-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[Y:%.*]], i32 1
+; ANY-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[X:%.*]], i32 2
+; ANY-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[W:%.*]], i32 3
+; ANY-NEXT:    [[TMP5:%.*]] = fadd <4 x double> [[TMP4]], <double 3.000000e+00, double 2.000000e+00, double 1.000000e+00, double 0.000000e+00>
 ; ANY-NEXT:    [[TMP6:%.*]] = fmul <4 x double> [[TMP5]], <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>
-; ANY-NEXT:    [[TMP7:%.*]] = extractelement <4 x double> [[TMP6]], i32 0
+; ANY-NEXT:    [[TMP7:%.*]] = extractelement <4 x double> [[TMP6]], i32 3
 ; ANY-NEXT:    [[I1:%.*]] = insertelement <4 x double> undef, double [[TMP7]], i32 3
-; ANY-NEXT:    [[TMP8:%.*]] = extractelement <4 x double> [[TMP6]], i32 1
+; ANY-NEXT:    [[TMP8:%.*]] = extractelement <4 x double> [[TMP6]], i32 2
 ; ANY-NEXT:    [[I2:%.*]] = insertelement <4 x double> [[I1]], double [[TMP8]], i32 2
-; ANY-NEXT:    [[TMP9:%.*]] = extractelement <4 x double> [[TMP6]], i32 2
+; ANY-NEXT:    [[TMP9:%.*]] = extractelement <4 x double> [[TMP6]], i32 1
 ; ANY-NEXT:    [[I3:%.*]] = insertelement <4 x double> [[I2]], double [[TMP9]], i32 1
-; ANY-NEXT:    [[TMP10:%.*]] = extractelement <4 x double> [[TMP6]], i32 3
+; ANY-NEXT:    [[TMP10:%.*]] = extractelement <4 x double> [[TMP6]], i32 0
 ; ANY-NEXT:    [[I4:%.*]] = insertelement <4 x double> [[I3]], double [[TMP10]], i32 0
 ; ANY-NEXT:    ret <4 x double> [[I4]]
 ;
