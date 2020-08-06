@@ -24,6 +24,7 @@ namespace llvm {
 struct CoroSplitPass : PassInfoMixin<CoroSplitPass> {
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
+  static bool isRequired() { return true; }
 };
 } // end namespace llvm
 
