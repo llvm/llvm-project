@@ -199,7 +199,7 @@ llvm::LLVMContext &LLVMTypeConverter::getLLVMContext() {
 }
 
 LLVM::LLVMType LLVMTypeConverter::getIndexType() {
-  return LLVM::LLVMType::getIntNTy(llvmDialect, getIndexTypeBitwidth());
+  return LLVM::LLVMType::getIntNTy(&getContext(), getIndexTypeBitwidth());
 }
 
 unsigned LLVMTypeConverter::getPointerBitwidth(unsigned addressSpace) {
@@ -211,19 +211,19 @@ Type LLVMTypeConverter::convertIndexType(IndexType type) {
 }
 
 Type LLVMTypeConverter::convertIntegerType(IntegerType type) {
-  return LLVM::LLVMType::getIntNTy(llvmDialect, type.getWidth());
+  return LLVM::LLVMType::getIntNTy(&getContext(), type.getWidth());
 }
 
 Type LLVMTypeConverter::convertFloatType(FloatType type) {
   switch (type.getKind()) {
   case mlir::StandardTypes::F32:
-    return LLVM::LLVMType::getFloatTy(llvmDialect);
+    return LLVM::LLVMType::getFloatTy(&getContext());
   case mlir::StandardTypes::F64:
-    return LLVM::LLVMType::getDoubleTy(llvmDialect);
+    return LLVM::LLVMType::getDoubleTy(&getContext());
   case mlir::StandardTypes::F16:
-    return LLVM::LLVMType::getHalfTy(llvmDialect);
+    return LLVM::LLVMType::getHalfTy(&getContext());
   case mlir::StandardTypes::BF16: {
-    return LLVM::LLVMType::getBFloatTy(llvmDialect);
+    return LLVM::LLVMType::getBFloatTy(&getContext());
   }
   default:
     llvm_unreachable("non-float type in convertFloatType");
@@ -238,7 +238,7 @@ static constexpr unsigned kRealPosInComplexNumberStruct = 0;
 static constexpr unsigned kImaginaryPosInComplexNumberStruct = 1;
 Type LLVMTypeConverter::convertComplexType(ComplexType type) {
   auto elementType = convertType(type.getElementType()).cast<LLVM::LLVMType>();
-  return LLVM::LLVMType::getStructTy(llvmDialect, {elementType, elementType});
+  return LLVM::LLVMType::getStructTy(&getContext(), {elementType, elementType});
 }
 
 // Except for signatures, MLIR function types are converted into LLVM
@@ -274,7 +274,7 @@ LLVMTypeConverter::convertMemRefSignature(MemRefType type) {
 /// In signatures, unranked MemRef descriptors are expanded into a pair "rank,
 /// pointer to descriptor".
 SmallVector<Type, 2> LLVMTypeConverter::convertUnrankedMemRefSignature() {
-  return {getIndexType(), LLVM::LLVMType::getInt8PtrTy(llvmDialect)};
+  return {getIndexType(), LLVM::LLVMType::getInt8PtrTy(&getContext())};
 }
 
 // Function types are converted to LLVM Function types by recursively converting
@@ -307,7 +307,7 @@ LLVM::LLVMType LLVMTypeConverter::convertFunctionSignature(
   // a struct.
   LLVM::LLVMType resultType =
       type.getNumResults() == 0
-          ? LLVM::LLVMType::getVoidTy(llvmDialect)
+          ? LLVM::LLVMType::getVoidTy(&getContext())
           : unwrap(packFunctionResults(type.getResults()));
   if (!resultType)
     return {};
@@ -331,7 +331,7 @@ LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) {
 
   LLVM::LLVMType resultType =
       type.getNumResults() == 0
-          ? LLVM::LLVMType::getVoidTy(llvmDialect)
+          ? LLVM::LLVMType::getVoidTy(&getContext())
           : unwrap(packFunctionResults(type.getResults()));
   if (!resultType)
     return {};
@@ -400,7 +400,7 @@ static constexpr unsigned kPtrInUnrankedMemRefDescriptor = 1;
 
 Type LLVMTypeConverter::convertUnrankedMemRefType(UnrankedMemRefType type) {
   auto rankTy = getIndexType();
-  auto ptrTy = LLVM::LLVMType::getInt8PtrTy(llvmDialect);
+  auto ptrTy = LLVM::LLVMType::getInt8PtrTy(&getContext());
   return LLVM::LLVMType::getStructTy(rankTy, ptrTy);
 }
 
@@ -853,11 +853,11 @@ LLVM::LLVMType ConvertToLLVMPattern::getIndexType() const {
 }
 
 LLVM::LLVMType ConvertToLLVMPattern::getVoidType() const {
-  return LLVM::LLVMType::getVoidTy(&getDialect());
+  return LLVM::LLVMType::getVoidTy(&typeConverter.getContext());
 }
 
 LLVM::LLVMType ConvertToLLVMPattern::getVoidPtrType() const {
-  return LLVM::LLVMType::getInt8PtrTy(&getDialect());
+  return LLVM::LLVMType::getInt8PtrTy(&typeConverter.getContext());
 }
 
 Value ConvertToLLVMPattern::createIndexConstant(
@@ -2025,9 +2025,10 @@ static LogicalResult copyUnrankedDescriptors(OpBuilder &builder, Location loc,
                                          unrankedMemrefs, sizes);
 
   // Get frequently used types.
-  auto voidType = LLVM::LLVMType::getVoidTy(typeConverter.getDialect());
-  auto voidPtrType = LLVM::LLVMType::getInt8PtrTy(typeConverter.getDialect());
-  auto i1Type = LLVM::LLVMType::getInt1Ty(typeConverter.getDialect());
+  MLIRContext *context = builder.getContext();
+  auto voidType = LLVM::LLVMType::getVoidTy(context);
+  auto voidPtrType = LLVM::LLVMType::getInt8PtrTy(context);
+  auto i1Type = LLVM::LLVMType::getInt1Ty(context);
   LLVM::LLVMType indexType = typeConverter.getIndexType();
 
   // Find the malloc and free, or declare them if necessary.
@@ -3168,7 +3169,7 @@ struct GenericAtomicRMWOpLowering
     // Append the cmpxchg op to the end of the loop block.
     auto successOrdering = LLVM::AtomicOrdering::acq_rel;
     auto failureOrdering = LLVM::AtomicOrdering::monotonic;
-    auto boolType = LLVM::LLVMType::getInt1Ty(&getDialect());
+    auto boolType = LLVM::LLVMType::getInt1Ty(rewriter.getContext());
     auto pairType = LLVM::LLVMType::getStructTy(valueType, boolType);
     auto cmpxchg = rewriter.create<LLVM::AtomicCmpXchgOp>(
         loc, pairType, dataPtr, loopArgument, result, successOrdering,
@@ -3330,13 +3331,13 @@ Type LLVMTypeConverter::packFunctionResults(ArrayRef<Type> types) {
     resultTypes.push_back(converted);
   }
 
-  return LLVM::LLVMType::getStructTy(llvmDialect, resultTypes);
+  return LLVM::LLVMType::getStructTy(&getContext(), resultTypes);
 }
 
 Value LLVMTypeConverter::promoteOneMemRefDescriptor(Location loc, Value operand,
                                                     OpBuilder &builder) {
   auto *context = builder.getContext();
-  auto int64Ty = LLVM::LLVMType::getInt64Ty(getDialect());
+  auto int64Ty = LLVM::LLVMType::getInt64Ty(builder.getContext());
   auto indexType = IndexType::get(context);
   // Alloca with proper alignment. We do not expect optimizations of this
   // alloca op and so we omit allocating at the entry block.

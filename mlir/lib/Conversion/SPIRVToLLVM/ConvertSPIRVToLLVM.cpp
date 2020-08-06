@@ -186,15 +186,15 @@ static Type convertStructTypePacked(spirv::StructType type,
       llvm::map_range(type.getElementTypes(), [&](Type elementType) {
         return converter.convertType(elementType).cast<LLVM::LLVMType>();
       }));
-  return LLVM::LLVMType::getStructTy(converter.getDialect(), elementsVector,
+  return LLVM::LLVMType::getStructTy(type.getContext(), elementsVector,
                                      /*isPacked=*/true);
 }
 
 /// Creates LLVM dialect constant with the given value.
 static Value createI32ConstantOf(Location loc, PatternRewriter &rewriter,
-                                 LLVMTypeConverter &converter, unsigned value) {
+                                 unsigned value) {
   return rewriter.create<LLVM::ConstantOp>(
-      loc, LLVM::LLVMType::getInt32Ty(converter.getDialect()),
+      loc, LLVM::LLVMType::getInt32Ty(rewriter.getContext()),
       rewriter.getIntegerAttr(rewriter.getI32Type(), value));
 }
 
@@ -1002,7 +1002,7 @@ public:
       return failure();
 
     Location loc = varOp.getLoc();
-    Value size = createI32ConstantOf(loc, rewriter, typeConverter, 1);
+    Value size = createI32ConstantOf(loc, rewriter, 1);
     if (!init) {
       rewriter.replaceOpWithNewOp<LLVM::AllocaOp>(varOp, dstType, size);
       return success();
