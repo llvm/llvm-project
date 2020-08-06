@@ -129,8 +129,8 @@ private:
 
 public:
   CLASS_BOILERPLATE(Operation)
-  explicit Operation(const Expr<OPERANDS> &... x) : operand_{x...} {}
-  explicit Operation(Expr<OPERANDS> &&... x) : operand_{std::move(x)...} {}
+  explicit Operation(const Expr<OPERANDS> &...x) : operand_{x...} {}
+  explicit Operation(Expr<OPERANDS> &&...x) : operand_{std::move(x)...} {}
 
   Derived &derived() { return *static_cast<Derived *>(this); }
   const Derived &derived() const { return *static_cast<const Derived *>(this); }

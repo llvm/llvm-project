@@ -118,7 +118,7 @@ public:
   Message &Say(const SourceName &, MessageFixedText &&);
   // Emit a formatted message associated with a source location.
   template <typename... A>
-  Message &Say(const SourceName &source, MessageFixedText &&msg, A &&... args) {
+  Message &Say(const SourceName &source, MessageFixedText &&msg, A &&...args) {
     return context_->Say(source, std::move(msg), std::forward<A>(args)...);
   }
 
@@ -214,12 +214,12 @@ public:
     }
   }
 
-  template <typename... A> Message &Say(A &&... args) {
+  template <typename... A> Message &Say(A &&...args) {
     return messageHandler_.Say(std::forward<A>(args)...);
   }
   template <typename... A>
   Message &Say(
-      const parser::Name &name, MessageFixedText &&text, const A &... args) {
+      const parser::Name &name, MessageFixedText &&text, const A &...args) {
     return messageHandler_.Say(name.source, std::move(text), args...);
   }
 
