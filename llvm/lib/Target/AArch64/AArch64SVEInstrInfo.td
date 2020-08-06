@@ -182,6 +182,7 @@ def AArch64fmul_p : SDNode<"AArch64ISD::FMUL_PRED", SDT_AArch64Arith>;
 def AArch64fsub_p : SDNode<"AArch64ISD::FSUB_PRED", SDT_AArch64Arith>;
 def AArch64lsl_p  : SDNode<"AArch64ISD::SHL_PRED",  SDT_AArch64Arith>;
 def AArch64lsr_p  : SDNode<"AArch64ISD::SRL_PRED",  SDT_AArch64Arith>;
+def AArch64mul_p  : SDNode<"AArch64ISD::MUL_PRED",  SDT_AArch64Arith>;
 def AArch64sdiv_p : SDNode<"AArch64ISD::SDIV_PRED", SDT_AArch64Arith>;
 def AArch64smax_p : SDNode<"AArch64ISD::SMAX_PRED", SDT_AArch64Arith>;
 def AArch64smin_p : SDNode<"AArch64ISD::SMIN_PRED", SDT_AArch64Arith>;
@@ -291,9 +292,11 @@ let Predicates = [HasSVE] in {
   defm UMIN_ZI   : sve_int_arith_imm1_unsigned<0b11, "umin", AArch64umin_p>;
 
   defm MUL_ZI     : sve_int_arith_imm2<"mul", mul>;
-  defm MUL_ZPmZ   : sve_int_bin_pred_arit_2<0b000, "mul",   int_aarch64_sve_mul>;
-  defm SMULH_ZPmZ : sve_int_bin_pred_arit_2<0b010, "smulh", int_aarch64_sve_smulh>;
-  defm UMULH_ZPmZ : sve_int_bin_pred_arit_2<0b011, "umulh", int_aarch64_sve_umulh>;
+  defm MUL_ZPmZ   : sve_int_bin_pred_arit_2<0b000, "mul",   "MUL_ZPZZ",   int_aarch64_sve_mul,   DestructiveBinaryComm>;
+  defm SMULH_ZPmZ : sve_int_bin_pred_arit_2<0b010, "smulh", "SMULH_ZPZZ", int_aarch64_sve_smulh, DestructiveBinaryComm>;
+  defm UMULH_ZPmZ : sve_int_bin_pred_arit_2<0b011, "umulh", "UMULH_ZPZZ", int_aarch64_sve_umulh, DestructiveBinaryComm>;
+
+  defm MUL_ZPZZ   : sve_int_bin_pred_bhsd<AArch64mul_p>;
 
   // Add unpredicated alternative for the mul instruction.
   def : Pat<(mul nxv16i8:$Op1, nxv16i8:$Op2),
