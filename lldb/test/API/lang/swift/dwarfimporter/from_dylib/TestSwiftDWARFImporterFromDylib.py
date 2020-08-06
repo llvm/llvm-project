@@ -15,7 +15,8 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         self.build()
         #os.remove(self.getBuildArtifact('Foo.swiftmodule'))
         lldbutil.run_to_source_breakpoint(self, 'break here',
-                                          lldb.SBFileSpec('main.swift'))
+                                          lldb.SBFileSpec('main.swift'),
+                                          extra_images=['Foo'])
         # This type can only be imported into Swift via DWARFImporter
         # and is not visible from the main module at all.
         self.expect("expr -- WrappingFromDylib()", substrs=['23'])
