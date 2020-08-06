@@ -367,23 +367,23 @@ public:
   }
   void Clear() { ::wclear(m_window); }
   void Erase() { ::werase(m_window); }
-  Rect GetBounds() {
+  Rect GetBounds() const {
     return Rect(GetParentOrigin(), GetSize());
   } // Get the rectangle in our parent window
   int GetChar() { return ::wgetch(m_window); }
-  int GetCursorX() { return getcurx(m_window); }
-  int GetCursorY() { return getcury(m_window); }
-  Rect GetFrame() {
+  int GetCursorX() const { return getcurx(m_window); }
+  int GetCursorY() const { return getcury(m_window); }
+  Rect GetFrame() const {
     return Rect(Point(), GetSize());
   } // Get our rectangle in our own coordinate system
-  Point GetParentOrigin() { return Point(GetParentX(), GetParentY()); }
-  Size GetSize() { return Size(GetWidth(), GetHeight()); }
-  int GetParentX() { return getparx(m_window); }
-  int GetParentY() { return getpary(m_window); }
-  int GetMaxX() { return getmaxx(m_window); }
-  int GetMaxY() { return getmaxy(m_window); }
-  int GetWidth() { return GetMaxX(); }
-  int GetHeight() { return GetMaxY(); }
+  Point GetParentOrigin() const { return Point(GetParentX(), GetParentY()); }
+  Size GetSize() const { return Size(GetWidth(), GetHeight()); }
+  int GetParentX() const { return getparx(m_window); }
+  int GetParentY() const { return getpary(m_window); }
+  int GetMaxX() const { return getmaxx(m_window); }
+  int GetMaxY() const { return getmaxy(m_window); }
+  int GetWidth() const { return GetMaxX(); }
+  int GetHeight() const { return GetMaxY(); }
   void MoveCursor(int x, int y) { ::wmove(m_window, y, x); }
   void MoveWindow(int x, int y) { MoveWindow(Point(x, y)); }
   void Resize(int w, int h) { ::wresize(m_window, h, w); }
@@ -396,7 +396,7 @@ public:
     ::wbkgd(m_window, COLOR_PAIR(color_pair_idx));
   }
 
-  void PutCStringTruncated(const char *s, int right_pad) {
+  void PutCStringTruncated(int right_pad, const char *s) {
     int bytes_left = GetWidth() - GetCursorX();
     if (bytes_left > right_pad) {
       bytes_left -= right_pad;
@@ -436,6 +436,20 @@ public:
     va_start(args, format);
     vwprintw(m_window, format, args);
     va_end(args);
+  }
+
+  void PrintfTruncated(int right_pad, const char *format, ...)
+      __attribute__((format(printf, 3, 4))) {
+    va_list args;
+    va_start(args, format);
+    StreamString strm;
+    strm.PrintfVarArg(format, args);
+    va_end(args);
+    PutCStringTruncated(right_pad, strm.GetData());
+  }
+
+  size_t LimitLengthToRestOfLine(size_t length) const {
+    return std::min<size_t>(length, std::max(0, GetWidth() - GetCursorX() - 1));
   }
 
   void Touch() {
@@ -553,7 +567,7 @@ public:
       } else {
         MoveCursor(1, GetHeight() - 1);
         PutChar('[');
-        PutCStringTruncated(bottom_message, 1);
+        PutCStringTruncated(1, bottom_message);
       }
     }
     if (attr)
@@ -1911,7 +1925,7 @@ public:
         if (FormatEntity::Format(m_format, strm, &sc, &exe_ctx, nullptr,
                                  nullptr, false, false)) {
           int right_pad = 1;
-          window.PutCStringTruncated(strm.GetString().str().c_str(), right_pad);
+          window.PutCStringTruncated(right_pad, strm.GetString().str().c_str());
         }
       }
     }
@@ -1970,7 +1984,7 @@ public:
       if (FormatEntity::Format(m_format, strm, nullptr, &exe_ctx, nullptr,
                                nullptr, false, false)) {
         int right_pad = 1;
-        window.PutCStringTruncated(strm.GetString().str().c_str(), right_pad);
+        window.PutCStringTruncated(right_pad, strm.GetString().str().c_str());
       }
     }
   }
@@ -2060,7 +2074,7 @@ public:
       if (FormatEntity::Format(m_format, strm, nullptr, &exe_ctx, nullptr,
                                nullptr, false, false)) {
         int right_pad = 1;
-        window.PutCStringTruncated(strm.GetString().str().c_str(), right_pad);
+        window.PutCStringTruncated(right_pad, strm.GetString().str().c_str());
       }
     }
   }
@@ -2363,29 +2377,29 @@ protected:
       window.AttributeOn(A_REVERSE);
 
     if (type_name && type_name[0])
-      window.Printf("(%s) ", type_name);
+      window.PrintfTruncated(1, "(%s) ", type_name);
 
     if (name && name[0])
-      window.PutCString(name);
+      window.PutCStringTruncated(1, name);
 
     attr_t changd_attr = 0;
     if (valobj->GetValueDidChange())
       changd_attr = COLOR_PAIR(5) | A_BOLD;
 
     if (value && value[0]) {
-      window.PutCString(" = ");
+      window.PutCStringTruncated(1, " = ");
       if (changd_attr)
         window.AttributeOn(changd_attr);
-      window.PutCString(value);
+      window.PutCStringTruncated(1, value);
       if (changd_attr)
         window.AttributeOff(changd_attr);
     }
 
     if (summary && summary[0]) {
-      window.PutChar(' ');
+      window.PutCStringTruncated(1, " ");
       if (changd_attr)
         window.AttributeOn(changd_attr);
-      window.PutCString(summary);
+      window.PutCStringTruncated(1, summary);
       if (changd_attr)
         window.AttributeOff(changd_attr);
     }
@@ -2823,7 +2837,7 @@ bool HelpDialogDelegate::WindowDelegateDraw(Window &window, bool force) {
   while (y <= max_y) {
     window.MoveCursor(x, y);
     window.PutCStringTruncated(
-        m_text.GetStringAtIndex(m_first_visible_line + y - min_y), 1);
+        1, m_text.GetStringAtIndex(m_first_visible_line + y - min_y));
     ++y;
   }
   return true;
@@ -3251,7 +3265,7 @@ public:
         if (thread && FormatEntity::Format(m_format, strm, nullptr, &exe_ctx,
                                            nullptr, nullptr, false, false)) {
           window.MoveCursor(40, 0);
-          window.PutCStringTruncated(strm.GetString().str().c_str(), 1);
+          window.PutCStringTruncated(1, strm.GetString().str().c_str());
         }
 
         window.MoveCursor(60, 0);
@@ -3477,7 +3491,7 @@ public:
       window.AttributeOn(A_REVERSE);
       window.MoveCursor(1, 1);
       window.PutChar(' ');
-      window.PutCStringTruncated(m_title.GetString().str().c_str(), 1);
+      window.PutCStringTruncated(1, m_title.GetString().str().c_str());
       int x = window.GetCursorX();
       if (x < window_width - 1) {
         window.Printf("%*s", window_width - x - 1, "");
@@ -3549,8 +3563,8 @@ public:
 
           if (highlight_attr)
             window.AttributeOn(highlight_attr);
-          const uint32_t line_len =
-              m_file_sp->GetLineLength(curr_line + 1, false);
+          const uint32_t line_len = window.LimitLengthToRestOfLine(
+              m_file_sp->GetLineLength(curr_line + 1, false));
           if (line_len > 0)
             window.PutCString(m_file_sp->PeekLineData(curr_line + 1), line_len);
 
@@ -3564,11 +3578,12 @@ public:
               if (stop_description && stop_description[0]) {
                 size_t stop_description_len = strlen(stop_description);
                 int desc_x = window_width - stop_description_len - 16;
-                window.Printf("%*s", desc_x - window.GetCursorX(), "");
-                // window.MoveCursor(window_width - stop_description_len - 15,
-                // line_y);
-                window.Printf("<<< Thread %u: %s ", thread->GetIndexID(),
-                              stop_description);
+                if (desc_x - window.GetCursorX() > 0)
+                  window.Printf("%*s", desc_x - window.GetCursorX(), "");
+                window.MoveCursor(window_width - stop_description_len - 15,
+                                  line_y);
+                window.PrintfTruncated(1, "<<< Thread %u: %s ",
+                                       thread->GetIndexID(), stop_description);
               }
             } else {
               window.Printf("%*s", window_width - window.GetCursorX() - 1, "");
@@ -3699,7 +3714,7 @@ public:
             strm.Printf("%s", mnemonic);
 
           int right_pad = 1;
-          window.PutCStringTruncated(strm.GetData(), right_pad);
+          window.PutCStringTruncated(right_pad, strm.GetData());
 
           if (is_pc_line && frame_sp &&
               frame_sp->GetConcreteFrameIndex() == 0) {
@@ -3711,11 +3726,12 @@ public:
               if (stop_description && stop_description[0]) {
                 size_t stop_description_len = strlen(stop_description);
                 int desc_x = window_width - stop_description_len - 16;
-                window.Printf("%*s", desc_x - window.GetCursorX(), "");
-                // window.MoveCursor(window_width - stop_description_len - 15,
-                // line_y);
-                window.Printf("<<< Thread %u: %s ", thread->GetIndexID(),
-                              stop_description);
+                if (desc_x - window.GetCursorX() > 0)
+                  window.Printf("%*s", desc_x - window.GetCursorX(), "");
+                window.MoveCursor(window_width - stop_description_len - 15,
+                                  line_y);
+                window.PrintfTruncated(1, "<<< Thread %u: %s ",
+                                       thread->GetIndexID(), stop_description);
               }
             } else {
               window.Printf("%*s", window_width - window.GetCursorX() - 1, "");
