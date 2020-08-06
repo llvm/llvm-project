@@ -51,8 +51,7 @@ define i1 @t1(i8 %x) {
 
 define i1 @t2(i8 %x) {
 ; CHECK-LABEL: @t2(
-; CHECK-NEXT:    [[NEG_X:%.*]] = sub nsw i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[NEG_X]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %neg_x = sub nsw i8 0, %x
