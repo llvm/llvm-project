@@ -1131,9 +1131,20 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
     return new ZExtInst(Builder.CreateICmpEQ(Op0, Op1), I.getType());
 
   // sdiv exact X,  1<<C  -->    ashr exact X, C   iff  1<<C  is non-negative
-  if (I.isExact() && match(Op1, m_Power2()) && match(Op1, m_NonNegative()))
-    return BinaryOperator::CreateExactAShr(
+  // sdiv exact X, -1<<C  -->  -(ashr exact X, C)
+  if (I.isExact() && ((match(Op1, m_Power2()) && match(Op1, m_NonNegative())) ||
+                      match(Op1, m_NegatedPower2()))) {
+    bool DivisorWasNegative = match(Op1, m_NegatedPower2());
+    if (DivisorWasNegative)
+      Op1 = ConstantExpr::getNeg(cast<Constant>(Op1));
+    auto *AShr = BinaryOperator::CreateExactAShr(
         Op0, getLogBase2(I.getType(), cast<Constant>(Op1)), I.getName());
+    if (!DivisorWasNegative)
+      return AShr;
+    Builder.Insert(AShr);
+    AShr->setName(I.getName() + ".neg");
+    return BinaryOperator::CreateNeg(AShr, I.getName());
+  }
 
   const APInt *Op1C;
   if (match(Op1, m_APInt(Op1C))) {
