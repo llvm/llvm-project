@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -loop-unswitch -stats -disable-output 2>&1 | FileCheck %s
-; RUN: opt < %s -loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -stats -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -stats -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -enable-mssa-loop-dependency=true -verify-memoryssa -stats -disable-output 2>&1 | FileCheck %s
 ; PR 3170
 
 define i32 @a(i32 %x, i32 %y) nounwind {
