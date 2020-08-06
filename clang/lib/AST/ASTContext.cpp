@@ -753,10 +753,10 @@ canonicalizeImmediatelyDeclaredConstraint(const ASTContext &C, Expr *IDC,
       CSE->isInstantiationDependent(), CSE->containsUnexpandedParameterPack());
 
   if (auto *OrigFold = dyn_cast<CXXFoldExpr>(IDC))
-    NewIDC = new (C) CXXFoldExpr(OrigFold->getType(), SourceLocation(), NewIDC,
-                                 BinaryOperatorKind::BO_LAnd,
-                                 SourceLocation(), /*RHS=*/nullptr,
-                                 SourceLocation(), /*NumExpansions=*/None);
+    NewIDC = new (C) CXXFoldExpr(
+        OrigFold->getType(), /*Callee*/nullptr, SourceLocation(), NewIDC,
+        BinaryOperatorKind::BO_LAnd, SourceLocation(), /*RHS=*/nullptr,
+        SourceLocation(), /*NumExpansions=*/None);
   return NewIDC;
 }
 
