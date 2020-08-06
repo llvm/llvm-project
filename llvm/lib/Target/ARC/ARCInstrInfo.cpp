@@ -167,10 +167,10 @@ static bool isJumpOpcode(int Opc) { return Opc == ARC::J; }
 /// If AllowModify is true, then this routine is allowed to modify the basic
 /// block (e.g. delete instructions after the unconditional branch).
 
-bool ARCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
-                                 MachineBasicBlock *&TBB,
-                                 MachineBasicBlock *&FBB,
-                                 SmallVectorImpl<MachineOperand> &Cond,
+bool ARCInstrInfo::analyzeBranch(MachineBasicBlock &MBB, // this machine block
+                                 MachineBasicBlock *&TBB, // true basic block (where to jump when true)
+                                 MachineBasicBlock *&FBB, // false basic block (where to jump when false)
+                                 SmallVectorImpl<MachineOperand> &Cond, // list of condition operands
                                  bool AllowModify) const {
   TBB = FBB = nullptr;
   MachineBasicBlock::iterator I = MBB.end();

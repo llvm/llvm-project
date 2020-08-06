@@ -31,7 +31,7 @@ def SDT_MSP430Cmp          : SDTypeProfile<0, 2, [SDTCisSameAs<0, 1>]>;
 def SDT_MSP430BrCC         : SDTypeProfile<0, 2, [SDTCisVT<0, OtherVT>,
                                                   SDTCisVT<1, i8>]>;
 def SDT_MSP430SelectCC     : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
-                                                  SDTCisSameAs<1, 2>, 
+                                                  SDTCisSameAs<1, 2>,
                                                   SDTCisVT<3, i8>]>;
 def SDT_MSP430DAdd         : SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>,
                                                   SDTCisSameAs<0, 2>,
@@ -152,7 +152,7 @@ def cg16imm : Operand<i16>,
 // MSP430 Complex Pattern Definitions.
 //===----------------------------------------------------------------------===//
 
-def addr : ComplexPattern<iPTR, 2, "SelectAddr", [], []>;
+def addr : ComplexPattern<iPTR, 1, "SelectAddr", [], []>;
 
 //===----------------------------------------------------------------------===//
 // Pattern Fragments
@@ -520,12 +520,12 @@ multiclass Arith<bits<4> opcode, string asmstring, SDNode node,
                     (implicit SR)]>;
   def 8mm : I8mm<opcode, (outs), (ins memdst:$dst, memsrc:$src),
                  !strconcat(asmstring, ".b\t$src, $dst"),
-                 [(store (node (load addr:$dst), 
+                 [(store (node (load addr:$dst),
                                (i8 (load addr:$src))), addr:$dst),
                   (implicit SR)]>;
   def 16mm : I16mm<opcode, (outs), (ins memdst:$dst, memsrc:$src),
                    !strconcat(asmstring, "\t$src, $dst"),
-                   [(store (node (load addr:$dst), 
+                   [(store (node (load addr:$dst),
                                  (i16 (load addr:$src))), addr:$dst),
                     (implicit SR)]>;
   def 8mn : I8mn<opcode, (outs), (ins memdst:$dst, indreg:$rs),
@@ -781,7 +781,7 @@ def CMP16mi : I16mi<0b1001,
 def CMP8rm  : I8rm<0b1001,
                    (outs), (ins GR8:$rd, memsrc:$src),
                    "cmp.b\t$src, $rd",
-                   [(MSP430cmp GR8:$rd, (load addr:$src)), 
+                   [(MSP430cmp GR8:$rd, (load addr:$src)),
                     (implicit SR)]>;
 def CMP16rm : I16rm<0b1001,
                     (outs), (ins GR16:$rd, memsrc:$src),
@@ -807,7 +807,7 @@ def CMP8mr  : I8mr<0b1001,
 def CMP16mr : I16mr<0b1001,
                     (outs), (ins memsrc:$dst, GR16:$rs),
                     "cmp\t$rs, $dst",
-                    [(MSP430cmp (load addr:$dst), GR16:$rs), 
+                    [(MSP430cmp (load addr:$dst), GR16:$rs),
                      (implicit SR)]>;
 def CMP8mm  : I8mm<0b1001,
                    (outs), (ins memdst:$dst, memsrc:$src),

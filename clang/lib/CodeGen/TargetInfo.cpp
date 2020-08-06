@@ -8009,6 +8009,27 @@ public:
 }
 
 //===----------------------------------------------------------------------===//
+// P2 ABI Implementation.
+//===----------------------------------------------------------------------===//
+
+namespace {
+class P2TargetCodeGenInfo : public TargetCodeGenInfo {
+public:
+  P2TargetCodeGenInfo(CodeGenTypes &CGT)
+      : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
+
+  void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+                           CodeGen::CodeGenModule &CGM) const override {
+    if (GV->isDeclaration())
+      return;
+    const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
+    if (!FD) return;
+    auto *Fn = cast<llvm::Function>(GV);
+  }
+};
+}
+
+//===----------------------------------------------------------------------===//
 // TCE ABI Implementation (see http://tce.cs.tut.fi). Uses mostly the defaults.
 // Currently subclassed only to implement custom OpenCL C function attribute
 // handling.
@@ -10817,6 +10838,9 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
 
   case llvm::Triple::avr:
     return SetCGInfo(new AVRTargetCodeGenInfo(Types));
+
+  case llvm::Triple::p2:
+    return SetCGInfo(new P2TargetCodeGenInfo(Types));
 
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_32:

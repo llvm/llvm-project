@@ -26,6 +26,7 @@
 #include "Targets/Mips.h"
 #include "Targets/NVPTX.h"
 #include "Targets/OSTargets.h"
+#include "Targets/P2.h"
 #include "Targets/PNaCl.h"
 #include "Targets/PPC.h"
 #include "Targets/RISCV.h"
@@ -234,6 +235,10 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
 
   case llvm::Triple::avr:
     return new AVRTargetInfo(Triple, Opts);
+
+  case llvm::Triple::p2:
+    return new P2TargetInfo(Triple, Opts);
+
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
     return new BPFTargetInfo(Triple, Opts);

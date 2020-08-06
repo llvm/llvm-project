@@ -312,6 +312,7 @@ enum {
   EM_LANAI = 244,         // Lanai 32-bit processor
   EM_BPF = 247,           // Linux kernel bpf virtual machine
   EM_VE = 251,            // NEC SX-Aurora VE
+  EM_P2 = 300,
 };
 
 // Object file classes.
@@ -770,6 +771,11 @@ enum {
 // ELF Relocation type for VE.
 enum {
 #include "ELFRelocs/VE.def"
+};
+
+// ELF Relocation types for P2
+enum {
+#include "ELFRelocs/P2.def"
 };
 
 #undef ELF_RELOC
