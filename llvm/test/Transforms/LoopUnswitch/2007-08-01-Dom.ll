@@ -1,4 +1,4 @@
-; RUN: opt < %s -licm -loop-unswitch -disable-output 
+; RUN: opt < %s -licm -loop-unswitch -enable-new-pm=0 -disable-output 
 ; PR 1589
 
       	%struct.QBasicAtomic = type { i32 }
