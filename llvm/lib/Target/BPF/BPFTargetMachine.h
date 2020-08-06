@@ -37,6 +37,8 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
+
+  void adjustPassManager(PassManagerBuilder &) override;
 };
 }
 
