@@ -966,19 +966,19 @@ static Value *UpgradeX86PSRLDQIntrinsics(IRBuilder<> &Builder, Value *Op,
 
 static Value *getX86MaskVec(IRBuilder<> &Builder, Value *Mask,
                             unsigned NumElts) {
+  assert(isPowerOf2_32(NumElts) && "Expected power-of-2 mask elements");
   llvm::VectorType *MaskTy = FixedVectorType::get(
       Builder.getInt1Ty(), cast<IntegerType>(Mask->getType())->getBitWidth());
   Mask = Builder.CreateBitCast(Mask, MaskTy);
 
-  // If we have less than 8 elements, then the starting mask was an i8 and
-  // we need to extract down to the right number of elements.
-  if (NumElts < 8) {
+  // If we have less than 8 elements (1, 2 or 4), then the starting mask was an
+  // i8 and we need to extract down to the right number of elements.
+  if (NumElts <= 4) {
     int Indices[4];
     for (unsigned i = 0; i != NumElts; ++i)
       Indices[i] = i;
-    Mask = Builder.CreateShuffleVector(Mask, Mask,
-                                       makeArrayRef(Indices, NumElts),
-                                       "extract");
+    Mask = Builder.CreateShuffleVector(
+        Mask, Mask, makeArrayRef(Indices, NumElts), "extract");
   }
 
   return Mask;
