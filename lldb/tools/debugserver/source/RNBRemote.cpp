@@ -6354,10 +6354,11 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
             DNBProcessMemoryRead(pid, load_command_addr, sizeof(lc), &lc);
         (void)bytes_read;
 
+        bool is_executable = true;
         uint32_t major_version, minor_version, patch_version;
-        auto *platform = DNBGetDeploymentInfo(pid, lc, load_command_addr,
-                                              major_version, minor_version,
-                                              patch_version);
+        auto *platform =
+            DNBGetDeploymentInfo(pid, is_executable, lc, load_command_addr,
+                                 major_version, minor_version, patch_version);
         if (platform) {
           os_handled = true;
           rep << "ostype:" << platform << ";";

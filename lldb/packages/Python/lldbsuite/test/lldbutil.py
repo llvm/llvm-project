@@ -1508,3 +1508,40 @@ def execute_command(command):
     #    print(output)
     #print('status = %u' % (exit_status))
     return exit_status
+
+def packetlog_get_process_info(log):
+    """parse a gdb-remote packet log file and extract the response to qProcessInfo"""
+    process_info = dict()
+    with open(log, "r") as logfile:
+        process_info_ostype = None
+        expect_process_info_response = False
+        for line in logfile:
+            if expect_process_info_response:
+                for pair in line.split(';'):
+                    keyval = pair.split(':')
+                    if len(keyval) == 2:
+                        process_info[keyval[0]] = keyval[1]
+                break
+            if 'send packet: $qProcessInfo#' in line:
+                expect_process_info_response = True
+    return process_info
+
+def packetlog_get_dylib_info(log):
+    """parse a gdb-remote packet log file and extract the *last* response to jGetLoadedDynamicLibrariesInfos"""
+    import json
+    dylib_info = None
+    with open(log, "r") as logfile:
+        dylib_info = None
+        expect_dylib_info_response = False
+        for line in logfile:
+            if expect_dylib_info_response:
+                while line[0] != '$':
+                    line = line[1:]
+                line = line[1:]
+                # Unescape '}'.
+                dylib_info = json.loads(line.replace('}]','}')[:-4])
+                expect_dylib_info_response = False
+            if 'send packet: $jGetLoadedDynamicLibrariesInfos:{' in line:
+                expect_dylib_info_response = True
+
+    return dylib_info
