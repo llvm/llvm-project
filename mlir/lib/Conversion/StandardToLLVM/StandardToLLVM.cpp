@@ -2370,30 +2370,85 @@ struct DimOpLowering : public ConvertOpToLLVMPattern<DimOp> {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto dimOp = cast<DimOp>(op);
-    auto loc = op->getLoc();
+    Type operandType = dimOp.memrefOrTensor().getType();
+    if (operandType.isa<UnrankedMemRefType>()) {
+      rewriter.replaceOp(op, {extractSizeOfUnrankedMemRef(operandType, dimOp,
+                                                          operands, rewriter)});
+
+      return success();
+    }
+    if (operandType.isa<MemRefType>()) {
+      rewriter.replaceOp(op, {extractSizeOfRankedMemRef(operandType, dimOp,
+                                                        operands, rewriter)});
+      return success();
+    }
+    return failure();
+  }
+
+private:
+  Value extractSizeOfUnrankedMemRef(Type operandType, DimOp dimOp,
+                                    ArrayRef<Value> operands,
+                                    ConversionPatternRewriter &rewriter) const {
+    Location loc = dimOp.getLoc();
     DimOp::Adaptor transformed(operands);
 
+    auto unrankedMemRefType = operandType.cast<UnrankedMemRefType>();
+    auto scalarMemRefType =
+        MemRefType::get({}, unrankedMemRefType.getElementType());
+    unsigned addressSpace = unrankedMemRefType.getMemorySpace();
+
+    // Extract pointer to the underlying ranked descriptor and bitcast it to a
+    // memref<element_type> descriptor pointer to minimize the number of GEP
+    // operations.
+    UnrankedMemRefDescriptor unrankedDesc(transformed.memrefOrTensor());
+    Value underlyingRankedDesc = unrankedDesc.memRefDescPtr(rewriter, loc);
+    Value scalarMemRefDescPtr = rewriter.create<LLVM::BitcastOp>(
+        loc,
+        typeConverter.convertType(scalarMemRefType)
+            .cast<LLVM::LLVMType>()
+            .getPointerTo(addressSpace),
+        underlyingRankedDesc);
+
+    // Get pointer to offset field of memref<element_type> descriptor.
+    Type indexPtrTy = typeConverter.getIndexType().getPointerTo(addressSpace);
+    Value two = rewriter.create<LLVM::ConstantOp>(
+        loc, typeConverter.convertType(rewriter.getI32Type()),
+        rewriter.getI32IntegerAttr(2));
+    Value offsetPtr = rewriter.create<LLVM::GEPOp>(
+        loc, indexPtrTy, scalarMemRefDescPtr,
+        ValueRange({createIndexConstant(rewriter, loc, 0), two}));
+
+    // The size value that we have to extract can be obtained using GEPop with
+    // `dimOp.index() + 1` index argument.
+    Value idxPlusOne = rewriter.create<LLVM::AddOp>(
+        loc, createIndexConstant(rewriter, loc, 1), transformed.index());
+    Value sizePtr = rewriter.create<LLVM::GEPOp>(loc, indexPtrTy, offsetPtr,
+                                                 ValueRange({idxPlusOne}));
+    return rewriter.create<LLVM::LoadOp>(loc, sizePtr);
+  }
+
+  Value extractSizeOfRankedMemRef(Type operandType, DimOp dimOp,
+                                  ArrayRef<Value> operands,
+                                  ConversionPatternRewriter &rewriter) const {
+    Location loc = dimOp.getLoc();
+    DimOp::Adaptor transformed(operands);
     // Take advantage if index is constant.
-    MemRefType memRefType = dimOp.memrefOrTensor().getType().cast<MemRefType>();
+    MemRefType memRefType = operandType.cast<MemRefType>();
     if (Optional<int64_t> index = dimOp.getConstantIndex()) {
       int64_t i = index.getValue();
       if (memRefType.isDynamicDim(i)) {
-        // Extract dynamic size from the memref descriptor.
+        // extract dynamic size from the memref descriptor.
         MemRefDescriptor descriptor(transformed.memrefOrTensor());
-        rewriter.replaceOp(op, {descriptor.size(rewriter, loc, i)});
-      } else {
-        // Use constant for static size.
-        int64_t dimSize = memRefType.getDimSize(i);
-        rewriter.replaceOp(op, createIndexConstant(rewriter, loc, dimSize));
+        return descriptor.size(rewriter, loc, i);
       }
-      return success();
+      // Use constant for static size.
+      int64_t dimSize = memRefType.getDimSize(i);
+      return createIndexConstant(rewriter, loc, dimSize);
     }
-
     Value index = dimOp.index();
     int64_t rank = memRefType.getRank();
     MemRefDescriptor memrefDescriptor(transformed.memrefOrTensor());
-    rewriter.replaceOp(op, {memrefDescriptor.size(rewriter, loc, index, rank)});
-    return success();
+    return memrefDescriptor.size(rewriter, loc, index, rank);
   }
 };
 
