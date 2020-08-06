@@ -7543,14 +7543,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       Op.getOperand(2), // ptr
       Op.getOperand(3)  // vdata
     };
-    EVT VT = Op.getOperand(3).getValueType();
 
+    EVT VT = Op.getOperand(3).getValueType();
     auto *M = cast<MemSDNode>(Op);
-    if (VT.isVector()) {
-      return DAG.getMemIntrinsicNode(
-        AMDGPUISD::ATOMIC_PK_FADD, DL, Op->getVTList(), Ops, VT,
-        M->getMemOperand());
-    }
 
     return DAG.getAtomic(ISD::ATOMIC_LOAD_FADD, DL, VT,
                          DAG.getVTList(VT, MVT::Other), Ops,
