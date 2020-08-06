@@ -1149,18 +1149,9 @@ There are also common utilities when targeting SPIR-V from any dialect:
 
 These common utilities are implemented in the `MLIRSPIRVTransforms` library.
 
-## Contribution
-
-All kinds of contributions are highly appreciated! :) We have GitHub issues for
-tracking the [dialect][GitHubDialectTracking] and
-[lowering][GitHubLoweringTracking] development. You can find todo tasks there.
-The [Code organization](#code-organization) section gives an overview of how
-SPIR-V related functionalities are implemented in MLIR. This section gives more
-concrete steps on how to contribute.
-
 ## Rationale
 
-## Lowering `memref`s to `!spv.array<..>` and `!spv.rtarray<..>`.
+### Lowering `memref`s to `!spv.array<..>` and `!spv.rtarray<..>`.
 
 The LLVM dialect lowers `memref` types to a `MemrefDescriptor`:
 
@@ -1183,14 +1174,14 @@ is lowered directly to a `!spv.ptr<!spv.array<nelts x elem_type>>` when the
 below.
 
 1.  Inputs/output buffers to a SPIR-V kernel are specified using
-    [`OpVariable`][SpirvOpVariable] inside
-    [interface storage classes][VulkanShaderInterfaceStorageClass] (e.g.,
-    Uniform, StorageBuffer, etc.), while kernel private variables reside in
-    non-interface storage classes (e.g., Function, Workgroup, etc.). By default,
-    Vulkan-flavored SPIR-V requires logical addressing mode: one cannot
-    load/store pointers from/to variables and cannot perform pointer arithmetic.
-    Expressing a struct like `MemrefDescriptor` in interface storage class
-    requires special addressing mode
+    [`OpVariable`][SpirvOpVariable] inside [interface storage
+    classes][VulkanShaderInterfaceStorageClass] (e.g., Uniform, StorageBuffer,
+    etc.), while kernel private variables reside in non-interface storage
+    classes (e.g., Function, Workgroup, etc.). By default, Vulkan-flavored
+    SPIR-V requires logical addressing mode: one cannot load/store pointers
+    from/to variables and cannot perform pointer arithmetic.  Expressing a
+    struct like `MemrefDescriptor` in interface storage class requires special
+    addressing mode
     ([PhysicalStorageBuffer][VulkanExtensionPhysicalStorageBuffer]) and
     manipulating such a struct in non-interface storage classes requires special
     capabilities ([VariablePointers][VulkanExtensionVariablePointers]).
@@ -1209,10 +1200,10 @@ below.
     further advantages:
 
     *   All the dynamic shape/stride information of the `memref` can be combined
-        into a single descriptor. Descriptors are
-        [limited resources on many Vulkan hardware][VulkanGPUInfoMaxPerStageDescriptorStorageBuffers].
-        So combining them would help make the generated code more portable
-        across devices.
+        into a single descriptor. Descriptors are [limited resources on many
+        Vulkan hardware][VulkanGPUInfoMaxPerStageDescriptorStorageBuffers].  So
+        combining them would help make the generated code more portable across
+        devices.
     *   If the shape/stride information is small enough, they could be accessed
         using [PushConstants][VulkanPushConstants] that are faster to access and
         avoid buffer allocation overheads. These would be unnecessary if all
@@ -1222,6 +1213,15 @@ below.
     *   The shape/stride information (typically) needs to be update less
         frequently than the data stored in the buffers. They could be part of
         different descriptor sets.
+
+## Contribution
+
+All kinds of contributions are highly appreciated! :) We have GitHub issues for
+tracking the [dialect][GitHubDialectTracking] and
+[lowering][GitHubLoweringTracking] development. You can find todo tasks there.
+The [Code organization](#code-organization) section gives an overview of how
+SPIR-V related functionalities are implemented in MLIR. This section gives more
+concrete steps on how to contribute.
 
 ### Automated development flow
 
