@@ -140,7 +140,7 @@ define void @f1() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[4]: empty-set, @Write8(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[4]: [0,8), @Write8(arg0, [0,1)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %x1 = bitcast i32* %x to i8*
@@ -155,7 +155,7 @@ define void @f2() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[4]: empty-set, @Write1(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[4]: [0,1), @Write1(arg0, [0,1)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %x1 = bitcast i32* %x to i8*
@@ -170,7 +170,7 @@ define void @f3() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[4]: empty-set, @Write4(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[4]: [0,4), @Write4(arg0, [0,1)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %x1 = bitcast i32* %x to i8*
@@ -185,7 +185,7 @@ define void @f4() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[4]: empty-set, @Write1(arg0, [1,2)){{$}}
 ; GLOBAL-NEXT: x[4]: [1,2), @Write1(arg0, [1,2)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %x1 = bitcast i32* %x to i8*
@@ -201,7 +201,7 @@ define void @f5() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: empty-set, @Write4(arg0, [1,2)){{$}}
 ; GLOBAL-NEXT: [1,5), @Write4(arg0, [1,2)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %x1 = bitcast i32* %x to i8*
@@ -217,7 +217,7 @@ define void @f6() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[4]: empty-set, @ExternalCall(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[4]: full-set, @ExternalCall(arg0, [0,1)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %x1 = bitcast i32* %x to i8*
@@ -232,7 +232,7 @@ define void @PreemptableCall() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[4]: empty-set, @PreemptableWrite1(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[4]: full-set, @PreemptableWrite1(arg0, [0,1)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %x1 = bitcast i32* %x to i8*
@@ -248,7 +248,7 @@ define void @InterposableCall() #0 {
 ; LOCAL-NEXT: x[4]: empty-set, @InterposableWrite1(arg0, [0,1)){{$}}
 ; NOLTO-NEXT: x[4]: full-set, @InterposableWrite1(arg0, [0,1)){{$}}
 ; LTO-NEXT: x[4]: [0,1), @InterposableWrite1(arg0, [0,1)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %x1 = bitcast i32* %x to i8*
@@ -263,7 +263,7 @@ define void @PrivateCall() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[4]: empty-set, @PrivateWrite1(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[4]: [0,1), @PrivateWrite1(arg0, [0,1)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %x1 = bitcast i32* %x to i8*
@@ -276,7 +276,7 @@ define private void @PrivateWrite1(i8* %p) #0 {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   store i8 0, i8* %p, align 1
   ret void
@@ -290,7 +290,7 @@ define void @f7() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[4]: empty-set, @ReturnDependent(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[4]: full-set, @ReturnDependent(arg0, [0,1)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %x1 = bitcast i32* %x to i8*
@@ -304,7 +304,7 @@ define void @f8left() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[8]: empty-set, @Rec2(arg0, [2,3)){{$}}
 ; GLOBAL-NEXT: x[8]: [0,4), @Rec2(arg0, [2,3)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
   %x1 = bitcast i64* %x to i8*
@@ -320,7 +320,7 @@ define void @f8right() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[8]: empty-set, @Rec2(arg0, [6,7)){{$}}
 ; GLOBAL-NEXT: x[8]: [4,8), @Rec2(arg0, [6,7)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
   %x1 = bitcast i64* %x to i8*
@@ -336,7 +336,7 @@ define void @f8oobleft() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[8]: empty-set, @Rec2(arg0, [1,2)){{$}}
 ; GLOBAL-NEXT: x[8]: [-1,3), @Rec2(arg0, [1,2)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
   %x1 = bitcast i64* %x to i8*
@@ -352,7 +352,7 @@ define void @f8oobright() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[8]: empty-set, @Rec2(arg0, [7,8)){{$}}
 ; GLOBAL-NEXT: x[8]: [5,9), @Rec2(arg0, [7,8)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
   %x1 = bitcast i64* %x to i8*
@@ -368,7 +368,7 @@ define void @TwoArguments() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[8]: empty-set, @Write4_2(arg1, [0,1)), @Write4_2(arg0, [4,5)){{$}}
 ; GLOBAL-NEXT: x[8]: [0,8), @Write4_2(arg1, [0,1)), @Write4_2(arg0, [4,5)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
   %x1 = bitcast i64* %x to i8*
@@ -383,7 +383,7 @@ define void @TwoArgumentsOOBOne() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[8]: empty-set, @Write4_2(arg1, [0,1)), @Write4_2(arg0, [5,6)){{$}}
 ; GLOBAL-NEXT: x[8]: [0,9), @Write4_2(arg1, [0,1)), @Write4_2(arg0, [5,6)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
   %x1 = bitcast i64* %x to i8*
@@ -398,7 +398,7 @@ define void @TwoArgumentsOOBOther() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[8]: empty-set, @Write4_2(arg1, [-1,0)), @Write4_2(arg0, [4,5)){{$}}
 ; GLOBAL-NEXT: x[8]: [-1,8), @Write4_2(arg1, [-1,0)), @Write4_2(arg0, [4,5)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
   %x0 = bitcast i64* %x to i8*
@@ -414,7 +414,7 @@ define void @TwoArgumentsOOBBoth() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[8]: empty-set, @Write4_2(arg1, [-1,0)), @Write4_2(arg0, [5,6)){{$}}
 ; GLOBAL-NEXT: x[8]: [-1,9), @Write4_2(arg1, [-1,0)), @Write4_2(arg0, [5,6)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
   %x0 = bitcast i64* %x to i8*
@@ -431,7 +431,7 @@ define i32 @TestRecursiveNoOffset(i32* %p, i32 %size) #0 {
 ; GLOBAL-NEXT: p[]: full-set, @RecursiveNoOffset(arg0, [0,1)){{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: sum[4]: [0,4), @RecursiveNoOffset(arg2, [0,1)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %sum = alloca i32, align 4
   %0 = bitcast i32* %sum to i8*
@@ -447,7 +447,7 @@ define void @TestRecursiveWithOffset(i32 %size) #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: sum[64]: empty-set, @RecursiveWithOffset(arg1, [0,1)){{$}}
 ; GLOBAL-NEXT: sum[64]: full-set, @RecursiveWithOffset(arg1, [0,1)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %sum = alloca i32, i64 16, align 4
   call void @RecursiveWithOffset(i32 %size, i32* %sum)
@@ -461,7 +461,7 @@ define void @TestUpdateArg() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[16]: empty-set, @WriteAndReturn8(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[16]: full-set, @WriteAndReturn8(arg0, [0,1)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i8, i64 16, align 4
   %0 = call i8* @WriteAndReturn8(i8* %x)
@@ -474,71 +474,71 @@ entry:
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 
 ; CHECK-LABEL: @Write4{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: [0,4){{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 
 ; CHECK-LABEL: @Write4_2{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: [0,4){{$}}
 ; CHECK-NEXT: q[]: [0,4){{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 
 ; CHECK-LABEL: @Write8{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: [0,8){{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 
 ; CHECK-LABEL: @WriteAndReturn8{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: full-set{{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 
 ; CHECK-LABEL: @PreemptableWrite1 dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 
 ; CHECK-LABEL: @InterposableWrite1 interposable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 
 ; CHECK-LABEL: @ReturnDependent{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: full-set{{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 
 ; CHECK-LABEL: @Rec0{{$}}
 ; CHECK-NEXT: args uses:
 ; LOCAL-NEXT: p[]: empty-set, @Write4(arg0, [2,3)){{$}}
 ; GLOBAL-NEXT: p[]: [2,6)
 ; CHECK-NEXT: allocas uses:
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 
 ; CHECK-LABEL: @Rec1{{$}}
 ; CHECK-NEXT: args uses:
 ; LOCAL-NEXT: p[]: empty-set, @Rec0(arg0, [1,2)){{$}}
 ; GLOBAL-NEXT: p[]: [3,7)
 ; CHECK-NEXT: allocas uses:
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 
 ; CHECK-LABEL: @Rec2{{$}}
 ; CHECK-NEXT: args uses:
 ; LOCAL-NEXT: p[]: empty-set, @Rec1(arg0, [-5,-4)){{$}}
 ; GLOBAL-NEXT: p[]: [-2,2)
 ; CHECK-NEXT: allocas uses:
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 
 ; CHECK-LABEL: @RecursiveNoOffset{{$}}
 ; CHECK-NEXT: args uses:
@@ -546,17 +546,17 @@ entry:
 ; GLOBAL-NEXT: p[]: full-set, @RecursiveNoOffset(arg0, [4,5)){{$}}
 ; CHECK-NEXT: acc[]: [0,4), @RecursiveNoOffset(arg2, [0,1)){{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 
 ; CHECK-LABEL: @RecursiveWithOffset{{$}}
 ; CHECK-NEXT: args uses:
 ; LOCAL-NEXT: acc[]: [0,4), @RecursiveWithOffset(arg1, [4,5)){{$}}
 ; GLOBAL-NEXT: acc[]: full-set, @RecursiveWithOffset(arg1, [4,5)){{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 
 ; CHECK-LABEL: @ReturnAlloca
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: full-set
-; CHECK-NOT: ]:
+; CHECK-EMPTY:

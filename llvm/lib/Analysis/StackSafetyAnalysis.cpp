@@ -174,6 +174,7 @@ template <typename CalleeTy> struct FunctionInfo {
     } else {
       assert(Allocas.empty());
     }
+    O << "\n";
   }
 };
 
