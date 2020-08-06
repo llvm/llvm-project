@@ -1887,15 +1887,15 @@ public:
           m_section_infos[n_sect].vm_range.SetByteSize(
               section_sp->GetByteSize());
         } else {
-          const char *filename = "<unknown>";
+          std::string filename = "<unknown>";
           SectionSP first_section_sp(m_section_list->GetSectionAtIndex(0));
           if (first_section_sp)
-            filename = first_section_sp->GetObjectFile()->GetFileSpec().GetPath().c_str();
+            filename = first_section_sp->GetObjectFile()->GetFileSpec().GetPath();
 
           Host::SystemLog(Host::eSystemLogError,
                           "error: unable to find section %d for a symbol in %s, corrupt file?\n",
                           n_sect, 
-                          filename);
+                          filename.c_str());
         }
       }
       if (m_section_infos[n_sect].vm_range.Contains(file_addr)) {
