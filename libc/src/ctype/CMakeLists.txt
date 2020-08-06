@@ -66,6 +66,8 @@ add_entrypoint_object(
     islower.cpp
   HDRS
     islower.h
+  DEPENDS
+    .ctype_utils
 )
 
 add_entrypoint_object(
@@ -100,6 +102,8 @@ add_entrypoint_object(
     isupper.cpp
   HDRS
     isupper.h
+  DEPENDS
+    .ctype_utils
 )
 
 add_entrypoint_object(
@@ -108,6 +112,26 @@ add_entrypoint_object(
     isxdigit.cpp
   HDRS
     isxdigit.h
+  DEPENDS
+    .ctype_utils
+)
+
+add_entrypoint_object(
+  tolower
+  SRCS
+    tolower.cpp
+  HDRS
+    tolower.h
+  DEPENDS
+    .ctype_utils
+)
+
+add_entrypoint_object(
+  toupper
+  SRCS
+    toupper.cpp
+  HDRS
+    toupper.h
   DEPENDS
     .ctype_utils
 )
