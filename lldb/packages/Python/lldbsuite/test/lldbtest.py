@@ -496,8 +496,12 @@ class Base(unittest2.TestCase):
             mydir = TestBase.compute_mydir(__file__)
         '''
         # /abs/path/to/packages/group/subdir/mytest.py -> group/subdir
-        rel_prefix = test_file[len(os.environ["LLDB_TEST_SRC"]) + 1:]
-        return os.path.dirname(rel_prefix)
+        lldb_test_src = configuration.test_src_root
+        if not test_file.startswith(lldb_test_src):
+          raise Exception(
+              "Test file '%s' must reside within lldb_test_src "
+              "(which is '%s')." % (test_file, lldb_test_src))
+        return os.path.dirname(os.path.relpath(test_file, start=lldb_test_src))
 
     def TraceOn(self):
         """Returns True if we are in trace mode (tracing detailed test execution)."""
@@ -520,15 +524,11 @@ class Base(unittest2.TestCase):
         # Save old working directory.
         cls.oldcwd = os.getcwd()
 
-        # Change current working directory if ${LLDB_TEST_SRC} is defined.
-        # See also dotest.py which sets up ${LLDB_TEST_SRC}.
-        if ("LLDB_TEST_SRC" in os.environ):
-            full_dir = os.path.join(os.environ["LLDB_TEST_SRC"],
-                                    cls.mydir)
-            if traceAlways:
-                print("Change dir to:", full_dir, file=sys.stderr)
-            os.chdir(full_dir)
-            lldb.SBReproducer.SetWorkingDirectory(full_dir)
+        full_dir = os.path.join(configuration.test_src_root, cls.mydir)
+        if traceAlways:
+            print("Change dir to:", full_dir, file=sys.stderr)
+        os.chdir(full_dir)
+        lldb.SBReproducer.SetWorkingDirectory(full_dir)
 
         # Set platform context.
         cls.platformContext = lldbplatformutil.createPlatformContext()
@@ -662,7 +662,7 @@ class Base(unittest2.TestCase):
 
     def getSourceDir(self):
         """Return the full path to the current test."""
-        return os.path.join(os.environ["LLDB_TEST_SRC"], self.mydir)
+        return os.path.join(configuration.test_src_root, self.mydir)
 
     def getBuildDirBasename(self):
         return self.__class__.__module__ + "." + self.testMethodName
@@ -716,6 +716,9 @@ class Base(unittest2.TestCase):
             # different binaries with the same UUID, because they only
             # differ in the debug info, which is not being hashed.
             "settings set symbols.enable-external-lookup false",
+
+            # Inherit the TCC permissions from the inferior's parent.
+            "settings set target.inherit-tcc true",
 
             # Disable fix-its by default so that incorrect expressions in tests don't
             # pass just because Clang thinks it has a fix-it.
@@ -1095,7 +1098,7 @@ class Base(unittest2.TestCase):
 
         <session-dir>/<arch>-<compiler>-<test-file>.<test-class>.<test-method>
         """
-        dname = os.path.join(os.environ["LLDB_TEST_SRC"],
+        dname = os.path.join(configuration.test_src_root,
                              os.environ["LLDB_SESSION_DIRNAME"])
         if not os.path.isdir(dname):
             os.mkdir(dname)
@@ -1322,25 +1325,35 @@ class Base(unittest2.TestCase):
            Use compiler_version[0] to specify the operator used to determine if a match has occurred.
            Any operator other than the following defaults to an equality test:
              '>', '>=', "=>", '<', '<=', '=<', '!=', "!" or 'not'
+
+           If the current compiler version cannot be determined, we assume it is close to the top
+           of trunk, so any less-than or equal-to comparisons will return False, and any
+           greater-than or not-equal-to comparisons will return True.
         """
-        if (compiler_version is None):
+        if compiler_version is None:
             return True
         operator = str(compiler_version[0])
         version = compiler_version[1]
 
-        if (version is None):
+        if version is None:
             return True
-        if (operator == '>'):
-            return LooseVersion(self.getCompilerVersion()) > LooseVersion(version)
-        if (operator == '>=' or operator == '=>'):
-            return LooseVersion(self.getCompilerVersion()) >= LooseVersion(version)
-        if (operator == '<'):
-            return LooseVersion(self.getCompilerVersion()) < LooseVersion(version)
-        if (operator == '<=' or operator == '=<'):
-            return LooseVersion(self.getCompilerVersion()) <= LooseVersion(version)
-        if (operator == '!=' or operator == '!' or operator == 'not'):
-            return str(version) not in str(self.getCompilerVersion())
-        return str(version) in str(self.getCompilerVersion())
+
+        test_compiler_version = self.getCompilerVersion()
+        if test_compiler_version == 'unknown':
+            # Assume the compiler version is at or near the top of trunk.
+            return operator in ['>', '>=', '!', '!=', 'not']
+
+        if operator == '>':
+            return LooseVersion(test_compiler_version) > LooseVersion(version)
+        if operator == '>=' or operator == '=>':
+            return LooseVersion(test_compiler_version) >= LooseVersion(version)
+        if operator == '<':
+            return LooseVersion(test_compiler_version) < LooseVersion(version)
+        if operator == '<=' or operator == '=<':
+            return LooseVersion(test_compiler_version) <= LooseVersion(version)
+        if operator == '!=' or operator == '!' or operator == 'not':
+            return str(version) not in str(test_compiler_version)
+        return str(version) in str(test_compiler_version)
 
     def expectedCompiler(self, compilers):
         """Returns True iff any element of compilers is a sub-string of the current compiler."""

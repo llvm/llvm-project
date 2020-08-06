@@ -502,9 +502,7 @@ def skipIfOutOfTreeDebugserver(func):
 
 def skipIfRemote(func):
     """Decorate the item to skip tests if testing remotely."""
-    def is_remote():
-        return "skip on remote platform" if lldb.remote_platform else None
-    return skipTestIfFn(is_remote)(func)
+    return unittest2.skipIf(lldb.remote_platform, "skip on remote platform")(func)
 
 
 def skipIfNoSBHeaders(func):
@@ -540,10 +538,9 @@ def skipIfNoSBHeaders(func):
 def skipIfRosetta(bugnumber):
     """Skip a test when running the testsuite on macOS under the Rosetta translation layer."""
     def is_running_rosetta(self):
-        if not lldbplatformutil.getPlatform() in ['darwin', 'macosx']:
-            return "not on macOS"
-        if (platform.uname()[5] == "arm") and (self.getArchitecture() == "x86_64"):
-            return "skipped under Rosetta"
+        if lldbplatformutil.getPlatform() in ['darwin', 'macosx']:
+            if (platform.uname()[5] == "arm") and (self.getArchitecture() == "x86_64"):
+                return "skipped under Rosetta"
         return None
     return skipTestIfFn(is_running_rosetta)
 

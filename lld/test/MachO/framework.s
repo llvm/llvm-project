@@ -22,7 +22,7 @@
 .globl _main
 .text
 _main:
-  sub $8, %rsp # 16-byte-align the stack; dylld -flavor darwinnew checks for this
+  sub $8, %rsp # 16-byte-align the stack; dyld checks for this
   callq _foo
   mov $0, %rax
   add $8, %rsp

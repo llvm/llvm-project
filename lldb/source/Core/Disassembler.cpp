@@ -990,17 +990,15 @@ void InstructionList::Append(lldb::InstructionSP &inst_sp) {
 
 uint32_t
 InstructionList::GetIndexOfNextBranchInstruction(uint32_t start,
-                                                 Target &target,
                                                  bool ignore_calls,
                                                  bool *found_calls) const {
   size_t num_instructions = m_instructions.size();
 
   uint32_t next_branch = UINT32_MAX;
-  size_t i;
   
   if (found_calls)
     *found_calls = false;
-  for (i = start; i < num_instructions; i++) {
+  for (size_t i = start; i < num_instructions; i++) {
     if (m_instructions[i]->DoesBranch()) {
       if (ignore_calls && m_instructions[i]->IsCall()) {
         if (found_calls)
@@ -1012,42 +1010,6 @@ InstructionList::GetIndexOfNextBranchInstruction(uint32_t start,
     }
   }
 
-  // Hexagon needs the first instruction of the packet with the branch. Go
-  // backwards until we find an instruction marked end-of-packet, or until we
-  // hit start.
-  if (target.GetArchitecture().GetTriple().getArch() == llvm::Triple::hexagon) {
-    // If we didn't find a branch, find the last packet start.
-    if (next_branch == UINT32_MAX) {
-      i = num_instructions - 1;
-    }
-
-    while (i > start) {
-      --i;
-
-      Status error;
-      uint32_t inst_bytes;
-      bool prefer_file_cache = false; // Read from process if process is running
-      lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
-      target.ReadMemory(m_instructions[i]->GetAddress(), prefer_file_cache,
-                        &inst_bytes, sizeof(inst_bytes), error, &load_addr);
-      // If we have an error reading memory, return start
-      if (!error.Success())
-        return start;
-      // check if this is the last instruction in a packet bits 15:14 will be
-      // 11b or 00b for a duplex
-      if (((inst_bytes & 0xC000) == 0xC000) ||
-          ((inst_bytes & 0xC000) == 0x0000)) {
-        // instruction after this should be the start of next packet
-        next_branch = i + 1;
-        break;
-      }
-    }
-
-    if (next_branch == UINT32_MAX) {
-      // We couldn't find the previous packet, so return start
-      next_branch = start;
-    }
-  }
   return next_branch;
 }
 

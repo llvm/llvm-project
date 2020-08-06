@@ -63,6 +63,11 @@ private:
   SDValue lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc, SDValue Offset,
                        SDValue CachePolicy, SelectionDAG &DAG) const;
 
+  SDValue lowerRawBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
+                                     unsigned NewOpcode) const;
+  SDValue lowerStructBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
+                                        unsigned NewOpcode) const;
+
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
@@ -255,12 +260,22 @@ public:
                         const SelectionDAG &DAG) const override;
 
   bool allowsMisalignedMemoryAccessesImpl(
-      unsigned Size, unsigned AS, unsigned Align,
+      unsigned Size, unsigned AddrSpace, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       bool *IsFast = nullptr) const;
 
   bool allowsMisalignedMemoryAccesses(
-      EVT VT, unsigned AS, unsigned Align,
+      LLT Ty, unsigned AddrSpace, Align Alignment,
+      MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
+      bool *IsFast = nullptr) const override {
+    if (IsFast)
+      *IsFast = false;
+    return allowsMisalignedMemoryAccessesImpl(Ty.getSizeInBits(), AddrSpace,
+                                              Alignment, Flags, IsFast);
+  }
+
+  bool allowsMisalignedMemoryAccesses(
+      EVT VT, unsigned AS, unsigned Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       bool *IsFast = nullptr) const override;
 

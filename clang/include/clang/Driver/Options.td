@@ -1351,7 +1351,7 @@ def flto_EQ : Joined<["-"], "flto=">, Flags<[CoreOption, CC1Option]>, Group<f_Gr
   HelpText<"Set LTO mode to either 'full' or 'thin'">, Values<"thin,full">;
 def flto : Flag<["-"], "flto">, Flags<[CoreOption, CC1Option]>, Group<f_Group>,
   HelpText<"Enable LTO in 'full' mode">;
-def fno_lto : Flag<["-"], "fno-lto">, Group<f_Group>,
+def fno_lto : Flag<["-"], "fno-lto">, Flags<[CoreOption, CC1Option]>, Group<f_Group>,
   HelpText<"Disable LTO mode (default)">;
 def flto_jobs_EQ : Joined<["-"], "flto-jobs=">,
   Flags<[CC1Option]>, Group<f_Group>,
@@ -1801,10 +1801,15 @@ def fstack_protector_strong : Flag<["-"], "fstack-protector-strong">, Group<f_Gr
            "as well as any calls to alloca or the taking of an address from a local variable">;
 def fstack_protector : Flag<["-"], "fstack-protector">, Group<f_Group>,
   HelpText<"Enable stack protectors for some functions vulnerable to stack smashing. "
-           "This uses a loose heuristic which considers functions vulnerable "
-           "if they contain a char (or 8bit integer) array or constant sized calls to "
-           "alloca, which are of greater size than ssp-buffer-size (default: 8 bytes). "
-           "All variable sized calls to alloca are considered vulnerable">;
+           "This uses a loose heuristic which considers functions vulnerable if they "
+           "contain a char (or 8bit integer) array or constant sized calls to alloca "
+           ", which are of greater size than ssp-buffer-size (default: 8 bytes). All "
+           "variable sized calls to alloca are considered vulnerable. A function with"
+           "a stack protector has a guard value added to the stack frame that is "
+           "checked on function exit. The guard value must be positioned in the "
+           "stack frame such that a buffer overflow from a vulnerable variable will "
+           "overwrite the guard value before overwriting the function's return "
+           "address. The reference stack guard value is stored in a global variable.">;
 def ftrivial_auto_var_init : Joined<["-"], "ftrivial-auto-var-init=">, Group<f_Group>,
   Flags<[CC1Option, CoreOption]>, HelpText<"Initialize trivial automatic stack variables: uninitialized (default)"
   " | pattern">, Values<"uninitialized,pattern">;

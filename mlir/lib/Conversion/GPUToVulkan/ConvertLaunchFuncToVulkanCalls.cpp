@@ -57,19 +57,12 @@ class VulkanLaunchFuncToVulkanCallsPass
     : public ConvertVulkanLaunchFuncToVulkanCallsBase<
           VulkanLaunchFuncToVulkanCallsPass> {
 private:
-  LLVM::LLVMDialect *getLLVMDialect() { return llvmDialect; }
-
-  llvm::LLVMContext &getLLVMContext() {
-    return getLLVMDialect()->getLLVMContext();
-  }
-
   void initializeCachedTypes() {
-    llvmDialect = getContext().getRegisteredDialect<LLVM::LLVMDialect>();
-    llvmFloatType = LLVM::LLVMType::getFloatTy(llvmDialect);
-    llvmVoidType = LLVM::LLVMType::getVoidTy(llvmDialect);
-    llvmPointerType = LLVM::LLVMType::getInt8PtrTy(llvmDialect);
-    llvmInt32Type = LLVM::LLVMType::getInt32Ty(llvmDialect);
-    llvmInt64Type = LLVM::LLVMType::getInt64Ty(llvmDialect);
+    llvmFloatType = LLVM::LLVMType::getFloatTy(&getContext());
+    llvmVoidType = LLVM::LLVMType::getVoidTy(&getContext());
+    llvmPointerType = LLVM::LLVMType::getInt8PtrTy(&getContext());
+    llvmInt32Type = LLVM::LLVMType::getInt32Ty(&getContext());
+    llvmInt64Type = LLVM::LLVMType::getInt64Ty(&getContext());
   }
 
   LLVM::LLVMType getMemRefType(uint32_t rank, LLVM::LLVMType elemenType) {
@@ -91,7 +84,7 @@ private:
     // `!llvm<"{ `element-type`*, `element-type`*, i64,
     // [`rank` x i64], [`rank` x i64]}">`.
     return LLVM::LLVMType::getStructTy(
-        llvmDialect,
+        &getContext(),
         {llvmPtrToElementType, llvmPtrToElementType, getInt64Type(),
          llvmArrayRankElementSizeType, llvmArrayRankElementSizeType});
   }
@@ -157,7 +150,6 @@ public:
   void runOnOperation() override;
 
 private:
-  LLVM::LLVMDialect *llvmDialect;
   LLVM::LLVMType llvmFloatType;
   LLVM::LLVMType llvmVoidType;
   LLVM::LLVMType llvmPointerType;
@@ -249,7 +241,7 @@ void VulkanLaunchFuncToVulkanCallsPass::createBindMemRefCalls(
     // int16_t and bitcast the descriptor.
     if (type.isHalfTy()) {
       auto memRefTy =
-          getMemRefType(rank, LLVM::LLVMType::getInt16Ty(llvmDialect));
+          getMemRefType(rank, LLVM::LLVMType::getInt16Ty(&getContext()));
       ptrToMemRefDescriptor = builder.create<LLVM::BitcastOp>(
           loc, memRefTy.getPointerTo(), ptrToMemRefDescriptor);
     }
@@ -328,15 +320,15 @@ void VulkanLaunchFuncToVulkanCallsPass::declareVulkanFunctions(Location loc) {
   }
 
   for (unsigned i = 1; i <= 3; i++) {
-    for (LLVM::LLVMType type : {LLVM::LLVMType::getFloatTy(llvmDialect),
-                                LLVM::LLVMType::getInt32Ty(llvmDialect),
-                                LLVM::LLVMType::getInt16Ty(llvmDialect),
-                                LLVM::LLVMType::getInt8Ty(llvmDialect),
-                                LLVM::LLVMType::getHalfTy(llvmDialect)}) {
+    for (LLVM::LLVMType type : {LLVM::LLVMType::getFloatTy(&getContext()),
+                                LLVM::LLVMType::getInt32Ty(&getContext()),
+                                LLVM::LLVMType::getInt16Ty(&getContext()),
+                                LLVM::LLVMType::getInt8Ty(&getContext()),
+                                LLVM::LLVMType::getHalfTy(&getContext())}) {
       std::string fnName = "bindMemRef" + std::to_string(i) + "D" +
                            std::string(stringifyType(type));
       if (type.isHalfTy())
-        type = getMemRefType(i, LLVM::LLVMType::getInt16Ty(llvmDialect));
+        type = getMemRefType(i, LLVM::LLVMType::getInt16Ty(&getContext()));
       if (!module.lookupSymbol(fnName)) {
         auto fnType = LLVM::LLVMType::getFunctionTy(
             getVoidType(),
@@ -372,8 +364,7 @@ Value VulkanLaunchFuncToVulkanCallsPass::createEntryPointNameConstant(
 
   std::string entryPointGlobalName = (name + "_spv_entry_point_name").str();
   return LLVM::createGlobalString(loc, builder, entryPointGlobalName,
-                                  shaderName, LLVM::Linkage::Internal,
-                                  getLLVMDialect());
+                                  shaderName, LLVM::Linkage::Internal);
 }
 
 void VulkanLaunchFuncToVulkanCallsPass::translateVulkanLaunchCall(
@@ -392,7 +383,7 @@ void VulkanLaunchFuncToVulkanCallsPass::translateVulkanLaunchCall(
   // that data to runtime call.
   Value ptrToSPIRVBinary = LLVM::createGlobalString(
       loc, builder, kSPIRVBinary, spirvAttributes.first.getValue(),
-      LLVM::Linkage::Internal, getLLVMDialect());
+      LLVM::Linkage::Internal);
 
   // Create LLVM constant for the size of SPIR-V binary shader.
   Value binarySize = builder.create<LLVM::ConstantOp>(

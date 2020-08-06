@@ -125,8 +125,8 @@ void VirtualCallChecker::checkPreCall(const CallEvent &Call,
   OS << "Call to ";
   if (IsPure)
     OS << "pure ";
-  OS << "virtual method '" << MD->getParent()->getNameAsString()
-     << "::" << MD->getNameAsString() << "' during ";
+  OS << "virtual method '" << MD->getParent()->getDeclName()
+     << "::" << MD->getDeclName() << "' during ";
   if (*ObState == ObjectState::CtorCalled)
     OS << "construction ";
   else

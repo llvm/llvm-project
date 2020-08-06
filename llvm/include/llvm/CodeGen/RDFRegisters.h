@@ -91,6 +91,11 @@ namespace rdf {
     bool operator< (const RegisterRef &RR) const {
       return Reg < RR.Reg || (Reg == RR.Reg && Mask < RR.Mask);
     }
+
+    size_t hash() const {
+      return std::hash<RegisterId>{}(Reg) ^
+             std::hash<LaneBitmask::Type>{}(Mask.getAsInteger());
+    }
   };
 
 
@@ -110,7 +115,11 @@ namespace rdf {
       return RegMasks.get(Register::stackSlot2Index(R));
     }
 
-    RegisterRef normalize(RegisterRef RR) const;
+    LLVM_ATTRIBUTE_DEPRECATED(RegisterRef normalize(RegisterRef RR),
+      "This function is now an identity function");
+    RegisterRef normalize(RegisterRef RR) const {
+      return RR;
+    }
 
     bool alias(RegisterRef RA, RegisterRef RB) const {
       if (!isRegMaskId(RA.Reg))
@@ -128,6 +137,10 @@ namespace rdf {
       return MaskInfos[Register::stackSlot2Index(MaskId)].Units;
     }
 
+    const BitVector &getUnitAliases(uint32_t U) const {
+      return AliasInfos[U].Regs;
+    }
+
     RegisterRef mapTo(RegisterRef RR, unsigned R) const;
     const TargetRegisterInfo &getTRI() const { return TRI; }
 
@@ -142,12 +155,16 @@ namespace rdf {
     struct MaskInfo {
       BitVector Units;
     };
+    struct AliasInfo {
+      BitVector Regs;
+    };
 
     const TargetRegisterInfo &TRI;
     IndexedSet<const uint32_t*> RegMasks;
     std::vector<RegInfo> RegInfos;
     std::vector<UnitInfo> UnitInfos;
     std::vector<MaskInfo> MaskInfos;
+    std::vector<AliasInfo> AliasInfos;
 
     bool aliasRR(RegisterRef RA, RegisterRef RB) const;
     bool aliasRM(RegisterRef RR, RegisterRef RM) const;
@@ -159,9 +176,14 @@ namespace rdf {
         : Units(pri.getTRI().getNumRegUnits()), PRI(pri) {}
     RegisterAggr(const RegisterAggr &RG) = default;
 
+    unsigned count() const { return Units.count(); }
     bool empty() const { return Units.none(); }
     bool hasAliasOf(RegisterRef RR) const;
     bool hasCoverOf(RegisterRef RR) const;
+
+    bool operator==(const RegisterAggr &A) const {
+      return DenseMapInfo<BitVector>::isEqual(Units, A.Units);
+    }
 
     static bool isCoverOf(RegisterRef RA, RegisterRef RB,
                           const PhysicalRegisterInfo &PRI) {
@@ -178,6 +200,10 @@ namespace rdf {
     RegisterRef intersectWith(RegisterRef RR) const;
     RegisterRef clearIn(RegisterRef RR) const;
     RegisterRef makeRegRef() const;
+
+    size_t hash() const {
+      return DenseMapInfo<BitVector>::getHashValue(Units);
+    }
 
     void print(raw_ostream &OS) const;
 
@@ -233,8 +259,27 @@ namespace rdf {
   };
   raw_ostream &operator<< (raw_ostream &OS, const PrintLaneMaskOpt &P);
 
+  raw_ostream &operator<< (raw_ostream &OS, const RegisterAggr &A);
 } // end namespace rdf
 
 } // end namespace llvm
 
+namespace std {
+  template <> struct hash<llvm::rdf::RegisterRef> {
+    size_t operator()(llvm::rdf::RegisterRef A) const {
+      return A.hash();
+    }
+  };
+  template <> struct hash<llvm::rdf::RegisterAggr> {
+    size_t operator()(const llvm::rdf::RegisterAggr &A) const {
+      return A.hash();
+    }
+  };
+  template <> struct equal_to<llvm::rdf::RegisterAggr> {
+    bool operator()(const llvm::rdf::RegisterAggr &A,
+                    const llvm::rdf::RegisterAggr &B) const {
+      return A == B;
+    }
+  };
+}
 #endif // LLVM_LIB_TARGET_HEXAGON_RDFREGISTERS_H

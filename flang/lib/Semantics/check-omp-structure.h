@@ -14,12 +14,11 @@
 #ifndef FORTRAN_SEMANTICS_CHECK_OMP_STRUCTURE_H_
 #define FORTRAN_SEMANTICS_CHECK_OMP_STRUCTURE_H_
 
+#include "check-directive-structure.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/semantics.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
-
-#include <unordered_map>
 
 using OmpDirectiveSet = Fortran::common::EnumSet<llvm::omp::Directive,
     llvm::omp::Directive_enumSize>;
@@ -79,9 +78,16 @@ static OmpDirectiveSet taskGeneratingSet{
 
 namespace Fortran::semantics {
 
-class OmpStructureChecker : public virtual BaseChecker {
+class OmpStructureChecker
+    : public DirectiveStructureChecker<llvm::omp::Directive, llvm::omp::Clause,
+          parser::OmpClause, llvm::omp::Clause_enumSize> {
 public:
-  OmpStructureChecker(SemanticsContext &context) : context_{context} {}
+  OmpStructureChecker(SemanticsContext &context)
+      : DirectiveStructureChecker(context,
+#define GEN_FLANG_DIRECTIVE_CLAUSE_MAP
+#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
+        ) {
+  }
 
   void Enter(const parser::OpenMPConstruct &);
   void Enter(const parser::OpenMPLoopConstruct &);
@@ -156,116 +162,16 @@ public:
   void Enter(const parser::OmpScheduleClause &);
 
 private:
-#define GEN_FLANG_DIRECTIVE_CLAUSE_MAP
-#include "llvm/Frontend/OpenMP/OMP.cpp.inc"
 
-  struct OmpContext {
-    OmpContext(parser::CharBlock source, llvm::omp::Directive d)
-        : directiveSource{source}, directive{d} {}
-    parser::CharBlock directiveSource{nullptr};
-    parser::CharBlock clauseSource{nullptr};
-    llvm::omp::Directive directive;
-    OmpClauseSet allowedClauses{};
-    OmpClauseSet allowedOnceClauses{};
-    OmpClauseSet allowedExclusiveClauses{};
-    OmpClauseSet requiredClauses{};
-
-    const parser::OmpClause *clause{nullptr};
-    std::multimap<llvm::omp::Clause, const parser::OmpClause *> clauseInfo;
-  };
-  // back() is the top of the stack
-  OmpContext &GetContext() {
-    CHECK(!ompContext_.empty());
-    return ompContext_.back();
-  }
-  // reset source location, check information, and
-  // collected information for END directive
-  void ResetPartialContext(const parser::CharBlock &source) {
-    CHECK(!ompContext_.empty());
-    SetContextDirectiveSource(source);
-    GetContext().allowedClauses = {};
-    GetContext().allowedOnceClauses = {};
-    GetContext().allowedExclusiveClauses = {};
-    GetContext().requiredClauses = {};
-    GetContext().clauseInfo = {};
-  }
-  void SetContextDirectiveSource(const parser::CharBlock &directive) {
-    GetContext().directiveSource = directive;
-  }
-  void SetContextClause(const parser::OmpClause &clause) {
-    GetContext().clauseSource = clause.source;
-    GetContext().clause = &clause;
-  }
-  void SetContextDirectiveEnum(llvm::omp::Directive dir) {
-    GetContext().directive = dir;
-  }
-  void SetContextAllowed(const OmpClauseSet &allowed) {
-    GetContext().allowedClauses = allowed;
-  }
-  void SetContextAllowedOnce(const OmpClauseSet &allowedOnce) {
-    GetContext().allowedOnceClauses = allowedOnce;
-  }
-  void SetContextAllowedExclusive(const OmpClauseSet &allowedExclusive) {
-    GetContext().allowedExclusiveClauses = allowedExclusive;
-  }
-  void SetContextRequired(const OmpClauseSet &required) {
-    GetContext().requiredClauses = required;
-  }
-  void SetContextClauseInfo(llvm::omp::Clause type) {
-    GetContext().clauseInfo.emplace(type, GetContext().clause);
-  }
-  const parser::OmpClause *FindClause(llvm::omp::Clause type) {
-    auto it{GetContext().clauseInfo.find(type)};
-    if (it != GetContext().clauseInfo.end()) {
-      return it->second;
-    }
-    return nullptr;
-  }
-  void PushContext(const parser::CharBlock &source, llvm::omp::Directive dir) {
-    ompContext_.emplace_back(source, dir);
-  }
-  void SetClauseSets(llvm::omp::Directive dir) {
-    ompContext_.back().allowedClauses = directiveClausesTable[dir].allowed;
-    ompContext_.back().allowedOnceClauses =
-        directiveClausesTable[dir].allowedOnce;
-    ompContext_.back().allowedExclusiveClauses =
-        directiveClausesTable[dir].allowedExclusive;
-    ompContext_.back().requiredClauses =
-        directiveClausesTable[dir].requiredOneOf;
-  }
-  void PushContextAndClauseSets(
-      const parser::CharBlock &source, llvm::omp::Directive dir) {
-    PushContext(source, dir);
-    SetClauseSets(dir);
-  }
-  void RequiresConstantPositiveParameter(
-      const llvm::omp::Clause &clause, const parser::ScalarIntConstantExpr &i);
-  void RequiresPositiveParameter(
-      const llvm::omp::Clause &clause, const parser::ScalarIntExpr &i);
-
-  bool CurrentDirectiveIsNested() { return ompContext_.size() > 0; };
   bool HasInvalidWorksharingNesting(
       const parser::CharBlock &, const OmpDirectiveSet &);
-  void CheckAllowed(llvm::omp::Clause);
-  void CheckRequired(llvm::omp::Clause);
-  std::string ContextDirectiveAsFortran();
-  void SayNotMatching(const parser::CharBlock &, const parser::CharBlock &);
-  template <typename A, typename B, typename C>
-  const A &CheckMatching(const B &beginDir, const C &endDir) {
-    const A &begin{std::get<A>(beginDir.t)};
-    const A &end{std::get<A>(endDir.t)};
-    if (begin.v != end.v) {
-      SayNotMatching(begin.source, end.source);
-    }
-    return begin;
-  }
 
   // specific clause related
   bool ScheduleModifierHasType(const parser::OmpScheduleClause &,
       const parser::OmpScheduleModifierType::ModType &);
 
-  SemanticsContext &context_;
-  std::vector<OmpContext> ompContext_; // used as a stack
+  llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
+  llvm::StringRef getDirectiveName(llvm::omp::Directive directive) override;
 };
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_CHECK_OMP_STRUCTURE_H_

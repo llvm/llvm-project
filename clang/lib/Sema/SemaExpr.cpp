@@ -17864,6 +17864,25 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
   if (Var->isInvalidDecl())
     return;
 
+  // Record a CUDA/HIP static device/constant variable if it is referenced
+  // by host code. This is done conservatively, when the variable is referenced
+  // in any of the following contexts:
+  //   - a non-function context
+  //   - a host function
+  //   - a host device function
+  // This also requires the reference of the static device/constant variable by
+  // host code to be visible in the device compilation for the compiler to be
+  // able to externalize the static device/constant variable.
+  if ((Var->hasAttr<CUDADeviceAttr>() || Var->hasAttr<CUDAConstantAttr>()) &&
+      Var->isFileVarDecl() && Var->getStorageClass() == SC_Static) {
+    auto *CurContext = SemaRef.CurContext;
+    if (!CurContext || !isa<FunctionDecl>(CurContext) ||
+        cast<FunctionDecl>(CurContext)->hasAttr<CUDAHostAttr>() ||
+        (!cast<FunctionDecl>(CurContext)->hasAttr<CUDADeviceAttr>() &&
+         !cast<FunctionDecl>(CurContext)->hasAttr<CUDAGlobalAttr>()))
+      SemaRef.getASTContext().CUDAStaticDeviceVarReferencedByHost.insert(Var);
+  }
+
   auto *MSI = Var->getMemberSpecializationInfo();
   TemplateSpecializationKind TSK = MSI ? MSI->getTemplateSpecializationKind()
                                        : Var->getTemplateSpecializationKind();

@@ -172,3 +172,34 @@ func @no_fold_memref_reshape(%arg0 : memref<?x?xf32>) -> memref<?x?xf32>
 // CHECK-LABEL: @no_fold_memref_reshape
 //       CHECK:   linalg.reshape
 //       CHECK:   linalg.reshape
+
+// -----
+
+#accesses = [
+  affine_map<(i) -> (i)>,
+  affine_map<(i) -> (i)>
+]
+
+#trait = {
+  args_in = 1,
+  args_out = 1,
+  indexing_maps = #accesses,
+  iterator_types = ["parallel"]
+}
+
+func @dce_zero_memref(%arg0 : memref<0xf32>, %arg1: tensor<0xf32>) -> tensor<0xf32> {
+  // memref<0x32> is expected to be dce'ed
+  linalg.copy(%arg0, %arg0): memref<0xf32>, memref<0xf32>
+
+  // tensor<0xf32> cannot be dce'ed
+  %1 = linalg.generic #trait %arg1 {
+  ^bb(%0: f32) :
+    linalg.yield %0 : f32
+  } : tensor<0xf32> -> tensor<0xf32>
+
+  return %1: tensor<0xf32>
+}
+// CHECK-LABEL: @dce_zero_memref
+//   CHECK-NOT:   linalg.copy
+//  CHECK-NEXT:   linalg.generic
+

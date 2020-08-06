@@ -152,28 +152,49 @@ static bool isDirectory(StringRef option, StringRef path) {
 
 static void getSearchPaths(std::vector<StringRef> &paths, unsigned optionCode,
                            opt::InputArgList &args,
+                           const std::vector<StringRef> &roots,
                            const SmallVector<StringRef, 2> &systemPaths) {
   StringRef optionLetter{(optionCode == OPT_F ? "F" : "L")};
   for (auto const &path : args::getStrings(args, optionCode)) {
-    if (isDirectory(optionLetter, path))
-      paths.push_back(path);
-  }
-  if (!args.hasArg(OPT_Z) && Triple(sys::getProcessTriple()).isOSDarwin()) {
-    for (auto const &path : systemPaths) {
+    // NOTE: only absolute paths are re-rooted to syslibroot(s)
+    if (llvm::sys::path::is_absolute(path, llvm::sys::path::Style::posix)) {
+      for (StringRef root : roots) {
+        SmallString<261> buffer(root);
+        llvm::sys::path::append(buffer, path);
+        // Do not warn about paths that are computed via the syslib roots
+        if (llvm::sys::fs::is_directory(buffer))
+          paths.push_back(saver.save(buffer.str()));
+      }
+    } else {
       if (isDirectory(optionLetter, path))
         paths.push_back(path);
     }
   }
+
+  // `-Z` suppresses the standard "system" search paths.
+  if (args.hasArg(OPT_Z))
+    return;
+
+  for (auto const &path : systemPaths) {
+    for (auto root : roots) {
+      SmallString<261> buffer(root);
+      llvm::sys::path::append(buffer, path);
+      if (isDirectory(optionLetter, buffer))
+        paths.push_back(saver.save(buffer.str()));
+    }
+  }
 }
 
-static void getLibrarySearchPaths(std::vector<StringRef> &paths,
-                                  opt::InputArgList &args) {
-  getSearchPaths(paths, OPT_L, args, {"/usr/lib", "/usr/local/lib"});
+static void getLibrarySearchPaths(opt::InputArgList &args,
+                                  const std::vector<StringRef> &roots,
+                                  std::vector<StringRef> &paths) {
+  getSearchPaths(paths, OPT_L, args, roots, {"/usr/lib", "/usr/local/lib"});
 }
 
-static void getFrameworkSearchPaths(std::vector<StringRef> &paths,
-                                    opt::InputArgList &args) {
-  getSearchPaths(paths, OPT_F, args,
+static void getFrameworkSearchPaths(opt::InputArgList &args,
+                                    const std::vector<StringRef> &roots,
+                                    std::vector<StringRef> &paths) {
+  getSearchPaths(paths, OPT_F, args, roots,
                  {"/Library/Frameworks", "/System/Library/Frameworks"});
 }
 
@@ -397,9 +418,21 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   config->installName =
       args.getLastArgValue(OPT_install_name, config->outputFile);
   config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
-  getLibrarySearchPaths(config->librarySearchPaths, args);
-  getFrameworkSearchPaths(config->frameworkSearchPaths, args);
   config->outputType = args.hasArg(OPT_dylib) ? MH_DYLIB : MH_EXECUTE;
+
+  std::vector<StringRef> roots;
+  for (const Arg *arg : args.filtered(OPT_syslibroot))
+    roots.push_back(arg->getValue());
+  // NOTE: the final `-syslibroot` being `/` will ignore all roots
+  if (roots.size() && roots.back() == "/")
+    roots.clear();
+  // NOTE: roots can never be empty - add an empty root to simplify the library
+  // and framework search path computation.
+  if (roots.empty())
+    roots.emplace_back("");
+
+  getLibrarySearchPaths(args, roots, config->librarySearchPaths);
+  getFrameworkSearchPaths(args, roots, config->frameworkSearchPaths);
 
   if (args.hasArg(OPT_v)) {
     message(getLLDVersion());
@@ -455,6 +488,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     case OPT_install_name:
     case OPT_Z:
     case OPT_arch:
+    case OPT_syslibroot:
       // handled elsewhere
       break;
     default:

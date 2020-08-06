@@ -127,35 +127,35 @@ bool LLVMType::isStructTy() { return isa<LLVMStructType>(); }
 //----------------------------------------------------------------------------//
 // Utilities used to generate floating point types.
 
-LLVMType LLVMType::getDoubleTy(LLVMDialect *dialect) {
-  return LLVMDoubleType::get(dialect->getContext());
+LLVMType LLVMType::getDoubleTy(MLIRContext *context) {
+  return LLVMDoubleType::get(context);
 }
 
-LLVMType LLVMType::getFloatTy(LLVMDialect *dialect) {
-  return LLVMFloatType::get(dialect->getContext());
+LLVMType LLVMType::getFloatTy(MLIRContext *context) {
+  return LLVMFloatType::get(context);
 }
 
-LLVMType LLVMType::getBFloatTy(LLVMDialect *dialect) {
-  return LLVMBFloatType::get(dialect->getContext());
+LLVMType LLVMType::getBFloatTy(MLIRContext *context) {
+  return LLVMBFloatType::get(context);
 }
 
-LLVMType LLVMType::getHalfTy(LLVMDialect *dialect) {
-  return LLVMHalfType::get(dialect->getContext());
+LLVMType LLVMType::getHalfTy(MLIRContext *context) {
+  return LLVMHalfType::get(context);
 }
 
-LLVMType LLVMType::getFP128Ty(LLVMDialect *dialect) {
-  return LLVMFP128Type::get(dialect->getContext());
+LLVMType LLVMType::getFP128Ty(MLIRContext *context) {
+  return LLVMFP128Type::get(context);
 }
 
-LLVMType LLVMType::getX86_FP80Ty(LLVMDialect *dialect) {
-  return LLVMX86FP80Type::get(dialect->getContext());
+LLVMType LLVMType::getX86_FP80Ty(MLIRContext *context) {
+  return LLVMX86FP80Type::get(context);
 }
 
 //----------------------------------------------------------------------------//
 // Utilities used to generate integer types.
 
-LLVMType LLVMType::getIntNTy(LLVMDialect *dialect, unsigned numBits) {
-  return LLVMIntegerType::get(dialect->getContext(), numBits);
+LLVMType LLVMType::getIntNTy(MLIRContext *context, unsigned numBits) {
+  return LLVMIntegerType::get(context, numBits);
 }
 
 //----------------------------------------------------------------------------//
@@ -170,9 +170,9 @@ LLVMType LLVMType::getFunctionTy(LLVMType result, ArrayRef<LLVMType> params,
   return LLVMFunctionType::get(result, params, isVarArg);
 }
 
-LLVMType LLVMType::getStructTy(LLVMDialect *dialect,
+LLVMType LLVMType::getStructTy(MLIRContext *context,
                                ArrayRef<LLVMType> elements, bool isPacked) {
-  return LLVMStructType::getLiteral(dialect->getContext(), elements, isPacked);
+  return LLVMStructType::getLiteral(context, elements, isPacked);
 }
 
 LLVMType LLVMType::getVectorTy(LLVMType elementType, unsigned numElements) {
@@ -182,8 +182,8 @@ LLVMType LLVMType::getVectorTy(LLVMType elementType, unsigned numElements) {
 //----------------------------------------------------------------------------//
 // Void type utilities.
 
-LLVMType LLVMType::getVoidTy(LLVMDialect *dialect) {
-  return LLVMVoidType::get(dialect->getContext());
+LLVMType LLVMType::getVoidTy(MLIRContext *context) {
+  return LLVMVoidType::get(context);
 }
 
 bool LLVMType::isVoidTy() { return isa<LLVMVoidType>(); }
@@ -191,7 +191,7 @@ bool LLVMType::isVoidTy() { return isa<LLVMVoidType>(); }
 //----------------------------------------------------------------------------//
 // Creation and setting of LLVM's identified struct types
 
-LLVMType LLVMType::createStructTy(LLVMDialect *dialect,
+LLVMType LLVMType::createStructTy(MLIRContext *context,
                                   ArrayRef<LLVMType> elements,
                                   Optional<StringRef> name, bool isPacked) {
   assert(name.hasValue() &&
@@ -200,8 +200,7 @@ LLVMType LLVMType::createStructTy(LLVMDialect *dialect,
   std::string stringName = stringNameBase.str();
   unsigned counter = 0;
   do {
-    auto type =
-        LLVMStructType::getIdentified(dialect->getContext(), stringName);
+    auto type = LLVMStructType::getIdentified(context, stringName);
     if (type.isInitialized() || failed(type.setBody(elements, isPacked))) {
       counter += 1;
       stringName =

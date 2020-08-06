@@ -1150,6 +1150,102 @@ def Vector_TransferWriteOp :
   let hasFolder = 1;
 }
 
+def Vector_MaskedLoadOp :
+  Vector_Op<"maskedload">,
+    Arguments<(ins AnyMemRef:$base,
+               VectorOfRankAndType<[1], [I1]>:$mask,
+               VectorOfRank<[1]>:$pass_thru)>,
+    Results<(outs VectorOfRank<[1]>:$result)> {
+
+  let summary = "loads elements from memory into a vector as defined by a mask vector";
+
+  let description = [{
+    The masked load reads elements from memory into a 1-D vector as defined
+    by a base and a 1-D mask vector. When the mask is set, the element is read
+    from memory. Otherwise, the corresponding element is taken from a 1-D
+    pass-through vector. Informally the semantics are:
+    ```
+    result[0] := mask[0] ? MEM[base+0] : pass_thru[0]
+    result[1] := mask[1] ? MEM[base+1] : pass_thru[1]
+    etc.
+    ```
+    The masked load can be used directly where applicable, or can be used
+    during progressively lowering to bring other memory operations closer to
+    hardware ISA support for a masked load. The semantics of the operation
+    closely correspond to those of the `llvm.masked.load`
+    [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-load-intrinsics).
+
+    Example:
+
+    ```mlir
+    %0 = vector.maskedload %base, %mask, %pass_thru
+       : memref<?xf32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+    ```
+  }];
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return base().getType().cast<MemRefType>();
+    }
+    VectorType getMaskVectorType() {
+      return mask().getType().cast<VectorType>();
+    }
+    VectorType getPassThruVectorType() {
+      return pass_thru().getType().cast<VectorType>();
+    }
+    VectorType getResultVectorType() {
+      return result().getType().cast<VectorType>();
+    }
+  }];
+  let assemblyFormat = "$base `,` $mask `,` $pass_thru attr-dict `:` "
+    "type($base) `,` type($mask) `,` type($pass_thru) `into` type($result)";
+}
+
+def Vector_MaskedStoreOp :
+  Vector_Op<"maskedstore">,
+    Arguments<(ins AnyMemRef:$base,
+               VectorOfRankAndType<[1], [I1]>:$mask,
+               VectorOfRank<[1]>:$value)> {
+
+  let summary = "stores elements from a vector into memory as defined by a mask vector";
+
+  let description = [{
+    The masked store operation writes elements from a 1-D vector into memory
+    as defined by a base and a 1-D mask vector. When the mask is set, the
+    corresponding element from the vector is written to memory. Otherwise,
+    no action is taken for the element. Informally the semantics are:
+    ```
+    if (mask[0]) MEM[base+0] = value[0]
+    if (mask[1]) MEM[base+1] = value[1]
+    etc.
+    ```
+    The masked store can be used directly where applicable, or can be used
+    during progressively lowering to bring other memory operations closer to
+    hardware ISA support for a masked store. The semantics of the operation
+    closely correspond to those of the `llvm.masked.store`
+    [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-store-intrinsics).
+
+    Example:
+
+    ```mlir
+    vector.maskedstore %base, %mask, %value
+      : memref<?xf32>, vector<8xi1>, vector<8xf32>
+    ```
+  }];
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return base().getType().cast<MemRefType>();
+    }
+    VectorType getMaskVectorType() {
+      return mask().getType().cast<VectorType>();
+    }
+    VectorType getValueVectorType() {
+      return value().getType().cast<VectorType>();
+    }
+  }];
+  let assemblyFormat = "$base `,` $mask `,` $value attr-dict `:` "
+    "type($mask) `,` type($value) `into` type($base)";
+}
+
 def Vector_GatherOp :
   Vector_Op<"gather">,
     Arguments<(ins AnyMemRef:$base,
@@ -1158,7 +1254,7 @@ def Vector_GatherOp :
                Variadic<VectorOfRank<[1]>>:$pass_thru)>,
     Results<(outs VectorOfRank<[1]>:$result)> {
 
-  let summary = "gathers elements from memory into a vector as defined by an index vector";
+  let summary = "gathers elements from memory into a vector as defined by an index vector and mask";
 
   let description = [{
     The gather operation gathers elements from memory into a 1-D vector as
@@ -1186,7 +1282,6 @@ def Vector_GatherOp :
     %g = vector.gather %base, %indices, %mask, %pass_thru
         : (memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>) -> vector<16xf32>
     ```
-
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -1217,7 +1312,7 @@ def Vector_ScatterOp :
                VectorOfRankAndType<[1], [I1]>:$mask,
                VectorOfRank<[1]>:$value)> {
 
-  let summary = "scatters elements from a vector into memory as defined by an index vector";
+  let summary = "scatters elements from a vector into memory as defined by an index vector and mask";
 
   let description = [{
     The scatter operation scatters elements from a 1-D vector into memory as
@@ -1263,6 +1358,108 @@ def Vector_ScatterOp :
   }];
   let assemblyFormat = "$base `,` $indices `,` $mask `,` $value attr-dict `:` "
     "type($indices) `,` type($mask) `,` type($value) `into` type($base)";
+}
+
+def Vector_ExpandLoadOp :
+  Vector_Op<"expandload">,
+    Arguments<(ins AnyMemRef:$base,
+               VectorOfRankAndType<[1], [I1]>:$mask,
+               VectorOfRank<[1]>:$pass_thru)>,
+    Results<(outs VectorOfRank<[1]>:$result)> {
+
+  let summary = "reads elements from memory and spreads them into a vector as defined by a mask";
+
+  let description = [{
+    The expand load reads elements from memory into a 1-D vector as defined
+    by a base and a 1-D mask vector. When the mask is set, the next element
+    is read from memory. Otherwise, the corresponding element is taken from
+    a 1-D pass-through vector. Informally the semantics are:
+    ```
+    index = base
+    result[0] := mask[0] ? MEM[index++] : pass_thru[0]
+    result[1] := mask[1] ? MEM[index++] : pass_thru[1]
+    etc.
+    ```
+    Note that the index increment is done conditionally.
+
+    The expand load can be used directly where applicable, or can be used
+    during progressively lowering to bring other memory operations closer to
+    hardware ISA support for an expand. The semantics of the operation closely
+    correspond to those of the `llvm.masked.expandload`
+    [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-expandload-intrinsics).
+
+    Example:
+
+    ```mlir
+    %0 = vector.expandload %base, %mask, %pass_thru
+       : memref<?xf32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+    ```
+  }];
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return base().getType().cast<MemRefType>();
+    }
+    VectorType getMaskVectorType() {
+      return mask().getType().cast<VectorType>();
+    }
+    VectorType getPassThruVectorType() {
+      return pass_thru().getType().cast<VectorType>();
+    }
+    VectorType getResultVectorType() {
+      return result().getType().cast<VectorType>();
+    }
+  }];
+  let assemblyFormat = "$base `,` $mask `,` $pass_thru attr-dict `:` "
+    "type($base) `,` type($mask) `,` type($pass_thru) `into` type($result)";
+}
+
+def Vector_CompressStoreOp :
+  Vector_Op<"compressstore">,
+    Arguments<(ins AnyMemRef:$base,
+               VectorOfRankAndType<[1], [I1]>:$mask,
+               VectorOfRank<[1]>:$value)> {
+
+  let summary = "writes elements selectively from a vector as defined by a mask";
+
+  let description = [{
+    The compress store operation writes elements from a 1-D vector into memory
+    as defined by a base and a 1-D mask vector. When the mask is set, the
+    corresponding element from the vector is written next to memory. Otherwise,
+    no action is taken for the element. Informally the semantics are:
+    ```
+    index = base
+    if (mask[0]) MEM[index++] = value[0]
+    if (mask[1]) MEM[index++] = value[1]
+    etc.
+    ```
+    Note that the index increment is done conditionally.
+
+    The compress store can be used directly where applicable, or can be used
+    during progressively lowering to bring other memory operations closer to
+    hardware ISA support for a compress. The semantics of the operation closely
+    correspond to those of the `llvm.masked.compressstore`
+    [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics).
+
+    Example:
+
+    ```mlir
+    vector.compressstore %base, %mask, %value
+      : memref<?xf32>, vector<8xi1>, vector<8xf32>
+    ```
+  }];
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return base().getType().cast<MemRefType>();
+    }
+    VectorType getMaskVectorType() {
+      return mask().getType().cast<VectorType>();
+    }
+    VectorType getValueVectorType() {
+      return value().getType().cast<VectorType>();
+    }
+  }];
+  let assemblyFormat = "$base `,` $mask `,` $value attr-dict `:` "
+    "type($base) `,` type($mask) `,` type($value)";
 }
 
 def Vector_ShapeCastOp :

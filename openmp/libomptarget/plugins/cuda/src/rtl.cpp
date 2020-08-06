@@ -990,7 +990,7 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *image) {
 int32_t __tgt_rtl_number_of_devices() { return DeviceRTL.getNumOfDevices(); }
 
 int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
-  DP("Init requires flags to %ld\n", RequiresFlags);
+  DP("Init requires flags to %" PRId64 "\n", RequiresFlags);
   DeviceRTL.setRequiresFlag(RequiresFlags);
   return RequiresFlags;
 }

@@ -159,11 +159,7 @@ void X86TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
   }
 
   Features[Name] = Enabled;
-
-  SmallVector<StringRef, 8> ImpliedFeatures;
-  llvm::X86::getImpliedFeatures(Name, Enabled, ImpliedFeatures);
-  for (const auto &F : ImpliedFeatures)
-    Features[F] = Enabled;
+  llvm::X86::updateImpliedFeatures(Name, Enabled, Features);
 }
 
 /// handleTargetFeatures - Perform initialization based on the user

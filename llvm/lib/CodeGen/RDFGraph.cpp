@@ -984,11 +984,6 @@ RegisterRef DataFlowGraph::restrictRef(RegisterRef AR, RegisterRef BR) const {
     LaneBitmask M = AR.Mask & BR.Mask;
     return M.any() ? RegisterRef(AR.Reg, M) : RegisterRef();
   }
-#ifndef NDEBUG
-//  RegisterRef NAR = PRI.normalize(AR);
-//  RegisterRef NBR = PRI.normalize(BR);
-//  assert(NAR.Reg != NBR.Reg);
-#endif
   // This isn't strictly correct, because the overlap may happen in the
   // part masked out.
   if (PRI.alias(AR, BR))

@@ -451,7 +451,11 @@ Expected<llvm::StringRef> PythonString::AsUTF8() const {
 size_t PythonString::GetSize() const {
   if (IsValid()) {
 #if PY_MAJOR_VERSION >= 3
+#if PY_MINOR_VERSION >= 3
+    return PyUnicode_GetLength(m_py_obj);
+#else
     return PyUnicode_GetSize(m_py_obj);
+#endif
 #else
     return PyString_Size(m_py_obj);
 #endif

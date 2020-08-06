@@ -1,0 +1,189 @@
+## Test how we dump the .debug_aranges section.
+
+## a) Test dumping the DWARF32/64 address range table from 32/64-bit, little/big endian object files.
+## The .debug_aranges should be written to the 'DWARF' entry and the 'Sections' entry should remain empty.
+
+# RUN: yaml2obj --docnum=1 -DBITS=32 -DENDIAN=LSB %s | obj2yaml | \
+# RUN:   FileCheck -DLENGTH1=24 -DLENGTH2=24 -DADDRSIZE=0x04 %s --check-prefix=BASIC --implicit-check-not=Sections
+
+# RUN: yaml2obj --docnum=1 -DBITS=32 -DENDIAN=MSB %s | obj2yaml | \
+# RUN:   FileCheck -DLENGTH1=24 -DLENGTH2=24 -DADDRSIZE=0x04 %s --check-prefix=BASIC --implicit-check-not=Sections
+
+# RUN: yaml2obj --docnum=1 -DBITS=64 -DENDIAN=LSB %s | obj2yaml | \
+# RUN:   FileCheck -DLENGTH1=3C -DLENGTH2=44 -DADDRSIZE=0x08 %s --check-prefix=BASIC --implicit-check-not=Sections
+
+# RUN: yaml2obj --docnum=1 -DBITS=64 -DENDIAN=MSB %s | obj2yaml | \
+# RUN:   FileCheck -DLENGTH1=3C -DLENGTH2=44 -DADDRSIZE=0x08 %s --check-prefix=BASIC --implicit-check-not=Sections
+
+#      BASIC: DWARF:
+# BASIC-NEXT:   debug_aranges:
+# BASIC-NEXT:     - Length:      0x00000000000000[[LENGTH1]]
+# BASIC-NEXT:       Version:     2
+# BASIC-NEXT:       CuOffset:    0x0000000000001234
+# BASIC-NEXT:       AddressSize: [[ADDRSIZE]]
+# BASIC-NEXT:       Descriptors:
+# BASIC-NEXT:         - Address: 0x0000000000001234
+# BASIC-NEXT:           Length:  0x0000000000005678
+# BASIC-NEXT:         - Address: 0x0000000000001234
+# BASIC-NEXT:           Length:  0x0000000000005678
+# BASIC-NEXT:     - Format:      DWARF64
+# BASIC-NEXT:       Length:      0x00000000000000[[LENGTH2]]
+# BASIC-NEXT:       Version:     2
+# BASIC-NEXT:       CuOffset:    0x1234567890ABCDEF
+# BASIC-NEXT:       AddressSize: [[ADDRSIZE]]
+# BASIC-NEXT:       Descriptors:
+# BASIC-NEXT:         - Address: 0x0000000000001234
+# BASIC-NEXT:           Length:  0x0000000000005678
+# BASIC-NEXT:         - Address: 0x0000000000001234
+# BASIC-NEXT:           Length:  0x0000000000005678
+# BASIC-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS[[BITS]]
+  Data:    ELFDATA2[[ENDIAN]]
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_aranges:
+    - Version:  2
+      CuOffset: 0x1234
+      Descriptors:
+        - Address: 0x1234
+          Length:  0x5678
+        - Address: 0x1234
+          Length:  0x5678
+    - Format:   DWARF64
+      Version:  2
+      CuOffset: 0x1234567890abcdef
+      Descriptors:
+        - Address: 0x1234
+          Length:  0x5678
+        - Address: 0x1234
+          Length:  0x5678
+
+## b) Test dumping an .debug_aranges section whose section header properties are overridden.
+
+# RUN: yaml2obj --docnum=2 -DTYPE=SHT_STRTAB %s | obj2yaml | FileCheck %s -DTYPE=STRTAB --check-prefixes=ARANGE,SHDR
+# RUN: yaml2obj --docnum=2 -DFLAGS=[SHF_ALLOC] %s | obj2yaml | FileCheck %s -DTYPE=PROGBITS --check-prefixes=ARANGE,SHDR,FLAGS
+# RUN: yaml2obj --docnum=2 -DLINK='.sec' %s | obj2yaml | FileCheck %s -DTYPE=PROGBITS --check-prefixes=ARANGE,SHDR,LINK
+# RUN: yaml2obj --docnum=2 -DENTSIZE=3 %s | obj2yaml | FileCheck %s -DTYPE=PROGBITS --check-prefixes=ARANGE,SHDR,ENTSIZE
+# RUN: yaml2obj --docnum=2 -DINFO=3 %s | obj2yaml | FileCheck %s -DTYPE=PROGBITS --check-prefixes=ARANGE,SHDR,INFO
+# RUN: yaml2obj --docnum=2 -DADDRALIGN=3 %s | obj2yaml | FileCheck %s -DTYPE=PROGBITS --check-prefixes=ARANGE,SHDR,ADDRALIGN
+# RUN: yaml2obj --docnum=2 -DADDRESS=0x2020 %s | obj2yaml | FileCheck %s -DTYPE=PROGBITS --check-prefixes=ARANGE,SHDR,ADDRESS
+
+#           SHDR: - Name:         .debug_aranges
+#      SHDR-NEXT:   Type:         SHT_[[TYPE]]
+#     FLAGS-NEXT:   Flags:        [ SHF_ALLOC ]
+#      LINK-NEXT:   Link:         .sec
+#   ENTSIZE-NEXT:   EntSize:      0x0000000000000003
+#      INFO-NEXT:   Info:         0x0000000000000003
+# ADDRALIGN-NEXT:   AddressAlign: 0x0000000000000003
+#   ADDRESS-NEXT:   Address:      0x0000000000002020
+
+#      ARANGE: DWARF:
+# ARANGE-NEXT:   debug_aranges:
+# ARANGE-NEXT:     - Length:      0x000000000000001C
+# ARANGE-NEXT:       Version:     2
+# ARANGE-NEXT:       CuOffset:    0x0000000000001234
+# ARANGE-NEXT:       AddressSize: 0x08
+# ARANGE-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .debug_aranges
+    Type:         [[TYPE=SHT_PROGBITS]]
+    Flags:        [[FLAGS=<none>]]
+    Link:         [[LINK='']]
+    EntSize:      [[ENTSIZE=<none>]]
+    Info:         [[INFO=<none>]]
+    AddressAlign: [[ADDRALIGN=0]]
+    Address:      [[ADDRESS=<none>]]
+  - Name:         .sec
+    Type:         SHT_PROGBITS
+DWARF:
+  debug_aranges:
+    - Version:  2
+      CuOffset: 0x1234
+
+## c) Test dumping a .debug_aranges section whose address_size doesn't match the
+## object file's address size.
+
+# RUN: yaml2obj --docnum=3 %s | obj2yaml | \
+# RUN:   FileCheck %s -DLENGTH=0x000000000000001C -DADDRSIZE=0x04 -DADDRLEN=0x0000000012345678 --check-prefix=ADDRSIZE
+
+#      ADDRSIZE: DWARF:
+# ADDRSIZE-NEXT:   debug_aranges:
+# ADDRSIZE-NEXT:     - Length:      [[LENGTH]]
+# ADDRSIZE-NEXT:       Version:     2
+# ADDRSIZE-NEXT:       CuOffset:    0x0000000000001234
+# ADDRSIZE-NEXT:       AddressSize: [[ADDRSIZE]]
+# ADDRSIZE-NEXT:       Descriptors:
+# ADDRSIZE-NEXT:         - Address: [[ADDRLEN]]
+# ADDRSIZE-NEXT:           Length:  [[ADDRLEN]]
+# ADDRSIZE-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS[[BITS=64]]
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_aranges:
+    - Version:     2
+      CuOffset:    0x1234
+      AddressSize: [[ADDRSIZE=0x04]]
+      Descriptors:
+        - Address: [[ADDRLEN=0x12345678]]
+          Length:  [[ADDRLEN=0x12345678]]
+
+# RUN: yaml2obj --docnum=3 -DBITS=32 -DADDRSIZE=0x08 -DADDRLEN=0x1234567890abcdef %s | \
+# RUN:   obj2yaml | \
+# RUN:   FileCheck %s -DLENGTH=0x000000000000002C -DADDRSIZE=0x08 -DADDRLEN=0x1234567890ABCDEF --check-prefix=ADDRSIZE
+
+## d) Test dumping a .debug_aranges section whose length field doesn't match the actual length.
+## This makes the DWARF parser fail to parse it and we will dump it as a raw content section.
+
+# RUN: yaml2obj --docnum=4 %s | obj2yaml | FileCheck %s --check-prefix=RAW-CONTENT
+
+#      RAW-CONTENT: Sections:
+# RAW-CONTENT-NEXT:   - Name:            .debug_aranges
+# RAW-CONTENT-NEXT:     Type:            SHT_PROGBITS
+# RAW-CONTENT-NEXT:     AddressAlign:    0x0000000000000001
+# RAW-CONTENT-NEXT:     Content:         '3412000002003412000008000000000000000000000000000000000000000000'
+# RAW-CONTENT-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_aranges:
+    - Length:   0x1234
+      Version:  2
+      CuOffset: 0x1234
+
+## e) Test dumping an empty .debug_aranges section.
+
+# RUN: yaml2obj --docnum=5 %s | obj2yaml | FileCheck %s --check-prefix=EMPTY-CONTENT
+
+#      EMPTY-CONTENT: DWARF:
+# EMPTY-CONTENT-NEXT:   debug_aranges:   []
+# EMPTY-CONTENT-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_aranges: []

@@ -180,7 +180,12 @@ else()
          ${LLVM_INCLUDE_TESTS})
   set(FLANG_GTEST_AVAIL 1)
 
-  set(FLANG_BINARY_DIR ${CMAKE_BINARY_DIR}/tools/flang)
+  if(FLANG_STANDALONE_BUILD)
+    set(FLANG_BINARY_DIR ${CMAKE_BINARY_DIR}/tools/flang)
+  else()
+    set(FLANG_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+  endif()
+
   set(BACKEND_PACKAGE_STRING "${PACKAGE_STRING}")
   if (LINK_WITH_FIR)
     set(MLIR_MAIN_SRC_DIR ${LLVM_MAIN_SRC_DIR}/../mlir/include ) # --src-root
@@ -194,8 +199,10 @@ endif()
 
 if(LINK_WITH_FIR)
   # tco tool and FIR lib output directories
-  set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/bin)
-  set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/lib)
+  if(FLANG_STANDALONE_BUILD)
+    set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/bin)
+    set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/lib)
+  endif()
   # Always build tco tool
   set(LLVM_BUILD_TOOLS ON)
   message(STATUS "Linking driver with FIR and LLVM")

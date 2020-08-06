@@ -52,7 +52,7 @@ void FileIndexRecord::print(llvm::raw_ostream &OS) const {
        << ':' << PLoc.getColumn();
 
     if (auto ND = dyn_cast<NamedDecl>(D)) {
-      OS << ' ' << ND->getNameAsString();
+      OS << ' ' << ND->getDeclName();
     }
 
     OS << '\n';

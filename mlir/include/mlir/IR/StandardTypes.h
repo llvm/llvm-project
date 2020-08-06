@@ -632,10 +632,10 @@ public:
 
   /// Get or create a new TupleType with the provided element types. Assumes the
   /// arguments define a well-formed type.
-  static TupleType get(ArrayRef<Type> elementTypes, MLIRContext *context);
+  static TupleType get(TypeRange elementTypes, MLIRContext *context);
 
   /// Get or create an empty tuple type.
-  static TupleType get(MLIRContext *context) { return get({}, context); }
+  static TupleType get(MLIRContext *context);
 
   /// Return the elements types for this tuple.
   ArrayRef<Type> getTypes() const;

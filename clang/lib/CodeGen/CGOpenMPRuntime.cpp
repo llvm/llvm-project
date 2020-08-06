@@ -8826,6 +8826,30 @@ emitOffloadingArrays(CodeGenFunction &CGF,
     MapTypesArrayGbl->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     Info.MapTypesArray = MapTypesArrayGbl;
 
+    // If there's a present map type modifier, it must not be applied to the end
+    // of a region, so generate a separate map type array in that case.
+    if (Info.separateBeginEndCalls()) {
+      bool EndMapTypesDiffer = false;
+      for (uint64_t &Type : Mapping) {
+        if (Type & MappableExprsHandler::OMP_MAP_PRESENT) {
+          Type &= ~MappableExprsHandler::OMP_MAP_PRESENT;
+          EndMapTypesDiffer = true;
+        }
+      }
+      if (EndMapTypesDiffer) {
+        MapTypesArrayInit =
+            llvm::ConstantDataArray::get(CGF.Builder.getContext(), Mapping);
+        MaptypesName = CGM.getOpenMPRuntime().getName({"offload_maptypes"});
+        MapTypesArrayGbl = new llvm::GlobalVariable(
+            CGM.getModule(), MapTypesArrayInit->getType(),
+            /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage,
+            MapTypesArrayInit, MaptypesName);
+        MapTypesArrayGbl->setUnnamedAddr(
+            llvm::GlobalValue::UnnamedAddr::Global);
+        Info.MapTypesArrayEnd = MapTypesArrayGbl;
+      }
+    }
+
     for (unsigned I = 0; I < Info.NumberOfPtrs; ++I) {
       llvm::Value *BPVal = *CombinedInfo.BasePointers[I];
       llvm::Value *BP = CGF.Builder.CreateConstInBoundsGEP2_32(
@@ -8878,12 +8902,16 @@ emitOffloadingArrays(CodeGenFunction &CGF,
 }
 
 /// Emit the arguments to be passed to the runtime library based on the
-/// arrays of base pointers, pointers, sizes, map types, and mappers.
+/// arrays of base pointers, pointers, sizes, map types, and mappers.  If
+/// ForEndCall, emit map types to be passed for the end of the region instead of
+/// the beginning.
 static void emitOffloadingArraysArgument(
     CodeGenFunction &CGF, llvm::Value *&BasePointersArrayArg,
     llvm::Value *&PointersArrayArg, llvm::Value *&SizesArrayArg,
     llvm::Value *&MapTypesArrayArg, llvm::Value *&MappersArrayArg,
-    CGOpenMPRuntime::TargetDataInfo &Info) {
+    CGOpenMPRuntime::TargetDataInfo &Info, bool ForEndCall = false) {
+  assert((!ForEndCall || Info.separateBeginEndCalls()) &&
+         "expected region end call to runtime only when end call is separate");
   CodeGenModule &CGM = CGF.CGM;
   if (Info.NumberOfPtrs) {
     BasePointersArrayArg = CGF.Builder.CreateConstInBoundsGEP2_32(
@@ -8900,7 +8928,8 @@ static void emitOffloadingArraysArgument(
         /*Idx0=*/0, /*Idx1=*/0);
     MapTypesArrayArg = CGF.Builder.CreateConstInBoundsGEP2_32(
         llvm::ArrayType::get(CGM.Int64Ty, Info.NumberOfPtrs),
-        Info.MapTypesArray,
+        ForEndCall && Info.MapTypesArrayEnd ? Info.MapTypesArrayEnd
+                                            : Info.MapTypesArray,
         /*Idx0=*/0,
         /*Idx1=*/0);
     MappersArrayArg =
@@ -10267,7 +10296,7 @@ void CGOpenMPRuntime::emitTargetDataCalls(
     llvm::Value *MappersArrayArg = nullptr;
     emitOffloadingArraysArgument(CGF, BasePointersArrayArg, PointersArrayArg,
                                  SizesArrayArg, MapTypesArrayArg,
-                                 MappersArrayArg, Info);
+                                 MappersArrayArg, Info, /*ForEndCall=*/false);
 
     // Emit device ID if any.
     llvm::Value *DeviceID = nullptr;
@@ -10307,7 +10336,7 @@ void CGOpenMPRuntime::emitTargetDataCalls(
     llvm::Value *MappersArrayArg = nullptr;
     emitOffloadingArraysArgument(CGF, BasePointersArrayArg, PointersArrayArg,
                                  SizesArrayArg, MapTypesArrayArg,
-                                 MappersArrayArg, Info);
+                                 MappersArrayArg, Info, /*ForEndCall=*/true);
 
     // Emit device ID if any.
     llvm::Value *DeviceID = nullptr;

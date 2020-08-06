@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: opt -newgvn -S %s | FileChecks %s
+; RUN: opt -newgvn -S %s | FileCheck %s
 
 ; XFAIL: *
 

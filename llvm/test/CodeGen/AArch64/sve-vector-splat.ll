@@ -355,5 +355,22 @@ define <vscale x 2 x double> @splat_nxv2f64_imm() {
   ret <vscale x 2 x double> %2
 }
 
+define <vscale x 4 x i32> @splat_nxv4i32_fold(<vscale x 4 x i32> %x) {
+; CHECK-LABEL: splat_nxv4i32_fold:
+; CHECK: mov z0.s, #0
+; CHECK-NEXT: ret
+  %r = sub <vscale x 4 x i32> %x, %x
+  ret <vscale x 4 x i32> %r
+}
+
+
+define <vscale x 4 x float> @splat_nxv4f32_fold(<vscale x 4 x float> %x) {
+; CHECK-LABEL: splat_nxv4f32_fold:
+; CHECK: mov z0.s, #0
+; CHECK-NEXT: ret
+  %r = fsub nnan <vscale x 4 x float> %x, %x
+  ret <vscale x 4 x float> %r
+}
+
 ; +bf16 is required for the bfloat version.
 attributes #0 = { "target-features"="+sve,+bf16" }

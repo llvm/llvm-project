@@ -306,6 +306,9 @@ LLVM-specific variables
   scenario where a manual override may be desirable is when using Visual Studio
   2017's CMake integration, which would not be detected as an IDE otherwise.
 
+**LLVM_ENABLE_MODULES**
+  Compile with C++ modules enabled.
+
 **LLVM_ENABLE_PIC**:BOOL
   Add the ``-fPIC`` flag to the compiler command-line, if the compiler supports
   this flag. Some systems, like Windows, do not need this flag. Defaults to ON.

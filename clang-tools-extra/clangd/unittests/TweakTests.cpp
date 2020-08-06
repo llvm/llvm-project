@@ -1093,6 +1093,11 @@ TEST_F(DefineInlineTest, TemplateSpec) {
     template<> void f^oo<int>() {
       bar();
     })cpp");
+  EXPECT_UNAVAILABLE(R"cpp(
+    namespace bar {
+      template <typename T> void f^oo() {}
+      template void foo<int>();
+    })cpp");
 }
 
 TEST_F(DefineInlineTest, CheckForCanonDecl) {
@@ -2003,6 +2008,13 @@ TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
   EXPECT_UNAVAILABLE(R"cpp(
     template <typename> struct Foo { void fo^o(){} };
     )cpp");
+
+  // Not available on function templates and specializations, as definition must
+  // be visible to all translation units.
+  EXPECT_UNAVAILABLE(R"cpp(
+    template <typename> void fo^o() {};
+    template <> void fo^o<int>() {};
+  )cpp");
 }
 
 TEST_F(DefineOutlineTest, FailsWithoutSource) {
@@ -2031,27 +2043,6 @@ TEST_F(DefineOutlineTest, ApplyTest) {
           "void fo^o() { return; }",
           "void foo() ;",
           "void foo() { return; }",
-      },
-      // Templated function.
-      {
-          "template <typename T> void fo^o(T, T x) { return; }",
-          "template <typename T> void foo(T, T x) ;",
-          "template <typename T> void foo(T, T x) { return; }",
-      },
-      {
-          "template <typename> void fo^o() { return; }",
-          "template <typename> void foo() ;",
-          "template <typename> void foo() { return; }",
-      },
-      // Template specialization.
-      {
-          R"cpp(
-            template <typename> void foo();
-            template <> void fo^o<int>() { return; })cpp",
-          R"cpp(
-            template <typename> void foo();
-            template <> void foo<int>() ;)cpp",
-          "template <> void foo<int>() { return; }",
       },
       // Default args.
       {

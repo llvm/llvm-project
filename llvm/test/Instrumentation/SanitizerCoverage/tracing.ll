@@ -74,7 +74,7 @@ lj:
 ; CHECK_PC_GUARD: call void @longjmp
 ; CHECK_PC_GUARD: unreachable
 
-; CHECK_PC_GUARD: call void @__sanitizer_cov_trace_pc_guard_init(i32* bitcast (i32** @__start___sancov_guards to i32*), i32* bitcast (i32** @__stop___sancov_guards to i32*))
+; CHECK_PC_GUARD: call void @__sanitizer_cov_trace_pc_guard_init(i32* @__start___sancov_guards, i32* @__stop___sancov_guards)
 
 ; CHECK_PC_GUARD_DARWIN-LABEL: define void @foo
 ; CHECK_PC_GUARD_DARWIN: call void @__sanitizer_cov_trace_pc_guard
@@ -82,4 +82,4 @@ lj:
 ; CHECK_PC_GUARD_DARWIN: call void @__sanitizer_cov_trace_pc_guard
 ; CHECK_PC_GUARD_DARWIN-NOT: call void @__sanitizer_cov_trace_pc
 ; CHECK_PC_GUARD_DARWIN: ret void
-; CHECK_PC_GUARD_DARWIN: call void @__sanitizer_cov_trace_pc_guard_init(i32* bitcast (i32** @"\01section$start$__DATA$__sancov_guards" to i32*), i32* bitcast (i32** @"\01section$end$__DATA$__sancov_guards" to i32*))
+; CHECK_PC_GUARD_DARWIN: call void @__sanitizer_cov_trace_pc_guard_init(i32* @"\01section$start$__DATA$__sancov_guards", i32* @"\01section$end$__DATA$__sancov_guards")

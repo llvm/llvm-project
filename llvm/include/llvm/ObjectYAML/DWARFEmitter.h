@@ -48,7 +48,8 @@ std::function<Error(raw_ostream &, const Data &)>
 getDWARFEmitterByName(StringRef SecName);
 Expected<StringMap<std::unique_ptr<MemoryBuffer>>>
 emitDebugSections(StringRef YAMLString,
-                  bool IsLittleEndian = sys::IsLittleEndianHost);
+                  bool IsLittleEndian = sys::IsLittleEndianHost,
+                  bool Is64BitAddrSize = true);
 } // end namespace DWARFYAML
 } // end namespace llvm
 
