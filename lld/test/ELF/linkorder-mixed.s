@@ -15,7 +15,7 @@
 # CHECK-NEXT:   [[#%x,ADDR:]] 01020003
 
 ## TODO Allow non-contiguous SHF_LINK_ORDER sections in an output section.
-# RUN: llvm-mc --filetype=obj --defsym EXTRA=1 %s -o %t.o
+# RUN: llvm-mc --filetype=obj -triple=x86_64 --defsym EXTRA=1 %s -o %t.o
 # RUN: not ld.lld %t.o -o /dev/null
 
 .section .text,"ax",@progbits,unique,0
