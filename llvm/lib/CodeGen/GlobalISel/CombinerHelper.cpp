@@ -1766,6 +1766,16 @@ bool CombinerHelper::replaceSingleDefInstWithOperand(MachineInstr &MI,
   return true;
 }
 
+bool CombinerHelper::replaceSingleDefInstWithReg(MachineInstr &MI,
+                                                 Register Replacement) {
+  assert(MI.getNumExplicitDefs() == 1 && "Expected one explicit def?");
+  Register OldReg = MI.getOperand(0).getReg();
+  assert(canReplaceReg(OldReg, Replacement, MRI) && "Cannot replace register?");
+  MI.eraseFromParent();
+  replaceRegWith(MRI, OldReg, Replacement);
+  return true;
+}
+
 bool CombinerHelper::matchSelectSameVal(MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::G_SELECT);
   // Match (cond ? x : x)
@@ -1977,6 +1987,52 @@ bool CombinerHelper::applyAshShlToSextInreg(
   Builder.buildSExtInReg(MI.getOperand(0).getReg(), Src, Size - ShiftAmt);
   MI.eraseFromParent();
   return true;
+}
+
+bool CombinerHelper::matchAndWithTrivialMask(MachineInstr &MI,
+                                             Register &Replacement) {
+  // Given
+  //
+  // %mask:_(sN) = G_CONSTANT iN 000...0111...1
+  // %x:_(sN) = G_SOMETHING
+  // %y:_(sN) = G_AND %x, %mask
+  //
+  // Eliminate the G_AND when it is known that x & mask == x.
+  //
+  // Patterns like this can appear as a result of legalization. E.g.
+  //
+  // %cmp:_(s32) = G_ICMP intpred(pred), %x(s32), %y
+  // %one:_(s32) = G_CONSTANT i32 1
+  // %and:_(s32) = G_AND %cmp, %one
+  //
+  // In this case, G_ICMP only produces a single bit, so x & 1 == x.
+  assert(MI.getOpcode() == TargetOpcode::G_AND);
+  if (!KB)
+    return false;
+
+  // Replacement = %x, AndDst = %y. Check that we can replace AndDst with the
+  // LHS of the G_AND.
+  Replacement = MI.getOperand(1).getReg();
+  Register AndDst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(AndDst);
+
+  // FIXME: This should be removed once GISelKnownBits supports vectors.
+  if (DstTy.isVector())
+    return false;
+  if (!canReplaceReg(AndDst, Replacement, MRI))
+    return false;
+
+  // Check that we have a constant on the RHS of the G_AND, which is of the form
+  // 000...0111...1.
+  int64_t Cst;
+  if (!mi_match(MI.getOperand(2).getReg(), MRI, m_ICst(Cst)))
+    return false;
+  APInt Mask(DstTy.getSizeInBits(), Cst);
+  if (!Mask.isMask())
+    return false;
+
+  // Now, let's check that x & Mask == x. If this is true, then x & ~Mask == 0.
+  return KB->maskedValueIsZero(Replacement, ~Mask);
 }
 
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
