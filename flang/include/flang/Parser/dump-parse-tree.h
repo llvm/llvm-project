@@ -582,6 +582,8 @@ public:
   NODE(OmpReductionCombiner, FunctionCombiner)
   NODE(parser, OmpReductionInitializerClause)
   NODE(parser, OmpReductionOperator)
+  NODE(parser, OmpAllocateClause)
+  NODE(OmpAllocateClause, Allocator)
   NODE(parser, OmpScheduleClause)
   NODE_ENUM(OmpScheduleClause, ScheduleType)
   NODE(parser, OmpScheduleModifier)

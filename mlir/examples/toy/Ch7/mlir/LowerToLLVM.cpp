@@ -56,19 +56,15 @@ public:
     auto memRefType = (*op->operand_type_begin()).cast<MemRefType>();
     auto memRefShape = memRefType.getShape();
     auto loc = op->getLoc();
-    auto *llvmDialect =
-        op->getContext()->getRegisteredDialect<LLVM::LLVMDialect>();
-    assert(llvmDialect && "expected llvm dialect to be registered");
 
     ModuleOp parentModule = op->getParentOfType<ModuleOp>();
 
     // Get a symbol reference to the printf function, inserting it if necessary.
-    auto printfRef = getOrInsertPrintf(rewriter, parentModule, llvmDialect);
+    auto printfRef = getOrInsertPrintf(rewriter, parentModule);
     Value formatSpecifierCst = getOrCreateGlobalString(
-        loc, rewriter, "frmt_spec", StringRef("%f \0", 4), parentModule,
-        llvmDialect);
+        loc, rewriter, "frmt_spec", StringRef("%f \0", 4), parentModule);
     Value newLineCst = getOrCreateGlobalString(
-        loc, rewriter, "nl", StringRef("\n\0", 2), parentModule, llvmDialect);
+        loc, rewriter, "nl", StringRef("\n\0", 2), parentModule);
 
     // Create a loop for each of the dimensions within the shape.
     SmallVector<Value, 4> loopIvs;
@@ -108,16 +104,15 @@ private:
   /// Return a symbol reference to the printf function, inserting it into the
   /// module if necessary.
   static FlatSymbolRefAttr getOrInsertPrintf(PatternRewriter &rewriter,
-                                             ModuleOp module,
-                                             LLVM::LLVMDialect *llvmDialect) {
+                                             ModuleOp module) {
     auto *context = module.getContext();
     if (module.lookupSymbol<LLVM::LLVMFuncOp>("printf"))
       return SymbolRefAttr::get("printf", context);
 
     // Create a function declaration for printf, the signature is:
     //   * `i32 (i8*, ...)`
-    auto llvmI32Ty = LLVM::LLVMType::getInt32Ty(llvmDialect);
-    auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(llvmDialect);
+    auto llvmI32Ty = LLVM::LLVMType::getInt32Ty(context);
+    auto llvmI8PtrTy = LLVM::LLVMType::getInt8PtrTy(context);
     auto llvmFnType = LLVM::LLVMType::getFunctionTy(llvmI32Ty, llvmI8PtrTy,
                                                     /*isVarArg=*/true);
 
@@ -132,15 +127,14 @@ private:
   /// name, creating the string if necessary.
   static Value getOrCreateGlobalString(Location loc, OpBuilder &builder,
                                        StringRef name, StringRef value,
-                                       ModuleOp module,
-                                       LLVM::LLVMDialect *llvmDialect) {
+                                       ModuleOp module) {
     // Create the global at the entry of the module.
     LLVM::GlobalOp global;
     if (!(global = module.lookupSymbol<LLVM::GlobalOp>(name))) {
       OpBuilder::InsertionGuard insertGuard(builder);
       builder.setInsertionPointToStart(module.getBody());
       auto type = LLVM::LLVMType::getArrayTy(
-          LLVM::LLVMType::getInt8Ty(llvmDialect), value.size());
+          LLVM::LLVMType::getInt8Ty(builder.getContext()), value.size());
       global = builder.create<LLVM::GlobalOp>(loc, type, /*isConstant=*/true,
                                               LLVM::Linkage::Internal, name,
                                               builder.getStringAttr(value));
@@ -149,10 +143,10 @@ private:
     // Get the pointer to the first character in the global string.
     Value globalPtr = builder.create<LLVM::AddressOfOp>(loc, global);
     Value cst0 = builder.create<LLVM::ConstantOp>(
-        loc, LLVM::LLVMType::getInt64Ty(llvmDialect),
+        loc, LLVM::LLVMType::getInt64Ty(builder.getContext()),
         builder.getIntegerAttr(builder.getIndexType(), 0));
     return builder.create<LLVM::GEPOp>(
-        loc, LLVM::LLVMType::getInt8PtrTy(llvmDialect), globalPtr,
+        loc, LLVM::LLVMType::getInt8PtrTy(builder.getContext()), globalPtr,
         ArrayRef<Value>({cst0, cst0}));
   }
 };

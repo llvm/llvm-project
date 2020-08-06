@@ -3387,6 +3387,34 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
       return NV;
   }
 
+  if (match(Op0, m_Undef())) {
+    // If I is freeze(undef), see its uses and fold it to the best constant.
+    // - or: pick -1
+    // - select's condition: pick the value that leads to choosing a constant
+    // - other ops: pick 0
+    Constant *BestValue = nullptr;
+    Constant *NullValue = Constant::getNullValue(I.getType());
+    for (const auto *U : I.users()) {
+      Constant *C = NullValue;
+
+      if (match(U, m_Or(m_Value(), m_Value())))
+        C = Constant::getAllOnesValue(I.getType());
+      else if (const auto *SI = dyn_cast<SelectInst>(U)) {
+        if (SI->getCondition() == &I) {
+          APInt CondVal(1, isa<Constant>(SI->getFalseValue()) ? 0 : 1);
+          C = Constant::getIntegerValue(I.getType(), CondVal);
+        }
+      }
+
+      if (!BestValue)
+        BestValue = C;
+      else if (BestValue != C)
+        BestValue = NullValue;
+    }
+
+    return replaceInstUsesWith(I, BestValue);
+  }
+
   return nullptr;
 }
 

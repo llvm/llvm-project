@@ -80,17 +80,17 @@ static bool isAggregateTypeForABI(QualType T) {
          T->isMemberFunctionPointerType();
 }
 
-ABIArgInfo
-ABIInfo::getNaturalAlignIndirect(QualType Ty, bool ByRef, bool Realign,
-                                 llvm::Type *Padding) const {
-  return ABIArgInfo::getIndirect(getContext().getTypeAlignInChars(Ty),
-                                 ByRef, Realign, Padding);
+ABIArgInfo ABIInfo::getNaturalAlignIndirect(QualType Ty, bool ByVal,
+                                            bool Realign,
+                                            llvm::Type *Padding) const {
+  return ABIArgInfo::getIndirect(getContext().getTypeAlignInChars(Ty), ByVal,
+                                 Realign, Padding);
 }
 
 ABIArgInfo
 ABIInfo::getNaturalAlignIndirectInReg(QualType Ty, bool Realign) const {
   return ABIArgInfo::getIndirectInReg(getContext().getTypeAlignInChars(Ty),
-                                      /*ByRef*/ false, Realign);
+                                      /*ByVal*/ false, Realign);
 }
 
 Address ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
@@ -8555,7 +8555,7 @@ ABIArgInfo LanaiABIInfo::classifyArgumentType(QualType Ty,
     if (RAA == CGCXXABI::RAA_Indirect) {
       return getIndirectResult(Ty, /*ByVal=*/false, State);
     } else if (RAA == CGCXXABI::RAA_DirectInMemory) {
-      return getNaturalAlignIndirect(Ty, /*ByRef=*/true);
+      return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
     }
   }
 

@@ -154,14 +154,13 @@ define i32 @one_undef(i8 %cond) {
 ; CHECK-NEXT:    i8 1, label [[C:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       A:
-; CHECK-NEXT:    [[PHI_FR:%.*]] = freeze i32 undef
 ; CHECK-NEXT:    br label [[D:%.*]]
 ; CHECK:       B:
 ; CHECK-NEXT:    br label [[D]]
 ; CHECK:       C:
 ; CHECK-NEXT:    br label [[D]]
 ; CHECK:       D:
-; CHECK-NEXT:    [[Y:%.*]] = phi i32 [ [[PHI_FR]], [[A]] ], [ 32, [[B]] ], [ 0, [[C]] ]
+; CHECK-NEXT:    [[Y:%.*]] = phi i32 [ 0, [[A]] ], [ 32, [[B]] ], [ 0, [[C]] ]
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
   switch i8 %cond, label %A [

@@ -1,5 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
-
+use omp_lib
 ! Check OpenMP clause validity for the following directives:
 !
 !    2.5 PARALLEL construct
@@ -13,6 +13,11 @@
   integer, parameter :: num = 16
   real(8) :: arrayA(256), arrayB(512)
 
+  integer(omp_memspace_handle_kind) :: xy_memspace = omp_default_mem_space
+  type(omp_alloctrait) :: xy_traits(1) = [omp_alloctrait(omp_atk_alignment,64)]
+  integer(omp_allocator_handle_kind) :: xy_alloc
+  xy_alloc = omp_init_allocator(xy_memspace, 1, xy_traits)
+
   arrayA = 1.414
   arrayB = 3.14
   N = 1024
@@ -25,9 +30,34 @@
 !                        shared-clause |
 !                        copyin-clause |
 !                        reduction-clause |
-!                        proc-bind-clause
+!                        proc-bind-clause |
+!                        allocate-clause
 
   !$omp parallel
+  do i = 1, N
+     a = 3.14
+  enddo
+  !$omp end parallel
+
+  !$omp parallel allocate(b)
+  do i = 1, N
+     a = 3.14
+  enddo
+  !$omp end parallel
+
+  !$omp parallel allocate(omp_default_mem_space : b, c)
+  do i = 1, N
+     a = 3.14
+  enddo
+  !$omp end parallel
+
+  !$omp parallel allocate(b) allocate(c)
+  do i = 1, N
+     a = 3.14
+  enddo
+  !$omp end parallel
+
+  !$omp parallel allocate(xy_alloc :b) 
   do i = 1, N
      a = 3.14
   enddo

@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
@@ -140,6 +138,10 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
     OS << #name;                                                               \
     return OS;
 #include "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
+#include "llvm/DebugInfo/CodeView/CodeView.h"             // for RegisterId, ThunkOrdinal, CPURegister, CPUType, CPUType::ARM64, ThunkOrdinal::BranchIsland, ThunkOrdinal::Pcode, ThunkOrdinal::Standard, ThunkOrdinal::ThisAdjustor, ThunkOrdinal::TrampIncremental, ThunkOrdinal::UnknownLoad, ThunkOrdinal::Vcall
+#include "llvm/DebugInfo/PDB/PDBTypes.h"                  // for PDB_SymType, PDB_CallingConv, PDB_VariantType, PDB_BuiltinType, PDB_Machine, PDB_Lang, Variant, PDB_LocType, Variant::(anonymous), PDB_DataKind, PDB_Checksum, PDB_SourceCompression, PDB_UdtType, PDB_MemberAccess, VersionInfo, PDB_VariantType::Bool, PDB_VariantType::Double, PDB_VariantType::Int16, PDB_VariantType::Int32, PDB_VariantType::Int64, PDB_VariantType::Int8, PDB_VariantType::Single, PDB_VariantType::UInt16, PDB_VariantType::UInt32, PDB_VariantType::UInt64, PDB_VariantType::UInt8, PDB_BuiltinType::BCD, PDB_BuiltinType::BSTR, PDB_BuiltinType::Bitfield, PDB_BuiltinType::Bool, PDB_BuiltinType::Char, PDB_BuiltinType::Char16, PDB_BuiltinType::Char32, PDB_BuiltinType::Complex, PDB_BuiltinType::Currency, PDB_BuiltinType::Date, PDB_BuiltinType::Float, PDB_BuiltinType::HResult, PDB_BuiltinType::Int, PDB_BuiltinType::Long, PDB_BuiltinType::None, PDB_BuiltinType::UInt, PDB_BuiltinType::ULong, PDB_BuiltinType::Variant, PDB_BuiltinType::Void, PDB_...
+#include "llvm/Support/raw_ostream.h"                     // for raw_ostream
+#include "stdint.h"                                       // for uint32_t
 #undef CV_REGISTER
 #undef CV_REGISTERS_X86
 
