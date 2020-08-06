@@ -257,6 +257,11 @@ LLVM_DUMP_METHOD void ABIArgInfo::dump() const {
        << " ByVal=" << getIndirectByVal()
        << " Realign=" << getIndirectRealign();
     break;
+  case IndirectAliased:
+    OS << "Indirect Align=" << getIndirectAlign().getQuantity()
+       << " AadrSpace=" << getIndirectAddrSpace()
+       << " Realign=" << getIndirectRealign();
+    break;
   case Expand:
     OS << "Expand";
     break;
@@ -1989,6 +1994,7 @@ static bool isArgInAlloca(const ABIArgInfo &Info) {
   case ABIArgInfo::InAlloca:
     return true;
   case ABIArgInfo::Ignore:
+  case ABIArgInfo::IndirectAliased:
     return false;
   case ABIArgInfo::Indirect:
   case ABIArgInfo::Direct:
@@ -8790,16 +8796,29 @@ ABIArgInfo AMDGPUABIInfo::classifyKernelArgumentType(QualType Ty) const {
 
   // TODO: Can we omit empty structs?
 
-  llvm::Type *LTy = nullptr;
   if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
-    LTy = CGT.ConvertType(QualType(SeltTy, 0));
+    Ty = QualType(SeltTy, 0);
 
+  llvm::Type *OrigLTy = CGT.ConvertType(Ty);
+  llvm::Type *LTy = OrigLTy;
   if (getContext().getLangOpts().HIP) {
-    if (!LTy)
-      LTy = CGT.ConvertType(Ty);
     LTy = coerceKernelArgumentType(
-        LTy, /*FromAS=*/getContext().getTargetAddressSpace(LangAS::Default),
+        OrigLTy, /*FromAS=*/getContext().getTargetAddressSpace(LangAS::Default),
         /*ToAS=*/getContext().getTargetAddressSpace(LangAS::cuda_device));
+  }
+
+  // FIXME: Should also use this for OpenCL, but it requires addressing the
+  // problem of kernels being called.
+  //
+  // FIXME: This doesn't apply the optimization of coercing pointers in structs
+  // to global address space when using byref. This would require implementing a
+  // new kind of coercion of the in-memory type when for indirect arguments.
+  if (!getContext().getLangOpts().OpenCL && LTy == OrigLTy &&
+      isAggregateTypeForABI(Ty)) {
+    return ABIArgInfo::getIndirectAliased(
+        getContext().getTypeAlignInChars(Ty),
+        getContext().getTargetAddressSpace(LangAS::opencl_constant),
+        false /*Realign*/, nullptr /*Padding*/);
   }
 
   // If we set CanBeFlattened to true, CodeGen will expand the struct to its
@@ -9377,6 +9396,7 @@ Address SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   }
 
   case ABIArgInfo::Indirect:
+  case ABIArgInfo::IndirectAliased:
     Stride = SlotSize;
     ArgAddr = Builder.CreateElementBitCast(Addr, ArgPtrTy, "indirect");
     ArgAddr = Address(Builder.CreateLoad(ArgAddr, "indirect.arg"),
@@ -9742,6 +9762,7 @@ Address XCoreABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     ArgSize = ArgSize.alignTo(SlotSize);
     break;
   case ABIArgInfo::Indirect:
+  case ABIArgInfo::IndirectAliased:
     Val = Builder.CreateElementBitCast(AP, ArgPtrTy);
     Val = Address(Builder.CreateLoad(Val), TypeAlign);
     ArgSize = SlotSize;
