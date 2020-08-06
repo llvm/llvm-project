@@ -156,7 +156,7 @@ void MappingTraits<DWARFYAML::Unit>::mapping(IO &IO, DWARFYAML::Unit &Unit) {
 
 void MappingTraits<DWARFYAML::Entry>::mapping(IO &IO, DWARFYAML::Entry &Entry) {
   IO.mapRequired("AbbrCode", Entry.AbbrCode);
-  IO.mapRequired("Values", Entry.Values);
+  IO.mapOptional("Values", Entry.Values);
 }
 
 void MappingTraits<DWARFYAML::FormValue>::mapping(
