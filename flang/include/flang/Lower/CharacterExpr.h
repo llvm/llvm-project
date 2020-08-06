@@ -89,6 +89,13 @@ public:
   ///   - fir.ref<fir.char<kind>> if str has dynamic length.
   std::pair<mlir::Value, mlir::Value> materializeCharacter(mlir::Value str);
 
+  /// Return the (buffer, length) pair of `str`. Returns the obvious pair if
+  /// `str` is a scalar. However if `str` is an array of CHARACTER, this will
+  /// perform an implicit concatenation of the entire array. This implements the
+  /// implied semantics of using an array of CHARACTER in a scalar context.
+  std::pair<mlir::Value, mlir::Value>
+  materializeCharacterOrSequence(mlir::Value str);
+
   /// Return true if \p type is a character literal type (is
   /// fir.array<len x fir.char<kind>>).;
   static bool isCharacterLiteral(mlir::Type type);
