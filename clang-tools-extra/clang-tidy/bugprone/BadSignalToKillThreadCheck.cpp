@@ -30,7 +30,8 @@ static Preprocessor *PP;
 
 void BadSignalToKillThreadCheck::check(const MatchFinder::MatchResult &Result) {
   const auto IsSigterm = [](const auto &KeyValue) -> bool {
-    return KeyValue.first->getName() == "SIGTERM";
+    return KeyValue.first->getName() == "SIGTERM" &&
+           KeyValue.first->hasMacroDefinition();
   };
   const auto TryExpandAsInteger =
       [](Preprocessor::macro_iterator It) -> Optional<unsigned> {
