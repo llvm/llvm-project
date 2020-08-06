@@ -486,7 +486,7 @@ public:
     attr_t saved_attr;
     short saved_pair;
     int saved_opts;
-    ::wattr_get(m_window, &saved_attr, &saved_pair, &saved_opts);
+    wattr_get(m_window, &saved_attr, &saved_pair, &saved_opts);
     if (use_blue_background)
       ::wattron(m_window, COLOR_PAIR(WhiteOnBlue));
     while (!string.empty()) {
@@ -522,7 +522,7 @@ public:
         continue;
       }
       if (value == 0) { // Reset.
-        ::wattr_set(m_window, saved_attr, saved_pair, &saved_opts);
+        wattr_set(m_window, saved_attr, saved_pair, &saved_opts);
         if (use_blue_background)
           ::wattron(m_window, COLOR_PAIR(WhiteOnBlue));
       } else {
@@ -531,7 +531,7 @@ public:
                   COLOR_PAIR(value - 30 + 1 + (use_blue_background ? 8 : 0)));
       }
     }
-    ::wattr_set(m_window, saved_attr, saved_pair, &saved_opts);
+    wattr_set(m_window, saved_attr, saved_pair, &saved_opts);
   }
 
   void Touch() {
