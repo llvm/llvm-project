@@ -299,16 +299,17 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
   // Configure target features per ROCm / HIP version.
   configTargetFeatures();
 
+  const char gpuBinaryAnnotation[] = "rocdl.hsaco";
   pm.addPass(createGpuKernelOutliningPass());
   auto &kernelPm = pm.nest<gpu::GPUModuleOp>();
   kernelPm.addPass(createStripDebugInfoPass());
   kernelPm.addPass(createLowerGpuOpsToROCDLOpsPass());
   kernelPm.addPass(createConvertGPUKernelToBlobPass(
       compileModuleToROCDLIR, compileISAToHsaco, tripleName, targetChip,
-      features, /*gpuBinaryAnnotation=*/"rocdl.hsaco"));
+      features, gpuBinaryAnnotation));
   pm.addPass(createLowerToLLVMPass());
-  pm.addPass(createConvertGpuLaunchFuncToGpuRuntimeCallsPass(
-      /*gpuBinaryAnnotation=*/"rocdl.hsaco"));
+  pm.addPass(
+      createConvertGpuLaunchFuncToGpuRuntimeCallsPass(gpuBinaryAnnotation));
 
   return pm.run(m);
 }
