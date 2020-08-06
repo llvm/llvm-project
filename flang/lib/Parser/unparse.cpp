@@ -2207,6 +2207,12 @@ public:
     Walk(std::get<std::list<Designator>>(x.t), ",");
     Put(")");
   }
+  void Unparse(const OmpAllocateClause &x) {
+    Word("ALLOCATE(");
+    Walk(std::get<std::optional<OmpAllocateClause::Allocator>>(x.t), ":");
+    Walk(std::get<OmpObjectList>(x.t));
+    Put(")");
+  }
   void Unparse(const OmpDependSinkVecLength &x) {
     Walk(std::get<DefinedOperator>(x.t));
     Walk(std::get<ScalarIntConstantExpr>(x.t));
