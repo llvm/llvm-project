@@ -37,17 +37,15 @@ EXIT2:
 
 define i32 @test2(i1 %cond, i1 %a, i1 %b) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[C:%.*]]
 ; CHECK:       A:
 ; CHECK-NEXT:    call void @f()
-; CHECK-NEXT:    br label [[C:%.*]]
-; CHECK:       B:
-; CHECK-NEXT:    call void @g()
-; CHECK-NEXT:    br label [[C]]
+; CHECK-NEXT:    [[P_FR1:%.*]] = freeze i1 [[A:%.*]]
+; CHECK-NEXT:    br i1 [[P_FR1]], label [[EXIT1:%.*]], label [[EXIT2:%.*]]
 ; CHECK:       C:
-; CHECK-NEXT:    [[P:%.*]] = phi i1 [ [[A:%.*]], [[A]] ], [ [[B:%.*]], [[B]] ]
-; CHECK-NEXT:    [[P_FR:%.*]] = freeze i1 [[P]]
-; CHECK-NEXT:    br i1 [[P_FR]], label [[EXIT1:%.*]], label [[EXIT2:%.*]]
+; CHECK-NEXT:    call void @g()
+; CHECK-NEXT:    [[P_FR:%.*]] = freeze i1 [[B:%.*]]
+; CHECK-NEXT:    br i1 [[P_FR]], label [[EXIT1]], label [[EXIT2]]
 ; CHECK:       EXIT1:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       EXIT2:
