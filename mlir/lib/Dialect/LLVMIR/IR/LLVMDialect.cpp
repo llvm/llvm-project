@@ -1672,14 +1672,12 @@ namespace mlir {
 namespace LLVM {
 namespace detail {
 struct LLVMDialectImpl {
-  LLVMDialectImpl() : module("LLVMDialectModule", llvmContext) {}
+  LLVMDialectImpl() : layout("") {}
 
-  llvm::LLVMContext llvmContext;
-  llvm::Module module;
-
-  /// A smart mutex to lock access to the llvm context. Unlike MLIR, LLVM is not
-  /// multi-threaded and requires locked access to prevent race conditions.
-  llvm::sys::SmartMutex<true> mutex;
+  /// Default data layout to use.
+  // TODO: this should be moved to some Op equivalent to LLVM module and
+  // eventually replaced with a proper MLIR data layout.
+  llvm::DataLayout layout;
 };
 } // end namespace detail
 } // end namespace LLVM
@@ -1723,14 +1721,7 @@ LLVMDialect::~LLVMDialect() {}
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMOps.cpp.inc"
 
-llvm::LLVMContext &LLVMDialect::getLLVMContext() { return impl->llvmContext; }
-llvm::Module &LLVMDialect::getLLVMModule() { return impl->module; }
-llvm::sys::SmartMutex<true> &LLVMDialect::getLLVMContextMutex() {
-  return impl->mutex;
-}
-const llvm::DataLayout &LLVMDialect::getDataLayout() {
-  return impl->module.getDataLayout();
-}
+const llvm::DataLayout &LLVMDialect::getDataLayout() { return impl->layout; }
 
 /// Parse a type registered to this dialect.
 Type LLVMDialect::parseType(DialectAsmParser &parser) const {

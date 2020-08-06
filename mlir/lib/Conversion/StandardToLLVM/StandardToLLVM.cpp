@@ -193,11 +193,6 @@ MLIRContext &LLVMTypeConverter::getContext() {
   return *getDialect()->getContext();
 }
 
-/// Get the LLVM context.
-llvm::LLVMContext &LLVMTypeConverter::getLLVMContext() {
-  return llvmDialect->getLLVMContext();
-}
-
 LLVM::LLVMType LLVMTypeConverter::getIndexType() {
   return LLVM::LLVMType::getIntNTy(&getContext(), getIndexTypeBitwidth());
 }
@@ -842,10 +837,6 @@ void UnrankedMemRefDescriptor::computeSizes(
 
 LLVM::LLVMDialect &ConvertToLLVMPattern::getDialect() const {
   return *typeConverter.getDialect();
-}
-
-llvm::LLVMContext &ConvertToLLVMPattern::getContext() const {
-  return typeConverter.getLLVMContext();
 }
 
 LLVM::LLVMType ConvertToLLVMPattern::getIndexType() const {
