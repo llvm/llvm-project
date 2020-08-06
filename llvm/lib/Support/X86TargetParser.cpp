@@ -536,14 +536,6 @@ static constexpr FeatureInfo FeatureInfos[X86::CPU_FEATURE_MAX] = {
 #include "llvm/Support/X86TargetParser.def"
 };
 
-// Convert the set bits in FeatureBitset to a list of strings.
-static void getFeatureBitsAsStrings(const FeatureBitset &Bits,
-                                    SmallVectorImpl<StringRef> &Features) {
-  for (unsigned i = 0; i != CPU_FEATURE_MAX; ++i)
-    if (Bits[i] && !FeatureInfos[i].Name.empty())
-      Features.push_back(FeatureInfos[i].Name);
-}
-
 void llvm::X86::getFeaturesForCPU(StringRef CPU,
                                   SmallVectorImpl<StringRef> &EnabledFeatures) {
   auto I = llvm::find_if(Processors,
@@ -557,7 +549,9 @@ void llvm::X86::getFeaturesForCPU(StringRef CPU,
   Bits &= ~Feature64BIT;
 
   // Add the string version of all set bits.
-  getFeatureBitsAsStrings(Bits, EnabledFeatures);
+  for (unsigned i = 0; i != CPU_FEATURE_MAX; ++i)
+    if (Bits[i] && !FeatureInfos[i].Name.empty())
+      EnabledFeatures.push_back(FeatureInfos[i].Name);
 }
 
 // For each feature that is (transitively) implied by this feature, set it.
@@ -591,9 +585,9 @@ static void getImpliedDisabledFeatures(FeatureBitset &Bits, unsigned Value) {
   } while (Prev != Bits);
 }
 
-void llvm::X86::getImpliedFeatures(
+void llvm::X86::updateImpliedFeatures(
     StringRef Feature, bool Enabled,
-    SmallVectorImpl<StringRef> &ImpliedFeatures) {
+    StringMap<bool> &Features) {
   auto I = llvm::find_if(
       FeatureInfos, [&](const FeatureInfo &FI) { return FI.Name == Feature; });
   if (I == std::end(FeatureInfos)) {
@@ -609,6 +603,8 @@ void llvm::X86::getImpliedFeatures(
     getImpliedDisabledFeatures(ImpliedBits,
                                std::distance(std::begin(FeatureInfos), I));
 
-  // Convert all the found bits into strings.
-  getFeatureBitsAsStrings(ImpliedBits, ImpliedFeatures);
+  // Update the map entry for all implied features.
+  for (unsigned i = 0; i != CPU_FEATURE_MAX; ++i)
+    if (ImpliedBits[i] && !FeatureInfos[i].Name.empty())
+      Features[FeatureInfos[i].Name] = Enabled;
 }
