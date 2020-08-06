@@ -1336,3 +1336,42 @@ func @rank_of_ranked(%ranked: memref<?xi32>) {
 }
 // CHECK: llvm.mlir.constant(1 : index) : !llvm.i64
 // CHECK32: llvm.mlir.constant(1 : index) : !llvm.i32
+
+// -----
+
+// CHECK-LABEL: func @dim_of_unranked
+// CHECK32-LABEL: func @dim_of_unranked
+func @dim_of_unranked(%unranked: memref<*xi32>) -> index {
+  %c0 = constant 0 : index
+  %dim = dim %unranked, %c0 : memref<*xi32>
+  return %dim : index
+}
+// CHECK-NEXT: llvm.mlir.undef : !llvm.struct<(i64, ptr<i8>)>
+// CHECK-NEXT: llvm.insertvalue 
+// CHECK-NEXT: %[[UNRANKED_DESC:.*]] = llvm.insertvalue
+// CHECK-NEXT: %[[C0:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
+
+// CHECK-NEXT: %[[RANKED_DESC:.*]] = llvm.extractvalue %[[UNRANKED_DESC]][1]
+// CHECK-SAME:   : !llvm.struct<(i64, ptr<i8>)>
+
+// CHECK-NEXT: %[[ZERO_D_DESC:.*]] = llvm.bitcast %[[RANKED_DESC]]
+// CHECK-SAME:   : !llvm.ptr<i8> to !llvm.ptr<struct<(ptr<i32>, ptr<i32>, i64)>>
+
+// CHECK-NEXT: %[[C2_i32:.*]] = llvm.mlir.constant(2 : i32) : !llvm.i32
+// CHECK-NEXT: %[[C0_:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
+
+// CHECK-NEXT: %[[OFFSET_PTR:.*]] = llvm.getelementptr %[[ZERO_D_DESC]]{{\[}}
+// CHECK-SAME:   %[[C0_]], %[[C2_i32]]] : (!llvm.ptr<struct<(ptr<i32>, ptr<i32>,
+// CHECK-SAME:   i64)>>, !llvm.i64, !llvm.i32) -> !llvm.ptr<i64>
+
+// CHECK-NEXT: %[[C1:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
+// CHECK-NEXT: %[[INDEX_INC:.*]] = llvm.add %[[C1]], %[[C0]] : !llvm.i64
+
+// CHECK-NEXT: %[[SIZE_PTR:.*]] = llvm.getelementptr %[[OFFSET_PTR]]{{\[}}
+// CHECK-SAME:   %[[INDEX_INC]]] : (!llvm.ptr<i64>, !llvm.i64) -> !llvm.ptr<i64>
+
+// CHECK-NEXT: %[[SIZE:.*]] = llvm.load %[[SIZE_PTR]] : !llvm.ptr<i64>
+// CHECK-NEXT: llvm.return %[[SIZE]] : !llvm.i64
+
+// CHECK32: %[[SIZE:.*]] = llvm.load %{{.*}} : !llvm.ptr<i32>
+// CHECK32-NEXT: llvm.return %[[SIZE]] : !llvm.i32
