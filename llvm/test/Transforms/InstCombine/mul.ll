@@ -1003,3 +1003,83 @@ define <2 x i32> @muladd2_vec_nonuniform_undef(<2 x i32> %a0) {
   %mul = mul <2 x i32> %add, <i32 -4, i32 undef>
   ret <2 x i32> %mul
 }
+
+define i32 @mulmuladd2(i32 %a0, i32 %a1) {
+; CHECK-LABEL: @mulmuladd2(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A0:%.*]], 16
+; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 [[ADD]], [[A1:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL1]], -4
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %add = add i32 %a0, 16
+  %mul1 = mul i32 %add, %a1
+  %mul2 = mul i32 %mul1, -4
+  ret i32 %mul2
+}
+define i32 @mulmuladd2_extrause0(i32 %a0, i32 %a1) {
+; CHECK-LABEL: @mulmuladd2_extrause0(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A0:%.*]], 16
+; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 [[ADD]], [[A1:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[MUL1]])
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL1]], -4
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %add = add i32 %a0, 16
+  %mul1 = mul i32 %add, %a1
+  call void @use32(i32 %mul1)
+  %mul2 = mul i32 %mul1, -4
+  ret i32 %mul2
+}
+define i32 @mulmuladd2_extrause1(i32 %a0, i32 %a1) {
+; CHECK-LABEL: @mulmuladd2_extrause1(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A0:%.*]], 16
+; CHECK-NEXT:    call void @use32(i32 [[ADD]])
+; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 [[ADD]], [[A1:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL1]], -4
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %add = add i32 %a0, 16
+  call void @use32(i32 %add)
+  %mul1 = mul i32 %add, %a1
+  %mul2 = mul i32 %mul1, -4
+  ret i32 %mul2
+}
+define i32 @mulmuladd2_extrause2(i32 %a0, i32 %a1) {
+; CHECK-LABEL: @mulmuladd2_extrause2(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A0:%.*]], 16
+; CHECK-NEXT:    call void @use32(i32 [[ADD]])
+; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 [[ADD]], [[A1:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[MUL1]])
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL1]], -4
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %add = add i32 %a0, 16
+  call void @use32(i32 %add)
+  %mul1 = mul i32 %add, %a1
+  call void @use32(i32 %mul1)
+  %mul2 = mul i32 %mul1, -4
+  ret i32 %mul2
+}
+
+define i32 @mulnot(i32 %a0) {
+; CHECK-LABEL: @mulnot(
+; CHECK-NEXT:    [[ADD:%.*]] = xor i32 [[A0:%.*]], -1
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ADD]], -4
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %add = xor i32 %a0, -1
+  %mul = mul i32 %add, -4
+  ret i32 %mul
+}
+define i32 @mulnot_extrause(i32 %a0) {
+; CHECK-LABEL: @mulnot_extrause(
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A0:%.*]], -1
+; CHECK-NEXT:    call void @use32(i32 [[NOT]])
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[NOT]], -4
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %not = xor i32 %a0, -1
+  call void @use32(i32 %not)
+  %mul = mul i32 %not, -4
+  ret i32 %mul
+}
