@@ -339,7 +339,7 @@ class ProcessAPITestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Launch the process and stop at the entry point.
-        launch_info = lldb.SBLaunchInfo(None)
+        launch_info = target.GetLaunchInfo()
         launch_info.SetWorkingDirectory(self.get_process_working_directory())
         launch_flags = launch_info.GetLaunchFlags()
         launch_flags |= lldb.eLaunchFlagStopAtEntry
