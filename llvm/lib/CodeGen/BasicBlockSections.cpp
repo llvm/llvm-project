@@ -1,4 +1,4 @@
-//===-- BBSectionsPrepare.cpp ---=========---------------------------------===//
+//===-- BasicBlockSections.cpp ---=========--------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// BBSectionsPrepare implementation.
+// BasicBlockSections implementation.
 //
 // The purpose of this pass is to assign sections to basic blocks when
 // -fbasic-block-sections= option is used. Further, with profile information
@@ -100,7 +100,7 @@ struct BBClusterInfo {
 
 using ProgramBBClusterInfoMapTy = StringMap<SmallVector<BBClusterInfo, 4>>;
 
-class BBSectionsPrepare : public MachineFunctionPass {
+class BasicBlockSections : public MachineFunctionPass {
 public:
   static char ID;
 
@@ -119,13 +119,13 @@ public:
   // name for which we have mapping in ProgramBBClusterInfo.
   StringMap<StringRef> FuncAliasMap;
 
-  BBSectionsPrepare(const MemoryBuffer *Buf)
+  BasicBlockSections(const MemoryBuffer *Buf)
       : MachineFunctionPass(ID), MBuf(Buf) {
-    initializeBBSectionsPreparePass(*PassRegistry::getPassRegistry());
+    initializeBasicBlockSectionsPass(*PassRegistry::getPassRegistry());
   };
 
-  BBSectionsPrepare() : MachineFunctionPass(ID) {
-    initializeBBSectionsPreparePass(*PassRegistry::getPassRegistry());
+  BasicBlockSections() : MachineFunctionPass(ID) {
+    initializeBasicBlockSectionsPass(*PassRegistry::getPassRegistry());
   }
 
   StringRef getPassName() const override {
@@ -144,8 +144,8 @@ public:
 
 } // end anonymous namespace
 
-char BBSectionsPrepare::ID = 0;
-INITIALIZE_PASS(BBSectionsPrepare, "bbsections-prepare",
+char BasicBlockSections::ID = 0;
+INITIALIZE_PASS(BasicBlockSections, "bbsections-prepare",
                 "Prepares for basic block sections, by splitting functions "
                 "into clusters of basic blocks.",
                 false, false)
@@ -324,7 +324,7 @@ static bool assignSectionsAndSortBasicBlocks(
   return true;
 }
 
-bool BBSectionsPrepare::runOnMachineFunction(MachineFunction &MF) {
+bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
   auto BBSectionsType = MF.getTarget().getBBSectionsType();
   assert(BBSectionsType != BasicBlockSection::None &&
          "BB Sections not enabled!");
@@ -438,7 +438,7 @@ static Error getBBClusterInfo(const MemoryBuffer *MBuf,
   return Error::success();
 }
 
-bool BBSectionsPrepare::doInitialization(Module &M) {
+bool BasicBlockSections::doInitialization(Module &M) {
   if (!MBuf)
     return false;
   if (auto Err = getBBClusterInfo(MBuf, ProgramBBClusterInfo, FuncAliasMap))
@@ -446,12 +446,12 @@ bool BBSectionsPrepare::doInitialization(Module &M) {
   return false;
 }
 
-void BBSectionsPrepare::getAnalysisUsage(AnalysisUsage &AU) const {
+void BasicBlockSections::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
 MachineFunctionPass *
-llvm::createBBSectionsPreparePass(const MemoryBuffer *Buf) {
-  return new BBSectionsPrepare(Buf);
+llvm::createBasicBlockSectionsPass(const MemoryBuffer *Buf) {
+  return new BasicBlockSections(Buf);
 }
