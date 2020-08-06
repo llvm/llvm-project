@@ -1,5 +1,5 @@
-; RUN: opt < %s -loop-unswitch
-; RUN: opt < %s -loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa
+; RUN: opt < %s -loop-unswitch -enable-new-pm=0
+; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -enable-mssa-loop-dependency=true -verify-memoryssa
 ; PR8622
 @g_38 = external global i32, align 4
 
