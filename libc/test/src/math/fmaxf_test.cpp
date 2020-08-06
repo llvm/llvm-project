@@ -9,6 +9,7 @@
 #include "include/math.h"
 #include "src/math/fmaxf.h"
 #include "utils/FPUtil/FPBits.h"
+#include "utils/FPUtil/TestHelpers.h"
 #include "utils/UnitTest/Test.h"
 
 using FPBits = __llvm_libc::fputil::FPBits<float>;
@@ -18,36 +19,36 @@ float inf = FPBits::inf();
 float negInf = FPBits::negInf();
 
 TEST(FmaxfTest, NaNArg) {
-  EXPECT_EQ(inf, __llvm_libc::fmaxf(nan, inf));
-  EXPECT_EQ(negInf, __llvm_libc::fmaxf(negInf, nan));
-  EXPECT_EQ(0.0f, __llvm_libc::fmaxf(nan, 0.0f));
-  EXPECT_EQ(-0.0f, __llvm_libc::fmaxf(-0.0f, nan));
-  EXPECT_EQ(-1.2345f, __llvm_libc::fmaxf(nan, -1.2345f));
-  EXPECT_EQ(1.2345f, __llvm_libc::fmaxf(1.2345f, nan));
+  EXPECT_FP_EQ(inf, __llvm_libc::fmaxf(nan, inf));
+  EXPECT_FP_EQ(negInf, __llvm_libc::fmaxf(negInf, nan));
+  EXPECT_FP_EQ(0.0f, __llvm_libc::fmaxf(nan, 0.0f));
+  EXPECT_FP_EQ(-0.0f, __llvm_libc::fmaxf(-0.0f, nan));
+  EXPECT_FP_EQ(-1.2345f, __llvm_libc::fmaxf(nan, -1.2345f));
+  EXPECT_FP_EQ(1.2345f, __llvm_libc::fmaxf(1.2345f, nan));
   EXPECT_NE(isnan(__llvm_libc::fmaxf(nan, nan)), 0);
 }
 
 TEST(FmaxfTest, InfArg) {
-  EXPECT_EQ(inf, __llvm_libc::fmaxf(negInf, inf));
-  EXPECT_EQ(inf, __llvm_libc::fmaxf(inf, 0.0f));
-  EXPECT_EQ(inf, __llvm_libc::fmaxf(-0.0f, inf));
-  EXPECT_EQ(inf, __llvm_libc::fmaxf(inf, 1.2345f));
-  EXPECT_EQ(inf, __llvm_libc::fmaxf(-1.2345f, inf));
+  EXPECT_FP_EQ(inf, __llvm_libc::fmaxf(negInf, inf));
+  EXPECT_FP_EQ(inf, __llvm_libc::fmaxf(inf, 0.0f));
+  EXPECT_FP_EQ(inf, __llvm_libc::fmaxf(-0.0f, inf));
+  EXPECT_FP_EQ(inf, __llvm_libc::fmaxf(inf, 1.2345f));
+  EXPECT_FP_EQ(inf, __llvm_libc::fmaxf(-1.2345f, inf));
 }
 
 TEST(FmaxfTest, NegInfArg) {
-  EXPECT_EQ(inf, __llvm_libc::fmaxf(inf, negInf));
-  EXPECT_EQ(0.0f, __llvm_libc::fmaxf(negInf, 0.0f));
-  EXPECT_EQ(-0.0f, __llvm_libc::fmaxf(-0.0f, negInf));
-  EXPECT_EQ(-1.2345f, __llvm_libc::fmaxf(negInf, -1.2345f));
-  EXPECT_EQ(1.2345f, __llvm_libc::fmaxf(1.2345f, negInf));
+  EXPECT_FP_EQ(inf, __llvm_libc::fmaxf(inf, negInf));
+  EXPECT_FP_EQ(0.0f, __llvm_libc::fmaxf(negInf, 0.0f));
+  EXPECT_FP_EQ(-0.0f, __llvm_libc::fmaxf(-0.0f, negInf));
+  EXPECT_FP_EQ(-1.2345f, __llvm_libc::fmaxf(negInf, -1.2345f));
+  EXPECT_FP_EQ(1.2345f, __llvm_libc::fmaxf(1.2345f, negInf));
 }
 
 TEST(FmaxfTest, BothZero) {
-  EXPECT_EQ(0.0f, __llvm_libc::fmaxf(0.0f, 0.0f));
-  EXPECT_EQ(0.0f, __llvm_libc::fmaxf(-0.0f, 0.0f));
-  EXPECT_EQ(0.0f, __llvm_libc::fmaxf(0.0f, -0.0f));
-  EXPECT_EQ(-0.0f, __llvm_libc::fmaxf(-0.0f, -0.0f));
+  EXPECT_FP_EQ(0.0f, __llvm_libc::fmaxf(0.0f, 0.0f));
+  EXPECT_FP_EQ(0.0f, __llvm_libc::fmaxf(-0.0f, 0.0f));
+  EXPECT_FP_EQ(0.0f, __llvm_libc::fmaxf(0.0f, -0.0f));
+  EXPECT_FP_EQ(-0.0f, __llvm_libc::fmaxf(-0.0f, -0.0f));
 }
 
 TEST(FmaxfTest, InFloatRange) {
@@ -65,9 +66,9 @@ TEST(FmaxfTest, InFloatRange) {
       continue;
 
     if (x > y) {
-      ASSERT_EQ(x, __llvm_libc::fmaxf(x, y));
+      ASSERT_FP_EQ(x, __llvm_libc::fmaxf(x, y));
     } else {
-      ASSERT_EQ(y, __llvm_libc::fmaxf(x, y));
+      ASSERT_FP_EQ(y, __llvm_libc::fmaxf(x, y));
     }
   }
 }
