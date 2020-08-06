@@ -1929,8 +1929,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UDIV, MVT::i128, Custom);
     setOperationAction(ISD::SREM, MVT::i128, Custom);
     setOperationAction(ISD::UREM, MVT::i128, Custom);
-    setOperationAction(ISD::SDIVREM, MVT::i128, Custom);
-    setOperationAction(ISD::UDIVREM, MVT::i128, Custom);
   }
 
   // On 32 bit MSVC, `fmodf(f32)` is not defined - only `fmod(f64)`
@@ -3203,13 +3201,23 @@ X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
     return DAG.getFrameIndex(FI, PtrVT);
   }
 
+  EVT ArgVT = Ins[i].ArgVT;
+
+  // If this is a vector that has been split into multiple parts, and the
+  // scalar size of the parts don't match the vector element size, then we can't
+  // elide the copy. The parts will have padding between them instead of being
+  // packed like a vector.
+  bool ScalarizedAndExtendedVector =
+      ArgVT.isVector() && !VA.getLocVT().isVector() &&
+      VA.getLocVT().getSizeInBits() != ArgVT.getScalarSizeInBits();
+
   // This is an argument in memory. We might be able to perform copy elision.
   // If the argument is passed directly in memory without any extension, then we
   // can perform copy elision. Large vector types, for example, may be passed
   // indirectly by pointer.
   if (Flags.isCopyElisionCandidate() &&
-      VA.getLocInfo() != CCValAssign::Indirect && !ExtendedInMem) {
-    EVT ArgVT = Ins[i].ArgVT;
+      VA.getLocInfo() != CCValAssign::Indirect && !ExtendedInMem &&
+      !ScalarizedAndExtendedVector) {
     SDValue PartAddr;
     if (Ins[i].PartOffset == 0) {
       // If this is a one-part value or the first part of a multi-part value,
@@ -26889,8 +26897,6 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
   case ISD::UDIV:      isSigned = false; LC = RTLIB::UDIV_I128;    break;
   case ISD::SREM:      isSigned = true;  LC = RTLIB::SREM_I128;    break;
   case ISD::UREM:      isSigned = false; LC = RTLIB::UREM_I128;    break;
-  case ISD::SDIVREM:   isSigned = true;  LC = RTLIB::SDIVREM_I128; break;
-  case ISD::UDIVREM:   isSigned = false; LC = RTLIB::UDIVREM_I128; break;
   }
 
   SDLoc dl(Op);
@@ -29525,10 +29531,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
 
-    LLVM_FALLTHROUGH;
-  }
-  case ISD::SDIVREM:
-  case ISD::UDIVREM: {
     SDValue V = LowerWin64_i128OP(SDValue(N,0), DAG);
     Results.push_back(V);
     return;

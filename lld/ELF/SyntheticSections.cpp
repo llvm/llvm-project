@@ -480,7 +480,7 @@ void EhFrameSection::iterateFDEWithLSDAAux(
 template <class ELFT>
 void EhFrameSection::iterateFDEWithLSDA(
     llvm::function_ref<void(InputSection &)> fn) {
-  DenseSet<uint64_t> ciesWithLSDA;
+  DenseSet<size_t> ciesWithLSDA;
   for (EhInputSection *sec : sections) {
     ciesWithLSDA.clear();
     if (sec->areRelocsRela)

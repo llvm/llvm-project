@@ -606,7 +606,7 @@ namespace AArch64II {
     MO_HI12 = 7,
 
     /// MO_COFFSTUB - On a symbol operand "FOO", this indicates that the
-    /// reference is actually to the ".refptrp.FOO" symbol.  This is used for
+    /// reference is actually to the ".refptr.FOO" symbol.  This is used for
     /// stub symbols on windows.
     MO_COFFSTUB = 0x8,
 

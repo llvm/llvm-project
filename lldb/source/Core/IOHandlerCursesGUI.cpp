@@ -273,6 +273,32 @@ struct KeyHelp {
   const char *description;
 };
 
+// COLOR_PAIR index names
+enum {
+  // First 16 colors are 8 black background and 8 blue background colors,
+  // needed by OutputColoredStringTruncated().
+  BlackOnBlack = 1,
+  RedOnBlack,
+  GreenOnBlack,
+  YellowOnBlack,
+  BlueOnBlack,
+  MagentaOnBlack,
+  CyanOnBlack,
+  WhiteOnBlack,
+  BlackOnBlue,
+  RedOnBlue,
+  GreenOnBlue,
+  YellowOnBlue,
+  BlueOnBlue,
+  MagentaOnBlue,
+  CyanOnBlue,
+  WhiteOnBlue,
+  // Other colors, as needed.
+  BlackOnWhite,
+  MagentaOnWhite,
+  LastColorPairIndex = MagentaOnWhite
+};
+
 class WindowDelegate {
 public:
   virtual ~WindowDelegate() = default;
@@ -367,23 +393,23 @@ public:
   }
   void Clear() { ::wclear(m_window); }
   void Erase() { ::werase(m_window); }
-  Rect GetBounds() {
+  Rect GetBounds() const {
     return Rect(GetParentOrigin(), GetSize());
   } // Get the rectangle in our parent window
   int GetChar() { return ::wgetch(m_window); }
-  int GetCursorX() { return getcurx(m_window); }
-  int GetCursorY() { return getcury(m_window); }
-  Rect GetFrame() {
+  int GetCursorX() const { return getcurx(m_window); }
+  int GetCursorY() const { return getcury(m_window); }
+  Rect GetFrame() const {
     return Rect(Point(), GetSize());
   } // Get our rectangle in our own coordinate system
-  Point GetParentOrigin() { return Point(GetParentX(), GetParentY()); }
-  Size GetSize() { return Size(GetWidth(), GetHeight()); }
-  int GetParentX() { return getparx(m_window); }
-  int GetParentY() { return getpary(m_window); }
-  int GetMaxX() { return getmaxx(m_window); }
-  int GetMaxY() { return getmaxy(m_window); }
-  int GetWidth() { return GetMaxX(); }
-  int GetHeight() { return GetMaxY(); }
+  Point GetParentOrigin() const { return Point(GetParentX(), GetParentY()); }
+  Size GetSize() const { return Size(GetWidth(), GetHeight()); }
+  int GetParentX() const { return getparx(m_window); }
+  int GetParentY() const { return getpary(m_window); }
+  int GetMaxX() const { return getmaxx(m_window); }
+  int GetMaxY() const { return getmaxy(m_window); }
+  int GetWidth() const { return GetMaxX(); }
+  int GetHeight() const { return GetMaxY(); }
   void MoveCursor(int x, int y) { ::wmove(m_window, y, x); }
   void MoveWindow(int x, int y) { MoveWindow(Point(x, y)); }
   void Resize(int w, int h) { ::wresize(m_window, h, w); }
@@ -396,11 +422,11 @@ public:
     ::wbkgd(m_window, COLOR_PAIR(color_pair_idx));
   }
 
-  void PutCStringTruncated(const char *s, int right_pad) {
+  void PutCStringTruncated(int right_pad, const char *s, int len = -1) {
     int bytes_left = GetWidth() - GetCursorX();
     if (bytes_left > right_pad) {
       bytes_left -= right_pad;
-      ::waddnstr(m_window, s, bytes_left);
+      ::waddnstr(m_window, s, len < 0 ? bytes_left : std::min(bytes_left, len));
     }
   }
 
@@ -436,6 +462,76 @@ public:
     va_start(args, format);
     vwprintw(m_window, format, args);
     va_end(args);
+  }
+
+  void PrintfTruncated(int right_pad, const char *format, ...)
+      __attribute__((format(printf, 3, 4))) {
+    va_list args;
+    va_start(args, format);
+    StreamString strm;
+    strm.PrintfVarArg(format, args);
+    va_end(args);
+    PutCStringTruncated(right_pad, strm.GetData());
+  }
+
+  size_t LimitLengthToRestOfLine(size_t length) const {
+    return std::min<size_t>(length, std::max(0, GetWidth() - GetCursorX() - 1));
+  }
+
+  // Curses doesn't allow direct output of color escape sequences, but that's
+  // how we get source lines from the Highligher class. Read the line and
+  // convert color escape sequences to curses color attributes.
+  void OutputColoredStringTruncated(int right_pad, StringRef string,
+                                    bool use_blue_background) {
+    attr_t saved_attr;
+    short saved_pair;
+    int saved_opts;
+    wattr_get(m_window, &saved_attr, &saved_pair, &saved_opts);
+    if (use_blue_background)
+      ::wattron(m_window, COLOR_PAIR(WhiteOnBlue));
+    while (!string.empty()) {
+      size_t esc_pos = string.find('\x1b');
+      if (esc_pos == StringRef::npos) {
+        PutCStringTruncated(right_pad, string.data(), string.size());
+        break;
+      }
+      if (esc_pos > 0) {
+        PutCStringTruncated(right_pad, string.data(), esc_pos);
+        string = string.drop_front(esc_pos);
+      }
+      bool consumed = string.consume_front("\x1b");
+      assert(consumed);
+      UNUSED_IF_ASSERT_DISABLED(consumed);
+      // This is written to match our Highlighter classes, which seem to
+      // generate only foreground color escape sequences. If necessary, this
+      // will need to be extended.
+      if (!string.consume_front("[")) {
+        llvm::errs() << "Missing '[' in color escape sequence.\n";
+        continue;
+      }
+      // Only 8 basic foreground colors and reset, our Highlighter doesn't use
+      // anything else.
+      int value;
+      if (!!string.consumeInteger(10, value) || // Returns false on success.
+          !(value == 0 || (value >= 30 && value <= 37))) {
+        llvm::errs() << "No valid color code in color escape sequence.\n";
+        continue;
+      }
+      if (!string.consume_front("m")) {
+        llvm::errs() << "Missing 'm' in color escape sequence.\n";
+        continue;
+      }
+      if (value == 0) { // Reset.
+        wattr_set(m_window, saved_attr, saved_pair, &saved_opts);
+        if (use_blue_background)
+          ::wattron(m_window, COLOR_PAIR(WhiteOnBlue));
+      } else {
+        // Mapped directly to first 16 color pairs (black/blue background).
+        ::wattron(m_window,
+                  COLOR_PAIR(value - 30 + 1 + (use_blue_background ? 8 : 0)));
+      }
+    }
+    wattr_set(m_window, saved_attr, saved_pair, &saved_opts);
   }
 
   void Touch() {
@@ -526,7 +622,7 @@ public:
   void DrawTitleBox(const char *title, const char *bottom_message = nullptr) {
     attr_t attr = 0;
     if (IsActive())
-      attr = A_BOLD | COLOR_PAIR(2);
+      attr = A_BOLD | COLOR_PAIR(BlackOnWhite);
     else
       attr = 0;
     if (attr)
@@ -553,7 +649,7 @@ public:
       } else {
         MoveCursor(1, GetHeight() - 1);
         PutChar('[');
-        PutCStringTruncated(bottom_message, 1);
+        PutCStringTruncated(1, bottom_message);
       }
     }
     if (attr)
@@ -956,14 +1052,14 @@ void Menu::DrawMenuTitle(Window &window, bool highlight) {
 
     if (m_key_name.empty()) {
       if (!underlined_shortcut && llvm::isPrint(m_key_value)) {
-        window.AttributeOn(COLOR_PAIR(3));
+        window.AttributeOn(COLOR_PAIR(MagentaOnWhite));
         window.Printf(" (%c)", m_key_value);
-        window.AttributeOff(COLOR_PAIR(3));
+        window.AttributeOff(COLOR_PAIR(MagentaOnWhite));
       }
     } else {
-      window.AttributeOn(COLOR_PAIR(3));
+      window.AttributeOn(COLOR_PAIR(MagentaOnWhite));
       window.Printf(" (%s)", m_key_name.c_str());
-      window.AttributeOff(COLOR_PAIR(3));
+      window.AttributeOff(COLOR_PAIR(MagentaOnWhite));
     }
   }
 }
@@ -975,7 +1071,7 @@ bool Menu::WindowDelegateDraw(Window &window, bool force) {
   Menu::Type menu_type = GetType();
   switch (menu_type) {
   case Menu::Type::Bar: {
-    window.SetBackground(2);
+    window.SetBackground(BlackOnWhite);
     window.MoveCursor(0, 0);
     for (size_t i = 0; i < num_submenus; ++i) {
       Menu *menu = submenus[i].get();
@@ -995,7 +1091,7 @@ bool Menu::WindowDelegateDraw(Window &window, bool force) {
     int cursor_x = 0;
     int cursor_y = 0;
     window.Erase();
-    window.SetBackground(2);
+    window.SetBackground(BlackOnWhite);
     window.Box();
     for (size_t i = 0; i < num_submenus; ++i) {
       const bool is_selected = (i == static_cast<size_t>(selected_idx));
@@ -1911,7 +2007,7 @@ public:
         if (FormatEntity::Format(m_format, strm, &sc, &exe_ctx, nullptr,
                                  nullptr, false, false)) {
           int right_pad = 1;
-          window.PutCStringTruncated(strm.GetString().str().c_str(), right_pad);
+          window.PutCStringTruncated(right_pad, strm.GetString().str().c_str());
         }
       }
     }
@@ -1970,7 +2066,7 @@ public:
       if (FormatEntity::Format(m_format, strm, nullptr, &exe_ctx, nullptr,
                                nullptr, false, false)) {
         int right_pad = 1;
-        window.PutCStringTruncated(strm.GetString().str().c_str(), right_pad);
+        window.PutCStringTruncated(right_pad, strm.GetString().str().c_str());
       }
     }
   }
@@ -2060,7 +2156,7 @@ public:
       if (FormatEntity::Format(m_format, strm, nullptr, &exe_ctx, nullptr,
                                nullptr, false, false)) {
         int right_pad = 1;
-        window.PutCStringTruncated(strm.GetString().str().c_str(), right_pad);
+        window.PutCStringTruncated(right_pad, strm.GetString().str().c_str());
       }
     }
   }
@@ -2363,29 +2459,29 @@ protected:
       window.AttributeOn(A_REVERSE);
 
     if (type_name && type_name[0])
-      window.Printf("(%s) ", type_name);
+      window.PrintfTruncated(1, "(%s) ", type_name);
 
     if (name && name[0])
-      window.PutCString(name);
+      window.PutCStringTruncated(1, name);
 
     attr_t changd_attr = 0;
     if (valobj->GetValueDidChange())
-      changd_attr = COLOR_PAIR(5) | A_BOLD;
+      changd_attr = COLOR_PAIR(RedOnBlack) | A_BOLD;
 
     if (value && value[0]) {
-      window.PutCString(" = ");
+      window.PutCStringTruncated(1, " = ");
       if (changd_attr)
         window.AttributeOn(changd_attr);
-      window.PutCString(value);
+      window.PutCStringTruncated(1, value);
       if (changd_attr)
         window.AttributeOff(changd_attr);
     }
 
     if (summary && summary[0]) {
-      window.PutChar(' ');
+      window.PutCStringTruncated(1, " ");
       if (changd_attr)
         window.AttributeOn(changd_attr);
-      window.PutCString(summary);
+      window.PutCStringTruncated(1, summary);
       if (changd_attr)
         window.AttributeOff(changd_attr);
     }
@@ -2823,7 +2919,7 @@ bool HelpDialogDelegate::WindowDelegateDraw(Window &window, bool force) {
   while (y <= max_y) {
     window.MoveCursor(x, y);
     window.PutCStringTruncated(
-        m_text.GetStringAtIndex(m_first_visible_line + y - min_y), 1);
+        1, m_text.GetStringAtIndex(m_first_visible_line + y - min_y));
     ++y;
   }
   return true;
@@ -3239,7 +3335,7 @@ public:
     Thread *thread = exe_ctx.GetThreadPtr();
     StackFrame *frame = exe_ctx.GetFramePtr();
     window.Erase();
-    window.SetBackground(2);
+    window.SetBackground(BlackOnWhite);
     window.MoveCursor(0, 0);
     if (process) {
       const StateType state = process->GetState();
@@ -3251,7 +3347,7 @@ public:
         if (thread && FormatEntity::Format(m_format, strm, nullptr, &exe_ctx,
                                            nullptr, nullptr, false, false)) {
           window.MoveCursor(40, 0);
-          window.PutCStringTruncated(strm.GetString().str().c_str(), 1);
+          window.PutCStringTruncated(1, strm.GetString().str().c_str());
         }
 
         window.MoveCursor(60, 0);
@@ -3477,7 +3573,7 @@ public:
       window.AttributeOn(A_REVERSE);
       window.MoveCursor(1, 1);
       window.PutChar(' ');
-      window.PutCStringTruncated(m_title.GetString().str().c_str(), 1);
+      window.PutCStringTruncated(1, m_title.GetString().str().c_str());
       int x = window.GetCursorX();
       if (x < window_width - 1) {
         window.Printf("%*s", window_width - x - 1, "");
@@ -3511,7 +3607,7 @@ public:
       }
 
       const attr_t selected_highlight_attr = A_REVERSE;
-      const attr_t pc_highlight_attr = COLOR_PAIR(1);
+      const attr_t pc_highlight_attr = COLOR_PAIR(BlackOnBlue);
 
       for (size_t i = 0; i < num_visible_lines; ++i) {
         const uint32_t curr_line = m_first_visible_line + i;
@@ -3530,7 +3626,7 @@ public:
             highlight_attr = selected_highlight_attr;
 
           if (bp_lines.find(curr_line + 1) != bp_lines.end())
-            bp_attr = COLOR_PAIR(2);
+            bp_attr = COLOR_PAIR(BlackOnWhite);
 
           if (bp_attr)
             window.AttributeOn(bp_attr);
@@ -3549,10 +3645,13 @@ public:
 
           if (highlight_attr)
             window.AttributeOn(highlight_attr);
-          const uint32_t line_len =
-              m_file_sp->GetLineLength(curr_line + 1, false);
-          if (line_len > 0)
-            window.PutCString(m_file_sp->PeekLineData(curr_line + 1), line_len);
+
+          StreamString lineStream;
+          m_file_sp->DisplaySourceLines(curr_line + 1, {}, 0, 0, &lineStream);
+          StringRef line = lineStream.GetString();
+          if (line.endswith("\n"))
+            line = line.drop_back();
+          window.OutputColoredStringTruncated(1, line, is_pc_line);
 
           if (is_pc_line && frame_sp &&
               frame_sp->GetConcreteFrameIndex() == 0) {
@@ -3564,11 +3663,15 @@ public:
               if (stop_description && stop_description[0]) {
                 size_t stop_description_len = strlen(stop_description);
                 int desc_x = window_width - stop_description_len - 16;
-                window.Printf("%*s", desc_x - window.GetCursorX(), "");
-                // window.MoveCursor(window_width - stop_description_len - 15,
-                // line_y);
-                window.Printf("<<< Thread %u: %s ", thread->GetIndexID(),
-                              stop_description);
+                if (desc_x - window.GetCursorX() > 0)
+                  window.Printf("%*s", desc_x - window.GetCursorX(), "");
+                window.MoveCursor(window_width - stop_description_len - 16,
+                                  line_y);
+                const attr_t stop_reason_attr = COLOR_PAIR(WhiteOnBlue);
+                window.AttributeOn(stop_reason_attr);
+                window.PrintfTruncated(1, " <<< Thread %u: %s ",
+                                       thread->GetIndexID(), stop_description);
+                window.AttributeOff(stop_reason_attr);
               }
             } else {
               window.Printf("%*s", window_width - window.GetCursorX() - 1, "");
@@ -3608,7 +3711,7 @@ public:
         }
 
         const attr_t selected_highlight_attr = A_REVERSE;
-        const attr_t pc_highlight_attr = COLOR_PAIR(1);
+        const attr_t pc_highlight_attr = COLOR_PAIR(WhiteOnBlue);
 
         StreamString strm;
 
@@ -3656,7 +3759,7 @@ public:
 
           if (bp_file_addrs.find(inst->GetAddress().GetFileAddress()) !=
               bp_file_addrs.end())
-            bp_attr = COLOR_PAIR(2);
+            bp_attr = COLOR_PAIR(BlackOnWhite);
 
           if (bp_attr)
             window.AttributeOn(bp_attr);
@@ -3699,7 +3802,7 @@ public:
             strm.Printf("%s", mnemonic);
 
           int right_pad = 1;
-          window.PutCStringTruncated(strm.GetData(), right_pad);
+          window.PutCStringTruncated(right_pad, strm.GetData());
 
           if (is_pc_line && frame_sp &&
               frame_sp->GetConcreteFrameIndex() == 0) {
@@ -3711,11 +3814,12 @@ public:
               if (stop_description && stop_description[0]) {
                 size_t stop_description_len = strlen(stop_description);
                 int desc_x = window_width - stop_description_len - 16;
-                window.Printf("%*s", desc_x - window.GetCursorX(), "");
-                // window.MoveCursor(window_width - stop_description_len - 15,
-                // line_y);
-                window.Printf("<<< Thread %u: %s ", thread->GetIndexID(),
-                              stop_description);
+                if (desc_x - window.GetCursorX() > 0)
+                  window.Printf("%*s", desc_x - window.GetCursorX(), "");
+                window.MoveCursor(window_width - stop_description_len - 15,
+                                  line_y);
+                window.PrintfTruncated(1, "<<< Thread %u: %s ",
+                                       thread->GetIndexID(), stop_description);
               }
             } else {
               window.Printf("%*s", window_width - window.GetCursorX() - 1, "");
@@ -4174,11 +4278,28 @@ void IOHandlerCursesGUI::Activate() {
       main_window_sp->CreateHelpSubwindow();
     }
 
-    init_pair(1, COLOR_WHITE, COLOR_BLUE);
-    init_pair(2, COLOR_BLACK, COLOR_WHITE);
-    init_pair(3, COLOR_MAGENTA, COLOR_WHITE);
-    init_pair(4, COLOR_MAGENTA, COLOR_BLACK);
-    init_pair(5, COLOR_RED, COLOR_BLACK);
+    // All colors with black background.
+    init_pair(1, COLOR_BLACK, COLOR_BLACK);
+    init_pair(2, COLOR_RED, COLOR_BLACK);
+    init_pair(3, COLOR_GREEN, COLOR_BLACK);
+    init_pair(4, COLOR_YELLOW, COLOR_BLACK);
+    init_pair(5, COLOR_BLUE, COLOR_BLACK);
+    init_pair(6, COLOR_MAGENTA, COLOR_BLACK);
+    init_pair(7, COLOR_CYAN, COLOR_BLACK);
+    init_pair(8, COLOR_WHITE, COLOR_BLACK);
+    // All colors with blue background.
+    init_pair(9, COLOR_BLACK, COLOR_BLUE);
+    init_pair(10, COLOR_RED, COLOR_BLUE);
+    init_pair(11, COLOR_GREEN, COLOR_BLUE);
+    init_pair(12, COLOR_YELLOW, COLOR_BLUE);
+    init_pair(13, COLOR_BLUE, COLOR_BLUE);
+    init_pair(14, COLOR_MAGENTA, COLOR_BLUE);
+    init_pair(15, COLOR_CYAN, COLOR_BLUE);
+    init_pair(16, COLOR_WHITE, COLOR_BLUE);
+    // These must match the order in the color indexes enum.
+    init_pair(17, COLOR_BLACK, COLOR_WHITE);
+    init_pair(18, COLOR_MAGENTA, COLOR_WHITE);
+    static_assert(LastColorPairIndex == 18, "Color indexes do not match.");
   }
 }
 

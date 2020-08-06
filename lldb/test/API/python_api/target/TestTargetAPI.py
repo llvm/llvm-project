@@ -152,6 +152,7 @@ class TargetAPITestCase(TestBase):
 
 
     @add_test_categories(['pyapi'])
+    @skipIfWindows  # stdio manipulation unsupported on Windows
     def test_launch_simple(self):
         d = {'EXE': 'b.out'}
         self.build(dictionary=d)
@@ -282,6 +283,10 @@ class TargetAPITestCase(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
+        # Try it with a null name:
+        list = target.FindFunctions(None, lldb.eFunctionNameTypeAuto)
+        self.assertTrue(list.GetSize() == 0)
+        
         list = target.FindFunctions('c', lldb.eFunctionNameTypeAuto)
         self.assertTrue(list.GetSize() == 1)
 

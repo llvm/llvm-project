@@ -34,13 +34,13 @@ template <typename C, std::size_t ClauseEnumSize> struct DirectiveClauses {
 // typename PC is the parser class defined in parse-tree.h for the clauses.
 template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
 class DirectiveStructureChecker : public virtual BaseChecker {
-public:
+protected:
   DirectiveStructureChecker(SemanticsContext &context,
       std::unordered_map<D, DirectiveClauses<C, ClauseEnumSize>>
           directiveClausesMap)
       : context_{context}, directiveClausesMap_(directiveClausesMap) {}
+  virtual ~DirectiveStructureChecker() {}
 
-protected:
   struct DirectiveContext {
     DirectiveContext(parser::CharBlock source, D d)
         : directiveSource{source}, directive{d} {}

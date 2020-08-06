@@ -630,6 +630,16 @@ static bool addSanitizerDynamicList(const ToolChain &TC, const ArgList &Args,
   return false;
 }
 
+static const char *getAsNeededOption(const ToolChain &TC, bool as_needed) {
+  // While the Solaris 11.2 ld added --as-needed/--no-as-needed as aliases
+  // for the native forms -z ignore/-z record, they are missing in Illumos,
+  // so always use the native form.
+  if (TC.getTriple().isOSSolaris())
+    return as_needed ? "-zignore" : "-zrecord";
+  else
+    return as_needed ? "--as-needed" : "--no-as-needed";
+}
+
 void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
                                      ArgStringList &CmdArgs) {
   // Fuchsia never needs these.  Any sanitizer runtimes with system
@@ -639,7 +649,7 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
 
   // Force linking against the system libraries sanitizers depends on
   // (see PR15823 why this is necessary).
-  CmdArgs.push_back("--no-as-needed");
+  CmdArgs.push_back(getAsNeededOption(TC, false));
   // There's no libpthread or librt on RTEMS & Android.
   if (TC.getTriple().getOS() != llvm::Triple::RTEMS &&
       !TC.getTriple().isAndroid()) {
@@ -836,7 +846,7 @@ bool tools::addXRayRuntime(const ToolChain&TC, const ArgList &Args, ArgStringLis
 }
 
 void tools::linkXRayRuntimeDeps(const ToolChain &TC, ArgStringList &CmdArgs) {
-  CmdArgs.push_back("--no-as-needed");
+  CmdArgs.push_back(getAsNeededOption(TC, false));
   CmdArgs.push_back("-lpthread");
   if (!TC.getTriple().isOSOpenBSD())
     CmdArgs.push_back("-lrt");
@@ -1261,7 +1271,7 @@ static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
   bool AsNeeded = LGT == LibGccType::UnspecifiedLibGcc &&
                   !TC.getTriple().isAndroid() && !TC.getTriple().isOSCygMing();
   if (AsNeeded)
-    CmdArgs.push_back("--as-needed");
+    CmdArgs.push_back(getAsNeededOption(TC, true));
 
   switch (UNW) {
   case ToolChain::UNW_None:
@@ -1289,7 +1299,7 @@ static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
   }
 
   if (AsNeeded)
-    CmdArgs.push_back("--no-as-needed");
+    CmdArgs.push_back(getAsNeededOption(TC, false));
 }
 
 static void AddLibgcc(const ToolChain &TC, const Driver &D,

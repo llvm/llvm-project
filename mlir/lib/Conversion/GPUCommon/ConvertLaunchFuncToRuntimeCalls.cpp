@@ -66,12 +66,7 @@ class GpuLaunchFuncToGpuRuntimeCallsPass
 private:
   LLVM::LLVMDialect *getLLVMDialect() { return llvmDialect; }
 
-  llvm::LLVMContext &getLLVMContext() {
-    return getLLVMDialect()->getLLVMContext();
-  }
-
   void initializeCachedTypes() {
-    const llvm::Module &module = llvmDialect->getLLVMModule();
     llvmVoidType = LLVM::LLVMType::getVoidTy(llvmDialect);
     llvmPointerType = LLVM::LLVMType::getInt8PtrTy(llvmDialect);
     llvmPointerPointerType = llvmPointerType.getPointerTo();
@@ -79,7 +74,7 @@ private:
     llvmInt32Type = LLVM::LLVMType::getInt32Ty(llvmDialect);
     llvmInt64Type = LLVM::LLVMType::getInt64Ty(llvmDialect);
     llvmIntPtrType = LLVM::LLVMType::getIntNTy(
-        llvmDialect, module.getDataLayout().getPointerSizeInBits());
+        llvmDialect, llvmDialect->getDataLayout().getPointerSizeInBits());
   }
 
   LLVM::LLVMType getVoidType() { return llvmVoidType; }
@@ -95,9 +90,9 @@ private:
   LLVM::LLVMType getInt64Type() { return llvmInt64Type; }
 
   LLVM::LLVMType getIntPtrType() {
-    const llvm::Module &module = getLLVMDialect()->getLLVMModule();
     return LLVM::LLVMType::getIntNTy(
-        getLLVMDialect(), module.getDataLayout().getPointerSizeInBits());
+        getLLVMDialect(),
+        getLLVMDialect()->getDataLayout().getPointerSizeInBits());
   }
 
   // Allocate a void pointer on the stack.

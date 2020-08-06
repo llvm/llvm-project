@@ -1612,6 +1612,9 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
 static bool compareByFilePosition(InputSection *a, InputSection *b) {
   InputSection *la = a->getLinkOrderDep();
   InputSection *lb = b->getLinkOrderDep();
+  // SHF_LINK_ORDER sections with non-zero sh_link are ordered before others.
+  if (!la || !lb)
+    return la && !lb;
   OutputSection *aOut = la->getParent();
   OutputSection *bOut = lb->getParent();
 
@@ -1652,7 +1655,7 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
             sections.push_back(isec);
 
             InputSection *link = isec->getLinkOrderDep();
-            if (!link->getParent())
+            if (link && !link->getParent())
               error(toString(isec) + ": sh_link points to discarded section " +
                     toString(link));
           }

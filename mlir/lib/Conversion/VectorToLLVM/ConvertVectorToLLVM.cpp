@@ -126,11 +126,12 @@ LogicalResult getMemRefAlignment(LLVMTypeConverter &typeConverter, T op,
   if (!elementTy)
     return failure();
 
-  auto dataLayout = typeConverter.getDialect()->getLLVMModule().getDataLayout();
-  // TODO: this should be abstracted away to avoid depending on translation.
-  align = dataLayout.getPrefTypeAlignment(LLVM::translateTypeToLLVMIR(
-      elementTy.cast<LLVM::LLVMType>(),
-      typeConverter.getDialect()->getLLVMContext()));
+  // TODO: this should use the MLIR data layout when it becomes available and
+  // stop depending on translation.
+  LLVM::LLVMDialect *dialect = typeConverter.getDialect();
+  align = LLVM::TypeToLLVMIRTranslator(dialect->getLLVMContext())
+              .getPreferredAlignment(elementTy.cast<LLVM::LLVMType>(),
+                                     dialect->getDataLayout());
   return success();
 }
 
@@ -158,6 +159,19 @@ LogicalResult getBasePtr(ConversionPatternRewriter &rewriter, Location loc,
   if (failed(getBase(rewriter, loc, memref, memRefType, base)))
     return failure();
   auto pType = MemRefDescriptor(memref).getElementType();
+  ptr = rewriter.create<LLVM::GEPOp>(loc, pType, base);
+  return success();
+}
+
+// Helper that returns a bit-casted pointer given a memref base.
+LogicalResult getBasePtr(ConversionPatternRewriter &rewriter, Location loc,
+                         Value memref, MemRefType memRefType, Type type,
+                         Value &ptr) {
+  Value base;
+  if (failed(getBase(rewriter, loc, memref, memRefType, base)))
+    return failure();
+  auto pType = type.template cast<LLVM::LLVMType>().getPointerTo();
+  base = rewriter.create<LLVM::BitcastOp>(loc, pType, base);
   ptr = rewriter.create<LLVM::GEPOp>(loc, pType, base);
   return success();
 }
@@ -293,6 +307,72 @@ public:
     rewriter.replaceOpWithNewOp<LLVM::MatrixTransposeOp>(
         transOp, typeConverter.convertType(transOp.res().getType()),
         adaptor.matrix(), transOp.rows(), transOp.columns());
+    return success();
+  }
+};
+
+/// Conversion pattern for a vector.maskedload.
+class VectorMaskedLoadOpConversion : public ConvertToLLVMPattern {
+public:
+  explicit VectorMaskedLoadOpConversion(MLIRContext *context,
+                                        LLVMTypeConverter &typeConverter)
+      : ConvertToLLVMPattern(vector::MaskedLoadOp::getOperationName(), context,
+                             typeConverter) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op->getLoc();
+    auto load = cast<vector::MaskedLoadOp>(op);
+    auto adaptor = vector::MaskedLoadOpAdaptor(operands);
+
+    // Resolve alignment.
+    unsigned align;
+    if (failed(getMemRefAlignment(typeConverter, load, align)))
+      return failure();
+
+    auto vtype = typeConverter.convertType(load.getResultVectorType());
+    Value ptr;
+    if (failed(getBasePtr(rewriter, loc, adaptor.base(), load.getMemRefType(),
+                          vtype, ptr)))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<LLVM::MaskedLoadOp>(
+        load, vtype, ptr, adaptor.mask(), adaptor.pass_thru(),
+        rewriter.getI32IntegerAttr(align));
+    return success();
+  }
+};
+
+/// Conversion pattern for a vector.maskedstore.
+class VectorMaskedStoreOpConversion : public ConvertToLLVMPattern {
+public:
+  explicit VectorMaskedStoreOpConversion(MLIRContext *context,
+                                         LLVMTypeConverter &typeConverter)
+      : ConvertToLLVMPattern(vector::MaskedStoreOp::getOperationName(), context,
+                             typeConverter) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op->getLoc();
+    auto store = cast<vector::MaskedStoreOp>(op);
+    auto adaptor = vector::MaskedStoreOpAdaptor(operands);
+
+    // Resolve alignment.
+    unsigned align;
+    if (failed(getMemRefAlignment(typeConverter, store, align)))
+      return failure();
+
+    auto vtype = typeConverter.convertType(store.getValueVectorType());
+    Value ptr;
+    if (failed(getBasePtr(rewriter, loc, adaptor.base(), store.getMemRefType(),
+                          vtype, ptr)))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<LLVM::MaskedStoreOp>(
+        store, adaptor.value(), ptr, adaptor.mask(),
+        rewriter.getI32IntegerAttr(align));
     return success();
   }
 };
@@ -1072,7 +1152,7 @@ public:
     //    address space 0.
     // TODO: support alignment when possible.
     Value dataPtr = getDataPtr(loc, memRefType, adaptor.memref(),
-                               adaptor.indices(), rewriter, getModule());
+                               adaptor.indices(), rewriter);
     auto vecTy =
         toLLVMTy(xferOp.getVectorType()).template cast<LLVM::LLVMType>();
     Value vectorDataPtr;
@@ -1341,6 +1421,8 @@ void mlir::populateVectorToLLVMConversionPatterns(
               VectorTransferConversion<TransferReadOp>,
               VectorTransferConversion<TransferWriteOp>,
               VectorTypeCastOpConversion,
+              VectorMaskedLoadOpConversion,
+              VectorMaskedStoreOpConversion,
               VectorGatherOpConversion,
               VectorScatterOpConversion,
               VectorExpandLoadOpConversion,

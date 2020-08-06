@@ -1741,6 +1741,9 @@ llvm::Module &LLVMDialect::getLLVMModule() { return impl->module; }
 llvm::sys::SmartMutex<true> &LLVMDialect::getLLVMContextMutex() {
   return impl->mutex;
 }
+const llvm::DataLayout &LLVMDialect::getDataLayout() {
+  return impl->module.getDataLayout();
+}
 
 /// Parse a type registered to this dialect.
 Type LLVMDialect::parseType(DialectAsmParser &parser) const {

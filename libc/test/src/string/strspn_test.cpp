@@ -1,0 +1,85 @@
+//===-- Unittests for strspn ----------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "src/string/strspn.h"
+
+#include "utils/UnitTest/Test.h"
+
+TEST(StrSpnTest, EmptyStringShouldReturnZeroLengthSpan) {
+  // The search should not include the null terminator.
+  EXPECT_EQ(__llvm_libc::strspn("", ""), size_t{0});
+  EXPECT_EQ(__llvm_libc::strspn("_", ""), size_t{0});
+  EXPECT_EQ(__llvm_libc::strspn("", "_"), size_t{0});
+}
+
+TEST(StrSpnTest, ShouldNotSpanAnythingAfterNullTerminator) {
+  const char src[4] = {'a', 'b', '\0', 'c'};
+  EXPECT_EQ(__llvm_libc::strspn(src, "ab"), size_t{2});
+  EXPECT_EQ(__llvm_libc::strspn(src, "c"), size_t{0});
+
+  // Same goes for the segment to be searched for.
+  const char segment[4] = {'1', '2', '\0', '3'};
+  EXPECT_EQ(__llvm_libc::strspn("123", segment), size_t{2});
+}
+
+TEST(StrSpnTest, SpanEachIndividualCharacter) {
+  const char *src = "12345";
+  EXPECT_EQ(__llvm_libc::strspn(src, "1"), size_t{1});
+  // Since '1' is not within the segment, the span
+  // size should remain zero.
+  EXPECT_EQ(__llvm_libc::strspn(src, "2"), size_t{0});
+  EXPECT_EQ(__llvm_libc::strspn(src, "3"), size_t{0});
+  EXPECT_EQ(__llvm_libc::strspn(src, "4"), size_t{0});
+  EXPECT_EQ(__llvm_libc::strspn(src, "5"), size_t{0});
+}
+
+TEST(StrSpnTest, UnmatchedCharacterShouldNotBeCountedInSpan) {
+  EXPECT_EQ(__llvm_libc::strspn("a", "b"), size_t{0});
+  EXPECT_EQ(__llvm_libc::strspn("abcdef", "1"), size_t{0});
+  EXPECT_EQ(__llvm_libc::strspn("123", "4"), size_t{0});
+}
+
+TEST(StrSpnTest, SequentialCharactersShouldSpan) {
+  const char *src = "abcde";
+  EXPECT_EQ(__llvm_libc::strspn(src, "a"), size_t{1});
+  EXPECT_EQ(__llvm_libc::strspn(src, "ab"), size_t{2});
+  EXPECT_EQ(__llvm_libc::strspn(src, "abc"), size_t{3});
+  EXPECT_EQ(__llvm_libc::strspn(src, "abcd"), size_t{4});
+  EXPECT_EQ(__llvm_libc::strspn(src, "abcde"), size_t{5});
+  // Same thing for when the roles are reversed.
+  EXPECT_EQ(__llvm_libc::strspn("abcde", src), size_t{5});
+  EXPECT_EQ(__llvm_libc::strspn("abcd", src), size_t{4});
+  EXPECT_EQ(__llvm_libc::strspn("abc", src), size_t{3});
+  EXPECT_EQ(__llvm_libc::strspn("ab", src), size_t{2});
+  EXPECT_EQ(__llvm_libc::strspn("a", src), size_t{1});
+}
+
+TEST(StrSpnTest, NonSequentialCharactersShouldNotSpan) {
+  const char *src = "123456789";
+  EXPECT_EQ(__llvm_libc::strspn(src, "_1_abc_2_def_3_"), size_t{3});
+  // Only spans 4 since '5' is not within the span.
+  EXPECT_EQ(__llvm_libc::strspn(src, "67__34abc12"), size_t{4});
+}
+
+TEST(StrSpnTest, ReverseCharacters) {
+  // Since these are still sequential, this should span.
+  EXPECT_EQ(__llvm_libc::strspn("12345", "54321"), size_t{5});
+  // Does not span any since '1' is not within the span.
+  EXPECT_EQ(__llvm_libc::strspn("12345", "432"), size_t{0});
+  // Only spans 1 since '2' is not within the span.
+  EXPECT_EQ(__llvm_libc::strspn("12345", "51"), size_t{1});
+}
+
+TEST(StrSpnTest, DuplicatedCharactersToBeSearchedForShouldStillMatch) {
+  // Only a single character, so only spans 1.
+  EXPECT_EQ(__llvm_libc::strspn("a", "aa"), size_t{1});
+  // This should count once for each 'a' in the source string.
+  EXPECT_EQ(__llvm_libc::strspn("aa", "aa"), size_t{2});
+  EXPECT_EQ(__llvm_libc::strspn("aaa", "aa"), size_t{3});
+  EXPECT_EQ(__llvm_libc::strspn("aaaa", "aa"), size_t{4});
+}
