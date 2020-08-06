@@ -3719,6 +3719,27 @@ Value *InstCombinerImpl::foldUnsignedMultiplicationOverflowCheck(ICmpInst &I) {
   return Res;
 }
 
+Instruction *foldICmpXNegX(ICmpInst &I) {
+  CmpInst::Predicate Pred;
+  Value *X;
+  if (!match(&I, m_c_ICmp(Pred, m_NSWNeg(m_Value(X)), m_Deferred(X))))
+    return nullptr;
+
+  CmpInst::Predicate NewPred;
+  Constant *NewRHS;
+  switch (Pred) {
+  case ICmpInst::ICMP_SGT:
+    NewPred = ICmpInst::ICMP_SLT;
+    NewRHS = Constant::getNullValue(X->getType());
+    break;
+
+  default:
+    return nullptr;
+  }
+
+  return ICmpInst::Create(Instruction::ICmp, NewPred, X, NewRHS, I.getName());
+}
+
 /// Try to fold icmp (binop), X or icmp X, (binop).
 /// TODO: A large part of this logic is duplicated in InstSimplify's
 /// simplifyICmpWithBinOp(). We should be able to share that and avoid the code
@@ -3733,6 +3754,9 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   BinaryOperator *BO1 = dyn_cast<BinaryOperator>(Op1);
   if (!BO0 && !BO1)
     return nullptr;
+
+  if (Instruction *NewICmp = foldICmpXNegX(I))
+    return NewICmp;
 
   const CmpInst::Predicate Pred = I.getPredicate();
   Value *X;
