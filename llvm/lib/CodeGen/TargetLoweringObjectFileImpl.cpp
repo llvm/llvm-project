@@ -2085,11 +2085,18 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
 
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForJumpTable(
     const Function &F, const TargetMachine &TM) const {
-  assert (!TM.getFunctionSections() && "Unique sections not supported on XCOFF"
-          " yet.");
   assert (!F.getComdat() && "Comdat not supported on XCOFF.");
-  //TODO: Enable emiting jump table to unique sections when we support it.
-  return ReadOnlySection;
+
+  if (!TM.getFunctionSections())
+    return ReadOnlySection;
+
+  // If the function can be removed, produce a unique section so that
+  // the table doesn't prevent the removal.
+  SmallString<128> NameStr(".rodata.jmp..");
+  getNameWithPrefix(NameStr, &F, TM);
+  return getContext().getXCOFFSection(NameStr, XCOFF::XMC_RO, XCOFF::XTY_SD,
+                                      XCOFF::C_HIDEXT,
+                                      SectionKind::getReadOnly());
 }
 
 bool TargetLoweringObjectFileXCOFF::shouldPutJumpTableInFunctionSection(
