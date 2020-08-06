@@ -6,8 +6,7 @@ declare void @use8(i8)
 
 define i1 @t0(i8 %x) {
 ; CHECK-LABEL: @t0(
-; CHECK-NEXT:    [[NEG_X:%.*]] = sub nsw i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[NEG_X]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %neg_x = sub nsw i8 0, %x
@@ -18,8 +17,7 @@ define i1 @t0(i8 %x) {
 define i1 @t0_commutative() {
 ; CHECK-LABEL: @t0_commutative(
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[NEG_X:%.*]] = sub nsw i8 0, [[X]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X]], [[NEG_X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x = call i8 @gen8()
@@ -32,7 +30,7 @@ define i1 @t0_extrause(i8 %x) {
 ; CHECK-LABEL: @t0_extrause(
 ; CHECK-NEXT:    [[NEG_X:%.*]] = sub nsw i8 0, [[X:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[NEG_X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[NEG_X]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %neg_x = sub nsw i8 0, %x
