@@ -1277,6 +1277,8 @@ static unsigned getAGPRSpillSaveOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_A32_SAVE;
   case 8:
     return AMDGPU::SI_SPILL_A64_SAVE;
+  case 12:
+    return AMDGPU::SI_SPILL_A96_SAVE;
   case 16:
     return AMDGPU::SI_SPILL_A128_SAVE;
   case 64:
@@ -1406,6 +1408,8 @@ static unsigned getAGPRSpillRestoreOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_A32_RESTORE;
   case 8:
     return AMDGPU::SI_SPILL_A64_RESTORE;
+  case 12:
+    return AMDGPU::SI_SPILL_A96_RESTORE;
   case 16:
     return AMDGPU::SI_SPILL_A128_RESTORE;
   case 64:
