@@ -2495,3 +2495,125 @@ entry:
   store double %ext, double addrspace(1)* %out
   ret void
 }
+
+define i32 @v_extract_v64i32_7(<64 x i32> addrspace(1)* %ptr) {
+; GPRIDX-LABEL: v_extract_v64i32_7:
+; GPRIDX:       ; %bb.0:
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GPRIDX-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:16
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v7
+; GPRIDX-NEXT:    s_setpc_b64 s[30:31]
+;
+; MOVREL-LABEL: v_extract_v64i32_7:
+; MOVREL:       ; %bb.0:
+; MOVREL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; MOVREL-NEXT:    v_add_u32_e32 v0, vcc, 16, v0
+; MOVREL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; MOVREL-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
+; MOVREL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; MOVREL-NEXT:    v_mov_b32_e32 v0, v7
+; MOVREL-NEXT:    s_setpc_b64 s[30:31]
+  %vec = load <64 x i32>, <64 x i32> addrspace(1)* %ptr
+  %elt = extractelement <64 x i32> %vec, i32 7
+  ret i32 %elt
+}
+
+define i32 @v_extract_v64i32_32(<64 x i32> addrspace(1)* %ptr) {
+; GPRIDX-LABEL: v_extract_v64i32_32:
+; GPRIDX:       ; %bb.0:
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GPRIDX-NEXT:    s_movk_i32 s4, 0x80
+; GPRIDX-NEXT:    s_mov_b32 s5, 0
+; GPRIDX-NEXT:    v_mov_b32_e32 v2, s4
+; GPRIDX-NEXT:    v_mov_b32_e32 v3, s5
+; GPRIDX-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
+; GPRIDX-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
+; GPRIDX-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
+; GPRIDX-NEXT:    s_setpc_b64 s[30:31]
+;
+; MOVREL-LABEL: v_extract_v64i32_32:
+; MOVREL:       ; %bb.0:
+; MOVREL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; MOVREL-NEXT:    s_movk_i32 s4, 0x80
+; MOVREL-NEXT:    s_mov_b32 s5, 0
+; MOVREL-NEXT:    v_mov_b32_e32 v2, s4
+; MOVREL-NEXT:    v_mov_b32_e32 v3, s5
+; MOVREL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
+; MOVREL-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
+; MOVREL-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; MOVREL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; MOVREL-NEXT:    s_setpc_b64 s[30:31]
+  %vec = load <64 x i32>, <64 x i32> addrspace(1)* %ptr
+  %elt = extractelement <64 x i32> %vec, i32 32
+  ret i32 %elt
+}
+
+define i32 @v_extract_v64i32_33(<64 x i32> addrspace(1)* %ptr) {
+; GPRIDX-LABEL: v_extract_v64i32_33:
+; GPRIDX:       ; %bb.0:
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GPRIDX-NEXT:    s_movk_i32 s4, 0x80
+; GPRIDX-NEXT:    s_mov_b32 s5, 0
+; GPRIDX-NEXT:    v_mov_b32_e32 v2, s4
+; GPRIDX-NEXT:    v_mov_b32_e32 v3, s5
+; GPRIDX-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
+; GPRIDX-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
+; GPRIDX-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v1
+; GPRIDX-NEXT:    s_setpc_b64 s[30:31]
+;
+; MOVREL-LABEL: v_extract_v64i32_33:
+; MOVREL:       ; %bb.0:
+; MOVREL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; MOVREL-NEXT:    s_movk_i32 s4, 0x80
+; MOVREL-NEXT:    s_mov_b32 s5, 0
+; MOVREL-NEXT:    v_mov_b32_e32 v2, s4
+; MOVREL-NEXT:    v_mov_b32_e32 v3, s5
+; MOVREL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
+; MOVREL-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
+; MOVREL-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; MOVREL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; MOVREL-NEXT:    v_mov_b32_e32 v0, v1
+; MOVREL-NEXT:    s_setpc_b64 s[30:31]
+  %vec = load <64 x i32>, <64 x i32> addrspace(1)* %ptr
+  %elt = extractelement <64 x i32> %vec, i32 33
+  ret i32 %elt
+}
+
+define i32 @v_extract_v64i32_37(<64 x i32> addrspace(1)* %ptr) {
+; GPRIDX-LABEL: v_extract_v64i32_37:
+; GPRIDX:       ; %bb.0:
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GPRIDX-NEXT:    s_movk_i32 s4, 0x80
+; GPRIDX-NEXT:    s_mov_b32 s5, 0
+; GPRIDX-NEXT:    v_mov_b32_e32 v2, s4
+; GPRIDX-NEXT:    v_mov_b32_e32 v3, s5
+; GPRIDX-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
+; GPRIDX-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v3, vcc
+; GPRIDX-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:16
+; GPRIDX-NEXT:    s_waitcnt vmcnt(0)
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, v5
+; GPRIDX-NEXT:    s_setpc_b64 s[30:31]
+;
+; MOVREL-LABEL: v_extract_v64i32_37:
+; MOVREL:       ; %bb.0:
+; MOVREL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; MOVREL-NEXT:    s_movk_i32 s4, 0x80
+; MOVREL-NEXT:    s_mov_b32 s5, 0
+; MOVREL-NEXT:    v_mov_b32_e32 v2, s4
+; MOVREL-NEXT:    v_mov_b32_e32 v3, s5
+; MOVREL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
+; MOVREL-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
+; MOVREL-NEXT:    v_add_u32_e32 v0, vcc, 16, v0
+; MOVREL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; MOVREL-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
+; MOVREL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; MOVREL-NEXT:    v_mov_b32_e32 v0, v5
+; MOVREL-NEXT:    s_setpc_b64 s[30:31]
+  %vec = load <64 x i32>, <64 x i32> addrspace(1)* %ptr
+  %elt = extractelement <64 x i32> %vec, i32 37
+  ret i32 %elt
+}
