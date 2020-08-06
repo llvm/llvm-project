@@ -16,6 +16,7 @@
 namespace llvm {
 class BPFTargetMachine;
 
+ModulePass *createBPFAdjustOpt();
 ModulePass *createBPFCheckAndAdjustIR();
 
 FunctionPass *createBPFAbstractMemberAccess(BPFTargetMachine *TM);
@@ -27,6 +28,7 @@ FunctionPass *createBPFMIPeepholeTruncElimPass();
 FunctionPass *createBPFMIPreEmitPeepholePass();
 FunctionPass *createBPFMIPreEmitCheckingPass();
 
+void initializeBPFAdjustOptPass(PassRegistry&);
 void initializeBPFCheckAndAdjustIRPass(PassRegistry&);
 
 void initializeBPFAbstractMemberAccessLegacyPassPass(PassRegistry &);
