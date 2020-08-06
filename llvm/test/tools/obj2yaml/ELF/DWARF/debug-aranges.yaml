@@ -170,3 +170,20 @@ DWARF:
     - Length:   0x1234
       Version:  2
       CuOffset: 0x1234
+
+## e) Test dumping an empty .debug_aranges section.
+
+# RUN: yaml2obj --docnum=5 %s | obj2yaml | FileCheck %s --check-prefix=EMPTY-CONTENT
+
+#      EMPTY-CONTENT: DWARF:
+# EMPTY-CONTENT-NEXT:   debug_aranges:   []
+# EMPTY-CONTENT-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_aranges: []

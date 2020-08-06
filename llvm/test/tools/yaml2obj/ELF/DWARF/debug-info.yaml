@@ -842,3 +842,35 @@ DWARF:
             - Value: 0x1120 ## DW_AT_low_pc [DW_FORM_addr]
             - Value: 0x06   ## DW_AT_high_pc [DW_FORM_data4]
             - Value: 0x38   ## DW_AT_name [DW_FORM_strp]
+
+## l) Test that if we don't specify the 'Values' key for an entry, yaml2obj will only emit the abbrev_code.
+
+# RUN: yaml2obj --docnum=14 %s -o %t14.o
+# RUN: llvm-readelf --hex-dump=.debug_info %t14.o | \
+# RUN:   FileCheck %s --check-prefix=NO-VALUES
+
+#      NO-VALUES: Hex dump of section '.debug_info':
+# NO-VALUES-NEXT: 0x00000000 0a000000 04000000 00000801 0002     ..............
+##                           ^-------                            unit_length (4-byte)
+##                                    ^---                       version (2-byte)
+##                                        ^--------              debug_abbrev_offset (4-byte)
+##                                                 ^-            address_size (1-byte)
+##                                                   ^-          abbrev_code (ULEB128) 0x01
+##                                                      ^-       abbrev_code (ULEB128) 0x00
+##                                                        ^-     abbrev_code (ULEB128) 0x02
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_info:
+    - Version:    4
+      AbbrOffset: 0x00
+      AddrSize:   0x08
+      Entries:
+        - AbbrCode: 1
+        - AbbrCode: 0
+        - AbbrCode: 2
