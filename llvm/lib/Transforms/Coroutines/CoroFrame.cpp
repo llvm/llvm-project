@@ -1567,50 +1567,70 @@ static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
   }
 
   for (Instruction &I : instructions(F)) {
-    if (!isa<AllocaInst>(&I))
+    AllocaInst* AI = dyn_cast<AllocaInst>(&I);
+    if (!AI)
       continue;
 
     for (BasicBlock *DomBB : DomSet) {
       bool Valid = true;
-      SmallVector<Instruction *, 1> BCInsts;
+      SmallVector<Instruction *, 1> Lifetimes;
 
-      auto isUsedByLifetimeStart = [&](Instruction *I) {
-        if (isa<BitCastInst>(I) && I->hasOneUse())
-          if (auto *IT = dyn_cast<IntrinsicInst>(I->user_back()))
-            return IT->getIntrinsicID() == Intrinsic::lifetime_start;
+      auto isLifetimeStart = [](Instruction* I) {
+        if (auto* II = dyn_cast<IntrinsicInst>(I))
+          return II->getIntrinsicID() == Intrinsic::lifetime_start;
         return false;
       };
 
-      for (User *U : I.users()) {
+      auto collectLifetimeStart = [&](Instruction *U, AllocaInst *AI) {
+        if (isLifetimeStart(U)) {
+          Lifetimes.push_back(U);
+          return true;
+        }
+        if (!U->hasOneUse() || U->stripPointerCasts() != AI)
+          return false;
+        if (isLifetimeStart(U->user_back())) {
+          Lifetimes.push_back(U->user_back());
+          return true;
+        }
+        return false;
+      };
+
+      for (User *U : AI->users()) {
         Instruction *UI = cast<Instruction>(U);
         // For all users except lifetime.start markers, if they are all
         // dominated by one of the basic blocks and do not cross
         // suspend points as well, then there is no need to spill the
         // instruction.
         if (!DT.dominates(DomBB, UI->getParent()) ||
-            Checker.isDefinitionAcrossSuspend(DomBB, U)) {
-          // Skip bitcast used by lifetime.start markers.
-          if (isUsedByLifetimeStart(UI)) {
-            BCInsts.push_back(UI);
+            Checker.isDefinitionAcrossSuspend(DomBB, UI)) {
+          // Skip lifetime.start, GEP and bitcast used by lifetime.start
+          // markers.
+          if (collectLifetimeStart(UI, AI))
             continue;
-          }
           Valid = false;
           break;
         }
       }
       // Sink lifetime.start markers to dominate block when they are
       // only used outside the region.
-      if (Valid && BCInsts.size() != 0) {
-        auto *NewBitcast = BCInsts[0]->clone();
-        auto *NewLifetime = cast<Instruction>(BCInsts[0]->user_back())->clone();
-        NewLifetime->replaceUsesOfWith(BCInsts[0], NewBitcast);
-        NewBitcast->insertBefore(DomBB->getTerminator());
+      if (Valid && Lifetimes.size() != 0) {
+        // May be AI itself, when the type of AI is i8*
+        auto *NewBitCast = [&](AllocaInst *AI) -> Value* {
+          if (isa<AllocaInst>(Lifetimes[0]->getOperand(1)))
+            return AI;
+          auto *Int8PtrTy = Type::getInt8PtrTy(F.getContext());
+          return CastInst::Create(Instruction::BitCast, AI, Int8PtrTy, "",
+                                  DomBB->getTerminator());
+        }(AI);
+
+        auto *NewLifetime = Lifetimes[0]->clone();
+        NewLifetime->replaceUsesOfWith(NewLifetime->getOperand(1), NewBitCast);
         NewLifetime->insertBefore(DomBB->getTerminator());
 
         // All the outsided lifetime.start markers are no longer necessary.
-        for (Instruction *S : BCInsts) {
-          S->user_back()->eraseFromParent();
-        }
+        for (Instruction *S : Lifetimes)
+          S->eraseFromParent();
+
         break;
       }
     }
@@ -1676,14 +1696,14 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
     if (!II || II->getIntrinsicID() != Intrinsic::lifetime_start)
       continue;
 
-    if (auto *OpInst = dyn_cast<BitCastInst>(I.getOperand(1)))
-      if (auto *AI = dyn_cast<AllocaInst>(OpInst->getOperand(0))) {
+    if (auto *OpInst = dyn_cast<Instruction>(II->getOperand(1))) {
+      if (auto *AI = dyn_cast<AllocaInst>(OpInst->stripPointerCasts())) {
 
         if (LifetimeMap.find(AI) == LifetimeMap.end())
           LifetimeMap[AI] = std::make_unique<LifetimeStart>();
-
-        LifetimeMap[AI]->insert(OpInst);
+        LifetimeMap[AI]->insert(isa<AllocaInst>(OpInst) ? II : OpInst);
       }
+    }
   }
 
   // Collect the spills for arguments and other not-materializable values.
