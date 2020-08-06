@@ -864,7 +864,7 @@ private:
   SDValue WidenVecRes_MGATHER(MaskedGatherSDNode* N);
   SDValue WidenVecRes_ScalarOp(SDNode* N);
   SDValue WidenVecRes_SELECT(SDNode* N);
-  SDValue WidenVSELECTAndMask(SDNode *N);
+  SDValue WidenVSELECTMask(SDNode *N);
   SDValue WidenVecRes_SELECT_CC(SDNode* N);
   SDValue WidenVecRes_SETCC(SDNode* N);
   SDValue WidenVecRes_STRICT_FSETCC(SDNode* N);
