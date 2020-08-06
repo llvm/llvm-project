@@ -58,61 +58,71 @@ test_gotpageoff12:
 # For the GOTPAGEOFF12 relocation we test the ADD instruction, all LDR/GPR
 # variants and all LDR/Neon variants.
 #
-# jitlink-check: decode_operand(test_page21, 1) = (named_data[32:12] - test_page21[32:12])
-# jitlink-check: decode_operand(test_pageoff12add, 2) = named_data[11:0]
-# jitlink-check: decode_operand(test_pageoff12gpr8, 2) = named_data[11:0]
-# jitlink-check: decode_operand(test_pageoff12gpr16, 2) = named_data[11:1]
-# jitlink-check: decode_operand(test_pageoff12gpr32, 2) = named_data[11:2]
-# jitlink-check: decode_operand(test_pageoff12gpr64, 2) = named_data[11:3]
-# jitlink-check: decode_operand(test_pageoff12neon8, 2) = named_data[11:0]
-# jitlink-check: decode_operand(test_pageoff12neon16, 2) = named_data[11:1]
-# jitlink-check: decode_operand(test_pageoff12neon32, 2) = named_data[11:2]
-# jitlink-check: decode_operand(test_pageoff12neon64, 2) = named_data[11:3]
-# jitlink-check: decode_operand(test_pageoff12neon128, 2) = named_data[11:4]
+# jitlink-check: decode_operand(test_page21, 1) = ((named_data + 256) - test_page21)[32:12]
+# jitlink-check: decode_operand(test_pageoff12add, 2) = (named_data + 256)[11:0]
+# jitlink-check: decode_operand(test_pageoff12gpr8, 2) = (named_data + 256)[11:0]
+# jitlink-cherk: decode_operand(test_pageoff12gpr8s, 2) = (named_data + 256)[11:0]
+# jitlink-check: decode_operand(test_pageoff12gpr16, 2) = (named_data + 256)[11:1]
+# jitlink-check: decode_operand(test_pageoff12gpr16s, 2) = (named_data + 256)[11:1]
+# jitlink-check: decode_operand(test_pageoff12gpr32, 2) = (named_data + 256)[11:2]
+# jitlink-check: decode_operand(test_pageoff12gpr64, 2) = (named_data + 256)[11:3]
+# jitlink-check: decode_operand(test_pageoff12neon8, 2) = (named_data + 256)[11:0]
+# jitlink-check: decode_operand(test_pageoff12neon16, 2) = (named_data + 256)[11:1]
+# jitlink-check: decode_operand(test_pageoff12neon32, 2) = (named_data + 256)[11:2]
+# jitlink-check: decode_operand(test_pageoff12neon64, 2) = (named_data + 256)[11:3]
+# jitlink-check: decode_operand(test_pageoff12neon128, 2) = (named_data + 256)[11:4]
         .globl  test_page21
         .p2align  2
 test_page21:
-        adrp  x0, named_data@PAGE
+        adrp  x0, named_data@PAGE + 256
 
         .globl  test_pageoff12add
 test_pageoff12add:
-        add   x0, x0, named_data@PAGEOFF
+        add   x0, x0, named_data@PAGEOFF + 256
 
         .globl  test_pageoff12gpr8
 test_pageoff12gpr8:
-        ldrb  w0, [x0, named_data@PAGEOFF]
+        ldrb  w0, [x0, named_data@PAGEOFF + 256]
+
+        .globl  test_pageoff12gpr8s
+test_pageoff12gpr8s:
+        ldrsb w0, [x0, named_data@PAGEOFF + 256]
 
         .globl  test_pageoff12gpr16
 test_pageoff12gpr16:
-        ldrh  w0, [x0, named_data@PAGEOFF]
+        ldrh  w0, [x0, named_data@PAGEOFF + 256]
+
+        .globl  test_pageoff12gpr16s
+test_pageoff12gpr16s:
+        ldrsh w0, [x0, named_data@PAGEOFF + 256]
 
         .globl  test_pageoff12gpr32
 test_pageoff12gpr32:
-        ldr   w0, [x0, named_data@PAGEOFF]
+        ldr   w0, [x0, named_data@PAGEOFF + 256]
 
         .globl  test_pageoff12gpr64
 test_pageoff12gpr64:
-        ldr   x0, [x0, named_data@PAGEOFF]
+        ldr   x0, [x0, named_data@PAGEOFF + 256]
 
         .globl  test_pageoff12neon8
 test_pageoff12neon8:
-        ldr   b0, [x0, named_data@PAGEOFF]
+        ldr   b0, [x0, named_data@PAGEOFF + 256]
 
         .globl  test_pageoff12neon16
 test_pageoff12neon16:
-        ldr   h0, [x0, named_data@PAGEOFF]
+        ldr   h0, [x0, named_data@PAGEOFF + 256]
 
         .globl  test_pageoff12neon32
 test_pageoff12neon32:
-        ldr   s0, [x0, named_data@PAGEOFF]
+        ldr   s0, [x0, named_data@PAGEOFF + 256]
 
         .globl  test_pageoff12neon64
 test_pageoff12neon64:
-        ldr   d0, [x0, named_data@PAGEOFF]
+        ldr   d0, [x0, named_data@PAGEOFF + 256]
 
         .globl  test_pageoff12neon128
 test_pageoff12neon128:
-        ldr   q0, [x0, named_data@PAGEOFF]
+        ldr   q0, [x0, named_data@PAGEOFF + 256]
 
 # Check that calls to external functions trigger the generation of stubs and GOT
 # entries.

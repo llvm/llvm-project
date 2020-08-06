@@ -31,7 +31,7 @@ class TestTailCallFrameSBAPI(TestBase):
                         VALID_BREAKPOINT)
 
         error = lldb.SBError()
-        launch_info = lldb.SBLaunchInfo(None)
+        launch_info = target.GetLaunchInfo()
         process = target.Launch(launch_info, error)
         self.assertTrue(process, PROCESS_IS_VALID)
 
