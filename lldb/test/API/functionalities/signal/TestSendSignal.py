@@ -47,7 +47,7 @@ class SendSignalTestCase(TestBase):
                         VALID_BREAKPOINT_LOCATION)
 
         # Now launch the process, no arguments & do not stop at entry point.
-        launch_info = lldb.SBLaunchInfo([exe])
+        launch_info = target.GetLaunchInfo()
         launch_info.SetWorkingDirectory(self.get_process_working_directory())
 
         process_listener = lldb.SBListener("signal_test_listener")
