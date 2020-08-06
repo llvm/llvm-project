@@ -152,6 +152,9 @@ class TargetAPITestCase(TestBase):
 
 
     @add_test_categories(['pyapi'])
+    @skipIfWindows  # stdio manipulation unsupported on Windows
+    @skipIfRemote   # stdio manipulation unsupported on remote iOS devices<rdar://problem/54581135>
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test_launch_simple(self):
         d = {'EXE': 'b.out'}
         self.build(dictionary=d)
@@ -281,6 +284,10 @@ class TargetAPITestCase(TestBase):
         # Create a target by the debugger.
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
+
+        # Try it with a null name:
+        list = target.FindFunctions(None, lldb.eFunctionNameTypeAuto)
+        self.assertTrue(list.GetSize() == 0)
 
         list = target.FindFunctions('c', lldb.eFunctionNameTypeAuto)
         self.assertTrue(list.GetSize() == 1)
