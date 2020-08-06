@@ -341,12 +341,17 @@ void tools::gnutools::StaticLibTool::ConstructJob(
   // Silence warnings when linking C code with a C++ '-stdlib' argument.
   Args.ClaimAllArgs(options::OPT_stdlib_EQ);
 
-  // GNU ar tool command "ar <options> <output_file> <input_files>".
+  // ar tool command "llvm-ar <options> <output_file> <input_files>".
   ArgStringList CmdArgs;
   // Create and insert file members with a deterministic index.
   CmdArgs.push_back("rcsD");
   CmdArgs.push_back(Output.getFilename());
-  AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
+
+  for (const auto &II : Inputs) {
+    if (II.isFilename()) {
+       CmdArgs.push_back(II.getFilename());
+    }
+  }
 
   // Delete old output archive file if it already exists before generating a new
   // archive file.
