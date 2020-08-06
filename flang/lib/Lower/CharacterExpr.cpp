@@ -10,6 +10,8 @@
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/DoLoopHelper.h"
 #include "flang/Lower/IntrinsicCall.h"
+#include "llvm/Support/Debug.h"
+#define DEBUG_TYPE "flang-lower-character"
 
 //===----------------------------------------------------------------------===//
 // CharacterExprHelper implementation
@@ -62,6 +64,8 @@ fir::CharBoxValue Fortran::lower::CharacterExprHelper::materializeValue(
     return str;
   auto variable = builder.create<fir::AllocaOp>(loc, str.getBuffer().getType());
   builder.create<fir::StoreOp>(loc, str.getBuffer(), variable);
+  LLVM_DEBUG(llvm::dbgs() << "materialized as local: " << str << " -> ("
+                          << variable << ", " << str.getLen() << ")\n");
   return {variable, str.getLen()};
 }
 
