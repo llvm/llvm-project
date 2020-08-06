@@ -317,3 +317,6 @@ def gi_extract_dlc : GICustomOperandRenderer<"renderExtractDLC">,
 
 def gi_extract_swz : GICustomOperandRenderer<"renderExtractSWZ">,
   GISDNodeXFormEquiv<extract_swz>;
+
+def gi_frameindex_to_targetframeindex : GICustomOperandRenderer<"renderFrameIndex">,
+  GISDNodeXFormEquiv<frameindex_to_targetframeindex>;
