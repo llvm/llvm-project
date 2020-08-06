@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wtautological-constant-in-range-compare -DTEST -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wtautological-constant-in-range-compare -DTEST -verify -x c++ %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wtautological-constant-in-range-compare -DTEST=2 -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wtautological-constant-in-range-compare -DTEST=2 -verify -x c++ %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wtautological-type-limit-compare -DTEST -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wtautological-type-limit-compare -DTEST -verify -x c++ %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wtype-limits -DTEST -verify %s
@@ -545,9 +545,9 @@ int main()
   if (maybe >= e)
       return 0;
 
-  // For the time being, use the declared type of bit-fields rather than their
-  // length when determining whether a value is in-range.
-  // FIXME: Reconsider this.
+  // We only warn on out-of-range bitfields and expressions with limited range
+  // under -Wtantological-in-range-compare, not under -Wtype-limits, because
+  // the warning is not based on the type alone.
   struct A {
     int a : 3;
     unsigned b : 3;
@@ -555,13 +555,36 @@ int main()
     unsigned long d : 3;
   } a;
   if (a.a < 3) {}
-  if (a.a < 4) {}
+  if (a.a < 4) {} // #bitfield1
   if (a.b < 7) {}
-  if (a.b < 8) {}
+  if (a.b < 8) {} // #bitfield2
   if (a.c < 3) {}
-  if (a.c < 4) {}
+  if (a.c < 4) {} // #bitfield3
   if (a.d < 7) {}
-  if (a.d < 8) {}
+  if (a.d < 8) {} // #bitfield4
+#if TEST == 2
+  // expected-warning@#bitfield1 {{comparison of 3-bit signed value < 4 is always true}}
+  // expected-warning@#bitfield2 {{comparison of 3-bit unsigned value < 8 is always true}}
+  // expected-warning@#bitfield3 {{comparison of 3-bit signed value < 4 is always true}}
+  // expected-warning@#bitfield4 {{comparison of 3-bit unsigned value < 8 is always true}}
+#endif
+
+  if ((s & 0xff) < 0) {} // #valuerange1
+  if ((s & 0xff) < 1) {}
+  if ((s & -3) < -4) {} // #valuerange2
+  if ((s & -3) < -3) {}
+  if ((s & -3) < 4u) {} // (true if s non-negative)
+  if ((s & -3) > 4u) {} // (true if s negative)
+  if ((s & -3) == 4u) {} // #valuerange3 (never true)
+  if ((s & -3) == 3u) {}
+  if ((s & -3) == -5u) {} // #valuerange4
+  if ((s & -3) == -4u) {}
+#if TEST == 2
+  // expected-warning@#valuerange1 {{comparison of 8-bit unsigned value < 0 is always false}}
+  // expected-warning@#valuerange2 {{comparison of 3-bit signed value < -4 is always false}}
+  // expected-warning@#valuerange3 {{comparison of 3-bit signed value == 4 is always false}}
+  // expected-warning@#valuerange4 {{comparison of 3-bit signed value == 4294967291 is always false}}
+#endif
 
   return 1;
 }

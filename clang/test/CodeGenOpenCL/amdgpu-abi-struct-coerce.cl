@@ -67,7 +67,6 @@ typedef struct struct_of_structs_arg
     int i2;
 } struct_of_structs_arg_t;
 
-// CHECK: %union.transparent_u = type { i32 }
 typedef union
 {
   int b1;
@@ -237,7 +236,7 @@ __kernel void kernel_test_struct_of_arrays_arg(struct_of_arrays_arg_t arg1) { }
 // CHECK: void @kernel_struct_of_structs_arg(%struct.struct_of_structs_arg %arg1.coerce)
 __kernel void kernel_struct_of_structs_arg(struct_of_structs_arg_t arg1) { }
 
-// CHECK: void @test_kernel_transparent_union_arg(%union.transparent_u %u.coerce)
+// CHECK: void @test_kernel_transparent_union_arg(i32 %u.coerce)
 __kernel void test_kernel_transparent_union_arg(transparent_u u) { }
 
 // CHECK: void @kernel_single_array_element_struct_arg(%struct.single_array_element_struct_arg %arg1.coerce)

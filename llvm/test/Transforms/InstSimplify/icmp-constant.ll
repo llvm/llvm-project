@@ -1023,3 +1023,45 @@ define i1 @mul_nsw_srem_cmp_neg_constant_is_0(i8 %x) {
   %r = icmp eq i8 %m, -84
   ret i1 %r
 }
+
+; Don't crash trying to div/rem-by-zero.
+
+define i1 @mul_nsw_by_zero(i8 %x) {
+; CHECK-LABEL: @mul_nsw_by_zero(
+; CHECK-NEXT:  bb1:
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB2:%.*]]
+;
+bb1:
+  br label %bb3
+bb2:
+  %r = icmp eq i8 %m, 45
+  ret i1 %r
+bb3:
+  %m = mul nsw i8 %x, 0
+  br label %bb2
+}
+
+; Don't crash trying to div/rem-by-zero.
+
+define i1 @mul_nuw_by_zero(i8 %x) {
+; CHECK-LABEL: @mul_nuw_by_zero(
+; CHECK-NEXT:  bb1:
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB2:%.*]]
+;
+bb1:
+  br label %bb3
+bb2:
+  %r = icmp eq i8 %m, 45
+  ret i1 %r
+bb3:
+  %m = mul nuw i8 %x, 0
+  br label %bb2
+}

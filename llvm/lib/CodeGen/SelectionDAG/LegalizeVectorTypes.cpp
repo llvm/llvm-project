@@ -3968,11 +3968,11 @@ SDValue DAGTypeLegalizer::convertMask(SDValue InMask, EVT MaskVT,
   return Mask;
 }
 
-// This method tries to handle VSELECT and its mask by legalizing operands
-// (which may require widening) and if needed adjusting the mask vector type
-// to match that of the VSELECT. Without it, many cases end up with
-// scalarization of the SETCC, with many unnecessary instructions.
-SDValue DAGTypeLegalizer::WidenVSELECTAndMask(SDNode *N) {
+// This method tries to handle some special cases for the vselect mask
+// and if needed adjusting the mask vector type to match that of the VSELECT.
+// Without it, many cases end up with scalarization of the SETCC, with many
+// unnecessary instructions.
+SDValue DAGTypeLegalizer::WidenVSELECTMask(SDNode *N) {
   LLVMContext &Ctx = *DAG.getContext();
   SDValue Cond = N->getOperand(0);
 
@@ -4019,14 +4019,9 @@ SDValue DAGTypeLegalizer::WidenVSELECTAndMask(SDNode *N) {
       return SDValue();
   }
 
-  // Get the VT and operands for VSELECT, and widen if needed.
-  SDValue VSelOp1 = N->getOperand(1);
-  SDValue VSelOp2 = N->getOperand(2);
-  if (getTypeAction(VSelVT) == TargetLowering::TypeWidenVector) {
+  // Widen the vselect result type if needed.
+  if (getTypeAction(VSelVT) == TargetLowering::TypeWidenVector)
     VSelVT = TLI.getTypeToTransformTo(Ctx, VSelVT);
-    VSelOp1 = GetWidenedVector(VSelOp1);
-    VSelOp2 = GetWidenedVector(VSelOp2);
-  }
 
   // The mask of the VSELECT should have integer elements.
   EVT ToMaskVT = VSelVT;
@@ -4075,7 +4070,7 @@ SDValue DAGTypeLegalizer::WidenVSELECTAndMask(SDNode *N) {
   } else
     return SDValue();
 
-  return DAG.getNode(ISD::VSELECT, SDLoc(N), VSelVT, Mask, VSelOp1, VSelOp2);
+  return Mask;
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_SELECT(SDNode *N) {
@@ -4085,8 +4080,13 @@ SDValue DAGTypeLegalizer::WidenVecRes_SELECT(SDNode *N) {
   SDValue Cond1 = N->getOperand(0);
   EVT CondVT = Cond1.getValueType();
   if (CondVT.isVector()) {
-    if (SDValue Res = WidenVSELECTAndMask(N))
-      return Res;
+    if (SDValue WideCond = WidenVSELECTMask(N)) {
+      SDValue InOp1 = GetWidenedVector(N->getOperand(1));
+      SDValue InOp2 = GetWidenedVector(N->getOperand(2));
+      assert(InOp1.getValueType() == WidenVT && InOp2.getValueType() == WidenVT);
+      return DAG.getNode(N->getOpcode(), SDLoc(N),
+                         WidenVT, WideCond, InOp1, InOp2);
+    }
 
     EVT CondEltVT = CondVT.getVectorElementType();
     EVT CondWidenVT =  EVT::getVectorVT(*DAG.getContext(),
