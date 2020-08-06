@@ -262,7 +262,7 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
 
   unsigned RegSize = Ty.getSizeInBits();
   unsigned MemSize = Query.MMODescrs[0].SizeInBits;
-  unsigned Align = Query.MMODescrs[0].AlignInBits;
+  unsigned AlignBits = Query.MMODescrs[0].AlignInBits;
   unsigned AS = Query.Types[1].getAddressSpace();
 
   // All of these need to be custom lowered to cast the pointer operand.
@@ -305,9 +305,10 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
 
   assert(RegSize >= MemSize);
 
-  if (Align < MemSize) {
+  if (AlignBits < MemSize) {
     const SITargetLowering *TLI = ST.getTargetLowering();
-    if (!TLI->allowsMisalignedMemoryAccessesImpl(MemSize, AS, Align / 8))
+    if (!TLI->allowsMisalignedMemoryAccessesImpl(MemSize, AS,
+                                                 Align(AlignBits / 8)))
       return false;
   }
 
@@ -954,10 +955,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     // Split vector extloads.
     unsigned MemSize = Query.MMODescrs[0].SizeInBits;
-    unsigned Align = Query.MMODescrs[0].AlignInBits;
+    unsigned AlignBits = Query.MMODescrs[0].AlignInBits;
 
     if (MemSize < DstTy.getSizeInBits())
-      MemSize = std::max(MemSize, Align);
+      MemSize = std::max(MemSize, AlignBits);
 
     if (DstTy.isVector() && DstTy.getSizeInBits() > MemSize)
       return true;
@@ -979,9 +980,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         return true;
     }
 
-    if (Align < MemSize) {
+    if (AlignBits < MemSize) {
       const SITargetLowering *TLI = ST.getTargetLowering();
-      return !TLI->allowsMisalignedMemoryAccessesImpl(MemSize, AS, Align / 8);
+      return !TLI->allowsMisalignedMemoryAccessesImpl(MemSize, AS,
+                                                      Align(AlignBits / 8));
     }
 
     return false;

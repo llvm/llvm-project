@@ -260,12 +260,22 @@ public:
                         const SelectionDAG &DAG) const override;
 
   bool allowsMisalignedMemoryAccessesImpl(
-      unsigned Size, unsigned AS, unsigned Align,
+      unsigned Size, unsigned AddrSpace, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       bool *IsFast = nullptr) const;
 
   bool allowsMisalignedMemoryAccesses(
-      EVT VT, unsigned AS, unsigned Align,
+      LLT Ty, unsigned AddrSpace, Align Alignment,
+      MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
+      bool *IsFast = nullptr) const override {
+    if (IsFast)
+      *IsFast = false;
+    return allowsMisalignedMemoryAccessesImpl(Ty.getSizeInBits(), AddrSpace,
+                                              Alignment, Flags, IsFast);
+  }
+
+  bool allowsMisalignedMemoryAccesses(
+      EVT VT, unsigned AS, unsigned Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       bool *IsFast = nullptr) const override;
 
