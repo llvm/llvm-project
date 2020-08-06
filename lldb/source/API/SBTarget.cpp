@@ -1791,7 +1791,7 @@ lldb::SBSymbolContextList SBTarget::FindFunctions(const char *name,
                      (const char *, uint32_t), name, name_type_mask);
 
   lldb::SBSymbolContextList sb_sc_list;
-  if (!name | !name[0])
+  if (!name || !name[0])
     return LLDB_RECORD_RESULT(sb_sc_list);
 
   TargetSP target_sp(GetSP());
