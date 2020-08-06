@@ -131,7 +131,7 @@ LogicalResult getMemRefAlignment(LLVMTypeConverter &typeConverter, T op,
   LLVM::LLVMDialect *dialect = typeConverter.getDialect();
   align = LLVM::TypeToLLVMIRTranslator(dialect->getLLVMContext())
               .getPreferredAlignment(elementTy.cast<LLVM::LLVMType>(),
-                                     dialect->getLLVMModule().getDataLayout());
+                                     dialect->getDataLayout());
   return success();
 }
 
@@ -1152,7 +1152,7 @@ public:
     //    address space 0.
     // TODO: support alignment when possible.
     Value dataPtr = getDataPtr(loc, memRefType, adaptor.memref(),
-                               adaptor.indices(), rewriter, getModule());
+                               adaptor.indices(), rewriter);
     auto vecTy =
         toLLVMTy(xferOp.getVectorType()).template cast<LLVM::LLVMType>();
     Value vectorDataPtr;
