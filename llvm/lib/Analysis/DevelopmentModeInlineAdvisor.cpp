@@ -90,7 +90,6 @@ private:
   std::vector<bool> Decisions;
   std::vector<bool> Effects;
   std::vector<int64_t> Rewards;
-  std::vector<bool> Mandatory;
 };
 
 /// An extension of the MLInlineAdvisor for the 'development' mode, targeting
@@ -158,11 +157,12 @@ public:
   LoggingMLInlineAdvice(DevelopmentModeMLInlineAdvisor *Advisor, CallBase &CB,
                         OptimizationRemarkEmitter &ORE, bool Recommendation,
                         TrainingLogger &Logger, size_t CallerSizeEstimateBefore,
-                        size_t CalleeSizeEstimateBefore, bool DefaultDecision)
+                        size_t CalleeSizeEstimateBefore, bool DefaultDecision,
+                        bool Mandatory = false)
       : MLInlineAdvice(Advisor, CB, ORE, Recommendation), Logger(Logger),
         CallerSizeEstimateBefore(CallerSizeEstimateBefore),
         CalleeSizeEstimateBefore(CalleeSizeEstimateBefore),
-        DefaultDecision(DefaultDecision) {}
+        DefaultDecision(DefaultDecision), Mandatory(Mandatory) {}
 
   virtual ~LoggingMLInlineAdvice() = default;
 
@@ -207,6 +207,8 @@ private:
   }
 
   void log(int64_t Reward, bool Success) {
+    if (Mandatory)
+      return;
     InlineEvent Event;
     Event.AdvisedDecision = isInliningRecommended();
     Event.DefaultDecision = DefaultDecision;
@@ -220,6 +222,7 @@ private:
   const size_t CallerSizeEstimateBefore;
   const size_t CalleeSizeEstimateBefore;
   const bool DefaultDecision;
+  const bool Mandatory;
 };
 
 /// A pseudo model runner. We use it to store feature values when collecting
@@ -363,7 +366,7 @@ DevelopmentModeMLInlineAdvisor::getMandatoryAdvice(
       /*CallerSizeEstimateBefore=*/getNativeSizeEstimate(*CB.getCaller()),
       /*CalleeSizeEstimateBefore=*/
       getNativeSizeEstimate(*CB.getCalledFunction()),
-      /*DefaultDecision=*/true);
+      /*DefaultDecision=*/true, /*Mandatory*/ true);
 }
 
 std::unique_ptr<MLInlineAdvice>
