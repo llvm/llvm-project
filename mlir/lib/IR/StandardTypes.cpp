@@ -732,19 +732,16 @@ MemRefType mlir::canonicalizeStridedLayout(MemRefType t) {
 AffineExpr mlir::makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
                                                 ArrayRef<AffineExpr> exprs,
                                                 MLIRContext *context) {
+  // Size 0 corner case is useful for canonicalizations.
+  if (llvm::is_contained(sizes, 0))
+    return getAffineConstantExpr(0, context);
+
+  auto maps = AffineMap::inferFromExprList(exprs);
+  assert(!maps.empty() && "Expected one non-empty map");
+  unsigned numDims = maps[0].getNumDims(), nSymbols = maps[0].getNumSymbols();
+
   AffineExpr expr;
   bool dynamicPoisonBit = false;
-  unsigned numDims = 0;
-  unsigned nSymbols = 0;
-  // Compute the number of symbols and dimensions of the passed exprs.
-  for (AffineExpr expr : exprs) {
-    expr.walk([&numDims, &nSymbols](AffineExpr d) {
-      if (AffineDimExpr dim = d.dyn_cast<AffineDimExpr>())
-        numDims = std::max(numDims, dim.getPosition() + 1);
-      else if (AffineSymbolExpr symbol = d.dyn_cast<AffineSymbolExpr>())
-        nSymbols = std::max(nSymbols, symbol.getPosition() + 1);
-    });
-  }
   int64_t runningSize = 1;
   for (auto en : llvm::zip(llvm::reverse(exprs), llvm::reverse(sizes))) {
     int64_t size = std::get<1>(en);
