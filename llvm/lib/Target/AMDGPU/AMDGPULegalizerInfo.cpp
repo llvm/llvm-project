@@ -3160,6 +3160,55 @@ bool AMDGPULegalizerInfo::legalizeFDIVFastIntrin(MachineInstr &MI,
   return true;
 }
 
+// Expand llvm.amdgcn.rsq.clamp on targets that don't support the instruction.
+// FIXME: Why do we handle this one but not other removed instructions?
+//
+// Reciprocal square root.  The clamp prevents infinite results, clamping
+// infinities to max_float.  D.f = 1.0 / sqrt(S0.f), result clamped to
+// +-max_float.
+bool AMDGPULegalizerInfo::legalizeRsqClampIntrinsic(MachineInstr &MI,
+                                                    MachineRegisterInfo &MRI,
+                                                    MachineIRBuilder &B) const {
+  if (ST.getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS)
+    return true;
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(2).getReg();
+  auto Flags = MI.getFlags();
+
+  LLT Ty = MRI.getType(Dst);
+
+  const fltSemantics *FltSemantics;
+  if (Ty == LLT::scalar(32))
+    FltSemantics = &APFloat::IEEEsingle();
+  else if (Ty == LLT::scalar(64))
+    FltSemantics = &APFloat::IEEEdouble();
+  else
+    return false;
+
+  auto Rsq = B.buildIntrinsic(Intrinsic::amdgcn_rsq, {Ty}, false)
+    .addUse(Src)
+    .setMIFlags(Flags);
+
+  // We don't need to concern ourselves with the snan handling difference, since
+  // the rsq quieted (or not) so use the one which will directly select.
+  const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
+  const bool UseIEEE = MFI->getMode().IEEE;
+
+  auto MaxFlt = B.buildFConstant(Ty, APFloat::getLargest(*FltSemantics));
+  auto ClampMax = UseIEEE ? B.buildFMinNumIEEE(Ty, Rsq, MaxFlt, Flags) :
+                            B.buildFMinNum(Ty, Rsq, MaxFlt, Flags);
+
+  auto MinFlt = B.buildFConstant(Ty, APFloat::getLargest(*FltSemantics, true));
+
+  if (UseIEEE)
+    B.buildFMaxNumIEEE(Dst, ClampMax, MinFlt, Flags);
+  else
+    B.buildFMaxNum(Dst, ClampMax, MinFlt, Flags);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::getImplicitArgPtr(Register DstReg,
                                             MachineRegisterInfo &MRI,
                                             MachineIRBuilder &B) const {
@@ -4393,6 +4442,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return legalizeTrapIntrinsic(MI, MRI, B);
   case Intrinsic::debugtrap:
     return legalizeDebugTrapIntrinsic(MI, MRI, B);
+  case Intrinsic::amdgcn_rsq_clamp:
+    return legalizeRsqClampIntrinsic(MI, MRI, B);
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))
