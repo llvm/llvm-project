@@ -256,7 +256,7 @@ private:
           // If this is an Addend relocation then process it and move to the
           // paired reloc.
 
-          Addend = RI.r_symbolnum;
+          Addend = SignExtend64(RI.r_symbolnum, 24);
 
           if (RelItr == RelEnd)
             return make_error<JITLinkError>("Unpaired Addend reloc at " +
@@ -340,6 +340,11 @@ private:
             TargetSymbol = TargetSymbolOrErr->GraphSymbol;
           else
             return TargetSymbolOrErr.takeError();
+          uint32_t Instr = *(const ulittle32_t *)FixupContent;
+          uint32_t EncodedAddend = (Instr & 0x003FFC00) >> 10;
+          if (EncodedAddend != 0)
+            return make_error<JITLinkError>("GOTPAGEOFF12 target has non-zero "
+                                            "encoded addend");
           break;
         }
         case GOTPageOffset12: {
@@ -524,23 +529,17 @@ private:
   }
 
   static unsigned getPageOffset12Shift(uint32_t Instr) {
-    constexpr uint32_t LDRLiteralMask = 0x3ffffc00;
+    constexpr uint32_t LoadStoreImm12Mask = 0x3b000000;
+    constexpr uint32_t Vec128Mask = 0x04800000;
 
-    // Check for a GPR LDR immediate with a zero embedded literal.
-    // If found, the top two bits contain the shift.
-    if ((Instr & LDRLiteralMask) == 0x39400000)
-      return Instr >> 30;
+    if ((Instr & LoadStoreImm12Mask) == 0x39000000) {
+      uint32_t ImplicitShift = Instr >> 30;
+      if (ImplicitShift == 0)
+        if ((Instr & Vec128Mask) == Vec128Mask)
+          ImplicitShift = 4;
 
-    // Check for a Neon LDR immediate of size 64-bit or less with a zero
-    // embedded literal. If found, the top two bits contain the shift.
-    if ((Instr & LDRLiteralMask) == 0x3d400000)
-      return Instr >> 30;
-
-    // Check for a Neon LDR immediate of size 128-bit with a zero embedded
-    // literal.
-    constexpr uint32_t SizeBitsMask = 0xc0000000;
-    if ((Instr & (LDRLiteralMask | SizeBitsMask)) == 0x3dc00000)
-      return 4;
+      return ImplicitShift;
+    }
 
     return 0;
   }
