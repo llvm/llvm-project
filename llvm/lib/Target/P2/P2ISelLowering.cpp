@@ -40,8 +40,8 @@ How function calling works:
 
 1. LowerCall is used to copy arguments to there destination registers/stack space
 2. LowerFormalArguments is used to copy passed argument by the callee into the callee's stack frame
-3. LowerReturn is used to copy the return value to r15 or the stack
-4. LowerCallResult used to copy the return value out of r15 or the stack into the caller's space
+3. LowerReturn is used to copy the return value to r31 or the stack
+4. LowerCallResult used to copy the return value out of r31 or the stack into the caller's space
 
 Byval arguments: byvals will always be passed by the stack. easier this way for now, since most structs will be
 greater than 4 ints anyway
@@ -592,11 +592,11 @@ SDValue P2TargetLowering::LowerReturn(SDValue Chain,
             llvm_unreachable("sret virtual register not created in entry block");
 
         SDValue Val = DAG.getCopyFromReg(Chain, DL, reg, getPointerTy(DAG.getDataLayout()));
-        unsigned R15 = P2::R15;
+        unsigned R31 = P2::R31;
 
-        Chain = DAG.getCopyToReg(Chain, DL, R15, Val, Flag);
+        Chain = DAG.getCopyToReg(Chain, DL, R31, Val, Flag);
         Flag = Chain.getValue(1);
-        RetOps.push_back(DAG.getRegister(R15, getPointerTy(DAG.getDataLayout())));
+        RetOps.push_back(DAG.getRegister(R31, getPointerTy(DAG.getDataLayout())));
     }
 
     RetOps[0] = Chain;  // Update chain.
