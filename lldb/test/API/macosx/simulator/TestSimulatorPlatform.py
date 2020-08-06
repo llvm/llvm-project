@@ -6,7 +6,6 @@ import json
 import unittest2
 
 
-@skipIfDarwin # rdar://problem/64552748
 class TestSimulatorPlatformLaunching(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -41,14 +40,16 @@ class TestSimulatorPlatformLaunching(TestBase):
 
 
     def run_with(self, arch, os, vers, env, expected_load_command):
-        self.build(dictionary={'TRIPLE': arch+'-apple-'+os+vers+'-'+env})
+        env_list = [env] if env else []
+        triple = '-'.join([arch, 'apple', os + vers] + env_list)
+        self.build(dictionary={'TRIPLE': triple})
         self.check_load_commands(expected_load_command)
         log = self.getBuildArtifact('packets.log')
         self.expect("log enable gdb-remote packets -f "+log)
         lldbutil.run_to_source_breakpoint(self, "break here",
                                           lldb.SBFileSpec("hello.c"))
-        self.expect('image list -b -t',
-                    patterns=['a\.out '+arch+'-apple-'+os+vers+'.*-'+env])
+        triple_re = '-'.join([arch, 'apple', os + vers+'.*'] + env_list)
+        self.expect('image list -b -t', patterns=['a\.out '+triple_re])
         self.check_debugserver(log, os+env, vers)
 
     @skipUnlessDarwin
@@ -101,6 +102,13 @@ class TestSimulatorPlatformLaunching(TestBase):
     # macOS, however, these legacy load commands are never generated.
     #
         
+    @skipUnlessDarwin
+    @skipIfDarwinEmbedded
+    def test_lc_version_min_macosx(self):
+        """Test running a back-deploying non-simulator MacOS X binary"""
+        self.run_with(arch=self.getArchitecture(),
+                      os='macosx', vers='10.9', env='',
+                      expected_load_command='LC_VERSION_MIN_MACOSX')
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
     @apple_simulator_test('iphone')
