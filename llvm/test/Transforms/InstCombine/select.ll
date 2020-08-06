@@ -2510,6 +2510,28 @@ define i8 @cond_freeze2(i8 %x, i8 %y) {
   ret i8 %s
 }
 
+define i8 @cond_freeze3(i8 %x) {
+; CHECK-LABEL: @cond_freeze3(
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 undef
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND_FR]], i8 1, i8 [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %cond.fr = freeze i1 undef
+  %s = select i1 %cond.fr, i8 1, i8 %x
+  ret i8 %s
+}
+
+define <2 x i8> @cond_freeze_vec(<2 x i8> %x) {
+; CHECK-LABEL: @cond_freeze_vec(
+; CHECK-NEXT:    [[COND_FR:%.*]] = freeze <2 x i1> undef
+; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[COND_FR]], <2 x i8> <i8 1, i8 2>, <2 x i8> [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[S]]
+;
+  %cond.fr = freeze <2 x i1> <i1 undef, i1 undef>
+  %s = select <2 x i1> %cond.fr, <2 x i8> <i8 1, i8 2>, <2 x i8> %x
+  ret <2 x i8> %s
+}
+
 declare void @foo2(i8, i8)
 
 define void @cond_freeze_multipleuses(i8 %x, i8 %y) {

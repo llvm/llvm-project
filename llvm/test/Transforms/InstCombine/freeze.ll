@@ -18,3 +18,70 @@ define i32 @make_const() {
   %x = freeze i32 10
   ret i32 %x
 }
+
+define i32 @and_freeze_undef(i32 %x) {
+; CHECK-LABEL: @and_freeze_undef(
+; CHECK-NEXT:    [[F:%.*]] = freeze i32 undef
+; CHECK-NEXT:    [[RES:%.*]] = and i32 [[F]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %f = freeze i32 undef
+  %res = and i32 %x, %f
+  ret i32 %res
+}
+
+declare void @use_i32(i32)
+
+define i32 @and_freeze_undef_multipleuses(i32 %x) {
+; CHECK-LABEL: @and_freeze_undef_multipleuses(
+; CHECK-NEXT:    [[F:%.*]] = freeze i32 undef
+; CHECK-NEXT:    [[RES:%.*]] = and i32 [[F]], [[X:%.*]]
+; CHECK-NEXT:    call void @use_i32(i32 [[F]])
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %f = freeze i32 undef
+  %res = and i32 %x, %f
+  call void @use_i32(i32 %f)
+  ret i32 %res
+}
+
+define i32 @or_freeze_undef(i32 %x) {
+; CHECK-LABEL: @or_freeze_undef(
+; CHECK-NEXT:    [[F:%.*]] = freeze i32 undef
+; CHECK-NEXT:    [[RES:%.*]] = or i32 [[F]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %f = freeze i32 undef
+  %res = or i32 %x, %f
+  ret i32 %res
+}
+
+define i32 @or_freeze_undef_multipleuses(i32 %x) {
+; CHECK-LABEL: @or_freeze_undef_multipleuses(
+; CHECK-NEXT:    [[F:%.*]] = freeze i32 undef
+; CHECK-NEXT:    [[RES:%.*]] = or i32 [[F]], [[X:%.*]]
+; CHECK-NEXT:    call void @use_i32(i32 [[F]])
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %f = freeze i32 undef
+  %res = or i32 %x, %f
+  call void @use_i32(i32 %f)
+  ret i32 %res
+}
+
+declare void @use_i32_i1(i32, i1)
+
+define void @or_select_multipleuses(i32 %x, i1 %y) {
+; CHECK-LABEL: @or_select_multipleuses(
+; CHECK-NEXT:    [[F:%.*]] = freeze i1 undef
+; CHECK-NEXT:    [[A:%.*]] = select i1 [[F]], i32 [[X:%.*]], i32 32
+; CHECK-NEXT:    [[B:%.*]] = or i1 [[F]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use_i32_i1(i32 [[A]], i1 [[B]])
+; CHECK-NEXT:    ret void
+;
+  %f = freeze i1 undef
+  %a = select i1 %f, i32 %x, i32 32 ; prefers %f to be false
+  %b = or i1 %f, %y ; prefers %f to be true
+  call void @use_i32_i1(i32 %a, i1 %b)
+  ret void
+}
