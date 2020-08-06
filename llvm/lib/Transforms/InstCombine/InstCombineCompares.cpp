@@ -3725,60 +3725,14 @@ Instruction *foldICmpXNegX(ICmpInst &I) {
   if (!match(&I, m_c_ICmp(Pred, m_NSWNeg(m_Value(X)), m_Deferred(X))))
     return nullptr;
 
-  CmpInst::Predicate NewPred;
-  Constant *NewRHS;
-  switch (Pred) {
-  case ICmpInst::ICMP_SGT:
-    NewPred = ICmpInst::ICMP_SLT;
-    NewRHS = Constant::getNullValue(X->getType());
-    break;
+  if (ICmpInst::isSigned(Pred))
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+  else if (ICmpInst::isUnsigned(Pred))
+    Pred = ICmpInst::getSignedPredicate(Pred);
+  // else for equality-comparisons just keep the predicate.
 
-  case ICmpInst::ICMP_SGE:
-    NewPred = ICmpInst::ICMP_SLE;
-    NewRHS = Constant::getNullValue(X->getType());
-    break;
-
-  case ICmpInst::ICMP_SLT:
-    NewPred = ICmpInst::ICMP_SGT;
-    NewRHS = Constant::getNullValue(X->getType());
-    break;
-
-  case ICmpInst::ICMP_SLE:
-    NewPred = ICmpInst::ICMP_SGE;
-    NewRHS = Constant::getNullValue(X->getType());
-    break;
-
-  case ICmpInst::ICMP_UGT:
-    NewPred = ICmpInst::ICMP_SGT;
-    NewRHS = Constant::getNullValue(X->getType());
-    break;
-
-  case ICmpInst::ICMP_UGE:
-    NewPred = ICmpInst::ICMP_SGE;
-    NewRHS = Constant::getNullValue(X->getType());
-    break;
-
-  case ICmpInst::ICMP_ULT:
-    NewPred = ICmpInst::ICMP_SLT;
-    NewRHS = Constant::getNullValue(X->getType());
-    break;
-
-  case ICmpInst::ICMP_ULE:
-    NewPred = ICmpInst::ICMP_SLE;
-    NewRHS = Constant::getNullValue(X->getType());
-    break;
-
-  case ICmpInst::ICMP_EQ:
-  case ICmpInst::ICMP_NE:
-    NewPred = Pred;
-    NewRHS = Constant::getNullValue(X->getType());
-    break;
-
-  default:
-    return nullptr;
-  }
-
-  return ICmpInst::Create(Instruction::ICmp, NewPred, X, NewRHS, I.getName());
+  return ICmpInst::Create(Instruction::ICmp, Pred, X,
+                          Constant::getNullValue(X->getType()), I.getName());
 }
 
 /// Try to fold icmp (binop), X or icmp X, (binop).
