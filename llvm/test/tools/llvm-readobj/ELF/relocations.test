@@ -128,6 +128,7 @@ Sections:
   - Name:    .rel.text
     Type:    SHT_REL
     Info:    .text
+    Link:    [[LINK=.symtab]]
     ShName:  [[SHNAME=<none>]]
     EntSize: [[ENTSIZEREL=<none>]]
     Relocations:
@@ -145,6 +146,7 @@ Sections:
   - Name:    .rela.text
     Type:    SHT_RELA
     Info:    .text
+    Link:    [[LINK=.symtab]]
     ShName:  [[SHNAME=<none>]]
     EntSize: [[ENTSIZERELA=<none>]]
     Relocations:
@@ -200,6 +202,7 @@ Symbols:
 ## Check we continue dumping other relocation sections if any.
 
 ## Case A: check the case when relocations can't be read from an SHT_REL section.
+##         because of broken sh_entsize field.
 # RUN: yaml2obj %s --docnum=1 -DENTSIZEREL=1 -o %t.broken.rel
 # RUN: llvm-readobj --relocations %t.broken.rel 2>&1 \
 # RUN:   | FileCheck %s -DFILE=%t.broken.rel --check-prefix=BROKEN-REL-LLVM
@@ -231,6 +234,7 @@ Symbols:
 # BROKEN-REL-GNU-NEXT: 0000000000000009  000000090000000b R_X86_64_32S   ffffffffffffffff rela_maxpos + 7fffffffffffffff
 
 ## Case B: check the case when relocations can't be read from an SHT_RELA section.
+##         because of broken sh_entsize field.
 # RUN: yaml2obj %s --docnum=1 -DENTSIZERELA=1 -o %t.broken.rela
 # RUN: llvm-readobj --relocations %t.broken.rela 2>&1 \
 # RUN:   | FileCheck %s -DFILE=%t.broken.rela --check-prefix=BROKEN-RELA-LLVM
@@ -259,6 +263,31 @@ Symbols:
 # BROKEN-RELA-GNU-NEXT: Relocation section '.rela.text' at offset 0x91 contains 120 entries:
 # BROKEN-RELA-GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
 # BROKEN-RELA-GNU-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_RELA section with index 3: section [index 3] has an invalid sh_entsize: 1
+
+## Case C: check the case when relocations can't be read from SHT_REL/SHT_RELA sections
+##         because of broken sh_link fields.
+# RUN: yaml2obj %s --docnum=1 -DLINK=0xffff -o %t.broken.link
+# RUN: llvm-readobj --relocations %t.broken.link 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.broken.link --check-prefix=BROKEN-LINK-LLVM
+# RUN: llvm-readelf --relocations %t.broken.link 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.broken.link --check-prefix=BROKEN-LINK-GNU
+
+# BROKEN-LINK-LLVM:      Relocations [
+# BROKEN-LINK-LLVM-NEXT:   Section (2) .rel.text {
+# BROKEN-LINK-LLVM-NEXT: warning: '[[FILE]]': unable to locate a symbol table for SHT_REL section with index 2: invalid section index: 65535
+# BROKEN-LINK-LLVM-NEXT:   }
+# BROKEN-LINK-LLVM-NEXT:   Section (3) .rela.text {
+# BROKEN-LINK-LLVM-NEXT: warning: '[[FILE]]': unable to locate a symbol table for SHT_RELA section with index 3: invalid section index: 65535
+# BROKEN-LINK-LLVM-NEXT:   }
+# BROKEN-LINK-LLVM-NEXT: ]
+
+# BROKEN-LINK-GNU:      Relocation section '.rel.text' at offset 0x51 contains 4 entries:
+# BROKEN-LINK-GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name
+# BROKEN-LINK-GNU-NEXT: warning: '[[FILE]]': unable to locate a symbol table for SHT_REL section with index 2: invalid section index: 65535
+# BROKEN-LINK-GNU-EMPTY:
+# BROKEN-LINK-GNU-NEXT: Relocation section '.rela.text' at offset 0x91 contains 5 entries:
+# BROKEN-LINK-GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# BROKEN-LINK-GNU-NEXT: warning: '[[FILE]]': unable to locate a symbol table for SHT_RELA section with index 3: invalid section index: 65535
 
 ## Show that ELF32 is dumped correctly.
 # RUN: yaml2obj %s --docnum=2 -o %t32

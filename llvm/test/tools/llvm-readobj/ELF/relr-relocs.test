@@ -151,6 +151,7 @@ Sections:
                0x000F0501, 0x50400009 ]
     EntSize: [[ENTSIZE=<none>]]
     ShType:  [[SHTYPE=<none>]]
+    Link:    [[LINK=""]]
 
 ## Check we report a warning when we are unable to dump relocations
 ## for a SHT_RELR/SHT_ANDROID_RELR section.
@@ -179,3 +180,23 @@ Sections:
 
 # RUN: not llvm-readelf --relocations %t2.broken.android 2>&1 | \
 # RUN:   FileCheck -DFILE=%t2.broken.android --check-prefix=BROKEN-GNU %s
+
+## Check the behavior when the sh_link field of the SHT_RELR/SHT_ANDROID_RELR section
+## is set to an arbitrary value. Normally, it is set to 0, because such sections contains
+## only relative relocations and do not have an associated symbol table, like other
+## relocation sections.
+
+## Case A: check we do not report warnings when the sh_link field is set to an arbitrary value
+##         and the --relocations option is requested.
+# RUN: yaml2obj --docnum=2 -DLINK=0xff %s -o %t2.has.link
+# RUN: llvm-readobj --relocations %t2.has.link 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.has.link --check-prefix=LLVM2 %s --implicit-check-not=warning:
+# RUN: llvm-readelf --relocations %t2.has.link 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.has.link --check-prefix=GNU2 %s --implicit-check-not=warning:
+
+## Case B: check we do not report warnings when the sh_link field is set to an arbitrary value
+##         and --relocations and --raw-relr options are requested.
+# RUN: llvm-readobj --relocations --raw-relr %t2.has.link | \
+# RUN:   FileCheck -DFILE=%t2.has.link --check-prefix=RAW-LLVM2 %s
+# RUN: llvm-readelf --relocations --raw-relr %t2.has.link 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.has.link --check-prefix=RAW-GNU2 %s
