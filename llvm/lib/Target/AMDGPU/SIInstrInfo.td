@@ -316,7 +316,7 @@ defm atomic_load_fmax_#as : binary_atomic_op<SIatomic_fmax, 0>;
 } // End let AddressSpaces = ...
 } // End foreach AddrSpace
 
-def atomic_fadd_global_noret : PatFrag<
+def atomic_fadd_global_noret_impl : PatFrag<
   (ops node:$ptr, node:$value),
   (atomic_load_fadd node:$ptr, node:$value)> {
   // FIXME: Move this
@@ -325,14 +325,9 @@ def atomic_fadd_global_noret : PatFrag<
   let AddressSpaces = StoreAddress_global.AddrSpaces;
 }
 
-def atomic_pk_fadd_global_noret : PatFrag<
-    (ops node:$ptr, node:$value),
-    (atomic_load_fadd node:$ptr, node:$value)> {
-  // FIXME: Move this
-  let MemoryVT = v2f16;
-  let IsAtomic = 1;
-  let AddressSpaces = StoreAddress_global.AddrSpaces;
-}
+def atomic_fadd_global_noret : PatFrags<(ops node:$src0, node:$src1),
+  [(int_amdgcn_global_atomic_fadd node:$src0, node:$src1),
+   (atomic_fadd_global_noret_impl node:$src0, node:$src1)]>;
 
 //===----------------------------------------------------------------------===//
 // SDNodes PatFrags for loads/stores with a glue input.

@@ -1140,6 +1140,8 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                             ->getPointerElementType());
     Info.ptrVal = CI.getOperand(0);
     Info.align.reset();
+
+    // FIXME: Should report an atomic ordering here.
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
 
     return true;
@@ -7521,21 +7523,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                                    Op->getVTList(), Ops, VT,
                                    M->getMemOperand());
   }
-
-  case Intrinsic::amdgcn_global_atomic_fadd: {
-    SDValue Ops[] = {
-      Chain,
-      Op.getOperand(2), // ptr
-      Op.getOperand(3)  // vdata
-    };
-
-    EVT VT = Op.getOperand(3).getValueType();
-    auto *M = cast<MemSDNode>(Op);
-
-    return DAG.getAtomic(ISD::ATOMIC_LOAD_FADD, DL, VT,
-                         DAG.getVTList(VT, MVT::Other), Ops,
-                         M->getMemOperand()).getValue(1);
-  }
   case Intrinsic::amdgcn_end_cf:
     return SDValue(DAG.getMachineNode(AMDGPU::SI_END_CF, DL, MVT::Other,
                                       Op->getOperand(2), Chain), 0);
@@ -8567,7 +8554,7 @@ SDValue SITargetLowering::performSHLPtrCombine(SDNode *N,
 
 /// MemSDNode::getBasePtr() does not work for intrinsics, which needs to offset
 /// by the chain and intrinsic ID. Theoretically we would also need to check the
-/// specific intrinsic.
+/// specific intrinsic, but they all place the pointer operand first.
 static unsigned getBasePtrIndex(const MemSDNode *N) {
   switch (N->getOpcode()) {
   case ISD::STORE:
