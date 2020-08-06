@@ -13,8 +13,8 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/Support/raw_ostream.h"
-#include <unordered_map>
 #include <cstdint>
+#include <unordered_map>
 
 namespace llvm {
 
