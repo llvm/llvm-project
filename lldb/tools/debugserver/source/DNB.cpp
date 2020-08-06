@@ -1384,19 +1384,20 @@ nub_bool_t DNBProcessSharedLibrariesUpdated(nub_process_t pid) {
   return false;
 }
 
-const char *DNBGetDeploymentInfo(nub_process_t pid,
-                                 const struct load_command& lc,
+const char *DNBGetDeploymentInfo(nub_process_t pid, bool is_executable,
+                                 const struct load_command &lc,
                                  uint64_t load_command_address,
-                                 uint32_t& major_version,
-                                 uint32_t& minor_version,
-                                 uint32_t& patch_version) {
+                                 uint32_t &major_version,
+                                 uint32_t &minor_version,
+                                 uint32_t &patch_version) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP)) {
     // FIXME: This doesn't return the correct result when xctest (a
     // macOS binary) is loaded with the macCatalyst dyld platform
     // override. The image info corrects for this, but qProcessInfo
     // will return what is in the binary.
-    auto info = procSP->GetDeploymentInfo(lc, load_command_address);
+    auto info =
+        procSP->GetDeploymentInfo(lc, load_command_address, is_executable);
     major_version = info.major_version;
     minor_version = info.minor_version;
     patch_version = info.patch_version;
@@ -1404,7 +1405,6 @@ const char *DNBGetDeploymentInfo(nub_process_t pid,
   }
   return nullptr;
 }
-
 
 // Get the current shared library information for a process. Only return
 // the shared libraries that have changed since the last shared library

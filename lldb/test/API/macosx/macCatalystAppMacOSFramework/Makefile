@@ -1,8 +1,11 @@
 C_SOURCES := main.c
 LD_EXTRAS := -L. -lfoo
 
-TRIPLE := x86_64-apple-ios13.0-macabi
+TRIPLE := $(ARCH)-apple-ios13.0-macabi
 CFLAGS_EXTRAS := -target $(TRIPLE)
+
+# FIXME: rdar://problem/54986190
+override CC=xcrun clang
 
 all: libfoo.dylib a.out
 
