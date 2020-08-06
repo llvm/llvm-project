@@ -3733,6 +3733,12 @@ Instruction *foldICmpXNegX(ICmpInst &I) {
     NewRHS = Constant::getNullValue(X->getType());
     break;
 
+  case ICmpInst::ICMP_EQ:
+  case ICmpInst::ICMP_NE:
+    NewPred = Pred;
+    NewRHS = Constant::getNullValue(X->getType());
+    break;
+
   default:
     return nullptr;
   }
