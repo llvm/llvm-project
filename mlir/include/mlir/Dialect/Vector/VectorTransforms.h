@@ -208,9 +208,8 @@ public:
       : OpRewritePattern<vector::ContractionOp>(context),
         vectorTransformsOptions(vectorTransformsOptions), filter(constraint) {}
 
-  LogicalResult match(vector::ContractionOp op) const override;
-  void rewrite(vector::ContractionOp op,
-               PatternRewriter &rewriter) const override;
+  LogicalResult matchAndRewrite(vector::ContractionOp op,
+                                PatternRewriter &rewriter) const override;
 
 private:
   /// Options to control the vector patterns.
@@ -250,9 +249,8 @@ public:
       : OpRewritePattern<vector::ContractionOp>(context),
         vectorTransformsOptions(vectorTransformsOptions), filter(constraint) {}
 
-  LogicalResult match(vector::ContractionOp op) const override;
-  void rewrite(vector::ContractionOp op,
-               PatternRewriter &rewriter) const override;
+  LogicalResult matchAndRewrite(vector::ContractionOp op,
+                                PatternRewriter &rewriter) const override;
 
 private:
   /// Options to control the vector patterns.
