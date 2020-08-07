@@ -66,11 +66,68 @@ static cl::opt<std::string>
              cl::desc("Pass in file containing a list of filenames"),
              cl::value_desc("listfile[,dirname]"), cl::cat(LibtoolCategory));
 
+static cl::list<std::string> Libraries(
+    "l",
+    cl::desc(
+        "l<x> searches for the library libx.a in the library search path. If"
+        " the string 'x' ends with '.o', then the library 'x' is searched for"
+        " without prepending 'lib' or appending '.a'"),
+    cl::ZeroOrMore, cl::Prefix, cl::cat(LibtoolCategory));
+
+static cl::list<std::string> LibrarySearchDirs(
+    "L",
+    cl::desc(
+        "L<dir> adds <dir> to the list of directories in which to search for"
+        " libraries"),
+    cl::ZeroOrMore, cl::Prefix, cl::cat(LibtoolCategory));
+
+static const std::array<std::string, 3> StandardSearchDirs{
+    "/lib",
+    "/usr/lib",
+    "/usr/local/lib",
+};
+
 struct Config {
   bool Deterministic = true; // Updated by 'D' and 'U' modifiers.
   uint32_t ArchCPUType;
   uint32_t ArchCPUSubtype;
 };
+
+static Expected<std::string> searchForFile(const Twine &FileName) {
+
+  auto FindLib =
+      [FileName](ArrayRef<std::string> SearchDirs) -> Optional<std::string> {
+    for (StringRef Dir : SearchDirs) {
+      SmallString<128> Path;
+      sys::path::append(Path, Dir, FileName);
+
+      if (sys::fs::exists(Path))
+        return std::string(Path);
+    }
+    return None;
+  };
+
+  Optional<std::string> Found = FindLib(LibrarySearchDirs);
+  if (!Found.hasValue())
+    Found = FindLib(StandardSearchDirs);
+  if (Found.hasValue())
+    return Found.getValue();
+
+  return createStringError(std::errc::invalid_argument,
+                           "cannot locate file '%s'", FileName.str().c_str());
+}
+
+static Error processCommandLineLibraries() {
+  for (StringRef BaseName : Libraries) {
+    Expected<std::string> FullPath = searchForFile(
+        BaseName.endswith(".o") ? BaseName.str() : "lib" + BaseName + ".a");
+    if (!FullPath)
+      return FullPath.takeError();
+    InputFiles.push_back(FullPath.get());
+  }
+
+  return Error::success();
+}
 
 static Error processFileList() {
   StringRef FileName, DirName;
@@ -392,6 +449,10 @@ static Expected<Config> parseCommandLine(int Argc, char **Argv) {
                              "cannot specify both -D and -U flags");
   else if (NonDeterministicOption)
     C.Deterministic = false;
+
+  if (!Libraries.empty())
+    if (Error E = processCommandLineLibraries())
+      return std::move(E);
 
   if (!FileList.empty())
     if (Error E = processFileList())
