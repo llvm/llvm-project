@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fsyntax-only -Wno-unused-value -Wbad-function-cast -triple x86_64-unknown-unknown -verify
+// RUN: %clang_cc1 %s -fsyntax-only -Wno-unused-value -Wbad-function-cast -ffixed-point -triple x86_64-unknown-unknown -verify
 // rdar://9103192
 
 void vf(void);
@@ -12,15 +12,20 @@ enum e { E1 } ef(void);
 _Bool bf(void);
 char *pf1(void);
 int *pf2(void);
+_Fract ff1(void);
 
 void
 foo(void)
 {
+
+  /* default, no cast, should always be ok */
+  ff1();
   /* Casts to void types are always OK.  */
   (void)vf();
   (void)if1();
   (void)cf();
   (const void)bf();
+  (void)ff1();
   /* Casts to the same type or similar types are OK.  */
   (int)if1();
   (long)if2();
@@ -32,6 +37,7 @@ foo(void)
   (_Bool)bf();
   (void *)pf1();
   (char *)pf2();
+  (_Fract) ff1();
   /* All following casts issue warning */
   (float)if1(); /* expected-warning {{cast from function call of type 'int' to non-matching type 'float'}} */
   (double)if2(); /* expected-warning {{cast from function call of type 'char' to non-matching type 'double'}} */
@@ -43,5 +49,7 @@ foo(void)
   (int)bf(); /* expected-warning {{cast from function call of type '_Bool' to non-matching type 'int'}} */
   (__SIZE_TYPE__)pf1(); /* expected-warning {{cast from function call of type 'char *' to non-matching type 'unsigned long'}} */
   (__PTRDIFF_TYPE__)pf2(); /* expected-warning {{cast from function call of type 'int *' to non-matching type 'long'}} */
+  (_Fract) if1();          /* expected-warning{{cast from function call of type 'int' to non-matching type '_Fract'}} */
+  (int)ff1();              /* expected-warning{{cast from function call of type '_Fract' to non-matching type 'int'}} */
 }
 
