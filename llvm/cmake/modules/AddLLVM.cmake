@@ -222,13 +222,8 @@ function(add_link_opts target_name)
     # Pass -O3 to the linker. This enabled different optimizations on different
     # linkers.
     if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin|SunOS|AIX" OR WIN32))
-      # Before binutils 2.34, gold -O2 and above did not correctly handle R_386_GOTOFF to
-      # SHF_MERGE|SHF_STRINGS sections: https://sourceware.org/bugzilla/show_bug.cgi?id=16794
-      if(LLVM_LINKER_IS_GOLD)
-        set_property(TARGET ${target_name} APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-O1")
-      else()
-        set_property(TARGET ${target_name} APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-O3")
-      endif()
+      set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                   LINK_FLAGS " -Wl,-O3")
     endif()
 
     if(LLVM_LINKER_IS_GOLD)
