@@ -16955,6 +16955,11 @@ public:
     Components.emplace_back(CTE, nullptr);
     return true;
   }
+  bool VisitCXXOperatorCallExpr(CXXOperatorCallExpr *COCE) {
+    assert(!RelevantExpr && "RelevantExpr is expected to be nullptr");
+    Components.emplace_back(COCE, nullptr);
+    return true;
+  }
   bool VisitStmt(Stmt *) {
     emitErrorMsg();
     return false;
