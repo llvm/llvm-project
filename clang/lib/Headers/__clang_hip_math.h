@@ -14,6 +14,7 @@
 #include <limits.h>
 #include <limits>
 #include <stdint.h>
+#include <assert.h>
 
 #pragma push_macro("__DEVICE__")
 #pragma push_macro("__RETURN_TYPE")
@@ -21,6 +22,34 @@
 // to be consistent with __clang_cuda_math_forward_declares
 #define __DEVICE__ static __device__
 #define __RETURN_TYPE bool
+
+#if defined (__cplusplus) && __cplusplus < 201103L
+//emulate static_assert on type sizes
+template<bool>
+struct __compare_result{};
+template<>
+struct __compare_result<true> {
+  static const bool valid;
+};
+
+__DEVICE__
+inline void __suppress_unused_warning(bool b) {};
+template<unsigned int S, unsigned int T>
+__DEVICE__
+inline void __static_assert_equal_size() {
+    __suppress_unused_warning(__compare_result<S==T>::valid);
+}
+
+#define __static_assert_type_size_equal(A, B) \
+  __static_assert_equal_size<A,B>()
+
+#else
+
+#define __static_assert_type_size_equal(A,B) \
+  static_assert((A) == (B), "")
+
+#endif
+
 
 __DEVICE__
 inline uint64_t __make_mantissa_base8(const char *__tagp) {
@@ -252,9 +281,8 @@ inline float nanf(const char *__tagp) {
       uint32_t exponent : 8;
       uint32_t sign : 1;
     } bits;
-
-    static_assert(sizeof(float) == sizeof(struct ieee_float), "");
   } __tmp;
+  __static_assert_type_size_equal(sizeof(__tmp.val), sizeof(__tmp.bits));
 
   __tmp.bits.sign = 0u;
   __tmp.bits.exponent = ~0u;
@@ -716,8 +744,8 @@ inline double nan(const char *__tagp) {
       uint32_t exponent : 11;
       uint32_t sign : 1;
     } bits;
-    static_assert(sizeof(double) == sizeof(struct ieee_double), "");
   } __tmp;
+  __static_assert_type_size_equal(sizeof(__tmp.val), sizeof(__tmp.bits));
 
   __tmp.bits.sign = 0u;
   __tmp.bits.exponent = ~0u;
@@ -726,7 +754,7 @@ inline double nan(const char *__tagp) {
 
   return __tmp.val;
 #else
-  static_assert(sizeof(uint64_t) == sizeof(double));
+  __static_assert_type_size_equal(sizeof(uint64_t), sizeof(double));
   uint64_t val = __make_mantissa(__tagp);
   val |= 0xFFF << 51;
   return *reinterpret_cast<double *>(&val);
