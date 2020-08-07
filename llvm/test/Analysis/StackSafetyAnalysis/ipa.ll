@@ -37,6 +37,10 @@
 ; RUN:  -r %t.summ0.bc,RecursiveNoOffset, \
 ; RUN:  -r %t.summ0.bc,RecursiveWithOffset, \
 ; RUN:  -r %t.summ0.bc,ReturnDependent, \
+; RUN:  -r %t.summ0.bc,TestCrossModuleConflict,px \
+; RUN:  -r %t.summ0.bc,TestCrossModuleOnce,px \
+; RUN:  -r %t.summ0.bc,TestCrossModuleTwice,px \
+; RUN:  -r %t.summ0.bc,TestCrossModuleWeak,px \
 ; RUN:  -r %t.summ0.bc,TestRecursiveNoOffset,px \
 ; RUN:  -r %t.summ0.bc,TestRecursiveWithOffset,px \
 ; RUN:  -r %t.summ0.bc,TestUpdateArg,px \
@@ -44,7 +48,13 @@
 ; RUN:  -r %t.summ0.bc,TwoArgumentsOOBBoth,px \
 ; RUN:  -r %t.summ0.bc,TwoArgumentsOOBOne,px \
 ; RUN:  -r %t.summ0.bc,TwoArgumentsOOBOther,px \
+; RUN:  -r %t.summ0.bc,Weak,px \
 ; RUN:  -r %t.summ0.bc,Write1, \
+; RUN:  -r %t.summ0.bc,Write1DiffModule,px \
+; RUN:  -r %t.summ0.bc,Write1Module0,px \
+; RUN:  -r %t.summ0.bc,Write1Private,px \
+; RUN:  -r %t.summ0.bc,Write1SameModule,px \
+; RUN:  -r %t.summ0.bc,Write1Weak,px \
 ; RUN:  -r %t.summ0.bc,Write4_2, \
 ; RUN:  -r %t.summ0.bc,Write4, \
 ; RUN:  -r %t.summ0.bc,Write8, \
@@ -59,7 +69,13 @@
 ; RUN:  -r %t.summ1.bc,RecursiveWithOffset,px \
 ; RUN:  -r %t.summ1.bc,ReturnAlloca,px \
 ; RUN:  -r %t.summ1.bc,ReturnDependent,px \
+; RUN:  -r %t.summ1.bc,Weak,px \
 ; RUN:  -r %t.summ1.bc,Write1,px \
+; RUN:  -r %t.summ1.bc,Write1DiffModule,px \
+; RUN:  -r %t.summ1.bc,Write1Module0,px \
+; RUN:  -r %t.summ1.bc,Write1Private,px \
+; RUN:  -r %t.summ1.bc,Write1SameModule,px \
+; RUN:  -r %t.summ1.bc,Write1Weak,px \
 ; RUN:  -r %t.summ1.bc,Write4_2,px \
 ; RUN:  -r %t.summ1.bc,Write4,px \
 ; RUN:  -r %t.summ1.bc,Write8,px \
@@ -88,6 +104,10 @@
 ; RUN:  -r %t.summ0.bc,RecursiveNoOffset, \
 ; RUN:  -r %t.summ0.bc,RecursiveWithOffset, \
 ; RUN:  -r %t.summ0.bc,ReturnDependent, \
+; RUN:  -r %t.summ0.bc,TestCrossModuleConflict,px \
+; RUN:  -r %t.summ0.bc,TestCrossModuleOnce,px \
+; RUN:  -r %t.summ0.bc,TestCrossModuleTwice,px \
+; RUN:  -r %t.summ0.bc,TestCrossModuleWeak,px \
 ; RUN:  -r %t.summ0.bc,TestRecursiveNoOffset,px \
 ; RUN:  -r %t.summ0.bc,TestRecursiveWithOffset,px \
 ; RUN:  -r %t.summ0.bc,TestUpdateArg,px \
@@ -95,7 +115,13 @@
 ; RUN:  -r %t.summ0.bc,TwoArgumentsOOBBoth,px \
 ; RUN:  -r %t.summ0.bc,TwoArgumentsOOBOne,px \
 ; RUN:  -r %t.summ0.bc,TwoArgumentsOOBOther,px \
+; RUN:  -r %t.summ0.bc,Weak,px \
 ; RUN:  -r %t.summ0.bc,Write1, \
+; RUN:  -r %t.summ0.bc,Write1DiffModule,px \
+; RUN:  -r %t.summ0.bc,Write1Module0,px \
+; RUN:  -r %t.summ0.bc,Write1Private,px \
+; RUN:  -r %t.summ0.bc,Write1SameModule,px \
+; RUN:  -r %t.summ0.bc,Write1Weak,px \
 ; RUN:  -r %t.summ0.bc,Write4_2, \
 ; RUN:  -r %t.summ0.bc,Write4, \
 ; RUN:  -r %t.summ0.bc,Write8, \
@@ -110,7 +136,13 @@
 ; RUN:  -r %t.summ1.bc,RecursiveWithOffset,px \
 ; RUN:  -r %t.summ1.bc,ReturnAlloca,px \
 ; RUN:  -r %t.summ1.bc,ReturnDependent,px \
+; RUN:  -r %t.summ1.bc,Weak,px \
 ; RUN:  -r %t.summ1.bc,Write1,px \
+; RUN:  -r %t.summ1.bc,Write1DiffModule,px \
+; RUN:  -r %t.summ1.bc,Write1Module0,px \
+; RUN:  -r %t.summ1.bc,Write1Private,px \
+; RUN:  -r %t.summ1.bc,Write1SameModule,px \
+; RUN:  -r %t.summ1.bc,Write1Weak,px \
 ; RUN:  -r %t.summ1.bc,Write4_2,px \
 ; RUN:  -r %t.summ1.bc,Write4,px \
 ; RUN:  -r %t.summ1.bc,Write8,px \
@@ -134,6 +166,10 @@ declare i8* @ReturnDependent(i8* %p)
 declare void @Rec2(i8* %p)
 declare void @RecursiveNoOffset(i32* %p, i32 %size, i32* %acc)
 declare void @RecursiveWithOffset(i32 %size, i32* %acc)
+declare void @Write1SameModule(i8* %p)
+declare void @Write1DiffModule(i8* %p)
+declare void @Write1Private(i8* %p)
+declare void @Write1Weak(i8* %p)
 
 ; Basic out-of-bounds.
 define void @f1() #0 {
@@ -467,6 +503,82 @@ define void @TestUpdateArg() #0 {
 entry:
   %x = alloca i8, i64 16, align 4
   %0 = call i8* @WriteAndReturn8(i8* %x)
+  ret void
+}
+
+define void @TestCrossModuleOnce() #0 {
+; CHECK-DAG: @TestCrossModuleOnce dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; LOCAL-NEXT: y[1]: empty-set, @Write1SameModule(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: y[1]: [0,1), @Write1SameModule(arg0, [0,1)){{$}}
+; CHECK-EMPTY:
+entry:
+  %y = alloca i8, align 4
+  call void @Write1SameModule(i8* %y)
+  ret void
+}
+
+; FIXME: LTO should match NOLTO
+define void @TestCrossModuleTwice() #0 {
+; CHECK-DAG: @TestCrossModuleTwice dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; LOCAL-NEXT: z[1]: empty-set, @Write1DiffModule(arg0, [0,1)){{$}}
+; NOLTO-NEXT: z[1]: [0,1), @Write1DiffModule(arg0, [0,1)){{$}}
+; LTO-NEXT: z[1]: full-set, @Write1DiffModule(arg0, [0,1)){{$}}
+; CHECK-EMPTY:
+entry:
+  %z = alloca i8, align 4
+  call void @Write1DiffModule(i8* %z)
+  ret void
+}
+
+define void @TestCrossModuleConflict() #0 {
+; CHECK-DAG: @TestCrossModuleConflict dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; LOCAL-NEXT: x[1]: empty-set, @Write1Private(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: x[1]: [-1,0), @Write1Private(arg0, [0,1)){{$}}
+; CHECK-EMPTY:
+entry:
+  %x = alloca i8, align 4
+  call void @Write1Private(i8* %x)
+  ret void
+}
+
+; FIXME: LTO should match NOLTO
+define void @TestCrossModuleWeak() #0 {
+; CHECK-DAG: @TestCrossModuleWeak dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; LOCAL-NEXT: x[1]: empty-set, @Write1Weak(arg0, [0,1)){{$}}
+; NOLTO-NEXT: x[1]: [1,2), @Write1Weak(arg0, [0,1)){{$}}
+; LTO-NEXT: x[1]: [-1,0), @Write1Weak(arg0, [0,1)){{$}}
+; CHECK-EMPTY:
+entry:
+  %x = alloca i8, align 4
+  call void @Write1Weak(i8* %x)
+  ret void
+}
+
+define private dso_local void @Private(i8* %p) #0 {
+entry:
+  %p1 = getelementptr i8, i8* %p, i64 1
+  store i8 0, i8* %p1, align 1
+  ret void
+}
+
+define dso_local void @Write1Module0(i8* %p) #0 {
+entry:
+  store i8 0, i8* %p, align 1
+  ret void
+}
+
+define dso_local void @Weak(i8* %p) #0 {
+entry:
+  %p1 = getelementptr i8, i8* %p, i64 1
+  store i8 0, i8* %p1, align 1
   ret void
 }
 
