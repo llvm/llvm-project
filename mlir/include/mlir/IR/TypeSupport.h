@@ -35,7 +35,7 @@ public:
   /// This method is used by Dialect objects when they register the list of
   /// types they contain.
   template <typename T> static AbstractType get(Dialect &dialect) {
-    return AbstractType(dialect, T::getInterfaceMap());
+    return AbstractType(dialect, T::getInterfaceMap(), T::getTypeID());
   }
 
   /// Return the dialect this type was registered to.
@@ -48,15 +48,23 @@ public:
     return interfaceMap.lookup<T>();
   }
 
+  /// Return the unique identifier representing the concrete type class.
+  TypeID getTypeID() const { return typeID; }
+
 private:
-  AbstractType(Dialect &dialect, detail::InterfaceMap &&interfaceMap)
-      : dialect(dialect), interfaceMap(std::move(interfaceMap)) {}
+  AbstractType(Dialect &dialect, detail::InterfaceMap &&interfaceMap,
+               TypeID typeID)
+      : dialect(dialect), interfaceMap(std::move(interfaceMap)),
+        typeID(typeID) {}
 
   /// This is the dialect that this type was registered to.
   Dialect &dialect;
 
   /// This is a collection of the interfaces registered to this type.
   detail::InterfaceMap interfaceMap;
+
+  /// The unique identifier of the derived Type class.
+  TypeID typeID;
 };
 
 //===----------------------------------------------------------------------===//
