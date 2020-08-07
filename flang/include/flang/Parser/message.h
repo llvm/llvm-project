@@ -67,7 +67,7 @@ constexpr MessageFixedText operator""_err_en_US(
 class MessageFormattedText {
 public:
   template <typename... A>
-  MessageFormattedText(const MessageFixedText &text, A &&... x)
+  MessageFormattedText(const MessageFixedText &text, A &&...x)
       : isFatal_{text.isFatal()} {
     Format(&text, Convert(std::forward<A>(x))...);
   }
@@ -166,7 +166,7 @@ public:
       : location_{csr}, text_{t} {}
 
   template <typename RANGE, typename A, typename... As>
-  Message(RANGE r, const MessageFixedText &t, A &&x, As &&... xs)
+  Message(RANGE r, const MessageFixedText &t, A &&x, As &&...xs)
       : location_{r}, text_{MessageFormattedText{
                           t, std::forward<A>(x), std::forward<As>(xs)...}} {}
 
@@ -179,7 +179,7 @@ public:
   }
   Message &Attach(Message *);
   Message &Attach(std::unique_ptr<Message> &&);
-  template <typename... A> Message &Attach(A &&... args) {
+  template <typename... A> Message &Attach(A &&...args) {
     return Attach(new Message{std::forward<A>(args)...}); // reference-counted
   }
 
@@ -234,7 +234,7 @@ public:
   bool empty() const { return messages_.empty(); }
   void clear();
 
-  template <typename... A> Message &Say(A &&... args) {
+  template <typename... A> Message &Say(A &&...args) {
     last_ = messages_.emplace_after(last_, std::forward<A>(args)...);
     return *last_;
   }
@@ -298,7 +298,7 @@ public:
     return common::ScopedSet(messages_, nullptr);
   }
 
-  template <typename... A> Message *Say(CharBlock at, A &&... args) {
+  template <typename... A> Message *Say(CharBlock at, A &&...args) {
     if (messages_ != nullptr) {
       return &messages_->Say(at, std::forward<A>(args)...);
     } else {
@@ -306,7 +306,7 @@ public:
     }
   }
 
-  template <typename... A> Message *Say(A &&... args) {
+  template <typename... A> Message *Say(A &&...args) {
     return Say(at_, std::forward<A>(args)...);
   }
 
