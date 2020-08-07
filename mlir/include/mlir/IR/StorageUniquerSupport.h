@@ -109,8 +109,8 @@ protected:
   /// The arguments are forwarded to 'ConcreteT::mutate'.
   template <typename... Args>
   LogicalResult mutate(Args &&...args) {
-    return UniquerT::mutate(this->getContext(), getImpl(),
-                            std::forward<Args>(args)...);
+    return UniquerT::template mutate<ConcreteT>(this->getContext(), getImpl(),
+                                                std::forward<Args>(args)...);
   }
 
   /// Default implementation that just returns success.

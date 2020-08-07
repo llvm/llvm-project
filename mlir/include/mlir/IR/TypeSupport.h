@@ -127,6 +127,7 @@ struct TypeUniquer {
   template <typename T, typename... Args>
   static T get(MLIRContext *ctx, unsigned kind, Args &&... args) {
     return ctx->getTypeUniquer().get<typename T::ImplType>(
+        T::getTypeID(),
         [&](TypeStorage *storage) {
           storage->initialize(AbstractType::lookup(T::getTypeID(), ctx));
         },
@@ -135,11 +136,12 @@ struct TypeUniquer {
 
   /// Change the mutable component of the given type instance in the provided
   /// context.
-  template <typename ImplType, typename... Args>
-  static LogicalResult mutate(MLIRContext *ctx, ImplType *impl,
+  template <typename T, typename... Args>
+  static LogicalResult mutate(MLIRContext *ctx, typename T::ImplType *impl,
                               Args &&...args) {
     assert(impl && "cannot mutate null type");
-    return ctx->getTypeUniquer().mutate(impl, std::forward<Args>(args)...);
+    return ctx->getTypeUniquer().mutate(T::getTypeID(), impl,
+                                        std::forward<Args>(args)...);
   }
 };
 } // namespace detail
