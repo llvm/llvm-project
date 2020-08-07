@@ -230,6 +230,11 @@ int64_t ShapedType::getSizeInBits() const {
   if (elementType.isIntOrFloat())
     return elementType.getIntOrFloatBitWidth() * getNumElements();
 
+  if (auto complexType = elementType.dyn_cast<ComplexType>()) {
+    elementType = complexType.getElementType();
+    return elementType.getIntOrFloatBitWidth() * getNumElements() * 2;
+  }
+
   // Tensors can have vectors and other tensors as elements, other shaped types
   // cannot.
   assert(isa<TensorType>() && "unsupported element type");
