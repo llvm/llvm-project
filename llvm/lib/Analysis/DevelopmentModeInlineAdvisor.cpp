@@ -81,13 +81,84 @@ public:
   void print(raw_fd_ostream &OutFile);
 
 private:
+  /// Write the values of one tensor as a list.
   template <typename T>
-  void writeTensor(raw_fd_ostream &OutFile, StringRef TensorName,
-                   const std::vector<T> &Tensor);
+  void writeTensorValues(raw_fd_ostream &OutFile, const char *TensorData,
+                         size_t ElemCount) const {
+    OutFile << "[";
+    const T *TypedData = reinterpret_cast<const T *>(TensorData);
+    for (size_t I = 0; I < ElemCount; ++I) {
+      if (I > 0)
+        OutFile << ", ";
+      OutFile << TypedData[I];
+    }
+    OutFile << "]";
+  }
+
+  /// Write a list of tensors as a sequence of TensorFlow FeatureList protobufs.
+  /// The tensors are assumed to be stored contiguously, in row-major format,
+  /// in the TensorData buffer. Each tensor has the shape given by Spec. The
+  /// feature name in the output is either the provided LoggingName, if
+  /// specified, otherwise it's the name of the tensor (as given by Spec).
+  template <typename T>
+  void
+  writeTensorsAsFeatureLists(raw_fd_ostream &OutFile, const TensorSpec &Spec,
+                             const T *TensorData, size_t TensorCount,
+                             Optional<StringRef> LoggingName = None) const {
+    writeRawTensorsAsFeatureLists(OutFile, Spec,
+                                  reinterpret_cast<const char *>(TensorData),
+                                  TensorCount, LoggingName);
+  }
+
+  /// Untyped implementation of the API above.
+  void
+  writeRawTensorsAsFeatureLists(raw_fd_ostream &OutFile, const TensorSpec &Spec,
+                                const char *TensorData, size_t TensorCount,
+                                Optional<StringRef> LoggingName = None) const {
+    const char *FieldName = "<invalid>";
+    std::function<void(const char *)> ValueWriter;
+    // The 'Feature' protobuf only has 3 possible fields: float_list,
+    // int64_list, or bytes_list, so we capture int32 values as int64. We don't
+    // support any other types.
+    if (Spec.isElementType<int64_t>()) {
+      FieldName = "int64_list";
+      ValueWriter = [&](const char *Data) {
+        writeTensorValues<int64_t>(OutFile, Data, Spec.getElementCount());
+      };
+    } else if (Spec.isElementType<int32_t>()) {
+      FieldName = "int64_list";
+      ValueWriter = [&](const char *Data) {
+        writeTensorValues<int32_t>(OutFile, Data, Spec.getElementCount());
+      };
+
+    } else if (Spec.isElementType<float>()) {
+      FieldName = "float_list";
+      ValueWriter = [&](const char *Data) {
+        writeTensorValues<float>(OutFile, Data, Spec.getElementCount());
+      };
+
+    } else
+      llvm_unreachable("Unsupported tensor type.");
+
+    OutFile << "  feature_list: {\n";
+    OutFile << "    key: "
+            << "\"" << (LoggingName ? *LoggingName : Spec.name()) << "\" ";
+    OutFile << "value: {\n";
+    size_t TensorByteSize = Spec.getElementCount() * Spec.getElementByteSize();
+    for (const char *P = TensorData,
+                    *E = TensorData + TensorByteSize * TensorCount;
+         P < E; P += TensorByteSize) {
+      OutFile << "      feature: { " << FieldName << ": { value: ";
+      ValueWriter(P);
+      OutFile << " } }\n";
+    }
+    OutFile << "    }\n";
+    OutFile << "  }\n";
+  }
 
   std::vector<InlineFeatures> Features;
-  std::vector<bool> DefaultDecisions;
-  std::vector<bool> Decisions;
+  std::vector<int64_t> DefaultDecisions;
+  std::vector<int64_t> Decisions;
   std::vector<bool> Effects;
   std::vector<int64_t> Rewards;
 };
@@ -294,33 +365,28 @@ void TrainingLogger::logInlineEvent(const InlineEvent &Event,
 }
 
 void TrainingLogger::print(raw_fd_ostream &OutFile) {
-  if (DefaultDecisions.empty())
+  size_t NumberOfRecords = Decisions.size();
+  if (NumberOfRecords == 0)
     return;
-  OutFile << "feature_lists: {\n";
 
-  for (size_t I = 0; I < Features.size(); I++) {
-    writeTensor(OutFile, FeatureNameMap.at(I), Features[I]);
-  }
-  writeTensor(OutFile, DefaultDecisionName, DefaultDecisions);
-  writeTensor(OutFile, DecisionName, Decisions);
-  writeTensor(OutFile, RewardName, Rewards);
+  OutFile << "feature_lists: {\n";
+  for (size_t I = 0; I < Features.size(); ++I)
+    writeTensorsAsFeatureLists(
+        OutFile, TensorSpec::createSpec<int64_t>(FeatureNameMap.at(I), {1}),
+        Features[I].data(), NumberOfRecords);
+
+  writeTensorsAsFeatureLists(
+      OutFile, TensorSpec::createSpec<int64_t>(DefaultDecisionName, {1}),
+      DefaultDecisions.data(), NumberOfRecords);
+
+  writeTensorsAsFeatureLists(OutFile,
+                             TensorSpec::createSpec<int64_t>(DecisionName, {1}),
+                             Decisions.data(), NumberOfRecords);
+  writeTensorsAsFeatureLists(OutFile,
+                             TensorSpec::createSpec<int64_t>(RewardName, {1}),
+                             Rewards.data(), NumberOfRecords);
 
   OutFile << "}\n";
-}
-
-template <typename T>
-void TrainingLogger::writeTensor(raw_fd_ostream &OutFile, StringRef TensorName,
-                                 const std::vector<T> &Tensor) {
-  OutFile << "  feature_list: {\n";
-  OutFile << "    key: "
-          << "\"" << TensorName << "\" ";
-  OutFile << "value: {\n";
-  for (const auto &Feature : Tensor) {
-    OutFile << "      feature: { int64_list: { value: [" << Feature
-            << "] } }\n";
-  }
-  OutFile << "    }\n";
-  OutFile << "  }\n";
 }
 
 DevelopmentModeMLInlineAdvisor::DevelopmentModeMLInlineAdvisor(
