@@ -101,10 +101,7 @@ public:
 
   unsigned getUniqueID() const { return ID; }
 
-  void createOutputDIE() {
-    NewUnit.emplace(OrigUnit.getVersion(), OrigUnit.getAddressByteSize(),
-                    OrigUnit.getUnitDIE().getTag());
-  }
+  void createOutputDIE() { NewUnit.emplace(OrigUnit.getUnitDIE().getTag()); }
 
   DIE *getOutputUnitDIE() const {
     if (NewUnit)

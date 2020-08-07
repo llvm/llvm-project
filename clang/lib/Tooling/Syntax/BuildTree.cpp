@@ -45,7 +45,7 @@
 using namespace clang;
 
 LLVM_ATTRIBUTE_UNUSED
-static bool isImplicitExpr(clang::Expr *E) { return E->IgnoreImplicit() != E; }
+static bool isImplicitExpr(Expr *E) { return E->IgnoreImplicit() != E; }
 
 namespace {
 /// Get start location of the Declarator from the TypeLoc.
@@ -275,15 +275,13 @@ public:
 
   /// Populate children for \p New node, assuming it covers tokens from \p
   /// Range.
-  void foldNode(llvm::ArrayRef<syntax::Token> Range, syntax::Tree *New,
-                ASTPtr From) {
+  void foldNode(ArrayRef<syntax::Token> Range, syntax::Tree *New, ASTPtr From) {
     assert(New);
     Pending.foldChildren(Arena, Range, New);
     if (From)
       Mapping.add(From, New);
   }
-  void foldNode(llvm::ArrayRef<syntax::Token> Range, syntax::Tree *New,
-                TypeLoc L) {
+  void foldNode(ArrayRef<syntax::Token> Range, syntax::Tree *New, TypeLoc L) {
     // FIXME: add mapping for TypeLocs
     foldNode(Range, New, nullptr);
   }
@@ -329,7 +327,7 @@ public:
   const syntax::Token *findToken(SourceLocation L) const;
 
   /// Finds the syntax tokens corresponding to the \p SourceRange.
-  llvm::ArrayRef<syntax::Token> getRange(SourceRange Range) const {
+  ArrayRef<syntax::Token> getRange(SourceRange Range) const {
     assert(Range.isValid());
     return getRange(Range.getBegin(), Range.getEnd());
   }
@@ -337,8 +335,8 @@ public:
   /// Finds the syntax tokens corresponding to the passed source locations.
   /// \p First is the start position of the first token and \p Last is the start
   /// position of the last token.
-  llvm::ArrayRef<syntax::Token> getRange(SourceLocation First,
-                                         SourceLocation Last) const {
+  ArrayRef<syntax::Token> getRange(SourceLocation First,
+                                   SourceLocation Last) const {
     assert(First.isValid());
     assert(Last.isValid());
     assert(First == Last ||
@@ -346,7 +344,7 @@ public:
     return llvm::makeArrayRef(findToken(First), std::next(findToken(Last)));
   }
 
-  llvm::ArrayRef<syntax::Token>
+  ArrayRef<syntax::Token>
   getTemplateRange(const ClassTemplateSpecializationDecl *D) const {
     auto Tokens = getRange(D->getSourceRange());
     return maybeAppendSemicolon(Tokens, D);
@@ -366,7 +364,7 @@ public:
     if (Next == nullptr) {
       return true;
     }
-    const auto *NextT = llvm::dyn_cast<T>(Next);
+    const auto *NextT = dyn_cast<T>(Next);
 
     // Next sibling is not the same type, this one is responsible.
     if (NextT == nullptr) {
@@ -383,23 +381,23 @@ public:
     return false;
   }
 
-  llvm::ArrayRef<syntax::Token> getDeclarationRange(Decl *D) {
-    llvm::ArrayRef<clang::syntax::Token> Tokens;
+  ArrayRef<syntax::Token> getDeclarationRange(Decl *D) {
+    ArrayRef<syntax::Token> Tokens;
     // We want to drop the template parameters for specializations.
-    if (const auto *S = llvm::dyn_cast<TagDecl>(D))
+    if (const auto *S = dyn_cast<TagDecl>(D))
       Tokens = getRange(S->TypeDecl::getBeginLoc(), S->getEndLoc());
     else
       Tokens = getRange(D->getSourceRange());
     return maybeAppendSemicolon(Tokens, D);
   }
 
-  llvm::ArrayRef<syntax::Token> getExprRange(const Expr *E) const {
+  ArrayRef<syntax::Token> getExprRange(const Expr *E) const {
     return getRange(E->getSourceRange());
   }
 
   /// Find the adjusted range for the statement, consuming the trailing
   /// semicolon when needed.
-  llvm::ArrayRef<syntax::Token> getStmtRange(const Stmt *S) const {
+  ArrayRef<syntax::Token> getStmtRange(const Stmt *S) const {
     auto Tokens = getRange(S->getSourceRange());
     if (isa<CompoundStmt>(S))
       return Tokens;
@@ -412,10 +410,9 @@ public:
   }
 
 private:
-  llvm::ArrayRef<syntax::Token>
-  maybeAppendSemicolon(llvm::ArrayRef<syntax::Token> Tokens,
-                       const Decl *D) const {
-    if (llvm::isa<NamespaceDecl>(D))
+  ArrayRef<syntax::Token> maybeAppendSemicolon(ArrayRef<syntax::Token> Tokens,
+                                               const Decl *D) const {
+    if (isa<NamespaceDecl>(D))
       return Tokens;
     if (DeclsWithoutSemicolons.count(D))
       return Tokens;
@@ -424,8 +421,8 @@ private:
     return withTrailingSemicolon(Tokens);
   }
 
-  llvm::ArrayRef<syntax::Token>
-  withTrailingSemicolon(llvm::ArrayRef<syntax::Token> Tokens) const {
+  ArrayRef<syntax::Token>
+  withTrailingSemicolon(ArrayRef<syntax::Token> Tokens) const {
     assert(!Tokens.empty());
     assert(Tokens.back().kind() != tok::eof);
     // We never consume 'eof', so looking at the next token is ok.
@@ -459,8 +456,7 @@ private:
       }
     }
 
-    void assignRole(llvm::ArrayRef<syntax::Token> Range,
-                    syntax::NodeRole Role) {
+    void assignRole(ArrayRef<syntax::Token> Range, syntax::NodeRole Role) {
       assert(!Range.empty());
       auto It = Trees.lower_bound(Range.begin());
       assert(It != Trees.end() && "no node found");
@@ -474,8 +470,7 @@ private:
     }
 
     /// Add \p Node to the forest and attach child nodes based on \p Tokens.
-    void foldChildren(const syntax::Arena &A,
-                      llvm::ArrayRef<syntax::Token> Tokens,
+    void foldChildren(const syntax::Arena &A, ArrayRef<syntax::Token> Tokens,
                       syntax::Tree *Node) {
       // Attach children to `Node`.
       assert(Node->firstChild() == nullptr && "node already has children");
@@ -523,9 +518,9 @@ private:
                 ? (std::next(It)->first - It->first)
                 : A.tokenBuffer().expandedTokens().end() - It->first;
 
-        R += std::string(llvm::formatv(
-            "- '{0}' covers '{1}'+{2} tokens\n", It->second->kind(),
-            It->first->text(A.sourceManager()), CoveredTokens));
+        R += std::string(
+            formatv("- '{0}' covers '{1}'+{2} tokens\n", It->second->kind(),
+                    It->first->text(A.sourceManager()), CoveredTokens));
         R += It->second->dump(A);
       }
       return R;
@@ -623,7 +618,7 @@ public:
           foldTemplateDeclaration(R, TemplateKW, DeclarationRange, nullptr);
       DeclarationRange = R;
     };
-    if (auto *S = llvm::dyn_cast<ClassTemplatePartialSpecializationDecl>(C))
+    if (auto *S = dyn_cast<ClassTemplatePartialSpecializationDecl>(C))
       ConsumeTemplateParameters(*S->getTemplateParameters());
     for (unsigned I = C->getNumTemplateParameterLists(); 0 < I; --I)
       ConsumeTemplateParameters(*C->getTemplateParameterList(I - 1));
@@ -677,11 +672,11 @@ public:
   }
 
   bool TraverseStmt(Stmt *S) {
-    if (auto *DS = llvm::dyn_cast_or_null<DeclStmt>(S)) {
+    if (auto *DS = dyn_cast_or_null<DeclStmt>(S)) {
       // We want to consume the semicolon, make sure SimpleDeclaration does not.
       for (auto *D : DS->decls())
         Builder.noticeDeclWithoutSemicolon(D);
-    } else if (auto *E = llvm::dyn_cast_or_null<Expr>(S)) {
+    } else if (auto *E = dyn_cast_or_null<Expr>(S)) {
       return RecursiveASTVisitor::TraverseStmt(E->IgnoreImplicit());
     }
     return RecursiveASTVisitor::TraverseStmt(S);
@@ -722,16 +717,16 @@ public:
   syntax::UserDefinedLiteralExpression *
   buildUserDefinedLiteral(UserDefinedLiteral *S) {
     switch (S->getLiteralOperatorKind()) {
-    case clang::UserDefinedLiteral::LOK_Integer:
+    case UserDefinedLiteral::LOK_Integer:
       return new (allocator()) syntax::IntegerUserDefinedLiteralExpression;
-    case clang::UserDefinedLiteral::LOK_Floating:
+    case UserDefinedLiteral::LOK_Floating:
       return new (allocator()) syntax::FloatUserDefinedLiteralExpression;
-    case clang::UserDefinedLiteral::LOK_Character:
+    case UserDefinedLiteral::LOK_Character:
       return new (allocator()) syntax::CharUserDefinedLiteralExpression;
-    case clang::UserDefinedLiteral::LOK_String:
+    case UserDefinedLiteral::LOK_String:
       return new (allocator()) syntax::StringUserDefinedLiteralExpression;
-    case clang::UserDefinedLiteral::LOK_Raw:
-    case clang::UserDefinedLiteral::LOK_Template:
+    case UserDefinedLiteral::LOK_Raw:
+    case UserDefinedLiteral::LOK_Template:
       // For raw literal operator and numeric literal operator template we
       // cannot get the type of the operand in the semantic AST. We get this
       // information from the token. As integer and floating point have the same
@@ -1183,7 +1178,7 @@ private:
     if (IsAnonymous)
       return SourceLocation();
 
-    if (const auto *DD = llvm::dyn_cast<DeclaratorDecl>(D)) {
+    if (const auto *DD = dyn_cast<DeclaratorDecl>(D)) {
       if (DD->getQualifierLoc()) {
         return DD->getQualifierLoc().getBeginLoc();
       }
@@ -1193,7 +1188,7 @@ private:
   }
 
   SourceRange getInitializerRange(Decl *D) {
-    if (auto *V = llvm::dyn_cast<VarDecl>(D)) {
+    if (auto *V = dyn_cast<VarDecl>(D)) {
       auto *I = V->getInit();
       // Initializers in range-based-for are not part of the declarator
       if (I && !V->isCXXForRangeDecl())
