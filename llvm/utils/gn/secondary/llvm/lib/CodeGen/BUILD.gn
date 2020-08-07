@@ -116,6 +116,7 @@ static_library("CodeGen") {
     "MachineOperand.cpp",
     "MachineOptimizationRemarkEmitter.cpp",
     "MachineOutliner.cpp",
+    "MachinePassManager.cpp",
     "MachinePipeliner.cpp",
     "MachinePostDominators.cpp",
     "MachineRegionInfo.cpp",
