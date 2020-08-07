@@ -1403,7 +1403,7 @@ private:
         auto boxChar = argRef;
         if (!boxChar.getType().isa<fir::BoxCharType>()) {
           Fortran::lower::CharacterExprHelper helper{builder, getLoc()};
-          auto ch = helper.materializeCharacter(boxChar);
+          auto ch = helper.materializeCharacterOrSequence(boxChar);
           boxChar = helper.createEmboxChar(ch.first, ch.second);
         }
         caller.placeInput(arg, boxChar);
