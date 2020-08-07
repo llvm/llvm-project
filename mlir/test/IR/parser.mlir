@@ -152,6 +152,12 @@ func @memref_with_vector_elems(memref<1x?xvector<10xf32>>)
 // CHECK: func @unranked_memref_with_complex_elems(memref<*xcomplex<f32>>)
 func @unranked_memref_with_complex_elems(memref<*xcomplex<f32>>)
 
+// CHECK: func @unranked_memref_with_index_elems(memref<*xindex>)
+func @unranked_memref_with_index_elems(memref<*xindex>)
+
+// CHECK: func @unranked_memref_with_vector_elems(memref<*xvector<10xf32>>)
+func @unranked_memref_with_vector_elems(memref<*xvector<10xf32>>)
+
 // CHECK: func @functions((memref<1x?x4x?x?xi32, #map0>, memref<8xi8>) -> (), () -> ())
 func @functions((memref<1x?x4x?x?xi32, #map0, 0>, memref<8xi8, #map1, 0>) -> (), ()->())
 
