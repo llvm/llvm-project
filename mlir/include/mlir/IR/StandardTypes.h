@@ -294,13 +294,7 @@ public:
   int64_t getSizeInBits() const;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool classof(Type type) {
-    return type.getKind() == StandardTypes::Vector ||
-           type.getKind() == StandardTypes::RankedTensor ||
-           type.getKind() == StandardTypes::UnrankedTensor ||
-           type.getKind() == StandardTypes::UnrankedMemRef ||
-           type.getKind() == StandardTypes::MemRef;
-  }
+  static bool classof(Type type);
 
   /// Whether the given dimension size indicates a dynamic dimension.
   static constexpr bool isDynamic(int64_t dSize) {
@@ -358,20 +352,10 @@ public:
   using ShapedType::ShapedType;
 
   /// Return true if the specified element type is ok in a tensor.
-  static bool isValidElementType(Type type) {
-    // Note: Non standard/builtin types are allowed to exist within tensor
-    // types. Dialects are expected to verify that tensor types have a valid
-    // element type within that dialect.
-    return type.isa<ComplexType, FloatType, IntegerType, OpaqueType, VectorType,
-                    IndexType>() ||
-           (type.getKind() > Type::Kind::LAST_STANDARD_TYPE);
-  }
+  static bool isValidElementType(Type type);
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool classof(Type type) {
-    return type.getKind() == StandardTypes::RankedTensor ||
-           type.getKind() == StandardTypes::UnrankedTensor;
-  }
+  static bool classof(Type type);
 };
 
 //===----------------------------------------------------------------------===//
@@ -443,10 +427,7 @@ public:
   using ShapedType::ShapedType;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool classof(Type type) {
-    return type.getKind() == StandardTypes::MemRef ||
-           type.getKind() == StandardTypes::UnrankedMemRef;
-  }
+  static bool classof(Type type);
 };
 
 //===----------------------------------------------------------------------===//
@@ -628,6 +609,23 @@ public:
     return getTypes()[index];
   }
 };
+
+//===----------------------------------------------------------------------===//
+// Deferred Method Definitions
+//===----------------------------------------------------------------------===//
+
+inline bool BaseMemRefType::classof(Type type) {
+  return type.isa<MemRefType, UnrankedMemRefType>();
+}
+
+inline bool ShapedType::classof(Type type) {
+  return type.isa<RankedTensorType, VectorType, UnrankedTensorType,
+                  UnrankedMemRefType, MemRefType>();
+}
+
+inline bool TensorType::classof(Type type) {
+  return type.isa<RankedTensorType, UnrankedTensorType>();
+}
 
 //===----------------------------------------------------------------------===//
 // Type Utilities

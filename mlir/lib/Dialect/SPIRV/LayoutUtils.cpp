@@ -78,20 +78,17 @@ Type VulkanLayoutUtils::decorateType(Type type, VulkanLayoutUtils::Size &size,
     size = alignment;
     return type;
   }
-
-  switch (type.getKind()) {
-  case spirv::TypeKind::Struct:
-    return decorateType(type.cast<spirv::StructType>(), size, alignment);
-  case spirv::TypeKind::Array:
-    return decorateType(type.cast<spirv::ArrayType>(), size, alignment);
-  case StandardTypes::Vector:
-    return decorateType(type.cast<VectorType>(), size, alignment);
-  case spirv::TypeKind::RuntimeArray:
+  if (auto structType = type.dyn_cast<spirv::StructType>())
+    return decorateType(structType, size, alignment);
+  if (auto arrayType = type.dyn_cast<spirv::ArrayType>())
+    return decorateType(arrayType, size, alignment);
+  if (auto vectorType = type.dyn_cast<VectorType>())
+    return decorateType(vectorType, size, alignment);
+  if (auto arrayType = type.dyn_cast<spirv::RuntimeArrayType>()) {
     size = std::numeric_limits<Size>().max();
-    return decorateType(type.cast<spirv::RuntimeArrayType>(), alignment);
-  default:
-    llvm_unreachable("unhandled SPIR-V type");
+    return decorateType(arrayType, alignment);
   }
+  llvm_unreachable("unhandled SPIR-V type");
 }
 
 Type VulkanLayoutUtils::decorateType(VectorType vectorType,
