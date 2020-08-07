@@ -34,7 +34,7 @@ while.body:                                       ; preds = %while.cond
   br label %while.cond
 
 while.end:                                        ; preds = %while.cond
-  ret i32 0
+  ret i32 %dec
 }
 
 attributes #0 = { optnone noinline }
