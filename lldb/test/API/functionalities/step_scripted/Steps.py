@@ -75,9 +75,29 @@ class StepUntil(StepWithChild):
         if not self.value.IsValid():
             return True
 
-        print("Got next value: %d"%(self.value.GetValueAsUnsigned()))
         if not self.value.GetValueDidChange():
             self.child_thread_plan = self.queue_child_thread_plan()
             return False
         else:
             return True
+
+# This plan does nothing, but sets stop_mode to the
+# value of GetStopOthers for this plan.
+class StepReportsStopOthers():
+    stop_mode_dict = {}
+    
+    def __init__(self, thread_plan, args_data, dict):
+        self.thread_plan = thread_plan
+        self.key = args_data.GetValueForKey("token").GetStringValue(1000)
+        
+    def should_stop(self, event):
+        self.thread_plan.SetPlanComplete(True)
+        print("Called in should_stop")
+        StepReportsStopOthers.stop_mode_dict[self.key] = self.thread_plan.GetStopOthers()
+        return True
+
+    def should_step(self):
+        return True
+
+    def explains_stop(self, event):
+        return True
