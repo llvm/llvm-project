@@ -44,11 +44,6 @@ struct OpaqueTypeStorage;
 ///
 /// Derived type classes are expected to implement several required
 /// implementation hooks:
-///  * Required:
-///    - static bool kindof(unsigned kind);
-///      * Returns if the provided type kind corresponds to an instance of the
-///        current type. Used for isa/dyn_cast casting functionality.
-///
 ///  * Optional:
 ///    - static LogicalResult verifyConstructionInvariants(Location loc,
 ///                                                        Args... args)
@@ -136,6 +131,10 @@ public:
 
   // Support type casting Type to itself.
   static bool classof(Type) { return true; }
+
+  /// Return a unique identifier for the concrete type. This is used to support
+  /// dynamic type casting.
+  TypeID getTypeID() { return impl->getAbstractType().getTypeID(); }
 
   /// Return the classification for this type.
   unsigned getKind() const;
@@ -262,7 +261,6 @@ public:
 
   // Input types.
   unsigned getNumInputs() const;
-
   Type getInput(unsigned i) const { return getInputs()[i]; }
   ArrayRef<Type> getInputs() const;
 
@@ -270,9 +268,6 @@ public:
   unsigned getNumResults() const;
   Type getResult(unsigned i) const { return getResults()[i]; }
   ArrayRef<Type> getResults() const;
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) { return kind == Kind::Function; }
 };
 
 //===----------------------------------------------------------------------===//
@@ -307,8 +302,6 @@ public:
   static LogicalResult verifyConstructionInvariants(Location loc,
                                                     Identifier dialect,
                                                     StringRef typeData);
-
-  static bool kindof(unsigned kind) { return kind == Kind::Opaque; }
 };
 
 // Make Type hashable.

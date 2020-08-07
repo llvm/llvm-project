@@ -322,6 +322,11 @@ ArrayRef<LLVMType> LLVMStructType::getBody() {
 //===----------------------------------------------------------------------===//
 // Vector types.
 
+/// Support type casting functionality.
+bool LLVMVectorType::classof(Type type) {
+  return type.isa<LLVMFixedVectorType, LLVMScalableVectorType>();
+}
+
 LLVMType LLVMVectorType::getElementType() {
   // Both derived classes share the implementation type.
   return static_cast<detail::LLVMTypeAndSizeStorage *>(impl)->elementType;
@@ -331,7 +336,7 @@ llvm::ElementCount LLVMVectorType::getElementCount() {
   // Both derived classes share the implementation type.
   return llvm::ElementCount(
       static_cast<detail::LLVMTypeAndSizeStorage *>(impl)->numElements,
-      this->isa<LLVMScalableVectorType>());
+      isa<LLVMScalableVectorType>());
 }
 
 LLVMFixedVectorType LLVMFixedVectorType::get(LLVMType elementType,
