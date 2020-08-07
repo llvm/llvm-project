@@ -943,6 +943,8 @@ def fno_elide_type : Flag<["-"], "fno-elide-type">, Group<f_Group>,
     Flags<[CC1Option]>,
     HelpText<"Do not elide types when printing diagnostics">;
 def feliminate_unused_debug_symbols : Flag<["-"], "feliminate-unused-debug-symbols">, Group<f_Group>;
+defm eliminate_unused_debug_types : OptOutFFlag<"eliminate-unused-debug-types",
+  "Do not emit ", "Emit ", " debug info for defined but unused types">;
 def femit_all_decls : Flag<["-"], "femit-all-decls">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Emit all declarations, even if unused">;
 def femulated_tls : Flag<["-"], "femulated-tls">, Group<f_Group>, Flags<[CC1Option]>,
@@ -3321,7 +3323,6 @@ def fdiagnostics_show_location_EQ : Joined<["-"], "fdiagnostics-show-location=">
 defm fcheck_new : BooleanFFlag<"check-new">, Group<clang_ignored_f_Group>;
 defm caller_saves : BooleanFFlag<"caller-saves">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm reorder_blocks : BooleanFFlag<"reorder-blocks">, Group<clang_ignored_gcc_optimization_f_Group>;
-defm eliminate_unused_debug_types : BooleanFFlag<"eliminate-unused-debug-types">, Group<clang_ignored_f_Group>;
 defm branch_count_reg : BooleanFFlag<"branch-count-reg">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm default_inline : BooleanFFlag<"default-inline">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm fat_lto_objects : BooleanFFlag<"fat-lto-objects">, Group<clang_ignored_gcc_optimization_f_Group>;
