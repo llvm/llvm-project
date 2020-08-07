@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Quant/QuantTypes.h"
 #include "TypeDetail.h"
+#include "mlir/Dialect/Quant/QuantOps.h"
 
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/StandardTypes.h"
@@ -21,6 +22,10 @@ using namespace mlir::quant::detail;
 
 unsigned QuantizedType::getFlags() const {
   return static_cast<ImplType *>(impl)->flags;
+}
+
+bool QuantizedType::classof(Type type) {
+  return llvm::isa<QuantizationDialect>(type.getDialect());
 }
 
 LogicalResult QuantizedType::verifyConstructionInvariants(

@@ -18,6 +18,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::spirv;
@@ -163,18 +164,11 @@ Optional<int64_t> ArrayType::getSizeInBytes() {
 //===----------------------------------------------------------------------===//
 
 bool CompositeType::classof(Type type) {
-  switch (type.getKind()) {
-  case TypeKind::Array:
-  case TypeKind::CooperativeMatrix:
-  case TypeKind::Matrix:
-  case TypeKind::RuntimeArray:
-  case TypeKind::Struct:
-    return true;
-  case StandardTypes::Vector:
-    return isValid(type.cast<VectorType>());
-  default:
-    return false;
-  }
+  if (auto vectorType = type.dyn_cast<VectorType>())
+    return isValid(vectorType);
+  return type
+      .isa<spirv::ArrayType, spirv::CooperativeMatrixNVType, spirv::MatrixType,
+           spirv::RuntimeArrayType, spirv::StructType>();
 }
 
 bool CompositeType::isValid(VectorType type) {
@@ -183,22 +177,14 @@ bool CompositeType::isValid(VectorType type) {
 }
 
 Type CompositeType::getElementType(unsigned index) const {
-  switch (getKind()) {
-  case spirv::TypeKind::Array:
-    return cast<ArrayType>().getElementType();
-  case spirv::TypeKind::CooperativeMatrix:
-    return cast<CooperativeMatrixNVType>().getElementType();
-  case spirv::TypeKind::Matrix:
-    return cast<MatrixType>().getColumnType();
-  case spirv::TypeKind::RuntimeArray:
-    return cast<RuntimeArrayType>().getElementType();
-  case spirv::TypeKind::Struct:
-    return cast<StructType>().getElementType(index);
-  case StandardTypes::Vector:
-    return cast<VectorType>().getElementType();
-  default:
-    llvm_unreachable("invalid composite type");
-  }
+  return TypeSwitch<Type, Type>(*this)
+      .Case<ArrayType, CooperativeMatrixNVType, RuntimeArrayType, VectorType>(
+          [](auto type) { return type.getElementType(); })
+      .Case<MatrixType>([](MatrixType type) { return type.getColumnType(); })
+      .Case<StructType>(
+          [index](StructType type) { return type.getElementType(index); })
+      .Default(
+          [](Type) -> Type { llvm_unreachable("invalid composite type"); });
 }
 
 unsigned CompositeType::getNumElements() const {

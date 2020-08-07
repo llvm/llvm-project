@@ -11,6 +11,7 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Dialect.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Twine.h"
 
@@ -244,16 +245,11 @@ int64_t ShapedType::getSizeInBits() const {
 }
 
 ArrayRef<int64_t> ShapedType::getShape() const {
-  switch (getKind()) {
-  case StandardTypes::Vector:
-    return cast<VectorType>().getShape();
-  case StandardTypes::RankedTensor:
-    return cast<RankedTensorType>().getShape();
-  case StandardTypes::MemRef:
-    return cast<MemRefType>().getShape();
-  default:
-    llvm_unreachable("not a ShapedType or not ranked");
-  }
+  if (auto vectorType = dyn_cast<VectorType>())
+    return vectorType.getShape();
+  if (auto tensorType = dyn_cast<RankedTensorType>())
+    return tensorType.getShape();
+  return cast<MemRefType>().getShape();
 }
 
 int64_t ShapedType::getNumDynamicDims() const {
@@ -305,11 +301,21 @@ ArrayRef<int64_t> VectorType::getShape() const { return getImpl()->getShape(); }
 
 // Check if "elementType" can be an element type of a tensor. Emit errors if
 // location is not nullptr.  Returns failure if check failed.
-static inline LogicalResult checkTensorElementType(Location location,
-                                                   Type elementType) {
+static LogicalResult checkTensorElementType(Location location,
+                                            Type elementType) {
   if (!TensorType::isValidElementType(elementType))
     return emitError(location, "invalid tensor element type");
   return success();
+}
+
+/// Return true if the specified element type is ok in a tensor.
+bool TensorType::isValidElementType(Type type) {
+  // Note: Non standard/builtin types are allowed to exist within tensor
+  // types. Dialects are expected to verify that tensor types have a valid
+  // element type within that dialect.
+  return type.isa<ComplexType, FloatType, IntegerType, OpaqueType, VectorType,
+                  IndexType>() ||
+         !type.getDialect().getNamespace().empty();
 }
 
 //===----------------------------------------------------------------------===//
