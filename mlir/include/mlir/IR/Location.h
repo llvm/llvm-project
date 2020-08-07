@@ -42,10 +42,7 @@ public:
   using Attribute::Attribute;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool classof(Attribute attr) {
-    return attr.getKind() >= StandardAttributes::FIRST_LOCATION_ATTR &&
-           attr.getKind() <= StandardAttributes::LAST_LOCATION_ATTR;
-  }
+  static bool classof(Attribute attr);
 };
 
 /// This class defines the main interface for locations in MLIR and acts as a

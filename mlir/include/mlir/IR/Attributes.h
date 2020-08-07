@@ -661,10 +661,7 @@ public:
                          function_ref<APInt(const APFloat &)> mapping) const;
 
   /// Method for support type inquiry through isa, cast and dyn_cast.
-  static bool classof(Attribute attr) {
-    return attr.getKind() >= StandardAttributes::FIRST_ELEMENTS_ATTR &&
-           attr.getKind() <= StandardAttributes::LAST_ELEMENTS_ATTR;
-  }
+  static bool classof(Attribute attr);
 
 protected:
   /// Returns the 1 dimensional flattened row-major index from the given
@@ -729,10 +726,7 @@ public:
   using ElementsAttr::ElementsAttr;
 
   /// Method for support type inquiry through isa, cast and dyn_cast.
-  static bool classof(Attribute attr) {
-    return attr.getKind() == StandardAttributes::DenseIntOrFPElements ||
-           attr.getKind() == StandardAttributes::DenseStringElements;
-  }
+  static bool classof(Attribute attr);
 
   /// Constructs a dense elements attribute from an array of element values.
   /// Each element attribute value is expected to be an element of 'type'.
@@ -1513,12 +1507,10 @@ class ElementsAttrIterator
   template <typename RetT, template <typename> class ProcessFn,
             typename... Args>
   RetT process(Args &... args) const {
-    switch (attrKind) {
-    case StandardAttributes::DenseIntOrFPElements:
+    if (attr.isa<DenseElementsAttr>())
       return ProcessFn<DenseIteratorT>()(args...);
-    case StandardAttributes::SparseElements:
+    if (attr.isa<SparseElementsAttr>())
       return ProcessFn<SparseIteratorT>()(args...);
-    }
     llvm_unreachable("unexpected attribute kind");
   }
 
@@ -1543,22 +1535,21 @@ class ElementsAttrIterator
   };
 
 public:
-  ElementsAttrIterator(const ElementsAttrIterator<T> &rhs)
-      : attrKind(rhs.attrKind) {
+  ElementsAttrIterator(const ElementsAttrIterator<T> &rhs) : attr(rhs.attr) {
     process<void, ConstructIter>(it, rhs.it);
   }
   ~ElementsAttrIterator() { process<void, DestructIter>(it); }
 
   /// Methods necessary to support random access iteration.
   ptrdiff_t operator-(const ElementsAttrIterator<T> &rhs) const {
-    assert(attrKind == rhs.attrKind && "incompatible iterators");
+    assert(attr == rhs.attr && "incompatible iterators");
     return process<ptrdiff_t, Minus>(it, rhs.it);
   }
   bool operator==(const ElementsAttrIterator<T> &rhs) const {
-    return rhs.attrKind == attrKind && process<bool, std::equal_to>(it, rhs.it);
+    return rhs.attr == attr && process<bool, std::equal_to>(it, rhs.it);
   }
   bool operator<(const ElementsAttrIterator<T> &rhs) const {
-    assert(attrKind == rhs.attrKind && "incompatible iterators");
+    assert(attr == rhs.attr && "incompatible iterators");
     return process<bool, std::less>(it, rhs.it);
   }
   ElementsAttrIterator<T> &operator+=(ptrdiff_t offset) {
@@ -1575,14 +1566,14 @@ public:
 
 private:
   template <typename IteratorT>
-  ElementsAttrIterator(unsigned attrKind, IteratorT &&it)
-      : attrKind(attrKind), it(std::forward<IteratorT>(it)) {}
+  ElementsAttrIterator(Attribute attr, IteratorT &&it)
+      : attr(attr), it(std::forward<IteratorT>(it)) {}
 
   /// Allow accessing the constructor.
   friend ElementsAttr;
 
-  /// The kind of derived elements attribute.
-  unsigned attrKind;
+  /// The parent elements attribute.
+  Attribute attr;
 
   /// A union containing the specific iterators for each derived kind.
   Iterator it;
@@ -1599,13 +1590,13 @@ template <typename T>
 auto ElementsAttr::getValues() const -> iterator_range<T> {
   if (DenseElementsAttr denseAttr = dyn_cast<DenseElementsAttr>()) {
     auto values = denseAttr.getValues<T>();
-    return {iterator<T>(getKind(), values.begin()),
-            iterator<T>(getKind(), values.end())};
+    return {iterator<T>(*this, values.begin()),
+            iterator<T>(*this, values.end())};
   }
   if (SparseElementsAttr sparseAttr = dyn_cast<SparseElementsAttr>()) {
     auto values = sparseAttr.getValues<T>();
-    return {iterator<T>(getKind(), values.begin()),
-            iterator<T>(getKind(), values.end())};
+    return {iterator<T>(*this, values.begin()),
+            iterator<T>(*this, values.end())};
   }
   llvm_unreachable("unexpected attribute kind");
 }
