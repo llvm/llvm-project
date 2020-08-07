@@ -1176,7 +1176,11 @@ static ExprResult formImmediatelyDeclaredConstraint(
   // template<C1... T> struct s1;
   //
   // The constraint: (C1<T> && ...)
-  return S.BuildCXXFoldExpr(/*LParenLoc=*/SourceLocation(),
+  //
+  // Note that the type of C1<T> is known to be 'bool', so we don't need to do
+  // any unqualified lookups for 'operator&&' here.
+  return S.BuildCXXFoldExpr(/*UnqualifiedLookup=*/nullptr,
+                            /*LParenLoc=*/SourceLocation(),
                             ImmediatelyDeclaredConstraint.get(), BO_LAnd,
                             EllipsisLoc, /*RHS=*/nullptr,
                             /*RParenLoc=*/SourceLocation(),
