@@ -653,7 +653,7 @@ mlir::spirv::setABIAttrs(spirv::FuncOp funcOp,
                          ArrayRef<spirv::InterfaceVarABIAttr> argABIInfo) {
   // Set the attributes for argument and the function.
   StringRef argABIAttrName = spirv::getInterfaceVarABIAttrName();
-  for (auto argIndex : llvm::seq<unsigned>(0, funcOp.getNumArguments())) {
+  for (auto argIndex : llvm::seq<unsigned>(0, argABIInfo.size())) {
     funcOp.setArgAttr(argIndex, argABIAttrName, argABIInfo[argIndex]);
   }
   funcOp.setAttr(spirv::getEntryPointABIAttrName(), entryPointInfo);

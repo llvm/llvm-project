@@ -90,6 +90,16 @@ spirv::getInterfaceVarABIAttr(unsigned descriptorSet, unsigned binding,
                                          context);
 }
 
+bool spirv::needsInterfaceVarABIAttrs(spirv::TargetEnvAttr targetAttr) {
+  for (spirv::Capability cap : targetAttr.getCapabilities()) {
+    if (cap == spirv::Capability::Kernel)
+      return false;
+    if (cap == spirv::Capability::Shader)
+      return true;
+  }
+  return false;
+}
+
 StringRef spirv::getEntryPointABIAttrName() { return "spv.entry_point_abi"; }
 
 spirv::EntryPointABIAttr
@@ -164,4 +174,38 @@ spirv::TargetEnvAttr spirv::lookupTargetEnvOrDefault(Operation *op) {
     return attr;
 
   return getDefaultTargetEnv(op->getContext());
+}
+
+spirv::AddressingModel
+spirv::getAddressingModel(spirv::TargetEnvAttr targetAttr) {
+  for (spirv::Capability cap : targetAttr.getCapabilities()) {
+    // TODO: Physical64 is hard-coded here, but some information should come
+    // from TargetEnvAttr to selected between Physical32 and Physical64.
+    if (cap == Capability::Kernel)
+      return spirv::AddressingModel::Physical64;
+  }
+  // Logical addressing doesn't need any capabilities so return it as default.
+  return spirv::AddressingModel::Logical;
+}
+
+FailureOr<spirv::ExecutionModel>
+spirv::getExecutionModel(spirv::TargetEnvAttr targetAttr) {
+  for (spirv::Capability cap : targetAttr.getCapabilities()) {
+    if (cap == spirv::Capability::Kernel)
+      return spirv::ExecutionModel::Kernel;
+    if (cap == spirv::Capability::Shader)
+      return spirv::ExecutionModel::GLCompute;
+  }
+  return failure();
+}
+
+FailureOr<spirv::MemoryModel>
+spirv::getMemoryModel(spirv::TargetEnvAttr targetAttr) {
+  for (spirv::Capability cap : targetAttr.getCapabilities()) {
+    if (cap == spirv::Capability::Addresses)
+      return spirv::MemoryModel::OpenCL;
+    if (cap == spirv::Capability::Shader)
+      return spirv::MemoryModel::GLSL450;
+  }
+  return failure();
 }
