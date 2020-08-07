@@ -686,6 +686,14 @@ sizeof...($TemplateParameter[[Elements]]);
       void $Function[[bar]]($TemplateParameter[[T]] $Parameter[[F]]) {
         $Parameter[[F]].$DependentName[[foo]]();
       }
+    )cpp",
+      // Dependent template name
+      R"cpp(
+      template <template <typename> class> struct $Class[[A]] {};
+      template <typename $TemplateParameter[[T]]>
+      using $Typedef[[W]] = $Class[[A]]<
+        $TemplateParameter[[T]]::template $DependentType[[Waldo]]
+      >;
     )cpp"};
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);

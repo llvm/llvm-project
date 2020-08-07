@@ -296,6 +296,18 @@ public:
     return true;
   }
 
+  bool TraverseTemplateArgumentLoc(TemplateArgumentLoc L) {
+    switch (L.getArgument().getKind()) {
+    case TemplateArgument::Template:
+    case TemplateArgument::TemplateExpansion:
+      H.addToken(L.getTemplateNameLoc(), HighlightingKind::DependentType);
+      break;
+    default:
+      break;
+    }
+    return RecursiveASTVisitor::TraverseTemplateArgumentLoc(L);
+  }
+
   // findExplicitReferences will walk nested-name-specifiers and
   // find anything that can be resolved to a Decl. However, non-leaf
   // components of nested-name-specifiers which are dependent names
