@@ -440,7 +440,7 @@ bool MetadataStreamerV2::emitTo(AMDGPUTargetStreamer &TargetStreamer) {
   return TargetStreamer.EmitHSAMetadata(getHSAMetadata());
 }
 
-void MetadataStreamerV2::begin(const Module &Mod) {
+void MetadataStreamerV2::begin(const Module &Mod, StringRef TargetID) {
   emitVersion();
   emitPrintf(Mod);
 }
@@ -616,6 +616,11 @@ void MetadataStreamerV3::emitVersion() {
   Version.push_back(Version.getDocument()->getNode(VersionMajor));
   Version.push_back(Version.getDocument()->getNode(VersionMinor));
   getRootMetadata("amdhsa.version") = Version;
+}
+
+void MetadataStreamerV3::emitTargetID(StringRef TargetID) {
+  getRootMetadata("amdhsa.target") =
+      HSAMetadataDoc->getNode(TargetID, /*Copy=*/true);
 }
 
 void MetadataStreamerV3::emitPrintf(const Module &Mod) {
@@ -886,8 +891,10 @@ bool MetadataStreamerV3::emitTo(AMDGPUTargetStreamer &TargetStreamer) {
   return TargetStreamer.EmitHSAMetadata(*HSAMetadataDoc, true);
 }
 
-void MetadataStreamerV3::begin(const Module &Mod) {
+void MetadataStreamerV3::begin(const Module &Mod, StringRef TargetID) {
   emitVersion();
+  if (enableNewTargetID())
+    emitTargetID(TargetID);
   emitPrintf(Mod);
   getRootMetadata("amdhsa.kernels") = HSAMetadataDoc->getArrayNode();
 }

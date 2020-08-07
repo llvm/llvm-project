@@ -172,8 +172,23 @@ void AMDGPUTargetAsmStreamer::finish() {
   OS << S;
 }
 
-void AMDGPUTargetAsmStreamer::EmitDirectiveAMDGCNTarget(StringRef Target) {
-  OS << "\t.amdgcn_target \"" << Target << "\"\n";
+void AMDGPUTargetAsmStreamer::EmitDirectiveAMDGCNTarget(
+    const MCSubtargetInfo &STI, StringRef TargetID) {
+  if (!IsaInfo::hasCodeObjectV3(&STI)) {
+    // V2 does not have TargetID concept.
+    return;
+  }
+  if (!enableNewTargetID()) {
+    // V3 + Original TargetID.
+    std::string ConstructedTargetIDStr;
+    raw_string_ostream ConstructedTargetIDOStr(ConstructedTargetIDStr);
+    IsaInfo::streamIsaVersion(&STI, ConstructedTargetIDOStr);
+    OS << "\t.amdgcn_target \"" << ConstructedTargetIDStr << "\"\n";
+    return;
+  }
+
+  // V3 + New TargetID.
+  OS << "\t.amdgcn_target \"" << TargetID << "\"\n";
 }
 
 void AMDGPUTargetAsmStreamer::EmitDirectiveHSACodeObjectVersion(
@@ -397,20 +412,30 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
 
 AMDGPUTargetELFStreamer::AMDGPUTargetELFStreamer(MCStreamer &S,
                                                  const MCSubtargetInfo &STI)
-    : AMDGPUTargetStreamer(S), Streamer(S), Os(STI.getTargetTriple().getOS()) {
+    : AMDGPUTargetStreamer(S), Streamer(S), STI(STI) {
   MCAssembler &MCA = getStreamer().getAssembler();
   unsigned EFlags = MCA.getELFHeaderEFlags();
 
   EFlags &= ~ELF::EF_AMDGPU_MACH;
   EFlags |= getElfMach(STI.getCPU());
 
-  EFlags &= ~ELF::EF_AMDGPU_XNACK;
-  if (AMDGPU::hasXNACK(STI))
-    EFlags |= ELF::EF_AMDGPU_XNACK;
+  if (!enableNewTargetID()) {
+    // V2, V3 + Original TargetID.
+    EFlags &= ~ELF::EF_AMDGPU_XNACK;
+    if (AMDGPU::hasXNACK(STI))
+      EFlags |= ELF::EF_AMDGPU_XNACK;
 
-  EFlags &= ~ELF::EF_AMDGPU_SRAM_ECC;
-  if (AMDGPU::hasSRAMECC(STI))
-    EFlags |= ELF::EF_AMDGPU_SRAM_ECC;
+    EFlags &= ~ELF::EF_AMDGPU_SRAM_ECC;
+    if (AMDGPU::hasSRAMECC(STI))
+      EFlags |= ELF::EF_AMDGPU_SRAM_ECC;
+  } else {
+    // V3 + New TargetID.
+    EFlags &= ~ELF::EF_AMDGPU_FEATURE_XNACK;
+    EFlags |= ELF::EF_AMDGPU_FEATURE_XNACK_DEFAULT;
+
+    EFlags &= ~ELF::EF_AMDGPU_FEATURE_SRAM_ECC;
+    EFlags |= ELF::EF_AMDGPU_FEATURE_SRAM_ECC_DEFAULT;
+  }
 
   MCA.setELFHeaderEFlags(EFlags);
 }
@@ -443,7 +468,7 @@ void AMDGPUTargetELFStreamer::EmitNote(
   unsigned NoteFlags = 0;
   // TODO Apparently, this is currently needed for OpenCL as mentioned in
   // https://reviews.llvm.org/D74995
-  if (Os == Triple::AMDHSA)
+  if (STI.getTargetTriple().getOS() == Triple::AMDHSA)
     NoteFlags = ELF::SHF_ALLOC;
 
   S.PushSection();
@@ -459,7 +484,34 @@ void AMDGPUTargetELFStreamer::EmitNote(
   S.PopSection();
 }
 
-void AMDGPUTargetELFStreamer::EmitDirectiveAMDGCNTarget(StringRef Target) {}
+void AMDGPUTargetELFStreamer::EmitDirectiveAMDGCNTarget(
+    const MCSubtargetInfo &STI, StringRef TargetID) {
+  if (!IsaInfo::hasCodeObjectV3(&STI)) {
+    // V2 is setup in the constructor.
+    return;
+  }
+  if (!enableNewTargetID()) {
+    // V3 + Original TargetID is setup in the constructor.
+    return;
+  }
+
+  MCAssembler &MCA = getStreamer().getAssembler();
+  unsigned EFlags = MCA.getELFHeaderEFlags();
+
+  // V3 + New TargetID (default is already setup in the constructor).
+  if (auto XNACK = getXnackFromTargetID(TargetID)) {
+    EFlags &= ~ELF::EF_AMDGPU_FEATURE_XNACK;
+    EFlags |= XNACK.getValue() ? ELF::EF_AMDGPU_FEATURE_XNACK_ON
+                               : ELF::EF_AMDGPU_FEATURE_XNACK_OFF;
+  }
+  if (auto SRAM_ECC = getSramEccFromTargetID(TargetID)) {
+    EFlags &= ~ELF::EF_AMDGPU_FEATURE_SRAM_ECC;
+    EFlags |= SRAM_ECC.getValue() ? ELF::EF_AMDGPU_FEATURE_SRAM_ECC_ON
+                                  : ELF::EF_AMDGPU_FEATURE_SRAM_ECC_OFF;
+  }
+
+  MCA.setELFHeaderEFlags(EFlags);
+}
 
 void AMDGPUTargetELFStreamer::EmitDirectiveHSACodeObjectVersion(
     uint32_t Major, uint32_t Minor) {

@@ -43,7 +43,7 @@ public:
 
   virtual bool emitTo(AMDGPUTargetStreamer &TargetStreamer) = 0;
 
-  virtual void begin(const Module &Mod) = 0;
+  virtual void begin(const Module &Mod, StringRef TargetID) = 0;
 
   virtual void end() = 0;
 
@@ -75,6 +75,8 @@ private:
                                         const SIProgramInfo &ProgramInfo) const;
 
   void emitVersion();
+
+  void emitTargetID(StringRef TargetID);
 
   void emitPrintf(const Module &Mod);
 
@@ -111,7 +113,7 @@ public:
 
   bool emitTo(AMDGPUTargetStreamer &TargetStreamer) override;
 
-  void begin(const Module &Mod) override;
+  void begin(const Module &Mod, StringRef TargetID) override;
 
   void end() override;
 
@@ -175,7 +177,7 @@ public:
 
   bool emitTo(AMDGPUTargetStreamer &TargetStreamer) override;
 
-  void begin(const Module &Mod) override;
+  void begin(const Module &Mod, StringRef TargetID) override;
 
   void end() override;
 

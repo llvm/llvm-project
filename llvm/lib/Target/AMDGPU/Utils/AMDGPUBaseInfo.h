@@ -37,6 +37,23 @@ class Triple;
 
 namespace AMDGPU {
 
+/// \returns True if new target identification string is enabled, false
+/// otherwise.
+bool enableNewTargetID();
+
+/// \returns None for "default", false for "off", true for "on".
+Optional<bool> getFeatureFromTargetID(StringRef TargetID, StringRef Feature);
+
+/// \returns None for "default", false for "off", true for "on".
+Optional<bool> getXnackFromTargetID(StringRef TargetID);
+
+/// \returns None for "default", false for "off", true for "on".
+Optional<bool> getSramEccFromTargetID(StringRef TargetID);
+
+/// \returns True if \p STI is equivalent to \p TargetID, false otherwise.
+bool isSubtargetInfoEquivalentToTargetID(const MCSubtargetInfo *STI,
+                                         StringRef TargetID);
+
 struct GcnBufferFormatInfo {
   unsigned Format;
   unsigned BitsPerComp;

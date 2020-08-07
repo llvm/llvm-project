@@ -17,6 +17,7 @@
 
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPU.h"
+#include "AMDGPUMachineModuleInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
@@ -129,20 +130,17 @@ AMDGPUTargetStreamer* AMDGPUAsmPrinter::getTargetStreamer() const {
 }
 
 void AMDGPUAsmPrinter::emitStartOfAsmFile(Module &M) {
-  if (IsaInfo::hasCodeObjectV3(getGlobalSTI())) {
-    std::string ExpectedTarget;
-    raw_string_ostream ExpectedTargetOS(ExpectedTarget);
-    IsaInfo::streamIsaVersion(getGlobalSTI(), ExpectedTargetOS);
-
-    getTargetStreamer()->EmitDirectiveAMDGCNTarget(ExpectedTarget);
-  }
-
   if (TM.getTargetTriple().getOS() != Triple::AMDHSA &&
       TM.getTargetTriple().getOS() != Triple::AMDPAL)
     return;
 
+  StringRef TargetID =
+      MMI->getObjFileInfo<AMDGPUMachineModuleInfo>().getTargetID();
+  if (IsaInfo::hasCodeObjectV3(getGlobalSTI()) || enableNewTargetID())
+    getTargetStreamer()->EmitDirectiveAMDGCNTarget(*getGlobalSTI(), TargetID);
+
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA)
-    HSAMetadataStream->begin(M);
+    HSAMetadataStream->begin(M, TargetID);
 
   if (TM.getTargetTriple().getOS() == Triple::AMDPAL)
     getTargetStreamer()->getPALMetadata()->readFromIR(M);

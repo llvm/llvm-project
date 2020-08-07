@@ -430,8 +430,23 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1011, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1012, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1030, EF_AMDGPU_MACH);
-    BCase(EF_AMDGPU_XNACK);
-    BCase(EF_AMDGPU_SRAM_ECC);
+    switch (Object->Header.ABIVersion) {
+    case 0:
+    case 1:
+      BCase(EF_AMDGPU_XNACK);
+      BCase(EF_AMDGPU_SRAM_ECC);
+      break;
+    case 2:
+      BCaseMask(EF_AMDGPU_FEATURE_XNACK_DEFAULT, EF_AMDGPU_FEATURE_XNACK);
+      BCaseMask(EF_AMDGPU_FEATURE_XNACK_OFF, EF_AMDGPU_FEATURE_XNACK);
+      BCaseMask(EF_AMDGPU_FEATURE_XNACK_ON, EF_AMDGPU_FEATURE_XNACK);
+      BCaseMask(EF_AMDGPU_FEATURE_SRAM_ECC_DEFAULT, EF_AMDGPU_FEATURE_SRAM_ECC);
+      BCaseMask(EF_AMDGPU_FEATURE_SRAM_ECC_OFF, EF_AMDGPU_FEATURE_SRAM_ECC);
+      BCaseMask(EF_AMDGPU_FEATURE_SRAM_ECC_ON, EF_AMDGPU_FEATURE_SRAM_ECC);
+      break;
+    default:
+      llvm_unreachable("Unsupported ABI Version");
+    }
     break;
   case ELF::EM_X86_64:
     break;

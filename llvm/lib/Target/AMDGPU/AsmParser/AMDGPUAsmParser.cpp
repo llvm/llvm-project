@@ -3789,22 +3789,28 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGCNTarget() {
   if (getSTI().getTargetTriple().getArch() != Triple::amdgcn)
     return TokError("directive only supported for amdgcn architecture");
 
-  std::string Target;
+  std::string TargetID;
 
   SMLoc TargetStart = getTok().getLoc();
-  if (getParser().parseEscapedString(Target))
+  if (getParser().parseEscapedString(TargetID))
     return true;
   SMRange TargetRange = SMRange(TargetStart, getTok().getLoc());
 
-  std::string ExpectedTarget;
-  raw_string_ostream ExpectedTargetOS(ExpectedTarget);
-  IsaInfo::streamIsaVersion(&getSTI(), ExpectedTargetOS);
+  if (!enableNewTargetID()) {
+    std::string ExpectedTargetIDStr;
+    raw_string_ostream ExpectedTargetIDOStr(ExpectedTargetIDStr);
+    IsaInfo::streamIsaVersion(&getSTI(), ExpectedTargetIDOStr);
 
-  if (Target != ExpectedTargetOS.str())
-    return getParser().Error(TargetRange.Start, "target must match options",
-                             TargetRange);
+    if (TargetID != ExpectedTargetIDOStr.str())
+      return getParser().Error(TargetRange.Start, "target must match options",
+                               TargetRange);
+  } else {
+    if (!isSubtargetInfoEquivalentToTargetID(&getSTI(), TargetID))
+      return getParser().Error(TargetRange.Start, "target must match options",
+                               TargetRange);
+  }
 
-  getTargetStreamer().EmitDirectiveAMDGCNTarget(Target);
+  getTargetStreamer().EmitDirectiveAMDGCNTarget(getSTI(), TargetID);
   return false;
 }
 

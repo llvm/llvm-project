@@ -14,6 +14,8 @@
 
 #include "AMDGPUMachineModuleInfo.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Support/TargetParser.h"
 
 namespace llvm {
 
@@ -33,6 +35,39 @@ AMDGPUMachineModuleInfo::AMDGPUMachineModuleInfo(const MachineModuleInfo &MMI)
       CTX.getOrInsertSyncScopeID("wavefront-one-as");
   SingleThreadOneAddressSpaceSSID =
       CTX.getOrInsertSyncScopeID("singlethread-one-as");
+
+  if (MMI.getTarget().getTargetTriple().getArch() != Triple::amdgcn) {
+    return;
+  }
+
+  SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
+  MMI.getModule()->getModuleFlagsMetadata(ModuleFlags);
+  for (const auto &MFE : ModuleFlags) {
+    if (MFE.Behavior != Module::MergeTargetID) {
+      continue;
+    }
+
+    assert(MFE.Key->getString().equals("target-id"));
+    TargetID = cast<MDString>(MFE.Val)->getString().str();
+  }
+  if (TargetID.empty()) {
+    auto TargetTriple = MMI.getTarget().getTargetTriple();
+    auto CPU = MMI.getTarget().getTargetCPU();
+    auto Version = AMDGPU::getIsaVersion(CPU);
+
+    raw_string_ostream ConstructedTargetIDOStr(TargetID);
+    ConstructedTargetIDOStr << TargetTriple.getArchName() << '-'
+                            << TargetTriple.getVendorName() << '-'
+                            << TargetTriple.getOSName() << '-'
+                            << TargetTriple.getEnvironmentName() << '-';
+    if (Version.Major >= 9) {
+      ConstructedTargetIDOStr << CPU;
+    } else {
+      ConstructedTargetIDOStr << "gfx" << Version.Major << Version.Minor
+                              << Version.Stepping;
+    }
+    ConstructedTargetIDOStr.flush();
+  }
 }
 
 } // end namespace llvm

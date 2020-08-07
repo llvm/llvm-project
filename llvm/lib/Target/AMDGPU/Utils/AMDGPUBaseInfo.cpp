@@ -32,6 +32,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
@@ -47,6 +48,11 @@
 #include "AMDGPUGenInstrInfo.inc"
 #undef GET_INSTRMAP_INFO
 #undef GET_INSTRINFO_NAMED_OPS
+
+static llvm::cl::opt<bool> EnableNewTargetID(
+  "amdgcn-new-target-id",
+  llvm::cl::desc("Use New Target ID"),
+  llvm::cl::init(false));
 
 namespace {
 
@@ -102,6 +108,73 @@ unsigned getVmcntBitWidthHi() { return 2; }
 namespace llvm {
 
 namespace AMDGPU {
+
+bool enableNewTargetID() {
+  return EnableNewTargetID;
+}
+
+Optional<bool> getFeatureFromTargetID(StringRef TargetID, StringRef Feature) {
+  SmallVector<StringRef, 3> TargetIDSplit;
+  TargetID.split(TargetIDSplit, ':');
+
+  Optional<bool> FeatureStatus;
+  for (const auto &FeatureString : TargetIDSplit) {
+    if (FeatureString.startswith(Feature)) {
+      if (FeatureString.endswith("+")) {
+        FeatureStatus = true;
+      } else if (FeatureString.endswith("-")) {
+        FeatureStatus = false;
+      } else {
+        llvm_unreachable("Malformed feature string");
+      }
+    }
+  }
+  return FeatureStatus;
+}
+
+Optional<bool> getXnackFromTargetID(StringRef TargetID) {
+  return getFeatureFromTargetID(TargetID, "xnack");
+}
+
+Optional<bool> getSramEccFromTargetID(StringRef TargetID) {
+  return getFeatureFromTargetID(TargetID, "sram-ecc");
+}
+
+bool isSubtargetInfoEquivalentToTargetID(const MCSubtargetInfo *STI,
+                                         StringRef TargetID) {
+  auto TargetTriple = STI->getTargetTriple();
+  auto CPU = STI->getCPU();
+  auto Version = AMDGPU::getIsaVersion(CPU);
+
+  std::string ConstructedTargetIDStr;
+  raw_string_ostream ConstructedTargetIDOStr(ConstructedTargetIDStr);
+  ConstructedTargetIDOStr << TargetTriple.getArchName() << '-'
+                          << TargetTriple.getVendorName() << '-'
+                          << TargetTriple.getOSName() << '-'
+                          << TargetTriple.getEnvironmentName() << '-';
+  if (Version.Major >= 9) {
+    ConstructedTargetIDOStr << CPU;
+  } else {
+    ConstructedTargetIDOStr << "gfx" << Version.Major << Version.Minor
+                            << Version.Stepping;
+  }
+  ConstructedTargetIDOStr.flush();
+
+  if (!TargetID.startswith(ConstructedTargetIDStr)) {
+    return false;
+  }
+  if (auto XNACK = getXnackFromTargetID(TargetID)) {
+    if (XNACK.getValue() != hasXNACK(*STI)) {
+      return false;
+    }
+  }
+  if (auto SRAM_ECC = getSramEccFromTargetID(TargetID)) {
+    if (SRAM_ECC.getValue() != hasSRAMECC(*STI)) {
+      return false;
+    }
+  }
+  return true;
+}
 
 #define GET_MIMGBaseOpcodesTable_IMPL
 #define GET_MIMGDimInfoTable_IMPL
