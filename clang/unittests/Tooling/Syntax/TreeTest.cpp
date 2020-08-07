@@ -873,24 +873,47 @@ TEST_P(SyntaxTreeTest, QualifiedId) {
   }
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
-namespace a {
+namespace n {
   struct S {
     template<typename T>
-    static T f(){}
+    struct ST {
+      static void f();
+    };
   };
 }
+template<typename T>
+struct ST {
+  struct S {
+    template<typename U>
+    static U f();
+  };
+};
 void test() {
-  ::              // global-namespace-specifier
-  a::             // namespace-specifier
-  S::             // type-name-specifier
+  ::                 // global-namespace-specifier
+  n::                // namespace-specifier
+  S::                // type-name-specifier
+  template ST<int>:: // type-template-instantiation-specifier
+  f();
+
+  n::                // namespace-specifier
+  S::                // type-name-specifier
+  ST<int>::          // type-template-instantiation-specifier
+  f();
+
+  ST<int>::         // type-name-specifier
+  S::               // type-name-specifier
   f<int>();
+
+  ST<int>::         // type-name-specifier
+  S::               // type-name-specifier
+  template f<int>();
 }
 )cpp",
       R"txt(
 *: TranslationUnit
 |-NamespaceDefinition
 | |-namespace
-| |-a
+| |-n
 | |-{
 | |-SimpleDeclaration
 | | |-struct
@@ -904,19 +927,58 @@ void test() {
 | | | | `-T
 | | | |->
 | | | `-SimpleDeclaration
-| | |   |-static
-| | |   |-T
-| | |   |-SimpleDeclarator
-| | |   | |-f
-| | |   | `-ParametersAndQualifiers
-| | |   |   |-(
-| | |   |   `-)
-| | |   `-CompoundStatement
-| | |     |-{
-| | |     `-}
+| | |   |-struct
+| | |   |-ST
+| | |   |-{
+| | |   |-SimpleDeclaration
+| | |   | |-static
+| | |   | |-void
+| | |   | |-SimpleDeclarator
+| | |   | | |-f
+| | |   | | `-ParametersAndQualifiers
+| | |   | |   |-(
+| | |   | |   `-)
+| | |   | `-;
+| | |   |-}
+| | |   `-;
 | | |-}
 | | `-;
 | `-}
+|-TemplateDeclaration
+| |-template
+| |-<
+| |-UnknownDeclaration
+| | |-typename
+| | `-T
+| |->
+| `-SimpleDeclaration
+|   |-struct
+|   |-ST
+|   |-{
+|   |-SimpleDeclaration
+|   | |-struct
+|   | |-S
+|   | |-{
+|   | |-TemplateDeclaration
+|   | | |-template
+|   | | |-<
+|   | | |-UnknownDeclaration
+|   | | | |-typename
+|   | | | `-U
+|   | | |->
+|   | | `-SimpleDeclaration
+|   | |   |-static
+|   | |   |-U
+|   | |   |-SimpleDeclarator
+|   | |   | |-f
+|   | |   | `-ParametersAndQualifiers
+|   | |   |   |-(
+|   | |   |   `-)
+|   | |   `-;
+|   | |-}
+|   | `-;
+|   |-}
+|   `-;
 `-SimpleDeclaration
   |-void
   |-SimpleDeclarator
@@ -930,14 +992,81 @@ void test() {
     | |-UnknownExpression
     | | |-IdExpression
     | | | |-NestedNameSpecifier
-    | | | | |-NameSpecifier
-    | | | | | `-::
-    | | | | |-NameSpecifier
-    | | | | | |-a
-    | | | | | `-::
-    | | | | `-NameSpecifier
-    | | | |   |-S
-    | | | |   `-::
+    | | | | |-::
+    | | | | |-IdentifierNameSpecifier
+    | | | | | `-n
+    | | | | |-::
+    | | | | |-IdentifierNameSpecifier
+    | | | | | `-S
+    | | | | |-::
+    | | | | |-SimpleTemplateNameSpecifier
+    | | | | | |-template
+    | | | | | |-ST
+    | | | | | |-<
+    | | | | | |-int
+    | | | | | `->
+    | | | | `-::
+    | | | `-UnqualifiedId
+    | | |   `-f
+    | | |-(
+    | | `-)
+    | `-;
+    |-ExpressionStatement
+    | |-UnknownExpression
+    | | |-IdExpression
+    | | | |-NestedNameSpecifier
+    | | | | |-IdentifierNameSpecifier
+    | | | | | `-n
+    | | | | |-::
+    | | | | |-IdentifierNameSpecifier
+    | | | | | `-S
+    | | | | |-::
+    | | | | |-SimpleTemplateNameSpecifier
+    | | | | | |-ST
+    | | | | | |-<
+    | | | | | |-int
+    | | | | | `->
+    | | | | `-::
+    | | | `-UnqualifiedId
+    | | |   `-f
+    | | |-(
+    | | `-)
+    | `-;
+    |-ExpressionStatement
+    | |-UnknownExpression
+    | | |-IdExpression
+    | | | |-NestedNameSpecifier
+    | | | | |-SimpleTemplateNameSpecifier
+    | | | | | |-ST
+    | | | | | |-<
+    | | | | | |-int
+    | | | | | `->
+    | | | | |-::
+    | | | | |-IdentifierNameSpecifier
+    | | | | | `-S
+    | | | | `-::
+    | | | `-UnqualifiedId
+    | | |   |-f
+    | | |   |-<
+    | | |   |-int
+    | | |   `->
+    | | |-(
+    | | `-)
+    | `-;
+    |-ExpressionStatement
+    | |-UnknownExpression
+    | | |-IdExpression
+    | | | |-NestedNameSpecifier
+    | | | | |-SimpleTemplateNameSpecifier
+    | | | | | |-ST
+    | | | | | |-<
+    | | | | | |-int
+    | | | | | `->
+    | | | | |-::
+    | | | | |-IdentifierNameSpecifier
+    | | | | | `-S
+    | | | | `-::
+    | | | |-template
     | | | `-UnqualifiedId
     | | |   |-f
     | | |   |-<
@@ -950,7 +1079,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, QualifiedIdWithTemplateKeyword) {
+TEST_P(SyntaxTreeTest, QualifiedIdWithDependentType) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -961,63 +1090,17 @@ TEST_P(SyntaxTreeTest, QualifiedIdWithTemplateKeyword) {
   }
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
-struct X {
-  template<int> static void f();
-  template<int>
-  struct Y {
-    static void f();
-  };
-};
-template<typename T> void test() {
-  // TODO: Expose `id-expression` from `DependentScopeDeclRefExpr`
-  T::template f<0>();     // nested-name-specifier template unqualified-id
-  T::template Y<0>::f();  // nested-name-specifier template :: unqualified-id
+template <typename T>
+void test() {
+  T::template U<int>::f();
+
+  T::U::f();
+
+  T::template f<0>();
 }
 )cpp",
       R"txt(
 *: TranslationUnit
-|-SimpleDeclaration
-| |-struct
-| |-X
-| |-{
-| |-TemplateDeclaration
-| | |-template
-| | |-<
-| | |-SimpleDeclaration
-| | | `-int
-| | |->
-| | `-SimpleDeclaration
-| |   |-static
-| |   |-void
-| |   |-SimpleDeclarator
-| |   | |-f
-| |   | `-ParametersAndQualifiers
-| |   |   |-(
-| |   |   `-)
-| |   `-;
-| |-TemplateDeclaration
-| | |-template
-| | |-<
-| | |-SimpleDeclaration
-| | | `-int
-| | |->
-| | `-SimpleDeclaration
-| |   |-struct
-| |   |-Y
-| |   |-{
-| |   |-SimpleDeclaration
-| |   | |-static
-| |   | |-void
-| |   | |-SimpleDeclarator
-| |   | | |-f
-| |   | | `-ParametersAndQualifiers
-| |   | |   |-(
-| |   | |   `-)
-| |   | `-;
-| |   |-}
-| |   `-;
-| |-}
-| `-;
 `-TemplateDeclaration
   |-template
   |-<
@@ -1036,31 +1119,52 @@ template<typename T> void test() {
       |-{
       |-ExpressionStatement
       | |-UnknownExpression
-      | | |-UnknownExpression
-      | | | |-T
-      | | | |-::
-      | | | |-template
-      | | | |-f
-      | | | |-<
-      | | | |-IntegerLiteralExpression
-      | | | | `-0
-      | | | `->
+      | | |-IdExpression
+      | | | |-NestedNameSpecifier
+      | | | | |-IdentifierNameSpecifier
+      | | | | | `-T
+      | | | | |-::
+      | | | | |-SimpleTemplateNameSpecifier
+      | | | | | |-template
+      | | | | | |-U
+      | | | | | |-<
+      | | | | | |-int
+      | | | | | `->
+      | | | | `-::
+      | | | `-UnqualifiedId
+      | | |   `-f
       | | |-(
       | | `-)
       | `-;
       |-ExpressionStatement
       | |-UnknownExpression
-      | | |-UnknownExpression
-      | | | |-T
-      | | | |-::
+      | | |-IdExpression
+      | | | |-NestedNameSpecifier
+      | | | | |-IdentifierNameSpecifier
+      | | | | | `-T
+      | | | | |-::
+      | | | | |-IdentifierNameSpecifier
+      | | | | | `-U
+      | | | | `-::
+      | | | `-UnqualifiedId
+      | | |   `-f
+      | | |-(
+      | | `-)
+      | `-;
+      |-ExpressionStatement
+      | |-UnknownExpression
+      | | |-IdExpression
+      | | | |-NestedNameSpecifier
+      | | | | |-IdentifierNameSpecifier
+      | | | | | `-T
+      | | | | `-::
       | | | |-template
-      | | | |-Y
-      | | | |-<
-      | | | |-IntegerLiteralExpression
-      | | | | `-0
-      | | | |->
-      | | | |-::
-      | | | `-f
+      | | | `-UnqualifiedId
+      | | |   |-f
+      | | |   |-<
+      | | |   |-IntegerLiteralExpression
+      | | |   | `-0
+      | | |   `->
       | | |-(
       | | `-)
       | `-;
@@ -1118,14 +1222,14 @@ void test(S s) {
     | |-UnknownExpression
     | | |-IdExpression
     | | | |-NestedNameSpecifier
-    | | | | `-NameSpecifier
-    | | | |   |-decltype
-    | | | |   |-(
-    | | | |   |-IdExpression
-    | | | |   | `-UnqualifiedId
-    | | | |   |   `-s
-    | | | |   |-)
-    | | | |   `-::
+    | | | | |-DecltypeNameSpecifier
+    | | | | | |-decltype
+    | | | | | |-(
+    | | | | | |-IdExpression
+    | | | | | | `-UnqualifiedId
+    | | | | | |   `-s
+    | | | | | `-)
+    | | | | `-::
     | | | `-UnqualifiedId
     | | |   `-f
     | | |-(

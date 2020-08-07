@@ -101,6 +101,37 @@ AffineExpr AffineExpr::shiftSymbols(unsigned numSymbols, unsigned shift) const {
   return replaceDimsAndSymbols({}, symbols);
 }
 
+/// Sparse replace method. Return the modified expression tree.
+AffineExpr
+AffineExpr::replace(const DenseMap<AffineExpr, AffineExpr> &map) const {
+  auto it = map.find(*this);
+  if (it != map.end())
+    return it->second;
+  switch (getKind()) {
+  default:
+    return *this;
+  case AffineExprKind::Add:
+  case AffineExprKind::Mul:
+  case AffineExprKind::FloorDiv:
+  case AffineExprKind::CeilDiv:
+  case AffineExprKind::Mod:
+    auto binOp = cast<AffineBinaryOpExpr>();
+    auto lhs = binOp.getLHS(), rhs = binOp.getRHS();
+    auto newLHS = lhs.replace(map);
+    auto newRHS = rhs.replace(map);
+    if (newLHS == lhs && newRHS == rhs)
+      return *this;
+    return getAffineBinaryOpExpr(getKind(), newLHS, newRHS);
+  }
+  llvm_unreachable("Unknown AffineExpr");
+}
+
+/// Sparse replace method. Return the modified expression tree.
+AffineExpr AffineExpr::replace(AffineExpr expr, AffineExpr replacement) const {
+  DenseMap<AffineExpr, AffineExpr> map;
+  map.insert(std::make_pair(expr, replacement));
+  return replace(map);
+}
 /// Returns true if this expression is made out of only symbols and
 /// constants (no dimensional identifiers).
 bool AffineExpr::isSymbolicOrConstant() const {

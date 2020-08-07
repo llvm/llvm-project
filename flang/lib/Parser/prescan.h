@@ -64,7 +64,7 @@ public:
   TokenSequence TokenizePreprocessorDirective();
   Provenance GetCurrentProvenance() const { return GetProvenance(at_); }
 
-  template <typename... A> Message &Say(A &&... a) {
+  template <typename... A> Message &Say(A &&...a) {
     Message &m{messages_.Say(std::forward<A>(a)...)};
     std::optional<ProvenanceRange> range{m.GetProvenanceRange(cooked_)};
     CHECK(!range || cooked_.IsValid(*range));

@@ -243,6 +243,16 @@ public:
                   ExtraArgsT...) {
     return false;
   }
+
+  template <typename CallableT>
+  void pushBeforeNonSkippedPassCallback(CallableT C) {
+    if (Callbacks)
+      Callbacks->BeforeNonSkippedPassCallbacks.emplace_back(std::move(C));
+  }
+  void popBeforeNonSkippedPassCallback() {
+    if (Callbacks)
+      Callbacks->BeforeNonSkippedPassCallbacks.pop_back();
+  }
 };
 
 bool isSpecialPass(StringRef PassID, const std::vector<StringRef> &Specials);

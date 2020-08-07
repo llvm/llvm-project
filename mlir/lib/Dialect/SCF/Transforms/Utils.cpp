@@ -13,7 +13,12 @@
 #include "mlir/Dialect/SCF/Utils.h"
 
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/Function.h"
+#include "mlir/Transforms/RegionUtils.h"
+
+#include "llvm/ADT/SetVector.h"
 
 using namespace mlir;
 
@@ -70,4 +75,51 @@ scf::ForOp mlir::cloneWithNewYields(OpBuilder &b, scf::ForOp loop,
   newYield.erase();
 
   return newLoop;
+}
+
+void mlir::outlineIfOp(OpBuilder &b, scf::IfOp ifOp, FuncOp *thenFn,
+                       StringRef thenFnName, FuncOp *elseFn,
+                       StringRef elseFnName) {
+  Location loc = ifOp.getLoc();
+  MLIRContext *ctx = ifOp.getContext();
+  auto outline = [&](Region &ifOrElseRegion, StringRef funcName) {
+    assert(!funcName.empty() && "Expected function name for outlining");
+    assert(ifOrElseRegion.getBlocks().size() <= 1 &&
+           "Expected at most one block");
+
+    // Outline before current function.
+    OpBuilder::InsertionGuard g(b);
+    b.setInsertionPoint(ifOp.getParentOfType<FuncOp>());
+
+    llvm::SetVector<Value> captures;
+    getUsedValuesDefinedAbove(ifOrElseRegion, captures);
+
+    ValueRange values(captures.getArrayRef());
+    FunctionType type =
+        FunctionType::get(values.getTypes(), ifOp.getResultTypes(), ctx);
+    auto outlinedFunc = b.create<FuncOp>(loc, funcName, type);
+    b.setInsertionPointToStart(outlinedFunc.addEntryBlock());
+    BlockAndValueMapping bvm;
+    for (auto it : llvm::zip(values, outlinedFunc.getArguments()))
+      bvm.map(std::get<0>(it), std::get<1>(it));
+    for (Operation &op : ifOrElseRegion.front().without_terminator())
+      b.clone(op, bvm);
+
+    Operation *term = ifOrElseRegion.front().getTerminator();
+    SmallVector<Value, 4> terminatorOperands;
+    for (auto op : term->getOperands())
+      terminatorOperands.push_back(bvm.lookup(op));
+    b.create<ReturnOp>(loc, term->getResultTypes(), terminatorOperands);
+
+    ifOrElseRegion.front().clear();
+    b.setInsertionPointToEnd(&ifOrElseRegion.front());
+    Operation *call = b.create<CallOp>(loc, outlinedFunc, values);
+    b.create<scf::YieldOp>(loc, call->getResults());
+    return outlinedFunc;
+  };
+
+  if (thenFn && !ifOp.thenRegion().empty())
+    *thenFn = outline(ifOp.thenRegion(), thenFnName);
+  if (elseFn && !ifOp.elseRegion().empty())
+    *elseFn = outline(ifOp.elseRegion(), elseFnName);
 }

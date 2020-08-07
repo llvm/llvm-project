@@ -36,7 +36,12 @@ struct Reloc {
 };
 
 inline bool isZeroFill(uint8_t flags) {
-  return (flags & llvm::MachO::SECTION_TYPE) == llvm::MachO::S_ZEROFILL;
+  return llvm::MachO::isVirtualSection(flags & llvm::MachO::SECTION_TYPE);
+}
+
+inline bool isThreadLocalVariables(uint8_t flags) {
+  return (flags & llvm::MachO::SECTION_TYPE) ==
+         llvm::MachO::S_THREAD_LOCAL_VARIABLES;
 }
 
 class InputSection {
