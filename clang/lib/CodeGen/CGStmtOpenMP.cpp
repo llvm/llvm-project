@@ -3554,12 +3554,9 @@ void CodeGenFunction::EmitOMPSectionsDirective(const OMPSectionsDirective &S) {
 }
 
 void CodeGenFunction::EmitOMPSectionDirective(const OMPSectionDirective &S) {
-  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
-    CGF.EmitStmt(S.getInnermostCapturedStmt()->getCapturedStmt());
-  };
-  OMPLexicalScope Scope(*this, S, OMPD_unknown);
-  CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_section, CodeGen,
-                                              S.hasCancel());
+  LexicalScope Scope(*this, S.getSourceRange());
+  EmitStopPoint(&S);
+  EmitStmt(S.getAssociatedStmt());
 }
 
 void CodeGenFunction::EmitOMPSingleDirective(const OMPSingleDirective &S) {
@@ -3610,7 +3607,7 @@ void CodeGenFunction::EmitOMPSingleDirective(const OMPSingleDirective &S) {
 static void emitMaster(CodeGenFunction &CGF, const OMPExecutableDirective &S) {
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     Action.Enter(CGF);
-    CGF.EmitStmt(S.getInnermostCapturedStmt()->getCapturedStmt());
+    CGF.EmitStmt(S.getRawStmt());
   };
   CGF.CGM.getOpenMPRuntime().emitMasterRegion(CGF, CodeGen, S.getBeginLoc());
 }
@@ -3620,8 +3617,7 @@ void CodeGenFunction::EmitOMPMasterDirective(const OMPMasterDirective &S) {
     llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
     using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
 
-    const CapturedStmt *CS = S.getInnermostCapturedStmt();
-    const Stmt *MasterRegionBodyStmt = CS->getCapturedStmt();
+    const Stmt *MasterRegionBodyStmt = S.getAssociatedStmt();
 
     auto FiniCB = [this](InsertPointTy IP) {
       OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
@@ -3635,13 +3631,14 @@ void CodeGenFunction::EmitOMPMasterDirective(const OMPMasterDirective &S) {
                                              CodeGenIP, FiniBB);
     };
 
-    CGCapturedStmtInfo CGSI(*CS, CR_OpenMP);
-    CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(*this, &CGSI);
+    LexicalScope Scope(*this, S.getSourceRange());
+    EmitStopPoint(&S);
     Builder.restoreIP(OMPBuilder.CreateMaster(Builder, BodyGenCB, FiniCB));
 
     return;
   }
-  OMPLexicalScope Scope(*this, S, OMPD_unknown);
+  LexicalScope Scope(*this, S.getSourceRange());
+  EmitStopPoint(&S);
   emitMaster(*this, S);
 }
 
@@ -3650,8 +3647,7 @@ void CodeGenFunction::EmitOMPCriticalDirective(const OMPCriticalDirective &S) {
     llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
     using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
 
-    const CapturedStmt *CS = S.getInnermostCapturedStmt();
-    const Stmt *CriticalRegionBodyStmt = CS->getCapturedStmt();
+    const Stmt *CriticalRegionBodyStmt = S.getAssociatedStmt();
     const Expr *Hint = nullptr;
     if (const auto *HintClause = S.getSingleClause<OMPHintClause>())
       Hint = HintClause->getHint();
@@ -3676,8 +3672,8 @@ void CodeGenFunction::EmitOMPCriticalDirective(const OMPCriticalDirective &S) {
                                              CodeGenIP, FiniBB);
     };
 
-    CGCapturedStmtInfo CGSI(*CS, CR_OpenMP);
-    CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(*this, &CGSI);
+    LexicalScope Scope(*this, S.getSourceRange());
+    EmitStopPoint(&S);
     Builder.restoreIP(OMPBuilder.CreateCritical(
         Builder, BodyGenCB, FiniCB, S.getDirectiveName().getAsString(),
         HintInst));
@@ -3687,12 +3683,13 @@ void CodeGenFunction::EmitOMPCriticalDirective(const OMPCriticalDirective &S) {
 
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
     Action.Enter(CGF);
-    CGF.EmitStmt(S.getInnermostCapturedStmt()->getCapturedStmt());
+    CGF.EmitStmt(S.getAssociatedStmt());
   };
   const Expr *Hint = nullptr;
   if (const auto *HintClause = S.getSingleClause<OMPHintClause>())
     Hint = HintClause->getHint();
-  OMPLexicalScope Scope(*this, S, OMPD_unknown);
+  LexicalScope Scope(*this, S.getSourceRange());
+  EmitStopPoint(&S);
   CGM.getOpenMPRuntime().emitCriticalRegion(*this,
                                             S.getDirectiveName().getAsString(),
                                             CodeGen, S.getBeginLoc(), Hint);
@@ -5368,17 +5365,11 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
     }
   }
 
-  const Stmt *CS = S.getInnermostCapturedStmt()->IgnoreContainers();
-
-  auto &&CodeGen = [&S, Kind, AO, CS](CodeGenFunction &CGF,
-                                            PrePostActionTy &) {
-    CGF.EmitStopPoint(CS);
-    emitOMPAtomicExpr(CGF, Kind, AO, S.isPostfixUpdate(), S.getX(), S.getV(),
-                      S.getExpr(), S.getUpdateExpr(), S.isXLHSInRHSPart(),
-                      S.getBeginLoc());
-  };
-  OMPLexicalScope Scope(*this, S, OMPD_unknown);
-  CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_atomic, CodeGen);
+  LexicalScope Scope(*this, S.getSourceRange());
+  EmitStopPoint(S.getAssociatedStmt());
+  emitOMPAtomicExpr(*this, Kind, AO, S.isPostfixUpdate(), S.getX(), S.getV(),
+                    S.getExpr(), S.getUpdateExpr(), S.isXLHSInRHSPart(),
+                    S.getBeginLoc());
 }
 
 static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
@@ -6631,7 +6622,12 @@ void CodeGenFunction::EmitSimpleOMPExecutableDirective(
       CGF.EmitStmt(D.getInnermostCapturedStmt()->getCapturedStmt());
     }
   };
-  {
+  if (D.getDirectiveKind() == OMPD_atomic ||
+      D.getDirectiveKind() == OMPD_critical ||
+      D.getDirectiveKind() == OMPD_section ||
+      D.getDirectiveKind() == OMPD_master) {
+    EmitStmt(D.getAssociatedStmt());
+  } else {
     auto LPCRegion =
         CGOpenMPRuntime::LastprivateConditionalRAII::disable(*this, D);
     OMPSimdLexicalScope Scope(*this, D);
