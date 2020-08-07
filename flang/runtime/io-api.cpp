@@ -9,6 +9,8 @@
 // Implements the I/O statement API
 
 #include "io-api.h"
+#include "descriptor-io.h"
+#include "descriptor.h"
 #include "edit-input.h"
 #include "edit-output.h"
 #include "environment.h"
@@ -863,15 +865,12 @@ bool IONAME(GetNewUnit)(Cookie cookie, int &unit, int kind) {
 
 // Data transfers
 
-bool IONAME(OutputDescriptor)(Cookie cookie, const Descriptor &) {
-  IoStatementState &io{*cookie};
-  io.GetIoErrorHandler().Crash("OutputDescriptor: not yet implemented"); // TODO
+bool IONAME(OutputDescriptor)(Cookie cookie, const Descriptor &descriptor) {
+  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor);
 }
 
-bool IONAME(InputDescriptor)(Cookie cookie, const Descriptor &) {
-  IoStatementState &io{*cookie};
-  io.BeginReadingRecord();
-  io.GetIoErrorHandler().Crash("InputDescriptor: not yet implemented"); // TODO
+bool IONAME(InputDescriptor)(Cookie cookie, const Descriptor &descriptor) {
+  return descr::DescriptorIO<Direction::Input>(*cookie, descriptor);
 }
 
 bool IONAME(OutputUnformattedBlock)(Cookie cookie, const char *x,
@@ -898,198 +897,112 @@ bool IONAME(InputUnformattedBlock)(
 }
 
 bool IONAME(OutputInteger64)(Cookie cookie, std::int64_t n) {
-  IoStatementState &io{*cookie};
-  if (!io.get_if<OutputStatementState>()) {
-    io.GetIoErrorHandler().Crash(
-        "OutputInteger64() called for a non-output I/O statement");
-    return false;
-  }
-  if (auto edit{io.GetNextDataEdit()}) {
-    return EditIntegerOutput(io, *edit, n);
-  }
-  return false;
+  StaticDescriptor staticDescriptor;
+  Descriptor &descriptor{staticDescriptor.descriptor()};
+  descriptor.Establish(
+      TypeCategory::Integer, 8, reinterpret_cast<void *>(&n), 0);
+  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor);
 }
 
 bool IONAME(InputInteger)(Cookie cookie, std::int64_t &n, int kind) {
-  IoStatementState &io{*cookie};
-  if (!io.get_if<InputStatementState>()) {
-    io.GetIoErrorHandler().Crash(
-        "InputInteger64() called for a non-input I/O statement");
-    return false;
-  }
-  io.BeginReadingRecord();
-  if (auto edit{io.GetNextDataEdit()}) {
-    if (edit->descriptor == DataEdit::ListDirectedNullValue) {
-      return true;
-    }
-    return EditIntegerInput(io, *edit, reinterpret_cast<void *>(&n), kind);
-  }
-  return false;
-}
-
-template <int PREC, typename REAL>
-static bool OutputReal(Cookie cookie, REAL x) {
-  IoStatementState &io{*cookie};
-  if (!io.get_if<OutputStatementState>()) {
-    io.GetIoErrorHandler().Crash(
-        "OutputReal() called for a non-output I/O statement");
-    return false;
-  }
-  if (auto edit{io.GetNextDataEdit()}) {
-    return RealOutputEditing<PREC>{io, x}.Edit(*edit);
-  }
-  return false;
+  StaticDescriptor staticDescriptor;
+  Descriptor &descriptor{staticDescriptor.descriptor()};
+  descriptor.Establish(
+      TypeCategory::Integer, kind, reinterpret_cast<void *>(&n), 0);
+  return descr::DescriptorIO<Direction::Input>(*cookie, descriptor);
 }
 
 bool IONAME(OutputReal32)(Cookie cookie, float x) {
-  return OutputReal<24, float>(cookie, x);
+  StaticDescriptor staticDescriptor;
+  Descriptor &descriptor{staticDescriptor.descriptor()};
+  descriptor.Establish(TypeCategory::Real, 4, reinterpret_cast<void *>(&x), 0);
+  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor);
 }
 
 bool IONAME(OutputReal64)(Cookie cookie, double x) {
-  return OutputReal<53, double>(cookie, x);
-}
-
-template <int PREC, typename REAL>
-static bool InputReal(Cookie cookie, REAL &x) {
-  IoStatementState &io{*cookie};
-  if (!io.get_if<InputStatementState>()) {
-    io.GetIoErrorHandler().Crash(
-        "InputReal() called for a non-input I/O statement");
-    return false;
-  }
-  io.BeginReadingRecord();
-  if (auto edit{io.GetNextDataEdit()}) {
-    if (edit->descriptor == DataEdit::ListDirectedNullValue) {
-      return true;
-    }
-    return EditRealInput<PREC>(io, *edit, reinterpret_cast<void *>(&x));
-  }
-  return false;
+  StaticDescriptor staticDescriptor;
+  Descriptor &descriptor{staticDescriptor.descriptor()};
+  descriptor.Establish(TypeCategory::Real, 8, reinterpret_cast<void *>(&x), 0);
+  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor);
 }
 
 bool IONAME(InputReal32)(Cookie cookie, float &x) {
-  return InputReal<24, float>(cookie, x);
+  StaticDescriptor staticDescriptor;
+  Descriptor &descriptor{staticDescriptor.descriptor()};
+  descriptor.Establish(TypeCategory::Real, 4, reinterpret_cast<void *>(&x), 0);
+  return descr::DescriptorIO<Direction::Input>(*cookie, descriptor);
 }
 
 bool IONAME(InputReal64)(Cookie cookie, double &x) {
-  return InputReal<53, double>(cookie, x);
+  StaticDescriptor staticDescriptor;
+  Descriptor &descriptor{staticDescriptor.descriptor()};
+  descriptor.Establish(TypeCategory::Real, 8, reinterpret_cast<void *>(&x), 0);
+  return descr::DescriptorIO<Direction::Input>(*cookie, descriptor);
 }
 
-template <int PREC, typename REAL>
-static bool OutputComplex(Cookie cookie, REAL r, REAL z) {
-  IoStatementState &io{*cookie};
-  if (io.get_if<ListDirectedStatementState<Direction::Output>>()) {
-    DataEdit real, imaginary;
-    real.descriptor = DataEdit::ListDirectedRealPart;
-    imaginary.descriptor = DataEdit::ListDirectedImaginaryPart;
-    return RealOutputEditing<PREC>{io, r}.Edit(real) &&
-        RealOutputEditing<PREC>{io, z}.Edit(imaginary);
-  }
-  return OutputReal<PREC, REAL>(cookie, r) && OutputReal<PREC, REAL>(cookie, z);
+bool IONAME(OutputComplex32)(Cookie cookie, float r, float i) {
+  float z[2]{r, i};
+  StaticDescriptor staticDescriptor;
+  Descriptor &descriptor{staticDescriptor.descriptor()};
+  descriptor.Establish(
+      TypeCategory::Complex, 4, reinterpret_cast<void *>(&z), 0);
+  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor);
 }
 
-bool IONAME(OutputComplex32)(Cookie cookie, float r, float z) {
-  return OutputComplex<24, float>(cookie, r, z);
+bool IONAME(OutputComplex64)(Cookie cookie, double r, double i) {
+  double z[2]{r, i};
+  StaticDescriptor staticDescriptor;
+  Descriptor &descriptor{staticDescriptor.descriptor()};
+  descriptor.Establish(
+      TypeCategory::Complex, 8, reinterpret_cast<void *>(&z), 0);
+  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor);
 }
 
-bool IONAME(OutputComplex64)(Cookie cookie, double r, double z) {
-  return OutputComplex<53, double>(cookie, r, z);
+bool IONAME(InputComplex32)(Cookie cookie, float z[2]) {
+  StaticDescriptor staticDescriptor;
+  Descriptor &descriptor{staticDescriptor.descriptor()};
+  descriptor.Establish(
+      TypeCategory::Complex, 4, reinterpret_cast<void *>(z), 0);
+  return descr::DescriptorIO<Direction::Input>(*cookie, descriptor);
 }
 
-template <int PREC, typename REAL>
-static bool InputComplex(Cookie cookie, REAL x[2]) {
-  IoStatementState &io{*cookie};
-  if (!io.get_if<InputStatementState>()) {
-    io.GetIoErrorHandler().Crash(
-        "InputComplex() called for a non-input I/O statement");
-    return false;
-  }
-  io.BeginReadingRecord();
-  for (int j{0}; j < 2; ++j) {
-    if (auto edit{io.GetNextDataEdit()}) {
-      if (edit->descriptor == DataEdit::ListDirectedNullValue) {
-        return true;
-      }
-      if (!EditRealInput<PREC>(io, *edit, reinterpret_cast<void *>(&x[j]))) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-bool IONAME(InputComplex32)(Cookie cookie, float x[2]) {
-  return InputComplex<24, float>(cookie, x);
-}
-
-bool IONAME(InputComplex64)(Cookie cookie, double x[2]) {
-  return InputComplex<53, double>(cookie, x);
+bool IONAME(InputComplex64)(Cookie cookie, double z[2]) {
+  StaticDescriptor staticDescriptor;
+  Descriptor &descriptor{staticDescriptor.descriptor()};
+  descriptor.Establish(
+      TypeCategory::Complex, 8, reinterpret_cast<void *>(z), 0);
+  return descr::DescriptorIO<Direction::Input>(*cookie, descriptor);
 }
 
 bool IONAME(OutputAscii)(Cookie cookie, const char *x, std::size_t length) {
-  IoStatementState &io{*cookie};
-  if (!io.get_if<OutputStatementState>()) {
-    io.GetIoErrorHandler().Crash(
-        "OutputAscii() called for a non-output I/O statement");
-    return false;
-  }
-  if (auto *list{io.get_if<ListDirectedStatementState<Direction::Output>>()}) {
-    return ListDirectedDefaultCharacterOutput(io, *list, x, length);
-  } else if (auto edit{io.GetNextDataEdit()}) {
-    return EditDefaultCharacterOutput(io, *edit, x, length);
-  } else {
-    return false;
-  }
+  StaticDescriptor staticDescriptor;
+  Descriptor &descriptor{staticDescriptor.descriptor()};
+  descriptor.Establish(
+      1, length, reinterpret_cast<void *>(const_cast<char *>(x)), 0);
+  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor);
 }
 
 bool IONAME(InputAscii)(Cookie cookie, char *x, std::size_t length) {
-  IoStatementState &io{*cookie};
-  if (!io.get_if<InputStatementState>()) {
-    io.GetIoErrorHandler().Crash(
-        "InputAscii() called for a non-input I/O statement");
-    return false;
-  }
-  io.BeginReadingRecord();
-  if (auto edit{io.GetNextDataEdit()}) {
-    if (edit->descriptor == DataEdit::ListDirectedNullValue) {
-      return true;
-    }
-    return EditDefaultCharacterInput(io, *edit, x, length);
-  }
-  return false;
+  StaticDescriptor staticDescriptor;
+  Descriptor &descriptor{staticDescriptor.descriptor()};
+  descriptor.Establish(1, length, reinterpret_cast<void *>(x), 0);
+  return descr::DescriptorIO<Direction::Input>(*cookie, descriptor);
 }
 
 bool IONAME(OutputLogical)(Cookie cookie, bool truth) {
-  IoStatementState &io{*cookie};
-  if (!io.get_if<OutputStatementState>()) {
-    io.GetIoErrorHandler().Crash(
-        "OutputLogical() called for a non-output I/O statement");
-    return false;
-  }
-  if (auto *list{io.get_if<ListDirectedStatementState<Direction::Output>>()}) {
-    return ListDirectedLogicalOutput(io, *list, truth);
-  } else if (auto edit{io.GetNextDataEdit()}) {
-    return EditLogicalOutput(io, *edit, truth);
-  } else {
-    return false;
-  }
+  StaticDescriptor staticDescriptor;
+  Descriptor &descriptor{staticDescriptor.descriptor()};
+  descriptor.Establish(
+      TypeCategory::Logical, 1, reinterpret_cast<void *>(&truth), 0);
+  return descr::DescriptorIO<Direction::Output>(*cookie, descriptor);
 }
 
 bool IONAME(InputLogical)(Cookie cookie, bool &truth) {
-  IoStatementState &io{*cookie};
-  if (!io.get_if<InputStatementState>()) {
-    io.GetIoErrorHandler().Crash(
-        "InputLogical() called for a non-input I/O statement");
-    return false;
-  }
-  io.BeginReadingRecord();
-  if (auto edit{io.GetNextDataEdit()}) {
-    if (edit->descriptor == DataEdit::ListDirectedNullValue) {
-      return true;
-    }
-    return EditLogicalInput(io, *edit, truth);
-  }
-  return false;
+  StaticDescriptor staticDescriptor;
+  Descriptor &descriptor{staticDescriptor.descriptor()};
+  descriptor.Establish(
+      TypeCategory::Logical, 1, reinterpret_cast<void *>(&truth), 0);
+  return descr::DescriptorIO<Direction::Input>(*cookie, descriptor);
 }
 
 void IONAME(GetIoMsg)(Cookie cookie, char *msg, std::size_t length) {
