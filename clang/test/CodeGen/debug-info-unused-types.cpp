@@ -1,8 +1,8 @@
-// RUN: %clang++ -fno-eliminate-unused-debug-types -g -emit-llvm -S -o - %s | FileCheck %s
-// RUN: %clang++ -fno-eliminate-unused-debug-types -g1 -emit-llvm -S -o - %s | FileCheck --check-prefix=NODBG %s
-// RUN: %clang++ -feliminate-unused-debug-types -g -emit-llvm -S -o - %s | FileCheck --check-prefix=NODBG %s
-// RUN: %clang++ -g -emit-llvm -S -o - %s | FileCheck --check-prefix=NODBG %s
-// RUN: %clang++ -emit-llvm -S -o - %s | FileCheck --check-prefix=NODBG %s
+// RUN: %clangxx -fno-eliminate-unused-debug-types -g -emit-llvm -S -o - %s | FileCheck %s
+// RUN: %clangxx -fno-eliminate-unused-debug-types -g1 -emit-llvm -S -o - %s | FileCheck --check-prefix=NODBG %s
+// RUN: %clangxx -feliminate-unused-debug-types -g -emit-llvm -S -o - %s | FileCheck --check-prefix=NODBG %s
+// RUN: %clangxx -g -emit-llvm -S -o - %s | FileCheck --check-prefix=NODBG %s
+// RUN: %clangxx -emit-llvm -S -o - %s | FileCheck --check-prefix=NODBG %s
 using foo = int;
 class bar {};
 enum class baz { BAZ };
