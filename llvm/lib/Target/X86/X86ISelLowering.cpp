@@ -39633,10 +39633,14 @@ combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG,
 
   // vselect Cond, 000..., X -> andn Cond, X
   if (TValIsAllZeros) {
-    MVT AndNVT = MVT::getVectorVT(MVT::i64, CondVT.getSizeInBits() / 64);
-    SDValue CastCond = DAG.getBitcast(AndNVT, Cond);
-    SDValue CastRHS = DAG.getBitcast(AndNVT, RHS);
-    SDValue AndN = DAG.getNode(X86ISD::ANDNP, DL, AndNVT, CastCond, CastRHS);
+    SDValue CastRHS = DAG.getBitcast(CondVT, RHS);
+    SDValue AndN;
+    // The canonical form differs for i1 vectors - x86andnp is not used
+    if (CondVT.getScalarType() == MVT::i1)
+      AndN = DAG.getNode(ISD::AND, DL, CondVT, DAG.getNOT(DL, Cond, CondVT),
+                         CastRHS);
+    else
+      AndN = DAG.getNode(X86ISD::ANDNP, DL, CondVT, Cond, CastRHS);
     return DAG.getBitcast(VT, AndN);
   }
 
