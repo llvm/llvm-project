@@ -312,10 +312,10 @@ define amdgpu_kernel void @global_extload_v8f16_to_v8f32(<8 x float> addrspace(1
 ; SI: v_cvt_f32_f16_e32
 ; SI: v_cvt_f32_f16_e32
 ; SI: v_cvt_f32_f16_e32
+; SI: v_cvt_f32_f16_e32
 
 ; GCN: flat_store_dwordx4
 
-; SI: v_cvt_f32_f16_e32
 ; SI: v_cvt_f32_f16_e32
 ; SI: v_cvt_f32_f16_e32
 ; SI: v_cvt_f32_f16_e32
