@@ -361,12 +361,3 @@
 // GEMBED_2:  error: invalid argument '-gembed-source' only allowed with '-gdwarf-5'
 // NOGEMBED_5-NOT:  "-gembed-source"
 // NOGEMBED_2-NOT:  error: invalid argument '-gembed-source' only allowed with '-gdwarf-5'
-//
-// RUN: %clang -### -g -fno-eliminate-unused-debug-types -c %s 2>&1 \
-// RUN:        | FileCheck -check-prefix=DEBUG_UNUSED_TYPES %s
-// DEBUG_UNUSED_TYPES: "-debug-info-kind=unused-types"
-// DEBUG_UNUSED_TYPES-NOT: "-debug-info-kind=limited"
-// RUN: %clang -### -g -feliminate-unused-debug-types -c %s 2>&1 \
-// RUN:        | FileCheck -check-prefix=NO_DEBUG_UNUSED_TYPES %s
-// NO_DEBUG_UNUSED_TYPES: "-debug-info-kind=limited"
-// NO_DEBUG_UNUSED_TYPES-NOT: "-debug-info-kind=unused-types"
