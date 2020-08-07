@@ -41,3 +41,10 @@ _Z1dv:
 .section .gcc_except_table,"a",@progbits
 ## The actual content does not matter.
 .Lexception0:
+
+## .rodata.Z1[ab]v reference .text.Z1[ab]v. Dont fold them.
+.section .rodata.Z1av,"a",@progbits
+  .long .text.Z1av - .
+
+.section .rodata.Z1bv,"a",@progbits
+  .long .text.Z1bv - .
