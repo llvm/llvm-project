@@ -514,24 +514,19 @@ static llvm::StringRef GetXcodeSDKDir(std::string preferred,
   return sdk;
 }
 
-static unsigned g_ios_initialize_count = 0;
 static const char *g_ios_plugin_name = "ios-simulator";
 static const char *g_ios_description = "iPhone simulator platform plug-in.";
 
 /// IPhone Simulator Plugin.
 struct PlatformiOSSimulator {
   static void Initialize() {
-    if (g_ios_initialize_count++ == 0) {
-      PluginManager::RegisterPlugin(ConstString(g_ios_plugin_name),
-                                    g_ios_description,
-                                    PlatformiOSSimulator::CreateInstance);
-    }
+    PluginManager::RegisterPlugin(ConstString(g_ios_plugin_name),
+                                  g_ios_description,
+                                  PlatformiOSSimulator::CreateInstance);
   }
 
   static void Terminate() {
-    if (g_ios_initialize_count > 0)
-      if (--g_ios_initialize_count == 0)
-        PluginManager::UnregisterPlugin(PlatformiOSSimulator::CreateInstance);
+    PluginManager::UnregisterPlugin(PlatformiOSSimulator::CreateInstance);
   }
 
   static PlatformSP CreateInstance(bool force, const ArchSpec *arch) {
@@ -567,24 +562,19 @@ struct PlatformiOSSimulator {
   }
 };
 
-static unsigned g_tvos_initialize_count = 0;
 static const char *g_tvos_plugin_name = "tvos-simulator";
 static const char *g_tvos_description = "tvOS simulator platform plug-in.";
 
 /// Apple TV Simulator Plugin.
 struct PlatformAppleTVSimulator {
   static void Initialize() {
-    if (g_tvos_initialize_count++ == 0) {
-      PluginManager::RegisterPlugin(ConstString(g_tvos_plugin_name),
-                                    g_tvos_description,
-                                    PlatformAppleTVSimulator::CreateInstance);
-    }
+    PluginManager::RegisterPlugin(ConstString(g_tvos_plugin_name),
+                                  g_tvos_description,
+                                  PlatformAppleTVSimulator::CreateInstance);
   }
 
   static void Terminate() {
-    if (g_tvos_initialize_count > 0)
-      if (--g_tvos_initialize_count == 0)
-        PluginManager::UnregisterPlugin(PlatformAppleTVSimulator::CreateInstance);
+    PluginManager::UnregisterPlugin(PlatformAppleTVSimulator::CreateInstance);
   }
 
   static PlatformSP CreateInstance(bool force, const ArchSpec *arch) {
@@ -611,7 +601,6 @@ struct PlatformAppleTVSimulator {
 };
 
 
-static unsigned g_watchos_initialize_count = 0;
 static const char *g_watchos_plugin_name = "watchos-simulator";
 static const char *g_watchos_description =
     "Apple Watch simulator platform plug-in.";
@@ -619,18 +608,14 @@ static const char *g_watchos_description =
 /// Apple Watch Simulator Plugin.
 struct PlatformAppleWatchSimulator {
   static void Initialize() {
-    if (g_watchos_initialize_count++ == 0) {
-      PluginManager::RegisterPlugin(
-          ConstString(g_watchos_plugin_name), g_watchos_description,
-          PlatformAppleWatchSimulator::CreateInstance);
-    }
+    PluginManager::RegisterPlugin(ConstString(g_watchos_plugin_name),
+                                  g_watchos_description,
+                                  PlatformAppleWatchSimulator::CreateInstance);
   }
 
   static void Terminate() {
-    if (g_watchos_initialize_count > 0)
-      if (--g_watchos_initialize_count == 0)
-        PluginManager::UnregisterPlugin(
-            PlatformAppleWatchSimulator::CreateInstance);
+    PluginManager::UnregisterPlugin(
+        PlatformAppleWatchSimulator::CreateInstance);
   }
 
   static PlatformSP CreateInstance(bool force, const ArchSpec *arch) {
@@ -657,18 +642,25 @@ struct PlatformAppleWatchSimulator {
 };
 
 
+static unsigned g_initialize_count = 0;
+
 // Static Functions
 void PlatformAppleSimulator::Initialize() {
-  PlatformDarwin::Initialize();
-  PlatformiOSSimulator::Initialize();
-  PlatformAppleTVSimulator::Initialize();
-  PlatformAppleWatchSimulator::Initialize();
+  if (g_initialize_count++ == 0) {
+    PlatformDarwin::Initialize();
+    PlatformiOSSimulator::Initialize();
+    PlatformAppleTVSimulator::Initialize();
+    PlatformAppleWatchSimulator::Initialize();
+  }
 }
 
 void PlatformAppleSimulator::Terminate() {
-  PlatformAppleWatchSimulator::Terminate();
-  PlatformAppleTVSimulator::Terminate();
-  PlatformiOSSimulator::Terminate();
-  PlatformDarwin::Terminate();
+  if (g_initialize_count > 0)
+    if (--g_initialize_count == 0) {
+      PlatformAppleWatchSimulator::Terminate();
+      PlatformAppleTVSimulator::Terminate();
+      PlatformiOSSimulator::Terminate();
+      PlatformDarwin::Terminate();
+    }
 }
 
