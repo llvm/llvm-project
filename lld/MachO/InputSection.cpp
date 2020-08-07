@@ -35,10 +35,19 @@ void InputSection::writeTo(uint8_t *buf) {
 
   for (Reloc &r : relocs) {
     uint64_t va = 0;
-    if (auto *s = r.target.dyn_cast<Symbol *>())
-      va = target->getSymbolVA(*s, r.type);
-    else if (auto *isec = r.target.dyn_cast<InputSection *>())
+    if (auto *s = r.target.dyn_cast<Symbol *>()) {
+      va = target->resolveSymbolVA(buf + r.offset, *s, r.type);
+
+      if (isThreadLocalVariables(flags)) {
+        // References from thread-local variable sections are treated as
+        // offsets relative to the start of the target section, instead of as
+        // absolute addresses.
+        if (auto *defined = dyn_cast<Defined>(s))
+          va -= defined->isec->parent->addr;
+      }
+    } else if (auto *isec = r.target.dyn_cast<InputSection *>()) {
       va = isec->getVA();
+    }
 
     uint64_t val = va + r.addend;
     if (r.pcrel)
