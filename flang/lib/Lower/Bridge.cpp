@@ -1566,10 +1566,6 @@ private:
     genPauseStatement(*this, stmt);
   }
 
-  void genFIR(const Fortran::parser::DataStmt &) {
-    // do nothing. The front-end converts to data initializations.
-  }
-
   void genFIR(const Fortran::parser::NamelistStmt &) { TODO(); }
 
   // call FAIL IMAGE in runtime
@@ -1886,7 +1882,7 @@ private:
   }
 
   /// Instantiate a local variable. Precondition: Each variable will be visited
-  /// such that if it's properties depend on other variables, the variables upon
+  /// such that if its properties depend on other variables, the variables upon
   /// which its properties depend will already have been visited.
   void instantiateLocal(const Fortran::lower::pft::Variable &var,
                         llvm::DenseMap<std::size_t, mlir::Value> &storeMap) {
@@ -2366,7 +2362,10 @@ private:
   }
 
   void lowerMod(Fortran::lower::pft::ModuleLikeUnit &mod) {
-    // FIXME: do we need to visit the module statements?
+    // TODO: Implement instantiation of module data.
+    // llvm::DenseMap<std::size_t, mlir::Value> storeMap;
+    // for (const auto &var : mod.getOrderedSymbolTable())
+    //   instantiateVar(var, storeMap);
     for (auto &f : mod.nestedFunctions)
       lowerFunc(f);
   }
