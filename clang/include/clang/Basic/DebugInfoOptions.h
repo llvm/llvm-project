@@ -46,11 +46,7 @@ enum DebugInfoKind {
   LimitedDebugInfo,
 
   /// Generate complete debug info.
-  FullDebugInfo,
-
-  /// Generate debug info for types that may be unused in the source
-  /// (-fno-eliminate-unused-debug-types).
-  UnusedTypeInfo,
+  FullDebugInfo
 };
 
 } // end namespace codegenoptions

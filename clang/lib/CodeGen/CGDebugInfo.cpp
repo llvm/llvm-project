@@ -606,7 +606,6 @@ void CGDebugInfo::CreateCompileUnit() {
   case codegenoptions::DebugInfoConstructor:
   case codegenoptions::LimitedDebugInfo:
   case codegenoptions::FullDebugInfo:
-  case codegenoptions::UnusedTypeInfo:
     EmissionKind = llvm::DICompileUnit::FullDebug;
     break;
   }
@@ -4961,17 +4960,13 @@ void CGDebugInfo::finalize() {
   DBuilder.finalize();
 }
 
-// Don't ignore in case of explicit cast where it is referenced indirectly.
 void CGDebugInfo::EmitExplicitCastType(QualType Ty) {
-  if (CGM.getCodeGenOpts().hasReducedDebugInfo())
-    if (auto *DieTy = getOrCreateType(Ty, TheCU->getFile()))
-      DBuilder.retainType(DieTy);
-}
+  if (!CGM.getCodeGenOpts().hasReducedDebugInfo())
+    return;
 
-void CGDebugInfo::EmitAndRetainType(QualType Ty) {
-  if (CGM.getCodeGenOpts().hasMaybeUnusedDebugInfo())
-    if (auto *DieTy = getOrCreateType(Ty, TheCU->getFile()))
-      DBuilder.retainType(DieTy);
+  if (auto *DieTy = getOrCreateType(Ty, TheCU->getFile()))
+    // Don't ignore in case of explicit cast where it is referenced indirectly.
+    DBuilder.retainType(DieTy);
 }
 
 llvm::DebugLoc CGDebugInfo::SourceLocToDebugLoc(SourceLocation Loc) {
