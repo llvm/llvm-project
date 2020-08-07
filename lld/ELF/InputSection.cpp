@@ -938,14 +938,17 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       // the folded-in function, so exclude .debug_line.
       //
       // For pre-DWARF-v5 .debug_loc and .debug_ranges, -1 is a reserved value
-      // (base address selection entry), so -2 is used.
+      // (base address selection entry), use 1 (which is used by GNU ld for
+      // .debug_ranges).
+      //
+      // TODO To reduce disruption, we use 0 instead of -1 as the tombstone
+      // value. Enable -1 in a future release.
       auto *ds = dyn_cast<Defined>(&sym);
       if (!sym.getOutputSection() ||
           (ds && ds->section->repl != ds->section && !isDebugLine)) {
         // If -z dead-reloc-in-nonalloc= is specified, respect it.
-        const uint64_t value =
-            tombstone ? SignExtend64<bits>(*tombstone)
-                      : (isDebugLocOrRanges ? UINT64_MAX - 1 : UINT64_MAX);
+        const uint64_t value = tombstone ? SignExtend64<bits>(*tombstone)
+                                         : (isDebugLocOrRanges ? 1 : 0);
         target->relocateNoSym(bufLoc, type, value);
         continue;
       }

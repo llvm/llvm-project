@@ -9,15 +9,15 @@
 # RUN: llvm-objdump -s %t | FileCheck %s
 
 # CHECK:      Contents of section .debug_loc:
-# CHECK-NEXT:  0000 feffffff ffffffff feffffff ffffffff
+# CHECK-NEXT:  0000 01000000 00000000 01000000 00000000
 # CHECK-NEXT: Contents of section .debug_ranges:
-# CHECK-NEXT:  0000 feffffff ffffffff feffffff ffffffff
+# CHECK-NEXT:  0000 01000000 00000000 01000000 00000000
 # CHECK-NEXT: Contents of section .debug_addr:
 # CHECK-NEXT:  0000 {{.*}}000 00000000 {{.*}}000 00000000
-# CHECK-NEXT:  0010 ffffffff  ffffffff {{.*}}000 00000000
+# CHECK-NEXT:  0010 00000000  00000000 {{.*}}000 00000000
 # CHECK-NEXT: Contents of section .debug_foo:
-# CHECK-NEXT:  0000 ffffffff ffffffff 08000000 00000000
-# CHECK-NEXT:  0010 ffffffff ffffffff 08000000 00000000
+# CHECK-NEXT:  0000 00000000 00000000 08000000 00000000
+# CHECK-NEXT:  0010 00000000 00000000 08000000 00000000
 
 ## -z dead-reloc-in-nonalloc= can override the tombstone value.
 # RUN: ld.lld --gc-sections -z dead-reloc-in-nonalloc=.debug_loc=42 %t.o %t1.o %t1.o -o %t42
@@ -35,7 +35,7 @@
 group:
   .byte 0
 
-## Resolved to UINT64_C(-2), with the addend ignored.
+## Resolved to UINT64_C(1), with the addend ignored.
 ## UINT64_C(-1) is a reserved value (base address selection entry) which can't be used.
 .section .debug_loc
   .quad .text.1+8
@@ -44,7 +44,7 @@ group:
 
 .section .debug_addr
 ## .text.3 is a local symbol. The symbol defined in a non-prevailing group is
-## discarded. Resolved to UINT64_C(-1).
+## discarded. Resolved to UINT64_C(0).
   .quad .text.3+24
 ## group is a non-local symbol. The relocation from the second %t1.o gets
 ## resolved to the prevailing copy.
