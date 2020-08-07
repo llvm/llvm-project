@@ -7,7 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SDBM/SDBMDialect.h"
+#include "SDBMExprDetail.h"
 
 using namespace mlir;
+
+SDBMDialect::SDBMDialect(MLIRContext *context)
+    : Dialect(getDialectNamespace(), context, TypeID::get<SDBMDialect>()) {
+  uniquer.registerStorageType(TypeID::get<detail::SDBMBinaryExprStorage>());
+  uniquer.registerStorageType(TypeID::get<detail::SDBMConstantExprStorage>());
+  uniquer.registerStorageType(TypeID::get<detail::SDBMDiffExprStorage>());
+  uniquer.registerStorageType(TypeID::get<detail::SDBMNegExprStorage>());
+  uniquer.registerStorageType(TypeID::get<detail::SDBMTermExprStorage>());
+}
 
 SDBMDialect::~SDBMDialect() = default;

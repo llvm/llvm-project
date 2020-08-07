@@ -402,6 +402,13 @@ MLIRContext::MLIRContext() : impl(new MLIRContextImpl()) {
   /// The empty dictionary attribute.
   impl->emptyDictionaryAttr = AttributeUniquer::get<DictionaryAttr>(
       this, StandardAttributes::Dictionary, ArrayRef<NamedAttribute>());
+
+  // Register the affine storage objects with the uniquer.
+  impl->affineUniquer.registerStorageType(
+      TypeID::get<AffineBinaryOpExprStorage>());
+  impl->affineUniquer.registerStorageType(
+      TypeID::get<AffineConstantExprStorage>());
+  impl->affineUniquer.registerStorageType(TypeID::get<AffineDimExprStorage>());
 }
 
 MLIRContext::~MLIRContext() {}
@@ -571,6 +578,7 @@ void Dialect::addType(TypeID typeID, AbstractType &&typeInfo) {
           AbstractType(std::move(typeInfo));
   if (!impl.registeredTypes.insert({typeID, newInfo}).second)
     llvm::report_fatal_error("Dialect Type already registered.");
+  impl.typeUniquer.registerStorageType(typeID);
 }
 
 void Dialect::addAttribute(TypeID typeID, AbstractAttribute &&attrInfo) {
@@ -580,6 +588,7 @@ void Dialect::addAttribute(TypeID typeID, AbstractAttribute &&attrInfo) {
           AbstractAttribute(std::move(attrInfo));
   if (!impl.registeredAttributes.insert({typeID, newInfo}).second)
     llvm::report_fatal_error("Dialect Attribute already registered.");
+  impl.attributeUniquer.registerStorageType(typeID);
 }
 
 /// Get the dialect that registered the attribute with the provided typeid.

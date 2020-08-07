@@ -133,17 +133,19 @@ public:
   template <typename T, typename... Args>
   static T get(MLIRContext *ctx, unsigned kind, Args &&... args) {
     return ctx->getAttributeUniquer().get<typename T::ImplType>(
+        T::getTypeID(),
         [ctx](AttributeStorage *storage) {
           initializeAttributeStorage(storage, ctx, T::getTypeID());
         },
         kind, std::forward<Args>(args)...);
   }
 
-  template <typename ImplType, typename... Args>
-  static LogicalResult mutate(MLIRContext *ctx, ImplType *impl,
+  template <typename T, typename... Args>
+  static LogicalResult mutate(MLIRContext *ctx, typename T::ImplType *impl,
                               Args &&...args) {
     assert(impl && "cannot mutate null attribute");
-    return ctx->getAttributeUniquer().mutate(impl, std::forward<Args>(args)...);
+    return ctx->getAttributeUniquer().mutate(T::getTypeID(), impl,
+                                             std::forward<Args>(args)...);
   }
 
 private:
