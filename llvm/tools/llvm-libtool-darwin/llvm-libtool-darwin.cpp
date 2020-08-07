@@ -16,6 +16,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LineIterator.h"
 #include "llvm/Support/WithColor.h"
 
 using namespace llvm;
@@ -29,7 +30,7 @@ static cl::opt<std::string> OutputFile("o", cl::desc("Specify output filename"),
 
 static cl::list<std::string> InputFiles(cl::Positional,
                                         cl::desc("<input files>"),
-                                        cl::OneOrMore,
+                                        cl::ZeroOrMore,
                                         cl::cat(LibtoolCategory));
 
 enum class Operation { Static };
@@ -40,6 +41,44 @@ static cl::opt<Operation> LibraryOperation(
         clEnumValN(Operation::Static, "static",
                    "Produce a statically linked library from the input files")),
     cl::Required, cl::cat(LibtoolCategory));
+
+static cl::opt<std::string>
+    FileList("filelist",
+             cl::desc("Pass in file containing a list of filenames"),
+             cl::value_desc("listfile[,dirname]"), cl::cat(LibtoolCategory));
+
+static Error processFileList() {
+  StringRef FileName, DirName;
+  std::tie(FileName, DirName) = StringRef(FileList).rsplit(",");
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
+      MemoryBuffer::getFileOrSTDIN(FileName, /*FileSize=*/-1,
+                                   /*RequiresNullTerminator=*/false);
+  if (std::error_code EC = FileOrErr.getError())
+    return createFileError(FileName, errorCodeToError(EC));
+  const MemoryBuffer &Ref = *FileOrErr.get();
+
+  line_iterator I(Ref, /*SkipBlanks=*/false);
+  if (I.is_at_eof())
+    return createStringError(std::errc::invalid_argument,
+                             "file list file: '%s' is empty",
+                             FileName.str().c_str());
+  for (; !I.is_at_eof(); ++I) {
+    StringRef Line = *I;
+    if (Line.empty())
+      return createStringError(std::errc::invalid_argument,
+                               "file list file: '%s': filename cannot be empty",
+                               FileName.str().c_str());
+
+    SmallString<128> Path;
+    if (!DirName.empty())
+      sys::path::append(Path, DirName, Line);
+    else
+      sys::path::append(Path, Line);
+    InputFiles.push_back(static_cast<std::string>(Path));
+  }
+  return Error::success();
+}
 
 static Error verifyMachOObject(const NewArchiveMember &Member) {
   auto MBRef = Member.Buf->getMemBufferRef();
@@ -135,12 +174,25 @@ int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
   cl::HideUnrelatedOptions({&LibtoolCategory, &ColorCategory});
   cl::ParseCommandLineOptions(Argc, Argv, "llvm-libtool-darwin\n");
+  if (!FileList.empty()) {
+    if (Error E = processFileList()) {
+      WithColor::defaultErrorHandler(std::move(E));
+      return EXIT_FAILURE;
+    }
+  }
+
+  if (InputFiles.empty()) {
+    Error E = createStringError(std::errc::invalid_argument,
+                                "no input files specified");
+    WithColor::defaultErrorHandler(std::move(E));
+    return EXIT_FAILURE;
+  }
 
   switch (LibraryOperation) {
   case Operation::Static:
     if (Error E = createStaticLibrary()) {
       WithColor::defaultErrorHandler(std::move(E));
-      exit(EXIT_FAILURE);
+      return EXIT_FAILURE;
     }
     break;
   }
