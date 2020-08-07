@@ -17,6 +17,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
+#include "clang/AST/StmtOpenMP.h"
 #include "llvm/ADT/BitVector.h"
 using namespace clang;
 
@@ -580,6 +581,17 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     break;
 
   default:
+    if (auto *ED = dyn_cast<OMPExecutableDirective>(S)) {
+      if (!ED->isStandaloneDirective()) {
+        unsigned NewParentScope = Scopes.size();
+        Scopes.emplace_back(ParentScope,
+                            diag::note_omp_protected_structured_block,
+                            diag::note_omp_exits_structured_block,
+                            ED->getStructuredBlock()->getBeginLoc());
+        BuildScopeInformation(ED->getStructuredBlock(), NewParentScope);
+        return;
+      }
+    }
     break;
   }
 
@@ -902,6 +914,11 @@ void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
     for (unsigned I = FromScope; I > ToScope; I = Scopes[I].ParentScope) {
       if (Scopes[I].InDiag == diag::note_protected_by_seh_finally) {
         S.Diag(From->getBeginLoc(), diag::warn_jump_out_of_seh_finally);
+        break;
+      }
+      if (Scopes[I].InDiag == diag::note_omp_protected_structured_block) {
+        S.Diag(From->getBeginLoc(), diag::err_goto_into_protected_scope);
+        S.Diag(To->getBeginLoc(), diag::note_omp_exits_structured_block);
         break;
       }
     }

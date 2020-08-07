@@ -81,7 +81,7 @@ static ParseResult parseROCDLMubufStoreOp(OpAsmParser &parser,
 //===----------------------------------------------------------------------===//
 
 // TODO: This should be the llvm.rocdl dialect once this is supported.
-ROCDLDialect::ROCDLDialect(MLIRContext *context) : Dialect("rocdl", context) {
+void ROCDLDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/LLVMIR/ROCDLOps.cpp.inc"

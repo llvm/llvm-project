@@ -136,7 +136,7 @@ static LogicalResult verify(MmaOp op) {
 //===----------------------------------------------------------------------===//
 
 // TODO: This should be the llvm.nvvm dialect once this is supported.
-NVVMDialect::NVVMDialect(MLIRContext *context) : Dialect("nvvm", context) {
+void NVVMDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/LLVMIR/NVVMOps.cpp.inc"

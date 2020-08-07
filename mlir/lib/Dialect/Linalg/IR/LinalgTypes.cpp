@@ -24,8 +24,7 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
-mlir::linalg::LinalgDialect::LinalgDialect(MLIRContext *context)
-    : Dialect(getDialectNamespace(), context) {
+void mlir::linalg::LinalgDialect::initialize() {
   addTypes<RangeType>();
   addOperations<
 #define GET_OP_LIST
