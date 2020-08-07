@@ -1160,7 +1160,7 @@ static void CheckFoldOperand(Sema &S, Expr *E) {
   }
 }
 
-ExprResult Sema::ActOnCXXFoldExpr(SourceLocation LParenLoc, Expr *LHS,
+ExprResult Sema::ActOnCXXFoldExpr(Scope *S, SourceLocation LParenLoc, Expr *LHS,
                                   tok::TokenKind Operator,
                                   SourceLocation EllipsisLoc, Expr *RHS,
                                   SourceLocation RParenLoc) {
@@ -1202,18 +1202,37 @@ ExprResult Sema::ActOnCXXFoldExpr(SourceLocation LParenLoc, Expr *LHS,
   }
 
   BinaryOperatorKind Opc = ConvertTokenKindToBinaryOpcode(Operator);
-  return BuildCXXFoldExpr(LParenLoc, LHS, Opc, EllipsisLoc, RHS, RParenLoc,
+
+  // Perform first-phase name lookup now.
+  UnresolvedLookupExpr *ULE = nullptr;
+  {
+    UnresolvedSet<16> Functions;
+    LookupBinOp(S, EllipsisLoc, Opc, Functions);
+    if (!Functions.empty()) {
+      DeclarationName OpName = Context.DeclarationNames.getCXXOperatorName(
+          BinaryOperator::getOverloadedOperator(Opc));
+      ExprResult Callee = CreateUnresolvedLookupExpr(
+          /*NamingClass*/ nullptr, NestedNameSpecifierLoc(),
+          DeclarationNameInfo(OpName, EllipsisLoc), Functions);
+      if (Callee.isInvalid())
+        return ExprError();
+      ULE = cast<UnresolvedLookupExpr>(Callee.get());
+    }
+  }
+
+  return BuildCXXFoldExpr(ULE, LParenLoc, LHS, Opc, EllipsisLoc, RHS, RParenLoc,
                           None);
 }
 
-ExprResult Sema::BuildCXXFoldExpr(SourceLocation LParenLoc, Expr *LHS,
+ExprResult Sema::BuildCXXFoldExpr(UnresolvedLookupExpr *Callee,
+                                  SourceLocation LParenLoc, Expr *LHS,
                                   BinaryOperatorKind Operator,
                                   SourceLocation EllipsisLoc, Expr *RHS,
                                   SourceLocation RParenLoc,
                                   Optional<unsigned> NumExpansions) {
-  return new (Context) CXXFoldExpr(Context.DependentTy, LParenLoc, LHS,
-                                   Operator, EllipsisLoc, RHS, RParenLoc,
-                                   NumExpansions);
+  return new (Context)
+      CXXFoldExpr(Context.DependentTy, Callee, LParenLoc, LHS, Operator,
+                  EllipsisLoc, RHS, RParenLoc, NumExpansions);
 }
 
 ExprResult Sema::BuildEmptyCXXFoldExpr(SourceLocation EllipsisLoc,
