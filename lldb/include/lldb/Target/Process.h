@@ -91,6 +91,7 @@ public:
   std::chrono::seconds GetUtilityExpressionTimeout() const;
   bool GetOSPluginReportsAllThreads() const;
   void SetOSPluginReportsAllThreads(bool does_report);
+  bool GetSteppingRunsAllThreads() const;
 
 protected:
   Process *m_process; // Can be nullptr for global ProcessProperties
