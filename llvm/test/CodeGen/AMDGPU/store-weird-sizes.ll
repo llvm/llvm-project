@@ -7,11 +7,11 @@ define void @local_store_i56(i56 addrspace(3)* %ptr, i56 %arg) #0 {
 ; CIVI-LABEL: local_store_i56:
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:        s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CIVI-NEXT:        v_lshrrev_b32_e32 v3, 16, v2
 ; CIVI-NEXT:        s_mov_b32 m0, -1
-; CIVI-NEXT:        ds_write_b8 v0, v3 offset:6
-; CIVI-NEXT:        ds_write_b16 v0, v2 offset:4
 ; CIVI-NEXT:        ds_write_b32 v0, v1
+; CIVI-NEXT:        v_lshrrev_b32_e32 v1, 16, v2
+; CIVI-NEXT:        ds_write_b16 v0, v2 offset:4
+; CIVI-NEXT:        ds_write_b8 v0, v1 offset:6
 ; CIVI-NEXT:        s_waitcnt lgkmcnt(0)
 ; CIVI-NEXT:        s_setpc_b64 s[30:31]
 ;
