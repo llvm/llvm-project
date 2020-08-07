@@ -2038,6 +2038,37 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
       return true;
     };
 
+    auto InspectReturnInstForUB =
+        [&](Value &V, const SmallSetVector<ReturnInst *, 4> RetInsts) {
+          // Check if a return instruction always cause UB or not
+          // Note: It is guaranteed that the returned position of the anchor
+          //       scope has noundef attribute when this is called.
+
+          // When the returned position has noundef attriubte, UB occur in the
+          // following cases.
+          //   (1) Returned value is known to be undef.
+          //   (2) The value is known to be a null pointer and the returned
+          //       position has nonnull attribute (because the returned value is
+          //       poison).
+          // Note: This callback is not called for a dead returned value because
+          //       such values are ignored in
+          //       checkForAllReturnedValuesAndReturnedInsts.
+          bool FoundUB = false;
+          if (isa<UndefValue>(V)) {
+            FoundUB = true;
+          } else {
+            auto &NonNullAA = A.getAAFor<AANonNull>(
+                *this, IRPosition::returned(*getAnchorScope()));
+            if (NonNullAA.isKnownNonNull() && isa<ConstantPointerNull>(V))
+              FoundUB = true;
+          }
+
+          if (FoundUB)
+            for (ReturnInst *RI : RetInsts)
+              KnownUBInsts.insert(RI);
+          return true;
+        };
+
     A.checkForAllInstructions(InspectMemAccessInstForUB, *this,
                               {Instruction::Load, Instruction::Store,
                                Instruction::AtomicCmpXchg,
@@ -2046,6 +2077,13 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
     A.checkForAllInstructions(InspectBrInstForUB, *this, {Instruction::Br},
                               /* CheckBBLivenessOnly */ true);
     A.checkForAllCallLikeInstructions(InspectCallSiteForUB, *this);
+
+    // If the returned position of the anchor scope has noundef attriubte, check
+    // all returned instructions.
+    // TODO: If AANoUndef is implemented, ask it here.
+    if (IRPosition::returned(*getAnchorScope()).hasAttr({Attribute::NoUndef}))
+      A.checkForAllReturnedValuesAndReturnInsts(InspectReturnInstForUB, *this);
+
     if (NoUBPrevSize != AssumedNoUBInsts.size() ||
         UBPrevSize != KnownUBInsts.size())
       return ChangeStatus::CHANGED;
