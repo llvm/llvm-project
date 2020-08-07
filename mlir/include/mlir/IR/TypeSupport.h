@@ -79,16 +79,9 @@ public:
     return *abstractType;
   }
 
-  /// Get the subclass data.
-  unsigned getSubclassData() const { return subclassData; }
-
-  /// Set the subclass data.
-  void setSubclassData(unsigned val) { subclassData = val; }
-
 protected:
   /// This constructor is used by derived classes as part of the TypeUniquer.
-  TypeStorage(unsigned subclassData = 0)
-      : abstractType(nullptr), subclassData(subclassData) {}
+  TypeStorage() : abstractType(nullptr) {}
 
 private:
   /// Set the abstract type for this storage instance. This is used by the
@@ -99,9 +92,6 @@ private:
 
   /// The abstract description for this type.
   const AbstractType *abstractType;
-
-  /// Space for subclasses to store data.
-  unsigned subclassData;
 };
 
 /// Default storage type for types that require no additional initialization or
