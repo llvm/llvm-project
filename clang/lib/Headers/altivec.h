@@ -17101,6 +17101,92 @@ vec_inserth(vector unsigned int __a, vector unsigned int __b,
 #endif
 }
 
+/* vec_extractl */
+
+static __inline__ vector unsigned long long __ATTRS_o_ai vec_extractl(
+    vector unsigned char __a, vector unsigned char __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vextdubvrx(__a, __b, __c);
+#else
+  vector unsigned long long __ret = __builtin_altivec_vextdubvlx(__a, __b, __c);
+  return vec_sld(__ret, __ret, 8);
+#endif
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai vec_extractl(
+    vector unsigned short __a, vector unsigned short __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vextduhvrx(__a, __b, __c);
+#else
+  vector unsigned long long __ret = __builtin_altivec_vextduhvlx(__a, __b, __c);
+  return vec_sld(__ret, __ret, 8);
+#endif
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai vec_extractl(
+    vector unsigned int __a, vector unsigned int __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vextduwvrx(__a, __b, __c);
+#else
+  vector unsigned long long __ret = __builtin_altivec_vextduwvlx(__a, __b, __c);
+  return vec_sld(__ret, __ret, 8);
+#endif
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_extractl(vector unsigned long long __a, vector unsigned long long __b,
+             unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vextddvrx(__a, __b, __c);
+#else
+  vector unsigned long long __ret = __builtin_altivec_vextddvlx(__a, __b, __c);
+  return vec_sld(__ret, __ret, 8);
+#endif
+}
+
+/* vec_extracth */
+
+static __inline__ vector unsigned long long __ATTRS_o_ai vec_extracth(
+    vector unsigned char __a, vector unsigned char __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vextdubvlx(__a, __b, __c);
+#else
+  vector unsigned long long __ret = __builtin_altivec_vextdubvrx(__a, __b, __c);
+  return vec_sld(__ret, __ret, 8);
+#endif
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai vec_extracth(
+    vector unsigned short __a, vector unsigned short __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vextduhvlx(__a, __b, __c);
+#else
+  vector unsigned long long __ret = __builtin_altivec_vextduhvrx(__a, __b, __c);
+  return vec_sld(__ret, __ret, 8);
+#endif
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai vec_extracth(
+    vector unsigned int __a, vector unsigned int __b, unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vextduwvlx(__a, __b, __c);
+#else
+  vector unsigned long long __ret = __builtin_altivec_vextduwvrx(__a, __b, __c);
+  return vec_sld(__ret, __ret, 8);
+#endif
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_extracth(vector unsigned long long __a, vector unsigned long long __b,
+             unsigned int __c) {
+#ifdef __LITTLE_ENDIAN__
+  return __builtin_altivec_vextddvlx(__a, __b, __c);
+#else
+  vector unsigned long long __ret = __builtin_altivec_vextddvrx(__a, __b, __c);
+  return vec_sld(__ret, __ret, 8);
+#endif
+}
+
 #ifdef __VSX__
 
 /* vec_permx */
