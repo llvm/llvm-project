@@ -91,6 +91,11 @@ enum NodeType : unsigned {
   UMAX_PRED,
   UMIN_PRED,
 
+  // Predicated instructions with the result of inactive lanes provided by the
+  // last operand.
+  SIGN_EXTEND_INREG_MERGE_PASSTHRU,
+  ZERO_EXTEND_INREG_MERGE_PASSTHRU,
+
   SETCC_MERGE_ZERO,
 
   // Arithmetic instructions which write flags.
