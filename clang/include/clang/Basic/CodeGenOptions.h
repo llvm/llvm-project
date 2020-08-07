@@ -388,6 +388,11 @@ public:
   bool hasReducedDebugInfo() const {
     return getDebugInfo() >= codegenoptions::DebugInfoConstructor;
   }
+
+  /// Check if maybe unused type info should be emitted.
+  bool hasMaybeUnusedDebugInfo() const {
+    return getDebugInfo() >= codegenoptions::UnusedTypeInfo;
+  }
 };
 
 }  // end namespace clang

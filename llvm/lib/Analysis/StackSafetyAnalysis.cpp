@@ -45,6 +45,10 @@ STATISTIC(NumModuleCalleeLookupTotal,
           "Number of total callee lookups on module index.");
 STATISTIC(NumModuleCalleeLookupFailed,
           "Number of failed callee lookups on module index.");
+STATISTIC(NumCombinedParamAccessesBefore,
+          "Number of total param accesses before generateParamAccessSummary.");
+STATISTIC(NumCombinedParamAccessesAfter,
+          "Number of total param accesses after generateParamAccessSummary.");
 
 static cl::opt<int> StackSafetyMaxIterations("stack-safety-max-iterations",
                                              cl::init(20), cl::Hidden);
@@ -936,6 +940,18 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
   if (!Index.hasParamAccess())
     return;
   const ConstantRange FullSet(FunctionSummary::ParamAccess::RangeWidth, true);
+
+  auto CountParamAccesses = [&](StatisticBase &Counter) {
+    if (!AreStatisticsEnabled())
+      return;
+    for (auto &GVS : Index)
+      for (auto &GV : GVS.second.SummaryList)
+        if (FunctionSummary *FS = dyn_cast<FunctionSummary>(GV.get()))
+          NumCombinedParamAccessesAfter += FS->paramAccesses().size();
+  };
+
+  CountParamAccesses(NumCombinedParamAccessesBefore);
+
   std::map<const FunctionSummary *, FunctionInfo<FunctionSummary>> Functions;
 
   // Convert the ModuleSummaryIndex to a FunctionMap
@@ -988,6 +1004,8 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
     const_cast<FunctionSummary *>(KV.first)->setParamAccesses(
         std::move(NewParams));
   }
+
+  CountParamAccesses(NumCombinedParamAccessesAfter);
 }
 
 static const char LocalPassArg[] = "stack-safety-local";

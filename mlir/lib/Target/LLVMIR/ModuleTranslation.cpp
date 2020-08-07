@@ -454,7 +454,12 @@ ModuleTranslation::convertOmpParallel(Operation &opInst,
   // TODO: The various operands of parallel operation are not handled.
   // Parallel operation is created with some default options for now.
   llvm::Value *ifCond = nullptr;
+  if (auto ifExprVar = cast<omp::ParallelOp>(opInst).if_expr_var())
+    ifCond = valueMapping.lookup(ifExprVar);
   llvm::Value *numThreads = nullptr;
+  if (auto numThreadsVar = cast<omp::ParallelOp>(opInst).num_threads_var())
+    numThreads = valueMapping.lookup(numThreadsVar);
+  // TODO: Is the Parallel construct cancellable?
   bool isCancellable = false;
   // TODO: Determine the actual alloca insertion point, e.g., the function
   // entry or the alloca insertion point as provided by the body callback

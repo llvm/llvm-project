@@ -81,10 +81,6 @@ public:
   /// Inherit some necessary constructors from 'TypeBase'.
   using Base::Base;
 
-  /// This static method is used to support type inquiry through isa, cast,
-  /// and dyn_cast.
-  static bool kindof(unsigned kind) { return kind == ToyTypes::Struct; }
-
   /// Create an instance of a `StructType` with the given element types. There
   /// *must* be atleast one element type.
   static StructType get(llvm::ArrayRef<mlir::Type> elementTypes);

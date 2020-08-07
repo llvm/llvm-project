@@ -1472,18 +1472,15 @@ static LogicalResult verify(spirv::ConstantOp constOp) {
   // ODS already generates checks to make sure the result type is valid. We just
   // need to additionally check that the value's attribute type is consistent
   // with the result type.
-  switch (value.getKind()) {
-  case StandardAttributes::Integer:
-  case StandardAttributes::Float: {
+  if (value.isa<IntegerAttr, FloatAttr>()) {
     if (valueType != opType)
       return constOp.emitOpError("result type (")
              << opType << ") does not match value type (" << valueType << ")";
     return success();
-  } break;
-  case StandardAttributes::DenseIntOrFPElements:
-  case StandardAttributes::SparseElements: {
+  }
+  if (value.isa<DenseIntOrFPElementsAttr, SparseElementsAttr>()) {
     if (valueType == opType)
-      break;
+      return success();
     auto arrayType = opType.dyn_cast<spirv::ArrayType>();
     auto shapedType = valueType.dyn_cast<ShapedType>();
     if (!arrayType) {
@@ -1497,9 +1494,8 @@ static LogicalResult verify(spirv::ConstantOp constOp) {
       numElements *= t.getNumElements();
       opElemType = t.getElementType();
     }
-    if (!opElemType.isIntOrFloat()) {
+    if (!opElemType.isIntOrFloat())
       return constOp.emitOpError("only support nested array result type");
-    }
 
     auto valueElemType = shapedType.getElementType();
     if (valueElemType != opElemType) {
@@ -1513,26 +1509,24 @@ static LogicalResult verify(spirv::ConstantOp constOp) {
              << numElements << ") does not match value number of elements ("
              << shapedType.getNumElements() << ")";
     }
-  } break;
-  case StandardAttributes::Array: {
+    return success();
+  }
+  if (auto attayAttr = value.dyn_cast<ArrayAttr>()) {
     auto arrayType = opType.dyn_cast<spirv::ArrayType>();
     if (!arrayType)
       return constOp.emitOpError(
           "must have spv.array result type for array value");
-    auto elemType = arrayType.getElementType();
-    for (auto element : value.cast<ArrayAttr>().getValue()) {
+    Type elemType = arrayType.getElementType();
+    for (Attribute element : attayAttr.getValue()) {
       if (element.getType() != elemType)
         return constOp.emitOpError("has array element whose type (")
                << element.getType()
                << ") does not match the result element type (" << elemType
                << ')';
     }
-  } break;
-  default:
-    return constOp.emitOpError("cannot have value of type ") << valueType;
+    return success();
   }
-
-  return success();
+  return constOp.emitOpError("cannot have value of type ") << valueType;
 }
 
 bool spirv::ConstantOp::isBuildableWith(Type type) {
@@ -1540,8 +1534,7 @@ bool spirv::ConstantOp::isBuildableWith(Type type) {
   if (!type.isa<spirv::SPIRVType>())
     return false;
 
-  if (type.getKind() >= Type::FIRST_SPIRV_TYPE &&
-      type.getKind() <= spirv::TypeKind::LAST_SPIRV_TYPE) {
+  if (isa<SPIRVDialect>(type.getDialect())) {
     // TODO: support constant struct
     return type.isa<spirv::ArrayType>();
   }
@@ -2619,19 +2612,14 @@ static LogicalResult verify(spirv::SpecConstantOp constOp) {
       return constOp.emitOpError("SpecId cannot be negative");
 
   auto value = constOp.default_value();
-
-  switch (value.getKind()) {
-  case StandardAttributes::Integer:
-  case StandardAttributes::Float: {
+  if (value.isa<IntegerAttr, FloatAttr>()) {
     // Make sure bitwidth is allowed.
     if (!value.getType().isa<spirv::SPIRVType>())
       return constOp.emitOpError("default value bitwidth disallowed");
     return success();
   }
-  default:
-    return constOp.emitOpError(
-        "default value can only be a bool, integer, or float scalar");
-  }
+  return constOp.emitOpError(
+      "default value can only be a bool, integer, or float scalar");
 }
 
 //===----------------------------------------------------------------------===//

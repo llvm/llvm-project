@@ -767,6 +767,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
             .Case("constructor", codegenoptions::DebugInfoConstructor)
             .Case("limited", codegenoptions::LimitedDebugInfo)
             .Case("standalone", codegenoptions::FullDebugInfo)
+            .Case("unused-types", codegenoptions::UnusedTypeInfo)
             .Default(~0U);
     if (Val == ~0U)
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
