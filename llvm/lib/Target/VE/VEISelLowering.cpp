@@ -672,6 +672,14 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SDIVREM, IntVT, Expand);
     setOperationAction(ISD::UDIVREM, IntVT, Expand);
 
+    // VE has no MULHU/S or U/SMUL_LOHI operations.
+    // TODO: Use MPD instruction to implement SMUL_LOHI for i32 type.
+    setOperationAction(ISD::MULHU, IntVT, Expand);
+    setOperationAction(ISD::MULHS, IntVT, Expand);
+    setOperationAction(ISD::UMUL_LOHI, IntVT, Expand);
+    setOperationAction(ISD::SMUL_LOHI, IntVT, Expand);
+
+    // VE has no CTTZ, ROTL, ROTR operations.
     setOperationAction(ISD::CTTZ, IntVT, Expand);
     setOperationAction(ISD::ROTL, IntVT, Expand);
     setOperationAction(ISD::ROTR, IntVT, Expand);

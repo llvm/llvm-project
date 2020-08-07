@@ -1,6 +1,19 @@
 ; RUN: llc < %s -mtriple=ve-unknown-unknown | FileCheck %s
 
 ; Function Attrs: norecurse nounwind readnone
+define i128 @divi128(i128, i128) {
+; CHECK-LABEL: divi128:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    lea %s4, __divti3@lo
+; CHECK-NEXT:    and %s4, %s4, (32)0
+; CHECK-NEXT:    lea.sl %s12, __divti3@hi(, %s4)
+; CHECK-NEXT:    bsic %s10, (, %s12)
+; CHECK-NEXT:    or %s11, 0, %s9
+  %3 = sdiv i128 %0, %1
+  ret i128 %3
+}
+
+; Function Attrs: norecurse nounwind readnone
 define i64 @divi64(i64 %a, i64 %b) {
 ; CHECK-LABEL: divi64:
 ; CHECK:       .LBB{{[0-9]+}}_2:
@@ -11,13 +24,27 @@ define i64 @divi64(i64 %a, i64 %b) {
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define i32 @divi32(i32 %a, i32 %b) {
+define signext i32 @divi32(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: divi32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    divs.w.sx %s0, %s0, %s1
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = sdiv i32 %a, %b
   ret i32 %r
+}
+
+; Function Attrs: norecurse nounwind readnone
+define i128 @divu128(i128, i128) {
+; CHECK-LABEL: divu128:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    lea %s4, __udivti3@lo
+; CHECK-NEXT:    and %s4, %s4, (32)0
+; CHECK-NEXT:    lea.sl %s12, __udivti3@hi(, %s4)
+; CHECK-NEXT:    bsic %s10, (, %s12)
+; CHECK-NEXT:    or %s11, 0, %s9
+  %3 = udiv i128 %0, %1
+  ret i128 %3
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -31,10 +58,11 @@ define i64 @divu64(i64 %a, i64 %b) {
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define i32 @divu32(i32 %a, i32 %b) {
+define zeroext i32 @divu32(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: divu32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    divu.w %s0, %s0, %s1
+; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = udiv i32 %a, %b
   ret i32 %r
@@ -93,6 +121,21 @@ define zeroext i8 @divu8(i8 zeroext %a, i8 zeroext %b) {
 }
 
 ; Function Attrs: norecurse nounwind readnone
+define i128 @divi128ri(i128) {
+; CHECK-LABEL: divi128ri:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    lea %s2, __divti3@lo
+; CHECK-NEXT:    and %s2, %s2, (32)0
+; CHECK-NEXT:    lea.sl %s12, __divti3@hi(, %s2)
+; CHECK-NEXT:    or %s2, 3, (0)1
+; CHECK-NEXT:    or %s3, 0, (0)1
+; CHECK-NEXT:    bsic %s10, (, %s12)
+; CHECK-NEXT:    or %s11, 0, %s9
+  %2 = sdiv i128 %0, 3
+  ret i128 %2
+}
+
+; Function Attrs: norecurse nounwind readnone
 define i64 @divi64ri(i64 %a, i64 %b) {
 ; CHECK-LABEL: divi64ri:
 ; CHECK:       .LBB{{[0-9]+}}_2:
@@ -103,13 +146,29 @@ define i64 @divi64ri(i64 %a, i64 %b) {
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define i32 @divi32ri(i32 %a, i32 %b) {
+define signext i32 @divi32ri(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: divi32ri:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    divs.w.sx %s0, %s0, (62)0
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = sdiv i32 %a, 3
   ret i32 %r
+}
+
+; Function Attrs: norecurse nounwind readnone
+define i128 @divu128ri(i128) {
+; CHECK-LABEL: divu128ri:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    lea %s2, __udivti3@lo
+; CHECK-NEXT:    and %s2, %s2, (32)0
+; CHECK-NEXT:    lea.sl %s12, __udivti3@hi(, %s2)
+; CHECK-NEXT:    or %s2, 3, (0)1
+; CHECK-NEXT:    or %s3, 0, (0)1
+; CHECK-NEXT:    bsic %s10, (, %s12)
+; CHECK-NEXT:    or %s11, 0, %s9
+  %2 = udiv i128 %0, 3
+  ret i128 %2
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -123,13 +182,31 @@ define i64 @divu64ri(i64 %a, i64 %b) {
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define i32 @divu32ri(i32 %a, i32 %b) {
+define zeroext i32 @divu32ri(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: divu32ri:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    divu.w %s0, %s0, (62)0
+; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = udiv i32 %a, 3
   ret i32 %r
+}
+
+; Function Attrs: norecurse nounwind readnone
+define i128 @divi128li(i128) {
+; CHECK-LABEL: divi128li:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    or %s3, 0, %s1
+; CHECK-NEXT:    or %s2, 0, %s0
+; CHECK-NEXT:    lea %s0, __divti3@lo
+; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    lea.sl %s12, __divti3@hi(, %s0)
+; CHECK-NEXT:    or %s0, 3, (0)1
+; CHECK-NEXT:    or %s1, 0, (0)1
+; CHECK-NEXT:    bsic %s10, (, %s12)
+; CHECK-NEXT:    or %s11, 0, %s9
+  %2 = sdiv i128 3, %0
+  ret i128 %2
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -143,13 +220,31 @@ define i64 @divi64li(i64 %a, i64 %b) {
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define i32 @divi32li(i32 %a, i32 %b) {
+define signext i32 @divi32li(i32 signext %a, i32 signext %b) {
 ; CHECK-LABEL: divi32li:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    divs.w.sx %s0, 3, %s1
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = sdiv i32 3, %b
   ret i32 %r
+}
+
+; Function Attrs: norecurse nounwind readnone
+define i128 @divu128li(i128) {
+; CHECK-LABEL: divu128li:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    or %s3, 0, %s1
+; CHECK-NEXT:    or %s2, 0, %s0
+; CHECK-NEXT:    lea %s0, __udivti3@lo
+; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    lea.sl %s12, __udivti3@hi(, %s0)
+; CHECK-NEXT:    or %s0, 3, (0)1
+; CHECK-NEXT:    or %s1, 0, (0)1
+; CHECK-NEXT:    bsic %s10, (, %s12)
+; CHECK-NEXT:    or %s11, 0, %s9
+  %2 = udiv i128 3, %0
+  ret i128 %2
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -163,10 +258,11 @@ define i64 @divu64li(i64 %a, i64 %b) {
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define i32 @divu32li(i32 %a, i32 %b) {
+define zeroext i32 @divu32li(i32 zeroext %a, i32 zeroext %b) {
 ; CHECK-LABEL: divu32li:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    divu.w %s0, 3, %s1
+; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = udiv i32 3, %b
   ret i32 %r
