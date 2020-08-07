@@ -119,16 +119,11 @@ AST_MATCHER_P(QualType, isSugarFor, Matcher<QualType>, SugarMatcher) {
 /// \endcode
 ///
 /// namedDecl(hasStdIteratorName()) matches \c I and \c CI.
-AST_MATCHER(NamedDecl, hasStdIteratorName) {
-  static const char *const IteratorNames[] = {"iterator", "reverse_iterator",
-                                              "const_iterator",
-                                              "const_reverse_iterator"};
-
-  for (const char *Name : IteratorNames) {
-    if (hasName(Name).matches(Node, Finder, Builder))
-      return true;
-  }
-  return false;
+Matcher<NamedDecl> hasStdIteratorName() {
+  static const StringRef IteratorNames[] = {"iterator", "reverse_iterator",
+                                            "const_iterator",
+                                            "const_reverse_iterator"};
+  return hasAnyName(IteratorNames);
 }
 
 /// Matches named declarations that have one of the standard container
@@ -143,26 +138,21 @@ AST_MATCHER(NamedDecl, hasStdIteratorName) {
 ///
 /// recordDecl(hasStdContainerName()) matches \c vector and \c forward_list
 /// but not \c my_vec.
-AST_MATCHER(NamedDecl, hasStdContainerName) {
-  static const char *const ContainerNames[] = {
-      "array",         "deque",
-      "forward_list",  "list",
-      "vector",
+Matcher<NamedDecl> hasStdContainerName() {
+  static StringRef ContainerNames[] = {"array",         "deque",
+                                       "forward_list",  "list",
+                                       "vector",
 
-      "map",           "multimap",
-      "set",           "multiset",
+                                       "map",           "multimap",
+                                       "set",           "multiset",
 
-      "unordered_map", "unordered_multimap",
-      "unordered_set", "unordered_multiset",
+                                       "unordered_map", "unordered_multimap",
+                                       "unordered_set", "unordered_multiset",
 
-      "queue",         "priority_queue",
-      "stack"};
+                                       "queue",         "priority_queue",
+                                       "stack"};
 
-  for (const char *Name : ContainerNames) {
-    if (hasName(Name).matches(Node, Finder, Builder))
-      return true;
-  }
-  return false;
+  return hasAnyName(ContainerNames);
 }
 
 /// Matches declarations whose declaration context is the C++ standard library
