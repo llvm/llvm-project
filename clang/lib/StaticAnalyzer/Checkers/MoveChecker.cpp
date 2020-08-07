@@ -104,7 +104,7 @@ private:
       "basic_ios",
       "future",
       "optional",
-      "packaged_task"
+      "packaged_task",
       "promise",
       "shared_future",
       "shared_lock",
