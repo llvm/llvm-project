@@ -1944,7 +1944,7 @@ private:
     // properties except they are never boxed arguments from the caller and
     // never having a missing column size.
     mlir::Value addr = lookupSymbol(sym);
-    mlir::Value len{};
+    mlir::Value len;
     [[maybe_unused]] bool mustBeDummy = false;
 
     if (sba.isChar) {
@@ -1968,17 +1968,16 @@ private:
         // XXX: Subsequent lowering expects a CHARACTER variable to be in a
         // boxchar. We assert that here. We might want to reconsider this
         // precondition.
-        // Update: Skeleton entry point dummy char argument generation hits
-        // this assert.  Suppress it pending further investigation.
-        // assert(addr.getType().isa<fir::BoxCharType>());
+        assert(addr.getType().isa<fir::BoxCharType>() &&
+               "dummy CHARACTER argument must be boxchar");
       } else {
         // local CHARACTER variable
         if (auto c = sba.getCharLenConst()) {
           len = builder->createIntegerConstant(loc, idxTy, *c);
-        } else {
-          auto e = sba.getCharLenExpr();
-          assert(e && "CHARACTER variable must have LEN parameter");
+        } else if (auto e = sba.getCharLenExpr()) {
           len = genExprValue(*e);
+        } else {
+          len = builder->createIntegerConstant(loc, idxTy, sym.size());
         }
         assert(!addr);
       }
@@ -1993,8 +1992,14 @@ private:
       if (sba.staticSize) {
         // object shape is constant
         auto castTy = builder->getRefType(genType(var));
-        if (addr)
-          addr = builder->createConvert(loc, castTy, addr);
+        if (addr) {
+          // XXX: special handling for boxchar; see proviso above
+          if (auto box =
+                  dyn_cast_or_null<fir::EmboxCharOp>(addr.getDefiningOp()))
+            addr = builder->createConvert(loc, castTy, box.memref());
+          else
+            addr = builder->createConvert(loc, castTy, addr);
+        }
         if (sba.lboundIsAllOnes()) {
           // if lower bounds are all ones, build simple shaped object
           llvm::SmallVector<mlir::Value, 8> shape;
