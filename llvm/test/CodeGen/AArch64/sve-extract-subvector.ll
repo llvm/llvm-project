@@ -28,5 +28,43 @@ define <vscale x 2 x i64> @extract_nxv2i64_nxv32i8(<vscale x 32 x i8> %z0_z1) {
   ret <vscale x 2 x i64> %ext
 }
 
+define <vscale x 4 x half> @extract_lo_nxv4f16_nxv8f16(<vscale x 8 x half> %z0) {
+; CHECK-LABEL: extract_lo_nxv4f16_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    ret
+  %ext = call <vscale x 4 x half> @llvm.aarch64.sve.tuple.get.nxv8f16(<vscale x 8 x half> %z0, i32 0)
+  ret <vscale x 4 x half> %ext
+}
+
+define <vscale x 4 x half> @extract_hi_nxv4f16_nxv8f16(<vscale x 8 x half> %z0) {
+; CHECK-LABEL: extract_hi_nxv4f16_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpkhi z0.s, z0.h
+; CHECK-NEXT:    ret
+  %ext = call <vscale x 4 x half> @llvm.aarch64.sve.tuple.get.nxv8f16(<vscale x 8 x half> %z0, i32 1)
+  ret <vscale x 4 x half> %ext
+}
+
+define <vscale x 2 x float> @extract_lo_nxv2f32_nxv4f32(<vscale x 4 x float> %z0) {
+; CHECK-LABEL: extract_lo_nxv2f32_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    ret
+  %ext = call <vscale x 2 x float> @llvm.aarch64.sve.tuple.get.nxv4f32(<vscale x 4 x float> %z0, i32 0)
+  ret <vscale x 2 x float> %ext
+}
+
+define <vscale x 2 x float> @extract_hi_nxv2f32_nxv4f32(<vscale x 4 x float> %z0) {
+; CHECK-LABEL: extract_hi_nxv2f32_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpkhi z0.d, z0.s
+; CHECK-NEXT:    ret
+  %ext = call <vscale x 2 x float> @llvm.aarch64.sve.tuple.get.nxv4f32(<vscale x 4 x float> %z0, i32 1)
+  ret <vscale x 2 x float> %ext
+}
+
 declare <vscale x 2 x i64> @llvm.aarch64.sve.tuple.get.nxv4i64(<vscale x 4 x i64>, i32)
 declare <vscale x 16 x i8> @llvm.aarch64.sve.tuple.get.nxv32i8(<vscale x 32 x i8>, i32)
+declare <vscale x 2 x float> @llvm.aarch64.sve.tuple.get.nxv4f32(<vscale x 4 x float>, i32)
+declare <vscale x 4 x half> @llvm.aarch64.sve.tuple.get.nxv8f16(<vscale x 8 x half>, i32)
