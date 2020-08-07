@@ -921,6 +921,8 @@ bool llvm::needsParamAccessSummary(const Module &M) {
 }
 
 void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
+  if (!Index.hasParamAccess())
+    return;
   const ConstantRange FullSet(FunctionSummary::ParamAccess::RangeWidth, true);
   std::map<const FunctionSummary *, FunctionInfo<FunctionSummary>> Functions;
 
