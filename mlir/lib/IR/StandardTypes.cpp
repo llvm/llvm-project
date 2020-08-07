@@ -408,9 +408,7 @@ MemRefType MemRefType::getImpl(ArrayRef<int64_t> shape, Type elementType,
                                Optional<Location> location) {
   auto *context = elementType.getContext();
 
-  // Check that memref is formed from allowed types.
-  if (!elementType.isIntOrIndexOrFloat() &&
-      !elementType.isa<VectorType, ComplexType>())
+  if (!BaseMemRefType::isValidElementType(elementType))
     return emitOptionalError(location, "invalid memref element type"),
            MemRefType();
 
@@ -486,9 +484,7 @@ unsigned UnrankedMemRefType::getMemorySpace() const {
 LogicalResult
 UnrankedMemRefType::verifyConstructionInvariants(Location loc, Type elementType,
                                                  unsigned memorySpace) {
-  // Check that memref is formed from allowed types.
-  if (!elementType.isIntOrFloat() &&
-      !elementType.isa<VectorType, ComplexType>())
+  if (!BaseMemRefType::isValidElementType(elementType))
     return emitError(loc, "invalid memref element type");
   return success();
 }
