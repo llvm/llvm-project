@@ -27,6 +27,10 @@ using namespace mlir::LLVM;
 // LLVMType.
 //===----------------------------------------------------------------------===//
 
+bool LLVMType::classof(Type type) {
+  return llvm::isa<LLVMDialect>(type.getDialect());
+}
+
 LLVMDialect &LLVMType::getDialect() {
   return static_cast<LLVMDialect &>(Type::getDialect());
 }

@@ -101,10 +101,7 @@ public:
   }
 
   /// Support for isa/cast.
-  static bool classof(Type type) {
-    return type.getKind() >= FIRST_NEW_LLVM_TYPE &&
-           type.getKind() <= LAST_NEW_LLVM_TYPE;
-  }
+  static bool classof(Type type);
 
   LLVMDialect &getDialect();
 
