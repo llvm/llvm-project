@@ -941,13 +941,13 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
     return;
   const ConstantRange FullSet(FunctionSummary::ParamAccess::RangeWidth, true);
 
-  auto CountParamAccesses = [&](StatisticBase &Counter) {
+  auto CountParamAccesses = [&](auto &Stat) {
     if (!AreStatisticsEnabled())
       return;
     for (auto &GVS : Index)
       for (auto &GV : GVS.second.SummaryList)
         if (FunctionSummary *FS = dyn_cast<FunctionSummary>(GV.get()))
-          NumCombinedParamAccessesAfter += FS->paramAccesses().size();
+          Stat += FS->paramAccesses().size();
   };
 
   CountParamAccesses(NumCombinedParamAccessesBefore);

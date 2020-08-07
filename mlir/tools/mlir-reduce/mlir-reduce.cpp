@@ -19,6 +19,8 @@
 #include "mlir/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Reducer/ReductionNode.h"
+#include "mlir/Reducer/ReductionTreePass.h"
 #include "mlir/Reducer/Tester.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LogicalResult.h"
@@ -83,14 +85,26 @@ int main(int argc, char **argv) {
     llvm::report_fatal_error("Input test case can't be parsed");
 
   // Initialize test environment.
-  Tester test(testFilename, testArguments);
-  test.setMostReduced(moduleRef.get());
+  const Tester test(testFilename, testArguments);
 
   if (!test.isInteresting(inputFilename))
     llvm::report_fatal_error(
         "Input test case does not exhibit interesting behavior");
 
-  test.getMostReduced().print(output->os());
+  // Reduction pass pipeline.
+  PassManager pm(&context);
+
+  // Reduction tree pass with OpReducer variant generation and single path
+  // traversal.
+  pm.addPass(
+      std::make_unique<ReductionTreePass<FunctionReducer, SinglePath>>(&test));
+
+  ModuleOp m = moduleRef.get().clone();
+
+  if (failed(pm.run(m)))
+    llvm::report_fatal_error("Error running the reduction pass pipeline");
+
+  m.print(output->os());
   output->keep();
 
   return 0;
