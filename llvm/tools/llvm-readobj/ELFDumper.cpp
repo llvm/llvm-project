@@ -3328,23 +3328,32 @@ static void printMipsReginfoData(ScopedPrinter &W,
 }
 
 template <class ELFT> void ELFDumper<ELFT>::printMipsReginfo() {
-  const ELFFile<ELFT> *Obj = ObjF->getELFFile();
-  const Elf_Shdr *RegInfo = findSectionByName(".reginfo");
-  if (!RegInfo) {
+  const Elf_Shdr *RegInfoSec = findSectionByName(".reginfo");
+  if (!RegInfoSec) {
     W.startLine() << "There is no .reginfo section in the file.\n";
     return;
   }
 
-  ArrayRef<uint8_t> Sec = unwrapOrError(ObjF->getFileName(),
-                                        Obj->getSectionContents(RegInfo));
-  if (Sec.size() != sizeof(Elf_Mips_RegInfo<ELFT>)) {
-    W.startLine() << "The .reginfo section has a wrong size.\n";
+  const ELFFile<ELFT> *Obj = ObjF->getELFFile();
+  Expected<ArrayRef<uint8_t>> ContentsOrErr =
+      Obj->getSectionContents(RegInfoSec);
+  if (!ContentsOrErr) {
+    this->reportUniqueWarning(createError(
+        "unable to read the content of the .reginfo section (" +
+        describe(*RegInfoSec) + "): " + toString(ContentsOrErr.takeError())));
+    return;
+  }
+
+  if (ContentsOrErr->size() < sizeof(Elf_Mips_RegInfo<ELFT>)) {
+    this->reportUniqueWarning(
+        createError("the .reginfo section has an invalid size (0x" +
+                    Twine::utohexstr(ContentsOrErr->size()) + ")"));
     return;
   }
 
   DictScope GS(W, "MIPS RegInfo");
-  auto *Reginfo = reinterpret_cast<const Elf_Mips_RegInfo<ELFT> *>(Sec.data());
-  printMipsReginfoData(W, *Reginfo);
+  printMipsReginfoData(W, *reinterpret_cast<const Elf_Mips_RegInfo<ELFT> *>(
+                              ContentsOrErr->data()));
 }
 
 template <class ELFT>
