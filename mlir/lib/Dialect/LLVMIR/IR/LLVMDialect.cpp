@@ -1683,9 +1683,8 @@ struct LLVMDialectImpl {
 } // end namespace LLVM
 } // end namespace mlir
 
-LLVMDialect::LLVMDialect(MLIRContext *context)
-    : Dialect(getDialectNamespace(), context),
-      impl(new detail::LLVMDialectImpl()) {
+void LLVMDialect::initialize() {
+  impl = new detail::LLVMDialectImpl();
   // clang-format off
   addTypes<LLVMVoidType,
            LLVMHalfType,
@@ -1716,7 +1715,7 @@ LLVMDialect::LLVMDialect(MLIRContext *context)
   allowUnknownOperations();
 }
 
-LLVMDialect::~LLVMDialect() {}
+LLVMDialect::~LLVMDialect() { delete impl; }
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMOps.cpp.inc"

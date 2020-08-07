@@ -27,7 +27,9 @@ def LLVM_Dialect : Dialect {
   private:
     friend LLVMType;
 
-    std::unique_ptr<detail::LLVMDialectImpl> impl;
+    // This can't be a unique_ptr because the ctor is generated inline
+    // in the class definition at the moment.
+    detail::LLVMDialectImpl *impl;
   }];
 }
 

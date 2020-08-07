@@ -26,8 +26,7 @@
 using namespace mlir;
 using namespace mlir::omp;
 
-OpenMPDialect::OpenMPDialect(MLIRContext *context)
-    : Dialect(getDialectNamespace(), context) {
+void OpenMPDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/OpenMP/OpenMPOps.cpp.inc"
