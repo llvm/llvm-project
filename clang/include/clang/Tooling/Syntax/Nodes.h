@@ -173,8 +173,6 @@ enum class NodeRole : uint8_t {
   ParametersAndQualifiers_trailingReturn,
   IdExpression_id,
   IdExpression_qualifier,
-  NestedNameSpecifier_specifier,
-  NestedNameSpecifier_delimiter,
   ParenExpression_subExpression
 };
 /// For debugging purposes.
@@ -262,14 +260,15 @@ public:
 
 /// Models a `nested-name-specifier`. C++ [expr.prim.id.qual]
 /// e.g. the `std::vector<int>::` in `std::vector<int>::size`.
-class NestedNameSpecifier final : public Tree {
+class NestedNameSpecifier final : public List {
 public:
-  NestedNameSpecifier() : Tree(NodeKind::NestedNameSpecifier) {}
+  NestedNameSpecifier() : List(NodeKind::NestedNameSpecifier) {}
   static bool classof(const Node *N) {
     return N->kind() <= NodeKind::NestedNameSpecifier;
   }
   std::vector<NameSpecifier *> specifiers();
-  std::vector<Leaf *> delimiters();
+  std::vector<List::ElementAndDelimiter<syntax::NameSpecifier>>
+  specifiersAndDoubleColons();
 };
 
 /// Models an `unqualified-id`. C++ [expr.prim.id.unqual]

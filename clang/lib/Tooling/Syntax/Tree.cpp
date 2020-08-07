@@ -357,21 +357,32 @@ std::vector<syntax::Node *> syntax::List::getElementsAsNodes() {
   return children;
 }
 
-// The methods below can't be implemented without information about the derived
-// list. These methods will be implemented by switching on the derived list's
-// `NodeKind`
-
 clang::tok::TokenKind syntax::List::getDelimiterTokenKind() {
-  llvm_unreachable("There are no subclasses of List, thus "
-                   "getDelimiterTokenKind() cannot be called");
+  switch (this->kind()) {
+  case NodeKind::NestedNameSpecifier:
+    return clang::tok::coloncolon;
+  default:
+    llvm_unreachable("This is not a subclass of List, thus "
+                     "getDelimiterTokenKind() cannot be called");
+  }
 }
 
 syntax::List::TerminationKind syntax::List::getTerminationKind() {
-  llvm_unreachable("There are no subclasses of List, thus getTerminationKind() "
-                   "cannot be called");
+  switch (this->kind()) {
+  case NodeKind::NestedNameSpecifier:
+    return TerminationKind::Terminated;
+  default:
+    llvm_unreachable("This is not a subclass of List, thus "
+                     "getTerminationKind() cannot be called");
+  }
 }
 
 bool syntax::List::canBeEmpty() {
-  llvm_unreachable(
-      "There are no subclasses of List, thus canBeEmpty() cannot be called");
+  switch (this->kind()) {
+  case NodeKind::NestedNameSpecifier:
+    return false;
+  default:
+    llvm_unreachable("This is not a subclass of List, thus canBeEmpty() "
+                     "cannot be called");
+  }
 }

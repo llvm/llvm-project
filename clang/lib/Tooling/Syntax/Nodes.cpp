@@ -200,30 +200,32 @@ raw_ostream &syntax::operator<<(raw_ostream &OS, NodeRole R) {
     return OS << "IdExpression_id";
   case syntax::NodeRole::IdExpression_qualifier:
     return OS << "IdExpression_qualifier";
-  case syntax::NodeRole::NestedNameSpecifier_specifier:
-    return OS << "NestedNameSpecifier_specifier";
-  case syntax::NodeRole::NestedNameSpecifier_delimiter:
-    return OS << "NestedNameSpecifier_delimiter";
   case syntax::NodeRole::ParenExpression_subExpression:
     return OS << "ParenExpression_subExpression";
   }
   llvm_unreachable("invalid role");
 }
 
-std::vector<syntax::Leaf *> syntax::NestedNameSpecifier::delimiters() {
-  std::vector<syntax::Leaf *> Children;
-  for (auto *C = firstChild(); C; C = C->nextSibling()) {
-    assert(C->role() == syntax::NodeRole::NestedNameSpecifier_delimiter);
-    Children.push_back(llvm::cast<syntax::Leaf>(C));
+// We could have an interator in list to not pay memory costs of temporary
+// vector
+std::vector<syntax::NameSpecifier *> syntax::NestedNameSpecifier::specifiers() {
+  auto specifiersAsNodes = getElementsAsNodes();
+  std::vector<syntax::NameSpecifier *> Children;
+  for (const auto &element : specifiersAsNodes) {
+    Children.push_back(llvm::cast<syntax::NameSpecifier>(element));
   }
   return Children;
 }
 
-std::vector<syntax::NameSpecifier *> syntax::NestedNameSpecifier::specifiers() {
-  std::vector<syntax::NameSpecifier *> Children;
-  for (auto *C = firstChild(); C; C = C->nextSibling()) {
-    assert(C->role() == syntax::NodeRole::NestedNameSpecifier_specifier);
-    Children.push_back(cast<syntax::NameSpecifier>(C));
+std::vector<syntax::List::ElementAndDelimiter<syntax::NameSpecifier>>
+syntax::NestedNameSpecifier::specifiersAndDoubleColons() {
+  auto specifiersAsNodesAndDoubleColons = getElementsAsNodesAndDelimiters();
+  std::vector<syntax::List::ElementAndDelimiter<syntax::NameSpecifier>>
+      Children;
+  for (const auto &specifierAndDoubleColon : specifiersAsNodesAndDoubleColons) {
+    Children.push_back(
+        {llvm::cast<syntax::NameSpecifier>(specifierAndDoubleColon.element),
+         specifierAndDoubleColon.delimiter});
   }
   return Children;
 }

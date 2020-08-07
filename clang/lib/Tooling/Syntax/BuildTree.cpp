@@ -809,9 +809,8 @@ public:
       if (!isa<syntax::GlobalNameSpecifier>(NS))
         Builder.foldNode(Builder.getRange(getLocalSourceRange(it)).drop_back(),
                          NS, it);
-      Builder.markChild(NS, syntax::NodeRole::NestedNameSpecifier_specifier);
-      Builder.markChildToken(it.getEndLoc(),
-                             syntax::NodeRole::NestedNameSpecifier_delimiter);
+      Builder.markChild(NS, syntax::NodeRole::List_element);
+      Builder.markChildToken(it.getEndLoc(), syntax::NodeRole::List_delimiter);
     }
     auto *NNS = new (allocator()) syntax::NestedNameSpecifier;
     Builder.foldNode(Builder.getRange(QualifierLoc.getSourceRange()), NNS,
