@@ -130,10 +130,10 @@ IntegerType::verifyConstructionInvariants(Location loc, unsigned width,
   return success();
 }
 
-unsigned IntegerType::getWidth() const { return getImpl()->getWidth(); }
+unsigned IntegerType::getWidth() const { return getImpl()->width; }
 
 IntegerType::SignednessSemantics IntegerType::getSignedness() const {
-  return getImpl()->getSignedness();
+  return getImpl()->signedness;
 }
 
 //===----------------------------------------------------------------------===//

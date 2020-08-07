@@ -192,9 +192,6 @@ public:
 
   friend ::llvm::hash_code hash_value(Type arg);
 
-  unsigned getSubclassData() const;
-  void setSubclassData(unsigned val);
-
   /// Methods for supporting PointerLikeTypeTraits.
   const void *getAsOpaquePointer() const {
     return static_cast<const void *>(impl);
@@ -264,7 +261,8 @@ public:
                           MLIRContext *context);
 
   // Input types.
-  unsigned getNumInputs() const { return getSubclassData(); }
+  unsigned getNumInputs() const;
+
   Type getInput(unsigned i) const { return getInputs()[i]; }
   ArrayRef<Type> getInputs() const;
 
