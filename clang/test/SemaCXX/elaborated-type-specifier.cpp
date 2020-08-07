@@ -26,7 +26,7 @@ namespace NS {
 }
 
 void test_X_elab(NS::X x) {
-  struct S4 *s4 = 0;
+  struct S4 *s4 = 0; // expected-note{{'S4' is not defined, but forward declared here; conversion would be valid if it's derived from 'NS::S4'}}
   x.test_elab2(s4); // expected-error{{cannot initialize a parameter of type 'NS::S4 *' with an lvalue of type 'struct S4 *'}}
 }
 
