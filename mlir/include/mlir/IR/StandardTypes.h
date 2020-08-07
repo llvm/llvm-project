@@ -92,8 +92,6 @@ public:
                                                     Type elementType);
 
   Type getElementType();
-
-  static bool kindof(unsigned kind) { return kind == StandardTypes::Complex; }
 };
 
 //===----------------------------------------------------------------------===//
@@ -108,9 +106,6 @@ public:
 
   /// Get an instance of the IndexType.
   static IndexType get(MLIRContext *context);
-
-  /// Support method to enable LLVM-style type casting.
-  static bool kindof(unsigned kind) { return kind == StandardTypes::Index; }
 
   /// Storage bit width used for IndexType by internal compiler data structures.
   static constexpr unsigned kInternalStorageBitWidth = 64;
@@ -177,9 +172,6 @@ public:
   /// Return true if this is an unsigned integer type.
   bool isUnsigned() const { return getSignedness() == Unsigned; }
 
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) { return kind == StandardTypes::Integer; }
-
   /// Integer representation maximal bitwidth.
   static constexpr unsigned kMaxWidth = 4096;
 };
@@ -208,12 +200,6 @@ public:
     return get(StandardTypes::F64, ctx);
   }
 
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) {
-    return kind >= StandardTypes::FIRST_FLOATING_POINT_TYPE &&
-           kind <= StandardTypes::LAST_FLOATING_POINT_TYPE;
-  }
-
   /// Return the bitwidth of this float type.
   unsigned getWidth();
 
@@ -233,8 +219,6 @@ public:
 
   /// Get an instance of the NoneType.
   static NoneType get(MLIRContext *context);
-
-  static bool kindof(unsigned kind) { return kind == StandardTypes::None; }
 };
 
 //===----------------------------------------------------------------------===//
@@ -361,9 +345,6 @@ public:
   }
 
   ArrayRef<int64_t> getShape() const;
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) { return kind == StandardTypes::Vector; }
 };
 
 //===----------------------------------------------------------------------===//
@@ -422,10 +403,6 @@ public:
                                                     Type elementType);
 
   ArrayRef<int64_t> getShape() const;
-
-  static bool kindof(unsigned kind) {
-    return kind == StandardTypes::RankedTensor;
-  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -454,10 +431,6 @@ public:
                                                     Type elementType);
 
   ArrayRef<int64_t> getShape() const { return llvm::None; }
-
-  static bool kindof(unsigned kind) {
-    return kind == StandardTypes::UnrankedTensor;
-  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -568,8 +541,6 @@ public:
     return ShapedType::kDynamicStrideOrOffset;
   }
 
-  static bool kindof(unsigned kind) { return kind == StandardTypes::MemRef; }
-
 private:
   /// Get or create a new MemRefType defined by the arguments.  If the resulting
   /// type would be ill-formed, return nullptr.  If the location is provided,
@@ -611,9 +582,6 @@ public:
 
   /// Returns the memory space in which data referred to by this memref resides.
   unsigned getMemorySpace() const;
-  static bool kindof(unsigned kind) {
-    return kind == StandardTypes::UnrankedMemRef;
-  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -659,8 +627,6 @@ public:
     assert(index < size() && "invalid index for tuple type");
     return getTypes()[index];
   }
-
-  static bool kindof(unsigned kind) { return kind == StandardTypes::Tuple; }
 };
 
 //===----------------------------------------------------------------------===//

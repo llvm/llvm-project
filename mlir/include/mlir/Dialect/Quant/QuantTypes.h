@@ -211,9 +211,6 @@ class AnyQuantizedType
 public:
   using Base::Base;
 
-  /// Support method to enable LLVM-style type casting.
-  static bool kindof(unsigned kind) { return kind == QuantizationTypes::Any; }
-
   /// Gets an instance of the type with all parameters specified but not
   /// checked.
   static AnyQuantizedType get(unsigned flags, Type storageType,
@@ -292,11 +289,6 @@ public:
                                int64_t zeroPoint, int64_t storageTypeMin,
                                int64_t storageTypeMax);
 
-  /// Support method to enable LLVM-style type casting.
-  static bool kindof(unsigned kind) {
-    return kind == QuantizationTypes::UniformQuantized;
-  }
-
   /// Gets the scale term. The scale designates the difference between the real
   /// values corresponding to consecutive quantized values differing by 1.
   double getScale() const;
@@ -356,11 +348,6 @@ public:
                                ArrayRef<int64_t> zeroPoints,
                                int32_t quantizedDimension,
                                int64_t storageTypeMin, int64_t storageTypeMax);
-
-  /// Support method to enable LLVM-style type casting.
-  static bool kindof(unsigned kind) {
-    return kind == QuantizationTypes::UniformQuantizedPerAxis;
-  }
 
   /// Gets the quantization scales. The scales designate the difference between
   /// the real values corresponding to consecutive quantized values differing

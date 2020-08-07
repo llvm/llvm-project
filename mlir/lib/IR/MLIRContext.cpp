@@ -676,7 +676,6 @@ Identifier Identifier::get(StringRef str, MLIRContext *context) {
 StorageUniquer &MLIRContext::getTypeUniquer() { return getImpl().typeUniquer; }
 
 FloatType FloatType::get(StandardTypes::Kind kind, MLIRContext *context) {
-  assert(kindof(kind) && "Not a FP kind.");
   switch (kind) {
   case StandardTypes::BF16:
     return context->getImpl().bf16Ty;

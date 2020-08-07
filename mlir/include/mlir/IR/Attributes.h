@@ -97,6 +97,10 @@ public:
   /// Return the classification for this attribute.
   unsigned getKind() const { return impl->getKind(); }
 
+  /// Return a unique identifier for the concrete attribute type. This is used
+  /// to support dynamic type casting.
+  TypeID getTypeID() { return impl->getAbstractAttribute().getTypeID(); }
+
   /// Return the type of this attribute.
   Type getType() const;
 
@@ -231,11 +235,6 @@ public:
   static AffineMapAttr get(AffineMap value);
 
   AffineMap getValue() const;
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) {
-    return kind == StandardAttributes::AffineMap;
-  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -261,11 +260,6 @@ public:
   iterator end() const { return getValue().end(); }
   size_t size() const { return getValue().size(); }
   bool empty() const { return size() == 0; }
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) {
-    return kind == StandardAttributes::Array;
-  }
 
 private:
   /// Class for underlying value iterator support.
@@ -357,11 +351,6 @@ public:
   /// Requires: uniquely named attributes.
   static bool sortInPlace(SmallVectorImpl<NamedAttribute> &array);
 
-  /// Methods for supporting type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) {
-    return kind == StandardAttributes::Dictionary;
-  }
-
 private:
   /// Return empty dictionary.
   static DictionaryAttr getEmpty(MLIRContext *context);
@@ -393,11 +382,6 @@ public:
   /// precision.
   double getValueAsDouble() const;
   static double getValueAsDouble(APFloat val);
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) {
-    return kind == StandardAttributes::Float;
-  }
 
   /// Verify the construction invariants for a double value.
   static LogicalResult verifyConstructionInvariants(Location loc, Type type,
@@ -431,11 +415,6 @@ public:
   /// Return the integer value as a unsigned 64-bit int. The attribute must be
   /// an unsigned integer.
   uint64_t getUInt() const;
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) {
-    return kind == StandardAttributes::Integer;
-  }
 
   static LogicalResult verifyConstructionInvariants(Location loc, Type type,
                                                     int64_t value);
@@ -480,11 +459,6 @@ public:
   static IntegerSetAttr get(IntegerSet value);
 
   IntegerSet getValue() const;
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) {
-    return kind == StandardAttributes::IntegerSet;
-  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -520,10 +494,6 @@ public:
                                                     Identifier dialect,
                                                     StringRef attrData,
                                                     Type type);
-
-  static bool kindof(unsigned kind) {
-    return kind == StandardAttributes::Opaque;
-  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -543,11 +513,6 @@ public:
   static StringAttr get(StringRef bytes, Type type);
 
   StringRef getValue() const;
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) {
-    return kind == StandardAttributes::String;
-  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -584,11 +549,6 @@ public:
   /// Returns the set of nested references representing the path to the symbol
   /// nested under the root reference.
   ArrayRef<FlatSymbolRefAttr> getNestedReferences() const;
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) {
-    return kind == StandardAttributes::SymbolRef;
-  }
 };
 
 /// A symbol reference with a reference path containing a single element. This
@@ -630,9 +590,6 @@ public:
   static TypeAttr get(Type value);
 
   Type getValue() const;
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) { return kind == StandardAttributes::Type; }
 };
 
 //===----------------------------------------------------------------------===//
@@ -647,8 +604,6 @@ public:
   using Base::Base;
 
   static UnitAttr get(MLIRContext *context);
-
-  static bool kindof(unsigned kind) { return kind == StandardAttributes::Unit; }
 };
 
 //===----------------------------------------------------------------------===//
@@ -1229,11 +1184,6 @@ class DenseStringElementsAttr
 public:
   using Base::Base;
 
-  /// Method for support type inquiry through isa, cast and dyn_cast.
-  static bool kindof(unsigned kind) {
-    return kind == StandardAttributes::DenseStringElements;
-  }
-
   /// Overload of the raw 'get' method that asserts that the given type is of
   /// integer or floating-point type. This method is used to verify type
   /// invariants that the templatized 'get' method cannot.
@@ -1251,11 +1201,6 @@ class DenseIntOrFPElementsAttr
 
 public:
   using Base::Base;
-
-  /// Method for support type inquiry through isa, cast and dyn_cast.
-  static bool kindof(unsigned kind) {
-    return kind == StandardAttributes::DenseIntOrFPElements;
-  }
 
 protected:
   friend DenseElementsAttr;
@@ -1394,11 +1339,6 @@ public:
 
   /// Returns dialect associated with this opaque constant.
   Dialect *getDialect() const;
-
-  /// Method for support type inquiry through isa, cast and dyn_cast.
-  static bool kindof(unsigned kind) {
-    return kind == StandardAttributes::OpaqueElements;
-  }
 };
 
 /// An attribute that represents a reference to a sparse vector or tensor
@@ -1459,11 +1399,6 @@ public:
   /// Return the value of the element at the given index. The 'index' is
   /// expected to refer to a valid element.
   Attribute getValue(ArrayRef<uint64_t> index) const;
-
-  /// Method for support type inquiry through isa, cast and dyn_cast.
-  static bool kindof(unsigned kind) {
-    return kind == StandardAttributes::SparseElements;
-  }
 
 private:
   /// Get a zero APFloat for the given sparse attribute.
