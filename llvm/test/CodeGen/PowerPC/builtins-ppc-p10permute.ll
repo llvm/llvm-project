@@ -253,3 +253,91 @@ entry:
   ret <2 x i64> %0
 }
 declare <2 x i64> @llvm.ppc.altivec.vinsd(<2 x i64>, i64, i32 immarg)
+
+define <2 x i64> @testVEXTDUBVLX(<16 x i8> %a, <16 x i8> %b, i32 %c) {
+; CHECK-LABEL: testVEXTDUBVLX:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vextdubvlx v2, v2, v3, r7
+; CHECK-NEXT:    blr
+entry:
+  %0 = tail call <2 x i64> @llvm.ppc.altivec.vextdubvlx(<16 x i8> %a, <16 x i8> %b, i32 %c)
+  ret <2 x i64> %0
+}
+declare <2 x i64> @llvm.ppc.altivec.vextdubvlx(<16 x i8>, <16 x i8>, i32)
+
+define <2 x i64> @testVEXTDUBVRX(<16 x i8> %a, <16 x i8> %b, i32 %c) {
+; CHECK-LABEL: testVEXTDUBVRX:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vextdubvrx v2, v2, v3, r7
+; CHECK-NEXT:    blr
+entry:
+  %0 = tail call <2 x i64> @llvm.ppc.altivec.vextdubvrx(<16 x i8> %a, <16 x i8> %b, i32 %c)
+  ret <2 x i64> %0
+}
+declare <2 x i64> @llvm.ppc.altivec.vextdubvrx(<16 x i8>, <16 x i8>, i32)
+
+define <2 x i64> @testVEXTDUHVLX(<8 x i16> %a, <8 x i16> %b, i32 %c) {
+; CHECK-LABEL: testVEXTDUHVLX:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vextduhvlx v2, v2, v3, r7
+; CHECK-NEXT:    blr
+entry:
+  %0 = tail call <2 x i64> @llvm.ppc.altivec.vextduhvlx(<8 x i16> %a, <8 x i16> %b, i32 %c)
+  ret <2 x i64> %0
+}
+declare <2 x i64> @llvm.ppc.altivec.vextduhvlx(<8 x i16>, <8 x i16>, i32)
+
+define <2 x i64> @testVEXTDUHVRX(<8 x i16> %a, <8 x i16> %b, i32 %c) {
+; CHECK-LABEL: testVEXTDUHVRX:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vextduhvrx v2, v2, v3, r7
+; CHECK-NEXT:    blr
+entry:
+  %0 = tail call <2 x i64> @llvm.ppc.altivec.vextduhvrx(<8 x i16> %a, <8 x i16> %b, i32 %c)
+  ret <2 x i64> %0
+}
+declare <2 x i64> @llvm.ppc.altivec.vextduhvrx(<8 x i16>, <8 x i16>, i32)
+
+define <2 x i64> @testVEXTDUWVLX(<4 x i32> %a, <4 x i32> %b, i32 %c) {
+; CHECK-LABEL: testVEXTDUWVLX:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vextduwvlx v2, v2, v3, r7
+; CHECK-NEXT:    blr
+entry:
+  %0 = tail call <2 x i64> @llvm.ppc.altivec.vextduwvlx(<4 x i32> %a, <4 x i32> %b, i32 %c)
+  ret <2 x i64> %0
+}
+declare <2 x i64> @llvm.ppc.altivec.vextduwvlx(<4 x i32>, <4 x i32>, i32)
+
+define <2 x i64> @testVEXTDUWVRX(<4 x i32> %a, <4 x i32> %b, i32 %c) {
+; CHECK-LABEL: testVEXTDUWVRX:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vextduwvrx v2, v2, v3, r7
+; CHECK-NEXT:    blr
+entry:
+  %0 = tail call <2 x i64> @llvm.ppc.altivec.vextduwvrx(<4 x i32> %a, <4 x i32> %b, i32 %c)
+  ret <2 x i64> %0
+}
+declare <2 x i64> @llvm.ppc.altivec.vextduwvrx(<4 x i32>, <4 x i32>, i32)
+
+define <2 x i64> @testVEXTDDVLX(<2 x i64> %a, <2 x i64> %b, i32 %c) {
+; CHECK-LABEL: testVEXTDDVLX:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vextddvlx v2, v2, v3, r7
+; CHECK-NEXT:    blr
+entry:
+  %0 = tail call <2 x i64> @llvm.ppc.altivec.vextddvlx(<2 x i64> %a, <2 x i64> %b, i32 %c)
+  ret <2 x i64> %0
+}
+declare <2 x i64> @llvm.ppc.altivec.vextddvlx(<2 x i64>, <2 x i64>, i32)
+
+define <2 x i64> @testVEXTDDVRX(<2 x i64> %a, <2 x i64> %b, i32 %c) {
+; CHECK-LABEL: testVEXTDDVRX:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vextddvrx v2, v2, v3, r7
+; CHECK-NEXT:    blr
+entry:
+  %0 = tail call <2 x i64> @llvm.ppc.altivec.vextddvrx(<2 x i64> %a, <2 x i64> %b, i32 %c)
+  ret <2 x i64> %0
+}
+declare <2 x i64> @llvm.ppc.altivec.vextddvrx(<2 x i64>, <2 x i64>, i32)

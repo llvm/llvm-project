@@ -531,6 +531,39 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
               Intrinsic<[llvm_v2i64_ty],
                         [llvm_v2i64_ty, llvm_i64_ty, llvm_i32_ty],
                         [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+  // P10 Vector Extract.
+  def int_ppc_altivec_vextdubvlx : GCCBuiltin<"__builtin_altivec_vextdubvlx">,
+              Intrinsic<[llvm_v2i64_ty],
+                        [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vextdubvrx : GCCBuiltin<"__builtin_altivec_vextdubvrx">,
+              Intrinsic<[llvm_v2i64_ty],
+                        [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vextduhvlx : GCCBuiltin<"__builtin_altivec_vextduhvlx">,
+              Intrinsic<[llvm_v2i64_ty],
+                        [llvm_v8i16_ty, llvm_v8i16_ty, llvm_i32_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vextduhvrx : GCCBuiltin<"__builtin_altivec_vextduhvrx">,
+              Intrinsic<[llvm_v2i64_ty],
+                        [llvm_v8i16_ty, llvm_v8i16_ty, llvm_i32_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vextduwvlx : GCCBuiltin<"__builtin_altivec_vextduwvlx">,
+              Intrinsic<[llvm_v2i64_ty],
+                        [llvm_v4i32_ty, llvm_v4i32_ty, llvm_i32_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vextduwvrx : GCCBuiltin<"__builtin_altivec_vextduwvrx">,
+              Intrinsic<[llvm_v2i64_ty],
+                        [llvm_v4i32_ty, llvm_v4i32_ty, llvm_i32_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vextddvlx : GCCBuiltin<"__builtin_altivec_vextddvlx">,
+              Intrinsic<[llvm_v2i64_ty],
+                        [llvm_v2i64_ty, llvm_v2i64_ty, llvm_i32_ty],
+                        [IntrNoMem]>;
+  def int_ppc_altivec_vextddvrx : GCCBuiltin<"__builtin_altivec_vextddvrx">,
+              Intrinsic<[llvm_v2i64_ty],
+                        [llvm_v2i64_ty, llvm_v2i64_ty, llvm_i32_ty],
+                        [IntrNoMem]>;
 }
 
 // Vector average.
