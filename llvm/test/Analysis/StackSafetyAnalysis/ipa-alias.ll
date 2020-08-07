@@ -16,42 +16,44 @@
 ; RUN: opt -module-summary %S/Inputs/ipa-alias.ll -o %t.summ1.bc
 
 ; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t.lto -stack-safety-print -stack-safety-run -save-temps -thinlto-threads 1 -O0 \
-; RUN:  -r %t.summ0.bc,PreemptableAliasWrite1, \
-; RUN:  -r %t.summ0.bc,AliasToPreemptableAliasWrite1, \
-; RUN:  -r %t.summ0.bc,InterposableAliasWrite1, \
-; RUN:  -r %t.summ0.bc,AliasWrite1, \
-; RUN:  -r %t.summ0.bc,BitcastAliasWrite1, \
-; RUN:  -r %t.summ0.bc,AliasToBitcastAliasWrite1, \
-; RUN:  -r %t.summ0.bc,PreemptableAliasCall,px \
-; RUN:  -r %t.summ0.bc,InterposableAliasCall,px \
 ; RUN:  -r %t.summ0.bc,AliasCall,px \
+; RUN:  -r %t.summ0.bc,AliasToBitcastAliasWrite1, \
+; RUN:  -r %t.summ0.bc,AliasToPreemptableAliasWrite1, \
+; RUN:  -r %t.summ0.bc,AliasWrite1, \
 ; RUN:  -r %t.summ0.bc,BitcastAliasCall,px \
-; RUN:  -r %t.summ1.bc,PreemptableAliasWrite1,px \
+; RUN:  -r %t.summ0.bc,BitcastAliasWrite1, \
+; RUN:  -r %t.summ0.bc,InterposableAliasCall,px \
+; RUN:  -r %t.summ0.bc,InterposableAliasWrite1, \
+; RUN:  -r %t.summ0.bc,PreemptableAliasCall,px \
+; RUN:  -r %t.summ0.bc,PreemptableAliasWrite1, \
+; RUN:  -r %t.summ1.bc,AliasToBitcastAliasWrite1,px \
 ; RUN:  -r %t.summ1.bc,AliasToPreemptableAliasWrite1,px \
-; RUN:  -r %t.summ1.bc,InterposableAliasWrite1,px \
 ; RUN:  -r %t.summ1.bc,AliasWrite1,px \
 ; RUN:  -r %t.summ1.bc,BitcastAliasWrite1,px \
-; RUN:  -r %t.summ1.bc,AliasToBitcastAliasWrite1,px \
-; RUN:  -r %t.summ1.bc,Write1,px 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
+; RUN:  -r %t.summ1.bc,InterposableAliasWrite1,px \
+; RUN:  -r %t.summ1.bc,PreemptableAliasWrite1,px \
+; RUN:  -r %t.summ1.bc,Write1,px \
+; RUN:    2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
 
 ; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t-newpm.lto -stack-safety-print -stack-safety-run -save-temps -use-new-pm -thinlto-threads 1 -O0 \
-; RUN:  -r %t.summ0.bc,PreemptableAliasWrite1, \
-; RUN:  -r %t.summ0.bc,AliasToPreemptableAliasWrite1, \
-; RUN:  -r %t.summ0.bc,InterposableAliasWrite1, \
-; RUN:  -r %t.summ0.bc,AliasWrite1, \
-; RUN:  -r %t.summ0.bc,BitcastAliasWrite1, \
-; RUN:  -r %t.summ0.bc,AliasToBitcastAliasWrite1, \
-; RUN:  -r %t.summ0.bc,PreemptableAliasCall,px \
-; RUN:  -r %t.summ0.bc,InterposableAliasCall,px \
 ; RUN:  -r %t.summ0.bc,AliasCall,px \
+; RUN:  -r %t.summ0.bc,AliasToBitcastAliasWrite1, \
+; RUN:  -r %t.summ0.bc,AliasToPreemptableAliasWrite1, \
+; RUN:  -r %t.summ0.bc,AliasWrite1, \
 ; RUN:  -r %t.summ0.bc,BitcastAliasCall,px \
-; RUN:  -r %t.summ1.bc,PreemptableAliasWrite1,px \
+; RUN:  -r %t.summ0.bc,BitcastAliasWrite1, \
+; RUN:  -r %t.summ0.bc,InterposableAliasCall,px \
+; RUN:  -r %t.summ0.bc,InterposableAliasWrite1, \
+; RUN:  -r %t.summ0.bc,PreemptableAliasCall,px \
+; RUN:  -r %t.summ0.bc,PreemptableAliasWrite1, \
+; RUN:  -r %t.summ1.bc,AliasToBitcastAliasWrite1,px \
 ; RUN:  -r %t.summ1.bc,AliasToPreemptableAliasWrite1,px \
-; RUN:  -r %t.summ1.bc,InterposableAliasWrite1,px \
 ; RUN:  -r %t.summ1.bc,AliasWrite1,px \
 ; RUN:  -r %t.summ1.bc,BitcastAliasWrite1,px \
-; RUN:  -r %t.summ1.bc,AliasToBitcastAliasWrite1,px \
-; RUN:  -r %t.summ1.bc,Write1,px 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
+; RUN:  -r %t.summ1.bc,InterposableAliasWrite1,px \
+; RUN:  -r %t.summ1.bc,PreemptableAliasWrite1,px \
+; RUN:  -r %t.summ1.bc,Write1,px \
+; RUN:    2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux"
