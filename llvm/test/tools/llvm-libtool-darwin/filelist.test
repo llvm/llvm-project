@@ -1,0 +1,108 @@
+## This test checks that the -filelist option works correctly.
+
+# RUN: yaml2obj %S/Inputs/input1.yaml -o %t-input1.o
+# RUN: yaml2obj %S/Inputs/input2.yaml -o %t-input2.o
+
+## Passing files in a listfile:
+# RUN: echo %t-input1.o >  %t.files.txt
+# RUN: echo %t-input2.o >> %t.files.txt
+# RUN: llvm-libtool-darwin -static -o %t.lib -filelist %t.files.txt
+
+## Check that binaries are present:
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+
+# CHECK-NAMES:      [[PREFIX]]-input1.o
+# CHECK-NAMES-NEXT: [[PREFIX]]-input2.o
+
+## Check that symbols are present:
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# CHECK-SYMBOLS:      Archive map
+# CHECK-SYMBOLS-NEXT: _symbol1 in [[PREFIX]]-input1.o
+# CHECK-SYMBOLS-NEXT: _symbol2 in [[PREFIX]]-input2.o
+# CHECK-SYMBOLS-EMPTY:
+
+# RUN: rm -rf %t/dirname && mkdir -p %t/dirname
+# RUN: yaml2obj %S/Inputs/input1.yaml -o %t/dirname/%basename_t.tmp-input1.o
+# RUN: echo %basename_t.tmp-input1.o > %t.files.txt
+
+## Passing in dirname:
+# RUN: llvm-libtool-darwin -static -o %t.lib -filelist %t.files.txt,%t/dirname
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=DIRNAME-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=DIRNAME-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# DIRNAME-NAMES:      [[PREFIX]]-input1.o
+
+# DIRNAME-SYMBOLS:      Archive map
+# DIRNAME-SYMBOLS-NEXT: _symbol1 in [[PREFIX]]-input1.o
+# DIRNAME-SYMBOLS-EMPTY:
+
+## Passing both -filelist option and object file as input:
+# RUN: llvm-libtool-darwin -static -o %t.lib -filelist %t.files.txt,%t/dirname %t-input2.o
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=REVERSE-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=REVERSE-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# REVERSE-NAMES:      [[PREFIX]]-input2.o
+# REVERSE-NAMES-NEXT: [[PREFIX]]-input1.o
+
+# REVERSE-SYMBOLS:      Archive map
+# REVERSE-SYMBOLS-NEXT: _symbol2 in [[PREFIX]]-input2.o
+# REVERSE-SYMBOLS-NEXT: _symbol1 in [[PREFIX]]-input1.o
+# REVERSE-SYMBOLS-EMPTY:
+
+## Check that an error is thrown when a file in the filelist doesn't exist in the cwd and no dirname is specified:
+# RUN: echo 'no-such-file' > %t.invalid-list.txt
+# RUN: not llvm-libtool-darwin -static -o %t.lib -filelist %t.invalid-list.txt 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=FILE-ERROR -DFILE=no-such-file
+
+# FILE-ERROR: error: '[[FILE]]': {{[nN]}}o such file or directory
+
+## Check that an error is thrown when the directory exists but does not contain the requested file:
+# RUN: not llvm-libtool-darwin -static -o %t.lib -filelist %t.invalid-list.txt,%t/dirname 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=DIR-ERROR -DDIR=%t/dirname -DFILE=no-such-file
+
+# DIR-ERROR: error: '[[DIR]]{{[/\\]}}[[FILE]]': {{[nN]}}o such file or directory
+
+## Check that an error is thrown when a file is in the cwd but dirname is specified:
+# RUN: yaml2obj %S/Inputs/input2.yaml -o %basename_t.tmp-input2.o
+# RUN: echo %basename_t.tmp-input2.o > %t.files-cwd.txt
+# RUN: not llvm-libtool-darwin -static -o %t.lib -filelist %t.files-cwd.txt,%t/dirname 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=DIR-ERROR -DDIR=%t/dirname -DFILE=%basename_t.tmp-input2.o
+
+## Check that an error is thrown when the directory doesn't exist:
+# RUN: not llvm-libtool-darwin -static -o %t.lib -filelist %t.files-cwd.txt,%t/Invalid-Dir 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=DIR-ERROR -DDIR=%t/Invalid-Dir -DFILE=%basename_t.tmp-input2.o
+
+## Check that an error is thrown when the filelist is empty:
+# RUN: touch %t.empty-list
+# RUN: not llvm-libtool-darwin -static -o %t.lib -filelist %t.empty-list 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=EMPTY-ERROR -DFILE=%t.empty-list
+
+# EMPTY-ERROR: error: file list file: '[[FILE]]' is empty
+
+## Check that an error is thrown when the filelist contains a blank line:
+# RUN: echo %t-input2.o > %t.blank-line.txt
+# RUN: echo '' >> %t.blank-line.txt
+# RUN: not llvm-libtool-darwin -static -o %t.lib -filelist %t.blank-line.txt 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=EMPTY-FILENAME -DFILE=%t.blank-line.txt
+
+# EMPTY-FILENAME: error: file list file: '[[FILE]]': filename cannot be empty
+
+## Check that an error is thrown when the filelist contains a line with only spaces:
+# RUN: echo %t-input2.o > %t.space-line.txt
+# RUN: echo "     " >> %t.space-line.txt
+# RUN: not llvm-libtool-darwin -static -o %t.lib -filelist %t.space-line.txt 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=FILE-ERROR -DFILE='     ' --strict-whitespace
+
+## Filelist option specified more than once:
+# RUN: touch %t.list1.txt and %t.list2.txt
+# RUN: not llvm-libtool-darwin -static -o %t.lib -filelist %t.list1.txt -filelist %t.list2.txt 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=DUPLICATE-ERROR
+
+# DUPLICATE-ERROR: for the --filelist option: may only occur zero or one times!

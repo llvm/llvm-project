@@ -46,6 +46,13 @@ OPTIONS
 
  Produces a static library from the input files.
 
+.. option:: -filelist <listfile[,dirname]>
+
+ Read input file names from `<listfile>`. File names are specified in `<listfile>`
+ one per line, separated only by newlines. Whitespace on a line is assumed
+ to be part of the filename. If the directory name, `dirname`, is also
+ specified then it is prepended to each file name in the `<listfile>`.
+
 EXIT STATUS
 -----------
 
