@@ -245,10 +245,10 @@ These each perform their respective integer arithmetic on a scalar.
 
   %2:_(s32) = G_ADD %0:_(s32), %1:_(s32)
 
-G_SADDSAT, G_UADDSAT, G_SSUBSAT, G_USUBSAT
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+G_SADDSAT, G_UADDSAT, G_SSUBSAT, G_USUBSAT, G_SSHLSAT, G_USHLSAT
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Signed and unsigned addition and subtraction with saturation.
+Signed and unsigned addition, subtraction and left shift with saturation.
 
 .. code-block:: none
 

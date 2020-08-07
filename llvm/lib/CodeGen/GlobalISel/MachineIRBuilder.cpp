@@ -977,7 +977,9 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
   }
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_ASHR:
-  case TargetOpcode::G_LSHR: {
+  case TargetOpcode::G_LSHR:
+  case TargetOpcode::G_USHLSAT:
+  case TargetOpcode::G_SSHLSAT: {
     assert(DstOps.size() == 1 && "Invalid Dst");
     assert(SrcOps.size() == 2 && "Invalid Srcs");
     validateShiftOp(DstOps[0].getLLTTy(*getMRI()),
