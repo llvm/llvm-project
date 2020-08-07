@@ -1262,7 +1262,7 @@ Expected<size_t> readNativeFileSlice(file_t FileHandle,
 
 std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
   DWORD Flags = LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY;
-  OVERLAPPED OV = {0};
+  OVERLAPPED OV = {};
   file_t File = convertFDToNativeFile(FD);
   auto Start = std::chrono::steady_clock::now();
   auto End = Start + Timeout;
@@ -1281,7 +1281,7 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
 
 std::error_code lockFile(int FD) {
   DWORD Flags = LOCKFILE_EXCLUSIVE_LOCK;
-  OVERLAPPED OV = {0};
+  OVERLAPPED OV = {};
   file_t File = convertFDToNativeFile(FD);
   if (::LockFileEx(File, Flags, 0, MAXDWORD, MAXDWORD, &OV))
     return std::error_code();
@@ -1290,7 +1290,7 @@ std::error_code lockFile(int FD) {
 }
 
 std::error_code unlockFile(int FD) {
-  OVERLAPPED OV = {0};
+  OVERLAPPED OV = {};
   file_t File = convertFDToNativeFile(FD);
   if (::UnlockFileEx(File, 0, MAXDWORD, MAXDWORD, &OV))
     return std::error_code();
