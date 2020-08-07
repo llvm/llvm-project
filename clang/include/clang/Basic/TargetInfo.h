@@ -100,8 +100,8 @@ struct TransferrableTargetInfo {
   unsigned char MinGlobalAlign;
 
   unsigned short NewAlign;
-  unsigned short MaxVectorAlign;
-  unsigned short MaxTLSAlign;
+  unsigned MaxVectorAlign;
+  unsigned MaxTLSAlign;
 
   const llvm::fltSemantics *HalfFormat, *BFloat16Format, *FloatFormat,
     *DoubleFormat, *LongDoubleFormat, *Float128Format;
@@ -1271,9 +1271,7 @@ public:
   ///
   /// Gets the maximum alignment (in bits) of a TLS variable on this target.
   /// Returns zero if there is no such constraint.
-  unsigned short getMaxTLSAlign() const {
-    return MaxTLSAlign;
-  }
+  unsigned getMaxTLSAlign() const { return MaxTLSAlign; }
 
   /// Whether target supports variable-length arrays.
   bool isVLASupported() const { return VLASupported; }
