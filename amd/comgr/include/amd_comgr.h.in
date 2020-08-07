@@ -44,34 +44,34 @@
 #endif /* __cplusplus */
 
 /* Placeholder for calling convention and import/export macros */
-#ifndef AMD_CALL
-#define AMD_CALL
+#ifndef AMD_COMGR_CALL
+#define AMD_COMGR_CALL
 #endif
 
-#ifndef AMD_EXPORT_DECORATOR
+#ifndef AMD_COMGR_EXPORT_DECORATOR
 #ifdef __GNUC__
-#define AMD_EXPORT_DECORATOR __attribute__ ((visibility ("default")))
+#define AMD_COMGR_EXPORT_DECORATOR __attribute__ ((visibility ("default")))
 #else
-#define AMD_EXPORT_DECORATOR __declspec(dllexport)
+#define AMD_COMGR_EXPORT_DECORATOR __declspec(dllexport)
 #endif
 #endif
 
-#ifndef AMD_IMPORT_DECORATOR
+#ifndef AMD_COMGR_IMPORT_DECORATOR
 #ifdef __GNUC__
-#define AMD_IMPORT_DECORATOR
+#define AMD_COMGR_IMPORT_DECORATOR
 #else
-#define AMD_IMPORT_DECORATOR __declspec(dllimport)
+#define AMD_COMGR_IMPORT_DECORATOR __declspec(dllimport)
 #endif
 #endif
 
-#define AMD_API_EXPORT AMD_EXPORT_DECORATOR AMD_CALL
-#define AMD_API_IMPORT AMD_IMPORT_DECORATOR AMD_CALL
+#define AMD_COMGR_API_EXPORT AMD_COMGR_EXPORT_DECORATOR AMD_COMGR_CALL
+#define AMD_COMGR_API_IMPORT AMD_COMGR_IMPORT_DECORATOR AMD_COMGR_CALL
 
-#ifndef AMD_API
-#ifdef AMD_EXPORT
-#define AMD_API AMD_API_EXPORT
+#ifndef AMD_COMGR_API
+#ifdef AMD_COMGR_EXPORT
+#define AMD_COMGR_API AMD_COMGR_API_EXPORT
 #else
-#define AMD_API AMD_API_IMPORT
+#define AMD_COMGR_API AMD_COMGR_API_IMPORT
 #endif
 #endif
 
@@ -140,6 +140,30 @@ extern "C" {
  *   include additional Comgr-specific informational messages.
  */
 
+
+/** \defgroup symbol_versions_group Symbol Versions
+ *
+ * The names used for the shared library versioned symbols.
+ *
+ * Every function is annotated with one of the version macros defined in this
+ * section.  Each macro specifies a corresponding symbol version string.  After
+ * dynamically loading the shared library with \p dlopen, the address of each
+ * function can be obtained using \p dlvsym with the name of the function and
+ * its corresponding symbol version string.  An error will be reported by \p
+ * dlvsym if the installed library does not support the version for the
+ * function specified in this version of the interface.
+ *
+ * @{
+ */
+
+/**
+ * The function was introduced in version 1.8 of the interface and has the
+ * symbol version string of ``"@amd_comgr_NAME@_1.8"``.
+ */
+#define AMD_COMGR_VERSION_1_8
+
+/** @} */
+
 /**
  * @brief Status codes.
  */
@@ -207,9 +231,9 @@ typedef enum amd_comgr_language_s {
  * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p
  * status is an invalid status code, or @p status_string is NULL.
  */
-amd_comgr_status_t AMD_API amd_comgr_status_string(
+amd_comgr_status_t AMD_COMGR_API amd_comgr_status_string(
     amd_comgr_status_t status,
-    const char ** status_string);
+    const char ** status_string) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Get the version of the code object manager interface
@@ -222,9 +246,9 @@ amd_comgr_status_t AMD_API amd_comgr_status_string(
  *
  * @param[out] minor Minor version number.
  */
-void AMD_API amd_comgr_get_version(
+void AMD_COMGR_API amd_comgr_get_version(
   size_t *major,
-  size_t *minor);
+  size_t *minor) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief The kinds of data supported.
@@ -365,9 +389,9 @@ typedef struct amd_comgr_disassembly_info_s {
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update action info object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_get_isa_count(
-  size_t *count);
+  size_t *count) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Return the Nth isa name supported by this version of the
@@ -389,10 +413,10 @@ amd_comgr_get_isa_count(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update action info object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_get_isa_name(
   size_t index,
-  const char **isa_name);
+  const char **isa_name) AMD_COMGR_VERSION_1_8;
 
  /**
  * @brief Get a handle to the metadata of an isa name.
@@ -418,10 +442,10 @@ amd_comgr_get_isa_name(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_get_isa_metadata(
   const char *isa_name,
-  amd_comgr_metadata_node_t *metadata);
+  amd_comgr_metadata_node_t *metadata) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Create a data object that can hold data of a specified kind.
@@ -446,10 +470,10 @@ amd_comgr_get_isa_metadata(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to create the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_create_data(
   amd_comgr_data_kind_t kind,
-  amd_comgr_data_t *data);
+  amd_comgr_data_t *data) AMD_COMGR_VERSION_1_8;
 
  /**
  * @brief Indicate that no longer using a data object handle.
@@ -469,9 +493,9 @@ amd_comgr_create_data(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_release_data(
-  amd_comgr_data_t data);
+  amd_comgr_data_t data) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Get the kind of the data object.
@@ -489,10 +513,10 @@ amd_comgr_release_data(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to create the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_get_data_kind(
   amd_comgr_data_t data,
-  amd_comgr_data_kind_t *kind);
+  amd_comgr_data_kind_t *kind) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Set the data content of a data object to the specified
@@ -519,11 +543,11 @@ amd_comgr_get_data_kind(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_set_data(
   amd_comgr_data_t data,
   size_t size,
-  const char* bytes);
+  const char* bytes) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Set the name associated with a data object.
@@ -549,10 +573,10 @@ amd_comgr_set_data(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_set_data_name(
   amd_comgr_data_t data,
-  const char* name);
+  const char* name) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Get the data contents, and/or the size of the data
@@ -578,11 +602,11 @@ amd_comgr_set_data_name(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_get_data(
   amd_comgr_data_t data,
   size_t *size,
-  char *bytes);
+  char *bytes) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Get the data object name and/or name length.
@@ -608,11 +632,11 @@ amd_comgr_get_data(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_get_data_name(
   amd_comgr_data_t data,
   size_t *size,
-  char *name);
+  char *name) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Get the data object isa name and/or isa name length.
@@ -639,11 +663,11 @@ amd_comgr_get_data_name(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_get_data_isa_name(
   amd_comgr_data_t data,
   size_t *size,
-  char *isa_name);
+  char *isa_name) AMD_COMGR_VERSION_1_8;
 
  /**
  * @brief Get a handle to the metadata of a data object.
@@ -665,10 +689,10 @@ amd_comgr_get_data_isa_name(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_get_data_metadata(
   amd_comgr_data_t data,
-  amd_comgr_metadata_node_t *metadata);
+  amd_comgr_metadata_node_t *metadata) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Destroy a metadata handle.
@@ -684,8 +708,8 @@ amd_comgr_get_data_metadata(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to update metadata
  * handle as out of resources.
  */
-amd_comgr_status_t AMD_API
-amd_comgr_destroy_metadata(amd_comgr_metadata_node_t metadata);
+amd_comgr_status_t AMD_COMGR_API
+amd_comgr_destroy_metadata(amd_comgr_metadata_node_t metadata) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Create a data set object.
@@ -701,9 +725,9 @@ amd_comgr_destroy_metadata(amd_comgr_metadata_node_t metadata);
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to create the data
  * set object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_create_data_set(
-  amd_comgr_data_set_t *data_set);
+  amd_comgr_data_set_t *data_set) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Destroy a data set object.
@@ -722,9 +746,9 @@ amd_comgr_create_data_set(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to update data set
  * object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_destroy_data_set(
-  amd_comgr_data_set_t data_set);
+  amd_comgr_data_set_t data_set) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Add a data object to a data set object if it is not already added.
@@ -747,10 +771,10 @@ amd_comgr_destroy_data_set(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to update data set
  * object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_data_set_add(
   amd_comgr_data_set_t data_set,
-  amd_comgr_data_t data);
+  amd_comgr_data_t data) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Remove all data objects of a specified kind from a data set object.
@@ -771,10 +795,10 @@ amd_comgr_data_set_add(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to update data set
  * object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_data_set_remove(
   amd_comgr_data_set_t data_set,
-  amd_comgr_data_kind_t data_kind);
+  amd_comgr_data_kind_t data_kind) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Return the number of data objects of a specified data kind that are
@@ -796,11 +820,11 @@ amd_comgr_data_set_remove(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to query data set
  * object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_data_count(
   amd_comgr_data_set_t data_set,
   amd_comgr_data_kind_t data_kind,
-  size_t *count);
+  size_t *count) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Return the Nth data object of a specified data kind that is added to a
@@ -829,12 +853,12 @@ amd_comgr_action_data_count(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to query data set
  * object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_data_get_data(
   amd_comgr_data_set_t data_set,
   amd_comgr_data_kind_t data_kind,
   size_t index,
-  amd_comgr_data_t *data);
+  amd_comgr_data_t *data) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Create an action info object.
@@ -850,9 +874,9 @@ amd_comgr_action_data_get_data(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to create the action info object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_create_action_info(
-  amd_comgr_action_info_t *action_info);
+  amd_comgr_action_info_t *action_info) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Destroy an action info object.
@@ -868,9 +892,9 @@ amd_comgr_create_action_info(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update action info object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_destroy_action_info(
-  amd_comgr_action_info_t action_info);
+  amd_comgr_action_info_t action_info) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Set the isa name of an action info object.
@@ -898,10 +922,10 @@ amd_comgr_destroy_action_info(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update action info object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_set_isa_name(
   amd_comgr_action_info_t action_info,
-  const char *isa_name);
+  const char *isa_name) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Get the isa name and/or isa name length.
@@ -927,11 +951,11 @@ amd_comgr_action_info_set_isa_name(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_get_isa_name(
   amd_comgr_action_info_t action_info,
   size_t *size,
-  char *isa_name);
+  char *isa_name) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Set the source language of an action info object.
@@ -957,10 +981,10 @@ amd_comgr_action_info_get_isa_name(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update action info object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_set_language(
   amd_comgr_action_info_t action_info,
-  amd_comgr_language_t language);
+  amd_comgr_language_t language) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Get the language for an action info object.
@@ -979,10 +1003,10 @@ amd_comgr_action_info_set_language(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_get_language(
   amd_comgr_action_info_t action_info,
-  amd_comgr_language_t *language);
+  amd_comgr_language_t *language) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Set the options string of an action info object.
@@ -1013,10 +1037,10 @@ amd_comgr_action_info_get_language(
  * @deprecated since 1.3
  * @see amd_comgr_action_info_set_option_list
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_set_options(
   amd_comgr_action_info_t action_info,
-  const char *options);
+  const char *options) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Get the options string and/or options strings length of an action
@@ -1053,11 +1077,11 @@ amd_comgr_action_info_set_options(
  * @see amd_comgr_action_info_get_option_list_count and
  * amd_comgr_action_info_get_option_list_item
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_get_options(
   amd_comgr_action_info_t action_info,
   size_t *size,
-  char *options);
+  char *options) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Set the options array of an action info object.
@@ -1086,11 +1110,11 @@ amd_comgr_action_info_get_options(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to update action
  * info object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_set_option_list(
   amd_comgr_action_info_t action_info,
   const char *options[],
-  size_t count);
+  size_t count) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Return the number of options in the options array.
@@ -1114,10 +1138,10 @@ amd_comgr_action_info_set_option_list(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to query the data
  * object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_get_option_list_count(
   amd_comgr_action_info_t action_info,
-  size_t *count);
+  size_t *count) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Return the Nth option string in the options array and/or that
@@ -1153,12 +1177,12 @@ amd_comgr_action_info_get_option_list_count(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to query the data
  * object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_get_option_list_item(
   amd_comgr_action_info_t action_info,
   size_t index,
   size_t *size,
-  char *option);
+  char *option) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Set the working directory of an action info object.
@@ -1183,10 +1207,10 @@ amd_comgr_action_info_get_option_list_item(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update action info object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_set_working_directory_path(
   amd_comgr_action_info_t action_info,
-  const char *path);
+  const char *path) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Get the working directory path and/or working directory path
@@ -1214,11 +1238,11 @@ amd_comgr_action_info_set_working_directory_path(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_get_working_directory_path(
   amd_comgr_action_info_t action_info,
   size_t *size,
-  char *path);
+  char *path) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Set whether logging is enabled for an action info object.
@@ -1237,10 +1261,10 @@ amd_comgr_action_info_get_working_directory_path(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update action info object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_set_logging(
   amd_comgr_action_info_t action_info,
-  bool logging);
+  bool logging) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Get whether logging is enabled for an action info object.
@@ -1258,10 +1282,10 @@ amd_comgr_action_info_set_logging(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_get_logging(
   amd_comgr_action_info_t action_info,
-  bool *logging);
+  bool *logging) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief The kinds of actions that can be performed.
@@ -1543,12 +1567,12 @@ typedef enum amd_comgr_action_kind_s {
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_do_action(
   amd_comgr_action_kind_t kind,
   amd_comgr_action_info_t info,
   amd_comgr_data_set_t input,
-  amd_comgr_data_set_t result);
+  amd_comgr_data_set_t result) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief The kinds of metadata nodes.
@@ -1592,10 +1616,10 @@ typedef enum amd_comgr_metadata_kind_s {
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to create the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_get_metadata_kind(
   amd_comgr_metadata_node_t metadata,
-  amd_comgr_metadata_kind_t *kind);
+  amd_comgr_metadata_kind_t *kind) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Get the string and/or string length from a metadata string
@@ -1622,11 +1646,11 @@ amd_comgr_get_metadata_kind(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_get_metadata_string(
   amd_comgr_metadata_node_t metadata,
   size_t *size,
-  char *string);
+  char *string) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Get the map size from a metadata map node.
@@ -1645,10 +1669,10 @@ amd_comgr_get_metadata_string(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_get_metadata_map_size(
   amd_comgr_metadata_node_t metadata,
-  size_t *size);
+  size_t *size) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Iterate over the elements a metadata map node.
@@ -1680,14 +1704,14 @@ amd_comgr_get_metadata_map_size(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to iterate the metadata as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_iterate_map_metadata(
   amd_comgr_metadata_node_t metadata,
   amd_comgr_status_t (*callback)(
     amd_comgr_metadata_node_t key,
     amd_comgr_metadata_node_t value,
     void *user_data),
-  void *user_data);
+  void *user_data) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Use a string key to lookup an element of a metadata map
@@ -1715,11 +1739,11 @@ amd_comgr_iterate_map_metadata(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to lookup metadata as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_metadata_lookup(
   amd_comgr_metadata_node_t metadata,
   const char *key,
-  amd_comgr_metadata_node_t *value);
+  amd_comgr_metadata_node_t *value) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Get the list size from a metadata list node.
@@ -1738,10 +1762,10 @@ amd_comgr_metadata_lookup(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_get_metadata_list_size(
   amd_comgr_metadata_node_t metadata,
-  size_t *size);
+  size_t *size) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Return the Nth metadata node of a list metadata node.
@@ -1766,11 +1790,11 @@ amd_comgr_get_metadata_list_size(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to update action data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_index_list_metadata(
   amd_comgr_metadata_node_t metadata,
   size_t index,
-  amd_comgr_metadata_node_t *value);
+  amd_comgr_metadata_node_t *value) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Iterate over the symbols of a machine code object.
@@ -1802,13 +1826,13 @@ amd_comgr_index_list_metadata(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to iterate the data object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_iterate_symbols(
   amd_comgr_data_t data,
   amd_comgr_status_t (*callback)(
     amd_comgr_symbol_t symbol,
     void *user_data),
-  void *user_data);
+  void *user_data) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Lookup a symbol in a machine code object by name.
@@ -1836,11 +1860,11 @@ amd_comgr_iterate_symbols(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to lookup symbol as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_symbol_lookup(
   amd_comgr_data_t data,
   const char *name,
-  amd_comgr_symbol_t *symbol);
+  amd_comgr_symbol_t *symbol) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Machine code object symbol type.
@@ -1964,11 +1988,11 @@ typedef enum amd_comgr_symbol_info_s {
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
  * Unable to query symbol as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_symbol_get_info(
   amd_comgr_symbol_t symbol,
   amd_comgr_symbol_info_t attribute,
-  void *value);
+  void *value) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Create a disassembly info object.
@@ -2008,7 +2032,7 @@ amd_comgr_symbol_get_info(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to create the
  * disassembly info object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_create_disassembly_info(
   const char *isa_name,
   uint64_t (*read_memory_callback)(
@@ -2022,7 +2046,7 @@ amd_comgr_create_disassembly_info(
   void (*print_address_annotation_callback)(
     uint64_t address,
     void *user_data),
-  amd_comgr_disassembly_info_t *disassembly_info);
+  amd_comgr_disassembly_info_t *disassembly_info) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Destroy a disassembly info object.
@@ -2039,9 +2063,9 @@ amd_comgr_create_disassembly_info(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to destroy the
  * disassembly info object as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_destroy_disassembly_info(
-  amd_comgr_disassembly_info_t disassembly_info);
+  amd_comgr_disassembly_info_t disassembly_info) AMD_COMGR_VERSION_1_8;
 
 /**
  * @brief Disassemble a single instruction.
@@ -2065,12 +2089,12 @@ amd_comgr_destroy_disassembly_info(
  * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES Unable to disassemble the
  * instruction as out of resources.
  */
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
 amd_comgr_disassemble_instruction(
   amd_comgr_disassembly_info_t disassembly_info,
   uint64_t address,
   void *user_data,
-  uint64_t *size);
+  uint64_t *size) AMD_COMGR_VERSION_1_8;
 
 /** @} */
 

@@ -1,4 +1,4 @@
-{
+@amd_comgr_NAME@_1.8 {
 global: amd_comgr_status_string;
         amd_comgr_get_version;
         amd_comgr_get_isa_count;

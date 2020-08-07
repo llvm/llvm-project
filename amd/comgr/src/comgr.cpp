@@ -459,7 +459,7 @@ std::string DataMeta::convertDocNodeToString(msgpack::DocNode DocNode) {
 DataSymbol::DataSymbol(SymbolContext *DataSym) : DataSym(DataSym) {}
 DataSymbol::~DataSymbol() { delete DataSym; }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_status_string
     //
@@ -486,7 +486,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-void AMD_API
+void AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_get_version
     //
@@ -495,7 +495,7 @@ void AMD_API
   *Minor = AMD_COMGR_INTERFACE_VERSION_MINOR;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_get_isa_count
     //
@@ -508,7 +508,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_get_isa_name
     //
@@ -521,7 +521,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_get_isa_metadata
     //
@@ -551,7 +551,7 @@ amd_comgr_status_t AMD_API
 
 // API functions on Data Object
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_create_data
     //
@@ -569,7 +569,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_release_data
     //
@@ -584,7 +584,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_get_data_kind
     //
@@ -601,7 +601,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_set_data
     //
@@ -614,7 +614,7 @@ amd_comgr_status_t AMD_API
   return DataP->setData(StringRef(Bytes, Size));
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_get_data
     //
@@ -632,7 +632,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_set_data_name
     //
@@ -645,7 +645,7 @@ amd_comgr_status_t AMD_API
   return DataP->setName(Name);
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_get_data_name
     //
@@ -663,7 +663,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_get_data_isa_name
     //
@@ -680,7 +680,7 @@ amd_comgr_status_t AMD_API
 
 // API functions on Data Set
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_create_data_set
     //
@@ -697,7 +697,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_destroy_data_set
     //
@@ -712,7 +712,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_data_set_add
     //
@@ -730,7 +730,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_data_set_remove
     //
@@ -752,7 +752,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_data_count
     //
@@ -770,7 +770,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_data_get_data
     //
@@ -801,7 +801,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_create_action_info
     //
@@ -818,7 +818,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_destroy_action_info
     //
@@ -833,7 +833,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_set_isa_name
     //
@@ -855,7 +855,7 @@ amd_comgr_status_t AMD_API
   return ActionP->setIsaName(IsaName);
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_get_isa_name
     //
@@ -873,7 +873,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_set_language
     //
@@ -888,7 +888,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_get_language
     //
@@ -903,7 +903,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_set_options
     //
@@ -916,7 +916,7 @@ amd_comgr_status_t AMD_API
   return ActionP->setOptionsFlat(Options);
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_get_options
     //
@@ -938,7 +938,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_set_option_list
     //
@@ -951,7 +951,7 @@ amd_comgr_status_t AMD_API
   return ActionP->setOptionList(ArrayRef<const char *>(Options, Count));
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_get_option_list_count
     //
@@ -964,7 +964,7 @@ amd_comgr_status_t AMD_API
   return ActionP->getOptionListCount(*Count);
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_get_option_list_item
     //
@@ -987,7 +987,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_set_working_directory_path
     //
@@ -1002,7 +1002,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_get_working_directory_path
     //
@@ -1020,7 +1020,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_set_logging
     //
@@ -1035,7 +1035,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_get_logging
     //
@@ -1050,7 +1050,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_do_action
     //
@@ -1169,7 +1169,7 @@ amd_comgr_status_t AMD_API
   return ActionStatus;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_get_data_metadata
     //
@@ -1202,7 +1202,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_destroy_metadata
     //
@@ -1212,7 +1212,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_get_metadata_kind
     //
@@ -1228,7 +1228,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_get_metadata_string
     //
@@ -1248,7 +1248,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_get_metadata_map_size
     //
@@ -1263,7 +1263,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_iterate_map_metadata
     //
@@ -1296,7 +1296,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_metadata_lookup
     //
@@ -1326,7 +1326,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_ERROR;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_get_metadata_list_size
     //
@@ -1341,7 +1341,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_index_list_metadata
     //
@@ -1368,7 +1368,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_iterate_symbols
     //
@@ -1390,7 +1390,7 @@ amd_comgr_status_t AMD_API
   return Helper.iterateTable(Ins, DataP->DataKind, Callback, UserData);
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_symbol_lookup
     //
@@ -1426,7 +1426,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_symbol_get_info
     //
@@ -1463,7 +1463,7 @@ amd_comgr_status_t AMD_API
   llvm_unreachable("invalid symbol info");
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_create_disassembly_info
     //
@@ -1489,7 +1489,7 @@ amd_comgr_status_t AMD_API
                                  PrintAddressAnnotationCallback, DisasmInfo);
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_destroy_disassembly_info
     //
@@ -1505,7 +1505,7 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMD_API
+amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_disassemble_instruction
     //

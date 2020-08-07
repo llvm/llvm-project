@@ -14,7 +14,8 @@ if (ROCM_CCACHE_BUILD)
   endif() # if (CCACHE_PROGRAM)
 endif() # if (ROCM_CCACHE_BUILD)
 
-project(amd_comgr VERSION "1.7.0" LANGUAGES C CXX)
+project(amd_comgr VERSION "1.8.0" LANGUAGES C CXX)
+set(amd_comgr_NAME "${PROJECT_NAME}")
 
 find_package(ROCM PATHS "/opt/rocm")
 if (ROCM_FOUND)
@@ -120,8 +121,11 @@ if (UNIX)
     _GNU_SOURCE __STDC_LIMIT_MACROS __STDC_CONSTANT_MACROS)
   list(APPEND AMD_COMGR_PUBLIC_LINKER_OPTIONS -pthread)
   if (NOT APPLE AND COMGR_BUILD_SHARED_LIBS)
+    configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/exportmap.in
+      ${CMAKE_CURRENT_BINARY_DIR}/src/exportmap @ONLY)
     list(APPEND AMD_COMGR_PRIVATE_LINKER_OPTIONS
-      "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/src/exportmap")
+      "-Wl,--version-script=${CMAKE_CURRENT_BINARY_DIR}/src/exportmap")
     # When building a shared library with -fsanitize=address we can't be
     # strict about undefined symbol references, as Clang won't include
     # libasan in the link, see
@@ -139,7 +143,7 @@ endif()
 # Windows is strict about visibility of exports in shared libraries, so we ask
 # GCC/Clang to also be strict, and then explicitly mark each exported symbol in
 # the shared header.
-list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS AMD_EXPORT)
+list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS AMD_COMGR_EXPORT)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/amd_comgr.h.in
