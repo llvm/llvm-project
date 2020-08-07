@@ -313,10 +313,8 @@ unsigned DIE::computeOffsetsAndAbbrevs(const AsmPrinter *AP,
 //===----------------------------------------------------------------------===//
 // DIEUnit Implementation
 //===----------------------------------------------------------------------===//
-DIEUnit::DIEUnit(uint16_t V, uint8_t A, dwarf::Tag UnitTag)
-    : Die(UnitTag), Section(nullptr), Offset(0), Length(0), Version(V),
-      AddrSize(A)
-{
+DIEUnit::DIEUnit(dwarf::Tag UnitTag)
+    : Die(UnitTag), Section(nullptr), Offset(0) {
   Die.Owner = this;
   assert((UnitTag == dwarf::DW_TAG_compile_unit ||
           UnitTag == dwarf::DW_TAG_skeleton_unit ||
