@@ -475,6 +475,12 @@ HANDLE_TARGET_OPCODE(G_USUBSAT)
 /// Generic saturating signed subtraction.
 HANDLE_TARGET_OPCODE(G_SSUBSAT)
 
+/// Generic saturating unsigned left shift.
+HANDLE_TARGET_OPCODE(G_USHLSAT)
+
+/// Generic saturating signed left shift.
+HANDLE_TARGET_OPCODE(G_SSHLSAT)
+
 // Perform signed fixed point multiplication
 HANDLE_TARGET_OPCODE(G_SMULFIX)
 

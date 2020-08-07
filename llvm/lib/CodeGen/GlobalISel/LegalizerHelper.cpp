@@ -1714,14 +1714,17 @@ LegalizerHelper::widenScalarInsert(MachineInstr &MI, unsigned TypeIdx,
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::widenScalarAddSubSat(MachineInstr &MI, unsigned TypeIdx,
-                                      LLT WideTy) {
+LegalizerHelper::widenScalarAddSubShlSat(MachineInstr &MI, unsigned TypeIdx,
+                                         LLT WideTy) {
   bool IsSigned = MI.getOpcode() == TargetOpcode::G_SADDSAT ||
-                  MI.getOpcode() == TargetOpcode::G_SSUBSAT;
+                  MI.getOpcode() == TargetOpcode::G_SSUBSAT ||
+                  MI.getOpcode() == TargetOpcode::G_SSHLSAT;
+  bool IsShift = MI.getOpcode() == TargetOpcode::G_SSHLSAT ||
+                 MI.getOpcode() == TargetOpcode::G_USHLSAT;
   // We can convert this to:
   //   1. Any extend iN to iM
   //   2. SHL by M-N
-  //   3. [US][ADD|SUB]SAT
+  //   3. [US][ADD|SUB|SHL]SAT
   //   4. L/ASHR by M-N
   //
   // It may be more efficient to lower this to a min and a max operation in
@@ -1732,11 +1735,14 @@ LegalizerHelper::widenScalarAddSubSat(MachineInstr &MI, unsigned TypeIdx,
   unsigned NewBits = WideTy.getScalarSizeInBits();
   unsigned SHLAmount = NewBits - MRI.getType(DstReg).getScalarSizeInBits();
 
+  // Shifts must zero-extend the RHS to preserve the unsigned quantity, and
+  // must not left shift the RHS to preserve the shift amount.
   auto LHS = MIRBuilder.buildAnyExt(WideTy, MI.getOperand(1));
-  auto RHS = MIRBuilder.buildAnyExt(WideTy, MI.getOperand(2));
+  auto RHS = IsShift ? MIRBuilder.buildZExt(WideTy, MI.getOperand(2))
+                     : MIRBuilder.buildAnyExt(WideTy, MI.getOperand(2));
   auto ShiftK = MIRBuilder.buildConstant(WideTy, SHLAmount);
   auto ShiftL = MIRBuilder.buildShl(WideTy, LHS, ShiftK);
-  auto ShiftR = MIRBuilder.buildShl(WideTy, RHS, ShiftK);
+  auto ShiftR = IsShift ? RHS : MIRBuilder.buildShl(WideTy, RHS, ShiftK);
 
   auto WideInst = MIRBuilder.buildInstr(MI.getOpcode(), {WideTy},
                                         {ShiftL, ShiftR}, MI.getFlags());
@@ -1789,9 +1795,11 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   }
   case TargetOpcode::G_SADDSAT:
   case TargetOpcode::G_SSUBSAT:
+  case TargetOpcode::G_SSHLSAT:
   case TargetOpcode::G_UADDSAT:
   case TargetOpcode::G_USUBSAT:
-    return widenScalarAddSubSat(MI, TypeIdx, WideTy);
+  case TargetOpcode::G_USHLSAT:
+    return widenScalarAddSubShlSat(MI, TypeIdx, WideTy);
   case TargetOpcode::G_CTTZ:
   case TargetOpcode::G_CTTZ_ZERO_UNDEF:
   case TargetOpcode::G_CTLZ:
@@ -2946,6 +2954,9 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
       return lowerAddSubSatToMinMax(MI);
     return lowerAddSubSatToAddoSubo(MI);
   }
+  case G_SSHLSAT:
+  case G_USHLSAT:
+    return lowerShlSat(MI);
   }
 }
 
@@ -3824,6 +3835,8 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_SHL:
   case G_LSHR:
   case G_ASHR:
+  case G_SSHLSAT:
+  case G_USHLSAT:
   case G_CTLZ:
   case G_CTLZ_ZERO_UNDEF:
   case G_CTTZ:
@@ -5844,6 +5857,40 @@ LegalizerHelper::lowerAddSubSatToAddoSubo(MachineInstr &MI) {
     Clamp = MIRBuilder.buildConstant(Ty, IsAdd ? -1 : 0);
   }
   MIRBuilder.buildSelect(Res, Ov, Clamp, Tmp);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerShlSat(MachineInstr &MI) {
+  assert((MI.getOpcode() == TargetOpcode::G_SSHLSAT ||
+          MI.getOpcode() == TargetOpcode::G_USHLSAT) &&
+         "Expected shlsat opcode!");
+  bool IsSigned = MI.getOpcode() == TargetOpcode::G_SSHLSAT;
+  Register Res = MI.getOperand(0).getReg();
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  LLT Ty = MRI.getType(Res);
+  LLT BoolTy = Ty.changeElementSize(1);
+
+  unsigned BW = Ty.getScalarSizeInBits();
+  auto Result = MIRBuilder.buildShl(Ty, LHS, RHS);
+  auto Orig = IsSigned ? MIRBuilder.buildAShr(Ty, Result, RHS)
+                       : MIRBuilder.buildLShr(Ty, Result, RHS);
+
+  MachineInstrBuilder SatVal;
+  if (IsSigned) {
+    auto SatMin = MIRBuilder.buildConstant(Ty, APInt::getSignedMinValue(BW));
+    auto SatMax = MIRBuilder.buildConstant(Ty, APInt::getSignedMaxValue(BW));
+    auto Cmp = MIRBuilder.buildICmp(CmpInst::ICMP_SLT, BoolTy, LHS,
+                                    MIRBuilder.buildConstant(Ty, 0));
+    SatVal = MIRBuilder.buildSelect(Ty, Cmp, SatMin, SatMax);
+  } else {
+    SatVal = MIRBuilder.buildConstant(Ty, APInt::getMaxValue(BW));
+  }
+  auto Ov = MIRBuilder.buildICmp(CmpInst::ICMP_NE, Ty, LHS, Orig);
+  MIRBuilder.buildSelect(Res, Ov, SatVal, Result);
 
   MI.eraseFromParent();
   return Legalized;

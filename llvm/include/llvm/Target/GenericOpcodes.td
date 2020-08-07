@@ -545,6 +545,22 @@ def G_SSUBSAT : GenericInstruction {
   let isCommutable = 0;
 }
 
+// Generic saturating unsigned left shift.
+def G_USHLSAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type1:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
+// Generic saturating signed left shift.
+def G_SSHLSAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type1:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
 /// RESULT = [US]MULFIX(LHS, RHS, SCALE) - Perform fixed point
 /// multiplication on 2 integers with the same width and scale. SCALE
 /// represents the scale of both operands as fixed point numbers. This

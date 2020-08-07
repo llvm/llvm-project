@@ -1293,6 +1293,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Shifts.clampScalar(1, S32, S32);
     Shifts.clampScalar(0, S16, S64);
     Shifts.widenScalarToNextPow2(0, 16);
+
+    getActionDefinitionsBuilder({G_SSHLSAT, G_USHLSAT})
+      .minScalar(0, S16)
+      .scalarize(0)
+      .lower();
   } else {
     // Make sure we legalize the shift amount type first, as the general
     // expansion for the shifted type will produce much worse code if it hasn't
@@ -1300,6 +1305,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Shifts.clampScalar(1, S32, S32);
     Shifts.clampScalar(0, S32, S64);
     Shifts.widenScalarToNextPow2(0, 32);
+
+    getActionDefinitionsBuilder({G_SSHLSAT, G_USHLSAT})
+      .minScalar(0, S32)
+      .scalarize(0)
+      .lower();
   }
   Shifts.scalarize(0);
 
