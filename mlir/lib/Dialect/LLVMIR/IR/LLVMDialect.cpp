@@ -1794,16 +1794,3 @@ bool mlir::LLVM::satisfiesLLVMModule(Operation *op) {
   return op->hasTrait<OpTrait::SymbolTable>() &&
          op->hasTrait<OpTrait::IsIsolatedFromAbove>();
 }
-
-std::unique_ptr<llvm::Module>
-mlir::LLVM::cloneModuleIntoNewContext(llvm::LLVMContext *context,
-                                      llvm::Module *module) {
-  SmallVector<char, 1> buffer;
-  {
-    llvm::raw_svector_ostream os(buffer);
-    WriteBitcodeToFile(*module, os);
-  }
-  llvm::MemoryBufferRef bufferRef(StringRef(buffer.data(), buffer.size()),
-                                  "cloned module buffer");
-  return cantFail(parseBitcodeFile(bufferRef, *context));
-}

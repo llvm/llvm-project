@@ -75,10 +75,12 @@ protected:
 };
 } // namespace
 
-std::unique_ptr<llvm::Module> mlir::translateModuleToROCDLIR(Operation *m) {
+std::unique_ptr<llvm::Module>
+mlir::translateModuleToROCDLIR(Operation *m, llvm::LLVMContext &llvmContext,
+                               StringRef name) {
   // lower MLIR (with RODL Dialect) to LLVM IR (with ROCDL intrinsics)
-  auto llvmModule =
-      LLVM::ModuleTranslation::translateModule<ModuleTranslation>(m);
+  auto llvmModule = LLVM::ModuleTranslation::translateModule<ModuleTranslation>(
+      m, llvmContext, name);
 
   // foreach GPU kernel
   // 1. Insert AMDGPU_KERNEL calling convention.
@@ -102,7 +104,8 @@ namespace mlir {
 void registerToROCDLIRTranslation() {
   TranslateFromMLIRRegistration registration(
       "mlir-to-rocdlir", [](ModuleOp module, raw_ostream &output) {
-        auto llvmModule = mlir::translateModuleToROCDLIR(module);
+        llvm::LLVMContext llvmContext;
+        auto llvmModule = mlir::translateModuleToROCDLIR(module, llvmContext);
         if (!llvmModule)
           return failure();
 
