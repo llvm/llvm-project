@@ -118,7 +118,7 @@ using ActionStmts = std::tuple<
     parser::AssignStmt, parser::AssignedGotoStmt, parser::PauseStmt>;
 
 using OtherStmts = std::tuple<parser::FormatStmt, parser::EntryStmt,
-                              parser::DataStmt, parser::NamelistStmt>;
+                              parser::NamelistStmt>;
 
 using ConstructStmts = std::tuple<
     parser::AssociateStmt, parser::EndAssociateStmt, parser::BlockStmt,
@@ -547,8 +547,6 @@ struct FunctionLikeUnit : public ProgramUnit {
   FunctionLikeUnit(FunctionLikeUnit &&) = default;
   FunctionLikeUnit(const FunctionLikeUnit &) = delete;
 
-  void processSymbolTable(const Fortran::semantics::Scope &);
-
   std::vector<Variable> getOrderedSymbolTable() { return varList[0]; }
 
   bool isMainProgram() const {
@@ -633,9 +631,12 @@ struct ModuleLikeUnit : public ProgramUnit {
 
   LLVM_DUMP_METHOD void dump() const;
 
+  std::vector<Variable> getOrderedSymbolTable() { return varList[0]; }
+
   ModuleStatement beginStmt;
   ModuleStatement endStmt;
   std::list<FunctionLikeUnit> nestedFunctions;
+  std::vector<std::vector<Variable>> varList;
 };
 
 /// Block data units contain the variables and data initializers for common
