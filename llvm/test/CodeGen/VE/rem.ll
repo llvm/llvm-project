@@ -16,8 +16,6 @@ define i64 @remi64(i64 %a, i64 %b) {
 define i32 @remi32(i32 %a, i32 %b) {
 ; CHECK-LABEL: remi32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    divs.w.sx %s2, %s0, %s1
 ; CHECK-NEXT:    muls.w.sx %s1, %s2, %s1
 ; CHECK-NEXT:    subs.w.sx %s0, %s0, %s1
@@ -42,8 +40,6 @@ define i64 @remu64(i64 %a, i64 %b) {
 define i32 @remu32(i32 %a, i32 %b) {
 ; CHECK-LABEL: remu32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    divu.w %s2, %s0, %s1
 ; CHECK-NEXT:    muls.w.sx %s1, %s2, %s1
 ; CHECK-NEXT:    subs.w.sx %s0, %s0, %s1
@@ -56,8 +52,6 @@ define i32 @remu32(i32 %a, i32 %b) {
 define signext i16 @remi16(i16 signext %a, i16 signext %b) {
 ; CHECK-LABEL: remi16:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    divs.w.sx %s2, %s0, %s1
 ; CHECK-NEXT:    muls.w.sx %s1, %s2, %s1
 ; CHECK-NEXT:    subs.w.sx %s0, %s0, %s1
@@ -75,8 +69,6 @@ define signext i16 @remi16(i16 signext %a, i16 signext %b) {
 define zeroext i16 @remu16(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK-LABEL: remu16:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    divu.w %s2, %s0, %s1
 ; CHECK-NEXT:    muls.w.sx %s1, %s2, %s1
 ; CHECK-NEXT:    subs.w.sx %s0, %s0, %s1
@@ -90,8 +82,6 @@ define zeroext i16 @remu16(i16 zeroext %a, i16 zeroext %b) {
 define signext i8 @remi8(i8 signext %a, i8 signext %b) {
 ; CHECK-LABEL: remi8:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    divs.w.sx %s2, %s0, %s1
 ; CHECK-NEXT:    muls.w.sx %s1, %s2, %s1
 ; CHECK-NEXT:    subs.w.sx %s0, %s0, %s1
@@ -109,8 +99,6 @@ define signext i8 @remi8(i8 signext %a, i8 signext %b) {
 define zeroext i8 @remu8(i8 zeroext %a, i8 zeroext %b) {
 ; CHECK-LABEL: remu8:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    divu.w %s2, %s0, %s1
 ; CHECK-NEXT:    muls.w.sx %s1, %s2, %s1
 ; CHECK-NEXT:    subs.w.sx %s0, %s0, %s1
@@ -136,7 +124,6 @@ define i64 @remi64ri(i64 %a, i64 %b) {
 define i32 @remi32ri(i32 %a, i32 %b) {
 ; CHECK-LABEL: remi32ri:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    divs.w.sx %s1, %s0, (62)0
 ; CHECK-NEXT:    muls.w.sx %s1, 3, %s1
 ; CHECK-NEXT:    subs.w.sx %s0, %s0, %s1
@@ -161,7 +148,6 @@ define i64 @remu64ri(i64 %a, i64 %b) {
 define i32 @remu32ri(i32 %a, i32 %b) {
 ; CHECK-LABEL: remu32ri:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    divu.w %s1, %s0, (62)0
 ; CHECK-NEXT:    muls.w.sx %s1, 3, %s1
 ; CHECK-NEXT:    subs.w.sx %s0, %s0, %s1
@@ -186,9 +172,8 @@ define i64 @remi64li(i64 %a, i64 %b) {
 define i32 @remi32li(i32 %a, i32 %b) {
 ; CHECK-LABEL: remi32li:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s1, (0)1
-; CHECK-NEXT:    divs.w.sx %s1, 3, %s0
-; CHECK-NEXT:    muls.w.sx %s0, %s1, %s0
+; CHECK-NEXT:    divs.w.sx %s0, 3, %s1
+; CHECK-NEXT:    muls.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    subs.w.sx %s0, 3, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = srem i32 3, %b
@@ -211,9 +196,8 @@ define i64 @remu64li(i64 %a, i64 %b) {
 define i32 @remu32li(i32 %a, i32 %b) {
 ; CHECK-LABEL: remu32li:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s1, (0)1
-; CHECK-NEXT:    divu.w %s1, 3, %s0
-; CHECK-NEXT:    muls.w.sx %s0, %s1, %s0
+; CHECK-NEXT:    divu.w %s0, 3, %s1
+; CHECK-NEXT:    muls.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    subs.w.sx %s0, 3, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = urem i32 3, %b
