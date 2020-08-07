@@ -3618,8 +3618,8 @@ public:
   }
 
   ExprResult RebuildRecoveryExpr(SourceLocation BeginLoc, SourceLocation EndLoc,
-                                 ArrayRef<Expr *> SubExprs) {
-    return getSema().CreateRecoveryExpr(BeginLoc, EndLoc, SubExprs);
+                                 ArrayRef<Expr *> SubExprs, QualType Type) {
+    return getSema().CreateRecoveryExpr(BeginLoc, EndLoc, SubExprs, Type);
   }
 
 private:
@@ -10209,7 +10209,7 @@ ExprResult TreeTransform<Derived>::TransformRecoveryExpr(RecoveryExpr *E) {
   if (!getDerived().AlwaysRebuild() && !Changed)
     return E;
   return getDerived().RebuildRecoveryExpr(E->getBeginLoc(), E->getEndLoc(),
-                                          Children);
+                                          Children, E->getType());
 }
 
 template<typename Derived>
