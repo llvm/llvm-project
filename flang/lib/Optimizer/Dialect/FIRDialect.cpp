@@ -14,7 +14,7 @@
 using namespace fir;
 
 fir::FIROpsDialect::FIROpsDialect(mlir::MLIRContext *ctx)
-    : mlir::Dialect("fir", ctx) {
+    : mlir::Dialect("fir", ctx, mlir::TypeID::get<FIROpsDialect>()) {
   addTypes<BoxType, BoxCharType, BoxProcType, CharacterType, CplxType, DimsType,
            FieldType, HeapType, IntType, LenType, LogicalType, PointerType,
            RealType, RecordType, ReferenceType, SequenceType, TypeDescType>();
