@@ -22,9 +22,6 @@ def LLVM_Dialect : Dialect {
   let hasRegionArgAttrVerify = 1;
   let extraClassDeclaration = [{
     ~LLVMDialect();
-    llvm::LLVMContext &getLLVMContext();
-    llvm::Module &getLLVMModule();
-    llvm::sys::SmartMutex<true> &getLLVMContextMutex();
     const llvm::DataLayout &getDataLayout();
 
   private:
