@@ -18,7 +18,7 @@ current-version:  0001.001.1
 parent-umbrella:  System
 exports:
   - archs:        [ 'x86_64' ]
-    symbols:      [ dyld_stub_binder ]
+    symbols:      [ dyld_stub_binder, __tlv_bootstrap ]
 --- !tapi-tbd-v3
 archs:            [ x86_64 ]
 uuids:            [ 'x86_64: 00000000-0000-0000-0000-000000000002' ]
