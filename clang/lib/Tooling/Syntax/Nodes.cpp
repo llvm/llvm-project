@@ -116,8 +116,14 @@ raw_ostream &syntax::operator<<(raw_ostream &OS, NodeKind K) {
     return OS << "ParametersAndQualifiers";
   case NodeKind::MemberPointer:
     return OS << "MemberPointer";
-  case NodeKind::NameSpecifier:
-    return OS << "NameSpecifier";
+  case NodeKind::GlobalNameSpecifier:
+    return OS << "GlobalNameSpecifier";
+  case NodeKind::DecltypeNameSpecifier:
+    return OS << "DecltypeNameSpecifier";
+  case NodeKind::IdentifierNameSpecifier:
+    return OS << "IdentifierNameSpecifier";
+  case NodeKind::SimpleTemplateNameSpecifier:
+    return OS << "SimpleTemplateNameSpecifier";
   case NodeKind::NestedNameSpecifier:
     return OS << "NestedNameSpecifier";
   }
@@ -142,6 +148,8 @@ raw_ostream &syntax::operator<<(raw_ostream &OS, NodeRole R) {
     return OS << "ArrowToken";
   case syntax::NodeRole::ExternKeyword:
     return OS << "ExternKeyword";
+  case syntax::NodeRole::TemplateKeyword:
+    return OS << "TemplateKeyword";
   case syntax::NodeRole::BodyStatement:
     return OS << "BodyStatement";
   case syntax::NodeRole::CaseStatement_value:
@@ -190,10 +198,21 @@ raw_ostream &syntax::operator<<(raw_ostream &OS, NodeRole R) {
     return OS << "IdExpression_qualifier";
   case syntax::NodeRole::NestedNameSpecifier_specifier:
     return OS << "NestedNameSpecifier_specifier";
+  case syntax::NodeRole::NestedNameSpecifier_delimiter:
+    return OS << "NestedNameSpecifier_delimiter";
   case syntax::NodeRole::ParenExpression_subExpression:
     return OS << "ParenExpression_subExpression";
   }
   llvm_unreachable("invalid role");
+}
+
+std::vector<syntax::Leaf *> syntax::NestedNameSpecifier::delimiters() {
+  std::vector<syntax::Leaf *> Children;
+  for (auto *C = firstChild(); C; C = C->nextSibling()) {
+    assert(C->role() == syntax::NodeRole::NestedNameSpecifier_delimiter);
+    Children.push_back(llvm::cast<syntax::Leaf>(C));
+  }
+  return Children;
 }
 
 std::vector<syntax::NameSpecifier *> syntax::NestedNameSpecifier::specifiers() {
@@ -208,6 +227,11 @@ std::vector<syntax::NameSpecifier *> syntax::NestedNameSpecifier::specifiers() {
 syntax::NestedNameSpecifier *syntax::IdExpression::qualifier() {
   return cast_or_null<syntax::NestedNameSpecifier>(
       findChild(syntax::NodeRole::IdExpression_qualifier));
+}
+
+syntax::Leaf *syntax::IdExpression::templateKeyword() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::TemplateKeyword));
 }
 
 syntax::UnqualifiedId *syntax::IdExpression::unqualifiedId() {
