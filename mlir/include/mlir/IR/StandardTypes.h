@@ -127,7 +127,7 @@ public:
   using Base::Base;
 
   /// Signedness semantics.
-  enum SignednessSemantics {
+  enum SignednessSemantics : uint32_t {
     Signless, /// No signedness semantics
     Signed,   /// Signed integer
     Unsigned, /// Unsigned integer

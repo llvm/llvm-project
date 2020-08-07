@@ -27,9 +27,6 @@ Dialect &Type::getDialect() const {
 
 MLIRContext *Type::getContext() const { return getDialect().getContext(); }
 
-unsigned Type::getSubclassData() const { return impl->getSubclassData(); }
-void Type::setSubclassData(unsigned val) { impl->setSubclassData(val); }
-
 //===----------------------------------------------------------------------===//
 // FunctionType
 //===----------------------------------------------------------------------===//
@@ -38,6 +35,8 @@ FunctionType FunctionType::get(TypeRange inputs, TypeRange results,
                                MLIRContext *context) {
   return Base::get(context, Type::Kind::Function, inputs, results);
 }
+
+unsigned FunctionType::getNumInputs() const { return getImpl()->numInputs; }
 
 ArrayRef<Type> FunctionType::getInputs() const {
   return getImpl()->getInputs();
