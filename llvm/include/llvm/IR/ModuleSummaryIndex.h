@@ -1061,6 +1061,9 @@ private:
   // some were not. Set when the combined index is created during the thin link.
   bool PartiallySplitLTOUnits = false;
 
+  /// True if some of the FunctionSummary contains a ParamAccess.
+  bool HasParamAccess = false;
+
   std::set<std::string> CfiFunctionDefs;
   std::set<std::string> CfiFunctionDecls;
 
@@ -1213,6 +1216,8 @@ public:
   bool partiallySplitLTOUnits() const { return PartiallySplitLTOUnits; }
   void setPartiallySplitLTOUnits() { PartiallySplitLTOUnits = true; }
 
+  bool hasParamAccess() const { return HasParamAccess; }
+
   bool isGlobalValueLive(const GlobalValueSummary *GVS) const {
     return !WithGlobalValueDeadStripping || GVS->isLive();
   }
@@ -1284,6 +1289,8 @@ public:
   /// Add a global value summary for the given ValueInfo.
   void addGlobalValueSummary(ValueInfo VI,
                              std::unique_ptr<GlobalValueSummary> Summary) {
+    if (const FunctionSummary *FS = dyn_cast<FunctionSummary>(Summary.get()))
+      HasParamAccess |= !FS->paramAccesses().empty();
     addOriginalName(VI.getGUID(), Summary->getOriginalName());
     // Here we have a notionally const VI, but the value it points to is owned
     // by the non-const *this.
