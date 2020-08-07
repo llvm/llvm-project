@@ -287,6 +287,9 @@ private:
   bool InitDesignator(const SomeExpr &);
   // Initializes a single object.
   bool InitElement(const evaluate::OffsetSymbol &, const SomeExpr &designator);
+  // If the returned flag is true, emit a warning about CHARACTER misusage.
+  std::optional<std::pair<SomeExpr, bool>> ConvertElement(
+      const SomeExpr &, const evaluate::DynamicType &);
 
   DataInitializations &inits_;
   evaluate::ExpressionAnalyzer &exprAnalyzer_;
@@ -406,6 +409,32 @@ bool DataInitializationCompiler::InitDesignator(const SomeExpr &designator) {
   return folder.isEmpty();
 }
 
+std::optional<std::pair<SomeExpr, bool>>
+DataInitializationCompiler::ConvertElement(
+    const SomeExpr &expr, const evaluate::DynamicType &type) {
+  if (auto converted{evaluate::ConvertToType(type, SomeExpr{expr})}) {
+    return {std::make_pair(std::move(*converted), false)};
+  }
+  if (std::optional<std::string> chValue{evaluate::GetScalarConstantValue<
+          evaluate::Type<TypeCategory::Character, 1>>(expr)}) {
+    // Allow DATA initialization with Hollerith and kind=1 CHARACTER like
+    // (most) other Fortran compilers do.  Pad on the right with spaces
+    // when short, truncate the right if long.
+    // TODO: big-endian targets
+    std::size_t bytes{type.MeasureSizeInBytes().value()};
+    evaluate::BOZLiteralConstant bits{0};
+    for (std::size_t j{0}; j < bytes; ++j) {
+      char ch{j >= chValue->size() ? ' ' : chValue->at(j)};
+      evaluate::BOZLiteralConstant chBOZ{static_cast<unsigned char>(ch)};
+      bits = bits.IOR(chBOZ.SHIFTL(8 * j));
+    }
+    if (auto converted{evaluate::ConvertToType(type, SomeExpr{bits})}) {
+      return {std::make_pair(std::move(*converted), true)};
+    }
+  }
+  return std::nullopt;
+}
+
 bool DataInitializationCompiler::InitElement(
     const evaluate::OffsetSymbol &offsetSymbol, const SomeExpr &designator) {
   const Symbol &symbol{offsetSymbol.symbol()};
@@ -491,16 +520,19 @@ bool DataInitializationCompiler::InitElement(
         "Initializer for '%s' must not be a procedure"_err_en_US,
         DescribeElement());
   } else if (auto designatorType{designator.GetType()}) {
-    if (auto converted{
-            evaluate::ConvertToType(*designatorType, SomeExpr{*expr})}) {
+    if (auto converted{ConvertElement(*expr, *designatorType)}) {
       // value non-pointer initialization
       if (std::holds_alternative<evaluate::BOZLiteralConstant>(expr->u) &&
           designatorType->category() != TypeCategory::Integer) { // 8.6.7(11)
         exprAnalyzer_.Say(values_.LocateSource(),
             "BOZ literal should appear in a DATA statement only as a value for an integer object, but '%s' is '%s'"_en_US,
             DescribeElement(), designatorType->AsFortran());
+      } else if (converted->second) {
+        exprAnalyzer_.context().Say(
+            "DATA statement value initializes '%s' of type '%s' with CHARACTER"_en_US,
+            DescribeElement(), designatorType->AsFortran());
       }
-      auto folded{evaluate::Fold(context, std::move(*converted))};
+      auto folded{evaluate::Fold(context, std::move(converted->first))};
       switch (
           GetImage().Add(offsetSymbol.offset(), offsetSymbol.size(), folded)) {
       case evaluate::InitialImage::Ok:
