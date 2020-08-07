@@ -38,6 +38,14 @@ OPTIONS
 
   Display the version of this program.
 
+.. option:: -D
+
+ Use zero for timestamps and UIDs/GIDs. This is set by default.
+
+.. option:: -U
+
+ Use actual timestamps and UIDs/GIDs.
+
 .. option:: -o <filename>
 
   Specify the output file name. Must be specified exactly once.
