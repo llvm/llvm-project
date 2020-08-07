@@ -1,4 +1,4 @@
-// REQUIRES: system-darwin
+// REQUIRES: darwin
 
 // Always error about undefined 'TARGET_OS_*' macros on Darwin.
 // RUN: %clang -### %s 2>&1 | FileCheck %s
