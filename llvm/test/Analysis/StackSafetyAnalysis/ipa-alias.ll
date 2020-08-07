@@ -78,7 +78,7 @@ define void @PreemptableAliasCall() #0 {
 ; GLOBAL-NEXT: x1[1]: full-set, @PreemptableAliasWrite1(arg0, [0,1)){{$}}
 ; LOCAL-NEXT: x2[1]: empty-set, @AliasToPreemptableAliasWrite1(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x2[1]: [0,1), @AliasToPreemptableAliasWrite1(arg0, [0,1)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x1 = alloca i8
   call void @PreemptableAliasWrite1(i8* %x1)
@@ -97,7 +97,7 @@ define void @InterposableAliasCall() #0 {
 ; LOCAL-NEXT: x[1]: empty-set, @InterposableAliasWrite1(arg0, [0,1)){{$}}
 ; NOLTO-NEXT: x[1]: full-set, @InterposableAliasWrite1(arg0, [0,1)){{$}}
 ; LTO-NEXT: x[1]: [0,1), @InterposableAliasWrite1(arg0, [0,1)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i8
 ; ThinLTO can resolve the prevailing implementation for interposable definitions.
@@ -112,7 +112,7 @@ define void @AliasCall() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[1]: empty-set, @AliasWrite1(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[1]: [0,1), @AliasWrite1(arg0, [0,1)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i8
   call void @AliasWrite1(i8* %x)
@@ -128,7 +128,7 @@ define void @BitcastAliasCall() #0 {
 ; GLOBAL-NEXT: x1[4]: [0,1), @BitcastAliasWrite1(arg0, [0,1)){{$}}
 ; LOCAL-NEXT: x2[1]: empty-set, @AliasToBitcastAliasWrite1(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x2[1]: [0,1), @AliasToBitcastAliasWrite1(arg0, [0,1)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x1 = alloca i32
   call void @BitcastAliasWrite1(i32* %x1)
@@ -143,4 +143,4 @@ entry:
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
