@@ -59,6 +59,10 @@ struct TestLinalgTransforms
       llvm::cl::desc("Test a set of patterns that rewrite a linalg contraction "
                      "in vector.contract form"),
       llvm::cl::init(false)};
+  Option<bool> testAffineMinSCFCanonicalizationPatterns{
+      *this, "test-affine-min-scf-canonicalization-patterns",
+      llvm::cl::desc("Test affine-min + scf canonicalization patterns."),
+      llvm::cl::init(false)};
 };
 } // end anonymous namespace
 
@@ -316,6 +320,15 @@ static void applyContractionToVectorPatterns(FuncOp funcOp) {
   applyPatternsAndFoldGreedily(funcOp, patterns);
 }
 
+static void applyAffineMinSCFCanonicalizationPatterns(FuncOp funcOp) {
+  OwningRewritePatternList foldPattern;
+  foldPattern.insert<AffineMinSCFCanonicalizationPattern>(funcOp.getContext());
+  // Explicitly walk and apply the pattern locally to avoid more general folding
+  // on the rest of the IR.
+  funcOp.walk([&foldPattern](AffineMinOp minOp) {
+    applyOpPatternsAndFold(minOp, foldPattern);
+  });
+}
 /// Apply transformations specified as patterns.
 void TestLinalgTransforms::runOnFunction() {
   auto lambda = [&](void *) {
@@ -341,6 +354,8 @@ void TestLinalgTransforms::runOnFunction() {
     return applyVectorTransferForwardingPatterns(getFunction());
   if (testGenericToVectorPattern)
     return applyContractionToVectorPatterns(getFunction());
+  if (testAffineMinSCFCanonicalizationPatterns)
+    return applyAffineMinSCFCanonicalizationPatterns(getFunction());
 }
 
 namespace mlir {
