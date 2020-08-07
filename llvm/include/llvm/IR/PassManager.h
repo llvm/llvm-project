@@ -558,7 +558,7 @@ public:
 
   static bool isRequired() { return true; }
 
-protected:
+private:
   using PassConceptT =
       detail::PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...>;
 
