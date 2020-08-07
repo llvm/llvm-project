@@ -466,7 +466,6 @@ int P2AsmParser::matchRegisterName(StringRef Name) {
             .Case("r13",    P2::R13)
             .Case("r14",    P2::R14)
             .Case("r15",    P2::R15)
-
             .Case("r16",    P2::R16)
             .Case("r17",    P2::R17)
             .Case("r18",    P2::R18)
@@ -483,7 +482,8 @@ int P2AsmParser::matchRegisterName(StringRef Name) {
             .Case("r29",    P2::R29)
             .Case("r30",    P2::R30)
             .Case("r31",    P2::R31)
-            //.Case("sp",     P2::PTRA)
+            .Case("pa",     P2::PA)
+            .Case("pb",     P2::PB)
             .Case("ptra",   P2::PTRA)
             .Case("ptrb",   P2::PTRB)
             .Case("dira",   P2::DIRA)

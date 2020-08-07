@@ -60,17 +60,19 @@ static const uint16_t GPRDecoderTable[] = {
     P2::R20, P2::R21, P2::R22, P2::R23,
     P2::R24, P2::R25, P2::R26, P2::R27,
     P2::R28, P2::R29, P2::R30, P2::R31,
-    0, 0, 0, 0, 0, 0, 0, 0, P2::PTRA, P2::PTRB, // place holders for now.
+    0, 0, 0, 0, 0, 0,   // place holders for now.
+    P2::PA, P2::PB, P2::PTRA, P2::PTRB,
     P2::DIRA, P2::DIRB, P2::OUTA, P2::OUTB
 };
 
 static uint16_t getRegForField(uint16_t r) {
-    if (r < 0x1e0 || r > 0x1ff) {
+    int reg_start = 0x1d0;
+    if (r < reg_start || r > 0x1ff) {
         LLVM_DEBUG(errs() << "register address: " << r << "\n");
         llvm_unreachable("bad register address!");
     }
 
-    return GPRDecoderTable[r-0x1e0];
+    return GPRDecoderTable[r-reg_start];
 }
 
 static DecodeStatus DecodeP2GPRRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address, const void *Decoder);

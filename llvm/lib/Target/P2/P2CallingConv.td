@@ -36,4 +36,4 @@ def RetCC_P2 : CallingConv <[
     CCIfByVal<CCAssignToStack<4, 1>>,
 ]>;
 
-def CSR : CalleeSavedRegs<(add (sequence "R%u", 0, 14))> {}
+def CSR : CalleeSavedRegs<(add (sequence "R%u", 0, 29))> {}

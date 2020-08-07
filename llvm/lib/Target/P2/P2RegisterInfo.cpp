@@ -45,6 +45,8 @@ const uint32_t *P2RegisterInfo::getCallPreservedMask(const MachineFunction &MF,C
 
 BitVector P2RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     BitVector Reserved(getNumRegs());
+    Reserved.set(P2::PA);
+    Reserved.set(P2::PB);
     Reserved.set(P2::PTRA);
     Reserved.set(P2::PTRB);
     Reserved.set(P2::OUTA);
