@@ -59,6 +59,9 @@ namespace lld {
         }
 
         void P2::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
+
+            //errs() << "relocate\n";
+
             switch (rel.type) {
                 case R_P2_32: {
                     *loc = val;
@@ -75,10 +78,15 @@ namespace lld {
                     // special relocation where we modify 2 instructions to perform an immediate load of a 20-bit (or greater) immediate.
                     // by invoking the augd or augs instruction
                     uint32_t inst = read32le(loc);
-                    uint32_t aug = read32le(loc-4); // the previous instruction is expected to be an AUGS/D
+                    uint32_t aug = read32le(loc-4) & ~0x7fffff; // the previous instruction is expected to be an AUGS/D
+
+                    LLVM_DEBUG(errs() << "aug 20 relocation\n");
+                    LLVM_DEBUG(errs() << "original value is " << (int)val << "\n");
+                    //LLVM_DEBUG(errs() << "aug value is " << (int)((aug & ~0x7fffff) | (val >> 9)) << "\n");
+                    LLVM_DEBUG(errs() << "adjusted value is " << (int)(val & 0x1ff) << "\n");
 
                     inst += val & 0x1ff; // get the lower 9 bits into the current instruction
-                    aug = (aug & ~0x7fffff) | (val >> 9); // get the upper 23 bits into the previous AUG instruction
+                    aug |= (val >> 9); // get the upper 23 bits into the previous AUG instruction
 
                     write32le(loc-4, aug);
                     write32le(loc, inst);
