@@ -41,7 +41,6 @@ bool MipsTargetInfo::processorSupportsGPR64() const {
       .Case("octeon", true)
       .Case("octeon+", true)
       .Default(false);
-  return false;
 }
 
 static constexpr llvm::StringLiteral ValidCPUNames[] = {
