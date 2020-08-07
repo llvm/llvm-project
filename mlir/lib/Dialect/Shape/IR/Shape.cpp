@@ -59,8 +59,7 @@ static LogicalResult verifyShapeOrExtentTensorOp(Operation *op) {
   return success();
 }
 
-ShapeDialect::ShapeDialect(MLIRContext *context)
-    : Dialect(getDialectNamespace(), context) {
+void ShapeDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/Shape/IR/ShapeOps.cpp.inc"

@@ -63,8 +63,14 @@ filterForDialect(ArrayRef<llvm::Record *> records, Dialect &dialect) {
 /// {1}: The dialect namespace.
 static const char *const dialectDeclBeginStr = R"(
 class {0} : public ::mlir::Dialect {
+  explicit {0}(::mlir::MLIRContext *context)
+    : ::mlir::Dialect(getDialectNamespace(), context,
+      ::mlir::TypeID::get<{0}>()) {{
+    initialize();
+  }
+  void initialize();
+  friend class ::mlir::MLIRContext;
 public:
-  explicit {0}(::mlir::MLIRContext *context);
   static ::llvm::StringRef getDialectNamespace() { return "{1}"; }
 )";
 
