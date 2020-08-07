@@ -90,8 +90,10 @@ llvm::Optional<HighlightingKind> kindForDecl(const NamedDecl *D) {
                ? HighlightingKind::StaticField
                : VD->isLocalVarDecl() ? HighlightingKind::LocalVariable
                                       : HighlightingKind::Variable;
-  if (isa<BindingDecl>(D))
-    return HighlightingKind::Variable;
+  if (const auto *BD = dyn_cast<BindingDecl>(D))
+    return BD->getDeclContext()->isFunctionOrMethod()
+               ? HighlightingKind::LocalVariable
+               : HighlightingKind::Variable;
   if (isa<FunctionDecl>(D))
     return HighlightingKind::Function;
   if (isa<NamespaceDecl>(D) || isa<NamespaceAliasDecl>(D) ||
