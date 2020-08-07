@@ -515,13 +515,14 @@ $InactiveCode[[]]      #endif
         $Class[[S]] *$Field[[Next]];
       };
       $Class[[S]] $Variable[[Global]][2] = {$Class[[S]](), $Class[[S]]()};
+      auto [$Variable[[G1]], $Variable[[G2]]] = $Variable[[Global]];
       void $Function[[f]]($Class[[S]] $Parameter[[P]]) {
         int $LocalVariable[[A]][2] = {1,2};
-        auto [$Variable[[B1]], $Variable[[B2]]] = $LocalVariable[[A]];
-        auto [$Variable[[G1]], $Variable[[G2]]] = $Variable[[Global]];
-        $Class[[auto]] [$Variable[[P1]], $Variable[[P2]]] = $Parameter[[P]];
+        auto [$LocalVariable[[B1]], $LocalVariable[[B2]]] = $LocalVariable[[A]];
+        auto [$LocalVariable[[G1]], $LocalVariable[[G2]]] = $Variable[[Global]];
+        $Class[[auto]] [$LocalVariable[[P1]], $LocalVariable[[P2]]] = $Parameter[[P]];
         // Highlights references to BindingDecls.
-        $Variable[[B1]]++;
+        $LocalVariable[[B1]]++;
       }
     )cpp",
       R"cpp(
