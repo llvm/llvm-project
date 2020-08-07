@@ -134,6 +134,11 @@ unsigned tblgen::Operator::getNumVariableLengthOperands() const {
   });
 }
 
+bool tblgen::Operator::hasSingleVariadicArg() const {
+  return getNumArgs() == 1 && getArg(0).is<tblgen::NamedTypeConstraint *>() &&
+         getOperand(0).isVariadic();
+}
+
 tblgen::Operator::arg_iterator tblgen::Operator::arg_begin() const {
   return arguments.begin();
 }
