@@ -18,6 +18,7 @@
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveInterval.h"
@@ -72,6 +73,8 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "machine-scheduler"
+
+STATISTIC(NumClustered, "Number of load/store pairs clustered");
 
 namespace llvm {
 
@@ -1623,6 +1626,7 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
 
     LLVM_DEBUG(dbgs() << "Cluster ld/st SU(" << SUa->NodeNum << ") - SU("
                       << SUb->NodeNum << ")\n");
+    ++NumClustered;
 
     if (IsLoad) {
       // Copy successor edges from SUa to SUb. Interleaving computation
