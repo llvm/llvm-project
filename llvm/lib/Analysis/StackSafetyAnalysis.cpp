@@ -37,6 +37,15 @@ using namespace llvm;
 STATISTIC(NumAllocaStackSafe, "Number of safe allocas");
 STATISTIC(NumAllocaTotal, "Number of total allocas");
 
+STATISTIC(NumCombinedCalleeLookupTotal,
+          "Number of total callee lookups on combined index.");
+STATISTIC(NumCombinedCalleeLookupFailed,
+          "Number of failed callee lookups on combined index.");
+STATISTIC(NumModuleCalleeLookupTotal,
+          "Number of total callee lookups on module index.");
+STATISTIC(NumModuleCalleeLookupFailed,
+          "Number of failed callee lookups on module index.");
+
 static cl::opt<int> StackSafetyMaxIterations("stack-safety-max-iterations",
                                              cl::init(20), cl::Hidden);
 
@@ -638,8 +647,11 @@ void resolveAllCalls(UseInfo<GlobalValue> &Use,
     GlobalValueSummary *GVS = getGlobalValueSummary(Index, C.Callee->getGUID());
 
     FunctionSummary *FS = resolveCallee(GVS);
-    if (!FS)
+    ++NumModuleCalleeLookupTotal;
+    if (!FS) {
+      ++NumModuleCalleeLookupFailed;
       return Use.updateRange(FullSet);
+    }
     const ConstantRange *Found = findParamAccess(*FS, C.ParamNo);
     if (!Found)
       return Use.updateRange(FullSet);
@@ -945,7 +957,9 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
             assert(!Call.Offsets.isFullSet());
             FunctionSummary *S = resolveCallee(
                 Index.findSummaryInModule(Call.Callee, FS->modulePath()));
+            ++NumCombinedCalleeLookupTotal;
             if (!S) {
+              ++NumCombinedCalleeLookupFailed;
               US.Range = FullSet;
               US.Calls.clear();
               break;
