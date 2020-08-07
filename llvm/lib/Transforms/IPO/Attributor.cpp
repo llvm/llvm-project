@@ -2079,6 +2079,19 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const AbstractAttribute &AA) {
   return OS;
 }
 
+raw_ostream &llvm::operator<<(raw_ostream &OS,
+                              const PotentialConstantIntValuesState &S) {
+  OS << "set-state(< {";
+  if (!S.isValidState())
+    OS << "full-set";
+  else
+    for (auto &it : S.getAssumedSet())
+      OS << it << ", ";
+  OS << "} >)";
+
+  return OS;
+}
+
 void AbstractAttribute::print(raw_ostream &OS) const {
   OS << "[";
   OS << getName();
