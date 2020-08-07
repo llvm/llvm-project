@@ -23,6 +23,7 @@ namespace clang {
         P2ToolChain(const Driver &D, const llvm::Triple &Triple,
                      const llvm::opt::ArgList &Args);
         bool IsIntegratedAssemblerDefault() const override { return true; }
+        bool isPICDefault() const override { return false; }
 
       protected:
         Tool *buildLinker() const override;

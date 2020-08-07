@@ -31,7 +31,7 @@ namespace {
     };
 }
 
-P2ELFObjectWriter::P2ELFObjectWriter(uint8_t OSABI) : MCELFObjectTargetWriter(false, OSABI, ELF::EM_P2, /*HasRelocationAddend*/ false) {}
+P2ELFObjectWriter::P2ELFObjectWriter(uint8_t OSABI) : MCELFObjectTargetWriter(false, OSABI, ELF::EM_P2, /*HasRelocationAddend*/ true) {}
 
 P2ELFObjectWriter::~P2ELFObjectWriter() {}
 

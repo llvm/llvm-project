@@ -27,9 +27,7 @@ using namespace llvm::opt;
 
 /// P2 Toolchain
 P2ToolChain::P2ToolChain(const Driver &D, const llvm::Triple &Triple,
-                           const ArgList &Args)
-    : Generic_ELF(D, Triple, Args) {
-  //GCCInstallation.init(Triple, Args);
+                        const ArgList &Args) : Generic_ELF(D, Triple, Args) {
 }
 
 Tool *P2ToolChain::buildLinker() const {
@@ -40,16 +38,5 @@ void P2::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                const InputInfo &Output,
                                const InputInfoList &Inputs,
                                const ArgList &Args,
-                               const char *LinkingOutput) const {
+                               const char *LinkingOutput) const {}
 
-    // std::string Linker = getToolChain().GetProgramPath(getShortName());
-    // ArgStringList CmdArgs;
-    // CmdArgs.push_back("-o");
-    // CmdArgs.push_back(Output.getFilename());
-
-    // C.addCommand(std::make_unique<Command>(JA, *this, Args.MakeArgString(Linker), CmdArgs, Inputs));
-}
-
-// llvm::Optional<std::string> P2ToolChain::findP2LibcInstallation() const {
-//   return llvm::None;
-// }

@@ -148,7 +148,7 @@ unsigned P2MCCodeEmitter::getExprOpValue(const MCInst &MI, const MCExpr *Expr, S
         LLVM_DEBUG(MI.dump());
         LLVM_DEBUG(Expr->dump());
         MCFixupKind FixupKind = static_cast<MCFixupKind>(P2::fixup_P2_AUG20);
-        Fixups.push_back(MCFixup::create(0, Expr, FixupKind, MI.getLoc()));
+        Fixups.push_back(MCFixup::create(0, Expr, FixupKind));
         return 0;
     }
 
