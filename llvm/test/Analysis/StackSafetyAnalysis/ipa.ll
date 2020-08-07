@@ -48,13 +48,13 @@
 ; RUN:  -r %t.summ0.bc,TwoArgumentsOOBBoth,px \
 ; RUN:  -r %t.summ0.bc,TwoArgumentsOOBOne,px \
 ; RUN:  -r %t.summ0.bc,TwoArgumentsOOBOther,px \
-; RUN:  -r %t.summ0.bc,Weak,px \
+; RUN:  -r %t.summ0.bc,Weak,x \
 ; RUN:  -r %t.summ0.bc,Write1, \
-; RUN:  -r %t.summ0.bc,Write1DiffModule,px \
+; RUN:  -r %t.summ0.bc,Write1DiffModule,x \
 ; RUN:  -r %t.summ0.bc,Write1Module0,px \
-; RUN:  -r %t.summ0.bc,Write1Private,px \
-; RUN:  -r %t.summ0.bc,Write1SameModule,px \
-; RUN:  -r %t.summ0.bc,Write1Weak,px \
+; RUN:  -r %t.summ0.bc,Write1Private,x \
+; RUN:  -r %t.summ0.bc,Write1SameModule,x \
+; RUN:  -r %t.summ0.bc,Write1Weak,x \
 ; RUN:  -r %t.summ0.bc,Write4_2, \
 ; RUN:  -r %t.summ0.bc,Write4, \
 ; RUN:  -r %t.summ0.bc,Write8, \
@@ -69,10 +69,10 @@
 ; RUN:  -r %t.summ1.bc,RecursiveWithOffset,px \
 ; RUN:  -r %t.summ1.bc,ReturnAlloca,px \
 ; RUN:  -r %t.summ1.bc,ReturnDependent,px \
-; RUN:  -r %t.summ1.bc,Weak,px \
+; RUN:  -r %t.summ1.bc,Weak,x \
 ; RUN:  -r %t.summ1.bc,Write1,px \
 ; RUN:  -r %t.summ1.bc,Write1DiffModule,px \
-; RUN:  -r %t.summ1.bc,Write1Module0,px \
+; RUN:  -r %t.summ1.bc,Write1Module0,x \
 ; RUN:  -r %t.summ1.bc,Write1Private,px \
 ; RUN:  -r %t.summ1.bc,Write1SameModule,px \
 ; RUN:  -r %t.summ1.bc,Write1Weak,px \
@@ -115,13 +115,13 @@
 ; RUN:  -r %t.summ0.bc,TwoArgumentsOOBBoth,px \
 ; RUN:  -r %t.summ0.bc,TwoArgumentsOOBOne,px \
 ; RUN:  -r %t.summ0.bc,TwoArgumentsOOBOther,px \
-; RUN:  -r %t.summ0.bc,Weak,px \
+; RUN:  -r %t.summ0.bc,Weak,x \
 ; RUN:  -r %t.summ0.bc,Write1, \
-; RUN:  -r %t.summ0.bc,Write1DiffModule,px \
+; RUN:  -r %t.summ0.bc,Write1DiffModule,x \
 ; RUN:  -r %t.summ0.bc,Write1Module0,px \
-; RUN:  -r %t.summ0.bc,Write1Private,px \
-; RUN:  -r %t.summ0.bc,Write1SameModule,px \
-; RUN:  -r %t.summ0.bc,Write1Weak,px \
+; RUN:  -r %t.summ0.bc,Write1Private,x \
+; RUN:  -r %t.summ0.bc,Write1SameModule,x \
+; RUN:  -r %t.summ0.bc,Write1Weak,x \
 ; RUN:  -r %t.summ0.bc,Write4_2, \
 ; RUN:  -r %t.summ0.bc,Write4, \
 ; RUN:  -r %t.summ0.bc,Write8, \
@@ -136,10 +136,10 @@
 ; RUN:  -r %t.summ1.bc,RecursiveWithOffset,px \
 ; RUN:  -r %t.summ1.bc,ReturnAlloca,px \
 ; RUN:  -r %t.summ1.bc,ReturnDependent,px \
-; RUN:  -r %t.summ1.bc,Weak,px \
+; RUN:  -r %t.summ1.bc,Weak,x \
 ; RUN:  -r %t.summ1.bc,Write1,px \
 ; RUN:  -r %t.summ1.bc,Write1DiffModule,px \
-; RUN:  -r %t.summ1.bc,Write1Module0,px \
+; RUN:  -r %t.summ1.bc,Write1Module0,x \
 ; RUN:  -r %t.summ1.bc,Write1Private,px \
 ; RUN:  -r %t.summ1.bc,Write1SameModule,px \
 ; RUN:  -r %t.summ1.bc,Write1Weak,px \
@@ -554,7 +554,7 @@ define void @TestCrossModuleWeak() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[1]: empty-set, @Write1Weak(arg0, [0,1)){{$}}
 ; NOLTO-NEXT: x[1]: [1,2), @Write1Weak(arg0, [0,1)){{$}}
-; LTO-NEXT: x[1]: [-1,0), @Write1Weak(arg0, [0,1)){{$}}
+; LTO-NEXT: x[1]: full-set, @Write1Weak(arg0, [0,1)){{$}}
 ; CHECK-EMPTY:
 entry:
   %x = alloca i8, align 4

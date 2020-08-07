@@ -617,7 +617,6 @@ GlobalValueSummary *getGlobalValueSummary(const ModuleSummaryIndex *Index,
   auto VI = Index->getValueInfo(ValueGUID);
   if (!VI || VI.getSummaryList().empty())
     return nullptr;
-  assert(VI.getSummaryList().size() == 1);
   auto &Summary = VI.getSummaryList()[0];
   return Summary.get();
 }
