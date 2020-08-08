@@ -170,6 +170,7 @@ public:
   void ActivateIndexVar(const parser::Name &, IndexVarKind);
   void DeactivateIndexVar(const parser::Name &);
   SymbolVector GetIndexVars(IndexVarKind);
+  SourceName GetTempName(const Scope &);
 
 private:
   void CheckIndexVarRedefine(
@@ -196,6 +197,7 @@ private:
     IndexVarKind kind;
   };
   std::map<SymbolRef, const IndexVarInfo> activeIndexVars_;
+  std::vector<std::string> tempNames_;
 };
 
 class Semantics {
