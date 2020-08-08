@@ -796,10 +796,10 @@ TEST_F(FileCheckTest, Binop) {
                                         std::move(Binop2));
   ImplicitFormat = OuterBinop->getImplicitFormat(SM);
   expectSameErrors<ErrorDiagnostic>(
-      {"implicit format conflict between 'FOO' (%u) and 'BAZ' (%x), "
-       "need an explicit format specifier",
-       "implicit format conflict between 'FOO' (%u) and 'QUUX' (%x), "
-       "need an explicit format specifier"},
+      {("implicit format conflict between 'FOO' (%u) and 'BAZ' (%x), need an "
+       "explicit format specifier"),
+       ("implicit format conflict between 'FOO' (%u) and 'QUUX' (%x), need an "
+       "explicit format specifier")},
       ImplicitFormat.takeError());
 }
 
