@@ -2017,8 +2017,8 @@ static Instruction *canonicalizeScalarSelectOfVecs(SelectInst &Sel,
   // select (extelt V, Index), T, F --> select (splat V, Index), T, F
   // Splatting the extracted condition reduces code (we could directly create a
   // splat shuffle of the source vector to eliminate the intermediate step).
-  unsigned NumElts = Ty->getNumElements();
-  return IC.replaceOperand(Sel, 0, IC.Builder.CreateVectorSplat(NumElts, Cond));
+  return IC.replaceOperand(
+      Sel, 0, IC.Builder.CreateVectorSplat(Ty->getElementCount(), Cond));
 }
 
 /// Reuse bitcasted operands between a compare and select:
