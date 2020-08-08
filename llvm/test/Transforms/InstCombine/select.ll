@@ -2537,3 +2537,42 @@ define void @cond_freeze_multipleuses(i8 %x, i8 %y) {
   call void @foo2(i8 %s, i8 %s2)
   ret void
 }
+
+define i32 @select_freeze_icmp_eq(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_freeze_icmp_eq(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_FR:%.*]] = freeze i1 [[C]]
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C_FR]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  %c = icmp eq i32 %x, %y
+  %c.fr = freeze i1 %c
+  %v = select i1 %c.fr, i32 %x, i32 %y
+  ret i32 %v
+}
+
+define i32 @select_freeze_icmp_ne(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_freeze_icmp_ne(
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_FR:%.*]] = freeze i1 [[C]]
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C_FR]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  %c = icmp ne i32 %x, %y
+  %c.fr = freeze i1 %c
+  %v = select i1 %c.fr, i32 %x, i32 %y
+  ret i32 %v
+}
+
+define i32 @select_freeze_icmp_else(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_freeze_icmp_else(
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_FR:%.*]] = freeze i1 [[C]]
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C_FR]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  %c = icmp ult i32 %x, %y
+  %c.fr = freeze i1 %c
+  %v = select i1 %c.fr, i32 %x, i32 %y
+  ret i32 %v
+}
