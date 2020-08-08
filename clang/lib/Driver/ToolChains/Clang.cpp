@@ -1884,7 +1884,7 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
     switch (getToolChain().getArch()) {
     case llvm::Triple::ppc64: {
       if ((T.isOSFreeBSD() && T.getOSMajorVersion() >= 13) ||
-          T.isOSOpenBSD() || T.isMusl()
+          T.isOSOpenBSD() || T.isMusl())
         ABIName = "elfv2";
       else
         ABIName = "elfv1";
