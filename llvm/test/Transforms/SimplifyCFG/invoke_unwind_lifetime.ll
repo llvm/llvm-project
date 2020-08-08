@@ -32,28 +32,11 @@ define void @caller(i1 %c) personality i8* bitcast (i32 (...)* @__gxx_personalit
 ; CHECK-NEXT:    call void @escape(i32* [[I6]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[V0:%.*]], label [[V1:%.*]]
 ; CHECK:       v0:
-; CHECK-NEXT:    invoke void @throwing_callee_foo()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD_V0:%.*]]
-; CHECK:       v1:
-; CHECK-NEXT:    invoke void @throwing_callee_bar()
-; CHECK-NEXT:    to label [[INVOKE_CONT]] unwind label [[LPAD_V1:%.*]]
-; CHECK:       invoke.cont:
+; CHECK-NEXT:    call void @throwing_callee_foo()
 ; CHECK-NEXT:    unreachable
-; CHECK:       lpad.v0:
-; CHECK-NEXT:    [[I8:%.*]] = landingpad { i8*, i32 }
-; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[I1]])
-; CHECK-NEXT:    br label [[END:%.*]]
-; CHECK:       lpad.v1:
-; CHECK-NEXT:    [[I9:%.*]] = landingpad { i8*, i32 }
-; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[I3]])
-; CHECK-NEXT:    br label [[END]]
-; CHECK:       end:
-; CHECK-NEXT:    [[I10:%.*]] = phi { i8*, i32 } [ [[I8]], [[LPAD_V0]] ], [ [[I9]], [[LPAD_V1]] ]
-; CHECK-NEXT:    [[I11:%.*]] = phi i8* [ [[I5]], [[LPAD_V0]] ], [ [[I7]], [[LPAD_V1]] ]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[I11]])
-; CHECK-NEXT:    resume { i8*, i32 } [[I10]]
+; CHECK:       v1:
+; CHECK-NEXT:    call void @throwing_callee_bar()
+; CHECK-NEXT:    unreachable
 ;
 entry:
   %i0 = alloca i32

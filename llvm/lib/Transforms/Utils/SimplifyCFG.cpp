@@ -3958,17 +3958,36 @@ bool SimplifyCFGOpt::simplifyResume(ResumeInst *RI, IRBuilder<> &Builder) {
   return false;
 }
 
+// Check if cleanup block is empty
+static bool isCleanupBlockEmpty(iterator_range<BasicBlock::iterator> R) {
+  for (Instruction &I : R) {
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    if (!II)
+      return false;
+
+    Intrinsic::ID IntrinsicID = II->getIntrinsicID();
+    switch (IntrinsicID) {
+    case Intrinsic::dbg_declare:
+    case Intrinsic::dbg_value:
+    case Intrinsic::dbg_label:
+    case Intrinsic::lifetime_end:
+      break;
+    default:
+      return false;
+    }
+  }
+  return true;
+}
+
 // Simplify resume that is shared by several landing pads (phi of landing pad).
 bool SimplifyCFGOpt::simplifyCommonResume(ResumeInst *RI) {
   BasicBlock *BB = RI->getParent();
 
-  // Check that there are no other instructions except for debug intrinsics
-  // between the phi of landing pads (RI->getValue()) and resume instruction.
-  BasicBlock::iterator I = cast<Instruction>(RI->getValue())->getIterator(),
-                       E = RI->getIterator();
-  while (++I != E)
-    if (!isa<DbgInfoIntrinsic>(I))
-      return false;
+  // Check that there are no other instructions except for debug and lifetime
+  // intrinsics between the phi's and resume instruction.
+  if (!isCleanupBlockEmpty(
+          make_range(RI->getParent()->getFirstNonPHI(), BB->getTerminator())))
+    return false;
 
   SmallSetVector<BasicBlock *, 4> TrivialUnwindBlocks;
   auto *PhiLPInst = cast<PHINode>(RI->getValue());
@@ -3989,17 +4008,8 @@ bool SimplifyCFGOpt::simplifyCommonResume(ResumeInst *RI) {
     if (IncomingValue != LandingPad)
       continue;
 
-    bool isTrivial = true;
-
-    I = IncomingBB->getFirstNonPHI()->getIterator();
-    E = IncomingBB->getTerminator()->getIterator();
-    while (++I != E)
-      if (!isa<DbgInfoIntrinsic>(I)) {
-        isTrivial = false;
-        break;
-      }
-
-    if (isTrivial)
+    if (isCleanupBlockEmpty(
+            make_range(LandingPad->getNextNode(), IncomingBB->getTerminator())))
       TrivialUnwindBlocks.insert(IncomingBB);
   }
 
@@ -4036,27 +4046,6 @@ bool SimplifyCFGOpt::simplifyCommonResume(ResumeInst *RI) {
     BB->eraseFromParent();
 
   return !TrivialUnwindBlocks.empty();
-}
-
-// Check if cleanup block is empty
-static bool isCleanupBlockEmpty(iterator_range<BasicBlock::iterator> R) {
-  for (Instruction &I : R) {
-    auto *II = dyn_cast<IntrinsicInst>(&I);
-    if (!II)
-      return false;
-
-    Intrinsic::ID IntrinsicID = II->getIntrinsicID();
-    switch (IntrinsicID) {
-    case Intrinsic::dbg_declare:
-    case Intrinsic::dbg_value:
-    case Intrinsic::dbg_label:
-    case Intrinsic::lifetime_end:
-      break;
-    default:
-      return false;
-    }
-  }
-  return true;
 }
 
 // Simplify resume that is only used by a single (non-phi) landing pad.
