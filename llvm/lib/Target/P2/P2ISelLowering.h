@@ -89,6 +89,8 @@ namespace llvm {
         /// being processed is 'm'.
         void LowerAsmOperandForConstraint(SDValue Op, std::string &Constraint, std::vector<SDValue> &Ops, SelectionDAG &DAG) const override;
 
+        Register getRegisterByName(const char* RegName, LLT VT, const MachineFunction &MF) const override;
+
         void getOpndList(SmallVectorImpl<SDValue> &Ops,
                 std::deque< std::pair<unsigned, SDValue> > &RegsToPass,
                 bool IsPICCall, bool GlobalOrExternal, bool InternalLinkage,

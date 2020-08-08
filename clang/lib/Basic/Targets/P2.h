@@ -23,9 +23,12 @@ namespace targets {
 
 // P2 Target
 class LLVM_LIBRARY_VISIBILITY P2TargetInfo : public TargetInfo {
+  static const char *const GCCRegNames[];
+
 public:
   P2TargetInfo(const llvm::Triple &Triple, const TargetOptions &)
       : TargetInfo(Triple) {
+        // TODO: fill this out, though most defaults seem to work fine
     // TLSSupported = false;
     // PointerWidth = 16;
     // PointerAlign = 8;
@@ -57,41 +60,37 @@ public:
     resetDataLayout("e-p:32:32-i32:32");
   }
 
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override;
+  void getTargetDefines(const LangOptions &Opts, MacroBuilder &Builder) const override;
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override { return None; }
-
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
   }
 
   const char *getClobbers() const override { return ""; }
 
-  ArrayRef<const char *> getGCCRegNames() const override {
-    return None;
-  }
-
-  ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return None;
-  }
+  ArrayRef<const char *> getGCCRegNames() const override;
 
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override {
     return None;
   }
 
-  bool validateAsmConstraint(const char *&Name,
-                             TargetInfo::ConstraintInfo &Info) const override {
-    return true;
+  ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
+    static const TargetInfo::GCCRegAlias GCCRegAliases[] = {
+        {{"ptra"}, "sp"},
+    };
+    return llvm::makeArrayRef(GCCRegAliases);
+  }
+
+  bool validateAsmConstraint(const char *&Name, TargetInfo::ConstraintInfo &Info) const override {
+      return true;
   }
 
   IntType getIntTypeByWidth(unsigned BitWidth, bool IsSigned) const final {
-    // P2 prefers int for 32-bit integers.
     return TargetInfo::getIntTypeByWidth(BitWidth, IsSigned);
   }
 
   IntType getLeastIntTypeByWidth(unsigned BitWidth, bool IsSigned) const final {
-    // P2 uses int for int_least32_t and int_fast32_t.
     return TargetInfo::getLeastIntTypeByWidth(BitWidth, IsSigned);
   }
 

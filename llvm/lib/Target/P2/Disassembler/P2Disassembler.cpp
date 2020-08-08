@@ -52,17 +52,13 @@ extern "C" void LLVMInitializeP2Disassembler() {
 }
 
 static const uint16_t GPRDecoderTable[] = {
-    P2::R0, P2::R1, P2::R2, P2::R3,
-    P2::R4, P2::R5, P2::R6, P2::R7,
-    P2::R8, P2::R9, P2::R10, P2::R11,
-    P2::R12, P2::R13, P2::R14, P2::R15,
-    P2::R16, P2::R17, P2::R18, P2::R19,
-    P2::R20, P2::R21, P2::R22, P2::R23,
-    P2::R24, P2::R25, P2::R26, P2::R27,
-    P2::R28, P2::R29, P2::R30, P2::R31,
-    0, 0, 0, 0, 0, 0,   // place holders for now.
-    P2::PA, P2::PB, P2::PTRA, P2::PTRB,
-    P2::DIRA, P2::DIRB, P2::OUTA, P2::OUTB
+    P2::R0, P2::R1, P2::R2, P2::R3, P2::R4, P2::R5, P2::R6, P2::R7,
+    P2::R8, P2::R9, P2::R10, P2::R11, P2::R12, P2::R13, P2::R14, P2::R15,
+    P2::R16, P2::R17, P2::R18, P2::R19, P2::R20, P2::R21, P2::R22, P2::R23,
+    P2::R24, P2::R25, P2::R26, P2::R27, P2::R28, P2::R29, P2::R30, P2::R31,
+    P2::IJMP3, P2::IRET3, P2::IJMP2, P2::IRET2, P2::IJMP1, P2::IRET1,
+    P2::PA, P2::PB, P2::PTRA, P2::PTRB, P2::DIRA, P2::DIRB, P2::OUTA, P2::OUTB,
+    P2::INA, P2::INB
 };
 
 static uint16_t getRegForField(uint16_t r) {

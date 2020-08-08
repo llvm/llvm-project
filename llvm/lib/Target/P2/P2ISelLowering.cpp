@@ -647,6 +647,63 @@ void P2TargetLowering::getOpndList(SmallVectorImpl<SDValue> &Ops,
 //                           P2 Inline Assembly Support
 //===----------------------------------------------------------------------===//
 
+Register P2TargetLowering::getRegisterByName(const char *RegName, LLT VT, const MachineFunction &MF) const {
+    Register Reg  = StringSwitch<unsigned>(RegName)
+            .Case("r0",     P2::R0)
+            .Case("r1",     P2::R1)
+            .Case("r2",     P2::R2)
+            .Case("r3",     P2::R3)
+            .Case("r4",     P2::R4)
+            .Case("r5",     P2::R5)
+            .Case("r6",     P2::R6)
+            .Case("r7",     P2::R7)
+            .Case("r8",     P2::R8)
+            .Case("r9",     P2::R9)
+            .Case("r10",    P2::R10)
+            .Case("r11",    P2::R11)
+            .Case("r12",    P2::R12)
+            .Case("r13",    P2::R13)
+            .Case("r14",    P2::R14)
+            .Case("r15",    P2::R15)
+            .Case("r16",    P2::R16)
+            .Case("r17",    P2::R17)
+            .Case("r18",    P2::R18)
+            .Case("r19",    P2::R19)
+            .Case("r20",    P2::R20)
+            .Case("r21",    P2::R21)
+            .Case("r22",    P2::R22)
+            .Case("r23",    P2::R23)
+            .Case("r24",    P2::R24)
+            .Case("r25",    P2::R25)
+            .Case("r26",    P2::R26)
+            .Case("r27",    P2::R27)
+            .Case("r28",    P2::R28)
+            .Case("r29",    P2::R29)
+            .Case("r30",    P2::R30)
+            .Case("r31",    P2::R31)
+            .Case("ijmp3",  P2::IJMP3)
+            .Case("iret3",  P2::IRET3)
+            .Case("ijmp2",  P2::IJMP2)
+            .Case("iret2",  P2::IRET2)
+            .Case("ijmp1",  P2::IJMP1)
+            .Case("iret1",  P2::IRET1)
+            .Case("pa",     P2::PA)
+            .Case("pb",     P2::PB)
+            .Case("ptra",   P2::PTRA)
+            .Case("ptrb",   P2::PTRB)
+            .Case("dira",   P2::DIRA)
+            .Case("dirb",   P2::DIRB)
+            .Case("outa",   P2::OUTA)
+            .Case("outb",   P2::OUTB)
+            .Case("ina",    P2::INA)
+            .Case("inb",    P2::INB)
+            .Default(0);
+
+    if (Reg) return Reg;
+
+    report_fatal_error("Invalid register name global variable");
+}
+
 /// getConstraintType - Given a constraint letter, return the type of
 /// constraint it is for this target.
 P2TargetLowering::ConstraintType P2TargetLowering::getConstraintType(StringRef Constraint) const {
@@ -689,12 +746,15 @@ std::pair<unsigned, const TargetRegisterClass *> P2TargetLowering::parseRegForIn
 
     std::pair<bool, bool> R = parsePhysicalReg(C, Prefix, Reg);
 
+    LLVM_DEBUG(errs() << "for constraint " << C << ":\n");
+    LLVM_DEBUG(errs() << " prefix is " << Prefix << "\n");
+    LLVM_DEBUG(errs() << " reg is " << Reg << "\n");
+
     if (!R.first)
         return std::make_pair(0U, nullptr);
     if (!R.second)
         return std::make_pair(0U, nullptr);
 
-    // Parse $0-$15.
     assert(Prefix == "$");
     RC = getRegClassFor((VT == MVT::Other) ? MVT::i32 : VT);
 

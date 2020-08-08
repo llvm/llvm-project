@@ -443,6 +443,9 @@ def COGIDr      : P2InstCLD<0b1101011, 0b000000001, 0b00, always, (outs P2GPR:$d
 def WAITXr      : P2InstLD<0b1101011, 0b000011111, 0b0, always, (outs), (ins P2GPR:$d), "waitx $d", []>;
 def WAITXi      : P2InstLD<0b1101011, 0b000011111, 0b1, always, (outs), (ins i32imm:$d), "waitx #$d", []>;
 
+def GETCTlor    : P2InstCZD<0b1101011, 0b000011010, 0b00, always, (outs P2GPR:$d), (ins), "getct $d", []>;
+def GETCThir    : P2InstCZD<0b1101011, 0b000011010, 0b10, always, (outs P2GPR:$d), (ins), "getct $d wc", []>;
+
 def COGINITrr   : P2InstCLIDS<0b1100111, 0b000, always, (outs), (ins P2GPR:$d, P2GPR:$s), "coginit $d, $s", []>;
 def COGINITir   : P2InstCLIDS<0b1100111, 0b010, always, (outs), (ins s9imm:$d, P2GPR:$s), "coginit #$d, $s", []>;
 def COGINITri   : P2InstCLIDS<0b1100111, 0b001, always, (outs), (ins P2GPR:$d, s9imm:$s), "coginit $d, #$s", []>;
