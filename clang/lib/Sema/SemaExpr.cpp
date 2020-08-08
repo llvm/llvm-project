@@ -6906,6 +6906,21 @@ Sema::ActOnInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
         << DIE->getSourceRange();
       Diag(InitArgList[I]->getBeginLoc(), diag::note_designated_init_mixed)
         << InitArgList[I]->getSourceRange();
+    } else if (const auto *SL = dyn_cast<StringLiteral>(InitArgList[I])) {
+      unsigned NumConcat = SL->getNumConcatenated();
+      // Diagnose missing comma in string array initialization.
+      // Do not warn when all the elements in the initializer are concatenated together.
+      // Do not warn for macros too.
+      if (NumConcat > 1 && E > 1 && !SL->getBeginLoc().isMacroID()) {
+        SmallVector<FixItHint, 1> Hints;
+        for (unsigned i = 0; i < NumConcat - 1; ++i)
+          Hints.push_back(FixItHint::CreateInsertion(
+              PP.getLocForEndOfToken(SL->getStrTokenLoc(i)), ", "));
+
+        Diag(SL->getStrTokenLoc(1), diag::warn_concatenated_literal_array_init)
+            << Hints;
+        Diag(SL->getBeginLoc(), diag::note_concatenated_string_literal_silence);
+      }
     }
   }
 
