@@ -20,7 +20,7 @@ using namespace mlir;
 
 /// Sets up the metadata and links the node to its parent.
 ReductionNode::ReductionNode(ModuleOp module, ReductionNode *parent)
-    : module(module), evaluated(false), parent(parent) {
+    : module(module), evaluated(false) {
 
   if (parent != nullptr)
     parent->linkVariant(this);
