@@ -904,3 +904,163 @@ func @test_dep_store_depth2_load_depth1() {
   }
   return
 }
+
+// -----
+
+// Test the case that `affine.if` changes the domain for both load/store simultaneously.
+#set = affine_set<(d0): (d0 - 50 >= 0)>
+
+// CHECK-LABEL: func @test_affine_for_if_same_block() {
+func @test_affine_for_if_same_block() {
+  %0 = alloc() : memref<100xf32>
+  %cf7 = constant 7.0 : f32
+
+  affine.for %i0 = 0 to 100 {
+    affine.if #set(%i0) {
+      %1 = affine.load %0[%i0] : memref<100xf32>
+      // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
+      // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}
+      // expected-remark@above {{dependence from 0 to 1 at depth 1 = false}}
+      // expected-remark@above {{dependence from 0 to 1 at depth 2 = true}}
+      affine.store %cf7, %0[%i0] : memref<100xf32>
+      // expected-remark@above {{dependence from 1 to 0 at depth 1 = false}}
+      // expected-remark@above {{dependence from 1 to 0 at depth 2 = false}}
+      // expected-remark@above {{dependence from 1 to 1 at depth 1 = false}}
+      // expected-remark@above {{dependence from 1 to 1 at depth 2 = false}}
+    }
+  }
+
+  return
+}
+
+// -----
+
+// Test the case that the domain that load/store access is completedly separated by `affine.if`.
+#set = affine_set<(d0): (d0 - 50 >= 0)>
+
+// CHECK-LABEL: func @test_affine_for_if_separated() {
+func @test_affine_for_if_separated() {
+  %0 = alloc() : memref<100xf32>
+  %cf7 = constant 7.0 : f32
+
+  affine.for %i0 = 0 to 10 {
+    affine.if #set(%i0) {
+      %1 = affine.load %0[%i0] : memref<100xf32>
+      // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
+      // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}
+      // expected-remark@above {{dependence from 0 to 1 at depth 1 = false}}
+      // expected-remark@above {{dependence from 0 to 1 at depth 2 = false}}
+    } else {
+      affine.store %cf7, %0[%i0] : memref<100xf32>
+      // expected-remark@above {{dependence from 1 to 0 at depth 1 = false}}
+      // expected-remark@above {{dependence from 1 to 0 at depth 2 = false}}
+      // expected-remark@above {{dependence from 1 to 1 at depth 1 = false}}
+      // expected-remark@above {{dependence from 1 to 1 at depth 2 = false}}
+    }
+  }
+
+  return
+}
+
+// -----
+
+// Test the case that the domain that load/store access has non-empty union set.
+#set1 = affine_set<(d0): (  d0 - 25 >= 0)>
+#set2 = affine_set<(d0): (- d0 + 75 >= 0)>
+
+// CHECK-LABEL: func @test_affine_for_if_partially_joined() {
+func @test_affine_for_if_partially_joined() {
+  %0 = alloc() : memref<100xf32>
+  %cf7 = constant 7.0 : f32
+
+  affine.for %i0 = 0 to 100 {
+    affine.if #set1(%i0) {
+      %1 = affine.load %0[%i0] : memref<100xf32>
+      // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
+      // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}
+      // expected-remark@above {{dependence from 0 to 1 at depth 1 = false}}
+      // expected-remark@above {{dependence from 0 to 1 at depth 2 = true}}
+    }
+    affine.if #set2(%i0) {
+      affine.store %cf7, %0[%i0] : memref<100xf32>
+      // expected-remark@above {{dependence from 1 to 0 at depth 1 = false}}
+      // expected-remark@above {{dependence from 1 to 0 at depth 2 = false}}
+      // expected-remark@above {{dependence from 1 to 1 at depth 1 = false}}
+      // expected-remark@above {{dependence from 1 to 1 at depth 2 = false}}
+    }
+  }
+
+  return
+}
+
+// -----
+
+// Test whether interleaved affine.for/affine.if can be properly handled.
+#set1 = affine_set<(d0): (d0 - 50 >= 0)>
+#set2 = affine_set<(d0, d1): (d0 - 75 >= 0, d1 - 50 >= 0)>
+
+// CHECK-LABEL: func @test_interleaved_affine_for_if() {
+func @test_interleaved_affine_for_if() {
+  %0 = alloc() : memref<100x100xf32>
+  %cf7 = constant 7.0 : f32
+
+  affine.for %i0 = 0 to 100 {
+    affine.if #set1(%i0) {
+      affine.for %i1 = 0 to 100 {
+        %1 = affine.load %0[%i0, %i1] : memref<100x100xf32>
+        // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
+        // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}
+        // expected-remark@above {{dependence from 0 to 0 at depth 3 = false}}
+        // expected-remark@above {{dependence from 0 to 1 at depth 1 = false}}
+        // expected-remark@above {{dependence from 0 to 1 at depth 2 = false}}
+        // expected-remark@above {{dependence from 0 to 1 at depth 3 = true}}
+
+        affine.if #set2(%i0, %i1) {
+          affine.store %cf7, %0[%i0, %i1] : memref<100x100xf32>
+          // expected-remark@above {{dependence from 1 to 0 at depth 1 = false}}
+          // expected-remark@above {{dependence from 1 to 0 at depth 2 = false}}
+          // expected-remark@above {{dependence from 1 to 0 at depth 3 = false}}
+          // expected-remark@above {{dependence from 1 to 1 at depth 1 = false}}
+          // expected-remark@above {{dependence from 1 to 1 at depth 2 = false}}
+          // expected-remark@above {{dependence from 1 to 1 at depth 3 = false}}
+        }
+      }
+    }
+  }
+
+  return
+}
+
+// -----
+
+// Test whether symbols can be handled .
+#set1 = affine_set<(d0)[s0]: (  d0 - s0 floordiv 2 >= 0)>
+#set2 = affine_set<(d0):     (- d0 +            51 >= 0)>
+
+// CHECK-LABEL: func @test_interleaved_affine_for_if() {
+func @test_interleaved_affine_for_if() {
+  %0 = alloc() : memref<101xf32>
+  %c0 = constant 0 : index
+  %N = dim %0, %c0 : memref<101xf32>
+  %cf7 = constant 7.0 : f32
+
+  affine.for %i0 = 0 to 100 {
+    affine.if #set1(%i0)[%N] {
+      %1 = affine.load %0[%i0] : memref<101xf32>
+      // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
+      // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}
+      // expected-remark@above {{dependence from 0 to 1 at depth 1 = false}}
+      // expected-remark@above {{dependence from 0 to 1 at depth 2 = true}}
+    }
+
+    affine.if #set2(%i0) {
+      affine.store %cf7, %0[%i0] : memref<101xf32>
+      // expected-remark@above {{dependence from 1 to 0 at depth 1 = false}}
+      // expected-remark@above {{dependence from 1 to 0 at depth 2 = false}}
+      // expected-remark@above {{dependence from 1 to 1 at depth 1 = false}}
+      // expected-remark@above {{dependence from 1 to 1 at depth 2 = false}}
+    }
+  }
+
+  return
+}
