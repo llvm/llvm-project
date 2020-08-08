@@ -2989,15 +2989,6 @@ static Type getTensorTypeFromMemRefType(Type type) {
   return NoneType::get(type.getContext());
 }
 
-static Type getMemRefTypeFromTensorType(Type type) {
-  if (auto tensor = type.dyn_cast<MemRefType>())
-    return MemRefType::get(tensor.getShape(), tensor.getElementType());
-  if (auto tensor = type.dyn_cast<UnrankedMemRefType>())
-    return UnrankedMemRefType::get(tensor.getElementType(),
-                                   tensor.getMemorySpace());
-  return NoneType::get(type.getContext());
-}
-
 //===----------------------------------------------------------------------===//
 // TruncateIOp
 //===----------------------------------------------------------------------===//
