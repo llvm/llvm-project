@@ -7760,11 +7760,14 @@ public:
     /// Lambda expression.
     UPPC_Lambda,
 
-    /// Block expression,
+    /// Block expression.
     UPPC_Block,
 
-    /// A type constraint,
-    UPPC_TypeConstraint
+    /// A type constraint.
+    UPPC_TypeConstraint,
+
+    // A requirement in a requires-expression.
+    UPPC_Requirement,
   };
 
   /// Diagnose unexpanded parameter packs.
@@ -7802,6 +7805,15 @@ public:
   /// \returns true if an error occurred, false otherwise.
   bool DiagnoseUnexpandedParameterPack(Expr *E,
                        UnexpandedParameterPackContext UPPC = UPPC_Expression);
+
+  /// If the given requirees-expression contains an unexpanded reference to one
+  /// of its own parameter packs, diagnose the error.
+  ///
+  /// \param RE The requiress-expression that is being checked for unexpanded
+  /// parameter packs.
+  ///
+  /// \returns true if an error occurred, false otherwise.
+  bool DiagnoseUnexpandedParameterPackInRequiresExpr(RequiresExpr *RE);
 
   /// If the given nested-name-specifier contains an unexpanded
   /// parameter pack, diagnose the error.
