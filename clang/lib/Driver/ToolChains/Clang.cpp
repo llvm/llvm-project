@@ -4805,7 +4805,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Add the split debug info name to the command lines here so we
   // can propagate it to the backend.
   bool SplitDWARF = (DwarfFission != DwarfFissionKind::None) &&
-                    TC.getTriple().isOSBinFormatELF() &&
+                    (TC.getTriple().isOSBinFormatELF() ||
+                     TC.getTriple().isOSBinFormatWasm()) &&
                     (isa<AssembleJobAction>(JA) || isa<CompileJobAction>(JA) ||
                      isa<BackendJobAction>(JA));
   if (SplitDWARF) {
