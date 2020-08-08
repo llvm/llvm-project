@@ -61,6 +61,32 @@ static cl::opt<bool> StackSafetyRun("stack-safety-run", cl::init(false),
 
 namespace {
 
+// Check if we should bailout for such ranges.
+bool isUnsafe(const ConstantRange &R) {
+  return R.isEmptySet() || R.isFullSet() || R.isUpperSignWrapped();
+}
+
+ConstantRange addOverflowNever(const ConstantRange &L, const ConstantRange &R) {
+  assert(!L.isSignWrappedSet());
+  assert(!R.isSignWrappedSet());
+  if (L.signedAddMayOverflow(R) !=
+      ConstantRange::OverflowResult::NeverOverflows)
+    return ConstantRange::getFull(L.getBitWidth());
+  ConstantRange Result = L.add(R);
+  assert(!Result.isSignWrappedSet());
+  return Result;
+}
+
+ConstantRange unionNoWrap(const ConstantRange &L, const ConstantRange &R) {
+  assert(!L.isSignWrappedSet());
+  assert(!R.isSignWrappedSet());
+  auto Result = L.unionWith(R);
+  // Two non-wrapped sets can produce wrapped.
+  if (Result.isSignWrappedSet())
+    Result = ConstantRange::getFull(Result.getBitWidth());
+  return Result;
+}
+
 /// Describes use of address in as a function call argument.
 template <typename CalleeTy> struct CallInfo {
   /// Function being called.
@@ -93,11 +119,7 @@ template <typename CalleeTy> struct UseInfo {
 
   UseInfo(unsigned PointerSize) : Range{PointerSize, false} {}
 
-  void updateRange(const ConstantRange &R) {
-    assert(!R.isUpperSignWrapped());
-    Range = Range.unionWith(R);
-    assert(!Range.isUpperSignWrapped());
-  }
+  void updateRange(const ConstantRange &R) { Range = unionNoWrap(Range, R); }
 };
 
 template <typename CalleeTy>
@@ -106,18 +128,6 @@ raw_ostream &operator<<(raw_ostream &OS, const UseInfo<CalleeTy> &U) {
   for (auto &Call : U.Calls)
     OS << ", " << Call;
   return OS;
-}
-
-// Check if we should bailout for such ranges.
-bool isUnsafe(const ConstantRange &R) {
-  return R.isEmptySet() || R.isFullSet() || R.isUpperSignWrapped();
-}
-
-ConstantRange addOverflowNever(const ConstantRange &L, const ConstantRange &R) {
-  if (L.signedAddMayOverflow(R) !=
-      ConstantRange::OverflowResult::NeverOverflows)
-    return ConstantRange(L.getBitWidth(), true);
-  return L.add(R);
 }
 
 /// Calculate the allocation size of a given alloca. Returns empty range
@@ -515,7 +525,7 @@ bool StackSafetyDataFlowAnalysis<CalleeTy>::updateOneUse(UseInfo<CalleeTy> &US,
       if (UpdateToFullSet)
         US.Range = UnknownRange;
       else
-        US.Range = US.Range.unionWith(CalleeRange);
+        US.updateRange(CalleeRange);
     }
   }
   return Changed;
