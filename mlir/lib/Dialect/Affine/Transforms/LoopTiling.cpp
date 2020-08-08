@@ -289,7 +289,11 @@ mlir::tilePerfectlyNested(MutableArrayRef<AffineForOp> input,
   extractForInductionVars(input, &origLoopIVs);
 
   FlatAffineConstraints cst;
-  getIndexSet(input, &cst);
+  SmallVector<Operation *, 8> ops;
+  ops.reserve(input.size());
+  for (AffineForOp forOp : input)
+    ops.push_back(forOp);
+  getIndexSet(ops, &cst);
   if (!cst.isHyperRectangular(0, width)) {
     rootAffineForOp.emitError("tiled code generation unimplemented for the "
                               "non-hyperrectangular case");
