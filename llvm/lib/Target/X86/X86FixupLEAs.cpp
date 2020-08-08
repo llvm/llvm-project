@@ -376,7 +376,7 @@ bool FixupLEAPass::optTwoAddrLEA(MachineBasicBlock::iterator &I,
   const MachineOperand &Segment = MI.getOperand(1 + X86::AddrSegmentReg);
 
   if (Segment.getReg() != 0 || !Disp.isImm() || Scale.getImm() > 1 ||
-      !TII->isSafeToClobberEFLAGS(MBB, I))
+      !TII->isSafeToClobberEFLAGS(MBB, I, 10))
     return false;
 
   Register DestReg = MI.getOperand(0).getReg();
