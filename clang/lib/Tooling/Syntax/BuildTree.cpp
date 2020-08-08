@@ -769,6 +769,7 @@ public:
       llvm::report_fatal_error("We don't yet support the __super specifier",
                                true);
     }
+    llvm_unreachable("Unhandled NestedNameSpecifier::SpecifierKind enum");
   }
 
   // FIXME: Fix `NestedNameSpecifierLoc::getLocalSourceRange` for the
