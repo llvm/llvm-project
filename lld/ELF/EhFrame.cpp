@@ -188,19 +188,14 @@ uint8_t EhReader::getFdeEncoding() {
   for (char c : aug) {
     if (c == 'R')
       return readByte();
-    if (c == 'z') {
+    if (c == 'z')
       skipLeb128();
-      continue;
-    }
-    if (c == 'P') {
-      skipAugP();
-      continue;
-    }
-    if (c == 'L') {
+    else if (c == 'L')
       readByte();
-      continue;
-    }
-    failOn(aug.data(), "unknown .eh_frame augmentation string: " + aug);
+    else if (c == 'P')
+      skipAugP();
+    else if (c != 'S')
+      failOn(aug.data(), "unknown .eh_frame augmentation string: " + aug);
   }
   return DW_EH_PE_absptr;
 }
@@ -216,7 +211,7 @@ bool EhReader::hasLSDA() {
       skipAugP();
     else if (c == 'R')
       readByte();
-    else
+    else if (c != 'S')
       failOn(aug.data(), "unknown .eh_frame augmentation string: " + aug);
   }
   return false;
