@@ -22,11 +22,13 @@ const wchar_t *missing_comma_wchar[] = {
     L"promise"      // expected-warning{{suspicious concatenation of string literals in an array initialization; did you mean to separate the elements with a comma?}}
 };
 
+#if __cplusplus >= 201103L
 const char *missing_comma_u8[] = {
     u8"basic_filebuf",
     u8"packaged_task" // expected-note{{place parentheses around the string literal to silence warning}}
     u8"promise"      // expected-warning{{suspicious concatenation of string literals in an array initialization; did you mean to separate the elements with a comma?}}
 };
+#endif
 
 const char *missing_two_commas[] = {"basic_filebuf",
                        "basic_ios" // expected-note{{place parentheses around the string literal to silence warning}}
