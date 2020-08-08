@@ -3002,6 +3002,10 @@ def err_missing_atsign_prefix : Error<
 def warn_objc_string_literal_comparison : Warning<
   "direct comparison of a string literal has undefined behavior">,
   InGroup<ObjCStringComparison>;
+def warn_concatenated_literal_array_init : Warning<
+  "suspicious concatenation of string literals in an array initialization; "
+  "did you mean to separate the elements with a comma?">,
+  InGroup<DiagGroup<"string-concatenation">>;
 def warn_concatenated_nsarray_literal : Warning<
   "concatenated NSString literal for an NSArray expression - "
   "possibly missing a comma">,
@@ -6141,6 +6145,9 @@ def warn_overloaded_shift_in_comparison :Warning<
   InGroup<OverloadedShiftOpParentheses>;
 def note_evaluate_comparison_first :Note<
   "place parentheses around comparison expression to evaluate it first">;
+
+def note_concatenated_string_literal_silence :Note<
+  "place parentheses around the string literal to silence warning">;
 
 def warn_addition_in_bitshift : Warning<
   "operator '%0' has lower precedence than '%1'; "
