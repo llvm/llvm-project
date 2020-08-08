@@ -408,6 +408,29 @@ bool Sema::DiagnoseUnexpandedParameterPack(Expr *E,
   return DiagnoseUnexpandedParameterPacks(E->getBeginLoc(), UPPC, Unexpanded);
 }
 
+bool Sema::DiagnoseUnexpandedParameterPackInRequiresExpr(RequiresExpr *RE) {
+  if (!RE->containsUnexpandedParameterPack())
+    return false;
+
+  SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+  CollectUnexpandedParameterPacksVisitor(Unexpanded).TraverseStmt(RE);
+  assert(!Unexpanded.empty() && "Unable to find unexpanded parameter packs");
+
+  // We only care about unexpanded references to the RequiresExpr's own
+  // parameter packs.
+  auto Parms = RE->getLocalParameters();
+  llvm::SmallPtrSet<NamedDecl*, 8> ParmSet(Parms.begin(), Parms.end());
+  SmallVector<UnexpandedParameterPack, 2> UnexpandedParms;
+  for (auto Parm : Unexpanded)
+    if (ParmSet.contains(Parm.first.dyn_cast<NamedDecl*>()))
+      UnexpandedParms.push_back(Parm);
+  if (UnexpandedParms.empty())
+    return false;
+
+  return DiagnoseUnexpandedParameterPacks(RE->getBeginLoc(), UPPC_Requirement,
+                                          UnexpandedParms);
+}
+
 bool Sema::DiagnoseUnexpandedParameterPack(const CXXScopeSpec &SS,
                                         UnexpandedParameterPackContext UPPC) {
   // C++0x [temp.variadic]p5:
