@@ -414,8 +414,8 @@ public:
       ABI = "elfv1";
     }
 
-    if (Triple.isOSFreeBSD() || Triple.getOS() == llvm::Triple::AIX ||
-        Triple.isMusl()) {
+    if (Triple.isOSFreeBSD() || Triple.isOSOpenBSD() ||
+        Triple.getOS() == llvm::Triple::AIX || Triple.isMusl()) {
       LongDoubleWidth = LongDoubleAlign = 64;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     }
