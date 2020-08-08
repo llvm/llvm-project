@@ -6915,7 +6915,7 @@ Sema::ActOnInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
         SmallVector<FixItHint, 1> Hints;
         for (unsigned i = 0; i < NumConcat - 1; ++i)
           Hints.push_back(FixItHint::CreateInsertion(
-              PP.getLocForEndOfToken(SL->getStrTokenLoc(i)), ", "));
+              PP.getLocForEndOfToken(SL->getStrTokenLoc(i)), ","));
 
         Diag(SL->getStrTokenLoc(1), diag::warn_concatenated_literal_array_init)
             << Hints;
