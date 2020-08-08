@@ -809,6 +809,9 @@ class GdbRemoteTestSequence(object):
         self.entries = []
         self.logger = logger
 
+    def __len__(self):
+        return len(self.entries)
+
     def add_log_lines(self, log_lines, remote_input_is_read):
         for line in log_lines:
             if isinstance(line, str):

@@ -703,7 +703,7 @@ class GdbRemoteTestCaseBase(TestBase):
             self.sock,
             self.test_sequence,
             self._pump_queues,
-            self.DEFAULT_TIMEOUT,
+            self.DEFAULT_TIMEOUT * len(self.test_sequence),
             self.logger)
 
     _KNOWN_REGINFO_KEYS = [
