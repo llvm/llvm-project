@@ -22,7 +22,7 @@
 # CHECK-NEXT:   EntrySize: 0
 # CHECK-NEXT:   SectionData (
 # CHECK-NEXT:     0000: 011B033B 10000000 01000000 30F2FFFF
-# CHECK-NEXT:     0010: 24000000
+# CHECK-NEXT:     0010: 2C000000
 # Header (always 4 bytes): 011B033B
 #    10000000 = .eh_frame(0x2018) - .eh_frame_hdr(0x2004) - 4
 #    01000000 = 1 = the number of FDE pointers in the table.
@@ -43,10 +43,11 @@
 # CHECK-NEXT:   AddressAlignment:
 # CHECK-NEXT:   EntrySize:
 # CHECK-NEXT:   SectionData (
-# CHECK-NEXT:     0000: 0C000000 00000000 01520001 010102FF
-# CHECK-NEXT:     0010: 0C000000 14000000 34120000 00000000
-#                                           ^
-#                                           ---> ADDR(foo) + 0x234 = 0x1234
+# CHECK-NEXT:     0000: 14000000 00000000 01525300 01010102
+# CHECK-NEXT:     0010: FF000000 00000000 0C000000 1C000000
+# CHECK-NEXT:     0020: 34120000 00000000 00000000
+#                       ^
+#                       ---> ADDR(foo) + 0x234 = 0x1234
 
 .text
 .global foo
@@ -54,11 +55,12 @@ foo:
  nop
 
 .section .eh_frame,"a",@unwind
-  .long 12   # Size
+  .long 13   # Size
   .long 0x00 # ID
   .byte 0x01 # Version.
   
-  .byte 0x52 # Augmentation string: 'R','\0'
+  .byte 0x52 # Augmentation string: 'R','S','\0'
+  .byte 0x53
   .byte 0x00
   
   .byte 0x01
@@ -71,5 +73,5 @@ foo:
   .byte 0xFF
  
   .long 0x6  # Size
-  .long 0x14 # ID
+  .long 0x15 # ID
   .short foo + 0x234
