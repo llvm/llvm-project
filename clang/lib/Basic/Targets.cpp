@@ -346,6 +346,8 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new FreeBSDTargetInfo<PPC64TargetInfo>(Triple, Opts);
     case llvm::Triple::NetBSD:
       return new NetBSDTargetInfo<PPC64TargetInfo>(Triple, Opts);
+    case llvm::Triple::OpenBSD:
+      return new OpenBSDTargetInfo<PPC64TargetInfo>(Triple, Opts);
     case llvm::Triple::AIX:
       return new AIXPPC64TargetInfo(Triple, Opts);
     default:
@@ -358,6 +360,8 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new LinuxTargetInfo<PPC64TargetInfo>(Triple, Opts);
     case llvm::Triple::NetBSD:
       return new NetBSDTargetInfo<PPC64TargetInfo>(Triple, Opts);
+    case llvm::Triple::OpenBSD:
+      return new OpenBSDTargetInfo<PPC64TargetInfo>(Triple, Opts);
     default:
       return new PPC64TargetInfo(Triple, Opts);
     }
