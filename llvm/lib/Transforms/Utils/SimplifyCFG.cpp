@@ -4039,10 +4039,9 @@ bool SimplifyCFGOpt::simplifyCommonResume(ResumeInst *RI) {
 }
 
 // Check if cleanup block is empty
-static bool isCleanupBlockEmpty(Instruction *Inst, Instruction *RI) {
-  BasicBlock::iterator I = Inst->getIterator(), E = RI->getIterator();
-  while (++I != E) {
-    auto *II = dyn_cast<IntrinsicInst>(I);
+static bool isCleanupBlockEmpty(iterator_range<BasicBlock::iterator> R) {
+  for (Instruction &I : R) {
+    auto *II = dyn_cast<IntrinsicInst>(&I);
     if (!II)
       return false;
 
@@ -4068,7 +4067,8 @@ bool SimplifyCFGOpt::simplifySingleResume(ResumeInst *RI) {
          "Resume must unwind the exception that caused control to here");
 
   // Check that there are no other instructions except for debug intrinsics.
-  if (!isCleanupBlockEmpty(LPInst, RI))
+  if (!isCleanupBlockEmpty(
+          make_range<Instruction *>(LPInst->getNextNode(), RI)))
     return false;
 
   // Turn all invokes that unwind here into calls and delete the basic block.
@@ -4106,7 +4106,8 @@ static bool removeEmptyCleanup(CleanupReturnInst *RI) {
     return false;
 
   // Check that there are no other instructions except for benign intrinsics.
-  if (!isCleanupBlockEmpty(CPInst, RI))
+  if (!isCleanupBlockEmpty(
+          make_range<Instruction *>(CPInst->getNextNode(), RI)))
     return false;
 
   // If the cleanup return we are simplifying unwinds to the caller, this will
