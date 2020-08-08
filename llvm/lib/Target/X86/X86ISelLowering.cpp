@@ -35921,14 +35921,8 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
   SmallVector<int, 16> TargetMask128;
   if (!TargetMask.empty() && 0 < TargetOps.size() && TargetOps.size() <= 2 &&
       isRepeatedTargetShuffleMask(128, VT, TargetMask, TargetMask128)) {
-    SmallVector<int, 16> WidenedMask128 = TargetMask128;
-    while (WidenedMask128.size() > 2) {
-      SmallVector<int, 16> WidenedMask;
-      if (!canWidenShuffleElements(WidenedMask128, WidenedMask))
-        break;
-      WidenedMask128 = std::move(WidenedMask);
-    }
-    if (WidenedMask128.size() == 2) {
+    SmallVector<int, 16> WidenedMask128;
+    if (scaleShuffleElements(TargetMask128, 2, WidenedMask128)) {
       assert(isUndefOrZeroOrInRange(WidenedMask128, 0, 4) && "Illegal shuffle");
       SDValue BC0 = peekThroughBitcasts(TargetOps.front());
       SDValue BC1 = peekThroughBitcasts(TargetOps.back());
