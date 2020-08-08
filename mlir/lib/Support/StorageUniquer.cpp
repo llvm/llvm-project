@@ -9,7 +9,6 @@
 #include "mlir/Support/StorageUniquer.h"
 
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/ThreadLocalCache.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/Support/RWMutex.h"
 
@@ -40,8 +39,6 @@ struct InstSpecificUniquer {
   /// A utility wrapper object representing a hashed storage object. This class
   /// contains a storage object and an existing computed hash value.
   struct HashedStorage {
-    HashedStorage(unsigned hashValue = 0, BaseStorage *storage = nullptr)
-        : hashValue(hashValue), storage(storage) {}
     unsigned hashValue;
     BaseStorage *storage;
   };
@@ -49,10 +46,10 @@ struct InstSpecificUniquer {
   /// Storage info for derived TypeStorage objects.
   struct StorageKeyInfo : DenseMapInfo<HashedStorage> {
     static HashedStorage getEmptyKey() {
-      return HashedStorage(0, DenseMapInfo<BaseStorage *>::getEmptyKey());
+      return HashedStorage{0, DenseMapInfo<BaseStorage *>::getEmptyKey()};
     }
     static HashedStorage getTombstoneKey() {
-      return HashedStorage(0, DenseMapInfo<BaseStorage *>::getTombstoneKey());
+      return HashedStorage{0, DenseMapInfo<BaseStorage *>::getTombstoneKey()};
     }
 
     static unsigned getHashValue(const HashedStorage &key) {
@@ -105,34 +102,25 @@ struct StorageUniquerImpl {
     if (!threadingIsEnabled)
       return getOrCreateUnsafe(storageUniquer, kind, lookupKey, ctorFn);
 
-    // Check for a instance of this object in the local cache.
-    auto localIt = complexStorageLocalCache->insert_as(
-        InstSpecificUniquer::HashedStorage(lookupKey.hashValue), lookupKey);
-    BaseStorage *&localInst = localIt.first->storage;
-    if (localInst)
-      return localInst;
-
     // Check for an existing instance in read-only mode.
     {
       llvm::sys::SmartScopedReader<true> typeLock(storageUniquer.mutex);
       auto it = storageUniquer.complexInstances.find_as(lookupKey);
       if (it != storageUniquer.complexInstances.end())
-        return localInst = it->storage;
+        return it->storage;
     }
 
     // Acquire a writer-lock so that we can safely create the new type instance.
     llvm::sys::SmartScopedWriter<true> typeLock(storageUniquer.mutex);
-    return localInst =
-               getOrCreateUnsafe(storageUniquer, kind, lookupKey, ctorFn);
+    return getOrCreateUnsafe(storageUniquer, kind, lookupKey, ctorFn);
   }
   /// Get or create an instance of a complex derived type in an thread-unsafe
   /// fashion.
   BaseStorage *
   getOrCreateUnsafe(InstSpecificUniquer &storageUniquer, unsigned kind,
-                    InstSpecificUniquer::LookupKey &key,
+                    InstSpecificUniquer::LookupKey &lookupKey,
                     function_ref<BaseStorage *(StorageAllocator &)> ctorFn) {
-    auto existing =
-        storageUniquer.complexInstances.insert_as({key.hashValue}, key);
+    auto existing = storageUniquer.complexInstances.insert_as({}, lookupKey);
     if (!existing.second)
       return existing.first->storage;
 
@@ -140,7 +128,9 @@ struct StorageUniquerImpl {
     // instance.
     BaseStorage *storage =
         initializeStorage(kind, storageUniquer.allocator, ctorFn);
-    return existing.first->storage = storage;
+    *existing.first =
+        InstSpecificUniquer::HashedStorage{lookupKey.hashValue, storage};
+    return storage;
   }
 
   /// Get or create an instance of a simple derived type.
@@ -152,11 +142,6 @@ struct StorageUniquerImpl {
     if (!threadingIsEnabled)
       return getOrCreateUnsafe(storageUniquer, kind, ctorFn);
 
-    // Check for a instance of this object in the local cache.
-    BaseStorage *&localInst = (*simpleStorageLocalCache)[kind];
-    if (localInst)
-      return localInst;
-
     // Check for an existing instance in read-only mode.
     {
       llvm::sys::SmartScopedReader<true> typeLock(storageUniquer.mutex);
@@ -167,7 +152,7 @@ struct StorageUniquerImpl {
 
     // Acquire a writer-lock so that we can safely create the new type instance.
     llvm::sys::SmartScopedWriter<true> typeLock(storageUniquer.mutex);
-    return localInst = getOrCreateUnsafe(storageUniquer, kind, ctorFn);
+    return getOrCreateUnsafe(storageUniquer, kind, ctorFn);
   }
   /// Get or create an instance of a simple derived type in an thread-unsafe
   /// fashion.
@@ -229,12 +214,6 @@ struct StorageUniquerImpl {
 
   /// Map of type ids to the storage uniquer to use for registered objects.
   DenseMap<TypeID, std::unique_ptr<InstSpecificUniquer>> instUniquers;
-
-  /// A thread local cache for simple and complex storage objects. This helps to
-  /// reduce the lock contention when an object already existing in the cache.
-  ThreadLocalCache<DenseMap<unsigned, BaseStorage *>> simpleStorageLocalCache;
-  ThreadLocalCache<InstSpecificUniquer::StorageTypeSet>
-      complexStorageLocalCache;
 
   /// Flag specifying if multi-threading is enabled within the uniquer.
   bool threadingIsEnabled = true;
