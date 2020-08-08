@@ -1,4 +1,4 @@
-; RUN: opt -loop-unswitch -disable-output < %s
+; RUN: opt -loop-unswitch -enable-new-pm=0 -disable-output < %s
 ; PR10031
 
 define i32 @test(i32 %command) {

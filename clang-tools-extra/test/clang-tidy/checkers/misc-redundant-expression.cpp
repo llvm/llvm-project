@@ -797,6 +797,13 @@ struct Bar {
 template <class... Values>
 struct Bar2 {
   static_assert((... && (sizeof(Values) > 0)) == (... && (sizeof(Values) > 0)));
-  // CHECK-MESSAGES: :[[@LINE-1]]:47: warning: both sides of operator are equivalent [misc-redundant-expression]
+  // FIXME: It's not clear that we should be diagnosing this. The `&&` operator
+  // here is unresolved and could resolve to an overloaded operator that might
+  // have side-effects on its operands. For other constructs with the same
+  // property (eg, the `S2` cases above) we suppress this diagnostic. This
+  // started failing when Clang started properly modeling the fold-expression as
+  // containing an unresolved operator name.
+  // FIXME-MESSAGES: :[[@LINE-1]]:47: warning: both sides of operator are equivalent [misc-redundant-expression]
 };
+
 } // namespace no_crash

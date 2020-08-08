@@ -503,7 +503,6 @@ define i64 @i2ull(i32 %0) {
 define float @i2f(i32 %x) {
 ; CHECK-LABEL: i2f:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    cvt.s.w %s0, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = sitofp i32 %x to float
@@ -513,7 +512,6 @@ define float @i2f(i32 %x) {
 define double @i2d(i32 %x) {
 ; CHECK-LABEL: i2d:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    cvt.d.w %s0, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = sitofp i32 %x to double
@@ -680,7 +678,6 @@ define i64 @s2ull(i16 signext %0) {
 define float @s2f(i16 signext %x) {
 ; CHECK-LABEL: s2f:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    cvt.s.w %s0, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = sitofp i16 %x to float
@@ -690,7 +687,6 @@ define float @s2f(i16 signext %x) {
 define double @s2d(i16 signext %x) {
 ; CHECK-LABEL: s2d:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    cvt.d.w %s0, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = sitofp i16 %x to double
@@ -767,7 +763,6 @@ define i64 @us2ull(i16 zeroext %0) {
 define float @us2f(i16 zeroext %x) {
 ; CHECK-LABEL: us2f:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    cvt.s.w %s0, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = uitofp i16 %x to float
@@ -777,7 +772,6 @@ define float @us2f(i16 zeroext %x) {
 define double @us2d(i16 zeroext %x) {
 ; CHECK-LABEL: us2d:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    cvt.d.w %s0, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = uitofp i16 %x to double
@@ -851,7 +845,6 @@ define i64 @c2ull(i8 signext %0) {
 define float @c2f(i8 signext %x) {
 ; CHECK-LABEL: c2f:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    cvt.s.w %s0, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = sitofp i8 %x to float
@@ -861,7 +854,6 @@ define float @c2f(i8 signext %x) {
 define double @c2d(i8 signext %x) {
 ; CHECK-LABEL: c2d:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    cvt.d.w %s0, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = sitofp i8 %x to double
@@ -935,7 +927,6 @@ define i64 @uc2ull(i8 zeroext %0) {
 define float @uc2f(i8 zeroext %x) {
 ; CHECK-LABEL: uc2f:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    cvt.s.w %s0, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = uitofp i8 %x to float
@@ -945,7 +936,6 @@ define float @uc2f(i8 zeroext %x) {
 define double @uc2d(i8 zeroext %x) {
 ; CHECK-LABEL: uc2d:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    cvt.d.w %s0, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = uitofp i8 %x to double

@@ -3,8 +3,6 @@
 define signext i8 @func1(i8 signext %0, i8 signext %1) {
 ; CHECK-LABEL: func1:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    sll %s0, %s0, 56
 ; CHECK-NEXT:    sra.l %s0, %s0, 56
@@ -19,8 +17,6 @@ define signext i8 @func1(i8 signext %0, i8 signext %1) {
 define signext i16 @func2(i16 signext %0, i16 signext %1) {
 ; CHECK-LABEL: func2:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    sll %s0, %s0, 48
 ; CHECK-NEXT:    sra.l %s0, %s0, 48
@@ -35,8 +31,6 @@ define signext i16 @func2(i16 signext %0, i16 signext %1) {
 define i32 @func3(i32 %0, i32 %1) {
 ; CHECK-LABEL: func3:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %3 = shl i32 %0, %1
@@ -46,7 +40,6 @@ define i32 @func3(i32 %0, i32 %1) {
 define i64 @func4(i64 %0, i64 %1) {
 ; CHECK-LABEL: func4:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
 ; CHECK-NEXT:    sll %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %3 = shl i64 %0, %1
@@ -56,8 +49,6 @@ define i64 @func4(i64 %0, i64 %1) {
 define zeroext i8 @func6(i8 zeroext %0, i8 zeroext %1) {
 ; CHECK-LABEL: func6:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    and %s0, %s0, (56)0
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -71,8 +62,6 @@ define zeroext i8 @func6(i8 zeroext %0, i8 zeroext %1) {
 define zeroext i16 @func7(i16 zeroext %0, i16 zeroext %1) {
 ; CHECK-LABEL: func7:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    and %s0, %s0, (48)0
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -86,8 +75,6 @@ define zeroext i16 @func7(i16 zeroext %0, i16 zeroext %1) {
 define i32 @func8(i32 %0, i32 %1) {
 ; CHECK-LABEL: func8:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %3 = shl i32 %0, %1
@@ -97,7 +84,6 @@ define i32 @func8(i32 %0, i32 %1) {
 define i64 @func9(i64 %0, i64 %1) {
 ; CHECK-LABEL: func9:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
 ; CHECK-NEXT:    sll %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %3 = shl i64 %0, %1
@@ -107,7 +93,6 @@ define i64 @func9(i64 %0, i64 %1) {
 define signext i8 @func11(i8 signext %0) {
 ; CHECK-LABEL: func11:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 5
 ; CHECK-NEXT:    sll %s0, %s0, 56
 ; CHECK-NEXT:    sra.l %s0, %s0, 56
@@ -119,7 +104,6 @@ define signext i8 @func11(i8 signext %0) {
 define signext i16 @func12(i16 signext %0) {
 ; CHECK-LABEL: func12:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 5
 ; CHECK-NEXT:    sll %s0, %s0, 48
 ; CHECK-NEXT:    sra.l %s0, %s0, 48
@@ -131,7 +115,6 @@ define signext i16 @func12(i16 signext %0) {
 define i32 @func13(i32 %0) {
 ; CHECK-LABEL: func13:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 5
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = shl i32 %0, 5
@@ -150,7 +133,6 @@ define i64 @func14(i64 %0) {
 define zeroext i8 @func16(i8 zeroext %0) {
 ; CHECK-LABEL: func16:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 5
 ; CHECK-NEXT:    lea %s1, 224
 ; CHECK-NEXT:    and %s0, %s0, %s1
@@ -162,7 +144,6 @@ define zeroext i8 @func16(i8 zeroext %0) {
 define zeroext i16 @func17(i16 zeroext %0) {
 ; CHECK-LABEL: func17:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 5
 ; CHECK-NEXT:    lea %s1, 65504
 ; CHECK-NEXT:    and %s0, %s0, %s1
@@ -174,7 +155,6 @@ define zeroext i16 @func17(i16 zeroext %0) {
 define i32 @func18(i32 %0) {
 ; CHECK-LABEL: func18:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    sla.w.sx %s0, %s0, 5
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = shl i32 %0, 5

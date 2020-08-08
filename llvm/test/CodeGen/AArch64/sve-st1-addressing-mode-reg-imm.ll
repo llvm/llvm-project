@@ -104,3 +104,32 @@ define void @st1d_inbound(<vscale x 2 x i64> %data, <vscale x 2 x i64>* %a) {
   store <vscale x 2 x i64> %data, <vscale x 2 x i64>* %base
   ret void
 }
+
+
+; Splat stores of unpacked FP scalable vectors
+
+define void @store_nxv2f32(<vscale x 2 x float>* %out) {
+; CHECK-LABEL: store_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov z0.s, #1.00000000
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    st1w { z0.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  %ins = insertelement <vscale x 2 x float> undef, float 1.0, i32 0
+  %splat = shufflevector <vscale x 2 x float> %ins, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
+  store <vscale x 2 x float> %splat, <vscale x 2 x float>* %out
+  ret void
+}
+
+define void @store_nxv4f16(<vscale x 4 x half>* %out) {
+; CHECK-LABEL: store_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov z0.h, #1.00000000
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
+; CHECK-NEXT:    ret
+  %ins = insertelement <vscale x 4 x half> undef, half 1.0, i32 0
+  %splat = shufflevector <vscale x 4 x half> %ins, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
+  store <vscale x 4 x half> %splat, <vscale x 4 x half>* %out
+  ret void
+}

@@ -862,7 +862,224 @@ define <4 x i32> @combine_mul_nabs_v4i32(<4 x i32> %0) {
 define <vscale x 2 x i64> @mul_scalable_splat_zero(<vscale x 2 x i64> %z) {
 ; CHECK-LABEL: @mul_scalable_splat_zero(
 ; CHECK-NEXT:    ret <vscale x 2 x i64> zeroinitializer
+;
   %shuf = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 0, i32 0), <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
   %t3 = mul <vscale x 2 x i64> %shuf, %z
   ret <vscale x 2 x i64> %t3
+}
+
+;
+; fold mul(sub(x,y),negpow2) -> shl(sub(y,x),log2(pow2))
+;
+
+define i32 @mulsub1(i32 %a0, i32 %a1) {
+; CHECK-LABEL: @mulsub1(
+; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub i32 [[A0:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[SUB_NEG]], 2
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %sub = sub i32 %a1, %a0
+  %mul = mul i32 %sub, -4
+  ret i32 %mul
+}
+
+define <2 x i32> @mulsub1_vec(<2 x i32> %a0, <2 x i32> %a1) {
+; CHECK-LABEL: @mulsub1_vec(
+; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub <2 x i32> [[A0:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[SUB_NEG]], <i32 2, i32 2>
+; CHECK-NEXT:    ret <2 x i32> [[MUL]]
+;
+  %sub = sub <2 x i32> %a1, %a0
+  %mul = mul <2 x i32> %sub, <i32 -4, i32 -4>
+  ret <2 x i32> %mul
+}
+
+define <2 x i32> @mulsub1_vec_nonuniform(<2 x i32> %a0, <2 x i32> %a1) {
+; CHECK-LABEL: @mulsub1_vec_nonuniform(
+; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub <2 x i32> [[A0:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[SUB_NEG]], <i32 2, i32 3>
+; CHECK-NEXT:    ret <2 x i32> [[MUL]]
+;
+  %sub = sub <2 x i32> %a1, %a0
+  %mul = mul <2 x i32> %sub, <i32 -4, i32 -8>
+  ret <2 x i32> %mul
+}
+
+define <2 x i32> @mulsub1_vec_nonuniform_undef(<2 x i32> %a0, <2 x i32> %a1) {
+; CHECK-LABEL: @mulsub1_vec_nonuniform_undef(
+; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub <2 x i32> [[A0:%.*]], [[A1:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[SUB_NEG]], <i32 2, i32 undef>
+; CHECK-NEXT:    ret <2 x i32> [[MUL]]
+;
+  %sub = sub <2 x i32> %a1, %a0
+  %mul = mul <2 x i32> %sub, <i32 -4, i32 undef>
+  ret <2 x i32> %mul
+}
+
+define i32 @mulsub2(i32 %a0) {
+; CHECK-LABEL: @mulsub2(
+; CHECK-NEXT:    [[SUB_NEG:%.*]] = shl i32 [[A0:%.*]], 2
+; CHECK-NEXT:    [[MUL:%.*]] = add i32 [[SUB_NEG]], -64
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %sub = sub i32 16, %a0
+  %mul = mul i32 %sub, -4
+  ret i32 %mul
+}
+
+define <2 x i32> @mulsub2_vec(<2 x i32> %a0) {
+; CHECK-LABEL: @mulsub2_vec(
+; CHECK-NEXT:    [[SUB_NEG:%.*]] = shl <2 x i32> [[A0:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    [[MUL:%.*]] = add <2 x i32> [[SUB_NEG]], <i32 -64, i32 -64>
+; CHECK-NEXT:    ret <2 x i32> [[MUL]]
+;
+  %sub = sub <2 x i32> <i32 16, i32 16>, %a0
+  %mul = mul <2 x i32> %sub, <i32 -4, i32 -4>
+  ret <2 x i32> %mul
+}
+
+define <2 x i32> @mulsub2_vec_nonuniform(<2 x i32> %a0) {
+; CHECK-LABEL: @mulsub2_vec_nonuniform(
+; CHECK-NEXT:    [[SUB_NEG:%.*]] = add <2 x i32> [[A0:%.*]], <i32 -16, i32 -32>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[SUB_NEG]], <i32 2, i32 3>
+; CHECK-NEXT:    ret <2 x i32> [[MUL]]
+;
+  %sub = sub <2 x i32> <i32 16, i32 32>, %a0
+  %mul = mul <2 x i32> %sub, <i32 -4, i32 -8>
+  ret <2 x i32> %mul
+}
+
+define <2 x i32> @mulsub2_vec_nonuniform_undef(<2 x i32> %a0) {
+; CHECK-LABEL: @mulsub2_vec_nonuniform_undef(
+; CHECK-NEXT:    [[SUB_NEG:%.*]] = add <2 x i32> [[A0:%.*]], <i32 -16, i32 -32>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[SUB_NEG]], <i32 2, i32 undef>
+; CHECK-NEXT:    ret <2 x i32> [[MUL]]
+;
+  %sub = sub <2 x i32> <i32 16, i32 32>, %a0
+  %mul = mul <2 x i32> %sub, <i32 -4, i32 undef>
+  ret <2 x i32> %mul
+}
+
+define i32 @muladd2(i32 %a0) {
+; CHECK-LABEL: @muladd2(
+; CHECK-NEXT:    [[ADD_NEG_NEG:%.*]] = mul i32 [[A0:%.*]], -4
+; CHECK-NEXT:    [[MUL:%.*]] = add i32 [[ADD_NEG_NEG]], -64
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %add = add i32 %a0, 16
+  %mul = mul i32 %add, -4
+  ret i32 %mul
+}
+
+define <2 x i32> @muladd2_vec(<2 x i32> %a0) {
+; CHECK-LABEL: @muladd2_vec(
+; CHECK-NEXT:    [[ADD_NEG_NEG:%.*]] = mul <2 x i32> [[A0:%.*]], <i32 -4, i32 -4>
+; CHECK-NEXT:    [[MUL:%.*]] = add <2 x i32> [[ADD_NEG_NEG]], <i32 -64, i32 -64>
+; CHECK-NEXT:    ret <2 x i32> [[MUL]]
+;
+  %add = add <2 x i32> %a0, <i32 16, i32 16>
+  %mul = mul <2 x i32> %add, <i32 -4, i32 -4>
+  ret <2 x i32> %mul
+}
+
+define <2 x i32> @muladd2_vec_nonuniform(<2 x i32> %a0) {
+; CHECK-LABEL: @muladd2_vec_nonuniform(
+; CHECK-NEXT:    [[ADD_NEG:%.*]] = sub <2 x i32> <i32 -16, i32 -32>, [[A0:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[ADD_NEG]], <i32 2, i32 3>
+; CHECK-NEXT:    ret <2 x i32> [[MUL]]
+;
+  %add = add <2 x i32> %a0, <i32 16, i32 32>
+  %mul = mul <2 x i32> %add, <i32 -4, i32 -8>
+  ret <2 x i32> %mul
+}
+
+define <2 x i32> @muladd2_vec_nonuniform_undef(<2 x i32> %a0) {
+; CHECK-LABEL: @muladd2_vec_nonuniform_undef(
+; CHECK-NEXT:    [[ADD_NEG:%.*]] = sub <2 x i32> <i32 -16, i32 -32>, [[A0:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[ADD_NEG]], <i32 2, i32 undef>
+; CHECK-NEXT:    ret <2 x i32> [[MUL]]
+;
+  %add = add <2 x i32> %a0, <i32 16, i32 32>
+  %mul = mul <2 x i32> %add, <i32 -4, i32 undef>
+  ret <2 x i32> %mul
+}
+
+define i32 @mulmuladd2(i32 %a0, i32 %a1) {
+; CHECK-LABEL: @mulmuladd2(
+; CHECK-NEXT:    [[ADD_NEG:%.*]] = sub i32 -16, [[A0:%.*]]
+; CHECK-NEXT:    [[MUL1_NEG:%.*]] = mul i32 [[ADD_NEG]], [[A1:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = shl i32 [[MUL1_NEG]], 2
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %add = add i32 %a0, 16
+  %mul1 = mul i32 %add, %a1
+  %mul2 = mul i32 %mul1, -4
+  ret i32 %mul2
+}
+define i32 @mulmuladd2_extrause0(i32 %a0, i32 %a1) {
+; CHECK-LABEL: @mulmuladd2_extrause0(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A0:%.*]], 16
+; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 [[ADD]], [[A1:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[MUL1]])
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL1]], -4
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %add = add i32 %a0, 16
+  %mul1 = mul i32 %add, %a1
+  call void @use32(i32 %mul1)
+  %mul2 = mul i32 %mul1, -4
+  ret i32 %mul2
+}
+define i32 @mulmuladd2_extrause1(i32 %a0, i32 %a1) {
+; CHECK-LABEL: @mulmuladd2_extrause1(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A0:%.*]], 16
+; CHECK-NEXT:    call void @use32(i32 [[ADD]])
+; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 [[ADD]], [[A1:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL1]], -4
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %add = add i32 %a0, 16
+  call void @use32(i32 %add)
+  %mul1 = mul i32 %add, %a1
+  %mul2 = mul i32 %mul1, -4
+  ret i32 %mul2
+}
+define i32 @mulmuladd2_extrause2(i32 %a0, i32 %a1) {
+; CHECK-LABEL: @mulmuladd2_extrause2(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A0:%.*]], 16
+; CHECK-NEXT:    call void @use32(i32 [[ADD]])
+; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 [[ADD]], [[A1:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[MUL1]])
+; CHECK-NEXT:    [[MUL2:%.*]] = mul i32 [[MUL1]], -4
+; CHECK-NEXT:    ret i32 [[MUL2]]
+;
+  %add = add i32 %a0, 16
+  call void @use32(i32 %add)
+  %mul1 = mul i32 %add, %a1
+  call void @use32(i32 %mul1)
+  %mul2 = mul i32 %mul1, -4
+  ret i32 %mul2
+}
+
+define i32 @mulnot(i32 %a0) {
+; CHECK-LABEL: @mulnot(
+; CHECK-NEXT:    [[ADD_NEG:%.*]] = shl i32 [[A0:%.*]], 2
+; CHECK-NEXT:    [[MUL:%.*]] = add i32 [[ADD_NEG]], 4
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %add = xor i32 %a0, -1
+  %mul = mul i32 %add, -4
+  ret i32 %mul
+}
+define i32 @mulnot_extrause(i32 %a0) {
+; CHECK-LABEL: @mulnot_extrause(
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A0:%.*]], -1
+; CHECK-NEXT:    call void @use32(i32 [[NOT]])
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[NOT]], -4
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %not = xor i32 %a0, -1
+  call void @use32(i32 %not)
+  %mul = mul i32 %not, -4
+  ret i32 %mul
 }

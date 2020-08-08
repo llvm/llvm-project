@@ -499,6 +499,23 @@ S3 h;
 
 typedef int from;
 
+struct dim {
+  double x, y;
+};
+
+template<typename T>
+class Array1D
+{
+  public:
+    unsigned n1;
+    unsigned size;
+    T * dptr;
+
+    inline T& operator() (unsigned i1) { return dptr[i1]; }
+
+    Array1D() {n1=0;size=0;dptr=nullptr;}
+};
+
 template <typename T, int I> // expected-note {{declared here}}
 T tmain(T argc) {
   const T d = 5;
@@ -835,6 +852,16 @@ int main(int argc, char **argv) {
   {
 #pragma omp target
     Arr[0] = 2; // lt50-error {{original storage of expression in data environment is shared but data environment do not fully contain mapped expression storage}}
+  }
+
+  Array1D<dim> pos;
+
+#pragma omp target enter data map(to:pos)
+#pragma omp target enter data map(to:pos.dptr[0:pos.size])
+#pragma omp target teams distribute parallel for
+  for(int i=0; i<100; i++) {
+    pos(i).x = i;
+    pos(i).y = i+1;
   }
 
   return tmain<int, 3>(argc)+tmain<from, 4>(argc); // expected-note {{in instantiation of function template specialization 'tmain<int, 3>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<int, 4>' requested here}}

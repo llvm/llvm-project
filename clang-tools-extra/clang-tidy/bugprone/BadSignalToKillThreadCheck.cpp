@@ -39,7 +39,7 @@ void BadSignalToKillThreadCheck::check(const MatchFinder::MatchResult &Result) {
       return llvm::None;
     const MacroInfo *MI = PP->getMacroInfo(It->first);
     const Token &T = MI->tokens().back();
-    if (!T.isLiteral())
+    if (!T.isLiteral() || !T.getLiteralData())
       return llvm::None;
     StringRef ValueStr = StringRef(T.getLiteralData(), T.getLength());
 

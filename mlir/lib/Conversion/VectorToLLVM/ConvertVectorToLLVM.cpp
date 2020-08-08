@@ -129,7 +129,8 @@ LogicalResult getMemRefAlignment(LLVMTypeConverter &typeConverter, T op,
   // TODO: this should use the MLIR data layout when it becomes available and
   // stop depending on translation.
   LLVM::LLVMDialect *dialect = typeConverter.getDialect();
-  align = LLVM::TypeToLLVMIRTranslator(dialect->getLLVMContext())
+  llvm::LLVMContext llvmContext;
+  align = LLVM::TypeToLLVMIRTranslator(llvmContext)
               .getPreferredAlignment(elementTy.cast<LLVM::LLVMType>(),
                                      dialect->getDataLayout());
   return success();
@@ -1348,9 +1349,9 @@ private:
 };
 
 /// Progressive lowering of ExtractStridedSliceOp to either:
-///   1. extractelement + insertelement for the 1-D case
-///   2. extract + optional strided_slice + insert for the n-D case.
-class VectorStridedSliceOpConversion
+///   1. express single offset extract as a direct shuffle.
+///   2. extract + lower rank strided_slice + insert for the n-D case.
+class VectorExtractStridedSliceOpConversion
     : public OpRewritePattern<ExtractStridedSliceOp> {
 public:
   using OpRewritePattern<ExtractStridedSliceOp>::OpRewritePattern;
@@ -1370,21 +1371,34 @@ public:
     auto loc = op.getLoc();
     auto elemType = dstType.getElementType();
     assert(elemType.isSignlessIntOrIndexOrFloat());
+
+    // Single offset can be more efficiently shuffled.
+    if (op.offsets().getValue().size() == 1) {
+      SmallVector<int64_t, 4> offsets;
+      offsets.reserve(size);
+      for (int64_t off = offset, e = offset + size * stride; off < e;
+           off += stride)
+        offsets.push_back(off);
+      rewriter.replaceOpWithNewOp<ShuffleOp>(op, dstType, op.vector(),
+                                             op.vector(),
+                                             rewriter.getI64ArrayAttr(offsets));
+      return success();
+    }
+
+    // Extract/insert on a lower ranked extract strided slice op.
     Value zero = rewriter.create<ConstantOp>(loc, elemType,
                                              rewriter.getZeroAttr(elemType));
     Value res = rewriter.create<SplatOp>(loc, dstType, zero);
     for (int64_t off = offset, e = offset + size * stride, idx = 0; off < e;
          off += stride, ++idx) {
-      Value extracted = extractOne(rewriter, loc, op.vector(), off);
-      if (op.offsets().getValue().size() > 1) {
-        extracted = rewriter.create<ExtractStridedSliceOp>(
-            loc, extracted, getI64SubArray(op.offsets(), /* dropFront=*/1),
-            getI64SubArray(op.sizes(), /* dropFront=*/1),
-            getI64SubArray(op.strides(), /* dropFront=*/1));
-      }
+      Value one = extractOne(rewriter, loc, op.vector(), off);
+      Value extracted = rewriter.create<ExtractStridedSliceOp>(
+          loc, one, getI64SubArray(op.offsets(), /* dropFront=*/1),
+          getI64SubArray(op.sizes(), /* dropFront=*/1),
+          getI64SubArray(op.strides(), /* dropFront=*/1));
       res = insertOne(rewriter, loc, extracted, res, idx);
     }
-    rewriter.replaceOp(op, {res});
+    rewriter.replaceOp(op, res);
     return success();
   }
   /// This pattern creates recursive ExtractStridedSliceOp, but the recursion is
@@ -1403,7 +1417,7 @@ void mlir::populateVectorToLLVMConversionPatterns(
   patterns.insert<VectorFMAOpNDRewritePattern,
                   VectorInsertStridedSliceOpDifferentRankRewritePattern,
                   VectorInsertStridedSliceOpSameRankRewritePattern,
-                  VectorStridedSliceOpConversion>(ctx);
+                  VectorExtractStridedSliceOpConversion>(ctx);
   patterns.insert<VectorReductionOpConversion>(
       ctx, converter, reassociateFPReductions);
   patterns

@@ -86,8 +86,8 @@ write_cmake_config("lit_common_configured") {
   }
 
   if (llvm_enable_zlib) {
-    values += [ "LLVM_ENABLE_ZLIB=1" ]
+    values += [ "HAVE_LIBZ=1" ]
   } else {
-    values += [ "LLVM_ENABLE_ZLIB=0" ]
+    values += [ "HAVE_LIBZ=0" ]
   }
 }

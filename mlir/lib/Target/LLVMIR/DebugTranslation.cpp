@@ -115,26 +115,19 @@ DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope,
     return existingIt->second;
 
   const llvm::DILocation *llvmLoc = nullptr;
-  switch (loc->getKind()) {
-  case StandardAttributes::CallSiteLocation: {
-    auto callLoc = loc.dyn_cast<CallSiteLoc>();
-
+  if (auto callLoc = loc.dyn_cast<CallSiteLoc>()) {
     // For callsites, the caller is fed as the inlinedAt for the callee.
     const auto *callerLoc = translateLoc(callLoc.getCaller(), scope, inlinedAt);
     llvmLoc = translateLoc(callLoc.getCallee(), scope, callerLoc);
-    break;
-  }
-  case StandardAttributes::FileLineColLocation: {
-    auto fileLoc = loc.dyn_cast<FileLineColLoc>();
+
+  } else if (auto fileLoc = loc.dyn_cast<FileLineColLoc>()) {
     auto *file = translateFile(fileLoc.getFilename());
     auto *fileScope = builder.createLexicalBlockFile(scope, file);
     llvmLoc = llvm::DILocation::get(llvmCtx, fileLoc.getLine(),
                                     fileLoc.getColumn(), fileScope,
                                     const_cast<llvm::DILocation *>(inlinedAt));
-    break;
-  }
-  case StandardAttributes::FusedLocation: {
-    auto fusedLoc = loc.dyn_cast<FusedLoc>();
+
+  } else if (auto fusedLoc = loc.dyn_cast<FusedLoc>()) {
     ArrayRef<Location> locations = fusedLoc.getLocations();
 
     // For fused locations, merge each of the nodes.
@@ -143,18 +136,17 @@ DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope,
       llvmLoc = llvm::DILocation::getMergedLocation(
           llvmLoc, translateLoc(locIt, scope, inlinedAt));
     }
-    break;
-  }
-  case StandardAttributes::NameLocation:
+
+  } else if (auto nameLoc = loc.dyn_cast<NameLoc>()) {
     llvmLoc = translateLoc(loc.cast<NameLoc>().getChildLoc(), scope, inlinedAt);
-    break;
-  case StandardAttributes::OpaqueLocation:
+
+  } else if (auto opaqueLoc = loc.dyn_cast<OpaqueLoc>()) {
     llvmLoc = translateLoc(loc.cast<OpaqueLoc>().getFallbackLocation(), scope,
                            inlinedAt);
-    break;
-  default:
+  } else {
     llvm_unreachable("unknown location kind");
   }
+
   locationToLoc.try_emplace(std::make_pair(loc, scope), llvmLoc);
   return llvmLoc;
 }

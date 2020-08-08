@@ -68,12 +68,12 @@ public:
   /// Return a unique identifier for the concrete type.
   static TypeID getTypeID() { return TypeID::get<ConcreteT>(); }
 
-  /// Provide a default implementation of 'classof' that invokes a 'kindof'
-  /// method on the concrete type.
+  /// Provide an implementation of 'classof' that compares the type id of the
+  /// provided value with that of the concerete type.
   template <typename T> static bool classof(T val) {
     static_assert(std::is_convertible<ConcreteT, T>::value,
                   "casting from a non-convertible type");
-    return ConcreteT::kindof(val.getKind());
+    return val.getTypeID() == getTypeID();
   }
 
   /// Returns an interface map for the interfaces registered to this storage
@@ -107,10 +107,9 @@ protected:
 
   /// Mutate the current storage instance. This will not change the unique key.
   /// The arguments are forwarded to 'ConcreteT::mutate'.
-  template <typename... Args>
-  LogicalResult mutate(Args &&...args) {
-    return UniquerT::mutate(this->getContext(), getImpl(),
-                            std::forward<Args>(args)...);
+  template <typename... Args> LogicalResult mutate(Args &&...args) {
+    return UniquerT::template mutate<ConcreteT>(this->getContext(), getImpl(),
+                                                std::forward<Args>(args)...);
   }
 
   /// Default implementation that just returns success.

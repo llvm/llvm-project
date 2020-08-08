@@ -21,7 +21,7 @@ namespace driver {
 namespace tools {
 namespace x86 {
 
-const char *getX86TargetCPU(const llvm::opt::ArgList &Args,
+std::string getX86TargetCPU(const llvm::opt::ArgList &Args,
                             const llvm::Triple &Triple);
 
 void getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,

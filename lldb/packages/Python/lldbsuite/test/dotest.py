@@ -426,6 +426,8 @@ def parseOptionsAndInitTestdirs():
         configuration.lldb_platform_url = args.lldb_platform_url
     if args.lldb_platform_working_dir:
         configuration.lldb_platform_working_dir = args.lldb_platform_working_dir
+    if platform_system == 'Darwin'  and args.apple_sdk:
+        configuration.apple_sdk = args.apple_sdk
     if args.test_build_dir:
         configuration.test_build_dir = args.test_build_dir
     if args.lldb_module_cache_dir:

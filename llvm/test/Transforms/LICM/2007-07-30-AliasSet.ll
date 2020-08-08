@@ -1,4 +1,4 @@
-; RUN: opt < %s -licm -loop-unswitch -disable-output
+; RUN: opt < %s -licm -simple-loop-unswitch -disable-output
 	%struct.III_scalefac_t = type { [22 x i32], [13 x [3 x i32]] }
 	%struct.gr_info = type { i32, i32, i32, i32, i32, i32, i32, i32, [3 x i32], [3 x i32], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32*, [4 x i32] }
 

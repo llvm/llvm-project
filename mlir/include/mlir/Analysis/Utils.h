@@ -39,6 +39,12 @@ class Value;
 //  TODO: handle 'affine.if' ops.
 void getLoopIVs(Operation &op, SmallVectorImpl<AffineForOp> *loops);
 
+/// Populates 'ops' with IVs of the loops surrounding `op`, along with
+/// `affine.if` operations interleaved between these loops, ordered from the
+/// outermost `affine.for` or `affine.if` operation to the innermost one.
+void getEnclosingAffineForAndIfOps(Operation &op,
+                                   SmallVectorImpl<Operation *> *ops);
+
 /// Returns the nesting depth of this operation, i.e., the number of loops
 /// surrounding this operation.
 unsigned getNestingDepth(Operation *op);

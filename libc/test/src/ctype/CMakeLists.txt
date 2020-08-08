@@ -119,3 +119,23 @@ add_libc_unittest(
   DEPENDS
     libc.src.ctype.isxdigit
 )
+
+add_libc_unittest(
+  tolower
+  SUITE
+    libc_ctype_unittests
+  SRCS
+    tolower_test.cpp
+  DEPENDS
+    libc.src.ctype.tolower
+)
+
+add_libc_unittest(
+  toupper
+  SUITE
+    libc_ctype_unittests
+  SRCS
+    toupper_test.cpp
+  DEPENDS
+    libc.src.ctype.toupper
+)

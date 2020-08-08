@@ -47,7 +47,7 @@ private:
       parser::CharBlock rhsSource, bool isPointerAssignment);
   void CheckShape(parser::CharBlock, const SomeExpr *);
   template <typename... A>
-  parser::Message *Say(parser::CharBlock at, A &&... args) {
+  parser::Message *Say(parser::CharBlock at, A &&...args) {
     return &context_.Say(at, std::forward<A>(args)...);
   }
   evaluate::FoldingContext &foldingContext() {

@@ -795,6 +795,110 @@ define double @div_sqrt_fabs_f64(double %x, double %y, double %z) {
   ret double %d
 }
 
+; This is a special case for the general pattern above -
+; if the sqrt operand is the same as the other mul op,
+; then fabs may be omitted.
+; x / (y * sqrt(y)) --> x * rsqrt(y*y*y)
+
+define float @div_sqrt_f32(float %x, float %y) {
+; SSE-LABEL: div_sqrt_f32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps %xmm1, %xmm2
+; SSE-NEXT:    mulss %xmm1, %xmm2
+; SSE-NEXT:    mulss %xmm1, %xmm2
+; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    rsqrtss %xmm2, %xmm1
+; SSE-NEXT:    mulss %xmm1, %xmm2
+; SSE-NEXT:    mulss %xmm1, %xmm2
+; SSE-NEXT:    addss {{.*}}(%rip), %xmm2
+; SSE-NEXT:    mulss {{.*}}(%rip), %xmm1
+; SSE-NEXT:    mulss %xmm0, %xmm1
+; SSE-NEXT:    mulss %xmm2, %xmm1
+; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: div_sqrt_f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmulss %xmm1, %xmm1, %xmm2
+; AVX1-NEXT:    vmulss %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vrsqrtss %xmm1, %xmm1, %xmm2
+; AVX1-NEXT:    vmulss %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vmulss %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vaddss {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vmulss {{.*}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vmulss %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vmulss %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: div_sqrt_f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmulss %xmm1, %xmm1, %xmm2
+; AVX512-NEXT:    vmulss %xmm1, %xmm2, %xmm1
+; AVX512-NEXT:    vrsqrtss %xmm1, %xmm1, %xmm2
+; AVX512-NEXT:    vmulss %xmm2, %xmm1, %xmm1
+; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm2 * xmm1) + mem
+; AVX512-NEXT:    vmulss {{.*}}(%rip), %xmm2, %xmm2
+; AVX512-NEXT:    vmulss %xmm0, %xmm2, %xmm0
+; AVX512-NEXT:    vmulss %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    retq
+  %s = call fast float @llvm.sqrt.f32(float %y)
+  %m = fmul fast float %s, %y
+  %d = fdiv fast float %x, %m
+  ret float %d
+}
+
+; This is a special case for the general pattern above -
+; if the sqrt operand is the same as the other mul op,
+; then fabs may be omitted.
+; x / (y * sqrt(y)) --> x * rsqrt(y*y*y)
+
+define <4 x float> @div_sqrt_v4f32(<4 x float> %x, <4 x float> %y) {
+; SSE-LABEL: div_sqrt_v4f32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps %xmm1, %xmm2
+; SSE-NEXT:    mulps %xmm1, %xmm2
+; SSE-NEXT:    mulps %xmm1, %xmm2
+; SSE-NEXT:    rsqrtps %xmm2, %xmm1
+; SSE-NEXT:    mulps %xmm1, %xmm2
+; SSE-NEXT:    mulps %xmm1, %xmm2
+; SSE-NEXT:    addps {{.*}}(%rip), %xmm2
+; SSE-NEXT:    mulps {{.*}}(%rip), %xmm1
+; SSE-NEXT:    mulps %xmm2, %xmm1
+; SSE-NEXT:    mulps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: div_sqrt_v4f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmulps %xmm1, %xmm1, %xmm2
+; AVX1-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vrsqrtps %xmm1, %xmm2
+; AVX1-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vaddps {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vmulps {{.*}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: div_sqrt_v4f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmulps %xmm1, %xmm1, %xmm2
+; AVX512-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; AVX512-NEXT:    vrsqrtps %xmm1, %xmm2
+; AVX512-NEXT:    vmulps %xmm2, %xmm1, %xmm1
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; AVX512-NEXT:    vfmadd231ps {{.*#+}} xmm3 = (xmm2 * xmm1) + xmm3
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; AVX512-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; AVX512-NEXT:    vmulps %xmm3, %xmm1, %xmm1
+; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %s = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %y)
+  %m = fmul reassoc <4 x float> %y, %s
+  %d = fdiv reassoc arcp <4 x float> %x, %m
+  ret <4 x float> %d
+}
+
 attributes #0 = { "unsafe-fp-math"="true" "reciprocal-estimates"="!sqrtf,!vec-sqrtf,!divf,!vec-divf" }
 attributes #1 = { "unsafe-fp-math"="true" "reciprocal-estimates"="sqrt,vec-sqrt" }
 attributes #2 = { nounwind readnone }

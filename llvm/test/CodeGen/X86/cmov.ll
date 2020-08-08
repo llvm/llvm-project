@@ -212,3 +212,26 @@ define i32 @smin(i32 %x) {
   ret i32 %sel
 }
 
+define i32 @pr47049_1(i32 %0) {
+; CHECK-LABEL: pr47049_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    cmovlel %edi, %eax
+; CHECK-NEXT:    retq
+  %2 = icmp slt i32 %0, 1
+  %3 = select i1 %2, i32 %0, i32 1
+  ret i32 %3
+}
+
+define i32 @pr47049_2(i32 %0) {
+; CHECK-LABEL: pr47049_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    movl $-1, %eax
+; CHECK-NEXT:    cmovnsl %edi, %eax
+; CHECK-NEXT:    retq
+  %2 = icmp sgt i32 %0, -1
+  %3 = select i1 %2, i32 %0, i32 -1
+  ret i32 %3
+}

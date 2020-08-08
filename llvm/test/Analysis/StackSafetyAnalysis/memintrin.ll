@@ -16,7 +16,7 @@ define void @MemsetInBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %x1 = bitcast i32* %x to i8*
@@ -30,7 +30,7 @@ define void @VolatileMemsetInBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %x1 = bitcast i32* %x to i8*
@@ -43,7 +43,7 @@ define void @MemsetOutOfBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,5){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %x1 = bitcast i32* %x to i8*
@@ -56,7 +56,7 @@ define void @MemsetNonConst(i32 %size) {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4294967295){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %x1 = bitcast i32* %x to i8*
@@ -71,7 +71,7 @@ define void @MemsetNonConstInBounds(i1 zeroext %z) {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4294967295){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %x1 = bitcast i32* %x to i8*
@@ -86,7 +86,7 @@ define void @MemsetNonConstSize() {
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4294967295){{$}}
 ; CHECK-NEXT: y[4]: empty-set{{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %y = alloca i32, align 4
@@ -104,7 +104,7 @@ define void @MemcpyInBounds() {
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,4){{$}}
 ; CHECK-NEXT: y[4]: [0,4){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %y = alloca i32, align 4
@@ -120,7 +120,7 @@ define void @MemcpySrcOutOfBounds() {
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: [0,5){{$}}
 ; CHECK-NEXT: y[4]: [0,5){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
   %y = alloca i32, align 4
@@ -136,7 +136,7 @@ define void @MemcpyDstOutOfBounds() {
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,5){{$}}
 ; CHECK-NEXT: y[8]: [0,5){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %y = alloca i64, align 4
@@ -152,7 +152,7 @@ define void @MemcpyBothOutOfBounds() {
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[4]: [0,9){{$}}
 ; CHECK-NEXT: y[8]: [0,9){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i32, align 4
   %y = alloca i64, align 4
@@ -167,7 +167,7 @@ define void @MemcpySelfInBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: [0,8){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
   %x1 = bitcast i64* %x to i8*
@@ -181,7 +181,7 @@ define void @MemcpySelfSrcOutOfBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: [0,9){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
   %x1 = bitcast i64* %x to i8*
@@ -195,7 +195,7 @@ define void @MemcpySelfDstOutOfBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: [0,9){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
   %x1 = bitcast i64* %x to i8*
@@ -209,7 +209,7 @@ define void @MemmoveSelfBothOutOfBounds() {
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: [0,14){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
   %x1 = bitcast i64* %x to i8*

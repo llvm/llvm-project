@@ -153,16 +153,23 @@ class TargetAPITestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @skipIfWindows  # stdio manipulation unsupported on Windows
+    @skipIfRemote   # stdio manipulation unsupported on remote iOS devices<rdar://problem/54581135>
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @no_debug_info_test
     def test_launch_simple(self):
         d = {'EXE': 'b.out'}
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
         target = self.create_simple_target('b.out')
 
+        # Set the debugger to synchronous mode so we only continue after the
+        # process has exited.
+        self.dbg.SetAsync(False)
+
         process = target.LaunchSimple(
             ['foo', 'bar'], ['baz'], self.get_process_working_directory())
         self.runCmd("run")
+        self.assertEqual(process.GetState(), lldb.eStateExited)
         output = process.GetSTDOUT(9999)
         self.assertIn('arg: foo', output)
         self.assertIn('arg: bar', output)
@@ -173,6 +180,7 @@ class TargetAPITestCase(TestBase):
         process = target.LaunchSimple(None, None,
                                       self.get_process_working_directory())
         self.runCmd("run")
+        self.assertEqual(process.GetState(), lldb.eStateExited)
         output = process.GetSTDOUT(9999)
         self.assertIn('arg: foo', output)
         self.assertIn('env: bar=baz', output)
@@ -181,6 +189,7 @@ class TargetAPITestCase(TestBase):
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
         self.runCmd("run")
+        self.assertEqual(process.GetState(), lldb.eStateExited)
         output = process.GetSTDOUT(9999)
         self.assertEqual(output, "")
 
@@ -287,7 +296,7 @@ class TargetAPITestCase(TestBase):
         # Try it with a null name:
         list = target.FindFunctions(None, lldb.eFunctionNameTypeAuto)
         self.assertTrue(list.GetSize() == 0)
-        
+
         list = target.FindFunctions('c', lldb.eFunctionNameTypeAuto)
         self.assertTrue(list.GetSize() == 1)
 

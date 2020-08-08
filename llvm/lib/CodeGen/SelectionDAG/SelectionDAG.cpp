@@ -2223,7 +2223,6 @@ SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &DemandedBits,
   default:
     return TLI->SimplifyMultipleUseDemandedBits(V, DemandedBits, DemandedElts,
                                                 *this, 0);
-    break;
   case ISD::Constant: {
     const APInt &CVal = cast<ConstantSDNode>(V)->getAPIntValue();
     APInt NewVal = CVal & DemandedBits;
@@ -2249,18 +2248,6 @@ SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &DemandedBits,
                        V.getOperand(1));
     }
     break;
-  case ISD::AND: {
-    // X & -1 -> X (ignoring bits which aren't demanded).
-    // Also handle the case where masked out bits in X are known to be zero.
-    if (ConstantSDNode *RHSC = isConstOrConstSplat(V.getOperand(1))) {
-      const APInt &AndVal = RHSC->getAPIntValue();
-      if (DemandedBits.isSubsetOf(AndVal) ||
-          DemandedBits.isSubsetOf(computeKnownBits(V.getOperand(0)).Zero |
-                                  AndVal))
-        return V.getOperand(0);
-    }
-    break;
-  }
   }
   return SDValue();
 }

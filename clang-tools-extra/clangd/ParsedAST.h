@@ -131,7 +131,7 @@ private:
   std::unique_ptr<FrontendAction> Action;
   /// Tokens recorded after the preamble finished.
   ///   - Includes all spelled tokens for the main file.
-  ///   - Includes expanded tokens produced **after** preabmle.
+  ///   - Includes expanded tokens produced **after** preamble.
   ///   - Does not have spelled or expanded tokens for files from preamble.
   syntax::TokenBuffer Tokens;
 

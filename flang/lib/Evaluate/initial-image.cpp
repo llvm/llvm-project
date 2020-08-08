@@ -9,6 +9,7 @@
 #include "flang/Evaluate/initial-image.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
+#include <cstring>
 
 namespace Fortran::evaluate {
 
@@ -51,6 +52,13 @@ auto InitialImage::Add(ConstantSubscript offset, std::size_t bytes,
 void InitialImage::AddPointer(
     ConstantSubscript offset, const Expr<SomeType> &pointer) {
   pointers_.emplace(offset, pointer);
+}
+
+void InitialImage::Incorporate(
+    ConstantSubscript offset, const InitialImage &that) {
+  CHECK(that.pointers_.empty()); // pointers are not allowed in EQUIVALENCE
+  CHECK(offset + that.size() <= size());
+  std::memcpy(&data_[offset], &that.data_[0], that.size());
 }
 
 // Classes used with common::SearchTypes() to (re)construct Constant<> values

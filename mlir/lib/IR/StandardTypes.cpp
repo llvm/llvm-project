@@ -11,6 +11,7 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Dialect.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Twine.h"
 
@@ -130,10 +131,10 @@ IntegerType::verifyConstructionInvariants(Location loc, unsigned width,
   return success();
 }
 
-unsigned IntegerType::getWidth() const { return getImpl()->getWidth(); }
+unsigned IntegerType::getWidth() const { return getImpl()->width; }
 
 IntegerType::SignednessSemantics IntegerType::getSignedness() const {
-  return getImpl()->getSignedness();
+  return getImpl()->signedness;
 }
 
 //===----------------------------------------------------------------------===//
@@ -230,6 +231,11 @@ int64_t ShapedType::getSizeInBits() const {
   if (elementType.isIntOrFloat())
     return elementType.getIntOrFloatBitWidth() * getNumElements();
 
+  if (auto complexType = elementType.dyn_cast<ComplexType>()) {
+    elementType = complexType.getElementType();
+    return elementType.getIntOrFloatBitWidth() * getNumElements() * 2;
+  }
+
   // Tensors can have vectors and other tensors as elements, other shaped types
   // cannot.
   assert(isa<TensorType>() && "unsupported element type");
@@ -239,16 +245,11 @@ int64_t ShapedType::getSizeInBits() const {
 }
 
 ArrayRef<int64_t> ShapedType::getShape() const {
-  switch (getKind()) {
-  case StandardTypes::Vector:
-    return cast<VectorType>().getShape();
-  case StandardTypes::RankedTensor:
-    return cast<RankedTensorType>().getShape();
-  case StandardTypes::MemRef:
-    return cast<MemRefType>().getShape();
-  default:
-    llvm_unreachable("not a ShapedType or not ranked");
-  }
+  if (auto vectorType = dyn_cast<VectorType>())
+    return vectorType.getShape();
+  if (auto tensorType = dyn_cast<RankedTensorType>())
+    return tensorType.getShape();
+  return cast<MemRefType>().getShape();
 }
 
 int64_t ShapedType::getNumDynamicDims() const {
@@ -300,11 +301,21 @@ ArrayRef<int64_t> VectorType::getShape() const { return getImpl()->getShape(); }
 
 // Check if "elementType" can be an element type of a tensor. Emit errors if
 // location is not nullptr.  Returns failure if check failed.
-static inline LogicalResult checkTensorElementType(Location location,
-                                                   Type elementType) {
+static LogicalResult checkTensorElementType(Location location,
+                                            Type elementType) {
   if (!TensorType::isValidElementType(elementType))
     return emitError(location, "invalid tensor element type");
   return success();
+}
+
+/// Return true if the specified element type is ok in a tensor.
+bool TensorType::isValidElementType(Type type) {
+  // Note: Non standard/builtin types are allowed to exist within tensor
+  // types. Dialects are expected to verify that tensor types have a valid
+  // element type within that dialect.
+  return type.isa<ComplexType, FloatType, IntegerType, OpaqueType, VectorType,
+                  IndexType>() ||
+         !type.getDialect().getNamespace().empty();
 }
 
 //===----------------------------------------------------------------------===//
@@ -397,9 +408,7 @@ MemRefType MemRefType::getImpl(ArrayRef<int64_t> shape, Type elementType,
                                Optional<Location> location) {
   auto *context = elementType.getContext();
 
-  // Check that memref is formed from allowed types.
-  if (!elementType.isIntOrIndexOrFloat() &&
-      !elementType.isa<VectorType, ComplexType>())
+  if (!BaseMemRefType::isValidElementType(elementType))
     return emitOptionalError(location, "invalid memref element type"),
            MemRefType();
 
@@ -475,9 +484,7 @@ unsigned UnrankedMemRefType::getMemorySpace() const {
 LogicalResult
 UnrankedMemRefType::verifyConstructionInvariants(Location loc, Type elementType,
                                                  unsigned memorySpace) {
-  // Check that memref is formed from allowed types.
-  if (!elementType.isIntOrFloat() &&
-      !elementType.isa<VectorType, ComplexType>())
+  if (!BaseMemRefType::isValidElementType(elementType))
     return emitError(loc, "invalid memref element type");
   return success();
 }

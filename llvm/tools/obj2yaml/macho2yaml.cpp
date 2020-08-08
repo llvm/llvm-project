@@ -34,10 +34,6 @@ class MachODumper {
                        ArrayRef<uint8_t> OpcodeBuffer, bool Lazy = false);
   void dumpExportTrie(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpSymbols(std::unique_ptr<MachOYAML::Object> &Y);
-  void dumpDebugAbbrev(DWARFContext &DCtx,
-                       std::unique_ptr<MachOYAML::Object> &Y);
-  void dumpDebugStrings(DWARFContext &DCtx,
-                        std::unique_ptr<MachOYAML::Object> &Y);
 
   template <typename SectionType>
   Expected<MachOYAML::Section> constructSectionCommon(SectionType Sec,

@@ -42,10 +42,7 @@ public:
   using Attribute::Attribute;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool classof(Attribute attr) {
-    return attr.getKind() >= StandardAttributes::FIRST_LOCATION_ATTR &&
-           attr.getKind() <= StandardAttributes::LAST_LOCATION_ATTR;
-  }
+  static bool classof(Attribute attr);
 };
 
 /// This class defines the main interface for locations in MLIR and acts as a
@@ -120,11 +117,6 @@ public:
 
   /// The caller's location.
   Location getCaller() const;
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) {
-    return kind == StandardAttributes::CallSiteLocation;
-  }
 };
 
 /// Represents a location derived from a file/line/column location.  The column
@@ -146,11 +138,6 @@ public:
 
   unsigned getLine() const;
   unsigned getColumn() const;
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) {
-    return kind == StandardAttributes::FileLineColLocation;
-  }
 };
 
 /// Represents a value composed of multiple source constructs, with an optional
@@ -174,11 +161,6 @@ public:
   /// Returns the optional metadata attached to this fused location. Given that
   /// it is optional, the return value may be a null node.
   Attribute getMetadata() const;
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) {
-    return kind == StandardAttributes::FusedLocation;
-  }
 };
 
 /// Represents an identity name attached to a child location.
@@ -199,11 +181,6 @@ public:
 
   /// Return the child location.
   Location getChildLoc() const;
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) {
-    return kind == StandardAttributes::NameLocation;
-  }
 };
 
 /// Represents an unknown location.  This is always a singleton for a given
@@ -215,11 +192,6 @@ public:
 
   /// Get an instance of the UnknownLoc.
   static Location get(MLIRContext *context);
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) {
-    return kind == StandardAttributes::UnknownLocation;
-  }
 };
 
 /// Represents a location that is external to MLIR. Contains a pointer to some
@@ -282,11 +254,6 @@ public:
 
   /// Returns a fallback location.
   Location getFallbackLocation() const;
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) {
-    return kind == StandardAttributes::OpaqueLocation;
-  }
 
 private:
   static Location get(uintptr_t underlyingLocation, TypeID typeID,

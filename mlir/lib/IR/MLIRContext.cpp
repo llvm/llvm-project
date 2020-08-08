@@ -85,7 +85,8 @@ namespace {
 /// A builtin dialect to define types/etc that are necessary for the validity of
 /// the IR.
 struct BuiltinDialect : public Dialect {
-  BuiltinDialect(MLIRContext *context) : Dialect(/*name=*/"", context) {
+  BuiltinDialect(MLIRContext *context)
+      : Dialect(/*name=*/"", context, TypeID::get<BuiltinDialect>()) {
     addAttributes<AffineMapAttr, ArrayAttr, DenseIntOrFPElementsAttr,
                   DenseStringElementsAttr, DictionaryAttr, FloatAttr,
                   SymbolRefAttr, IntegerAttr, IntegerSetAttr, OpaqueAttr,
@@ -102,6 +103,7 @@ struct BuiltinDialect : public Dialect {
     // have been fully decoupled from the core.
     addOperations<FuncOp, ModuleOp, ModuleTerminatorOp>();
   }
+  static StringRef getDialectNamespace() { return ""; }
 };
 } // end anonymous namespace.
 
@@ -349,7 +351,7 @@ MLIRContext::MLIRContext() : impl(new MLIRContextImpl()) {
   }
 
   // Register dialects with this context.
-  new BuiltinDialect(this);
+  getOrCreateDialect<BuiltinDialect>();
   registerAllDialects(this);
 
   // Initialize several common attributes and types to avoid the need to lock
@@ -400,6 +402,13 @@ MLIRContext::MLIRContext() : impl(new MLIRContextImpl()) {
   /// The empty dictionary attribute.
   impl->emptyDictionaryAttr = AttributeUniquer::get<DictionaryAttr>(
       this, StandardAttributes::Dictionary, ArrayRef<NamedAttribute>());
+
+  // Register the affine storage objects with the uniquer.
+  impl->affineUniquer.registerStorageType(
+      TypeID::get<AffineBinaryOpExprStorage>());
+  impl->affineUniquer.registerStorageType(
+      TypeID::get<AffineConstantExprStorage>());
+  impl->affineUniquer.registerStorageType(TypeID::get<AffineDimExprStorage>());
 }
 
 MLIRContext::~MLIRContext() {}
@@ -446,25 +455,33 @@ Dialect *MLIRContext::getRegisteredDialect(StringRef name) {
              : nullptr;
 }
 
-/// Register this dialect object with the specified context.  The context
-/// takes ownership of the heap allocated dialect.
-void Dialect::registerDialect(MLIRContext *context) {
-  auto &impl = context->getImpl();
-  std::unique_ptr<Dialect> dialect(this);
-
+/// Get a dialect for the provided namespace and TypeID: abort the program if a
+/// dialect exist for this namespace with different TypeID. Returns a pointer to
+/// the dialect owned by the context.
+Dialect *
+MLIRContext::getOrCreateDialect(StringRef dialectNamespace, TypeID dialectID,
+                                function_ref<std::unique_ptr<Dialect>()> ctor) {
+  auto &impl = getImpl();
   // Get the correct insertion position sorted by namespace.
-  auto insertPt = llvm::lower_bound(
-      impl.dialects, dialect, [](const auto &lhs, const auto &rhs) {
-        return lhs->getNamespace() < rhs->getNamespace();
-      });
+  auto insertPt =
+      llvm::lower_bound(impl.dialects, nullptr,
+                        [&](const std::unique_ptr<Dialect> &lhs,
+                            const std::unique_ptr<Dialect> &rhs) {
+                          if (!lhs)
+                            return dialectNamespace < rhs->getNamespace();
+                          return lhs->getNamespace() < dialectNamespace;
+                        });
 
   // Abort if dialect with namespace has already been registered.
   if (insertPt != impl.dialects.end() &&
-      (*insertPt)->getNamespace() == getNamespace()) {
-    llvm::report_fatal_error("a dialect with namespace '" + getNamespace() +
+      (*insertPt)->getNamespace() == dialectNamespace) {
+    if ((*insertPt)->getTypeID() == dialectID)
+      return insertPt->get();
+    llvm::report_fatal_error("a dialect with namespace '" + dialectNamespace +
                              "' has already been registered");
   }
-  impl.dialects.insert(insertPt, std::move(dialect));
+  auto it = impl.dialects.insert(insertPt, ctor());
+  return &**it;
 }
 
 bool MLIRContext::allowsUnregisteredDialects() {
@@ -561,6 +578,7 @@ void Dialect::addType(TypeID typeID, AbstractType &&typeInfo) {
           AbstractType(std::move(typeInfo));
   if (!impl.registeredTypes.insert({typeID, newInfo}).second)
     llvm::report_fatal_error("Dialect Type already registered.");
+  impl.typeUniquer.registerStorageType(typeID);
 }
 
 void Dialect::addAttribute(TypeID typeID, AbstractAttribute &&attrInfo) {
@@ -570,6 +588,7 @@ void Dialect::addAttribute(TypeID typeID, AbstractAttribute &&attrInfo) {
           AbstractAttribute(std::move(attrInfo));
   if (!impl.registeredAttributes.insert({typeID, newInfo}).second)
     llvm::report_fatal_error("Dialect Attribute already registered.");
+  impl.attributeUniquer.registerStorageType(typeID);
 }
 
 /// Get the dialect that registered the attribute with the provided typeid.
@@ -642,7 +661,6 @@ Identifier Identifier::get(StringRef str, MLIRContext *context) {
 StorageUniquer &MLIRContext::getTypeUniquer() { return getImpl().typeUniquer; }
 
 FloatType FloatType::get(StandardTypes::Kind kind, MLIRContext *context) {
-  assert(kindof(kind) && "Not a FP kind.");
   switch (kind) {
   case StandardTypes::BF16:
     return context->getImpl().bf16Ty;

@@ -438,6 +438,21 @@ TEST(DiagnosticTest, ClangTidySuppressionCommentTrumpsWarningAsError) {
   EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre());
 }
 
+TEST(DiagnosticTest, ClangTidyNoLiteralDataInMacroToken) {
+  Annotations Main(R"cpp(
+    #define SIGTERM 15
+    using pthread_t = int;
+    int pthread_kill(pthread_t thread, int sig);
+    int func() {
+      pthread_t thread;
+      return pthread_kill(thread, 0);
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.ClangTidyChecks = "-*,bugprone-bad-signal-to-kill-thread";
+  EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre()); // no-crash
+}
+
 TEST(DiagnosticsTest, Preprocessor) {
   // This looks like a preamble, but there's an #else in the middle!
   // Check that:

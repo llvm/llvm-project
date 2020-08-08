@@ -23,16 +23,14 @@ using namespace clang;
 // OMPThreadPrivateDecl Implementation.
 //===----------------------------------------------------------------------===//
 
-void OMPThreadPrivateDecl::anchor() { }
+void OMPThreadPrivateDecl::anchor() {}
 
 OMPThreadPrivateDecl *OMPThreadPrivateDecl::Create(ASTContext &C,
                                                    DeclContext *DC,
                                                    SourceLocation L,
                                                    ArrayRef<Expr *> VL) {
-  OMPThreadPrivateDecl *D =
-      new (C, DC, additionalSizeToAlloc<Expr *>(VL.size()))
-          OMPThreadPrivateDecl(OMPThreadPrivate, DC, L);
-  D->NumVars = VL.size();
+  auto *D = OMPDeclarativeDirective::createDirective<OMPThreadPrivateDecl>(
+      C, DC, llvm::None, VL.size(), L);
   D->setVars(VL);
   return D;
 }
@@ -40,16 +38,14 @@ OMPThreadPrivateDecl *OMPThreadPrivateDecl::Create(ASTContext &C,
 OMPThreadPrivateDecl *OMPThreadPrivateDecl::CreateDeserialized(ASTContext &C,
                                                                unsigned ID,
                                                                unsigned N) {
-  OMPThreadPrivateDecl *D = new (C, ID, additionalSizeToAlloc<Expr *>(N))
-      OMPThreadPrivateDecl(OMPThreadPrivate, nullptr, SourceLocation());
-  D->NumVars = N;
-  return D;
+  return OMPDeclarativeDirective::createEmptyDirective<OMPThreadPrivateDecl>(
+      C, ID, 0, N);
 }
 
 void OMPThreadPrivateDecl::setVars(ArrayRef<Expr *> VL) {
-  assert(VL.size() == NumVars &&
+  assert(VL.size() == Data->getNumChildren() &&
          "Number of variables is not the same as the preallocated buffer");
-  std::uninitialized_copy(VL.begin(), VL.end(), getTrailingObjects<Expr *>());
+  llvm::copy(VL, getVars().begin());
 }
 
 //===----------------------------------------------------------------------===//
@@ -61,38 +57,23 @@ void OMPAllocateDecl::anchor() { }
 OMPAllocateDecl *OMPAllocateDecl::Create(ASTContext &C, DeclContext *DC,
                                          SourceLocation L, ArrayRef<Expr *> VL,
                                          ArrayRef<OMPClause *> CL) {
-  OMPAllocateDecl *D = new (
-      C, DC, additionalSizeToAlloc<Expr *, OMPClause *>(VL.size(), CL.size()))
-      OMPAllocateDecl(OMPAllocate, DC, L);
-  D->NumVars = VL.size();
+  auto *D = OMPDeclarativeDirective::createDirective<OMPAllocateDecl>(
+      C, DC, CL, VL.size(), L);
   D->setVars(VL);
-  D->NumClauses = CL.size();
-  D->setClauses(CL);
   return D;
 }
 
 OMPAllocateDecl *OMPAllocateDecl::CreateDeserialized(ASTContext &C, unsigned ID,
                                                      unsigned NVars,
                                                      unsigned NClauses) {
-  OMPAllocateDecl *D =
-      new (C, ID, additionalSizeToAlloc<Expr *, OMPClause *>(NVars, NClauses))
-          OMPAllocateDecl(OMPAllocate, nullptr, SourceLocation());
-  D->NumVars = NVars;
-  D->NumClauses = NClauses;
-  return D;
+  return OMPDeclarativeDirective::createEmptyDirective<OMPAllocateDecl>(
+      C, ID, NClauses, NVars, SourceLocation());
 }
 
 void OMPAllocateDecl::setVars(ArrayRef<Expr *> VL) {
-  assert(VL.size() == NumVars &&
+  assert(VL.size() == Data->getNumChildren() &&
          "Number of variables is not the same as the preallocated buffer");
-  std::uninitialized_copy(VL.begin(), VL.end(), getTrailingObjects<Expr *>());
-}
-
-void OMPAllocateDecl::setClauses(ArrayRef<OMPClause *> CL) {
-  assert(CL.size() == NumClauses &&
-         "Number of variables is not the same as the preallocated buffer");
-  std::uninitialized_copy(CL.begin(), CL.end(),
-                          getTrailingObjects<OMPClause *>());
+  llvm::copy(VL, getVars().begin());
 }
 
 //===----------------------------------------------------------------------===//
@@ -104,27 +85,14 @@ void OMPRequiresDecl::anchor() {}
 OMPRequiresDecl *OMPRequiresDecl::Create(ASTContext &C, DeclContext *DC,
                                          SourceLocation L,
                                          ArrayRef<OMPClause *> CL) {
-  OMPRequiresDecl *D =
-      new (C, DC, additionalSizeToAlloc<OMPClause *>(CL.size()))
-      OMPRequiresDecl(OMPRequires, DC, L);
-  D->NumClauses = CL.size();
-  D->setClauses(CL);
-  return D;
+  return OMPDeclarativeDirective::createDirective<OMPRequiresDecl>(C, DC, CL, 0,
+                                                                   L);
 }
 
 OMPRequiresDecl *OMPRequiresDecl::CreateDeserialized(ASTContext &C, unsigned ID,
                                                      unsigned N) {
-  OMPRequiresDecl *D = new (C, ID, additionalSizeToAlloc<OMPClause *>(N))
-      OMPRequiresDecl(OMPRequires, nullptr, SourceLocation());
-  D->NumClauses = N;
-  return D;
-}
-
-void OMPRequiresDecl::setClauses(ArrayRef<OMPClause *> CL) {
-  assert(CL.size() == NumClauses &&
-         "Number of clauses is not the same as the preallocated buffer");
-  std::uninitialized_copy(CL.begin(), CL.end(),
-                          getTrailingObjects<OMPClause *>());
+  return OMPDeclarativeDirective::createEmptyDirective<OMPRequiresDecl>(
+      C, ID, N, 0, SourceLocation());
 }
 
 //===----------------------------------------------------------------------===//
@@ -171,48 +139,20 @@ OMPDeclareReductionDecl::getPrevDeclInScope() const {
 
 void OMPDeclareMapperDecl::anchor() {}
 
-OMPDeclareMapperDecl *
-OMPDeclareMapperDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
-                             DeclarationName Name, QualType T,
-                             DeclarationName VarName,
-                             OMPDeclareMapperDecl *PrevDeclInScope) {
-  return new (C, DC) OMPDeclareMapperDecl(OMPDeclareMapper, DC, L, Name, T,
-                                          VarName, PrevDeclInScope);
+OMPDeclareMapperDecl *OMPDeclareMapperDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation L, DeclarationName Name,
+    QualType T, DeclarationName VarName, ArrayRef<OMPClause *> Clauses,
+    OMPDeclareMapperDecl *PrevDeclInScope) {
+  return OMPDeclarativeDirective::createDirective<OMPDeclareMapperDecl>(
+      C, DC, Clauses, 1, L, Name, T, VarName, PrevDeclInScope);
 }
 
 OMPDeclareMapperDecl *OMPDeclareMapperDecl::CreateDeserialized(ASTContext &C,
                                                                unsigned ID,
                                                                unsigned N) {
-  auto *D = new (C, ID)
-      OMPDeclareMapperDecl(OMPDeclareMapper, /*DC=*/nullptr, SourceLocation(),
-                           DeclarationName(), QualType(), DeclarationName(),
-                           /*PrevDeclInScope=*/nullptr);
-  if (N) {
-    auto **ClauseStorage = C.Allocate<OMPClause *>(N);
-    D->Clauses = llvm::makeMutableArrayRef<OMPClause *>(ClauseStorage, N);
-  }
-  return D;
-}
-
-/// Creates an array of clauses to this mapper declaration and intializes
-/// them. The space used to store clause pointers is dynamically allocated,
-/// because we do not know the number of clauses when creating
-/// OMPDeclareMapperDecl
-void OMPDeclareMapperDecl::CreateClauses(ASTContext &C,
-                                         ArrayRef<OMPClause *> CL) {
-  assert(Clauses.empty() && "Number of clauses should be 0 on initialization");
-  size_t NumClauses = CL.size();
-  if (NumClauses) {
-    auto **ClauseStorage = C.Allocate<OMPClause *>(NumClauses);
-    Clauses = llvm::makeMutableArrayRef<OMPClause *>(ClauseStorage, NumClauses);
-    setClauses(CL);
-  }
-}
-
-void OMPDeclareMapperDecl::setClauses(ArrayRef<OMPClause *> CL) {
-  assert(CL.size() == Clauses.size() &&
-         "Number of clauses is not the same as the preallocated buffer");
-  std::uninitialized_copy(CL.begin(), CL.end(), Clauses.data());
+  return OMPDeclarativeDirective::createEmptyDirective<OMPDeclareMapperDecl>(
+      C, ID, N, 1, SourceLocation(), DeclarationName(), QualType(),
+      DeclarationName(), /*PrevDeclInScope=*/nullptr);
 }
 
 OMPDeclareMapperDecl *OMPDeclareMapperDecl::getPrevDeclInScope() {

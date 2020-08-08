@@ -1062,6 +1062,7 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-unknown-freebsd11 -target-abi elfv1 -xc /dev/null | FileCheck --check-prefix=PPC64-ELFv1 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-unknown-freebsd12 -target-abi elfv1 -xc /dev/null | FileCheck --check-prefix=PPC64-ELFv1 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-unknown-freebsd13 -target-abi elfv2 -xc /dev/null | FileCheck --check-prefix=PPC64-ELFv2 %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-unknown-openbsd -target-abi elfv2 -xc /dev/null | FileCheck --check-prefix=PPC64-ELFv2 %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-linux-musl -target-abi elfv2 -xc /dev/null | FileCheck --check-prefix=PPC64-ELFv2 %s
 
 // PPC64-ELFv1:#define _CALL_ELF 1

@@ -13,11 +13,15 @@
 #ifndef MLIR_DIALECT_SCF_UTILS_H_
 #define MLIR_DIALECT_SCF_UTILS_H_
 
+#include "mlir/Support/LLVM.h"
+
 namespace mlir {
+class FuncOp;
 class OpBuilder;
 class ValueRange;
 
 namespace scf {
+class IfOp;
 class ForOp;
 class ParallelOp;
 } // end namespace scf
@@ -46,5 +50,12 @@ scf::ForOp cloneWithNewYields(OpBuilder &b, scf::ForOp loop,
                               ValueRange newYieldedValues,
                               bool replaceLoopResults = true);
 
+/// Outline the then and/or else regions of `ifOp` as follows:
+///  - if `thenFn` is not null, `thenFnName` must be specified and the `then`
+///    region is inlined into a new FuncOp that is captured by the pointer.
+///  - if `elseFn` is not null, `elseFnName` must be specified and the `else`
+///    region is inlined into a new FuncOp that is captured by the pointer.
+void outlineIfOp(OpBuilder &b, scf::IfOp ifOp, FuncOp *thenFn,
+                 StringRef thenFnName, FuncOp *elseFn, StringRef elseFnName);
 } // end namespace mlir
 #endif // MLIR_DIALECT_SCF_UTILS_H_

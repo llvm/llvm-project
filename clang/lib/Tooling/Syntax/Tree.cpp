@@ -36,11 +36,9 @@ syntax::Arena::Arena(SourceManager &SourceMgr, const LangOptions &LangOpts,
                      const TokenBuffer &Tokens)
     : SourceMgr(SourceMgr), LangOpts(LangOpts), Tokens(Tokens) {}
 
-const clang::syntax::TokenBuffer &syntax::Arena::tokenBuffer() const {
-  return Tokens;
-}
+const syntax::TokenBuffer &syntax::Arena::tokenBuffer() const { return Tokens; }
 
-std::pair<FileID, llvm::ArrayRef<syntax::Token>>
+std::pair<FileID, ArrayRef<syntax::Token>>
 syntax::Arena::lexBuffer(std::unique_ptr<llvm::MemoryBuffer> Input) {
   auto FID = SourceMgr.createFileID(std::move(Input));
   auto It = ExtraTokens.try_emplace(FID, tokenize(FID, SourceMgr, LangOpts));
@@ -135,7 +133,7 @@ void syntax::Tree::replaceChildRangeLowLevel(Node *BeforeBegin, Node *End,
 }
 
 namespace {
-static void dumpTokens(llvm::raw_ostream &OS, ArrayRef<syntax::Token> Tokens,
+static void dumpTokens(raw_ostream &OS, ArrayRef<syntax::Token> Tokens,
                        const SourceManager &SM) {
   assert(!Tokens.empty());
   bool First = true;
@@ -153,7 +151,7 @@ static void dumpTokens(llvm::raw_ostream &OS, ArrayRef<syntax::Token> Tokens,
   }
 }
 
-static void dumpTree(llvm::raw_ostream &OS, const syntax::Node *N,
+static void dumpTree(raw_ostream &OS, const syntax::Node *N,
                      const syntax::Arena &A, std::vector<bool> IndentMask) {
   std::string Marks;
   if (!N->isOriginal())
@@ -165,13 +163,13 @@ static void dumpTree(llvm::raw_ostream &OS, const syntax::Node *N,
   if (!Marks.empty())
     OS << Marks << ": ";
 
-  if (auto *L = llvm::dyn_cast<syntax::Leaf>(N)) {
+  if (auto *L = dyn_cast<syntax::Leaf>(N)) {
     dumpTokens(OS, *L->token(), A.sourceManager());
     OS << "\n";
     return;
   }
 
-  auto *T = llvm::cast<syntax::Tree>(N);
+  auto *T = cast<syntax::Tree>(N);
   OS << T->kind() << "\n";
 
   for (auto It = T->firstChild(); It != nullptr; It = It->nextSibling()) {
@@ -205,7 +203,7 @@ std::string syntax::Node::dumpTokens(const Arena &A) const {
   std::string Storage;
   llvm::raw_string_ostream OS(Storage);
   traverse(this, [&](const syntax::Node *N) {
-    auto *L = llvm::dyn_cast<syntax::Leaf>(N);
+    auto *L = dyn_cast<syntax::Leaf>(N);
     if (!L)
       return;
     ::dumpTokens(OS, *L->token(), A.sourceManager());

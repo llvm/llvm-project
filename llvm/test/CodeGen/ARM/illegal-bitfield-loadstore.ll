@@ -122,11 +122,12 @@ define void @i56_and_or(i56* %a) {
 ; BE-LABEL: i56_and_or:
 ; BE:       @ %bb.0:
 ; BE-NEXT:    mov r1, r0
+; BE-NEXT:    mov r2, #128
+; BE-NEXT:    ldrh r12, [r1, #4]!
+; BE-NEXT:    ldrb r3, [r1, #2]
+; BE-NEXT:    strb r2, [r1, #2]
+; BE-NEXT:    orr r2, r3, r12, lsl #8
 ; BE-NEXT:    ldr r12, [r0]
-; BE-NEXT:    ldrh r2, [r1, #4]!
-; BE-NEXT:    mov r3, #128
-; BE-NEXT:    strb r3, [r1, #2]
-; BE-NEXT:    lsl r2, r2, #8
 ; BE-NEXT:    orr r2, r2, r12, lsl #24
 ; BE-NEXT:    orr r2, r2, #384
 ; BE-NEXT:    lsr r3, r2, #8

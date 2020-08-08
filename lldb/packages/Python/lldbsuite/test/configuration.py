@@ -117,6 +117,9 @@ lldb_platform_name = None
 lldb_platform_url = None
 lldb_platform_working_dir = None
 
+# Apple SDK
+apple_sdk = None
+
 # The base directory in which the tests are being built.
 test_build_dir = None
 

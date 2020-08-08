@@ -1,7 +1,7 @@
 C_SOURCES := main.c
 LD_EXTRAS := -L. -lfoo
 
-TRIPLE := $(ARCH)-apple-ios13.0-macabi
+override TRIPLE := $(ARCH)-apple-ios13.0-macabi
 CFLAGS_EXTRAS := -target $(TRIPLE)
 
 # FIXME: rdar://problem/54986190

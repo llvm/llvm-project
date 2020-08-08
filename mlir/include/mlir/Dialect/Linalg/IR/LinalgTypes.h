@@ -41,8 +41,6 @@ public:
     /// Custom, uniq'ed construction in the MLIRContext.
     return Base::get(context, LinalgTypes::Range);
   }
-  /// Used to implement llvm-style cast.
-  static bool kindof(unsigned kind) { return kind == LinalgTypes::Range; }
 };
 
 } // namespace linalg

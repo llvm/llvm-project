@@ -69,7 +69,7 @@ struct TestCall {
     strings.Save(x.keyword);
     return *this;
   }
-  template <typename A, typename... As> TestCall &Push(A &&x, As &&... xs) {
+  template <typename A, typename... As> TestCall &Push(A &&x, As &&...xs) {
     Push(std::move(x));
     return Push(std::move(xs)...);
   }

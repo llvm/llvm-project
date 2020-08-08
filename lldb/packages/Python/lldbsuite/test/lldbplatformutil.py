@@ -129,17 +129,28 @@ def getDarwinOSTriples():
 
 def getPlatform():
     """Returns the target platform which the tests are running on."""
-    triple = lldb.selected_platform.GetTriple()
-    if triple is None:
-      # It might be an unconnected remote platform.
-      return ''
+    # Use the Apple SDK to determine the platform if set.
+    if configuration.apple_sdk:
+        platform = configuration.apple_sdk
+        dot = platform.find('.')
+        if dot != -1:
+            platform = platform[:dot]
+        if platform == 'iphoneos':
+            platform = 'ios'
+        return platform
 
-    platform = triple.split('-')[2]
-    if platform.startswith('freebsd'):
-        platform = 'freebsd'
-    elif platform.startswith('netbsd'):
-        platform = 'netbsd'
-    return platform
+    # Use the triple to determine the platform if set.
+    triple = lldb.selected_platform.GetTriple()
+    if triple:
+        platform = triple.split('-')[2]
+        if platform.startswith('freebsd'):
+            platform = 'freebsd'
+        elif platform.startswith('netbsd'):
+            platform = 'netbsd'
+        return platform
+
+    # It still might be an unconnected remote platform.
+    return ''
 
 
 def platformIsDarwin():

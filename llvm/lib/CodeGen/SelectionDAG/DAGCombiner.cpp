@@ -13313,21 +13313,26 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
       }
       if (Sqrt.getNode()) {
         // If the other multiply operand is known positive, pull it into the
-        // sqrt. That will eliminate the division if we convert to an estimate:
-        // X / (fabs(A) * sqrt(Z)) --> X / sqrt(A*A*Z) --> X * rsqrt(A*A*Z)
-        // TODO: Also fold the case where A == Z (fabs is missing).
+        // sqrt. That will eliminate the division if we convert to an estimate.
         if (Flags.hasAllowReassociation() && N1.hasOneUse() &&
-            N1->getFlags().hasAllowReassociation() && Sqrt.hasOneUse() &&
-            Y.getOpcode() == ISD::FABS && Y.hasOneUse()) {
-          SDValue AA = DAG.getNode(ISD::FMUL, DL, VT, Y.getOperand(0),
-                                   Y.getOperand(0), Flags);
-          SDValue AAZ =
-              DAG.getNode(ISD::FMUL, DL, VT, AA, Sqrt.getOperand(0), Flags);
-          if (SDValue Rsqrt = buildRsqrtEstimate(AAZ, Flags))
-            return DAG.getNode(ISD::FMUL, DL, VT, N0, Rsqrt, Flags);
+            N1->getFlags().hasAllowReassociation() && Sqrt.hasOneUse()) {
+          SDValue A;
+          if (Y.getOpcode() == ISD::FABS && Y.hasOneUse())
+            A = Y.getOperand(0);
+          else if (Y == Sqrt.getOperand(0))
+            A = Y;
+          if (A) {
+            // X / (fabs(A) * sqrt(Z)) --> X / sqrt(A*A*Z) --> X * rsqrt(A*A*Z)
+            // X / (A * sqrt(A))       --> X / sqrt(A*A*A) --> X * rsqrt(A*A*A)
+            SDValue AA = DAG.getNode(ISD::FMUL, DL, VT, A, A, Flags);
+            SDValue AAZ =
+                DAG.getNode(ISD::FMUL, DL, VT, AA, Sqrt.getOperand(0), Flags);
+            if (SDValue Rsqrt = buildRsqrtEstimate(AAZ, Flags))
+              return DAG.getNode(ISD::FMUL, DL, VT, N0, Rsqrt, Flags);
 
-          // Estimate creation failed. Clean up speculatively created nodes.
-          recursivelyDeleteUnusedNodes(AAZ.getNode());
+            // Estimate creation failed. Clean up speculatively created nodes.
+            recursivelyDeleteUnusedNodes(AAZ.getNode());
+          }
         }
 
         // We found a FSQRT, so try to make this fold:

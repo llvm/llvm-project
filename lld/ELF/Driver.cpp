@@ -1863,7 +1863,7 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
 
     // Tell LTO not to eliminate these symbols.
     sym->isUsedInRegularObj = true;
-    if (wrap->isDefined())
+    if (!wrap->isUndefined())
       wrap->isUsedInRegularObj = true;
   }
   return v;
