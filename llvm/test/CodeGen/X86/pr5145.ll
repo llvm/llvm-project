@@ -9,7 +9,7 @@ define void @atomic_maxmin_i8() {
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmpb $4, %al
+; CHECK-NEXT:    cmpb $5, %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    movl $5, %ecx
 ; CHECK-NEXT:    cmovgl %eax, %ecx
