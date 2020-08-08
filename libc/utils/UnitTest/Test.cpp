@@ -8,7 +8,6 @@
 
 #include "Test.h"
 
-#include "utils/FPUtil/FPBits.h"
 #include "utils/testutils/ExecuteFunction.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -34,60 +33,26 @@ private:
 
 namespace internal {
 
-// Display the first N hexadecimal digits of an integer in upper case.
-template <typename T>
-cpp::EnableIfType<cpp::IsIntegral<T>::Value, std::string>
-uintToHex(T X, size_t Length = sizeof(T) * 2) {
-  std::string s(Length, '0');
-
-  for (auto it = s.rbegin(), end = s.rend(); it != end; ++it, X >>= 4) {
-    unsigned char Mod = static_cast<unsigned char>(X) & 15;
-    *it = llvm::hexdigit(Mod, true);
-  }
-
-  return s;
-}
-
-// When the value is not floating-point type, just display it as normal.
+// When the value is of integral type, just display it as normal.
 template <typename ValType>
-cpp::EnableIfType<!cpp::IsFloatingPointType<ValType>::Value, std::string>
+cpp::EnableIfType<cpp::IsIntegral<ValType>::Value, std::string>
 describeValue(ValType Value) {
   return std::to_string(Value);
 }
 
-template <> std::string describeValue<llvm::StringRef>(llvm::StringRef Value) {
-  return std::string(Value);
-}
+std::string describeValue(llvm::StringRef Value) { return std::string(Value); }
 
 // When the value is __uint128_t, also show its hexadecimal digits.
 // Using template to force exact match, prevent ambiguous promotion.
 template <> std::string describeValue<__uint128_t>(__uint128_t Value) {
-  return "0x" + uintToHex(Value);
-}
+  std::string S(sizeof(__uint128_t) * 2, '0');
 
-// When the value is a floating point type, also show its sign | exponent |
-// mantissa.
-template <typename ValType>
-cpp::EnableIfType<cpp::IsFloatingPointType<ValType>::Value, std::string>
-describeValue(ValType Value) {
-  fputil::FPBits<ValType> Bits(Value);
-
-  if (Bits.isNaN()) {
-    return "(NaN)";
-  } else if (Bits.isInf()) {
-    return Bits.sign ? "(-Infinity)" : "(+Infinity)";
-  } else {
-    constexpr int ExponentWidthInHex =
-        (fputil::ExponentWidth<ValType>::value - 1) / 4 + 1;
-    constexpr int MantissaWidthInHex =
-        (fputil::MantissaWidth<ValType>::value - 1) / 4 + 1;
-
-    return std::string("Sign: ") + (Bits.sign ? '1' : '0') + ", Exponent: 0x" +
-           uintToHex<uint16_t>(Bits.exponent, ExponentWidthInHex) +
-           ", Mantissa: 0x" +
-           uintToHex<typename fputil::FPBits<ValType>::UIntType>(
-               Bits.mantissa, MantissaWidthInHex);
+  for (auto I = S.rbegin(), End = S.rend(); I != End; ++I, Value >>= 4) {
+    unsigned char Mod = static_cast<unsigned char>(Value) & 15;
+    *I = llvm::hexdigit(Mod, true);
   }
+
+  return "0x" + S;
 }
 
 template <typename ValType>
@@ -105,23 +70,6 @@ void explainDifference(ValType LHS, ValType RHS, const char *LHSStr,
 }
 
 template <typename ValType>
-cpp::EnableIfType<!cpp::IsFloatingPointType<ValType>::Value, bool>
-testEQ(ValType LHS, ValType RHS) {
-  return LHS == RHS;
-}
-
-// For floating points, we consider all NaNs are equal, and +0.0 is not equal to
-// -0.0.
-template <typename ValType>
-cpp::EnableIfType<cpp::IsFloatingPointType<ValType>::Value, bool>
-testEQ(ValType LHS, ValType RHS) {
-  fputil::FPBits<ValType> LHSBits(LHS), RHSBits(RHS);
-
-  return (LHSBits.isNaN() && RHSBits.isNaN()) ||
-         (LHSBits.bitsAsUInt() == RHSBits.bitsAsUInt());
-}
-
-template <typename ValType>
 bool test(RunContext &Ctx, TestCondition Cond, ValType LHS, ValType RHS,
           const char *LHSStr, const char *RHSStr, const char *File,
           unsigned long Line) {
@@ -131,14 +79,14 @@ bool test(RunContext &Ctx, TestCondition Cond, ValType LHS, ValType RHS,
 
   switch (Cond) {
   case Cond_EQ:
-    if (testEQ(LHS, RHS))
+    if (LHS == RHS)
       return true;
 
     Ctx.markFail();
     ExplainDifference("equal to");
     return false;
   case Cond_NE:
-    if (!testEQ(LHS, RHS))
+    if (LHS != RHS)
       return true;
 
     Ctx.markFail();
@@ -290,7 +238,7 @@ template bool Test::test<__uint128_t, 0>(RunContext &Ctx, TestCondition Cond,
                                          __uint128_t LHS, __uint128_t RHS,
                                          const char *LHSStr, const char *RHSStr,
                                          const char *File, unsigned long Line);
-
+/*
 template bool Test::test<float, 0>(RunContext &Ctx, TestCondition Cond,
                                    float LHS, float RHS, const char *LHSStr,
                                    const char *RHSStr, const char *File,
@@ -305,7 +253,7 @@ template bool Test::test<long double, 0>(RunContext &Ctx, TestCondition Cond,
                                          long double LHS, long double RHS,
                                          const char *LHSStr, const char *RHSStr,
                                          const char *File, unsigned long Line);
-
+*/
 bool Test::testStrEq(RunContext &Ctx, const char *LHS, const char *RHS,
                      const char *LHSStr, const char *RHSStr, const char *File,
                      unsigned long Line) {
