@@ -591,7 +591,7 @@ FunctionSummary *resolveCallee(GlobalValueSummary *S) {
     if (FunctionSummary *FS = dyn_cast<FunctionSummary>(S))
       return FS;
     AliasSummary *AS = dyn_cast<AliasSummary>(S);
-    if (!AS)
+    if (!AS || !AS->hasAliasee())
       return nullptr;
     S = AS->getBaseObject();
     if (S == AS)
