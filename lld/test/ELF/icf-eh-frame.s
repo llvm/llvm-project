@@ -29,6 +29,7 @@ _Z1bv:
 .section .text.Z1cv,"ax",@progbits
 _Z1cv:
   .cfi_startproc
+  .cfi_signal_frame
   ret
   .cfi_endproc
 

@@ -74,10 +74,6 @@ private:
   // This indicates if the module has been evalueated (measured and tested).
   bool evaluated;
 
-  // This points to the ReductionNode that was used as a starting point to
-  // create this variant. It is null if the reduction node is the root.
-  ReductionNode *parent;
-
   // This points to the child variants that were created using this node as a
   // starting point.
   std::vector<std::unique_ptr<ReductionNode>> variants;

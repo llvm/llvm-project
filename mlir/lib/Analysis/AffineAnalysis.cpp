@@ -857,20 +857,20 @@ void mlir::getDependenceComponents(
     AffineForOp forOp, unsigned maxLoopDepth,
     std::vector<SmallVector<DependenceComponent, 2>> *depCompsVec) {
   // Collect all load and store ops in loop nest rooted at 'forOp'.
-  SmallVector<Operation *, 8> loadAndStoreOpInsts;
-  forOp.getOperation()->walk([&](Operation *opInst) {
-    if (isa<AffineReadOpInterface, AffineWriteOpInterface>(opInst))
-      loadAndStoreOpInsts.push_back(opInst);
+  SmallVector<Operation *, 8> loadAndStoreOps;
+  forOp.getOperation()->walk([&](Operation *op) {
+    if (isa<AffineReadOpInterface, AffineWriteOpInterface>(op))
+      loadAndStoreOps.push_back(op);
   });
 
-  unsigned numOps = loadAndStoreOpInsts.size();
+  unsigned numOps = loadAndStoreOps.size();
   for (unsigned d = 1; d <= maxLoopDepth; ++d) {
     for (unsigned i = 0; i < numOps; ++i) {
-      auto *srcOpInst = loadAndStoreOpInsts[i];
-      MemRefAccess srcAccess(srcOpInst);
+      auto *srcOp = loadAndStoreOps[i];
+      MemRefAccess srcAccess(srcOp);
       for (unsigned j = 0; j < numOps; ++j) {
-        auto *dstOpInst = loadAndStoreOpInsts[j];
-        MemRefAccess dstAccess(dstOpInst);
+        auto *dstOp = loadAndStoreOps[j];
+        MemRefAccess dstAccess(dstOp);
 
         FlatAffineConstraints dependenceConstraints;
         SmallVector<DependenceComponent, 2> depComps;
