@@ -35,6 +35,8 @@
 ; RUN:  -r %t.summ1.bc,Write1,px \
 ; RUN:    2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
 
+; RUN: llvm-dis %t.lto.index.bc -o - | FileCheck --check-prefix=INDEX %s
+
 ; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t-newpm.lto -stack-safety-print -stack-safety-run -save-temps -use-new-pm -thinlto-threads 1 -O0 \
 ; RUN:  -r %t.summ0.bc,AliasCall,px \
 ; RUN:  -r %t.summ0.bc,AliasToBitcastAliasWrite1, \
@@ -54,6 +56,8 @@
 ; RUN:  -r %t.summ1.bc,PreemptableAliasWrite1,px \
 ; RUN:  -r %t.summ1.bc,Write1,px \
 ; RUN:    2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
+
+; RUN: llvm-dis %t.lto.index.bc -o - | FileCheck --check-prefix=INDEX %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux"
@@ -146,3 +150,19 @@ entry:
 ; CHECK-NEXT: p[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
 ; CHECK-EMPTY:
+
+
+; INDEX: ^0 = module:
+; INDEX-NEXT: ^1 = module:
+; INDEX-NEXT: ^2 = gv: (guid: 5302792608346012368, summaries: (alias: (module: ^1,  flags: ({{[^)]+}}), aliasee: ^6)))
+; INDEX-NEXT: ^3 = gv: (guid: 5645561129491455876, summaries: (alias: (module: ^1,  flags: ({{[^)]+}}), aliasee: ^6)))
+; INDEX-NEXT: ^4 = gv: (guid: 9072417439152471835, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 3,  funcFlags: ({{[^)]+}}), calls: ((callee: ^2)))))
+; INDEX-NEXT: ^5 = gv: (guid: 14609149411681023120, summaries: (alias: (module: ^1,  flags: ({{[^)]+}}), aliasee: ^6)))
+; INDEX-NEXT: ^6 = gv: (guid: 14731732627017339067, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 2,  funcFlags: ({{[^)]+}}), params: ((param: 0, offset: [0, 0])))))
+; INDEX-NEXT: ^7 = gv: (guid: 15652123661340530809, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 3,  funcFlags: ({{[^)]+}}), calls: ((callee: ^10)))))
+; INDEX-NEXT: ^8 = gv: (guid: 15975491923281567905, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 5,  funcFlags: ({{[^)]+}}), calls: ((callee: ^11), (callee: ^3)))))
+; INDEX-NEXT: ^9 = gv: (guid: 15975942840034111240, summaries: (alias: (module: ^1,  flags: ({{[^)]+}}), aliasee: ^6)))
+; INDEX-NEXT: ^10 = gv: (guid: 16188965948532098721, summaries: (alias: (module: ^1,  flags: ({{[^)]+}}), aliasee: ^6)))
+; INDEX-NEXT: ^11 = gv: (guid: 17692787678414841595, summaries: (alias: (module: ^1,  flags: ({{[^)]+}}), aliasee: ^6)))
+; INDEX-NEXT: ^12 = gv: (guid: 18029348658524400206, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 5,  funcFlags: ({{[^)]+}}), calls: ((callee: ^9), (callee: ^5)))))
+; INDEX-NEXT: ^13 = flags: 1
