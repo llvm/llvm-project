@@ -26,10 +26,8 @@
 # RUN: llvm-readelf --dyn-syms %t1 | FileCheck %s --check-prefix=DYNSYM
 # RUN: llvm-objdump -d %t1 | FileCheck %s --check-prefix=ASM
 
-## FIXME GNU ld does not export bar
-# DYNSYM:      Symbol table '.dynsym' contains 3 entries:
+# DYNSYM:      Symbol table '.dynsym' contains 2 entries:
 # DYNSYM:      NOTYPE  LOCAL  DEFAULT  UND
-# DYNSYM-NEXT: NOTYPE  GLOBAL DEFAULT  UND bar
 # DYNSYM-NEXT: NOTYPE  GLOBAL DEFAULT  UND __wrap_bar
 
 # ASM:      <_start>:
