@@ -16,6 +16,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -33,6 +34,7 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "vector-combine"
+STATISTIC(NumVecLoad, "Number of vector loads formed");
 STATISTIC(NumVecCmp, "Number of vector compares formed");
 STATISTIC(NumVecBO, "Number of vector binops formed");
 STATISTIC(NumVecCmpBO, "Number of vector compare + binop formed");
@@ -65,6 +67,7 @@ private:
   const TargetTransformInfo &TTI;
   const DominatorTree &DT;
 
+  bool vectorizeLoadInsert(Instruction &I);
   ExtractElementInst *getShuffleExtract(ExtractElementInst *Ext0,
                                         ExtractElementInst *Ext1,
                                         unsigned PreferredExtractIndex) const;
@@ -86,6 +89,61 @@ private:
 static void replaceValue(Value &Old, Value &New) {
   Old.replaceAllUsesWith(&New);
   New.takeName(&Old);
+}
+
+bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
+  // Match insert of scalar load.
+  Value *Scalar;
+  if (!match(&I, m_InsertElt(m_Undef(), m_Value(Scalar), m_ZeroInt())))
+    return false;
+  auto *Load = dyn_cast<LoadInst>(Scalar);
+  Type *ScalarTy = Scalar->getType();
+  if (!Load || !Load->isSimple())
+    return false;
+
+  // TODO: Extend this to match GEP with constant offsets.
+  Value *PtrOp = Load->getPointerOperand()->stripPointerCasts();
+  assert(isa<PointerType>(PtrOp->getType()) && "Expected a pointer type");
+
+  unsigned VectorSize = TTI.getMinVectorRegisterBitWidth();
+  uint64_t ScalarSize = ScalarTy->getPrimitiveSizeInBits();
+  if (!ScalarSize || VectorSize % ScalarSize != 0)
+    return false;
+
+  // Check safety of replacing the scalar load with a larger vector load.
+  unsigned VecNumElts = VectorSize / ScalarSize;
+  auto *VectorTy = VectorType::get(ScalarTy, VecNumElts, false);
+  // TODO: Allow insert/extract subvector if the type does not match.
+  if (VectorTy != I.getType())
+    return false;
+  Align Alignment = Load->getAlign();
+  const DataLayout &DL = I.getModule()->getDataLayout();
+  if (!isSafeToLoadUnconditionally(PtrOp, VectorTy, Alignment, DL, Load, &DT))
+    return false;
+
+  // Original pattern: insertelt undef, load [free casts of] ScalarPtr, 0
+  int OldCost = TTI.getMemoryOpCost(Instruction::Load, ScalarTy, Alignment,
+                                    Load->getPointerAddressSpace());
+  APInt DemandedElts = APInt::getOneBitSet(VecNumElts, 0);
+  OldCost += TTI.getScalarizationOverhead(VectorTy, DemandedElts, true, false);
+
+  // New pattern: load VecPtr
+  int NewCost = TTI.getMemoryOpCost(Instruction::Load, VectorTy, Alignment,
+                                    Load->getPointerAddressSpace());
+
+  // We can aggressively convert to the vector form because the backend can
+  // invert this transform if it does not result in a performance win.
+  if (OldCost < NewCost)
+    return false;
+
+  // It is safe and potentially profitable to load a vector directly:
+  // inselt undef, load Scalar, 0 --> load VecPtr
+  IRBuilder<> Builder(Load);
+  Value *CastedPtr = Builder.CreateBitCast(PtrOp, VectorTy->getPointerTo());
+  LoadInst *VecLd = Builder.CreateAlignedLoad(VectorTy, CastedPtr, Alignment);
+  replaceValue(I, *VecLd);
+  ++NumVecLoad;
+  return true;
 }
 
 /// Determine which, if any, of the inputs should be replaced by a shuffle
@@ -625,6 +683,7 @@ bool VectorCombine::run() {
       if (isa<DbgInfoIntrinsic>(I))
         continue;
       Builder.SetInsertPoint(&I);
+      MadeChange |= vectorizeLoadInsert(I);
       MadeChange |= foldExtractExtract(I);
       MadeChange |= foldBitcastShuf(I);
       MadeChange |= scalarizeBinopOrCmp(I);
