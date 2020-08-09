@@ -780,69 +780,18 @@ bool X86InstructionSelector::selectZext(MachineInstr &I,
   const LLT DstTy = MRI.getType(DstReg);
   const LLT SrcTy = MRI.getType(SrcReg);
 
+  assert(!(SrcTy == LLT::scalar(8) && DstTy == LLT::scalar(16)) &&
+         "8=>16 Zext is handled by tablegen");
   assert(!(SrcTy == LLT::scalar(8) && DstTy == LLT::scalar(32)) &&
          "8=>32 Zext is handled by tablegen");
   assert(!(SrcTy == LLT::scalar(16) && DstTy == LLT::scalar(32)) &&
          "16=>32 Zext is handled by tablegen");
-
-  const static struct ZextEntry {
-    LLT SrcTy;
-    LLT DstTy;
-    unsigned MovOp;
-    bool NeedSubregToReg;
-  } OpTable[] = {
-      {LLT::scalar(8), LLT::scalar(16), X86::MOVZX16rr8, false},  // i8  => i16
-      {LLT::scalar(8), LLT::scalar(64), X86::MOVZX32rr8, true},   // i8  => i64
-      {LLT::scalar(16), LLT::scalar(64), X86::MOVZX32rr16, true}, // i16 => i64
-      {LLT::scalar(32), LLT::scalar(64), 0, true}                 // i32 => i64
-  };
-
-  auto ZextEntryIt =
-      std::find_if(std::begin(OpTable), std::end(OpTable),
-                   [SrcTy, DstTy](const ZextEntry &El) {
-                     return El.DstTy == DstTy && El.SrcTy == SrcTy;
-                   });
-
-  // Here we try to select Zext into a MOVZ and/or SUBREG_TO_REG instruction.
-  if (ZextEntryIt != std::end(OpTable)) {
-    const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
-    const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
-    const TargetRegisterClass *DstRC = getRegClass(DstTy, DstRB);
-    const TargetRegisterClass *SrcRC = getRegClass(SrcTy, SrcRB);
-
-    if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI) ||
-        !RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
-      LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
-                        << " operand\n");
-      return false;
-    }
-
-    unsigned TransitRegTo = DstReg;
-    unsigned TransitRegFrom = SrcReg;
-    if (ZextEntryIt->MovOp) {
-      // If we select Zext into MOVZ + SUBREG_TO_REG, we need to have
-      // a transit register in between: create it here.
-      if (ZextEntryIt->NeedSubregToReg) {
-        TransitRegFrom = MRI.createVirtualRegister(
-            getRegClass(LLT::scalar(32), DstReg, MRI));
-        TransitRegTo = TransitRegFrom;
-      }
-
-      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(ZextEntryIt->MovOp))
-          .addDef(TransitRegTo)
-          .addReg(SrcReg);
-    }
-    if (ZextEntryIt->NeedSubregToReg) {
-      BuildMI(*I.getParent(), I, I.getDebugLoc(),
-              TII.get(TargetOpcode::SUBREG_TO_REG))
-          .addDef(DstReg)
-          .addImm(0)
-          .addReg(TransitRegFrom)
-          .addImm(X86::sub_32bit);
-    }
-    I.eraseFromParent();
-    return true;
-  }
+  assert(!(SrcTy == LLT::scalar(8) && DstTy == LLT::scalar(64)) &&
+         "8=>64 Zext is handled by tablegen");
+  assert(!(SrcTy == LLT::scalar(16) && DstTy == LLT::scalar(64)) &&
+         "16=>64 Zext is handled by tablegen");
+  assert(!(SrcTy == LLT::scalar(32) && DstTy == LLT::scalar(64)) &&
+         "32=>64 Zext is handled by tablegen");
 
   if (SrcTy != LLT::scalar(1))
     return false;
