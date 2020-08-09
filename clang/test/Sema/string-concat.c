@@ -19,14 +19,16 @@ typedef __WCHAR_TYPE__ wchar_t;
 const wchar_t *missing_comma_wchar[] = {
     L"basic_filebuf",
     L"packaged_task" // expected-note{{place parentheses around the string literal to silence warning}}
-    L"promise"      // expected-warning{{suspicious concatenation of string literals in an array initialization; did you mean to separate the elements with a comma?}}
+    L"promise",      // expected-warning{{suspicious concatenation of string literals in an array initialization; did you mean to separate the elements with a comma?}}
+    L"shared_future"
 };
 
 #if __cplusplus >= 201103L
 const char *missing_comma_u8[] = {
     u8"basic_filebuf",
     u8"packaged_task" // expected-note{{place parentheses around the string literal to silence warning}}
-    u8"promise"      // expected-warning{{suspicious concatenation of string literals in an array initialization; did you mean to separate the elements with a comma?}}
+    u8"promise",      // expected-warning{{suspicious concatenation of string literals in an array initialization; did you mean to separate the elements with a comma?}}
+    u8"shared_future"
 };
 #endif
 
@@ -47,10 +49,11 @@ const char *missing_comma_different_lines[] = {"basic_filebuf", "basic_ios" // e
 const char *missing_comma_same_line_all_literals[] = {"basic_filebuf", "future" "optional", "packaged_task"}; // expected-note{{place parentheses around the string literal to silence warning}}
                                                                                // expected-warning@-1{{suspicious concatenation of string literals in an array initialization; did you mean to separate the elements with a comma?}}
 
-char missing_comma_inner[][4] = {
+char missing_comma_inner[][5] = {
     "a",
-    "b" // expected-note{{place parentheses around the string literal to silence warning}}
-    "c" // expected-warning{{suspicious concatenation of string literals in an array initialization; did you mean to separate the elements with a comma?}}
+    "b",
+    "c" // expected-note{{place parentheses around the string literal to silence warning}}
+    "d" // expected-warning{{suspicious concatenation of string literals in an array initialization; did you mean to separate the elements with a comma?}}
 };
 
 
@@ -88,6 +91,18 @@ const char *macro_test4[] = {"basic_filebuf",
 
 #define SUPPRESS(x) x
 const char *macro_test5[] = { SUPPRESS("foo" "bar"), "baz" };
+
+typedef struct {
+    int i;
+    const char s[11];
+} S;
+
+S s = {1, "hello" "world"};
+
+const char *not_warn[] = {
+    "hello"
+    "world", "test"
+};
 
 // Do not warn when all the elements in the initializer are concatenated together.
 const char *all_elems_in_init_concatenated[] = {"a" "b" "c"};
