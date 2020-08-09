@@ -792,8 +792,8 @@ TEST_F(CommentParserTest, ParamCommand2) {
 
 TEST_F(CommentParserTest, ParamCommand3) {
   const char *Sources[] = {
-    ("// \\param aaa Bbb\n",
-    "// \\param\n"
+    "// \\param aaa Bbb\n",
+    ("// \\param\n"
     "//     aaa Bbb\n"),
     ("// \\param \n"
     "//     aaa Bbb\n"),
