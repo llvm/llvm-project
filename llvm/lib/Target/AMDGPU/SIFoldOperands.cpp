@@ -666,32 +666,34 @@ void SIFoldOperands::foldOperand(
       return;
 
     const TargetRegisterClass *DestRC = TRI->getRegClassForReg(*MRI, DestReg);
-    if (TRI->isSGPRClass(SrcRC) && TRI->hasVectorRegisters(DestRC)) {
-      MachineRegisterInfo::use_iterator NextUse;
-      SmallVector<FoldCandidate, 4> CopyUses;
-      for (MachineRegisterInfo::use_iterator Use = MRI->use_begin(DestReg),
-                                             E = MRI->use_end();
-           Use != E; Use = NextUse) {
-        NextUse = std::next(Use);
-        // There's no point trying to fold into an implicit operand.
-        if (Use->isImplicit())
-          continue;
+    if (!DestReg.isPhysical()) {
+      if (TRI->isSGPRClass(SrcRC) && TRI->hasVectorRegisters(DestRC)) {
+        MachineRegisterInfo::use_iterator NextUse;
+        SmallVector<FoldCandidate, 4> CopyUses;
+        for (MachineRegisterInfo::use_iterator Use = MRI->use_begin(DestReg),
+               E = MRI->use_end();
+             Use != E; Use = NextUse) {
+          NextUse = std::next(Use);
+          // There's no point trying to fold into an implicit operand.
+          if (Use->isImplicit())
+            continue;
 
-        FoldCandidate FC = FoldCandidate(Use->getParent(), Use.getOperandNo(),
-                                         &UseMI->getOperand(1));
-        CopyUses.push_back(FC);
+          FoldCandidate FC = FoldCandidate(Use->getParent(), Use.getOperandNo(),
+                                           &UseMI->getOperand(1));
+          CopyUses.push_back(FC);
+        }
+        for (auto &F : CopyUses) {
+          foldOperand(*F.OpToFold, F.UseMI, F.UseOpNo, FoldList, CopiesToReplace);
+        }
       }
-      for (auto &F : CopyUses) {
-        foldOperand(*F.OpToFold, F.UseMI, F.UseOpNo, FoldList, CopiesToReplace);
-      }
-    }
 
-    if (DestRC == &AMDGPU::AGPR_32RegClass &&
-        TII->isInlineConstant(OpToFold, AMDGPU::OPERAND_REG_INLINE_C_INT32)) {
-      UseMI->setDesc(TII->get(AMDGPU::V_ACCVGPR_WRITE_B32));
-      UseMI->getOperand(1).ChangeToImmediate(OpToFold.getImm());
-      CopiesToReplace.push_back(UseMI);
-      return;
+      if (DestRC == &AMDGPU::AGPR_32RegClass &&
+          TII->isInlineConstant(OpToFold, AMDGPU::OPERAND_REG_INLINE_C_INT32)) {
+        UseMI->setDesc(TII->get(AMDGPU::V_ACCVGPR_WRITE_B32));
+        UseMI->getOperand(1).ChangeToImmediate(OpToFold.getImm());
+        CopiesToReplace.push_back(UseMI);
+        return;
+      }
     }
 
     // In order to fold immediates into copies, we need to change the
