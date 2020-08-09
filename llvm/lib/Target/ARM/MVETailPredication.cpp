@@ -254,11 +254,12 @@ bool MVETailPredication::IsPredicatedVectorLoop() {
       switch (Int->getIntrinsicID()) {
       case Intrinsic::get_active_lane_mask:
         ActiveLaneMask = true;
-        LLVM_FALLTHROUGH;
+        continue;
       case Intrinsic::sadd_sat:
       case Intrinsic::uadd_sat:
       case Intrinsic::ssub_sat:
       case Intrinsic::usub_sat:
+      case Intrinsic::experimental_vector_reduce_add:
         continue;
       case Intrinsic::fma:
       case Intrinsic::trunc:
@@ -269,7 +270,7 @@ bool MVETailPredication::IsPredicatedVectorLoop() {
       case Intrinsic::fabs:
         if (ST->hasMVEFloatOps())
           continue;
-        LLVM_FALLTHROUGH;
+        break;
       default:
         break;
       }
