@@ -470,6 +470,23 @@ def WYPINri     : P2InstLIDS<0b11000010, 0b01, always, (outs), (ins P2GPR:$d, s9
 def WYPINir     : P2InstLIDS<0b11000010, 0b10, always, (outs), (ins s9imm:$d, P2GPR:$s), "wypin #$d, $s", []>;
 
 /*--------------------------------*/
+/* Interrupts and events          */
+/*--------------------------------*/
+
+def ADDCT1rr    : P2InstIDS<0b101001100, 0b0, always, (outs), (ins P2GPR:$d, P2GPR:$s), "addct1 $d, $s", []>;
+def ADDCT1ri    : P2InstIDS<0b101001100, 0b1, always, (outs), (ins P2GPR:$d, s9imm:$s), "addct1 $d, #$s", []>;
+
+def ADDCT2rr    : P2InstIDS<0b101001101, 0b0, always, (outs), (ins P2GPR:$d, P2GPR:$s), "addct2 $d, $s", []>;
+def ADDCT2ri    : P2InstIDS<0b101001101, 0b1, always, (outs), (ins P2GPR:$d, s9imm:$s), "addct2 $d, #$s", []>;
+
+def ADDCT3rr    : P2InstIDS<0b101001110, 0b0, always, (outs), (ins P2GPR:$d, P2GPR:$s), "addct3 $d, $s", []>;
+def ADDCT3ri    : P2InstIDS<0b101001110, 0b1, always, (outs), (ins P2GPR:$d, s9imm:$s), "addct3 $d, #$s", []>;
+
+def WAITCT1     : P2InstCZ<0b11010110, 0b000010001, 0b000100100, 0b00, always, (outs), (ins), "waitct1", []>;
+def WAITCT2     : P2InstCZ<0b11010110, 0b000010010, 0b000100100, 0b00, always, (outs), (ins), "waitct2", []>;
+def WAITCT3     : P2InstCZ<0b11010110, 0b000010011, 0b000100100, 0b00, always, (outs), (ins), "waitct3", []>;
+
+/*--------------------------------*/
 /* misc instructions              */
 /*--------------------------------*/
 def NOP         : P2InstNOP;

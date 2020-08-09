@@ -23,14 +23,6 @@ namespace targets {
 } // namespace targets
 } // namespace clang
 
-// bool P2TargetInfo::isValidCPUName(StringRef Name) const {
-
-// }
-
-// void P2TargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
-
-// }
-
 const char *const P2TargetInfo::GCCRegNames[] = {
     "r0", "r1", "r2",  "r3",  "r4",  "r5",  "r6",  "r7",
     "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15",
