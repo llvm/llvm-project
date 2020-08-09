@@ -82,6 +82,8 @@
 ; RUN:  -r %t.summ1.bc,WriteAndReturn8,px \
 ; RUN:    2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
 
+; RUN: llvm-dis %t.lto.index.bc -o - | FileCheck --check-prefix=INDEX %s
+
 ; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t-newpm.lto -use-new-pm -stack-safety-print -stack-safety-run -save-temps -thinlto-threads 1 -O0 \
 ; RUN:  -r %t.summ0.bc,ExternalCall, \
 ; RUN:  -r %t.summ0.bc,f1,px \
@@ -148,6 +150,8 @@
 ; RUN:  -r %t.summ1.bc,Write8,px \
 ; RUN:  -r %t.summ1.bc,WriteAndReturn8,px \
 ; RUN:    2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
+
+; RUN: llvm-dis %t-newpm.lto.index.bc -o - | FileCheck --check-prefix=INDEX %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux"
@@ -674,3 +678,56 @@ entry:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: full-set
 ; CHECK-EMPTY:
+
+
+; INDEX: ^0 = module:
+; INDEX-NEXT: ^1 = module:
+; INDEX-NEXT: ^2 = gv: (guid: 357037859923812466, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 2,  funcFlags: ({{[^)]+}}))))
+; INDEX-NEXT: ^3 = gv: (guid: 402261637236519836, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 3,  funcFlags: ({{[^)]+}}), params: ((param: 0, offset: [1, 1])))))
+; INDEX-NEXT: ^4 = gv: (guid: 413541695569076425, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 6,  funcFlags: ({{[^)]+}}), calls: ((callee: ^18)))))
+; INDEX-NEXT: ^5 = gv: (guid: 583675441393868004, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 3,  funcFlags: ({{[^)]+}}), calls: ((callee: ^11)), params: ((param: 0, offset: [0, -1], calls: ((callee: ^11, param: 0, offset: [2, 2])))))))
+; INDEX-NEXT: ^6 = gv: (guid: 1136387433625471221, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 3,  funcFlags: ({{[^)]+}}), calls: ((callee: ^32)), params: ((param: 0, offset: [0, -1], calls: ((callee: ^32, param: 0, offset: [-5, -5])))))))
+; INDEX-NEXT: ^7 = gv: (guid: 2072045998141807037, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 4,  funcFlags: ({{[^)]+}}), calls: ((callee: ^14)))))
+; INDEX-NEXT: ^8 = gv: (guid: 2275681413198219603, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 2,  funcFlags: ({{[^)]+}}), params: ((param: 0, offset: [0, 0])))))
+; INDEX-NEXT: ^9 = gv: (guid: 2497238192574115968, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 6,  funcFlags: ({{[^)]+}}), calls: ((callee: ^34)), params: ((param: 0, offset: [0, -1], calls: ((callee: ^34, param: 0, offset: [0, 0])))))))
+; INDEX-NEXT: ^10 = gv: (guid: 2532896148796215206, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 5,  funcFlags: ({{[^)]+}}), calls: ((callee: ^6)))))
+; INDEX-NEXT: ^11 = gv: (guid: 2688347355436776808, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 3,  funcFlags: ({{[^)]+}}), params: ((param: 0, offset: [0, 3])))))
+; INDEX-NEXT: ^12 = gv: (guid: 2998357024553461356, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 4,  funcFlags: ({{[^)]+}}), calls: ((callee: ^2)))))
+; INDEX-NEXT: ^13 = gv: (guid: 3063826769604044178, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 2,  funcFlags: ({{[^)]+}}), calls: ((callee: ^39)), params: ((param: 0, offset: [0, -1], calls: ((callee: ^39, param: 0, offset: [0, 0])))))))
+; INDEX-NEXT: ^14 = gv: (guid: 3498046014991828871, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 3,  funcFlags: ({{[^)]+}}), params: ((param: 0, offset: [0, 7])))))
+; INDEX-NEXT: ^15 = gv: (guid: 3524937277209782828, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 5,  funcFlags: ({{[^)]+}}), calls: ((callee: ^18)))))
+; INDEX-NEXT: ^16 = gv: (guid: 4197650231481825559, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 4,  funcFlags: ({{[^)]+}}), calls: ((callee: ^11)))))
+; INDEX-NEXT: ^17 = gv: (guid: 4936416805851585180, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 5,  funcFlags: ({{[^)]+}}), calls: ((callee: ^6)))))
+; INDEX-NEXT: ^18 = gv: (guid: 5426356728050253384, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 5,  funcFlags: ({{[^)]+}}), params: ((param: 0, offset: [0, 3]), (param: 1, offset: [0, 3])))))
+; INDEX-NEXT: ^19 = gv: (guid: 5775385244688528345, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 8, calls: ((callee: ^19)), params: ((param: 1, offset: [0, 3], calls: ((callee: ^19, param: 1, offset: [4, 4])))))))
+; INDEX-NEXT: ^20 = gv: (guid: 5825695806885405811, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 3,  funcFlags: ({{[^)]+}}), params: ((param: 0, offset: [1, 1]))), function: (module: ^1,  flags: ({{[^)]+}}), insts: 3,  funcFlags: ({{[^)]+}}), params: ((param: 0, offset: [-1, -1])))))
+; INDEX-NEXT: ^21 = gv: (guid: 6195939829073041205, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 2,  funcFlags: ({{[^)]+}}), calls: ((callee: ^31)), params: ((param: 0, offset: [0, -1], calls: ((callee: ^31, param: 0, offset: [0, 0])))))))
+; INDEX-NEXT: ^22 = gv: (guid: 6392508476582107374, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 3,  funcFlags: ({{[^)]+}}), calls: ((callee: ^44)))))
+; INDEX-NEXT: ^23 = gv: (guid: 7664681152647503879, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 3,  funcFlags: ({{[^)]+}}), calls: ((callee: ^48)))))
+; INDEX-NEXT: ^24 = gv: (guid: 7878145294651437475, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 3,  funcFlags: ({{[^)]+}}), calls: ((callee: ^38)))))
+; INDEX-NEXT: ^25 = gv: (guid: 8471399308421654326, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 4,  funcFlags: ({{[^)]+}}), calls: ((callee: ^39)))))
+; INDEX-NEXT: ^26 = gv: (guid: 8866541111220081334, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 4,  funcFlags: ({{[^)]+}}), calls: ((callee: ^8)))))
+; INDEX-NEXT: ^27 = gv: (guid: 9330565726709681411, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 3,  funcFlags: ({{[^)]+}}), calls: ((callee: ^19)))))
+; INDEX-NEXT: ^28 = gv: (guid: 9608616742292190323, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 5,  funcFlags: ({{[^)]+}}), calls: ((callee: ^6)))))
+; INDEX-NEXT: ^29 = gv: (guid: 9977445152485795981, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 2,  funcFlags: ({{[^)]+}}), params: ((param: 0, offset: [0, 0])))))
+; INDEX-NEXT: ^30 = gv: (guid: 10064745020953272174, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 5,  funcFlags: ({{[^)]+}}), calls: ((callee: ^39)))))
+; INDEX-NEXT: ^31 = gv: (guid: 10228479262507912607, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 3,  funcFlags: ({{[^)]+}}), params: ((param: 0, offset: [-1, -1])))))
+; INDEX-NEXT: ^32 = gv: (guid: 10622720612762034607, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 3,  funcFlags: ({{[^)]+}}), calls: ((callee: ^5)), params: ((param: 0, offset: [0, -1], calls: ((callee: ^5, param: 0, offset: [1, 1])))))))
+; INDEX-NEXT: ^33 = gv: (guid: 10879331213637669871, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 3,  funcFlags: ({{[^)]+}}), calls: ((callee: ^21)))))
+; INDEX-NEXT: ^34 = gv: (guid: 11254704694495916625, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 11, calls: ((callee: ^34)), params: ((param: 0, offset: [0, 3], calls: ((callee: ^34, param: 0, offset: [4, 4]))), (param: 2, offset: [0, 3], calls: ((callee: ^34, param: 2, offset: [0, 0])))))))
+; INDEX-NEXT: ^35 = gv: (guid: 11349614871118095988, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 6,  funcFlags: ({{[^)]+}}), calls: ((callee: ^18)))))
+; INDEX-NEXT: ^36 = gv: (guid: 11686717102184386164, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 5,  funcFlags: ({{[^)]+}}), calls: ((callee: ^11)))))
+; INDEX-NEXT: ^37 = gv: (guid: 11834966808443348068, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 4,  funcFlags: ({{[^)]+}}))))
+; INDEX-NEXT: ^38 = gv: (guid: 13174833224364694040, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 2,  funcFlags: ({{[^)]+}}), calls: ((callee: ^20)), params: ((param: 0, offset: [0, -1], calls: ((callee: ^20, param: 0, offset: [0, 0])))))))
+; INDEX-NEXT: ^39 = gv: (guid: 14731732627017339067, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 2,  funcFlags: ({{[^)]+}}), params: ((param: 0, offset: [0, 0])))))
+; INDEX-NEXT: ^40 = gv: (guid: 15140994247518074144, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 2,  funcFlags: ({{[^)]+}}), params: ((param: 0, offset: [0, 0])))))
+; INDEX-NEXT: ^41 = gv: (guid: 15185358799878470431, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 5,  funcFlags: ({{[^)]+}}), calls: ((callee: ^6)))))
+; INDEX-NEXT: ^42 = gv: (guid: 15238722921051206629, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 4,  funcFlags: ({{[^)]+}}), calls: ((callee: ^29)))))
+; INDEX-NEXT: ^43 = gv: (guid: 15982699239429404956, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 3,  funcFlags: ({{[^)]+}}), calls: ((callee: ^13)))))
+; INDEX-NEXT: ^44 = gv: (guid: 16066523084744374939, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 2,  funcFlags: ({{[^)]+}}))))
+; INDEX-NEXT: ^45 = gv: (guid: 16200396372539015164, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 5,  funcFlags: ({{[^)]+}}), calls: ((callee: ^18)))))
+; INDEX-NEXT: ^46 = gv: (guid: 16531634002570146185, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 2,  funcFlags: ({{[^)]+}}), params: ((param: 0, offset: [0, 0])))))
+; INDEX-NEXT: ^47 = gv: (guid: 16555643409459919887, summaries: (function: (module: ^0,  flags: ({{[^)]+}}), insts: 4,  funcFlags: ({{[^)]+}}), calls: ((callee: ^40)))))
+; INDEX-NEXT: ^48 = gv: (guid: 16869210845156067648, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 2,  funcFlags: ({{[^)]+}}), calls: ((callee: ^46)), params: ((param: 0, offset: [0, -1], calls: ((callee: ^46, param: 0, offset: [0, 0])))))))
+; INDEX-NEXT: ^49 = gv: (guid: 18021476350828399578, summaries: (function: (module: ^1,  flags: ({{[^)]+}}), insts: 2)))
+; INDEX-NEXT: ^50 = flags: 1
