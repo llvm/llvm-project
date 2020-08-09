@@ -58,7 +58,7 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux"
 
-attributes #0 = { sanitize_memtag "target-features"="+mte,+neon" }
+attributes #0 = { noinline sanitize_memtag "target-features"="+mte,+neon" }
 
 declare void @PreemptableAliasWrite1(i8* %p)
 declare void @AliasToPreemptableAliasWrite1(i8* %p)
