@@ -16,6 +16,9 @@
 ; RUN: opt -module-summary %s -o %t.summ0.bc
 ; RUN: opt -module-summary %S/Inputs/ipa.ll -o %t.summ1.bc
 
+; RUN: llvm-dis %t.summ0.bc -o - > %t.ids.txt
+; RUN: llvm-dis %t.summ1.bc -o - >> %t.ids.txt
+
 ; RUN: echo > %t.res.txt \
 ; RUN:  -r %t.summ0.bc,ExternalCall, \
 ; RUN:  -r %t.summ0.bc,f1,px \
@@ -86,9 +89,15 @@
 ; RUN:  $(cat %t.res.txt) \
 ; RUN:    2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
 
+; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t.lto -stack-safety-run -thinlto-distributed-indexes -thinlto-threads 1 -O0 $(cat %t.res.txt)
+; RUN: (cat %t.ids.txt ; llvm-dis %t.summ1.bc.thinlto.bc -o -) | FileCheck --check-prefixes=INDEX %s
+
 ; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t-newpm.lto -use-new-pm -stack-safety-print -stack-safety-run -save-temps -thinlto-threads 1 -O0 \
 ; RUN:  $(cat %t.res.txt) \
 ; RUN:    2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
+
+; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t-newpm.lto -stack-safety-run -thinlto-distributed-indexes -thinlto-threads 1 -O0 $(cat %t.res.txt)
+; RUN: (cat %t.ids.txt ; llvm-dis %t.summ1.bc.thinlto.bc -o -) | FileCheck --check-prefixes=INDEX %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux"
@@ -615,3 +624,99 @@ entry:
 ; CHECK-NEXT: allocas uses:
 ; CHECK-NEXT: x[8]: full-set
 ; CHECK-EMPTY:
+
+; INDEX-LABEL: ^0 = module:
+; INDEX-DAG: name: "ReturnDependent"{{.*}} guid = [[ReturnDependent:[-0-9]+]]
+; INDEX-DAG: name: "Private"{{.*}} guid = [[Private:[-0-9]+]]
+; INDEX-DAG: name: "TwoArgumentsOOBOther"{{.*}} guid = [[TwoArgumentsOOBOther:[-0-9]+]]
+; INDEX-DAG: name: "Rec2"{{.*}} guid = [[Rec2:[-0-9]+]]
+; INDEX-DAG: name: "f1"{{.*}} guid = [[f1:[-0-9]+]]
+; INDEX-DAG: name: "PrivateWrite1"{{.*}} guid = [[PrivateWrite1:[-0-9]+]]
+; INDEX-DAG: name: "TestRecursiveNoOffset"{{.*}} guid = [[TestRecursiveNoOffset:[-0-9]+]]
+; INDEX-DAG: name: "f8left"{{.*}} guid = [[f8left:[-0-9]+]]
+; INDEX-DAG: name: "Write4"{{.*}} guid = [[Write4:[-0-9]+]]
+; INDEX-DAG: name: "f7"{{.*}} guid = [[f7:[-0-9]+]]
+; INDEX-DAG: name: "Write1SameModule"{{.*}} guid = [[Write1SameModule:[-0-9]+]]
+; INDEX-DAG: name: "Write8"{{.*}} guid = [[Write8:[-0-9]+]]
+; INDEX-DAG: name: "TwoArgumentsOOBOne"{{.*}} guid = [[TwoArgumentsOOBOne:[-0-9]+]]
+; INDEX-DAG: name: "f3"{{.*}} guid = [[f3:[-0-9]+]]
+; INDEX-DAG: name: "f8right"{{.*}} guid = [[f8right:[-0-9]+]]
+; INDEX-DAG: name: "Write4_2"{{.*}} guid = [[Write4_2:[-0-9]+]]
+; INDEX-DAG: name: "RecursiveWithOffset"{{.*}} guid = [[RecursiveWithOffset:[-0-9]+]]
+; INDEX-DAG: name: "Weak"{{.*}} guid = [[Weak:[-0-9]+]]
+; INDEX-DAG: name: "Write1Private"{{.*}} guid = [[Write1Private:[-0-9]+]]
+; INDEX-DAG: name: "TestUpdateArg"{{.*}} guid = [[TestUpdateArg:[-0-9]+]]
+; INDEX-DAG: name: "TestCrossModuleTwice"{{.*}} guid = [[TestCrossModuleTwice:[-0-9]+]]
+; INDEX-DAG: name: "TestCrossModuleWeak"{{.*}} guid = [[TestCrossModuleWeak:[-0-9]+]]
+; INDEX-DAG: name: "f2"{{.*}} guid = [[f2:[-0-9]+]]
+; INDEX-DAG: name: "PrivateCall"{{.*}} guid = [[PrivateCall:[-0-9]+]]
+; INDEX-DAG: name: "TestRecursiveWithOffset"{{.*}} guid = [[TestRecursiveWithOffset:[-0-9]+]]
+; INDEX-DAG: name: "f8oobleft"{{.*}} guid = [[f8oobleft:[-0-9]+]]
+; INDEX-DAG: name: "InterposableWrite1"{{.*}} guid = [[InterposableWrite1:[-0-9]+]]
+; INDEX-DAG: name: "f4"{{.*}} guid = [[f4:[-0-9]+]]
+; INDEX-DAG: name: "TestCrossModuleConflict"{{.*}} guid = [[TestCrossModuleConflict:[-0-9]+]]
+; INDEX-DAG: name: "RecursiveNoOffset"{{.*}} guid = [[RecursiveNoOffset:[-0-9]+]]
+; INDEX-DAG: name: "TwoArgumentsOOBBoth"{{.*}} guid = [[TwoArgumentsOOBBoth:[-0-9]+]]
+; INDEX-DAG: name: "f5"{{.*}} guid = [[f5:[-0-9]+]]
+; INDEX-DAG: name: "f6"{{.*}} guid = [[f6:[-0-9]+]]
+; INDEX-DAG: name: "Write1Weak"{{.*}} guid = [[Write1Weak:[-0-9]+]]
+; INDEX-DAG: name: "Write1"{{.*}} guid = [[Write1:[-0-9]+]]
+; INDEX-DAG: name: "PreemptableWrite1"{{.*}} guid = [[PreemptableWrite1:[-0-9]+]]
+; INDEX-DAG: name: "f8oobright"{{.*}} guid = [[f8oobright:[-0-9]+]]
+; INDEX-DAG: name: "InterposableCall"{{.*}} guid = [[InterposableCall:[-0-9]+]]
+; INDEX-DAG: name: "TestCrossModuleOnce"{{.*}} guid = [[TestCrossModuleOnce:[-0-9]+]]
+; INDEX-DAG: name: "WriteAndReturn8"{{.*}} guid = [[WriteAndReturn8:[-0-9]+]]
+; INDEX-DAG: name: "TwoArguments"{{.*}} guid = [[TwoArguments:[-0-9]+]]
+; INDEX-DAG: name: "Write1Module0"{{.*}} guid = [[Write1Module0:[-0-9]+]]
+; INDEX-DAG: name: "PreemptableCall"{{.*}} guid = [[PreemptableCall:[-0-9]+]]
+; INDEX-DAG: name: "Write1DiffModule"{{.*}} guid = [[Write1DiffModule:[-0-9]+]]
+; INDEX-DAG: name: "ExternalCall"{{.*}} guid = [[ExternalCall:[-0-9]+]]
+; INDEX-LABEL: = blockcount:
+
+; INDEX-LABEL: ^0 = module:
+; INDEX-DAG: name: "ReturnDependent"{{.*}} guid = [[ReturnDependent:[-0-9]+]]
+; INDEX-DAG: name: "Rec0"{{.*}} guid = [[Rec0:[-0-9]+]]
+; INDEX-DAG: name: "Rec2"{{.*}} guid = [[Rec2:[-0-9]+]]
+; INDEX-DAG: name: "Write4"{{.*}} guid = [[Write4:[-0-9]+]]
+; INDEX-DAG: name: "Write1SameModule"{{.*}} guid = [[Write1SameModule:[-0-9]+]]
+; INDEX-DAG: name: "Write8"{{.*}} guid = [[Write8:[-0-9]+]]
+; INDEX-DAG: name: "Write4_2"{{.*}} guid = [[Write4_2:[-0-9]+]]
+; INDEX-DAG: name: "RecursiveWithOffset"{{.*}} guid = [[RecursiveWithOffset:[-0-9]+]]
+; INDEX-DAG: name: "Weak"{{.*}} guid = [[Weak:[-0-9]+]]
+; INDEX-DAG: name: "Write1Private"{{.*}} guid = [[Write1Private:[-0-9]+]]
+; INDEX-DAG: name: "InterposableWrite1"{{.*}} guid = [[InterposableWrite1:[-0-9]+]]
+; INDEX-DAG: name: "Private"{{.*}} guid = [[Private:[-0-9]+]]
+; INDEX-DAG: name: "Rec1"{{.*}} guid = [[Rec1:[-0-9]+]]
+; INDEX-DAG: name: "RecursiveNoOffset"{{.*}} guid = [[RecursiveNoOffset:[-0-9]+]]
+; INDEX-DAG: name: "Write1Weak"{{.*}} guid = [[Write1Weak:[-0-9]+]]
+; INDEX-DAG: name: "Write1"{{.*}} guid = [[Write1:[-0-9]+]]
+; INDEX-DAG: name: "PreemptableWrite1"{{.*}} guid = [[PreemptableWrite1:[-0-9]+]]
+; INDEX-DAG: name: "WriteAndReturn8"{{.*}} guid = [[WriteAndReturn8:[-0-9]+]]
+; INDEX-DAG: name: "Write1Module0"{{.*}} guid = [[Write1Module0:[-0-9]+]]
+; INDEX-DAG: name: "Write1DiffModule"{{.*}} guid = [[Write1DiffModule:[-0-9]+]]
+; INDEX-DAG: name: "ExternalCall"{{.*}} guid = [[ExternalCall:[-0-9]+]]
+; INDEX-DAG: name: "ReturnAlloca"{{.*}} guid = [[ReturnAlloca:[-0-9]+]]
+; INDEX-LABEL: = blockcount:
+
+; INDEX-LABEL: ^0 = module:
+; INDEX-DAG: guid: [[ReturnDependent]], {{.*}}, funcFlags: ({{.*}}))))
+; INDEX-DAG: guid: [[Rec0]], {{.*}}, params: ((param: 0, offset: [2, 5])))))
+; INDEX-DAG: guid: [[Rec2]], {{.*}}, params: ((param: 0, offset: [-2, 1])))))
+; INDEX-DAG: guid: [[Write4]], {{.*}}, params: ((param: 0, offset: [0, 3])))))
+; INDEX-DAG: guid: [[Write1SameModule]], {{.*}}, params: ((param: 0, offset: [0, 0])))))
+; INDEX-DAG: guid: [[Write8]], {{.*}}, params: ((param: 0, offset: [0, 7])))))
+; INDEX-DAG: guid: [[Write4_2]], {{.*}}, params: ((param: 0, offset: [0, 3]), (param: 1, offset: [0, 3])))))
+; INDEX-DAG: guid: [[RecursiveWithOffset]], {{.*}}, params: ((param: 1, offset: [-1, 9223372036854775807])))))
+; INDEX-DAG: guid: [[Weak]], {{.*}}, funcFlags: ({{.*}}))))
+; INDEX-DAG: guid: [[Write1Private]], {{.*}}, params: ((param: 0, offset: [-1, -1])))))
+; INDEX-DAG: guid: [[InterposableWrite1]], {{.*}}, params: ((param: 0, offset: [0, 0])))))
+; INDEX-DAG: guid: [[Private]], {{.*}}, params: ((param: 0, offset: [-1, -1])))))
+; INDEX-DAG: guid: [[Rec1]], {{.*}}, params: ((param: 0, offset: [3, 6])))))
+; INDEX-DAG: guid: [[RecursiveNoOffset]], {{.*}}, params: ((param: 0, offset: [-1, 9223372036854775807]), (param: 2, offset: [0, 3])))))
+; INDEX-DAG: guid: [[Write1Weak]], {{.*}}, params: ((param: 0, offset: [-1, 9223372036854775807])))))
+; INDEX-DAG: guid: [[Write1]], {{.*}}, params: ((param: 0, offset: [0, 0])))))
+; INDEX-DAG: guid: [[PreemptableWrite1]], {{.*}}, funcFlags: ({{.*}}))))
+; INDEX-DAG: guid: [[WriteAndReturn8]], {{.*}}, funcFlags: ({{.*}}))))
+; INDEX-DAG: guid: [[Write1DiffModule]], {{.*}}, params: ((param: 0, offset: [-1, 9223372036854775807])))))
+; INDEX-DAG: guid: [[ReturnAlloca]], {{.*}}, insts: 2)))
+; INDEX-LABEL: blockcount:
