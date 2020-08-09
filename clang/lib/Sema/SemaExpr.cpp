@@ -1151,8 +1151,8 @@ static QualType handleFloatConversion(Sema &S, ExprResult &LHS,
   }
   assert(RHSFloat);
   return handleIntToFloatConversion(S, RHS, LHS, RHSType, LHSType,
-                                    /*convertInt=*/ true,
-                                    /*convertFloat=*/!IsCompAssign);
+                                    /*ConvertFloat=*/ true,
+                                    /*ConvertInt=*/!IsCompAssign);
 }
 
 /// Diagnose attempts to convert between __float128 and long double if
