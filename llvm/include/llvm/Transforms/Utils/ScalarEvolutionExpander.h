@@ -343,6 +343,11 @@ public:
   Optional<ScalarEvolution::ValueOffsetPair>
   getRelatedExistingExpansion(const SCEV *S, const Instruction *At, Loop *L);
 
+  /// Returns a suitable insert point after \p I, that dominates \p
+  /// MustDominate. Skips instructions inserted by the expander.
+  BasicBlock::iterator findInsertPointAfter(Instruction *I,
+                                            Instruction *MustDominate);
+
 private:
   LLVMContext &getContext() const { return SE.getContext(); }
 
