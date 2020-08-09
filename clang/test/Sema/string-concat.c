@@ -61,7 +61,7 @@ char missing_comma_inner[][5] = {
 #define TWO "foo"
 const char *macro_test[] = { ONE("foo") "bar", 
                              TWO "bar", 
-                             "foo" TWO // expected-note{{place parentheses around the string literal to silence warning}}
+                             "foo" "bar" TWO // expected-note{{place parentheses around the string literal to silence warning}}
                            };          // expected-warning@-1{{suspicious concatenation of string literals in an array initialization; did you mean to separate the elements with a comma?}}
 
 // Do not warn for macros.
@@ -103,6 +103,12 @@ const char *not_warn[] = {
     "hello"
     "world", "test"
 };
+
+const char *not_warn2[] = {
+    "// Aaa\\\n"   " Bbb\\ \n"   " Ccc?" "?/\n",
+    "// Aaa\\\r\n" " Bbb\\ \r\n" " Ccc?" "?/\r\n",
+    "// Aaa\\\r"   " Bbb\\ \r"   " Ccc?" "?/\r"
+  };
 
 // Do not warn when all the elements in the initializer are concatenated together.
 const char *all_elems_in_init_concatenated[] = {"a" "b" "c"};
