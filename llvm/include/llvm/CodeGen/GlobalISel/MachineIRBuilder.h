@@ -365,6 +365,8 @@ public:
   }
 
   void stopObservingChanges() { State.Observer = nullptr; }
+
+  bool isObservingChanges() const { return State.Observer != nullptr; }
   /// @}
 
   /// Set the debug location to \p DL for all the next build instructions.
