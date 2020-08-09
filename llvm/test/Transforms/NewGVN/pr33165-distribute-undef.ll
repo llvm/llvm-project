@@ -3,12 +3,12 @@
 
 ; Test for PR33165.
 
-; TODO: Currently NewGVN miscompiles the function.
 define i2 @f(i2, i1) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:    [[A:%.*]] = xor i2 [[TMP0:%.*]], -1
 ; CHECK-NEXT:    [[B:%.*]] = select i1 [[TMP1:%.*]], i2 [[A]], i2 undef
-; CHECK-NEXT:    ret i2 [[B]]
+; CHECK-NEXT:    [[C:%.*]] = and i2 [[A]], [[B]]
+; CHECK-NEXT:    ret i2 [[C]]
 ;
   %a = xor i2 %0, -1
   %b = select i1 %1, i2 %a, i2 undef
