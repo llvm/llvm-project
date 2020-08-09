@@ -6911,7 +6911,7 @@ Sema::ActOnInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
       // Diagnose missing comma in string array initialization.
       // Do not warn when all the elements in the initializer are concatenated together.
       // Do not warn for macros too.
-      if (NumConcat > 1 && E > 1 && !SL->getBeginLoc().isMacroID()) {
+      if (NumConcat > 1 && E > 2 && !SL->getBeginLoc().isMacroID()) {
         SmallVector<FixItHint, 1> Hints;
         for (unsigned i = 0; i < NumConcat - 1; ++i)
           Hints.push_back(FixItHint::CreateInsertion(
