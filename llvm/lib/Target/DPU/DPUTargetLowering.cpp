@@ -1975,10 +1975,12 @@ SDValue DPUTargetLowering::LowerIntrinsic(SDValue Op, SelectionDAG &DAG,
     switch (cast<ConstantSDNode>(Op->getOperand(1))->getZExtValue()) {
     default:
       break;
+    case Intrinsic::dpu_sdma_unchecked:
     case Intrinsic::dpu_sdma: {
       result = LowerDMA(Op, DAG, DPUISD::SDMA);
       break;
     }
+    case Intrinsic::dpu_ldma_unchecked:
     case Intrinsic::dpu_ldma: {
       result = LowerDMA(Op, DAG, DPUISD::LDMA);
       break;
