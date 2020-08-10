@@ -930,6 +930,10 @@ SwiftASTContext::SwiftASTContext(std::string description, llvm::Triple triple,
   ir_gen_opts.OutputKind = swift::IRGenOutputKind::Module;
   ir_gen_opts.UseJIT = true;
   ir_gen_opts.DWARFVersion = swift::DWARFVersion;
+  // Allow deserializing @_implementationOnly dependencies
+  // to avoid crashing due to module recovery issues.
+  swift::LangOptions &lang_opts = m_compiler_invocation_ap->getLangOptions();
+  lang_opts.AllowDeserializingImplementationOnly = true;
 }
 
 SwiftASTContext::~SwiftASTContext() {
