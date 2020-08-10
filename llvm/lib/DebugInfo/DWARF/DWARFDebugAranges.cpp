@@ -28,8 +28,7 @@ void DWARFDebugAranges::extract(
   DWARFDebugArangeSet Set;
 
   while (DebugArangesData.isValidOffset(Offset)) {
-    if (Error E =
-            Set.extract(DebugArangesData, &Offset, RecoverableErrorHandler)) {
+    if (Error E = Set.extract(DebugArangesData, &Offset)) {
       RecoverableErrorHandler(std::move(E));
       return;
     }
