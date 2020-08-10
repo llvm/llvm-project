@@ -47,7 +47,196 @@ Major New Features
 Improvements to clangd
 ----------------------
 
-The improvements are...
+Performance
+^^^^^^^^^^^
+
+- Eliminated long delays after adding/removing includes ("async preambles")
+
+- Faster indexing
+
+- Less memory used to index headers used by open files ("dynamic index")
+
+- Many requests are implicitly cancelled rather than queued when the file is
+  edited, preventing a backlog
+
+- Background indexing can be selectively disabled per-path through config
+
+Selecting and targeting
+^^^^^^^^^^^^^^^^^^^^^^^
+
+- Improved understanding and selection around broken code ("recovery AST")
+
+- Operations like "go-to-definition" will target things on the left of the
+  cursor, if there is nothing eligible on the right.
+
+- Arguments to ``assert()``-like macros can be properly selected.
+
+Diagnostics
+^^^^^^^^^^^
+
+- When a header is saved, diagnostics for files that use it are updated.
+
+- Calls ``std::make_unique`` produce diagnostics for the constructor call.
+  (Template functions *in general* are not expanded for performance reasons).
+
+- Diagnostics update more quickly for files that build quickly (no 500ms delay)
+
+- Automatic fixes are offered even when they affect macro arguments.
+
+- Warnings from included headers are not shown (but errors still are).
+
+- A handful of high-quality clang-tidy checks are enabled by default:
+
+  - readability-misleading-indentation,
+
+  - readability-deleted-default,
+
+  - bugprone-integer-division,
+
+  - bugprone-sizeof-expression,
+
+  - bugprone-suspicious-missing-comma,
+
+  - bugprone-unused-raii,
+
+  - bugprone-unused-return-value,
+
+  - misc-unused-using-decls,
+
+  - misc-unused-alias-decls,
+
+  - misc-definitions-in-headers
+
+Refactorings
+^^^^^^^^^^^^
+
+- Rename applies across the project, using the index.
+
+- Accuracy of rename improved in many places.
+
+- New refactoring: add using declaration for qualified name.
+
+- New refactoring: move function definition out-of-line.
+
+Code completion
+^^^^^^^^^^^^^^^
+
+- Function call parentheses are not inserted if they already exist.
+
+- Completion of ``#include`` filenames triggers earlier (after ``<``, ``"``, and
+  ``/``) and is less aggressive about replacing existing text.
+
+- Documentation is reflowed in the same way as on hover.
+
+Go-to-definition
+^^^^^^^^^^^^^^^^
+
+- Dependent names in templates may be heuristically resolved
+
+- Identifiers in comments may be resolved using other occurrences in the file
+  or in the index.
+
+- Go-to-definition on an ``override`` or ``final`` specifier jumps to the
+  overridden method.
+
+Hover
+^^^^^
+
+- Expressions passed as function arguments show parameter name, conversions etc.
+
+- Members now include the access specifier in the displayed declaration.
+
+- Classes and fields show memory layout information (size and offset).
+
+- Somewhat improved understanding of formatting in documentation comments.
+
+- Trivial inline getters/setters are implicitly documented as such.
+
+Highlighting
+^^^^^^^^^^^^
+
+- The ``semanticTokens`` protocol from LSP 3.16 is supported.
+  (Only token types are exposed, no modifiers yet).
+
+- The non-standard ``textDocument/semanticHighlighting`` notification is
+  deprecated and will be removed in clangd 12.
+
+- Placing the cursor on a control flow keyword highlights related flow
+  (e.g. ``break`` -> ``for``).
+
+Language support
+^^^^^^^^^^^^^^^^
+
+- clangd features now work inside templates on windows.
+  (MSVC-compatible delayed-template-parsing is no longer used).
+
+- Objective-C properties can be targeted and cross-references are indexed.
+
+- Field names in designated initializers (C++20) can be targeted, and code
+  completion works in many cases.
+
+- ``goto`` labels: go-to-defintion, cross-references, and rename all work.
+
+- Concepts (C++20): go-to-definition on concept names, and some limited code
+  completion support for concept members.
+
+System integration
+^^^^^^^^^^^^^^^^^^
+
+- The project index is now written to ``$PROJECT/.cache/clangd/index``.
+  ``$PROJECT/.clangd`` is now expected to be a configuration file.
+
+  Old ``$PROJECT/.clangd`` directories can safely be deleted.
+
+  We recommend including both ``.cache/`` and ``.clangd/`` (with trailing slash)
+  in ``.gitignore``, for backward-compatibility with earlier releases of clangd.
+
+- For non-project files (those without a compilation database), the index
+  location better reflects OS conventions:
+
+  - ``%LocalAppData%\clangd\index`` on Windows
+
+  - ``$(getconf DARWIN_USER_CACHE_DIR)/clangd/index`` on Mac
+
+  - ``$XDG_CACHE_HOME/clangd/index`` or ``~/.cache/clangd/index`` on others
+
+  Old ``~/.clangd/index`` directories can safely be deleted.
+
+- clangd now reads configuration from ``.clangd`` files inside your project,
+  and from a user configuration file in an OS-specific location:
+
+  - ``%LocalAppData%\clangd\config.yaml`` on Windows
+
+  - ``~/Library/clangd/config.yaml`` on Mac
+
+  - ``$XDG_CONFIG_HOME/clangd/config.yaml`` or ``~/.config/clangd/config.yaml``
+    on others
+
+  See `clangd configuration format <https://clangd.llvm.org/config.html>`_.
+
+- clangd will search for compilation databases (``compile_commands.json``) in
+  a ``build/`` subdirectory, as well as in the project root.
+  This follows CMake conventions, avoiding the need for a symlink in many cases.
+
+- Compile flags can be selectively modified per-path, using configuration.
+
+- Improved filtering of unhelpful compile flags (such as those relating to
+  pre-compiled headers).
+
+- Improved detection of standard library headers location.
+
+Miscellaneous
+^^^^^^^^^^^^^
+
+- Background indexing status is reported using LSP 3.15 progress events
+  (``window/workDoneProgress/create``).
+
+- Infrastructure for gathering internal metrics.
+  (Off by default, set ``$CLANGD_METRICS`` to generate a named CSV file).
+
+- Document versions are now tracked, version is reported along with diagnostics.
+
+- Too many stability and correctness fixes to mention.
 
 Improvements to clang-doc
 -------------------------
