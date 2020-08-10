@@ -43,6 +43,7 @@ def relativenames : F<"relativenames", "Strip the compilation directory from pat
 defm untag_addresses : B<"untag-addresses", "", "Remove memory tags from addresses before symbolization">;
 def use_native_pdb_reader : F<"use-native-pdb-reader", "Use native PDB functionality">;
 def verbose : F<"verbose", "Print verbose line info">;
+def version : F<"version", "Display the version">;
 
 def : Flag<["-"], "a">, Alias<addresses>, HelpText<"Alias for --addresses">;
 def : F<"print-address", "Alias for --addresses">, Alias<addresses>;
@@ -58,6 +59,7 @@ def : Flag<["-"], "i">, Alias<inlines>, HelpText<"Alias for --inlines">;
 def : F<"inlining", "Alias for --inlines">, Alias<inlines>;
 def : Flag<["-"], "p">, Alias<pretty_print>, HelpText<"Alias for --pretty-print">;
 def : Flag<["-"], "s">, Alias<basenames>, HelpText<"Alias for --basenames">;
+def : Flag<["-"], "v">, Alias<version>, HelpText<"Alias for --version">;
 
 // Compatibility aliases for old asan_symbolize.py and sanitizer binaries (before 2020-08).
 def : Flag<["--"], "inlining=true">, Alias<inlines>, HelpText<"Alias for --inlines">;

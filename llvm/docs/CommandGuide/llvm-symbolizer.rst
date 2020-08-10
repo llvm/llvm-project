@@ -346,7 +346,7 @@ OPTIONS
       Line: 15
       Column: 0
 
-.. option:: --version
+.. option:: --version, -v
 
   Print version information for the tool.
 
