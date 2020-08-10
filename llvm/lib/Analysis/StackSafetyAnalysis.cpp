@@ -49,6 +49,8 @@ STATISTIC(NumCombinedParamAccessesBefore,
           "Number of total param accesses before generateParamAccessSummary.");
 STATISTIC(NumCombinedParamAccessesAfter,
           "Number of total param accesses after generateParamAccessSummary.");
+STATISTIC(NumCombinedDataFlowNodes,
+          "Number of total nodes in combined index for dataflow processing.");
 
 static cl::opt<int> StackSafetyMaxIterations("stack-safety-max-iterations",
                                              cl::init(20), cl::Hidden);
@@ -1000,6 +1002,7 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
       FS->setParamAccesses({});
     }
   }
+  NumCombinedDataFlowNodes += Functions.size();
   StackSafetyDataFlowAnalysis<FunctionSummary> SSDFA(
       FunctionSummary::ParamAccess::RangeWidth, std::move(Functions));
   for (auto &KV : SSDFA.run()) {
