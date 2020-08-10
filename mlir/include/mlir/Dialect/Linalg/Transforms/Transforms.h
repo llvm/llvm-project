@@ -270,6 +270,15 @@ struct LinalgTilingOptions {
     loopType = lt;
     return *this;
   }
+
+  /// When specified, specifies distribution of generated tile loops to
+  /// processors.
+  Optional<LinalgLoopDistributionOptions> distribution = None;
+  LinalgTilingOptions &
+  setDistributionOptions(LinalgLoopDistributionOptions &distributionOptions) {
+    distribution = distributionOptions;
+    return *this;
+  }
 };
 
 /// Canonicalization patterns relevant to apply after tiling patterns. These are

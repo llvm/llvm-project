@@ -34,7 +34,7 @@ public:
 // CHECK-DAG:   [[SST_TY:%.+]] = type { double }
 // CHECK-DAG:   [[SS_TY:%.+]] = type { i32, i8, i32* }
 // CHECK-DAG:   [[IDENT_T_TY:%.+]] = type { i32, i32, i32, i32, i8* }
-// CHECK:       [[IMPLICIT_BARRIER_SINGLE_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 322, i32 0, i32 0, i8*
+// CHECK:       [[IMPLICIT_BARRIER_SINGLE_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 322, i32 0, i32 0, i8*
 
 // CHECK:       define void [[FOO:@.+]]()
 
