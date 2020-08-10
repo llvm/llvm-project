@@ -47,6 +47,11 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   // eieio instruction
   def int_ppc_eieio : Intrinsic<[],[],[]>;
 
+  // Get content from current FPSCR register
+  def int_ppc_readflm : Intrinsic<[llvm_double_ty], [], [IntrNoMem]>;
+  // Set FPSCR register, and return previous content
+  def int_ppc_setflm : Intrinsic<[llvm_double_ty], [llvm_double_ty], []>;
+
   // Intrinsics for [double]word extended forms of divide instructions
   def int_ppc_divwe : GCCBuiltin<"__builtin_divwe">,
                       Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
