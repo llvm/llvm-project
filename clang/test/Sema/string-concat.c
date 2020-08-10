@@ -108,7 +108,20 @@ const char *not_warn2[] = {
     "// Aaa\\\n"   " Bbb\\ \n"   " Ccc?" "?/\n",
     "// Aaa\\\r\n" " Bbb\\ \r\n" " Ccc?" "?/\r\n",
     "// Aaa\\\r"   " Bbb\\ \r"   " Ccc?" "?/\r"
-  };
+};
+
+const char *not_warn3[] = {
+    "// \\param [in,out] aaa Bbb\n",
+    "// \\param[in,out] aaa Bbb\n",
+    "// \\param [in, out] aaa Bbb\n",
+    "// \\param [in,\n"
+    "//     out] aaa Bbb\n",
+    "// \\param [in,out]\n"
+    "//     aaa Bbb\n",
+    "// \\param [in,out] aaa\n"
+    "// Bbb\n"
+};
+
 
 // Do not warn when all the elements in the initializer are concatenated together.
 const char *all_elems_in_init_concatenated[] = {"a" "b" "c"};
