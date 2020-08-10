@@ -871,21 +871,28 @@ std::optional<Expr<SubscriptInteger>> ExpressionAnalyzer::TripletPart(
 
 std::optional<Subscript> ExpressionAnalyzer::AnalyzeSectionSubscript(
     const parser::SectionSubscript &ss) {
-  return std::visit(common::visitors{
-                        [&](const parser::SubscriptTriplet &t) {
-                          return std::make_optional<Subscript>(
-                              Triplet{TripletPart(std::get<0>(t.t)),
-                                  TripletPart(std::get<1>(t.t)),
-                                  TripletPart(std::get<2>(t.t))});
-                        },
-                        [&](const auto &s) -> std::optional<Subscript> {
-                          if (auto subscriptExpr{AsSubscript(Analyze(s))}) {
-                            return Subscript{std::move(*subscriptExpr)};
-                          } else {
-                            return std::nullopt;
-                          }
-                        },
-                    },
+  return std::visit(
+      common::visitors{
+          [&](const parser::SubscriptTriplet &t) -> std::optional<Subscript> {
+            const auto &lower{std::get<0>(t.t)};
+            const auto &upper{std::get<1>(t.t)};
+            const auto &stride{std::get<2>(t.t)};
+            auto result{Triplet{
+                TripletPart(lower), TripletPart(upper), TripletPart(stride)}};
+            if ((lower && !result.lower()) || (upper && !result.upper())) {
+              return std::nullopt;
+            } else {
+              return std::make_optional<Subscript>(result);
+            }
+          },
+          [&](const auto &s) -> std::optional<Subscript> {
+            if (auto subscriptExpr{AsSubscript(Analyze(s))}) {
+              return Subscript{std::move(*subscriptExpr)};
+            } else {
+              return std::nullopt;
+            }
+          },
+      },
       ss.u);
 }
 
