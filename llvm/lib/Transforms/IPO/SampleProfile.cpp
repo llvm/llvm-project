@@ -820,9 +820,8 @@ SampleProfileLoader::findCalleeFunctionSamples(const CallBase &Inst) const {
   }
 
   StringRef CalleeName;
-  if (const CallInst *CI = dyn_cast<CallInst>(&Inst))
-    if (Function *Callee = CI->getCalledFunction())
-      CalleeName = Callee->getName();
+  if (Function *Callee = Inst.getCalledFunction())
+    CalleeName = Callee->getName();
 
   const FunctionSamples *FS = findFunctionSamples(Inst);
   if (FS == nullptr)

@@ -110,7 +110,7 @@ void Prescanner::Statement() {
   case LineClassification::Kind::CompilerDirective:
     directiveSentinel_ = line.sentinel;
     CHECK(InCompilerDirective());
-    BeginSourceLineAndAdvance();
+    BeginStatementAndAdvance();
     if (inFixedForm_) {
       CHECK(IsFixedFormCommentChar(*at_));
     } else {
@@ -144,7 +144,7 @@ void Prescanner::Statement() {
     }
     break;
   case LineClassification::Kind::Source:
-    BeginSourceLineAndAdvance();
+    BeginStatementAndAdvance();
     if (inFixedForm_) {
       LabelField(tokens);
     } else if (skipLeadingAmpersand_) {
@@ -226,7 +226,7 @@ void Prescanner::Statement() {
 TokenSequence Prescanner::TokenizePreprocessorDirective() {
   CHECK(nextLine_ < limit_ && !inPreprocessorDirective_);
   inPreprocessorDirective_ = true;
-  BeginSourceLineAndAdvance();
+  BeginStatementAndAdvance();
   TokenSequence tokens;
   while (NextToken(tokens)) {
   }
@@ -497,12 +497,8 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     } while (IsLegalInIdentifier(EmitCharAndAdvance(tokens, *at_)));
     if (*at_ == '\'' || *at_ == '"') {
       QuotedCharacterLiteral(tokens, start);
-      preventHollerith_ = false;
-    } else {
-      // Subtle: Don't misrecognize labeled DO statement label as Hollerith
-      // when the loop control variable starts with 'H'.
-      preventHollerith_ = true;
     }
+    preventHollerith_ = false;
   } else if (*at_ == '*') {
     if (EmitCharAndAdvance(tokens, '*') == '*') {
       EmitCharAndAdvance(tokens, '*');
@@ -510,7 +506,7 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       // Subtle ambiguity:
       //  CHARACTER*2H     declares H because *2 is a kind specifier
       //  DATAC/N*2H  /    is repeated Hollerith
-      preventHollerith_ = !slashInCurrentLine_;
+      preventHollerith_ = !slashInCurrentStatement_;
     }
   } else {
     char ch{*at_};
@@ -530,7 +526,7 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       // token comprises two characters
       EmitCharAndAdvance(tokens, nch);
     } else if (ch == '/') {
-      slashInCurrentLine_ = true;
+      slashInCurrentStatement_ = true;
     }
   }
   tokens.CloseToken();
