@@ -5134,15 +5134,6 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
   VarTemplateSpecializationDecl *VarSpec =
       dyn_cast<VarTemplateSpecializationDecl>(Var);
   if (VarSpec) {
-    // If this is a variable template specialization, make sure that it is
-    // non-dependent.
-    bool InstantiationDependent = false;
-    assert(!TemplateSpecializationType::anyDependentTemplateArguments(
-               VarSpec->getTemplateArgsInfo(), InstantiationDependent) &&
-           "Only instantiate variable template specializations that are "
-           "not type-dependent");
-    (void)InstantiationDependent;
-
     // If this is a static data member template, there might be an
     // uninstantiated initializer on the declaration. If so, instantiate
     // it now.
@@ -5963,16 +5954,7 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
         return nullptr;
       DeclContext::lookup_result Found = ParentDC->lookup(Name);
 
-      if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(D)) {
-        VarTemplateDecl *Templ = cast_or_null<VarTemplateDecl>(
-            findInstantiationOf(Context, VTSD->getSpecializedTemplate(),
-                                Found.begin(), Found.end()));
-        if (!Templ)
-          return nullptr;
-        Result = getVarTemplateSpecialization(
-            Templ, &VTSD->getTemplateArgsInfo(), NewNameInfo, SourceLocation());
-      } else
-        Result = findInstantiationOf(Context, D, Found.begin(), Found.end());
+      Result = findInstantiationOf(Context, D, Found.begin(), Found.end());
     } else {
       // Since we don't have a name for the entity we're looking for,
       // our only option is to walk through all of the declarations to
