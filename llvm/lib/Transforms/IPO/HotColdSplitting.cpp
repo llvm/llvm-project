@@ -70,6 +70,7 @@
 #include <algorithm>
 #include <limits>
 #include <cassert>
+#include <string>
 
 #define DEBUG_TYPE "hotcoldsplit"
 
@@ -89,6 +90,17 @@ static cl::opt<int>
 static cl::opt<int> MaxParametersForSplit(
     "hotcoldsplit-max-params", cl::init(8), cl::Hidden,
     cl::desc("Maximum number of parameters for a split function"));
+
+static cl::opt<bool> EnableColdSection(
+    "enable-cold-section", cl::init(false), cl::Hidden,
+    cl::desc("Enable placement of extracted cold functions"
+             " into a separate section after hot-cold splitting."));
+
+static cl::opt<std::string>
+    ColdSectionName("hotcoldsplit-cold-section-name", cl::init("__llvm_cold"),
+                    cl::Hidden,
+                    cl::desc("Name for the section containing cold functions "
+                             "extracted by hot-cold splitting."));
 
 namespace {
 // Same as blockEndsInUnreachable in CodeGen/BranchFolding.cpp. Do not modify
@@ -374,8 +386,12 @@ Function *HotColdSplitting::extractColdRegion(
     }
     CI->setIsNoInline();
 
-    if (OrigF->hasSection())
-      OutF->setSection(OrigF->getSection());
+    if (EnableColdSection)
+      OutF->setSection(ColdSectionName);
+    else {
+      if (OrigF->hasSection())
+        OutF->setSection(OrigF->getSection());
+    }
 
     markFunctionCold(*OutF, BFI != nullptr);
 
