@@ -95,6 +95,22 @@ define i32 @insert_extract_element_same_vec_idx_2() {
   ret i32 %r
 }
 
+define i32 @insert_extract_element_same_vec_idx_3() {
+; CHECK-LABEL: @insert_extract_element_same_vec_idx_3(
+; CHECK-NEXT:    ret i32 1
+;
+  %r = extractelement <vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 1, i64 4), i64 4
+  ret i32 %r
+}
+
+define i32 @insert_extract_element_same_vec_idx_4() {
+; CHECK-LABEL: @insert_extract_element_same_vec_idx_4(
+; CHECK-NEXT:    ret i32 1
+;
+  %r = extractelement <vscale x 4 x i32> insertelement (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 1, i32 4), i32 2, i64 3), i64 4
+  ret i32 %r
+}
+
 ; more complicated expressions
 
 define <vscale x 2 x i1> @cmp_le_smax_always_true(<vscale x 2 x i64> %x) {
