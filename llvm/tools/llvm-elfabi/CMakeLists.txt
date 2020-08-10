@@ -5,7 +5,6 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_tool(llvm-elfabi
-  ELFObjHandler.cpp
   ErrorCollector.cpp
   llvm-elfabi.cpp
   )
