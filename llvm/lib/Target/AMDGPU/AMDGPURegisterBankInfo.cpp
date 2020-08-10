@@ -1039,7 +1039,7 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
 
 // Return any unique registers used by \p MI at \p OpIndices that need to be
 // handled in a waterfall loop. Returns these registers in \p
-// SGPROperandRegs. Returns true if there are any operansd to handle and a
+// SGPROperandRegs. Returns true if there are any operands to handle and a
 // waterfall loop is necessary.
 bool AMDGPURegisterBankInfo::collectWaterfallOperands(
   SmallSet<Register, 4> &SGPROperandRegs, MachineInstr &MI,
