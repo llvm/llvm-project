@@ -805,10 +805,12 @@ void NotNullTerminatedResultCheck::check(
         // PP->getMacroInfo() returns nullptr if macro has no definition.
         if (MI) {
           const auto &T = MI->tokens().back();
-          StringRef ValueStr = StringRef(T.getLiteralData(), T.getLength());
-          llvm::APInt IntValue;
-          ValueStr.getAsInteger(10, IntValue);
-          AreSafeFunctionsWanted = IntValue.getZExtValue();
+          if (T.isLiteral() && T.getLiteralData()) {
+            StringRef ValueStr = StringRef(T.getLiteralData(), T.getLength());
+            llvm::APInt IntValue;
+            ValueStr.getAsInteger(10, IntValue);
+            AreSafeFunctionsWanted = IntValue.getZExtValue();
+          }
         }
       }
 
