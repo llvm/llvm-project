@@ -15,7 +15,7 @@
 ; RUN: opt -module-summary %s -o %t.summ0.bc
 ; RUN: opt -module-summary %S/Inputs/ipa.ll -o %t.summ1.bc
 
-; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t.lto -stack-safety-print -stack-safety-run -save-temps -thinlto-threads 1 -O0 \
+; RUN: echo > %t.res.txt \
 ; RUN:  -r %t.summ0.bc,ExternalCall, \
 ; RUN:  -r %t.summ0.bc,f1,px \
 ; RUN:  -r %t.summ0.bc,f2,px \
@@ -79,74 +79,14 @@
 ; RUN:  -r %t.summ1.bc,Write4_2,px \
 ; RUN:  -r %t.summ1.bc,Write4,px \
 ; RUN:  -r %t.summ1.bc,Write8,px \
-; RUN:  -r %t.summ1.bc,WriteAndReturn8,px \
+; RUN:  -r %t.summ1.bc,WriteAndReturn8,px
+
+; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t.lto -stack-safety-print -stack-safety-run -save-temps -thinlto-threads 1 -O0 \
+; RUN:  $(cat %t.res.txt) \
 ; RUN:    2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
 
 ; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t-newpm.lto -use-new-pm -stack-safety-print -stack-safety-run -save-temps -thinlto-threads 1 -O0 \
-; RUN:  -r %t.summ0.bc,ExternalCall, \
-; RUN:  -r %t.summ0.bc,f1,px \
-; RUN:  -r %t.summ0.bc,f2,px \
-; RUN:  -r %t.summ0.bc,f3,px \
-; RUN:  -r %t.summ0.bc,f4,px \
-; RUN:  -r %t.summ0.bc,f5,px \
-; RUN:  -r %t.summ0.bc,f6,px \
-; RUN:  -r %t.summ0.bc,f7,px \
-; RUN:  -r %t.summ0.bc,f8left,px \
-; RUN:  -r %t.summ0.bc,f8oobleft,px \
-; RUN:  -r %t.summ0.bc,f8oobright,px \
-; RUN:  -r %t.summ0.bc,f8right,px \
-; RUN:  -r %t.summ0.bc,InterposableCall,px \
-; RUN:  -r %t.summ0.bc,InterposableWrite1, \
-; RUN:  -r %t.summ0.bc,PreemptableCall,px \
-; RUN:  -r %t.summ0.bc,PreemptableWrite1, \
-; RUN:  -r %t.summ0.bc,PrivateCall,px \
-; RUN:  -r %t.summ0.bc,Rec2, \
-; RUN:  -r %t.summ0.bc,RecursiveNoOffset, \
-; RUN:  -r %t.summ0.bc,RecursiveWithOffset, \
-; RUN:  -r %t.summ0.bc,ReturnDependent, \
-; RUN:  -r %t.summ0.bc,TestCrossModuleConflict,px \
-; RUN:  -r %t.summ0.bc,TestCrossModuleOnce,px \
-; RUN:  -r %t.summ0.bc,TestCrossModuleTwice,px \
-; RUN:  -r %t.summ0.bc,TestCrossModuleWeak,px \
-; RUN:  -r %t.summ0.bc,TestRecursiveNoOffset,px \
-; RUN:  -r %t.summ0.bc,TestRecursiveWithOffset,px \
-; RUN:  -r %t.summ0.bc,TestUpdateArg,px \
-; RUN:  -r %t.summ0.bc,TwoArguments,px \
-; RUN:  -r %t.summ0.bc,TwoArgumentsOOBBoth,px \
-; RUN:  -r %t.summ0.bc,TwoArgumentsOOBOne,px \
-; RUN:  -r %t.summ0.bc,TwoArgumentsOOBOther,px \
-; RUN:  -r %t.summ0.bc,Weak,x \
-; RUN:  -r %t.summ0.bc,Write1, \
-; RUN:  -r %t.summ0.bc,Write1DiffModule,x \
-; RUN:  -r %t.summ0.bc,Write1Module0,px \
-; RUN:  -r %t.summ0.bc,Write1Private,x \
-; RUN:  -r %t.summ0.bc,Write1SameModule,x \
-; RUN:  -r %t.summ0.bc,Write1Weak,x \
-; RUN:  -r %t.summ0.bc,Write4_2, \
-; RUN:  -r %t.summ0.bc,Write4, \
-; RUN:  -r %t.summ0.bc,Write8, \
-; RUN:  -r %t.summ0.bc,WriteAndReturn8, \
-; RUN:  -r %t.summ1.bc,ExternalCall,px \
-; RUN:  -r %t.summ1.bc,InterposableWrite1,px \
-; RUN:  -r %t.summ1.bc,PreemptableWrite1,px \
-; RUN:  -r %t.summ1.bc,Rec0,px \
-; RUN:  -r %t.summ1.bc,Rec1,px \
-; RUN:  -r %t.summ1.bc,Rec2,px \
-; RUN:  -r %t.summ1.bc,RecursiveNoOffset,px \
-; RUN:  -r %t.summ1.bc,RecursiveWithOffset,px \
-; RUN:  -r %t.summ1.bc,ReturnAlloca,px \
-; RUN:  -r %t.summ1.bc,ReturnDependent,px \
-; RUN:  -r %t.summ1.bc,Weak,x \
-; RUN:  -r %t.summ1.bc,Write1,px \
-; RUN:  -r %t.summ1.bc,Write1DiffModule,px \
-; RUN:  -r %t.summ1.bc,Write1Module0,x \
-; RUN:  -r %t.summ1.bc,Write1Private,px \
-; RUN:  -r %t.summ1.bc,Write1SameModule,px \
-; RUN:  -r %t.summ1.bc,Write1Weak,px \
-; RUN:  -r %t.summ1.bc,Write4_2,px \
-; RUN:  -r %t.summ1.bc,Write4,px \
-; RUN:  -r %t.summ1.bc,Write8,px \
-; RUN:  -r %t.summ1.bc,WriteAndReturn8,px \
+; RUN:  $(cat %t.res.txt) \
 ; RUN:    2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
