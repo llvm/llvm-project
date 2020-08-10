@@ -101,3 +101,65 @@ outer.crit_edge:              ; preds = %outer.latch
 for.cond.cleanup:                                 ; preds = %outer.crit_edge, %entry
   ret void
 }
+
+@global = external local_unnamed_addr global [4 x [4 x [2 x i16]]] align 16
+
+; %N.ext is defined in the outer loop header and used in the inner loop. After
+; interchanging, it will be defined in the new inner loop and used in the new;
+; outer latch, so we need to create a new LCSSA phi node for it.
+
+define void @test2(i32 %N) {
+; CHECK-LABEL: @test2(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br label [[INNER_PREHEADER:%.*]]
+; CHECK:       outer.header.preheader:
+; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
+; CHECK:       outer.header:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ [[OUTER_IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ], [ 0, [[OUTER_HEADER_PREHEADER:%.*]] ]
+; CHECK-NEXT:    [[N_EXT:%.*]] = sext i32 [[N:%.*]] to i64
+; CHECK-NEXT:    br label [[INNER_SPLIT1:%.*]]
+; CHECK:       inner.preheader:
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ [[TMP0:%.*]], [[INNER_SPLIT:%.*]] ], [ 0, [[INNER_PREHEADER]] ]
+; CHECK-NEXT:    br label [[OUTER_HEADER_PREHEADER]]
+; CHECK:       inner.split1:
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [4 x [4 x [2 x i16]]], [4 x [4 x [2 x i16]]]* @global, i64 0, i64 [[INNER_IV]], i64 [[OUTER_IV]], i64 0
+; CHECK-NEXT:    [[INNER_IV_NEXT:%.*]] = add nsw i64 [[INNER_IV]], 1
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i64 [[INNER_IV_NEXT]], [[N_EXT]]
+; CHECK-NEXT:    br label [[OUTER_LATCH]]
+; CHECK:       inner.split:
+; CHECK-NEXT:    [[N_EXT_LCSSA:%.*]] = phi i64 [ [[N_EXT]], [[OUTER_LATCH]] ]
+; CHECK-NEXT:    [[TMP0]] = add nsw i64 [[INNER_IV]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[TMP0]], [[N_EXT_LCSSA]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[INNER]], label [[EXIT:%.*]]
+; CHECK:       outer.latch:
+; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nsw i64 [[OUTER_IV]], 1
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i64 [[OUTER_IV]], [[N_EXT]]
+; CHECK-NEXT:    br i1 [[C_2]], label [[OUTER_HEADER]], label [[INNER_SPLIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+bb:
+  br label %outer.header
+
+outer.header:                                              ; preds = %bb11, %bb2
+  %outer.iv = phi i64 [ 0, %bb ], [ %outer.iv.next, %outer.latch ]
+  %N.ext = sext i32 %N to i64
+  br label %inner
+
+inner:                                              ; preds = %bb6, %bb4
+  %inner.iv = phi i64 [ 0, %outer.header ], [ %inner.iv.next, %inner ]
+  %tmp8 = getelementptr inbounds [4 x [4 x [2 x i16]]], [4 x [4 x [2 x i16]]]* @global, i64 0, i64 %inner.iv, i64 %outer.iv, i64 0
+  %inner.iv.next = add nsw i64 %inner.iv, 1
+  %c.1 = icmp ne i64 %inner.iv.next, %N.ext
+  br i1 %c.1, label %inner, label %outer.latch
+
+outer.latch:                                             ; preds = %bb6
+  %outer.iv.next = add nsw i64 %outer.iv, 1
+  %c.2 = icmp ne i64 %outer.iv, %N.ext
+  br i1 %c.2 , label %outer.header, label %exit
+
+exit:                                             ; preds = %bb11
+  ret void
+}
