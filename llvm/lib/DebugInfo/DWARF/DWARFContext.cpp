@@ -502,7 +502,8 @@ void DWARFContext::dump(
                                    0);
     DWARFDebugArangeSet set;
     while (arangesData.isValidOffset(offset)) {
-      if (Error E = set.extract(arangesData, &offset)) {
+      if (Error E =
+              set.extract(arangesData, &offset, DumpOpts.WarningHandler)) {
         RecoverableErrorHandler(std::move(E));
         break;
       }
