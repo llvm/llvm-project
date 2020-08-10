@@ -1696,11 +1696,6 @@ bool AMDGPUInstructionSelector::selectG_SELECT(MachineInstr &I) const {
   return Ret;
 }
 
-bool AMDGPUInstructionSelector::selectG_STORE(MachineInstr &I) const {
-  initM0(I);
-  return selectImpl(I, *CoverageInfo);
-}
-
 static int sizeToSubRegIndex(unsigned Size) {
   switch (Size) {
   case 32:
@@ -2226,19 +2221,20 @@ bool AMDGPUInstructionSelector::hasVgprParts(ArrayRef<GEPInfo> AddrInfo) const {
 }
 
 void AMDGPUInstructionSelector::initM0(MachineInstr &I) const {
-  MachineBasicBlock *BB = I.getParent();
-
   const LLT PtrTy = MRI->getType(I.getOperand(1).getReg());
   unsigned AS = PtrTy.getAddressSpace();
   if ((AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) &&
       STI.ldsRequiresM0Init()) {
+    MachineBasicBlock *BB = I.getParent();
+
     // If DS instructions require M0 initializtion, insert it before selecting.
     BuildMI(*BB, &I, I.getDebugLoc(), TII.get(AMDGPU::S_MOV_B32), AMDGPU::M0)
       .addImm(-1);
   }
 }
 
-bool AMDGPUInstructionSelector::selectG_LOAD_ATOMICRMW(MachineInstr &I) const {
+bool AMDGPUInstructionSelector::selectG_LOAD_STORE_ATOMICRMW(
+  MachineInstr &I) const {
   initM0(I);
   return selectImpl(I, *CoverageInfo);
 }
@@ -2866,6 +2862,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
       return true;
     return selectImpl(I, *CoverageInfo);
   case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_STORE:
   case TargetOpcode::G_ATOMIC_CMPXCHG:
   case TargetOpcode::G_ATOMICRMW_XCHG:
   case TargetOpcode::G_ATOMICRMW_ADD:
@@ -2882,13 +2879,11 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case AMDGPU::G_AMDGPU_ATOMIC_DEC:
   case AMDGPU::G_AMDGPU_ATOMIC_FMIN:
   case AMDGPU::G_AMDGPU_ATOMIC_FMAX:
-    return selectG_LOAD_ATOMICRMW(I);
+    return selectG_LOAD_STORE_ATOMICRMW(I);
   case AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG:
     return selectG_AMDGPU_ATOMIC_CMPXCHG(I);
   case TargetOpcode::G_SELECT:
     return selectG_SELECT(I);
-  case TargetOpcode::G_STORE:
-    return selectG_STORE(I);
   case TargetOpcode::G_TRUNC:
     return selectG_TRUNC(I);
   case TargetOpcode::G_SEXT:
