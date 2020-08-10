@@ -679,7 +679,8 @@ Given
   #pragma omp parallel default(firstprivate)
   #pragma omp parallel
 
-``ompDefaultClause()`` matches ``default(none)``, ``default(shared)``, and ``default(firstprivate)``.
+``ompDefaultClause()`` matches ``default(none)``, ``default(shared)``, and
+``default(firstprivate)``
 </pre></td></tr>
 
 
@@ -1622,6 +1623,17 @@ Given
   while (true) {}
 whileStmt()
   matches 'while (true) {}'.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt;</td><td class="name" onclick="toggle('templateArgumentLoc0')"><a name="templateArgumentLoc0Anchor">templateArgumentLoc</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgumentLoc.html">TemplateArgumentLoc</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="templateArgumentLoc0"><pre>Matches template arguments (with location info).
+
+Given
+  template &lt;typename T&gt; struct C {};
+  C&lt;int&gt; c;
+templateArgumentLoc()
+  matches 'int' in C&lt;int&gt;.
 </pre></td></tr>
 
 
@@ -3776,6 +3788,22 @@ namespaceDecl(isInline()) will match n::m.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1OMPDefaultClause.html">OMPDefaultClause</a>&gt;</td><td class="name" onclick="toggle('isFirstPrivateKind0')"><a name="isFirstPrivateKind0Anchor">isFirstPrivateKind</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isFirstPrivateKind0"><pre>Matches if the OpenMP ``default`` clause has ``firstprivate`` kind
+specified.
+
+Given
+
+  #pragma omp parallel
+  #pragma omp parallel default(none)
+  #pragma omp parallel default(shared)
+  #pragma omp parallel default(firstprivate)
+
+``ompDefaultClause(isFirstPrivateKind())`` matches only
+``default(firstprivate)``.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1OMPDefaultClause.html">OMPDefaultClause</a>&gt;</td><td class="name" onclick="toggle('isNoneKind0')"><a name="isNoneKind0Anchor">isNoneKind</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isNoneKind0"><pre>Matches if the OpenMP ``default`` clause has ``none`` kind specified.
 
@@ -3801,20 +3829,6 @@ Given
   #pragma omp parallel default(firstprivate)
 
 ``ompDefaultClause(isSharedKind())`` matches only ``default(shared)``.
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1OMPDefaultClause.html">OMPDefaultClause</a>&gt;</td><td class="name" onclick="toggle('isFirstPrivateKind0')"><a name="isFirstPrivateKind0Anchor">isSharedKind</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isFirstPrivateKind0"><pre>Matches if the OpenMP ``default`` clause has ``firstprivate`` kind specified.
-
-Given
-
-  #pragma omp parallel
-  #pragma omp parallel default(none)
-  #pragma omp parallel default(shared)
-  #pragma omp parallel default(firstprivate)
-
-``ompDefaultClause(isFirstPrivateKind())`` matches only ``default(firstprivate)``.
 </pre></td></tr>
 
 
