@@ -182,12 +182,12 @@ end subroutine iand_test
 subroutine ichar_test(c)
   character(1) :: c
   character :: str(10)
-  ! CHECK: fir.load {{.*}} : !fir.ref<!fir.char<1>>
-  ! CHECK: fir.convert {{.*}} : (!fir.char<1>) -> i32
+  ! CHECK: %[[BOX:.*]] = fir.load %{{.*}} : !fir.ref<!fir.char<1>>
+  ! CHECK: %{{.*}} = fir.convert %[[BOX]] : (!fir.char<1>) -> i32
   print *, ichar(c)
 
-  ! CHECK: fir.extract_value {{.*}} : (!fir.array<1x!fir.char<1>>, i32) -> !fir.char<1>
-  ! CHECK: fir.convert {{.*}} : (!fir.char<1>) -> i32
+  ! CHECK: %[[ARRV:.*]] = fir.extract_value %{{.*}}, %{{.*}} : (!fir.array<1x!fir.char<1>>, i32) -> !fir.char<1>
+  ! CHECK: %{{.*}} = fir.convert %[[ARRV]] : (!fir.char<1>) -> i32
   print *, ichar(str(J))
 end subroutine
 

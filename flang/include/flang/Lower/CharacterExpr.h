@@ -109,6 +109,10 @@ public:
   /// Extract the kind of a character type
   static int getCharacterKind(mlir::Type type);
 
+  /// Determine the base character type
+  static fir::CharacterType getCharacterType(mlir::Type type);
+  static fir::CharacterType getCharacterType(const fir::CharBoxValue &box);
+
   /// Return the integer type that must be used to manipulate
   /// Character lengths. TODO: move this to FirOpBuilder?
   mlir::Type getLengthType() { return builder.getIndexType(); }

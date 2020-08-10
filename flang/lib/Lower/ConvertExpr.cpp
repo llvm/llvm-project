@@ -1281,7 +1281,7 @@ private:
       }
     }
     // Let the intrinsic library lower the intrinsic procedure call
-    llvm::StringRef name{intrinsic.name};
+    llvm::StringRef name = intrinsic.name;
     return Fortran::lower::genIntrinsicCall(builder, getLoc(), name,
                                             resultType[0], operands);
   }
