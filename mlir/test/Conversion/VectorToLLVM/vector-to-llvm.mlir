@@ -906,6 +906,24 @@ func @transfer_read_1d_not_masked(%A : memref<?xf32>, %base: index) -> vector<17
 // 2. Rewrite as a load.
 //       CHECK: %[[loaded:.*]] = llvm.load %[[vecPtr]] {alignment = 4 : i64} : !llvm.ptr<vec<17 x float>>
 
+func @transfer_read_1d_cast(%A : memref<?xi32>, %base: index) -> vector<12xi8> {
+  %c0 = constant 0: i32
+  %v = vector.transfer_read %A[%base], %c0 {masked = [false]} :
+    memref<?xi32>, vector<12xi8>
+  return %v: vector<12xi8>
+}
+// CHECK-LABEL: func @transfer_read_1d_cast
+//  CHECK-SAME: %[[BASE:[a-zA-Z0-9]*]]: !llvm.i64) -> !llvm.vec<12 x i8>
+//
+// 1. Bitcast to vector form.
+//       CHECK: %[[gep:.*]] = llvm.getelementptr {{.*}} :
+//  CHECK-SAME: (!llvm.ptr<i32>, !llvm.i64) -> !llvm.ptr<i32>
+//       CHECK: %[[vecPtr:.*]] = llvm.bitcast %[[gep]] :
+//  CHECK-SAME: !llvm.ptr<i32> to !llvm.ptr<vec<12 x i8>>
+//
+// 2. Rewrite as a load.
+//       CHECK: %[[loaded:.*]] = llvm.load %[[vecPtr]] {alignment = 4 : i64} : !llvm.ptr<vec<12 x i8>>
+
 func @genbool_1d() -> vector<8xi1> {
   %0 = vector.constant_mask [4] : vector<8xi1>
   return %0 : vector<8xi1>
