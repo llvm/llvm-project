@@ -1,4 +1,5 @@
 ; REQUIRES: aarch64-registered-target
+; REQUIRES: shell
 
 ; RUN: llvm-as %s -o %t0.bc
 ; RUN: llvm-as %S/Inputs/ipa.ll -o %t1.bc
