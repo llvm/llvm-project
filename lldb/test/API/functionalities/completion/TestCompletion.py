@@ -426,6 +426,9 @@ class CommandLineCompletionTestCase(TestBase):
         self.runCmd("frame recognizer add -l py_class -s module_name -n recognizer_name")
         self.check_completion_with_desc('frame recognizer delete ', [['0', 'py_class, module module_name, symbol recognizer_name']])
 
+    def test_platform_install_local_file(self):
+        self.complete_from_to('platform target-install main.cp', 'platform target-install main.cpp')
+
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489")
     def test_symbol_name(self):
         self.build()
