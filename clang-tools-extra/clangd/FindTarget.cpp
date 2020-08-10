@@ -596,6 +596,19 @@ public:
       add(CCI->getAnyMember(), Flags);
     // Constructor calls contain a TypeLoc node, so we don't handle them here.
   }
+
+  void add(const TemplateArgument &Arg, RelSet Flags) {
+    // Only used for template template arguments.
+    // For type and non-type template arguments, SelectionTree
+    // will hit a more specific node (e.g. a TypeLoc or a
+    // DeclRefExpr).
+    if (Arg.getKind() == TemplateArgument::Template ||
+        Arg.getKind() == TemplateArgument::TemplateExpansion) {
+      if (TemplateDecl *TD = Arg.getAsTemplate().getAsTemplateDecl()) {
+        report(TD, Flags);
+      }
+    }
+  }
 };
 
 } // namespace
@@ -619,6 +632,8 @@ allTargetDecls(const ast_type_traits::DynTypedNode &N) {
     Finder.add(*QT, Flags);
   else if (const CXXCtorInitializer *CCI = N.get<CXXCtorInitializer>())
     Finder.add(CCI, Flags);
+  else if (const TemplateArgumentLoc *TAL = N.get<TemplateArgumentLoc>())
+    Finder.add(TAL->getArgument(), Flags);
 
   return Finder.takeDecls();
 }
