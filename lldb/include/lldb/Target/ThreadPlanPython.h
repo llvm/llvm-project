@@ -47,7 +47,7 @@ public:
 
   bool StopOthers() override { return m_stop_others; }
 
-  void SetStopOthers(bool new_value) { m_stop_others = new_value; }
+  void SetStopOthers(bool new_value) override { m_stop_others = new_value; }
 
   void DidPush() override;
 
