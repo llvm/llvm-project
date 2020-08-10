@@ -3367,18 +3367,18 @@ struct PotentialValuesState : AbstractState {
   PotentialValuesState(bool IsValid) : IsValidState(IsValid) {}
 
   /// See AbstractState::isValidState(...)
-  bool isValidState() const { return IsValidState.isValidState(); }
+  bool isValidState() const override { return IsValidState.isValidState(); }
 
   /// See AbstractState::isAtFixpoint(...)
-  bool isAtFixpoint() const { return IsValidState.isAtFixpoint(); }
+  bool isAtFixpoint() const override { return IsValidState.isAtFixpoint(); }
 
   /// See AbstractState::indicatePessimisticFixpoint(...)
-  ChangeStatus indicatePessimisticFixpoint() {
+  ChangeStatus indicatePessimisticFixpoint() override {
     return IsValidState.indicatePessimisticFixpoint();
   }
 
   /// See AbstractState::indicateOptimisticFixpoint(...)
-  ChangeStatus indicateOptimisticFixpoint() {
+  ChangeStatus indicateOptimisticFixpoint() override {
     return IsValidState.indicateOptimisticFixpoint();
   }
 
