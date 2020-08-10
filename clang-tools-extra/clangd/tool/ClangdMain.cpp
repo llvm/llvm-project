@@ -682,7 +682,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   if (!ResourceDir.empty())
     Opts.ResourceDir = ResourceDir;
   Opts.BuildDynamicSymbolIndex = EnableIndex;
-  Opts.BackgroundIndex = EnableBackgroundIndex;
   std::unique_ptr<SymbolIndex> StaticIdx;
   std::future<void> AsyncIndexLoad; // Block exit while loading the index.
   if (EnableIndex && !IndexFile.empty()) {
@@ -713,6 +712,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     }
   }
 #endif
+  Opts.BackgroundIndex = EnableBackgroundIndex;
   Opts.StaticIndex = StaticIdx.get();
   Opts.AsyncThreadsCount = WorkerThreadsCount;
   Opts.BuildRecoveryAST = RecoveryAST;
