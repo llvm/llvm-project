@@ -117,6 +117,26 @@ protected:
       "mgpuStreamSynchronize",
       llvmVoidType,
       {llvmPointerType /* void *stream */}};
+  FunctionCallBuilder hostRegisterCallBuilder = {
+      "mgpuMemHostRegisterMemRef",
+      llvmVoidType,
+      {llvmIntPtrType /* intptr_t rank */,
+       llvmPointerType /* void *memrefDesc */,
+       llvmIntPtrType /* intptr_t elementSizeBytes */}};
+};
+
+/// A rewrite patter to convert gpu.host_register operations into a GPU runtime
+/// call. Currently it supports CUDA and ROCm (HIP).
+class ConvertHostRegisterOpToGpuRuntimeCallPattern
+    : public ConvertOpToGpuRuntimeCallPattern<gpu::HostRegisterOp> {
+public:
+  ConvertHostRegisterOpToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter)
+      : ConvertOpToGpuRuntimeCallPattern<gpu::HostRegisterOp>(typeConverter) {}
+
+private:
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
 };
 
 /// A rewrite patter to convert gpu.launch_func operations into a sequence of
@@ -190,6 +210,33 @@ LLVM::CallOp FunctionCallBuilder::create(Location loc, OpBuilder &builder,
   return builder.create<LLVM::CallOp>(
       loc, const_cast<LLVM::LLVMType &>(functionType).getFunctionResultType(),
       builder.getSymbolRefAttr(function), arguments);
+}
+
+// Returns whether value is of LLVM type.
+static bool isLLVMType(Value value) {
+  return value.getType().isa<LLVM::LLVMType>();
+}
+
+LogicalResult ConvertHostRegisterOpToGpuRuntimeCallPattern::matchAndRewrite(
+    Operation *op, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+  if (!llvm::all_of(operands, isLLVMType))
+    return rewriter.notifyMatchFailure(
+        op, "Cannot convert if operands aren't of LLVM type.");
+
+  Location loc = op->getLoc();
+
+  auto memRefType = cast<gpu::HostRegisterOp>(op).value().getType();
+  auto elementType = memRefType.cast<UnrankedMemRefType>().getElementType();
+  auto elementSize = getSizeInBytes(loc, elementType, rewriter);
+
+  auto arguments =
+      typeConverter.promoteOperands(loc, op->getOperands(), operands, rewriter);
+  arguments.push_back(elementSize);
+  hostRegisterCallBuilder.create(loc, rewriter, arguments);
+
+  rewriter.eraseOp(op);
+  return success();
 }
 
 // Creates a struct containing all kernel parameters on the stack and returns
@@ -269,11 +316,6 @@ Value ConvertLaunchFuncOpToGpuRuntimeCallPattern::generateKernelNameConstant(
       LLVM::Linkage::Internal);
 }
 
-// Returns whether value is of LLVM type.
-static bool isLLVMType(Value value) {
-  return value.getType().isa<LLVM::LLVMType>();
-}
-
 // Emits LLVM IR to launch a kernel function. Expects the module that contains
 // the compiled kernel function as a cubin in the 'nvvm.cubin' attribute, or a
 // hsaco in the 'rocdl.hsaco' attribute of the kernel function in the IR.
@@ -351,6 +393,7 @@ mlir::createGpuToLLVMConversionPass(StringRef gpuBinaryAnnotation) {
 void mlir::populateGpuToLLVMConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
     StringRef gpuBinaryAnnotation) {
+  patterns.insert<ConvertHostRegisterOpToGpuRuntimeCallPattern>(converter);
   patterns.insert<ConvertLaunchFuncOpToGpuRuntimeCallPattern>(
       converter, gpuBinaryAnnotation);
   patterns.insert<EraseGpuModuleOpPattern>(&converter.getContext());

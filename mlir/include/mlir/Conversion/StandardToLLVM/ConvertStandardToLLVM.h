@@ -440,6 +440,10 @@ public:
                                 ConversionPatternRewriter &rewriter,
                                 SmallVectorImpl<Value> &sizes) const;
 
+  /// Computes the size of type in bytes.
+  Value getSizeInBytes(Location loc, Type type,
+                       ConversionPatternRewriter &rewriter) const;
+
   /// Computes total size in bytes of to store the given shape.
   Value getCumulativeSizeInBytes(Location loc, Type elementType,
                                  ArrayRef<Value> shape,
