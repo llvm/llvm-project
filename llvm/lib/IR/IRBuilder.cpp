@@ -42,13 +42,14 @@ using namespace llvm;
 /// created.
 GlobalVariable *IRBuilderBase::CreateGlobalString(StringRef Str,
                                                   const Twine &Name,
-                                                  unsigned AddressSpace) {
+                                                  unsigned AddressSpace,
+                                                  Module *M) {
   Constant *StrConstant = ConstantDataArray::getString(Context, Str);
-  Module &M = *BB->getParent()->getParent();
-  auto *GV = new GlobalVariable(M, StrConstant->getType(), true,
-                                GlobalValue::PrivateLinkage, StrConstant, Name,
-                                nullptr, GlobalVariable::NotThreadLocal,
-                                AddressSpace);
+  if (!M)
+    M = BB->getParent()->getParent();
+  auto *GV = new GlobalVariable(
+      *M, StrConstant->getType(), true, GlobalValue::PrivateLinkage,
+      StrConstant, Name, nullptr, GlobalVariable::NotThreadLocal, AddressSpace);
   GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   GV->setAlignment(Align(1));
   return GV;
