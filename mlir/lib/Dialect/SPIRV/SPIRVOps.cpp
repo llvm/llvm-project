@@ -1994,6 +1994,25 @@ static LogicalResult verify(spirv::GlobalVariableOp varOp) {
 }
 
 //===----------------------------------------------------------------------===//
+// spv.GroupBroadcast
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(spirv::GroupBroadcastOp broadcastOp) {
+  spirv::Scope scope = broadcastOp.execution_scope();
+  if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
+    return broadcastOp.emitOpError(
+        "execution scope must be 'Workgroup' or 'Subgroup'");
+
+  if (auto localIdTy = broadcastOp.localid().getType().dyn_cast<VectorType>())
+    if (!(localIdTy.getNumElements() == 2 || localIdTy.getNumElements() == 3))
+      return broadcastOp.emitOpError("localid is a vector and can be with only "
+                                     " 2 or 3 components, actual number is ")
+             << localIdTy.getNumElements();
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // spv.GroupNonUniformBallotOp
 //===----------------------------------------------------------------------===//
 
