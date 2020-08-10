@@ -696,11 +696,8 @@ bool GotSection::isNeeded() const {
 }
 
 void GotSection::writeTo(uint8_t *buf) {
-  // Buf points to the start of this section's buffer,
-  // whereas InputSectionBase::relocateAlloc() expects its argument
-  // to point to the start of the output section.
   target->writeGotHeader(buf);
-  relocateAlloc(buf - outSecOff, buf - outSecOff + size);
+  relocateAlloc(buf, buf + size);
 }
 
 static uint64_t getMipsPageAddr(uint64_t addr) {
@@ -3497,7 +3494,7 @@ void ARMExidxSyntheticSection::writeTo(uint8_t *buf) {
     assert(isec->getParent() != nullptr);
     if (InputSection *d = findExidxSection(isec)) {
       memcpy(buf + offset, d->data().data(), d->data().size());
-      d->relocateAlloc(buf, buf + d->getSize());
+      d->relocateAlloc(buf + d->outSecOff, buf + d->outSecOff + d->getSize());
       offset += d->getSize();
     } else {
       // A Linker generated CANTUNWIND section.
