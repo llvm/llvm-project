@@ -1539,6 +1539,13 @@ public:
     return buildInstr(TargetOpcode::G_FSUB, {Dst}, {Src0, Src1}, Flags);
   }
 
+  /// Build and insert \p Res = G_FDIV \p Op0, \p Op1
+  MachineInstrBuilder buildFDiv(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1,
+                                Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_FDIV, {Dst}, {Src0, Src1}, Flags);
+  }
+
   /// Build and insert \p Res = G_FMA \p Op0, \p Op1, \p Op2
   MachineInstrBuilder buildFMA(const DstOp &Dst, const SrcOp &Src0,
                                const SrcOp &Src1, const SrcOp &Src2,
