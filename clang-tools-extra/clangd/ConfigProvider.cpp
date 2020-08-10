@@ -209,7 +209,11 @@ Provider::combine(std::vector<const Provider *> Providers) {
   };
   auto Result = std::make_unique<CombinedProvider>();
   Result->Providers = std::move(Providers);
-  return Result;
+  // FIXME: This is a workaround for a bug in older versions of clang (< 3.9)
+  //   The constructor that is supposed to allow for Derived to Base
+  //   conversion does not work. Remove this if we drop support for such
+  //   configurations.
+  return std::unique_ptr<Provider>(Result.release());
 }
 
 Config Provider::getConfig(const Params &P, DiagnosticCallback DC) const {
