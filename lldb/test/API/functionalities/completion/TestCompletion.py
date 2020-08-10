@@ -429,6 +429,9 @@ class CommandLineCompletionTestCase(TestBase):
             '1', 'py_class, module module_name, symbol recognizer_name'
         ]])
 
+    def test_platform_install_local_file(self):
+        self.complete_from_to('platform target-install main.cp', 'platform target-install main.cpp')
+
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489")
     def test_symbol_name(self):
         self.build()
