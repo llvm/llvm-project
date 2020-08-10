@@ -65,8 +65,9 @@ Value *SCEVExpander::ReuseOrCreateCast(Value *V, Type *Ty,
     if (!CI || CI->getOpcode() != Op)
       continue;
 
-    // Found a suitable cast that is at IP or comes before IP. Use it.
-    if (IP->getParent() == CI->getParent() &&
+    // Found a suitable cast that is at IP or comes before IP. Use it. Note that
+    // the cast must also properly dominate the Builder's insertion point.
+    if (IP->getParent() == CI->getParent() && &*BIP != CI &&
         (&*IP == CI || CI->comesBefore(&*IP))) {
       Ret = CI;
       break;
