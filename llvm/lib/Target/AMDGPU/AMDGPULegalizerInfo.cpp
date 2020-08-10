@@ -708,6 +708,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   FMad.scalarize(0)
       .lower();
 
+  auto &FRem = getActionDefinitionsBuilder(G_FREM);
+  if (ST.has16BitInsts()) {
+    FRem.customFor({S16, S32, S64});
+  } else {
+    FRem.minScalar(0, S32)
+        .customFor({S32, S64});
+  }
+  FRem.scalarize(0);
+
   // TODO: Do we need to clamp maximum bitwidth?
   getActionDefinitionsBuilder(G_TRUNC)
     .legalIf(isScalar(0))
@@ -1601,6 +1610,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeFrint(MI, MRI, B);
   case TargetOpcode::G_FCEIL:
     return legalizeFceil(MI, MRI, B);
+  case TargetOpcode::G_FREM:
+    return legalizeFrem(MI, MRI, B);
   case TargetOpcode::G_INTRINSIC_TRUNC:
     return legalizeIntrinsicTrunc(MI, MRI, B);
   case TargetOpcode::G_SITOFP:
@@ -1867,6 +1878,23 @@ bool AMDGPULegalizerInfo::legalizeFceil(
   // TODO: Should this propagate fast-math-flags?
   B.buildFAdd(MI.getOperand(0).getReg(), Trunc, Add);
   return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeFrem(
+  MachineInstr &MI, MachineRegisterInfo &MRI,
+  MachineIRBuilder &B) const {
+    Register DstReg = MI.getOperand(0).getReg();
+    Register Src0Reg = MI.getOperand(1).getReg();
+    Register Src1Reg = MI.getOperand(2).getReg();
+    auto Flags = MI.getFlags();
+    LLT Ty = MRI.getType(DstReg);
+
+    auto Div = B.buildFDiv(Ty, Src0Reg, Src1Reg, Flags);
+    auto Trunc = B.buildIntrinsicTrunc(Ty, Div, Flags);
+    auto Neg = B.buildFNeg(Ty, Trunc, Flags);
+    B.buildFMA(DstReg, Neg, Src1Reg, Src0Reg, Flags);
+    MI.eraseFromParent();
+    return true;
 }
 
 static MachineInstrBuilder extractF64Exponent(Register Hi,
