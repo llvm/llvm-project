@@ -1,4 +1,5 @@
 ; REQUIRES: aarch64-registered-target
+; REQUIRES: shell
 
 ; Test IPA over a single combined file
 ; RUN: llvm-as %s -o %t0.bc
