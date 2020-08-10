@@ -118,6 +118,11 @@ struct SimplifyQuery {
     Copy.CxtI = I;
     return Copy;
   }
+  SimplifyQuery getWithoutUndef() const {
+    SimplifyQuery Copy(*this);
+    Copy.CanUseUndef = false;
+    return Copy;
+  }
 };
 
 // NOTE: the explicit multiple argument versions of these functions are
