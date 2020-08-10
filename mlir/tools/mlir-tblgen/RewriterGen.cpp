@@ -734,6 +734,8 @@ std::string PatternEmitter::handleLocationDirective(DagNode tree) {
 
 std::string PatternEmitter::handleOpArgument(DagLeaf leaf,
                                              StringRef patArgName) {
+  if (leaf.isStringAttr())
+    PrintFatalError(loc, "raw string not supported as argument");
   if (leaf.isConstantAttr()) {
     auto constAttr = leaf.getAsConstantAttr();
     return handleConstantAttr(constAttr.getAttribute(),
