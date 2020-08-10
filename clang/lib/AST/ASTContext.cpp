@@ -11191,10 +11191,17 @@ clang::operator<<(const DiagnosticBuilder &DB,
   return DB << "a prior #pragma section";
 }
 
-bool ASTContext::shouldExternalizeStaticVar(const Decl *D) const {
+bool ASTContext::mayExternalizeStaticVar(const Decl *D) const {
   return !getLangOpts().GPURelocatableDeviceCode &&
-         (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>()) &&
+         ((D->hasAttr<CUDADeviceAttr>() &&
+           !D->getAttr<CUDADeviceAttr>()->isImplicit()) ||
+          (D->hasAttr<CUDAConstantAttr>() &&
+           !D->getAttr<CUDAConstantAttr>()->isImplicit())) &&
          isa<VarDecl>(D) && cast<VarDecl>(D)->isFileVarDecl() &&
-         cast<VarDecl>(D)->getStorageClass() == SC_Static &&
+         cast<VarDecl>(D)->getStorageClass() == SC_Static;
+}
+
+bool ASTContext::shouldExternalizeStaticVar(const Decl *D) const {
+  return mayExternalizeStaticVar(D) &&
          CUDAStaticDeviceVarReferencedByHost.count(cast<VarDecl>(D));
 }

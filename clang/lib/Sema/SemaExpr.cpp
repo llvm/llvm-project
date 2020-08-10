@@ -17910,8 +17910,7 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
   // This also requires the reference of the static device/constant variable by
   // host code to be visible in the device compilation for the compiler to be
   // able to externalize the static device/constant variable.
-  if ((Var->hasAttr<CUDADeviceAttr>() || Var->hasAttr<CUDAConstantAttr>()) &&
-      Var->isFileVarDecl() && Var->getStorageClass() == SC_Static) {
+  if (SemaRef.getASTContext().mayExternalizeStaticVar(Var)) {
     auto *CurContext = SemaRef.CurContext;
     if (!CurContext || !isa<FunctionDecl>(CurContext) ||
         cast<FunctionDecl>(CurContext)->hasAttr<CUDAHostAttr>() ||
