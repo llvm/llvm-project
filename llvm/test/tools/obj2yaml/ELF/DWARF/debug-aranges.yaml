@@ -4,16 +4,24 @@
 ## The .debug_aranges should be written to the 'DWARF' entry and the 'Sections' entry should remain empty.
 
 # RUN: yaml2obj --docnum=1 -DBITS=32 -DENDIAN=LSB %s | obj2yaml | \
-# RUN:   FileCheck -DLENGTH1=24 -DLENGTH2=24 -DADDRSIZE=0x04 %s --check-prefix=BASIC --implicit-check-not=Sections
+# RUN:   FileCheck %s --check-prefix=BASIC --implicit-check-not=Sections \
+# RUN:     -DLENGTH1=24 -DLENGTH2=24 -DADDRSIZE=0x04 \
+# RUN:     -DVARADDR=0x0000000000001234 -DVARLEN=0x0000000000005678
 
 # RUN: yaml2obj --docnum=1 -DBITS=32 -DENDIAN=MSB %s | obj2yaml | \
-# RUN:   FileCheck -DLENGTH1=24 -DLENGTH2=24 -DADDRSIZE=0x04 %s --check-prefix=BASIC --implicit-check-not=Sections
+# RUN:   FileCheck %s --check-prefix=BASIC --implicit-check-not=Sections \
+# RUN:     -DLENGTH1=24 -DLENGTH2=24 -DADDRSIZE=0x04 \
+# RUN:     -DVARADDR=0x0000000000001234 -DVARLEN=0x0000000000005678
 
 # RUN: yaml2obj --docnum=1 -DBITS=64 -DENDIAN=LSB %s | obj2yaml | \
-# RUN:   FileCheck -DLENGTH1=3C -DLENGTH2=44 -DADDRSIZE=0x08 %s --check-prefix=BASIC --implicit-check-not=Sections
+# RUN:   FileCheck %s --check-prefix=BASIC --implicit-check-not=Sections \
+# RUN:     -DLENGTH1=3C -DLENGTH2=44 -DADDRSIZE=0x08 \
+# RUN:     -DVARADDR=0x0000000000001234 -DVARLEN=0x0000000000005678
 
 # RUN: yaml2obj --docnum=1 -DBITS=64 -DENDIAN=MSB %s | obj2yaml | \
-# RUN:   FileCheck -DLENGTH1=3C -DLENGTH2=44 -DADDRSIZE=0x08 %s --check-prefix=BASIC --implicit-check-not=Sections
+# RUN:   FileCheck  %s --check-prefix=BASIC --implicit-check-not=Sections \
+# RUN:     -DLENGTH1=3C -DLENGTH2=44 -DADDRSIZE=0x08 \
+# RUN:     -DVARADDR=0x0000000000001234 -DVARLEN=0x0000000000005678
 
 #      BASIC: DWARF:
 # BASIC-NEXT:   debug_aranges:
@@ -32,8 +40,8 @@
 # BASIC-NEXT:       CuOffset:    0x1234567890ABCDEF
 # BASIC-NEXT:       AddressSize: [[ADDRSIZE]]
 # BASIC-NEXT:       Descriptors:
-# BASIC-NEXT:         - Address: 0x0000000000001234
-# BASIC-NEXT:           Length:  0x0000000000005678
+# BASIC-NEXT:         - Address: [[VARADDR]]
+# BASIC-NEXT:           Length:  [[VARLEN]]
 # BASIC-NEXT:         - Address: 0x0000000000001234
 # BASIC-NEXT:           Length:  0x0000000000005678
 # BASIC-NEXT: ...
@@ -57,8 +65,8 @@ DWARF:
       Version:  2
       CuOffset: 0x1234567890abcdef
       Descriptors:
-        - Address: 0x1234
-          Length:  0x5678
+        - Address: [[ADDR=0x1234]]
+          Length:  [[LENGTH=0x5678]]
         - Address: 0x1234
           Length:  0x5678
 
@@ -187,3 +195,11 @@ FileHeader:
   Machine: EM_X86_64
 DWARF:
   debug_aranges: []
+
+## f) Show that dumping a table with a premature terminator entry still uses the
+## DWARF tag.
+
+# RUN: yaml2obj --docnum=1 %s -DADDR=0 -DLENGTH=0 -DBITS=64 -DENDIAN=LSB | obj2yaml | \
+# RUN:   FileCheck %s --check-prefix=BASIC --implicit-check-not=Sections \
+# RUN:     -DLENGTH1=3C -DLENGTH2=44 -DADDRSIZE=0x08  \
+# RUN:     -DVARADDR=0x0000000000000000 -DVARLEN=0x0000000000000000

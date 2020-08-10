@@ -98,7 +98,8 @@ bool HexagonTargetInfo::initFeatureMap(
   StringRef CPUFeature = CPU;
   CPUFeature.consume_front("hexagon");
   CPUFeature.consume_back("t");
-  Features[CPUFeature] = true;
+  if (!CPUFeature.empty())
+    Features[CPUFeature] = true;
 
   Features["long-calls"] = false;
 

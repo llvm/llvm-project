@@ -241,10 +241,24 @@ public:
     assert(Added && "mapping added twice");
   }
 
+  void add(NestedNameSpecifierLoc From, syntax::Tree *To) {
+    assert(To != nullptr);
+    assert(From.hasQualifier());
+
+    bool Added = NNSNodes.insert({From, To}).second;
+    (void)Added;
+    assert(Added && "mapping added twice");
+  }
+
   syntax::Tree *find(ASTPtr P) const { return Nodes.lookup(P); }
+
+  syntax::Tree *find(NestedNameSpecifierLoc P) const {
+    return NNSNodes.lookup(P);
+  }
 
 private:
   llvm::DenseMap<ASTPtr, syntax::Tree *> Nodes;
+  llvm::DenseMap<NestedNameSpecifierLoc, syntax::Tree *> NNSNodes;
 };
 } // namespace
 
@@ -281,16 +295,20 @@ public:
     if (From)
       Mapping.add(From, New);
   }
+
   void foldNode(ArrayRef<syntax::Token> Range, syntax::Tree *New, TypeLoc L) {
     // FIXME: add mapping for TypeLocs
     foldNode(Range, New, nullptr);
   }
 
-  void foldNode(ArrayRef<syntax::Token> Range, syntax::Tree *New,
-                NestedNameSpecifierLoc L) {
-    // FIXME: add mapping for NestedNameSpecifierLoc
-    foldNode(Range, New, nullptr);
+  void foldNode(llvm::ArrayRef<syntax::Token> Range, syntax::Tree *New,
+                NestedNameSpecifierLoc From) {
+    assert(New);
+    Pending.foldChildren(Arena, Range, New);
+    if (From)
+      Mapping.add(From, New);
   }
+
   /// Notifies that we should not consume trailing semicolon when computing
   /// token range of \p D.
   void noticeDeclWithoutSemicolon(Decl *D);
@@ -312,6 +330,8 @@ public:
   void markChild(syntax::Node *N, NodeRole R);
   /// Set role for the syntax node matching \p N.
   void markChild(ASTPtr N, NodeRole R);
+  /// Set role for the syntax node matching \p N.
+  void markChild(NestedNameSpecifierLoc N, NodeRole R);
 
   /// Finish building the tree and consume the root node.
   syntax::TranslationUnit *finalize() && {
@@ -744,45 +764,18 @@ public:
     return true;
   }
 
-  syntax::NameSpecifier *BuildNameSpecifier(const NestedNameSpecifier &NNS) {
-    switch (NNS.getKind()) {
-    case NestedNameSpecifier::Global:
-      return new (allocator()) syntax::GlobalNameSpecifier;
-    case NestedNameSpecifier::Namespace:
-    case NestedNameSpecifier::NamespaceAlias:
-    case NestedNameSpecifier::Identifier:
-      return new (allocator()) syntax::IdentifierNameSpecifier;
-    case NestedNameSpecifier::TypeSpecWithTemplate:
-      return new (allocator()) syntax::SimpleTemplateNameSpecifier;
-    case NestedNameSpecifier::TypeSpec: {
-      const auto *NNSType = NNS.getAsType();
-      assert(NNSType);
-      if (isa<DecltypeType>(NNSType))
-        return new (allocator()) syntax::DecltypeNameSpecifier;
-      if (isa<TemplateSpecializationType, DependentTemplateSpecializationType>(
-              NNSType))
-        return new (allocator()) syntax::SimpleTemplateNameSpecifier;
-      return new (allocator()) syntax::IdentifierNameSpecifier;
-    }
-    case NestedNameSpecifier::Super:
-      // FIXME: Support Microsoft's __super
-      llvm::report_fatal_error("We don't yet support the __super specifier",
-                               true);
-    }
-    llvm_unreachable("Unhandled NestedNameSpecifier::SpecifierKind enum");
-  }
-
   // FIXME: Fix `NestedNameSpecifierLoc::getLocalSourceRange` for the
   // `DependentTemplateSpecializationType` case.
-  /// Given a nested-name-specifier return the range for the last name specifier
+  /// Given a nested-name-specifier return the range for the last name
+  /// specifier.
   ///
   /// e.g. `std::T::template X<U>::` => `template X<U>::`
   SourceRange getLocalSourceRange(const NestedNameSpecifierLoc &NNSLoc) {
     auto SR = NNSLoc.getLocalSourceRange();
 
-    // The method `NestedNameSpecifierLoc::getLocalSourceRange` *should* return
-    // the desired `SourceRange`, but there is a corner
-    // case. For a `DependentTemplateSpecializationType` this method returns its
+    // The method `NestedNameSpecifierLoc::getLocalSourceRange` *should*
+    // return the desired `SourceRange`, but there is a corner case. For a
+    // `DependentTemplateSpecializationType` this method returns its
     // qualifiers as well, in other words in the example above this method
     // returns `T::template X<U>::` instead of only `template X<U>::`
     if (auto TL = NNSLoc.getTypeLoc()) {
@@ -798,31 +791,99 @@ public:
     return SR;
   }
 
-  syntax::NestedNameSpecifier *
-  BuildNestedNameSpecifier(const NestedNameSpecifierLoc &QualifierLoc) {
-    if (!QualifierLoc)
-      return nullptr;
-    for (auto it = QualifierLoc; it; it = it.getPrefix()) {
-      assert(it.hasQualifier());
-      auto *NS = BuildNameSpecifier(*it.getNestedNameSpecifier());
-      assert(NS);
-      if (!isa<syntax::GlobalNameSpecifier>(NS))
-        Builder.foldNode(Builder.getRange(getLocalSourceRange(it)).drop_back(),
-                         NS, it);
-      Builder.markChild(NS, syntax::NodeRole::NestedNameSpecifier_specifier);
-      Builder.markChildToken(it.getEndLoc(),
-                             syntax::NodeRole::NestedNameSpecifier_delimiter);
+  syntax::NodeKind getNameSpecifierKind(const NestedNameSpecifier &NNS) {
+    switch (NNS.getKind()) {
+    case NestedNameSpecifier::Global:
+      return syntax::NodeKind::GlobalNameSpecifier;
+    case NestedNameSpecifier::Namespace:
+    case NestedNameSpecifier::NamespaceAlias:
+    case NestedNameSpecifier::Identifier:
+      return syntax::NodeKind::IdentifierNameSpecifier;
+    case NestedNameSpecifier::TypeSpecWithTemplate:
+      return syntax::NodeKind::SimpleTemplateNameSpecifier;
+    case NestedNameSpecifier::TypeSpec: {
+      const auto *NNSType = NNS.getAsType();
+      assert(NNSType);
+      if (isa<DecltypeType>(NNSType))
+        return syntax::NodeKind::DecltypeNameSpecifier;
+      if (isa<TemplateSpecializationType, DependentTemplateSpecializationType>(
+              NNSType))
+        return syntax::NodeKind::SimpleTemplateNameSpecifier;
+      return syntax::NodeKind::IdentifierNameSpecifier;
     }
-    auto *NNS = new (allocator()) syntax::NestedNameSpecifier;
-    Builder.foldNode(Builder.getRange(QualifierLoc.getSourceRange()), NNS,
+    default:
+      // FIXME: Support Microsoft's __super
+      llvm::report_fatal_error("We don't yet support the __super specifier",
+                               true);
+    }
+  }
+
+  syntax::NameSpecifier *
+  BuildNameSpecifier(const NestedNameSpecifierLoc &NNSLoc) {
+    assert(NNSLoc.hasQualifier());
+    auto NameSpecifierTokens =
+        Builder.getRange(getLocalSourceRange(NNSLoc)).drop_back();
+    switch (getNameSpecifierKind(*NNSLoc.getNestedNameSpecifier())) {
+    case syntax::NodeKind::GlobalNameSpecifier:
+      return new (allocator()) syntax::GlobalNameSpecifier;
+    case syntax::NodeKind::IdentifierNameSpecifier: {
+      assert(NameSpecifierTokens.size() == 1);
+      Builder.markChildToken(NameSpecifierTokens.begin(),
+                             syntax::NodeRole::Unknown);
+      auto *NS = new (allocator()) syntax::IdentifierNameSpecifier;
+      Builder.foldNode(NameSpecifierTokens, NS, nullptr);
+      return NS;
+    }
+    case syntax::NodeKind::SimpleTemplateNameSpecifier: {
+      // TODO: Build `SimpleTemplateNameSpecifier` children and implement
+      // accessors to them.
+      // Be aware, we cannot do that simply by calling `TraverseTypeLoc`,
+      // some `TypeLoc`s have inside them the previous name specifier and
+      // we want to treat them independently.
+      auto *NS = new (allocator()) syntax::SimpleTemplateNameSpecifier;
+      Builder.foldNode(NameSpecifierTokens, NS, nullptr);
+      return NS;
+    }
+    case syntax::NodeKind::DecltypeNameSpecifier: {
+      const auto TL = NNSLoc.getTypeLoc().castAs<DecltypeTypeLoc>();
+      if (!RecursiveASTVisitor::TraverseDecltypeTypeLoc(TL))
+        return nullptr;
+      auto *NS = new (allocator()) syntax::DecltypeNameSpecifier;
+      // TODO: Implement accessor to `DecltypeNameSpecifier` inner
+      // `DecltypeTypeLoc`.
+      // For that add mapping from `TypeLoc` to `syntax::Node*` then:
+      // Builder.markChild(TypeLoc, syntax::NodeRole);
+      Builder.foldNode(NameSpecifierTokens, NS, nullptr);
+      return NS;
+    }
+    default:
+      llvm_unreachable("getChildKind() does not return this value");
+    }
+  }
+
+  // To build syntax tree nodes for NestedNameSpecifierLoc we override
+  // Traverse instead of WalkUpFrom because we want to traverse the children
+  // ourselves and build a list instead of a nested tree of name specifier
+  // prefixes.
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc QualifierLoc) {
+    if (!QualifierLoc)
+      return true;
+    for (auto it = QualifierLoc; it; it = it.getPrefix()) {
+      auto *NS = BuildNameSpecifier(it);
+      if (!NS)
+        return false;
+      Builder.markChild(NS, syntax::NodeRole::List_element);
+      Builder.markChildToken(it.getEndLoc(), syntax::NodeRole::List_delimiter);
+    }
+    Builder.foldNode(Builder.getRange(QualifierLoc.getSourceRange()),
+                     new (allocator()) syntax::NestedNameSpecifier,
                      QualifierLoc);
-    return NNS;
+    return true;
   }
 
   bool WalkUpFromDeclRefExpr(DeclRefExpr *S) {
-    auto *Qualifier = BuildNestedNameSpecifier(S->getQualifierLoc());
-    if (Qualifier)
-      Builder.markChild(Qualifier, syntax::NodeRole::IdExpression_qualifier);
+    if (auto QualifierLoc = S->getQualifierLoc())
+      Builder.markChild(QualifierLoc, syntax::NodeRole::IdExpression_qualifier);
 
     auto TemplateKeywordLoc = S->getTemplateKeywordLoc();
     if (TemplateKeywordLoc.isValid())
@@ -843,9 +904,8 @@ public:
 
   // Same logic as DeclRefExpr.
   bool WalkUpFromDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *S) {
-    auto *Qualifier = BuildNestedNameSpecifier(S->getQualifierLoc());
-    if (Qualifier)
-      Builder.markChild(Qualifier, syntax::NodeRole::IdExpression_qualifier);
+    if (auto QualifierLoc = S->getQualifierLoc())
+      Builder.markChild(QualifierLoc, syntax::NodeRole::IdExpression_qualifier);
 
     auto TemplateKeywordLoc = S->getTemplateKeywordLoc();
     if (TemplateKeywordLoc.isValid())
@@ -1396,6 +1456,11 @@ void syntax::TreeBuilder::markChild(syntax::Node *N, NodeRole R) {
 
 void syntax::TreeBuilder::markChild(ASTPtr N, NodeRole R) {
   auto *SN = Mapping.find(N);
+  assert(SN != nullptr);
+  setRole(SN, R);
+}
+void syntax::TreeBuilder::markChild(NestedNameSpecifierLoc NNSLoc, NodeRole R) {
+  auto *SN = Mapping.find(NNSLoc);
   assert(SN != nullptr);
   setRole(SN, R);
 }
