@@ -557,8 +557,6 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
   if (!SrcRC || !RBI.constrainGenericRegister(SrcReg, *SrcRC, *MRI))
     return false;
 
-  const unsigned SrcFlags = getUndefRegState(Src.isUndef());
-
   // Note we could have mixed SGPR and VGPR destination banks for an SGPR
   // source, and this relies on the fact that the same subregister indices are
   // used for both.
@@ -566,7 +564,7 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
   for (int I = 0, E = NumDst; I != E; ++I) {
     MachineOperand &Dst = MI.getOperand(I);
     BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::COPY), Dst.getReg())
-      .addReg(SrcReg, SrcFlags, SubRegs[I]);
+      .addReg(SrcReg, 0, SubRegs[I]);
 
     // Make sure the subregister index is valid for the source register.
     SrcRC = TRI.getSubClassWithSubReg(SrcRC, SubRegs[I]);
