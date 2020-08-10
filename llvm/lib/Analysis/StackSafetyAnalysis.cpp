@@ -668,10 +668,11 @@ void resolveAllCalls(UseInfo<GlobalValue> &Use,
       return Use.updateRange(FullSet);
     }
     const ConstantRange *Found = findParamAccess(*FS, C.ParamNo);
-    if (!Found)
+    if (!Found || Found->isFullSet())
       return Use.updateRange(FullSet);
     ConstantRange Access = Found->sextOrTrunc(Use.Range.getBitWidth());
-    Use.updateRange(addOverflowNever(Access, C.Offset));
+    if (!Access.isEmptySet())
+      Use.updateRange(addOverflowNever(Access, C.Offset));
     C.Callee = nullptr;
   }
 
