@@ -625,6 +625,13 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
       containsUnsafeInstructions(OuterLoopLatch))
     return false;
 
+  // Also make sure the inner loop preheader does not contain any unsafe
+  // instructions. Note that all instructions in the preheader will be moved to
+  // the outer loop header when interchanging.
+  if (InnerLoopPreHeader != OuterLoopHeader &&
+      containsUnsafeInstructions(InnerLoopPreHeader))
+    return false;
+
   LLVM_DEBUG(dbgs() << "Loops are perfectly nested\n");
   // We have a perfect loop nest.
   return true;
@@ -1304,6 +1311,21 @@ bool LoopInterchangeTransform::transform() {
     BasicBlock *InnerLoopHeader = InnerLoop->getHeader();
     SplitBlock(InnerLoopHeader, InnerLoopHeader->getFirstNonPHI(), DT, LI);
     LLVM_DEBUG(dbgs() << "splitting InnerLoopHeader done\n");
+  }
+
+  // Instructions in the original inner loop preheader may depend on values
+  // defined in the outer loop header. Move them there, because the original
+  // inner loop preheader will become the entry into the interchanged loop nest.
+  // Currently we move all instructions and rely on LICM to move invariant
+  // instructions outside the loop nest.
+  BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
+  BasicBlock *OuterLoopHeader = OuterLoop->getHeader();
+  if (InnerLoopPreHeader != OuterLoopHeader) {
+    SmallPtrSet<Instruction *, 4> NeedsMoving;
+    for (Instruction &I :
+         make_early_inc_range(make_range(InnerLoopPreHeader->begin(),
+                                         std::prev(InnerLoopPreHeader->end()))))
+      I.moveBefore(OuterLoopHeader->getTerminator());
   }
 
   Transformed |= adjustLoopLinks();

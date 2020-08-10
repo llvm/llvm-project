@@ -20,11 +20,11 @@ define void @lcssa_08(i32 %n, i32 %m) {
 ; CHECK-NEXT:    [[CMP24:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP24]], label [[INNER_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       outer.preheader:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[M:%.*]] to i64
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
 ; CHECK:       outer.header:
 ; CHECK-NEXT:    [[INDVARS_IV27:%.*]] = phi i64 [ 0, [[OUTER_PREHEADER:%.*]] ], [ [[INDVARS_IV_NEXT28:%.*]], [[OUTER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[CMP222:%.*]] = icmp sgt i32 [[M]], 0
+; CHECK-NEXT:    [[CMP222:%.*]] = icmp sgt i32 [[M:%.*]], 0
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[M]] to i64
 ; CHECK-NEXT:    br i1 [[CMP222]], label [[INNER_FOR_BODY_SPLIT1:%.*]], label [[OUTER_CRIT_EDGE:%.*]]
 ; CHECK:       inner.preheader:
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT29:%.*]] = zext i32 [[N]] to i64
@@ -41,8 +41,9 @@ define void @lcssa_08(i32 %n, i32 %m) {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br label [[INNER_CRIT_EDGE:%.*]]
 ; CHECK:       inner.for.body.split:
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT_LCSSA2:%.*]] = phi i64 [ [[WIDE_TRIP_COUNT]], [[OUTER_LATCH]] ]
 ; CHECK-NEXT:    [[TMP1]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], [[WIDE_TRIP_COUNT_LCSSA2]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[INNER_FOR_BODY]], label [[OUTER_CRIT_EDGE]]
 ; CHECK:       inner.crit_edge:
 ; CHECK-NEXT:    br label [[OUTER_LATCH]]
