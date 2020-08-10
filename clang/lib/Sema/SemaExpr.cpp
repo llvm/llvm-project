@@ -6914,7 +6914,6 @@ Sema::ActOnInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
       // Do not warn when all the elements in the initializer are concatenated
       // together. Do not warn for macros too.
       if (NumConcat > 1 && E > 2 && !SL->getBeginLoc().isMacroID() &&
-          SL->getString().find(" ") == llvm::StringRef::npos &&
           isa<StringLiteral>(InitArgList[0]) && SLPrev &&
           NumConcat != SLPrev->getNumConcatenated()) {
         SmallVector<FixItHint, 1> Hints;

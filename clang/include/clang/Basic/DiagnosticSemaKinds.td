@@ -3005,7 +3005,7 @@ def warn_objc_string_literal_comparison : Warning<
 def warn_concatenated_literal_array_init : Warning<
   "suspicious concatenation of string literals in an array initialization; "
   "did you mean to separate the elements with a comma?">,
-  InGroup<DiagGroup<"string-concatenation">>;
+  InGroup<StringConcatation>, DefaultIgnore;
 def warn_concatenated_nsarray_literal : Warning<
   "concatenated NSString literal for an NSArray expression - "
   "possibly missing a comma">,
