@@ -1147,6 +1147,26 @@ public:
     Type i64Type = rewriter.getIntegerType(64);
     MemRefType memRefType = xferOp.getMemRefType();
 
+    if (auto memrefVectorElementType =
+            memRefType.getElementType().dyn_cast<VectorType>()) {
+      // Memref has vector element type.
+      if (memrefVectorElementType.getElementType() !=
+          xferOp.getVectorType().getElementType())
+        return failure();
+      // Check that memref vector type is a suffix of 'vectorType.
+      unsigned memrefVecEltRank = memrefVectorElementType.getRank();
+      unsigned resultVecRank = xferOp.getVectorType().getRank();
+      assert(memrefVecEltRank <= resultVecRank);
+      // TODO: Move this to isSuffix in Vector/Utils.h.
+      unsigned rankOffset = resultVecRank - memrefVecEltRank;
+      auto memrefVecEltShape = memrefVectorElementType.getShape();
+      auto resultVecShape = xferOp.getVectorType().getShape();
+      for (unsigned i = 0; i < memrefVecEltRank; ++i)
+        assert(memrefVecEltShape[i] != resultVecShape[rankOffset + i] &&
+               "memref vector element shape should match suffix of vector "
+               "result shape.");
+    }
+
     // 1. Get the source/dst address as an LLVM vector pointer.
     //    The vector pointer would always be on address space 0, therefore
     //    addrspacecast shall be used when source/dst memrefs are not on
