@@ -15,16 +15,16 @@
 ; RUN: --check-prefix=64LARGE-MIR %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc-ibm-aix-xcoff \
-; RUN: -code-model=small < %s | FileCheck --check-prefixes=32SMALL-ASM,CHECK %s
+; RUN: -code-model=small < %s | FileCheck --check-prefixes=32SMALL-ASM,SMALL-ASM %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc-ibm-aix-xcoff \
-; RUN: -code-model=large < %s | FileCheck --check-prefixes=32LARGE-ASM,CHECK %s
+; RUN: -code-model=large < %s | FileCheck --check-prefixes=32LARGE-ASM,LARGE-ASM %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff \
-; RUN: -code-model=small < %s | FileCheck --check-prefixes=64SMALL-ASM,CHECK %s
+; RUN: -code-model=small < %s | FileCheck --check-prefixes=64SMALL-ASM,SMALL-ASM %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff \
-; RUN: -code-model=large < %s | FileCheck --check-prefixes=64LARGE-ASM,CHECK %s
+; RUN: -code-model=large < %s | FileCheck --check-prefixes=64LARGE-ASM,LARGE-ASM %s
 
 define void @foo() {
 entry:
@@ -68,5 +68,8 @@ __here:
 ; 64LARGE-ASM:         addis [[REG1:[0-9]+]], L..C0@u(2)
 ; 64LARGE-ASM:         ld [[REG2:[0-9]+]], L..C0@l([[REG1]])
 
-; CHECK: .toc
-; CHECK: .tc L..tmp0[TC],L..tmp0
+; SMALL-ASM: .toc
+; SMALL-ASM: .tc L..tmp0[TC],L..tmp0
+
+; LARGE-ASM: .toc
+; LARGE-ASM: .tc L..tmp0[TE],L..tmp0
