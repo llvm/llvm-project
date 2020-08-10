@@ -207,7 +207,7 @@ System integration
 
   - ``%LocalAppData%\clangd\config.yaml`` on Windows
 
-  - ``~/Library/clangd/config.yaml`` on Mac
+  - ``~/Library/Preferences/clangd/config.yaml`` on Mac
 
   - ``$XDG_CONFIG_HOME/clangd/config.yaml`` or ``~/.config/clangd/config.yaml``
     on others
