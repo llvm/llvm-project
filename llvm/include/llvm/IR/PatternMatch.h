@@ -1442,6 +1442,12 @@ inline CastClass_match<OpTy, Instruction::PtrToInt> m_PtrToInt(const OpTy &Op) {
   return CastClass_match<OpTy, Instruction::PtrToInt>(Op);
 }
 
+/// Matches IntToPtr.
+template <typename OpTy>
+inline CastClass_match<OpTy, Instruction::IntToPtr> m_IntToPtr(const OpTy &Op) {
+  return CastClass_match<OpTy, Instruction::IntToPtr>(Op);
+}
+
 /// Matches Trunc.
 template <typename OpTy>
 inline CastClass_match<OpTy, Instruction::Trunc> m_Trunc(const OpTy &Op) {
