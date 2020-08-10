@@ -36,6 +36,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#define DEBUG_TYPE "flang-codegen"
 
 /// The Tilikum bridge performs the conversion of operations from both the FIR
 /// and standard dialects to the LLVM-IR dialect.
@@ -45,7 +46,7 @@
 /// necessary to preserve the semantics of the Fortran program.
 
 #undef TODO
-#define TODO() llvm_unreachable("not yet implemented")
+#define TODO() llvm::report_fatal_error("tilikum: not yet implemented")
 
 using namespace llvm;
 
@@ -1279,6 +1280,8 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
       return this->lowerTy().getKindMap();
     };
 
+    if (auto eleTy = fir::dyn_cast_ptrEleTy(boxEleTy))
+      boxEleTy = eleTy;
     if (fir::isa_integer(boxEleTy)) {
       if (auto ty = boxEleTy.dyn_cast<mlir::IntegerType>())
         return doInteger(ty.getWidth());

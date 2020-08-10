@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
 #include "flang/Optimizer/CodeGen/CodeGen.h"
@@ -16,6 +20,8 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "flang-codegen-rewrite"
 
 using namespace fir;
 
@@ -77,13 +83,12 @@ public:
     auto shapeAttr = rewriter.getIntegerAttr(idxTy, shapeOpers.size());
     attrs.push_back(
         rewriter.getNamedAttr(XEmboxOp::shapeAttrName(), shapeAttr));
-    attrs.push_back(
-        rewriter.getNamedAttr(XEmboxOp::shiftAttrName(), zeroAttr));
-    attrs.push_back(
-        rewriter.getNamedAttr(XEmboxOp::sliceAttrName(), zeroAttr));
+    attrs.push_back(rewriter.getNamedAttr(XEmboxOp::shiftAttrName(), zeroAttr));
+    attrs.push_back(rewriter.getNamedAttr(XEmboxOp::sliceAttrName(), zeroAttr));
     auto xbox = rewriter.create<XEmboxOp>(loc, embox.getType(), embox.memref(),
                                           shapeOpers, llvm::None, llvm::None,
                                           llvm::None, attrs);
+    LLVM_DEBUG(llvm::errs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();
   }
@@ -127,6 +132,7 @@ public:
     auto xbox = rewriter.create<XEmboxOp>(loc, embox.getType(), embox.memref(),
                                           shapeOpers, shiftOpers, sliceOpers,
                                           embox.getLenParams(), attrs);
+    LLVM_DEBUG(llvm::errs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();
   }
@@ -180,6 +186,8 @@ public:
     auto xArrCoor = rewriter.create<XArrayCoorOp>(
         loc, arrCoor.getType(), arrCoor.memref(), shapeOpers, shiftOpers,
         sliceOpers, arrCoor.indices(), arrCoor.lenParams(), attrs);
+    LLVM_DEBUG(llvm::errs()
+               << "rewriting " << arrCoor << " to " << xArrCoor << '\n');
     rewriter.replaceOp(arrCoor, xArrCoor.getOperation()->getResults());
     return mlir::success();
   }
