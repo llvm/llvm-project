@@ -124,9 +124,10 @@ public:
       MCSymbolXCOFF *TCSym =
           cast<MCSymbolXCOFF>(Streamer.getContext().getOrCreateSymbol(
               XSym->getSymbolTableName() + "[TC]"));
+      OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << '\n';
+
       if (TCSym->hasRename())
         Streamer.emitXCOFFRenameDirective(TCSym, TCSym->getSymbolTableName());
-      OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << '\n';
       return;
     }
 
