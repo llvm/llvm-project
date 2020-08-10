@@ -124,7 +124,7 @@ class TestSwiftRewriteClangPaths(TestBase):
             self.assertEqual(found_iquote, 2)
             self.assertEqual(found_i1, 2)
             self.assertEqual(found_i2, 2)
-            self.assertEqual(found_f, 4)
+            self.assertEqual(found_f, 2)
             self.assertEqual(found_rel, 0)
             self.assertEqual(found_abs, 1)
             self.assertEqual(found_ovl, 2)
