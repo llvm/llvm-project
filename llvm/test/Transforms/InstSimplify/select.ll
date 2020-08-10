@@ -919,3 +919,16 @@ define <2 x i32> @all_constant_true_undef_false_constexpr_vec() {
   %s = select i1 ptrtoint (<2 x i32> ()* @all_constant_true_undef_false_constexpr_vec to i1), <2 x i32> undef, <2 x i32><i32 -1, i32 ptrtoint (<2 x i32> ()* @all_constant_true_undef_false_constexpr_vec to i32)>
   ret <2 x i32> %s
 }
+
+define i1 @expand_binop_undef(i32 %x, i32 %y) {
+; CHECK-LABEL: @expand_binop_undef(
+; CHECK-NEXT:    [[CMP15:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP15]]
+;
+  %cmp9.not.1 = icmp eq i32 %x, %y
+  %cmp15 = icmp slt i32 %x, %y
+  %spec.select39 = select i1 %cmp9.not.1, i1 undef, i1 %cmp15
+  %spec.select40 = xor i1 %cmp9.not.1, 1
+  %spec.select  = and i1 %spec.select39, %spec.select40
+  ret i1 %spec.select
+}
