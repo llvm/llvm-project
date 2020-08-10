@@ -176,6 +176,12 @@ MlirOperation mlirOperationCreate(const MlirOperationState *state) {
   for (unsigned i = 0; i < state->nRegions; ++i)
     cppState.addRegion(std::unique_ptr<Region>(unwrap(state->regions[i])));
 
+  free(state->results);
+  free(state->operands);
+  free(state->regions);
+  free(state->successors);
+  free(state->attributes);
+
   return wrap(Operation::create(cppState));
 }
 
