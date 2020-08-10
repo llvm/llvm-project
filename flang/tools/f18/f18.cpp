@@ -38,6 +38,8 @@
 #include <unistd.h>
 #include <vector>
 
+#include "f18_version.h"
+
 static std::list<std::string> argList(int argc, char *const argv[]) {
   std::list<std::string> result;
   for (int j = 0; j < argc; ++j) {
@@ -390,6 +392,13 @@ void Link(std::vector<std::string> &liblist, std::vector<std::string> &objects,
   }
 }
 
+int printVersion() {
+  llvm::errs() << "\nf18 compiler (under development), version "
+               << __FLANG_MAJOR__ << "." << __FLANG_MINOR__ << "."
+               << __FLANG_PATCHLEVEL__ << "\n";
+  return exitStatus;
+}
+
 int main(int argc, char *const argv[]) {
 
   atexit(CleanUpAtExit);
@@ -411,6 +420,11 @@ int main(int argc, char *const argv[]) {
   options.predefinitions.emplace_back("__F18_MAJOR__", "1");
   options.predefinitions.emplace_back("__F18_MINOR__", "1");
   options.predefinitions.emplace_back("__F18_PATCHLEVEL__", "1");
+  options.predefinitions.emplace_back("__flang__", __FLANG__);
+  options.predefinitions.emplace_back("__flang_major__", __FLANG_MAJOR__);
+  options.predefinitions.emplace_back("__flang_minor__", __FLANG_MINOR__);
+  options.predefinitions.emplace_back(
+      "__flang_patchlevel__", __FLANG_PATCHLEVEL__);
 #if __x86_64__
   options.predefinitions.emplace_back("__x86_64__", "1");
 #endif
@@ -651,13 +665,16 @@ int main(int argc, char *const argv[]) {
           << "Unrecognised options are passed through to the external compiler\n"
           << "set by F18_FC (see defaults).\n";
       return exitStatus;
-    } else if (arg == "-V") {
-      llvm::errs() << "\nf18 compiler (under development)\n";
-      return exitStatus;
+    } else if (arg == "-V" || arg == "--version") {
+      return printVersion();
     } else {
       driver.F18_FCArgs.push_back(arg);
       if (arg == "-v") {
-        driver.verbose = true;
+        if (args.size() > 1) {
+          driver.verbose = true;
+        } else {
+          return printVersion();
+        }
       } else if (arg == "-I") {
         driver.F18_FCArgs.push_back(args.front());
         driver.searchDirectories.push_back(args.front());
