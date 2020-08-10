@@ -87,23 +87,23 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:    bl __gcc_qsub
 ; CHECK-NEXT:    mffs 0
 ; CHECK-NEXT:    mtfsb1 31
-; CHECK-NEXT:    lis 3, .LCPI0_1@ha
 ; CHECK-NEXT:    mtfsb0 30
 ; CHECK-NEXT:    fadd 1, 2, 1
 ; CHECK-NEXT:    mtfsf 1, 0
 ; CHECK-NEXT:    fctiwz 0, 1
-; CHECK-NEXT:    mffs 1
 ; CHECK-NEXT:    stfd 0, 160(1)
+; CHECK-NEXT:    mffs 0
 ; CHECK-NEXT:    mtfsb1 31
+; CHECK-NEXT:    lis 3, .LCPI0_1@ha
 ; CHECK-NEXT:    mtfsb0 30
-; CHECK-NEXT:    fadd 0, 28, 29
-; CHECK-NEXT:    mtfsf 1, 1
-; CHECK-NEXT:    lfs 1, .LCPI0_1@l(3)
-; CHECK-NEXT:    fctiwz 0, 0
-; CHECK-NEXT:    stfd 0, 152(1)
+; CHECK-NEXT:    fadd 1, 28, 29
+; CHECK-NEXT:    mtfsf 1, 0
+; CHECK-NEXT:    lfs 0, .LCPI0_1@l(3)
+; CHECK-NEXT:    fctiwz 1, 1
+; CHECK-NEXT:    stfd 1, 152(1)
 ; CHECK-NEXT:    fcmpu 0, 28, 27
 ; CHECK-NEXT:    lwz 3, 164(1)
-; CHECK-NEXT:    fcmpu 1, 29, 1
+; CHECK-NEXT:    fcmpu 1, 29, 0
 ; CHECK-NEXT:    lwz 4, 156(1)
 ; CHECK-NEXT:    crandc 20, 6, 0
 ; CHECK-NEXT:    cror 20, 5, 20
@@ -209,25 +209,25 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:    bl __gcc_qsub
 ; CHECK-NEXT:    mffs 0
 ; CHECK-NEXT:    mtfsb1 31
-; CHECK-NEXT:    lis 3, .LCPI0_2@ha
 ; CHECK-NEXT:    mtfsb0 30
 ; CHECK-NEXT:    fadd 1, 2, 1
 ; CHECK-NEXT:    mtfsf 1, 0
 ; CHECK-NEXT:    fctiwz 0, 1
-; CHECK-NEXT:    mffs 1
 ; CHECK-NEXT:    stfd 0, 32(1)
+; CHECK-NEXT:    mffs 0
 ; CHECK-NEXT:    mtfsb1 31
-; CHECK-NEXT:    lfs 0, .LCPI0_2@l(3)
-; CHECK-NEXT:    lis 3, .LCPI0_3@ha
+; CHECK-NEXT:    lis 3, .LCPI0_2@ha
+; CHECK-NEXT:    lfs 2, .LCPI0_2@l(3)
 ; CHECK-NEXT:    mtfsb0 30
-; CHECK-NEXT:    fadd 2, 28, 29
-; CHECK-NEXT:    mtfsf 1, 1
-; CHECK-NEXT:    lfs 1, .LCPI0_3@l(3)
-; CHECK-NEXT:    fctiwz 2, 2
-; CHECK-NEXT:    stfd 2, 24(1)
-; CHECK-NEXT:    fcmpu 0, 30, 0
+; CHECK-NEXT:    lis 3, .LCPI0_3@ha
+; CHECK-NEXT:    fadd 1, 28, 29
+; CHECK-NEXT:    mtfsf 1, 0
+; CHECK-NEXT:    lfs 0, .LCPI0_3@l(3)
+; CHECK-NEXT:    fctiwz 1, 1
+; CHECK-NEXT:    stfd 1, 24(1)
+; CHECK-NEXT:    fcmpu 0, 30, 2
 ; CHECK-NEXT:    lwz 3, 36(1)
-; CHECK-NEXT:    fcmpu 1, 31, 1
+; CHECK-NEXT:    fcmpu 1, 31, 0
 ; CHECK-NEXT:    lwz 4, 28(1)
 ; CHECK-NEXT:    crandc 20, 6, 1
 ; CHECK-NEXT:    cror 20, 4, 20
@@ -264,25 +264,25 @@ define i64 @__fixunstfdi(ppc_fp128 %a) nounwind readnone {
 ; CHECK-NEXT:    bl __gcc_qsub
 ; CHECK-NEXT:    mffs 0
 ; CHECK-NEXT:    mtfsb1 31
-; CHECK-NEXT:    lis 3, .LCPI0_0@ha
 ; CHECK-NEXT:    mtfsb0 30
 ; CHECK-NEXT:    fadd 1, 2, 1
 ; CHECK-NEXT:    mtfsf 1, 0
 ; CHECK-NEXT:    fctiwz 0, 1
-; CHECK-NEXT:    mffs 1
 ; CHECK-NEXT:    stfd 0, 96(1)
+; CHECK-NEXT:    mffs 0
 ; CHECK-NEXT:    mtfsb1 31
-; CHECK-NEXT:    lfs 0, .LCPI0_0@l(3)
-; CHECK-NEXT:    lis 3, .LCPI0_1@ha
+; CHECK-NEXT:    lis 3, .LCPI0_0@ha
+; CHECK-NEXT:    lfs 2, .LCPI0_0@l(3)
 ; CHECK-NEXT:    mtfsb0 30
-; CHECK-NEXT:    fadd 2, 30, 31
-; CHECK-NEXT:    mtfsf 1, 1
-; CHECK-NEXT:    lfs 1, .LCPI0_1@l(3)
-; CHECK-NEXT:    fctiwz 2, 2
-; CHECK-NEXT:    stfd 2, 88(1)
-; CHECK-NEXT:    fcmpu 0, 30, 0
+; CHECK-NEXT:    lis 3, .LCPI0_1@ha
+; CHECK-NEXT:    fadd 1, 30, 31
+; CHECK-NEXT:    mtfsf 1, 0
+; CHECK-NEXT:    lfs 0, .LCPI0_1@l(3)
+; CHECK-NEXT:    fctiwz 1, 1
+; CHECK-NEXT:    stfd 1, 88(1)
+; CHECK-NEXT:    fcmpu 0, 30, 2
 ; CHECK-NEXT:    lwz 3, 100(1)
-; CHECK-NEXT:    fcmpu 1, 31, 1
+; CHECK-NEXT:    fcmpu 1, 31, 0
 ; CHECK-NEXT:    lwz 4, 92(1)
 ; CHECK-NEXT:    crandc 20, 6, 0
 ; CHECK-NEXT:    cror 20, 5, 20
