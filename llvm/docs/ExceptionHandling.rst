@@ -530,7 +530,7 @@ on Itanium C++ ABI platforms. The fundamental difference between the two models
 is that Itanium EH is designed around the idea of "successive unwinding," while
 Windows EH is not.
 
-Under Itanium, throwing an exception typically involes allocating thread local
+Under Itanium, throwing an exception typically involves allocating thread local
 memory to hold the exception, and calling into the EH runtime. The runtime
 identifies frames with appropriate exception handling actions, and successively
 resets the register context of the current thread to the most recently active
