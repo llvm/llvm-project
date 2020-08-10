@@ -71,14 +71,14 @@ struct InlineEvent {
 /// lines up with how TF SequenceExample represents it.
 class TrainingLogger final {
 public:
-  TrainingLogger();
+  TrainingLogger(StringRef LogFileName);
 
   /// Log one inlining event.
   void logInlineEvent(const InlineEvent &Event,
                       const MLModelRunner &ModelRunner);
 
   /// Print the stored tensors.
-  void print(raw_fd_ostream &OutFile);
+  void print();
 
 private:
   /// Write the values of one tensor as a list.
@@ -156,6 +156,7 @@ private:
     OutFile << "  }\n";
   }
 
+  StringRef LogFileName;
   std::vector<InlineFeatures> Features;
   std::vector<int64_t> DefaultDecisions;
   std::vector<int64_t> Decisions;
@@ -193,7 +194,8 @@ public:
   DevelopmentModeMLInlineAdvisor(
       Module &M, ModuleAnalysisManager &MAM,
       std::unique_ptr<MLModelRunner> ModelRunner,
-      std::function<bool(CallBase &)> GetDefaultAdvice, bool IsDoingInference);
+      std::function<bool(CallBase &)> GetDefaultAdvice, bool IsDoingInference,
+      std::unique_ptr<TrainingLogger> Logger);
 
   size_t getTotalSizeEstimate();
 
@@ -211,11 +213,11 @@ public:
   size_t getNativeSizeEstimate(const Function &F) const;
 
 private:
-  bool isLogging() const { return !TrainingLog.empty(); }
+  bool isLogging() const { return !!Logger; }
 
   std::function<bool(CallBase &)> GetDefaultAdvice;
-  TrainingLogger Logger;
   const bool IsDoingInference;
+  std::unique_ptr<TrainingLogger> Logger;
 
   const int32_t InitialNativeSize;
   int32_t CurrentNativeSize = 0;
@@ -346,25 +348,27 @@ private:
 };
 } // namespace
 
-TrainingLogger::TrainingLogger() {
-  for (size_t I = 0; I < NumberOfFeatures; ++I) {
+TrainingLogger::TrainingLogger(StringRef LogFileName)
+    : LogFileName(LogFileName) {
+  for (size_t I = 0; I < NumberOfFeatures; ++I)
     Features.push_back(InlineFeatures());
-  }
 }
 
 /// Log one inlining event.
 void TrainingLogger::logInlineEvent(const InlineEvent &Event,
                                     const MLModelRunner &ModelRunner) {
-  for (size_t I = 0; I < NumberOfFeatures; ++I) {
+  for (size_t I = 0; I < NumberOfFeatures; ++I)
     Features[I].push_back(ModelRunner.getFeature(I));
-  }
+
   Decisions.push_back(Event.AdvisedDecision);
   Effects.push_back(Event.Effect);
   Rewards.push_back(Event.Reward);
   DefaultDecisions.push_back(Event.DefaultDecision);
 }
 
-void TrainingLogger::print(raw_fd_ostream &OutFile) {
+void TrainingLogger::print() {
+  std::error_code EC;
+  raw_fd_ostream OutFile(LogFileName, EC);
   size_t NumberOfRecords = Decisions.size();
   if (NumberOfRecords == 0)
     return;
@@ -392,9 +396,11 @@ void TrainingLogger::print(raw_fd_ostream &OutFile) {
 DevelopmentModeMLInlineAdvisor::DevelopmentModeMLInlineAdvisor(
     Module &M, ModuleAnalysisManager &MAM,
     std::unique_ptr<MLModelRunner> ModelRunner,
-    std::function<bool(CallBase &)> GetDefaultAdvice, bool IsDoingInference)
+    std::function<bool(CallBase &)> GetDefaultAdvice, bool IsDoingInference,
+    std::unique_ptr<TrainingLogger> Logger)
     : MLInlineAdvisor(M, MAM, std::move(ModelRunner)),
       GetDefaultAdvice(GetDefaultAdvice), IsDoingInference(IsDoingInference),
+      Logger(std::move(Logger)),
       InitialNativeSize(isLogging() ? getTotalSizeEstimate() : 0),
       CurrentNativeSize(InitialNativeSize) {
   // We cannot have the case of neither inference nor logging.
@@ -402,11 +408,8 @@ DevelopmentModeMLInlineAdvisor::DevelopmentModeMLInlineAdvisor(
 }
 
 DevelopmentModeMLInlineAdvisor::~DevelopmentModeMLInlineAdvisor() {
-  if (TrainingLog.empty())
-    return;
-  std::error_code ErrorCode;
-  raw_fd_ostream OutFile(TrainingLog, ErrorCode);
-  Logger.print(OutFile);
+  if (isLogging())
+    Logger->print();
 }
 
 size_t
@@ -428,7 +431,7 @@ DevelopmentModeMLInlineAdvisor::getMandatoryAdvice(
     return MLInlineAdvisor::getMandatoryAdvice(CB, ORE);
   return std::make_unique<LoggingMLInlineAdvice>(
       /*Advisor=*/this,
-      /*CB=*/CB, /*ORE=*/ORE, /*Recommendation=*/true, /*Logger=*/Logger,
+      /*CB=*/CB, /*ORE=*/ORE, /*Recommendation=*/true, /*Logger=*/*Logger,
       /*CallerSizeEstimateBefore=*/getNativeSizeEstimate(*CB.getCaller()),
       /*CalleeSizeEstimateBefore=*/
       getNativeSizeEstimate(*CB.getCalledFunction()),
@@ -446,7 +449,7 @@ DevelopmentModeMLInlineAdvisor::getAdviceFromModel(
   return std::make_unique<LoggingMLInlineAdvice>(
       /*Advisor=*/this,
       /*CB=*/CB, /*ORE=*/ORE, /*Recommendation=*/Recommendation,
-      /*Logger=*/Logger,
+      /*Logger=*/*Logger,
       /*CallerSizeEstimateBefore=*/getNativeSizeEstimate(*CB.getCaller()),
       /*CalleeSizeEstimateBefore=*/
       getNativeSizeEstimate(*CB.getCalledFunction()),
@@ -531,7 +534,12 @@ std::unique_ptr<InlineAdvisor> llvm::getDevelopmentModeAdvisor(
     }
     IsDoingInference = true;
   }
+  std::unique_ptr<TrainingLogger> Logger;
+  if (!TrainingLog.empty())
+    Logger = std::make_unique<TrainingLogger>(TrainingLog);
+
   return std::make_unique<DevelopmentModeMLInlineAdvisor>(
-      M, MAM, std::move(Runner), GetDefaultAdvice, IsDoingInference);
+      M, MAM, std::move(Runner), GetDefaultAdvice, IsDoingInference,
+      std::move(Logger));
 }
 #endif // defined(LLVM_HAVE_TF_API)

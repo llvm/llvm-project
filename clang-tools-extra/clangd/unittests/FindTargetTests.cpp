@@ -376,6 +376,15 @@ TEST_F(TargetDeclTest, ClassTemplate) {
                {"template<> class Foo<int *>", Rel::TemplateInstantiation},
                {"template <typename T> class Foo<T *>", Rel::TemplatePattern});
 
+  Code = R"cpp(
+    // Template template argument.
+    template<typename T> struct Vector {};
+    template <template <typename> class Container>
+    struct A {};
+    A<[[Vector]]> a;
+  )cpp";
+  EXPECT_DECLS("TemplateArgumentLoc", {"template <typename T> struct Vector"});
+
   Flags.push_back("-std=c++17"); // for CTAD tests
 
   Code = R"cpp(

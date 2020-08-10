@@ -5121,18 +5121,12 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
 /// Like getPartialRegUpdateClearance, this makes a strong assumption that the
 /// high bits that are passed-through are not live.
 unsigned
-X86InstrInfo::getUndefRegClearance(const MachineInstr &MI, unsigned &OpNum,
+X86InstrInfo::getUndefRegClearance(const MachineInstr &MI, unsigned OpNum,
                                    const TargetRegisterInfo *TRI) const {
-  for (unsigned i = MI.getNumExplicitDefs(), e = MI.getNumExplicitOperands();
-         i != e; ++i) {
-    const MachineOperand &MO = MI.getOperand(i);
-    if (MO.isReg() && MO.isUndef() &&
-        Register::isPhysicalRegister(MO.getReg()) &&
-        hasUndefRegUpdate(MI.getOpcode(), i)) {
-      OpNum = i;
-      return UndefRegClearance;
-    }
-  }
+  const MachineOperand &MO = MI.getOperand(OpNum);
+  if (Register::isPhysicalRegister(MO.getReg()) &&
+      hasUndefRegUpdate(MI.getOpcode(), OpNum))
+    return UndefRegClearance;
 
   return 0;
 }

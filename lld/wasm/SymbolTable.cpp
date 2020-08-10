@@ -211,7 +211,7 @@ DefinedFunction *SymbolTable::addSyntheticFunction(StringRef name,
 // exported via the --export flag.  Otherwise we don't add the symbol and return
 // nullptr.
 DefinedData *SymbolTable::addOptionalDataSymbol(StringRef name,
-                                                uint32_t value) {
+                                                uint64_t value) {
   Symbol *s = find(name);
   if (!s && (config->exportAll || config->exportedSymbols.count(name) != 0))
     s = insertName(name).first;

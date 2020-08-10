@@ -118,9 +118,7 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
   kernelPm.addPass(createConvertGPUKernelToBlobPass(
       translateModuleToNVVMIR, compilePtxToCubin, "nvptx64-nvidia-cuda",
       "sm_35", "+ptx60", gpuBinaryAnnotation));
-  pm.addPass(createLowerToLLVMPass());
-  pm.addPass(
-      createConvertGpuLaunchFuncToGpuRuntimeCallsPass(gpuBinaryAnnotation));
+  pm.addPass(createGpuToLLVMConversionPass(gpuBinaryAnnotation));
 
   return pm.run(m);
 }

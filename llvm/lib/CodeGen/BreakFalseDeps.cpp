@@ -186,17 +186,24 @@ bool BreakFalseDeps::shouldBreakDependence(MachineInstr *MI, unsigned OpIdx,
 void BreakFalseDeps::processDefs(MachineInstr *MI) {
   assert(!MI->isDebugInstr() && "Won't process debug values");
 
+  const MCInstrDesc &MCID = MI->getDesc();
+
   // Break dependence on undef uses. Do this before updating LiveRegs below.
   // This can remove a false dependence with no additional instructions.
-  unsigned OpNum;
-  unsigned Pref = TII->getUndefRegClearance(*MI, OpNum, TRI);
-  if (Pref) {
-    bool HadTrueDependency = pickBestRegisterForUndef(MI, OpNum, Pref);
-    // We don't need to bother trying to break a dependency if this
-    // instruction has a true dependency on that register through another
-    // operand - we'll have to wait for it to be available regardless.
-    if (!HadTrueDependency && shouldBreakDependence(MI, OpNum, Pref))
-      UndefReads.push_back(std::make_pair(MI, OpNum));
+  for (unsigned i = MCID.getNumDefs(), e = MCID.getNumOperands(); i != e; ++i) {
+    MachineOperand &MO = MI->getOperand(i);
+    if (!MO.isReg() || !MO.getReg() || !MO.isUse() || !MO.isUndef())
+      continue;
+
+    unsigned Pref = TII->getUndefRegClearance(*MI, i, TRI);
+    if (Pref) {
+      bool HadTrueDependency = pickBestRegisterForUndef(MI, i, Pref);
+      // We don't need to bother trying to break a dependency if this
+      // instruction has a true dependency on that register through another
+      // operand - we'll have to wait for it to be available regardless.
+      if (!HadTrueDependency && shouldBreakDependence(MI, i, Pref))
+        UndefReads.push_back(std::make_pair(MI, i));
+    }
   }
 
   // The code below allows the target to create a new instruction to break the
@@ -204,7 +211,6 @@ void BreakFalseDeps::processDefs(MachineInstr *MI) {
   if (MF->getFunction().hasMinSize())
     return;
 
-  const MCInstrDesc &MCID = MI->getDesc();
   for (unsigned i = 0,
     e = MI->isVariadic() ? MI->getNumOperands() : MCID.getNumDefs();
     i != e; ++i) {
