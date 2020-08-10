@@ -27,6 +27,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -1593,6 +1594,17 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   OuterLoopHeader->replacePhiUsesWith(InnerLoopLatch, OuterLoopLatch);
   InnerLoopHeader->replacePhiUsesWith(OuterLoopPreHeader, InnerLoopPreHeader);
   InnerLoopHeader->replacePhiUsesWith(OuterLoopLatch, InnerLoopLatch);
+
+  // Values defined in the outer loop header could be used in the inner loop
+  // latch. In that case, we need to create LCSSA phis for them, because after
+  // interchanging they will be defined in the new inner loop and used in the
+  // new outer loop.
+  IRBuilder<> Builder(OuterLoopHeader->getContext());
+  SmallVector<Instruction *, 4> MayNeedLCSSAPhis;
+  for (Instruction &I :
+       make_range(OuterLoopHeader->begin(), std::prev(OuterLoopHeader->end())))
+    MayNeedLCSSAPhis.push_back(&I);
+  formLCSSAForInstructions(MayNeedLCSSAPhis, *DT, *LI, SE, Builder);
 
   return true;
 }
