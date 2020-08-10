@@ -23,6 +23,7 @@ using namespace clang;
 const ASTNodeKind::KindInfo ASTNodeKind::AllKindInfo[] = {
   { NKI_None, "<None>" },
   { NKI_None, "TemplateArgument" },
+  { NKI_None, "TemplateArgumentLoc" },
   { NKI_None, "TemplateName" },
   { NKI_None, "NestedNameSpecifierLoc" },
   { NKI_None, "QualType" },
@@ -129,6 +130,8 @@ void DynTypedNode::print(llvm::raw_ostream &OS,
                          const PrintingPolicy &PP) const {
   if (const TemplateArgument *TA = get<TemplateArgument>())
     TA->print(PP, OS);
+  else if (const TemplateArgumentLoc *TAL = get<TemplateArgumentLoc>())
+    TAL->getArgument().print(PP, OS);
   else if (const TemplateName *TN = get<TemplateName>())
     TN->print(OS, PP);
   else if (const NestedNameSpecifier *NNS = get<NestedNameSpecifier>())
@@ -175,6 +178,8 @@ SourceRange DynTypedNode::getSourceRange() const {
     return D->getSourceRange();
   if (const Stmt *S = get<Stmt>())
     return S->getSourceRange();
+  if (const TemplateArgumentLoc *TAL = get<TemplateArgumentLoc>())
+    return TAL->getSourceRange();
   if (const auto *C = get<OMPClause>())
     return SourceRange(C->getBeginLoc(), C->getEndLoc());
   return SourceRange();
