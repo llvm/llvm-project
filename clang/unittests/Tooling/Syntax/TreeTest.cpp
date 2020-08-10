@@ -2973,7 +2973,8 @@ using namespace ::ns;
 `-UsingNamespaceDirective
   |-using
   |-namespace
-  |-::
+  |-NestedNameSpecifier
+  | `-::
   |-ns
   `-;
 )txt"));
@@ -3002,8 +3003,10 @@ using ns::a;
 | `-}
 `-UsingDeclaration
   |-using
-  |-ns
-  |-::
+  |-NestedNameSpecifier
+  | |-IdentifierNameSpecifier
+  | | `-ns
+  | `-::
   |-a
   `-;
 )txt"));
@@ -3207,11 +3210,13 @@ template <class T> struct X<T>::Y {};
   |->
   `-SimpleDeclaration
     |-struct
-    |-X
-    |-<
-    |-T
-    |->
-    |-::
+    |-NestedNameSpecifier
+    | |-SimpleTemplateNameSpecifier
+    | | |-X
+    | | |-<
+    | | |-T
+    | | `->
+    | `-::
     |-Y
     |-{
     |-}
@@ -3245,15 +3250,19 @@ template <class T> struct X {
     |-{
     |-UsingDeclaration
     | |-using
-    | |-T
-    | |-::
+    | |-NestedNameSpecifier
+    | | |-IdentifierNameSpecifier
+    | | | `-T
+    | | `-::
     | |-foo
     | `-;
     |-UsingDeclaration
     | |-using
     | |-typename
-    | |-T
-    | |-::
+    | |-NestedNameSpecifier
+    | | |-IdentifierNameSpecifier
+    | | | `-T
+    | | `-::
     | |-bar
     | `-;
     |-}
