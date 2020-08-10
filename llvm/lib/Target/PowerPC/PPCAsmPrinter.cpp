@@ -1826,7 +1826,7 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
   for (auto &I : TOC) {
     // Setup the csect for the current TC entry.
     MCSectionXCOFF *TCEntry = cast<MCSectionXCOFF>(
-        getObjFileLowering().getSectionForTOCEntry(I.first));
+        getObjFileLowering().getSectionForTOCEntry(I.first, TM));
     OutStreamer->SwitchSection(TCEntry);
 
     OutStreamer->emitLabel(I.second);
