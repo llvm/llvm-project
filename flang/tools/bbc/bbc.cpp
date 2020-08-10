@@ -121,8 +121,6 @@ static llvm::cl::opt<bool> dumpModuleOnFailure("dump-module-on-failure",
 
 using ProgramName = std::string;
 
-static int exitStatus{EXIT_SUCCESS};
-
 // Print the module without the "module { ... }" wrapper.
 static void printModule(mlir::ModuleOp mlirModule, llvm::raw_ostream &out) {
   for (auto &op : mlirModule.getBody()->without_terminator())
@@ -131,7 +129,7 @@ static void printModule(mlir::ModuleOp mlirModule, llvm::raw_ostream &out) {
 }
 
 // Convert Fortran input to MLIR (target is FIR dialect)
-static void convertFortranSourceToMLIR(
+static mlir::LogicalResult convertFortranSourceToMLIR(
     std::string path, Fortran::parser::Options options,
     const ProgramName &programPrefix,
     Fortran::semantics::SemanticsContext &semanticsContext,
@@ -158,8 +156,7 @@ static void convertFortranSourceToMLIR(
       (warnIsError || parsing.messages().AnyFatalError())) {
     llvm::errs() << programPrefix << "could not scan " << path << '\n';
     parsing.messages().Emit(llvm::errs(), parsing.cooked());
-    exitStatus = EXIT_FAILURE;
-    return;
+    return mlir::failure();
   }
 
   // parse the input Fortran
@@ -168,15 +165,13 @@ static void convertFortranSourceToMLIR(
   if (!parsing.consumedWholeFile()) {
     parsing.EmitMessage(llvm::errs(), parsing.finalRestingPlace(),
                         "parser FAIL (final position)");
-    exitStatus = EXIT_FAILURE;
-    return;
+    return mlir::failure();
   }
   if ((!parsing.messages().empty() &&
        (warnIsError || parsing.messages().AnyFatalError())) ||
       !parsing.parseTree().has_value()) {
     llvm::errs() << programPrefix << "could not parse " << path << '\n';
-    exitStatus = EXIT_FAILURE;
-    return;
+    return mlir::failure();
   }
 
   // run semantics
@@ -187,8 +182,7 @@ static void convertFortranSourceToMLIR(
   semantics.EmitMessages(llvm::errs());
   if (semantics.AnyFatalError()) {
     llvm::errs() << programPrefix << "semantic errors in " << path << '\n';
-    exitStatus = EXIT_FAILURE;
-    return;
+    return mlir::failure();
   }
   if (dumpSymbols)
     semantics.DumpSymbols(llvm::outs());
@@ -196,11 +190,10 @@ static void convertFortranSourceToMLIR(
   if (pftDumpTest) {
     if (auto ast{Fortran::lower::createPFT(parseTree, semanticsContext)}) {
       Fortran::lower::dumpPFT(llvm::outs(), *ast);
-    } else {
-      llvm::errs() << "Pre FIR Tree is NULL.\n";
-      exitStatus = EXIT_FAILURE;
+      return mlir::success();
     }
-    return;
+    llvm::errs() << "Pre FIR Tree is NULL.\n";
+    return mlir::failure();
   }
 
   // MLIR+FIR
@@ -217,22 +210,29 @@ static void convertFortranSourceToMLIR(
   llvm::raw_fd_ostream out(outputName, ec);
   if (ec) {
     llvm::errs() << "could not open output file " << outputName << '\n';
-    return;
+    return mlir::failure();
   }
 
   // Otherwise run the default passes.
   mlir::PassManager pm(mlirModule.getContext());
   mlir::applyPassManagerCLOptions(pm);
   if (passPipeline.hasAnyOccurrences()) {
+    // run the command-line specified pipeline
     passPipeline.addToPipeline(pm);
   } else if (emitFIR) {
-    // --emit-fir: Build the IR, verify it, and dump the IR (unconditionally).
+    // --emit-fir: Build the IR, verify it, and dump the IR if the IR passes
+    // verification. Use --dump-module-on-failure to dump invalid IR.
     pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
-    if (mlir::failed(pm.run(mlirModule)))
+    if (mlir::failed(pm.run(mlirModule))) {
       llvm::errs() << "FATAL: verification of lowering to FIR failed";
+      if (dumpModuleOnFailure)
+        mlirModule.dump();
+      return mlir::failure();
+    }
     printModule(mlirModule, out);
-    return;
+    return mlir::success();
   } else {
+    // run the default canned pipeline
     pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
     pm.addPass(mlir::createCanonicalizerPass());
     pm.addPass(fir::createCSEPass());
@@ -254,25 +254,24 @@ static void convertFortranSourceToMLIR(
                                  llvm::sys::fs::OF_None);
     if (ec) {
       llvm::errs() << "can't open output file " + outputName + ".ll";
-      return;
+      return mlir::failure();
     }
     pm.addPass(fir::createLLVMDialectToLLVMPass(outFile.os()));
     if (mlir::succeeded(pm.run(mlirModule))) {
       outFile.keep();
       printModule(mlirModule, out);
-      return;
+      return mlir::success();
     }
-  } else {
+  } else if (mlir::succeeded(pm.run(mlirModule))) {
     // Emit MLIR and do not lower to LLVM IR.
-    if (mlir::succeeded(pm.run(mlirModule))) {
-      printModule(mlirModule, out);
-      return;
-    }
+    printModule(mlirModule, out);
+    return mlir::success();
   }
   // Something went wrong. Try to dump the MLIR module.
   llvm::errs() << "oops, pass manager reported failure\n";
   if (dumpModuleOnFailure)
     mlirModule.dump();
+  return mlir::failure();
 }
 
 int main(int argc, char **argv) {
@@ -316,7 +315,6 @@ int main(int argc, char **argv) {
       .set_warnOnNonstandardUsage(warnStdViolation)
       .set_warningsAreErrors(warnIsError);
 
-  convertFortranSourceToMLIR(inputFilename, options, programPrefix,
-                             semanticsContext, passPipe);
-  return exitStatus;
+  return mlir::failed(convertFortranSourceToMLIR(
+      inputFilename, options, programPrefix, semanticsContext, passPipe));
 }
