@@ -147,6 +147,8 @@ enum class NodeRole : uint8_t {
   /// statement, e.g. loop body for while, for, etc; inner statement for case,
   /// default, etc.
   BodyStatement,
+  List_element,
+  List_delimiter,
 
   // Roles specific to particular node kinds.
   OperatorExpression_operatorToken,
