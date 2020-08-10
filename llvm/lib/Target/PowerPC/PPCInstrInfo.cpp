@@ -2653,21 +2653,34 @@ const unsigned *PPCInstrInfo::getLoadOpcodesForSpillArray() const {
   return LoadSpillOpcodesArray[getSpillTarget()];
 }
 
-void PPCInstrInfo::fixupIsDeadOrKill(MachineInstr &StartMI, MachineInstr &EndMI,
+void PPCInstrInfo::fixupIsDeadOrKill(MachineInstr *StartMI, MachineInstr *EndMI,
                                      unsigned RegNo) const {
   // Conservatively clear kill flag for the register if the instructions are in
   // different basic blocks and in SSA form, because the kill flag may no longer
   // be right. There is no need to bother with dead flags since defs with no
   // uses will be handled by DCE.
-  MachineRegisterInfo &MRI = StartMI.getParent()->getParent()->getRegInfo();
-  if (MRI.isSSA() && (StartMI.getParent() != EndMI.getParent())) {
+  MachineRegisterInfo &MRI = StartMI->getParent()->getParent()->getRegInfo();
+  if (MRI.isSSA() && (StartMI->getParent() != EndMI->getParent())) {
     MRI.clearKillFlags(RegNo);
     return;
   }
 
   // Instructions between [StartMI, EndMI] should be in same basic block.
-  assert((StartMI.getParent() == EndMI.getParent()) &&
+  assert((StartMI->getParent() == EndMI->getParent()) &&
          "Instructions are not in same basic block");
+
+  // If before RA, StartMI may be def through COPY, we need to adjust it to the
+  // real def. See function getForwardingDefMI.
+  if (MRI.isSSA()) {
+    bool Reads, Writes;
+    std::tie(Reads, Writes) = StartMI->readsWritesVirtualRegister(RegNo);
+    if (!Reads && !Writes) {
+      assert(Register::isVirtualRegister(RegNo) &&
+             "Must be a virtual register");
+      // Get real def and ignore copies.
+      StartMI = MRI.getVRegDef(RegNo);
+    }
+  }
 
   bool IsKillSet = false;
 
@@ -2681,21 +2694,21 @@ void PPCInstrInfo::fixupIsDeadOrKill(MachineInstr &StartMI, MachineInstr &EndMI,
   // Set killed flag for EndMI.
   // No need to do anything if EndMI defines RegNo.
   int UseIndex =
-      EndMI.findRegisterUseOperandIdx(RegNo, false, &getRegisterInfo());
+      EndMI->findRegisterUseOperandIdx(RegNo, false, &getRegisterInfo());
   if (UseIndex != -1) {
-    EndMI.getOperand(UseIndex).setIsKill(true);
+    EndMI->getOperand(UseIndex).setIsKill(true);
     IsKillSet = true;
     // Clear killed flag for other EndMI operands related to RegNo. In some
     // upexpected cases, killed may be set multiple times for same register
     // operand in same MI.
-    for (int i = 0, e = EndMI.getNumOperands(); i != e; ++i)
+    for (int i = 0, e = EndMI->getNumOperands(); i != e; ++i)
       if (i != UseIndex)
-        clearOperandKillInfo(EndMI, i);
+        clearOperandKillInfo(*EndMI, i);
   }
 
   // Walking the inst in reverse order (EndMI -> StartMI].
-  MachineBasicBlock::reverse_iterator It = EndMI;
-  MachineBasicBlock::reverse_iterator E = EndMI.getParent()->rend();
+  MachineBasicBlock::reverse_iterator It = *EndMI;
+  MachineBasicBlock::reverse_iterator E = EndMI->getParent()->rend();
   // EndMI has been handled above, skip it here.
   It++;
   MachineOperand *MO = nullptr;
@@ -2721,13 +2734,13 @@ void PPCInstrInfo::fixupIsDeadOrKill(MachineInstr &StartMI, MachineInstr &EndMI,
       } else if ((MO = It->findRegisterDefOperand(RegNo, false, true,
                                                   &getRegisterInfo()))) {
         // No use found, set dead for its def.
-        assert(&*It == &StartMI && "No new def between StartMI and EndMI.");
+        assert(&*It == StartMI && "No new def between StartMI and EndMI.");
         MO->setIsDead(true);
         break;
       }
     }
 
-    if ((&*It) == &StartMI)
+    if ((&*It) == StartMI)
       break;
   }
   // Ensure RegMo liveness is killed after EndMI.
@@ -3858,7 +3871,7 @@ bool PPCInstrInfo::simplifyToLI(MachineInstr &MI, MachineInstr &DefMI,
     // ForwardingOperandReg = LI imm1
     // y = op2 imm2, ForwardingOperandReg(killed)
     if (IsForwardingOperandKilled)
-      fixupIsDeadOrKill(DefMI, MI, ForwardingOperandReg);
+      fixupIsDeadOrKill(&DefMI, &MI, ForwardingOperandReg);
 
     LLVM_DEBUG(dbgs() << "With:\n");
     LLVM_DEBUG(MI.dump());
@@ -3950,9 +3963,9 @@ bool PPCInstrInfo::transformToNewImmFormFedByAdd(
 
     // Update kill flag
     if (RegMO->isKill() || IsKilledFor(RegMO->getReg()))
-      fixupIsDeadOrKill(DefMI, MI, RegMO->getReg());
+      fixupIsDeadOrKill(&DefMI, &MI, RegMO->getReg());
     if (ForwardKilledOperandReg != ~0U)
-      fixupIsDeadOrKill(DefMI, MI, ForwardKilledOperandReg);
+      fixupIsDeadOrKill(&DefMI, &MI, ForwardKilledOperandReg);
   }
 
   LLVM_DEBUG(dbgs() << "With:\n");
@@ -4063,12 +4076,12 @@ bool PPCInstrInfo::transformToImmFormFedByAdd(
   // x = ADD reg(killed), imm
   // y = XOP 0, x
   if (IsFwdFeederRegKilled || RegMO->isKill())
-    fixupIsDeadOrKill(DefMI, MI, RegMO->getReg());
+    fixupIsDeadOrKill(&DefMI, &MI, RegMO->getReg());
   // Pattern 3:
   // ForwardKilledOperandReg = ADD reg, imm
   // y = XOP 0, ForwardKilledOperandReg(killed)
   if (ForwardKilledOperandReg != ~0U)
-    fixupIsDeadOrKill(DefMI, MI, ForwardKilledOperandReg);
+    fixupIsDeadOrKill(&DefMI, &MI, ForwardKilledOperandReg);
 
   LLVM_DEBUG(dbgs() << "With:\n");
   LLVM_DEBUG(MI.dump());
@@ -4224,7 +4237,7 @@ bool PPCInstrInfo::transformToImmFormFedByLI(MachineInstr &MI,
   // ForwardKilledOperandReg = LI imm
   // y = XOP reg, ForwardKilledOperandReg(killed)
   if (ForwardKilledOperandReg != ~0U)
-    fixupIsDeadOrKill(DefMI, MI, ForwardKilledOperandReg);
+    fixupIsDeadOrKill(&DefMI, &MI, ForwardKilledOperandReg);
   return true;
 }
 
