@@ -218,3 +218,32 @@ TEST_F(TestSwiftASTContext, SwiftFriendlyTriple) {
                 llvm::Triple("aarch64-unknown-linux")),
             llvm::Triple("aarch64-unknown-linux-gnu"));
 }
+
+namespace {
+  const std::vector<std::string> duplicated_flags = {
+    "-DMACRO1", "-D", "MACRO1", "-UMACRO2", "-U", "MACRO2",
+    "-I/path1", "-I", "/path1", "-F/path2", "-F", "/path2",
+    "-fmodule-map-file=/path3", "-fmodule-map-file=/path3",
+    "-F/path2", "-F", "/path2", "-I/path1", "-I", "/path1",
+    "-UMACRO2", "-U", "MACRO2", "-DMACRO1", "-D", "MACRO1",
+  };
+  const std::vector<std::string> uniqued_flags = {
+    "-DMACRO1", "-UMACRO2", "-I/path1", "-F/path2", "-fmodule-map-file=/path3"
+  };
+} // namespace
+
+TEST(ClangArgs, UniquingCollisionWithExistingFlags) {
+  const std::vector<std::string> source = duplicated_flags;
+  std::vector<std::string> dest = uniqued_flags;
+  SwiftASTContext::AddExtraClangArgs(source, dest);
+
+  EXPECT_EQ(dest, uniqued_flags);
+}
+
+TEST(ClangArgs, UniquingCollisionWithAddedFlags) {
+  const std::vector<std::string> source = duplicated_flags;
+  std::vector<std::string> dest;
+  SwiftASTContext::AddExtraClangArgs(source, dest);
+
+  EXPECT_EQ(dest, uniqued_flags);
+}
