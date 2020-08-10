@@ -514,7 +514,7 @@ public:
   /// the machine instruction generated due to folding.
   MachineInstr *optimizeLoadInstr(MachineInstr &MI,
                                   const MachineRegisterInfo *MRI,
-                                  unsigned &FoldAsLoadDefReg,
+                                  Register &FoldAsLoadDefReg,
                                   MachineInstr *&DefMI) const override;
 
   std::pair<unsigned, unsigned>

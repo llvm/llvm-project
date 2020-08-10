@@ -1932,22 +1932,22 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
   // If the destination integer type is not the intptr_t type for this target,
   // do a ptrtoint to intptr_t then do a trunc or zext.  This allows the cast
   // to be exposed to other transforms.
-
+  Value *SrcOp = CI.getPointerOperand();
   Type *Ty = CI.getType();
   unsigned AS = CI.getPointerAddressSpace();
+  if (Ty->getScalarSizeInBits() != DL.getPointerSizeInBits(AS)) {
+    Type *IntPtrTy = DL.getIntPtrType(CI.getContext(), AS);
+    if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
+      // Handle vectors of pointers.
+      // FIXME: what should happen for scalable vectors?
+      IntPtrTy = FixedVectorType::get(IntPtrTy, VecTy->getNumElements());
+    }
 
-  if (Ty->getScalarSizeInBits() == DL.getPointerSizeInBits(AS))
-    return commonPointerCastTransforms(CI);
-
-  Type *PtrTy = DL.getIntPtrType(CI.getContext(), AS);
-  if (auto *VTy = dyn_cast<VectorType>(Ty)) {
-    // Handle vectors of pointers.
-    // FIXME: what should happen for scalable vectors?
-    PtrTy = FixedVectorType::get(PtrTy, VTy->getNumElements());
+    Value *P = Builder.CreatePtrToInt(SrcOp, IntPtrTy);
+    return CastInst::CreateIntegerCast(P, Ty, /*isSigned=*/false);
   }
 
-  Value *P = Builder.CreatePtrToInt(CI.getOperand(0), PtrTy);
-  return CastInst::CreateIntegerCast(P, Ty, /*isSigned=*/false);
+  return commonPointerCastTransforms(CI);
 }
 
 /// This input value (which is known to have vector type) is being zero extended

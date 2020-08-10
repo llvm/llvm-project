@@ -191,6 +191,59 @@ private:
   Node *FirstChild = nullptr;
 };
 
+/// A list of Elements separated or terminated by a fixed token.
+///
+/// This type models the following grammar construct:
+/// delimited-list(element, delimiter, termination, canBeEmpty)
+class List : public Tree {
+public:
+  template <typename Element> struct ElementAndDelimiter {
+    Element *element;
+    Leaf *delimiter;
+  };
+
+  enum class TerminationKind {
+    Terminated,
+    MaybeTerminated,
+    Separated,
+  };
+
+  using Tree::Tree;
+  /// Returns the elements and corresponding delimiters. Missing elements
+  /// and delimiters are represented as null pointers.
+  ///
+  /// For example, in a separated list:
+  /// "a, b, c" <=> [("a", ","), ("b", ","), ("c", null)]
+  /// "a, , c" <=> [("a", ","), (null, ","), ("c", ",)]
+  /// "a, b," <=> [("a", ","), ("b", ","), (null, null)]
+  ///
+  /// In a terminated or maybe-terminated list:
+  /// "a, b," <=> [("a", ","), ("b", ",")]
+  std::vector<ElementAndDelimiter<Node>> getElementsAsNodesAndDelimiters();
+
+  /// Returns the elements of the list. Missing elements are represented
+  /// as null pointers in the same way as in the return value of
+  /// `getElementsAsNodesAndDelimiters()`.
+  std::vector<Node *> getElementsAsNodes();
+
+  // These can't be implemented with the information we have!
+
+  /// Returns the appropriate delimiter for this list.
+  ///
+  /// Useful for discovering the correct delimiter to use when adding
+  /// elements to empty or one-element lists.
+  clang::tok::TokenKind getDelimiterTokenKind();
+
+  TerminationKind getTerminationKind();
+
+  /// Whether this list can be empty in syntactically and semantically correct
+  /// code.
+  ///
+  /// This list may be empty when the source code has errors even if
+  /// canBeEmpty() returns false.
+  bool canBeEmpty();
+};
+
 } // namespace syntax
 } // namespace clang
 
