@@ -350,17 +350,16 @@ private:
 
 TrainingLogger::TrainingLogger(StringRef LogFileName)
     : LogFileName(LogFileName) {
-  for (size_t I = 0; I < NumberOfFeatures; ++I) {
+  for (size_t I = 0; I < NumberOfFeatures; ++I)
     Features.push_back(InlineFeatures());
-  }
 }
 
 /// Log one inlining event.
 void TrainingLogger::logInlineEvent(const InlineEvent &Event,
                                     const MLModelRunner &ModelRunner) {
-  for (size_t I = 0; I < NumberOfFeatures; ++I) {
+  for (size_t I = 0; I < NumberOfFeatures; ++I)
     Features[I].push_back(ModelRunner.getFeature(I));
-  }
+
   Decisions.push_back(Event.AdvisedDecision);
   Effects.push_back(Event.Effect);
   Rewards.push_back(Event.Reward);
