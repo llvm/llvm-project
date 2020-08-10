@@ -2202,8 +2202,11 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForFunctionDescriptor(
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
-    const MCSymbol *Sym) const {
+    const MCSymbol *Sym, const TargetMachine &TM) const {
+  // Use TE storage-mapping class when large code model is enabled so that
+  // the chance of needing -bbigtoc is decreased.
   return getContext().getXCOFFSection(
-      cast<MCSymbolXCOFF>(Sym)->getSymbolTableName(), XCOFF::XMC_TC,
+      cast<MCSymbolXCOFF>(Sym)->getSymbolTableName(),
+      TM.getCodeModel() == CodeModel::Large ? XCOFF::XMC_TE : XCOFF::XMC_TC,
       XCOFF::XTY_SD, XCOFF::C_HIDEXT, SectionKind::getData());
 }

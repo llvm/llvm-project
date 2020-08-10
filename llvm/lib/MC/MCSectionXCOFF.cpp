@@ -45,6 +45,7 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
       printCsectDirective(OS);
       break;
     case XCOFF::XMC_TC:
+    case XCOFF::XMC_TE:
       break;
     case XCOFF::XMC_TC0:
       OS << "\t.toc\n";
