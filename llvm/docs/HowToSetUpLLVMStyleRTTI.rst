@@ -430,7 +430,7 @@ template argument and the parent class as the second argument. Any class that
 uses ``RTTIExtends`` must define a ``static char ID`` member, the address of
 which will be used to identify the type.
 
-This open-hierarchy RTTI support should only be used if your use case requries
+This open-hierarchy RTTI support should only be used if your use case requires
 it. Otherwise the standard LLVM RTTI system should be preferred.
 
 .. _`Curiously Recurring Template Idiom`:
