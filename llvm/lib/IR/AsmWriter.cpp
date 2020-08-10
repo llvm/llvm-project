@@ -3089,7 +3089,7 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
     printTypeIdInfo(*TIdInfo);
 
   auto PrintRange = [&](const ConstantRange &Range) {
-    Out << "[" << Range.getLower() << ", " << Range.getSignedMax() << "]";
+    Out << "[" << Range.getSignedMin() << ", " << Range.getSignedMax() << "]";
   };
 
   if (!FS->paramAccesses().empty()) {
