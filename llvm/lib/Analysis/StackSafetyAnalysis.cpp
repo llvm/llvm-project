@@ -996,6 +996,9 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
     std::vector<FunctionSummary::ParamAccess> NewParams;
     NewParams.reserve(KV.second.Params.size());
     for (auto &Param : KV.second.Params) {
+      // It's not needed as FullSet is processed the same as a missing value.
+      if (Param.second.Range.isFullSet())
+        continue;
       NewParams.emplace_back();
       FunctionSummary::ParamAccess &New = NewParams.back();
       New.ParamNo = Param.first;
