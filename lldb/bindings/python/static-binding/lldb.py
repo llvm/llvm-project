@@ -224,6 +224,7 @@ eLaunchFlagDontSetExitStatus = _lldb.eLaunchFlagDontSetExitStatus
 eLaunchFlagDetachOnError = _lldb.eLaunchFlagDetachOnError
 eLaunchFlagShellExpandArguments = _lldb.eLaunchFlagShellExpandArguments
 eLaunchFlagCloseTTYOnExit = _lldb.eLaunchFlagCloseTTYOnExit
+eLaunchFlagInheritTCCFromParent = _lldb.eLaunchFlagInheritTCCFromParent
 eOnlyThisThread = _lldb.eOnlyThisThread
 eAllThreads = _lldb.eAllThreads
 eOnlyDuringStepping = _lldb.eOnlyDuringStepping
