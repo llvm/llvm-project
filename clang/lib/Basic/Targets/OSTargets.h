@@ -465,6 +465,8 @@ protected:
 public:
   OpenBSDTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : OSTargetInfo<Target>(Triple, Opts) {
+    this->IntMaxType = TargetInfo::SignedLongLong;
+    this->Int64Type = TargetInfo::SignedLongLong;
     switch (Triple.getArch()) {
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
