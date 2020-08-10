@@ -15,16 +15,16 @@
 ; RUN: --check-prefix=64LARGE-MIR %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc-ibm-aix-xcoff \
-; RUN: -code-model=small < %s | FileCheck --check-prefixes=32SMALL-ASM,CHECK %s
+; RUN: -code-model=small < %s | FileCheck --check-prefixes=32SMALL-ASM,SMALL-ASM %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc-ibm-aix-xcoff \
-; RUN: -code-model=large < %s | FileCheck --check-prefixes=32LARGE-ASM,CHECK %s
+; RUN: -code-model=large < %s | FileCheck --check-prefixes=32LARGE-ASM,LARGE-ASM %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff \
-; RUN: -code-model=small < %s | FileCheck --check-prefixes=64SMALL-ASM,CHECK %s
+; RUN: -code-model=small < %s | FileCheck --check-prefixes=64SMALL-ASM,SMALL-ASM %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mtriple powerpc64-ibm-aix-xcoff \
-; RUN: -code-model=large < %s | FileCheck --check-prefixes=64LARGE-ASM,CHECK %s
+; RUN: -code-model=large < %s | FileCheck --check-prefixes=64LARGE-ASM,LARGE-ASM %s
 
 define float @test_float() {
 entry:
@@ -83,5 +83,8 @@ entry:
 ; 64LARGE-ASM:         lfs 1, 0([[REG2]])
 ; 64LARGE-ASM:         blr
 
-; CHECK: .toc
-; CHECK: .tc L..CPI0_0[TC],L..CPI0_0
+; SMALL-ASM: .toc
+; SMALL-ASM: .tc L..CPI0_0[TC],L..CPI0_0
+
+; LARGE-ASM: .toc
+; LARGE-ASM: .tc L..CPI0_0[TE],L..CPI0_0

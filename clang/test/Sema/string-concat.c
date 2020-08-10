@@ -1,6 +1,6 @@
 
-// RUN: %clang_cc1 -x c -fsyntax-only -verify %s
-// RUN: %clang_cc1 -x c++ -fsyntax-only -verify %s
+// RUN: %clang_cc1 -x c -Wstring-concatenation -fsyntax-only -verify %s
+// RUN: %clang_cc1 -x c++ -Wstring-concatenation -fsyntax-only -verify %s
 
 const char *missing_comma[] = {
     "basic_filebuf",
@@ -108,7 +108,7 @@ const char *not_warn2[] = {
     "// Aaa\\\n"   " Bbb\\ \n"   " Ccc?" "?/\n",
     "// Aaa\\\r\n" " Bbb\\ \r\n" " Ccc?" "?/\r\n",
     "// Aaa\\\r"   " Bbb\\ \r"   " Ccc?" "?/\r"
-  };
+};
 
 // Do not warn when all the elements in the initializer are concatenated together.
 const char *all_elems_in_init_concatenated[] = {"a" "b" "c"};
