@@ -2319,15 +2319,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     setRegsToType(MRI, DefRegs, HalfTy);
 
-    B.buildInstr(Opc)
-      .addDef(DefRegs[0])
-      .addUse(Src0Regs[0])
-      .addUse(Src1Regs[0]);
-
-    B.buildInstr(Opc)
-      .addDef(DefRegs[1])
-      .addUse(Src0Regs[1])
-      .addUse(Src1Regs[1]);
+    B.buildInstr(Opc, {DefRegs[0]}, {Src0Regs[0], Src1Regs[0]});
+    B.buildInstr(Opc, {DefRegs[1]}, {Src0Regs[1], Src1Regs[1]});
 
     MRI.setRegBank(DstReg, AMDGPU::VGPRRegBank);
     MI.eraseFromParent();
