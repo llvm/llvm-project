@@ -48,10 +48,10 @@ struct S {
 
 // CHECK-DAG: [[S_FLOAT_TY:%.+]] = type { float }
 // CHECK-DAG: [[S_INT_TY:%.+]] = type { i{{[0-9]+}} }
-// CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 66, i32 0, i32 0, i8*
+// CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 66, i32 0, i32 0, i8*
 // TLS-CHECK-DAG: [[S_FLOAT_TY:%.+]] = type { float }
 // TLS-CHECK-DAG: [[S_INT_TY:%.+]] = type { i{{[0-9]+}} }
-// TLS-CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 66, i32 0, i32 0, i8*
+// TLS-CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 66, i32 0, i32 0, i8*
 
 // CHECK-DAG: [[T_VAR:@.+]] = internal global i{{[0-9]+}} 1122,
 // CHECK-DAG: [[VEC:@.+]] = internal global [2 x i{{[0-9]+}}] [i{{[0-9]+}} 1, i{{[0-9]+}} 2],
