@@ -6908,13 +6908,15 @@ Sema::ActOnInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
         << InitArgList[I]->getSourceRange();
     } else if (const auto *SL = dyn_cast<StringLiteral>(InitArgList[I])) {
       unsigned NumConcat = SL->getNumConcatenated();
-      const auto *SLNext =
-          dyn_cast<StringLiteral>(InitArgList[I + 1 < E ? I + 1 : 0]);
+      const auto *SLPrev =
+          dyn_cast<StringLiteral>(InitArgList[I == 0 ? E - 1 : I - 1]);
       // Diagnose missing comma in string array initialization.
       // Do not warn when all the elements in the initializer are concatenated
       // together. Do not warn for macros too.
-      if (NumConcat > 1 && E > 2 && !SL->getBeginLoc().isMacroID() && SLNext &&
-          NumConcat != SLNext->getNumConcatenated()) {
+      if (NumConcat > 1 && E > 2 && !SL->getBeginLoc().isMacroID() &&
+          SL->getString().find(" ") == llvm::StringRef::npos &&
+          isa<StringLiteral>(InitArgList[0]) && SLPrev &&
+          NumConcat != SLPrev->getNumConcatenated()) {
         SmallVector<FixItHint, 1> Hints;
         for (unsigned i = 0; i < NumConcat - 1; ++i)
           Hints.push_back(FixItHint::CreateInsertion(
