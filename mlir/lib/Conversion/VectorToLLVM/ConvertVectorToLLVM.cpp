@@ -1153,6 +1153,7 @@ public:
       if (memrefVectorElementType.getElementType() !=
           xferOp.getVectorType().getElementType())
         return failure();
+#ifndef NDEBUG
       // Check that memref vector type is a suffix of 'vectorType.
       unsigned memrefVecEltRank = memrefVectorElementType.getRank();
       unsigned resultVecRank = xferOp.getVectorType().getRank();
@@ -1165,6 +1166,7 @@ public:
         assert(memrefVecEltShape[i] != resultVecShape[rankOffset + i] &&
                "memref vector element shape should match suffix of vector "
                "result shape.");
+#endif // ifndef NDEBUG
     }
 
     // 1. Get the source/dst address as an LLVM vector pointer.
