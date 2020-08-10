@@ -2154,6 +2154,10 @@ Emit section containing metadata on function stack sizes
 
 Emit full debug info for all types used by the program
 
+.. option:: -feliminate-unused-debug-types, -fno-eliminate-unused-debug-types
+
+Suppress (or emit) debug info for types that are unused but defined by the program.
+
 .. option:: -fstrict-aliasing, -fno-strict-aliasing
 
 .. option:: -fstrict-enums, -fno-strict-enums
