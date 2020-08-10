@@ -153,7 +153,7 @@ G_BITCAST
 ^^^^^^^^^
 
 Reinterpret a value as a new type. This is usually done without
-changing any bits but this is not always the case due a sublety in the
+changing any bits but this is not always the case due a subtlety in the
 definition of the :ref:`LLVM-IR Bitcast Instruction <i_bitcast>`. It
 is allowed to bitcast between pointers with the same size, but
 different address spaces.
