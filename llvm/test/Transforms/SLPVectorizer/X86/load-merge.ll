@@ -56,7 +56,7 @@ define <4 x float> @PR16739_byref(<4 x float>* nocapture readonly dereferenceabl
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[X]], i64 0, i64 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[GEP0]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    [[X2:%.*]] = load float, float* [[GEP2]]
+; CHECK-NEXT:    [[X2:%.*]] = load float, float* [[GEP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
