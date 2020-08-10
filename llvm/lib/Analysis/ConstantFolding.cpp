@@ -18,6 +18,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -42,6 +43,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsARM.h"
+#include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
@@ -1469,6 +1471,11 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::arm_mve_vctp16:
   case Intrinsic::arm_mve_vctp32:
   case Intrinsic::arm_mve_vctp64:
+  // WebAssembly float semantics are always known
+  case Intrinsic::wasm_trunc_signed:
+  case Intrinsic::wasm_trunc_unsigned:
+  case Intrinsic::wasm_trunc_saturate_signed:
+  case Intrinsic::wasm_trunc_saturate_unsigned:
     return true;
 
   // Floating point operations cannot be folded in strictfp functions in
@@ -1861,11 +1868,45 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       return ConstantInt::get(Ty->getContext(), Val.bitcastToAPInt());
     }
 
+    APFloat U = Op->getValueAPF();
+
+    if (IntrinsicID == Intrinsic::wasm_trunc_signed ||
+        IntrinsicID == Intrinsic::wasm_trunc_unsigned ||
+        IntrinsicID == Intrinsic::wasm_trunc_saturate_signed ||
+        IntrinsicID == Intrinsic::wasm_trunc_saturate_unsigned) {
+
+      bool Saturating = IntrinsicID == Intrinsic::wasm_trunc_saturate_signed ||
+                        IntrinsicID == Intrinsic::wasm_trunc_saturate_unsigned;
+      bool Signed = IntrinsicID == Intrinsic::wasm_trunc_signed ||
+                    IntrinsicID == Intrinsic::wasm_trunc_saturate_signed;
+
+      if (U.isNaN())
+        return Saturating ? ConstantInt::get(Ty, 0) : nullptr;
+
+      unsigned Width = Ty->getIntegerBitWidth();
+      APSInt Int(Width, !Signed);
+      bool IsExact = false;
+      APFloat::opStatus Status =
+          U.convertToInteger(Int, APFloat::rmTowardZero, &IsExact);
+
+      if (Status == APFloat::opOK || Status == APFloat::opInexact)
+        return ConstantInt::get(Ty, Int);
+
+      if (!Saturating)
+        return nullptr;
+
+      if (U.isNegative())
+        return Signed ? ConstantInt::get(Ty, APInt::getSignedMinValue(Width))
+                      : ConstantInt::get(Ty, APInt::getMinValue(Width));
+      else
+        return Signed ? ConstantInt::get(Ty, APInt::getSignedMaxValue(Width))
+                      : ConstantInt::get(Ty, APInt::getMaxValue(Width));
+    }
+
     if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
       return nullptr;
 
     // Use internal versions of these intrinsics.
-    APFloat U = Op->getValueAPF();
 
     if (IntrinsicID == Intrinsic::nearbyint || IntrinsicID == Intrinsic::rint) {
       U.roundToIntegral(APFloat::rmNearestTiesToEven);
