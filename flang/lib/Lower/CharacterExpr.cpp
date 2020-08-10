@@ -18,7 +18,8 @@
 //===----------------------------------------------------------------------===//
 
 /// Get fir.char<kind> type with the same kind as inside str.
-static fir::CharacterType getCharacterType(mlir::Type type) {
+fir::CharacterType
+Fortran::lower::CharacterExprHelper::getCharacterType(mlir::Type type) {
   if (auto boxType = type.dyn_cast<fir::BoxCharType>())
     return boxType.getEleTy();
   if (auto refType = type.dyn_cast<fir::ReferenceType>())
@@ -32,7 +33,8 @@ static fir::CharacterType getCharacterType(mlir::Type type) {
   llvm_unreachable("Invalid character value type");
 }
 
-static fir::CharacterType getCharacterType(const fir::CharBoxValue &box) {
+fir::CharacterType Fortran::lower::CharacterExprHelper::getCharacterType(
+    const fir::CharBoxValue &box) {
   return getCharacterType(box.getBuffer().getType());
 }
 

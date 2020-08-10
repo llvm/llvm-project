@@ -146,9 +146,8 @@ mlir::Value Fortran::lower::FirOpBuilder::convertWithSemantics(
   auto fromTy = val.getType();
   if (fromTy == toTy)
     return val;
-  // FIXME: add a fir::is_integer() test
   ComplexExprHelper helper{*this, loc};
-  if ((fir::isa_real(fromTy) || fromTy.isSignlessInteger()) &&
+  if ((fir::isa_real(fromTy) || fir::isa_integer(fromTy)) &&
       fir::isa_complex(toTy)) {
     // imaginary part is zero
     auto eleTy = helper.getComplexPartType(toTy);
@@ -158,9 +157,8 @@ mlir::Value Fortran::lower::FirOpBuilder::convertWithSemantics(
     auto imag = createRealConstant(loc, eleTy, zero);
     return helper.createComplex(toTy, cast, imag);
   }
-  // FIXME: add a fir::is_integer() test
   if (fir::isa_complex(fromTy) &&
-      (toTy.isSignlessInteger() || fir::isa_real(toTy))) {
+      (fir::isa_integer(toTy) || fir::isa_real(toTy))) {
     // drop the imaginary part
     auto rp = helper.extractComplexPart(val, /*isImagPart=*/false);
     return createConvert(loc, toTy, rp);
