@@ -145,6 +145,7 @@ using TypeLocMatcher = internal::Matcher<TypeLoc>;
 using NestedNameSpecifierMatcher = internal::Matcher<NestedNameSpecifier>;
 using NestedNameSpecifierLocMatcher = internal::Matcher<NestedNameSpecifierLoc>;
 using CXXCtorInitializerMatcher = internal::Matcher<CXXCtorInitializer>;
+using TemplateArgumentLocMatcher = internal::Matcher<TemplateArgumentLoc>;
 /// @}
 
 /// Matches any node.
@@ -514,6 +515,18 @@ extern const internal::VariadicAllOfMatcher<CXXCtorInitializer>
 /// templateArgument()
 ///   matches 'int' in C<int>.
 extern const internal::VariadicAllOfMatcher<TemplateArgument> templateArgument;
+
+/// Matches template arguments (with location info).
+///
+/// Given
+/// \code
+///   template <typename T> struct C {};
+///   C<int> c;
+/// \endcode
+/// templateArgumentLoc()
+///   matches 'int' in C<int>.
+extern const internal::VariadicAllOfMatcher<TemplateArgumentLoc>
+    templateArgumentLoc;
 
 /// Matches template name.
 ///
