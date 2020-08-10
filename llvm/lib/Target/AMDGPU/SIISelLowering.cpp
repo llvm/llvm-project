@@ -8552,7 +8552,7 @@ SDValue SITargetLowering::performSHLPtrCombine(SDNode *N,
   EVT VT = N->getValueType(0);
 
   SDValue ShlX = DAG.getNode(ISD::SHL, SL, VT, N0.getOperand(0), N1);
-  SDValue COffset = DAG.getConstant(Offset, SL, MVT::i32);
+  SDValue COffset = DAG.getConstant(Offset, SL, VT);
 
   SDNodeFlags Flags;
   Flags.setNoUnsignedWrap(N->getFlags().hasNoUnsignedWrap() &&
