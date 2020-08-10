@@ -170,11 +170,15 @@ mlir::Value Fortran::lower::CharacterExprHelper::createLoadCharAt(
     const fir::CharBoxValue &str, mlir::Value index) {
   // In case this is addressing a length one character scalar simply return
   // the single character.
-  if (str.getBuffer().getType().isa<fir::CharacterType>())
-    return str.getBuffer();
-  auto buff = builder.createConvert(loc, getSeqTy(str), str.getBuffer());
+  auto buff = str.getBuffer();
+  if (auto charTy = buff.getType().dyn_cast<fir::CharacterType>()) {
+    assert(charTy.getLen() == 1 && "string not handled");
+    return buff;
+  }
+  assert(fir::isa_ref_type(buff.getType()));
+  auto coor = builder.createConvert(loc, getSeqTy(str), buff);
   auto addr = builder.create<fir::CoordinateOp>(loc, getReferenceType(str),
-                                                buff, index);
+                                                coor, index);
   return builder.create<fir::LoadOp>(loc, addr);
 }
 
@@ -190,9 +194,12 @@ void Fortran::lower::CharacterExprHelper::createStoreCharAt(
 void Fortran::lower::CharacterExprHelper::createCopy(
     const fir::CharBoxValue &dest, const fir::CharBoxValue &src,
     mlir::Value count) {
+  auto from = src;
+  if (needToMaterialize(src))
+    from = materializeValue(src);
   Fortran::lower::DoLoopHelper{builder, loc}.createLoop(
       count, [&](Fortran::lower::FirOpBuilder &, mlir::Value index) {
-        auto charVal = createLoadCharAt(src, index);
+        auto charVal = createLoadCharAt(from, index);
         createStoreCharAt(dest, index, charVal);
       });
 }
@@ -228,7 +235,8 @@ void Fortran::lower::CharacterExprHelper::createLengthOneAssign(
   auto valTy = val.getType();
   // Precondition is rhs is size 1, but it may be wrapped in a fir.array.
   if (auto seqTy = valTy.dyn_cast<fir::SequenceType>()) {
-    auto zero = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
+    auto zero =
+        builder.createIntegerConstant(loc, builder.getIntegerType(32), 0);
     valTy = seqTy.getEleTy();
     val = builder.create<fir::ExtractValueOp>(loc, valTy, val, zero);
   }
@@ -294,11 +302,14 @@ fir::CharBoxValue Fortran::lower::CharacterExprHelper::createConcatenate(
   auto upperBound = builder.create<mlir::SubIOp>(loc, len, one);
   auto lhsLen =
       builder.createConvert(loc, builder.getIndexType(), lhs.getLen());
+  auto from = rhs;
+  if (needToMaterialize(rhs))
+    from = materializeValue(rhs);
   Fortran::lower::DoLoopHelper{builder, loc}.createLoop(
       lhs.getLen(), upperBound, one,
       [&](Fortran::lower::FirOpBuilder &bldr, mlir::Value index) {
         auto rhsIndex = bldr.create<mlir::SubIOp>(loc, index, lhsLen);
-        auto charVal = createLoadCharAt(rhs, rhsIndex);
+        auto charVal = createLoadCharAt(from, rhsIndex);
         createStoreCharAt(temp, index, charVal);
       });
   return temp;
@@ -332,7 +343,7 @@ fir::CharBoxValue Fortran::lower::CharacterExprHelper::createSubstring(
       loc, getReferenceType(str), buff, offset);
 
   // Compute the length.
-  mlir::Value substringLen{};
+  mlir::Value substringLen;
   if (nbounds < 2) {
     substringLen =
         builder.create<mlir::SubIOp>(loc, str.getLen(), castBounds[0]);

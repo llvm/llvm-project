@@ -775,7 +775,7 @@ private:
       auto chTy =
           converter.genType(Fortran::common::TypeCategory::Character, KIND);
       auto arrayTy = fir::SequenceType::get(shape, chTy);
-      auto idxTy = builder.getIndexType();
+      auto idxTy = builder.getIntegerType(32);
       mlir::Value array = builder.create<fir::UndefOp>(getLoc(), arrayTy);
       Fortran::evaluate::ConstantSubscripts subscripts = con.lbounds();
       do {

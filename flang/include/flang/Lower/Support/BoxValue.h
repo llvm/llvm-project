@@ -13,6 +13,7 @@
 #ifndef LOWER_SUPPORT_BOXVALUE_H
 #define LOWER_SUPPORT_BOXVALUE_H
 
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
@@ -51,7 +52,12 @@ using UnboxedValue = mlir::Value;
 class AbstractBox {
 public:
   AbstractBox() = delete;
-  AbstractBox(mlir::Value addr) : addr{addr} {}
+  AbstractBox(mlir::Value addr) : addr{addr} {
+    // FIXME: enable the assert!
+    // assert(fir::isa_passbyref_type(addr.getType()));
+  }
+
+  /// An abstract box always contains a memory reference to a value.
   mlir::Value getAddr() const { return addr; }
 
 protected:
@@ -67,9 +73,10 @@ public:
 
   CharBoxValue clone(mlir::Value newBase) const { return {newBase, len}; }
 
-  mlir::Value getLen() const { return len; }
+  /// Convenience alias to get the memory reference to the buffer.
   mlir::Value getBuffer() const { return getAddr(); }
 
+  mlir::Value getLen() const { return len; }
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &,
                                        const CharBoxValue &);
   LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this; }

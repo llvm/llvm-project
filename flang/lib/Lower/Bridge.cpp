@@ -40,6 +40,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
+#define DEBUG_TYPE "flang-lower-bridge"
 
 #undef TODO
 #define TODO() llvm_unreachable("not yet implemented");
@@ -1762,7 +1763,7 @@ private:
         // The target data layout is the better solution because it is selected
         // by the instance of flang's chosen target rather than by properties of
         // the build machine.
-        mlir::Type commonTy = [&]() {
+        mlir::TupleType commonTy = [&]() {
           llvm::SmallVector<mlir::Type, 8> members;
           for (const auto &obj : details->objects()) {
             auto memTy = genType(*obj);
@@ -1788,18 +1789,23 @@ private:
           // Assume that the members of the COMMON block will appear in an order
           // that is sorted by offset.
           [[maybe_unused]] std::int64_t lastByteOff = -1;
+          LLVM_DEBUG(llvm::errs() << "block {\n");
           for (const auto &obj : details->objects()) {
             assert(lastByteOff < static_cast<std::int64_t>(obj->offset()));
             lastByteOff = static_cast<std::int64_t>(obj->offset());
+            LLVM_DEBUG(llvm::errs() << "offset: " << obj->offset() << '\n');
             if (const auto *objDet =
                     obj->detailsIf<Fortran::semantics::ObjectEntityDetails>())
               if (objDet->init()) {
                 auto initVal = genInitializerExprValue(objDet->init().value());
-                auto off = builder.createIntegerConstant(loc, idxTy, offset++);
-                cb = builder.create<fir::InsertValueOp>(
-                    loc, commonTy, cb, fir::getBase(initVal), off);
+                auto off = builder.createIntegerConstant(loc, idxTy, offset);
+                auto castVal = builder.createConvert(
+                    loc, commonTy.getType(offset++), fir::getBase(initVal));
+                cb = builder.create<fir::InsertValueOp>(loc, commonTy, cb,
+                                                        castVal, off);
               }
           }
+          LLVM_DEBUG(llvm::errs() << "}\n");
           builder.create<fir::HasValueOp>(loc, cb);
         };
         global = builder->createGlobal(loc, commonTy, globalName,
@@ -2346,6 +2352,8 @@ private:
       Fortran::lower::pft::Variable var(*sym, true);
       instantiateVar(var, fakeMap);
     }
+    if (auto *region = func.getCallableRegion())
+      region->dropAllReferences();
     func.erase();
     delete builder;
     builder = nullptr;
