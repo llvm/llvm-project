@@ -4957,6 +4957,8 @@ def err_mismatched_exception_spec_explicit_instantiation : Error<
 def ext_mismatched_exception_spec_explicit_instantiation : ExtWarn<
   err_mismatched_exception_spec_explicit_instantiation.Text>,
   InGroup<MicrosoftExceptionSpec>;
+def err_explicit_instantiation_dependent : Error<
+  "explicit instantiation has dependent template arguments">;
 
 // C++ typename-specifiers
 def err_typename_nested_not_found : Error<"no type named %0 in %1">;

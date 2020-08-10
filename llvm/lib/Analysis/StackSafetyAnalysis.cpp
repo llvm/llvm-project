@@ -49,6 +49,8 @@ STATISTIC(NumCombinedParamAccessesBefore,
           "Number of total param accesses before generateParamAccessSummary.");
 STATISTIC(NumCombinedParamAccessesAfter,
           "Number of total param accesses after generateParamAccessSummary.");
+STATISTIC(NumCombinedDataFlowNodes,
+          "Number of total nodes in combined index for dataflow processing.");
 
 static cl::opt<int> StackSafetyMaxIterations("stack-safety-max-iterations",
                                              cl::init(20), cl::Hidden);
@@ -60,6 +62,32 @@ static cl::opt<bool> StackSafetyRun("stack-safety-run", cl::init(false),
                                     cl::Hidden);
 
 namespace {
+
+// Check if we should bailout for such ranges.
+bool isUnsafe(const ConstantRange &R) {
+  return R.isEmptySet() || R.isFullSet() || R.isUpperSignWrapped();
+}
+
+ConstantRange addOverflowNever(const ConstantRange &L, const ConstantRange &R) {
+  assert(!L.isSignWrappedSet());
+  assert(!R.isSignWrappedSet());
+  if (L.signedAddMayOverflow(R) !=
+      ConstantRange::OverflowResult::NeverOverflows)
+    return ConstantRange::getFull(L.getBitWidth());
+  ConstantRange Result = L.add(R);
+  assert(!Result.isSignWrappedSet());
+  return Result;
+}
+
+ConstantRange unionNoWrap(const ConstantRange &L, const ConstantRange &R) {
+  assert(!L.isSignWrappedSet());
+  assert(!R.isSignWrappedSet());
+  auto Result = L.unionWith(R);
+  // Two non-wrapped sets can produce wrapped.
+  if (Result.isSignWrappedSet())
+    Result = ConstantRange::getFull(Result.getBitWidth());
+  return Result;
+}
 
 /// Describes use of address in as a function call argument.
 template <typename CalleeTy> struct CallInfo {
@@ -93,11 +121,7 @@ template <typename CalleeTy> struct UseInfo {
 
   UseInfo(unsigned PointerSize) : Range{PointerSize, false} {}
 
-  void updateRange(const ConstantRange &R) {
-    assert(!R.isUpperSignWrapped());
-    Range = Range.unionWith(R);
-    assert(!Range.isUpperSignWrapped());
-  }
+  void updateRange(const ConstantRange &R) { Range = unionNoWrap(Range, R); }
 };
 
 template <typename CalleeTy>
@@ -106,18 +130,6 @@ raw_ostream &operator<<(raw_ostream &OS, const UseInfo<CalleeTy> &U) {
   for (auto &Call : U.Calls)
     OS << ", " << Call;
   return OS;
-}
-
-// Check if we should bailout for such ranges.
-bool isUnsafe(const ConstantRange &R) {
-  return R.isEmptySet() || R.isFullSet() || R.isUpperSignWrapped();
-}
-
-ConstantRange addOverflowNever(const ConstantRange &L, const ConstantRange &R) {
-  if (L.signedAddMayOverflow(R) !=
-      ConstantRange::OverflowResult::NeverOverflows)
-    return ConstantRange(L.getBitWidth(), true);
-  return L.add(R);
 }
 
 /// Calculate the allocation size of a given alloca. Returns empty range
@@ -515,7 +527,7 @@ bool StackSafetyDataFlowAnalysis<CalleeTy>::updateOneUse(UseInfo<CalleeTy> &US,
       if (UpdateToFullSet)
         US.Range = UnknownRange;
       else
-        US.Range = US.Range.unionWith(CalleeRange);
+        US.updateRange(CalleeRange);
     }
   }
   return Changed;
@@ -591,7 +603,7 @@ FunctionSummary *resolveCallee(GlobalValueSummary *S) {
     if (FunctionSummary *FS = dyn_cast<FunctionSummary>(S))
       return FS;
     AliasSummary *AS = dyn_cast<AliasSummary>(S);
-    if (!AS)
+    if (!AS || !AS->hasAliasee())
       return nullptr;
     S = AS->getBaseObject();
     if (S == AS)
@@ -656,10 +668,11 @@ void resolveAllCalls(UseInfo<GlobalValue> &Use,
       return Use.updateRange(FullSet);
     }
     const ConstantRange *Found = findParamAccess(*FS, C.ParamNo);
-    if (!Found)
+    if (!Found || Found->isFullSet())
       return Use.updateRange(FullSet);
     ConstantRange Access = Found->sextOrTrunc(Use.Range.getBitWidth());
-    Use.updateRange(addOverflowNever(Access, C.Offset));
+    if (!Access.isEmptySet())
+      Use.updateRange(addOverflowNever(Access, C.Offset));
     C.Callee = nullptr;
   }
 
@@ -990,6 +1003,7 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
       FS->setParamAccesses({});
     }
   }
+  NumCombinedDataFlowNodes += Functions.size();
   StackSafetyDataFlowAnalysis<FunctionSummary> SSDFA(
       FunctionSummary::ParamAccess::RangeWidth, std::move(Functions));
   for (auto &KV : SSDFA.run()) {

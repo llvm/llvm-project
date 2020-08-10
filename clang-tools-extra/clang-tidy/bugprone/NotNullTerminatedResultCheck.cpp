@@ -802,11 +802,14 @@ void NotNullTerminatedResultCheck::check(
     while (It != PP->macro_end() && !AreSafeFunctionsWanted.hasValue()) {
       if (It->first->getName() == "__STDC_WANT_LIB_EXT1__") {
         const auto *MI = PP->getMacroInfo(It->first);
-        const auto &T = MI->tokens().back();
-        StringRef ValueStr = StringRef(T.getLiteralData(), T.getLength());
-        llvm::APInt IntValue;
-        ValueStr.getAsInteger(10, IntValue);
-        AreSafeFunctionsWanted = IntValue.getZExtValue();
+        // PP->getMacroInfo() returns nullptr if macro has no definition.
+        if (MI) {
+          const auto &T = MI->tokens().back();
+          StringRef ValueStr = StringRef(T.getLiteralData(), T.getLength());
+          llvm::APInt IntValue;
+          ValueStr.getAsInteger(10, IntValue);
+          AreSafeFunctionsWanted = IntValue.getZExtValue();
+        }
       }
 
       ++It;

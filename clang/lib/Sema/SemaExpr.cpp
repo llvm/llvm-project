@@ -17925,8 +17925,6 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
   bool NeedDefinition =
       OdrUse == OdrUseContext::Used || NeededForConstantEvaluation;
 
-  VarTemplateSpecializationDecl *VarSpec =
-      dyn_cast<VarTemplateSpecializationDecl>(Var);
   assert(!isa<VarTemplatePartialSpecializationDecl>(Var) &&
          "Can't instantiate a partial template specialization.");
 
@@ -17961,30 +17959,21 @@ static void DoMarkVarDeclReferenced(Sema &SemaRef, SourceLocation Loc,
           Var->setTemplateSpecializationKind(TSK, PointOfInstantiation);
       }
 
-      bool InstantiationDependent = false;
-      bool IsNonDependent =
-          VarSpec ? !TemplateSpecializationType::anyDependentTemplateArguments(
-                        VarSpec->getTemplateArgsInfo(), InstantiationDependent)
-                  : true;
-
-      // Do not instantiate specializations that are still type-dependent.
-      if (IsNonDependent) {
-        if (UsableInConstantExpr) {
-          // Do not defer instantiations of variables that could be used in a
-          // constant expression.
-          SemaRef.runWithSufficientStackSpace(PointOfInstantiation, [&] {
-            SemaRef.InstantiateVariableDefinition(PointOfInstantiation, Var);
-          });
-        } else if (FirstInstantiation ||
-                   isa<VarTemplateSpecializationDecl>(Var)) {
-          // FIXME: For a specialization of a variable template, we don't
-          // distinguish between "declaration and type implicitly instantiated"
-          // and "implicit instantiation of definition requested", so we have
-          // no direct way to avoid enqueueing the pending instantiation
-          // multiple times.
-          SemaRef.PendingInstantiations
-              .push_back(std::make_pair(Var, PointOfInstantiation));
-        }
+      if (UsableInConstantExpr) {
+        // Do not defer instantiations of variables that could be used in a
+        // constant expression.
+        SemaRef.runWithSufficientStackSpace(PointOfInstantiation, [&] {
+          SemaRef.InstantiateVariableDefinition(PointOfInstantiation, Var);
+        });
+      } else if (FirstInstantiation ||
+                 isa<VarTemplateSpecializationDecl>(Var)) {
+        // FIXME: For a specialization of a variable template, we don't
+        // distinguish between "declaration and type implicitly instantiated"
+        // and "implicit instantiation of definition requested", so we have
+        // no direct way to avoid enqueueing the pending instantiation
+        // multiple times.
+        SemaRef.PendingInstantiations
+            .push_back(std::make_pair(Var, PointOfInstantiation));
       }
     }
   }

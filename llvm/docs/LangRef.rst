@@ -4882,7 +4882,7 @@ raw data, if they aren't equivalent. This is only supported for array types,
 particularly to describe Fortran arrays, which have an array descriptor in
 addition to the array data. Alternatively it can also be DIVariable which
 has the address of the actual raw data. The Fortran language supports pointer
-arrays which can be attached to actual arrays, this attachement between pointer
+arrays which can be attached to actual arrays, this attachment between pointer
 and pointee is called association.  The optional ``associated`` is a
 DIExpression that describes whether the pointer array is currently associated.
 The optional ``allocated`` is a DIExpression that describes whether the
@@ -6915,7 +6915,7 @@ We can expect the record like this:
 
     params: ((param: 0, offset: [0, 7]),(param: 2, offset: [5, 5], calls: ((callee: ^3, param: 1, offset: [-128, 127]))))
 
-The function may access just 8 bytes of the paramenter %0 . ``calls`` is empty,
+The function may access just 8 bytes of the parameter %0 . ``calls`` is empty,
 so the parameter is either not used for function calls or ``offset`` already
 covers all accesses from nested function calls.
 Parameter %1 escapes, so access is unknown.
@@ -16943,7 +16943,7 @@ Back-edge Taken Count (BTC). Thus, these intrinsics perform an element-wise
 less than or equal comparison of VIV with BTC, producing a mask of true/false
 values representing active/inactive vector lanes, except if the VIV overflows
 in which case they return false in the lanes where the VIV overflows.  The
-arguments are scalar types to accomodate scalable vector types, for which it is
+arguments are scalar types to accommodate scalable vector types, for which it is
 unknown what the type of the step vector needs to be that enumerate its
 lanes without overflow.
 

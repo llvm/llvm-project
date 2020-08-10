@@ -7342,11 +7342,17 @@ public:
       SourceLocation TemplateKWLoc, TemplateParameterList *TemplateParams,
       StorageClass SC, bool IsPartialSpecialization);
 
+  /// Get the specialization of the given variable template corresponding to
+  /// the specified argument list, or a null-but-valid result if the arguments
+  /// are dependent.
   DeclResult CheckVarTemplateId(VarTemplateDecl *Template,
                                 SourceLocation TemplateLoc,
                                 SourceLocation TemplateNameLoc,
                                 const TemplateArgumentListInfo &TemplateArgs);
 
+  /// Form a reference to the specialization of the given variable template
+  /// corresponding to the specified argument list, or a null-but-valid result
+  /// if the arguments are dependent.
   ExprResult CheckVarTemplateId(const CXXScopeSpec &SS,
                                 const DeclarationNameInfo &NameInfo,
                                 VarTemplateDecl *Template,
@@ -9168,10 +9174,6 @@ public:
                              LocalInstantiationScope *StartingScope,
                              bool InstantiatingVarTemplate = false,
                              VarTemplateSpecializationDecl *PrevVTSD = nullptr);
-
-  VarDecl *getVarTemplateSpecialization(
-      VarTemplateDecl *VarTempl, const TemplateArgumentListInfo *TemplateArgs,
-      const DeclarationNameInfo &MemberNameInfo, SourceLocation TemplateKWLoc);
 
   void InstantiateVariableInitializer(
       VarDecl *Var, VarDecl *OldVar,

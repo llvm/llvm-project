@@ -96,7 +96,7 @@ compiler [:ref:`GCC <amdgpu-dwarf-GCC>`] and the Perforce TotalView HPC debugger
 [:ref:`Perforce-TotalView <amdgpu-dwarf-Perforce-TotalView>`].
 
 However, the extensions are intended to be vendor and architecture neutral. They
-are believed to apply to other heterogenous hardware devices including GPUs,
+are believed to apply to other heterogeneous hardware devices including GPUs,
 DSPs, FPGAs, and other specialized hardware. These collectively include similar
 characteristics and requirements as AMDGPU devices. Some of the extension can
 also apply to traditional CPU hardware that supports large vector registers.
@@ -2068,7 +2068,7 @@ register starting at the specified bit offset.
 
     *An implementation may evaluate the call frame information immediately, or
     may defer evaluation until L is accessed by an operation. If evaluation is
-    defered, R and the current context can be recorded in L. When accessed, the
+    deferred, R and the current context can be recorded in L. When accessed, the
     recorded context is used to evaluate the call frame information, not the
     current context of the access operation.*
 

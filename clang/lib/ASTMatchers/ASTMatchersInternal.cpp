@@ -734,6 +734,7 @@ const internal::VariadicDynCastAllOfMatcher<Decl, AccessSpecDecl>
     accessSpecDecl;
 const internal::VariadicAllOfMatcher<CXXCtorInitializer> cxxCtorInitializer;
 const internal::VariadicAllOfMatcher<TemplateArgument> templateArgument;
+const internal::VariadicAllOfMatcher<TemplateArgumentLoc> templateArgumentLoc;
 const internal::VariadicAllOfMatcher<TemplateName> templateName;
 const internal::VariadicDynCastAllOfMatcher<Decl, NonTypeTemplateParmDecl>
     nonTypeTemplateParmDecl;

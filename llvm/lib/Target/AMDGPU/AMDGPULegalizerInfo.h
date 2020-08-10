@@ -44,6 +44,8 @@ public:
                      MachineIRBuilder &B) const;
   bool legalizeFceil(MachineInstr &MI, MachineRegisterInfo &MRI,
                      MachineIRBuilder &B) const;
+  bool legalizeFrem(MachineInstr &MI, MachineRegisterInfo &MRI,
+                    MachineIRBuilder &B) const;
   bool legalizeIntrinsicTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &B) const;
   bool legalizeITOFP(MachineInstr &MI, MachineRegisterInfo &MRI,
