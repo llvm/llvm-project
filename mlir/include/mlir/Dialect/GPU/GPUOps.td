@@ -741,4 +741,16 @@ def GPU_ModuleEndOp : GPU_Op<"module_end", [
   let printer = [{ p << getOperationName(); }];
 }
 
+def GPU_HostRegisterOp : GPU_Op<"host_register">,
+    Arguments<(ins AnyUnrankedMemRef:$value)> {
+  let summary = "Registers a memref for access from device.";
+  let description = [{
+    This op registers the host memory pointed to by a memref to be accessed from
+    a device.
+  }];
+
+  let assemblyFormat = "$value attr-dict `:` type($value)";
+  let verifier = [{ return success(); }];
+}
+
 #endif // GPU_OPS

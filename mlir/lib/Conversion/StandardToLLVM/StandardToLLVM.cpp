@@ -927,6 +927,22 @@ void ConvertToLLVMPattern::getMemRefDescriptorSizes(
                         : createIndexConstant(rewriter, loc, s));
 }
 
+Value ConvertToLLVMPattern::getSizeInBytes(
+    Location loc, Type type, ConversionPatternRewriter &rewriter) const {
+  // Compute the size of an individual element. This emits the MLIR equivalent
+  // of the following sizeof(...) implementation in LLVM IR:
+  //   %0 = getelementptr %elementType* null, %indexType 1
+  //   %1 = ptrtoint %elementType* %0 to %indexType
+  // which is a common pattern of getting the size of a type in bytes.
+  auto convertedPtrType =
+      typeConverter.convertType(type).cast<LLVM::LLVMType>().getPointerTo();
+  auto nullPtr = rewriter.create<LLVM::NullOp>(loc, convertedPtrType);
+  auto gep = rewriter.create<LLVM::GEPOp>(
+      loc, convertedPtrType,
+      ArrayRef<Value>{nullPtr, createIndexConstant(rewriter, loc, 1)});
+  return rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gep);
+}
+
 Value ConvertToLLVMPattern::getCumulativeSizeInBytes(
     Location loc, Type elementType, ArrayRef<Value> sizes,
     ConversionPatternRewriter &rewriter) const {
@@ -936,21 +952,7 @@ Value ConvertToLLVMPattern::getCumulativeSizeInBytes(
   for (unsigned i = 1, e = sizes.size(); i < e; ++i)
     cumulativeSizeInBytes = rewriter.create<LLVM::MulOp>(
         loc, getIndexType(), ArrayRef<Value>{cumulativeSizeInBytes, sizes[i]});
-
-  // Compute the size of an individual element. This emits the MLIR equivalent
-  // of the following sizeof(...) implementation in LLVM IR:
-  //   %0 = getelementptr %elementType* null, %indexType 1
-  //   %1 = ptrtoint %elementType* %0 to %indexType
-  // which is a common pattern of getting the size of a type in bytes.
-  auto convertedPtrType = typeConverter.convertType(elementType)
-                              .cast<LLVM::LLVMType>()
-                              .getPointerTo();
-  auto nullPtr = rewriter.create<LLVM::NullOp>(loc, convertedPtrType);
-  auto gep = rewriter.create<LLVM::GEPOp>(
-      loc, convertedPtrType,
-      ArrayRef<Value>{nullPtr, createIndexConstant(rewriter, loc, 1)});
-  auto elementSize =
-      rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gep);
+  auto elementSize = this->getSizeInBytes(loc, elementType, rewriter);
   return rewriter.create<LLVM::MulOp>(
       loc, getIndexType(), ArrayRef<Value>{cumulativeSizeInBytes, elementSize});
 }
