@@ -11,6 +11,7 @@ target triple = "x86_64-unknown-linux-gnu"
 declare void @llvm.memset.p0i8.i32(i8* %dest, i8 %val, i32 %len, i1 %isvolatile)
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 %len, i1 %isvolatile)
 declare void @llvm.memmove.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 %len, i1 %isvolatile)
+declare void @llvm.memset.p0i8.i64(i8* %dest, i8 %val, i64 %len, i1 %isvolatile)
 
 ; Address leaked.
 define void @LeakAddress() {
@@ -78,6 +79,33 @@ entry:
   %x2 = add i64 %x1, 2
   %x3 = inttoptr i64 %x2 to i8*
   store i8 0, i8* %x3, align 1
+  ret void
+}
+
+define dso_local void @WriteMinMax(i8* %p) {
+; CHECK-LABEL: @WriteMinMax{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: p[]: full-set
+; CHECK-NEXT: allocas uses:
+; CHECK-EMPTY:
+entry:
+  %p1 = getelementptr i8, i8* %p, i64 9223372036854775805
+  store i8 0, i8* %p1, align 1
+  %p2 = getelementptr i8, i8* %p, i64 -9223372036854775805
+  store i8 0, i8* %p2, align 1
+  ret void
+}
+
+define dso_local void @WriteMax(i8* %p) {
+; CHECK-LABEL: @WriteMax{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: p[]: [-9223372036854775807,9223372036854775806)
+; CHECK-NEXT: allocas uses:
+; CHECK-EMPTY:
+entry:
+  call void @llvm.memset.p0i8.i64(i8* %p, i8 1, i64 9223372036854775806, i1 0)
+  %p2 = getelementptr i8, i8* %p, i64 -9223372036854775807
+  call void @llvm.memset.p0i8.i64(i8* %p2, i8 1, i64 9223372036854775806, i1 0)
   ret void
 }
 
