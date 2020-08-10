@@ -62,7 +62,7 @@
 
 // RUN: %clang -target shave-myriad -c %s -o foo.o -### -MD -MF dep.d 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=MDMF
-// MDMF: "-S" "-fno-exceptions" "-DMYRIAD2" "-MD" "-MF" "dep.d" "-MT" "foo.o"
+// MDMF: "-S" "-fno-exceptions" "-DMYRIAD2" "-MD" "-MF" "dep.d" "-Wno-elaborated-enum-base" "-MT" "foo.o"
 
 // RUN: %clang -target shave-myriad -std=gnu++11 -mcpu=anothercpu -S %s -o foo.o -### 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=STDEQ
