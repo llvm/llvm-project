@@ -35880,6 +35880,25 @@ static SDValue combineShuffleWithHorizOp(SDValue N, MVT VT, const SDLoc &DL,
   if (!isHoriz && !isPack)
     return SDValue();
 
+  // Canonicalize unary horizontal ops to only refer to lower halves.
+  if (TargetMask.size() == VT0.getVectorNumElements()) {
+    int NumElts = VT0.getVectorNumElements();
+    int NumLanes = VT0.getSizeInBits() / 128;
+    int NumEltsPerLane = NumElts / NumLanes;
+    int NumHalfEltsPerLane = NumEltsPerLane / 2;
+    for (int i = 0; i != NumElts; ++i) {
+      int &M = TargetMask[i];
+      if (isUndefOrZero(M))
+        continue;
+      if (M < NumElts && BC0.getOperand(0) == BC0.getOperand(1) &&
+          (M % NumEltsPerLane) >= NumHalfEltsPerLane)
+        M -= NumHalfEltsPerLane;
+      if (NumElts <= M && BC1.getOperand(0) == BC1.getOperand(1) &&
+          ((M - NumElts) % NumEltsPerLane) >= NumHalfEltsPerLane)
+        M -= NumHalfEltsPerLane;
+    }
+  }
+
   SmallVector<int, 16> TargetMask128, WideMask128;
   if (isRepeatedTargetShuffleMask(128, VT, TargetMask, TargetMask128) &&
       scaleShuffleElements(TargetMask128, 2, WideMask128)) {

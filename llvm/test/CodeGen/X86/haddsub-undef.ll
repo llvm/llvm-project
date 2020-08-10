@@ -1015,9 +1015,7 @@ define <4 x float> @PR34724_add_v4f32_0u23(<4 x float> %0, <4 x float> %1) {
 ;
 ; SSE-FAST-LABEL: PR34724_add_v4f32_0u23:
 ; SSE-FAST:       # %bb.0:
-; SSE-FAST-NEXT:    haddps %xmm0, %xmm0
-; SSE-FAST-NEXT:    haddps %xmm1, %xmm1
-; SSE-FAST-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,3]
+; SSE-FAST-NEXT:    haddps %xmm1, %xmm0
 ; SSE-FAST-NEXT:    retq
 ;
 ; AVX-SLOW-LABEL: PR34724_add_v4f32_0u23:
@@ -1034,9 +1032,7 @@ define <4 x float> @PR34724_add_v4f32_0u23(<4 x float> %0, <4 x float> %1) {
 ;
 ; AVX-FAST-LABEL: PR34724_add_v4f32_0u23:
 ; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
-; AVX-FAST-NEXT:    vhaddps %xmm1, %xmm1, %xmm1
-; AVX-FAST-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,3]
+; AVX-FAST-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    retq
   %3 = shufflevector <4 x float> %0, <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
   %4 = fadd <4 x float> %3, %0
