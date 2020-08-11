@@ -4,12 +4,16 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wtautological-type-limit-compare -DTEST -verify -x c++ %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wtype-limits -DTEST -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wtype-limits -DTEST -verify -x c++ %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wextra -Wno-sign-compare -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wextra -Wno-sign-compare -verify -x c++ %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wall -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wall -verify -x c++ %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -verify -x c++ %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wextra -Wno-sign-compare -verify=silent %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wextra -Wno-sign-compare -verify=silent -x c++ %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wall -verify=silent %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -Wall -verify=silent -x c++ %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -verify=silent %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -verify=silent -x c++ %s
+
+#ifndef TEST
+// silent-no-diagnostics
+#endif
 
 int value(void);
 
@@ -184,7 +188,6 @@ int main()
   if (-32768L >= s)
       return 0;
 #else
-  // expected-no-diagnostics
   if (s == 32767)
     return 0;
   if (s != 32767)
@@ -373,7 +376,6 @@ int main()
   if (65535UL >= us) // expected-warning {{comparison 65535 >= 'unsigned short' is always true}}
       return 0;
 #else
-  // expected-no-diagnostics
   if (us == 65535)
       return 0;
   if (us != 65535)
@@ -571,20 +573,100 @@ int main()
 
   if ((s & 0xff) < 0) {} // #valuerange1
   if ((s & 0xff) < 1) {}
-  if ((s & -3) < -4) {} // #valuerange2
+  if ((s & -3) < -4) {}
   if ((s & -3) < -3) {}
-  if ((s & -3) < 4u) {} // (true if s non-negative)
-  if ((s & -3) > 4u) {} // (true if s negative)
-  if ((s & -3) == 4u) {} // #valuerange3 (never true)
-  if ((s & -3) == 3u) {}
-  if ((s & -3) == -5u) {} // #valuerange4
+  if ((s & -3) < 4u) {}
+  if ((s & -3) > 4u) {}
+  if ((s & -3) == 4u) {}
+  if ((s & -3) == 3u) {} // FIXME: Impossible.
+  if ((s & -3) == -5u) {}
   if ((s & -3) == -4u) {}
 #if TEST == 2
   // expected-warning@#valuerange1 {{comparison of 8-bit unsigned value < 0 is always false}}
-  // expected-warning@#valuerange2 {{comparison of 3-bit signed value < -4 is always false}}
-  // expected-warning@#valuerange3 {{comparison of 3-bit signed value == 4 is always false}}
-  // expected-warning@#valuerange4 {{comparison of 3-bit signed value == 4294967291 is always false}}
 #endif
+
+  // FIXME: Our bit-level width tracking comes unstuck here: the second of the
+  // conditions below is also tautological, but we can't tell that because we
+  // don't track the actual range, only the bit-width.
+  if ((s ? 1 : 0) + (us ? 1 : 0) > 1) {}
+  if ((s ? 1 : 0) + (us ? 1 : 0) > 2) {}
+  if ((s ? 1 : 0) + (us ? 1 : 0) > 3) {} // #addrange1
+#if TEST == 2
+  // expected-warning@#addrange1 {{comparison of 2-bit unsigned value > 3 is always false}}
+#endif
+
+  // FIXME: The second and third comparisons are also tautological; 0x40000000
+  // is the greatest value that multiplying two int16s can produce.
+  if (s * s > 0x3fffffff) {}
+  if (s * s > 0x40000000) {}
+  if (s * s > 0x7ffffffe) {}
+  if (s * s > 0x7fffffff) {} // expected-warning {{result of comparison 'int' > 2147483647 is always false}}
+
+  if ((s & 0x3ff) * (s & 0x1f) > 0x7be0) {}
+  if ((s & 0x3ff) * (s & 0x1f) > 0x7be1) {} // FIXME
+  if ((s & 0x3ff) * (s & 0x1f) > 0x7ffe) {} // FIXME
+  if ((s & 0x3ff) * (s & 0x1f) > 0x7fff) {} // #mulrange1
+#if TEST == 2
+  // expected-warning@#mulrange1 {{comparison of 15-bit unsigned value > 32767 is always false}}
+#endif
+
+  if (a.a * a.b > 21) {} // FIXME
+  if (a.a * a.b > 31) {} // #mulrange2
+#if TEST == 2
+  // expected-warning@#mulrange2 {{comparison of 6-bit signed value > 31 is always false}}
+#endif
+
+  if (a.a - (s & 1) < -4) {}
+  if (a.a - (s & 1) < -7) {} // FIXME
+  if (a.a - (s & 1) < -8) {} // #subrange1
+  if (a.a - (s & 1) > 3) {} // FIXME: Can be < -4 but not > 3.
+  if (a.a - (s & 1) > 7) {} // #subrange2
+
+  if (a.a - (s & 7) < -8) {}
+  if (a.a - (s & 7) > 7) {} // FIXME: Can be < -8 but not > 7.
+  if (a.a - (s & 7) < -15) {}
+  if (a.a - (s & 7) < -16) {} // #subrange3
+  if (a.a - (s & 7) > 15) {} // #subrange4
+
+  if (a.b - (s & 1) > 6) {}
+  if (a.b - (s & 1) > 7) {} // #subrange5
+  if (a.b - (s & 7) < -8) {} // #subrange6
+  if (a.b - (s & 15) < -8) {}
+  if (a.b - (s & 15) < -16) {} // #subrange7
+#if TEST == 2
+  // expected-warning@#subrange1 {{comparison of 4-bit signed value < -8 is always false}}
+  // expected-warning@#subrange2 {{comparison of 4-bit signed value > 7 is always false}}
+  // expected-warning@#subrange3 {{comparison of 5-bit signed value < -16 is always false}}
+  // expected-warning@#subrange4 {{comparison of 5-bit signed value > 15 is always false}}
+  // expected-warning@#subrange5 {{comparison of 4-bit signed value > 7 is always false}}
+  // expected-warning@#subrange6 {{comparison of 4-bit signed value < -8 is always false}}
+  // expected-warning@#subrange7 {{comparison of 5-bit signed value < -16 is always false}}
+#endif
+
+  // a.a % 3 is in range [-2, 2], which we expand to [-4, 4)
+  if (a.a % 3 > 2) {}
+  if (a.a % 3 > 3) {} // #remrange1
+  if (a.a % 3 == -1) {}
+  if (a.a % 3 == -2) {}
+  if (a.a % 3 < -3) {} // FIXME
+  if (a.a % 3 < -4) {} // #remrange2
+
+  // a.b % 3 is in range [0, 3), which we expand to [0, 4)
+  if (a.b % 3 > 2) {}
+  if (a.b % 3 > 3) {} // #remrange3
+  if (a.b % 3 < 0) {} // #remrange4
+#if TEST == 2
+  // expected-warning@#remrange1 {{comparison of 3-bit signed value > 3 is always false}}
+  // expected-warning@#remrange2 {{comparison of 3-bit signed value < -4 is always false}}
+  // expected-warning@#remrange3 {{comparison of 2-bit unsigned value > 3 is always false}}
+  // expected-warning@#remrange4 {{comparison of 2-bit unsigned value < 0 is always false}}
+#endif
+
+  // Don't warn on non-constant-expression values that end up being a constant
+  // 0; we generally only want to warn when one side of the comparison is
+  // effectively non-constant.
+  if ("x"[1] == 0) {}
+  if (((void)s, 0) == 0) {}
 
   return 1;
 }
