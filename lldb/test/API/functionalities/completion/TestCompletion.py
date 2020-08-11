@@ -548,6 +548,26 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('register write rbx ',
                               [])
 
+    def test_common_completion_target_stophook_ids(self):
+        subcommands = ['delete', 'enable', 'disable']
+
+        for subcommand in subcommands:
+            self.complete_from_to('target stop-hook ' + subcommand + ' ',
+                                  'target stop-hook ' + subcommand + ' ')
+
+        self.build()
+        self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.runCmd('target stop-hook add test DONE')
+
+        for subcommand in subcommands:
+            self.complete_from_to('target stop-hook ' + subcommand + ' ',
+                                  'target stop-hook ' + subcommand + ' 1')
+
+        # Completion should work only on the first argument.
+        for subcommand in subcommands:
+            self.complete_from_to('target stop-hook ' + subcommand + ' 1 ',
+                                  'target stop-hook ' + subcommand + ' 1 ')
+
     def test_common_completion_type_language(self):
         self.complete_from_to('type category -l ', ['c'])
 
