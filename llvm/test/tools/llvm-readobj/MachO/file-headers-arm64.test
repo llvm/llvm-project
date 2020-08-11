@@ -14,7 +14,7 @@
 # RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.arm64e --check-prefix=ARM64 -DSUBTYPE="CPU_SUBTYPE_ARM64E (0x2)"
 
 #      ARM64:File: [[FILE]]
-# ARM64-NEXT:Format: Mach-O arm64
+# ARM64-NEXT:Format: Mach-O arm64{{e?}}
 # ARM64-NEXT:Arch: aarch64
 # ARM64-NEXT:AddressSize: 64bit
 # ARM64-NEXT:MachHeader {
