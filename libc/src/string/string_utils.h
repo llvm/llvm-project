@@ -9,8 +9,6 @@
 #ifndef LIBC_SRC_STRING_STRING_UTILS_H
 #define LIBC_SRC_STRING_STRING_UTILS_H
 
-#include "src/string/memory_utils/utils.h"
-
 #include "utils/CPP/Bitset.h"
 #include <stddef.h> // size_t
 

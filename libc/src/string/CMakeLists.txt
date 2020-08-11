@@ -132,6 +132,16 @@ add_entrypoint_object(
     .string_utils
 )
 
+add_entrypoint_object(
+  strtok
+  SRCS
+    strtok.cpp
+  HDRS
+    strtok.h
+  DEPENDS
+    libc.utils.CPP.standalone_cpp
+)
+
 # Helper to define a function with multiple implementations
 # - Computes flags to satisfy required/rejected features and arch,
 # - Declares an entry point,
