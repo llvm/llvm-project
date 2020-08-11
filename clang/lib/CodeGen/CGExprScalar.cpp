@@ -2003,6 +2003,34 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       }
     }
 
+    // Perform VLAT <-> VLST bitcast through memory.
+    if ((isa<llvm::FixedVectorType>(SrcTy) &&
+         isa<llvm::ScalableVectorType>(DstTy)) ||
+        (isa<llvm::ScalableVectorType>(SrcTy) &&
+         isa<llvm::FixedVectorType>(DstTy))) {
+      if (const CallExpr *CE = dyn_cast<CallExpr>(E)) {
+        // Call expressions can't have a scalar return unless the return type
+        // is a reference type so an lvalue can't be emitted. Create a temp
+        // alloca to store the call, bitcast the address then load.
+        QualType RetTy = CE->getCallReturnType(CGF.getContext());
+        Address Addr =
+            CGF.CreateDefaultAlignTempAlloca(SrcTy, "saved-call-rvalue");
+        LValue LV = CGF.MakeAddrLValue(Addr, RetTy);
+        CGF.EmitStoreOfScalar(Src, LV);
+        Addr = Builder.CreateElementBitCast(Addr, CGF.ConvertTypeForMem(DestTy),
+                                            "castFixedSve");
+        LValue DestLV = CGF.MakeAddrLValue(Addr, DestTy);
+        DestLV.setTBAAInfo(TBAAAccessInfo::getMayAliasInfo());
+        return EmitLoadOfLValue(DestLV, CE->getExprLoc());
+      }
+
+      Address Addr = EmitLValue(E).getAddress(CGF);
+      Addr = Builder.CreateElementBitCast(Addr, CGF.ConvertTypeForMem(DestTy));
+      LValue DestLV = CGF.MakeAddrLValue(Addr, DestTy);
+      DestLV.setTBAAInfo(TBAAAccessInfo::getMayAliasInfo());
+      return EmitLoadOfLValue(DestLV, CE->getExprLoc());
+    }
+
     return Builder.CreateBitCast(Src, DstTy);
   }
   case CK_AddressSpaceConversion: {
