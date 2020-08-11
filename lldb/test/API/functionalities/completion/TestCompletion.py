@@ -209,6 +209,13 @@ class CommandLineCompletionTestCase(TestBase):
         """Test that 'watchpoint set var' completes to 'watchpoint set variable '."""
         self.complete_from_to('watchpoint set var', 'watchpoint set variable ')
 
+    def test_watchpoint_set_variable_foo(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(self, '// Break here', lldb.SBFileSpec("main.cpp"))
+        self.complete_from_to('watchpoint set variable fo', 'watchpoint set variable fooo')
+        # Only complete the first argument.
+        self.complete_from_to('watchpoint set variable fooo ', 'watchpoint set variable fooo ')
+
     def test_help_fi(self):
         """Test that 'help fi' completes to ['file', 'finish']."""
         self.complete_from_to(
