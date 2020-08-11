@@ -34,6 +34,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strrchr
     libc.src.string.strspn
     libc.src.string.strstr
+    libc.src.string.strtok
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
