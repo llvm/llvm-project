@@ -23,6 +23,7 @@ class ObjCExceptionsTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         launch_info = lldb.SBLaunchInfo(["a.out", "0"])
+        launch_info.SetLaunchFlags(lldb.eLaunchFlagInheritTCCFromParent)
         lldbutil.run_to_name_breakpoint(self, "objc_exception_throw", launch_info=launch_info)
 
         self.expect("thread list",
