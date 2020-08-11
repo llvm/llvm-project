@@ -6,6 +6,16 @@ void func_pchar(__private__ char *x);
 void func_pvoid(__private__ void *x);
 void func_pint(__private__ int *x);
 
+class Base {
+};
+
+class Derived : public Base {
+};
+
+void fn(Derived *p) {
+  __private__ Base *b = (__private__ Base *)p;
+}
+
 void test_cast(char *gen_char_ptr, void *gen_void_ptr, int *gen_int_ptr) {
   // CHECK: %[[cast:.*]] = addrspacecast i8* %{{.*}} to i8 addrspace(5)*
   // CHECK-NEXT: store i8 addrspace(5)* %[[cast]]
