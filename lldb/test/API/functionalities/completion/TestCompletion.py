@@ -232,6 +232,22 @@ class CommandLineCompletionTestCase(TestBase):
         """Test that 'help watchpoint s' completes to 'help watchpoint set '."""
         self.complete_from_to('help watchpoint s', 'help watchpoint set ')
 
+    def test_common_complete_watchpoint_ids(self):
+        subcommands = ['enable', 'disable', 'delete', 'modify', 'ignore']
+
+        # Completion should not work without a target.
+        for subcommand in subcommands:
+            self.complete_from_to('watchpoint ' + subcommand + ' ',
+                                  'watchpoint ' + subcommand + ' ')
+
+        # Create a process to provide a target and enable watchpoint setting.
+        self.build()
+        lldbutil.run_to_source_breakpoint(self, '// Break here', lldb.SBFileSpec("main.cpp"))
+
+        self.runCmd('watchpoint set variable ptr_fooo')
+        for subcommand in subcommands:
+            self.complete_from_to('watchpoint ' + subcommand + ' ', ['1'])
+
     def test_settings_append_target_er(self):
         """Test that 'settings append target.er' completes to 'settings append target.error-path'."""
         self.complete_from_to(
