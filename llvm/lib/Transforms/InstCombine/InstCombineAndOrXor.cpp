@@ -3219,6 +3219,11 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     // ~(X + C) --> -(C + 1) - X
     if (match(Op0, m_Add(m_Value(X), m_Constant(C))))
       return BinaryOperator::CreateSub(ConstantExpr::getNeg(AddOne(C)), X);
+
+    // ~(~X + Y) --> X - Y
+    if (match(NotVal, m_c_Add(m_Not(m_Value(X)), m_Value(Y))))
+      return BinaryOperator::CreateWithCopiedFlags(Instruction::Sub, X, Y,
+                                                   NotVal);
   }
 
   // Use DeMorgan and reassociation to eliminate a 'not' op.

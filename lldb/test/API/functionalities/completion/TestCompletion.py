@@ -115,6 +115,12 @@ class CommandLineCompletionTestCase(TestBase):
                                 '--thread-index',
                                 '--thread-name'])
 
+    def test_disassemble_dash_f(self):
+        self.completions_match('disassemble -F ',
+                               ['default',
+                                'intel',
+                                'att'])
+
     def test_plugin_load(self):
         self.complete_from_to('plugin load ', [])
 
@@ -208,6 +214,13 @@ class CommandLineCompletionTestCase(TestBase):
     def test_watchpoint_set_var(self):
         """Test that 'watchpoint set var' completes to 'watchpoint set variable '."""
         self.complete_from_to('watchpoint set var', 'watchpoint set variable ')
+
+    def test_watchpoint_set_variable_foo(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(self, '// Break here', lldb.SBFileSpec("main.cpp"))
+        self.complete_from_to('watchpoint set variable fo', 'watchpoint set variable fooo')
+        # Only complete the first argument.
+        self.complete_from_to('watchpoint set variable fooo ', 'watchpoint set variable fooo ')
 
     def test_help_fi(self):
         """Test that 'help fi' completes to ['file', 'finish']."""
@@ -316,6 +329,19 @@ class CommandLineCompletionTestCase(TestBase):
                               ['target.process.thread.step-avoid-regexp',
                                'target.process.thread.trace-thread'])
 
+    def test_thread_plan_discard(self):
+        self.build()
+        (_, _, thread, _) = lldbutil.run_to_source_breakpoint(self,
+                                          'ptr_foo', lldb.SBFileSpec("main.cpp"))
+        self.assertTrue(thread)
+        self.complete_from_to('thread plan discard ', 'thread plan discard ')
+
+        source_path = os.path.join(self.getSourceDir(), "thread_plan_script.py")
+        self.runCmd("command script import '%s'"%(source_path))
+        self.runCmd("thread step-scripted -C thread_plan_script.PushPlanStack")
+        self.complete_from_to('thread plan discard ', 'thread plan discard 1')
+        self.runCmd('thread plan discard 1')
+
     def test_target_space(self):
         """Test that 'target ' completes to ['create', 'delete', 'list',
         'modules', 'select', 'stop-hook', 'variable']."""
@@ -374,6 +400,13 @@ class CommandLineCompletionTestCase(TestBase):
     def test_command_script_delete(self):
         self.runCmd("command script add -h test_desc -f none -s current usercmd1")
         self.check_completion_with_desc('command script delete ', [['usercmd1', 'test_desc']])
+
+    def test_command_delete(self):
+        self.runCmd(r"command regex test_command s/^$/finish/ 's/([0-9]+)/frame select %1/'")
+        self.complete_from_to('command delete test_c', 'command delete test_command')
+
+    def test_command_unalias(self):
+        self.complete_from_to('command unalias ima', 'command unalias image')
 
     def test_completion_description_commands(self):
         """Test descriptions of top-level command completions"""
@@ -502,6 +535,9 @@ class CommandLineCompletionTestCase(TestBase):
         # register write can only take exact one register name as argument
         self.complete_from_to('register write rbx ',
                               [])
+
+    def test_common_completion_type_language(self):
+        self.complete_from_to('type category -l ', ['c'])
 
     def test_complete_breakpoint_with_ids(self):
         """These breakpoint subcommands should be completed with a list of breakpoint ids"""
