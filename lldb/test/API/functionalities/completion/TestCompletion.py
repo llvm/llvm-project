@@ -329,6 +329,19 @@ class CommandLineCompletionTestCase(TestBase):
                               ['target.process.thread.step-avoid-regexp',
                                'target.process.thread.trace-thread'])
 
+    def test_thread_plan_discard(self):
+        self.build()
+        (_, _, thread, _) = lldbutil.run_to_source_breakpoint(self,
+                                          'ptr_foo', lldb.SBFileSpec("main.cpp"))
+        self.assertTrue(thread)
+        self.complete_from_to('thread plan discard ', 'thread plan discard ')
+
+        source_path = os.path.join(self.getSourceDir(), "thread_plan_script.py")
+        self.runCmd("command script import '%s'"%(source_path))
+        self.runCmd("thread step-scripted -C thread_plan_script.PushPlanStack")
+        self.complete_from_to('thread plan discard ', 'thread plan discard 1')
+        self.runCmd('thread plan discard 1')
+
     def test_target_space(self):
         """Test that 'target ' completes to ['create', 'delete', 'list',
         'modules', 'select', 'stop-hook', 'variable']."""
