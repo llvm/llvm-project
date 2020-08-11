@@ -19,9 +19,6 @@ include_directories(
   googlemock
   )
 
-# Gtest 1.8.0 uses tr1/tuple which is deprecated on MSVC, so we force it off.
-add_definitions(-DGTEST_HAS_TR1_TUPLE=0)
-
 if(WIN32)
   add_definitions(-DGTEST_OS_WINDOWS=1)
 endif()
@@ -44,10 +41,6 @@ endif()
 
 set(LLVM_REQUIRES_RTTI 1)
 add_definitions( -DGTEST_HAS_RTTI=0 )
-
-if (NOT LLVM_ENABLE_THREADS)
-  add_definitions( -DGTEST_HAS_PTHREAD=0 )
-endif()
 
 find_library(LLVM_PTHREAD_LIBRARY_PATH pthread)
 if (LLVM_PTHREAD_LIBRARY_PATH)
@@ -75,6 +68,13 @@ if(CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
   add_definitions("-Wno-suggest-override")
   set_target_properties(gtest PROPERTIES INTERFACE_COMPILE_OPTIONS "-Wno-suggest-override")
 endif()
+
+# Gtest 1.8.0 uses tr1/tuple which is deprecated on MSVC, so we force it off.
+target_compile_definitions(gtest PUBLIC GTEST_HAS_TR1_TUPLE=0)
+
+if (NOT LLVM_ENABLE_THREADS)
+  target_compile_definitions(gtest PUBLIC GTEST_HAS_PTHREAD=0)
+endif ()
 
 add_subdirectory(UnitTestMain)
 
