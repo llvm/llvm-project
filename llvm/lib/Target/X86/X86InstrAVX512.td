@@ -2494,10 +2494,6 @@ def X86cmpm_su : PatFrag<(ops node:$src1, node:$src2, node:$cc),
                          (X86cmpm node:$src1, node:$src2, node:$cc), [{
   return N->hasOneUse();
 }]>;
-def X86cmpmSAE_su : PatFrag<(ops node:$src1, node:$src2, node:$cc),
-                            (X86cmpmSAE node:$src1, node:$src2, node:$cc), [{
-  return N->hasOneUse();
-}]>;
 
 def X86cmpm_imm_commute : SDNodeXForm<timm, [{
   uint8_t Imm = X86::getSwappedVCMPImm(N->getZExtValue() & 0x1f);
@@ -2564,19 +2560,71 @@ let Uses = [MXCSR], mayRaiseFPException = 1 in {
             (!cast<Instruction>(Name#_.ZSuffix#"rmbik") _.KRCWM:$mask,
                                                         _.RC:$src1, addr:$src2,
                                                         (X86cmpm_imm_commute timm:$cc))>;
+
+  // Patterns for mask intrinsics.
+  def : Pat<(X86cmpmm (_.VT _.RC:$src1), (_.VT _.RC:$src2), timm:$cc,
+                      (_.KVT immAllOnesV)),
+            (!cast<Instruction>(Name#_.ZSuffix#"rri") _.RC:$src1, _.RC:$src2, timm:$cc)>;
+
+  def : Pat<(X86cmpmm (_.VT _.RC:$src1), (_.VT _.RC:$src2), timm:$cc, _.KRCWM:$mask),
+            (!cast<Instruction>(Name#_.ZSuffix#"rrik") _.KRCWM:$mask, _.RC:$src1,
+                                                       _.RC:$src2, timm:$cc)>;
+
+  def : Pat<(X86cmpmm (_.VT _.RC:$src1), (_.VT (_.LdFrag addr:$src2)), timm:$cc,
+                      (_.KVT immAllOnesV)),
+            (!cast<Instruction>(Name#_.ZSuffix#"rmi") _.RC:$src1, addr:$src2, timm:$cc)>;
+
+  def : Pat<(X86cmpmm (_.VT _.RC:$src1), (_.VT (_.LdFrag addr:$src2)), timm:$cc,
+                      _.KRCWM:$mask),
+            (!cast<Instruction>(Name#_.ZSuffix#"rmik") _.KRCWM:$mask, _.RC:$src1,
+                                                       addr:$src2, timm:$cc)>;
+
+  def : Pat<(X86cmpmm (_.VT _.RC:$src1), (_.VT (_.BroadcastLdFrag addr:$src2)), timm:$cc,
+                      (_.KVT immAllOnesV)),
+            (!cast<Instruction>(Name#_.ZSuffix#"rmbi") _.RC:$src1, addr:$src2, timm:$cc)>;
+
+  def : Pat<(X86cmpmm (_.VT _.RC:$src1), (_.VT (_.BroadcastLdFrag addr:$src2)), timm:$cc,
+                      _.KRCWM:$mask),
+            (!cast<Instruction>(Name#_.ZSuffix#"rmbik") _.KRCWM:$mask, _.RC:$src1,
+                                                        addr:$src2, timm:$cc)>;
+
+  // Patterns for mask intrinsics with loads in other operand.
+  def : Pat<(X86cmpmm (_.VT (_.LdFrag addr:$src2)), (_.VT _.RC:$src1), timm:$cc,
+                      (_.KVT immAllOnesV)),
+            (!cast<Instruction>(Name#_.ZSuffix#"rmi") _.RC:$src1, addr:$src2,
+                                                      (X86cmpm_imm_commute timm:$cc))>;
+
+  def : Pat<(X86cmpmm (_.VT (_.LdFrag addr:$src2)), (_.VT _.RC:$src1), timm:$cc,
+                      _.KRCWM:$mask),
+            (!cast<Instruction>(Name#_.ZSuffix#"rmik") _.KRCWM:$mask,
+                                                       _.RC:$src1, addr:$src2,
+                                                       (X86cmpm_imm_commute timm:$cc))>;
+
+  def : Pat<(X86cmpmm (_.VT (_.BroadcastLdFrag addr:$src2)), (_.VT _.RC:$src1), timm:$cc,
+                      (_.KVT immAllOnesV)),
+            (!cast<Instruction>(Name#_.ZSuffix#"rmbi") _.RC:$src1, addr:$src2,
+                                                       (X86cmpm_imm_commute timm:$cc))>;
+
+  def : Pat<(X86cmpmm (_.VT (_.BroadcastLdFrag addr:$src2)), (_.VT _.RC:$src1), timm:$cc,
+                      _.KRCWM:$mask),
+            (!cast<Instruction>(Name#_.ZSuffix#"rmbik") _.KRCWM:$mask,
+                                                        _.RC:$src1, addr:$src2,
+                                                        (X86cmpm_imm_commute  timm:$cc))>;
 }
 
 multiclass avx512_vcmp_sae<X86FoldableSchedWrite sched, X86VectorVTInfo _> {
   // comparison code form (VCMP[EQ/LT/LE/...]
   let Uses = [MXCSR] in
-  defm  rrib  : AVX512_maskable_cmp<0xC2, MRMSrcReg, _,
-                     (outs _.KRC:$dst),(ins _.RC:$src1, _.RC:$src2, u8imm:$cc),
+  defm  rrib  : AVX512_maskable_custom_cmp<0xC2, MRMSrcReg, (outs _.KRC:$dst),
+                     (ins _.RC:$src1, _.RC:$src2, u8imm:$cc),
+                     (ins _.KRCWM:$mask, _.RC:$src1, _.RC:$src2, u8imm:$cc),
                      "vcmp"#_.Suffix,
                      "$cc, {sae}, $src2, $src1",
                      "$src1, $src2, {sae}, $cc",
-                     (X86cmpmSAE (_.VT _.RC:$src1), (_.VT _.RC:$src2), timm:$cc),
-                     (X86cmpmSAE_su (_.VT _.RC:$src1), (_.VT _.RC:$src2),
-                                    timm:$cc)>,
+                     [(set _.KRC:$dst, (X86cmpmmSAE (_.VT _.RC:$src1),
+                                        (_.VT _.RC:$src2), timm:$cc, (_.KVT immAllOnesV)))],
+                     [(set _.KRC:$dst, (X86cmpmmSAE (_.VT _.RC:$src1),
+                                        (_.VT _.RC:$src2), timm:$cc, _.KRCWM:$mask))]>,
                      EVEX_B, Sched<[sched]>;
 }
 

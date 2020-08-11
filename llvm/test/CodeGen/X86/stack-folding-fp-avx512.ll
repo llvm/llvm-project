@@ -312,11 +312,11 @@ define i8 @stack_fold_cmppd(<8 x double> %a0, <8 x double> %a1) {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %res = call <8 x i1> @llvm.x86.avx512.cmp.pd.512(<8 x double> %a0, <8 x double> %a1, i32 0, i32 4)
+  %res = call <8 x i1> @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> %a0, <8 x double> %a1, i32 0, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 4)
   %2 = bitcast <8 x i1> %res to i8
   ret i8 %2
 }
-declare <8 x i1> @llvm.x86.avx512.cmp.pd.512(<8 x double>, <8 x double>, i32, i32)
+declare <8 x i1> @llvm.x86.avx512.mask.cmp.pd.512(<8 x double>, <8 x double>, i32, <8 x i1>, i32)
 
 define <8 x double> @stack_fold_cmppd_mask(<8 x double> %a0, <8 x double> %a1, <8 x double>* %a2, i8 %mask, <8 x double> %b0, <8 x double> %b1) {
 ; CHECK-LABEL: stack_fold_cmppd_mask:
@@ -332,8 +332,9 @@ define <8 x double> @stack_fold_cmppd_mask(<8 x double> %a0, <8 x double> %a1, <
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vaddpd (%rdi), %zmm0, %zmm0
+; CHECK-NEXT:    vcmpeqpd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k0 # 64-byte Folded Reload
 ; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    vcmpeqpd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k1 {%k1} # 64-byte Folded Reload
+; CHECK-NEXT:    kandb %k0, %k1, %k1
 ; CHECK-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vblendmpd (%rsp), %zmm0, %zmm0 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    addq $184, %rsp
@@ -344,7 +345,7 @@ define <8 x double> @stack_fold_cmppd_mask(<8 x double> %a0, <8 x double> %a1, <
   %2 = load <8 x double>, <8 x double>* %a2
   %3 = fadd <8 x double> %a1, %2
   %4 = bitcast i8 %mask to <8 x i1>
-  %5 = call <8 x i1> @llvm.x86.avx512.cmp.pd.512(<8 x double> %3, <8 x double> %a0, i32 0, i32 4)
+  %5 = call <8 x i1> @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> %3, <8 x double> %a0, i32 0, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 4)
   %6 = and <8 x i1> %4, %5
   %7 = select <8 x i1> %6, <8 x double> %b0, <8 x double> %b1
   ret <8 x double> %7
@@ -364,8 +365,9 @@ define <8 x double> @stack_fold_cmppd_mask_commuted(<8 x double> %a0, <8 x doubl
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vaddpd (%rdi), %zmm0, %zmm0
+; CHECK-NEXT:    vcmpeqpd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k0 # 64-byte Folded Reload
 ; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    vcmpeqpd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k1 {%k1} # 64-byte Folded Reload
+; CHECK-NEXT:    kandb %k0, %k1, %k1
 ; CHECK-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vblendmpd (%rsp), %zmm0, %zmm0 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    addq $184, %rsp
@@ -376,7 +378,7 @@ define <8 x double> @stack_fold_cmppd_mask_commuted(<8 x double> %a0, <8 x doubl
   %2 = load <8 x double>, <8 x double>* %a2
   %3 = fadd <8 x double> %a1, %2
   %4 = bitcast i8 %mask to <8 x i1>
-  %5 = call <8 x i1> @llvm.x86.avx512.cmp.pd.512(<8 x double> %a0, <8 x double> %3, i32 0, i32 4)
+  %5 = call <8 x i1> @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> %a0, <8 x double> %3, i32 0, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 4)
   %6 = and <8 x i1> %4, %5
   %7 = select <8 x i1> %6, <8 x double> %b0, <8 x double> %b1
   ret <8 x double> %7
@@ -395,11 +397,11 @@ define i16 @stack_fold_cmpps(<16 x float> %a0, <16 x float> %a1) {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %res = call <16 x i1> @llvm.x86.avx512.cmp.ps.512(<16 x float> %a0, <16 x float> %a1, i32 0, i32 4)
+  %res = call <16 x i1> @llvm.x86.avx512.mask.cmp.ps.512(<16 x float> %a0, <16 x float> %a1, i32 0,  <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 4)
   %2 = bitcast <16 x i1> %res to i16
   ret i16 %2
 }
-declare <16 x i1> @llvm.x86.avx512.cmp.ps.512(<16 x float>, <16 x float>, i32, i32)
+declare <16 x i1> @llvm.x86.avx512.mask.cmp.ps.512(<16 x float>, <16 x float>, i32, <16 x i1>, i32)
 
 define <16 x float> @stack_fold_cmpps_mask(<16 x float> %a0, <16 x float> %a1, <16 x float>* %a2, i16 %mask, <16 x float> %b0, <16 x float> %b1) {
 ; CHECK-LABEL: stack_fold_cmpps_mask:
@@ -415,8 +417,9 @@ define <16 x float> @stack_fold_cmpps_mask(<16 x float> %a0, <16 x float> %a1, <
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vaddps (%rdi), %zmm0, %zmm0
+; CHECK-NEXT:    vcmpeqps {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k0 # 64-byte Folded Reload
 ; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    vcmpeqps {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k1 {%k1} # 64-byte Folded Reload
+; CHECK-NEXT:    kandw %k0, %k1, %k1
 ; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vblendmps (%rsp), %zmm0, %zmm0 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    addq $184, %rsp
@@ -427,7 +430,7 @@ define <16 x float> @stack_fold_cmpps_mask(<16 x float> %a0, <16 x float> %a1, <
   %2 = load <16 x float>, <16 x float>* %a2
   %3 = fadd <16 x float> %a1, %2
   %4 = bitcast i16 %mask to <16 x i1>
-  %5 = call <16 x i1> @llvm.x86.avx512.cmp.ps.512(<16 x float> %3, <16 x float> %a0, i32 0, i32 4)
+  %5 = call <16 x i1> @llvm.x86.avx512.mask.cmp.ps.512(<16 x float> %3, <16 x float> %a0, i32 0,  <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 4)
   %6 = and <16 x i1> %4, %5
   %7 = select <16 x i1> %6, <16 x float> %b0, <16 x float> %b1
   ret <16 x float> %7
@@ -447,8 +450,9 @@ define <16 x float> @stack_fold_cmpps_mask_commuted(<16 x float> %a0, <16 x floa
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vaddps (%rdi), %zmm0, %zmm0
+; CHECK-NEXT:    vcmpeqps {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k0 # 64-byte Folded Reload
 ; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    vcmpeqps {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k1 {%k1} # 64-byte Folded Reload
+; CHECK-NEXT:    kandw %k0, %k1, %k1
 ; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
 ; CHECK-NEXT:    vblendmps (%rsp), %zmm0, %zmm0 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    addq $184, %rsp
@@ -459,7 +463,7 @@ define <16 x float> @stack_fold_cmpps_mask_commuted(<16 x float> %a0, <16 x floa
   %2 = load <16 x float>, <16 x float>* %a2
   %3 = fadd <16 x float> %a1, %2
   %4 = bitcast i16 %mask to <16 x i1>
-  %5 = call <16 x i1> @llvm.x86.avx512.cmp.ps.512(<16 x float> %a0, <16 x float> %3, i32 0, i32 4)
+  %5 = call <16 x i1> @llvm.x86.avx512.mask.cmp.ps.512(<16 x float> %a0, <16 x float> %3, i32 0, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 4)
   %6 = and <16 x i1> %4, %5
   %7 = select <16 x i1> %6, <16 x float> %b0, <16 x float> %b1
   ret <16 x float> %7

@@ -384,8 +384,10 @@ namespace llvm {
     /// Vector comparison generating mask bits for fp and
     /// integer signed and unsigned data types.
     CMPM,
-    // Vector comparison with SAE for FP values
-    CMPM_SAE,
+    // Vector mask comparison generating mask bits for FP values.
+    CMPMM,
+    // Vector mask comparison with SAE for FP values.
+    CMPMM_SAE,
 
     // Arithmetic operations with FLAGS results.
     ADD,

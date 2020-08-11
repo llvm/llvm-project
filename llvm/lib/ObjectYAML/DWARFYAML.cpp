@@ -17,7 +17,7 @@
 namespace llvm {
 
 bool DWARFYAML::Data::isEmpty() const {
-  return DebugStrings.empty() && AbbrevDecls.empty() && DebugAranges &&
+  return DebugStrings.empty() && AbbrevDecls.empty() && !DebugAranges &&
          DebugRanges.empty() && !PubNames && !PubTypes && !GNUPubNames &&
          !GNUPubTypes && CompileUnits.empty() && DebugLines.empty();
 }

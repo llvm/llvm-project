@@ -226,6 +226,8 @@ void ASTStmtReader::VisitIfStmt(IfStmt *S) {
     S->setInit(Record.readSubStmt());
 
   S->setIfLoc(readSourceLocation());
+  S->setLParenLoc(readSourceLocation());
+  S->setRParenLoc(readSourceLocation());
   if (HasElse)
     S->setElseLoc(readSourceLocation());
 }
@@ -247,6 +249,8 @@ void ASTStmtReader::VisitSwitchStmt(SwitchStmt *S) {
     S->setConditionVariable(Record.getContext(), readDeclAs<VarDecl>());
 
   S->setSwitchLoc(readSourceLocation());
+  S->setLParenLoc(readSourceLocation());
+  S->setRParenLoc(readSourceLocation());
 
   SwitchCase *PrevSC = nullptr;
   for (auto E = Record.size(); Record.getIdx() != E; ) {

@@ -11763,6 +11763,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return EmitX86CpuInit();
 
   SmallVector<Value*, 4> Ops;
+  bool IsMaskFCmp = false;
 
   // Find out if any arguments are required to be integer constant expressions.
   unsigned ICEArguments = 0;
@@ -13661,16 +13662,18 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_cmpordps:
   case X86::BI__builtin_ia32_cmpordpd:
     return getVectorFCmpIR(CmpInst::FCMP_ORD, /*IsSignaling*/false);
-  case X86::BI__builtin_ia32_cmpps:
-  case X86::BI__builtin_ia32_cmpps256:
-  case X86::BI__builtin_ia32_cmppd:
-  case X86::BI__builtin_ia32_cmppd256:
   case X86::BI__builtin_ia32_cmpps128_mask:
   case X86::BI__builtin_ia32_cmpps256_mask:
   case X86::BI__builtin_ia32_cmpps512_mask:
   case X86::BI__builtin_ia32_cmppd128_mask:
   case X86::BI__builtin_ia32_cmppd256_mask:
-  case X86::BI__builtin_ia32_cmppd512_mask: {
+  case X86::BI__builtin_ia32_cmppd512_mask:
+    IsMaskFCmp = true;
+    LLVM_FALLTHROUGH;
+  case X86::BI__builtin_ia32_cmpps:
+  case X86::BI__builtin_ia32_cmpps256:
+  case X86::BI__builtin_ia32_cmppd:
+  case X86::BI__builtin_ia32_cmppd256: {
     // Lowering vector comparisons to fcmp instructions, while
     // ignoring signalling behaviour requested
     // ignoring rounding mode requested
@@ -13715,8 +13718,11 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     // If the predicate is true or false and we're using constrained intrinsics,
     // we don't have a compare intrinsic we can use. Just use the legacy X86
     // specific intrinsic.
-    if ((Pred == FCmpInst::FCMP_TRUE || Pred == FCmpInst::FCMP_FALSE) &&
-        Builder.getIsFPConstrained()) {
+    // If the intrinsic is mask enabled and we're using constrained intrinsics,
+    // use the legacy X86 specific intrinsic.
+    if (Builder.getIsFPConstrained() &&
+        (Pred == FCmpInst::FCMP_TRUE || Pred == FCmpInst::FCMP_FALSE ||
+         IsMaskFCmp)) {
 
       Intrinsic::ID IID;
       switch (BuiltinID) {
@@ -13734,36 +13740,32 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
         IID = Intrinsic::x86_avx_cmp_pd_256;
         break;
       case X86::BI__builtin_ia32_cmpps512_mask:
-        IID = Intrinsic::x86_avx512_cmp_ps_512;
+        IID = Intrinsic::x86_avx512_mask_cmp_ps_512;
         break;
       case X86::BI__builtin_ia32_cmppd512_mask:
-        IID = Intrinsic::x86_avx512_cmp_pd_512;
+        IID = Intrinsic::x86_avx512_mask_cmp_pd_512;
         break;
       case X86::BI__builtin_ia32_cmpps128_mask:
-        IID = Intrinsic::x86_avx512_cmp_ps_128;
+        IID = Intrinsic::x86_avx512_mask_cmp_ps_128;
         break;
       case X86::BI__builtin_ia32_cmpps256_mask:
-        IID = Intrinsic::x86_avx512_cmp_ps_256;
+        IID = Intrinsic::x86_avx512_mask_cmp_ps_256;
         break;
       case X86::BI__builtin_ia32_cmppd128_mask:
-        IID = Intrinsic::x86_avx512_cmp_pd_128;
+        IID = Intrinsic::x86_avx512_mask_cmp_pd_128;
         break;
       case X86::BI__builtin_ia32_cmppd256_mask:
-        IID = Intrinsic::x86_avx512_cmp_pd_256;
+        IID = Intrinsic::x86_avx512_mask_cmp_pd_256;
         break;
       }
 
       Function *Intr = CGM.getIntrinsic(IID);
-      if (cast<llvm::VectorType>(Intr->getReturnType())
-              ->getElementType()
-              ->isIntegerTy(1)) {
+      if (IsMaskFCmp) {
         unsigned NumElts =
             cast<llvm::VectorType>(Ops[0]->getType())->getNumElements();
-        Value *MaskIn = Ops[3];
-        Ops.erase(&Ops[3]);
-
+        Ops[3] = getMaskVecValue(*this, Ops[3], NumElts);
         Value *Cmp = Builder.CreateCall(Intr, Ops);
-        return EmitX86MaskedCompareResult(*this, Cmp, NumElts, MaskIn);
+        return EmitX86MaskedCompareResult(*this, Cmp, NumElts, nullptr);
       }
 
       return Builder.CreateCall(Intr, Ops);
@@ -13771,14 +13773,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
 
     // Builtins without the _mask suffix return a vector of integers
     // of the same width as the input vectors
-    switch (BuiltinID) {
-    case X86::BI__builtin_ia32_cmpps512_mask:
-    case X86::BI__builtin_ia32_cmppd512_mask:
-    case X86::BI__builtin_ia32_cmpps128_mask:
-    case X86::BI__builtin_ia32_cmpps256_mask:
-    case X86::BI__builtin_ia32_cmppd128_mask:
-    case X86::BI__builtin_ia32_cmppd256_mask: {
-      // FIXME: Support SAE.
+    if (IsMaskFCmp) {
+      // We ignore SAE if strict FP is disabled. We only keep precise
+      // exception behavior under strict FP.
       unsigned NumElts =
           cast<llvm::VectorType>(Ops[0]->getType())->getNumElements();
       Value *Cmp;
@@ -13788,9 +13785,8 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
         Cmp = Builder.CreateFCmp(Pred, Ops[0], Ops[1]);
       return EmitX86MaskedCompareResult(*this, Cmp, NumElts, Ops[3]);
     }
-    default:
-      return getVectorFCmpIR(Pred, IsSignaling);
-    }
+
+    return getVectorFCmpIR(Pred, IsSignaling);
   }
 
   // SSE scalar comparison intrinsics
