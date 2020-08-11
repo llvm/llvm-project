@@ -54,8 +54,8 @@ class Module;
 //===----------------------------------------------------------------------===//
 /// This class can be derived from and used by targets to hold private
 /// target-specific information for each Module.  Objects of type are
-/// accessed/created with MMI::getInfo and destroyed when the MachineModuleInfo
-/// is destroyed.
+/// accessed/created with MachineModuleInfo::getObjFileInfo and destroyed when
+/// the MachineModuleInfo is destroyed.
 ///
 class MachineModuleInfoImpl {
 public:
@@ -251,6 +251,12 @@ public:
     return Personalities;
   }
   /// \}
+
+  // MMI owes MCContext. It should never be invalidated.
+  bool invalidate(Module &, const PreservedAnalyses &,
+                  ModuleAnalysisManager::Invalidator &) {
+    return false;
+  }
 }; // End class MachineModuleInfo
 
 class MachineModuleInfoWrapperPass : public ImmutablePass {

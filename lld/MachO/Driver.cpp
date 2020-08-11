@@ -36,6 +36,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
+#include <algorithm>
+
 using namespace llvm;
 using namespace llvm::MachO;
 using namespace llvm::sys;
@@ -358,8 +360,49 @@ static bool markSubLibrary(StringRef searchName) {
   return false;
 }
 
+static inline char toLowerDash(char x) {
+  if (x >= 'A' && x <= 'Z')
+    return x - 'A' + 'a';
+  else if (x == ' ')
+    return '-';
+  return x;
+}
+
+static std::string lowerDash(StringRef s) {
+  return std::string(map_iterator(s.begin(), toLowerDash),
+                     map_iterator(s.end(), toLowerDash));
+}
+
 static void handlePlatformVersion(const opt::Arg *arg) {
-  // TODO: implementation coming very soon ...
+  StringRef platformStr = arg->getValue(0);
+  StringRef minVersionStr = arg->getValue(1);
+  StringRef sdkVersionStr = arg->getValue(2);
+
+  // TODO(compnerd) see if we can generate this case list via XMACROS
+  config->platform.kind =
+      llvm::StringSwitch<llvm::MachO::PlatformKind>(lowerDash(platformStr))
+          .Cases("macos", "1", llvm::MachO::PlatformKind::macOS)
+          .Cases("ios", "2", llvm::MachO::PlatformKind::iOS)
+          .Cases("tvos", "3", llvm::MachO::PlatformKind::tvOS)
+          .Cases("watchos", "4", llvm::MachO::PlatformKind::watchOS)
+          .Cases("bridgeos", "5", llvm::MachO::PlatformKind::bridgeOS)
+          .Cases("mac-catalyst", "6", llvm::MachO::PlatformKind::macCatalyst)
+          .Cases("ios-simulator", "7", llvm::MachO::PlatformKind::iOSSimulator)
+          .Cases("tvos-simulator", "8",
+                 llvm::MachO::PlatformKind::tvOSSimulator)
+          .Cases("watchos-simulator", "9",
+                 llvm::MachO::PlatformKind::watchOSSimulator)
+          .Default(llvm::MachO::PlatformKind::unknown);
+  if (config->platform.kind == llvm::MachO::PlatformKind::unknown)
+    error(Twine("malformed platform: ") + platformStr);
+  // TODO: check validity of version strings, which varies by platform
+  // NOTE: ld64 accepts version strings with 5 components
+  // llvm::VersionTuple accepts no more than 4 components
+  // Has Apple ever published version strings with 5 components?
+  if (config->platform.minimum.tryParse(minVersionStr))
+    error(Twine("malformed minimum version: ") + minVersionStr);
+  if (config->platform.sdk.tryParse(sdkVersionStr))
+    error(Twine("malformed sdk version: ") + sdkVersionStr);
 }
 
 static void warnIfDeprecatedOption(const opt::Option &opt) {
@@ -495,6 +538,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     case OPT_Z:
     case OPT_arch:
     case OPT_syslibroot:
+    case OPT_sectcreate:
       // handled elsewhere
       break;
     default:
@@ -523,6 +567,15 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
 
   createSyntheticSections();
   symtab->addDSOHandle(in.header);
+
+  for (opt::Arg *arg : args.filtered(OPT_sectcreate)) {
+    StringRef segName = arg->getValue(0);
+    StringRef sectName = arg->getValue(1);
+    StringRef fileName = arg->getValue(2);
+    Optional<MemoryBufferRef> buffer = readFile(fileName);
+    if (buffer)
+      inputFiles.push_back(make<OpaqueFile>(*buffer, segName, sectName));
+  }
 
   // Initialize InputSections.
   for (InputFile *file : inputFiles) {
