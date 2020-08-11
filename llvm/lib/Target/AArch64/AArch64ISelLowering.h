@@ -92,6 +92,7 @@ enum NodeType : unsigned {
   SMIN_PRED,
   SRA_PRED,
   SRL_PRED,
+  SUB_PRED,
   UDIV_PRED,
   UMAX_PRED,
   UMIN_PRED,
