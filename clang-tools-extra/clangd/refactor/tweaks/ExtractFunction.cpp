@@ -673,6 +673,8 @@ bool ExtractFunction::prepare(const Selection &Inputs) {
   const Node *CommonAnc = Inputs.ASTSelection.commonAncestor();
   const SourceManager &SM = Inputs.AST->getSourceManager();
   const LangOptions &LangOpts = Inputs.AST->getLangOpts();
+  if (!LangOpts.CPlusPlus)
+    return false;
   if (auto MaybeExtZone = findExtractionZone(CommonAnc, SM, LangOpts)) {
     ExtZone = std::move(*MaybeExtZone);
     return true;
