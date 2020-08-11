@@ -460,12 +460,12 @@ class CommandLineCompletionTestCase(TestBase):
         self.check_completion_with_desc("breakpoint set --Z", [
         ])
 
-    def test_frame_select(self):
+    def test_common_completion_frame_index(self):
         self.build()
-        self.main_source_spec = lldb.SBFileSpec("main.cpp")
-        lldbutil.run_to_source_breakpoint(self, '// Break here', self.main_source_spec)
+        lldbutil.run_to_source_breakpoint(self, '// Break here', lldb.SBFileSpec("main.cpp"))
 
         self.complete_from_to('frame select ', ['0'])
+        self.complete_from_to('thread backtrace -s ', ['0'])
     
     def test_frame_recognizer_delete(self):
         self.runCmd("frame recognizer add -l py_class -s module_name -n recognizer_name")
