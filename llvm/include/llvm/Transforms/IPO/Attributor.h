@@ -3427,11 +3427,13 @@ struct PotentialValuesState : AbstractState {
 
   /// "Clamp" this state with \p PVS.
   PotentialValuesState operator^=(const PotentialValuesState &PVS) {
+    IsValidState ^= PVS.IsValidState;
     unionAssumed(PVS);
     return *this;
   }
 
   PotentialValuesState operator&=(const PotentialValuesState &PVS) {
+    IsValidState &= PVS.IsValidState;
     unionAssumed(PVS);
     return *this;
   }
