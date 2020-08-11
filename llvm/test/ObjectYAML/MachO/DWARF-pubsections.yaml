@@ -372,7 +372,6 @@ DWARF:
 # EMPTY-NEXT:     reserved1:       0x00000000
 # EMPTY-NEXT:     reserved2:       0x00000000
 # EMPTY-NEXT:     reserved3:       0x00000000
-# EMPTY-NEXT:     content:         ''
 # EMPTY-NEXT:   - sectname:        __debug_pubtypes
 # EMPTY-NEXT:     segname:         __DWARF
 # EMPTY-NEXT:     addr:            0x0000000000000000
@@ -385,7 +384,6 @@ DWARF:
 # EMPTY-NEXT:     reserved1:       0x00000000
 # EMPTY-NEXT:     reserved2:       0x00000000
 # EMPTY-NEXT:     reserved3:       0x00000000
-# EMPTY-NEXT:     content:         ''
 # EMPTY-NEXT: ...
 
 --- !mach-o
