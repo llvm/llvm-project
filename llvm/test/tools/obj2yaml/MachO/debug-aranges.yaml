@@ -100,6 +100,7 @@ DWARF:
 # RUN: yaml2obj --docnum=2 %s | obj2yaml | FileCheck %s -DSEGNAME=FOO --check-prefix=ARANGES
 
 --- !mach-o
+IsLittleEndian: true
 FileHeader:
   magic:      0xFEEDFACF
   cputype:    0x01000007
