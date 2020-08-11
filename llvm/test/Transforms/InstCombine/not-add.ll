@@ -2,13 +2,10 @@
 ; RUN: opt -instcombine -S < %s | FileCheck %s
 
 declare void @use(i8)
-declare i8 @get()
 
 define i8 @basic(i8 %x, i8 %y) {
 ; CHECK-LABEL: @basic(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 [[A]], -1
+; CHECK-NEXT:    [[NOTA:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[NOTA]]
 ;
   %notx = xor i8 %x, -1
@@ -19,9 +16,7 @@ define i8 @basic(i8 %x, i8 %y) {
 
 define i8 @basic_com_add(i8 %x, i8 %y) {
 ; CHECK-LABEL: @basic_com_add(
-; CHECK-NEXT:    [[NOTY:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[NOTY]], [[X:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 [[A]], -1
+; CHECK-NEXT:    [[NOTA:%.*]] = sub i8 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[NOTA]]
 ;
   %noty = xor i8 %y, -1
@@ -34,8 +29,7 @@ define i8 @basic_use_xor(i8 %x, i8 %y) {
 ; CHECK-LABEL: @basic_use_xor(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @use(i8 [[NOTX]])
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 [[A]], -1
+; CHECK-NEXT:    [[NOTA:%.*]] = sub i8 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[NOTA]]
 ;
   %notx = xor i8 %x, -1
@@ -50,7 +44,7 @@ define i8 @basic_use_add(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[NOTX]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[A]])
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 [[A]], -1
+; CHECK-NEXT:    [[NOTA:%.*]] = sub i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[NOTA]]
 ;
   %notx = xor i8 %x, -1
@@ -66,7 +60,7 @@ define i8 @basic_use_both(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @use(i8 [[NOTX]])
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[NOTX]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[A]])
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 [[A]], -1
+; CHECK-NEXT:    [[NOTA:%.*]] = sub i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[NOTA]]
 ;
   %notx = xor i8 %x, -1
@@ -79,9 +73,7 @@ define i8 @basic_use_both(i8 %x, i8 %y) {
 
 define i8 @basic_preserve_nsw(i8 %x, i8 %y) {
 ; CHECK-LABEL: @basic_preserve_nsw(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[A:%.*]] = add nsw i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 [[A]], -1
+; CHECK-NEXT:    [[NOTA:%.*]] = sub nsw i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[NOTA]]
 ;
   %notx = xor i8 %x, -1
@@ -92,9 +84,7 @@ define i8 @basic_preserve_nsw(i8 %x, i8 %y) {
 
 define i8 @basic_preserve_nuw(i8 %x, i8 %y) {
 ; CHECK-LABEL: @basic_preserve_nuw(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[A:%.*]] = add nuw i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 [[A]], -1
+; CHECK-NEXT:    [[NOTA:%.*]] = sub nuw i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[NOTA]]
 ;
   %notx = xor i8 %x, -1
@@ -105,9 +95,7 @@ define i8 @basic_preserve_nuw(i8 %x, i8 %y) {
 
 define i8 @basic_preserve_nuw_nsw(i8 %x, i8 %y) {
 ; CHECK-LABEL: @basic_preserve_nuw_nsw(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[A:%.*]] = add nuw nsw i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i8 [[A]], -1
+; CHECK-NEXT:    [[NOTA:%.*]] = sub nuw nsw i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[NOTA]]
 ;
   %notx = xor i8 %x, -1
@@ -118,9 +106,7 @@ define i8 @basic_preserve_nuw_nsw(i8 %x, i8 %y) {
 
 define <4 x i32> @vector_test(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @vector_test(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor <4 x i32> [[X:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[A:%.*]] = add <4 x i32> [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor <4 x i32> [[A]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[NOTA:%.*]] = sub <4 x i32> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[NOTA]]
 ;
   %notx = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -131,9 +117,7 @@ define <4 x i32> @vector_test(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x i32> @vector_test_undef(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @vector_test_undef(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor <4 x i32> [[X:%.*]], <i32 -1, i32 undef, i32 undef, i32 -1>
-; CHECK-NEXT:    [[A:%.*]] = add <4 x i32> [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor <4 x i32> [[A]], <i32 -1, i32 -1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[NOTA:%.*]] = sub <4 x i32> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[NOTA]]
 ;
   %notx = xor <4 x i32> %x, <i32 -1, i32 undef, i32 undef, i32 -1>
@@ -145,9 +129,7 @@ define <4 x i32> @vector_test_undef(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x i32> @vector_test_undef_nsw_nuw(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @vector_test_undef_nsw_nuw(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor <4 x i32> [[X:%.*]], <i32 -1, i32 undef, i32 undef, i32 -1>
-; CHECK-NEXT:    [[A:%.*]] = add nuw nsw <4 x i32> [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor <4 x i32> [[A]], <i32 -1, i32 -1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[NOTA:%.*]] = sub nuw nsw <4 x i32> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[NOTA]]
 ;
   %notx = xor <4 x i32> %x, <i32 -1, i32 undef, i32 undef, i32 -1>
