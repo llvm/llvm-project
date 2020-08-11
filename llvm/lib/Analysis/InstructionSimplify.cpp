@@ -5220,29 +5220,26 @@ static APInt getMaxMinLimit(Intrinsic::ID IID, unsigned BitWidth) {
   }
 }
 
-static bool isMinMax(Intrinsic::ID IID) {
-  return IID == Intrinsic::smax || IID == Intrinsic::smin ||
-         IID == Intrinsic::umax || IID == Intrinsic::umin;
-}
-
 /// Given a min/max intrinsic, see if it can be removed based on having an
 /// operand that is another min/max intrinsic with shared operand(s). The caller
 /// is expected to swap the operand arguments to handle commutation.
 static Value *foldMinMaxSharedOp(Intrinsic::ID IID, Value *Op0, Value *Op1) {
-  assert(isMinMax(IID) && "Expected min/max intrinsic");
-  auto *InnerMM = dyn_cast<IntrinsicInst>(Op0);
-  if (!InnerMM)
-    return nullptr;
-  Intrinsic::ID InnerID = InnerMM->getIntrinsicID();
-  if (!isMinMax(InnerID))
+  Value *X, *Y;
+  if (!match(Op0, m_MaxOrMin(m_Value(X), m_Value(Y))))
     return nullptr;
 
-  if (Op1 == InnerMM->getOperand(0) || Op1 == InnerMM->getOperand(1)) {
+  auto *MM0 = dyn_cast<IntrinsicInst>(Op0);
+  if (!MM0)
+    return nullptr;
+  Intrinsic::ID IID0 = MM0->getIntrinsicID();
+
+  if (Op1 == X || Op1 == Y ||
+      match(Op1, m_c_MaxOrMin(m_Specific(X), m_Specific(Y)))) {
     // max (max X, Y), X --> max X, Y
-    if (InnerID == IID)
-      return InnerMM;
+    if (IID0 == IID)
+      return MM0;
     // max (min X, Y), X --> X
-    if (InnerID == getMaxMinOpposite(IID))
+    if (IID0 == getMaxMinOpposite(IID))
       return Op1;
   }
   return nullptr;
