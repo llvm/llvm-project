@@ -59,14 +59,16 @@ Marshaller::Marshaller(llvm::StringRef RemoteIndexRoot,
     assert(llvm::sys::path::is_absolute(RemoteIndexRoot));
     assert(RemoteIndexRoot ==
            llvm::sys::path::convert_to_slash(RemoteIndexRoot));
-    assert(RemoteIndexRoot.endswith(llvm::sys::path::get_separator()));
     this->RemoteIndexRoot = RemoteIndexRoot.str();
+    if (!RemoteIndexRoot.endswith(llvm::sys::path::get_separator()))
+      *this->RemoteIndexRoot += llvm::sys::path::get_separator();
   }
   if (!LocalIndexRoot.empty()) {
     assert(llvm::sys::path::is_absolute(LocalIndexRoot));
     assert(LocalIndexRoot == llvm::sys::path::convert_to_slash(LocalIndexRoot));
-    assert(LocalIndexRoot.endswith(llvm::sys::path::get_separator()));
     this->LocalIndexRoot = LocalIndexRoot.str();
+    if (!LocalIndexRoot.endswith(llvm::sys::path::get_separator()))
+      *this->LocalIndexRoot += llvm::sys::path::get_separator();
   }
   assert(!RemoteIndexRoot.empty() || !LocalIndexRoot.empty());
 }
