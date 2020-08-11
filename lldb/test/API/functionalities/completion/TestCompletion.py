@@ -368,6 +368,18 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('target modules load a.ou',
                               ['a.out'])
 
+    def test_target_modules_search_paths_insert(self):
+        # Completion won't work without a valid target.
+        self.complete_from_to("target modules search-paths insert ", "target modules search-paths insert ")
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact('a.out'))
+        self.assertTrue(target, VALID_TARGET)
+        self.complete_from_to("target modules search-paths insert ", "target modules search-paths insert ")
+        self.runCmd("target modules search-paths add a b")
+        self.complete_from_to("target modules search-paths insert ", "target modules search-paths insert 0")
+        # Completion only works for the first arg.
+        self.complete_from_to("target modules search-paths insert 0 ", "target modules search-paths insert 0 ")
+
     def test_target_create_dash_co(self):
         """Test that 'target create --co' completes to 'target variable --core '."""
         self.complete_from_to('target create --co', 'target create --core ')
@@ -375,6 +387,22 @@ class CommandLineCompletionTestCase(TestBase):
     def test_target_va(self):
         """Test that 'target va' completes to 'target variable '."""
         self.complete_from_to('target va', 'target variable ')
+
+    def test_common_completion_thread_index(self):
+        subcommands = ['continue', 'info', 'exception', 'select',
+                       'step-in', 'step-inst', 'step-inst-over', 'step-out', 'step-over', 'step-script']
+
+        # Completion should do nothing without threads.
+        for subcommand in subcommands:
+            self.complete_from_to('thread ' + subcommand + ' ',
+                                  'thread ' + subcommand + ' ')
+
+        self.build()
+        lldbutil.run_to_source_breakpoint(self, '// Break here', lldb.SBFileSpec("main.cpp"))
+
+        # At least we have the thread at the index of 1 now.
+        for subcommand in subcommands:
+            self.complete_from_to('thread ' + subcommand + ' ', ['1'])
 
     def test_command_argument_completion(self):
         """Test completion of command arguments"""
@@ -448,12 +476,12 @@ class CommandLineCompletionTestCase(TestBase):
         self.check_completion_with_desc("breakpoint set --Z", [
         ])
 
-    def test_frame_select(self):
+    def test_common_completion_frame_index(self):
         self.build()
-        self.main_source_spec = lldb.SBFileSpec("main.cpp")
-        lldbutil.run_to_source_breakpoint(self, '// Break here', self.main_source_spec)
+        lldbutil.run_to_source_breakpoint(self, '// Break here', lldb.SBFileSpec("main.cpp"))
 
         self.complete_from_to('frame select ', ['0'])
+        self.complete_from_to('thread backtrace -s ', ['0'])
     
     def test_frame_recognizer_delete(self):
         self.runCmd("frame recognizer add -l py_class -s module_name -n recognizer_name")
@@ -536,8 +564,33 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('register write rbx ',
                               [])
 
+    def test_common_completion_target_stophook_ids(self):
+        subcommands = ['delete', 'enable', 'disable']
+
+        for subcommand in subcommands:
+            self.complete_from_to('target stop-hook ' + subcommand + ' ',
+                                  'target stop-hook ' + subcommand + ' ')
+
+        self.build()
+        self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.runCmd('target stop-hook add test DONE')
+
+        for subcommand in subcommands:
+            self.complete_from_to('target stop-hook ' + subcommand + ' ',
+                                  'target stop-hook ' + subcommand + ' 1')
+
+        # Completion should work only on the first argument.
+        for subcommand in subcommands:
+            self.complete_from_to('target stop-hook ' + subcommand + ' 1 ',
+                                  'target stop-hook ' + subcommand + ' 1 ')
+
     def test_common_completion_type_language(self):
         self.complete_from_to('type category -l ', ['c'])
+
+    def test_target_modules_load_dash_u(self):
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.complete_from_to('target modules load -u ', [target.GetModuleAtIndex(0).GetUUIDString()])
 
     def test_complete_breakpoint_with_ids(self):
         """These breakpoint subcommands should be completed with a list of breakpoint ids"""

@@ -164,12 +164,12 @@ def AArch64lastb     : SDNode<"AArch64ISD::LASTB",        SDT_AArch64Reduce>;
 
 def SDT_AArch64Arith : SDTypeProfile<1, 3, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVec<3>,
-  SDTCVecEltisVT<1,i1>, SDTCisSameAs<2,3>
+  SDTCVecEltisVT<1,i1>, SDTCisSameAs<0,2>, SDTCisSameAs<2,3>
 ]>;
 
 def SDT_AArch64FMA : SDTypeProfile<1, 4, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVec<3>, SDTCisVec<4>,
-  SDTCVecEltisVT<1,i1>, SDTCisSameAs<2,3>, SDTCisSameAs<3,4>
+  SDTCVecEltisVT<1,i1>, SDTCisSameAs<0,2>, SDTCisSameAs<2,3>, SDTCisSameAs<3,4>
 ]>;
 
 // Predicated operations with the result of inactive lanes being unspecified.
@@ -186,9 +186,19 @@ def AArch64mul_p  : SDNode<"AArch64ISD::MUL_PRED",  SDT_AArch64Arith>;
 def AArch64sdiv_p : SDNode<"AArch64ISD::SDIV_PRED", SDT_AArch64Arith>;
 def AArch64smax_p : SDNode<"AArch64ISD::SMAX_PRED", SDT_AArch64Arith>;
 def AArch64smin_p : SDNode<"AArch64ISD::SMIN_PRED", SDT_AArch64Arith>;
+def AArch64sub_p  : SDNode<"AArch64ISD::SUB_PRED",  SDT_AArch64Arith>;
 def AArch64udiv_p : SDNode<"AArch64ISD::UDIV_PRED", SDT_AArch64Arith>;
 def AArch64umax_p : SDNode<"AArch64ISD::UMAX_PRED", SDT_AArch64Arith>;
 def AArch64umin_p : SDNode<"AArch64ISD::UMIN_PRED", SDT_AArch64Arith>;
+
+def SDT_AArch64IntExtend : SDTypeProfile<1, 4, [
+  SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVT<3, OtherVT>, SDTCisVec<4>,
+  SDTCVecEltisVT<1,i1>, SDTCisSameAs<0,2>, SDTCisVTSmallerThanOp<3, 2>, SDTCisSameAs<0,4>
+]>;
+
+// Predicated operations with the result of inactive lanes provided by the last operand.
+def AArch64sxt_mt : SDNode<"AArch64ISD::SIGN_EXTEND_INREG_MERGE_PASSTHRU", SDT_AArch64IntExtend>;
+def AArch64uxt_mt : SDNode<"AArch64ISD::ZERO_EXTEND_INREG_MERGE_PASSTHRU", SDT_AArch64IntExtend>;
 
 def SDT_AArch64ReduceWithInit : SDTypeProfile<1, 3, [SDTCisVec<1>, SDTCisVec<3>]>;
 def AArch64clasta_n   : SDNode<"AArch64ISD::CLASTA_N",   SDT_AArch64ReduceWithInit>;
@@ -246,6 +256,7 @@ let Predicates = [HasSVE] in {
   defm SUBR_ZPmZ : sve_int_bin_pred_arit_0<0b011, "subr", "SUBR_ZPZZ", int_aarch64_sve_subr, DestructiveBinaryCommWithRev, "SUB_ZPmZ", /*isReverseInstr*/ 1>;
 
   defm ADD_ZPZZ  : sve_int_bin_pred_bhsd<AArch64add_p>;
+  defm SUB_ZPZZ  : sve_int_bin_pred_bhsd<AArch64sub_p>;
 
   let Predicates = [HasSVE, UseExperimentalZeroingPseudos] in {
     defm ADD_ZPZZ  : sve_int_bin_pred_zeroing_bhsd<int_aarch64_sve_add>;
@@ -312,12 +323,12 @@ let Predicates = [HasSVE] in {
   defm SDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b0, "sdot", int_aarch64_sve_sdot_lane>;
   defm UDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b1, "udot", int_aarch64_sve_udot_lane>;
 
-  defm SXTB_ZPmZ : sve_int_un_pred_arit_0_h<0b000, "sxtb", int_aarch64_sve_sxtb>;
-  defm UXTB_ZPmZ : sve_int_un_pred_arit_0_h<0b001, "uxtb", int_aarch64_sve_uxtb>;
-  defm SXTH_ZPmZ : sve_int_un_pred_arit_0_w<0b010, "sxth", int_aarch64_sve_sxth>;
-  defm UXTH_ZPmZ : sve_int_un_pred_arit_0_w<0b011, "uxth", int_aarch64_sve_uxth>;
-  defm SXTW_ZPmZ : sve_int_un_pred_arit_0_d<0b100, "sxtw", int_aarch64_sve_sxtw>;
-  defm UXTW_ZPmZ : sve_int_un_pred_arit_0_d<0b101, "uxtw", int_aarch64_sve_uxtw>;
+  defm SXTB_ZPmZ : sve_int_un_pred_arit_0_h<0b000, "sxtb", AArch64sxt_mt>;
+  defm UXTB_ZPmZ : sve_int_un_pred_arit_0_h<0b001, "uxtb", AArch64uxt_mt>;
+  defm SXTH_ZPmZ : sve_int_un_pred_arit_0_w<0b010, "sxth", AArch64sxt_mt>;
+  defm UXTH_ZPmZ : sve_int_un_pred_arit_0_w<0b011, "uxth", AArch64uxt_mt>;
+  defm SXTW_ZPmZ : sve_int_un_pred_arit_0_d<0b100, "sxtw", AArch64sxt_mt>;
+  defm UXTW_ZPmZ : sve_int_un_pred_arit_0_d<0b101, "uxtw", AArch64uxt_mt>;
   defm ABS_ZPmZ  : sve_int_un_pred_arit_0<  0b110, "abs",  int_aarch64_sve_abs>;
   defm NEG_ZPmZ  : sve_int_un_pred_arit_0<  0b111, "neg",  int_aarch64_sve_neg>;
 

@@ -19,7 +19,9 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Language.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/Thread.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
@@ -53,6 +55,7 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {eDiskDirectoryCompletion, CommandCompletions::DiskDirectories},
       {eSymbolCompletion, CommandCompletions::Symbols},
       {eModuleCompletion, CommandCompletions::Modules},
+      {eModuleUUIDCompletion, CommandCompletions::ModuleUUIDs},
       {eSettingsNameCompletion, CommandCompletions::SettingsNames},
       {ePlatformPluginCompletion, CommandCompletions::PlatformPluginNames},
       {eArchitectureCompletion, CommandCompletions::ArchitectureNames},
@@ -62,6 +65,9 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {eProcessPluginCompletion, CommandCompletions::ProcessPluginNames},
       {eDisassemblyFlavorCompletion, CommandCompletions::DisassemblyFlavors},
       {eTypeLanguageCompletion, CommandCompletions::TypeLanguages},
+      {eFrameIndexCompletion, CommandCompletions::FrameIndexes},
+      {eStopHookIDCompletion, CommandCompletions::StopHookIDs},
+      {eThreadIndexCompletion, CommandCompletions::ThreadIndexes},
       {eNoCompletion, nullptr} // This one has to be last in the list.
   };
 
@@ -489,6 +495,24 @@ void CommandCompletions::Modules(CommandInterpreter &interpreter,
   }
 }
 
+void CommandCompletions::ModuleUUIDs(CommandInterpreter &interpreter,
+                                     CompletionRequest &request,
+                                     SearchFilter *searcher) {
+  const ExecutionContext &exe_ctx = interpreter.GetExecutionContext();
+  if (!exe_ctx.HasTargetScope())
+    return;
+
+  exe_ctx.GetTargetPtr()->GetImages().ForEach(
+      [&request](const lldb::ModuleSP &module) {
+        StreamString strm;
+        module->GetDescription(strm.AsRawOstream(),
+                               lldb::eDescriptionLevelInitial);
+        request.TryCompleteCurrentArg(module->GetUUID().GetAsString(),
+                                      strm.GetString());
+        return true;
+      });
+}
+
 void CommandCompletions::Symbols(CommandInterpreter &interpreter,
                                  CompletionRequest &request,
                                  SearchFilter *searcher) {
@@ -616,5 +640,60 @@ void CommandCompletions::TypeLanguages(CommandInterpreter &interpreter,
        Language::GetLanguagesSupportingTypeSystems().bitvector.set_bits()) {
     request.TryCompleteCurrentArg(
         Language::GetNameForLanguageType(static_cast<lldb::LanguageType>(bit)));
+  }
+}
+
+void CommandCompletions::FrameIndexes(CommandInterpreter &interpreter,
+                                      CompletionRequest &request,
+                                      SearchFilter *searcher) {
+  const ExecutionContext &exe_ctx = interpreter.GetExecutionContext();
+  if (!exe_ctx.HasProcessScope())
+    return;
+
+  lldb::ThreadSP thread_sp = exe_ctx.GetThreadSP();
+  const uint32_t frame_num = thread_sp->GetStackFrameCount();
+  for (uint32_t i = 0; i < frame_num; ++i) {
+    lldb::StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(i);
+    StreamString strm;
+    frame_sp->Dump(&strm, false, true);
+    request.TryCompleteCurrentArg(std::to_string(i), strm.GetString());
+  }
+}
+
+void CommandCompletions::StopHookIDs(CommandInterpreter &interpreter,
+                                     CompletionRequest &request,
+                                     SearchFilter *searcher) {
+  const lldb::TargetSP target_sp =
+      interpreter.GetExecutionContext().GetTargetSP();
+  if (!target_sp)
+    return;
+
+  const size_t num = target_sp->GetNumStopHooks();
+  for (size_t idx = 0; idx < num; ++idx) {
+    StreamString strm;
+    // The value 11 is an offset to make the completion description looks
+    // neater.
+    strm.SetIndentLevel(11);
+    const Target::StopHookSP stophook_sp = target_sp->GetStopHookAtIndex(idx);
+    stophook_sp->GetDescription(&strm, lldb::eDescriptionLevelInitial);
+    request.TryCompleteCurrentArg(std::to_string(stophook_sp->GetID()),
+                                  strm.GetString());
+  }
+}
+
+void CommandCompletions::ThreadIndexes(CommandInterpreter &interpreter,
+                                       CompletionRequest &request,
+                                       SearchFilter *searcher) {
+  const ExecutionContext &exe_ctx = interpreter.GetExecutionContext();
+  if (!exe_ctx.HasProcessScope())
+    return;
+
+  ThreadList &threads = exe_ctx.GetProcessPtr()->GetThreadList();
+  lldb::ThreadSP thread_sp;
+  for (uint32_t idx = 0; (thread_sp = threads.GetThreadAtIndex(idx)); ++idx) {
+    StreamString strm;
+    thread_sp->GetStatus(strm, 0, 1, 1, true);
+    request.TryCompleteCurrentArg(std::to_string(thread_sp->GetIndexID()),
+                                  strm.GetString());
   }
 }

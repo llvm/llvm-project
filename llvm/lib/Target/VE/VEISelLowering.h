@@ -105,10 +105,20 @@ public:
                                       MachineMemOperand::Flags Flags,
                                       bool *Fast) const override;
 
-  // Block s/udiv lowering for now
-  bool isIntDivCheap(EVT VT, AttributeList Attr) const override { return true; }
+  /// Target Optimization {
 
+  // SX-Aurora VE's s/udiv is 5-9 times slower than multiply.
+  bool isIntDivCheap(EVT, AttributeList) const override { return false; }
+  // VE doesn't have rem.
+  bool hasStandaloneRem(EVT) const override { return false; }
+  // VE LDZ instruction returns 64 if the input is zero.
+  bool isCheapToSpeculateCtlz() const override { return true; }
+  // VE LDZ instruction is fast.
+  bool isCtlzFast() const override { return true; }
+  // VE has NND instruction.
   bool hasAndNot(SDValue Y) const override;
+
+  /// } Target Optimization
 };
 } // namespace llvm
 
