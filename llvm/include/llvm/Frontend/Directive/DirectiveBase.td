@@ -46,6 +46,9 @@ class DirectiveLanguage {
 
   // EnumSet class name used for clauses to generated the allowed clauses map.
   string clauseEnumSetClass = "";
+
+  // Class holding the clauses in the flang parse-tree.
+  string flangClauseBaseClass = "";
 }
 
 // Information about a specific clause.
@@ -57,10 +60,20 @@ class Clause<string c> {
   string alternativeName = "";
 
   // Optional class holding value of the clause in clang AST.
-  string clangClass = ?;
+  string clangClass = "";
+
+  // Optional class holding the clause in flang AST. If left blank, the class
+  // is assumed to be the name of the clause with capitalized word and
+  // underscores removed.
+  // ex: async -> Async
+  //     num_threads -> NumThreads
+  string flangClass = "";
 
   // Optional class holding value of the clause in flang AST.
-  string flangClass = ?;
+  string flangClassValue = "";
+
+  // If set to 1, value is optional. Not optional by default.
+  bit isValueOptional = 0;
 
   // Is clause implicit? If clause is set as implicit, the default kind will
   // be return in get<LanguageName>ClauseKind instead of their own kind.
