@@ -719,7 +719,7 @@ multiclass DSWritePat_mc <DS_Pseudo inst, ValueType vt, string frag> {
 // normal store.
 class DSAtomicWritePat <DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat <
   (frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$value),
-  (inst $ptr, $value, offset:$offset, (i1 0))
+  (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 0))
 >;
 
 multiclass DSAtomicWritePat_mc <DS_Pseudo inst, ValueType vt, string frag> {
