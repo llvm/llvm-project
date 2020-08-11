@@ -684,14 +684,18 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ROTL, IntVT, Expand);
     setOperationAction(ISD::ROTR, IntVT, Expand);
 
-    // Use isel patterns for i32 and i64
+    // VE has 64 bits instruction which works as i64 BSWAP operation.  This
+    // instruction works fine as i32 BSWAP operation with an additional
+    // parameter.  Use isel patterns to lower BSWAP.
     setOperationAction(ISD::BSWAP, IntVT, Legal);
-    setOperationAction(ISD::CTLZ, IntVT, Legal);
-    setOperationAction(ISD::CTPOP, IntVT, Legal);
 
-    // Use isel patterns for i64, Promote i32
+    // VE has only 64 bits instructions which work as i64 BITREVERSE/CTLZ/CTPOP
+    // operations.  Use isel patterns for i64, promote for i32.
     LegalizeAction Act = (IntVT == MVT::i32) ? Promote : Legal;
     setOperationAction(ISD::BITREVERSE, IntVT, Act);
+    setOperationAction(ISD::CTLZ, IntVT, Act);
+    setOperationAction(ISD::CTLZ_ZERO_UNDEF, IntVT, Act);
+    setOperationAction(ISD::CTPOP, IntVT, Act);
   }
   /// } Int Ops
 
