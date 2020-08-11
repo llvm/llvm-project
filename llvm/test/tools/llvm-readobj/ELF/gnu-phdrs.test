@@ -1,6 +1,9 @@
-## Check how llvm-readelf dumps program headers and prints sections to segments mapping.
+## Check how we dump program headers and print sections to segments
+## mapping (llvm-readelf only) with -l, --program-headers and --segments options.
 
 ## Check that -l, --program-headers and --segments are the same option.
+
+## Case A: test llvm-readelf tool.
 # RUN: yaml2obj --docnum=1 -DBITS=32 -DMACHINE=EM_386 %s -o %t32.elf
 # RUN: llvm-readelf -l %t32.elf 2>&1 > %t.readelf-l.txt
 # RUN: llvm-readelf --program-headers %t32.elf 2>&1 > %t.readelf-pheaders.txt
@@ -8,13 +11,23 @@
 # RUN: llvm-readelf --segments %t32.elf 2>&1 > %t.readelf-segments.txt
 # RUN: cmp %t.readelf-l.txt %t.readelf-segments.txt
 
+## Case B: test llvm-readobj tool.
+# RUN: llvm-readobj -l %t32.elf 2>&1 > %t.readobj-l.txt
+# RUN: llvm-readobj --program-headers %t32.elf 2>&1 > %t.readobj-pheaders.txt
+# RUN: cmp %t.readobj-l.txt %t.readobj-pheaders.txt
+# RUN: llvm-readobj --segments %t32.elf 2>&1 > %t.readobj-segments.txt
+# RUN: cmp %t.readobj-l.txt %t.readobj-segments.txt
+
 ## Check we are able to print program headers of different types.
-# RUN: llvm-readelf -l %t32.elf | \
-# RUN:   FileCheck %s --check-prefixes=ELF32,MAPPING --strict-whitespace --match-full-lines
+# RUN: FileCheck %s --check-prefixes=ELF32,MAPPING \
+# RUN:   --match-full-lines --strict-whitespace --input-file=%t.readelf-l.txt
+# RUN: FileCheck %s --check-prefixes=ELF-LLVM,ELF32-LLVM \
+# RUN:   --match-full-lines --input-file=%t.readobj-l.txt
 
 # RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_X86_64 %s -o %t64.elf
 # RUN: llvm-readelf -l %t64.elf | \
 # RUN:   FileCheck %s --check-prefixes=ELF64,MAPPING --strict-whitespace --match-full-lines
+# RUN: llvm-readobj -l %t64.elf | FileCheck %s --check-prefixes=ELF-LLVM,ELF64-LLVM
 
 #       ELF32:There are 23 program headers, starting at offset 52
 # ELF32-EMPTY:
@@ -102,6 +115,293 @@
 # MAPPING-NEXT:   21     .foo.begin .foo.end {{$}}
 # MAPPING-NEXT:   22     .foo.begin .foo.end {{$}}
 # MAPPING-NEXT:   None   .unused .strtab .shstrtab {{$}}
+
+# ELF-LLVM:      ProgramHeaders [
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_PHDR (0x6)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x2)
+# ELF-LLVM-NEXT:       PF_W (0x2)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_PHDR (0x6)
+# ELF32-LLVM-NEXT:   Offset: 0x317
+# ELF64-LLVM-NEXT:   Offset: 0x54B
+# ELF-LLVM-NEXT:     VirtualAddress: 0x2000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x2000
+# ELF-LLVM-NEXT:     FileSize: 7
+# ELF-LLVM-NEXT:     MemSize: 7
+# ELF-LLVM-NEXT:     Flags [ (0x1)
+# ELF-LLVM-NEXT:       PF_X (0x1)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_NULL (0x0)
+# ELF32-LLVM-NEXT:   Offset: 0x317
+# ELF64-LLVM-NEXT:   Offset: 0x54B
+# ELF-LLVM-NEXT:     VirtualAddress: 0x2000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x2000
+# ELF-LLVM-NEXT:     FileSize: 7
+# ELF-LLVM-NEXT:     MemSize: 7
+# ELF-LLVM-NEXT:     Flags [ (0x1)
+# ELF-LLVM-NEXT:       PF_X (0x1)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_DYNAMIC (0x2)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x7)
+# ELF-LLVM-NEXT:       PF_R (0x4)
+# ELF-LLVM-NEXT:       PF_W (0x2)
+# ELF-LLVM-NEXT:       PF_X (0x1)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_INTERP (0x3)
+# ELF32-LLVM-NEXT:   Offset: 0x31E
+# ELF64-LLVM-NEXT:   Offset: 0x552
+# ELF-LLVM-NEXT:     VirtualAddress: 0x3000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x3000
+# ELF-LLVM-NEXT:     FileSize: 4
+# ELF-LLVM-NEXT:     MemSize: 4
+# ELF-LLVM-NEXT:     Flags [ (0x6)
+# ELF-LLVM-NEXT:       PF_R (0x4)
+# ELF-LLVM-NEXT:       PF_W (0x2)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_NOTE (0x4)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_SHLIB (0x5)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 1
+# ELF-LLVM-NEXT:     MemSize: 1
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_TLS (0x7)
+# ELF32-LLVM-NEXT:   Offset: 0x322
+# ELF64-LLVM-NEXT:   Offset: 0x556
+# ELF-LLVM-NEXT:     VirtualAddress: 0x4000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x4000
+# ELF-LLVM-NEXT:     FileSize: 1
+# ELF-LLVM-NEXT:     MemSize: 1
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type:  (0x60000000)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_GNU_EH_FRAME (0x6474E550)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_SUNW_UNWIND (0x6464E550)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_GNU_STACK (0x6474E551)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_GNU_RELRO (0x6474E552)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_GNU_PROPERTY (0x6474E553)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_OPENBSD_RANDOMIZE (0x65A3DBE6)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_OPENBSD_WXNEEDED (0x65A3DBE7)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_OPENBSD_BOOTDATA (0x65A41BE6)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type:  (0x6FFFFFFF)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type:  (0x70000000)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type:  (0x70000001)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type:  (0x70000002)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type:  (0x70000003)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type:  (0x7FFFFFFF)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT: ]
 
 --- !ELF
 FileHeader:
@@ -288,23 +588,42 @@ ProgramHeaders:
 
 ## Check how we dump ARM specific program headers.
 # RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_ARM %s -o %tarm.elf
-# RUN: llvm-readelf --program-headers %tarm.elf | FileCheck %s --check-prefix=ARM
+# RUN: llvm-readelf --program-headers %tarm.elf | FileCheck %s --check-prefix=ARM-GNU
+# RUN: llvm-readobj --program-headers %tarm.elf | FileCheck %s --check-prefix=ARM-LLVM
 
-# ARM:      <unknown>: 0x70000000 0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
-# ARM-NEXT:            EXIDX      0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
-# ARM-NEXT: <unknown>: 0x70000002 0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
+# ARM-GNU:      <unknown>: 0x70000000 0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
+# ARM-GNU-NEXT:            EXIDX      0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
+# ARM-GNU-NEXT: <unknown>: 0x70000002 0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
+
+# ARM-LLVM:      ProgramHeader {
+# ARM-LLVM:        Type:  (0x70000000)
+# ARM-LLVM:      ProgramHeader {
+# ARM-LLVM-NEXT:   Type: PT_ARM_EXIDX (0x70000001)
+# ARM-LLVM:      ProgramHeader {
+# ARM-LLVM-NEXT:   Type:  (0x70000002)
 
 ## Check how we dump MIPS specific program headers.
 # RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_MIPS %s -o %tmips.elf
-# RUN: llvm-readelf --program-headers %tmips.elf | FileCheck %s --check-prefix=MIPS
+# RUN: llvm-readelf --program-headers %tmips.elf | FileCheck %s --check-prefix=MIPS-GNU
+# RUN: llvm-readobj --program-headers %tmips.elf | FileCheck %s --check-prefix=MIPS-LLVM
 
-# MIPS:      REGINFO  0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
-# MIPS-NEXT: RTPROC   0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
-# MIPS-NEXT: OPTIONS  0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
-# MIPS-NEXT: ABIFLAGS 0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
+# MIPS-GNU:      REGINFO  0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
+# MIPS-GNU-NEXT: RTPROC   0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
+# MIPS-GNU-NEXT: OPTIONS  0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
+# MIPS-GNU-NEXT: ABIFLAGS 0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
 
-## Check we report a warning when a program interpreter name is non-null-terminated or when
-## PT_INTERP has an offset that goes past the end of the file.
+# MIPS-LLVM:      ProgramHeader {
+# MIPS-LLVM:        Type: PT_MIPS_REGINFO (0x70000000)
+# MIPS-LLVM:      ProgramHeader {
+# MIPS-LLVM-NEXT:   Type: PT_MIPS_RTPROC (0x70000001)
+# MIPS-LLVM:      ProgramHeader {
+# MIPS-LLVM-NEXT:   Type: PT_MIPS_OPTIONS (0x70000002)
+# MIPS-LLVM:      ProgramHeader {
+# MIPS-LLVM-NEXT:   Type: PT_MIPS_ABIFLAGS (0x70000003)
+
+## Check that llvm-readelf reports a warning when a program interpreter
+## name is non-null-terminated or when PT_INTERP has an offset that
+## goes past the end of the file.
 # RUN: yaml2obj --docnum=2 %s -o %t.err
 
 ## Show the size of the output produced. It is used in the YAML below.
@@ -358,14 +677,20 @@ ProgramHeaders:
 ## Case A: the e_phentsize field is invalid.
 # RUN: yaml2obj --docnum=3 -DPHENTSIZE=1 %s -o %t.phdr.err
 # RUN: llvm-readelf --program-headers %t.phdr.err 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t.phdr.err --check-prefix=WARN-PHENTSIZE
+# RUN:   FileCheck %s -DFILE=%t.phdr.err --check-prefix=WARN-PHENTSIZE-GNU
+# RUN: llvm-readobj --program-headers %t.phdr.err 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.phdr.err --check-prefix=WARN-PHENTSIZE-LLVM
 
-# WARN-PHENTSIZE:      Program Headers:
-# WARN-PHENTSIZE-NEXT:   Type Offset VirtAddr PhysAddr FileSiz  MemSiz Flg Align
-# WARN-PHENTSIZE-NEXT: warning: '[[FILE]]': unable to dump program headers: invalid e_phentsize: 1
-# WARN-PHENTSIZE:      Section to Segment mapping:
-# WARN-PHENTSIZE-NEXT:   Segment Sections...
-# WARN-PHENTSIZE-NEXT: warning: '[[FILE]]': can't read program headers to build section to segment mapping: invalid e_phentsize: 1
+# WARN-PHENTSIZE-GNU:      Program Headers:
+# WARN-PHENTSIZE-GNU-NEXT:   Type Offset VirtAddr PhysAddr FileSiz  MemSiz Flg Align
+# WARN-PHENTSIZE-GNU-NEXT: warning: '[[FILE]]': unable to dump program headers: invalid e_phentsize: 1
+# WARN-PHENTSIZE-GNU:      Section to Segment mapping:
+# WARN-PHENTSIZE-GNU-NEXT:   Segment Sections...
+# WARN-PHENTSIZE-GNU-NEXT: warning: '[[FILE]]': can't read program headers to build section to segment mapping: invalid e_phentsize: 1
+
+# WARN-PHENTSIZE-LLVM:      ProgramHeaders [
+# WARN-PHENTSIZE-LLVM-NEXT: warning: '[[FILE]]': unable to dump program headers: invalid e_phentsize: 1
+# WARN-PHENTSIZE-LLVM-NEXT: ]
 
 --- !ELF
 FileHeader:
@@ -389,21 +714,30 @@ ProgramHeaders:
 ## 0x160 + size of headers (56) == file size.
 # RUN: yaml2obj --docnum=3 -DPHOFF=0x160 %s -o %t.phdr.no.err2
 # RUN: llvm-readelf %t.phdr.no.err2 --program-headers 2>&1 | FileCheck %s --implicit-check-not=warning:
+# RUN: llvm-readobj %t.phdr.no.err2 --program-headers 2>&1 | FileCheck %s --implicit-check-not=warning:
 
 ## Check we report a warning when e_phoff goes 1 byte past the end of the file.
 # RUN: yaml2obj --docnum=3 -DPHOFF=0x161 %s -o %t.phdr.err2
 # RUN: llvm-readelf --program-headers %t.phdr.err2 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t.phdr.err2 --check-prefix=WARN-PHOFF -DOFF=0x161
+# RUN:   FileCheck %s -DFILE=%t.phdr.err2 --check-prefix=WARN-PHOFF-GNU -DOFF=0x161
+# RUN: llvm-readobj --program-headers %t.phdr.err2 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.phdr.err2 --check-prefix=WARN-PHOFF-LLVM -DOFF=0x161
 
-# WARN-PHOFF:      Program Headers:
-# WARN-PHOFF-NEXT:   Type Offset VirtAddr PhysAddr FileSiz MemSiz Flg Align
-# WARN-PHOFF-NEXT: warning: '[[FILE]]': unable to dump program headers: program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
-# WARN-PHOFF:      Section to Segment mapping:
-# WARN-PHOFF-NEXT:   Segment Sections...
-# WARN-PHOFF-NEXT: warning: '[[FILE]]': can't read program headers to build section to segment mapping: program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
+# WARN-PHOFF-GNU:      Program Headers:
+# WARN-PHOFF-GNU-NEXT:   Type Offset VirtAddr PhysAddr FileSiz MemSiz Flg Align
+# WARN-PHOFF-GNU-NEXT: warning: '[[FILE]]': unable to dump program headers: program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
+# WARN-PHOFF-GNU:      Section to Segment mapping:
+# WARN-PHOFF-GNU-NEXT:   Segment Sections...
+# WARN-PHOFF-GNU-NEXT: warning: '[[FILE]]': can't read program headers to build section to segment mapping: program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
+
+# WARN-PHOFF-LLVM:      ProgramHeaders [
+# WARN-PHOFF-LLVM-NEXT: warning: '[[FILE]]': unable to dump program headers: program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
+# WARN-PHOFF-LLVM-NEXT: ]
 
 ## Check we report a warning when the value of e_phoff is so large that
 ## e_phoff + e_phnum * e_phentsize > UINT64_MAX.
 # RUN: yaml2obj --docnum=3 -DPHOFF=0xffffffffffffffff %s -o %t.phdr.err3
 # RUN: llvm-readelf --program-headers %t.phdr.err3 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t.phdr.err3 --check-prefix=WARN-PHOFF -DOFF=0xffffffffffffffff
+# RUN:   FileCheck %s -DFILE=%t.phdr.err3 --check-prefix=WARN-PHOFF-GNU -DOFF=0xffffffffffffffff
+# RUN: llvm-readobj --program-headers %t.phdr.err3 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.phdr.err3 --check-prefix=WARN-PHOFF-LLVM -DOFF=0xffffffffffffffff
