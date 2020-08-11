@@ -629,7 +629,8 @@ private:
   SDValue ExpandFloatOp_STORE(SDNode *N, unsigned OpNo);
 
   void FloatExpandSetCCOperands(SDValue &NewLHS, SDValue &NewRHS,
-                                ISD::CondCode &CCCode, const SDLoc &dl);
+                                ISD::CondCode &CCCode, const SDLoc &dl,
+                                SDValue &Chain, bool IsSignaling = false);
 
   //===--------------------------------------------------------------------===//
   // Float promotion support: LegalizeFloatTypes.cpp
