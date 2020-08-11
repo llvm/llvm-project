@@ -986,8 +986,6 @@ define <4 x float> @PR34724_add_v4f32_u123(<4 x float> %0, <4 x float> %1) {
 ; AVX-FAST:       # %bb.0:
 ; AVX-FAST-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX-FAST-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
-; AVX-FAST-NEXT:    vhaddps %xmm1, %xmm1, %xmm1
-; AVX-FAST-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; AVX-FAST-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,2,3]
 ; AVX-FAST-NEXT:    retq
   %3 = shufflevector <4 x float> %0, <4 x float> %1, <2 x i32> <i32 2, i32 4>
