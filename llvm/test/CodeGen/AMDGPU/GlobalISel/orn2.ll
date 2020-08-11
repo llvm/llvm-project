@@ -212,10 +212,9 @@ define amdgpu_ps i16 @s_orn2_i16(i16 inreg %src0, i16 inreg %src1) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_mov_b32 s0, 0xffff
 ; GFX9-NEXT:    s_and_b32 s1, s3, s0
-; GFX9-NEXT:    s_xor_b32 s1, s1, s0
-; GFX9-NEXT:    s_and_b32 s2, s2, s0
-; GFX9-NEXT:    s_and_b32 s0, s1, s0
+; GFX9-NEXT:    s_xor_b32 s0, s1, s0
 ; GFX9-NEXT:    s_or_b32 s0, s2, s0
+; GFX9-NEXT:    s_bfe_u32 s0, s0, 0x100000
 ; GFX9-NEXT:    ; return to shader part epilog
   %not.src1 = xor i16 %src1, -1
   %or = or i16 %src0, %not.src1
@@ -233,10 +232,9 @@ define amdgpu_ps i16 @s_orn2_i16_commute(i16 inreg %src0, i16 inreg %src1) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_mov_b32 s0, 0xffff
 ; GFX9-NEXT:    s_and_b32 s1, s3, s0
-; GFX9-NEXT:    s_xor_b32 s1, s1, s0
-; GFX9-NEXT:    s_and_b32 s1, s1, s0
-; GFX9-NEXT:    s_and_b32 s0, s2, s0
-; GFX9-NEXT:    s_or_b32 s0, s1, s0
+; GFX9-NEXT:    s_xor_b32 s0, s1, s0
+; GFX9-NEXT:    s_or_b32 s0, s0, s2
+; GFX9-NEXT:    s_bfe_u32 s0, s0, 0x100000
 ; GFX9-NEXT:    ; return to shader part epilog
   %not.src1 = xor i16 %src1, -1
   %or = or i16 %not.src1, %src0
@@ -255,9 +253,8 @@ define amdgpu_ps { i16, i16 } @s_orn2_i16_multi_use(i16 inreg %src0, i16 inreg %
 ; GFX9-NEXT:    s_mov_b32 s0, 0xffff
 ; GFX9-NEXT:    s_and_b32 s1, s3, s0
 ; GFX9-NEXT:    s_xor_b32 s1, s1, s0
-; GFX9-NEXT:    s_and_b32 s2, s2, s0
-; GFX9-NEXT:    s_and_b32 s0, s1, s0
-; GFX9-NEXT:    s_or_b32 s0, s2, s0
+; GFX9-NEXT:    s_or_b32 s0, s2, s1
+; GFX9-NEXT:    s_bfe_u32 s0, s0, 0x100000
 ; GFX9-NEXT:    ; return to shader part epilog
   %not.src1 = xor i16 %src1, -1
   %or = or i16 %src0, %not.src1
