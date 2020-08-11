@@ -54,6 +54,7 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {eDiskDirectoryCompletion, CommandCompletions::DiskDirectories},
       {eSymbolCompletion, CommandCompletions::Symbols},
       {eModuleCompletion, CommandCompletions::Modules},
+      {eModuleUUIDCompletion, CommandCompletions::ModuleUUIDs},
       {eSettingsNameCompletion, CommandCompletions::SettingsNames},
       {ePlatformPluginCompletion, CommandCompletions::PlatformPluginNames},
       {eArchitectureCompletion, CommandCompletions::ArchitectureNames},
@@ -489,6 +490,24 @@ void CommandCompletions::Modules(CommandInterpreter &interpreter,
   } else {
     completer.DoCompletion(searcher);
   }
+}
+
+void CommandCompletions::ModuleUUIDs(CommandInterpreter &interpreter,
+                                     CompletionRequest &request,
+                                     SearchFilter *searcher) {
+  const ExecutionContext &exe_ctx = interpreter.GetExecutionContext();
+  if (!exe_ctx.HasTargetScope())
+    return;
+
+  exe_ctx.GetTargetPtr()->GetImages().ForEach(
+      [&request](const lldb::ModuleSP &module) {
+        StreamString strm;
+        module->GetDescription(strm.AsRawOstream(),
+                               lldb::eDescriptionLevelInitial);
+        request.TryCompleteCurrentArg(module->GetUUID().GetAsString(),
+                                      strm.GetString());
+        return true;
+      });
 }
 
 void CommandCompletions::Symbols(CommandInterpreter &interpreter,
