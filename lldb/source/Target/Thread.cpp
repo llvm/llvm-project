@@ -1111,7 +1111,7 @@ void Thread::AutoCompleteThreadPlans(CompletionRequest &request) const {
   // Iterate from the second plan (index: 1) to skip the base plan.
   ThreadPlanSP p;
   uint32_t i = 1;
-  while (p = plans.GetPlanByIndex(i, false)) {
+  while ((p = plans.GetPlanByIndex(i, false))) {
     StreamString strm;
     p->GetDescription(&strm, eDescriptionLevelInitial);
     request.TryCompleteCurrentArg(std::to_string(i), strm.GetString());
