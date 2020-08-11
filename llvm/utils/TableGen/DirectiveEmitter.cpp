@@ -68,10 +68,6 @@ public:
     return Def->getValueAsString("clauseEnumSetClass");
   }
 
-  StringRef getFlangClauseBaseClass() const {
-    return Def->getValueAsString("flangClauseBaseClass");
-  }
-
   bool hasMakeEnumAvailableInNamespace() const {
     return Def->getValueAsBit("makeEnumAvailableInNamespace");
   }
@@ -149,35 +145,6 @@ public:
   StringRef getFlangClass() const {
     return Def->getValueAsString("flangClass");
   }
-
-  // Optional field.
-  StringRef getFlangClassValue() const {
-    return Def->getValueAsString("flangClassValue");
-  }
-
-  // Get the formatted name for Flang parser class. The generic formatted class
-  // name is constructed from the name were the first letter of each word is
-  // captitalized and the underscores are removed.
-  // ex: async -> Async
-  //     num_threads -> NumThreads
-  std::string getFormattedParserClassName() {
-    StringRef Name = Def->getValueAsString("name");
-    std::string N = Name.str();
-    bool Cap = true;
-    std::transform(N.begin(), N.end(), N.begin(), [&Cap](unsigned char C) {
-      if (Cap == true) {
-        C = std::toupper(C);
-        Cap = false;
-      } else if (C == '_') {
-        Cap = true;
-      }
-      return C;
-    });
-    N.erase(std::remove(N.begin(), N.end(), '_'), N.end());
-    return N;
-  }
-
-  bool isValueOptional() const { return Def->getValueAsBit("isValueOptional"); }
 
   bool isImplict() const { return Def->getValueAsBit("isImplicit"); }
 };
@@ -522,89 +489,15 @@ void GenerateDirectiveClauseMap(const std::vector<Record *> &Directives,
   OS << "}\n";
 }
 
-// Generate classes entry for Flang clauses in the Flang parse-tree
-// If the clause as a non-generic class, no entry is generated.
-// If the clause does not hold a value, an EMPTY_CLASS is used.
-// If the clause class is generic then a WRAPPER_CLASS is used. When the value
-// is optional, the value class is wrapped into a std::optional.
-void GenerateFlangClauseParserClass(const std::vector<Record *> &Clauses,
-                                    raw_ostream &OS) {
-
-  IfDefScope Scope("GEN_FLANG_CLAUSE_PARSER_CLASSES", OS);
-
-  OS << "\n";
-
-  for (const auto &C : Clauses) {
-    Clause Clause{C};
-    // Clause has a non generic class.
-    if (!Clause.getFlangClass().empty())
-      continue;
-    // G
-    if (!Clause.getFlangClassValue().empty()) {
-      if (Clause.isValueOptional()) {
-        OS << "WRAPPER_CLASS(" << Clause.getFormattedParserClassName()
-           << ", std::optional<" << Clause.getFlangClassValue() << ">);\n";
-      } else {
-        OS << "WRAPPER_CLASS(" << Clause.getFormattedParserClassName() << ", "
-           << Clause.getFlangClassValue() << ");\n";
-      }
-    } else {
-      OS << "EMPTY_CLASS(" << Clause.getFormattedParserClassName() << ");\n";
-    }
-  }
-}
-
-// Generate a list of the different clause classes for Flang.
-void GenerateFlangClauseParserClassList(const std::vector<Record *> &Clauses,
-                                        raw_ostream &OS) {
-
-  IfDefScope Scope("GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST", OS);
-
-  OS << "\n";
-  llvm::interleaveComma(Clauses, OS, [&](Record *C) {
-    Clause Clause{C};
-    if (Clause.getFlangClass().empty())
-      OS << Clause.getFormattedParserClassName() << "\n";
-    else
-      OS << Clause.getFlangClass() << "\n";
-  });
-}
-
-// Generate dump node list for the clauses holding a generic class name.
-void GenerateFlangClauseDump(const std::vector<Record *> &Clauses,
-                             const DirectiveLanguage &DirLang,
-                             raw_ostream &OS) {
-
-  IfDefScope Scope("GEN_FLANG_DUMP_PARSE_TREE_CLAUSES", OS);
-
-  OS << "\n";
-  for (const auto &C : Clauses) {
-    Clause Clause{C};
-    // Clause has a non generic class.
-    if (!Clause.getFlangClass().empty())
-      continue;
-
-    OS << "NODE(" << DirLang.getFlangClauseBaseClass() << ", "
-       << Clause.getFormattedParserClassName() << ")\n";
-  }
-}
-
 // Generate the implemenation section for the enumeration in the directive
 // language
 void EmitDirectivesFlangImpl(const std::vector<Record *> &Directives,
-                             const std::vector<Record *> &Clauses,
                              raw_ostream &OS,
                              DirectiveLanguage &DirectiveLanguage) {
 
   GenerateDirectiveClauseSets(Directives, OS, DirectiveLanguage);
 
   GenerateDirectiveClauseMap(Directives, OS, DirectiveLanguage);
-
-  GenerateFlangClauseParserClass(Clauses, OS);
-
-  GenerateFlangClauseParserClassList(Clauses, OS);
-
-  GenerateFlangClauseDump(Clauses, DirectiveLanguage, OS);
 }
 
 // Generate the implemenation section for the enumeration in the directive
@@ -620,9 +513,8 @@ void EmitDirectivesGen(RecordKeeper &Records, raw_ostream &OS) {
   }
 
   const auto &Directives = Records.getAllDerivedDefinitions("Directive");
-  const auto &Clauses = Records.getAllDerivedDefinitions("Clause");
   DirectiveLanguage DirectiveLanguage{DirectiveLanguages[0]};
-  EmitDirectivesFlangImpl(Directives, Clauses, OS, DirectiveLanguage);
+  EmitDirectivesFlangImpl(Directives, OS, DirectiveLanguage);
 }
 
 // Generate the implemenation for the enumeration in the directive
