@@ -3174,6 +3174,14 @@
 // CHECK_SPARCV9: #define __sparcv9 1
 // CHECK_SPARCV9: #define __sparcv9__ 1
 
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target sparcv9-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARCV9_GCC_ATOMICS
+// CHECK_SPARCV9_GCC_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK_SPARCV9_GCC_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK_SPARCV9_GCC_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK_SPARCV9_GCC_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+
 // Begin SystemZ/GCC/Linux tests ----------------
 
 // RUN: %clang -march=arch8 -E -dM %s -o - 2>&1 \
