@@ -910,8 +910,6 @@ define <4 x float> @PR34724_1(<4 x float> %a, <4 x float> %b) {
 ; AVX1_FAST:       # %bb.0:
 ; AVX1_FAST-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX1_FAST-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
-; AVX1_FAST-NEXT:    vhaddps %xmm1, %xmm1, %xmm1
-; AVX1_FAST-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; AVX1_FAST-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,2,3]
 ; AVX1_FAST-NEXT:    retq
 ;
@@ -929,8 +927,6 @@ define <4 x float> @PR34724_1(<4 x float> %a, <4 x float> %b) {
 ; AVX2_FAST:       # %bb.0:
 ; AVX2_FAST-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2_FAST-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
-; AVX2_FAST-NEXT:    vhaddps %xmm1, %xmm1, %xmm1
-; AVX2_FAST-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; AVX2_FAST-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,2,3]
 ; AVX2_FAST-NEXT:    retq
   %t0 = shufflevector <4 x float> %a, <4 x float> %b, <2 x i32> <i32 2, i32 4>
@@ -972,8 +968,6 @@ define <4 x float> @PR34724_2(<4 x float> %a, <4 x float> %b) {
 ; AVX1_FAST-LABEL: PR34724_2:
 ; AVX1_FAST:       # %bb.0:
 ; AVX1_FAST-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
-; AVX1_FAST-NEXT:    vhaddps %xmm1, %xmm1, %xmm1
-; AVX1_FAST-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; AVX1_FAST-NEXT:    retq
 ;
 ; AVX2_SLOW-LABEL: PR34724_2:
@@ -987,8 +981,6 @@ define <4 x float> @PR34724_2(<4 x float> %a, <4 x float> %b) {
 ; AVX2_FAST-LABEL: PR34724_2:
 ; AVX2_FAST:       # %bb.0:
 ; AVX2_FAST-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
-; AVX2_FAST-NEXT:    vhaddps %xmm1, %xmm1, %xmm1
-; AVX2_FAST-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; AVX2_FAST-NEXT:    retq
   %t0 = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 2, i32 4, i32 undef, i32 undef>
   %t1 = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 3, i32 5, i32 undef, i32 undef>
