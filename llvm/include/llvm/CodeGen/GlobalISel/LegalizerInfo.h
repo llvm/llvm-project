@@ -183,7 +183,7 @@ struct TypePairAndMemDesc {
            MemSize == Other.MemSize;
   }
 
-  /// \returns true if this memory access is legal with for the acecss described
+  /// \returns true if this memory access is legal with for the access described
   /// by \p Other (The alignment is sufficient for the size and result type).
   bool isCompatible(const TypePairAndMemDesc &Other) const {
     return Type0 == Other.Type0 && Type1 == Other.Type1 &&
