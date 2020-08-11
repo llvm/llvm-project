@@ -368,6 +368,18 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('target modules load a.ou',
                               ['a.out'])
 
+    def test_target_modules_search_paths_insert(self):
+        # Completion won't work without a valid target.
+        self.complete_from_to("target modules search-paths insert ", "target modules search-paths insert ")
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact('a.out'))
+        self.assertTrue(target, VALID_TARGET)
+        self.complete_from_to("target modules search-paths insert ", "target modules search-paths insert ")
+        self.runCmd("target modules search-paths add a b")
+        self.complete_from_to("target modules search-paths insert ", "target modules search-paths insert 0")
+        # Completion only works for the first arg.
+        self.complete_from_to("target modules search-paths insert 0 ", "target modules search-paths insert 0 ")
+
     def test_target_create_dash_co(self):
         """Test that 'target create --co' completes to 'target variable --core '."""
         self.complete_from_to('target create --co', 'target create --core ')
