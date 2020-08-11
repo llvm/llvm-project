@@ -223,6 +223,7 @@ class MachineIRBuilder {
 protected:
   void validateTruncExt(const LLT Dst, const LLT Src, bool IsExtend);
 
+  void validateUnaryOp(const LLT Res, const LLT Op0);
   void validateBinaryOp(const LLT Res, const LLT Op0, const LLT Op1);
   void validateShiftOp(const LLT Res, const LLT Op0, const LLT Op1);
 
@@ -1663,6 +1664,11 @@ public:
   MachineInstrBuilder buildUMax(const DstOp &Dst, const SrcOp &Src0,
                                 const SrcOp &Src1) {
     return buildInstr(TargetOpcode::G_UMAX, {Dst}, {Src0, Src1});
+  }
+
+  /// Build and insert \p Dst = G_ABS \p Src
+  MachineInstrBuilder buildAbs(const DstOp &Dst, const SrcOp &Src) {
+    return buildInstr(TargetOpcode::G_ABS, {Dst}, {Src});
   }
 
   /// Build and insert \p Res = G_JUMP_TABLE \p JTI
