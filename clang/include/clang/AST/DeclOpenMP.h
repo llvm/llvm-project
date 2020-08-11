@@ -43,9 +43,6 @@ protected:
   OMPChildren *Data = nullptr;
 
   /// Build instance of directive.
-  ///
-  /// \param StartLoc Starting location of the directive (directive keyword).
-  ///
   template <typename... Params>
   OMPDeclarativeDirective(Params &&... P) : U(std::forward<Params>(P)...) {}
 
