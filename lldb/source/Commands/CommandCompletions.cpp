@@ -9,6 +9,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSet.h"
 
+#include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -68,6 +69,7 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {eFrameIndexCompletion, CommandCompletions::FrameIndexes},
       {eStopHookIDCompletion, CommandCompletions::StopHookIDs},
       {eThreadIndexCompletion, CommandCompletions::ThreadIndexes},
+      {eWatchPointIDCompletion, CommandCompletions::WatchPointIDs},
       {eNoCompletion, nullptr} // This one has to be last in the list.
   };
 
@@ -694,6 +696,24 @@ void CommandCompletions::ThreadIndexes(CommandInterpreter &interpreter,
     StreamString strm;
     thread_sp->GetStatus(strm, 0, 1, 1, true);
     request.TryCompleteCurrentArg(std::to_string(thread_sp->GetIndexID()),
+                                  strm.GetString());
+  }
+}
+
+void CommandCompletions::WatchPointIDs(CommandInterpreter &interpreter,
+                                       CompletionRequest &request,
+                                       SearchFilter *searcher) {
+  const ExecutionContext &exe_ctx = interpreter.GetExecutionContext();
+  if (!exe_ctx.HasTargetScope())
+    return;
+
+  const WatchpointList &wp_list = exe_ctx.GetTargetPtr()->GetWatchpointList();
+  const size_t wp_num = wp_list.GetSize();
+  for (size_t idx = 0; idx < wp_num; ++idx) {
+    const lldb::WatchpointSP wp_sp = wp_list.GetByIndex(idx);
+    StreamString strm;
+    wp_sp->Dump(&strm);
+    request.TryCompleteCurrentArg(std::to_string(wp_sp->GetID()),
                                   strm.GetString());
   }
 }
