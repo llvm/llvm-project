@@ -928,7 +928,7 @@ LLJIT::PlatformSupport::~PlatformSupport() {}
 
 Error LLJITBuilderState::prepareForConstruction() {
 
-  LLVM_DEBUG(dbgs() << "Preparing to create LLIT instance...\n");
+  LLVM_DEBUG(dbgs() << "Preparing to create LLJIT instance...\n");
 
   if (!JTMB) {
     LLVM_DEBUG({
