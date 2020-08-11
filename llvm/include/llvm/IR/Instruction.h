@@ -492,6 +492,10 @@ public:
   /// merged DebugLoc.
   void applyMergedLocation(const DILocation *LocA, const DILocation *LocB);
 
+  /// Updates the debug location given that the instruction has been hoisted
+  /// from a block to a predecessor of that block.
+  void updateLocationAfterHoist();
+
 private:
   /// Return true if we have an entry in the on-the-side metadata hash.
   bool hasMetadataHashEntry() const {
