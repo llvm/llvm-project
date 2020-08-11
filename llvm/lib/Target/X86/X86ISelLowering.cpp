@@ -41991,7 +41991,7 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue combineVectorPackWithShuffle(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineHorizOpWithShuffle(SDNode *N, SelectionDAG &DAG) {
   unsigned Opcode = N->getOpcode();
   assert((X86ISD::PACKSS == Opcode || X86ISD::PACKUS == Opcode) &&
          "Unexpected pack opcode");
@@ -42001,8 +42001,8 @@ static SDValue combineVectorPackWithShuffle(SDNode *N, SelectionDAG &DAG) {
   SDValue N1 = N->getOperand(1);
   unsigned NumDstElts = VT.getVectorNumElements();
 
-  // Attempt to fold PACK(LOSUBVECTOR(SHUFFLE(X)),HISUBVECTOR(SHUFFLE(X)))
-  // to SHUFFLE(PACK(LOSUBVECTOR(X),HISUBVECTOR(X))), this is mainly for
+  // Attempt to fold HOP(LOSUBVECTOR(SHUFFLE(X)),HISUBVECTOR(SHUFFLE(X)))
+  // to SHUFFLE(HOP(LOSUBVECTOR(X),HISUBVECTOR(X))), this is mainly for
   // truncation trees that help us avoid lane crossing shuffles.
   // TODO: There's a lot more we can do for PACK/HADD style shuffle combines.
   if (N0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
@@ -42014,7 +42014,7 @@ static SDValue combineVectorPackWithShuffle(SDNode *N, SelectionDAG &DAG) {
     // TODO - support target/faux shuffles.
     SDValue Vec = peekThroughBitcasts(N0.getOperand(0));
     if (auto *SVN = dyn_cast<ShuffleVectorSDNode>(Vec)) {
-      // To keep the PACK LHS/RHS coherency, we must be able to scale the unary
+      // To keep the HOP LHS/RHS coherency, we must be able to scale the unary
       // shuffle to a vXi64 width - we can probably relax this in the future.
       SmallVector<int, 4> ShuffleMask;
       if (SVN->getOperand(1).isUndef() &&
@@ -42032,7 +42032,7 @@ static SDValue combineVectorPackWithShuffle(SDNode *N, SelectionDAG &DAG) {
     }
   }
 
-  // Attempt to fold PACK(SHUFFLE(X,Y),SHUFFLE(X,Y)) -> SHUFFLE(PACK(X,Y)).
+  // Attempt to fold HOP(SHUFFLE(X,Y),SHUFFLE(X,Y)) -> SHUFFLE(HOP(X,Y)).
   // TODO: Relax shuffle scaling to support sub-128-bit subvector shuffles.
   if (VT.is256BitVector()) {
     if (auto *SVN0 = dyn_cast<ShuffleVectorSDNode>(N0)) {
@@ -42140,7 +42140,7 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
   }
 
   // Try to fold PACK(SHUFFLE(),SHUFFLE()) -> SHUFFLE(PACK()).
-  if (SDValue V = combineVectorPackWithShuffle(N, DAG))
+  if (SDValue V = combineHorizOpWithShuffle(N, DAG))
     return V;
 
   // Try to combine a PACKUSWB/PACKSSWB implemented truncate with a regular
