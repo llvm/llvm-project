@@ -536,6 +536,9 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('register write rbx ',
                               [])
 
+    def test_common_completion_type_language(self):
+        self.complete_from_to('type category -l ', ['c'])
+
     def test_complete_breakpoint_with_ids(self):
         """These breakpoint subcommands should be completed with a list of breakpoint ids"""
 
