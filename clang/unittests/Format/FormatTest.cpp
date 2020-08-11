@@ -11259,6 +11259,23 @@ TEST_F(FormatTest, ConfigurableUseOfTab) {
                "\t}\n"
                "};",
                Tab);
+  Tab.AlignOperands = FormatStyle::OAS_Align;
+  verifyFormat("int aaaaaaaaaa = bbbbbbbbbbbbbbbbbbbb +\n"
+               "                 cccccccccccccccccccc;",
+               Tab);
+  // no alignment
+  verifyFormat("int aaaaaaaaaa =\n"
+               "\tbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;",
+               Tab);
+  verifyFormat("return aaaaaaaaaaaaaaaa ? 111111111111111\n"
+               "       : bbbbbbbbbbbbbb ? 222222222222222\n"
+               "                        : 333333333333333;",
+               Tab);
+  Tab.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
+  Tab.AlignOperands = FormatStyle::OAS_AlignAfterOperator;
+  verifyFormat("int aaaaaaaaaa = bbbbbbbbbbbbbbbbbbbb\n"
+               "               + cccccccccccccccccccc;",
+               Tab);
 }
 
 TEST_F(FormatTest, ZeroTabWidth) {
