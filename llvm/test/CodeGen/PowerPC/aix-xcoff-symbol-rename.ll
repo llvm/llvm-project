@@ -51,7 +51,7 @@ declare i32 @"f\40o"(...)
 ; ASM-NEXT:    .vbyte  4, 0
 ; ASM-NEXT:    .csect .text[PR],2
 ; ASM-NEXT:  ._Renamed..24f_o:
-; ASM:         bl ._Renamed..40f_o
+; ASM:         bl ._Renamed..40f_o[PR]
 ; ASM-NEXT:    nop
 ; ASM:         .globl  _Renamed..26f_o[DS] # -- Begin function f&o
 ; ASM-NEXT:    .rename _Renamed..26f_o[DS],"f&o"
@@ -84,8 +84,8 @@ declare i32 @"f\40o"(...)
 ; ASM-NEXT:    .vbyte  4, 10                   # 0xa
 ; ASM-NEXT:    .comm _Renamed..2222f_o_[RW],4,2
 ; ASM-NEXT:    .rename _Renamed..2222f_o_[RW],"f""o"""
-; ASM-NEXT:    .extern ._Renamed..40f_o
-; ASM-NEXT:    .rename ._Renamed..40f_o,".f@o"
+; ASM-NEXT:    .extern ._Renamed..40f_o[PR]
+; ASM-NEXT:    .rename ._Renamed..40f_o[PR],".f@o"
 ; ASM-NEXT:    .extern _Renamed..40f_o[DS]
 ; ASM-NEXT:    .rename _Renamed..40f_o[DS],"f@o"
 ; ASM-NEXT:    .toc

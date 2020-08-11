@@ -2016,13 +2016,11 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForExternalReference(
 
   SmallString<128> Name;
   getNameWithPrefix(Name, GO, TM);
-  XCOFF::StorageClass SC =
-      TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GO);
 
   // Externals go into a csect of type ER.
   return getContext().getXCOFFSection(
       Name, isa<Function>(GO) ? XCOFF::XMC_DS : XCOFF::XMC_UA, XCOFF::XTY_ER,
-      SC, SectionKind::getMetadata());
+      SectionKind::getMetadata());
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
@@ -2035,11 +2033,9 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
   if (Kind.isBSSLocal() || Kind.isCommon()) {
     SmallString<128> Name;
     getNameWithPrefix(Name, GO, TM);
-    XCOFF::StorageClass SC =
-        TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GO);
     return getContext().getXCOFFSection(
         Name, Kind.isBSSLocal() ? XCOFF::XMC_BS : XCOFF::XMC_RW, XCOFF::XTY_CM,
-        SC, Kind, /* BeginSymbolName */ nullptr);
+        Kind, /* BeginSymbolName */ nullptr);
   }
 
   if (Kind.isMergeableCString()) {
@@ -2051,10 +2047,8 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
     SmallString<128> Name;
     Name = SizeSpec + utostr(Alignment.value());
 
-    return getContext().getXCOFFSection(
-        Name, XCOFF::XMC_RO, XCOFF::XTY_SD,
-        TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GO),
-        Kind, /* BeginSymbolName */ nullptr);
+    return getContext().getXCOFFSection(Name, XCOFF::XMC_RO, XCOFF::XTY_SD,
+                                        Kind, /*BeginSymbolName*/ nullptr);
   }
 
   if (Kind.isText()) {
@@ -2095,7 +2089,6 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForJumpTable(
   SmallString<128> NameStr(".rodata.jmp..");
   getNameWithPrefix(NameStr, &F, TM);
   return getContext().getXCOFFSection(NameStr, XCOFF::XMC_RO, XCOFF::XTY_SD,
-                                      XCOFF::C_HIDEXT,
                                       SectionKind::getReadOnly());
 }
 
@@ -2176,16 +2169,15 @@ MCSymbol *TargetLoweringObjectFileXCOFF::getFunctionEntryPointSymbol(
 
   // When -function-sections is enabled, it's not necessary to emit
   // function entry point label any more. We will use function entry
-  // point csect instead. For function delcarations, it's okay to continue
-  // using label semantic because undefined symbols gets treated as csect with
-  // XTY_ER property anyway.
-  if (TM.getFunctionSections() && !Func->isDeclaration() &&
+  // point csect instead. And for function delcarations, the undefined symbols
+  // gets treated as csect with XTY_ER property.
+  if ((TM.getFunctionSections() || Func->isDeclaration()) &&
       isa<Function>(Func)) {
-    XCOFF::StorageClass SC =
-        TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(Func);
-    return cast<MCSectionXCOFF>(getContext().getXCOFFSection(
-                                    NameStr, XCOFF::XMC_PR, XCOFF::XTY_SD, SC,
-                                    SectionKind::getText()))
+    return cast<MCSectionXCOFF>(
+               getContext().getXCOFFSection(
+                   NameStr, XCOFF::XMC_PR,
+                   Func->isDeclaration() ? XCOFF::XTY_ER : XCOFF::XTY_SD,
+                   SectionKind::getText()))
         ->getQualNameSymbol();
   }
 
@@ -2197,7 +2189,6 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForFunctionDescriptor(
   SmallString<128> NameStr;
   getNameWithPrefix(NameStr, F, TM);
   return getContext().getXCOFFSection(NameStr, XCOFF::XMC_DS, XCOFF::XTY_SD,
-                                      getStorageClassForGlobal(F),
                                       SectionKind::getData());
 }
 
@@ -2208,5 +2199,5 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
   return getContext().getXCOFFSection(
       cast<MCSymbolXCOFF>(Sym)->getSymbolTableName(),
       TM.getCodeModel() == CodeModel::Large ? XCOFF::XMC_TE : XCOFF::XMC_TC,
-      XCOFF::XTY_SD, XCOFF::C_HIDEXT, SectionKind::getData());
+      XCOFF::XTY_SD, SectionKind::getData());
 }
