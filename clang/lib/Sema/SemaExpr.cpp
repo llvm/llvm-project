@@ -1125,6 +1125,11 @@ static QualType handleFloatConversion(Sema &S, ExprResult &LHS,
   bool LHSFloat = LHSType->isRealFloatingType();
   bool RHSFloat = RHSType->isRealFloatingType();
 
+  // FIXME: Implement floating to fixed point conversion.(Bug 46268)
+  // Reference N1169 4.1.4 (Type conversion, usual arithmetic conversions).
+  if ((LHSType->isFixedPointType() && RHSFloat) ||
+      (LHSFloat && RHSType->isFixedPointType()))
+    return QualType();
   // If we have two real floating types, convert the smaller operand
   // to the bigger result.
   if (LHSFloat && RHSFloat) {
