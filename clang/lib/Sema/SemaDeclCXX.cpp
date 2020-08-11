@@ -3577,8 +3577,10 @@ namespace {
         Base = SubME->getBase();
       }
 
-      if (!isa<CXXThisExpr>(Base->IgnoreParenImpCasts()))
+      if (!isa<CXXThisExpr>(Base->IgnoreParenImpCasts())) {
+        Visit(Base);
         return;
+      }
 
       if (AddressOf && AllPODFields)
         return;
