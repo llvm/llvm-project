@@ -2925,6 +2925,8 @@ def err_attribute_invalid_size : Error<
   "vector size not an integral multiple of component size">;
 def err_attribute_zero_size : Error<"zero %0 size">;
 def err_attribute_size_too_large : Error<"%0 size too large">;
+def err_typecheck_vector_not_convertable_sizeless : Error<
+  "cannot convert between a fixed-length and a sizeless vector (%0 and %1)">;
 def err_typecheck_vector_not_convertable_implict_truncation : Error<
    "cannot convert between %select{scalar|vector}0 type %1 and vector type"
    " %2 as implicit conversion would cause truncation">;

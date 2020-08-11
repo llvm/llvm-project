@@ -9009,6 +9009,14 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
       }
     }
 
+    // Allow assignments between fixed-length and sizeless SVE vectors.
+    if (((LHSType->isSizelessBuiltinType() && RHSType->isVectorType()) ||
+         (LHSType->isVectorType() && RHSType->isSizelessBuiltinType())) &&
+        Context.areCompatibleSveTypes(LHSType, RHSType)) {
+      Kind = CK_BitCast;
+      return Compatible;
+    }
+
     return Incompatible;
   }
 
@@ -9898,6 +9906,22 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
   }
 
   // Okay, the expression is invalid.
+
+  // Returns true if the operands are SVE VLA and VLS types.
+  auto IsSveConversion = [](QualType FirstType, QualType SecondType) {
+    const VectorType *VecType = SecondType->getAs<VectorType>();
+    return FirstType->isSizelessBuiltinType() && VecType &&
+           (VecType->getVectorKind() == VectorType::SveFixedLengthDataVector ||
+            VecType->getVectorKind() ==
+                VectorType::SveFixedLengthPredicateVector);
+  };
+
+  // If there's a sizeless and fixed-length operand, diagnose that.
+  if (IsSveConversion(LHSType, RHSType) || IsSveConversion(RHSType, LHSType)) {
+    Diag(Loc, diag::err_typecheck_vector_not_convertable_sizeless)
+        << LHSType << RHSType;
+    return QualType();
+  }
 
   // If there's a non-vector, non-real operand, diagnose that.
   if ((!RHSVecType && !RHSType->isRealType()) ||

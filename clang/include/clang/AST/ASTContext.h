@@ -2058,6 +2058,11 @@ public:
   /// types.
   bool areCompatibleVectorTypes(QualType FirstVec, QualType SecondVec);
 
+  /// Return true if the given types are an SVE builtin and a VectorType that
+  /// is a fixed-length representation of the SVE builtin for a specific
+  /// vector-length.
+  bool areCompatibleSveTypes(QualType FirstType, QualType SecondType);
+
   /// Return true if the type has been explicitly qualified with ObjC ownership.
   /// A type may be implicitly qualified with ownership under ObjC ARC, and in
   /// some cases the compiler treats these differently.
@@ -2113,10 +2118,6 @@ public:
   Optional<CharUnits> getTypeSizeInCharsIfKnown(const Type *Ty) const {
     return getTypeSizeInCharsIfKnown(QualType(Ty, 0));
   }
-
-  /// Returns the bitwidth of \p T, an SVE type attributed with
-  /// 'arm_sve_vector_bits'. Should only be called if T->isVLST().
-  unsigned getBitwidthForAttributedSveType(const Type *T) const;
 
   /// Return the ABI-specified alignment of a (complete) type \p T, in
   /// bits.
