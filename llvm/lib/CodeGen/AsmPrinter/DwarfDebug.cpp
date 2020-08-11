@@ -428,6 +428,8 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
   // the debug entry values feature. It can also be enabled explicitly.
   EmitDebugEntryValues = Asm->TM.Options.ShouldEmitDebugEntryValues();
 
+  UseDebugMacroSection = DwarfVersion >= 5;
+
   Asm->OutStreamer->getContext().setDwarfVersion(DwarfVersion);
 }
 
@@ -1346,7 +1348,7 @@ void DwarfDebug::finalizeModuleInfo() {
     // If compile Unit has macros, emit "DW_AT_macro_info/DW_AT_macros"
     // attribute.
     if (CUNode->getMacros()) {
-      if (getDwarfVersion() >= 5) {
+      if (UseDebugMacroSection) {
         if (useSplitDwarf())
           TheCU.addSectionDelta(
               TheCU.getUnitDie(), dwarf::DW_AT_macros, U.getMacroLabelBegin(),
@@ -3016,9 +3018,8 @@ void DwarfDebug::handleMacroNodes(DIMacroNodeArray Nodes, DwarfCompileUnit &U) {
 void DwarfDebug::emitMacro(DIMacro &M) {
   StringRef Name = M.getName();
   StringRef Value = M.getValue();
-  bool UseMacro = getDwarfVersion() >= 5;
 
-  if (UseMacro) {
+  if (UseDebugMacroSection) {
     unsigned Type = M.getMacinfoType() == dwarf::DW_MACINFO_define
                         ? dwarf::DW_MACRO_define_strx
                         : dwarf::DW_MACRO_undef_strx;
@@ -3079,8 +3080,7 @@ void DwarfDebug::emitMacroFile(DIMacroFile &F, DwarfCompileUnit &U) {
   // DWARFv5 macro and DWARFv4 macinfo share some common encodings,
   // so for readibility/uniformity, We are explicitly emitting those.
   assert(F.getMacinfoType() == dwarf::DW_MACINFO_start_file);
-  bool UseMacro = getDwarfVersion() >= 5;
-  if (UseMacro)
+  if (UseDebugMacroSection)
     emitMacroFileImpl(F, U, dwarf::DW_MACRO_start_file,
                       dwarf::DW_MACRO_end_file, dwarf::MacroString);
   else
@@ -3099,7 +3099,7 @@ void DwarfDebug::emitDebugMacinfoImpl(MCSection *Section) {
       continue;
     Asm->OutStreamer->SwitchSection(Section);
     Asm->OutStreamer->emitLabel(U.getMacroLabelBegin());
-    if (getDwarfVersion() >= 5)
+    if (UseDebugMacroSection)
       emitMacroHeader(Asm, *this, U);
     handleMacroNodes(Macros, U);
     Asm->OutStreamer->AddComment("End Of Macro List Mark");
@@ -3110,14 +3110,14 @@ void DwarfDebug::emitDebugMacinfoImpl(MCSection *Section) {
 /// Emit macros into a debug macinfo/macro section.
 void DwarfDebug::emitDebugMacinfo() {
   auto &ObjLower = Asm->getObjFileLowering();
-  emitDebugMacinfoImpl(getDwarfVersion() >= 5
+  emitDebugMacinfoImpl(UseDebugMacroSection
                            ? ObjLower.getDwarfMacroSection()
                            : ObjLower.getDwarfMacinfoSection());
 }
 
 void DwarfDebug::emitDebugMacinfoDWO() {
   auto &ObjLower = Asm->getObjFileLowering();
-  emitDebugMacinfoImpl(getDwarfVersion() >= 5
+  emitDebugMacinfoImpl(UseDebugMacroSection
                            ? ObjLower.getDwarfMacroDWOSection()
                            : ObjLower.getDwarfMacinfoDWOSection());
 }
