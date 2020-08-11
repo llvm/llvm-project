@@ -696,24 +696,6 @@ void Instruction::applyMergedLocation(const DILocation *LocA,
   setDebugLoc(DILocation::getMergedLocation(LocA, LocB));
 }
 
-void Instruction::updateLocationAfterHoist() {
-  const DebugLoc &DL = getDebugLoc();
-  if (!DL)
-    return;
-
-  // If we didn't hoist a call, drop the location to allow a location from a
-  // preceding instruction to propagate.
-  if (!isa<CallBase>(this)) {
-    setDebugLoc(DebugLoc());
-    return;
-  }
-
-  // Set a line 0 location for (potentially inlinable) calls. Set the scope to
-  // the parent function's scope if it's available, and drop any inlinedAt info
-  // to avoid making it look like the inlined callee was reached early.
-  setDebugLoc(DebugLoc::get(0, 0, DL.getScope()));
-}
-
 //===----------------------------------------------------------------------===//
 // LLVM C API implementations.
 //===----------------------------------------------------------------------===//
