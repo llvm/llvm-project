@@ -495,6 +495,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     case OPT_Z:
     case OPT_arch:
     case OPT_syslibroot:
+    case OPT_sectcreate:
       // handled elsewhere
       break;
     default:
@@ -523,6 +524,15 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
 
   createSyntheticSections();
   symtab->addDSOHandle(in.header);
+
+  for (opt::Arg *arg : args.filtered(OPT_sectcreate)) {
+    StringRef segName = arg->getValue(0);
+    StringRef sectName = arg->getValue(1);
+    StringRef fileName = arg->getValue(2);
+    Optional<MemoryBufferRef> buffer = readFile(fileName);
+    if (buffer)
+      inputFiles.push_back(make<OpaqueFile>(*buffer, segName, sectName));
+  }
 
   // Initialize InputSections.
   for (InputFile *file : inputFiles) {
