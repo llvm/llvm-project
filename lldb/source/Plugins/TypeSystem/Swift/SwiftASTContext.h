@@ -335,6 +335,11 @@ public:
   bool SetTriple(const llvm::Triple triple,
                  lldb_private::Module *module = nullptr);
 
+  /// Condition a triple to be safe for use with Swift.  Swift is
+  /// really peculiar about what CPU types it thinks it has standard
+  /// libraries for.
+  static llvm::Triple GetSwiftFriendlyTriple(llvm::Triple triple);
+
   CompilerType GetCompilerType(swift::TypeBase *swift_type);
   CompilerType GetCompilerType(ConstString mangled_name);
   swift::Type GetSwiftType(CompilerType compiler_type);

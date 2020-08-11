@@ -199,3 +199,18 @@ TEST_F(TestSwiftASTContext, IsNonTriviallyManagedReferenceType) {
                                                                    nullptr));
 #endif
 }
+
+TEST_F(TestSwiftASTContext, SwiftFriendlyTriple) {
+  EXPECT_EQ(SwiftASTContext::GetSwiftFriendlyTriple(
+                llvm::Triple("x86_64-apple-macosx")),
+            llvm::Triple("x86_64-apple-macosx"));
+  EXPECT_EQ(SwiftASTContext::GetSwiftFriendlyTriple(
+                llvm::Triple("x86_64h-apple-macosx")),
+            llvm::Triple("x86_64-apple-macosx"));
+  EXPECT_EQ(SwiftASTContext::GetSwiftFriendlyTriple(
+                llvm::Triple("aarch64-apple-macosx")),
+            llvm::Triple("arm64-apple-macosx"));
+  EXPECT_EQ(SwiftASTContext::GetSwiftFriendlyTriple(
+                llvm::Triple("aarch64_32-apple-watchos")),
+            llvm::Triple("arm64_32-apple-watchos"));
+}
