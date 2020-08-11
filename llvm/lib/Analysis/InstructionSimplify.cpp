@@ -238,10 +238,12 @@ static Value *expandBinOp(Instruction::BinaryOps Opcode, Value *V,
   if (!B || B->getOpcode() != OpcodeToExpand)
     return nullptr;
   Value *B0 = B->getOperand(0), *B1 = B->getOperand(1);
-  Value *L = SimplifyBinOp(Opcode, B0, OtherOp, Q, MaxRecurse);
+  Value *L = SimplifyBinOp(Opcode, B0, OtherOp, Q.getWithoutUndef(),
+                           MaxRecurse);
   if (!L)
     return nullptr;
-  Value *R = SimplifyBinOp(Opcode, B1, OtherOp, Q, MaxRecurse);
+  Value *R = SimplifyBinOp(Opcode, B1, OtherOp, Q.getWithoutUndef(),
+                           MaxRecurse);
   if (!R)
     return nullptr;
 
