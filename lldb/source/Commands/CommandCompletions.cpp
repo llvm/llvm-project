@@ -65,6 +65,7 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {eDisassemblyFlavorCompletion, CommandCompletions::DisassemblyFlavors},
       {eTypeLanguageCompletion, CommandCompletions::TypeLanguages},
       {eFrameIndexCompletion, CommandCompletions::FrameIndexes},
+      {eStopHookIDCompletion, CommandCompletions::StopHookIDs},
       {eNoCompletion, nullptr} // This one has to be last in the list.
   };
 
@@ -654,5 +655,26 @@ void CommandCompletions::FrameIndexes(CommandInterpreter &interpreter,
     StreamString strm;
     frame_sp->Dump(&strm, false, true);
     request.TryCompleteCurrentArg(std::to_string(i), strm.GetString());
+  }
+}
+
+void CommandCompletions::StopHookIDs(CommandInterpreter &interpreter,
+                                     CompletionRequest &request,
+                                     SearchFilter *searcher) {
+  const lldb::TargetSP target_sp =
+      interpreter.GetExecutionContext().GetTargetSP();
+  if (!target_sp)
+    return;
+
+  const size_t num = target_sp->GetNumStopHooks();
+  for (size_t idx = 0; idx < num; ++idx) {
+    StreamString strm;
+    // The value 11 is an offset to make the completion description looks
+    // neater.
+    strm.SetIndentLevel(11);
+    const Target::StopHookSP stophook_sp = target_sp->GetStopHookAtIndex(idx);
+    stophook_sp->GetDescription(&strm, lldb::eDescriptionLevelInitial);
+    request.TryCompleteCurrentArg(std::to_string(stophook_sp->GetID()),
+                                  strm.GetString());
   }
 }
