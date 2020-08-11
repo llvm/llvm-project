@@ -309,6 +309,14 @@ enum MacroEntryType {
   DW_MACRO_hi_user = 0xff
 };
 
+/// GNU .debug_macro macro information entry type encodings.
+enum GnuMacroEntryType {
+#define HANDLE_DW_MACRO_GNU(ID, NAME) DW_MACRO_GNU_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
+  DW_MACRO_GNU_lo_user = 0xe0,
+  DW_MACRO_GNU_hi_user = 0xff
+};
+
 /// DWARF v5 range list entry encoding values.
 enum RnglistEntries {
 #define HANDLE_DW_RLE(ID, NAME) DW_RLE_##NAME = ID,
