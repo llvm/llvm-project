@@ -2,8 +2,8 @@
 // RUN: split-file %s %t
 // RUN: llvm-mc -filetype=obj -triple=x86_64 %t/asm -o %t.o
 // RUN: ld.lld -T %t/lds %t.o -o %t.exe 2>&1 | FileCheck %s
-// CHECK:      warning: {{.*}}.o:(.nonalloc1+0x2): has non-ABS relocation R_X86_64_PC32 against symbol '_start'
-// CHECK-NEXT: warning: {{.*}}.o:(.nonalloc1+0x7): has non-ABS relocation R_X86_64_PC32 against symbol '_start'
+// CHECK:      warning: {{.*}}.o:(.nonalloc1+0x1): has non-ABS relocation R_X86_64_PC32 against symbol '_start'
+// CHECK-NEXT: warning: {{.*}}.o:(.nonalloc1+0x6): has non-ABS relocation R_X86_64_PC32 against symbol '_start'
 
 // RUN: llvm-objdump -D --no-show-raw-insn %t.exe | FileCheck --check-prefix=DISASM %s
 // DISASM:      Disassembly of section .nonalloc:
