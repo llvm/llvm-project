@@ -52,6 +52,7 @@ translateEdits(const MatchResult &Result, ArrayRef<ASTEdit> ASTEdits) {
     if (!Metadata)
       return Metadata.takeError();
     transformer::Edit T;
+    T.Kind = E.Kind;
     T.Range = *EditRange;
     T.Replacement = std::move(*Replacement);
     T.Metadata = std::move(*Metadata);
@@ -115,14 +116,36 @@ public:
 };
 } // namespace
 
+static TextGenerator makeText(std::string S) {
+  return std::make_shared<SimpleTextGenerator>(std::move(S));
+}
+
 ASTEdit transformer::remove(RangeSelector S) {
-  return change(std::move(S), std::make_shared<SimpleTextGenerator>(""));
+  return change(std::move(S), makeText(""));
+}
+
+static std::string formatHeaderPath(StringRef Header, IncludeFormat Format) {
+  switch (Format) {
+  case transformer::IncludeFormat::Quoted:
+    return Header.str();
+  case transformer::IncludeFormat::Angled:
+    return ("<" + Header + ">").str();
+  }
+}
+
+ASTEdit transformer::addInclude(RangeSelector Target, StringRef Header,
+                                IncludeFormat Format) {
+  ASTEdit E;
+  E.Kind = EditKind::AddInclude;
+  E.TargetRange = Target;
+  E.Replacement = makeText(formatHeaderPath(Header, Format));
+  return E;
 }
 
 RewriteRule transformer::makeRule(DynTypedMatcher M, EditGenerator Edits,
                                   TextGenerator Explanation) {
-  return RewriteRule{{RewriteRule::Case{
-      std::move(M), std::move(Edits), std::move(Explanation), {}}}};
+  return RewriteRule{{RewriteRule::Case{std::move(M), std::move(Edits),
+                                        std::move(Explanation)}}};
 }
 
 namespace {
@@ -258,7 +281,7 @@ EditGenerator transformer::rewriteDescendants(std::string NodeId,
 void transformer::addInclude(RewriteRule &Rule, StringRef Header,
                              IncludeFormat Format) {
   for (auto &Case : Rule.Cases)
-    Case.AddedIncludes.emplace_back(Header.str(), Format);
+    Case.Edits = flatten(std::move(Case.Edits), addInclude(Header, Format));
 }
 
 #ifndef NDEBUG
