@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMTextAPI
+  ELF/ELFObjHandler.cpp
   ELF/ELFStub.cpp
   ELF/TBEHandler.cpp
   MachO/Architecture.cpp
@@ -13,6 +14,6 @@ add_llvm_component_library(LLVMTextAPI
 
   ADDITIONAL_HEADER_DIRS
   "${LLVM_MAIN_INCLUDE_DIR}/llvm/TextAPI"
-  "${LLVM_MAIN_INCLUDE_DIR}/llvm/TextAPI/Elf"
+  "${LLVM_MAIN_INCLUDE_DIR}/llvm/TextAPI/ELF"
   "${LLVM_MAIN_INCLUDE_DIR}/llvm/TextAPI/MachO"
 )
