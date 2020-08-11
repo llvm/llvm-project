@@ -18,6 +18,7 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Variable.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StreamString.h"
@@ -60,6 +61,7 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {eBreakpointCompletion, CommandCompletions::Breakpoints},
       {eProcessPluginCompletion, CommandCompletions::ProcessPluginNames},
       {eDisassemblyFlavorCompletion, CommandCompletions::DisassemblyFlavors},
+      {eTypeLanguageCompletion, CommandCompletions::TypeLanguages},
       {eNoCompletion, nullptr} // This one has to be last in the list.
   };
 
@@ -604,5 +606,15 @@ void CommandCompletions::DisassemblyFlavors(CommandInterpreter &interpreter,
   static const char *flavors[] = {"default", "att", "intel"};
   for (const char *flavor : flavors) {
     request.TryCompleteCurrentArg(flavor);
+  }
+}
+
+void CommandCompletions::TypeLanguages(CommandInterpreter &interpreter,
+                                       CompletionRequest &request,
+                                       SearchFilter *searcher) {
+  for (int bit :
+       Language::GetLanguagesSupportingTypeSystems().bitvector.set_bits()) {
+    request.TryCompleteCurrentArg(
+        Language::GetNameForLanguageType(static_cast<lldb::LanguageType>(bit)));
   }
 }
