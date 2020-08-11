@@ -2025,7 +2025,12 @@ Align SelectionDAG::getReducedAlign(EVT VT, bool UseABI) {
 
 SDValue SelectionDAG::CreateStackTemporary(TypeSize Bytes, Align Alignment) {
   MachineFrameInfo &MFI = MF->getFrameInfo();
-  int FrameIdx = MFI.CreateStackObject(Bytes, Alignment, false);
+  const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
+  int StackID = 0;
+  if (Bytes.isScalable())
+    StackID = TFI->getStackIDForScalableVectors();
+  int FrameIdx = MFI.CreateStackObject(Bytes, Alignment,
+                                       false, nullptr, StackID);
   return getFrameIndex(FrameIdx, TLI->getFrameIndexTy(getDataLayout()));
 }
 
@@ -5937,8 +5942,16 @@ SDValue SelectionDAG::getMemBasePlusOffset(SDValue Base, TypeSize Offset,
                                            const SDLoc &DL,
                                            const SDNodeFlags Flags) {
   EVT VT = Base.getValueType();
-  return getMemBasePlusOffset(Base, getConstant(Offset.getFixedSize(), DL, VT),
-                              DL, Flags);
+  SDValue Index;
+
+  if (Offset.isScalable())
+    Index = getVScale(DL, Base.getValueType(),
+                      APInt(Base.getValueSizeInBits().getFixedSize(),
+                            Offset.getKnownMinSize()));
+  else
+    Index = getConstant(Offset.getFixedSize(), DL, VT);
+
+  return getMemBasePlusOffset(Base, Index, DL, Flags);
 }
 
 SDValue SelectionDAG::getMemBasePlusOffset(SDValue Ptr, SDValue Offset,
