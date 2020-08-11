@@ -248,7 +248,7 @@ void X86_64::prepareSymbolRelocation(lld::macho::Symbol &sym,
   case X86_64_RELOC_SIGNED_4:
     break;
   case X86_64_RELOC_TLV:
-    if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
+    if (isa<DylibSymbol>(&sym))
       error("relocations to thread-local dylib symbols not yet implemented");
     else
       assert(isa<Defined>(&sym));
@@ -278,7 +278,7 @@ uint64_t X86_64::resolveSymbolVA(uint8_t *buf, const lld::macho::Symbol &sym,
   case X86_64_RELOC_SIGNED_4:
     return sym.getVA();
   case X86_64_RELOC_TLV: {
-    if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
+    if (isa<DylibSymbol>(&sym))
       error("relocations to thread-local dylib symbols not yet implemented");
 
     // Convert the movq to a leaq.
