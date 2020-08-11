@@ -98,7 +98,6 @@ typedef uint32_t pid_t;
 // custom implementations.
 int vasprintf(char **ret, const char *fmt, va_list ap);
 char *strcasestr(const char *s, const char *find);
-char *realpath(const char *name, char *resolved);
 
 #ifdef _MSC_VER
 
