@@ -737,4 +737,320 @@ define void @mul_v32i64(<32 x i64>* %a, <32 x i64>* %b) #0 {
   ret void
 }
 
+;
+; SUB
+;
+
+; Don't use SVE for 64-bit vectors.
+define <8 x i8> @sub_v8i8(<8 x i8> %op1, <8 x i8> %op2) #0 {
+; CHECK-LABEL: sub_v8i8:
+; CHECK: sub v0.8b, v0.8b, v1.8b
+; CHECK: ret
+  %res = sub <8 x i8> %op1, %op2
+  ret <8 x i8> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <16 x i8> @sub_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
+; CHECK-LABEL: sub_v16i8:
+; CHECK: sub v0.16b, v0.16b, v1.16b
+; CHECK: ret
+  %res = sub <16 x i8> %op1, %op2
+  ret <16 x i8> %res
+}
+
+define void @sub_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
+; CHECK-LABEL: sub_v32i8:
+; CHECK: ptrue [[PG:p[0-9]+]].b, vl[[#min(VBYTES,32)]]
+; CHECK-DAG: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
+; CHECK-DAG: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
+; CHECK: sub [[RES:z[0-9]+]].b, [[PG]]/m, [[OP1]].b, [[OP2]].b
+; CHECK: st1b { [[RES]].b }, [[PG]], [x0]
+; CHECK: ret
+  %op1 = load <32 x i8>, <32 x i8>* %a
+  %op2 = load <32 x i8>, <32 x i8>* %b
+  %res = sub <32 x i8> %op1, %op2
+  store <32 x i8> %res, <32 x i8>* %a
+  ret void
+}
+
+define void @sub_v64i8(<64 x i8>* %a, <64 x i8>* %b) #0 {
+; CHECK-LABEL: sub_v64i8:
+; CHECK: ptrue [[PG:p[0-9]+]].b, vl[[#min(VBYTES,64)]]
+; CHECK-DAG: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
+; CHECK-DAG: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
+; CHECK: sub [[RES:z[0-9]+]].b, [[PG]]/m, [[OP1]].b, [[OP2]].b
+; CHECK: st1b { [[RES]].b }, [[PG]], [x0]
+; CHECK: ret
+  %op1 = load <64 x i8>, <64 x i8>* %a
+  %op2 = load <64 x i8>, <64 x i8>* %b
+  %res = sub <64 x i8> %op1, %op2
+  store <64 x i8> %res, <64 x i8>* %a
+  ret void
+}
+
+define void @sub_v128i8(<128 x i8>* %a, <128 x i8>* %b) #0 {
+; CHECK-LABEL: sub_v128i8:
+; CHECK: ptrue [[PG:p[0-9]+]].b, vl[[#min(VBYTES,128)]]
+; CHECK-DAG: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
+; CHECK-DAG: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
+; CHECK: sub [[RES:z[0-9]+]].b, [[PG]]/m, [[OP1]].b, [[OP2]].b
+; CHECK: st1b { [[RES]].b }, [[PG]], [x0]
+; CHECK: ret
+  %op1 = load <128 x i8>, <128 x i8>* %a
+  %op2 = load <128 x i8>, <128 x i8>* %b
+  %res = sub <128 x i8> %op1, %op2
+  store <128 x i8> %res, <128 x i8>* %a
+  ret void
+}
+
+define void @sub_v256i8(<256 x i8>* %a, <256 x i8>* %b) #0 {
+; CHECK-LABEL: sub_v256i8:
+; CHECK: ptrue [[PG:p[0-9]+]].b, vl[[#min(VBYTES,256)]]
+; CHECK-DAG: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
+; CHECK-DAG: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
+; CHECK: sub [[RES:z[0-9]+]].b, [[PG]]/m, [[OP1]].b, [[OP2]].b
+; CHECK: st1b { [[RES]].b }, [[PG]], [x0]
+; CHECK: ret
+  %op1 = load <256 x i8>, <256 x i8>* %a
+  %op2 = load <256 x i8>, <256 x i8>* %b
+  %res = sub <256 x i8> %op1, %op2
+  store <256 x i8> %res, <256 x i8>* %a
+  ret void
+}
+
+; Don't use SVE for 64-bit vectors.
+define <4 x i16> @sub_v4i16(<4 x i16> %op1, <4 x i16> %op2) #0 {
+; CHECK-LABEL: sub_v4i16:
+; CHECK: sub v0.4h, v0.4h, v1.4h
+; CHECK: ret
+  %res = sub <4 x i16> %op1, %op2
+  ret <4 x i16> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <8 x i16> @sub_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
+; CHECK-LABEL: sub_v8i16:
+; CHECK: sub v0.8h, v0.8h, v1.8h
+; CHECK: ret
+  %res = sub <8 x i16> %op1, %op2
+  ret <8 x i16> %res
+}
+
+define void @sub_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
+; CHECK-LABEL: sub_v16i16:
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),16)]]
+; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
+; CHECK: sub [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
+; CHECK: st1h { [[RES]].h }, [[PG]], [x0]
+; CHECK: ret
+  %op1 = load <16 x i16>, <16 x i16>* %a
+  %op2 = load <16 x i16>, <16 x i16>* %b
+  %res = sub <16 x i16> %op1, %op2
+  store <16 x i16> %res, <16 x i16>* %a
+  ret void
+}
+
+define void @sub_v32i16(<32 x i16>* %a, <32 x i16>* %b) #0 {
+; CHECK-LABEL: sub_v32i16:
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),32)]]
+; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
+; CHECK: sub [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
+; CHECK: st1h { [[RES]].h }, [[PG]], [x0]
+; CHECK: ret
+  %op1 = load <32 x i16>, <32 x i16>* %a
+  %op2 = load <32 x i16>, <32 x i16>* %b
+  %res = sub <32 x i16> %op1, %op2
+  store <32 x i16> %res, <32 x i16>* %a
+  ret void
+}
+
+define void @sub_v64i16(<64 x i16>* %a, <64 x i16>* %b) #0 {
+; CHECK-LABEL: sub_v64i16:
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),64)]]
+; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
+; CHECK: sub [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
+; CHECK: st1h { [[RES]].h }, [[PG]], [x0]
+; CHECK: ret
+  %op1 = load <64 x i16>, <64 x i16>* %a
+  %op2 = load <64 x i16>, <64 x i16>* %b
+  %res = sub <64 x i16> %op1, %op2
+  store <64 x i16> %res, <64 x i16>* %a
+  ret void
+}
+
+define void @sub_v128i16(<128 x i16>* %a, <128 x i16>* %b) #0 {
+; CHECK-LABEL: sub_v128i16:
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),128)]]
+; CHECK-DAG: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK-DAG: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
+; CHECK: sub [[RES:z[0-9]+]].h, [[PG]]/m, [[OP1]].h, [[OP2]].h
+; CHECK: st1h { [[RES]].h }, [[PG]], [x0]
+; CHECK: ret
+  %op1 = load <128 x i16>, <128 x i16>* %a
+  %op2 = load <128 x i16>, <128 x i16>* %b
+  %res = sub <128 x i16> %op1, %op2
+  store <128 x i16> %res, <128 x i16>* %a
+  ret void
+}
+
+; Don't use SVE for 64-bit vectors.
+define <2 x i32> @sub_v2i32(<2 x i32> %op1, <2 x i32> %op2) #0 {
+; CHECK-LABEL: sub_v2i32:
+; CHECK: sub v0.2s, v0.2s, v1.2s
+; CHECK: ret
+  %res = sub <2 x i32> %op1, %op2
+  ret <2 x i32> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <4 x i32> @sub_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
+; CHECK-LABEL: sub_v4i32:
+; CHECK: sub v0.4s, v0.4s, v1.4s
+; CHECK: ret
+  %res = sub <4 x i32> %op1, %op2
+  ret <4 x i32> %res
+}
+
+define void @sub_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
+; CHECK-LABEL: sub_v8i32:
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),8)]]
+; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
+; CHECK: sub [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
+; CHECK: st1w { [[RES]].s }, [[PG]], [x0]
+; CHECK: ret
+  %op1 = load <8 x i32>, <8 x i32>* %a
+  %op2 = load <8 x i32>, <8 x i32>* %b
+  %res = sub <8 x i32> %op1, %op2
+  store <8 x i32> %res, <8 x i32>* %a
+  ret void
+}
+
+define void @sub_v16i32(<16 x i32>* %a, <16 x i32>* %b) #0 {
+; CHECK-LABEL: sub_v16i32:
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),16)]]
+; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
+; CHECK: sub [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
+; CHECK: st1w { [[RES]].s }, [[PG]], [x0]
+; CHECK: ret
+  %op1 = load <16 x i32>, <16 x i32>* %a
+  %op2 = load <16 x i32>, <16 x i32>* %b
+  %res = sub <16 x i32> %op1, %op2
+  store <16 x i32> %res, <16 x i32>* %a
+  ret void
+}
+
+define void @sub_v32i32(<32 x i32>* %a, <32 x i32>* %b) #0 {
+; CHECK-LABEL: sub_v32i32:
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),32)]]
+; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
+; CHECK: sub [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
+; CHECK: st1w { [[RES]].s }, [[PG]], [x0]
+; CHECK: ret
+  %op1 = load <32 x i32>, <32 x i32>* %a
+  %op2 = load <32 x i32>, <32 x i32>* %b
+  %res = sub <32 x i32> %op1, %op2
+  store <32 x i32> %res, <32 x i32>* %a
+  ret void
+}
+
+define void @sub_v64i32(<64 x i32>* %a, <64 x i32>* %b) #0 {
+; CHECK-LABEL: sub_v64i32:
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),64)]]
+; CHECK-DAG: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-DAG: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
+; CHECK: sub [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
+; CHECK: st1w { [[RES]].s }, [[PG]], [x0]
+; CHECK: ret
+  %op1 = load <64 x i32>, <64 x i32>* %a
+  %op2 = load <64 x i32>, <64 x i32>* %b
+  %res = sub <64 x i32> %op1, %op2
+  store <64 x i32> %res, <64 x i32>* %a
+  ret void
+}
+
+; Don't use SVE for 64-bit vectors.
+define <1 x i64> @sub_v1i64(<1 x i64> %op1, <1 x i64> %op2) #0 {
+; CHECK-LABEL: sub_v1i64:
+; CHECK: sub d0, d0, d1
+; CHECK: ret
+  %res = sub <1 x i64> %op1, %op2
+  ret <1 x i64> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <2 x i64> @sub_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
+; CHECK-LABEL: sub_v2i64:
+; CHECK: sub v0.2d, v0.2d, v1.2d
+; CHECK: ret
+  %res = sub <2 x i64> %op1, %op2
+  ret <2 x i64> %res
+}
+
+define void @sub_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
+; CHECK-LABEL: sub_v4i64:
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),4)]]
+; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
+; CHECK: sub [[RES:z[0-9]+]].d, [[PG]]/m, [[OP1]].d, [[OP2]].d
+; CHECK: st1d { [[RES]].d }, [[PG]], [x0]
+; CHECK: ret
+  %op1 = load <4 x i64>, <4 x i64>* %a
+  %op2 = load <4 x i64>, <4 x i64>* %b
+  %res = sub <4 x i64> %op1, %op2
+  store <4 x i64> %res, <4 x i64>* %a
+  ret void
+}
+
+define void @sub_v8i64(<8 x i64>* %a, <8 x i64>* %b) #0 {
+; CHECK-LABEL: sub_v8i64:
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),8)]]
+; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
+; CHECK: sub [[RES:z[0-9]+]].d, [[PG]]/m, [[OP1]].d, [[OP2]].d
+; CHECK: st1d { [[RES]].d }, [[PG]], [x0]
+; CHECK: ret
+  %op1 = load <8 x i64>, <8 x i64>* %a
+  %op2 = load <8 x i64>, <8 x i64>* %b
+  %res = sub <8 x i64> %op1, %op2
+  store <8 x i64> %res, <8 x i64>* %a
+  ret void
+}
+
+define void @sub_v16i64(<16 x i64>* %a, <16 x i64>* %b) #0 {
+; CHECK-LABEL: sub_v16i64:
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),16)]]
+; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
+; CHECK: sub [[RES:z[0-9]+]].d, [[PG]]/m, [[OP1]].d, [[OP2]].d
+; CHECK: st1d { [[RES]].d }, [[PG]], [x0]
+; CHECK: ret
+  %op1 = load <16 x i64>, <16 x i64>* %a
+  %op2 = load <16 x i64>, <16 x i64>* %b
+  %res = sub <16 x i64> %op1, %op2
+  store <16 x i64> %res, <16 x i64>* %a
+  ret void
+}
+
+define void @sub_v32i64(<32 x i64>* %a, <32 x i64>* %b) #0 {
+; CHECK-LABEL: sub_v32i64:
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),32)]]
+; CHECK-DAG: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-DAG: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
+; CHECK: sub [[RES:z[0-9]+]].d, [[PG]]/m, [[OP1]].d, [[OP2]].d
+; CHECK: st1d { [[RES]].d }, [[PG]], [x0]
+; CHECK: ret
+  %op1 = load <32 x i64>, <32 x i64>* %a
+  %op2 = load <32 x i64>, <32 x i64>* %b
+  %res = sub <32 x i64> %op1, %op2
+  store <32 x i64> %res, <32 x i64>* %a
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve" }
