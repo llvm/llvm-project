@@ -21,8 +21,8 @@ static Value chooseOperand(Value input1, Value input2, BoolAttr choice) {
   return choice.getValue() ? input1 : input2;
 }
 
-static void createOpI(PatternRewriter &rewriter, Value input) {
-  rewriter.create<OpI>(rewriter.getUnknownLoc(), input);
+static void createOpI(PatternRewriter &rewriter, Location loc, Value input) {
+  rewriter.create<OpI>(loc, input);
 }
 
 static void handleNoResultOp(PatternRewriter &rewriter,
