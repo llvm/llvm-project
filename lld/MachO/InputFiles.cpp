@@ -301,6 +301,18 @@ void InputFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
   }
 }
 
+OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,
+                       StringRef sectName)
+    : InputFile(OpaqueKind, mb) {
+  InputSection *isec = make<InputSection>();
+  isec->file = this;
+  isec->name = sectName.take_front(16);
+  isec->segname = segName.take_front(16);
+  const auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
+  isec->data = {buf, mb.getBufferSize()};
+  subsections.push_back({{0, isec}});
+}
+
 ObjFile::ObjFile(MemoryBufferRef mb) : InputFile(ObjKind, mb) {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const mach_header_64 *>(mb.getBufferStart());
