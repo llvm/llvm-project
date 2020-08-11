@@ -10,8 +10,8 @@
 ///
 //===-----------------------------------------------------------------------===/
 
-#ifndef LLVM_TEXTAPI_ELF_ELFOBJHANDLER_H
-#define LLVM_TEXTAPI_ELF_ELFOBJHANDLER_H
+#ifndef LLVM_TOOLS_ELFABI_ELFOBJHANDLER_H
+#define LLVM_TOOLS_ELFABI_ELFOBJHANDLER_H
 
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
@@ -29,4 +29,4 @@ Expected<std::unique_ptr<ELFStub>> readELFFile(MemoryBufferRef Buf);
 } // end namespace elfabi
 } // end namespace llvm
 
-#endif // LLVM_TEXTAPI_ELF_ELFOBJHANDLER_H
+#endif // LLVM_TOOLS_ELFABI_ELFOBJHANDLER_H
