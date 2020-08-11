@@ -1764,7 +1764,7 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
                               (__builtin_ctz(UNWIND_PERSONALITY_MASK));
   if (personalityIndex != 0) {
     --personalityIndex; // change 1-based to zero-based index
-    if (personalityIndex > sectionHeader.personalityArrayCount()) {
+    if (personalityIndex >= sectionHeader.personalityArrayCount()) {
       _LIBUNWIND_DEBUG_LOG("found encoding 0x%08X with personality index %d,  "
                             "but personality table has only %d entries",
                             encoding, personalityIndex,
