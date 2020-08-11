@@ -12,10 +12,15 @@ def TestDirectiveLanguage : DirectiveLanguage {
   let clausePrefix = "TDLC_";
   let makeEnumAvailableInNamespace = 1;
   let enableBitmaskEnumInNamespace = 1;
+  let flangClauseBaseClass = "TdlClause";
 }
 
-def TDLC_ClauseA : Clause<"clausea"> {}
+def TDLC_ClauseA : Clause<"clausea"> {
+  let flangClass = "TdlClauseA";
+}
 def TDLC_ClauseB : Clause<"clauseb"> {
+  let flangClassValue = "IntExpr";
+  let isValueOptional = 1;
   let isDefault = 1;
 }
 
@@ -173,4 +178,27 @@ def TDL_DirA : Directive<"dira"> {
 // GEN-NEXT:  }
 // GEN-EMPTY:
 // GEN-NEXT:  #endif // GEN_FLANG_DIRECTIVE_CLAUSE_MAP
+// GEN-EMPTY:
+// GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_PARSER_CLASSES
+// GEN-NEXT:  #undef GEN_FLANG_CLAUSE_PARSER_CLASSES
+// GEN-EMPTY:
+// GEN-NEXT:  WRAPPER_CLASS(Clauseb, std::optional<IntExpr>);
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_CLASSES
+// GEN-EMPTY:
+// GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
+// GEN-NEXT:  #undef GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
+// GEN-EMPTY:
+// GEN-NEXT:  TdlClauseA
+// GEN-NEXT:  , Clauseb
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
+// GEN-EMPTY:
+// GEN-NEXT:  #ifdef GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
+// GEN-NEXT:  #undef GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
+// GEN-EMPTY:
+// GEN-NEXT:  NODE(TdlClause, Clauseb)
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
+
 

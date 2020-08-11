@@ -76,11 +76,11 @@ public:
   void Enter(const parser::AccClause::Detach &);
   void Enter(const parser::AccClause::Device &);
   void Enter(const parser::AccClause::DeviceNum &);
-  void Enter(const parser::AccClause::DevicePtr &);
+  void Enter(const parser::AccClause::Deviceptr &);
   void Enter(const parser::AccClause::DeviceResident &);
   void Enter(const parser::AccClause::DeviceType &);
   void Enter(const parser::AccClause::Finalize &);
-  void Enter(const parser::AccClause::FirstPrivate &);
+  void Enter(const parser::AccClause::Firstprivate &);
   void Enter(const parser::AccClause::Gang &);
   void Enter(const parser::AccClause::Host &);
   void Enter(const parser::AccClause::If &);
@@ -88,7 +88,7 @@ public:
   void Enter(const parser::AccClause::Independent &);
   void Enter(const parser::AccClause::Link &);
   void Enter(const parser::AccClause::NoCreate &);
-  void Enter(const parser::AccClause::NoHost &);
+  void Enter(const parser::AccClause::Nohost &);
   void Enter(const parser::AccClause::NumGangs &);
   void Enter(const parser::AccClause::NumWorkers &);
   void Enter(const parser::AccClause::Present &);
