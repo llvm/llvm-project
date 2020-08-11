@@ -411,16 +411,3 @@ void dumpDebugLines(DWARFContext &DCtx, DWARFYAML::Data &Y) {
     }
   }
 }
-
-llvm::Error dwarf2yaml(DWARFContext &DCtx, DWARFYAML::Data &Y) {
-  dumpDebugAbbrev(DCtx, Y);
-  dumpDebugStrings(DCtx, Y);
-  if (Error E = dumpDebugARanges(DCtx, Y))
-    return E;
-  if (Error E = dumpDebugRanges(DCtx, Y))
-    return E;
-  dumpDebugPubSections(DCtx, Y);
-  dumpDebugInfo(DCtx, Y);
-  dumpDebugLines(DCtx, Y);
-  return ErrorSuccess();
-}
