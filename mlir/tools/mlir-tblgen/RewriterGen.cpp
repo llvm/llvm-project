@@ -113,6 +113,9 @@ private:
   StringRef handleReplaceWithValue(DagNode tree);
 
   // Returns the location value to use.
+  std::pair<bool, std::string> getLocation(DagNode tree);
+
+  // Returns the location value to use.
   std::string handleLocationDirective(DagNode tree);
 
   // Emits the C++ statement to build a new op out of the given DAG `tree` and
@@ -779,13 +782,18 @@ std::string PatternEmitter::handleReplaceWithNativeCodeCall(DagNode tree) {
     PrintFatalError(loc, "unsupported NativeCodeCall argument numbers: " +
                              Twine(tree.getNumArgs()));
   }
-  for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
+  bool hasLocationDirective;
+  std::string locToUse;
+  std::tie(hasLocationDirective, locToUse) = getLocation(tree);
+
+  for (int i = 0, e = tree.getNumArgs() - hasLocationDirective; i != e; ++i) {
     attrs[i] = handleOpArgument(tree.getArgAsLeaf(i), tree.getArgName(i));
     LLVM_DEBUG(llvm::dbgs() << "NativeCodeCall argument #" << i
                             << " replacement: " << attrs[i] << "\n");
   }
-  return std::string(tgfmt(fmt, &fmtCtx, attrs[0], attrs[1], attrs[2], attrs[3],
-                           attrs[4], attrs[5], attrs[6], attrs[7]));
+  return std::string(tgfmt(fmt, &fmtCtx.addSubst("_loc", locToUse), attrs[0],
+                           attrs[1], attrs[2], attrs[3], attrs[4], attrs[5],
+                           attrs[6], attrs[7]));
 }
 
 int PatternEmitter::getNodeValueCount(DagNode node) {
@@ -804,6 +812,20 @@ int PatternEmitter::getNodeValueCount(DagNode node) {
   return 1;
 }
 
+std::pair<bool, std::string> PatternEmitter::getLocation(DagNode tree) {
+  auto numPatArgs = tree.getNumArgs();
+
+  if (numPatArgs != 0) {
+    if (auto lastArg = tree.getArgAsNestedDag(numPatArgs - 1))
+      if (lastArg.isLocationDirective()) {
+        return std::make_pair(true, handleLocationDirective(lastArg));
+      }
+  }
+
+  // If no explicit location is given, use the default, all fused, location.
+  return std::make_pair(false, "odsLoc");
+}
+
 std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
                                              int depth) {
   LLVM_DEBUG(llvm::dbgs() << "create op for pattern: ");
@@ -814,25 +836,17 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
   auto numOpArgs = resultOp.getNumArgs();
   auto numPatArgs = tree.getNumArgs();
 
-  // Get the location for this operation if explicitly provided.
+  bool hasLocationDirective;
   std::string locToUse;
-  if (numPatArgs != 0) {
-    if (auto lastArg = tree.getArgAsNestedDag(numPatArgs - 1))
-      if (lastArg.isLocationDirective())
-        locToUse = handleLocationDirective(lastArg);
-  }
+  std::tie(hasLocationDirective, locToUse) = getLocation(tree);
 
-  auto inPattern = numPatArgs - !locToUse.empty();
+  auto inPattern = numPatArgs - hasLocationDirective;
   if (numOpArgs != inPattern) {
     PrintFatalError(loc,
                     formatv("resultant op '{0}' argument number mismatch: "
                             "{1} in pattern vs. {2} in definition",
                             resultOp.getOperationName(), inPattern, numOpArgs));
   }
-
-  // If no explicit location is given, use the default, all fused, location.
-  if (locToUse.empty())
-    locToUse = "odsLoc";
 
   // A map to collect all nested DAG child nodes' names, with operand index as
   // the key. This includes both bound and unbound child nodes.

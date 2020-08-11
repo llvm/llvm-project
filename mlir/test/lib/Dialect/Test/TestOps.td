@@ -724,7 +724,8 @@ def OpNativeCodeCall3 : TEST_Op<"native_code_call3"> {
 // Test that NativeCodeCall is not ignored if it is not used to directly
 // replace the matched root op.
 def : Pattern<(OpNativeCodeCall3 $input),
-              [(NativeCodeCall<"createOpI($_builder, $0)"> $input), (OpK)]>;
+              [(NativeCodeCall<"createOpI($_builder, $_loc, $0)"> $input),
+               (OpK)]>;
 
 // Test AllAttrConstraintsOf.
 def OpAllAttrConstraint1 : TEST_Op<"all_attr_constraint_of1"> {
