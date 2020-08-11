@@ -355,7 +355,21 @@ public:
       Flags |= Rel::Underlying; // continue with the underlying decl.
     } else if (const auto *DG = dyn_cast<CXXDeductionGuideDecl>(D)) {
       D = DG->getDeducedTemplate();
+    } else if (const ObjCImplementationDecl *IID =
+                   dyn_cast<ObjCImplementationDecl>(D)) {
+      // Treat ObjC{Interface,Implementation}Decl as if they were a decl/def
+      // pair as long as the interface isn't implicit.
+      if (const auto *CID = IID->getClassInterface())
+        if (const auto *DD = CID->getDefinition())
+          if (!DD->isImplicitInterfaceDecl())
+            D = DD;
+    } else if (const ObjCCategoryImplDecl *CID =
+                   dyn_cast<ObjCCategoryImplDecl>(D)) {
+      // Treat ObjC{Category,CategoryImpl}Decl as if they were a decl/def pair.
+      D = CID->getCategoryDecl();
     }
+    if (!D)
+      return;
 
     if (const Decl *Pat = getTemplatePattern(D)) {
       assert(Pat != D);
