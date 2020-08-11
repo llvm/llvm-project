@@ -605,6 +605,9 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
   EXPECT_THAT(apply(" if(true) [[{ return; }]] "), HasSubstr("extracted"));
   // Don't extract uncertain return
   EXPECT_THAT(apply(" if(true) [[if (false) return;]] "), StartsWith("fail"));
+
+  FileName = "a.c";
+  EXPECT_THAT(apply(" for([[int i = 0;]];);"), HasSubstr("unavailable"));
 }
 
 TEST_F(ExtractFunctionTest, FileTest) {
