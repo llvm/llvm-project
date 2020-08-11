@@ -1055,7 +1055,7 @@ CommandObject::ArgumentTableEntry CommandObject::g_arguments_data[] = {
     { eArgTypeExprFormat, "expression-format", CommandCompletions::eNoCompletion, { nullptr, false }, "[ [bool|b] | [bin] | [char|c] | [oct|o] | [dec|i|d|u] | [hex|x] | [float|f] | [cstr|s] ]" },
     { eArgTypeFilename, "filename", CommandCompletions::eDiskFileCompletion, { nullptr, false }, "The name of a file (can include path)." },
     { eArgTypeFormat, "format", CommandCompletions::eNoCompletion, { FormatHelpTextCallback, true }, nullptr },
-    { eArgTypeFrameIndex, "frame-index", CommandCompletions::eNoCompletion, { nullptr, false }, "Index into a thread's list of frames." },
+    { eArgTypeFrameIndex, "frame-index", CommandCompletions::eFrameIndexCompletion, { nullptr, false }, "Index into a thread's list of frames." },
     { eArgTypeFullName, "fullname", CommandCompletions::eNoCompletion, { nullptr, false }, "Help text goes here." },
     { eArgTypeFunctionName, "function-name", CommandCompletions::eNoCompletion, { nullptr, false }, "The name of a function." },
     { eArgTypeFunctionOrSymbol, "function-or-symbol", CommandCompletions::eNoCompletion, { nullptr, false }, "The name of a function or symbol." },

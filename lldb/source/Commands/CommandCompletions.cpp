@@ -20,6 +20,7 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/Thread.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
@@ -62,6 +63,7 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {eProcessPluginCompletion, CommandCompletions::ProcessPluginNames},
       {eDisassemblyFlavorCompletion, CommandCompletions::DisassemblyFlavors},
       {eTypeLanguageCompletion, CommandCompletions::TypeLanguages},
+      {eFrameIndexCompletion, CommandCompletions::FrameIndexes},
       {eNoCompletion, nullptr} // This one has to be last in the list.
   };
 
@@ -616,5 +618,22 @@ void CommandCompletions::TypeLanguages(CommandInterpreter &interpreter,
        Language::GetLanguagesSupportingTypeSystems().bitvector.set_bits()) {
     request.TryCompleteCurrentArg(
         Language::GetNameForLanguageType(static_cast<lldb::LanguageType>(bit)));
+  }
+}
+
+void CommandCompletions::FrameIndexes(CommandInterpreter &interpreter,
+                                      CompletionRequest &request,
+                                      SearchFilter *searcher) {
+  const ExecutionContext &exe_ctx = interpreter.GetExecutionContext();
+  if (!exe_ctx.HasProcessScope())
+    return;
+
+  lldb::ThreadSP thread_sp = exe_ctx.GetThreadSP();
+  const uint32_t frame_num = thread_sp->GetStackFrameCount();
+  for (uint32_t i = 0; i < frame_num; ++i) {
+    lldb::StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(i);
+    StreamString strm;
+    frame_sp->Dump(&strm, false, true);
+    request.TryCompleteCurrentArg(std::to_string(i), strm.GetString());
   }
 }
