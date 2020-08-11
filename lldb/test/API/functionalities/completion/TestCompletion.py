@@ -401,6 +401,13 @@ class CommandLineCompletionTestCase(TestBase):
         self.runCmd("command script add -h test_desc -f none -s current usercmd1")
         self.check_completion_with_desc('command script delete ', [['usercmd1', 'test_desc']])
 
+    def test_command_delete(self):
+        self.runCmd(r"command regex test_command s/^$/finish/ 's/([0-9]+)/frame select %1/'")
+        self.complete_from_to('command delete test_c', 'command delete test_command')
+
+    def test_command_unalias(self):
+        self.complete_from_to('command unalias ima', 'command unalias image')
+
     def test_completion_description_commands(self):
         """Test descriptions of top-level command completions"""
         self.check_completion_with_desc("", [

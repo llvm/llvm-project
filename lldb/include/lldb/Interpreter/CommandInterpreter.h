@@ -501,6 +501,12 @@ public:
     return m_user_dict;
   }
 
+  const CommandObject::CommandMap &GetCommands() const {
+    return m_command_dict;
+  }
+
+  const CommandObject::CommandMap &GetAliases() const { return m_alias_dict; }
+
   /// Specify if the command interpreter should allow that the user can
   /// specify a custom exit code when calling 'quit'.
   void AllowExitCodeOnQuit(bool allow);
