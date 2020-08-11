@@ -46,7 +46,7 @@ public:
 
 ValueObjectSynthetic::ValueObjectSynthetic(ValueObject &parent,
                                            lldb::SyntheticChildrenSP filter)
-    : ValueObject(parent), m_synth_sp(filter), m_children_byindex(),
+    : ValueObject(parent), m_synth_sp(std::move(filter)), m_children_byindex(),
       m_name_toindex(), m_synthetic_children_cache(),
       m_synthetic_children_count(UINT32_MAX),
       m_parent_type_name(parent.GetTypeName()),
