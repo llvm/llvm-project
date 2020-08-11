@@ -388,6 +388,22 @@ class CommandLineCompletionTestCase(TestBase):
         """Test that 'target va' completes to 'target variable '."""
         self.complete_from_to('target va', 'target variable ')
 
+    def test_common_completion_thread_index(self):
+        subcommands = ['continue', 'info', 'exception', 'select',
+                       'step-in', 'step-inst', 'step-inst-over', 'step-out', 'step-over', 'step-script']
+
+        # Completion should do nothing without threads.
+        for subcommand in subcommands:
+            self.complete_from_to('thread ' + subcommand + ' ',
+                                  'thread ' + subcommand + ' ')
+
+        self.build()
+        lldbutil.run_to_source_breakpoint(self, '// Break here', lldb.SBFileSpec("main.cpp"))
+
+        # At least we have the thread at the index of 1 now.
+        for subcommand in subcommands:
+            self.complete_from_to('thread ' + subcommand + ' ', ['1'])
+
     def test_command_argument_completion(self):
         """Test completion of command arguments"""
         self.complete_from_to("watchpoint set variable -", ["-w", "-s"])

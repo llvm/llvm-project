@@ -19,6 +19,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Language.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/FileSpec.h"
@@ -66,6 +67,7 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {eTypeLanguageCompletion, CommandCompletions::TypeLanguages},
       {eFrameIndexCompletion, CommandCompletions::FrameIndexes},
       {eStopHookIDCompletion, CommandCompletions::StopHookIDs},
+      {eThreadIndexCompletion, CommandCompletions::ThreadIndexes},
       {eNoCompletion, nullptr} // This one has to be last in the list.
   };
 
@@ -675,6 +677,23 @@ void CommandCompletions::StopHookIDs(CommandInterpreter &interpreter,
     const Target::StopHookSP stophook_sp = target_sp->GetStopHookAtIndex(idx);
     stophook_sp->GetDescription(&strm, lldb::eDescriptionLevelInitial);
     request.TryCompleteCurrentArg(std::to_string(stophook_sp->GetID()),
+                                  strm.GetString());
+  }
+}
+
+void CommandCompletions::ThreadIndexes(CommandInterpreter &interpreter,
+                                       CompletionRequest &request,
+                                       SearchFilter *searcher) {
+  const ExecutionContext &exe_ctx = interpreter.GetExecutionContext();
+  if (!exe_ctx.HasProcessScope())
+    return;
+
+  ThreadList &threads = exe_ctx.GetProcessPtr()->GetThreadList();
+  lldb::ThreadSP thread_sp;
+  for (uint32_t idx = 0; (thread_sp = threads.GetThreadAtIndex(idx)); ++idx) {
+    StreamString strm;
+    thread_sp->GetStatus(strm, 0, 1, 1, true);
+    request.TryCompleteCurrentArg(std::to_string(thread_sp->GetIndexID()),
                                   strm.GetString());
   }
 }
