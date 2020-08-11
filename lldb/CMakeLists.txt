@@ -26,14 +26,8 @@ include(LLDBConfig)
 include(AddLLDB)
 
 # Define the LLDB_CONFIGURATION_xxx matching the build type.
-if( uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
-  add_definitions( -DLLDB_CONFIGURATION_DEBUG )
-else()
-  add_definitions( -DLLDB_CONFIGURATION_RELEASE )
-endif()
-
-if(APPLE)
-  add_definitions(-DLLDB_USE_OS_LOG)
+if(uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
+  add_definitions(-DLLDB_CONFIGURATION_DEBUG)
 endif()
 
 if (WIN32)

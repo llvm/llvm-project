@@ -129,6 +129,8 @@ if(LLDB_USE_ENTITLEMENTS)
   endif()
 endif()
 
+add_definitions(-DLLDB_USE_OS_LOG)
+
 if(${CMAKE_OSX_SYSROOT} MATCHES ".Internal.sdk$")
   message(STATUS "LLDB debugserver energy support is enabled")
   add_definitions(-DLLDB_ENERGY)
