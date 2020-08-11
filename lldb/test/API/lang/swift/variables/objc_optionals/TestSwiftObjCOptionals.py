@@ -24,8 +24,6 @@ class TestSwiftObjCOptionalType(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(bugnumber="rdar://60396797",
-                        setting=('symbols.use-swift-clangimporter', 'false'))
     @swiftTest
     @skipUnlessDarwin
     def test_swift_objc_optional_type(self):
