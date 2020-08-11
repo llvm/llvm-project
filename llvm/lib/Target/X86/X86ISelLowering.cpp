@@ -35900,7 +35900,7 @@ static SDValue combineShuffleWithHorizOp(SDValue N, MVT VT, const SDLoc &DL,
           (M % NumEltsPerLane) >= NumHalfEltsPerLane)
         M -= NumHalfEltsPerLane;
       if (NumElts <= M && BC1.getOperand(0) == BC1.getOperand(1) &&
-          ((M - NumElts) % NumEltsPerLane) >= NumHalfEltsPerLane)
+          (M % NumEltsPerLane) >= NumHalfEltsPerLane)
         M -= NumHalfEltsPerLane;
     }
   }
