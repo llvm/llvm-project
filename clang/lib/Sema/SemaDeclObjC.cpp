@@ -3922,15 +3922,11 @@ Decl *Sema::ActOnAtEnd(Scope *S, SourceRange AtEnd, ArrayRef<Decl *> allMethods,
   if (auto *OID = dyn_cast<ObjCImplementationDecl>(CurContext)) {
     for (auto PropImpl : OID->property_impls()) {
       if (auto *Getter = PropImpl->getGetterMethodDecl())
-        if (Getter->isSynthesizedAccessorStub()) {
-          OID->makeDeclVisibleInContext(Getter);
+        if (Getter->isSynthesizedAccessorStub())
           OID->addDecl(Getter);
-        }
       if (auto *Setter = PropImpl->getSetterMethodDecl())
-        if (Setter->isSynthesizedAccessorStub()) {
-          OID->makeDeclVisibleInContext(Setter);
+        if (Setter->isSynthesizedAccessorStub())
           OID->addDecl(Setter);
-        }
     }
   }
 
