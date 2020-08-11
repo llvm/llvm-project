@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_RPCSERIALIZATION_H
-#define LLVM_EXECUTIONENGINE_ORC_RPCSERIALIZATION_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_RPC_RPCSERIALIZATION_H
+#define LLVM_EXECUTIONENGINE_ORC_RPC_RPCSERIALIZATION_H
 
 #include "llvm/ExecutionEngine/Orc/OrcError.h"
 #include "llvm/Support/thread.h"
@@ -699,4 +699,4 @@ public:
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_RPCSERIALIZATION_H
+#endif // LLVM_EXECUTIONENGINE_ORC_RPC_RPCSERIALIZATION_H
