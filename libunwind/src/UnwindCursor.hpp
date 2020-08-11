@@ -1759,7 +1759,7 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
     }
   }
 
-  // extact personality routine, if encoding says function has one
+  // extract personality routine, if encoding says function has one
   uint32_t personalityIndex = (encoding & UNWIND_PERSONALITY_MASK) >>
                               (__builtin_ctz(UNWIND_PERSONALITY_MASK));
   if (personalityIndex != 0) {
