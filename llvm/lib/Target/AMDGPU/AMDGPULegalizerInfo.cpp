@@ -1338,11 +1338,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                   VecTy.getSizeInBits() <= MaxRegisterSize &&
                   IdxTy.getSizeInBits() == 32;
         })
-      .bitcastIf(all(sizeIsMultipleOf32(1), scalarOrEltNarrowerThan(1, 32)),
-                 bitcastToVectorElement32(1))
+      .bitcastIf(all(sizeIsMultipleOf32(VecTypeIdx), scalarOrEltNarrowerThan(VecTypeIdx, 32)),
+                 bitcastToVectorElement32(VecTypeIdx))
       //.bitcastIf(vectorSmallerThan(1, 32), bitcastToScalar(1))
       .bitcastIf(
-        all(sizeIsMultipleOf32(1), scalarOrEltWiderThan(1, 64)),
+        all(sizeIsMultipleOf32(VecTypeIdx), scalarOrEltWiderThan(VecTypeIdx, 64)),
         [=](const LegalityQuery &Query) {
           // For > 64-bit element types, try to turn this into a 64-bit
           // element vector since we may be able to do better indexing
