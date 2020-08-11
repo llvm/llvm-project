@@ -1203,7 +1203,10 @@ defm NND : RRNCm<"nnd", 0x54, I64, i64, and_not>;
 defm MRG : RRMRGm<"mrg", 0x56, I64, i64>;
 
 // Section 8.5.7 - LDZ (Leading Zero Count)
-defm LDZ : RRI1m<"ldz", 0x67, I64, i64, ctlz>;
+def ctlz_pat : PatFrags<(ops node:$src),
+                        [(ctlz node:$src),
+                         (ctlz_zero_undef node:$src)]>;
+defm LDZ : RRI1m<"ldz", 0x67, I64, i64, ctlz_pat>;
 
 // Section 8.5.8 - PCNT (Population Count)
 defm PCNT : RRI1m<"pcnt", 0x38, I64, i64, ctpop>;
@@ -1213,6 +1216,16 @@ defm BRV : RRI1m<"brv", 0x39, I64, i64, bitreverse>;
 
 // Section 8.5.10 - BSWP (Byte Swap)
 defm BSWP : RRSWPm<"bswp", 0x2B, I64, i64>;
+def : Pat<(i64 (bswap i64:$src)),
+          (BSWPri $src, 0)>;
+def : Pat<(i64 (bswap (i64 mimm:$src))),
+          (BSWPmi (MIMM $src), 0)>;
+def : Pat<(i32 (bswap i32:$src)),
+          (EXTRACT_SUBREG
+              (BSWPri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $src, sub_i32), 1),
+              sub_i32)>;
+def : Pat<(i32 (bswap (i32 mimm:$src))),
+          (EXTRACT_SUBREG (BSWPmi (MIMM $src), 1), sub_i32)>;
 
 // Section 8.5.11 - CMOV (Conditional Move)
 let cw = 0, cw2 = 0 in defm CMOVL : RRCMOVm<"cmov.l.${cfw}", 0x3B, I64, i64>;
@@ -1981,19 +1994,6 @@ def : Pat<(i32 (bitconvert f32:$op)),
 def : Pat<(f32 (bitconvert i32:$op)),
           (EXTRACT_SUBREG (SLLri (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
             $op, sub_i32), 32), sub_f32)>;
-
-// Bits operations pattern matchings.
-def : Pat<(i32 (ctpop i32:$src)),
-          (EXTRACT_SUBREG (PCNTr (ANDrm (INSERT_SUBREG
-            (i64 (IMPLICIT_DEF)), $src, sub_i32), !add(32, 64))), sub_i32)>;
-def : Pat<(i32 (ctlz i32:$src)),
-          (EXTRACT_SUBREG (LDZr (SLLri (INSERT_SUBREG
-            (i64 (IMPLICIT_DEF)), $src, sub_i32), 32)), sub_i32)>;
-def : Pat<(i64 (bswap i64:$src)),
-          (BSWPri $src, 0)>;
-def : Pat<(i32 (bswap i32:$src)),
-          (EXTRACT_SUBREG (BSWPri (INSERT_SUBREG
-            (i64 (IMPLICIT_DEF)), $src, sub_i32), 1), sub_i32)>;
 
 // Several special pattern matches to optimize code
 
