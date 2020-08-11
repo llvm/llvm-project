@@ -1985,6 +1985,15 @@ public:
 
   ~CommandObjectThreadPlanDiscard() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_exe_ctx.HasThreadScope() || request.GetCursorIndex())
+      return;
+
+    m_exe_ctx.GetThreadPtr()->AutoCompleteThreadPlans(request);
+  }
+
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     Thread *thread = m_exe_ctx.GetThreadPtr();
     if (args.GetArgumentCount() != 1) {
