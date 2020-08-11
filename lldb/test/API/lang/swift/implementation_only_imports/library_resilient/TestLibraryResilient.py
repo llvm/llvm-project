@@ -27,6 +27,7 @@ class TestLibraryResilient(TestBase):
 
     def launch_info(self):
         info = lldb.SBLaunchInfo([])
+        info.SetLaunchFlags(lldb.eLaunchFlagInheritTCCFromParent)
 
         if self.getPlatform() == "freebsd" or self.getPlatform() == "linux":
             # LD_LIBRARY_PATH must be set so the shared libraries are found on
@@ -44,7 +45,7 @@ class TestLibraryResilient(TestBase):
     @expectedFailureAll(oslist=["windows"]) # Requires Remote Mirrors support
     def test_implementation_only_import_library(self):
         """Test `@_implementationOnly import` in a resilient library used by the main executable
-        
+
         See the ReadMe.md in the parent directory for more information.
         """
 
@@ -66,7 +67,7 @@ class TestLibraryResilient(TestBase):
     @expectedFailureAll(oslist=["windows"]) # Requires Remote Mirrors support
     def test_implementation_only_import_library_no_library_module(self):
         """Test `@_implementationOnly import` in a resilient library used by the main executable, after removing the implementation-only library's swiftmodule
-        
+
         See the ReadMe.md in the parent directory for more information.
         """
 
