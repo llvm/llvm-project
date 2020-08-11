@@ -135,6 +135,7 @@ def : GINodeEquiv<G_SMIN, smin>;
 def : GINodeEquiv<G_SMAX, smax>;
 def : GINodeEquiv<G_UMIN, umin>;
 def : GINodeEquiv<G_UMAX, umax>;
+def : GINodeEquiv<G_ABS, abs>;
 def : GINodeEquiv<G_FMINNUM, fminnum>;
 def : GINodeEquiv<G_FMAXNUM, fmaxnum>;
 def : GINodeEquiv<G_FMINNUM_IEEE, fminnum_ieee>;

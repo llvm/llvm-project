@@ -289,6 +289,11 @@ private:
   /// MachineBasicBlocks for the function have been created.
   void finishPendingPhis();
 
+  /// Translate \p Inst into a unary operation \p Opcode.
+  /// \pre \p U is a unary operation.
+  bool translateUnaryOp(unsigned Opcode, const User &U,
+                        MachineIRBuilder &MIRBuilder);
+
   /// Translate \p Inst into a binary operation \p Opcode.
   /// \pre \p U is a binary operation.
   bool translateBinaryOp(unsigned Opcode, const User &U,
