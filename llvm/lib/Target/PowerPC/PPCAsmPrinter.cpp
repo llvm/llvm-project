@@ -1709,10 +1709,7 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
          "Unhandled intrinsic global variable.");
   ValidateGV(GV);
 
-  // Create the symbol, set its storage class.
   MCSymbolXCOFF *GVSym = cast<MCSymbolXCOFF>(getSymbol(GV));
-  GVSym->setStorageClass(
-      TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GV));
 
   if (GV->isDeclarationForLinker()) {
     emitLinkage(GV, GVSym);
@@ -1736,6 +1733,8 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (GVKind.isCommon() || GVKind.isBSSLocal()) {
     Align Alignment = GV->getAlign().getValueOr(DL.getPreferredAlign(GV));
     uint64_t Size = DL.getTypeAllocSize(GV->getType()->getElementType());
+    GVSym->setStorageClass(
+        TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GV));
 
     if (GVKind.isBSSLocal())
       OutStreamer->emitXCOFFLocalCommonSymbol(
@@ -1907,15 +1906,6 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (MO.isSymbol()) {
       MCSymbolXCOFF *S =
           cast<MCSymbolXCOFF>(OutContext.getOrCreateSymbol(MO.getSymbolName()));
-      if (!S->hasRepresentedCsectSet()) {
-        // On AIX, an undefined symbol needs to be associated with a
-        // MCSectionXCOFF to get the correct storage mapping class.
-        // In this case, XCOFF::XMC_PR.
-        MCSectionXCOFF *Sec = OutContext.getXCOFFSection(
-            S->getName(), XCOFF::XMC_PR, XCOFF::XTY_ER, XCOFF::C_EXT,
-            SectionKind::getMetadata());
-        S->setRepresentedCsect(Sec);
-      }
       ExtSymSDNodeSymbols.insert(S);
     }
   } break;
@@ -1938,10 +1928,9 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
 }
 
 bool PPCAIXAsmPrinter::doFinalization(Module &M) {
-  bool Ret = PPCAsmPrinter::doFinalization(M);
   for (MCSymbol *Sym : ExtSymSDNodeSymbols)
     OutStreamer->emitSymbolAttribute(Sym, MCSA_Extern);
-  return Ret;
+  return PPCAsmPrinter::doFinalization(M);
 }
 
 void PPCAIXAsmPrinter::emitXXStructorList(const DataLayout &DL,

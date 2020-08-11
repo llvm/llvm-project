@@ -134,7 +134,7 @@ declare void @test_byval_64Byte(%struct.S64* byval(%struct.S64) align 1)
 ; CHECK-DAG:   renamable $x8 = LD 40, renamable $x[[REGADDR]] :: (load 8)
 ; CHECK-DAG:   renamable $x9 = LD 48, renamable $x[[REGADDR]] :: (load 8)
 ; CHECK-DAG:   renamable $x10 = LD 56, renamable $x[[REGADDR]] :: (load 8)
-; CHECK-NEXT:  BL8_NOP <mcsymbol .test_byval_64Byte>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x2, implicit-def $r1
+; CHECK-NEXT:  BL8_NOP <mcsymbol .test_byval_64Byte[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x6, implicit $x7, implicit $x8, implicit $x9, implicit $x10, implicit $x2, implicit-def $r1
 ; CHECK-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 ; CHECKASM-LABEL: .test_byval_64Byte:

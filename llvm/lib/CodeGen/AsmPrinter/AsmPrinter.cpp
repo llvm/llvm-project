@@ -1528,9 +1528,8 @@ bool AsmPrinter::doFinalization(Module &M) {
     // Variable `Name` is the function descriptor symbol (see above). Get the
     // function entry point symbol.
     MCSymbol *FnEntryPointSym = TLOF.getFunctionEntryPointSymbol(&F, TM);
-    if (cast<MCSymbolXCOFF>(FnEntryPointSym)->hasRepresentedCsectSet())
-      // Emit linkage for the function entry point.
-      emitLinkage(&F, FnEntryPointSym);
+    // Emit linkage for the function entry point.
+    emitLinkage(&F, FnEntryPointSym);
 
     // Emit linkage for the function descriptor.
     emitLinkage(&F, Name);
