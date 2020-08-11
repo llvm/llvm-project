@@ -1,5 +1,33 @@
 // RUN: mlir-opt --allow-unregistered-dialect -split-input-file -verify-diagnostics %s
 
+func @array_of_void() {
+  // expected-error @+1 {{invalid array element type}}
+  "some.op"() : () -> !llvm.array<4 x void>
+}
+
+// -----
+
+func @function_returning_function() {
+  // expected-error @+1 {{invalid function result type}}
+  "some.op"() : () -> !llvm.func<func<void ()> ()>
+}
+
+// -----
+
+func @function_taking_function() {
+  // expected-error @+1 {{invalid function argument type}}
+  "some.op"() : () -> !llvm.func<void (func<void ()>)>
+}
+
+// -----
+
+func @void_pointer() {
+  // expected-error @+1 {{invalid pointer element type}}
+  "some.op"() : () -> !llvm.ptr<void>
+}
+
+// -----
+
 func @repeated_struct_name() {
   "some.op"() : () -> !llvm.struct<"a", (ptr<struct<"a">>)>
   // expected-error @+2 {{identified type already used with a different body}}
@@ -74,6 +102,20 @@ func @explicitly_opaque_struct() {
 
 // -----
 
+func @literal_struct_with_void() {
+  // expected-error @+1 {{invalid LLVM structure element type}}
+  "some.op"() : () -> !llvm.struct<(void)>
+}
+
+// -----
+
+func @identified_struct_with_void() {
+  // expected-error @+1 {{invalid LLVM structure element type}}
+  "some.op"() : () -> !llvm.struct<"a", (void)>
+}
+
+// -----
+
 func @dynamic_vector() {
   // expected-error @+1 {{expected '? x <integer> x <type>' or '<integer> x <type>'}}
   "some.op"() : () -> !llvm.vec<? x float>
@@ -93,3 +135,23 @@ func @unscalable_vector() {
   "some.op"() : () -> !llvm.vec<4 x 4 x i32>
 }
 
+// -----
+
+func @zero_vector() {
+  // expected-error @+1 {{the number of vector elements must be positive}}
+  "some.op"() : () -> !llvm.vec<0 x i32>
+}
+
+// -----
+
+func @nested_vector() {
+  // expected-error @+1 {{invalid vector element type}}
+  "some.op"() : () -> !llvm.vec<2 x vec<2 x i32>>
+}
+
+// -----
+
+func @scalable_void_vector() {
+  // expected-error @+1 {{invalid vector element type}}
+  "some.op"() : () -> !llvm.vec<? x 4 x void>
+}
