@@ -194,9 +194,14 @@ TEST(CompletionTest, Filter) {
   EXPECT_THAT(completions(Body + "int main() { S().Foba^ }").Completions,
               AllOf(Has("FooBar"), Has("FooBaz"), Not(Has("Qux"))));
 
-  // Macros require  prefix match.
-  EXPECT_THAT(completions(Body + "int main() { C^ }").Completions,
-              AllOf(Has("Car"), Not(Has("MotorCar"))));
+  // Macros require prefix match, either from index or AST.
+  Symbol Sym = var("MotorCarIndex");
+  Sym.SymInfo.Kind = index::SymbolKind::Macro;
+  EXPECT_THAT(
+      completions(Body + "int main() { C^ }", {Sym}).Completions,
+      AllOf(Has("Car"), Not(Has("MotorCar")), Not(Has("MotorCarIndex"))));
+  EXPECT_THAT(completions(Body + "int main() { M^ }", {Sym}).Completions,
+              AllOf(Has("MotorCar"), Has("MotorCarIndex")));
 }
 
 void testAfterDotCompletion(clangd::CodeCompleteOptions Opts) {
