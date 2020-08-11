@@ -6,12 +6,12 @@
 //
 //===-----------------------------------------------------------------------===/
 
-#include "llvm/TextAPI/ELF/TBEHandler.h"
-#include "llvm/ADT/StringSwitch.h"
+#include "llvm/InterfaceStub/TBEHandler.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/InterfaceStub/ELFStub.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/YAMLTraits.h"
-#include "llvm/TextAPI/ELF/ELFStub.h"
 
 using namespace llvm;
 using namespace llvm::elfabi;

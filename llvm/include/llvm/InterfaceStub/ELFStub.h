@@ -16,8 +16,8 @@
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/VersionTuple.h"
-#include <vector>
 #include <set>
+#include <vector>
 
 namespace llvm {
 namespace elfabi {
@@ -42,15 +42,13 @@ struct ELFSymbol {
   bool Undefined;
   bool Weak;
   Optional<std::string> Warning;
-  bool operator<(const ELFSymbol &RHS) const {
-    return Name < RHS.Name;
-  }
+  bool operator<(const ELFSymbol &RHS) const { return Name < RHS.Name; }
 };
 
 // A cumulative representation of ELF stubs.
 // Both textual and binary stubs will read into and write from this object.
 class ELFStub {
-// TODO: Add support for symbol versioning.
+  // TODO: Add support for symbol versioning.
 public:
   VersionTuple TbeVersion;
   Optional<std::string> SoName;
