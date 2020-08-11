@@ -44,7 +44,6 @@ add_flang_library(FortranSemantics
   unparse-with-symbols.cpp
 
   DEPENDS
-  acc_gen
   omp_gen
 
   LINK_LIBS

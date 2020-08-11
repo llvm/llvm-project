@@ -55,7 +55,7 @@ TYPE_PARSER("AUTO" >> construct<AccClause>(construct<AccClause::Auto>()) ||
                     parenthesized(Parser<AccObjectList>{}))) ||
     "DEVICE" >> construct<AccClause>(construct<AccClause::Device>(
                     parenthesized(Parser<AccObjectList>{}))) ||
-    "DEVICEPTR" >> construct<AccClause>(construct<AccClause::Deviceptr>(
+    "DEVICEPTR" >> construct<AccClause>(construct<AccClause::DevicePtr>(
                        parenthesized(Parser<AccObjectList>{}))) ||
     "DEVICENUM" >> construct<AccClause>(construct<AccClause::DeviceNum>(
                        parenthesized(scalarIntConstantExpr))) ||
@@ -69,7 +69,7 @@ TYPE_PARSER("AUTO" >> construct<AccClause>(construct<AccClause::Auto>()) ||
         construct<AccClause>(construct<AccClause::DeviceType>(
             parenthesized(maybe(nonemptyList(name))))) ||
     "FINALIZE" >> construct<AccClause>(construct<AccClause::Finalize>()) ||
-    "FIRSTPRIVATE" >> construct<AccClause>(construct<AccClause::Firstprivate>(
+    "FIRSTPRIVATE" >> construct<AccClause>(construct<AccClause::FirstPrivate>(
                           parenthesized(Parser<AccObjectList>{}))) ||
     "GANG" >> construct<AccClause>(construct<AccClause::Gang>(
                   maybe(parenthesized(Parser<AccGangArgument>{})))) ||
@@ -84,7 +84,7 @@ TYPE_PARSER("AUTO" >> construct<AccClause>(construct<AccClause::Auto>()) ||
                   parenthesized(Parser<AccObjectList>{}))) ||
     "NO_CREATE" >> construct<AccClause>(construct<AccClause::NoCreate>(
                        parenthesized(Parser<AccObjectList>{}))) ||
-    "NOHOST" >> construct<AccClause>(construct<AccClause::Nohost>()) ||
+    "NOHOST" >> construct<AccClause>(construct<AccClause::NoHost>()) ||
     "NUM_GANGS" >> construct<AccClause>(construct<AccClause::NumGangs>(
                        parenthesized(scalarIntExpr))) ||
     "NUM_WORKERS" >> construct<AccClause>(construct<AccClause::NumWorkers>(
