@@ -173,7 +173,7 @@ public:
     ResolveAccObjectList(x.v, Symbol::Flag::AccPrivate);
     return false;
   }
-  bool Pre(const parser::AccClause::Firstprivate &x) {
+  bool Pre(const parser::AccClause::FirstPrivate &x) {
     ResolveAccObjectList(x.v, Symbol::Flag::AccFirstPrivate);
     return false;
   }
