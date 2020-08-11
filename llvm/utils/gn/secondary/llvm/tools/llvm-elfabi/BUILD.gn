@@ -5,7 +5,6 @@ executable("llvm-elfabi") {
     "//llvm/lib/TextAPI",
   ]
   sources = [
-    "ELFObjHandler.cpp",
     "ErrorCollector.cpp",
     "llvm-elfabi.cpp",
   ]
