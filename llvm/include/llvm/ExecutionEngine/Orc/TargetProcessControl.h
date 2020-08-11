@@ -161,13 +161,19 @@ protected:
   MemoryAccess *MemAccess = nullptr;
 };
 
-/// A TargetProcessControl
+/// A TargetProcessControl implementation targeting the current process.
 class SelfTargetProcessControl : public TargetProcessControl,
                                  private TargetProcessControl::MemoryAccess {
 public:
-  SelfTargetProcessControl(Triple TT, unsigned PageSize);
+  SelfTargetProcessControl(
+      Triple TT, unsigned PageSize,
+      std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr);
 
-  static Expected<std::unique_ptr<SelfTargetProcessControl>> Create();
+  /// Create a SelfTargetProcessControl with the given memory manager.
+  /// If no memory manager is given a jitlink::InProcessMemoryManager will
+  /// be used by default.
+  static Expected<std::unique_ptr<SelfTargetProcessControl>>
+  Create(std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr = nullptr);
 
   Expected<DylibHandle> loadDylib(const char *DylibPath) override;
 
@@ -189,9 +195,7 @@ private:
   void writeBuffers(ArrayRef<BufferWrite> Ws,
                     WriteResultFn OnWriteComplete) override;
 
-  std::unique_ptr<jitlink::InProcessMemoryManager> IPMM =
-      std::make_unique<jitlink::InProcessMemoryManager>();
-
+  std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
   char GlobalManglingPrefix = 0;
   std::vector<std::unique_ptr<sys::DynamicLibrary>> DynamicLibraries;
 };
