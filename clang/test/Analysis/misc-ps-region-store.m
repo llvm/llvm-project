@@ -1157,7 +1157,7 @@ struct list_pr8141
 struct list_pr8141 *
 pr8141 (void) {
   struct list_pr8141 *items;
-  for (;; items = ({ do { } while (0); items->tail; })) // expected-warning{{Dereference of undefined pointer value}}
+  for (;; items = ({ do { } while (0); items->tail; })) // expected-warning{{dereference of an undefined pointer value}}
     {
     }
 }
