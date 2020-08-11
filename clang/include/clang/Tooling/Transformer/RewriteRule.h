@@ -31,12 +31,28 @@
 
 namespace clang {
 namespace transformer {
+// Specifies how to interpret an edit.
+enum class EditKind {
+  // Edits a source range in the file.
+  Range,
+  // Inserts an include in the file. The `Replacement` field is the name of the
+  // newly included file.
+  AddInclude,
+};
+
 /// A concrete description of a source edit, represented by a character range in
 /// the source to be replaced and a corresponding replacement string.
 struct Edit {
+  EditKind Kind = EditKind::Range;
   CharSourceRange Range;
   std::string Replacement;
   llvm::Any Metadata;
+};
+
+/// Format of the path in an include directive -- angle brackets or quotes.
+enum class IncludeFormat {
+  Quoted,
+  Angled,
 };
 
 /// Maps a match result to a list of concrete edits (with possible
@@ -86,6 +102,7 @@ using AnyGenerator = MatchConsumer<llvm::Any>;
 //   changeTo(cat("different_expr"))
 // \endcode
 struct ASTEdit {
+  EditKind Kind = EditKind::Range;
   RangeSelector TargetRange;
   TextGenerator Replacement;
   TextGenerator Note;
@@ -185,6 +202,18 @@ inline ASTEdit insertAfter(RangeSelector S, TextGenerator Replacement) {
 /// Removes the source selected by \p S.
 ASTEdit remove(RangeSelector S);
 
+/// Adds an include directive for the given header to the file of `Target`. The
+/// particular location specified by `Target` is ignored.
+ASTEdit addInclude(RangeSelector Target, StringRef Header,
+                   IncludeFormat Format = IncludeFormat::Quoted);
+
+/// Adds an include directive for the given header to the file associated with
+/// `RootID`.
+inline ASTEdit addInclude(StringRef Header,
+                          IncludeFormat Format = IncludeFormat::Quoted) {
+  return addInclude(node(RootID), Header, Format);
+}
+
 // FIXME: If `Metadata` returns an `llvm::Expected<T>` the `AnyGenerator` will
 // construct an `llvm::Expected<llvm::Any>` where no error is present but the
 // `llvm::Any` holds the error. This is unlikely but potentially surprising.
@@ -216,12 +245,6 @@ inline EditGenerator shrinkTo(RangeSelector outer, RangeSelector inner) {
                    remove(enclose(after(inner), after(outer)))});
 }
 
-/// Format of the path in an include directive -- angle brackets or quotes.
-enum class IncludeFormat {
-  Quoted,
-  Angled,
-};
-
 /// Description of a source-code transformation.
 //
 // A *rewrite rule* describes a transformation of source code. A simple rule
@@ -250,10 +273,6 @@ struct RewriteRule {
     ast_matchers::internal::DynTypedMatcher Matcher;
     EditGenerator Edits;
     TextGenerator Explanation;
-    /// Include paths to add to the file affected by this case.  These are
-    /// bundled with the `Case`, rather than the `RewriteRule`, because each
-    /// case might have different associated changes to the includes.
-    std::vector<std::pair<std::string, IncludeFormat>> AddedIncludes;
   };
   // We expect RewriteRules will most commonly include only one case.
   SmallVector<Case, 1> Cases;
