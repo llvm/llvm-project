@@ -41996,26 +41996,31 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue combineHorizOpWithShuffle(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineHorizOpWithShuffle(SDNode *N, SelectionDAG &DAG,
+                                         const X86Subtarget &Subtarget) {
   unsigned Opcode = N->getOpcode();
-  assert((X86ISD::PACKSS == Opcode || X86ISD::PACKUS == Opcode) &&
-         "Unexpected pack opcode");
+  assert((X86ISD::HADD == Opcode || X86ISD::FHADD == Opcode ||
+          X86ISD::HSUB == Opcode || X86ISD::FHSUB == Opcode ||
+          X86ISD::PACKSS == Opcode || X86ISD::PACKUS == Opcode) &&
+         "Unexpected hadd/hsub/pack opcode");
 
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
-  unsigned NumDstElts = VT.getVectorNumElements();
+  EVT SrcVT = N0.getValueType();
 
   // Attempt to fold HOP(LOSUBVECTOR(SHUFFLE(X)),HISUBVECTOR(SHUFFLE(X)))
   // to SHUFFLE(HOP(LOSUBVECTOR(X),HISUBVECTOR(X))), this is mainly for
   // truncation trees that help us avoid lane crossing shuffles.
   // TODO: There's a lot more we can do for PACK/HADD style shuffle combines.
+  // TODO: We don't handle vXf64 shuffles yet.
   if (N0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       N1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       N0.getConstantOperandAPInt(1) == 0 &&
-      N1.getConstantOperandAPInt(1) == (NumDstElts / 2) &&
+      N1.getConstantOperandAPInt(1) == SrcVT.getVectorNumElements() &&
       N0.getOperand(0) == N1.getOperand(0) && VT.is128BitVector() &&
-      N0.getOperand(0).getValueType().is256BitVector()) {
+      N0.getOperand(0).getValueType().is256BitVector() &&
+      SrcVT.getScalarSizeInBits() <= 32) {
     // TODO - support target/faux shuffles.
     SDValue Vec = peekThroughBitcasts(N0.getOperand(0));
     if (auto *SVN = dyn_cast<ShuffleVectorSDNode>(Vec)) {
@@ -42026,12 +42031,13 @@ static SDValue combineHorizOpWithShuffle(SDNode *N, SelectionDAG &DAG) {
           scaleShuffleElements(SVN->getMask(), 4, ShuffleMask)) {
         SDLoc DL(N);
         SDValue Lo, Hi;
+        MVT ShufVT = VT.isFloatingPoint() ? MVT::v4f32 : MVT::v4i32;
         std::tie(Lo, Hi) = DAG.SplitVector(SVN->getOperand(0), DL);
         Lo = DAG.getBitcast(N0.getValueType(), Lo);
         Hi = DAG.getBitcast(N1.getValueType(), Hi);
         SDValue Res = DAG.getNode(Opcode, DL, VT, Lo, Hi);
-        Res = DAG.getBitcast(MVT::v4i32, Res);
-        Res = DAG.getVectorShuffle(MVT::v4i32, DL, Res, Res, ShuffleMask);
+        Res = DAG.getBitcast(ShufVT, Res);
+        Res = DAG.getVectorShuffle(ShufVT, DL, Res, Res, ShuffleMask);
         return DAG.getBitcast(VT, Res);
       }
     }
@@ -42039,7 +42045,7 @@ static SDValue combineHorizOpWithShuffle(SDNode *N, SelectionDAG &DAG) {
 
   // Attempt to fold HOP(SHUFFLE(X,Y),SHUFFLE(X,Y)) -> SHUFFLE(HOP(X,Y)).
   // TODO: Relax shuffle scaling to support sub-128-bit subvector shuffles.
-  if (VT.is256BitVector()) {
+  if (VT.is256BitVector() && Subtarget.hasInt256()) {
     if (auto *SVN0 = dyn_cast<ShuffleVectorSDNode>(N0)) {
       if (auto *SVN1 = dyn_cast<ShuffleVectorSDNode>(N1)) {
         SmallVector<int, 2> ShuffleMask0, ShuffleMask1;
@@ -42058,9 +42064,10 @@ static SDValue combineHorizOpWithShuffle(SDNode *N, SelectionDAG &DAG) {
             ShuffleMask.append(ShuffleMask0.begin(), ShuffleMask0.end());
             ShuffleMask.append(ShuffleMask1.begin(), ShuffleMask1.end());
             SDLoc DL(N);
+            MVT ShufVT = VT.isFloatingPoint() ? MVT::v4f64 : MVT::v4i64;
             SDValue Res = DAG.getNode(Opcode, DL, VT, Op00, Op01);
-            Res = DAG.getBitcast(MVT::v4i64, Res);
-            Res = DAG.getVectorShuffle(MVT::v4i64, DL, Res, Res, ShuffleMask);
+            Res = DAG.getBitcast(ShufVT, Res);
+            Res = DAG.getVectorShuffle(ShufVT, DL, Res, Res, ShuffleMask);
             return DAG.getBitcast(VT, Res);
           }
         }
@@ -42145,7 +42152,7 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
   }
 
   // Try to fold PACK(SHUFFLE(),SHUFFLE()) -> SHUFFLE(PACK()).
-  if (SDValue V = combineHorizOpWithShuffle(N, DAG))
+  if (SDValue V = combineHorizOpWithShuffle(N, DAG, Subtarget))
     return V;
 
   // Try to combine a PACKUSWB/PACKSSWB implemented truncate with a regular
@@ -42193,6 +42200,21 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
   SDValue Op(N, 0);
   if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
     return Res;
+
+  return SDValue();
+}
+
+static SDValue combineVectorHADDSUB(SDNode *N, SelectionDAG &DAG,
+                                    TargetLowering::DAGCombinerInfo &DCI,
+                                    const X86Subtarget &Subtarget) {
+  unsigned Opcode = N->getOpcode();
+  assert((X86ISD::HADD == Opcode || X86ISD::FHADD == Opcode ||
+          X86ISD::HSUB == Opcode || X86ISD::FHSUB == Opcode) &&
+         "Unexpected horizontal add/sub opcode");
+
+  // Try to fold HOP(SHUFFLE(),SHUFFLE()) -> SHUFFLE(HOP()).
+  if (SDValue V = combineHorizOpWithShuffle(N, DAG, Subtarget))
+    return V;
 
   return SDValue();
 }
@@ -49087,6 +49109,10 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::BRCOND:      return combineBrCond(N, DAG, Subtarget);
   case X86ISD::PACKSS:
   case X86ISD::PACKUS:      return combineVectorPack(N, DAG, DCI, Subtarget);
+  case X86ISD::HADD:
+  case X86ISD::HSUB:
+  case X86ISD::FHADD:
+  case X86ISD::FHSUB:       return combineVectorHADDSUB(N, DAG, DCI, Subtarget);
   case X86ISD::VSHL:
   case X86ISD::VSRA:
   case X86ISD::VSRL:
