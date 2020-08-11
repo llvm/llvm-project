@@ -152,6 +152,8 @@ void ASTStmtWriter::VisitIfStmt(IfStmt *S) {
     Record.AddStmt(S->getInit());
 
   Record.AddSourceLocation(S->getIfLoc());
+  Record.AddSourceLocation(S->getLParenLoc());
+  Record.AddSourceLocation(S->getRParenLoc());
   if (HasElse)
     Record.AddSourceLocation(S->getElseLoc());
 
@@ -175,6 +177,8 @@ void ASTStmtWriter::VisitSwitchStmt(SwitchStmt *S) {
     Record.AddDeclRef(S->getConditionVariable());
 
   Record.AddSourceLocation(S->getSwitchLoc());
+  Record.AddSourceLocation(S->getLParenLoc());
+  Record.AddSourceLocation(S->getRParenLoc());
 
   for (SwitchCase *SC = S->getSwitchCaseList(); SC;
        SC = SC->getNextSwitchCase())
