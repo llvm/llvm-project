@@ -551,6 +551,11 @@ class CommandLineCompletionTestCase(TestBase):
     def test_common_completion_type_language(self):
         self.complete_from_to('type category -l ', ['c'])
 
+    def test_target_modules_load_dash_u(self):
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.complete_from_to('target modules load -u ', [target.GetModuleAtIndex(0).GetUUIDString()])
+
     def test_complete_breakpoint_with_ids(self):
         """These breakpoint subcommands should be completed with a list of breakpoint ids"""
 
