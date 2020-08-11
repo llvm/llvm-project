@@ -131,6 +131,7 @@ static std::string formatHeaderPath(StringRef Header, IncludeFormat Format) {
   case transformer::IncludeFormat::Angled:
     return ("<" + Header + ">").str();
   }
+  llvm_unreachable("Unknown transformer::IncludeFormat enum");
 }
 
 ASTEdit transformer::addInclude(RangeSelector Target, StringRef Header,
