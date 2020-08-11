@@ -3009,7 +3009,6 @@ class OMPCancellationPointDirective : public OMPExecutableDirective {
   ///
   /// \param StartLoc Starting location of the directive kind.
   /// \param EndLoc Ending location of the directive.
-  /// \param Data Data storage, containing info about associated clauses,
   /// statements and child expressions.
   ///
   OMPCancellationPointDirective(SourceLocation StartLoc, SourceLocation EndLoc)
@@ -3018,9 +3017,6 @@ class OMPCancellationPointDirective : public OMPExecutableDirective {
                                EndLoc) {}
 
   /// Build an empty directive.
-  /// \param Data Data storage, containing info about associated clauses,
-  /// statements and child expressions.
-  ///
   explicit OMPCancellationPointDirective()
       : OMPExecutableDirective(OMPCancellationPointDirectiveClass,
                                llvm::omp::OMPD_cancellation_point,
