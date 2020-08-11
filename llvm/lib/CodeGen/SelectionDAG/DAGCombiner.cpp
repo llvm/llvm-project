@@ -8560,8 +8560,8 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
                                      RHS->getAddressSpace(), NewAlign,
                                      RHS->getMemOperand()->getFlags(), &Fast) &&
               Fast) {
-            SDValue NewPtr =
-                DAG.getMemBasePlusOffset(RHS->getBasePtr(), PtrOff, DL);
+            SDValue NewPtr = DAG.getMemBasePlusOffset(
+                RHS->getBasePtr(), TypeSize::Fixed(PtrOff), DL);
             AddToWorklist(NewPtr.getNode());
             SDValue Load = DAG.getLoad(
                 VT, DL, RHS->getChain(), NewPtr,
@@ -9733,7 +9733,7 @@ SDValue DAGCombiner::CombineExtLoad(SDNode *N) {
         LN0->getPointerInfo().getWithOffset(Offset), SplitSrcVT, Align,
         LN0->getMemOperand()->getFlags(), LN0->getAAInfo());
 
-    BasePtr = DAG.getMemBasePlusOffset(BasePtr, Stride, DL);
+    BasePtr = DAG.getMemBasePlusOffset(BasePtr, TypeSize::Fixed(Stride), DL);
 
     Loads.push_back(SplitLoad.getValue(0));
     Chains.push_back(SplitLoad.getValue(1));
@@ -10954,8 +10954,8 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
   // The original load itself didn't wrap, so an offset within it doesn't.
   SDNodeFlags Flags;
   Flags.setNoUnsignedWrap(true);
-  SDValue NewPtr =
-      DAG.getMemBasePlusOffset(LN0->getBasePtr(), PtrOff, DL, Flags);
+  SDValue NewPtr = DAG.getMemBasePlusOffset(LN0->getBasePtr(),
+                                            TypeSize::Fixed(PtrOff), DL, Flags);
   AddToWorklist(NewPtr.getNode());
 
   SDValue Load;
@@ -15642,7 +15642,7 @@ ShrinkLoadReplaceStoreWithStore(const std::pair<unsigned, unsigned> &MaskInfo,
   SDValue Ptr = St->getBasePtr();
   if (StOffset) {
     SDLoc DL(IVal);
-    Ptr = DAG.getMemBasePlusOffset(Ptr, StOffset, DL);
+    Ptr = DAG.getMemBasePlusOffset(Ptr, TypeSize::Fixed(StOffset), DL);
     NewAlign = MinAlign(NewAlign, StOffset);
   }
 
@@ -15756,7 +15756,8 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
       if (NewAlign < DAG.getDataLayout().getABITypeAlign(NewVTTy))
         return SDValue();
 
-      SDValue NewPtr = DAG.getMemBasePlusOffset(Ptr, PtrOff, SDLoc(LD));
+      SDValue NewPtr =
+          DAG.getMemBasePlusOffset(Ptr, TypeSize::Fixed(PtrOff), SDLoc(LD));
       SDValue NewLD =
           DAG.getLoad(NewVT, SDLoc(N0), LD->getChain(), NewPtr,
                       LD->getPointerInfo().getWithOffset(PtrOff), NewAlign,
@@ -17002,7 +17003,7 @@ SDValue DAGCombiner::replaceStoreOfFPConstant(StoreSDNode *ST) {
 
       SDValue St0 = DAG.getStore(Chain, DL, Lo, Ptr, ST->getPointerInfo(),
                                  ST->getAlignment(), MMOFlags, AAInfo);
-      Ptr = DAG.getMemBasePlusOffset(Ptr, 4, DL);
+      Ptr = DAG.getMemBasePlusOffset(Ptr, TypeSize::Fixed(4), DL);
       Alignment = MinAlign(Alignment, 4U);
       SDValue St1 = DAG.getStore(Chain, DL, Hi, Ptr,
                                  ST->getPointerInfo().getWithOffset(4),
@@ -17353,7 +17354,7 @@ SDValue DAGCombiner::splitMergedValStore(StoreSDNode *ST) {
   // Lower value store.
   SDValue St0 = DAG.getStore(Chain, DL, Lo, Ptr, ST->getPointerInfo(),
                              ST->getAlignment(), MMOFlags, AAInfo);
-  Ptr = DAG.getMemBasePlusOffset(Ptr, HalfValBitSize / 8, DL);
+  Ptr = DAG.getMemBasePlusOffset(Ptr, TypeSize::Fixed(HalfValBitSize / 8), DL);
   // Higher value store.
   SDValue St1 =
       DAG.getStore(St0, DL, Hi, Ptr,
@@ -19361,7 +19362,8 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
   SDValue BaseAddr = Ld->getBasePtr();
 
   // TODO: Use "BaseIndexOffset" to make this more effective.
-  SDValue NewAddr = DAG.getMemBasePlusOffset(BaseAddr, Offset, DL);
+  SDValue NewAddr =
+      DAG.getMemBasePlusOffset(BaseAddr, TypeSize::Fixed(Offset), DL);
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(Ld->getMemOperand(), Offset,
                                                    VT.getStoreSize());

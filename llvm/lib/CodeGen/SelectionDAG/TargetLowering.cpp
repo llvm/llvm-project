@@ -3588,7 +3588,8 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
             shouldReduceLoadWidth(Lod, ISD::NON_EXTLOAD, newVT)) {
           SDValue Ptr = Lod->getBasePtr();
           if (bestOffset != 0)
-            Ptr = DAG.getMemBasePlusOffset(Ptr, bestOffset, dl);
+            Ptr =
+                DAG.getMemBasePlusOffset(Ptr, TypeSize::Fixed(bestOffset), dl);
           unsigned NewAlign = MinAlign(Lod->getAlignment(), bestOffset);
           SDValue NewLoad = DAG.getLoad(
               newVT, dl, Lod->getChain(), Ptr,
@@ -6789,7 +6790,7 @@ TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
                        SrcEltVT, MinAlign(LD->getAlignment(), Idx * Stride),
                        LD->getMemOperand()->getFlags(), LD->getAAInfo());
 
-    BasePTR = DAG.getObjectPtrOffset(SL, BasePTR, Stride);
+    BasePTR = DAG.getObjectPtrOffset(SL, BasePTR, TypeSize::Fixed(Stride));
 
     Vals.push_back(ScalarLoad.getValue(0));
     LoadChains.push_back(ScalarLoad.getValue(1));
@@ -6860,7 +6861,8 @@ SDValue TargetLowering::scalarizeVectorStore(StoreSDNode *ST,
     SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, RegSclVT, Value,
                               DAG.getVectorIdxConstant(Idx, SL));
 
-    SDValue Ptr = DAG.getObjectPtrOffset(SL, BasePtr, Idx * Stride);
+    SDValue Ptr =
+        DAG.getObjectPtrOffset(SL, BasePtr, TypeSize::Fixed(Idx * Stride));
 
     // This scalar TruncStore may be illegal, but we legalize it later.
     SDValue Store = DAG.getTruncStore(
@@ -6996,7 +6998,7 @@ TargetLowering::expandUnalignedLoad(LoadSDNode *LD, SelectionDAG &DAG) const {
                         NewLoadedVT, Alignment, LD->getMemOperand()->getFlags(),
                         LD->getAAInfo());
 
-    Ptr = DAG.getObjectPtrOffset(dl, Ptr, IncrementSize);
+    Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::Fixed(IncrementSize));
     Hi = DAG.getExtLoad(HiExtType, dl, VT, Chain, Ptr,
                         LD->getPointerInfo().getWithOffset(IncrementSize),
                         NewLoadedVT, MinAlign(Alignment, IncrementSize),
@@ -7006,7 +7008,7 @@ TargetLowering::expandUnalignedLoad(LoadSDNode *LD, SelectionDAG &DAG) const {
                         NewLoadedVT, Alignment, LD->getMemOperand()->getFlags(),
                         LD->getAAInfo());
 
-    Ptr = DAG.getObjectPtrOffset(dl, Ptr, IncrementSize);
+    Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::Fixed(IncrementSize));
     Lo = DAG.getExtLoad(ISD::ZEXTLOAD, dl, VT, Chain, Ptr,
                         LD->getPointerInfo().getWithOffset(IncrementSize),
                         NewLoadedVT, MinAlign(Alignment, IncrementSize),
@@ -7124,8 +7126,8 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
          "Unaligned store of unknown type.");
   // Get the half-size VT
   EVT NewStoredVT = StoreMemVT.getHalfSizedIntegerVT(*DAG.getContext());
-  int NumBits = NewStoredVT.getSizeInBits();
-  int IncrementSize = NumBits / 8;
+  unsigned NumBits = NewStoredVT.getSizeInBits().getFixedSize();
+  unsigned IncrementSize = NumBits / 8;
 
   // Divide the stored value in two parts.
   SDValue ShiftAmount = DAG.getConstant(
@@ -7140,7 +7142,7 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
                              Ptr, ST->getPointerInfo(), NewStoredVT, Alignment,
                              ST->getMemOperand()->getFlags());
 
-  Ptr = DAG.getObjectPtrOffset(dl, Ptr, IncrementSize);
+  Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::Fixed(IncrementSize));
   Alignment = MinAlign(Alignment, IncrementSize);
   Store2 = DAG.getTruncStore(
       Chain, dl, DAG.getDataLayout().isLittleEndian() ? Hi : Lo, Ptr,
