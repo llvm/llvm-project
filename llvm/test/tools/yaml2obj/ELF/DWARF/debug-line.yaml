@@ -317,3 +317,56 @@ DWARF:
       IncludeDirs:           []
       Files:                 []
       Opcodes:               []
+
+## h) Test that the address size is inferred from the target machine.
+
+# RUN: yaml2obj --docnum=8 -DBITS=64 -DADDR=0x1234567890abcdef %s -o %t8.64-bit.o
+# RUN: llvm-readelf --hex-dump=.debug_line %t8.64-bit.o | \
+# RUN:   FileCheck %s --check-prefix=ADDRSIZE -DADDR="efcdab90 78563412"
+
+#      ADDRSIZE: Hex dump of section '.debug_line':
+# ADDRSIZE-NEXT: 0x00000000 34120000 02003412 00000101 010e0d00 4.....4.........
+##                          ^-------                            unit_length (4-byte)
+##                                   ^---                       version (2-byte)
+##                                       ^--------              header_length (4-byte)
+##                                                ^-            minimum_instruction_length (1-byte)
+##                                                  ^-          default_is_stmt (1-byte)
+##                                                     ^-       line_base (1-byte)
+##                                                       ^-     line_range (1-byte)
+##                                                         ^-   opcode_base (1-byte)
+##                                                           ^- null byte for terminating include_directories
+# ADDRSIZE-NEXT: 0x00000010 00000902 [[ADDR]]
+##                          ^-                                  null byte for terminating file_names
+##                            ^-                                DW_LNS_extended_op
+##                              ^-                              extended op length (ULEB128) 0x09
+##                                ^-                            DW_LNE_set_address
+##                                   ^-------                   address
+
+# RUN: yaml2obj --docnum=8 -DBITS=32 -DADDR=0x12345678 %s -o %t8.32-bit.o
+# RUN: llvm-readelf --hex-dump=.debug_line %t8.32-bit.o | \
+# RUN:   FileCheck %s --check-prefix=ADDRSIZE -DADDR="78563412"
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS[[BITS]]
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_line:
+    - Length:                0x1234
+      Version:               2
+      PrologueLength:        0x1234
+      MinInstLength:         1
+      DefaultIsStmt:         1
+      LineBase:              1
+      LineRange:             14
+      OpcodeBase:            13
+      StandardOpcodeLengths: []
+      IncludeDirs:           []
+      Files:                 []
+      Opcodes:
+        - Opcode:    DW_LNS_extended_op
+          ExtLen:    9
+          SubOpcode: DW_LNE_set_address
+          Data:      [[ADDR]]
