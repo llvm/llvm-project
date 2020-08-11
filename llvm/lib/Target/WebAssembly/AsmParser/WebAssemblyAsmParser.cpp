@@ -38,7 +38,7 @@ using namespace llvm;
 namespace {
 
 /// WebAssemblyOperand - Instances of this class represent the operands in a
-/// parsed WASM machine instruction.
+/// parsed Wasm machine instruction.
 struct WebAssemblyOperand : public MCParsedAsmOperand {
   enum KindTy { Token, Integer, Float, Symbol, BrList } Kind;
 
@@ -868,7 +868,7 @@ public:
     }
     case Match_MissingFeature:
       return Parser.Error(
-          IDLoc, "instruction requires a WASM feature not currently enabled");
+          IDLoc, "instruction requires a Wasm feature not currently enabled");
     case Match_MnemonicFail:
       return Parser.Error(IDLoc, "invalid instruction");
     case Match_NearMisses:

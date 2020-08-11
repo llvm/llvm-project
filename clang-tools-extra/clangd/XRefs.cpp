@@ -78,6 +78,32 @@ const NamedDecl *getDefinition(const NamedDecl *D) {
     return VD->getDefinition();
   if (const auto *FD = dyn_cast<FunctionDecl>(D))
     return FD->getDefinition();
+  // Objective-C classes can have three types of declarations:
+  //
+  // - forward declaration: @class MyClass;
+  // - true declaration (interface definition): @interface MyClass ... @end
+  // - true definition (implementation): @implementation MyClass ... @end
+  //
+  // Objective-C categories are extensions are on classes:
+  //
+  // - declaration: @interface MyClass (Ext) ... @end
+  // - definition: @implementation MyClass (Ext) ... @end
+  //
+  // With one special case, a class extension, which is normally used to keep
+  // some declarations internal to a file without exposing them in a header.
+  //
+  // - class extension declaration: @interface MyClass () ... @end
+  // - which really links to class definition: @implementation MyClass ... @end
+  if (const auto *ID = dyn_cast<ObjCInterfaceDecl>(D))
+    return ID->getImplementation();
+  if (const auto *CD = dyn_cast<ObjCCategoryDecl>(D)) {
+    if (CD->IsClassExtension()) {
+      if (const auto *ID = CD->getClassInterface())
+        return ID->getImplementation();
+      return nullptr;
+    }
+    return CD->getImplementation();
+  }
   // Only a single declaration is allowed.
   if (isa<ValueDecl>(D) || isa<TemplateTypeParmDecl>(D) ||
       isa<TemplateTemplateParmDecl>(D)) // except cases above
@@ -223,6 +249,37 @@ locateMacroReferent(const syntax::Token &TouchedIdentifier, ParsedAST &AST,
   return llvm::None;
 }
 
+// A wrapper around `Decl::getCanonicalDecl` to support cases where Clang's
+// definition of a canonical declaration doesn't match up to what a programmer
+// would expect. For example, Objective-C classes can have three types of
+// declarations:
+//
+// - forward declaration(s): @class MyClass;
+// - true declaration (interface definition): @interface MyClass ... @end
+// - true definition (implementation): @implementation MyClass ... @end
+//
+// Clang will consider the forward declaration to be the canonical declaration
+// because it is first. We actually want the class definition if it is
+// available since that is what a programmer would consider the primary
+// declaration to be.
+const NamedDecl *getPreferredDecl(const NamedDecl *D) {
+  // FIXME: Canonical declarations of some symbols might refer to built-in
+  // decls with possibly-invalid source locations (e.g. global new operator).
+  // In such cases we should pick up a redecl with valid source location
+  // instead of failing.
+  D = llvm::cast<NamedDecl>(D->getCanonicalDecl());
+
+  // Prefer Objective-C class/protocol definitions over the forward declaration.
+  if (const auto *ID = dyn_cast<ObjCInterfaceDecl>(D))
+    if (const auto *DefinitionID = ID->getDefinition())
+      return DefinitionID;
+  if (const auto *PD = dyn_cast<ObjCProtocolDecl>(D))
+    if (const auto *DefinitionID = PD->getDefinition())
+      return DefinitionID;
+
+  return D;
+}
+
 // Decls are more complicated.
 // The AST contains at least a declaration, maybe a definition.
 // These are up-to-date, and so generally preferred over index results.
@@ -238,11 +295,7 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
   llvm::DenseMap<SymbolID, size_t> ResultIndex;
 
   auto AddResultDecl = [&](const NamedDecl *D) {
-    // FIXME: Canonical declarations of some symbols might refer to built-in
-    // decls with possibly-invalid source locations (e.g. global new operator).
-    // In such cases we should pick up a redecl with valid source location
-    // instead of failing.
-    D = llvm::cast<NamedDecl>(D->getCanonicalDecl());
+    D = getPreferredDecl(D);
     auto Loc =
         makeLocation(AST.getASTContext(), nameLocation(*D, SM), MainFilePath);
     if (!Loc)
@@ -301,6 +354,19 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
           [&](const NamedDecl *UD) { AddResultDecl(UD); });
       continue;
     }
+
+    // Special case: if the class name is selected, also map Objective-C
+    // categories and category implementations back to their class interface.
+    //
+    // Since `TouchedIdentifier` might refer to the `ObjCCategoryImplDecl`
+    // instead of the `ObjCCategoryDecl` we intentionally check the contents
+    // of the locs when checking for class name equivalence.
+    if (const auto *CD = dyn_cast<ObjCCategoryDecl>(D))
+      if (const auto *ID = CD->getClassInterface())
+        if (TouchedIdentifier &&
+            (CD->getLocation() == TouchedIdentifier->location() ||
+             ID->getName() == TouchedIdentifier->text(SM)))
+          AddResultDecl(ID);
 
     // Otherwise the target declaration is the right one.
     AddResultDecl(D);

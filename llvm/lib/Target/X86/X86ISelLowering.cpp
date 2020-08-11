@@ -35886,12 +35886,40 @@ static SDValue combineShuffleWithHorizOp(SDValue N, MVT VT, const SDLoc &DL,
   if (!isHoriz && !isPack)
     return SDValue();
 
-  // Canonicalize unary horizontal ops to only refer to lower halves.
   if (TargetMask.size() == VT0.getVectorNumElements()) {
     int NumElts = VT0.getVectorNumElements();
     int NumLanes = VT0.getSizeInBits() / 128;
     int NumEltsPerLane = NumElts / NumLanes;
     int NumHalfEltsPerLane = NumEltsPerLane / 2;
+
+    // Canonicalize binary shuffles of horizontal ops that use the
+    // same sources to an unary shuffle.
+    // TODO: Try to perform this fold even if the shuffle remains.
+    if (BC0 != BC1) {
+      auto ContainsOps = [](SDValue HOp, SDValue Op) {
+        return Op == HOp.getOperand(0) || Op == HOp.getOperand(1);
+      };
+      // Commute if all BC0's ops are contained in BC1.
+      if (ContainsOps(BC1, BC0.getOperand(0)) &&
+          ContainsOps(BC1, BC0.getOperand(1))) {
+        ShuffleVectorSDNode::commuteMask(TargetMask);
+        std::swap(BC0, BC1);
+      }
+      // If BC1 can be represented by BC0, then convert to unary shuffle.
+      if (ContainsOps(BC0, BC1.getOperand(0)) &&
+          ContainsOps(BC0, BC1.getOperand(1))) {
+        for (int &M : TargetMask) {
+          if (M < NumElts) // BC0 element or UNDEF/Zero sentinel.
+            continue;
+          int SubLane = ((M % NumEltsPerLane) >= NumHalfEltsPerLane) ? 1 : 0;
+          M -= NumElts + (SubLane * NumHalfEltsPerLane);
+          if (BC1.getOperand(SubLane) != BC0.getOperand(0))
+            M += NumHalfEltsPerLane;
+        }
+      }
+    }
+
+    // Canonicalize unary horizontal ops to only refer to lower halves.
     for (int i = 0; i != NumElts; ++i) {
       int &M = TargetMask[i];
       if (isUndefOrZero(M))
@@ -35900,7 +35928,7 @@ static SDValue combineShuffleWithHorizOp(SDValue N, MVT VT, const SDLoc &DL,
           (M % NumEltsPerLane) >= NumHalfEltsPerLane)
         M -= NumHalfEltsPerLane;
       if (NumElts <= M && BC1.getOperand(0) == BC1.getOperand(1) &&
-          ((M - NumElts) % NumEltsPerLane) >= NumHalfEltsPerLane)
+          (M % NumEltsPerLane) >= NumHalfEltsPerLane)
         M -= NumHalfEltsPerLane;
     }
   }
@@ -42207,9 +42235,8 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
 static SDValue combineVectorHADDSUB(SDNode *N, SelectionDAG &DAG,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     const X86Subtarget &Subtarget) {
-  unsigned Opcode = N->getOpcode();
-  assert((X86ISD::HADD == Opcode || X86ISD::FHADD == Opcode ||
-          X86ISD::HSUB == Opcode || X86ISD::FHSUB == Opcode) &&
+  assert((X86ISD::HADD == N->getOpcode() || X86ISD::FHADD == N->getOpcode() ||
+          X86ISD::HSUB == N->getOpcode() || X86ISD::FHSUB == N->getOpcode()) &&
          "Unexpected horizontal add/sub opcode");
 
   // Try to fold HOP(SHUFFLE(),SHUFFLE()) -> SHUFFLE(HOP()).

@@ -898,7 +898,8 @@ bool BranchProbabilityInfo::calcZeroHeuristics(const BasicBlock *BB,
       Func == LibFunc_strcmp ||
       Func == LibFunc_strncasecmp ||
       Func == LibFunc_strncmp ||
-      Func == LibFunc_memcmp) {
+      Func == LibFunc_memcmp ||
+      Func == LibFunc_bcmp) {
     // strcmp and similar functions return zero, negative, or positive, if the
     // first string is equal, less, or greater than the second. We consider it
     // likely that the strings are not equal, so a comparison with zero is

@@ -470,13 +470,14 @@ Error DWARFYAML::emitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
         writeInteger((uint8_t)Op.SubOpcode, OS, DI.IsLittleEndian);
         switch (Op.SubOpcode) {
         case dwarf::DW_LNE_set_address:
-        case dwarf::DW_LNE_set_discriminator:
-          // FIXME: The operand of set_discriminator is not an address.
           cantFail(writeVariableSizedInteger(Op.Data, AddrSize, OS,
                                              DI.IsLittleEndian));
           break;
         case dwarf::DW_LNE_define_file:
           emitFileEntry(OS, Op.FileEntry);
+          break;
+        case dwarf::DW_LNE_set_discriminator:
+          encodeULEB128(Op.Data, OS);
           break;
         case dwarf::DW_LNE_end_sequence:
           break;

@@ -756,6 +756,30 @@ TEST_F(TargetDeclTest, ObjC) {
   )cpp";
   EXPECT_DECLS("ObjCInterfaceTypeLoc", "@interface Foo");
 
+  Code = R"cpp(// Don't consider implicit interface as the target.
+    @implementation [[Implicit]]
+    @end
+  )cpp";
+  EXPECT_DECLS("ObjCImplementationDecl", "@implementation Implicit");
+
+  Code = R"cpp(
+    @interface Foo
+    @end
+    @implementation [[Foo]]
+    @end
+  )cpp";
+  EXPECT_DECLS("ObjCImplementationDecl", "@interface Foo");
+
+  Code = R"cpp(
+    @interface Foo
+    @end
+    @interface Foo (Ext)
+    @end
+    @implementation [[Foo]] (Ext)
+    @end
+  )cpp";
+  EXPECT_DECLS("ObjCCategoryImplDecl", "@interface Foo(Ext)");
+
   Code = R"cpp(
     @protocol Foo
     @end

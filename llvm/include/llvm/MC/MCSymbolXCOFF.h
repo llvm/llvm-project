@@ -35,8 +35,6 @@ public:
   }
 
   void setStorageClass(XCOFF::StorageClass SC) {
-    assert((!StorageClass.hasValue() || StorageClass.getValue() == SC) &&
-           "Redefining StorageClass of XCOFF MCSymbol.");
     StorageClass = SC;
   };
 
@@ -47,8 +45,6 @@ public:
   }
 
   StringRef getUnqualifiedName() const { return getUnqualifiedName(getName()); }
-
-  bool hasRepresentedCsectSet() const { return RepresentedCsect != nullptr; }
 
   MCSectionXCOFF *getRepresentedCsect() const;
 
