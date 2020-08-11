@@ -1,6 +1,6 @@
-# RUN: llvm-readobj --sections %p/Inputs/xcoff-reloc-overflow.o | \
+# RUN: llvm-readobj --sections %p/Inputs/reloc-overflow.o | \
 # RUN: FileCheck --check-prefix=SECOVERFLOW %s
-# SECOVERFLOW:      File: {{.*}}xcoff-reloc-overflow.o
+# SECOVERFLOW:      File: {{.*}}reloc-overflow.o
 # SECOVERFLOW-NEXT: Format: aixcoff-rs6000
 # SECOVERFLOW-NEXT: Arch: powerpc
 # SECOVERFLOW-NEXT: AddressSize: 32bit

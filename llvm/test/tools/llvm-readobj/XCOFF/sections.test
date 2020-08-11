@@ -1,10 +1,10 @@
-# RUN: llvm-readobj --section-headers %p/Inputs/xcoff-basic.o | \
+# RUN: llvm-readobj --section-headers %p/Inputs/basic.o | \
 # RUN: FileCheck --check-prefix=SEC32 %s
 
-# RUN: llvm-readobj --section-headers %p/Inputs/xcoff-basic-64.o | \
+# RUN: llvm-readobj --section-headers %p/Inputs/basic64.o | \
 # RUN: FileCheck --check-prefix=SEC64 %s
 
-# SEC32:     File: {{.*}}xcoff-basic.o
+# SEC32:     File: {{.*}}basic.o
 # SEC32-NEXT:  Format: aixcoff-rs6000
 # SEC32-NEXT:  Arch: powerpc
 # SEC32-NEXT:  AddressSize: 32bit
@@ -90,7 +90,7 @@
 # SEC32-NEXT:  ]
 
 
-# SEC64:     File: {{.*}}xcoff-basic-64.o
+# SEC64:     File: {{.*}}basic64.o
 # SEC64-NEXT:  Format: aix5coff64-rs6000
 # SEC64-NEXT:  Arch: powerpc64
 # SEC64-NEXT:  AddressSize: 64bit
