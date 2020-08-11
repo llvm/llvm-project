@@ -5106,9 +5106,10 @@ std::string CGObjCCommonMac::GetSectionName(StringRef Section,
            "expected the name to begin with __");
     return ("." + Section.substr(2) + "$B").str();
   case llvm::Triple::Wasm:
+  case llvm::Triple::GOFF:
   case llvm::Triple::XCOFF:
     llvm::report_fatal_error(
-        "Objective-C support is unimplemented for object file format.");
+        "Objective-C support is unimplemented for object file format");
   }
 
   llvm_unreachable("Unhandled llvm::Triple::ObjectFormatType enum");
