@@ -115,6 +115,12 @@ class CommandLineCompletionTestCase(TestBase):
                                 '--thread-index',
                                 '--thread-name'])
 
+    def test_disassemble_dash_f(self):
+        self.completions_match('disassemble -F ',
+                               ['default',
+                                'intel',
+                                'att'])
+
     def test_plugin_load(self):
         self.complete_from_to('plugin load ', [])
 
