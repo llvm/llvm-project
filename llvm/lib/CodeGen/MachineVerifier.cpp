@@ -86,7 +86,7 @@ namespace {
   struct MachineVerifier {
     MachineVerifier(Pass *pass, const char *b) : PASS(pass), Banner(b) {}
 
-    unsigned verify(MachineFunction &MF);
+    unsigned verify(const MachineFunction &MF);
 
     Pass *const PASS;
     const char *Banner;
@@ -336,7 +336,7 @@ void MachineVerifier::verifyProperties(const MachineFunction &MF) {
     report("Function has NoVRegs property but there are VReg operands", &MF);
 }
 
-unsigned MachineVerifier::verify(MachineFunction &MF) {
+unsigned MachineVerifier::verify(const MachineFunction &MF) {
   foundErrors = 0;
 
   this->MF = &MF;
