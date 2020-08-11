@@ -12821,6 +12821,8 @@ static QualType chooseRecoveryType(OverloadCandidateSet &CS,
   auto ConsiderCandidate = [&](const OverloadCandidate &Candidate) {
     if (!Candidate.Function)
       return;
+    if (Candidate.Function->isInvalidDecl())
+      return;
     QualType T = Candidate.Function->getReturnType();
     if (T.isNull())
       return;
