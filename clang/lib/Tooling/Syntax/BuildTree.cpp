@@ -1007,23 +1007,26 @@ public:
   }
 
   bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *S) {
-    if (getOperatorNodeKind(*S) ==
-        syntax::NodeKind::PostfixUnaryOperatorExpression) {
+    // To construct a syntax tree of the same shape for calls to built-in and
+    // user-defined operators, ignore the `DeclRefExpr` that refers to the
+    // operator and treat it as a simple token. Do that by traversing
+    // arguments instead of children.
+    for (auto *child : S->arguments()) {
       // A postfix unary operator is declared as taking two operands. The
       // second operand is used to distinguish from its prefix counterpart. In
       // the semantic AST this "phantom" operand is represented as a
       // `IntegerLiteral` with invalid `SourceLocation`. We skip visiting this
       // operand because it does not correspond to anything written in source
-      // code
-      for (auto *child : S->children()) {
-        if (child->getSourceRange().isInvalid())
-          continue;
-        if (!TraverseStmt(child))
-          return false;
+      // code.
+      if (child->getSourceRange().isInvalid()) {
+        assert(getOperatorNodeKind(*S) ==
+               syntax::NodeKind::PostfixUnaryOperatorExpression);
+        continue;
       }
-      return WalkUpFromCXXOperatorCallExpr(S);
-    } else
-      return RecursiveASTVisitor::TraverseCXXOperatorCallExpr(S);
+      if (!TraverseStmt(child))
+        return false;
+    }
+    return WalkUpFromCXXOperatorCallExpr(S);
   }
 
   bool WalkUpFromCXXOperatorCallExpr(CXXOperatorCallExpr *S) {
