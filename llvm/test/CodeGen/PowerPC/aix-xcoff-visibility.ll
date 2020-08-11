@@ -52,6 +52,7 @@ declare hidden i32 @bar_h(i32*)
 ; CHECK:        .globl  b{{[[:space:]]*([#].*)?$}}
 ; CHECK:        .globl  b_h,hidden
 
+; CHECK:        .weak   .zoo_weak_extern_h[PR],hidden
 ; CHECK:        .weak   zoo_weak_extern_h[DS],hidden
-; CHECK:        .extern .bar_h,hidden
+; CHECK:        .extern .bar_h[PR],hidden
 ; CHECK:        .extern bar_h[DS],hidden
