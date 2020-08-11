@@ -42,10 +42,11 @@ public:
     eFrameIndexCompletion = (1u << 14),
     eModuleUUIDCompletion = (1u << 15),
     eStopHookIDCompletion = (1u << 16),
+    eThreadIndexCompletion = (1u << 17),
     // This item serves two purposes.  It is the last element in the enum, so
     // you can add custom enums starting from here in your Option class. Also
     // if you & in this bit the base code will not process the option.
-    eCustomCompletion = (1u << 17)
+    eCustomCompletion = (1u << 18)
   };
 
   static bool InvokeCommonCompletionCallbacks(
@@ -115,6 +116,9 @@ public:
 
   static void StopHookIDs(CommandInterpreter &interpreter,
                           CompletionRequest &request, SearchFilter *searcher);
+
+  static void ThreadIndexes(CommandInterpreter &interpreter,
+                            CompletionRequest &request, SearchFilter *searcher);
 };
 
 } // namespace lldb_private
