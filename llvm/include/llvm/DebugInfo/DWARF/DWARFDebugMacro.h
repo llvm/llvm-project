@@ -96,6 +96,9 @@ class DWARFDebugMacro {
     MacroHeader Header;
     SmallVector<Entry, 4> Macros;
     uint64_t Offset;
+
+    /// Whether or not this is a .debug_macro section.
+    bool IsDebugMacro;
   };
 
   /// A list of all the macro entries in the debug_macinfo section.
