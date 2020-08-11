@@ -7197,16 +7197,26 @@ static SDValue clampDynamicVectorIndex(SelectionDAG &DAG,
                                        SDValue Idx,
                                        EVT VecVT,
                                        const SDLoc &dl) {
-  if (isa<ConstantSDNode>(Idx))
+  if (!VecVT.isScalableVector() && isa<ConstantSDNode>(Idx))
     return Idx;
 
   EVT IdxVT = Idx.getValueType();
-  unsigned NElts = VecVT.getVectorNumElements();
-  if (isPowerOf2_32(NElts)) {
-    APInt Imm = APInt::getLowBitsSet(IdxVT.getSizeInBits(),
-                                     Log2_32(NElts));
-    return DAG.getNode(ISD::AND, dl, IdxVT, Idx,
-                       DAG.getConstant(Imm, dl, IdxVT));
+  unsigned NElts = VecVT.getVectorMinNumElements();
+  if (VecVT.isScalableVector()) {
+    SDValue VS = DAG.getVScale(dl, IdxVT,
+                               APInt(IdxVT.getSizeInBits().getFixedSize(),
+                                     NElts));
+    SDValue Sub = DAG.getNode(ISD::SUB, dl, IdxVT, VS,
+                              DAG.getConstant(1, dl, IdxVT));
+
+    return DAG.getNode(ISD::UMIN, dl, IdxVT, Idx, Sub);
+  } else {
+    if (isPowerOf2_32(NElts)) {
+      APInt Imm = APInt::getLowBitsSet(IdxVT.getSizeInBits(),
+                                       Log2_32(NElts));
+      return DAG.getNode(ISD::AND, dl, IdxVT, Idx,
+                         DAG.getConstant(Imm, dl, IdxVT));
+    }
   }
 
   return DAG.getNode(ISD::UMIN, dl, IdxVT, Idx,
@@ -7223,8 +7233,8 @@ SDValue TargetLowering::getVectorElementPointer(SelectionDAG &DAG,
   EVT EltVT = VecVT.getVectorElementType();
 
   // Calculate the element offset and add it to the pointer.
-  unsigned EltSize = EltVT.getSizeInBits() / 8; // FIXME: should be ABI size.
-  assert(EltSize * 8 == EltVT.getSizeInBits() &&
+  unsigned EltSize = EltVT.getSizeInBits().getFixedSize() / 8; // FIXME: should be ABI size.
+  assert(EltSize * 8 == EltVT.getSizeInBits().getFixedSize() &&
          "Converting bits to bytes lost precision");
 
   Index = clampDynamicVectorIndex(DAG, Index, VecVT, dl);
