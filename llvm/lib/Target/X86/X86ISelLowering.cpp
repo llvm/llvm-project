@@ -42207,9 +42207,8 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
 static SDValue combineVectorHADDSUB(SDNode *N, SelectionDAG &DAG,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     const X86Subtarget &Subtarget) {
-  unsigned Opcode = N->getOpcode();
-  assert((X86ISD::HADD == Opcode || X86ISD::FHADD == Opcode ||
-          X86ISD::HSUB == Opcode || X86ISD::FHSUB == Opcode) &&
+  assert((X86ISD::HADD == N->getOpcode() || X86ISD::FHADD == N->getOpcode() ||
+          X86ISD::HSUB == N->getOpcode() || X86ISD::FHSUB == N->getOpcode()) &&
          "Unexpected horizontal add/sub opcode");
 
   // Try to fold HOP(SHUFFLE(),SHUFFLE()) -> SHUFFLE(HOP()).
