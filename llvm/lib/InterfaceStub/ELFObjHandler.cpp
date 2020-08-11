@@ -6,14 +6,14 @@
 //
 //===-----------------------------------------------------------------------===/
 
-#include "ELFObjHandler.h"
+#include "llvm/InterfaceStub/ELFObjHandler.h"
+#include "llvm/InterfaceStub/ELFStub.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/TextAPI/ELF/ELFStub.h"
 
 using llvm::MemoryBufferRef;
 using llvm::object::ELFObjectFile;
@@ -128,19 +128,17 @@ static Error populateDynamic(DynamicEntries &Dyn,
         "Couldn't locate dynamic symbol table (no DT_SYMTAB entry)");
   }
   if (Dyn.SONameOffset.hasValue() && *Dyn.SONameOffset >= Dyn.StrSize) {
-    return createStringError(
-        object_error::parse_failed,
-        "DT_SONAME string offset (0x%016" PRIx64
-        ") outside of dynamic string table",
-        *Dyn.SONameOffset);
+    return createStringError(object_error::parse_failed,
+                             "DT_SONAME string offset (0x%016" PRIx64
+                             ") outside of dynamic string table",
+                             *Dyn.SONameOffset);
   }
   for (uint64_t Offset : Dyn.NeededLibNames) {
     if (Offset >= Dyn.StrSize) {
-      return createStringError(
-          object_error::parse_failed,
-          "DT_NEEDED string offset (0x%016" PRIx64
-          ") outside of dynamic string table",
-          Offset);
+      return createStringError(object_error::parse_failed,
+                               "DT_NEEDED string offset (0x%016" PRIx64
+                               ") outside of dynamic string table",
+                               Offset);
     }
   }
 
@@ -212,16 +210,16 @@ static Expected<uint64_t> getNumSyms(DynamicEntries &Dyn,
 static ELFSymbolType convertInfoToType(uint8_t Info) {
   Info = Info & 0xf;
   switch (Info) {
-    case ELF::STT_NOTYPE:
-      return ELFSymbolType::NoType;
-    case ELF::STT_OBJECT:
-      return ELFSymbolType::Object;
-    case ELF::STT_FUNC:
-      return ELFSymbolType::Func;
-    case ELF::STT_TLS:
-      return ELFSymbolType::TLS;
-    default:
-      return ELFSymbolType::Unknown;
+  case ELF::STT_NOTYPE:
+    return ELFSymbolType::NoType;
+  case ELF::STT_OBJECT:
+    return ELFSymbolType::Object;
+  case ELF::STT_FUNC:
+    return ELFSymbolType::Func;
+  case ELF::STT_TLS:
+    return ELFSymbolType::TLS;
+  default:
+    return ELFSymbolType::Unknown;
   }
 }
 
@@ -259,8 +257,8 @@ static ELFSymbol createELFSym(StringRef SymName,
 /// @param DynStr StringRef to the dynamic string table.
 template <class ELFT>
 static Error populateSymbols(ELFStub &TargetStub,
-                            const typename ELFT::SymRange DynSym,
-                            StringRef DynStr) {
+                             const typename ELFT::SymRange DynSym,
+                             StringRef DynStr) {
   // Skips the first symbol since it's the NULL symbol.
   for (auto RawSym : DynSym.drop_front(1)) {
     // If a symbol does not have global or weak binding, ignore it.
@@ -311,7 +309,7 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
   if (Error Err = populateDynamic<ELFT>(DynEnt, *DynTable))
     return std::move(Err);
 
-    // Get pointer to in-memory location of .dynstr section.
+  // Get pointer to in-memory location of .dynstr section.
   Expected<const uint8_t *> DynStrPtr =
       ElfFile->toMappedAddr(DynEnt.StrTabAddr);
   if (!DynStrPtr)
@@ -355,9 +353,8 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
     if (!DynSymPtr)
       return appendToError(DynSymPtr.takeError(),
                            "when locating .dynsym section contents");
-    Elf_Sym_Range DynSyms =
-        ArrayRef<Elf_Sym>(reinterpret_cast<const Elf_Sym *>(*DynSymPtr),
-                          *SymCount);
+    Elf_Sym_Range DynSyms = ArrayRef<Elf_Sym>(
+        reinterpret_cast<const Elf_Sym *>(*DynSymPtr), *SymCount);
     Error SymReadError = populateSymbols<ELFT>(*DestStub, DynSyms, DynStr);
     if (SymReadError)
       return appendToError(std::move(SymReadError),

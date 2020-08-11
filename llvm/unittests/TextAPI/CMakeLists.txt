@@ -3,7 +3,6 @@ set(LLVM_LINK_COMPONENTS
 )
 
 add_llvm_unittest(TextAPITests
-  ELFYAMLTest.cpp
   TextStubV1Tests.cpp
   TextStubV2Tests.cpp
   TextStubV3Tests.cpp
