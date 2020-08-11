@@ -91,52 +91,52 @@ public:
     template <typename U = TypeFormatImpl>
     typename std::enable_if<std::is_same<U, T>::value, ForEachCallbacks &>::type
     SetExact(FormatContainer::ExactMatchForEachCallback callback) {
-      m_format_exact = callback;
+      m_format_exact = std::move(callback);
       return *this;
     }
     template <typename U = TypeFormatImpl>
     typename std::enable_if<std::is_same<U, T>::value, ForEachCallbacks &>::type
     SetWithRegex(FormatContainer::RegexMatchForEachCallback callback) {
-      m_format_regex = callback;
+      m_format_regex = std::move(callback);
       return *this;
     }
 
     template <typename U = TypeSummaryImpl>
     typename std::enable_if<std::is_same<U, T>::value, ForEachCallbacks &>::type
     SetExact(SummaryContainer::ExactMatchForEachCallback callback) {
-      m_summary_exact = callback;
+      m_summary_exact = std::move(callback);
       return *this;
     }
     template <typename U = TypeSummaryImpl>
     typename std::enable_if<std::is_same<U, T>::value, ForEachCallbacks &>::type
     SetWithRegex(SummaryContainer::RegexMatchForEachCallback callback) {
-      m_summary_regex = callback;
+      m_summary_regex = std::move(callback);
       return *this;
     }
 
     template <typename U = TypeFilterImpl>
     typename std::enable_if<std::is_same<U, T>::value, ForEachCallbacks &>::type
     SetExact(FilterContainer::ExactMatchForEachCallback callback) {
-      m_filter_exact = callback;
+      m_filter_exact = std::move(callback);
       return *this;
     }
     template <typename U = TypeFilterImpl>
     typename std::enable_if<std::is_same<U, T>::value, ForEachCallbacks &>::type
     SetWithRegex(FilterContainer::RegexMatchForEachCallback callback) {
-      m_filter_regex = callback;
+      m_filter_regex = std::move(callback);
       return *this;
     }
 
     template <typename U = SyntheticChildren>
     typename std::enable_if<std::is_same<U, T>::value, ForEachCallbacks &>::type
     SetExact(SynthContainer::ExactMatchForEachCallback callback) {
-      m_synth_exact = callback;
+      m_synth_exact = std::move(callback);
       return *this;
     }
     template <typename U = SyntheticChildren>
     typename std::enable_if<std::is_same<U, T>::value, ForEachCallbacks &>::type
     SetWithRegex(SynthContainer::RegexMatchForEachCallback callback) {
-      m_synth_regex = callback;
+      m_synth_regex = std::move(callback);
       return *this;
     }
 
