@@ -238,22 +238,7 @@ template bool Test::test<__uint128_t, 0>(RunContext &Ctx, TestCondition Cond,
                                          __uint128_t LHS, __uint128_t RHS,
                                          const char *LHSStr, const char *RHSStr,
                                          const char *File, unsigned long Line);
-/*
-template bool Test::test<float, 0>(RunContext &Ctx, TestCondition Cond,
-                                   float LHS, float RHS, const char *LHSStr,
-                                   const char *RHSStr, const char *File,
-                                   unsigned long Line);
 
-template bool Test::test<double, 0>(RunContext &Ctx, TestCondition Cond,
-                                    double LHS, double RHS, const char *LHSStr,
-                                    const char *RHSStr, const char *File,
-                                    unsigned long Line);
-
-template bool Test::test<long double, 0>(RunContext &Ctx, TestCondition Cond,
-                                         long double LHS, long double RHS,
-                                         const char *LHSStr, const char *RHSStr,
-                                         const char *File, unsigned long Line);
-*/
 bool Test::testStrEq(RunContext &Ctx, const char *LHS, const char *RHS,
                      const char *LHSStr, const char *RHSStr, const char *File,
                      unsigned long Line) {
