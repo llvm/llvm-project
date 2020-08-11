@@ -5916,7 +5916,8 @@ bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
   Walk(std::get<2>(x.t));
   Walk(std::get<3>(x.t));
   Walk(std::get<4>(x.t));
-  const std::list<parser::DeclarationConstruct> &decls{std::get<5>(x.t)};
+  Walk(std::get<5>(x.t));
+  const std::list<parser::DeclarationConstruct> &decls{std::get<6>(x.t)};
   for (const auto &decl : decls) {
     if (const auto *spec{
             std::get_if<parser::SpecificationConstruct>(&decl.u)}) {
