@@ -259,7 +259,7 @@ Below are some guidelines about the format of the message itself:
 * If you're not the original author, ensure the 'Author' property of the commit is
   set to the original author and the 'Committer' property is set to yourself.
   You can use a command similar to
-  ``git commit --amend --author="John Doe <jdoe@llvm.org>`` to correct the
+  ``git commit --amend --author="John Doe <jdoe@llvm.org>"`` to correct the
   author property if it is incorrect. See `Attribution of Changes`_ for more
   information including the method we used for attribution before the project
   migrated to git.
