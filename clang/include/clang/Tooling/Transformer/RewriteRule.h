@@ -97,6 +97,9 @@ struct ASTEdit {
   };
 };
 
+/// Generates a single (specified) edit.
+EditGenerator edit(ASTEdit E);
+
 /// Lifts a list of `ASTEdit`s into an `EditGenerator`.
 ///
 /// The `EditGenerator` will return an empty vector if any of the edits apply to
@@ -107,21 +110,19 @@ struct ASTEdit {
 /// clients.  We recommend use of the \c AtomicChange or \c Replacements classes
 /// for assistance in detecting such conflicts.
 EditGenerator editList(llvm::SmallVector<ASTEdit, 1> Edits);
-/// Convenience form of `editList` for a single edit.
-EditGenerator edit(ASTEdit);
 
-/// Convenience generator for a no-op edit generator.
+/// Generates no edits.
 inline EditGenerator noEdits() { return editList({}); }
 
-/// Convenience version of `ifBound` specialized to `ASTEdit`.
+/// Version of `ifBound` specialized to `ASTEdit`.
 inline EditGenerator ifBound(std::string ID, ASTEdit TrueEdit,
                              ASTEdit FalseEdit) {
   return ifBound(std::move(ID), edit(std::move(TrueEdit)),
                  edit(std::move(FalseEdit)));
 }
 
-/// Convenience version of `ifBound` that has no "False" branch. If the node is
-/// not bound, then no edits are produced.
+/// Version of `ifBound` that has no "False" branch. If the node is not bound,
+/// then no edits are produced.
 inline EditGenerator ifBound(std::string ID, ASTEdit TrueEdit) {
   return ifBound(std::move(ID), edit(std::move(TrueEdit)), noEdits());
 }
@@ -131,7 +132,7 @@ inline EditGenerator ifBound(std::string ID, ASTEdit TrueEdit) {
 EditGenerator flattenVector(SmallVector<EditGenerator, 2> Generators);
 
 namespace detail {
-/// Convenience function to construct an \c EditGenerator. Overloaded for common
+/// Helper function to construct an \c EditGenerator. Overloaded for common
 /// cases so that user doesn't need to specify which factory function to
 /// use. This pattern gives benefits similar to implicit constructors, while
 /// maintaing a higher degree of explicitness.
@@ -141,6 +142,78 @@ inline EditGenerator injectEdits(EditGenerator G) { return G; }
 
 template <typename... Ts> EditGenerator flatten(Ts &&...Edits) {
   return flattenVector({detail::injectEdits(std::forward<Ts>(Edits))...});
+}
+
+// Every rewrite rule is triggered by a match against some AST node.
+// Transformer guarantees that this ID is bound to the triggering node whenever
+// a rewrite rule is applied.
+extern const char RootID[];
+
+/// Replaces a portion of the source text with \p Replacement.
+ASTEdit changeTo(RangeSelector Target, TextGenerator Replacement);
+/// DEPRECATED: use \c changeTo.
+inline ASTEdit change(RangeSelector Target, TextGenerator Replacement) {
+  return changeTo(std::move(Target), std::move(Replacement));
+}
+
+/// Replaces the entirety of a RewriteRule's match with \p Replacement.  For
+/// example, to replace a function call, one could write:
+/// \code
+///   makeRule(callExpr(callee(functionDecl(hasName("foo")))),
+///            changeTo(cat("bar()")))
+/// \endcode
+inline ASTEdit changeTo(TextGenerator Replacement) {
+  return changeTo(node(RootID), std::move(Replacement));
+}
+/// DEPRECATED: use \c changeTo.
+inline ASTEdit change(TextGenerator Replacement) {
+  return changeTo(std::move(Replacement));
+}
+
+/// Inserts \p Replacement before \p S, leaving the source selected by \S
+/// unchanged.
+inline ASTEdit insertBefore(RangeSelector S, TextGenerator Replacement) {
+  return changeTo(before(std::move(S)), std::move(Replacement));
+}
+
+/// Inserts \p Replacement after \p S, leaving the source selected by \S
+/// unchanged.
+inline ASTEdit insertAfter(RangeSelector S, TextGenerator Replacement) {
+  return changeTo(after(std::move(S)), std::move(Replacement));
+}
+
+/// Removes the source selected by \p S.
+ASTEdit remove(RangeSelector S);
+
+// FIXME: If `Metadata` returns an `llvm::Expected<T>` the `AnyGenerator` will
+// construct an `llvm::Expected<llvm::Any>` where no error is present but the
+// `llvm::Any` holds the error. This is unlikely but potentially surprising.
+// Perhaps the `llvm::Expected` should be unwrapped, or perhaps this should be a
+// compile-time error. No solution here is perfect.
+//
+// Note: This function template accepts any type callable with a MatchResult
+// rather than a `std::function` because the return-type needs to be deduced. If
+// it accepted a `std::function<R(MatchResult)>`, lambdas or other callable
+// types would not be able to deduce `R`, and users would be forced to specify
+// explicitly the type they intended to return by wrapping the lambda at the
+// call-site.
+template <typename Callable>
+inline ASTEdit withMetadata(ASTEdit Edit, Callable Metadata) {
+  Edit.Metadata =
+      [Gen = std::move(Metadata)](
+          const ast_matchers::MatchFinder::MatchResult &R) -> llvm::Any {
+    return Gen(R);
+  };
+
+  return Edit;
+}
+
+/// Assuming that the inner range is enclosed by the outer range, creates
+/// precision edits to remove the parts of the outer range that are not included
+/// in the inner range.
+inline EditGenerator shrinkTo(RangeSelector outer, RangeSelector inner) {
+  return editList({remove(enclose(before(outer), before(inner))),
+                   remove(enclose(after(inner), after(outer)))});
 }
 
 /// Format of the path in an include directive -- angle brackets or quotes.
@@ -177,25 +250,23 @@ struct RewriteRule {
     ast_matchers::internal::DynTypedMatcher Matcher;
     EditGenerator Edits;
     TextGenerator Explanation;
-    // Include paths to add to the file affected by this case.  These are
-    // bundled with the `Case`, rather than the `RewriteRule`, because each case
-    // might have different associated changes to the includes.
+    /// Include paths to add to the file affected by this case.  These are
+    /// bundled with the `Case`, rather than the `RewriteRule`, because each
+    /// case might have different associated changes to the includes.
     std::vector<std::pair<std::string, IncludeFormat>> AddedIncludes;
   };
   // We expect RewriteRules will most commonly include only one case.
   SmallVector<Case, 1> Cases;
 
-  // ID used as the default target of each match. The node described by the
-  // matcher is should always be bound to this id.
-  static constexpr llvm::StringLiteral RootID = "___root___";
+  /// DEPRECATED: use `::clang::transformer::RootID` instead.
+  static const llvm::StringRef RootID;
 };
 
-/// Convenience function for constructing a simple \c RewriteRule.
+/// Constructs a simple \c RewriteRule.
 RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
                      EditGenerator Edits, TextGenerator Explanation = nullptr);
 
-/// Convenience function for constructing a \c RewriteRule from multiple
-/// `ASTEdit`s.
+/// Constructs a \c RewriteRule from multiple `ASTEdit`s.
 inline RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
                             llvm::SmallVector<ASTEdit, 1> Edits,
                             TextGenerator Explanation = nullptr) {
@@ -203,7 +274,7 @@ inline RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
                   std::move(Explanation));
 }
 
-/// Convenience overload of \c makeRule for common case of only one edit.
+/// Overload of \c makeRule for common case of only one edit.
 inline RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
                             ASTEdit Edit,
                             TextGenerator Explanation = nullptr) {
@@ -263,74 +334,6 @@ void addInclude(RewriteRule &Rule, llvm::StringRef Header,
 //                             makeRule(right_call, right_call_action)});
 // ```
 RewriteRule applyFirst(ArrayRef<RewriteRule> Rules);
-
-/// Replaces a portion of the source text with \p Replacement.
-ASTEdit changeTo(RangeSelector Target, TextGenerator Replacement);
-/// DEPRECATED: use \c changeTo.
-inline ASTEdit change(RangeSelector Target, TextGenerator Replacement) {
-  return changeTo(std::move(Target), std::move(Replacement));
-}
-
-/// Replaces the entirety of a RewriteRule's match with \p Replacement.  For
-/// example, to replace a function call, one could write:
-/// \code
-///   makeRule(callExpr(callee(functionDecl(hasName("foo")))),
-///            changeTo(cat("bar()")))
-/// \endcode
-inline ASTEdit changeTo(TextGenerator Replacement) {
-  return changeTo(node(std::string(RewriteRule::RootID)),
-                  std::move(Replacement));
-}
-/// DEPRECATED: use \c changeTo.
-inline ASTEdit change(TextGenerator Replacement) {
-  return changeTo(std::move(Replacement));
-}
-
-/// Inserts \p Replacement before \p S, leaving the source selected by \S
-/// unchanged.
-inline ASTEdit insertBefore(RangeSelector S, TextGenerator Replacement) {
-  return changeTo(before(std::move(S)), std::move(Replacement));
-}
-
-/// Inserts \p Replacement after \p S, leaving the source selected by \S
-/// unchanged.
-inline ASTEdit insertAfter(RangeSelector S, TextGenerator Replacement) {
-  return changeTo(after(std::move(S)), std::move(Replacement));
-}
-
-/// Removes the source selected by \p S.
-ASTEdit remove(RangeSelector S);
-
-// FIXME: If `Metadata` returns an `llvm::Expected<T>` the `AnyGenerator` will
-// construct an `llvm::Expected<llvm::Any>` where no error is present but the
-// `llvm::Any` holds the error. This is unlikely but potentially surprising.
-// Perhaps the `llvm::Expected` should be unwrapped, or perhaps this should be a
-// compile-time error. No solution here is perfect.
-//
-// Note: This function template accepts any type callable with a MatchResult
-// rather than a `std::function` because the return-type needs to be deduced. If
-// it accepted a `std::function<R(MatchResult)>`, lambdas or other callable types
-// would not be able to deduce `R`, and users would be forced to specify
-// explicitly the type they intended to return by wrapping the lambda at the
-// call-site.
-template <typename Callable>
-inline ASTEdit withMetadata(ASTEdit Edit, Callable Metadata) {
-  Edit.Metadata =
-      [Gen = std::move(Metadata)](
-          const ast_matchers::MatchFinder::MatchResult &R) -> llvm::Any {
-    return Gen(R);
-  };
-
-  return Edit;
-}
-
-/// Assuming that the inner range is enclosed by the outer range, creates
-/// precision edits to remove the parts of the outer range that are not included
-/// in the inner range.
-inline EditGenerator shrinkTo(RangeSelector outer, RangeSelector inner) {
-  return editList({remove(enclose(before(outer), before(inner))),
-                   remove(enclose(after(inner), after(outer)))});
-}
 
 /// Applies `Rule` to all descendants of the node bound to `NodeId`. `Rule` can
 /// refer to nodes bound by the calling rule. `Rule` is not applied to the node
