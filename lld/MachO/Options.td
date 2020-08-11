@@ -156,7 +156,6 @@ def grp_content : OptionGroup<"content">, HelpText<"ADDITIONAL CONTENT">;
 def sectcreate : MultiArg<["-"], "sectcreate", 3>,
      MetaVarName<"<segment> <section> <file>">,
      HelpText<"Create <section> in <segment> from the contents of <file>">,
-     Flags<[HelpHidden]>,
      Group<grp_content>;
 def segcreate : MultiArg<["-"], "segcreate", 3>,
      MetaVarName<"<segment> <section> <file>">,

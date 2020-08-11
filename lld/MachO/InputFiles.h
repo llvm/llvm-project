@@ -40,6 +40,7 @@ public:
     ObjKind,
     DylibKind,
     ArchiveKind,
+    OpaqueKind,
   };
 
   virtual ~InputFile() = default;
@@ -70,6 +71,14 @@ class ObjFile : public InputFile {
 public:
   explicit ObjFile(MemoryBufferRef mb);
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
+};
+
+// command-line -sectcreate file
+class OpaqueFile : public InputFile {
+public:
+  explicit OpaqueFile(MemoryBufferRef mb, StringRef segName,
+                      StringRef sectName);
+  static bool classof(const InputFile *f) { return f->kind() == OpaqueKind; }
 };
 
 // .dylib file
