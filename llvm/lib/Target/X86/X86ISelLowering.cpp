@@ -24709,20 +24709,21 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     case CMP_MASK_CC: {
       MVT MaskVT = Op.getSimpleValueType();
       SDValue CC = Op.getOperand(3);
+      SDValue Mask = Op.getOperand(4);
       // We specify 2 possible opcodes for intrinsics with rounding modes.
       // First, we check if the intrinsic may have non-default rounding mode,
       // (IntrData->Opc1 != 0), then we check the rounding mode operand.
       if (IntrData->Opc1 != 0) {
-        SDValue Sae = Op.getOperand(4);
+        SDValue Sae = Op.getOperand(5);
         if (isRoundModeSAE(Sae))
           return DAG.getNode(IntrData->Opc1, dl, MaskVT, Op.getOperand(1),
-                             Op.getOperand(2), CC, Sae);
+                             Op.getOperand(2), CC, Mask, Sae);
         if (!isRoundModeCurDirection(Sae))
           return SDValue();
       }
       //default rounding mode
       return DAG.getNode(IntrData->Opc0, dl, MaskVT,
-                         {Op.getOperand(1), Op.getOperand(2), CC});
+                         {Op.getOperand(1), Op.getOperand(2), CC, Mask});
     }
     case CMP_MASK_SCALAR_CC: {
       SDValue Src1 = Op.getOperand(1);
@@ -30302,8 +30303,9 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(COMI)
   NODE_NAME_CASE(UCOMI)
   NODE_NAME_CASE(CMPM)
+  NODE_NAME_CASE(CMPMM)
   NODE_NAME_CASE(STRICT_CMPM)
-  NODE_NAME_CASE(CMPM_SAE)
+  NODE_NAME_CASE(CMPMM_SAE)
   NODE_NAME_CASE(SETCC)
   NODE_NAME_CASE(SETCC_CARRY)
   NODE_NAME_CASE(FSETCC)
