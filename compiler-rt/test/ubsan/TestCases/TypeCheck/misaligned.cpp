@@ -1,7 +1,6 @@
 // RUN: %clangxx %gmlt -fsanitize=alignment %s -O3 -o %t
 // RUN: %run %t l0 && %run %t s0 && %run %t r0 && %run %t m0 && %run %t f0 && %run %t n0 && %run %t u0
 // RUN: %run %t l1 2>&1 | FileCheck %s --check-prefix=CHECK-LOAD --strict-whitespace
-// RUN: %run %t s1 2>&1 | FileCheck %s --check-prefix=CHECK-STORE
 // RUN: %run %t r1 2>&1 | FileCheck %s --check-prefix=CHECK-REFERENCE
 // RUN: %run %t m1 2>&1 | FileCheck %s --check-prefix=CHECK-MEMBER
 // RUN: %run %t f1 2>&1 | FileCheck %s --check-prefix=CHECK-MEMFUN
@@ -10,6 +9,7 @@
 // RUN: %env_ubsan_opts=print_stacktrace=1 %run %t l1 2>&1 | FileCheck %s --check-prefix=CHECK-LOAD --check-prefix=CHECK-STACK-LOAD
 
 // RUN: %clangxx -fsanitize=alignment -fno-sanitize-recover=alignment %s -O3 -o %t
+// RUN: not %run %t s1 2>&1 | FileCheck %s --check-prefix=CHECK-STORE
 // RUN: not %run %t w1 2>&1 | FileCheck %s --check-prefix=CHECK-WILD
 // Compilation error make the test fails.
 // XFAIL: openbsd
