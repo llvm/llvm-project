@@ -309,6 +309,16 @@ Take the minimum/maximum of two values.
 
   %5:_(s32) = G_SMIN %6, %2
 
+G_ABS
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Take the absolute value of a signed integer. The absolute value of the minimum
+negative value (e.g. the 8-bit value `0x80`) is defined to be itself.
+
+.. code-block:: none
+
+  %1:_(s32) = G_ABS %0
+
 G_UADDO, G_SADDO, G_USUBO, G_SSUBO, G_SMULO, G_UMULO
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

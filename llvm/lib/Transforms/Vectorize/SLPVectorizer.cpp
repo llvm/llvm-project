@@ -29,6 +29,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator.h"
@@ -3911,17 +3912,18 @@ int BoUpSLP::getTreeCost() {
   int SpillCost = getSpillCost();
   Cost += SpillCost + ExtractCost;
 
-  std::string Str;
+#ifndef NDEBUG
+  SmallString<256> Str;
   {
-    raw_string_ostream OS(Str);
+    raw_svector_ostream OS(Str);
     OS << "SLP: Spill Cost = " << SpillCost << ".\n"
        << "SLP: Extract Cost = " << ExtractCost << ".\n"
        << "SLP: Total Cost = " << Cost << ".\n";
   }
   LLVM_DEBUG(dbgs() << Str);
-
   if (ViewSLPTree)
     ViewGraph(this, "SLP" + F->getName(), false, Str);
+#endif
 
   return Cost;
 }

@@ -414,6 +414,13 @@ def G_UMAX : GenericInstruction {
   let isCommutable = 1;
 }
 
+// Generic integer absolute value.
+def G_ABS : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
 //------------------------------------------------------------------------------
 // Overflow ops
 //------------------------------------------------------------------------------

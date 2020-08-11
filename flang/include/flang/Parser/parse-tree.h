@@ -403,7 +403,8 @@ struct ImplicitPartStmt {
       Statement<common::Indirection<ParameterStmt>>,
       Statement<common::Indirection<OldParameterStmt>>,
       Statement<common::Indirection<FormatStmt>>,
-      Statement<common::Indirection<EntryStmt>>>
+      Statement<common::Indirection<EntryStmt>>,
+      common::Indirection<CompilerDirective>>
       u;
 };
 
@@ -430,6 +431,7 @@ struct SpecificationPart {
   TUPLE_CLASS_BOILERPLATE(SpecificationPart);
   std::tuple<std::list<OpenACCDeclarativeConstruct>,
       std::list<OpenMPDeclarativeConstruct>,
+      std::list<common::Indirection<CompilerDirective>>,
       std::list<Statement<common::Indirection<UseStmt>>>,
       std::list<Statement<common::Indirection<ImportStmt>>>, ImplicitPart,
       std::list<DeclarationConstruct>>

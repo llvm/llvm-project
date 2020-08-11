@@ -19,6 +19,7 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
+
 using namespace llvm;
 
 namespace {
@@ -166,7 +167,7 @@ public:
     bool Cap = true;
     std::transform(N.begin(), N.end(), N.begin(), [&Cap](unsigned char C) {
       if (Cap == true) {
-        C = std::toupper(C);
+        C = llvm::toUpper(C);
         Cap = false;
       } else if (C == '_') {
         Cap = true;

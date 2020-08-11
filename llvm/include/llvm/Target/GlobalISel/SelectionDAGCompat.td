@@ -135,6 +135,7 @@ def : GINodeEquiv<G_SMIN, smin>;
 def : GINodeEquiv<G_SMAX, smax>;
 def : GINodeEquiv<G_UMIN, umin>;
 def : GINodeEquiv<G_UMAX, umax>;
+def : GINodeEquiv<G_ABS, abs>;
 def : GINodeEquiv<G_FMINNUM, fminnum>;
 def : GINodeEquiv<G_FMAXNUM, fmaxnum>;
 def : GINodeEquiv<G_FMINNUM_IEEE, fminnum_ieee>;
@@ -176,6 +177,12 @@ def : GINodeEquiv<G_ICMP, setcc> {
 def : GINodeEquiv<G_STORE, st> { let CheckMMOIsNonAtomic = 1; }
 
 def : GINodeEquiv<G_LOAD, atomic_load> {
+  let CheckMMOIsNonAtomic = 0;
+  let CheckMMOIsAtomic = 1;
+}
+
+// Operands are swapped for atomic_store vs. regular store
+def : GINodeEquiv<G_STORE, atomic_store> {
   let CheckMMOIsNonAtomic = 0;
   let CheckMMOIsAtomic = 1;
 }

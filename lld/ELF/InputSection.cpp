@@ -881,7 +881,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     if (config->emachine == EM_386 && type == R_386_GOTPC)
       continue;
 
-    uint64_t offset = getOffset(rel.r_offset);
+    uint64_t offset = rel.r_offset;
     uint8_t *bufLoc = buf + offset;
     int64_t addend = getAddend<ELFT>(rel);
     if (!RelTy::IsRela)
@@ -915,8 +915,9 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       // address 0. For bug-compatibilty, we accept them with warnings. We
       // know Steel Bank Common Lisp as of 2018 have this bug.
       warn(msg);
-      target->relocateNoSym(bufLoc, type,
-                            SignExtend64<bits>(sym.getVA(addend - offset)));
+      target->relocateNoSym(
+          bufLoc, type,
+          SignExtend64<bits>(sym.getVA(addend - offset - outSecOff)));
       continue;
     }
 
@@ -975,7 +976,7 @@ static void relocateNonAllocForRelocatable(InputSection *sec, uint8_t *buf) {
   for (const Relocation &rel : sec->relocations) {
     // InputSection::copyRelocations() adds only R_ABS relocations.
     assert(rel.expr == R_ABS);
-    uint8_t *bufLoc = buf + rel.offset + sec->outSecOff;
+    uint8_t *bufLoc = buf + rel.offset;
     uint64_t targetVA = SignExtend64(rel.sym->getVA(rel.addend), bits);
     target->relocate(bufLoc, rel, targetVA);
   }
@@ -1008,12 +1009,12 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
     if (rel.expr == R_NONE)
       continue;
     uint64_t offset = rel.offset;
-    if (auto *sec = dyn_cast<InputSection>(this))
-      offset += sec->outSecOff;
     uint8_t *bufLoc = buf + offset;
     RelType type = rel.type;
 
     uint64_t addrLoc = getOutputSection()->addr + offset;
+    if (auto *sec = dyn_cast<InputSection>(this))
+      addrLoc += sec->outSecOff;
     RelExpr expr = rel.expr;
     uint64_t targetVA = SignExtend64(
         getRelocTargetVA(file, type, rel.addend, addrLoc, *rel.sym, expr),
@@ -1089,7 +1090,7 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
   // basic block sections.
   if (auto *sec = dyn_cast<InputSection>(this)) {
     for (const JumpInstrMod &jumpMod : jumpInstrMods) {
-      uint64_t offset = jumpMod.offset + sec->outSecOff;
+      uint64_t offset = jumpMod.offset;
       uint8_t *bufLoc = buf + offset;
       target->applyJumpInstrMod(bufLoc, jumpMod.original, jumpMod.size);
     }
@@ -1187,8 +1188,8 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *buf,
 
     if (Defined *f = getEnclosingFunction<ELFT>(rel.offset)) {
       prologues.insert(f);
-      if (target->adjustPrologueForCrossSplitStack(buf + getOffset(f->value),
-                                                   end, f->stOther))
+      if (target->adjustPrologueForCrossSplitStack(buf + f->value, end,
+                                                   f->stOther))
         continue;
       if (!getFile<ELFT>()->someNoSplitStack)
         error(lld::toString(this) + ": " + f->getName() +
@@ -1236,7 +1237,7 @@ template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
       fatal(toString(this) +
             ": uncompress failed: " + llvm::toString(std::move(e)));
     uint8_t *bufEnd = buf + outSecOff + size;
-    relocate<ELFT>(buf, bufEnd);
+    relocate<ELFT>(buf + outSecOff, bufEnd);
     return;
   }
 
@@ -1244,7 +1245,7 @@ template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
   // and then apply relocations.
   memcpy(buf + outSecOff, data().data(), data().size());
   uint8_t *bufEnd = buf + outSecOff + data().size();
-  relocate<ELFT>(buf, bufEnd);
+  relocate<ELFT>(buf + outSecOff, bufEnd);
 }
 
 void InputSection::replace(InputSection *other) {

@@ -190,4 +190,3 @@ def TDL_DirA : Directive<"dira"> {
 // GEN-NEXT:  NODE(TdlClause, Clauseb)
 // GEN-EMPTY:
 // GEN-NEXT:  #endif // GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
-

@@ -318,6 +318,10 @@ public:
   LegalizeResult bitcastExtractVectorElt(MachineInstr &MI, unsigned TypeIdx,
                                          LLT CastTy);
 
+  /// Perform Bitcast legalize action on G_INSERT_VECTOR_ELT.
+  LegalizeResult bitcastInsertVectorElt(MachineInstr &MI, unsigned TypeIdx,
+                                        LLT CastTy);
+
   LegalizeResult lowerBitcast(MachineInstr &MI);
   LegalizeResult lowerLoad(MachineInstr &MI);
   LegalizeResult lowerStore(MachineInstr &MI);
