@@ -180,6 +180,12 @@ def : GINodeEquiv<G_LOAD, atomic_load> {
   let CheckMMOIsAtomic = 1;
 }
 
+// Operands are swapped for atomic_store vs. regular store
+def : GINodeEquiv<G_STORE, atomic_store> {
+  let CheckMMOIsNonAtomic = 0;
+  let CheckMMOIsAtomic = 1;
+}
+
 def : GINodeEquiv<G_ATOMIC_CMPXCHG, atomic_cmp_swap>;
 def : GINodeEquiv<G_ATOMICRMW_XCHG, atomic_swap>;
 def : GINodeEquiv<G_ATOMICRMW_ADD, atomic_load_add>;

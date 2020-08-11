@@ -32,28 +32,6 @@ define i128 @ABIi128(i128 %arg1) {
   ret i128 %res
 }
 
-  ; The key problem here is that we may fail to create an MBB referenced by a
-  ; PHI. If so, we cannot complete the G_PHI and mustn't try or bad things
-  ; happen.
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: G_STORE %6:gpr(s32), %2:gpr(p0) :: (store seq_cst 4 into %ir.addr) (in function: pending_phis)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for pending_phis
-; FALLBACK-WITH-REPORT-OUT-LABEL: pending_phis:
-define i32 @pending_phis(i1 %tst, i32 %val, i32* %addr) {
-  br i1 %tst, label %true, label %false
-
-end:
-  %res = phi i32 [%val, %true], [42, %false]
-  ret i32 %res
-
-true:
-  store atomic i32 42, i32* %addr seq_cst, align 4
-  br label %end
-
-false:
-  br label %end
-
-}
-
 ; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: G_STORE %1:_(<7 x s32>), %0:_(p0) :: (store 28 into %ir.addr, align 32) (in function: odd_vector)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for odd_vector
 ; FALLBACK-WITH-REPORT-OUT-LABEL: odd_vector:
@@ -70,16 +48,6 @@ define void @odd_vector(<7 x i32>* %addr) {
 ; FALLBACK-WITH-REPORT-LABEL: sequence_sizes:
 define i128 @sequence_sizes([8 x i8] %in) {
   ret i128 undef
-}
-
-; Just to make sure we don't accidentally emit a normal load/store.
-; FALLBACK-WITH-REPORT-ERR: cannot select: G_STORE %1:gpr(s64), %0:gpr64sp(p0) :: (store unordered 8 into %ir.addr) (in function: atomic_ops)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for atomic_ops
-; FALLBACK-WITH-REPORT-LABEL: atomic_ops:
-define i64 @atomic_ops(i64* %addr) {
-  store atomic i64 0, i64* %addr unordered, align 8
-  %res = load atomic i64, i64* %addr seq_cst, align 8
-  ret i64 %res
 }
 
 ; Make sure we don't mess up metadata arguments.
