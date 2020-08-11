@@ -2548,7 +2548,6 @@ LegalizerHelper::bitcastInsertVectorElt(MachineInstr &MI, unsigned TypeIdx,
   Register Idx = MI.getOperand(3).getReg();
 
   LLT VecTy = MRI.getType(Dst);
-  LLT ValTy = MRI.getType(Val);
   LLT IdxTy = MRI.getType(Idx);
 
   LLT VecEltTy = VecTy.getElementType();
