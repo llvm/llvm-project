@@ -3761,7 +3761,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn, Args);
     Value *Res = ApplyX86MaskOn1BitsVec(Builder, NewCall, nullptr);
 
-    StringRef Name = CI->getName();
+    std::string Name(CI->getName());
     if (!Name.empty()) {
       CI->setName(Name + ".old");
       NewCall->setName(Name);
