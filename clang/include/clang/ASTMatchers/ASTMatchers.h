@@ -562,6 +562,18 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl,
 extern const internal::VariadicDynCastAllOfMatcher<Decl, TemplateTypeParmDecl>
     templateTypeParmDecl;
 
+/// Matches template template parameter declarations.
+///
+/// Given
+/// \code
+///   template <template <typename> class Z, int N> struct C {};
+/// \endcode
+/// templateTypeParmDecl()
+///   matches 'Z', but not 'N'.
+extern const internal::VariadicDynCastAllOfMatcher<Decl,
+                                                   TemplateTemplateParmDecl>
+    templateTemplateParmDecl;
+
 /// Matches public C++ declarations and C++ base specifers that specify public
 /// inheritance.
 ///
