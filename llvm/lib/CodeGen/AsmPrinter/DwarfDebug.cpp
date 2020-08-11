@@ -3019,6 +3019,10 @@ void DwarfDebug::emitMacro(DIMacro &M) {
   StringRef Name = M.getName();
   StringRef Value = M.getValue();
 
+  // There should be one space between the macro name and the macro value in
+  // define entries. In undef entries, only the macro name is emitted.
+  std::string Str = Value.empty() ? Name.str() : (Name + " " + Value).str();
+
   if (UseDebugMacroSection) {
     unsigned Type = M.getMacinfoType() == dwarf::DW_MACINFO_define
                         ? dwarf::DW_MACRO_define_strx
@@ -3028,29 +3032,15 @@ void DwarfDebug::emitMacro(DIMacro &M) {
     Asm->OutStreamer->AddComment("Line Number");
     Asm->emitULEB128(M.getLine());
     Asm->OutStreamer->AddComment("Macro String");
-    if (!Value.empty())
-      Asm->emitULEB128(this->InfoHolder.getStringPool()
-                           .getIndexedEntry(*Asm, (Name + " " + Value).str())
-                           .getIndex());
-    else
-      // DW_MACRO_undef_strx doesn't have a value, so just emit the macro
-      // string.
-      Asm->emitULEB128(this->InfoHolder.getStringPool()
-                           .getIndexedEntry(*Asm, (Name).str())
-                           .getIndex());
+    Asm->emitULEB128(
+        InfoHolder.getStringPool().getIndexedEntry(*Asm, Str).getIndex());
   } else {
     Asm->OutStreamer->AddComment(dwarf::MacinfoString(M.getMacinfoType()));
     Asm->emitULEB128(M.getMacinfoType());
     Asm->OutStreamer->AddComment("Line Number");
     Asm->emitULEB128(M.getLine());
     Asm->OutStreamer->AddComment("Macro String");
-    Asm->OutStreamer->emitBytes(Name);
-    if (!Value.empty()) {
-      // There should be one space between macro name and macro value.
-      Asm->emitInt8(' ');
-      Asm->OutStreamer->AddComment("Macro Value=");
-      Asm->OutStreamer->emitBytes(Value);
-    }
+    Asm->OutStreamer->emitBytes(Str);
     Asm->emitInt8('\0');
   }
 }
