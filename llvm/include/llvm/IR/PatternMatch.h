@@ -1714,6 +1714,17 @@ inline MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty> m_UMin(const LHS &L,
   return MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty>(L, R);
 }
 
+template <typename LHS, typename RHS>
+inline match_combine_or<
+    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty>,
+                     MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty>>,
+    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty>,
+                     MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty>>>
+m_MaxOrMin(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_CombineOr(m_SMax(L, R), m_SMin(L, R)),
+                     m_CombineOr(m_UMax(L, R), m_UMin(L, R)));
+}
+
 /// Match an 'ordered' floating point maximum function.
 /// Floating point has one special value 'NaN'. Therefore, there is no total
 /// order. However, if we can ignore the 'NaN' value (for example, because of a
@@ -2104,6 +2115,17 @@ template <typename LHS, typename RHS>
 inline MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty, true>
 m_c_UMax(const LHS &L, const RHS &R) {
   return MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty, true>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline match_combine_or<
+    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty, true>,
+                     MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty, true>>,
+    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty, true>,
+                     MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty, true>>>
+m_c_MaxOrMin(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_CombineOr(m_c_SMax(L, R), m_c_SMin(L, R)),
+                     m_CombineOr(m_c_UMax(L, R), m_c_UMin(L, R)));
 }
 
 /// Matches FAdd with LHS and RHS in either order.
