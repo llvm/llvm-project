@@ -2319,14 +2319,20 @@ llvm::Triple SwiftASTContext::GetTriple() const {
   return llvm::Triple(m_compiler_invocation_ap->getTargetTriple());
 }
 
-/// Conditions a triple string to be safe for use with Swift.  Right
-/// now this just strips the Haswell marker off the CPU name.
+/// Conditions a triple string to be safe for use with Swift.  Swift
+/// is really peculiar about what CPU types it thinks it has standard
+/// libraries for.
 ///
 /// TODO: Make Swift more robust.
-static std::string GetSwiftFriendlyTriple(StringRef triple) {
-  if (triple.consume_front("x86_64h"))
-    return std::string("x86_64") + triple.str();
-  return triple.str();
+llvm::Triple SwiftASTContext::GetSwiftFriendlyTriple(llvm::Triple triple) {
+  StringRef arch_name = triple.getArchName();
+  if (arch_name == "x86_64h")
+    triple.setArchName("x86_64");
+  else if (arch_name == "aarch64")
+    triple.setArchName("arm64");
+  else if (arch_name == "aarch64_32")
+    triple.setArchName("arm64_32");
+  return triple;
 }
 
 bool SwiftASTContext::SetTriple(const llvm::Triple triple, Module *module) {
@@ -2344,18 +2350,15 @@ bool SwiftASTContext::SetTriple(const llvm::Triple triple, Module *module) {
   }
 
   const unsigned unspecified = 0;
-  std::string adjusted_triple = GetSwiftFriendlyTriple(triple.str());
+  llvm::Triple adjusted_triple = GetSwiftFriendlyTriple(triple);
   // If the OS version is unspecified, do fancy things.
   if (triple.getOSMajorVersion() == unspecified) {
     // If a triple is "<arch>-apple-darwin" change it to be
     // "<arch>-apple-macosx" otherwise the major and minor OS
     // version we append below would be wrong.
     if (triple.getVendor() == llvm::Triple::VendorType::Apple &&
-        triple.getOS() == llvm::Triple::OSType::Darwin) {
-      llvm::Triple mac_triple(adjusted_triple);
-      mac_triple.setOS(llvm::Triple::OSType::MacOSX);
-      adjusted_triple = mac_triple.str();
-    }
+        triple.getOS() == llvm::Triple::OSType::Darwin)
+      adjusted_triple.setOS(llvm::Triple::OSType::MacOSX);
 
     // Append the min OS to the triple if we have a target
     ModuleSP module_sp;
@@ -2370,12 +2373,9 @@ bool SwiftASTContext::SetTriple(const llvm::Triple triple, Module *module) {
 
     if (module) {
       if (ObjectFile *objfile = module->GetObjectFile())
-        if (llvm::VersionTuple version = objfile->GetMinimumOSVersion()) {
-          llvm::Triple vers_triple(adjusted_triple);
-          vers_triple.setOSName(vers_triple.getOSName().str() +
-                                version.getAsString());
-          adjusted_triple = vers_triple.str();
-        }
+        if (llvm::VersionTuple version = objfile->GetMinimumOSVersion())
+          adjusted_triple.setOSName(adjusted_triple.getOSName().str() +
+                                    version.getAsString());
     }
   }
   if (llvm::Triple(triple).getOS() == llvm::Triple::UnknownOS) {
@@ -2384,15 +2384,14 @@ bool SwiftASTContext::SetTriple(const llvm::Triple triple, Module *module) {
     return false;
   }
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") setting to \"%s\"",
-             triple.str().c_str(), adjusted_triple.c_str());
+             triple.str().c_str(), adjusted_triple.str().c_str());
 
-  llvm::Triple adjusted_llvm_triple(adjusted_triple);
-  m_compiler_invocation_ap->setTargetTriple(adjusted_llvm_triple);
+  m_compiler_invocation_ap->setTargetTriple(adjusted_triple);
 
-  assert(GetTriple() == adjusted_llvm_triple);
+  assert(GetTriple() == adjusted_triple);
   assert(!m_ast_context_ap ||
          (llvm::Triple(m_ast_context_ap->LangOpts.Target.getTriple()) ==
-          adjusted_llvm_triple));
+          adjusted_triple));
 
   // Every time the triple is changed the LangOpts must be updated
   // too, because Swift default-initializes the EnableObjCInterop
