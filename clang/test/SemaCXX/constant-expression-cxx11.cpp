@@ -2343,3 +2343,8 @@ namespace flexible_array {
   // constant-evaluate it properly.
   constexpr A c = {1, 2, 3}; // expected-error {{initialization of flexible array member}}
 }
+
+void local_constexpr_var() {
+  constexpr int a = 0; // expected-note {{address of non-static constexpr variable 'a' may differ on each invocation of the enclosing function; add 'static' to give it a constant address}}
+  constexpr const int *p = &a; // expected-error {{constant expression}} expected-note {{pointer to 'a' is not a constant expression}}
+}
