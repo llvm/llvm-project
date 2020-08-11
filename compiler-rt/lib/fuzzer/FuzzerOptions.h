@@ -69,6 +69,7 @@ struct FuzzingOptions {
   int PurgeAllocatorIntervalSec = 1;
   int  TraceMalloc = 0;
   bool HandleAbrt = false;
+  bool HandleAlrm = false;
   bool HandleBus = false;
   bool HandleFpe = false;
   bool HandleIll = false;
