@@ -295,7 +295,8 @@ bool IRTranslator::translateBinaryOp(unsigned Opcode, const User &U,
   return true;
 }
 
-bool IRTranslator::translateFNeg(const User &U, MachineIRBuilder &MIRBuilder) {
+bool IRTranslator::translateUnaryOp(unsigned Opcode, const User &U,
+                                    MachineIRBuilder &MIRBuilder) {
   Register Op0 = getOrCreateVReg(*U.getOperand(0));
   Register Res = getOrCreateVReg(U);
   uint16_t Flags = 0;
@@ -303,8 +304,12 @@ bool IRTranslator::translateFNeg(const User &U, MachineIRBuilder &MIRBuilder) {
     const Instruction &I = cast<Instruction>(U);
     Flags = MachineInstr::copyFlagsFromInstruction(I);
   }
-  MIRBuilder.buildFNeg(Res, Op0, Flags);
+  MIRBuilder.buildInstr(Opcode, {Res}, {Op0}, Flags);
   return true;
+}
+
+bool IRTranslator::translateFNeg(const User &U, MachineIRBuilder &MIRBuilder) {
+  return translateUnaryOp(TargetOpcode::G_FNEG, U, MIRBuilder);
 }
 
 bool IRTranslator::translateCompare(const User &U,
@@ -1496,6 +1501,9 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return translateBinaryOp(TargetOpcode::G_SMIN, CI, MIRBuilder);
   case Intrinsic::smax:
     return translateBinaryOp(TargetOpcode::G_SMAX, CI, MIRBuilder);
+  case Intrinsic::abs:
+    // TODO: Preserve "int min is poison" arg in GMIR?
+    return translateUnaryOp(TargetOpcode::G_ABS, CI, MIRBuilder);
   case Intrinsic::smul_fix:
     return translateFixedPointIntrinsic(TargetOpcode::G_SMULFIX, CI, MIRBuilder);
   case Intrinsic::umul_fix:
