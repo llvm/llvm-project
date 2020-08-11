@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple powerpc64le-unknown-linux | FileCheck %s
 ; RUN: llc < %s -mtriple powerpc64le-unknown-linux -debug-only=machine-scheduler \
 ; RUN:   2>&1 | FileCheck %s --check-prefix=LOG
+; REQUIRES: DEBUG
 
 define double @in_nostrict(double %a, double %b, double %c, double %d) {
 ; CHECK-LABEL: in_nostrict:
