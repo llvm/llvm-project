@@ -34,20 +34,21 @@ class TestWeakSymbolsInExpressions(TestBase):
             correct_value = 10
         else:
             correct_value = 20
-            
+
         # Note, I'm adding the "; 10" at the end of the expression to work around
         # the bug that expressions with no result currently return False for Success()...
         expr = "if (&" + weak_varname + " != NULL) { present_weak_int = 10; } else { present_weak_int = 20;}; 10"
         result = self.frame.EvaluateExpression(expr)
         self.assertSuccess(result.GetError(), "absent_weak_int expr failed")
         self.assertEqual(value.GetValueAsSigned(), correct_value, "Didn't change present_weak_int correctly.")
-        
+
     def do_test(self):
         hidden_dir = os.path.join(self.getBuildDir(), "hidden")
         hidden_dylib = os.path.join(hidden_dir, "libdylib.dylib")
 
         launch_info = lldb.SBLaunchInfo(None)
         launch_info.SetWorkingDirectory(self.getBuildDir())
+        launch_info.SetLaunchFlags(lldb.eLaunchFlagInheritTCCFromParent)
         # We have to point to the hidden directory to pick up the
         # version of the dylib without the weak symbols:
         env_expr = self.platformContext.shlib_environment_var + "=" + hidden_dir
@@ -63,7 +64,7 @@ class TestWeakSymbolsInExpressions(TestBase):
         # search paths, and then run @import to introduce it into the expression
         # context:
         self.dbg.HandleCommand("settings set target.clang-module-search-paths " + self.getSourceDir())
-        
+
         self.frame = thread.frames[0]
         self.assertTrue(self.frame.IsValid(), "Got a good frame")
         options = lldb.SBExpressionOptions()
@@ -73,7 +74,7 @@ class TestWeakSymbolsInExpressions(TestBase):
         # Now run an expression that references an absent weak symbol:
         self.run_weak_var_check("absent_weak_int", False)
         self.run_weak_var_check("absent_weak_function", False)
-        
+
         # Make sure we can do the same thing with present weak symbols
         self.run_weak_var_check("present_weak_int", True)
         self.run_weak_var_check("present_weak_function", True)
