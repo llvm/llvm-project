@@ -1304,52 +1304,5 @@ TEST(InstructionsTest, UnaryOperator) {
   I->deleteValue();
 }
 
-TEST(InstructionsTest, UpdateLocationAfterHoist) {
-  LLVMContext C;
-  std::unique_ptr<Module> M = parseIR(C,
-                                      R"(
-      declare void @callee()
-
-      define void @f() {
-        call void @callee()           ; Inst with no location.
-        call void @callee(), !dbg !11 ; Call with location.
-        ret void, !dbg !11            ; Non-call inst with location.
-      }
-
-      !llvm.dbg.cu = !{!0}
-      !llvm.module.flags = !{!3, !4}
-      !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 6.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
-      !1 = !DIFile(filename: "t2.c", directory: "foo")
-      !2 = !{}
-      !3 = !{i32 2, !"Dwarf Version", i32 4}
-      !4 = !{i32 2, !"Debug Info Version", i32 3}
-      !8 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !9, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
-      !9 = !DISubroutineType(types: !10)
-      !10 = !{null}
-      !11 = !DILocation(line: 2, column: 7, scope: !8)
-  )");
-  ASSERT_TRUE(M);
-  Function *F = cast<Function>(M->getNamedValue("f"));
-  BasicBlock &BB = F->front();
-
-  auto *I1 = BB.getFirstNonPHI();
-  auto *I2 = I1->getNextNode();
-  auto *I3 = BB.getTerminator();
-
-  EXPECT_FALSE(bool(I1->getDebugLoc()));
-  I1->updateLocationAfterHoist();
-  EXPECT_FALSE(bool(I1->getDebugLoc()));
-
-  const MDNode *Scope = I2->getDebugLoc().getScope();
-  EXPECT_EQ(I2->getDebugLoc().getLine(), 2U);
-  I2->updateLocationAfterHoist();
-  EXPECT_EQ(I2->getDebugLoc().getLine(), 0U);
-  EXPECT_EQ(I2->getDebugLoc().getScope(), Scope);
-
-  EXPECT_EQ(I3->getDebugLoc().getLine(), 2U);
-  I3->updateLocationAfterHoist();
-  EXPECT_FALSE(bool(I3->getDebugLoc()));
-}
-
 } // end anonymous namespace
 } // end namespace llvm
