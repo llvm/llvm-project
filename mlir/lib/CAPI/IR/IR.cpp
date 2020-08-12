@@ -13,6 +13,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Parser.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 
@@ -57,6 +58,33 @@ static ArrayRef<CppTy> unwrapList(intptr_t size, CTy *first,
 }
 
 /* ========================================================================== */
+/* Printing helper.                                                           */
+/* ========================================================================== */
+
+namespace {
+/// A simple raw ostream subclass that forwards write_impl calls to the
+/// user-supplied callback together with opaque user-supplied data.
+class CallbackOstream : public llvm::raw_ostream {
+public:
+  CallbackOstream(std::function<void(const char *, intptr_t, void *)> callback,
+                  void *opaqueData)
+      : callback(callback), opaqueData(opaqueData), pos(0u) {}
+
+  void write_impl(const char *ptr, size_t size) override {
+    callback(ptr, size, opaqueData);
+    pos += size;
+  }
+
+  uint64_t current_pos() const override { return pos; }
+
+private:
+  std::function<void(const char *, intptr_t, void *)> callback;
+  void *opaqueData;
+  uint64_t pos;
+};
+} // end namespace
+
+/* ========================================================================== */
 /* Context API.                                                               */
 /* ========================================================================== */
 
@@ -79,6 +107,13 @@ MlirLocation mlirLocationFileLineColGet(MlirContext context,
 
 MlirLocation mlirLocationUnknownGet(MlirContext context) {
   return wrap(UnknownLoc::get(unwrap(context)));
+}
+
+void mlirLocationPrint(MlirLocation location, MlirPrintCallback callback,
+                       void *userData) {
+  CallbackOstream stream(callback, userData);
+  unwrap(location).print(stream);
+  stream.flush();
 }
 
 /* ========================================================================== */
@@ -239,6 +274,13 @@ MlirAttribute mlirOperationGetAttributeByName(MlirOperation op,
   return wrap(unwrap(op)->getAttr(name));
 }
 
+void mlirOperationPrint(MlirOperation op, MlirPrintCallback callback,
+                        void *userData) {
+  CallbackOstream stream(callback, userData);
+  unwrap(op)->print(stream);
+  stream.flush();
+}
+
 void mlirOperationDump(MlirOperation op) { return unwrap(op)->dump(); }
 
 /* ========================================================================== */
@@ -314,12 +356,26 @@ MlirValue mlirBlockGetArgument(MlirBlock block, intptr_t pos) {
   return wrap(unwrap(block)->getArgument(static_cast<unsigned>(pos)));
 }
 
+void mlirBlockPrint(MlirBlock block, MlirPrintCallback callback,
+                    void *userData) {
+  CallbackOstream stream(callback, userData);
+  unwrap(block)->print(stream);
+  stream.flush();
+}
+
 /* ========================================================================== */
 /* Value API.                                                                 */
 /* ========================================================================== */
 
 MlirType mlirValueGetType(MlirValue value) {
   return wrap(unwrap(value).getType());
+}
+
+void mlirValuePrint(MlirValue value, MlirPrintCallback callback,
+                    void *userData) {
+  CallbackOstream stream(callback, userData);
+  unwrap(value).print(stream);
+  stream.flush();
 }
 
 /* ========================================================================== */
@@ -330,6 +386,12 @@ MlirType mlirTypeParseGet(MlirContext context, const char *type) {
   return wrap(mlir::parseType(type, unwrap(context)));
 }
 
+void mlirTypePrint(MlirType type, MlirPrintCallback callback, void *userData) {
+  CallbackOstream stream(callback, userData);
+  unwrap(type).print(stream);
+  stream.flush();
+}
+
 void mlirTypeDump(MlirType type) { unwrap(type).dump(); }
 
 /* ========================================================================== */
@@ -338,6 +400,13 @@ void mlirTypeDump(MlirType type) { unwrap(type).dump(); }
 
 MlirAttribute mlirAttributeParseGet(MlirContext context, const char *attr) {
   return wrap(mlir::parseAttribute(attr, unwrap(context)));
+}
+
+void mlirAttributePrint(MlirAttribute attr, MlirPrintCallback callback,
+                        void *userData) {
+  CallbackOstream stream(callback, userData);
+  unwrap(attr).print(stream);
+  stream.flush();
 }
 
 void mlirAttributeDump(MlirAttribute attr) { unwrap(attr).dump(); }
