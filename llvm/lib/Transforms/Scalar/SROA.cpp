@@ -780,6 +780,9 @@ private:
         LI.getPointerAddressSpace() != DL.getAllocaAddrSpace())
       return PI.setAborted(&LI);
 
+    if (isa<ScalableVectorType>(LI.getType()))
+      return PI.setAborted(&LI);
+
     uint64_t Size = DL.getTypeStoreSize(LI.getType()).getFixedSize();
     return handleLoadOrStore(LI.getType(), LI, Offset, Size, LI.isVolatile());
   }
@@ -793,6 +796,9 @@ private:
 
     if (SI.isVolatile() &&
         SI.getPointerAddressSpace() != DL.getAllocaAddrSpace())
+      return PI.setAborted(&SI);
+
+    if (isa<ScalableVectorType>(ValOp->getType()))
       return PI.setAborted(&SI);
 
     uint64_t Size = DL.getTypeStoreSize(ValOp->getType()).getFixedSize();
@@ -1538,6 +1544,8 @@ static Value *getNaturalGEPWithOffset(IRBuilderTy &IRB, const DataLayout &DL,
   Type *ElementTy = Ty->getElementType();
   if (!ElementTy->isSized())
     return nullptr; // We can't GEP through an unsized element.
+  if (isa<ScalableVectorType>(ElementTy))
+    return nullptr;
   APInt ElementSize(Offset.getBitWidth(),
                     DL.getTypeAllocSize(ElementTy).getFixedSize());
   if (ElementSize == 0)
