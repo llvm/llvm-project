@@ -493,13 +493,6 @@ public:
       lldb::addr_t addr_of_valobj =
           valobj_sp->GetAddressOf(scalar_is_load_address, &address_type);
           
-      // if the dynamic type is a class, bypass the GetAddressOf() optimization
-      // as it doesn't do the right thing
-      lldb::addr_t addr_of_valobj =
-          is_dynamic_class_type
-              ? LLDB_INVALID_ADDRESS
-              : valobj_sp->GetAddressOf(scalar_is_load_address, &address_type);
-
       // BEGIN Swift.
       if (lldb::ProcessSP process_sp =
           map.GetBestExecutionContextScope()->CalculateProcess())
