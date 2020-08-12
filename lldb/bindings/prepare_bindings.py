@@ -270,7 +270,7 @@ def main(args):
 
     # Check if the swig file exists.
     swig_path = os.path.normcase(
-        os.path.join(options.src_root, "bindings", "python.swig"))
+        os.path.join(options.src_root, "bindings", "python", "python.swig"))
     if not os.path.isfile(swig_path):
         logging.error("swig file not found at '%s'", swig_path)
         sys.exit(-3)
