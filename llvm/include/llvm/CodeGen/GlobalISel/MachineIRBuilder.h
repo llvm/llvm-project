@@ -730,7 +730,7 @@ public:
   ///      depend on bit 0 (for now).
   ///
   /// \return The newly created instruction.
-  MachineInstrBuilder buildBrCond(Register Tst, MachineBasicBlock &Dest);
+  MachineInstrBuilder buildBrCond(const SrcOp &Tst, MachineBasicBlock &Dest);
 
   /// Build and insert G_BRINDIRECT \p Tgt
   ///
