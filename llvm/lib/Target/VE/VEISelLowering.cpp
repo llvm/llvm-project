@@ -696,6 +696,12 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTLZ, IntVT, Act);
     setOperationAction(ISD::CTLZ_ZERO_UNDEF, IntVT, Act);
     setOperationAction(ISD::CTPOP, IntVT, Act);
+
+    // VE has only 64 bits instructions which work as i64 AND/OR/XOR operations.
+    // Use isel patterns for i64, promote for i32.
+    setOperationAction(ISD::AND, IntVT, Act);
+    setOperationAction(ISD::OR, IntVT, Act);
+    setOperationAction(ISD::XOR, IntVT, Act);
   }
   /// } Int Ops
 
