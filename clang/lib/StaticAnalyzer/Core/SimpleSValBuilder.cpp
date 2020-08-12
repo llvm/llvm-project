@@ -1106,19 +1106,28 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
 }
 
 SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
-                                  BinaryOperator::Opcode op,
-                                  Loc lhs, NonLoc rhs, QualType resultTy) {
+                                    BinaryOperator::Opcode op, Loc lhs,
+                                    NonLoc rhs, QualType resultTy) {
   if (op >= BO_PtrMemD && op <= BO_PtrMemI) {
     if (auto PTMSV = rhs.getAs<nonloc::PointerToMember>()) {
       if (PTMSV->isNullMemberPointer())
         return UndefinedVal();
-      if (const FieldDecl *FD = PTMSV->getDeclAs<FieldDecl>()) {
+
+      auto getFieldLValue = [&](const auto *FD) -> SVal {
         SVal Result = lhs;
 
         for (const auto &I : *PTMSV)
           Result = StateMgr.getStoreManager().evalDerivedToBase(
-              Result, I->getType(),I->isVirtual());
+              Result, I->getType(), I->isVirtual());
+
         return state->getLValue(FD, Result);
+      };
+
+      if (const auto *FD = PTMSV->getDeclAs<FieldDecl>()) {
+        return getFieldLValue(FD);
+      }
+      if (const auto *FD = PTMSV->getDeclAs<IndirectFieldDecl>()) {
+        return getFieldLValue(FD);
       }
     }
 
