@@ -15,9 +15,10 @@
 namespace mlir {
 class Attribute;
 class OpFoldResult;
+class Region;
 
-/// Define a fold interface to allow for dialects to opt-in specific
-/// folding for operations they define.
+/// Define a fold interface to allow for dialects to control specific aspects
+/// of the folding behavior for operations they define.
 class DialectFoldInterface
     : public DialectInterface::Base<DialectFoldInterface> {
 public:
@@ -33,6 +34,13 @@ public:
                              SmallVectorImpl<OpFoldResult> &results) const {
     return failure();
   }
+
+  /// Registered hook to check if the given region, which is attached to an
+  /// operation that is *not* isolated from above, should be used when
+  /// materializing constants. The folder will generally materialize constants
+  /// into the top-level isolated region, this allows for materializing into a
+  /// lower level ancestor region if it is more profitable/correct.
+  virtual bool shouldMaterializeInto(Region *region) const { return false; }
 };
 
 } // end namespace mlir
