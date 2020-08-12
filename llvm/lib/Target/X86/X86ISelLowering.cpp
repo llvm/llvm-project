@@ -10767,8 +10767,8 @@ static bool IsElementEquivalent(int MaskSize, SDValue Op, SDValue ExpectedOp,
     // If the values are build vectors, we can look through them to find
     // equivalent inputs that make the shuffles equivalent.
     // TODO: Handle MaskSize != Op.getNumOperands()?
-    if (MaskSize == Op.getNumOperands() &&
-        MaskSize == ExpectedOp.getNumOperands())
+    if (MaskSize == (int)Op.getNumOperands() &&
+        MaskSize == (int)ExpectedOp.getNumOperands())
       return Op.getOperand(Idx) == ExpectedOp.getOperand(ExpectedIdx);
   }
 
@@ -10788,7 +10788,7 @@ static bool IsElementEquivalent(int MaskSize, SDValue Op, SDValue ExpectedOp,
 static bool isShuffleEquivalent(SDValue V1, SDValue V2, ArrayRef<int> Mask,
                                 ArrayRef<int> ExpectedMask) {
   int Size = Mask.size();
-  if (Mask.size() != (int)ExpectedMask.size())
+  if (Size != (int)ExpectedMask.size())
     return false;
 
   for (int i = 0; i < Size; ++i) {
