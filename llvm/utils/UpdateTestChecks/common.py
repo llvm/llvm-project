@@ -387,7 +387,7 @@ def genericize_check_lines(lines, is_analyze, vars_seen, global_vars_seen):
     pre = get_ir_prefix_from_ir_value_match(match)
     var = get_name_from_ir_value_match(match)
     for nameless_value in nameless_values:
-        if re.fullmatch(nameless_value.ir_prefix + r'[0-9]+?', var, re.IGNORECASE):
+        if re.match(r'^' + nameless_value.check_prefix + r'[0-9]+?$', var, re.IGNORECASE):
             warn("Change IR value name '%s' to prevent possible conflict with scripted FileCheck name." % (var,))
     if (pre, var) in vars_seen or (pre, var) in global_vars_seen:
       rv = get_value_use(var, match)
