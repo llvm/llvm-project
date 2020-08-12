@@ -12,6 +12,9 @@ concept unary_concept = true;
 template <typename T, typename U>
 concept binary_concept = true;
 
+template <typename... Ts>
+concept variadic_concept = true;
+
 template <typename T>
 struct Foo {
   // CHECK:      TemplateTypeParmDecl {{.*}} referenced Concept {{.*}} 'binary_concept'
@@ -37,4 +40,12 @@ struct Foo {
   template <typename R>
   Foo(R, char) requires unary_concept<R> {
   }
+
+  // CHECK: CXXFoldExpr {{.*}} <col:13, col:29>
+  template <variadic_concept... Ts>
+  Foo();
+
+  // CHECK: CXXFoldExpr {{.*}} <col:13, col:34>
+  template <variadic_concept<int>... Ts>
+  Foo();
 };
