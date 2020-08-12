@@ -8,77 +8,76 @@
 
 #include "include/math.h"
 #include "src/math/roundf.h"
-#include "utils/FPUtil/BitPatterns.h"
-#include "utils/FPUtil/FloatOperations.h"
-#include "utils/FPUtil/FloatProperties.h"
+#include "utils/FPUtil/FPBits.h"
+#include "utils/FPUtil/TestHelpers.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
 
-using __llvm_libc::fputil::valueAsBits;
-using __llvm_libc::fputil::valueFromBits;
-
-using BitPatterns = __llvm_libc::fputil::BitPatterns<float>;
-using Properties = __llvm_libc::fputil::FloatProperties<float>;
+using FPBits = __llvm_libc::fputil::FPBits<float>;
 
 namespace mpfr = __llvm_libc::testing::mpfr;
 
+static const float zero = FPBits::zero();
+static const float negZero = FPBits::negZero();
+static const float nan = FPBits::buildNaN(1);
+static const float inf = FPBits::inf();
+static const float negInf = FPBits::negInf();
+
 // Zero tolerance; As in, exact match with MPFR result.
-static constexpr mpfr::Tolerance tolerance{mpfr::Tolerance::doublePrecision, 0,
+static constexpr mpfr::Tolerance tolerance{mpfr::Tolerance::floatPrecision, 0,
                                            0};
-
 TEST(RoundfTest, SpecialNumbers) {
-  EXPECT_EQ(
-      BitPatterns::aQuietNaN,
-      valueAsBits(__llvm_libc::roundf(valueFromBits(BitPatterns::aQuietNaN))));
-  EXPECT_EQ(BitPatterns::aNegativeQuietNaN,
-            valueAsBits(__llvm_libc::roundf(
-                valueFromBits(BitPatterns::aNegativeQuietNaN))));
+  EXPECT_FP_EQ(zero, __llvm_libc::roundf(zero));
+  EXPECT_FP_EQ(negZero, __llvm_libc::roundf(negZero));
 
-  EXPECT_EQ(BitPatterns::aSignallingNaN,
-            valueAsBits(__llvm_libc::roundf(
-                valueFromBits(BitPatterns::aSignallingNaN))));
-  EXPECT_EQ(BitPatterns::aNegativeSignallingNaN,
-            valueAsBits(__llvm_libc::roundf(
-                valueFromBits(BitPatterns::aNegativeSignallingNaN))));
+  EXPECT_FP_EQ(inf, __llvm_libc::roundf(inf));
+  EXPECT_FP_EQ(negInf, __llvm_libc::roundf(negInf));
 
-  EXPECT_EQ(BitPatterns::inf,
-            valueAsBits(__llvm_libc::roundf(valueFromBits(BitPatterns::inf))));
-  EXPECT_EQ(BitPatterns::negInf, valueAsBits(__llvm_libc::roundf(
-                                     valueFromBits(BitPatterns::negInf))));
-
-  EXPECT_EQ(BitPatterns::zero,
-            valueAsBits(__llvm_libc::roundf(valueFromBits(BitPatterns::zero))));
-  EXPECT_EQ(BitPatterns::negZero, valueAsBits(__llvm_libc::roundf(
-                                      valueFromBits(BitPatterns::negZero))));
+  ASSERT_NE(isnan(nan), 0);
+  ASSERT_NE(isnan(__llvm_libc::roundf(nan)), 0);
 }
 
 TEST(RoundfTest, RoundedNumbers) {
-  EXPECT_EQ(valueAsBits(1.0f), valueAsBits(__llvm_libc::roundf(1.0f)));
-  EXPECT_EQ(valueAsBits(-1.0f), valueAsBits(__llvm_libc::roundf(-1.0f)));
-  EXPECT_EQ(valueAsBits(10.0f), valueAsBits(__llvm_libc::roundf(10.0f)));
-  EXPECT_EQ(valueAsBits(-10.0f), valueAsBits(__llvm_libc::roundf(-10.0f)));
-  EXPECT_EQ(valueAsBits(12345.0f), valueAsBits(__llvm_libc::roundf(12345.0f)));
-  EXPECT_EQ(valueAsBits(-12345.0f),
-            valueAsBits(__llvm_libc::roundf(-12345.0f)));
+  EXPECT_FP_EQ(1.0f, __llvm_libc::roundf(1.0f));
+  EXPECT_FP_EQ(-1.0f, __llvm_libc::roundf(-1.0f));
+  EXPECT_FP_EQ(10.0f, __llvm_libc::roundf(10.0f));
+  EXPECT_FP_EQ(-10.0f, __llvm_libc::roundf(-10.0f));
+  EXPECT_FP_EQ(1234.0f, __llvm_libc::roundf(1234.0f));
+  EXPECT_FP_EQ(-1234.0f, __llvm_libc::roundf(-1234.0f));
 }
 
-TEST(RoundfTest, CloseToZeroNumbers) {
-  EXPECT_EQ(valueAsBits(1.0f), valueAsBits(__llvm_libc::roundf(0.5f)));
-  EXPECT_EQ(valueAsBits(-1.0f), valueAsBits(__llvm_libc::roundf(-0.5f)));
-  EXPECT_EQ(valueAsBits(0.0f), valueAsBits(__llvm_libc::roundf(0.115f)));
-  EXPECT_EQ(valueAsBits(-0.0f), valueAsBits(__llvm_libc::roundf(-0.115f)));
-  EXPECT_EQ(valueAsBits(1.0f), valueAsBits(__llvm_libc::roundf(0.715f)));
-  EXPECT_EQ(valueAsBits(-1.0f), valueAsBits(__llvm_libc::roundf(-0.715f)));
+TEST(RoundfTest, Fractions) {
+  EXPECT_FP_EQ(1.0f, __llvm_libc::roundf(0.5f));
+  EXPECT_FP_EQ(-1.0f, __llvm_libc::roundf(-0.5f));
+  EXPECT_FP_EQ(0.0f, __llvm_libc::roundf(0.115f));
+  EXPECT_FP_EQ(-0.0f, __llvm_libc::roundf(-0.115f));
+  EXPECT_FP_EQ(1.0f, __llvm_libc::roundf(0.715f));
+  EXPECT_FP_EQ(-1.0f, __llvm_libc::roundf(-0.715f));
+  EXPECT_FP_EQ(1.0f, __llvm_libc::roundf(1.3f));
+  EXPECT_FP_EQ(-1.0f, __llvm_libc::roundf(-1.3f));
+  EXPECT_FP_EQ(2.0f, __llvm_libc::roundf(1.5f));
+  EXPECT_FP_EQ(-2.0f, __llvm_libc::roundf(-1.5f));
+  EXPECT_FP_EQ(2.0f, __llvm_libc::roundf(1.75f));
+  EXPECT_FP_EQ(-2.0f, __llvm_libc::roundf(-1.75f));
+  EXPECT_FP_EQ(10.0f, __llvm_libc::roundf(10.32f));
+  EXPECT_FP_EQ(-10.0f, __llvm_libc::roundf(-10.32f));
+  EXPECT_FP_EQ(11.0f, __llvm_libc::roundf(10.65f));
+  EXPECT_FP_EQ(-11.0f, __llvm_libc::roundf(-10.65f));
+  EXPECT_FP_EQ(1234.0f, __llvm_libc::roundf(1234.38f));
+  EXPECT_FP_EQ(-1234.0f, __llvm_libc::roundf(-1234.38f));
+  EXPECT_FP_EQ(1235.0f, __llvm_libc::roundf(1234.96f));
+  EXPECT_FP_EQ(-1235.0f, __llvm_libc::roundf(-1234.96f));
 }
 
 TEST(RoundfTest, InFloatRange) {
-  using BitsType = Properties::BitsType;
-  constexpr BitsType count = 1000000;
-  constexpr BitsType step = UINT32_MAX / count;
-  for (BitsType i = 0, v = 0; i <= count; ++i, v += step) {
-    double x = valueFromBits(v);
+  using UIntType = FPBits::UIntType;
+  constexpr UIntType count = 1000000;
+  constexpr UIntType step = UIntType(-1) / count;
+  for (UIntType i = 0, v = 0; i <= count; ++i, v += step) {
+    float x = FPBits(v);
     if (isnan(x) || isinf(x))
       continue;
+
     ASSERT_MPFR_MATCH(mpfr::Operation::Round, x, __llvm_libc::roundf(x),
                       tolerance);
   }

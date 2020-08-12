@@ -1,0 +1,16 @@
+## Basic test checking that update_test_checks.py works correctly on various "IR value" kinds
+# RUN: cp -f %S/Inputs/various_ir_values.ll %t.ll && %update_test_checks %t.ll
+# RUN: diff -u %t.ll %S/Inputs/various_ir_values.ll.expected
+## Check that running the script again does not change the result:
+# RUN: %update_test_checks %t.ll
+# RUN: diff -u %t.ll %S/Inputs/various_ir_values.ll.expected
+## Also try the --function-signature flag
+# RUN: %update_test_checks %t.ll --function-signature
+# RUN: diff -u %t.ll %S/Inputs/various_ir_values.ll.funcsig.expected
+## Verify that running without the --function-signature flag does not removes
+## the -SAME: lines since the generated file will have --function-signature in
+## an UTC_ARGS: comment in the first line (from the invocation above) which is
+## added to the update invocation below.
+# RUN: %update_test_checks %t.ll
+# RUN: diff -u %t.ll %S/Inputs/various_ir_values.ll.funcsig.expected
+

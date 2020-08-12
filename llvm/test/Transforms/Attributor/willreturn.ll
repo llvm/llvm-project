@@ -459,27 +459,17 @@ label2:
 declare i1 @maybe_raise_exception() #1 willreturn
 
 define void @invoke_test() personality i32 (...)* @__gxx_personality_v0 {
-; IS__TUNIT____: Function Attrs: nounwind willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@invoke_test() #12 personality i32 (...)* @__gxx_personality_v0
-; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = invoke i1 @maybe_raise_exception()
-; IS__TUNIT____-NEXT:    to label [[N:%.*]] unwind label [[F:%.*]]
-; IS__TUNIT____:       N:
-; IS__TUNIT____-NEXT:    ret void
-; IS__TUNIT____:       F:
-; IS__TUNIT____-NEXT:    [[VAL:%.*]] = landingpad { i8*, i32 }
-; IS__TUNIT____-NEXT:    catch i8* null
-; IS__TUNIT____-NEXT:    ret void
-;
-; IS__CGSCC____: Function Attrs: nounwind willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@invoke_test() #14 personality i32 (...)* @__gxx_personality_v0
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = invoke i1 @maybe_raise_exception()
-; IS__CGSCC____-NEXT:    to label [[N:%.*]] unwind label [[F:%.*]]
-; IS__CGSCC____:       N:
-; IS__CGSCC____-NEXT:    ret void
-; IS__CGSCC____:       F:
-; IS__CGSCC____-NEXT:    [[VAL:%.*]] = landingpad { i8*, i32 }
-; IS__CGSCC____-NEXT:    catch i8* null
-; IS__CGSCC____-NEXT:    ret void
+; CHECK: Function Attrs: nounwind willreturn
+; CHECK-LABEL: define {{[^@]+}}@invoke_test
+; CHECK-SAME: () [[ATTR14:#.*]] personality i32 (...)* @__gxx_personality_v0
+; CHECK-NEXT:    [[TMP1:%.*]] = invoke i1 @maybe_raise_exception()
+; CHECK-NEXT:    to label [[N:%.*]] unwind label [[F:%.*]]
+; CHECK:       N:
+; CHECK-NEXT:    ret void
+; CHECK:       F:
+; CHECK-NEXT:    [[VAL:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    catch i8* null
+; CHECK-NEXT:    ret void
 ;
   invoke i1 @maybe_raise_exception()
   to label %N unwind label %F

@@ -808,12 +808,17 @@ bool X86InstructionSelector::selectZext(MachineInstr &I,
   else
     return false;
 
-  unsigned DefReg = SrcReg;
+  Register DefReg = SrcReg;
   if (DstTy != LLT::scalar(8)) {
+    Register ImpDefReg =
+        MRI.createVirtualRegister(getRegClass(DstTy, DstReg, MRI));
+    BuildMI(*I.getParent(), I, I.getDebugLoc(),
+            TII.get(TargetOpcode::IMPLICIT_DEF), ImpDefReg);
+
     DefReg = MRI.createVirtualRegister(getRegClass(DstTy, DstReg, MRI));
     BuildMI(*I.getParent(), I, I.getDebugLoc(),
-            TII.get(TargetOpcode::SUBREG_TO_REG), DefReg)
-        .addImm(0)
+            TII.get(TargetOpcode::INSERT_SUBREG), DefReg)
+        .addReg(ImpDefReg)
         .addReg(SrcReg)
         .addImm(X86::sub_8bit);
   }

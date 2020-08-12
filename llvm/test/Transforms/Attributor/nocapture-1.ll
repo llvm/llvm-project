@@ -163,7 +163,7 @@ declare void @throw_if_bit_set(i8*, i8) readonly
 define i1 @c6(i8* %q, i8 %bit) personality i32 (...)* @__gxx_personality_v0 {
 ; CHECK: Function Attrs: nounwind readonly
 ; CHECK-LABEL: define {{[^@]+}}@c6
-; CHECK-SAME: (i8* readonly [[Q:%.*]], i8 [[BIT:%.*]]) #4 personality i32 (...)* @__gxx_personality_v0
+; CHECK-SAME: (i8* readonly [[Q:%.*]], i8 [[BIT:%.*]]) [[ATTR4:#.*]] personality i32 (...)* @__gxx_personality_v0
 ; CHECK-NEXT:    invoke void @throw_if_bit_set(i8* readonly [[Q]], i8 [[BIT]])
 ; CHECK-NEXT:    to label [[RET0:%.*]] unwind label [[RET1:%.*]]
 ; CHECK:       ret0:
