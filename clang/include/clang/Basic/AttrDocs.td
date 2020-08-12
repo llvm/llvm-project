@@ -3678,12 +3678,18 @@ Clang provides the following context selector extensions, used via
     match_all
     match_any
     match_none
+    disable_implicit_base
 
 The match extensions change when the *entire* context selector is considered a
 match for an OpenMP context. The default is ``all``, with ``none`` no trait in the
 selector is allowed to be in the OpenMP context, with ``any`` a single trait in
 both the selector and OpenMP context is sufficient. Only a single match
 extension trait is allowed per context selector.
+The disable extensions remove default effects of the ``begin declare variant``
+applied to a definition. If ``disable_implicit_base`` is given, we will not
+introduce an implicit base function for a variant if no base function was
+found. The variant is still generated but will never be called, due to the
+absence of a base function and consequently calls to a base function.
 
   }];
 }
