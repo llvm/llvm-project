@@ -346,12 +346,6 @@ bool Debugger::SetUseColor(bool b) {
   return ret;
 }
 
-bool Debugger::GetUseAutosuggestion() const {
-  const uint32_t idx = ePropertyShowAutosuggestion;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_debugger_properties[idx].default_uint_value != 0);
-}
-
 bool Debugger::GetUseSourceCache() const {
   const uint32_t idx = ePropertyUseSourceCache;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
