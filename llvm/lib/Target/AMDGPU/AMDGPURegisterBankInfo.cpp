@@ -4245,6 +4245,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
       break;
     }
+    case Intrinsic::amdgcn_global_atomic_fadd:
     case Intrinsic::amdgcn_global_atomic_csub:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_ds_ordered_add:
