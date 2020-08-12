@@ -23,12 +23,6 @@ class DialectInterface;
 class OpBuilder;
 class Type;
 
-using DialectConstantDecodeHook =
-    std::function<bool(const OpaqueElementsAttr, ElementsAttr &)>;
-using DialectConstantFoldHook = std::function<LogicalResult(
-    Operation *, ArrayRef<Attribute>, SmallVectorImpl<Attribute> &)>;
-using DialectExtractElementHook =
-    std::function<Attribute(const OpaqueElementsAttr, ArrayRef<uint64_t>)>;
 using DialectAllocatorFunction = std::function<void(MLIRContext *)>;
 
 /// Dialects are groups of MLIR operations and behavior associated with the
@@ -62,38 +56,6 @@ public:
   /// prefixed with the dialect namespace but not registered with addType.
   /// These are represented with OpaqueType.
   bool allowsUnknownTypes() const { return unknownTypesAllowed; }
-
-  //===--------------------------------------------------------------------===//
-  // Constant Hooks
-  //===--------------------------------------------------------------------===//
-
-  /// Registered fallback constant fold hook for the dialect. Like the constant
-  /// fold hook of each operation, it attempts to constant fold the operation
-  /// with the specified constant operand values - the elements in "operands"
-  /// will correspond directly to the operands of the operation, but may be null
-  /// if non-constant.  If constant folding is successful, this fills in the
-  /// `results` vector.  If not, this returns failure and `results` is
-  /// unspecified.
-  DialectConstantFoldHook constantFoldHook =
-      [](Operation *op, ArrayRef<Attribute> operands,
-         SmallVectorImpl<Attribute> &results) { return failure(); };
-
-  /// Registered hook to decode opaque constants associated with this
-  /// dialect. The hook function attempts to decode an opaque constant tensor
-  /// into a tensor with non-opaque content. If decoding is successful, this
-  /// method returns false and sets 'output' attribute. If not, it returns true
-  /// and leaves 'output' unspecified. The default hook fails to decode.
-  DialectConstantDecodeHook decodeHook =
-      [](const OpaqueElementsAttr input, ElementsAttr &output) { return true; };
-
-  /// Registered hook to extract an element from an opaque constant associated
-  /// with this dialect. If element has been successfully extracted, this
-  /// method returns that element. If not, it returns an empty attribute.
-  /// The default hook fails to extract an element.
-  DialectExtractElementHook extractElementHook =
-      [](const OpaqueElementsAttr input, ArrayRef<uint64_t> index) {
-        return Attribute();
-      };
 
   /// Registered hook to materialize a single constant operation from a given
   /// attribute value with the desired resultant type. This method should use
