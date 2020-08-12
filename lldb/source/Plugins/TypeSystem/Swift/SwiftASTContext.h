@@ -249,7 +249,7 @@ public:
 
   void CacheModule(swift::ModuleDecl *module);
 
-  Module *GetModule() const { return m_module; }
+  Module *GetModule() const override { return m_module; }
 
   // Call this after the search paths are set up, it will find the module given
   // by module, load the module into the AST context, and also load any

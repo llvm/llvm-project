@@ -91,6 +91,7 @@ public:
   static ConstString GetPluginNameStatic();
   /// \}
 
+  virtual Module *GetModule() const = 0;
   virtual lldb::TypeSP GetCachedType(ConstString mangled) = 0;
   virtual void SetCachedType(ConstString mangled,
                              const lldb::TypeSP &type_sp) = 0;
@@ -117,6 +118,8 @@ public:
       lldb::opaque_compiler_type_t type, Stream *s,
       bool print_help_if_available, bool print_extensions_if_available,
       lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) = 0;
+
+  /// Create a CompilerType from a mangled Swift type name.
   virtual CompilerType
   GetTypeFromMangledTypename(ConstString mangled_typename) = 0;
   virtual CompilerType GetGenericArgumentType(lldb::opaque_compiler_type_t type,

@@ -14,3 +14,4 @@ func test()
 }
 
 _ = test()
+print("this is needed to load the stdlib")

@@ -249,7 +249,8 @@ public:
                                                    Status *error = nullptr);
 
   /// Ask Remote Mirrors for the size of a Swift type.
-  llvm::Optional<uint64_t> GetBitSize(CompilerType type);
+  llvm::Optional<uint64_t> GetBitSize(CompilerType type,
+                                      ExecutionContextScope *exe_scope);
 
   /// Ask Remote mirrors for the stride of a Swift type.
   llvm::Optional<uint64_t> GetByteStride(CompilerType type);

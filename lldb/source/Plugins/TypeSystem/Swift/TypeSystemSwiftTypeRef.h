@@ -17,12 +17,18 @@
 #include "lldb/Core/SwiftForward.h"
 
 #include "swift/AST/Type.h"
-#include "swift/Demangling/Demangle.h"
-#include "swift/Demangling/Demangler.h"
 
 // FIXME: needed only for the DenseMap.
 #include "clang/APINotes/APINotesManager.h"
 #include "clang/Basic/Module.h"
+
+namespace swift {
+namespace Demangle {
+class Node;
+using NodePointer = Node *;
+class Demangler;
+} // namespace Demangle
+} // namespace swift
 
 namespace lldb_private {
 class SwiftASTContext;
@@ -44,7 +50,7 @@ public:
 
   TypeSystemSwiftTypeRef(SwiftASTContext *swift_ast_context);
 
-  Module *GetModule() const;
+  Module *GetModule() const override;
   swift::CanType GetCanonicalSwiftType(CompilerType compiler_type);
   swift::Type GetSwiftType(CompilerType compiler_type);
   CompilerType ReconstructType(CompilerType type);
@@ -247,16 +253,22 @@ public:
       bool print_help_if_available, bool print_extensions_if_available,
       lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
 
-private:
-  /// Helper that creates an AST type from \p type.
-  void *ReconstructType(lldb::opaque_compiler_type_t type);
-  /// Cast \p opaque_type as a mangled name.
-  const char *AsMangledName(lldb::opaque_compiler_type_t opaque_type);
+  /// Return the canonicalized Demangle tree for a Swift mangled type name.
+  static swift::Demangle::NodePointer
+  GetCanonicalDemangleTree(lldb_private::Module *Module,
+                           swift::Demangle::Demangler &Dem,
+                           llvm::StringRef mangled_name);
 
   /// Wrap \p node as \p Global(TypeMangling(node)), remangle the type
   /// and create a CompilerType from it.
   CompilerType RemangleAsType(swift::Demangle::Demangler &Dem,
                               swift::Demangle::NodePointer node);
+
+private:
+  /// Helper that creates an AST type from \p type.
+  void *ReconstructType(lldb::opaque_compiler_type_t type);
+  /// Cast \p opaque_type as a mangled name.
+  const char *AsMangledName(lldb::opaque_compiler_type_t type);
 
   /// Demangle the mangled name of the canonical type of \p type and
   /// drill into the Global(TypeMangling(Type())).

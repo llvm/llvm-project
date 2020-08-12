@@ -67,7 +67,7 @@ static TypeSP LookupClangType(Module &M, StringRef name) {
 }
 
 /// Find a Clang type by name in module \p M.
-static CompilerType LookupClangForwardType(Module &M, StringRef name) {
+CompilerType LookupClangForwardType(Module &M, StringRef name) {
   if (TypeSP type = LookupClangType(M, name))
     return type->GetForwardCompilerType();
   return {};
@@ -275,6 +275,16 @@ GetCanonicalNode(lldb_private::Module *M, swift::Demangle::Demangler &Dem,
       return getCanonicalNode(node_clangtype.first);
     return node;
   }
+  case Node::Kind::DynamicSelf: {
+    // Substitute the static type for dynamic self.
+    assert(node->getNumChildren() == 1);
+    if (node->getNumChildren() != 1)
+      return node;
+    NodePointer type = node->getChild(0);
+    if (type->getKind() != Node::Kind::Type || type->getNumChildren() != 1)
+      return node;
+    return getCanonicalNode(type->getChild(0));
+  }
   default:
     break;
   }
@@ -294,10 +304,9 @@ GetCanonicalNode(lldb_private::Module *M, swift::Demangle::Demangler &Dem,
 
 /// Return the demangle tree representation of this type's canonical
 /// (type aliases resolved) type.
-static swift::Demangle::NodePointer
-GetCanonicalDemangleTree(lldb_private::Module *Module,
-                         swift::Demangle::Demangler &Dem,
-                         const char *mangled_name) {
+swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetCanonicalDemangleTree(
+    lldb_private::Module *Module, swift::Demangle::Demangler &Dem,
+    StringRef mangled_name) {
   NodePointer node = Dem.demangleSymbol(mangled_name);
   NodePointer canonical = GetCanonicalNode(Module, Dem, node);
   return canonical;
@@ -986,7 +995,11 @@ bool TypeSystemSwiftTypeRef::Verify(opaque_compiler_type_t type) {
 
 #include <regex>
 namespace {
-template <typename T> bool Equivalent(T l, T r) { return l == r; }
+template <typename T> bool Equivalent(T l, T r) {
+  if (l != r)
+    llvm::dbgs() <<  l << " != " << r << "\n";
+  return l == r;
+}
 
 /// Specialization for GetTypeInfo().
 template <> bool Equivalent<uint32_t>(uint32_t l, uint32_t r) {
@@ -1120,7 +1133,23 @@ template <> bool Equivalent<ConstString>(ConstString l, ConstString r) {
   }
   return l == r;
 }
+
+/// Version taylored to GetBitSize & friends.
+template <>
+bool Equivalent<llvm::Optional<uint64_t>>(llvm::Optional<uint64_t> l,
+                                          llvm::Optional<uint64_t> r) {
+  if (l == r)
+    return true;
+  // There are situations where SwiftASTContext incorrectly returns
+  // all Clang-imported members of structs as having a size of 0, we
+  // thus assume that a larger number is "better".
+  if (l.hasValue() && r.hasValue() && *l > *r)
+    return true;
+  llvm::dbgs() << l << " != " << r << "\n";
+  return false;
 }
+
+} // namespace
 #endif
 
 // This can be removed once the transition is complete.
@@ -1149,6 +1178,7 @@ template <> bool Equivalent<ConstString>(ConstString l, ConstString r) {
            "TypeSystemSwiftTypeRef diverges from SwiftASTContext");            \
     return result;                                                             \
   } while (0)
+
 #else
 #define VALIDATE_AND_RETURN_STATIC(IMPL, REFERENCE) return IMPL()
 #define VALIDATE_AND_RETURN(IMPL, REFERENCE, TYPE, ARGS) return IMPL()
@@ -1173,8 +1203,6 @@ TypeSystemSwiftTypeRef::RemangleAsType(swift::Demangle::Demangler &Dem,
 swift::Demangle::NodePointer TypeSystemSwiftTypeRef::DemangleCanonicalType(
     swift::Demangle::Demangler &Dem, opaque_compiler_type_t opaque_type) {
   using namespace swift::Demangle;
-  if (!opaque_type)
-    return nullptr;
   NodePointer node =
       GetCanonicalDemangleTree(GetModule(), Dem, AsMangledName(opaque_type));
 
@@ -1586,7 +1614,19 @@ TypeSystemSwiftTypeRef::GetPointerType(opaque_compiler_type_t type) {
 llvm::Optional<uint64_t>
 TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
                                    ExecutionContextScope *exe_scope) {
-  return m_swift_ast_context->GetBitSize(ReconstructType(type), exe_scope);
+  auto impl = [&]() -> llvm::Optional<uint64_t> {
+    // Bug-for-bug compatibility. See comment in SwiftASTContext::GetBitSize().
+    if (IsFunctionType(type, nullptr))
+      return GetPointerByteSize() * 8;
+    if (!exe_scope)
+      return {};
+    if (auto *runtime =
+            SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
+      return runtime->GetBitSize({this, type}, exe_scope);
+    return {};
+  };
+  VALIDATE_AND_RETURN(impl, GetBitSize, type,
+                      (ReconstructType(type), exe_scope));
 }
 llvm::Optional<uint64_t>
 TypeSystemSwiftTypeRef::GetByteStride(opaque_compiler_type_t type,
