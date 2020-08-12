@@ -1311,6 +1311,28 @@ int computeHostNumPhysicalCores() {
   }
   return count;
 }
+#elif defined(__MVS__)
+int computeHostNumPhysicalCores() {
+  enum {
+    // Byte offset of the pointer to the Communications Vector Table (CVT) in
+    // the Prefixed Save Area (PSA). The table entry is a 31-bit pointer and
+    // will be zero-extended to uintptr_t.
+    FLCCVT = 16,
+    // Byte offset of the pointer to the Common System Data Area (CSD) in the
+    // CVT. The table entry is a 31-bit pointer and will be zero-extended to
+    // uintptr_t.
+    CVTCSD = 660,
+    // Byte offset to the number of live CPs in the LPAR, stored as a signed
+    // 32-bit value in the table.
+    CSD_NUMBER_ONLINE_STANDARD_CPS = 264,
+  };
+  char *PSA = 0;
+  char *CVT = reinterpret_cast<char *>(
+      static_cast<uintptr_t>(reinterpret_cast<unsigned int &>(PSA[FLCCVT])));
+  char *CSD = reinterpret_cast<char *>(
+      static_cast<uintptr_t>(reinterpret_cast<unsigned int &>(CVT[CVTCSD])));
+  return reinterpret_cast<int &>(CSD[CSD_NUMBER_ONLINE_STANDARD_CPS]);
+}
 #elif defined(_WIN32) && LLVM_ENABLE_THREADS != 0
 // Defined in llvm/lib/Support/Windows/Threading.inc
 int computeHostNumPhysicalCores();
