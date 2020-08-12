@@ -8,17 +8,18 @@
 
 #include "include/math.h"
 #include "src/math/fabs.h"
-#include "utils/FPUtil/BitPatterns.h"
-#include "utils/FPUtil/FloatOperations.h"
-#include "utils/FPUtil/FloatProperties.h"
+#include "utils/FPUtil/FPBits.h"
+#include "utils/FPUtil/TestHelpers.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
 
-using __llvm_libc::fputil::valueAsBits;
-using __llvm_libc::fputil::valueFromBits;
+using FPBits = __llvm_libc::fputil::FPBits<double>;
 
-using BitPatterns = __llvm_libc::fputil::BitPatterns<double>;
-using Properties = __llvm_libc::fputil::FloatProperties<double>;
+static const double zero = FPBits::zero();
+static const double negZero = FPBits::negZero();
+static const double nan = FPBits::buildNaN(1);
+static const double inf = FPBits::inf();
+static const double negInf = FPBits::negInf();
 
 namespace mpfr = __llvm_libc::testing::mpfr;
 
@@ -27,36 +28,21 @@ static constexpr mpfr::Tolerance tolerance{mpfr::Tolerance::doublePrecision, 0,
                                            0};
 
 TEST(FabsTest, SpecialNumbers) {
-  EXPECT_EQ(
-      BitPatterns::aQuietNaN,
-      valueAsBits(__llvm_libc::fabs(valueFromBits(BitPatterns::aQuietNaN))));
-  EXPECT_EQ(BitPatterns::aQuietNaN, valueAsBits(__llvm_libc::fabs(valueFromBits(
-                                        BitPatterns::aNegativeQuietNaN))));
+  EXPECT_FP_EQ(nan, __llvm_libc::fabs(nan));
 
-  EXPECT_EQ(BitPatterns::aSignallingNaN,
-            valueAsBits(
-                __llvm_libc::fabs(valueFromBits(BitPatterns::aSignallingNaN))));
-  EXPECT_EQ(BitPatterns::aSignallingNaN,
-            valueAsBits(__llvm_libc::fabs(
-                valueFromBits(BitPatterns::aNegativeSignallingNaN))));
+  EXPECT_FP_EQ(inf, __llvm_libc::fabs(inf));
+  EXPECT_FP_EQ(inf, __llvm_libc::fabs(negInf));
 
-  EXPECT_EQ(BitPatterns::inf,
-            valueAsBits(__llvm_libc::fabs(valueFromBits(BitPatterns::inf))));
-  EXPECT_EQ(BitPatterns::inf,
-            valueAsBits(__llvm_libc::fabs(valueFromBits(BitPatterns::negInf))));
-
-  EXPECT_EQ(BitPatterns::zero,
-            valueAsBits(__llvm_libc::fabs(valueFromBits(BitPatterns::zero))));
-  EXPECT_EQ(BitPatterns::zero, valueAsBits(__llvm_libc::fabs(
-                                   valueFromBits(BitPatterns::negZero))));
+  EXPECT_FP_EQ(zero, __llvm_libc::fabs(zero));
+  EXPECT_FP_EQ(zero, __llvm_libc::fabs(negZero));
 }
 
 TEST(FabsTest, InDoubleRange) {
-  using BitsType = Properties::BitsType;
-  constexpr BitsType count = 1000000;
-  constexpr BitsType step = UINT64_MAX / count;
-  for (BitsType i = 0, v = 0; i <= count; ++i, v += step) {
-    double x = valueFromBits(v);
+  using UIntType = FPBits::UIntType;
+  constexpr UIntType count = 10000000;
+  constexpr UIntType step = UIntType(-1) / count;
+  for (UIntType i = 0, v = 0; i <= count; ++i, v += step) {
+    double x = FPBits(v);
     if (isnan(x) || isinf(x))
       continue;
     ASSERT_MPFR_MATCH(mpfr::Operation::Abs, x, __llvm_libc::fabs(x), tolerance);
