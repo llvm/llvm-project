@@ -274,6 +274,8 @@ Attribute Builder::getZeroAttr(Type type) {
   case StandardTypes::F32:
   case StandardTypes::F64:
     return getFloatAttr(type, 0.0);
+  case StandardTypes::Index:
+    return getIndexAttr(0);
   case StandardTypes::Integer:
     return getIntegerAttr(type, APInt(type.cast<IntegerType>().getWidth(), 0));
   case StandardTypes::Vector:
