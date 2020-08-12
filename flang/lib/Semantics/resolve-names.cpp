@@ -1290,7 +1290,6 @@ public:
     ResolveName(*parser::Unwrap<parser::Name>(x.name));
   }
   void Post(const parser::ProcComponentRef &);
-  bool Pre(const parser::ActualArg &);
   bool Pre(const parser::FunctionReference &);
   bool Pre(const parser::CallStmt &);
   bool Pre(const parser::ImportStmt &);
@@ -5316,23 +5315,6 @@ const DeclTypeSpec &ConstructVisitor::ToDeclTypeSpec(
 }
 
 // ResolveNamesVisitor implementation
-
-// Ensures that bare undeclared intrinsic procedure names passed as actual
-// arguments get recognized as being intrinsics.
-bool ResolveNamesVisitor::Pre(const parser::ActualArg &arg) {
-  if (const auto *expr{std::get_if<Indirection<parser::Expr>>(&arg.u)}) {
-    if (const auto *designator{
-            std::get_if<Indirection<parser::Designator>>(&expr->value().u)}) {
-      if (const auto *dataRef{
-              std::get_if<parser::DataRef>(&designator->value().u)}) {
-        if (const auto *name{std::get_if<parser::Name>(&dataRef->u)}) {
-          NameIsKnownOrIntrinsic(*name);
-        }
-      }
-    }
-  }
-  return true;
-}
 
 bool ResolveNamesVisitor::Pre(const parser::FunctionReference &x) {
   HandleCall(Symbol::Flag::Function, x.v);
