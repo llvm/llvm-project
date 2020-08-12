@@ -180,7 +180,7 @@ public:
         UntiedCodeGen(CGF);
         CodeGenFunction::JumpDest CurPoint =
             CGF.getJumpDestInCurrentScope(".untied.next.");
-        CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
+        CGF.EmitBranch(CGF.ReturnBlock.getBlock());
         CGF.EmitBlock(CGF.createBasicBlock(".untied.jmp."));
         UntiedSwitch->addCase(CGF.Builder.getInt32(UntiedSwitch->getNumCases()),
                               CGF.Builder.GetInsertBlock());
@@ -3370,10 +3370,14 @@ struct PrivateHelpersTy {
                    const VarDecl *PrivateCopy, const VarDecl *PrivateElemInit)
       : OriginalRef(OriginalRef), Original(Original), PrivateCopy(PrivateCopy),
         PrivateElemInit(PrivateElemInit) {}
+  PrivateHelpersTy(const VarDecl *Original) : Original(Original) {}
   const Expr *OriginalRef = nullptr;
   const VarDecl *Original = nullptr;
   const VarDecl *PrivateCopy = nullptr;
   const VarDecl *PrivateElemInit = nullptr;
+  bool isLocalPrivate() const {
+    return !OriginalRef && !PrivateCopy && !PrivateElemInit;
+  }
 };
 typedef std::pair<CharUnits /*Align*/, PrivateHelpersTy> PrivateDataTy;
 } // anonymous namespace
@@ -3390,6 +3394,11 @@ createPrivatesRecordDecl(CodeGenModule &CGM, ArrayRef<PrivateDataTy> Privates) {
     for (const auto &Pair : Privates) {
       const VarDecl *VD = Pair.second.Original;
       QualType Type = VD->getType().getNonReferenceType();
+      // If the private variable is a local variable with lvalue ref type,
+      // allocate the pointer instead of the pointee type.
+      if (Pair.second.isLocalPrivate() &&
+          VD->getType()->isLValueReferenceType())
+        Type = C.getPointerType(Type);
       FieldDecl *FD = addFieldToRecordDecl(C, RD, Type);
       if (VD->hasAttrs()) {
         for (specific_attr_iterator<AlignedAttr> I(VD->getAttrs().begin()),
@@ -3643,10 +3652,7 @@ static llvm::Value *emitDestructorsFunction(CodeGenModule &CGM,
 /// \endcode
 static llvm::Value *
 emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
-                               ArrayRef<const Expr *> PrivateVars,
-                               ArrayRef<const Expr *> FirstprivateVars,
-                               ArrayRef<const Expr *> LastprivateVars,
-                               QualType PrivatesQTy,
+                               const OMPTaskDataTy &Data, QualType PrivatesQTy,
                                ArrayRef<PrivateDataTy> Privates) {
   ASTContext &C = CGM.getContext();
   FunctionArgList Args;
@@ -3655,9 +3661,9 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
       C.getPointerType(PrivatesQTy).withConst().withRestrict(),
       ImplicitParamDecl::Other);
   Args.push_back(&TaskPrivatesArg);
-  llvm::DenseMap<const VarDecl *, unsigned> PrivateVarsPos;
+  llvm::DenseMap<CanonicalDeclPtr<const VarDecl>, unsigned> PrivateVarsPos;
   unsigned Counter = 1;
-  for (const Expr *E : PrivateVars) {
+  for (const Expr *E : Data.PrivateVars) {
     Args.push_back(ImplicitParamDecl::Create(
         C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
         C.getPointerType(C.getPointerType(E->getType()))
@@ -3668,7 +3674,7 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
     PrivateVarsPos[VD] = Counter;
     ++Counter;
   }
-  for (const Expr *E : FirstprivateVars) {
+  for (const Expr *E : Data.FirstprivateVars) {
     Args.push_back(ImplicitParamDecl::Create(
         C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
         C.getPointerType(C.getPointerType(E->getType()))
@@ -3679,7 +3685,7 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
     PrivateVarsPos[VD] = Counter;
     ++Counter;
   }
-  for (const Expr *E : LastprivateVars) {
+  for (const Expr *E : Data.LastprivateVars) {
     Args.push_back(ImplicitParamDecl::Create(
         C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
         C.getPointerType(C.getPointerType(E->getType()))
@@ -3687,6 +3693,17 @@ emitTaskPrivateMappingFunction(CodeGenModule &CGM, SourceLocation Loc,
             .withRestrict(),
         ImplicitParamDecl::Other));
     const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
+    PrivateVarsPos[VD] = Counter;
+    ++Counter;
+  }
+  for (const VarDecl *VD : Data.PrivateLocals) {
+    QualType Ty = VD->getType().getNonReferenceType();
+    if (VD->getType()->isLValueReferenceType())
+      Ty = C.getPointerType(Ty);
+    Args.push_back(ImplicitParamDecl::Create(
+        C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
+        C.getPointerType(C.getPointerType(Ty)).withConst().withRestrict(),
+        ImplicitParamDecl::Other));
     PrivateVarsPos[VD] = Counter;
     ++Counter;
   }
@@ -3762,6 +3779,9 @@ static void emitPrivatesInit(CodeGenFunction &CGF,
   }
   FI = cast<RecordDecl>(FI->getType()->getAsTagDecl())->field_begin();
   for (const PrivateDataTy &Pair : Privates) {
+    // Do not initialize private locals.
+    if (Pair.second.isLocalPrivate())
+      continue;
     const VarDecl *VD = Pair.second.PrivateCopy;
     const Expr *Init = VD->getAnyInitializer();
     if (Init && (!ForDup || (isa<CXXConstructExpr>(Init) &&
@@ -3852,6 +3872,8 @@ static bool checkInitIsRequired(CodeGenFunction &CGF,
                                 ArrayRef<PrivateDataTy> Privates) {
   bool InitRequired = false;
   for (const PrivateDataTy &Pair : Privates) {
+    if (Pair.second.isLocalPrivate())
+      continue;
     const VarDecl *VD = Pair.second.PrivateCopy;
     const Expr *Init = VD->getAnyInitializer();
     InitRequired = InitRequired || (Init && isa<CXXConstructExpr>(Init) &&
@@ -3945,16 +3967,16 @@ emitTaskDupFunction(CodeGenModule &CGM, SourceLocation Loc,
 /// Checks if destructor function is required to be generated.
 /// \return true if cleanups are required, false otherwise.
 static bool
-checkDestructorsRequired(const RecordDecl *KmpTaskTWithPrivatesQTyRD) {
-  bool NeedsCleanup = false;
-  auto FI = std::next(KmpTaskTWithPrivatesQTyRD->field_begin(), 1);
-  const auto *PrivateRD = cast<RecordDecl>(FI->getType()->getAsTagDecl());
-  for (const FieldDecl *FD : PrivateRD->fields()) {
-    NeedsCleanup = NeedsCleanup || FD->getType().isDestructedType();
-    if (NeedsCleanup)
-      break;
+checkDestructorsRequired(const RecordDecl *KmpTaskTWithPrivatesQTyRD,
+                         ArrayRef<PrivateDataTy> Privates) {
+  for (const PrivateDataTy &P : Privates) {
+    if (P.second.isLocalPrivate())
+      continue;
+    QualType Ty = P.second.Original->getType().getNonReferenceType();
+    if (Ty.isDestructedType())
+      return true;
   }
-  return NeedsCleanup;
+  return false;
 }
 
 namespace {
@@ -4124,9 +4146,12 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
                          /*PrivateElemInit=*/nullptr));
     ++I;
   }
-  llvm::stable_sort(Privates, [](PrivateDataTy L, PrivateDataTy R) {
-    return L.first > R.first;
-  });
+  for (const VarDecl *VD : Data.PrivateLocals)
+    Privates.emplace_back(C.getDeclAlign(VD), PrivateHelpersTy(VD));
+  llvm::stable_sort(Privates,
+                    [](const PrivateDataTy &L, const PrivateDataTy &R) {
+                      return L.first > R.first;
+                    });
   QualType KmpInt32Ty = C.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/1);
   // Build type kmp_routine_entry_t (if not built yet).
   emitKmpRoutineEntryT(KmpInt32Ty);
@@ -4168,9 +4193,8 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
       std::next(TaskFunction->arg_begin(), 3)->getType();
   if (!Privates.empty()) {
     auto FI = std::next(KmpTaskTWithPrivatesQTyRD->field_begin());
-    TaskPrivatesMap = emitTaskPrivateMappingFunction(
-        CGM, Loc, Data.PrivateVars, Data.FirstprivateVars, Data.LastprivateVars,
-        FI->getType(), Privates);
+    TaskPrivatesMap =
+        emitTaskPrivateMappingFunction(CGM, Loc, Data, FI->getType(), Privates);
     TaskPrivatesMap = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
         TaskPrivatesMap, TaskPrivatesMapTy);
   } else {
@@ -4200,7 +4224,8 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   unsigned Flags = Data.Tied ? TiedFlag : 0;
   bool NeedsCleanup = false;
   if (!Privates.empty()) {
-    NeedsCleanup = checkDestructorsRequired(KmpTaskTWithPrivatesQTyRD);
+    NeedsCleanup =
+        checkDestructorsRequired(KmpTaskTWithPrivatesQTyRD, Privates);
     if (NeedsCleanup)
       Flags = Flags | DestructorsFlag;
   }
@@ -7911,7 +7936,8 @@ public:
   /// individual struct members.
   void emitCombinedEntry(MapCombinedInfoTy &CombinedInfo,
                          MapFlagsArrayTy &CurTypes,
-                         const StructRangeInfoTy &PartialStruct) const {
+                         const StructRangeInfoTy &PartialStruct,
+                         bool NotTargetParams = false) const {
     // Base is the base of the struct
     CombinedInfo.BasePointers.push_back(PartialStruct.Base.getPointer());
     // Pointer is the address of the lowest element
@@ -7928,8 +7954,9 @@ public:
     llvm::Value *Size = CGF.Builder.CreateIntCast(Diff, CGF.Int64Ty,
                                                   /*isSigned=*/false);
     CombinedInfo.Sizes.push_back(Size);
-    // Map type is always TARGET_PARAM
-    CombinedInfo.Types.push_back(OMP_MAP_TARGET_PARAM);
+    // Map type is always TARGET_PARAM, if generate info for captures.
+    CombinedInfo.Types.push_back(NotTargetParams ? OMP_MAP_NONE
+                                                 : OMP_MAP_TARGET_PARAM);
     // If any element has the present modifier, then make sure the runtime
     // doesn't attempt to allocate the struct.
     if (CurTypes.end() !=
@@ -7955,7 +7982,7 @@ public:
   /// pair of the relevant declaration and index where it occurs is appended to
   /// the device pointers info array.
   void generateAllInfo(
-      MapCombinedInfoTy &CombinedInfo,
+      MapCombinedInfoTy &CombinedInfo, bool NotTargetParams = false,
       const llvm::DenseSet<CanonicalDeclPtr<const Decl>> &SkipVarSet =
           llvm::DenseSet<CanonicalDeclPtr<const Decl>>()) const {
     // We have to process the component lists that relate with the same
@@ -8078,8 +8105,9 @@ public:
           UseDevicePtrCombinedInfo.Pointers.push_back(Ptr);
           UseDevicePtrCombinedInfo.Sizes.push_back(
               llvm::Constant::getNullValue(CGF.Int64Ty));
-          UseDevicePtrCombinedInfo.Types.push_back(OMP_MAP_RETURN_PARAM |
-                                                   OMP_MAP_TARGET_PARAM);
+          UseDevicePtrCombinedInfo.Types.push_back(
+              OMP_MAP_RETURN_PARAM |
+              (NotTargetParams ? OMP_MAP_NONE : OMP_MAP_TARGET_PARAM));
           UseDevicePtrCombinedInfo.Mappers.push_back(nullptr);
         }
       }
@@ -8144,8 +8172,11 @@ public:
             Ptr = CGF.EmitScalarExpr(IE);
           CombinedInfo.BasePointers.emplace_back(Ptr, VD);
           CombinedInfo.Pointers.push_back(Ptr);
-          CombinedInfo.Sizes.push_back(llvm::Constant::getNullValue(CGF.Int64Ty));
-          CombinedInfo.Types.push_back(OMP_MAP_RETURN_PARAM | OMP_MAP_TARGET_PARAM);
+          CombinedInfo.Sizes.push_back(
+              llvm::Constant::getNullValue(CGF.Int64Ty));
+          CombinedInfo.Types.push_back(
+              OMP_MAP_RETURN_PARAM |
+              (NotTargetParams ? OMP_MAP_NONE : OMP_MAP_TARGET_PARAM));
           CombinedInfo.Mappers.push_back(nullptr);
         }
       }
@@ -8154,7 +8185,7 @@ public:
     for (const auto &M : Info) {
       // We need to know when we generate information for the first component
       // associated with a capture, because the mapping flags depend on it.
-      bool IsFirstComponentList = true;
+      bool IsFirstComponentList = !NotTargetParams;
 
       // Temporary generated information.
       MapCombinedInfoTy CurInfo;
@@ -8227,7 +8258,8 @@ public:
       // If there is an entry in PartialStruct it means we have a struct with
       // individual members mapped. Emit an extra combined entry.
       if (PartialStruct.Base.isValid())
-        emitCombinedEntry(CombinedInfo, CurInfo.Types, PartialStruct);
+        emitCombinedEntry(CombinedInfo, CurInfo.Types, PartialStruct,
+                          NotTargetParams);
 
       // We need to append the results of this capture to what we already have.
       CombinedInfo.append(CurInfo);
@@ -9584,7 +9616,8 @@ void CGOpenMPRuntime::emitTargetCall(
         CombinedInfo.Types);
     // Map any list items in a map clause that were not captures because they
     // weren't referenced within the construct.
-    MEHandler.generateAllInfo(CombinedInfo, MappedVarSet);
+    MEHandler.generateAllInfo(CombinedInfo, /*NotTargetParams=*/true,
+                              MappedVarSet);
 
     TargetDataInfo Info;
     // Fill up the arrays and create the arguments.
@@ -11223,56 +11256,64 @@ Address CGOpenMPRuntime::getAddressOfLocalVariable(CodeGenFunction &CGF,
   if (!VD)
     return Address::invalid();
   const VarDecl *CVD = VD->getCanonicalDecl();
-  if (!CVD->hasAttr<OMPAllocateDeclAttr>())
-    return Address::invalid();
-  const auto *AA = CVD->getAttr<OMPAllocateDeclAttr>();
-  // Use the default allocation.
-  if ((AA->getAllocatorType() == OMPAllocateDeclAttr::OMPDefaultMemAlloc ||
-       AA->getAllocatorType() == OMPAllocateDeclAttr::OMPNullMemAlloc) &&
-      !AA->getAllocator())
-    return Address::invalid();
-  llvm::Value *Size;
-  CharUnits Align = CGM.getContext().getDeclAlign(CVD);
-  if (CVD->getType()->isVariablyModifiedType()) {
-    Size = CGF.getTypeSize(CVD->getType());
-    // Align the size: ((size + align - 1) / align) * align
-    Size = CGF.Builder.CreateNUWAdd(
-        Size, CGM.getSize(Align - CharUnits::fromQuantity(1)));
-    Size = CGF.Builder.CreateUDiv(Size, CGM.getSize(Align));
-    Size = CGF.Builder.CreateNUWMul(Size, CGM.getSize(Align));
-  } else {
-    CharUnits Sz = CGM.getContext().getTypeSizeInChars(CVD->getType());
-    Size = CGM.getSize(Sz.alignTo(Align));
+  if (CVD->hasAttr<OMPAllocateDeclAttr>()) {
+    const auto *AA = CVD->getAttr<OMPAllocateDeclAttr>();
+    // Use the default allocation.
+    if ((AA->getAllocatorType() == OMPAllocateDeclAttr::OMPDefaultMemAlloc ||
+         AA->getAllocatorType() == OMPAllocateDeclAttr::OMPNullMemAlloc) &&
+        !AA->getAllocator())
+      return Address::invalid();
+    llvm::Value *Size;
+    CharUnits Align = CGM.getContext().getDeclAlign(CVD);
+    if (CVD->getType()->isVariablyModifiedType()) {
+      Size = CGF.getTypeSize(CVD->getType());
+      // Align the size: ((size + align - 1) / align) * align
+      Size = CGF.Builder.CreateNUWAdd(
+          Size, CGM.getSize(Align - CharUnits::fromQuantity(1)));
+      Size = CGF.Builder.CreateUDiv(Size, CGM.getSize(Align));
+      Size = CGF.Builder.CreateNUWMul(Size, CGM.getSize(Align));
+    } else {
+      CharUnits Sz = CGM.getContext().getTypeSizeInChars(CVD->getType());
+      Size = CGM.getSize(Sz.alignTo(Align));
+    }
+    llvm::Value *ThreadID = getThreadID(CGF, CVD->getBeginLoc());
+    assert(AA->getAllocator() &&
+           "Expected allocator expression for non-default allocator.");
+    llvm::Value *Allocator = CGF.EmitScalarExpr(AA->getAllocator());
+    // According to the standard, the original allocator type is a enum
+    // (integer). Convert to pointer type, if required.
+    if (Allocator->getType()->isIntegerTy())
+      Allocator = CGF.Builder.CreateIntToPtr(Allocator, CGM.VoidPtrTy);
+    else if (Allocator->getType()->isPointerTy())
+      Allocator = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+          Allocator, CGM.VoidPtrTy);
+    llvm::Value *Args[] = {ThreadID, Size, Allocator};
+
+    llvm::Value *Addr =
+        CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                                CGM.getModule(), OMPRTL___kmpc_alloc),
+                            Args, getName({CVD->getName(), ".void.addr"}));
+    llvm::Value *FiniArgs[OMPAllocateCleanupTy::CleanupArgs] = {ThreadID, Addr,
+                                                                Allocator};
+    llvm::FunctionCallee FiniRTLFn = OMPBuilder.getOrCreateRuntimeFunction(
+        CGM.getModule(), OMPRTL___kmpc_free);
+
+    CGF.EHStack.pushCleanup<OMPAllocateCleanupTy>(NormalAndEHCleanup, FiniRTLFn,
+                                                  llvm::makeArrayRef(FiniArgs));
+    Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+        Addr,
+        CGF.ConvertTypeForMem(CGM.getContext().getPointerType(CVD->getType())),
+        getName({CVD->getName(), ".addr"}));
+    return Address(Addr, Align);
   }
-  llvm::Value *ThreadID = getThreadID(CGF, CVD->getBeginLoc());
-  assert(AA->getAllocator() &&
-         "Expected allocator expression for non-default allocator.");
-  llvm::Value *Allocator = CGF.EmitScalarExpr(AA->getAllocator());
-  // According to the standard, the original allocator type is a enum (integer).
-  // Convert to pointer type, if required.
-  if (Allocator->getType()->isIntegerTy())
-    Allocator = CGF.Builder.CreateIntToPtr(Allocator, CGM.VoidPtrTy);
-  else if (Allocator->getType()->isPointerTy())
-    Allocator = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(Allocator,
-                                                                CGM.VoidPtrTy);
-  llvm::Value *Args[] = {ThreadID, Size, Allocator};
+  if (UntiedLocalVarsStack.empty())
+    return Address::invalid();
+  const UntiedLocalVarsAddressesMap &UntiedData = UntiedLocalVarsStack.back();
+  auto It = UntiedData.find(VD);
+  if (It == UntiedData.end())
+    return Address::invalid();
 
-  llvm::Value *Addr =
-      CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                              CGM.getModule(), OMPRTL___kmpc_alloc),
-                          Args, getName({CVD->getName(), ".void.addr"}));
-  llvm::Value *FiniArgs[OMPAllocateCleanupTy::CleanupArgs] = {ThreadID, Addr,
-                                                              Allocator};
-  llvm::FunctionCallee FiniRTLFn = OMPBuilder.getOrCreateRuntimeFunction(
-      CGM.getModule(), OMPRTL___kmpc_free);
-
-  CGF.EHStack.pushCleanup<OMPAllocateCleanupTy>(NormalAndEHCleanup, FiniRTLFn,
-                                                llvm::makeArrayRef(FiniArgs));
-  Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-      Addr,
-      CGF.ConvertTypeForMem(CGM.getContext().getPointerType(CVD->getType())),
-      getName({CVD->getName(), ".addr"}));
-  return Address(Addr, Align);
+  return It->second;
 }
 
 CGOpenMPRuntime::NontemporalDeclsRAII::NontemporalDeclsRAII(
@@ -11305,6 +11346,21 @@ CGOpenMPRuntime::NontemporalDeclsRAII::~NontemporalDeclsRAII() {
   if (!NeedToPush)
     return;
   CGM.getOpenMPRuntime().NontemporalDeclsStack.pop_back();
+}
+
+CGOpenMPRuntime::UntiedTaskLocalDeclsRAII::UntiedTaskLocalDeclsRAII(
+    CodeGenModule &CGM,
+    const llvm::DenseMap<CanonicalDeclPtr<const VarDecl>, Address> &LocalVars)
+    : CGM(CGM), NeedToPush(!LocalVars.empty()) {
+  if (!NeedToPush)
+    return;
+  CGM.getOpenMPRuntime().UntiedLocalVarsStack.push_back(LocalVars);
+}
+
+CGOpenMPRuntime::UntiedTaskLocalDeclsRAII::~UntiedTaskLocalDeclsRAII() {
+  if (!NeedToPush)
+    return;
+  CGM.getOpenMPRuntime().UntiedLocalVarsStack.pop_back();
 }
 
 bool CGOpenMPRuntime::isNontemporalDecl(const ValueDecl *VD) const {

@@ -114,7 +114,7 @@ unsigned HexagonTTIImpl::getRegisterBitWidth(bool Vector) const {
 }
 
 unsigned HexagonTTIImpl::getMinVectorRegisterBitWidth() const {
-  return useHVX() ? ST.getVectorLength()*8 : 0;
+  return useHVX() ? ST.getVectorLength()*8 : 32;
 }
 
 unsigned HexagonTTIImpl::getMinimumVF(unsigned ElemWidth) const {

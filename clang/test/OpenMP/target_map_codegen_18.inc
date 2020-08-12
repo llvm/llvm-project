@@ -11,193 +11,225 @@
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE00:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
-// CK19: [[MTYPE00:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
+// CK19-USE: [[MTYPE00:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
+// CK19-NOUSE: [[MTYPE00:@.+]] = private {{.*}}constant [1 x i64] zeroinitializer
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE00n:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
-// CK19: [[MTYPE00n:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
+// CK19-USE: [[MTYPE00n:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
+// CK19-NOUSE: [[MTYPE00n:@.+]] = private {{.*}}constant [1 x i64] zeroinitializer
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE01:@.+]] = private {{.*}}constant [1 x i64] [i64 400]
-// CK19: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
+// CK19-USE: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
+// CK19-NOUSE: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 1]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE02:@.+]] = private {{.*}}constant [1 x i64] [i64 240]
-// CK19: [[MTYPE02:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
+// CK19-USE: [[MTYPE02:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
+// CK19-NOUSE: [[MTYPE02:@.+]] = private {{.*}}constant [1 x i64] [i64 2]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE03:@.+]] = private {{.*}}constant [1 x i64] [i64 240]
-// CK19: [[MTYPE03:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-USE: [[MTYPE03:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE03:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE04:@.+]] = private {{.*}}constant [1 x i64] [i64 400]
-// CK19: [[MTYPE04:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
+// CK19-USE: [[MTYPE04:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
+// CK19-NOUSE: [[MTYPE04:@.+]] = private {{.*}}constant [1 x i64] zeroinitializer
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE05:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
-// CK19: [[MTYPE05:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
+// CK19-USE: [[MTYPE05:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
+// CK19-NOUSE: [[MTYPE05:@.+]] = private {{.*}}constant [1 x i64] [i64 1]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK19: [[MTYPE06:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-USE: [[MTYPE06:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE06:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK19: [[MTYPE07:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
+// CK19-USE: [[MTYPE07:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
+// CK19-NOUSE: [[MTYPE07:@.+]] = private {{.*}}constant [1 x i64] zeroinitializer
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE08:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
-// CK19: [[MTYPE08:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-USE: [[MTYPE08:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE08:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE09:@.+]] = private {{.*}}constant [1 x i64] [i64 {{8|4}}]
-// CK19: [[MTYPE09:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
+// CK19-USE: [[MTYPE09:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
+// CK19-NOUSE: [[MTYPE09:@.+]] = private {{.*}}constant [1 x i64] [i64 2]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE10:@.+]] = private {{.*}}constant [1 x i64] [i64 240]
-// CK19: [[MTYPE10:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-USE: [[MTYPE10:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE10:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE11:@.+]] = private {{.*}}constant [1 x i64] [i64 240]
-// CK19: [[MTYPE11:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
+// CK19-USE: [[MTYPE11:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
+// CK19-NOUSE: [[MTYPE11:@.+]] = private {{.*}}constant [1 x i64] zeroinitializer
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE12:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
-// CK19: [[MTYPE12:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
+// CK19-USE: [[MTYPE12:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
+// CK19-NOUSE: [[MTYPE12:@.+]] = private {{.*}}constant [1 x i64] [i64 1]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK19: [[MTYPE13:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
+// CK19-USE: [[MTYPE13:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
+// CK19-NOUSE: [[MTYPE13:@.+]] = private {{.*}}constant [1 x i64] zeroinitializer
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK19: [[MTYPE14:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
+// CK19-USE: [[MTYPE14:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
+// CK19-NOUSE: [[MTYPE14:@.+]] = private {{.*}}constant [1 x i64] [i64 1]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE15:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
-// CK19: [[MTYPE15:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
+// CK19-USE: [[MTYPE15:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
+// CK19-NOUSE: [[MTYPE15:@.+]] = private {{.*}}constant [1 x i64] [i64 2]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19-USE: [[MTYPE16:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 33]
-// CK19-NOUSE: [[MTYPE16:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
+// CK19-NOUSE: [[MTYPE16:@.+]] = private {{.*}}constant [1 x i64] [i64 1]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19-USE: [[SIZE17:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 240]
 // CK19-USE: [[MTYPE17:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 34]
 // CK19-NOUSE: [[SIZE17:@.+]] = private {{.*}}constant [1 x i64] [i64 240]
-// CK19-NOUSE: [[MTYPE17:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
+// CK19-NOUSE: [[MTYPE17:@.+]] = private {{.*}}constant [1 x i64] [i64 2]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19-USE: [[SIZE18:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 240]
 // CK19-USE: [[MTYPE18:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 35]
 // CK19-NOUSE: [[SIZE18:@.+]] = private {{.*}}constant [1 x i64] [i64 240]
-// CK19-NOUSE: [[MTYPE18:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE18:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19-USE: [[MTYPE19:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 32]
-// CK19-NOUSE: [[MTYPE19:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
+// CK19-NOUSE: [[MTYPE19:@.+]] = private {{.*}}constant [1 x i64] zeroinitializer
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19-USE: [[SIZE20:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 4]
 // CK19-USE: [[MTYPE20:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 33]
 // CK19-NOUSE: [[SIZE20:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
-// CK19-NOUSE: [[MTYPE20:@.+]] = private {{.*}}constant [1 x i64] [i64 33]
+// CK19-NOUSE: [[MTYPE20:@.+]] = private {{.*}}constant [1 x i64] [i64 1]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19-USE: [[MTYPE21:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 35]
-// CK19-NOUSE: [[MTYPE21:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE21:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19-USE: [[SIZE22:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 4]
 // CK19-USE: [[MTYPE22:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 35]
 // CK19-NOUSE: [[SIZE22:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
-// CK19-NOUSE: [[MTYPE22:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE22:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE23:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
-// CK19: [[MTYPE23:@.+]] = private {{.*}}constant [1 x i64] [i64 39]
+// CK19-USE: [[MTYPE23:@.+]] = private {{.*}}constant [1 x i64] [i64 39]
+// CK19-NOUSE: [[MTYPE23:@.+]] = private {{.*}}constant [1 x i64] [i64 7]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE24:@.+]] = private {{.*}}constant [1 x i64] [i64 480]
-// CK19: [[MTYPE24:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-USE: [[MTYPE24:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE24:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE25:@.+]] = private {{.*}}constant [1 x i64] [i64 16]
-// CK19: [[MTYPE25:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-USE: [[MTYPE25:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE25:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE26:@.+]] = private {{.*}}constant [1 x i64] [i64 24]
-// CK19: [[MTYPE26:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-USE: [[MTYPE26:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE26:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE27:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
-// CK19: [[MTYPE27:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-USE: [[MTYPE27:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE27:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE28:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|4}}, i64 {{8|4}}, i64 16]
-// CK19: [[MTYPE28:@.+]] = private {{.*}}constant [3 x i64] [i64 35, i64 16, i64 19]
+// CK19-USE: [[MTYPE28:@.+]] = private {{.*}}constant [3 x i64] [i64 35, i64 16, i64 19]
+// CK19-NOUSE: [[MTYPE28:@.+]] = private {{.*}}constant [3 x i64] [i64 3, i64 16, i64 19]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE29:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|4}}, i64 {{8|4}}, i64 4]
-// CK19: [[MTYPE29:@.+]] = private {{.*}}constant [3 x i64] [i64 35, i64 16, i64 19]
+// CK19-USE: [[MTYPE29:@.+]] = private {{.*}}constant [3 x i64] [i64 35, i64 16, i64 19]
+// CK19-NOUSE: [[MTYPE29:@.+]] = private {{.*}}constant [3 x i64] [i64 3, i64 16, i64 19]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19-USE: [[MTYPE30:@.+]] = private {{.*}}constant [4 x i64] [i64 800, i64 800, i64 800, i64 35]
-// CK19-NOUSE: [[MTYPE30:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE30:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19-USE: [[SIZE31:@.+]] = private {{.*}}constant [4 x i64] [i64 {{8|4}}, i64 {{8|4}}, i64 {{8|4}}, i64 40]
 // CK19-USE: [[MTYPE31:@.+]] = private {{.*}}constant [4 x i64] [i64 800, i64 800, i64 800, i64 35]
 // CK19-NOUSE: [[SIZE31:@.+]] = private {{.*}}constant [1 x i64] [i64 40]
-// CK19-NOUSE: [[MTYPE31:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE31:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE32:@.+]] = private {{.*}}constant [1 x i64] [i64 13728]
-// CK19: [[MTYPE32:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-USE: [[MTYPE32:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE32:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE33:@.+]] = private {{.*}}constant [1 x i64] [i64 13728]
-// CK19: [[MTYPE33:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-USE: [[MTYPE33:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE33:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE34:@.+]] = private {{.*}}constant [1 x i64] [i64 13728]
-// CK19: [[MTYPE34:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-USE: [[MTYPE34:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE34:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK19: [[MTYPE35:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-USE: [[MTYPE35:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE35:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE36:@.+]] = private {{.*}}constant [1 x i64] [i64 208]
-// CK19: [[MTYPE36:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-USE: [[MTYPE36:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE36:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19-USE: [[MTYPE37:@.+]] = private {{.*}}constant [3 x i64] [i64 800, i64 800, i64 35]
-// CK19-NOUSE: [[MTYPE37:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE37:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19-USE: [[MTYPE38:@.+]] = private {{.*}}constant [3 x i64] [i64 800, i64 800, i64 35]
-// CK19-NOUSE: [[MTYPE38:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE38:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19-USE: [[MTYPE39:@.+]] = private {{.*}}constant [3 x i64] [i64 800, i64 800, i64 35]
-// CK19-NOUSE: [[MTYPE39:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE39:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19-USE: [[MTYPE40:@.+]] = private {{.*}}constant [3 x i64] [i64 800, i64 800, i64 35]
-// CK19-NOUSE: [[MTYPE40:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE40:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19-USE: [[SIZE41:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|4}}, i64 {{8|4}}, i64 208]
 // CK19-USE: [[MTYPE41:@.+]] = private {{.*}}constant [3 x i64] [i64 800, i64 800, i64 35]
 // CK19-NOUSE: [[SIZE41:@.+]] = private {{.*}}constant [1 x i64] [i64 208]
-// CK19-NOUSE: [[MTYPE41:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE41:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE42:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|4}}, i64 {{8|4}}, i64 104]
-// CK19: [[MTYPE42:@.+]] = private {{.*}}constant [3 x i64] [i64 35, i64 16, i64 19]
+// CK19-USE: [[MTYPE42:@.+]] = private {{.*}}constant [3 x i64] [i64 35, i64 16, i64 19]
+// CK19-NOUSE: [[MTYPE42:@.+]] = private {{.*}}constant [3 x i64] [i64 3, i64 16, i64 19]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK19: [[MTYPE43:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-USE: [[MTYPE43:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK19-NOUSE: [[MTYPE43:@.+]] = private {{.*}}constant [1 x i64] [i64 3]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK19: [[SIZE44:@.+]] = private {{.*}}constant [1 x i64] [i64 320]
-// CK19: [[MTYPE44:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
+// CK19-USE: [[MTYPE44:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
+// CK19-NOUSE: [[MTYPE44:@.+]] = private {{.*}}constant [1 x i64] [i64 2]
 
 // CK19-LABEL: explicit_maps_single{{.*}}(
 void explicit_maps_single (int ii){
