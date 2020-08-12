@@ -164,9 +164,8 @@ entry:
 
 define <2 x i32> @insertelt(<2 x i32> %x, i32* %p, i133 %index) {
 ; CHECK-LABEL: @insertelt(
-; CHECK-NEXT:    [[V:%.*]] = inttoptr <2 x i32> [[X:%.*]] to <2 x i32*>
-; CHECK-NEXT:    [[I:%.*]] = insertelement <2 x i32*> [[V]], i32* [[P:%.*]], i133 [[INDEX:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = ptrtoint <2 x i32*> [[I]] to <2 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint i32* [[P:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i32> [[X:%.*]], i32 [[TMP1]], i133 [[INDEX:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %v = inttoptr <2 x i32> %x to <2 x i32*>
@@ -178,9 +177,8 @@ define <2 x i32> @insertelt(<2 x i32> %x, i32* %p, i133 %index) {
 define <2 x i32> @insertelt_intptr_trunc(<2 x i64> %x, i32* %p) {
 ; CHECK-LABEL: @insertelt_intptr_trunc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i64> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[V:%.*]] = inttoptr <2 x i32> [[TMP1]] to <2 x i32*>
-; CHECK-NEXT:    [[I:%.*]] = insertelement <2 x i32*> [[V]], i32* [[P:%.*]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = ptrtoint <2 x i32*> [[I]] to <2 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint i32* [[P:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[TMP2]], i32 0
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %v = inttoptr <2 x i64> %x to <2 x i32*>
@@ -192,9 +190,8 @@ define <2 x i32> @insertelt_intptr_trunc(<2 x i64> %x, i32* %p) {
 define <2 x i32> @insertelt_intptr_zext(<2 x i8> %x, i32* %p) {
 ; CHECK-LABEL: @insertelt_intptr_zext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[V:%.*]] = inttoptr <2 x i32> [[TMP1]] to <2 x i32*>
-; CHECK-NEXT:    [[I:%.*]] = insertelement <2 x i32*> [[V]], i32* [[P:%.*]], i32 1
-; CHECK-NEXT:    [[R:%.*]] = ptrtoint <2 x i32*> [[I]] to <2 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint i32* [[P:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[TMP2]], i32 1
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %v = inttoptr <2 x i8> %x to <2 x i32*>
@@ -206,10 +203,9 @@ define <2 x i32> @insertelt_intptr_zext(<2 x i8> %x, i32* %p) {
 define <2 x i64> @insertelt_intptr_zext_zext(<2 x i8> %x, i32* %p) {
 ; CHECK-LABEL: @insertelt_intptr_zext_zext(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i8> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[V:%.*]] = inttoptr <2 x i32> [[TMP1]] to <2 x i32*>
-; CHECK-NEXT:    [[I:%.*]] = insertelement <2 x i32*> [[V]], i32* [[P:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint <2 x i32*> [[I]] to <2 x i32>
-; CHECK-NEXT:    [[R:%.*]] = zext <2 x i32> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint i32* [[P:%.*]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[TMP2]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i32> [[TMP3]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %v = inttoptr <2 x i8> %x to <2 x i32*>
@@ -224,8 +220,8 @@ define <2 x i32> @insertelt_extra_use1(<2 x i32> %x, i32* %p) {
 ; CHECK-LABEL: @insertelt_extra_use1(
 ; CHECK-NEXT:    [[V:%.*]] = inttoptr <2 x i32> [[X:%.*]] to <2 x i32*>
 ; CHECK-NEXT:    call void @use(<2 x i32*> [[V]])
-; CHECK-NEXT:    [[I:%.*]] = insertelement <2 x i32*> [[V]], i32* [[P:%.*]], i32 0
-; CHECK-NEXT:    [[R:%.*]] = ptrtoint <2 x i32*> [[I]] to <2 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint i32* [[P:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i32> [[X]], i32 [[TMP1]], i32 0
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %v = inttoptr <2 x i32> %x to <2 x i32*>
