@@ -48257,6 +48257,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       break;
     case X86ISD::HADD:
     case X86ISD::HSUB:
+    case X86ISD::FHADD:
+    case X86ISD::FHSUB:
     case X86ISD::PACKSS:
     case X86ISD::PACKUS:
       if (!IsSplat && VT.is256BitVector() && Subtarget.hasInt256()) {
