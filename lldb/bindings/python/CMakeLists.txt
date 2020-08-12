@@ -4,8 +4,8 @@ add_custom_command(
   DEPENDS ${SWIG_SOURCES}
   DEPENDS ${SWIG_INTERFACES}
   DEPENDS ${SWIG_HEADERS}
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/prepare_binding_python.py
-  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/prepare_bindings.py
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/prepare_binding_python.py
+  COMMAND ${PYTHON_EXECUTABLE} ${LLDB_SOURCE_DIR}/bindings/prepare_bindings.py
       ${framework_arg}
       --srcRoot=${LLDB_SOURCE_DIR}
       --targetDir=${CMAKE_CURRENT_BINARY_DIR}
