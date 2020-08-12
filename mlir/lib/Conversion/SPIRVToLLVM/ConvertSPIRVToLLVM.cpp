@@ -273,6 +273,22 @@ static Optional<Type> convertStructType(spirv::StructType type,
 
 namespace {
 
+class AddressOfPattern : public SPIRVToLLVMConversion<spirv::AddressOfOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::AddressOfOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::AddressOfOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = typeConverter.convertType(op.pointer().getType());
+    if (!dstType)
+      return failure();
+    rewriter.replaceOpWithNewOp<LLVM::AddressOfOp>(
+        op, dstType.cast<LLVM::LLVMType>(), op.variable());
+    return success();
+  }
+};
+
 class BitFieldInsertPattern
     : public SPIRVToLLVMConversion<spirv::BitFieldInsertOp> {
 public:
@@ -503,6 +519,55 @@ public:
       return failure();
     rewriter.template replaceOpWithNewOp<LLVMOp>(operation, dstType, operands,
                                                  operation.getAttrs());
+    return success();
+  }
+};
+
+/// Converts `spv.globalVariable` to `llvm.mlir.global`. Note that SPIR-V global
+/// returns a pointer, whereas in LLVM dialect the global holds an actual value.
+/// This difference is handled by `spv._address_of` and `llvm.mlir.addressof`ops
+/// that both return a pointer.
+class GlobalVariablePattern
+    : public SPIRVToLLVMConversion<spirv::GlobalVariableOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::GlobalVariableOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::GlobalVariableOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Currently, there is no support of initialization with a constant value in
+    // SPIR-V dialect. Specialization constants are not considered as well.
+    if (op.initializer())
+      return failure();
+
+    auto srcType = op.type().cast<spirv::PointerType>();
+    auto dstType = typeConverter.convertType(srcType.getPointeeType());
+    if (!dstType)
+      return failure();
+
+    // Limit conversion to the current invocation only for now.
+    auto storageClass = srcType.getStorageClass();
+    if (storageClass != spirv::StorageClass::Input &&
+        storageClass != spirv::StorageClass::Private &&
+        storageClass != spirv::StorageClass::Output) {
+      return failure();
+    }
+
+    // LLVM dialect spec: "If the global value is a constant, storing into it is
+    // not allowed.". This corresponds to SPIR-V 'Input' storage class that is
+    // read-only.
+    bool isConstant = storageClass == spirv::StorageClass::Input;
+    // SPIR-V spec: "By default, functions and global variables are private to a
+    // module and cannot be accessed by other modules. However, a module may be
+    // written to export or import functions and global (module scope)
+    // variables.". Therefore, map 'Private' storage class to private linkage,
+    // 'Input' and 'Output' to external linkage.
+    auto linkage = storageClass == spirv::StorageClass::Private
+                       ? LLVM::Linkage::Private
+                       : LLVM::Linkage::External;
+    rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
+        op, dstType.cast<LLVM::LLVMType>(), isConstant, linkage, op.sym_name(),
+        Attribute());
     return success();
   }
 };
@@ -1230,8 +1295,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       NotPattern<spirv::LogicalNotOp>,
 
       // Memory ops
-      LoadStorePattern<spirv::LoadOp>, LoadStorePattern<spirv::StoreOp>,
-      VariablePattern,
+      AddressOfPattern, GlobalVariablePattern, LoadStorePattern<spirv::LoadOp>,
+      LoadStorePattern<spirv::StoreOp>, VariablePattern,
 
       // Miscellaneous ops
       DirectConversionPattern<spirv::SelectOp, LLVM::SelectOp>,
