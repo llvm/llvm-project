@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple i386-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,NONCOFF
+// RUN: %clang_cc1 -triple i386-unknown-windows-pc -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,COFF
 
 __attribute((aligned(16))) float a[128];
 union {int a[4]; __attribute((aligned(16))) float b[4];} b;
@@ -7,7 +8,7 @@ union {int a[4]; __attribute((aligned(16))) float b[4];} b;
 // CHECK: @b = {{.*}}zeroinitializer, align 16
 
 long long int test5[1024];
-// CHECK-DAG: @test5 = global [1024 x i64] zeroinitializer, align 8
+// CHECK-DAG: @test5 = {{.*}}global [1024 x i64] zeroinitializer, align 8
 
 // PR5279 - Reduced alignment on typedef.
 typedef int myint __attribute__((aligned(1)));
@@ -67,3 +68,11 @@ void test6(float4align64 *p) {
 }
 // CHECK-LABEL: @test6
 // CHECK:       load <4 x float>, <4 x float>* {{.*}}, align 2
+
+typedef int __attribute__((ext_vector_type(200 * 16))) BigVecTy;
+void test7() {
+  BigVecTy V;
+}
+// CHECK-LABEL: @test7
+// NONCOFF: alloca <3200 x i32>, align 16384
+// COFF: alloca <3200 x i32>, align 8192
