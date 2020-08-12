@@ -412,7 +412,7 @@ class EntityVariable : public Materializer::Entity {
 public:
   EntityVariable(lldb::VariableSP &variable_sp)
       : Entity(), m_variable_sp(variable_sp), m_is_reference(false),
-        m_is_generic(false), m_temporary_allocation(LLDB_INVALID_ADDRESS),
+        m_temporary_allocation(LLDB_INVALID_ADDRESS),
         m_temporary_allocation_size(0) {
     // Hard-coding to maximum size of a pointer since all variables are
     // materialized by reference
@@ -420,8 +420,6 @@ public:
     m_alignment = 8;
     m_is_reference =
         m_variable_sp->GetType()->GetForwardCompilerType().IsReferenceType();
-    m_is_generic = SwiftASTContext::IsGenericType(
-        m_variable_sp->GetType()->GetForwardCompilerType());
   }
 
   void Materialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
@@ -793,7 +791,6 @@ public:
 private:
   lldb::VariableSP m_variable_sp;
   bool m_is_reference;
-  bool m_is_generic;
   lldb::addr_t m_temporary_allocation;
   size_t m_temporary_allocation_size;
   lldb::DataBufferSP m_original_data;
