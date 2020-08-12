@@ -186,9 +186,7 @@ define <4 x i1> @abs_known_not_int_min_vec(<4 x i32> %x) {
 ; If it's >= 0 it should be >= -1 as well.
 define i1 @abs_nsw_sge_neg(i32 %x) {
 ; CHECK-LABEL: @abs_nsw_sge_neg(
-; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[C:%.*]] = icmp sge i32 [[ABS]], -1
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %abs = call i32 @llvm.abs.i32(i32 %x, i1 true)
   %c = icmp sge i32 %abs, -1
@@ -197,9 +195,7 @@ define i1 @abs_nsw_sge_neg(i32 %x) {
 
 define i1 @abs_ule_int_min(i8 %x) {
 ; CHECK-LABEL: @abs_ule_int_min(
-; CHECK-NEXT:    [[ABS:%.*]] = call i8 @llvm.abs.i8(i8 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[C:%.*]] = icmp ule i8 [[ABS]], -128
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %abs = call i8 @llvm.abs.i8(i8 %x, i1 false)
   %c = icmp ule i8 %abs, 128

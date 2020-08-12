@@ -63,7 +63,7 @@ define i32 @abs_signbits(i30 %x) {
 ; CHECK-LABEL: @abs_signbits(
 ; CHECK-NEXT:    [[EXT:%.*]] = sext i30 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[EXT]], i1 false)
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[ABS]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ABS]], 1
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %ext = sext i30 %x to i32
@@ -76,7 +76,7 @@ define <4 x i32> @abs_signbits_vec(<4 x i30> %x) {
 ; CHECK-LABEL: @abs_signbits_vec(
 ; CHECK-NEXT:    [[EXT:%.*]] = sext <4 x i30> [[X:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[ABS:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[EXT]], i1 false)
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw <4 x i32> [[ABS]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <4 x i32> [[ABS]], <i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    ret <4 x i32> [[ADD]]
 ;
   %ext = sext <4 x i30> %x to <4 x i32>
