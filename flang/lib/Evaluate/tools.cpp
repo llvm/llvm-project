@@ -242,9 +242,9 @@ std::optional<Expr<SomeType>> MixedComplexLeft(
     // (a,b) * x -> (a*x, b*x)
     // (a,b) / x -> (a/x, b/x)
     auto copy{iry};
-    auto rr{NumericOperation<Multiply>(messages, AsGenericExpr(std::move(zr)),
+    auto rr{NumericOperation<OPR>(messages, AsGenericExpr(std::move(zr)),
         AsGenericExpr(std::move(iry)), defaultRealKind)};
-    auto ri{NumericOperation<Multiply>(messages, AsGenericExpr(std::move(zi)),
+    auto ri{NumericOperation<OPR>(messages, AsGenericExpr(std::move(zi)),
         AsGenericExpr(std::move(copy)), defaultRealKind)};
     if (auto parts{common::AllPresent(std::move(rr), std::move(ri))}) {
       return Package(ConstructComplex(messages, std::get<0>(std::move(*parts)),
@@ -287,7 +287,7 @@ std::optional<Expr<SomeType>> MixedComplexRight(
       std::is_same_v<OPR<LargestReal>, Multiply<LargestReal>>) {
     // x + (a,b) -> (a,b) + x -> (a+x, b)
     // x * (a,b) -> (a,b) * x -> (a*x, b*x)
-    return MixedComplexLeft<Add, LCAT>(
+    return MixedComplexLeft<OPR, LCAT>(
         messages, std::move(zy), std::move(irx), defaultRealKind);
   } else if constexpr (std::is_same_v<OPR<LargestReal>,
                            Subtract<LargestReal>>) {
