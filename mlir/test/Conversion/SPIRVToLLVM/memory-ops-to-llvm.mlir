@@ -1,6 +1,26 @@
 // RUN: mlir-opt -convert-spirv-to-llvm %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
+// spv.globalVariable and spv._address_of
+//===----------------------------------------------------------------------===//
+
+spv.module Logical GLSL450 {
+  // CHECK: llvm.mlir.global external constant @var() : !llvm.float
+  spv.globalVariable @var : !spv.ptr<f32, Input>
+}
+
+spv.module Logical GLSL450 {
+  //       CHECK: llvm.mlir.global private @struct() : !llvm.struct<packed (float, array<10 x float>)>
+  // CHECK-LABEL: @func
+  //       CHECK: llvm.mlir.addressof @struct : !llvm.ptr<struct<packed (float, array<10 x float>)>>
+  spv.globalVariable @struct : !spv.ptr<!spv.struct<f32, !spv.array<10xf32>>, Private>
+  spv.func @func() -> () "None" {
+    %0 = spv._address_of @struct : !spv.ptr<!spv.struct<f32, !spv.array<10xf32>>, Private>
+    spv.Return
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // spv.Load
 //===----------------------------------------------------------------------===//
 
