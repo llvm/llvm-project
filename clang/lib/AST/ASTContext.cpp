@@ -11147,8 +11147,7 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
     std::vector<std::string> Features(FeaturesTmp.begin(), FeaturesTmp.end());
     Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
   } else {
-    Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU,
-                           Target->getTargetOpts().Features);
+    FeatureMap = Target->getTargetOpts().FeatureMap;
   }
 }
 
