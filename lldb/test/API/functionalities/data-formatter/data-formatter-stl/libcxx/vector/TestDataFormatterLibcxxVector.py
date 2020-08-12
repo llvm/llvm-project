@@ -26,16 +26,15 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
                              '[6] = 1234567',
                              '}'])
 
-        self.expect("p " + var_name,
-                    substrs=['$', 'size=7',
-                             '[0] = 1',
-                             '[1] = 12',
-                             '[2] = 123',
-                             '[3] = 1234',
-                             '[4] = 12345',
-                             '[5] = 123456',
-                             '[6] = 1234567',
-                             '}'])
+        self.expect_expr(var_name, result_summary="size=7", result_children=[
+            ValueCheck(value="1"),
+            ValueCheck(value="12"),
+            ValueCheck(value="123"),
+            ValueCheck(value="1234"),
+            ValueCheck(value="12345"),
+            ValueCheck(value="123456"),
+            ValueCheck(value="1234567"),
+        ])
 
         # check access-by-index
         self.expect("frame variable " + var_name + "[0]",
