@@ -80,9 +80,9 @@ define internal i32 @call_with_two_values(i32 %c) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@call_with_two_values
 ; IS__TUNIT____-SAME: (i32 [[C:%.*]])
-; IS__TUNIT____-NEXT:    [[CSRET1:%.*]] = call i32 @iszero2(i32 [[C]]) #0, !range !0
+; IS__TUNIT____-NEXT:    [[CSRET1:%.*]] = call i32 @iszero2(i32 [[C]]) [[ATTR0:#.*]], [[RNG0:!range !.*]]
 ; IS__TUNIT____-NEXT:    [[MINUSC:%.*]] = sub i32 0, [[C]]
-; IS__TUNIT____-NEXT:    [[CSRET2:%.*]] = call i32 @iszero2(i32 [[MINUSC]]) #0, !range !0
+; IS__TUNIT____-NEXT:    [[CSRET2:%.*]] = call i32 @iszero2(i32 [[MINUSC]]) [[ATTR0]], [[RNG0]]
 ; IS__TUNIT____-NEXT:    [[RET:%.*]] = add i32 [[CSRET1]], [[CSRET2]]
 ; IS__TUNIT____-NEXT:    ret i32 [[RET]]
 ;
@@ -106,8 +106,8 @@ define i32 @potential_test2(i1 %c) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@potential_test2
 ; IS__TUNIT____-SAME: (i1 [[C:%.*]])
-; IS__TUNIT____-NEXT:    [[CSRET1:%.*]] = call i32 @call_with_two_values(i32 1) #0, !range !1
-; IS__TUNIT____-NEXT:    [[CSRET2:%.*]] = call i32 @call_with_two_values(i32 -1) #1, !range !1
+; IS__TUNIT____-NEXT:    [[CSRET1:%.*]] = call i32 @call_with_two_values(i32 1) [[ATTR0]], [[RNG1:!range !.*]]
+; IS__TUNIT____-NEXT:    [[CSRET2:%.*]] = call i32 @call_with_two_values(i32 -1) [[ATTR1:#.*]], [[RNG1]]
 ; IS__TUNIT____-NEXT:    [[RET:%.*]] = add i32 [[CSRET1]], [[CSRET2]]
 ; IS__TUNIT____-NEXT:    ret i32 [[RET]]
 ;
@@ -188,10 +188,10 @@ define i32 @potential_test3() {
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@potential_test3()
-; IS__TUNIT_NPM-NEXT:    [[CMP1:%.*]] = call i32 @iszero3(i32 0) #0, !range !0
-; IS__TUNIT_NPM-NEXT:    [[TRUE1:%.*]] = call i32 @less_than_two(i32 [[CMP1]]) #0, !range !0
-; IS__TUNIT_NPM-NEXT:    [[CMP2:%.*]] = call i32 @iszero3(i32 1) #0, !range !0
-; IS__TUNIT_NPM-NEXT:    [[TRUE2:%.*]] = call i32 @less_than_two(i32 [[CMP2]]) #0, !range !0
+; IS__TUNIT_NPM-NEXT:    [[CMP1:%.*]] = call i32 @iszero3(i32 0) [[ATTR0:#.*]], [[RNG0:!range !.*]]
+; IS__TUNIT_NPM-NEXT:    [[TRUE1:%.*]] = call i32 @less_than_two(i32 [[CMP1]]) [[ATTR0]], [[RNG0]]
+; IS__TUNIT_NPM-NEXT:    [[CMP2:%.*]] = call i32 @iszero3(i32 1) [[ATTR0]], [[RNG0]]
+; IS__TUNIT_NPM-NEXT:    [[TRUE2:%.*]] = call i32 @less_than_two(i32 [[CMP2]]) [[ATTR0]], [[RNG0]]
 ; IS__TUNIT_NPM-NEXT:    [[RET:%.*]] = add i32 [[TRUE1]], [[TRUE2]]
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[RET]]
 ;
@@ -227,7 +227,7 @@ define i32 @potential_test4(i32 %c) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@potential_test4
 ; IS__TUNIT____-SAME: (i32 [[C:%.*]])
-; IS__TUNIT____-NEXT:    [[CSRET:%.*]] = call i32 @return1or3(i32 [[C]]) #0, !range !2
+; IS__TUNIT____-NEXT:    [[CSRET:%.*]] = call i32 @return1or3(i32 [[C]]) [[ATTR0]], [[RNG2:!range !.*]]
 ; IS__TUNIT____-NEXT:    [[FALSE:%.*]] = icmp eq i32 [[CSRET]], 2
 ; IS__TUNIT____-NEXT:    [[RET:%.*]] = zext i1 [[FALSE]] to i32
 ; IS__TUNIT____-NEXT:    ret i32 [[RET]]
@@ -250,8 +250,8 @@ define i32 @potential_test5(i32 %c) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@potential_test5
 ; IS__TUNIT____-SAME: (i32 [[C:%.*]])
-; IS__TUNIT____-NEXT:    [[CSRET1:%.*]] = call i32 @return1or3(i32 [[C]]) #0, !range !2
-; IS__TUNIT____-NEXT:    [[CSRET2:%.*]] = call i32 @return2or4(i32 [[C]]) #0, !range !3
+; IS__TUNIT____-NEXT:    [[CSRET1:%.*]] = call i32 @return1or3(i32 [[C]]) [[ATTR0]], [[RNG2]]
+; IS__TUNIT____-NEXT:    [[CSRET2:%.*]] = call i32 @return2or4(i32 [[C]]) [[ATTR0]], [[RNG3:!range !.*]]
 ; IS__TUNIT____-NEXT:    [[FALSE:%.*]] = icmp eq i32 [[CSRET1]], [[CSRET2]]
 ; IS__TUNIT____-NEXT:    [[RET:%.*]] = zext i1 [[FALSE]] to i32
 ; IS__TUNIT____-NEXT:    ret i32 [[RET]]
@@ -276,7 +276,7 @@ define i1 @potential_test6(i32 %c) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@potential_test6
 ; IS__TUNIT____-SAME: (i32 [[C:%.*]])
-; IS__TUNIT____-NEXT:    [[CSRET1:%.*]] = call i32 @return1or3(i32 [[C]]) #0, !range !2
+; IS__TUNIT____-NEXT:    [[CSRET1:%.*]] = call i32 @return1or3(i32 [[C]]) [[ATTR0]], [[RNG2]]
 ; IS__TUNIT____-NEXT:    [[RET:%.*]] = icmp eq i32 [[CSRET1]], 3
 ; IS__TUNIT____-NEXT:    ret i1 [[RET]]
 ;
@@ -296,8 +296,8 @@ define i1 @potential_test7(i32 %c) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@potential_test7
 ; IS__TUNIT____-SAME: (i32 [[C:%.*]])
-; IS__TUNIT____-NEXT:    [[CSRET1:%.*]] = call i32 @return1or3(i32 [[C]]) #0, !range !2
-; IS__TUNIT____-NEXT:    [[CSRET2:%.*]] = call i32 @return3or4(i32 [[C]]) #0, !range !4
+; IS__TUNIT____-NEXT:    [[CSRET1:%.*]] = call i32 @return1or3(i32 [[C]]) [[ATTR0]], [[RNG2]]
+; IS__TUNIT____-NEXT:    [[CSRET2:%.*]] = call i32 @return3or4(i32 [[C]]) [[ATTR0]], [[RNG4:!range !.*]]
 ; IS__TUNIT____-NEXT:    [[RET:%.*]] = icmp eq i32 [[CSRET1]], [[CSRET2]]
 ; IS__TUNIT____-NEXT:    ret i1 [[RET]]
 ;

@@ -356,7 +356,7 @@ define void @nonnull_assume_pos(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4) {
 ;
 ; CHECK-LABEL: define {{[^@]+}}@nonnull_assume_pos
 ; CHECK-SAME: (i8* nofree [[ARG1:%.*]], i8* [[ARG2:%.*]], i8* nofree [[ARG3:%.*]], i8* [[ARG4:%.*]])
-; CHECK-NEXT:    call void @llvm.assume(i1 true) #11 [ "nofree"(i8* [[ARG1]]), "nofree"(i8* [[ARG3]]) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [[ATTR11:#.*]] [ "nofree"(i8* [[ARG1]]), "nofree"(i8* [[ARG3]]) ]
 ; CHECK-NEXT:    call void @unknown(i8* nofree [[ARG1]], i8* [[ARG2]], i8* nofree [[ARG3]], i8* [[ARG4]])
 ; CHECK-NEXT:    ret void
 ;
