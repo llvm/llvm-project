@@ -670,6 +670,10 @@ bool VectorCombine::run() {
   if (DisableVectorCombine)
     return false;
 
+  // Don't attempt vectorization if the target does not support vectors.
+  if (!TTI.getNumberOfRegisters(TTI.getRegisterClassForType(/*Vector*/ true)))
+    return false;
+
   bool MadeChange = false;
   for (BasicBlock &BB : F) {
     // Ignore unreachable basic blocks.
