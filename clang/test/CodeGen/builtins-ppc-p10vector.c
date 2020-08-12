@@ -8,6 +8,7 @@
 
 #include <altivec.h>
 
+vector signed __int128 vi128a;
 vector signed char vsca, vscb;
 vector unsigned char vuca, vucb, vucc;
 vector signed short vssa, vssb;
@@ -777,6 +778,49 @@ void test_vec_xst_trunc_ull(vector unsigned __int128 __a, signed long long __b,
   // CHECK: store i64 %{{.+}}, i64* %{{.+}}, align 8
   vec_xst_trunc(__a, __b, __c);
 }
+
+vector unsigned __int128 test_vec_slq_unsigned (void) {
+  // CHECK-LABEL: test_vec_slq_unsigned
+  // CHECK: shl <1 x i128> %{{.+}}, %{{.+}}
+  // CHECK: ret <1 x i128> %{{.+}}
+  return vec_sl(vui128a, vui128b);
+}
+
+vector signed __int128 test_vec_slq_signed (void) {
+  // CHECK-LABEL: test_vec_slq_signed
+  // CHECK: shl <1 x i128> %{{.+}}, %{{.+}}
+  // CHECK: ret <1 x i128>
+  return vec_sl(vi128a, vui128a);
+}
+
+vector unsigned __int128 test_vec_srq_unsigned (void) {
+  // CHECK-LABEL: test_vec_srq_unsigned
+  // CHECK: lshr <1 x i128> %{{.+}}, %{{.+}}
+  // CHECK: ret <1 x i128>
+  return vec_sr(vui128a, vui128b);
+}
+
+vector signed __int128 test_vec_srq_signed (void) {
+  // CHECK-LABEL: test_vec_srq_signed
+  // CHECK: lshr <1 x i128> %{{.+}}, %{{.+}}
+  // CHECK: ret <1 x i128>
+  return vec_sr(vi128a, vui128a);
+}
+
+vector unsigned __int128 test_vec_sraq_unsigned (void) {
+  // CHECK-LABEL: test_vec_sraq_unsigned
+  // CHECK: ashr <1 x i128> %{{.+}}, %{{.+}}
+  // CHECK: ret <1 x i128>
+  return vec_sra(vui128a, vui128b);
+}
+
+vector signed __int128 test_vec_sraq_signed (void) {
+  // CHECK-LABEL: test_vec_sraq_signed
+  // CHECK: ashr <1 x i128> %{{.+}}, %{{.+}}
+  // CHECK: ret <1 x i128>
+  return vec_sra(vi128a, vui128a);
+}
+
 
 int test_vec_test_lsbb_all_ones(void) {
   // CHECK: @llvm.ppc.vsx.xvtlsbb(<16 x i8> %{{.+}}, i32 1
