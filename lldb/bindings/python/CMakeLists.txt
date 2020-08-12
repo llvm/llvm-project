@@ -6,6 +6,7 @@ add_custom_command(
   DEPENDS ${SWIG_HEADERS}
   COMMAND ${SWIG_EXECUTABLE}
       ${SWIG_COMMON_FLAGS}
+      -I${CMAKE_CURRENT_SOURCE_DIR}
       -c++
       -shadow
       -python
