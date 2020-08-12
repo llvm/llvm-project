@@ -6414,6 +6414,33 @@ static void setLimitsForIntrinsic(const IntrinsicInst &II, APInt &Lower,
       }
     }
     break;
+  case Intrinsic::umin:
+  case Intrinsic::umax:
+  case Intrinsic::smin:
+  case Intrinsic::smax:
+    if (!match(II.getOperand(0), m_APInt(C)) &&
+        !match(II.getOperand(1), m_APInt(C)))
+      break;
+
+    switch (II.getIntrinsicID()) {
+    case Intrinsic::umin:
+      Upper = *C + 1;
+      break;
+    case Intrinsic::umax:
+      Lower = *C;
+      break;
+    case Intrinsic::smin:
+      Lower = APInt::getSignedMinValue(Width);
+      Upper = *C + 1;
+      break;
+    case Intrinsic::smax:
+      Lower = *C;
+      Upper = APInt::getSignedMaxValue(Width) + 1;
+      break;
+    default:
+      llvm_unreachable("Must be min/max intrinsic");
+    }
+    break;
   default:
     break;
   }
