@@ -21,28 +21,28 @@ using namespace mlir::tblgen;
 // Marker to indicate an error happened when replacing a placeholder.
 const char *const kMarkerForNoSubst = "<no-subst-found>";
 
-FmtContext &tblgen::FmtContext::addSubst(StringRef placeholder, Twine subst) {
+FmtContext &FmtContext::addSubst(StringRef placeholder, Twine subst) {
   customSubstMap[placeholder] = subst.str();
   return *this;
 }
 
-FmtContext &tblgen::FmtContext::withBuilder(Twine subst) {
+FmtContext &FmtContext::withBuilder(Twine subst) {
   builtinSubstMap[PHKind::Builder] = subst.str();
   return *this;
 }
 
-FmtContext &tblgen::FmtContext::withOp(Twine subst) {
+FmtContext &FmtContext::withOp(Twine subst) {
   builtinSubstMap[PHKind::Op] = subst.str();
   return *this;
 }
 
-FmtContext &tblgen::FmtContext::withSelf(Twine subst) {
+FmtContext &FmtContext::withSelf(Twine subst) {
   builtinSubstMap[PHKind::Self] = subst.str();
   return *this;
 }
 
 Optional<StringRef>
-tblgen::FmtContext::getSubstFor(FmtContext::PHKind placeholder) const {
+FmtContext::getSubstFor(FmtContext::PHKind placeholder) const {
   if (placeholder == FmtContext::PHKind::None ||
       placeholder == FmtContext::PHKind::Custom)
     return {};
@@ -52,15 +52,14 @@ tblgen::FmtContext::getSubstFor(FmtContext::PHKind placeholder) const {
   return StringRef(it->second);
 }
 
-Optional<StringRef>
-tblgen::FmtContext::getSubstFor(StringRef placeholder) const {
+Optional<StringRef> FmtContext::getSubstFor(StringRef placeholder) const {
   auto it = customSubstMap.find(placeholder);
   if (it == customSubstMap.end())
     return {};
   return StringRef(it->second);
 }
 
-FmtContext::PHKind tblgen::FmtContext::getPlaceHolderKind(StringRef str) {
+FmtContext::PHKind FmtContext::getPlaceHolderKind(StringRef str) {
   return llvm::StringSwitch<FmtContext::PHKind>(str)
       .Case("_builder", FmtContext::PHKind::Builder)
       .Case("_op", FmtContext::PHKind::Op)
@@ -70,7 +69,7 @@ FmtContext::PHKind tblgen::FmtContext::getPlaceHolderKind(StringRef str) {
 }
 
 std::pair<FmtReplacement, StringRef>
-tblgen::FmtObjectBase::splitFmtSegment(StringRef fmt) {
+FmtObjectBase::splitFmtSegment(StringRef fmt) {
   size_t begin = fmt.find_first_of('$');
   if (begin == StringRef::npos) {
     // No placeholders: the whole format string should be returned as a
