@@ -838,7 +838,7 @@ void Writer::createInitMemoryFunction() {
       for (const OutputSegment *s : segments) {
         if (needsPassiveInitialization(s)) {
           // destination address
-          if (config->is64) {
+          if (config->is64.getValueOr(false)) {
             writeI64Const(os, s->startVA, "destination address");
           } else {
             writeI32Const(os, static_cast<int32_t>(s->startVA),
