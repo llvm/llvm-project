@@ -870,6 +870,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::ATOMIC_LOAD_UMIN);
   setTargetDAGCombine(ISD::ATOMIC_LOAD_UMAX);
   setTargetDAGCombine(ISD::ATOMIC_LOAD_FADD);
+  setTargetDAGCombine(ISD::INTRINSIC_VOID);
+  setTargetDAGCombine(ISD::INTRINSIC_W_CHAIN);
 
   // FIXME: In other contexts we pretend this is a per-function property.
   setStackPointerRegisterToSaveRestore(AMDGPU::SGPR32);
@@ -8563,13 +8565,27 @@ SDValue SITargetLowering::performSHLPtrCombine(SDNode *N,
   return DAG.getNode(ISD::ADD, SL, VT, ShlX, COffset, Flags);
 }
 
+/// MemSDNode::getBasePtr() does not work for intrinsics, which needs to offset
+/// by the chain and intrinsic ID. Theoretically we would also need to check the
+/// specific intrinsic.
+static unsigned getBasePtrIndex(const MemSDNode *N) {
+  switch (N->getOpcode()) {
+  case ISD::STORE:
+  case ISD::INTRINSIC_W_CHAIN:
+  case ISD::INTRINSIC_VOID:
+    return 2;
+  default:
+    return 1;
+  }
+}
+
 SDValue SITargetLowering::performMemSDNodeCombine(MemSDNode *N,
                                                   DAGCombinerInfo &DCI) const {
-  // FIXME: getBasePtr does not work correctly for intrinsic nodes and will find
-  // the intrinsic ID, not the pointer.
-  SDValue Ptr = N->getBasePtr();
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
+
+  unsigned PtrIdx = getBasePtrIndex(N);
+  SDValue Ptr = N->getOperand(PtrIdx);
 
   // TODO: We could also do this for multiplies.
   if (Ptr.getOpcode() == ISD::SHL) {
@@ -8578,7 +8594,7 @@ SDValue SITargetLowering::performMemSDNodeCombine(MemSDNode *N,
     if (NewPtr) {
       SmallVector<SDValue, 8> NewOps(N->op_begin(), N->op_end());
 
-      NewOps[N->getOpcode() == ISD::STORE ? 2 : 1] = NewPtr;
+      NewOps[PtrIdx] = NewPtr;
       return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
     }
   }
