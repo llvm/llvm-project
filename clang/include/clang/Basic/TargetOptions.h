@@ -54,6 +54,10 @@ public:
   /// be a list of strings starting with by '+' or '-'.
   std::vector<std::string> Features;
 
+  /// The map of which features have been enabled disabled based on the command
+  /// line.
+  llvm::StringMap<bool> FeatureMap;
+
   /// Supported OpenCL extensions and optional core features.
   OpenCLOptions SupportedOpenCLOptions;
 
