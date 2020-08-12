@@ -89,8 +89,11 @@ regions, results and successors.
 
 For indexed components, the following pair of functions is provided.
 
--   `unsigned mlirXGetNum<Y>s(MlirX)` returns the upper bound on the index.
--   `MlirY mlirXGet<Y>(MlirX, unsigned pos)` returns 'pos'-th subobject.
+-   `intptr_t mlirXGetNum<Y>s(MlirX)` returns the upper bound on the index.
+-   `MlirY mlirXGet<Y>(MlirX, intptr_t pos)` returns 'pos'-th subobject.
+
+The sizes are accepted and returned as signed pointer-sized integers, i.e.
+`intptr_t`. This typedef is avalable in C99.
 
 Note that the name of subobject in the function does not necessarily match the
 type of the subobject. For example, `mlirOperationGetOperand` returns a

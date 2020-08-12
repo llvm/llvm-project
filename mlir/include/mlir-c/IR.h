@@ -18,6 +18,8 @@
 #ifndef MLIR_C_IR_H
 #define MLIR_C_IR_H
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -122,15 +124,15 @@ MlirOperation mlirModuleGetOperation(MlirModule module);
 struct MlirOperationState {
   const char *name;
   MlirLocation location;
-  unsigned nResults;
+  intptr_t nResults;
   MlirType *results;
-  unsigned nOperands;
+  intptr_t nOperands;
   MlirValue *operands;
-  unsigned nRegions;
+  intptr_t nRegions;
   MlirRegion *regions;
-  unsigned nSuccessors;
+  intptr_t nSuccessors;
   MlirBlock *successors;
-  unsigned nAttributes;
+  intptr_t nAttributes;
   MlirNamedAttribute *attributes;
 };
 typedef struct MlirOperationState MlirOperationState;
@@ -139,15 +141,15 @@ typedef struct MlirOperationState MlirOperationState;
 MlirOperationState mlirOperationStateGet(const char *name, MlirLocation loc);
 
 /** Adds a list of components to the operation state. */
-void mlirOperationStateAddResults(MlirOperationState *state, unsigned n,
+void mlirOperationStateAddResults(MlirOperationState *state, intptr_t n,
                                   MlirType *results);
-void mlirOperationStateAddOperands(MlirOperationState *state, unsigned n,
+void mlirOperationStateAddOperands(MlirOperationState *state, intptr_t n,
                                    MlirValue *operands);
-void mlirOperationStateAddOwnedRegions(MlirOperationState *state, unsigned n,
+void mlirOperationStateAddOwnedRegions(MlirOperationState *state, intptr_t n,
                                        MlirRegion *regions);
-void mlirOperationStateAddSuccessors(MlirOperationState *state, unsigned n,
+void mlirOperationStateAddSuccessors(MlirOperationState *state, intptr_t n,
                                      MlirBlock *successors);
-void mlirOperationStateAddAttributes(MlirOperationState *state, unsigned n,
+void mlirOperationStateAddAttributes(MlirOperationState *state, intptr_t n,
                                      MlirNamedAttribute *attributes);
 
 /*============================================================================*/
@@ -164,38 +166,38 @@ void mlirOperationDestroy(MlirOperation op);
 int mlirOperationIsNull(MlirOperation op);
 
 /** Returns the number of regions attached to the given operation. */
-unsigned mlirOperationGetNumRegions(MlirOperation op);
+intptr_t mlirOperationGetNumRegions(MlirOperation op);
 
 /** Returns `pos`-th region attached to the operation. */
-MlirRegion mlirOperationGetRegion(MlirOperation op, unsigned pos);
+MlirRegion mlirOperationGetRegion(MlirOperation op, intptr_t pos);
 
 /** Returns an operation immediately following the given operation it its
  * enclosing block. */
 MlirOperation mlirOperationGetNextInBlock(MlirOperation op);
 
 /** Returns the number of operands of the operation. */
-unsigned mlirOperationGetNumOperands(MlirOperation op);
+intptr_t mlirOperationGetNumOperands(MlirOperation op);
 
 /** Returns `pos`-th operand of the operation. */
-MlirValue mlirOperationGetOperand(MlirOperation op, unsigned pos);
+MlirValue mlirOperationGetOperand(MlirOperation op, intptr_t pos);
 
 /** Returns the number of results of the operation. */
-unsigned mlirOperationGetNumResults(MlirOperation op);
+intptr_t mlirOperationGetNumResults(MlirOperation op);
 
 /** Returns `pos`-th result of the operation. */
-MlirValue mlirOperationGetResult(MlirOperation op, unsigned pos);
+MlirValue mlirOperationGetResult(MlirOperation op, intptr_t pos);
 
 /** Returns the number of successor blocks of the operation. */
-unsigned mlirOperationGetNumSuccessors(MlirOperation op);
+intptr_t mlirOperationGetNumSuccessors(MlirOperation op);
 
 /** Returns `pos`-th successor of the operation. */
-MlirBlock mlirOperationGetSuccessor(MlirOperation op, unsigned pos);
+MlirBlock mlirOperationGetSuccessor(MlirOperation op, intptr_t pos);
 
 /** Returns the number of attributes attached to the operation. */
-unsigned mlirOperationGetNumAttributes(MlirOperation op);
+intptr_t mlirOperationGetNumAttributes(MlirOperation op);
 
 /** Return `pos`-th attribute of the operation. */
-MlirNamedAttribute mlirOperationGetAttribute(MlirOperation op, unsigned pos);
+MlirNamedAttribute mlirOperationGetAttribute(MlirOperation op, intptr_t pos);
 
 /** Returns an attrbute attached to the operation given its name. */
 MlirAttribute mlirOperationGetAttributeByName(MlirOperation op,
@@ -223,7 +225,7 @@ void mlirRegionAppendOwnedBlock(MlirRegion region, MlirBlock block);
 
 /** Takes a block owned by the caller and inserts it at `pos` to the given
  * region. */
-void mlirRegionInsertOwnedBlock(MlirRegion region, unsigned pos,
+void mlirRegionInsertOwnedBlock(MlirRegion region, intptr_t pos,
                                 MlirBlock block);
 
 /*============================================================================*/
@@ -232,7 +234,7 @@ void mlirRegionInsertOwnedBlock(MlirRegion region, unsigned pos,
 
 /** Creates a new empty block with the given argument types and transfers
  * ownership to the caller. */
-MlirBlock mlirBlockCreate(unsigned nArgs, MlirType *args);
+MlirBlock mlirBlockCreate(intptr_t nArgs, MlirType *args);
 
 /** Takes a block owned by the caller and destroys it. */
 void mlirBlockDestroy(MlirBlock block);
@@ -252,14 +254,14 @@ void mlirBlockAppendOwnedOperation(MlirBlock block, MlirOperation operation);
 
 /** Takes an operation owned by the caller and inserts it as `pos` to the block.
  */
-void mlirBlockInsertOwnedOperation(MlirBlock block, unsigned pos,
+void mlirBlockInsertOwnedOperation(MlirBlock block, intptr_t pos,
                                    MlirOperation operation);
 
 /** Returns the number of arguments of the block. */
-unsigned mlirBlockGetNumArguments(MlirBlock block);
+intptr_t mlirBlockGetNumArguments(MlirBlock block);
 
 /** Returns `pos`-th argument of the block. */
-MlirValue mlirBlockGetArgument(MlirBlock block, unsigned pos);
+MlirValue mlirBlockGetArgument(MlirBlock block, intptr_t pos);
 
 /*============================================================================*/
 /* Value API.                                                                 */
