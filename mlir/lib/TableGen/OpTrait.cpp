@@ -44,7 +44,7 @@ llvm::StringRef InternalOpTrait::getTrait() const {
 }
 
 std::string PredOpTrait::getPredTemplate() const {
-  auto pred = tblgen::Pred(def->getValueInit("predicate"));
+  auto pred = Pred(def->getValueInit("predicate"));
   return pred.getCondition();
 }
 
