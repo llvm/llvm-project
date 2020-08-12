@@ -20,7 +20,6 @@
 
 int main(int, char**)
 {
-#if TEST_STD_VER >= 11
     {
         std::promise<int> p0;
         std::promise<int> p(p0); // expected-error {{call to deleted constructor of 'std::promise<int>'}}
@@ -33,20 +32,6 @@ int main(int, char**)
         std::promise<void> p0;
         std::promise<void> p(p0); // expected-error {{call to deleted constructor of 'std::promise<void>'}}
     }
-#else
-    {
-        std::promise<int> p0;
-        std::promise<int> p(p0); // expected-error {{calling a private constructor of class 'std::__1::promise<int>'}}
-    }
-    {
-        std::promise<int &> p0;
-        std::promise<int &> p(p0); // expected-error {{calling a private constructor of class 'std::__1::promise<int &>'}}
-    }
-    {
-        std::promise<void> p0;
-        std::promise<void> p(p0); // expected-error {{calling a private constructor of class 'std::__1::promise<void>'}}
-    }
-#endif
 
-  return 0;
+    return 0;
 }
