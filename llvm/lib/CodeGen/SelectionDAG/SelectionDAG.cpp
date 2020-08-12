@@ -5560,6 +5560,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
             (VT.getVectorMinNumElements() + N2C->getZExtValue()) <=
                 N1VT.getVectorMinNumElements()) &&
            "Extract subvector overflow!");
+    assert(N2C->getAPIntValue().getBitWidth() ==
+               TLI->getVectorIdxTy(getDataLayout())
+                   .getSizeInBits()
+                   .getFixedSize() &&
+           "Constant index for EXTRACT_SUBVECTOR has an invalid size");
 
     // Trivial extraction.
     if (VT == N1VT)

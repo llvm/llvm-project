@@ -1155,6 +1155,16 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   def : Pat<(nxv8i1 (extract_subvector (nxv16i1 PPR:$Ps), (i64 8))),
             (ZIP2_PPP_B PPR:$Ps, (PFALSE))>;
 
+  // Extract subvectors from FP SVE vectors
+  def : Pat<(nxv4f16 (extract_subvector (nxv8f16 ZPR:$Zs), (i64 0))),
+            (UUNPKLO_ZZ_S ZPR:$Zs)>;
+  def : Pat<(nxv4f16 (extract_subvector (nxv8f16 ZPR:$Zs), (i64 4))),
+            (UUNPKHI_ZZ_S ZPR:$Zs)>;
+  def : Pat<(nxv2f32 (extract_subvector (nxv4f32 ZPR:$Zs), (i64 0))),
+            (UUNPKLO_ZZ_D ZPR:$Zs)>;
+  def : Pat<(nxv2f32 (extract_subvector (nxv4f32 ZPR:$Zs), (i64 2))),
+            (UUNPKHI_ZZ_D ZPR:$Zs)>;
+
   // Concatenate two predicates.
   def : Pat<(nxv4i1 (concat_vectors nxv2i1:$p1, nxv2i1:$p2)),
             (UZP1_PPP_S $p1, $p2)>;
