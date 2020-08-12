@@ -994,3 +994,19 @@ define i4 @or_or_xor_use2(i4 %x, i4 %y, i4 %z, i4* %p) {
   %r = xor i4 %o1, %o2
   ret i4 %r
 }
+
+; PR32706 - https://bugs.llvm.org/show_bug.cgi?id=32706
+; TODO: Pin an xor constant operand to -1 if possible because 'not' is better for SCEV and codegen.
+
+define i32 @not_is_canonical(i32 %x, i32 %y) {
+; CHECK-LABEL: @not_is_canonical(
+; CHECK-NEXT:    [[SUB:%.*]] = xor i32 [[X:%.*]], 1073741823
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SUB]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[ADD]], 2
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %sub = xor i32 %x, 1073741823
+  %add = add i32 %sub, %y
+  %mul = shl i32 %add, 2
+  ret i32 %mul
+}
