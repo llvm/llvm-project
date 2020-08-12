@@ -51,6 +51,21 @@ class DirectiveLanguage {
   string flangClauseBaseClass = "";
 }
 
+// Information about values accepted by enum-like clauses
+class ClauseVal<string n, int v, bit uv> {
+  // Name of the clause value.
+  string name = n;
+
+  // Integer value of the clause.
+  int value = v;
+
+  // Can user specify this value?
+  bit isUserValue = uv;
+
+  // Set clause value used by default when unknown.
+  bit isDefault = 0;
+}
+
 // Information about a specific clause.
 class Clause<string c> {
   // Name of the clause.
@@ -75,11 +90,17 @@ class Clause<string c> {
   // If set to 1, value is optional. Not optional by default.
   bit isValueOptional = 0;
 
+  // Name of enum when there is a list of allowed clause values.
+  string enumClauseValue = "";
+
+  // List of allowed clause values
+  list<ClauseVal> allowedClauseValues = [];
+
   // Is clause implicit? If clause is set as implicit, the default kind will
   // be return in get<LanguageName>ClauseKind instead of their own kind.
   bit isImplicit = 0;
 
-  // Set directive used by default when unknown. Function returning the kind
+  // Set clause used by default when unknown. Function returning the kind
   // of enumeration will use this clause as the default.
   bit isDefault = 0;
 }
