@@ -44,10 +44,3 @@ int main() {                    // CHECK: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2 =
 
   return 0;
 }
-
-#define FOO true
-
-// CHECK-LABEL: _Z7ternaryv:
-void ternary() {
-  true ? FOO : FOO; // CHECK-NOT: Gap,{{.*}}, [[@LINE]]:8 ->
-}

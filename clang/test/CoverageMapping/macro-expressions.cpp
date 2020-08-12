@@ -57,7 +57,8 @@ void foo(int i) {
   // CHECK: File 0, [[@LINE+1]]:10 -> [[@LINE+1]]:12 = #1
   if (0) {}
 
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+2]]:7 -> [[@LINE+2]]:11 = #0
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:7 -> [[@LINE+3]]:11 = #0
+  // CHECK-NEXT: Gap,File 0, [[@LINE+2]]:15 -> [[@LINE+2]]:16 = #2
   // CHECK-NEXT: File 0, [[@LINE+1]]:16 -> [[@LINE+1]]:18 = #2
   if (EXPR(i)) {}
   // CHECK-NEXT: Expansion,File 0, [[@LINE+2]]:9 -> [[@LINE+2]]:14 = (#0 + #3)
@@ -70,7 +71,8 @@ void foo(int i) {
   for (ASSIGN(DECL(int, j), 0); LT(j, i); INC(j)) {}
   // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:9 = #0
   ASSIGN(DECL(int, k), 0);
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:10 -> [[@LINE+3]]:12 = (#0 + #5)
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+4]]:10 -> [[@LINE+4]]:12 = (#0 + #5)
+  // CHECK-NEXT: Gap,File 0, [[@LINE+3]]:19 -> [[@LINE+3]]:20 = #5
   // CHECK-NEXT: File 0, [[@LINE+2]]:20 -> [[@LINE+2]]:31 = #5
   // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:22 -> [[@LINE+1]]:25 = #5
   while (LT(k, i)) { INC(k); }
@@ -82,6 +84,7 @@ void foo(int i) {
   // CHECK: File 0, [[@LINE+1]]:42 -> [[@LINE+1]]:44 = #7
   for (DECL(int, j) : ARR(int, 1, 2, 3)) {}
 
+  // CHECK-NEXT: Gap,File 0, [[@LINE+3]]:12 -> [[@LINE+3]]:14 = #8
   // CHECK-NEXT: Expansion,File 0, [[@LINE+2]]:14 -> [[@LINE+2]]:20 = #0
   // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:23 -> [[@LINE+1]]:29 = #0
   (void)(i ? PRIo64 : PRIu64);
