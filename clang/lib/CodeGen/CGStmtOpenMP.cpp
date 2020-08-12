@@ -21,6 +21,7 @@
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/PrettyStackTrace.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -3784,6 +3785,42 @@ void CodeGenFunction::EmitOMPParallelSectionsDirective(
   checkForLastprivateConditionalUpdate(*this, S);
 }
 
+namespace {
+/// Get the list of variables declared in the context of the untied tasks.
+class CheckVarsEscapingUntiedTaskDeclContext final
+    : public ConstStmtVisitor<CheckVarsEscapingUntiedTaskDeclContext> {
+  llvm::SmallVector<const VarDecl *, 4> PrivateDecls;
+
+public:
+  explicit CheckVarsEscapingUntiedTaskDeclContext() = default;
+  virtual ~CheckVarsEscapingUntiedTaskDeclContext() = default;
+  void VisitDeclStmt(const DeclStmt *S) {
+    if (!S)
+      return;
+    // Need to privatize only local vars, static locals can be processed as is.
+    for (const Decl *D : S->decls()) {
+      if (const auto *VD = dyn_cast_or_null<VarDecl>(D))
+        if (VD->hasLocalStorage())
+          PrivateDecls.push_back(VD);
+    }
+  }
+  void VisitOMPExecutableDirective(const OMPExecutableDirective *) { return; }
+  void VisitCapturedStmt(const CapturedStmt *) { return; }
+  void VisitLambdaExpr(const LambdaExpr *) { return; }
+  void VisitBlockExpr(const BlockExpr *) { return; }
+  void VisitStmt(const Stmt *S) {
+    if (!S)
+      return;
+    for (const Stmt *Child : S->children())
+      if (Child)
+        Visit(Child);
+  }
+
+  /// Swaps list of vars with the provided one.
+  ArrayRef<const VarDecl *> getPrivateDecls() const { return PrivateDecls; }
+};
+} // anonymous namespace
+
 void CodeGenFunction::EmitOMPTaskBasedDirective(
     const OMPExecutableDirective &S, const OpenMPDirectiveKind CapturedRegion,
     const RegionCodeGenTy &BodyGen, const TaskGenTy &TaskGen,
@@ -3884,14 +3921,22 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
         Data.Dependences.emplace_back(C->getDependencyKind(), C->getModifier());
     DD.DepExprs.append(C->varlist_begin(), C->varlist_end());
   }
+  // Get list of local vars for untied tasks.
+  if (!Data.Tied) {
+    CheckVarsEscapingUntiedTaskDeclContext Checker;
+    Checker.Visit(S.getInnermostCapturedStmt()->getCapturedStmt());
+    Data.PrivateLocals.append(Checker.getPrivateDecls().begin(),
+                              Checker.getPrivateDecls().end());
+  }
   auto &&CodeGen = [&Data, &S, CS, &BodyGen, &LastprivateDstsOrigs,
                     CapturedRegion](CodeGenFunction &CGF,
                                     PrePostActionTy &Action) {
+    llvm::DenseMap<CanonicalDeclPtr<const VarDecl>, Address> UntiedLocalVars;
     // Set proper addresses for generated private copies.
     OMPPrivateScope Scope(CGF);
     llvm::SmallVector<std::pair<const VarDecl *, Address>, 16> FirstprivatePtrs;
     if (!Data.PrivateVars.empty() || !Data.FirstprivateVars.empty() ||
-        !Data.LastprivateVars.empty()) {
+        !Data.LastprivateVars.empty() || !Data.PrivateLocals.empty()) {
       llvm::FunctionType *CopyFnTy = llvm::FunctionType::get(
           CGF.Builder.getVoidTy(), {CGF.Builder.getInt8PtrTy()}, true);
       enum { PrivatesParam = 2, CopyFnParam = 3 };
@@ -3927,6 +3972,15 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
         PrivatePtrs.emplace_back(VD, PrivatePtr);
         CallArgs.push_back(PrivatePtr.getPointer());
       }
+      for (const VarDecl *VD : Data.PrivateLocals) {
+        QualType Ty = VD->getType().getNonReferenceType();
+        if (VD->getType()->isLValueReferenceType())
+          Ty = CGF.getContext().getPointerType(Ty);
+        Address PrivatePtr = CGF.CreateMemTemp(
+            CGF.getContext().getPointerType(Ty), ".local.ptr.addr");
+        UntiedLocalVars.try_emplace(VD, PrivatePtr);
+        CallArgs.push_back(PrivatePtr.getPointer());
+      }
       CGF.CGM.getOpenMPRuntime().emitOutlinedFunctionCall(
           CGF, S.getBeginLoc(), {CopyFnTy, CopyFn}, CallArgs);
       for (const auto &Pair : LastprivateDstsOrigs) {
@@ -3944,6 +3998,13 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
         Address Replacement(CGF.Builder.CreateLoad(Pair.second),
                             CGF.getContext().getDeclAlign(Pair.first));
         Scope.addPrivate(Pair.first, [Replacement]() { return Replacement; });
+      }
+      // Adjust mapping for internal locals by mapping actual memory instead of
+      // a pointer to this memory.
+      for (auto &Pair : UntiedLocalVars) {
+        Address Replacement(CGF.Builder.CreateLoad(Pair.second),
+                            CGF.getContext().getDeclAlign(Pair.first));
+        Pair.getSecond() = Replacement;
       }
     }
     if (Data.Reductions) {
@@ -4039,6 +4100,8 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
     }
     (void)InRedScope.Privatize();
 
+    CGOpenMPRuntime::UntiedTaskLocalDeclsRAII LocalVarsScope(CGF.CGM,
+                                                             UntiedLocalVars);
     Action.Enter(CGF);
     BodyGen(CGF);
   };
