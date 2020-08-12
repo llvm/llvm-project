@@ -626,6 +626,43 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
           }
         }
       }
+    } else if (intrinsic->name == "transfer") {
+      if (call.arguments().size() == 3 && call.arguments().at(2)) {
+        // SIZE= is present; shape is vector [SIZE=]
+        if (const auto *size{
+                UnwrapExpr<Expr<SomeInteger>>(call.arguments().at(2))}) {
+          return Shape{
+              MaybeExtentExpr{ConvertToType<ExtentType>(common::Clone(*size))}};
+        }
+      } else if (auto moldTypeAndShape{
+                     characteristics::TypeAndShape::Characterize(
+                         call.arguments().at(1), context_)}) {
+        if (GetRank(moldTypeAndShape->shape()) == 0) {
+          // SIZE= is absent and MOLD= is scalar: result is scalar
+          return Scalar();
+        } else {
+          // SIZE= is absent and MOLD= is array: result is vector whose
+          // length is determined by sizes of types.  See 16.9.193p4 case(ii).
+          if (auto sourceTypeAndShape{
+                  characteristics::TypeAndShape::Characterize(
+                      call.arguments().at(0), context_)}) {
+            auto sourceElements{
+                GetSize(common::Clone(sourceTypeAndShape->shape()))};
+            auto sourceElementBytes{
+                sourceTypeAndShape->type().MeasureSizeInBytes(&context_)};
+            auto moldElementBytes{
+                moldTypeAndShape->type().MeasureSizeInBytes(&context_)};
+            if (sourceElements && sourceElementBytes && moldElementBytes) {
+              ExtentExpr extent{Fold(context_,
+                  ((std::move(*sourceElements) *
+                       std::move(*sourceElementBytes)) +
+                      common::Clone(*moldElementBytes) - ExtentExpr{1}) /
+                      common::Clone(*moldElementBytes))};
+              return Shape{MaybeExtentExpr{std::move(extent)}};
+            }
+          }
+        }
+      }
     } else if (intrinsic->name == "transpose") {
       if (call.arguments().size() >= 1) {
         if (auto shape{(*this)(call.arguments().at(0))}) {

@@ -396,13 +396,14 @@ auto ComputeOffsetsHelper::GetIntrinsicSizeAndAlignment(
   if (category == TypeCategory::Character) {
     return {static_cast<std::size_t>(kind)};
   }
-  std::optional<std::size_t> size{
-      evaluate::DynamicType{category, kind}.MeasureSizeInBytes()};
-  CHECK(size.has_value());
+  auto bytes{evaluate::ToInt64(
+      evaluate::DynamicType{category, kind}.MeasureSizeInBytes())};
+  CHECK(bytes && *bytes > 0);
+  std::size_t size{static_cast<std::size_t>(*bytes)};
   if (category == TypeCategory::Complex) {
-    return {*size, *size >> 1};
+    return {size, size >> 1};
   } else {
-    return {*size};
+    return {size};
   }
 }
 
