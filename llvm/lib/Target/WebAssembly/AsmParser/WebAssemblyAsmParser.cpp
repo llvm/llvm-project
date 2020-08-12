@@ -870,8 +870,7 @@ public:
       return false;
     }
     case Match_MissingFeature: {
-      auto NumMissing = MissingFeatures.count();
-      assert(NumMissing > 0 && "Expected missing features");
+      assert(MissingFeatures.count() > 0 && "Expected missing features");
       SmallString<128> Message;
       raw_svector_ostream OS(Message);
       OS << "instruction requires:";
