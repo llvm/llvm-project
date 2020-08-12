@@ -1856,9 +1856,7 @@ define i8 @umin_umin_umin(i8 %x, i8 %y) {
 
 define i1 @umin_ult_diff_const(i8 %x) {
 ; CHECK-LABEL: @umin_ult_diff_const(
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[X:%.*]], i8 10)
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[M]], 20
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %m = call i8 @llvm.umin.i8(i8 %x, i8 10)
   %c = icmp ult i8 %m, 20
@@ -1867,9 +1865,7 @@ define i1 @umin_ult_diff_const(i8 %x) {
 
 define i1 @umax_ugt_diff_const(i8 %x) {
 ; CHECK-LABEL: @umax_ugt_diff_const(
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 10)
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[M]], 5
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %m = call i8 @llvm.umax.i8(i8 %x, i8 10)
   %c = icmp ugt i8 %m, 5
@@ -1878,9 +1874,7 @@ define i1 @umax_ugt_diff_const(i8 %x) {
 
 define i1 @smin_slt_diff_const(i8 %x) {
 ; CHECK-LABEL: @smin_slt_diff_const(
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[X:%.*]], i8 10)
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[M]], 20
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %m = call i8 @llvm.smin.i8(i8 %x, i8 10)
   %c = icmp slt i8 %m, 20
@@ -1889,9 +1883,7 @@ define i1 @smin_slt_diff_const(i8 %x) {
 
 define i1 @smax_sgt_diff_const(i8 %x) {
 ; CHECK-LABEL: @smax_sgt_diff_const(
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 10)
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[M]], 5
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %m = call i8 @llvm.smax.i8(i8 %x, i8 10)
   %c = icmp sgt i8 %m, 5
