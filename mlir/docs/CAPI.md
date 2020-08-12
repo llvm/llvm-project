@@ -71,9 +71,30 @@ owned by the `MlirContext` in which they were created.
 ### Nullity
 
 A handle may refer to a _null_ object. It is the responsibility of the caller to
-check if an object is null by using `MlirXIsNull(MlirX)`. API functions do _not_
+check if an object is null by using `mlirXIsNull(MlirX)`. API functions do _not_
 expect null objects as arguments unless explicitly stated otherwise. API
 functions _may_ return null objects.
+
+### Conversion To String and Printing
+
+IR objects can be converted to a string representation, for example for
+printing, using `mlirXPrint(MlirX, MlirPrintCallback, void *)` functions. These
+functions accept take arguments a callback with signature `void (*)(const char
+*, intptr_t, void *)` and a pointer to user-defined data. They call the callback
+and supply it with chunks of the string representation, provided as a pointer to
+the first character and a length, and forward the user-defined data unmodified.
+It is up to the caller to allocate memory if the string representation must be
+stored and perform the copy. There is no guarantee that the pointer supplied to
+the callback points to a null-terminated string, the size argument should be
+used to find the end of the string. The callback may be called multiple times
+with consecutive chunks of the string representation (the printing itself is
+bufferred).
+
+*Rationale*: this approach allows the caller to have full control of the
+allocation and avoid unnecessary allocation and copying inside the printer.
+
+For convenience, `mlirXDump(MlirX)` functions are provided to print the given
+object to the standard error stream.
 
 ### Common Patterns
 

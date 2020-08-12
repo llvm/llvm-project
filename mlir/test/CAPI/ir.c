@@ -197,11 +197,47 @@ void collectStats(MlirOperation operation) {
     head = next;
   } while (head);
 
-  printf("Number of operations: %u\n", stats.numOperations);
-  printf("Number of attributes: %u\n", stats.numAttributes);
-  printf("Number of blocks: %u\n", stats.numBlocks);
-  printf("Number of regions: %u\n", stats.numRegions);
-  printf("Number of values: %u\n", stats.numValues);
+  fprintf(stderr, "Number of operations: %u\n", stats.numOperations);
+  fprintf(stderr, "Number of attributes: %u\n", stats.numAttributes);
+  fprintf(stderr, "Number of blocks: %u\n", stats.numBlocks);
+  fprintf(stderr, "Number of regions: %u\n", stats.numRegions);
+  fprintf(stderr, "Number of values: %u\n", stats.numValues);
+}
+
+static void printToStderr(const char *str, intptr_t len, void *userData) {
+  (void)userData;
+  fwrite(str, 1, len, stderr);
+}
+
+static void printFirstOfEach(MlirOperation operation) {
+  // Assuming we are given a module, go to the first operation of the first
+  // function.
+  MlirRegion region = mlirOperationGetRegion(operation, 0);
+  MlirBlock block = mlirRegionGetFirstBlock(region);
+  operation = mlirBlockGetFirstOperation(block);
+  region = mlirOperationGetRegion(operation, 0);
+  block = mlirRegionGetFirstBlock(region);
+  operation = mlirBlockGetFirstOperation(block);
+
+  // In the module we created, the first operation of the first function is an
+  // "std.dim", which has an attribute an a single result that we can use to
+  // test the printing mechanism.
+  mlirBlockPrint(block, printToStderr, NULL);
+  fprintf(stderr, "\n");
+  mlirOperationPrint(operation, printToStderr, NULL);
+  fprintf(stderr, "\n");
+
+  MlirNamedAttribute namedAttr = mlirOperationGetAttribute(operation, 0);
+  mlirAttributePrint(namedAttr.attribute, printToStderr, NULL);
+  fprintf(stderr, "\n");
+
+  MlirValue value = mlirOperationGetResult(operation, 0);
+  mlirValuePrint(value, printToStderr, NULL);
+  fprintf(stderr, "\n");
+
+  MlirType type = mlirValueGetType(value);
+  mlirTypePrint(type, printToStderr, NULL);
+  fprintf(stderr, "\n");
 }
 
 int main() {
@@ -236,6 +272,24 @@ int main() {
   // CHECK: Number of blocks: 3
   // CHECK: Number of regions: 3
   // CHECK: Number of values: 9
+  // clang-format on
+
+  printFirstOfEach(module);
+  // clang-format off
+  // CHECK:   %[[C0:.*]] = constant 0 : index
+  // CHECK:   %[[DIM:.*]] = dim %{{.*}}, %[[C0]] : memref<?xf32>
+  // CHECK:   %[[C1:.*]] = constant 1 : index
+  // CHECK:   scf.for %[[I:.*]] = %[[C0]] to %[[DIM]] step %[[C1]] {
+  // CHECK:     %[[LHS:.*]] = load %{{.*}}[%[[I]]] : memref<?xf32>
+  // CHECK:     %[[RHS:.*]] = load %{{.*}}[%[[I]]] : memref<?xf32>
+  // CHECK:     %[[SUM:.*]] = addf %[[LHS]], %[[RHS]] : f32
+  // CHECK:     store %[[SUM]], %{{.*}}[%[[I]]] : memref<?xf32>
+  // CHECK:   }
+  // CHECK: return
+  // CHECK: constant 0 : index
+  // CHECK: 0 : index
+  // CHECK: constant 0 : index
+  // CHECK: index
   // clang-format on
 
   mlirModuleDestroy(moduleOp);
