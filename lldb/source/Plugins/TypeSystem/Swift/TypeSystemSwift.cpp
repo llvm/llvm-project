@@ -15,11 +15,13 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include <lldb/lldb-enumerations.h>
+#include <llvm/ADT/StringRef.h>
 
 LLDB_PLUGIN_DEFINE(TypeSystemSwift)
 
 using namespace lldb;
 using namespace lldb_private;
+using llvm::StringRef;
 
 /// TypeSystem Plugin functionality.
 /// \{

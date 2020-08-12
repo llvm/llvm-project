@@ -259,7 +259,8 @@ public:
     return {};
   }
 
-  llvm::Optional<uint64_t> GetBitSize(CompilerType type) {
+  llvm::Optional<uint64_t> GetBitSize(CompilerType type,
+                                      ExecutionContextScope *exe_scope) {
     STUB_LOG();
     return {};
   }
@@ -2107,8 +2108,10 @@ SwiftLanguageRuntime::GetConcreteType(ExecutionContextScope *exe_scope,
   FORWARD(GetConcreteType, exe_scope, abstract_type_name);
 }
 
-llvm::Optional<uint64_t> SwiftLanguageRuntime::GetBitSize(CompilerType type) {
-  FORWARD(GetBitSize, type);
+llvm::Optional<uint64_t>
+SwiftLanguageRuntime::GetBitSize(CompilerType type,
+                                 ExecutionContextScope *exe_scope) {
+  FORWARD(GetBitSize, type, exe_scope);
 }
 
 llvm::Optional<uint64_t>
