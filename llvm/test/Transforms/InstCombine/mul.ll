@@ -908,7 +908,7 @@ define <2 x i32> @mulsub1_vec_nonuniform(<2 x i32> %a0, <2 x i32> %a1) {
 define <2 x i32> @mulsub1_vec_nonuniform_undef(<2 x i32> %a0, <2 x i32> %a1) {
 ; CHECK-LABEL: @mulsub1_vec_nonuniform_undef(
 ; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub <2 x i32> [[A0:%.*]], [[A1:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[SUB_NEG]], <i32 2, i32 undef>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[SUB_NEG]], <i32 2, i32 0>
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %sub = sub <2 x i32> %a1, %a0
@@ -952,7 +952,7 @@ define <2 x i32> @mulsub2_vec_nonuniform(<2 x i32> %a0) {
 define <2 x i32> @mulsub2_vec_nonuniform_undef(<2 x i32> %a0) {
 ; CHECK-LABEL: @mulsub2_vec_nonuniform_undef(
 ; CHECK-NEXT:    [[SUB_NEG:%.*]] = add <2 x i32> [[A0:%.*]], <i32 -16, i32 -32>
-; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[SUB_NEG]], <i32 2, i32 undef>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[SUB_NEG]], <i32 2, i32 0>
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %sub = sub <2 x i32> <i32 16, i32 32>, %a0
@@ -996,7 +996,7 @@ define <2 x i32> @muladd2_vec_nonuniform(<2 x i32> %a0) {
 define <2 x i32> @muladd2_vec_nonuniform_undef(<2 x i32> %a0) {
 ; CHECK-LABEL: @muladd2_vec_nonuniform_undef(
 ; CHECK-NEXT:    [[ADD_NEG:%.*]] = sub <2 x i32> <i32 -16, i32 -32>, [[A0:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[ADD_NEG]], <i32 2, i32 undef>
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[ADD_NEG]], <i32 2, i32 0>
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %add = add <2 x i32> %a0, <i32 16, i32 32>
