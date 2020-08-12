@@ -188,6 +188,10 @@ def platform_version : MultiArg<["-"], "platform_version", 3>,
      MetaVarName<"<platform> <min_version> <sdk_version>">,
      HelpText<"Platform (e.g., macos, ios, tvos, watchos, bridgeos, mac-catalyst, ios-sim, tvos-sim, watchos-sim, driverkit) and version numbers">,
      Group<grp_opts>;
+def sdk_version : Separate<["-"], "sdk_version">,
+     HelpText<"This option is undocumented in ld64">,
+     Flags<[HelpHidden]>,
+     Group<grp_opts>;
 def macos_version_min : Separate<["-"], "macos_version_min">,
      MetaVarName<"<version>">,
      HelpText<"Oldest macOS version for which linked output is useable">,
@@ -202,6 +206,11 @@ def macosx_version_min : Separate<["-"], "macosx_version_min">,
 def ios_version_min : Separate<["-"], "ios_version_min">,
      MetaVarName<"<version>">,
      HelpText<"Oldest iOS version for which linked output is useable">,
+     Flags<[HelpHidden]>,
+     Group<grp_opts>;
+def ios_simulator_version_min : Separate<["-"], "ios_simulator_version_min">,
+     MetaVarName<"<version>">,
+     HelpText<"Oldest iOS simulator version for which linked output is useable">,
      Flags<[HelpHidden]>,
      Group<grp_opts>;
 def iphoneos_version_min : Separate<["-"], "iphoneos_version_min">,
@@ -1212,7 +1221,7 @@ def no_new_main : Flag<["-"], "no_new_main">,
      HelpText<"This option is undocumented in ld64">,
      Flags<[HelpHidden]>,
      Group<grp_undocumented>;
-def objc_abi_version : Flag<["-"], "objc_abi_version">,
+def objc_abi_version : Separate<["-"], "objc_abi_version">,
      HelpText<"This option is undocumented in ld64">,
      Flags<[HelpHidden]>,
      Group<grp_undocumented>;
@@ -1225,10 +1234,6 @@ def random_uuid : Flag<["-"], "random_uuid">,
      Flags<[HelpHidden]>,
      Group<grp_undocumented>;
 def save_temps : Flag<["-"], "save-temps">,
-     HelpText<"This option is undocumented in ld64">,
-     Flags<[HelpHidden]>,
-     Group<grp_undocumented>;
-def sdk_version : Flag<["-"], "sdk_version">,
      HelpText<"This option is undocumented in ld64">,
      Flags<[HelpHidden]>,
      Group<grp_undocumented>;
