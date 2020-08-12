@@ -4077,9 +4077,15 @@ static Value *SimplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
   if (TrueVal == FalseVal)
     return TrueVal;
 
-  if (Q.isUndefValue(TrueVal)) // select ?, undef, X -> X
+  // If the true or false value is undef, we can fold to the other value as
+  // long as the other value isn't poison.
+  // select ?, undef, X -> X
+  if (Q.isUndefValue(TrueVal) &&
+      isGuaranteedNotToBeUndefOrPoison(FalseVal, Q.CxtI, Q.DT))
     return FalseVal;
-  if (Q.isUndefValue(FalseVal)) // select ?, X, undef -> X
+  // select ?, X, undef -> X
+  if (Q.isUndefValue(FalseVal) &&
+      isGuaranteedNotToBeUndefOrPoison(TrueVal, Q.CxtI, Q.DT))
     return TrueVal;
 
   // Deal with partial undef vector constants: select ?, VecC, VecC' --> VecC''
@@ -4100,9 +4106,11 @@ static Value *SimplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
       // one element is undef, choose the defined element as the safe result.
       if (TEltC == FEltC)
         NewC.push_back(TEltC);
-      else if (Q.isUndefValue(TEltC))
+      else if (Q.isUndefValue(TEltC) &&
+               isGuaranteedNotToBeUndefOrPoison(FEltC))
         NewC.push_back(FEltC);
-      else if (Q.isUndefValue(FEltC))
+      else if (Q.isUndefValue(FEltC) &&
+               isGuaranteedNotToBeUndefOrPoison(TEltC))
         NewC.push_back(TEltC);
       else
         break;
