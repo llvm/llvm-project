@@ -2978,7 +2978,7 @@ static void RenderSCPOptions(const ToolChain &TC, const ArgList &Args,
     return;
 
   if (Args.hasFlag(options::OPT_fstack_clash_protection,
-                   options::OPT_fnostack_clash_protection, false))
+                   options::OPT_fno_stack_clash_protection, false))
     CmdArgs.push_back("-fstack-clash-protection");
 }
 
