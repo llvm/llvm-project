@@ -42,23 +42,27 @@ struct ST {
 // CK31A-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 //
 // PRESENT=0x1000 | TARGET_PARAM=0x20 = 0x1020
-// CK31A: [[MTYPE00:@.+]] = private {{.*}}constant [7 x i64] [i64 [[#0x1020]],
+// CK31A-USE: [[MTYPE00:@.+]] = private {{.*}}constant [7 x i64] [i64 [[#0x1020]],
+// CK31A-NOUSE: [[MTYPE00:@.+]] = private {{.*}}constant [7 x i64] [i64 [[#0x1000]],
 //
 // MEMBER_OF_1=0x1000000000000 | FROM=0x2 | TO=0x1 = 0x1000000000003
 // MEMBER_OF_1=0x1000000000000 | PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x1000000001003
 // PRESENT=0x1000 | TARGET_PARAM=0x20 | FROM=0x2 | TO=0x1 = 0x1023
-// CK31A-SAME: {{^}} i64 [[#0x1000000000003]], i64 [[#0x1000000001003]], i64 [[#0x1023]],
+// CK31A-USE-SAME: {{^}} i64 [[#0x1000000000003]], i64 [[#0x1000000001003]], i64 [[#0x1023]],
+// CK31A-NOUSE-SAME: {{^}} i64 [[#0x1000000000003]], i64 [[#0x1000000001003]], i64 [[#0x1003]],
 //
 // PRESENT=0x1000 | TARGET_PARAM=0x20 = 0x1020
 // MEMBER_OF_5=0x5000000000000 | PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x5000000001003
 // MEMBER_OF_5=0x5000000000000 | FROM=0x2 | TO=0x1 = 0x5000000000003
-// CK31A-SAME: {{^}} i64 [[#0x1020]], i64 [[#0x5000000001003]], i64 [[#0x5000000000003]]]
+// CK31A-USE-SAME: {{^}} i64 [[#0x1020]], i64 [[#0x5000000001003]], i64 [[#0x5000000000003]]]
+// CK31A-NOUSE-SAME: {{^}} i64 [[#0x1000]], i64 [[#0x5000000001003]], i64 [[#0x5000000000003]]]
 
 // CK31A-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK31A: [[SIZE01:@.+]] = private {{.*}}constant [1 x i[[Z:64|32]]] [i[[Z:64|32]] 4]
 //
 // PRESENT=0x1000 | CLOSE=0x400 | TARGET_PARAM=0x20 | ALWAYS=0x4 | FROM=0x2 | TO=0x1 = 0x1427
-// CK31A: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 [[#0x1427]]]
+// CK31A-USE: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 [[#0x1427]]]
+// CK31A-NOUSE: [[MTYPE01:@.+]] = private {{.*}}constant [1 x i64] [i64 [[#0x1407]]]
 
 // CK31A-LABEL: explicit_maps_single{{.*}}(
 void explicit_maps_single (int ii){
