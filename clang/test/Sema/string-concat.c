@@ -130,6 +130,25 @@ const char *not_warn4[] =  {"title",
                "url"
 };
 
+typedef struct {
+  const char *a;
+  const char *b;
+  const char *c;
+} A;
+
+const A not_warn5 = (A){"",
+                        ""
+                        "",
+                        ""};
+
+#ifdef __cplusplus
+const A not_warn6 =  A{"",
+                      ""
+                      "",
+                      ""};
+#endif
+
+
 // Do not warn when all the elements in the initializer are concatenated together.
 const char *all_elems_in_init_concatenated[] = {"a" "b" "c"};
 

@@ -6870,7 +6870,6 @@ Sema::ActOnInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
   bool DiagnosedArrayDesignator = false;
   bool DiagnosedNestedDesignator = false;
   bool DiagnosedMixedDesignator = false;
-  bool DiagnosedMissingComma = false;
 
   // Check that any designated initializers are syntactically valid in the
   // current language mode.
@@ -6912,37 +6911,6 @@ Sema::ActOnInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
         << DIE->getSourceRange();
       Diag(InitArgList[I]->getBeginLoc(), diag::note_designated_init_mixed)
         << InitArgList[I]->getSourceRange();
-    } else if (const auto *SL = dyn_cast<StringLiteral>(InitArgList[I])) {
-      unsigned NumConcat = SL->getNumConcatenated();
-      // Diagnose missing comma in string array initialization.
-      // Do not warn when all the elements in the initializer are concatenated
-      // together. Do not warn for macros too.
-      if (!DiagnosedMissingComma && NumConcat == 2 && E > 2 && !SL->getBeginLoc().isMacroID()) {
-        bool OnlyOneMissingComma = true;
-        for (unsigned J = 0; J < E; ++J) {
-          if (J == I)
-            continue;
-          const auto *SLJ = dyn_cast<StringLiteral>(InitArgList[J]);
-          if (!SLJ || SLJ->getNumConcatenated() > 1) {
-            OnlyOneMissingComma = false;
-            break;
-          }
-        }
-
-        if (OnlyOneMissingComma) {
-          SmallVector<FixItHint, 1> Hints;
-          for (unsigned i = 0; i < NumConcat - 1; ++i)
-            Hints.push_back(FixItHint::CreateInsertion(
-                PP.getLocForEndOfToken(SL->getStrTokenLoc(i)), ","));
-
-          Diag(SL->getStrTokenLoc(1),
-               diag::warn_concatenated_literal_array_init)
-              << Hints;
-          Diag(SL->getBeginLoc(),
-               diag::note_concatenated_string_literal_silence);
-          DiagnosedMissingComma = true;
-        }
-      }
     }
   }
 
