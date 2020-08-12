@@ -242,6 +242,77 @@ def which(program):
                 return exe_file
     return None
 
+class ValueCheck:
+    def __init__(self, name=None, value=None, type=None, summary=None,
+                 children=None):
+        """
+        :param name: The name that the SBValue should have. None if the summary
+                     should not be checked.
+        :param summary: The summary that the SBValue should have. None if the
+                        summary should not be checked.
+        :param value: The value that the SBValue should have. None if the value
+                      should not be checked.
+        :param type: The type that the SBValue result should have. None if the
+                     type should not be checked.
+        :param children: A list of ValueChecks that need to match the children
+                         of this SBValue. None if children shouldn't be checked.
+                         The order of checks is the order of the checks in the
+                         list. The number of checks has to match the number of
+                         children.
+        """
+        self.expect_name = name
+        self.expect_value = value
+        self.expect_type = type
+        self.expect_summary = summary
+        self.children = children
+
+    def check_value(self, test_base, val, error_msg=None):
+        """
+        Checks that the given value matches the currently set properties
+        of this ValueCheck. If a match failed, the given TestBase will
+        be used to emit an error. A custom error message can be specified
+        that will be used to describe failed check for this SBValue (but
+        not errors in the child values).
+        """
+
+        this_error_msg = error_msg if error_msg else ""
+        this_error_msg += "\nChecking SBValue: " + str(val)
+
+        test_base.assertSuccess(val.GetError())
+
+        if self.expect_name:
+            test_base.assertEqual(self.expect_name, val.GetName(),
+                                  this_error_msg)
+        if self.expect_value:
+            test_base.assertEqual(self.expect_value, val.GetValue(),
+                                  this_error_msg)
+        if self.expect_type:
+            test_base.assertEqual(self.expect_type, val.GetDisplayTypeName(),
+                                  this_error_msg)
+        if self.expect_summary:
+            test_base.assertEqual(self.expect_summary, val.GetSummary(),
+                                  this_error_msg)
+        if self.children is not None:
+            self.check_value_children(test_base, val, error_msg)
+
+    def check_value_children(self, test_base, val, error_msg=None):
+        """
+        Checks that the children of a SBValue match a certain structure and
+        have certain properties.
+
+        :param test_base: The current test's TestBase object.
+        :param val: The SBValue to check.
+        """
+
+        this_error_msg = error_msg if error_msg else ""
+        this_error_msg += "\nChecking SBValue: " + str(val)
+
+        test_base.assertEqual(len(self.children), val.GetNumChildren(), this_error_msg)
+
+        for i in range(0, val.GetNumChildren()):
+            expected_child = self.children[i]
+            actual_child = val.GetChildAtIndex(i)
+            expected_child.check_value(test_base, actual_child, error_msg)
 
 class recording(SixStringIO):
     """
@@ -2424,6 +2495,7 @@ FileCheck output:
             result_summary=None,
             result_value=None,
             result_type=None,
+            result_children=None
             ):
         """
         Evaluates the given expression and verifies the result.
@@ -2431,6 +2503,8 @@ FileCheck output:
         :param result_summary: The summary that the expression should have. None if the summary should not be checked.
         :param result_value: The value that the expression should have. None if the value should not be checked.
         :param result_type: The type that the expression result should have. None if the type should not be checked.
+        :param result_children: The expected children of the expression result
+                                as a list of ValueChecks. None if the children shouldn't be checked.
         """
         self.assertTrue(expr.strip() == expr, "Expression contains trailing/leading whitespace: '" + expr + "'")
 
@@ -2454,16 +2528,9 @@ FileCheck output:
                 target = self.dbg.GetDummyTarget()
             eval_result = target.EvaluateExpression(expr, options)
 
-        self.assertSuccess(eval_result.GetError())
-
-        if result_type:
-            self.assertEqual(result_type, eval_result.GetDisplayTypeName())
-
-        if result_value:
-            self.assertEqual(result_value, eval_result.GetValue())
-
-        if result_summary:
-            self.assertEqual(result_summary, eval_result.GetSummary())
+        value_check = ValueCheck(type=result_type, value=result_value,
+                                 summary=result_summary, children=result_children)
+        value_check.check_value(self, eval_result, str(eval_result))
 
     def invoke(self, obj, name, trace=False):
         """Use reflection to call a method dynamically with no argument."""
