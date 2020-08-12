@@ -21,7 +21,7 @@ target_include_directories(debugserverTests PRIVATE
   ${LLDB_SOURCE_DIR}/tools/debugserver/source
   ${LLDB_SOURCE_DIR}/tools/debugserver/source/MacOSX)
 
-if(IOS)
+if(APPLE_EMBEDDED)
   set_property(TARGET debugserverTests APPEND PROPERTY COMPILE_DEFINITIONS
       WITH_LOCKDOWN
       WITH_FBS
