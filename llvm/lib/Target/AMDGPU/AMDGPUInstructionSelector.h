@@ -118,12 +118,6 @@ private:
   bool selectDSGWSIntrinsic(MachineInstr &MI, Intrinsic::ID IID) const;
   bool selectDSAppendConsume(MachineInstr &MI, bool IsAppend) const;
 
-  bool selectWaterfallBegin(MachineInstr &MI) const;
-  bool selectWaterfallEnd(MachineInstr &MI) const;
-  bool selectWaterfallReadFirstLane(MachineInstr &MI) const;
-  bool selectWaterfallLastUse(MachineInstr &MI) const;
-  bool selectWaterfallIntrinsic(MachineInstr &MI, unsigned Opcode) const;
-
   bool selectImageIntrinsic(MachineInstr &MI,
                             const AMDGPU::ImageDimIntrinsicInfo *Intr) const;
   bool selectG_INTRINSIC_W_SIDE_EFFECTS(MachineInstr &I) const;
