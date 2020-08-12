@@ -17321,6 +17321,53 @@ vec_test_lsbb_all_zeros(vector unsigned char __a) {
   return __builtin_vsx_xvtlsbb(__a, 0);
 }
 #endif /* __VSX__ */
+
+/* vs[l | r | ra] */
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_sl(vector unsigned __int128 __a, vector unsigned __int128 __b) {
+  return __a << (__b % (vector unsigned __int128)(sizeof(unsigned __int128) *
+                                                  __CHAR_BIT__));
+}
+
+static __inline__ vector signed __int128 __ATTRS_o_ai
+vec_sl(vector signed __int128 __a, vector unsigned __int128 __b) {
+  return __a << (__b % (vector unsigned __int128)(sizeof(unsigned __int128) *
+                                                  __CHAR_BIT__));
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_sr(vector unsigned __int128 __a, vector unsigned __int128 __b) {
+  return __a >> (__b % (vector unsigned __int128)(sizeof(unsigned __int128) *
+                                                  __CHAR_BIT__));
+}
+
+static __inline__ vector signed __int128 __ATTRS_o_ai
+vec_sr(vector signed __int128 __a, vector unsigned __int128 __b) {
+  return (
+      vector signed __int128)(((vector unsigned __int128)__a) >>
+                              (__b %
+                               (vector unsigned __int128)(sizeof(
+                                                              unsigned __int128) *
+                                                          __CHAR_BIT__)));
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_sra(vector unsigned __int128 __a, vector unsigned __int128 __b) {
+  return (
+      vector unsigned __int128)(((vector signed __int128)__a) >>
+                                (__b %
+                                 (vector unsigned __int128)(sizeof(
+                                                                unsigned __int128) *
+                                                            __CHAR_BIT__)));
+}
+
+static __inline__ vector signed __int128 __ATTRS_o_ai
+vec_sra(vector signed __int128 __a, vector unsigned __int128 __b) {
+  return __a >> (__b % (vector unsigned __int128)(sizeof(unsigned __int128) *
+                                                  __CHAR_BIT__));
+}
+
 #endif /* __POWER10_VECTOR__ */
 
 #undef __ATTRS_o_ai

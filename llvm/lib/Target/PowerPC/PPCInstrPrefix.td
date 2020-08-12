@@ -1288,6 +1288,18 @@ let Predicates = [IsISA3_1] in {
             (EXTRACT_SUBREG (XVTLSBB (COPY_TO_REGCLASS $XB, VSRC)), sub_lt)>;
   def : Pat<(i32 (int_ppc_vsx_xvtlsbb v16i8:$XB, 0)),
             (EXTRACT_SUBREG (XVTLSBB (COPY_TO_REGCLASS $XB, VSRC)), sub_eq)>;
+  def : Pat<(v1i128 (shl v1i128:$VRA, v1i128:$VRB)),
+            (v1i128 (VSLQ v1i128:$VRA, v1i128:$VRB))>;
+  def : Pat<(v1i128 (PPCshl v1i128:$VRA, v1i128:$VRB)),
+            (v1i128 (VSLQ v1i128:$VRA, v1i128:$VRB))>;
+  def : Pat<(v1i128 (srl v1i128:$VRA, v1i128:$VRB)),
+            (v1i128 (VSRQ v1i128:$VRA, v1i128:$VRB))>;
+  def : Pat<(v1i128 (PPCsrl v1i128:$VRA, v1i128:$VRB)),
+            (v1i128 (VSRQ v1i128:$VRA, v1i128:$VRB))>;
+  def : Pat<(v1i128 (sra v1i128:$VRA, v1i128:$VRB)),
+            (v1i128 (VSRAQ v1i128:$VRA, v1i128:$VRB))>;
+  def : Pat<(v1i128 (PPCsra v1i128:$VRA, v1i128:$VRB)),
+            (v1i128 (VSRAQ v1i128:$VRA, v1i128:$VRB))>;
 }
 
 let AddedComplexity = 400, Predicates = [IsISA3_1] in {
