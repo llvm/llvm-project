@@ -105,6 +105,7 @@ struct OMPTaskDataTy final {
   SmallVector<const Expr *, 4> ReductionOrigs;
   SmallVector<const Expr *, 4> ReductionCopies;
   SmallVector<const Expr *, 4> ReductionOps;
+  SmallVector<CanonicalDeclPtr<const VarDecl>, 4> PrivateLocals;
   struct DependData {
     OpenMPDependClauseKind DepKind = OMPC_DEPEND_unknown;
     const Expr *IteratorExpr = nullptr;
@@ -243,6 +244,19 @@ public:
   public:
     NontemporalDeclsRAII(CodeGenModule &CGM, const OMPLoopDirective &S);
     ~NontemporalDeclsRAII();
+  };
+
+  /// Manages list of nontemporal decls for the specified directive.
+  class UntiedTaskLocalDeclsRAII {
+    CodeGenModule &CGM;
+    const bool NeedToPush;
+
+  public:
+    UntiedTaskLocalDeclsRAII(
+        CodeGenModule &CGM,
+        const llvm::DenseMap<CanonicalDeclPtr<const VarDecl>, Address>
+            &LocalVars);
+    ~UntiedTaskLocalDeclsRAII();
   };
 
   /// Maps the expression for the lastprivate variable to the global copy used
@@ -704,6 +718,10 @@ private:
   /// Stack for list of declarations in current context marked as nontemporal.
   /// The set is the union of all current stack elements.
   llvm::SmallVector<NontemporalDeclsSet, 4> NontemporalDeclsStack;
+
+  using UntiedLocalVarsAddressesMap =
+      llvm::DenseMap<CanonicalDeclPtr<const VarDecl>, Address>;
+  llvm::SmallVector<UntiedLocalVarsAddressesMap, 4> UntiedLocalVarsStack;
 
   /// Stack for list of addresses of declarations in current context marked as
   /// lastprivate conditional. The set is the union of all current stack
