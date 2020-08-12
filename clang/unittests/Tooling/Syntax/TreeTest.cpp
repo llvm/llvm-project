@@ -2592,9 +2592,7 @@ void test(X x, X y, X* xp, int X::* pmi) {
     | | |-IdExpression
     | | | `-UnqualifiedId
     | | |   `-x
-    | | |-IdExpression
-    | | | `-UnqualifiedId
-    | | |   `-=
+    | | |-=
     | | `-IdExpression
     | |   `-UnqualifiedId
     | |     `-y
@@ -2605,9 +2603,7 @@ void test(X x, X y, X* xp, int X::* pmi) {
     | | | `-IdExpression
     | | |   `-UnqualifiedId
     | | |     `-x
-    | | |-IdExpression
-    | | | `-UnqualifiedId
-    | | |   `-+
+    | | |-+
     | | `-IdExpression
     | |   `-UnqualifiedId
     | |     `-y
@@ -2617,9 +2613,7 @@ void test(X x, X y, X* xp, int X::* pmi) {
     | | |-IdExpression
     | | | `-UnqualifiedId
     | | |   `-x
-    | | |-IdExpression
-    | | | `-UnqualifiedId
-    | | |   `-<
+    | | |-<
     | | `-IdExpression
     | |   `-UnqualifiedId
     | |     `-y
@@ -2629,9 +2623,7 @@ void test(X x, X y, X* xp, int X::* pmi) {
     | | |-IdExpression
     | | | `-UnqualifiedId
     | | |   `-x
-    | | |-IdExpression
-    | | | `-UnqualifiedId
-    | | |   `-<<
+    | | |-<<
     | | `-IdExpression
     | |   `-UnqualifiedId
     | |     `-y
@@ -2641,9 +2633,7 @@ void test(X x, X y, X* xp, int X::* pmi) {
     | | |-IdExpression
     | | | `-UnqualifiedId
     | | |   `-x
-    | | |-IdExpression
-    | | | `-UnqualifiedId
-    | | |   `-,
+    | | |-,
     | | `-IdExpression
     | |   `-UnqualifiedId
     | |     `-y
@@ -2730,27 +2720,21 @@ void test(X x) {
     |-{
     |-ExpressionStatement
     | |-PrefixUnaryOperatorExpression
-    | | |-IdExpression
-    | | | `-UnqualifiedId
-    | | |   `-++
+    | | |-++
     | | `-IdExpression
     | |   `-UnqualifiedId
     | |     `-x
     | `-;
     |-ExpressionStatement
     | |-PrefixUnaryOperatorExpression
-    | | |-IdExpression
-    | | | `-UnqualifiedId
-    | | |   `-!
+    | | |-!
     | | `-IdExpression
     | |   `-UnqualifiedId
     | |     `-x
     | `-;
     |-ExpressionStatement
     | |-PrefixUnaryOperatorExpression
-    | | |-IdExpression
-    | | | `-UnqualifiedId
-    | | |   `-&
+    | | |-&
     | | `-IdExpression
     | |   `-UnqualifiedId
     | |     `-x
@@ -2809,9 +2793,7 @@ void test(X x) {
     | | |-IdExpression
     | | | `-UnqualifiedId
     | | |   `-x
-    | | `-IdExpression
-    | |   `-UnqualifiedId
-    | |     `-++
+    | | `-++
     | `-;
     `-}
 )txt"));
