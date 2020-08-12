@@ -1,5 +1,4 @@
-//===-- Unittests for copysignf
-//--------------------------------------------===//
+//===-- Unittests for copysignf -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,57 +8,42 @@
 
 #include "include/math.h"
 #include "src/math/copysignf.h"
-#include "utils/FPUtil/BitPatterns.h"
-#include "utils/FPUtil/FloatOperations.h"
-#include "utils/FPUtil/FloatProperties.h"
+#include "utils/FPUtil/FPBits.h"
+#include "utils/FPUtil/TestHelpers.h"
 #include "utils/UnitTest/Test.h"
 
-using __llvm_libc::fputil::valueAsBits;
-using __llvm_libc::fputil::valueFromBits;
+using FPBits = __llvm_libc::fputil::FPBits<float>;
 
-using BitPatterns = __llvm_libc::fputil::BitPatterns<float>;
-using Properties = __llvm_libc::fputil::FloatProperties<float>;
+static const float zero = FPBits::zero();
+static const float negZero = FPBits::negZero();
+static const float nan = FPBits::buildNaN(1);
+static const float inf = FPBits::inf();
+static const float negInf = FPBits::negInf();
 
-TEST(CopySignFTest, SpecialNumbers) {
-  EXPECT_EQ(BitPatterns::aNegativeQuietNaN,
-            valueAsBits(__llvm_libc::copysignf(
-                valueFromBits(BitPatterns::aQuietNaN), -1.0f)));
-  EXPECT_EQ(BitPatterns::aQuietNaN,
-            valueAsBits(__llvm_libc::copysignf(
-                valueFromBits(BitPatterns::aNegativeQuietNaN), 1.0f)));
+TEST(CopySinfTest, SpecialNumbers) {
+  EXPECT_FP_EQ(nan, __llvm_libc::copysignf(nan, -1.0));
+  EXPECT_FP_EQ(nan, __llvm_libc::copysignf(nan, 1.0));
 
-  EXPECT_EQ(BitPatterns::aNegativeSignallingNaN,
-            valueAsBits(__llvm_libc::copysignf(
-                valueFromBits(BitPatterns::aSignallingNaN), -1.0f)));
-  EXPECT_EQ(BitPatterns::aSignallingNaN,
-            valueAsBits(__llvm_libc::copysignf(
-                valueFromBits(BitPatterns::aNegativeSignallingNaN), 1.0f)));
+  EXPECT_FP_EQ(negInf, __llvm_libc::copysignf(inf, -1.0));
+  EXPECT_FP_EQ(inf, __llvm_libc::copysignf(negInf, 1.0));
 
-  EXPECT_EQ(BitPatterns::negInf, valueAsBits(__llvm_libc::copysignf(
-                                     valueFromBits(BitPatterns::inf), -1.0f)));
-  EXPECT_EQ(BitPatterns::inf, valueAsBits(__llvm_libc::copysignf(
-                                  valueFromBits(BitPatterns::negInf), 1.0f)));
-
-  EXPECT_EQ(BitPatterns::negZero,
-            valueAsBits(__llvm_libc::copysignf(valueFromBits(BitPatterns::zero),
-                                               -1.0f)));
-  EXPECT_EQ(BitPatterns::zero, valueAsBits(__llvm_libc::copysignf(
-                                   valueFromBits(BitPatterns::negZero), 1.0f)));
+  EXPECT_FP_EQ(negZero, __llvm_libc::copysignf(zero, -1.0));
+  EXPECT_FP_EQ(zero, __llvm_libc::copysignf(negZero, 1.0));
 }
 
-TEST(CopySignFTest, InDoubleRange) {
-  using BitsType = Properties::BitsType;
-  constexpr BitsType count = 1000000;
-  constexpr BitsType step = UINT32_MAX / count;
-  for (BitsType i = 0, v = 0; i <= count; ++i, v += step) {
-    float x = valueFromBits(v);
+TEST(CopySinfTest, InFloatRange) {
+  using UIntType = FPBits::UIntType;
+  constexpr UIntType count = 1000000;
+  constexpr UIntType step = UIntType(-1) / count;
+  for (UIntType i = 0, v = 0; i <= count; ++i, v += step) {
+    float x = FPBits(v);
     if (isnan(x) || isinf(x) || x == 0)
       continue;
 
     float res1 = __llvm_libc::copysignf(x, -x);
-    ASSERT_TRUE(res1 == -x);
+    ASSERT_FP_EQ(res1, -x);
 
     float res2 = __llvm_libc::copysignf(x, x);
-    ASSERT_TRUE(res2 == x);
+    ASSERT_FP_EQ(res2, x);
   }
 }
