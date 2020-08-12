@@ -453,7 +453,6 @@ DWARF:
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
-      AddrSize:   4
       Entries:    []
 
 ## e) Test that yaml2obj emits an error message when both the "Content" and the
@@ -482,7 +481,6 @@ DWARF:
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
-      AddrSize:   4
       Entries:    []
 
 ## f) Test that all the properties can be overridden by the section header when
@@ -550,7 +548,6 @@ DWARF:
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
-      AddrSize:   4
       Entries:
         - AbbrCode: 0
           Values:   []
@@ -568,7 +565,7 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
+  Class:   ELFCLASS32
   Data:    ELFDATA2LSB
   Type:    ET_EXEC
   Machine: EM_X86_64
@@ -578,7 +575,6 @@ DWARF:
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
-      AddrSize:   4
       Entries:    []
 
 ## h) Test that yaml2obj emits values in the DIE according to the abbreviation whose
@@ -604,7 +600,7 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
+  Class:   ELFCLASS32
   Data:    ELFDATA2LSB
   Type:    ET_EXEC
   Machine: EM_X86_64
@@ -629,7 +625,6 @@ DWARF:
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
-      AddrSize:   4
       Entries:
         ## Test that yaml2obj emits values when the abbrev code is specified.
         - AbbrCode: 2
@@ -667,7 +662,6 @@ DWARF:
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
-      AddrSize:   4
       Entries:
         - AbbrCode: 1
           Values:
@@ -703,7 +697,6 @@ DWARF:
       Version:    5
       UnitType:   DW_UT_type
       AbbrOffset: 0x1234
-      AddrSize:   8
       Entries:    []
 
 ## DWARFv4 unit header.
@@ -733,7 +726,6 @@ DWARF:
       Length:     0x0c
       Version:    4
       AbbrOffset: 0x1234
-      AddrSize:   8
       Entries:    []
 
 ## k) Test that yaml2obj is able to emit a correct length for compilation units.
@@ -826,7 +818,6 @@ DWARF:
   debug_info:
     - Version:    4
       AbbrOffset: 0x00
-      AddrSize:   0x08
       Entries:
         - AbbrCode: 1
           Values:
@@ -869,8 +860,31 @@ DWARF:
   debug_info:
     - Version:    4
       AbbrOffset: 0x00
-      AddrSize:   0x08
       Entries:
         - AbbrCode: 1
         - AbbrCode: 0
         - AbbrCode: 2
+
+## m) Test that yaml2obj is able to infer the address size from the object file.
+
+# RUN: yaml2obj --docnum=15 -DBITS=64 %s -o %t15.64-bit.o
+# RUN: llvm-readelf --hex-dump=.debug_info %t15.64-bit.o | \
+# RUN:   FileCheck %s --check-prefix=ADDRSIZE -DADDRSIZE=08
+
+#      ADDRSIZE: Hex dump of section '.debug_info':
+# ADDRSIZE-NEXT: 0x00000000 07000000 04000000 0000[[ADDRSIZE]]            ...........
+
+# RUN: yaml2obj --docnum=15 -DBITS=32 %s -o %t15.32-bit.o
+# RUN: llvm-readelf --hex-dump=.debug_info %t15.32-bit.o | \
+# RUN:   FileCheck %s --check-prefix=ADDRSIZE -DADDRSIZE=04
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS[[BITS]]
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_info:
+    - Version:    4
+      AbbrOffset: 0x00
