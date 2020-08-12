@@ -36,7 +36,7 @@ Sections:
   - Name:     .rela.dyn
     Type:     SHT_ANDROID_RELA
     Flags:    [ SHF_ALLOC ]
-    Link:     .symtab
+    Link:     [[LINK=.symtab]]
     Content:  41505332088020020108800280010202088180808010818080802002080181808080100802818080802004020C7E048180808010088180808020
     ShOffset: [[SHOFFSET=<none>]]
 Symbols:
@@ -59,6 +59,24 @@ Symbols:
 
 ## FIXME: GNU still reports an error before trying to dump relocations.
 # BROKEN-RELA-GNU: error: '[[FILE]]': section [index 1] has a sh_offset (0xffffffff) + sh_size (0x3a) that is greater than the file size (0x238)
+
+## Check we report a warning when the sh_link field of the SHT_ANDROID_RELA section is broken.
+
+# RUN: yaml2obj --docnum=1 -DLINK=0xffffffff %s -o %t1.broken.link
+# RUN: llvm-readobj --relocations %t1.broken.link 2>&1 | \
+# RUN:   FileCheck -DFILE=%t1.broken.link --check-prefix=BROKEN-RELA-LINK-LLVM %s
+# RUN: llvm-readelf --relocations %t1.broken.link 2>&1 | \
+# RUN:   FileCheck -DFILE=%t1.broken.link --check-prefix=BROKEN-RELA-LINK-GNU %s
+
+# BROKEN-RELA-LINK-LLVM:      Relocations [
+# BROKEN-RELA-LINK-LLVM-NEXT:   Section (1) .rela.dyn {
+# BROKEN-RELA-LINK-LLVM-NEXT: warning: '[[FILE]]': unable to locate a symbol table for SHT_ANDROID_RELA section with index 1: invalid section index: 4294967295
+# BROKEN-RELA-LINK-LLVM-NEXT:   }
+# BROKEN-RELA-LINK-LLVM-NEXT: ]
+
+# BROKEN-RELA-LINK-GNU:      Relocation section '.rela.dyn' at offset 0x40 contains 8 entries:
+# BROKEN-RELA-LINK-GNU-NEXT:  Offset   Info  Type  Symbol's Value  Symbol's Name + Addend
+# BROKEN-RELA-LINK-GNU-NEXT: warning: '[[FILE]]': unable to locate a symbol table for SHT_ANDROID_RELA section with index 1: invalid section index: 4294967295
 
 # RUN: yaml2obj --docnum=2 %s -o %t2
 # RUN: llvm-readobj --relocations %t2 | FileCheck --check-prefix=LLVM2 %s
@@ -99,7 +117,7 @@ Sections:
   - Name:     .rel.dyn
     Type:     SHT_ANDROID_REL
     Flags:    [ SHF_ALLOC ]
-    Link:     .symtab
+    Link:     [[LINK=.symtab]]
     Content:  415053320A80200202088102830408037C08
     ShOffset: [[SHOFFSET=<none>]]
 Symbols:
@@ -122,6 +140,24 @@ Symbols:
 
 ## FIXME: GNU still reports an error before trying to dump relocations.
 # BROKEN-REL-GNU: error: '[[FILE]]': section [index 1] has a sh_offset (0xffffffff) + sh_size (0x12) that cannot be represented
+
+## Check we report a warning when the sh_link field of the SHT_ANDROID_REL section is broken.
+
+# RUN: yaml2obj --docnum=2 -DLINK=0xffffffff %s -o %t2.broken.link
+# RUN: llvm-readobj --relocations %t2.broken.link 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.broken.link --check-prefix=BROKEN-REL-LINK-LLVM %s
+# RUN: llvm-readelf --relocations %t2.broken.link 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.broken.link --check-prefix=BROKEN-REL-LINK-GNU %s
+
+# BROKEN-REL-LINK-LLVM:      Relocations [
+# BROKEN-REL-LINK-LLVM-NEXT:   Section (1) .rel.dyn {
+# BROKEN-REL-LINK-LLVM-NEXT: warning: '[[FILE]]': unable to locate a symbol table for SHT_ANDROID_REL section with index 1: invalid section index: 4294967295
+# BROKEN-REL-LINK-LLVM-NEXT:   }
+# BROKEN-REL-LINK-LLVM-NEXT: ]
+
+# BROKEN-REL-LINK-GNU:      Relocation section '.rel.dyn' at offset 0x34 contains 10 entries:
+# BROKEN-REL-LINK-GNU-NEXT:  Offset  Info  Type  Sym. Value  Symbol's Name
+# BROKEN-REL-LINK-GNU-NEXT: warning: '[[FILE]]': unable to locate a symbol table for SHT_ANDROID_REL section with index 1: invalid section index: 4294967295
 
 # RUN: yaml2obj --docnum=3 %s | llvm-readobj --relocations - | FileCheck --check-prefix=LLVM3 %s
 #
