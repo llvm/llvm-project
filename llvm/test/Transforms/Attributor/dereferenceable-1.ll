@@ -658,7 +658,7 @@ define void @call_fill_range(i32* nocapture %p, i64* nocapture readonly %range) 
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@call_fill_range
 ; IS__TUNIT_OPM-SAME: (i32* nocapture nofree writeonly [[P:%.*]], i64* nocapture nofree nonnull readonly align 8 dereferenceable(8) [[RANGE:%.*]])
 ; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = load i64, i64* [[RANGE]], align 8, !range !0
+; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = load i64, i64* [[RANGE]], align 8, [[RNG0:!range !.*]]
 ; IS__TUNIT_OPM-NEXT:    tail call void @fill_range_inbounds(i32* nocapture nofree writeonly [[P]], i64 [[TMP0]])
 ; IS__TUNIT_OPM-NEXT:    tail call void @fill_range_not_inbounds(i32* nocapture nofree writeonly [[P]], i64 [[TMP0]])
 ; IS__TUNIT_OPM-NEXT:    ret void
@@ -667,7 +667,7 @@ define void @call_fill_range(i32* nocapture %p, i64* nocapture readonly %range) 
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@call_fill_range
 ; IS__TUNIT_NPM-SAME: (i32* nocapture nofree writeonly [[P:%.*]], i64* nocapture nofree nonnull readonly align 8 dereferenceable(8) [[RANGE:%.*]])
 ; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i64, i64* [[RANGE]], align 8, !range !0
+; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load i64, i64* [[RANGE]], align 8, [[RNG0:!range !.*]]
 ; IS__TUNIT_NPM-NEXT:    tail call void @fill_range_inbounds(i32* nocapture nofree writeonly [[P]], i64 [[TMP0]])
 ; IS__TUNIT_NPM-NEXT:    tail call void @fill_range_not_inbounds(i32* nocapture nofree writeonly [[P]], i64 [[TMP0]])
 ; IS__TUNIT_NPM-NEXT:    ret void
@@ -676,7 +676,7 @@ define void @call_fill_range(i32* nocapture %p, i64* nocapture readonly %range) 
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@call_fill_range
 ; IS__CGSCC_OPM-SAME: (i32* nocapture nofree writeonly [[P:%.*]], i64* nocapture nofree nonnull readonly align 8 dereferenceable(8) [[RANGE:%.*]])
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = load i64, i64* [[RANGE]], align 8, !range !0
+; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = load i64, i64* [[RANGE]], align 8, [[RNG0:!range !.*]]
 ; IS__CGSCC_OPM-NEXT:    tail call void @fill_range_inbounds(i32* nocapture nofree writeonly [[P]], i64 [[TMP0]])
 ; IS__CGSCC_OPM-NEXT:    tail call void @fill_range_not_inbounds(i32* nocapture nofree writeonly [[P]], i64 [[TMP0]])
 ; IS__CGSCC_OPM-NEXT:    ret void
@@ -685,7 +685,7 @@ define void @call_fill_range(i32* nocapture %p, i64* nocapture readonly %range) 
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@call_fill_range
 ; IS__CGSCC_NPM-SAME: (i32* nocapture nofree writeonly [[P:%.*]], i64* nocapture nofree nonnull readonly align 8 dereferenceable(8) [[RANGE:%.*]])
 ; IS__CGSCC_NPM-NEXT:  entry:
-; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load i64, i64* [[RANGE]], align 8, !range !0
+; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load i64, i64* [[RANGE]], align 8, [[RNG0:!range !.*]]
 ; IS__CGSCC_NPM-NEXT:    tail call void @fill_range_inbounds(i32* nocapture nofree writeonly [[P]], i64 [[TMP0]])
 ; IS__CGSCC_NPM-NEXT:    tail call void @fill_range_not_inbounds(i32* nocapture nofree writeonly [[P]], i64 [[TMP0]])
 ; IS__CGSCC_NPM-NEXT:    ret void
@@ -960,19 +960,19 @@ define void @nonnull_assume_pos(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4) {
 ;
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@nonnull_assume_pos
 ; IS__TUNIT_OPM-SAME: (i8* nocapture nofree nonnull readnone dereferenceable(101) [[ARG1:%.*]], i8* nocapture nofree readnone dereferenceable_or_null(31) [[ARG2:%.*]], i8* nocapture nofree nonnull readnone [[ARG3:%.*]], i8* nocapture nofree readnone dereferenceable_or_null(42) [[ARG4:%.*]])
-; IS__TUNIT_OPM-NEXT:    call void @llvm.assume(i1 true) #6 [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i8* [[ARG1]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
+; IS__TUNIT_OPM-NEXT:    call void @llvm.assume(i1 true) [[ATTR6:#.*]] [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i8* [[ARG1]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
 ; IS__TUNIT_OPM-NEXT:    call void @unknown()
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@nonnull_assume_pos
 ; IS________NPM-SAME: (i8* nocapture nofree nonnull readnone dereferenceable(101) [[ARG1:%.*]], i8* nocapture nofree readnone dereferenceable_or_null(31) [[ARG2:%.*]], i8* nocapture nofree nonnull readnone [[ARG3:%.*]], i8* nocapture nofree readnone dereferenceable_or_null(42) [[ARG4:%.*]])
-; IS________NPM-NEXT:    call void @llvm.assume(i1 true) #7 [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i8* [[ARG1]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
+; IS________NPM-NEXT:    call void @llvm.assume(i1 true) [[ATTR7:#.*]] [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i8* [[ARG1]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
 ; IS________NPM-NEXT:    call void @unknown()
 ; IS________NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@nonnull_assume_pos
 ; IS__CGSCC_OPM-SAME: (i8* nocapture nofree nonnull readnone dereferenceable(101) [[ARG1:%.*]], i8* nocapture nofree readnone dereferenceable_or_null(31) [[ARG2:%.*]], i8* nocapture nofree nonnull readnone [[ARG3:%.*]], i8* nocapture nofree readnone dereferenceable_or_null(42) [[ARG4:%.*]])
-; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) #8 [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i8* [[ARG1]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [[ATTR8:#.*]] [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i8* [[ARG1]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
 ; IS__CGSCC_OPM-NEXT:    call void @unknown()
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;

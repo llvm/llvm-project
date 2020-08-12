@@ -10,7 +10,8 @@
 ; argument promotion running along with it.
 define void @zot() personality i32 (...)* @wibble {
 ; IS__TUNIT____: Function Attrs: nofree noreturn nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@zot() #0 personality i32 (...)* @wibble
+; IS__TUNIT____-LABEL: define {{[^@]+}}@zot
+; IS__TUNIT____-SAME: () [[ATTR0:#.*]] personality i32 (...)* @wibble
 ; IS__TUNIT____-NEXT:  bb:
 ; IS__TUNIT____-NEXT:    call void @hoge()
 ; IS__TUNIT____-NEXT:    unreachable
@@ -20,7 +21,8 @@ define void @zot() personality i32 (...)* @wibble {
 ; IS__TUNIT____-NEXT:    unreachable
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@zot() #0 personality i32 (...)* @wibble
+; IS__CGSCC____-LABEL: define {{[^@]+}}@zot
+; IS__CGSCC____-SAME: () [[ATTR0:#.*]] personality i32 (...)* @wibble
 ; IS__CGSCC____-NEXT:  bb:
 ; IS__CGSCC____-NEXT:    call void @hoge()
 ; IS__CGSCC____-NEXT:    unreachable
