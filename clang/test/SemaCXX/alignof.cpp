@@ -102,3 +102,8 @@ typedef int __attribute__((aligned(16))) aligned_int;
 template <typename>
 using template_alias = aligned_int;
 static_assert(alignof(template_alias<void>) == 16, "Expected alignment of 16" );
+
+struct PR47138 {
+  invalid_type a; // expected-error {{unknown type}}
+};
+static_assert(__alignof__(PR47138) == 1, ""); // Don't crash.
