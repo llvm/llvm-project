@@ -825,13 +825,31 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
 
 namespace {
 
-using ExpArgTokens = llvm::SmallVector<Token, 2>;
+using ExpArgTokensTy = llvm::SmallVector<Token, 2>;
 
+} // end of anonymous namespace
+
+LLVM_DUMP_METHOD static void
+dumpExpArgTokensToStream(llvm::raw_ostream &Out, const Preprocessor &PP,
+                         const ExpArgTokensTy &Toks);
+
+LLVM_DUMP_METHOD static void dumpExpArgTokens(const Preprocessor &PP,
+                                              const ExpArgTokensTy &Toks) {
+  dumpExpArgTokensToStream(llvm::errs(), PP, Toks);
+}
+
+namespace {
 /// Maps unexpanded macro arguments to expanded arguments. A macro argument may
 /// need to expanded further when it is nested inside another macro.
-class MacroArgMap : public std::map<const IdentifierInfo *, ExpArgTokens> {
+class MacroArgMap : public std::map<const IdentifierInfo *, ExpArgTokensTy> {
 public:
   void expandFromPrevMacro(const MacroArgMap &Super);
+  LLVM_DUMP_METHOD void dump(const Preprocessor &PP) const {
+    dumpToStream(llvm::errs(), PP);
+  }
+
+  LLVM_DUMP_METHOD void dumpToStream(llvm::raw_ostream &Out,
+                                     const Preprocessor &PP) const;
 };
 
 struct MacroNameAndArgs {
@@ -1225,7 +1243,7 @@ static const MacroInfo *getMacroInfoForLocation(const Preprocessor &PP,
 void MacroArgMap::expandFromPrevMacro(const MacroArgMap &Super) {
 
   for (value_type &Pair : *this) {
-    ExpArgTokens &CurrExpArgTokens = Pair.second;
+    ExpArgTokensTy &CurrExpArgTokens = Pair.second;
 
     // For each token in the expanded macro argument.
     auto It = CurrExpArgTokens.begin();
@@ -1244,7 +1262,7 @@ void MacroArgMap::expandFromPrevMacro(const MacroArgMap &Super) {
         continue;
       }
 
-      const ExpArgTokens &SuperExpArgTokens = Super.at(II);
+      const ExpArgTokensTy &SuperExpArgTokens = Super.at(II);
 
       It = CurrExpArgTokens.insert(
           It, SuperExpArgTokens.begin(), SuperExpArgTokens.end());
@@ -1252,6 +1270,23 @@ void MacroArgMap::expandFromPrevMacro(const MacroArgMap &Super) {
       It = CurrExpArgTokens.erase(It);
     }
   }
+}
+
+void MacroArgMap::dumpToStream(llvm::raw_ostream &Out,
+                               const Preprocessor &PP) const {
+  for (const std::pair<const IdentifierInfo *, ExpArgTokensTy> Pair : *this) {
+    Out << Pair.first->getName() << " -> ";
+    dumpExpArgTokensToStream(Out, PP, Pair.second);
+    Out << '\n';
+  }
+}
+
+static void dumpExpArgTokensToStream(llvm::raw_ostream &Out,
+                                     const Preprocessor &PP,
+                                     const ExpArgTokensTy &Toks) {
+  TokenPrinter Printer(Out, PP);
+  for (Token Tok : Toks)
+    Printer.printToken(Tok);
 }
 
 void TokenPrinter::printToken(const Token &Tok) {
