@@ -60,7 +60,7 @@ DEFINE_C_API_STRUCT(MlirModule, const void);
 
 /** Named MLIR attribute.
  *
- * A named attribute is essentially a (name, attrbute) pair where the name is
+ * A named attribute is essentially a (name, attribute) pair where the name is
  * a string.
  */
 struct MlirNamedAttribute {
@@ -68,6 +68,17 @@ struct MlirNamedAttribute {
   MlirAttribute attribute;
 };
 typedef struct MlirNamedAttribute MlirNamedAttribute;
+
+/** A callback for printing to IR objects.
+ *
+ * This function is called back by the printing functions with the following
+ * arguments:
+ *   - a pointer to the beginning of a string;
+ *   - the length of the string (the pointer may point to a larger buffer, not
+ *     necessarily null-terminated);
+ *   - a pointer to user data forwarded from the printing call.
+ */
+typedef void (*MlirPrintCallback)(const char *, intptr_t, void *);
 
 /*============================================================================*/
 /* Context API.                                                               */
@@ -90,6 +101,12 @@ MlirLocation mlirLocationFileLineColGet(MlirContext context,
 
 /** Creates a location with unknown position owned by the given context. */
 MlirLocation mlirLocationUnknownGet(MlirContext context);
+
+/** Prints a location by sending chunks of the string representation and
+ * forwarding `userData to `callback`. Note that the callback may be called
+ * several times with consecutive chunks of the string. */
+void mlirLocationPrint(MlirLocation location, MlirPrintCallback callback,
+                       void *userData);
 
 /*============================================================================*/
 /* Module API.                                                                */
@@ -202,6 +219,14 @@ MlirNamedAttribute mlirOperationGetAttribute(MlirOperation op, intptr_t pos);
 /** Returns an attrbute attached to the operation given its name. */
 MlirAttribute mlirOperationGetAttributeByName(MlirOperation op,
                                               const char *name);
+
+/** Prints an operation by sending chunks of the string representation and
+ * forwarding `userData to `callback`. Note that the callback may be called
+ * several times with consecutive chunks of the string. */
+void mlirOperationPrint(MlirOperation op, MlirPrintCallback callback,
+                        void *userData);
+
+/** Prints an operation to stderr. */
 void mlirOperationDump(MlirOperation op);
 
 /*============================================================================*/
@@ -263,6 +288,12 @@ intptr_t mlirBlockGetNumArguments(MlirBlock block);
 /** Returns `pos`-th argument of the block. */
 MlirValue mlirBlockGetArgument(MlirBlock block, intptr_t pos);
 
+/** Prints a block by sending chunks of the string representation and
+ * forwarding `userData to `callback`. Note that the callback may be called
+ * several times with consecutive chunks of the string. */
+void mlirBlockPrint(MlirBlock block, MlirPrintCallback callback,
+                    void *userData);
+
 /*============================================================================*/
 /* Value API.                                                                 */
 /*============================================================================*/
@@ -270,12 +301,23 @@ MlirValue mlirBlockGetArgument(MlirBlock block, intptr_t pos);
 /** Returns the type of the value. */
 MlirType mlirValueGetType(MlirValue value);
 
+/** Prints a value by sending chunks of the string representation and
+ * forwarding `userData to `callback`. Note that the callback may be called
+ * several times with consecutive chunks of the string. */
+void mlirValuePrint(MlirValue value, MlirPrintCallback callback,
+                    void *userData);
+
 /*============================================================================*/
 /* Type API.                                                                  */
 /*============================================================================*/
 
 /** Parses a type. The type is owned by the context. */
 MlirType mlirTypeParseGet(MlirContext context, const char *type);
+
+/** Prints a location by sending chunks of the string representation and
+ * forwarding `userData to `callback`. Note that the callback may be called
+ * several times with consecutive chunks of the string. */
+void mlirTypePrint(MlirType type, MlirPrintCallback callback, void *userData);
 
 /** Prints the type to the standard error stream. */
 void mlirTypeDump(MlirType type);
@@ -286,6 +328,12 @@ void mlirTypeDump(MlirType type);
 
 /** Parses an attribute. The attribute is owned by the context. */
 MlirAttribute mlirAttributeParseGet(MlirContext context, const char *attr);
+
+/** Prints an attribute by sending chunks of the string representation and
+ * forwarding `userData to `callback`. Note that the callback may be called
+ * several times with consecutive chunks of the string. */
+void mlirAttributePrint(MlirAttribute attr, MlirPrintCallback callback,
+                        void *userData);
 
 /** Prints the attrbute to the standard error stream. */
 void mlirAttributeDump(MlirAttribute attr);
