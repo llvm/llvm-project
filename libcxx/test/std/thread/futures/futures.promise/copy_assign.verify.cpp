@@ -20,7 +20,6 @@
 
 int main(int, char**)
 {
-#if TEST_STD_VER >= 11
     {
         std::promise<int> p0, p;
         p = p0; // expected-error {{overload resolution selected deleted operator '='}}
@@ -33,20 +32,6 @@ int main(int, char**)
         std::promise<void> p0, p;
         p = p0; // expected-error {{overload resolution selected deleted operator '='}}
     }
-#else
-    {
-        std::promise<int> p0, p;
-        p = p0; // expected-error {{'operator=' is a private member of 'std::__1::promise<int>'}}
-    }
-    {
-        std::promise<int&> p0, p;
-        p = p0; // expected-error {{'operator=' is a private member of 'std::__1::promise<int &>'}}
-    }
-    {
-        std::promise<void> p0, p;
-        p = p0; // expected-error {{'operator=' is a private member of 'std::__1::promise<void>'}}
-    }
-#endif
 
-  return 0;
+    return 0;
 }
