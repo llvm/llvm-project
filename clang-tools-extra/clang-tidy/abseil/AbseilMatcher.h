@@ -50,8 +50,8 @@ AST_POLYMORPHIC_MATCHER(
   static const char *AbseilLibraries[] = {
       "algorithm", "base",     "container",       "debugging", "flags",
       "hash",      "iterator", "memory",          "meta",      "numeric",
-      "random",    "strings",  "synchronization", "time",      "types",
-      "utility"};
+      "random",    "strings",  "synchronization", "status",    "time",
+      "types",     "utility"};
   return std::any_of(
       std::begin(AbseilLibraries), std::end(AbseilLibraries),
       [&](const char *Library) { return Path.startswith(Library); });
