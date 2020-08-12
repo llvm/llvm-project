@@ -107,7 +107,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
 
   unsigned VectorSize = TTI.getMinVectorRegisterBitWidth();
   uint64_t ScalarSize = ScalarTy->getPrimitiveSizeInBits();
-  if (!ScalarSize || VectorSize % ScalarSize != 0)
+  if (!ScalarSize || !VectorSize || VectorSize % ScalarSize != 0)
     return false;
 
   // Check safety of replacing the scalar load with a larger vector load.
