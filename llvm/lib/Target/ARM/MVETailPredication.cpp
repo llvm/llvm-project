@@ -362,20 +362,27 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
   bool ForceTailPredication =
     EnableTailPredication == TailPredication::ForceEnabledNoReductions ||
     EnableTailPredication == TailPredication::ForceEnabled;
+
   // 1) Test whether entry to the loop is protected by a conditional
   // BTC + 1 < 0. In other words, if the scalar trip count overflows,
   // becomes negative, we shouldn't enter the loop and creating
   // tripcount expression BTC + 1 is not safe. So, check that BTC
   // isn't max. This is evaluated in unsigned, because the semantics
   // of @get.active.lane.mask is a ULE comparison.
-
-  int VectorWidth = VecTy->getNumElements();
   auto *BackedgeTakenCount = ActiveLaneMask->getOperand(1);
   auto *BTC = SE->getSCEV(BackedgeTakenCount);
+  auto *MaxBTC = SE->getConstantMaxBackedgeTakenCount(L);
 
-  if (!llvm::cannotBeMaxInLoop(BTC, L, *SE, false /*Signed*/) &&
+  if (isa<SCEVCouldNotCompute>(MaxBTC)) {
+    LLVM_DEBUG(dbgs() << "ARM TP: Can't compute SCEV BTC expression: ";
+               BTC->dump());
+    return false;
+  }
+
+  APInt MaxInt = APInt(BTC->getType()->getScalarSizeInBits(), ~0);
+  if (cast<SCEVConstant>(MaxBTC)->getAPInt().eq(MaxInt) &&
       !ForceTailPredication) {
-    LLVM_DEBUG(dbgs() << "ARM TP: Overflow possible, BTC can be max: ";
+    LLVM_DEBUG(dbgs() << "ARM TP: Overflow possible, BTC can be int max: ";
                BTC->dump());
     return false;
   }
@@ -397,6 +404,7 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
   //
   auto *TC = SE->getSCEV(TripCount);
   unsigned SizeInBits = TripCount->getType()->getScalarSizeInBits();
+  int VectorWidth = VecTy->getNumElements();
   auto Diff =  APInt(SizeInBits, ~0) - APInt(SizeInBits, VectorWidth);
   uint64_t MaxMinusVW = Diff.getZExtValue();
   uint64_t UpperboundTC = SE->getSignedRange(TC).getUpper().getZExtValue();
@@ -404,7 +412,7 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
   if (UpperboundTC > MaxMinusVW && !ForceTailPredication) {
     LLVM_DEBUG(dbgs() << "ARM TP: Overflow possible in tripcount rounding:\n";
                dbgs() << "upperbound(TC) <= UINT_MAX - VectorWidth\n";
-               dbgs() << UpperboundTC << " <= " << MaxMinusVW << "== false\n";);
+               dbgs() << UpperboundTC << " <= " << MaxMinusVW << " == false\n";);
     return false;
   }
 
@@ -453,10 +461,10 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
     return false;
   }
 
-  // 3) Find out if IV is an induction phi. Note that We can't use Loop
+  // 3) Find out if IV is an induction phi. Note that we can't use Loop
   // helpers here to get the induction variable, because the hardware loop is
-  // no longer in loopsimplify form, and also the hwloop intrinsic use a
-  // different counter.  Using SCEV, we check that the induction is of the
+  // no longer in loopsimplify form, and also the hwloop intrinsic uses a
+  // different counter. Using SCEV, we check that the induction is of the
   // form i = i + 4, where the increment must be equal to the VectorWidth.
   auto *IV = ActiveLaneMask->getOperand(0);
   auto *IVExpr = SE->getSCEV(IV);
