@@ -901,13 +901,15 @@ bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
 
   // TODO: use the function scope once we have call site AAReturnedValues.
   const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
-  const auto &LivenessAA =
-      getAAFor<AAIsDead>(QueryingAA, QueryIRP, /* TrackDependence */ false);
+  const auto *LivenessAA =
+      CheckBBLivenessOnly ? nullptr
+                          : &(getAAFor<AAIsDead>(QueryingAA, QueryIRP,
+                                                 /* TrackDependence */ false));
 
   auto &OpcodeInstMap =
       InfoCache.getOpcodeInstMapForFunction(*AssociatedFunction);
   if (!checkForAllInstructionsImpl(this, OpcodeInstMap, Pred, &QueryingAA,
-                                   &LivenessAA, Opcodes, CheckBBLivenessOnly))
+                                   LivenessAA, Opcodes, CheckBBLivenessOnly))
     return false;
 
   return true;
