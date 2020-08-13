@@ -9,13 +9,13 @@
 %module lldb
 
 %include <std_string.i>
-%include "./lua/lua-typemaps.swig"
-%include "./macros.swig"
-%include "./headers.swig"
+%include "lua-typemaps.swig"
+%include "macros.swig"
+%include "headers.swig"
 
 %{
 using namespace lldb_private;
 using namespace lldb;
 %}
 
-%include "./interfaces.swig"
+%include "interfaces.swig"
