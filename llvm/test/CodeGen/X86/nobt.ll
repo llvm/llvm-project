@@ -9,10 +9,11 @@ define void @test2(i32 %x, i32 %n) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB0_2
-; CHECK-NEXT:  # %bb.1: # %bb
+; CHECK-NEXT:    je .LBB0_1
+; CHECK-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; CHECK-NEXT:    retl
+; CHECK-NEXT:  .LBB0_1: # %bb
 ; CHECK-NEXT:    calll foo
-; CHECK-NEXT:  .LBB0_2: # %UnifiedReturnBlock
 ; CHECK-NEXT:    retl
 entry:
         %tmp1 = and i32 %x, 1
@@ -34,10 +35,11 @@ define void @test3(i32 %x, i32 %n) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB1_2
-; CHECK-NEXT:  # %bb.1: # %bb
+; CHECK-NEXT:    je .LBB1_1
+; CHECK-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; CHECK-NEXT:    retl
+; CHECK-NEXT:  .LBB1_1: # %bb
 ; CHECK-NEXT:    calll foo
-; CHECK-NEXT:  .LBB1_2: # %UnifiedReturnBlock
 ; CHECK-NEXT:    retl
 entry:
         %tmp1 = and i32 %x, 1

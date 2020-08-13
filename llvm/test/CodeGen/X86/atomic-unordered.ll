@@ -2716,24 +2716,24 @@ define i1 @fold_cmp_over_fence(i32* %p, i32 %v1) {
 ; CHECK-O3-CUR-NEXT:    movl (%rdi), %eax
 ; CHECK-O3-CUR-NEXT:    mfence
 ; CHECK-O3-CUR-NEXT:    cmpl %eax, %esi
-; CHECK-O3-CUR-NEXT:    jne .LBB116_2
-; CHECK-O3-CUR-NEXT:  # %bb.1: # %taken
-; CHECK-O3-CUR-NEXT:    movb $1, %al
-; CHECK-O3-CUR-NEXT:    retq
-; CHECK-O3-CUR-NEXT:  .LBB116_2: # %untaken
+; CHECK-O3-CUR-NEXT:    je .LBB116_1
+; CHECK-O3-CUR-NEXT:  # %bb.2: # %untaken
 ; CHECK-O3-CUR-NEXT:    xorl %eax, %eax
+; CHECK-O3-CUR-NEXT:    retq
+; CHECK-O3-CUR-NEXT:  .LBB116_1: # %taken
+; CHECK-O3-CUR-NEXT:    movb $1, %al
 ; CHECK-O3-CUR-NEXT:    retq
 ;
 ; CHECK-O3-EX-LABEL: fold_cmp_over_fence:
 ; CHECK-O3-EX:       # %bb.0:
 ; CHECK-O3-EX-NEXT:    cmpl (%rdi), %esi
 ; CHECK-O3-EX-NEXT:    mfence
-; CHECK-O3-EX-NEXT:    jne .LBB116_2
-; CHECK-O3-EX-NEXT:  # %bb.1: # %taken
-; CHECK-O3-EX-NEXT:    movb $1, %al
-; CHECK-O3-EX-NEXT:    retq
-; CHECK-O3-EX-NEXT:  .LBB116_2: # %untaken
+; CHECK-O3-EX-NEXT:    je .LBB116_1
+; CHECK-O3-EX-NEXT:  # %bb.2: # %untaken
 ; CHECK-O3-EX-NEXT:    xorl %eax, %eax
+; CHECK-O3-EX-NEXT:    retq
+; CHECK-O3-EX-NEXT:  .LBB116_1: # %taken
+; CHECK-O3-EX-NEXT:    movb $1, %al
 ; CHECK-O3-EX-NEXT:    retq
   %v2 = load atomic i32, i32* %p unordered, align 4
   fence seq_cst

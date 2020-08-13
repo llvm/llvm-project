@@ -315,7 +315,7 @@ private:
   bool calcColdCallHeuristics(const BasicBlock *BB);
   bool calcPointerHeuristics(const BasicBlock *BB);
   bool calcLoopBranchHeuristics(const BasicBlock *BB, const LoopInfo &LI);
-  bool calcZeroHeuristics(const BasicBlock *BB, const TargetLibraryInfo *TLI);
+  bool calcIntegerHeuristics(const BasicBlock *BB, const TargetLibraryInfo *TLI);
   bool calcFloatingPointHeuristics(const BasicBlock *BB);
   bool calcInvokeHeuristics(const BasicBlock *BB);
 };
