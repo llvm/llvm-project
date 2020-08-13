@@ -179,7 +179,6 @@ Expected<const char *> MachODumper::extractSections(
     if (Expected<MachOYAML::Section> S =
             constructSection(Sec, Sections.size() + 1)) {
       StringRef SecName(S->sectname);
-      DWARFYAML::Data DWARF;
       if (SecName.startswith("__debug_")) {
         // If the DWARF section cannot be successfully parsed, emit raw content
         // instead of an entry in the DWARF section of the YAML.
