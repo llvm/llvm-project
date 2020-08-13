@@ -992,6 +992,16 @@ bool SIPeepholeSDWA::isConvertibleToSDWA(MachineInstr &MI,
   if (Opc == AMDGPU::V_CNDMASK_B32_e32)
     return false;
 
+  if (MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0)) {
+    if (!Src0->isReg() && !Src0->isImm())
+      return false;
+  }
+
+  if (MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1)) {
+    if (!Src1->isReg() && !Src1->isImm())
+      return false;
+  }
+
   return true;
 }
 
