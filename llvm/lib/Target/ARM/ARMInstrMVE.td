@@ -4055,6 +4055,8 @@ class MVE_VMAXMINNMA<string iname, string suffix, bit size, bit bit_12,
   let Inst{4} = 0b0;
   let Inst{3-1} = Qm{2-0};
   let Inst{0} = 0b1;
+
+  let isCommutable = 1;
 }
 
 multiclass MVE_VMAXMINNMA_m<string iname, MVEVectorVTInfo VTI,
