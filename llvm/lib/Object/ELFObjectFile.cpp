@@ -440,7 +440,7 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
   TheTriple.setArchName(Triple);
 }
 
-std::vector<std::pair<DataRefImpl, uint64_t>>
+std::vector<std::pair<Optional<DataRefImpl>, uint64_t>>
 ELFObjectFileBase::getPltAddresses() const {
   std::string Err;
   const auto Triple = makeTriple();
@@ -498,14 +498,18 @@ ELFObjectFileBase::getPltAddresses() const {
     GotToPlt.insert(std::make_pair(Entry.second, Entry.first));
   // Find the relocations in the dynamic relocation table that point to
   // locations in the GOT for which we know the corresponding PLT entry.
-  std::vector<std::pair<DataRefImpl, uint64_t>> Result;
+  std::vector<std::pair<Optional<DataRefImpl>, uint64_t>> Result;
   for (const auto &Relocation : RelaPlt->relocations()) {
     if (Relocation.getType() != JumpSlotReloc)
       continue;
     auto PltEntryIter = GotToPlt.find(Relocation.getOffset());
-    if (PltEntryIter != GotToPlt.end())
-      Result.push_back(std::make_pair(
-          Relocation.getSymbol()->getRawDataRefImpl(), PltEntryIter->second));
+    if (PltEntryIter != GotToPlt.end()) {
+      symbol_iterator Sym = Relocation.getSymbol();
+      if (Sym == symbol_end())
+        Result.emplace_back(None, PltEntryIter->second);
+      else
+        Result.emplace_back(Sym->getRawDataRefImpl(), PltEntryIter->second);
+    }
   }
   return Result;
 }
