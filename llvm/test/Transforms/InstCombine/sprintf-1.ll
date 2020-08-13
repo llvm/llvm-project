@@ -81,19 +81,15 @@ define void @test_simplify4(i8* %dst) {
   ret void
 }
 
-; Check sprintf(dst, "%s", str) -> llvm.memcpy(dest, str, strlen(str) + 1, 1).
+; Check sprintf(dst, "%s", str) -> strcpy(dst, str)
 
 define void @test_simplify5(i8* %dst, i8* %str) {
 ; CHECK-LABEL: @test_simplify5(
-; CHECK-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* nonnull dereferenceable(1) [[STR:%.*]])
-; CHECK-NEXT:    [[LENINC:%.*]] = add i32 [[STRLEN]], 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[DST:%.*]], i8* align 1 [[STR]], i32 [[LENINC]], i1 false)
+; CHECK-NEXT:    [[STRCPY:%.*]] = call i8* @strcpy(i8* nonnull dereferenceable(1) [[DST:%.*]], i8* nonnull dereferenceable(1) [[STR:%.*]])
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-IPRINTF-LABEL: @test_simplify5(
-; CHECK-IPRINTF-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* nonnull dereferenceable(1) [[STR:%.*]])
-; CHECK-IPRINTF-NEXT:    [[LENINC:%.*]] = add i32 [[STRLEN]], 1
-; CHECK-IPRINTF-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[DST:%.*]], i8* align 1 [[STR]], i32 [[LENINC]], i1 false)
+; CHECK-IPRINTF-NEXT:    [[STRCPY:%.*]] = call i8* @strcpy(i8* nonnull dereferenceable(1) [[DST:%.*]], i8* nonnull dereferenceable(1) [[STR:%.*]])
 ; CHECK-IPRINTF-NEXT:    ret void
 ;
   %fmt = getelementptr [3 x i8], [3 x i8]* @percent_s, i32 0, i32 0

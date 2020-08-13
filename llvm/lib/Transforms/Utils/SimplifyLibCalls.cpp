@@ -2487,21 +2487,11 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
   }
 
   if (FormatStr[1] == 's') {
-    // sprintf(dest, "%s", str) -> llvm.memcpy(align 1 dest, align 1 str,
-    // strlen(str)+1)
+    // sprintf(dest, "%s", str) -> strcpy(dest, str)
     if (!CI->getArgOperand(2)->getType()->isPointerTy())
       return nullptr;
 
-    Value *Len = emitStrLen(CI->getArgOperand(2), B, DL, TLI);
-    if (!Len)
-      return nullptr;
-    Value *IncLen =
-        B.CreateAdd(Len, ConstantInt::get(Len->getType(), 1), "leninc");
-    B.CreateMemCpy(CI->getArgOperand(0), Align(1), CI->getArgOperand(2),
-                   Align(1), IncLen);
-
-    // The sprintf result is the unincremented number of bytes in the string.
-    return B.CreateIntCast(Len, CI->getType(), false);
+    return emitStrCpy(CI->getArgOperand(0), CI->getArgOperand(2), B, TLI);
   }
   return nullptr;
 }
