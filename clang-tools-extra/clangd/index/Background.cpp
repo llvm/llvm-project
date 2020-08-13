@@ -91,28 +91,25 @@ bool shardIsStale(const LoadedShard &LS, llvm::vfs::FileSystem *FS) {
 } // namespace
 
 BackgroundIndex::BackgroundIndex(
-    Context BackgroundContext, const ThreadsafeFS &TFS,
-    const GlobalCompilationDatabase &CDB,
-    BackgroundIndexStorage::Factory IndexStorageFactory, size_t ThreadPoolSize,
-    std::function<void(BackgroundQueue::Stats)> OnProgress,
-    std::function<Context(PathRef)> ContextProvider)
+    const ThreadsafeFS &TFS, const GlobalCompilationDatabase &CDB,
+    BackgroundIndexStorage::Factory IndexStorageFactory, Options Opts)
     : SwapIndex(std::make_unique<MemIndex>()), TFS(TFS), CDB(CDB),
-      BackgroundContext(std::move(BackgroundContext)),
-      ContextProvider(std::move(ContextProvider)),
-      Rebuilder(this, &IndexedSymbols, ThreadPoolSize),
+      ContextProvider(std::move(Opts.ContextProvider)),
+      Rebuilder(this, &IndexedSymbols, Opts.ThreadPoolSize),
       IndexStorageFactory(std::move(IndexStorageFactory)),
-      Queue(std::move(OnProgress)),
+      Queue(std::move(Opts.OnProgress)),
       CommandsChanged(
           CDB.watch([&](const std::vector<std::string> &ChangedFiles) {
             enqueue(ChangedFiles);
           })) {
-  assert(ThreadPoolSize > 0 && "Thread pool size can't be zero.");
+  assert(Opts.ThreadPoolSize > 0 && "Thread pool size can't be zero.");
   assert(this->IndexStorageFactory && "Storage factory can not be null!");
-  for (unsigned I = 0; I < ThreadPoolSize; ++I) {
-    ThreadPool.runAsync("background-worker-" + llvm::Twine(I + 1), [this] {
-      WithContext Ctx(this->BackgroundContext.clone());
-      Queue.work([&] { Rebuilder.idle(); });
-    });
+  for (unsigned I = 0; I < Opts.ThreadPoolSize; ++I) {
+    ThreadPool.runAsync("background-worker-" + llvm::Twine(I + 1),
+                        [this, Ctx(Context::current().clone())]() mutable {
+                          WithContext BGContext(std::move(Ctx));
+                          Queue.work([&] { Rebuilder.idle(); });
+                        });
   }
 }
 
