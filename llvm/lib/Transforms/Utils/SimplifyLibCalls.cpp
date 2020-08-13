@@ -608,9 +608,15 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilderBase &B) {
     return Dst;
   }
 
-  // Let strncpy handle the zero padding
-  if (Len > SrcLen + 1)
-    return nullptr;
+  // strncpy(a, "a", 4) - > memcpy(a, "a\0\0\0", 4)
+  if (Len > SrcLen + 1) {
+    StringRef Str;
+    if (!getConstantStringInfo(Src, Str))
+      return nullptr;
+    std::string SrcStr = Str.str();
+    SrcStr.resize(Len, '\0');
+    Src = B.CreateGlobalString(SrcStr, "str");
+  }
 
   Type *PT = Callee->getFunctionType()->getParamType(0);
   // strncpy(x, s, c) -> memcpy(align 1 x, align 1 s, c) [s and c are constant]
