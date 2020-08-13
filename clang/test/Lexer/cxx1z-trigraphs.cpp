@@ -1,14 +1,31 @@
 // RUN: %clang_cc1 -std=c++1z %s -verify
-// RUN: %clang_cc1 -std=c++1z %s -ftrigraphs -fsyntax-only 2>&1 | FileCheck --check-prefix=TRIGRAPHS %s
+// RUN: %clang_cc1 -std=c++1z %s -verify -ftrigraphs -DENABLED_TRIGRAPHS=1
+// RUN: %clang_cc1 -std=c++1z %s -verify -fno-trigraphs -DENABLED_TRIGRAPHS=0
 
-??= define foo ; // expected-error {{}} expected-warning {{trigraph ignored}}
+#ifdef __MVS__
+#ifndef ENABLED_TRIGRAPHS
+#define ENABLED_TRIGRAPHS 1
+#endif
+#endif
 
-static_assert("??="[0] == '#', ""); // expected-error {{failed}} expected-warning {{trigraph ignored}}
+??= define foo ;
+
+static_assert("??="[0] == '#', "");
 
 // ??/
-error here; // expected-error {{}}
+error here;
 
-// Note, there is intentionally trailing whitespace two lines below.
-// TRIGRAPHS: :[[@LINE+1]]:{{.*}} backslash and newline separated by space
+// Note, there is intentionally trailing whitespace one line below.
 // ??/  
-error here; // expected-error {{}}
+error here;
+
+#if !ENABLED_TRIGRAPHS
+// expected-error@11 {{}} expected-warning@11 {{trigraph ignored}}
+// expected-error@13 {{failed}} expected-warning@13 {{trigraph ignored}}
+// expected-error@16 {{}}
+// expected-error@20 {{}}
+#else
+// expected-warning@11 {{trigraph converted}}
+// expected-warning@13 {{trigraph converted}}
+// expected-warning@19 {{backslash and newline separated by space}}
+#endif

@@ -608,9 +608,15 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilderBase &B) {
     return Dst;
   }
 
-  // Let strncpy handle the zero padding
-  if (Len > SrcLen + 1)
-    return nullptr;
+  // strncpy(a, "a", 4) - > memcpy(a, "a\0\0\0", 4)
+  if (Len > SrcLen + 1) {
+    StringRef Str;
+    if (!getConstantStringInfo(Src, Str))
+      return nullptr;
+    std::string SrcStr = Str.str();
+    SrcStr.resize(Len, '\0');
+    Src = B.CreateGlobalString(SrcStr, "str");
+  }
 
   Type *PT = Callee->getFunctionType()->getParamType(0);
   // strncpy(x, s, c) -> memcpy(align 1 x, align 1 s, c) [s and c are constant]
@@ -2481,21 +2487,11 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
   }
 
   if (FormatStr[1] == 's') {
-    // sprintf(dest, "%s", str) -> llvm.memcpy(align 1 dest, align 1 str,
-    // strlen(str)+1)
+    // sprintf(dest, "%s", str) -> strcpy(dest, str)
     if (!CI->getArgOperand(2)->getType()->isPointerTy())
       return nullptr;
 
-    Value *Len = emitStrLen(CI->getArgOperand(2), B, DL, TLI);
-    if (!Len)
-      return nullptr;
-    Value *IncLen =
-        B.CreateAdd(Len, ConstantInt::get(Len->getType(), 1), "leninc");
-    B.CreateMemCpy(CI->getArgOperand(0), Align(1), CI->getArgOperand(2),
-                   Align(1), IncLen);
-
-    // The sprintf result is the unincremented number of bytes in the string.
-    return B.CreateIntCast(Len, CI->getType(), false);
+    return emitStrCpy(CI->getArgOperand(0), CI->getArgOperand(2), B, TLI);
   }
   return nullptr;
 }
