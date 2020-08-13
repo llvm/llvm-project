@@ -148,12 +148,9 @@ public:
     /// Takes the max of the two values, which are required to be integers.
     Max = 7,
 
-    /// Merge target ids.
-    MergeTargetID = 8,
-
     // Markers:
     ModFlagBehaviorFirstVal = Error,
-    ModFlagBehaviorLastVal = MergeTargetID
+    ModFlagBehaviorLastVal = Max
   };
 
   /// Checks if Metadata represents a valid ModFlagBehavior, and stores the

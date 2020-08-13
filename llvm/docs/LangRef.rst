@@ -6513,15 +6513,6 @@ The following behaviors are supported:
      - **Max**
            Takes the max of the two values, which are required to be integers.
 
-   * - 8
-     - **MergeTargetID**
-           Merge two string values in the format of triple-`target-ID
-           <https://llvm.org/docs/AMDGPUUsage.html#target-ids>`.
-           The key must be `target-id`. If there is a mismatch in triple or
-           processor of the source and destination target ID's, or if a feature
-           is in both source and destination target ID's but with different
-           signs, an error of conflict module flags will be emitted.
-
 It is an error for a particular unique flag ID to have multiple behaviors,
 except in the case of **Require** (which adds restrictions on another metadata
 value) or **Override**.

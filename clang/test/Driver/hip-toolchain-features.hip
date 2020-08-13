@@ -3,10 +3,10 @@
 // REQUIRES: amdgpu-registered-target
 
 // RUN: %clang -### -target x86_64-linux-gnu -fgpu-rdc -nogpulib \
-// RUN:   --cuda-gpu-arch=gfx803:xnack+ --cuda-gpu-arch=gfx900:xnack+ %s \
+// RUN:   --cuda-gpu-arch=gfx906:xnack+ --cuda-gpu-arch=gfx900:xnack+ %s \
 // RUN:   2>&1 | FileCheck %s -check-prefix=XNACK
 // RUN: %clang -### -target x86_64-linux-gnu -fgpu-rdc -nogpulib \
-// RUN:   --cuda-gpu-arch=gfx803:xnack- --cuda-gpu-arch=gfx900:xnack- %s \
+// RUN:   --cuda-gpu-arch=gfx906:xnack- --cuda-gpu-arch=gfx900:xnack- %s \
 // RUN:   2>&1 | FileCheck %s -check-prefix=NOXNACK
 
 // XNACK: {{.*}}clang{{.*}}"-target-feature" "+xnack"

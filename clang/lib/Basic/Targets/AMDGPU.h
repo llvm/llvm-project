@@ -44,8 +44,8 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   /// Target ID is device name followed by optional feature name postfixed
   /// by plus or minus sign delimitted by colon, e.g. gfx908:xnack+:sram-ecc-.
-  /// If the target ID contains +feature, map it to true.
-  /// If the target ID contains -feature, map it to false.
+  /// If the target ID contains feature+, map it to true.
+  /// If the target ID contains feature-, map it to false.
   /// If the target ID does not contain a feature (default), do not map it.
   llvm::StringMap<bool> OffloadArchFeatures;
   std::string TargetID;
@@ -398,7 +398,6 @@ public:
   void setAuxTarget(const TargetInfo *Aux) override;
 
   bool hasExtIntType() const override { return true; }
-
   bool
   isFPAtomicFetchAddSubSupported(const llvm::fltSemantics &FS) const override {
     switch (llvm::APFloat::SemanticsToEnum(FS)) {
@@ -414,15 +413,17 @@ public:
   // pre-defined macros.
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override {
-    for (auto &F : Features) {
+    auto TargetIDFeatures =
+        getAllPossibleTargetIDFeatures(getTriple(), getArchNameAMDGCN(GPUKind));
+    llvm::for_each(Features, [&](const auto &F) {
       assert(F.front() == '+' || F.front() == '-');
       bool IsOn = F.front() == '+';
       StringRef Name = StringRef(F).drop_front();
-      if (Name != "xnack" && Name != "sram-ecc")
-        continue;
+      if (llvm::find(TargetIDFeatures, Name) == TargetIDFeatures.end())
+        return;
       assert(OffloadArchFeatures.find(Name) == OffloadArchFeatures.end());
       OffloadArchFeatures[Name] = IsOn;
-    }
+    });
     return true;
   }
 

@@ -55,12 +55,12 @@
 
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   -x hip \
-// RUN:   --offload-arch=fiji:xnack+ \
-// RUN:   --offload-arch=gfx803:xnack+ \
-// RUN:   --offload-arch=fiji:xnack+ \
+// RUN:   --offload-arch=fiji \
+// RUN:   --offload-arch=gfx803 \
+// RUN:   --offload-arch=fiji \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=FIJI %s
-// FIJI: "-targets=host-x86_64-unknown-linux,hip-amdgcn-amd-amdhsa-gfx803:xnack+"
+// FIJI: "-targets=host-x86_64-unknown-linux,hip-amdgcn-amd-amdhsa-gfx803"
 
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   -x hip \

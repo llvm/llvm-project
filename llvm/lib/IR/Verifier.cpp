@@ -1467,16 +1467,6 @@ Verifier::visitModuleFlag(const MDNode *Op,
     break;
   }
 
-  case Module::MergeTargetID: {
-    Assert(ID->getString() == "target-id",
-           "Invalid key for 'MergeTargetID' module flag (expected 'target-id')",
-           Op->getOperand(1));
-    Assert(dyn_cast_or_null<MDString>(Op->getOperand(2)),
-           "invalid value for 'MergeTargetID' module flag (expected string)",
-           Op->getOperand(2));
-    break;
-  }
-
   case Module::Require: {
     // The value should itself be an MDNode with two operands, a flag ID (an
     // MDString), and a value.

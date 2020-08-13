@@ -387,8 +387,8 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
         auto Pos = FeatureMap.find(Feature);
         if (Pos == FeatureMap.end())
           continue;
-        std::string Opt = (Twine(Pos->second ? "+" : "-") + Feature).str();
-        Features.push_back(Args.MakeArgStringRef(Opt));
+        Features.push_back(Args.MakeArgStringRef(
+            (Twine(Pos->second ? "+" : "-") + Feature).str()));
       }
     }
   }

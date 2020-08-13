@@ -30,16 +30,13 @@ getAllPossibleTargetIDFeatures(const llvm::Triple &T,
 llvm::StringRef getProcessorFromTargetID(const llvm::Triple &T,
                                          llvm::StringRef OffloadArch);
 
-/// Parse an target ID to get processor and feature map.
-/// Returns processor name or None if the target ID is invalid.
+/// Parse a target ID to get processor and feature map.
+/// Returns canonicalized processor name or None if the target ID is invalid.
 /// Returns target ID features in \p FeatureMap if it is not null pointer.
 /// This function assumes \p OffloadArch is a valid target ID.
 /// If the target ID contains feature+, map it to true.
 /// If the target ID contains feature-, map it to false.
 /// If the target ID does not contain a feature (default), do not map it.
-/// Returns whether the target ID features are valid in \p IsValid if it
-/// is not a null pointer.
-/// If \p CanonicalizeProc is true, canonicalize returned processor name.
 llvm::Optional<llvm::StringRef>
 parseTargetID(const llvm::Triple &T, llvm::StringRef OffloadArch,
               llvm::StringMap<bool> *FeatureMap);
@@ -49,13 +46,11 @@ parseTargetID(const llvm::Triple &T, llvm::StringRef OffloadArch,
 std::string getCanonicalTargetID(llvm::StringRef Processor,
                                  const llvm::StringMap<bool> &Features);
 
-/// Whether the combination of target ID is valid for a compilation or
-/// a bundled code object, assuming \p TargetIDs are canonicalized.
-/// \returns conflicting target IDs by \p ConflictingTIDs if it not null
-/// pointer.
-bool isValidTargetIDCombination(
-    const std::set<llvm::StringRef> &TargetIDs,
-    llvm::SmallVectorImpl<llvm::StringRef> *ConflictingTIDs = nullptr);
+/// Get the conflicted pair of target IDs for a compilation or a bundled code
+/// object, assuming \p TargetIDs are canonicalized. If there is no conflicts,
+/// returns None.
+llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>
+getConflictTargetIDCombination(const std::set<llvm::StringRef> &TargetIDs);
 } // namespace clang
 
 #endif

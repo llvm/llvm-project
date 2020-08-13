@@ -12,10 +12,10 @@
 // RUN: %clang -### -target amdgcn -mcpu=gfx700 -mno-code-object-v3 %s 2>&1 | FileCheck --check-prefix=NO-CODE-OBJECT-V3 %s
 // NO-CODE-OBJECT-V3: "-target-feature" "-code-object-v3"
 
-// RUN: %clang -### -target amdgcn-amdhsa -mcpu=gfx801:xnack+ %s 2>&1 | FileCheck --check-prefix=XNACK %s
+// RUN: %clang -### -target amdgcn-amdhsa -mcpu=gfx900:xnack+ %s 2>&1 | FileCheck --check-prefix=XNACK %s
 // XNACK: "-target-feature" "+xnack"
 
-// RUN: %clang -### -target amdgcn-amdpal -mcpu=gfx801:xnack- %s 2>&1 | FileCheck --check-prefix=NO-XNACK %s
+// RUN: %clang -### -target amdgcn-amdpal -mcpu=gfx900:xnack- %s 2>&1 | FileCheck --check-prefix=NO-XNACK %s
 // NO-XNACK: "-target-feature" "-xnack"
 
 // RUN: %clang -### -target amdgcn-mesa3d -mcpu=gfx908:sram-ecc+ %s 2>&1 | FileCheck --check-prefix=SRAM-ECC %s
