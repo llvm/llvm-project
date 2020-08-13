@@ -63,21 +63,21 @@ define void @f_non_leaf(i32 %x, i32 %y) !prof !14 {
 ; CHECK32-NEXT:    #APP
 ; CHECK32-NEXT:    #NO_APP
 ; CHECK32-NEXT:    cmpl {{[0-9]+}}(%esp), %eax # encoding: [0x3b,0x44,0x24,0x0c]
-; CHECK32-NEXT:    jne .LBB1_2 # encoding: [0x75,A]
-; CHECK32-NEXT:    # fixup A - offset: 1, value: .LBB1_2-1, kind: FK_PCRel_1
-; CHECK32-NEXT:  # %bb.1: # %bb1
-; CHECK32-NEXT:    popl %ebx # encoding: [0x5b]
-; CHECK32-NEXT:    .cfi_def_cfa_offset 4
-; CHECK32-NEXT:    jmp foo # TAILCALL
-; CHECK32-NEXT:    # encoding: [0xeb,A]
-; CHECK32-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
-; CHECK32-NEXT:  .LBB1_2: # %bb2
-; CHECK32-NEXT:    .cfi_def_cfa_offset 8
+; CHECK32-NEXT:    je .LBB1_1 # encoding: [0x74,A]
+; CHECK32-NEXT:    # fixup A - offset: 1, value: .LBB1_1-1, kind: FK_PCRel_1
+; CHECK32-NEXT:  # %bb.2: # %bb2
 ; CHECK32-NEXT:    popl %ebx # encoding: [0x5b]
 ; CHECK32-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK32-NEXT:    jmp bar # TAILCALL
 ; CHECK32-NEXT:    # encoding: [0xeb,A]
 ; CHECK32-NEXT:    # fixup A - offset: 1, value: bar-1, kind: FK_PCRel_1
+; CHECK32-NEXT:  .LBB1_1: # %bb1
+; CHECK32-NEXT:    .cfi_def_cfa_offset 8
+; CHECK32-NEXT:    popl %ebx # encoding: [0x5b]
+; CHECK32-NEXT:    .cfi_def_cfa_offset 4
+; CHECK32-NEXT:    jmp foo # TAILCALL
+; CHECK32-NEXT:    # encoding: [0xeb,A]
+; CHECK32-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
 ;
 ; CHECK64-LABEL: f_non_leaf:
 ; CHECK64:       # %bb.0: # %entry
@@ -87,21 +87,21 @@ define void @f_non_leaf(i32 %x, i32 %y) !prof !14 {
 ; CHECK64-NEXT:    #APP
 ; CHECK64-NEXT:    #NO_APP
 ; CHECK64-NEXT:    cmpl %esi, %edi # encoding: [0x39,0xf7]
-; CHECK64-NEXT:    jne .LBB1_2 # encoding: [0x75,A]
-; CHECK64-NEXT:    # fixup A - offset: 1, value: .LBB1_2-1, kind: FK_PCRel_1
-; CHECK64-NEXT:  # %bb.1: # %bb1
-; CHECK64-NEXT:    popq %rbx # encoding: [0x5b]
-; CHECK64-NEXT:    .cfi_def_cfa_offset 8
-; CHECK64-NEXT:    jmp foo # TAILCALL
-; CHECK64-NEXT:    # encoding: [0xeb,A]
-; CHECK64-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
-; CHECK64-NEXT:  .LBB1_2: # %bb2
-; CHECK64-NEXT:    .cfi_def_cfa_offset 16
+; CHECK64-NEXT:    je .LBB1_1 # encoding: [0x74,A]
+; CHECK64-NEXT:    # fixup A - offset: 1, value: .LBB1_1-1, kind: FK_PCRel_1
+; CHECK64-NEXT:  # %bb.2: # %bb2
 ; CHECK64-NEXT:    popq %rbx # encoding: [0x5b]
 ; CHECK64-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK64-NEXT:    jmp bar # TAILCALL
 ; CHECK64-NEXT:    # encoding: [0xeb,A]
 ; CHECK64-NEXT:    # fixup A - offset: 1, value: bar-1, kind: FK_PCRel_1
+; CHECK64-NEXT:  .LBB1_1: # %bb1
+; CHECK64-NEXT:    .cfi_def_cfa_offset 16
+; CHECK64-NEXT:    popq %rbx # encoding: [0x5b]
+; CHECK64-NEXT:    .cfi_def_cfa_offset 8
+; CHECK64-NEXT:    jmp foo # TAILCALL
+; CHECK64-NEXT:    # encoding: [0xeb,A]
+; CHECK64-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
 ;
 ; WIN64-LABEL: f_non_leaf:
 ; WIN64:       # %bb.0: # %entry
@@ -111,19 +111,19 @@ define void @f_non_leaf(i32 %x, i32 %y) !prof !14 {
 ; WIN64-NEXT:    #APP
 ; WIN64-NEXT:    #NO_APP
 ; WIN64-NEXT:    cmpl %edx, %ecx # encoding: [0x39,0xd1]
-; WIN64-NEXT:    jne .LBB1_2 # encoding: [0x75,A]
-; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB1_2-1, kind: FK_PCRel_1
-; WIN64-NEXT:  # %bb.1: # %bb1
-; WIN64-NEXT:    popq %rbx # encoding: [0x5b]
-; WIN64-NEXT:    jmp foo # TAILCALL
-; WIN64-NEXT:    # encoding: [0xeb,A]
-; WIN64-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
-; WIN64-NEXT:  .LBB1_2: # %bb2
-; WIN64-NEXT:    nop # encoding: [0x90]
+; WIN64-NEXT:    je .LBB1_1 # encoding: [0x74,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: .LBB1_1-1, kind: FK_PCRel_1
+; WIN64-NEXT:  # %bb.2: # %bb2
 ; WIN64-NEXT:    popq %rbx # encoding: [0x5b]
 ; WIN64-NEXT:    jmp bar # TAILCALL
 ; WIN64-NEXT:    # encoding: [0xeb,A]
 ; WIN64-NEXT:    # fixup A - offset: 1, value: bar-1, kind: FK_PCRel_1
+; WIN64-NEXT:  .LBB1_1: # %bb1
+; WIN64-NEXT:    nop # encoding: [0x90]
+; WIN64-NEXT:    popq %rbx # encoding: [0x5b]
+; WIN64-NEXT:    jmp foo # TAILCALL
+; WIN64-NEXT:    # encoding: [0xeb,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
 ; WIN64-NEXT:    .seh_handlerdata
 ; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
