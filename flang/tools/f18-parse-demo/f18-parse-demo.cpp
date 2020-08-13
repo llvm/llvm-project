@@ -59,7 +59,7 @@ std::vector<std::string> filesToDelete;
 void CleanUpAtExit() {
   for (const auto &path : filesToDelete) {
     if (!path.empty()) {
-      unlink(path.data());
+      llvm::sys::fs::remove(path);
     }
   }
 }
