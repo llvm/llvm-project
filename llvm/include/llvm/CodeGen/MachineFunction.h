@@ -1141,6 +1141,11 @@ template <> struct GraphTraits<Inverse<const MachineFunction*>> :
   }
 };
 
+class MachineFunctionAnalysisManager;
+void verifyMachineFunction(MachineFunctionAnalysisManager *,
+                           const std::string &Banner,
+                           const MachineFunction &MF);
+
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_MACHINEFUNCTION_H
