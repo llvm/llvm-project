@@ -997,6 +997,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       // These operations are not supported on NEON but SVE can do them.
       setOperationAction(ISD::MUL, MVT::v1i64, Custom);
       setOperationAction(ISD::MUL, MVT::v2i64, Custom);
+      setOperationAction(ISD::SMAX, MVT::v1i64, Custom);
+      setOperationAction(ISD::SMAX, MVT::v2i64, Custom);
+      setOperationAction(ISD::SMIN, MVT::v1i64, Custom);
+      setOperationAction(ISD::SMIN, MVT::v2i64, Custom);
     }
   }
 
@@ -1110,6 +1114,8 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::SHL, VT, Custom);
   setOperationAction(ISD::SIGN_EXTEND, VT, Custom);
   setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Custom);
+  setOperationAction(ISD::SMAX, VT, Custom);
+  setOperationAction(ISD::SMIN, VT, Custom);
   setOperationAction(ISD::SRA, VT, Custom);
   setOperationAction(ISD::SRL, VT, Custom);
   setOperationAction(ISD::STORE, VT, Custom);
@@ -3625,11 +3631,13 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::UDIV:
     return LowerDIV(Op, DAG);
   case ISD::SMIN:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMIN_PRED);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMIN_PRED,
+                               /*OverrideNEON=*/true);
   case ISD::UMIN:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::UMIN_PRED);
   case ISD::SMAX:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMAX_PRED);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMAX_PRED,
+                               /*OverrideNEON=*/true);
   case ISD::UMAX:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::UMAX_PRED);
   case ISD::SRA:

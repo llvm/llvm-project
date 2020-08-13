@@ -29,6 +29,7 @@ using namespace mlir;
 
 namespace mlir {
 // Defined in the test directory, no public header.
+void registerConvertCallOpPass();
 void registerConvertToTargetEnvPass();
 void registerInliner();
 void registerMemRefBoundCheck();
@@ -102,6 +103,7 @@ static cl::opt<bool> allowUnregisteredDialects(
 
 #ifdef MLIR_INCLUDE_TESTS
 void registerTestPasses() {
+  registerConvertCallOpPass();
   registerConvertToTargetEnvPass();
   registerInliner();
   registerMemRefBoundCheck();

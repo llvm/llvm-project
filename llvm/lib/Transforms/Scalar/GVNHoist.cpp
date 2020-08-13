@@ -521,6 +521,10 @@ private:
     if (NewPt == OldPt)
       return true;
 
+    // MemoryUseDef information is not available, bail out.
+    if (!U)
+      return false;
+
     const BasicBlock *NewBB = NewPt->getParent();
     const BasicBlock *OldBB = OldPt->getParent();
     const BasicBlock *UBB = U->getBlock();

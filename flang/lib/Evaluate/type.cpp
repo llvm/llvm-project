@@ -103,11 +103,10 @@ bool DynamicType::operator==(const DynamicType &that) const {
       PointeeComparison(derived_, that.derived_);
 }
 
-std::optional<common::ConstantSubscript> DynamicType::GetCharLength() const {
-  if (category_ == TypeCategory::Character && charLength_ &&
-      charLength_->isExplicit()) {
-    if (const auto &len{charLength_->GetExplicit()}) {
-      return ToInt64(len);
+std::optional<Expr<SubscriptInteger>> DynamicType::GetCharLength() const {
+  if (category_ == TypeCategory::Character && charLength_) {
+    if (auto length{charLength_->GetExplicit()}) {
+      return ConvertToType<SubscriptInteger>(std::move(*length));
     }
   }
   return std::nullopt;
@@ -125,24 +124,31 @@ static constexpr int RealKindBytes(int kind) {
   }
 }
 
-std::optional<std::size_t> DynamicType::MeasureSizeInBytes() const {
+std::optional<Expr<SubscriptInteger>> DynamicType::MeasureSizeInBytes(
+    FoldingContext *context) const {
   switch (category_) {
   case TypeCategory::Integer:
-    return kind_;
+    return Expr<SubscriptInteger>{kind_};
   case TypeCategory::Real:
-    return RealKindBytes(kind_);
+    return Expr<SubscriptInteger>{RealKindBytes(kind_)};
   case TypeCategory::Complex:
-    return 2 * RealKindBytes(kind_);
+    return Expr<SubscriptInteger>{2 * RealKindBytes(kind_)};
   case TypeCategory::Character:
     if (auto len{GetCharLength()}) {
-      return kind_ * *len;
+      auto result{Expr<SubscriptInteger>{kind_} * std::move(*len)};
+      if (context) {
+        return Fold(*context, std::move(result));
+      } else {
+        return std::move(result);
+      }
     }
     break;
   case TypeCategory::Logical:
-    return kind_;
+    return Expr<SubscriptInteger>{kind_};
   case TypeCategory::Derived:
     if (derived_ && derived_->scope()) {
-      return derived_->scope()->size();
+      return Expr<SubscriptInteger>{
+          static_cast<common::ConstantSubscript>(derived_->scope()->size())};
     }
     break;
   }

@@ -808,23 +808,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
         // FIXME: use the FS provided to the function.
         Opts = ClangTidyOptProvider->getOptions(File);
       }
-      if (!Opts.Checks) {
-        // If the user hasn't configured clang-tidy checks at all, including
-        // via .clang-tidy, give them a nice set of checks.
-        // (This should be what the "default" options does, but it isn't...)
-        //
-        // These default checks are chosen for:
-        //  - low false-positive rate
-        //  - providing a lot of value
-        //  - being reasonably efficient
-        Opts.Checks = llvm::join_items(
-            ",", "readability-misleading-indentation",
-            "readability-deleted-default", "bugprone-integer-division",
-            "bugprone-sizeof-expression", "bugprone-suspicious-missing-comma",
-            "bugprone-unused-raii", "bugprone-unused-return-value",
-            "misc-unused-using-decls", "misc-unused-alias-decls",
-            "misc-definitions-in-headers");
-      }
       return Opts;
     };
   }

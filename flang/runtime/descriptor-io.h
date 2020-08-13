@@ -223,16 +223,16 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
     std::size_t elementBytes{descriptor.ElementBytes()};
     SubscriptValue subscripts[maxRank];
     descriptor.GetLowerBounds(subscripts);
+    std::size_t numElements{descriptor.Elements()};
     if (descriptor.IsContiguous()) { // contiguous unformatted I/O
       char &x{ExtractElement<char>(io, descriptor, subscripts)};
-      auto totalBytes{descriptor.SizeInBytes()};
+      auto totalBytes{numElements * elementBytes};
       if constexpr (DIR == Direction::Output) {
         return unf->Emit(&x, totalBytes, elementBytes);
       } else {
         return unf->Receive(&x, totalBytes, elementBytes);
       }
     } else { // non-contiguous unformatted I/O
-      std::size_t numElements{descriptor.Elements()};
       for (std::size_t j{0}; j < numElements; ++j) {
         char &x{ExtractElement<char>(io, descriptor, subscripts)};
         if constexpr (DIR == Direction::Output) {
