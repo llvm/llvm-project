@@ -3,7 +3,10 @@
 ; RUN: llvm-link %S/Inputs/subprogram-linkonce-weak.ll %s -S -o %t2
 ; RUN: FileCheck %s -check-prefix=WL -check-prefix=CHECK <%t2
 ; REQUIRES: default_triple
-
+;
+; Bug 47131
+; XFAIL: sparc
+;
 ; This testcase tests the following flow:
 ;  - File A defines a linkonce version of @foo which has inlined into @bar.
 ;  - File B defines a weak version of @foo (different definition).
