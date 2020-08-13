@@ -110,11 +110,10 @@ define i32 @cross_mbb_phys_cse(i32 %a, i32 %b) nounwind ssp {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    cmpl %esi, %edi
-; CHECK-NEXT:    jbe .LBB2_1
-; CHECK-NEXT:  # %bb.2: # %return
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB2_1: # %if.end
+; CHECK-NEXT:    ja .LBB2_2
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    sbbl %eax, %eax
+; CHECK-NEXT:  .LBB2_2: # %return
 ; CHECK-NEXT:    retq
 entry:
   %cmp = icmp ugt i32 %a, %b
