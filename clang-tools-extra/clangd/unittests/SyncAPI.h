@@ -60,6 +60,9 @@ runSemanticRanges(ClangdServer &Server, PathRef File,
 llvm::Expected<llvm::Optional<clangd::Path>>
 runSwitchHeaderSource(ClangdServer &Server, PathRef File);
 
+llvm::Error runCustomAction(ClangdServer &Server, PathRef File,
+                            llvm::function_ref<void(InputsAndAST)>);
+
 } // namespace clangd
 } // namespace clang
 

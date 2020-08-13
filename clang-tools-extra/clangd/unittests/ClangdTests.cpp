@@ -15,6 +15,7 @@
 #include "Matchers.h"
 #include "SyncAPI.h"
 #include "TestFS.h"
+#include "TestTU.h"
 #include "URI.h"
 #include "support/Path.h"
 #include "support/Threading.h"
@@ -28,6 +29,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <algorithm>
@@ -1139,6 +1141,21 @@ TEST_F(ClangdVFSTest, FallbackWhenWaitingForCompileCommand) {
                   .Completions,
               ElementsAre(AllOf(Field(&CodeCompletion::Name, "xyz"),
                                 Field(&CodeCompletion::Scope, "ns::"))));
+}
+
+TEST(ClangdServerTest, CustomAction) {
+  OverlayCDB CDB(/*Base=*/nullptr);
+  MockFS FS;
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
+
+  Server.addDocument(testPath("foo.cc"), "void x();");
+  Decl::Kind XKind = Decl::TranslationUnit;
+  EXPECT_THAT_ERROR(runCustomAction(Server, testPath("foo.cc"),
+                                    [&](InputsAndAST AST) {
+                                      XKind = findDecl(AST.AST, "x").getKind();
+                                    }),
+                    llvm::Succeeded());
+  EXPECT_EQ(XKind, Decl::Function);
 }
 
 // Tests fails when built with asan due to stack overflow. So skip running the

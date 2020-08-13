@@ -754,6 +754,11 @@ void ClangdServer::semanticHighlights(
                            TUScheduler::InvalidateOnUpdate);
 }
 
+void ClangdServer::customAction(PathRef File, llvm::StringRef Name,
+                                Callback<InputsAndAST> Action) {
+  WorkScheduler.runWithAST(Name, File, std::move(Action));
+}
+
 llvm::StringMap<TUScheduler::FileStats> ClangdServer::fileStats() const {
   return WorkScheduler.fileStats();
 }
