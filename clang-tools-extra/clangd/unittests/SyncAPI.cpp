@@ -154,5 +154,20 @@ runSwitchHeaderSource(ClangdServer &Server, PathRef File) {
   return std::move(*Result);
 }
 
+llvm::Error runCustomAction(ClangdServer &Server, PathRef File,
+                            llvm::function_ref<void(InputsAndAST)> Action) {
+  llvm::Error Result = llvm::Error::success();
+  Notification Done;
+  Server.customAction(File, "Custom", [&](llvm::Expected<InputsAndAST> AST) {
+    if (!AST)
+      Result = AST.takeError();
+    else
+      Action(*AST);
+    Done.notify();
+  });
+  Done.wait();
+  return Result;
+}
+
 } // namespace clangd
 } // namespace clang
