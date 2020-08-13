@@ -165,20 +165,11 @@ static void indexTranslationUnit(ASTUnit &Unit, IndexingContext &IndexCtx) {
 static void indexPreprocessorMacros(const Preprocessor &PP,
                                     IndexDataConsumer &DataConsumer) {
   for (const auto &M : PP.macros())
-    if (MacroDirective *MD = M.second.getLatest()) {
-      auto *MI = MD->getMacroInfo();
-      // When using modules, it may happen that we find #undef of a macro that
-      // was defined in another module. In such case, MI may be nullptr, since
-      // we only look for macro definitions in the current TU. In that case,
-      // there is nothing to index.
-      if (!MI)
-        continue;
-
+    if (MacroDirective *MD = M.second.getLatest())
       DataConsumer.handleMacroOccurrence(
           M.first, MD->getMacroInfo(),
           static_cast<unsigned>(index::SymbolRole::Definition),
           MD->getLocation());
-    }
 }
 
 void index::indexASTUnit(ASTUnit &Unit, IndexDataConsumer &DataConsumer,

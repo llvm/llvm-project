@@ -520,7 +520,7 @@ class PointerToMember : public NonLoc {
 
 public:
   using PTMDataType =
-      llvm::PointerUnion<const DeclaratorDecl *, const PointerToMemberData *>;
+      llvm::PointerUnion<const NamedDecl *, const PointerToMemberData *>;
 
   const PTMDataType getPTMData() const {
     return PTMDataType::getFromOpaqueValue(const_cast<void *>(Data));
@@ -528,7 +528,7 @@ public:
 
   bool isNullMemberPointer() const;
 
-  const DeclaratorDecl *getDecl() const;
+  const NamedDecl *getDecl() const;
 
   template<typename AdjustedDecl>
   const AdjustedDecl *getDeclAs() const {
