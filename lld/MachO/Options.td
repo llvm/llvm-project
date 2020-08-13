@@ -410,7 +410,6 @@ def undefined : Separate<["-"], "undefined">,
 def rpath : Separate<["-"], "rpath">,
      MetaVarName<"<path>">,
      HelpText<"Add <path> to dyld search list for dylibs with load path prefix `@rpath/'">,
-     Flags<[HelpHidden]>,
      Group<grp_resolve>;
 def commons : Separate<["-"], "commons">,
      MetaVarName<"<treatment>">,

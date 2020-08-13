@@ -41,6 +41,7 @@ struct Configuration {
   llvm::MachO::HeaderFileType outputType;
   std::vector<llvm::StringRef> librarySearchPaths;
   std::vector<llvm::StringRef> frameworkSearchPaths;
+  std::vector<llvm::StringRef> runtimePaths;
   llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
 };
 
