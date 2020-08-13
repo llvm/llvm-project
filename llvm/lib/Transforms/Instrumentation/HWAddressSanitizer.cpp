@@ -203,6 +203,7 @@ public:
 
   bool sanitizeFunction(Function &F);
   void initializeModule();
+  void createHwasanCtorComdat();
 
   void initializeCallbacks(Module &M);
 
@@ -365,6 +366,106 @@ PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
   return PreservedAnalyses::all();
 }
 
+void HWAddressSanitizer::createHwasanCtorComdat() {
+  std::tie(HwasanCtorFunction, std::ignore) =
+      getOrCreateSanitizerCtorAndInitFunctions(
+          M, kHwasanModuleCtorName, kHwasanInitName,
+          /*InitArgTypes=*/{},
+          /*InitArgs=*/{},
+          // This callback is invoked when the functions are created the first
+          // time. Hook them into the global ctors list in that case:
+          [&](Function *Ctor, FunctionCallee) {
+            Comdat *CtorComdat = M.getOrInsertComdat(kHwasanModuleCtorName);
+            Ctor->setComdat(CtorComdat);
+            appendToGlobalCtors(M, Ctor, 0, Ctor);
+          });
+
+  // Create a note that contains pointers to the list of global
+  // descriptors. Adding a note to the output file will cause the linker to
+  // create a PT_NOTE program header pointing to the note that we can use to
+  // find the descriptor list starting from the program headers. A function
+  // provided by the runtime initializes the shadow memory for the globals by
+  // accessing the descriptor list via the note. The dynamic loader needs to
+  // call this function whenever a library is loaded.
+  //
+  // The reason why we use a note for this instead of a more conventional
+  // approach of having a global constructor pass a descriptor list pointer to
+  // the runtime is because of an order of initialization problem. With
+  // constructors we can encounter the following problematic scenario:
+  //
+  // 1) library A depends on library B and also interposes one of B's symbols
+  // 2) B's constructors are called before A's (as required for correctness)
+  // 3) during construction, B accesses one of its "own" globals (actually
+  //    interposed by A) and triggers a HWASAN failure due to the initialization
+  //    for A not having happened yet
+  //
+  // Even without interposition it is possible to run into similar situations in
+  // cases where two libraries mutually depend on each other.
+  //
+  // We only need one note per binary, so put everything for the note in a
+  // comdat. This needs to be a comdat with an .init_array section to prevent
+  // newer versions of lld from discarding the note.
+  //
+  // Create the note even if we aren't instrumenting globals. This ensures that
+  // binaries linked from object files with both instrumented and
+  // non-instrumented globals will end up with a note, even if a comdat from an
+  // object file with non-instrumented globals is selected. The note is harmless
+  // if the runtime doesn't support it, since it will just be ignored.
+  Comdat *NoteComdat = M.getOrInsertComdat(kHwasanModuleCtorName);
+
+  Type *Int8Arr0Ty = ArrayType::get(Int8Ty, 0);
+  auto Start =
+      new GlobalVariable(M, Int8Arr0Ty, true, GlobalVariable::ExternalLinkage,
+                         nullptr, "__start_hwasan_globals");
+  Start->setVisibility(GlobalValue::HiddenVisibility);
+  Start->setDSOLocal(true);
+  auto Stop =
+      new GlobalVariable(M, Int8Arr0Ty, true, GlobalVariable::ExternalLinkage,
+                         nullptr, "__stop_hwasan_globals");
+  Stop->setVisibility(GlobalValue::HiddenVisibility);
+  Stop->setDSOLocal(true);
+
+  // Null-terminated so actually 8 bytes, which are required in order to align
+  // the note properly.
+  auto *Name = ConstantDataArray::get(*C, "LLVM\0\0\0");
+
+  auto *NoteTy = StructType::get(Int32Ty, Int32Ty, Int32Ty, Name->getType(),
+                                 Int32Ty, Int32Ty);
+  auto *Note =
+      new GlobalVariable(M, NoteTy, /*isConstantGlobal=*/true,
+                         GlobalValue::PrivateLinkage, nullptr, kHwasanNoteName);
+  Note->setSection(".note.hwasan.globals");
+  Note->setComdat(NoteComdat);
+  Note->setAlignment(Align(4));
+  Note->setDSOLocal(true);
+
+  // The pointers in the note need to be relative so that the note ends up being
+  // placed in rodata, which is the standard location for notes.
+  auto CreateRelPtr = [&](Constant *Ptr) {
+    return ConstantExpr::getTrunc(
+        ConstantExpr::getSub(ConstantExpr::getPtrToInt(Ptr, Int64Ty),
+                             ConstantExpr::getPtrToInt(Note, Int64Ty)),
+        Int32Ty);
+  };
+  Note->setInitializer(ConstantStruct::getAnon(
+      {ConstantInt::get(Int32Ty, 8),                           // n_namesz
+       ConstantInt::get(Int32Ty, 8),                           // n_descsz
+       ConstantInt::get(Int32Ty, ELF::NT_LLVM_HWASAN_GLOBALS), // n_type
+       Name, CreateRelPtr(Start), CreateRelPtr(Stop)}));
+  appendToCompilerUsed(M, Note);
+
+  // Create a zero-length global in hwasan_globals so that the linker will
+  // always create start and stop symbols.
+  auto Dummy = new GlobalVariable(
+      M, Int8Arr0Ty, /*isConstantGlobal*/ true, GlobalVariable::PrivateLinkage,
+      Constant::getNullValue(Int8Arr0Ty), "hwasan.dummy.global");
+  Dummy->setSection("hwasan_globals");
+  Dummy->setComdat(NoteComdat);
+  Dummy->setMetadata(LLVMContext::MD_associated,
+                     MDNode::get(*C, ValueAsMetadata::get(Note)));
+  appendToCompilerUsed(M, Dummy);
+}
+
 /// Module-level initialization.
 ///
 /// inserts a call to __hwasan_init to the module's constructor list.
@@ -400,19 +501,7 @@ void HWAddressSanitizer::initializeModule() {
                               : !NewRuntime;
 
   if (!CompileKernel) {
-    std::tie(HwasanCtorFunction, std::ignore) =
-        getOrCreateSanitizerCtorAndInitFunctions(
-            M, kHwasanModuleCtorName, kHwasanInitName,
-            /*InitArgTypes=*/{},
-            /*InitArgs=*/{},
-            // This callback is invoked when the functions are created the first
-            // time. Hook them into the global ctors list in that case:
-            [&](Function *Ctor, FunctionCallee) {
-              Comdat *CtorComdat = M.getOrInsertComdat(kHwasanModuleCtorName);
-              Ctor->setComdat(CtorComdat);
-              appendToGlobalCtors(M, Ctor, 0, Ctor);
-            });
-
+    createHwasanCtorComdat();
     bool InstrumentGlobals =
         ClGlobals.getNumOccurrences() ? ClGlobals : NewRuntime;
     if (InstrumentGlobals)
@@ -1300,85 +1389,6 @@ void HWAddressSanitizer::instrumentGlobal(GlobalVariable *GV, uint8_t Tag) {
 }
 
 void HWAddressSanitizer::instrumentGlobals() {
-  // Start by creating a note that contains pointers to the list of global
-  // descriptors. Adding a note to the output file will cause the linker to
-  // create a PT_NOTE program header pointing to the note that we can use to
-  // find the descriptor list starting from the program headers. A function
-  // provided by the runtime initializes the shadow memory for the globals by
-  // accessing the descriptor list via the note. The dynamic loader needs to
-  // call this function whenever a library is loaded.
-  //
-  // The reason why we use a note for this instead of a more conventional
-  // approach of having a global constructor pass a descriptor list pointer to
-  // the runtime is because of an order of initialization problem. With
-  // constructors we can encounter the following problematic scenario:
-  //
-  // 1) library A depends on library B and also interposes one of B's symbols
-  // 2) B's constructors are called before A's (as required for correctness)
-  // 3) during construction, B accesses one of its "own" globals (actually
-  //    interposed by A) and triggers a HWASAN failure due to the initialization
-  //    for A not having happened yet
-  //
-  // Even without interposition it is possible to run into similar situations in
-  // cases where two libraries mutually depend on each other.
-  //
-  // We only need one note per binary, so put everything for the note in a
-  // comdat. This need to be a comdat with an .init_array section to prevent
-  // newer versions of lld from discarding the note.
-  Comdat *NoteComdat = M.getOrInsertComdat(kHwasanModuleCtorName);
-
-  Type *Int8Arr0Ty = ArrayType::get(Int8Ty, 0);
-  auto Start =
-      new GlobalVariable(M, Int8Arr0Ty, true, GlobalVariable::ExternalLinkage,
-                         nullptr, "__start_hwasan_globals");
-  Start->setVisibility(GlobalValue::HiddenVisibility);
-  Start->setDSOLocal(true);
-  auto Stop =
-      new GlobalVariable(M, Int8Arr0Ty, true, GlobalVariable::ExternalLinkage,
-                         nullptr, "__stop_hwasan_globals");
-  Stop->setVisibility(GlobalValue::HiddenVisibility);
-  Stop->setDSOLocal(true);
-
-  // Null-terminated so actually 8 bytes, which are required in order to align
-  // the note properly.
-  auto *Name = ConstantDataArray::get(*C, "LLVM\0\0\0");
-
-  auto *NoteTy = StructType::get(Int32Ty, Int32Ty, Int32Ty, Name->getType(),
-                                 Int32Ty, Int32Ty);
-  auto *Note =
-      new GlobalVariable(M, NoteTy, /*isConstantGlobal=*/true,
-                         GlobalValue::PrivateLinkage, nullptr, kHwasanNoteName);
-  Note->setSection(".note.hwasan.globals");
-  Note->setComdat(NoteComdat);
-  Note->setAlignment(Align(4));
-  Note->setDSOLocal(true);
-
-  // The pointers in the note need to be relative so that the note ends up being
-  // placed in rodata, which is the standard location for notes.
-  auto CreateRelPtr = [&](Constant *Ptr) {
-    return ConstantExpr::getTrunc(
-        ConstantExpr::getSub(ConstantExpr::getPtrToInt(Ptr, Int64Ty),
-                             ConstantExpr::getPtrToInt(Note, Int64Ty)),
-        Int32Ty);
-  };
-  Note->setInitializer(ConstantStruct::getAnon(
-      {ConstantInt::get(Int32Ty, 8),                           // n_namesz
-       ConstantInt::get(Int32Ty, 8),                           // n_descsz
-       ConstantInt::get(Int32Ty, ELF::NT_LLVM_HWASAN_GLOBALS), // n_type
-       Name, CreateRelPtr(Start), CreateRelPtr(Stop)}));
-  appendToCompilerUsed(M, Note);
-
-  // Create a zero-length global in hwasan_globals so that the linker will
-  // always create start and stop symbols.
-  auto Dummy = new GlobalVariable(
-      M, Int8Arr0Ty, /*isConstantGlobal*/ true, GlobalVariable::PrivateLinkage,
-      Constant::getNullValue(Int8Arr0Ty), "hwasan.dummy.global");
-  Dummy->setSection("hwasan_globals");
-  Dummy->setComdat(NoteComdat);
-  Dummy->setMetadata(LLVMContext::MD_associated,
-                     MDNode::get(*C, ValueAsMetadata::get(Note)));
-  appendToCompilerUsed(M, Dummy);
-
   std::vector<GlobalVariable *> Globals;
   for (GlobalVariable &GV : M.globals()) {
     if (GV.isDeclarationForLinker() || GV.getName().startswith("llvm.") ||
