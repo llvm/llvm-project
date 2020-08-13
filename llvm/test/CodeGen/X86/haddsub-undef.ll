@@ -587,7 +587,7 @@ define <4 x float> @add_ps_017(<4 x float> %x) {
 ; SSE-FAST-LABEL: add_ps_017:
 ; SSE-FAST:       # %bb.0:
 ; SSE-FAST-NEXT:    haddps %xmm0, %xmm0
-; SSE-FAST-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; SSE-FAST-NEXT:    movshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE-FAST-NEXT:    retq
 ;
 ; AVX-SLOW-LABEL: add_ps_017:
@@ -600,7 +600,7 @@ define <4 x float> @add_ps_017(<4 x float> %x) {
 ; AVX-FAST-LABEL: add_ps_017:
 ; AVX-FAST:       # %bb.0:
 ; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
-; AVX-FAST-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; AVX-FAST-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; AVX-FAST-NEXT:    retq
   %l = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 undef, i32 2>
   %add = fadd <4 x float> %l, %x
@@ -612,13 +612,13 @@ define <4 x float> @add_ps_018(<4 x float> %x) {
 ; SSE-LABEL: add_ps_018:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm0, %xmm0
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,2,2,2]
+; SSE-NEXT:    movsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: add_ps_018:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,2,2,2]
+; AVX-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
 ; AVX-NEXT:    retq
   %l = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 0, i32 undef>
   %r = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 1, i32 undef>
@@ -929,9 +929,8 @@ define <4 x float> @PR45747_2(<4 x float> %a, <4 x float> %b) nounwind {
 ;
 ; SSE-FAST-LABEL: PR45747_2:
 ; SSE-FAST:       # %bb.0:
-; SSE-FAST-NEXT:    movaps %xmm1, %xmm0
-; SSE-FAST-NEXT:    haddps %xmm1, %xmm0
-; SSE-FAST-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; SSE-FAST-NEXT:    haddps %xmm1, %xmm1
+; SSE-FAST-NEXT:    movshdup {{.*#+}} xmm0 = xmm1[1,1,3,3]
 ; SSE-FAST-NEXT:    retq
 ;
 ; AVX-SLOW-LABEL: PR45747_2:
@@ -944,7 +943,7 @@ define <4 x float> @PR45747_2(<4 x float> %a, <4 x float> %b) nounwind {
 ; AVX-FAST-LABEL: PR45747_2:
 ; AVX-FAST:       # %bb.0:
 ; AVX-FAST-NEXT:    vhaddps %xmm1, %xmm1, %xmm0
-; AVX-FAST-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; AVX-FAST-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; AVX-FAST-NEXT:    retq
   %t0 = shufflevector <4 x float> %b, <4 x float> undef, <4 x i32> <i32 undef, i32 undef, i32 3, i32 undef>
   %t1 = fadd <4 x float> %t0, %b
