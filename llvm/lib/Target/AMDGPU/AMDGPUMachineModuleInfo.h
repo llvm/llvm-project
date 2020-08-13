@@ -46,12 +46,6 @@ private:
   /// Single thread synchronization scope ID (single address space).
   SyncScope::ID SingleThreadOneAddressSpaceSSID;
 
-  // Target identification string syntax can be found here:
-  //   https://llvm.org/docs/AMDGPUUsage.html#code-object-target-identification
-
-  /// Target identification string.
-  std::string TargetID;
-
   /// In AMDGPU target synchronization scopes are inclusive, meaning a
   /// larger synchronization scope is inclusive of a smaller synchronization
   /// scope.
@@ -143,11 +137,6 @@ public:
 
     return AIO.getValue() >= BIO.getValue() &&
         (IsAOneAddressSpace == IsBOneAddressSpace || !IsAOneAddressSpace);
-  }
-
-  /// \returns Target identification string.
-  StringRef getTargetID() const {
-    return TargetID;
   }
 };
 

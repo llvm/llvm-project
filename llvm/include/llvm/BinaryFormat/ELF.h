@@ -718,31 +718,11 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX1031,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
-  // in the object. Only valid for EI_ABIVERSION=1.
+  // in the object.
   EF_AMDGPU_XNACK = 0x100,
   // Indicates if the "sram-ecc" target feature is enabled for all code
-  // contained in the object. Only valid for EI_ABIVERSION=1.
+  // contained in the object.
   EF_AMDGPU_SRAM_ECC = 0x200,
-
-  // XNACK selection mask for EF_AMDGPU_FEATURE_XNACK_* values. Only valid
-  // for EI_OSABI=ELFOSABI_AMDGPU_HSA and EI_ABIVERSION=2.
-  EF_AMDGPU_FEATURE_XNACK = 0x300,
-  // XNACK is any/default.
-  EF_AMDGPU_FEATURE_XNACK_DEFAULT=0x100,
-  // XNACK is off.
-  EF_AMDGPU_FEATURE_XNACK_OFF=0x200,
-  // XNACK is on.
-  EF_AMDGPU_FEATURE_XNACK_ON=0x300,
-
-  // SRAM ECC selection mask for EF_AMDGPU_FEATURE_SRAM_ECC_* values. Only valid
-  // for EI_OSABI=ELFOSABI_AMDGPU_HSA and EI_ABIVERSION=2.
-  EF_AMDGPU_FEATURE_SRAM_ECC = 0xc00,
-  // SRAM ECC is any/default.
-  EF_AMDGPU_FEATURE_SRAM_ECC_DEFAULT = 0x400,
-  // SRAM ECC is off.
-  EF_AMDGPU_FEATURE_SRAM_ECC_OFF = 0x800,
-  // SRAM ECC is on.
-  EF_AMDGPU_FEATURE_SRAM_ECC_ON = 0xc00,
 };
 
 // ELF Relocation types for AMDGPU

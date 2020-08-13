@@ -39,8 +39,7 @@ public:
 
   AMDGPUPALMetadata *getPALMetadata() { return &PALMetadata; }
 
-  virtual void EmitDirectiveAMDGCNTarget(const MCSubtargetInfo &STI,
-                                         StringRef TargetID = "") = 0;
+  virtual void EmitDirectiveAMDGCNTarget(StringRef Target) = 0;
 
   virtual void EmitDirectiveHSACodeObjectVersion(uint32_t Major,
                                                  uint32_t Minor) = 0;
@@ -98,8 +97,7 @@ public:
 
   void finish() override;
 
-  void EmitDirectiveAMDGCNTarget(const MCSubtargetInfo &STI,
-                                 StringRef TargetID = "") override;
+  void EmitDirectiveAMDGCNTarget(StringRef Target) override;
 
   void EmitDirectiveHSACodeObjectVersion(uint32_t Major,
                                          uint32_t Minor) override;
@@ -135,7 +133,7 @@ public:
 
 class AMDGPUTargetELFStreamer final : public AMDGPUTargetStreamer {
   MCStreamer &Streamer;
-  const MCSubtargetInfo &STI;
+  Triple::OSType Os;
 
   void EmitNote(StringRef Name, const MCExpr *DescSize, unsigned NoteType,
                 function_ref<void(MCELFStreamer &)> EmitDesc);
@@ -147,8 +145,7 @@ public:
 
   void finish() override;
 
-  void EmitDirectiveAMDGCNTarget(const MCSubtargetInfo &STI,
-                                 StringRef TargetID = "") override;
+  void EmitDirectiveAMDGCNTarget(StringRef Target) override;
 
   void EmitDirectiveHSACodeObjectVersion(uint32_t Major,
                                          uint32_t Minor) override;
