@@ -924,6 +924,13 @@ CompilerType TypeSystemSwiftTypeRef::GetTypeFromMangledTypename(
   return {this, (opaque_compiler_type_t)mangled_typename.AsCString()};
 }
 
+CompilerType
+TypeSystemSwiftTypeRef::GetGenericArgumentType(opaque_compiler_type_t type,
+                                               size_t idx) {
+  return m_swift_ast_context->GetGenericArgumentType(ReconstructType(type),
+                                                     idx);
+}
+
 lldb::TypeSP TypeSystemSwiftTypeRef::GetCachedType(ConstString mangled) {
   return m_swift_ast_context->GetCachedType(mangled);
 }

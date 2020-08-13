@@ -20,12 +20,11 @@ namespace lldb_private {
 namespace formatters {
 namespace swift {
 
-bool UnsafeBufferPointerSummaryProvider(ValueObject &valobj, Stream &stream,
-                                        const TypeSummaryOptions &);
+bool UnsafeTypeSummaryProvider(ValueObject &valobj, Stream &stream,
+                               const TypeSummaryOptions &);
 
 SyntheticChildrenFrontEnd *
-UnsafeBufferPointerSyntheticFrontEndCreator(CXXSyntheticChildren *,
-                                            lldb::ValueObjectSP);
+UnsafeTypeSyntheticFrontEndCreator(CXXSyntheticChildren *, lldb::ValueObjectSP);
 
 }; // namespace swift
 }; // namespace formatters
