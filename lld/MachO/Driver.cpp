@@ -499,6 +499,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
       args.getLastArgValue(OPT_install_name, config->outputFile);
   config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
   config->outputType = args.hasArg(OPT_dylib) ? MH_DYLIB : MH_EXECUTE;
+  config->runtimePaths = args::getStrings(args, OPT_rpath);
 
   std::vector<StringRef> roots;
   for (const Arg *arg : args.filtered(OPT_syslibroot))
@@ -569,6 +570,8 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     case OPT_L:
     case OPT_headerpad:
     case OPT_install_name:
+    case OPT_rpath:
+    case OPT_sub_library:
     case OPT_Z:
     case OPT_arch:
     case OPT_syslibroot:
