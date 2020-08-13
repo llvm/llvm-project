@@ -8,7 +8,7 @@ declare void @foo()
 define i32 @f1(i32 %a, i32 %b, i32* %v) {
 entry:
 ; CHECK-LABEL: f1:
-; CHECK: bne LBB
+; CHECK: beq LBB
         %tmp = icmp eq i32 %a, %b               ; <i1> [#uses=1]
         br i1 %tmp, label %cond_true, label %return
 
@@ -59,7 +59,7 @@ return:         ; preds = %entry
 define i32 @f4(i32 %a, i32 %b, i32* %v) {
 entry:
 ; CHECK-LABEL: f4:
-; CHECK: blo LBB
+; CHECK: bhs LBB
         %tmp = icmp uge i32 %a, %b              ; <i1> [#uses=1]
         br i1 %tmp, label %cond_true, label %return
 

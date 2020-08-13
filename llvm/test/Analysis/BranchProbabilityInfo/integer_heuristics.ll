@@ -101,3 +101,54 @@ for.inc:
 exit:
   ret void
 }
+
+declare void @foo() 
+
+; CHECK-LABEL: foo1
+define i32 @foo1(i32 %x, i32 %y, i8 signext %z, i8 signext %w) {
+entry: 
+  %c = icmp eq i32 %x, %y
+  br i1 %c, label %then, label %else
+; CHECK: edge entry -> then probability is 0x30000000 / 0x80000000 = 37.50%
+; CHECK: edge entry -> else probability is 0x50000000 / 0x80000000 = 62.50%
+then:
+  tail call void @foo()
+  br label %else
+; CHECK: edge then -> else probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+else:
+  %v = phi i8 [ %z, %then ], [ %w, %entry ]
+  %r = sext i8 %v to i32
+  ret i32 %r
+}
+
+; CHECK-LABEL: foo2
+define i32 @foo2(i32 %x, i32 %y, i8 signext %z, i8 signext %w) {
+entry: 
+  %c = icmp ne i32 %x, %y
+  br i1 %c, label %then, label %else
+; CHECK: edge entry -> then probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK: edge entry -> else probability is 0x30000000 / 0x80000000 = 37.50%
+then:
+  br label %else
+; CHECK: edge then -> else probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+else:
+  %v = phi i8 [ %z, %then ], [ %w, %entry ]
+  %r = sext i8 %v to i32
+  ret i32 %r
+}
+
+; CHECK-LABEL: foo3
+define i32 @foo3(i32 %x, i32 %y, i8 signext %z, i8 signext %w) {
+entry: 
+  %c = icmp ult i32 %x, %y
+  br i1 %c, label %then, label %else
+; CHECK: edge entry -> then probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK: edge entry -> else probability is 0x30000000 / 0x80000000 = 37.50%
+then:
+  br label %else
+; CHECK: edge then -> else probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
+else:
+  %v = phi i8 [ %z, %then ], [ %w, %entry ]
+  %r = sext i8 %v to i32
+  ret i32 %r
+}
