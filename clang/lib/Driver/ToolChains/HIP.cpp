@@ -120,7 +120,7 @@ void AMDGCN::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
 
   for (const auto &II : Inputs) {
     const auto* A = II.getAction();
-    BundlerTargetArg = BundlerTargetArg + ",hip-amdgcn-amd-amdhsa-" +
+    BundlerTargetArg = BundlerTargetArg + ",hip-amdgcn-amd-amdhsa--" +
                        StringRef(A->getOffloadingArch()).str();
     BundlerInputArg = BundlerInputArg + "," + II.getFilename();
   }
