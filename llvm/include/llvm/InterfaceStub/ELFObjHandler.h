@@ -13,9 +13,9 @@
 #ifndef LLVM_TOOLS_ELFABI_ELFOBJHANDLER_H
 #define LLVM_TOOLS_ELFABI_ELFOBJHANDLER_H
 
+#include "llvm/InterfaceStub/ELFStub.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
-#include "llvm/TextAPI/ELF/ELFStub.h"
 
 namespace llvm {
 
