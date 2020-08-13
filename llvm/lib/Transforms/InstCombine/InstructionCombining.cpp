@@ -3776,8 +3776,12 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
     if (Visited.count(&BB))
       continue;
 
-    unsigned NumDeadInstInBB = removeAllNonTerminatorAndEHPadInstructions(&BB);
-    MadeIRChange |= NumDeadInstInBB > 0;
+    unsigned NumDeadInstInBB;
+    unsigned NumDeadDbgInstInBB;
+    std::tie(NumDeadInstInBB, NumDeadDbgInstInBB) =
+        removeAllNonTerminatorAndEHPadInstructions(&BB);
+
+    MadeIRChange |= NumDeadInstInBB + NumDeadDbgInstInBB > 0;
     NumDeadInst += NumDeadInstInBB;
   }
 
