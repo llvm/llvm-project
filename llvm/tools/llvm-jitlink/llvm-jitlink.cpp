@@ -187,7 +187,7 @@ static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
 
   // If this graph is part of the test then promote any symbols referenced by
   // the harness to default scope, remove all symbols that clash with harness
-  // definitions.
+  // definitions, demote all other definitions.
   std::vector<Symbol *> DefinitionsToRemove;
   for (auto *Sym : G.defined_symbols()) {
 
@@ -219,6 +219,10 @@ static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
     } else if (S.HarnessDefinitions.count(Sym->getName())) {
       LLVM_DEBUG(dbgs() << "  Externalizing " << Sym->getName() << "\n");
       DefinitionsToRemove.push_back(Sym);
+    } else {
+      LLVM_DEBUG(dbgs() << "  Demoting " << Sym->getName() << "\n");
+      Sym->setScope(Scope::Local);
+      Sym->setLive(false);
     }
   }
 
@@ -517,8 +521,7 @@ Error LLVMJITLinkObjectLinkingLayer::add(JITDylib &JD,
       return SymFlagsOrErr.takeError();
 
     // Skip symbols not defined in this object file.
-    if ((*SymFlagsOrErr & object::BasicSymbolRef::SF_Undefined) ||
-        !(*SymFlagsOrErr & object::BasicSymbolRef::SF_Global))
+    if (*SymFlagsOrErr & object::BasicSymbolRef::SF_Undefined)
       continue;
 
     auto Name = Sym.getName();
@@ -548,8 +551,10 @@ Error LLVMJITLinkObjectLinkingLayer::add(JITDylib &JD,
         *SymFlags &= ~JITSymbolFlags::Exported;
     } else if (S.HarnessExternals.count(*Name)) {
       *SymFlags |= JITSymbolFlags::Exported;
-    } else if (S.HarnessDefinitions.count(*Name))
+    } else {
+      // Skip symbols that aren't in the HarnessExternals set.
       continue;
+    }
 
     auto InternedName = S.ES.intern(*Name);
     SymbolFlags[InternedName] = std::move(*SymFlags);
