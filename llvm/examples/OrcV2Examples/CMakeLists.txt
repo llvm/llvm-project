@@ -1,4 +1,5 @@
 add_subdirectory(LLJITDumpObjects)
+add_subdirectory(LLJITWithChildProcess)
 add_subdirectory(LLJITWithCustomObjectLinkingLayer)
 add_subdirectory(LLJITWithGDBRegistrationListener)
 add_subdirectory(LLJITWithInitializers)
