@@ -403,8 +403,7 @@ DWARF:
         - Address:         0x0000000100000F50
           Length:          52
   debug_pubnames:  
-    Length:          
-      TotalLength:     23
+    Length:          23
     Version:         2
     UnitOffset:      0
     UnitSize:        121
@@ -412,8 +411,7 @@ DWARF:
       - DieOffset:       0x0000002A
         Name:            main
   debug_pubtypes:  
-    Length:          
-      TotalLength:     31
+    Length:          31
     Version:         2
     UnitOffset:      0
     UnitSize:        121

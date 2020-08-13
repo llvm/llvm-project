@@ -19,13 +19,6 @@
 
 using namespace llvm;
 
-void dumpInitialLength(DataExtractor &Data, uint64_t &Offset,
-                       DWARFYAML::InitialLength &InitialLength) {
-  InitialLength.TotalLength = Data.getU32(&Offset);
-  if (InitialLength.isDWARF64())
-    InitialLength.TotalLength64 = Data.getU64(&Offset);
-}
-
 void dumpDebugAbbrev(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   auto AbbrevSetPtr = DCtx.getDebugAbbrev();
   if (AbbrevSetPtr) {
@@ -132,11 +125,18 @@ static DWARFYAML::PubSection dumpPubSection(const DWARFContext &DCtx,
                                     DCtx.isLittleEndian(), 0);
   DWARFYAML::PubSection Y;
   uint64_t Offset = 0;
-  dumpInitialLength(PubSectionData, Offset, Y.Length);
+  uint64_t Length = PubSectionData.getU32(&Offset);
+  if (Length == dwarf::DW_LENGTH_DWARF64) {
+    Y.Format = dwarf::DWARF64;
+    Y.Length = PubSectionData.getU64(&Offset);
+  } else {
+    Y.Format = dwarf::DWARF32;
+    Y.Length = Length;
+  }
   Y.Version = PubSectionData.getU16(&Offset);
   Y.UnitOffset = PubSectionData.getU32(&Offset);
   Y.UnitSize = PubSectionData.getU32(&Offset);
-  while (Offset < Y.Length.getLength()) {
+  while (Offset < Y.Length) {
     DWARFYAML::PubEntry NewEntry;
     NewEntry.DieOffset = PubSectionData.getU32(&Offset);
     if (IsGNUStyle)
