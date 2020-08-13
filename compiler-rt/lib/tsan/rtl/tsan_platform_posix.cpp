@@ -56,41 +56,6 @@ void InitializeShadowMemory() {
   // Frequently a thread uses only a small part of stack and similarly
   // a program uses a small part of large mmap. On some programs
   // we see 20% memory usage reduction without huge pages for this range.
-  // FIXME: don't use constants here.
-#if defined(__x86_64__)
-  const uptr kMadviseRangeBeg  = 0x7f0000000000ull;
-  const uptr kMadviseRangeSize = 0x010000000000ull;
-#elif defined(__mips64)
-  const uptr kMadviseRangeBeg  = 0xff00000000ull;
-  const uptr kMadviseRangeSize = 0x0100000000ull;
-#elif defined(__aarch64__) && defined(__APPLE__)
-  uptr kMadviseRangeBeg = LoAppMemBeg();
-  uptr kMadviseRangeSize = LoAppMemEnd() - LoAppMemBeg();
-#elif defined(__aarch64__)
-  uptr kMadviseRangeBeg = 0;
-  uptr kMadviseRangeSize = 0;
-  if (vmaSize == 39) {
-    kMadviseRangeBeg  = 0x7d00000000ull;
-    kMadviseRangeSize = 0x0300000000ull;
-  } else if (vmaSize == 42) {
-    kMadviseRangeBeg  = 0x3f000000000ull;
-    kMadviseRangeSize = 0x01000000000ull;
-  } else {
-    DCHECK(0);
-  }
-#elif defined(__powerpc64__)
-  uptr kMadviseRangeBeg = 0;
-  uptr kMadviseRangeSize = 0;
-  if (vmaSize == 44) {
-    kMadviseRangeBeg  = 0x0f60000000ull;
-    kMadviseRangeSize = 0x0010000000ull;
-  } else if (vmaSize == 46) {
-    kMadviseRangeBeg  = 0x3f0000000000ull;
-    kMadviseRangeSize = 0x010000000000ull;
-  } else {
-    DCHECK(0);
-  }
-#endif
   DontDumpShadow(ShadowBeg(), ShadowEnd() - ShadowBeg());
   DPrintf("memory shadow: %zx-%zx (%zuGB)\n",
       ShadowBeg(), ShadowEnd(),
