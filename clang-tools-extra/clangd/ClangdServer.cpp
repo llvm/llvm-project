@@ -171,16 +171,20 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
   if (Opts.StaticIndex)
     AddIndex(Opts.StaticIndex);
   if (Opts.BackgroundIndex) {
+    BackgroundIndex::Options BGOpts;
+    BGOpts.ThreadPoolSize = std::max(Opts.AsyncThreadsCount, 1u);
+    BGOpts.OnProgress = [Callbacks](BackgroundQueue::Stats S) {
+      if (Callbacks)
+        Callbacks->onBackgroundIndexProgress(S);
+    };
+    BGOpts.ContextProvider = [this](PathRef P) {
+      return createProcessingContext(P);
+    };
     BackgroundIdx = std::make_unique<BackgroundIndex>(
-        Context::current().clone(), TFS, CDB,
+        TFS, CDB,
         BackgroundIndexStorage::createDiskBackedStorageFactory(
             [&CDB](llvm::StringRef File) { return CDB.getProjectInfo(File); }),
-        std::max(Opts.AsyncThreadsCount, 1u),
-        [Callbacks](BackgroundQueue::Stats S) {
-          if (Callbacks)
-            Callbacks->onBackgroundIndexProgress(S);
-        },
-        [this](PathRef P) { return createProcessingContext(P); });
+        std::move(BGOpts));
     AddIndex(BackgroundIdx.get());
   }
   if (DynamicIdx)
