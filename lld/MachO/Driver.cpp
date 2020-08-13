@@ -230,11 +230,12 @@ static void addFile(StringRef path) {
     inputFiles.push_back(make<DylibFile>(mbref));
     break;
   case file_magic::tapi_file: {
-    llvm::Expected<std::unique_ptr<llvm::MachO::InterfaceFile>> result =
-        TextAPIReader::get(mbref);
-    if (!result)
+    Expected<std::unique_ptr<InterfaceFile>> result = TextAPIReader::get(mbref);
+    if (!result) {
+      error("could not load TAPI file at " + mbref.getBufferIdentifier() +
+            ": " + toString(result.takeError()));
       return;
-
+    }
     inputFiles.push_back(make<DylibFile>(**result));
     break;
   }
