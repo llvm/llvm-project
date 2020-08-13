@@ -632,7 +632,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, UnqualifiedIdIdentifier) {
+TEST_P(SyntaxTreeTest, UnqualifiedId_Identifier) {
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
 void test(int a) {
@@ -663,7 +663,7 @@ void test(int a) {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, UnqualifiedIdOperatorFunctionId) {
+TEST_P(SyntaxTreeTest, UnqualifiedId_OperatorFunctionId) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -739,7 +739,7 @@ void test(X x) {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, UnqualifiedIdConversionFunctionId) {
+TEST_P(SyntaxTreeTest, UnqualifiedId_ConversionFunctionId) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -798,7 +798,7 @@ void test(X x) {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, UnqualifiedIdLiteralOperatorId) {
+TEST_P(SyntaxTreeTest, UnqualifiedId_LiteralOperatorId) {
   if (!GetParam().isCXX11OrLater()) {
     return;
   }
@@ -848,7 +848,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, UnqualifiedIdDestructor) {
+TEST_P(SyntaxTreeTest, UnqualifiedId_Destructor) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -897,7 +897,7 @@ void test(X x) {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, UnqualifiedIdDecltypeDestructor) {
+TEST_P(SyntaxTreeTest, UnqualifiedId_DecltypeDestructor) {
   if (!GetParam().isCXX11OrLater()) {
     return;
   }
@@ -949,7 +949,7 @@ void test(X x) {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, UnqualifiedIdTemplateId) {
+TEST_P(SyntaxTreeTest, UnqualifiedId_TemplateId) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -1002,7 +1002,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, QualifiedIdWithNamespace) {
+TEST_P(SyntaxTreeTest, QualifiedId_NamespaceSpecifier) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -1065,7 +1065,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, QualifiedIdWithTemplateSpecifier) {
+TEST_P(SyntaxTreeTest, QualifiedId_TemplateSpecifier) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -1145,7 +1145,73 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, QualifiedIdWithOptionalTemplateKw) {
+TEST_P(SyntaxTreeTest, QualifiedId_DecltypeSpecifier) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+struct S {
+  static void f(){}
+};
+void test(S s) {
+  decltype(s)::f();
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+|-SimpleDeclaration
+| |-struct
+| |-S
+| |-{
+| |-SimpleDeclaration
+| | |-static
+| | |-void
+| | |-SimpleDeclarator
+| | | |-f
+| | | `-ParametersAndQualifiers
+| | |   |-(
+| | |   `-)
+| | `-CompoundStatement
+| |   |-{
+| |   `-}
+| |-}
+| `-;
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   |-SimpleDeclaration
+  |   | |-S
+  |   | `-SimpleDeclarator
+  |   |   `-s
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-UnknownExpression
+    | | |-IdExpression
+    | | | |-NestedNameSpecifier
+    | | | | |-DecltypeNameSpecifier
+    | | | | | |-decltype
+    | | | | | |-(
+    | | | | | |-IdExpression
+    | | | | | | `-UnqualifiedId
+    | | | | | |   `-s
+    | | | | | `-)
+    | | | | `-::
+    | | | `-UnqualifiedId
+    | | |   `-f
+    | | |-(
+    | | `-)
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, QualifiedId_OptionalTemplateKw) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -1228,18 +1294,18 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, QualifiedIdComplex) {
+TEST_P(SyntaxTreeTest, QualifiedId_Complex) {
   if (!GetParam().isCXX()) {
     return;
   }
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
 namespace n {
-    template<typename T>
-    struct ST {
-      template<typename U>
-      static U f();
-    };
+  template<typename T>
+  struct ST {
+    template<typename U>
+    static U f();
+  };
 }
 void test() {
   ::n::template ST<int>::template f<int>();
@@ -1318,7 +1384,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, QualifiedIdWithDependentType) {
+TEST_P(SyntaxTreeTest, QualifiedId_DependentType) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -1409,72 +1475,6 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, QualifiedIdDecltype) {
-  if (!GetParam().isCXX11OrLater()) {
-    return;
-  }
-  EXPECT_TRUE(treeDumpEqual(
-      R"cpp(
-struct S {
-  static void f(){}
-};
-void test(S s) {
-  decltype(s)::f();
-}
-)cpp",
-      R"txt(
-*: TranslationUnit
-|-SimpleDeclaration
-| |-struct
-| |-S
-| |-{
-| |-SimpleDeclaration
-| | |-static
-| | |-void
-| | |-SimpleDeclarator
-| | | |-f
-| | | `-ParametersAndQualifiers
-| | |   |-(
-| | |   `-)
-| | `-CompoundStatement
-| |   |-{
-| |   `-}
-| |-}
-| `-;
-`-SimpleDeclaration
-  |-void
-  |-SimpleDeclarator
-  | |-test
-  | `-ParametersAndQualifiers
-  |   |-(
-  |   |-SimpleDeclaration
-  |   | |-S
-  |   | `-SimpleDeclarator
-  |   |   `-s
-  |   `-)
-  `-CompoundStatement
-    |-{
-    |-ExpressionStatement
-    | |-UnknownExpression
-    | | |-IdExpression
-    | | | |-NestedNameSpecifier
-    | | | | |-DecltypeNameSpecifier
-    | | | | | |-decltype
-    | | | | | |-(
-    | | | | | |-IdExpression
-    | | | | | | `-UnqualifiedId
-    | | | | | |   `-s
-    | | | | | `-)
-    | | | | `-::
-    | | | `-UnqualifiedId
-    | | |   `-f
-    | | |-(
-    | | `-)
-    | `-;
-    `-}
-)txt"));
-}
-
 TEST_P(SyntaxTreeTest, ParenExpr) {
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
@@ -1530,7 +1530,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, CharUserDefinedLiteral) {
+TEST_P(SyntaxTreeTest, UserDefinedLiteral_Char) {
   if (!GetParam().isCXX11OrLater()) {
     return;
   }
@@ -1572,7 +1572,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, StringUserDefinedLiteral) {
+TEST_P(SyntaxTreeTest, UserDefinedLiteral_String) {
   if (!GetParam().isCXX11OrLater()) {
     return;
   }
@@ -1637,7 +1637,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, IntegerUserDefinedLiteral) {
+TEST_P(SyntaxTreeTest, UserDefinedLiteral_Integer) {
   if (!GetParam().isCXX11OrLater()) {
     return;
   }
@@ -1727,7 +1727,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, FloatUserDefinedLiteral) {
+TEST_P(SyntaxTreeTest, UserDefinedLiteral_Float) {
   if (!GetParam().isCXX11OrLater()) {
     return;
   }
@@ -1816,7 +1816,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, IntegerLiteralLongLong) {
+TEST_P(SyntaxTreeTest, IntegerLiteral_LongLong) {
   if (!GetParam().isCXX11OrLater()) {
     return;
   }
@@ -1850,7 +1850,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, IntegerLiteralBinary) {
+TEST_P(SyntaxTreeTest, IntegerLiteral_Binary) {
   if (!GetParam().isCXX14OrLater()) {
     return;
   }
@@ -1879,7 +1879,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, IntegerLiteralWithDigitSeparators) {
+TEST_P(SyntaxTreeTest, IntegerLiteral_WithDigitSeparators) {
   if (!GetParam().isCXX14OrLater()) {
     return;
   }
@@ -1959,7 +1959,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, CharacterLiteralUtf) {
+TEST_P(SyntaxTreeTest, CharacterLiteral_Utf) {
   if (!GetParam().isCXX11OrLater()) {
     return;
   }
@@ -2003,7 +2003,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, CharacterLiteralUtf8) {
+TEST_P(SyntaxTreeTest, CharacterLiteral_Utf8) {
   if (!GetParam().isCXX17OrLater()) {
     return;
   }
@@ -2078,7 +2078,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, FloatingLiteralHexadecimal) {
+TEST_P(SyntaxTreeTest, FloatingLiteral_Hexadecimal) {
   if (!GetParam().isCXX17OrLater()) {
     return;
   }
@@ -2153,7 +2153,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, StringLiteralUtf) {
+TEST_P(SyntaxTreeTest, StringLiteral_Utf) {
   if (!GetParam().isCXX11OrLater()) {
     return;
   }
@@ -2192,7 +2192,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, StringLiteralRaw) {
+TEST_P(SyntaxTreeTest, StringLiteral_Raw) {
   if (!GetParam().isCXX11OrLater()) {
     return;
   }
@@ -2643,7 +2643,7 @@ void test(int a) {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, NestedBinaryOperatorWithParenthesis) {
+TEST_P(SyntaxTreeTest, BinaryOperator_NestedWithParenthesis) {
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
 void test() {
@@ -2687,7 +2687,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, NestedBinaryOperatorWithAssociativity) {
+TEST_P(SyntaxTreeTest, BinaryOperator_Associativity) {
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
 void test(int a, int b) {
@@ -2747,7 +2747,7 @@ void test(int a, int b) {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, NestedBinaryOperatorWithPrecedence) {
+TEST_P(SyntaxTreeTest, BinaryOperator_Precedence) {
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
 void test() {
@@ -2802,7 +2802,7 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, UserDefinedAssignmentOperator) {
+TEST_P(SyntaxTreeTest, OverloadedOperator_Assignment) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -2870,7 +2870,7 @@ void test(X x, X y) {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, UserDefinedPlusOperator) {
+TEST_P(SyntaxTreeTest, OverloadedOperator_Plus) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -2943,7 +2943,7 @@ void test(X x, X y) {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, UserDefinedLessOperator) {
+TEST_P(SyntaxTreeTest, OverloadedOperator_Less) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -3018,7 +3018,7 @@ void test(X x, X y) {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, UserDefinedShiftOperator) {
+TEST_P(SyntaxTreeTest, OverloadedOperator_LeftShift) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -3092,7 +3092,7 @@ void test(X x, X y) {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, UserDefinedCommaOperator) {
+TEST_P(SyntaxTreeTest, OverloadedOperator_Comma) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -3158,7 +3158,7 @@ void test(X x, X y) {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, UserDefinedArrowPointerOperator) {
+TEST_P(SyntaxTreeTest, OverloadedOperator_PointerToMember) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -3227,61 +3227,7 @@ void test(X* xp, int X::* pmi) {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, UserDefinedPrefixIncrOperator) {
-  if (!GetParam().isCXX()) {
-    return;
-  }
-  EXPECT_TRUE(treeDumpEqual(
-      R"cpp(
-struct X {
-  X operator++();
-};
-void test(X x) {
-  ++x;
-}
-)cpp",
-      R"txt(
-*: TranslationUnit
-|-SimpleDeclaration
-| |-struct
-| |-X
-| |-{
-| |-SimpleDeclaration
-| | |-X
-| | |-SimpleDeclarator
-| | | |-operator
-| | | |-++
-| | | `-ParametersAndQualifiers
-| | |   |-(
-| | |   `-)
-| | `-;
-| |-}
-| `-;
-`-SimpleDeclaration
-  |-void
-  |-SimpleDeclarator
-  | |-test
-  | `-ParametersAndQualifiers
-  |   |-(
-  |   |-SimpleDeclaration
-  |   | |-X
-  |   | `-SimpleDeclarator
-  |   |   `-x
-  |   `-)
-  `-CompoundStatement
-    |-{
-    |-ExpressionStatement
-    | |-PrefixUnaryOperatorExpression
-    | | |-++
-    | | `-IdExpression
-    | |   `-UnqualifiedId
-    | |     `-x
-    | `-;
-    `-}
-)txt"));
-}
-
-TEST_P(SyntaxTreeTest, UserDefinedExclamOperator) {
+TEST_P(SyntaxTreeTest, OverloadedOperator_Negation) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -3335,7 +3281,7 @@ void test(X x) {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, UserDefinedReferenceOperator) {
+TEST_P(SyntaxTreeTest, OverloadedOperator_AddressOf) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -3390,7 +3336,61 @@ void test(X x) {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, UserDefinedUnaryPostfixOperator) {
+TEST_P(SyntaxTreeTest, OverloadedOperator_PrefixIncrement) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+struct X {
+  X operator++();
+};
+void test(X x) {
+  ++x;
+}
+)cpp",
+      R"txt(
+*: TranslationUnit
+|-SimpleDeclaration
+| |-struct
+| |-X
+| |-{
+| |-SimpleDeclaration
+| | |-X
+| | |-SimpleDeclarator
+| | | |-operator
+| | | |-++
+| | | `-ParametersAndQualifiers
+| | |   |-(
+| | |   `-)
+| | `-;
+| |-}
+| `-;
+`-SimpleDeclaration
+  |-void
+  |-SimpleDeclarator
+  | |-test
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   |-SimpleDeclaration
+  |   | |-X
+  |   | `-SimpleDeclarator
+  |   |   `-x
+  |   `-)
+  `-CompoundStatement
+    |-{
+    |-ExpressionStatement
+    | |-PrefixUnaryOperatorExpression
+    | | |-++
+    | | `-IdExpression
+    | |   `-UnqualifiedId
+    | |     `-x
+    | `-;
+    `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, OverloadedOperator_PostfixIncrement) {
   if (!GetParam().isCXX()) {
     return;
   }
