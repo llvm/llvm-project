@@ -151,12 +151,12 @@ target.markOpRecursivelyLegal<MyOp>([](MyOp op) { ... });
 ## Rewrite Pattern Specification
 
 After the conversion target has been defined, a set of legalization patterns
-must be provided to transform illegal operations into legal ones. The structure
-of the patterns supplied here is the same as those described in the
-[quickstart rewrites guide](Tutorials/QuickstartRewrites.md#adding-patterns).
-The patterns provided do not need to generate operations that are directly legal
-on the target. The framework will automatically build a graph of conversions to
-convert non-legal operations into a set of legal ones.
+must be provided to transform illegal operations into legal ones. The patterns
+supplied here have the same structure and restrictions as those described in the
+main [Pattern](PatternRewriter.md) documentation. The patterns provided do not
+need to generate operations that are directly legal on the target. The framework
+will automatically build a graph of conversions to convert non-legal operations
+into a set of legal ones.
 
 As an example, say you define a target that supports one operation: `foo.add`.
 When providing the following patterns: [`bar.add` -> `baz.add`, `baz.add` ->
