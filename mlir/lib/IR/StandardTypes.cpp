@@ -22,10 +22,10 @@ using namespace mlir::detail;
 // Type
 //===----------------------------------------------------------------------===//
 
-bool Type::isBF16() { return getKind() == StandardTypes::BF16; }
-bool Type::isF16() { return getKind() == StandardTypes::F16; }
-bool Type::isF32() { return getKind() == StandardTypes::F32; }
-bool Type::isF64() { return getKind() == StandardTypes::F64; }
+bool Type::isBF16() { return isa<BFloat16Type>(); }
+bool Type::isF16() { return isa<Float16Type>(); }
+bool Type::isF32() { return isa<Float32Type>(); }
+bool Type::isF64() { return isa<Float64Type>(); }
 
 bool Type::isIndex() { return isa<IndexType>(); }
 
@@ -90,6 +90,13 @@ bool Type::isIntOrFloat() { return isa<IntegerType, FloatType>(); }
 
 bool Type::isIntOrIndexOrFloat() { return isIntOrFloat() || isIndex(); }
 
+unsigned Type::getIntOrFloatBitWidth() {
+  assert(isIntOrFloat() && "only integers and floats have a bitwidth");
+  if (auto intType = dyn_cast<IntegerType>())
+    return intType.getWidth();
+  return cast<FloatType>().getWidth();
+}
+
 //===----------------------------------------------------------------------===//
 /// ComplexType
 //===----------------------------------------------------------------------===//
@@ -142,37 +149,26 @@ IntegerType::SignednessSemantics IntegerType::getSignedness() const {
 //===----------------------------------------------------------------------===//
 
 unsigned FloatType::getWidth() {
-  switch (getKind()) {
-  case StandardTypes::BF16:
-  case StandardTypes::F16:
+  if (isa<Float16Type, BFloat16Type>())
     return 16;
-  case StandardTypes::F32:
+  if (isa<Float32Type>())
     return 32;
-  case StandardTypes::F64:
+  if (isa<Float64Type>())
     return 64;
-  default:
-    llvm_unreachable("unexpected type");
-  }
+  llvm_unreachable("unexpected float type");
 }
 
 /// Returns the floating semantics for the given type.
 const llvm::fltSemantics &FloatType::getFloatSemantics() {
-  if (isBF16())
+  if (isa<BFloat16Type>())
     return APFloat::BFloat();
-  if (isF16())
+  if (isa<Float16Type>())
     return APFloat::IEEEhalf();
-  if (isF32())
+  if (isa<Float32Type>())
     return APFloat::IEEEsingle();
-  if (isF64())
+  if (isa<Float64Type>())
     return APFloat::IEEEdouble();
   llvm_unreachable("non-floating point type used");
-}
-
-unsigned Type::getIntOrFloatBitWidth() {
-  assert(isIntOrFloat() && "only integers and floats have a bitwidth");
-  if (auto intType = dyn_cast<IntegerType>())
-    return intType.getWidth();
-  return cast<FloatType>().getWidth();
 }
 
 //===----------------------------------------------------------------------===//

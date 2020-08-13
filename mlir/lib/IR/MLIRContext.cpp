@@ -95,9 +95,10 @@ struct BuiltinDialect : public Dialect {
     addAttributes<CallSiteLoc, FileLineColLoc, FusedLoc, NameLoc, OpaqueLoc,
                   UnknownLoc>();
 
-    addTypes<ComplexType, FloatType, FunctionType, IndexType, IntegerType,
-             MemRefType, UnrankedMemRefType, NoneType, OpaqueType,
-             RankedTensorType, TupleType, UnrankedTensorType, VectorType>();
+    addTypes<ComplexType, BFloat16Type, Float16Type, Float32Type, Float64Type,
+             FunctionType, IndexType, IntegerType, MemRefType,
+             UnrankedMemRefType, NoneType, OpaqueType, RankedTensorType,
+             TupleType, UnrankedTensorType, VectorType>();
 
     // TODO: These operations should be moved to a different dialect when they
     // have been fully decoupled from the core.
@@ -313,7 +314,10 @@ public:
   StorageUniquer typeUniquer;
 
   /// Cached Type Instances.
-  FloatType bf16Ty, f16Ty, f32Ty, f64Ty;
+  BFloat16Type bf16Ty;
+  Float16Type f16Ty;
+  Float32Type f32Ty;
+  Float64Type f64Ty;
   IndexType indexTy;
   IntegerType int1Ty, int8Ty, int16Ty, int32Ty, int64Ty, int128Ty;
   NoneType noneType;
@@ -359,10 +363,10 @@ MLIRContext::MLIRContext() : impl(new MLIRContextImpl()) {
 
   //// Types.
   /// Floating-point Types.
-  impl->bf16Ty = TypeUniquer::get<FloatType>(this, StandardTypes::BF16);
-  impl->f16Ty = TypeUniquer::get<FloatType>(this, StandardTypes::F16);
-  impl->f32Ty = TypeUniquer::get<FloatType>(this, StandardTypes::F32);
-  impl->f64Ty = TypeUniquer::get<FloatType>(this, StandardTypes::F64);
+  impl->bf16Ty = TypeUniquer::get<BFloat16Type>(this, StandardTypes::BF16);
+  impl->f16Ty = TypeUniquer::get<Float16Type>(this, StandardTypes::F16);
+  impl->f32Ty = TypeUniquer::get<Float32Type>(this, StandardTypes::F32);
+  impl->f64Ty = TypeUniquer::get<Float64Type>(this, StandardTypes::F64);
   /// Index Type.
   impl->indexTy = TypeUniquer::get<IndexType>(this, StandardTypes::Index);
   /// Integer Types.
@@ -660,19 +664,17 @@ Identifier Identifier::get(StringRef str, MLIRContext *context) {
 /// This should not be used directly.
 StorageUniquer &MLIRContext::getTypeUniquer() { return getImpl().typeUniquer; }
 
-FloatType FloatType::get(StandardTypes::Kind kind, MLIRContext *context) {
-  switch (kind) {
-  case StandardTypes::BF16:
-    return context->getImpl().bf16Ty;
-  case StandardTypes::F16:
-    return context->getImpl().f16Ty;
-  case StandardTypes::F32:
-    return context->getImpl().f32Ty;
-  case StandardTypes::F64:
-    return context->getImpl().f64Ty;
-  default:
-    llvm_unreachable("unexpected floating-point kind");
-  }
+BFloat16Type BFloat16Type::get(MLIRContext *context) {
+  return context->getImpl().bf16Ty;
+}
+Float16Type Float16Type::get(MLIRContext *context) {
+  return context->getImpl().f16Ty;
+}
+Float32Type Float32Type::get(MLIRContext *context) {
+  return context->getImpl().f32Ty;
+}
+Float64Type Float64Type::get(MLIRContext *context) {
+  return context->getImpl().f64Ty;
 }
 
 /// Get an instance of the IndexType.

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
+#include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Identifier.h"
 #include "mlir/IR/StandardTypes.h"
@@ -188,108 +189,70 @@ Type CompositeType::getElementType(unsigned index) const {
 }
 
 unsigned CompositeType::getNumElements() const {
-  switch (getKind()) {
-  case spirv::TypeKind::Array:
-    return cast<ArrayType>().getNumElements();
-  case spirv::TypeKind::CooperativeMatrix:
+  if (auto arrayType = dyn_cast<ArrayType>())
+    return arrayType.getNumElements();
+  if (auto matrixType = dyn_cast<MatrixType>())
+    return matrixType.getNumColumns();
+  if (auto structType = dyn_cast<StructType>())
+    return structType.getNumElements();
+  if (auto vectorType = dyn_cast<VectorType>())
+    return vectorType.getNumElements();
+  if (isa<CooperativeMatrixNVType>()) {
     llvm_unreachable(
         "invalid to query number of elements of spirv::CooperativeMatrix type");
-  case spirv::TypeKind::Matrix:
-    return cast<MatrixType>().getNumColumns();
-  case spirv::TypeKind::RuntimeArray:
+  }
+  if (isa<RuntimeArrayType>()) {
     llvm_unreachable(
         "invalid to query number of elements of spirv::RuntimeArray type");
-  case spirv::TypeKind::Struct:
-    return cast<StructType>().getNumElements();
-  case StandardTypes::Vector:
-    return cast<VectorType>().getNumElements();
-  default:
-    llvm_unreachable("invalid composite type");
   }
+  llvm_unreachable("invalid composite type");
 }
 
 bool CompositeType::hasCompileTimeKnownNumElements() const {
-  switch (getKind()) {
-  case TypeKind::CooperativeMatrix:
-  case TypeKind::RuntimeArray:
-    return false;
-  default:
-    return true;
-  }
+  return !isa<CooperativeMatrixNVType, RuntimeArrayType>();
 }
 
 void CompositeType::getExtensions(
     SPIRVType::ExtensionArrayRefVector &extensions,
     Optional<StorageClass> storage) {
-  switch (getKind()) {
-  case spirv::TypeKind::Array:
-    cast<ArrayType>().getExtensions(extensions, storage);
-    break;
-  case spirv::TypeKind::CooperativeMatrix:
-    cast<CooperativeMatrixNVType>().getExtensions(extensions, storage);
-    break;
-  case spirv::TypeKind::Matrix:
-    cast<MatrixType>().getExtensions(extensions, storage);
-    break;
-  case spirv::TypeKind::RuntimeArray:
-    cast<RuntimeArrayType>().getExtensions(extensions, storage);
-    break;
-  case spirv::TypeKind::Struct:
-    cast<StructType>().getExtensions(extensions, storage);
-    break;
-  case StandardTypes::Vector:
-    cast<VectorType>().getElementType().cast<ScalarType>().getExtensions(
-        extensions, storage);
-    break;
-  default:
-    llvm_unreachable("invalid composite type");
-  }
+  TypeSwitch<Type>(*this)
+      .Case<ArrayType, CooperativeMatrixNVType, MatrixType, RuntimeArrayType,
+            StructType>(
+          [&](auto type) { type.getExtensions(extensions, storage); })
+      .Case<VectorType>([&](VectorType type) {
+        return type.getElementType().cast<ScalarType>().getExtensions(
+            extensions, storage);
+      })
+      .Default([](Type) { llvm_unreachable("invalid composite type"); });
 }
 
 void CompositeType::getCapabilities(
     SPIRVType::CapabilityArrayRefVector &capabilities,
     Optional<StorageClass> storage) {
-  switch (getKind()) {
-  case spirv::TypeKind::Array:
-    cast<ArrayType>().getCapabilities(capabilities, storage);
-    break;
-  case spirv::TypeKind::CooperativeMatrix:
-    cast<CooperativeMatrixNVType>().getCapabilities(capabilities, storage);
-    break;
-  case spirv::TypeKind::Matrix:
-    cast<MatrixType>().getCapabilities(capabilities, storage);
-    break;
-  case spirv::TypeKind::RuntimeArray:
-    cast<RuntimeArrayType>().getCapabilities(capabilities, storage);
-    break;
-  case spirv::TypeKind::Struct:
-    cast<StructType>().getCapabilities(capabilities, storage);
-    break;
-  case StandardTypes::Vector:
-    cast<VectorType>().getElementType().cast<ScalarType>().getCapabilities(
-        capabilities, storage);
-    break;
-  default:
-    llvm_unreachable("invalid composite type");
-  }
+  TypeSwitch<Type>(*this)
+      .Case<ArrayType, CooperativeMatrixNVType, MatrixType, RuntimeArrayType,
+            StructType>(
+          [&](auto type) { type.getCapabilities(capabilities, storage); })
+      .Case<VectorType>([&](VectorType type) {
+        return type.getElementType().cast<ScalarType>().getCapabilities(
+            capabilities, storage);
+      })
+      .Default([](Type) { llvm_unreachable("invalid composite type"); });
 }
 
 Optional<int64_t> CompositeType::getSizeInBytes() {
-  switch (getKind()) {
-  case spirv::TypeKind::Array:
-    return cast<ArrayType>().getSizeInBytes();
-  case spirv::TypeKind::Struct:
-    return cast<StructType>().getSizeInBytes();
-  case StandardTypes::Vector: {
-    auto elementSize =
-        cast<VectorType>().getElementType().cast<ScalarType>().getSizeInBytes();
+  if (auto arrayType = dyn_cast<ArrayType>())
+    return arrayType.getSizeInBytes();
+  if (auto structType = dyn_cast<StructType>())
+    return structType.getSizeInBytes();
+  if (auto vectorType = dyn_cast<VectorType>()) {
+    Optional<int64_t> elementSize =
+        vectorType.getElementType().cast<ScalarType>().getSizeInBytes();
     if (!elementSize)
       return llvm::None;
-    return *elementSize * cast<VectorType>().getNumElements();
+    return *elementSize * vectorType.getNumElements();
   }
-  default:
-    return llvm::None;
-  }
+  return llvm::None;
 }
 
 //===----------------------------------------------------------------------===//
@@ -741,8 +704,7 @@ Optional<int64_t> ScalarType::getSizeInBytes() {
 
 bool SPIRVType::classof(Type type) {
   // Allow SPIR-V dialect types
-  if (type.getKind() >= Type::FIRST_SPIRV_TYPE &&
-      type.getKind() <= TypeKind::LAST_SPIRV_TYPE)
+  if (llvm::isa<SPIRVDialect>(type.getDialect()))
     return true;
   if (type.isa<ScalarType>())
     return true;

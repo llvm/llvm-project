@@ -10,6 +10,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -23,46 +24,28 @@ static void printTypeImpl(llvm::raw_ostream &os, LLVMType type,
 
 /// Returns the keyword to use for the given type.
 static StringRef getTypeKeyword(LLVMType type) {
-  switch (type.getKind()) {
-  case LLVMType::VoidType:
-    return "void";
-  case LLVMType::HalfType:
-    return "half";
-  case LLVMType::BFloatType:
-    return "bfloat";
-  case LLVMType::FloatType:
-    return "float";
-  case LLVMType::DoubleType:
-    return "double";
-  case LLVMType::FP128Type:
-    return "fp128";
-  case LLVMType::X86FP80Type:
-    return "x86_fp80";
-  case LLVMType::PPCFP128Type:
-    return "ppc_fp128";
-  case LLVMType::X86MMXType:
-    return "x86_mmx";
-  case LLVMType::TokenType:
-    return "token";
-  case LLVMType::LabelType:
-    return "label";
-  case LLVMType::MetadataType:
-    return "metadata";
-  case LLVMType::FunctionType:
-    return "func";
-  case LLVMType::IntegerType:
-    return "i";
-  case LLVMType::PointerType:
-    return "ptr";
-  case LLVMType::FixedVectorType:
-  case LLVMType::ScalableVectorType:
-    return "vec";
-  case LLVMType::ArrayType:
-    return "array";
-  case LLVMType::StructType:
-    return "struct";
-  }
-  llvm_unreachable("unhandled type kind");
+  return TypeSwitch<Type, StringRef>(type)
+      .Case<LLVMVoidType>([&](Type) { return "void"; })
+      .Case<LLVMHalfType>([&](Type) { return "half"; })
+      .Case<LLVMBFloatType>([&](Type) { return "bfloat"; })
+      .Case<LLVMFloatType>([&](Type) { return "float"; })
+      .Case<LLVMDoubleType>([&](Type) { return "double"; })
+      .Case<LLVMFP128Type>([&](Type) { return "fp128"; })
+      .Case<LLVMX86FP80Type>([&](Type) { return "x86_fp80"; })
+      .Case<LLVMPPCFP128Type>([&](Type) { return "ppc_fp128"; })
+      .Case<LLVMX86MMXType>([&](Type) { return "x86_mmx"; })
+      .Case<LLVMTokenType>([&](Type) { return "token"; })
+      .Case<LLVMLabelType>([&](Type) { return "label"; })
+      .Case<LLVMMetadataType>([&](Type) { return "metadata"; })
+      .Case<LLVMFunctionType>([&](Type) { return "func"; })
+      .Case<LLVMIntegerType>([&](Type) { return "i"; })
+      .Case<LLVMPointerType>([&](Type) { return "ptr"; })
+      .Case<LLVMVectorType>([&](Type) { return "vec"; })
+      .Case<LLVMArrayType>([&](Type) { return "array"; })
+      .Case<LLVMStructType>([&](Type) { return "struct"; })
+      .Default([](Type) -> StringRef {
+        llvm_unreachable("unexpected 'llvm' type kind");
+      });
 }
 
 /// Prints the body of a structure type. Uses `stack` to avoid printing
@@ -153,13 +136,7 @@ static void printTypeImpl(llvm::raw_ostream &os, LLVMType type,
     return;
   }
 
-  unsigned kind = type.getKind();
   os << getTypeKeyword(type);
-
-  // Trivial types only consist of their keyword.
-  if (LLVMType::FIRST_TRIVIAL_TYPE <= kind &&
-      kind <= LLVMType::LAST_TRIVIAL_TYPE)
-    return;
 
   if (auto intType = type.dyn_cast<LLVMIntegerType>()) {
     os << intType.getBitWidth();
@@ -190,7 +167,8 @@ static void printTypeImpl(llvm::raw_ostream &os, LLVMType type,
   if (auto structType = type.dyn_cast<LLVMStructType>())
     return printStructType(os, structType, stack);
 
-  printFunctionType(os, type.cast<LLVMFunctionType>(), stack);
+  if (auto funcType = type.dyn_cast<LLVMFunctionType>())
+    return printFunctionType(os, funcType, stack);
 }
 
 void mlir::LLVM::detail::printType(LLVMType type, DialectAsmPrinter &printer) {
