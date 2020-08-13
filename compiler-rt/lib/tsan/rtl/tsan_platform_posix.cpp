@@ -46,7 +46,8 @@ static void DontDumpShadow(uptr addr, uptr size) {
 #if !SANITIZER_GO
 void InitializeShadowMemory() {
   // Map memory shadow.
-  if (!MmapFixedNoReserve(ShadowBeg(), ShadowEnd() - ShadowBeg(), "shadow")) {
+  if (!MmapFixedSuperNoReserve(ShadowBeg(), ShadowEnd() - ShadowBeg(),
+                               "shadow")) {
     Printf("FATAL: ThreadSanitizer can not mmap the shadow memory\n");
     Printf("FATAL: Make sure to compile with -fPIE and to link with -pie.\n");
     Die();
@@ -90,8 +91,6 @@ void InitializeShadowMemory() {
     DCHECK(0);
   }
 #endif
-  NoHugePagesInShadow(MemToShadow(kMadviseRangeBeg),
-                      kMadviseRangeSize * kShadowMultiplier);
   DontDumpShadow(ShadowBeg(), ShadowEnd() - ShadowBeg());
   DPrintf("memory shadow: %zx-%zx (%zuGB)\n",
       ShadowBeg(), ShadowEnd(),
@@ -100,12 +99,11 @@ void InitializeShadowMemory() {
   // Map meta shadow.
   const uptr meta = MetaShadowBeg();
   const uptr meta_size = MetaShadowEnd() - meta;
-  if (!MmapFixedNoReserve(meta, meta_size, "meta shadow")) {
+  if (!MmapFixedSuperNoReserve(meta, meta_size, "meta shadow")) {
     Printf("FATAL: ThreadSanitizer can not mmap the shadow memory\n");
     Printf("FATAL: Make sure to compile with -fPIE and to link with -pie.\n");
     Die();
   }
-  NoHugePagesInShadow(meta, meta_size);
   DontDumpShadow(meta, meta_size);
   DPrintf("meta shadow: %zx-%zx (%zuGB)\n",
       meta, meta + meta_size, meta_size >> 30);
