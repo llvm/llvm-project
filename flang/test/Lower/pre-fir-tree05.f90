@@ -31,3 +31,19 @@ subroutine foo()
 end subroutine
 ! CHECK-NEXT: EndSubroutine foo
 
+! CHECK: Subroutine foo
+subroutine foo2()
+  ! CHECK-NEXT: <<OpenACCConstruct>>
+  !$acc parallel loop
+  ! CHECK-NEXT: <<DoConstruct>>
+  ! CHECK-NEXT: NonLabelDoStmt
+  do i=1,5
+  ! CHECK-NEXT: EndDoStmt
+  ! CHECK-NEXT: <<End DoConstruct>>
+  end do
+  !$acc end parallel loop
+  ! CHECK-NEXT: <<End OpenACCConstruct>>
+  ! CHECK-NEXT: ContinueStmt
+end subroutine
+! CHECK-NEXT: EndSubroutine foo2
+
