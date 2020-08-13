@@ -26,9 +26,11 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -1193,6 +1195,44 @@ TEST(ClangdServerTest, TestStackOverflow) {
   EXPECT_TRUE(DiagConsumer.hadErrorInLastDiags());
 }
 #endif
+
+TEST(ClangdServer, TidyOverrideTest) {
+  struct DiagsCheckingCallback : public ClangdServer::Callbacks {
+  public:
+    void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
+                            std::vector<Diag> Diagnostics) override {
+      std::lock_guard<std::mutex> Lock(Mutex);
+      HadDiagsInLastCallback = !Diagnostics.empty();
+    }
+
+    std::mutex Mutex;
+    bool HadDiagsInLastCallback = false;
+  } DiagConsumer;
+
+  MockFS FS;
+  MockCompilationDatabase CDB;
+  CDB.ExtraClangFlags = {"-xc++"};
+  auto Opts = ClangdServer::optsForTest();
+  Opts.GetClangTidyOptions = [](llvm::vfs::FileSystem &, llvm::StringRef) {
+    auto Opts = tidy::ClangTidyOptions::getDefaults();
+    // These checks don't work well in clangd, even if configured they shouldn't
+    // run.
+    Opts.Checks = "bugprone-use-after-move,llvm-header-guard";
+    return Opts;
+  };
+  ClangdServer Server(CDB, FS, Opts, &DiagConsumer);
+  const char *SourceContents = R"cpp(
+    struct Foo { Foo(); Foo(Foo&); Foo(Foo&&); };
+    namespace std { Foo&& move(Foo&); }
+    void foo() {
+      Foo x;
+      Foo y = std::move(x);
+      Foo z = x;
+    })cpp";
+  Server.addDocument(testPath("foo.h"), SourceContents);
+  ASSERT_TRUE(Server.blockUntilIdleForTest());
+  EXPECT_FALSE(DiagConsumer.HadDiagsInLastCallback);
+}
 
 } // namespace
 } // namespace clangd
