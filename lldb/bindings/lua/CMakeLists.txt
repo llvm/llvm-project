@@ -5,6 +5,7 @@ add_custom_command(
   DEPENDS ${SWIG_HEADERS}
   COMMAND ${SWIG_EXECUTABLE}
       ${SWIG_COMMON_FLAGS}
+      -I${CMAKE_CURRENT_SOURCE_DIR}
       -lua
       -w503
       -outdir ${CMAKE_CURRENT_BINARY_DIR}
