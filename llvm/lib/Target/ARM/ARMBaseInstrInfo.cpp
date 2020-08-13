@@ -587,13 +587,6 @@ bool ARMBaseInstrInfo::DefinesPredicate(
     const MachineOperand &MO = MI.getOperand(i);
     if ((MO.isRegMask() && MO.clobbersPhysReg(ARM::CPSR)) ||
         (MO.isReg() && MO.isDef() && MO.getReg() == ARM::CPSR)) {
-
-      // Filter out T1 instructions that have a dead CPSR,
-      // allowing IT blocks to be generated containing T1 instructions
-      const MCInstrDesc &MCID = MI.getDesc();
-      if (MCID.TSFlags & ARMII::ThumbArithFlagSetting && MO.isDead())
-        continue;
-
       Pred.push_back(MO);
       Found = true;
     }
