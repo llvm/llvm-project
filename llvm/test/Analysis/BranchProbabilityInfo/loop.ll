@@ -263,8 +263,8 @@ for.body:
   %0 = load i32, i32* %c, align 4
   %cmp1 = icmp eq i32 %0, %i.011
   br i1 %cmp1, label %for.inc5, label %if.end
-; CHECK: edge for.body -> for.inc5 probability is 0x30000000 / 0x80000000 = 37.50%
-; CHECK: edge for.body -> if.end probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK: edge for.body -> for.inc5 probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge for.body -> if.end probability is 0x40000000 / 0x80000000 = 50.00%
 
 if.end:
   call void @g1()
@@ -324,22 +324,22 @@ for.body3:
   %0 = load i32, i32* %c, align 4
   %cmp4 = icmp eq i32 %0, %j.017
   br i1 %cmp4, label %for.inc, label %if.end
-; CHECK: edge for.body3 -> for.inc probability is 0x30000000 / 0x80000000 = 37.50%
-; CHECK: edge for.body3 -> if.end probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK: edge for.body3 -> for.inc probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge for.body3 -> if.end probability is 0x40000000 / 0x80000000 = 50.00%
 
 if.end:
   %1 = load i32, i32* %arrayidx5, align 4
   %cmp6 = icmp eq i32 %1, %j.017
   br i1 %cmp6, label %for.inc, label %if.end8
-; CHECK: edge if.end -> for.inc probability is 0x30000000 / 0x80000000 = 37.50%
-; CHECK: edge if.end -> if.end8 probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK: edge if.end -> for.inc probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge if.end -> if.end8 probability is 0x40000000 / 0x80000000 = 50.00%
 
 if.end8:
   %2 = load i32, i32* %arrayidx9, align 4
   %cmp10 = icmp eq i32 %2, %j.017
   br i1 %cmp10, label %for.inc, label %if.end12
-; CHECK: edge if.end8 -> for.inc probability is 0x30000000 / 0x80000000 = 37.50%
-; CHECK: edge if.end8 -> if.end12 probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK: edge if.end8 -> for.inc probability is 0x40000000 / 0x80000000 = 50.00%
+; CHECK: edge if.end8 -> if.end12 probability is 0x40000000 / 0x80000000 = 50.00%
 
 if.end12:
   call void @g2()
