@@ -302,8 +302,7 @@ define void @fma8(float* noalias nocapture readonly %A, float* noalias nocapture
 ; CHECK-NEXT:    le lr, .LBB2_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
 ; CHECK-NEXT:    cmp r12, r3
-; CHECK-NEXT:    it eq
-; CHECK-NEXT:    popeq {r4, r5, r6, pc}
+; CHECK-NEXT:    beq .LBB2_8
 ; CHECK-NEXT:  .LBB2_6: @ %for.body.preheader12
 ; CHECK-NEXT:    sub.w lr, r3, r12
 ; CHECK-NEXT:    add.w r0, r0, r12, lsl #2
