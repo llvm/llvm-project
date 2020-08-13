@@ -568,7 +568,9 @@ Error FileAnalysis::parseSymbolTable() {
   }
   if (auto *ElfObject = dyn_cast<object::ELFObjectFileBase>(Object)) {
     for (const auto &Addr : ElfObject->getPltAddresses()) {
-      object::SymbolRef Sym(Addr.first, Object);
+      if (!Addr.first)
+        continue;
+      object::SymbolRef Sym(*Addr.first, Object);
       auto SymNameOrErr = Sym.getName();
       if (!SymNameOrErr)
         consumeError(SymNameOrErr.takeError());

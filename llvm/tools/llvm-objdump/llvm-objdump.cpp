@@ -1394,13 +1394,23 @@ static void addPltEntries(const ObjectFile *Obj,
     return;
   if (auto *ElfObj = dyn_cast<ELFObjectFileBase>(Obj)) {
     for (auto PltEntry : ElfObj->getPltAddresses()) {
-      SymbolRef Symbol(PltEntry.first, ElfObj);
-      uint8_t SymbolType = getElfSymbolType(Obj, Symbol);
-
-      StringRef Name = unwrapOrError(Symbol.getName(), Obj->getFileName());
-      if (!Name.empty())
-        AllSymbols[*Plt].emplace_back(
-            PltEntry.second, Saver.save((Name + "@plt").str()), SymbolType);
+      if (PltEntry.first) {
+        SymbolRef Symbol(*PltEntry.first, ElfObj);
+        uint8_t SymbolType = getElfSymbolType(Obj, Symbol);
+        if (Expected<StringRef> NameOrErr = Symbol.getName()) {
+          if (!NameOrErr->empty())
+            AllSymbols[*Plt].emplace_back(
+                PltEntry.second, Saver.save((*NameOrErr + "@plt").str()),
+                SymbolType);
+          continue;
+        } else {
+          // The warning has been reported in disassembleObject().
+          consumeError(NameOrErr.takeError());
+        }
+      }
+      reportWarning("PLT entry at 0x" + Twine::utohexstr(PltEntry.second) +
+                        " references an invalid symbol",
+                    Obj->getFileName());
     }
   }
 }
@@ -1594,8 +1604,12 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
   const StringRef FileName = Obj->getFileName();
   const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(Obj);
   for (const SymbolRef &Symbol : Obj->symbols()) {
-    StringRef Name = unwrapOrError(Symbol.getName(), FileName);
-    if (Name.empty() && !(Obj->isXCOFF() && SymbolDescription))
+    Expected<StringRef> NameOrErr = Symbol.getName();
+    if (!NameOrErr) {
+      reportWarning(toString(NameOrErr.takeError()), FileName);
+      continue;
+    }
+    if (NameOrErr->empty() && !(Obj->isXCOFF() && SymbolDescription))
       continue;
 
     if (Obj->isELF() && getElfSymbolType(Obj, Symbol) == ELF::STT_SECTION)
