@@ -568,8 +568,13 @@ std::string ToolChain::GetLinkerPath() const {
   }
   // If we're passed -fuse-ld= with no argument, or with the argument ld,
   // then use whatever the default system linker is.
-  if (UseLinker.empty() || UseLinker == "ld")
-    return GetProgramPath(getDefaultLinker());
+  if (UseLinker.empty() || UseLinker == "ld") {
+    const char *DefaultLinker = getDefaultLinker();
+    if (llvm::sys::path::is_absolute(DefaultLinker))
+      return std::string(DefaultLinker);
+    else
+      return GetProgramPath(DefaultLinker);
+  }
 
   // Extending -fuse-ld= to an absolute or relative path is unexpected. Checking
   // for the linker flavor is brittle. In addition, prepending "ld." or "ld64."
