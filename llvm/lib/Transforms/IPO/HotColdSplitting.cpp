@@ -79,8 +79,8 @@ STATISTIC(NumColdRegionsOutlined, "Number of cold regions outlined.");
 
 using namespace llvm;
 
-static cl::opt<bool> EnableStaticAnalyis("hot-cold-static-analysis",
-                              cl::init(true), cl::Hidden);
+static cl::opt<bool> EnableStaticAnalysis("hot-cold-static-analysis",
+                                          cl::init(true), cl::Hidden);
 
 static cl::opt<int>
     SplittingThreshold("hotcoldsplit-threshold", cl::init(2), cl::Hidden,
@@ -634,7 +634,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
       continue;
 
     bool Cold = (BFI && PSI->isColdBlock(BB, BFI)) ||
-                (EnableStaticAnalyis && unlikelyExecuted(*BB, PSI, BFI));
+                (EnableStaticAnalysis && unlikelyExecuted(*BB, PSI, BFI));
     if (!Cold)
       continue;
 
