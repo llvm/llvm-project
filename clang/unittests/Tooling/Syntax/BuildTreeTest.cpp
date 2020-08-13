@@ -1,217 +1,20 @@
-//===- TreeTest.cpp -------------------------------------------------------===//
+//===- BuildTreeTest.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file tests the syntax tree generation from the ClangAST.
+//
+//===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Syntax/Tree.h"
-#include "clang/AST/ASTConsumer.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/Stmt.h"
-#include "clang/Basic/LLVM.h"
-#include "clang/Basic/TokenKinds.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/FrontendAction.h"
-#include "clang/Frontend/TextDiagnosticPrinter.h"
-#include "clang/Lex/PreprocessorOptions.h"
-#include "clang/Testing/CommandLineArgs.h"
-#include "clang/Testing/TestClangConfig.h"
-#include "clang/Tooling/Core/Replacement.h"
-#include "clang/Tooling/Syntax/BuildTree.h"
-#include "clang/Tooling/Syntax/Mutations.h"
-#include "clang/Tooling/Syntax/Nodes.h"
-#include "clang/Tooling/Syntax/Tokens.h"
-#include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Testing/Support/Annotations.h"
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
-#include <cstdlib>
-#include <memory>
+#include "TreeTestBase.h"
 
-using namespace clang;
-
+namespace clang {
+namespace syntax {
 namespace {
-static ArrayRef<syntax::Token> tokens(syntax::Node *N) {
-  assert(N->isOriginal() && "tokens of modified nodes are not well-defined");
-  if (auto *L = dyn_cast<syntax::Leaf>(N))
-    return llvm::makeArrayRef(L->token(), 1);
-  auto *T = cast<syntax::Tree>(N);
-  return llvm::makeArrayRef(T->firstLeaf()->token(),
-                            T->lastLeaf()->token() + 1);
-}
-
-class SyntaxTreeTest : public ::testing::Test,
-                       public ::testing::WithParamInterface<TestClangConfig> {
-protected:
-  // Build a syntax tree for the code.
-  syntax::TranslationUnit *buildTree(StringRef Code,
-                                     const TestClangConfig &ClangConfig) {
-    // FIXME: this code is almost the identical to the one in TokensTest. Share
-    //        it.
-    class BuildSyntaxTree : public ASTConsumer {
-    public:
-      BuildSyntaxTree(syntax::TranslationUnit *&Root,
-                      std::unique_ptr<syntax::TokenBuffer> &TB,
-                      std::unique_ptr<syntax::Arena> &Arena,
-                      std::unique_ptr<syntax::TokenCollector> Tokens)
-          : Root(Root), TB(TB), Arena(Arena), Tokens(std::move(Tokens)) {
-        assert(this->Tokens);
-      }
-
-      void HandleTranslationUnit(ASTContext &Ctx) override {
-        TB =
-            std::make_unique<syntax::TokenBuffer>(std::move(*Tokens).consume());
-        Tokens = nullptr; // make sure we fail if this gets called twice.
-        Arena = std::make_unique<syntax::Arena>(Ctx.getSourceManager(),
-                                                Ctx.getLangOpts(), *TB);
-        Root = syntax::buildSyntaxTree(*Arena, *Ctx.getTranslationUnitDecl());
-      }
-
-    private:
-      syntax::TranslationUnit *&Root;
-      std::unique_ptr<syntax::TokenBuffer> &TB;
-      std::unique_ptr<syntax::Arena> &Arena;
-      std::unique_ptr<syntax::TokenCollector> Tokens;
-    };
-
-    class BuildSyntaxTreeAction : public ASTFrontendAction {
-    public:
-      BuildSyntaxTreeAction(syntax::TranslationUnit *&Root,
-                            std::unique_ptr<syntax::TokenBuffer> &TB,
-                            std::unique_ptr<syntax::Arena> &Arena)
-          : Root(Root), TB(TB), Arena(Arena) {}
-
-      std::unique_ptr<ASTConsumer>
-      CreateASTConsumer(CompilerInstance &CI, StringRef InFile) override {
-        // We start recording the tokens, ast consumer will take on the result.
-        auto Tokens =
-            std::make_unique<syntax::TokenCollector>(CI.getPreprocessor());
-        return std::make_unique<BuildSyntaxTree>(Root, TB, Arena,
-                                                 std::move(Tokens));
-      }
-
-    private:
-      syntax::TranslationUnit *&Root;
-      std::unique_ptr<syntax::TokenBuffer> &TB;
-      std::unique_ptr<syntax::Arena> &Arena;
-    };
-
-    constexpr const char *FileName = "./input.cpp";
-    FS->addFile(FileName, time_t(), llvm::MemoryBuffer::getMemBufferCopy(""));
-
-    if (!Diags->getClient())
-      Diags->setClient(new TextDiagnosticPrinter(llvm::errs(), DiagOpts.get()));
-    Diags->setSeverityForGroup(diag::Flavor::WarningOrError, "unused-value",
-                               diag::Severity::Ignored, SourceLocation());
-
-    // Prepare to run a compiler.
-    std::vector<std::string> Args = {
-        "syntax-test",
-        "-fsyntax-only",
-    };
-    llvm::copy(ClangConfig.getCommandLineArgs(), std::back_inserter(Args));
-    Args.push_back(FileName);
-
-    std::vector<const char *> ArgsCStr;
-    for (const std::string &arg : Args) {
-      ArgsCStr.push_back(arg.c_str());
-    }
-
-    Invocation = createInvocationFromCommandLine(ArgsCStr, Diags, FS);
-    assert(Invocation);
-    Invocation->getFrontendOpts().DisableFree = false;
-    Invocation->getPreprocessorOpts().addRemappedFile(
-        FileName, llvm::MemoryBuffer::getMemBufferCopy(Code).release());
-    CompilerInstance Compiler;
-    Compiler.setInvocation(Invocation);
-    Compiler.setDiagnostics(Diags.get());
-    Compiler.setFileManager(FileMgr.get());
-    Compiler.setSourceManager(SourceMgr.get());
-
-    syntax::TranslationUnit *Root = nullptr;
-    BuildSyntaxTreeAction Recorder(Root, this->TB, this->Arena);
-
-    // Action could not be executed but the frontend didn't identify any errors
-    // in the code ==> problem in setting up the action.
-    if (!Compiler.ExecuteAction(Recorder) &&
-        Diags->getClient()->getNumErrors() == 0) {
-      ADD_FAILURE() << "failed to run the frontend";
-      std::abort();
-    }
-    return Root;
-  }
-
-  ::testing::AssertionResult treeDumpEqual(StringRef Code, StringRef Tree) {
-    SCOPED_TRACE(llvm::join(GetParam().getCommandLineArgs(), " "));
-
-    auto *Root = buildTree(Code, GetParam());
-    if (Diags->getClient()->getNumErrors() != 0) {
-      return ::testing::AssertionFailure()
-             << "Source file has syntax errors, they were printed to the test "
-                "log";
-    }
-    std::string Actual = std::string(StringRef(Root->dump(*Arena)).trim());
-    // EXPECT_EQ shows the diff between the two strings if they are different.
-    EXPECT_EQ(Tree.trim().str(), Actual);
-    if (Actual != Tree.trim().str()) {
-      return ::testing::AssertionFailure();
-    }
-    return ::testing::AssertionSuccess();
-  }
-
-  // Adds a file to the test VFS.
-  void addFile(StringRef Path, StringRef Contents) {
-    if (!FS->addFile(Path, time_t(),
-                     llvm::MemoryBuffer::getMemBufferCopy(Contents))) {
-      ADD_FAILURE() << "could not add a file to VFS: " << Path;
-    }
-  }
-
-  /// Finds the deepest node in the tree that covers exactly \p R.
-  /// FIXME: implement this efficiently and move to public syntax tree API.
-  syntax::Node *nodeByRange(llvm::Annotations::Range R, syntax::Node *Root) {
-    ArrayRef<syntax::Token> Toks = tokens(Root);
-
-    if (Toks.front().location().isFileID() &&
-        Toks.back().location().isFileID() &&
-        syntax::Token::range(*SourceMgr, Toks.front(), Toks.back()) ==
-            syntax::FileRange(SourceMgr->getMainFileID(), R.Begin, R.End))
-      return Root;
-
-    auto *T = dyn_cast<syntax::Tree>(Root);
-    if (!T)
-      return nullptr;
-    for (auto *C = T->firstChild(); C != nullptr; C = C->nextSibling()) {
-      if (auto *Result = nodeByRange(R, C))
-        return Result;
-    }
-    return nullptr;
-  }
-
-  // Data fields.
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      new DiagnosticsEngine(new DiagnosticIDs, DiagOpts.get());
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
-      new llvm::vfs::InMemoryFileSystem;
-  IntrusiveRefCntPtr<FileManager> FileMgr =
-      new FileManager(FileSystemOptions(), FS);
-  IntrusiveRefCntPtr<SourceManager> SourceMgr =
-      new SourceManager(*Diags, *FileMgr);
-  std::shared_ptr<CompilerInvocation> Invocation;
-  // Set after calling buildTree().
-  std::unique_ptr<syntax::TokenBuffer> TB;
-  std::unique_ptr<syntax::Arena> Arena;
-};
 
 TEST_P(SyntaxTreeTest, Simple) {
   EXPECT_TRUE(treeDumpEqual(
@@ -5033,70 +4836,6 @@ void x(char a, short (*b)(int), long (**c)(long long));
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, Mutations) {
-  if (!GetParam().isCXX11OrLater()) {
-    return;
-  }
-
-  using Transformation = std::function<void(
-      const llvm::Annotations & /*Input*/, syntax::TranslationUnit * /*Root*/)>;
-  auto CheckTransformation = [this](std::string Input, std::string Expected,
-                                    Transformation Transform) -> void {
-    llvm::Annotations Source(Input);
-    auto *Root = buildTree(Source.code(), GetParam());
-
-    Transform(Source, Root);
-
-    auto Replacements = syntax::computeReplacements(*Arena, *Root);
-    auto Output = tooling::applyAllReplacements(Source.code(), Replacements);
-    if (!Output) {
-      ADD_FAILURE() << "could not apply replacements: "
-                    << llvm::toString(Output.takeError());
-      return;
-    }
-
-    EXPECT_EQ(Expected, *Output) << "input is:\n" << Input;
-  };
-
-  // Removes the selected statement. Input should have exactly one selected
-  // range and it should correspond to a single statement.
-  auto RemoveStatement = [this](const llvm::Annotations &Input,
-                                syntax::TranslationUnit *TU) {
-    auto *S = cast<syntax::Statement>(nodeByRange(Input.range(), TU));
-    ASSERT_TRUE(S->canModify()) << "cannot remove a statement";
-    syntax::removeStatement(*Arena, S);
-    EXPECT_TRUE(S->isDetached());
-    EXPECT_FALSE(S->isOriginal())
-        << "node removed from tree cannot be marked as original";
-  };
-
-  std::vector<std::pair<std::string /*Input*/, std::string /*Expected*/>>
-      Cases = {
-          {"void test() { [[100+100;]] test(); }", "void test() {  test(); }"},
-          {"void test() { if (true) [[{}]] else {} }",
-           "void test() { if (true) ; else {} }"},
-          {"void test() { [[;]] }", "void test() {  }"}};
-  for (const auto &C : Cases)
-    CheckTransformation(C.first, C.second, RemoveStatement);
-}
-
-TEST_P(SyntaxTreeTest, SynthesizedNodes) {
-  buildTree("", GetParam());
-
-  auto *C = syntax::createPunctuation(*Arena, tok::comma);
-  ASSERT_NE(C, nullptr);
-  EXPECT_EQ(C->token()->kind(), tok::comma);
-  EXPECT_TRUE(C->canModify());
-  EXPECT_FALSE(C->isOriginal());
-  EXPECT_TRUE(C->isDetached());
-
-  auto *S = syntax::createEmptyStatement(*Arena);
-  ASSERT_NE(S, nullptr);
-  EXPECT_TRUE(S->canModify());
-  EXPECT_FALSE(S->isOriginal());
-  EXPECT_TRUE(S->isDetached());
-}
-
 static std::vector<TestClangConfig> allTestClangConfigs() {
   std::vector<TestClangConfig> all_configs;
   for (TestLanguage lang : {Lang_C89, Lang_C99, Lang_CXX03, Lang_CXX11,
@@ -5118,3 +4857,5 @@ INSTANTIATE_TEST_CASE_P(SyntaxTreeTests, SyntaxTreeTest,
                         testing::ValuesIn(allTestClangConfigs()), );
 
 } // namespace
+} // namespace syntax
+} // namespace clang
