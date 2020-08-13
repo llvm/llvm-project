@@ -1,4 +1,4 @@
-//===-- Implementation of strtok ------------------------------------------===//
+//===-- Implementation of strtok_r ----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,19 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/string/strtok.h"
+#include "src/string/strtok_r.h"
 
 #include "src/__support/common.h"
 #include "src/string/string_utils.h"
 
 namespace __llvm_libc {
 
-static char *strtok_str = nullptr;
-
-// TODO: Place restrict qualifier where necessary for this and other function
-// arguments.
-char *LLVM_LIBC_ENTRYPOINT(strtok)(char *src, const char *delimiter_string) {
-  return internal::string_token(src, delimiter_string, &strtok_str);
+char *LLVM_LIBC_ENTRYPOINT(strtok_r)(char *src, const char *delimiter_string,
+                                     char **saveptr) {
+  return internal::string_token(src, delimiter_string, saveptr);
 }
 
 } // namespace __llvm_libc
