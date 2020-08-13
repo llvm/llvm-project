@@ -258,6 +258,7 @@ struct AssignStmt;
 struct AssignedGotoStmt;
 struct PauseStmt;
 struct OpenACCConstruct;
+struct AccEndCombinedDirective;
 struct OpenACCDeclarativeConstruct;
 struct OpenMPConstruct;
 struct OpenMPDeclarativeConstruct;
@@ -517,6 +518,7 @@ struct ExecutableConstruct {
       common::Indirection<WhereConstruct>, common::Indirection<ForallConstruct>,
       common::Indirection<CompilerDirective>,
       common::Indirection<OpenACCConstruct>,
+      common::Indirection<AccEndCombinedDirective>,
       common::Indirection<OpenMPConstruct>,
       common::Indirection<OmpEndLoopDirective>>
       u;
@@ -3970,6 +3972,7 @@ struct OpenACCStandaloneDeclarativeConstruct {
 
 struct AccBeginCombinedDirective {
   TUPLE_CLASS_BOILERPLATE(AccBeginCombinedDirective);
+  CharBlock source;
   std::tuple<AccCombinedDirective, AccClauseList> t;
 };
 
@@ -3981,7 +3984,9 @@ struct AccEndCombinedDirective {
 struct OpenACCCombinedConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenACCCombinedConstruct);
   CharBlock source;
-  std::tuple<AccBeginCombinedDirective, Block,
+  OpenACCCombinedConstruct(AccBeginCombinedDirective &&a)
+      : t({std::move(a), std::nullopt, std::nullopt}) {}
+  std::tuple<AccBeginCombinedDirective, std::optional<DoConstruct>,
       std::optional<AccEndCombinedDirective>>
       t;
 };
