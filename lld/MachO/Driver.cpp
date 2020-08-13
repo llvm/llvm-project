@@ -8,6 +8,7 @@
 
 #include "Driver.h"
 #include "Config.h"
+#include "DriverUtils.h"
 #include "InputFiles.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
@@ -129,7 +130,7 @@ static Optional<std::string> findFramework(StringRef name) {
       // Suffix lookup failed, fall through to the no-suffix case.
     }
 
-    if (Optional<std::string> path = findWithExtension(symlink, {".tbd", ""}))
+    if (Optional<std::string> path = resolveDylibPath(symlink))
       return path;
   }
   return {};
@@ -233,13 +234,10 @@ static void addFile(StringRef path) {
     inputFiles.push_back(make<DylibFile>(mbref));
     break;
   case file_magic::tapi_file: {
-    Expected<std::unique_ptr<InterfaceFile>> result = TextAPIReader::get(mbref);
-    if (!result) {
-      error("could not load TAPI file at " + mbref.getBufferIdentifier() +
-            ": " + toString(result.takeError()));
+    Optional<DylibFile *> dylibFile = makeDylibFromTAPI(mbref);
+    if (!dylibFile)
       return;
-    }
-    inputFiles.push_back(make<DylibFile>(**result));
+    inputFiles.push_back(*dylibFile);
     break;
   }
   default:
@@ -506,7 +504,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   config->outputType = args.hasArg(OPT_dylib) ? MH_DYLIB : MH_EXECUTE;
   config->runtimePaths = args::getStrings(args, OPT_rpath);
 
-  std::vector<StringRef> roots;
+  std::vector<StringRef> &roots = config->systemLibraryRoots;
   for (const Arg *arg : args.filtered(OPT_syslibroot))
     roots.push_back(arg->getValue());
   // NOTE: the final `-syslibroot` being `/` will ignore all roots
