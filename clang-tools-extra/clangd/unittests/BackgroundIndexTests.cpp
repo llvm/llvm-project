@@ -96,8 +96,8 @@ TEST_F(BackgroundIndexTest, NoCrashOnErrorFile) {
   size_t CacheHits = 0;
   MemoryShardStorage MSS(Storage, CacheHits);
   OverlayCDB CDB(/*Base=*/nullptr);
-  BackgroundIndex Idx(Context::empty(), FS, CDB,
-                      [&](llvm::StringRef) { return &MSS; });
+  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                      /*Opts=*/{});
 
   tooling::CompileCommand Cmd;
   Cmd.Filename = testPath("root/A.cc");
@@ -127,7 +127,8 @@ TEST_F(BackgroundIndexTest, Config) {
   // Context provider that installs a configuration mutating foo's command.
   // This causes it to define foo::two instead of foo::one.
   // It also disables indexing of baz entirely.
-  auto ContextProvider = [](PathRef P) {
+  BackgroundIndex::Options Opts;
+  Opts.ContextProvider = [](PathRef P) {
     Config C;
     if (P.endswith("foo.cpp"))
       C.CompileFlags.Edits.push_back(
@@ -143,9 +144,9 @@ TEST_F(BackgroundIndexTest, Config) {
   // We need the CommandMangler, because that applies the config we're testing.
   OverlayCDB CDB(/*Base=*/nullptr, /*FallbackFlags=*/{},
                  tooling::ArgumentsAdjuster(CommandMangler::forTests()));
+
   BackgroundIndex Idx(
-      Context::empty(), FS, CDB, [&](llvm::StringRef) { return &MSS; },
-      /*ThreadPoolSize=*/4, /*OnProgress=*/nullptr, std::move(ContextProvider));
+      FS, CDB, [&](llvm::StringRef) { return &MSS; }, std::move(Opts));
   // Index the two files.
   for (auto &Cmd : Cmds) {
     std::string FullPath = testPath(Cmd.Filename);
@@ -186,8 +187,8 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
   size_t CacheHits = 0;
   MemoryShardStorage MSS(Storage, CacheHits);
   OverlayCDB CDB(/*Base=*/nullptr);
-  BackgroundIndex Idx(Context::empty(), FS, CDB,
-                      [&](llvm::StringRef) { return &MSS; });
+  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                      /*Opts=*/{});
 
   tooling::CompileCommand Cmd;
   Cmd.Filename = testPath("root/A.cc");
@@ -253,8 +254,8 @@ TEST_F(BackgroundIndexTest, ShardStorageTest) {
   // Check nothing is loaded from Storage, but A.cc and A.h has been stored.
   {
     OverlayCDB CDB(/*Base=*/nullptr);
-    BackgroundIndex Idx(Context::empty(), FS, CDB,
-                        [&](llvm::StringRef) { return &MSS; });
+    BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                        /*Opts=*/{});
     CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
   }
@@ -263,8 +264,8 @@ TEST_F(BackgroundIndexTest, ShardStorageTest) {
 
   {
     OverlayCDB CDB(/*Base=*/nullptr);
-    BackgroundIndex Idx(Context::empty(), FS, CDB,
-                        [&](llvm::StringRef) { return &MSS; });
+    BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                        /*Opts=*/{});
     CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
   }
@@ -321,8 +322,8 @@ TEST_F(BackgroundIndexTest, DirectIncludesTest) {
   Cmd.CommandLine = {"clang++", testPath("root/A.cc")};
   {
     OverlayCDB CDB(/*Base=*/nullptr);
-    BackgroundIndex Idx(Context::empty(), FS, CDB,
-                        [&](llvm::StringRef) { return &MSS; });
+    BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                        /*Opts=*/{});
     CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
   }
@@ -371,8 +372,8 @@ TEST_F(BackgroundIndexTest, ShardStorageLoad) {
   // Check nothing is loaded from Storage, but A.cc and A.h has been stored.
   {
     OverlayCDB CDB(/*Base=*/nullptr);
-    BackgroundIndex Idx(Context::empty(), FS, CDB,
-                        [&](llvm::StringRef) { return &MSS; });
+    BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                        /*Opts=*/{});
     CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
   }
@@ -386,8 +387,8 @@ TEST_F(BackgroundIndexTest, ShardStorageLoad) {
       )cpp";
   {
     OverlayCDB CDB(/*Base=*/nullptr);
-    BackgroundIndex Idx(Context::empty(), FS, CDB,
-                        [&](llvm::StringRef) { return &MSS; });
+    BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                        /*Opts=*/{});
     CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
   }
@@ -404,8 +405,8 @@ TEST_F(BackgroundIndexTest, ShardStorageLoad) {
   {
     CacheHits = 0;
     OverlayCDB CDB(/*Base=*/nullptr);
-    BackgroundIndex Idx(Context::empty(), FS, CDB,
-                        [&](llvm::StringRef) { return &MSS; });
+    BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                        /*Opts=*/{});
     CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
   }
@@ -445,8 +446,8 @@ TEST_F(BackgroundIndexTest, ShardStorageEmptyFile) {
   // Check that A.cc, A.h and B.h has been stored.
   {
     OverlayCDB CDB(/*Base=*/nullptr);
-    BackgroundIndex Idx(Context::empty(), FS, CDB,
-                        [&](llvm::StringRef) { return &MSS; });
+    BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                        /*Opts=*/{});
     CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
   }
@@ -461,8 +462,8 @@ TEST_F(BackgroundIndexTest, ShardStorageEmptyFile) {
   {
     CacheHits = 0;
     OverlayCDB CDB(/*Base=*/nullptr);
-    BackgroundIndex Idx(Context::empty(), FS, CDB,
-                        [&](llvm::StringRef) { return &MSS; });
+    BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                        /*Opts=*/{});
     CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
   }
@@ -477,8 +478,8 @@ TEST_F(BackgroundIndexTest, ShardStorageEmptyFile) {
   {
     CacheHits = 0;
     OverlayCDB CDB(/*Base=*/nullptr);
-    BackgroundIndex Idx(Context::empty(), FS, CDB,
-                        [&](llvm::StringRef) { return &MSS; });
+    BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                        /*Opts=*/{});
     CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
   }
@@ -495,8 +496,8 @@ TEST_F(BackgroundIndexTest, NoDotsInAbsPath) {
   size_t CacheHits = 0;
   MemoryShardStorage MSS(Storage, CacheHits);
   OverlayCDB CDB(/*Base=*/nullptr);
-  BackgroundIndex Idx(Context::empty(), FS, CDB,
-                      [&](llvm::StringRef) { return &MSS; });
+  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                      /*Opts=*/{});
   ASSERT_TRUE(Idx.blockUntilIdleForTest());
 
   tooling::CompileCommand Cmd;
@@ -526,8 +527,8 @@ TEST_F(BackgroundIndexTest, UncompilableFiles) {
   size_t CacheHits = 0;
   MemoryShardStorage MSS(Storage, CacheHits);
   OverlayCDB CDB(/*Base=*/nullptr);
-  BackgroundIndex Idx(Context::empty(), FS, CDB,
-                      [&](llvm::StringRef) { return &MSS; });
+  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                      /*Opts=*/{});
 
   tooling::CompileCommand Cmd;
   FS.Files[testPath("A.h")] = "void foo();";
@@ -589,8 +590,8 @@ TEST_F(BackgroundIndexTest, CmdLineHash) {
   size_t CacheHits = 0;
   MemoryShardStorage MSS(Storage, CacheHits);
   OverlayCDB CDB(/*Base=*/nullptr);
-  BackgroundIndex Idx(Context::empty(), FS, CDB,
-                      [&](llvm::StringRef) { return &MSS; });
+  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                      /*Opts=*/{});
 
   tooling::CompileCommand Cmd;
   FS.Files[testPath("A.cc")] = "#include \"A.h\"";
