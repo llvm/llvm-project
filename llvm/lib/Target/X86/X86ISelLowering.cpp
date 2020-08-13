@@ -10763,13 +10763,39 @@ static bool IsElementEquivalent(int MaskSize, SDValue Op, SDValue ExpectedOp,
   if (!Op || !ExpectedOp || Op.getOpcode() != ExpectedOp.getOpcode())
     return false;
 
-  if (Op.getOpcode() == ISD::BUILD_VECTOR) {
+  switch (Op.getOpcode()) {
+  case ISD::BUILD_VECTOR:
     // If the values are build vectors, we can look through them to find
     // equivalent inputs that make the shuffles equivalent.
     // TODO: Handle MaskSize != Op.getNumOperands()?
     if (MaskSize == (int)Op.getNumOperands() &&
         MaskSize == (int)ExpectedOp.getNumOperands())
       return Op.getOperand(Idx) == ExpectedOp.getOperand(ExpectedIdx);
+    break;
+  case X86ISD::HADD:
+  case X86ISD::HSUB:
+  case X86ISD::FHADD:
+  case X86ISD::FHSUB:
+  case X86ISD::PACKSS:
+  case X86ISD::PACKUS:
+    // HOP(X,X) can refer to the elt from the lower/upper half of a lane.
+    // TODO: Handle MaskSize != NumElts?
+    // TODO: Handle HOP(X,Y) vs HOP(Y,X) equivalence cases.
+    if (Op == ExpectedOp && Op.getOperand(0) == Op.getOperand(1)) {
+      MVT VT = Op.getSimpleValueType();
+      int NumElts = VT.getVectorNumElements();
+      if (MaskSize == NumElts) {
+        int NumLanes = VT.getSizeInBits() / 128;
+        int NumEltsPerLane = NumElts / NumLanes;
+        int NumHalfEltsPerLane = NumEltsPerLane / 2;
+        bool SameLane =
+            (Idx / NumEltsPerLane) == (ExpectedIdx / NumEltsPerLane);
+        bool SameElt =
+            (Idx % NumHalfEltsPerLane) == (ExpectedIdx % NumHalfEltsPerLane);
+        return SameLane && SameElt;
+      }
+    }
+    break;
   }
 
   return false;
@@ -34012,17 +34038,17 @@ static bool matchUnaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
   // instructions are no slower than UNPCKLPD but has the option to
   // fold the input operand into even an unaligned memory load.
   if (MaskVT.is128BitVector() && Subtarget.hasSSE3() && AllowFloatDomain) {
-    if (isTargetShuffleEquivalent(Mask, {0, 0})) {
+    if (isTargetShuffleEquivalent(Mask, {0, 0}, V1)) {
       Shuffle = X86ISD::MOVDDUP;
       SrcVT = DstVT = MVT::v2f64;
       return true;
     }
-    if (isTargetShuffleEquivalent(Mask, {0, 0, 2, 2})) {
+    if (isTargetShuffleEquivalent(Mask, {0, 0, 2, 2}, V1)) {
       Shuffle = X86ISD::MOVSLDUP;
       SrcVT = DstVT = MVT::v4f32;
       return true;
     }
-    if (isTargetShuffleEquivalent(Mask, {1, 1, 3, 3})) {
+    if (isTargetShuffleEquivalent(Mask, {1, 1, 3, 3}, V1)) {
       Shuffle = X86ISD::MOVSHDUP;
       SrcVT = DstVT = MVT::v4f32;
       return true;
@@ -34031,17 +34057,17 @@ static bool matchUnaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
 
   if (MaskVT.is256BitVector() && AllowFloatDomain) {
     assert(Subtarget.hasAVX() && "AVX required for 256-bit vector shuffles");
-    if (isTargetShuffleEquivalent(Mask, {0, 0, 2, 2})) {
+    if (isTargetShuffleEquivalent(Mask, {0, 0, 2, 2}, V1)) {
       Shuffle = X86ISD::MOVDDUP;
       SrcVT = DstVT = MVT::v4f64;
       return true;
     }
-    if (isTargetShuffleEquivalent(Mask, {0, 0, 2, 2, 4, 4, 6, 6})) {
+    if (isTargetShuffleEquivalent(Mask, {0, 0, 2, 2, 4, 4, 6, 6}, V1)) {
       Shuffle = X86ISD::MOVSLDUP;
       SrcVT = DstVT = MVT::v8f32;
       return true;
     }
-    if (isTargetShuffleEquivalent(Mask, {1, 1, 3, 3, 5, 5, 7, 7})) {
+    if (isTargetShuffleEquivalent(Mask, {1, 1, 3, 3, 5, 5, 7, 7}, V1)) {
       Shuffle = X86ISD::MOVSHDUP;
       SrcVT = DstVT = MVT::v8f32;
       return true;
@@ -34051,19 +34077,19 @@ static bool matchUnaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
   if (MaskVT.is512BitVector() && AllowFloatDomain) {
     assert(Subtarget.hasAVX512() &&
            "AVX512 required for 512-bit vector shuffles");
-    if (isTargetShuffleEquivalent(Mask, {0, 0, 2, 2, 4, 4, 6, 6})) {
+    if (isTargetShuffleEquivalent(Mask, {0, 0, 2, 2, 4, 4, 6, 6}, V1)) {
       Shuffle = X86ISD::MOVDDUP;
       SrcVT = DstVT = MVT::v8f64;
       return true;
     }
     if (isTargetShuffleEquivalent(
-            Mask, {0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 14, 14})) {
+            Mask, {0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10, 12, 12, 14, 14}, V1)) {
       Shuffle = X86ISD::MOVSLDUP;
       SrcVT = DstVT = MVT::v16f32;
       return true;
     }
     if (isTargetShuffleEquivalent(
-            Mask, {1, 1, 3, 3, 5, 5, 7, 7, 9, 9, 11, 11, 13, 13, 15, 15})) {
+            Mask, {1, 1, 3, 3, 5, 5, 7, 7, 9, 9, 11, 11, 13, 13, 15, 15}, V1)) {
       Shuffle = X86ISD::MOVSHDUP;
       SrcVT = DstVT = MVT::v16f32;
       return true;

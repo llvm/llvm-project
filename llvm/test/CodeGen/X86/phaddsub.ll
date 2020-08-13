@@ -451,13 +451,13 @@ define <4 x i32> @phaddd_single_source6(<4 x i32> %x) {
 ; SSSE3-LABEL: phaddd_single_source6:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    phaddd %xmm0, %xmm0
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; SSSE3-NEXT:    retq
 ;
 ; AVX-LABEL: phaddd_single_source6:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; AVX-NEXT:    retq
   %l = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> <i32 undef, i32 undef, i32 0, i32 undef>
   %r = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> <i32 undef, i32 undef, i32 1, i32 undef>
