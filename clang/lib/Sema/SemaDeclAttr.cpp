@@ -21,6 +21,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetBuiltins.h"
@@ -30,12 +31,15 @@
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
 using namespace sema;
@@ -5341,37 +5345,28 @@ static void handleObjCRequiresSuperAttr(Sema &S, Decl *D,
   D->addAttr(::new (S.Context) ObjCRequiresSuperAttr(S.Context, Attrs));
 }
 
-static void handleNSErrorDomain(Sema &S, Decl *D, const ParsedAttr &Attr) {
-  if (!isa<TagDecl>(D)) {
-    S.Diag(D->getBeginLoc(), diag::err_nserrordomain_not_tagdecl)
-        << S.getLangOpts().CPlusPlus;
-    return;
-  }
-  IdentifierLoc *identLoc =
-      Attr.isArgIdent(0) ? Attr.getArgAsIdent(0) : nullptr;
-  if (!identLoc || !identLoc->Ident) {
-    // Try to locate the argument directly
-    SourceLocation loc = Attr.getLoc();
-    if (Attr.isArgExpr(0) && Attr.getArgAsExpr(0))
-      loc = Attr.getArgAsExpr(0)->getBeginLoc();
+static void handleNSErrorDomain(Sema &S, Decl *D, const ParsedAttr &AL) {
+  auto *E = AL.getArgAsExpr(0);
+  auto Loc = E ? E->getBeginLoc() : AL.getLoc();
 
-    S.Diag(loc, diag::err_nserrordomain_requires_identifier);
+  auto *DRE = dyn_cast<DeclRefExpr>(AL.getArgAsExpr(0));
+  if (!DRE) {
+    S.Diag(Loc, diag::err_nserrordomain_invalid_decl) << 0;
     return;
   }
 
-  // Verify that the identifier is a valid decl in the C decl namespace
-  LookupResult lookupResult(S, DeclarationName(identLoc->Ident),
-                            SourceLocation(),
-                            Sema::LookupNameKind::LookupOrdinaryName);
-  if (!S.LookupName(lookupResult, S.TUScope) ||
-      !lookupResult.getAsSingle<VarDecl>()) {
-    S.Diag(identLoc->Loc, diag::err_nserrordomain_invalid_decl)
-        << identLoc->Ident;
+  auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+  if (!VD) {
+    S.Diag(Loc, diag::err_nserrordomain_invalid_decl) << 1 << DRE->getDecl();
     return;
   }
 
-  D->addAttr(::new (S.Context)
-                 NSErrorDomainAttr(S.Context, Attr, identLoc->Ident));
+  if (!isNSStringType(VD->getType(), S.Context)) {
+    S.Diag(Loc, diag::err_nserrordomain_wrong_type) << VD;
+    return;
+  }
+
+  D->addAttr(::new (S.Context) NSErrorDomainAttr(S.Context, AL, VD));
 }
 
 static void handleObjCBridgeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
