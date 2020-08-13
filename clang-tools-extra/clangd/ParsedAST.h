@@ -146,10 +146,6 @@ private:
   CanonicalIncludes CanonIncludes;
 };
 
-/// For testing/debugging purposes. Note that this method deserializes all
-/// unserialized Decls, so use with care.
-void dumpAST(ParsedAST &AST, llvm::raw_ostream &OS);
-
 } // namespace clangd
 } // namespace clang
 

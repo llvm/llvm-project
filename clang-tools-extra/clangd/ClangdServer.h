@@ -295,10 +295,6 @@ public:
   void applyTweak(PathRef File, Range Sel, StringRef ID,
                   Callback<Tweak::Effect> CB);
 
-  /// Only for testing purposes.
-  /// Waits until all requests to worker thread are finished and dumps AST for
-  /// \p File. \p File must be in the list of added documents.
-  void dumpAST(PathRef File, llvm::unique_function<void(std::string)> Callback);
   /// Called when an event occurs for a watched file in the workspace.
   void onFileEvent(const DidChangeWatchedFilesParams &Params);
 
