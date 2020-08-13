@@ -1,7 +1,7 @@
 static_library("InterfaceStub") {
   output_name = "LLVMInterfaceStub"
   deps = [
-    "//llvm/lib/Bitstream/Reader",
+    "//llvm/lib/Object",
     "//llvm/lib/Support",
   ]
 
