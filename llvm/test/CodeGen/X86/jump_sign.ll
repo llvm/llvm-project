@@ -139,12 +139,11 @@ define i32 @func_l2(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    subl %edx, %eax
-; CHECK-NEXT:    je .LBB8_1
-; CHECK-NEXT:  # %bb.2: # %if.else
-; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB8_1: # %if.then
+; CHECK-NEXT:    jne .LBB8_2
+; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    cmpl %ecx, %edx
 ; CHECK-NEXT:    cmovlel %ecx, %eax
+; CHECK-NEXT:  .LBB8_2: # %if.else
 ; CHECK-NEXT:    retl
   %cmp = icmp eq i32 %b, %a
   %sub = sub nsw i32 %a, %b
@@ -330,13 +329,12 @@ define i8* @func_r(i8* %base, i32* nocapture %offset, i32 %size) nounwind {
 ; CHECK-NEXT:    movl (%edx), %ecx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    jge .LBB15_1
-; CHECK-NEXT:  # %bb.2: # %return
-; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB15_1: # %if.end
+; CHECK-NEXT:    jl .LBB15_2
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl %ecx, (%edx)
 ; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:  .LBB15_2: # %return
 ; CHECK-NEXT:    retl
 entry:
   %0 = load i32, i32* %offset, align 8
