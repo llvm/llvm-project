@@ -16,11 +16,8 @@
 ; ASM:         .cv_loc 0 1 3 9                 # t.c:3:9
 ; ASM:         movl    %ecx, %eax
 ; ASM:         cmpl    %edx, %ecx
-; ASM:         jge     LBB0_1
+; ASM:         jl      [[EPILOGUE:LBB0_[0-9]+]]
 
-; ASM:         retl    $8
-
-; ASM: LBB0_1: 
 ; ASM:         pushl   %ebx
 ; ASM:         .cv_fpo_pushreg %ebx
 ; ASM:         pushl   %edi
@@ -34,7 +31,9 @@
 ; ASM:         popl    %esi
 ; ASM:         popl    %edi
 ; ASM:         popl    %ebx
-; ASM: Ltmp11:
+; ASM: [[EPILOGUE]]:                                 # %return
+; ASM:         retl    $8
+; ASM: Ltmp10:
 ; ASM:         .cv_fpo_endproc
 
 ; Note how RvaStart advances 7 bytes to skip the shrink-wrapped portion.
@@ -42,7 +41,7 @@
 ; OBJ:    FrameData {
 ; OBJ:      RvaStart: 0x0
 ; OBJ:      CodeSize: 0x36
-; OBJ:     PrologSize: 0xC
+; OBJ:      PrologSize: 0x9
 ; OBJ:      FrameFunc [
 ; OBJ-NEXT:   $T0 .raSearch =
 ; OBJ-NEXT:   $eip $T0 ^ =
@@ -50,8 +49,8 @@
 ; OBJ-NEXT: ]
 ; OBJ:    }
 ; OBJ:    FrameData {
-; OBJ:      RvaStart: 0xA
-; OBJ:      CodeSize: 0x2C
+; OBJ:      RvaStart: 0x7
+; OBJ:      CodeSize: 0x2F
 ; OBJ:      PrologSize: 0x2
 ; OBJ:      FrameFunc [
 ; OBJ-NEXT:   $T0 .raSearch =
@@ -61,8 +60,8 @@
 ; OBJ-NEXT: ]
 ; OBJ:    }
 ; OBJ:    FrameData {
-; OBJ:      RvaStart: 0xB
-; OBJ:      CodeSize: 0x2B
+; OBJ:      RvaStart: 0x8
+; OBJ:      CodeSize: 0x2E
 ; OBJ:      PrologSize: 0x1
 ; OBJ:      FrameFunc [
 ; OBJ-NEXT:   $T0 .raSearch =
@@ -73,8 +72,8 @@
 ; OBJ-NEXT: ]
 ; OBJ:    }
 ; OBJ:    FrameData {
-; OBJ:      RvaStart: 0xC
-; OBJ:      CodeSize: 0x2A
+; OBJ:      RvaStart: 0x9
+; OBJ:      CodeSize: 0x2D
 ; OBJ:      PrologSize: 0x0
 ; OBJ:      FrameFunc [
 ; OBJ-NEXT:   $T0 .raSearch =
