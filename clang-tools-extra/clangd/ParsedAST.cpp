@@ -238,10 +238,6 @@ private:
 
 } // namespace
 
-void dumpAST(ParsedAST &AST, llvm::raw_ostream &OS) {
-  AST.getASTContext().getTranslationUnitDecl()->dump(OS, true);
-}
-
 llvm::Optional<ParsedAST>
 ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
                  std::unique_ptr<clang::CompilerInvocation> CI,

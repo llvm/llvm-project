@@ -66,8 +66,8 @@ const PathCompareTest CompareTestCases[] =
     {"/foo/bar/", "/foo/bar", 1}, // trailing separator
     {"foo", "/foo", -1}, // if !this->has_root_directory() and p.has_root_directory(), a value less than 0.
     {"/foo", "foo", 1}, //  if this->has_root_directory() and !p.has_root_directory(), a value greater than 0.
-    {"//" LONGA "////" LONGB "/" LONGC "///" LONGD, "//" LONGA "/" LONGB "/" LONGC "/" LONGD, 0},
-    { LONGA "/" LONGB "/" LONGC, LONGA "/" LONGB "/" LONGB, 1}
+    {("//" LONGA "////" LONGB "/" LONGC "///" LONGD), ("//" LONGA "/" LONGB "/" LONGC "/" LONGD), 0},
+    {(LONGA "/" LONGB "/" LONGC), (LONGA "/" LONGB "/" LONGB), 1}
 
 };
 #undef LONGA

@@ -3339,6 +3339,38 @@ arguments, with arbitrary offsets.
   }];
 }
 
+def NSErrorDomainDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+In Cocoa frameworks in Objective-C, one can group related error codes in enums
+and categorize these enums with error domains.
+
+The ``ns_error_domain`` attribute indicates a global ``NSString`` constant
+representing the error domain that an error code belongs to. For pointer
+uniqueness and code size this is a constant symbol, not a literal.
+
+The domain and error code need to be used together. The ``ns_error_domain``
+attribute links error codes to their domain at the source level.
+
+This metadata is useful for documentation purposes, for static analysis, and for
+improving interoperability between Objective-C and Swift. It is not used for
+code generation in Objective-C.
+
+For example:
+
+  .. code-block:: objc
+
+    #define NS_ERROR_ENUM(_type, _name, _domain)  \
+      enum _name : _type _name; enum __attribute__((ns_error_domain(_domain))) _name : _type
+
+    extern NSString *const MyErrorDomain;
+    typedef NS_ERROR_ENUM(unsigned char, MyErrorEnum, MyErrorDomain) {
+      MyErrFirst,
+      MyErrSecond,
+    };
+  }];
+}
+
 def OMPDeclareSimdDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "#pragma omp declare simd";

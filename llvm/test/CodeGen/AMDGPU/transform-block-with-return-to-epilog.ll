@@ -115,14 +115,15 @@ define amdgpu_ps { <4 x float> } @test_return_to_epilog_with_optimized_kill(floa
   ; GCN:   liveins: $sgpr0_sgpr1
   ; GCN:   $exec = S_MOV_B64 0
   ; GCN: bb.6.end:
-  ; GCN:   successors: %bb.7(0x80000000)
+  ; GCN:   successors: %bb.7(0x40000000), %bb.8(0x40000000)
   ; GCN:   liveins: $sgpr0_sgpr1
   ; GCN:   $exec = S_OR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def $scc
   ; GCN:   S_CBRANCH_EXECZ %bb.7, implicit $exec
-  ; GCN:   SI_RETURN_TO_EPILOG undef $vgpr0, undef $vgpr1, undef $vgpr2, undef $vgpr3
+  ; GCN:   S_BRANCH %bb.8
   ; GCN: bb.7:
   ; GCN:   EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
   ; GCN:   S_ENDPGM 0
+  ; GCN: bb.8:
 entry:
   %.i0 = fdiv reassoc nnan nsz arcp contract afn float 1.000000e+00, %val
   %cmp0 = fcmp olt float %.i0, 0.000000e+00

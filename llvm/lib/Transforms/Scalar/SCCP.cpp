@@ -1707,7 +1707,7 @@ static bool runSCCP(Function &F, const DataLayout &DL,
       LLVM_DEBUG(dbgs() << "  BasicBlock Dead:" << BB);
 
       ++NumDeadBlocks;
-      NumInstRemoved += removeAllNonTerminatorAndEHPadInstructions(&BB);
+      NumInstRemoved += removeAllNonTerminatorAndEHPadInstructions(&BB).first;
 
       MadeChanges = true;
       continue;
