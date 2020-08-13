@@ -17,8 +17,7 @@ define arm_aapcs_vfpcc <4 x float> @maxf32(<4 x float> %a, <4 x float> %b) {
 define arm_aapcs_vfpcc <4 x float> @maxf32_c(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: maxf32_c:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxnma.f32 q1, q0
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vmaxnma.f32 q0, q1
 ; CHECK-NEXT:    bx lr
   %aa = tail call fast <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
   %bb = tail call fast <4 x float> @llvm.fabs.v4f32(<4 x float> %b)
@@ -40,8 +39,7 @@ define arm_aapcs_vfpcc <4 x float> @minf32(<4 x float> %a, <4 x float> %b) {
 define arm_aapcs_vfpcc <4 x float> @minf32_c(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: minf32_c:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminnma.f32 q1, q0
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vminnma.f32 q0, q1
 ; CHECK-NEXT:    bx lr
   %aa = tail call fast <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
   %bb = tail call fast <4 x float> @llvm.fabs.v4f32(<4 x float> %b)
@@ -114,8 +112,7 @@ define arm_aapcs_vfpcc <8 x half> @maxf16(<8 x half> %a, <8 x half> %b) {
 define arm_aapcs_vfpcc <8 x half> @maxf16_c(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: maxf16_c:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmaxnma.f16 q1, q0
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vmaxnma.f16 q0, q1
 ; CHECK-NEXT:    bx lr
   %aa = tail call fast <8 x half> @llvm.fabs.v8f16(<8 x half> %a)
   %bb = tail call fast <8 x half> @llvm.fabs.v8f16(<8 x half> %b)
@@ -137,8 +134,7 @@ define arm_aapcs_vfpcc <8 x half> @minf16(<8 x half> %a, <8 x half> %b) {
 define arm_aapcs_vfpcc <8 x half> @minf16_c(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: minf16_c:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vminnma.f16 q1, q0
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vminnma.f16 q0, q1
 ; CHECK-NEXT:    bx lr
   %aa = tail call fast <8 x half> @llvm.fabs.v8f16(<8 x half> %a)
   %bb = tail call fast <8 x half> @llvm.fabs.v8f16(<8 x half> %b)
@@ -254,11 +250,10 @@ define void @loop_absmax32_c(float* nocapture readonly %0, i32 %1, float* nocapt
 ; CHECK-NEXT:    lsr.w lr, r1, #3
 ; CHECK-NEXT:    wls lr, lr, .LBB17_3
 ; CHECK-NEXT:  @ %bb.1: @ %.preheader
-; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:  .LBB17_2: @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
 ; CHECK-NEXT:    vmaxnma.f32 q0, q1
-; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    le lr, .LBB17_2
 ; CHECK-NEXT:  .LBB17_3:
 ; CHECK-NEXT:    vldr s4, .LCPI17_0
@@ -447,11 +442,10 @@ define void @loop_absmax16_c(half* nocapture readonly %0, i32 %1, half* nocaptur
 ; CHECK-NEXT:    lsr.w lr, r1, #3
 ; CHECK-NEXT:    wls lr, lr, .LBB21_3
 ; CHECK-NEXT:  @ %bb.1: @ %.preheader
-; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:  .LBB21_2: @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q0, [r0], #8
+; CHECK-NEXT:    vldrw.u32 q1, [r0], #8
 ; CHECK-NEXT:    vmaxnma.f16 q0, q1
-; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    le lr, .LBB21_2
 ; CHECK-NEXT:  .LBB21_3:
 ; CHECK-NEXT:    vldr.16 s4, .LCPI21_0
