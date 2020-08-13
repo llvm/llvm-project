@@ -775,6 +775,12 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     else
       Opts.setDebugInfo(static_cast<codegenoptions::DebugInfoKind>(Val));
   }
+  // If -fuse-ctor-homing is set and limited debug info is already on, then use
+  // constructor homing.
+  if (Arg *A = Args.getLastArg(OPT_fuse_ctor_homing))
+    if (Opts.getDebugInfo() == codegenoptions::LimitedDebugInfo)
+      Opts.setDebugInfo(codegenoptions::DebugInfoConstructor);
+
   if (Arg *A = Args.getLastArg(OPT_debugger_tuning_EQ)) {
     unsigned Val = llvm::StringSwitch<unsigned>(A->getValue())
                        .Case("gdb", unsigned(llvm::DebuggerKind::GDB))
