@@ -1,4 +1,4 @@
-;===- ./tools/llvm-elfabi/LLVMBuild.txt ------------------------*- Conf -*--===;
+;===- ./lib/InterfaceStub/LLVMBuild.txt ------------------------*- Conf -*--===;
 ;
 ; Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 ; See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,7 @@
 ;===------------------------------------------------------------------------===;
 
 [component_0]
-type = Tool
-name = llvm-elfabi
-parent = Tools
-required_libraries = InterfaceStub Object Support TextAPI
+type = Library
+name = InterfaceStub
+parent = Libraries
+required_libraries = Object Support

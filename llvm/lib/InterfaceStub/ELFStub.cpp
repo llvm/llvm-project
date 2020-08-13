@@ -6,7 +6,7 @@
 //
 //===-----------------------------------------------------------------------===/
 
-#include "llvm/TextAPI/ELF/ELFStub.h"
+#include "llvm/InterfaceStub/ELFStub.h"
 
 using namespace llvm;
 using namespace llvm::elfabi;
