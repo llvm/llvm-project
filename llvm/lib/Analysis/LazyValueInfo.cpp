@@ -1256,8 +1256,8 @@ static ValueLatticeElement constantFoldUser(User *Usr, Value *Op,
             SimplifyBinOp(BO->getOpcode(), LHS, RHS, DL))) {
       return ValueLatticeElement::getRange(ConstantRange(C->getValue()));
     }
-  } else if (auto *FI = dyn_cast<FreezeInst>(Usr)) {
-    assert(FI->getOperand(0) == Op && "Operand 0 isn't Op");
+  } else if (isa<FreezeInst>(Usr)) {
+    assert(cast<FreezeInst>(Usr)->getOperand(0) == Op && "Operand 0 isn't Op");
     return ValueLatticeElement::getRange(ConstantRange(OpConstVal));
   }
   return ValueLatticeElement::getOverdefined();
