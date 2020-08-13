@@ -236,6 +236,7 @@ def StringAPI : PublicAPI<"string.h"> {
     "strspn",
     "strstr",
     "strtok",
+    "strtok_r",
     "strxfrm",   
   ];
 
