@@ -298,8 +298,7 @@ Status NativeProcessProtocol::RemoveHardwareBreakpoint(lldb::addr_t addr) {
 bool NativeProcessProtocol::RegisterNativeDelegate(
     NativeDelegate &native_delegate) {
   std::lock_guard<std::recursive_mutex> guard(m_delegates_mutex);
-  if (std::find(m_delegates.begin(), m_delegates.end(), &native_delegate) !=
-      m_delegates.end())
+  if (llvm::is_contained(m_delegates, &native_delegate))
     return false;
 
   m_delegates.push_back(&native_delegate);

@@ -1982,8 +1982,7 @@ public:
 protected:
   bool HandleOneThread(lldb::tid_t tid, CommandReturnObject &result) override {
     // If we have already handled this from a -t option, skip it here.
-    if (std::find(m_options.m_tids.begin(), m_options.m_tids.end(), tid) !=
-        m_options.m_tids.end())
+    if (llvm::is_contained(m_options.m_tids, tid))
       return true;
 
     Process *process = m_exe_ctx.GetProcessPtr();
