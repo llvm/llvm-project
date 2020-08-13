@@ -41,11 +41,13 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/Passes.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -116,6 +118,9 @@ static llvm::cl::opt<bool> enableOpenMP("fopenmp",
 
 static llvm::cl::opt<bool> dumpModuleOnFailure("dump-module-on-failure",
                                                llvm::cl::init(false));
+
+static llvm::cl::opt<std::string>
+    targetTriple("target", llvm::cl::desc("specify a target triple"));
 
 //===----------------------------------------------------------------------===//
 
@@ -280,6 +285,7 @@ int main(int argc, char **argv) {
   fir::registerOptPasses();
   [[maybe_unused]] llvm::InitLLVM y(argc, argv);
 
+  llvm::InitializeAllTargets();
   mlir::registerAsmPrinterCLOptions();
   mlir::registerMLIRContextCLOptions();
   mlir::registerPassManagerCLOptions();
