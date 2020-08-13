@@ -540,6 +540,7 @@ void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();
   in.binding = make<BindingSection>();
   in.got = make<GotSection>();
+  in.tlvPointers = make<TlvPointerSection>();
   in.lazyPointers = make<LazyPointerSection>();
   in.stubs = make<StubsSection>();
   in.stubHelper = make<StubHelperSection>();

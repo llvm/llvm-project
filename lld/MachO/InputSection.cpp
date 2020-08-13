@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputSection.h"
+#include "InputFiles.h"
 #include "OutputSegment.h"
 #include "Symbols.h"
 #include "Target.h"
@@ -54,4 +55,8 @@ void InputSection::writeTo(uint8_t *buf) {
       val -= getVA() + r.offset;
     target->relocateOne(buf + r.offset, r, val);
   }
+}
+
+std::string lld::toString(const InputSection *isec) {
+  return (toString(isec->file) + ":(" + isec->name + ")").str();
 }

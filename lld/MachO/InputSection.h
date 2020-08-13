@@ -74,6 +74,9 @@ public:
 extern std::vector<InputSection *> inputSections;
 
 } // namespace macho
+
+std::string toString(const macho::InputSection *);
+
 } // namespace lld
 
 #endif

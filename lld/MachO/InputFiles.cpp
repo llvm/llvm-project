@@ -363,8 +363,9 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
     parseTrie(buf + c->export_off, c->export_size,
               [&](const Twine &name, uint64_t flags) {
                 bool isWeakDef = flags & EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION;
-                symbols.push_back(
-                    symtab->addDylib(saver.save(name), umbrella, isWeakDef));
+                bool isTlv = flags & EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL;
+                symbols.push_back(symtab->addDylib(saver.save(name), umbrella,
+                                                   isWeakDef, isTlv));
               });
   } else {
     error("LC_DYLD_INFO_ONLY not found in " + getName());
@@ -403,11 +404,12 @@ DylibFile::DylibFile(std::shared_ptr<llvm::MachO::InterfaceFile> interface,
 
   dylibName = saver.save(interface->getInstallName());
   // TODO(compnerd) filter out symbols based on the target platform
-  // TODO: handle weak defs
+  // TODO: handle weak defs, thread locals
   for (const auto symbol : interface->symbols())
     if (symbol->getArchitectures().has(config->arch))
       symbols.push_back(symtab->addDylib(saver.save(symbol->getName()),
-                                         umbrella, /*isWeakDef=*/false));
+                                         umbrella, /*isWeakDef=*/false,
+                                         /*isTlv=*/false));
   // TODO(compnerd) properly represent the hierarchy of the documents as it is
   // in theory possible to have re-exported dylibs from re-exported dylibs which
   // should be parent'ed to the child.
