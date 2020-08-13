@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/Decl.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/APINotes/APINotesReader.h"
@@ -342,11 +344,22 @@ static void ProcessAPINotes(Sema &S, Decl *D,
 
   // ns_error_domain
   if (auto nsErrorDomain = info.getNSErrorDomain()) {
-    handleAPINotedAttribute<NSErrorDomainAttr>(S, D, !nsErrorDomain->empty(),
-                                               metadata, [&] {
-      return new (S.Context) NSErrorDomainAttr(
-          S.Context, getDummyAttrInfo(), &S.Context.Idents.get(*nsErrorDomain));
-    });
+    handleAPINotedAttribute<NSErrorDomainAttr>(
+        S, D, !nsErrorDomain->empty(), metadata, [&]() -> NSErrorDomainAttr * {
+          LookupResult lookupResult(
+              S, DeclarationName(&S.Context.Idents.get(*nsErrorDomain)),
+              SourceLocation(), Sema::LookupNameKind::LookupOrdinaryName);
+          S.LookupName(lookupResult, S.TUScope);
+          auto *VD = lookupResult.getAsSingle<VarDecl>();
+
+          if (!VD) {
+            S.Diag(D->getLocation(), diag::err_nserrordomain_invalid_decl) << 0;
+            return nullptr;
+          }
+
+          return new (S.Context)
+              NSErrorDomainAttr(S.Context, getDummyAttrInfo(), VD);
+        });
   }
 
   ProcessAPINotes(S, D, static_cast<const api_notes::CommonEntityInfo &>(info),
