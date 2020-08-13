@@ -12,9 +12,11 @@
 
 #include "clang/Tooling/Syntax/Mutations.h"
 #include "TreeTestBase.h"
+#include "clang/Tooling/Syntax/BuildTree.h"
 
-namespace clang {
-namespace syntax {
+using namespace clang;
+using namespace clang::syntax;
+
 namespace {
 
 TEST_P(SyntaxTreeTest, Mutations) {
@@ -81,5 +83,3 @@ TEST_P(SyntaxTreeTest, SynthesizedNodes) {
   EXPECT_TRUE(S->isDetached());
 }
 } // namespace
-} // namespace syntax
-} // namespace clang
