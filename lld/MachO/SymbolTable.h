@@ -36,7 +36,7 @@ public:
 
   Symbol *addUndefined(StringRef name);
 
-  Symbol *addDylib(StringRef name, DylibFile *file, bool isWeakDef);
+  Symbol *addDylib(StringRef name, DylibFile *file, bool isWeakDef, bool isTlv);
 
   Symbol *addLazy(StringRef name, ArchiveFile *file,
                   const llvm::object::Archive::Symbol &sym);
