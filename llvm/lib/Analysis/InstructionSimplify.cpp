@@ -5232,6 +5232,16 @@ static APInt getMaxMinLimit(Intrinsic::ID IID, unsigned BitWidth) {
   }
 }
 
+static ICmpInst::Predicate getMaxMinPredicate(Intrinsic::ID IID) {
+  switch (IID) {
+  case Intrinsic::smax: return ICmpInst::ICMP_SGE;
+  case Intrinsic::smin: return ICmpInst::ICMP_SLE;
+  case Intrinsic::umax: return ICmpInst::ICMP_UGE;
+  case Intrinsic::umin: return ICmpInst::ICMP_ULE;
+  default: llvm_unreachable("Unexpected intrinsic");
+  }
+}
+
 /// Given a min/max intrinsic, see if it can be removed based on having an
 /// operand that is another min/max intrinsic with shared operand(s). The caller
 /// is expected to swap the operand arguments to handle commutation.
@@ -5323,6 +5333,12 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
       return V;
     if (Value *V = foldMinMaxSharedOp(IID, Op1, Op0))
       return V;
+
+    ICmpInst::Predicate Pred = getMaxMinPredicate(IID);
+    if (isICmpTrue(Pred, Op0, Op1, Q.getWithoutUndef(), RecursionLimit))
+      return Op0;
+    if (isICmpTrue(Pred, Op1, Op0, Q.getWithoutUndef(), RecursionLimit))
+      return Op1;
 
     break;
   }
