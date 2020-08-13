@@ -261,16 +261,6 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       swift_category_sp,
       lldb_private::formatters::swift::SwiftBasicTypeSyntheticFrontEndCreator,
       "Swift.UWord", ConstString("Swift.UWord"), basic_synth_flags);
-  AddCXXSynthetic(
-      swift_category_sp,
-      lldb_private::formatters::swift::SwiftBasicTypeSyntheticFrontEndCreator,
-      "Swift.UnsafePointer", ConstString("^Swift.UnsafePointer<.+>$"),
-      basic_synth_flags, true);
-  AddCXXSynthetic(
-      swift_category_sp,
-      lldb_private::formatters::swift::SwiftBasicTypeSyntheticFrontEndCreator,
-      "Swift.UnsafeMutablePointer",
-      ConstString("^Swift.UnsafeMutablePointer<.+>$"), basic_synth_flags, true);
 
   AddFormat(swift_category_sp, lldb::eFormatPointer,
             ConstString("Swift.OpaquePointer"), format_flags, false);
@@ -330,9 +320,9 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
 
   AddCXXSummary(
       swift_category_sp,
-      lldb_private::formatters::swift::UnsafeBufferPointerSummaryProvider,
-      "Swift.Unsafe[Mutable][Raw]BufferPointer",
-      ConstString("^Swift.Unsafe(Mutable)?(Raw)?BufferPointer(<.+>)?$"),
+      lldb_private::formatters::swift::UnsafeTypeSummaryProvider,
+      "Swift.Unsafe[Mutable][Raw][Buffer]Pointer",
+      ConstString("^Swift.Unsafe(Mutable)?(Raw)?(Buffer)?Pointer(<.+>)?$"),
       summary_flags, true);
 
   DictionaryConfig::Get()
@@ -394,10 +384,9 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
 
   AddCXXSynthetic(
       swift_category_sp,
-      lldb_private::formatters::swift::
-          UnsafeBufferPointerSyntheticFrontEndCreator,
-      "Swift.Unsafe[Mutable][Raw]BufferPointer",
-      ConstString("^Swift.Unsafe(Mutable)?(Raw)?BufferPointer(<.+>)?$"),
+      lldb_private::formatters::swift::UnsafeTypeSyntheticFrontEndCreator,
+      "Swift.Unsafe[Mutable][Raw][Buffer]Pointer",
+      ConstString("^Swift.Unsafe(Mutable)?(Raw)?(Buffer)?Pointer(<.+>)?$"),
       synth_flags, true);
 
   DictionaryConfig::Get()
