@@ -6,8 +6,6 @@ static_library("TextAPI") {
   ]
   include_dirs = [ "." ]
   sources = [
-    "ELF/ELFStub.cpp",
-    "ELF/TBEHandler.cpp",
     "MachO/Architecture.cpp",
     "MachO/ArchitectureSet.cpp",
     "MachO/InterfaceFile.cpp",
