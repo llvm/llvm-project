@@ -65,6 +65,8 @@ func @float32_unary_scalar(%arg0: f32) {
   %8 = tanh %arg0 : f32
   // CHECK: spv.GLSL.Sin %{{.*}}: f32
   %9 = sin %arg0 : f32
+  // CHECK: spv.GLSL.Floor %{{.*}}: f32
+  %10 = floorf %arg0 : f32
   return
 }
 
