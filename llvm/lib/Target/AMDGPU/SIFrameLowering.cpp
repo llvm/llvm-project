@@ -158,6 +158,10 @@ static void buildPrologSpill(LivePhysRegs &LiveRegs, MachineBasicBlock &MBB,
     return;
   }
 
+  // Don't clobber the TmpVGPR if we also need a scratch reg for the stack
+  // offset in the spill.
+  LiveRegs.addReg(SpillReg);
+
   MCPhysReg OffsetReg = findScratchNonCalleeSaveRegister(
     MF->getRegInfo(), LiveRegs, AMDGPU::VGPR_32RegClass);
 
@@ -176,6 +180,8 @@ static void buildPrologSpill(LivePhysRegs &LiveRegs, MachineBasicBlock &MBB,
     .addImm(0) // dlc
     .addImm(0) // swz
     .addMemOperand(MMO);
+
+  LiveRegs.removeReg(SpillReg);
 }
 
 static void buildEpilogReload(LivePhysRegs &LiveRegs, MachineBasicBlock &MBB,
