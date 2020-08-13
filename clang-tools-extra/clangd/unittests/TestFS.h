@@ -34,21 +34,12 @@ buildTestFS(llvm::StringMap<std::string> const &Files,
 class MockFS : public ThreadsafeFS {
 public:
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> viewImpl() const override {
-    auto MemFS = buildTestFS(Files, Timestamps);
-    if (!OverlayRealFileSystemForModules)
-      return MemFS;
-    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem =
-        new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem());
-    OverlayFileSystem->pushOverlay(MemFS);
-    return OverlayFileSystem;
+    return buildTestFS(Files, Timestamps);
   }
 
   // If relative paths are used, they are resolved with testPath().
   llvm::StringMap<std::string> Files;
   llvm::StringMap<time_t> Timestamps;
-  // If true, real file system will be used as fallback for the in-memory one.
-  // This is useful for testing module support.
-  bool OverlayRealFileSystemForModules = false;
 };
 
 // A Compilation database that returns a fixed set of compile flags.

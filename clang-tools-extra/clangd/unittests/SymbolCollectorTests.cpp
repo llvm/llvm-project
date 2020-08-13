@@ -1610,31 +1610,6 @@ TEST_F(SymbolCollectorTest, MacrosInHeaders) {
   EXPECT_THAT(Symbols,
               UnorderedElementsAre(AllOf(QName("X"), ForCodeCompletion(true))));
 }
-
-// Regression test for a crash-bug we used to have.
-TEST_F(SymbolCollectorTest, UndefOfModuleMacro) {
-  auto TU = TestTU::withCode(R"cpp(#include "bar.h")cpp");
-  TU.AdditionalFiles["bar.h"] = R"cpp(
-    #include "foo.h"
-    #undef X
-    )cpp";
-  TU.AdditionalFiles["foo.h"] = "#define X 1";
-  TU.AdditionalFiles["module.map"] = R"cpp(
-    module foo {
-     header "foo.h"
-     export *
-   }
-   )cpp";
-  TU.ExtraArgs.push_back("-fmodules");
-  TU.ExtraArgs.push_back("-fmodule-map-file=" + testPath("module.map"));
-  TU.OverlayRealFileSystemForModules = true;
-
-  TU.build();
-  // We mostly care about not crashing, but verify that we didn't insert garbage
-  // about X too.
-  EXPECT_THAT(TU.headerSymbols(), Not(Contains(QName("X"))));
-}
-
 } // namespace
 } // namespace clangd
 } // namespace clang
