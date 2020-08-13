@@ -97,6 +97,7 @@ MODULE_PASS("msan-module", MemorySanitizerPass({}))
 MODULE_PASS("tsan-module", ThreadSanitizerPass())
 MODULE_PASS("kasan-module", ModuleAddressSanitizerPass(/*CompileKernel=*/true, false, true, false))
 MODULE_PASS("sancov-module", ModuleSanitizerCoveragePass())
+MODULE_PASS("heapprof-module", ModuleHeapProfilerPass())
 MODULE_PASS("poison-checking", PoisonCheckingPass())
 #undef MODULE_PASS
 
@@ -276,6 +277,7 @@ FUNCTION_PASS("kasan", AddressSanitizerPass(true, false, false))
 FUNCTION_PASS("msan", MemorySanitizerPass({}))
 FUNCTION_PASS("kmsan", MemorySanitizerPass({0, false, /*Kernel=*/true}))
 FUNCTION_PASS("tsan", ThreadSanitizerPass())
+FUNCTION_PASS("heapprof", HeapProfilerPass())
 #undef FUNCTION_PASS
 
 #ifndef FUNCTION_PASS_WITH_PARAMS
