@@ -14,6 +14,7 @@
 #include "mlir/IR/Function.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Interfaces/DecodeAttributesInterfaces.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Endian.h"
@@ -1227,17 +1228,20 @@ StringRef OpaqueElementsAttr::getValue() const { return getImpl()->bytes; }
 /// element, then a null attribute is returned.
 Attribute OpaqueElementsAttr::getValue(ArrayRef<uint64_t> index) const {
   assert(isValidIndex(index) && "expected valid multi-dimensional index");
-  if (Dialect *dialect = getDialect())
-    return dialect->extractElementHook(*this, index);
   return Attribute();
 }
 
 Dialect *OpaqueElementsAttr::getDialect() const { return getImpl()->dialect; }
 
 bool OpaqueElementsAttr::decode(ElementsAttr &result) {
-  if (auto *d = getDialect())
-    return d->decodeHook(*this, result);
-  return true;
+  auto *d = getDialect();
+  if (!d)
+    return true;
+  auto *interface =
+      d->getRegisteredInterface<DialectDecodeAttributesInterface>();
+  if (!interface)
+    return true;
+  return failed(interface->decode(*this, result));
 }
 
 //===----------------------------------------------------------------------===//
