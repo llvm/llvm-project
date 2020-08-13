@@ -855,13 +855,13 @@ define <4 x float> @broadcast_haddps_v4f32(<4 x float> %a0) {
 ; SSSE3-LABEL: broadcast_haddps_v4f32:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    haddps %xmm0, %xmm0
-; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSSE3-NEXT:    movsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
 ; SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: broadcast_haddps_v4f32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: broadcast_haddps_v4f32:

@@ -236,7 +236,8 @@ static FixedVectorType *getVectorType(IntrinsicInst *I) {
   unsigned ID = I->getIntrinsicID();
   FixedVectorType *VecTy;
   if (ID == Intrinsic::masked_load || isGather(I)) {
-    if (ID == Intrinsic::arm_mve_vldr_gather_base_wb_predicated)
+    if (ID == Intrinsic::arm_mve_vldr_gather_base_wb ||
+        ID == Intrinsic::arm_mve_vldr_gather_base_wb_predicated)
       // then the type is a StructType
       VecTy = dyn_cast<FixedVectorType>(I->getType()->getContainedType(0));
     else
