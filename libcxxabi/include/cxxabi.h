@@ -21,6 +21,7 @@
 
 #define _LIBCPPABI_VERSION 1002
 #define _LIBCXXABI_NORETURN  __attribute__((noreturn))
+#define _LIBCXXABI_ALWAYS_COLD __attribute__((cold))
 
 #ifdef __cplusplus
 
@@ -78,13 +79,13 @@ extern _LIBCXXABI_FUNC_VIS _LIBCXXABI_NORETURN void __cxa_deleted_virtual(void);
 
 // 3.3.2 One-time Construction API
 #if defined(_LIBCXXABI_GUARD_ABI_ARM)
-extern _LIBCXXABI_FUNC_VIS int __cxa_guard_acquire(uint32_t *);
-extern _LIBCXXABI_FUNC_VIS void __cxa_guard_release(uint32_t *);
-extern _LIBCXXABI_FUNC_VIS void __cxa_guard_abort(uint32_t *);
+extern _LIBCXXABI_FUNC_VIS _LIBCXXABI_ALWAYS_COLD int __cxa_guard_acquire(uint32_t *);
+extern _LIBCXXABI_FUNC_VIS _LIBCXXABI_ALWAYS_COLD void __cxa_guard_release(uint32_t *);
+extern _LIBCXXABI_FUNC_VIS _LIBCXXABI_ALWAYS_COLD void __cxa_guard_abort(uint32_t *);
 #else
-extern _LIBCXXABI_FUNC_VIS int __cxa_guard_acquire(uint64_t *);
-extern _LIBCXXABI_FUNC_VIS void __cxa_guard_release(uint64_t *);
-extern _LIBCXXABI_FUNC_VIS void __cxa_guard_abort(uint64_t *);
+extern _LIBCXXABI_FUNC_VIS _LIBCXXABI_ALWAYS_COLD int __cxa_guard_acquire(uint64_t *);
+extern _LIBCXXABI_FUNC_VIS _LIBCXXABI_ALWAYS_COLD void __cxa_guard_release(uint64_t *);
+extern _LIBCXXABI_FUNC_VIS _LIBCXXABI_ALWAYS_COLD void __cxa_guard_abort(uint64_t *);
 #endif
 
 // 3.3.3 Array Construction and Destruction API
