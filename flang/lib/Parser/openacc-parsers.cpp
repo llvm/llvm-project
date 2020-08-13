@@ -199,15 +199,8 @@ TYPE_PARSER(sourced(
         parenthesized(Parser<AccObjectListWithModifier>{}))))
 
 // 2.11 Combined constructs
-TYPE_PARSER(startAccLine >> construct<AccEndCombinedDirective>(sourced(
-                                "END"_tok >> Parser<AccCombinedDirective>{})))
-
 TYPE_PARSER(construct<AccBeginCombinedDirective>(
     sourced(Parser<AccCombinedDirective>{}), Parser<AccClauseList>{}))
-
-TYPE_PARSER(construct<OpenACCCombinedConstruct>(
-    Parser<AccBeginCombinedDirective>{} / endAccLine, block,
-    maybe(Parser<AccEndCombinedDirective>{} / endAccLine)))
 
 // 2.12 Atomic constructs
 TYPE_PARSER(construct<AccEndAtomic>(startAccLine >> "END ATOMIC"_tok))
@@ -281,4 +274,11 @@ TYPE_CONTEXT_PARSER("OpenACC construct"_en_US,
             construct<OpenACCConstruct>(Parser<OpenACCCacheConstruct>{}),
             construct<OpenACCConstruct>(Parser<OpenACCWaitConstruct>{}),
             construct<OpenACCConstruct>(Parser<OpenACCAtomicConstruct>{})))
+
+TYPE_PARSER(startAccLine >> sourced(construct<AccEndCombinedDirective>(sourced(
+                                "END"_tok >> Parser<AccCombinedDirective>{}))))
+
+TYPE_PARSER(construct<OpenACCCombinedConstruct>(
+    sourced(Parser<AccBeginCombinedDirective>{} / endAccLine)))
+
 } // namespace Fortran::parser

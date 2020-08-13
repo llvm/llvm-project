@@ -2104,10 +2104,9 @@ public:
     Walk(std::get<AccBeginCombinedDirective>(x.t));
     Put("\n");
     EndOpenACC();
-    Walk(std::get<Block>(x.t), "");
+    Walk(std::get<std::optional<DoConstruct>>(x.t));
     BeginOpenACC();
-    Word("!$ACC END ");
-    Walk(std::get<std::optional<AccEndCombinedDirective>>(x.t));
+    Walk("!$ACC END ", std::get<std::optional<DoConstruct>>(x.t));
     Put("\n");
     EndOpenACC();
   }
