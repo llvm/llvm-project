@@ -148,8 +148,8 @@ static void encodeBinding(const DylibSymbol &dysym, const OutputSection *osec,
       os << static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
                                  dysym.file->ordinal);
     } else {
-      error("TODO: Support larger dylib symbol ordinals");
-      return;
+      os << static_cast<uint8_t>(MachO::BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB);
+      encodeULEB128(dysym.file->ordinal, os);
     }
     lastBinding.ordinal = dysym.file->ordinal;
   }
@@ -348,11 +348,13 @@ uint32_t LazyBindingSection::encode(const DylibSymbol &sym) {
   uint64_t offset = in.lazyPointers->addr - dataSeg->firstSection()->addr +
                     sym.stubsIndex * WordSize;
   encodeULEB128(offset, os);
-  if (sym.file->ordinal <= MachO::BIND_IMMEDIATE_MASK)
+  if (sym.file->ordinal <= MachO::BIND_IMMEDIATE_MASK) {
     os << static_cast<uint8_t>(MachO::BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
                                sym.file->ordinal);
-  else
-    fatal("TODO: Support larger dylib symbol ordinals");
+  } else {
+    os << static_cast<uint8_t>(MachO::BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB);
+    encodeULEB128(sym.file->ordinal, os);
+  }
 
   os << static_cast<uint8_t>(MachO::BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM)
      << sym.getName() << '\0'
