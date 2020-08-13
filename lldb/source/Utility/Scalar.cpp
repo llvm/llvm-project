@@ -82,45 +82,19 @@ static bool IsSigned(Scalar::Type type) {
 
 // Promote to max type currently follows the ANSI C rule for type promotion in
 // expressions.
-static Scalar::Type PromoteToMaxType(
-    const Scalar &lhs,  // The const left hand side object
-    const Scalar &rhs,  // The const right hand side object
-    Scalar &temp_value, // A modifiable temp value than can be used to hold
-                        // either the promoted lhs or rhs object
-    const Scalar *&promoted_lhs_ptr, // Pointer to the resulting possibly
-                                     // promoted value of lhs (at most one of
-                                     // lhs/rhs will get promoted)
-    const Scalar *&promoted_rhs_ptr  // Pointer to the resulting possibly
-                                     // promoted value of rhs (at most one of
-                                     // lhs/rhs will get promoted)
-) {
-  Scalar result;
-  // Initialize the promoted values for both the right and left hand side
-  // values to be the objects themselves. If no promotion is needed (both right
-  // and left have the same type), then the temp_value will not get used.
-  promoted_lhs_ptr = &lhs;
-  promoted_rhs_ptr = &rhs;
+static Scalar::Type PromoteToMaxType(Scalar &lhs, Scalar &rhs) {
   // Extract the types of both the right and left hand side values
   Scalar::Type lhs_type = lhs.GetType();
   Scalar::Type rhs_type = rhs.GetType();
 
-  if (lhs_type > rhs_type) {
-    // Right hand side need to be promoted
-    temp_value = rhs; // Copy right hand side into the temp value
-    if (temp_value.Promote(lhs_type)) // Promote it
-      promoted_rhs_ptr =
-          &temp_value; // Update the pointer for the promoted right hand side
-  } else if (lhs_type < rhs_type) {
-    // Left hand side need to be promoted
-    temp_value = lhs; // Copy left hand side value into the temp value
-    if (temp_value.Promote(rhs_type)) // Promote it
-      promoted_lhs_ptr =
-          &temp_value; // Update the pointer for the promoted left hand side
-  }
+  if (lhs_type > rhs_type)
+    rhs.Promote(lhs_type);
+  else if (lhs_type < rhs_type)
+    lhs.Promote(rhs_type);
 
   // Make sure our type promotion worked as expected
-  if (promoted_lhs_ptr->GetType() == promoted_rhs_ptr->GetType())
-    return promoted_lhs_ptr->GetType(); // Return the resulting max type
+  if (lhs.GetType() == rhs.GetType())
+    return lhs.GetType(); // Return the resulting max type
 
   // Return the void type (zero) if we fail to promote either of the values.
   return Scalar::e_void;
@@ -684,21 +658,18 @@ long double Scalar::LongDouble(long double fail_value) const {
   return static_cast<long double>(Double(fail_value));
 }
 
-Scalar &Scalar::operator+=(const Scalar &rhs) {
-  Scalar temp_value;
-  const Scalar *a;
-  const Scalar *b;
-  if ((m_type = PromoteToMaxType(*this, rhs, temp_value, a, b)) !=
-      Scalar::e_void) {
+Scalar &Scalar::operator+=(Scalar rhs) {
+  Scalar copy = *this;
+  if ((m_type = PromoteToMaxType(copy, rhs)) != Scalar::e_void) {
     switch (GetCategory(m_type)) {
     case Category::Void:
       break;
     case Category::Integral:
-      m_integer = a->m_integer + b->m_integer;
+      m_integer = copy.m_integer + rhs.m_integer;
       break;
 
     case Category::Float:
-      m_float = a->m_float + b->m_float;
+      m_float = copy.m_float + rhs.m_float;
       break;
     }
   }
@@ -841,46 +812,38 @@ const Scalar lldb_private::operator+(const Scalar &lhs, const Scalar &rhs) {
   return result;
 }
 
-const Scalar lldb_private::operator-(const Scalar &lhs, const Scalar &rhs) {
+const Scalar lldb_private::operator-(Scalar lhs, Scalar rhs) {
   Scalar result;
-  Scalar temp_value;
-  const Scalar *a;
-  const Scalar *b;
-  if ((result.m_type = PromoteToMaxType(lhs, rhs, temp_value, a, b)) !=
-      Scalar::e_void) {
+  if ((result.m_type = PromoteToMaxType(lhs, rhs)) != Scalar::e_void) {
     switch (GetCategory(result.m_type)) {
     case Category::Void:
       break;
     case Category::Integral:
-      result.m_integer = a->m_integer - b->m_integer;
+      result.m_integer = lhs.m_integer - rhs.m_integer;
       break;
     case Category::Float:
-      result.m_float = a->m_float - b->m_float;
+      result.m_float = lhs.m_float - rhs.m_float;
       break;
     }
   }
   return result;
 }
 
-const Scalar lldb_private::operator/(const Scalar &lhs, const Scalar &rhs) {
+const Scalar lldb_private::operator/(Scalar lhs, Scalar rhs) {
   Scalar result;
-  Scalar temp_value;
-  const Scalar *a;
-  const Scalar *b;
-  if ((result.m_type = PromoteToMaxType(lhs, rhs, temp_value, a, b)) !=
-          Scalar::e_void &&
-      !b->IsZero()) {
+  if ((result.m_type = PromoteToMaxType(lhs, rhs)) != Scalar::e_void &&
+      !rhs.IsZero()) {
     switch (GetCategory(result.m_type)) {
     case Category::Void:
       break;
     case Category::Integral:
       if (IsSigned(result.m_type))
-        result.m_integer = a->m_integer.sdiv(b->m_integer);
-      else 
-        result.m_integer = a->m_integer.udiv(b->m_integer);
+        result.m_integer = lhs.m_integer.sdiv(rhs.m_integer);
+      else
+        result.m_integer = lhs.m_integer.udiv(rhs.m_integer);
       return result;
     case Category::Float:
-      result.m_float = a->m_float / b->m_float;
+      result.m_float = lhs.m_float / rhs.m_float;
       return result;
     }
   }
@@ -890,69 +853,53 @@ const Scalar lldb_private::operator/(const Scalar &lhs, const Scalar &rhs) {
   return result;
 }
 
-const Scalar lldb_private::operator*(const Scalar &lhs, const Scalar &rhs) {
+const Scalar lldb_private::operator*(Scalar lhs, Scalar rhs) {
   Scalar result;
-  Scalar temp_value;
-  const Scalar *a;
-  const Scalar *b;
-  if ((result.m_type = PromoteToMaxType(lhs, rhs, temp_value, a, b)) !=
-      Scalar::e_void) {
+  if ((result.m_type = PromoteToMaxType(lhs, rhs)) != Scalar::e_void) {
     switch (GetCategory(result.m_type)) {
     case Category::Void:
       break;
     case Category::Integral:
-      result.m_integer = a->m_integer * b->m_integer;
+      result.m_integer = lhs.m_integer * rhs.m_integer;
       break;
     case Category::Float:
-      result.m_float = a->m_float * b->m_float;
+      result.m_float = lhs.m_float * rhs.m_float;
       break;
     }
   }
   return result;
 }
 
-const Scalar lldb_private::operator&(const Scalar &lhs, const Scalar &rhs) {
+const Scalar lldb_private::operator&(Scalar lhs, Scalar rhs) {
   Scalar result;
-  Scalar temp_value;
-  const Scalar *a;
-  const Scalar *b;
-  if ((result.m_type = PromoteToMaxType(lhs, rhs, temp_value, a, b)) !=
-      Scalar::e_void) {
+  if ((result.m_type = PromoteToMaxType(lhs, rhs)) != Scalar::e_void) {
     if (GetCategory(result.m_type) == Category::Integral)
-      result.m_integer = a->m_integer & b->m_integer;
+      result.m_integer = lhs.m_integer & rhs.m_integer;
     else
       result.m_type = Scalar::e_void;
   }
   return result;
 }
 
-const Scalar lldb_private::operator|(const Scalar &lhs, const Scalar &rhs) {
+const Scalar lldb_private::operator|(Scalar lhs, Scalar rhs) {
   Scalar result;
-  Scalar temp_value;
-  const Scalar *a;
-  const Scalar *b;
-  if ((result.m_type = PromoteToMaxType(lhs, rhs, temp_value, a, b)) !=
-      Scalar::e_void) {
+  if ((result.m_type = PromoteToMaxType(lhs, rhs)) != Scalar::e_void) {
     if (GetCategory(result.m_type) == Category::Integral)
-      result.m_integer = a->m_integer | b->m_integer;
+      result.m_integer = lhs.m_integer | rhs.m_integer;
     else
       result.m_type = Scalar::e_void;
   }
   return result;
 }
 
-const Scalar lldb_private::operator%(const Scalar &lhs, const Scalar &rhs) {
+const Scalar lldb_private::operator%(Scalar lhs, Scalar rhs) {
   Scalar result;
-  Scalar temp_value;
-  const Scalar *a;
-  const Scalar *b;
-  if ((result.m_type = PromoteToMaxType(lhs, rhs, temp_value, a, b)) !=
-      Scalar::e_void) {
-    if (!b->IsZero() && GetCategory(result.m_type) == Category::Integral) {
+  if ((result.m_type = PromoteToMaxType(lhs, rhs)) != Scalar::e_void) {
+    if (!rhs.IsZero() && GetCategory(result.m_type) == Category::Integral) {
       if (IsSigned(result.m_type))
-        result.m_integer = a->m_integer.srem(b->m_integer);
+        result.m_integer = lhs.m_integer.srem(rhs.m_integer);
       else
-        result.m_integer = a->m_integer.urem(b->m_integer);
+        result.m_integer = lhs.m_integer.urem(rhs.m_integer);
       return result;
     }
   }
@@ -960,15 +907,11 @@ const Scalar lldb_private::operator%(const Scalar &lhs, const Scalar &rhs) {
   return result;
 }
 
-const Scalar lldb_private::operator^(const Scalar &lhs, const Scalar &rhs) {
+const Scalar lldb_private::operator^(Scalar lhs, Scalar rhs) {
   Scalar result;
-  Scalar temp_value;
-  const Scalar *a;
-  const Scalar *b;
-  if ((result.m_type = PromoteToMaxType(lhs, rhs, temp_value, a, b)) !=
-      Scalar::e_void) {
+  if ((result.m_type = PromoteToMaxType(lhs, rhs)) != Scalar::e_void) {
     if (GetCategory(result.m_type) == Category::Integral)
-      result.m_integer = a->m_integer ^ b->m_integer;
+      result.m_integer = lhs.m_integer ^ rhs.m_integer;
     else
       result.m_type = Scalar::e_void;
   }
@@ -1214,16 +1157,13 @@ bool Scalar::ExtractBitfield(uint32_t bit_size, uint32_t bit_offset) {
   return false;
 }
 
-bool lldb_private::operator==(const Scalar &lhs, const Scalar &rhs) {
+bool lldb_private::operator==(Scalar lhs, Scalar rhs) {
   // If either entry is void then we can just compare the types
   if (lhs.m_type == Scalar::e_void || rhs.m_type == Scalar::e_void)
     return lhs.m_type == rhs.m_type;
 
-  Scalar temp_value;
-  const Scalar *a;
-  const Scalar *b;
   llvm::APFloat::cmpResult result;
-  switch (PromoteToMaxType(lhs, rhs, temp_value, a, b)) {
+  switch (PromoteToMaxType(lhs, rhs)) {
   case Scalar::e_void:
     break;
   case Scalar::e_sint:
@@ -1238,11 +1178,11 @@ bool lldb_private::operator==(const Scalar &lhs, const Scalar &rhs) {
   case Scalar::e_uint256:
   case Scalar::e_sint512:
   case Scalar::e_uint512:
-    return a->m_integer == b->m_integer;
+    return lhs.m_integer == rhs.m_integer;
   case Scalar::e_float:
   case Scalar::e_double:
   case Scalar::e_long_double:
-    result = a->m_float.compare(b->m_float);
+    result = lhs.m_float.compare(rhs.m_float);
     if (result == llvm::APFloat::cmpEqual)
       return true;
   }
@@ -1253,15 +1193,12 @@ bool lldb_private::operator!=(const Scalar &lhs, const Scalar &rhs) {
   return !(lhs == rhs);
 }
 
-bool lldb_private::operator<(const Scalar &lhs, const Scalar &rhs) {
+bool lldb_private::operator<(Scalar lhs, Scalar rhs) {
   if (lhs.m_type == Scalar::e_void || rhs.m_type == Scalar::e_void)
     return false;
 
-  Scalar temp_value;
-  const Scalar *a;
-  const Scalar *b;
   llvm::APFloat::cmpResult result;
-  switch (PromoteToMaxType(lhs, rhs, temp_value, a, b)) {
+  switch (PromoteToMaxType(lhs, rhs)) {
   case Scalar::e_void:
     break;
   case Scalar::e_sint:
@@ -1271,17 +1208,17 @@ bool lldb_private::operator<(const Scalar &lhs, const Scalar &rhs) {
   case Scalar::e_sint256:
   case Scalar::e_sint512:
   case Scalar::e_uint512:
-    return a->m_integer.slt(b->m_integer);
+    return lhs.m_integer.slt(rhs.m_integer);
   case Scalar::e_uint:
   case Scalar::e_ulong:
   case Scalar::e_ulonglong:
   case Scalar::e_uint128:
   case Scalar::e_uint256:
-    return a->m_integer.ult(b->m_integer);
+    return lhs.m_integer.ult(rhs.m_integer);
   case Scalar::e_float:
   case Scalar::e_double:
   case Scalar::e_long_double:
-    result = a->m_float.compare(b->m_float);
+    result = lhs.m_float.compare(rhs.m_float);
     if (result == llvm::APFloat::cmpLessThan)
       return true;
   }
