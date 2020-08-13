@@ -59,6 +59,8 @@ class LLVMConfig(object):
             features.add('system-netbsd')
         elif platform.system() == 'AIX':
             features.add('system-aix')
+        elif platform.system() == 'SunOS':
+            features.add('system-solaris')
 
         # Native compilation: host arch == default triple arch
         # Both of these values should probably be in every site config (e.g. as
