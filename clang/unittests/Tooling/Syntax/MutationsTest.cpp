@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Tooling/Syntax/Mutations.h"
 #include "TreeTestBase.h"
 
 namespace clang {
