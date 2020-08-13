@@ -84,7 +84,7 @@ public:
 // .dylib file
 class DylibFile : public InputFile {
 public:
-  explicit DylibFile(std::shared_ptr<llvm::MachO::InterfaceFile> interface,
+  explicit DylibFile(const llvm::MachO::InterfaceFile &interface,
                      DylibFile *umbrella = nullptr);
 
   // Mach-O dylibs can re-export other dylibs as sub-libraries, meaning that the
