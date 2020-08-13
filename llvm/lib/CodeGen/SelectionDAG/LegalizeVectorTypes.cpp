@@ -2253,13 +2253,14 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_VECTOR_ELT(SDNode *N) {
     SDValue Lo, Hi;
     GetSplitVector(Vec, Lo, Hi);
 
-    uint64_t LoElts = Lo.getValueType().getVectorNumElements();
+    uint64_t LoElts = Lo.getValueType().getVectorMinNumElements();
 
     if (IdxVal < LoElts)
       return SDValue(DAG.UpdateNodeOperands(N, Lo, Idx), 0);
-    return SDValue(DAG.UpdateNodeOperands(N, Hi,
-                                  DAG.getConstant(IdxVal - LoElts, SDLoc(N),
-                                                  Idx.getValueType())), 0);
+    else if (!Vec.getValueType().isScalableVector())
+      return SDValue(DAG.UpdateNodeOperands(N, Hi,
+                                    DAG.getConstant(IdxVal - LoElts, SDLoc(N),
+                                                    Idx.getValueType())), 0);
   }
 
   // See if the target wants to custom expand this node.
@@ -2272,7 +2273,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_VECTOR_ELT(SDNode *N) {
   if (VecVT.getScalarSizeInBits() < 8) {
     EltVT = MVT::i8;
     VecVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
-                             VecVT.getVectorNumElements());
+                             VecVT.getVectorElementCount());
     Vec = DAG.getNode(ISD::ANY_EXTEND, dl, VecVT, Vec);
   }
 
@@ -2302,7 +2303,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_VECTOR_ELT(SDNode *N) {
   return DAG.getExtLoad(
       ISD::EXTLOAD, dl, N->getValueType(0), Store, StackPtr,
       MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()), EltVT,
-      commonAlignment(SmallestAlign, EltVT.getSizeInBits() / 8));
+      commonAlignment(SmallestAlign, EltVT.getSizeInBits().getFixedSize() / 8));
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_ExtVecInRegOp(SDNode *N) {
