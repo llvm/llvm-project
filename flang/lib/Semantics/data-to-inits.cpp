@@ -229,7 +229,9 @@ DataInitializationCompiler::ConvertElement(
     // (most) other Fortran compilers do.  Pad on the right with spaces
     // when short, truncate the right if long.
     // TODO: big-endian targets
-    std::size_t bytes{type.MeasureSizeInBytes().value()};
+    std::size_t bytes{static_cast<std::size_t>(evaluate::ToInt64(
+        type.MeasureSizeInBytes(&exprAnalyzer_.GetFoldingContext()))
+                                                   .value())};
     evaluate::BOZLiteralConstant bits{0};
     for (std::size_t j{0}; j < bytes; ++j) {
       char ch{j >= chValue->size() ? ' ' : chValue->at(j)};
@@ -425,12 +427,16 @@ static bool CombineSomeEquivalencedInits(
     }
     // Compute the minimum common granularity
     if (auto dyType{evaluate::DynamicType::From(symbol)}) {
-      minElementBytes = dyType->MeasureSizeInBytes().value_or(1);
+      minElementBytes = evaluate::ToInt64(
+          dyType->MeasureSizeInBytes(&exprAnalyzer.GetFoldingContext()))
+                            .value_or(1);
     }
     for (const Symbol *s : conflicts) {
       if (auto dyType{evaluate::DynamicType::From(*s)}) {
-        minElementBytes =
-            std::min(minElementBytes, dyType->MeasureSizeInBytes().value_or(1));
+        minElementBytes = std::min(minElementBytes,
+            static_cast<std::size_t>(evaluate::ToInt64(
+                dyType->MeasureSizeInBytes(&exprAnalyzer.GetFoldingContext()))
+                                         .value_or(1)));
       } else {
         minElementBytes = 1;
       }
