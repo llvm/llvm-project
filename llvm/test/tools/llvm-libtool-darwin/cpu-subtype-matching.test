@@ -1,0 +1,269 @@
+## This test checks that the CPU subtype matching logic is handled correctly.
+
+# RUN: yaml2obj %s --docnum=1 -o %t.armv6
+# RUN: yaml2obj %s --docnum=2 -o %t.armv7
+
+# RUN: llvm-libtool-darwin -static -o %t.lib %t.armv6 %t.armv7 -arch_only armv7
+
+## Check that only armv7 binary is present:
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=ARM-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+
+# ARM-NAMES: [[PREFIX]].armv7
+
+## Check that only armv7 symbol is present:
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=ARM-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# ARM-SYMBOLS:      Archive map
+# ARM-SYMBOLS-NEXT: _armv7 in [[PREFIX]].armv7
+# ARM-SYMBOLS-EMPTY:
+
+## armv6.yaml
+## CPUTYPE:    CPU_TYPE_ARM
+## CPUSUBTYPE: CPU_SUBTYPE_ARM_V6
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACE
+  cputype:         0x0000000C
+  cpusubtype:      0x00000006
+  filetype:        0x00000001
+  ncmds:           2
+  sizeofcmds:      148
+  flags:           0x00002000
+LoadCommands:
+  - cmd:             LC_SEGMENT
+    cmdsize:         124
+    segname:         ''
+    vmaddr:          0
+    vmsize:          24
+    fileoff:         296
+    filesize:        24
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        size:            24
+        offset:          0x00000128
+        align:           2
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         04D04DE208009FE500008DE504D08DE21EFF2FE100000000
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          328
+    nsyms:           1
+    stroff:          340
+    strsize:         8
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - _armv6
+    - ''
+...
+
+## armv7.yaml
+## CPUTYPE:    CPU_TYPE_ARM
+## CPUSUBTYPE: CPU_SUBTYPE_ARM_V7
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACE
+  cputype:         0x0000000C
+  cpusubtype:      0x00000009
+  filetype:        0x00000001
+  ncmds:           2
+  sizeofcmds:      148
+  flags:           0x00002000
+LoadCommands:
+  - cmd:             LC_SEGMENT
+    cmdsize:         124
+    segname:         ''
+    vmaddr:          0
+    vmsize:          10
+    fileoff:         280
+    filesize:        10
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        size:            10
+        offset:          0x00000118
+        align:           1
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         81B00020009001B07047
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          292
+    nsyms:           1
+    stroff:          304
+    strsize:         8
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          8
+      n_value:         0
+  StringTable:
+    - ''
+    - _armv7
+    - ''
+...
+
+# RUN: yaml2obj %s --docnum=3 -o %t.x86_64
+# RUN: yaml2obj %s --docnum=4 -o %t.x86_64_h
+
+# RUN: llvm-libtool-darwin -static -o %t.lib %t.x86_64 %t.x86_64_h -arch_only x86_64
+
+## Check that only x86_64 binary is present:
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=X86-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+
+# X86-NAMES: [[PREFIX]].x86_64
+
+## Check that only x86_64 symbol is present:
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=X86-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# X86-SYMBOLS:      Archive map
+# X86-SYMBOLS-NEXT: _x86_64 in [[PREFIX]].x86_64
+# X86-SYMBOLS-EMPTY:
+
+## x86_64.yaml
+## CPUTYPE:    CPU_TYPE_X86_64
+## CPUSUBTYPE: CPU_SUBTYPE_X86_64_ALL
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           2
+  sizeofcmds:      176
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         ''
+    vmaddr:          0
+    vmsize:          15
+    fileoff:         312
+    filesize:        15
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        size:            15
+        offset:          0x00000138
+        align:           4
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         554889E531C0C745FC000000005DC3
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          328
+    nsyms:           1
+    stroff:          344
+    strsize:         8
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - _x86_64
+    - ''
+...
+
+## x86_64h.yaml
+## CPUTYPE:    CPU_TYPE_X86_64
+## CPUSUBTYPE: CPU_SUBTYPE_X86_64_H
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000008
+  filetype:        0x00000001
+  ncmds:           2
+  sizeofcmds:      176
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         ''
+    vmaddr:          0
+    vmsize:          15
+    fileoff:         312
+    filesize:        15
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        size:            15
+        offset:          0x00000138
+        align:           4
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+        content:         554889E531C0C745FC000000005DC3
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          328
+    nsyms:           1
+    stroff:          344
+    strsize:         8
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - _x86_64_h
+    - ''
+...
