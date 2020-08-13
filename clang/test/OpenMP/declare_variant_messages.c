@@ -153,3 +153,17 @@ void caller() {
 #pragma omp declare variant // expected-error {{function declaration is expected after 'declare variant' directive}}
 
 #pragma omp declare variant // expected-error {{function declaration is expected after 'declare variant' directive}}
+
+// FIXME: If the scores are equivalent we should detect that and allow it.
+#pragma omp begin declare variant match(implementation = {vendor(score(2) \
+                                                                 : llvm)})
+#pragma omp declare variant(foo) match(implementation = {vendor(score(2) \
+                                                                : llvm)}) // expected-error@-1 {{nested OpenMP context selector contains duplicated trait 'llvm' in selector 'vendor' and set 'implementation' with different score}}
+int conflicting_nested_score(void);
+#pragma omp end declare variant
+
+// FIXME: We should build the conjuction of different conditions, see also the score fixme above.
+#pragma omp begin declare variant match(user = {condition(1)})
+#pragma omp declare variant(foo) match(user = {condition(1)}) // expected-error {{nested user conditions in OpenMP context selector not supported (yet)}}
+int conflicting_nested_condition(void);
+#pragma omp end declare variant
