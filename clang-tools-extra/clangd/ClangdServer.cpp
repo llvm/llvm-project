@@ -525,26 +525,6 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
   WorkScheduler.runWithAST("ApplyTweak", File, std::move(Action));
 }
 
-void ClangdServer::dumpAST(PathRef File,
-                           llvm::unique_function<void(std::string)> Callback) {
-  auto Action = [Callback = std::move(Callback)](
-                    llvm::Expected<InputsAndAST> InpAST) mutable {
-    if (!InpAST) {
-      llvm::consumeError(InpAST.takeError());
-      return Callback("<no-ast>");
-    }
-    std::string Result;
-
-    llvm::raw_string_ostream ResultOS(Result);
-    clangd::dumpAST(InpAST->AST, ResultOS);
-    ResultOS.flush();
-
-    Callback(Result);
-  };
-
-  WorkScheduler.runWithAST("DumpAST", File, std::move(Action));
-}
-
 void ClangdServer::locateSymbolAt(PathRef File, Position Pos,
                                   Callback<std::vector<LocatedSymbol>> CB) {
   auto Action = [Pos, CB = std::move(CB),

@@ -139,9 +139,25 @@ std::string replacePtrsInDump(std::string const &Dump) {
   return Result;
 }
 
+std::string dumpAST(ClangdServer &Server, PathRef File) {
+  std::string Result;
+  Notification Done;
+  Server.customAction(File, "DumpAST", [&](llvm::Expected<InputsAndAST> AST) {
+    if (AST) {
+      llvm::raw_string_ostream ResultOS(Result);
+      AST->AST.getASTContext().getTranslationUnitDecl()->dump(ResultOS, true);
+    } else {
+      llvm::consumeError(AST.takeError());
+      Result = "<no-ast>";
+    }
+    Done.notify();
+  });
+  Done.wait();
+  return Result;
+}
+
 std::string dumpASTWithoutMemoryLocs(ClangdServer &Server, PathRef File) {
-  auto DumpWithMemLocs = runDumpAST(Server, File);
-  return replacePtrsInDump(DumpWithMemLocs);
+  return replacePtrsInDump(dumpAST(Server, File));
 }
 
 class ClangdVFSTest : public ::testing::Test {
@@ -607,7 +623,7 @@ TEST_F(ClangdVFSTest, InvalidCompileCommand) {
   // Clang can't parse command args in that case, but we shouldn't crash.
   runAddDocument(Server, FooCpp, "int main() {}");
 
-  EXPECT_EQ(runDumpAST(Server, FooCpp), "<no-ast>");
+  EXPECT_EQ(dumpAST(Server, FooCpp), "<no-ast>");
   EXPECT_ERROR(runLocateSymbolAt(Server, FooCpp, Position()));
   EXPECT_ERROR(runFindDocumentHighlights(Server, FooCpp, Position()));
   EXPECT_ERROR(runRename(Server, FooCpp, Position(), "new_name",
