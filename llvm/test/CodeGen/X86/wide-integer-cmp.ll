@@ -9,12 +9,12 @@ define i32 @branch_eq(i64 %a, i64 %b) {
 ; CHECK-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl %ecx, %eax
-; CHECK-NEXT:    je .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %bb2
-; CHECK-NEXT:    movl $2, %eax
-; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB0_1: # %bb1
+; CHECK-NEXT:    jne .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    retl
+; CHECK-NEXT:  .LBB0_2: # %bb2
+; CHECK-NEXT:    movl $2, %eax
 ; CHECK-NEXT:    retl
 entry:
   %cmp = icmp eq i64 %a, %b
@@ -55,12 +55,12 @@ define i32 @branch_ule(i64 %a, i64 %b) {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    jae .LBB2_1
-; CHECK-NEXT:  # %bb.2: # %bb2
-; CHECK-NEXT:    movl $2, %eax
-; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB2_1: # %bb1
+; CHECK-NEXT:    jb .LBB2_2
+; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    retl
+; CHECK-NEXT:  .LBB2_2: # %bb2
+; CHECK-NEXT:    movl $2, %eax
 ; CHECK-NEXT:    retl
 entry:
   %cmp = icmp ule i64 %a, %b
