@@ -15,6 +15,7 @@
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Multilib.h"
+#include "clang/Driver/Tool.h"
 #include "clang/Driver/Types.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -56,7 +57,6 @@ class Compilation;
 class Driver;
 class InputInfo;
 class SanitizerArgs;
-class Tool;
 class XRayArgs;
 
 /// Helper structure used to pass information extracted from clang executable
@@ -565,6 +565,14 @@ public:
   virtual void
   AddFlangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &Flang1Args) const {}
+
+  /// Add options that need to be passed to cc1 for this target that could add
+  /// commands to the compilation to transform an input.
+  virtual void
+  addActionsFromClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+				   llvm::opt::ArgStringList &CC1Args,
+				   const JobAction &JA, Compilation &C,
+				   const InputInfoList &Inputs) const;
 
   /// Add options that need to be passed to cc1 for this target.
   virtual void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,

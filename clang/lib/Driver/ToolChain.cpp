@@ -808,6 +808,14 @@ void ToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   // Each toolchain should provide the appropriate include flags.
 }
 
+void ToolChain::addActionsFromClangTargetOptions(
+    const ArgList &DriverArgs,
+    ArgStringList &CC1Args,
+    const JobAction &JA,
+    Compilation &C,
+    const InputInfoList &Inputs) const
+{}
+
 void ToolChain::addClangTargetOptions(
     const ArgList &DriverArgs, ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadKind) const {}

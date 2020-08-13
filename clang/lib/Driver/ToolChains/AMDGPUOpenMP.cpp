@@ -214,10 +214,10 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
 
   // for OpenMP, we already did this in clang-build-select-link
   if (JA.getOffloadingDeviceKind() != Action::OFK_OpenMP)
-     AddStaticDeviceLibs(C, *this, JA, Inputs, Args, CmdArgs, "amdgcn",
-                      SubArchName,
-                      /* bitcode SDL?*/ true,
-                      /* PostClang Link? */ false);
+    AddStaticDeviceLibs(C, *this, JA, Inputs, Args, CmdArgs, "amdgcn",
+                        SubArchName,
+                        /* bitcode SDL?*/ true,
+                        /* PostClang Link? */ false);
 
   // Add an intermediate output file.
   CmdArgs.push_back("-o");

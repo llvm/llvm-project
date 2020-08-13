@@ -998,8 +998,9 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
             return nullptr;
           }
 
-          auto ChildBuf =
-              llvm::MemoryBuffer::getMemBuffer(MemBufRef.get(), false);
+          auto ChildBuf = llvm::MemoryBuffer::getMemBufferCopy(
+              MemBufRef.get().getBuffer(),
+              MemBufRef.get().getBufferIdentifier());
           Expected<std::unique_ptr<llvm::Module>> ModuleOrErr =
               getOwningLazyBitcodeModule(std::move(ChildBuf), *VMContext);
           if (!ModuleOrErr) {
