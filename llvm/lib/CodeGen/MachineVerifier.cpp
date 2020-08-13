@@ -304,6 +304,19 @@ FunctionPass *llvm::createMachineVerifierPass(const std::string &Banner) {
   return new MachineVerifierPass(Banner);
 }
 
+void llvm::verifyMachineFunction(MachineFunctionAnalysisManager *,
+                                 const std::string &Banner,
+                                 const MachineFunction &MF) {
+  // TODO: Use MFAM after porting below analyses.
+  // LiveVariables *LiveVars;
+  // LiveIntervals *LiveInts;
+  // LiveStacks *LiveStks;
+  // SlotIndexes *Indexes;
+  unsigned FoundErrors = MachineVerifier(nullptr, Banner.c_str()).verify(MF);
+  if (FoundErrors)
+    report_fatal_error("Found " + Twine(FoundErrors) + " machine code errors.");
+}
+
 bool MachineFunction::verify(Pass *p, const char *Banner, bool AbortOnErrors)
     const {
   MachineFunction &MF = const_cast<MachineFunction&>(*this);
