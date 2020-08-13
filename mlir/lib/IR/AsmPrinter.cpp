@@ -1576,128 +1576,95 @@ void ModulePrinter::printType(Type type) {
     }
   }
 
-  switch (type.getKind()) {
-  default:
-    return printDialectType(type);
-
-  case Type::Kind::Opaque: {
-    auto opaqueTy = type.cast<OpaqueType>();
-    printDialectSymbol(os, "!", opaqueTy.getDialectNamespace(),
-                       opaqueTy.getTypeData());
-    return;
-  }
-  case StandardTypes::Index:
-    os << "index";
-    return;
-  case StandardTypes::BF16:
-    os << "bf16";
-    return;
-  case StandardTypes::F16:
-    os << "f16";
-    return;
-  case StandardTypes::F32:
-    os << "f32";
-    return;
-  case StandardTypes::F64:
-    os << "f64";
-    return;
-
-  case StandardTypes::Integer: {
-    auto integer = type.cast<IntegerType>();
-    if (integer.isSigned())
-      os << 's';
-    else if (integer.isUnsigned())
-      os << 'u';
-    os << 'i' << integer.getWidth();
-    return;
-  }
-  case Type::Kind::Function: {
-    auto func = type.cast<FunctionType>();
-    os << '(';
-    interleaveComma(func.getInputs(), [&](Type type) { printType(type); });
-    os << ") -> ";
-    auto results = func.getResults();
-    if (results.size() == 1 && !results[0].isa<FunctionType>())
-      os << results[0];
-    else {
-      os << '(';
-      interleaveComma(results, [&](Type type) { printType(type); });
-      os << ')';
-    }
-    return;
-  }
-  case StandardTypes::Vector: {
-    auto v = type.cast<VectorType>();
-    os << "vector<";
-    for (auto dim : v.getShape())
-      os << dim << 'x';
-    os << v.getElementType() << '>';
-    return;
-  }
-  case StandardTypes::RankedTensor: {
-    auto v = type.cast<RankedTensorType>();
-    os << "tensor<";
-    for (auto dim : v.getShape()) {
-      if (dim < 0)
-        os << '?';
-      else
-        os << dim;
-      os << 'x';
-    }
-    os << v.getElementType() << '>';
-    return;
-  }
-  case StandardTypes::UnrankedTensor: {
-    auto v = type.cast<UnrankedTensorType>();
-    os << "tensor<*x";
-    printType(v.getElementType());
-    os << '>';
-    return;
-  }
-  case StandardTypes::MemRef: {
-    auto v = type.cast<MemRefType>();
-    os << "memref<";
-    for (auto dim : v.getShape()) {
-      if (dim < 0)
-        os << '?';
-      else
-        os << dim;
-      os << 'x';
-    }
-    printType(v.getElementType());
-    for (auto map : v.getAffineMaps()) {
-      os << ", ";
-      printAttribute(AffineMapAttr::get(map));
-    }
-    // Only print the memory space if it is the non-default one.
-    if (v.getMemorySpace())
-      os << ", " << v.getMemorySpace();
-    os << '>';
-    return;
-  }
-  case StandardTypes::UnrankedMemRef: {
-    auto v = type.cast<UnrankedMemRefType>();
-    os << "memref<*x";
-    printType(v.getElementType());
-    os << '>';
-    return;
-  }
-  case StandardTypes::Complex:
-    os << "complex<";
-    printType(type.cast<ComplexType>().getElementType());
-    os << '>';
-    return;
-  case StandardTypes::Tuple: {
-    auto tuple = type.cast<TupleType>();
-    os << "tuple<";
-    interleaveComma(tuple.getTypes(), [&](Type type) { printType(type); });
-    os << '>';
-    return;
-  }
-  case StandardTypes::None:
-    os << "none";
-    return;
-  }
+  TypeSwitch<Type>(type)
+      .Case<OpaqueType>([&](OpaqueType opaqueTy) {
+        printDialectSymbol(os, "!", opaqueTy.getDialectNamespace(),
+                           opaqueTy.getTypeData());
+      })
+      .Case<IndexType>([&](Type) { os << "index"; })
+      .Case<BFloat16Type>([&](Type) { os << "bf16"; })
+      .Case<Float16Type>([&](Type) { os << "f16"; })
+      .Case<Float32Type>([&](Type) { os << "f32"; })
+      .Case<Float64Type>([&](Type) { os << "f64"; })
+      .Case<IntegerType>([&](IntegerType integerTy) {
+        if (integerTy.isSigned())
+          os << 's';
+        else if (integerTy.isUnsigned())
+          os << 'u';
+        os << 'i' << integerTy.getWidth();
+      })
+      .Case<FunctionType>([&](FunctionType funcTy) {
+        os << '(';
+        interleaveComma(funcTy.getInputs(), [&](Type ty) { printType(ty); });
+        os << ") -> ";
+        ArrayRef<Type> results = funcTy.getResults();
+        if (results.size() == 1 && !results[0].isa<FunctionType>()) {
+          os << results[0];
+        } else {
+          os << '(';
+          interleaveComma(results, [&](Type ty) { printType(ty); });
+          os << ')';
+        }
+      })
+      .Case<VectorType>([&](VectorType vectorTy) {
+        os << "vector<";
+        for (int64_t dim : vectorTy.getShape())
+          os << dim << 'x';
+        os << vectorTy.getElementType() << '>';
+      })
+      .Case<RankedTensorType>([&](RankedTensorType tensorTy) {
+        os << "tensor<";
+        for (int64_t dim : tensorTy.getShape()) {
+          if (ShapedType::isDynamic(dim))
+            os << '?';
+          else
+            os << dim;
+          os << 'x';
+        }
+        os << tensorTy.getElementType() << '>';
+      })
+      .Case<UnrankedTensorType>([&](UnrankedTensorType tensorTy) {
+        os << "tensor<*x";
+        printType(tensorTy.getElementType());
+        os << '>';
+      })
+      .Case<MemRefType>([&](MemRefType memrefTy) {
+        os << "memref<";
+        for (int64_t dim : memrefTy.getShape()) {
+          if (ShapedType::isDynamic(dim))
+            os << '?';
+          else
+            os << dim;
+          os << 'x';
+        }
+        printType(memrefTy.getElementType());
+        for (auto map : memrefTy.getAffineMaps()) {
+          os << ", ";
+          printAttribute(AffineMapAttr::get(map));
+        }
+        // Only print the memory space if it is the non-default one.
+        if (memrefTy.getMemorySpace())
+          os << ", " << memrefTy.getMemorySpace();
+        os << '>';
+      })
+      .Case<UnrankedMemRefType>([&](UnrankedMemRefType memrefTy) {
+        os << "memref<*x";
+        printType(memrefTy.getElementType());
+        os << '>';
+      })
+      .Case<ComplexType>([&](ComplexType complexTy) {
+        os << "complex<";
+        printType(complexTy.getElementType());
+        os << '>';
+      })
+      .Case<TupleType>([&](TupleType tupleTy) {
+        os << "tuple<";
+        interleaveComma(tupleTy.getTypes(),
+                        [&](Type type) { printType(type); });
+        os << '>';
+      })
+      .Case<NoneType>([&](Type) { os << "none"; })
+      .Default([&](Type type) { return printDialectType(type); });
 }
 
 void ModulePrinter::printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
