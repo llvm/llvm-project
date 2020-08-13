@@ -30,7 +30,7 @@ void test(const void* key, int len) {
 
 int main(int, char**) {
   const std::string TestCases[] = {
-      "abcdaoeuaoeclaoeoaeuaoeuaousaotehu]+}sthoasuthaoesutahoesutaohesutaoeusaoetuhasoetuhaoseutaoseuthaoesutaohes"
+      "abcdaoeuaoeclaoeoaeuaoeuaousaotehu]+}sthoasuthaoesutahoesutaohesutaoeusaoetuhasoetuhaoseutaoseuthaoesutaohes",
       "00000000000000000000000000000000000000000000000000000000000000000000000",
       "1237546895+54+4554985416849484213464984765465464654564565645645646546456546546"
   };
