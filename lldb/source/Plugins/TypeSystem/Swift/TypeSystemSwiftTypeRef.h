@@ -51,6 +51,9 @@ public:
   CompilerType
   GetTypeFromMangledTypename(ConstString mangled_typename) override;
 
+  CompilerType GetGenericArgumentType(lldb::opaque_compiler_type_t type,
+                                      size_t idx) override;
+
   // PluginInterface functions
   ConstString GetPluginName() override;
   uint32_t GetPluginVersion() override;

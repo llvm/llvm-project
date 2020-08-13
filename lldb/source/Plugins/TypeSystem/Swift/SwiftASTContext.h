@@ -624,7 +624,7 @@ public:
                                    size_t idx);
   static CompilerType GetGenericArgumentType(CompilerType ct, size_t idx);
   CompilerType GetGenericArgumentType(lldb::opaque_compiler_type_t type,
-                                      size_t idx);
+                                      size_t idx) override;
 
   CompilerType GetTypeForFormatters(lldb::opaque_compiler_type_t type) override;
 
