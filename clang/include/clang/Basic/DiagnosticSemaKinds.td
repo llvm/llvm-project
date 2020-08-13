@@ -2006,7 +2006,7 @@ def err_init_conversion_failed : Error<
   "|: different qualifiers (%5 vs %6)"
   "|: different exception specifications}4">;
 def note_forward_class_conversion : Note<"%0 is not defined, but forward "
-  "declared here; conversion would be valid if it's derived from %1">;
+  "declared here; conversion would be valid if it was derived from %1">;
 
 def err_lvalue_to_rvalue_ref : Error<"rvalue reference %diff{to type $ cannot "
   "bind to lvalue of type $|cannot bind to incompatible lvalue}0,1">;
