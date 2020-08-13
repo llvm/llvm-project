@@ -780,8 +780,8 @@ private:
 
   // Helper function for incrementing the pointer when splitting
   // memory operations
-  void IncrementPointer(MemSDNode *N, EVT MemVT,
-                        MachinePointerInfo &MPI, SDValue &Ptr);
+  void IncrementPointer(MemSDNode *N, EVT MemVT, MachinePointerInfo &MPI,
+                        SDValue &Ptr, uint64_t *ScaledOffset = nullptr);
 
   // Vector Result Splitting: <128 x ty> -> 2 x <64 x ty>.
   void SplitVectorResult(SDNode *N, unsigned ResNo);
