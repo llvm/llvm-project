@@ -19338,19 +19338,15 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
     return SDValue();
 
   unsigned Index = ExtIdx->getZExtValue();
-  unsigned NumElts = VT.getVectorNumElements();
+  unsigned NumElts = VT.getVectorMinNumElements();
 
-  // If the index is a multiple of the extract element count, we can offset the
-  // address by the store size multiplied by the subvector index. Otherwise if
-  // the scalar type is byte sized, we can just use the index multiplied by
-  // the element size in bytes as the offset.
-  unsigned Offset;
-  if (Index % NumElts == 0)
-    Offset = (Index / NumElts) * VT.getStoreSize();
-  else if (VT.getScalarType().isByteSized())
-    Offset = Index * VT.getScalarType().getStoreSize();
-  else
-    return SDValue();
+  // The definition of EXTRACT_SUBVECTOR states that the index must be a
+  // multiple of the minimum number of elements in the result type.
+  assert(Index % NumElts == 0 && "The extract subvector index is not a "
+                                 "multiple of the result's element count");
+
+  // It's fine to use TypeSize here as we know the offset will not be negative.
+  TypeSize Offset = VT.getStoreSize() * (Index / NumElts);
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (!TLI.shouldReduceLoadWidth(Ld, Ld->getExtensionType(), VT))
@@ -19359,14 +19355,21 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
   // The narrow load will be offset from the base address of the old load if
   // we are extracting from something besides index 0 (little-endian).
   SDLoc DL(Extract);
-  SDValue BaseAddr = Ld->getBasePtr();
 
   // TODO: Use "BaseIndexOffset" to make this more effective.
-  SDValue NewAddr =
-      DAG.getMemBasePlusOffset(BaseAddr, TypeSize::Fixed(Offset), DL);
+  SDValue NewAddr = DAG.getMemBasePlusOffset(Ld->getBasePtr(), Offset, DL);
+
+  uint64_t StoreSize = MemoryLocation::getSizeOrUnknown(VT.getStoreSize());
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineMemOperand *MMO = MF.getMachineMemOperand(Ld->getMemOperand(), Offset,
-                                                   VT.getStoreSize());
+  MachineMemOperand *MMO;
+  if (Offset.isScalable()) {
+    MachinePointerInfo MPI =
+        MachinePointerInfo(Ld->getPointerInfo().getAddrSpace());
+    MMO = MF.getMachineMemOperand(Ld->getMemOperand(), MPI, StoreSize);
+  } else
+    MMO = MF.getMachineMemOperand(Ld->getMemOperand(), Offset.getFixedSize(),
+                                  StoreSize);
+
   SDValue NewLd = DAG.getLoad(VT, DL, Ld->getChain(), NewAddr, MMO);
   DAG.makeEquivalentMemoryOrdering(Ld, NewLd);
   return NewLd;
