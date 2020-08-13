@@ -235,7 +235,7 @@ static void addFile(StringRef path) {
     if (!result)
       return;
 
-    inputFiles.push_back(make<DylibFile>(std::move(*result)));
+    inputFiles.push_back(make<DylibFile>(**result));
     break;
   }
   default:
