@@ -1113,8 +1113,11 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::MUL, VT, Custom);
   setOperationAction(ISD::OR, VT, Custom);
   setOperationAction(ISD::SETCC, VT, Custom);
+  setOperationAction(ISD::SHL, VT, Custom);
   setOperationAction(ISD::SIGN_EXTEND, VT, Custom);
   setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Custom);
+  setOperationAction(ISD::SRA, VT, Custom);
+  setOperationAction(ISD::SRL, VT, Custom);
   setOperationAction(ISD::STORE, VT, Custom);
   setOperationAction(ISD::SUB, VT, Custom);
   setOperationAction(ISD::TRUNCATE, VT, Custom);
@@ -9241,7 +9244,7 @@ SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
     llvm_unreachable("unexpected shift opcode");
 
   case ISD::SHL:
-    if (VT.isScalableVector())
+    if (VT.isScalableVector() || useSVEForFixedLengthVectorVT(VT))
       return LowerToPredicatedOp(Op, DAG, AArch64ISD::SHL_PRED);
 
     if (isVShiftLImm(Op.getOperand(1), VT, false, Cnt) && Cnt < EltSize)
@@ -9253,7 +9256,7 @@ SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
                        Op.getOperand(0), Op.getOperand(1));
   case ISD::SRA:
   case ISD::SRL:
-    if (VT.isScalableVector()) {
+    if (VT.isScalableVector() || useSVEForFixedLengthVectorVT(VT)) {
       unsigned Opc = Op.getOpcode() == ISD::SRA ? AArch64ISD::SRA_PRED
                                                 : AArch64ISD::SRL_PRED;
       return LowerToPredicatedOp(Op, DAG, Opc);
