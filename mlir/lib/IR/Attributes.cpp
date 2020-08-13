@@ -748,21 +748,13 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
   for (unsigned i = 0, e = values.size(); i < e; ++i) {
     assert(eltType == values[i].getType() &&
            "expected attribute value to have element type");
-
-    switch (eltType.getKind()) {
-    case StandardTypes::BF16:
-    case StandardTypes::F16:
-    case StandardTypes::F32:
-    case StandardTypes::F64:
+    if (eltType.isa<FloatType>())
       intVal = values[i].cast<FloatAttr>().getValue().bitcastToAPInt();
-      break;
-    case StandardTypes::Integer:
-    case StandardTypes::Index:
+    else if (eltType.isa<IntegerType>())
       intVal = values[i].cast<IntegerAttr>().getValue();
-      break;
-    default:
+    else
       llvm_unreachable("unexpected element type");
-    }
+
     assert(intVal.getBitWidth() == bitWidth &&
            "expected value to have same bitwidth as element type");
     writeBits(data.data(), i * storageBitWidth, intVal);
