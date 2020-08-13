@@ -268,24 +268,18 @@ ArrayAttr Builder::getAffineMapArrayAttr(ArrayRef<AffineMap> values) {
 }
 
 Attribute Builder::getZeroAttr(Type type) {
-  switch (type.getKind()) {
-  case StandardTypes::BF16:
-  case StandardTypes::F16:
-  case StandardTypes::F32:
-  case StandardTypes::F64:
+  if (type.isa<FloatType>())
     return getFloatAttr(type, 0.0);
-  case StandardTypes::Integer:
+  if (type.isa<IndexType>())
+    return getIndexAttr(0);
+  if (auto integerType = type.dyn_cast<IntegerType>())
     return getIntegerAttr(type, APInt(type.cast<IntegerType>().getWidth(), 0));
-  case StandardTypes::Vector:
-  case StandardTypes::RankedTensor: {
+  if (type.isa<RankedTensorType, VectorType>()) {
     auto vtType = type.cast<ShapedType>();
     auto element = getZeroAttr(vtType.getElementType());
     if (!element)
       return {};
     return DenseElementsAttr::get(vtType, element);
-  }
-  default:
-    break;
   }
   return {};
 }

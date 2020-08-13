@@ -19,20 +19,21 @@
 #include "llvm/TableGen/Record.h"
 
 using namespace mlir;
+using namespace tblgen;
 
 // Construct a Predicate from a record.
-tblgen::Pred::Pred(const llvm::Record *record) : def(record) {
+Pred::Pred(const llvm::Record *record) : def(record) {
   assert(def->isSubClassOf("Pred") &&
          "must be a subclass of TableGen 'Pred' class");
 }
 
 // Construct a Predicate from an initializer.
-tblgen::Pred::Pred(const llvm::Init *init) : def(nullptr) {
+Pred::Pred(const llvm::Init *init) : def(nullptr) {
   if (const auto *defInit = dyn_cast_or_null<llvm::DefInit>(init))
     def = defInit->getDef();
 }
 
-std::string tblgen::Pred::getCondition() const {
+std::string Pred::getCondition() const {
   // Static dispatch to subclasses.
   if (def->isSubClassOf("CombinedPred"))
     return static_cast<const CombinedPred *>(this)->getConditionImpl();
@@ -41,44 +42,44 @@ std::string tblgen::Pred::getCondition() const {
   llvm_unreachable("Pred::getCondition must be overridden in subclasses");
 }
 
-bool tblgen::Pred::isCombined() const {
+bool Pred::isCombined() const {
   return def && def->isSubClassOf("CombinedPred");
 }
 
-ArrayRef<llvm::SMLoc> tblgen::Pred::getLoc() const { return def->getLoc(); }
+ArrayRef<llvm::SMLoc> Pred::getLoc() const { return def->getLoc(); }
 
-tblgen::CPred::CPred(const llvm::Record *record) : Pred(record) {
+CPred::CPred(const llvm::Record *record) : Pred(record) {
   assert(def->isSubClassOf("CPred") &&
          "must be a subclass of Tablegen 'CPred' class");
 }
 
-tblgen::CPred::CPred(const llvm::Init *init) : Pred(init) {
+CPred::CPred(const llvm::Init *init) : Pred(init) {
   assert((!def || def->isSubClassOf("CPred")) &&
          "must be a subclass of Tablegen 'CPred' class");
 }
 
 // Get condition of the C Predicate.
-std::string tblgen::CPred::getConditionImpl() const {
+std::string CPred::getConditionImpl() const {
   assert(!isNull() && "null predicate does not have a condition");
   return std::string(def->getValueAsString("predExpr"));
 }
 
-tblgen::CombinedPred::CombinedPred(const llvm::Record *record) : Pred(record) {
+CombinedPred::CombinedPred(const llvm::Record *record) : Pred(record) {
   assert(def->isSubClassOf("CombinedPred") &&
          "must be a subclass of Tablegen 'CombinedPred' class");
 }
 
-tblgen::CombinedPred::CombinedPred(const llvm::Init *init) : Pred(init) {
+CombinedPred::CombinedPred(const llvm::Init *init) : Pred(init) {
   assert((!def || def->isSubClassOf("CombinedPred")) &&
          "must be a subclass of Tablegen 'CombinedPred' class");
 }
 
-const llvm::Record *tblgen::CombinedPred::getCombinerDef() const {
+const llvm::Record *CombinedPred::getCombinerDef() const {
   assert(def->getValue("kind") && "CombinedPred must have a value 'kind'");
   return def->getValueAsDef("kind");
 }
 
-const std::vector<llvm::Record *> tblgen::CombinedPred::getChildren() const {
+const std::vector<llvm::Record *> CombinedPred::getChildren() const {
   assert(def->getValue("children") &&
          "CombinedPred must have a value 'children'");
   return def->getValueAsListOfDefs("children");
@@ -101,7 +102,7 @@ enum class PredCombinerKind {
 // A node in a logical predicate tree.
 struct PredNode {
   PredCombinerKind kind;
-  const tblgen::Pred *predicate;
+  const Pred *predicate;
   SmallVector<PredNode *, 4> children;
   std::string expr;
 
@@ -113,11 +114,11 @@ struct PredNode {
 
 // Get a predicate tree node kind based on the kind used in the predicate
 // TableGen record.
-static PredCombinerKind getPredCombinerKind(const tblgen::Pred &pred) {
+static PredCombinerKind getPredCombinerKind(const Pred &pred) {
   if (!pred.isCombined())
     return PredCombinerKind::Leaf;
 
-  const auto &combinedPred = static_cast<const tblgen::CombinedPred &>(pred);
+  const auto &combinedPred = static_cast<const CombinedPred &>(pred);
   return llvm::StringSwitch<PredCombinerKind>(
              combinedPred.getCombinerDef()->getName())
       .Case("PredCombinerAnd", PredCombinerKind::And)
@@ -137,7 +138,7 @@ using Subst = std::pair<StringRef, StringRef>;
 // substitution, nodes are still pointing to the original TableGen record.
 // All nodes are created within "allocator".
 static PredNode *
-buildPredicateTree(const tblgen::Pred &root,
+buildPredicateTree(const Pred &root,
                    llvm::SpecificBumpPtrAllocator<PredNode> &allocator,
                    ArrayRef<Subst> substitutions) {
   auto *rootNode = allocator.Allocate();
@@ -166,22 +167,22 @@ buildPredicateTree(const tblgen::Pred &root,
   // list before continuing.
   auto allSubstitutions = llvm::to_vector<4>(substitutions);
   if (rootNode->kind == PredCombinerKind::SubstLeaves) {
-    const auto &substPred = static_cast<const tblgen::SubstLeavesPred &>(root);
+    const auto &substPred = static_cast<const SubstLeavesPred &>(root);
     allSubstitutions.push_back(
         {substPred.getPattern(), substPred.getReplacement()});
   }
   // If the current predicate is a ConcatPred, record the prefix and suffix.
   else if (rootNode->kind == PredCombinerKind::Concat) {
-    const auto &concatPred = static_cast<const tblgen::ConcatPred &>(root);
+    const auto &concatPred = static_cast<const ConcatPred &>(root);
     rootNode->prefix = std::string(concatPred.getPrefix());
     rootNode->suffix = std::string(concatPred.getSuffix());
   }
 
   // Build child subtrees.
-  auto combined = static_cast<const tblgen::CombinedPred &>(root);
+  auto combined = static_cast<const CombinedPred &>(root);
   for (const auto *record : combined.getChildren()) {
     auto childTree =
-        buildPredicateTree(tblgen::Pred(record), allocator, allSubstitutions);
+        buildPredicateTree(Pred(record), allocator, allSubstitutions);
     rootNode->children.push_back(childTree);
   }
   return rootNode;
@@ -192,9 +193,10 @@ buildPredicateTree(const tblgen::Pred &root,
 // children is known to be false(true), the result is also false(true).
 // Furthermore, for AND(OR) combined predicates, children that are known to be
 // true(false) don't have to be checked dynamically.
-static PredNode *propagateGroundTruth(
-    PredNode *node, const llvm::SmallPtrSetImpl<tblgen::Pred *> &knownTruePreds,
-    const llvm::SmallPtrSetImpl<tblgen::Pred *> &knownFalsePreds) {
+static PredNode *
+propagateGroundTruth(PredNode *node,
+                     const llvm::SmallPtrSetImpl<Pred *> &knownTruePreds,
+                     const llvm::SmallPtrSetImpl<Pred *> &knownFalsePreds) {
   // If the current predicate is known to be true or false, change the kind of
   // the node and return immediately.
   if (knownTruePreds.count(node->predicate) != 0) {
@@ -339,29 +341,29 @@ static std::string getCombinedCondition(const PredNode &root) {
   llvm::PrintFatalError(root.predicate->getLoc(), "unsupported predicate kind");
 }
 
-std::string tblgen::CombinedPred::getConditionImpl() const {
+std::string CombinedPred::getConditionImpl() const {
   llvm::SpecificBumpPtrAllocator<PredNode> allocator;
   auto predicateTree = buildPredicateTree(*this, allocator, {});
-  predicateTree = propagateGroundTruth(
-      predicateTree,
-      /*knownTruePreds=*/llvm::SmallPtrSet<tblgen::Pred *, 2>(),
-      /*knownFalsePreds=*/llvm::SmallPtrSet<tblgen::Pred *, 2>());
+  predicateTree =
+      propagateGroundTruth(predicateTree,
+                           /*knownTruePreds=*/llvm::SmallPtrSet<Pred *, 2>(),
+                           /*knownFalsePreds=*/llvm::SmallPtrSet<Pred *, 2>());
 
   return getCombinedCondition(*predicateTree);
 }
 
-StringRef tblgen::SubstLeavesPred::getPattern() const {
+StringRef SubstLeavesPred::getPattern() const {
   return def->getValueAsString("pattern");
 }
 
-StringRef tblgen::SubstLeavesPred::getReplacement() const {
+StringRef SubstLeavesPred::getReplacement() const {
   return def->getValueAsString("replacement");
 }
 
-StringRef tblgen::ConcatPred::getPrefix() const {
+StringRef ConcatPred::getPrefix() const {
   return def->getValueAsString("prefix");
 }
 
-StringRef tblgen::ConcatPred::getSuffix() const {
+StringRef ConcatPred::getSuffix() const {
   return def->getValueAsString("suffix");
 }

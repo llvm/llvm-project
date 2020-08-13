@@ -40,8 +40,9 @@
 
 using namespace llvm;
 using namespace llvm::MachO;
-using namespace llvm::sys;
+using namespace llvm::object;
 using namespace llvm::opt;
+using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
 
@@ -230,12 +231,13 @@ static void addFile(StringRef path) {
     inputFiles.push_back(make<DylibFile>(mbref));
     break;
   case file_magic::tapi_file: {
-    llvm::Expected<std::unique_ptr<llvm::MachO::InterfaceFile>> result =
-        TextAPIReader::get(mbref);
-    if (!result)
+    Expected<std::unique_ptr<InterfaceFile>> result = TextAPIReader::get(mbref);
+    if (!result) {
+      error("could not load TAPI file at " + mbref.getBufferIdentifier() +
+            ": " + toString(result.takeError()));
       return;
-
-    inputFiles.push_back(make<DylibFile>(std::move(*result)));
+    }
+    inputFiles.push_back(make<DylibFile>(**result));
     break;
   }
   default:
@@ -250,6 +252,35 @@ static void addFileList(StringRef path) {
   MemoryBufferRef mbref = *buffer;
   for (StringRef path : args::getLines(mbref))
     addFile(path);
+}
+
+// Returns slices of MB by parsing MB as an archive file.
+// Each slice consists of a member file in the archive.
+static std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef mb) {
+  std::unique_ptr<Archive> file =
+      CHECK(Archive::create(mb),
+            mb.getBufferIdentifier() + ": failed to parse archive");
+
+  std::vector<MemoryBufferRef> v;
+  Error err = Error::success();
+  for (const Archive::Child &c : file->children(err)) {
+    MemoryBufferRef mbref =
+        CHECK(c.getMemoryBufferRef(),
+              mb.getBufferIdentifier() +
+                  ": could not get the buffer for a child of the archive");
+    v.push_back(mbref);
+  }
+  if (err)
+    fatal(mb.getBufferIdentifier() +
+          ": Archive::children failed: " + toString(std::move(err)));
+
+  return v;
+}
+
+static void forceLoadArchive(StringRef path) {
+  if (Optional<MemoryBufferRef> buffer = readFile(path))
+    for (MemoryBufferRef member : getArchiveMembers(*buffer))
+      inputFiles.push_back(make<ObjFile>(member));
 }
 
 static std::array<StringRef, 6> archNames{"arm",    "arm64", "i386",
@@ -468,6 +499,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
       args.getLastArgValue(OPT_install_name, config->outputFile);
   config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
   config->outputType = args.hasArg(OPT_dylib) ? MH_DYLIB : MH_EXECUTE;
+  config->runtimePaths = args::getStrings(args, OPT_rpath);
 
   std::vector<StringRef> roots;
   for (const Arg *arg : args.filtered(OPT_syslibroot))
@@ -507,6 +539,9 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     case OPT_filelist:
       addFileList(arg->getValue());
       break;
+    case OPT_force_load:
+      forceLoadArchive(arg->getValue());
+      break;
     case OPT_l: {
       StringRef name = arg->getValue();
       if (Optional<std::string> path = findLibrary(name)) {
@@ -535,6 +570,8 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     case OPT_L:
     case OPT_headerpad:
     case OPT_install_name:
+    case OPT_rpath:
+    case OPT_sub_library:
     case OPT_Z:
     case OPT_arch:
     case OPT_syslibroot:

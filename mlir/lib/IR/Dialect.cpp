@@ -8,7 +8,6 @@
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/DialectHooks.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/MLIRContext.h"
@@ -31,10 +30,6 @@ DialectAsmParser::~DialectAsmParser() {}
 static llvm::ManagedStatic<llvm::MapVector<TypeID, DialectAllocatorFunction>>
     dialectRegistry;
 
-/// Registry for functions that set dialect hooks.
-static llvm::ManagedStatic<llvm::MapVector<TypeID, DialectHooksSetter>>
-    dialectHooksRegistry;
-
 void Dialect::registerDialectAllocator(
     TypeID typeID, const DialectAllocatorFunction &function) {
   assert(function &&
@@ -42,23 +37,10 @@ void Dialect::registerDialectAllocator(
   dialectRegistry->insert({typeID, function});
 }
 
-/// Registers a function to set specific hooks for a specific dialect, typically
-/// used through the DialectHooksRegistration template.
-void DialectHooks::registerDialectHooksSetter(
-    TypeID typeID, const DialectHooksSetter &function) {
-  assert(
-      function &&
-      "Attempting to register an empty dialect hooks initialization function");
-
-  dialectHooksRegistry->insert({typeID, function});
-}
-
 /// Registers all dialects and hooks from the global registries with the
 /// specified MLIRContext.
 void mlir::registerAllDialects(MLIRContext *context) {
   for (const auto &it : *dialectRegistry)
-    it.second(context);
-  for (const auto &it : *dialectHooksRegistry)
     it.second(context);
 }
 

@@ -9801,8 +9801,7 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     if (!E->hasAssociatedStmt() || !E->getAssociatedStmt())
       return;
 
-    scanForTargetRegionsFunctions(
-        E->getInnermostCapturedStmt()->getCapturedStmt(), ParentName);
+    scanForTargetRegionsFunctions(E->getRawStmt(), ParentName);
     return;
   }
 

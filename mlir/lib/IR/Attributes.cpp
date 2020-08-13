@@ -14,6 +14,7 @@
 #include "mlir/IR/Function.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Interfaces/DecodeAttributesInterfaces.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Endian.h"
@@ -747,21 +748,13 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
   for (unsigned i = 0, e = values.size(); i < e; ++i) {
     assert(eltType == values[i].getType() &&
            "expected attribute value to have element type");
-
-    switch (eltType.getKind()) {
-    case StandardTypes::BF16:
-    case StandardTypes::F16:
-    case StandardTypes::F32:
-    case StandardTypes::F64:
+    if (eltType.isa<FloatType>())
       intVal = values[i].cast<FloatAttr>().getValue().bitcastToAPInt();
-      break;
-    case StandardTypes::Integer:
-    case StandardTypes::Index:
+    else if (eltType.isa<IntegerType>())
       intVal = values[i].cast<IntegerAttr>().getValue();
-      break;
-    default:
+    else
       llvm_unreachable("unexpected element type");
-    }
+
     assert(intVal.getBitWidth() == bitWidth &&
            "expected value to have same bitwidth as element type");
     writeBits(data.data(), i * storageBitWidth, intVal);
@@ -1227,17 +1220,20 @@ StringRef OpaqueElementsAttr::getValue() const { return getImpl()->bytes; }
 /// element, then a null attribute is returned.
 Attribute OpaqueElementsAttr::getValue(ArrayRef<uint64_t> index) const {
   assert(isValidIndex(index) && "expected valid multi-dimensional index");
-  if (Dialect *dialect = getDialect())
-    return dialect->extractElementHook(*this, index);
   return Attribute();
 }
 
 Dialect *OpaqueElementsAttr::getDialect() const { return getImpl()->dialect; }
 
 bool OpaqueElementsAttr::decode(ElementsAttr &result) {
-  if (auto *d = getDialect())
-    return d->decodeHook(*this, result);
-  return true;
+  auto *d = getDialect();
+  if (!d)
+    return true;
+  auto *interface =
+      d->getRegisteredInterface<DialectDecodeAttributesInterface>();
+  if (!interface)
+    return true;
+  return failed(interface->decode(*this, result));
 }
 
 //===----------------------------------------------------------------------===//

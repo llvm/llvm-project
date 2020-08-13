@@ -64,7 +64,19 @@ define <vscale x 2 x float> @extract_hi_nxv2f32_nxv4f32(<vscale x 4 x float> %z0
   ret <vscale x 2 x float> %ext
 }
 
+define <vscale x 4 x float> @load_extract_nxv4f32_nxv8f32(<vscale x 8 x float>* %p) {
+; CHECK-LABEL: load_extract_nxv4f32_nxv8f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ret
+  %tmp1 = load <vscale x 8 x float>, <vscale x 8 x float>* %p, align 16
+  %tmp2 = call <vscale x 4 x float> @llvm.aarch64.sve.tuple.get.nxv8f32(<vscale x 8 x float> %tmp1, i32 1)
+  ret <vscale x 4 x float> %tmp2
+}
+
 declare <vscale x 2 x i64> @llvm.aarch64.sve.tuple.get.nxv4i64(<vscale x 4 x i64>, i32)
 declare <vscale x 16 x i8> @llvm.aarch64.sve.tuple.get.nxv32i8(<vscale x 32 x i8>, i32)
 declare <vscale x 2 x float> @llvm.aarch64.sve.tuple.get.nxv4f32(<vscale x 4 x float>, i32)
 declare <vscale x 4 x half> @llvm.aarch64.sve.tuple.get.nxv8f16(<vscale x 8 x half>, i32)
+declare <vscale x 4 x float> @llvm.aarch64.sve.tuple.get.nxv8f32(<vscale x 8 x float>, i32)

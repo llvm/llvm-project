@@ -13,18 +13,16 @@
 #include "mlir/TableGen/Dialect.h"
 #include "llvm/TableGen/Record.h"
 
-namespace mlir {
-namespace tblgen {
+using namespace mlir;
+using namespace mlir::tblgen;
 
-StringRef tblgen::Dialect::getName() const {
-  return def->getValueAsString("name");
-}
+StringRef Dialect::getName() const { return def->getValueAsString("name"); }
 
-StringRef tblgen::Dialect::getCppNamespace() const {
+StringRef Dialect::getCppNamespace() const {
   return def->getValueAsString("cppNamespace");
 }
 
-std::string tblgen::Dialect::getCppClassName() const {
+std::string Dialect::getCppClassName() const {
   // Simply use the name and remove any '_' tokens.
   std::string cppName = def->getName().str();
   llvm::erase_if(cppName, [](char c) { return c == '_'; });
@@ -40,32 +38,32 @@ static StringRef getAsStringOrEmpty(const llvm::Record &record,
   return "";
 }
 
-StringRef tblgen::Dialect::getSummary() const {
+StringRef Dialect::getSummary() const {
   return getAsStringOrEmpty(*def, "summary");
 }
 
-StringRef tblgen::Dialect::getDescription() const {
+StringRef Dialect::getDescription() const {
   return getAsStringOrEmpty(*def, "description");
 }
 
-llvm::Optional<StringRef> tblgen::Dialect::getExtraClassDeclaration() const {
+llvm::Optional<StringRef> Dialect::getExtraClassDeclaration() const {
   auto value = def->getValueAsString("extraClassDeclaration");
   return value.empty() ? llvm::Optional<StringRef>() : value;
 }
 
-bool tblgen::Dialect::hasConstantMaterializer() const {
+bool Dialect::hasConstantMaterializer() const {
   return def->getValueAsBit("hasConstantMaterializer");
 }
 
-bool tblgen::Dialect::hasOperationAttrVerify() const {
+bool Dialect::hasOperationAttrVerify() const {
   return def->getValueAsBit("hasOperationAttrVerify");
 }
 
-bool tblgen::Dialect::hasRegionArgAttrVerify() const {
+bool Dialect::hasRegionArgAttrVerify() const {
   return def->getValueAsBit("hasRegionArgAttrVerify");
 }
 
-bool tblgen::Dialect::hasRegionResultAttrVerify() const {
+bool Dialect::hasRegionResultAttrVerify() const {
   return def->getValueAsBit("hasRegionResultAttrVerify");
 }
 
@@ -76,6 +74,3 @@ bool Dialect::operator==(const Dialect &other) const {
 bool Dialect::operator<(const Dialect &other) const {
   return getName() < other.getName();
 }
-
-} // end namespace tblgen
-} // end namespace mlir

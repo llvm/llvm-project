@@ -210,19 +210,15 @@ Type LLVMTypeConverter::convertIntegerType(IntegerType type) {
 }
 
 Type LLVMTypeConverter::convertFloatType(FloatType type) {
-  switch (type.getKind()) {
-  case mlir::StandardTypes::F32:
+  if (type.isa<Float32Type>())
     return LLVM::LLVMType::getFloatTy(&getContext());
-  case mlir::StandardTypes::F64:
+  if (type.isa<Float64Type>())
     return LLVM::LLVMType::getDoubleTy(&getContext());
-  case mlir::StandardTypes::F16:
+  if (type.isa<Float16Type>())
     return LLVM::LLVMType::getHalfTy(&getContext());
-  case mlir::StandardTypes::BF16: {
+  if (type.isa<BFloat16Type>())
     return LLVM::LLVMType::getBFloatTy(&getContext());
-  }
-  default:
-    llvm_unreachable("non-float type in convertFloatType");
-  }
+  llvm_unreachable("non-float type in convertFloatType");
 }
 
 // Convert a `ComplexType` to an LLVM type. The result is a complex number

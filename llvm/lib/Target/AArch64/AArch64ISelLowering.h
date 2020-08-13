@@ -77,6 +77,8 @@ enum NodeType : unsigned {
   FADD_PRED,
   FDIV_PRED,
   FMA_PRED,
+  FMAXNM_PRED,
+  FMINNM_PRED,
   FMUL_PRED,
   FSUB_PRED,
   MUL_PRED,
@@ -902,7 +904,10 @@ private:
   SDValue LowerSVEStructLoad(unsigned Intrinsic, ArrayRef<SDValue> LoadOps,
                              EVT VT, SelectionDAG &DAG, const SDLoc &DL) const;
 
+  SDValue LowerFixedLengthVectorIntExtendToSVE(SDValue Op,
+                                               SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorLoadToSVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFixedLengthVectorSetccToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorStoreToSVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorTruncateToSVE(SDValue Op,
                                               SelectionDAG &DAG) const;

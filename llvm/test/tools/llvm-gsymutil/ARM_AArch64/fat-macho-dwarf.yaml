@@ -387,8 +387,7 @@ Slices:
             - Address:         0x000000000000BFF0
               Length:          16
       debug_pubnames:
-        Length:
-          TotalLength:     23
+        Length:          23
         Version:         2
         UnitOffset:      0
         UnitSize:        119
@@ -396,8 +395,7 @@ Slices:
           - DieOffset:       0x00000026
             Name:            main
       debug_pubtypes:
-        Length:
-          TotalLength:     31
+        Length:          31
         Version:         2
         UnitOffset:      0
         UnitSize:        119
@@ -865,8 +863,7 @@ Slices:
             - Address:         0x0000000100007F9C
               Length:          28
       debug_pubnames:
-        Length:
-          TotalLength:     23
+        Length:          23
         Version:         2
         UnitOffset:      0
         UnitSize:        126
@@ -874,8 +871,7 @@ Slices:
           - DieOffset:       0x0000002A
             Name:            main
       debug_pubtypes:
-        Length:
-          TotalLength:     31
+        Length:          31
         Version:         2
         UnitOffset:      0
         UnitSize:        126

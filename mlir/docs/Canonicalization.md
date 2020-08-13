@@ -51,7 +51,7 @@ These transformations are applied to all levels of IR:
 *   `constant-like` operations are uniqued and hoisted into the entry block of
     the first parent barrier region. This is a region that is either isolated
     from above, e.g. the entry block of a function, or one marked as a barrier
-    via the `shouldMaterializeInto` method on the `OpFolderDialectInterface`.
+    via the `shouldMaterializeInto` method on the `DialectFoldInterface`.
 
 ## Defining Canonicalizations
 
@@ -169,6 +169,10 @@ correspond to an existing value. The `fold` methods are not permitted to
 generate new `Value`s. There are no specific restrictions on the form of the
 `Attribute` value returned, but it is important to ensure that the `Attribute`
 representation of a specific `Type` is consistent.
+
+When the `fold` hook on an operation is not successful, the dialect can
+provide a fallback by implementing the `DialectFoldInterface` and overriding
+the fold hook.
 
 #### Generating Constants from Attributes
 

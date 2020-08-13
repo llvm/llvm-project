@@ -136,6 +136,7 @@ void MappingTraits<DWARFYAML::PubEntry>::mapping(IO &IO,
 
 void MappingTraits<DWARFYAML::PubSection>::mapping(
     IO &IO, DWARFYAML::PubSection &Section) {
+  IO.mapOptional("Format", Section.Format, dwarf::DWARF32);
   IO.mapRequired("Length", Section.Length);
   IO.mapRequired("Version", Section.Version);
   IO.mapRequired("UnitOffset", Section.UnitOffset);
@@ -284,13 +285,6 @@ void MappingTraits<DWARFYAML::ListTable<EntryType>>::mapping(
   IO.mapOptional("OffsetEntryCount", ListTable.OffsetEntryCount);
   IO.mapOptional("Offsets", ListTable.Offsets);
   IO.mapOptional("Lists", ListTable.Lists);
-}
-
-void MappingTraits<DWARFYAML::InitialLength>::mapping(
-    IO &IO, DWARFYAML::InitialLength &InitialLength) {
-  IO.mapRequired("TotalLength", InitialLength.TotalLength);
-  if (InitialLength.isDWARF64())
-    IO.mapRequired("TotalLength64", InitialLength.TotalLength64);
 }
 
 } // end namespace yaml

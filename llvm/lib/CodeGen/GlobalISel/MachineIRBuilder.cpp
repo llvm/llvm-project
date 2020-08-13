@@ -317,11 +317,14 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
   return buildFConstant(Res, *CFP);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildBrCond(Register Tst,
+MachineInstrBuilder MachineIRBuilder::buildBrCond(const SrcOp &Tst,
                                                   MachineBasicBlock &Dest) {
-  assert(getMRI()->getType(Tst).isScalar() && "invalid operand type");
+  assert(Tst.getLLTTy(*getMRI()).isScalar() && "invalid operand type");
 
-  return buildInstr(TargetOpcode::G_BRCOND).addUse(Tst).addMBB(&Dest);
+  auto MIB = buildInstr(TargetOpcode::G_BRCOND);
+  Tst.addSrcToMIB(MIB);
+  MIB.addMBB(&Dest);
+  return MIB;
 }
 
 MachineInstrBuilder

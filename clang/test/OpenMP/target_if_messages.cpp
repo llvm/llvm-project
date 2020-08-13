@@ -2,6 +2,9 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 %s -Wuninitialized
 
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+
 void foo() {
 }
 

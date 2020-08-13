@@ -317,6 +317,13 @@ public:
   void semanticHighlights(PathRef File,
                           Callback<std::vector<HighlightingToken>>);
 
+  /// Runs an arbitrary action that has access to the AST of the specified file.
+  /// The action will execute on one of ClangdServer's internal threads.
+  /// The AST is only valid for the duration of the callback.
+  /// As with other actions, the file must have been opened.
+  void customAction(PathRef File, llvm::StringRef Name,
+                    Callback<InputsAndAST> Action);
+
   /// Returns estimated memory usage and other statistics for each of the
   /// currently open files.
   /// Overall memory usage of clangd may be significantly more than reported

@@ -267,7 +267,7 @@ endif()
 
 # Find Apple-specific libraries or frameworks that may be needed.
 if (APPLE)
-  if(NOT IOS)
+  if(NOT APPLE_EMBEDDED)
     find_library(CARBON_LIBRARY Carbon)
     find_library(CORE_SERVICES_LIBRARY CoreServices)
   endif()

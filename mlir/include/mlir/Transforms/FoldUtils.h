@@ -17,29 +17,12 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectInterface.h"
+#include "mlir/Interfaces/FoldInterfaces.h"
 
 namespace mlir {
 class Operation;
 class Value;
 
-//===--------------------------------------------------------------------===//
-// Operation Folding Interface
-//===--------------------------------------------------------------------===//
-
-/// This class defines a dialect interface used to assist the operation folder.
-/// It provides hooks for materializing and folding operations.
-class OpFolderDialectInterface
-    : public DialectInterface::Base<OpFolderDialectInterface> {
-public:
-  OpFolderDialectInterface(Dialect *dialect) : Base(dialect) {}
-
-  /// Registered hook to check if the given region, which is attached to an
-  /// operation that is *not* isolated from above, should be used when
-  /// materializing constants. The folder will generally materialize constants
-  /// into the top-level isolated region, this allows for materializing into a
-  /// lower level ancestor region if it is more profitable/correct.
-  virtual bool shouldMaterializeInto(Region *region) const { return false; }
-};
 
 //===--------------------------------------------------------------------===//
 // OperationFolder
@@ -153,7 +136,7 @@ private:
   DenseMap<Operation *, SmallVector<Dialect *, 2>> referencedDialects;
 
   /// A collection of dialect folder interfaces.
-  DialectInterfaceCollection<OpFolderDialectInterface> interfaces;
+  DialectInterfaceCollection<DialectFoldInterface> interfaces;
 };
 
 } // end namespace mlir

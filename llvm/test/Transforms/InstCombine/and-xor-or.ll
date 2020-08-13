@@ -74,7 +74,7 @@ define <2 x i32> @and_xor_common_op_commute3(<2 x i32> %pa, <2 x i32> %pb) {
 
 define <4 x i32> @and_xor_common_op_constant(<4 x i32> %A) {
 ; CHECK-LABEL: @and_xor_common_op_constant(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[A:%.*]], <i32 7, i32 7, i32 7, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[A:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
@@ -87,7 +87,7 @@ define <4 x i32> @and_xor_common_op_constant(<4 x i32> %A) {
 
 define i32 @and_xor_not_common_op(i32 %a, i32 %b) {
 ; CHECK-LABEL: @and_xor_not_common_op(
-; CHECK-NEXT:    [[T4:%.*]] = and i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = and i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %b2 = xor i32 %b, -1

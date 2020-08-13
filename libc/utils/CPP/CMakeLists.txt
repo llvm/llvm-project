@@ -5,6 +5,5 @@ add_header_library(
     ArrayRef.h
     Bitset.h
     Functional.h
-    StringRef.h
     TypeTraits.h
 )

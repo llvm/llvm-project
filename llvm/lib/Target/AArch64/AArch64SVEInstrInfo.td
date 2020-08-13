@@ -178,6 +178,8 @@ def AArch64asr_p  : SDNode<"AArch64ISD::SRA_PRED",  SDT_AArch64Arith>;
 def AArch64fadd_p : SDNode<"AArch64ISD::FADD_PRED", SDT_AArch64Arith>;
 def AArch64fdiv_p : SDNode<"AArch64ISD::FDIV_PRED", SDT_AArch64Arith>;
 def AArch64fma_p  : SDNode<"AArch64ISD::FMA_PRED",  SDT_AArch64FMA>;
+def AArch64fmaxnm_p : SDNode<"AArch64ISD::FMAXNM_PRED", SDT_AArch64Arith>;
+def AArch64fminnm_p : SDNode<"AArch64ISD::FMINNM_PRED", SDT_AArch64Arith>;
 def AArch64fmul_p : SDNode<"AArch64ISD::FMUL_PRED", SDT_AArch64Arith>;
 def AArch64fsub_p : SDNode<"AArch64ISD::FSUB_PRED", SDT_AArch64Arith>;
 def AArch64lsl_p  : SDNode<"AArch64ISD::SHL_PRED",  SDT_AArch64Arith>;
@@ -386,6 +388,8 @@ let Predicates = [HasSVE] in {
   defm FADD_ZPZZ   : sve_fp_bin_pred_hfd<AArch64fadd_p>;
   defm FSUB_ZPZZ   : sve_fp_bin_pred_hfd<AArch64fsub_p>;
   defm FMUL_ZPZZ   : sve_fp_bin_pred_hfd<AArch64fmul_p>;
+  defm FMAXNM_ZPZZ : sve_fp_bin_pred_hfd<AArch64fmaxnm_p>;
+  defm FMINNM_ZPZZ : sve_fp_bin_pred_hfd<AArch64fminnm_p>;
   defm FDIV_ZPZZ   : sve_fp_bin_pred_hfd<AArch64fdiv_p>;
 
   let Predicates = [HasSVE, UseExperimentalZeroingPseudos] in {

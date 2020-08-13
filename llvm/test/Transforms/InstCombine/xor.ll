@@ -600,10 +600,10 @@ define i8 @xor_or_not(i8 %x, i8* %p) {
 
 define i8 @xor_or_not_uses(i8 %x, i8* %p) {
 ; CHECK-LABEL: @xor_or_not_uses(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[OR:%.*]] = xor i8 [[TMP1]], -8
+; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[NX]], 7
 ; CHECK-NEXT:    store i8 [[OR]], i8* [[P:%.*]], align 1
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP1]], -12
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[OR]], 12
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %nx = xor i8 %x, -1
@@ -993,4 +993,20 @@ define i4 @or_or_xor_use2(i4 %x, i4 %y, i4 %z, i4* %p) {
   store i4 %o2, i4* %p
   %r = xor i4 %o1, %o2
   ret i4 %r
+}
+
+; PR32706 - https://bugs.llvm.org/show_bug.cgi?id=32706
+; TODO: Pin an xor constant operand to -1 if possible because 'not' is better for SCEV and codegen.
+
+define i32 @not_is_canonical(i32 %x, i32 %y) {
+; CHECK-LABEL: @not_is_canonical(
+; CHECK-NEXT:    [[SUB:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SUB]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[ADD]], 2
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %sub = xor i32 %x, 1073741823
+  %add = add i32 %sub, %y
+  %mul = shl i32 %add, 2
+  ret i32 %mul
 }

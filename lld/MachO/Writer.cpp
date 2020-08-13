@@ -247,6 +247,30 @@ private:
   // different location.
   const StringRef path = "/usr/lib/dyld";
 };
+
+class LCRPath : public LoadCommand {
+public:
+  LCRPath(StringRef path) : path(path) {}
+
+  uint32_t getSize() const override {
+    return alignTo(sizeof(rpath_command) + path.size() + 1, WordSize);
+  }
+
+  void writeTo(uint8_t *buf) const override {
+    auto *c = reinterpret_cast<rpath_command *>(buf);
+    buf += sizeof(rpath_command);
+
+    c->cmd = LC_RPATH;
+    c->cmdsize = getSize();
+    c->path = sizeof(rpath_command);
+
+    memcpy(buf, path.data(), path.size());
+    buf[path.size()] = '\0';
+  }
+
+private:
+  StringRef path;
+};
 } // namespace
 
 void Writer::scanRelocations() {
@@ -268,6 +292,8 @@ void Writer::createLoadCommands() {
       make<LCDyldInfo>(in.binding, lazyBindingSection, exportSection));
   in.header->addLoadCommand(make<LCSymtab>(symtabSection, stringTableSection));
   in.header->addLoadCommand(make<LCDysymtab>());
+  for (StringRef path : config->runtimePaths)
+    in.header->addLoadCommand(make<LCRPath>(path));
 
   switch (config->outputType) {
   case MH_EXECUTE:
@@ -540,6 +566,7 @@ void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();
   in.binding = make<BindingSection>();
   in.got = make<GotSection>();
+  in.tlvPointers = make<TlvPointerSection>();
   in.lazyPointers = make<LazyPointerSection>();
   in.stubs = make<StubsSection>();
   in.stubHelper = make<StubHelperSection>();

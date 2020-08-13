@@ -6,5 +6,8 @@ install-name:     '/System/Library/Frameworks/CoreFoundation.framework/CoreFound
 current-version:  0001.001.1
 compatibility-version: 150
 exports:
-  - archs:        [ 'x86_64' ]
-    symbols:      [ '__CFBigNumGetInt128' ]
+  - archs:         [ 'x86_64' ]
+    symbols:       [ '__CFBigNumGetInt128' ]
+    objc-classes:  [ NSObject ]
+    objc-ivars:    [ NSConstantArray._count ]
+    objc-eh-types: [ NSException ]

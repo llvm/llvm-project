@@ -68,13 +68,6 @@ static void ZeroFillBytes(raw_ostream &OS, size_t Size) {
   OS.write(reinterpret_cast<char *>(FillData.data()), Size);
 }
 
-static void writeInitialLength(const DWARFYAML::InitialLength &Length,
-                               raw_ostream &OS, bool IsLittleEndian) {
-  writeInteger((uint32_t)Length.TotalLength, OS, IsLittleEndian);
-  if (Length.isDWARF64())
-    writeInteger((uint64_t)Length.TotalLength64, OS, IsLittleEndian);
-}
-
 static void writeInitialLength(const dwarf::DwarfFormat Format,
                                const uint64_t Length, raw_ostream &OS,
                                bool IsLittleEndian) {
@@ -213,7 +206,7 @@ Error DWARFYAML::emitDebugRanges(raw_ostream &OS, const DWARFYAML::Data &DI) {
 
 static Error emitPubSection(raw_ostream &OS, const DWARFYAML::PubSection &Sect,
                             bool IsLittleEndian, bool IsGNUPubSec = false) {
-  writeInitialLength(Sect.Length, OS, IsLittleEndian);
+  writeInitialLength(Sect.Format, Sect.Length, OS, IsLittleEndian);
   writeInteger((uint16_t)Sect.Version, OS, IsLittleEndian);
   writeInteger((uint32_t)Sect.UnitOffset, OS, IsLittleEndian);
   writeInteger((uint32_t)Sect.UnitSize, OS, IsLittleEndian);
