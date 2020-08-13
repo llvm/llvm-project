@@ -15,7 +15,7 @@
 namespace llvm {
 namespace orc {
 
-ThreadSafeModule cloneToNewContext(ThreadSafeModule &TSM,
+ThreadSafeModule cloneToNewContext(const ThreadSafeModule &TSM,
                                    GVPredicate ShouldCloneDef,
                                    GVModifier UpdateClonedDefSource) {
   assert(TSM && "Can not clone null module");
