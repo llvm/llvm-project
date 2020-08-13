@@ -6,7 +6,7 @@
 ; GFX9: v_addc_co_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc{{$}}
 ; FIJI: v_add_u32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; FIJI: v_addc_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc{{$}}
-define amdgpu_kernel void @test_add_co_sdwa(i64 addrspace(1)* %arg, i32 addrspace(1)* %arg1) #0 {
+define void @test_add_co_sdwa(i64 addrspace(1)* %arg, i32 addrspace(1)* %arg1) #0 {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp3 = getelementptr inbounds i32, i32 addrspace(1)* %arg1, i32 %tmp
@@ -26,7 +26,7 @@ bb:
 ; GFX9: v_subbrev_co_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc{{$}}
 ; FIJI: v_sub_u32_sdwa v{{[0-9]+}}, vcc, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; FIJI: v_subbrev_u32_e32 v{{[0-9]+}}, vcc, 0, v{{[0-9]+}}, vcc{{$}}
-define amdgpu_kernel void @test_sub_co_sdwa(i64 addrspace(1)* %arg, i32 addrspace(1)* %arg1) #0 {
+define void @test_sub_co_sdwa(i64 addrspace(1)* %arg, i32 addrspace(1)* %arg1) #0 {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp3 = getelementptr inbounds i32, i32 addrspace(1)* %arg1, i32 %tmp
