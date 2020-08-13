@@ -234,6 +234,19 @@ define <4 x float> @gep00_load_f32_insert_v4f32(<4 x float>* align 16 dereferenc
   ret <4 x float> %r
 }
 
+; Should work with addrspace as well.
+
+define <4 x float> @gep00_load_f32_insert_v4f32_addrspace(<4 x float> addrspace(44)* align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @gep00_load_f32_insert_v4f32_addrspace(
+; CHECK-NEXT:    [[R:%.*]] = load <4 x float>, <4 x float> addrspace(44)* [[P:%.*]], align 16
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(44)* %p, i64 0, i64 0
+  %s = load float, float addrspace(44)* %gep, align 16
+  %r = insertelement <4 x float> undef, float %s, i64 0
+  ret <4 x float> %r
+}
+
 ; If there are enough dereferenceable bytes, we can offset the vector load.
 
 define <8 x i16> @gep01_load_i16_insert_v8i16(<8 x i16>* align 16 dereferenceable(18) %p) {
