@@ -6436,7 +6436,7 @@ Call Convention
 
 .. note::
 
-  This section is currently incomplete and has inakkuracies. It is WIP that will
+  This section is currently incomplete and has inaccuracies. It is WIP that will
   be updated as information is determined.
 
 See :ref:`amdgpu-dwarf-address-space-identifier` for information on swizzled
