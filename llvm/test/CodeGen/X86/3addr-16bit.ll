@@ -12,17 +12,17 @@ define zeroext i16 @test1(i16 zeroext %c, i16 zeroext %k) nounwind ssp {
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    incl %eax
 ; X64-NEXT:    cmpw %di, %si
-; X64-NEXT:    jne LBB0_2
-; X64-NEXT:  ## %bb.1: ## %bb
+; X64-NEXT:    je LBB0_1
+; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    movzwl %ax, %eax
+; X64-NEXT:    retq
+; X64-NEXT:  LBB0_1: ## %bb
 ; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    movzwl %ax, %ebx
 ; X64-NEXT:    movl %ebx, %edi
 ; X64-NEXT:    callq _foo
 ; X64-NEXT:    movl %ebx, %eax
 ; X64-NEXT:    popq %rbx
-; X64-NEXT:    retq
-; X64-NEXT:  LBB0_2: ## %bb1
-; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test1:
@@ -33,15 +33,15 @@ define zeroext i16 @test1(i16 zeroext %c, i16 zeroext %k) nounwind ssp {
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    incl %eax
 ; X32-NEXT:    cmpw {{[0-9]+}}(%esp), %cx
-; X32-NEXT:    jne LBB0_2
-; X32-NEXT:  ## %bb.1: ## %bb
+; X32-NEXT:    je LBB0_1
+; X32-NEXT:  ## %bb.2: ## %bb1
+; X32-NEXT:    movzwl %ax, %eax
+; X32-NEXT:    jmp LBB0_3
+; X32-NEXT:  LBB0_1: ## %bb
 ; X32-NEXT:    movzwl %ax, %esi
 ; X32-NEXT:    movl %esi, (%esp)
 ; X32-NEXT:    calll _foo
 ; X32-NEXT:    movl %esi, %eax
-; X32-NEXT:    jmp LBB0_3
-; X32-NEXT:  LBB0_2: ## %bb1
-; X32-NEXT:    movzwl %ax, %eax
 ; X32-NEXT:  LBB0_3: ## %bb1
 ; X32-NEXT:    addl $8, %esp
 ; X32-NEXT:    popl %esi
@@ -65,17 +65,17 @@ define zeroext i16 @test2(i16 zeroext %c, i16 zeroext %k) nounwind ssp {
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    decl %eax
 ; X64-NEXT:    cmpw %di, %si
-; X64-NEXT:    jne LBB1_2
-; X64-NEXT:  ## %bb.1: ## %bb
+; X64-NEXT:    je LBB1_1
+; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    movzwl %ax, %eax
+; X64-NEXT:    retq
+; X64-NEXT:  LBB1_1: ## %bb
 ; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    movzwl %ax, %ebx
 ; X64-NEXT:    movl %ebx, %edi
 ; X64-NEXT:    callq _foo
 ; X64-NEXT:    movl %ebx, %eax
 ; X64-NEXT:    popq %rbx
-; X64-NEXT:    retq
-; X64-NEXT:  LBB1_2: ## %bb1
-; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test2:
@@ -86,15 +86,15 @@ define zeroext i16 @test2(i16 zeroext %c, i16 zeroext %k) nounwind ssp {
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    decl %eax
 ; X32-NEXT:    cmpw {{[0-9]+}}(%esp), %cx
-; X32-NEXT:    jne LBB1_2
-; X32-NEXT:  ## %bb.1: ## %bb
+; X32-NEXT:    je LBB1_1
+; X32-NEXT:  ## %bb.2: ## %bb1
+; X32-NEXT:    movzwl %ax, %eax
+; X32-NEXT:    jmp LBB1_3
+; X32-NEXT:  LBB1_1: ## %bb
 ; X32-NEXT:    movzwl %ax, %esi
 ; X32-NEXT:    movl %esi, (%esp)
 ; X32-NEXT:    calll _foo
 ; X32-NEXT:    movl %esi, %eax
-; X32-NEXT:    jmp LBB1_3
-; X32-NEXT:  LBB1_2: ## %bb1
-; X32-NEXT:    movzwl %ax, %eax
 ; X32-NEXT:  LBB1_3: ## %bb1
 ; X32-NEXT:    addl $8, %esp
 ; X32-NEXT:    popl %esi
@@ -120,17 +120,17 @@ define zeroext i16 @test3(i16 zeroext %c, i16 zeroext %k) nounwind ssp {
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    addl $2, %eax
 ; X64-NEXT:    cmpw %di, %si
-; X64-NEXT:    jne LBB2_2
-; X64-NEXT:  ## %bb.1: ## %bb
+; X64-NEXT:    je LBB2_1
+; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    movzwl %ax, %eax
+; X64-NEXT:    retq
+; X64-NEXT:  LBB2_1: ## %bb
 ; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    movzwl %ax, %ebx
 ; X64-NEXT:    movl %ebx, %edi
 ; X64-NEXT:    callq _foo
 ; X64-NEXT:    movl %ebx, %eax
 ; X64-NEXT:    popq %rbx
-; X64-NEXT:    retq
-; X64-NEXT:  LBB2_2: ## %bb1
-; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test3:
@@ -141,15 +141,15 @@ define zeroext i16 @test3(i16 zeroext %c, i16 zeroext %k) nounwind ssp {
 ; X32-NEXT:    movl %ecx, %eax
 ; X32-NEXT:    addl $2, %eax
 ; X32-NEXT:    cmpw {{[0-9]+}}(%esp), %cx
-; X32-NEXT:    jne LBB2_2
-; X32-NEXT:  ## %bb.1: ## %bb
+; X32-NEXT:    je LBB2_1
+; X32-NEXT:  ## %bb.2: ## %bb1
+; X32-NEXT:    movzwl %ax, %eax
+; X32-NEXT:    jmp LBB2_3
+; X32-NEXT:  LBB2_1: ## %bb
 ; X32-NEXT:    movzwl %ax, %esi
 ; X32-NEXT:    movl %esi, (%esp)
 ; X32-NEXT:    calll _foo
 ; X32-NEXT:    movl %esi, %eax
-; X32-NEXT:    jmp LBB2_3
-; X32-NEXT:  LBB2_2: ## %bb1
-; X32-NEXT:    movzwl %ax, %eax
 ; X32-NEXT:  LBB2_3: ## %bb1
 ; X32-NEXT:    addl $8, %esp
 ; X32-NEXT:    popl %esi
@@ -173,17 +173,17 @@ define zeroext i16 @test4(i16 zeroext %c, i16 zeroext %k) nounwind ssp {
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    addl %edi, %eax
 ; X64-NEXT:    cmpw %di, %si
-; X64-NEXT:    jne LBB3_2
-; X64-NEXT:  ## %bb.1: ## %bb
+; X64-NEXT:    je LBB3_1
+; X64-NEXT:  ## %bb.2: ## %bb1
+; X64-NEXT:    movzwl %ax, %eax
+; X64-NEXT:    retq
+; X64-NEXT:  LBB3_1: ## %bb
 ; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    movzwl %ax, %ebx
 ; X64-NEXT:    movl %ebx, %edi
 ; X64-NEXT:    callq _foo
 ; X64-NEXT:    movl %ebx, %eax
 ; X64-NEXT:    popq %rbx
-; X64-NEXT:    retq
-; X64-NEXT:  LBB3_2: ## %bb1
-; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test4:
@@ -195,15 +195,15 @@ define zeroext i16 @test4(i16 zeroext %c, i16 zeroext %k) nounwind ssp {
 ; X32-NEXT:    movl %edx, %eax
 ; X32-NEXT:    addl %ecx, %eax
 ; X32-NEXT:    cmpw %cx, %dx
-; X32-NEXT:    jne LBB3_2
-; X32-NEXT:  ## %bb.1: ## %bb
+; X32-NEXT:    je LBB3_1
+; X32-NEXT:  ## %bb.2: ## %bb1
+; X32-NEXT:    movzwl %ax, %eax
+; X32-NEXT:    jmp LBB3_3
+; X32-NEXT:  LBB3_1: ## %bb
 ; X32-NEXT:    movzwl %ax, %esi
 ; X32-NEXT:    movl %esi, (%esp)
 ; X32-NEXT:    calll _foo
 ; X32-NEXT:    movl %esi, %eax
-; X32-NEXT:    jmp LBB3_3
-; X32-NEXT:  LBB3_2: ## %bb1
-; X32-NEXT:    movzwl %ax, %eax
 ; X32-NEXT:  LBB3_3: ## %bb1
 ; X32-NEXT:    addl $8, %esp
 ; X32-NEXT:    popl %esi
