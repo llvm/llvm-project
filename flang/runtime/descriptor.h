@@ -255,6 +255,7 @@ public:
     }
   }
 
+  // Returns size in bytes of the descriptor (not the data)
   static constexpr std::size_t SizeInBytes(
       int rank, bool addendum = false, int lengthTypeParameters = 0) {
     std::size_t bytes{sizeof(Descriptor) - sizeof(Dimension)};
