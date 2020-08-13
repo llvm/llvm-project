@@ -11,10 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTConsumer.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/Stmt.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/TokenKinds.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -22,23 +19,16 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Testing/CommandLineArgs.h"
 #include "clang/Testing/TestClangConfig.h"
-#include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Syntax/BuildTree.h"
-#include "clang/Tooling/Syntax/Mutations.h"
 #include "clang/Tooling/Syntax/Nodes.h"
 #include "clang/Tooling/Syntax/Tokens.h"
-#include "clang/Tooling/Tooling.h"
+#include "clang/Tooling/Syntax/Tree.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Annotations.h"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <cstdlib>
-#include <memory>
 
 namespace clang {
 namespace syntax {
