@@ -403,13 +403,35 @@ DylibFile::DylibFile(std::shared_ptr<llvm::MachO::InterfaceFile> interface,
     umbrella = this;
 
   dylibName = saver.save(interface->getInstallName());
+  auto addSymbol = [&](const Twine &name) -> void {
+    symbols.push_back(symtab->addDylib(saver.save(name), umbrella,
+                                       /*isWeakDef=*/false,
+                                       /*isTlv=*/false));
+  };
   // TODO(compnerd) filter out symbols based on the target platform
   // TODO: handle weak defs, thread locals
-  for (const auto symbol : interface->symbols())
-    if (symbol->getArchitectures().has(config->arch))
-      symbols.push_back(symtab->addDylib(saver.save(symbol->getName()),
-                                         umbrella, /*isWeakDef=*/false,
-                                         /*isTlv=*/false));
+  for (const auto symbol : interface->symbols()) {
+    if (!symbol->getArchitectures().has(config->arch))
+      continue;
+
+    switch (symbol->getKind()) {
+    case SymbolKind::GlobalSymbol:
+      addSymbol(symbol->getName());
+      break;
+    case SymbolKind::ObjectiveCClass:
+      // XXX ld64 only creates these symbols when -ObjC is passed in. We may
+      // want to emulate that.
+      addSymbol("_OBJC_CLASS_$_" + symbol->getName());
+      addSymbol("_OBJC_METACLASS_$_" + symbol->getName());
+      break;
+    case SymbolKind::ObjectiveCClassEHType:
+      addSymbol("_OBJC_EHTYPE_$_" + symbol->getName());
+      break;
+    case SymbolKind::ObjectiveCInstanceVariable:
+      addSymbol("_OBJC_IVAR_$_" + symbol->getName());
+      break;
+    }
+  }
   // TODO(compnerd) properly represent the hierarchy of the documents as it is
   // in theory possible to have re-exported dylibs from re-exported dylibs which
   // should be parent'ed to the child.
