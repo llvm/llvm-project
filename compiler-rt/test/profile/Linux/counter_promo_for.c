@@ -2,7 +2,7 @@
 // RUN: rm -fr %t.nopromo.prof
 // RUN: %clang_pgogen=%t.promo.prof/ -o %t.promo.gen -O2 %s
 // RUN: %clang_pgogen=%t.promo.prof/ -o %t.promo.gen.ll -emit-llvm -S -O2 %s
-// RUN: cp %t.promo.gen.ll /tmp/d.txt ; cat %t.promo.gen.ll | FileCheck --check-prefix=PROMO %s
+// RUN: cat %t.promo.gen.ll | FileCheck --check-prefix=PROMO %s
 // RUN: %run %t.promo.gen
 // RUN: llvm-profdata merge -o %t.promo.profdata %t.promo.prof/
 // RUN: llvm-profdata show --counts --all-functions %t.promo.profdata  > %t.promo.dump
