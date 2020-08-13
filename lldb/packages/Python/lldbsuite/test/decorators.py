@@ -863,8 +863,6 @@ def skipUnlessFeature(feature):
 
 def skipIfReproducer(func):
     """Skip this test if the environment is set up to run LLDB with reproducers."""
-    def is_reproducer():
-        if configuration.capture_path or configuration.replay_path:
-            return "reproducers unsupported"
-        return None
-    return skipTestIfFn(is_reproducer)(func)
+    return unittest2.skipIf(
+        configuration.capture_path or configuration.replay_path,
+        "reproducers unsupported")(func)
