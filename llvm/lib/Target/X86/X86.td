@@ -1018,12 +1018,12 @@ def ProcessorFeatures {
 
 class Proc<string Name, list<SubtargetFeature> Features,
            list<SubtargetFeature> TuneFeatures>
- : ProcessorModel<Name, GenericModel, !listconcat(Features, TuneFeatures)>;
+ : ProcessorModel<Name, GenericModel, Features, TuneFeatures>;
 
 class ProcModel<string Name, SchedMachineModel Model,
                 list<SubtargetFeature> Features,
                 list<SubtargetFeature> TuneFeatures>
- : ProcessorModel<Name, Model, !listconcat(Features, TuneFeatures)>;
+ : ProcessorModel<Name, Model, Features, TuneFeatures>;
 
 // NOTE: CMPXCHG8B is here for legacy compatibility so that it is only disabled
 // if i386/i486 is specifically requested.

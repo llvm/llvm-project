@@ -2123,16 +2123,9 @@ void Verifier::verifyStatepoint(const CallBase &Call) {
          Call);
   const int NumTransitionArgs =
       cast<ConstantInt>(NumTransitionArgsV)->getZExtValue();
-  Assert(NumTransitionArgs >= 0,
-         "gc.statepoint number of transition arguments must be positive", Call);
+  Assert(NumTransitionArgs == 0,
+         "gc.statepoint w/inline transition bundle is deprecated", Call);
   const int EndTransitionArgsInx = EndCallArgsInx + 1 + NumTransitionArgs;
-
-  // We're migrating away from inline operands to operand bundles, enforce
-  // the either/or property during transition.
-  if (Call.getOperandBundle(LLVMContext::OB_gc_transition)) {
-    Assert(NumTransitionArgs == 0,
-           "can't use both deopt operands and deopt bundle on a statepoint");
-  }
 
   const Value *NumDeoptArgsV = Call.getArgOperand(EndTransitionArgsInx + 1);
   Assert(isa<ConstantInt>(NumDeoptArgsV),
@@ -2140,17 +2133,8 @@ void Verifier::verifyStatepoint(const CallBase &Call) {
          "must be constant integer",
          Call);
   const int NumDeoptArgs = cast<ConstantInt>(NumDeoptArgsV)->getZExtValue();
-  Assert(NumDeoptArgs >= 0,
-         "gc.statepoint number of deoptimization arguments "
-         "must be positive",
-         Call);
-
-  // We're migrating away from inline operands to operand bundles, enforce
-  // the either/or property during transition.
-  if (Call.getOperandBundle(LLVMContext::OB_deopt)) {
-    Assert(NumDeoptArgs == 0,
-           "can't use both deopt operands and deopt bundle on a statepoint");
-  }
+  Assert(NumDeoptArgs == 0,
+         "gc.statepoint w/inline deopt operands is deprecated", Call);
 
   const int ExpectedNumArgs =
       7 + NumCallArgs + NumTransitionArgs + NumDeoptArgs;

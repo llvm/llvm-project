@@ -472,7 +472,7 @@ public:
     return &InstrItins;
   }
 
-  void ParseSubtargetFeatures(StringRef CPU, StringRef FS);
+  void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
   Generation getGeneration() const {
     return (Generation)Gen;
@@ -1300,7 +1300,7 @@ public:
     return &TSInfo;
   }
 
-  void ParseSubtargetFeatures(StringRef CPU, StringRef FS);
+  void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
   Generation getGeneration() const {
     return Gen;

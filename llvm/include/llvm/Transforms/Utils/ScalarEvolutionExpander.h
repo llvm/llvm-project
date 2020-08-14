@@ -180,23 +180,6 @@ public:
     ChainedPhis.clear();
   }
 
-  /// Return a vector containing all instructions inserted during expansion.
-  SmallVector<Instruction *, 32> getAllInsertedInstructions() const {
-    SmallVector<Instruction *, 32> Result;
-    for (auto &VH : InsertedValues) {
-      Value *V = VH;
-      if (auto *Inst = dyn_cast<Instruction>(V))
-        Result.push_back(Inst);
-    }
-    for (auto &VH : InsertedPostIncValues) {
-      Value *V = VH;
-      if (auto *Inst = dyn_cast<Instruction>(V))
-        Result.push_back(Inst);
-    }
-
-    return Result;
-  }
-
   /// Return true for expressions that can't be evaluated at runtime
   /// within given \b Budget.
   ///
@@ -468,27 +451,6 @@ private:
   /// LCSSA PHIs have been created, return the LCSSA PHI available at \p User.
   /// If no PHIs have been created, return the unchanged operand \p OpIdx.
   Value *fixupLCSSAFormFor(Instruction *User, unsigned OpIdx);
-};
-
-/// Helper to remove instructions inserted during SCEV expansion, unless they
-/// are marked as used.
-class SCEVExpanderCleaner {
-  SCEVExpander &Expander;
-
-  DominatorTree &DT;
-
-  /// Indicates whether the result of the expansion is used. If false, the
-  /// instructions added during expansion are removed.
-  bool ResultUsed;
-
-public:
-  SCEVExpanderCleaner(SCEVExpander &Expander, DominatorTree &DT)
-      : Expander(Expander), DT(DT), ResultUsed(false) {}
-
-  ~SCEVExpanderCleaner();
-
-  /// Indicate that the result of the expansion is used.
-  void markResultUsed() { ResultUsed = true; }
 };
 } // namespace llvm
 
