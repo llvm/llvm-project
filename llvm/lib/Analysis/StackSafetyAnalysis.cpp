@@ -101,7 +101,7 @@ template <typename CalleeTy> struct CallInfo {
 
   struct Less {
     bool operator()(const CallInfo &L, const CallInfo &R) const {
-      return std::tie(L.Callee, L.ParamNo) < std::tie(R.Callee, R.ParamNo);
+      return std::tie(L.ParamNo, L.Callee) < std::tie(R.ParamNo, R.Callee);
     }
   };
 };
@@ -812,11 +812,11 @@ StackSafetyInfo::getParamAccesses() const {
       }
       Param.Calls.emplace_back(C.first.ParamNo, C.first.Callee->getGUID(),
                                C.second);
-      llvm::sort(Param.Calls, [](const FunctionSummary::ParamAccess::Call &L,
-                                 const FunctionSummary::ParamAccess::Call &R) {
-        return std::tie(L.ParamNo, L.Callee) < std::tie(R.ParamNo, R.Callee);
-      });
     }
+    sort(Param.Calls, [](const FunctionSummary::ParamAccess::Call &L,
+                         const FunctionSummary::ParamAccess::Call &R) {
+      return std::tie(L.ParamNo, L.Callee) < std::tie(R.ParamNo, R.Callee);
+    });
   }
   return ParamAccesses;
 }
