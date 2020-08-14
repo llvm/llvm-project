@@ -537,24 +537,24 @@ void test_strtoll() {
 }
 
 void test_strtoul() {
-  char buf[] = "0xffffffffffffaa";
+  char buf[] = "ffffffffffffaa";
   char *endptr = NULL;
   dfsan_set_label(i_label, buf + 1, 1);
   dfsan_set_label(j_label, buf + 2, 1);
   long unsigned int ret = strtol(buf, &endptr, 16);
   assert(ret == 72057594037927850);
-  assert(endptr == buf + 16);
+  assert(endptr == buf + 14);
   ASSERT_LABEL(ret, i_j_label);
 }
 
 void test_strtoull() {
-  char buf[] = "0xffffffffffffffaa";
+  char buf[] = "ffffffffffffffaa";
   char *endptr = NULL;
   dfsan_set_label(i_label, buf + 1, 1);
   dfsan_set_label(j_label, buf + 2, 1);
   long long unsigned int ret = strtoull(buf, &endptr, 16);
   assert(ret == 0xffffffffffffffaa);
-  assert(endptr == buf + 18);
+  assert(endptr == buf + 16);
   ASSERT_LABEL(ret, i_j_label);
 }
 
