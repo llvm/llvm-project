@@ -151,7 +151,7 @@ public:
   // automagically by the compiler, so no temporary objects will need to be
   // created. As a result, we currently don't need a variety of overloaded set
   // value accessors.
-  Scalar &operator+=(const Scalar &rhs);
+  Scalar &operator+=(Scalar rhs);
   Scalar &operator<<=(const Scalar &rhs); // Shift left
   Scalar &operator>>=(const Scalar &rhs); // Shift right (arithmetic)
   Scalar &operator&=(const Scalar &rhs);
@@ -266,18 +266,18 @@ protected:
 
 private:
   friend const Scalar operator+(const Scalar &lhs, const Scalar &rhs);
-  friend const Scalar operator-(const Scalar &lhs, const Scalar &rhs);
-  friend const Scalar operator/(const Scalar &lhs, const Scalar &rhs);
-  friend const Scalar operator*(const Scalar &lhs, const Scalar &rhs);
-  friend const Scalar operator&(const Scalar &lhs, const Scalar &rhs);
-  friend const Scalar operator|(const Scalar &lhs, const Scalar &rhs);
-  friend const Scalar operator%(const Scalar &lhs, const Scalar &rhs);
-  friend const Scalar operator^(const Scalar &lhs, const Scalar &rhs);
+  friend const Scalar operator-(Scalar lhs, Scalar rhs);
+  friend const Scalar operator/(Scalar lhs, Scalar rhs);
+  friend const Scalar operator*(Scalar lhs, Scalar rhs);
+  friend const Scalar operator&(Scalar lhs, Scalar rhs);
+  friend const Scalar operator|(Scalar lhs, Scalar rhs);
+  friend const Scalar operator%(Scalar lhs, Scalar rhs);
+  friend const Scalar operator^(Scalar lhs, Scalar rhs);
   friend const Scalar operator<<(const Scalar &lhs, const Scalar &rhs);
   friend const Scalar operator>>(const Scalar &lhs, const Scalar &rhs);
-  friend bool operator==(const Scalar &lhs, const Scalar &rhs);
+  friend bool operator==(Scalar lhs, Scalar rhs);
   friend bool operator!=(const Scalar &lhs, const Scalar &rhs);
-  friend bool operator<(const Scalar &lhs, const Scalar &rhs);
+  friend bool operator<(Scalar lhs, Scalar rhs);
   friend bool operator<=(const Scalar &lhs, const Scalar &rhs);
   friend bool operator>(const Scalar &lhs, const Scalar &rhs);
   friend bool operator>=(const Scalar &lhs, const Scalar &rhs);
@@ -297,18 +297,18 @@ private:
 //  Differentiate among members functions, non-member functions, and
 //  friend functions
 const Scalar operator+(const Scalar &lhs, const Scalar &rhs);
-const Scalar operator-(const Scalar &lhs, const Scalar &rhs);
-const Scalar operator/(const Scalar &lhs, const Scalar &rhs);
-const Scalar operator*(const Scalar &lhs, const Scalar &rhs);
-const Scalar operator&(const Scalar &lhs, const Scalar &rhs);
-const Scalar operator|(const Scalar &lhs, const Scalar &rhs);
-const Scalar operator%(const Scalar &lhs, const Scalar &rhs);
-const Scalar operator^(const Scalar &lhs, const Scalar &rhs);
+const Scalar operator-(Scalar lhs, Scalar rhs);
+const Scalar operator/(Scalar lhs, Scalar rhs);
+const Scalar operator*(Scalar lhs, Scalar rhs);
+const Scalar operator&(Scalar lhs, Scalar rhs);
+const Scalar operator|(Scalar lhs, Scalar rhs);
+const Scalar operator%(Scalar lhs, Scalar rhs);
+const Scalar operator^(Scalar lhs, Scalar rhs);
 const Scalar operator<<(const Scalar &lhs, const Scalar &rhs);
 const Scalar operator>>(const Scalar &lhs, const Scalar &rhs);
-bool operator==(const Scalar &lhs, const Scalar &rhs);
+bool operator==(Scalar lhs, Scalar rhs);
 bool operator!=(const Scalar &lhs, const Scalar &rhs);
-bool operator<(const Scalar &lhs, const Scalar &rhs);
+bool operator<(Scalar lhs, Scalar rhs);
 bool operator<=(const Scalar &lhs, const Scalar &rhs);
 bool operator>(const Scalar &lhs, const Scalar &rhs);
 bool operator>=(const Scalar &lhs, const Scalar &rhs);
