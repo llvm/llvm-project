@@ -94,6 +94,7 @@ def AffineLoopUnrollAndJam : FunctionPass<"affine-loop-unroll-jam"> {
 def AffineVectorize : FunctionPass<"affine-super-vectorize"> {
   let summary = "Vectorize to a target independent n-D vector abstraction";
   let constructor = "mlir::createSuperVectorizePass()";
+  let dependentDialects = ["vector::VectorDialect"];
   let options = [
     ListOption<"vectorSizes", "virtual-vector-size", "int64_t",
                "Specify an n-D virtual vector size for vectorization",

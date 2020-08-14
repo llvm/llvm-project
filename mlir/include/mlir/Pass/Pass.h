@@ -9,6 +9,7 @@
 #ifndef MLIR_PASS_PASS_H
 #define MLIR_PASS_PASS_H
 
+#include "mlir/IR/Dialect.h"
 #include "mlir/IR/Function.h"
 #include "mlir/Pass/AnalysisManager.h"
 #include "mlir/Pass/PassRegistry.h"
@@ -56,6 +57,13 @@ public:
 
   /// Returns the derived pass name.
   virtual StringRef getName() const = 0;
+
+  /// Register dependent dialects for the current pass.
+  /// A pass is expected to register the dialects it will create operations for,
+  /// other than dialect that exists in the input. For example, a pass that
+  /// converts from Linalg to Affine would register the Affine dialect but does
+  /// not need to register Linalg.
+  virtual void getDependentDialects(DialectRegistry &registry) const {}
 
   /// Returns the command line argument used when registering this pass. Return
   /// an empty string if one does not exist.

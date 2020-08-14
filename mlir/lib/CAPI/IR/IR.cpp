@@ -9,9 +9,11 @@
 #include "mlir-c/IR.h"
 
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Dialect.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
+#include "mlir/InitAllDialects.h"
 #include "mlir/Parser.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -89,11 +91,16 @@ private:
 /* ========================================================================== */
 
 MlirContext mlirContextCreate() {
-  auto *context = new MLIRContext;
+  auto *context = new MLIRContext(false);
   return wrap(context);
 }
 
 void mlirContextDestroy(MlirContext context) { delete unwrap(context); }
+
+void mlirContextLoadAllDialects(MlirContext context) {
+  registerAllDialects(unwrap(context));
+  getGlobalDialectRegistry().loadAll(unwrap(context));
+}
 
 /* ========================================================================== */
 /* Location API.                                                              */
