@@ -46,6 +46,20 @@ static cl::opt<bool> FixupSCSExtendSlotSize(
     cl::desc("Allow spill in spill slot of greater size than register size"),
     cl::Hidden);
 
+static cl::opt<bool> PassGCPtrInCSR(
+    "fixup-allow-gcptr-in-csr", cl::Hidden, cl::init(false),
+    cl::desc("Allow passing GC Pointer arguments in callee saved registers"));
+
+static cl::opt<bool> EnableCopyProp(
+    "fixup-scs-enable-copy-propagation", cl::Hidden, cl::init(true),
+    cl::desc("Enable simple copy propagation during register reloading"));
+
+// This is purely debugging option.
+// It may be handy for investigating statepoint spilling issues.
+static cl::opt<unsigned> MaxStatepointsWithRegs(
+    "fixup-max-csr-statepoints", cl::Hidden,
+    cl::desc("Max number of statepoints allowed to pass GC Ptrs in registers"));
+
 namespace {
 
 class FixupStatepointCallerSaved : public MachineFunctionPass {
@@ -67,6 +81,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
+
 } // End anonymous namespace.
 
 char FixupStatepointCallerSaved::ID = 0;
@@ -83,7 +98,143 @@ static unsigned getRegisterSize(const TargetRegisterInfo &TRI, Register Reg) {
   return TRI.getSpillSize(*RC);
 }
 
+// Advance iterator to the next stack map entry
+static MachineInstr::const_mop_iterator
+advanceToNextStackMapElt(MachineInstr::const_mop_iterator MOI) {
+  if (MOI->isImm()) {
+    switch (MOI->getImm()) {
+    default:
+      llvm_unreachable("Unrecognized operand type.");
+    case StackMaps::DirectMemRefOp:
+      MOI += 2; // <Reg>, <Imm>
+      break;
+    case StackMaps::IndirectMemRefOp:
+      MOI += 3; // <Size>, <Reg>, <Imm>
+      break;
+    case StackMaps::ConstantOp:
+      MOI += 1;
+      break;
+    }
+  }
+  return ++MOI;
+}
+
+// Return statepoint GC args as a set
+static SmallSet<Register, 8> collectGCRegs(MachineInstr &MI) {
+  StatepointOpers SO(&MI);
+  unsigned NumDeoptIdx = SO.getNumDeoptArgsIdx();
+  unsigned NumDeoptArgs = MI.getOperand(NumDeoptIdx).getImm();
+  MachineInstr::const_mop_iterator MOI(MI.operands_begin() + NumDeoptIdx + 1),
+      MOE(MI.operands_end());
+
+  // Skip deopt args
+  while (NumDeoptArgs--)
+    MOI = advanceToNextStackMapElt(MOI);
+
+  SmallSet<Register, 8> Result;
+  while (MOI != MOE) {
+    if (MOI->isReg() && !MOI->isImplicit())
+      Result.insert(MOI->getReg());
+    MOI = advanceToNextStackMapElt(MOI);
+  }
+  return Result;
+}
+
+// Try to eliminate redundant copy to register which we're going to
+// spill, i.e. try to change:
+//    X = COPY Y
+//    SPILL X
+//  to
+//    SPILL Y
+//  If there are no uses of X between copy and STATEPOINT, that COPY
+//  may be eliminated.
+//  Reg - register we're about to spill
+//  RI - On entry points to statepoint.
+//       On successful copy propagation set to new spill point.
+//  IsKill - set to true if COPY is Kill (there are no uses of Y)
+//  Returns either found source copy register or original one.
+static Register performCopyPropagation(Register Reg,
+                                       MachineBasicBlock::iterator &RI,
+                                       bool &IsKill, const TargetInstrInfo &TII,
+                                       const TargetRegisterInfo &TRI) {
+  // First check if statepoint itself uses Reg in non-meta operands.
+  int Idx = RI->findRegisterUseOperandIdx(Reg, false, &TRI);
+  if (Idx >= 0 && (unsigned)Idx < StatepointOpers(&*RI).getNumDeoptArgsIdx()) {
+    IsKill = false;
+    return Reg;
+  }
+
+  if (!EnableCopyProp)
+    return Reg;
+
+  MachineBasicBlock *MBB = RI->getParent();
+  MachineBasicBlock::reverse_iterator E = MBB->rend();
+  MachineInstr *Def = nullptr, *Use = nullptr;
+  for (auto It = ++(RI.getReverse()); It != E; ++It) {
+    if (It->readsRegister(Reg, &TRI) && !Use)
+      Use = &*It;
+    if (It->modifiesRegister(Reg, &TRI)) {
+      Def = &*It;
+      break;
+    }
+  }
+
+  if (!Def)
+    return Reg;
+
+  auto DestSrc = TII.isCopyInstr(*Def);
+  if (!DestSrc || DestSrc->Destination->getReg() != Reg)
+    return Reg;
+
+  Register SrcReg = DestSrc->Source->getReg();
+
+  if (getRegisterSize(TRI, Reg) != getRegisterSize(TRI, SrcReg))
+    return Reg;
+
+  LLVM_DEBUG(dbgs() << "spillRegisters: perform copy propagation "
+                    << printReg(Reg, &TRI) << " -> " << printReg(SrcReg, &TRI)
+                    << "\n");
+
+  // Insert spill immediately after Def
+  RI = ++MachineBasicBlock::iterator(Def);
+  IsKill = DestSrc->Source->isKill();
+
+  // There are no uses of original register between COPY and STATEPOINT.
+  // There can't be any after STATEPOINT, so we can eliminate Def.
+  if (!Use) {
+    LLVM_DEBUG(dbgs() << "spillRegisters: removing dead copy " << *Def);
+    Def->eraseFromParent();
+  }
+  return SrcReg;
+}
+
 namespace {
+// Pair {Register, FrameIndex}
+using RegSlotPair = std::pair<Register, int>;
+
+// Keeps track of what reloads were inserted in MBB.
+class RegReloadCache {
+  using ReloadSet = SmallSet<RegSlotPair, 8>;
+  DenseMap<const MachineBasicBlock *, ReloadSet> Reloads;
+
+public:
+  RegReloadCache() = default;
+
+  // Record reload of Reg from FI in block MBB
+  void recordReload(Register Reg, int FI, const MachineBasicBlock *MBB) {
+    RegSlotPair RSP(Reg, FI);
+    auto Res = Reloads[MBB].insert(RSP);
+    (void)Res;
+    assert(Res.second && "reload already exists");
+  }
+
+  // Does basic block MBB contains reload of Reg from FI?
+  bool hasReload(Register Reg, int FI, const MachineBasicBlock *MBB) {
+    RegSlotPair RSP(Reg, FI);
+    return Reloads.count(MBB) && Reloads[MBB].count(RSP);
+  }
+};
+
 // Cache used frame indexes during statepoint re-write to re-use them in
 // processing next statepoint instruction.
 // Two strategies. One is to preserve the size of spill slot while another one
@@ -105,24 +256,62 @@ private:
   // size will be increased.
   DenseMap<unsigned, FrameIndexesPerSize> Cache;
 
+  // Keeps track of slots reserved for the shared landing pad processing.
+  // Initialized from GlobalIndices for the current EHPad.
+  SmallSet<int, 8> ReservedSlots;
+
+  // Landing pad can be destination of several statepoints. Every register
+  // defined by such statepoints must be spilled to the same stack slot.
+  // This map keeps that information.
+  DenseMap<const MachineBasicBlock *, SmallVector<RegSlotPair, 8>>
+      GlobalIndices;
+
+  FrameIndexesPerSize &getCacheBucket(unsigned Size) {
+    // In FixupSCSExtendSlotSize mode the bucket with 0 index is used
+    // for all sizes.
+    return Cache[FixupSCSExtendSlotSize ? 0 : Size];
+  }
+
 public:
   FrameIndexesCache(MachineFrameInfo &MFI, const TargetRegisterInfo &TRI)
       : MFI(MFI), TRI(TRI) {}
   // Reset the current state of used frame indexes. After invocation of
-  // this function all frame indexes are available for allocation.
-  void reset() {
+  // this function all frame indexes are available for allocation with
+  // the exception of slots reserved for landing pad processing (if any).
+  void reset(const MachineBasicBlock *EHPad) {
     for (auto &It : Cache)
       It.second.Index = 0;
+
+    ReservedSlots.clear();
+    if (EHPad && GlobalIndices.count(EHPad))
+      for (auto &RSP : GlobalIndices[EHPad])
+        ReservedSlots.insert(RSP.second);
   }
+
   // Get frame index to spill the register.
-  int getFrameIndex(Register Reg) {
+  int getFrameIndex(Register Reg, MachineBasicBlock *EHPad) {
+    // Check if slot for Reg is already reserved at EHPad.
+    auto It = GlobalIndices.find(EHPad);
+    if (It != GlobalIndices.end()) {
+      auto &Vec = It->second;
+      auto Idx = llvm::find_if(
+          Vec, [Reg](RegSlotPair &RSP) { return Reg == RSP.first; });
+      if (Idx != Vec.end()) {
+        int FI = Idx->second;
+        LLVM_DEBUG(dbgs() << "Found global FI " << FI << " for register "
+                          << printReg(Reg, &TRI) << " at "
+                          << printMBBReference(*EHPad) << "\n");
+        assert(ReservedSlots.count(FI) && "using unreserved slot");
+        return FI;
+      }
+    }
+
     unsigned Size = getRegisterSize(TRI, Reg);
-    // In FixupSCSExtendSlotSize mode the bucket with 0 index is used
-    // for all sizes.
-    unsigned Bucket = FixupSCSExtendSlotSize ? 0 : Size;
-    FrameIndexesPerSize &Line = Cache[Bucket];
-    if (Line.Index < Line.Slots.size()) {
+    FrameIndexesPerSize &Line = getCacheBucket(Size);
+    while (Line.Index < Line.Slots.size()) {
       int FI = Line.Slots[Line.Index++];
+      if (ReservedSlots.count(FI))
+        continue;
       // If all sizes are kept together we probably need to extend the
       // spill slot size.
       if (MFI.getObjectSize(FI) < Size) {
@@ -136,8 +325,18 @@ public:
     NumSpillSlotsAllocated++;
     Line.Slots.push_back(FI);
     ++Line.Index;
+
+    // Remember assignment {Reg, FI} for EHPad
+    if (EHPad) {
+      GlobalIndices[EHPad].push_back(std::make_pair(Reg, FI));
+      LLVM_DEBUG(dbgs() << "Reserved FI " << FI << " for spilling reg "
+                        << printReg(Reg, &TRI) << " at landing pad "
+                        << printMBBReference(*EHPad) << "\n");
+    }
+
     return FI;
   }
+
   // Sort all registers to spill in descendent order. In the
   // FixupSCSExtendSlotSize mode it will minimize the total frame size.
   // In non FixupSCSExtendSlotSize mode we can skip this step.
@@ -156,6 +355,8 @@ private:
   // statepoint instruction.
   MachineInstr &MI;
   MachineFunction &MF;
+  // If non-null then statepoint is invoke, and this points to the landing pad.
+  MachineBasicBlock *EHPad;
   const TargetRegisterInfo &TRI;
   const TargetInstrInfo &TII;
   MachineFrameInfo &MFI;
@@ -163,26 +364,55 @@ private:
   const uint32_t *Mask;
   // Cache of frame indexes used on previous instruction processing.
   FrameIndexesCache &CacheFI;
+  bool AllowGCPtrInCSR;
   // Operands with physical registers requiring spilling.
   SmallVector<unsigned, 8> OpsToSpill;
   // Set of register to spill.
   SmallVector<Register, 8> RegsToSpill;
+  // Set of registers to reload after statepoint.
+  SmallVector<Register, 8> RegsToReload;
   // Map Register to Frame Slot index.
   DenseMap<Register, int> RegToSlotIdx;
 
 public:
   StatepointState(MachineInstr &MI, const uint32_t *Mask,
-                  FrameIndexesCache &CacheFI)
+                  FrameIndexesCache &CacheFI, bool AllowGCPtrInCSR)
       : MI(MI), MF(*MI.getMF()), TRI(*MF.getSubtarget().getRegisterInfo()),
         TII(*MF.getSubtarget().getInstrInfo()), MFI(MF.getFrameInfo()),
-        Mask(Mask), CacheFI(CacheFI) {}
+        Mask(Mask), CacheFI(CacheFI), AllowGCPtrInCSR(AllowGCPtrInCSR) {
+
+    // Find statepoint's landing pad, if any.
+    EHPad = nullptr;
+    MachineBasicBlock *MBB = MI.getParent();
+    // Invoke statepoint must be last one in block.
+    bool Last = std::none_of(++MI.getIterator(), MBB->end().getInstrIterator(),
+                             [](MachineInstr &I) {
+                               return I.getOpcode() == TargetOpcode::STATEPOINT;
+                             });
+
+    if (!Last)
+      return;
+
+    auto IsEHPad = [](MachineBasicBlock *B) { return B->isEHPad(); };
+
+    assert(llvm::count_if(MBB->successors(), IsEHPad) < 2 && "multiple EHPads");
+
+    auto It = llvm::find_if(MBB->successors(), IsEHPad);
+    if (It != MBB->succ_end())
+      EHPad = *It;
+  }
+
+  MachineBasicBlock *getEHPad() const { return EHPad; }
+
   // Return true if register is callee saved.
   bool isCalleeSaved(Register Reg) { return (Mask[Reg / 32] >> Reg % 32) & 1; }
+
   // Iterates over statepoint meta args to find caller saver registers.
   // Also cache the size of found registers.
   // Returns true if caller save registers found.
   bool findRegistersToSpill() {
     SmallSet<Register, 8> VisitedRegs;
+    SmallSet<Register, 8> GCRegs = collectGCRegs(MI);
     for (unsigned Idx = StatepointOpers(&MI).getVarIdx(),
                   EndIdx = MI.getNumOperands();
          Idx < EndIdx; ++Idx) {
@@ -191,8 +421,13 @@ public:
         continue;
       Register Reg = MO.getReg();
       assert(Reg.isPhysical() && "Only physical regs are expected");
-      if (isCalleeSaved(Reg))
+
+      if (isCalleeSaved(Reg) && (AllowGCPtrInCSR || !is_contained(GCRegs, Reg)))
         continue;
+
+      LLVM_DEBUG(dbgs() << "Will spill " << printReg(Reg, &TRI) << " at index "
+                        << Idx << "\n");
+
       if (VisitedRegs.insert(Reg).second)
         RegsToSpill.push_back(Reg);
       OpsToSpill.push_back(Idx);
@@ -200,30 +435,109 @@ public:
     CacheFI.sortRegisters(RegsToSpill);
     return !RegsToSpill.empty();
   }
+
   // Spill all caller saved registers right before statepoint instruction.
   // Remember frame index where register is spilled.
   void spillRegisters() {
     for (Register Reg : RegsToSpill) {
-      int FI = CacheFI.getFrameIndex(Reg);
+      int FI = CacheFI.getFrameIndex(Reg, EHPad);
       const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
-      TII.storeRegToStackSlot(*MI.getParent(), MI, Reg, true /*is_Kill*/, FI,
-                              RC, &TRI);
+
       NumSpilledRegisters++;
       RegToSlotIdx[Reg] = FI;
+
+      LLVM_DEBUG(dbgs() << "Spilling " << printReg(Reg, &TRI) << " to FI " << FI
+                        << "\n");
+
+      // Perform trivial copy propagation
+      bool IsKill = true;
+      MachineBasicBlock::iterator InsertBefore(MI);
+      Reg = performCopyPropagation(Reg, InsertBefore, IsKill, TII, TRI);
+
+      LLVM_DEBUG(dbgs() << "Insert spill before " << *InsertBefore);
+      TII.storeRegToStackSlot(*MI.getParent(), InsertBefore, Reg, IsKill, FI,
+                              RC, &TRI);
     }
   }
+
+  void insertReloadBefore(unsigned Reg, MachineBasicBlock::iterator It,
+                          MachineBasicBlock *MBB) {
+    const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
+    int FI = RegToSlotIdx[Reg];
+    if (It != MBB->end()) {
+      TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, &TRI);
+      return;
+    }
+
+    // To insert reload at the end of MBB, insert it before last instruction
+    // and then swap them.
+    assert(MBB->begin() != MBB->end() && "Empty block");
+    --It;
+    TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, &TRI);
+    MachineInstr *Reload = It->getPrevNode();
+    int Dummy = 0;
+    (void)Dummy;
+    assert(TII.isLoadFromStackSlot(*Reload, Dummy) == Reg);
+    assert(Dummy == FI);
+    MBB->remove(Reload);
+    MBB->insertAfter(It, Reload);
+  }
+
+  // Insert reloads of (relocated) registers spilled in statepoint.
+  void insertReloads(MachineInstr *NewStatepoint, RegReloadCache &RC) {
+    MachineBasicBlock *MBB = NewStatepoint->getParent();
+    auto InsertPoint = std::next(NewStatepoint->getIterator());
+
+    for (auto Reg : RegsToReload) {
+      insertReloadBefore(Reg, InsertPoint, MBB);
+      LLVM_DEBUG(dbgs() << "Reloading " << printReg(Reg, &TRI) << " from FI "
+                        << RegToSlotIdx[Reg] << " after statepoint\n");
+
+      if (EHPad && !RC.hasReload(Reg, RegToSlotIdx[Reg], EHPad)) {
+        RC.recordReload(Reg, RegToSlotIdx[Reg], EHPad);
+        auto EHPadInsertPoint = EHPad->SkipPHIsLabelsAndDebug(EHPad->begin());
+        insertReloadBefore(Reg, EHPadInsertPoint, EHPad);
+        LLVM_DEBUG(dbgs() << "...also reload at EHPad "
+                          << printMBBReference(*EHPad) << "\n");
+      }
+    }
+  }
+
   // Re-write statepoint machine instruction to replace caller saved operands
   // with indirect memory location (frame index).
-  void rewriteStatepoint() {
+  MachineInstr *rewriteStatepoint() {
     MachineInstr *NewMI =
         MF.CreateMachineInstr(TII.get(MI.getOpcode()), MI.getDebugLoc(), true);
     MachineInstrBuilder MIB(MF, NewMI);
+
+    unsigned NumOps = MI.getNumOperands();
+
+    // New indices for the remaining defs.
+    SmallVector<unsigned, 8> NewIndices;
+    unsigned NumDefs = MI.getNumDefs();
+    for (unsigned I = 0; I < NumDefs; ++I) {
+      MachineOperand &DefMO = MI.getOperand(I);
+      assert(DefMO.isReg() && DefMO.isDef() && "Expected Reg Def operand");
+      Register Reg = DefMO.getReg();
+      if (!AllowGCPtrInCSR) {
+        assert(is_contained(RegsToSpill, Reg));
+        RegsToReload.push_back(Reg);
+      } else {
+        if (isCalleeSaved(Reg)) {
+          NewIndices.push_back(NewMI->getNumOperands());
+          MIB.addReg(Reg, RegState::Define);
+        } else {
+          NewIndices.push_back(NumOps);
+          RegsToReload.push_back(Reg);
+        }
+      }
+    }
 
     // Add End marker.
     OpsToSpill.push_back(MI.getNumOperands());
     unsigned CurOpIdx = 0;
 
-    for (unsigned I = 0; I < MI.getNumOperands(); ++I) {
+    for (unsigned I = NumDefs; I < MI.getNumOperands(); ++I) {
       MachineOperand &MO = MI.getOperand(I);
       if (I == OpsToSpill[CurOpIdx]) {
         int FI = RegToSlotIdx[MO.getReg()];
@@ -234,23 +548,38 @@ public:
         MIB.addFrameIndex(FI);
         MIB.addImm(0);
         ++CurOpIdx;
-      } else
+      } else {
         MIB.add(MO);
+        unsigned OldDef;
+        if (AllowGCPtrInCSR && MI.isRegTiedToDefOperand(I, &OldDef)) {
+          assert(OldDef < NumDefs);
+          assert(NewIndices[OldDef] < NumOps);
+          MIB->tieOperands(NewIndices[OldDef], MIB->getNumOperands() - 1);
+        }
+      }
     }
     assert(CurOpIdx == (OpsToSpill.size() - 1) && "Not all operands processed");
     // Add mem operands.
     NewMI->setMemRefs(MF, MI.memoperands());
     for (auto It : RegToSlotIdx) {
+      Register R = It.first;
       int FrameIndex = It.second;
       auto PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIndex);
-      auto *MMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad,
-                                          getRegisterSize(TRI, It.first),
-                                          MFI.getObjectAlign(FrameIndex));
+      MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad;
+      if (is_contained(RegsToReload, R))
+        Flags |= MachineMemOperand::MOStore;
+      auto *MMO =
+          MF.getMachineMemOperand(PtrInfo, Flags, getRegisterSize(TRI, R),
+                                  MFI.getObjectAlign(FrameIndex));
       NewMI->addMemOperand(MF, MMO);
     }
+
     // Insert new statepoint and erase old one.
     MI.getParent()->insert(MI, NewMI);
+
+    LLVM_DEBUG(dbgs() << "rewritten statepoint to : " << *NewMI << "\n");
     MI.eraseFromParent();
+    return NewMI;
   }
 };
 
@@ -259,28 +588,33 @@ private:
   MachineFunction &MF;
   const TargetRegisterInfo &TRI;
   FrameIndexesCache CacheFI;
+  RegReloadCache ReloadCache;
 
 public:
   StatepointProcessor(MachineFunction &MF)
       : MF(MF), TRI(*MF.getSubtarget().getRegisterInfo()),
         CacheFI(MF.getFrameInfo(), TRI) {}
 
-  bool process(MachineInstr &MI) {
+  bool process(MachineInstr &MI, bool AllowGCPtrInCSR) {
     StatepointOpers SO(&MI);
     uint64_t Flags = SO.getFlags();
     // Do nothing for LiveIn, it supports all registers.
     if (Flags & (uint64_t)StatepointFlags::DeoptLiveIn)
       return false;
+    LLVM_DEBUG(dbgs() << "\nMBB " << MI.getParent()->getNumber() << " "
+                      << MI.getParent()->getName() << " : process statepoint "
+                      << MI);
     CallingConv::ID CC = SO.getCallingConv();
     const uint32_t *Mask = TRI.getCallPreservedMask(MF, CC);
-    CacheFI.reset();
-    StatepointState SS(MI, Mask, CacheFI);
+    StatepointState SS(MI, Mask, CacheFI, AllowGCPtrInCSR);
+    CacheFI.reset(SS.getEHPad());
 
     if (!SS.findRegistersToSpill())
       return false;
 
     SS.spillRegisters();
-    SS.rewriteStatepoint();
+    auto *NewStatepoint = SS.rewriteStatepoint();
+    SS.insertReloads(NewStatepoint, ReloadCache);
     return true;
   }
 };
@@ -305,7 +639,14 @@ bool FixupStatepointCallerSaved::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
   StatepointProcessor SPP(MF);
-  for (MachineInstr *I : Statepoints)
-    Changed |= SPP.process(*I);
+  unsigned NumStatepoints = 0;
+  bool AllowGCPtrInCSR = PassGCPtrInCSR;
+  for (MachineInstr *I : Statepoints) {
+    ++NumStatepoints;
+    if (MaxStatepointsWithRegs.getNumOccurrences() &&
+        NumStatepoints >= MaxStatepointsWithRegs)
+      AllowGCPtrInCSR = false;
+    Changed |= SPP.process(*I, AllowGCPtrInCSR);
+  }
   return Changed;
 }

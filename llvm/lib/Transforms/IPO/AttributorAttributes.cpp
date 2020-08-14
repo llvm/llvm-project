@@ -7286,6 +7286,262 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
                       << getAssociatedValue() << "\n");
   }
 
+  static bool calculateICmpInst(const ICmpInst *ICI, const APInt &LHS,
+                                const APInt &RHS) {
+    ICmpInst::Predicate Pred = ICI->getPredicate();
+    switch (Pred) {
+    case ICmpInst::ICMP_UGT:
+      return LHS.ugt(RHS);
+    case ICmpInst::ICMP_SGT:
+      return LHS.sgt(RHS);
+    case ICmpInst::ICMP_EQ:
+      return LHS.eq(RHS);
+    case ICmpInst::ICMP_UGE:
+      return LHS.uge(RHS);
+    case ICmpInst::ICMP_SGE:
+      return LHS.sge(RHS);
+    case ICmpInst::ICMP_ULT:
+      return LHS.ult(RHS);
+    case ICmpInst::ICMP_SLT:
+      return LHS.slt(RHS);
+    case ICmpInst::ICMP_NE:
+      return LHS.ne(RHS);
+    case ICmpInst::ICMP_ULE:
+      return LHS.ule(RHS);
+    case ICmpInst::ICMP_SLE:
+      return LHS.sle(RHS);
+    default:
+      llvm_unreachable("Invalid ICmp predicate!");
+    }
+  }
+
+  static APInt calculateCastInst(const CastInst *CI, const APInt &Src,
+                                 uint32_t ResultBitWidth) {
+    Instruction::CastOps CastOp = CI->getOpcode();
+    switch (CastOp) {
+    default:
+      llvm_unreachable("unsupported or not integer cast");
+    case Instruction::Trunc:
+      return Src.trunc(ResultBitWidth);
+    case Instruction::SExt:
+      return Src.sext(ResultBitWidth);
+    case Instruction::ZExt:
+      return Src.zext(ResultBitWidth);
+    case Instruction::BitCast:
+      return Src;
+    }
+  }
+
+  static APInt calculateBinaryOperator(const BinaryOperator *BinOp,
+                                       const APInt &LHS, const APInt &RHS,
+                                       bool &SkipOperation, bool &Unsupported) {
+    Instruction::BinaryOps BinOpcode = BinOp->getOpcode();
+    // Unsupported is set to true when the binary operator is not supported.
+    // SkipOperation is set to true when UB occur with the given operand pair
+    // (LHS, RHS).
+    // TODO: we should look at nsw and nuw keywords to handle operations
+    //       that create poison or undef value.
+    switch (BinOpcode) {
+    default:
+      Unsupported = true;
+      return LHS;
+    case Instruction::Add:
+      return LHS + RHS;
+    case Instruction::Sub:
+      return LHS - RHS;
+    case Instruction::Mul:
+      return LHS * RHS;
+    case Instruction::UDiv:
+      if (RHS.isNullValue()) {
+        SkipOperation = true;
+        return LHS;
+      }
+      return LHS.udiv(RHS);
+    case Instruction::SDiv:
+      if (RHS.isNullValue()) {
+        SkipOperation = true;
+        return LHS;
+      }
+      return LHS.sdiv(RHS);
+    case Instruction::URem:
+      if (RHS.isNullValue()) {
+        SkipOperation = true;
+        return LHS;
+      }
+      return LHS.urem(RHS);
+    case Instruction::SRem:
+      if (RHS.isNullValue()) {
+        SkipOperation = true;
+        return LHS;
+      }
+      return LHS.srem(RHS);
+    case Instruction::Shl:
+      return LHS.shl(RHS);
+    case Instruction::LShr:
+      return LHS.lshr(RHS);
+    case Instruction::AShr:
+      return LHS.ashr(RHS);
+    case Instruction::And:
+      return LHS & RHS;
+    case Instruction::Or:
+      return LHS | RHS;
+    case Instruction::Xor:
+      return LHS ^ RHS;
+    }
+  }
+
+  ChangeStatus updateWithICmpInst(Attributor &A, ICmpInst *ICI) {
+    auto AssumedBefore = getAssumed();
+    Value *LHS = ICI->getOperand(0);
+    Value *RHS = ICI->getOperand(1);
+    if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
+      return indicatePessimisticFixpoint();
+
+    auto &LHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*LHS));
+    if (!LHSAA.isValidState())
+      return indicatePessimisticFixpoint();
+
+    auto &RHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*RHS));
+    if (!RHSAA.isValidState())
+      return indicatePessimisticFixpoint();
+
+    const DenseSet<APInt> &LHSAAPVS = LHSAA.getAssumedSet();
+    const DenseSet<APInt> &RHSAAPVS = RHSAA.getAssumedSet();
+
+    // TODO: Handle undef correctly.
+    bool MaybeTrue = false, MaybeFalse = false;
+    for (const APInt &L : LHSAAPVS) {
+      for (const APInt &R : RHSAAPVS) {
+        bool CmpResult = calculateICmpInst(ICI, L, R);
+        MaybeTrue |= CmpResult;
+        MaybeFalse |= !CmpResult;
+        if (MaybeTrue & MaybeFalse)
+          return indicatePessimisticFixpoint();
+      }
+    }
+    if (MaybeTrue)
+      unionAssumed(APInt(/* numBits */ 1, /* val */ 1));
+    if (MaybeFalse)
+      unionAssumed(APInt(/* numBits */ 1, /* val */ 0));
+    return AssumedBefore == getAssumed() ? ChangeStatus::UNCHANGED
+                                         : ChangeStatus::CHANGED;
+  }
+
+  ChangeStatus updateWithSelectInst(Attributor &A, SelectInst *SI) {
+    auto AssumedBefore = getAssumed();
+    Value *LHS = SI->getTrueValue();
+    Value *RHS = SI->getFalseValue();
+    if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
+      return indicatePessimisticFixpoint();
+
+    // TODO: Use assumed simplified condition value
+    auto &LHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*LHS));
+    if (!LHSAA.isValidState())
+      return indicatePessimisticFixpoint();
+
+    auto &RHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*RHS));
+    if (!RHSAA.isValidState())
+      return indicatePessimisticFixpoint();
+
+    unionAssumed(LHSAA);
+    unionAssumed(RHSAA);
+    return AssumedBefore == getAssumed() ? ChangeStatus::UNCHANGED
+                                         : ChangeStatus::CHANGED;
+  }
+
+  ChangeStatus updateWithCastInst(Attributor &A, CastInst *CI) {
+    auto AssumedBefore = getAssumed();
+    if (!CI->isIntegerCast())
+      return indicatePessimisticFixpoint();
+    assert(CI->getNumOperands() == 1 && "Expected cast to be unary!");
+    uint32_t ResultBitWidth = CI->getDestTy()->getIntegerBitWidth();
+    Value *Src = CI->getOperand(0);
+    auto &SrcAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*Src));
+    if (!SrcAA.isValidState())
+      return indicatePessimisticFixpoint();
+    const DenseSet<APInt> &SrcAAPVS = SrcAA.getAssumedSet();
+    for (const APInt &S : SrcAAPVS) {
+      APInt T = calculateCastInst(CI, S, ResultBitWidth);
+      unionAssumed(T);
+    }
+    // TODO: Handle undef correctly.
+    return AssumedBefore == getAssumed() ? ChangeStatus::UNCHANGED
+                                         : ChangeStatus::CHANGED;
+  }
+
+  ChangeStatus updateWithBinaryOperator(Attributor &A, BinaryOperator *BinOp) {
+    auto AssumedBefore = getAssumed();
+    Value *LHS = BinOp->getOperand(0);
+    Value *RHS = BinOp->getOperand(1);
+    if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
+      return indicatePessimisticFixpoint();
+
+    auto &LHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*LHS));
+    if (!LHSAA.isValidState())
+      return indicatePessimisticFixpoint();
+
+    auto &RHSAA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(*RHS));
+    if (!RHSAA.isValidState())
+      return indicatePessimisticFixpoint();
+
+    const DenseSet<APInt> &LHSAAPVS = LHSAA.getAssumedSet();
+    const DenseSet<APInt> &RHSAAPVS = RHSAA.getAssumedSet();
+
+    // TODO: Handle undef correctly
+    for (const APInt &L : LHSAAPVS) {
+      for (const APInt &R : RHSAAPVS) {
+        bool SkipOperation = false;
+        bool Unsupported = false;
+        APInt Result =
+            calculateBinaryOperator(BinOp, L, R, SkipOperation, Unsupported);
+        if (Unsupported)
+          return indicatePessimisticFixpoint();
+        // If SkipOperation is true, we can ignore this operand pair (L, R).
+        if (!SkipOperation)
+          unionAssumed(Result);
+      }
+    }
+    return AssumedBefore == getAssumed() ? ChangeStatus::UNCHANGED
+                                         : ChangeStatus::CHANGED;
+  }
+
+  ChangeStatus updateWithPHINode(Attributor &A, PHINode *PHI) {
+    auto AssumedBefore = getAssumed();
+    for (unsigned u = 0, e = PHI->getNumIncomingValues(); u < e; u++) {
+      Value *IncomingValue = PHI->getIncomingValue(u);
+      auto &PotentialValuesAA = A.getAAFor<AAPotentialValues>(
+          *this, IRPosition::value(*IncomingValue));
+      if (!PotentialValuesAA.isValidState())
+        return indicatePessimisticFixpoint();
+      unionAssumed(PotentialValuesAA.getAssumed());
+    }
+    return AssumedBefore == getAssumed() ? ChangeStatus::UNCHANGED
+                                         : ChangeStatus::CHANGED;
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    Value &V = getAssociatedValue();
+    Instruction *I = dyn_cast<Instruction>(&V);
+
+    if (auto *ICI = dyn_cast<ICmpInst>(I))
+      return updateWithICmpInst(A, ICI);
+
+    if (auto *SI = dyn_cast<SelectInst>(I))
+      return updateWithSelectInst(A, SI);
+
+    if (auto *CI = dyn_cast<CastInst>(I))
+      return updateWithCastInst(A, CI);
+
+    if (auto *BinOp = dyn_cast<BinaryOperator>(I))
+      return updateWithBinaryOperator(A, BinOp);
+
+    if (auto *PHI = dyn_cast<PHINode>(I))
+      return updateWithPHINode(A, PHI);
+
+    return indicatePessimisticFixpoint();
+  }
+
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FLOATING_ATTR(potential_values)
@@ -7333,6 +7589,37 @@ struct AAPotentialValuesCallSiteReturned
 struct AAPotentialValuesCallSiteArgument : AAPotentialValuesFloating {
   AAPotentialValuesCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AAPotentialValuesFloating(IRP, A) {}
+
+  /// See AbstractAttribute::initialize(..).
+  void initialize(Attributor &A) override {
+    Value &V = getAssociatedValue();
+
+    if (auto *C = dyn_cast<ConstantInt>(&V)) {
+      unionAssumed(C->getValue());
+      indicateOptimisticFixpoint();
+      return;
+    }
+
+    if (isa<UndefValue>(&V)) {
+      // Collapse the undef state to 0.
+      unionAssumed(
+          APInt(/* numBits */ getAssociatedType()->getIntegerBitWidth(),
+                /* val */ 0));
+      indicateOptimisticFixpoint();
+      return;
+    }
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    Value &V = getAssociatedValue();
+    auto AssumedBefore = getAssumed();
+    auto &AA = A.getAAFor<AAPotentialValues>(*this, IRPosition::value(V));
+    const auto &S = AA.getAssumed();
+    unionAssumed(S);
+    return AssumedBefore == getAssumed() ? ChangeStatus::UNCHANGED
+                                         : ChangeStatus::CHANGED;
+  }
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
