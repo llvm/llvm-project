@@ -178,10 +178,7 @@ define amdgpu_ps <2 x float> @v_orn2_i64_vs(i64 %src0, i64 inreg %src1) {
 define amdgpu_ps <2 x i32> @s_orn2_v2i32(<2 x i32> inreg %src0, <2 x i32> inreg %src1) {
 ; GCN-LABEL: s_orn2_v2i32:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_mov_b32 s0, -1
-; GCN-NEXT:    s_mov_b32 s1, s0
-; GCN-NEXT:    s_xor_b64 s[0:1], s[4:5], s[0:1]
-; GCN-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
+; GCN-NEXT:    s_orn2_b64 s[0:1], s[2:3], s[4:5]
 ; GCN-NEXT:    ; return to shader part epilog
   %not.src1 = xor <2 x i32> %src1, <i32 -1, i32 -1>
   %or = or <2 x i32> %src0, %not.src1
@@ -191,10 +188,7 @@ define amdgpu_ps <2 x i32> @s_orn2_v2i32(<2 x i32> inreg %src0, <2 x i32> inreg 
 define amdgpu_ps <2 x i32> @s_orn2_v2i32_commute(<2 x i32> inreg %src0, <2 x i32> inreg %src1) {
 ; GCN-LABEL: s_orn2_v2i32_commute:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_mov_b32 s0, -1
-; GCN-NEXT:    s_mov_b32 s1, s0
-; GCN-NEXT:    s_xor_b64 s[0:1], s[4:5], s[0:1]
-; GCN-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
+; GCN-NEXT:    s_orn2_b64 s[0:1], s[2:3], s[4:5]
 ; GCN-NEXT:    ; return to shader part epilog
   %not.src1 = xor <2 x i32> %src1, <i32 -1, i32 -1>
   %or = or <2 x i32> %not.src1, %src0
