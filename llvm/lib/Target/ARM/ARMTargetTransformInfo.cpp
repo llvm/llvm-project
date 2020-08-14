@@ -1358,6 +1358,86 @@ bool ARMTTIImpl::isLoweredToCall(const Function *F) {
   return BaseT::isLoweredToCall(F);
 }
 
+bool ARMTTIImpl::maybeLoweredToCall(Instruction &I) {
+  unsigned ISD = TLI->InstructionOpcodeToISD(I.getOpcode());
+  EVT VT = TLI->getValueType(DL, I.getType(), true);
+  if (TLI->getOperationAction(ISD, VT) == TargetLowering::LibCall)
+    return true;
+
+  // Check if an intrinsic will be lowered to a call and assume that any
+  // other CallInst will generate a bl.
+  if (auto *Call = dyn_cast<CallInst>(&I)) {
+    if (isa<IntrinsicInst>(Call)) {
+      if (const Function *F = Call->getCalledFunction())
+        return isLoweredToCall(F);
+    }
+    return true;
+  }
+
+  // FPv5 provides conversions between integer, double-precision,
+  // single-precision, and half-precision formats.
+  switch (I.getOpcode()) {
+  default:
+    break;
+  case Instruction::FPToSI:
+  case Instruction::FPToUI:
+  case Instruction::SIToFP:
+  case Instruction::UIToFP:
+  case Instruction::FPTrunc:
+  case Instruction::FPExt:
+    return !ST->hasFPARMv8Base();
+  }
+
+  // FIXME: Unfortunately the approach of checking the Operation Action does
+  // not catch all cases of Legalization that use library calls. Our
+  // Legalization step categorizes some transformations into library calls as
+  // Custom, Expand or even Legal when doing type legalization. So for now
+  // we have to special case for instance the SDIV of 64bit integers and the
+  // use of floating point emulation.
+  if (VT.isInteger() && VT.getSizeInBits() >= 64) {
+    switch (ISD) {
+    default:
+      break;
+    case ISD::SDIV:
+    case ISD::UDIV:
+    case ISD::SREM:
+    case ISD::UREM:
+    case ISD::SDIVREM:
+    case ISD::UDIVREM:
+      return true;
+    }
+  }
+
+  // Assume all other non-float operations are supported.
+  if (!VT.isFloatingPoint())
+    return false;
+
+  // We'll need a library call to handle most floats when using soft.
+  if (TLI->useSoftFloat()) {
+    switch (I.getOpcode()) {
+    default:
+      return true;
+    case Instruction::Alloca:
+    case Instruction::Load:
+    case Instruction::Store:
+    case Instruction::Select:
+    case Instruction::PHI:
+      return false;
+    }
+  }
+
+  // We'll need a libcall to perform double precision operations on a single
+  // precision only FPU.
+  if (I.getType()->isDoubleTy() && !ST->hasFP64())
+    return true;
+
+  // Likewise for half precision arithmetic.
+  if (I.getType()->isHalfTy() && !ST->hasFullFP16())
+    return true;
+
+  return false;
+}
+
 bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                           AssumptionCache &AC,
                                           TargetLibraryInfo *LibInfo,
@@ -1392,86 +1472,6 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
 
   // Making a call will trash LR and clear LO_BRANCH_INFO, so there's little
   // point in generating a hardware loop if that's going to happen.
-  auto MaybeCall = [this](Instruction &I) {
-    const ARMTargetLowering *TLI = getTLI();
-    unsigned ISD = TLI->InstructionOpcodeToISD(I.getOpcode());
-    EVT VT = TLI->getValueType(DL, I.getType(), true);
-    if (TLI->getOperationAction(ISD, VT) == TargetLowering::LibCall)
-      return true;
-
-    // Check if an intrinsic will be lowered to a call and assume that any
-    // other CallInst will generate a bl.
-    if (auto *Call = dyn_cast<CallInst>(&I)) {
-      if (isa<IntrinsicInst>(Call)) {
-        if (const Function *F = Call->getCalledFunction())
-          return isLoweredToCall(F);
-      }
-      return true;
-    }
-
-    // FPv5 provides conversions between integer, double-precision,
-    // single-precision, and half-precision formats.
-    switch (I.getOpcode()) {
-    default:
-      break;
-    case Instruction::FPToSI:
-    case Instruction::FPToUI:
-    case Instruction::SIToFP:
-    case Instruction::UIToFP:
-    case Instruction::FPTrunc:
-    case Instruction::FPExt:
-      return !ST->hasFPARMv8Base();
-    }
-
-    // FIXME: Unfortunately the approach of checking the Operation Action does
-    // not catch all cases of Legalization that use library calls. Our
-    // Legalization step categorizes some transformations into library calls as
-    // Custom, Expand or even Legal when doing type legalization. So for now
-    // we have to special case for instance the SDIV of 64bit integers and the
-    // use of floating point emulation.
-    if (VT.isInteger() && VT.getSizeInBits() >= 64) {
-      switch (ISD) {
-      default:
-        break;
-      case ISD::SDIV:
-      case ISD::UDIV:
-      case ISD::SREM:
-      case ISD::UREM:
-      case ISD::SDIVREM:
-      case ISD::UDIVREM:
-        return true;
-      }
-    }
-
-    // Assume all other non-float operations are supported.
-    if (!VT.isFloatingPoint())
-      return false;
-
-    // We'll need a library call to handle most floats when using soft.
-    if (TLI->useSoftFloat()) {
-      switch (I.getOpcode()) {
-      default:
-        return true;
-      case Instruction::Alloca:
-      case Instruction::Load:
-      case Instruction::Store:
-      case Instruction::Select:
-      case Instruction::PHI:
-        return false;
-      }
-    }
-
-    // We'll need a libcall to perform double precision operations on a single
-    // precision only FPU.
-    if (I.getType()->isDoubleTy() && !ST->hasFP64())
-      return true;
-
-    // Likewise for half precision arithmetic.
-    if (I.getType()->isHalfTy() && !ST->hasFullFP16())
-      return true;
-
-    return false;
-  };
 
   auto IsHardwareLoopIntrinsic = [](Instruction &I) {
     if (auto *Call = dyn_cast<IntrinsicInst>(&I)) {
@@ -1493,7 +1493,7 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
   auto ScanLoop = [&](Loop *L) {
     for (auto *BB : L->getBlocks()) {
       for (auto &I : *BB) {
-        if (MaybeCall(I) || IsHardwareLoopIntrinsic(I)) {
+        if (maybeLoweredToCall(I) || IsHardwareLoopIntrinsic(I)) {
           LLVM_DEBUG(dbgs() << "ARMHWLoops: Bad instruction: " << I << "\n");
           return false;
         }

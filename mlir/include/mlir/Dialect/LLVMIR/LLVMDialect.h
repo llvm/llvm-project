@@ -15,6 +15,7 @@
 #define MLIR_DIALECT_LLVMIR_LLVMDIALECT_H_
 
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/OpDefinition.h"

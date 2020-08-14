@@ -125,7 +125,7 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx)
 /// Create an LLVMTypeConverter using custom LowerToLLVMOptions.
 LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
                                      const LowerToLLVMOptions &options)
-    : llvmDialect(ctx->getRegisteredDialect<LLVM::LLVMDialect>()),
+    : llvmDialect(ctx->getOrLoadDialect<LLVM::LLVMDialect>()),
       options(options) {
   assert(llvmDialect && "LLVM IR dialect is not registered");
   if (options.indexBitwidth == kDeriveIndexBitwidthFromDataLayout)
@@ -2278,11 +2278,11 @@ struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<MemRefCastOp> {
     auto targetStructType = typeConverter.convertType(memRefCastOp.getType());
     auto loc = op->getLoc();
 
-    // MemRefCastOp reduce to bitcast in the ranked MemRef case.
-    if (srcType.isa<MemRefType>() && dstType.isa<MemRefType>()) {
-      rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, targetStructType,
-                                                   transformed.source());
-    } else if (srcType.isa<MemRefType>() && dstType.isa<UnrankedMemRefType>()) {
+    // For ranked/ranked case, just keep the original descriptor.
+    if (srcType.isa<MemRefType>() && dstType.isa<MemRefType>())
+      return rewriter.replaceOp(op, {transformed.source()});
+
+    if (srcType.isa<MemRefType>() && dstType.isa<UnrankedMemRefType>()) {
       // Casting ranked to unranked memref type
       // Set the rank in the destination from the memref type
       // Allocate space on the stack and copy the src memref descriptor

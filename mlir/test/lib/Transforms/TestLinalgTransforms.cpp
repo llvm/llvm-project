@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -29,6 +30,14 @@ struct TestLinalgTransforms
     : public PassWrapper<TestLinalgTransforms, FunctionPass> {
   TestLinalgTransforms() = default;
   TestLinalgTransforms(const TestLinalgTransforms &pass) {}
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<AffineDialect>();
+    registry.insert<scf::SCFDialect>();
+    registry.insert<StandardOpsDialect>();
+    registry.insert<vector::VectorDialect>();
+    registry.insert<gpu::GPUDialect>();
+  }
 
   void runOnFunction() override;
 

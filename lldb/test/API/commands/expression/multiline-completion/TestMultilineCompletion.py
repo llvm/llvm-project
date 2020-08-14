@@ -40,7 +40,9 @@ class MultilineCompletionTest(PExpectTest):
 
         self.start_expression_editor()
         self.child.send("to_\t")
-        self.child.expect_exact("to_complete")
+        # editline might move the cursor back to the start of the line via \r
+        # and then back to its original position.
+        self.child.expect(re.compile(b"to_(\r" + self.cursor_forward_escape_seq(len("  1: to_")) + b")?complete"))
         self.exit_expression_editor()
 
         # Check that completion empty input in a function with only one
