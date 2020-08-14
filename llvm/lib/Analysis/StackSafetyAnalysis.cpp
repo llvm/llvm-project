@@ -101,7 +101,7 @@ template <typename CalleeTy> struct CallInfo {
 
   struct Less {
     bool operator()(const CallInfo &L, const CallInfo &R) const {
-      return std::tie(L.Callee, L.ParamNo) < std::tie(R.Callee, R.ParamNo);
+      return std::tie(L.ParamNo, L.Callee) < std::tie(R.ParamNo, R.Callee);
     }
   };
 };
