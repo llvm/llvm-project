@@ -3105,7 +3105,7 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
         FieldSeparator IFS;
         for (auto &Call : PS.Calls) {
           Out << IFS;
-          Out << "(callee: ^" << Machine.getGUIDSlot(Call.Callee);
+          Out << "(callee: ^" << Machine.getGUIDSlot(Call.Callee.getGUID());
           Out << ", param: " << Call.ParamNo;
           Out << ", offset: ";
           PrintRange(Call.Offsets);
