@@ -1882,12 +1882,10 @@ Value *SCEVExpander::expand(const SCEV *S) {
         // there) so that it is guaranteed to dominate any user inside the loop.
         if (L && SE.hasComputableLoopEvolution(S, L) && !PostIncLoops.count(L))
           InsertPt = &*L->getHeader()->getFirstInsertionPt();
-
         while (InsertPt->getIterator() != Builder.GetInsertPoint() &&
                (isInsertedInstruction(InsertPt) ||
-                isa<DbgInfoIntrinsic>(InsertPt))) {
+                isa<DbgInfoIntrinsic>(InsertPt)))
           InsertPt = &*std::next(InsertPt->getIterator());
-        }
         break;
       }
     }
@@ -2631,41 +2629,5 @@ bool isSafeToExpandAt(const SCEV *S, const Instruction *InsertionPoint,
           return true;
   }
   return false;
-}
-
-SCEVExpanderCleaner::~SCEVExpanderCleaner() {
-  // Result is used, nothing to remove.
-  if (ResultUsed)
-    return;
-
-  auto InsertedInstructions = Expander.getAllInsertedInstructions();
-#ifndef NDEBUG
-  SmallPtrSet<Instruction *, 8> InsertedSet(InsertedInstructions.begin(),
-                                            InsertedInstructions.end());
-  (void)InsertedSet;
-#endif
-  // Remove sets with value handles.
-  Expander.clear();
-
-  // Sort so that earlier instructions do not dominate later instructions.
-  stable_sort(InsertedInstructions, [this](Instruction *A, Instruction *B) {
-    return DT.dominates(B, A);
-  });
-  // Remove all inserted instructions.
-  for (Instruction *I : InsertedInstructions) {
-
-#ifndef NDEBUG
-    assert(all_of(I->users(),
-                  [&InsertedSet](Value *U) {
-                    return InsertedSet.contains(cast<Instruction>(U));
-                  }) &&
-           "removed instruction should only be used by instructions inserted "
-           "during expansion");
-#endif
-    assert(!I->getType()->isVoidTy() &&
-           "inserted instruction should have non-void types");
-    I->replaceAllUsesWith(UndefValue::get(I->getType()));
-    I->eraseFromParent();
-  }
 }
 }
