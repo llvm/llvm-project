@@ -49,8 +49,8 @@ entry:
 ; CHECK: ret void
 
 ; ADDR-LABEL: @Store(
-; ADDR: %[[MASKSHADOW:.*]] = load <4 x i1>, {{.*}}@__msan_param_tls to i64), i64 40)
 ; ADDR: %[[ADDRSHADOW:.*]] = load i64, {{.*}}[100 x i64]* @__msan_param_tls, i32 0, i32 0)
+; ADDR: %[[MASKSHADOW:.*]] = load <4 x i1>, {{.*}}@__msan_param_tls to i64), i64 40)
 
 ; ADDR: %[[ADDRBAD:.*]] = icmp ne i64 %[[ADDRSHADOW]], 0
 ; ADDR: br i1 %[[ADDRBAD]], label {{.*}}, label {{.*}}
@@ -72,14 +72,14 @@ entry:
 }
 
 ; CHECK-LABEL: @Load(
-; CHECK: %[[A:.*]] = load <4 x i64>, {{.*}}@__msan_param_tls to i64), i64 8)
-; CHECK-ORIGIN: %[[O:.*]] = load i32, {{.*}}@__msan_param_origin_tls to i64), i64 8)
 ; CHECK: %[[B:.*]] = ptrtoint <4 x double>* %p to i64
 ; CHECK: %[[C:.*]] = xor i64 %[[B]], 87960930222080
 ; CHECK: %[[D:.*]] = inttoptr i64 %[[C]] to <4 x i64>*
 ; CHECK-ORIGIN: %[[E:.*]] = add i64 %[[C]], 17592186044416
 ; CHECK-ORIGIN: %[[F:.*]] = and i64 %[[E]], -4
 ; CHECK-ORIGIN: %[[G:.*]] = inttoptr i64 %[[F]] to i32*
+; CHECK: %[[A:.*]] = load <4 x i64>, {{.*}}@__msan_param_tls to i64), i64 8)
+; CHECK-ORIGIN: %[[O:.*]] = load i32, {{.*}}@__msan_param_origin_tls to i64), i64 8)
 ; CHECK: %[[E:.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>* %[[D]], i32 1, <4 x i1> %mask, <4 x i64> %[[A]])
 ; CHECK-ORIGIN: %[[H:.*]] = load i32, i32* %[[G]]
 ; CHECK-ORIGIN: %[[O2:.*]] = select i1 %{{.*}}, i32 %[[O]], i32 %[[H]]
@@ -89,8 +89,8 @@ entry:
 ; CHECK: ret <4 x double> %[[X]]
 
 ; ADDR-LABEL: @Load(
-; ADDR: %[[MASKSHADOW:.*]] = load <4 x i1>, {{.*}}@__msan_param_tls to i64), i64 40)
 ; ADDR: %[[ADDRSHADOW:.*]] = load i64, {{.*}}[100 x i64]* @__msan_param_tls, i32 0, i32 0)
+; ADDR: %[[MASKSHADOW:.*]] = load <4 x i1>, {{.*}}@__msan_param_tls to i64), i64 40)
 
 ; ADDR: %[[ADDRBAD:.*]] = icmp ne i64 %[[ADDRSHADOW]], 0
 ; ADDR: br i1 %[[ADDRBAD]], label {{.*}}, label {{.*}}

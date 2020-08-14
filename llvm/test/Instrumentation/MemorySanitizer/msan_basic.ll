@@ -436,7 +436,7 @@ entry:
 ; CHECK-LABEL: @FDiv
 ; CHECK: %[[SA:.*]] = load i32,{{.*}}@__msan_param_tls
 ; CHECK: %[[SB:.*]] = load i32,{{.*}}@__msan_param_tls
-; CHECK: %[[SC:.*]] = or i32 %[[SB]], %[[SA]]
+; CHECK: %[[SC:.*]] = or i32 %[[SA]], %[[SB]]
 ; CHECK: = fdiv float
 ; CHECK: store i32 %[[SC]], i32* {{.*}}@__msan_retval_tls
 ; CHECK: ret float
