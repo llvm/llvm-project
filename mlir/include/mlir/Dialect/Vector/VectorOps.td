@@ -1198,6 +1198,7 @@ def Vector_MaskedLoadOp :
   }];
   let assemblyFormat = "$base `,` $mask `,` $pass_thru attr-dict `:` "
     "type($base) `,` type($mask) `,` type($pass_thru) `into` type($result)";
+  let hasCanonicalizer = 1;
 }
 
 def Vector_MaskedStoreOp :
@@ -1244,6 +1245,7 @@ def Vector_MaskedStoreOp :
   }];
   let assemblyFormat = "$base `,` $mask `,` $value attr-dict `:` "
     "type($mask) `,` type($value) `into` type($base)";
+  let hasCanonicalizer = 1;
 }
 
 def Vector_GatherOp :
@@ -1303,6 +1305,7 @@ def Vector_GatherOp :
     }
   }];
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+  let hasCanonicalizer = 1;
 }
 
 def Vector_ScatterOp :
@@ -1358,6 +1361,7 @@ def Vector_ScatterOp :
   }];
   let assemblyFormat = "$base `,` $indices `,` $mask `,` $value attr-dict `:` "
     "type($indices) `,` type($mask) `,` type($value) `into` type($base)";
+  let hasCanonicalizer = 1;
 }
 
 def Vector_ExpandLoadOp :
@@ -1411,6 +1415,7 @@ def Vector_ExpandLoadOp :
   }];
   let assemblyFormat = "$base `,` $mask `,` $pass_thru attr-dict `:` "
     "type($base) `,` type($mask) `,` type($pass_thru) `into` type($result)";
+  let hasCanonicalizer = 1;
 }
 
 def Vector_CompressStoreOp :
@@ -1460,6 +1465,7 @@ def Vector_CompressStoreOp :
   }];
   let assemblyFormat = "$base `,` $mask `,` $value attr-dict `:` "
     "type($base) `,` type($mask) `,` type($value)";
+  let hasCanonicalizer = 1;
 }
 
 def Vector_ShapeCastOp :
