@@ -259,7 +259,9 @@ int mlir::JitRunnerMain(
     }
   }
 
-  MLIRContext context;
+  MLIRContext context(/*loadAllDialects=*/false);
+  registerAllDialects(&context);
+
   auto m = parseMLIRInput(options.inputFilename, &context);
   if (!m) {
     llvm::errs() << "could not parse the input IR\n";
