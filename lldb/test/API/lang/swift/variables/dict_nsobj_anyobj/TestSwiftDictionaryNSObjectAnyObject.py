@@ -29,6 +29,7 @@ class TestDictionaryNSObjectAnyObject(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
+    @skipIf(bugnumber="rdar://problem/66843018")
     def test_dictionary_nsobject_any_object(self):
         """Tests that we properly vend synthetic children for Swift.Dictionary<NSObject,AnyObject>"""
         self.build()

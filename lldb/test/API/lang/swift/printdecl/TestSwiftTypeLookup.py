@@ -28,6 +28,7 @@ class TestSwiftTypeLookup(TestBase):
         TestBase.setUp(self)
 
     @swiftTest
+    @skipIf(bugnumber="rdar://problem/67082900")
     def test_swift_type_lookup(self):
         """Test the ability to look for type definitions at the command line"""
         self.build()
