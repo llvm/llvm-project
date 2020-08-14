@@ -13,6 +13,8 @@ int main(int argc, const char **argv)
              argv[1], argv[1], argv[1]);
     system (command);
 
+    FILE *fp = fopen (argv[2], "w");
+    fclose (fp);
     setup_is_complete = 1;
 
     // At this point we want lldb to attach to the process.  If lldb attaches
