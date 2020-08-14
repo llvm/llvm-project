@@ -11,7 +11,8 @@
 
 namespace __llvm_libc {
 
-char *strtok_r(char *src, const char *delimiter_string, char **saveptr);
+char *strtok_r(char *__restrict src, const char *__restrict delimiter_string,
+               char **__restrict saveptr);
 
 } // namespace __llvm_libc
 
