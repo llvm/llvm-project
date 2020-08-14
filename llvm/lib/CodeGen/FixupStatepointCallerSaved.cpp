@@ -224,6 +224,7 @@ public:
   void recordReload(Register Reg, int FI, const MachineBasicBlock *MBB) {
     RegSlotPair RSP(Reg, FI);
     auto Res = Reloads[MBB].insert(RSP);
+    (void)Res;
     assert(Res.second && "reload already exists");
   }
 
@@ -475,6 +476,7 @@ public:
     TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, &TRI);
     MachineInstr *Reload = It->getPrevNode();
     int Dummy = 0;
+    (void)Dummy;
     assert(TII.isLoadFromStackSlot(*Reload, Dummy) == Reg);
     assert(Dummy == FI);
     MBB->remove(Reload);
