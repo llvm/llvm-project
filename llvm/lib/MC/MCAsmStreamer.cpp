@@ -580,6 +580,7 @@ static const char *getPlatformName(MachO::PlatformType Type) {
   case MachO::PLATFORM_IOSSIMULATOR:     return "iossimulator";
   case MachO::PLATFORM_TVOSSIMULATOR:    return "tvossimulator";
   case MachO::PLATFORM_WATCHOSSIMULATOR: return "watchossimulator";
+  case MachO::PLATFORM_DRIVERKIT:        return "driverkit";
   }
   llvm_unreachable("Invalid Mach-O platform type");
 }
