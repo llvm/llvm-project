@@ -1,8 +1,9 @@
-# This setup requires gRPC to be built from sources using CMake and installed to
-# ${GRPC_INSTALL_PATH} via -DCMAKE_INSTALL_PREFIX=${GRPC_INSTALL_PATH}.
 # FIXME(kirillbobyrev): Check if gRPC and Protobuf headers can be included at
 # configure time.
 if (GRPC_INSTALL_PATH)
+  # This setup requires gRPC to be built from sources using CMake and installed
+  # to ${GRPC_INSTALL_PATH} via -DCMAKE_INSTALL_PREFIX=${GRPC_INSTALL_PATH}.
+  # gRPC and Protobuf will be linked statically.
   set(protobuf_MODULE_COMPATIBLE TRUE)
   find_package(Protobuf CONFIG REQUIRED HINTS ${GRPC_INSTALL_PATH})
   message(STATUS "Using protobuf ${protobuf_VERSION}")
@@ -21,10 +22,17 @@ if (GRPC_INSTALL_PATH)
   set(GRPC_CPP_PLUGIN $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
   set(PROTOC ${Protobuf_PROTOC_EXECUTABLE})
 else()
+  # This setup requires system-installed gRPC and Protobuf.
+  # We always link dynamically in this mode. While the static libraries are
+  # usually installed, the CMake files telling us *which* static libraries to
+  # link are not.
+  if (NOT BUILD_SHARED_LIBS)
+    message(NOTICE "gRPC and Protobuf will be linked dynamically. If you want static linking, build gRPC from sources.")
+  endif()
   find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin)
   find_program(PROTOC protoc)
   if (GRPC_CPP_PLUGIN-NOTFOUND OR PROTOC-NOTFOUND)
-    message(FATAL_ERROR "gRPC C++ Plugin and Protoc must be on $PATH for Clangd remote index build")
+    message(FATAL_ERROR "gRPC C++ Plugin and Protoc must be on $PATH for Clangd remote index build.")
   endif()
   # On macOS the libraries are typically installed via Homebrew and are not on
   # the system path.
