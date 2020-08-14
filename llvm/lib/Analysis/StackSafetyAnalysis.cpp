@@ -95,20 +95,16 @@ template <typename CalleeTy> struct CallInfo {
   const CalleeTy *Callee = nullptr;
   /// Index of argument which pass address.
   size_t ParamNo = 0;
-  // Offset range of address from base address (alloca or calling function
-  // argument).
-  // Range should never set to empty-set, that is an invalid access range
-  // that can cause empty-set to be propagated with ConstantRange::add
-  ConstantRange Offset;
-  CallInfo(const CalleeTy *Callee, size_t ParamNo, const ConstantRange &Offset)
-      : Callee(Callee), ParamNo(ParamNo), Offset(Offset) {}
-};
 
-template <typename CalleeTy>
-raw_ostream &operator<<(raw_ostream &OS, const CallInfo<CalleeTy> &P) {
-  return OS << "@" << P.Callee->getName() << "(arg" << P.ParamNo << ", "
-            << P.Offset << ")";
-}
+  CallInfo(const CalleeTy *Callee, size_t ParamNo)
+      : Callee(Callee), ParamNo(ParamNo) {}
+
+  struct Less {
+    bool operator()(const CallInfo &L, const CallInfo &R) const {
+      return std::tie(L.Callee, L.ParamNo) < std::tie(R.Callee, R.ParamNo);
+    }
+  };
+};
 
 /// Describe uses of address (alloca or parameter) inside of the function.
 template <typename CalleeTy> struct UseInfo {
@@ -117,7 +113,12 @@ template <typename CalleeTy> struct UseInfo {
   ConstantRange Range;
 
   // List of calls which pass address as an argument.
-  SmallVector<CallInfo<CalleeTy>, 4> Calls;
+  // Value is offset range of address from base address (alloca or calling
+  // function argument). Range should never set to empty-set, that is an invalid
+  // access range that can cause empty-set to be propagated with
+  // ConstantRange::add
+  std::map<CallInfo<CalleeTy>, ConstantRange, typename CallInfo<CalleeTy>::Less>
+      Calls;
 
   UseInfo(unsigned PointerSize) : Range{PointerSize, false} {}
 
@@ -128,7 +129,9 @@ template <typename CalleeTy>
 raw_ostream &operator<<(raw_ostream &OS, const UseInfo<CalleeTy> &U) {
   OS << U.Range;
   for (auto &Call : U.Calls)
-    OS << ", " << Call;
+    OS << ", "
+       << "@" << Call.first.Callee->getName() << "(arg" << Call.first.ParamNo
+       << ", " << Call.second << ")";
   return OS;
 }
 
@@ -410,7 +413,11 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
         }
 
         assert(isa<Function>(Callee) || isa<GlobalAlias>(Callee));
-        US.Calls.emplace_back(Callee, ArgNo, offsetFrom(UI, Ptr));
+        ConstantRange Offsets = offsetFrom(UI, Ptr);
+        auto Insert =
+            US.Calls.emplace(CallInfo<GlobalValue>(Callee, ArgNo), Offsets);
+        if (!Insert.second)
+          Insert.first->second = Insert.first->second.unionWith(Offsets);
         break;
       }
 
@@ -516,12 +523,12 @@ template <typename CalleeTy>
 bool StackSafetyDataFlowAnalysis<CalleeTy>::updateOneUse(UseInfo<CalleeTy> &US,
                                                          bool UpdateToFullSet) {
   bool Changed = false;
-  for (auto &CS : US.Calls) {
-    assert(!CS.Offset.isEmptySet() &&
+  for (auto &KV : US.Calls) {
+    assert(!KV.second.isEmptySet() &&
            "Param range can't be empty-set, invalid offset range");
 
     ConstantRange CalleeRange =
-        getArgumentAccessRange(CS.Callee, CS.ParamNo, CS.Offset);
+        getArgumentAccessRange(KV.first.Callee, KV.first.ParamNo, KV.second);
     if (!US.Range.contains(CalleeRange)) {
       Changed = true;
       if (UpdateToFullSet)
@@ -561,7 +568,7 @@ void StackSafetyDataFlowAnalysis<CalleeTy>::runDataFlow() {
     auto &FS = F.second;
     for (auto &KV : FS.Params)
       for (auto &CS : KV.second.Calls)
-        Callees.push_back(CS.Callee);
+        Callees.push_back(CS.first.Callee);
 
     llvm::sort(Callees);
     Callees.erase(std::unique(Callees.begin(), Callees.end()), Callees.end());
@@ -650,16 +657,18 @@ const ConstantRange *findParamAccess(const FunctionSummary &FS,
 void resolveAllCalls(UseInfo<GlobalValue> &Use,
                      const ModuleSummaryIndex *Index) {
   ConstantRange FullSet(Use.Range.getBitWidth(), true);
-  for (auto &C : Use.Calls) {
-    const Function *F = findCalleeInModule(C.Callee);
+  auto TmpCalls = std::move(Use.Calls);
+  for (const auto &C : TmpCalls) {
+    const Function *F = findCalleeInModule(C.first.Callee);
     if (F) {
-      C.Callee = F;
+      Use.Calls.emplace(CallInfo<GlobalValue>(F, C.first.ParamNo), C.second);
       continue;
     }
 
     if (!Index)
       return Use.updateRange(FullSet);
-    GlobalValueSummary *GVS = getGlobalValueSummary(Index, C.Callee->getGUID());
+    GlobalValueSummary *GVS =
+        getGlobalValueSummary(Index, C.first.Callee->getGUID());
 
     FunctionSummary *FS = resolveCallee(GVS);
     ++NumModuleCalleeLookupTotal;
@@ -667,18 +676,13 @@ void resolveAllCalls(UseInfo<GlobalValue> &Use,
       ++NumModuleCalleeLookupFailed;
       return Use.updateRange(FullSet);
     }
-    const ConstantRange *Found = findParamAccess(*FS, C.ParamNo);
+    const ConstantRange *Found = findParamAccess(*FS, C.first.ParamNo);
     if (!Found || Found->isFullSet())
       return Use.updateRange(FullSet);
     ConstantRange Access = Found->sextOrTrunc(Use.Range.getBitWidth());
     if (!Access.isEmptySet())
-      Use.updateRange(addOverflowNever(Access, C.Offset));
-    C.Callee = nullptr;
+      Use.updateRange(addOverflowNever(Access, C.second));
   }
-
-  Use.Calls.erase(std::remove_if(Use.Calls.begin(), Use.Calls.end(),
-                                 [](auto &T) { return !T.Callee; }),
-                  Use.Calls.end());
 }
 
 GVToSSI createGlobalStackSafetyInfo(
@@ -692,8 +696,11 @@ GVToSSI createGlobalStackSafetyInfo(
   auto Copy = Functions;
 
   for (auto &FnKV : Copy)
-    for (auto &KV : FnKV.second.Params)
+    for (auto &KV : FnKV.second.Params) {
       resolveAllCalls(KV.second, Index);
+      if (KV.second.Range.isFullSet())
+        KV.second.Calls.clear();
+    }
 
   uint32_t PointerSize = Copy.begin()
                              ->first->getParent()
@@ -708,8 +715,8 @@ GVToSSI createGlobalStackSafetyInfo(
       auto &A = KV.second;
       resolveAllCalls(A, Index);
       for (auto &C : A.Calls) {
-        A.updateRange(
-            SSDFA.getArgumentAccessRange(C.Callee, C.ParamNo, C.Offset));
+        A.updateRange(SSDFA.getArgumentAccessRange(C.first.Callee,
+                                                   C.first.ParamNo, C.second));
       }
       // FIXME: This is needed only to preserve calls in print() results.
       A.Calls = SrcF.Allocas.find(KV.first)->second.Calls;
@@ -799,11 +806,16 @@ StackSafetyInfo::getParamAccesses() const {
       // will make ParamAccess::Range as FullSet anyway. So we can drop the
       // entire parameter like we did above.
       // TODO(vitalybuka): Return already filtered parameters from getInfo().
-      if (C.Offset.isFullSet()) {
+      if (C.second.isFullSet()) {
         ParamAccesses.pop_back();
         break;
       }
-      Param.Calls.emplace_back(C.ParamNo, C.Callee->getGUID(), C.Offset);
+      Param.Calls.emplace_back(C.first.ParamNo, C.first.Callee->getGUID(),
+                               C.second);
+      llvm::sort(Param.Calls, [](const FunctionSummary::ParamAccess::Call &L,
+                                 const FunctionSummary::ParamAccess::Call &R) {
+        return std::tie(L.ParamNo, L.Callee) < std::tie(R.ParamNo, R.Callee);
+      });
     }
   }
   return ParamAccesses;
@@ -992,7 +1004,8 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
               US.Calls.clear();
               break;
             }
-            US.Calls.emplace_back(S, Call.ParamNo, Call.Offsets);
+            US.Calls.emplace(CallInfo<FunctionSummary>(S, Call.ParamNo),
+                             Call.Offsets);
           }
         }
         Functions.emplace(FS, std::move(FI));
