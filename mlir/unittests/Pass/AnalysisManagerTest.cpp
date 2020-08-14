@@ -9,6 +9,8 @@
 #include "mlir/Pass/AnalysisManager.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Function.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassManager.h"
 #include "gtest/gtest.h"
 
 using namespace mlir;
@@ -21,6 +23,9 @@ struct MyAnalysis {
 };
 struct OtherAnalysis {
   OtherAnalysis(Operation *) {}
+};
+struct OpSpecificAnalysis {
+  OpSpecificAnalysis(ModuleOp) {}
 };
 
 TEST(AnalysisManagerTest, FineGrainModuleAnalysisPreservation) {
@@ -138,4 +143,18 @@ TEST(AnalysisManagerTest, CustomInvalidation) {
   am.invalidate(pa);
   EXPECT_TRUE(am.getCachedAnalysis<CustomInvalidatingAnalysis>().hasValue());
 }
+
+TEST(AnalysisManagerTest, OpSpecificAnalysis) {
+  MLIRContext context;
+
+  // Create a module.
+  OwningModuleRef module(ModuleOp::create(UnknownLoc::get(&context)));
+  ModuleAnalysisManager mam(*module, /*passInstrumentor=*/nullptr);
+  AnalysisManager am = mam;
+
+  // Query the op specific analysis for the module and verify that its cached.
+  am.getAnalysis<OpSpecificAnalysis, ModuleOp>();
+  EXPECT_TRUE(am.getCachedAnalysis<OpSpecificAnalysis>().hasValue());
+}
+
 } // end namespace
