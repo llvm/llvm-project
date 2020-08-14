@@ -33,7 +33,7 @@ SystemZSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   if (CPUName.empty())
     CPUName = "generic";
   // Parse features string.
-  ParseSubtargetFeatures(CPUName, FS);
+  ParseSubtargetFeatures(CPUName, /*TuneCPU*/ CPUName, FS);
 
   // -msoft-float implies -mno-vx.
   if (HasSoftFloat)
@@ -53,12 +53,12 @@ SystemZSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
 SystemZSubtarget::SystemZSubtarget(const Triple &TT, const std::string &CPU,
                                    const std::string &FS,
                                    const TargetMachine &TM)
-    : SystemZGenSubtargetInfo(TT, CPU, FS), HasDistinctOps(false),
-      HasLoadStoreOnCond(false), HasHighWord(false), HasFPExtension(false),
-      HasPopulationCount(false), HasMessageSecurityAssist3(false),
-      HasMessageSecurityAssist4(false), HasResetReferenceBitsMultiple(false),
-      HasFastSerialization(false), HasInterlockedAccess1(false),
-      HasMiscellaneousExtensions(false),
+    : SystemZGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
+      HasDistinctOps(false), HasLoadStoreOnCond(false), HasHighWord(false),
+      HasFPExtension(false), HasPopulationCount(false),
+      HasMessageSecurityAssist3(false), HasMessageSecurityAssist4(false),
+      HasResetReferenceBitsMultiple(false), HasFastSerialization(false),
+      HasInterlockedAccess1(false), HasMiscellaneousExtensions(false),
       HasExecutionHint(false), HasLoadAndTrap(false),
       HasTransactionalExecution(false), HasProcessorAssist(false),
       HasDFPZonedConversion(false), HasEnhancedDAT2(false),

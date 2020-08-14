@@ -57,7 +57,7 @@ R600Subtarget::initializeSubtargetDependencies(const Triple &TT,
                                                StringRef GPU, StringRef FS) {
   SmallString<256> FullFS("+promote-alloca,");
   FullFS += FS;
-  ParseSubtargetFeatures(GPU, FullFS);
+  ParseSubtargetFeatures(GPU, /*TuneCPU*/ GPU, FullFS);
 
   HasMulU24 = getGeneration() >= EVERGREEN;
   HasMulI24 = hasCaymanISA();
@@ -97,7 +97,7 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   FullFS += FS;
 
-  ParseSubtargetFeatures(GPU, FullFS);
+  ParseSubtargetFeatures(GPU, /*TuneCPU*/ GPU, FullFS);
 
   // We don't support FP64 for EG/NI atm.
   assert(!hasFP64() || (getGeneration() >= AMDGPUSubtarget::SOUTHERN_ISLANDS));
@@ -170,7 +170,7 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) :
 
 GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                            const GCNTargetMachine &TM) :
-    AMDGPUGenSubtargetInfo(TT, GPU, FS),
+    AMDGPUGenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
     AMDGPUSubtarget(TT),
     TargetTriple(TT),
     Gen(TT.getOS() == Triple::AMDHSA ? SEA_ISLANDS : SOUTHERN_ISLANDS),
@@ -541,7 +541,7 @@ unsigned AMDGPUSubtarget::getKernArgSegmentSize(const Function &F,
 
 R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,
                              const TargetMachine &TM) :
-  R600GenSubtargetInfo(TT, GPU, FS),
+  R600GenSubtargetInfo(TT, GPU, /*TuneCPU*/GPU, FS),
   AMDGPUSubtarget(TT),
   InstrInfo(*this),
   FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0),
