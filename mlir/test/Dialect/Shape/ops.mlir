@@ -235,3 +235,26 @@ func @shape_with_shape(%a : !shape.value_shape, %b : !shape.value_shape) -> !sha
   %2 = call @shape_equal_shapes(%a, %1) : (!shape.value_shape, !shape.value_shape) -> !shape.shape
   return %2 : !shape.shape
 }
+
+func @any_on_shape(%a : !shape.shape, %b : !shape.shape, %c : !shape.shape)
+    -> !shape.shape {
+  %result = shape.any %a, %b, %c
+      : !shape.shape, !shape.shape, !shape.shape -> !shape.shape
+  return %result : !shape.shape
+}
+
+func @any_on_mixed(%a : tensor<?xindex>,
+                   %b : tensor<?xindex>,
+                   %c : !shape.shape) -> !shape.shape {
+  %result = shape.any %a, %b, %c
+      : tensor<?xindex>, tensor<?xindex>, !shape.shape -> !shape.shape
+  return %result : !shape.shape
+}
+
+func @any_on_extent_tensors(%a : tensor<?xindex>,
+                            %b : tensor<?xindex>,
+                            %c : tensor<?xindex>) -> tensor<?xindex> {
+  %result = shape.any %a, %b, %c
+      : tensor<?xindex>, tensor<?xindex>, tensor<?xindex> -> tensor<?xindex>
+  return %result : tensor<?xindex>
+}
