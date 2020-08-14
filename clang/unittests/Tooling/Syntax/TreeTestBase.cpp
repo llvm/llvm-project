@@ -171,7 +171,7 @@ SyntaxTreeTest::buildTree(StringRef Code, const TestClangConfig &ClangConfig) {
            << "Source file has syntax errors, they were printed to the test "
               "log";
   }
-  std::string Actual = std::string(StringRef(Root->dump(*Arena)).trim());
+  auto Actual = StringRef(Root->dump(*Arena)).trim().str();
   // EXPECT_EQ shows the diff between the two strings if they are different.
   EXPECT_EQ(Tree.trim().str(), Actual);
   if (Actual != Tree.trim().str()) {
@@ -194,21 +194,29 @@ SyntaxTreeTest::treeDumpEqualOnAnnotations(StringRef CodeWithAnnotations,
               "log";
   }
 
-  bool failed = false;
   auto AnnotatedRanges = AnnotatedCode.ranges();
-  assert(AnnotatedRanges.size() == TreeDumps.size());
-  for (auto i = 0ul; i < AnnotatedRanges.size(); i++) {
+  if (AnnotatedRanges.size() != TreeDumps.size()) {
+    return ::testing::AssertionFailure()
+           << "The number of annotated ranges in the source code is different "
+              "to the number of their corresponding tree dumps.";
+  }
+  bool Failed = false;
+  for (unsigned i = 0; i < AnnotatedRanges.size(); i++) {
     auto *AnnotatedNode = nodeByRange(AnnotatedRanges[i], Root);
     assert(AnnotatedNode);
     auto AnnotatedNodeDump =
-        std::string(StringRef(AnnotatedNode->dump(*Arena)).trim());
+        StringRef(AnnotatedNode->dump(*Arena)).trim().str();
     // EXPECT_EQ shows the diff between the two strings if they are different.
-    EXPECT_EQ(TreeDumps[i].trim().str(), AnnotatedNodeDump);
+    EXPECT_EQ(TreeDumps[i].trim().str(), AnnotatedNodeDump)
+        << "Dumps diverged for the code:\n"
+        << AnnotatedCode.code().slice(AnnotatedRanges[i].Begin,
+                                      AnnotatedRanges[i].End);
     if (AnnotatedNodeDump != TreeDumps[i].trim().str())
-      failed = true;
+      Failed = true;
   }
-  return failed ? ::testing::AssertionFailure() : ::testing::AssertionSuccess();
+  return Failed ? ::testing::AssertionFailure() : ::testing::AssertionSuccess();
 }
+
 syntax::Node *SyntaxTreeTest::nodeByRange(llvm::Annotations::Range R,
                                           syntax::Node *Root) {
   ArrayRef<syntax::Token> Toks = tokens(Root);
