@@ -1056,7 +1056,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ValueMap<Value*, Value*> ShadowMap, OriginMap;
   std::unique_ptr<VarArgHelper> VAHelper;
   const TargetLibraryInfo *TLI;
-  Instruction *ActualFnStart;
+  Instruction *FnPrologueEnd;
 
   // The following flags disable parts of MSan instrumentation based on
   // exclusion list contents and command-line options.
@@ -1095,16 +1095,22 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     removeUnreachableBlocks(F);
 
     MS.initializeCallbacks(*F.getParent());
-    ActualFnStart = F.getEntryBlock().getFirstNonPHI();
+    FnPrologueEnd = IRBuilder<>(F.getEntryBlock().getFirstNonPHI())
+                        .CreateIntrinsic(Intrinsic::donothing, {}, {});
 
     if (MS.CompileKernel) {
-      IRBuilder<> IRB(ActualFnStart);
+      IRBuilder<> IRB(FnPrologueEnd);
       insertKmsanPrologue(IRB);
     }
 
     LLVM_DEBUG(if (!InsertChecks) dbgs()
                << "MemorySanitizer is not inserting checks into '"
                << F.getName() << "'\n");
+  }
+
+  bool isInPrologue(Instruction &I) {
+    return I.getParent() == FnPrologueEnd->getParent() &&
+           (&I == FnPrologueEnd || I.comesBefore(FnPrologueEnd));
   }
 
   Value *updateOrigin(Value *V, IRBuilder<> &IRB) {
@@ -1269,6 +1275,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     LLVM_DEBUG(dbgs() << "DONE:\n" << F);
   }
 
+  // Returns the last instruction in the new prologue
   void insertKmsanPrologue(IRBuilder<> &IRB) {
     Value *ContextState = IRB.CreateCall(MS.MsanGetContextStateFn, {});
     Constant *Zero = IRB.getInt32(0);
@@ -1295,7 +1302,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Iterate all BBs in depth-first order and create shadow instructions
     // for all instructions (where applicable).
     // For PHI nodes we create dummy shadow PHIs which will be finalized later.
-    for (BasicBlock *BB : depth_first(ActualFnStart->getParent()))
+    for (BasicBlock *BB : depth_first(FnPrologueEnd->getParent()))
       visit(*BB);
 
     // Finalize PHI nodes.
@@ -1662,7 +1669,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       if (*ShadowPtr)
         return *ShadowPtr;
       Function *F = A->getParent();
-      IRBuilder<> EntryIRB(ActualFnStart);
+      IRBuilder<> EntryIRB(FnPrologueEnd);
       unsigned ArgOffset = 0;
       const DataLayout &DL = F->getParent()->getDataLayout();
       for (auto &FArg : F->args()) {
@@ -1880,9 +1887,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visit(Instruction &I) {
     if (I.getMetadata("nosanitize"))
       return;
-    // Don't want to visit if we're in the zone before ActualFnStart
-    if (I.getParent() == ActualFnStart->getParent() &&
-        I.comesBefore(ActualFnStart))
+    // Don't want to visit if we're in the prologue
+    if (isInPrologue(I))
       return;
     InstVisitor<MemorySanitizerVisitor>::visit(I);
   }
@@ -4309,7 +4315,7 @@ struct VarArgAMD64Helper : public VarArgHelper {
     if (!VAStartInstrumentationList.empty()) {
       // If there is a va_start in this function, make a backup copy of
       // va_arg_tls somewhere in the function entry block.
-      IRBuilder<> IRB(MSV.ActualFnStart);
+      IRBuilder<> IRB(MSV.FnPrologueEnd);
       VAArgOverflowSize =
           IRB.CreateLoad(IRB.getInt64Ty(), MS.VAArgOverflowSizeTLS);
       Value *CopySize =
@@ -4455,7 +4461,7 @@ struct VarArgMIPS64Helper : public VarArgHelper {
   void finalizeInstrumentation() override {
     assert(!VAArgSize && !VAArgTLSCopy &&
            "finalizeInstrumentation called twice");
-    IRBuilder<> IRB(MSV.ActualFnStart);
+    IRBuilder<> IRB(MSV.FnPrologueEnd);
     VAArgSize = IRB.CreateLoad(IRB.getInt64Ty(), MS.VAArgOverflowSizeTLS);
     Value *CopySize = IRB.CreateAdd(ConstantInt::get(MS.IntptrTy, 0),
                                     VAArgSize);
@@ -4648,7 +4654,7 @@ struct VarArgAArch64Helper : public VarArgHelper {
     if (!VAStartInstrumentationList.empty()) {
       // If there is a va_start in this function, make a backup copy of
       // va_arg_tls somewhere in the function entry block.
-      IRBuilder<> IRB(MSV.ActualFnStart);
+      IRBuilder<> IRB(MSV.FnPrologueEnd);
       VAArgOverflowSize =
           IRB.CreateLoad(IRB.getInt64Ty(), MS.VAArgOverflowSizeTLS);
       Value *CopySize =
@@ -4893,7 +4899,7 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
   void finalizeInstrumentation() override {
     assert(!VAArgSize && !VAArgTLSCopy &&
            "finalizeInstrumentation called twice");
-    IRBuilder<> IRB(MSV.ActualFnStart);
+    IRBuilder<> IRB(MSV.FnPrologueEnd);
     VAArgSize = IRB.CreateLoad(IRB.getInt64Ty(), MS.VAArgOverflowSizeTLS);
     Value *CopySize = IRB.CreateAdd(ConstantInt::get(MS.IntptrTy, 0),
                                     VAArgSize);
@@ -5212,7 +5218,7 @@ struct VarArgSystemZHelper : public VarArgHelper {
     if (!VAStartInstrumentationList.empty()) {
       // If there is a va_start in this function, make a backup copy of
       // va_arg_tls somewhere in the function entry block.
-      IRBuilder<> IRB(MSV.ActualFnStart);
+      IRBuilder<> IRB(MSV.FnPrologueEnd);
       VAArgOverflowSize =
           IRB.CreateLoad(IRB.getInt64Ty(), MS.VAArgOverflowSizeTLS);
       Value *CopySize =

@@ -45,11 +45,11 @@ entry:
 ; CHECK: [[BASE:%[0-9]+]] = ptrtoint {{.*}} [[PARAM_SHADOW]]
 ; CHECK: [[SHADOW_PTR:%[a-z0-9_]+]] = inttoptr {{.*}} [[BASE]]
 ; CHECK: [[SHADOW:%[a-z0-9]+]] = load i64, i64* [[SHADOW_PTR]]
+; CHECK: [[BASE2:%[0-9]+]] = ptrtoint {{.*}} [[PARAM_SHADOW]]
 ; Load the shadow of %p and check it
 ; CHECK: icmp ne i64 [[SHADOW]]
 ; CHECK: br i1
 ; CHECK: {{^[0-9]+}}:
-; CHECK: [[BASE2:%[0-9]+]] = ptrtoint {{.*}} [[PARAM_SHADOW]]
 ; CHECK: @__msan_metadata_ptr_for_store_1(i8* %p)
 ; CHECK: store i8
 ; If the new shadow is non-zero, jump to __msan_chain_origin()
