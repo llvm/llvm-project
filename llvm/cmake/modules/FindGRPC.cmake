@@ -3,7 +3,10 @@
 if (GRPC_INSTALL_PATH)
   # This setup requires gRPC to be built from sources using CMake and installed
   # to ${GRPC_INSTALL_PATH} via -DCMAKE_INSTALL_PREFIX=${GRPC_INSTALL_PATH}.
-  # gRPC and Protobuf will be linked statically.
+  # Libraries will be linked according to gRPC build policy which generates
+  # static libraries when BUILD_SHARED_LIBS is Off and dynamic libraries when
+  # it's On (NOTE: This is a variable passed to gRPC CMake build invocation,
+  # LLVM's BUILD_SHARED_LIBS has no effect).
   set(protobuf_MODULE_COMPATIBLE TRUE)
   find_package(Protobuf CONFIG REQUIRED HINTS ${GRPC_INSTALL_PATH})
   message(STATUS "Using protobuf ${protobuf_VERSION}")
@@ -27,7 +30,7 @@ else()
   # usually installed, the CMake files telling us *which* static libraries to
   # link are not.
   if (NOT BUILD_SHARED_LIBS)
-    message(NOTICE "gRPC and Protobuf will be linked dynamically. If you want static linking, build gRPC from sources.")
+    message(NOTICE "gRPC and Protobuf will be linked dynamically. If you want static linking, build gRPC from sources with -DBUILD_SHARED_LIBS=Off.")
   endif()
   find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin)
   find_program(PROTOC protoc)
