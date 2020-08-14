@@ -34,7 +34,8 @@ protected:
     BB = BasicBlock::Create(Ctx, "", F);
 
     DIBuilder DIB(*M);
-    auto File = DIB.createFile("test.dbg", "/");
+    auto File = DIB.createFile("test.dbg", "/src", llvm::None,
+                               Optional<StringRef>("/src/test.dbg"));
     auto CU =
         DIB.createCompileUnit(dwarf::DW_LANG_C, File, "llvm-C", true, "", 0);
     auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray(None));
@@ -301,7 +302,7 @@ TEST_F(OpenMPIRBuilderTest, DbgLoc) {
       dyn_cast<ConstantDataArray>(SrcStrGlob->getInitializer());
   if (!SrcSrc)
     return;
-  EXPECT_EQ(SrcSrc->getAsCString(), ";test.dbg;foo;3;7;;");
+  EXPECT_EQ(SrcSrc->getAsCString(), ";/src/test.dbg;foo;3;7;;");
 }
 
 TEST_F(OpenMPIRBuilderTest, ParallelSimple) {
