@@ -1887,6 +1887,36 @@ bool CombinerHelper::applyBuildInstructionSteps(
   return true;
 }
 
+bool CombinerHelper::matchAshrShlToSextInreg(
+    MachineInstr &MI, std::tuple<Register, int64_t> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_ASHR);
+  int64_t ShlCst, AshrCst;
+  Register Src;
+  // FIXME: detect splat constant vectors.
+  if (!mi_match(MI.getOperand(0).getReg(), MRI,
+                m_GAShr(m_GShl(m_Reg(Src), m_ICst(ShlCst)), m_ICst(AshrCst))))
+    return false;
+  if (ShlCst != AshrCst)
+    return false;
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_SEXT_INREG, {MRI.getType(Src)}}))
+    return false;
+  MatchInfo = {Src, ShlCst};
+  return true;
+}
+bool CombinerHelper::applyAshShlToSextInreg(
+    MachineInstr &MI, std::tuple<Register, int64_t> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_ASHR);
+  Register Src;
+  int64_t ShiftAmt;
+  std::tie(Src, ShiftAmt) = MatchInfo;
+  unsigned Size = MRI.getType(Src).getScalarSizeInBits();
+  Builder.setInstrAndDebugLoc(MI);
+  Builder.buildSExtInReg(MI.getOperand(0).getReg(), Src, Size - ShiftAmt);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))
     return true;
