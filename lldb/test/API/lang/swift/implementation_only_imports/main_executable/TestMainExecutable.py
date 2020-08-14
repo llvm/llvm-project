@@ -102,7 +102,7 @@ class TestMainExecutable(TestBase):
         self.runCmd("settings set symbols.use-swift-dwarfimporter true")
 
     @swiftTest
-    @expectedFailureOS(no_match(["macosx"])) # Requires Remote Mirrors support
+    @expectedFailureAll(oslist=["windows"])
     def test_implementation_only_import_main_executable_resilient(self):
         """Test `@_implementationOnly import` in the main executable with a resilient library
         
