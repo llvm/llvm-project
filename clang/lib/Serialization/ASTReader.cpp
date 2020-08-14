@@ -4987,10 +4987,10 @@ void ASTReader::InitializeContext() {
                         /*ImportLoc=*/Import.ImportLoc);
       if (Import.ImportLoc.isValid())
         PP.makeModuleVisible(Imported, Import.ImportLoc);
-      // FIXME: should we tell Sema to make the module visible too?
+      // This updates visibility for Preprocessor only. For Sema, which can be
+      // nullptr here, we do the same later, in UpdateSema().
     }
   }
-  ImportedModules.clear();
 }
 
 void ASTReader::finalizeForWriting() {
@@ -7941,6 +7941,15 @@ void ASTReader::UpdateSema() {
     } else {
       SemaObj->FpPragmaStack.CurrentValue = *FpPragmaCurrentValue;
       SemaObj->FpPragmaStack.CurrentPragmaLocation = FpPragmaCurrentLocation;
+    }
+  }
+
+  // For non-modular AST files, restore visiblity of modules.
+  for (auto &Import : ImportedModules) {
+    if (Import.ImportLoc.isInvalid())
+      continue;
+    if (Module *Imported = getSubmodule(Import.ID)) {
+      SemaObj->makeModuleVisible(Imported, Import.ImportLoc);
     }
   }
 }

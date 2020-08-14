@@ -1912,6 +1912,12 @@ public:
 
   bool isModuleVisible(const Module *M, bool ModulePrivate = false);
 
+  // When loading a non-modular PCH files, this is used to restore module
+  // visibility.
+  void makeModuleVisible(Module *Mod, SourceLocation ImportLoc) {
+    VisibleModules.setVisible(Mod, ImportLoc);
+  }
+
   /// Determine whether a declaration is visible to name lookup.
   bool isVisible(const NamedDecl *D) {
     return D->isUnconditionallyVisible() || isVisibleSlow(D);
