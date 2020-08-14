@@ -40,7 +40,8 @@ Dialect *DialectRegistry::loadByName(StringRef name, MLIRContext *context) {
 void DialectRegistry::insert(TypeID typeID, StringRef name,
                              DialectAllocatorFunction ctor) {
   auto inserted =
-      registry.insert(std::make_pair(name, std::make_pair(typeID, ctor)));
+    registry.insert(std::make_pair((std::string)name,
+                                   std::make_pair(typeID, ctor)));
   if (!inserted.second && inserted.first->second.first != typeID) {
     llvm::report_fatal_error(
         "Trying to register different dialects for the same namespace: " +
