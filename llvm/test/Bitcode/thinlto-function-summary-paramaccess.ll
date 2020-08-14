@@ -230,7 +230,7 @@ entry:
 }
 
 ; SSI-LABEL: for function 'CallMany2'
-; SSI: p[]: empty-set, @Callee(arg0, [-715,125)), @Callee2(arg1, [-33,-32))
+; SSI: p[]: empty-set, @Callee(arg0, [-715,125))
 ; BC-NEXT: <PARAM_ACCESS op0=0 op1=0 op2=0 op3=2 op4=0 op5=[[CALLEE]] op6=1431 op7=250 op8=1 op9=[[CALLEE2:-?[0-9]+]] op10=67 op11=65/>
 ; BC-NEXT: <PERMODULE
 ; DIS-DAG: = gv: (name: "CallMany2", summaries: {{.*}} calls: ((callee: ^{{.*}}), (callee: ^{{.*}})), params: ((param: 0, offset: [0, -1], calls: ((callee: ^{{.*}}, param: 0, offset: [-715, 124]), (callee: ^{{.*}}, param: 1, offset: [-33, -33]))))))) ; guid = 16654048340802466690
