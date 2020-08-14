@@ -21,6 +21,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/CommandLine.h"
+
 #define DEBUG_TYPE "flang-affine-promotion"
 
 /// disable FIR to affine dialect conversion
@@ -307,27 +308,54 @@ mlir::Type coordinateArrayElement(fir::ArrayCoorOp op) {
   return mlir::Type();
 }
 
+void populateIndexArgs(fir::ArrayCoorOp acoOp, fir::ShapeOp shape,
+                       SmallVectorImpl<mlir::Value> &indexArgs,
+                       mlir::PatternRewriter &rewriter) {
+  auto iter = shape.extents().begin();
+  auto one = rewriter.create<mlir::ConstantOp>(
+      acoOp.getLoc(), rewriter.getIndexType(), rewriter.getIndexAttr(1));
+  auto end = shape.extents().size();
+  for (decltype(end) i = 0; i < end; ++(++i)) {
+    indexArgs.push_back(one);
+    indexArgs.push_back(*iter++);
+    indexArgs.push_back(one);
+  }
+}
+void populateIndexArgs(fir::ArrayCoorOp acoOp, fir::ShapeShiftOp shape,
+                       SmallVectorImpl<mlir::Value> &indexArgs,
+                       mlir::PatternRewriter &rewriter) {
+  auto iter = shape.pairs().begin();
+  auto one = rewriter.create<mlir::ConstantOp>(
+      acoOp.getLoc(), rewriter.getIndexType(), rewriter.getIndexAttr(1));
+  auto end = shape.pairs().size();
+  for (decltype(end) i = 0; i < end; ++(++i)) {
+    indexArgs.push_back(*iter++);
+    indexArgs.push_back(*iter++);
+    indexArgs.push_back(one);
+  }
+}
+void populateIndexArgs(fir::ArrayCoorOp acoOp,
+                       SmallVectorImpl<mlir::Value> &indexArgs,
+                       mlir::PatternRewriter &rewriter) {
+  if (auto shape = acoOp.shape().getDefiningOp<ShapeOp>()) {
+    return populateIndexArgs(acoOp, shape, indexArgs, rewriter);
+  }
+  if (auto shapeShift = acoOp.shape().getDefiningOp<ShapeShiftOp>())
+    return populateIndexArgs(acoOp, shapeShift, indexArgs, rewriter);
+  llvm::dbgs() << "AffinePromotion: need to populateIndexArgs for slice\n";
+  return;
+}
+
 /// Returns affine.apply and fir.convert from array_coor and gendims
 std::pair<mlir::AffineApplyOp, fir::ConvertOp>
 createAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter) {
   auto acoOp = arrayRef.getDefiningOp<ArrayCoorOp>();
-  assert(acoOp.shape() && isa<ShapeOp>(acoOp.shape().getDefiningOp()));
-  auto genDim = acoOp.shape().getDefiningOp<ShapeOp>();
   auto affineMap =
       createArrayIndexAffineMap(acoOp.indices().size(), acoOp.getContext());
   SmallVector<mlir::Value, 4> indexArgs;
   indexArgs.append(acoOp.indices().begin(), acoOp.indices().end());
 
-  // FIXME: quick hack for now (assumes 1 for the shift and stride)
-  auto iter = genDim.extents().begin();
-  auto one = rewriter.create<mlir::ConstantOp>(
-      acoOp.getLoc(), rewriter.getIndexType(), rewriter.getIndexAttr(1));
-  auto end = genDim.extents().size();
-  for (decltype(end) i = 0; i < end; ++i) {
-    indexArgs.push_back(one);
-    indexArgs.push_back(*iter++);
-    indexArgs.push_back(one);
-  }
+  populateIndexArgs(acoOp, indexArgs, rewriter);
 
   auto affineApply = rewriter.create<mlir::AffineApplyOp>(acoOp.getLoc(),
                                                           affineMap, indexArgs);
@@ -504,6 +532,7 @@ public:
 
     auto *context = &getContext();
     auto function = getFunction();
+    markAllAnalysesPreserved();
     auto functionAnalysis = AffineFunctionAnalysis(function);
     mlir::OwningRewritePatternList patterns;
     patterns.insert<AffineIfConversion>(context, functionAnalysis);

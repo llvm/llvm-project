@@ -34,6 +34,10 @@ std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
 /// Convert Affine operations back to FIR
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
 
+std::unique_ptr<mlir::Pass> createFirLoopResultOptPass();
+
+std::unique_ptr<mlir::Pass> createMemDataFlowOptPass();
+
 /// Convert `fir.do_loop` and `fir.if` to a CFG.  This
 /// conversion enables the `createLowerToCFGPass` to transform these to CFG
 /// form.

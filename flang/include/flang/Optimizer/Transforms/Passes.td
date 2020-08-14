@@ -66,6 +66,22 @@ def MemRefDataFlowOpt : FunctionPass<"fir-memref-dataflow-opt"> {
   let constructor = "::fir::createMemDataFlowOptPass()";
 }
 
+def FirLoopResultOpt : FunctionPass<"fir-loop-result-opt"> {
+  let summary = "Optimizes fir do_loop by removing unused final iteration values.";
+  let constructor = "fir::createFirLoopResultOptPass()";
+
+}
+
+def MemRefDataFlowOpt : FunctionPass<"flang-memref-dataflow-opt"> {
+  let summary = "Perform store/load forwarding and potentially removing dead stores";
+  let description = [{
+    This pass performs store to load forwarding to eliminate memory
+    accesses and potentially the entire allocation if all the accesses are
+    forwarded.
+  }];
+  let constructor = "fir::createMemDataFlowOptPass()";
+}
+
 def BasicCSE : FunctionPass<"basic-cse"> {
   let summary = "Basic common sub-expression elimination.";
   let description = [{
