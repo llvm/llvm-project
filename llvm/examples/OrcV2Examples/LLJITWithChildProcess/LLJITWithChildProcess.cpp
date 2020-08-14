@@ -1,4 +1,4 @@
-//===--- LLJITWithLazyReexports.cpp - LLJIT example with custom laziness --===//
+//===--- LLJITWithChildProcess.cpp - LLJIT targeting a child process ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
