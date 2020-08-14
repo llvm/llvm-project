@@ -408,7 +408,9 @@ public:
         return errorCodeToError(EC);
 
       char *SlabAddr = static_cast<char *>(HostAllocation.base());
+#ifndef NDEBUG
       char *SlabAddrEnd = SlabAddr + HostAllocation.allocatedSize();
+#endif
 
       // Allocate segment memory from the slab.
       for (auto &KV : Request) {
