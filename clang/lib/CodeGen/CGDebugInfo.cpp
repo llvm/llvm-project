@@ -726,7 +726,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     {
       ASTContext::BuiltinVectorTypeInfo Info =
           CGM.getContext().getBuiltinVectorTypeInfo(BT);
-      unsigned NumElemsPerVG = (Info.EC.Min * Info.NumVectors) / 2;
+      unsigned NumElemsPerVG = (Info.EC.getKnownMinValue() * Info.NumVectors) / 2;
 
       // Debuggers can't extract 1bit from a vector, so will display a
       // bitpattern for svbool_t instead.

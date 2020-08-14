@@ -1003,7 +1003,7 @@ Value *IRBuilderBase::CreateVectorSplat(unsigned NumElts, Value *V,
 
 Value *IRBuilderBase::CreateVectorSplat(ElementCount EC, Value *V,
                                         const Twine &Name) {
-  assert(EC.Min > 0 && "Cannot splat to an empty vector!");
+  assert(EC.isNonZero() && "Cannot splat to an empty vector!");
 
   // First insert it into an undef vector so we can shuffle it.
   Type *I32Ty = getInt32Ty();

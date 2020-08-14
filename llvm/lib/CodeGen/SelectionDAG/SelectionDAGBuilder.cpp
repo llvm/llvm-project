@@ -428,10 +428,10 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
     // vector widening case (e.g. <2 x float> -> <4 x float>).  Extract the
     // elements we want.
     if (PartEVT.getVectorElementType() == ValueVT.getVectorElementType()) {
-      assert((PartEVT.getVectorElementCount().Min >
-              ValueVT.getVectorElementCount().Min) &&
-             (PartEVT.getVectorElementCount().Scalable ==
-              ValueVT.getVectorElementCount().Scalable) &&
+      assert((PartEVT.getVectorElementCount().getKnownMinValue() >
+              ValueVT.getVectorElementCount().getKnownMinValue()) &&
+             (PartEVT.getVectorElementCount().isScalable() ==
+              ValueVT.getVectorElementCount().isScalable()) &&
              "Cannot narrow, it would be a lossy transformation");
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ValueVT, Val,
                          DAG.getVectorIdxConstant(0, DL));
@@ -3751,7 +3751,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
   if (IsVectorGEP && !N.getValueType().isVector()) {
     LLVMContext &Context = *DAG.getContext();
     EVT VT = EVT::getVectorVT(Context, N.getValueType(), VectorElementCount);
-    if (VectorElementCount.Scalable)
+    if (VectorElementCount.isScalable())
       N = DAG.getSplatVector(VT, dl, N);
     else
       N = DAG.getSplatBuildVector(VT, dl, N);
@@ -3824,7 +3824,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
       if (!IdxN.getValueType().isVector() && IsVectorGEP) {
         EVT VT = EVT::getVectorVT(*Context, IdxN.getValueType(),
                                   VectorElementCount);
-        if (VectorElementCount.Scalable)
+        if (VectorElementCount.isScalable())
           IdxN = DAG.getSplatVector(VT, dl, IdxN);
         else
           IdxN = DAG.getSplatBuildVector(VT, dl, IdxN);

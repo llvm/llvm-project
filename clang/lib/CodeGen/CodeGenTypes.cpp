@@ -586,7 +586,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       ASTContext::BuiltinVectorTypeInfo Info =
           Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
       return llvm::ScalableVectorType::get(ConvertType(Info.ElementType),
-                                           Info.EC.Min * Info.NumVectors);
+                                           Info.EC.getKnownMinValue() *
+                                               Info.NumVectors);
     }
     case BuiltinType::Dependent:
 #define BUILTIN_TYPE(Id, SingletonId)

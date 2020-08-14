@@ -1967,7 +1967,8 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
     return false;
 
   // Make sure the mask elements make sense.
-  int V1Size = cast<VectorType>(V1->getType())->getElementCount().Min;
+  int V1Size =
+      cast<VectorType>(V1->getType())->getElementCount().getKnownMinValue();
   for (int Elem : Mask)
     if (Elem != UndefMaskElem && Elem >= V1Size * 2)
       return false;
@@ -2026,22 +2027,22 @@ void ShuffleVectorInst::getShuffleMask(const Constant *Mask,
   ElementCount EC = cast<VectorType>(Mask->getType())->getElementCount();
 
   if (isa<ConstantAggregateZero>(Mask)) {
-    Result.resize(EC.Min, 0);
+    Result.resize(EC.getKnownMinValue(), 0);
     return;
   }
 
-  Result.reserve(EC.Min);
+  Result.reserve(EC.getKnownMinValue());
 
-  if (EC.Scalable) {
+  if (EC.isScalable()) {
     assert((isa<ConstantAggregateZero>(Mask) || isa<UndefValue>(Mask)) &&
            "Scalable vector shuffle mask must be undef or zeroinitializer");
     int MaskVal = isa<UndefValue>(Mask) ? -1 : 0;
-    for (unsigned I = 0; I < EC.Min; ++I)
+    for (unsigned I = 0; I < EC.getKnownMinValue(); ++I)
       Result.emplace_back(MaskVal);
     return;
   }
 
-  unsigned NumElts = EC.Min;
+  unsigned NumElts = EC.getKnownMinValue();
 
   if (auto *CDS = dyn_cast<ConstantDataSequential>(Mask)) {
     for (unsigned i = 0; i != NumElts; ++i)

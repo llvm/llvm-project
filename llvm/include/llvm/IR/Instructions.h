@@ -2046,8 +2046,9 @@ public:
   /// Examples: shufflevector <4 x n> A, <4 x n> B, <1,2,3>
   ///           shufflevector <4 x n> A, <4 x n> B, <1,2,3,4,5>
   bool changesLength() const {
-    unsigned NumSourceElts =
-        cast<VectorType>(Op<0>()->getType())->getElementCount().Min;
+    unsigned NumSourceElts = cast<VectorType>(Op<0>()->getType())
+                                 ->getElementCount()
+                                 .getKnownMinValue();
     unsigned NumMaskElts = ShuffleMask.size();
     return NumSourceElts != NumMaskElts;
   }

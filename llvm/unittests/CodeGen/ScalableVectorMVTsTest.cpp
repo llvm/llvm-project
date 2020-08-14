@@ -71,8 +71,8 @@ TEST(ScalableVectorMVTsTest, HelperFuncs) {
 
   // Check fields inside llvm::ElementCount
   EltCnt = Vnx4i32.getVectorElementCount();
-  EXPECT_EQ(EltCnt.Min, 4U);
-  ASSERT_TRUE(EltCnt.Scalable);
+  EXPECT_EQ(EltCnt.getKnownMinValue(), 4U);
+  ASSERT_TRUE(EltCnt.isScalable());
 
   // Check that fixed-length vector types aren't scalable.
   EVT V8i32 = EVT::getVectorVT(Ctx, MVT::i32, 8);
@@ -82,8 +82,8 @@ TEST(ScalableVectorMVTsTest, HelperFuncs) {
 
   // Check that llvm::ElementCount works for fixed-length types.
   EltCnt = V8i32.getVectorElementCount();
-  EXPECT_EQ(EltCnt.Min, 8U);
-  ASSERT_FALSE(EltCnt.Scalable);
+  EXPECT_EQ(EltCnt.getKnownMinValue(), 8U);
+  ASSERT_FALSE(EltCnt.isScalable());
 }
 
 TEST(ScalableVectorMVTsTest, IRToVTTranslation) {

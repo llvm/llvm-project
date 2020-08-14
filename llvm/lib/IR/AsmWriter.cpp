@@ -656,9 +656,9 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
     VectorType *PTy = cast<VectorType>(Ty);
     ElementCount EC = PTy->getElementCount();
     OS << "<";
-    if (EC.Scalable)
+    if (EC.isScalable())
       OS << "vscale x ";
-    OS << EC.Min << " x ";
+    OS << EC.getKnownMinValue() << " x ";
     print(PTy->getElementType(), OS);
     OS << '>';
     return;

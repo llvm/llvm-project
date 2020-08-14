@@ -304,7 +304,7 @@ namespace llvm {
 
     /// Given a vector type, return the minimum number of elements it contains.
     unsigned getVectorMinNumElements() const {
-      return getVectorElementCount().Min;
+      return getVectorElementCount().getKnownMinValue();
     }
 
     /// Return the size of the specified value type in bits.
@@ -383,7 +383,7 @@ namespace llvm {
     EVT getHalfNumVectorElementsVT(LLVMContext &Context) const {
       EVT EltVT = getVectorElementType();
       auto EltCnt = getVectorElementCount();
-      assert(!(EltCnt.Min & 1) && "Splitting vector, but not in half!");
+      assert(EltCnt.isKnownEven() && "Splitting vector, but not in half!");
       return EVT::getVectorVT(Context, EltVT, EltCnt / 2);
     }
 
@@ -398,7 +398,8 @@ namespace llvm {
     EVT getPow2VectorType(LLVMContext &Context) const {
       if (!isPow2VectorType()) {
         ElementCount NElts = getVectorElementCount();
-        NElts.Min = 1 << Log2_32_Ceil(NElts.Min);
+        unsigned NewMinCount = 1 << Log2_32_Ceil(NElts.getKnownMinValue());
+        NElts = ElementCount::get(NewMinCount, NElts.isScalable());
         return EVT::getVectorVT(Context, getVectorElementType(), NElts);
       }
       else {
