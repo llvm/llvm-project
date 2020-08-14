@@ -64,6 +64,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -154,8 +155,9 @@ private:
   /// linkage for them in AIX.
   SmallPtrSet<MCSymbol *, 8> ExtSymSDNodeSymbols;
 
-  /// A unique trailing identifier as a part of sinit/sterm functions.
-  std::string GlobalUniqueModuleId;
+  /// A format indicator and unique trailing identifier to form part of the
+  /// sinit/sterm function names.
+  std::string FormatIndicatorAndUniqueModId;
 
   static void ValidateGV(const GlobalVariable *GV);
   // Record a list of GlobalAlias associated with a GlobalObject.
@@ -1859,17 +1861,23 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
       continue;
 
     if (isSpecialLLVMGlobalArrayForStaticInit(&G)) {
-      // Generate a unique module id which is a part of sinit and sterm function
-      // names.
-      if (GlobalUniqueModuleId.empty()) {
-        GlobalUniqueModuleId = getUniqueModuleId(&M);
-        // FIXME: We need to figure out what to hash on or encode into the
-        // unique ID we need.
-        if (GlobalUniqueModuleId.compare("") == 0)
-          llvm::report_fatal_error(
-              "cannot produce a unique identifier for this module based on"
-              " strong external symbols");
-        GlobalUniqueModuleId = GlobalUniqueModuleId.substr(1);
+      // Generate a format indicator and a unique module id to be a part of
+      // the sinit and sterm function names.
+      if (FormatIndicatorAndUniqueModId.empty()) {
+        std::string UniqueModuleId = getUniqueModuleId(&M);
+        if (UniqueModuleId.compare("") != 0)
+          // TODO: Use source file full path to generate the unique module id
+          // and add a format indicator as a part of function name in case we
+          // will support more than one format.
+          FormatIndicatorAndUniqueModId = "clang_" + UniqueModuleId.substr(1);
+        else
+          // Use the Pid and current time as the unique module id when we cannot
+          // generate one based on a module's strong external symbols.
+          // FIXME: Adjust the comment accordingly after we use source file full
+          // path instead.
+          FormatIndicatorAndUniqueModId =
+              "clangPidTime_" + llvm::itostr(sys::Process::getProcessId()) +
+              "_" + llvm::itostr(time(nullptr));
       }
 
       emitSpecialLLVMGlobal(&G);
@@ -1949,7 +1957,7 @@ void PPCAIXAsmPrinter::emitXXStructorList(const DataLayout &DL,
     llvm::GlobalAlias::create(
         GlobalValue::ExternalLinkage,
         (IsCtor ? llvm::Twine("__sinit") : llvm::Twine("__sterm")) +
-            llvm::Twine("80000000_clang_", GlobalUniqueModuleId) +
+            llvm::Twine("80000000_", FormatIndicatorAndUniqueModId) +
             llvm::Twine("_", llvm::utostr(Index++)),
         cast<Function>(S.Func));
   }
