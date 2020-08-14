@@ -157,12 +157,14 @@ static Register performCopyPropagation(Register Reg,
                                        MachineBasicBlock::iterator &RI,
                                        bool &IsKill, const TargetInstrInfo &TII,
                                        const TargetRegisterInfo &TRI) {
-  if (!EnableCopyProp)
-    return Reg;
-
   // First check if statepoint itself uses Reg in non-meta operands.
   int Idx = RI->findRegisterUseOperandIdx(Reg, false, &TRI);
-  if (Idx >= 0 && (unsigned)Idx < StatepointOpers(&*RI).getNumDeoptArgsIdx())
+  if (Idx >= 0 && (unsigned)Idx < StatepointOpers(&*RI).getNumDeoptArgsIdx()) {
+    IsKill = false;
+    return Reg;
+  }
+
+  if (!EnableCopyProp)
     return Reg;
 
   MachineBasicBlock *MBB = RI->getParent();
