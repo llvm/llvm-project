@@ -1,29 +1,32 @@
 ## Show that llvm-strings can handle the -t/--radix switch properly.
 
-RUN: echo one > %t
-RUN: echo two >> %t
-RUN: echo three >> %t
-RUN: echo four >> %t
-RUN: echo five >> %t
-RUN: echo six >> %t
-RUN: echo seven >> %t
-RUN: echo eight >> %t
-RUN: echo nine >> %t
-RUN: echo ten >> %t
+RUN: split-file --no-leading-lines %s %t
+#--- a.txt
+one
+two
+three
+four
+five
+six
+seven
+eight
+nine
+ten
+#--- end
 
-RUN: llvm-strings %t | FileCheck %s -check-prefix CHECK-NONE --implicit-check-not={{.}}
-RUN: llvm-strings -t d %t | FileCheck %s -check-prefix CHECK-DEC --strict-whitespace --implicit-check-not={{.}}
-RUN: llvm-strings -t o %t | FileCheck %s -check-prefix CHECK-OCT --strict-whitespace --implicit-check-not={{.}}
-RUN: llvm-strings -t x %t | FileCheck %s -check-prefix CHECK-HEX --strict-whitespace --implicit-check-not={{.}}
+RUN: llvm-strings %t/a.txt | FileCheck %s -check-prefix CHECK-NONE --implicit-check-not={{.}}
+RUN: llvm-strings -t d %t/a.txt | FileCheck %s -check-prefix CHECK-DEC --strict-whitespace --implicit-check-not={{.}}
+RUN: llvm-strings -t o %t/a.txt | FileCheck %s -check-prefix CHECK-OCT --strict-whitespace --implicit-check-not={{.}}
+RUN: llvm-strings -t x %t/a.txt | FileCheck %s -check-prefix CHECK-HEX --strict-whitespace --implicit-check-not={{.}}
 
 ## Show --radix works too.
-RUN: llvm-strings --radix d %t | FileCheck %s -check-prefix CHECK-DEC --strict-whitespace
-RUN: llvm-strings --radix o %t | FileCheck %s -check-prefix CHECK-OCT --strict-whitespace
-RUN: llvm-strings --radix x %t | FileCheck %s -check-prefix CHECK-HEX --strict-whitespace
+RUN: llvm-strings --radix d %t/a.txt | FileCheck %s -check-prefix CHECK-DEC --strict-whitespace
+RUN: llvm-strings --radix o %t/a.txt | FileCheck %s -check-prefix CHECK-OCT --strict-whitespace
+RUN: llvm-strings --radix x %t/a.txt | FileCheck %s -check-prefix CHECK-HEX --strict-whitespace
 
 ## Show different syntaxes work.
-RUN: llvm-strings --radix=d %t | FileCheck %s -check-prefix CHECK-DEC --strict-whitespace
-RUN: llvm-strings -t=d %t | FileCheck %s -check-prefix CHECK-DEC --strict-whitespace
+RUN: llvm-strings --radix=d %t/a.txt | FileCheck %s -check-prefix CHECK-DEC --strict-whitespace
+RUN: llvm-strings -t=d %t/a.txt | FileCheck %s -check-prefix CHECK-DEC --strict-whitespace
 
 CHECK-NONE: {{^}}three
 CHECK-NONE: {{^}}four
@@ -54,5 +57,5 @@ CHECK-HEX: {{^}}     22 eight
 CHECK-HEX: {{^}}     28 nine
 
 ## Show that an invalid value is rejected.
-RUN: not llvm-strings --radix z %t 2>&1 | FileCheck %s --check-prefix=INVALID
+RUN: not llvm-strings --radix z %t/a.txt 2>&1 | FileCheck %s --check-prefix=INVALID
 INVALID: llvm-strings{{.*}}: for the --radix option: Cannot find option named 'z'!

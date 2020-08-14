@@ -9,8 +9,8 @@
 // This file defines the Tester class used in the MLIR Reduce tool.
 //
 // A Tester object is passed as an argument to the reduction passes and it is
-// used to keep track of the state of the reduction throughout the multiple
-// passes.
+// used to run the interestigness testing script on the different generated
+// reduced variants of the test case.
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,13 +24,15 @@ Tester::Tester(StringRef scriptName, ArrayRef<std::string> scriptArgs)
 /// Runs the interestingness testing script on a MLIR test case file. Returns
 /// true if the interesting behavior is present in the test case or false
 /// otherwise.
-bool Tester::isInteresting(StringRef testCase) {
+bool Tester::isInteresting(StringRef testCase) const {
 
   std::vector<StringRef> testerArgs;
   testerArgs.push_back(testCase);
 
   for (const std::string &arg : testScriptArgs)
     testerArgs.push_back(arg);
+
+  testerArgs.push_back(testCase);
 
   std::string errMsg;
   int result = llvm::sys::ExecuteAndWait(

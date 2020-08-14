@@ -575,6 +575,24 @@ int vla_evaluate(int x) {
   return x;
 }
 
+// CHECK-LABEL: void CommaTemp::f()
+// CHECK:       [B1]
+// CHECK-NEXT:    1: CommaTemp::A() (CXXConstructExpr,
+// CHECK-NEXT:    2: [B1.1] (BindTemporary)
+// CHECK-NEXT:    3: CommaTemp::B() (CXXConstructExpr,
+// CHECK-NEXT:    4: [B1.3] (BindTemporary)
+// CHECK-NEXT:    5: ... , [B1.4]
+// CHECK-NEXT:    6: ~CommaTemp::B() (Temporary object destructor)
+// CHECK-NEXT:    7: ~CommaTemp::A() (Temporary object destructor)
+namespace CommaTemp {
+  struct A { ~A(); };
+  struct B { ~B(); };
+  void f();
+}
+void CommaTemp::f() {
+  A(), B();
+}
+
 // CHECK-LABEL: template<> int *PR18472<int>()
 // CHECK: [B2 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B1

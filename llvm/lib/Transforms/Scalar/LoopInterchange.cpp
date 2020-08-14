@@ -27,6 +27,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -622,6 +623,13 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
   // and outer loop latch doesn't contain any unsafe instructions.
   if (containsUnsafeInstructions(OuterLoopHeader) ||
       containsUnsafeInstructions(OuterLoopLatch))
+    return false;
+
+  // Also make sure the inner loop preheader does not contain any unsafe
+  // instructions. Note that all instructions in the preheader will be moved to
+  // the outer loop header when interchanging.
+  if (InnerLoopPreHeader != OuterLoopHeader &&
+      containsUnsafeInstructions(InnerLoopPreHeader))
     return false;
 
   LLVM_DEBUG(dbgs() << "Loops are perfectly nested\n");
@@ -1305,6 +1313,21 @@ bool LoopInterchangeTransform::transform() {
     LLVM_DEBUG(dbgs() << "splitting InnerLoopHeader done\n");
   }
 
+  // Instructions in the original inner loop preheader may depend on values
+  // defined in the outer loop header. Move them there, because the original
+  // inner loop preheader will become the entry into the interchanged loop nest.
+  // Currently we move all instructions and rely on LICM to move invariant
+  // instructions outside the loop nest.
+  BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
+  BasicBlock *OuterLoopHeader = OuterLoop->getHeader();
+  if (InnerLoopPreHeader != OuterLoopHeader) {
+    SmallPtrSet<Instruction *, 4> NeedsMoving;
+    for (Instruction &I :
+         make_early_inc_range(make_range(InnerLoopPreHeader->begin(),
+                                         std::prev(InnerLoopPreHeader->end()))))
+      I.moveBefore(OuterLoopHeader->getTerminator());
+  }
+
   Transformed |= adjustLoopLinks();
   if (!Transformed) {
     LLVM_DEBUG(dbgs() << "adjustLoopLinks failed\n");
@@ -1593,6 +1616,17 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   OuterLoopHeader->replacePhiUsesWith(InnerLoopLatch, OuterLoopLatch);
   InnerLoopHeader->replacePhiUsesWith(OuterLoopPreHeader, InnerLoopPreHeader);
   InnerLoopHeader->replacePhiUsesWith(OuterLoopLatch, InnerLoopLatch);
+
+  // Values defined in the outer loop header could be used in the inner loop
+  // latch. In that case, we need to create LCSSA phis for them, because after
+  // interchanging they will be defined in the new inner loop and used in the
+  // new outer loop.
+  IRBuilder<> Builder(OuterLoopHeader->getContext());
+  SmallVector<Instruction *, 4> MayNeedLCSSAPhis;
+  for (Instruction &I :
+       make_range(OuterLoopHeader->begin(), std::prev(OuterLoopHeader->end())))
+    MayNeedLCSSAPhis.push_back(&I);
+  formLCSSAForInstructions(MayNeedLCSSAPhis, *DT, *LI, SE, Builder);
 
   return true;
 }

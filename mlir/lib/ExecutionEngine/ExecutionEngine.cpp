@@ -223,7 +223,7 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
       enablePerfNotificationListener);
 
   std::unique_ptr<llvm::LLVMContext> ctx(new llvm::LLVMContext);
-  auto llvmModule = translateModuleToLLVMIR(m);
+  auto llvmModule = translateModuleToLLVMIR(m, *ctx);
   if (!llvmModule)
     return make_string_error("could not convert to LLVM IR");
   // FIXME: the triple should be passed to the translation or dialect conversion
@@ -232,12 +232,7 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
   setupTargetTriple(llvmModule.get());
   packFunctionArguments(llvmModule.get());
 
-  // Clone module in a new LLVMContext since translateModuleToLLVMIR buries
-  // ownership too deeply.
-  // TODO: Reevaluate model of ownership of LLVMContext in LLVMDialect.
-  std::unique_ptr<Module> deserModule =
-      LLVM::cloneModuleIntoNewContext(ctx.get(), llvmModule.get());
-  auto dataLayout = deserModule->getDataLayout();
+  auto dataLayout = llvmModule->getDataLayout();
 
   // Callback to create the object layer with symbol resolution to current
   // process and dynamically linked libraries.
@@ -295,7 +290,7 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
                    .create());
 
   // Add a ThreadSafemodule to the engine and return.
-  ThreadSafeModule tsm(std::move(deserModule), std::move(ctx));
+  ThreadSafeModule tsm(std::move(llvmModule), std::move(ctx));
   if (transformer)
     cantFail(tsm.withModuleDo(
         [&](llvm::Module &module) { return transformer(&module); }));

@@ -110,6 +110,7 @@ Optional<MemoryBufferRef> elf::readFile(StringRef path) {
     path = saver.save(config->chroot + path);
 
   log(path);
+  config->dependencyFiles.insert(llvm::CachedHashString(path));
 
   auto mbOrErr = MemoryBuffer::getFile(path, -1, false);
   if (auto ec = mbOrErr.getError()) {
@@ -656,17 +657,19 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
     if (sec.sh_type == SHT_REL || sec.sh_type == SHT_RELA)
       this->sections[i] = createInputSection(sec);
 
-    if (!(sec.sh_flags & SHF_LINK_ORDER))
+    // A SHF_LINK_ORDER section with sh_link=0 is handled as if it did not have
+    // the flag.
+    if (!(sec.sh_flags & SHF_LINK_ORDER) || !sec.sh_link)
       continue;
 
-    // .ARM.exidx sections have a reverse dependency on the InputSection they
-    // have a SHF_LINK_ORDER dependency, this is identified by the sh_link.
     InputSectionBase *linkSec = nullptr;
     if (sec.sh_link < this->sections.size())
       linkSec = this->sections[sec.sh_link];
     if (!linkSec)
       fatal(toString(this) + ": invalid sh_link index: " + Twine(sec.sh_link));
 
+    // A SHF_LINK_ORDER section is discarded if its linked-to section is
+    // discarded.
     InputSection *isec = cast<InputSection>(this->sections[i]);
     linkSec->dependentSections.push_back(isec);
     if (!isa<InputSection>(linkSec))

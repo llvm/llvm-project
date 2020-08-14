@@ -13,6 +13,7 @@ target_link_libraries(mlir-translate
   PRIVATE
   ${dialect_libs}
   ${translation_libs}
+  ${test_libs}
   MLIRIR
   MLIRParser
   MLIRPass

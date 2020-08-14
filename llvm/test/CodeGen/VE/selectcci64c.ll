@@ -35,8 +35,6 @@ define i64 @selectccsgti16(i16, i16, i64, i64) {
 define i64 @selectccsgti32(i32, i32, i64, i64) {
 ; CHECK-LABEL: selectccsgti32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    cmps.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.gt %s3, %s2, %s0
 ; CHECK-NEXT:    or %s0, 0, %s3
@@ -66,10 +64,10 @@ define i64 @selectccsgti128(i128, i128, i64, i64) {
 ; CHECK-NEXT:    or %s3, 0, %s6
 ; CHECK-NEXT:    cmov.l.gt %s3, (63)0, %s1
 ; CHECK-NEXT:    cmpu.l %s0, %s0, %s2
-; CHECK-NEXT:    cmov.l.gt %s6, (63)0, %s0
-; CHECK-NEXT:    cmov.l.eq %s3, %s6, %s1
-; CHECK-NEXT:    or %s0, 0, (0)1
-; CHECK-NEXT:    cmps.w.sx %s0, %s3, %s0
+; CHECK-NEXT:    or %s2, 0, %s6
+; CHECK-NEXT:    cmov.l.gt %s2, (63)0, %s0
+; CHECK-NEXT:    cmov.l.eq %s3, %s2, %s1
+; CHECK-NEXT:    cmps.w.sx %s0, %s3, %s6
 ; CHECK-NEXT:    cmov.w.ne %s5, %s4, %s0
 ; CHECK-NEXT:    or %s0, 0, %s5
 ; CHECK-NEXT:    or %s11, 0, %s9

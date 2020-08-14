@@ -168,7 +168,7 @@ constexpr TypeBuilderFunc getModel<const Fortran::runtime::NamelistGroup &>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     // FIXME: a namelist group must be some well-defined data structure, use a
     // tuple as a proxy for the moment
-    return mlir::TupleType::get(llvm::None, context);
+    return mlir::TupleType::get(context);
   };
 }
 template <>

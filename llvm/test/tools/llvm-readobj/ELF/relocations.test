@@ -125,10 +125,12 @@ Sections:
   - Name: .text
     Type: SHT_PROGBITS
     Content: '00FFFFFFFF020000001234567890ABCDEF'
-  - Name:   .rel.text
-    Type:   SHT_REL
-    Info:   .text
-    ShName: [[SHNAME=<none>]]
+  - Name:    .rel.text
+    Type:    SHT_REL
+    Info:    .text
+    Link:    [[LINK=.symtab]]
+    ShName:  [[SHNAME=<none>]]
+    EntSize: [[ENTSIZEREL=<none>]]
     Relocations:
       - Symbol: rel_0
         Type:   R_X86_64_NONE
@@ -141,10 +143,12 @@ Sections:
       - Offset: 0x9
         Symbol: rel_64
         Type:   R_X86_64_64
-  - Name: .rela.text
-    Type: SHT_RELA
-    Info: .text
-    ShName: [[SHNAME=<none>]]
+  - Name:    .rela.text
+    Type:    SHT_RELA
+    Info:    .text
+    Link:    [[LINK=.symtab]]
+    ShName:  [[SHNAME=<none>]]
+    EntSize: [[ENTSIZERELA=<none>]]
     Relocations:
       - Symbol: rela_0
         Type:   R_X86_64_NONE
@@ -193,6 +197,97 @@ Symbols:
   - Name:    rela_maxpos
     Section: .text
     Value:   0xFFFFFFFFFFFFFFFF
+
+## Check we report a warning when we are unable to dump relocations for a section.
+## Check we continue dumping other relocation sections if any.
+
+## Case A: check the case when relocations can't be read from an SHT_REL section.
+##         because of broken sh_entsize field.
+# RUN: yaml2obj %s --docnum=1 -DENTSIZEREL=1 -o %t.broken.rel
+# RUN: llvm-readobj --relocations %t.broken.rel 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.broken.rel --check-prefix=BROKEN-REL-LLVM
+# RUN: llvm-readelf --relocations %t.broken.rel 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.broken.rel --check-prefix=BROKEN-REL-GNU
+
+# BROKEN-REL-LLVM:      Relocations [
+# BROKEN-REL-LLVM-NEXT:   Section (2) .rel.text {
+# BROKEN-REL-LLVM-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_REL section with index 2: section [index 2] has an invalid sh_entsize: 1
+# BROKEN-REL-LLVM-NEXT:   }
+# BROKEN-REL-LLVM-NEXT:   Section (3) .rela.text {
+# BROKEN-REL-LLVM-NEXT:     0x0 R_X86_64_NONE rela_0 0x0
+# BROKEN-REL-LLVM-NEXT:     0x1 R_X86_64_PC32 rela_neg 0xFFFFFFFFFFFFFFFF
+# BROKEN-REL-LLVM-NEXT:     0x5 R_X86_64_PLT32 rela_pos 0x2
+# BROKEN-REL-LLVM-NEXT:     0xFFFFFFFFFFFFFFFF R_X86_64_64 rela_minneg 0x8000000000000000
+# BROKEN-REL-LLVM-NEXT:     0x9 R_X86_64_32S rela_maxpos 0x7FFFFFFFFFFFFFFF
+# BROKEN-REL-LLVM-NEXT:   }
+# BROKEN-REL-LLVM-NEXT: ]
+
+# BROKEN-REL-GNU:      Relocation section '.rel.text' at offset 0x51 contains 64 entries:
+# BROKEN-REL-GNU-NEXT:     Offset             Info             Type       Symbol's Value  Symbol's Name
+# BROKEN-REL-GNU-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_REL section with index 2: section [index 2] has an invalid sh_entsize: 1
+# BROKEN-REL-GNU:      Relocation section '.rela.text' at offset 0x91 contains 5 entries:
+# BROKEN-REL-GNU-NEXT:     Offset             Info             Type       Symbol's Value  Symbol's Name
+# BROKEN-REL-GNU-NEXT: 0000000000000000  0000000500000000 R_X86_64_NONE  0000000000000000 rela_0 + 0
+# BROKEN-REL-GNU-NEXT: 0000000000000001  0000000600000002 R_X86_64_PC32  0000000000000001 rela_neg - 1
+# BROKEN-REL-GNU-NEXT: 0000000000000005  0000000700000004 R_X86_64_PLT32 0000000000000002 rela_pos + 2
+# BROKEN-REL-GNU-NEXT: ffffffffffffffff  0000000800000001 R_X86_64_64    0000000000000003 rela_minneg - 8000000000000000
+# BROKEN-REL-GNU-NEXT: 0000000000000009  000000090000000b R_X86_64_32S   ffffffffffffffff rela_maxpos + 7fffffffffffffff
+
+## Case B: check the case when relocations can't be read from an SHT_RELA section.
+##         because of broken sh_entsize field.
+# RUN: yaml2obj %s --docnum=1 -DENTSIZERELA=1 -o %t.broken.rela
+# RUN: llvm-readobj --relocations %t.broken.rela 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.broken.rela --check-prefix=BROKEN-RELA-LLVM
+# RUN: llvm-readelf --relocations %t.broken.rela 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.broken.rela --check-prefix=BROKEN-RELA-GNU
+
+# BROKEN-RELA-LLVM:      Relocations [
+# BROKEN-RELA-LLVM-NEXT:   Section (2) .rel.text {
+# BROKEN-RELA-LLVM-NEXT:     0x0 R_X86_64_NONE rel_0 0x0
+# BROKEN-RELA-LLVM-NEXT:     0x1 R_X86_64_PC32 rel_neg 0x0
+# BROKEN-RELA-LLVM-NEXT:     0x5 R_X86_64_PLT32 rel_pos 0x0
+# BROKEN-RELA-LLVM-NEXT:     0x9 R_X86_64_64 rel_64 0x0
+# BROKEN-RELA-LLVM-NEXT:   }
+# BROKEN-RELA-LLVM-NEXT:   Section (3) .rela.text {
+# BROKEN-RELA-LLVM-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_RELA section with index 3: section [index 3] has an invalid sh_entsize: 1
+# BROKEN-RELA-LLVM-NEXT:   }
+# BROKEN-RELA-LLVM-NEXT: ]
+
+# BROKEN-RELA-GNU:      Relocation section '.rel.text' at offset 0x51 contains 4 entries:
+# BROKEN-RELA-GNU-NEXT:     Offset             Info             Type       Symbol's Value  Symbol's Name
+# BROKEN-RELA-GNU-NEXT: 0000000000000000  0000000100000000 R_X86_64_NONE  0000000000000000 rel_0
+# BROKEN-RELA-GNU-NEXT: 0000000000000001  0000000200000002 R_X86_64_PC32  0000000000000001 rel_neg
+# BROKEN-RELA-GNU-NEXT: 0000000000000005  0000000300000004 R_X86_64_PLT32 0000000000000002 rel_pos
+# BROKEN-RELA-GNU-NEXT: 0000000000000009  0000000400000001 R_X86_64_64    ffffffffffffffff rel_64
+# BROKEN-RELA-GNU-EMPTY:
+# BROKEN-RELA-GNU-NEXT: Relocation section '.rela.text' at offset 0x91 contains 120 entries:
+# BROKEN-RELA-GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# BROKEN-RELA-GNU-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_RELA section with index 3: section [index 3] has an invalid sh_entsize: 1
+
+## Case C: check the case when relocations can't be read from SHT_REL/SHT_RELA sections
+##         because of broken sh_link fields.
+# RUN: yaml2obj %s --docnum=1 -DLINK=0xffff -o %t.broken.link
+# RUN: llvm-readobj --relocations %t.broken.link 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.broken.link --check-prefix=BROKEN-LINK-LLVM
+# RUN: llvm-readelf --relocations %t.broken.link 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.broken.link --check-prefix=BROKEN-LINK-GNU
+
+# BROKEN-LINK-LLVM:      Relocations [
+# BROKEN-LINK-LLVM-NEXT:   Section (2) .rel.text {
+# BROKEN-LINK-LLVM-NEXT: warning: '[[FILE]]': unable to locate a symbol table for SHT_REL section with index 2: invalid section index: 65535
+# BROKEN-LINK-LLVM-NEXT:   }
+# BROKEN-LINK-LLVM-NEXT:   Section (3) .rela.text {
+# BROKEN-LINK-LLVM-NEXT: warning: '[[FILE]]': unable to locate a symbol table for SHT_RELA section with index 3: invalid section index: 65535
+# BROKEN-LINK-LLVM-NEXT:   }
+# BROKEN-LINK-LLVM-NEXT: ]
+
+# BROKEN-LINK-GNU:      Relocation section '.rel.text' at offset 0x51 contains 4 entries:
+# BROKEN-LINK-GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name
+# BROKEN-LINK-GNU-NEXT: warning: '[[FILE]]': unable to locate a symbol table for SHT_REL section with index 2: invalid section index: 65535
+# BROKEN-LINK-GNU-EMPTY:
+# BROKEN-LINK-GNU-NEXT: Relocation section '.rela.text' at offset 0x91 contains 5 entries:
+# BROKEN-LINK-GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# BROKEN-LINK-GNU-NEXT: warning: '[[FILE]]': unable to locate a symbol table for SHT_RELA section with index 3: invalid section index: 65535
 
 ## Show that ELF32 is dumped correctly.
 # RUN: yaml2obj %s --docnum=2 -o %t32

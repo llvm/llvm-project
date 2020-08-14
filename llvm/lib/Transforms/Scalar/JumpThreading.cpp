@@ -535,6 +535,10 @@ static unsigned getJumpThreadDuplicationCost(BasicBlock *BB,
     if (isa<BitCastInst>(I) && I->getType()->isPointerTy())
       continue;
 
+    // Freeze instruction is free, too.
+    if (isa<FreezeInst>(I))
+      continue;
+
     // Bail out if this instruction gives back a token type, it is not possible
     // to duplicate it if it is used outside this BB.
     if (I->getType()->isTokenTy() && I->isUsedOutsideOfBlock(BB))
@@ -674,13 +678,9 @@ bool JumpThreadingPass::ComputeValueKnownInPredecessorsImpl(
     return !Result.empty();
   }
 
-  // Handle Cast instructions.  Only see through Cast when the source operand is
-  // PHI, Cmp, or Freeze to save the compilation time.
+  // Handle Cast instructions.
   if (CastInst *CI = dyn_cast<CastInst>(I)) {
     Value *Source = CI->getOperand(0);
-    if (!isa<PHINode>(Source) && !isa<CmpInst>(Source) &&
-        !isa<FreezeInst>(Source))
-      return false;
     ComputeValueKnownInPredecessorsImpl(Source, BB, Result, Preference,
                                         RecursionSet, CxtI);
     if (Result.empty())
@@ -693,12 +693,8 @@ bool JumpThreadingPass::ComputeValueKnownInPredecessorsImpl(
     return true;
   }
 
-  // Handle Freeze instructions, in a manner similar to Cast.
   if (FreezeInst *FI = dyn_cast<FreezeInst>(I)) {
     Value *Source = FI->getOperand(0);
-    if (!isa<PHINode>(Source) && !isa<CmpInst>(Source) &&
-        !isa<CastInst>(Source))
-      return false;
     ComputeValueKnownInPredecessorsImpl(Source, BB, Result, Preference,
                                         RecursionSet, CxtI);
 
@@ -1194,11 +1190,14 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
   if (ProcessThreadableEdges(CondInst, BB, Preference, Terminator))
     return true;
 
-  // If this is an otherwise-unfoldable branch on a phi node in the current
-  // block, see if we can simplify.
-  if (PHINode *PN = dyn_cast<PHINode>(CondInst))
-    if (PN->getParent() == BB && isa<BranchInst>(BB->getTerminator()))
-      return ProcessBranchOnPHI(PN);
+  // If this is an otherwise-unfoldable branch on a phi node or freeze(phi) in
+  // the current block, see if we can simplify.
+  PHINode *PN = dyn_cast<PHINode>(
+      isa<FreezeInst>(CondInst) ? cast<FreezeInst>(CondInst)->getOperand(0)
+                                : CondInst);
+
+  if (PN && PN->getParent() == BB && isa<BranchInst>(BB->getTerminator()))
+    return ProcessBranchOnPHI(PN);
 
   // If this is an otherwise-unfoldable branch on a XOR, see if we can simplify.
   if (CondInst->getOpcode() == Instruction::Xor &&
@@ -1754,8 +1753,8 @@ bool JumpThreadingPass::ProcessThreadableEdges(Value *Cond, BasicBlock *BB,
 }
 
 /// ProcessBranchOnPHI - We have an otherwise unthreadable conditional branch on
-/// a PHI node in the current block.  See if there are any simplifications we
-/// can do based on inputs to the phi node.
+/// a PHI node (or freeze PHI) in the current block.  See if there are any
+/// simplifications we can do based on inputs to the phi node.
 bool JumpThreadingPass::ProcessBranchOnPHI(PHINode *PN) {
   BasicBlock *BB = PN->getParent();
 
@@ -1768,6 +1767,9 @@ bool JumpThreadingPass::ProcessBranchOnPHI(PHINode *PN) {
   // *duplicate* the conditional branch into that block in order to further
   // encourage jump threading and to eliminate cases where we have branch on a
   // phi of an icmp (branch on icmp is much better).
+  // This is still beneficial when a frozen phi is used as the branch condition
+  // because it allows CodeGenPrepare to further canonicalize br(freeze(icmp))
+  // to br(icmp(freeze ...)).
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
     BasicBlock *PredBB = PN->getIncomingBlock(i);
     if (BranchInst *PredBr = dyn_cast<BranchInst>(PredBB->getTerminator()))

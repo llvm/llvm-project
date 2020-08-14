@@ -18,12 +18,11 @@ define amdgpu_kernel void @fshl_i32(i32 addrspace(1)* %in, i32 %x, i32 %y, i32 %
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_sub_i32 s3, 32, s2
 ; SI-NEXT:    v_mov_b32_e32 v0, s1
-; SI-NEXT:    s_and_b32 s1, s2, 31
 ; SI-NEXT:    v_mov_b32_e32 v1, s3
-; SI-NEXT:    s_cmp_eq_u32 s1, 0
+; SI-NEXT:    s_and_b32 s1, s2, 31
 ; SI-NEXT:    v_alignbit_b32 v0, s0, v0, v1
 ; SI-NEXT:    v_mov_b32_e32 v1, s0
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
+; SI-NEXT:    v_cmp_eq_u32_e64 vcc, s1, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
@@ -153,21 +152,19 @@ define amdgpu_kernel void @fshl_v2i32(<2 x i32> addrspace(1)* %in, <2 x i32> %x,
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s9
 ; SI-NEXT:    s_sub_i32 s10, 32, s1
-; SI-NEXT:    s_and_b32 s1, s1, 31
 ; SI-NEXT:    v_mov_b32_e32 v1, s10
-; SI-NEXT:    s_cmp_eq_u32 s1, 0
+; SI-NEXT:    s_and_b32 s1, s1, 31
 ; SI-NEXT:    v_alignbit_b32 v0, s3, v0, v1
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
+; SI-NEXT:    v_cmp_eq_u32_e64 vcc, s1, 0
 ; SI-NEXT:    v_mov_b32_e32 v1, s3
 ; SI-NEXT:    s_sub_i32 s1, 32, s0
-; SI-NEXT:    s_and_b32 s0, s0, 31
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
-; SI-NEXT:    s_cmp_eq_u32 s0, 0
+; SI-NEXT:    s_and_b32 s0, s0, 31
 ; SI-NEXT:    v_mov_b32_e32 v0, s8
 ; SI-NEXT:    v_mov_b32_e32 v2, s1
 ; SI-NEXT:    v_alignbit_b32 v0, s2, v0, v2
 ; SI-NEXT:    v_mov_b32_e32 v2, s2
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
+; SI-NEXT:    v_cmp_eq_u32_e64 vcc, s0, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
@@ -336,39 +333,35 @@ define amdgpu_kernel void @fshl_v4i32(<4 x i32> addrspace(1)* %in, <4 x i32> %x,
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s15
 ; SI-NEXT:    s_sub_i32 s16, 32, s3
-; SI-NEXT:    s_and_b32 s3, s3, 31
 ; SI-NEXT:    v_mov_b32_e32 v1, s16
-; SI-NEXT:    s_cmp_eq_u32 s3, 0
+; SI-NEXT:    s_and_b32 s3, s3, 31
 ; SI-NEXT:    v_alignbit_b32 v0, s11, v0, v1
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
+; SI-NEXT:    v_cmp_eq_u32_e64 vcc, s3, 0
 ; SI-NEXT:    v_mov_b32_e32 v1, s11
 ; SI-NEXT:    s_sub_i32 s3, 32, s2
-; SI-NEXT:    s_and_b32 s2, s2, 31
 ; SI-NEXT:    v_cndmask_b32_e32 v3, v0, v1, vcc
-; SI-NEXT:    s_cmp_eq_u32 s2, 0
+; SI-NEXT:    s_and_b32 s2, s2, 31
 ; SI-NEXT:    v_mov_b32_e32 v0, s14
 ; SI-NEXT:    v_mov_b32_e32 v1, s3
 ; SI-NEXT:    v_alignbit_b32 v0, s10, v0, v1
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
+; SI-NEXT:    v_cmp_eq_u32_e64 vcc, s2, 0
 ; SI-NEXT:    v_mov_b32_e32 v1, s10
 ; SI-NEXT:    s_sub_i32 s2, 32, s1
-; SI-NEXT:    s_and_b32 s1, s1, 31
 ; SI-NEXT:    v_cndmask_b32_e32 v2, v0, v1, vcc
-; SI-NEXT:    s_cmp_eq_u32 s1, 0
+; SI-NEXT:    s_and_b32 s1, s1, 31
 ; SI-NEXT:    v_mov_b32_e32 v0, s13
 ; SI-NEXT:    v_mov_b32_e32 v1, s2
 ; SI-NEXT:    v_alignbit_b32 v0, s9, v0, v1
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
+; SI-NEXT:    v_cmp_eq_u32_e64 vcc, s1, 0
 ; SI-NEXT:    v_mov_b32_e32 v1, s9
 ; SI-NEXT:    s_sub_i32 s1, 32, s0
-; SI-NEXT:    s_and_b32 s0, s0, 31
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
-; SI-NEXT:    s_cmp_eq_u32 s0, 0
+; SI-NEXT:    s_and_b32 s0, s0, 31
 ; SI-NEXT:    v_mov_b32_e32 v0, s12
 ; SI-NEXT:    v_mov_b32_e32 v4, s1
 ; SI-NEXT:    v_alignbit_b32 v0, s8, v0, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, s8
-; SI-NEXT:    s_cselect_b64 vcc, -1, 0
+; SI-NEXT:    v_cmp_eq_u32_e64 vcc, s0, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
 ; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm

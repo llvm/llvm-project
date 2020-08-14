@@ -67,6 +67,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -153,6 +154,9 @@ private:
   /// linkage for them in AIX.
   SmallPtrSet<MCSymbol *, 8> ExtSymSDNodeSymbols;
 
+  /// A unique trailing identifier as a part of sinit/sterm functions.
+  std::string GlobalUniqueModuleId;
+
   static void ValidateGV(const GlobalVariable *GV);
   // Record a list of GlobalAlias associated with a GlobalObject.
   // This is used for AIX's extra-label-at-definition aliasing strategy.
@@ -170,6 +174,9 @@ public:
   StringRef getPassName() const override { return "AIX PPC Assembly Printer"; }
 
   bool doInitialization(Module &M) override;
+
+  void emitXXStructorList(const DataLayout &DL, const Constant *List,
+                          bool IsCtor) override;
 
   void SetupMachineFunction(MachineFunction &MF) override;
 
@@ -1678,11 +1685,6 @@ void PPCAIXAsmPrinter::ValidateGV(const GlobalVariable *GV) {
 static bool isSpecialLLVMGlobalArrayToSkip(const GlobalVariable *GV) {
   return GV->hasAppendingLinkage() &&
          StringSwitch<bool>(GV->getName())
-             // TODO: Update the handling of global arrays for static init when
-             // we support the ".ref" directive.
-             // Otherwise, we can skip these arrays, because the AIX linker
-             // collects static init functions simply based on their name.
-             .Cases("llvm.global_ctors", "llvm.global_dtors", true)
              // TODO: Linker could still eliminate the GV if we just skip
              // handling llvm.used array. Skipping them for now until we or the
              // AIX OS team come up with a good solution.
@@ -1692,18 +1694,22 @@ static bool isSpecialLLVMGlobalArrayToSkip(const GlobalVariable *GV) {
              .Default(false);
 }
 
+static bool isSpecialLLVMGlobalArrayForStaticInit(const GlobalVariable *GV) {
+  return StringSwitch<bool>(GV->getName())
+      .Cases("llvm.global_ctors", "llvm.global_dtors", true)
+      .Default(false);
+}
+
 void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
-  if (isSpecialLLVMGlobalArrayToSkip(GV))
+  // Special LLVM global arrays have been handled at the initialization.
+  if (isSpecialLLVMGlobalArrayToSkip(GV) || isSpecialLLVMGlobalArrayForStaticInit(GV))
     return;
 
   assert(!GV->getName().startswith("llvm.") &&
          "Unhandled intrinsic global variable.");
   ValidateGV(GV);
 
-  // Create the symbol, set its storage class.
   MCSymbolXCOFF *GVSym = cast<MCSymbolXCOFF>(getSymbol(GV));
-  GVSym->setStorageClass(
-      TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GV));
 
   if (GV->isDeclarationForLinker()) {
     emitLinkage(GV, GVSym);
@@ -1727,6 +1733,8 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (GVKind.isCommon() || GVKind.isBSSLocal()) {
     Align Alignment = GV->getAlign().getValueOr(DL.getPreferredAlign(GV));
     uint64_t Size = DL.getTypeAllocSize(GV->getType()->getElementType());
+    GVSym->setStorageClass(
+        TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GV));
 
     if (GVKind.isBSSLocal())
       OutStreamer->emitXCOFFLocalCommonSymbol(
@@ -1817,7 +1825,7 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
   for (auto &I : TOC) {
     // Setup the csect for the current TC entry.
     MCSectionXCOFF *TCEntry = cast<MCSectionXCOFF>(
-        getObjFileLowering().getSectionForTOCEntry(I.first));
+        getObjFileLowering().getSectionForTOCEntry(I.first, TM));
     OutStreamer->SwitchSection(TCEntry);
 
     OutStreamer->emitLabel(I.second);
@@ -1849,6 +1857,25 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
   for (const auto &G : M.globals()) {
     if (isSpecialLLVMGlobalArrayToSkip(&G))
       continue;
+
+    if (isSpecialLLVMGlobalArrayForStaticInit(&G)) {
+      // Generate a unique module id which is a part of sinit and sterm function
+      // names.
+      if (GlobalUniqueModuleId.empty()) {
+        GlobalUniqueModuleId = getUniqueModuleId(&M);
+        // FIXME: We need to figure out what to hash on or encode into the
+        // unique ID we need.
+        if (GlobalUniqueModuleId.compare("") == 0)
+          llvm::report_fatal_error(
+              "cannot produce a unique identifier for this module based on"
+              " strong external symbols");
+        GlobalUniqueModuleId = GlobalUniqueModuleId.substr(1);
+      }
+
+      emitSpecialLLVMGlobal(&G);
+      continue;
+    }
+
     setCsectAlignment(&G);
   }
 
@@ -1879,15 +1906,6 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (MO.isSymbol()) {
       MCSymbolXCOFF *S =
           cast<MCSymbolXCOFF>(OutContext.getOrCreateSymbol(MO.getSymbolName()));
-      if (!S->hasRepresentedCsectSet()) {
-        // On AIX, an undefined symbol needs to be associated with a
-        // MCSectionXCOFF to get the correct storage mapping class.
-        // In this case, XCOFF::XMC_PR.
-        MCSectionXCOFF *Sec = OutContext.getXCOFFSection(
-            S->getName(), XCOFF::XMC_PR, XCOFF::XTY_ER, XCOFF::C_EXT,
-            SectionKind::getMetadata());
-        S->setRepresentedCsect(Sec);
-      }
       ExtSymSDNodeSymbols.insert(S);
     }
   } break;
@@ -1910,10 +1928,31 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
 }
 
 bool PPCAIXAsmPrinter::doFinalization(Module &M) {
-  bool Ret = PPCAsmPrinter::doFinalization(M);
   for (MCSymbol *Sym : ExtSymSDNodeSymbols)
     OutStreamer->emitSymbolAttribute(Sym, MCSA_Extern);
-  return Ret;
+  return PPCAsmPrinter::doFinalization(M);
+}
+
+void PPCAIXAsmPrinter::emitXXStructorList(const DataLayout &DL,
+                                          const Constant *List, bool IsCtor) {
+  SmallVector<Structor, 8> Structors;
+  preprocessXXStructorList(DL, List, Structors);
+  if (Structors.empty())
+    return;
+
+  unsigned Index = 0;
+  for (Structor &S : Structors) {
+    if (S.Priority != 65535)
+      report_fatal_error(
+          "prioritized sinit and sterm functions are not yet supported on AIX");
+
+    llvm::GlobalAlias::create(
+        GlobalValue::ExternalLinkage,
+        (IsCtor ? llvm::Twine("__sinit") : llvm::Twine("__sterm")) +
+            llvm::Twine("80000000_clang_", GlobalUniqueModuleId) +
+            llvm::Twine("_", llvm::utostr(Index++)),
+        cast<Function>(S.Func));
+  }
 }
 
 /// createPPCAsmPrinterPass - Returns a pass that prints the PPC assembly code

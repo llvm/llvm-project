@@ -145,6 +145,7 @@ using TypeLocMatcher = internal::Matcher<TypeLoc>;
 using NestedNameSpecifierMatcher = internal::Matcher<NestedNameSpecifier>;
 using NestedNameSpecifierLocMatcher = internal::Matcher<NestedNameSpecifierLoc>;
 using CXXCtorInitializerMatcher = internal::Matcher<CXXCtorInitializer>;
+using TemplateArgumentLocMatcher = internal::Matcher<TemplateArgumentLoc>;
 /// @}
 
 /// Matches any node.
@@ -515,6 +516,18 @@ extern const internal::VariadicAllOfMatcher<CXXCtorInitializer>
 ///   matches 'int' in C<int>.
 extern const internal::VariadicAllOfMatcher<TemplateArgument> templateArgument;
 
+/// Matches template arguments (with location info).
+///
+/// Given
+/// \code
+///   template <typename T> struct C {};
+///   C<int> c;
+/// \endcode
+/// templateArgumentLoc()
+///   matches 'int' in C<int>.
+extern const internal::VariadicAllOfMatcher<TemplateArgumentLoc>
+    templateArgumentLoc;
+
 /// Matches template name.
 ///
 /// Given
@@ -548,6 +561,18 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl,
 ///   matches 'T', but not 'N'.
 extern const internal::VariadicDynCastAllOfMatcher<Decl, TemplateTypeParmDecl>
     templateTypeParmDecl;
+
+/// Matches template template parameter declarations.
+///
+/// Given
+/// \code
+///   template <template <typename> class Z, int N> struct C {};
+/// \endcode
+/// templateTypeParmDecl()
+///   matches 'Z', but not 'N'.
+extern const internal::VariadicDynCastAllOfMatcher<Decl,
+                                                   TemplateTemplateParmDecl>
+    templateTemplateParmDecl;
 
 /// Matches public C++ declarations and C++ base specifers that specify public
 /// inheritance.

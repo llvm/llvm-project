@@ -81,7 +81,8 @@ private:
   ImplicitRules *parent_;
   SemanticsContext &context_;
   bool inheritFromParent_{false}; // look in parent if not specified here
-  bool isImplicitNoneType_{false};
+  bool isImplicitNoneType_{
+      context_.IsEnabled(common::LanguageFeature::ImplicitNoneTypeAlways)};
   bool isImplicitNoneExternal_{false};
   // map_ contains the mapping between letters and types that were defined
   // by the IMPLICIT statements of the related scope. It does not contain
@@ -117,7 +118,7 @@ public:
   Message &Say(const SourceName &, MessageFixedText &&);
   // Emit a formatted message associated with a source location.
   template <typename... A>
-  Message &Say(const SourceName &source, MessageFixedText &&msg, A &&... args) {
+  Message &Say(const SourceName &source, MessageFixedText &&msg, A &&...args) {
     return context_->Say(source, std::move(msg), std::forward<A>(args)...);
   }
 
@@ -213,12 +214,12 @@ public:
     }
   }
 
-  template <typename... A> Message &Say(A &&... args) {
+  template <typename... A> Message &Say(A &&...args) {
     return messageHandler_.Say(std::forward<A>(args)...);
   }
   template <typename... A>
   Message &Say(
-      const parser::Name &name, MessageFixedText &&text, const A &... args) {
+      const parser::Name &name, MessageFixedText &&text, const A &...args) {
     return messageHandler_.Say(name.source, std::move(text), args...);
   }
 
@@ -1289,7 +1290,6 @@ public:
     ResolveName(*parser::Unwrap<parser::Name>(x.name));
   }
   void Post(const parser::ProcComponentRef &);
-  bool Pre(const parser::ActualArg &);
   bool Pre(const parser::FunctionReference &);
   bool Pre(const parser::CallStmt &);
   bool Pre(const parser::ImportStmt &);
@@ -1682,9 +1682,8 @@ bool ImplicitRulesVisitor::Pre(const parser::ImplicitStmt &x) {
                          Say("IMPLICIT statement after IMPLICIT NONE or "
                              "IMPLICIT NONE(TYPE) statement"_err_en_US);
                          return false;
-                       } else {
-                         implicitRules().set_isImplicitNoneType(false);
                        }
+                       implicitRules().set_isImplicitNoneType(false);
                        return true;
                      },
                  },
@@ -1744,12 +1743,16 @@ bool ImplicitRulesVisitor::HandleImplicitNone(
     return false;
   }
   prevImplicitNone_ = currStmtSource();
+  bool implicitNoneTypeNever{
+      context().IsEnabled(common::LanguageFeature::ImplicitNoneTypeNever)};
   if (nameSpecs.empty()) {
-    prevImplicitNoneType_ = currStmtSource();
-    implicitRules().set_isImplicitNoneType(true);
-    if (prevImplicit_) {
-      Say("IMPLICIT NONE statement after IMPLICIT statement"_err_en_US);
-      return false;
+    if (!implicitNoneTypeNever) {
+      prevImplicitNoneType_ = currStmtSource();
+      implicitRules().set_isImplicitNoneType(true);
+      if (prevImplicit_) {
+        Say("IMPLICIT NONE statement after IMPLICIT statement"_err_en_US);
+        return false;
+      }
     }
   } else {
     int sawType{0};
@@ -1761,13 +1764,15 @@ bool ImplicitRulesVisitor::HandleImplicitNone(
         ++sawExternal;
         break;
       case ImplicitNoneNameSpec::Type:
-        prevImplicitNoneType_ = currStmtSource();
-        implicitRules().set_isImplicitNoneType(true);
-        if (prevImplicit_) {
-          Say("IMPLICIT NONE(TYPE) after IMPLICIT statement"_err_en_US);
-          return false;
+        if (!implicitNoneTypeNever) {
+          prevImplicitNoneType_ = currStmtSource();
+          implicitRules().set_isImplicitNoneType(true);
+          if (prevImplicit_) {
+            Say("IMPLICIT NONE(TYPE) after IMPLICIT statement"_err_en_US);
+            return false;
+          }
+          ++sawType;
         }
-        ++sawType;
         break;
       }
     }
@@ -5311,23 +5316,6 @@ const DeclTypeSpec &ConstructVisitor::ToDeclTypeSpec(
 
 // ResolveNamesVisitor implementation
 
-// Ensures that bare undeclared intrinsic procedure names passed as actual
-// arguments get recognized as being intrinsics.
-bool ResolveNamesVisitor::Pre(const parser::ActualArg &arg) {
-  if (const auto *expr{std::get_if<Indirection<parser::Expr>>(&arg.u)}) {
-    if (const auto *designator{
-            std::get_if<Indirection<parser::Designator>>(&expr->value().u)}) {
-      if (const auto *dataRef{
-              std::get_if<parser::DataRef>(&designator->value().u)}) {
-        if (const auto *name{std::get_if<parser::Name>(&dataRef->u)}) {
-          NameIsKnownOrIntrinsic(*name);
-        }
-      }
-    }
-  }
-  return true;
-}
-
 bool ResolveNamesVisitor::Pre(const parser::FunctionReference &x) {
   HandleCall(Symbol::Flag::Function, x.v);
   return false;
@@ -5749,7 +5737,8 @@ void ResolveNamesVisitor::HandleProcedureName(
     // error was reported
   } else {
     symbol = &Resolve(name, symbol)->GetUltimate();
-    if (ConvertToProcEntity(*symbol) && IsIntrinsic(symbol->name())) {
+    if (ConvertToProcEntity(*symbol) && IsIntrinsic(symbol->name()) &&
+        !IsDummy(*symbol)) {
       symbol->attrs().set(Attr::INTRINSIC);
       // 8.2(3): ignore type from intrinsic in type-declaration-stmt
       symbol->get<ProcEntityDetails>().set_interface(ProcInterface{});
@@ -5909,7 +5898,8 @@ bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
   Walk(std::get<2>(x.t));
   Walk(std::get<3>(x.t));
   Walk(std::get<4>(x.t));
-  const std::list<parser::DeclarationConstruct> &decls{std::get<5>(x.t)};
+  Walk(std::get<5>(x.t));
+  const std::list<parser::DeclarationConstruct> &decls{std::get<6>(x.t)};
   for (const auto &decl : decls) {
     if (const auto *spec{
             std::get_if<parser::SpecificationConstruct>(&decl.u)}) {

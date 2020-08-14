@@ -52,6 +52,8 @@ def : GINodeEquiv<G_BITCAST, bitconvert>;
 def : GINodeEquiv<G_CONSTANT, imm>;
 def : GINodeEquiv<G_FCONSTANT, fpimm>;
 def : GINodeEquiv<G_IMPLICIT_DEF, undef>;
+def : GINodeEquiv<G_FRAME_INDEX, frameindex>;
+def : GINodeEquiv<G_BLOCK_ADDR, blockaddress>;
 def : GINodeEquiv<G_ADD, add>;
 def : GINodeEquiv<G_SUB, sub>;
 def : GINodeEquiv<G_MUL, mul>;
@@ -71,6 +73,8 @@ def : GINodeEquiv<G_SADDSAT, saddsat>;
 def : GINodeEquiv<G_UADDSAT, uaddsat>;
 def : GINodeEquiv<G_SSUBSAT, ssubsat>;
 def : GINodeEquiv<G_USUBSAT, usubsat>;
+def : GINodeEquiv<G_SSHLSAT, sshlsat>;
+def : GINodeEquiv<G_USHLSAT, ushlsat>;
 def : GINodeEquiv<G_SMULFIX, smulfix>;
 def : GINodeEquiv<G_UMULFIX, umulfix>;
 def : GINodeEquiv<G_SMULFIXSAT, smulfixsat>;
@@ -131,6 +135,7 @@ def : GINodeEquiv<G_SMIN, smin>;
 def : GINodeEquiv<G_SMAX, smax>;
 def : GINodeEquiv<G_UMIN, umin>;
 def : GINodeEquiv<G_UMAX, umax>;
+def : GINodeEquiv<G_ABS, abs>;
 def : GINodeEquiv<G_FMINNUM, fminnum>;
 def : GINodeEquiv<G_FMAXNUM, fmaxnum>;
 def : GINodeEquiv<G_FMINNUM_IEEE, fminnum_ieee>;
@@ -172,6 +177,12 @@ def : GINodeEquiv<G_ICMP, setcc> {
 def : GINodeEquiv<G_STORE, st> { let CheckMMOIsNonAtomic = 1; }
 
 def : GINodeEquiv<G_LOAD, atomic_load> {
+  let CheckMMOIsNonAtomic = 0;
+  let CheckMMOIsAtomic = 1;
+}
+
+// Operands are swapped for atomic_store vs. regular store
+def : GINodeEquiv<G_STORE, atomic_store> {
   let CheckMMOIsNonAtomic = 0;
   let CheckMMOIsAtomic = 1;
 }

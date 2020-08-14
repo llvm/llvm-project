@@ -469,10 +469,12 @@ private:
   };
   unsigned AddressSpace;
   std::vector<char> Values;
+  std::string Comment;
 
-  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int O, StringRef V)
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int O, StringRef V,
+                   StringRef Comment = "")
       : Operation(Op), Label(L), Register(R), Offset(O),
-        Values(V.begin(), V.end()) {
+        Values(V.begin(), V.end()), Comment(Comment) {
     assert(Op != OpRegister && Op != OpLLVMDefAspaceCfa);
   }
 
@@ -588,8 +590,9 @@ public:
 
   /// .cfi_escape Allows the user to add arbitrary bytes to the unwind
   /// info.
-  static MCCFIInstruction createEscape(MCSymbol *L, StringRef Vals) {
-    return MCCFIInstruction(OpEscape, L, 0, 0, Vals);
+  static MCCFIInstruction createEscape(MCSymbol *L, StringRef Vals,
+                                       StringRef Comment = "") {
+    return MCCFIInstruction(OpEscape, L, 0, 0, Vals, Comment);
   }
 
   /// A special wrapper for .cfi_escape that indicates GNU_ARGS_SIZE
@@ -630,6 +633,10 @@ public:
   StringRef getValues() const {
     assert(Operation == OpEscape);
     return StringRef(&Values[0], Values.size());
+  }
+
+  StringRef getComment() const {
+    return Comment;
   }
 };
 

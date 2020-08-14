@@ -63,7 +63,7 @@ define i32 @add(i32 %arg) {
 ; NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16I8 = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> undef, <16 x i8> undef)
 ; NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V32I8 = call <32 x i8> @llvm.sadd.sat.v32i8(<32 x i8> undef, <32 x i8> undef)
 ; NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V64I8 = call <64 x i8> @llvm.sadd.sat.v64i8(<64 x i8> undef, <64 x i8> undef)
-; NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; MVE-RECIP-LABEL: 'add'
 ; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %I64 = call i64 @llvm.sadd.sat.i64(i64 undef, i64 undef)
@@ -82,7 +82,7 @@ define i32 @add(i32 %arg) {
 ; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V16I8 = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> undef, <16 x i8> undef)
 ; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V32I8 = call <32 x i8> @llvm.sadd.sat.v32i8(<32 x i8> undef, <32 x i8> undef)
 ; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V64I8 = call <64 x i8> @llvm.sadd.sat.v64i8(<64 x i8> undef, <64 x i8> undef)
-; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; V8M-SIZE-LABEL: 'add'
 ; V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = call i64 @llvm.sadd.sat.i64(i64 undef, i64 undef)
@@ -221,7 +221,7 @@ define i32 @sub(i32 %arg) {
 ; NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16I8 = call <16 x i8> @llvm.ssub.sat.v16i8(<16 x i8> undef, <16 x i8> undef)
 ; NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V32I8 = call <32 x i8> @llvm.ssub.sat.v32i8(<32 x i8> undef, <32 x i8> undef)
 ; NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V64I8 = call <64 x i8> @llvm.ssub.sat.v64i8(<64 x i8> undef, <64 x i8> undef)
-; NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; MVE-RECIP-LABEL: 'sub'
 ; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %I64 = call i64 @llvm.ssub.sat.i64(i64 undef, i64 undef)
@@ -240,7 +240,7 @@ define i32 @sub(i32 %arg) {
 ; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V16I8 = call <16 x i8> @llvm.ssub.sat.v16i8(<16 x i8> undef, <16 x i8> undef)
 ; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V32I8 = call <32 x i8> @llvm.ssub.sat.v32i8(<32 x i8> undef, <32 x i8> undef)
 ; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V64I8 = call <64 x i8> @llvm.ssub.sat.v64i8(<64 x i8> undef, <64 x i8> undef)
-; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; V8M-SIZE-LABEL: 'sub'
 ; V8M-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = call i64 @llvm.ssub.sat.i64(i64 undef, i64 undef)

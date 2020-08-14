@@ -115,12 +115,12 @@ public:
     return foldingContext_.messages();
   }
 
-  template <typename... A> parser::Message *Say(A &&... args) {
+  template <typename... A> parser::Message *Say(A &&...args) {
     return GetContextualMessages().Say(std::forward<A>(args)...);
   }
 
   template <typename T, typename... A>
-  parser::Message *SayAt(const T &parsed, A &&... args) {
+  parser::Message *SayAt(const T &parsed, A &&...args) {
     return Say(parser::FindSourceLocation(parsed), std::forward<A>(args)...);
   }
 

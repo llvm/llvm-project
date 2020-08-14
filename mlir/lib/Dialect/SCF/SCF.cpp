@@ -53,8 +53,7 @@ struct SCFInlinerInterface : public DialectInlinerInterface {
 // SCFDialect
 //===----------------------------------------------------------------------===//
 
-SCFDialect::SCFDialect(MLIRContext *context)
-    : Dialect(getDialectNamespace(), context) {
+void SCFDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/SCF/SCFOps.cpp.inc"

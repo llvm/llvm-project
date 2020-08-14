@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-unswitch -disable-basic-aa -enable-mssa-loop-dependency -verify-memoryssa < %s | FileCheck %s
+; RUN: opt -S -simple-loop-unswitch -disable-basic-aa -enable-mssa-loop-dependency -verify-memoryssa < %s | FileCheck %s
 ; REQUIRES: asserts
 
 target triple = "x86_64-unknown-linux-gnu"

@@ -74,7 +74,7 @@ public:
       : m_type_name(type_name), m_is_regex(false) {}
   /// Creates a matcher that accepts any type matching the given regex.
   TypeMatcher(RegularExpression regex)
-      : m_type_name_regex(regex), m_is_regex(true) {}
+      : m_type_name_regex(std::move(regex)), m_is_regex(true) {}
 
   /// True iff this matches the given type name.
   bool Matches(ConstString type_name) const {

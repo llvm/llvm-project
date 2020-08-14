@@ -2055,7 +2055,20 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
       Info.FFDiag(Loc, diag::note_constexpr_non_global, 1)
         << IsReferenceType << !Designator.Entries.empty()
         << !!VD << VD;
-      NoteLValueLocation(Info, Base);
+
+      auto *VarD = dyn_cast_or_null<VarDecl>(VD);
+      if (VarD && VarD->isConstexpr()) {
+        // Non-static local constexpr variables have unintuitive semantics:
+        //   constexpr int a = 1;
+        //   constexpr const int *p = &a;
+        // ... is invalid because the address of 'a' is not constant. Suggest
+        // adding a 'static' in this case.
+        Info.Note(VarD->getLocation(), diag::note_constexpr_not_static)
+            << VarD
+            << FixItHint::CreateInsertion(VarD->getBeginLoc(), "static ");
+      } else {
+        NoteLValueLocation(Info, Base);
+      }
     } else {
       Info.FFDiag(Loc);
     }
@@ -8974,6 +8987,7 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
   const Expr *Init = E->getInitializer();
   const InitListExpr *ResizedArrayILE = nullptr;
   const CXXConstructExpr *ResizedArrayCCE = nullptr;
+  bool ValueInit = false;
 
   QualType AllocType = E->getAllocatedType();
   if (Optional<const Expr*> ArraySize = E->getArraySize()) {
@@ -9017,7 +9031,14 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
     //   -- the new-initializer is a braced-init-list and the number of
     //      array elements for which initializers are provided [...]
     //      exceeds the number of elements to initialize
-    if (Init && !isa<CXXConstructExpr>(Init)) {
+    if (!Init) {
+      // No initialization is performed.
+    } else if (isa<CXXScalarValueInitExpr>(Init) ||
+               isa<ImplicitValueInitExpr>(Init)) {
+      ValueInit = true;
+    } else if (auto *CCE = dyn_cast<CXXConstructExpr>(Init)) {
+      ResizedArrayCCE = CCE;
+    } else {
       auto *CAT = Info.Ctx.getAsConstantArrayType(Init->getType());
       assert(CAT && "unexpected type for array initializer");
 
@@ -9040,8 +9061,6 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
       // special handling for this case when we initialize.
       if (InitBound != AllocBound)
         ResizedArrayILE = cast<InitListExpr>(Init);
-    } else if (Init) {
-      ResizedArrayCCE = cast<CXXConstructExpr>(Init);
     }
 
     AllocType = Info.Ctx.getConstantArrayType(AllocType, ArrayBound, nullptr,
@@ -9102,7 +9121,11 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
       return false;
   }
 
-  if (ResizedArrayILE) {
+  if (ValueInit) {
+    ImplicitValueInitExpr VIE(AllocType);
+    if (!EvaluateInPlace(*Val, Info, Result, &VIE))
+      return false;
+  } else if (ResizedArrayILE) {
     if (!EvaluateArrayNewInitList(Info, Result, *Val, ResizedArrayILE,
                                   AllocType))
       return false;
@@ -13001,6 +13024,29 @@ bool FixedPointExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
     }
     Result = LHSFX.div(RHSFX, &OpOverflow)
                   .convert(ResultFXSema, &ConversionOverflow);
+    break;
+  }
+  case BO_Shl:
+  case BO_Shr: {
+    FixedPointSemantics LHSSema = LHSFX.getSemantics();
+    llvm::APSInt RHSVal = RHSFX.getValue();
+
+    unsigned ShiftBW =
+        LHSSema.getWidth() - (unsigned)LHSSema.hasUnsignedPadding();
+    unsigned Amt = RHSVal.getLimitedValue(ShiftBW - 1);
+    // Embedded-C 4.1.6.2.2:
+    //   The right operand must be nonnegative and less than the total number
+    //   of (nonpadding) bits of the fixed-point operand ...
+    if (RHSVal.isNegative())
+      Info.CCEDiag(E, diag::note_constexpr_negative_shift) << RHSVal;
+    else if (Amt != RHSVal)
+      Info.CCEDiag(E, diag::note_constexpr_large_shift)
+          << RHSVal << E->getType() << ShiftBW;
+
+    if (E->getOpcode() == BO_Shl)
+      Result = LHSFX.shl(Amt, &OpOverflow);
+    else
+      Result = LHSFX.shr(Amt, &OpOverflow);
     break;
   }
   default:

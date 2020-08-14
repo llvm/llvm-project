@@ -1663,6 +1663,20 @@ TEST_F(FormatTest, MultiLineControlStatements) {
             "  foo();\n"
             "}",
             format("for(int i=0;i<10;++i){foo();}", Style));
+  EXPECT_EQ("foreach (int i,\n"
+            "         list)\n"
+            "{\n"
+            "  foo();\n"
+            "}",
+            format("foreach(int i, list){foo();}", Style));
+  Style.ColumnLimit =
+      40; // to concentrate at brace wrapping, not line wrap due to column limit
+  EXPECT_EQ("foreach (int i, list) {\n"
+            "  foo();\n"
+            "}",
+            format("foreach(int i, list){foo();}", Style));
+  Style.ColumnLimit =
+      20; // to concentrate at brace wrapping, not line wrap due to column limit
   EXPECT_EQ("while (foo || bar ||\n"
             "       baz)\n"
             "{\n"
@@ -11244,6 +11258,23 @@ TEST_F(FormatTest, ConfigurableUseOfTab) {
                "\t\t\t\"abcdefghijklmnopqrstuvwxyz\";\n"
                "\t}\n"
                "};",
+               Tab);
+  Tab.AlignOperands = FormatStyle::OAS_Align;
+  verifyFormat("int aaaaaaaaaa = bbbbbbbbbbbbbbbbbbbb +\n"
+               "                 cccccccccccccccccccc;",
+               Tab);
+  // no alignment
+  verifyFormat("int aaaaaaaaaa =\n"
+               "\tbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;",
+               Tab);
+  verifyFormat("return aaaaaaaaaaaaaaaa ? 111111111111111\n"
+               "       : bbbbbbbbbbbbbb ? 222222222222222\n"
+               "                        : 333333333333333;",
+               Tab);
+  Tab.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
+  Tab.AlignOperands = FormatStyle::OAS_AlignAfterOperator;
+  verifyFormat("int aaaaaaaaaa = bbbbbbbbbbbbbbbbbbbb\n"
+               "               + cccccccccccccccccccc;",
                Tab);
 }
 

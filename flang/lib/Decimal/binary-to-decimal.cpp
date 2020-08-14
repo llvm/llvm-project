@@ -143,7 +143,6 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToDecimal(char *buffer,
     bool incr{false};
     switch (rounding_) {
     case RoundNearest:
-    case RoundDefault:
       incr = *end > '5' ||
           (*end == '5' && (p > end + 1 || ((end[-1] - '0') & 1) != 0));
       break;

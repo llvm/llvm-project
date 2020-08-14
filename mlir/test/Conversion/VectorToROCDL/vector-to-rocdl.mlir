@@ -9,7 +9,7 @@ func @transfer_readx2(%A : memref<?xf32>, %base: index) -> vector<2xf32> {
   return %f: vector<2xf32>
 }
 // CHECK-LABEL: @transfer_readx2
-// CHECK: rocdl.buffer.load {{.*}} !llvm<"<2 x float>">
+// CHECK: rocdl.buffer.load {{.*}} !llvm.vec<2 x float>
 
 func @transfer_readx4(%A : memref<?xf32>, %base: index) -> vector<4xf32> {
   %f0 = constant 0.0: f32
@@ -19,7 +19,7 @@ func @transfer_readx4(%A : memref<?xf32>, %base: index) -> vector<4xf32> {
   return %f: vector<4xf32>
 }
 // CHECK-LABEL: @transfer_readx4
-// CHECK: rocdl.buffer.load {{.*}} !llvm<"<4 x float>">
+// CHECK: rocdl.buffer.load {{.*}} !llvm.vec<4 x float>
 
 func @transfer_read_dwordConfig(%A : memref<?xf32>, %base: index) -> vector<4xf32> {
   %f0 = constant 0.0: f32
@@ -43,7 +43,7 @@ func @transfer_writex2(%A : memref<?xf32>, %B : vector<2xf32>, %base: index) {
   return
 }
 // CHECK-LABEL: @transfer_writex2
-// CHECK: rocdl.buffer.store {{.*}} !llvm<"<2 x float>">
+// CHECK: rocdl.buffer.store {{.*}} !llvm.vec<2 x float>
 
 func @transfer_writex4(%A : memref<?xf32>, %B : vector<4xf32>, %base: index) {
   vector.transfer_write %B, %A[%base]
@@ -52,7 +52,7 @@ func @transfer_writex4(%A : memref<?xf32>, %B : vector<4xf32>, %base: index) {
   return
 }
 // CHECK-LABEL: @transfer_writex4
-// CHECK: rocdl.buffer.store {{.*}} !llvm<"<4 x float>">
+// CHECK: rocdl.buffer.store {{.*}} !llvm.vec<4 x float>
 
 func @transfer_write_dwordConfig(%A : memref<?xf32>, %B : vector<2xf32>, %base: index) {
   vector.transfer_write %B, %A[%base]

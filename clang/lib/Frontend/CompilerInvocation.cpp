@@ -768,6 +768,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
             .Case("constructor", codegenoptions::DebugInfoConstructor)
             .Case("limited", codegenoptions::LimitedDebugInfo)
             .Case("standalone", codegenoptions::FullDebugInfo)
+            .Case("unused-types", codegenoptions::UnusedTypeInfo)
             .Default(~0U);
     if (Val == ~0U)
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
@@ -1156,8 +1157,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   if (const Arg *A = Args.getLastArg(OPT_compress_debug_sections,
                                      OPT_compress_debug_sections_EQ)) {
     if (A->getOption().getID() == OPT_compress_debug_sections) {
-      // TODO: be more clever about the compression type auto-detection
-      Opts.setCompressDebugSections(llvm::DebugCompressionType::GNU);
+      Opts.setCompressDebugSections(llvm::DebugCompressionType::Z);
     } else {
       auto DCT = llvm::StringSwitch<llvm::DebugCompressionType>(A->getValue())
                      .Case("none", llvm::DebugCompressionType::None)

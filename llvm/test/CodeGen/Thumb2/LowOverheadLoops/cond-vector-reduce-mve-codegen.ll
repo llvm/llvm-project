@@ -23,14 +23,14 @@ define dso_local i32 @vpsel_mul_reduce_add(i32* noalias nocapture readonly %a, i
 ; CHECK-NEXT:    vctp.32 r3
 ; CHECK-NEXT:    and r4, r12, #15
 ; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
-; CHECK-NEXT:    vdup.32 q3, r4
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vldrwt.u32 q1, [r2], #16
 ; CHECK-NEXT:    vldrwt.u32 q2, [r1], #16
-; CHECK-NEXT:    vcmp.i32 eq, q3, zr
+; CHECK-NEXT:    vdup.32 q3, r4
+; CHECK-NEXT:    vpt.i32 eq, q3, zr
+; CHECK-NEXT:    vmovt q1, q2
 ; CHECK-NEXT:    add.w r12, r12, #4
-; CHECK-NEXT:    vpsel q1, q2, q1
 ; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q2, [r0], #16

@@ -306,6 +306,9 @@ LLVM-specific variables
   scenario where a manual override may be desirable is when using Visual Studio
   2017's CMake integration, which would not be detected as an IDE otherwise.
 
+**LLVM_ENABLE_MODULES**
+  Compile with C++ modules enabled.
+
 **LLVM_ENABLE_PIC**:BOOL
   Add the ``-fPIC`` flag to the compiler command-line, if the compiler supports
   this flag. Some systems, like Windows, do not need this flag. Defaults to ON.
@@ -444,7 +447,7 @@ LLVM-specific variables
 **LLVM_STATIC_LINK_CXX_STDLIB**:BOOL
   Statically link to the C++ standard library if possible. This uses the flag
   "-static-libstdc++", but a Clang host compiler will statically link to libc++
-  if used in conjuction with the **LLVM_ENABLE_LIBCXX** flag. Defaults to OFF.
+  if used in conjunction with the **LLVM_ENABLE_LIBCXX** flag. Defaults to OFF.
 
 **LLVM_ENABLE_LLD**:BOOL
   This option is equivalent to `-DLLVM_USE_LINKER=lld`, except during a 2-stage

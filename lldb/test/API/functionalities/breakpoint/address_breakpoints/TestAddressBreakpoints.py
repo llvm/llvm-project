@@ -56,6 +56,7 @@ class AddressBreakpointTestCase(TestBase):
         launch_info = lldb.SBLaunchInfo(None)
         flags = launch_info.GetLaunchFlags()
         flags &= ~lldb.eLaunchFlagDisableASLR
+        flags &= lldb.eLaunchFlagInheritTCCFromParent
         launch_info.SetLaunchFlags(flags)
 
         error = lldb.SBError()

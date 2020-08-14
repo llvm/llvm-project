@@ -130,8 +130,6 @@ bool Combiner::combineMachineInstrs(MachineFunction &MF,
       WrapperObserver.addObserver(CSEInfo);
     RAIIDelegateInstaller DelInstall(MF, &WrapperObserver);
     for (MachineBasicBlock *MBB : post_order(&MF)) {
-      if (MBB->empty())
-        continue;
       for (auto MII = MBB->rbegin(), MIE = MBB->rend(); MII != MIE;) {
         MachineInstr *CurMI = &*MII;
         ++MII;

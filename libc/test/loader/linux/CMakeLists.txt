@@ -35,3 +35,19 @@ add_loader_test(
   DEPENDS
     libc.loader.linux.crt1
 )
+
+# TODO: Disableing this test temporarily to investigate why gold fails to link
+# and produce an executable for this test. Test works all fine with ld.bfd.
+#add_loader_test(
+#  loader_tls_test
+#  SRC
+#    tls_test.cpp
+#  DEPENDS
+#    libc.config.linux.app_h
+#    libc.include.errno
+#    libc.include.sys_mman
+#    libc.loader.linux.crt1
+#    libc.src.assert.__assert_fail
+#    libc.src.errno.__errno_location
+#    libc.src.sys.mman.mmap
+#)

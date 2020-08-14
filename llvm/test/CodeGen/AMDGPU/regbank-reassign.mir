@@ -494,3 +494,81 @@ body: |
     %2 = V_AND_B32_e32 %1, %0, implicit $exec
     S_ENDPGM 0
 ...
+
+# Test that bank of subreg is considered during scavenging.
+# If handled incorrectly an infinite loop occurs.
+# GCN-LABEL: s0_vs_s15_16_17_sub1{{$}}
+# GCN: S_AND_B32 renamable $sgpr13, $sgpr0,
+---
+name:            s0_vs_s15_16_17_sub1
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_96, preferred-register: '$sgpr15_sgpr16_sgpr17' }
+  - { id: 1, class: sgpr_32 }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    $sgpr0 = IMPLICIT_DEF
+    %1 = S_AND_B32 %0.sub1, $sgpr0, implicit-def $scc
+    S_ENDPGM 0
+...
+
+# Test that the size of subreg is correctly handled in bank calculation.
+# If handled incorrectly an infinite loop occurs.
+# GCN-LABEL: vgpr_sub_dependence{{$}}
+# GCN: $vgpr9_vgpr10_vgpr11_vgpr12 = IMPLICIT_DEF
+# GCN: $vgpr16_vgpr17 = IMPLICIT_DEF
+# GCN: $vgpr14_vgpr15 = IMPLICIT_DEF
+# GCN: $vgpr0_vgpr1 = IMPLICIT_DEF
+# GCN: $vgpr7_vgpr8 = IMPLICIT_DEF
+# GCN: $vgpr3_vgpr4_vgpr5_vgpr6 = IMPLICIT_DEF
+# GCN: $vgpr18_vgpr19 = IMPLICIT_DEF
+# GCN: $vgpr20_vgpr21_vgpr22_vgpr23 = IMPLICIT_DEF
+# GCN: $vgpr24_vgpr25_vgpr26_vgpr27 = IMPLICIT_DEF
+# GCN: $vgpr28_vgpr29_vgpr30_vgpr31 = IMPLICIT_DEF
+# GCN: $vgpr32_vgpr33_vgpr34_vgpr35 = IMPLICIT_DEF
+# GCN: $vgpr36_vgpr37_vgpr38_vgpr39 = IMPLICIT_DEF
+# GCN: $vgpr40_vgpr41_vgpr42_vgpr43 = IMPLICIT_DEF
+# GCN: $vgpr44_vgpr45_vgpr46_vgpr47 = IMPLICIT_DEF
+# GCN: $vgpr0_vgpr1 = V_ADD_F64 0, $vgpr11_vgpr12, 0, killed $vgpr16_vgpr17, 0, 0, implicit $mode, implicit $exec
+# GCN: $vgpr0_vgpr1 = V_ADD_F64 0, $vgpr9_vgpr10, 0, killed $vgpr14_vgpr15, 0, 0, implicit $mode, implicit $exec
+---
+name:            vgpr_sub_dependence
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_128, preferred-register: '$vgpr10_vgpr11_vgpr12_vgpr13' }
+  - { id: 1, class: vreg_64, preferred-register: '$vgpr16_vgpr17' }
+  - { id: 2, class: vreg_64, preferred-register: '$vgpr14_vgpr15' }
+  - { id: 3, class: vreg_64 }
+  - { id: 4, class: vreg_64 }
+  - { id: 5, class: vreg_64, preferred-register: '$vgpr0_vgpr1' }
+  - { id: 6, class: vreg_64, preferred-register: '$vgpr7_vgpr8' }
+  - { id: 7, class: vreg_128, preferred-register: '$vgpr3_vgpr4_vgpr5_vgpr6' }
+  - { id: 8, class: vreg_64, preferred-register: '$vgpr18_vgpr19' }
+  - { id: 9, class: vreg_128, preferred-register: '$vgpr20_vgpr21_vgpr22_vgpr23' }
+  - { id: 10, class: vreg_128, preferred-register: '$vgpr24_vgpr25_vgpr26_vgpr27' }
+  - { id: 11, class: vreg_128, preferred-register: '$vgpr28_vgpr29_vgpr30_vgpr31' }
+  - { id: 12, class: vreg_128, preferred-register: '$vgpr32_vgpr33_vgpr34_vgpr35' }
+  - { id: 13, class: vreg_128, preferred-register: '$vgpr36_vgpr37_vgpr38_vgpr39' }
+  - { id: 14, class: vreg_128, preferred-register: '$vgpr40_vgpr41_vgpr42_vgpr43' }
+  - { id: 15, class: vreg_128, preferred-register: '$vgpr44_vgpr45_vgpr46_vgpr47' }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = IMPLICIT_DEF
+    %5 = IMPLICIT_DEF
+    %6 = IMPLICIT_DEF
+    %7 = IMPLICIT_DEF
+    %8 = IMPLICIT_DEF
+    %9 = IMPLICIT_DEF
+    %10 = IMPLICIT_DEF
+    %11 = IMPLICIT_DEF
+    %12 = IMPLICIT_DEF
+    %13 = IMPLICIT_DEF
+    %14 = IMPLICIT_DEF
+    %15 = IMPLICIT_DEF
+    %3 = V_ADD_F64 0, %0.sub2_sub3:vreg_128, 0, %1:vreg_64, 0, 0, implicit $mode, implicit $exec
+    %4 = V_ADD_F64 0, %0.sub0_sub1:vreg_128, 0, %2:vreg_64, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...

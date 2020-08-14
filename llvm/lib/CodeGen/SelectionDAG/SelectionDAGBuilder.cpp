@@ -1843,7 +1843,8 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     for (unsigned i = 0; i != NumValues; ++i) {
       // An aggregate return value cannot wrap around the address space, so
       // offsets to its parts don't wrap either.
-      SDValue Ptr = DAG.getObjectPtrOffset(getCurSDLoc(), RetPtr, Offsets[i]);
+      SDValue Ptr = DAG.getObjectPtrOffset(getCurSDLoc(), RetPtr,
+                                           TypeSize::Fixed(Offsets[i]));
 
       SDValue Val = RetOp.getValue(RetOp.getResNo() + i);
       if (MemVTs[i] != ValueVTs[i])
@@ -4167,7 +4168,8 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
       Root = Chain;
       ChainI = 0;
     }
-    SDValue Add = DAG.getMemBasePlusOffset(Ptr, Offsets[i], dl, Flags);
+    SDValue Add =
+        DAG.getMemBasePlusOffset(Ptr, TypeSize::Fixed(Offsets[i]), dl, Flags);
     SDValue Val = SDValue(Src.getNode(), Src.getResNo() + i);
     if (MemVTs[i] != ValueVTs[i])
       Val = DAG.getPtrExtOrTrunc(Val, dl, MemVTs[i]);
@@ -6254,12 +6256,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Zero = DAG.getConstant(0, sdl, VT);
     SDValue ShAmt = DAG.getNode(ISD::UREM, sdl, VT, Z, BitWidthC);
 
-    auto FunnelOpcode = IsFSHL ? ISD::FSHL : ISD::FSHR;
-    if (TLI.isOperationLegalOrCustom(FunnelOpcode, VT)) {
-      setValue(&I, DAG.getNode(FunnelOpcode, sdl, VT, X, Y, Z));
-      return;
-    }
-
     // When X == Y, this is rotate. If the data type has a power-of-2 size, we
     // avoid the select that is necessary in the general case to filter out
     // the 0-shift possibility that leads to UB.
@@ -6286,6 +6282,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       SDValue ShX = DAG.getNode(ISD::SHL, sdl, VT, X, IsFSHL ? ShAmt : NShAmt);
       SDValue ShY = DAG.getNode(ISD::SRL, sdl, VT, X, IsFSHL ? NShAmt : ShAmt);
       setValue(&I, DAG.getNode(ISD::OR, sdl, VT, ShX, ShY));
+      return;
+    }
+
+    auto FunnelOpcode = IsFSHL ? ISD::FSHL : ISD::FSHR;
+    if (TLI.isOperationLegalOrCustom(FunnelOpcode, VT)) {
+      setValue(&I, DAG.getNode(FunnelOpcode, sdl, VT, X, Y, Z));
       return;
     }
 
@@ -6330,6 +6332,18 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Op1 = getValue(I.getArgOperand(0));
     SDValue Op2 = getValue(I.getArgOperand(1));
     setValue(&I, DAG.getNode(ISD::USUBSAT, sdl, Op1.getValueType(), Op1, Op2));
+    return;
+  }
+  case Intrinsic::sshl_sat: {
+    SDValue Op1 = getValue(I.getArgOperand(0));
+    SDValue Op2 = getValue(I.getArgOperand(1));
+    setValue(&I, DAG.getNode(ISD::SSHLSAT, sdl, Op1.getValueType(), Op1, Op2));
+    return;
+  }
+  case Intrinsic::ushl_sat: {
+    SDValue Op1 = getValue(I.getArgOperand(0));
+    SDValue Op2 = getValue(I.getArgOperand(1));
+    setValue(&I, DAG.getNode(ISD::USHLSAT, sdl, Op1.getValueType(), Op1, Op2));
     return;
   }
   case Intrinsic::smul_fix:

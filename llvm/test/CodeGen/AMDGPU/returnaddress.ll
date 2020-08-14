@@ -1,4 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -global-isel -amdgpu-fixed-function-abi -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
 
 ; Test with zero frame
 ; GCN-LABEL: {{^}}func1
@@ -25,7 +26,7 @@ entry:
 ; Test with amdgpu_kernel
 ; GCN-LABEL: {{^}}func3
 ; GCN: v_mov_b32_e32 v0, 0
-; GCN: v_mov_b32_e32 v1, v0
+; GCN: v_mov_b32_e32 v1, {{v0|0}}
 define amdgpu_kernel void @func3(i8** %out) nounwind {
 entry:
   %tmp = tail call i8* @llvm.returnaddress(i32 0)
@@ -36,7 +37,7 @@ entry:
 ; Test with use outside the entry-block
 ; GCN-LABEL: {{^}}func4
 ; GCN: v_mov_b32_e32 v0, 0
-; GCN: v_mov_b32_e32 v1, v0
+; GCN: v_mov_b32_e32 v1, {{v0|0}}
 define amdgpu_kernel void @func4(i8** %out, i32 %val) nounwind {
 entry:
   %cmp = icmp ne i32 %val, 0
@@ -61,5 +62,22 @@ entry:
   unreachable
 }
 
+declare void @callee()
+
+; GCN-LABEL: {{^}}multi_use:
+; GCN-DAG: v_mov_b32_e32 v[[LO:4[0-9]+]], s30
+; GCN-DAG: v_mov_b32_e32 v[[HI:4[0-9]+]], s31
+; GCN: global_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: s_swappc_b64
+; GCN: global_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+define void @multi_use() nounwind {
+entry:
+  %ret0 = tail call i8* @llvm.returnaddress(i32 0)
+  store volatile i8* %ret0, i8* addrspace(1)* undef
+  call void @callee()
+  %ret1 = tail call i8* @llvm.returnaddress(i32 0)
+  store volatile i8* %ret1, i8* addrspace(1)* undef
+  ret void
+}
 
 declare i8* @llvm.returnaddress(i32) nounwind readnone

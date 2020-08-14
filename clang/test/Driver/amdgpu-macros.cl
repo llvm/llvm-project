@@ -346,3 +346,4 @@
 // GFX1011-DAG: #define __amdgcn_processor__ "gfx1011"
 // GFX1012-DAG: #define __amdgcn_processor__ "gfx1012"
 // GFX1030-DAG: #define __amdgcn_processor__ "gfx1030"
+// GFX1031-DAG: #define __amdgcn_processor__ "gfx1031"

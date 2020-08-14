@@ -1,0 +1,40 @@
+#--- aa
+aa
+;--- bb
+; Comments are preserved.
+bb
+
+//--- subdir/cc
+cc
+//--- end
+
+# RUN: rm -rf %t
+# RUN: split-file %s %t
+# RUN: diff %S/Inputs/basic-aa.txt %t/aa
+# RUN: diff %S/Inputs/basic-bb.txt %t/bb
+# RUN: diff %S/Inputs/basic-cc.txt %t/subdir/cc
+# RUN: FileCheck %s --check-prefix=END < %t/end
+
+## Can be called on a non-empty directory.
+# RUN: split-file %s %t
+# RUN: diff %S/Inputs/basic-aa.txt %t/aa
+
+## Test that we will delete the output if it is a file, so that we can create
+## a directory.
+# RUN: rm -rf %t && touch %t
+# RUN: split-file %s %t
+# RUN: diff %S/Inputs/basic-aa.txt %t/aa
+
+# END: RUN: split-file %s %t
+
+# RUN: not %split-file 2>&1 | FileCheck %s --check-prefix=NO_INPUT
+
+# NO_INPUT: split-file: error: input filename is not specified
+
+# RUN: not %split-file %s '' 2>&1 | FileCheck %s --check-prefix=NO_OUTPUT
+
+# NO_OUTPUT: split-file: error: output directory is not specified
+
+# RUN: not %split-file %S/Inputs/basic-aa.txt %t 2>&1 | FileCheck %s --check-prefix=NOT_EXIST
+
+# NOT_EXIST: split-file: error: {{.*}}.txt: no part separator was found

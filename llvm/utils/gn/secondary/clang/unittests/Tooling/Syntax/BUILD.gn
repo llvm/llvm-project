@@ -16,7 +16,8 @@ unittest("SyntaxTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "BuildTreeTest.cpp",
+    "MutationsTest.cpp",
     "TokensTest.cpp",
-    "TreeTest.cpp",
   ]
 }

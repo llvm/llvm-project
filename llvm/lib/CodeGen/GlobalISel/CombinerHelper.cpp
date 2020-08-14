@@ -34,7 +34,6 @@ static cl::opt<bool>
                        cl::desc("Force all indexed operations to be "
                                 "legal for the GlobalISel combiner"));
 
-
 CombinerHelper::CombinerHelper(GISelChangeObserver &Observer,
                                MachineIRBuilder &B, GISelKnownBits *KB,
                                MachineDominatorTree *MDT,
@@ -42,6 +41,11 @@ CombinerHelper::CombinerHelper(GISelChangeObserver &Observer,
     : Builder(B), MRI(Builder.getMF().getRegInfo()), Observer(Observer),
       KB(KB), MDT(MDT), LI(LI) {
   (void)this->KB;
+}
+
+bool CombinerHelper::isLegalOrBeforeLegalizer(
+    const LegalityQuery &Query) const {
+  return !LI || LI->getAction(Query).Action == LegalizeActions::Legal;
 }
 
 void CombinerHelper::replaceRegWith(MachineRegisterInfo &MRI, Register FromReg,
@@ -1772,6 +1776,113 @@ bool CombinerHelper::applySimplifyAddToSub(
   Register SubLHS, SubRHS;
   std::tie(SubLHS, SubRHS) = MatchInfo;
   Builder.buildSub(MI.getOperand(0).getReg(), SubLHS, SubRHS);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool CombinerHelper::matchHoistLogicOpWithSameOpcodeHands(
+    MachineInstr &MI, InstructionStepsMatchInfo &MatchInfo) {
+  // Matches: logic (hand x, ...), (hand y, ...) -> hand (logic x, y), ...
+  //
+  // Creates the new hand + logic instruction (but does not insert them.)
+  //
+  // On success, MatchInfo is populated with the new instructions. These are
+  // inserted in applyHoistLogicOpWithSameOpcodeHands.
+  unsigned LogicOpcode = MI.getOpcode();
+  assert(LogicOpcode == TargetOpcode::G_AND ||
+         LogicOpcode == TargetOpcode::G_OR ||
+         LogicOpcode == TargetOpcode::G_XOR);
+  MachineIRBuilder MIB(MI);
+  Register Dst = MI.getOperand(0).getReg();
+  Register LHSReg = MI.getOperand(1).getReg();
+  Register RHSReg = MI.getOperand(2).getReg();
+
+  // Don't recompute anything.
+  if (!MRI.hasOneNonDBGUse(LHSReg) || !MRI.hasOneNonDBGUse(RHSReg))
+    return false;
+
+  // Make sure we have (hand x, ...), (hand y, ...)
+  MachineInstr *LeftHandInst = getDefIgnoringCopies(LHSReg, MRI);
+  MachineInstr *RightHandInst = getDefIgnoringCopies(RHSReg, MRI);
+  if (!LeftHandInst || !RightHandInst)
+    return false;
+  unsigned HandOpcode = LeftHandInst->getOpcode();
+  if (HandOpcode != RightHandInst->getOpcode())
+    return false;
+  if (!LeftHandInst->getOperand(1).isReg() ||
+      !RightHandInst->getOperand(1).isReg())
+    return false;
+
+  // Make sure the types match up, and if we're doing this post-legalization,
+  // we end up with legal types.
+  Register X = LeftHandInst->getOperand(1).getReg();
+  Register Y = RightHandInst->getOperand(1).getReg();
+  LLT XTy = MRI.getType(X);
+  LLT YTy = MRI.getType(Y);
+  if (XTy != YTy)
+    return false;
+  if (!isLegalOrBeforeLegalizer({LogicOpcode, {XTy, YTy}}))
+    return false;
+
+  // Optional extra source register.
+  Register ExtraHandOpSrcReg;
+  switch (HandOpcode) {
+  default:
+    return false;
+  case TargetOpcode::G_ANYEXT:
+  case TargetOpcode::G_SEXT:
+  case TargetOpcode::G_ZEXT: {
+    // Match: logic (ext X), (ext Y) --> ext (logic X, Y)
+    break;
+  }
+  case TargetOpcode::G_AND:
+  case TargetOpcode::G_ASHR:
+  case TargetOpcode::G_LSHR:
+  case TargetOpcode::G_SHL: {
+    // Match: logic (binop x, z), (binop y, z) -> binop (logic x, y), z
+    MachineOperand &ZOp = LeftHandInst->getOperand(2);
+    if (!matchEqualDefs(ZOp, RightHandInst->getOperand(2)))
+      return false;
+    ExtraHandOpSrcReg = ZOp.getReg();
+    break;
+  }
+  }
+
+  // Record the steps to build the new instructions.
+  //
+  // Steps to build (logic x, y)
+  auto NewLogicDst = MRI.createGenericVirtualRegister(XTy);
+  OperandBuildSteps LogicBuildSteps = {
+      [=](MachineInstrBuilder &MIB) { MIB.addDef(NewLogicDst); },
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(X); },
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Y); }};
+  InstructionBuildSteps LogicSteps(LogicOpcode, LogicBuildSteps);
+
+  // Steps to build hand (logic x, y), ...z
+  OperandBuildSteps HandBuildSteps = {
+      [=](MachineInstrBuilder &MIB) { MIB.addDef(Dst); },
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(NewLogicDst); }};
+  if (ExtraHandOpSrcReg.isValid())
+    HandBuildSteps.push_back(
+        [=](MachineInstrBuilder &MIB) { MIB.addReg(ExtraHandOpSrcReg); });
+  InstructionBuildSteps HandSteps(HandOpcode, HandBuildSteps);
+
+  MatchInfo = InstructionStepsMatchInfo({LogicSteps, HandSteps});
+  return true;
+}
+
+bool CombinerHelper::applyBuildInstructionSteps(
+    MachineInstr &MI, InstructionStepsMatchInfo &MatchInfo) {
+  assert(MatchInfo.InstrsToBuild.size() &&
+         "Expected at least one instr to build?");
+  Builder.setInstr(MI);
+  for (auto &InstrToBuild : MatchInfo.InstrsToBuild) {
+    assert(InstrToBuild.Opcode && "Expected a valid opcode?");
+    assert(InstrToBuild.OperandFns.size() && "Expected at least one operand?");
+    MachineInstrBuilder Instr = Builder.buildInstr(InstrToBuild.Opcode);
+    for (auto &OperandFn : InstrToBuild.OperandFns)
+      OperandFn(Instr);
+  }
   MI.eraseFromParent();
   return true;
 }

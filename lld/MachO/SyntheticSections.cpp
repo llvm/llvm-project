@@ -59,8 +59,18 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
   hdr->ncmds = loadCommands.size();
   hdr->sizeofcmds = sizeOfCmds;
   hdr->flags = MachO::MH_NOUNDEFS | MachO::MH_DYLDLINK | MachO::MH_TWOLEVEL;
+
   if (config->outputType == MachO::MH_DYLIB && !config->hasReexports)
     hdr->flags |= MachO::MH_NO_REEXPORTED_DYLIBS;
+
+  for (OutputSegment *seg : outputSegments) {
+    for (OutputSection *osec : seg->getSections()) {
+      if (isThreadLocalVariables(osec->flags)) {
+        hdr->flags |= MachO::MH_HAS_TLV_DESCRIPTORS;
+        break;
+      }
+    }
+  }
 
   uint8_t *p = reinterpret_cast<uint8_t *>(hdr + 1);
   for (LoadCommand *lc : loadCommands) {
@@ -72,22 +82,21 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
 PageZeroSection::PageZeroSection()
     : SyntheticSection(segment_names::pageZero, section_names::pageZero) {}
 
-GotSection::GotSection()
-    : SyntheticSection(segment_names::dataConst, section_names::got) {
+NonLazyPointerSectionBase::NonLazyPointerSectionBase(const char *segname,
+                                                     const char *name)
+    : SyntheticSection(segname, name) {
   align = 8;
   flags = MachO::S_NON_LAZY_SYMBOL_POINTERS;
-
-  // TODO: section_64::reserved1 should be an index into the indirect symbol
-  // table, which we do not currently emit
 }
 
-void GotSection::addEntry(Symbol &sym) {
+void NonLazyPointerSectionBase::addEntry(Symbol &sym) {
   if (entries.insert(&sym)) {
+    assert(sym.gotIndex == UINT32_MAX);
     sym.gotIndex = entries.size() - 1;
   }
 }
 
-void GotSection::writeTo(uint8_t *buf) const {
+void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
   for (size_t i = 0, n = entries.size(); i < n; ++i)
     if (auto *defined = dyn_cast<Defined>(entries[i]))
       write64le(&buf[i * WordSize], defined->getVA());
@@ -97,7 +106,8 @@ BindingSection::BindingSection()
     : LinkEditSection(segment_names::linkEdit, section_names::binding) {}
 
 bool BindingSection::isNeeded() const {
-  return bindings.size() != 0 || in.got->isNeeded();
+  return bindings.size() != 0 || in.got->isNeeded() ||
+         in.tlvPointers->isNeeded();
 }
 
 namespace {
@@ -128,7 +138,6 @@ static void encodeBinding(const DylibSymbol &dysym, const OutputSection *osec,
     lastBinding.segment = seg;
     lastBinding.offset = offset;
   } else if (lastBinding.offset != offset) {
-    assert(lastBinding.offset <= offset);
     os << static_cast<uint8_t>(BIND_OPCODE_ADD_ADDR_ULEB);
     encodeULEB128(offset - lastBinding.offset, os);
     lastBinding.offset = offset;
@@ -139,8 +148,8 @@ static void encodeBinding(const DylibSymbol &dysym, const OutputSection *osec,
       os << static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
                                  dysym.file->ordinal);
     } else {
-      error("TODO: Support larger dylib symbol ordinals");
-      return;
+      os << static_cast<uint8_t>(MachO::BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB);
+      encodeULEB128(dysym.file->ordinal, os);
     }
     lastBinding.ordinal = dysym.file->ordinal;
   }
@@ -159,6 +168,22 @@ static void encodeBinding(const DylibSymbol &dysym, const OutputSection *osec,
   lastBinding.offset += WordSize;
 }
 
+static bool encodeNonLazyPointerSection(NonLazyPointerSectionBase *osec,
+                                        Binding &lastBinding,
+                                        raw_svector_ostream &os) {
+  bool didEncode = false;
+  size_t idx = 0;
+  for (const Symbol *sym : osec->getEntries()) {
+    if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
+      didEncode = true;
+      encodeBinding(*dysym, osec, idx * WordSize, /*addend=*/0, lastBinding,
+                    os);
+    }
+    ++idx;
+  }
+  return didEncode;
+}
+
 // Emit bind opcodes, which are a stream of byte-sized opcodes that dyld
 // interprets to update a record with the following fields:
 //  * segment index (of the segment to write the symbol addresses to, typically
@@ -175,15 +200,8 @@ static void encodeBinding(const DylibSymbol &dysym, const OutputSection *osec,
 void BindingSection::finalizeContents() {
   raw_svector_ostream os{contents};
   Binding lastBinding;
-  bool didEncode = false;
-  size_t gotIdx = 0;
-  for (const Symbol *sym : in.got->getEntries()) {
-    if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
-      didEncode = true;
-      encodeBinding(*dysym, in.got, gotIdx * WordSize, 0, lastBinding, os);
-    }
-    ++gotIdx;
-  }
+  bool didEncode = encodeNonLazyPointerSection(in.got, lastBinding, os);
+  didEncode |= encodeNonLazyPointerSection(in.tlvPointers, lastBinding, os);
 
   // Sorting the relocations by segment and address allows us to encode them
   // more compactly.
@@ -330,11 +348,13 @@ uint32_t LazyBindingSection::encode(const DylibSymbol &sym) {
   uint64_t offset = in.lazyPointers->addr - dataSeg->firstSection()->addr +
                     sym.stubsIndex * WordSize;
   encodeULEB128(offset, os);
-  if (sym.file->ordinal <= MachO::BIND_IMMEDIATE_MASK)
+  if (sym.file->ordinal <= MachO::BIND_IMMEDIATE_MASK) {
     os << static_cast<uint8_t>(MachO::BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
                                sym.file->ordinal);
-  else
-    fatal("TODO: Support larger dylib symbol ordinals");
+  } else {
+    os << static_cast<uint8_t>(MachO::BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB);
+    encodeULEB128(sym.file->ordinal, os);
+  }
 
   os << static_cast<uint8_t>(MachO::BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM)
      << sym.getName() << '\0'

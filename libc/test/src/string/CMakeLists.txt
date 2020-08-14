@@ -102,6 +102,46 @@ add_libc_unittest(
     libc.src.string.strrchr
 )
 
+add_libc_unittest(
+  strcspn_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strcspn_test.cpp
+  DEPENDS
+    libc.src.string.strcspn
+)
+
+add_libc_unittest(
+  strspn_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strspn_test.cpp
+  DEPENDS
+    libc.src.string.strspn
+)
+
+add_libc_unittest(
+  strpbrk_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strpbrk_test.cpp
+  DEPENDS
+    libc.src.string.strpbrk
+)
+
+add_libc_unittest(
+  strtok_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strtok_test.cpp
+  DEPENDS
+    libc.src.string.strtok
+)
+
 # Tests all implementations that can run on the host.
 function(add_libc_multi_impl_test name)
   get_property(fq_implementations GLOBAL PROPERTY ${name}_implementations)

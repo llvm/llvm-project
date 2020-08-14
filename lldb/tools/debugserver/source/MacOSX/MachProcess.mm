@@ -93,6 +93,7 @@ typedef void (*SetErrorFunction)(NSInteger, std::string, DNBError &);
 typedef bool (*CallOpenApplicationFunction)(NSString *bundleIDNSStr,
                                             NSDictionary *options,
                                             DNBError &error, pid_t *return_pid);
+
 // This function runs the BKSSystemService (or FBSSystemService) method
 // openApplication:options:clientPort:withResult,
 // messaging the app passed in bundleIDNSStr.
@@ -483,6 +484,7 @@ static CallOpenApplicationFunction FBSCallOpenApplicationFunction =
 #define _POSIX_SPAWN_DISABLE_ASLR 0x0100
 #endif
 
+
 MachProcess::MachProcess()
     : m_pid(0), m_cpu_type(0), m_child_stdin(-1), m_child_stdout(-1),
       m_child_stderr(-1), m_path(), m_args(), m_task(this),
@@ -603,9 +605,11 @@ nub_addr_t MachProcess::GetTSDAddressForThread(
 
 MachProcess::DeploymentInfo
 MachProcess::GetDeploymentInfo(const struct load_command &lc,
-                               uint64_t load_command_address) {
+                               uint64_t load_command_address,
+                               bool is_executable) {
   DeploymentInfo info;
   uint32_t cmd = lc.cmd & ~LC_REQ_DYLD;
+
   // Handle the older LC_VERSION load commands, which don't
   // distinguish between simulator and real hardware.
   auto handle_version_min = [&](char platform) {
@@ -640,6 +644,7 @@ MachProcess::GetDeploymentInfo(const struct load_command &lc,
     // unambiguous LC_BUILD_VERSION load commands.
 #endif
   };
+
   switch (cmd) {
   case LC_VERSION_MIN_IPHONEOS:
     handle_version_min(PLATFORM_IOS);
@@ -667,6 +672,27 @@ MachProcess::GetDeploymentInfo(const struct load_command &lc,
   }
 #endif
   }
+
+  // The xctest binary is a pure macOS binary but is launched with
+  // DYLD_FORCE_PLATFORM=6. In that case, force the platform to
+  // macCatalyst and use the macCatalyst version of the host OS
+  // instead of the macOS deployment target.
+  if (is_executable && GetProcessPlatformViaDYLDSPI() == PLATFORM_MACCATALYST) {
+    info.platform = PLATFORM_MACCATALYST;
+    std::string catalyst_version = GetMacCatalystVersionString();
+    const char *major = catalyst_version.c_str();
+    char *minor = nullptr;
+    char *patch = nullptr;
+    info.major_version = std::strtoul(major, &minor, 10);
+    info.minor_version = 0;
+    info.patch_version = 0;
+    if (minor && *minor == '.') {
+      info.minor_version = std::strtoul(++minor, &patch, 10);
+      if (patch && *patch == '.')
+        info.patch_version = std::strtoul(++patch, nullptr, 10);
+    }
+  }
+
   return info;
 }
 
@@ -798,37 +824,21 @@ bool MachProcess::GetMachOInformationFromMemory(
           sizeof(struct uuid_command))
         uuid_copy(inf.uuid, uuidcmd.uuid);
     }
-    if (DeploymentInfo deployment_info = GetDeploymentInfo(lc, load_cmds_p)) {
+    if (DeploymentInfo deployment_info = GetDeploymentInfo(
+            lc, load_cmds_p, inf.mach_header.filetype == MH_EXECUTE)) {
       const char *lc_platform = GetPlatformString(deployment_info.platform);
-      // macCatalyst support.
-      //
-      // This handles two special cases:
-      //
-      // 1. Frameworks that have both a PLATFORM_MACOS and a
-      //    PLATFORM_MACCATALYST load command.  Make sure to select
-      //    the requested one.
-      //
-      // 2. The xctest binary is a pure macOS binary but is launched
-      //    with DYLD_FORCE_PLATFORM=6.
-      if (dyld_platform == PLATFORM_MACCATALYST &&
-          inf.mach_header.filetype == MH_EXECUTE &&
-          inf.min_version_os_name.empty() &&
-          (strcmp("macosx", lc_platform) == 0)) {
-        // DYLD says this *is* a macCatalyst process. If we haven't
-        // parsed any load commands, transform a macOS load command
-        // into a generic macCatalyst load command. It will be
-        // overwritten by a more specific one if there is one.  This
-        // is only done for the main executable. It is perfectly fine
-        // for a macCatalyst binary to link against a macOS-only framework.
-        inf.min_version_os_name = "maccatalyst";
-        inf.min_version_os_version = GetMacCatalystVersionString();
-      } else if (dyld_platform != PLATFORM_MACCATALYST &&
-                 inf.min_version_os_name == "macosx") {
-        // This is a binary with both PLATFORM_MACOS and
-        // PLATFORM_MACCATALYST load commands and the process is not
-        // running as PLATFORM_MACCATALYST. Stick with the
-        // "macosx" load command that we've already processed,
-        // ignore this one, which is presumed to be a
+      if (dyld_platform != PLATFORM_MACCATALYST &&
+          inf.min_version_os_name == "macosx") {
+        // macCatalyst support.
+        //
+        // This the special case of "zippered" frameworks that have both
+        // a PLATFORM_MACOS and a PLATFORM_MACCATALYST load command.
+        //
+        // When we are in this block, this is a binary with both
+        // PLATFORM_MACOS and PLATFORM_MACCATALYST load commands and
+        // the process is not running as PLATFORM_MACCATALYST. Stick
+        // with the "macosx" load command that we've already
+        // processed, ignore this one, which is presumed to be a
         // PLATFORM_MACCATALYST one.
       } else {
         inf.min_version_os_name = lc_platform;
@@ -1056,25 +1066,36 @@ JSONGenerator::ObjectSP MachProcess::GetLoadedDynamicLibrariesInfos(
   return reply_sp;
 }
 
-// From dyld SPI header dyld_process_info.h
+/// From dyld SPI header dyld_process_info.h
 typedef void *dyld_process_info;
 struct dyld_process_cache_info {
-  uuid_t cacheUUID;          // UUID of cache used by process
-  uint64_t cacheBaseAddress; // load address of dyld shared cache
-  bool noCache;              // process is running without a dyld cache
-  bool privateCache; // process is using a private copy of its dyld cache
+  /// UUID of cache used by process.
+  uuid_t cacheUUID;
+  /// Load address of dyld shared cache.
+  uint64_t cacheBaseAddress;
+  /// Process is running without a dyld cache.
+  bool noCache;
+  /// Process is using a private copy of its dyld cache.
+  bool privateCache;
 };
 
-// Use the dyld SPI present in macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer
-// to get
-// the load address, uuid, and filenames of all the libraries.
-// This only fills in those three fields in the 'struct
-// binary_image_information' - call
-// GetMachOInformationFromMemory to fill in the mach-o header/load command
-// details.
-uint32_t MachProcess::GetAllLoadedBinariesViaDYLDSPI(
-    std::vector<struct binary_image_information> &image_infos) {
+uint32_t MachProcess::GetProcessPlatformViaDYLDSPI() {
+  kern_return_t kern_ret;
   uint32_t platform = 0;
+  if (m_dyld_process_info_create) {
+    dyld_process_info info =
+        m_dyld_process_info_create(m_task.TaskPort(), 0, &kern_ret);
+    if (info) {
+      if (m_dyld_process_info_get_platform)
+        platform = m_dyld_process_info_get_platform(info);
+      m_dyld_process_info_release(info);
+    }
+  }
+  return platform;
+}
+
+void MachProcess::GetAllLoadedBinariesViaDYLDSPI(
+    std::vector<struct binary_image_information> &image_infos) {
   kern_return_t kern_ret;
   if (m_dyld_process_info_create) {
     dyld_process_info info =
@@ -1089,12 +1110,9 @@ uint32_t MachProcess::GetAllLoadedBinariesViaDYLDSPI(
             image.load_address = mach_header_addr;
             image_infos.push_back(image);
           });
-      if (m_dyld_process_info_get_platform)
-        platform = m_dyld_process_info_get_platform(info);
       m_dyld_process_info_release(info);
     }
   }
-  return platform;
 }
 
 // Fetch information about all shared libraries using the dyld SPIs that exist
@@ -1115,7 +1133,8 @@ MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid) {
       pointer_size = 8;
 
     std::vector<struct binary_image_information> image_infos;
-    uint32_t platform = GetAllLoadedBinariesViaDYLDSPI(image_infos);
+    GetAllLoadedBinariesViaDYLDSPI(image_infos);
+    uint32_t platform = GetProcessPlatformViaDYLDSPI();
     const size_t image_count = image_infos.size();
     for (size_t i = 0; i < image_count; i++) {
       GetMachOInformationFromMemory(platform,
@@ -1145,7 +1164,8 @@ JSONGenerator::ObjectSP MachProcess::GetLibrariesInfoForAddresses(
       pointer_size = 8;
 
     std::vector<struct binary_image_information> all_image_infos;
-    uint32_t platform = GetAllLoadedBinariesViaDYLDSPI(all_image_infos);
+    GetAllLoadedBinariesViaDYLDSPI(all_image_infos);
+    uint32_t platform = GetProcessPlatformViaDYLDSPI();
 
     std::vector<struct binary_image_information> image_infos;
     const size_t macho_addresses_count = macho_addresses.size();
@@ -1173,7 +1193,7 @@ JSONGenerator::ObjectSP MachProcess::GetLibrariesInfoForAddresses(
 
 JSONGenerator::ObjectSP MachProcess::GetSharedCacheInfo(nub_process_t pid) {
   JSONGenerator::DictionarySP reply_sp(new JSONGenerator::Dictionary());
-  ;
+
   kern_return_t kern_ret;
   if (m_dyld_process_info_create && m_dyld_process_info_get_cache) {
     dyld_process_info info =

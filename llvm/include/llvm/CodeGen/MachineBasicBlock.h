@@ -174,8 +174,9 @@ private:
   /// is only computed once and is cached.
   mutable MCSymbol *CachedMCSymbol = nullptr;
 
-  /// Used during basic block sections to mark the end of a basic block.
-  MCSymbol *EndMCSymbol = nullptr;
+  /// Marks the end of the basic block. Used during basic block sections to
+  /// calculate the size of the basic block, or the BB section ending with it.
+  mutable MCSymbol *CachedEndMCSymbol = nullptr;
 
   // Intrusive list support
   MachineBasicBlock() = default;
@@ -473,6 +474,9 @@ public:
 
   /// Sets the section ID for this basic block.
   void setSectionID(MBBSectionID V) { SectionID = V; }
+
+  /// Returns the MCSymbol marking the end of this basic block.
+  MCSymbol *getEndSymbol() const;
 
   /// Returns true if this block may have an INLINEASM_BR (overestimate, by
   /// checking if any of the successors are indirect targets of any inlineasm_br

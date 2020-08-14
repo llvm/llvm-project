@@ -40,10 +40,10 @@ entry:
 ; This is f@o
 declare i32 @"f\40o"(...)
 
-; ASM:         .rename _Renamed..24f_o[DS],"f$o" # -- Begin function f$o
-; ASM-NEXT:    .lglobl _Renamed..24f_o[DS]
-; ASM-NEXT:    .rename ._Renamed..24f_o,".f$o"
+; ASM:         .lglobl _Renamed..24f_o[DS] # -- Begin function f$o
+; ASM-NEXT:    .rename _Renamed..24f_o[DS],"f$o"
 ; ASM-NEXT:    .lglobl ._Renamed..24f_o
+; ASM-NEXT:    .rename ._Renamed..24f_o,".f$o"
 ; ASM-NEXT:    .align  4
 ; ASM-NEXT:    .csect _Renamed..24f_o[DS],2
 ; ASM-NEXT:    .vbyte  4, ._Renamed..24f_o     # @"f$o"
@@ -51,12 +51,12 @@ declare i32 @"f\40o"(...)
 ; ASM-NEXT:    .vbyte  4, 0
 ; ASM-NEXT:    .csect .text[PR],2
 ; ASM-NEXT:  ._Renamed..24f_o:
-; ASM:         bl ._Renamed..40f_o
+; ASM:         bl ._Renamed..40f_o[PR]
 ; ASM-NEXT:    nop
-; ASM:         .rename _Renamed..26f_o[DS],"f&o" # -- Begin function f&o
-; ASM-NEXT:    .globl  _Renamed..26f_o[DS]
-; ASM-NEXT:    .rename ._Renamed..26f_o,".f&o"
+; ASM:         .globl  _Renamed..26f_o[DS] # -- Begin function f&o
+; ASM-NEXT:    .rename _Renamed..26f_o[DS],"f&o"
 ; ASM-NEXT:    .globl  ._Renamed..26f_o
+; ASM-NEXT:    .rename ._Renamed..26f_o,".f&o"
 ; ASM-NEXT:    .align  4
 ; ASM-NEXT:    .csect _Renamed..26f_o[DS],2
 ; ASM-NEXT:    .vbyte  4, ._Renamed..26f_o     # @"f&o"
@@ -65,10 +65,10 @@ declare i32 @"f\40o"(...)
 ; ASM-NEXT:    .csect .text[PR],2
 ; ASM-NEXT:  ._Renamed..26f_o:
 ; ASM:         bl ._Renamed..24f_o
-; ASM:         .rename _Renamed..265ff__o[DS],"f&_o" # -- Begin function f&_o
-; ASM-NEXT:    .globl  _Renamed..265ff__o[DS]
-; ASM-NEXT:    .rename ._Renamed..265ff__o,".f&_o"
+; ASM:         .globl  _Renamed..265ff__o[DS] # -- Begin function f&_o
+; ASM-NEXT:    .rename _Renamed..265ff__o[DS],"f&_o"
 ; ASM-NEXT:    .globl  ._Renamed..265ff__o
+; ASM-NEXT:    .rename ._Renamed..265ff__o,".f&_o"
 ; ASM-NEXT:    .align  4
 ; ASM-NEXT:    .csect _Renamed..265ff__o[DS],2
 ; ASM-NEXT:    .vbyte  4, ._Renamed..265ff__o  # @"f&_o"
@@ -77,21 +77,21 @@ declare i32 @"f\40o"(...)
 ; ASM-NEXT:    .csect .text[PR],2
 ; ASM-NEXT:  ._Renamed..265ff__o:
 ; ASM:         .csect .data[RW],2
-; ASM-NEXT:    .rename _Renamed..60f_o,"f`o"
 ; ASM-NEXT:    .globl  _Renamed..60f_o
+; ASM-NEXT:    .rename _Renamed..60f_o,"f`o"
 ; ASM-NEXT:    .align  2
 ; ASM-NEXT:  _Renamed..60f_o:
 ; ASM-NEXT:    .vbyte  4, 10                   # 0xa
-; ASM-NEXT:    .rename _Renamed..2222f_o_[RW],"f""o"""
 ; ASM-NEXT:    .comm _Renamed..2222f_o_[RW],4,2
-; ASM-NEXT:    .rename ._Renamed..40f_o,".f@o"
-; ASM-NEXT:    .extern ._Renamed..40f_o
-; ASM-NEXT:    .rename _Renamed..40f_o[DS],"f@o"
+; ASM-NEXT:    .rename _Renamed..2222f_o_[RW],"f""o"""
+; ASM-NEXT:    .extern ._Renamed..40f_o[PR]
+; ASM-NEXT:    .rename ._Renamed..40f_o[PR],".f@o"
 ; ASM-NEXT:    .extern _Renamed..40f_o[DS]
+; ASM-NEXT:    .rename _Renamed..40f_o[DS],"f@o"
 ; ASM-NEXT:    .toc
 ; ASM-NEXT:  L..C0:
-; ASM-NEXT:    .rename _Renamed..40f_o[TC],"f@o"
 ; ASM-NEXT:    .tc _Renamed..40f_o[TC],_Renamed..40f_o[DS]
+; ASM-NEXT:    .rename _Renamed..40f_o[TC],"f@o"
 
 ; OBJ:       Disassembly of section .text:
 ; OBJ-EMPTY:

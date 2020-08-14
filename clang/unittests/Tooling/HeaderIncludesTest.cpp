@@ -347,6 +347,18 @@ TEST_F(HeaderIncludesTest, FakeHeaderGuard) {
   EXPECT_EQ(Expected, insert(Code, "<vector>"));
 }
 
+TEST_F(HeaderIncludesTest, FakeHeaderGuardIfnDef) {
+  std::string Code = "#ifndef A_H\n"
+                     "#define A_H 1\n"
+                     "#endif";
+  std::string Expected = "#include \"b.h\"\n"
+                         "#ifndef A_H\n"
+                         "#define A_H 1\n"
+                         "#endif";
+
+  EXPECT_EQ(Expected, insert(Code, "\"b.h\""));
+}
+
 TEST_F(HeaderIncludesTest, HeaderGuardWithComment) {
   std::string Code = "// comment \n"
                      "#ifndef X // comment\n"

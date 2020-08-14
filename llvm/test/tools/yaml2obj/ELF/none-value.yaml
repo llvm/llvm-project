@@ -21,6 +21,7 @@ FileHeader:
 Sections:
   - Name:         .bar
     Type:         SHT_PROGBITS
+    Flags:        [[TEST=<none>]] ## Comment
     Offset:       [[TEST=<none>]]
     Address:      [[TEST=<none>]]
     Content:      [[TEST=<none>]]

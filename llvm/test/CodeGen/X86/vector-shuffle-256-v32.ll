@@ -3358,9 +3358,9 @@ define <32 x i8> @shuffle_v32i8_42_45_12_13_35_35_60_40_17_22_29_44_33_12_48_51_
 ; AVX1-NEXT:    vpshufb {{.*#+}} xmm2 = zero,zero,xmm2[u,u],zero,zero,xmm2[12],zero,xmm2[u,u,u],zero,zero,xmm2[u,0,3]
 ; AVX1-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[10,13,u,u,3,3],zero,xmm1[8,u,u,u,12,1,u],zero,zero
 ; AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm2 = xmm4[u,u],zero,zero,xmm4[u,u,u,u,1,6,13,u,u],zero,xmm4[u,u]
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,u,12,13,u,u,u,u],zero,zero,zero,xmm0[u,u,12,u,u]
-; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm2 = xmm4[u,u,u,u,u,u,u,u,1,6,13,u,u,u,u,u]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,u,12,13,u,u,u,u,u,u,u,u,u,12,u,u]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5],xmm0[6,7]
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,255,0,0,255,255,255,255,0,0,0,255,255,0,255,255]
 ; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0

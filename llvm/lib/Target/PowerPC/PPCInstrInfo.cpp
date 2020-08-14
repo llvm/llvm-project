@@ -1644,6 +1644,17 @@ bool PPCInstrInfo::isPredicated(const MachineInstr &MI) const {
   return false;
 }
 
+bool PPCInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
+                                        const MachineBasicBlock *MBB,
+                                        const MachineFunction &MF) const {
+  // Set MFFS and MTFSF as scheduling boundary to avoid unexpected code motion
+  // across them, since some FP operations may change content of FPSCR.
+  // TODO: Model FPSCR in PPC instruction definitions and remove the workaround
+  if (MI.getOpcode() == PPC::MFFS || MI.getOpcode() == PPC::MTFSF)
+    return true;
+  return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
+}
+
 bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
                                         ArrayRef<MachineOperand> Pred) const {
   unsigned OpC = MI.getOpcode();

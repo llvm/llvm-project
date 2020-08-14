@@ -241,15 +241,12 @@ bool Breakpoint::SerializedBreakpointMatchesNames(
     return false;
 
   size_t num_names = names_array->GetSize();
-  std::vector<std::string>::iterator begin = names.begin();
-  std::vector<std::string>::iterator end = names.end();
 
   for (size_t i = 0; i < num_names; i++) {
     llvm::StringRef name;
     if (names_array->GetItemAtIndexAsString(i, name)) {
-      if (std::find(begin, end, name) != end) {
+      if (llvm::is_contained(names, name))
         return true;
-      }
     }
   }
   return false;

@@ -13,6 +13,7 @@
 ;CHECK: buffer_atomic_swap v0, off, s[0:3], [[SOFS]] offset:4 glc
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_swap v0, off, s[0:3], 0{{$}}
+;CHECK: buffer_atomic_swap v0, off, s[0:3], 0 glc
 define amdgpu_ps float @test1(<4 x i32> inreg %rsrc, i32 %data, i32 %voffset) {
 main_body:
   %o1 = call i32 @llvm.amdgcn.raw.buffer.atomic.swap.i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 0)
@@ -21,7 +22,8 @@ main_body:
   %o5 = call i32 @llvm.amdgcn.raw.buffer.atomic.swap.i32(i32 %o3, <4 x i32> %rsrc, i32 %off5, i32 0, i32 0)
   %o6 = call i32 @llvm.amdgcn.raw.buffer.atomic.swap.i32(i32 %o5, <4 x i32> %rsrc, i32 4, i32 8188, i32 0)
   %unused = call i32 @llvm.amdgcn.raw.buffer.atomic.swap.i32(i32 %o6, <4 x i32> %rsrc, i32 0, i32 0, i32 0)
-  %out = bitcast i32 %o6 to float
+  %o7 = bitcast i32 %o6 to float
+  %out = call float @llvm.amdgcn.raw.buffer.atomic.swap.f32(float %o7, <4 x i32> %rsrc, i32 0, i32 0, i32 0)
   ret float %out
 }
 
@@ -107,6 +109,7 @@ main_body:
 }
 
 declare i32 @llvm.amdgcn.raw.buffer.atomic.swap.i32(i32, <4 x i32>, i32, i32, i32) #0
+declare float @llvm.amdgcn.raw.buffer.atomic.swap.f32(float, <4 x i32>, i32, i32, i32) #0
 declare i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32, <4 x i32>, i32, i32, i32) #0
 declare i32 @llvm.amdgcn.raw.buffer.atomic.sub.i32(i32, <4 x i32>, i32, i32, i32) #0
 declare i32 @llvm.amdgcn.raw.buffer.atomic.smin.i32(i32, <4 x i32>, i32, i32, i32) #0

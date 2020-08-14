@@ -21,6 +21,7 @@ namespace mlir {
 
 class AffineCondition;
 class AffineForOp;
+class AffineIfOp;
 class AffineMap;
 class AffineValueMap;
 class IntegerSet;
@@ -214,6 +215,15 @@ public:
   /// symbol).
   //  TODO: add support for non-unit strides.
   LogicalResult addAffineForOpDomain(AffineForOp forOp);
+
+  /// Adds constraints imposed by the `affine.if` operation. These constraints
+  /// are collected from the IntegerSet attached to the given `affine.if`
+  /// instance argument (`ifOp`). It is asserted that:
+  /// 1) The IntegerSet of the given `affine.if` instance should not contain
+  /// semi-affine expressions,
+  /// 2) The columns of the constraint system created from `ifOp` should match
+  /// the columns in the current one regarding numbers and values.
+  void addAffineIfOpDomain(AffineIfOp ifOp);
 
   /// Adds a lower or an upper bound for the identifier at the specified
   /// position with constraints being drawn from the specified bound map and

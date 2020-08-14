@@ -50,7 +50,7 @@ public:
   /// Add \p Buffer to the underlying source manager, tokenize it and store the
   /// resulting tokens. Useful when there is a need to materialize tokens that
   /// were not written in user code.
-  std::pair<FileID, llvm::ArrayRef<syntax::Token>>
+  std::pair<FileID, ArrayRef<Token>>
   lexBuffer(std::unique_ptr<llvm::MemoryBuffer> Buffer);
 
 private:
@@ -58,7 +58,7 @@ private:
   const LangOptions &LangOpts;
   const TokenBuffer &Tokens;
   /// IDs and storage for additional tokenized files.
-  llvm::DenseMap<FileID, std::vector<syntax::Token>> ExtraTokens;
+  llvm::DenseMap<FileID, std::vector<Token>> ExtraTokens;
   /// Keeps all the allocated nodes and their intermediate data structures.
   llvm::BumpPtrAllocator Allocator;
 };
@@ -139,13 +139,13 @@ private:
 /// A leaf node points to a single token inside the expanded token stream.
 class Leaf final : public Node {
 public:
-  Leaf(const syntax::Token *T);
+  Leaf(const Token *T);
   static bool classof(const Node *N);
 
-  const syntax::Token *token() const { return Tok; }
+  const Token *token() const { return Tok; }
 
 private:
-  const syntax::Token *Tok;
+  const Token *Tok;
 };
 
 /// A node that has children and represents a syntactic language construct.
@@ -167,7 +167,7 @@ public:
 
 protected:
   /// Find the first node with a corresponding role.
-  syntax::Node *findChild(NodeRole R);
+  Node *findChild(NodeRole R);
 
 private:
   /// Prepend \p Child to the list of children and and sets the parent pointer.
@@ -189,6 +189,59 @@ private:
   friend class MutationsImpl;
 
   Node *FirstChild = nullptr;
+};
+
+/// A list of Elements separated or terminated by a fixed token.
+///
+/// This type models the following grammar construct:
+/// delimited-list(element, delimiter, termination, canBeEmpty)
+class List : public Tree {
+public:
+  template <typename Element> struct ElementAndDelimiter {
+    Element *element;
+    Leaf *delimiter;
+  };
+
+  enum class TerminationKind {
+    Terminated,
+    MaybeTerminated,
+    Separated,
+  };
+
+  using Tree::Tree;
+  /// Returns the elements and corresponding delimiters. Missing elements
+  /// and delimiters are represented as null pointers.
+  ///
+  /// For example, in a separated list:
+  /// "a, b, c" <=> [("a", ","), ("b", ","), ("c", null)]
+  /// "a, , c" <=> [("a", ","), (null, ","), ("c", ",)]
+  /// "a, b," <=> [("a", ","), ("b", ","), (null, null)]
+  ///
+  /// In a terminated or maybe-terminated list:
+  /// "a, b," <=> [("a", ","), ("b", ",")]
+  std::vector<ElementAndDelimiter<Node>> getElementsAsNodesAndDelimiters();
+
+  /// Returns the elements of the list. Missing elements are represented
+  /// as null pointers in the same way as in the return value of
+  /// `getElementsAsNodesAndDelimiters()`.
+  std::vector<Node *> getElementsAsNodes();
+
+  // These can't be implemented with the information we have!
+
+  /// Returns the appropriate delimiter for this list.
+  ///
+  /// Useful for discovering the correct delimiter to use when adding
+  /// elements to empty or one-element lists.
+  clang::tok::TokenKind getDelimiterTokenKind();
+
+  TerminationKind getTerminationKind();
+
+  /// Whether this list can be empty in syntactically and semantically correct
+  /// code.
+  ///
+  /// This list may be empty when the source code has errors even if
+  /// canBeEmpty() returns false.
+  bool canBeEmpty();
 };
 
 } // namespace syntax

@@ -52,8 +52,8 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
   }
 };
 
-struct TestOpFolderDialectInterface : public OpFolderDialectInterface {
-  using OpFolderDialectInterface::OpFolderDialectInterface;
+struct TestDialectFoldInterface : public DialectFoldInterface {
+  using DialectFoldInterface::DialectFoldInterface;
 
   /// Registered hook to check if the given region, which is attached to an
   /// operation that is *not* isolated from above, should be used when
@@ -130,13 +130,12 @@ struct TestInlinerInterface : public DialectInlinerInterface {
 // TestDialect
 //===----------------------------------------------------------------------===//
 
-TestDialect::TestDialect(MLIRContext *context)
-    : Dialect(getDialectNamespace(), context) {
+void TestDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "TestOps.cpp.inc"
       >();
-  addInterfaces<TestOpAsmInterface, TestOpFolderDialectInterface,
+  addInterfaces<TestOpAsmInterface, TestDialectFoldInterface,
                 TestInlinerInterface>();
   addTypes<TestType, TestRecursiveType>();
   allowUnknownOperations();

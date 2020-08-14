@@ -46,7 +46,7 @@ class BreakpointAutoContinue(TestBase):
 
     def launch_it (self, expected_state):
         error = lldb.SBError()
-        launch_info = lldb.SBLaunchInfo(None)
+        launch_info = self.target.GetLaunchInfo()
         launch_info.SetWorkingDirectory(self.get_process_working_directory())
 
         process = self.target.Launch(launch_info, error)

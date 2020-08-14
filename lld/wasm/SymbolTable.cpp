@@ -211,7 +211,7 @@ DefinedFunction *SymbolTable::addSyntheticFunction(StringRef name,
 // exported via the --export flag.  Otherwise we don't add the symbol and return
 // nullptr.
 DefinedData *SymbolTable::addOptionalDataSymbol(StringRef name,
-                                                uint32_t value) {
+                                                uint64_t value) {
   Symbol *s = find(name);
   if (!s && (config->exportAll || config->exportedSymbols.count(name) != 0))
     s = insertName(name).first;
@@ -458,11 +458,16 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef name,
                                      file, sig, isCalledDirectly);
   };
 
-  if (wasInserted)
+  if (wasInserted) {
     replaceSym();
-  else if (auto *lazy = dyn_cast<LazySymbol>(s))
-    lazy->fetch();
-  else {
+  } else if (auto *lazy = dyn_cast<LazySymbol>(s)) {
+    if ((flags & WASM_SYMBOL_BINDING_MASK) == WASM_SYMBOL_BINDING_WEAK) {
+      lazy->setWeak();
+      lazy->signature = sig;
+    } else {
+      lazy->fetch();
+    }
+  } else {
     auto existingFunction = dyn_cast<FunctionSymbol>(s);
     if (!existingFunction) {
       reportTypeError(s, file, WASM_SYMBOL_TYPE_FUNCTION);
@@ -499,12 +504,16 @@ Symbol *SymbolTable::addUndefinedData(StringRef name, uint32_t flags,
   if (s->traced)
     printTraceSymbolUndefined(name, file);
 
-  if (wasInserted)
+  if (wasInserted) {
     replaceSymbol<UndefinedData>(s, name, flags, file);
-  else if (auto *lazy = dyn_cast<LazySymbol>(s))
-    lazy->fetch();
-  else if (s->isDefined())
+  } else if (auto *lazy = dyn_cast<LazySymbol>(s)) {
+    if ((flags & WASM_SYMBOL_BINDING_MASK) == WASM_SYMBOL_BINDING_WEAK)
+      lazy->setWeak();
+    else
+      lazy->fetch();
+  } else if (s->isDefined()) {
     checkDataType(s, file);
+  }
   return s;
 }
 

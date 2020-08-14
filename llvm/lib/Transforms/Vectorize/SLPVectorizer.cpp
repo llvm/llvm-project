@@ -29,6 +29,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator.h"
@@ -3768,11 +3769,24 @@ int BoUpSLP::getSpillCost() const {
   SmallPtrSet<Instruction*, 4> LiveValues;
   Instruction *PrevInst = nullptr;
 
+  // The entries in VectorizableTree are not necessarily ordered by their
+  // position in basic blocks. Collect them and order them by dominance so later
+  // instructions are guaranteed to be visited first. For instructions in
+  // different basic blocks, we only scan to the beginning of the block, so
+  // their order does not matter, as long as all instructions in a basic block
+  // are grouped together. Using dominance ensures a deterministic order.
+  SmallVector<Instruction *, 16> OrderedScalars;
   for (const auto &TEPtr : VectorizableTree) {
     Instruction *Inst = dyn_cast<Instruction>(TEPtr->Scalars[0]);
     if (!Inst)
       continue;
+    OrderedScalars.push_back(Inst);
+  }
+  llvm::stable_sort(OrderedScalars, [this](Instruction *A, Instruction *B) {
+    return DT->dominates(B, A);
+  });
 
+  for (Instruction *Inst : OrderedScalars) {
     if (!PrevInst) {
       PrevInst = Inst;
       continue;
@@ -3898,17 +3912,18 @@ int BoUpSLP::getTreeCost() {
   int SpillCost = getSpillCost();
   Cost += SpillCost + ExtractCost;
 
-  std::string Str;
+#ifndef NDEBUG
+  SmallString<256> Str;
   {
-    raw_string_ostream OS(Str);
+    raw_svector_ostream OS(Str);
     OS << "SLP: Spill Cost = " << SpillCost << ".\n"
        << "SLP: Extract Cost = " << ExtractCost << ".\n"
        << "SLP: Total Cost = " << Cost << ".\n";
   }
   LLVM_DEBUG(dbgs() << Str);
-
   if (ViewSLPTree)
     ViewGraph(this, "SLP" + F->getName(), false, Str);
+#endif
 
   return Cost;
 }
@@ -7084,6 +7099,94 @@ private:
 
 } // end anonymous namespace
 
+static Optional<unsigned> getAggregateSize(Instruction *InsertInst) {
+  if (auto *IE = dyn_cast<InsertElementInst>(InsertInst))
+    return cast<FixedVectorType>(IE->getType())->getNumElements();
+
+  unsigned AggregateSize = 1;
+  auto *IV = cast<InsertValueInst>(InsertInst);
+  Type *CurrentType = IV->getType();
+  do {
+    if (auto *ST = dyn_cast<StructType>(CurrentType)) {
+      for (auto *Elt : ST->elements())
+        if (Elt != ST->getElementType(0)) // check homogeneity
+          return None;
+      AggregateSize *= ST->getNumElements();
+      CurrentType = ST->getElementType(0);
+    } else if (auto *AT = dyn_cast<ArrayType>(CurrentType)) {
+      AggregateSize *= AT->getNumElements();
+      CurrentType = AT->getElementType();
+    } else if (auto *VT = dyn_cast<FixedVectorType>(CurrentType)) {
+      AggregateSize *= VT->getNumElements();
+      return AggregateSize;
+    } else if (CurrentType->isSingleValueType()) {
+      return AggregateSize;
+    } else {
+      return None;
+    }
+  } while (true);
+}
+
+static Optional<unsigned> getOperandIndex(Instruction *InsertInst,
+                                          unsigned OperandOffset) {
+  unsigned OperandIndex = OperandOffset;
+  if (auto *IE = dyn_cast<InsertElementInst>(InsertInst)) {
+    if (auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2))) {
+      auto *VT = cast<FixedVectorType>(IE->getType());
+      OperandIndex *= VT->getNumElements();
+      OperandIndex += CI->getZExtValue();
+      return OperandIndex;
+    }
+    return None;
+  }
+
+  auto *IV = cast<InsertValueInst>(InsertInst);
+  Type *CurrentType = IV->getType();
+  for (unsigned int Index : IV->indices()) {
+    if (auto *ST = dyn_cast<StructType>(CurrentType)) {
+      OperandIndex *= ST->getNumElements();
+      CurrentType = ST->getElementType(Index);
+    } else if (auto *AT = dyn_cast<ArrayType>(CurrentType)) {
+      OperandIndex *= AT->getNumElements();
+      CurrentType = AT->getElementType();
+    } else {
+      return None;
+    }
+    OperandIndex += Index;
+  }
+  return OperandIndex;
+}
+
+static bool findBuildAggregate_rec(Instruction *LastInsertInst,
+                                   TargetTransformInfo *TTI,
+                                   SmallVectorImpl<Value *> &BuildVectorOpds,
+                                   SmallVectorImpl<Value *> &InsertElts,
+                                   unsigned OperandOffset) {
+  do {
+    Value *InsertedOperand = LastInsertInst->getOperand(1);
+    Optional<unsigned> OperandIndex =
+        getOperandIndex(LastInsertInst, OperandOffset);
+    if (!OperandIndex)
+      return false;
+    if (isa<InsertElementInst>(InsertedOperand) ||
+        isa<InsertValueInst>(InsertedOperand)) {
+      if (!findBuildAggregate_rec(cast<Instruction>(InsertedOperand), TTI,
+                                  BuildVectorOpds, InsertElts, *OperandIndex))
+        return false;
+    } else {
+      BuildVectorOpds[*OperandIndex] = InsertedOperand;
+      InsertElts[*OperandIndex] = LastInsertInst;
+    }
+    if (isa<UndefValue>(LastInsertInst->getOperand(0)))
+      return true;
+    LastInsertInst = dyn_cast<Instruction>(LastInsertInst->getOperand(0));
+  } while (LastInsertInst != nullptr &&
+           (isa<InsertValueInst>(LastInsertInst) ||
+            isa<InsertElementInst>(LastInsertInst)) &&
+           LastInsertInst->hasOneUse());
+  return false;
+}
+
 /// Recognize construction of vectors like
 ///  %ra = insertelement <4 x float> undef, float %s0, i32 0
 ///  %rb = insertelement <4 x float> %ra, float %s1, i32 1
@@ -7091,54 +7194,41 @@ private:
 ///  %rd = insertelement <4 x float> %rc, float %s3, i32 3
 ///  starting from the last insertelement or insertvalue instruction.
 ///
-/// Also recognize aggregates like {<2 x float>, <2 x float>},
+/// Also recognize homogeneous aggregates like {<2 x float>, <2 x float>},
 /// {{float, float}, {float, float}}, [2 x {float, float}] and so on.
 /// See llvm/test/Transforms/SLPVectorizer/X86/pr42022.ll for examples.
 ///
 /// Assume LastInsertInst is of InsertElementInst or InsertValueInst type.
 ///
 /// \return true if it matches.
-static bool findBuildAggregate(Value *LastInsertInst, TargetTransformInfo *TTI,
+static bool findBuildAggregate(Instruction *LastInsertInst,
+                               TargetTransformInfo *TTI,
                                SmallVectorImpl<Value *> &BuildVectorOpds,
                                SmallVectorImpl<Value *> &InsertElts) {
+
   assert((isa<InsertElementInst>(LastInsertInst) ||
           isa<InsertValueInst>(LastInsertInst)) &&
          "Expected insertelement or insertvalue instruction!");
-  do {
-    Value *InsertedOperand;
-    auto *IE = dyn_cast<InsertElementInst>(LastInsertInst);
-    if (IE) {
-      InsertedOperand = IE->getOperand(1);
-      LastInsertInst = IE->getOperand(0);
-    } else {
-      auto *IV = cast<InsertValueInst>(LastInsertInst);
-      InsertedOperand = IV->getInsertedValueOperand();
-      LastInsertInst = IV->getAggregateOperand();
-    }
-    if (isa<InsertElementInst>(InsertedOperand) ||
-        isa<InsertValueInst>(InsertedOperand)) {
-      SmallVector<Value *, 8> TmpBuildVectorOpds;
-      SmallVector<Value *, 8> TmpInsertElts;
-      if (!findBuildAggregate(InsertedOperand, TTI, TmpBuildVectorOpds,
-                              TmpInsertElts))
-        return false;
-      BuildVectorOpds.append(TmpBuildVectorOpds.rbegin(),
-                             TmpBuildVectorOpds.rend());
-      InsertElts.append(TmpInsertElts.rbegin(), TmpInsertElts.rend());
-    } else {
-      BuildVectorOpds.push_back(InsertedOperand);
-      InsertElts.push_back(IE);
-    }
-    if (isa<UndefValue>(LastInsertInst))
-      break;
-    if ((!isa<InsertValueInst>(LastInsertInst) &&
-         !isa<InsertElementInst>(LastInsertInst)) ||
-        !LastInsertInst->hasOneUse())
-      return false;
-  } while (true);
-  std::reverse(BuildVectorOpds.begin(), BuildVectorOpds.end());
-  std::reverse(InsertElts.begin(), InsertElts.end());
-  return true;
+
+  assert((BuildVectorOpds.empty() && InsertElts.empty()) &&
+         "Expected empty result vectors!");
+
+  Optional<unsigned> AggregateSize = getAggregateSize(LastInsertInst);
+  if (!AggregateSize)
+    return false;
+  BuildVectorOpds.resize(*AggregateSize);
+  InsertElts.resize(*AggregateSize);
+
+  if (findBuildAggregate_rec(LastInsertInst, TTI, BuildVectorOpds, InsertElts,
+                             0)) {
+    llvm::erase_if(BuildVectorOpds,
+                   [](const Value *V) { return V == nullptr; });
+    llvm::erase_if(InsertElts, [](const Value *V) { return V == nullptr; });
+    if (BuildVectorOpds.size() >= 2)
+      return true;
+  }
+
+  return false;
 }
 
 static bool PhiTypeSorterFunc(Value *V, Value *V2) {
@@ -7308,8 +7398,7 @@ bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
 
   SmallVector<Value *, 16> BuildVectorOpds;
   SmallVector<Value *, 16> BuildVectorInsts;
-  if (!findBuildAggregate(IVI, TTI, BuildVectorOpds, BuildVectorInsts) ||
-      BuildVectorOpds.size() < 2)
+  if (!findBuildAggregate(IVI, TTI, BuildVectorOpds, BuildVectorInsts))
     return false;
 
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IVI << "\n");
@@ -7324,7 +7413,6 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
   SmallVector<Value *, 16> BuildVectorInsts;
   SmallVector<Value *, 16> BuildVectorOpds;
   if (!findBuildAggregate(IEI, TTI, BuildVectorOpds, BuildVectorInsts) ||
-      BuildVectorOpds.size() < 2 ||
       (llvm::all_of(BuildVectorOpds,
                     [](Value *V) { return isa<ExtractElementInst>(V); }) &&
        isShuffle(BuildVectorOpds)))

@@ -1221,11 +1221,11 @@ static bool usesOperand(User *Usr, Value *Op) {
 }
 
 // Return true if the instruction type of Val is supported by
-// constantFoldUser(). Currently CastInst and BinaryOperator only.  Call this
-// before calling constantFoldUser() to find out if it's even worth attempting
-// to call it.
+// constantFoldUser(). Currently CastInst, BinaryOperator and FreezeInst only.
+// Call this before calling constantFoldUser() to find out if it's even worth
+// attempting to call it.
 static bool isOperationFoldable(User *Usr) {
-  return isa<CastInst>(Usr) || isa<BinaryOperator>(Usr);
+  return isa<CastInst>(Usr) || isa<BinaryOperator>(Usr) || isa<FreezeInst>(Usr);
 }
 
 // Check if Usr can be simplified to an integer constant when the value of one
@@ -1256,6 +1256,9 @@ static ValueLatticeElement constantFoldUser(User *Usr, Value *Op,
             SimplifyBinOp(BO->getOpcode(), LHS, RHS, DL))) {
       return ValueLatticeElement::getRange(ConstantRange(C->getValue()));
     }
+  } else if (isa<FreezeInst>(Usr)) {
+    assert(cast<FreezeInst>(Usr)->getOperand(0) == Op && "Operand 0 isn't Op");
+    return ValueLatticeElement::getRange(ConstantRange(OpConstVal));
   }
   return ValueLatticeElement::getOverdefined();
 }

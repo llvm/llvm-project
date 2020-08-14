@@ -43,6 +43,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
@@ -998,6 +999,9 @@ public:
 
   // Implicitly-declared type 'struct _GUID'.
   mutable TagDecl *MSGuidTagDecl = nullptr;
+
+  /// Keep track of CUDA/HIP static device variables referenced by host code.
+  llvm::DenseSet<const VarDecl *> CUDAStaticDeviceVarReferencedByHost;
 
   ASTContext(LangOptions &LOpts, SourceManager &SM, IdentifierTable &idents,
              SelectorTable &sels, Builtin::Context &builtins);
@@ -3029,6 +3033,12 @@ public:
 
   /// Return a new OMPTraitInfo object owned by this context.
   OMPTraitInfo &getNewOMPTraitInfo();
+
+  /// Whether a C++ static variable may be externalized.
+  bool mayExternalizeStaticVar(const Decl *D) const;
+
+  /// Whether a C++ static variable should be externalized.
+  bool shouldExternalizeStaticVar(const Decl *D) const;
 
 private:
   /// All OMPTraitInfo objects live in this collection, one per

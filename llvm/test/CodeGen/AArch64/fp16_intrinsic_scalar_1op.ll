@@ -16,6 +16,10 @@ declare i64 @llvm.aarch64.neon.fcvtau.i64.f16(half)
 declare i32 @llvm.aarch64.neon.fcvtau.i32.f16(half)
 declare i64 @llvm.aarch64.neon.fcvtas.i64.f16(half)
 declare i32 @llvm.aarch64.neon.fcvtas.i32.f16(half)
+declare i64 @llvm.aarch64.neon.fcvtzs.i64.f16(half)
+declare i32 @llvm.aarch64.neon.fcvtzs.i32.f16(half)
+declare i64 @llvm.aarch64.neon.fcvtzu.i64.f16(half)
+declare i32 @llvm.aarch64.neon.fcvtzu.i32.f16(half)
 declare half @llvm.aarch64.neon.frsqrte.f16(half)
 declare half @llvm.aarch64.neon.frecpx.f16(half)
 declare half @llvm.aarch64.neon.frecpe.f16(half)
@@ -136,6 +140,42 @@ define dso_local i64 @t18(half %a) {
 entry:
   %0 = fptoui half %a to i64
   ret i64 %0
+}
+
+define i32 @fcvtzu_intrinsic_i32(half %a) {
+; CHECK-LABEL: fcvtzu_intrinsic_i32:
+; CHECK:         fcvtzu w0, h0
+; CHECK-NEXT:    ret
+entry:
+  %fcvt = tail call i32 @llvm.aarch64.neon.fcvtzu.i32.f16(half %a)
+  ret i32 %fcvt
+}
+
+define i64 @fcvtzu_intrinsic_i64(half %a) {
+; CHECK-LABEL: fcvtzu_intrinsic_i64:
+; CHECK:         fcvtzs x0, h0
+; CHECK-NEXT:    ret
+entry:
+  %fcvt = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f16(half %a)
+  ret i64 %fcvt
+}
+
+define i32 @fcvtzs_intrinsic_i32(half %a) {
+; CHECK-LABEL: fcvtzs_intrinsic_i32:
+; CHECK:         fcvtzs w0, h0
+; CHECK-NEXT:    ret
+entry:
+  %fcvt = tail call i32 @llvm.aarch64.neon.fcvtzs.i32.f16(half %a)
+  ret i32 %fcvt
+}
+
+define i64 @fcvtzs_intrinsic_i64(half %a) {
+; CHECK-LABEL: fcvtzs_intrinsic_i64:
+; CHECK:         fcvtzs x0, h0
+; CHECK-NEXT:    ret
+entry:
+  %fcvt = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f16(half %a)
+  ret i64 %fcvt
 }
 
 define dso_local i16 @t19(half %a) {

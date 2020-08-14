@@ -19358,7 +19358,7 @@ entry:
 }
 
 
-declare <16 x i1> @llvm.x86.avx512.cmp.ps.512(<16 x float>, <16 x float>, i32, i32)
+declare <16 x i1> @llvm.x86.avx512.mask.cmp.ps.512(<16 x float>, <16 x float>, i32, <16 x i1>, i32)
 define zeroext i8 @test_vcmpoeqps_v4i1_v8i1_mask(<2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v4i1_v8i1_mask:
 ; VLX:       # %bb.0: # %entry
@@ -20799,7 +20799,7 @@ define zeroext i32 @test_vcmpoeqps_v16i1_v32i1_sae_mask(<8 x i64> %__a, <8 x i64
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x float>
   %1 = bitcast <8 x i64> %__b to <16 x float>
-  %2 = call <16 x i1> @llvm.x86.avx512.cmp.ps.512(<16 x float> %0, <16 x float> %1, i32 2, i32 8)
+  %2 = call <16 x i1> @llvm.x86.avx512.mask.cmp.ps.512(<16 x float> %0, <16 x float> %1, i32 2, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
   %3 = bitcast <16 x i1> %2 to i16
   %4 = zext i16 %3 to i32
   ret i32 %4
@@ -20824,7 +20824,7 @@ define zeroext i32 @test_masked_vcmpoeqps_v16i1_v32i1_sae_mask(i16 zeroext %__u,
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x float>
   %1 = bitcast <8 x i64> %__b to <16 x float>
-  %2 = call <16 x i1> @llvm.x86.avx512.cmp.ps.512(<16 x float> %0, <16 x float> %1, i32 2, i32 8)
+  %2 = call <16 x i1> @llvm.x86.avx512.mask.cmp.ps.512(<16 x float> %0, <16 x float> %1, i32 2, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
   %3 = bitcast i16 %__u to <16 x i1>
   %4 = and <16 x i1> %2, %3
   %5 = bitcast <16 x i1> %4 to i16
@@ -21002,7 +21002,7 @@ define zeroext i64 @test_vcmpoeqps_v16i1_v64i1_sae_mask(<8 x i64> %__a, <8 x i64
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x float>
   %1 = bitcast <8 x i64> %__b to <16 x float>
-  %2 = call <16 x i1> @llvm.x86.avx512.cmp.ps.512(<16 x float> %0, <16 x float> %1, i32 2, i32 8)
+  %2 = call <16 x i1> @llvm.x86.avx512.mask.cmp.ps.512(<16 x float> %0, <16 x float> %1, i32 2, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
   %3 = bitcast <16 x i1> %2 to i16
   %4 = zext i16 %3 to i64
   ret i64 %4
@@ -21027,7 +21027,7 @@ define zeroext i64 @test_masked_vcmpoeqps_v16i1_v64i1_sae_mask(i16 zeroext %__u,
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x float>
   %1 = bitcast <8 x i64> %__b to <16 x float>
-  %2 = call <16 x i1> @llvm.x86.avx512.cmp.ps.512(<16 x float> %0, <16 x float> %1, i32 2, i32 8)
+  %2 = call <16 x i1> @llvm.x86.avx512.mask.cmp.ps.512(<16 x float> %0, <16 x float> %1, i32 2, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
   %3 = bitcast i16 %__u to <16 x i1>
   %4 = and <16 x i1> %2, %3
   %5 = bitcast <16 x i1> %4 to i16
@@ -21037,7 +21037,7 @@ entry:
 
 
 
-declare <8 x i1> @llvm.x86.avx512.cmp.pd.512(<8 x double>, <8 x double>, i32, i32)
+declare <8 x i1> @llvm.x86.avx512.mask.cmp.pd.512(<8 x double>, <8 x double>, i32, <8 x i1>, i32)
 define zeroext i4 @test_vcmpoeqpd_v2i1_v4i1_mask(<2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v2i1_v4i1_mask:
 ; VLX:       # %bb.0: # %entry
@@ -22867,7 +22867,7 @@ define zeroext i16 @test_vcmpoeqpd_v8i1_v16i1_sae_mask(<8 x i64> %__a, <8 x i64>
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x double>
   %1 = bitcast <8 x i64> %__b to <8 x double>
-  %2 = call <8 x i1> @llvm.x86.avx512.cmp.pd.512(<8 x double> %0, <8 x double> %1, i32 2, i32 8)
+  %2 = call <8 x i1> @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> %0, <8 x double> %1, i32 2, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
   %3 = bitcast <8 x i1> %2 to i8
   %4 = zext i8 %3 to i16
   ret i16 %4
@@ -22896,7 +22896,7 @@ define zeroext i16 @test_masked_vcmpoeqpd_v8i1_v16i1_sae_mask(i8 zeroext %__u, <
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x double>
   %1 = bitcast <8 x i64> %__b to <8 x double>
-  %2 = call <8 x i1> @llvm.x86.avx512.cmp.pd.512(<8 x double> %0, <8 x double> %1, i32 2, i32 8)
+  %2 = call <8 x i1> @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> %0, <8 x double> %1, i32 2, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
   %3 = bitcast i8 %__u to <8 x i1>
   %4 = and <8 x i1> %2, %3
   %5 = bitcast <8 x i1> %4 to i8
@@ -23082,7 +23082,7 @@ define zeroext i32 @test_vcmpoeqpd_v8i1_v32i1_sae_mask(<8 x i64> %__a, <8 x i64>
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x double>
   %1 = bitcast <8 x i64> %__b to <8 x double>
-  %2 = call <8 x i1> @llvm.x86.avx512.cmp.pd.512(<8 x double> %0, <8 x double> %1, i32 2, i32 8)
+  %2 = call <8 x i1> @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> %0, <8 x double> %1, i32 2, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
   %3 = bitcast <8 x i1> %2 to i8
   %4 = zext i8 %3 to i32
   ret i32 %4
@@ -23109,7 +23109,7 @@ define zeroext i32 @test_masked_vcmpoeqpd_v8i1_v32i1_sae_mask(i8 zeroext %__u, <
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x double>
   %1 = bitcast <8 x i64> %__b to <8 x double>
-  %2 = call <8 x i1> @llvm.x86.avx512.cmp.pd.512(<8 x double> %0, <8 x double> %1, i32 2, i32 8)
+  %2 = call <8 x i1> @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> %0, <8 x double> %1, i32 2, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
   %3 = bitcast i8 %__u to <8 x i1>
   %4 = and <8 x i1> %2, %3
   %5 = bitcast <8 x i1> %4 to i8
@@ -23295,7 +23295,7 @@ define zeroext i64 @test_vcmpoeqpd_v8i1_v64i1_sae_mask(<8 x i64> %__a, <8 x i64>
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x double>
   %1 = bitcast <8 x i64> %__b to <8 x double>
-  %2 = call <8 x i1> @llvm.x86.avx512.cmp.pd.512(<8 x double> %0, <8 x double> %1, i32 2, i32 8)
+  %2 = call <8 x i1> @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> %0, <8 x double> %1, i32 2, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
   %3 = bitcast <8 x i1> %2 to i8
   %4 = zext i8 %3 to i64
   ret i64 %4
@@ -23322,7 +23322,7 @@ define zeroext i64 @test_masked_vcmpoeqpd_v8i1_v64i1_sae_mask(i8 zeroext %__u, <
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x double>
   %1 = bitcast <8 x i64> %__b to <8 x double>
-  %2 = call <8 x i1> @llvm.x86.avx512.cmp.pd.512(<8 x double> %0, <8 x double> %1, i32 2, i32 8)
+  %2 = call <8 x i1> @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> %0, <8 x double> %1, i32 2, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
   %3 = bitcast i8 %__u to <8 x i1>
   %4 = and <8 x i1> %2, %3
   %5 = bitcast <8 x i1> %4 to i8
@@ -23345,7 +23345,7 @@ define i32 @test_cmpm_rnd_zero(<16 x float> %a, <16 x float> %b) {
 ; NoVLX-NEXT:    kmovw %k0, %eax
 ; NoVLX-NEXT:    vzeroupper
 ; NoVLX-NEXT:    retq
-  %res = call <16 x i1> @llvm.x86.avx512.cmp.ps.512(<16 x float> %a, <16 x float> %b, i32 2, i32 8)
+  %res = call <16 x i1> @llvm.x86.avx512.mask.cmp.ps.512(<16 x float> %a, <16 x float> %b, i32 2, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, i32 8)
   %1 = bitcast <16 x i1> %res to i16
   %cast = bitcast i16 %1 to <16 x i1>
   %shuffle = shufflevector <16 x i1> %cast, <16 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>

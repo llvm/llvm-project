@@ -776,7 +776,7 @@ repro::DataRecorder *Debugger::GetInputRecorder() { return m_input_recorder; }
 void Debugger::SetInputFile(FileSP file_sp, repro::DataRecorder *recorder) {
   assert(file_sp && file_sp->IsValid());
   m_input_recorder = recorder;
-  m_input_file_sp = file_sp;
+  m_input_file_sp = std::move(file_sp);
   // Save away the terminal state if that is relevant, so that we can restore
   // it in RestoreInputState.
   SaveInputTerminalState();

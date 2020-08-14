@@ -512,7 +512,8 @@ define i1 @test24(i64 %i) {
 ; unsigned overflow does not happen during offset computation
 define i1 @test24_neg_offs(i32* %p, i64 %offs) {
 ; CHECK-LABEL: @test24_neg_offs(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OFFS:%.*]], -2
+; CHECK-NEXT:    [[P1_IDX_NEG:%.*]] = mul i64 [[OFFS:%.*]], -4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[P1_IDX_NEG]], 8
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %p1 = getelementptr inbounds i32, i32* %p, i64 %offs
@@ -916,14 +917,14 @@ define i1 @PR32949(i32 %X, i32 %Y, i32 %Z) {
 }
 
 ; PR8469
-define <2 x i1> @test49(<2 x i32> %tmp3) {
+define <2 x i1> @test49(<2 x i32> %i3) {
 ; CHECK-LABEL: @test49(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
 entry:
-  %tmp11 = and <2 x i32> %tmp3, <i32 3, i32 3>
-  %cmp = icmp ult <2 x i32> %tmp11, <i32 4, i32 4>
+  %i11 = and <2 x i32> %i3, <i32 3, i32 3>
+  %cmp = icmp ult <2 x i32> %i11, <i32 4, i32 4>
   ret <2 x i1> %cmp
 }
 
@@ -959,9 +960,9 @@ define i1 @test52(i32 %x1) {
 ;
   %conv = and i32 %x1, 255
   %cmp = icmp eq i32 %conv, 127
-  %tmp2 = lshr i32 %x1, 16
-  %tmp3 = trunc i32 %tmp2 to i8
-  %cmp15 = icmp eq i8 %tmp3, 76
+  %i2 = lshr i32 %x1, 16
+  %i3 = trunc i32 %i2 to i8
+  %cmp15 = icmp eq i8 %i3, 76
 
   %A = and i1 %cmp, %cmp15
   ret i1 %A
@@ -975,9 +976,9 @@ define i1 @test52b(i128 %x1) {
 ;
   %conv = and i128 %x1, 255
   %cmp = icmp eq i128 %conv, 127
-  %tmp2 = lshr i128 %x1, 16
-  %tmp3 = trunc i128 %tmp2 to i8
-  %cmp15 = icmp eq i8 %tmp3, 76
+  %i2 = lshr i128 %x1, 16
+  %i3 = trunc i128 %i2 to i8
+  %cmp15 = icmp eq i8 %i3, 76
 
   %A = and i1 %cmp, %cmp15
   ret i1 %A
@@ -3006,10 +3007,10 @@ define i32 @f6(i32 %a, i32 %b) {
 
 define i32 @f7(i32 %a, i32 %b) {
 ; CHECK-LABEL: @f7(
-; CHECK-NEXT:    [[CMP_UNSHIFTED:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP_MASK:%.*]] = and i32 [[CMP_UNSHIFTED]], 511
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CMP_MASK]], 0
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i32 0, i32 10000
+; CHECK-NEXT:    [[CMP_NOT_UNSHIFTED:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP_NOT_MASK:%.*]] = and i32 [[CMP_NOT_UNSHIFTED]], 511
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[CMP_NOT_MASK]], 0
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP_NOT]], i32 0, i32 10000
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
   %sext = shl i32 %a, 23

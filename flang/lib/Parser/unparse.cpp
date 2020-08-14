@@ -1835,7 +1835,7 @@ public:
   void Before(const AccClause::Finalize &) { Word("FINALIZE"); }
   void Before(const AccClause::IfPresent &) { Word("IF_PRESENT"); }
   void Before(const AccClause::Independent &) { Word("INDEPENDENT"); }
-  void Before(const AccClause::NoHost &) { Word("NOHOST"); }
+  void Before(const AccClause::Nohost &) { Word("NOHOST"); }
   void Before(const AccClause::Read &) { Word("READ"); }
   void Before(const AccClause::Seq &) { Word("SEQ"); }
   void Before(const AccClause::Write &) { Word("WRITE"); }
@@ -1906,7 +1906,7 @@ public:
     Walk(x.v);
     Put(")");
   }
-  void Unparse(const AccClause::DevicePtr &x) {
+  void Unparse(const AccClause::Deviceptr &x) {
     Word("DEVICEPTR");
     Put("(");
     Walk(x.v);
@@ -1918,7 +1918,7 @@ public:
     Walk(x.v);
     Put(")");
   }
-  void Unparse(const AccClause::FirstPrivate &x) {
+  void Unparse(const AccClause::Firstprivate &x) {
     Word("FIRSTPRIVATE");
     Put("(");
     Walk(x.v);
@@ -2205,6 +2205,12 @@ public:
     Walk(std::get<OmpReductionOperator>(x.t));
     Put(":");
     Walk(std::get<std::list<Designator>>(x.t), ",");
+    Put(")");
+  }
+  void Unparse(const OmpAllocateClause &x) {
+    Word("ALLOCATE(");
+    Walk(std::get<std::optional<OmpAllocateClause::Allocator>>(x.t), ":");
+    Walk(std::get<OmpObjectList>(x.t));
     Put(")");
   }
   void Unparse(const OmpDependSinkVecLength &x) {

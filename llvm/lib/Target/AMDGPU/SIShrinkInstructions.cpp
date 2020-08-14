@@ -374,12 +374,16 @@ static bool shrinkScalarLogicOp(const GCNSubtarget &ST,
     }
 
     if (SrcReg->isReg() && SrcReg->getReg() == Dest->getReg()) {
+      const bool IsUndef = SrcReg->isUndef();
+      const bool IsKill = SrcReg->isKill();
       MI.setDesc(TII->get(Opc));
       if (Opc == AMDGPU::S_BITSET0_B32 ||
           Opc == AMDGPU::S_BITSET1_B32) {
         Src0->ChangeToImmediate(NewImm);
         // Remove the immediate and add the tied input.
-        MI.getOperand(2).ChangeToRegister(Dest->getReg(), false);
+        MI.getOperand(2).ChangeToRegister(Dest->getReg(), /*IsDef*/ false,
+                                          /*isImp*/ false, IsKill,
+                                          /*isDead*/ false, IsUndef);
         MI.tieOperands(0, 2);
       } else {
         SrcImm->setImm(NewImm);

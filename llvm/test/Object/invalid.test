@@ -249,10 +249,10 @@ Symbols: []
 
 # RUN: yaml2obj %s --docnum=12 -o %t12
 # RUN: yaml2obj %s --docnum=13 -o %t13
-# RUN: not llvm-readobj -r %t12 2>&1 | FileCheck -DFILE=%t12 --check-prefix=INVALID-RELOC-SH-OFFSET %s
-# RUN: not llvm-readobj -r %t13 2>&1 | FileCheck -DFILE=%t13 --check-prefix=INVALID-RELOC-SH-OFFSET %s
+# RUN: llvm-readobj -r %t12 2>&1 | FileCheck -DFILE=%t12 --check-prefix=INVALID-RELOC-SH-OFFSET -DTYPE=SHT_REL %s
+# RUN: llvm-readobj -r %t13 2>&1 | FileCheck -DFILE=%t13 --check-prefix=INVALID-RELOC-SH-OFFSET -DTYPE=SHT_RELA %s
 
-# INVALID-RELOC-SH-OFFSET: error: '[[FILE]]': section [index 1] has a sh_offset (0x10000) + sh_size (0x0) that is greater than the file size (0x160)
+# INVALID-RELOC-SH-OFFSET: warning: '[[FILE]]': unable to read relocations from [[TYPE]] section with index 1: section [index 1] has a sh_offset (0x10000) + sh_size (0x0) that is greater than the file size (0x160)
 
 --- !ELF
 FileHeader:

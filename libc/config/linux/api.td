@@ -90,9 +90,18 @@ def CTypeAPI : PublicAPI<"ctype.h"> {
   let Functions = [
     "isalnum",
     "isalpha",
+    "isblank",
+    "iscntrl",
     "isdigit",
+    "isgraph",
     "islower",
+    "isprint",
+    "ispunct",
+    "isspace",
     "isupper",
+    "isxdigit",
+    "tolower",
+    "toupper",
   ];
 }
 

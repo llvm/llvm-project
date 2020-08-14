@@ -372,6 +372,9 @@ class DwarfDebug : public DebugHandlerBase {
   /// Generate DWARF v4 type units.
   bool GenerateTypeUnits;
 
+  /// Emit a .debug_macro section instead of .debug_macinfo.
+  bool UseDebugMacroSection;
+
   /// DWARF5 Experimental Options
   /// @{
   AccelTableKind TheAccelTableKind;

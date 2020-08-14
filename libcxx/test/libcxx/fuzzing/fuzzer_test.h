@@ -17,11 +17,11 @@
 #include "../../../fuzzing/fuzzing.cpp"
 
 const char* TestCaseSetOne[] = {"", "s", "bac",
-                            "bacasf"
+                            "bacasf",
                             "lkajseravea",
                             "adsfkajdsfjkas;lnc441324513,34535r34525234",
                             "b*c",
-                            "ba?sf"
+                            "ba?sf",
                             "lka*ea",
                             "adsf*kas;lnc441[0-9]1r34525234"};
 

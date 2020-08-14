@@ -247,7 +247,7 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
 
 void TCPSocket::CloseListenSockets() {
   for (auto socket : m_listen_sockets)
-  CLOSE_SOCKET(socket.first);
+    CLOSE_SOCKET(socket.first);
   m_listen_sockets.clear();
 }
 

@@ -2188,6 +2188,7 @@ void request_source(const llvm::json::Object &request) {
   } else {
     response["success"] = llvm::json::Value(false);
   }
+  EmplaceSafeString(body, "mimeType", "text/x-lldb.disassembly");
   response.try_emplace("body", std::move(body));
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }

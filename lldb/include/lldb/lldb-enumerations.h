@@ -126,6 +126,9 @@ FLAGS_ENUM(LaunchFlags){
     eLaunchFlagShellExpandArguments =
         (1u << 10), ///< Perform shell-style argument expansion
     eLaunchFlagCloseTTYOnExit = (1u << 11), ///< Close the open TTY on exit
+    eLaunchFlagInheritTCCFromParent =
+        (1u << 12), ///< Don't make the inferior responsible for its own TCC
+                    ///< permissions but instead inherit them from its parent.
 };
 
 /// Thread Run Modes.
@@ -593,6 +596,7 @@ enum CommandArgumentType {
   eArgRawInput,
   eArgTypeCommand,
   eArgTypeColumnNum,
+  eArgTypeModuleUUID,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };

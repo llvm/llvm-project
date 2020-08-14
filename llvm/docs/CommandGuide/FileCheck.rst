@@ -181,6 +181,10 @@ and from the command line.
   as old tests are migrated to the new non-overlapping ``CHECK-DAG:``
   implementation.
 
+.. option:: --allow-empty
+
+  Allow checking empty input. By default, empty input is rejected.
+
 .. option:: --color
 
   Use colors in output (autodetected by default).
@@ -379,8 +383,57 @@ For example, the following works like you'd expect:
    ; CHECK-SAME:              scope: ![[SCOPE:[0-9]+]]
 
 "``CHECK-SAME:``" directives reject the input if there are any newlines between
-it and the previous directive.  A "``CHECK-SAME:``" cannot be the first
-directive in a file.
+it and the previous directive.
+
+"``CHECK-SAME:``" is also useful to avoid writing matchers for irrelevant
+fields. For example, suppose you're writing a test which parses a tool that
+generates output like this:
+
+.. code-block:: text
+
+   Name: foo
+   Field1: ...
+   Field2: ...
+   Field3: ...
+   Value: 1
+
+   Name: bar
+   Field1: ...
+   Field2: ...
+   Field3: ...
+   Value: 2
+
+   Name: baz
+   Field1: ...
+   Field2: ...
+   Field3: ...
+   Value: 1
+
+To write a test that verifies ``foo`` has the value ``1``, you might first
+write this:
+
+.. code-block:: text
+
+   CHECK: Name: foo
+   CHECK: Value: 1{{$}}
+
+However, this would be a bad test: if the value for ``foo`` changes, the test
+would still pass because the "``CHECK: Value: 1``" line would match the value
+from ``baz``. To fix this, you could add ``CHECK-NEXT`` matchers for every
+``FieldN:`` line, but that would be verbose, and need to be updated when
+``Field4`` is added. A more succint way to write the test using the
+"``CHECK-SAME:``" matcher would be as follows:
+
+.. code-block:: text
+
+   CHECK:      Name: foo
+   CHECK:      Value:
+   CHECK-SAME:        {{ 1$}}
+
+This verifies that the *next* time "``Value:``" appears in the ouput, it has
+the value ``1``.
+
+Note: a "``CHECK-SAME:``" cannot be the first directive in a file.
 
 The "CHECK-EMPTY:" directive
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -854,5 +907,5 @@ matches output of the form (from llvm-dwarfdump):
        DW_AT_location [DW_FORM_sec_offset]   (0x00000233)
        DW_AT_name [DW_FORM_strp]  ( .debug_str[0x000000c9] = "intd")
 
-letting us set the :program:`FileCheck` variable ``DLOC`` to the desired value 
+letting us set the :program:`FileCheck` variable ``DLOC`` to the desired value
 ``0x00000233``, extracted from the line immediately preceding "``intd``".

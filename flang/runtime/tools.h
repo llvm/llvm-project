@@ -18,6 +18,8 @@ namespace Fortran::runtime {
 
 class Terminator;
 
+std::size_t TrimTrailingSpaces(const char *, std::size_t);
+
 OwningPtr<char> SaveDefaultCharacter(
     const char *, std::size_t, const Terminator &);
 

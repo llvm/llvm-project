@@ -81,6 +81,8 @@ private:
 public:
   bool hasFP(const MachineFunction &MF) const override;
 
+  bool requiresStackPointerReference(const MachineFunction &MF) const;
+
   /// Create a CFI index for CFIInst and build a MachineInstr around it.
   void buildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 const DebugLoc &DL, const MCCFIInstruction &CFIInst) const;

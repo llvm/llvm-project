@@ -12,7 +12,7 @@ func @unknown_clause() {
 
 func @if_once(%n : i1) {
   // expected-error@+1 {{at most one if clause can appear on the omp.parallel operation}}
-  omp.parallel if(%n) if(%n) {
+  omp.parallel if(%n : i1) if(%n : i1) {
   }
 
   return

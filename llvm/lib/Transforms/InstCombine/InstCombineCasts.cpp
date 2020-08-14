@@ -1932,22 +1932,35 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
   // If the destination integer type is not the intptr_t type for this target,
   // do a ptrtoint to intptr_t then do a trunc or zext.  This allows the cast
   // to be exposed to other transforms.
-
+  Value *SrcOp = CI.getPointerOperand();
   Type *Ty = CI.getType();
   unsigned AS = CI.getPointerAddressSpace();
+  unsigned TySize = Ty->getScalarSizeInBits();
+  unsigned PtrSize = DL.getPointerSizeInBits(AS);
+  if (TySize != PtrSize) {
+    Type *IntPtrTy = DL.getIntPtrType(CI.getContext(), AS);
+    if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
+      // Handle vectors of pointers.
+      // FIXME: what should happen for scalable vectors?
+      IntPtrTy = FixedVectorType::get(IntPtrTy, VecTy->getNumElements());
+    }
 
-  if (Ty->getScalarSizeInBits() == DL.getPointerSizeInBits(AS))
-    return commonPointerCastTransforms(CI);
-
-  Type *PtrTy = DL.getIntPtrType(CI.getContext(), AS);
-  if (auto *VTy = dyn_cast<VectorType>(Ty)) {
-    // Handle vectors of pointers.
-    // FIXME: what should happen for scalable vectors?
-    PtrTy = FixedVectorType::get(PtrTy, VTy->getNumElements());
+    Value *P = Builder.CreatePtrToInt(SrcOp, IntPtrTy);
+    return CastInst::CreateIntegerCast(P, Ty, /*isSigned=*/false);
   }
 
-  Value *P = Builder.CreatePtrToInt(CI.getOperand(0), PtrTy);
-  return CastInst::CreateIntegerCast(P, Ty, /*isSigned=*/false);
+  Value *Vec, *Scalar, *Index;
+  if (match(SrcOp, m_OneUse(m_InsertElt(m_IntToPtr(m_Value(Vec)),
+                                        m_Value(Scalar), m_Value(Index)))) &&
+      Vec->getType() == Ty) {
+    assert(Vec->getType()->getScalarSizeInBits() == PtrSize && "Wrong type");
+    // Convert the scalar to int followed by insert to eliminate one cast:
+    // p2i (ins (i2p Vec), Scalar, Index --> ins Vec, (p2i Scalar), Index
+    Value *NewCast = Builder.CreatePtrToInt(Scalar, Ty->getScalarType());
+    return InsertElementInst::Create(Vec, NewCast, Index);
+  }
+
+  return commonPointerCastTransforms(CI);
 }
 
 /// This input value (which is known to have vector type) is being zero extended

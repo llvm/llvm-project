@@ -82,6 +82,45 @@ spv.module Logical GLSL450 {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spv.loop
+//===----------------------------------------------------------------------===//
+
+spv.module Logical GLSL450 {
+  // CHECK-LABEL: @infinite_loop
+  spv.func @infinite_loop(%count : i32) -> () "None" {
+    // CHECK:   llvm.br ^[[BB1:.*]]
+    // CHECK: ^[[BB1]]:
+    // CHECK:   %[[COND:.*]] = llvm.mlir.constant(true) : !llvm.i1
+    // CHECK:   llvm.cond_br %[[COND]], ^[[BB2:.*]], ^[[BB4:.*]]
+    // CHECK: ^[[BB2]]:
+    // CHECK:   llvm.br ^[[BB3:.*]]
+    // CHECK: ^[[BB3]]:
+    // CHECK:   llvm.br ^[[BB1:.*]]
+    // CHECK: ^[[BB4]]:
+    // CHECK:   llvm.br ^[[BB5:.*]]
+    // CHECK: ^[[BB5]]:
+    // CHECK:   llvm.return
+    spv.loop {
+      spv.Branch ^header
+    ^header:
+      %cond = spv.constant true
+      spv.BranchConditional %cond, ^body, ^merge
+    ^body:
+      // Do nothing
+      spv.Branch ^continue
+    ^continue:
+      // Do nothing
+      spv.Branch ^header
+    ^merge:
+      spv._merge
+    }
+    spv.Return
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spv.selection
 //===----------------------------------------------------------------------===//
 

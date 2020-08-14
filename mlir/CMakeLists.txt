@@ -93,6 +93,8 @@ add_subdirectory(tools/mlir-tblgen)
 
 add_subdirectory(include/mlir)
 add_subdirectory(lib)
+# C API needs all dialects for registration, but should be built before tests.
+add_subdirectory(lib/CAPI)
 if (MLIR_INCLUDE_TESTS)
   add_definitions(-DMLIR_INCLUDE_TESTS)
   add_subdirectory(unittests)

@@ -1157,6 +1157,25 @@ public:
 
   ~CommandObjectTargetModulesSearchPathsInsert() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_exe_ctx.HasTargetScope() || request.GetCursorIndex() != 0)
+      return;
+
+    Target *target = m_exe_ctx.GetTargetPtr();
+    const PathMappingList &list = target->GetImageSearchPathList();
+    const size_t num = list.GetSize();
+    ConstString old_path, new_path;
+    for (size_t i = 0; i < num; ++i) {
+      if (!list.GetPathsAtIndex(i, old_path, new_path))
+        break;
+      StreamString strm;
+      strm << old_path << " -> " << new_path;
+      request.TryCompleteCurrentArg(std::to_string(i), strm.GetString());
+    }
+  }
+
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Target *target = &GetSelectedTarget();
@@ -4703,6 +4722,16 @@ public:
 
   ~CommandObjectTargetStopHookDelete() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (request.GetCursorIndex())
+      return;
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eStopHookIDCompletion,
+        request, nullptr);
+  }
+
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetSelectedOrDummyTarget();
@@ -4750,6 +4779,16 @@ public:
   }
 
   ~CommandObjectTargetStopHookEnableDisable() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (request.GetCursorIndex())
+      return;
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eStopHookIDCompletion,
+        request, nullptr);
+  }
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {

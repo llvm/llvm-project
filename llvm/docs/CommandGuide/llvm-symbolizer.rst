@@ -220,16 +220,16 @@ OPTIONS
 
   Show help and usage for this command.
 
-.. option:: --help-list
-
-  Show help and usage for this command without grouping the options into categories.
-
 .. _llvm-symbolizer-opt-i:
 
 .. option:: --inlining, --inlines, -i
 
   If a source code location is in an inlined function, prints all the inlined
-  frames. Defaults to true.
+  frames. This is the default.
+
+.. option:: --no-inlines
+
+  Don't print inlined frames.
 
 .. option:: --no-demangle
 
@@ -267,17 +267,17 @@ OPTIONS
 
     foo() at /tmp/test.cpp:6:3
 
-    $ llvm-symbolizer --output-style=LLVM --obj=inlined.elf 0x4004be 0x400486 -p -i=0
+    $ llvm-symbolizer --output-style=LLVM --obj=inlined.elf 0x4004be 0x400486 -p --no-inlines
     main at /tmp/test.cpp:11:18
 
     foo() at /tmp/test.cpp:6:3
 
-    $ llvm-symbolizer --output-style=GNU --obj=inlined.elf 0x4004be 0x400486 -p -i=0
+    $ llvm-symbolizer --output-style=GNU --obj=inlined.elf 0x4004be 0x400486 -p --no-inlines
     baz() at /tmp/test.cpp:11
     foo() at /tmp/test.cpp:6
 
     $ clang -g -fdebug-info-for-profiling test.cpp -o profiling.elf
-    $ llvm-symbolizer --output-style=GNU --obj=profiling.elf 0x401167 -p -i=0
+    $ llvm-symbolizer --output-style=GNU --obj=profiling.elf 0x401167 -p --no-inlines
     main at /tmp/test.cpp:15 (discriminator 2)
 
 .. option:: --pretty-print, -p
@@ -346,7 +346,7 @@ OPTIONS
       Line: 15
       Column: 0
 
-.. option:: --version
+.. option:: --version, -v
 
   Print version information for the tool.
 

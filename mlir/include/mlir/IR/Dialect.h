@@ -14,6 +14,7 @@
 #define MLIR_IR_DIALECT_H
 
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/Support/TypeID.h"
 
 namespace mlir {
 class DialectAsmParser;
@@ -22,12 +23,6 @@ class DialectInterface;
 class OpBuilder;
 class Type;
 
-using DialectConstantDecodeHook =
-    std::function<bool(const OpaqueElementsAttr, ElementsAttr &)>;
-using DialectConstantFoldHook = std::function<LogicalResult(
-    Operation *, ArrayRef<Attribute>, SmallVectorImpl<Attribute> &)>;
-using DialectExtractElementHook =
-    std::function<Attribute(const OpaqueElementsAttr, ArrayRef<uint64_t>)>;
 using DialectAllocatorFunction = std::function<void(MLIRContext *)>;
 
 /// Dialects are groups of MLIR operations and behavior associated with the
@@ -49,6 +44,9 @@ public:
 
   StringRef getNamespace() const { return name; }
 
+  /// Returns the unique identifier that corresponds to this dialect.
+  TypeID getTypeID() const { return dialectID; }
+
   /// Returns true if this dialect allows for unregistered operations, i.e.
   /// operations prefixed with the dialect namespace but not registered with
   /// addOperation.
@@ -58,38 +56,6 @@ public:
   /// prefixed with the dialect namespace but not registered with addType.
   /// These are represented with OpaqueType.
   bool allowsUnknownTypes() const { return unknownTypesAllowed; }
-
-  //===--------------------------------------------------------------------===//
-  // Constant Hooks
-  //===--------------------------------------------------------------------===//
-
-  /// Registered fallback constant fold hook for the dialect. Like the constant
-  /// fold hook of each operation, it attempts to constant fold the operation
-  /// with the specified constant operand values - the elements in "operands"
-  /// will correspond directly to the operands of the operation, but may be null
-  /// if non-constant.  If constant folding is successful, this fills in the
-  /// `results` vector.  If not, this returns failure and `results` is
-  /// unspecified.
-  DialectConstantFoldHook constantFoldHook =
-      [](Operation *op, ArrayRef<Attribute> operands,
-         SmallVectorImpl<Attribute> &results) { return failure(); };
-
-  /// Registered hook to decode opaque constants associated with this
-  /// dialect. The hook function attempts to decode an opaque constant tensor
-  /// into a tensor with non-opaque content. If decoding is successful, this
-  /// method returns false and sets 'output' attribute. If not, it returns true
-  /// and leaves 'output' unspecified. The default hook fails to decode.
-  DialectConstantDecodeHook decodeHook =
-      [](const OpaqueElementsAttr input, ElementsAttr &output) { return true; };
-
-  /// Registered hook to extract an element from an opaque constant associated
-  /// with this dialect. If element has been successfully extracted, this
-  /// method returns that element. If not, it returns an empty attribute.
-  /// The default hook fails to extract an element.
-  DialectExtractElementHook extractElementHook =
-      [](const OpaqueElementsAttr input, ArrayRef<uint64_t> index) {
-        return Attribute();
-      };
 
   /// Registered hook to materialize a single constant operation from a given
   /// attribute value with the desired resultant type. This method should use
@@ -177,7 +143,7 @@ protected:
   ///       with the namespace followed by '.'.
   /// Example:
   ///       - "tf" for the TensorFlow ops like "tf.add".
-  Dialect(StringRef name, MLIRContext *context);
+  Dialect(StringRef name, MLIRContext *context, TypeID id);
 
   /// This method is used by derived classes to add their operations to the set.
   ///
@@ -223,12 +189,12 @@ private:
   Dialect(const Dialect &) = delete;
   void operator=(Dialect &) = delete;
 
-  /// Register this dialect object with the specified context.  The context
-  /// takes ownership of the heap allocated dialect.
-  void registerDialect(MLIRContext *context);
-
   /// The namespace of this dialect.
   StringRef name;
+
+  /// The unique identifier of the derived Op class, this is used in the context
+  /// to allow registering multiple times the same dialect.
+  TypeID dialectID;
 
   /// This is the context that owns this Dialect object.
   MLIRContext *context;
@@ -255,7 +221,9 @@ private:
                            const DialectAllocatorFunction &function);
   template <typename ConcreteDialect>
   friend void registerDialect();
+  friend class MLIRContext;
 };
+
 /// Registers all dialects and hooks from the global registries with the
 /// specified MLIRContext.
 /// Note: This method is not thread-safe.
@@ -265,12 +233,9 @@ void registerAllDialects(MLIRContext *context);
 /// global registry by calling registerDialect<MyDialect>();
 /// Note: This method is not thread-safe.
 template <typename ConcreteDialect> void registerDialect() {
-  Dialect::registerDialectAllocator(TypeID::get<ConcreteDialect>(),
-                                    [](MLIRContext *ctx) {
-                                      // Just allocate the dialect, the context
-                                      // takes ownership of it.
-                                      new ConcreteDialect(ctx);
-                                    });
+  Dialect::registerDialectAllocator(
+      TypeID::get<ConcreteDialect>(),
+      [](MLIRContext *ctx) { ctx->getOrCreateDialect<ConcreteDialect>(); });
 }
 
 /// DialectRegistration provides a global initializer that registers a Dialect
@@ -291,7 +256,7 @@ namespace llvm {
 template <typename T>
 struct isa_impl<T, ::mlir::Dialect> {
   static inline bool doit(const ::mlir::Dialect &dialect) {
-    return T::getDialectNamespace() == dialect.getNamespace();
+    return mlir::TypeID::get<T>() == dialect.getTypeID();
   }
 };
 } // namespace llvm

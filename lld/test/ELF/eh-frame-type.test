@@ -11,6 +11,9 @@
 # RUN: ld.lld %t1.o %t2.o -o %tboth
 # RUN: llvm-readobj -S %tboth | FileCheck %s
 
+# RUN: ld.lld -r %t1.o %t2.o -o %tboth.ro
+# RUN: llvm-readobj -S %tboth.ro | FileCheck %s
+
 # CHECK:      Name: .eh_frame
 # CHECK-NEXT: Type: SHT_PROGBITS
 

@@ -317,3 +317,174 @@ DWARF:
       IncludeDirs:           []
       Files:                 []
       Opcodes:               []
+
+## h) Test that the address size is inferred from the target machine.
+
+# RUN: yaml2obj --docnum=8 -DBITS=64 -DADDR=0x1234567890abcdef %s -o %t8.64-bit.o
+# RUN: llvm-readelf --hex-dump=.debug_line %t8.64-bit.o | \
+# RUN:   FileCheck %s --check-prefix=ADDRSIZE -DADDR="efcdab90 78563412"
+
+#      ADDRSIZE: Hex dump of section '.debug_line':
+# ADDRSIZE-NEXT: 0x00000000 34120000 02003412 00000101 010e0d00 4.....4.........
+##                          ^-------                            unit_length (4-byte)
+##                                   ^---                       version (2-byte)
+##                                       ^--------              header_length (4-byte)
+##                                                ^-            minimum_instruction_length (1-byte)
+##                                                  ^-          default_is_stmt (1-byte)
+##                                                     ^-       line_base (1-byte)
+##                                                       ^-     line_range (1-byte)
+##                                                         ^-   opcode_base (1-byte)
+##                                                           ^- null byte for terminating include_directories
+# ADDRSIZE-NEXT: 0x00000010 00000902 [[ADDR]]
+##                          ^-                                  null byte for terminating file_names
+##                            ^-                                DW_LNS_extended_op
+##                              ^-                              extended op length (ULEB128) 0x09
+##                                ^-                            DW_LNE_set_address
+##                                   ^-------                   address
+
+# RUN: yaml2obj --docnum=8 -DBITS=32 -DADDR=0x12345678 %s -o %t8.32-bit.o
+# RUN: llvm-readelf --hex-dump=.debug_line %t8.32-bit.o | \
+# RUN:   FileCheck %s --check-prefix=ADDRSIZE -DADDR="78563412"
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS[[BITS]]
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_line:
+    - Length:                0x1234
+      Version:               2
+      PrologueLength:        0x1234
+      MinInstLength:         1
+      DefaultIsStmt:         1
+      LineBase:              1
+      LineRange:             14
+      OpcodeBase:            13
+      StandardOpcodeLengths: []
+      IncludeDirs:           []
+      Files:                 []
+      Opcodes:
+        - Opcode:    DW_LNS_extended_op
+          ExtLen:    9
+          SubOpcode: DW_LNE_set_address
+          Data:      [[ADDR]]
+
+## i) Test that yaml2obj is able to emit correct opcodes.
+
+# RUN: yaml2obj --docnum=9 %s -o %t9.o
+# RUN: llvm-readelf --hex-dump=.debug_line %t9.o | FileCheck %s --check-prefix=OPCODES
+
+#      OPCODES: Hex dump of section '.debug_line':
+# OPCODES-NEXT: 0x00000000 34120000 04003412 00000101 01010e0d 4.....4.........
+##                         ^-------                            unit_length (4-byte)
+##                                  ^---                       version (2-byte)
+##                                      ^--------              header_length (4-byte)
+##                                               ^-            minimum_instruction_length (1-byte)
+##                                                 ^-          maximum_operations_per_instruction (1-byte)
+##                                                    ^-       default_is_stmt (1-byte)
+##                                                      ^-     line_base (1-byte)
+##                                                        ^-   line_range (1-byte)
+##                                                          ^- opcode_base (1-byte)
+# OPCODES-NEXT: 0x00000010 00000102 b42403b4 2404b424 05b42406 .....$..$..$..$.
+##                         ^-                                  null byte for terminating include_directories
+##                           ^-                                null byte for terminating file_names
+##                             ^-                              DW_LNS_copy (1-byte)
+##                               ^-                            DW_LNS_advance_pc
+##                                  ^---                       operands[0] (ULEB128) 0x1234
+##                                      ^-                     DW_LNS_advance_line
+##                                        ^----                operands[0] (SLEB128) 0x1234
+##                                             ^-              DW_LNS_set_file
+##                                               ^---          operands[0] (ULEB128) 0x1234
+##                                                    ^-       DW_LNS_set_column
+##                                                      ^---   operands[0] (ULEB128) 0x1234
+##                                                          ^- DW_LNS_negate_stmt
+# OPCODES-NEXT: 0x00000020 07080934 120a0b0c b4240009 01000902 ...4.....$......
+##                         ^-                                  DW_LNS_set_basic_block
+##                           ^-                                DW_LNS_const_add_pc
+##                             ^-                              DW_LNS_fixed_advance_pc
+##                               ^----                         operands[0] (uhalf, 2-byte)
+##                                    ^-                       DW_LNS_set_prologue_end
+##                                      ^-                     DW_LNS_set_epilogue_begin
+##                                        ^-                   DW_LNS_set_isa
+##                                           ^---              operands[0] (ULEB128) 0x1234
+##                                               ^-            DW_LNS_extended_op
+##                                                 ^-          extended op length (ULEB128) 0x09
+##                                                    ^-       DW_LNE_end_sequence
+##                                                      ^-     DW_LNS_extended_op
+##                                                        ^-   extended op length (ULEB128) 0x09
+##                                                          ^- DW_LNE_set_address
+# OPCODES-NEXT: 0x00000030 34120000 00000000 00090361 62636400 4..........abcd.
+##                         ^----------------                   operands[0] (8-byte)
+##                                           ^-                DW_LNS_extended_op
+##                                             ^-              extended op length (ULEB128) 0x09
+##                                               ^-            DW_LNE_define_file
+##                                                 ^---------- operands[0] "abcd\0"
+# OPCODES-NEXT: 0x00000040 b424b424 b4240009 04b424            .$.$.$....$
+##                         ^---                                operands[1] (ULEB128) 0x1234
+##                             ^---                            operands[2] (ULEB128) 0x1234
+##                                  ^---                       operands[3] (ULEB128) 0x1234
+##                                      ^-                     DW_LNS_extended_op
+##                                        ^-                   extended op length (ULEB128) 0x09
+##                                           ^-                DW_LNE_set_discriminator
+##                                             ^---            operands[0] (ULEB128) 0x1234
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_line:
+    - Length:                0x1234
+      Version:               4
+      PrologueLength:        0x1234
+      MinInstLength:         1
+      MaxOpsPerInst:         1
+      DefaultIsStmt:         1
+      LineBase:              1
+      LineRange:             14
+      OpcodeBase:            13
+      StandardOpcodeLengths: []
+      IncludeDirs:           []
+      Files:                 []
+      Opcodes:
+        - Opcode:    DW_LNS_copy
+        - Opcode:    DW_LNS_advance_pc
+          Data:      0x1234
+        - Opcode:    DW_LNS_advance_line
+          SData:     0x1234
+        - Opcode:    DW_LNS_set_file
+          Data:      0x1234
+        - Opcode:    DW_LNS_set_column
+          Data:      0x1234
+        - Opcode:    DW_LNS_negate_stmt
+        - Opcode:    DW_LNS_set_basic_block
+        - Opcode:    DW_LNS_const_add_pc
+        - Opcode:    DW_LNS_fixed_advance_pc
+          Data:      0x1234
+        - Opcode:    DW_LNS_set_prologue_end
+        - Opcode:    DW_LNS_set_epilogue_begin
+        - Opcode:    DW_LNS_set_isa
+          Data:      0x1234
+        - Opcode:    DW_LNS_extended_op
+          ExtLen:    0x09
+          SubOpcode: DW_LNE_end_sequence
+        - Opcode:    DW_LNS_extended_op
+          ExtLen:    0x09
+          SubOpcode: DW_LNE_set_address
+          Data:      0x1234
+        - Opcode:    DW_LNS_extended_op
+          ExtLen:    0x09
+          SubOpcode: DW_LNE_define_file
+          FileEntry:
+            Name:    abcd
+            DirIdx:  0x1234
+            ModTime: 0x1234
+            Length:  0x1234
+        - Opcode:    DW_LNS_extended_op
+          ExtLen:    0x09
+          SubOpcode: DW_LNE_set_discriminator
+          Data:      0x1234

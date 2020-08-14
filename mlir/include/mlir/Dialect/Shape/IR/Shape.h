@@ -26,6 +26,9 @@ class PatternRewriter;
 
 namespace shape {
 
+/// Alias type for extent tensors.
+RankedTensorType getExtentTensorType(MLIRContext *ctx);
+
 namespace ShapeTypes {
 enum Kind {
   Component = Type::FIRST_SHAPE_TYPE,
@@ -46,11 +49,6 @@ public:
   static ComponentType get(MLIRContext *context) {
     return Base::get(context, ShapeTypes::Kind::Component);
   }
-
-  /// Support method to enable LLVM-style type casting.
-  static bool kindof(unsigned kind) {
-    return kind == ShapeTypes::Kind::Component;
-  }
 };
 
 /// The element type of the shaped type.
@@ -60,11 +58,6 @@ public:
 
   static ElementType get(MLIRContext *context) {
     return Base::get(context, ShapeTypes::Kind::Element);
-  }
-
-  /// Support method to enable LLVM-style type casting.
-  static bool kindof(unsigned kind) {
-    return kind == ShapeTypes::Kind::Element;
   }
 };
 
@@ -76,9 +69,6 @@ public:
   static ShapeType get(MLIRContext *context) {
     return Base::get(context, ShapeTypes::Kind::Shape);
   }
-
-  /// Support method to enable LLVM-style type casting.
-  static bool kindof(unsigned kind) { return kind == ShapeTypes::Kind::Shape; }
 };
 
 /// The type of a single dimension.
@@ -89,9 +79,6 @@ public:
   static SizeType get(MLIRContext *context) {
     return Base::get(context, ShapeTypes::Kind::Size);
   }
-
-  /// Support method to enable LLVM-style type casting.
-  static bool kindof(unsigned kind) { return kind == ShapeTypes::Kind::Size; }
 };
 
 /// The ValueShape represents a (potentially unknown) runtime value and shape.
@@ -103,11 +90,6 @@ public:
   static ValueShapeType get(MLIRContext *context) {
     return Base::get(context, ShapeTypes::Kind::ValueShape);
   }
-
-  /// Support method to enable LLVM-style type casting.
-  static bool kindof(unsigned kind) {
-    return kind == ShapeTypes::Kind::ValueShape;
-  }
 };
 
 /// The Witness represents a runtime constraint, to be used as shape related
@@ -118,11 +100,6 @@ public:
 
   static WitnessType get(MLIRContext *context) {
     return Base::get(context, ShapeTypes::Kind::Witness);
-  }
-
-  /// Support method to enable LLVM-style type casting.
-  static bool kindof(unsigned kind) {
-    return kind == ShapeTypes::Kind::Witness;
   }
 };
 

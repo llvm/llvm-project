@@ -305,6 +305,25 @@ TEST(ArchSpecTest, Compatibility) {
     ArchSpec B("x86_64-apple-ios-simulator");
     ASSERT_FALSE(A.IsExactMatch(B));
     ASSERT_FALSE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsExactMatch(A));
+    ASSERT_FALSE(B.IsCompatibleMatch(A));
+  }
+  {
+    ArchSpec A("x86_64-apple-ios");
+    ArchSpec B("x86_64-apple-ios-simulator");
+    ASSERT_FALSE(A.IsExactMatch(B));
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsExactMatch(A));
+    ASSERT_FALSE(B.IsCompatibleMatch(A));
+  }
+  {
+    // FIXME: This is surprisingly not equivalent to "x86_64-*-*".
+    ArchSpec A("x86_64");
+    ArchSpec B("x86_64-apple-ios-simulator");
+    ASSERT_FALSE(A.IsExactMatch(B));
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsExactMatch(A));
+    ASSERT_TRUE(B.IsCompatibleMatch(A));
   }
   {
     ArchSpec A("arm64-apple-ios");

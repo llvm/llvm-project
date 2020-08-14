@@ -4,6 +4,7 @@
 --- |
   define void @lr_other_block() { ret void }
   define void @already_live_in() { ret void }
+  define void @multi_use() { ret void }
   declare i8* @llvm.returnaddress(i32 immarg)
 ...
 ---
@@ -17,10 +18,11 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   liveins: $w0, $x0, $lr
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY $lr
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr64sp = COPY $lr
   ; CHECK:   B %bb.1
   ; CHECK: bb.1:
-  ; CHECK:   $x0 = COPY [[COPY]]
+  ; CHECK:   [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
+  ; CHECK:   $x0 = COPY [[COPY1]]
   ; CHECK:   RET_ReallyLR implicit $x0
   ; LR should be added as a livein to the entry block.
 
@@ -44,10 +46,11 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   liveins: $w0, $x0, $lr
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY $lr
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr64sp = COPY $lr
   ; CHECK:   B %bb.1
   ; CHECK: bb.1:
-  ; CHECK:   $x0 = COPY [[COPY]]
+  ; CHECK:   [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
+  ; CHECK:   $x0 = COPY [[COPY1]]
   ; CHECK:   RET_ReallyLR implicit $x0
   ; We should not have LR listed as a livein twice.
 
@@ -58,4 +61,34 @@ body:             |
     %4:gpr(p0) = G_INTRINSIC intrinsic(@llvm.returnaddress), 0
     $x0 = COPY %4
     RET_ReallyLR implicit $x0
+...
+
+# Check copies are inserted in the right places when selecting
+# multiple uses in different blocks
+---
+name:            multi_use
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: multi_use
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x80000000)
+  ; CHECK:   liveins: $w0, $x0, $lr
+  ; CHECK:   [[COPY:%[0-9]+]]:gpr64sp = COPY $lr
+  ; CHECK:   [[COPY1:%[0-9]+]]:gpr64 = COPY [[COPY]]
+  ; CHECK:   B %bb.1
+  ; CHECK: bb.1:
+  ; CHECK:   $x0 = COPY [[COPY1]]
+  ; CHECK:   [[COPY2:%[0-9]+]]:gpr64 = COPY [[COPY]]
+  ; CHECK:   RET_ReallyLR implicit [[COPY2]]
+  bb.0:
+    liveins: $w0, $x0, $lr
+    %0:gpr(p0) = G_INTRINSIC intrinsic(@llvm.returnaddress), 0
+    G_BR %bb.1
+  bb.1:
+    $x0 = COPY %0
+    %1:gpr(p0) = G_INTRINSIC intrinsic(@llvm.returnaddress), 0
+    RET_ReallyLR implicit %1
 ...

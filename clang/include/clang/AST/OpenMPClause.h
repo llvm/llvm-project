@@ -16,6 +16,7 @@
 #ifndef LLVM_CLANG_AST_OPENMPCLAUSE_H
 #define LLVM_CLANG_AST_OPENMPCLAUSE_H
 
+#include "clang/AST/ASTFwd.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
@@ -7876,6 +7877,150 @@ private:
   std::function<bool(StringRef)> FeatureValidityCheck;
   std::function<void(StringRef)> DiagUnknownTrait;
   llvm::StringMap<bool> FeatureMap;
+};
+
+/// Contains data for OpenMP directives: clauses, children
+/// expressions/statements (helpers for codegen) and associated statement, if
+/// any.
+class OMPChildren final
+    : private llvm::TrailingObjects<OMPChildren, OMPClause *, Stmt *> {
+  friend TrailingObjects;
+  friend class OMPClauseReader;
+  friend class OMPExecutableDirective;
+  template <typename T> friend class OMPDeclarativeDirective;
+
+  /// Numbers of clauses.
+  unsigned NumClauses = 0;
+  /// Number of child expressions/stmts.
+  unsigned NumChildren = 0;
+  /// true if the directive has associated statement.
+  bool HasAssociatedStmt = false;
+
+  /// Define the sizes of each trailing object array except the last one. This
+  /// is required for TrailingObjects to work properly.
+  size_t numTrailingObjects(OverloadToken<OMPClause *>) const {
+    return NumClauses;
+  }
+
+  OMPChildren() = delete;
+
+  OMPChildren(unsigned NumClauses, unsigned NumChildren, bool HasAssociatedStmt)
+      : NumClauses(NumClauses), NumChildren(NumChildren),
+        HasAssociatedStmt(HasAssociatedStmt) {}
+
+  static size_t size(unsigned NumClauses, bool HasAssociatedStmt,
+                     unsigned NumChildren);
+
+  static OMPChildren *Create(void *Mem, ArrayRef<OMPClause *> Clauses);
+  static OMPChildren *Create(void *Mem, ArrayRef<OMPClause *> Clauses, Stmt *S,
+                             unsigned NumChildren = 0);
+  static OMPChildren *CreateEmpty(void *Mem, unsigned NumClauses,
+                                  bool HasAssociatedStmt = false,
+                                  unsigned NumChildren = 0);
+
+public:
+  unsigned getNumClauses() const { return NumClauses; }
+  unsigned getNumChildren() const { return NumChildren; }
+  bool hasAssociatedStmt() const { return HasAssociatedStmt; }
+
+  /// Set associated statement.
+  void setAssociatedStmt(Stmt *S) {
+    getTrailingObjects<Stmt *>()[NumChildren] = S;
+  }
+
+  void setChildren(ArrayRef<Stmt *> Children);
+
+  /// Sets the list of variables for this clause.
+  ///
+  /// \param Clauses The list of clauses for the directive.
+  ///
+  void setClauses(ArrayRef<OMPClause *> Clauses);
+
+  /// Returns statement associated with the directive.
+  const Stmt *getAssociatedStmt() const {
+    return const_cast<OMPChildren *>(this)->getAssociatedStmt();
+  }
+  Stmt *getAssociatedStmt() {
+    assert(HasAssociatedStmt &&
+           "Expected directive with the associated statement.");
+    return getTrailingObjects<Stmt *>()[NumChildren];
+  }
+
+  /// Get the clauses storage.
+  MutableArrayRef<OMPClause *> getClauses() {
+    return llvm::makeMutableArrayRef(getTrailingObjects<OMPClause *>(),
+                                     NumClauses);
+  }
+  ArrayRef<OMPClause *> getClauses() const {
+    return const_cast<OMPChildren *>(this)->getClauses();
+  }
+
+  /// Returns the captured statement associated with the
+  /// component region within the (combined) directive.
+  ///
+  /// \param RegionKind Component region kind.
+  const CapturedStmt *
+  getCapturedStmt(OpenMPDirectiveKind RegionKind,
+                  ArrayRef<OpenMPDirectiveKind> CaptureRegions) const {
+    assert(llvm::any_of(
+               CaptureRegions,
+               [=](const OpenMPDirectiveKind K) { return K == RegionKind; }) &&
+           "RegionKind not found in OpenMP CaptureRegions.");
+    auto *CS = cast<CapturedStmt>(getAssociatedStmt());
+    for (auto ThisCaptureRegion : CaptureRegions) {
+      if (ThisCaptureRegion == RegionKind)
+        return CS;
+      CS = cast<CapturedStmt>(CS->getCapturedStmt());
+    }
+    llvm_unreachable("Incorrect RegionKind specified for directive.");
+  }
+
+  /// Get innermost captured statement for the construct.
+  CapturedStmt *
+  getInnermostCapturedStmt(ArrayRef<OpenMPDirectiveKind> CaptureRegions) {
+    assert(hasAssociatedStmt() && "Must have associated captured statement.");
+    assert(!CaptureRegions.empty() &&
+           "At least one captured statement must be provided.");
+    auto *CS = cast<CapturedStmt>(getAssociatedStmt());
+    for (unsigned Level = CaptureRegions.size(); Level > 1; --Level)
+      CS = cast<CapturedStmt>(CS->getCapturedStmt());
+    return CS;
+  }
+
+  const CapturedStmt *
+  getInnermostCapturedStmt(ArrayRef<OpenMPDirectiveKind> CaptureRegions) const {
+    return const_cast<OMPChildren *>(this)->getInnermostCapturedStmt(
+        CaptureRegions);
+  }
+
+  MutableArrayRef<Stmt *> getChildren();
+  ArrayRef<Stmt *> getChildren() const {
+    return const_cast<OMPChildren *>(this)->getChildren();
+  }
+
+  Stmt *getRawStmt() {
+    assert(HasAssociatedStmt &&
+           "Expected directive with the associated statement.");
+    if (auto *CS = dyn_cast<CapturedStmt>(getAssociatedStmt())) {
+      Stmt *S = nullptr;
+      do {
+        S = CS->getCapturedStmt();
+        CS = dyn_cast<CapturedStmt>(S);
+      } while (CS);
+      return S;
+    }
+    return getAssociatedStmt();
+  }
+  const Stmt *getRawStmt() const {
+    return const_cast<OMPChildren *>(this)->getRawStmt();
+  }
+
+  Stmt::child_range getAssociatedStmtAsRange() {
+    if (!HasAssociatedStmt)
+      return Stmt::child_range(Stmt::child_iterator(), Stmt::child_iterator());
+    return Stmt::child_range(&getTrailingObjects<Stmt *>()[NumChildren],
+                             &getTrailingObjects<Stmt *>()[NumChildren + 1]);
+  }
 };
 
 } // namespace clang

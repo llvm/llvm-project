@@ -39,6 +39,83 @@ body: |
 ...
 
 ---
+name: test_or_v2s1
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
+
+    ; CHECK-LABEL: name: test_or_v2s1
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; CHECK: [[COPY2:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr4_vgpr5
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](s32), [[UV2]]
+    ; CHECK: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s32), [[UV3]]
+    ; CHECK: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY2]](<2 x s32>)
+    ; CHECK: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV4]](s32), [[UV6]]
+    ; CHECK: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV5]](s32), [[UV7]]
+    ; CHECK: [[OR:%[0-9]+]]:_(s1) = G_OR [[ICMP]], [[ICMP2]]
+    ; CHECK: [[OR1:%[0-9]+]]:_(s1) = G_OR [[ICMP1]], [[ICMP3]]
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s1)
+    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[OR1]](s1)
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY3]](s32), [[COPY4]](s32)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    %2:_(<2 x s32>) = COPY $vgpr4_vgpr5
+    %3:_(<2 x s1>) = G_ICMP intpred(ne), %0, %1
+    %4:_(<2 x s1>) = G_ICMP intpred(ne), %0, %2
+    %5:_(<2 x s1>) = G_OR %3, %4
+    %6:_(<2 x s32>) = G_ANYEXT %5
+    $vgpr0_vgpr1 = COPY %6
+...
+
+---
+name: test_or_v3s1
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5, $vgpr6_vgpr7_vgpr8
+
+    ; CHECK-LABEL: name: test_or_v3s1
+    ; CHECK: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr3_vgpr4_vgpr5
+    ; CHECK: [[COPY2:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr6_vgpr7_vgpr8
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
+    ; CHECK: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<3 x s32>)
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](s32), [[UV3]]
+    ; CHECK: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s32), [[UV4]]
+    ; CHECK: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV2]](s32), [[UV5]]
+    ; CHECK: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
+    ; CHECK: [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY2]](<3 x s32>)
+    ; CHECK: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV6]](s32), [[UV9]]
+    ; CHECK: [[ICMP4:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV7]](s32), [[UV10]]
+    ; CHECK: [[ICMP5:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV8]](s32), [[UV11]]
+    ; CHECK: [[OR:%[0-9]+]]:_(s1) = G_OR [[ICMP]], [[ICMP3]]
+    ; CHECK: [[OR1:%[0-9]+]]:_(s1) = G_OR [[ICMP1]], [[ICMP4]]
+    ; CHECK: [[OR2:%[0-9]+]]:_(s1) = G_OR [[ICMP2]], [[ICMP5]]
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s1)
+    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[OR1]](s1)
+    ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[OR2]](s1)
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
+    ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY [[ANYEXT2]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32)
+    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
+    %0:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+    %1:_(<3 x s32>) = COPY $vgpr3_vgpr4_vgpr5
+    %2:_(<3 x s32>) = COPY $vgpr6_vgpr7_vgpr8
+    %3:_(<3 x s1>) = G_ICMP intpred(ne), %0, %1
+    %4:_(<3 x s1>) = G_ICMP intpred(ne), %0, %2
+    %5:_(<3 x s1>) = G_OR %3, %4
+    %6:_(<3 x s32>) = G_ANYEXT %5
+    $vgpr0_vgpr1_vgpr2 = COPY %6
+...
+
+---
 name: test_or_s64
 body: |
   bb.0:

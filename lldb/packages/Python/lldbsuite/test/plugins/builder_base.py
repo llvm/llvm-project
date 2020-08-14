@@ -34,7 +34,7 @@ def getCompiler():
     """Returns the compiler in effect the test suite is running with."""
     compiler = configuration.compiler if configuration.compiler else "clang"
     compiler = lldbutil.which(compiler)
-    return os.path.realpath(compiler)
+    return os.path.abspath(compiler)
 
 
 def getArchFlag():
@@ -62,12 +62,11 @@ def getMake(test_subdir, test_name):
 
     # Construct the base make invocation.
     lldb_test = os.environ["LLDB_TEST"]
-    lldb_test_src = os.environ["LLDB_TEST_SRC"]
-    if not (lldb_test and lldb_test_src and configuration.test_build_dir and test_subdir and
+    if not (lldb_test and configuration.test_build_dir and test_subdir and
             test_name and (not os.path.isabs(test_subdir))):
         raise Exception("Could not derive test directories")
     build_dir = os.path.join(configuration.test_build_dir, test_subdir, test_name)
-    src_dir = os.path.join(lldb_test_src, test_subdir)
+    src_dir = os.path.join(configuration.test_src_root, test_subdir)
     # This is a bit of a hack to make inline testcases work.
     makefile = os.path.join(src_dir, "Makefile")
     if not os.path.isfile(makefile):

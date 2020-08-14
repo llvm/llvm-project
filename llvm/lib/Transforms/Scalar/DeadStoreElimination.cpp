@@ -2249,22 +2249,27 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
         if (EnablePartialStoreMerging && OR == OW_PartialEarlierWithFullLater) {
           auto *Earlier = dyn_cast<StoreInst>(NI);
           auto *Later = dyn_cast<StoreInst>(SI);
-          if (Constant *Merged = tryToMergePartialOverlappingStores(
-                  Earlier, Later, InstWriteOffset, DepWriteOffset, DL, &AA,
-                  &DT)) {
+          // We are re-using tryToMergePartialOverlappingStores, which requires
+          // Earlier to domiante Later.
+          // TODO: implement tryToMergeParialOverlappingStores using MemorySSA.
+          if (Earlier && Later && DT.dominates(Earlier, Later)) {
+            if (Constant *Merged = tryToMergePartialOverlappingStores(
+                    Earlier, Later, InstWriteOffset, DepWriteOffset, DL, &AA,
+                    &DT)) {
 
-            // Update stored value of earlier store to merged constant.
-            Earlier->setOperand(0, Merged);
-            ++NumModifiedStores;
-            MadeChange = true;
+              // Update stored value of earlier store to merged constant.
+              Earlier->setOperand(0, Merged);
+              ++NumModifiedStores;
+              MadeChange = true;
 
-            // Remove later store and remove any outstanding overlap intervals
-            // for the updated store.
-            State.deleteDeadInstruction(Later);
-            auto I = State.IOLs.find(Earlier->getParent());
-            if (I != State.IOLs.end())
-              I->second.erase(Earlier);
-            break;
+              // Remove later store and remove any outstanding overlap intervals
+              // for the updated store.
+              State.deleteDeadInstruction(Later);
+              auto I = State.IOLs.find(Earlier->getParent());
+              if (I != State.IOLs.end())
+                I->second.erase(Earlier);
+              break;
+            }
           }
         }
 

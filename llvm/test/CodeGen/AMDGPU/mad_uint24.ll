@@ -75,7 +75,8 @@ entry:
 ; Check that the select instruction is not deleted.
 ; FUNC-LABEL: {{^}}i24_i32_i32_mad:
 ; EG: CNDE_INT
-; SI: s_cselect
+; SI: v_cndmask
+; GCN2: s_cselect
 define amdgpu_kernel void @i24_i32_i32_mad(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %d) {
 entry:
   %0 = ashr i32 %a, 8

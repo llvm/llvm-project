@@ -166,7 +166,7 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       if (auto *CI = dyn_cast<ConstantInt>(XorMask)) {
         if (CI->getValue().trunc(16).isAllOnesValue()) {
           auto TrueVector = IC.Builder.CreateVectorSplat(
-              cast<VectorType>(II.getType())->getNumElements(),
+              cast<FixedVectorType>(II.getType())->getNumElements(),
               IC.Builder.getTrue());
           return BinaryOperator::Create(Instruction::Xor, ArgArg, TrueVector);
         }
@@ -298,6 +298,18 @@ int ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Im
     return 0;
 
   return getIntImmCost(Imm, Ty, CostKind);
+}
+
+int ARMTTIImpl::getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind) {
+  if (CostKind == TTI::TCK_RecipThroughput &&
+      (ST->hasNEON() || ST->hasMVEIntegerOps())) {
+    // FIXME: The vectorizer is highly sensistive to the cost of these
+    // instructions, which suggests that it may be using the costs incorrectly.
+    // But, for now, just make them free to avoid performance regressions for
+    // vector targets.
+    return 0;
+  }
+  return BaseT::getCFInstrCost(Opcode, CostKind);
 }
 
 int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
@@ -1745,7 +1757,8 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 
       SmallVector<const Value*, 4> Operands(I.value_op_begin(),
                                             I.value_op_end());
-      Cost += getUserCost(&I, Operands, TargetTransformInfo::TCK_CodeSize);
+      Cost +=
+        getUserCost(&I, Operands, TargetTransformInfo::TCK_SizeAndLatency);
     }
   }
 

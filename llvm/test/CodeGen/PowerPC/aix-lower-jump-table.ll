@@ -15,16 +15,22 @@
 ; RUN: --check-prefix=64LARGE-MIR %s
 
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -code-model=small < %s | FileCheck \
-; RUN: --check-prefixes=32SMALL-ASM,CHECK %s
+; RUN: --check-prefixes=32SMALL-ASM,SMALL-ASM %s
 
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -code-model=large < %s | FileCheck \
-; RUN: --check-prefixes=32LARGE-ASM,CHECK %s
+; RUN: --check-prefixes=32LARGE-ASM,LARGE-ASM %s
 
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -code-model=small < %s | FileCheck \
-; RUN: --check-prefixes=64SMALL-ASM,CHECK %s
+; RUN: --check-prefixes=64SMALL-ASM,SMALL-ASM %s
 
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -code-model=large < %s | FileCheck \
-; RUN: --check-prefixes=64LARGE-ASM,CHECK %s
+; RUN: --check-prefixes=64LARGE-ASM,LARGE-ASM %s
+
+; RUN: llc -mtriple powerpc-ibm-aix-xcoff -function-sections < %s | FileCheck \
+; RUN: --check-prefixes=FUNC-ASM,CHECK %s
+
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -function-sections < %s | FileCheck \
+; RUN: --check-prefixes=FUNC-ASM,CHECK %s
 
   define i32 @jump_table(i32 %a) {
   entry:
@@ -184,5 +190,24 @@
 ; 64LARGE-ASM:      .vbyte	4, L..BB0_4-L..JTI0_0
 ; 64LARGE-ASM:      .vbyte	4, L..BB0_5-L..JTI0_0
 
-; CHECK: .toc
-; CHECK: .tc L..JTI0_0[TC],L..JTI0_0
+; FUNC-ASM:         .csect .jump_table[PR],2
+; FUNC-ASM: L..BB0_2:
+; FUNC-ASM: L..BB0_3:
+; FUNC-ASM: L..BB0_4:
+; FUNC-ASM: L..BB0_5:
+; FUNC-ASM: L..BB0_6:
+; FUNC-ASM:         li 3, 0
+; FUNC-ASM:         blr
+; FUNC-ASM:         .csect .rodata.jmp..jump_table[RO],2
+; FUNC-ASM:         .align  2
+; FUNC-ASM: L..JTI0_0:
+; FUNC-ASM:         .vbyte  4, L..BB0_2-L..JTI0_0
+; FUNC-ASM:         .vbyte  4, L..BB0_3-L..JTI0_0
+; FUNC-ASM:         .vbyte  4, L..BB0_4-L..JTI0_0
+; FUNC-ASM:         .vbyte  4, L..BB0_5-L..JTI0_0
+
+; SMALL-ASM: .toc
+; SMALL-ASM: .tc L..JTI0_0[TC],L..JTI0_0
+
+; LARGE-ASM: .toc
+; LARGE-ASM: .tc L..JTI0_0[TE],L..JTI0_0

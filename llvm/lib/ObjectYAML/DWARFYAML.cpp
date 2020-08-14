@@ -17,7 +17,7 @@
 namespace llvm {
 
 bool DWARFYAML::Data::isEmpty() const {
-  return DebugStrings.empty() && AbbrevDecls.empty() && DebugAranges &&
+  return DebugStrings.empty() && AbbrevDecls.empty() && !DebugAranges &&
          DebugRanges.empty() && !PubNames && !PubTypes && !GNUPubNames &&
          !GNUPubTypes && CompileUnits.empty() && DebugLines.empty();
 }
@@ -136,6 +136,7 @@ void MappingTraits<DWARFYAML::PubEntry>::mapping(IO &IO,
 
 void MappingTraits<DWARFYAML::PubSection>::mapping(
     IO &IO, DWARFYAML::PubSection &Section) {
+  IO.mapOptional("Format", Section.Format, dwarf::DWARF32);
   IO.mapRequired("Length", Section.Length);
   IO.mapRequired("Version", Section.Version);
   IO.mapRequired("UnitOffset", Section.UnitOffset);
@@ -144,19 +145,19 @@ void MappingTraits<DWARFYAML::PubSection>::mapping(
 }
 
 void MappingTraits<DWARFYAML::Unit>::mapping(IO &IO, DWARFYAML::Unit &Unit) {
-  IO.mapOptional("Format", Unit.FormParams.Format, dwarf::DWARF32);
+  IO.mapOptional("Format", Unit.Format, dwarf::DWARF32);
   IO.mapOptional("Length", Unit.Length);
-  IO.mapRequired("Version", Unit.FormParams.Version);
-  if (Unit.FormParams.Version >= 5)
+  IO.mapRequired("Version", Unit.Version);
+  if (Unit.Version >= 5)
     IO.mapRequired("UnitType", Unit.Type);
   IO.mapRequired("AbbrOffset", Unit.AbbrOffset);
-  IO.mapRequired("AddrSize", Unit.FormParams.AddrSize);
+  IO.mapOptional("AddrSize", Unit.AddrSize);
   IO.mapOptional("Entries", Unit.Entries);
 }
 
 void MappingTraits<DWARFYAML::Entry>::mapping(IO &IO, DWARFYAML::Entry &Entry) {
   IO.mapRequired("AbbrCode", Entry.AbbrCode);
-  IO.mapRequired("Values", Entry.Values);
+  IO.mapOptional("Values", Entry.Values);
 }
 
 void MappingTraits<DWARFYAML::FormValue>::mapping(
@@ -284,13 +285,6 @@ void MappingTraits<DWARFYAML::ListTable<EntryType>>::mapping(
   IO.mapOptional("OffsetEntryCount", ListTable.OffsetEntryCount);
   IO.mapOptional("Offsets", ListTable.Offsets);
   IO.mapOptional("Lists", ListTable.Lists);
-}
-
-void MappingTraits<DWARFYAML::InitialLength>::mapping(
-    IO &IO, DWARFYAML::InitialLength &InitialLength) {
-  IO.mapRequired("TotalLength", InitialLength.TotalLength);
-  if (InitialLength.isDWARF64())
-    IO.mapRequired("TotalLength64", InitialLength.TotalLength64);
 }
 
 } // end namespace yaml

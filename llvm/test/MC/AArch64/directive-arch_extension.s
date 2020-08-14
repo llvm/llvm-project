@@ -48,6 +48,10 @@ dc cvadp, x7
 irg x0, x1
 // CHECK: irg x0, x1
 
+.arch_extension memtag
+irg x0, x1
+// CHECK: irg x0, x1
+
 .arch_extension tlb-rmi
 tlbi vmalle1os
 // CHECK: tlbi vmalle1os

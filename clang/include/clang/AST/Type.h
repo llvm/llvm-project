@@ -1680,19 +1680,6 @@ protected:
     uint32_t NumElements;
   };
 
-  class ConstantMatrixTypeBitfields {
-    friend class ConstantMatrixType;
-
-    unsigned : NumTypeBits;
-
-    /// Number of rows and columns. Using 20 bits allows supporting very large
-    /// matrixes, while keeping 24 bits to accommodate NumTypeBits.
-    unsigned NumRows : 20;
-    unsigned NumColumns : 20;
-
-    static constexpr uint32_t MaxElementsPerDimension = (1 << 20) - 1;
-  };
-
   class AttributedTypeBitfields {
     friend class AttributedType;
 
@@ -1802,46 +1789,11 @@ protected:
     TypeWithKeywordBitfields TypeWithKeywordBits;
     ElaboratedTypeBitfields ElaboratedTypeBits;
     VectorTypeBitfields VectorTypeBits;
-    ConstantMatrixTypeBitfields ConstantMatrixTypeBits;
     SubstTemplateTypeParmPackTypeBitfields SubstTemplateTypeParmPackTypeBits;
     TemplateSpecializationTypeBitfields TemplateSpecializationTypeBits;
     DependentTemplateSpecializationTypeBitfields
       DependentTemplateSpecializationTypeBits;
     PackExpansionTypeBitfields PackExpansionTypeBits;
-
-    static_assert(sizeof(TypeBitfields) <= 8,
-                  "TypeBitfields is larger than 8 bytes!");
-    static_assert(sizeof(ArrayTypeBitfields) <= 8,
-                  "ArrayTypeBitfields is larger than 8 bytes!");
-    static_assert(sizeof(AttributedTypeBitfields) <= 8,
-                  "AttributedTypeBitfields is larger than 8 bytes!");
-    static_assert(sizeof(AutoTypeBitfields) <= 8,
-                  "AutoTypeBitfields is larger than 8 bytes!");
-    static_assert(sizeof(BuiltinTypeBitfields) <= 8,
-                  "BuiltinTypeBitfields is larger than 8 bytes!");
-    static_assert(sizeof(FunctionTypeBitfields) <= 8,
-                  "FunctionTypeBitfields is larger than 8 bytes!");
-    static_assert(sizeof(ObjCObjectTypeBitfields) <= 8,
-                  "ObjCObjectTypeBitfields is larger than 8 bytes!");
-    static_assert(sizeof(ReferenceTypeBitfields) <= 8,
-                  "ReferenceTypeBitfields is larger than 8 bytes!");
-    static_assert(sizeof(TypeWithKeywordBitfields) <= 8,
-                  "TypeWithKeywordBitfields is larger than 8 bytes!");
-    static_assert(sizeof(ElaboratedTypeBitfields) <= 8,
-                  "ElaboratedTypeBitfields is larger than 8 bytes!");
-    static_assert(sizeof(VectorTypeBitfields) <= 8,
-                  "VectorTypeBitfields is larger than 8 bytes!");
-    static_assert(sizeof(SubstTemplateTypeParmPackTypeBitfields) <= 8,
-                  "SubstTemplateTypeParmPackTypeBitfields is larger"
-                  " than 8 bytes!");
-    static_assert(sizeof(TemplateSpecializationTypeBitfields) <= 8,
-                  "TemplateSpecializationTypeBitfields is larger"
-                  " than 8 bytes!");
-    static_assert(sizeof(DependentTemplateSpecializationTypeBitfields) <= 8,
-                  "DependentTemplateSpecializationTypeBitfields is larger"
-                  " than 8 bytes!");
-    static_assert(sizeof(PackExpansionTypeBitfields) <= 8,
-                  "PackExpansionTypeBitfields is larger than 8 bytes");
   };
 
 private:
@@ -1858,6 +1810,10 @@ protected:
   Type(TypeClass tc, QualType canon, TypeDependence Dependence)
       : ExtQualsTypeCommonBase(this,
                                canon.isNull() ? QualType(this_(), 0) : canon) {
+    static_assert(sizeof(*this) <= 8 + sizeof(ExtQualsTypeCommonBase),
+                  "changing bitfields changed sizeof(Type)!");
+    static_assert(alignof(decltype(*this)) % sizeof(void *) == 0,
+                  "Insufficient alignment!");
     TypeBits.TC = tc;
     TypeBits.Dependence = static_cast<unsigned>(Dependence);
     TypeBits.CacheValid = false;
@@ -3469,7 +3425,14 @@ protected:
   friend class ASTContext;
 
   /// The element type of the matrix.
+  // FIXME: Appears to be unused? There is also MatrixType::ElementType...
   QualType ElementType;
+
+  /// Number of rows and columns.
+  unsigned NumRows;
+  unsigned NumColumns;
+
+  static constexpr unsigned MaxElementsPerDimension = (1 << 20) - 1;
 
   ConstantMatrixType(QualType MatrixElementType, unsigned NRows,
                      unsigned NColumns, QualType CanonElementType);
@@ -3479,25 +3442,24 @@ protected:
 
 public:
   /// Returns the number of rows in the matrix.
-  unsigned getNumRows() const { return ConstantMatrixTypeBits.NumRows; }
+  unsigned getNumRows() const { return NumRows; }
 
   /// Returns the number of columns in the matrix.
-  unsigned getNumColumns() const { return ConstantMatrixTypeBits.NumColumns; }
+  unsigned getNumColumns() const { return NumColumns; }
 
   /// Returns the number of elements required to embed the matrix into a vector.
   unsigned getNumElementsFlattened() const {
-    return ConstantMatrixTypeBits.NumRows * ConstantMatrixTypeBits.NumColumns;
+    return getNumRows() * getNumColumns();
   }
 
   /// Returns true if \p NumElements is a valid matrix dimension.
-  static bool isDimensionValid(uint64_t NumElements) {
-    return NumElements > 0 &&
-           NumElements <= ConstantMatrixTypeBitfields::MaxElementsPerDimension;
+  static constexpr bool isDimensionValid(size_t NumElements) {
+    return NumElements > 0 && NumElements <= MaxElementsPerDimension;
   }
 
   /// Returns the maximum number of elements per dimension.
-  static unsigned getMaxElementsPerDimension() {
-    return ConstantMatrixTypeBitfields::MaxElementsPerDimension;
+  static constexpr unsigned getMaxElementsPerDimension() {
+    return MaxElementsPerDimension;
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {

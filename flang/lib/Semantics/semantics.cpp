@@ -324,6 +324,18 @@ SymbolVector SemanticsContext::GetIndexVars(IndexVarKind kind) {
   return result;
 }
 
+SourceName SemanticsContext::GetTempName(const Scope &scope) {
+  for (const auto &str : tempNames_) {
+    SourceName name{str};
+    if (scope.find(name) == scope.end()) {
+      return name;
+    }
+  }
+  tempNames_.emplace_back(".F18.");
+  tempNames_.back() += std::to_string(tempNames_.size());
+  return {tempNames_.back()};
+}
+
 bool Semantics::Perform() {
   return ValidateLabels(context_, program_) &&
       parser::CanonicalizeDo(program_) && // force line break

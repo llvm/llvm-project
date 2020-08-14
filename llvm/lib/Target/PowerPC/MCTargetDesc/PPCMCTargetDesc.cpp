@@ -20,8 +20,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
@@ -30,6 +30,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -122,11 +123,12 @@ public:
   void emitTCEntry(const MCSymbol &S) override {
     if (const MCSymbolXCOFF *XSym = dyn_cast<MCSymbolXCOFF>(&S)) {
       MCSymbolXCOFF *TCSym =
-          cast<MCSymbolXCOFF>(Streamer.getContext().getOrCreateSymbol(
-              XSym->getSymbolTableName() + "[TC]"));
+          cast<MCSectionXCOFF>(Streamer.getCurrentSectionOnly())
+              ->getQualNameSymbol();
+      OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << '\n';
+
       if (TCSym->hasRename())
         Streamer.emitXCOFFRenameDirective(TCSym, TCSym->getSymbolTableName());
-      OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << '\n';
       return;
     }
 

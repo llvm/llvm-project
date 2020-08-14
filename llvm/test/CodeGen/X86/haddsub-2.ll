@@ -444,14 +444,21 @@ define <4 x double> @avx_vhadd_pd_test(<4 x double> %A, <4 x double> %B) {
 ; SSE-NEXT:    movapd %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: avx_vhadd_pd_test:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX-NEXT:    vhaddpd %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX-NEXT:    vhaddpd %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: avx_vhadd_pd_test:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vhaddpd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vhaddpd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: avx_vhadd_pd_test:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
+; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vhaddpd %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    retq
   %vecext = extractelement <4 x double> %A, i32 0
   %vecext1 = extractelement <4 x double> %A, i32 1
   %add = fadd double %vecext, %vecext1
@@ -479,14 +486,21 @@ define <4 x double> @avx_vhsub_pd_test(<4 x double> %A, <4 x double> %B) {
 ; SSE-NEXT:    movapd %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: avx_vhsub_pd_test:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX-NEXT:    vhsubpd %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX-NEXT:    vhsubpd %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: avx_vhsub_pd_test:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vhsubpd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vhsubpd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: avx_vhsub_pd_test:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
+; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vhsubpd %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    retq
   %vecext = extractelement <4 x double> %A, i32 0
   %vecext1 = extractelement <4 x double> %A, i32 1
   %sub = fsub double %vecext, %vecext1
@@ -579,11 +593,9 @@ define <8 x i32> @avx2_vphadd_d_test(<8 x i32> %A, <8 x i32> %B) {
 ;
 ; AVX2-LABEL: avx2_vphadd_d_test:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-NEXT:    vphaddd %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-NEXT:    vphaddd %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vphaddd %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
   %vecext = extractelement <8 x i32> %A, i32 0
   %vecext1 = extractelement <8 x i32> %A, i32 1
@@ -737,11 +749,9 @@ define <16 x i16> @avx2_vphadd_w_test(<16 x i16> %a, <16 x i16> %b) nounwind {
 ;
 ; AVX2-LABEL: avx2_vphadd_w_test:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-NEXT:    vphaddw %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-NEXT:    vphaddw %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vphaddw %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
   %vecext = extractelement <16 x i16> %a, i32 0
   %vecext1 = extractelement <16 x i16> %a, i32 1

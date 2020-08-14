@@ -36,13 +36,12 @@ class HostTest : public testing::Test {
 protected:
   bool isSupportedArchAndOS() {
     // Initially this is only testing detection of the number of
-    // physical cores, which is currently only supported/tested for
-    // x86_64 Linux and Darwin.
+    // physical cores, which is currently only supported/tested on
+    // some systems.
     return (Host.isOSWindows() && llvm_is_multithreaded()) ||
-           (Host.isX86() &&
-            (Host.isOSDarwin() || Host.getOS() == Triple::Linux)) ||
-           (Host.getOS() == Triple::Linux &&
-            (Host.isPPC64() || Host.isSystemZ()));
+           (Host.isX86() && (Host.isOSDarwin() || Host.isOSLinux())) ||
+           (Host.isPPC64() && Host.isOSLinux()) ||
+           (Host.isSystemZ() && (Host.isOSLinux() || Host.isOSzOS()));
   }
 
   HostTest() : Host(Triple::normalize(sys::getProcessTriple())) {}

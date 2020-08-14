@@ -92,8 +92,8 @@ bb1:
 define <8 x i1> @no_warn_dropped_scalable(<8 x i32>* %in) #0 {
 ; CHECK-LABEL: no_warn_dropped_scalable:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
-; CHECK: ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x0]
-; CHECK-COUNT-8: cmp w{{[0-9]+}}, #0
+; CHECK: ld1w { [[A:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK: cmpgt p{{[0-9]}}.s, [[PG]]/z, [[A]].s, z{{[0-9]+}}.s
 ; CHECK: ret
   %a = load <8 x i32>, <8 x i32>* %in
   br label %bb1

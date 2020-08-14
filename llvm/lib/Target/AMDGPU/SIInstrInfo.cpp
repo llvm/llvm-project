@@ -742,15 +742,20 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (DestReg == AMDGPU::SCC) {
     // Copying 64-bit or 32-bit sources to SCC barely makes sense,
     // but SelectionDAG emits such copies for i1 sources.
-    // TODO: Use S_BITCMP0_B32 instead and only consider the 0th bit.
     if (AMDGPU::SReg_64RegClass.contains(SrcReg)) {
-      SrcReg = RI.getSubReg(SrcReg, AMDGPU::sub0);
+      // This copy can only be produced by patterns
+      // with explicit SCC, which are known to be enabled
+      // only for subtargets with S_CMP_LG_U64 present.
+      assert(ST.hasScalarCompareEq64());
+      BuildMI(MBB, MI, DL, get(AMDGPU::S_CMP_LG_U64))
+          .addReg(SrcReg, getKillRegState(KillSrc))
+          .addImm(0);
+    } else {
+      assert(AMDGPU::SReg_32RegClass.contains(SrcReg));
+      BuildMI(MBB, MI, DL, get(AMDGPU::S_CMP_LG_U32))
+          .addReg(SrcReg, getKillRegState(KillSrc))
+          .addImm(0);
     }
-    assert(AMDGPU::SReg_32RegClass.contains(SrcReg));
-
-    BuildMI(MBB, MI, DL, get(AMDGPU::S_CMP_LG_U32))
-        .addReg(SrcReg, getKillRegState(KillSrc))
-        .addImm(0);
 
     return;
   }
@@ -1289,6 +1294,8 @@ static unsigned getAGPRSpillSaveOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_A32_SAVE;
   case 8:
     return AMDGPU::SI_SPILL_A64_SAVE;
+  case 12:
+    return AMDGPU::SI_SPILL_A96_SAVE;
   case 16:
     return AMDGPU::SI_SPILL_A128_SAVE;
   case 64:
@@ -1353,18 +1360,13 @@ void SIInstrInfo::storeRegToStackSlotImpl(
                         : getVGPRSpillSaveOpcode(SpillSize, NeedsCFI);
   MFI->setHasSpilledVGPRs();
 
-  auto MIB = BuildMI(MBB, MI, DL, get(Opcode));
-  if (RI.hasAGPRs(RC)) {
-    MachineRegisterInfo &MRI = MF->getRegInfo();
-    Register Tmp = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    MIB.addReg(Tmp, RegState::Define);
-  }
-  MIB.addReg(SrcReg, getKillRegState(isKill)) // data
-     .addFrameIndex(FrameIndex)               // addr
-     .addReg(MFI->getScratchRSrcReg())        // scratch_rsrc
-     .addReg(MFI->getStackPtrOffsetReg())     // scratch_offset
-     .addImm(0)                               // offset
-     .addMemOperand(MMO);
+  BuildMI(MBB, MI, DL, get(Opcode))
+    .addReg(SrcReg, getKillRegState(isKill)) // data
+    .addFrameIndex(FrameIndex)               // addr
+    .addReg(MFI->getScratchRSrcReg())        // scratch_rsrc
+    .addReg(MFI->getStackPtrOffsetReg())     // scratch_offset
+    .addImm(0)                               // offset
+    .addMemOperand(MMO);
 }
 
 void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
@@ -1441,6 +1443,8 @@ static unsigned getAGPRSpillRestoreOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_A32_RESTORE;
   case 8:
     return AMDGPU::SI_SPILL_A64_RESTORE;
+  case 12:
+    return AMDGPU::SI_SPILL_A96_RESTORE;
   case 16:
     return AMDGPU::SI_SPILL_A128_RESTORE;
   case 64:
@@ -1496,17 +1500,12 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
   unsigned Opcode = RI.hasAGPRs(RC) ? getAGPRSpillRestoreOpcode(SpillSize)
                                     : getVGPRSpillRestoreOpcode(SpillSize);
-  auto MIB = BuildMI(MBB, MI, DL, get(Opcode), DestReg);
-  if (RI.hasAGPRs(RC)) {
-    MachineRegisterInfo &MRI = MF->getRegInfo();
-    Register Tmp = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    MIB.addReg(Tmp, RegState::Define);
-  }
-  MIB.addFrameIndex(FrameIndex)        // vaddr
-     .addReg(MFI->getScratchRSrcReg()) // scratch_rsrc
-     .addReg(MFI->getStackPtrOffsetReg()) // scratch_offset
-     .addImm(0)                           // offset
-     .addMemOperand(MMO);
+  BuildMI(MBB, MI, DL, get(Opcode), DestReg)
+    .addFrameIndex(FrameIndex)        // vaddr
+    .addReg(MFI->getScratchRSrcReg()) // scratch_rsrc
+    .addReg(MFI->getStackPtrOffsetReg()) // scratch_offset
+    .addImm(0)                           // offset
+    .addMemOperand(MMO);
 }
 
 /// \param @Offset Offset in bytes of the FrameIndex being spilled
@@ -7247,4 +7246,26 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
   }
 
   return SchedModel.computeInstrLatency(&MI);
+}
+
+unsigned SIInstrInfo::getDSShaderTypeValue(const MachineFunction &MF) {
+  switch (MF.getFunction().getCallingConv()) {
+  case CallingConv::AMDGPU_PS:
+    return 1;
+  case CallingConv::AMDGPU_VS:
+    return 2;
+  case CallingConv::AMDGPU_GS:
+    return 3;
+  case CallingConv::AMDGPU_HS:
+  case CallingConv::AMDGPU_LS:
+  case CallingConv::AMDGPU_ES:
+    report_fatal_error("ds_ordered_count unsupported for this calling conv");
+  case CallingConv::AMDGPU_CS:
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::C:
+  case CallingConv::Fast:
+  default:
+    // Assume other calling conventions are various compute callable functions
+    return 0;
+  }
 }

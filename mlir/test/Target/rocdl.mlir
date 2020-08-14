@@ -43,133 +43,133 @@ llvm.func @rocdl.barrier() {
 }
 
 llvm.func @rocdl.xdlops(%arg0 : !llvm.float, %arg1 : !llvm.float,
-                   %arg2 : !llvm<"<32 x float>">, %arg3 : !llvm.i32,
-                   %arg4 : !llvm<"<16 x float>">, %arg5 : !llvm<"<4 x float>">,
-                   %arg6 : !llvm<"<4 x half>">, %arg7 : !llvm<"<32 x i32>">,
-                   %arg8 : !llvm<"<16 x i32>">, %arg9 : !llvm<"<4 x i32>">,
-                   %arg10 : !llvm<"<2 x i16>">) -> !llvm<"<32 x float>"> {
+                   %arg2 : !llvm.vec<32 x float>, %arg3 : !llvm.i32,
+                   %arg4 : !llvm.vec<16 x float>, %arg5 : !llvm.vec<4 x float>,
+                   %arg6 : !llvm.vec<4 x half>, %arg7 : !llvm.vec<32 x i32>,
+                   %arg8 : !llvm.vec<16 x i32>, %arg9 : !llvm.vec<4 x i32>,
+                   %arg10 : !llvm.vec<2 x i16>) -> !llvm.vec<32 x float> {
   // CHECK-LABEL: rocdl.xdlops
   // CHECK: call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float %{{.*}}, float %{{.*}}, <32 x float> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r0 = rocdl.mfma.f32.32x32x1f32 %arg0, %arg1, %arg2, %arg3, %arg3, %arg3 :
-                            (!llvm.float, !llvm.float, !llvm<"<32 x float>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<32 x float>">
+                            (!llvm.float, !llvm.float, !llvm.vec<32 x float>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<32 x float>
 
   // CHECK: call <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float %{{.*}}, float %{{.*}}, <16 x float> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r1 = rocdl.mfma.f32.16x16x1f32 %arg0, %arg1, %arg4, %arg3, %arg3, %arg3 :
-                            (!llvm.float, !llvm.float, !llvm<"<16 x float>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<16 x float>">
+                            (!llvm.float, !llvm.float, !llvm.vec<16 x float>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<16 x float>
 
   // CHECK: call <4 x float> @llvm.amdgcn.mfma.f32.16x16x4f32(float %{{.*}}, float %{{.*}}, <4 x float> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r2 = rocdl.mfma.f32.16x16x4f32 %arg0, %arg1, %arg5, %arg3, %arg3, %arg3 :
-                            (!llvm.float, !llvm.float, !llvm<"<4 x float>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<4 x float>">
+                            (!llvm.float, !llvm.float, !llvm.vec<4 x float>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<4 x float>
 
   // CHECK: call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float %{{.*}}, float %{{.*}}, <4 x float> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r3 = rocdl.mfma.f32.4x4x1f32 %arg0, %arg1, %arg5, %arg3, %arg3, %arg3 :
-                            (!llvm.float, !llvm.float, !llvm<"<4 x float>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<4 x float>">
+                            (!llvm.float, !llvm.float, !llvm.vec<4 x float>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<4 x float>
 
   // CHECK: call <16 x float> @llvm.amdgcn.mfma.f32.32x32x2f32(float %{{.*}}, float %{{.*}}, <16 x float> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r4= rocdl.mfma.f32.32x32x2f32 %arg0, %arg1, %arg4, %arg3, %arg3, %arg3 :
-                            (!llvm.float, !llvm.float, !llvm<"<16 x float>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<16 x float>">
+                            (!llvm.float, !llvm.float, !llvm.vec<16 x float>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<16 x float>
 
   // CHECK: call <32 x float> @llvm.amdgcn.mfma.f32.32x32x4f16(<4 x half> %{{.*}}, <4 x half> %{{.*}}, <32 x float> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r5 = rocdl.mfma.f32.32x32x4f16 %arg6, %arg6, %arg2, %arg3, %arg3, %arg3 :
-                            (!llvm<"<4 x half>">, !llvm<"<4 x half>">, !llvm<"<32 x float>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<32 x float>">
+                            (!llvm.vec<4 x half>, !llvm.vec<4 x half>, !llvm.vec<32 x float>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<32 x float>
 
   // CHECK: call <16 x float> @llvm.amdgcn.mfma.f32.16x16x4f16(<4 x half> %{{.*}}, <4 x half> %{{.*}}, <16 x float> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r6 = rocdl.mfma.f32.16x16x4f16 %arg6, %arg6, %arg4, %arg3, %arg3, %arg3 :
-                            (!llvm<"<4 x half>">, !llvm<"<4 x half>">, !llvm<"<16 x float>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<16 x float>">
+                            (!llvm.vec<4 x half>, !llvm.vec<4 x half>, !llvm.vec<16 x float>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<16 x float>
 
   // CHECK: call <4 x float> @llvm.amdgcn.mfma.f32.4x4x4f16(<4 x half> %{{.*}}, <4 x half> %{{.*}}, <4 x float> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r7 = rocdl.mfma.f32.4x4x4f16 %arg6, %arg6, %arg5, %arg3, %arg3, %arg3 :
-                            (!llvm<"<4 x half>">, !llvm<"<4 x half>">, !llvm<"<4 x float>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<4 x float>">
+                            (!llvm.vec<4 x half>, !llvm.vec<4 x half>, !llvm.vec<4 x float>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<4 x float>
 
   // CHECK: call <16 x float> @llvm.amdgcn.mfma.f32.32x32x8f16(<4 x half> %{{.*}}, <4 x half> %{{.*}}, <16 x float> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r8 = rocdl.mfma.f32.32x32x8f16 %arg6, %arg6, %arg4, %arg3, %arg3, %arg3 :
-                            (!llvm<"<4 x half>">, !llvm<"<4 x half>">, !llvm<"<16 x float>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<16 x float>">
+                            (!llvm.vec<4 x half>, !llvm.vec<4 x half>, !llvm.vec<16 x float>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<16 x float>
 
   // CHECK: call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> %{{.*}}, <4 x half> %{{.*}}, <4 x float> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r9 = rocdl.mfma.f32.16x16x16f16 %arg6, %arg6, %arg5, %arg3, %arg3, %arg3 :
-                            (!llvm<"<4 x half>">, !llvm<"<4 x half>">, !llvm<"<4 x float>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<4 x float>">
+                            (!llvm.vec<4 x half>, !llvm.vec<4 x half>, !llvm.vec<4 x float>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<4 x float>
 
   // CHECK: call <32 x i32> @llvm.amdgcn.mfma.i32.32x32x4i8(i32 %{{.*}}, i32 %{{.*}}, <32 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r10 = rocdl.mfma.i32.32x32x4i8 %arg3, %arg3, %arg7, %arg3, %arg3, %arg3 :
-                            (!llvm.i32, !llvm.i32, !llvm<"<32 x i32>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<32 x i32>">
+                            (!llvm.i32, !llvm.i32, !llvm.vec<32 x i32>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<32 x i32>
 
   // CHECK: call <16 x i32> @llvm.amdgcn.mfma.i32.16x16x4i8(i32 %{{.*}}, i32 %{{.*}}, <16 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r11 = rocdl.mfma.i32.16x16x4i8 %arg3, %arg3, %arg8, %arg3, %arg3, %arg3 :
-                            (!llvm.i32, !llvm.i32, !llvm<"<16 x i32>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<16 x i32>">
+                            (!llvm.i32, !llvm.i32, !llvm.vec<16 x i32>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<16 x i32>
 
   // CHECK: call <4 x i32> @llvm.amdgcn.mfma.i32.4x4x4i8(i32 %{{.*}}, i32 %{{.*}}, <4 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r12 = rocdl.mfma.i32.4x4x4i8 %arg3, %arg3, %arg9, %arg3, %arg3, %arg3 :
-                            (!llvm.i32, !llvm.i32, !llvm<"<4 x i32>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<4 x i32>">
+                            (!llvm.i32, !llvm.i32, !llvm.vec<4 x i32>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<4 x i32>
 
   // CHECK: call <16 x i32> @llvm.amdgcn.mfma.i32.32x32x8i8(i32 %{{.*}}, i32 %{{.*}}, <16 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r13 = rocdl.mfma.i32.32x32x8i8 %arg3, %arg3, %arg8, %arg3, %arg3, %arg3 :
-                            (!llvm.i32, !llvm.i32, !llvm<"<16 x i32>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<16 x i32>">
+                            (!llvm.i32, !llvm.i32, !llvm.vec<16 x i32>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<16 x i32>
 
   // CHECK: call <4 x i32> @llvm.amdgcn.mfma.i32.16x16x16i8(i32 %{{.*}}, i32 %{{.*}}, <4 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r14 = rocdl.mfma.i32.16x16x16i8 %arg3, %arg3, %arg9, %arg3, %arg3, %arg3 :
-                            (!llvm.i32, !llvm.i32, !llvm<"<4 x i32>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<4 x i32>">
+                            (!llvm.i32, !llvm.i32, !llvm.vec<4 x i32>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<4 x i32>
 
   // CHECK: call <32 x float> @llvm.amdgcn.mfma.f32.32x32x2bf16(<2 x i16> %{{.*}}, <2 x i16> %{{.*}}, <32 x float> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r15 = rocdl.mfma.f32.32x32x2bf16 %arg10, %arg10, %arg2, %arg3, %arg3, %arg3 :
-                            (!llvm<"<2 x i16>">, !llvm<"<2 x i16>">, !llvm<"<32 x float>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<32 x float>">
+                            (!llvm.vec<2 x i16>, !llvm.vec<2 x i16>, !llvm.vec<32 x float>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<32 x float>
 
   // CHECK: call <16 x float> @llvm.amdgcn.mfma.f32.16x16x2bf16(<2 x i16> %{{.*}}, <2 x i16> %{{.*}}, <16 x float> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r16 = rocdl.mfma.f32.16x16x2bf16 %arg10, %arg10, %arg4, %arg3, %arg3, %arg3 :
-                            (!llvm<"<2 x i16>">, !llvm<"<2 x i16>">, !llvm<"<16 x float>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<16 x float>">
+                            (!llvm.vec<2 x i16>, !llvm.vec<2 x i16>, !llvm.vec<16 x float>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<16 x float>
 
   // CHECK: call <4 x float> @llvm.amdgcn.mfma.f32.4x4x2bf16(<2 x i16> %{{.*}}, <2 x i16> %{{.*}}, <4 x float> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r17 = rocdl.mfma.f32.4x4x2bf16 %arg10, %arg10, %arg5, %arg3, %arg3, %arg3 :
-                            (!llvm<"<2 x i16>">, !llvm<"<2 x i16>">, !llvm<"<4 x float>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<4 x float>">
+                            (!llvm.vec<2 x i16>, !llvm.vec<2 x i16>, !llvm.vec<4 x float>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<4 x float>
 
   // CHECK: call <16 x float> @llvm.amdgcn.mfma.f32.32x32x4bf16(<2 x i16> %{{.*}}, <2 x i16> %{{.*}}, <16 x float> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r18 = rocdl.mfma.f32.32x32x4bf16 %arg10, %arg10, %arg4, %arg3, %arg3, %arg3 :
-                            (!llvm<"<2 x i16>">, !llvm<"<2 x i16>">, !llvm<"<16 x float>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<16 x float>">
+                            (!llvm.vec<2 x i16>, !llvm.vec<2 x i16>, !llvm.vec<16 x float>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<16 x float>
 
   // CHECK: call <4 x float> @llvm.amdgcn.mfma.f32.16x16x8bf16(<2 x i16> %{{.*}}, <2 x i16> %{{.*}}, <4 x float> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
   %r19 = rocdl.mfma.f32.16x16x8bf16 %arg10, %arg10, %arg5, %arg3, %arg3, %arg3 :
-                            (!llvm<"<2 x i16>">, !llvm<"<2 x i16>">, !llvm<"<4 x float>">,
-                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm<"<4 x float>">
+                            (!llvm.vec<2 x i16>, !llvm.vec<2 x i16>, !llvm.vec<4 x float>,
+                            !llvm.i32, !llvm.i32, !llvm.i32) -> !llvm.vec<4 x float>
 
-  llvm.return %r0 : !llvm<"<32 x float>">
+  llvm.return %r0 : !llvm.vec<32 x float>
 }
 
-llvm.func @rocdl.mubuf(%rsrc : !llvm<"<4 x i32>">, %vindex : !llvm.i32,
+llvm.func @rocdl.mubuf(%rsrc : !llvm.vec<4 x i32>, %vindex : !llvm.i32,
                        %offset : !llvm.i32, %glc : !llvm.i1,
-                       %slc : !llvm.i1, %vdata1 : !llvm<"<1 x float>">,
-                       %vdata2 : !llvm<"<2 x float>">, %vdata4 : !llvm<"<4 x float>">) {
+                       %slc : !llvm.i1, %vdata1 : !llvm.vec<1 x float>,
+                       %vdata2 : !llvm.vec<2 x float>, %vdata4 : !llvm.vec<4 x float>) {
   // CHECK-LABEL: rocdl.mubuf
   // CHECK: call <1 x float> @llvm.amdgcn.buffer.load.v1f32(<4 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 %{{.*}}, i1 %{{.*}})
-  %r1 = rocdl.buffer.load %rsrc, %vindex, %offset, %glc, %slc : !llvm<"<1 x float>">
+  %r1 = rocdl.buffer.load %rsrc, %vindex, %offset, %glc, %slc : !llvm.vec<1 x float>
   // CHECK: call <2 x float> @llvm.amdgcn.buffer.load.v2f32(<4 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 %{{.*}}, i1 %{{.*}})
-  %r2 = rocdl.buffer.load %rsrc, %vindex, %offset, %glc, %slc : !llvm<"<2 x float>">
+  %r2 = rocdl.buffer.load %rsrc, %vindex, %offset, %glc, %slc : !llvm.vec<2 x float>
   // CHECK: call <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 %{{.*}}, i1 %{{.*}})
-  %r4 = rocdl.buffer.load %rsrc, %vindex, %offset, %glc, %slc : !llvm<"<4 x float>">
+  %r4 = rocdl.buffer.load %rsrc, %vindex, %offset, %glc, %slc : !llvm.vec<4 x float>
 
   // CHECK: call void @llvm.amdgcn.buffer.store.v1f32(<1 x float> %{{.*}}, <4 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 %{{.*}}, i1 %{{.*}})
-  rocdl.buffer.store %vdata1, %rsrc, %vindex, %offset, %glc, %slc : !llvm<"<1 x float>">
+  rocdl.buffer.store %vdata1, %rsrc, %vindex, %offset, %glc, %slc : !llvm.vec<1 x float>
   // CHECK: call void @llvm.amdgcn.buffer.store.v2f32(<2 x float> %{{.*}}, <4 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 %{{.*}}, i1 %{{.*}})
-  rocdl.buffer.store %vdata2, %rsrc, %vindex, %offset, %glc, %slc : !llvm<"<2 x float>">
+  rocdl.buffer.store %vdata2, %rsrc, %vindex, %offset, %glc, %slc : !llvm.vec<2 x float>
   // CHECK: call void @llvm.amdgcn.buffer.store.v4f32(<4 x float> %{{.*}}, <4 x i32> %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 %{{.*}}, i1 %{{.*}})
-  rocdl.buffer.store %vdata4, %rsrc, %vindex, %offset, %glc, %slc : !llvm<"<4 x float>">
+  rocdl.buffer.store %vdata4, %rsrc, %vindex, %offset, %glc, %slc : !llvm.vec<4 x float>
 
   llvm.return
 }

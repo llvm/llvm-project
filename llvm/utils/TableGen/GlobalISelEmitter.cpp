@@ -3766,9 +3766,12 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     return failedImport("Src pattern child has predicate (" +
                         explainPredicates(Src) + ")");
   }
+
+  bool IsAtomic = false;
   if (SrcGIEquivOrNull && SrcGIEquivOrNull->getValueAsBit("CheckMMOIsNonAtomic"))
     InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("NotAtomic");
   else if (SrcGIEquivOrNull && SrcGIEquivOrNull->getValueAsBit("CheckMMOIsAtomic")) {
+    IsAtomic = true;
     InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
       "Unordered", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
   }
@@ -3820,6 +3823,27 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
           --NumChildren;
         }
       }
+    }
+
+    // Hack around an unfortunate mistake in how atomic store (and really
+    // atomicrmw in general) operands were ordered. A ISD::STORE used the order
+    // <stored value>, <pointer> order. ISD::ATOMIC_STORE used the opposite,
+    // <pointer>, <stored value>. In GlobalISel there's just the one store
+    // opcode, so we need to swap the operands here to get the right type check.
+    if (IsAtomic && SrcGIOrNull->TheDef->getName() == "G_STORE") {
+      assert(NumChildren == 2 && "wrong operands for atomic store");
+
+      TreePatternNode *PtrChild = Src->getChild(0);
+      TreePatternNode *ValueChild = Src->getChild(1);
+
+      if (auto Error = importChildMatcher(Rule, InsnMatcher, PtrChild, true,
+                                          false, 1, TempOpIdx))
+        return std::move(Error);
+
+      if (auto Error = importChildMatcher(Rule, InsnMatcher, ValueChild, false,
+                                          false, 0, TempOpIdx))
+        return std::move(Error);
+      return InsnMatcher;
     }
 
     // Match the used operands (i.e. the children of the operator).

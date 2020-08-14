@@ -1,3 +1,5 @@
+! RUN: %f18 -E %s 2>&1 | FileCheck %s
+! CHECK: res=((666)+111)
 * FLM rescan
       integer function IFLM(x)
         integer :: x
@@ -10,8 +12,8 @@
       integer :: res
       res = IFLM(666)
       if (res .eq. 777) then
-        print *, 'pp019.F pass'
+        print *, 'pp019.F yes'
       else
-        print *, 'pp019.F FAIL: ', res
+        print *, 'pp019.F no: ', res
       end if
       end

@@ -5319,7 +5319,7 @@ static CudaArch getCudaArch(CodeGenModule &CGM) {
   CGM.getTarget().initFeatureMap(Features, CGM.getDiags(),
                                  CGM.getTarget().getTargetOpts().CPU,
                                  CGM.getTarget().getTargetOpts().Features);
-  for (const auto &Feature : Features) {
+  for (const auto &Feature : CGM.getTarget().getTargetOpts().FeatureMap) {
     if (Feature.getValue()) {
       CudaArch Arch = StringToCudaArch(Feature.getKey());
       if (Arch != CudaArch::UNKNOWN)
@@ -5381,6 +5381,7 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(
       case CudaArch::GFX1011:
       case CudaArch::GFX1012:
       case CudaArch::GFX1030:
+      case CudaArch::GFX1031:
       case CudaArch::UNKNOWN:
         break;
       case CudaArch::LAST:
@@ -5445,6 +5446,7 @@ static std::pair<unsigned, unsigned> getSMsBlocksPerSM(CodeGenModule &CGM) {
   case CudaArch::GFX1011:
   case CudaArch::GFX1012:
   case CudaArch::GFX1030:
+  case CudaArch::GFX1031:
     // New GFX* need to be verified for the correct # SM's
     return {120, 64};
   case CudaArch::UNKNOWN:

@@ -294,6 +294,7 @@ public:
   dwarf::DwarfFormat getFormat() const { return Header.getFormat(); }
   uint8_t getUnitType() const { return Header.getUnitType(); }
   bool isTypeUnit() const { return Header.isTypeUnit(); }
+  uint64_t getAbbrOffset() const { return Header.getAbbrOffset(); }
   uint64_t getNextUnitOffset() const { return Header.getNextUnitOffset(); }
   const DWARFSection &getLineSection() const { return LineSection; }
   StringRef getStringSection() const { return StringSection; }
@@ -480,7 +481,6 @@ public:
   /// The unit needs to have its DIEs extracted for this method to work.
   DWARFDie getDIEForOffset(uint64_t Offset) {
     extractDIEsIfNeeded(false);
-    assert(!DieArray.empty());
     auto It =
         llvm::partition_point(DieArray, [=](const DWARFDebugInfoEntry &DIE) {
           return DIE.getOffset() < Offset;

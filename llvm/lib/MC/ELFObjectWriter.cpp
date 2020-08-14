@@ -1024,9 +1024,13 @@ void ELFWriter::writeSection(const SectionIndexMapTy &SectionIndexMap,
   }
 
   if (Section.getFlags() & ELF::SHF_LINK_ORDER) {
+    // If the value in the associated metadata is not a definition, Sym will be
+    // undefined. Represent this with sh_link=0.
     const MCSymbol *Sym = Section.getLinkedToSymbol();
-    const MCSectionELF *Sec = cast<MCSectionELF>(&Sym->getSection());
-    sh_link = SectionIndexMap.lookup(Sec);
+    if (Sym && Sym->isInSection()) {
+      const MCSectionELF *Sec = cast<MCSectionELF>(&Sym->getSection());
+      sh_link = SectionIndexMap.lookup(Sec);
+    }
   }
 
   WriteSecHdrEntry(StrTabBuilder.getOffset(Section.getName()),
@@ -1388,6 +1392,11 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
     unsigned Flags = Sec.getFlags();
     if (Flags & ELF::SHF_MERGE) {
       if (C != 0)
+        return true;
+
+      // It looks like gold has a bug (http://sourceware.org/PR16794) and can
+      // only handle section relocations to mergeable sections if using RELA.
+      if (!hasRelocationAddend())
         return true;
     }
 

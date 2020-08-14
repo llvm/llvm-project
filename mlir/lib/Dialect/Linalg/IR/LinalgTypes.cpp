@@ -24,8 +24,7 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
-mlir::linalg::LinalgDialect::LinalgDialect(MLIRContext *context)
-    : Dialect(getDialectNamespace(), context) {
+void mlir::linalg::LinalgDialect::initialize() {
   addTypes<RangeType>();
   addOperations<
 #define GET_OP_LIST
@@ -56,11 +55,5 @@ static void print(RangeType rt, DialectAsmPrinter &os) { os << "range"; }
 
 void mlir::linalg::LinalgDialect::printType(Type type,
                                             DialectAsmPrinter &os) const {
-  switch (type.getKind()) {
-  default:
-    llvm_unreachable("Unhandled Linalg type");
-  case LinalgTypes::Range:
-    print(type.cast<RangeType>(), os);
-    break;
-  }
+  print(type.cast<RangeType>(), os);
 }

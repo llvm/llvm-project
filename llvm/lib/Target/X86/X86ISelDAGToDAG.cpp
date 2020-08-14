@@ -499,6 +499,8 @@ namespace {
     bool tryShiftAmountMod(SDNode *N);
     bool tryShrinkShlLogicImm(SDNode *N);
     bool tryVPTERNLOG(SDNode *N);
+    bool matchVPTERNLOG(SDNode *Root, SDNode *ParentA, SDNode *ParentBC,
+                        SDValue A, SDValue B, SDValue C, uint8_t Imm);
     bool tryVPTESTM(SDNode *Root, SDValue Setcc, SDValue Mask);
     bool tryMatchBitSelect(SDNode *N);
 
@@ -521,9 +523,9 @@ namespace {
 // type.
 static bool isLegalMaskCompare(SDNode *N, const X86Subtarget *Subtarget) {
   unsigned Opcode = N->getOpcode();
-  if (Opcode == X86ISD::CMPM || Opcode == X86ISD::STRICT_CMPM ||
-      Opcode == ISD::SETCC || Opcode == X86ISD::CMPM_SAE ||
-      Opcode == X86ISD::VFPCLASS) {
+  if (Opcode == X86ISD::CMPM || Opcode == X86ISD::CMPMM ||
+      Opcode == X86ISD::STRICT_CMPM || Opcode == ISD::SETCC ||
+      Opcode == X86ISD::CMPMM_SAE || Opcode == X86ISD::VFPCLASS) {
     // We can get 256-bit 8 element types here without VLX being enabled. When
     // this happens we will use 512-bit operations and the mask will not be
     // zero extended.
@@ -3929,6 +3931,129 @@ bool X86DAGToDAGISel::tryShrinkShlLogicImm(SDNode *N) {
   return true;
 }
 
+bool X86DAGToDAGISel::matchVPTERNLOG(SDNode *Root, SDNode *ParentA,
+                                     SDNode *ParentBC, SDValue A, SDValue B,
+                                     SDValue C, uint8_t Imm) {
+  assert(A.isOperandOf(ParentA));
+  assert(B.isOperandOf(ParentBC));
+  assert(C.isOperandOf(ParentBC));
+
+  auto tryFoldLoadOrBCast =
+      [this](SDNode *Root, SDNode *P, SDValue &L, SDValue &Base, SDValue &Scale,
+             SDValue &Index, SDValue &Disp, SDValue &Segment) {
+        if (tryFoldLoad(Root, P, L, Base, Scale, Index, Disp, Segment))
+          return true;
+
+        // Not a load, check for broadcast which may be behind a bitcast.
+        if (L.getOpcode() == ISD::BITCAST && L.hasOneUse()) {
+          P = L.getNode();
+          L = L.getOperand(0);
+        }
+
+        if (L.getOpcode() != X86ISD::VBROADCAST_LOAD)
+          return false;
+
+        // Only 32 and 64 bit broadcasts are supported.
+        auto *MemIntr = cast<MemIntrinsicSDNode>(L);
+        unsigned Size = MemIntr->getMemoryVT().getSizeInBits();
+        if (Size != 32 && Size != 64)
+          return false;
+
+        return tryFoldBroadcast(Root, P, L, Base, Scale, Index, Disp, Segment);
+      };
+
+  bool FoldedLoad = false;
+  SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
+  if (tryFoldLoadOrBCast(Root, ParentBC, C, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4)) {
+    FoldedLoad = true;
+  } else if (tryFoldLoadOrBCast(Root, ParentA, A, Tmp0, Tmp1, Tmp2, Tmp3,
+                                Tmp4)) {
+    FoldedLoad = true;
+    std::swap(A, C);
+    // Swap bits 1/4 and 3/6.
+    uint8_t OldImm = Imm;
+    Imm = OldImm & 0xa5;
+    if (OldImm & 0x02) Imm |= 0x10;
+    if (OldImm & 0x10) Imm |= 0x02;
+    if (OldImm & 0x08) Imm |= 0x40;
+    if (OldImm & 0x40) Imm |= 0x08;
+  } else if (tryFoldLoadOrBCast(Root, ParentBC, B, Tmp0, Tmp1, Tmp2, Tmp3,
+                                Tmp4)) {
+    FoldedLoad = true;
+    std::swap(B, C);
+    // Swap bits 1/2 and 5/6.
+    uint8_t OldImm = Imm;
+    Imm = OldImm & 0x99;
+    if (OldImm & 0x02) Imm |= 0x04;
+    if (OldImm & 0x04) Imm |= 0x02;
+    if (OldImm & 0x20) Imm |= 0x40;
+    if (OldImm & 0x40) Imm |= 0x20;
+  }
+
+  SDLoc DL(Root);
+
+  SDValue TImm = CurDAG->getTargetConstant(Imm, DL, MVT::i8);
+
+  MVT NVT = Root->getSimpleValueType(0);
+
+  MachineSDNode *MNode;
+  if (FoldedLoad) {
+    SDVTList VTs = CurDAG->getVTList(NVT, MVT::Other);
+
+    unsigned Opc;
+    if (C.getOpcode() == X86ISD::VBROADCAST_LOAD) {
+      auto *MemIntr = cast<MemIntrinsicSDNode>(C);
+      unsigned EltSize = MemIntr->getMemoryVT().getSizeInBits();
+      assert((EltSize == 32 || EltSize == 64) && "Unexpected broadcast size!");
+
+      bool UseD = EltSize == 32;
+      if (NVT.is128BitVector())
+        Opc = UseD ? X86::VPTERNLOGDZ128rmbi : X86::VPTERNLOGQZ128rmbi;
+      else if (NVT.is256BitVector())
+        Opc = UseD ? X86::VPTERNLOGDZ256rmbi : X86::VPTERNLOGQZ256rmbi;
+      else if (NVT.is512BitVector())
+        Opc = UseD ? X86::VPTERNLOGDZrmbi : X86::VPTERNLOGQZrmbi;
+      else
+        llvm_unreachable("Unexpected vector size!");
+    } else {
+      bool UseD = NVT.getVectorElementType() == MVT::i32;
+      if (NVT.is128BitVector())
+        Opc = UseD ? X86::VPTERNLOGDZ128rmi : X86::VPTERNLOGQZ128rmi;
+      else if (NVT.is256BitVector())
+        Opc = UseD ? X86::VPTERNLOGDZ256rmi : X86::VPTERNLOGQZ256rmi;
+      else if (NVT.is512BitVector())
+        Opc = UseD ? X86::VPTERNLOGDZrmi : X86::VPTERNLOGQZrmi;
+      else
+        llvm_unreachable("Unexpected vector size!");
+    }
+
+    SDValue Ops[] = {A, B, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, TImm, C.getOperand(0)};
+    MNode = CurDAG->getMachineNode(Opc, DL, VTs, Ops);
+
+    // Update the chain.
+    ReplaceUses(C.getValue(1), SDValue(MNode, 1));
+    // Record the mem-refs
+    CurDAG->setNodeMemRefs(MNode, {cast<MemSDNode>(C)->getMemOperand()});
+  } else {
+    bool UseD = NVT.getVectorElementType() == MVT::i32;
+    unsigned Opc;
+    if (NVT.is128BitVector())
+      Opc = UseD ? X86::VPTERNLOGDZ128rri : X86::VPTERNLOGQZ128rri;
+    else if (NVT.is256BitVector())
+      Opc = UseD ? X86::VPTERNLOGDZ256rri : X86::VPTERNLOGQZ256rri;
+    else if (NVT.is512BitVector())
+      Opc = UseD ? X86::VPTERNLOGDZrri : X86::VPTERNLOGQZrri;
+    else
+      llvm_unreachable("Unexpected vector size!");
+
+    MNode = CurDAG->getMachineNode(Opc, DL, NVT, {A, B, C, TImm});
+  }
+
+  ReplaceUses(SDValue(Root, 0), SDValue(MNode, 0));
+  CurDAG->RemoveDeadNode(Root);
+  return true;
+}
+
 // Try to match two logic ops to a VPTERNLOG.
 // FIXME: Handle inverted inputs?
 // FIXME: Handle more complex patterns that use an operand more than once?
@@ -3991,123 +4116,18 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
 
   switch (N->getOpcode()) {
   default: llvm_unreachable("Unexpected opcode!");
+  case X86ISD::ANDNP:
+    if (A == N0)
+      Imm &= ~TernlogMagicA;
+    else
+      Imm = ~(Imm) & TernlogMagicA;
+    break;
   case ISD::AND: Imm &= TernlogMagicA; break;
   case ISD::OR:  Imm |= TernlogMagicA; break;
   case ISD::XOR: Imm ^= TernlogMagicA; break;
   }
 
-  auto tryFoldLoadOrBCast =
-      [this](SDNode *Root, SDNode *P, SDValue &L, SDValue &Base, SDValue &Scale,
-             SDValue &Index, SDValue &Disp, SDValue &Segment) {
-        if (tryFoldLoad(Root, P, L, Base, Scale, Index, Disp, Segment))
-          return true;
-
-        // Not a load, check for broadcast which may be behind a bitcast.
-        if (L.getOpcode() == ISD::BITCAST && L.hasOneUse()) {
-          P = L.getNode();
-          L = L.getOperand(0);
-        }
-
-        if (L.getOpcode() != X86ISD::VBROADCAST_LOAD)
-          return false;
-
-        // Only 32 and 64 bit broadcasts are supported.
-        auto *MemIntr = cast<MemIntrinsicSDNode>(L);
-        unsigned Size = MemIntr->getMemoryVT().getSizeInBits();
-        if (Size != 32 && Size != 64)
-          return false;
-
-        return tryFoldBroadcast(Root, P, L, Base, Scale, Index, Disp, Segment);
-      };
-
-  bool FoldedLoad = false;
-  SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
-  if (tryFoldLoadOrBCast(N, FoldableOp.getNode(), C, Tmp0, Tmp1, Tmp2, Tmp3,
-                         Tmp4)) {
-    FoldedLoad = true;
-  } else if (tryFoldLoadOrBCast(N, N, A, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4)) {
-    FoldedLoad = true;
-    std::swap(A, C);
-    // Swap bits 1/4 and 3/6.
-    uint8_t OldImm = Imm;
-    Imm = OldImm & 0xa5;
-    if (OldImm & 0x02) Imm |= 0x10;
-    if (OldImm & 0x10) Imm |= 0x02;
-    if (OldImm & 0x08) Imm |= 0x40;
-    if (OldImm & 0x40) Imm |= 0x08;
-  } else if (tryFoldLoadOrBCast(N, FoldableOp.getNode(), B, Tmp0, Tmp1, Tmp2,
-                                Tmp3, Tmp4)) {
-    FoldedLoad = true;
-    std::swap(B, C);
-    // Swap bits 1/2 and 5/6.
-    uint8_t OldImm = Imm;
-    Imm = OldImm & 0x99;
-    if (OldImm & 0x02) Imm |= 0x04;
-    if (OldImm & 0x04) Imm |= 0x02;
-    if (OldImm & 0x20) Imm |= 0x40;
-    if (OldImm & 0x40) Imm |= 0x20;
-  }
-
-  SDLoc DL(N);
-
-  SDValue TImm = CurDAG->getTargetConstant(Imm, DL, MVT::i8);
-
-  MachineSDNode *MNode;
-  if (FoldedLoad) {
-    SDVTList VTs = CurDAG->getVTList(NVT, MVT::Other);
-
-    unsigned Opc;
-    if (C.getOpcode() == X86ISD::VBROADCAST_LOAD) {
-      auto *MemIntr = cast<MemIntrinsicSDNode>(C);
-      unsigned EltSize = MemIntr->getMemoryVT().getSizeInBits();
-      assert((EltSize == 32 || EltSize == 64) && "Unexpected broadcast size!");
-
-      bool UseD = EltSize == 32;
-      if (NVT.is128BitVector())
-        Opc = UseD ? X86::VPTERNLOGDZ128rmbi : X86::VPTERNLOGQZ128rmbi;
-      else if (NVT.is256BitVector())
-        Opc = UseD ? X86::VPTERNLOGDZ256rmbi : X86::VPTERNLOGQZ256rmbi;
-      else if (NVT.is512BitVector())
-        Opc = UseD ? X86::VPTERNLOGDZrmbi : X86::VPTERNLOGQZrmbi;
-      else
-        llvm_unreachable("Unexpected vector size!");
-    } else {
-      bool UseD = NVT.getVectorElementType() == MVT::i32;
-      if (NVT.is128BitVector())
-        Opc = UseD ? X86::VPTERNLOGDZ128rmi : X86::VPTERNLOGQZ128rmi;
-      else if (NVT.is256BitVector())
-        Opc = UseD ? X86::VPTERNLOGDZ256rmi : X86::VPTERNLOGQZ256rmi;
-      else if (NVT.is512BitVector())
-        Opc = UseD ? X86::VPTERNLOGDZrmi : X86::VPTERNLOGQZrmi;
-      else
-        llvm_unreachable("Unexpected vector size!");
-    }
-
-    SDValue Ops[] = {A, B, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, TImm, C.getOperand(0)};
-    MNode = CurDAG->getMachineNode(Opc, DL, VTs, Ops);
-
-    // Update the chain.
-    ReplaceUses(C.getValue(1), SDValue(MNode, 1));
-    // Record the mem-refs
-    CurDAG->setNodeMemRefs(MNode, {cast<MemSDNode>(C)->getMemOperand()});
-  } else {
-    bool UseD = NVT.getVectorElementType() == MVT::i32;
-    unsigned Opc;
-    if (NVT.is128BitVector())
-      Opc = UseD ? X86::VPTERNLOGDZ128rri : X86::VPTERNLOGQZ128rri;
-    else if (NVT.is256BitVector())
-      Opc = UseD ? X86::VPTERNLOGDZ256rri : X86::VPTERNLOGQZ256rri;
-    else if (NVT.is512BitVector())
-      Opc = UseD ? X86::VPTERNLOGDZrri : X86::VPTERNLOGQZrri;
-    else
-      llvm_unreachable("Unexpected vector size!");
-
-    MNode = CurDAG->getMachineNode(Opc, DL, NVT, {A, B, C, TImm});
-  }
-
-  ReplaceUses(SDValue(N, 0), SDValue(MNode, 0));
-  CurDAG->RemoveDeadNode(N);
-  return true;
+  return matchVPTERNLOG(N, N, FoldableOp.getNode(), A, B, C, Imm);
 }
 
 /// If the high bits of an 'and' operand are known zero, try setting the
@@ -4441,8 +4461,9 @@ bool X86DAGToDAGISel::tryMatchBitSelect(SDNode *N) {
   SDValue Imm = CurDAG->getTargetConstant(0xCA, dl, MVT::i8);
   SDValue Ternlog = CurDAG->getNode(X86ISD::VPTERNLOG, dl, NVT, A, B, C, Imm);
   ReplaceNode(N, Ternlog.getNode());
-  SelectCode(Ternlog.getNode());
-  return true;
+
+  return matchVPTERNLOG(Ternlog.getNode(), Ternlog.getNode(), Ternlog.getNode(),
+                        A, B, C, 0xCA);
 }
 
 void X86DAGToDAGISel::Select(SDNode *Node) {
@@ -4589,6 +4610,19 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   case ISD::SRA:
   case ISD::SHL:
     if (tryShiftAmountMod(Node))
+      return;
+    break;
+
+  case X86ISD::VPTERNLOG: {
+    uint8_t Imm = cast<ConstantSDNode>(Node->getOperand(3))->getZExtValue();
+    if (matchVPTERNLOG(Node, Node, Node, Node->getOperand(0),
+                       Node->getOperand(1), Node->getOperand(2), Imm))
+      return;
+    break;
+  }
+
+  case X86ISD::ANDNP:
+    if (tryVPTERNLOG(Node))
       return;
     break;
 

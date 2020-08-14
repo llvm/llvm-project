@@ -210,7 +210,7 @@ static MCInst *getCompoundInsn(MCContext &Context, MCInst const &L,
   case Hexagon::A2_tfrsi:
     Rt = L.getOperand(0);
     compoundOpcode = J4_jumpseti;
-    CompoundInsn = new (Context) MCInst;
+    CompoundInsn = Context.createMCInst();
     CompoundInsn->setOpcode(compoundOpcode);
 
     CompoundInsn->addOperand(Rt);
@@ -223,7 +223,7 @@ static MCInst *getCompoundInsn(MCContext &Context, MCInst const &L,
     Rs = L.getOperand(1);
 
     compoundOpcode = J4_jumpsetr;
-    CompoundInsn = new (Context) MCInst;
+    CompoundInsn = Context.createMCInst();
     CompoundInsn->setOpcode(compoundOpcode);
     CompoundInsn->addOperand(Rt);
     CompoundInsn->addOperand(Rs);
@@ -237,7 +237,7 @@ static MCInst *getCompoundInsn(MCContext &Context, MCInst const &L,
     Rt = L.getOperand(2);
 
     compoundOpcode = cmpeqBitOpcode[getCompoundOp(R)];
-    CompoundInsn = new (Context) MCInst;
+    CompoundInsn = Context.createMCInst();
     CompoundInsn->setOpcode(compoundOpcode);
     CompoundInsn->addOperand(Rs);
     CompoundInsn->addOperand(Rt);
@@ -250,7 +250,7 @@ static MCInst *getCompoundInsn(MCContext &Context, MCInst const &L,
     Rt = L.getOperand(2);
 
     compoundOpcode = cmpgtBitOpcode[getCompoundOp(R)];
-    CompoundInsn = new (Context) MCInst;
+    CompoundInsn = Context.createMCInst();
     CompoundInsn->setOpcode(compoundOpcode);
     CompoundInsn->addOperand(Rs);
     CompoundInsn->addOperand(Rt);
@@ -263,7 +263,7 @@ static MCInst *getCompoundInsn(MCContext &Context, MCInst const &L,
     Rt = L.getOperand(2);
 
     compoundOpcode = cmpgtuBitOpcode[getCompoundOp(R)];
-    CompoundInsn = new (Context) MCInst;
+    CompoundInsn = Context.createMCInst();
     CompoundInsn->setOpcode(compoundOpcode);
     CompoundInsn->addOperand(Rs);
     CompoundInsn->addOperand(Rt);
@@ -281,7 +281,7 @@ static MCInst *getCompoundInsn(MCContext &Context, MCInst const &L,
       compoundOpcode = cmpeqiBitOpcode[getCompoundOp(R)];
 
     Rs = L.getOperand(1);
-    CompoundInsn = new (Context) MCInst;
+    CompoundInsn = Context.createMCInst();
     CompoundInsn->setOpcode(compoundOpcode);
     CompoundInsn->addOperand(Rs);
     CompoundInsn->addOperand(L.getOperand(2));
@@ -299,7 +299,7 @@ static MCInst *getCompoundInsn(MCContext &Context, MCInst const &L,
       compoundOpcode = cmpgtiBitOpcode[getCompoundOp(R)];
 
     Rs = L.getOperand(1);
-    CompoundInsn = new (Context) MCInst;
+    CompoundInsn = Context.createMCInst();
     CompoundInsn->setOpcode(compoundOpcode);
     CompoundInsn->addOperand(Rs);
     CompoundInsn->addOperand(L.getOperand(2));
@@ -310,7 +310,7 @@ static MCInst *getCompoundInsn(MCContext &Context, MCInst const &L,
     LLVM_DEBUG(dbgs() << "CX: C2_cmpgtui\n");
     Rs = L.getOperand(1);
     compoundOpcode = cmpgtuiBitOpcode[getCompoundOp(R)];
-    CompoundInsn = new (Context) MCInst;
+    CompoundInsn = Context.createMCInst();
     CompoundInsn->setOpcode(compoundOpcode);
     CompoundInsn->addOperand(Rs);
     CompoundInsn->addOperand(L.getOperand(2));
@@ -321,7 +321,7 @@ static MCInst *getCompoundInsn(MCContext &Context, MCInst const &L,
     LLVM_DEBUG(dbgs() << "CX: S2_tstbit_i\n");
     Rs = L.getOperand(1);
     compoundOpcode = tstBitOpcode[getCompoundOp(R)];
-    CompoundInsn = new (Context) MCInst;
+    CompoundInsn = Context.createMCInst();
     CompoundInsn->setOpcode(compoundOpcode);
     CompoundInsn->addOperand(Rs);
     CompoundInsn->addOperand(R.getOperand(1));

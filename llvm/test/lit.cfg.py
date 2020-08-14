@@ -141,6 +141,7 @@ tools = [
     ToolSubst('%llvm-objcopy', FindTool('llvm-objcopy')),
     ToolSubst('%llvm-strip', FindTool('llvm-strip')),
     ToolSubst('%llvm-install-name-tool', FindTool('llvm-install-name-tool')),
+    ToolSubst('%split-file', FindTool('split-file')),
 ]
 
 # FIXME: Why do we have both `lli` and `%lli` that do slightly different things?

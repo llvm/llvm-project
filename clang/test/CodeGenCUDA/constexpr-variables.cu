@@ -19,7 +19,7 @@ struct Q {
   // CXX14: @_ZN1Q2k2E = {{.*}}externally_initialized constant i32 6
   // CXX17: @_ZN1Q2k2E = internal {{.*}}constant i32 6
   // CXX14: @_ZN1Q2k1E = available_externally {{.*}}constant i32 5
-  // CXX17: @_ZN1Q2k1E = linkonce_odr {{.*}}constant i32 5
+  // CXX17: @_ZN1Q2k1E = {{.*}} externally_initialized constant i32 5
   static constexpr int k1 = 5;
   static constexpr int k2 = 6;
 };
@@ -30,14 +30,14 @@ __constant__ const int &use_Q_k2 = Q::k2;
 
 template<typename T> struct X {
   // CXX14: @_ZN1XIiE1aE = available_externally {{.*}}constant i32 123
-  // CXX17: @_ZN1XIiE1aE = linkonce_odr {{.*}}constant i32 123
+  // CXX17: @_ZN1XIiE1aE = {{.*}}externally_initialized constant i32 123
   static constexpr int a = 123;
 };
 __constant__ const int &use_X_a = X<int>::a;
 
 template <typename T, T a, T b> struct A {
   // CXX14: @_ZN1AIiLi1ELi2EE1xE = available_externally {{.*}}constant i32 2
-  // CXX17: @_ZN1AIiLi1ELi2EE1xE = linkonce_odr {{.*}}constant i32 2
+  // CXX17: @_ZN1AIiLi1ELi2EE1xE = {{.*}}externally_initialized constant i32 2
   constexpr static T x = a * b;
 };
 __constant__ const int &y = A<int, 1, 2>::x;

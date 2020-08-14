@@ -71,61 +71,97 @@ struct InlineEvent {
 /// lines up with how TF SequenceExample represents it.
 class TrainingLogger final {
 public:
-  TrainingLogger() {
-    for (size_t I = 0; I < NumberOfFeatures; ++I) {
-      Features.push_back(InlineFeatures());
-    }
-  }
+  TrainingLogger(StringRef LogFileName);
 
   /// Log one inlining event.
   void logInlineEvent(const InlineEvent &Event,
-                      const MLModelRunner &ModelRunner) {
-    for (size_t I = 0; I < NumberOfFeatures; ++I) {
-      Features[I].push_back(ModelRunner.getFeature(I));
-    }
-    Decisions.push_back(Event.AdvisedDecision);
-    Effects.push_back(Event.Effect);
-    Rewards.push_back(Event.Reward);
-    DefaultDecisions.push_back(Event.DefaultDecision);
-  }
+                      const MLModelRunner &ModelRunner);
 
-  void printTensor(raw_fd_ostream &OutFile) {
-    if (DefaultDecisions.empty())
-      return;
-    OutFile << "feature_lists: {\n";
-
-    for (size_t I = 0; I < Features.size(); I++) {
-      writeTensor(OutFile, FeatureNameMap.at(I), Features[I]);
-    }
-    writeTensor(OutFile, DefaultDecisionName, DefaultDecisions);
-    writeTensor(OutFile, DecisionName, Decisions);
-    writeTensor(OutFile, RewardName, Rewards);
-
-    OutFile << "}\n";
-  }
+  /// Print the stored tensors.
+  void print();
 
 private:
+  /// Write the values of one tensor as a list.
   template <typename T>
-  void writeTensor(raw_fd_ostream &OutFile, StringRef TensorName,
-                   const std::vector<T> &Tensor) {
+  void writeTensorValues(raw_fd_ostream &OutFile, const char *TensorData,
+                         size_t ElemCount) const {
+    OutFile << "[";
+    const T *TypedData = reinterpret_cast<const T *>(TensorData);
+    for (size_t I = 0; I < ElemCount; ++I) {
+      if (I > 0)
+        OutFile << ", ";
+      OutFile << TypedData[I];
+    }
+    OutFile << "]";
+  }
+
+  /// Write a list of tensors as a sequence of TensorFlow FeatureList protobufs.
+  /// The tensors are assumed to be stored contiguously, in row-major format,
+  /// in the TensorData buffer. Each tensor has the shape given by Spec. The
+  /// feature name in the output is either the provided LoggingName, if
+  /// specified, otherwise it's the name of the tensor (as given by Spec).
+  template <typename T>
+  void
+  writeTensorsAsFeatureLists(raw_fd_ostream &OutFile, const TensorSpec &Spec,
+                             const T *TensorData, size_t TensorCount,
+                             Optional<StringRef> LoggingName = None) const {
+    writeRawTensorsAsFeatureLists(OutFile, Spec,
+                                  reinterpret_cast<const char *>(TensorData),
+                                  TensorCount, LoggingName);
+  }
+
+  /// Untyped implementation of the API above.
+  void
+  writeRawTensorsAsFeatureLists(raw_fd_ostream &OutFile, const TensorSpec &Spec,
+                                const char *TensorData, size_t TensorCount,
+                                Optional<StringRef> LoggingName = None) const {
+    const char *FieldName = "<invalid>";
+    std::function<void(const char *)> ValueWriter;
+    // The 'Feature' protobuf only has 3 possible fields: float_list,
+    // int64_list, or bytes_list, so we capture int32 values as int64. We don't
+    // support any other types.
+    if (Spec.isElementType<int64_t>()) {
+      FieldName = "int64_list";
+      ValueWriter = [&](const char *Data) {
+        writeTensorValues<int64_t>(OutFile, Data, Spec.getElementCount());
+      };
+    } else if (Spec.isElementType<int32_t>()) {
+      FieldName = "int64_list";
+      ValueWriter = [&](const char *Data) {
+        writeTensorValues<int32_t>(OutFile, Data, Spec.getElementCount());
+      };
+
+    } else if (Spec.isElementType<float>()) {
+      FieldName = "float_list";
+      ValueWriter = [&](const char *Data) {
+        writeTensorValues<float>(OutFile, Data, Spec.getElementCount());
+      };
+
+    } else
+      llvm_unreachable("Unsupported tensor type.");
+
     OutFile << "  feature_list: {\n";
     OutFile << "    key: "
-            << "\"" << TensorName << "\" ";
+            << "\"" << (LoggingName ? *LoggingName : Spec.name()) << "\" ";
     OutFile << "value: {\n";
-    for (const auto &Feature : Tensor) {
-      OutFile << "      feature: { int64_list: { value: [" << Feature
-              << "] } }\n";
+    size_t TensorByteSize = Spec.getElementCount() * Spec.getElementByteSize();
+    for (const char *P = TensorData,
+                    *E = TensorData + TensorByteSize * TensorCount;
+         P < E; P += TensorByteSize) {
+      OutFile << "      feature: { " << FieldName << ": { value: ";
+      ValueWriter(P);
+      OutFile << " } }\n";
     }
     OutFile << "    }\n";
     OutFile << "  }\n";
   }
 
+  StringRef LogFileName;
   std::vector<InlineFeatures> Features;
-  std::vector<bool> DefaultDecisions;
-  std::vector<bool> Decisions;
+  std::vector<int64_t> DefaultDecisions;
+  std::vector<int64_t> Decisions;
   std::vector<bool> Effects;
   std::vector<int64_t> Rewards;
-  std::vector<bool> Mandatory;
 };
 
 /// An extension of the MLInlineAdvisor for the 'development' mode, targeting
@@ -158,7 +194,8 @@ public:
   DevelopmentModeMLInlineAdvisor(
       Module &M, ModuleAnalysisManager &MAM,
       std::unique_ptr<MLModelRunner> ModelRunner,
-      std::function<bool(CallBase &)> GetDefaultAdvice, bool IsDoingInference);
+      std::function<bool(CallBase &)> GetDefaultAdvice, bool IsDoingInference,
+      std::unique_ptr<TrainingLogger> Logger);
 
   size_t getTotalSizeEstimate();
 
@@ -176,11 +213,11 @@ public:
   size_t getNativeSizeEstimate(const Function &F) const;
 
 private:
-  bool isLogging() const { return !TrainingLog.empty(); }
+  bool isLogging() const { return !!Logger; }
 
   std::function<bool(CallBase &)> GetDefaultAdvice;
-  TrainingLogger Logger;
   const bool IsDoingInference;
+  std::unique_ptr<TrainingLogger> Logger;
 
   const int32_t InitialNativeSize;
   int32_t CurrentNativeSize = 0;
@@ -193,11 +230,12 @@ public:
   LoggingMLInlineAdvice(DevelopmentModeMLInlineAdvisor *Advisor, CallBase &CB,
                         OptimizationRemarkEmitter &ORE, bool Recommendation,
                         TrainingLogger &Logger, size_t CallerSizeEstimateBefore,
-                        size_t CalleeSizeEstimateBefore, bool DefaultDecision)
+                        size_t CalleeSizeEstimateBefore, bool DefaultDecision,
+                        bool Mandatory = false)
       : MLInlineAdvice(Advisor, CB, ORE, Recommendation), Logger(Logger),
         CallerSizeEstimateBefore(CallerSizeEstimateBefore),
         CalleeSizeEstimateBefore(CalleeSizeEstimateBefore),
-        DefaultDecision(DefaultDecision) {}
+        DefaultDecision(DefaultDecision), Mandatory(Mandatory) {}
 
   virtual ~LoggingMLInlineAdvice() = default;
 
@@ -242,6 +280,8 @@ private:
   }
 
   void log(int64_t Reward, bool Success) {
+    if (Mandatory)
+      return;
     InlineEvent Event;
     Event.AdvisedDecision = isInliningRecommended();
     Event.DefaultDecision = DefaultDecision;
@@ -255,6 +295,7 @@ private:
   const size_t CallerSizeEstimateBefore;
   const size_t CalleeSizeEstimateBefore;
   const bool DefaultDecision;
+  const bool Mandatory;
 };
 
 /// A pseudo model runner. We use it to store feature values when collecting
@@ -307,12 +348,59 @@ private:
 };
 } // namespace
 
+TrainingLogger::TrainingLogger(StringRef LogFileName)
+    : LogFileName(LogFileName) {
+  for (size_t I = 0; I < NumberOfFeatures; ++I)
+    Features.push_back(InlineFeatures());
+}
+
+/// Log one inlining event.
+void TrainingLogger::logInlineEvent(const InlineEvent &Event,
+                                    const MLModelRunner &ModelRunner) {
+  for (size_t I = 0; I < NumberOfFeatures; ++I)
+    Features[I].push_back(ModelRunner.getFeature(I));
+
+  Decisions.push_back(Event.AdvisedDecision);
+  Effects.push_back(Event.Effect);
+  Rewards.push_back(Event.Reward);
+  DefaultDecisions.push_back(Event.DefaultDecision);
+}
+
+void TrainingLogger::print() {
+  std::error_code EC;
+  raw_fd_ostream OutFile(LogFileName, EC);
+  size_t NumberOfRecords = Decisions.size();
+  if (NumberOfRecords == 0)
+    return;
+
+  OutFile << "feature_lists: {\n";
+  for (size_t I = 0; I < Features.size(); ++I)
+    writeTensorsAsFeatureLists(
+        OutFile, TensorSpec::createSpec<int64_t>(FeatureNameMap.at(I), {1}),
+        Features[I].data(), NumberOfRecords);
+
+  writeTensorsAsFeatureLists(
+      OutFile, TensorSpec::createSpec<int64_t>(DefaultDecisionName, {1}),
+      DefaultDecisions.data(), NumberOfRecords);
+
+  writeTensorsAsFeatureLists(OutFile,
+                             TensorSpec::createSpec<int64_t>(DecisionName, {1}),
+                             Decisions.data(), NumberOfRecords);
+  writeTensorsAsFeatureLists(OutFile,
+                             TensorSpec::createSpec<int64_t>(RewardName, {1}),
+                             Rewards.data(), NumberOfRecords);
+
+  OutFile << "}\n";
+}
+
 DevelopmentModeMLInlineAdvisor::DevelopmentModeMLInlineAdvisor(
     Module &M, ModuleAnalysisManager &MAM,
     std::unique_ptr<MLModelRunner> ModelRunner,
-    std::function<bool(CallBase &)> GetDefaultAdvice, bool IsDoingInference)
+    std::function<bool(CallBase &)> GetDefaultAdvice, bool IsDoingInference,
+    std::unique_ptr<TrainingLogger> Logger)
     : MLInlineAdvisor(M, MAM, std::move(ModelRunner)),
       GetDefaultAdvice(GetDefaultAdvice), IsDoingInference(IsDoingInference),
+      Logger(std::move(Logger)),
       InitialNativeSize(isLogging() ? getTotalSizeEstimate() : 0),
       CurrentNativeSize(InitialNativeSize) {
   // We cannot have the case of neither inference nor logging.
@@ -320,11 +408,8 @@ DevelopmentModeMLInlineAdvisor::DevelopmentModeMLInlineAdvisor(
 }
 
 DevelopmentModeMLInlineAdvisor::~DevelopmentModeMLInlineAdvisor() {
-  if (TrainingLog.empty())
-    return;
-  std::error_code ErrorCode;
-  raw_fd_ostream OutFile(TrainingLog, ErrorCode);
-  Logger.printTensor(OutFile);
+  if (isLogging())
+    Logger->print();
 }
 
 size_t
@@ -346,11 +431,11 @@ DevelopmentModeMLInlineAdvisor::getMandatoryAdvice(
     return MLInlineAdvisor::getMandatoryAdvice(CB, ORE);
   return std::make_unique<LoggingMLInlineAdvice>(
       /*Advisor=*/this,
-      /*CB=*/CB, /*ORE=*/ORE, /*Recommendation=*/true, /*Logger=*/Logger,
+      /*CB=*/CB, /*ORE=*/ORE, /*Recommendation=*/true, /*Logger=*/*Logger,
       /*CallerSizeEstimateBefore=*/getNativeSizeEstimate(*CB.getCaller()),
       /*CalleeSizeEstimateBefore=*/
       getNativeSizeEstimate(*CB.getCalledFunction()),
-      /*DefaultDecision=*/true);
+      /*DefaultDecision=*/true, /*Mandatory*/ true);
 }
 
 std::unique_ptr<MLInlineAdvice>
@@ -364,7 +449,7 @@ DevelopmentModeMLInlineAdvisor::getAdviceFromModel(
   return std::make_unique<LoggingMLInlineAdvice>(
       /*Advisor=*/this,
       /*CB=*/CB, /*ORE=*/ORE, /*Recommendation=*/Recommendation,
-      /*Logger=*/Logger,
+      /*Logger=*/*Logger,
       /*CallerSizeEstimateBefore=*/getNativeSizeEstimate(*CB.getCaller()),
       /*CalleeSizeEstimateBefore=*/
       getNativeSizeEstimate(*CB.getCalledFunction()),
@@ -449,7 +534,12 @@ std::unique_ptr<InlineAdvisor> llvm::getDevelopmentModeAdvisor(
     }
     IsDoingInference = true;
   }
+  std::unique_ptr<TrainingLogger> Logger;
+  if (!TrainingLog.empty())
+    Logger = std::make_unique<TrainingLogger>(TrainingLog);
+
   return std::make_unique<DevelopmentModeMLInlineAdvisor>(
-      M, MAM, std::move(Runner), GetDefaultAdvice, IsDoingInference);
+      M, MAM, std::move(Runner), GetDefaultAdvice, IsDoingInference,
+      std::move(Logger));
 }
 #endif // defined(LLVM_HAVE_TF_API)

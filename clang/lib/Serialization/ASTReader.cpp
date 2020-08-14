@@ -12932,3 +12932,20 @@ OMPTraitInfo *ASTRecordReader::readOMPTraitInfo() {
   }
   return &TI;
 }
+
+void ASTRecordReader::readOMPChildren(OMPChildren *Data) {
+  if (!Data)
+    return;
+  if (Reader->ReadingKind == ASTReader::Read_Stmt) {
+    // Skip NumClauses, NumChildren and HasAssociatedStmt fields.
+    skipInts(3);
+  }
+  SmallVector<OMPClause *, 4> Clauses(Data->getNumClauses());
+  for (unsigned I = 0, E = Data->getNumClauses(); I < E; ++I)
+    Clauses[I] = readOMPClause();
+  Data->setClauses(Clauses);
+  if (Data->hasAssociatedStmt())
+    Data->setAssociatedStmt(readStmt());
+  for (unsigned I = 0, E = Data->getNumChildren(); I < E; ++I)
+    Data->getChildren()[I] = readStmt();
+}

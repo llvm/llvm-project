@@ -124,7 +124,7 @@ static StringRef const StyleNames[] = {
 static std::vector<llvm::Optional<IdentifierNamingCheck::NamingStyle>>
 getNamingStyles(const ClangTidyCheck::OptionsView &Options) {
   std::vector<llvm::Optional<IdentifierNamingCheck::NamingStyle>> Styles;
-  Styles.reserve(StyleNames->size());
+  Styles.reserve(array_lengthof(StyleNames));
   for (auto const &StyleName : StyleNames) {
     auto CaseOptional = Options.getOptional<IdentifierNamingCheck::CaseType>(
         (StyleName + "Case").str());

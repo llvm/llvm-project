@@ -35,6 +35,8 @@ required_libraries =
  MC
  BPFDesc
  BPFInfo
+ IPO
+ Scalar
  SelectionDAG
  Support
  Target

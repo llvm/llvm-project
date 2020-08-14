@@ -42,7 +42,7 @@ template <typename A> class SizedNew {
 public:
   explicit SizedNew(const Terminator &terminator) : terminator_{terminator} {}
   template <typename... X>
-  [[nodiscard]] OwningPtr<A> operator()(std::size_t bytes, X &&... x) {
+  [[nodiscard]] OwningPtr<A> operator()(std::size_t bytes, X &&...x) {
     return OwningPtr<A>{new (AllocateMemoryOrCrash(terminator_, bytes))
             A{std::forward<X>(x)...}};
   }
@@ -53,7 +53,7 @@ private:
 
 template <typename A> struct New : public SizedNew<A> {
   using SizedNew<A>::SizedNew;
-  template <typename... X> [[nodiscard]] OwningPtr<A> operator()(X &&... x) {
+  template <typename... X> [[nodiscard]] OwningPtr<A> operator()(X &&...x) {
     return SizedNew<A>::operator()(sizeof(A), std::forward<X>(x)...);
   }
 };

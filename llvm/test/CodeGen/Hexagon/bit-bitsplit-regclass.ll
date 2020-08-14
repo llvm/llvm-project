@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
+; RUN: llc -march=hexagon -hexagon-initial-cfg-cleanup=0 -hexagon-instsimplify=0 < %s | FileCheck %s
 
 ; Check for successful compilation.
 ; CHECK: r{{[0-9]+}} = insert(r{{[0-9]+}},#1,#31)

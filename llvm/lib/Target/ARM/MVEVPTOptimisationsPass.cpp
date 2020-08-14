@@ -57,6 +57,7 @@ private:
                                             Register Target);
   bool ReduceOldVCCRValueUses(MachineBasicBlock &MBB);
   bool ReplaceVCMPsByVPNOTs(MachineBasicBlock &MBB);
+  bool ConvertVPSEL(MachineBasicBlock &MBB);
 };
 
 char MVEVPTOptimisations::ID = 0;
@@ -356,7 +357,7 @@ bool MVEVPTOptimisations::ReduceOldVCCRValueUses(MachineBasicBlock &MBB) {
   }
 
   for (MachineInstr *DeadInstruction : DeadInstructions)
-    DeadInstruction->removeFromParent();
+    DeadInstruction->eraseFromParent();
 
   return Modified;
 }
@@ -430,7 +431,46 @@ bool MVEVPTOptimisations::ReplaceVCMPsByVPNOTs(MachineBasicBlock &MBB) {
   }
 
   for (MachineInstr *DeadInstruction : DeadInstructions)
-    DeadInstruction->removeFromParent();
+    DeadInstruction->eraseFromParent();
+
+  return !DeadInstructions.empty();
+}
+
+// Replace VPSEL with a predicated VMOV in blocks with a VCTP. This is a
+// somewhat blunt approximation to allow tail predicated with vpsel
+// instructions. We turn a vselect into a VPSEL in ISEL, but they have slightly
+// different semantics under tail predication. Until that is modelled we just
+// convert to a VMOVT (via a predicated VORR) instead.
+bool MVEVPTOptimisations::ConvertVPSEL(MachineBasicBlock &MBB) {
+  bool HasVCTP = false;
+  SmallVector<MachineInstr *, 4> DeadInstructions;
+
+  for (MachineInstr &MI : MBB.instrs()) {
+    if (isVCTP(&MI)) {
+      HasVCTP = true;
+      continue;
+    }
+
+    if (!HasVCTP || MI.getOpcode() != ARM::MVE_VPSEL)
+      continue;
+
+    MachineInstrBuilder MIBuilder =
+        BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(ARM::MVE_VORR))
+            .add(MI.getOperand(0))
+            .add(MI.getOperand(1))
+            .add(MI.getOperand(1))
+            .addImm(ARMVCC::Then)
+            .add(MI.getOperand(4))
+            .add(MI.getOperand(2));
+    // Silence unused variable warning in release builds.
+    (void)MIBuilder;
+    LLVM_DEBUG(dbgs() << "Replacing VPSEL: "; MI.dump();
+               dbgs() << "     with VMOVT: "; MIBuilder.getInstr()->dump());
+    DeadInstructions.push_back(&MI);
+  }
+
+  for (MachineInstr *DeadInstruction : DeadInstructions)
+    DeadInstruction->eraseFromParent();
 
   return !DeadInstructions.empty();
 }
@@ -452,6 +492,7 @@ bool MVEVPTOptimisations::runOnMachineFunction(MachineFunction &Fn) {
   for (MachineBasicBlock &MBB : Fn) {
     Modified |= ReplaceVCMPsByVPNOTs(MBB);
     Modified |= ReduceOldVCCRValueUses(MBB);
+    Modified |= ConvertVPSEL(MBB);
   }
 
   LLVM_DEBUG(dbgs() << "**************************************\n");

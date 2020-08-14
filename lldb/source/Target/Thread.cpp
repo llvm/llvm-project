@@ -1103,6 +1103,22 @@ void Thread::DiscardPlan() {
             discarded_plan_sp->GetThread().GetID());
 }
 
+void Thread::AutoCompleteThreadPlans(CompletionRequest &request) const {
+  const ThreadPlanStack &plans = GetPlans();
+  if (!plans.AnyPlans())
+    return;
+
+  // Iterate from the second plan (index: 1) to skip the base plan.
+  ThreadPlanSP p;
+  uint32_t i = 1;
+  while ((p = plans.GetPlanByIndex(i, false))) {
+    StreamString strm;
+    p->GetDescription(&strm, eDescriptionLevelInitial);
+    request.TryCompleteCurrentArg(std::to_string(i), strm.GetString());
+    i++;
+  }
+}
+
 ThreadPlan *Thread::GetCurrentPlan() const {
   return GetPlans().GetCurrentPlan().get();
 }
@@ -1380,7 +1396,7 @@ lldb::ThreadPlanSP Thread::QueueThreadPlanForStepScripted(
 
   ThreadPlanSP thread_plan_sp(new ThreadPlanPython(*this, class_name, 
                                                    extra_args_impl));
-
+  thread_plan_sp->SetStopOthers(stop_other_threads);
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
 }

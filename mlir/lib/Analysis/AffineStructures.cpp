@@ -723,6 +723,18 @@ LogicalResult FlatAffineConstraints::addAffineForOpDomain(AffineForOp forOp) {
                               /*eq=*/false, /*lower=*/false);
 }
 
+void FlatAffineConstraints::addAffineIfOpDomain(AffineIfOp ifOp) {
+  // Create the base constraints from the integer set attached to ifOp.
+  FlatAffineConstraints cst(ifOp.getIntegerSet());
+
+  // Bind ids in the constraints to ifOp operands.
+  SmallVector<Value, 4> operands = ifOp.getOperands();
+  cst.setIdValues(0, cst.getNumDimAndSymbolIds(), operands);
+
+  // Merge the constraints from ifOp to the current domain.
+  mergeAndAlignIdsWithOther(0, &cst);
+}
+
 // Searches for a constraint with a non-zero coefficient at 'colIdx' in
 // equality (isEq=true) or inequality (isEq=false) constraints.
 // Returns true and sets row found in search in 'rowIdx'.

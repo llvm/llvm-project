@@ -29,7 +29,7 @@
 
 #ifndef OMP5
 // CHECK-DAG: [[IDENT_T_TY:%.+]] = type { i32, i32, i32, i32, i8* }
-// CHECK-DAG: [[LOOP_LOC:@.+]] = private unnamed_addr global [[IDENT_T_TY]] { i32 0, i32 514, i32 0, i32 0, i8*
+// CHECK-DAG: [[LOOP_LOC:@.+]] = private unnamed_addr constant [[IDENT_T_TY]] { i32 0, i32 514, i32 0, i32 0, i8*
 
 // CHECK-LABEL: with_var_schedule
 void with_var_schedule() {

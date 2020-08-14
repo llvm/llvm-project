@@ -414,6 +414,13 @@ def G_UMAX : GenericInstruction {
   let isCommutable = 1;
 }
 
+// Generic integer absolute value.
+def G_ABS : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
 //------------------------------------------------------------------------------
 // Overflow ops
 //------------------------------------------------------------------------------
@@ -541,6 +548,22 @@ def G_USUBSAT : GenericInstruction {
 def G_SSUBSAT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
+// Generic saturating unsigned left shift.
+def G_USHLSAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type1:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
+// Generic saturating signed left shift.
+def G_SSHLSAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type1:$src2);
   let hasSideEffects = 0;
   let isCommutable = 0;
 }

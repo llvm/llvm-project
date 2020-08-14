@@ -60,7 +60,7 @@ public:
   bool operator==(const Indirection &that) const { return *p_ == *that.p_; }
 
   template <typename... ARGS>
-  static common::IfNoLvalue<Indirection, ARGS...> Make(ARGS &&... args) {
+  static common::IfNoLvalue<Indirection, ARGS...> Make(ARGS &&...args) {
     return {new A(std::move(args)...)};
   }
 
@@ -112,7 +112,7 @@ public:
   bool operator==(const Indirection &that) const { return *p_ == *that.p_; }
 
   template <typename... ARGS>
-  static common::IfNoLvalue<Indirection, ARGS...> Make(ARGS &&... args) {
+  static common::IfNoLvalue<Indirection, ARGS...> Make(ARGS &&...args) {
     return {new A(std::move(args)...)};
   }
 

@@ -225,11 +225,11 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                                                  names.
      ``gfx906``                  ``amdgcn``   dGPU  - xnack                   - Radeon Instinct MI50
                                                       [off]                   - Radeon Instinct MI60
-                                                                              - Radeon VII
-                                                                              - Radeon Pro VII
+                                                    - sram-ecc                - Radeon VII
+                                                      [off]                   - Radeon Pro VII
      ``gfx908``                  ``amdgcn``   dGPU  - xnack                   *TBA*
                                                       [off]
-                                                      sram-ecc
+                                                    - sram-ecc
                                                       [on]
                                                                               .. TODO::
                                                                                  Add product
@@ -1139,7 +1139,7 @@ The loaded code object path URI syntax is defined by the following BNF syntax:
 **file_path**
   Is the file's path specified as a URI encoded UTF-8 string. In URI encoding,
   every character that is not in the regular expression ``[a-zA-Z0-9/_.~-]`` is
-  encoded as two uppercase hexidecimal digits proceeded by "%".  Directories in
+  encoded as two uppercase hexadecimal digits proceeded by "%".  Directories in
   the path are separated by "/".
 
 **offset**
@@ -6436,7 +6436,7 @@ Call Convention
 
 .. note::
 
-  This section is currently incomplete and has inakkuracies. It is WIP that will
+  This section is currently incomplete and has inaccuracies. It is WIP that will
   be updated as information is determined.
 
 See :ref:`amdgpu-dwarf-address-space-identifier` for information on swizzled
@@ -6568,7 +6568,7 @@ On exit from a function:
       VGPR232-239
       VGPR248-255
 
-        *Except the argument registers, the VGPR cloberred and the preserved
+        *Except the argument registers, the VGPR clobbered and the preserved
         registers are intermixed at regular intervals in order to
         get a better occupancy.*
 

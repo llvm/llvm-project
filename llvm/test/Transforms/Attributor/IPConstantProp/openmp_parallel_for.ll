@@ -36,7 +36,7 @@ define dso_local void @foo(i32 %N) {
 ; IS__TUNIT_OPM-NEXT:    store i32 [[N]], i32* [[N_ADDR]], align 4
 ; IS__TUNIT_OPM-NEXT:    store float 3.000000e+00, float* [[P]], align 4
 ; IS__TUNIT_OPM-NEXT:    store i32 7, i32* [[N_ADDR]], align 4
-; IS__TUNIT_OPM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull align 8 dereferenceable(24) @1, i32 3, void (i32*, i32*, ...)* nonnull bitcast (void (i32*, i32*, i32*, float*, i64)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* nocapture nonnull readonly align 4 dereferenceable(4) [[N_ADDR]], float* nocapture nonnull readonly align 4 dereferenceable(4) [[P]], i64 undef)
+; IS__TUNIT_OPM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull align 8 dereferenceable(24) [[GLOB1:@.*]], i32 3, void (i32*, i32*, ...)* nonnull bitcast (void (i32*, i32*, i32*, float*, i64)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* nocapture nonnull readonly align 4 dereferenceable(4) [[N_ADDR]], float* nocapture nonnull readonly align 4 dereferenceable(4) [[P]], i64 undef)
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@foo
@@ -47,7 +47,7 @@ define dso_local void @foo(i32 %N) {
 ; IS__TUNIT_NPM-NEXT:    store i32 [[N]], i32* [[N_ADDR]], align 4
 ; IS__TUNIT_NPM-NEXT:    store float 3.000000e+00, float* [[P]], align 4
 ; IS__TUNIT_NPM-NEXT:    store i32 7, i32* [[N_ADDR]], align 4
-; IS__TUNIT_NPM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull align 8 dereferenceable(24) @1, i32 3, void (i32*, i32*, ...)* nonnull bitcast (void (i32*, i32*, i32*, float*, i64)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[N_ADDR]], float* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[P]], i64 undef)
+; IS__TUNIT_NPM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull align 8 dereferenceable(24) [[GLOB1:@.*]], i32 3, void (i32*, i32*, ...)* nonnull bitcast (void (i32*, i32*, i32*, float*, i64)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[N_ADDR]], float* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[P]], i64 undef)
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@foo
@@ -58,7 +58,7 @@ define dso_local void @foo(i32 %N) {
 ; IS__CGSCC_OPM-NEXT:    store i32 [[N]], i32* [[N_ADDR]], align 4
 ; IS__CGSCC_OPM-NEXT:    store float 3.000000e+00, float* [[P]], align 4
 ; IS__CGSCC_OPM-NEXT:    store i32 7, i32* [[N_ADDR]], align 4
-; IS__CGSCC_OPM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull align 8 dereferenceable(24) @1, i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, float*, i64)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* nocapture nonnull readonly align 4 dereferenceable(4) [[N_ADDR]], float* nocapture nonnull readonly align 4 dereferenceable(4) [[P]], i64 4617315517961601024)
+; IS__CGSCC_OPM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull align 8 dereferenceable(24) [[GLOB1:@.*]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, float*, i64)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* nocapture nonnull readonly align 4 dereferenceable(4) [[N_ADDR]], float* nocapture nonnull readonly align 4 dereferenceable(4) [[P]], i64 4617315517961601024)
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@foo
@@ -69,7 +69,7 @@ define dso_local void @foo(i32 %N) {
 ; IS__CGSCC_NPM-NEXT:    store i32 [[N]], i32* [[N_ADDR]], align 4
 ; IS__CGSCC_NPM-NEXT:    store float 3.000000e+00, float* [[P]], align 4
 ; IS__CGSCC_NPM-NEXT:    store i32 7, i32* [[N_ADDR]], align 4
-; IS__CGSCC_NPM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull align 8 dereferenceable(24) @1, i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, float*, i64)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[N_ADDR]], float* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[P]], i64 4617315517961601024)
+; IS__CGSCC_NPM-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull align 8 dereferenceable(24) [[GLOB1:@.*]], i32 3, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, float*, i64)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[N_ADDR]], float* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[P]], i64 4617315517961601024)
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
 entry:
@@ -103,7 +103,7 @@ define internal void @.omp_outlined.(i32* noalias %.global_tid., i32* noalias %.
 ; NOT_TUNIT_NPM-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 ; NOT_TUNIT_NPM-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
 ; NOT_TUNIT_NPM-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
-; NOT_TUNIT_NPM-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* nonnull align 8 dereferenceable(24) @0, i32 [[TMP5]], i32 34, i32* nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 1, i32 1)
+; NOT_TUNIT_NPM-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* nonnull align 8 dereferenceable(24) [[GLOB0:@.*]], i32 [[TMP5]], i32 34, i32* nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 1, i32 1)
 ; NOT_TUNIT_NPM-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 ; NOT_TUNIT_NPM-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[TMP6]], [[SUB3]]
 ; NOT_TUNIT_NPM-NEXT:    br i1 [[CMP6]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -139,7 +139,7 @@ define internal void @.omp_outlined.(i32* noalias %.global_tid., i32* noalias %.
 ; NOT_TUNIT_NPM-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 ; NOT_TUNIT_NPM:       omp.loop.exit:
 ; NOT_TUNIT_NPM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
-; NOT_TUNIT_NPM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* nonnull align 8 dereferenceable(24) @0, i32 [[TMP12]])
+; NOT_TUNIT_NPM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* nonnull align 8 dereferenceable(24) [[GLOB0]], i32 [[TMP12]])
 ; NOT_TUNIT_NPM-NEXT:    br label [[OMP_PRECOND_END]]
 ; NOT_TUNIT_NPM:       omp.precond.end:
 ; NOT_TUNIT_NPM-NEXT:    ret void
@@ -164,7 +164,7 @@ define internal void @.omp_outlined.(i32* noalias %.global_tid., i32* noalias %.
 ; IS__TUNIT_NPM-NEXT:    store i32 1, i32* [[DOTOMP_STRIDE]], align 4
 ; IS__TUNIT_NPM-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP5:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
-; IS__TUNIT_NPM-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* nonnull align 8 dereferenceable(24) @0, i32 [[TMP5]], i32 34, i32* nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 1, i32 1)
+; IS__TUNIT_NPM-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* nonnull align 8 dereferenceable(24) [[GLOB0:@.*]], i32 [[TMP5]], i32 34, i32* nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], i32* nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 1, i32 1)
 ; IS__TUNIT_NPM-NEXT:    [[TMP6:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[TMP6]], [[SUB3]]
 ; IS__TUNIT_NPM-NEXT:    br i1 [[CMP6]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -200,7 +200,7 @@ define internal void @.omp_outlined.(i32* noalias %.global_tid., i32* noalias %.
 ; IS__TUNIT_NPM-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 ; IS__TUNIT_NPM:       omp.loop.exit:
 ; IS__TUNIT_NPM-NEXT:    [[TMP12:%.*]] = load i32, i32* [[DOTGLOBAL_TID_]], align 4
-; IS__TUNIT_NPM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* nonnull align 8 dereferenceable(24) @0, i32 [[TMP12]])
+; IS__TUNIT_NPM-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* nonnull align 8 dereferenceable(24) [[GLOB0]], i32 [[TMP12]])
 ; IS__TUNIT_NPM-NEXT:    br label [[OMP_PRECOND_END]]
 ; IS__TUNIT_NPM:       omp.precond.end:
 ; IS__TUNIT_NPM-NEXT:    ret void

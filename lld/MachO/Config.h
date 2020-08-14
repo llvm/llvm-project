@@ -12,7 +12,9 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/VersionTuple.h"
 #include "llvm/TextAPI/MachO/Architecture.h"
+#include "llvm/TextAPI/MachO/Platform.h"
 
 #include <vector>
 
@@ -22,6 +24,12 @@ namespace macho {
 class Symbol;
 struct SymbolPriorityEntry;
 
+struct PlatformInfo {
+  llvm::MachO::PlatformKind kind;
+  llvm::VersionTuple minimum;
+  llvm::VersionTuple sdk;
+};
+
 struct Configuration {
   Symbol *entry;
   bool hasReexports = false;
@@ -29,9 +37,11 @@ struct Configuration {
   llvm::StringRef installName;
   llvm::StringRef outputFile;
   llvm::MachO::Architecture arch;
+  PlatformInfo platform;
   llvm::MachO::HeaderFileType outputType;
   std::vector<llvm::StringRef> librarySearchPaths;
   std::vector<llvm::StringRef> frameworkSearchPaths;
+  std::vector<llvm::StringRef> runtimePaths;
   llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
 };
 

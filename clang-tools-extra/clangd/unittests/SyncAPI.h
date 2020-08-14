@@ -47,8 +47,6 @@ llvm::Expected<FileEdits> runRename(ClangdServer &Server, PathRef File,
 llvm::Expected<tooling::Replacements>
 runFormatFile(ClangdServer &Server, PathRef File, StringRef Code);
 
-std::string runDumpAST(ClangdServer &Server, PathRef File);
-
 SymbolSlab runFuzzyFind(const SymbolIndex &Index, StringRef Query);
 SymbolSlab runFuzzyFind(const SymbolIndex &Index, const FuzzyFindRequest &Req);
 RefSlab getRefs(const SymbolIndex &Index, SymbolID ID);
@@ -59,6 +57,9 @@ runSemanticRanges(ClangdServer &Server, PathRef File,
 
 llvm::Expected<llvm::Optional<clangd::Path>>
 runSwitchHeaderSource(ClangdServer &Server, PathRef File);
+
+llvm::Error runCustomAction(ClangdServer &Server, PathRef File,
+                            llvm::function_ref<void(InputsAndAST)>);
 
 } // namespace clangd
 } // namespace clang

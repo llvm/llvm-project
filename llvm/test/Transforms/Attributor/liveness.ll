@@ -1570,7 +1570,8 @@ live_with_dead_entry:
 
 define void @live_with_dead_entry_lp() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK: Function Attrs: nounwind
-; CHECK-LABEL: define {{[^@]+}}@live_with_dead_entry_lp() #2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+; CHECK-LABEL: define {{[^@]+}}@live_with_dead_entry_lp
+; CHECK-SAME: () [[ATTR2:#.*]] personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @blowup()
 ; CHECK-NEXT:    to label [[LIVE_WITH_DEAD_ENTRY_DEAD:%.*]] unwind label [[LP1:%.*]]

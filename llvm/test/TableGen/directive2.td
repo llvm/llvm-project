@@ -11,6 +11,7 @@ def TestDirectiveLanguage : DirectiveLanguage {
   let directivePrefix = "TDLD_";
   let clausePrefix = "TDLC_";
   let includeHeader = "tdl.h.inc";
+  let flangClauseBaseClass = "TdlClause";
 }
 
 def TDLC_ClauseA : Clause<"clausea"> {
@@ -18,6 +19,7 @@ def TDLC_ClauseA : Clause<"clausea"> {
 }
 def TDLC_ClauseB : Clause<"clauseb"> {
   let isDefault = 1;
+  let flangClassValue = "IntExpr";
 }
 
 def TDL_DirA : Directive<"dira"> {
@@ -152,15 +154,7 @@ def TDL_DirA : Directive<"dira"> {
 // GEN-NEXT: #ifdef GEN_FLANG_DIRECTIVE_CLAUSE_MAP
 // GEN-NEXT: #undef GEN_FLANG_DIRECTIVE_CLAUSE_MAP
 // GEN-EMPTY:
-// GEN-NEXT: struct TdlDirectiveClauses {
-// GEN-NEXT:   const  allowed;
-// GEN-NEXT:   const  allowedOnce;
-// GEN-NEXT:   const  allowedExclusive;
-// GEN-NEXT:   const  requiredOneOf;
-// GEN-NEXT: };
-// GEN-EMPTY:
-// GEN-NEXT: std::unordered_map<llvm::tdl::Directive, TdlDirectiveClauses>
-// GEN-NEXT:     directiveClausesTable = {
+// GEN-NEXT: {
 // GEN-NEXT:   {llvm::tdl::Directive::TDLD_dira,
 // GEN-NEXT:     {
 // GEN-NEXT:       llvm::tdl::allowedClauses_TDLD_dira,
@@ -169,6 +163,30 @@ def TDL_DirA : Directive<"dira"> {
 // GEN-NEXT:       llvm::tdl::requiredClauses_TDLD_dira,
 // GEN-NEXT:     }
 // GEN-NEXT:   },
-// GEN-NEXT: };
+// GEN-NEXT: }
 // GEN-EMPTY:
 // GEN-NEXT: #endif // GEN_FLANG_DIRECTIVE_CLAUSE_MAP
+// GEN-EMPTY:
+// GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_PARSER_CLASSES
+// GEN-NEXT:  #undef GEN_FLANG_CLAUSE_PARSER_CLASSES
+// GEN-EMPTY:
+// GEN-NEXT:  EMPTY_CLASS(Clausea);
+// GEN-NEXT:  WRAPPER_CLASS(Clauseb, IntExpr);
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_CLASSES
+// GEN-EMPTY:
+// GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
+// GEN-NEXT:  #undef GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
+// GEN-EMPTY:
+// GEN-NEXT:  Clausea
+// GEN-NEXT:  , Clauseb
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
+// GEN-EMPTY:
+// GEN-NEXT:  #ifdef GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
+// GEN-NEXT:  #undef GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
+// GEN-EMPTY:
+// GEN-NEXT:  NODE(TdlClause, Clausea)
+// GEN-NEXT:  NODE(TdlClause, Clauseb)
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_FLANG_DUMP_PARSE_TREE_CLAUSES

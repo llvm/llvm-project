@@ -68,8 +68,7 @@ struct AffineInlinerInterface : public DialectInlinerInterface {
 // AffineDialect
 //===----------------------------------------------------------------------===//
 
-AffineDialect::AffineDialect(MLIRContext *context)
-    : Dialect(getDialectNamespace(), context) {
+void AffineDialect::initialize() {
   addOperations<AffineDmaStartOp, AffineDmaWaitOp,
 #define GET_OP_LIST
 #include "mlir/Dialect/Affine/IR/AffineOps.cpp.inc"
@@ -2642,7 +2641,7 @@ static ParseResult parseAffineParallelOp(OpAsmParser &parser,
   }
 
   // Parse optional clause of the form: `reduce ("addf", "maxf")`, where the
-  // quoted strings a member of the enum AtomicRMWKind.  
+  // quoted strings a member of the enum AtomicRMWKind.
   SmallVector<Attribute, 4> reductions;
   if (succeeded(parser.parseOptionalKeyword("reduce"))) {
     if (parser.parseLParen())
@@ -2692,13 +2691,12 @@ static ParseResult parseAffineParallelOp(OpAsmParser &parser,
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(AffineYieldOp op) {
-  auto parentOp = op.getParentOp();
+  auto *parentOp = op.getParentOp();
   auto results = parentOp->getResults();
   auto operands = op.getOperands();
 
   if (!isa<AffineParallelOp, AffineIfOp, AffineForOp>(parentOp))
-    return op.emitOpError()
-           << "affine.terminate only terminates If, For or Parallel regions";
+    return op.emitOpError() << "only terminates affine.if/for/parallel regions";
   if (parentOp->getNumResults() != op.getNumOperands())
     return op.emitOpError() << "parent of yield must have same number of "
                                "results as the yield operands";

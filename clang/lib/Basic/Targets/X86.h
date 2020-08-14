@@ -144,6 +144,11 @@ public:
     LongDoubleFormat = &llvm::APFloat::x87DoubleExtended();
     AddrSpaceMap = &X86AddrSpaceMap;
     HasStrictFP = true;
+
+    bool IsWinCOFF =
+        getTriple().isOSWindows() && getTriple().isOSBinFormatCOFF();
+    if (IsWinCOFF)
+      MaxVectorAlign = MaxTLSAlign = 8192u * getCharWidth();
   }
 
   const char *getLongDoubleMangling() const override {

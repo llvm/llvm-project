@@ -1514,6 +1514,9 @@ def SETRNDi : PPCCustomInserterPseudo<(outs f8rc:$FRT), (ins u2imm:$RND),
 
 def SETRND : PPCCustomInserterPseudo<(outs f8rc:$FRT), (ins gprc:$in),
                     "#SETRND", [(set f64:$FRT, (int_ppc_setrnd gprc :$in))]>;
+
+def SETFLM : PPCCustomInserterPseudo<(outs f8rc:$FRT), (ins f8rc:$FLM),
+                    "#SETFLM", [(set f64:$FRT, (int_ppc_setflm f8rc:$FLM))]>;
 }
 
 let Defs = [LR] in
@@ -2570,14 +2573,17 @@ let isCompare = 1, hasSideEffects = 0 in {
 }
 }
 let PPC970_Unit = 3, Predicates = [HasFPU] in {  // FPU Operations.
-//def FCMPO  : XForm_17<63, 32, (outs CRRC:$crD), (ins FPRC:$fA, FPRC:$fB),
-//                      "fcmpo $crD, $fA, $fB", IIC_FPCompare>;
 let isCompare = 1, hasSideEffects = 0 in {
   def FCMPUS : XForm_17<63, 0, (outs crrc:$crD), (ins f4rc:$fA, f4rc:$fB),
                         "fcmpu $crD, $fA, $fB", IIC_FPCompare>;
-  let Interpretation64Bit = 1, isCodeGenOnly = 1 in
-  def FCMPUD : XForm_17<63, 0, (outs crrc:$crD), (ins f8rc:$fA, f8rc:$fB),
-                        "fcmpu $crD, $fA, $fB", IIC_FPCompare>;
+  def FCMPOS : XForm_17<63, 32, (outs crrc:$crD), (ins f4rc:$fA, f4rc:$fB),
+                        "fcmpo $crD, $fA, $fB", IIC_FPCompare>;
+  let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
+    def FCMPUD : XForm_17<63, 0, (outs crrc:$crD), (ins f8rc:$fA, f8rc:$fB),
+                          "fcmpu $crD, $fA, $fB", IIC_FPCompare>;
+    def FCMPOD : XForm_17<63, 32, (outs crrc:$crD), (ins f8rc:$fA, f8rc:$fB),
+                          "fcmpo $crD, $fA, $fB", IIC_FPCompare>;
+  }
 }
 
 def FTDIV: XForm_17<63, 128, (outs crrc:$crD), (ins f8rc:$fA, f8rc:$fB),
@@ -3266,7 +3272,7 @@ def : Pat<(PPCtc_return (i32 texternalsym:$dst), imm:$imm),
 def : Pat<(PPCtc_return CTRRC:$dst, imm:$imm),
           (TCRETURNri CTRRC:$dst, imm:$imm)>;
 
-
+def : Pat<(int_ppc_readflm), (MFFS)>;
 
 // Hi and Lo for Darwin Global Addresses.
 def : Pat<(PPChi tglobaladdr:$in, 0), (LIS tglobaladdr:$in)>;
@@ -3934,14 +3940,27 @@ multiclass FSetCCPat<SDNode SetCC, ValueType Ty, PatLeaf FCmp> {
 }
 
 let Predicates = [HasFPU] in {
+// FCMPU: If either of the operands is a Signaling NaN, then VXSNAN is set.
 // SETCC for f32.
-defm : FSetCCPat<setcc, f32, FCMPUS>;
+defm : FSetCCPat<any_fsetcc, f32, FCMPUS>;
 
 // SETCC for f64.
-defm : FSetCCPat<setcc, f64, FCMPUD>;
+defm : FSetCCPat<any_fsetcc, f64, FCMPUD>;
 
 // SETCC for f128.
-defm : FSetCCPat<setcc, f128, XSCMPUQP>;
+defm : FSetCCPat<any_fsetcc, f128, XSCMPUQP>;
+
+// FCMPO: If either of the operands is a Signaling NaN, then VXSNAN is set and,
+// if neither operand is a Signaling NaN but at least one operand is a Quiet NaN,
+// then VXVC is set.
+// SETCCS for f32.
+defm : FSetCCPat<strict_fsetccs, f32, FCMPOS>;
+
+// SETCCS for f64.
+defm : FSetCCPat<strict_fsetccs, f64, FCMPOD>;
+
+// SETCCS for f128.
+defm : FSetCCPat<strict_fsetccs, f128, XSCMPOQP>;
 }
 
 // This must be in this file because it relies on patterns defined in this file

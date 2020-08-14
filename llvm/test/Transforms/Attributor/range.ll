@@ -10,13 +10,13 @@ define i32 @test0(i32* %p) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test0
 ; IS__TUNIT____-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
-; IS__TUNIT____-NEXT:    [[A:%.*]] = load i32, i32* [[P]], align 4, !range !0
+; IS__TUNIT____-NEXT:    [[A:%.*]] = load i32, i32* [[P]], align 4, [[RNG0:!range !.*]]
 ; IS__TUNIT____-NEXT:    ret i32 [[A]]
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test0
 ; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
-; IS__CGSCC____-NEXT:    [[A:%.*]] = load i32, i32* [[P]], align 4, !range !0
+; IS__CGSCC____-NEXT:    [[A:%.*]] = load i32, i32* [[P]], align 4, [[RNG0:!range !.*]]
 ; IS__CGSCC____-NEXT:    ret i32 [[A]]
 ;
   %a = load i32, i32* %p, !range !0
@@ -27,13 +27,13 @@ define i32 @test0-range-check(i32* %p) {
 ; IS__TUNIT_OPM: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@test0-range-check
 ; IS__TUNIT_OPM-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
-; IS__TUNIT_OPM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly align 4 [[P]]) #3, !range !0
+; IS__TUNIT_OPM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly align 4 [[P]]) [[ATTR3:#.*]], [[RNG0:!range !.*]]
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[A]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@test0-range-check
 ; IS__TUNIT_NPM-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
-; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly align 4 [[P]]) #2, !range !0
+; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly align 4 [[P]]) [[ATTR2:#.*]], [[RNG0:!range !.*]]
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[A]]
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
@@ -62,7 +62,7 @@ define void @test0-icmp-check(i32* %p){
   ; ret = [0, 10)
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@test0-icmp-check
 ; IS__TUNIT_OPM-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
-; IS__TUNIT_OPM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly align 4 [[P]]) #3, !range !0
+; IS__TUNIT_OPM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly align 4 [[P]]) [[ATTR3]], [[RNG0]]
 ; IS__TUNIT_OPM-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
 ; IS__TUNIT_OPM-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
 ; IS__TUNIT_OPM-NEXT:    [[CMP_EQ_4:%.*]] = icmp eq i32 [[RET]], 1
@@ -109,7 +109,7 @@ define void @test0-icmp-check(i32* %p){
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@test0-icmp-check
 ; IS__TUNIT_NPM-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
-; IS__TUNIT_NPM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly align 4 [[P]]) #2, !range !0
+; IS__TUNIT_NPM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly align 4 [[P]]) [[ATTR2]], [[RNG0]]
 ; IS__TUNIT_NPM-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
 ; IS__TUNIT_NPM-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
 ; IS__TUNIT_NPM-NEXT:    [[CMP_EQ_4:%.*]] = icmp eq i32 [[RET]], 1
@@ -309,7 +309,7 @@ define i32 @test1(i32* %p) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test1
 ; IS__TUNIT____-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
-; IS__TUNIT____-NEXT:    [[LOAD_10_100:%.*]] = load i32, i32* [[P]], align 4, !range !1
+; IS__TUNIT____-NEXT:    [[LOAD_10_100:%.*]] = load i32, i32* [[P]], align 4, [[RNG1:!range !.*]]
 ; IS__TUNIT____-NEXT:    [[ADD_10_THEN_20_110:%.*]] = add i32 [[LOAD_10_100]], 10
 ; IS__TUNIT____-NEXT:    [[MUL_10_THEN_200_1091:%.*]] = mul i32 [[ADD_10_THEN_20_110]], 10
 ; IS__TUNIT____-NEXT:    ret i32 [[MUL_10_THEN_200_1091]]
@@ -317,7 +317,7 @@ define i32 @test1(i32* %p) {
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test1
 ; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
-; IS__CGSCC____-NEXT:    [[LOAD_10_100:%.*]] = load i32, i32* [[P]], align 4, !range !1
+; IS__CGSCC____-NEXT:    [[LOAD_10_100:%.*]] = load i32, i32* [[P]], align 4, [[RNG1:!range !.*]]
 ; IS__CGSCC____-NEXT:    [[ADD_10_THEN_20_110:%.*]] = add i32 [[LOAD_10_100]], 10
 ; IS__CGSCC____-NEXT:    [[MUL_10_THEN_200_1091:%.*]] = mul i32 [[ADD_10_THEN_20_110]], 10
 ; IS__CGSCC____-NEXT:    ret i32 [[MUL_10_THEN_200_1091]]
@@ -333,14 +333,14 @@ define i1 @test1-check(i32* %p) {
 ; IS__TUNIT_OPM: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@test1-check
 ; IS__TUNIT_OPM-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
-; IS__TUNIT_OPM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly align 4 [[P]]) #3, !range !2
+; IS__TUNIT_OPM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly align 4 [[P]]) [[ATTR3]], [[RNG2:!range !.*]]
 ; IS__TUNIT_OPM-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 500
 ; IS__TUNIT_OPM-NEXT:    ret i1 [[CMP]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@test1-check
 ; IS__TUNIT_NPM-SAME: (i32* nocapture nofree readonly align 4 [[P:%.*]])
-; IS__TUNIT_NPM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly align 4 [[P]]) #2, !range !2
+; IS__TUNIT_NPM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly align 4 [[P]]) [[ATTR2]], [[RNG2:!range !.*]]
 ; IS__TUNIT_NPM-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 500
 ; IS__TUNIT_NPM-NEXT:    ret i1 [[CMP]]
 ;
@@ -718,7 +718,7 @@ define dso_local i32 @test4-g2(i32 %u) {
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@test4-g2
 ; IS__TUNIT_NPM-SAME: (i32 [[U:%.*]])
 ; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = tail call i32 @test4-f2(i32 [[U]]) #1, !range !3
+; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = tail call i32 @test4-f2(i32 [[U]]) [[ATTR1:#.*]], [[RNG3:!range !.*]]
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[CALL]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
@@ -736,12 +736,12 @@ entry:
 define dso_local i32 @test-5() {
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@test-5()
 ; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    [[CALL:%.*]] = call i32 @rec(i32 0), !range !3
+; IS__TUNIT_OPM-NEXT:    [[CALL:%.*]] = call i32 @rec(i32 0), [[RNG3:!range !.*]]
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[CALL]]
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@test-5()
 ; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = call i32 @rec(i32 0), !range !4
+; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = call i32 @rec(i32 0), [[RNG4:!range !.*]]
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[CALL]]
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test-5()
@@ -1216,8 +1216,8 @@ define i1 @callee_range_2(i1 %c1, i1 %c2) {
 ; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@callee_range_2
 ; IS__TUNIT_OPM-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]])
-; IS__TUNIT_OPM-NEXT:    [[R1:%.*]] = call i32 @ret1or2(i1 [[C1]]) #2, !range !4
-; IS__TUNIT_OPM-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]]) #2, !range !4
+; IS__TUNIT_OPM-NEXT:    [[R1:%.*]] = call i32 @ret1or2(i1 [[C1]]) [[ATTR2:#.*]], [[RNG4:!range !.*]]
+; IS__TUNIT_OPM-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]]) [[ATTR2]], [[RNG4]]
 ; IS__TUNIT_OPM-NEXT:    [[A:%.*]] = add i32 [[R1]], [[R2]]
 ; IS__TUNIT_OPM-NEXT:    [[I1:%.*]] = icmp sle i32 [[A]], 3
 ; IS__TUNIT_OPM-NEXT:    [[I2:%.*]] = icmp sge i32 [[A]], 2
@@ -1227,8 +1227,8 @@ define i1 @callee_range_2(i1 %c1, i1 %c2) {
 ; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_range_2
 ; IS__TUNIT_NPM-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]])
-; IS__TUNIT_NPM-NEXT:    [[R1:%.*]] = call i32 @ret1or2(i1 [[C1]]) #1, !range !5
-; IS__TUNIT_NPM-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]]) #1, !range !5
+; IS__TUNIT_NPM-NEXT:    [[R1:%.*]] = call i32 @ret1or2(i1 [[C1]]) [[ATTR1]], [[RNG5:!range !.*]]
+; IS__TUNIT_NPM-NEXT:    [[R2:%.*]] = call i32 @ret1or2(i1 [[C2]]) [[ATTR1]], [[RNG5]]
 ; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = add i32 [[R1]], [[R2]]
 ; IS__TUNIT_NPM-NEXT:    [[I1:%.*]] = icmp sle i32 [[A]], 3
 ; IS__TUNIT_NPM-NEXT:    [[I2:%.*]] = icmp sge i32 [[A]], 2
@@ -1360,10 +1360,10 @@ define i32 @simplify_callsite_argument(i1 %d) {
 ; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = select i1 [[D]], i1 true, i1 false
 ; IS__TUNIT_OPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__TUNIT_OPM:       t:
-; IS__TUNIT_OPM-NEXT:    [[RET1:%.*]] = call i32 @func(i1 [[C]]) #2, !range !3
+; IS__TUNIT_OPM-NEXT:    [[RET1:%.*]] = call i32 @func(i1 [[C]]) [[ATTR2]], [[RNG3]]
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[RET1]]
 ; IS__TUNIT_OPM:       f:
-; IS__TUNIT_OPM-NEXT:    [[RET2:%.*]] = call i32 @func(i1 false) #2, !range !3
+; IS__TUNIT_OPM-NEXT:    [[RET2:%.*]] = call i32 @func(i1 false) [[ATTR2]], [[RNG3]]
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[RET2]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
@@ -1372,10 +1372,10 @@ define i32 @simplify_callsite_argument(i1 %d) {
 ; IS__TUNIT_NPM-NEXT:    [[C:%.*]] = select i1 [[D]], i1 true, i1 false
 ; IS__TUNIT_NPM-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__TUNIT_NPM:       t:
-; IS__TUNIT_NPM-NEXT:    [[RET1:%.*]] = call i32 @func(i1 true) #1, !range !4
+; IS__TUNIT_NPM-NEXT:    [[RET1:%.*]] = call i32 @func(i1 true) [[ATTR1]], [[RNG4]]
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[RET1]]
 ; IS__TUNIT_NPM:       f:
-; IS__TUNIT_NPM-NEXT:    [[RET2:%.*]] = call i32 @func(i1 false) #1, !range !4
+; IS__TUNIT_NPM-NEXT:    [[RET2:%.*]] = call i32 @func(i1 false) [[ATTR1]], [[RNG4]]
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[RET2]]
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn

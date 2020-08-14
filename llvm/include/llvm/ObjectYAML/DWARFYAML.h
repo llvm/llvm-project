@@ -26,26 +26,6 @@
 namespace llvm {
 namespace DWARFYAML {
 
-struct InitialLength {
-  uint32_t TotalLength;
-  uint64_t TotalLength64;
-
-  bool isDWARF64() const { return TotalLength == UINT32_MAX; }
-
-  uint64_t getLength() const {
-    return isDWARF64() ? TotalLength64 : TotalLength;
-  }
-
-  void setLength(uint64_t Len) {
-    if (Len >= (uint64_t)UINT32_MAX) {
-      TotalLength64 = Len;
-      TotalLength = UINT32_MAX;
-    } else {
-      TotalLength = Len;
-    }
-  }
-};
-
 struct AttributeAbbrev {
   llvm::dwarf::Attribute Attribute;
   llvm::dwarf::Form Form;
@@ -95,7 +75,8 @@ struct PubEntry {
 };
 
 struct PubSection {
-  InitialLength Length;
+  dwarf::DwarfFormat Format;
+  yaml::Hex64 Length;
   uint16_t Version;
   uint32_t UnitOffset;
   uint32_t UnitSize;
@@ -120,8 +101,10 @@ struct DWARFContext {
 };
 
 struct Unit {
-  dwarf::FormParams FormParams;
+  dwarf::DwarfFormat Format;
   Optional<yaml::Hex64> Length;
+  uint16_t Version;
+  Optional<uint8_t> AddrSize;
   llvm::dwarf::UnitType Type; // Added in DWARF 5
   yaml::Hex64 AbbrOffset;
   std::vector<Entry> Entries;
@@ -371,10 +354,6 @@ template <> struct MappingTraits<DWARFYAML::AddrTableEntry> {
 
 template <> struct MappingTraits<DWARFYAML::StringOffsetsTable> {
   static void mapping(IO &IO, DWARFYAML::StringOffsetsTable &StrOffsetsTable);
-};
-
-template <> struct MappingTraits<DWARFYAML::InitialLength> {
-  static void mapping(IO &IO, DWARFYAML::InitialLength &DWARF);
 };
 
 template <> struct ScalarEnumerationTraits<dwarf::DwarfFormat> {

@@ -39,8 +39,7 @@ cl::opt<unsigned> llvm::SCEVCheapExpansionBudget(
 using namespace PatternMatch;
 
 /// ReuseOrCreateCast - Arrange for there to be a cast of V to Ty at IP,
-/// reusing an existing cast if a suitable one exists, moving an existing
-/// cast if a suitable one exists but isn't in the right place, or
+/// reusing an existing cast if a suitable one (= dominating IP) exists, or
 /// creating a new one.
 Value *SCEVExpander::ReuseOrCreateCast(Value *V, Type *Ty,
                                        Instruction::CastOps Op,
@@ -59,40 +58,38 @@ Value *SCEVExpander::ReuseOrCreateCast(Value *V, Type *Ty,
   Instruction *Ret = nullptr;
 
   // Check to see if there is already a cast!
-  for (User *U : V->users())
-    if (U->getType() == Ty)
-      if (CastInst *CI = dyn_cast<CastInst>(U))
-        if (CI->getOpcode() == Op) {
-          // If the cast isn't where we want it, create a new cast at IP.
-          // Likewise, do not reuse a cast at BIP because it must dominate
-          // instructions that might be inserted before BIP.
-          if (BasicBlock::iterator(CI) != IP || BIP == IP) {
-            // Create a new cast, and leave the old cast in place in case
-            // it is being used as an insert point.
-            Ret = CastInst::Create(Op, V, Ty, "", &*IP);
-            Ret->takeName(CI);
-            CI->replaceAllUsesWith(Ret);
-            break;
-          }
-          Ret = CI;
-          break;
-        }
+  for (User *U : V->users()) {
+    if (U->getType() != Ty)
+      continue;
+    CastInst *CI = dyn_cast<CastInst>(U);
+    if (!CI || CI->getOpcode() != Op)
+      continue;
+
+    // Found a suitable cast that is at IP or comes before IP. Use it. Note that
+    // the cast must also properly dominate the Builder's insertion point.
+    if (IP->getParent() == CI->getParent() && &*BIP != CI &&
+        (&*IP == CI || CI->comesBefore(&*IP))) {
+      Ret = CI;
+      break;
+    }
+  }
 
   // Create a new cast.
-  if (!Ret)
+  if (!Ret) {
     Ret = CastInst::Create(Op, V, Ty, V->getName(), &*IP);
+    rememberInstruction(Ret);
+  }
 
   // We assert at the end of the function since IP might point to an
   // instruction with different dominance properties than a cast
   // (an invoke for example) and not dominate BIP (but the cast does).
   assert(SE.DT.dominates(Ret, &*BIP));
 
-  rememberInstruction(Ret);
   return Ret;
 }
 
-static BasicBlock::iterator findInsertPointAfter(Instruction *I,
-                                                 BasicBlock *MustDominate) {
+BasicBlock::iterator
+SCEVExpander::findInsertPointAfter(Instruction *I, Instruction *MustDominate) {
   BasicBlock::iterator IP = ++I->getIterator();
   if (auto *II = dyn_cast<InvokeInst>(I))
     IP = II->getNormalDest()->begin();
@@ -103,10 +100,16 @@ static BasicBlock::iterator findInsertPointAfter(Instruction *I,
   if (isa<FuncletPadInst>(IP) || isa<LandingPadInst>(IP)) {
     ++IP;
   } else if (isa<CatchSwitchInst>(IP)) {
-    IP = MustDominate->getFirstInsertionPt();
+    IP = MustDominate->getParent()->getFirstInsertionPt();
   } else {
     assert(!IP->isEHPad() && "unexpected eh pad!");
   }
+
+  // Adjust insert point to be after instructions inserted by the expander, so
+  // we can re-use already inserted instructions. Avoid skipping past the
+  // original \p MustDominate, in case it is an inserted instruction.
+  while (isInsertedInstruction(&*IP) && &*IP != MustDominate)
+    ++IP;
 
   return IP;
 }
@@ -167,7 +170,7 @@ Value *SCEVExpander::InsertNoopCastOfTo(Value *V, Type *Ty) {
 
   // Cast the instruction immediately after the instruction.
   Instruction *I = cast<Instruction>(V);
-  BasicBlock::iterator IP = findInsertPointAfter(I, Builder.GetInsertBlock());
+  BasicBlock::iterator IP = findInsertPointAfter(I, &*Builder.GetInsertPoint());
   return ReuseOrCreateCast(I, Ty, Op, IP);
 }
 
@@ -1526,7 +1529,7 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
     Value *V = expand(SE.getAddRecExpr(NewOps, S->getLoop(),
                                        S->getNoWrapFlags(SCEV::FlagNW)));
     BasicBlock::iterator NewInsertPt =
-        findInsertPointAfter(cast<Instruction>(V), Builder.GetInsertBlock());
+        findInsertPointAfter(cast<Instruction>(V), &*Builder.GetInsertPoint());
     V = expandCodeForImpl(SE.getTruncateExpr(SE.getUnknown(V), Ty), nullptr,
                           &*NewInsertPt, false);
     return V;
@@ -1879,10 +1882,12 @@ Value *SCEVExpander::expand(const SCEV *S) {
         // there) so that it is guaranteed to dominate any user inside the loop.
         if (L && SE.hasComputableLoopEvolution(S, L) && !PostIncLoops.count(L))
           InsertPt = &*L->getHeader()->getFirstInsertionPt();
+
         while (InsertPt->getIterator() != Builder.GetInsertPoint() &&
                (isInsertedInstruction(InsertPt) ||
-                isa<DbgInfoIntrinsic>(InsertPt)))
+                isa<DbgInfoIntrinsic>(InsertPt))) {
           InsertPt = &*std::next(InsertPt->getIterator());
+        }
         break;
       }
     }
@@ -2626,5 +2631,41 @@ bool isSafeToExpandAt(const SCEV *S, const Instruction *InsertionPoint,
           return true;
   }
   return false;
+}
+
+SCEVExpanderCleaner::~SCEVExpanderCleaner() {
+  // Result is used, nothing to remove.
+  if (ResultUsed)
+    return;
+
+  auto InsertedInstructions = Expander.getAllInsertedInstructions();
+#ifndef NDEBUG
+  SmallPtrSet<Instruction *, 8> InsertedSet(InsertedInstructions.begin(),
+                                            InsertedInstructions.end());
+  (void)InsertedSet;
+#endif
+  // Remove sets with value handles.
+  Expander.clear();
+
+  // Sort so that earlier instructions do not dominate later instructions.
+  stable_sort(InsertedInstructions, [this](Instruction *A, Instruction *B) {
+    return DT.dominates(B, A);
+  });
+  // Remove all inserted instructions.
+  for (Instruction *I : InsertedInstructions) {
+
+#ifndef NDEBUG
+    assert(all_of(I->users(),
+                  [&InsertedSet](Value *U) {
+                    return InsertedSet.contains(cast<Instruction>(U));
+                  }) &&
+           "removed instruction should only be used by instructions inserted "
+           "during expansion");
+#endif
+    assert(!I->getType()->isVoidTy() &&
+           "inserted instruction should have non-void types");
+    I->replaceAllUsesWith(UndefValue::get(I->getType()));
+    I->eraseFromParent();
+  }
 }
 }

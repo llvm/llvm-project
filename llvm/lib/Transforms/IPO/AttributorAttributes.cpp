@@ -45,6 +45,16 @@ static cl::opt<bool> ManifestInternal(
 static cl::opt<int> MaxHeapToStackSize("max-heap-to-stack-size", cl::init(128),
                                        cl::Hidden);
 
+template <>
+unsigned llvm::PotentialConstantIntValuesState::MaxPotentialValues = 0;
+
+static cl::opt<unsigned, true> MaxPotentialValues(
+    "attributor-max-potential-values", cl::Hidden,
+    cl::desc("Maximum number of potential values to be "
+             "tracked for each position."),
+    cl::location(llvm::PotentialConstantIntValuesState::MaxPotentialValues),
+    cl::init(7));
+
 STATISTIC(NumAAs, "Number of abstract attributes created");
 
 // Some helper macros to deal with statistics tracking.
@@ -120,6 +130,7 @@ PIPE_OPERATOR(AAMemoryLocation)
 PIPE_OPERATOR(AAValueConstantRange)
 PIPE_OPERATOR(AAPrivatizablePtr)
 PIPE_OPERATOR(AAUndefinedBehavior)
+PIPE_OPERATOR(AAPotentialValues)
 
 #undef PIPE_OPERATOR
 } // namespace llvm
@@ -2006,7 +2017,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
         if (idx >= Callee->arg_size())
           break;
         Value *ArgVal = CB.getArgOperand(idx);
-        if(!ArgVal)
+        if (!ArgVal)
           continue;
         IRPosition CalleeArgumentIRP =
             IRPosition::argument(*Callee->getArg(idx));
@@ -2038,6 +2049,37 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
       return true;
     };
 
+    auto InspectReturnInstForUB =
+        [&](Value &V, const SmallSetVector<ReturnInst *, 4> RetInsts) {
+          // Check if a return instruction always cause UB or not
+          // Note: It is guaranteed that the returned position of the anchor
+          //       scope has noundef attribute when this is called.
+
+          // When the returned position has noundef attriubte, UB occur in the
+          // following cases.
+          //   (1) Returned value is known to be undef.
+          //   (2) The value is known to be a null pointer and the returned
+          //       position has nonnull attribute (because the returned value is
+          //       poison).
+          // Note: This callback is not called for a dead returned value because
+          //       such values are ignored in
+          //       checkForAllReturnedValuesAndReturnedInsts.
+          bool FoundUB = false;
+          if (isa<UndefValue>(V)) {
+            FoundUB = true;
+          } else {
+            auto &NonNullAA = A.getAAFor<AANonNull>(
+                *this, IRPosition::returned(*getAnchorScope()));
+            if (NonNullAA.isKnownNonNull() && isa<ConstantPointerNull>(V))
+              FoundUB = true;
+          }
+
+          if (FoundUB)
+            for (ReturnInst *RI : RetInsts)
+              KnownUBInsts.insert(RI);
+          return true;
+        };
+
     A.checkForAllInstructions(InspectMemAccessInstForUB, *this,
                               {Instruction::Load, Instruction::Store,
                                Instruction::AtomicCmpXchg,
@@ -2046,6 +2088,13 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
     A.checkForAllInstructions(InspectBrInstForUB, *this, {Instruction::Br},
                               /* CheckBBLivenessOnly */ true);
     A.checkForAllCallLikeInstructions(InspectCallSiteForUB, *this);
+
+    // If the returned position of the anchor scope has noundef attriubte, check
+    // all returned instructions.
+    // TODO: If AANoUndef is implemented, ask it here.
+    if (IRPosition::returned(*getAnchorScope()).hasAttr({Attribute::NoUndef}))
+      A.checkForAllReturnedValuesAndReturnInsts(InspectReturnInstForUB, *this);
+
     if (NoUBPrevSize != AssumedNoUBInsts.size() ||
         UBPrevSize != KnownUBInsts.size())
       return ChangeStatus::CHANGED;
@@ -4425,24 +4474,35 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     return true;
   }
 
-  bool askSimplifiedValueForAAValueConstantRange(Attributor &A) {
+  /// Returns a candidate is found or not
+  template <typename AAType> bool askSimplifiedValueFor(Attributor &A) {
     if (!getAssociatedValue().getType()->isIntegerTy())
       return false;
 
-    const auto &ValueConstantRangeAA =
-        A.getAAFor<AAValueConstantRange>(*this, getIRPosition());
+    const auto &AA =
+        A.getAAFor<AAType>(*this, getIRPosition(), /* TrackDependence */ false);
 
-    Optional<ConstantInt *> COpt =
-        ValueConstantRangeAA.getAssumedConstantInt(A);
-    if (COpt.hasValue()) {
-      if (auto *C = COpt.getValue())
-        SimplifiedAssociatedValue = C;
-      else
-        return false;
-    } else {
+    Optional<ConstantInt *> COpt = AA.getAssumedConstantInt(A);
+
+    if (!COpt.hasValue()) {
       SimplifiedAssociatedValue = llvm::None;
+      A.recordDependence(AA, *this, DepClassTy::OPTIONAL);
+      return true;
     }
-    return true;
+    if (auto *C = COpt.getValue()) {
+      SimplifiedAssociatedValue = C;
+      A.recordDependence(AA, *this, DepClassTy::OPTIONAL);
+      return true;
+    }
+    return false;
+  }
+
+  bool askSimplifiedValueForOtherAAs(Attributor &A) {
+    if (askSimplifiedValueFor<AAValueConstantRange>(A))
+      return true;
+    if (askSimplifiedValueFor<AAPotentialValues>(A))
+      return true;
+    return false;
   }
 
   /// See AbstractAttribute::manifest(...).
@@ -4549,7 +4609,7 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
     bool AllCallSitesKnown;
     if (!A.checkForAllCallSites(PredForCallSite, *this, true,
                                 AllCallSitesKnown))
-      if (!askSimplifiedValueForAAValueConstantRange(A))
+      if (!askSimplifiedValueForOtherAAs(A))
         return indicatePessimisticFixpoint();
 
     // If a candicate was found in this update, return CHANGED.
@@ -4577,7 +4637,7 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
     };
 
     if (!A.checkForAllReturnedValues(PredForReturned, *this))
-      if (!askSimplifiedValueForAAValueConstantRange(A))
+      if (!askSimplifiedValueForOtherAAs(A))
         return indicatePessimisticFixpoint();
 
     // If a candicate was found in this update, return CHANGED.
@@ -4667,7 +4727,7 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
     if (!genericValueTraversal<AAValueSimplify, bool>(
             A, getIRPosition(), *this, Dummy, VisitValueCB, getCtxI(),
             /* UseValueSimplify */ false))
-      if (!askSimplifiedValueForAAValueConstantRange(A))
+      if (!askSimplifiedValueForOtherAAs(A))
         return indicatePessimisticFixpoint();
 
     // If a candicate was found in this update, return CHANGED.
@@ -7131,6 +7191,155 @@ struct AAValueConstantRangeCallSiteArgument : AAValueConstantRangeFloating {
     STATS_DECLTRACK_CSARG_ATTR(value_range)
   }
 };
+
+/// ------------------ Potential Values Attribute -------------------------
+
+struct AAPotentialValuesImpl : AAPotentialValues {
+  using StateType = PotentialConstantIntValuesState;
+
+  AAPotentialValuesImpl(const IRPosition &IRP, Attributor &A)
+      : AAPotentialValues(IRP, A) {}
+
+  /// See AbstractAttribute::getAsStr().
+  const std::string getAsStr() const override {
+    std::string Str;
+    llvm::raw_string_ostream OS(Str);
+    OS << getState();
+    return OS.str();
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    return indicatePessimisticFixpoint();
+  }
+};
+
+struct AAPotentialValuesArgument final
+    : AAArgumentFromCallSiteArguments<AAPotentialValues, AAPotentialValuesImpl,
+                                      PotentialConstantIntValuesState> {
+  using Base =
+      AAArgumentFromCallSiteArguments<AAPotentialValues, AAPotentialValuesImpl,
+                                      PotentialConstantIntValuesState>;
+  AAPotentialValuesArgument(const IRPosition &IRP, Attributor &A)
+      : Base(IRP, A) {}
+
+  /// See AbstractAttribute::initialize(..).
+  void initialize(Attributor &A) override {
+    if (!getAnchorScope() || getAnchorScope()->isDeclaration()) {
+      indicatePessimisticFixpoint();
+    } else {
+      Base::initialize(A);
+    }
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECLTRACK_ARG_ATTR(potential_values)
+  }
+};
+
+struct AAPotentialValuesReturned
+    : AAReturnedFromReturnedValues<AAPotentialValues, AAPotentialValuesImpl> {
+  using Base =
+      AAReturnedFromReturnedValues<AAPotentialValues, AAPotentialValuesImpl>;
+  AAPotentialValuesReturned(const IRPosition &IRP, Attributor &A)
+      : Base(IRP, A) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECLTRACK_FNRET_ATTR(potential_values)
+  }
+};
+
+struct AAPotentialValuesFloating : AAPotentialValuesImpl {
+  AAPotentialValuesFloating(const IRPosition &IRP, Attributor &A)
+      : AAPotentialValuesImpl(IRP, A) {}
+
+  /// See AbstractAttribute::initialize(..).
+  void initialize(Attributor &A) override {
+    Value &V = getAssociatedValue();
+
+    if (auto *C = dyn_cast<ConstantInt>(&V)) {
+      unionAssumed(C->getValue());
+      indicateOptimisticFixpoint();
+      return;
+    }
+
+    if (isa<UndefValue>(&V)) {
+      // Collapse the undef state to 0.
+      unionAssumed(
+          APInt(/* numBits */ getAssociatedType()->getIntegerBitWidth(),
+                /* val */ 0));
+      indicateOptimisticFixpoint();
+      return;
+    }
+
+    if (isa<BinaryOperator>(&V) || isa<ICmpInst>(&V) || isa<CastInst>(&V))
+      return;
+
+    if (isa<SelectInst>(V) || isa<PHINode>(V))
+      return;
+
+    indicatePessimisticFixpoint();
+
+    LLVM_DEBUG(dbgs() << "[AAPotentialValues] We give up: "
+                      << getAssociatedValue() << "\n");
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECLTRACK_FLOATING_ATTR(potential_values)
+  }
+};
+
+struct AAPotentialValuesFunction : AAPotentialValuesImpl {
+  AAPotentialValuesFunction(const IRPosition &IRP, Attributor &A)
+      : AAPotentialValuesImpl(IRP, A) {}
+
+  /// See AbstractAttribute::initialize(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    llvm_unreachable("AAPotentialValues(Function|CallSite)::updateImpl will "
+                     "not be called");
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECLTRACK_FN_ATTR(potential_values)
+  }
+};
+
+struct AAPotentialValuesCallSite : AAPotentialValuesFunction {
+  AAPotentialValuesCallSite(const IRPosition &IRP, Attributor &A)
+      : AAPotentialValuesFunction(IRP, A) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECLTRACK_CS_ATTR(potential_values)
+  }
+};
+
+struct AAPotentialValuesCallSiteReturned
+    : AACallSiteReturnedFromReturned<AAPotentialValues, AAPotentialValuesImpl> {
+  AAPotentialValuesCallSiteReturned(const IRPosition &IRP, Attributor &A)
+      : AACallSiteReturnedFromReturned<AAPotentialValues,
+                                       AAPotentialValuesImpl>(IRP, A) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECLTRACK_CSRET_ATTR(potential_values)
+  }
+};
+
+struct AAPotentialValuesCallSiteArgument : AAPotentialValuesFloating {
+  AAPotentialValuesCallSiteArgument(const IRPosition &IRP, Attributor &A)
+      : AAPotentialValuesFloating(IRP, A) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    STATS_DECLTRACK_CSARG_ATTR(potential_values)
+  }
+};
+
 } // namespace
 
 const char AAReturnedValues::ID = 0;
@@ -7154,6 +7363,7 @@ const char AAPrivatizablePtr::ID = 0;
 const char AAMemoryBehavior::ID = 0;
 const char AAMemoryLocation::ID = 0;
 const char AAValueConstantRange::ID = 0;
+const char AAPotentialValues::ID = 0;
 
 // Macro magic to create the static generator function for attributes that
 // follow the naming scheme.
@@ -7263,6 +7473,7 @@ CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AADereferenceable)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAAlign)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoCapture)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAValueConstantRange)
+CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPotentialValues)
 
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAValueSimplify)
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAIsDead)

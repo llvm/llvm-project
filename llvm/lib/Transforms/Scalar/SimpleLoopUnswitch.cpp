@@ -94,6 +94,11 @@ static cl::opt<bool> UnswitchGuards(
     "simple-loop-unswitch-guards", cl::init(true), cl::Hidden,
     cl::desc("If enabled, simple loop unswitching will also consider "
              "llvm.experimental.guard intrinsics as unswitch candidates."));
+static cl::opt<bool> DropNonTrivialImplicitNullChecks(
+    "simple-loop-unswitch-drop-non-trivial-implicit-null-checks",
+    cl::init(false), cl::Hidden,
+    cl::desc("If enabled, drop make.implicit metadata in unswitched implicit "
+             "null checks to save time analyzing if we can keep it."));
 
 /// Collect all of the loop invariant input values transitively used by the
 /// homogeneous instruction graph from a given root.
@@ -2074,12 +2079,18 @@ static void unswitchNontrivialInvariants(
   // Drop metadata if we may break its semantics by moving this instr into the
   // split block.
   if (TI.getMetadata(LLVMContext::MD_make_implicit)) {
-    // It is only legal to preserve make.implicit metadata if we are guaranteed
-    // to reach implicit null check block after following this branch.
-    ICFLoopSafetyInfo SafetyInfo;
-    SafetyInfo.computeLoopSafetyInfo(&L);
-    if (!SafetyInfo.isGuaranteedToExecute(TI, &DT, &L))
+    if (DropNonTrivialImplicitNullChecks)
+      // Do not spend time trying to understand if we can keep it, just drop it
+      // to save compile time.
       TI.setMetadata(LLVMContext::MD_make_implicit, nullptr);
+    else {
+      // It is only legal to preserve make.implicit metadata if we are
+      // guaranteed no reach implicit null check after following this branch.
+      ICFLoopSafetyInfo SafetyInfo;
+      SafetyInfo.computeLoopSafetyInfo(&L);
+      if (!SafetyInfo.isGuaranteedToExecute(TI, &DT, &L))
+        TI.setMetadata(LLVMContext::MD_make_implicit, nullptr);
+    }
   }
 
   // The stitching of the branched code back together depends on whether we're

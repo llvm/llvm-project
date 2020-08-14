@@ -354,7 +354,7 @@ void SetSignalHandler(const FuzzingOptions &Options) {
   Printf("%s", Buf);
 
   // Set up alarm handler if needed.
-  if (Options.UnitTimeoutSec > 0) {
+  if (Options.HandleAlrm && Options.UnitTimeoutSec > 0) {
     std::thread T(AlarmHandler, Options.UnitTimeoutSec / 2 + 1);
     T.detach();
   }

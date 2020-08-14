@@ -24,6 +24,7 @@
 #include "tensorflow/c/c_api_experimental.h"
 
 #include <cassert>
+#include <numeric>
 
 using namespace llvm;
 
@@ -83,6 +84,16 @@ private:
   const size_t OutputSize;
   std::vector<TF_Tensor *> Output;
 };
+
+size_t TensorSpec::getElementByteSize() const {
+  return TF_DataTypeSize(static_cast<TF_DataType>(TypeIndex));
+}
+
+TensorSpec::TensorSpec(const std::string &Name, int Port, int TypeIndex,
+                       const std::vector<int64_t> &Shape)
+    : Name(Name), Port(Port), TypeIndex(TypeIndex), Shape(Shape),
+      ElementCount(std::accumulate(Shape.begin(), Shape.end(), 1,
+                                   std::multiplies<int64_t>())) {}
 
 Optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
                                            const json::Value &Value) {
@@ -281,7 +292,18 @@ TFModelEvaluator::EvaluationResult::EvaluationResult(
 TFModelEvaluator::EvaluationResult::EvaluationResult(EvaluationResult &&Other)
     : Impl(std::move(Other.Impl)) {}
 
+TFModelEvaluator::EvaluationResult &
+TFModelEvaluator::EvaluationResult::operator=(EvaluationResult &&Other) {
+  Impl = std::move(Other.Impl);
+  return *this;
+}
+
 void *TFModelEvaluator::EvaluationResult::getUntypedTensorValue(size_t Index) {
+  return TF_TensorData(Impl->getOutput()[Index]);
+}
+
+const void *
+TFModelEvaluator::EvaluationResult::getUntypedTensorValue(size_t Index) const {
   return TF_TensorData(Impl->getOutput()[Index]);
 }
 

@@ -262,6 +262,7 @@ def main():
       for k, v in get_line2spell_and_mangled(ti.args, clang_args).items():
         line2spell_and_mangled_list[k].append(v)
 
+    global_vars_seen_dict = {}
     prefix_set = set([prefix for p in run_list for prefix in p[0]])
     output_lines = []
     for line_info in ti.iterlines(output_lines):
@@ -293,7 +294,7 @@ def main():
               output_lines.append('//')
             added.add(mangled)
             common.add_ir_checks(output_lines, '//', run_list, func_dict, mangled,
-                                 False, args.function_signature)
+                                 False, args.function_signature, global_vars_seen_dict)
             if line.rstrip('\n') == '//':
               include_line = False
 

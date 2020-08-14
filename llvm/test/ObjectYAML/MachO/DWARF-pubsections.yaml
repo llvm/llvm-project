@@ -308,8 +308,7 @@ DWARF:
     - int
     - char
   debug_pubnames:  
-    Length:
-      TotalLength:       23
+    Length:          23
     Version:         2
     UnitOffset:      0
     UnitSize:        121
@@ -317,8 +316,7 @@ DWARF:
       - DieOffset:       0x0000002A
         Name:            main
   debug_pubtypes:  
-    Length:
-      TotalLength:       31
+    Length:          31
     Version:         2
     UnitOffset:      0
     UnitSize:        121
@@ -331,8 +329,7 @@ DWARF:
 
 #CHECK: DWARF:           
 #CHECK:   debug_pubnames:  
-#CHECK:     Length:
-#CHECK:       TotalLength:       23
+#CHECK:     Length:          0x0000000000000017
 #CHECK:     Version:         2
 #CHECK:     UnitOffset:      0
 #CHECK:     UnitSize:        121
@@ -340,8 +337,7 @@ DWARF:
 #CHECK:       - DieOffset:       0x0000002A
 #CHECK:         Name:            main
 #CHECK:   debug_pubtypes:  
-#CHECK:     Length:
-#CHECK:       TotalLength:       31
+#CHECK:     Length:          0x000000000000001F
 #CHECK:     Version:         2
 #CHECK:     UnitOffset:      0
 #CHECK:     UnitSize:        121
@@ -372,7 +368,6 @@ DWARF:
 # EMPTY-NEXT:     reserved1:       0x00000000
 # EMPTY-NEXT:     reserved2:       0x00000000
 # EMPTY-NEXT:     reserved3:       0x00000000
-# EMPTY-NEXT:     content:         ''
 # EMPTY-NEXT:   - sectname:        __debug_pubtypes
 # EMPTY-NEXT:     segname:         __DWARF
 # EMPTY-NEXT:     addr:            0x0000000000000000
@@ -385,7 +380,6 @@ DWARF:
 # EMPTY-NEXT:     reserved1:       0x00000000
 # EMPTY-NEXT:     reserved2:       0x00000000
 # EMPTY-NEXT:     reserved3:       0x00000000
-# EMPTY-NEXT:     content:         ''
 # EMPTY-NEXT: ...
 
 --- !mach-o

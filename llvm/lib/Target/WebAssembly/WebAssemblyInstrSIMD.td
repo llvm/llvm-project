@@ -163,6 +163,43 @@ defm : LoadPatGlobalAddrOffOnly<types[0], !cast<PatFrag>(exts[0]#types[1]),
                                 "LOAD_EXTEND"#exts[1]#"_"#types[0]>;
 }
 
+// Load lane into zero vector
+multiclass SIMDLoadZero<ValueType vec_t, string name, bits<32> simdop> {
+  let mayLoad = 1, UseNamedOperandTable = 1 in {
+  defm LOAD_ZERO_#vec_t#_A32 :
+    SIMD_I<(outs V128:$dst),
+           (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
+           (outs), (ins P2Align:$p2align, offset32_op:$off), [],
+           name#"\t$dst, ${off}(${addr})$p2align",
+           name#"\t$off$p2align", simdop>;
+  defm LOAD_ZERO_#vec_t#_A64 :
+    SIMD_I<(outs V128:$dst),
+           (ins P2Align:$p2align, offset64_op:$off, I64:$addr),
+           (outs), (ins P2Align:$p2align, offset64_op:$off), [],
+           name#"\t$dst, ${off}(${addr})$p2align",
+           name#"\t$off$p2align", simdop>;
+  } // mayLoad = 1, UseNamedOperandTable = 1
+}
+
+// TODO: Also support v4f32 and v2f64 once the instructions are merged
+// to the proposal
+defm "" : SIMDLoadZero<v4i32, "v128.load32_zero", 252>;
+defm "" : SIMDLoadZero<v2i64, "v128.load64_zero", 253>;
+
+defm : LoadPatNoOffset<v4i32, int_wasm_load32_zero, "LOAD_ZERO_v4i32">;
+defm : LoadPatNoOffset<v2i64, int_wasm_load64_zero, "LOAD_ZERO_v2i64">;
+
+defm : LoadPatImmOff<v4i32, int_wasm_load32_zero, regPlusImm, "LOAD_ZERO_v4i32">;
+defm : LoadPatImmOff<v2i64, int_wasm_load64_zero, regPlusImm, "LOAD_ZERO_v2i64">;
+
+defm : LoadPatImmOff<v4i32, int_wasm_load32_zero, or_is_add, "LOAD_ZERO_v4i32">;
+defm : LoadPatImmOff<v2i64, int_wasm_load64_zero, or_is_add, "LOAD_ZERO_v2i64">;
+
+defm : LoadPatOffsetOnly<v4i32, int_wasm_load32_zero, "LOAD_ZERO_v4i32">;
+defm : LoadPatOffsetOnly<v2i64, int_wasm_load64_zero, "LOAD_ZERO_v2i64">;
+
+defm : LoadPatGlobalAddrOffOnly<v4i32, int_wasm_load32_zero, "LOAD_ZERO_v4i32">;
+defm : LoadPatGlobalAddrOffOnly<v2i64, int_wasm_load64_zero, "LOAD_ZERO_v2i64">;
 
 // Store: v128.store
 let mayStore = 1, UseNamedOperandTable = 1 in {
@@ -800,7 +837,7 @@ let isCommutable = 1 in
 defm DOT : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs), (outs), (ins),
                   [(set V128:$dst, (int_wasm_dot V128:$lhs, V128:$rhs))],
                   "i32x4.dot_i16x8_s\t$dst, $lhs, $rhs", "i32x4.dot_i16x8_s",
-                  180>;
+                  186>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point unary arithmetic
@@ -1038,20 +1075,21 @@ def : Pat<(t1 (bitconvert (t2 V128:$v))), (t1 V128:$v)>;
 // Quasi-Fused Multiply- Add and Subtract (QFMA/QFMS)
 //===----------------------------------------------------------------------===//
 
-multiclass SIMDQFM<ValueType vec_t, string vec, bits<32> baseInst> {
+multiclass SIMDQFM<ValueType vec_t, string vec, bits<32> simdopA,
+                   bits<32> simdopS> {
   defm QFMA_#vec_t :
     SIMD_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c),
            (outs), (ins),
            [(set (vec_t V128:$dst),
              (int_wasm_qfma (vec_t V128:$a), (vec_t V128:$b), (vec_t V128:$c)))],
-           vec#".qfma\t$dst, $a, $b, $c", vec#".qfma", baseInst>;
+           vec#".qfma\t$dst, $a, $b, $c", vec#".qfma", simdopA>;
   defm QFMS_#vec_t :
     SIMD_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c),
            (outs), (ins),
            [(set (vec_t V128:$dst),
              (int_wasm_qfms (vec_t V128:$a), (vec_t V128:$b), (vec_t V128:$c)))],
-           vec#".qfms\t$dst, $a, $b, $c", vec#".qfms", !add(baseInst, 1)>;
+           vec#".qfms\t$dst, $a, $b, $c", vec#".qfms", simdopS>;
 }
 
-defm "" : SIMDQFM<v4f32, "f32x4", 252>;
-defm "" : SIMDQFM<v2f64, "f64x2", 254>;
+defm "" : SIMDQFM<v4f32, "f32x4", 180, 212>;
+defm "" : SIMDQFM<v2f64, "f64x2", 254, 255>;

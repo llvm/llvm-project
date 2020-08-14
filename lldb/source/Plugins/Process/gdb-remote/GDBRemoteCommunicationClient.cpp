@@ -2120,6 +2120,7 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
         case llvm::Triple::COFF:
           m_process_arch.SetArchitecture(eArchTypeCOFF, cpu, sub);
           break;
+        case llvm::Triple::GOFF:
         case llvm::Triple::Wasm:
         case llvm::Triple::XCOFF:
           LLDB_LOGF(log, "error: not supported target architecture");

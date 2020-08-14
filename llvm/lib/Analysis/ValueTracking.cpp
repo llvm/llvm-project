@@ -549,10 +549,10 @@ void llvm::computeKnownBitsFromRangeMetadata(const MDNode &Ranges,
     // The first CommonPrefixBits of all values in Range are equal.
     unsigned CommonPrefixBits =
         (Range.getUnsignedMax() ^ Range.getUnsignedMin()).countLeadingZeros();
-
     APInt Mask = APInt::getHighBitsSet(BitWidth, CommonPrefixBits);
-    Known.One &= Range.getUnsignedMax() & Mask;
-    Known.Zero &= ~Range.getUnsignedMax() & Mask;
+    APInt UnsignedMax = Range.getUnsignedMax().zextOrTrunc(BitWidth);
+    Known.One &= UnsignedMax & Mask;
+    Known.Zero &= ~UnsignedMax & Mask;
   }
 }
 
@@ -6413,6 +6413,41 @@ static void setLimitsForIntrinsic(const IntrinsicInst &II, APInt &Lower,
         Upper = APInt::getSignedMaxValue(Width) - *C + 1;
       }
     }
+    break;
+  case Intrinsic::umin:
+  case Intrinsic::umax:
+  case Intrinsic::smin:
+  case Intrinsic::smax:
+    if (!match(II.getOperand(0), m_APInt(C)) &&
+        !match(II.getOperand(1), m_APInt(C)))
+      break;
+
+    switch (II.getIntrinsicID()) {
+    case Intrinsic::umin:
+      Upper = *C + 1;
+      break;
+    case Intrinsic::umax:
+      Lower = *C;
+      break;
+    case Intrinsic::smin:
+      Lower = APInt::getSignedMinValue(Width);
+      Upper = *C + 1;
+      break;
+    case Intrinsic::smax:
+      Lower = *C;
+      Upper = APInt::getSignedMaxValue(Width) + 1;
+      break;
+    default:
+      llvm_unreachable("Must be min/max intrinsic");
+    }
+    break;
+  case Intrinsic::abs:
+    // If abs of SIGNED_MIN is poison, then the result is [0..SIGNED_MAX],
+    // otherwise it is [0..SIGNED_MIN], as -SIGNED_MIN == SIGNED_MIN.
+    if (match(II.getOperand(1), m_One()))
+      Upper = APInt::getSignedMaxValue(Width) + 1;
+    else
+      Upper = APInt::getSignedMinValue(Width) + 1;
     break;
   default:
     break;

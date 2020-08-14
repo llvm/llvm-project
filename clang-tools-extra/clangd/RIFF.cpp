@@ -33,7 +33,7 @@ llvm::Expected<Chunk> readChunk(llvm::StringRef &Stream) {
                      llvm::Twine(Stream.size()));
   C.Data = Stream.take_front(Len);
   Stream = Stream.drop_front(Len);
-  if (Len % 2 & !Stream.empty()) { // Skip padding byte.
+  if ((Len % 2) && !Stream.empty()) { // Skip padding byte.
     if (Stream.front())
       return makeError("nonzero padding byte");
     Stream = Stream.drop_front();

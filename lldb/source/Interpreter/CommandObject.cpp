@@ -1047,7 +1047,7 @@ CommandObject::ArgumentTableEntry CommandObject::g_arguments_data[] = {
     { eArgTypeCommandName, "cmd-name", CommandCompletions::eNoCompletion, { nullptr, false }, "A debugger command (may be multiple words), without any options or arguments." },
     { eArgTypeCount, "count", CommandCompletions::eNoCompletion, { nullptr, false }, "An unsigned integer." },
     { eArgTypeDirectoryName, "directory", CommandCompletions::eDiskDirectoryCompletion, { nullptr, false }, "A directory name." },
-    { eArgTypeDisassemblyFlavor, "disassembly-flavor", CommandCompletions::eNoCompletion, { nullptr, false }, "A disassembly flavor recognized by your disassembly plugin.  Currently the only valid options are \"att\" and \"intel\" for Intel targets" },
+    { eArgTypeDisassemblyFlavor, "disassembly-flavor", CommandCompletions::eDisassemblyFlavorCompletion, { nullptr, false }, "A disassembly flavor recognized by your disassembly plugin.  Currently the only valid options are \"att\" and \"intel\" for Intel targets" },
     { eArgTypeDescriptionVerbosity, "description-verbosity", CommandCompletions::eNoCompletion, { nullptr, false }, "How verbose the output of 'po' should be." },
     { eArgTypeEndAddress, "end-address", CommandCompletions::eNoCompletion, { nullptr, false }, "Help text goes here." },
     { eArgTypeExpression, "expr", CommandCompletions::eNoCompletion, { nullptr, false }, "Help text goes here." },
@@ -1055,14 +1055,14 @@ CommandObject::ArgumentTableEntry CommandObject::g_arguments_data[] = {
     { eArgTypeExprFormat, "expression-format", CommandCompletions::eNoCompletion, { nullptr, false }, "[ [bool|b] | [bin] | [char|c] | [oct|o] | [dec|i|d|u] | [hex|x] | [float|f] | [cstr|s] ]" },
     { eArgTypeFilename, "filename", CommandCompletions::eDiskFileCompletion, { nullptr, false }, "The name of a file (can include path)." },
     { eArgTypeFormat, "format", CommandCompletions::eNoCompletion, { FormatHelpTextCallback, true }, nullptr },
-    { eArgTypeFrameIndex, "frame-index", CommandCompletions::eNoCompletion, { nullptr, false }, "Index into a thread's list of frames." },
+    { eArgTypeFrameIndex, "frame-index", CommandCompletions::eFrameIndexCompletion, { nullptr, false }, "Index into a thread's list of frames." },
     { eArgTypeFullName, "fullname", CommandCompletions::eNoCompletion, { nullptr, false }, "Help text goes here." },
     { eArgTypeFunctionName, "function-name", CommandCompletions::eNoCompletion, { nullptr, false }, "The name of a function." },
     { eArgTypeFunctionOrSymbol, "function-or-symbol", CommandCompletions::eNoCompletion, { nullptr, false }, "The name of a function or symbol." },
     { eArgTypeGDBFormat, "gdb-format", CommandCompletions::eNoCompletion, { GDBFormatHelpTextCallback, true }, nullptr },
     { eArgTypeHelpText, "help-text", CommandCompletions::eNoCompletion, { nullptr, false }, "Text to be used as help for some other entity in LLDB" },
     { eArgTypeIndex, "index", CommandCompletions::eNoCompletion, { nullptr, false }, "An index into a list." },
-    { eArgTypeLanguage, "source-language", CommandCompletions::eNoCompletion, { LanguageTypeHelpTextCallback, true }, nullptr },
+    { eArgTypeLanguage, "source-language", CommandCompletions::eTypeLanguageCompletion, { LanguageTypeHelpTextCallback, true }, nullptr },
     { eArgTypeLineNum, "linenum", CommandCompletions::eNoCompletion, { nullptr, false }, "Line number in a source file." },
     { eArgTypeFileLineColumn, "linespec", CommandCompletions::eNoCompletion, { nullptr, false }, "A source specifier in the form file:line[:column]" },
     { eArgTypeLogCategory, "log-category", CommandCompletions::eNoCompletion, { nullptr, false }, "The name of a category within a log channel, e.g. all (try \"log list\" to see a list of all channels and their categories." },
@@ -1119,7 +1119,8 @@ CommandObject::ArgumentTableEntry CommandObject::g_arguments_data[] = {
     { eArgTypeWatchType, "watch-type", CommandCompletions::eNoCompletion, { nullptr, false }, "Specify the type for a watchpoint." },
     { eArgRawInput, "raw-input", CommandCompletions::eNoCompletion, { nullptr, false }, "Free-form text passed to a command without prior interpretation, allowing spaces without requiring quotes.  To pass arguments and free form text put two dashes ' -- ' between the last argument and any raw input." },
     { eArgTypeCommand, "command", CommandCompletions::eNoCompletion, { nullptr, false }, "An LLDB Command line command." },
-    { eArgTypeColumnNum, "column", CommandCompletions::eNoCompletion, { nullptr, false }, "Column number in a source file." }
+    { eArgTypeColumnNum, "column", CommandCompletions::eNoCompletion, { nullptr, false }, "Column number in a source file." },
+    { eArgTypeModuleUUID, "module-uuid", CommandCompletions::eModuleUUIDCompletion, { nullptr, false }, "A module UUID value." }
     // clang-format on
 };
 

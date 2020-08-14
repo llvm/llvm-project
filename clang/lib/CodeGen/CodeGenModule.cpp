@@ -4915,6 +4915,8 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   switch (Triple.getObjectFormat()) {
   case llvm::Triple::UnknownObjectFormat:
     llvm_unreachable("unknown file format");
+  case llvm::Triple::GOFF:
+    llvm_unreachable("GOFF is not yet implemented");
   case llvm::Triple::XCOFF:
     llvm_unreachable("XCOFF is not yet implemented");
   case llvm::Triple::COFF:
@@ -5392,16 +5394,21 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
           Spec->hasDefinition())
         DI->completeTemplateDefinition(*Spec);
   } LLVM_FALLTHROUGH;
-  case Decl::CXXRecord:
-    if (CGDebugInfo *DI = getModuleDebugInfo())
+  case Decl::CXXRecord: {
+    CXXRecordDecl *CRD = cast<CXXRecordDecl>(D);
+    if (CGDebugInfo *DI = getModuleDebugInfo()) {
+      if (CRD->hasDefinition())
+        DI->EmitAndRetainType(getContext().getRecordType(cast<RecordDecl>(D)));
       if (auto *ES = D->getASTContext().getExternalSource())
         if (ES->hasExternalDefinitions(D) == ExternalASTSource::EK_Never)
-          DI->completeUnusedClass(cast<CXXRecordDecl>(*D));
+          DI->completeUnusedClass(*CRD);
+    }
     // Emit any static data members, they may be definitions.
-    for (auto *I : cast<CXXRecordDecl>(D)->decls())
+    for (auto *I : CRD->decls())
       if (isa<VarDecl>(I) || isa<CXXRecordDecl>(I))
         EmitTopLevelDecl(I);
     break;
+  }
     // No code generation needed.
   case Decl::UsingShadow:
   case Decl::ClassTemplate:
@@ -5585,6 +5592,25 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
 
   case Decl::OMPRequires:
     EmitOMPRequiresDecl(cast<OMPRequiresDecl>(D));
+    break;
+
+  case Decl::Typedef:
+  case Decl::TypeAlias: // using foo = bar; [C++11]
+    if (CGDebugInfo *DI = getModuleDebugInfo())
+      DI->EmitAndRetainType(
+          getContext().getTypedefType(cast<TypedefNameDecl>(D)));
+    break;
+
+  case Decl::Record:
+    if (CGDebugInfo *DI = getModuleDebugInfo())
+      if (cast<RecordDecl>(D)->getDefinition())
+        DI->EmitAndRetainType(getContext().getRecordType(cast<RecordDecl>(D)));
+    break;
+
+  case Decl::Enum:
+    if (CGDebugInfo *DI = getModuleDebugInfo())
+      if (cast<EnumDecl>(D)->getDefinition())
+        DI->EmitAndRetainType(getContext().getEnumType(cast<EnumDecl>(D)));
     break;
 
   default:

@@ -14,6 +14,7 @@ add_mlir_conversion_library(MLIRVectorToLLVM
   LINK_LIBS PUBLIC
   MLIRLLVMIR
   MLIRStandardToLLVM
-  MLIRVector
+  MLIRTargetLLVMIRModuleTranslation
   MLIRTransforms
+  MLIRVector
   )

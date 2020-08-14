@@ -96,14 +96,22 @@ PlatformSP PlatformRemoteAppleBridge::CreateInstance(bool force,
         break;
       }
       if (create) {
+// Suppress warning "switch statement contains 'default' but no 'case' labels".
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4065)
+#endif
         switch (triple.getOS()) {
-        // NEED_BRIDGEOS_TRIPLE case llvm::Triple::BridgeOS: 
-          break;
+          // NEED_BRIDGEOS_TRIPLE case llvm::Triple::BridgeOS:
+          //  break;
 
         default:
           create = false;
           break;
         }
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
       }
     } break;
     default:

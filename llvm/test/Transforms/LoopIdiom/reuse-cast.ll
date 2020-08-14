@@ -83,21 +83,22 @@ declare void @use.i1(i1)
 define void @reuse_cast_2(i32 %x, i32* %ptr.1.start) {
 ; CHECK-LABEL: @reuse_cast_2(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PTR_1_START2:%.*]] = bitcast i32* [[PTR_1_START:%.*]] to i8*
 ; CHECK-NEXT:    [[STACK:%.*]] = alloca [2 x i32], align 4
-; CHECK-NEXT:    [[CAST_TO_REUSE:%.*]] = bitcast [2 x i32]* [[STACK]] to i8*
+; CHECK-NEXT:    [[STACK1:%.*]] = bitcast [2 x i32]* [[STACK]] to i8*
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp sgt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast [2 x i32]* [[STACK]] to i8*
+; CHECK-NEXT:    [[CAST_TO_REUSE:%.*]] = bitcast [2 x i32]* [[STACK]] to i8*
 ; CHECK-NEXT:    [[PTR_2_START:%.*]] = getelementptr inbounds [2 x i32], [2 x i32]* [[STACK]], i64 0, i64 0
 ; CHECK-NEXT:    call void @use.i8(i8* [[CAST_TO_REUSE]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[STACK1]], i8* align 4 [[PTR_1_START2]], i64 8, i1 false)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[PTR_1:%.*]] = phi i32* [ [[PTR_1_START:%.*]], [[ENTRY]] ], [ [[PTR_1_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[PTR_1:%.*]] = phi i32* [ [[PTR_1_START]], [[ENTRY]] ], [ [[PTR_1_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[PTR_2:%.*]] = phi i32* [ [[PTR_2_START]], [[ENTRY]] ], [ [[PTR_2_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[PTR_1_NEXT]] = getelementptr inbounds i32, i32* [[PTR_1]], i64 1
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR_1]], align 4
 ; CHECK-NEXT:    [[PTR_2_NEXT]] = getelementptr inbounds i32, i32* [[PTR_2]], i64 1
-; CHECK-NEXT:    store i32 [[LV]], i32* [[PTR_2]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP]], label [[EXIT:%.*]]

@@ -34,8 +34,7 @@ using namespace mlir::vector;
 // VectorDialect
 //===----------------------------------------------------------------------===//
 
-VectorDialect::VectorDialect(MLIRContext *context)
-    : Dialect(getDialectNamespace(), context) {
+void VectorDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/Vector/VectorOps.cpp.inc"
@@ -1501,37 +1500,33 @@ static LogicalResult verifyTransferOp(Operation *op, MemRefType memrefType,
   if (auto memrefVectorElementType = memrefElementType.dyn_cast<VectorType>()) {
     // Memref has vector element type.
 
-    // Check that 'memrefVectorElementType' and vector element types match.
-    if (memrefVectorElementType.getElementType() != vectorType.getElementType())
+    unsigned memrefVecSize = memrefVectorElementType.getElementTypeBitWidth() *
+                             memrefVectorElementType.getShape().back();
+    unsigned resultVecSize =
+        vectorType.getElementTypeBitWidth() * vectorType.getShape().back();
+    if (resultVecSize % memrefVecSize != 0)
       return op->emitOpError(
-          "requires memref and vector types of the same elemental type");
+          "requires the bitwidth of the minor 1-D vector to be an integral "
+          "multiple of the bitwidth of the minor 1-D vector of the memref");
 
-    // Check that memref vector type is a suffix of 'vectorType.
     unsigned memrefVecEltRank = memrefVectorElementType.getRank();
     unsigned resultVecRank = vectorType.getRank();
     if (memrefVecEltRank > resultVecRank)
       return op->emitOpError(
           "requires memref vector element and vector result ranks to match.");
-    // TODO: Move this to isSuffix in Vector/Utils.h.
     unsigned rankOffset = resultVecRank - memrefVecEltRank;
-    auto memrefVecEltShape = memrefVectorElementType.getShape();
-    auto resultVecShape = vectorType.getShape();
-    for (unsigned i = 0; i < memrefVecEltRank; ++i)
-      if (memrefVecEltShape[i] != resultVecShape[rankOffset + i])
-        return op->emitOpError(
-            "requires memref vector element shape to match suffix of "
-            "vector result shape.");
     // Check that permutation map results match 'rankOffset' of vector type.
     if (permutationMap.getNumResults() != rankOffset)
       return op->emitOpError("requires a permutation_map with result dims of "
                              "the same rank as the vector type");
   } else {
     // Memref has scalar element type.
-
-    // Check that memref and vector element types match.
-    if (memrefType.getElementType() != vectorType.getElementType())
+    unsigned resultVecSize =
+        vectorType.getElementTypeBitWidth() * vectorType.getShape().back();
+    if (resultVecSize % memrefElementType.getIntOrFloatBitWidth() != 0)
       return op->emitOpError(
-          "requires memref and vector types of the same elemental type");
+          "requires the bitwidth of the minor 1-D vector to be an integral "
+          "multiple of the bitwidth of the memref element type");
 
     // Check that permutation map results match rank of vector type.
     if (permutationMap.getNumResults() != vectorType.getRank())
@@ -1561,7 +1556,7 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vector, Value memref, ValueRange indices,
                            AffineMap permutationMap,
                            ArrayRef<bool> maybeMasked) {
-  Type elemType = vector.cast<VectorType>().getElementType();
+  Type elemType = memref.getType().cast<MemRefType>().getElementType();
   Value padding = builder.create<ConstantOp>(result.location, elemType,
                                              builder.getZeroAttr(elemType));
   if (maybeMasked.empty())
@@ -1674,9 +1669,9 @@ static LogicalResult verify(TransferReadOp op) {
       return op.emitOpError("requires valid padding vector elemental type");
 
     // Check that padding type and vector element types match.
-    if (paddingType != vectorType.getElementType())
+    if (paddingType != memrefElementType)
       return op.emitOpError(
-          "requires formal padding and vector of the same elemental type");
+          "requires formal padding and memref of the same elemental type");
   }
 
   return verifyPermutationMap(permutationMap,
@@ -1856,6 +1851,41 @@ Optional<SmallVector<int64_t, 4>> TransferWriteOp::getShapeForUnroll() {
 }
 
 //===----------------------------------------------------------------------===//
+// MaskedLoadOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(MaskedLoadOp op) {
+  VectorType maskVType = op.getMaskVectorType();
+  VectorType passVType = op.getPassThruVectorType();
+  VectorType resVType = op.getResultVectorType();
+
+  if (resVType.getElementType() != op.getMemRefType().getElementType())
+    return op.emitOpError("base and result element type should match");
+
+  if (resVType.getDimSize(0) != maskVType.getDimSize(0))
+    return op.emitOpError("expected result dim to match mask dim");
+  if (resVType != passVType)
+    return op.emitOpError("expected pass_thru of same type as result type");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MaskedStoreOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(MaskedStoreOp op) {
+  VectorType maskVType = op.getMaskVectorType();
+  VectorType valueVType = op.getValueVectorType();
+
+  if (valueVType.getElementType() != op.getMemRefType().getElementType())
+    return op.emitOpError("base and value element type should match");
+
+  if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
+    return op.emitOpError("expected value dim to match mask dim");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // GatherOp
 //===----------------------------------------------------------------------===//
 
@@ -1893,6 +1923,41 @@ static LogicalResult verify(ScatterOp op) {
 
   if (valueVType.getDimSize(0) != indicesVType.getDimSize(0))
     return op.emitOpError("expected value dim to match indices dim");
+  if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
+    return op.emitOpError("expected value dim to match mask dim");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ExpandLoadOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(ExpandLoadOp op) {
+  VectorType maskVType = op.getMaskVectorType();
+  VectorType passVType = op.getPassThruVectorType();
+  VectorType resVType = op.getResultVectorType();
+
+  if (resVType.getElementType() != op.getMemRefType().getElementType())
+    return op.emitOpError("base and result element type should match");
+
+  if (resVType.getDimSize(0) != maskVType.getDimSize(0))
+    return op.emitOpError("expected result dim to match mask dim");
+  if (resVType != passVType)
+    return op.emitOpError("expected pass_thru of same type as result type");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// CompressStoreOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(CompressStoreOp op) {
+  VectorType maskVType = op.getMaskVectorType();
+  VectorType valueVType = op.getValueVectorType();
+
+  if (valueVType.getElementType() != op.getMemRefType().getElementType())
+    return op.emitOpError("base and value element type should match");
+
   if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
     return op.emitOpError("expected value dim to match mask dim");
   return success();

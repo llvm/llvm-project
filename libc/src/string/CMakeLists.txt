@@ -1,5 +1,13 @@
 add_subdirectory(memory_utils)
 
+add_header_library(
+  string_utils
+  HDRS
+    string_utils.h
+  DEPENDS
+    libc.utils.CPP.standalone_cpp
+)
+
 add_entrypoint_object(
   strcat
   SRCS
@@ -92,6 +100,46 @@ add_entrypoint_object(
     strrchr.cpp
   HDRS
     strrchr.h
+)
+
+add_entrypoint_object(
+  strcspn
+  SRCS
+    strcspn.cpp
+  HDRS
+    strcspn.h
+  DEPENDS
+    .string_utils
+)
+
+add_entrypoint_object(
+  strspn
+  SRCS
+    strspn.cpp
+  HDRS
+    strspn.h
+  DEPENDS
+    libc.utils.CPP.standalone_cpp
+)
+
+add_entrypoint_object(
+  strpbrk
+  SRCS
+    strpbrk.cpp
+  HDRS
+    strpbrk.h
+  DEPENDS
+    .string_utils
+)
+
+add_entrypoint_object(
+  strtok
+  SRCS
+    strtok.cpp
+  HDRS
+    strtok.h
+  DEPENDS
+    libc.utils.CPP.standalone_cpp
 )
 
 # Helper to define a function with multiple implementations

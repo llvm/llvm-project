@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
 
@@ -58,14 +59,16 @@ Marshaller::Marshaller(llvm::StringRef RemoteIndexRoot,
     assert(llvm::sys::path::is_absolute(RemoteIndexRoot));
     assert(RemoteIndexRoot ==
            llvm::sys::path::convert_to_slash(RemoteIndexRoot));
-    assert(RemoteIndexRoot.endswith(llvm::sys::path::get_separator()));
     this->RemoteIndexRoot = RemoteIndexRoot.str();
+    if (!RemoteIndexRoot.endswith(llvm::sys::path::get_separator()))
+      *this->RemoteIndexRoot += llvm::sys::path::get_separator();
   }
   if (!LocalIndexRoot.empty()) {
     assert(llvm::sys::path::is_absolute(LocalIndexRoot));
     assert(LocalIndexRoot == llvm::sys::path::convert_to_slash(LocalIndexRoot));
-    assert(LocalIndexRoot.endswith(llvm::sys::path::get_separator()));
     this->LocalIndexRoot = LocalIndexRoot.str();
+    if (!LocalIndexRoot.endswith(llvm::sys::path::get_separator()))
+      *this->LocalIndexRoot += llvm::sys::path::get_separator();
   }
   assert(!RemoteIndexRoot.empty() || !LocalIndexRoot.empty());
 }
@@ -303,7 +306,8 @@ Marshaller::relativePathToURI(llvm::StringRef RelativePath) {
   if (RelativePath.empty())
     return makeStringError("Empty relative path.");
   if (llvm::sys::path::is_absolute(RelativePath))
-    return makeStringError("RelativePath is absolute.");
+    return makeStringError(
+        llvm::formatv("RelativePath '{0}' is absolute.", RelativePath).str());
   llvm::SmallString<256> FullPath = llvm::StringRef(*LocalIndexRoot);
   llvm::sys::path::append(FullPath, RelativePath);
   auto Result = URI::createFile(FullPath);
@@ -316,10 +320,16 @@ llvm::Expected<std::string> Marshaller::uriToRelativePath(llvm::StringRef URI) {
   if (!ParsedURI)
     return ParsedURI.takeError();
   if (ParsedURI->scheme() != "file")
-    return makeStringError("Can not use URI schemes other than file.");
+    return makeStringError(
+        llvm::formatv("Can not use URI schemes other than file, given: '{0}'.",
+                      URI)
+            .str());
   llvm::SmallString<256> Result = ParsedURI->body();
   if (!llvm::sys::path::replace_path_prefix(Result, *RemoteIndexRoot, ""))
-    return makeStringError("File path doesn't start with RemoteIndexRoot.");
+    return makeStringError(
+        llvm::formatv("File path '{0}' doesn't start with '{1}'.", Result.str(),
+                      *RemoteIndexRoot)
+            .str());
   // Make sure the result has UNIX slashes.
   return llvm::sys::path::convert_to_slash(Result,
                                            llvm::sys::path::Style::posix);

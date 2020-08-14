@@ -1887,15 +1887,15 @@ public:
           m_section_infos[n_sect].vm_range.SetByteSize(
               section_sp->GetByteSize());
         } else {
-          const char *filename = "<unknown>";
+          std::string filename = "<unknown>";
           SectionSP first_section_sp(m_section_list->GetSectionAtIndex(0));
           if (first_section_sp)
-            filename = first_section_sp->GetObjectFile()->GetFileSpec().GetPath().c_str();
+            filename = first_section_sp->GetObjectFile()->GetFileSpec().GetPath();
 
           Host::SystemLog(Host::eSystemLogError,
                           "error: unable to find section %d for a symbol in %s, corrupt file?\n",
                           n_sect, 
-                          filename);
+                          filename.c_str());
         }
       }
       if (m_section_infos[n_sect].vm_range.Contains(file_addr)) {
@@ -5007,8 +5007,8 @@ void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
 
     struct version_min_command version_min;
     switch (load_cmd.cmd) {
-    case llvm::MachO::LC_VERSION_MIN_IPHONEOS:
     case llvm::MachO::LC_VERSION_MIN_MACOSX:
+    case llvm::MachO::LC_VERSION_MIN_IPHONEOS:
     case llvm::MachO::LC_VERSION_MIN_TVOS:
     case llvm::MachO::LC_VERSION_MIN_WATCHOS: {
       if (load_cmd.cmdsize != sizeof(version_min))
@@ -5024,7 +5024,19 @@ void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
 
       auto triple = base_triple;
       triple.setOSName(os.str());
-      os_name.clear();
+
+      // Disambiguate legacy simulator platforms.
+      if (load_cmd.cmd != llvm::MachO::LC_VERSION_MIN_MACOSX &&
+          (base_triple.getArch() == llvm::Triple::x86_64 ||
+           base_triple.getArch() == llvm::Triple::x86)) {
+        // The combination of legacy LC_VERSION_MIN load command and
+        // x86 architecture always indicates a simulator environment.
+        // The combination of LC_VERSION_MIN and arm architecture only
+        // appears for native binaries. Back-deploying simulator
+        // binaries on Apple Silicon Macs use the modern unambigous
+        // LC_BUILD_VERSION load commands; no special handling required.
+        triple.setEnvironment(llvm::Triple::Simulator);
+      }
       add_triple(triple);
       break;
     }

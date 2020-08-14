@@ -19,6 +19,7 @@
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Target/LLVMIR/TypeTranslation.h"
 
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
@@ -49,14 +50,15 @@ class LLVMFuncOp;
 class ModuleTranslation {
 public:
   template <typename T = ModuleTranslation>
-  static std::unique_ptr<llvm::Module> translateModule(Operation *m) {
+  static std::unique_ptr<llvm::Module>
+  translateModule(Operation *m, llvm::LLVMContext &llvmContext,
+                  StringRef name = "LLVMDialectModule") {
     if (!satisfiesLLVMModule(m))
       return nullptr;
     if (failed(checkSupportedModuleOps(m)))
       return nullptr;
-    auto llvmModule = prepareLLVMModule(m);
-    if (!llvmModule)
-      return nullptr;
+    std::unique_ptr<llvm::Module> llvmModule =
+        prepareLLVMModule(m, llvmContext, name);
 
     LLVM::ensureDistinctSuccessors(m);
 
@@ -93,7 +95,9 @@ protected:
   /// Converts the type from MLIR LLVM dialect to LLVM.
   llvm::Type *convertType(LLVMType type);
 
-  static std::unique_ptr<llvm::Module> prepareLLVMModule(Operation *m);
+  static std::unique_ptr<llvm::Module>
+  prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
+                    StringRef name);
 
   /// A helper to look up remapped operands in the value remapping table.
   SmallVector<llvm::Value *, 8> lookupValues(ValueRange values);
@@ -121,11 +125,12 @@ private:
   std::unique_ptr<llvm::OpenMPIRBuilder> ompBuilder;
   /// Precomputed pointer to OpenMP dialect.
   const Dialect *ompDialect;
-  /// Pointer to the llvmDialect;
-  LLVMDialect *llvmDialect;
 
   /// Mappings between llvm.mlir.global definitions and corresponding globals.
   DenseMap<Operation *, llvm::GlobalValue *> globalsMapping;
+
+  /// A stateful object used to translate types.
+  TypeToLLVMIRTranslator typeTranslator;
 
 protected:
   /// Mappings between original and translated values, used for lookups.
