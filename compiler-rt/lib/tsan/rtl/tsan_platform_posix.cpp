@@ -29,10 +29,6 @@ static const char kShadowMemoryMappingHint[] =
     "HINT: if %s is not supported in your environment, you may set "
     "TSAN_OPTIONS=%s=0\n";
 
-static void NoHugePagesInShadow(uptr addr, uptr size) {
-  SetShadowRegionHugePageMode(addr, size);
-}
-
 static void DontDumpShadow(uptr addr, uptr size) {
   if (common_flags()->use_madv_dontdump)
     if (!DontDumpShadowMemory(addr, size)) {
