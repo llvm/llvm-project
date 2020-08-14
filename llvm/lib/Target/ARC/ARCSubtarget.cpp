@@ -26,5 +26,5 @@ void ARCSubtarget::anchor() {}
 
 ARCSubtarget::ARCSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS, const TargetMachine &TM)
-    : ARCGenSubtargetInfo(TT, CPU, FS), FrameLowering(*this),
+    : ARCGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS), FrameLowering(*this),
       TLInfo(TM, *this) {}
