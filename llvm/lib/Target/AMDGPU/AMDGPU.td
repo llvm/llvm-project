@@ -655,8 +655,8 @@ def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   [FeatureFP64, FeatureLocalMemorySize32768, FeatureMIMG_R128,
   FeatureWavefrontSize64, FeatureSMemTimeInst, FeatureMadMacF32Insts,
   FeatureDsSrc2Insts, FeatureLDSBankCount32, FeatureMovrel,
-  FeatureTrigReducedRange, FeatureDoesNotSupportSRAMECC,
-  FeatureDoesNotSupportXNACK]
+  FeatureTrigReducedRange, FeatureDoesNotSupportXNACK,
+  FeatureDoesNotSupportSRAMECC]
 >;
 
 def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
@@ -665,7 +665,8 @@ def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   FeatureWavefrontSize64, FeatureFlatAddressSpace,
   FeatureCIInsts, FeatureMovrel, FeatureTrigReducedRange,
   FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
-  FeatureDsSrc2Insts, FeatureDoesNotSupportSRAMECC]
+  FeatureDsSrc2Insts, FeatureDoesNotSupportXNACK,
+  FeatureDoesNotSupportSRAMECC]
 >;
 
 def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
@@ -725,19 +726,16 @@ def FeatureISAVersion6_0_0 : FeatureSet<[FeatureSouthernIslands,
    FeatureFastFMAF32,
    HalfRate64Ops,
    FeatureLDSBankCount32,
-   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion6_0_1 : FeatureSet<
   [FeatureSouthernIslands,
    FeatureLDSBankCount32,
-   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion7_0_0 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount32,
-   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion7_0_1 : FeatureSet<
@@ -745,26 +743,22 @@ def FeatureISAVersion7_0_1 : FeatureSet<
    HalfRate64Ops,
    FeatureLDSBankCount32,
    FeatureFastFMAF32,
-   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion7_0_2 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount16,
    FeatureFastFMAF32,
-   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion7_0_3 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount16,
-   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion7_0_4 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount32,
-   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion8_0_1 : FeatureSet<
@@ -781,14 +775,12 @@ def FeatureISAVersion8_0_2 : FeatureSet<
    FeatureLDSBankCount32,
    FeatureSGPRInitBug,
    FeatureUnpackedD16VMem,
-   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion8_0_3 : FeatureSet<
   [FeatureVolcanicIslands,
    FeatureLDSBankCount32,
    FeatureUnpackedD16VMem,
-   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion8_1_0 : FeatureSet<
@@ -802,7 +794,6 @@ def FeatureISAVersion9_0_0 : FeatureSet<
    FeatureMadMixInsts,
    FeatureLDSBankCount32,
    FeatureCodeObjectV3,
-   FeatureDoesNotSupportXNACK,
    FeatureDoesNotSupportSRAMECC]>;
 
 def FeatureISAVersion9_0_2 : FeatureSet<
@@ -817,7 +808,6 @@ def FeatureISAVersion9_0_4 : FeatureSet<
   [FeatureGFX9,
    FeatureLDSBankCount32,
    FeatureFmaMixInsts,
-   FeatureDoesNotSupportXNACK,
    FeatureDoesNotSupportSRAMECC,
    FeatureCodeObjectV3]>;
 
@@ -829,7 +819,6 @@ def FeatureISAVersion9_0_6 : FeatureSet<
    FeatureDLInsts,
    FeatureDot1Insts,
    FeatureDot2Insts,
-   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 def FeatureISAVersion9_0_8 : FeatureSet<
@@ -847,6 +836,7 @@ def FeatureISAVersion9_0_8 : FeatureSet<
    FeatureMAIInsts,
    FeaturePkFmacF16Inst,
    FeatureAtomicFaddInsts,
+   FeatureXNACK,
    FeatureSRAMECC,
    FeatureMFMAInlineLiteralBug,
    FeatureCodeObjectV3]>;
@@ -889,7 +879,6 @@ def FeatureISAVersion10_1_0 : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
-     FeatureDoesNotSupportXNACK,
      FeatureCodeObjectV3])>;
 
 def FeatureISAVersion10_1_1 : FeatureSet<
@@ -910,7 +899,6 @@ def FeatureISAVersion10_1_1 : FeatureSet<
      FeatureSMemTimeInst,
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
-     FeatureDoesNotSupportXNACK,
      FeatureCodeObjectV3])>;
 
 def FeatureISAVersion10_1_2 : FeatureSet<
@@ -932,7 +920,6 @@ def FeatureISAVersion10_1_2 : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
-     FeatureDoesNotSupportXNACK,
      FeatureCodeObjectV3])>;
 
 def FeatureISAVersion10_3_0 : FeatureSet<
@@ -947,7 +934,6 @@ def FeatureISAVersion10_3_0 : FeatureSet<
    FeatureDot6Insts,
    FeatureNSAEncoding,
    FeatureWavefrontSize32,
-   FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
 //===----------------------------------------------------------------------===//

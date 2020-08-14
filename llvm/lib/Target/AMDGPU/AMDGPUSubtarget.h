@@ -288,6 +288,14 @@ public:
     LLVMTrapHandlerRegValue = 1
   };
 
+  /// Returns the current Xnack TargetIDSetting, possible options are
+  /// "NotSupported", "Any", "Off", and "On".
+  AMDGPU::IsaInfo::TargetIDSetting getXnackSetting() const;
+
+  /// Returns the current SramEcc TargetIDSetting, possible options are
+  /// "NotSupported", "Any", "Off", and "On".
+  AMDGPU::IsaInfo::TargetIDSetting getSramEccSetting() const;
+
 private:
   /// GlobalISel related APIs.
   std::unique_ptr<AMDGPUCallLowering> CallLoweringInfo;
@@ -328,6 +336,8 @@ protected:
   bool EnableDS128;
   bool EnablePRTStrictNull;
   bool DumpCode;
+  bool SupportAnyXnackSetting;
+  bool SupportAnySramEccSetting;
 
   // Subtarget statically properties set by tablegen
   bool FP64;
@@ -417,6 +427,10 @@ private:
 
   // See COMPUTE_TMPRING_SIZE.WAVESIZE, 13-bit field in units of 256-dword.
   static const unsigned MaxWaveScratchSize = (256 * 4) * ((1 << 13) - 1);
+
+  // Initialize Xnack and SramEcc settings based on subtarget support and
+  // requested features.
+  void initializeXnackAndSramEcc(StringRef FS, StringRef GPU);
 
 public:
   GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
@@ -708,7 +722,13 @@ public:
   }
 
   bool isXNACKEnabled() const {
-    return EnableXNACK;
+    // FIXME: XNACK should be enabled with "Any" as well as "On". We
+    // can then remove this function and start using getXnackSetting directly.
+    return getXnackSetting() == AMDGPU::IsaInfo::TargetIDSetting::On;
+  }
+
+  bool supportAnyXnackSetting() const {
+    return SupportAnyXnackSetting;
   }
 
   bool isCuModeEnabled() const {
@@ -764,7 +784,11 @@ public:
   }
 
   bool d16PreservesUnusedBits() const {
-    return hasD16LoadStore() && !isSRAMECCEnabled();
+    if (!hasD16LoadStore())
+      return false;
+    AMDGPU::IsaInfo::TargetIDSetting Setting = getSramEccSetting();
+    return Setting == AMDGPU::IsaInfo::TargetIDSetting::Off ||
+           Setting == AMDGPU::IsaInfo::TargetIDSetting::NotSupported;
   }
 
   bool hasD16Images() const {
@@ -872,8 +896,8 @@ public:
     return HasAtomicFaddInsts;
   }
 
-  bool isSRAMECCEnabled() const {
-    return EnableSRAMECC;
+  bool supportAnySramEccSetting() const {
+    return SupportAnySramEccSetting;
   }
 
   bool hasNoSdstCMPX() const {

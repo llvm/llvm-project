@@ -19,6 +19,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetParser.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <string>
 #include <utility>
@@ -59,6 +60,13 @@ enum {
   // doesn't spill SGPRs as much as when 80 is set.
   FIXED_NUM_SGPRS_FOR_INIT_BUG = 96,
   TRAP_NUM_SGPRS = 16
+};
+
+enum class TargetIDSetting {
+  NotSupported,
+  Any,
+  Off,
+  On
 };
 
 /// Streams isa version string for given subtarget \p STI into \p Stream.
@@ -835,6 +843,10 @@ struct SIModeRegisterDefaults {
 };
 
 } // end namespace AMDGPU
+
+raw_ostream &operator<<(raw_ostream &OS,
+                        const AMDGPU::IsaInfo::TargetIDSetting S);
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H

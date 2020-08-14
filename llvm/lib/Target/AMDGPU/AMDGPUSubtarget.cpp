@@ -13,18 +13,19 @@
 
 #include "AMDGPUSubtarget.h"
 #include "AMDGPU.h"
-#include "AMDGPUTargetMachine.h"
 #include "AMDGPUCallLowering.h"
 #include "AMDGPUInstructionSelector.h"
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
-#include "SIMachineFunctionInfo.h"
+#include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIMachineFunctionInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/MachineScheduler.h"
-#include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/IR/MDBuilder.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/IR/MDBuilder.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -78,7 +79,7 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // unset everything else if it is disabled
 
   // Assuming ECC is enabled is the conservative default.
-  SmallString<256> FullFS("+promote-alloca,+load-store-opt,+enable-ds128,+sram-ecc,+xnack,");
+  SmallString<256> FullFS("+promote-alloca,+load-store-opt,+enable-ds128,");
 
   if (isAmdHsaOS()) // Turn on FlatForGlobal for HSA.
     FullFS += "+flat-for-global,+unaligned-buffer-access,+trap-handler,";
@@ -131,20 +132,7 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
 
-  // Disable XNACK on targets where it is not enabled by default unless it is
-  // explicitly requested.
-  if (!FS.contains("+xnack") && DoesNotSupportXNACK && EnableXNACK) {
-    ToggleFeature(AMDGPU::FeatureXNACK);
-    EnableXNACK = false;
-  }
-
-  // ECC is on by default, but turn it off if the hardware doesn't support it
-  // anyway. This matters for the gfx9 targets with d16 loads, but don't support
-  // ECC.
-  if (DoesNotSupportSRAMECC && EnableSRAMECC) {
-    ToggleFeature(AMDGPU::FeatureSRAMECC);
-    EnableSRAMECC = false;
-  }
+  initializeXnackAndSramEcc(FS, GPU);
 
   return *this;
 }
@@ -200,6 +188,10 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     EnableDS128(false),
     EnablePRTStrictNull(false),
     DumpCode(false),
+
+    // Initialize with the conservative defaults.
+    SupportAnyXnackSetting(true),
+    SupportAnySramEccSetting(true),
 
     FP64(false),
     GCN3Encoding(false),
@@ -891,6 +883,80 @@ struct FillMFMAShadowMutation : ScheduleDAGMutation {
 void GCNSubtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
   Mutations.push_back(std::make_unique<FillMFMAShadowMutation>(&InstrInfo));
+}
+
+void GCNSubtarget::initializeXnackAndSramEcc(StringRef FS, StringRef GPU) {
+  bool XnackOnSupportRequested = FS.contains("+xnack");
+  bool SramEccOnSupportRequested = FS.contains("+sram-ecc");
+  bool XnackOffSupportRequested = FS.contains("-xnack");
+  bool SramEccOffSupportRequested = FS.contains("-sram-ecc");
+
+  // Check if support for XNACK or SRAMECC is explicitly enabled or disabled.
+  // In the absence of the target features we assume we must produce code that
+  // can run in any environment.
+  SupportAnyXnackSetting =
+      !(XnackOnSupportRequested || XnackOffSupportRequested);
+  SupportAnySramEccSetting =
+      !(SramEccOnSupportRequested || SramEccOffSupportRequested);
+
+  if (XnackOnSupportRequested && DoesNotSupportXNACK)
+    errs() << "warning: Xnack On was requested for a processor that does not "
+              "support it!\n";
+
+  if (SramEccOnSupportRequested && DoesNotSupportSRAMECC)
+    errs() << "warning: SramEcc On was requested for a processor that does not "
+              "support it!\n";
+
+  if (XnackOffSupportRequested && DoesNotSupportXNACK)
+    errs() << "warning: Xnack Off was requested for a processor that does not "
+              "support it!\n";
+
+  if (SramEccOffSupportRequested && DoesNotSupportSRAMECC)
+    errs() << "warning: SramEcc Off was requested for a processor that does "
+              "not support it!\n";
+
+  // FIXME: These hacks are necessary to support backwards compatibility with
+  // the old defaults for xnack. When the new targetid feature is enabled this,
+  // along with the change in isXNACKEnabled can be updated to reflect the true
+  // intended meaning of "default" for these settings.
+  if (EnableXNACK)
+    SupportAnyXnackSetting = false;
+  if (GPU == "generic" || GPU == "generic-hsa") {
+    SupportAnySramEccSetting = true;
+
+    // FIXME
+    SupportAnyXnackSetting = false;
+    EnableXNACK = true;
+  }
+
+  LLVM_DEBUG(dbgs() << "XNACK setting for subtarget: " << getXnackSetting()
+                    << '\n');
+  LLVM_DEBUG(dbgs() << "SRAMECC setting for subtarget: " << getSramEccSetting()
+                    << '\n');
+}
+
+AMDGPU::IsaInfo::TargetIDSetting GCNSubtarget::getXnackSetting() const {
+  if (DoesNotSupportXNACK)
+    return AMDGPU::IsaInfo::TargetIDSetting::NotSupported;
+
+  if (supportAnyXnackSetting())
+    return AMDGPU::IsaInfo::TargetIDSetting::Any;
+
+  if (!EnableXNACK)
+    return AMDGPU::IsaInfo::TargetIDSetting::Off;
+  return AMDGPU::IsaInfo::TargetIDSetting::On;
+}
+
+AMDGPU::IsaInfo::TargetIDSetting GCNSubtarget::getSramEccSetting() const {
+  if (DoesNotSupportSRAMECC)
+    return AMDGPU::IsaInfo::TargetIDSetting::NotSupported;
+
+  if (supportAnySramEccSetting())
+    return AMDGPU::IsaInfo::TargetIDSetting::Any;
+
+  if (!EnableSRAMECC)
+    return AMDGPU::IsaInfo::TargetIDSetting::Off;
+  return AMDGPU::IsaInfo::TargetIDSetting::On;
 }
 
 const AMDGPUSubtarget &AMDGPUSubtarget::get(const MachineFunction &MF) {
