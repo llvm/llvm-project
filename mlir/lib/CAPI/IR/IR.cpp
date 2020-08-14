@@ -13,7 +13,6 @@
 #include "mlir/IR/Module.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
-#include "mlir/InitAllDialects.h"
 #include "mlir/Parser.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -98,8 +97,7 @@ MlirContext mlirContextCreate() {
 void mlirContextDestroy(MlirContext context) { delete unwrap(context); }
 
 void mlirContextLoadAllDialects(MlirContext context) {
-  registerAllDialects(unwrap(context));
-  getGlobalDialectRegistry().loadAll(unwrap(context));
+  unwrap(context).loadAllGloballyRegisteredDialects();
 }
 
 /* ========================================================================== */
