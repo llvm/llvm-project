@@ -1581,24 +1581,4 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
 }
 
 } // namespace AMDGPU
-
-raw_ostream &operator<<(raw_ostream &OS,
-                        const AMDGPU::IsaInfo::TargetIDSetting S) {
-  switch (S) {
-  case (AMDGPU::IsaInfo::TargetIDSetting::NotSupported):
-    OS << "Not Supported";
-    break;
-  case (AMDGPU::IsaInfo::TargetIDSetting::Any):
-    OS << "Any";
-    break;
-  case (AMDGPU::IsaInfo::TargetIDSetting::Off):
-    OS << "Off";
-    break;
-  case (AMDGPU::IsaInfo::TargetIDSetting::On):
-    OS << "On";
-    break;
-  }
-  return OS;
-}
-
 } // namespace llvm
