@@ -30,7 +30,7 @@ public:
   /// the operands of the operation, but may be null if non-constant.  If
   /// folding is successful, this fills in the `results` vector.  If not, this
   /// returns failure and `results` is unspecified.
-  virtual LogicalResult Fold(Operation *op, ArrayRef<Attribute> operands,
+  virtual LogicalResult fold(Operation *op, ArrayRef<Attribute> operands,
                              SmallVectorImpl<OpFoldResult> &results) const {
     return failure();
   }
