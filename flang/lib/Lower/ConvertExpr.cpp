@@ -1114,6 +1114,7 @@ private:
     auto arrTy = fir::dyn_cast_ptrEleTy(addr.getType());
     auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
     auto refTy = builder.getRefType(eleTy);
+    auto idxTy = builder.getIndexType();
     auto arrShape = [&](const auto &arr) -> mlir::Value {
       if (arr.getLBounds().empty()) {
         auto shapeType =
@@ -1124,7 +1125,8 @@ private:
                                                 arr.getExtents().size());
       SmallVector<mlir::Value, 8> shapeArgs;
       for (const auto &pair : llvm::zip(arr.getLBounds(), arr.getExtents())) {
-        shapeArgs.push_back(std::get<0>(pair));
+        auto lb = builder.createConvert(loc, idxTy, std::get<0>(pair));
+        shapeArgs.push_back(lb);
         shapeArgs.push_back(std::get<1>(pair));
       }
       return builder.create<fir::ShapeShiftOp>(loc, shapeType, shapeArgs);
@@ -1136,7 +1138,8 @@ private:
         auto subVal = genComponent(sub);
         if (auto *ev = std::get_if<fir::ExtendedValue>(&subVal)) {
           if (auto *sval = ev->getUnboxed()) {
-            arrayCoorArgs.push_back(*sval);
+            auto val = builder.createConvert(loc, idxTy, *sval);
+            arrayCoorArgs.push_back(val);
           } else {
             TODO();
           }

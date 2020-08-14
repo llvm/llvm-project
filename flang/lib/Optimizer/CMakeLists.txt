@@ -23,11 +23,14 @@ add_flang_library(FIROptimizer
   Transforms/AffinePromotion.cpp
   Transforms/AffineDemotion.cpp
   Transforms/RewriteLoop.cpp
+  Transforms/MemDataFlowOpt.cpp
+  Transforms/FirLoopResultOpt.cpp
 
   DEPENDS
   FIROpsIncGen
   FIROptCodeGenPassIncGen
   FIROptTransformsPassIncGen
+  RewritePatternsIncGen
   ${dialect_libs}
 
   LINK_LIBS
