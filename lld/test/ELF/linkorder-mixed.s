@@ -14,9 +14,17 @@
 # CHECK:      Hex dump of section '.linkorder':
 # CHECK-NEXT:   [[#%x,ADDR:]] 01020003
 
-## TODO Allow non-contiguous SHF_LINK_ORDER sections in an output section.
 # RUN: llvm-mc --filetype=obj -triple=x86_64 --defsym EXTRA=1 %s -o %t.o
-# RUN: not ld.lld %t.o -o /dev/null
+# RUN: ld.lld %t.o -o %t1
+# RUN: llvm-readelf -S -x .linkorder %t1 | FileCheck %s --check-prefix=CHECK1
+
+# CHECK1:      [Nr] Name       {{.*}} Size   ES Flg Lk Inf
+# CHECK1-NEXT: [ 0]            {{.*}}
+# CHECK1-NEXT: [ 1] .linkorder {{.*}} 000005 00  AL  2   0
+# CHECK1-NEXT: [ 2] .text      {{.*}}
+
+# CHECK1:      Hex dump of section '.linkorder':
+# CHECK1-NEXT:   [[#%x,ADDR:]] 01020004 03
 
 .section .text,"ax",@progbits,unique,0
 .Ltext0:
