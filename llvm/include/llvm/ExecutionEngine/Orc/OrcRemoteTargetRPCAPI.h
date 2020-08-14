@@ -195,6 +195,14 @@ namespace exec {
     static const char *getName() { return "CallIntVoid"; }
   };
 
+  /// Call an 'int32_t(int32_t)'-type function on the remote, returns the called
+  /// function's return value.
+  class CallIntInt
+      : public rpc::Function<CallIntInt, int32_t(JITTargetAddress Addr, int)> {
+  public:
+    static const char *getName() { return "CallIntInt"; }
+  };
+
   /// Call an 'int32_t(int32_t, char**)'-type function on the remote, returns the
   /// called function's return value.
   class CallMain
