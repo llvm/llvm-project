@@ -19,5 +19,6 @@ unittest("SyntaxTests") {
     "BuildTreeTest.cpp",
     "MutationsTest.cpp",
     "TokensTest.cpp",
+    "TreeTestBase.cpp",
   ]
 }
