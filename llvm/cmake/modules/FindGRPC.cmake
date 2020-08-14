@@ -31,7 +31,7 @@ else()
   endif()
   find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin)
   find_program(PROTOC protoc)
-  if (GRPC_CPP_PLUGIN-NOTFOUND OR PROTOC-NOTFOUND)
+  if (NOT GRPC_CPP_PLUGIN OR NOT PROTOC)
     message(FATAL_ERROR "gRPC C++ Plugin and Protoc must be on $PATH for Clangd remote index build.")
   endif()
   # On macOS the libraries are typically installed via Homebrew and are not on
@@ -40,7 +40,7 @@ else()
     find_program(HOMEBREW brew)
     # If Homebrew is not found, the user might have installed libraries
     # manually. Fall back to the system path.
-    if (NOT HOMEBREW-NOTFOUND)
+    if (HOMEBREW)
       execute_process(COMMAND ${HOMEBREW} --prefix grpc
         OUTPUT_VARIABLE GRPC_HOMEBREW_PATH
         RESULT_VARIABLE GRPC_HOMEBREW_RETURN_CODE
