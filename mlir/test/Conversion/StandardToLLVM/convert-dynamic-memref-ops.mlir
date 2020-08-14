@@ -324,49 +324,49 @@ func @mixed_store(%mixed : memref<42x?xf32>, %i : index, %j : index, %val : f32)
 
 // CHECK-LABEL: func @memref_cast_static_to_dynamic
 func @memref_cast_static_to_dynamic(%static : memref<10x42xf32>) {
-// CHECK: llvm.bitcast %{{.*}} : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)> to !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK-NOT: llvm.bitcast
   %0 = memref_cast %static : memref<10x42xf32> to memref<?x?xf32>
   return
 }
 
 // CHECK-LABEL: func @memref_cast_static_to_mixed
 func @memref_cast_static_to_mixed(%static : memref<10x42xf32>) {
-// CHECK: llvm.bitcast %{{.*}} : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)> to !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK-NOT: llvm.bitcast
   %0 = memref_cast %static : memref<10x42xf32> to memref<?x42xf32>
   return
 }
 
 // CHECK-LABEL: func @memref_cast_dynamic_to_static
 func @memref_cast_dynamic_to_static(%dynamic : memref<?x?xf32>) {
-// CHECK: llvm.bitcast %{{.*}} : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)> to !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK-NOT: llvm.bitcast
   %0 = memref_cast %dynamic : memref<?x?xf32> to memref<10x12xf32>
   return
 }
 
 // CHECK-LABEL: func @memref_cast_dynamic_to_mixed
 func @memref_cast_dynamic_to_mixed(%dynamic : memref<?x?xf32>) {
-// CHECK: llvm.bitcast %{{.*}} : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)> to !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK-NOT: llvm.bitcast
   %0 = memref_cast %dynamic : memref<?x?xf32> to memref<?x12xf32>
   return
 }
 
 // CHECK-LABEL: func @memref_cast_mixed_to_dynamic
 func @memref_cast_mixed_to_dynamic(%mixed : memref<42x?xf32>) {
-// CHECK: llvm.bitcast %{{.*}} : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)> to !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK-NOT: llvm.bitcast
   %0 = memref_cast %mixed : memref<42x?xf32> to memref<?x?xf32>
   return
 }
 
 // CHECK-LABEL: func @memref_cast_mixed_to_static
 func @memref_cast_mixed_to_static(%mixed : memref<42x?xf32>) {
-// CHECK: llvm.bitcast %{{.*}} : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)> to !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK-NOT: llvm.bitcast
   %0 = memref_cast %mixed : memref<42x?xf32> to memref<42x1xf32>
   return
 }
 
 // CHECK-LABEL: func @memref_cast_mixed_to_mixed
 func @memref_cast_mixed_to_mixed(%mixed : memref<42x?xf32>) {
-// CHECK: llvm.bitcast %{{.*}} : !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)> to !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK-NOT: llvm.bitcast
   %0 = memref_cast %mixed : memref<42x?xf32> to memref<?x1xf32>
   return
 }
