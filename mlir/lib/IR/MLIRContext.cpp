@@ -31,9 +31,12 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+
+#define DEBUG_TYPE "mlircontext"
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -275,7 +278,8 @@ public:
 
   /// This is a list of dialects that are created referring to this context.
   /// The MLIRContext owns the objects.
-  std::vector<std::unique_ptr<Dialect>> dialects;
+  DenseMap<StringRef, std::unique_ptr<Dialect>> loadedDialects;
+  DialectRegistry dialectsRegistry;
 
   /// This is a mapping from operation name to AbstractOperation for registered
   /// operations.
@@ -346,7 +350,7 @@ public:
 };
 } // end namespace mlir
 
-MLIRContext::MLIRContext() : impl(new MLIRContextImpl()) {
+MLIRContext::MLIRContext(bool loadAllDialects) : impl(new MLIRContextImpl()) {
   // Initialize values based on the command line flags if they were provided.
   if (clOptions.isConstructed()) {
     disableMultithreading(clOptions->disableThreading);
@@ -355,8 +359,9 @@ MLIRContext::MLIRContext() : impl(new MLIRContextImpl()) {
   }
 
   // Register dialects with this context.
-  getOrCreateDialect<BuiltinDialect>();
-  registerAllDialects(this);
+  getOrLoadDialect<BuiltinDialect>();
+  if (loadAllDialects)
+    loadAllGloballyRegisteredDialects();
 
   // Initialize several common attributes and types to avoid the need to lock
   // the context when accessing them.
@@ -438,54 +443,72 @@ DiagnosticEngine &MLIRContext::getDiagEngine() { return getImpl().diagEngine; }
 // Dialect and Operation Registration
 //===----------------------------------------------------------------------===//
 
+DialectRegistry &MLIRContext::getDialectRegistry() {
+  return impl->dialectsRegistry;
+}
+
 /// Return information about all registered IR dialects.
-std::vector<Dialect *> MLIRContext::getRegisteredDialects() {
+std::vector<Dialect *> MLIRContext::getLoadedDialects() {
   std::vector<Dialect *> result;
-  result.reserve(impl->dialects.size());
-  for (auto &dialect : impl->dialects)
-    result.push_back(dialect.get());
+  result.reserve(impl->loadedDialects.size());
+  for (auto &dialect : impl->loadedDialects) {
+    result.push_back(dialect.second.get());
+  }
+  llvm::sort(result, [](Dialect *lhs, Dialect *rhs) {
+    return lhs->getNamespace() < rhs->getNamespace();
+  });
+  return result;
+}
+std::vector<StringRef> MLIRContext::getAvailableDialects() {
+  std::vector<StringRef> result;
+  for (auto &dialect : impl->dialectsRegistry)
+    result.push_back(dialect.first);
   return result;
 }
 
 /// Get a registered IR dialect with the given namespace. If none is found,
 /// then return nullptr.
-Dialect *MLIRContext::getRegisteredDialect(StringRef name) {
+Dialect *MLIRContext::getLoadedDialect(StringRef name) {
   // Dialects are sorted by name, so we can use binary search for lookup.
-  auto it = llvm::lower_bound(
-      impl->dialects, name,
-      [](const auto &lhs, StringRef rhs) { return lhs->getNamespace() < rhs; });
-  return (it != impl->dialects.end() && (*it)->getNamespace() == name)
-             ? (*it).get()
-             : nullptr;
+  auto it = impl->loadedDialects.find(name);
+  return (it != impl->loadedDialects.end()) ? it->second.get() : nullptr;
+}
+
+Dialect *MLIRContext::getOrLoadDialect(StringRef name) {
+  Dialect *dialect = getLoadedDialect(name);
+  if (dialect)
+    return dialect;
+  return impl->dialectsRegistry.loadByName(name, this);
 }
 
 /// Get a dialect for the provided namespace and TypeID: abort the program if a
 /// dialect exist for this namespace with different TypeID. Returns a pointer to
 /// the dialect owned by the context.
 Dialect *
-MLIRContext::getOrCreateDialect(StringRef dialectNamespace, TypeID dialectID,
-                                function_ref<std::unique_ptr<Dialect>()> ctor) {
+MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
+                              function_ref<std::unique_ptr<Dialect>()> ctor) {
   auto &impl = getImpl();
   // Get the correct insertion position sorted by namespace.
-  auto insertPt =
-      llvm::lower_bound(impl.dialects, nullptr,
-                        [&](const std::unique_ptr<Dialect> &lhs,
-                            const std::unique_ptr<Dialect> &rhs) {
-                          if (!lhs)
-                            return dialectNamespace < rhs->getNamespace();
-                          return lhs->getNamespace() < dialectNamespace;
-                        });
+  std::unique_ptr<Dialect> &dialect = impl.loadedDialects[dialectNamespace];
+
+  if (!dialect) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "Load new dialect in Context" << dialectNamespace);
+    dialect = ctor();
+    assert(dialect && "dialect ctor failed");
+    return dialect.get();
+  }
 
   // Abort if dialect with namespace has already been registered.
-  if (insertPt != impl.dialects.end() &&
-      (*insertPt)->getNamespace() == dialectNamespace) {
-    if ((*insertPt)->getTypeID() == dialectID)
-      return insertPt->get();
+  if (dialect->getTypeID() != dialectID)
     llvm::report_fatal_error("a dialect with namespace '" + dialectNamespace +
                              "' has already been registered");
-  }
-  auto it = impl.dialects.insert(insertPt, ctor());
-  return &**it;
+
+  return dialect.get();
+}
+
+void MLIRContext::loadAllGloballyRegisteredDialects() {
+  getGlobalDialectRegistry().loadAll(this);
 }
 
 bool MLIRContext::allowsUnregisteredDialects() {

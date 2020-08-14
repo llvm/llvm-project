@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
   if (showDialects) {
     mlir::MLIRContext context;
     llvm::outs() << "Registered Dialects:\n";
-    for (mlir::Dialect *dialect : context.getRegisteredDialects()) {
+    for (mlir::Dialect *dialect : context.getLoadedDialects()) {
       llvm::outs() << dialect->getNamespace() << "\n";
     }
     return 0;

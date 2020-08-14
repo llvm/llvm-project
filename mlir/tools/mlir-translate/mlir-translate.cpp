@@ -88,7 +88,8 @@ int main(int argc, char **argv) {
   // Processes the memory buffer with a new MLIRContext.
   auto processBuffer = [&](std::unique_ptr<llvm::MemoryBuffer> ownedBuffer,
                            raw_ostream &os) {
-    MLIRContext context;
+    MLIRContext context(false);
+    registerAllDialects(&context);
     context.allowUnregisteredDialects();
     context.printOpOnDiagnostic(!verifyDiagnostics);
     llvm::SourceMgr sourceMgr;
