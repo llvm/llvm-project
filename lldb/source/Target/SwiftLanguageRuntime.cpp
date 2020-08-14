@@ -42,6 +42,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Memory.h"
 
 // FIXME: we should not need this
 #include "Plugins/Language/Swift/SwiftFormatters.h"
@@ -318,13 +319,26 @@ static bool HasReflectionInfo(ObjectFile *obj_file) {
     return false;
   };
 
+  StringRef field_md = obj_file->GetReflectionSectionIdentifier(
+      swift::ReflectionSectionKind::fieldmd);
+  StringRef assocty = obj_file->GetReflectionSectionIdentifier(
+      swift::ReflectionSectionKind::assocty);
+  StringRef builtin = obj_file->GetReflectionSectionIdentifier(
+      swift::ReflectionSectionKind::builtin);
+  StringRef capture = obj_file->GetReflectionSectionIdentifier(
+      swift::ReflectionSectionKind::capture);
+  StringRef typeref = obj_file->GetReflectionSectionIdentifier(
+      swift::ReflectionSectionKind::typeref);
+  StringRef reflstr = obj_file->GetReflectionSectionIdentifier(
+      swift::ReflectionSectionKind::reflstr);
+
   bool hasReflectionSection = false;
-  hasReflectionSection |= findSectionInObject("__swift5_fieldmd");
-  hasReflectionSection |= findSectionInObject("__swift5_assocty");
-  hasReflectionSection |= findSectionInObject("__swift5_builtin");
-  hasReflectionSection |= findSectionInObject("__swift5_capture");
-  hasReflectionSection |= findSectionInObject("__swift5_typeref");
-  hasReflectionSection |= findSectionInObject("__swift5_reflstr");
+  hasReflectionSection |= findSectionInObject(field_md);
+  hasReflectionSection |= findSectionInObject(assocty);
+  hasReflectionSection |= findSectionInObject(builtin);
+  hasReflectionSection |= findSectionInObject(capture);
+  hasReflectionSection |= findSectionInObject(typeref);
+  hasReflectionSection |= findSectionInObject(reflstr);
   return hasReflectionSection;
 }
 
@@ -461,8 +475,6 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
   auto *obj_file = module_sp->GetObjectFile();
   if (!obj_file)
     return false;
-  if (obj_file->GetPluginName().GetStringRef().equals("elf"))
-    return false;
   Address start_address = obj_file->GetBaseAddress();
   auto load_ptr = static_cast<uintptr_t>(
       start_address.GetLoadAddress(&(m_process.GetTarget())));
@@ -473,8 +485,20 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
                     obj_file->GetFileSpec().GetFilename().GetCString());
     return false;
   }
-  if (HasReflectionInfo(obj_file))
-    m_reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
+  if (HasReflectionInfo(obj_file)) {
+    // When dealing with ELF, we need to pass in the contents of the on-disk
+    // file, since the Section Header Table is not present in the child process
+    if (obj_file->GetPluginName().GetStringRef().equals("elf")) {
+      DataExtractor extractor;
+      auto size = obj_file->GetData(0, obj_file->GetByteSize(), extractor);
+      const uint8_t *file_data = extractor.GetDataStart();
+      llvm::sys::MemoryBlock file_buffer((void *)file_data, size);
+      m_reflection_ctx->readELF(swift::remote::RemoteAddress(load_ptr),
+          llvm::Optional<llvm::sys::MemoryBlock>(file_buffer));
+    } else {
+      m_reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
+    }
+  }
   return true;
 }
 

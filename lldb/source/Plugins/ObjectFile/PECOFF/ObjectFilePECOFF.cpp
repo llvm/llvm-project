@@ -33,6 +33,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 
+#include "swift/ABI/ObjectFile.h"
+
 #define IMAGE_DOS_SIGNATURE 0x5A4D    // MZ
 #define IMAGE_NT_SIGNATURE 0x00004550 // PE00
 #define OPT_HEADER_MAGIC_PE32 0x010b
@@ -1252,3 +1254,9 @@ ObjectFile::Strata ObjectFilePECOFF::CalculateStrata() { return eStrataUser; }
 ConstString ObjectFilePECOFF::GetPluginName() { return GetPluginNameStatic(); }
 
 uint32_t ObjectFilePECOFF::GetPluginVersion() { return 1; }
+
+llvm::StringRef ObjectFilePECOFF::GetReflectionSectionIdentifier(
+    swift::ReflectionSectionKind section) {
+  swift::SwiftObjectFileFormatCOFF file_format_coff;
+  return file_format_coff.getSectionName(section);
+}

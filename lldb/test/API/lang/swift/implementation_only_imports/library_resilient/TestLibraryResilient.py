@@ -42,7 +42,7 @@ class TestLibraryResilient(TestBase):
         return info
 
     @swiftTest
-    @expectedFailureOS(no_match(["macosx"])) # Requires Remote Mirrors support
+    @expectedFailureAll(oslist=["windows"]) # Requires Remote Mirrors support
     def test_implementation_only_import_library(self):
         """Test `@_implementationOnly import` in a resilient library used by the main executable
 
@@ -64,7 +64,7 @@ class TestLibraryResilient(TestBase):
         self.expect("e container.wrapped", substrs=["(SomeLibraryCore.TwoInts)", "(first = 2, second = 3)"])
 
     @swiftTest
-    @expectedFailureOS(no_match(["macosx"])) # Requires Remote Mirrors support
+    @expectedFailureAll(oslist=["windows"]) # Requires Remote Mirrors support
     def test_implementation_only_import_library_no_library_module(self):
         """Test `@_implementationOnly import` in a resilient library used by the main executable, after removing the implementation-only library's swiftmodule
 

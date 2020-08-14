@@ -752,3 +752,9 @@ void llvm::format_provider<ObjectFile::Strata>::format(
     break;
   }
 }
+
+llvm::StringRef ObjectFile::GetReflectionSectionIdentifier(
+    swift::ReflectionSectionKind section) {
+  assert("Base class's GetReflectionSectionIdentifier should not be called");
+  return "";
+}
