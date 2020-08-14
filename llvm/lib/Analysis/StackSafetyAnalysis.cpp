@@ -22,6 +22,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -785,7 +786,7 @@ const StackSafetyGlobalInfo::InfoTy &StackSafetyGlobalInfo::getInfo() const {
 }
 
 std::vector<FunctionSummary::ParamAccess>
-StackSafetyInfo::getParamAccesses() const {
+StackSafetyInfo::getParamAccesses(ModuleSummaryIndex &Index) const {
   // Implementation transforms internal representation of parameter information
   // into FunctionSummary format.
   std::vector<FunctionSummary::ParamAccess> ParamAccesses;
@@ -810,7 +811,8 @@ StackSafetyInfo::getParamAccesses() const {
         ParamAccesses.pop_back();
         break;
       }
-      Param.Calls.emplace_back(C.first.ParamNo, C.first.Callee->getGUID(),
+      Param.Calls.emplace_back(C.first.ParamNo,
+                               Index.getOrInsertValueInfo(C.first.Callee),
                                C.second);
       llvm::sort(Param.Calls, [](const FunctionSummary::ParamAccess::Call &L,
                                  const FunctionSummary::ParamAccess::Call &R) {

@@ -13,8 +13,9 @@
 
 namespace __llvm_libc {
 
-char *LLVM_LIBC_ENTRYPOINT(strtok_r)(char *src, const char *delimiter_string,
-                                     char **saveptr) {
+char *LLVM_LIBC_ENTRYPOINT(strtok_r)(char *__restrict src,
+                                     const char *__restrict delimiter_string,
+                                     char **__restrict saveptr) {
   return internal::string_token(src, delimiter_string, saveptr);
 }
 

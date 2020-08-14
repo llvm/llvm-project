@@ -42108,6 +42108,39 @@ static SDValue combineHorizOpWithShuffle(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Attempt to fold HOP(SHUFFLE(X),SHUFFLE(Y)) -> SHUFFLE(HOP(X,Y)).
+  // TODO: Merge with binary shuffle folds below.
+  if (VT.is128BitVector() && SrcVT.getScalarSizeInBits() <= 32) {
+    int PostShuffle[4] = {0, 1, 2, 3};
+
+    // If the op is an unary shuffle that can scale to v2x64,
+    // then we can perform this as a v4x32 post shuffle.
+    auto AdjustOp = [&](SDValue V, int Offset) {
+      auto *SVN = dyn_cast<ShuffleVectorSDNode>(V);
+      SmallVector<int, 2> ScaledMask;
+      if (!SVN || !SVN->getOperand(1).isUndef() ||
+          !scaleShuffleElements(SVN->getMask(), 2, ScaledMask) ||
+          !N->isOnlyUserOf(V.getNode()))
+        return SDValue();
+      PostShuffle[Offset + 0] = ScaledMask[0] < 0 ? -1 : Offset + ScaledMask[0];
+      PostShuffle[Offset + 1] = ScaledMask[1] < 0 ? -1 : Offset + ScaledMask[1];
+      return SVN->getOperand(0);
+    };
+
+    SDValue Src0 = AdjustOp(N0, 0);
+    SDValue Src1 = AdjustOp(N1, 2);
+    if (Src0 || Src1) {
+      Src0 = Src0 ? Src0 : N0;
+      Src1 = Src1 ? Src1 : N1;
+      SDLoc DL(N);
+      MVT ShufVT = VT.isFloatingPoint() ? MVT::v4f32 : MVT::v4i32;
+      SDValue Res = DAG.getNode(Opcode, DL, VT, Src0, Src1);
+      Res = DAG.getBitcast(ShufVT, Res);
+      Res = DAG.getVectorShuffle(ShufVT, DL, Res, Res, PostShuffle);
+      return DAG.getBitcast(VT, Res);
+    }
+  }
+
   // Attempt to fold HOP(SHUFFLE(X,Y),SHUFFLE(X,Y)) -> SHUFFLE(HOP(X,Y)).
   // TODO: Relax shuffle scaling to support sub-128-bit subvector shuffles.
   if (VT.is256BitVector() && Subtarget.hasInt256()) {
