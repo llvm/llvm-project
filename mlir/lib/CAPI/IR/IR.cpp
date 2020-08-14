@@ -97,7 +97,7 @@ MlirContext mlirContextCreate() {
 void mlirContextDestroy(MlirContext context) { delete unwrap(context); }
 
 void mlirContextLoadAllDialects(MlirContext context) {
-  unwrap(context).loadAllGloballyRegisteredDialects();
+  unwrap(context)->loadAllGloballyRegisteredDialects();
 }
 
 /* ========================================================================== */
