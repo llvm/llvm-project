@@ -573,6 +573,9 @@ private:
   /// uninitialized value and returns an updated origin id encoding this info.
   FunctionCallee MsanChainOriginFn;
 
+  /// Run-time helper that paints an origin over a region.
+  FunctionCallee MsanSetOriginFn;
+
   /// MSan runtime replacements for memmove, memcpy and memset.
   FunctionCallee MemmoveFn, MemcpyFn, MemsetFn;
 
@@ -851,6 +854,9 @@ void MemorySanitizer::initializeCallbacks(Module &M) {
   // instrumentation.
   MsanChainOriginFn = M.getOrInsertFunction(
     "__msan_chain_origin", IRB.getInt32Ty(), IRB.getInt32Ty());
+  MsanSetOriginFn =
+      M.getOrInsertFunction("__msan_set_origin", IRB.getVoidTy(),
+                            IRB.getInt8PtrTy(), IntptrTy, IRB.getInt32Ty());
   MemmoveFn = M.getOrInsertFunction(
     "__msan_memmove", IRB.getInt8PtrTy(), IRB.getInt8PtrTy(),
     IRB.getInt8PtrTy(), IntptrTy);
@@ -1818,6 +1824,24 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     llvm_unreachable("Unknown ordering");
   }
 
+  Value *makeAddReleaseOrderingTable(IRBuilder<> &IRB) {
+    constexpr int NumOrderings = (int)AtomicOrderingCABI::seq_cst + 1;
+    uint32_t OrderingTable[NumOrderings] = {};
+
+    OrderingTable[(int)AtomicOrderingCABI::relaxed] =
+        OrderingTable[(int)AtomicOrderingCABI::release] =
+            (int)AtomicOrderingCABI::release;
+    OrderingTable[(int)AtomicOrderingCABI::consume] =
+        OrderingTable[(int)AtomicOrderingCABI::acquire] =
+            OrderingTable[(int)AtomicOrderingCABI::acq_rel] =
+                (int)AtomicOrderingCABI::acq_rel;
+    OrderingTable[(int)AtomicOrderingCABI::seq_cst] =
+        (int)AtomicOrderingCABI::seq_cst;
+
+    return ConstantDataVector::get(IRB.getContext(),
+                                   makeArrayRef(OrderingTable, NumOrderings));
+  }
+
   AtomicOrdering addAcquireOrdering(AtomicOrdering a) {
     switch (a) {
       case AtomicOrdering::NotAtomic:
@@ -1833,6 +1857,24 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         return AtomicOrdering::SequentiallyConsistent;
     }
     llvm_unreachable("Unknown ordering");
+  }
+
+  Value *makeAddAcquireOrderingTable(IRBuilder<> &IRB) {
+    constexpr int NumOrderings = (int)AtomicOrderingCABI::seq_cst + 1;
+    uint32_t OrderingTable[NumOrderings] = {};
+
+    OrderingTable[(int)AtomicOrderingCABI::relaxed] =
+        OrderingTable[(int)AtomicOrderingCABI::acquire] =
+            OrderingTable[(int)AtomicOrderingCABI::consume] =
+                (int)AtomicOrderingCABI::acquire;
+    OrderingTable[(int)AtomicOrderingCABI::release] =
+        OrderingTable[(int)AtomicOrderingCABI::acq_rel] =
+            (int)AtomicOrderingCABI::acq_rel;
+    OrderingTable[(int)AtomicOrderingCABI::seq_cst] =
+        (int)AtomicOrderingCABI::seq_cst;
+
+    return ConstantDataVector::get(IRB.getContext(),
+                                   makeArrayRef(OrderingTable, NumOrderings));
   }
 
   // ------------------- Visitors.
@@ -3451,6 +3493,63 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
+  void visitLibAtomicLoad(CallBase &CB) {
+    // Since we use getNextNode here, we can't have CB terminate the BB.
+    assert(isa<CallInst>(CB));
+
+    IRBuilder<> IRB(&CB);
+    Value *Size = CB.getArgOperand(0);
+    Value *SrcPtr = CB.getArgOperand(1);
+    Value *DstPtr = CB.getArgOperand(2);
+    Value *Ordering = CB.getArgOperand(3);
+    // Convert the call to have at least Acquire ordering to make sure
+    // the shadow operations aren't reordered before it.
+    Value *NewOrdering =
+        IRB.CreateExtractElement(makeAddAcquireOrderingTable(IRB), Ordering);
+    CB.setArgOperand(3, NewOrdering);
+
+    IRBuilder<> NextIRB(CB.getNextNode());
+    NextIRB.SetCurrentDebugLocation(CB.getDebugLoc());
+
+    Value *SrcShadowPtr, *SrcOriginPtr;
+    std::tie(SrcShadowPtr, SrcOriginPtr) =
+        getShadowOriginPtr(SrcPtr, NextIRB, NextIRB.getInt8Ty(), Align(1),
+                           /*isStore*/ false);
+    Value *DstShadowPtr =
+        getShadowOriginPtr(DstPtr, NextIRB, NextIRB.getInt8Ty(), Align(1),
+                           /*isStore*/ true)
+            .first;
+
+    NextIRB.CreateMemCpy(DstShadowPtr, Align(1), SrcShadowPtr, Align(1), Size);
+    if (MS.TrackOrigins) {
+      Value *SrcOrigin = NextIRB.CreateAlignedLoad(MS.OriginTy, SrcOriginPtr,
+                                                   kMinOriginAlignment);
+      Value *NewOrigin = updateOrigin(SrcOrigin, NextIRB);
+      NextIRB.CreateCall(MS.MsanSetOriginFn, {DstPtr, Size, NewOrigin});
+    }
+  }
+
+  void visitLibAtomicStore(CallBase &CB) {
+    IRBuilder<> IRB(&CB);
+    Value *Size = CB.getArgOperand(0);
+    Value *DstPtr = CB.getArgOperand(2);
+    Value *Ordering = CB.getArgOperand(3);
+    // Convert the call to have at least Release ordering to make sure
+    // the shadow operations aren't reordered after it.
+    Value *NewOrdering =
+        IRB.CreateExtractElement(makeAddReleaseOrderingTable(IRB), Ordering);
+    CB.setArgOperand(3, NewOrdering);
+
+    Value *DstShadowPtr =
+        getShadowOriginPtr(DstPtr, IRB, IRB.getInt8Ty(), Align(1),
+                           /*isStore*/ true)
+            .first;
+
+    // Atomic store always paints clean shadow/origin. See file header.
+    IRB.CreateMemSet(DstShadowPtr, getCleanShadow(IRB.getInt8Ty()), Size,
+                     Align(1));
+  }
+
   void visitCallBase(CallBase &CB) {
     assert(!CB.getMetadata("nosanitize"));
     if (CB.isInlineAsm()) {
@@ -3464,6 +3563,28 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         visitInstruction(CB);
       return;
     }
+    LibFunc LF;
+    if (TLI->getLibFunc(CB, LF)) {
+      // libatomic.a functions need to have special handling because there isn't
+      // a good way to intercept them or compile the library with
+      // instrumentation.
+      switch (LF) {
+      case LibFunc_atomic_load:
+        if (!isa<CallInst>(CB)) {
+          llvm::errs() << "MSAN -- cannot instrument invoke of libatomic load."
+                          "Ignoring!\n";
+          break;
+        }
+        visitLibAtomicLoad(CB);
+        return;
+      case LibFunc_atomic_store:
+        visitLibAtomicStore(CB);
+        return;
+      default:
+        break;
+      }
+    }
+
     if (auto *Call = dyn_cast<CallInst>(&CB)) {
       assert(!isa<IntrinsicInst>(Call) && "intrinsics are handled elsewhere");
 
