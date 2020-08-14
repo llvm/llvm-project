@@ -268,9 +268,7 @@ lit.util.usePlatformSdkOnDarwin(config, lit_config)
 # to the macOS version that first contained the relevant feature.
 darwin_min_deployment_target_substitutions = {
   '%macos_min_target_10_11': '10.11',
-  # rdar://problem/22207160
-  '%darwin_min_target_with_full_runtime_arc_support': '10.11',
-  '%darwin_min_target_with_tls_support': '10.12',
+  '%darwin_min_target_with_tls_support': '10.12',  # TLS requires watchOS 3+ simulator
 }
 
 if config.host_os == 'Darwin':
