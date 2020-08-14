@@ -2045,29 +2045,28 @@ struct DSEState {
           !isRemovable(Def->getMemoryInst()))
         continue;
 
-      // TODO: Consider doing the underlying object check first, if it is
-      // beneficial compile-time wise.
-      if (isWriteAtEndOfFunction(Def)) {
-        Instruction *DefI = Def->getMemoryInst();
-        // See through pointer-to-pointer bitcasts
-        SmallVector<const Value *, 4> Pointers;
-        getUnderlyingObjects(getLocForWriteEx(DefI)->Ptr, Pointers);
+      Instruction *DefI = Def->getMemoryInst();
+      SmallVector<const Value *, 4> Pointers;
+      auto DefLoc = getLocForWriteEx(DefI);
+      if (!DefLoc)
+        continue;
+      getUnderlyingObjects(DefLoc->Ptr, Pointers);
 
+      bool CanKill = true;
+      for (const Value *Pointer : Pointers) {
+        if (!InvisibleToCallerAfterRet.count(Pointer)) {
+          CanKill = false;
+          break;
+        }
+      }
+
+      if (CanKill && isWriteAtEndOfFunction(Def)) {
+        // See through pointer-to-pointer bitcasts
         LLVM_DEBUG(dbgs() << "   ... MemoryDef is not accessed until the end "
                              "of the function\n");
-        bool CanKill = true;
-        for (const Value *Pointer : Pointers) {
-          if (!InvisibleToCallerAfterRet.count(Pointer)) {
-            CanKill = false;
-            break;
-          }
-        }
-
-        if (CanKill) {
-          deleteDeadInstruction(DefI);
-          ++NumFastStores;
-          MadeChange = true;
-        }
+        deleteDeadInstruction(DefI);
+        ++NumFastStores;
+        MadeChange = true;
       }
     }
     return MadeChange;
