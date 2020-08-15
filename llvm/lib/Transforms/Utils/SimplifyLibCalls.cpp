@@ -610,12 +610,16 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilderBase &B) {
 
   // strncpy(a, "a", 4) - > memcpy(a, "a\0\0\0", 4)
   if (Len > SrcLen + 1) {
-    StringRef Str;
-    if (!getConstantStringInfo(Src, Str))
+    if (Len <= 128) {
+      StringRef Str;
+      if (!getConstantStringInfo(Src, Str))
+        return nullptr;
+      std::string SrcStr = Str.str();
+      SrcStr.resize(Len, '\0');
+      Src = B.CreateGlobalString(SrcStr, "str");
+    } else {
       return nullptr;
-    std::string SrcStr = Str.str();
-    SrcStr.resize(Len, '\0');
-    Src = B.CreateGlobalString(SrcStr, "str");
+    }
   }
 
   Type *PT = Callee->getFunctionType()->getParamType(0);
