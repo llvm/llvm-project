@@ -482,8 +482,16 @@ public:
     // Check if we are in Non-Stop mode
     TargetSP target_sp =
         execution_context ? execution_context->GetTargetSP() : TargetSP();
-    if (target_sp && target_sp->GetNonStopModeEnabled())
+    if (target_sp && target_sp->GetNonStopModeEnabled()) {
+      // NonStopMode runs all threads by definition, so when it is on we don't
+      // need to check the process setting for runs all threads.
       m_run_mode = eOnlyThisThread;
+    } else {
+      ProcessSP process_sp =
+          execution_context ? execution_context->GetProcessSP() : ProcessSP();
+      if (process_sp && process_sp->GetSteppingRunsAllThreads())
+        m_run_mode = eAllThreads;
+    }
 
     m_avoid_regexp.clear();
     m_step_in_target.clear();
@@ -612,8 +620,7 @@ protected:
     if (m_options.m_run_mode == eAllThreads)
       bool_stop_other_threads = false;
     else if (m_options.m_run_mode == eOnlyDuringStepping)
-      bool_stop_other_threads =
-          (m_step_type != eStepTypeOut && m_step_type != eStepTypeScripted);
+      bool_stop_other_threads = (m_step_type != eStepTypeOut);
     else
       bool_stop_other_threads = true;
 

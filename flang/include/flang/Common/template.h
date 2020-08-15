@@ -135,7 +135,7 @@ common::IfNoLvalue<TOV, FROMV> MoveVariant(FROMV &&u) {
 //   CombineTuples<std::tuple<char, int>, std::tuple<float, double>>
 // is std::tuple<char, int, float, double>.
 template <typename... TUPLES> struct CombineTuplesHelper {
-  static decltype(auto) f(TUPLES *... a) {
+  static decltype(auto) f(TUPLES *...a) {
     return std::tuple_cat(std::move(*a)...);
   }
   using type = decltype(f(static_cast<TUPLES *>(nullptr)...));
@@ -265,7 +265,7 @@ std::optional<std::vector<A>> AllElementsPresent(
 // i.e., given some number of optional values, return a optional tuple of
 // those values that is present only of all of the values were so.
 template <typename... A>
-std::optional<std::tuple<A...>> AllPresent(std::optional<A> &&... x) {
+std::optional<std::tuple<A...>> AllPresent(std::optional<A> &&...x) {
   return AllElementsPresent(std::make_tuple(std::move(x)...));
 }
 
@@ -276,14 +276,14 @@ std::optional<std::tuple<A...>> AllPresent(std::optional<A> &&... x) {
 // run it through JoinOptional to "squash" it.
 template <typename R, typename... A>
 std::optional<R> MapOptional(
-    std::function<R(A &&...)> &&f, std::optional<A> &&... x) {
+    std::function<R(A &&...)> &&f, std::optional<A> &&...x) {
   if (auto args{AllPresent(std::move(x)...)}) {
     return std::make_optional(std::apply(std::move(f), std::move(*args)));
   }
   return std::nullopt;
 }
 template <typename R, typename... A>
-std::optional<R> MapOptional(R (*f)(A &&...), std::optional<A> &&... x) {
+std::optional<R> MapOptional(R (*f)(A &&...), std::optional<A> &&...x) {
   return MapOptional(std::function<R(A && ...)>{f}, std::move(x)...);
 }
 

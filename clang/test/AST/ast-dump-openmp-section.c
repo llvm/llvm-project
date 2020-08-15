@@ -16,13 +16,5 @@ void test() {
 // CHECK-NEXT:         `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>
 // CHECK-NEXT:           |-CompoundStmt {{.*}} <line:5:3, line:8:3>
 // CHECK-NEXT:           | `-OMPSectionDirective {{.*}} <line:6:1, col:20>
-// CHECK-NEXT:           |   `-CapturedStmt {{.*}} <line:7:5>
-// CHECK-NEXT:           |     `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>
-// CHECK-NEXT:           |       |-NullStmt {{.*}} <col:5>
-// CHECK-NEXT:           |       `-ImplicitParamDecl {{.*}} <line:6:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-section.c:6:1) *const restrict'
-// CHECK-NEXT:           |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-section.c:4:1) *const restrict'
-// CHECK-NEXT:           |-RecordDecl {{.*}} <line:6:1> col:1 implicit struct definition
-// CHECK-NEXT:           | `-CapturedRecordAttr {{.*}} <<invalid sloc>> Implicit
-// CHECK-NEXT:           `-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>
-// CHECK-NEXT:             |-NullStmt {{.*}} <line:7:5>
-// CHECK-NEXT:             `-ImplicitParamDecl {{.*}} <line:6:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-section.c:6:1) *const restrict'
+// CHECK-NEXT:           | `-NullStmt {{.*}} <line:7:5>
+// CHECK-NEXT:           `-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-section.c:4:1) *const restrict'

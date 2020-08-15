@@ -1823,6 +1823,10 @@ template<class _Rp, class ..._ArgTypes>
 class _LIBCPP_AVAILABILITY_FUTURE __packaged_task_function<_Rp(_ArgTypes...)>
 {
     typedef __packaged_task_base<_Rp(_ArgTypes...)> __base;
+
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_NO_CFI
+    __base* __get_buf() { return (__base*)&__buf_; }
+
     typename aligned_storage<3*sizeof(void*)>::type __buf_;
     __base* __f_;
 
@@ -1856,10 +1860,10 @@ __packaged_task_function<_Rp(_ArgTypes...)>::__packaged_task_function(__packaged
 {
     if (__f.__f_ == nullptr)
         __f_ = nullptr;
-    else if (__f.__f_ == (__base*)&__f.__buf_)
+    else if (__f.__f_ == __f.__get_buf())
     {
+        __f.__f_->__move_to(__get_buf());
         __f_ = (__base*)&__buf_;
-        __f.__f_->__move_to(__f_);
     }
     else
     {
@@ -1877,8 +1881,8 @@ __packaged_task_function<_Rp(_ArgTypes...)>::__packaged_task_function(_Fp&& __f)
     typedef __packaged_task_func<_FR, allocator<_FR>, _Rp(_ArgTypes...)> _FF;
     if (sizeof(_FF) <= sizeof(__buf_))
     {
+        ::new (&__buf_) _FF(_VSTD::forward<_Fp>(__f));
         __f_ = (__base*)&__buf_;
-        ::new (__f_) _FF(_VSTD::forward<_Fp>(__f));
     }
     else
     {
@@ -1920,17 +1924,17 @@ template<class _Rp, class ..._ArgTypes>
 __packaged_task_function<_Rp(_ArgTypes...)>&
 __packaged_task_function<_Rp(_ArgTypes...)>::operator=(__packaged_task_function&& __f) _NOEXCEPT
 {
-    if (__f_ == (__base*)&__buf_)
+    if (__f_ == __get_buf())
         __f_->destroy();
     else if (__f_)
         __f_->destroy_deallocate();
     __f_ = nullptr;
     if (__f.__f_ == nullptr)
         __f_ = nullptr;
-    else if (__f.__f_ == (__base*)&__f.__buf_)
+    else if (__f.__f_ == __f.__get_buf())
     {
-        __f_ = (__base*)&__buf_;
-        __f.__f_->__move_to(__f_);
+        __f.__f_->__move_to(__get_buf());
+        __f_ = __get_buf();
     }
     else
     {
@@ -1943,13 +1947,14 @@ __packaged_task_function<_Rp(_ArgTypes...)>::operator=(__packaged_task_function&
 template<class _Rp, class ..._ArgTypes>
 __packaged_task_function<_Rp(_ArgTypes...)>::~__packaged_task_function()
 {
-    if (__f_ == (__base*)&__buf_)
+    if (__f_ == __get_buf())
         __f_->destroy();
     else if (__f_)
         __f_->destroy_deallocate();
 }
 
 template<class _Rp, class ..._ArgTypes>
+_LIBCPP_NO_CFI
 void
 __packaged_task_function<_Rp(_ArgTypes...)>::swap(__packaged_task_function& __f) _NOEXCEPT
 {

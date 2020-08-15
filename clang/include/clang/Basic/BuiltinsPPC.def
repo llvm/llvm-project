@@ -336,6 +336,16 @@ BUILTIN(__builtin_altivec_vinshvrx, "V8UsV8UsUiV8Us", "")
 BUILTIN(__builtin_altivec_vinswvlx, "V4UiV4UiUiV4Ui", "")
 BUILTIN(__builtin_altivec_vinswvrx, "V4UiV4UiUiV4Ui", "")
 
+// P10 Vector Extract built-ins.
+BUILTIN(__builtin_altivec_vextdubvlx, "V2ULLiV16UcV16UcUi", "")
+BUILTIN(__builtin_altivec_vextdubvrx, "V2ULLiV16UcV16UcUi", "")
+BUILTIN(__builtin_altivec_vextduhvlx, "V2ULLiV8UsV8UsUi", "")
+BUILTIN(__builtin_altivec_vextduhvrx, "V2ULLiV8UsV8UsUi", "")
+BUILTIN(__builtin_altivec_vextduwvlx, "V2ULLiV4UiV4UiUi", "")
+BUILTIN(__builtin_altivec_vextduwvrx, "V2ULLiV4UiV4UiUi", "")
+BUILTIN(__builtin_altivec_vextddvlx, "V2ULLiV2ULLiV2ULLiUi", "")
+BUILTIN(__builtin_altivec_vextddvrx, "V2ULLiV2ULLiV2ULLiUi", "")
+
 // VSX built-ins.
 
 BUILTIN(__builtin_vsx_lxvd2x, "V2divC*", "")

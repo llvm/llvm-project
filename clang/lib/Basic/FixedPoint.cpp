@@ -309,6 +309,40 @@ APFixedPoint APFixedPoint::div(const APFixedPoint &Other,
                       CommonFXSema);
 }
 
+APFixedPoint APFixedPoint::shl(unsigned Amt, bool *Overflow) const {
+  llvm::APSInt ThisVal = Val;
+  bool Overflowed = false;
+
+  // Widen the LHS.
+  unsigned Wide = Sema.getWidth() * 2;
+  if (Sema.isSigned())
+    ThisVal = ThisVal.sextOrSelf(Wide);
+  else
+    ThisVal = ThisVal.zextOrSelf(Wide);
+
+  // Clamp the shift amount at the original width, and perform the shift.
+  Amt = std::min(Amt, ThisVal.getBitWidth());
+  llvm::APSInt Result = ThisVal << Amt;
+  Result.setIsSigned(Sema.isSigned());
+
+  // If our result lies outside of the representative range of the
+  // semantic, we either have overflow or saturation.
+  llvm::APSInt Max = APFixedPoint::getMax(Sema).getValue().extOrTrunc(Wide);
+  llvm::APSInt Min = APFixedPoint::getMin(Sema).getValue().extOrTrunc(Wide);
+  if (Sema.isSaturated()) {
+    if (Result < Min)
+      Result = Min;
+    else if (Result > Max)
+      Result = Max;
+  } else
+    Overflowed = Result < Min || Result > Max;
+
+  if (Overflow)
+    *Overflow = Overflowed;
+
+  return APFixedPoint(Result.sextOrTrunc(Sema.getWidth()), Sema);
+}
+
 void APFixedPoint::toString(llvm::SmallVectorImpl<char> &Str) const {
   llvm::APSInt Val = getValue();
   unsigned Scale = getScale();

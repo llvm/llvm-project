@@ -37,6 +37,19 @@ using namespace llvm;
 STATISTIC(NumAllocaStackSafe, "Number of safe allocas");
 STATISTIC(NumAllocaTotal, "Number of total allocas");
 
+STATISTIC(NumCombinedCalleeLookupTotal,
+          "Number of total callee lookups on combined index.");
+STATISTIC(NumCombinedCalleeLookupFailed,
+          "Number of failed callee lookups on combined index.");
+STATISTIC(NumModuleCalleeLookupTotal,
+          "Number of total callee lookups on module index.");
+STATISTIC(NumModuleCalleeLookupFailed,
+          "Number of failed callee lookups on module index.");
+STATISTIC(NumCombinedParamAccessesBefore,
+          "Number of total param accesses before generateParamAccessSummary.");
+STATISTIC(NumCombinedParamAccessesAfter,
+          "Number of total param accesses after generateParamAccessSummary.");
+
 static cl::opt<int> StackSafetyMaxIterations("stack-safety-max-iterations",
                                              cl::init(20), cl::Hidden);
 
@@ -174,6 +187,7 @@ template <typename CalleeTy> struct FunctionInfo {
     } else {
       assert(Allocas.empty());
     }
+    O << "\n";
   }
 };
 
@@ -607,7 +621,6 @@ GlobalValueSummary *getGlobalValueSummary(const ModuleSummaryIndex *Index,
   auto VI = Index->getValueInfo(ValueGUID);
   if (!VI || VI.getSummaryList().empty())
     return nullptr;
-  assert(VI.getSummaryList().size() == 1);
   auto &Summary = VI.getSummaryList()[0];
   return Summary.get();
 }
@@ -637,8 +650,11 @@ void resolveAllCalls(UseInfo<GlobalValue> &Use,
     GlobalValueSummary *GVS = getGlobalValueSummary(Index, C.Callee->getGUID());
 
     FunctionSummary *FS = resolveCallee(GVS);
-    if (!FS)
+    ++NumModuleCalleeLookupTotal;
+    if (!FS) {
+      ++NumModuleCalleeLookupFailed;
       return Use.updateRange(FullSet);
+    }
     const ConstantRange *Found = findParamAccess(*FS, C.ParamNo);
     if (!Found)
       return Use.updateRange(FullSet);
@@ -921,7 +937,21 @@ bool llvm::needsParamAccessSummary(const Module &M) {
 }
 
 void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
+  if (!Index.hasParamAccess())
+    return;
   const ConstantRange FullSet(FunctionSummary::ParamAccess::RangeWidth, true);
+
+  auto CountParamAccesses = [&](auto &Stat) {
+    if (!AreStatisticsEnabled())
+      return;
+    for (auto &GVS : Index)
+      for (auto &GV : GVS.second.SummaryList)
+        if (FunctionSummary *FS = dyn_cast<FunctionSummary>(GV.get()))
+          Stat += FS->paramAccesses().size();
+  };
+
+  CountParamAccesses(NumCombinedParamAccessesBefore);
+
   std::map<const FunctionSummary *, FunctionInfo<FunctionSummary>> Functions;
 
   // Convert the ModuleSummaryIndex to a FunctionMap
@@ -942,7 +972,9 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
             assert(!Call.Offsets.isFullSet());
             FunctionSummary *S = resolveCallee(
                 Index.findSummaryInModule(Call.Callee, FS->modulePath()));
+            ++NumCombinedCalleeLookupTotal;
             if (!S) {
+              ++NumCombinedCalleeLookupFailed;
               US.Range = FullSet;
               US.Calls.clear();
               break;
@@ -972,6 +1004,8 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
     const_cast<FunctionSummary *>(KV.first)->setParamAccesses(
         std::move(NewParams));
   }
+
+  CountParamAccesses(NumCombinedParamAccessesAfter);
 }
 
 static const char LocalPassArg[] = "stack-safety-local";

@@ -133,12 +133,12 @@ public:
   bool HasError(const parser::Name &);
   void SetError(Symbol &, bool = true);
 
-  template <typename... A> parser::Message &Say(A &&... args) {
+  template <typename... A> parser::Message &Say(A &&...args) {
     CHECK(location_);
     return messages_.Say(*location_, std::forward<A>(args)...);
   }
   template <typename... A>
-  parser::Message &Say(parser::CharBlock at, A &&... args) {
+  parser::Message &Say(parser::CharBlock at, A &&...args) {
     return messages_.Say(at, std::forward<A>(args)...);
   }
   parser::Message &Say(parser::Message &&msg) {
@@ -146,7 +146,7 @@ public:
   }
   template <typename... A>
   void SayWithDecl(const Symbol &symbol, const parser::CharBlock &at,
-      parser::MessageFixedText &&msg, A &&... args) {
+      parser::MessageFixedText &&msg, A &&...args) {
     auto &message{Say(at, std::move(msg), args...)};
     evaluate::AttachDeclaration(&message, symbol);
   }
@@ -170,6 +170,7 @@ public:
   void ActivateIndexVar(const parser::Name &, IndexVarKind);
   void DeactivateIndexVar(const parser::Name &);
   SymbolVector GetIndexVars(IndexVarKind);
+  SourceName GetTempName(const Scope &);
 
 private:
   void CheckIndexVarRedefine(
@@ -196,6 +197,7 @@ private:
     IndexVarKind kind;
   };
   std::map<SymbolRef, const IndexVarInfo> activeIndexVars_;
+  std::vector<std::string> tempNames_;
 };
 
 class Semantics {

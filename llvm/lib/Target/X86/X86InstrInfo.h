@@ -437,16 +437,6 @@ public:
   /// instruction that defines the specified register class.
   bool isSafeToMoveRegClassDefs(const TargetRegisterClass *RC) const override;
 
-  /// isSafeToClobberEFLAGS - Return true if it's safe insert an instruction tha
-  /// would clobber the EFLAGS condition register. Note the result may be
-  /// conservative. If it cannot definitely determine the safety after visiting
-  /// a few instructions in each direction it assumes it's not safe.
-  bool isSafeToClobberEFLAGS(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator I) const {
-    return MBB.computeRegisterLiveness(&RI, X86::EFLAGS, I, 4) ==
-           MachineBasicBlock::LQR_Dead;
-  }
-
   /// True if MI has a condition code def, e.g. EFLAGS, that is
   /// not marked dead.
   bool hasLiveCondCodeDef(MachineInstr &MI) const;

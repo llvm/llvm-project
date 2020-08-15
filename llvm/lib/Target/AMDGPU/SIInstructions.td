@@ -716,6 +716,7 @@ defm SI_SPILL_V1024 : SI_SPILL_VGPR <VReg_1024>;
 
 defm SI_SPILL_A32  : SI_SPILL_VGPR <AGPR_32, 1>;
 defm SI_SPILL_A64  : SI_SPILL_VGPR <AReg_64, 1>;
+defm SI_SPILL_A96  : SI_SPILL_VGPR <AReg_96, 1>;
 defm SI_SPILL_A128 : SI_SPILL_VGPR <AReg_128, 1>;
 defm SI_SPILL_A512 : SI_SPILL_VGPR <AReg_512, 1>;
 defm SI_SPILL_A1024 : SI_SPILL_VGPR <AReg_1024, 1>;
@@ -2409,8 +2410,8 @@ def G_AMDGPU_ATOMIC_FMIN : G_ATOMICRMW_OP;
 def G_AMDGPU_ATOMIC_FMAX : G_ATOMICRMW_OP;
 }
 
-class BufferAtomicGenericInstruction : AMDGPUGenericInstruction {
-  let OutOperandList = (outs type0:$dst);
+class BufferAtomicGenericInstruction<bit NoRtn = 0> : AMDGPUGenericInstruction {
+  let OutOperandList = !if(NoRtn, (outs), (outs type0:$dst));
   let InOperandList = (ins type0:$vdata, type1:$rsrc, type2:$vindex, type2:$voffset,
                            type2:$soffset, untyped_imm_0:$offset,
                            untyped_imm_0:$cachepolicy, untyped_imm_0:$idxen);
@@ -2431,6 +2432,7 @@ def G_AMDGPU_BUFFER_ATOMIC_OR : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_XOR : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_INC : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_DEC : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_FADD : BufferAtomicGenericInstruction<1/*NoRtn*/>;
 
 def G_AMDGPU_BUFFER_ATOMIC_CMPSWAP : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);

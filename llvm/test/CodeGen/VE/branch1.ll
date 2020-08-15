@@ -3,8 +3,6 @@
 define signext i8 @func1(i8 signext %a, i8 signext %b) {
 ; CHECK-LABEL: func1:
 ; CHECK:       .LBB{{[0-9]+}}_5:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    brle.w %s0, %s1, .LBB{{[0-9]+}}_1
 ; CHECK-NEXT:  # %bb.2: # %on.true
 ; CHECK-NEXT:    lea %s0, ret@lo
@@ -39,8 +37,6 @@ declare i32 @ret(i32)
 define i32 @func2(i16 signext %a, i16 signext %b) {
 ; CHECK-LABEL: func2:
 ; CHECK:       .LBB{{[0-9]+}}_5:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    brle.w %s0, %s1, .LBB{{[0-9]+}}_1
 ; CHECK-NEXT:  # %bb.2: # %on.true
 ; CHECK-NEXT:    lea %s0, ret@lo
@@ -70,8 +66,6 @@ join:
 define i32 @func3(i32 %a, i32 %b) {
 ; CHECK-LABEL: func3:
 ; CHECK:       .LBB{{[0-9]+}}_5:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    brle.w %s0, %s1, .LBB{{[0-9]+}}_1
 ; CHECK-NEXT:  # %bb.2: # %on.true
 ; CHECK-NEXT:    lea %s0, ret@lo
@@ -130,8 +124,6 @@ join:
 define i32 @func5(i8 zeroext %a, i8 zeroext %b) {
 ; CHECK-LABEL: func5:
 ; CHECK:       .LBB{{[0-9]+}}_5:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
 ; CHECK-NEXT:    cmpu.w %s0, %s1, %s0
 ; CHECK-NEXT:    brle.w 0, %s0, .LBB{{[0-9]+}}_1
 ; CHECK-NEXT:  # %bb.2: # %on.true
@@ -162,8 +154,6 @@ join:
 define i32 @func6(i16 zeroext %a, i16 zeroext %b) {
 ; CHECK-LABEL: func6:
 ; CHECK:       .LBB{{[0-9]+}}_5:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
 ; CHECK-NEXT:    cmpu.w %s0, %s1, %s0
 ; CHECK-NEXT:    brle.w 0, %s0, .LBB{{[0-9]+}}_1
 ; CHECK-NEXT:  # %bb.2: # %on.true
@@ -194,8 +184,6 @@ join:
 define i32 @func7(i32 %a, i32 %b) {
 ; CHECK-LABEL: func7:
 ; CHECK:       .LBB{{[0-9]+}}_5:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
 ; CHECK-NEXT:    cmpu.w %s0, %s1, %s0
 ; CHECK-NEXT:    brle.w 0, %s0, .LBB{{[0-9]+}}_1
 ; CHECK-NEXT:  # %bb.2: # %on.true

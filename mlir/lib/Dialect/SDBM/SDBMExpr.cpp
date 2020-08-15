@@ -246,6 +246,7 @@ SDBMSumExpr SDBMSumExpr::get(SDBMTermExpr lhs, SDBMConstantExpr rhs) {
 
   StorageUniquer &uniquer = lhs.getDialect()->getUniquer();
   return uniquer.get<detail::SDBMBinaryExprStorage>(
+      TypeID::get<detail::SDBMBinaryExprStorage>(),
       /*initFn=*/{}, static_cast<unsigned>(SDBMExprKind::Add), lhs, rhs);
 }
 
@@ -533,6 +534,7 @@ SDBMDiffExpr SDBMDiffExpr::get(SDBMDirectExpr lhs, SDBMTermExpr rhs) {
 
   StorageUniquer &uniquer = lhs.getDialect()->getUniquer();
   return uniquer.get<detail::SDBMDiffExprStorage>(
+      TypeID::get<detail::SDBMDiffExprStorage>(),
       /*initFn=*/{}, static_cast<unsigned>(SDBMExprKind::Diff), lhs, rhs);
 }
 
@@ -573,6 +575,7 @@ SDBMStripeExpr SDBMStripeExpr::get(SDBMDirectExpr var,
 
   StorageUniquer &uniquer = var.getDialect()->getUniquer();
   return uniquer.get<detail::SDBMBinaryExprStorage>(
+      TypeID::get<detail::SDBMBinaryExprStorage>(),
       /*initFn=*/{}, static_cast<unsigned>(SDBMExprKind::Stripe), var,
       stripeFactor);
 }
@@ -608,7 +611,8 @@ SDBMDimExpr SDBMDimExpr::get(SDBMDialect *dialect, unsigned position) {
 
   StorageUniquer &uniquer = dialect->getUniquer();
   return uniquer.get<detail::SDBMTermExprStorage>(
-      assignDialect, static_cast<unsigned>(SDBMExprKind::DimId), position);
+      TypeID::get<detail::SDBMTermExprStorage>(), assignDialect,
+      static_cast<unsigned>(SDBMExprKind::DimId), position);
 }
 
 //===----------------------------------------------------------------------===//
@@ -624,7 +628,8 @@ SDBMSymbolExpr SDBMSymbolExpr::get(SDBMDialect *dialect, unsigned position) {
 
   StorageUniquer &uniquer = dialect->getUniquer();
   return uniquer.get<detail::SDBMTermExprStorage>(
-      assignDialect, static_cast<unsigned>(SDBMExprKind::SymbolId), position);
+      TypeID::get<detail::SDBMTermExprStorage>(), assignDialect,
+      static_cast<unsigned>(SDBMExprKind::SymbolId), position);
 }
 
 //===----------------------------------------------------------------------===//
@@ -640,7 +645,8 @@ SDBMConstantExpr SDBMConstantExpr::get(SDBMDialect *dialect, int64_t value) {
 
   StorageUniquer &uniquer = dialect->getUniquer();
   return uniquer.get<detail::SDBMConstantExprStorage>(
-      assignCtx, static_cast<unsigned>(SDBMExprKind::Constant), value);
+      TypeID::get<detail::SDBMConstantExprStorage>(), assignCtx,
+      static_cast<unsigned>(SDBMExprKind::Constant), value);
 }
 
 int64_t SDBMConstantExpr::getValue() const {
@@ -656,6 +662,7 @@ SDBMNegExpr SDBMNegExpr::get(SDBMDirectExpr var) {
 
   StorageUniquer &uniquer = var.getDialect()->getUniquer();
   return uniquer.get<detail::SDBMNegExprStorage>(
+      TypeID::get<detail::SDBMNegExprStorage>(),
       /*initFn=*/{}, static_cast<unsigned>(SDBMExprKind::Neg), var);
 }
 

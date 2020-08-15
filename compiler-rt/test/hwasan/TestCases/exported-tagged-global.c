@@ -4,6 +4,7 @@
 // RUN: %run %t
 // RUN: %clang_hwasan -O1 -mllvm --aarch64-enable-global-isel-at-O=1 %s -o %t
 // RUN: %run %t
+// REQUIRES: aarch64-target-arch
 
 static int global;
 

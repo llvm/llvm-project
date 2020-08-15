@@ -1,4 +1,4 @@
-; RUN: opt -S -licm -loop-unswitch < %s | FileCheck %s
+; RUN: opt -S -licm -simple-loop-unswitch < %s | FileCheck %s
 
 ; This test checks for a crash.  See PR32587.
 

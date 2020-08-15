@@ -100,6 +100,8 @@ def CTypeAPI : PublicAPI<"ctype.h"> {
     "isspace",
     "isupper",
     "isxdigit",
+    "tolower",
+    "toupper",
   ];
 }
 

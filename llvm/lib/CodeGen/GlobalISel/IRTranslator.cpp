@@ -1484,6 +1484,10 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return translateBinaryOp(TargetOpcode::G_USUBSAT, CI, MIRBuilder);
   case Intrinsic::ssub_sat:
     return translateBinaryOp(TargetOpcode::G_SSUBSAT, CI, MIRBuilder);
+  case Intrinsic::ushl_sat:
+    return translateBinaryOp(TargetOpcode::G_USHLSAT, CI, MIRBuilder);
+  case Intrinsic::sshl_sat:
+    return translateBinaryOp(TargetOpcode::G_SSHLSAT, CI, MIRBuilder);
   case Intrinsic::umin:
     return translateBinaryOp(TargetOpcode::G_UMIN, CI, MIRBuilder);
   case Intrinsic::umax:

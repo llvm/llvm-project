@@ -89,10 +89,6 @@ public:
   /// Inherit some necessary constructors from 'TypeBase'.
   using Base::Base;
 
-  /// This static method is used to support type inquiry through isa, cast,
-  /// and dyn_cast.
-  static bool kindof(unsigned kind) { return kind == MyTypes::Simple; }
-
   /// This method is used to get an instance of the 'SimpleType'. Given that
   /// this is a parameterless type, it just needs to take the context for
   /// uniquing purposes.
@@ -192,10 +188,6 @@ class ComplexType : public Type::TypeBase<ComplexType, Type,
 public:
   /// Inherit some necessary constructors from 'TypeBase'.
   using Base::Base;
-
-  /// This static method is used to support type inquiry through isa, cast,
-  /// and dyn_cast.
-  static bool kindof(unsigned kind) { return kind == MyTypes::Complex; }
 
   /// This method is used to get an instance of the 'ComplexType'. This method
   /// asserts that all of the construction invariants were satisfied. To
@@ -326,10 +318,6 @@ class RecursiveType : public Type::TypeBase<RecursiveType, Type,
 public:
   /// Inherit parent constructors.
   using Base::Base;
-
-  /// This static method is used to support type inquiry through isa, cast,
-  /// and dyn_cast.
-  static bool kindof(unsigned kind) { return kind == MyTypes::Recursive; }
 
   /// Creates an instance of the Recursive type. This only takes the type name
   /// and returns the type with uninitialized body.

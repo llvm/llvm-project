@@ -32,7 +32,16 @@ set(LIBS
   )
 
 add_llvm_tool(mlir-reduce
+  Passes/FunctionReducer.cpp
+  ReductionNode.cpp
+  ReductionTreePass.cpp
   mlir-reduce.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Reducer
+
+  DEPENDS
+  MLIRReducerIncGen
   )
 
 target_link_libraries(mlir-reduce PRIVATE ${LIBS})

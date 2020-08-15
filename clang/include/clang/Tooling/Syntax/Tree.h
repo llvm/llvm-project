@@ -50,7 +50,7 @@ public:
   /// Add \p Buffer to the underlying source manager, tokenize it and store the
   /// resulting tokens. Useful when there is a need to materialize tokens that
   /// were not written in user code.
-  std::pair<FileID, llvm::ArrayRef<syntax::Token>>
+  std::pair<FileID, ArrayRef<Token>>
   lexBuffer(std::unique_ptr<llvm::MemoryBuffer> Buffer);
 
 private:
@@ -58,7 +58,7 @@ private:
   const LangOptions &LangOpts;
   const TokenBuffer &Tokens;
   /// IDs and storage for additional tokenized files.
-  llvm::DenseMap<FileID, std::vector<syntax::Token>> ExtraTokens;
+  llvm::DenseMap<FileID, std::vector<Token>> ExtraTokens;
   /// Keeps all the allocated nodes and their intermediate data structures.
   llvm::BumpPtrAllocator Allocator;
 };
@@ -139,13 +139,13 @@ private:
 /// A leaf node points to a single token inside the expanded token stream.
 class Leaf final : public Node {
 public:
-  Leaf(const syntax::Token *T);
+  Leaf(const Token *T);
   static bool classof(const Node *N);
 
-  const syntax::Token *token() const { return Tok; }
+  const Token *token() const { return Tok; }
 
 private:
-  const syntax::Token *Tok;
+  const Token *Tok;
 };
 
 /// A node that has children and represents a syntactic language construct.
@@ -167,7 +167,7 @@ public:
 
 protected:
   /// Find the first node with a corresponding role.
-  syntax::Node *findChild(NodeRole R);
+  Node *findChild(NodeRole R);
 
 private:
   /// Prepend \p Child to the list of children and and sets the parent pointer.

@@ -404,16 +404,6 @@ bool P2AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name, S
 bool P2AsmParser::ParseDirective(llvm::AsmToken DirectiveID) {
     LLVM_DEBUG(errs() << "Parse directive: " << DirectiveID.getString() << "\n");
 
-    // StringRef IDVal = DirectiveID.getIdentifier();
-
-    // if (IDVal.lower() == ".long") {
-    //     parseLiteralValues(SIZE_LONG, DirectiveID.getLoc());
-    // } else if (IDVal.lower() == ".word" || IDVal.lower() == ".short") {
-    //     parseLiteralValues(SIZE_WORD, DirectiveID.getLoc());
-    // } else if (IDVal.lower() == ".byte") {
-    //     parseLiteralValues(1, DirectiveID.getLoc());
-    // }
-
     return true;
 }
 
@@ -482,12 +472,22 @@ int P2AsmParser::matchRegisterName(StringRef Name) {
             .Case("r29",    P2::R29)
             .Case("r30",    P2::R30)
             .Case("r31",    P2::R31)
+            .Case("ijmp3",  P2::IJMP3)
+            .Case("iret3",  P2::IRET3)
+            .Case("ijmp2",  P2::IJMP2)
+            .Case("iret2",  P2::IRET2)
+            .Case("ijmp1",  P2::IJMP1)
+            .Case("iret1",  P2::IRET1)
             .Case("pa",     P2::PA)
             .Case("pb",     P2::PB)
             .Case("ptra",   P2::PTRA)
             .Case("ptrb",   P2::PTRB)
             .Case("dira",   P2::DIRA)
             .Case("dirb",   P2::DIRB)
+            .Case("outa",   P2::OUTA)
+            .Case("outb",   P2::OUTB)
+            .Case("ina",    P2::INA)
+            .Case("inb",    P2::INB)
             .Default(-1);
 
     return CC;

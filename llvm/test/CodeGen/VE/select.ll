@@ -36,10 +36,8 @@ define i64 @selecti64(i1 zeroext, i64, i64) {
 define i32 @selecti32(i1 zeroext, i32, i32) {
 ; CHECK-LABEL: selecti32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s3, %s0, (0)1
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s2, (0)1
-; CHECK-NEXT:    cmov.w.ne %s0, %s1, %s3
+; CHECK-NEXT:    cmov.w.ne %s2, %s1, %s0
+; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:    or %s11, 0, %s9
   %4 = select i1 %0, i32 %1, i32 %2
   ret i32 %4
@@ -48,9 +46,6 @@ define i32 @selecti32(i1 zeroext, i32, i32) {
 define zeroext i1 @selecti1(i1 zeroext, i1 zeroext, i1 zeroext) {
 ; CHECK-LABEL: selecti1:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
-; CHECK-NEXT:    adds.w.sx %s2, %s2, (0)1
 ; CHECK-NEXT:    cmov.w.ne %s2, %s1, %s0
 ; CHECK-NEXT:    adds.w.zx %s0, %s2, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9

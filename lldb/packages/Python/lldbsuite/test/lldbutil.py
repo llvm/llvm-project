@@ -21,6 +21,8 @@ import six
 import lldb
 from . import lldbtest_config
 
+# How often failed simulator process launches are retried.
+SIMULATOR_RETRY = 3
 
 # ===================================================
 # Utilities for locating/checking executable programs
@@ -818,9 +820,20 @@ def run_to_breakpoint_do_run(test, target, bkpt, launch_info = None,
     error = lldb.SBError()
     process = target.Launch(launch_info, error)
 
+    # Unfortunate workaround for the iPhone simulator.
+    retry = SIMULATOR_RETRY
+    while (retry and error.Fail() and error.GetCString() and
+           "Unable to boot the Simulator" in error.GetCString()):
+        retry -= 1
+        print("** Simulator is unresponsive. Retrying %d more time(s)"%retry)
+        import time
+        time.sleep(60)
+        error = lldb.SBError()
+        process = target.Launch(launch_info, error)
+
     test.assertTrue(process,
-                    "Could not create a valid process for %s: %s"%(target.GetExecutable().GetFilename(),
-                    error.GetCString()))
+                    "Could not create a valid process for %s: %s" %
+                    (target.GetExecutable().GetFilename(), error.GetCString()))
     test.assertFalse(error.Fail(),
                      "Process launch failed: %s" % (error.GetCString()))
 

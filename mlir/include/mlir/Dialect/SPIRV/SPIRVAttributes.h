@@ -68,10 +68,6 @@ public:
   /// Returns `spirv::StorageClass`.
   Optional<StorageClass> getStorageClass();
 
-  static bool kindof(unsigned kind) {
-    return kind == AttrKind::InterfaceVarABI;
-  }
-
   static LogicalResult verifyConstructionInvariants(Location loc,
                                                     IntegerAttr descriptorSet,
                                                     IntegerAttr binding,
@@ -123,8 +119,6 @@ public:
   /// Returns the capabilities as an integer array attribute.
   ArrayAttr getCapabilitiesAttr();
 
-  static bool kindof(unsigned kind) { return kind == AttrKind::VerCapExt; }
-
   static LogicalResult verifyConstructionInvariants(Location loc,
                                                     IntegerAttr version,
                                                     ArrayAttr capabilities,
@@ -164,8 +158,6 @@ public:
 
   /// Returns the target resource limits.
   ResourceLimitsAttr getResourceLimits();
-
-  static bool kindof(unsigned kind) { return kind == AttrKind::TargetEnv; }
 
   static LogicalResult verifyConstructionInvariants(Location loc,
                                                     VerCapExtAttr triple,

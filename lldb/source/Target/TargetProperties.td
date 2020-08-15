@@ -217,6 +217,9 @@ let Definition = "process" in {
   def UtilityExpressionTimeout: Property<"utility-expression-timeout", "UInt64">,
     DefaultUnsignedValue<15>,
     Desc<"The time in seconds to wait for LLDB-internal utility expressions.">;
+  def SteppingRunsAllThreads: Property<"run-all-threads", "Boolean">,
+    DefaultFalse,
+    Desc<"If true, stepping operations will run all threads.  This is equivalent to setting the run-mode option to 'all-threads'.">;
 }
 
 let Definition = "platform" in {

@@ -4793,7 +4793,7 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
                                                    AArch64::GPR64spRegClass);
       MIRBuilder.buildCopy(DstReg, LiveInLR);
 
-      MFReturnAddr = DstReg;
+      MFReturnAddr = LiveInLR;
       I.eraseFromParent();
       return true;
     }

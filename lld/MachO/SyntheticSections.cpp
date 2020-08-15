@@ -59,8 +59,18 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
   hdr->ncmds = loadCommands.size();
   hdr->sizeofcmds = sizeOfCmds;
   hdr->flags = MachO::MH_NOUNDEFS | MachO::MH_DYLDLINK | MachO::MH_TWOLEVEL;
+
   if (config->outputType == MachO::MH_DYLIB && !config->hasReexports)
     hdr->flags |= MachO::MH_NO_REEXPORTED_DYLIBS;
+
+  for (OutputSegment *seg : outputSegments) {
+    for (OutputSection *osec : seg->getSections()) {
+      if (isThreadLocalVariables(osec->flags)) {
+        hdr->flags |= MachO::MH_HAS_TLV_DESCRIPTORS;
+        break;
+      }
+    }
+  }
 
   uint8_t *p = reinterpret_cast<uint8_t *>(hdr + 1);
   for (LoadCommand *lc : loadCommands) {

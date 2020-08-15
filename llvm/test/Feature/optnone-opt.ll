@@ -34,7 +34,7 @@ while.body:                                       ; preds = %while.cond
   br label %while.cond
 
 while.end:                                        ; preds = %while.cond
-  ret i32 0
+  ret i32 %dec
 }
 
 attributes #0 = { optnone noinline }
@@ -50,7 +50,7 @@ attributes #0 = { optnone noinline }
 ; O1-DAG: Skipping pass 'Reassociate expressions'
 ; O1-DAG: Skipping pass 'Simplify the CFG'
 ; O1-DAG: Skipping pass 'Sparse Conditional Constant Propagation'
-; NPM-O1-DAG: Skipping pass: SimplifyCFGPass
+; NPM-O1-DAG: Skipping pass: SimplifyCFGPass on {{.*}}foo
 ; NPM-O1-DAG: Skipping pass: SROA
 ; NPM-O1-DAG: Skipping pass: EarlyCSEPass
 ; NPM-O1-DAG: Skipping pass: LowerExpectIntrinsicPass
@@ -80,7 +80,9 @@ attributes #0 = { optnone noinline }
 ; LOOP-DAG: Skipping pass 'Simplify instructions in loops'
 ; LOOP-DAG: Skipping pass 'Unroll loops'
 ; LOOP-DAG: Skipping pass 'Unswitch loops'
-; NPM-LOOP-DAG: Skipping pass: LoopSimplifyPass
+; LoopPassManager should not be skipped over an optnone function
+; NPM-LOOP-NOT: Skipping pass: PassManager
+; NPM-LOOP-DAG: Skipping pass: LoopSimplifyPass on {{.*}}foo
 ; NPM-LOOP-DAG: Skipping pass: LCSSAPass
 ; NPM-LOOP-DAG: Skipping pass: IndVarSimplifyPass
 ; NPM-LOOP-DAG: Skipping pass: SimpleLoopUnswitchPass

@@ -60,7 +60,8 @@ namespace lld {
 
         void P2::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
-            //errs() << "relocate\n";
+            LLVM_DEBUG(outs() << "relocate: " << rel.sym->getName() << "\n");
+            LLVM_DEBUG(outs() << "reloc value is " << (int)val << "\n");
 
             switch (rel.type) {
                 case R_P2_32: {
@@ -80,10 +81,9 @@ namespace lld {
                     uint32_t inst = read32le(loc);
                     uint32_t aug = read32le(loc-4) & ~0x7fffff; // the previous instruction is expected to be an AUGS/D
 
-                    LLVM_DEBUG(errs() << "aug 20 relocation\n");
-                    LLVM_DEBUG(errs() << "original value is " << (int)val << "\n");
-                    //LLVM_DEBUG(errs() << "aug value is " << (int)((aug & ~0x7fffff) | (val >> 9)) << "\n");
-                    LLVM_DEBUG(errs() << "adjusted value is " << (int)(val & 0x1ff) << "\n");
+                    //LLVM_DEBUG(outs() << "reloc offset: " << rel.offset << "\n");
+                    LLVM_DEBUG(outs() << "reloc value is " << (int)val << "\n");
+                    //LLVM_DEBUG(outs() << "adjusted value is " << (int)(val & 0x1ff) << "\n");
 
                     inst += val & 0x1ff; // get the lower 9 bits into the current instruction
                     aug |= (val >> 9); // get the upper 23 bits into the previous AUG instruction
@@ -97,9 +97,9 @@ namespace lld {
                     // TODO: make this more flexible. right now it assumes the COG-based library lives at
                     // 0x100. Eventually we want to mark any function/variable as being able to live in the cog.
                     inst += ((val-0x100)/4) & 0x1ff;
-                    LLVM_DEBUG(errs() << "cog function relocation\n");
-                    LLVM_DEBUG(errs() << "original value is " << (int)val << "\n");
-                    LLVM_DEBUG(errs() << "adjusted value is " << (int)(((val-0x100)/4) & 0x1ff) << "\n");
+                    LLVM_DEBUG(outs() << "cog function relocation\n");
+                    LLVM_DEBUG(outs() << "original value is " << (int)val << "\n");
+                    LLVM_DEBUG(outs() << "adjusted value is " << (int)(((val-0x100)/4) & 0x1ff) << "\n");
                     write32le(loc, inst);
                     break;
                 }

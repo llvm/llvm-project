@@ -61,7 +61,7 @@ class LLVMIntegerType;
 /// Similarly to other MLIR types, LLVM dialect types are owned by the MLIR
 /// context, have an immutable identifier (for most types except identified
 /// structs, the entire type is the identifier) and are thread-safe.
-class LLVMType : public Type::TypeBase<LLVMType, Type, TypeStorage> {
+class LLVMType : public Type {
 public:
   enum Kind {
     // Keep non-parametric types contiguous in the enum.
@@ -92,7 +92,7 @@ public:
   };
 
   /// Inherit base constructors.
-  using Base::Base;
+  using Type::Type;
 
   /// Support for PointerLikeTypeTraits.
   using Type::getAsOpaquePointer;
@@ -101,9 +101,7 @@ public:
   }
 
   /// Support for isa/cast.
-  static bool kindof(unsigned kind) {
-    return FIRST_NEW_LLVM_TYPE <= kind && kind <= LAST_NEW_LLVM_TYPE;
-  }
+  static bool classof(Type type);
 
   LLVMDialect &getDialect();
 
@@ -256,7 +254,6 @@ public:
   class ClassName : public Type::TypeBase<ClassName, LLVMType, TypeStorage> {  \
   public:                                                                      \
     using Base::Base;                                                          \
-    static bool kindof(unsigned kind) { return kind == Kind; }                 \
     static ClassName get(MLIRContext *context) {                               \
       return Base::get(context, Kind);                                         \
     }                                                                          \
@@ -290,9 +287,6 @@ public:
   /// Inherit base constructors.
   using Base::Base;
 
-  /// Support for isa/cast.
-  static bool kindof(unsigned kind) { return kind == LLVMType::ArrayType; }
-
   /// Gets or creates an instance of LLVM dialect array type containing
   /// `numElements` of `elementType`, in the same context as `elementType`.
   static LLVMArrayType get(LLVMType elementType, unsigned numElements);
@@ -317,9 +311,6 @@ class LLVMFunctionType
 public:
   /// Inherit base constructors.
   using Base::Base;
-
-  /// Support for isa/cast.
-  static bool kindof(unsigned kind) { return kind == LLVMType::FunctionType; }
 
   /// Gets or creates an instance of LLVM dialect function in the same context
   /// as the `result` type.
@@ -354,9 +345,6 @@ public:
   /// Inherit base constructor.
   using Base::Base;
 
-  /// Support for isa/cast.
-  static bool kindof(unsigned kind) { return kind == LLVMType::IntegerType; }
-
   /// Gets or creates an instance of the integer of the specified `bitwidth` in
   /// the given context.
   static LLVMIntegerType get(MLIRContext *ctx, unsigned bitwidth);
@@ -377,9 +365,6 @@ class LLVMPointerType : public Type::TypeBase<LLVMPointerType, LLVMType,
 public:
   /// Inherit base constructors.
   using Base::Base;
-
-  /// Support for isa/cast.
-  static bool kindof(unsigned kind) { return kind == LLVMType::PointerType; }
 
   /// Gets or creates an instance of LLVM dialect pointer type pointing to an
   /// object of `pointee` type in the given address space. The pointer type is
@@ -426,9 +411,6 @@ class LLVMStructType : public Type::TypeBase<LLVMStructType, LLVMType,
 public:
   /// Inherit base construtors.
   using Base::Base;
-
-  /// Support for isa/cast.
-  static bool kindof(unsigned kind) { return kind == LLVMType::StructType; }
 
   /// Gets or creates an identified struct with the given name in the provided
   /// context. Note that unlike llvm::StructType::create, this function will
@@ -485,17 +467,13 @@ public:
 /// LLVM dialect vector type, represents a sequence of elements that can be
 /// processed as one, typically in SIMD context. This is a base class for fixed
 /// and scalable vectors.
-class LLVMVectorType : public Type::TypeBase<LLVMVectorType, LLVMType,
-                                             detail::LLVMTypeAndSizeStorage> {
+class LLVMVectorType : public LLVMType {
 public:
   /// Inherit base constructor.
-  using Base::Base;
+  using LLVMType::LLVMType;
 
-  /// Support for isa/cast.
-  static bool kindof(unsigned kind) {
-    return kind == LLVMType::FixedVectorType ||
-           kind == LLVMType::ScalableVectorType;
-  }
+  /// Support type casting functionality.
+  static bool classof(Type type);
 
   /// Returns the element type of the vector.
   LLVMType getElementType();
@@ -516,11 +494,6 @@ class LLVMFixedVectorType
 public:
   /// Inherit base constructor.
   using Base::Base;
-
-  /// Support for isa/cast.
-  static bool kindof(unsigned kind) {
-    return kind == LLVMType::FixedVectorType;
-  }
 
   /// Gets or creates a fixed vector type containing `numElements` of
   /// `elementType` in the same context as `elementType`.
@@ -543,11 +516,6 @@ class LLVMScalableVectorType
 public:
   /// Inherit base constructor.
   using Base::Base;
-
-  /// Support for isa/cast.
-  static bool kindof(unsigned kind) {
-    return kind == LLVMType::ScalableVectorType;
-  }
 
   /// Gets or creates a scalable vector type containing a non-zero multiple of
   /// `minNumElements` of `elementType` in the same context as `elementType`.

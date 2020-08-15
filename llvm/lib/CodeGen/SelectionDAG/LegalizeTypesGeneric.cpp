@@ -514,8 +514,8 @@ void DAGTypeLegalizer::SplitRes_SELECT(SDNode *N, SDValue &Lo, SDValue &Hi) {
   SDValue Cond = N->getOperand(0);
   CL = CH = Cond;
   if (Cond.getValueType().isVector()) {
-    if (SDValue Res = WidenVSELECTAndMask(N))
-      std::tie(CL, CH) = DAG.SplitVector(Res->getOperand(0), dl);
+    if (SDValue Res = WidenVSELECTMask(N))
+      std::tie(CL, CH) = DAG.SplitVector(Res, dl);
     // Check if there are already splitted versions of the vector available and
     // use those instead of splitting the mask operand again.
     else if (getTypeAction(Cond.getValueType()) ==

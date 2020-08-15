@@ -86,6 +86,12 @@ public:
   SDValue lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   /// } Custom Lower
 
+  /// Custom DAGCombine {
+  SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
+
+  SDValue combineTRUNCATE(SDNode *N, DAGCombinerInfo &DCI) const;
+  /// } Custom DAGCombine
+
   SDValue withTargetFlags(SDValue Op, unsigned TF, SelectionDAG &DAG) const;
   SDValue makeHiLoPair(SDValue Op, unsigned HiTF, unsigned LoTF,
                        SelectionDAG &DAG) const;

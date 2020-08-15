@@ -624,6 +624,18 @@ func @canonicalize_rank(%arg : tensor<1x2x?xf32>) -> index {
 
 // -----
 
+// Canonicalize `rank` when shape is derived from ranked tensor.
+// CHECK-LABEL: @canonicalize_rank
+func @canonicalize_rank_size(%arg : tensor<1x2x?xf32>) -> !shape.size {
+  // CHECK: %[[RESULT:.*]] = shape.const_size 3
+  // CHECK: return %[[RESULT]] : !shape.size
+  %shape = shape.shape_of %arg : tensor<1x2x?xf32> -> !shape.shape
+  %rank = shape.rank %shape : !shape.shape -> !shape.size
+  return %rank : !shape.size
+}
+
+// -----
+
 // Do not canonicalize `rank` when shape is derived from unranked tensor.
 // CHECK-LABEL: @dont_canonicalize_rank
 // CHECK-SAME: (%[[ARG:.*]]: tensor<*xf32>) -> index

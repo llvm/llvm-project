@@ -1297,3 +1297,25 @@ define <4 x i64> @ternlog_masky_xor_and_mask_ymm(<4 x i64> %x, <4 x i64> %y, <4 
   %c = select <4 x i1> %m, <4 x i64> %b, <4 x i64> %y
   ret <4 x i64> %c
 }
+
+define <4 x i32> @ternlog_andn_or(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: ternlog_andn_or:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpternlogd $14, %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %a = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %b = or <4 x i32> %y, %z
+  %c = and <4 x i32> %a, %b
+  ret <4 x i32> %c
+}
+
+define <4 x i32> @ternlog_andn_or_2(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+; CHECK-LABEL: ternlog_andn_or_2:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpternlogd $16, %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %a = or <4 x i32> %y, %z
+  %b = xor <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %c = and <4 x i32> %x, %b
+  ret <4 x i32> %c
+}

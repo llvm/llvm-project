@@ -86,7 +86,7 @@ private:
     return innermostSymbol_ && IsFunction(*innermostSymbol_);
   }
   template <typename... A>
-  void SayWithDeclaration(const Symbol &symbol, A &&... x) {
+  void SayWithDeclaration(const Symbol &symbol, A &&...x) {
     if (parser::Message * msg{messages_.Say(std::forward<A>(x)...)}) {
       if (messages_.at().begin() != symbol.name().begin()) {
         evaluate::AttachDeclaration(*msg, symbol);
@@ -1507,7 +1507,7 @@ bool SubprogramMatchHelper::CheckSameIntent(const Symbol &symbol1,
 // Report an error referring to first symbol with declaration of second symbol
 template <typename... A>
 void SubprogramMatchHelper::Say(const Symbol &symbol1, const Symbol &symbol2,
-    parser::MessageFixedText &&text, A &&... args) {
+    parser::MessageFixedText &&text, A &&...args) {
   auto &message{context.Say(symbol1.name(), std::move(text), symbol1.name(),
       std::forward<A>(args)...)};
   evaluate::AttachDeclaration(message, symbol2);

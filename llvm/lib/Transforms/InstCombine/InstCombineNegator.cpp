@@ -184,6 +184,10 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
       }
       return BO;
     }
+    // While we could negate exact arithmetic shift:
+    //   ashr exact %x, C  -->   sdiv exact i8 %x, -1<<C
+    // iff C != 0 and C u< bitwidth(%x), we don't want to,
+    // because division is *THAT* much worse than a shift.
     break;
   }
   case Instruction::SExt:

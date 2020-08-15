@@ -103,6 +103,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  strcspn_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strcspn_test.cpp
+  DEPENDS
+    libc.src.string.strcspn
+)
+
+add_libc_unittest(
   strspn_test
   SUITE
     libc_string_unittests
@@ -112,6 +122,15 @@ add_libc_unittest(
     libc.src.string.strspn
 )
 
+add_libc_unittest(
+  strpbrk_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strpbrk_test.cpp
+  DEPENDS
+    libc.src.string.strpbrk
+)
 
 # Tests all implementations that can run on the host.
 function(add_libc_multi_impl_test name)

@@ -238,14 +238,17 @@ define void @main()
 }
 ```
 
-The full code listing for dumping LLVM IR can be found in 
+The full code listing for dumping LLVM IR can be found in
 `examples/toy/Ch6/toy.cpp` in the `dumpLLVMIR()` function:
 
 ```c++
 
 int dumpLLVMIR(mlir::ModuleOp module) {
-  // Translate the module, that contains the LLVM dialect, to LLVM IR.
-  auto llvmModule = mlir::translateModuleToLLVMIR(module);
+  // Translate the module, that contains the LLVM dialect, to LLVM IR. Use a
+  // fresh LLVM IR context. (Note that LLVM is not thread-safe and any
+  // concurrent use of a context requires external locking.)
+  llvm::LLVMContext llvmContext;
+  auto llvmModule = mlir::translateModuleToLLVMIR(module, llvmContext);
   if (!llvmModule) {
     llvm::errs() << "Failed to emit LLVM IR\n";
     return -1;

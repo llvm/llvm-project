@@ -14,7 +14,6 @@ declare i64 @llvm.bswap.i64(i64)
 define i32 @func2(i32 %p) {
 ; CHECK-LABEL: func2:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    bswp %s0, %s0, 1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = tail call i32 @llvm.bswap.i32(i32 %p)
@@ -26,7 +25,6 @@ declare i32 @llvm.bswap.i32(i32)
 define signext i16 @func3(i16 signext %p) {
 ; CHECK-LABEL: func3:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    bswp %s0, %s0, 1
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    srl %s0, %s0, 16
@@ -51,7 +49,6 @@ define i64 @func4(i64 %p) {
 define i32 @func5(i32 %p) {
 ; CHECK-LABEL: func5:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    bswp %s0, %s0, 1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = tail call i32 @llvm.bswap.i32(i32 %p)
@@ -61,7 +58,6 @@ define i32 @func5(i32 %p) {
 define zeroext i16 @func6(i16 zeroext %p) {
 ; CHECK-LABEL: func6:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    bswp %s0, %s0, 1
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    srl %s0, %s0, 16

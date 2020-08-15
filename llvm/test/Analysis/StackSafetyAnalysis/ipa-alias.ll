@@ -16,42 +16,44 @@
 ; RUN: opt -module-summary %S/Inputs/ipa-alias.ll -o %t.summ1.bc
 
 ; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t.lto -stack-safety-print -stack-safety-run -save-temps -thinlto-threads 1 -O0 \
-; RUN:  -r %t.summ0.bc,PreemptableAliasWrite1, \
-; RUN:  -r %t.summ0.bc,AliasToPreemptableAliasWrite1, \
-; RUN:  -r %t.summ0.bc,InterposableAliasWrite1, \
-; RUN:  -r %t.summ0.bc,AliasWrite1, \
-; RUN:  -r %t.summ0.bc,BitcastAliasWrite1, \
-; RUN:  -r %t.summ0.bc,AliasToBitcastAliasWrite1, \
-; RUN:  -r %t.summ0.bc,PreemptableAliasCall,px \
-; RUN:  -r %t.summ0.bc,InterposableAliasCall,px \
 ; RUN:  -r %t.summ0.bc,AliasCall,px \
+; RUN:  -r %t.summ0.bc,AliasToBitcastAliasWrite1, \
+; RUN:  -r %t.summ0.bc,AliasToPreemptableAliasWrite1, \
+; RUN:  -r %t.summ0.bc,AliasWrite1, \
 ; RUN:  -r %t.summ0.bc,BitcastAliasCall,px \
-; RUN:  -r %t.summ1.bc,PreemptableAliasWrite1,px \
+; RUN:  -r %t.summ0.bc,BitcastAliasWrite1, \
+; RUN:  -r %t.summ0.bc,InterposableAliasCall,px \
+; RUN:  -r %t.summ0.bc,InterposableAliasWrite1, \
+; RUN:  -r %t.summ0.bc,PreemptableAliasCall,px \
+; RUN:  -r %t.summ0.bc,PreemptableAliasWrite1, \
+; RUN:  -r %t.summ1.bc,AliasToBitcastAliasWrite1,px \
 ; RUN:  -r %t.summ1.bc,AliasToPreemptableAliasWrite1,px \
-; RUN:  -r %t.summ1.bc,InterposableAliasWrite1,px \
 ; RUN:  -r %t.summ1.bc,AliasWrite1,px \
 ; RUN:  -r %t.summ1.bc,BitcastAliasWrite1,px \
-; RUN:  -r %t.summ1.bc,AliasToBitcastAliasWrite1,px \
-; RUN:  -r %t.summ1.bc,Write1,px 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
+; RUN:  -r %t.summ1.bc,InterposableAliasWrite1,px \
+; RUN:  -r %t.summ1.bc,PreemptableAliasWrite1,px \
+; RUN:  -r %t.summ1.bc,Write1,px \
+; RUN:    2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
 
 ; RUN: llvm-lto2 run %t.summ0.bc %t.summ1.bc -o %t-newpm.lto -stack-safety-print -stack-safety-run -save-temps -use-new-pm -thinlto-threads 1 -O0 \
-; RUN:  -r %t.summ0.bc,PreemptableAliasWrite1, \
-; RUN:  -r %t.summ0.bc,AliasToPreemptableAliasWrite1, \
-; RUN:  -r %t.summ0.bc,InterposableAliasWrite1, \
-; RUN:  -r %t.summ0.bc,AliasWrite1, \
-; RUN:  -r %t.summ0.bc,BitcastAliasWrite1, \
-; RUN:  -r %t.summ0.bc,AliasToBitcastAliasWrite1, \
-; RUN:  -r %t.summ0.bc,PreemptableAliasCall,px \
-; RUN:  -r %t.summ0.bc,InterposableAliasCall,px \
 ; RUN:  -r %t.summ0.bc,AliasCall,px \
+; RUN:  -r %t.summ0.bc,AliasToBitcastAliasWrite1, \
+; RUN:  -r %t.summ0.bc,AliasToPreemptableAliasWrite1, \
+; RUN:  -r %t.summ0.bc,AliasWrite1, \
 ; RUN:  -r %t.summ0.bc,BitcastAliasCall,px \
-; RUN:  -r %t.summ1.bc,PreemptableAliasWrite1,px \
+; RUN:  -r %t.summ0.bc,BitcastAliasWrite1, \
+; RUN:  -r %t.summ0.bc,InterposableAliasCall,px \
+; RUN:  -r %t.summ0.bc,InterposableAliasWrite1, \
+; RUN:  -r %t.summ0.bc,PreemptableAliasCall,px \
+; RUN:  -r %t.summ0.bc,PreemptableAliasWrite1, \
+; RUN:  -r %t.summ1.bc,AliasToBitcastAliasWrite1,px \
 ; RUN:  -r %t.summ1.bc,AliasToPreemptableAliasWrite1,px \
-; RUN:  -r %t.summ1.bc,InterposableAliasWrite1,px \
 ; RUN:  -r %t.summ1.bc,AliasWrite1,px \
 ; RUN:  -r %t.summ1.bc,BitcastAliasWrite1,px \
-; RUN:  -r %t.summ1.bc,AliasToBitcastAliasWrite1,px \
-; RUN:  -r %t.summ1.bc,Write1,px 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
+; RUN:  -r %t.summ1.bc,InterposableAliasWrite1,px \
+; RUN:  -r %t.summ1.bc,PreemptableAliasWrite1,px \
+; RUN:  -r %t.summ1.bc,Write1,px \
+; RUN:    2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,LTO
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux"
@@ -78,7 +80,7 @@ define void @PreemptableAliasCall() #0 {
 ; GLOBAL-NEXT: x1[1]: full-set, @PreemptableAliasWrite1(arg0, [0,1)){{$}}
 ; LOCAL-NEXT: x2[1]: empty-set, @AliasToPreemptableAliasWrite1(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x2[1]: [0,1), @AliasToPreemptableAliasWrite1(arg0, [0,1)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x1 = alloca i8
   call void @PreemptableAliasWrite1(i8* %x1)
@@ -97,7 +99,7 @@ define void @InterposableAliasCall() #0 {
 ; LOCAL-NEXT: x[1]: empty-set, @InterposableAliasWrite1(arg0, [0,1)){{$}}
 ; NOLTO-NEXT: x[1]: full-set, @InterposableAliasWrite1(arg0, [0,1)){{$}}
 ; LTO-NEXT: x[1]: [0,1), @InterposableAliasWrite1(arg0, [0,1)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i8
 ; ThinLTO can resolve the prevailing implementation for interposable definitions.
@@ -112,7 +114,7 @@ define void @AliasCall() #0 {
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: x[1]: empty-set, @AliasWrite1(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x[1]: [0,1), @AliasWrite1(arg0, [0,1)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x = alloca i8
   call void @AliasWrite1(i8* %x)
@@ -128,7 +130,7 @@ define void @BitcastAliasCall() #0 {
 ; GLOBAL-NEXT: x1[4]: [0,1), @BitcastAliasWrite1(arg0, [0,1)){{$}}
 ; LOCAL-NEXT: x2[1]: empty-set, @AliasToBitcastAliasWrite1(arg0, [0,1)){{$}}
 ; GLOBAL-NEXT: x2[1]: [0,1), @AliasToBitcastAliasWrite1(arg0, [0,1)){{$}}
-; CHECK-NOT: ]:
+; CHECK-EMPTY:
 entry:
   %x1 = alloca i32
   call void @BitcastAliasWrite1(i32* %x1)
@@ -143,4 +145,4 @@ entry:
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: p[]: [0,1){{$}}
 ; CHECK-NEXT: allocas uses:
-; CHECK-NOT: ]:
+; CHECK-EMPTY:

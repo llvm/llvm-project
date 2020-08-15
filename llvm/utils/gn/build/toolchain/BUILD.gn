@@ -70,10 +70,27 @@ template("unix_toolchain") {
       default_output_dir = "{{root_out_dir}}/lib"
     }
 
+    if (current_os == "mac") {
+      # gn < 1693 (e214b5d35898) doesn't support |frameworks|, requiring
+      # frameworks to be listed in |libs|, but gn >= 1808 (3028c6a426a4) forbids
+      # frameworks from appearing in |libs|. This assertion provides a helpful
+      # cue to upgrade, and is much more user-friendly than the failure that
+      # occurs when an older gn encounters |frameworks|.
+      #
+      # gn_version doesn’t actually exist in gn < 1709 (52cb644a3fb4), and
+      # defined(gn_version) doesn't actually work as expected
+      # (https://crbug.com/gn/183), so 1709 is the true minimum enforced by
+      # this construct, and if gn_version is not available, this line will still
+      # be blamed, making the resolution somewhat discoverable.
+      assert(gn_version >= 1693,
+             "Your GN is too old! " +
+                 "Update it, perhaps by running llvm/utils/gn/get.py")
+    }
+
     tool("solink") {
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
       if (current_os == "mac") {
-        command = "$ld -shared {{ldflags}} -o $outfile {{inputs}} {{libs}}"
+        command = "$ld -shared {{ldflags}} -o $outfile {{inputs}} {{libs}} {{frameworks}}"
         default_output_extension = ".dylib"
       } else {
         command = "$ld -shared {{ldflags}} -Wl,-z,defs -Wl,-soname,{{target_output_name}}{{output_extension}} -o $outfile {{inputs}} {{libs}}"
@@ -89,7 +106,7 @@ template("unix_toolchain") {
     tool("solink_module") {
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
       if (current_os == "mac") {
-        command = "$ld -shared {{ldflags}} -Wl,-flat_namespace -Wl,-undefined,suppress -o $outfile {{inputs}} {{libs}}"
+        command = "$ld -shared {{ldflags}} -Wl,-flat_namespace -Wl,-undefined,suppress -o $outfile {{inputs}} {{libs}} {{frameworks}}"
         default_output_extension = ".dylib"
       } else {
         command = "$ld -shared {{ldflags}} -Wl,-soname,{{target_output_name}}{{output_extension}} -o $outfile {{inputs}} {{libs}}"
@@ -104,7 +121,8 @@ template("unix_toolchain") {
     tool("link") {
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
       if (current_os == "mac") {
-        command = "$ld {{ldflags}} -o $outfile {{inputs}} {{libs}}"
+        command =
+            "$ld {{ldflags}} -o $outfile {{inputs}} {{libs}} {{frameworks}}"
       } else {
         command = "$ld {{ldflags}} -o $outfile -Wl,--start-group {{inputs}} -Wl,--end-group {{libs}}"
       }

@@ -290,6 +290,18 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
       }
     }
 
+    // Give the underlying decl if navigation is triggered on a non-renaming
+    // alias.
+    if (llvm::isa<UsingDecl>(D)) {
+      // FIXME: address more complicated cases. TargetDecl(... Underlying) gives
+      // all overload candidates, we only want the targeted one if the cursor is
+      // on an using-alias usage, workround it with getDeclAtPosition.
+      llvm::for_each(
+          getDeclAtPosition(AST, CurLoc, DeclRelation::Underlying, NodeKind),
+          [&](const NamedDecl *UD) { AddResultDecl(UD); });
+      continue;
+    }
+
     // Otherwise the target declaration is the right one.
     AddResultDecl(D);
   }

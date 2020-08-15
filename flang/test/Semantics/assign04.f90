@@ -115,3 +115,13 @@ subroutine s7
   integer :: a(10), v(10)
   a(v(:)) = 1  ! vector subscript is ok
 end
+
+subroutine s8
+  !ERROR: Assignment to subprogram 's8' is not allowed
+  s8 = 1.0
+end
+
+real function f9() result(r)
+  !ERROR: Assignment to subprogram 'f9' is not allowed
+  f9 = 1.0
+end

@@ -18,6 +18,7 @@
 #include "MCTargetDesc/P2MCTargetDesc.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
@@ -68,12 +69,16 @@ void P2AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
     if (!Value)
         return; // Doesn't change encoding.
 
-    LLVM_DEBUG(errs() << "-- applying fixup\n");
+    LLVM_DEBUG(errs() << "-- applying fixup for ");
+
+    LLVM_DEBUG(Target.dump(); errs() << "\n");
 
     // Where do we start in the object
     unsigned Offset = Fixup.getOffset();
+    LLVM_DEBUG(errs() << "offset is: " << Offset << "\n");
     // Number of bytes we need to fixup
     unsigned NumBytes = (getFixupKindInfo(Kind).TargetSize + 7) / 8;
+    LLVM_DEBUG(errs() << "num bytes is: " << NumBytes << "\n");
     // Grab current value, if any, from bits.
     uint64_t CurVal = 0;
 
@@ -81,12 +86,17 @@ void P2AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
         CurVal |= (uint64_t)((uint8_t)Data[Offset + i]) << (i*8);
     }
 
+    LLVM_DEBUG(errs() << "current value is: " << CurVal << "\n");
+
     uint64_t Mask = ((uint64_t)(-1) >> (64 - getFixupKindInfo(Kind).TargetSize));
     CurVal |= Value & Mask;
+
+    LLVM_DEBUG(errs() << "masked value is: " << CurVal << "\n");
 
     // Write out the fixed up bytes back to the code/data bits.
     for (unsigned i = 0; i != NumBytes; ++i) {
         Data[Offset + i] = (uint8_t)((CurVal >> (i*8)) & 0xff);
+        LLVM_DEBUG(errs() << "set data offset by " << Offset + i << " to " << ((CurVal >> (i*8)) & 0xff) << "\n");
     }
 }
 

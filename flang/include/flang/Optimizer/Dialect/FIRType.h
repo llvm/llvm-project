@@ -114,7 +114,6 @@ mlir::Type dyn_cast_ptrEleTy(mlir::Type t);
 /// Boilerplate mixin template
 template <typename A, unsigned Id>
 struct IntrinsicTypeMixin {
-  static constexpr bool kindof(unsigned kind) { return kind == getId(); }
   static constexpr unsigned getId() { return Id; }
 };
 
@@ -194,7 +193,6 @@ class BoxType
 public:
   using Base::Base;
   static BoxType get(mlir::Type eleTy, mlir::AffineMapAttr map = {});
-  static bool kindof(unsigned kind) { return kind == TypeKind::FIR_BOX; }
   mlir::Type getEleTy() const;
   mlir::AffineMapAttr getLayoutMap() const;
 
@@ -211,7 +209,6 @@ class BoxCharType : public mlir::Type::TypeBase<BoxCharType, mlir::Type,
 public:
   using Base::Base;
   static BoxCharType get(mlir::MLIRContext *ctxt, KindTy kind);
-  static bool kindof(unsigned kind) { return kind == TypeKind::FIR_BOXCHAR; }
   CharacterType getEleTy() const;
 };
 
@@ -223,7 +220,6 @@ class BoxProcType : public mlir::Type::TypeBase<BoxProcType, mlir::Type,
 public:
   using Base::Base;
   static BoxProcType get(mlir::Type eleTy);
-  static bool kindof(unsigned kind) { return kind == TypeKind::FIR_BOXPROC; }
   mlir::Type getEleTy() const;
 
   static mlir::LogicalResult verifyConstructionInvariants(mlir::Location,
@@ -239,7 +235,6 @@ class DimsType : public mlir::Type::TypeBase<DimsType, mlir::Type,
 public:
   using Base::Base;
   static DimsType get(mlir::MLIRContext *ctx, unsigned rank);
-  static bool kindof(unsigned kind) { return kind == TypeKind::FIR_DIMS; }
 
   /// returns -1 if the rank is unknown
   unsigned getRank() const;
@@ -253,7 +248,6 @@ class FieldType : public mlir::Type::TypeBase<FieldType, mlir::Type,
 public:
   using Base::Base;
   static FieldType get(mlir::MLIRContext *ctxt);
-  static bool kindof(unsigned kind) { return kind == TypeKind::FIR_FIELD; }
 };
 
 /// The type of a heap pointer. Fortran entities with the ALLOCATABLE attribute
@@ -265,7 +259,6 @@ class HeapType : public mlir::Type::TypeBase<HeapType, mlir::Type,
 public:
   using Base::Base;
   static HeapType get(mlir::Type elementType);
-  static bool kindof(unsigned kind) { return kind == TypeKind::FIR_HEAP; }
 
   mlir::Type getEleTy() const;
 
@@ -281,7 +274,6 @@ class LenType
 public:
   using Base::Base;
   static LenType get(mlir::MLIRContext *ctxt);
-  static bool kindof(unsigned kind) { return kind == TypeKind::FIR_LEN; }
 };
 
 /// The type of entities with the POINTER attribute.  These pointers are
@@ -292,7 +284,6 @@ class PointerType : public mlir::Type::TypeBase<PointerType, mlir::Type,
 public:
   using Base::Base;
   static PointerType get(mlir::Type elementType);
-  static bool kindof(unsigned kind) { return kind == TypeKind::FIR_POINTER; }
 
   mlir::Type getEleTy() const;
 
@@ -307,7 +298,6 @@ class ReferenceType
 public:
   using Base::Base;
   static ReferenceType get(mlir::Type elementType);
-  static bool kindof(unsigned kind) { return kind == TypeKind::FIR_REFERENCE; }
 
   mlir::Type getEleTy() const;
 
@@ -361,8 +351,6 @@ public:
   /// The value `-1` represents an unknown extent for a dimension
   static constexpr Extent getUnknownExtent() { return -1; }
 
-  static bool kindof(unsigned kind) { return kind == TypeKind::FIR_SEQUENCE; }
-
   static mlir::LogicalResult
   verifyConstructionInvariants(mlir::Location loc, const Shape &shape,
                                mlir::Type eleTy, mlir::AffineMapAttr map);
@@ -379,9 +367,6 @@ class TypeDescType : public mlir::Type::TypeBase<TypeDescType, mlir::Type,
 public:
   using Base::Base;
   static TypeDescType get(mlir::Type ofType);
-  static constexpr bool kindof(unsigned kind) {
-    return kind == TypeKind::FIR_TYPEDESC;
-  }
   mlir::Type getOfTy() const;
 
   static mlir::LogicalResult verifyConstructionInvariants(mlir::Location,
@@ -415,7 +400,6 @@ public:
   static RecordType get(mlir::MLIRContext *ctxt, llvm::StringRef name);
   void finalize(llvm::ArrayRef<TypePair> lenPList,
                 llvm::ArrayRef<TypePair> typeList);
-  static constexpr bool kindof(unsigned kind) { return kind == getId(); }
   static constexpr unsigned getId() { return TypeKind::FIR_DERIVED; }
 
   detail::RecordTypeStorage const *uniqueKey() const;

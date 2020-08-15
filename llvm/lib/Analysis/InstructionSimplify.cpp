@@ -2755,9 +2755,9 @@ static Value *simplifyICmpWithConstant(CmpInst::Predicate Pred, Value *LHS,
   const APInt *MulC;
   if (ICmpInst::isEquality(Pred) &&
       ((match(LHS, m_NUWMul(m_Value(), m_APIntAllowUndef(MulC))) &&
-        C->urem(*MulC) != 0) ||
+        *MulC != 0 && C->urem(*MulC) != 0) ||
        (match(LHS, m_NSWMul(m_Value(), m_APIntAllowUndef(MulC))) &&
-        C->srem(*MulC) != 0)))
+        *MulC != 0 && C->srem(*MulC) != 0)))
     return ConstantInt::get(ITy, Pred == ICmpInst::ICMP_NE);
 
   return nullptr;

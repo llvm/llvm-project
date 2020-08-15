@@ -1293,6 +1293,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Shifts.clampScalar(1, S32, S32);
     Shifts.clampScalar(0, S16, S64);
     Shifts.widenScalarToNextPow2(0, 16);
+
+    getActionDefinitionsBuilder({G_SSHLSAT, G_USHLSAT})
+      .minScalar(0, S16)
+      .scalarize(0)
+      .lower();
   } else {
     // Make sure we legalize the shift amount type first, as the general
     // expansion for the shifted type will produce much worse code if it hasn't
@@ -1300,6 +1305,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Shifts.clampScalar(1, S32, S32);
     Shifts.clampScalar(0, S32, S64);
     Shifts.widenScalarToNextPow2(0, 32);
+
+    getActionDefinitionsBuilder({G_SSHLSAT, G_USHLSAT})
+      .minScalar(0, S32)
+      .scalarize(0)
+      .lower();
   }
   Shifts.scalarize(0);
 
@@ -1340,7 +1350,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .clampScalar(EltTypeIdx, S32, S64)
       .clampScalar(VecTypeIdx, S32, S64)
       .clampScalar(IdxTypeIdx, S32, S32)
-      // TODO: Clamp the number of elements before resorting to stack lowering.
+      .clampMaxNumElements(1, S32, 32)
+      // TODO: Clamp elements for 64-bit vectors?
       // It should only be necessary with variable indexes.
       // As a last resort, lower to the stack
       .lower();
@@ -3647,6 +3658,9 @@ static unsigned getBufferAtomicPseudo(Intrinsic::ID IntrID) {
   case Intrinsic::amdgcn_raw_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_struct_buffer_atomic_cmpswap:
     return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_CMPSWAP;
+  case Intrinsic::amdgcn_raw_buffer_atomic_fadd:
+  case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD;
   default:
     llvm_unreachable("unhandled atomic opcode");
   }
@@ -3657,12 +3671,20 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
                                                Intrinsic::ID IID) const {
   const bool IsCmpSwap = IID == Intrinsic::amdgcn_raw_buffer_atomic_cmpswap ||
                          IID == Intrinsic::amdgcn_struct_buffer_atomic_cmpswap;
+  const bool HasReturn = MI.getNumExplicitDefs() != 0;
 
-  Register Dst = MI.getOperand(0).getReg();
-  Register VData = MI.getOperand(2).getReg();
+  Register Dst;
 
-  Register CmpVal;
   int OpOffset = 0;
+  if (HasReturn) {
+    // A few FP atomics do not support return values.
+    Dst = MI.getOperand(0).getReg();
+  } else {
+    OpOffset = -1;
+  }
+
+  Register VData = MI.getOperand(2 + OpOffset).getReg();
+  Register CmpVal;
 
   if (IsCmpSwap) {
     CmpVal = MI.getOperand(3 + OpOffset).getReg();
@@ -3670,7 +3692,7 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
   }
 
   Register RSrc = MI.getOperand(3 + OpOffset).getReg();
-  const unsigned NumVIndexOps = IsCmpSwap ? 9 : 8;
+  const unsigned NumVIndexOps = (IsCmpSwap ? 8 : 7) + HasReturn;
 
   // The struct intrinsic variants add one additional operand over raw.
   const bool HasVIndex = MI.getNumOperands() == NumVIndexOps;
@@ -3695,9 +3717,12 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
   if (!VIndex)
     VIndex = B.buildConstant(LLT::scalar(32), 0).getReg(0);
 
-  auto MIB = B.buildInstr(getBufferAtomicPseudo(IID))
-    .addDef(Dst)
-    .addUse(VData); // vdata
+  auto MIB = B.buildInstr(getBufferAtomicPseudo(IID));
+
+  if (HasReturn)
+    MIB.addDef(Dst);
+
+  MIB.addUse(VData); // vdata
 
   if (IsCmpSwap)
     MIB.addReg(CmpVal);
@@ -4462,6 +4487,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_struct_buffer_atomic_inc:
   case Intrinsic::amdgcn_raw_buffer_atomic_dec:
   case Intrinsic::amdgcn_struct_buffer_atomic_dec:
+  case Intrinsic::amdgcn_raw_buffer_atomic_fadd:
+  case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
   case Intrinsic::amdgcn_raw_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_struct_buffer_atomic_cmpswap:
     return legalizeBufferAtomic(MI, B, IntrID);

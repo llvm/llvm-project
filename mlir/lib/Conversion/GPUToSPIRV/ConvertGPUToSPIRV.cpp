@@ -14,6 +14,7 @@
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVLowering.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/TargetAndABI.h"
 #include "mlir/IR/Module.h"
 
 using namespace mlir;
@@ -170,9 +171,10 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, SPIRVTypeConverter &typeConverter,
                      "with no return values right now");
     return nullptr;
   }
-  if (fnType.getNumInputs() != argABIInfo.size()) {
+  if (!argABIInfo.empty() && fnType.getNumInputs() != argABIInfo.size()) {
     funcOp.emitError(
-        "lowering as entry functions requires ABI info for all arguments");
+        "lowering as entry functions requires ABI info for all arguments "
+        "or none of them");
     return nullptr;
   }
   // Update the signature to valid SPIR-V types and add the ABI
@@ -213,6 +215,10 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, SPIRVTypeConverter &typeConverter,
 static LogicalResult
 getDefaultABIAttrs(MLIRContext *context, gpu::GPUFuncOp funcOp,
                    SmallVectorImpl<spirv::InterfaceVarABIAttr> &argABI) {
+  spirv::TargetEnvAttr targetEnv = spirv::lookupTargetEnvOrDefault(funcOp);
+  if (!spirv::needsInterfaceVarABIAttrs(targetEnv))
+    return success();
+
   for (auto argIndex : llvm::seq<unsigned>(0, funcOp.getNumArguments())) {
     if (funcOp.getArgAttrOfType<spirv::InterfaceVarABIAttr>(
             argIndex, spirv::getInterfaceVarABIAttrName()))
@@ -272,9 +278,15 @@ LogicalResult GPUFuncOpConversion::matchAndRewrite(
 LogicalResult GPUModuleConversion::matchAndRewrite(
     gpu::GPUModuleOp moduleOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
+  spirv::TargetEnvAttr targetEnv = spirv::lookupTargetEnvOrDefault(moduleOp);
+  spirv::AddressingModel addressingModel = spirv::getAddressingModel(targetEnv);
+  FailureOr<spirv::MemoryModel> memoryModel = spirv::getMemoryModel(targetEnv);
+  if (failed(memoryModel))
+    return moduleOp.emitRemark("match failure: could not selected memory model "
+                               "based on 'spv.target_env'");
+
   auto spvModule = rewriter.create<spirv::ModuleOp>(
-      moduleOp.getLoc(), spirv::AddressingModel::Logical,
-      spirv::MemoryModel::GLSL450);
+      moduleOp.getLoc(), addressingModel, memoryModel.getValue());
 
   // Move the region from the module op into the SPIR-V module.
   Region &spvModuleRegion = spvModule.body();

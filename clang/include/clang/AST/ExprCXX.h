@@ -4519,31 +4519,38 @@ class CXXFoldExpr : public Expr {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 
+  enum SubExpr { Callee, LHS, RHS, Count };
+
   SourceLocation LParenLoc;
   SourceLocation EllipsisLoc;
   SourceLocation RParenLoc;
   // When 0, the number of expansions is not known. Otherwise, this is one more
   // than the number of expansions.
   unsigned NumExpansions;
-  Stmt *SubExprs[2];
+  Stmt *SubExprs[SubExpr::Count];
   BinaryOperatorKind Opcode;
 
 public:
-  CXXFoldExpr(QualType T, SourceLocation LParenLoc, Expr *LHS,
-              BinaryOperatorKind Opcode, SourceLocation EllipsisLoc, Expr *RHS,
-              SourceLocation RParenLoc, Optional<unsigned> NumExpansions)
+  CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
+              SourceLocation LParenLoc, Expr *LHS, BinaryOperatorKind Opcode,
+              SourceLocation EllipsisLoc, Expr *RHS, SourceLocation RParenLoc,
+              Optional<unsigned> NumExpansions)
       : Expr(CXXFoldExprClass, T, VK_RValue, OK_Ordinary), LParenLoc(LParenLoc),
         EllipsisLoc(EllipsisLoc), RParenLoc(RParenLoc),
         NumExpansions(NumExpansions ? *NumExpansions + 1 : 0), Opcode(Opcode) {
-    SubExprs[0] = LHS;
-    SubExprs[1] = RHS;
+    SubExprs[SubExpr::Callee] = Callee;
+    SubExprs[SubExpr::LHS] = LHS;
+    SubExprs[SubExpr::RHS] = RHS;
     setDependence(computeDependence(this));
   }
 
   CXXFoldExpr(EmptyShell Empty) : Expr(CXXFoldExprClass, Empty) {}
 
-  Expr *getLHS() const { return static_cast<Expr*>(SubExprs[0]); }
-  Expr *getRHS() const { return static_cast<Expr*>(SubExprs[1]); }
+  UnresolvedLookupExpr *getCallee() const {
+    return static_cast<UnresolvedLookupExpr *>(SubExprs[SubExpr::Callee]);
+  }
+  Expr *getLHS() const { return static_cast<Expr*>(SubExprs[SubExpr::LHS]); }
+  Expr *getRHS() const { return static_cast<Expr*>(SubExprs[SubExpr::RHS]); }
 
   /// Does this produce a right-associated sequence of operators?
   bool isRightFold() const {
@@ -4577,10 +4584,12 @@ public:
   }
 
   // Iterators
-  child_range children() { return child_range(SubExprs, SubExprs + 2); }
+  child_range children() {
+    return child_range(SubExprs, SubExprs + SubExpr::Count);
+  }
 
   const_child_range children() const {
-    return const_child_range(SubExprs, SubExprs + 2);
+    return const_child_range(SubExprs, SubExprs + SubExpr::Count);
   }
 };
 

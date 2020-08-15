@@ -117,3 +117,165 @@ body: |
     %4:_(s128) = G_ZEXT %3
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %4
 ...
+
+---
+name: test_zext_s8_to_s32_of_sext_s1_to_s8
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: test_zext_s8_to_s32_of_sext_s1_to_s8
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[ICMP]](s1)
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[SEXT]], [[C]]
+    ; CHECK: $vgpr0 = COPY [[AND]](s32)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = COPY $vgpr1
+    %2:_(s1) = G_ICMP intpred(eq), %0, %1
+    %3:_(s8) = G_SEXT %2
+    %4:_(s32) = G_ZEXT %3
+    $vgpr0 = COPY %4
+...
+
+---
+name: test_zext_s8_to_s32_of_sext_s1_to_s16
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: test_zext_s8_to_s32_of_sext_s1_to_s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[ICMP]](s1)
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[SEXT]], [[C]]
+    ; CHECK: $vgpr0 = COPY [[AND]](s32)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = COPY $vgpr1
+    %2:_(s1) = G_ICMP intpred(eq), %0, %1
+    %3:_(s16) = G_SEXT %2
+    %4:_(s32) = G_ZEXT %3
+    $vgpr0 = COPY %4
+...
+
+---
+name: test_zext_s8_to_s32_of_sext_s8_to_s16
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_zext_s8_to_s32_of_sext_s8_to_s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load 1, addrspace 1)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 8
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[SEXT_INREG]], [[C]]
+    ; CHECK: $vgpr0 = COPY [[AND]](s32)
+    %0:_(p1) = COPY $vgpr0_vgpr1
+    %1:_(s8) = G_LOAD %0 :: (load 1, addrspace 1)
+    %2:_(s16) = G_SEXT %1
+    %3:_(s32) = G_ZEXT %2
+    $vgpr0 = COPY %3
+...
+
+---
+name: test_zext_v2s8_to_v2s32_of_sext_v2s1_to_v2s8
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: test_zext_v2s8_to_v2s32_of_sext_v2s1_to_v2s8
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[UV]](s32), [[UV2]]
+    ; CHECK: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[UV1]](s32), [[UV3]]
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s1)
+    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP1]](s1)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY2]], 1
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
+    ; CHECK: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY3]], 1
+    ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SEXT_INREG]](s32), [[SEXT_INREG1]](s32)
+    ; CHECK: [[AND:%[0-9]+]]:_(<2 x s32>) = G_AND [[BUILD_VECTOR1]], [[BUILD_VECTOR]]
+    ; CHECK: $vgpr0_vgpr1 = COPY [[AND]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    %2:_(<2 x s1>) = G_ICMP intpred(eq), %0, %1
+    %3:_(<2 x s8>) = G_SEXT %2
+    %4:_(<2 x s32>) = G_ZEXT %3
+    $vgpr0_vgpr1 = COPY %4
+...
+
+---
+name: test_zext_v2s8_to_v2s32_of_sext_v2s1_to_v2s16
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: test_zext_v2s8_to_v2s32_of_sext_v2s1_to_v2s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[UV]](s32), [[UV2]]
+    ; CHECK: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[UV1]](s32), [[UV3]]
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s1)
+    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP1]](s1)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY2]], 1
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
+    ; CHECK: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY3]], 1
+    ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SEXT_INREG]](s32), [[SEXT_INREG1]](s32)
+    ; CHECK: [[AND:%[0-9]+]]:_(<2 x s32>) = G_AND [[BUILD_VECTOR1]], [[BUILD_VECTOR]]
+    ; CHECK: $vgpr0_vgpr1 = COPY [[AND]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    %2:_(<2 x s1>) = G_ICMP intpred(eq), %0, %1
+    %3:_(<2 x s16>) = G_SEXT %2
+    %4:_(<2 x s32>) = G_ZEXT %3
+    $vgpr0_vgpr1 = COPY %4
+...
+
+---
+name: test_zext_v2s8_to_v2s32_of_sext_v2s8_to_v2s16
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_zext_v2s8_to_v2s32_of_sext_v2s8_to_v2s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load 2, addrspace 1)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
+    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C1]](s32)
+    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C2]](s32)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
+    ; CHECK: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C3]](s32), [[C3]](s32)
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
+    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY3]], 8
+    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[COPY2]](s32)
+    ; CHECK: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY4]], 8
+    ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SEXT_INREG]](s32), [[SEXT_INREG1]](s32)
+    ; CHECK: [[AND:%[0-9]+]]:_(<2 x s32>) = G_AND [[BUILD_VECTOR1]], [[BUILD_VECTOR]]
+    ; CHECK: $vgpr0_vgpr1 = COPY [[AND]](<2 x s32>)
+    %0:_(p1) = COPY $vgpr0_vgpr1
+    %1:_(<2 x s8>) = G_LOAD %0 :: (load 2, addrspace 1)
+    %2:_(<2 x s16>) = G_SEXT %1
+    %3:_(<2 x s32>) = G_ZEXT %2
+    $vgpr0_vgpr1 = COPY %3
+...

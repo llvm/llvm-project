@@ -83,45 +83,51 @@ void MachOOptTable::printHelp(const char *argv0, bool showHidden) const {
   lld::outs() << "\n";
 }
 
-static Optional<std::string> findLibrary(StringRef name) {
-  std::string stub = (llvm::Twine("lib") + name + ".tbd").str();
-  std::string shared = (llvm::Twine("lib") + name + ".dylib").str();
-  std::string archive = (llvm::Twine("lib") + name + ".a").str();
-  llvm::SmallString<260> location;
+static Optional<std::string> findWithExtension(StringRef base,
+                                               ArrayRef<StringRef> extensions) {
+  for (StringRef ext : extensions) {
+    Twine location = base + ext;
+    if (fs::exists(location))
+      return location.str();
+  }
+  return {};
+}
 
+static Optional<std::string> findLibrary(StringRef name) {
+  llvm::SmallString<261> location;
   for (StringRef dir : config->librarySearchPaths) {
-    for (StringRef library : {stub, shared, archive}) {
       location = dir;
-      llvm::sys::path::append(location, library);
-      if (fs::exists(location))
-        return location.str().str();
-    }
+      path::append(location, Twine("lib") + name);
+      if (Optional<std::string> path =
+              findWithExtension(location, {".tbd", ".dylib", ".a"}))
+        return path;
   }
   return {};
 }
 
 static Optional<std::string> findFramework(StringRef name) {
-  // TODO: support .tbd files
   llvm::SmallString<260> symlink;
-  llvm::SmallString<260> location;
   StringRef suffix;
   std::tie(name, suffix) = name.split(",");
   for (StringRef dir : config->frameworkSearchPaths) {
     symlink = dir;
     path::append(symlink, name + ".framework", name);
-    // If the symlink fails to resolve, skip to the next search path.
-    // NOTE: we must resolve the symlink before trying the suffixes, because
-    // there are no symlinks for the suffixed paths.
-    if (fs::real_path(symlink, location))
-      continue;
+
     if (!suffix.empty()) {
-      llvm::Twine suffixed = location + suffix;
-      if (fs::exists(suffixed))
-        return suffixed.str();
+      // NOTE: we must resolve the symlink before trying the suffixes, because
+      // there are no symlinks for the suffixed paths.
+      llvm::SmallString<260> location;
+      if (!fs::real_path(symlink, location)) {
+        // only append suffix if realpath() succeeds
+        Twine suffixed = location + suffix;
+        if (fs::exists(suffixed))
+          return suffixed.str();
+      }
       // Suffix lookup failed, fall through to the no-suffix case.
     }
-    if (fs::exists(location))
-      return location.str().str();
+
+    if (Optional<std::string> path = findWithExtension(symlink, {".tbd", ""}))
+      return path;
   }
   return {};
 }

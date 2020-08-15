@@ -1400,24 +1400,24 @@ multiclass BufferAtomicPatterns_NO_RTN<SDPatternOperator name, ValueType vt,
     (name vt:$vdata_in, v4i32:$rsrc, 0,
           0, i32:$soffset, timm:$offset,
           timm:$cachepolicy, 0),
-    (!cast<MUBUF_Pseudo>(opcode # _OFFSET) $vdata_in, $rsrc, $soffset,
-                                        (as_i16imm $offset), (extract_slc $cachepolicy))
+    (!cast<MUBUF_Pseudo>(opcode # _OFFSET) getVregSrcForVT<vt>.ret:$vdata_in, SReg_128:$rsrc, SCSrc_b32:$soffset,
+                                        (as_i16timm $offset), (extract_slc $cachepolicy))
   >;
 
   def : GCNPat<
     (name vt:$vdata_in, v4i32:$rsrc, i32:$vindex,
           0, i32:$soffset, timm:$offset,
           timm:$cachepolicy, timm),
-    (!cast<MUBUF_Pseudo>(opcode # _IDXEN) $vdata_in, $vindex, $rsrc, $soffset,
-                                       (as_i16imm $offset), (extract_slc $cachepolicy))
+    (!cast<MUBUF_Pseudo>(opcode # _IDXEN) getVregSrcForVT<vt>.ret:$vdata_in, VGPR_32:$vindex, SReg_128:$rsrc, SCSrc_b32:$soffset,
+                                       (as_i16timm $offset), (extract_slc $cachepolicy))
   >;
 
   def : GCNPat<
     (name vt:$vdata_in, v4i32:$rsrc, 0,
           i32:$voffset, i32:$soffset, timm:$offset,
           timm:$cachepolicy, 0),
-    (!cast<MUBUF_Pseudo>(opcode # _OFFEN) $vdata_in, $voffset, $rsrc, $soffset,
-                                       (as_i16imm $offset), (extract_slc $cachepolicy))
+    (!cast<MUBUF_Pseudo>(opcode # _OFFEN) getVregSrcForVT<vt>.ret:$vdata_in, VGPR_32:$voffset, SReg_128:$rsrc, SCSrc_b32:$soffset,
+                                       (as_i16timm $offset), (extract_slc $cachepolicy))
   >;
 
   def : GCNPat<
@@ -1425,9 +1425,9 @@ multiclass BufferAtomicPatterns_NO_RTN<SDPatternOperator name, ValueType vt,
           i32:$voffset, i32:$soffset, timm:$offset,
           timm:$cachepolicy, timm),
     (!cast<MUBUF_Pseudo>(opcode # _BOTHEN)
-      $vdata_in,
-      (REG_SEQUENCE VReg_64, $vindex, sub0, $voffset, sub1),
-      $rsrc, $soffset, (as_i16imm $offset), (extract_slc $cachepolicy))
+      getVregSrcForVT<vt>.ret:$vdata_in,
+      (REG_SEQUENCE VReg_64, VGPR_32:$vindex, sub0, VGPR_32:$voffset, sub1),
+      SReg_128:$rsrc, SCSrc_b32:$soffset, (as_i16timm $offset), (extract_slc $cachepolicy))
   >;
 }
 

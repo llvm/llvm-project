@@ -1113,6 +1113,19 @@ define i8 @negate_add_with_single_negatible_operand(i8 %x, i8 %y) {
   %t1 = sub i8 0, %t0
   ret i8 %t1
 }
+; do so even if we are two levels deep
+define i8 @negate_add_with_single_negatible_operand_depth2(i8 %x, i8 %y) {
+; CHECK-LABEL: @negate_add_with_single_negatible_operand_depth2(
+; CHECK-NEXT:    [[T0_NEG:%.*]] = sub i8 -21, [[X:%.*]]
+; CHECK-NEXT:    [[T1_NEG:%.*]] = mul i8 [[T0_NEG]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[T1_NEG]]
+;
+  %t0 = add i8 %x, 21
+  %t1 = mul i8 %t0, %y
+  %t2 = sub i8 0, %t1
+  ret i8 %t2
+}
+
 define i8 @negate_add_with_single_negatible_operand_extrause(i8 %x, i8 %y) {
 ; CHECK-LABEL: @negate_add_with_single_negatible_operand_extrause(
 ; CHECK-NEXT:    [[T0:%.*]] = add i8 [[X:%.*]], 42

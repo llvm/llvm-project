@@ -108,7 +108,7 @@ class ProcedureRef; // forward definition, represents a CALL statement
 // is conventionally named "t".
 #define TUPLE_CLASS_BOILERPLATE(classname) \
   template <typename... Ts, typename = common::NoLvalue<Ts...>> \
-  classname(Ts &&... args) : t(std::move(args)...) {} \
+  classname(Ts &&...args) : t(std::move(args)...) {} \
   using TupleTrait = std::true_type; \
   BOILERPLATE(classname)
 

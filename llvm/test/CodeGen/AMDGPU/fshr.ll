@@ -1364,11 +1364,11 @@ define <2 x i24> @v_fshr_v2i24(<2 x i24> %src0, <2 x i24> %src1, <2 x i24> %src2
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
 ; GFX9-NEXT:    v_cndmask_b32_e32 v2, v3, v4, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v3, 8, v2
-; GFX9-NEXT:    buffer_store_byte_d16_hi v2, v0, s[0:3], 0 offen offset:5
-; GFX9-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:4
 ; GFX9-NEXT:    buffer_store_byte v2, v0, s[0:3], 0 offen offset:3
 ; GFX9-NEXT:    buffer_store_byte_d16_hi v1, v0, s[0:3], 0 offen offset:2
 ; GFX9-NEXT:    buffer_store_short v1, v0, s[0:3], 0 offen
+; GFX9-NEXT:    buffer_store_byte_d16_hi v2, v0, s[0:3], 0 offen offset:5
+; GFX9-NEXT:    buffer_store_byte v3, v0, s[0:3], 0 offen offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;

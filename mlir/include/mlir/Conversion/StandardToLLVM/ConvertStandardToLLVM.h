@@ -81,8 +81,6 @@ public:
   /// Returns the MLIR context.
   MLIRContext &getContext();
 
-  /// Returns the LLVM context.
-  llvm::LLVMContext &getLLVMContext();
 
   /// Returns the LLVM dialect.
   LLVM::LLVMDialect *getDialect() { return llvmDialect; }
@@ -395,9 +393,6 @@ public:
 
   /// Returns the LLVM dialect.
   LLVM::LLVMDialect &getDialect() const;
-
-  /// Returns the LLVM IR context.
-  llvm::LLVMContext &getContext() const;
 
   /// Gets the MLIR type wrapping the LLVM integer type whose bit width is
   /// defined by the used type converter.

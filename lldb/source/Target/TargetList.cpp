@@ -104,6 +104,15 @@ Status TargetList::CreateTargetInternal(
   }
 
   bool prefer_platform_arch = false;
+  auto update_platform_arch = [&](const ArchSpec &module_arch) {
+    // If the OS or vendor weren't specified, then adopt the module's
+    // architecture so that the platform matching can be more accurate.
+    if (!platform_arch.TripleOSWasSpecified() ||
+        !platform_arch.TripleVendorWasSpecified()) {
+      prefer_platform_arch = true;
+      platform_arch = module_arch;
+    }
+  };
 
   if (!user_exe_path.empty()) {
     ModuleSpec module_spec(FileSpec(user_exe_path, FileSpec::Style::native));
@@ -129,11 +138,7 @@ Status TargetList::CreateTargetInternal(
               // If the OS or vendor weren't specified, then adopt the module's
               // architecture so that the platform matching can be more
               // accurate.
-              if (!platform_arch.TripleOSWasSpecified() ||
-                  !platform_arch.TripleVendorWasSpecified()) {
-                prefer_platform_arch = true;
-                platform_arch = matching_module_spec.GetArchitecture();
-              }
+              update_platform_arch(matching_module_spec.GetArchitecture());
             } else {
               StreamString platform_arch_strm;
               StreamString module_arch_strm;
@@ -155,16 +160,14 @@ Status TargetList::CreateTargetInternal(
           }
         }
       } else if (arch.IsValid()) {
-        // A (valid) architecture was specified.
+        // Fat binary. A (valid) architecture was specified.
         module_spec.GetArchitecture() = arch;
         if (module_specs.FindMatchingModuleSpec(module_spec,
-                                                matching_module_spec)) {
-          prefer_platform_arch = true;
-          platform_arch = matching_module_spec.GetArchitecture();
-        }
+                                                matching_module_spec))
+            update_platform_arch(matching_module_spec.GetArchitecture());
       } else {
-        // No architecture specified, check if there is only one platform for
-        // all of the architectures.
+        // Fat binary. No architecture specified, check if there is
+        // only one platform for all of the architectures.
         PlatformSP host_platform_sp = Platform::GetHostPlatform();
         std::vector<PlatformSP> platforms;
         for (size_t i = 0; i < num_specs; ++i) {
@@ -251,7 +254,7 @@ Status TargetList::CreateTargetInternal(
   // If we have a valid architecture, make sure the current platform is
   // compatible with that architecture.
   if (!prefer_platform_arch && arch.IsValid()) {
-    if (!platform_sp->IsCompatibleArchitecture(arch, false, &platform_arch)) {
+    if (!platform_sp->IsCompatibleArchitecture(arch, false, nullptr)) {
       platform_sp = Platform::GetPlatformForArchitecture(arch, &platform_arch);
       if (!is_dummy_target && platform_sp)
         debugger.GetPlatformList().SetSelectedPlatform(platform_sp);
@@ -260,8 +263,7 @@ Status TargetList::CreateTargetInternal(
     // If "arch" isn't valid, yet "platform_arch" is, it means we have an
     // executable file with a single architecture which should be used.
     ArchSpec fixed_platform_arch;
-    if (!platform_sp->IsCompatibleArchitecture(platform_arch, false,
-                                               &fixed_platform_arch)) {
+    if (!platform_sp->IsCompatibleArchitecture(platform_arch, false, nullptr)) {
       platform_sp = Platform::GetPlatformForArchitecture(platform_arch,
                                                          &fixed_platform_arch);
       if (!is_dummy_target && platform_sp)

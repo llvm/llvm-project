@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/ctype/isupper.h"
+#include "src/ctype/ctype_utils.h"
 
 #include "src/__support/common.h"
 
@@ -14,9 +15,6 @@ namespace __llvm_libc {
 
 // TODO: Currently restricted to default locale.
 // These should be extended using locale information.
-int LLVM_LIBC_ENTRYPOINT(isupper)(int c) {
-  const unsigned ch = c;
-  return (ch - 'A') < 26;
-}
+int LLVM_LIBC_ENTRYPOINT(isupper)(int c) { return internal::isupper(c); }
 
 } // namespace __llvm_libc

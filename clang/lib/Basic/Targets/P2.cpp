@@ -23,14 +23,21 @@ namespace targets {
 } // namespace targets
 } // namespace clang
 
-// bool P2TargetInfo::isValidCPUName(StringRef Name) const {
+const char *const P2TargetInfo::GCCRegNames[] = {
+    "r0", "r1", "r2",  "r3",  "r4",  "r5",  "r6",  "r7",
+    "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15",
+    "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23",
+    "r24", "r25", "r26", "r27", "r28", "r29", "r30", "r31",
+    "ijmp3", "iret3", "ijmp2", "iret2", "ijmp1", "iret1", "pa", "pb",
+    "ptra", "ptrb", "dira", "dirb", "outa", "outb", "ina", "inb"
+};
 
-// }
-
-// void P2TargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
-
-// }
+ArrayRef<const char *> P2TargetInfo::getGCCRegNames() const {
+  return llvm::makeArrayRef(GCCRegNames);
+}
 
 void P2TargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
+    Builder.defineMacro("__propeller2__");
+    Builder.defineMacro("__p2llvm__");
 }

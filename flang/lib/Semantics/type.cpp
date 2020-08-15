@@ -439,7 +439,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const DerivedTypeSpec &x) {
   return o << x.AsFortran();
 }
 
-Bound::Bound(int bound) : expr_{bound} {}
+Bound::Bound(common::ConstantSubscript bound) : expr_{bound} {}
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &o, const Bound &x) {
   if (x.isAssumed()) {

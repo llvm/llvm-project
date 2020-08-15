@@ -2704,10 +2704,22 @@ void ArgumentAnalyzer::Analyze(const parser::Variable &x) {
       actuals_.emplace_back(std::move(*expr));
       return;
     }
-    const Symbol *symbol{GetFirstSymbol(*expr)};
-    context_.Say(x.GetSource(),
-        "Assignment to constant '%s' is not allowed"_err_en_US,
-        symbol ? symbol->name() : x.GetSource());
+    const Symbol *symbol{GetLastSymbol(*expr)};
+    if (!symbol) {
+      context_.SayAt(x, "Assignment to constant '%s' is not allowed"_err_en_US,
+          x.GetSource());
+    } else if (auto *subp{symbol->detailsIf<semantics::SubprogramDetails>()}) {
+      auto *msg{context_.SayAt(x,
+          "Assignment to subprogram '%s' is not allowed"_err_en_US,
+          symbol->name())};
+      if (subp->isFunction()) {
+        const auto &result{subp->result().name()};
+        msg->Attach(result, "Function result is '%s'"_err_en_US, result);
+      }
+    } else {
+      context_.SayAt(x, "Assignment to constant '%s' is not allowed"_err_en_US,
+          symbol->name());
+    }
   }
   fatalErrors_ = true;
 }

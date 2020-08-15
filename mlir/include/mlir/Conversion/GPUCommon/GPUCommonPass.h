@@ -35,8 +35,8 @@ class LLVMDialect;
 using OwnedBlob = std::unique_ptr<std::vector<char>>;
 using BlobGenerator =
     std::function<OwnedBlob(const std::string &, Location, StringRef)>;
-using LoweringCallback =
-    std::function<std::unique_ptr<llvm::Module>(Operation *)>;
+using LoweringCallback = std::function<std::unique_ptr<llvm::Module>(
+    Operation *, llvm::LLVMContext &, StringRef)>;
 
 /// Creates a pass to convert a gpu.launch_func operation into a sequence of
 /// GPU runtime calls.

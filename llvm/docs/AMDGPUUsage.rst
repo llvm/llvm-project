@@ -225,11 +225,11 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                                                  names.
      ``gfx906``                  ``amdgcn``   dGPU  - xnack                   - Radeon Instinct MI50
                                                       [off]                   - Radeon Instinct MI60
-                                                                              - Radeon VII
-                                                                              - Radeon Pro VII
+                                                    - sram-ecc                - Radeon VII
+                                                      [off]                   - Radeon Pro VII
      ``gfx908``                  ``amdgcn``   dGPU  - xnack                   *TBA*
                                                       [off]
-                                                      sram-ecc
+                                                    - sram-ecc
                                                       [on]
                                                                               .. TODO::
                                                                                  Add product

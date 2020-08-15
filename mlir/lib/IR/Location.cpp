@@ -14,6 +14,16 @@ using namespace mlir;
 using namespace mlir::detail;
 
 //===----------------------------------------------------------------------===//
+// LocationAttr
+//===----------------------------------------------------------------------===//
+
+/// Methods for support type inquiry through isa, cast, and dyn_cast.
+bool LocationAttr::classof(Attribute attr) {
+  return attr.isa<CallSiteLoc, FileLineColLoc, FusedLoc, NameLoc, OpaqueLoc,
+                  UnknownLoc>();
+}
+
+//===----------------------------------------------------------------------===//
 // CallSiteLoc
 //===----------------------------------------------------------------------===//
 

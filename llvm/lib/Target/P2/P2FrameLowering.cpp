@@ -56,6 +56,10 @@ Here's the ordering of sp adjustment: when calling, SP (previous) is adjusted fo
 variables (4). SP now becomes SP (previous) when getting
 ready to call another function.
 
+[This doesn't work yet] Callee saved register spilling/restoring will be done via setq and wrlong/rdlong to do a block transfer of
+registers to memory determin callee saves gives us a list of regsiters to save and their frame indices. We count up the number of
+continuous registers that need to be saved in a single setq/wrlong pair. Restoring does the same thing in reverse.
+
 */
 
 #define DEBUG_TYPE "p2-frame-lower"
@@ -130,7 +134,7 @@ void P2FrameLowering::determineCalleeSaves(MachineFunction &MF, BitVector &Saved
 
 bool P2FrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                                                 ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
-    // TODO: change this to use PUSHA instead to make it 1 instruction instead of 3.
+
 
     unsigned CalleeFrameSize = 0;
     DebugLoc DL = MBB.findDebugLoc(MI);
@@ -138,10 +142,13 @@ bool P2FrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB, MachineB
     const P2Subtarget &STI = MF.getSubtarget<P2Subtarget>();
     const TargetInstrInfo &TII = *STI.getInstrInfo();
     P2FunctionInfo *P2FI = MF.getInfo<P2FunctionInfo>();
-    //MachineFrameInfo *MFI = &MF.getFrameInfo();
+    MachineFrameInfo *MFI = &MF.getFrameInfo();
 
     LLVM_DEBUG(errs() << "=== Function: " << MF.getName() << " ===\n");
     LLVM_DEBUG(errs() << "Spilling callee saves\n");
+
+    if (CSI.empty())
+        return false;
 
     for (unsigned i = 0; i < CSI.size(); i++) {
         unsigned Reg = CSI[i].getReg();
@@ -161,6 +168,77 @@ bool P2FrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB, MachineB
         LLVM_DEBUG(errs() << "--- spilling " << Reg << " to index " << CSI[i].getFrameIdx() << "\n");
     }
 
+    return true;
+
+    // experimental code that doesn't work yet...
+    // go in reverse order since the last frame index has the lowest stack slot
+    uint16_t block_size = 0;
+    int block_frame_index = CSI[CSI.size()-1].getFrameIdx();
+    int block_first_reg = 0;
+    int memop_code = 0;
+
+    for (int i = CSI.size()-2; i >= 0; i--) {
+        unsigned reg = CSI[i].getReg();
+        unsigned prev_reg = CSI[i+1].getReg();
+
+        uint16_t reg_encoding = TRI->getEncodingValue(reg);
+        uint16_t prev_reg_encoding = TRI->getEncodingValue(prev_reg);
+
+        bool IsNotLiveIn = !MBB.isLiveIn(reg);
+        // Add the callee-saved register as live-in only if it is not already a
+        // live-in register, this usually happens with arguments that are passed
+        // through callee-saved registers.
+        if (IsNotLiveIn) {
+            MBB.addLiveIn(reg);
+        }
+
+        if (prev_reg_encoding - reg_encoding != 1) {
+            // this is a new register block, so let's write the previous block first.
+
+            block_first_reg = prev_reg;
+
+            MachineMemOperand *MMO = MF.getMachineMemOperand(
+                    MachinePointerInfo::getFixedStack(MF, block_frame_index),
+                    MachineMemOperand::MOLoad, MFI->getObjectSize(block_frame_index),
+                    MFI->getObjectAlign(block_frame_index));
+
+            if (block_size) {
+                // we can't do direct indexing of PTRA when also doing set q, so we'll do it by saving to ptrb and subtracting
+                BuildMI(MBB, MI, DL, TII.get(P2::SETQi)).addImm(block_size);
+                memop_code = P2::WRLONGrr;
+
+            } else {
+                memop_code = P2::WRLONGri;
+            }
+            BuildMI(MBB, MI, DL, TII.get(memop_code), block_first_reg)
+                .addFrameIndex(block_frame_index)
+                .addMemOperand(MMO);
+
+            block_size = 0;
+            block_frame_index = CSI[i].getFrameIdx();
+        } else {
+            block_size++;
+        }
+    }
+
+    // write the final block out
+    block_first_reg = CSI[0].getReg();
+    MachineMemOperand *MMO = MF.getMachineMemOperand(
+            MachinePointerInfo::getFixedStack(MF, block_frame_index),
+            MachineMemOperand::MOLoad, MFI->getObjectSize(block_frame_index),
+            MFI->getObjectAlign(block_frame_index));
+
+    if (block_size) {
+        memop_code = P2::WRLONGrr;
+        BuildMI(MBB, MI, DL, TII.get(P2::SETQi)).addImm(block_size);
+    } else {
+        memop_code = P2::WRLONGri;
+    }
+
+    BuildMI(MBB, MI, DL, TII.get(memop_code), block_first_reg)
+        .addFrameIndex(block_frame_index)
+        .addMemOperand(MMO);
+
     P2FI->setCalleeSavedFrameSize(CalleeFrameSize);
 
     return true;
@@ -168,11 +246,10 @@ bool P2FrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB, MachineB
 
 bool P2FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                                                 MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
-
-    // TODO: change this to use POPA to use 1 instruction instead of 3
     MachineFunction &MF = *MBB.getParent();
     const P2Subtarget &STI = MF.getSubtarget<P2Subtarget>();
     const TargetInstrInfo &TII = *STI.getInstrInfo();
+    MachineFrameInfo *MFI = &MF.getFrameInfo();
     DebugLoc DL = MBB.findDebugLoc(MI);
 
     LLVM_DEBUG(errs() << "=== Function: " << MF.getName() << " ===\n");
@@ -191,7 +268,75 @@ bool P2FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB, Machin
         LLVM_DEBUG(errs() << "--- restoring " << Reg << " from index " << CSI[i-1].getFrameIdx() << "\n");
     }
 
-    LLVM_DEBUG(errs() << "\n");
+    return true;
+
+    // experimental code that doesn't work yet...
+    // go in reverse order since the last frame index has the lowest stack slot
+    uint16_t block_size = 0;
+    int block_frame_index = CSI[CSI.size()-1].getFrameIdx();
+    int block_first_reg = 0;
+    int memop_code = 0;
+
+    for (int i = CSI.size()-2; i >= 0; i--) {
+        unsigned reg = CSI[i].getReg();
+        unsigned prev_reg = CSI[i+1].getReg();
+
+        uint16_t reg_encoding = TRI->getEncodingValue(reg);
+        uint16_t prev_reg_encoding = TRI->getEncodingValue(prev_reg);
+
+        bool IsNotLiveIn = !MBB.isLiveIn(reg);
+        // Add the callee-saved register as live-in only if it is not already a
+        // live-in register, this usually happens with arguments that are passed
+        // through callee-saved registers.
+        if (IsNotLiveIn) {
+            MBB.addLiveIn(reg);
+        }
+
+        if (prev_reg_encoding - reg_encoding != 1) {
+            // this is a new register block, so let's write the previous block first.
+
+            block_first_reg = prev_reg;
+
+            MachineMemOperand *MMO = MF.getMachineMemOperand(
+                    MachinePointerInfo::getFixedStack(MF, block_frame_index),
+                    MachineMemOperand::MOLoad, MFI->getObjectSize(block_frame_index),
+                    MFI->getObjectAlign(block_frame_index));
+
+            if (block_size) {
+                memop_code = P2::RDLONGrr;
+                BuildMI(MBB, MI, DL, TII.get(P2::SETQi)).addImm(block_size);
+            } else {
+                memop_code = P2::RDLONGri;
+            }
+
+            BuildMI(MBB, MI, DL, TII.get(memop_code), block_first_reg)
+                .addFrameIndex(block_frame_index)
+                .addMemOperand(MMO);
+
+            block_size = 0;
+            block_frame_index = CSI[i].getFrameIdx();
+        } else {
+            block_size++;
+        }
+    }
+
+    // write the final block out
+    block_first_reg = CSI[0].getReg();
+    MachineMemOperand *MMO = MF.getMachineMemOperand(
+            MachinePointerInfo::getFixedStack(MF, block_frame_index),
+            MachineMemOperand::MOLoad, MFI->getObjectSize(block_frame_index),
+            MFI->getObjectAlign(block_frame_index));
+
+    if (block_size) {
+        memop_code = P2::RDLONGrr;
+        BuildMI(MBB, MI, DL, TII.get(P2::SETQi)).addImm(block_size);
+    } else {
+        memop_code = P2::RDLONGri;
+    }
+
+    BuildMI(MBB, MI, DL, TII.get(memop_code), block_first_reg)
+        .addFrameIndex(block_frame_index)
+        .addMemOperand(MMO);
 
     return true;
 }

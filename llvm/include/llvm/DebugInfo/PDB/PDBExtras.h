@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_PDBEXTRAS_H
 #define LLVM_DEBUGINFO_PDB_PDBEXTRAS_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/Support/raw_ostream.h"
@@ -16,8 +17,6 @@
 #include <unordered_map>
 
 namespace llvm {
-
-class raw_ostream;
 
 namespace pdb {
 
@@ -50,7 +49,6 @@ void dumpSymbolField(raw_ostream &OS, StringRef Name, T Value, int Indent) {
   OS.indent(Indent);
   OS << Name << ": " << Value;
 }
-
 
 } // end namespace pdb
 

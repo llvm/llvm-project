@@ -297,12 +297,7 @@ bool OptNoneInstrumentation::skip(StringRef PassID, Any IR) {
   } else if (any_isa<const Loop *>(IR)) {
     F = any_cast<const Loop *>(IR)->getHeader()->getParent();
   }
-  if (F && F->hasOptNone()) {
-    if (DebugLogging)
-      dbgs() << "Skipping pass: " << PassID << " (optnone)\n";
-    return false;
-  }
-  return true;
+  return !(F && F->hasOptNone());
 }
 
 void PrintPassInstrumentation::registerCallbacks(
@@ -313,6 +308,15 @@ void PrintPassInstrumentation::registerCallbacks(
   std::vector<StringRef> SpecialPasses = {"PassManager"};
   if (!DebugPMVerbose)
     SpecialPasses.emplace_back("PassAdaptor");
+
+  PIC.registerBeforeSkippedPassCallback(
+      [SpecialPasses](StringRef PassID, Any IR) {
+        assert(!isSpecialPass(PassID, SpecialPasses) &&
+               "Unexpectedly skipping special pass");
+
+        dbgs() << "Skipping pass: " << PassID << " on ";
+        unwrapAndPrint(IR, "", false, true);
+      });
 
   PIC.registerBeforeNonSkippedPassCallback(
       [SpecialPasses](StringRef PassID, Any IR) {

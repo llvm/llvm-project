@@ -52,7 +52,6 @@ public:
         unknownLoc(FileLineColLoc::get("imported-bitcode", 0, 0, context)),
         typeTranslator(*context) {
     b.setInsertionPointToStart(module.getBody());
-    dialect = context->getRegisteredDialect<LLVMDialect>();
   }
 
   /// Imports `f` into the current module.
@@ -129,8 +128,6 @@ private:
   DenseMap<llvm::GlobalVariable *, GlobalOp> globals;
   /// Cached FileLineColLoc::get("imported-bitcode", 0, 0).
   Location unknownLoc;
-  /// Cached dialect.
-  LLVMDialect *dialect;
   /// The stateful type translator (contains named structs).
   LLVM::TypeFromLLVMIRTranslator typeTranslator;
 };
@@ -719,7 +716,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
   case llvm::Instruction::Fence: {
     StringRef syncscope;
     SmallVector<StringRef, 4> ssNs;
-    llvm::LLVMContext &llvmContext = dialect->getLLVMContext();
+    llvm::LLVMContext &llvmContext = inst->getContext();
     llvm::FenceInst *fence = cast<llvm::FenceInst>(inst);
     llvmContext.getSyncScopeNames(ssNs);
     int fenceSyncScopeID = fence->getSyncScopeID();
@@ -766,7 +763,7 @@ FlatSymbolRefAttr Importer::getPersonalityAsAttr(llvm::Function *f) {
   // bitcast to i8* are parsed.
   if (auto ce = dyn_cast<llvm::ConstantExpr>(pf)) {
     if (ce->getOpcode() == llvm::Instruction::BitCast &&
-        ce->getType() == llvm::Type::getInt8PtrTy(dialect->getLLVMContext())) {
+        ce->getType() == llvm::Type::getInt8PtrTy(f->getContext())) {
       if (auto func = dyn_cast<llvm::Function>(ce->getOperand(0)))
         return b.getSymbolRefAttr(func->getName());
     }
@@ -859,13 +856,10 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
 // LLVM dialect.
 OwningModuleRef translateLLVMIRToModule(llvm::SourceMgr &sourceMgr,
                                         MLIRContext *context) {
-  LLVMDialect *dialect = context->getRegisteredDialect<LLVMDialect>();
-  assert(dialect && "Could not find LLVMDialect?");
-
   llvm::SMDiagnostic err;
-  std::unique_ptr<llvm::Module> llvmModule =
-      llvm::parseIR(*sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID()), err,
-                    dialect->getLLVMContext());
+  llvm::LLVMContext llvmContext;
+  std::unique_ptr<llvm::Module> llvmModule = llvm::parseIR(
+      *sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID()), err, llvmContext);
   if (!llvmModule) {
     std::string errStr;
     llvm::raw_string_ostream errStream(errStr);

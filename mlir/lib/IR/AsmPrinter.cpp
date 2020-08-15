@@ -33,6 +33,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -1019,76 +1020,67 @@ void ModulePrinter::printTrailingLocation(Location loc) {
 }
 
 void ModulePrinter::printLocationInternal(LocationAttr loc, bool pretty) {
-  switch (loc.getKind()) {
-  case StandardAttributes::OpaqueLocation:
-    printLocationInternal(loc.cast<OpaqueLoc>().getFallbackLocation(), pretty);
-    break;
-  case StandardAttributes::UnknownLocation:
-    if (pretty)
-      os << "[unknown]";
-    else
-      os << "unknown";
-    break;
-  case StandardAttributes::FileLineColLocation: {
-    auto fileLoc = loc.cast<FileLineColLoc>();
-    auto mayQuote = pretty ? "" : "\"";
-    os << mayQuote << fileLoc.getFilename() << mayQuote << ':'
-       << fileLoc.getLine() << ':' << fileLoc.getColumn();
-    break;
-  }
-  case StandardAttributes::NameLocation: {
-    auto nameLoc = loc.cast<NameLoc>();
-    os << '\"' << nameLoc.getName() << '\"';
+  TypeSwitch<LocationAttr>(loc)
+      .Case<OpaqueLoc>([&](OpaqueLoc loc) {
+        printLocationInternal(loc.getFallbackLocation(), pretty);
+      })
+      .Case<UnknownLoc>([&](UnknownLoc loc) {
+        if (pretty)
+          os << "[unknown]";
+        else
+          os << "unknown";
+      })
+      .Case<FileLineColLoc>([&](FileLineColLoc loc) {
+        StringRef mayQuote = pretty ? "" : "\"";
+        os << mayQuote << loc.getFilename() << mayQuote << ':' << loc.getLine()
+           << ':' << loc.getColumn();
+      })
+      .Case<NameLoc>([&](NameLoc loc) {
+        os << '\"' << loc.getName() << '\"';
 
-    // Print the child if it isn't unknown.
-    auto childLoc = nameLoc.getChildLoc();
-    if (!childLoc.isa<UnknownLoc>()) {
-      os << '(';
-      printLocationInternal(childLoc, pretty);
-      os << ')';
-    }
-    break;
-  }
-  case StandardAttributes::CallSiteLocation: {
-    auto callLocation = loc.cast<CallSiteLoc>();
-    auto caller = callLocation.getCaller();
-    auto callee = callLocation.getCallee();
-    if (!pretty)
-      os << "callsite(";
-    printLocationInternal(callee, pretty);
-    if (pretty) {
-      if (callee.isa<NameLoc>()) {
-        if (caller.isa<FileLineColLoc>()) {
-          os << " at ";
-        } else {
-          os << newLine << " at ";
+        // Print the child if it isn't unknown.
+        auto childLoc = loc.getChildLoc();
+        if (!childLoc.isa<UnknownLoc>()) {
+          os << '(';
+          printLocationInternal(childLoc, pretty);
+          os << ')';
         }
-      } else {
-        os << newLine << " at ";
-      }
-    } else {
-      os << " at ";
-    }
-    printLocationInternal(caller, pretty);
-    if (!pretty)
-      os << ")";
-    break;
-  }
-  case StandardAttributes::FusedLocation: {
-    auto fusedLoc = loc.cast<FusedLoc>();
-    if (!pretty)
-      os << "fused";
-    if (auto metadata = fusedLoc.getMetadata())
-      os << '<' << metadata << '>';
-    os << '[';
-    interleave(
-        fusedLoc.getLocations(),
-        [&](Location loc) { printLocationInternal(loc, pretty); },
-        [&]() { os << ", "; });
-    os << ']';
-    break;
-  }
-  }
+      })
+      .Case<CallSiteLoc>([&](CallSiteLoc loc) {
+        Location caller = loc.getCaller();
+        Location callee = loc.getCallee();
+        if (!pretty)
+          os << "callsite(";
+        printLocationInternal(callee, pretty);
+        if (pretty) {
+          if (callee.isa<NameLoc>()) {
+            if (caller.isa<FileLineColLoc>()) {
+              os << " at ";
+            } else {
+              os << newLine << " at ";
+            }
+          } else {
+            os << newLine << " at ";
+          }
+        } else {
+          os << " at ";
+        }
+        printLocationInternal(caller, pretty);
+        if (!pretty)
+          os << ")";
+      })
+      .Case<FusedLoc>([&](FusedLoc loc) {
+        if (!pretty)
+          os << "fused";
+        if (Attribute metadata = loc.getMetadata())
+          os << '<' << metadata << '>';
+        os << '[';
+        interleave(
+            loc.getLocations(),
+            [&](Location loc) { printLocationInternal(loc, pretty); },
+            [&]() { os << ", "; });
+        os << ']';
+      });
 }
 
 /// Print a floating point value in a way that the parser will be able to
@@ -1305,27 +1297,19 @@ void ModulePrinter::printAttribute(Attribute attr,
   }
 
   auto attrType = attr.getType();
-  switch (attr.getKind()) {
-  default:
-    return printDialectAttribute(attr);
-
-  case StandardAttributes::Opaque: {
-    auto opaqueAttr = attr.cast<OpaqueAttr>();
+  if (auto opaqueAttr = attr.dyn_cast<OpaqueAttr>()) {
     printDialectSymbol(os, "#", opaqueAttr.getDialectNamespace(),
                        opaqueAttr.getAttrData());
-    break;
-  }
-  case StandardAttributes::Unit:
+  } else if (attr.isa<UnitAttr>()) {
     os << "unit";
-    break;
-  case StandardAttributes::Dictionary:
+    return;
+  } else if (auto dictAttr = attr.dyn_cast<DictionaryAttr>()) {
     os << '{';
-    interleaveComma(attr.cast<DictionaryAttr>().getValue(),
+    interleaveComma(dictAttr.getValue(),
                     [&](NamedAttribute attr) { printNamedAttribute(attr); });
     os << '}';
-    break;
-  case StandardAttributes::Integer: {
-    auto intAttr = attr.cast<IntegerAttr>();
+
+  } else if (auto intAttr = attr.dyn_cast<IntegerAttr>()) {
     if (attrType.isSignlessInteger(1)) {
       os << (intAttr.getValue().getBoolValue() ? "true" : "false");
 
@@ -1343,114 +1327,98 @@ void ModulePrinter::printAttribute(Attribute attr,
     // IntegerAttr elides the type if I64.
     if (typeElision == AttrTypeElision::May && attrType.isSignlessInteger(64))
       return;
-    break;
-  }
-  case StandardAttributes::Float: {
-    auto floatAttr = attr.cast<FloatAttr>();
+
+  } else if (auto floatAttr = attr.dyn_cast<FloatAttr>()) {
     printFloatValue(floatAttr.getValue(), os);
 
     // FloatAttr elides the type if F64.
     if (typeElision == AttrTypeElision::May && attrType.isF64())
       return;
-    break;
-  }
-  case StandardAttributes::String:
+
+  } else if (auto strAttr = attr.dyn_cast<StringAttr>()) {
     os << '"';
-    printEscapedString(attr.cast<StringAttr>().getValue(), os);
+    printEscapedString(strAttr.getValue(), os);
     os << '"';
-    break;
-  case StandardAttributes::Array:
+
+  } else if (auto arrayAttr = attr.dyn_cast<ArrayAttr>()) {
     os << '[';
-    interleaveComma(attr.cast<ArrayAttr>().getValue(), [&](Attribute attr) {
+    interleaveComma(arrayAttr.getValue(), [&](Attribute attr) {
       printAttribute(attr, AttrTypeElision::May);
     });
     os << ']';
-    break;
-  case StandardAttributes::AffineMap:
+
+  } else if (auto affineMapAttr = attr.dyn_cast<AffineMapAttr>()) {
     os << "affine_map<";
-    attr.cast<AffineMapAttr>().getValue().print(os);
+    affineMapAttr.getValue().print(os);
     os << '>';
 
     // AffineMap always elides the type.
     return;
-  case StandardAttributes::IntegerSet:
+
+  } else if (auto integerSetAttr = attr.dyn_cast<IntegerSetAttr>()) {
     os << "affine_set<";
-    attr.cast<IntegerSetAttr>().getValue().print(os);
+    integerSetAttr.getValue().print(os);
     os << '>';
 
     // IntegerSet always elides the type.
     return;
-  case StandardAttributes::Type:
-    printType(attr.cast<TypeAttr>().getValue());
-    break;
-  case StandardAttributes::SymbolRef: {
-    auto refAttr = attr.dyn_cast<SymbolRefAttr>();
+
+  } else if (auto typeAttr = attr.dyn_cast<TypeAttr>()) {
+    printType(typeAttr.getValue());
+
+  } else if (auto refAttr = attr.dyn_cast<SymbolRefAttr>()) {
     printSymbolReference(refAttr.getRootReference(), os);
     for (FlatSymbolRefAttr nestedRef : refAttr.getNestedReferences()) {
       os << "::";
       printSymbolReference(nestedRef.getValue(), os);
     }
-    break;
-  }
-  case StandardAttributes::OpaqueElements: {
-    auto eltsAttr = attr.cast<OpaqueElementsAttr>();
-    if (printerFlags.shouldElideElementsAttr(eltsAttr)) {
-      printElidedElementsAttr(os);
-      break;
-    }
-    os << "opaque<\"" << eltsAttr.getDialect()->getNamespace() << "\", ";
-    os << '"' << "0x" << llvm::toHex(eltsAttr.getValue()) << "\">";
-    break;
-  }
-  case StandardAttributes::DenseIntOrFPElements: {
-    auto eltsAttr = attr.cast<DenseIntOrFPElementsAttr>();
-    if (printerFlags.shouldElideElementsAttr(eltsAttr)) {
-      printElidedElementsAttr(os);
-      break;
-    }
-    os << "dense<";
-    printDenseIntOrFPElementsAttr(eltsAttr, /*allowHex=*/true);
-    os << '>';
-    break;
-  }
-  case StandardAttributes::DenseStringElements: {
-    auto eltsAttr = attr.cast<DenseStringElementsAttr>();
-    if (printerFlags.shouldElideElementsAttr(eltsAttr)) {
-      printElidedElementsAttr(os);
-      break;
-    }
-    os << "dense<";
-    printDenseStringElementsAttr(eltsAttr);
-    os << '>';
-    break;
-  }
-  case StandardAttributes::SparseElements: {
-    auto elementsAttr = attr.cast<SparseElementsAttr>();
-    if (printerFlags.shouldElideElementsAttr(elementsAttr.getIndices()) ||
-        printerFlags.shouldElideElementsAttr(elementsAttr.getValues())) {
-      printElidedElementsAttr(os);
-      break;
-    }
-    os << "sparse<";
-    DenseIntElementsAttr indices = elementsAttr.getIndices();
-    if (indices.getNumElements() != 0) {
-      printDenseIntOrFPElementsAttr(indices, /*allowHex=*/false);
-      os << ", ";
-      printDenseElementsAttr(elementsAttr.getValues(), /*allowHex=*/true);
-    }
-    os << '>';
-    break;
-  }
 
-  // Location attributes.
-  case StandardAttributes::CallSiteLocation:
-  case StandardAttributes::FileLineColLocation:
-  case StandardAttributes::FusedLocation:
-  case StandardAttributes::NameLocation:
-  case StandardAttributes::OpaqueLocation:
-  case StandardAttributes::UnknownLocation:
-    printLocation(attr.cast<LocationAttr>());
-    break;
+  } else if (auto opaqueAttr = attr.dyn_cast<OpaqueElementsAttr>()) {
+    if (printerFlags.shouldElideElementsAttr(opaqueAttr)) {
+      printElidedElementsAttr(os);
+    } else {
+      os << "opaque<\"" << opaqueAttr.getDialect()->getNamespace() << "\", ";
+      os << '"' << "0x" << llvm::toHex(opaqueAttr.getValue()) << "\">";
+    }
+
+  } else if (auto intOrFpEltAttr = attr.dyn_cast<DenseIntOrFPElementsAttr>()) {
+    if (printerFlags.shouldElideElementsAttr(intOrFpEltAttr)) {
+      printElidedElementsAttr(os);
+    } else {
+      os << "dense<";
+      printDenseIntOrFPElementsAttr(intOrFpEltAttr, /*allowHex=*/true);
+      os << '>';
+    }
+
+  } else if (auto strEltAttr = attr.dyn_cast<DenseStringElementsAttr>()) {
+    if (printerFlags.shouldElideElementsAttr(strEltAttr)) {
+      printElidedElementsAttr(os);
+    } else {
+      os << "dense<";
+      printDenseStringElementsAttr(strEltAttr);
+      os << '>';
+    }
+
+  } else if (auto sparseEltAttr = attr.dyn_cast<SparseElementsAttr>()) {
+    if (printerFlags.shouldElideElementsAttr(sparseEltAttr.getIndices()) ||
+        printerFlags.shouldElideElementsAttr(sparseEltAttr.getValues())) {
+      printElidedElementsAttr(os);
+    } else {
+      os << "sparse<";
+      DenseIntElementsAttr indices = sparseEltAttr.getIndices();
+      if (indices.getNumElements() != 0) {
+        printDenseIntOrFPElementsAttr(indices, /*allowHex=*/false);
+        os << ", ";
+        printDenseElementsAttr(sparseEltAttr.getValues(), /*allowHex=*/true);
+      }
+      os << '>';
+    }
+
+  } else if (auto locAttr = attr.dyn_cast<LocationAttr>()) {
+    printLocation(locAttr);
+
+  } else {
+    return printDialectAttribute(attr);
   }
 
   // Don't print the type if we must elide it, or if it is a None type.

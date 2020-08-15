@@ -233,29 +233,12 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     }
   }
 
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(Op1)) {
-    // (Y - X) * (-(2**n)) -> (X - Y) * (2**n), for positive nonzero n
-    // (Y + const) * (-(2**n)) -> (-constY) * (2**n), for positive nonzero n
-    // The "* (2**n)" thus becomes a potential shifting opportunity.
-    {
-      const APInt &   Val = CI->getValue();
-      const APInt &PosVal = Val.abs();
-      if (Val.isNegative() && PosVal.isPowerOf2()) {
-        Value *X = nullptr, *Y = nullptr;
-        if (Op0->hasOneUse()) {
-          ConstantInt *C1;
-          Value *Sub = nullptr;
-          if (match(Op0, m_Sub(m_Value(Y), m_Value(X))))
-            Sub = Builder.CreateSub(X, Y, "suba");
-          else if (match(Op0, m_Add(m_Value(Y), m_ConstantInt(C1))))
-            Sub = Builder.CreateSub(Builder.CreateNeg(C1), Y, "subc");
-          if (Sub)
-            return
-              BinaryOperator::CreateMul(Sub,
-                                        ConstantInt::get(Y->getType(), PosVal));
-        }
-      }
-    }
+  if (Op0->hasOneUse() && match(Op1, m_NegatedPower2())) {
+    // Interpret  X * (-1<<C)  as  (-X) * (1<<C)  and try to sink the negation.
+    // The "* (1<<C)" thus becomes a potential shifting opportunity.
+    if (Value *NegOp0 = Negator::Negate(/*IsNegation*/ true, Op0, *this))
+      return BinaryOperator::CreateMul(
+          NegOp0, ConstantExpr::getNeg(cast<Constant>(Op1)), I.getName());
   }
 
   if (Instruction *FoldedMul = foldBinOpIntoSelectOrPhi(I))
@@ -1130,14 +1113,24 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
   if (match(Op1, m_SignMask()))
     return new ZExtInst(Builder.CreateICmpEQ(Op0, Op1), I.getType());
 
+  // sdiv exact X,  1<<C  -->    ashr exact X, C   iff  1<<C  is non-negative
+  // sdiv exact X, -1<<C  -->  -(ashr exact X, C)
+  if (I.isExact() && ((match(Op1, m_Power2()) && match(Op1, m_NonNegative())) ||
+                      match(Op1, m_NegatedPower2()))) {
+    bool DivisorWasNegative = match(Op1, m_NegatedPower2());
+    if (DivisorWasNegative)
+      Op1 = ConstantExpr::getNeg(cast<Constant>(Op1));
+    auto *AShr = BinaryOperator::CreateExactAShr(
+        Op0, getLogBase2(I.getType(), cast<Constant>(Op1)), I.getName());
+    if (!DivisorWasNegative)
+      return AShr;
+    Builder.Insert(AShr);
+    AShr->setName(I.getName() + ".neg");
+    return BinaryOperator::CreateNeg(AShr, I.getName());
+  }
+
   const APInt *Op1C;
   if (match(Op1, m_APInt(Op1C))) {
-    // sdiv exact X, C  -->  ashr exact X, log2(C)
-    if (I.isExact() && Op1C->isNonNegative() && Op1C->isPowerOf2()) {
-      Value *ShAmt = ConstantInt::get(Op1->getType(), Op1C->exactLogBase2());
-      return BinaryOperator::CreateExactAShr(Op0, ShAmt, I.getName());
-    }
-
     // If the dividend is sign-extended and the constant divisor is small enough
     // to fit in the source type, shrink the division to the narrower type:
     // (sext X) sdiv C --> sext (X sdiv C)

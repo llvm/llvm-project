@@ -50,6 +50,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Utils/LCSSA.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
@@ -296,6 +297,21 @@ public:
     // declaration.
     appendLoopsToWorklist(LI, Worklist);
 
+#ifndef NDEBUG
+    PI.pushBeforeNonSkippedPassCallback([&LAR, &LI](StringRef PassID, Any IR) {
+      if (isSpecialPass(PassID, {"PassManager"}))
+        return;
+      assert(any_isa<const Loop *>(IR));
+      const Loop *L = any_cast<const Loop *>(IR);
+      assert(L && "Loop should be valid for printing");
+
+      // Verify the loop structure and LCSSA form before visiting the loop.
+      L->verifyLoop();
+      assert(L->isRecursivelyLCSSAForm(LAR.DT, LI) &&
+             "Loops must remain in LCSSA form!");
+    });
+#endif
+
     do {
       Loop *L = Worklist.pop_back_val();
 
@@ -306,11 +322,6 @@ public:
 #ifndef NDEBUG
       // Save a parent loop pointer for asserts.
       Updater.ParentL = L->getParentLoop();
-
-      // Verify the loop structure and LCSSA form before visiting the loop.
-      L->verifyLoop();
-      assert(L->isRecursivelyLCSSAForm(LAR.DT, LI) &&
-             "Loops must remain in LCSSA form!");
 #endif
       // Check the PassInstrumentation's BeforePass callbacks before running the
       // pass, skip its execution completely if asked to (callback returns
@@ -344,6 +355,10 @@ public:
       // analyses will eventually occur when the module pass completes.
       PA.intersect(std::move(PassPA));
     } while (!Worklist.empty());
+
+#ifndef NDEBUG
+    PI.popBeforeNonSkippedPassCallback();
+#endif
 
     // By definition we preserve the proxy. We also preserve all analyses on
     // Loops. This precludes *any* invalidation of loop analyses by the proxy,

@@ -1057,20 +1057,6 @@ bool ArchSpec::IsEqualTo(const ArchSpec &rhs, bool exact_match) const {
       return true;
   }
 
-  if (lhs_triple_os != rhs_triple_os) {
-    const bool rhs_os_specified = rhs.TripleOSWasSpecified();
-    const bool lhs_os_specified = TripleOSWasSpecified();
-    // Both architectures had the OS specified, so if they aren't equal then
-    // we return false
-    if (rhs_os_specified && lhs_os_specified)
-      return false;
-
-    // Only fail if both os types are not unknown
-    if (lhs_triple_os != llvm::Triple::UnknownOS &&
-        rhs_triple_os != llvm::Triple::UnknownOS)
-      return false;
-  }
-
   // x86_64-apple-ios-macabi and x86_64-apple-ios are not compatible.
   if (lhs_triple_os == llvm::Triple::IOS &&
       rhs_triple_os == llvm::Triple::IOS &&
@@ -1078,6 +1064,19 @@ bool ArchSpec::IsEqualTo(const ArchSpec &rhs, bool exact_match) const {
        rhs_triple_env == llvm::Triple::MacABI) &&
       lhs_triple_env != rhs_triple_env)
     return false;
+
+  if (lhs_triple_os != rhs_triple_os) {
+    const bool lhs_os_specified = TripleOSWasSpecified();
+    const bool rhs_os_specified = rhs.TripleOSWasSpecified();
+    // If both OS types are specified and different, fail.
+    if (lhs_os_specified && rhs_os_specified)
+      return false;
+
+    // If the pair of os+env is both unspecified, match any other os+env combo.
+    if (!exact_match && ((!lhs_os_specified && !lhs_triple.hasEnvironment()) ||
+                         (!rhs_os_specified && !rhs_triple.hasEnvironment())))
+      return true;
+  }
 
   return IsCompatibleEnvironment(lhs_triple_env, rhs_triple_env);
 }

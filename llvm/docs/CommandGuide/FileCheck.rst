@@ -181,6 +181,10 @@ and from the command line.
   as old tests are migrated to the new non-overlapping ``CHECK-DAG:``
   implementation.
 
+.. option:: --allow-empty
+
+  Allow checking empty input. By default, empty input is rejected.
+
 .. option:: --color
 
   Use colors in output (autodetected by default).
@@ -903,5 +907,5 @@ matches output of the form (from llvm-dwarfdump):
        DW_AT_location [DW_FORM_sec_offset]   (0x00000233)
        DW_AT_name [DW_FORM_strp]  ( .debug_str[0x000000c9] = "intd")
 
-letting us set the :program:`FileCheck` variable ``DLOC`` to the desired value 
+letting us set the :program:`FileCheck` variable ``DLOC`` to the desired value
 ``0x00000233``, extracted from the line immediately preceding "``intd``".

@@ -65,12 +65,6 @@ Value createGlobalString(Location loc, OpBuilder &builder, StringRef name,
 /// function confirms that the Operation has the desired properties.
 bool satisfiesLLVMModule(Operation *op);
 
-/// Clones the given module into the provided context. This is implemented by
-/// transforming the module into bitcode and then reparsing the bitcode in the
-/// provided context.
-std::unique_ptr<llvm::Module>
-cloneModuleIntoNewContext(llvm::LLVMContext *context, llvm::Module *module);
-
 } // end namespace LLVM
 } // end namespace mlir
 

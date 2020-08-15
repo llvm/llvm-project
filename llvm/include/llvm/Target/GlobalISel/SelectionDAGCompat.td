@@ -73,6 +73,8 @@ def : GINodeEquiv<G_SADDSAT, saddsat>;
 def : GINodeEquiv<G_UADDSAT, uaddsat>;
 def : GINodeEquiv<G_SSUBSAT, ssubsat>;
 def : GINodeEquiv<G_USUBSAT, usubsat>;
+def : GINodeEquiv<G_SSHLSAT, sshlsat>;
+def : GINodeEquiv<G_USHLSAT, ushlsat>;
 def : GINodeEquiv<G_SMULFIX, smulfix>;
 def : GINodeEquiv<G_UMULFIX, umulfix>;
 def : GINodeEquiv<G_SMULFIXSAT, smulfixsat>;

@@ -396,6 +396,8 @@ def saddsat    : SDNode<"ISD::SADDSAT"   , SDTIntBinOp, [SDNPCommutative]>;
 def uaddsat    : SDNode<"ISD::UADDSAT"   , SDTIntBinOp, [SDNPCommutative]>;
 def ssubsat    : SDNode<"ISD::SSUBSAT"   , SDTIntBinOp>;
 def usubsat    : SDNode<"ISD::USUBSAT"   , SDTIntBinOp>;
+def sshlsat    : SDNode<"ISD::SSHLSAT"   , SDTIntBinOp>;
+def ushlsat    : SDNode<"ISD::USHLSAT"   , SDTIntBinOp>;
 
 def smulfix    : SDNode<"ISD::SMULFIX"   , SDTIntScaledBinOp, [SDNPCommutative]>;
 def smulfixsat : SDNode<"ISD::SMULFIXSAT", SDTIntScaledBinOp, [SDNPCommutative]>;
@@ -553,6 +555,8 @@ def strict_sint_to_fp : SDNode<"ISD::STRICT_SINT_TO_FP",
                                SDTIntToFPOp, [SDNPHasChain]>;
 def strict_uint_to_fp : SDNode<"ISD::STRICT_UINT_TO_FP",
                                SDTIntToFPOp, [SDNPHasChain]>;
+def strict_fsetcc  : SDNode<"ISD::STRICT_FSETCC",  SDTSetCC, [SDNPHasChain]>;
+def strict_fsetccs : SDNode<"ISD::STRICT_FSETCCS", SDTSetCC, [SDNPHasChain]>;
 
 def setcc      : SDNode<"ISD::SETCC"      , SDTSetCC>;
 def select     : SDNode<"ISD::SELECT"     , SDTSelect>;
@@ -1420,6 +1424,12 @@ def any_sint_to_fp : PatFrags<(ops node:$src),
 def any_uint_to_fp : PatFrags<(ops node:$src),
                               [(strict_uint_to_fp node:$src),
                                (uint_to_fp node:$src)]>;
+def any_fsetcc : PatFrags<(ops node:$lhs, node:$rhs, node:$pred),
+                          [(strict_fsetcc node:$lhs, node:$rhs, node:$pred),
+                           (setcc node:$lhs, node:$rhs, node:$pred)]>;
+def any_fsetccs : PatFrags<(ops node:$lhs, node:$rhs, node:$pred),
+                          [(strict_fsetccs node:$lhs, node:$rhs, node:$pred),
+                           (setcc node:$lhs, node:$rhs, node:$pred)]>;
 
 multiclass binary_atomic_op_ord<SDNode atomic_op> {
   def NAME#_monotonic : PatFrag<(ops node:$ptr, node:$val),

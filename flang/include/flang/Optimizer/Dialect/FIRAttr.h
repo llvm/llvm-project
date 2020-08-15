@@ -48,7 +48,6 @@ public:
 
   mlir::Type getType() const;
 
-  static constexpr bool kindof(unsigned kind) { return kind == getId(); }
   static constexpr unsigned getId() { return AttributeKind::FIR_EXACTTYPE; }
 };
 
@@ -64,7 +63,6 @@ public:
 
   mlir::Type getType() const;
 
-  static constexpr bool kindof(unsigned kind) { return kind == getId(); }
   static constexpr unsigned getId() { return AttributeKind::FIR_SUBCLASS; }
 };
 
@@ -82,7 +80,6 @@ public:
 
   static constexpr llvm::StringRef getAttrName() { return "interval"; }
   static ClosedIntervalAttr get(mlir::MLIRContext *ctxt);
-  static constexpr bool kindof(unsigned kind) { return kind == getId(); }
   static constexpr unsigned getId() {
     return AttributeKind::FIR_CLOSEDCLOSED_INTERVAL;
   }
@@ -100,7 +97,6 @@ public:
 
   static constexpr llvm::StringRef getAttrName() { return "upper"; }
   static UpperBoundAttr get(mlir::MLIRContext *ctxt);
-  static constexpr bool kindof(unsigned kind) { return kind == getId(); }
   static constexpr unsigned getId() {
     return AttributeKind::FIR_OPENCLOSED_INTERVAL;
   }
@@ -118,7 +114,6 @@ public:
 
   static constexpr llvm::StringRef getAttrName() { return "lower"; }
   static LowerBoundAttr get(mlir::MLIRContext *ctxt);
-  static constexpr bool kindof(unsigned kind) { return kind == getId(); }
   static constexpr unsigned getId() {
     return AttributeKind::FIR_CLOSEDOPEN_INTERVAL;
   }
@@ -136,7 +131,6 @@ public:
 
   static constexpr llvm::StringRef getAttrName() { return "point"; }
   static PointIntervalAttr get(mlir::MLIRContext *ctxt);
-  static constexpr bool kindof(unsigned kind) { return kind == getId(); }
   static constexpr unsigned getId() { return AttributeKind::FIR_POINT; }
 };
 
@@ -157,7 +151,6 @@ public:
   int getFKind() const;
   llvm::APFloat getValue() const;
 
-  static constexpr bool kindof(unsigned kind) { return kind == getId(); }
   static constexpr unsigned getId() { return AttributeKind::FIR_REAL_ATTR; }
 };
 

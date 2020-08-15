@@ -72,14 +72,23 @@ let Namespace = "P2" in {
     def QY  : P2Reg<0, "qy">, DwarfRegNum<[34]>; // this is an implicit register for y result of cordic
     def N   : P2Reg<0, "n">, DwarfRegNum<[35]>; // implicit register for result of augs/augd instructions
 
-    def PA : P2Reg<0x1f6, "pa">, DwarfRegNum<[38]>;
-    def PB : P2Reg<0x1f7, "pb">, DwarfRegNum<[29]>;
-    def PTRA : P2Reg<0x1f8, "ptra">, DwarfRegNum<[40]>; // this is also the stack pointer
-    def PTRB : P2Reg<0x1f9, "ptrb">, DwarfRegNum<[41]>;
-    def DIRA : P2Reg<0x1fa, "dira">, DwarfRegNum<[42]>;
-    def DIRB : P2Reg<0x1fb, "dirb">, DwarfRegNum<[43]>;
-    def OUTA : P2Reg<0x1fc, "outa">, DwarfRegNum<[44]>;
-    def OUTB : P2Reg<0x1fd, "outb">, DwarfRegNum<[45]>;
+    def IJMP3 : P2Reg<0x1f0, "ijmp3">, DwarfRegNum<[36]>;
+    def IRET3 : P2Reg<0x1f1, "iret3">, DwarfRegNum<[37]>;
+    def IJMP2 : P2Reg<0x1f2, "ijmp2">, DwarfRegNum<[38]>;
+    def IRET2 : P2Reg<0x1f3, "iret2">, DwarfRegNum<[39]>;
+    def IJMP1 : P2Reg<0x1f4, "ijmp1">, DwarfRegNum<[40]>;
+    def IRET1 : P2Reg<0x1f5, "iret1">, DwarfRegNum<[41]>;
+
+    def PA : P2Reg<0x1f6, "pa">, DwarfRegNum<[42]>;
+    def PB : P2Reg<0x1f7, "pb">, DwarfRegNum<[43]>;
+    def PTRA : P2Reg<0x1f8, "ptra">, DwarfRegNum<[44]>; // this is also the stack pointer
+    def PTRB : P2Reg<0x1f9, "ptrb">, DwarfRegNum<[45]>;
+    def DIRA : P2Reg<0x1fa, "dira">, DwarfRegNum<[46]>;
+    def DIRB : P2Reg<0x1fb, "dirb">, DwarfRegNum<[47]>;
+    def OUTA : P2Reg<0x1fc, "outa">, DwarfRegNum<[48]>;
+    def OUTB : P2Reg<0x1fd, "outb">, DwarfRegNum<[49]>;
+    def INA  : P2Reg<0x1fe, "ina">, DwarfRegNum<[50]>;
+    def INB  : P2Reg<0x1ff, "inb">, DwarfRegNum<[51]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -91,10 +100,12 @@ def P2GPR : RegisterClass<"P2", [i32], 32, (add
     // general purpose registers
     R0, R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16,
     R17, R18, R19, R20, R21, R22, R23, R24, R25, R26, R27, R28, R29, R30, R31,
+    // interrupt registers
+    IJMP3, IRET3, IJMP2, IRET2, IJMP1, IRET1,
     // cog pointer regsiters, PTRA is the stack pointer
     PA, PB, PTRA, PTRB,
     // i/o registers
-    DIRA, DIRB, OUTA, OUTB
+    DIRA, DIRB, OUTA, OUTB, INA, INB
 )>;
 
 def P2Implicit : RegisterClass<"P2", [i32], 32, (add SW, QX, QY, N)>;

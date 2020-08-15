@@ -657,6 +657,8 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::UADDSAT, VT, Expand);
     setOperationAction(ISD::SSUBSAT, VT, Expand);
     setOperationAction(ISD::USUBSAT, VT, Expand);
+    setOperationAction(ISD::SSHLSAT, VT, Expand);
+    setOperationAction(ISD::USHLSAT, VT, Expand);
     setOperationAction(ISD::SMULFIX, VT, Expand);
     setOperationAction(ISD::SMULFIXSAT, VT, Expand);
     setOperationAction(ISD::UMULFIX, VT, Expand);

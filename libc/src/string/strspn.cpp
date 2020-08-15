@@ -11,7 +11,6 @@
 #include "src/__support/common.h"
 #include "utils/CPP/Bitset.h"
 #include <stddef.h>
-#include <stdint.h>
 
 namespace __llvm_libc {
 

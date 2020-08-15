@@ -87,6 +87,8 @@ public:
 
   void AddPointer(ConstantSubscript, const Expr<SomeType> &);
 
+  void Incorporate(ConstantSubscript, const InitialImage &);
+
   // Conversions to constant initializers
   std::optional<Expr<SomeType>> AsConstant(FoldingContext &,
       const DynamicType &, const ConstantSubscripts &,

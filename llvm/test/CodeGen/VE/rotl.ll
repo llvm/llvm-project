@@ -3,7 +3,6 @@
 define i64 @func1(i64 %a, i32 %b) {
 ; CHECK-LABEL: func1:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
 ; CHECK-NEXT:    sll %s2, %s0, %s1
 ; CHECK-NEXT:    lea %s3, 64
 ; CHECK-NEXT:    subs.w.sx %s1, %s3, %s1
@@ -22,8 +21,6 @@ define i64 @func1(i64 %a, i32 %b) {
 define i32 @func2(i32 %a, i32 %b) {
 ; CHECK-LABEL: func2:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.sx %s1, %s1, (0)1
-; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    sla.w.sx %s2, %s0, %s1
 ; CHECK-NEXT:    subs.w.sx %s1, 32, %s1
 ; CHECK-NEXT:    and %s0, %s0, (32)0

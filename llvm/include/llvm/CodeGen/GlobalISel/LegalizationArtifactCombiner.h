@@ -105,19 +105,23 @@ public:
     Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
 
     // zext(trunc x) - > and (aext/copy/trunc x), mask
+    // zext(sext x) -> and (sext x), mask
     Register TruncSrc;
-    if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
+    Register SextSrc;
+    if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc))) ||
+        mi_match(SrcReg, MRI, m_GSExt(m_Reg(SextSrc)))) {
       LLT DstTy = MRI.getType(DstReg);
       if (isInstUnsupported({TargetOpcode::G_AND, {DstTy}}) ||
           isConstantUnsupported(DstTy))
         return false;
       LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
       LLT SrcTy = MRI.getType(SrcReg);
-      APInt Mask = APInt::getAllOnesValue(SrcTy.getScalarSizeInBits());
-      auto MIBMask = Builder.buildConstant(
-        DstTy, Mask.zext(DstTy.getScalarSizeInBits()));
-      Builder.buildAnd(DstReg, Builder.buildAnyExtOrTrunc(DstTy, TruncSrc),
-                       MIBMask);
+      APInt MaskVal = APInt::getAllOnesValue(SrcTy.getScalarSizeInBits());
+      auto Mask = Builder.buildConstant(
+        DstTy, MaskVal.zext(DstTy.getScalarSizeInBits()));
+      auto Extended = SextSrc ? Builder.buildSExtOrTrunc(DstTy, SextSrc) :
+                                Builder.buildAnyExtOrTrunc(DstTy, TruncSrc);
+      Builder.buildAnd(DstReg, Extended, Mask);
       markInstAndDefDead(MI, *MRI.getVRegDef(SrcReg), DeadInsts);
       return true;
     }

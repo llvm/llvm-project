@@ -97,6 +97,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_ATTRIBUTOR_H
 #define LLVM_TRANSFORMS_IPO_ATTRIBUTOR_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -115,6 +116,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -3340,6 +3342,191 @@ struct AAValueConstantRange
 
   /// This function should return true if the type of the \p AA is
   /// AAValueConstantRange
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+/// A class for a set state.
+/// The assumed boolean state indicates whether the corresponding set is full
+/// set or not. If the assumed state is false, this is the worst state. The
+/// worst state (invalid state) of set of potential values is when the set
+/// contains every possible value (i.e. we cannot in any way limit the value
+/// that the target position can take). That never happens naturally, we only
+/// force it. As for the conditions under which we force it, see
+/// AAPotentialValues.
+template <typename MemberTy, typename KeyInfo = DenseMapInfo<MemberTy>>
+struct PotentialValuesState : BooleanState {
+  using SetTy = DenseSet<MemberTy, KeyInfo>;
+
+  PotentialValuesState() : BooleanState(true) {}
+
+  PotentialValuesState(bool IsValid) : BooleanState(IsValid) {}
+
+  /// Return this set. We should check whether this set is valid or not by
+  /// isValidState() before calling this function.
+  const SetTy &getAssumedSet() const {
+    assert(isValidState() && "This set shoud not be used when it is invalid!");
+    return Set;
+  }
+
+  bool operator==(const PotentialValuesState &RHS) const {
+    if (isValidState() != RHS.isValidState())
+      return false;
+    if (!isValidState() && !RHS.isValidState())
+      return true;
+    return Set == RHS.getAssumedSet();
+  }
+
+  /// Maximum number of potential values to be tracked.
+  /// This is set by -attributor-max-potential-values command line option
+  static unsigned MaxPotentialValues;
+
+  /// Return empty set as the best state of potential values.
+  static PotentialValuesState getBestState() {
+    return PotentialValuesState(true);
+  }
+
+  static PotentialValuesState getBestState(PotentialValuesState &PVS) {
+    return getBestState();
+  }
+
+  /// Return full set as the worst state of potential values.
+  static PotentialValuesState getWorstState() {
+    return PotentialValuesState(false);
+  }
+
+  /// Union assumed set with the passed value.
+  void unionAssumed(const MemberTy &C) { insert(C); }
+
+  /// Union assumed set with assumed set of the passed state \p PVS.
+  void unionAssumed(const PotentialValuesState &PVS) { unionWith(PVS); }
+
+  /// "Clamp" this state with \p PVS.
+  PotentialValuesState operator^=(const PotentialValuesState &PVS) {
+    unionAssumed(PVS);
+    return *this;
+  }
+
+  PotentialValuesState operator&=(const PotentialValuesState &PVS) {
+    unionAssumed(PVS);
+    return *this;
+  }
+
+private:
+  /// Check the size of this set, and invalidate when the size is no
+  /// less than \p MaxPotentialValues threshold.
+  void checkAndInvalidate() {
+    if (Set.size() >= MaxPotentialValues)
+      indicatePessimisticFixpoint();
+  }
+
+  /// Insert an element into this set.
+  void insert(const MemberTy &C) {
+    if (!isValidState())
+      return;
+    Set.insert(C);
+    checkAndInvalidate();
+  }
+
+  /// Take union with R.
+  void unionWith(const PotentialValuesState &R) {
+    /// If this is a full set, do nothing.;
+    if (!isValidState())
+      return;
+    /// If R is full set, change L to a full set.
+    if (!R.isValidState()) {
+      indicatePessimisticFixpoint();
+      return;
+    }
+    for (const MemberTy &C : R.Set)
+      Set.insert(C);
+    checkAndInvalidate();
+  }
+
+  /// Take intersection with R.
+  void intersectWith(const PotentialValuesState &R) {
+    /// If R is a full set, do nothing.
+    if (!R.isValidState())
+      return;
+    /// If this is a full set, change this to R.
+    if (!isValidState()) {
+      *this = R;
+      return;
+    }
+    SetTy IntersectSet;
+    for (const MemberTy &C : Set) {
+      if (R.Set.count(C))
+        IntersectSet.insert(C);
+    }
+    Set = IntersectSet;
+  }
+
+  /// Container for potential values
+  SetTy Set;
+};
+
+using PotentialConstantIntValuesState = PotentialValuesState<APInt>;
+
+raw_ostream &operator<<(raw_ostream &OS,
+                        const PotentialConstantIntValuesState &R);
+
+/// An abstract interface for potential values analysis.
+///
+/// This AA collects potential values for each IR position.
+/// An assumed set of potential values is initialized with the empty set (the
+/// best state) and it will grow monotonically as we find more potential values
+/// for this position.
+/// The set might be forced to the worst state, that is, to contain every
+/// possible value for this position in 2 cases.
+///   1. We surpassed the \p MaxPotentialValues threshold. This includes the
+///      case that this position is affected (e.g. because of an operation) by a
+///      Value that is in the worst state.
+///   2. We tried to initialize on a Value that we cannot handle (e.g. an
+///      operator we do not currently handle).
+///
+/// TODO: Support values other than constant integers.
+struct AAPotentialValues
+    : public StateWrapper<PotentialConstantIntValuesState, AbstractAttribute> {
+  using Base = StateWrapper<PotentialConstantIntValuesState, AbstractAttribute>;
+  AAPotentialValues(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// See AbstractAttribute::getState(...).
+  PotentialConstantIntValuesState &getState() override { return *this; }
+  const PotentialConstantIntValuesState &getState() const override {
+    return *this;
+  }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAPotentialValues &createForPosition(const IRPosition &IRP,
+                                              Attributor &A);
+
+  /// Return assumed constant for the associated value
+  Optional<ConstantInt *>
+  getAssumedConstantInt(Attributor &A,
+                        const Instruction *CtxI = nullptr) const {
+    if (!isValidState())
+      return nullptr;
+    if (getAssumedSet().size() == 1)
+      return cast<ConstantInt>(ConstantInt::get(getAssociatedValue().getType(),
+                                                *(getAssumedSet().begin())));
+    if (getAssumedSet().size() == 0)
+      return llvm::None;
+
+    return nullptr;
+  }
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAPotentialValues"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAPotentialValues
   static bool classof(const AbstractAttribute *AA) {
     return (AA->getIdAddr() == &ID);
   }

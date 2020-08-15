@@ -39,12 +39,18 @@ const MCPhysReg* P2RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) c
 }
 
 const uint32_t *P2RegisterInfo::getCallPreservedMask(const MachineFunction &MF,CallingConv::ID CC) const {
-    LLVM_DEBUG(errs() << CSR_RegMask[0] << "\n");
     return CSR_RegMask;
 }
 
 BitVector P2RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     BitVector Reserved(getNumRegs());
+
+    Reserved.set(P2::IJMP3);
+    Reserved.set(P2::IRET3);
+    Reserved.set(P2::IJMP2);
+    Reserved.set(P2::IRET2);
+    Reserved.set(P2::IJMP1);
+    Reserved.set(P2::IRET1);
     Reserved.set(P2::PA);
     Reserved.set(P2::PB);
     Reserved.set(P2::PTRA);
@@ -53,10 +59,16 @@ BitVector P2RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     Reserved.set(P2::OUTB);
     Reserved.set(P2::DIRA);
     Reserved.set(P2::DIRB);
+    Reserved.set(P2::DIRA);
+    Reserved.set(P2::DIRB);
+    Reserved.set(P2::INA);
+    Reserved.set(P2::INB);
+
     Reserved.set(P2::QX);
     Reserved.set(P2::QY);
-    Reserved.set(P2::R30); // reserve R30 since it's the one used for returns
-    Reserved.set(P2::R31); // reserve R31 since it's the one used for returns
+
+    Reserved.set(P2::R30); // reserve R30 since it's used for returns
+    Reserved.set(P2::R31); // reserve R31 since it's used for returns
     return Reserved;
 }
 
@@ -130,7 +142,7 @@ void P2RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II, int SPA
         // then make sure to kill the register after it is used here. For now, we can just use PTRB as a second stack pointer
         // register for writing to this frame index
 
-        Register reg = P2::PTRB;
+        Register reg = P2::PA;
 
         BuildMI(*MI.getParent(), II, dl, inst_info.get(P2::MOVrr), reg)
                                 .addReg(P2::PTRA); // save the SP to an unused register

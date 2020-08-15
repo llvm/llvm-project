@@ -10,6 +10,7 @@
 #define MLIR_IR_MLIRCONTEXT_H
 
 #include "mlir/Support/LLVM.h"
+#include "mlir/Support/TypeID.h"
 #include <functional>
 #include <memory>
 #include <vector>
@@ -47,6 +48,18 @@ public:
   /// derived type must provide a static 'getDialectNamespace' method.
   template <typename T> T *getRegisteredDialect() {
     return static_cast<T *>(getRegisteredDialect(T::getDialectNamespace()));
+  }
+
+  /// Get (or create) a dialect for the given derived dialect type. The derived
+  /// type must provide a static 'getDialectNamespace' method.
+  template <typename T>
+  T *getOrCreateDialect() {
+    return static_cast<T *>(getOrCreateDialect(
+        T::getDialectNamespace(), TypeID::get<T>(), [this]() {
+          std::unique_ptr<T> dialect(new T(this));
+          dialect->dialectID = TypeID::get<T>();
+          return dialect;
+        }));
   }
 
   /// Return true if we allow to create operation for unregistered dialects.
@@ -108,6 +121,12 @@ public:
 
 private:
   const std::unique_ptr<MLIRContextImpl> impl;
+
+  /// Get a dialect for the provided namespace and TypeID: abort the program if
+  /// a dialect exist for this namespace with different TypeID. Returns a
+  /// pointer to the dialect owned by the context.
+  Dialect *getOrCreateDialect(StringRef dialectNamespace, TypeID dialectID,
+                              function_ref<std::unique_ptr<Dialect>()> ctor);
 
   MLIRContext(const MLIRContext &) = delete;
   void operator=(const MLIRContext &) = delete;

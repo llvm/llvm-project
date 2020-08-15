@@ -167,8 +167,8 @@ private:
   widenScalarExtract(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
   LegalizeResult
   widenScalarInsert(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
-  LegalizeResult widenScalarAddSubSat(MachineInstr &MI, unsigned TypeIdx,
-                                      LLT WideTy);
+  LegalizeResult
+  widenScalarAddSubShlSat(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
 
   /// Helper function to split a wide generic register into bitwise blocks with
   /// the given Type (which implies the number of blocks needed). The generic
@@ -279,6 +279,9 @@ public:
   LegalizeResult fewerElementsVectorBuildVector(MachineInstr &MI,
                                                 unsigned TypeIdx,
                                                 LLT NarrowTy);
+  LegalizeResult fewerElementsVectorExtractVectorElt(MachineInstr &MI,
+                                                     unsigned TypeIdx,
+                                                     LLT NarrowTy);
 
   LegalizeResult
   reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
@@ -338,7 +341,7 @@ public:
   LegalizeResult lowerFFloor(MachineInstr &MI);
   LegalizeResult lowerMergeValues(MachineInstr &MI);
   LegalizeResult lowerUnmergeValues(MachineInstr &MI);
-  LegalizeResult lowerExtractVectorElt(MachineInstr &MI);
+  LegalizeResult lowerExtractInsertVectorElt(MachineInstr &MI);
   LegalizeResult lowerShuffleVector(MachineInstr &MI);
   LegalizeResult lowerDynStackAlloc(MachineInstr &MI);
   LegalizeResult lowerExtract(MachineInstr &MI);
@@ -346,6 +349,7 @@ public:
   LegalizeResult lowerSADDO_SSUBO(MachineInstr &MI);
   LegalizeResult lowerAddSubSatToMinMax(MachineInstr &MI);
   LegalizeResult lowerAddSubSatToAddoSubo(MachineInstr &MI);
+  LegalizeResult lowerShlSat(MachineInstr &MI);
   LegalizeResult lowerBswap(MachineInstr &MI);
   LegalizeResult lowerBitreverse(MachineInstr &MI);
   LegalizeResult lowerReadWriteRegister(MachineInstr &MI);

@@ -57,13 +57,6 @@ PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
       break;
     }
 
-#ifndef NDEBUG
-    // Verify the loop structure and LCSSA form before visiting the loop.
-    L.verifyLoop();
-    assert(L.isRecursivelyLCSSAForm(AR.DT, AR.LI) &&
-           "Loops must remain in LCSSA form!");
-#endif
-
     // Update the analysis manager as each pass runs and potentially
     // invalidates analyses.
     AM.invalidate(L, PassPA);

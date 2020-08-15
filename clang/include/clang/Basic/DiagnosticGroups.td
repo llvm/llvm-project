@@ -555,12 +555,16 @@ def IntInBoolContext : DiagGroup<"int-in-bool-context">;
 def TautologicalTypeLimitCompare : DiagGroup<"tautological-type-limit-compare">;
 def TautologicalUnsignedZeroCompare : DiagGroup<"tautological-unsigned-zero-compare">;
 def TautologicalUnsignedEnumZeroCompare : DiagGroup<"tautological-unsigned-enum-zero-compare">;
+// For compatibility with GCC. Tautological comparison warnings for constants
+// that are an extremal value of the type.
+def TypeLimits : DiagGroup<"type-limits", [TautologicalTypeLimitCompare,
+                                           TautologicalUnsignedZeroCompare,
+                                           TautologicalUnsignedEnumZeroCompare]>;
+// Additional tautological comparison warnings based on the expression, not
+// only on its type.
+def TautologicalValueRangeCompare : DiagGroup<"tautological-value-range-compare">;
 def TautologicalInRangeCompare : DiagGroup<"tautological-constant-in-range-compare",
-                                           [TautologicalTypeLimitCompare,
-                                            TautologicalUnsignedZeroCompare,
-                                            TautologicalUnsignedEnumZeroCompare]>;
-// For compatibility with GCC; -Wtype-limits = -Wtautological-constant-in-range-compare
-def TypeLimits : DiagGroup<"type-limits", [TautologicalInRangeCompare]>;
+                                           [TypeLimits, TautologicalValueRangeCompare]>;
 def TautologicalOutOfRangeCompare : DiagGroup<"tautological-constant-out-of-range-compare">;
 def TautologicalConstantCompare : DiagGroup<"tautological-constant-compare",
                                             [TautologicalOutOfRangeCompare]>;
@@ -624,7 +628,6 @@ def ImplicitFallthrough  : DiagGroup<"implicit-fallthrough",
 def InvalidPPToken : DiagGroup<"invalid-pp-token">;
 def Trigraphs      : DiagGroup<"trigraphs">;
 
-def : DiagGroup<"type-limits">;
 def UndefinedReinterpretCast : DiagGroup<"undefined-reinterpret-cast">;
 def ReinterpretBaseClass : DiagGroup<"reinterpret-base-class">;
 def Unicode  : DiagGroup<"unicode">;

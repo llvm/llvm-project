@@ -102,3 +102,25 @@ namespace PR41845 {
 
   Sum<1>::type<1, 2> x; // expected-note {{instantiation of}}
 }
+
+namespace PR30738 {
+  namespace N {
+    struct S {};
+  }
+
+  namespace T {
+    void operator+(N::S, N::S) {}
+    template<typename ...Ts> void f() { (Ts{} + ...); }
+  }
+
+  void g() { T::f<N::S, N::S>(); }
+
+  template<typename T, typename ...U> auto h(U ...v) {
+    T operator+(T, T); // expected-note {{candidate}}
+    return (v + ...); // expected-error {{invalid operands}}
+  }
+  int test_h1 = h<N::S>(1, 2, 3);
+  N::S test_h2 = h<N::S>(N::S(), N::S(), N::S());
+  int test_h3 = h<struct X>(1, 2, 3);
+  N::S test_h4 = h<struct X>(N::S(), N::S(), N::S()); // expected-note {{instantiation of}}
+}
