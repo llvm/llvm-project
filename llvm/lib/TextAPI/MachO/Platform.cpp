@@ -84,7 +84,7 @@ StringRef getPlatformName(PlatformKind Platform) {
   case PlatformKind::watchOSSimulator:
     return "watchOS Simulator";
   case PlatformKind::driverKit:
-    return "driverKit";
+    return "DriverKit";
   }
   llvm_unreachable("Unknown llvm.MachO.PlatformKind enum");
 }
