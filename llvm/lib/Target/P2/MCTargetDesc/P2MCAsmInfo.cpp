@@ -20,6 +20,10 @@ using namespace llvm;
 void P2MCAsmInfo::anchor() { }
 
 P2MCAsmInfo::P2MCAsmInfo(const Triple &TheTriple, const MCTargetOptions &Options) {
+    CodePointerSize = 4;
+    CalleeSaveStackSlotSize = 4;
+    StackGrowsUp = true;
+
     IsLittleEndian = true;
     CommentString = "\'\'";
 
@@ -30,7 +34,4 @@ P2MCAsmInfo::P2MCAsmInfo(const Triple &TheTriple, const MCTargetOptions &Options
     ProtectedVisibilityAttr = MCSA_Invalid;
     UseIntegratedAssembler = true;
     PreserveAsmComments = true;
-    // // Debug
-    // ExceptionsType = ExceptionHandling::DwarfCFI;
-    // DwarfRegNumForCFI = true;
 }
