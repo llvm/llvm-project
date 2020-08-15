@@ -4802,45 +4802,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
              "gc.relocate: statepoint base index out of bounds", Call);
       Assert(DerivedIndex < Opt->Inputs.size(),
              "gc.relocate: statepoint derived index out of bounds", Call);
-    } else {
-      Assert(BaseIndex < StatepointCall.arg_size(),
-             "gc.relocate: statepoint base index out of bounds", Call);
-      Assert(DerivedIndex < StatepointCall.arg_size(),
-             "gc.relocate: statepoint derived index out of bounds", Call);
-
-      // Check that BaseIndex and DerivedIndex fall within the 'gc parameters'
-      // section of the statepoint's argument.
-      Assert(StatepointCall.arg_size() > 0,
-             "gc.statepoint: insufficient arguments");
-      Assert(isa<ConstantInt>(StatepointCall.getArgOperand(3)),
-             "gc.statement: number of call arguments must be constant integer");
-      const uint64_t NumCallArgs =
-        cast<ConstantInt>(StatepointCall.getArgOperand(3))->getZExtValue();
-      Assert(StatepointCall.arg_size() > NumCallArgs + 5,
-             "gc.statepoint: mismatch in number of call arguments");
-      Assert(isa<ConstantInt>(StatepointCall.getArgOperand(NumCallArgs + 5)),
-             "gc.statepoint: number of transition arguments must be "
-             "a constant integer");
-      const uint64_t NumTransitionArgs =
-          cast<ConstantInt>(StatepointCall.getArgOperand(NumCallArgs + 5))
-              ->getZExtValue();
-      const uint64_t DeoptArgsStart = 4 + NumCallArgs + 1 + NumTransitionArgs + 1;
-      Assert(isa<ConstantInt>(StatepointCall.getArgOperand(DeoptArgsStart)),
-             "gc.statepoint: number of deoptimization arguments must be "
-             "a constant integer");
-      const uint64_t NumDeoptArgs =
-          cast<ConstantInt>(StatepointCall.getArgOperand(DeoptArgsStart))
-              ->getZExtValue();
-      const uint64_t GCParamArgsStart = DeoptArgsStart + 1 + NumDeoptArgs;
-      const uint64_t GCParamArgsEnd = StatepointCall.arg_size();
-      Assert(GCParamArgsStart <= BaseIndex && BaseIndex < GCParamArgsEnd,
-             "gc.relocate: statepoint base index doesn't fall within the "
-             "'gc parameters' section of the statepoint call",
-             Call);
-      Assert(GCParamArgsStart <= DerivedIndex && DerivedIndex < GCParamArgsEnd,
-             "gc.relocate: statepoint derived index doesn't fall within the "
-             "'gc parameters' section of the statepoint call",
-             Call);
     }
 
     // Relocated value must be either a pointer type or vector-of-pointer type,
