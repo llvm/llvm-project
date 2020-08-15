@@ -748,28 +748,28 @@ class FlatLoadSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt>
   (inst $vaddr, $offset)
 >;
 
-class FlatStorePat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt, RegisterClass rc = VGPR_32> : GCNPat <
+class FlatStorePat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (node vt:$data, (FLATOffset i64:$vaddr, i16:$offset)),
-  (inst $vaddr, rc:$data, $offset)
+  (inst $vaddr, getVregSrcForVT<vt>.ret:$data, $offset)
 >;
 
-class FlatStoreSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt, RegisterClass rc = VGPR_32> : GCNPat <
+class FlatStoreSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (node vt:$data, (FLATOffsetSigned i64:$vaddr, i16:$offset)),
-  (inst $vaddr, rc:$data, $offset)
+  (inst $vaddr, getVregSrcForVT<vt>.ret:$data, $offset)
 >;
 
-class FlatStoreAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt, RegisterClass rc = VGPR_32> : GCNPat <
+class FlatStoreAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   // atomic store follows atomic binop convention so the address comes
   // first.
   (node (FLATOffset i64:$vaddr, i16:$offset), vt:$data),
-  (inst $vaddr, rc:$data, $offset)
+  (inst $vaddr, getVregSrcForVT<vt>.ret:$data, $offset)
 >;
 
-class FlatStoreSignedAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt, RegisterClass rc = VGPR_32> : GCNPat <
+class FlatStoreSignedAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   // atomic store follows atomic binop convention so the address comes
   // first.
   (node (FLATOffset i64:$vaddr, i16:$offset), vt:$data),
-  (inst $vaddr, rc:$data, $offset)
+  (inst $vaddr, getVregSrcForVT<vt>.ret:$data, $offset)
 >;
 
 class FlatAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt,
@@ -815,19 +815,19 @@ def : FlatStorePat <FLAT_STORE_DWORD, store_flat, vt>;
 }
 
 foreach vt = VReg_64.RegTypes in {
-def : FlatStorePat <FLAT_STORE_DWORDX2, store_flat, vt, VReg_64>;
+def : FlatStorePat <FLAT_STORE_DWORDX2, store_flat, vt>;
 def : FlatLoadPat <FLAT_LOAD_DWORDX2, load_flat, vt>;
 }
 
-def : FlatStorePat <FLAT_STORE_DWORDX3, store_flat, v3i32, VReg_96>;
+def : FlatStorePat <FLAT_STORE_DWORDX3, store_flat, v3i32>;
 
 foreach vt = VReg_128.RegTypes in {
 def : FlatLoadPat <FLAT_LOAD_DWORDX4, load_flat, vt>;
-def : FlatStorePat <FLAT_STORE_DWORDX4, store_flat, vt, VReg_128>;
+def : FlatStorePat <FLAT_STORE_DWORDX4, store_flat, vt>;
 }
 
 def : FlatStoreAtomicPat <FLAT_STORE_DWORD, atomic_store_flat_32, i32>;
-def : FlatStoreAtomicPat <FLAT_STORE_DWORDX2, atomic_store_flat_64, i64, VReg_64>;
+def : FlatStoreAtomicPat <FLAT_STORE_DWORDX2, atomic_store_flat_64, i64>;
 
 def : FlatAtomicPat <FLAT_ATOMIC_ADD_RTN, atomic_load_add_global_32, i32>;
 def : FlatAtomicPat <FLAT_ATOMIC_SUB_RTN, atomic_load_sub_global_32, i32>;
@@ -896,29 +896,29 @@ def : FlatLoadSignedPat <GLOBAL_LOAD_USHORT, load_global, i16>;
 
 foreach vt = Reg32Types.types in {
 def : FlatLoadSignedPat <GLOBAL_LOAD_DWORD, load_global, vt>;
-def : FlatStoreSignedPat <GLOBAL_STORE_DWORD, store_global, vt, VGPR_32>;
+def : FlatStoreSignedPat <GLOBAL_STORE_DWORD, store_global, vt>;
 }
 
 foreach vt = VReg_64.RegTypes in {
 def : FlatLoadSignedPat <GLOBAL_LOAD_DWORDX2, load_global, vt>;
-def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX2, store_global, vt, VReg_64>;
+def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX2, store_global, vt>;
 }
 
 def : FlatLoadSignedPat <GLOBAL_LOAD_DWORDX3, load_global, v3i32>;
 
 foreach vt = VReg_128.RegTypes in {
 def : FlatLoadSignedPat <GLOBAL_LOAD_DWORDX4, load_global, vt>;
-def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX4, store_global, vt, VReg_128>;
+def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX4, store_global, vt>;
 }
 
 def : FlatLoadSignedPat <GLOBAL_LOAD_DWORD, atomic_load_32_global, i32>;
 def : FlatLoadSignedPat <GLOBAL_LOAD_DWORDX2, atomic_load_64_global, i64>;
 
-def : FlatStoreSignedPat <GLOBAL_STORE_BYTE, truncstorei8_global, i32, VGPR_32>;
-def : FlatStoreSignedPat <GLOBAL_STORE_BYTE, truncstorei8_global, i16, VGPR_32>;
-def : FlatStoreSignedPat <GLOBAL_STORE_SHORT, truncstorei16_global, i32, VGPR_32>;
-def : FlatStoreSignedPat <GLOBAL_STORE_SHORT, store_global, i16, VGPR_32>;
-def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX3, store_global, v3i32, VReg_96>;
+def : FlatStoreSignedPat <GLOBAL_STORE_BYTE, truncstorei8_global, i32>;
+def : FlatStoreSignedPat <GLOBAL_STORE_BYTE, truncstorei8_global, i16>;
+def : FlatStoreSignedPat <GLOBAL_STORE_SHORT, truncstorei16_global, i32>;
+def : FlatStoreSignedPat <GLOBAL_STORE_SHORT, store_global, i16>;
+def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX3, store_global, v3i32>;
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
 def : FlatStoreSignedPat <GLOBAL_STORE_SHORT_D16_HI, truncstorei16_hi16_global, i32>;
@@ -940,7 +940,7 @@ def : FlatSignedLoadPat_D16 <GLOBAL_LOAD_SHORT_D16, load_d16_lo_global, v2f16>;
 }
 
 def : FlatStoreSignedAtomicPat <GLOBAL_STORE_DWORD, atomic_store_global_32, i32>;
-def : FlatStoreSignedAtomicPat <GLOBAL_STORE_DWORDX2, atomic_store_global_64, i64, VReg_64>;
+def : FlatStoreSignedAtomicPat <GLOBAL_STORE_DWORDX2, atomic_store_global_64, i64>;
 
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_ADD_RTN, atomic_load_add_global_32, i32>;
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_SUB_RTN, atomic_load_sub_global_32, i32>;
