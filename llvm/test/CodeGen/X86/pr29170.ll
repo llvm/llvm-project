@@ -11,8 +11,11 @@ define i32 @main() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB0_3
-; CHECK-NEXT:  # %bb.1: # %go
+; CHECK-NEXT:    je .LBB0_1
+; CHECK-NEXT:  .LBB0_3: # %if.else
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retl
+; CHECK-NEXT:  .LBB0_1: # %go
 ; CHECK-NEXT:    movl $-1, %ecx
 ; CHECK-NEXT:    movsbl b, %edx
 ; CHECK-NEXT:    notl %ecx
@@ -22,9 +25,6 @@ define i32 @main() {
 ; CHECK-NEXT:    jge .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    movl $42, %eax
-; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB0_3: # %if.else
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl
 entry:
   %true = icmp eq i32 0, 0

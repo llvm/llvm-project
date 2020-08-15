@@ -941,17 +941,17 @@ define void @PR45265(i32 %0, %struct.S* nocapture readonly %1) nounwind {
 ; X32-SSE2-NEXT:    shldl $24, %ebx, %edi
 ; X32-SSE2-NEXT:    xorl %eax, %edi
 ; X32-SSE2-NEXT:    orl %edi, %ecx
-; X32-SSE2-NEXT:    jne .LBB44_1
-; X32-SSE2-NEXT:  # %bb.2:
-; X32-SSE2-NEXT:    popl %esi
-; X32-SSE2-NEXT:    popl %edi
-; X32-SSE2-NEXT:    popl %ebx
-; X32-SSE2-NEXT:    jmp _Z3foov # TAILCALL
-; X32-SSE2-NEXT:  .LBB44_1:
+; X32-SSE2-NEXT:    je .LBB44_2
+; X32-SSE2-NEXT:  # %bb.1:
 ; X32-SSE2-NEXT:    popl %esi
 ; X32-SSE2-NEXT:    popl %edi
 ; X32-SSE2-NEXT:    popl %ebx
 ; X32-SSE2-NEXT:    retl
+; X32-SSE2-NEXT:  .LBB44_2:
+; X32-SSE2-NEXT:    popl %esi
+; X32-SSE2-NEXT:    popl %edi
+; X32-SSE2-NEXT:    popl %ebx
+; X32-SSE2-NEXT:    jmp _Z3foov # TAILCALL
 ;
 ; X64-AVX2-LABEL: PR45265:
 ; X64-AVX2:       # %bb.0:
@@ -964,11 +964,11 @@ define void @PR45265(i32 %0, %struct.S* nocapture readonly %1) nounwind {
 ; X64-AVX2-NEXT:    movq (%rsi,%rcx,4), %rcx
 ; X64-AVX2-NEXT:    shrdq $40, %rdi, %rcx
 ; X64-AVX2-NEXT:    cmpq %rax, %rcx
-; X64-AVX2-NEXT:    jne .LBB44_1
-; X64-AVX2-NEXT:  # %bb.2:
-; X64-AVX2-NEXT:    jmp _Z3foov # TAILCALL
-; X64-AVX2-NEXT:  .LBB44_1:
+; X64-AVX2-NEXT:    je .LBB44_2
+; X64-AVX2-NEXT:  # %bb.1:
 ; X64-AVX2-NEXT:    retq
+; X64-AVX2-NEXT:  .LBB44_2:
+; X64-AVX2-NEXT:    jmp _Z3foov # TAILCALL
   %3 = sext i32 %0 to i64
   %4 = getelementptr inbounds %struct.S, %struct.S* %1, i64 %3
   %5 = bitcast %struct.S* %4 to i88*

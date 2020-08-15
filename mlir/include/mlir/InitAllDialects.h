@@ -35,29 +35,32 @@
 
 namespace mlir {
 
+// Add all the MLIR dialects to the provided registry.
+inline void registerAllDialects(DialectRegistry &registry) {
+  registry.insert<acc::OpenACCDialect>();
+  registry.insert<AffineDialect>();
+  registry.insert<avx512::AVX512Dialect>();
+  registry.insert<gpu::GPUDialect>();
+  registry.insert<LLVM::LLVMAVX512Dialect>();
+  registry.insert<LLVM::LLVMDialect>();
+  registry.insert<linalg::LinalgDialect>();
+  registry.insert<scf::SCFDialect>();
+  registry.insert<omp::OpenMPDialect>();
+  registry.insert<quant::QuantizationDialect>();
+  registry.insert<spirv::SPIRVDialect>();
+  registry.insert<StandardOpsDialect>();
+  registry.insert<vector::VectorDialect>();
+  registry.insert<NVVM::NVVMDialect>();
+  registry.insert<ROCDL::ROCDLDialect>();
+  registry.insert<SDBMDialect>();
+  registry.insert<shape::ShapeDialect>();
+}
+
 // This function should be called before creating any MLIRContext if one expect
 // all the possible dialects to be made available to the context automatically.
 inline void registerAllDialects() {
-  static bool init_once = []() {
-    registerDialect<acc::OpenACCDialect>();
-    registerDialect<AffineDialect>();
-    registerDialect<avx512::AVX512Dialect>();
-    registerDialect<gpu::GPUDialect>();
-    registerDialect<LLVM::LLVMAVX512Dialect>();
-    registerDialect<LLVM::LLVMDialect>();
-    registerDialect<linalg::LinalgDialect>();
-    registerDialect<scf::SCFDialect>();
-    registerDialect<omp::OpenMPDialect>();
-    registerDialect<quant::QuantizationDialect>();
-    registerDialect<spirv::SPIRVDialect>();
-    registerDialect<StandardOpsDialect>();
-    registerDialect<vector::VectorDialect>();
-    registerDialect<NVVM::NVVMDialect>();
-    registerDialect<ROCDL::ROCDLDialect>();
-    registerDialect<SDBMDialect>();
-    registerDialect<shape::ShapeDialect>();
-    return true;
-  }();
+  static bool init_once =
+      ([]() { registerAllDialects(getGlobalDialectRegistry()); }(), true);
   (void)init_once;
 }
 } // namespace mlir

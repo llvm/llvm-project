@@ -36,7 +36,7 @@ class GdbRemoteTestCaseBase(TestBase):
     # Default sleep time in seconds. The sleep time is doubled under Asan.
     DEFAULT_SLEEP   =  5  * (2  if ('ASAN_OPTIONS' in os.environ) else 1)
 
-    _GDBREMOTE_KILL_PACKET = "$k#6b"
+    _GDBREMOTE_KILL_PACKET = b"$k#6b"
 
     # Start the inferior separately, attach to the inferior on the stub
     # command line.

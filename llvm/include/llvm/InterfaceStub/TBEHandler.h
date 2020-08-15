@@ -15,8 +15,8 @@
 #ifndef LLVM_TEXTAPI_ELF_TBEHANDLER_H
 #define LLVM_TEXTAPI_ELF_TBEHANDLER_H
 
-#include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/VersionTuple.h"
 #include <memory>
 
 namespace llvm {

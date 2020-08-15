@@ -68,3 +68,10 @@ else:
             self.child.sendeof()
             self.child.close(force=not gracefully)
             self.child = None
+
+        def cursor_forward_escape_seq(self, chars_to_move):
+            """
+            Returns the escape sequence to move the cursor forward/right
+            by a certain amount of characters.
+            """
+            return b"\x1b\[" + str(chars_to_move).encode("utf-8") + b"C"

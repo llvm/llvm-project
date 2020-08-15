@@ -88,7 +88,6 @@ exit:
 ; CHECK-LABEL: test_GEP_across_BB:
 ; CHECK: ldr {{w[0-9]+}}, [{{x[0-9]+}}, #528]
 ; CHECK: ldr {{w[0-9]+}}, [{{x[0-9]+}}, #532]
-; CHECK-NOT: add
 ; CHECK: str {{w[0-9]+}}, [{{x[0-9]+}}, #532]
 ; CHECK: str {{w[0-9]+}}, [{{x[0-9]+}}, #528]
 

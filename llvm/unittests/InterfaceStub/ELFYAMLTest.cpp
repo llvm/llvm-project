@@ -7,8 +7,8 @@
 //===-----------------------------------------------------------------------===/
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/TextAPI/ELF/ELFStub.h"
-#include "llvm/TextAPI/ELF/TBEHandler.h"
+#include "llvm/InterfaceStub/ELFStub.h"
+#include "llvm/InterfaceStub/TBEHandler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"

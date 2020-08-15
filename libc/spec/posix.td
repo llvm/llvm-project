@@ -11,8 +11,12 @@ def RestrictStructSigactionPtr : RestrictedPtrType<StructSigaction>;
 def ConstRestrictStructSigactionPtr : ConstType<RestrictStructSigactionPtr>;
 
 def POSIX : StandardSpec<"POSIX"> {
+  // TODO: Change naming so that they're consistent with other files.
   PtrType CharPtr = PtrType<CharType>;
   ConstType ConstCharPtr = ConstType<CharPtr>;
+  RestrictedPtrType RestrictedCharPtr = RestrictedPtrType<CharType>;
+  ConstType ConstRestrictedCharPtr = ConstType<RestrictedCharPtr>;
+  RestrictedPtrType CharRestrictedDoublePtr = RestrictedPtrType<CharPtr>;
   NamedType OffTType = NamedType<"off_t">;
   NamedType SSizeTType = NamedType<"ssize_t">;
 
@@ -220,6 +224,11 @@ def POSIX : StandardSpec<"POSIX"> {
             "strnlen",
              RetValSpec<SizeTType>,
              [ArgSpec<ConstCharPtr>, ArgSpec<SizeTType>]
+        >,
+        FunctionSpec<
+            "strtok_r",
+            RetValSpec<CharPtr>,
+            [ArgSpec<ConstRestrictedCharPtr>, ArgSpec<CharRestrictedDoublePtr>]
         >,
     ]
   >;

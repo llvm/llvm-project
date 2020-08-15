@@ -13,7 +13,7 @@ We divide compiler transformations into two categories: local and global. In
 this chapter, we focus on how to leverage the Toy Dialect and its high-level
 semantics to perform local pattern-match transformations that would be difficult
 in LLVM. For this, we use MLIR's
-[Generic DAG Rewriter](../../GenericDAGRewriter.md).
+[Generic DAG Rewriter](../../PatternRewriter.md).
 
 There are two methods that can be used to implement pattern-match
 transformations: 1. Imperative, C++ pattern-match and rewrite 2. Declarative,

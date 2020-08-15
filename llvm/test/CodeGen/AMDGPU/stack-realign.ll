@@ -254,8 +254,78 @@ define void @no_free_scratch_sgpr_for_bp_copy(<32 x i32> %a, i32 %b) #0 {
   ret void
 }
 
+define void @no_free_regs_spill_bp_to_memory(<32 x i32> %a, i32 %b) #5 {
+; If there are no free SGPRs or VGPRs available we must spill the BP to memory.
+
+; GCN-LABEL: no_free_regs_spill_bp_to_mem
+; GCN: s_or_saveexec_b64 s[4:5], -1
+; GCN: v_mov_b32_e32 v0, s33
+; GCN: buffer_store_dword v0, off, s[0:3], s32
+; GCN: v_mov_b32_e32 v0, s34
+; GCN-DAG: buffer_store_dword v0, off, s[0:3], s32
+  %local_val = alloca i32, align 128, addrspace(5)
+  store volatile i32 %b, i32 addrspace(5)* %local_val, align 128
+
+  call void asm sideeffect "; clobber nonpreserved SGPRs and 64 CSRs",
+    "~{s4},~{s5},~{s6},~{s7},~{s8},~{s9}
+    ,~{s10},~{s11},~{s12},~{s13},~{s14},~{s15},~{s16},~{s17},~{s18},~{s19}
+    ,~{s20},~{s21},~{s22},~{s23},~{s24},~{s25},~{s26},~{s27},~{s28},~{s29}
+    ,~{s40},~{s41},~{s42},~{s43},~{s44},~{s45},~{s46},~{s47},~{s48},~{s49}
+    ,~{s50},~{s51},~{s52},~{s53},~{s54},~{s55},~{s56},~{s57},~{s58},~{s59}
+    ,~{s60},~{s61},~{s62},~{s63},~{s64},~{s65},~{s66},~{s67},~{s68},~{s69}
+    ,~{s70},~{s71},~{s72},~{s73},~{s74},~{s75},~{s76},~{s77},~{s78},~{s79}
+    ,~{s80},~{s81},~{s82},~{s83},~{s84},~{s85},~{s86},~{s87},~{s88},~{s89}
+    ,~{s90},~{s91},~{s92},~{s93},~{s94},~{s95},~{s96},~{s97},~{s98},~{s99}
+    ,~{s100},~{s101},~{s102},~{s39},~{vcc}"() #0
+
+  call void asm sideeffect "; clobber all VGPRs",
+    "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9}
+    ,~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19}
+    ,~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29}
+    ,~{v30},~{v31},~{v32},~{v33},~{v34},~{v35},~{v36},~{v37},~{v38}" () #0
+  ret void
+}
+
+define void @spill_bp_to_memory_scratch_reg_needed_mubuf_offset(<32 x i32> %a, i32 %b, [4096 x i8] addrspace(5)* byval align 4 %arg) #5 {
+; If the size of the offset exceeds the MUBUF offset field we need another
+; scratch VGPR to hold the offset.
+
+; GCN-LABEL: spill_bp_to_memory_scratch_reg_needed_mubuf_offset
+; GCN: s_or_saveexec_b64 s[4:5], -1
+; GCN: v_mov_b32_e32 v0, s33
+; GCN-NOT: v_mov_b32_e32 v0, 0x1088
+; GCN-NEXT: v_mov_b32_e32 v1, 0x1088
+; GCN-NEXT: buffer_store_dword v0, v1, s[0:3], s32 offen
+; GCN: v_mov_b32_e32 v0, s34
+; GCN-NOT: v_mov_b32_e32 v0, 0x1090
+; GCN-NEXT: v_mov_b32_e32 v1, 0x1090
+; GCN-NEXT: buffer_store_dword v0, v1, s[0:3], s32 offen
+  %local_val = alloca i32, align 128, addrspace(5)
+  store volatile i32 %b, i32 addrspace(5)* %local_val, align 128
+
+  call void asm sideeffect "; clobber nonpreserved SGPRs and 64 CSRs",
+    "~{s4},~{s5},~{s6},~{s7},~{s8},~{s9}
+    ,~{s10},~{s11},~{s12},~{s13},~{s14},~{s15},~{s16},~{s17},~{s18},~{s19}
+    ,~{s20},~{s21},~{s22},~{s23},~{s24},~{s25},~{s26},~{s27},~{s28},~{s29}
+    ,~{s40},~{s41},~{s42},~{s43},~{s44},~{s45},~{s46},~{s47},~{s48},~{s49}
+    ,~{s50},~{s51},~{s52},~{s53},~{s54},~{s55},~{s56},~{s57},~{s58},~{s59}
+    ,~{s60},~{s61},~{s62},~{s63},~{s64},~{s65},~{s66},~{s67},~{s68},~{s69}
+    ,~{s70},~{s71},~{s72},~{s73},~{s74},~{s75},~{s76},~{s77},~{s78},~{s79}
+    ,~{s80},~{s81},~{s82},~{s83},~{s84},~{s85},~{s86},~{s87},~{s88},~{s89}
+    ,~{s90},~{s91},~{s92},~{s93},~{s94},~{s95},~{s96},~{s97},~{s98},~{s99}
+    ,~{s100},~{s101},~{s102},~{s39},~{vcc}"() #0
+
+  call void asm sideeffect "; clobber all VGPRs",
+    "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9}
+    ,~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19}
+    ,~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29}
+    ,~{v30},~{v31},~{v32},~{v33},~{v34},~{v35},~{v36},~{v37},~{v38}"() #0
+  ret void
+}
+
 attributes #0 = { noinline nounwind }
 attributes #1 = { noinline nounwind "stackrealign" }
 attributes #2 = { noinline nounwind alignstack=4 }
 attributes #3 = { noinline nounwind "no-realign-stack" }
 attributes #4 = { noinline nounwind "frame-pointer"="all"}
+attributes #5 = { noinline nounwind "amdgpu-waves-per-eu"="6,6" }

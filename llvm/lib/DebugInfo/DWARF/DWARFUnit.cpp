@@ -995,11 +995,17 @@ DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor & DA) {
   // Prior to DWARF v5, we derive the contribution size from the
   // index table (in a package file). In a .dwo file it is simply
   // the length of the string offsets section.
-  if (!IndexEntry)
-    return {Optional<StrOffsetsContributionDescriptor>(
-        {0, StringOffsetSection.Data.size(), 4, Header.getFormat()})};
+  StrOffsetsContributionDescriptor Desc;
   if (C)
-    return {Optional<StrOffsetsContributionDescriptor>(
-        {C->Offset, C->Length, 4, Header.getFormat()})};
-  return None;
+    Desc = StrOffsetsContributionDescriptor(C->Offset, C->Length, 4,
+                                            Header.getFormat());
+  else if (!IndexEntry && !StringOffsetSection.Data.empty())
+    Desc = StrOffsetsContributionDescriptor(0, StringOffsetSection.Data.size(),
+                                            4, Header.getFormat());
+  else
+    return None;
+  auto DescOrError = Desc.validateContributionSize(DA);
+  if (!DescOrError)
+    return DescOrError.takeError();
+  return *DescOrError;
 }

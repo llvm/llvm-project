@@ -156,9 +156,17 @@ void AccStructureChecker::Leave(
 }
 
 void AccStructureChecker::Enter(const parser::OpenACCCombinedConstruct &x) {
-  const auto &beginBlockDir{std::get<parser::AccBeginCombinedDirective>(x.t)};
+  const auto &beginCombinedDir{
+      std::get<parser::AccBeginCombinedDirective>(x.t)};
   const auto &combinedDir{
-      std::get<parser::AccCombinedDirective>(beginBlockDir.t)};
+      std::get<parser::AccCombinedDirective>(beginCombinedDir.t)};
+
+  // check matching, End directive is optional
+  if (const auto &endCombinedDir{
+          std::get<std::optional<parser::AccEndCombinedDirective>>(x.t)}) {
+    CheckMatching<parser::AccCombinedDirective>(combinedDir, endCombinedDir->v);
+  }
+
   PushContextAndClauseSets(combinedDir.source, combinedDir.v);
 }
 

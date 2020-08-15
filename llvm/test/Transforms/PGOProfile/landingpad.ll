@@ -85,7 +85,8 @@ catch.dispatch:
 ; GEN: catch.dispatch:
 ; GEN-NOT: call void @llvm.instrprof.increment
   %tmp3 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*))
-  %matches = icmp eq i32 %tmp2, %tmp3
+  %c = icmp ne i32 %tmp2, %tmp3
+  %matches = xor i1 %c, -1
   br i1 %matches, label %catch, label %eh.resume
 ; USE: br i1 %matches, label %catch, label %eh.resume
 ; USE-SAME: !prof ![[BW_CATCH_DISPATCH:[0-9]+]]

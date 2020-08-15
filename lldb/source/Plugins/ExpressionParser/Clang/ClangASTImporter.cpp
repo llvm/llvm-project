@@ -870,13 +870,14 @@ ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
       return dn_or_err.takeError();
     DeclContext *dc = *dc_or_err;
     DeclContext::lookup_result lr = dc->lookup(*dn_or_err);
-    if (lr.size()) {
-      clang::Decl *lookup_found = lr.front();
-      RegisterImportedDecl(From, lookup_found);
-      m_decls_to_ignore.insert(lookup_found);
-      return lookup_found;
-    } else
-      LLDB_LOG(log, "[ClangASTImporter] Complete definition not found");
+    for (clang::Decl *candidate : lr) {
+      if (candidate->getKind() == From->getKind()) {
+        RegisterImportedDecl(From, candidate);
+        m_decls_to_ignore.insert(candidate);
+        return candidate;
+      }
+    }
+    LLDB_LOG(log, "[ClangASTImporter] Complete definition not found");
   }
 
   return ASTImporter::ImportImpl(From);

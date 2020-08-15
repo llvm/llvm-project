@@ -1878,6 +1878,19 @@ void CommandInterpreter::HandleCompletion(CompletionRequest &request) {
   HandleCompletionMatches(request);
 }
 
+llvm::Optional<std::string>
+CommandInterpreter::GetAutoSuggestionForCommand(llvm::StringRef line) {
+  if (line.empty())
+    return llvm::None;
+  const size_t s = m_command_history.GetSize();
+  for (int i = s - 1; i >= 0; --i) {
+    llvm::StringRef entry = m_command_history.GetStringAtIndex(i);
+    if (entry.consume_front(line))
+      return entry.str();
+  }
+  return llvm::None;
+}
+
 CommandInterpreter::~CommandInterpreter() {}
 
 void CommandInterpreter::UpdatePrompt(llvm::StringRef new_prompt) {

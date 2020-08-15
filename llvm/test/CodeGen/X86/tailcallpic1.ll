@@ -12,5 +12,5 @@ define fastcc i32 @tailcaller(i32 %in1, i32 %in2) {
 entry:
 	%tmp11 = tail call fastcc i32 @tailcallee( i32 %in1, i32 %in2, i32 %in1, i32 %in2 )		; <i32> [#uses=1]
 	ret i32 %tmp11
-; CHECK: jmp .Ltailcallee$local
+; CHECK: jmp tailcallee
 }

@@ -21,6 +21,26 @@ OPTIONS
 --------
 :program:`llvm-libtool-darwin` supports the following options:
 
+.. option:: -arch_only <architecture>
+
+  Build a static library only for the specified `<architecture>` and ignore all
+  other architectures in the files.
+
+.. option:: -color
+
+  Use colors in output.
+
+.. option:: -D
+
+  Use zero for timestamps and UIDs/GIDs. This is set by default.
+
+.. option:: -filelist <listfile[,dirname]>
+
+  Read input file names from `<listfile>`. File names are specified in `<listfile>`
+  one per line, separated only by newlines. Whitespace on a line is assumed
+  to be part of the filename. If the directory name, `dirname`, is also
+  specified then it is prepended to each file name in the `<listfile>`.
+
 .. option:: -h, -help
 
   Show help and usage for this command.
@@ -30,36 +50,21 @@ OPTIONS
   Show help and usage for this command without grouping the options
   into categories.
 
-.. option:: -color
-
-  Use colors in output.
-
-.. option:: -version
-
-  Display the version of this program.
-
-.. option:: -D
-
- Use zero for timestamps and UIDs/GIDs. This is set by default.
-
-.. option:: -U
-
- Use actual timestamps and UIDs/GIDs.
-
 .. option:: -o <filename>
 
   Specify the output file name. Must be specified exactly once.
 
 .. option:: -static
 
- Produces a static library from the input files.
+  Produces a static library from the input files.
 
-.. option:: -filelist <listfile[,dirname]>
+.. option:: -U
 
- Read input file names from `<listfile>`. File names are specified in `<listfile>`
- one per line, separated only by newlines. Whitespace on a line is assumed
- to be part of the filename. If the directory name, `dirname`, is also
- specified then it is prepended to each file name in the `<listfile>`.
+  Use actual timestamps and UIDs/GIDs.
+
+.. option:: -version
+
+  Display the version of this program.
 
 EXIT STATUS
 -----------

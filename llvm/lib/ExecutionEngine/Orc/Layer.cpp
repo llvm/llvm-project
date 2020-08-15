@@ -83,17 +83,14 @@ IRMaterializationUnit::IRMaterializationUnit(
     if (!llvm::empty(getStaticInitGVs(M))) {
       size_t Counter = 0;
 
-      while (true) {
+      do {
         std::string InitSymbolName;
         raw_string_ostream(InitSymbolName)
             << "$." << M.getModuleIdentifier() << ".__inits." << Counter++;
         InitSymbol = ES.intern(InitSymbolName);
-        if (SymbolFlags.count(InitSymbol))
-          continue;
-        SymbolFlags[InitSymbol] =
-            JITSymbolFlags::MaterializationSideEffectsOnly;
-        break;
-      }
+      } while (SymbolFlags.count(InitSymbol));
+
+      SymbolFlags[InitSymbol] = JITSymbolFlags::MaterializationSideEffectsOnly;
     }
   });
 }

@@ -142,6 +142,16 @@ add_libc_unittest(
     libc.src.string.strtok
 )
 
+add_libc_unittest(
+  strtok_r_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strtok_r_test.cpp
+  DEPENDS
+    libc.src.string.strtok_r
+)
+
 # Tests all implementations that can run on the host.
 function(add_libc_multi_impl_test name)
   get_property(fq_implementations GLOBAL PROPERTY ${name}_implementations)

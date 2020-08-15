@@ -52,7 +52,7 @@ class ModuleLoadedNotifysTestCase(TestBase):
             True
 
         error = lldb.SBError()
-        flags = lldb.eLaunchFlagInheritTCCFromParent
+        flags = target.GetLaunchInfo().GetLaunchFlags()
         process = target.Launch(listener,
                                 None,      # argv
                                 None,      # envp

@@ -63,6 +63,7 @@ public:
         EHFramesDeregister(std::move(EHFramesDeregister)) {
     using ThisT = std::remove_reference_t<decltype(*this)>;
     addHandler<exec::CallIntVoid>(*this, &ThisT::handleCallIntVoid);
+    addHandler<exec::CallIntInt>(*this, &ThisT::handleCallIntInt);
     addHandler<exec::CallMain>(*this, &ThisT::handleCallMain);
     addHandler<exec::CallVoidVoid>(*this, &ThisT::handleCallVoidVoid);
     addHandler<mem::CreateRemoteAllocator>(*this,
@@ -163,6 +164,19 @@ private:
 
     LLVM_DEBUG(dbgs() << "  Calling " << format("0x%016x", Addr) << "\n");
     int Result = Fn();
+    LLVM_DEBUG(dbgs() << "  Result = " << Result << "\n");
+
+    return Result;
+  }
+
+  Expected<int32_t> handleCallIntInt(JITTargetAddress Addr, int Arg) {
+    using IntIntFnTy = int (*)(int);
+
+    IntIntFnTy Fn = reinterpret_cast<IntIntFnTy>(static_cast<uintptr_t>(Addr));
+
+    LLVM_DEBUG(dbgs() << "  Calling " << format("0x%016x", Addr)
+                      << " with argument " << Arg << "\n");
+    int Result = Fn(Arg);
     LLVM_DEBUG(dbgs() << "  Result = " << Result << "\n");
 
     return Result;

@@ -76,10 +76,10 @@ TYPE_CONTEXT_PARSER("specification part"_en_US,
 // are in contexts that impose constraints on the kinds of statements that
 // are allowed, and so we have a variant production for declaration-construct
 // that implements those constraints.
-constexpr auto execPartLookAhead{first(actionStmt >> ok,
-    ompEndLoopDirective >> ok, openaccConstruct >> ok, openmpConstruct >> ok,
-    "ASSOCIATE ("_tok, "BLOCK"_tok, "SELECT"_tok, "CHANGE TEAM"_sptok,
-    "CRITICAL"_tok, "DO"_tok, "IF ("_tok, "WHERE ("_tok, "FORALL ("_tok)};
+constexpr auto execPartLookAhead{
+    first(actionStmt >> ok, openaccConstruct >> ok, openmpConstruct >> ok,
+        "ASSOCIATE ("_tok, "BLOCK"_tok, "SELECT"_tok, "CHANGE TEAM"_sptok,
+        "CRITICAL"_tok, "DO"_tok, "IF ("_tok, "WHERE ("_tok, "FORALL ("_tok)};
 constexpr auto declErrorRecovery{
     stmtErrorRecoveryStart >> !execPartLookAhead >> skipStmtErrorRecovery};
 constexpr auto misplacedSpecificationStmt{Parser<UseStmt>{} >>

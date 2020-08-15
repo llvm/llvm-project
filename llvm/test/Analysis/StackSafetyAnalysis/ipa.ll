@@ -354,8 +354,8 @@ define void @TwoArguments() #0 {
 ; CHECK-LABEL: @TwoArguments dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
-; LOCAL-NEXT: x[8]: empty-set, @Write4_2(arg1, [0,1)), @Write4_2(arg0, [4,5)){{$}}
-; GLOBAL-NEXT: x[8]: [0,8), @Write4_2(arg1, [0,1)), @Write4_2(arg0, [4,5)){{$}}
+; LOCAL-NEXT: x[8]: empty-set, @Write4_2(arg0, [4,5)), @Write4_2(arg1, [0,1)){{$}}
+; GLOBAL-NEXT: x[8]: [0,8), @Write4_2(arg0, [4,5)), @Write4_2(arg1, [0,1)){{$}}
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
@@ -369,8 +369,8 @@ define void @TwoArgumentsOOBOne() #0 {
 ; CHECK-LABEL: @TwoArgumentsOOBOne dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
-; LOCAL-NEXT: x[8]: empty-set, @Write4_2(arg1, [0,1)), @Write4_2(arg0, [5,6)){{$}}
-; GLOBAL-NEXT: x[8]: [0,9), @Write4_2(arg1, [0,1)), @Write4_2(arg0, [5,6)){{$}}
+; LOCAL-NEXT: x[8]: empty-set, @Write4_2(arg0, [5,6)), @Write4_2(arg1, [0,1)){{$}}
+; GLOBAL-NEXT: x[8]: [0,9), @Write4_2(arg0, [5,6)), @Write4_2(arg1, [0,1)){{$}}
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
@@ -384,8 +384,8 @@ define void @TwoArgumentsOOBOther() #0 {
 ; CHECK-LABEL: @TwoArgumentsOOBOther dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
-; LOCAL-NEXT: x[8]: empty-set, @Write4_2(arg1, [-1,0)), @Write4_2(arg0, [4,5)){{$}}
-; GLOBAL-NEXT: x[8]: [-1,8), @Write4_2(arg1, [-1,0)), @Write4_2(arg0, [4,5)){{$}}
+; LOCAL-NEXT: x[8]: empty-set, @Write4_2(arg0, [4,5)), @Write4_2(arg1, [-1,0)){{$}}
+; GLOBAL-NEXT: x[8]: [-1,8), @Write4_2(arg0, [4,5)), @Write4_2(arg1, [-1,0)){{$}}
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4
@@ -400,8 +400,8 @@ define void @TwoArgumentsOOBBoth() #0 {
 ; CHECK-LABEL: @TwoArgumentsOOBBoth dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
-; LOCAL-NEXT: x[8]: empty-set, @Write4_2(arg1, [-1,0)), @Write4_2(arg0, [5,6)){{$}}
-; GLOBAL-NEXT: x[8]: [-1,9), @Write4_2(arg1, [-1,0)), @Write4_2(arg0, [5,6)){{$}}
+; LOCAL-NEXT: x[8]: empty-set, @Write4_2(arg0, [5,6)), @Write4_2(arg1, [-1,0)){{$}}
+; GLOBAL-NEXT: x[8]: [-1,9), @Write4_2(arg0, [5,6)), @Write4_2(arg1, [-1,0)){{$}}
 ; CHECK-EMPTY:
 entry:
   %x = alloca i64, align 4

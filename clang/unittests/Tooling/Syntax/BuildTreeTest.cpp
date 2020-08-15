@@ -12,8 +12,9 @@
 
 #include "TreeTestBase.h"
 
-namespace clang {
-namespace syntax {
+using namespace clang;
+using namespace clang::syntax;
+
 namespace {
 
 TEST_P(SyntaxTreeTest, Simple) {
@@ -4836,26 +4837,4 @@ void x(char a, short (*b)(int), long (**c)(long long));
 )txt"));
 }
 
-static std::vector<TestClangConfig> allTestClangConfigs() {
-  std::vector<TestClangConfig> all_configs;
-  for (TestLanguage lang : {Lang_C89, Lang_C99, Lang_CXX03, Lang_CXX11,
-                            Lang_CXX14, Lang_CXX17, Lang_CXX20}) {
-    TestClangConfig config;
-    config.Language = lang;
-    config.Target = "x86_64-pc-linux-gnu";
-    all_configs.push_back(config);
-
-    // Windows target is interesting to test because it enables
-    // `-fdelayed-template-parsing`.
-    config.Target = "x86_64-pc-win32-msvc";
-    all_configs.push_back(config);
-  }
-  return all_configs;
-}
-
-INSTANTIATE_TEST_CASE_P(SyntaxTreeTests, SyntaxTreeTest,
-                        testing::ValuesIn(allTestClangConfigs()), );
-
 } // namespace
-} // namespace syntax
-} // namespace clang

@@ -139,7 +139,17 @@ add_entrypoint_object(
   HDRS
     strtok.h
   DEPENDS
-    libc.utils.CPP.standalone_cpp
+    .string_utils
+)
+
+add_entrypoint_object(
+  strtok_r
+  SRCS
+    strtok_r.cpp
+  HDRS
+    strtok_r.h
+  DEPENDS
+    .string_utils
 )
 
 # Helper to define a function with multiple implementations

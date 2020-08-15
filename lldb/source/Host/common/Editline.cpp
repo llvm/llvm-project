@@ -1004,11 +1004,15 @@ unsigned char Editline::TabCommand(int ch) {
     case CompletionMode::Normal: {
       std::string to_add = completion.GetCompletion();
       to_add = to_add.substr(request.GetCursorArgumentPrefix().size());
-      if (request.GetParsedArg().IsQuoted())
+      // Terminate the current argument with a quote if it started with a quote.
+      if (!request.GetParsedLine().empty() && request.GetParsedArg().IsQuoted())
         to_add.push_back(request.GetParsedArg().GetQuoteChar());
       to_add.push_back(' ');
       el_insertstr(m_editline, to_add.c_str());
-      break;
+      // Clear all the autosuggestion parts if the only single space can be completed.
+      if (to_add == " ")
+        return CC_REDISPLAY;
+      return CC_REFRESH;
     }
     case CompletionMode::Partial: {
       std::string to_add = completion.GetCompletion();
@@ -1039,6 +1043,52 @@ unsigned char Editline::TabCommand(int ch) {
 
   DisplayInput();
   MoveCursor(CursorLocation::BlockEnd, CursorLocation::EditingCursor);
+  return CC_REDISPLAY;
+}
+
+unsigned char Editline::ApplyAutosuggestCommand(int ch) {
+  const LineInfo *line_info = el_line(m_editline);
+  llvm::StringRef line(line_info->buffer,
+                       line_info->lastchar - line_info->buffer);
+
+  if (llvm::Optional<std::string> to_add =
+          m_suggestion_callback(line, m_suggestion_callback_baton))
+    el_insertstr(m_editline, to_add->c_str());
+
+  return CC_REDISPLAY;
+}
+
+unsigned char Editline::TypedCharacter(int ch) {
+  std::string typed = std::string(1, ch);
+  el_insertstr(m_editline, typed.c_str());
+  const LineInfo *line_info = el_line(m_editline);
+  llvm::StringRef line(line_info->buffer,
+                       line_info->lastchar - line_info->buffer);
+
+  if (llvm::Optional<std::string> to_add =
+          m_suggestion_callback(line, m_suggestion_callback_baton)) {
+    std::string to_add_color = ANSI_FAINT + to_add.getValue() + ANSI_UNFAINT;
+    fputs(typed.c_str(), m_output_file);
+    fputs(to_add_color.c_str(), m_output_file);
+    size_t new_autosuggestion_size = line.size() + to_add->length();
+    // Print spaces to hide any remains of a previous longer autosuggestion.
+    if (new_autosuggestion_size < m_previous_autosuggestion_size) {
+      size_t spaces_to_print =
+          m_previous_autosuggestion_size - new_autosuggestion_size;
+      std::string spaces = std::string(spaces_to_print, ' ');
+      fputs(spaces.c_str(), m_output_file);
+    }
+    m_previous_autosuggestion_size = new_autosuggestion_size;
+
+    int editline_cursor_position =
+        (int)((line_info->cursor - line_info->buffer) + GetPromptWidth());
+    int editline_cursor_row = editline_cursor_position / m_terminal_width;
+    int toColumn =
+        editline_cursor_position - (editline_cursor_row * m_terminal_width);
+    fprintf(m_output_file, ANSI_SET_COLUMN_N, toColumn);
+    return CC_REFRESH;
+  }
+
   return CC_REDISPLAY;
 }
 
@@ -1155,7 +1205,38 @@ void Editline::ConfigureEditor(bool multiline) {
   if (!multiline) {
     el_set(m_editline, EL_BIND, "^r", "em-inc-search-prev",
            NULL); // Cycle through backwards search, entering string
+
+    if (m_suggestion_callback) {
+      el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-apply-complete"),
+              EditLineConstString("Adopt autocompletion"),
+              (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
+                return Editline::InstanceFor(editline)->ApplyAutosuggestCommand(
+                    ch);
+              }));
+
+      el_set(m_editline, EL_BIND, "^f", "lldb-apply-complete",
+             NULL); // Apply a part that is suggested automatically
+
+      el_wset(m_editline, EL_ADDFN, EditLineConstString("lldb-typed-character"),
+              EditLineConstString("Typed character"),
+              (EditlineCommandCallbackType)([](EditLine *editline, int ch) {
+                return Editline::InstanceFor(editline)->TypedCharacter(ch);
+              }));
+
+      char bind_key[2] = {0, 0};
+      llvm::StringRef ascii_chars =
+          "abcdefghijklmnopqrstuvwxzyABCDEFGHIJKLMNOPQRSTUVWXZY1234567890!\"#$%"
+          "&'()*+,./:;<=>?@[]_`{|}~ ";
+      for (char c : ascii_chars) {
+        bind_key[0] = c;
+        el_set(m_editline, EL_BIND, bind_key, "lldb-typed-character", NULL);
+      }
+      el_set(m_editline, EL_BIND, "\\-", "lldb-typed-character", NULL);
+      el_set(m_editline, EL_BIND, "\\^", "lldb-typed-character", NULL);
+      el_set(m_editline, EL_BIND, "\\\\", "lldb-typed-character", NULL);
+    }
   }
+
   el_set(m_editline, EL_BIND, "^w", "ed-delete-prev-word",
          NULL); // Delete previous word, behave like bash in emacs mode
   el_set(m_editline, EL_BIND, "\t", "lldb-complete",
@@ -1364,6 +1445,12 @@ bool Editline::Cancel() {
   }
   m_editor_status = EditorStatus::Interrupted;
   return result;
+}
+
+void Editline::SetSuggestionCallback(SuggestionCallbackType callback,
+                                     void *baton) {
+  m_suggestion_callback = callback;
+  m_suggestion_callback_baton = baton;
 }
 
 void Editline::SetAutoCompleteCallback(CompleteCallbackType callback,

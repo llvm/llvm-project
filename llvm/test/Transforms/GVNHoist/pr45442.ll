@@ -1,32 +1,32 @@
 ; RUN: opt < %s -gvn-hoist -S | FileCheck %s
 
 ; gvn-hoist shouldn't crash in this case.
-; CHECK-LABEL: @func()
+; CHECK-LABEL: @func(i1 %b)
 ; CHECK:       entry:
 ; CHECK-NEXT:  br i1
 ; CHECK:  bb1:
-; CHECK-NEXT:  unreachable
+; CHECK-NEXT:  ret void
 ; CHECK:  bb2:
 ; CHECK-NEXT:  call
 ; CHECK-NEXT:  call
-; CHECK-NEXT:  unreachable
+; CHECK-NEXT:  ret void
 
 define void @v_1_0() #0 {
 entry:
   ret void
 }
 
-define void @func()  {
+define void @func(i1 %b) {
 entry:
-  br i1 undef, label %bb1, label %bb2
+  br i1 %b, label %bb1, label %bb2
 
 bb1:
-  unreachable
+  ret void
 
 bb2:
   call void @v_1_0()
   call void @v_1_0()
-  unreachable
+  ret void
 }
 
 attributes #0 = { nounwind readonly }

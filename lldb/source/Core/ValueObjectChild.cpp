@@ -199,11 +199,7 @@ bool ValueObjectChild::UpdateValue() {
           // try to extract the child value from the parent's scalar value
           {
             Scalar scalar(m_value.GetScalar());
-            if (m_bitfield_bit_size)
-              scalar.ExtractBitfield(m_bitfield_bit_size,
-                                     m_bitfield_bit_offset);
-            else
-              scalar.ExtractBitfield(8 * m_byte_size, 8 * m_byte_offset);
+            scalar.ExtractBitfield(8 * m_byte_size, 8 * m_byte_offset);
             m_value.GetScalar() = scalar;
           }
           break;

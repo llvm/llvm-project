@@ -17,12 +17,16 @@ define void @foo8(i64 %val) {
 ; NOPIC-NEXT:    .cfi_def_cfa_offset 16
 ; NOPIC-NEXT:    cmpq $cmp8@ABS8, %rdi # encoding: [0x48,0x83,0xff,A]
 ; NOPIC-NEXT:    # fixup A - offset: 3, value: cmp8@ABS8, kind: FK_Data_1
-; NOPIC-NEXT:    ja .LBB0_2 # encoding: [0x77,A]
-; NOPIC-NEXT:    # fixup A - offset: 1, value: .LBB0_2-1, kind: FK_PCRel_1
-; NOPIC-NEXT:  # %bb.1: # %t
+; NOPIC-NEXT:    jbe .LBB0_1 # encoding: [0x76,A]
+; NOPIC-NEXT:    # fixup A - offset: 1, value: .LBB0_1-1, kind: FK_PCRel_1
+; NOPIC-NEXT:  # %bb.2: # %f
+; NOPIC-NEXT:    popq %rax # encoding: [0x58]
+; NOPIC-NEXT:    .cfi_def_cfa_offset 8
+; NOPIC-NEXT:    retq # encoding: [0xc3]
+; NOPIC-NEXT:  .LBB0_1: # %t
+; NOPIC-NEXT:    .cfi_def_cfa_offset 16
 ; NOPIC-NEXT:    callq f # encoding: [0xe8,A,A,A,A]
 ; NOPIC-NEXT:    # fixup A - offset: 1, value: f-4, kind: reloc_branch_4byte_pcrel
-; NOPIC-NEXT:  .LBB0_2: # %f
 ; NOPIC-NEXT:    popq %rax # encoding: [0x58]
 ; NOPIC-NEXT:    .cfi_def_cfa_offset 8
 ; NOPIC-NEXT:    retq # encoding: [0xc3]
@@ -33,12 +37,16 @@ define void @foo8(i64 %val) {
 ; PIC-NEXT:    .cfi_def_cfa_offset 16
 ; PIC-NEXT:    cmpq $cmp8@ABS8, %rdi # encoding: [0x48,0x83,0xff,A]
 ; PIC-NEXT:    # fixup A - offset: 3, value: cmp8@ABS8, kind: FK_Data_1
-; PIC-NEXT:    ja .LBB0_2 # encoding: [0x77,A]
-; PIC-NEXT:    # fixup A - offset: 1, value: .LBB0_2-1, kind: FK_PCRel_1
-; PIC-NEXT:  # %bb.1: # %t
+; PIC-NEXT:    jbe .LBB0_1 # encoding: [0x76,A]
+; PIC-NEXT:    # fixup A - offset: 1, value: .LBB0_1-1, kind: FK_PCRel_1
+; PIC-NEXT:  # %bb.2: # %f
+; PIC-NEXT:    popq %rax # encoding: [0x58]
+; PIC-NEXT:    .cfi_def_cfa_offset 8
+; PIC-NEXT:    retq # encoding: [0xc3]
+; PIC-NEXT:  .LBB0_1: # %t
+; PIC-NEXT:    .cfi_def_cfa_offset 16
 ; PIC-NEXT:    callq f@PLT # encoding: [0xe8,A,A,A,A]
 ; PIC-NEXT:    # fixup A - offset: 1, value: f@PLT-4, kind: FK_PCRel_4
-; PIC-NEXT:  .LBB0_2: # %f
 ; PIC-NEXT:    popq %rax # encoding: [0x58]
 ; PIC-NEXT:    .cfi_def_cfa_offset 8
 ; PIC-NEXT:    retq # encoding: [0xc3]
@@ -60,12 +68,16 @@ define void @foo32(i64 %val) {
 ; NOPIC-NEXT:    .cfi_def_cfa_offset 16
 ; NOPIC-NEXT:    cmpq $cmp32, %rdi # encoding: [0x48,0x81,0xff,A,A,A,A]
 ; NOPIC-NEXT:    # fixup A - offset: 3, value: cmp32, kind: reloc_signed_4byte
-; NOPIC-NEXT:    ja .LBB1_2 # encoding: [0x77,A]
-; NOPIC-NEXT:    # fixup A - offset: 1, value: .LBB1_2-1, kind: FK_PCRel_1
-; NOPIC-NEXT:  # %bb.1: # %t
+; NOPIC-NEXT:    jbe .LBB1_1 # encoding: [0x76,A]
+; NOPIC-NEXT:    # fixup A - offset: 1, value: .LBB1_1-1, kind: FK_PCRel_1
+; NOPIC-NEXT:  # %bb.2: # %f
+; NOPIC-NEXT:    popq %rax # encoding: [0x58]
+; NOPIC-NEXT:    .cfi_def_cfa_offset 8
+; NOPIC-NEXT:    retq # encoding: [0xc3]
+; NOPIC-NEXT:  .LBB1_1: # %t
+; NOPIC-NEXT:    .cfi_def_cfa_offset 16
 ; NOPIC-NEXT:    callq f # encoding: [0xe8,A,A,A,A]
 ; NOPIC-NEXT:    # fixup A - offset: 1, value: f-4, kind: reloc_branch_4byte_pcrel
-; NOPIC-NEXT:  .LBB1_2: # %f
 ; NOPIC-NEXT:    popq %rax # encoding: [0x58]
 ; NOPIC-NEXT:    .cfi_def_cfa_offset 8
 ; NOPIC-NEXT:    retq # encoding: [0xc3]
@@ -76,12 +88,16 @@ define void @foo32(i64 %val) {
 ; PIC-NEXT:    .cfi_def_cfa_offset 16
 ; PIC-NEXT:    cmpq $cmp32, %rdi # encoding: [0x48,0x81,0xff,A,A,A,A]
 ; PIC-NEXT:    # fixup A - offset: 3, value: cmp32, kind: reloc_signed_4byte
-; PIC-NEXT:    ja .LBB1_2 # encoding: [0x77,A]
-; PIC-NEXT:    # fixup A - offset: 1, value: .LBB1_2-1, kind: FK_PCRel_1
-; PIC-NEXT:  # %bb.1: # %t
+; PIC-NEXT:    jbe .LBB1_1 # encoding: [0x76,A]
+; PIC-NEXT:    # fixup A - offset: 1, value: .LBB1_1-1, kind: FK_PCRel_1
+; PIC-NEXT:  # %bb.2: # %f
+; PIC-NEXT:    popq %rax # encoding: [0x58]
+; PIC-NEXT:    .cfi_def_cfa_offset 8
+; PIC-NEXT:    retq # encoding: [0xc3]
+; PIC-NEXT:  .LBB1_1: # %t
+; PIC-NEXT:    .cfi_def_cfa_offset 16
 ; PIC-NEXT:    callq f@PLT # encoding: [0xe8,A,A,A,A]
 ; PIC-NEXT:    # fixup A - offset: 1, value: f@PLT-4, kind: FK_PCRel_4
-; PIC-NEXT:  .LBB1_2: # %f
 ; PIC-NEXT:    popq %rax # encoding: [0x58]
 ; PIC-NEXT:    .cfi_def_cfa_offset 8
 ; PIC-NEXT:    retq # encoding: [0xc3]

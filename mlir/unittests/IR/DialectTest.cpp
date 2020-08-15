@@ -26,12 +26,12 @@ struct AnotherTestDialect : public Dialect {
 };
 
 TEST(DialectDeathTest, MultipleDialectsWithSameNamespace) {
-  MLIRContext context;
+  MLIRContext context(false);
 
   // Registering a dialect with the same namespace twice should result in a
   // failure.
-  context.getOrCreateDialect<TestDialect>();
-  ASSERT_DEATH(context.getOrCreateDialect<AnotherTestDialect>(), "");
+  context.getOrLoadDialect<TestDialect>();
+  ASSERT_DEATH(context.getOrLoadDialect<AnotherTestDialect>(), "");
 }
 
 } // end namespace

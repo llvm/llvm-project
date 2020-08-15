@@ -6,8 +6,7 @@ declare void @llvm.amdgcn.buffer.store.v2i16(<2 x i16>, <4 x i32>, i32, i32, i1 
 
 define hidden <2 x i16> @buffer_load_v2i16(i16* %0, i32 %1, i32 %2) local_unnamed_addr {
 ; GFX900-LABEL: buffer_load_v2i16:
-; GFX900:       buffer_load_v2i16$local:
-; GFX900-NEXT:  ; %bb.0:
+; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    v_mov_b32_e32 v4, -1
 ; GFX900-NEXT:    v_mov_b32_e32 v5, 0x27000
@@ -43,8 +42,7 @@ define hidden <2 x i16> @buffer_load_v2i16(i16* %0, i32 %1, i32 %2) local_unname
 
 define hidden void @buffer_store_v2i16(i16* nocapture readonly %0, i16* %1, i32 %2, i32 %3) local_unnamed_addr {
 ; GFX900-LABEL: buffer_store_v2i16:
-; GFX900:       buffer_store_v2i16$local:
-; GFX900-NEXT:  ; %bb.0:
+; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    flat_load_ushort v1, v[0:1]
 ; GFX900-NEXT:    v_add_lshl_u32 v0, v5, v4, 1

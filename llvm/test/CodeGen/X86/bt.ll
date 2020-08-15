@@ -611,21 +611,23 @@ define void @query3(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    btl %ecx, %eax
-; X86-NEXT:    jae .LBB16_2
-; X86-NEXT:  # %bb.1: # %bb
+; X86-NEXT:    jb .LBB16_1
+; X86-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB16_1: # %bb
 ; X86-NEXT:    calll foo
-; X86-NEXT:  .LBB16_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: query3:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    btl %esi, %edi
-; X64-NEXT:    jae .LBB16_2
-; X64-NEXT:  # %bb.1: # %bb
+; X64-NEXT:    jb .LBB16_1
+; X64-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB16_1: # %bb
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq foo
 ; X64-NEXT:    popq %rax
-; X64-NEXT:  .LBB16_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
 entry:
   %tmp29 = shl i32 1, %n
@@ -647,21 +649,23 @@ define void @query3b(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    btl %ecx, %eax
-; X86-NEXT:    jae .LBB17_2
-; X86-NEXT:  # %bb.1: # %bb
+; X86-NEXT:    jb .LBB17_1
+; X86-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB17_1: # %bb
 ; X86-NEXT:    calll foo
-; X86-NEXT:  .LBB17_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: query3b:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    btl %esi, %edi
-; X64-NEXT:    jae .LBB17_2
-; X64-NEXT:  # %bb.1: # %bb
+; X64-NEXT:    jb .LBB17_1
+; X64-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB17_1: # %bb
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq foo
 ; X64-NEXT:    popq %rax
-; X64-NEXT:  .LBB17_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
 entry:
   %tmp29 = shl i32 1, %n
@@ -683,21 +687,23 @@ define void @query3x(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    btl %ecx, %eax
-; X86-NEXT:    jae .LBB18_2
-; X86-NEXT:  # %bb.1: # %bb
+; X86-NEXT:    jb .LBB18_1
+; X86-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB18_1: # %bb
 ; X86-NEXT:    calll foo
-; X86-NEXT:  .LBB18_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: query3x:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    btl %esi, %edi
-; X64-NEXT:    jae .LBB18_2
-; X64-NEXT:  # %bb.1: # %bb
+; X64-NEXT:    jb .LBB18_1
+; X64-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB18_1: # %bb
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq foo
 ; X64-NEXT:    popq %rax
-; X64-NEXT:  .LBB18_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
 entry:
   %tmp29 = shl i32 1, %n
@@ -719,21 +725,23 @@ define void @query3bx(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    btl %ecx, %eax
-; X86-NEXT:    jae .LBB19_2
-; X86-NEXT:  # %bb.1: # %bb
+; X86-NEXT:    jb .LBB19_1
+; X86-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB19_1: # %bb
 ; X86-NEXT:    calll foo
-; X86-NEXT:  .LBB19_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: query3bx:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    btl %esi, %edi
-; X64-NEXT:    jae .LBB19_2
-; X64-NEXT:  # %bb.1: # %bb
+; X64-NEXT:    jb .LBB19_1
+; X64-NEXT:  # %bb.2: # %UnifiedReturnBlock
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB19_1: # %bb
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq foo
 ; X64-NEXT:    popq %rax
-; X64-NEXT:  .LBB19_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
 entry:
   %tmp29 = shl i32 1, %n
