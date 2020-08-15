@@ -175,11 +175,10 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "MLIR modular optimizer driver\n");
 
   if(showDialects) {
-    llvm::outs() << "Registered Dialects:\n";
-    MLIRContext context;
-    for(Dialect *dialect : context.getRegisteredDialects()) {
-      llvm::outs() << dialect->getNamespace() << "\n";
-    }
+    MLIRContext context(false);
+    registerAllDialects(&context);
+    llvm::outs() << "Available Dialects:\n";
+    interleave(context.getAvailableDialects(), llvm::outs(), "\n");
     return 0;
   }
 

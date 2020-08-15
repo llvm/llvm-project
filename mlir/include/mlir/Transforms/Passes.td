@@ -162,6 +162,8 @@ def BufferPlacement : FunctionPass<"buffer-placement"> {
 
   }];
   let constructor = "mlir::createBufferPlacementPass()";
+  // TODO: this pass likely shouldn't depend on Linalg?
+  let dependentDialects = ["linalg::LinalgDialect"];
 }
 
 def Canonicalizer : Pass<"canonicalize"> {

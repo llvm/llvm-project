@@ -61,17 +61,26 @@ filterForDialect(ArrayRef<llvm::Record *> records, Dialect &dialect) {
 ///
 /// {0}: The name of the dialect class.
 /// {1}: The dialect namespace.
+/// {2}: initialization code that is emitted in the ctor body before calling
+/// initialize()
 static const char *const dialectDeclBeginStr = R"(
 class {0} : public ::mlir::Dialect {
   explicit {0}(::mlir::MLIRContext *context)
     : ::mlir::Dialect(getDialectNamespace(), context,
       ::mlir::TypeID::get<{0}>()) {{
+    {2}
     initialize();
   }
   void initialize();
   friend class ::mlir::MLIRContext;
 public:
   static ::llvm::StringRef getDialectNamespace() { return "{1}"; }
+)";
+
+/// Registration for a single dependent dialect: to be inserted in the ctor
+/// above for each dependent dialect.
+const char *const dialectRegistrationTemplate = R"(
+    getContext()->getOrLoadDialect<{0}>();
 )";
 
 /// The code block for the attribute parser/printer hooks.
@@ -136,9 +145,18 @@ static void emitDialectDecl(Dialect &dialect,
                             iterator_range<DialectFilterIterator> dialectAttrs,
                             iterator_range<DialectFilterIterator> dialectTypes,
                             raw_ostream &os) {
+  /// Build the list of dependent dialects
+  std::string dependentDialectRegistrations;
+  {
+    llvm::raw_string_ostream dialectsOs(dependentDialectRegistrations);
+    for (StringRef dependentDialect : dialect.getDependentDialects())
+      dialectsOs << llvm::formatv(dialectRegistrationTemplate,
+                                  dependentDialect);
+  }
   // Emit the start of the decl.
   std::string cppName = dialect.getCppClassName();
-  os << llvm::formatv(dialectDeclBeginStr, cppName, dialect.getName());
+  os << llvm::formatv(dialectDeclBeginStr, cppName, dialect.getName(),
+                      dependentDialectRegistrations);
 
   // Check for any attributes/types registered to this dialect.  If there are,
   // add the hooks for parsing/printing.
