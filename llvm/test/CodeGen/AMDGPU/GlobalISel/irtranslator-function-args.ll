@@ -1947,11 +1947,11 @@ define void @byval_a3i32_align128_byval_i16_align64([3 x i32] addrspace(5)* byva
   ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s16) = G_LOAD [[COPY1]](p5) :: (dereferenceable load (s16) from %ir.arg1, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[LOAD]](s32), [[C]](p1) :: (store (s32) into `[3 x i32] addrspace(1)* null`, addrspace 1)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p1) = G_PTR_ADD [[C]], [[C3]](s64)
-  ; CHECK-NEXT:   G_STORE [[LOAD1]](s32), [[PTR_ADD2]](p1) :: (store (s32) into `[3 x i32] addrspace(1)* null` + 4, addrspace 1)
-  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p1) = G_PTR_ADD [[C]], [[C4]](s64)
-  ; CHECK-NEXT:   G_STORE [[LOAD2]](s32), [[PTR_ADD3]](p1) :: (store (s32) into `[3 x i32] addrspace(1)* null` + 8, addrspace 1)
+  ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(p1) = G_CONSTANT i64 4
+  ; CHECK-NEXT:   G_STORE [[LOAD1]](s32), [[C4]](p1) :: (store (s32) into `[3 x i32] addrspace(1)* null` + 4, addrspace 1)
+  ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(p1) = G_CONSTANT i64 8
+  ; CHECK-NEXT:   G_STORE [[LOAD2]](s32), [[C6]](p1) :: (store (s32) into `[3 x i32] addrspace(1)* null` + 8, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[LOAD3]](s16), [[COPY3]](p1) :: (store (s16) into `i16 addrspace(1)* null`, addrspace 1)
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
   ; CHECK-NEXT:   S_SETPC_B64_return [[COPY4]]

@@ -5184,22 +5184,22 @@ define amdgpu_ps void @amdgpu_ps_call_default_cc() {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY [[DEF]](p4)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(p4) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[C1]], [[C2]](s64)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p4) = COPY [[C1]](p4)
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY [[DEF2]](s32)
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[DEF2]](s32)
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[DEF2]](s32)
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY4]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[DEF2]](s32)
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(<4 x s32>) = COPY $private_rsrc_reg
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY5]](<4 x s32>)
   ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[DEF]](p4)
   ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY]](p4)
-  ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[PTR_ADD]](p4)
+  ; CHECK-NEXT:   $sgpr8_sgpr9 = COPY [[COPY1]](p4)
   ; CHECK-NEXT:   $sgpr10_sgpr11 = COPY [[DEF1]](s64)
   ; CHECK-NEXT:   $sgpr12 = COPY [[DEF2]](s32)
-  ; CHECK-NEXT:   $sgpr13 = COPY [[COPY1]](s32)
-  ; CHECK-NEXT:   $sgpr14 = COPY [[COPY2]](s32)
-  ; CHECK-NEXT:   $vgpr31 = COPY [[COPY3]](s32)
+  ; CHECK-NEXT:   $sgpr13 = COPY [[COPY2]](s32)
+  ; CHECK-NEXT:   $sgpr14 = COPY [[COPY3]](s32)
+  ; CHECK-NEXT:   $vgpr31 = COPY [[COPY4]](s32)
   ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[C]](p0), 0, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_ENDPGM 0

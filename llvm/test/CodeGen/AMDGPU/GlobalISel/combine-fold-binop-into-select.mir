@@ -342,12 +342,9 @@ body: |
     ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
     ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %ten:_(p3) = G_CONSTANT i32 10
-    ; CHECK-NEXT: %twenty:_(p3) = G_CONSTANT i32 20
-    ; CHECK-NEXT: %thirty:_(s32) = G_CONSTANT i32 30
-    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p3) = G_PTR_ADD %ten, %thirty(s32)
-    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p3) = G_PTR_ADD %twenty, %thirty(s32)
-    ; CHECK-NEXT: %ptr_add:_(p3) = G_SELECT %cond(s1), [[PTR_ADD]], [[PTR_ADD1]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(p3) = G_CONSTANT i32 40
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(p3) = G_CONSTANT i32 50
+    ; CHECK-NEXT: %ptr_add:_(p3) = G_SELECT %cond(s1), [[C]], [[C1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit %ptr_add(p3)
     %reg:_(s32) = COPY $vgpr0
     %zero:_(s32) = G_CONSTANT i32 0
@@ -372,12 +369,9 @@ body: |
     ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
     ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %ten:_(s32) = G_CONSTANT i32 10
-    ; CHECK-NEXT: %twenty:_(s32) = G_CONSTANT i32 20
-    ; CHECK-NEXT: %thirty:_(p3) = G_CONSTANT i32 30
-    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p3) = G_PTR_ADD %thirty, %ten(s32)
-    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p3) = G_PTR_ADD %thirty, %twenty(s32)
-    ; CHECK-NEXT: %ptr_add:_(p3) = G_SELECT %cond(s1), [[PTR_ADD]], [[PTR_ADD1]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(p3) = G_CONSTANT i32 40
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(p3) = G_CONSTANT i32 50
+    ; CHECK-NEXT: %ptr_add:_(p3) = G_SELECT %cond(s1), [[C]], [[C1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit %ptr_add(p3)
     %reg:_(s32) = COPY $vgpr0
     %zero:_(s32) = G_CONSTANT i32 0

@@ -174,6 +174,7 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
   default:
     break;
   case TargetOpcode::G_ADD:
+  case TargetOpcode::G_PTR_ADD:
   case TargetOpcode::G_AND:
   case TargetOpcode::G_ASHR:
   case TargetOpcode::G_LSHR:
@@ -193,7 +194,13 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
     // Try to constant fold these.
     assert(SrcOps.size() == 2 && "Invalid sources");
     assert(DstOps.size() == 1 && "Invalid dsts");
-    if (SrcOps[0].getLLTTy(*getMRI()).isVector()) {
+    LLT SrcTy = SrcOps[0].getLLTTy(*getMRI());
+
+    if (Opc == TargetOpcode::G_PTR_ADD &&
+        getDataLayout().isNonIntegralAddressSpace(SrcTy.getAddressSpace()))
+      break;
+
+    if (SrcTy.isVector()) {
       // Try to constant fold vector constants.
       Register VecCst = ConstantFoldVectorBinop(
           Opc, SrcOps[0].getReg(), SrcOps[1].getReg(), *getMRI(), *this);
@@ -201,6 +208,7 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
         return buildCopy(DstOps[0], VecCst);
       break;
     }
+
     if (Optional<APInt> Cst = ConstantFoldBinOp(Opc, SrcOps[0].getReg(),
                                                 SrcOps[1].getReg(), *getMRI()))
       return buildConstant(DstOps[0], *Cst);
