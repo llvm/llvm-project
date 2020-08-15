@@ -163,6 +163,8 @@ def ABSri   : P2InstCZIDS<0b0110010, 0b001, always, (outs P2GPR:$d), (ins s9imm:
 def NEGrr   : P2InstCZIDS<0b0110011, 0b000, always, (outs P2GPR:$d), (ins P2GPR:$s), "neg $d, $s", [(set P2GPR:$d, (ineg P2GPR:$s))]>;
 def NEGri   : P2InstCZIDS<0b0110011, 0b001, always, (outs P2GPR:$d), (ins s9imm:$s), "neg $d, #$s", [(set P2GPR:$d, (ineg imm9:$s))]>;
 
+def REVr    : P2InstD<0b1101011, 0b001101001, always, (outs P2GPR:$d), (ins P2GPR:$s), "rev $d", [(set P2GPR:$d, (bitreverse P2GPR:$s))]>;
+
 def ENCODrr : P2InstCZIDS<0b0111100, 0b000, always, (outs P2GPR:$d), (ins P2GPR:$s), "encod $d, $s", []>;
 
 def : Pat<(sext_inreg P2GPR:$d, i1), (SIGNXri P2GPR:$d, 0)>;
