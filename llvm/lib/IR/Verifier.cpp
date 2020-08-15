@@ -2136,10 +2136,9 @@ void Verifier::verifyStatepoint(const CallBase &Call) {
   Assert(NumDeoptArgs == 0,
          "gc.statepoint w/inline deopt operands is deprecated", Call);
 
-  const int ExpectedNumArgs =
-      7 + NumCallArgs + NumTransitionArgs + NumDeoptArgs;
-  Assert(ExpectedNumArgs <= (int)Call.arg_size(),
-         "gc.statepoint too few arguments according to length fields", Call);
+  const int ExpectedNumArgs = 7 + NumCallArgs;
+  Assert(ExpectedNumArgs == (int)Call.arg_size(),
+         "gc.statepoint too many arguments", Call);
 
   // Check that the only uses of this gc.statepoint are gc.result or
   // gc.relocate calls which are tied to this statepoint and thus part
