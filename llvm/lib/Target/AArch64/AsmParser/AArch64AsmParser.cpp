@@ -186,12 +186,14 @@ private:
 
   bool parseDirectiveSEHAllocStack(SMLoc L);
   bool parseDirectiveSEHPrologEnd(SMLoc L);
+  bool parseDirectiveSEHSaveR19R20X(SMLoc L);
   bool parseDirectiveSEHSaveFPLR(SMLoc L);
   bool parseDirectiveSEHSaveFPLRX(SMLoc L);
   bool parseDirectiveSEHSaveReg(SMLoc L);
   bool parseDirectiveSEHSaveRegX(SMLoc L);
   bool parseDirectiveSEHSaveRegP(SMLoc L);
   bool parseDirectiveSEHSaveRegPX(SMLoc L);
+  bool parseDirectiveSEHSaveLRPair(SMLoc L);
   bool parseDirectiveSEHSaveFReg(SMLoc L);
   bool parseDirectiveSEHSaveFRegX(SMLoc L);
   bool parseDirectiveSEHSaveFRegP(SMLoc L);
@@ -199,8 +201,13 @@ private:
   bool parseDirectiveSEHSetFP(SMLoc L);
   bool parseDirectiveSEHAddFP(SMLoc L);
   bool parseDirectiveSEHNop(SMLoc L);
+  bool parseDirectiveSEHSaveNext(SMLoc L);
   bool parseDirectiveSEHEpilogStart(SMLoc L);
   bool parseDirectiveSEHEpilogEnd(SMLoc L);
+  bool parseDirectiveSEHTrapFrame(SMLoc L);
+  bool parseDirectiveSEHMachineFrame(SMLoc L);
+  bool parseDirectiveSEHContext(SMLoc L);
+  bool parseDirectiveSEHClearUnwoundToCall(SMLoc L);
 
   bool validateInstruction(MCInst &Inst, SMLoc &IDLoc,
                            SmallVectorImpl<SMLoc> &Loc);
@@ -5174,6 +5181,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
       parseDirectiveSEHAllocStack(Loc);
     else if (IDVal == ".seh_endprologue")
       parseDirectiveSEHPrologEnd(Loc);
+    else if (IDVal == ".seh_save_r19r20_x")
+      parseDirectiveSEHSaveR19R20X(Loc);
     else if (IDVal == ".seh_save_fplr")
       parseDirectiveSEHSaveFPLR(Loc);
     else if (IDVal == ".seh_save_fplr_x")
@@ -5186,6 +5195,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
       parseDirectiveSEHSaveRegP(Loc);
     else if (IDVal == ".seh_save_regp_x")
       parseDirectiveSEHSaveRegPX(Loc);
+    else if (IDVal == ".seh_save_lrpair")
+      parseDirectiveSEHSaveLRPair(Loc);
     else if (IDVal == ".seh_save_freg")
       parseDirectiveSEHSaveFReg(Loc);
     else if (IDVal == ".seh_save_freg_x")
@@ -5200,10 +5211,20 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
       parseDirectiveSEHAddFP(Loc);
     else if (IDVal == ".seh_nop")
       parseDirectiveSEHNop(Loc);
+    else if (IDVal == ".seh_save_next")
+      parseDirectiveSEHSaveNext(Loc);
     else if (IDVal == ".seh_startepilogue")
       parseDirectiveSEHEpilogStart(Loc);
     else if (IDVal == ".seh_endepilogue")
       parseDirectiveSEHEpilogEnd(Loc);
+    else if (IDVal == ".seh_trap_frame")
+      parseDirectiveSEHTrapFrame(Loc);
+    else if (IDVal == ".seh_pushframe")
+      parseDirectiveSEHMachineFrame(Loc);
+    else if (IDVal == ".seh_context")
+      parseDirectiveSEHContext(Loc);
+    else if (IDVal == ".seh_clear_unwound_to_call")
+      parseDirectiveSEHClearUnwoundToCall(Loc);
     else
       return true;
   } else
@@ -5645,6 +5666,16 @@ bool AArch64AsmParser::parseDirectiveSEHPrologEnd(SMLoc L) {
   return false;
 }
 
+/// parseDirectiveSEHSaveR19R20X
+/// ::= .seh_save_r19r20_x
+bool AArch64AsmParser::parseDirectiveSEHSaveR19R20X(SMLoc L) {
+  int64_t Offset;
+  if (parseImmExpr(Offset))
+    return true;
+  getTargetStreamer().EmitARM64WinCFISaveR19R20X(Offset);
+  return false;
+}
+
 /// parseDirectiveSEHSaveFPLR
 /// ::= .seh_save_fplr
 bool AArch64AsmParser::parseDirectiveSEHSaveFPLR(SMLoc L) {
@@ -5710,6 +5741,22 @@ bool AArch64AsmParser::parseDirectiveSEHSaveRegPX(SMLoc L) {
       parseComma() || parseImmExpr(Offset))
     return true;
   getTargetStreamer().EmitARM64WinCFISaveRegPX(Reg, Offset);
+  return false;
+}
+
+/// parseDirectiveSEHSaveLRPair
+/// ::= .seh_save_lrpair
+bool AArch64AsmParser::parseDirectiveSEHSaveLRPair(SMLoc L) {
+  unsigned Reg;
+  int64_t Offset;
+  L = getLoc();
+  if (parseRegisterInRange(Reg, AArch64::X0, AArch64::X19, AArch64::LR) ||
+      parseComma() || parseImmExpr(Offset))
+    return true;
+  if (check(((Reg - 19) % 2 != 0), L,
+            "expected register with even offset from x19"))
+    return true;
+  getTargetStreamer().EmitARM64WinCFISaveLRPair(Reg, Offset);
   return false;
 }
 
@@ -5785,6 +5832,13 @@ bool AArch64AsmParser::parseDirectiveSEHNop(SMLoc L) {
   return false;
 }
 
+/// parseDirectiveSEHSaveNext
+/// ::= .seh_save_next
+bool AArch64AsmParser::parseDirectiveSEHSaveNext(SMLoc L) {
+  getTargetStreamer().EmitARM64WinCFISaveNext();
+  return false;
+}
+
 /// parseDirectiveSEHEpilogStart
 /// ::= .seh_startepilogue
 bool AArch64AsmParser::parseDirectiveSEHEpilogStart(SMLoc L) {
@@ -5796,6 +5850,34 @@ bool AArch64AsmParser::parseDirectiveSEHEpilogStart(SMLoc L) {
 /// ::= .seh_endepilogue
 bool AArch64AsmParser::parseDirectiveSEHEpilogEnd(SMLoc L) {
   getTargetStreamer().EmitARM64WinCFIEpilogEnd();
+  return false;
+}
+
+/// parseDirectiveSEHTrapFrame
+/// ::= .seh_trap_frame
+bool AArch64AsmParser::parseDirectiveSEHTrapFrame(SMLoc L) {
+  getTargetStreamer().EmitARM64WinCFITrapFrame();
+  return false;
+}
+
+/// parseDirectiveSEHMachineFrame
+/// ::= .seh_pushframe
+bool AArch64AsmParser::parseDirectiveSEHMachineFrame(SMLoc L) {
+  getTargetStreamer().EmitARM64WinCFIMachineFrame();
+  return false;
+}
+
+/// parseDirectiveSEHContext
+/// ::= .seh_context
+bool AArch64AsmParser::parseDirectiveSEHContext(SMLoc L) {
+  getTargetStreamer().EmitARM64WinCFIContext();
+  return false;
+}
+
+/// parseDirectiveSEHClearUnwoundToCall
+/// ::= .seh_clear_unwound_to_call
+bool AArch64AsmParser::parseDirectiveSEHClearUnwoundToCall(SMLoc L) {
+  getTargetStreamer().EmitARM64WinCFIClearUnwoundToCall();
   return false;
 }
 

@@ -280,6 +280,9 @@ ARM64CountOfUnwindCodes(const std::vector<WinEH::Instruction> &Insns) {
     case Win64EH::UOP_AllocLarge:
       Count += 4;
       break;
+    case Win64EH::UOP_SaveR19R20X:
+      Count += 1;
+      break;
     case Win64EH::UOP_SaveFPLRX:
       Count += 1;
       break;
@@ -296,6 +299,9 @@ ARM64CountOfUnwindCodes(const std::vector<WinEH::Instruction> &Insns) {
       Count += 2;
       break;
     case Win64EH::UOP_SaveRegX:
+      Count += 2;
+      break;
+    case Win64EH::UOP_SaveLRPair:
       Count += 2;
       break;
     case Win64EH::UOP_SaveFReg:
@@ -320,6 +326,21 @@ ARM64CountOfUnwindCodes(const std::vector<WinEH::Instruction> &Insns) {
       Count += 1;
       break;
     case Win64EH::UOP_End:
+      Count += 1;
+      break;
+    case Win64EH::UOP_SaveNext:
+      Count += 1;
+      break;
+    case Win64EH::UOP_TrapFrame:
+      Count += 1;
+      break;
+    case Win64EH::UOP_PushMachFrame:
+      Count += 1;
+      break;
+    case Win64EH::UOP_Context:
+      Count += 1;
+      break;
+    case Win64EH::UOP_ClearUnwoundToCall:
       Count += 1;
       break;
     }
@@ -375,6 +396,11 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer, const MCSymbol *begin,
     b = 0xE3;
     streamer.emitInt8(b);
     break;
+  case Win64EH::UOP_SaveR19R20X:
+    b = 0x20;
+    b |= (inst.Offset >> 3) & 0x1F;
+    streamer.emitInt8(b);
+    break;
   case Win64EH::UOP_SaveFPLRX:
     b = 0x80;
     b |= ((inst.Offset - 1) >> 3) & 0x3F;
@@ -417,6 +443,16 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer, const MCSymbol *begin,
     b = ((reg & 0x3) << 6) | ((inst.Offset >> 3) - 1);
     streamer.emitInt8(b);
     break;
+  case Win64EH::UOP_SaveLRPair:
+    assert(inst.Register >= 19 && "Saved reg must be >= 19");
+    reg = inst.Register - 19;
+    assert((reg % 2) == 0 && "Saved reg must be 19+2*X");
+    reg /= 2;
+    b = 0xD6 | ((reg & 0x7) >> 2);
+    streamer.emitInt8(b);
+    b = ((reg & 0x3) << 6) | (inst.Offset >> 3);
+    streamer.emitInt8(b);
+    break;
   case Win64EH::UOP_SaveFReg:
     assert(inst.Register >= 8 && "Saved dreg must be >= 8");
     reg = inst.Register - 8;
@@ -451,6 +487,26 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer, const MCSymbol *begin,
     break;
   case Win64EH::UOP_End:
     b = 0xE4;
+    streamer.emitInt8(b);
+    break;
+  case Win64EH::UOP_SaveNext:
+    b = 0xE6;
+    streamer.emitInt8(b);
+    break;
+  case Win64EH::UOP_TrapFrame:
+    b = 0xE8;
+    streamer.emitInt8(b);
+    break;
+  case Win64EH::UOP_PushMachFrame:
+    b = 0xE9;
+    streamer.emitInt8(b);
+    break;
+  case Win64EH::UOP_Context:
+    b = 0xEA;
+    streamer.emitInt8(b);
+    break;
+  case Win64EH::UOP_ClearUnwoundToCall:
+    b = 0xEC;
     streamer.emitInt8(b);
     break;
   }
