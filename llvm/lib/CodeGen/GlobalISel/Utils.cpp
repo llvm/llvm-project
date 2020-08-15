@@ -365,7 +365,7 @@ getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
   while (DefMI->getOpcode() == TargetOpcode::COPY) {
     Register SrcReg = DefMI->getOperand(1).getReg();
     auto SrcTy = MRI.getType(SrcReg);
-    if (!SrcTy.isValid() || SrcTy != DstTy)
+    if (!SrcTy.isValid())
       break;
     DefMI = MRI.getVRegDef(SrcReg);
     DefSrcReg = SrcReg;
