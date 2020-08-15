@@ -355,7 +355,7 @@ multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
 
   def _SADDR : FLAT_AtomicNoRet_Pseudo <opName,
     (outs),
-    (ins VReg_64:$vaddr, data_rc:$vdata, SReg_64:$saddr, flat_offset:$offset, SLC_0:$slc),
+    (ins VGPR_32:$vaddr, data_rc:$vdata, SReg_64:$saddr, flat_offset:$offset, SLC_0:$slc),
     " $vaddr, $vdata, $saddr$offset$slc">,
     GlobalSaddrTable<1, opName>,
     AtomicNoRet <opName#"_saddr", 0> {
@@ -389,7 +389,7 @@ multiclass FLAT_Global_Atomic_Pseudo_RTN<
 
   def _SADDR_RTN : FLAT_AtomicRet_Pseudo <opName,
     (outs vdst_rc:$vdst),
-      (ins VReg_64:$vaddr, data_rc:$vdata, SReg_64:$saddr, flat_offset:$offset, SLC_0:$slc),
+      (ins VGPR_32:$vaddr, data_rc:$vdata, SReg_64:$saddr, flat_offset:$offset, SLC_0:$slc),
     " $vdst, $vaddr, $vdata, $saddr$offset glc$slc">,
     GlobalSaddrTable<1, opName#"_rtn">,
     AtomicNoRet <opName#"_saddr", 1> {
