@@ -866,6 +866,19 @@ def AffineVectorLoadOp : AffineLoadOpBase<"vector_load"> {
 
   let results = (outs AnyVector:$result);
 
+  let builders = [
+    /// Builds an affine vector load op with the specified map and operands.
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
+              "VectorType resultType, AffineMap map, ValueRange operands">,
+    /// Builds an affine vector load op with an identity map and operands.
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
+              "VectorType resultType, Value memref, ValueRange indices = {}">,
+    /// Builds an affine vector load op with the specified map and its operands.
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
+              "VectorType resultType, Value memref, AffineMap map, "
+              "ValueRange mapOperands">
+  ];
+
   let extraClassDeclaration = extraClassDeclarationBase # [{
     VectorType getVectorType() {
       return result().getType().cast<VectorType>();
@@ -919,6 +932,15 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
       Arg<AnyMemRef, "the reference to store to",
       [MemWrite]>:$memref,
       Variadic<Index>:$indices);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
+                      "Value valueToStore, Value memref, ValueRange indices">,
+    OpBuilder<"OpBuilder &builder, OperationState &result, "
+                      "Value valueToStore, Value memref, AffineMap map, "
+                      "ValueRange mapOperands">
+  ];
 
   let extraClassDeclaration = extraClassDeclarationBase # [{
     VectorType getVectorType() {
