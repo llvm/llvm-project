@@ -15,7 +15,8 @@
 class OpenMPLoweringTest : public testing::Test {
 protected:
   void SetUp() override {
-    ctx.loadDialect<mlir::omp::OpenMPDialect>();
+    mlir::registerDialect<mlir::omp::OpenMPDialect>();
+    mlir::registerAllDialects(&ctx);
     mlirOpBuilder.reset(new mlir::OpBuilder(&ctx));
   }
 

@@ -36,18 +36,16 @@ using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 
 static MLIRContext &globalContext() {
-  static thread_local MLIRContext context(/*loadAllDialects=*/false);
-  static thread_local bool initOnce = [&]() {
-    // clang-format off
-    context.loadDialect<AffineDialect,
-                        scf::SCFDialect,
-                        linalg::LinalgDialect,
-                        StandardOpsDialect,
-                        vector::VectorDialect>();
-    // clang-format on
+  static bool init_once = []() {
+    registerDialect<AffineDialect>();
+    registerDialect<linalg::LinalgDialect>();
+    registerDialect<scf::SCFDialect>();
+    registerDialect<StandardOpsDialect>();
+    registerDialect<vector::VectorDialect>();
     return true;
   }();
-  (void)initOnce;
+  (void)init_once;
+  static thread_local MLIRContext context;
   context.allowUnregisteredDialects();
   return context;
 }

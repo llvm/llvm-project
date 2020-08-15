@@ -36,7 +36,6 @@ def SCFParallelLoopTiling : FunctionPass<"parallel-loop-tiling"> {
                "Factors to tile parallel loops by",
                "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
   ];
-  let dependentDialects = ["AffineDialect"];
 }
 
 #endif // MLIR_DIALECT_SCF_PASSES
