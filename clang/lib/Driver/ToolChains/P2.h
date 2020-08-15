@@ -14,6 +14,7 @@
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Tool.h"
 
+
 namespace clang {
   namespace driver {
     namespace toolchains {
@@ -24,6 +25,9 @@ namespace clang {
                      const llvm::opt::ArgList &Args);
         bool IsIntegratedAssemblerDefault() const override { return true; }
         bool isPICDefault() const override { return false; }
+        void AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                                      llvm::opt::ArgStringList &CC1Args) const override;
+        std::string computeSysRoot() const override;
 
       protected:
         Tool *buildLinker() const override;
@@ -36,23 +40,10 @@ namespace clang {
     namespace tools {
       namespace P2 {
 
-        // class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
-        // public:
-        //   Assembler(const ToolChain &TC)
-        //       : Tool("solaris::Assembler", "assembler", TC) {}
-
-        //   bool hasIntegratedCPP() const override { return false; }
-
-        //   void ConstructJob(Compilation &C, const JobAction &JA,
-        //                     const InputInfo &Output, const InputInfoList &Inputs,
-        //                     const llvm::opt::ArgList &TCArgs,
-        //                     const char *LinkingOutput) const override;
-        // };
-
         class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
         public:
           Linker(const llvm::Triple &Triple, const ToolChain &TC)
-              : Tool("P2::Linker", "P2-ld", TC), Triple(Triple) {}
+              : Tool("P2::Linker", "ld.lld", TC), Triple(Triple) {}
 
           bool hasIntegratedCPP() const override { return false; }
           bool isLinkJob() const override { return true; }
