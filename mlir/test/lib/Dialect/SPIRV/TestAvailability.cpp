@@ -30,7 +30,7 @@ void PrintOpAvailability::runOnFunction() {
   auto f = getFunction();
   llvm::outs() << f.getName() << "\n";
 
-  Dialect *spvDialect = getContext().getLoadedDialect("spv");
+  Dialect *spvDialect = getContext().getRegisteredDialect("spv");
 
   f.getOperation()->walk([&](Operation *op) {
     if (op->getDialect() != spvDialect)

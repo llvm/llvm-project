@@ -24,7 +24,7 @@ struct OtherAnalysis {
 };
 
 TEST(AnalysisManagerTest, FineGrainModuleAnalysisPreservation) {
-  MLIRContext context(false);
+  MLIRContext context;
 
   // Test fine grain invalidation of the module analysis manager.
   OwningModuleRef module(ModuleOp::create(UnknownLoc::get(&context)));
@@ -45,7 +45,7 @@ TEST(AnalysisManagerTest, FineGrainModuleAnalysisPreservation) {
 }
 
 TEST(AnalysisManagerTest, FineGrainFunctionAnalysisPreservation) {
-  MLIRContext context(false);
+  MLIRContext context;
   Builder builder(&context);
 
   // Create a function and a module.
@@ -74,7 +74,7 @@ TEST(AnalysisManagerTest, FineGrainFunctionAnalysisPreservation) {
 }
 
 TEST(AnalysisManagerTest, FineGrainChildFunctionAnalysisPreservation) {
-  MLIRContext context(false);
+  MLIRContext context;
   Builder builder(&context);
 
   // Create a function and a module.
@@ -117,7 +117,7 @@ struct CustomInvalidatingAnalysis {
 };
 
 TEST(AnalysisManagerTest, CustomInvalidation) {
-  MLIRContext context(false);
+  MLIRContext context;
   Builder builder(&context);
 
   // Create a function and a module.
