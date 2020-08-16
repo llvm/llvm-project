@@ -10368,10 +10368,16 @@ static IntRange GetExprRange(ASTContext &C, const Expr *E, unsigned MaxWidth,
                           MaxWidth, InConstantContext);
 
     // Otherwise, conservatively merge.
-    IntRange L =
-        GetExprRange(C, CO->getTrueExpr(), MaxWidth, InConstantContext);
-    IntRange R =
-        GetExprRange(C, CO->getFalseExpr(), MaxWidth, InConstantContext);
+    // GetExprRange requires an integer expression, but a throw expression
+    // results in a void type.
+    Expr *E = CO->getTrueExpr();
+    IntRange L = E->getType()->isVoidType()
+                     ? IntRange{0, true}
+                     : GetExprRange(C, E, MaxWidth, InConstantContext);
+    E = CO->getFalseExpr();
+    IntRange R = E->getType()->isVoidType()
+                     ? IntRange{0, true}
+                     : GetExprRange(C, E, MaxWidth, InConstantContext);
     return IntRange::join(L, R);
   }
 
