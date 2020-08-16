@@ -13,11 +13,7 @@ declare void @usei32i32agg({ i32, i32 })
 ; We should just return the source aggregate.
 define { i32, i32 } @test0({ i32, i32 } %srcagg) {
 ; CHECK-LABEL: @test0(
-; CHECK-NEXT:    [[I0:%.*]] = extractvalue { i32, i32 } [[SRCAGG:%.*]], 0
-; CHECK-NEXT:    [[I1:%.*]] = extractvalue { i32, i32 } [[SRCAGG]], 1
-; CHECK-NEXT:    [[I2:%.*]] = insertvalue { i32, i32 } undef, i32 [[I0]], 0
-; CHECK-NEXT:    [[I3:%.*]] = insertvalue { i32, i32 } [[I2]], i32 [[I1]], 1
-; CHECK-NEXT:    ret { i32, i32 } [[I3]]
+; CHECK-NEXT:    ret { i32, i32 } [[SRCAGG:%.*]]
 ;
   %i0 = extractvalue { i32, i32 } %srcagg, 0
   %i1 = extractvalue { i32, i32 } %srcagg, 1
@@ -29,11 +25,7 @@ define { i32, i32 } @test0({ i32, i32 } %srcagg) {
 ; Arrays are still aggregates
 define [2 x i32] @test1([2 x i32] %srcagg) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[I0:%.*]] = extractvalue [2 x i32] [[SRCAGG:%.*]], 0
-; CHECK-NEXT:    [[I1:%.*]] = extractvalue [2 x i32] [[SRCAGG]], 1
-; CHECK-NEXT:    [[I2:%.*]] = insertvalue [2 x i32] undef, i32 [[I0]], 0
-; CHECK-NEXT:    [[I3:%.*]] = insertvalue [2 x i32] [[I2]], i32 [[I1]], 1
-; CHECK-NEXT:    ret [2 x i32] [[I3]]
+; CHECK-NEXT:    ret [2 x i32] [[SRCAGG:%.*]]
 ;
   %i0 = extractvalue [2 x i32] %srcagg, 0
   %i1 = extractvalue [2 x i32] %srcagg, 1
@@ -83,11 +75,7 @@ define {{ i32, i32 }} @test3({{ i32, i32 }} %srcagg) {
 ; This is fine, however, all elements are on the same level
 define { i32, { i32 } } @test4({ i32, { i32 } } %srcagg) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[I0:%.*]] = extractvalue { i32, { i32 } } [[SRCAGG:%.*]], 0
-; CHECK-NEXT:    [[I1:%.*]] = extractvalue { i32, { i32 } } [[SRCAGG]], 1
-; CHECK-NEXT:    [[I2:%.*]] = insertvalue { i32, { i32 } } undef, i32 [[I0]], 0
-; CHECK-NEXT:    [[I3:%.*]] = insertvalue { i32, { i32 } } [[I2]], { i32 } [[I1]], 1
-; CHECK-NEXT:    ret { i32, { i32 } } [[I3]]
+; CHECK-NEXT:    ret { i32, { i32 } } [[SRCAGG:%.*]]
 ;
   %i0 = extractvalue { i32, { i32 } } %srcagg, 0
   %i1 = extractvalue { i32, { i32 } } %srcagg, 1
@@ -216,8 +204,7 @@ define { i32, i32 } @test12({ i32, i32 } %srcagg) {
 ; CHECK-NEXT:    call void @usei32(i32 [[I1]])
 ; CHECK-NEXT:    [[I2:%.*]] = insertvalue { i32, i32 } undef, i32 [[I0]], 0
 ; CHECK-NEXT:    call void @usei32i32agg({ i32, i32 } [[I2]])
-; CHECK-NEXT:    [[I3:%.*]] = insertvalue { i32, i32 } [[I2]], i32 [[I1]], 1
-; CHECK-NEXT:    ret { i32, i32 } [[I3]]
+; CHECK-NEXT:    ret { i32, i32 } [[SRCAGG]]
 ;
   %i0 = extractvalue { i32, i32 } %srcagg, 0
   call void @usei32(i32 %i0)
@@ -233,11 +220,7 @@ define { i32, i32 } @test12({ i32, i32 } %srcagg) {
 ; overwritten with %i0, so all is fine.
 define { i32, i32 } @test13({ i32, i32 } %srcagg) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    [[I0:%.*]] = extractvalue { i32, i32 } [[SRCAGG:%.*]], 0
-; CHECK-NEXT:    [[I1:%.*]] = extractvalue { i32, i32 } [[SRCAGG]], 1
-; CHECK-NEXT:    [[I3:%.*]] = insertvalue { i32, i32 } undef, i32 [[I0]], 0
-; CHECK-NEXT:    [[I4:%.*]] = insertvalue { i32, i32 } [[I3]], i32 [[I1]], 1
-; CHECK-NEXT:    ret { i32, i32 } [[I4]]
+; CHECK-NEXT:    ret { i32, i32 } [[SRCAGG:%.*]]
 ;
   %i0 = extractvalue { i32, i32 } %srcagg, 0
   %i1 = extractvalue { i32, i32 } %srcagg, 1
@@ -283,11 +266,7 @@ define { i32, i32 } @test16({ i32, i32 } %srcagg) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[I0:%.*]] = extractvalue { i32, i32 } [[SRCAGG:%.*]], 0
-; CHECK-NEXT:    [[I1:%.*]] = extractvalue { i32, i32 } [[SRCAGG]], 1
-; CHECK-NEXT:    [[I2:%.*]] = insertvalue { i32, i32 } undef, i32 [[I0]], 0
-; CHECK-NEXT:    [[I3:%.*]] = insertvalue { i32, i32 } [[I2]], i32 [[I1]], 1
-; CHECK-NEXT:    ret { i32, i32 } [[I3]]
+; CHECK-NEXT:    ret { i32, i32 } [[SRCAGG:%.*]]
 ;
 entry:
   br label %end
@@ -308,11 +287,7 @@ define { i32, i32 } @test17({ i32, i32 } %srcagg0, { i32, i32 } %srcagg1, i1 %c)
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[SRCAGG_PHI:%.*]] = phi { i32, i32 } [ [[SRCAGG0:%.*]], [[ENTRY:%.*]] ], [ [[SRCAGG1:%.*]], [[INTERMEDIATE]] ]
-; CHECK-NEXT:    [[I0:%.*]] = extractvalue { i32, i32 } [[SRCAGG_PHI]], 0
-; CHECK-NEXT:    [[I1:%.*]] = extractvalue { i32, i32 } [[SRCAGG_PHI]], 1
-; CHECK-NEXT:    [[I2:%.*]] = insertvalue { i32, i32 } undef, i32 [[I0]], 0
-; CHECK-NEXT:    [[I3:%.*]] = insertvalue { i32, i32 } [[I2]], i32 [[I1]], 1
-; CHECK-NEXT:    ret { i32, i32 } [[I3]]
+; CHECK-NEXT:    ret { i32, i32 } [[SRCAGG_PHI]]
 ;
 entry:
   br i1 %c, label %intermediate, label %end

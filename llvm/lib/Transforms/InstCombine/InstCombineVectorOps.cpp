@@ -18,6 +18,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/BasicBlock.h"
@@ -45,6 +46,10 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
+
+STATISTIC(NumAggregateReconstructionsSimplified,
+          "Number of aggregate reconstructions turned into reuse of the "
+          "original aggregate");
 
 /// Return true if the value is cheaper to scalarize than it is to leave as a
 /// vector operation. IsConstantExtractIndex indicates whether we are extracting
@@ -694,6 +699,243 @@ static ShuffleOps collectShuffleElements(Value *V, SmallVectorImpl<int> &Mask,
   return std::make_pair(V, nullptr);
 }
 
+/// Look for chain of insertvalue's that fully define an aggregate, and trace
+/// back the values inserted, see if they are all were extractvalue'd from
+/// the same source aggregate from the exact same element indexes.
+/// If they were, just reuse the source aggregate.
+/// This potentially deals with PHI indirections.
+Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
+    InsertValueInst &OrigIVI) {
+  BasicBlock *UseBB = OrigIVI.getParent();
+  Type *AggTy = OrigIVI.getType();
+  unsigned NumAggElts;
+  switch (AggTy->getTypeID()) {
+  case Type::StructTyID:
+    NumAggElts = AggTy->getStructNumElements();
+    break;
+  case Type::ArrayTyID:
+    NumAggElts = AggTy->getArrayNumElements();
+    break;
+  default:
+    llvm_unreachable("Unhandled aggregate type?");
+  }
+
+  // Arbitrary aggregate size cut-off. Motivation for limit of 2 is to be able
+  // to handle clang C++ exception struct (which is hardcoded as {i8*, i32}),
+  // FIXME: any interesting patterns to be caught with larger limit?
+  assert(NumAggElts > 0 && "Aggregate should have elements.");
+  if (NumAggElts > 2)
+    return nullptr;
+
+  static constexpr auto NotFound = None;
+  static constexpr auto FoundMismatch = nullptr;
+
+  // Try to find a value of each element of an aggregate.
+  // FIXME: deal with more complex, not one-dimensional, aggregate types
+  SmallVector<Optional<Value *>, 2> AggElts(NumAggElts, NotFound);
+
+  // Do we know values for each element of the aggregate?
+  auto KnowAllElts = [&AggElts]() {
+    return all_of(AggElts,
+                  [](Optional<Value *> Elt) { return Elt != NotFound; });
+  };
+
+  int Depth = 0;
+
+  // Arbitrary `insertvalue` visitation depth limit. Let's be okay with
+  // every element being overwritten twice, which should never happen.
+  static const int DepthLimit = 2 * NumAggElts;
+
+  // Recurse up the chain of `insertvalue` aggregate operands until either we've
+  // reconstructed full initializer or can't visit any more `insertvalue`'s.
+  for (InsertValueInst *CurrIVI = &OrigIVI;
+       Depth < DepthLimit && CurrIVI && !KnowAllElts();
+       CurrIVI = dyn_cast<InsertValueInst>(CurrIVI->getAggregateOperand()),
+                       ++Depth) {
+    Value *InsertedValue = CurrIVI->getInsertedValueOperand();
+    ArrayRef<unsigned int> Indices = CurrIVI->getIndices();
+
+    // Don't bother with more than single-level aggregates.
+    if (Indices.size() != 1)
+      return nullptr; // FIXME: deal with more complex aggregates?
+
+    // Now, we may have already previously recorded the value for this element
+    // of an aggregate. If we did, that means the CurrIVI will later be
+    // overwritten with the already-recorded value. But if not, let's record it!
+    Optional<Value *> &Elt = AggElts[Indices.front()];
+    Elt = Elt.getValueOr(InsertedValue);
+
+    // FIXME: should we handle chain-terminating undef base operand?
+  }
+
+  // Was that sufficient to deduce the full initializer for the aggregate?
+  if (!KnowAllElts())
+    return nullptr; // Give up then.
+
+  // We now want to find the source[s] of the aggregate elements we've found.
+  // And with "source" we mean the original aggregate[s] from which
+  // the inserted elements were extracted. This may require PHI translation.
+
+  enum class SourceAggregate {
+    /// When analyzing the value that was inserted into an aggregate, we did
+    /// not manage to find defining `extractvalue` instruction to analyze.
+    NotFound,
+    /// When analyzing the value that was inserted into an aggregate, we did
+    /// manage to find defining `extractvalue` instruction[s], and everything
+    /// matched perfectly - aggregate type, element insertion/extraction index.
+    Found,
+    /// When analyzing the value that was inserted into an aggregate, we did
+    /// manage to find defining `extractvalue` instruction, but there was
+    /// a mismatch: either the source type from which the extraction was didn't
+    /// match the aggregate type into which the insertion was,
+    /// or the extraction/insertion channels mismatched,
+    /// or different elements had different source aggregates.
+    FoundMismatch
+  };
+  auto Describe = [](Optional<Value *> SourceAggregate) {
+    if (SourceAggregate == NotFound)
+      return SourceAggregate::NotFound;
+    if (*SourceAggregate == FoundMismatch)
+      return SourceAggregate::FoundMismatch;
+    return SourceAggregate::Found;
+  };
+
+  // Given the value \p Elt that was being inserted into element \p EltIdx of an
+  // aggregate AggTy, see if \p Elt was originally defined by an
+  // appropriate extractvalue (same element index, same aggregate type).
+  // If found, return the source aggregate from which the extraction was.
+  // If \p PredBB is provided, does PHI translation of an \p Elt first.
+  auto FindSourceAggregate =
+      [&](Value *Elt, unsigned EltIdx,
+          Optional<BasicBlock *> PredBB) -> Optional<Value *> {
+    // For now(?), only deal with, at most, a single level of PHI indirection.
+    if (PredBB)
+      Elt = Elt->DoPHITranslation(UseBB, *PredBB);
+    // FIXME: deal with multiple levels of PHI indirection?
+
+    // Did we find an extraction?
+    auto *EVI = dyn_cast<ExtractValueInst>(Elt);
+    if (!EVI)
+      return NotFound;
+
+    Value *SourceAggregate = EVI->getAggregateOperand();
+
+    // Is the extraction from the same type into which the insertion was?
+    if (SourceAggregate->getType() != AggTy)
+      return FoundMismatch;
+    // And the element index doesn't change between extraction and insertion?
+    if (EVI->getNumIndices() != 1 || EltIdx != EVI->getIndices().front())
+      return FoundMismatch;
+
+    return SourceAggregate; // SourceAggregate::Found
+  };
+
+  // Given elements AggElts that were constructing an aggregate OrigIVI,
+  // see if we can find appropriate source aggregate for each of the elements,
+  // and see it's the same aggregate for each element. If so, return it.
+  auto FindCommonSourceAggregate =
+      [&](Optional<BasicBlock *> PredBB) -> Optional<Value *> {
+    Optional<Value *> SourceAggregate;
+
+    for (auto I : enumerate(AggElts)) {
+      assert(Describe(SourceAggregate) != SourceAggregate::FoundMismatch &&
+             "We don't store nullptr in SourceAggregate!");
+      assert((Describe(SourceAggregate) == SourceAggregate::Found) ==
+                 (I.index() != 0) &&
+             "SourceAggregate should be valid after the the first element,");
+
+      // For this element, is there a plausible source aggregate?
+      // FIXME: we could special-case undef element, IFF we know that in the
+      //        source aggregate said element isn't poison.
+      Optional<Value *> SourceAggregateForElement =
+          FindSourceAggregate(*I.value(), I.index(), PredBB);
+
+      // Okay, what have we found? Does that correlate with previous findings?
+
+      // Regardless of whether or not we have previously found source
+      // aggregate for previous elements (if any), if we didn't find one for
+      // this element, passthrough whatever we have just found.
+      if (Describe(SourceAggregateForElement) != SourceAggregate::Found)
+        return SourceAggregateForElement;
+
+      // Okay, we have found source aggregate for this element.
+      // Let's see what we already know from previous elements, if any.
+      switch (Describe(SourceAggregate)) {
+      case SourceAggregate::NotFound:
+        // This is apparently the first element that we have examined.
+        SourceAggregate = SourceAggregateForElement; // Record the aggregate!
+        continue; // Great, now look at next element.
+      case SourceAggregate::Found:
+        // We have previously already successfully examined other elements.
+        // Is this the same source aggregate we've found for other elements?
+        if (*SourceAggregateForElement != *SourceAggregate)
+          return FoundMismatch;
+        continue; // Still the same aggregate, look at next element.
+      case SourceAggregate::FoundMismatch:
+        llvm_unreachable("Can't happen. We would have early-exited then.");
+      };
+    }
+
+    assert(Describe(SourceAggregate) == SourceAggregate::Found &&
+           "Must be a valid Value");
+    return *SourceAggregate;
+  };
+
+  Optional<Value *> SourceAggregate;
+
+  // Can we find the source aggregate without looking at predecessors?
+  SourceAggregate = FindCommonSourceAggregate(/*PredBB=*/None);
+  if (Describe(SourceAggregate) != SourceAggregate::NotFound) {
+    if (Describe(SourceAggregate) == SourceAggregate::FoundMismatch)
+      return nullptr; // Conflicting source aggregates!
+    ++NumAggregateReconstructionsSimplified;
+    return replaceInstUsesWith(OrigIVI, *SourceAggregate);
+  }
+
+  // If we didn't manage to find source aggregate without looking at
+  // predecessors, and there are no predecessors to look at, then we're done.
+  if (pred_empty(UseBB))
+    return nullptr;
+
+  // Okay, apparently we need to look at predecessors.
+
+  // Arbitrary predecessor count limit.
+  static const int PredCountLimit = 64;
+  // Don't bother if there are too many predecessors.
+  if (UseBB->hasNPredecessorsOrMore(PredCountLimit + 1))
+    return nullptr;
+
+  // For each predecessor, what is the source aggregate,
+  // from which all the elements were originally extracted from?
+  // Note that we want for the map to have stable iteration order!
+  SmallMapVector<BasicBlock *, Value *, 4> SourceAggregates;
+  for (BasicBlock *Pred : predecessors(UseBB)) {
+    std::pair<decltype(SourceAggregates)::iterator, bool> IV =
+        SourceAggregates.insert({Pred, nullptr});
+    // Did we already evaluate this predecessor?
+    if (!IV.second)
+      continue;
+
+    // Let's hope that when coming from predecessor Pred, all elements of the
+    // aggregate produced by OrigIVI must have been originally extracted from
+    // the same aggregate. Is that so? Can we find said original aggregate?
+    SourceAggregate = FindCommonSourceAggregate(Pred);
+    if (Describe(SourceAggregate) != SourceAggregate::Found)
+      return nullptr; // Give up.
+    IV.first->second = *SourceAggregate;
+  }
+
+  // All good! Now we just need to thread the source aggregates here.
+  auto *PHI = PHINode::Create(AggTy, SourceAggregates.size(),
+                              OrigIVI.getName() + ".merged");
+  for (const std::pair<BasicBlock *, Value *> &SourceAggregate :
+       SourceAggregates)
+    PHI->addIncoming(SourceAggregate.second, SourceAggregate.first);
+
+  ++NumAggregateReconstructionsSimplified;
+  return PHI;
+};
+
 /// Try to find redundant insertvalue instructions, like the following ones:
 ///  %0 = insertvalue { i8, i32 } undef, i8 %x, 0
 ///  %1 = insertvalue { i8, i32 } %0,    i8 %y, 0
@@ -726,6 +968,10 @@ Instruction *InstCombinerImpl::visitInsertValueInst(InsertValueInst &I) {
 
   if (IsRedundant)
     return replaceInstUsesWith(I, I.getOperand(0));
+
+  if (Instruction *NewI = foldAggregateConstructionIntoAggregateReuse(I))
+    return NewI;
+
   return nullptr;
 }
 
