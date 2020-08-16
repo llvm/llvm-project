@@ -1,6 +1,4 @@
-// RUN: %check_clang_tidy -std=c++14,c++17 %s modernize-use-trailing-return-type %t -- -- -fdeclspec -fexceptions
-// FIXME: Fix the checker to work in C++20 mode, it is performing a
-// use-of-uninitialized-value.
+// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-use-trailing-return-type %t -- -- -fdeclspec -fexceptions -DCOMMAND_LINE_INT=int
 
 namespace std {
     template <typename T>
@@ -10,6 +8,8 @@ namespace std {
     class array;
 
     class string;
+
+    class ostream;
 
     template <typename T>
     auto declval() -> T;
@@ -215,18 +215,28 @@ struct A e13();
 // CHECK-FIXES: {{^}}auto e13() -> struct A;{{$}}
 
 //
-// decltype (unsupported if top level expression)
+// deduced return types
 //
+
+const auto ded1();
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
+// CHECK-FIXES: {{^}}auto ded1() -> const auto;{{$}}
+const auto& ded2();
+// CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
+// CHECK-FIXES: {{^}}auto ded2() -> const auto&;{{$}}
+
+decltype(auto) ded3();
+// CHECK-MESSAGES: :[[@LINE-1]]:16: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
+// CHECK-FIXES: {{^}}auto ded3() -> decltype(auto);{{$}}
+
 
 decltype(1 + 2) dec1() { return 1 + 2; }
 // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
-// TODO: source range of DecltypeTypeLoc not yet implemented
-// _HECK-FIXES: {{^}}auto dec1() -> decltype(1 + 2) { return 1 + 2; }{{$}}
+// CHECK-FIXES: {{^}}auto dec1() -> decltype(1 + 2) { return 1 + 2; }{{$}}
 template <typename F, typename T>
 decltype(std::declval<F>(std::declval<T>)) dec2(F f, T t) { return f(t); }
 // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
-// TODO: source range of DecltypeTypeLoc not yet implemented
-// _HECK-FIXES: {{^}}auto dec2(F f, T t) -> decltype(std::declval<F>(std::declval<T>)) { return f(t); }{{$}}
+// CHECK-FIXES: {{^}}auto dec2(F f, T t) -> decltype(std::declval<F>(std::declval<T>)) { return f(t); }{{$}}
 template <typename T>
 typename decltype(std::declval<T>())::value_type dec3();
 // CHECK-MESSAGES: :[[@LINE-1]]:50: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
@@ -463,6 +473,13 @@ CONST_CAT int& h19();
 CONST_F_MACRO int& h19();
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
 // CHECK-FIXES: {{^}}auto h19() -> CONST_F_MACRO int&;{{$}}
+// Macro COMMAND_LINE_INT is defined on the command line via: -DCOMMAND_LINE_INT=int
+const COMMAND_LINE_INT& h20();
+// CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
+// CHECK-FIXES: {{^}}auto h20() -> const COMMAND_LINE_INT&;{{$}}
+decltype(COMMAND_LINE_INT{}) h21();
+// CHECK-MESSAGES: :[[@LINE-1]]:30: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
+// CHECK-FIXES: {{^}}auto h21() -> decltype(COMMAND_LINE_INT{});{{$}}
 
 //
 // Name collisions
@@ -531,6 +548,14 @@ Object DD::g() {
     return {0};
 }
 
+//
+// bug 44206, no rewrite should happen due to collision with parameter name
+//
+
+using std::ostream;
+ostream& operator<<(ostream& ostream, int i);
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
+// CHECK-FIXES: {{^}}ostream& operator<<(ostream& ostream, int i);{{$}}
 
 //
 // Samples which do not trigger the check
@@ -544,7 +569,6 @@ auto f(int arg1, int arg2, int arg3, ...) -> int;
 template <typename T> auto f(T t) -> int;
 
 auto ff();
-decltype(auto) fff();
 
 void c();
 void c(int arg);
