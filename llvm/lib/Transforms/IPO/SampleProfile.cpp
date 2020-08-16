@@ -43,6 +43,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/ReplayInlineAdvisor.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
@@ -169,6 +170,13 @@ static cl::opt<bool> ProfileSizeInline(
 static cl::opt<int> SampleColdCallSiteThreshold(
     "sample-profile-cold-inline-threshold", cl::Hidden, cl::init(45),
     cl::desc("Threshold for inlining cold callsites"));
+
+static cl::opt<std::string> ProfileInlineReplayFile(
+    "sample-profile-inline-replay", cl::init(""), cl::value_desc("filename"),
+    cl::desc(
+        "Optimization remarks file containing inline remarks to be replayed "
+        "by inlining from sample profile loader."),
+    cl::Hidden);
 
 namespace {
 
@@ -319,7 +327,7 @@ public:
         RemappingFilename(std::string(RemapName)),
         IsThinLTOPreLink(IsThinLTOPreLink) {}
 
-  bool doInitialization(Module &M);
+  bool doInitialization(Module &M, FunctionAnalysisManager *FAM = nullptr);
   bool runOnModule(Module &M, ModuleAnalysisManager *AM,
                    ProfileSummaryInfo *_PSI, CallGraph *CG);
 
@@ -473,6 +481,9 @@ protected:
   // overriden by -profile-sample-accurate or profile-sample-accurate
   // attribute.
   bool ProfAccForSymsInList;
+
+  // External inline advisor used to replay inline decision from remarks.
+  std::unique_ptr<ReplayInlineAdvisor> ExternalInlineAdvisor;
 };
 
 class SampleProfileLoaderLegacyPass : public ModulePass {
@@ -897,6 +908,16 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
 }
 
 bool SampleProfileLoader::inlineCallInstruction(CallBase &CB) {
+  if (ExternalInlineAdvisor) {
+    auto Advice = ExternalInlineAdvisor->getAdvice(CB);
+    if (!Advice->isInliningRecommended()) {
+      Advice->recordUnattemptedInlining();
+      return false;
+    }
+    // Dummy record, we don't use it for replay.
+    Advice->recordInlining();
+  }
+
   Function *CalledFunction = CB.getCalledFunction();
   assert(CalledFunction);
   DebugLoc DLoc = CB.getDebugLoc();
@@ -1006,7 +1027,7 @@ bool SampleProfileLoader::inlineHotFunctions(
           }
         }
       }
-      if (Hot) {
+      if (Hot || ExternalInlineAdvisor) {
         CIS.insert(CIS.begin(), AllCandidates.begin(), AllCandidates.end());
         emitOptimizationRemarksForInlineCandidates(AllCandidates, F, true);
       } else {
@@ -1829,7 +1850,8 @@ SampleProfileLoader::buildFunctionOrder(Module &M, CallGraph *CG) {
   return FunctionOrderList;
 }
 
-bool SampleProfileLoader::doInitialization(Module &M) {
+bool SampleProfileLoader::doInitialization(Module &M,
+                                           FunctionAnalysisManager *FAM) {
   auto &Ctx = M.getContext();
 
   std::unique_ptr<SampleProfileReaderItaniumRemapper> RemapReader;
@@ -1852,6 +1874,13 @@ bool SampleProfileLoader::doInitialization(Module &M) {
     NamesInProfile.clear();
     if (auto NameTable = Reader->getNameTable())
       NamesInProfile.insert(NameTable->begin(), NameTable->end());
+  }
+
+  if (FAM && !ProfileInlineReplayFile.empty()) {
+    ExternalInlineAdvisor = std::make_unique<ReplayInlineAdvisor>(
+        *FAM, Ctx, ProfileInlineReplayFile);
+    if (!ExternalInlineAdvisor->areReplayRemarksLoaded())
+      ExternalInlineAdvisor.reset();
   }
 
   return true;
@@ -2006,7 +2035,7 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
                                        : ProfileRemappingFileName,
       IsThinLTOPreLink, GetAssumptionCache, GetTTI, GetTLI);
 
-  if (!SampleLoader.doInitialization(M))
+  if (!SampleLoader.doInitialization(M, &FAM))
     return PreservedAnalyses::all();
 
   ProfileSummaryInfo *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
