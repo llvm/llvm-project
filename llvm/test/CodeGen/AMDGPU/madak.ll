@@ -1,8 +1,8 @@
 ; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX6,GFX6_8_9,MAD %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8,GFX6_8_9,GFX8_9,GFX8_9_10,MAD %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs  -amdgpu-enable-global-sgpr-addr < %s | FileCheck -check-prefixes=GCN,GFX9,GFX6_8_9,GFX8_9,GFX8_9_10,MAD %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -amdgpu-enable-global-sgpr-addr < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_9_10,GFX10-MAD %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -fp-contract=fast -amdgpu-enable-global-sgpr-addr < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_9_10,FMA %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,GFX6_8_9,GFX8_9,GFX8_9_10,MAD %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_9_10,GFX10-MAD %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -fp-contract=fast < %s | FileCheck -check-prefixes=GCN,GFX10,GFX8_9_10,FMA %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 declare float @llvm.fabs.f32(float) nounwind readnone
