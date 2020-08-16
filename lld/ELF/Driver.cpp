@@ -1306,6 +1306,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
   std::vector<std::tuple<bool, bool, bool>> stack;
 
   // Iterate over argv to process input files and positional arguments.
+  InputFile::isInGroup = false;
   for (auto *arg : args) {
     switch (arg->getOption().getID()) {
     case OPT_library:
