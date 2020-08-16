@@ -839,7 +839,8 @@ func @generic_atomic_rmw(%I: memref<1x2xf32>, %i : index, %j : index) {
       %c1 = constant 1.0 : f32
       %out = addf %c1, %old_value : f32
       atomic_yield %out : f32
-  }
+  // CHECK: index_attr = 8 : index
+  } { index_attr = 8 : index }
   return
 }
 
