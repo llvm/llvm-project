@@ -239,6 +239,10 @@ public:
   /// subtarget without any kind of limitation.
   unsigned getMaxWavesPerEU() const { return MaxWavesPerEU; }
 
+  /// Return the maximum workitem ID value in the function, for the given (0, 1,
+  /// 2) dimension.
+  unsigned getMaxWorkitemID(const Function &Kernel, unsigned Dimension) const;
+
   /// Creates value range metadata on an workitemid.* inrinsic call or load.
   bool makeLIDRangeMetadata(Instruction *I) const;
 
