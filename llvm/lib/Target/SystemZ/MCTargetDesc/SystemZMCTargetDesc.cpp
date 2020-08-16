@@ -171,7 +171,7 @@ static MCRegisterInfo *createSystemZMCRegisterInfo(const Triple &TT) {
 
 static MCSubtargetInfo *
 createSystemZMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
-  return createSystemZMCSubtargetInfoImpl(TT, CPU, FS);
+  return createSystemZMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 
 static MCInstPrinter *createSystemZMCInstPrinter(const Triple &T,

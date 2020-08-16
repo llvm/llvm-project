@@ -35,7 +35,7 @@ NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
     // Provide the default CPU if we don't have one.
     TargetName = std::string(CPU.empty() ? "sm_20" : CPU);
 
-    ParseSubtargetFeatures(TargetName, FS);
+    ParseSubtargetFeatures(TargetName, /*TuneCPU*/ TargetName, FS);
 
     // Set default to PTX 3.2 (CUDA 5.5)
     if (PTXVersion == 0) {
@@ -48,9 +48,9 @@ NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
 NVPTXSubtarget::NVPTXSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const NVPTXTargetMachine &TM)
-    : NVPTXGenSubtargetInfo(TT, CPU, FS), PTXVersion(0), SmVersion(20), TM(TM),
-      InstrInfo(), TLInfo(TM, initializeSubtargetDependencies(CPU, FS)),
-      FrameLowering() {}
+    : NVPTXGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), PTXVersion(0),
+      SmVersion(20), TM(TM), InstrInfo(),
+      TLInfo(TM, initializeSubtargetDependencies(CPU, FS)), FrameLowering() {}
 
 bool NVPTXSubtarget::hasImageHandles() const {
   // Enable handles for Kepler+, where CUDA supports indirect surfaces and

@@ -51,7 +51,7 @@ static MCRegisterInfo *createXCoreMCRegisterInfo(const Triple &TT) {
 
 static MCSubtargetInfo *
 createXCoreMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
-  return createXCoreMCSubtargetInfoImpl(TT, CPU, FS);
+  return createXCoreMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 
 static MCAsmInfo *createXCoreMCAsmInfo(const MCRegisterInfo &MRI,

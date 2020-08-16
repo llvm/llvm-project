@@ -76,7 +76,7 @@ static MCAsmBackend *createAsmBackend(const Target & /*T*/,
 
 static MCSubtargetInfo *createMCSubtargetInfo(const Triple &TT, StringRef CPU,
                                               StringRef FS) {
-  return createWebAssemblyMCSubtargetInfoImpl(TT, CPU, FS);
+  return createWebAssemblyMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 
 static MCTargetStreamer *
