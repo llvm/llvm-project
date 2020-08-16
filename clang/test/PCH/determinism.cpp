@@ -6,6 +6,10 @@
 // RUN: cmp %t/a.pch %t/b.pch
 
 #pragma float_control(push)
+double fp_control_0(double x) {
+  return -x + x;
+}
+
 double fp_control_1(double x) {
 #pragma float_control(precise, on)
   return -x + x;
