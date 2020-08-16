@@ -41,6 +41,7 @@ struct MemorySanitizerPass : public PassInfoMixin<MemorySanitizerPass> {
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  static bool isRequired() { return true; }
 
 private:
   MemorySanitizerOptions Options;
