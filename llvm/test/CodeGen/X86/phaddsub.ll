@@ -507,7 +507,7 @@ define <8 x i16> @phaddw_single_source2(<8 x i16> %x) {
 ; AVX2-SHUF-LABEL: phaddw_single_source2:
 ; AVX2-SHUF:       # %bb.0:
 ; AVX2-SHUF-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
-; AVX2-SHUF-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[10,11,8,9,10,11,8,9,10,11,8,9,10,11,8,9]
+; AVX2-SHUF-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,0,1,2,3,0,1,2,3,0,1,2,3,0,1]
 ; AVX2-SHUF-NEXT:    retq
   %l = shufflevector <8 x i16> %x, <8 x i16> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 0, i32 2, i32 4, i32 6>
   %r = shufflevector <8 x i16> %x, <8 x i16> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 1, i32 3, i32 5, i32 7>
