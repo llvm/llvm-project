@@ -792,14 +792,14 @@ private:
       }
       // Insert empty CHI node for this VN. This is used to factor out
       // basic blocks where the ANTIC can potentially change.
-      for (auto IDFB : IDFBlocks) {
+      CHIArg EmptyChi = {VN, nullptr, nullptr};
+      for (auto *IDFBB : IDFBlocks) {
         for (unsigned i = 0; i < V.size(); ++i) {
-          CHIArg C = {VN, nullptr, nullptr};
-           // Ignore spurious PDFs.
-          if (DT->properlyDominates(IDFB, V[i]->getParent())) {
-            OutValue[IDFB].push_back(C);
-            LLVM_DEBUG(dbgs() << "\nInsertion a CHI for BB: " << IDFB->getName()
-                              << ", for Insn: " << *V[i]);
+          // Ignore spurious PDFs.
+          if (DT->properlyDominates(IDFBB, V[i]->getParent())) {
+            OutValue[IDFBB].push_back(EmptyChi);
+            LLVM_DEBUG(dbgs() << "\nInserting a CHI for BB: "
+                              << IDFBB->getName() << ", for Insn: " << *V[i]);
           }
         }
       }
