@@ -517,7 +517,7 @@ Optional<SDBMExpr> SDBMExpr::tryConvertAffineExpr(AffineExpr affine) {
 
     SDBMDialect *dialect;
   } converter;
-  converter.dialect = affine.getContext()->getRegisteredDialect<SDBMDialect>();
+  converter.dialect = affine.getContext()->getOrLoadDialect<SDBMDialect>();
 
   if (auto result = converter.visit(affine))
     return result;
