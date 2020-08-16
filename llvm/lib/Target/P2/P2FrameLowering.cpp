@@ -56,9 +56,11 @@ Here's the ordering of sp adjustment: when calling, SP (previous) is adjusted fo
 variables (4). SP now becomes SP (previous) when getting
 ready to call another function.
 
-[This doesn't work yet] Callee saved register spilling/restoring will be done via setq and wrlong/rdlong to do a block transfer of
-registers to memory determin callee saves gives us a list of regsiters to save and their frame indices. We count up the number of
+Callee saved register spilling/restoring is done via setq and wrlong/rdlong to do a block transfer of
+registers to memory. determine callee saves gives us a list of regsiters to save and their frame indices. We count up the number of
 continuous registers that need to be saved in a single setq/wrlong pair. Restoring does the same thing in reverse.
+Eventually, we might need to adjust determine callee saves to line up the register blocks with their corresponing frame indicies,
+though they might be aligned now?
 
 */
 
@@ -169,27 +171,10 @@ bool P2FrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB, MachineB
 
     CalleeFrameSize = CSI.size()*4;
 
-    // for (unsigned i = 0; i < CSI.size(); i++) {
-    //     unsigned Reg = CSI[i].getReg();
-    //     bool IsNotLiveIn = !MBB.isLiveIn(Reg);
-    //     // Add the callee-saved register as live-in only if it is not already a
-    //     // live-in register, this usually happens with arguments that are passed
-    //     // through callee-saved registers.
-    //     if (IsNotLiveIn) {
-    //         MBB.addLiveIn(Reg);
-    //     }
-
-    //     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    //     TII.storeRegToStackSlot(MBB, MI, Reg, false, CSI[i].getFrameIdx(), RC, TRI);
-
-    //     CalleeFrameSize += 4;
-
-    //     LLVM_DEBUG(errs() << "--- spilling " << Reg << " to index " << CSI[i].getFrameIdx() << "\n");
-    // }
-
-    // return true;
-
-    // experimental code that doesn't work yet...
+    // use auto-incrementing feature of ptra to write blocks of regsiters to ptra (instead of one register at a time)
+    // when doing this, we want to make sure the manual allocation of ptra happens after this code, so we mark each instruction
+    // as a FrameSetup instruction, then in emitPrologue, skip over any FrameSetup instructions we have.
+    //
     // block size is 1 less than number of regs to write in a block transfer (which is also the number to give to setq)
     uint16_t block_size = 0;
     int block_first_reg = CSI[0].getReg();
@@ -272,17 +257,8 @@ bool P2FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB, Machin
         return false;
     }
 
-    // for (unsigned i = CSI.size(); i != 0; --i) {
-    //     unsigned Reg = CSI[i-1].getReg();
-    //     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-    //     TII.loadRegFromStackSlot(MBB, MI, Reg, CSI[i-1].getFrameIdx(), RC, TRI);
-
-    //     LLVM_DEBUG(errs() << "--- restoring " << Reg << " from index " << CSI[i-1].getFrameIdx() << "\n");
-    // }
-
-    // return true;
-
-    // experimental code that doesn't work yet...
+    // see spillCalleeSavedRegisters for explanation, this is just doing the same thin in reverse
+    //
     // block size is 1 less than number of regs to write in a block transfer (which is also the number to give to setq)
     // go in reverse order since we are auto-decrementing ptra
     uint16_t block_size = 0;
