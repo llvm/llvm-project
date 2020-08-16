@@ -111,7 +111,6 @@ void P2RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II, int SPA
     if (MI.getOpcode() == P2::FRMIDX) {
         MI.setDesc(inst_info.get(P2::MOVrr)); // change our psesudo instruction to a mov
         MI.getOperand(FIOperandNum).ChangeToRegister(P2::PTRA, false); // change the abstract frame index register to our real stack pointer register
-        //MI.getOperand(0).ChangeToRegister(P2::PTRB, false); // I think we can always just use PTRB instead of the assigned reg
 
         Register dst_reg = MI.getOperand(0).getReg();
         II++; // skip forward by 1 instruction
@@ -144,6 +143,14 @@ void P2RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II, int SPA
 
         Register reg = P2::PA;
 
+        auto inst = II->getPrevNode();
+        if (inst && (inst->getOpcode() == P2::SETQr || inst->getOpcode() == P2::SETQi)) {
+            // if we have a setq before the instruction with the frame index, back up so keep the setq next to the
+            // desired instruction
+            LLVM_DEBUG(errs() << "have a setq, backing up by one instruction\n");
+            II--;
+        }
+
         BuildMI(*MI.getParent(), II, dl, inst_info.get(P2::MOVrr), reg)
                                 .addReg(P2::PTRA); // save the SP to an unused register
 
@@ -151,11 +158,9 @@ void P2RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II, int SPA
                                 .addReg(reg, RegState::Kill)
                                 .addImm(offset); // adjust saved SP by frame index offset
 
-        LLVM_DEBUG((*II).dump(); errs() << "... became ");
+        MI.getOperand(FIOperandNum).ChangeToRegister(reg, false);
 
-        (*II).getOperand(FIOperandNum).ChangeToRegister(reg, false);
-
-        LLVM_DEBUG((*II).dump());
+        LLVM_DEBUG(MI.dump());
     }
 }
 

@@ -94,9 +94,12 @@ void P2FrameLowering::emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) 
     P2FunctionInfo *P2FI = MF.getInfo<P2FunctionInfo>();
     MachineFrameInfo &MFI = MF.getFrameInfo();
 
+    LLVM_DEBUG(errs() << "prologue mbb\n");
+    LLVM_DEBUG(MBB.dump());
+
     // the stack gets preallocated for incoming arguments + 4 bytes for the PC/SW + regs already saved to the stack,
     // so don't allocate that in the prologue
-    uint64_t StackSize = MFI.getStackSize() - 4 - P2FI->getIncomingArgSize();// - P2FI->getCalleeSavedFrameSize();
+    uint64_t StackSize = MFI.getStackSize() - 4 - P2FI->getIncomingArgSize() - P2FI->getCalleeSavedFrameSize();
     LLVM_DEBUG(errs() << "Allocating " << StackSize << " bytes for stack (original value: " << MFI.getStackSize() << ")\n");
 
     // No need to allocate space on the stack.
@@ -104,6 +107,11 @@ void P2FrameLowering::emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) 
         LLVM_DEBUG(errs() << "No need to allocate stack space\n");
         return;
     }
+
+    // we want to iterate MBBI until we hit the first function instruction, we marked the callee saving instructions
+    // as FrameSetup instructions
+    if (P2FI->getCalleeSavedFrameSize())
+        while ((*MBBI).getFlag(MachineInstr::FrameSetup)) MBBI++;
 
     TII->adjustStackPtr(P2::PTRA, StackSize, MBB, MBBI);
 }
@@ -115,12 +123,20 @@ void P2FrameLowering::emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) 
     P2FunctionInfo *P2FI = MF.getInfo<P2FunctionInfo>();
 
     const P2InstrInfo *TII = MF.getSubtarget<P2Subtarget>().getInstrInfo();
-    uint64_t StackSize = MFI.getStackSize() - 4 - P2FI->getIncomingArgSize();// - P2FI->getCalleeSavedFrameSize();
+    uint64_t StackSize = MFI.getStackSize() - 4 - P2FI->getIncomingArgSize() - P2FI->getCalleeSavedFrameSize();
 
+    LLVM_DEBUG(errs() << "epilogue mbb\n");
+    LLVM_DEBUG(MBB.dump());
+
+    // allocate 0s for now for testing
     if (StackSize == 0) {
         LLVM_DEBUG(errs() << "No need to de-allocate stack space\n");
         return;
     }
+
+    // back up before the callee restore instructions/return instruction, then insert the stack pointer adjustment
+    if (P2FI->getCalleeSavedFrameSize())
+        while (MBBI != MBB.begin() && MBBI->getPrevNode()->getFlag(MachineInstr::FrameDestroy)) MBBI--;
 
     // Adjust stack.
     TII->adjustStackPtr(P2::PTRA, -StackSize, MBB, MBBI);
@@ -130,6 +146,7 @@ void P2FrameLowering::determineCalleeSaves(MachineFunction &MF, BitVector &Saved
     LLVM_DEBUG(errs() << "=== Function: " << MF.getName() << " ===\n");
     LLVM_DEBUG(errs() << "Determining callee saves\n");
     TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+    // eventually might need to add to this to re-order the frame index based to match what will happen in spilling/restoring
 }
 
 bool P2FrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
@@ -150,36 +167,39 @@ bool P2FrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB, MachineB
     if (CSI.empty())
         return false;
 
-    for (unsigned i = 0; i < CSI.size(); i++) {
-        unsigned Reg = CSI[i].getReg();
-        bool IsNotLiveIn = !MBB.isLiveIn(Reg);
-        // Add the callee-saved register as live-in only if it is not already a
-        // live-in register, this usually happens with arguments that are passed
-        // through callee-saved registers.
-        if (IsNotLiveIn) {
-            MBB.addLiveIn(Reg);
-        }
+    CalleeFrameSize = CSI.size()*4;
 
-        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-        TII.storeRegToStackSlot(MBB, MI, Reg, false, CSI[i].getFrameIdx(), RC, TRI);
+    // for (unsigned i = 0; i < CSI.size(); i++) {
+    //     unsigned Reg = CSI[i].getReg();
+    //     bool IsNotLiveIn = !MBB.isLiveIn(Reg);
+    //     // Add the callee-saved register as live-in only if it is not already a
+    //     // live-in register, this usually happens with arguments that are passed
+    //     // through callee-saved registers.
+    //     if (IsNotLiveIn) {
+    //         MBB.addLiveIn(Reg);
+    //     }
 
-        CalleeFrameSize += 4;
+    //     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    //     TII.storeRegToStackSlot(MBB, MI, Reg, false, CSI[i].getFrameIdx(), RC, TRI);
 
-        LLVM_DEBUG(errs() << "--- spilling " << Reg << " to index " << CSI[i].getFrameIdx() << "\n");
-    }
+    //     CalleeFrameSize += 4;
 
-    return true;
+    //     LLVM_DEBUG(errs() << "--- spilling " << Reg << " to index " << CSI[i].getFrameIdx() << "\n");
+    // }
+
+    // return true;
 
     // experimental code that doesn't work yet...
-    // go in reverse order since the last frame index has the lowest stack slot
+    // block size is 1 less than number of regs to write in a block transfer (which is also the number to give to setq)
     uint16_t block_size = 0;
-    int block_frame_index = CSI[CSI.size()-1].getFrameIdx();
-    int block_first_reg = 0;
-    int memop_code = 0;
+    int block_first_reg = CSI[0].getReg();
 
-    for (int i = CSI.size()-2; i >= 0; i--) {
+    LLVM_DEBUG(errs() << "reg: " << block_first_reg << "\n");
+
+    for (int i = 1; i < CSI.size(); i++) {
+
         unsigned reg = CSI[i].getReg();
-        unsigned prev_reg = CSI[i+1].getReg();
+        unsigned prev_reg = CSI[i-1].getReg();
 
         uint16_t reg_encoding = TRI->getEncodingValue(reg);
         uint16_t prev_reg_encoding = TRI->getEncodingValue(prev_reg);
@@ -192,52 +212,44 @@ bool P2FrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB, MachineB
             MBB.addLiveIn(reg);
         }
 
-        if (prev_reg_encoding - reg_encoding != 1) {
+        if (reg_encoding - prev_reg_encoding != 1) {
             // this is a new register block, so let's write the previous block first.
 
-            block_first_reg = prev_reg;
-
-            MachineMemOperand *MMO = MF.getMachineMemOperand(
-                    MachinePointerInfo::getFixedStack(MF, block_frame_index),
-                    MachineMemOperand::MOLoad, MFI->getObjectSize(block_frame_index),
-                    MFI->getObjectAlign(block_frame_index));
-
             if (block_size) {
-                // we can't do direct indexing of PTRA when also doing set q, so we'll do it by saving to ptrb and subtracting
-                BuildMI(MBB, MI, DL, TII.get(P2::SETQi)).addImm(block_size);
-                memop_code = P2::WRLONGrr;
-
-            } else {
-                memop_code = P2::WRLONGri;
+                // if we have more than 1 reg to write, add setq.
+                BuildMI(MBB, MI, DL, TII.get(P2::SETQi))
+                    .addImm(block_size)
+                    .setMIFlag(MachineInstr::FrameSetup);
             }
-            BuildMI(MBB, MI, DL, TII.get(memop_code), block_first_reg)
-                .addFrameIndex(block_frame_index)
-                .addMemOperand(MMO);
+
+            // write the first block register to ptra, incrementing ptra. if we added setq above, it will write
+            // a block of registers.
+            BuildMI(MBB, MI, DL, TII.get(P2::WRLONGri), block_first_reg)
+                .addImm(P2::PTRA_POSTINC)
+                .setMIFlag(MachineInstr::FrameSetup);
+
+            LLVM_DEBUG(errs() << "New block transfer to reg " << block_first_reg << "\n");
 
             block_size = 0;
-            block_frame_index = CSI[i].getFrameIdx();
+            block_first_reg = reg;
         } else {
             block_size++;
         }
-    }
 
-    // write the final block out
-    block_first_reg = CSI[0].getReg();
-    MachineMemOperand *MMO = MF.getMachineMemOperand(
-            MachinePointerInfo::getFixedStack(MF, block_frame_index),
-            MachineMemOperand::MOLoad, MFI->getObjectSize(block_frame_index),
-            MFI->getObjectAlign(block_frame_index));
+        LLVM_DEBUG(errs() << "reg: " << reg << "\n");
+    }
 
     if (block_size) {
-        memop_code = P2::WRLONGrr;
-        BuildMI(MBB, MI, DL, TII.get(P2::SETQi)).addImm(block_size);
-    } else {
-        memop_code = P2::WRLONGri;
+        BuildMI(MBB, MI, DL, TII.get(P2::SETQi))
+            .addImm(block_size)
+            .setMIFlag(MachineInstr::FrameSetup);
     }
 
-    BuildMI(MBB, MI, DL, TII.get(memop_code), block_first_reg)
-        .addFrameIndex(block_frame_index)
-        .addMemOperand(MMO);
+    BuildMI(MBB, MI, DL, TII.get(P2::WRLONGri), block_first_reg)
+        .addImm(P2::PTRA_POSTINC)
+        .setMIFlag(MachineInstr::FrameSetup);
+
+    LLVM_DEBUG(errs() << "New block transfer to reg " << block_first_reg << "\n");
 
     P2FI->setCalleeSavedFrameSize(CalleeFrameSize);
 
@@ -260,26 +272,29 @@ bool P2FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB, Machin
         return false;
     }
 
-    for (unsigned i = CSI.size(); i != 0; --i) {
-        unsigned Reg = CSI[i-1].getReg();
-        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-        TII.loadRegFromStackSlot(MBB, MI, Reg, CSI[i-1].getFrameIdx(), RC, TRI);
+    // for (unsigned i = CSI.size(); i != 0; --i) {
+    //     unsigned Reg = CSI[i-1].getReg();
+    //     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+    //     TII.loadRegFromStackSlot(MBB, MI, Reg, CSI[i-1].getFrameIdx(), RC, TRI);
 
-        LLVM_DEBUG(errs() << "--- restoring " << Reg << " from index " << CSI[i-1].getFrameIdx() << "\n");
-    }
+    //     LLVM_DEBUG(errs() << "--- restoring " << Reg << " from index " << CSI[i-1].getFrameIdx() << "\n");
+    // }
 
-    return true;
+    // return true;
 
     // experimental code that doesn't work yet...
-    // go in reverse order since the last frame index has the lowest stack slot
+    // block size is 1 less than number of regs to write in a block transfer (which is also the number to give to setq)
+    // go in reverse order since we are auto-decrementing ptra
     uint16_t block_size = 0;
-    int block_frame_index = CSI[CSI.size()-1].getFrameIdx();
-    int block_first_reg = 0;
-    int memop_code = 0;
+    int block_first_reg = CSI[CSI.size()-1].getReg();
+
+    LLVM_DEBUG(errs() << "reg: " << block_first_reg << "\n");
 
     for (int i = CSI.size()-2; i >= 0; i--) {
         unsigned reg = CSI[i].getReg();
         unsigned prev_reg = CSI[i+1].getReg();
+
+        LLVM_DEBUG(errs() << "reg: " << reg << "\n");
 
         uint16_t reg_encoding = TRI->getEncodingValue(reg);
         uint16_t prev_reg_encoding = TRI->getEncodingValue(prev_reg);
@@ -295,48 +310,34 @@ bool P2FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB, Machin
         if (prev_reg_encoding - reg_encoding != 1) {
             // this is a new register block, so let's write the previous block first.
 
-            block_first_reg = prev_reg;
-
-            MachineMemOperand *MMO = MF.getMachineMemOperand(
-                    MachinePointerInfo::getFixedStack(MF, block_frame_index),
-                    MachineMemOperand::MOLoad, MFI->getObjectSize(block_frame_index),
-                    MFI->getObjectAlign(block_frame_index));
-
             if (block_size) {
-                memop_code = P2::RDLONGrr;
-                BuildMI(MBB, MI, DL, TII.get(P2::SETQi)).addImm(block_size);
-            } else {
-                memop_code = P2::RDLONGri;
+                BuildMI(MBB, MI, DL, TII.get(P2::SETQi))
+                    .addImm(block_size)
+                    .setMIFlag(MachineInstr::FrameDestroy);
             }
 
-            BuildMI(MBB, MI, DL, TII.get(memop_code), block_first_reg)
-                .addFrameIndex(block_frame_index)
-                .addMemOperand(MMO);
+            BuildMI(MBB, MI, DL, TII.get(P2::RDLONGri), block_first_reg)
+                .addImm(P2::PTRA_PREDEC)
+                .setMIFlag(MachineInstr::FrameDestroy);
 
             block_size = 0;
-            block_frame_index = CSI[i].getFrameIdx();
         } else {
             block_size++;
+            block_first_reg = reg;
         }
     }
 
     // write the final block out
-    block_first_reg = CSI[0].getReg();
-    MachineMemOperand *MMO = MF.getMachineMemOperand(
-            MachinePointerInfo::getFixedStack(MF, block_frame_index),
-            MachineMemOperand::MOLoad, MFI->getObjectSize(block_frame_index),
-            MFI->getObjectAlign(block_frame_index));
 
     if (block_size) {
-        memop_code = P2::RDLONGrr;
-        BuildMI(MBB, MI, DL, TII.get(P2::SETQi)).addImm(block_size);
-    } else {
-        memop_code = P2::RDLONGri;
+        BuildMI(MBB, MI, DL, TII.get(P2::SETQi))
+            .addImm(block_size)
+            .setMIFlag(MachineInstr::FrameDestroy);
     }
 
-    BuildMI(MBB, MI, DL, TII.get(memop_code), block_first_reg)
-        .addFrameIndex(block_frame_index)
-        .addMemOperand(MMO);
+    BuildMI(MBB, MI, DL, TII.get(P2::RDLONGri), block_first_reg)
+        .addImm(P2::PTRA_PREDEC)
+        .setMIFlag(MachineInstr::FrameDestroy);
 
     return true;
 }
