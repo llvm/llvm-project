@@ -17,7 +17,7 @@
 # RUN: llvm-libtool-darwin -static -o %t.lib %t.armv6 %t.armv6 %t.armv7
 # RUN: llvm-lipo -info %t.lib | \
 # RUN:   FileCheck %s --check-prefix=ARCHS -DFILE=%t.lib
-# RUN: llvm-objdump --macho --all-headers %t.lib | \
+# RUN: llvm-objdump --macho --arch all --all-headers %t.lib | \
 # RUN:   FileCheck %s --check-prefix=UNIVERSAL-MEMBERS -DFILE=%t.lib -DPREFIX=%basename_t.tmp --implicit-check-not=Archive
 
 # UNIVERSAL-MEMBERS:      Archive : [[FILE]] (architecture armv6)
@@ -57,7 +57,7 @@
 # RUN: yaml2obj %s -o %t.arm64 -DTYPE=0x0100000C -DSUBTYPE=0x0 -DSTRING=_arm64all
 # RUN: yaml2obj %s -o %t.arm64e -DTYPE=0x0100000C -DSUBTYPE=0x2 -DSTRING=_arm64e
 # RUN: llvm-libtool-darwin -static -o %t.lib %t.arm64 %t.arm64e
-# RUN: llvm-objdump --macho --all-headers %t.lib | \
+# RUN: llvm-objdump --macho --arch all --all-headers %t.lib | \
 # RUN:   FileCheck %s --check-prefix=UNIVERSAL-MEMBERS-ARM64 -DFILE=%t.lib -DPREFIX=%basename_t.tmp --implicit-check-not=Archive
 
 # UNIVERSAL-MEMBERS-ARM64:      Archive : [[FILE]] (architecture arm64)
