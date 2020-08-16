@@ -36,4 +36,4 @@ typedef struct atmi_kernel_enqueue_template_s {
   void *kernarg_regions;
 } atmi_kernel_enqueue_template_t;
 
-#endif  // INCLUDE_ATMI_KL_H_
+#endif // INCLUDE_ATMI_KL_H_

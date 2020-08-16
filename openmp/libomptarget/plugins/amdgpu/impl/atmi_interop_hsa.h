@@ -104,4 +104,4 @@ atmi_status_t atmi_interop_hsa_get_kernel_info(
 }
 #endif
 
-#endif  // INCLUDE_ATMI_INTEROP_HSA_H_
+#endif // INCLUDE_ATMI_INTEROP_HSA_H_

@@ -4,35 +4,35 @@
  * This file is distributed under the MIT License. See LICENSE.txt for details.
  *===------------------------------------------------------------------------*/
 #include "data.h"
-#include <hsa.h>
-#include <hsa_ext_amd.h>
-#include <stdio.h>
-#include <string.h>
-#include <cassert>
-#include <iostream>
-#include <thread>
-#include <vector>
 #include "atmi_runtime.h"
 #include "internal.h"
 #include "machine.h"
 #include "rt.h"
+#include <cassert>
+#include <hsa.h>
+#include <hsa_ext_amd.h>
+#include <iostream>
+#include <stdio.h>
+#include <string.h>
+#include <thread>
+#include <vector>
 
 using core::TaskImpl;
 extern ATLMachine g_atl_machine;
 extern hsa_signal_t IdentityCopySignal;
 
 namespace core {
-ATLPointerTracker g_data_map;  // Track all am pointer allocations.
+ATLPointerTracker g_data_map; // Track all am pointer allocations.
 void allow_access_to_all_gpu_agents(void *ptr);
 
 const char *getPlaceStr(atmi_devtype_t type) {
   switch (type) {
-    case ATMI_DEVTYPE_CPU:
-      return "CPU";
-    case ATMI_DEVTYPE_GPU:
-      return "GPU";
-    default:
-      return NULL;
+  case ATMI_DEVTYPE_CPU:
+    return "CPU";
+  case ATMI_DEVTYPE_GPU:
+    return "GPU";
+  default:
+    return NULL;
   }
 }
 
@@ -62,7 +62,7 @@ ATLData *ATLPointerTracker::find(const void *pointer) {
   ATLData *ret = NULL;
   auto iter = tracker_.find(ATLMemoryRange(pointer, 1));
   DEBUG_PRINT("find: %p\n", pointer);
-  if (iter != tracker_.end())  // found
+  if (iter != tracker_.end()) // found
     ret = iter->second;
   return ret;
 }
@@ -70,20 +70,20 @@ ATLData *ATLPointerTracker::find(const void *pointer) {
 ATLProcessor &get_processor_by_compute_place(atmi_place_t place) {
   int dev_id = place.device_id;
   switch (place.type) {
-    case ATMI_DEVTYPE_CPU:
-      return g_atl_machine.processors<ATLCPUProcessor>()[dev_id];
-    case ATMI_DEVTYPE_GPU:
-      return g_atl_machine.processors<ATLGPUProcessor>()[dev_id];
+  case ATMI_DEVTYPE_CPU:
+    return g_atl_machine.processors<ATLCPUProcessor>()[dev_id];
+  case ATMI_DEVTYPE_GPU:
+    return g_atl_machine.processors<ATLGPUProcessor>()[dev_id];
   }
 }
 
 ATLProcessor &get_processor_by_mem_place(atmi_mem_place_t place) {
   int dev_id = place.dev_id;
   switch (place.dev_type) {
-    case ATMI_DEVTYPE_CPU:
-      return g_atl_machine.processors<ATLCPUProcessor>()[dev_id];
-    case ATMI_DEVTYPE_GPU:
-      return g_atl_machine.processors<ATLGPUProcessor>()[dev_id];
+  case ATMI_DEVTYPE_CPU:
+    return g_atl_machine.processors<ATLCPUProcessor>()[dev_id];
+  case ATMI_DEVTYPE_GPU:
+    return g_atl_machine.processors<ATLGPUProcessor>()[dev_id];
   }
 }
 
@@ -103,7 +103,8 @@ hsa_amd_memory_pool_t get_memory_pool_by_mem_place(atmi_mem_place_t place) {
 void register_allocation(void *ptr, size_t size, atmi_mem_place_t place) {
   ATLData *data = new ATLData(ptr, NULL, size, place, ATMI_IN_OUT);
   g_data_map.insert(ptr, data);
-  if (place.dev_type == ATMI_DEVTYPE_CPU) allow_access_to_all_gpu_agents(ptr);
+  if (place.dev_type == ATMI_DEVTYPE_CPU)
+    allow_access_to_all_gpu_agents(ptr);
   // TODO(ashwinma): what if one GPU wants to access another GPU?
 }
 
@@ -115,7 +116,8 @@ atmi_status_t Runtime::Malloc(void **ptr, size_t size, atmi_mem_place_t place) {
   DEBUG_PRINT("Malloced [%s %d] %p\n",
               place.dev_type == ATMI_DEVTYPE_CPU ? "CPU" : "GPU", place.dev_id,
               *ptr);
-  if (err != HSA_STATUS_SUCCESS) ret = ATMI_STATUS_ERROR;
+  if (err != HSA_STATUS_SUCCESS)
+    ret = ATMI_STATUS_ERROR;
 
   register_allocation(*ptr, size, place);
 
@@ -137,7 +139,8 @@ atmi_status_t Runtime::Memfree(void *ptr) {
   ErrorCheck(atmi_free, err);
   DEBUG_PRINT("Freed %p\n", ptr);
 
-  if (err != HSA_STATUS_SUCCESS || !data) ret = ATMI_STATUS_ERROR;
+  if (err != HSA_STATUS_SUCCESS || !data)
+    ret = ATMI_STATUS_ERROR;
   return ret;
 }
 
@@ -213,4 +216,4 @@ atmi_status_t Runtime::Memcpy(void *dest, const void *src, size_t size) {
   return ret;
 }
 
-}  // namespace core
+} // namespace core

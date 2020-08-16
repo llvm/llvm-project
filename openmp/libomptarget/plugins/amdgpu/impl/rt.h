@@ -16,20 +16,19 @@ namespace core {
 #define DEFAULT_MAX_SIGNALS 1024
 #define DEFAULT_MAX_QUEUE_SIZE 4096
 #define DEFAULT_MAX_KERNEL_TYPES 32
-#define DEFAULT_NUM_GPU_QUEUES -1  // computed in code
-#define DEFAULT_NUM_CPU_QUEUES -1  // computed in code
+#define DEFAULT_NUM_GPU_QUEUES -1 // computed in code
+#define DEFAULT_NUM_CPU_QUEUES -1 // computed in code
 #define DEFAULT_DEBUG_MODE 0
 #define DEFAULT_PROFILE_MODE 0
 class Environment {
- public:
+public:
   Environment()
       : max_signals_(DEFAULT_MAX_SIGNALS),
         max_queue_size_(DEFAULT_MAX_QUEUE_SIZE),
         max_kernel_types_(DEFAULT_MAX_KERNEL_TYPES),
         num_gpu_queues_(DEFAULT_NUM_GPU_QUEUES),
         num_cpu_queues_(DEFAULT_NUM_CPU_QUEUES),
-        debug_mode_(DEFAULT_DEBUG_MODE),
-        profile_mode_(DEFAULT_PROFILE_MODE) {
+        debug_mode_(DEFAULT_DEBUG_MODE), profile_mode_(DEFAULT_PROFILE_MODE) {
     GetEnvAll();
   }
 
@@ -47,7 +46,7 @@ class Environment {
   // TODO(ashwinma): int may change to enum if we have more profile modes
   int getProfileMode() const { return profile_mode_; }
 
- private:
+private:
   std::string GetEnv(const char *name) {
     char *env = getenv(name);
     std::string ret;
@@ -67,7 +66,7 @@ class Environment {
 };
 
 class Runtime {
- public:
+public:
   static Runtime &getInstance() {
     static Runtime instance;
     return instance;
@@ -79,8 +78,7 @@ class Runtime {
   // machine info
   atmi_machine_t *GetMachineInfo();
   // modules
-  atmi_status_t RegisterModuleFromMemory(void *, size_t,
-                                         atmi_place_t);
+  atmi_status_t RegisterModuleFromMemory(void *, size_t, atmi_place_t);
   // data
   atmi_status_t Memcpy(void *, const void *, size_t);
   atmi_status_t Memfree(void *);
@@ -98,18 +96,17 @@ class Runtime {
   // TODO(ashwinma): int may change to enum if we have more profile modes
   int getProfileMode() const { return env_.getProfileMode(); }
 
-
- protected:
+protected:
   Runtime() = default;
   ~Runtime() = default;
   Runtime(const Runtime &) = delete;
   Runtime &operator=(const Runtime &) = delete;
 
- protected:
+protected:
   // variable to track environment variables
   Environment env_;
 };
 
-}  // namespace core
+} // namespace core
 
-#endif  // SRC_RUNTIME_INCLUDE_RT_H_
+#endif // SRC_RUNTIME_INCLUDE_RT_H_

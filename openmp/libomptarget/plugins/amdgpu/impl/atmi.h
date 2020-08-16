@@ -47,10 +47,10 @@ typedef enum atmi_status_t {
  */
 typedef enum atmi_devtype_s {
   ATMI_DEVTYPE_CPU = 0x0001,
-  ATMI_DEVTYPE_iGPU = 0x0010,                                // Integrated GPU
-  ATMI_DEVTYPE_dGPU = 0x0100,                                // Discrete GPU
-  ATMI_DEVTYPE_GPU = ATMI_DEVTYPE_iGPU | ATMI_DEVTYPE_dGPU,  // Any GPU
-  ATMI_DEVTYPE_ALL = 0x111  // Union of all device types
+  ATMI_DEVTYPE_iGPU = 0x0010,                               // Integrated GPU
+  ATMI_DEVTYPE_dGPU = 0x0100,                               // Discrete GPU
+  ATMI_DEVTYPE_GPU = ATMI_DEVTYPE_iGPU | ATMI_DEVTYPE_dGPU, // Any GPU
+  ATMI_DEVTYPE_ALL = 0x111 // Union of all device types
 } atmi_devtype_t;
 
 /**
@@ -79,8 +79,8 @@ typedef enum atmi_state_s {
  * @brief Scheduler Types.
  */
 typedef enum atmi_scheduler_s {
-  ATMI_SCHED_NONE = 0,  // No scheduler, all tasks go to the same queue
-  ATMI_SCHED_RR         // Round-robin tasks across queues
+  ATMI_SCHED_NONE = 0, // No scheduler, all tasks go to the same queue
+  ATMI_SCHED_RR        // Round-robin tasks across queues
 } atmi_scheduler_t;
 
 /**
@@ -218,7 +218,7 @@ typedef struct atmi_device_s {
    * Array of memory spaces/regions that are accessible
    * from this device.
    */
-  atmi_memory_t* memories;
+  atmi_memory_t *memories;
 } atmi_device_t;
 
 /**
@@ -232,7 +232,7 @@ typedef struct atmi_machine_s {
   /**
    * The device structures categorized by the device type
    */
-  atmi_device_t* devices_by_type[ATMI_DEVTYPE_ALL];
+  atmi_device_t *devices_by_type[ATMI_DEVTYPE_ALL];
 } atmi_machine_t;
 
 /**
@@ -242,96 +242,96 @@ extern atmi_place_t ATMI_DEFAULT_PLACE;
 
 // Below are some helper macros that can be used to setup
 // some of the ATMI data structures.
-#define ATMI_PLACE_ANY(node)                                    \
-  {                                                             \
-    .node_id = node, .type = ATMI_DEVTYPE_ALL, .device_id = -1, \
-    .cu_mask = 0xFFFFFFFFFFFFFFFF                               \
+#define ATMI_PLACE_ANY(node)                                                   \
+  {                                                                            \
+    .node_id = node, .type = ATMI_DEVTYPE_ALL, .device_id = -1,                \
+    .cu_mask = 0xFFFFFFFFFFFFFFFF                                              \
   }
-#define ATMI_PLACE_ANY_CPU(node)                                \
-  {                                                             \
-    .node_id = node, .type = ATMI_DEVTYPE_CPU, .device_id = -1, \
-    .cu_mask = 0xFFFFFFFFFFFFFFFF                               \
+#define ATMI_PLACE_ANY_CPU(node)                                               \
+  {                                                                            \
+    .node_id = node, .type = ATMI_DEVTYPE_CPU, .device_id = -1,                \
+    .cu_mask = 0xFFFFFFFFFFFFFFFF                                              \
   }
-#define ATMI_PLACE_ANY_GPU(node)                                \
-  {                                                             \
-    .node_id = node, .type = ATMI_DEVTYPE_GPU, .device_id = -1, \
-    .cu_mask = 0xFFFFFFFFFFFFFFFF                               \
+#define ATMI_PLACE_ANY_GPU(node)                                               \
+  {                                                                            \
+    .node_id = node, .type = ATMI_DEVTYPE_GPU, .device_id = -1,                \
+    .cu_mask = 0xFFFFFFFFFFFFFFFF                                              \
   }
-#define ATMI_PLACE_CPU(node, cpu_id)                                \
-  {                                                                 \
-    .node_id = node, .type = ATMI_DEVTYPE_CPU, .device_id = cpu_id, \
-    .cu_mask = 0xFFFFFFFFFFFFFFFF                                   \
+#define ATMI_PLACE_CPU(node, cpu_id)                                           \
+  {                                                                            \
+    .node_id = node, .type = ATMI_DEVTYPE_CPU, .device_id = cpu_id,            \
+    .cu_mask = 0xFFFFFFFFFFFFFFFF                                              \
   }
-#define ATMI_PLACE_GPU(node, gpu_id)                                \
-  {                                                                 \
-    .node_id = node, .type = ATMI_DEVTYPE_GPU, .device_id = gpu_id, \
-    .cu_mask = 0xFFFFFFFFFFFFFFFF                                   \
+#define ATMI_PLACE_GPU(node, gpu_id)                                           \
+  {                                                                            \
+    .node_id = node, .type = ATMI_DEVTYPE_GPU, .device_id = gpu_id,            \
+    .cu_mask = 0xFFFFFFFFFFFFFFFF                                              \
   }
-#define ATMI_PLACE_CPU_MASK(node, cpu_id, cpu_mask)                \
-  {                                                                \
-    .node_id = node, .type = ATMI_DEVTYPE_CPU, device_id = cpu_id, \
-    .cu_mask = (0x0 | cpu_mask)                                    \
+#define ATMI_PLACE_CPU_MASK(node, cpu_id, cpu_mask)                            \
+  {                                                                            \
+    .node_id = node, .type = ATMI_DEVTYPE_CPU, device_id = cpu_id,             \
+    .cu_mask = (0x0 | cpu_mask)                                                \
   }
-#define ATMI_PLACE_GPU_MASK(node, gpu_id, gpu_mask)                \
-  {                                                                \
-    .node_id = node, .type = ATMI_DEVTYPE_GPU, device_id = gpu_id, \
-    .cu_mask = (0x0 | gpu_mask)                                    \
+#define ATMI_PLACE_GPU_MASK(node, gpu_id, gpu_mask)                            \
+  {                                                                            \
+    .node_id = node, .type = ATMI_DEVTYPE_GPU, device_id = gpu_id,             \
+    .cu_mask = (0x0 | gpu_mask)                                                \
   }
-#define ATMI_PLACE(node, dev_type, dev_id, mask) \
+#define ATMI_PLACE(node, dev_type, dev_id, mask)                               \
   { .node_id = node, .type = dev_type, .device_id = dev_id, .cu_mask = mask }
 
-#define ATMI_MEM_PLACE_ANY(node) \
+#define ATMI_MEM_PLACE_ANY(node)                                               \
   { .node_id = node, .dev_type = ATMI_DEVTYPE_ALL, .dev_id = -1, .mem_id = -1 }
-#define ATMI_MEM_PLACE_ANY_CPU(node) \
+#define ATMI_MEM_PLACE_ANY_CPU(node)                                           \
   { .node_id = node, .dev_type = ATMI_DEVTYPE_CPU, .dev_id = -1, .mem_id = -1 }
-#define ATMI_MEM_PLACE_ANY_GPU(node) \
+#define ATMI_MEM_PLACE_ANY_GPU(node)                                           \
   { .node_id = node, .dev_type = ATMI_DEVTYPE_GPU, .dev_id = -1, .mem_id = -1 }
-#define ATMI_MEM_PLACE_CPU(node, cpu_id)                             \
-  {                                                                  \
-    .node_id = node, .dev_type = ATMI_DEVTYPE_CPU, .dev_id = cpu_id, \
-    .mem_id = -1                                                     \
+#define ATMI_MEM_PLACE_CPU(node, cpu_id)                                       \
+  {                                                                            \
+    .node_id = node, .dev_type = ATMI_DEVTYPE_CPU, .dev_id = cpu_id,           \
+    .mem_id = -1                                                               \
   }
-#define ATMI_MEM_PLACE_GPU(node, gpu_id)                             \
-  {                                                                  \
-    .node_id = node, .dev_type = ATMI_DEVTYPE_GPU, .dev_id = gpu_id, \
-    .mem_id = -1                                                     \
+#define ATMI_MEM_PLACE_GPU(node, gpu_id)                                       \
+  {                                                                            \
+    .node_id = node, .dev_type = ATMI_DEVTYPE_GPU, .dev_id = gpu_id,           \
+    .mem_id = -1                                                               \
   }
-#define ATMI_MEM_PLACE_CPU_MEM(node, cpu_id, cpu_mem_id)             \
-  {                                                                  \
-    .node_id = node, .dev_type = ATMI_DEVTYPE_CPU, .dev_id = cpu_id, \
-    .mem_id = cpu_mem_id                                             \
+#define ATMI_MEM_PLACE_CPU_MEM(node, cpu_id, cpu_mem_id)                       \
+  {                                                                            \
+    .node_id = node, .dev_type = ATMI_DEVTYPE_CPU, .dev_id = cpu_id,           \
+    .mem_id = cpu_mem_id                                                       \
   }
-#define ATMI_MEM_PLACE_GPU_MEM(node, gpu_id, gpu_mem_id)             \
-  {                                                                  \
-    .node_id = node, .dev_type = ATMI_DEVTYPE_GPU, .dev_id = gpu_id, \
-    .mem_id = gpu_mem_id                                             \
+#define ATMI_MEM_PLACE_GPU_MEM(node, gpu_id, gpu_mem_id)                       \
+  {                                                                            \
+    .node_id = node, .dev_type = ATMI_DEVTYPE_GPU, .dev_id = gpu_id,           \
+    .mem_id = gpu_mem_id                                                       \
   }
-#define ATMI_MEM_PLACE(d_type, d_id, m_id) \
+#define ATMI_MEM_PLACE(d_type, d_id, m_id)                                     \
   { .node_id = 0, .dev_type = d_type, .dev_id = d_id, .mem_id = m_id }
-#define ATMI_MEM_PLACE_NODE(node, d_type, d_id, m_id) \
+#define ATMI_MEM_PLACE_NODE(node, d_type, d_id, m_id)                          \
   { .node_id = node, .dev_type = d_type, .dev_id = d_id, .mem_id = m_id }
 
-#define ATMI_DATA(X, PTR, COUNT, PLACE) \
-  atmi_data_t X;                        \
-  X.ptr = PTR;                          \
-  X.size = COUNT;                       \
+#define ATMI_DATA(X, PTR, COUNT, PLACE)                                        \
+  atmi_data_t X;                                                               \
+  X.ptr = PTR;                                                                 \
+  X.size = COUNT;                                                              \
   X.place = PLACE;
 
 #define WORKITEMS gridDim[0]
 #define WORKITEMS2D gridDim[1]
 #define WORKITEMS3D gridDim[2]
 
-#define ATMI_CPARM(X)                                          \
-  atmi_cparm_t* X;                                             \
-  atmi_cparm_t _##X = {.group = ATMI_DEFAULT_TASKGROUP_HANDLE, \
-                       .groupable = ATMI_FALSE,                \
-                       .profilable = ATMI_FALSE,               \
-                       .synchronous = ATMI_FALSE,              \
-                       .num_required = 0,                      \
-                       .requires = NULL,                       \
-                       .num_required_groups = 0,               \
-                       .required_groups = NULL,                \
-                       .task_info = NULL};                     \
+#define ATMI_CPARM(X)                                                          \
+  atmi_cparm_t *X;                                                             \
+  atmi_cparm_t _##X = {.group = ATMI_DEFAULT_TASKGROUP_HANDLE,                 \
+                       .groupable = ATMI_FALSE,                                \
+                       .profilable = ATMI_FALSE,                               \
+                       .synchronous = ATMI_FALSE,                              \
+                       .num_required = 0,                                      \
+                       .requires = NULL,                                       \
+                       .num_required_groups = 0,                               \
+                       .required_groups = NULL,                                \
+                       .task_info = NULL};                                     \
   X = &_##X;
 
 #ifndef __OPENCL_C_VERSION__
@@ -341,4 +341,4 @@ extern atmi_place_t ATMI_DEFAULT_PLACE;
 
 #endif
 
-#endif  // INCLUDE_ATMI_H_
+#endif // INCLUDE_ATMI_H_

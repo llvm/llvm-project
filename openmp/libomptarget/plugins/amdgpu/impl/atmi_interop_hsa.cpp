@@ -11,8 +11,10 @@ using core::get_compute_agent;
 
 atmi_status_t atmi_interop_hsa_get_agent(atmi_place_t proc,
                                          hsa_agent_t *agent) {
-  if (!atl_is_atmi_initialized()) return ATMI_STATUS_ERROR;
-  if (!agent) return ATMI_STATUS_ERROR;
+  if (!atl_is_atmi_initialized())
+    return ATMI_STATUS_ERROR;
+  if (!agent)
+    return ATMI_STATUS_ERROR;
 
   *agent = get_compute_agent(proc);
   return ATMI_STATUS_SUCCESS;
@@ -31,9 +33,11 @@ atmi_status_t atmi_interop_hsa_get_symbol_info(atmi_mem_place_t place,
      atmi_memcpy(host_add, var_addr, var_size);
   */
 
-  if (!atl_is_atmi_initialized()) return ATMI_STATUS_ERROR;
+  if (!atl_is_atmi_initialized())
+    return ATMI_STATUS_ERROR;
   atmi_machine_t *machine = atmi_machine_get_info();
-  if (!symbol || !var_addr || !var_size || !machine) return ATMI_STATUS_ERROR;
+  if (!symbol || !var_addr || !var_size || !machine)
+    return ATMI_STATUS_ERROR;
   if (place.dev_id < 0 ||
       place.dev_id >= machine->device_count_by_type[place.dev_type])
     return ATMI_STATUS_ERROR;
@@ -64,9 +68,11 @@ atmi_status_t atmi_interop_hsa_get_kernel_info(
                                   &val);
   */
 
-  if (!atl_is_atmi_initialized()) return ATMI_STATUS_ERROR;
+  if (!atl_is_atmi_initialized())
+    return ATMI_STATUS_ERROR;
   atmi_machine_t *machine = atmi_machine_get_info();
-  if (!kernel_name || !value || !machine) return ATMI_STATUS_ERROR;
+  if (!kernel_name || !value || !machine)
+    return ATMI_STATUS_ERROR;
   if (place.dev_id < 0 ||
       place.dev_id >= machine->device_count_by_type[place.dev_type])
     return ATMI_STATUS_ERROR;
@@ -78,20 +84,20 @@ atmi_status_t atmi_interop_hsa_get_kernel_info(
       KernelInfoTable[place.dev_id].end()) {
     atl_kernel_info_t info = KernelInfoTable[place.dev_id][kernelStr];
     switch (kernel_info) {
-      case HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE:
-        *value = info.group_segment_size;
-        break;
-      case HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE:
-        *value = info.private_segment_size;
-        break;
-      case HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE:
-        // return the size for non-implicit args
-        *value = info.kernel_segment_size - sizeof(atmi_implicit_args_t);
-        break;
-      default:
-        *value = 0;
-        status = ATMI_STATUS_ERROR;
-        break;
+    case HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_GROUP_SEGMENT_SIZE:
+      *value = info.group_segment_size;
+      break;
+    case HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_PRIVATE_SEGMENT_SIZE:
+      *value = info.private_segment_size;
+      break;
+    case HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE:
+      // return the size for non-implicit args
+      *value = info.kernel_segment_size - sizeof(atmi_implicit_args_t);
+      break;
+    default:
+      *value = 0;
+      status = ATMI_STATUS_ERROR;
+      break;
     }
   } else {
     *value = 0;

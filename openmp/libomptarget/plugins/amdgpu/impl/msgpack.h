@@ -71,8 +71,7 @@ private:
   // Default implementation for sequences is to skip over the messages
   const unsigned char *handle_array(uint64_t N, byte_range bytes) {
     for (uint64_t i = 0; i < N; i++) {
-      const unsigned char *next =
-          skip_next_message(bytes.start, bytes.end);
+      const unsigned char *next = skip_next_message(bytes.start, bytes.end);
       if (!next) {
         return nullptr;
       }
@@ -84,8 +83,7 @@ private:
   const unsigned char *handle_map(uint64_t N, byte_range bytes) {
     for (uint64_t i = 0; i < N; i++) {
       const unsigned char *start_key = bytes.start;
-      const unsigned char *end_key =
-          skip_next_message(start_key, bytes.end);
+      const unsigned char *end_key = skip_next_message(start_key, bytes.end);
       if (!end_key) {
         return nullptr;
       }

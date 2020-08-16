@@ -5,12 +5,12 @@
  *===------------------------------------------------------------------------*/
 #ifndef SRC_RUNTIME_INCLUDE_DATA_H_
 #define SRC_RUNTIME_INCLUDE_DATA_H_
+#include "atmi.h"
 #include <hsa.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <map>
 #include <mutex>
-#include "atmi.h"
+#include <stdio.h>
+#include <stdlib.h>
 // we maintain our own mapping of device addr to a user specified data object
 // in order to work around a (possibly historic) bug in ROCr's
 // hsa_amd_pointer_info_set_userdata for variable symbols
@@ -20,20 +20,14 @@ namespace core {
 // Internal representation of any data that is created and managed by ATMI.
 // Data can be located on any device memory or host memory.
 class ATLData {
- public:
+public:
   ATLData(void *ptr, size_t size, atmi_mem_place_t place, atmi_arg_type_t type)
-      : ptr_(ptr),
-        host_aliasptr_(NULL),
-        size_(size),
-        place_(place),
+      : ptr_(ptr), host_aliasptr_(NULL), size_(size), place_(place),
         arg_type_(type) {}
 
   ATLData(void *ptr, void *hostptr, size_t size, atmi_mem_place_t place,
           atmi_arg_type_t type)
-      : ptr_(ptr),
-        host_aliasptr_(hostptr),
-        size_(size),
-        place_(place),
+      : ptr_(ptr), host_aliasptr_(hostptr), size_(size), place_(place),
         arg_type_(type) {}
 
   void *ptr() const { return ptr_; }
@@ -42,7 +36,7 @@ class ATLData {
   atmi_mem_place_t place() const { return place_; }
   atmi_arg_type_t arg_type() const { return arg_type_; }
 
- private:
+private:
   // make this a vector of pointers?
   void *ptr_;
   void *host_aliasptr_;
@@ -82,21 +76,21 @@ class ATLPointerTracker {
   typedef std::map<ATLMemoryRange, ATLData *, ATLMemoryRangeCompare>
       MapTrackerType;
 
- public:
+public:
   void insert(void *pointer, ATLData *data);
   void remove(void *pointer);
   ATLData *find(const void *pointer);
 
- private:
+private:
   MapTrackerType tracker_;
   std::mutex mutex_;
   // std::shared_timed_mutex _mut;
 };
 
-extern ATLPointerTracker g_data_map;  // Track all am pointer allocations.
+extern ATLPointerTracker g_data_map; // Track all am pointer allocations.
 
 enum class Direction { ATMI_H2D, ATMI_D2H, ATMI_D2D, ATMI_H2H };
 
 hsa_agent_t get_compute_agent(atmi_place_t place);
-}  // namespace core
-#endif  // SRC_RUNTIME_INCLUDE_DATA_H_
+} // namespace core
+#endif // SRC_RUNTIME_INCLUDE_DATA_H_

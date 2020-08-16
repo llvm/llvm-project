@@ -6,9 +6,9 @@
 #ifndef INCLUDE_ATMI_RUNTIME_H_
 #define INCLUDE_ATMI_RUNTIME_H_
 
+#include "atmi.h"
 #include <inttypes.h>
 #include <stdlib.h>
-#include "atmi.h"
 #ifndef __cplusplus
 #include <stdbool.h>
 #endif
@@ -90,7 +90,7 @@ atmi_status_t atmi_finalize();
  * @retval ::ATMI_STATUS_UNKNOWN The function encountered errors.
  *
  */
-  atmi_status_t atmi_module_register_from_memory_to_place(void *module_bytes,
+atmi_status_t atmi_module_register_from_memory_to_place(void *module_bytes,
                                                         size_t module_size,
                                                         atmi_place_t place);
 
@@ -283,4 +283,4 @@ unsigned long get_num_groups(unsigned int dim);
 }
 #endif
 
-#endif  // INCLUDE_ATMI_RUNTIME_H_
+#endif // INCLUDE_ATMI_RUNTIME_H_

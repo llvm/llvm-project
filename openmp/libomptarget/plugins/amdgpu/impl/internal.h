@@ -48,10 +48,10 @@ extern "C" {
 #define SNK_OR 1
 #define SNK_AND 0
 
-#define check(msg, status)            \
-  if (status != HSA_STATUS_SUCCESS) { \
-    printf("%s failed.\n", #msg);     \
-    exit(1);                          \
+#define check(msg, status)                                                     \
+  if (status != HSA_STATUS_SUCCESS) {                                          \
+    printf("%s failed.\n", #msg);                                              \
+    exit(1);                                                                   \
   }
 
 #ifdef DEBUG
@@ -60,29 +60,31 @@ extern "C" {
 #endif
 
 #ifdef DEBUG_SNK
-#define DEBUG_PRINT(fmt, ...)                                           \
-  if (core::Runtime::getInstance().getDebugMode()) {                    \
-    fprintf(stderr, "[%s:%d] " fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
+#define DEBUG_PRINT(fmt, ...)                                                  \
+  if (core::Runtime::getInstance().getDebugMode()) {                           \
+    fprintf(stderr, "[%s:%d] " fmt, __FILE__, __LINE__, ##__VA_ARGS__);        \
   }
 #else
-#define DEBUG_PRINT(...) \
-  do {                   \
+#define DEBUG_PRINT(...)                                                       \
+  do {                                                                         \
   } while (false)
 #endif
 
 #ifdef VERBOSE_SNK
-#define VERBOSE_PRINT(fmt, ...)                                         \
-  if (core::Runtime::getInstance().getDebugMode()) {                    \
-    fprintf(stderr, "[%s:%d] " fmt, __FILE__, __LINE__, ##__VA_ARGS__); \
+#define VERBOSE_PRINT(fmt, ...)                                                \
+  if (core::Runtime::getInstance().getDebugMode()) {                           \
+    fprintf(stderr, "[%s:%d] " fmt, __FILE__, __LINE__, ##__VA_ARGS__);        \
   }
 #else
-#define VERBOSE_PRINT(...) \
-  do {                     \
+#define VERBOSE_PRINT(...)                                                     \
+  do {                                                                         \
   } while (false)
 #endif
 
 #ifndef HSA_RUNTIME_INC_HSA_H_
-typedef struct hsa_signal_s { uint64_t handle; } hsa_signal_t;
+typedef struct hsa_signal_s {
+  uint64_t handle;
+} hsa_signal_t;
 #endif
 
 /*  All global values go in this global structure */
@@ -148,8 +150,8 @@ typedef struct atl_symbol_info_s {
   uint32_t size;
 } atl_symbol_info_t;
 
-extern std::vector<std::map<std::string, atl_kernel_info_t> > KernelInfoTable;
-extern std::vector<std::map<std::string, atl_symbol_info_t> > SymbolInfoTable;
+extern std::vector<std::map<std::string, atl_kernel_info_t>> KernelInfoTable;
+extern std::vector<std::map<std::string, atl_symbol_info_t>> SymbolInfoTable;
 
 // ---------------------- Kernel End -------------
 
@@ -171,7 +173,7 @@ class TaskgroupImpl;
 class TaskImpl;
 class Kernel;
 class KernelImpl;
-}  // namespace core
+} // namespace core
 
 extern std::vector<core::TaskgroupImpl *> AllTaskgroups;
 // atmi_task_table_t TaskTable[SNK_MAX_TASKS];
@@ -225,29 +227,24 @@ hsa_status_t finalize_hsa();
 /*
  * Generic utils
  */
-template <typename T>
-inline T alignDown(T value, size_t alignment) {
+template <typename T> inline T alignDown(T value, size_t alignment) {
   return (T)(value & ~(alignment - 1));
 }
 
-template <typename T>
-inline T *alignDown(T *value, size_t alignment) {
+template <typename T> inline T *alignDown(T *value, size_t alignment) {
   return reinterpret_cast<T *>(alignDown((intptr_t)value, alignment));
 }
 
-template <typename T>
-inline T alignUp(T value, size_t alignment) {
+template <typename T> inline T alignUp(T value, size_t alignment) {
   return alignDown((T)(value + alignment - 1), alignment);
 }
 
-template <typename T>
-inline T *alignUp(T *value, size_t alignment) {
+template <typename T> inline T *alignUp(T *value, size_t alignment) {
   return reinterpret_cast<T *>(
       alignDown((intptr_t)(value + alignment - 1), alignment));
 }
 
-template <typename T>
-void clear_container(T *q) {
+template <typename T> void clear_container(T *q) {
   T empty;
   std::swap(*q, empty);
 }
@@ -257,57 +254,57 @@ long int get_nanosecs(struct timespec start_time, struct timespec end_time);
 extern void register_allocation(void *addr, size_t size,
                                 atmi_mem_place_t place);
 extern hsa_agent_t get_compute_agent(atmi_place_t place);
-extern hsa_amd_memory_pool_t get_memory_pool_by_mem_place(
-    atmi_mem_place_t place);
+extern hsa_amd_memory_pool_t
+get_memory_pool_by_mem_place(atmi_mem_place_t place);
 extern bool atl_is_atmi_initialized();
 
 bool handle_group_signal(hsa_signal_value_t value, void *arg);
 
 void packet_store_release(uint32_t *packet, uint16_t header, uint16_t rest);
-uint16_t create_header(
-    hsa_packet_type_t type, int barrier,
-    atmi_task_fence_scope_t acq_fence = ATMI_FENCE_SCOPE_SYSTEM,
-    atmi_task_fence_scope_t rel_fence = ATMI_FENCE_SCOPE_SYSTEM);
+uint16_t
+create_header(hsa_packet_type_t type, int barrier,
+              atmi_task_fence_scope_t acq_fence = ATMI_FENCE_SCOPE_SYSTEM,
+              atmi_task_fence_scope_t rel_fence = ATMI_FENCE_SCOPE_SYSTEM);
 
 void allow_access_to_all_gpu_agents(void *ptr);
-}  // namespace core
+} // namespace core
 
 const char *get_error_string(hsa_status_t err);
 const char *get_atmi_error_string(atmi_status_t err);
 int cpu_bindthread(int cpu_index);
 atmi_status_t set_thread_affinity(int id);
-#define ATMIErrorCheck(msg, status)                             \
-  if (status != ATMI_STATUS_SUCCESS) {                          \
-    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, #msg, \
-           get_atmi_error_string(status));                      \
-    exit(1);                                                    \
-  } else {                                                      \
-    /*  printf("%s succeeded.\n", #msg);*/                      \
+#define ATMIErrorCheck(msg, status)                                            \
+  if (status != ATMI_STATUS_SUCCESS) {                                         \
+    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, #msg,                \
+           get_atmi_error_string(status));                                     \
+    exit(1);                                                                   \
+  } else {                                                                     \
+    /*  printf("%s succeeded.\n", #msg);*/                                     \
   }
 
-#define ErrorCheck(msg, status)                                 \
-  if (status != HSA_STATUS_SUCCESS) {                           \
-    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, #msg, \
-           get_error_string(status));                           \
-    exit(1);                                                    \
-  } else {                                                      \
-    /*  printf("%s succeeded.\n", #msg);*/                      \
+#define ErrorCheck(msg, status)                                                \
+  if (status != HSA_STATUS_SUCCESS) {                                          \
+    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, #msg,                \
+           get_error_string(status));                                          \
+    exit(1);                                                                   \
+  } else {                                                                     \
+    /*  printf("%s succeeded.\n", #msg);*/                                     \
   }
 
-#define ELFErrorReturn(msg, status)                             \
-  {                                                             \
-    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, #msg, \
-           get_error_string(status));                           \
-    return status;                                              \
+#define ELFErrorReturn(msg, status)                                            \
+  {                                                                            \
+    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, #msg,                \
+           get_error_string(status));                                          \
+    return status;                                                             \
   }
 
-#define ErrorCheckAndContinue(msg, status)                           \
-  if (status != HSA_STATUS_SUCCESS) {                                \
-    DEBUG_PRINT("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, #msg, \
-                get_error_string(status));                           \
-    continue;                                                        \
-  } else {                                                           \
-    /*  printf("%s succeeded.\n", #msg);*/                           \
+#define ErrorCheckAndContinue(msg, status)                                     \
+  if (status != HSA_STATUS_SUCCESS) {                                          \
+    DEBUG_PRINT("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, #msg,           \
+                get_error_string(status));                                     \
+    continue;                                                                  \
+  } else {                                                                     \
+    /*  printf("%s succeeded.\n", #msg);*/                                     \
   }
 
-#endif  // SRC_RUNTIME_INCLUDE_INTERNAL_H_
+#endif // SRC_RUNTIME_INCLUDE_INTERNAL_H_

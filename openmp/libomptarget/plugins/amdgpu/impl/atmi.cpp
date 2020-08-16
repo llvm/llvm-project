@@ -7,9 +7,7 @@
 /*
  * Initialize/Finalize
  */
-atmi_status_t atmi_init() {
-  return core::Runtime::getInstance().Initialize();
-}
+atmi_status_t atmi_init() { return core::Runtime::getInstance().Initialize(); }
 
 atmi_status_t atmi_finalize() {
   return core::Runtime::getInstance().Finalize();
@@ -31,7 +29,6 @@ atmi_status_t atmi_module_register_from_memory_to_place(void *module_bytes,
   return core::Runtime::getInstance().RegisterModuleFromMemory(
       module_bytes, module_size, place);
 }
-
 
 /*
  * Data
