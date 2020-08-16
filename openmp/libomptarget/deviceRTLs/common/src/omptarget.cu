@@ -17,9 +17,15 @@
 // global data tables
 ////////////////////////////////////////////////////////////////////////////////
 
+#ifdef __AMDGCN__
+extern DEVICE
+    omptarget_nvptx_Queue<omptarget_nvptx_ThreadPrivateContext, OMP_STATE_COUNT>
+        *omptarget_nvptx_device_State;
+#else
 extern DEVICE
     omptarget_nvptx_Queue<omptarget_nvptx_ThreadPrivateContext, OMP_STATE_COUNT>
         omptarget_nvptx_device_State[MAX_SM];
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // init entry points

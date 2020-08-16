@@ -23,9 +23,25 @@ DEVICE omptarget_device_environmentTy omptarget_device_environment;
 // global data holding OpenMP state information
 ////////////////////////////////////////////////////////////////////////////////
 
+#ifndef __AMDGCN__
+
 DEVICE
 omptarget_nvptx_Queue<omptarget_nvptx_ThreadPrivateContext, OMP_STATE_COUNT>
     omptarget_nvptx_device_State[MAX_SM];
+
+#else
+
+__attribute__((used))
+EXTERN uint64_t const constexpr omptarget_nvptx_device_State_size =
+    sizeof(omptarget_nvptx_Queue<omptarget_nvptx_ThreadPrivateContext,
+                                 OMP_STATE_COUNT>[MAX_SM]);
+
+// Initialized to point to omptarget_nvptx_device_State_size bytes by plugin
+DEVICE
+omptarget_nvptx_Queue<omptarget_nvptx_ThreadPrivateContext, OMP_STATE_COUNT>
+    *omptarget_nvptx_device_State;
+
+#endif
 
 #ifdef __AMDGCN__
 // Allocated by rtl.cpp

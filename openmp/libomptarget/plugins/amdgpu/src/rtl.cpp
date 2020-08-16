@@ -322,6 +322,14 @@ public:
   // OpenMP Requires Flags
   int64_t RequiresFlags;
 
+  // Clean up manually allocated state
+  struct atmiFreePtrDeletor {
+    void operator()(void *p) {
+      atmi_free(p);  // ignore failure to free
+    }
+  };
+  std::vector<std::unique_ptr<void, atmiFreePtrDeletor>> deviceStateStore;
+
   // static int EnvNumThreads;
   static const int HardTeamLimit = 1 << 20; // 1 Meg
   static const int DefaultNumTeams = 128;
@@ -496,7 +504,10 @@ public:
 
   ~RTLDeviceInfoTy() {
     DP("Finalizing the HSA-ATMI DeviceInfo.\n");
-    KernelArgPoolMap.clear(); // calls hsa to free memory
+    // Run destructors on types that use HSA before
+    // atmi_finalize removes access to it
+    deviceStateStore.clear();
+    KernelArgPoolMap.clear();
     // Terminate hostcall before finalizing ATMI
     atmi_hostcall_terminate();
     atmi_finalize();
@@ -816,8 +827,31 @@ atmi_status_t interop_get_symbol_info(char *base, size_t img_size,
 }
 } // namespace
 
-static __tgt_target_table *
-__tgt_rtl_load_binary_locked(int32_t device_id, __tgt_device_image *image);
+static uint64_t get_device_State_bytes(char *ImageStart, size_t img_size) {
+  uint64_t device_State_bytes = 0;
+  {
+    // If this is the deviceRTL, get the state variable size
+    symbol_info size_si;
+    int rc = get_symbol_info_without_loading(
+        ImageStart, img_size, "omptarget_nvptx_device_State_size", &size_si);
+
+    if (rc == 0) {
+      if (size_si.size != sizeof(uint64_t)) {
+        fprintf(stderr,
+                "Found device_State_size variable with wrong size, aborting\n");
+        exit(1);
+      }
+
+      // Read number of bytes directly from the elf
+      memcpy(&device_State_bytes, size_si.addr, sizeof(uint64_t));
+    }
+  }
+  return device_State_bytes;
+}
+
+static __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
+                                                 __tgt_device_image *image);
+
 
 __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
                                           __tgt_device_image *image) {
@@ -861,6 +895,52 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
   }
 
   DP("ATMI module successfully loaded!\n");
+
+  // Zero the pseudo-bss variable by calling into hsa
+  // Do this post-load to handle got
+  uint64_t device_State_bytes =
+      get_device_State_bytes((char *)image->ImageStart, img_size);
+  if (device_State_bytes != 0) {
+    void *ptr = NULL;
+
+    atmi_status_t err =
+        atmi_malloc(&ptr, device_State_bytes, get_gpu_mem_place(device_id));
+    if (err != ATMI_STATUS_SUCCESS) {
+      fprintf(stderr, "Failed to allocate device_state array\n");
+      return NULL;
+    }
+    DeviceInfo.deviceStateStore.emplace_back(ptr);
+
+    void *state_ptr;
+    uint32_t state_ptr_size;
+    err = atmi_interop_hsa_get_symbol_info(get_gpu_mem_place(device_id),
+                                           "omptarget_nvptx_device_State",
+                                           &state_ptr, &state_ptr_size);
+
+    if (err != ATMI_STATUS_SUCCESS) {
+      fprintf(stderr, "failed to find device_state ptr\n");
+      return NULL;
+    }
+    if (state_ptr_size != sizeof(void *)) {
+      fprintf(stderr, "unexpected size of state_ptr %u != %zu\n", state_ptr_size,
+              sizeof(void *));
+      return NULL;
+    }
+
+    // write ptr to device memory so it can be used by later kernels
+    err = atmi_memcpy(state_ptr, &ptr, sizeof(void *));
+    if (err != ATMI_STATUS_SUCCESS) {
+      fprintf(stderr, "memcpy install of state_ptr failed\n");
+      return NULL;
+    }
+
+    assert((device_State_bytes & 0x3) == 0); // known >= 4 byte aligned
+    hsa_status_t rc = hsa_amd_memory_fill(ptr, 0, device_State_bytes / 4);
+    if (rc != HSA_STATUS_SUCCESS) {
+      fprintf(stderr, "zero fill device_state failed with %u\n", rc);
+      return NULL;
+    }
+  }
 
   // TODO: Check with Guansong to understand the below comment more thoroughly.
   // Here, we take advantage of the data that is appended after img_end to get
