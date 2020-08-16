@@ -255,10 +255,6 @@ struct TransposeOpLowering : public ConversionPattern {
 namespace {
 struct ToyToAffineLoweringPass
     : public PassWrapper<ToyToAffineLoweringPass, FunctionPass> {
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect>();
-    registry.insert<StandardOpsDialect>();
-  }
   void runOnFunction() final;
 };
 } // end anonymous namespace.

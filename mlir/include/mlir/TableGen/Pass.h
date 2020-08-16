@@ -94,9 +94,6 @@ public:
   /// Return the C++ constructor call to create an instance of this pass.
   StringRef getConstructor() const;
 
-  /// Return the dialects this pass needs to be registered.
-  ArrayRef<StringRef> getDependentDialects() const;
-
   /// Return the options provided by this pass.
   ArrayRef<PassOption> getOptions() const;
 
@@ -107,7 +104,6 @@ public:
 
 private:
   const llvm::Record *def;
-  std::vector<StringRef> dependentDialects;
   std::vector<PassOption> options;
   std::vector<PassStatistic> statistics;
 };
