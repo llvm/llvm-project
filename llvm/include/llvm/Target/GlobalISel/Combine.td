@@ -291,6 +291,16 @@ def i2p_to_p2i: GICombineRule<
   (apply [{ return Helper.applyCombineP2IToI2P(*${root}, ${info}); }])
 >;
 
+// Fold add ptrtoint(x), y -> ptrtoint (ptr_add x), y
+def add_p2i_to_ptradd_matchinfo : GIDefMatchData<"std::pair<Register, bool>">;
+def add_p2i_to_ptradd : GICombineRule<
+  (defs root:$root, add_p2i_to_ptradd_matchinfo:$info),
+  (match (wip_match_opcode G_ADD):$root,
+    [{ return Helper.matchCombineAddP2IToPtrAdd(*${root}, ${info}); }]),
+  (apply [{ return Helper.applyCombineAddP2IToPtrAdd(*${root}, ${info}); }])
+>;
+
+
 // Simplify: (logic_op (op x...), (op y...)) -> (op (logic_op x, y))
 def hoist_logic_op_with_same_opcode_hands: GICombineRule <
   (defs root:$root, instruction_steps_matchdata:$info),
@@ -331,7 +341,7 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
 
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend]>;
 
-def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl]>;
+def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, add_p2i_to_ptradd]>;
 def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
     combines_for_extload, combine_indexed_load_store, undef_combines,
     identity_combines, simplify_add_to_sub,
