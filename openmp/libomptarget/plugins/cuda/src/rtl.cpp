@@ -75,6 +75,9 @@ struct KernelTy {
   // 1 - Generic mode (with master warp)
   int8_t ExecutionMode;
 
+  /// Maximal number of threads per block for this kernel.
+  int MaxThreadsPerBlock = 0;
+
   KernelTy(CUfunction _Func, int8_t _ExecutionMode)
       : Func(_Func), ExecutionMode(_ExecutionMode) {}
 };
@@ -843,10 +846,9 @@ public:
     return OFFLOAD_SUCCESS;
   }
 
-  int runTargetTeamRegion(const int DeviceId, const void *TgtEntryPtr,
-                          void **TgtArgs, ptrdiff_t *TgtOffsets,
-                          const int ArgNum, const int TeamNum,
-                          const int ThreadLimit,
+  int runTargetTeamRegion(const int DeviceId, void *TgtEntryPtr, void **TgtArgs,
+                          ptrdiff_t *TgtOffsets, const int ArgNum,
+                          const int TeamNum, const int ThreadLimit,
                           const unsigned int LoopTripCount,
                           __tgt_async_info *AsyncInfo) const {
     CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
@@ -862,10 +864,9 @@ public:
       Args[I] = &Ptrs[I];
     }
 
-    const KernelTy *KernelInfo =
-        reinterpret_cast<const KernelTy *>(TgtEntryPtr);
+    KernelTy *KernelInfo = reinterpret_cast<KernelTy *>(TgtEntryPtr);
 
-    unsigned int CudaThreadsPerBlock;
+    int CudaThreadsPerBlock;
     if (ThreadLimit > 0) {
       DP("Setting CUDA threads per block to requested %d\n", ThreadLimit);
       CudaThreadsPerBlock = ThreadLimit;
@@ -886,13 +887,18 @@ public:
       CudaThreadsPerBlock = DeviceData[DeviceId].ThreadsPerBlock;
     }
 
-    int KernelLimit;
-    Err = cuFuncGetAttribute(&KernelLimit,
-                             CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK,
-                             KernelInfo->Func);
-    if (Err == CUDA_SUCCESS && KernelLimit < CudaThreadsPerBlock) {
-      DP("Threads per block capped at kernel limit %d\n", KernelLimit);
-      CudaThreadsPerBlock = KernelLimit;
+    if (!KernelInfo->MaxThreadsPerBlock) {
+      Err = cuFuncGetAttribute(&KernelInfo->MaxThreadsPerBlock,
+                               CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK,
+                               KernelInfo->Func);
+      if (!checkResult(Err, "Error returned from cuFuncGetAttribute\n"))
+        return OFFLOAD_FAIL;
+    }
+
+    if (KernelInfo->MaxThreadsPerBlock < CudaThreadsPerBlock) {
+      DP("Threads per block capped at kernel limit %d\n",
+         KernelInfo->MaxThreadsPerBlock);
+      CudaThreadsPerBlock = KernelInfo->MaxThreadsPerBlock;
     }
 
     unsigned int CudaBlocksPerGrid;
