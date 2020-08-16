@@ -57,7 +57,7 @@ static MCSubtargetInfo *createVEMCSubtargetInfo(const Triple &TT, StringRef CPU,
                                                 StringRef FS) {
   if (CPU.empty())
     CPU = "ve";
-  return createVEMCSubtargetInfoImpl(TT, CPU, FS);
+  return createVEMCSubtargetInfoImpl(TT, CPU, /*TuneCPU=*/CPU, FS);
 }
 
 static MCTargetStreamer *
