@@ -173,7 +173,8 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            Callbacks *Callbacks)
     : ConfigProvider(Opts.ConfigProvider), TFS(TFS),
       DynamicIdx(Opts.BuildDynamicSymbolIndex
-                     ? new FileIndex(Opts.HeavyweightDynamicSymbolIndex)
+                     ? new FileIndex(Opts.HeavyweightDynamicSymbolIndex,
+                                     Opts.CollectMainFileRefs)
                      : nullptr),
       GetClangTidyOptions(Opts.GetClangTidyOptions),
       SuggestMissingIncludes(Opts.SuggestMissingIncludes),
