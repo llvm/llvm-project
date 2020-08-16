@@ -75,6 +75,9 @@ struct KernelTy {
   // 1 - Generic mode (with master warp)
   int8_t ExecutionMode;
 
+  /// Maximal number of threads per block for this kernel.
+  int MaxThreadsPerBlock = 0;
+
   KernelTy(CUfunction _Func, int8_t _ExecutionMode)
       : Func(_Func), ExecutionMode(_ExecutionMode) {}
 };
@@ -85,10 +88,6 @@ struct KernelTy {
 struct omptarget_device_environmentTy {
   int32_t debug_level;
 };
-
-/// List that contains all the kernels.
-/// FIXME: we may need this to be per device and per library.
-std::list<KernelTy> KernelsList;
 
 namespace {
 bool checkResult(CUresult Err, const char *ErrMsg) {
@@ -118,7 +117,11 @@ int memcpyDtoD(const void *SrcPtr, void *DstPtr, int64_t Size,
 
 // Structure contains per-device data
 struct DeviceDataTy {
+  /// List that contains all the kernels.
+  std::list<KernelTy> KernelsList;
+
   std::list<FuncOrGblEntryTy> FuncGblEntries;
+
   CUcontext Context = nullptr;
   // Device properties
   int ThreadsPerBlock = 0;
@@ -565,6 +568,7 @@ public:
     const __tgt_offload_entry *HostBegin = Image->EntriesBegin;
     const __tgt_offload_entry *HostEnd = Image->EntriesEnd;
 
+    std::list<KernelTy> &KernelsList = DeviceData[DeviceId].KernelsList;
     for (const __tgt_offload_entry *E = HostBegin; E != HostEnd; ++E) {
       if (!E->addr) {
         // We return nullptr when something like this happens, the host should
@@ -843,10 +847,9 @@ public:
     return OFFLOAD_SUCCESS;
   }
 
-  int runTargetTeamRegion(const int DeviceId, const void *TgtEntryPtr,
-                          void **TgtArgs, ptrdiff_t *TgtOffsets,
-                          const int ArgNum, const int TeamNum,
-                          const int ThreadLimit,
+  int runTargetTeamRegion(const int DeviceId, void *TgtEntryPtr, void **TgtArgs,
+                          ptrdiff_t *TgtOffsets, const int ArgNum,
+                          const int TeamNum, const int ThreadLimit,
                           const unsigned int LoopTripCount,
                           __tgt_async_info *AsyncInfo) const {
     CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
@@ -862,10 +865,9 @@ public:
       Args[I] = &Ptrs[I];
     }
 
-    const KernelTy *KernelInfo =
-        reinterpret_cast<const KernelTy *>(TgtEntryPtr);
+    KernelTy *KernelInfo = reinterpret_cast<KernelTy *>(TgtEntryPtr);
 
-    unsigned int CudaThreadsPerBlock;
+    int CudaThreadsPerBlock;
     if (ThreadLimit > 0) {
       DP("Setting CUDA threads per block to requested %d\n", ThreadLimit);
       CudaThreadsPerBlock = ThreadLimit;
@@ -886,13 +888,18 @@ public:
       CudaThreadsPerBlock = DeviceData[DeviceId].ThreadsPerBlock;
     }
 
-    int KernelLimit;
-    Err = cuFuncGetAttribute(&KernelLimit,
-                             CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK,
-                             KernelInfo->Func);
-    if (Err == CUDA_SUCCESS && KernelLimit < CudaThreadsPerBlock) {
-      DP("Threads per block capped at kernel limit %d\n", KernelLimit);
-      CudaThreadsPerBlock = KernelLimit;
+    if (!KernelInfo->MaxThreadsPerBlock) {
+      Err = cuFuncGetAttribute(&KernelInfo->MaxThreadsPerBlock,
+                               CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK,
+                               KernelInfo->Func);
+      if (!checkResult(Err, "Error returned from cuFuncGetAttribute\n"))
+        return OFFLOAD_FAIL;
+    }
+
+    if (KernelInfo->MaxThreadsPerBlock < CudaThreadsPerBlock) {
+      DP("Threads per block capped at kernel limit %d\n",
+         KernelInfo->MaxThreadsPerBlock);
+      CudaThreadsPerBlock = KernelInfo->MaxThreadsPerBlock;
     }
 
     unsigned int CudaBlocksPerGrid;
