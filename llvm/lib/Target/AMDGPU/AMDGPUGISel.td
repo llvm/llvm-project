@@ -74,6 +74,9 @@ def gi_flat_offset :
 def gi_flat_offset_signed :
     GIComplexOperandMatcher<s64, "selectFlatOffsetSigned">,
     GIComplexPatternEquiv<FLATOffsetSigned>;
+def gi_global_saddr :
+    GIComplexOperandMatcher<s64, "selectGlobalSAddr">,
+    GIComplexPatternEquiv<GlobalSAddr>;
 
 def gi_mubuf_scratch_offset :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffset">,
