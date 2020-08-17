@@ -25,14 +25,12 @@ class TestIndirectEnumVariables(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
-    @skipIf(bugnumber='rdar://27568868', oslist=['linux'])
     def test_indirect_cases_variables(self):
         """Tests that indirect Enum variables display correctly when cases are indirect"""
         self.build()
         self.do_test("indirect case break here")
 
     @swiftTest
-    @skipIf(bugnumber='rdar://27568868', oslist=['linux'])
     def test_indirect_enum_variables(self):
         """Tests that indirect Enum variables display correctly when enum is indirect"""
         self.build()
