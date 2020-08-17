@@ -44,5 +44,5 @@ class TestPtrRefs(TestBase):
 
         frame = thread.GetFrameAtIndex(0)
 
-        self.runCmd("script import lldb.macosx.heap")
+        self.runCmd("command script import lldb.macosx.heap")
         self.expect("ptr_refs my_ptr", substrs=["malloc", "stack"])
