@@ -1221,6 +1221,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(Sign, m_Intrinsic<Intrinsic::copysign>(m_Value(), m_Value(X))))
       return replaceOperand(*II, 1, X);
 
+    // Peek through changes of magnitude's sign-bit. This call rewrites those:
+    // copysign (fabs X), Sign --> copysign X, Sign
+    // copysign (fneg X), Sign --> copysign X, Sign
+    if (match(Mag, m_FAbs(m_Value(X))) || match(Mag, m_FNeg(m_Value(X))))
+      return replaceOperand(*II, 0, X);
+
     break;
   }
   case Intrinsic::fabs: {

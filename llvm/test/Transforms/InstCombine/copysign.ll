@@ -92,8 +92,7 @@ define float @copysign_sign_arg(float %x, float %y, float %z) {
 
 define float @fneg_mag(float %x, float %y) {
 ; CHECK-LABEL: @fneg_mag(
-; CHECK-NEXT:    [[N:%.*]] = fneg float [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.copysign.f32(float [[N]], float [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.copysign.f32(float [[X:%.*]], float [[Y:%.*]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %n = fneg float %x
@@ -103,8 +102,7 @@ define float @fneg_mag(float %x, float %y) {
 
 define float @fabs_mag(float %x, float %y) {
 ; CHECK-LABEL: @fabs_mag(
-; CHECK-NEXT:    [[A:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.copysign.f32(float [[A]], float [[Y:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.copysign.f32(float [[X:%.*]], float [[Y:%.*]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %a = call float @llvm.fabs.f32(float %x)
