@@ -126,6 +126,8 @@ MlirModule mlirModuleCreateEmpty(MlirLocation location) {
 
 MlirModule mlirModuleCreateParse(MlirContext context, const char *module) {
   OwningModuleRef owning = parseSourceString(module, unwrap(context));
+  if (!owning)
+    return MlirModule{nullptr};
   return MlirModule{owning.release().getOperation()};
 }
 

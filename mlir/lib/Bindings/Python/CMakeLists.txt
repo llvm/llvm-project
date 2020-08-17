@@ -22,6 +22,7 @@ endif()
 add_library(MLIRBindingsPythonExtension ${PYEXT_LINK_MODE}
   MainModule.cpp
   IRModules.cpp
+  PybindUtils.cpp
 )
 
 target_include_directories(MLIRBindingsPythonExtension PRIVATE
@@ -68,7 +69,6 @@ endif()
 
 target_link_libraries(MLIRBindingsPythonExtension
   PRIVATE
-  MLIRIR
   MLIRCAPIIR
   MLIRCAPIRegistration
   ${PYEXT_LIBADD}
