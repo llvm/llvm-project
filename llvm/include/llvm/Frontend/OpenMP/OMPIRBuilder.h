@@ -318,6 +318,32 @@ public:
   StringMap<AssertingVH<Constant>, BumpPtrAllocator> InternalVars;
 
 public:
+  /// Generator for __kmpc_copyprivate
+  ///
+  /// \param Loc The source location description.
+  /// \param BufSize Number of elements in the buffer.
+  /// \param CpyBuf List of pointers to data to be copied.
+  /// \param CpyFn function to call for copying data.
+  /// \param DidIt flag variable; 1 for 'single' thread, 0 otherwise.
+  ///
+  /// \return The insertion position *after* the CopyPrivate call.
+
+  InsertPointTy CreateCopyPrivate(const LocationDescription &Loc,
+                                  llvm::Value *BufSize, llvm::Value *CpyBuf,
+                                  llvm::Value *CpyFn, llvm::Value *DidIt);
+
+  /// Generator for '#omp single'
+  ///
+  /// \param Loc The source location description.
+  /// \param BodyGenCB Callback that will generate the region code.
+  /// \param FiniCB Callback to finalize variable copies.
+  /// \param DidIt Local variable used as a flag to indicate 'single' thread
+  ///
+  /// \returns The insertion position *after* the single call.
+  InsertPointTy CreateSingle(const LocationDescription &Loc,
+                             BodyGenCallbackTy BodyGenCB,
+                             FinalizeCallbackTy FiniCB, llvm::Value *DidIt);
+
   /// Generator for '#omp master'
   ///
   /// \param Loc The insert and source location description.

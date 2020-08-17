@@ -804,6 +804,62 @@ OpenMPIRBuilder::CreateMaster(const LocationDescription &Loc,
                               /*Conditional*/ true, /*hasFinalize*/ true);
 }
 
+OpenMPIRBuilder::InsertPointTy
+OpenMPIRBuilder::CreateCopyPrivate(const LocationDescription &Loc,
+                                   llvm::Value *BufSize, llvm::Value *CpyBuf,
+                                   llvm::Value *CpyFn, llvm::Value *DidIt) {
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
+  Value *Ident = getOrCreateIdent(SrcLocStr);
+  Value *ThreadId = getOrCreateThreadID(Ident);
+
+  llvm::Value *DidItLD = Builder.CreateLoad(DidIt);
+
+  Value *Args[] = {Ident, ThreadId, BufSize, CpyBuf, CpyFn, DidItLD};
+
+  Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_copyprivate);
+  Builder.CreateCall(Fn, Args);
+
+  return Builder.saveIP();
+}
+
+OpenMPIRBuilder::InsertPointTy
+OpenMPIRBuilder::CreateSingle(const LocationDescription &Loc,
+                              BodyGenCallbackTy BodyGenCB,
+                              FinalizeCallbackTy FiniCB, llvm::Value *DidIt) {
+
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  // If needed (i.e. not null), initialize `DidIt` with 0
+  if (DidIt) {
+    Builder.CreateStore(Builder.getInt32(0), DidIt);
+  }
+
+  Directive OMPD = Directive::OMPD_single;
+  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc);
+  Value *Ident = getOrCreateIdent(SrcLocStr);
+  Value *ThreadId = getOrCreateThreadID(Ident);
+  Value *Args[] = {Ident, ThreadId};
+
+  Function *EntryRTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_single);
+  Instruction *EntryCall = Builder.CreateCall(EntryRTLFn, Args);
+
+  Function *ExitRTLFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_single);
+  Instruction *ExitCall = Builder.CreateCall(ExitRTLFn, Args);
+
+  // generates the following:
+  // if (__kmpc_single()) {
+  //		.... single region ...
+  // 		__kmpc_end_single
+  // }
+
+  return EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
+                              /*Conditional*/ true, /*hasFinalize*/ true);
+}
+
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::CreateCritical(
     const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
     FinalizeCallbackTy FiniCB, StringRef CriticalName, Value *HintInst) {
