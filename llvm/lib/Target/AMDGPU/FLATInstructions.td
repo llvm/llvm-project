@@ -783,6 +783,11 @@ class FlatAtomicPatNoRtn <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt
   (inst VReg_64:$vaddr, getVregSrcForVT<vt>.ret:$data, $offset)
 >;
 
+class FlatSignedAtomicPatNoRtn <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (node (FLATOffsetSigned i64:$vaddr, i16:$offset), vt:$data),
+  (inst VReg_64:$vaddr, getVregSrcForVT<vt>.ret:$data, $offset)
+>;
+
 class FlatSignedAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt,
                      ValueType data_vt = vt> : GCNPat <
   (vt (node (FLATOffsetSigned i64:$vaddr, i16:$offset), data_vt:$data)),
@@ -971,8 +976,8 @@ def : FlatSignedAtomicPat <GLOBAL_ATOMIC_SWAP_X2_RTN, atomic_swap_global_64, i64
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_CMPSWAP_X2_RTN, AMDGPUatomic_cmp_swap_global_64, i64, v2i64>;
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_XOR_X2_RTN, atomic_load_xor_global_64, i64>;
 
-def : FlatAtomicPatNoRtn <GLOBAL_ATOMIC_ADD_F32,    atomic_fadd_global_noret, f32>;
-def : FlatAtomicPatNoRtn <GLOBAL_ATOMIC_PK_ADD_F16, atomic_fadd_global_noret, v2f16>;
+def : FlatSignedAtomicPatNoRtn <GLOBAL_ATOMIC_ADD_F32,    atomic_fadd_global_noret, f32>;
+def : FlatSignedAtomicPatNoRtn <GLOBAL_ATOMIC_PK_ADD_F16, atomic_fadd_global_noret, v2f16>;
 
 } // End OtherPredicates = [HasFlatGlobalInsts], AddedComplexity = 10
 
