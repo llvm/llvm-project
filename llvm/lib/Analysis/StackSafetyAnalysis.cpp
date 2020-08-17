@@ -846,11 +846,13 @@ StackSafetyInfo::getParamAccesses(ModuleSummaryIndex &Index) const {
       Param.Calls.emplace_back(C.first.ParamNo,
                                Index.getOrInsertValueInfo(C.first.Callee),
                                C.second);
-      llvm::sort(Param.Calls, [](const FunctionSummary::ParamAccess::Call &L,
-                                 const FunctionSummary::ParamAccess::Call &R) {
-        return std::tie(L.ParamNo, L.Callee) < std::tie(R.ParamNo, R.Callee);
-      });
     }
+  }
+  for (FunctionSummary::ParamAccess &Param : ParamAccesses) {
+    sort(Param.Calls, [](const FunctionSummary::ParamAccess::Call &L,
+                         const FunctionSummary::ParamAccess::Call &R) {
+      return std::tie(L.ParamNo, L.Callee) < std::tie(R.ParamNo, R.Callee);
+    });
   }
   return ParamAccesses;
 }
