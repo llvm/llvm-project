@@ -20,16 +20,15 @@ def LLVM_Dialect : Dialect {
   let name = "llvm";
   let cppNamespace = "LLVM";
   let hasRegionArgAttrVerify = 1;
+  let hasOperationAttrVerify = 1;
   let extraClassDeclaration = [{
-    ~LLVMDialect();
-    const llvm::DataLayout &getDataLayout();
+    /// Name of the data layout attributes.
+    static StringRef getDataLayoutAttrName() { return "llvm.data_layout"; }
 
-  private:
-    friend LLVMType;
-
-    // This can't be a unique_ptr because the ctor is generated inline
-    // in the class definition at the moment.
-    detail::LLVMDialectImpl *impl;
+    /// Verifies if the given string is a well-formed data layout descriptor.
+    /// Uses `reportError` to report errors.
+    static LogicalResult verifyDataLayoutString(
+        StringRef descr, llvm::function_ref<void (const Twine &)> reportError);
   }];
 }
 

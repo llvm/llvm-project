@@ -1216,27 +1216,27 @@ func @atomic_rmw(%I : memref<10xi32>, %ival : i32, %F : memref<10xf32>, %fval : 
 // -----
 
 // CHECK-LABEL: func @generic_atomic_rmw
-func @generic_atomic_rmw(%I : memref<10xf32>, %i : index) -> f32 {
-  %x = generic_atomic_rmw %I[%i] : memref<10xf32> {
-    ^bb0(%old_value : f32):
-      %c1 = constant 1.0 : f32
-      atomic_yield %c1 : f32
+func @generic_atomic_rmw(%I : memref<10xi32>, %i : index) -> i32 {
+  %x = generic_atomic_rmw %I[%i] : memref<10xi32> {
+    ^bb0(%old_value : i32):
+      %c1 = constant 1 : i32
+      atomic_yield %c1 : i32
   }
-  // CHECK: [[init:%.*]] = llvm.load %{{.*}} : !llvm.ptr<float>
-  // CHECK-NEXT: llvm.br ^bb1([[init]] : !llvm.float)
-  // CHECK-NEXT: ^bb1([[loaded:%.*]]: !llvm.float):
-  // CHECK-NEXT: [[c1:%.*]] = llvm.mlir.constant(1.000000e+00 : f32)
+  // CHECK: [[init:%.*]] = llvm.load %{{.*}} : !llvm.ptr<i32>
+  // CHECK-NEXT: llvm.br ^bb1([[init]] : !llvm.i32)
+  // CHECK-NEXT: ^bb1([[loaded:%.*]]: !llvm.i32):
+  // CHECK-NEXT: [[c1:%.*]] = llvm.mlir.constant(1 : i32)
   // CHECK-NEXT: [[pair:%.*]] = llvm.cmpxchg %{{.*}}, [[loaded]], [[c1]]
-  // CHECK-SAME:                    acq_rel monotonic : !llvm.float
+  // CHECK-SAME:                    acq_rel monotonic : !llvm.i32
   // CHECK-NEXT: [[new:%.*]] = llvm.extractvalue [[pair]][0]
   // CHECK-NEXT: [[ok:%.*]] = llvm.extractvalue [[pair]][1]
-  // CHECK-NEXT: llvm.cond_br [[ok]], ^bb2, ^bb1([[new]] : !llvm.float)
+  // CHECK-NEXT: llvm.cond_br [[ok]], ^bb2, ^bb1([[new]] : !llvm.i32)
   // CHECK-NEXT: ^bb2:
-  %c2 = constant 2.0 : f32
-  %add = addf %c2, %x : f32
-  return %add : f32
-  // CHECK-NEXT: [[c2:%.*]] = llvm.mlir.constant(2.000000e+00 : f32)
-  // CHECK-NEXT: [[add:%.*]] = llvm.fadd [[c2]], [[new]] : !llvm.float
+  %c2 = constant 2 : i32
+  %add = addi %c2, %x : i32
+  return %add : i32
+  // CHECK-NEXT: [[c2:%.*]] = llvm.mlir.constant(2 : i32)
+  // CHECK-NEXT: [[add:%.*]] = llvm.add [[c2]], [[new]] : !llvm.i32
   // CHECK-NEXT: llvm.return [[add]]
 }
 

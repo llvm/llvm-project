@@ -129,8 +129,7 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
       options(options) {
   assert(llvmDialect && "LLVM IR dialect is not registered");
   if (options.indexBitwidth == kDeriveIndexBitwidthFromDataLayout)
-    this->options.indexBitwidth =
-        llvmDialect->getDataLayout().getPointerSizeInBits();
+    this->options.indexBitwidth = options.dataLayout.getPointerSizeInBits();
 
   // Register conversions for the standard types.
   addConversion([&](ComplexType type) { return convertComplexType(type); });
@@ -198,7 +197,7 @@ LLVM::LLVMType LLVMTypeConverter::getIndexType() {
 }
 
 unsigned LLVMTypeConverter::getPointerBitwidth(unsigned addressSpace) {
-  return llvmDialect->getDataLayout().getPointerSizeInBits(addressSpace);
+  return options.dataLayout.getPointerSizeInBits(addressSpace);
 }
 
 Type LLVMTypeConverter::convertIndexType(IndexType type) {
@@ -3427,11 +3426,13 @@ namespace {
 struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
   LLVMLoweringPass() = default;
   LLVMLoweringPass(bool useBarePtrCallConv, bool emitCWrappers,
-                   unsigned indexBitwidth, bool useAlignedAlloc) {
+                   unsigned indexBitwidth, bool useAlignedAlloc,
+                   const llvm::DataLayout &dataLayout) {
     this->useBarePtrCallConv = useBarePtrCallConv;
     this->emitCWrappers = emitCWrappers;
     this->indexBitwidth = indexBitwidth;
     this->useAlignedAlloc = useAlignedAlloc;
+    this->dataLayout = dataLayout.getStringRepresentation();
   }
 
   /// Run the dialect converter on the module.
@@ -3443,11 +3444,19 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
       signalPassFailure();
       return;
     }
+    if (failed(LLVM::LLVMDialect::verifyDataLayoutString(
+            this->dataLayout, [this](const Twine &message) {
+              getOperation().emitError() << message.str();
+            }))) {
+      signalPassFailure();
+      return;
+    }
 
     ModuleOp m = getOperation();
 
     LowerToLLVMOptions options = {useBarePtrCallConv, emitCWrappers,
-                                  indexBitwidth, useAlignedAlloc};
+                                  indexBitwidth, useAlignedAlloc,
+                                  llvm::DataLayout(this->dataLayout)};
     LLVMTypeConverter typeConverter(&getContext(), options);
 
     OwningRewritePatternList patterns;
@@ -3456,6 +3465,8 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
     LLVMConversionTarget target(getContext());
     if (failed(applyPartialConversion(m, target, patterns)))
       signalPassFailure();
+    m.setAttr(LLVM::LLVMDialect::getDataLayoutAttrName(),
+              StringAttr::get(this->dataLayout, m.getContext()));
   }
 };
 } // end namespace
@@ -3471,5 +3482,5 @@ std::unique_ptr<OperationPass<ModuleOp>>
 mlir::createLowerToLLVMPass(const LowerToLLVMOptions &options) {
   return std::make_unique<LLVMLoweringPass>(
       options.useBarePtrCallConv, options.emitCWrappers, options.indexBitwidth,
-      options.useAlignedAlloc);
+      options.useAlignedAlloc, options.dataLayout);
 }
