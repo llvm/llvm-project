@@ -16232,10 +16232,11 @@ void DAGCombiner::getStoreMergeCandidates(
   RootNode = St->getChain().getNode();
 
   unsigned NumNodesExplored = 0;
+  const unsigned MaxSearchNodes = 1024;
   if (auto *Ldn = dyn_cast<LoadSDNode>(RootNode)) {
     RootNode = Ldn->getChain().getNode();
     for (auto I = RootNode->use_begin(), E = RootNode->use_end();
-         I != E && NumNodesExplored < 1024; ++I, ++NumNodesExplored) {
+         I != E && NumNodesExplored < MaxSearchNodes; ++I, ++NumNodesExplored) {
       if (I.getOperandNo() == 0 && isa<LoadSDNode>(*I)) { // walk down chain
         for (auto I2 = (*I)->use_begin(), E2 = (*I)->use_end(); I2 != E2; ++I2)
           TryToAddCandidate(I2);
@@ -16243,7 +16244,7 @@ void DAGCombiner::getStoreMergeCandidates(
     }
   } else {
     for (auto I = RootNode->use_begin(), E = RootNode->use_end();
-         I != E && NumNodesExplored < 1024; ++I, ++NumNodesExplored)
+         I != E && NumNodesExplored < MaxSearchNodes; ++I, ++NumNodesExplored)
       TryToAddCandidate(I);
   }
 }
