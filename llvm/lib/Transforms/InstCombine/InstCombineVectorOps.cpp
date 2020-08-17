@@ -926,14 +926,21 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   }
 
   // All good! Now we just need to thread the source aggregates here.
-  auto *PHI = PHINode::Create(AggTy, SourceAggregates.size(),
-                              OrigIVI.getName() + ".merged");
+  // Note that we have to insert the new PHI here, ourselves, because we can't
+  // rely on InstCombinerImpl::run() inserting it into the right basic block.
+  BuilderTy::InsertPointGuard Guard(Builder);
+  Builder.SetInsertPoint(UseBB->getFirstNonPHI());
+  auto *PHI = Builder.CreatePHI(AggTy, SourceAggregates.size(),
+                                OrigIVI.getName() + ".merged");
   for (const std::pair<BasicBlock *, Value *> &SourceAggregate :
        SourceAggregates)
     PHI->addIncoming(SourceAggregate.second, SourceAggregate.first);
 
   ++NumAggregateReconstructionsSimplified;
-  return PHI;
+  OrigIVI.replaceAllUsesWith(PHI);
+
+  // Just signal that the fold happened, we've already inserted instructions.
+  return &OrigIVI;
 }
 
 /// Try to find redundant insertvalue instructions, like the following ones:
