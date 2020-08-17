@@ -2916,10 +2916,9 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
     m_process_sp->HijackProcessEvents(hijack_listener_sp);
   }
 
-  state = m_process_sp->WaitForProcessToStop(llvm::None, nullptr, false,
-                                             hijack_listener_sp, nullptr);
-
-  if (state == eStateStopped) {
+  switch (m_process_sp->WaitForProcessToStop(llvm::None, nullptr, false,
+                                             hijack_listener_sp, nullptr)) {
+  case eStateStopped: {
     if (!launch_info.GetFlags().Test(eLaunchFlagStopAtEntry)) {
       if (synchronous_execution) {
         // Now we have handled the stop-from-attach, and we are just
@@ -2938,7 +2937,8 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
         error = error2;
       }
     }
-  } else if (state == eStateExited) {
+  } break;
+  case eStateExited: {
     bool with_shell = !!launch_info.GetShell();
     const int exit_status = m_process_sp->GetExitStatus();
     const char *exit_desc = m_process_sp->GetExitDescription();
@@ -2962,9 +2962,11 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
         error.SetErrorStringWithFormat("process exited with status %i",
                                        exit_status);
     }
-  } else {
+  } break;
+  default:
     error.SetErrorStringWithFormat("initial process state wasn't stopped: %s",
                                    StateAsCString(state));
+    break;
   }
   return error;
 }
