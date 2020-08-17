@@ -5612,7 +5612,6 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
 
 CompilerType
 SwiftASTContext::GetArrayElementType(opaque_compiler_type_t type,
-                                     uint64_t *stride,
                                      ExecutionContextScope *exe_scope) {
   VALID_OR_RETURN(CompilerType());
 
