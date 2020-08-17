@@ -231,7 +231,7 @@ protected:
                   MachineIRBuilder &MIRBuilder) const;
 
   /// Invoke Handler::assignArg on each of the given \p Args and then use
-  /// \p Callback to move them to the assigned locations.
+  /// \p Handler to move them to the assigned locations.
   ///
   /// \return True if everything has succeeded, false otherwise.
   bool handleAssignments(MachineIRBuilder &MIRBuilder,
