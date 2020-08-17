@@ -457,9 +457,9 @@ public:
   NODE(parser, OmpCancelType)
   NODE_ENUM(OmpCancelType, Type)
   NODE(parser, OmpClause)
-  NODE(parser, OmpClauseList)
 #define GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
 #include "llvm/Frontend/OpenMP/OMP.cpp.inc"
+  NODE(parser, OmpClauseList)
   NODE(parser, OmpCriticalDirective)
   NODE(OmpCriticalDirective, Hint)
   NODE(parser, OmpDeclareTargetSpecifier)
@@ -478,6 +478,7 @@ public:
   NODE_ENUM(OmpDependenceType, Type)
   NODE(parser, OmpDependSinkVec)
   NODE(parser, OmpDependSinkVecLength)
+  NODE(parser, OmpDistScheduleClause)
   NODE(parser, OmpEndAtomic)
   NODE(parser, OmpEndBlockDirective)
   NODE(parser, OmpEndCriticalDirective)
