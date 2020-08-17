@@ -50,6 +50,20 @@ OPTIONS
   Show help and usage for this command without grouping the options
   into categories.
 
+.. option:: -l <x>
+
+  Searches for the library libx.a in the library search path. If the string `<x>`
+  ends with '.o', then the library 'x' is searched for without prepending 'lib'
+  or appending '.a'. If the library is found, it is added to the list of input
+  files. Otherwise, an error is raised.
+
+.. option:: -L <dir>
+
+  Adds `<dir>` to the list of directories in which to search for libraries. The
+  directories are searched in the order in which they are specified with
+  :option:`-L` and before the default search path. The default search path
+  includes directories `/lib`, `/usr/lib` and `/usr/local/lib`.
+
 .. option:: -o <filename>
 
   Specify the output file name. Must be specified exactly once.
