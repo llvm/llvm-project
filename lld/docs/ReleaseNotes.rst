@@ -40,12 +40,17 @@ Breaking changes
 COFF Improvements
 -----------------
 
-* ...
+* Fixed exporting symbols whose names contain a period (``.``), which was
+  a regression in lld 7.
 
 MinGW Improvements
 ------------------
 
-* ...
+* Implemented new options for disabling auto import and runtime pseudo
+  relocations (``--disable-auto-import`` and
+  ``--disable-runtime-pseudo-reloc``), the ``--no-seh`` flag and options
+  for selecting file and section alignment (``--file-alignment`` and
+  ``--section-alignment``).
 
 MachO Improvements
 ------------------

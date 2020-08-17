@@ -191,6 +191,16 @@ Attribute Changes in Clang
 Windows Support
 ---------------
 
+- Don't warn about `ms_struct may not produce Microsoft-compatible layouts
+  for classes with base classes or virtual functions` if the option is
+  enabled globally, as opposed to enabled on a specific class/struct or
+  on a specific section in the source files. This avoids needing to
+  couple `-mms-bitfields` with `-Wno-incompatible-ms-struct` if building
+  C++ code.
+
+- Enable `-mms-bitfields` by default for MinGW targets, matching a similar
+  change in GCC 4.7.
+
 C Language Changes in Clang
 ---------------------------
 
