@@ -63,6 +63,11 @@ config.substitutions.append(('%env_asan_opts=',
 # Setup source root.
 config.test_source_root = os.path.dirname(__file__)
 
+# Setup executable root.
+if hasattr(config, 'asan_lit_binary_dir') and \
+        config.asan_lit_binary_dir is not None:
+    config.test_exec_root = config.asan_lit_binary_dir
+
 if config.host_os not in ['FreeBSD', 'NetBSD']:
   libdl_flag = "-ldl"
 else:
