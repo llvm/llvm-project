@@ -8,10 +8,8 @@
 define amdgpu_ps float @global_csub_saddr_i32_rtn(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
 ; GCN-LABEL: global_csub_saddr_i32_rtn:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_add_co_u32_e64 v2, s0, s2, v0
+; GCN-NEXT:    global_atomic_csub v0, v0, v1, s[2:3] glc
 ; GCN-NEXT:    ; implicit-def: $vcc_hi
-; GCN-NEXT:    v_add_co_ci_u32_e64 v3, s0, s3, 0, s0
-; GCN-NEXT:    global_atomic_csub v0, v[2:3], v1, off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
@@ -25,10 +23,8 @@ define amdgpu_ps float @global_csub_saddr_i32_rtn(i8 addrspace(1)* inreg %sbase,
 define amdgpu_ps float @global_csub_saddr_i32_rtn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
 ; GCN-LABEL: global_csub_saddr_i32_rtn_neg128:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_add_co_u32_e64 v2, s0, s2, v0
+; GCN-NEXT:    global_atomic_csub v0, v0, v1, s[2:3] offset:-128 glc
 ; GCN-NEXT:    ; implicit-def: $vcc_hi
-; GCN-NEXT:    v_add_co_ci_u32_e64 v3, s0, s3, 0, s0
-; GCN-NEXT:    global_atomic_csub v0, v[2:3], v1, off offset:-128 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
@@ -43,9 +39,7 @@ define amdgpu_ps float @global_csub_saddr_i32_rtn_neg128(i8 addrspace(1)* inreg 
 define amdgpu_ps void @global_csub_saddr_i32_nortn(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
 ; GCN-LABEL: global_csub_saddr_i32_nortn:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_add_co_u32_e64 v2, s0, s2, v0
-; GCN-NEXT:    v_add_co_ci_u32_e64 v3, s0, s3, 0, s0
-; GCN-NEXT:    global_atomic_csub v0, v[2:3], v1, off glc
+; GCN-NEXT:    global_atomic_csub v0, v0, v1, s[2:3] glc
 ; GCN-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
@@ -57,9 +51,7 @@ define amdgpu_ps void @global_csub_saddr_i32_nortn(i8 addrspace(1)* inreg %sbase
 define amdgpu_ps void @global_csub_saddr_i32_nortn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, i32 %data) {
 ; GCN-LABEL: global_csub_saddr_i32_nortn_neg128:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_add_co_u32_e64 v2, s0, s2, v0
-; GCN-NEXT:    v_add_co_ci_u32_e64 v3, s0, s3, 0, s0
-; GCN-NEXT:    global_atomic_csub v0, v[2:3], v1, off offset:-128 glc
+; GCN-NEXT:    global_atomic_csub v0, v0, v1, s[2:3] offset:-128 glc
 ; GCN-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
