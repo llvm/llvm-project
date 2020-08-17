@@ -1,6 +1,6 @@
 #include <clc/clc.h>
 
-_CLC_DEF size_t get_local_id(uint dim) {
+_CLC_DEF _CLC_OVERLOAD size_t get_local_id(uint dim) {
   switch (dim) {
   case 0:  return __nvvm_read_ptx_sreg_tid_x();
   case 1:  return __nvvm_read_ptx_sreg_tid_y();
