@@ -16,6 +16,11 @@
 using namespace mlir;
 using namespace mlir::tblgen;
 
+Dialect::Dialect(const llvm::Record *def) : def(def) {
+  for (StringRef dialect : def->getValueAsListOfStrings("dependentDialects"))
+    dependentDialects.push_back(dialect);
+}
+
 StringRef Dialect::getName() const { return def->getValueAsString("name"); }
 
 StringRef Dialect::getCppNamespace() const {
@@ -44,6 +49,10 @@ StringRef Dialect::getSummary() const {
 
 StringRef Dialect::getDescription() const {
   return getAsStringOrEmpty(*def, "description");
+}
+
+ArrayRef<StringRef> Dialect::getDependentDialects() const {
+  return dependentDialects;
 }
 
 llvm::Optional<StringRef> Dialect::getExtraClassDeclaration() const {
