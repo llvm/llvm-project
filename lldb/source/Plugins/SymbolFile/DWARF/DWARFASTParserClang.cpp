@@ -1244,7 +1244,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
           clang::FunctionTemplateDecl *func_template_decl =
               m_ast.CreateFunctionTemplateDecl(
                   containing_decl_ctx, GetOwningClangModule(die),
-                  template_function_decl, name, template_param_infos);
+                  template_function_decl, template_param_infos);
           m_ast.CreateFunctionTemplateSpecializationInfo(
               template_function_decl, func_template_decl, template_param_infos);
         }
