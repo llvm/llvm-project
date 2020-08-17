@@ -1029,6 +1029,17 @@ class Base(unittest2.TestCase):
         lldb.SBDebugger.Destroy(self.dbg)
         del self.dbg
 
+        # All modules should be orphaned now so that they can be cleared from
+        # the shared module cache.
+        lldb.SBModule.GarbageCollectAllocatedModules()
+
+        # Modules are not orphaned during reproducer replay because they're
+        # leaked on purpose.
+        if not configuration.is_reproducer():
+            # Assert that the global module cache is empty.
+            self.assertEqual(lldb.SBModule.GetNumberAllocatedModules(), 0)
+
+
     # =========================================================
     # Various callbacks to allow introspection of test progress
     # =========================================================
@@ -1984,13 +1995,9 @@ class TestBase(Base):
         for target in targets:
             self.dbg.DeleteTarget(target)
 
-        # Modules are not orphaned during reproducer replay because they're
-        # leaked on purpose.
         if not configuration.is_reproducer():
             # Assert that all targets are deleted.
-            assert self.dbg.GetNumTargets() == 0
-            # Assert that the global module cache is empty.
-            assert lldb.SBModule.GetNumberAllocatedModules() == 0
+            self.assertEqual(self.dbg.GetNumTargets(), 0)
 
         # Do this last, to make sure it's in reverse order from how we setup.
         Base.tearDown(self)
