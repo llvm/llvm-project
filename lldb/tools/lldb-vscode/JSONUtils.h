@@ -9,11 +9,11 @@
 #ifndef LLDB_TOOLS_LLDB_VSCODE_JSONUTILS_H
 #define LLDB_TOOLS_LLDB_VSCODE_JSONUTILS_H
 
-#include <stdint.h>
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/JSON.h"
 #include "VSCodeForward.h"
 #include "lldb/API/SBModule.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/JSON.h"
+#include <stdint.h>
 
 namespace lldb_vscode {
 
