@@ -140,10 +140,11 @@ class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
   (outs regClass:$vdst),
   !con(
     !con(
-      !con((ins VReg_64:$vaddr),
-        !if(EnableSaddr, (ins SReg_64:$saddr), (ins))),
-          (ins flat_offset:$offset, GLC:$glc, SLC:$slc, DLC:$dlc)),
-          !if(HasTiedOutput, (ins regClass:$vdst_in), (ins))),
+      !if(EnableSaddr,
+        (ins SReg_64:$saddr, VGPR_32:$vaddr),
+        (ins VReg_64:$vaddr)),
+        (ins flat_offset:$offset, GLC:$glc, SLC:$slc, DLC:$dlc)),
+        !if(HasTiedOutput, (ins regClass:$vdst_in), (ins))),
   " $vdst, $vaddr"#!if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")#"$offset$glc$slc$dlc"> {
   let has_data = 0;
   let mayLoad = 1;
@@ -161,9 +162,10 @@ class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass,
   opName,
   (outs),
   !con(
-    !con((ins VReg_64:$vaddr, vdataClass:$vdata),
-      !if(EnableSaddr, (ins SReg_64:$saddr), (ins))),
-        (ins flat_offset:$offset, GLC:$glc, SLC:$slc, DLC:$dlc)),
+    !if(EnableSaddr,
+      (ins VGPR_32:$vaddr, vdataClass:$vdata, SReg_64:$saddr),
+      (ins VReg_64:$vaddr, vdataClass:$vdata)),
+      (ins flat_offset:$offset, GLC:$glc, SLC:$slc, DLC:$dlc)),
   " $vaddr, $vdata"#!if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")#"$offset$glc$slc$dlc"> {
   let mayLoad  = 0;
   let mayStore = 1;
