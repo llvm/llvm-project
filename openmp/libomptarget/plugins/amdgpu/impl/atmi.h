@@ -63,6 +63,32 @@ typedef enum atmi_memtype_s {
 } atmi_memtype_t;
 
 /**
+ * @brief Task States.
+ */
+typedef enum atmi_state_s {
+  ATMI_UNINITIALIZED = -1,
+  ATMI_INITIALIZED = 0,
+  ATMI_READY = 1,
+  ATMI_DISPATCHED = 2,
+  ATMI_EXECUTED = 3,
+  ATMI_COMPLETED = 4,
+  ATMI_FAILED = 9999
+} atmi_state_t;
+
+/**
+ * @brief Scheduler Types.
+ */
+typedef enum atmi_scheduler_s {
+  ATMI_SCHED_NONE = 0, // No scheduler, all tasks go to the same queue
+  ATMI_SCHED_RR        // Round-robin tasks across queues
+} atmi_scheduler_t;
+
+/**
+ * @brief ATMI data arg types.
+ */
+typedef enum atmi_arg_type_s { ATMI_IN, ATMI_OUT, ATMI_IN_OUT } atmi_arg_type_t;
+
+/**
  * @brief ATMI Memory Fences for Tasks.
  */
 typedef enum atmi_task_fence_scope_s {
