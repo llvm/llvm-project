@@ -4,6 +4,12 @@ if(NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB)
   list(APPEND LLD_SYSTEM_LIBS atomic)
 endif()
 
+set(LLD_SYSTEM_LIBS ${LLVM_PTHREAD_LIB})
+
+if(NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB)
+  list(APPEND LLD_SYSTEM_LIBS atomic)
+endif()
+
 find_first_existing_vc_file("${LLVM_MAIN_SRC_DIR}" llvm_vc)
 find_first_existing_vc_file("${LLD_SOURCE_DIR}" lld_vc)
 
