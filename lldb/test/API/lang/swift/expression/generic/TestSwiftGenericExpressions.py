@@ -29,7 +29,6 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-    @skipIfLinux # <rdar://problem/30783388> test crashing sometimes when run on linux
     @swiftTest
     def test_generic_expressions(self):
         """Test expressions in generic contexts"""

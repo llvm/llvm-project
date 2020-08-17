@@ -27,7 +27,6 @@ class TestSwiftReturns(TestBase):
 
     @swiftTest
     @skipIfDarwin # rdar://problem/48924409
-    @skipIfLinux  # bugs.swift.org/SR-841
     @expectedFailureAll(
         oslist=["ios"],
         archs=["arm64"],
@@ -40,7 +39,6 @@ class TestSwiftReturns(TestBase):
         self.do_test()
 
     @swiftTest
-    @skipIfLinux  # bugs.swift.org/SR-841
     @expectedFailureAll(
         oslist=["ios"],
         archs=["arm64"],
