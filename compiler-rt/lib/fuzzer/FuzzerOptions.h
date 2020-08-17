@@ -49,6 +49,7 @@ struct FuzzingOptions {
   bool Entropic = false;
   size_t EntropicFeatureFrequencyThreshold = 0xFF;
   size_t EntropicNumberOfRarestFeatures = 100;
+  bool EntropicScalePerExecTime = false;
   std::string OutputCorpus;
   std::string ArtifactPrefix = "./";
   std::string ExactArtifactPath;

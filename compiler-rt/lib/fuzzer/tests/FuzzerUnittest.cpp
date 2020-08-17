@@ -599,7 +599,9 @@ TEST(Corpus, Distribution) {
   for (size_t i = 0; i < N; i++)
     C->AddToCorpus(Unit{static_cast<uint8_t>(i)}, /*NumFeatures*/ 1,
                    /*MayDeleteFile*/ false, /*HasFocusFunction*/ false,
-                   /*ForceAddToCorpus*/ false, /*FeatureSet*/ {}, DFT,
+                   /*ForceAddToCorpus*/ false,
+                   /*TimeOfUnit*/ std::chrono::microseconds(0),
+                   /*FeatureSet*/ {}, DFT,
                    /*BaseII*/ nullptr);
 
   Vector<size_t> Hist(N);
@@ -1101,17 +1103,17 @@ TEST(Entropic, ComputeEnergy) {
   Vector<std::pair<uint32_t, uint16_t>> FeatureFreqs = {{1, 3}, {2, 3}, {3, 3}};
   II->FeatureFreqs = FeatureFreqs;
   II->NumExecutedMutations = 0;
-  II->UpdateEnergy(4);
+  II->UpdateEnergy(4, false, std::chrono::microseconds(0));
   EXPECT_LT(SubAndSquare(II->Energy, 1.450805), Precision);
 
   II->NumExecutedMutations = 9;
-  II->UpdateEnergy(5);
+  II->UpdateEnergy(5, false, std::chrono::microseconds(0));
   EXPECT_LT(SubAndSquare(II->Energy, 1.525496), Precision);
 
   II->FeatureFreqs[0].second++;
   II->FeatureFreqs.push_back(std::pair<uint32_t, uint16_t>(42, 6));
   II->NumExecutedMutations = 20;
-  II->UpdateEnergy(10);
+  II->UpdateEnergy(10, false, std::chrono::microseconds(0));
   EXPECT_LT(SubAndSquare(II->Energy, 1.792831), Precision);
 }
 

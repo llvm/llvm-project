@@ -470,6 +470,7 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
     return false;
 
   ExecuteCallback(Data, Size);
+  auto TimeOfUnit = duration_cast<microseconds>(UnitStopTime - UnitStartTime);
 
   UniqFeatureSetTmp.clear();
   size_t FoundUniqFeaturesOfII = 0;
@@ -493,7 +494,7 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
     auto NewII =
         Corpus.AddToCorpus({Data, Data + Size}, NumNewFeatures, MayDeleteFile,
                            TPC.ObservedFocusFunction(), ForceAddToCorpus,
-                           UniqFeatureSetTmp, DFT, II);
+                           TimeOfUnit, UniqFeatureSetTmp, DFT, II);
     WriteFeatureSetToFile(Options.FeaturesDir, Sha1ToString(NewII->Sha1),
                           NewII->UniqFeatureSet);
     return true;
