@@ -475,7 +475,7 @@ public:
 /// The is implemented as a value of the new FPOptions plus a mask showing which
 /// fields are actually set in it.
 class FPOptionsOverride {
-  FPOptions Options;
+  FPOptions Options = FPOptions(0);
   FPOptions::storage_type OverrideMask = 0;
 
 public:
