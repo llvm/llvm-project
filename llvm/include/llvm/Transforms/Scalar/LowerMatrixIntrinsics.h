@@ -18,6 +18,7 @@
 namespace llvm {
 struct LowerMatrixIntrinsicsPass : PassInfoMixin<LowerMatrixIntrinsicsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 } // namespace llvm
 
