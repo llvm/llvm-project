@@ -317,10 +317,10 @@ unsigned CompilerType::GetTypeQualifiers() const {
 
 // Creating related types
 
-CompilerType CompilerType::GetArrayElementType(ExecutionContextScope *exe_scope,
-                                               uint64_t *stride) const {
+CompilerType
+CompilerType::GetArrayElementType(ExecutionContextScope *exe_scope) const {
   if (IsValid()) {
-    return m_type_system->GetArrayElementType(m_type, stride, exe_scope);
+    return m_type_system->GetArrayElementType(m_type, exe_scope);
   }
   return CompilerType();
 }
