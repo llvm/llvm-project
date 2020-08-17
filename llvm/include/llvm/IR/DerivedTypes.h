@@ -446,7 +446,8 @@ public:
 
   static VectorType *get(Type *ElementType, unsigned NumElements,
                          bool Scalable) {
-    return VectorType::get(ElementType, {NumElements, Scalable});
+    return VectorType::get(ElementType,
+                           ElementCount::get(NumElements, Scalable));
   }
 
   static VectorType *get(Type *ElementType, const VectorType *Other) {
@@ -640,7 +641,7 @@ public:
 };
 
 inline ElementCount VectorType::getElementCount() const {
-  return ElementCount(ElementQuantity, isa<ScalableVectorType>(this));
+  return ElementCount::get(ElementQuantity, isa<ScalableVectorType>(this));
 }
 
 /// Class to represent pointers.

@@ -310,7 +310,7 @@ ElementCount getECFromSignature(FunctionType *Signature) {
     if (auto *VTy = dyn_cast<VectorType>(Ty))
       return VTy->getElementCount();
 
-  return ElementCount(/*Min=*/1, /*Scalable=*/false);
+  return ElementCount::getFixed(/*Min=*/1);
 }
 } // namespace
 

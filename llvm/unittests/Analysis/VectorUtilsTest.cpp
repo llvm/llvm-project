@@ -93,7 +93,8 @@ TEST_F(BasicTest, isSplat) {
   Value *SplatC = IRB.CreateVectorSplat(5, ScalarC);
   EXPECT_TRUE(isSplatValue(SplatC));
 
-  Value *SplatC_SVE = IRB.CreateVectorSplat(ElementCount(5, true), ScalarC);
+  Value *SplatC_SVE =
+      IRB.CreateVectorSplat(ElementCount::getScalable(5), ScalarC);
   EXPECT_TRUE(isSplatValue(SplatC_SVE));
 
   // FIXME: Constant splat analysis does not allow undef elements.
@@ -502,7 +503,7 @@ protected:
   SmallVector<VFParameter, 8> &ExpectedParams = Expected.Parameters;
 
   void buildShape(unsigned VF, bool IsScalable, bool HasGlobalPred) {
-    Shape = VFShape::get(*CI, {VF, IsScalable}, HasGlobalPred);
+    Shape = VFShape::get(*CI, ElementCount::get(VF, IsScalable), HasGlobalPred);
   }
 
   bool validParams(ArrayRef<VFParameter> Parameters) {
