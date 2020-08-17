@@ -1,5 +1,5 @@
 // RUN: mlir-opt --show-dialects | FileCheck %s
-// CHECK: Available Dialects:
+// CHECK: Registered Dialects:
 // CHECK: affine
 // CHECK: gpu
 // CHECK: linalg

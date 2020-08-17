@@ -12,7 +12,6 @@
 
 #include "Parser.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/StandardTypes.h"
 #include "llvm/ADT/StringExtras.h"
@@ -246,11 +245,6 @@ ParseResult Parser::parseAttributeDict(NamedAttrList &attributes) {
     if (!seenKeys.insert(*nameId).second)
       return emitError("duplicate key in dictionary attribute");
     consumeToken();
-
-    // Lazy load a dialect in the context if there is a possible namespace.
-    auto splitName = nameId->strref().split('.');
-    if (!splitName.second.empty())
-      getContext()->getOrLoadDialect(splitName.first);
 
     // Try to parse the '=' for the attribute value.
     if (!consumeIf(Token::equal)) {
@@ -823,9 +817,7 @@ Attribute Parser::parseOpaqueElementsAttr(Type attrType) {
     return (emitError("expected dialect namespace"), nullptr);
 
   auto name = getToken().getStringValue();
-  // Lazy load a dialect in the context if there is a possible namespace.
-  Dialect *dialect = builder.getContext()->getOrLoadDialect(name);
-
+  auto *dialect = builder.getContext()->getRegisteredDialect(name);
   // TODO: Allow for having an unknown dialect on an opaque
   // attribute. Otherwise, it can't be roundtripped without having the dialect
   // registered.
