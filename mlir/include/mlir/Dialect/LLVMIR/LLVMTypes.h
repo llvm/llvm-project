@@ -18,6 +18,7 @@
 
 namespace llvm {
 class ElementCount;
+class TypeSize;
 } // namespace llvm
 
 namespace mlir {
@@ -104,6 +105,12 @@ public:
   static bool classof(Type type);
 
   LLVMDialect &getDialect();
+
+  /// Returns the size of a primitive type (including vectors) in bits, for
+  /// example, the size of !llvm.i16 is 16 and the size of !llvm.vec<4 x i16>
+  /// is 64. Returns 0 for non-primitive (aggregates such as struct) or types
+  /// that don't have a size (such as void).
+  llvm::TypeSize getPrimitiveSizeInBits();
 
   /// Floating-point type utilities.
   bool isBFloatTy() { return isa<LLVMBFloatType>(); }
