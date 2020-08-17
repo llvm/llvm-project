@@ -449,8 +449,7 @@ Syntax:
                        func_type <target>, 
                        i64 <#call args>, i64 <flags>,
                        ... (call parameters),
-                       i64 0, i64 0,
-                       ... (gc parameters))
+                       i64 0, i64 0)
 
 Overview:
 """""""""
@@ -519,15 +518,6 @@ These were originally the length prefixes for 'gc transition parameter' and
 'deopt parameter' arguments, but the role of these parameter sets have been
 entirely replaced with the corresponding operand bundles.  In a future
 revision, these now redundant arguments will be removed.
-
-The 'gc parameters' arguments contain every pointer to a garbage
-collector object which potentially needs to be updated by the garbage
-collector.  Note that the argument list must explicitly contain a base
-pointer for every derived pointer listed.  The order of arguments is
-unimportant.  Unlike the other variable length parameter sets, this
-list is not length prefixed.  Use of the 'gc parameters' list is
-deprecated and will eventually be replaced entirely with the
-:ref:`gc-live <ob_gc_live>` operand bundle.
 
 Semantics:
 """"""""""
