@@ -81,6 +81,15 @@ Changes to the LLVM IR
 Changes to building LLVM
 ------------------------
 
+Changes to the AArch64 Backend
+------------------------------
+
+* Back up and restore x18 in functions with windows calling convention on
+  non-windows OSes.
+
+* Clearly error out on unsupported relocations when targeting COFF, instead
+  of silently accepting some (without being able to do what was requested).
+
 Changes to the ARM Backend
 --------------------------
 
@@ -157,6 +166,12 @@ Changes to the WebAssembly Target
 * `__attribute__((visibility("protected")))` now evokes a warning, as
   WebAssembly does not support "protected" visibility.
 
+Changes to the Windows Target
+-----------------------------
+
+* Produce COFF weak external symbols for IR level weak symbols without a comdat
+  (e.g. for `__attribute__((weak))` in C)
+
 Changes to the OCaml bindings
 -----------------------------
 
@@ -194,6 +209,12 @@ Changes to the LLVM tools
 * llvm-nm now implements the flag ``--special-syms`` and will filter out special
   symbols, i.e. mapping symbols on ARM and AArch64, by default. This matches
   the GNU nm behavior.
+
+* llvm-rc now tolerates -1 as menu item ID, supports the language id option
+  and allows string table values to be split into multiple string literals
+
+* llvm-lib supports adding import library objects in addition to regular
+  object files
 
 Changes to LLDB
 ===============
