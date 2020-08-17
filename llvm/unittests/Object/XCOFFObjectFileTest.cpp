@@ -143,7 +143,7 @@ TEST(XCOFFObjectFileTest, XCOFFTracebackTableAPIControlledStorageInfoDisp) {
 
   SmallVector<uint32_t, 8> Disp = TT.getControlledStorageInfoDisp().getValue();
 
-  ASSERT_EQ(Disp.size(), 2);
+  ASSERT_EQ(Disp.size(), 2UL);
   EXPECT_EQ(Disp[0], 0x05050000u);
   EXPECT_EQ(Disp[1], 0x06060000u);
 }
