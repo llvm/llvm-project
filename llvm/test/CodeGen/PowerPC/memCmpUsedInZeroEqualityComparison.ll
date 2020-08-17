@@ -43,12 +43,12 @@ define signext i32 @zeroEqualityTest01(i8* %x, i8* %y) {
 ; CHECK-NEXT:    ld 3, 8(3)
 ; CHECK-NEXT:    ld 4, 8(4)
 ; CHECK-NEXT:    cmpld 3, 4
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    beq 0, .LBB1_3
 ; CHECK-NEXT:  .LBB1_2: # %res_block
 ; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB1_3:
-; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:  .LBB1_3: # %endblock
+; CHECK-NEXT:    clrldi 3, 3, 32
 ; CHECK-NEXT:    blr
   %call = tail call signext i32 @memcmp(i8* %x, i8* %y, i64 16)
   %not.tobool = icmp ne i32 %call, 0
@@ -73,12 +73,12 @@ define signext i32 @zeroEqualityTest03(i8* %x, i8* %y) {
 ; CHECK-NEXT:    lbz 3, 6(3)
 ; CHECK-NEXT:    lbz 4, 6(4)
 ; CHECK-NEXT:    cmplw 3, 4
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    beq 0, .LBB2_4
 ; CHECK-NEXT:  .LBB2_3: # %res_block
 ; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB2_4:
-; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:  .LBB2_4: # %endblock
+; CHECK-NEXT:    clrldi 3, 3, 32
 ; CHECK-NEXT:    blr
   %call = tail call signext i32 @memcmp(i8* %x, i8* %y, i64 7)
   %not.lnot = icmp ne i32 %call, 0
@@ -136,16 +136,14 @@ define signext i32 @equalityFoldOneConstant(i8* %X) {
 ; CHECK-NEXT:    sldi 4, 4, 32
 ; CHECK-NEXT:    ori 4, 4, 2
 ; CHECK-NEXT:    cmpld 3, 4
-; CHECK-NEXT:    beq 0, .LBB6_4
+; CHECK-NEXT:    li 3, 0
+; CHECK-NEXT:    beq 0, .LBB6_3
 ; CHECK-NEXT:  .LBB6_2: # %res_block
 ; CHECK-NEXT:    li 3, 1
 ; CHECK-NEXT:  .LBB6_3: # %endblock
 ; CHECK-NEXT:    cntlzw 3, 3
 ; CHECK-NEXT:    srwi 3, 3, 5
 ; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB6_4:
-; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    b .LBB6_3
   %call = tail call signext i32 @memcmp(i8* bitcast ([15 x i32]* @zeroEqualityTest04.buffer1 to i8*), i8* %X, i64 16)
   %not.tobool = icmp eq i32 %call, 0
   %cond = zext i1 %not.tobool to i32

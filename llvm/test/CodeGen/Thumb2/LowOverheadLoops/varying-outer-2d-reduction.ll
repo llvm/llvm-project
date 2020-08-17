@@ -17,7 +17,7 @@
 define dso_local void @varying_outer_2d_reduction(i16* nocapture readonly %Input, i16* nocapture %Output, i16 signext %Size, i16 signext %N, i16 signext %Scale) local_unnamed_addr {
 ; ENABLED-LABEL: varying_outer_2d_reduction:
 ; ENABLED:       @ %bb.0: @ %entry
-; ENABLED-NEXT:    push.w {r4, r5, r6, r7, r9, r10, r11, lr}
+; ENABLED-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, lr}
 ; ENABLED-NEXT:    sub sp, #4
 ; ENABLED-NEXT:    cmp r3, #1
 ; ENABLED-NEXT:    str r0, [sp] @ 4-byte Spill
@@ -54,7 +54,7 @@ define dso_local void @varying_outer_2d_reduction(i16* nocapture readonly %Input
 ; ENABLED-NEXT:    subs r0, #4
 ; ENABLED-NEXT:    subs r4, r2, r6
 ; ENABLED-NEXT:    vmov.i32 q0, #0x0
-; ENABLED-NEXT:    add.w r11, r7, r0, lsr #2
+; ENABLED-NEXT:    add.w r8, r7, r0, lsr #2
 ; ENABLED-NEXT:    mov r7, r10
 ; ENABLED-NEXT:    dlstp.32 lr, r4
 ; ENABLED-NEXT:    ldr r0, [sp] @ 4-byte Reload
@@ -63,9 +63,9 @@ define dso_local void @varying_outer_2d_reduction(i16* nocapture readonly %Input
 ; ENABLED-NEXT:    @ => This Inner Loop Header: Depth=2
 ; ENABLED-NEXT:    vldrh.s32 q1, [r0], #8
 ; ENABLED-NEXT:    vldrh.s32 q2, [r7], #8
-; ENABLED-NEXT:    mov lr, r11
+; ENABLED-NEXT:    mov lr, r8
 ; ENABLED-NEXT:    vmul.i32 q1, q2, q1
-; ENABLED-NEXT:    sub.w r11, r11, #1
+; ENABLED-NEXT:    sub.w r8, r8, #1
 ; ENABLED-NEXT:    vshl.s32 q1, r5
 ; ENABLED-NEXT:    vadd.i32 q0, q1, q0
 ; ENABLED-NEXT:    letp lr, .LBB0_6
@@ -75,11 +75,11 @@ define dso_local void @varying_outer_2d_reduction(i16* nocapture readonly %Input
 ; ENABLED-NEXT:    b .LBB0_3
 ; ENABLED-NEXT:  .LBB0_8: @ %for.end17
 ; ENABLED-NEXT:    add sp, #4
-; ENABLED-NEXT:    pop.w {r4, r5, r6, r7, r9, r10, r11, pc}
+; ENABLED-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, pc}
 ;
 ; NOREDUCTIONS-LABEL: varying_outer_2d_reduction:
 ; NOREDUCTIONS:       @ %bb.0: @ %entry
-; NOREDUCTIONS-NEXT:    push.w {r4, r5, r6, r7, r9, r10, r11, lr}
+; NOREDUCTIONS-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, lr}
 ; NOREDUCTIONS-NEXT:    sub sp, #4
 ; NOREDUCTIONS-NEXT:    cmp r3, #1
 ; NOREDUCTIONS-NEXT:    str r0, [sp] @ 4-byte Spill
@@ -116,7 +116,7 @@ define dso_local void @varying_outer_2d_reduction(i16* nocapture readonly %Input
 ; NOREDUCTIONS-NEXT:    subs r0, #4
 ; NOREDUCTIONS-NEXT:    subs r4, r2, r6
 ; NOREDUCTIONS-NEXT:    vmov.i32 q0, #0x0
-; NOREDUCTIONS-NEXT:    add.w r11, r7, r0, lsr #2
+; NOREDUCTIONS-NEXT:    add.w r8, r7, r0, lsr #2
 ; NOREDUCTIONS-NEXT:    mov r7, r10
 ; NOREDUCTIONS-NEXT:    dlstp.32 lr, r4
 ; NOREDUCTIONS-NEXT:    ldr r0, [sp] @ 4-byte Reload
@@ -125,9 +125,9 @@ define dso_local void @varying_outer_2d_reduction(i16* nocapture readonly %Input
 ; NOREDUCTIONS-NEXT:    @ => This Inner Loop Header: Depth=2
 ; NOREDUCTIONS-NEXT:    vldrh.s32 q1, [r0], #8
 ; NOREDUCTIONS-NEXT:    vldrh.s32 q2, [r7], #8
-; NOREDUCTIONS-NEXT:    mov lr, r11
+; NOREDUCTIONS-NEXT:    mov lr, r8
 ; NOREDUCTIONS-NEXT:    vmul.i32 q1, q2, q1
-; NOREDUCTIONS-NEXT:    sub.w r11, r11, #1
+; NOREDUCTIONS-NEXT:    sub.w r8, r8, #1
 ; NOREDUCTIONS-NEXT:    vshl.s32 q1, r5
 ; NOREDUCTIONS-NEXT:    vadd.i32 q0, q1, q0
 ; NOREDUCTIONS-NEXT:    letp lr, .LBB0_6
@@ -137,7 +137,8 @@ define dso_local void @varying_outer_2d_reduction(i16* nocapture readonly %Input
 ; NOREDUCTIONS-NEXT:    b .LBB0_3
 ; NOREDUCTIONS-NEXT:  .LBB0_8: @ %for.end17
 ; NOREDUCTIONS-NEXT:    add sp, #4
-; NOREDUCTIONS-NEXT:    pop.w {r4, r5, r6, r7, r9, r10, r11, pc}
+; NOREDUCTIONS-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, pc}
+;
 entry:
   %conv = sext i16 %N to i32
   %cmp36 = icmp sgt i16 %N, 0
