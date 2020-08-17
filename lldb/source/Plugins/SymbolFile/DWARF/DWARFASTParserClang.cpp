@@ -1215,7 +1215,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
       }
 
       if (!function_decl) {
-        const char *name = attrs.name.GetCString();
+        llvm::StringRef name = attrs.name.GetStringRef();
 
         // We currently generate function templates with template parameters in
         // their name. In order to get closer to the AST that clang generates
@@ -1239,7 +1239,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
           template_function_decl = m_ast.CreateFunctionDeclaration(
               ignore_containing_context ? m_ast.GetTranslationUnitDecl()
                                         : containing_decl_ctx,
-              GetOwningClangModule(die), attrs.name.GetCString(), clang_type,
+              GetOwningClangModule(die), attrs.name.GetStringRef(), clang_type,
               attrs.storage, attrs.is_inline);
           clang::FunctionTemplateDecl *func_template_decl =
               m_ast.CreateFunctionTemplateDecl(
