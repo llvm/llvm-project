@@ -321,18 +321,13 @@ define { i32, i32 } @test6({ i32, i32 } %agg_left, { i32, i32 } %agg_right, i1 %
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C0:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
-; CHECK-NEXT:    [[I0:%.*]] = extractvalue { i32, i32 } [[AGG_LEFT:%.*]], 0
-; CHECK-NEXT:    [[I2:%.*]] = extractvalue { i32, i32 } [[AGG_LEFT]], 1
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       right:
-; CHECK-NEXT:    [[I3:%.*]] = extractvalue { i32, i32 } [[AGG_RIGHT:%.*]], 0
-; CHECK-NEXT:    [[I4:%.*]] = extractvalue { i32, i32 } [[AGG_RIGHT]], 1
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[I5:%.*]] = phi i32 [ [[I0]], [[LEFT]] ], [ [[I3]], [[RIGHT]] ]
-; CHECK-NEXT:    [[I6:%.*]] = phi i32 [ [[I2]], [[LEFT]] ], [ [[I4]], [[RIGHT]] ]
+; CHECK-NEXT:    [[I8_MERGED:%.*]] = phi { i32, i32 } [ [[AGG_RIGHT:%.*]], [[RIGHT]] ], [ [[AGG_LEFT:%.*]], [[LEFT]] ]
 ; CHECK-NEXT:    call void @baz()
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[END:%.*]], label [[PASSTHROUGH:%.*]]
 ; CHECK:       passthrough:
@@ -340,9 +335,7 @@ define { i32, i32 } @test6({ i32, i32 } %agg_left, { i32, i32 } %agg_right, i1 %
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    call void @quux()
-; CHECK-NEXT:    [[I7:%.*]] = insertvalue { i32, i32 } undef, i32 [[I5]], 0
-; CHECK-NEXT:    [[I8:%.*]] = insertvalue { i32, i32 } [[I7]], i32 [[I6]], 1
-; CHECK-NEXT:    ret { i32, i32 } [[I8]]
+; CHECK-NEXT:    ret { i32, i32 } [[I8_MERGED]]
 ;
 entry:
   br i1 %c0, label %left, label %right
