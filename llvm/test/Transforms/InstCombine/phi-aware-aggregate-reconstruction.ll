@@ -5,6 +5,7 @@ declare void @foo()
 declare void @bar()
 declare void @baz()
 declare void @qux()
+declare void @quux()
 
 declare i1 @geni1()
 
@@ -311,5 +312,118 @@ middle:
   br i1 %c1, label %end, label %middle
 
 end:
+  ret { i32, i32 } %i8
+}
+
+; Diamond structure, but with "padding" block before the use.
+define { i32, i32 } @test6({ i32, i32 } %agg_left, { i32, i32 } %agg_right, i1 %c0, i1 %c1) {
+; CHECK-LABEL: @test6(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C0:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    [[I0:%.*]] = extractvalue { i32, i32 } [[AGG_LEFT:%.*]], 0
+; CHECK-NEXT:    [[I2:%.*]] = extractvalue { i32, i32 } [[AGG_LEFT]], 1
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       right:
+; CHECK-NEXT:    [[I3:%.*]] = extractvalue { i32, i32 } [[AGG_RIGHT:%.*]], 0
+; CHECK-NEXT:    [[I4:%.*]] = extractvalue { i32, i32 } [[AGG_RIGHT]], 1
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[I5:%.*]] = phi i32 [ [[I0]], [[LEFT]] ], [ [[I3]], [[RIGHT]] ]
+; CHECK-NEXT:    [[I6:%.*]] = phi i32 [ [[I2]], [[LEFT]] ], [ [[I4]], [[RIGHT]] ]
+; CHECK-NEXT:    call void @baz()
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[END:%.*]], label [[PASSTHROUGH:%.*]]
+; CHECK:       passthrough:
+; CHECK-NEXT:    call void @qux()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    call void @quux()
+; CHECK-NEXT:    [[I7:%.*]] = insertvalue { i32, i32 } undef, i32 [[I5]], 0
+; CHECK-NEXT:    [[I8:%.*]] = insertvalue { i32, i32 } [[I7]], i32 [[I6]], 1
+; CHECK-NEXT:    ret { i32, i32 } [[I8]]
+;
+entry:
+  br i1 %c0, label %left, label %right
+
+left:
+  %i0 = extractvalue { i32, i32 } %agg_left, 0
+  %i2 = extractvalue { i32, i32 } %agg_left, 1
+  call void @foo()
+  br label %merge
+
+right:
+  %i3 = extractvalue { i32, i32 } %agg_right, 0
+  %i4 = extractvalue { i32, i32 } %agg_right, 1
+  call void @bar()
+  br label %merge
+
+merge:
+  %i5 = phi i32 [ %i0, %left ], [ %i3, %right ]
+  %i6 = phi i32 [ %i2, %left ], [ %i4, %right ]
+  call void @baz()
+  br i1 %c1, label %end, label %passthrough
+
+passthrough:
+  call void @qux()
+  br label %end
+
+end:
+  call void @quux()
+  %i7 = insertvalue { i32, i32 } undef, i32 %i5, 0
+  %i8 = insertvalue { i32, i32 } %i7, i32 %i6, 1
+  ret { i32, i32 } %i8
+}
+
+; All the definitions of the aggregate elements must happen in the same block.
+define { i32, i32 } @negative_test7({ i32, i32 } %agg_left, { i32, i32 } %agg_right, i1 %c0, i1 %c1) {
+; CHECK-LABEL: @negative_test7(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[I0:%.*]] = extractvalue { i32, i32 } [[AGG_LEFT:%.*]], 0
+; CHECK-NEXT:    call void @usei32(i32 [[I0]])
+; CHECK-NEXT:    br i1 [[C0:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    [[I1:%.*]] = extractvalue { i32, i32 } [[AGG_LEFT]], 1
+; CHECK-NEXT:    call void @usei32(i32 [[I1]])
+; CHECK-NEXT:    br label [[MERGE:%.*]]
+; CHECK:       right:
+; CHECK-NEXT:    [[I2:%.*]] = extractvalue { i32, i32 } [[AGG_RIGHT:%.*]], 1
+; CHECK-NEXT:    call void @usei32(i32 [[I2]])
+; CHECK-NEXT:    br label [[MERGE]]
+; CHECK:       merge:
+; CHECK-NEXT:    [[I3:%.*]] = phi i32 [ [[I1]], [[LEFT]] ], [ [[I2]], [[RIGHT]] ]
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       end:
+; CHECK-NEXT:    call void @baz()
+; CHECK-NEXT:    [[I7:%.*]] = insertvalue { i32, i32 } undef, i32 [[I0]], 0
+; CHECK-NEXT:    [[I8:%.*]] = insertvalue { i32, i32 } [[I7]], i32 [[I3]], 1
+; CHECK-NEXT:    ret { i32, i32 } [[I8]]
+;
+entry:
+  %i0 = extractvalue { i32, i32 } %agg_left, 0
+  call void @usei32(i32 %i0)
+  br i1 %c0, label %left, label %right
+
+left:
+  %i1 = extractvalue { i32, i32 } %agg_left, 1
+  call void @usei32(i32 %i1)
+  br label %merge
+
+right:
+  %i2 = extractvalue { i32, i32 } %agg_right, 1
+  call void @usei32(i32 %i2)
+  br label %merge
+
+merge:
+  %i3 = phi i32 [ %i1, %left ], [ %i2, %right ]
+  call void @bar()
+  br label %end
+
+end:
+  call void @baz()
+  %i7 = insertvalue { i32, i32 } undef, i32 %i0, 0
+  %i8 = insertvalue { i32, i32 } %i7, i32 %i3, 1
   ret { i32, i32 } %i8
 }
