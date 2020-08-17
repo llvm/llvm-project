@@ -28,7 +28,7 @@ class TestSwiftStructInit(TestBase):
         TestBase.setUp(self)
 
     @swiftTest
-    @skipIfLinux
+    @skipIf(oslist=['windows'])
     def test_swift_struct_init(self):
         """Test that we display self correctly for an inline-initialized struct"""
         self.build()
