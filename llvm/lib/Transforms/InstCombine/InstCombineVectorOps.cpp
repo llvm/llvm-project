@@ -776,7 +776,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // And with "source" we mean the original aggregate[s] from which
   // the inserted elements were extracted. This may require PHI translation.
 
-  enum class SourceAggregate {
+  enum class AggregateDescription {
     /// When analyzing the value that was inserted into an aggregate, we did
     /// not manage to find defining `extractvalue` instruction to analyze.
     NotFound,
@@ -794,10 +794,10 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   };
   auto Describe = [](Optional<Value *> SourceAggregate) {
     if (SourceAggregate == NotFound)
-      return SourceAggregate::NotFound;
+      return AggregateDescription::NotFound;
     if (*SourceAggregate == FoundMismatch)
-      return SourceAggregate::FoundMismatch;
-    return SourceAggregate::Found;
+      return AggregateDescription::FoundMismatch;
+    return AggregateDescription::Found;
   };
 
   // Given the value \p Elt that was being inserted into element \p EltIdx of an
@@ -827,7 +827,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     if (EVI->getNumIndices() != 1 || EltIdx != EVI->getIndices().front())
       return FoundMismatch;
 
-    return SourceAggregate; // SourceAggregate::Found
+    return SourceAggregate; // AggregateDescription::Found
   };
 
   // Given elements AggElts that were constructing an aggregate OrigIVI,
@@ -838,9 +838,9 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     Optional<Value *> SourceAggregate;
 
     for (auto I : enumerate(AggElts)) {
-      assert(Describe(SourceAggregate) != SourceAggregate::FoundMismatch &&
+      assert(Describe(SourceAggregate) != AggregateDescription::FoundMismatch &&
              "We don't store nullptr in SourceAggregate!");
-      assert((Describe(SourceAggregate) == SourceAggregate::Found) ==
+      assert((Describe(SourceAggregate) == AggregateDescription::Found) ==
                  (I.index() != 0) &&
              "SourceAggregate should be valid after the the first element,");
 
@@ -855,28 +855,28 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
       // Regardless of whether or not we have previously found source
       // aggregate for previous elements (if any), if we didn't find one for
       // this element, passthrough whatever we have just found.
-      if (Describe(SourceAggregateForElement) != SourceAggregate::Found)
+      if (Describe(SourceAggregateForElement) != AggregateDescription::Found)
         return SourceAggregateForElement;
 
       // Okay, we have found source aggregate for this element.
       // Let's see what we already know from previous elements, if any.
       switch (Describe(SourceAggregate)) {
-      case SourceAggregate::NotFound:
+      case AggregateDescription::NotFound:
         // This is apparently the first element that we have examined.
         SourceAggregate = SourceAggregateForElement; // Record the aggregate!
         continue; // Great, now look at next element.
-      case SourceAggregate::Found:
+      case AggregateDescription::Found:
         // We have previously already successfully examined other elements.
         // Is this the same source aggregate we've found for other elements?
         if (*SourceAggregateForElement != *SourceAggregate)
           return FoundMismatch;
         continue; // Still the same aggregate, look at next element.
-      case SourceAggregate::FoundMismatch:
+      case AggregateDescription::FoundMismatch:
         llvm_unreachable("Can't happen. We would have early-exited then.");
       };
     }
 
-    assert(Describe(SourceAggregate) == SourceAggregate::Found &&
+    assert(Describe(SourceAggregate) == AggregateDescription::Found &&
            "Must be a valid Value");
     return *SourceAggregate;
   };
@@ -885,8 +885,8 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
 
   // Can we find the source aggregate without looking at predecessors?
   SourceAggregate = FindCommonSourceAggregate(/*PredBB=*/None);
-  if (Describe(SourceAggregate) != SourceAggregate::NotFound) {
-    if (Describe(SourceAggregate) == SourceAggregate::FoundMismatch)
+  if (Describe(SourceAggregate) != AggregateDescription::NotFound) {
+    if (Describe(SourceAggregate) == AggregateDescription::FoundMismatch)
       return nullptr; // Conflicting source aggregates!
     ++NumAggregateReconstructionsSimplified;
     return replaceInstUsesWith(OrigIVI, *SourceAggregate);
@@ -920,7 +920,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     // aggregate produced by OrigIVI must have been originally extracted from
     // the same aggregate. Is that so? Can we find said original aggregate?
     SourceAggregate = FindCommonSourceAggregate(Pred);
-    if (Describe(SourceAggregate) != SourceAggregate::Found)
+    if (Describe(SourceAggregate) != AggregateDescription::Found)
       return nullptr; // Give up.
     IV.first->second = *SourceAggregate;
   }
