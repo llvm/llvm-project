@@ -1015,8 +1015,7 @@ PdbAstBuilder::GetOrCreateFunctionDecl(PdbCompilandSymId func_id) {
   proc_name.consume_front("::");
 
   clang::FunctionDecl *function_decl = m_clang.CreateFunctionDeclaration(
-      parent, OptionalClangModuleID(), proc_name.str().c_str(), func_ct,
-      storage, false);
+      parent, OptionalClangModuleID(), proc_name, func_ct, storage, false);
 
   lldbassert(m_uid_to_decl.count(toOpaqueUid(func_id)) == 0);
   m_uid_to_decl[toOpaqueUid(func_id)] = function_decl;

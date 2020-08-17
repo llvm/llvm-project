@@ -408,11 +408,10 @@ public:
 
   // Function Types
 
-  clang::FunctionDecl *
-  CreateFunctionDeclaration(clang::DeclContext *decl_ctx,
-                            OptionalClangModuleID owning_module,
-                            const char *name, const CompilerType &function_Type,
-                            clang::StorageClass storage, bool is_inline);
+  clang::FunctionDecl *CreateFunctionDeclaration(
+      clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
+      llvm::StringRef name, const CompilerType &function_Type,
+      clang::StorageClass storage, bool is_inline);
 
   CompilerType CreateFunctionType(const CompilerType &result_type,
                                   const CompilerType *args, unsigned num_args,
@@ -1053,7 +1052,8 @@ public:
   }
 
   clang::DeclarationName
-  GetDeclarationName(const char *name, const CompilerType &function_clang_type);
+  GetDeclarationName(llvm::StringRef name,
+                     const CompilerType &function_clang_type);
 
   clang::LangOptions *GetLangOpts() const {
     return m_language_options_up.get();

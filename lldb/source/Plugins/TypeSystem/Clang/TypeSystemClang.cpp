@@ -1965,11 +1965,8 @@ TypeSystemClang::GetOpaqueCompilerType(clang::ASTContext *ast,
 #pragma mark Function Types
 
 clang::DeclarationName
-TypeSystemClang::GetDeclarationName(const char *name,
+TypeSystemClang::GetDeclarationName(llvm::StringRef name,
                                     const CompilerType &function_clang_type) {
-  if (!name || !name[0])
-    return clang::DeclarationName();
-
   clang::OverloadedOperatorKind op_kind = clang::NUM_OVERLOADED_OPERATORS;
   if (!IsOperator(name, op_kind) || op_kind == clang::NUM_OVERLOADED_OPERATORS)
     return DeclarationName(&getASTContext().Idents.get(
@@ -1996,7 +1993,7 @@ TypeSystemClang::GetDeclarationName(const char *name,
 
 FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
-    const char *name, const CompilerType &function_clang_type,
+    llvm::StringRef name, const CompilerType &function_clang_type,
     clang::StorageClass storage, bool is_inline) {
   FunctionDecl *func_decl = nullptr;
   ASTContext &ast = getASTContext();
