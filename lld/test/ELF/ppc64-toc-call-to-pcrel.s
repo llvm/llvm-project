@@ -21,18 +21,18 @@
 # SYMBOL: 10010000     0 NOTYPE  LOCAL  DEFAULT [<other: 0x20>]   1 callee
 # SYMBOL: 10020000     0 NOTYPE  LOCAL  DEFAULT [<other: 0x60>]   2 caller
 # SYMBOL: 10020020     0 NOTYPE  LOCAL  DEFAULT [<other: 0x60>]   2 caller_14
-# SYMBOL: 1002003c     8 FUNC    LOCAL  DEFAULT                   2 __toc_save_callee
+# SYMBOL: 10020040     8 FUNC    LOCAL  DEFAULT                   2 __toc_save_callee
 
 # CHECK-LABEL: callee
 # CHECK:       blr
 
 # CHECK-LABEL: caller
-# CHECK:       bl 0x1002003c
+# CHECK:       bl 0x10020040
 # CHECK-NEXT:  ld 2, 24(1)
 # CHECK-NEXT:  blr
 
 # CHECK-LABEL: caller_14
-# CHECK:       bfl 0, 0x1002003c
+# CHECK:       bfl 0, 0x10020040
 # CHECK-NEXT:  ld 2, 24(1)
 # CHECK-NEXT:  blr
 
