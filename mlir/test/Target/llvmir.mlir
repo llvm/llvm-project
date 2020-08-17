@@ -1295,3 +1295,19 @@ llvm.func @nontemoral_store_and_load() {
 }
 
 // CHECK: ![[NODE]] = !{i32 1}
+
+// -----
+
+// Check that the translation does not crash in absence of a data layout.
+module {
+  // CHECK: declare void @module_default_layout
+  llvm.func @module_default_layout()
+}
+
+// -----
+
+// CHECK: target datalayout = "E"
+module attributes {llvm.data_layout = "E"} {
+  llvm.func @module_big_endian()
+}
+
