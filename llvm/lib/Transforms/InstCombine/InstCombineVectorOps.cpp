@@ -894,11 +894,33 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
 
   // Okay, apparently we need to look at predecessors.
 
-  BasicBlock *UseBB = OrigIVI.getParent();
+  // We should be smart about picking the "use" basic block, which will be the
+  // merge point for aggregate, where we'll insert the final PHI that will be
+  // used instead of OrigIVI. Basic block of OrigIVI is *not* the right choice.
+  // We should look in which blocks each of the AggElts is being defined,
+  // they all should be defined in the same basic block.
+  BasicBlock *UseBB = nullptr;
+
+  for (const Optional<Value *> &Elt : AggElts) {
+    // If this element's value was not defined by an instruction, ignore it.
+    auto *I = dyn_cast<Instruction>(*Elt);
+    if (!I)
+      continue;
+    // Otherwise, in which basic block is this instruction located?
+    BasicBlock *BB = I->getParent();
+    // If it's the first instruction we've encountered, record the basic block.
+    if (!UseBB) {
+      UseBB = BB;
+      continue;
+    }
+    // Otherwise, this must be the same basic block we've seen previously.
+    if (UseBB != BB)
+      return nullptr;
+  }
 
   // If *all* of the elements are basic-block-independent, meaning they are
   // either function arguments, or constant expressions, then if we didn't
-  // handle them without predecessor-aware folding, we won't handle them now.
+  // handle them without predecessor-aware handling, we won't handle them now.
   if (!UseBB)
     return nullptr;
 
