@@ -27,7 +27,9 @@ static const char *RTLNames[] = {
     /* PowerPC target */ "libomptarget.rtl.ppc64.so",
     /* x86_64 target  */ "libomptarget.rtl.x86_64.so",
     /* CUDA target    */ "libomptarget.rtl.cuda.so",
-    /* AArch64 target */ "libomptarget.rtl.aarch64.so"};
+    /* AArch64 target */ "libomptarget.rtl.aarch64.so",
+    /* AMDGPU target  */ "libomptarget.rtl.amdgpu.so",
+};
 
 RTLsTy *RTLs;
 std::mutex *RTLsMtx;
