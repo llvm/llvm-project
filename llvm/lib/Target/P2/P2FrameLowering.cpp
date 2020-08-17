@@ -145,8 +145,15 @@ void P2FrameLowering::emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) 
 }
 
 void P2FrameLowering::determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs, RegScavenger *RS) const {
+
     LLVM_DEBUG(errs() << "=== Function: " << MF.getName() << " ===\n");
     LLVM_DEBUG(errs() << "Determining callee saves\n");
+    // hack for now: if this is the __start, __entry, or main function, skip saving anything since we have no stack to save to,
+    // or in the case of main, there's no reason to save it since main should never return
+    auto fn_name = MF.getName();
+    if (fn_name == "__start" || fn_name == "__entry" || fn_name == "main")
+        return;
+
     TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
     // eventually might need to add to this to re-order the frame index based to match what will happen in spilling/restoring
 }
