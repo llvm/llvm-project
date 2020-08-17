@@ -2204,8 +2204,9 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   // TODO: for now we eagerly internalize functions without calculating the
   //       cost, we need a cost interface to determine whether internalizing
   //       a function is "benefitial"
-  if (AllowDeepWrapper)
-    for (unsigned u = 0; u < Functions.size(); u ++) {
+  if (AllowDeepWrapper) {
+    unsigned FunSize = Functions.size();
+    for (unsigned u = 0; u < FunSize; u++) {
       Function *F = Functions[u];
       if (!F->isDeclaration() && !F->isDefinitionExact() && F->getNumUses() &&
           !GlobalValue::isInterposableLinkage(F->getLinkage())) {
@@ -2221,6 +2222,7 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
           }
       }
     }
+  }
 
   for (Function *F : Functions) {
     if (F->hasExactDefinition())
