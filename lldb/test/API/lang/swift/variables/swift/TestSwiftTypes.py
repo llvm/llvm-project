@@ -161,10 +161,7 @@ class TestSwiftTypes(TestBase):
                 'Double',
                 'float64',
                 'value = 2.5'])
-        float80_unsupported_platforms = ["ios"]
-        float80_unsupported_archs = ["ppc64le"]
-        if self.getPlatform() not in float80_unsupported_platforms \
-        and platform.machine() not in float80_unsupported_archs:
+        if self.getArchitecture() == "x86_64":
             self.expect(
                 "frame variable --raw float80",
                 substrs=[
