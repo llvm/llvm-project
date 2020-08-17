@@ -19,6 +19,10 @@
 #include "BlocksRuntime/Block.h"
 #include "tsan_dispatch_defs.h"
 
+#if SANITIZER_MAC
+# include <Availability.h>
+#endif
+
 namespace __tsan {
   typedef u16 uint16_t;
 
@@ -219,8 +223,23 @@ static void invoke_and_release_block(void *param) {
 DISPATCH_INTERCEPT(dispatch, false)
 DISPATCH_INTERCEPT(dispatch_barrier, true)
 
-DISPATCH_INTERCEPT_SYNC_F(dispatch_async_and_wait_f, false)
+// dispatch_async_and_wait() and friends were introduced in macOS 10.14.
+// Linking of these interceptors fails when using an older SDK.
+#if !SANITIZER_MAC || defined(__MAC_10_14)
+// macOS 10.14 is greater than our minimal deployment target.  To ensure we
+// generate a weak reference so the TSan dylib continues to work on older
+// systems, we need to forward declare the intercepted functions as "weak
+// imports".   Note that this file is multi-platform, so we cannot include the
+// actual header file (#include <dispatch/dispatch.h>).
+SANITIZER_WEAK_IMPORT void dispatch_async_and_wait(
+    dispatch_queue_t queue, DISPATCH_NOESCAPE dispatch_block_t block);
+SANITIZER_WEAK_IMPORT void dispatch_async_and_wait_f(
+    dispatch_queue_t queue, void *context, dispatch_function_t work);
+
 DISPATCH_INTERCEPT_SYNC_B(dispatch_async_and_wait, false)
+DISPATCH_INTERCEPT_SYNC_F(dispatch_async_and_wait_f, false)
+#endif
+
 
 DECLARE_REAL(void, dispatch_after_f, dispatch_time_t when,
              dispatch_queue_t queue, void *context, dispatch_function_t work)
