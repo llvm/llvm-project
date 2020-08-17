@@ -204,8 +204,7 @@ define amdgpu_ps <2 x i32> @s_andn2_v2i32_commute(<2 x i32> inreg %src0, <2 x i3
 define amdgpu_ps i16 @s_andn2_i16(i16 inreg %src0, i16 inreg %src1) {
 ; GFX6-LABEL: s_andn2_i16:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_xor_b32 s0, s3, -1
-; GFX6-NEXT:    s_and_b32 s0, s2, s0
+; GFX6-NEXT:    s_andn2_b32 s0, s2, s3
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_andn2_i16:
@@ -224,8 +223,7 @@ define amdgpu_ps i16 @s_andn2_i16(i16 inreg %src0, i16 inreg %src1) {
 define amdgpu_ps i16 @s_andn2_i16_commute(i16 inreg %src0, i16 inreg %src1) {
 ; GFX6-LABEL: s_andn2_i16_commute:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_xor_b32 s0, s3, -1
-; GFX6-NEXT:    s_and_b32 s0, s0, s2
+; GFX6-NEXT:    s_andn2_b32 s0, s2, s3
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_andn2_i16_commute:
@@ -245,7 +243,7 @@ define amdgpu_ps { i16, i16 } @s_andn2_i16_multi_use(i16 inreg %src0, i16 inreg 
 ; GFX6-LABEL: s_andn2_i16_multi_use:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_xor_b32 s1, s3, -1
-; GFX6-NEXT:    s_and_b32 s0, s2, s1
+; GFX6-NEXT:    s_andn2_b32 s0, s2, s3
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_andn2_i16_multi_use:
@@ -266,9 +264,8 @@ define amdgpu_ps { i16, i16 } @s_andn2_i16_multi_use(i16 inreg %src0, i16 inreg 
 define amdgpu_ps { i16, i16 } @s_andn2_i16_multi_foldable_use(i16 inreg %src0, i16 inreg %src1, i16 inreg %src2) {
 ; GFX6-LABEL: s_andn2_i16_multi_foldable_use:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_xor_b32 s1, s4, -1
-; GFX6-NEXT:    s_and_b32 s0, s2, s1
-; GFX6-NEXT:    s_and_b32 s1, s3, s1
+; GFX6-NEXT:    s_andn2_b32 s0, s2, s4
+; GFX6-NEXT:    s_andn2_b32 s1, s3, s4
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_andn2_i16_multi_foldable_use:
