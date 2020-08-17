@@ -934,7 +934,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
 
   ++NumAggregateReconstructionsSimplified;
   return PHI;
-};
+}
 
 /// Try to find redundant insertvalue instructions, like the following ones:
 ///  %0 = insertvalue { i8, i32 } undef, i8 %x, 0
