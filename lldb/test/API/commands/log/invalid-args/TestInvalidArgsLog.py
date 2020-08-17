@@ -15,3 +15,8 @@ class InvalidArgsLogTestCase(TestBase):
     def test_disable_empty(self):
         self.expect("log disable", error=True,
                     substrs=["error: log disable takes a log channel and one or more log types."])
+
+    @no_debug_info_test
+    def test_enable_empty(self):
+        self.expect("log enable lldb all -f this/is/not/a/valid/path", error=True,
+                    substrs=["Unable to open log file 'this/is/not/a/valid/path': No such file or directory\n"])
