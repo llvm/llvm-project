@@ -10,6 +10,7 @@
 
 #include <pybind11/pybind11.h>
 
+#include "IRModules.h"
 #include "mlir/IR/MLIRContext.h"
 
 using namespace mlir;
@@ -24,4 +25,8 @@ PYBIND11_MODULE(_mlir, m) {
     return std::make_tuple(std::string("From the native module"),
                            context.isMultithreadingEnabled());
   });
+
+  // Define and populate IR submodule.
+  auto irModule = m.def_submodule("ir", "MLIR IR Bindings");
+  populateIRSubmodule(irModule);
 }
