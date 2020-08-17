@@ -346,11 +346,9 @@ public:
     std::unique_ptr<TemplateParameterInfos> packed_args;
   };
 
-  clang::FunctionTemplateDecl *
-  CreateFunctionTemplateDecl(clang::DeclContext *decl_ctx,
-                             OptionalClangModuleID owning_module,
-                             clang::FunctionDecl *func_decl, const char *name,
-                             const TemplateParameterInfos &infos);
+  clang::FunctionTemplateDecl *CreateFunctionTemplateDecl(
+      clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
+      clang::FunctionDecl *func_decl, const TemplateParameterInfos &infos);
 
   void CreateFunctionTemplateSpecializationInfo(
       clang::FunctionDecl *func_decl, clang::FunctionTemplateDecl *Template,
@@ -414,7 +412,7 @@ public:
   CreateFunctionDeclaration(clang::DeclContext *decl_ctx,
                             OptionalClangModuleID owning_module,
                             const char *name, const CompilerType &function_Type,
-                            int storage, bool is_inline);
+                            clang::StorageClass storage, bool is_inline);
 
   CompilerType CreateFunctionType(const CompilerType &result_type,
                                   const CompilerType *args, unsigned num_args,
