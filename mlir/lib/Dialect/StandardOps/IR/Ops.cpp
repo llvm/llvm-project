@@ -564,7 +564,8 @@ static ParseResult parseGenericAtomicRMWOp(OpAsmParser &parser,
     return failure();
 
   Region *body = result.addRegion();
-  if (parser.parseRegion(*body, llvm::None, llvm::None))
+  if (parser.parseRegion(*body, llvm::None, llvm::None) ||
+      parser.parseOptionalAttrDict(result.attributes))
     return failure();
   result.types.push_back(memrefType.cast<MemRefType>().getElementType());
   return success();
