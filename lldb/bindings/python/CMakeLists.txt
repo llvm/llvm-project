@@ -28,7 +28,7 @@ function(create_python_package swig_target working_dir pkg_dir)
     set(copy_cmd COMMAND ${CMAKE_COMMAND} -E copy ${ARG_FILES} ${pkg_dir})
   endif()
   if(NOT ARG_NOINIT)
-    set(init_cmd COMMAND ${PYTHON_EXECUTABLE}
+    set(init_cmd COMMAND ${Python3_EXECUTABLE}
         "${LLDB_SOURCE_DIR}/bindings/python/createPythonInit.py"
         "${pkg_dir}" ${ARG_FILES})
   endif()
