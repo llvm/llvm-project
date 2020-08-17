@@ -2804,7 +2804,7 @@ void LegalizerHelper::changeOpcode(MachineInstr &MI, unsigned NewOpcode) {
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
+LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   using namespace TargetOpcode;
 
   switch(MI.getOpcode()) {
@@ -2814,6 +2814,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return lowerBitcast(MI);
   case TargetOpcode::G_SREM:
   case TargetOpcode::G_UREM: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     auto Quot =
         MIRBuilder.buildInstr(MI.getOpcode() == G_SREM ? G_SDIV : G_UDIV, {Ty},
                               {MI.getOperand(1), MI.getOperand(2)});
@@ -2834,6 +2835,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     Register Overflow = MI.getOperand(1).getReg();
     Register LHS = MI.getOperand(2).getReg();
     Register RHS = MI.getOperand(3).getReg();
+    LLT Ty = MRI.getType(Res);
 
     unsigned Opcode = MI.getOpcode() == TargetOpcode::G_SMULO
                           ? TargetOpcode::G_SMULH
@@ -2862,11 +2864,13 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return Legalized;
   }
   case TargetOpcode::G_FNEG: {
+    Register Res = MI.getOperand(0).getReg();
+    LLT Ty = MRI.getType(Res);
+
     // TODO: Handle vector types once we are able to
     // represent them.
     if (Ty.isVector())
       return UnableToLegalize;
-    Register Res = MI.getOperand(0).getReg();
     LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
     Type *ZeroTy = getFloatTypeForLLT(Ctx, Ty);
     if (!ZeroTy)
@@ -2881,12 +2885,14 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return Legalized;
   }
   case TargetOpcode::G_FSUB: {
+    Register Res = MI.getOperand(0).getReg();
+    LLT Ty = MRI.getType(Res);
+
     // Lower (G_FSUB LHS, RHS) to (G_FADD LHS, (G_FNEG RHS)).
     // First, check if G_FNEG is marked as Lower. If so, we may
     // end up with an infinite loop as G_FSUB is used to legalize G_FNEG.
     if (LI.getAction({G_FNEG, {Ty}}).Action == Lower)
       return UnableToLegalize;
-    Register Res = MI.getOperand(0).getReg();
     Register LHS = MI.getOperand(1).getReg();
     Register RHS = MI.getOperand(2).getReg();
     Register Neg = MRI.createGenericVirtualRegister(Ty);
@@ -2930,7 +2936,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTTZ:
   case TargetOpcode::G_CTPOP:
-    return lowerBitCount(MI, TypeIdx, Ty);
+    return lowerBitCount(MI);
   case G_UADDO: {
     Register Res = MI.getOperand(0).getReg();
     Register CarryOut = MI.getOperand(1).getReg();
@@ -2992,24 +2998,24 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return Legalized;
   }
   case G_UITOFP:
-    return lowerUITOFP(MI, TypeIdx, Ty);
+    return lowerUITOFP(MI);
   case G_SITOFP:
-    return lowerSITOFP(MI, TypeIdx, Ty);
+    return lowerSITOFP(MI);
   case G_FPTOUI:
-    return lowerFPTOUI(MI, TypeIdx, Ty);
+    return lowerFPTOUI(MI);
   case G_FPTOSI:
     return lowerFPTOSI(MI);
   case G_FPTRUNC:
-    return lowerFPTRUNC(MI, TypeIdx, Ty);
+    return lowerFPTRUNC(MI);
   case G_FPOWI:
     return lowerFPOWI(MI);
   case G_SMIN:
   case G_SMAX:
   case G_UMIN:
   case G_UMAX:
-    return lowerMinMax(MI, TypeIdx, Ty);
+    return lowerMinMax(MI);
   case G_FCOPYSIGN:
-    return lowerFCopySign(MI, TypeIdx, Ty);
+    return lowerFCopySign(MI);
   case G_FMINNUM:
   case G_FMAXNUM:
     return lowerFMinNumMaxNum(MI);
@@ -4758,7 +4764,7 @@ LegalizerHelper::narrowScalarCTPOP(MachineInstr &MI, unsigned TypeIdx,
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
+LegalizerHelper::lowerBitCount(MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
   const auto &TII = MIRBuilder.getTII();
   auto isSupported = [this](const LegalityQuery &Q) {
@@ -4848,15 +4854,15 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     // unless the target has ctlz but not ctpop, in which case we use:
     // { return 32 - nlz(~x & (x-1)); }
     // Ref: "Hacker's Delight" by Henry Warren
-    auto MIBCstNeg1 = MIRBuilder.buildConstant(Ty, -1);
-    auto MIBNot = MIRBuilder.buildXor(Ty, SrcReg, MIBCstNeg1);
+    auto MIBCstNeg1 = MIRBuilder.buildConstant(SrcTy, -1);
+    auto MIBNot = MIRBuilder.buildXor(SrcTy, SrcReg, MIBCstNeg1);
     auto MIBTmp = MIRBuilder.buildAnd(
-        Ty, MIBNot, MIRBuilder.buildAdd(Ty, SrcReg, MIBCstNeg1));
-    if (!isSupported({TargetOpcode::G_CTPOP, {Ty, Ty}}) &&
-        isSupported({TargetOpcode::G_CTLZ, {Ty, Ty}})) {
-      auto MIBCstLen = MIRBuilder.buildConstant(Ty, Len);
+        SrcTy, MIBNot, MIRBuilder.buildAdd(SrcTy, SrcReg, MIBCstNeg1));
+    if (!isSupported({TargetOpcode::G_CTPOP, {SrcTy, SrcTy}}) &&
+        isSupported({TargetOpcode::G_CTLZ, {SrcTy, SrcTy}})) {
+      auto MIBCstLen = MIRBuilder.buildConstant(SrcTy, Len);
       MIRBuilder.buildSub(MI.getOperand(0), MIBCstLen,
-                          MIRBuilder.buildCTLZ(Ty, MIBTmp));
+                          MIRBuilder.buildCTLZ(SrcTy, MIBTmp));
       MI.eraseFromParent();
       return Legalized;
     }
@@ -4865,6 +4871,8 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return Legalized;
   }
   case TargetOpcode::G_CTPOP: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    LLT Ty = MRI.getType(SrcReg);
     unsigned Size = Ty.getSizeInBits();
     MachineIRBuilder &B = MIRBuilder;
 
@@ -4874,11 +4882,11 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     // B2Count = val - { (val >> 1) & 0x55555555 }
     // since it gives same result in blocks of 2 with one instruction less.
     auto C_1 = B.buildConstant(Ty, 1);
-    auto B2Set1LoTo1Hi = B.buildLShr(Ty, MI.getOperand(1).getReg(), C_1);
+    auto B2Set1LoTo1Hi = B.buildLShr(Ty, SrcReg, C_1);
     APInt B2Mask1HiTo0 = APInt::getSplat(Size, APInt(8, 0x55));
     auto C_B2Mask1HiTo0 = B.buildConstant(Ty, B2Mask1HiTo0);
     auto B2Count1Hi = B.buildAnd(Ty, B2Set1LoTo1Hi, C_B2Mask1HiTo0);
-    auto B2Count = B.buildSub(Ty, MI.getOperand(1).getReg(), B2Count1Hi);
+    auto B2Count = B.buildSub(Ty, SrcReg, B2Count1Hi);
 
     // In order to get count in blocks of 4 add values from adjacent block of 2.
     // B4Count = { B2Count & 0x33333333 } + { (B2Count >> 2) & 0x33333333 }
@@ -4977,8 +4985,7 @@ LegalizerHelper::lowerU64ToF32BitOps(MachineInstr &MI) {
   return Legalized;
 }
 
-LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerUITOFP(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerUITOFP(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
   LLT DstTy = MRI.getType(Dst);
@@ -5006,8 +5013,7 @@ LegalizerHelper::lowerUITOFP(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   return UnableToLegalize;
 }
 
-LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerSITOFP(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerSITOFP(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
   LLT DstTy = MRI.getType(Dst);
@@ -5053,8 +5059,7 @@ LegalizerHelper::lowerSITOFP(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   return UnableToLegalize;
 }
 
-LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerFPTOUI(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerFPTOUI(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
   LLT DstTy = MRI.getType(Dst);
@@ -5271,7 +5276,7 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerFPTRUNC(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
+LegalizerHelper::lowerFPTRUNC(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
 
@@ -5315,8 +5320,7 @@ static CmpInst::Predicate minMaxToCompare(unsigned Opc) {
   }
 }
 
-LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerMinMax(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerMinMax(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   Register Src0 = MI.getOperand(1).getReg();
   Register Src1 = MI.getOperand(2).getReg();
@@ -5332,7 +5336,7 @@ LegalizerHelper::lowerMinMax(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerFCopySign(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
+LegalizerHelper::lowerFCopySign(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   Register Src0 = MI.getOperand(1).getReg();
   Register Src1 = MI.getOperand(2).getReg();
