@@ -75,14 +75,13 @@ static LogicalResult processBuffer(raw_ostream &os,
                                    std::unique_ptr<MemoryBuffer> ownedBuffer,
                                    bool verifyDiagnostics, bool verifyPasses,
                                    bool allowUnregisteredDialects,
-                                   bool preloadDialectsInContext,
                                    const PassPipelineCLParser &passPipeline) {
   // Tell sourceMgr about this buffer, which is what the parser will pick up.
   SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());
 
   // Parse the input file.
-  MLIRContext context(/*loadAllDialects=*/preloadDialectsInContext);
+  MLIRContext context;
   context.allowUnregisteredDialects(allowUnregisteredDialects);
   context.printOpOnDiagnostic(!verifyDiagnostics);
 
@@ -112,8 +111,7 @@ LogicalResult mlir::MlirOptMain(raw_ostream &os,
                                 const PassPipelineCLParser &passPipeline,
                                 bool splitInputFile, bool verifyDiagnostics,
                                 bool verifyPasses,
-                                bool allowUnregisteredDialects,
-                                bool preloadDialectsInContext) {
+                                bool allowUnregisteredDialects) {
   // The split-input-file mode is a very specific mode that slices the file
   // up into small pieces and checks each independently.
   if (splitInputFile)
@@ -122,11 +120,10 @@ LogicalResult mlir::MlirOptMain(raw_ostream &os,
         [&](std::unique_ptr<MemoryBuffer> chunkBuffer, raw_ostream &os) {
           return processBuffer(os, std::move(chunkBuffer), verifyDiagnostics,
                                verifyPasses, allowUnregisteredDialects,
-                               preloadDialectsInContext, passPipeline);
+                               passPipeline);
         },
         os);
 
   return processBuffer(os, std::move(buffer), verifyDiagnostics, verifyPasses,
-                       allowUnregisteredDialects, preloadDialectsInContext,
-                       passPipeline);
+                       allowUnregisteredDialects, passPipeline);
 }

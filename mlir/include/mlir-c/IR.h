@@ -90,12 +90,6 @@ MlirContext mlirContextCreate();
 /** Takes an MLIR context owned by the caller and destroys it. */
 void mlirContextDestroy(MlirContext context);
 
-/** Load all the globally registered dialects in the provided context.
- *  TODO: remove the concept of globally registered dialect by exposing the
- *  DialectRegistry.
- */
-void mlirContextLoadAllDialects(MlirContext context);
-
 /*============================================================================*/
 /* Location API.                                                              */
 /*============================================================================*/

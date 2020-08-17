@@ -27,30 +27,21 @@ DialectAsmParser::~DialectAsmParser() {}
 //===----------------------------------------------------------------------===//
 
 /// Registry for all dialect allocation functions.
-static llvm::ManagedStatic<DialectRegistry> dialectRegistry;
-DialectRegistry &mlir::getGlobalDialectRegistry() { return *dialectRegistry; }
+static llvm::ManagedStatic<llvm::MapVector<TypeID, DialectAllocatorFunction>>
+    dialectRegistry;
 
+void Dialect::registerDialectAllocator(
+    TypeID typeID, const DialectAllocatorFunction &function) {
+  assert(function &&
+         "Attempting to register an empty dialect initialize function");
+  dialectRegistry->insert({typeID, function});
+}
+
+/// Registers all dialects and hooks from the global registries with the
+/// specified MLIRContext.
 void mlir::registerAllDialects(MLIRContext *context) {
-  dialectRegistry->appendTo(context->getDialectRegistry());
-}
-
-Dialect *DialectRegistry::loadByName(StringRef name, MLIRContext *context) {
-  auto it = registry.find(name.str());
-  if (it == registry.end())
-    return nullptr;
-  return it->second.second(context);
-}
-
-void DialectRegistry::insert(TypeID typeID, StringRef name,
-                             DialectAllocatorFunction ctor) {
-  auto inserted =
-    registry.insert(std::make_pair((std::string)name,
-                                   std::make_pair(typeID, ctor)));
-  if (!inserted.second && inserted.first->second.first != typeID) {
-    llvm::report_fatal_error(
-        "Trying to register different dialects for the same namespace: " +
-        name);
-  }
+  for (const auto &it : *dialectRegistry)
+    it.second(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -128,7 +119,7 @@ DialectInterface::~DialectInterface() {}
 
 DialectInterfaceCollectionBase::DialectInterfaceCollectionBase(
     MLIRContext *ctx, TypeID interfaceKind) {
-  for (auto *dialect : ctx->getLoadedDialects()) {
+  for (auto *dialect : ctx->getRegisteredDialects()) {
     if (auto *interface = dialect->getRegisteredInterface(interfaceKind)) {
       interfaces.insert(interface);
       orderedInterfaces.push_back(interface);
