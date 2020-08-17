@@ -8,6 +8,7 @@ from lldbsuite.test import lldbutil
 
 import json
 
+@skipIfReproducer
 class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
