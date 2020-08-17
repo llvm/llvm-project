@@ -1455,12 +1455,16 @@ void ApplyWorkingDir(SmallString &clang_argument, StringRef cur_working_dir) {
 }
 
 std::array<StringRef, 2> macro_flags = { "-D", "-U" };
+std::array<StringRef, 5> multi_arg_flags =
+    { "-D", "-U", "-I", "-F", "-working-directory" };
+std::array<StringRef, 5> args_to_unique =
+    { "-D", "-U", "-I", "-F", "-fmodule-map-file=" };
 
 bool IsMultiArgClangFlag(StringRef arg) {
-  for (auto &flag : macro_flags)
+  for (auto &flag : multi_arg_flags)
     if (flag == arg)
       return true;
-  return arg == "-working-directory";
+  return false;
 }
 
 bool IsMacroDefinition(StringRef arg) {
@@ -1471,19 +1475,23 @@ bool IsMacroDefinition(StringRef arg) {
 }
 
 bool ShouldUnique(StringRef arg) {
-  return IsMacroDefinition(arg);
+  for (auto &flag : args_to_unique)
+    if (arg.startswith(flag))
+      return true;
+  return false;
 }
 } // namespace
 
-void SwiftASTContext::AddExtraClangArgs(std::vector<std::string> ExtraArgs) {
-  swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
+// static
+void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string>& source,
+                                        std::vector<std::string>& dest) {
   llvm::StringSet<> unique_flags;
-  for (auto &arg : importer_options.ExtraArgs)
+  for (auto &arg : dest)
     unique_flags.insert(arg);
 
   llvm::SmallString<128> cur_working_dir;
   llvm::SmallString<128> clang_argument;
-  for (const std::string &arg : ExtraArgs) {
+  for (const std::string &arg : source) {
     // Join multi-arg options for uniquing.
     clang_argument += arg;
     if (IsMultiArgClangFlag(clang_argument))
@@ -1510,10 +1518,15 @@ void SwiftASTContext::AddExtraClangArgs(std::vector<std::string> ExtraArgs) {
 
     auto clang_arg_str = clang_argument.str();
     if (!ShouldUnique(clang_argument) || !unique_flags.count(clang_arg_str)) {
-      importer_options.ExtraArgs.push_back(clang_arg_str);
+      dest.push_back(clang_arg_str);
       unique_flags.insert(clang_arg_str);
     }
   }
+}
+
+void SwiftASTContext::AddExtraClangArgs(std::vector<std::string> ExtraArgs) {
+  swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
+  AddExtraClangArgs(ExtraArgs, importer_options.ExtraArgs);
 }
 
 void SwiftASTContext::AddUserClangArgs(TargetProperties &props) {
