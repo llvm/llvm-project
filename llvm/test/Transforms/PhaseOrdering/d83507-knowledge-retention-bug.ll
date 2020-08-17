@@ -13,7 +13,10 @@ define %0* @f1() local_unnamed_addr {
 ; ANY-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(%0* [[I1]]) ]
 ; ANY-NEXT:    [[I4:%.*]] = getelementptr inbounds [[TMP0:%.*]], %0* [[I1]], i64 0, i32 0
 ; ANY-NEXT:    [[I5]] = load %0*, %0** [[I4]], align 8
-; ANY-NEXT:    br label [[BB3]]
+; ANY-NEXT:    [[I2:%.*]] = icmp eq %0* [[I5]], null
+; ANY-NEXT:    br i1 [[I2]], label [[BB6:%.*]], label [[BB3]]
+; ANY:       bb6:
+; ANY-NEXT:    ret %0* undef
 ;
 bb:
   br label %bb1
