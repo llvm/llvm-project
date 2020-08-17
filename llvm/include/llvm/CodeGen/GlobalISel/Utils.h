@@ -151,9 +151,8 @@ const ConstantFP* getConstantFPVRegVal(Register VReg,
 MachineInstr *getOpcodeDef(unsigned Opcode, Register Reg,
                            const MachineRegisterInfo &MRI);
 
-/// Find the def instruction for \p Reg, folding away any trivial copies. Note
-/// it may still return a COPY, if it changes the type. May return nullptr if \p
-/// Reg is not a generic virtual register.
+/// Find the def instruction for \p Reg, folding away any trivial copies. May
+/// return nullptr if \p Reg is not a generic virtual register.
 MachineInstr *getDefIgnoringCopies(Register Reg,
                                    const MachineRegisterInfo &MRI);
 
