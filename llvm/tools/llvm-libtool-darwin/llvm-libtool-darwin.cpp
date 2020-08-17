@@ -108,10 +108,10 @@ static Expected<std::string> searchForFile(const Twine &FileName) {
   };
 
   Optional<std::string> Found = FindLib(LibrarySearchDirs);
-  if (!Found.hasValue())
+  if (!Found)
     Found = FindLib(StandardSearchDirs);
-  if (Found.hasValue())
-    return Found.getValue();
+  if (Found)
+    return *Found;
 
   return createStringError(std::errc::invalid_argument,
                            "cannot locate file '%s'", FileName.str().c_str());
