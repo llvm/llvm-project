@@ -74,8 +74,8 @@ MCRegisterInfo *llvm::createGCNMCRegisterInfo(AMDGPUDwarfFlavour DwarfFlavour) {
 static MCSubtargetInfo *
 createAMDGPUMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   if (TT.getArch() == Triple::r600)
-    return createR600MCSubtargetInfoImpl(TT, CPU, FS);
-  return createAMDGPUMCSubtargetInfoImpl(TT, CPU, FS);
+    return createR600MCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+  return createAMDGPUMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 
 static MCInstPrinter *createAMDGPUMCInstPrinter(const Triple &T,

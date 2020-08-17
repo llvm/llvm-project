@@ -57,7 +57,7 @@ createAArch64MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
       CPU = "vortex";
   }
 
-  return createAArch64MCSubtargetInfoImpl(TT, CPU, FS);
+  return createAArch64MCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 
 void AArch64_MC::initLLVMToCVRegMapping(MCRegisterInfo *MRI) {

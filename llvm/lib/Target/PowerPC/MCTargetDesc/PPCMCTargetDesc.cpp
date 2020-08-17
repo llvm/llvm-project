@@ -78,7 +78,7 @@ static MCRegisterInfo *createPPCMCRegisterInfo(const Triple &TT) {
 
 static MCSubtargetInfo *createPPCMCSubtargetInfo(const Triple &TT,
                                                  StringRef CPU, StringRef FS) {
-  return createPPCMCSubtargetInfoImpl(TT, CPU, FS);
+  return createPPCMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 
 static MCAsmInfo *createPPCMCAsmInfo(const MCRegisterInfo &MRI,

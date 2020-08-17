@@ -468,7 +468,8 @@ MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
   StringRef CPUName = Features.first;
   StringRef ArchFS = Features.second;
 
-  MCSubtargetInfo *X = createHexagonMCSubtargetInfoImpl(TT, CPUName, ArchFS);
+  MCSubtargetInfo *X = createHexagonMCSubtargetInfoImpl(
+      TT, CPUName, /*TuneCPU*/ CPUName, ArchFS);
   if (X != nullptr && (CPUName == "hexagonv67t"))
     addArchSubtarget(X, ArchFS);
 

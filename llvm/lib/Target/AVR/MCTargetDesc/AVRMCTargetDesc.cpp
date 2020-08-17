@@ -53,7 +53,7 @@ static MCRegisterInfo *createAVRMCRegisterInfo(const Triple &TT) {
 
 static MCSubtargetInfo *createAVRMCSubtargetInfo(const Triple &TT,
                                                  StringRef CPU, StringRef FS) {
-  return createAVRMCSubtargetInfoImpl(TT, CPU, FS);
+  return createAVRMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 
 static MCInstPrinter *createAVRMCInstPrinter(const Triple &T,
