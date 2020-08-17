@@ -62,6 +62,90 @@ enum DFormOpcd {
   ADDI = 14
 };
 
+enum class PPCLegacyInsn : uint32_t {
+  NOINSN = 0,
+  // Loads.
+  LBZ = 0x88000000,
+  LHZ = 0xa0000000,
+  LWZ = 0x80000000,
+  LHA = 0xa8000000,
+  LWA = 0xe8000002,
+  LD = 0xe8000000,
+  LFS = 0xC0000000,
+  LXSSP = 0xe4000003,
+  LFD = 0xc8000000,
+  LXSD = 0xe4000002,
+  LXV = 0xf4000001,
+  LXVP = 0x18000000,
+
+  // Stores.
+  STB = 0x98000000,
+  STH = 0xb0000000,
+  STW = 0x90000000,
+  STD = 0xf8000000,
+  STFS = 0xd0000000,
+  STXSSP = 0xf4000003,
+  STFD = 0xd8000000,
+  STXSD = 0xf4000002,
+  STXV = 0xf4000005,
+  STXVP = 0x18000001
+};
+enum class PPCPrefixedInsn : uint64_t {
+  NOINSN = 0,
+  PREFIX_MLS = 0x0610000000000000,
+  PREFIX_8LS = 0x0410000000000000,
+
+  // Loads.
+  PLBZ = PREFIX_MLS,
+  PLHZ = PREFIX_MLS,
+  PLWZ = PREFIX_MLS,
+  PLHA = PREFIX_MLS,
+  PLWA = PREFIX_8LS | 0xa4000000,
+  PLD = PREFIX_8LS | 0xe4000000,
+  PLFS = PREFIX_MLS,
+  PLXSSP = PREFIX_8LS | 0xac000000,
+  PLFD = PREFIX_MLS,
+  PLXSD = PREFIX_8LS | 0xa8000000,
+  PLXV = PREFIX_8LS | 0xc8000000,
+  PLXVP = PREFIX_8LS | 0xe8000000,
+
+  // Stores.
+  PSTB = PREFIX_MLS,
+  PSTH = PREFIX_MLS,
+  PSTW = PREFIX_MLS,
+  PSTD = PREFIX_8LS | 0xf4000000,
+  PSTFS = PREFIX_MLS,
+  PSTXSSP = PREFIX_8LS | 0xbc000000,
+  PSTFD = PREFIX_MLS,
+  PSTXSD = PREFIX_8LS | 0xb8000000,
+  PSTXV = PREFIX_8LS | 0xd8000000,
+  PSTXVP = PREFIX_8LS | 0xf8000000
+};
+static bool checkPPCLegacyInsn(uint32_t encoding) {
+  PPCLegacyInsn insn = static_cast<PPCLegacyInsn>(encoding);
+  if (insn == PPCLegacyInsn::NOINSN)
+    return false;
+#define PCREL_OPT(Legacy, PCRel, InsnMask)                                     \
+  if (insn == PPCLegacyInsn::Legacy)                                           \
+    return true;
+#include "PPCInsns.def"
+#undef PCREL_OPT
+  return false;
+}
+
+// Masks to apply to legacy instructions when converting them to prefixed,
+// pc-relative versions. For the most part, the primary opcode is shared
+// between the legacy instruction and the suffix of its prefixed version.
+// However, there are some instances where that isn't the case (DS-Form and
+// DQ-form instructions).
+enum class LegacyToPrefixMask : uint64_t {
+  NOMASK = 0x0,
+  OPC_AND_RST = 0xffe00000, // Primary opc (0-5) and R[ST] (6-10).
+  ONLY_RST = 0x3e00000,     // [RS]T (6-10).
+  ST_STX28_TO5 =
+      0x8000000003e00000, // S/T (6-10) - The [S/T]X bit moves from 28 to 5.
+};
+
 uint64_t elf::getPPC64TocBase() {
   // The TOC consists of sections .got, .toc, .tocbss, .plt in that order. The
   // TOC starts where the first of these sections starts. We always create a
@@ -333,6 +417,7 @@ static bool isDQFormInstruction(uint32_t encoding) {
   switch (getPrimaryOpCode(encoding)) {
   default:
     return false;
+  case 6: // Power10 paired loads/stores (lxvp, stxvp).
   case 56:
     // The only instruction with a primary opcode of 56 is `lq`.
     return true;
@@ -342,6 +427,78 @@ static bool isDQFormInstruction(uint32_t encoding) {
     // The DS 'XO' bits being set to 01 is restricted to DQ form.
     return (encoding & 3) == 0x1;
   }
+}
+
+static bool isDSFormInstruction(PPCLegacyInsn insn) {
+  switch (insn) {
+  default:
+    return false;
+  case PPCLegacyInsn::LWA:
+  case PPCLegacyInsn::LD:
+  case PPCLegacyInsn::LXSD:
+  case PPCLegacyInsn::LXSSP:
+  case PPCLegacyInsn::STD:
+  case PPCLegacyInsn::STXSD:
+  case PPCLegacyInsn::STXSSP:
+    return true;
+  }
+}
+
+static PPCLegacyInsn getPPCLegacyInsn(uint32_t encoding) {
+  uint32_t opc = encoding & 0xfc000000;
+
+  // If the primary opcode is shared between multiple instructions, we need to
+  // fix it up to match the actual instruction we are after.
+  if ((opc == 0xe4000000 || opc == 0xe8000000 || opc == 0xf4000000 ||
+       opc == 0xf8000000) &&
+      !isDQFormInstruction(encoding))
+    opc = encoding & 0xfc000003;
+  else if (opc == 0xf4000000)
+    opc = encoding & 0xfc000007;
+  else if (opc == 0x18000000)
+    opc = encoding & 0xfc00000f;
+
+  // If the value is not one of the enumerators in PPCLegacyInsn, we want to
+  // return PPCLegacyInsn::NOINSN.
+  if (!checkPPCLegacyInsn(opc))
+    return PPCLegacyInsn::NOINSN;
+  return static_cast<PPCLegacyInsn>(opc);
+}
+
+static PPCPrefixedInsn getPCRelativeForm(PPCLegacyInsn insn) {
+  switch (insn) {
+#define PCREL_OPT(Legacy, PCRel, InsnMask)                                     \
+  case PPCLegacyInsn::Legacy:                                                  \
+    return PPCPrefixedInsn::PCRel
+#include "PPCInsns.def"
+#undef PCREL_OPT
+  }
+  return PPCPrefixedInsn::NOINSN;
+}
+
+static LegacyToPrefixMask getInsnMask(PPCLegacyInsn insn) {
+  switch (insn) {
+#define PCREL_OPT(Legacy, PCRel, InsnMask)                                     \
+  case PPCLegacyInsn::Legacy:                                                  \
+    return LegacyToPrefixMask::InsnMask
+#include "PPCInsns.def"
+#undef PCREL_OPT
+  }
+  return LegacyToPrefixMask::NOMASK;
+}
+static uint64_t getPCRelativeForm(uint32_t encoding) {
+  PPCLegacyInsn origInsn = getPPCLegacyInsn(encoding);
+  PPCPrefixedInsn pcrelInsn = getPCRelativeForm(origInsn);
+  if (pcrelInsn == PPCPrefixedInsn::NOINSN)
+    return UINT64_C(-1);
+  LegacyToPrefixMask origInsnMask = getInsnMask(origInsn);
+  uint64_t pcrelEncoding =
+      (uint64_t)pcrelInsn | (encoding & (uint64_t)origInsnMask);
+
+  // If the mask requires moving bit 28 to bit 5, do that now.
+  if (origInsnMask == LegacyToPrefixMask::ST_STX28_TO5)
+    pcrelEncoding |= (encoding & 0x8) << 23;
+  return pcrelEncoding;
 }
 
 static bool isInstructionUpdateForm(uint32_t encoding) {
@@ -366,6 +523,25 @@ static bool isInstructionUpdateForm(uint32_t encoding) {
   case STD:
     return (encoding & 3) == 1;
   }
+}
+
+// Compute the total displacement between the prefixed instruction that gets
+// to the start of the data and the load/store instruction that has the offset
+// into the data structure.
+// For example:
+// paddi 3, 0, 1000, 1
+// lwz 3, 20(3)
+// Should add up to 1020 for total displacement.
+static int64_t getTotalDisp(uint64_t prefixedInsn, uint32_t accessInsn) {
+  int64_t disp34 = llvm::SignExtend64(
+      ((prefixedInsn & 0x3ffff00000000) >> 16) | (prefixedInsn & 0xffff), 34);
+  int32_t disp16 = llvm::SignExtend32(accessInsn & 0xffff, 16);
+  // For DS and DQ form instructions, we need to mask out the XO bits.
+  if (isDQFormInstruction(accessInsn))
+    disp16 &= ~0xf;
+  else if (isDSFormInstruction(getPPCLegacyInsn(accessInsn)))
+    disp16 &= ~0x3;
+  return disp34 + disp16;
 }
 
 // There are a number of places when we either want to read or write an
@@ -473,6 +649,49 @@ void PPC64::relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       error("expected a 'ld' for got-indirect to toc-relative relaxing");
     writeFromHalf16(loc, (insn & 0x03ffffff) | 0x38000000);
     relocateNoSym(loc, R_PPC64_TOC16_LO, val);
+    break;
+  }
+  case R_PPC64_GOT_PCREL34: {
+    // Clear the first 8 bits of the prefix and the first 6 bits of the
+    // instruction (the primary opcode).
+    uint64_t insn = readPrefixedInstruction(loc);
+    if ((insn & 0xfc000000) != 0xe4000000)
+      error("expected a 'pld' for got-indirect to pc-relative relaxing");
+    insn &= ~0xff000000fc000000;
+
+    // Replace the cleared bits with the values for PADDI (0x600000038000000);
+    insn |= 0x600000038000000;
+    writePrefixedInstruction(loc, insn);
+    relocate(loc, rel, val);
+    break;
+  }
+  case R_PPC64_PCREL_OPT: {
+    // We can only relax this if the R_PPC64_GOT_PCREL34 at this offset can
+    // be relaxed. The eligibility for the relaxation needs to be determined
+    // on that relocation since this one does not relocate a symbol.
+    uint64_t insn = readPrefixedInstruction(loc);
+    uint32_t accessInsn = read32(loc + rel.addend);
+    uint64_t pcRelInsn = getPCRelativeForm(accessInsn);
+
+    // This error is not necessary for correctness but is emitted for now
+    // to ensure we don't miss these opportunities in real code. It can be
+    // removed at a later date.
+    if (pcRelInsn == UINT64_C(-1)) {
+      errorOrWarn(
+          "unrecognized instruction for R_PPC64_PCREL_OPT relaxation: 0x" +
+          Twine::utohexstr(accessInsn));
+      break;
+    }
+
+    int64_t totalDisp = getTotalDisp(insn, accessInsn);
+    if (!isInt<34>(totalDisp))
+      break; // Displacement doesn't fit.
+    // Convert the PADDI to the prefixed version of accessInsn and convert
+    // accessInsn to a nop.
+    writePrefixedInstruction(loc, pcRelInsn |
+                                      ((totalDisp & 0x3ffff0000) << 16) |
+                                      (totalDisp & 0xffff));
+    write32(loc + rel.addend, 0x60000000); // nop accessInsn.
     break;
   }
   default:
@@ -668,6 +887,7 @@ RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
   case R_PPC64_TOC16_LO:
     return R_GOTREL;
   case R_PPC64_GOT_PCREL34:
+  case R_PPC64_PCREL_OPT:
     return R_GOT_PC;
   case R_PPC64_TOC16_HA:
   case R_PPC64_TOC16_LO_DS:
@@ -1024,6 +1244,9 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
                              (val & si1Mask));
     break;
   }
+  // If we encounter a PCREL_OPT relocation that we won't optimize.
+  case R_PPC64_PCREL_OPT:
+    break;
   default:
     llvm_unreachable("unknown relocation");
   }
@@ -1080,6 +1303,14 @@ bool PPC64::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
 
 RelExpr PPC64::adjustRelaxExpr(RelType type, const uint8_t *data,
                                RelExpr expr) const {
+  if ((type == R_PPC64_GOT_PCREL34 || type == R_PPC64_PCREL_OPT) &&
+      config->pcRelOptimize) {
+    // It only makes sense to optimize pld since paddi means that the address
+    // of the object in the GOT is required rather than the object itself.
+    assert(data && "Expecting an instruction encoding here");
+    if ((readPrefixedInstruction(data) & 0xfc000000) == 0xe4000000)
+      return R_PPC64_RELAX_GOT_PC;
+  }
   if (expr == R_RELAX_TLS_GD_TO_IE)
     return R_RELAX_TLS_GD_TO_IE_GOT_OFF;
   if (expr == R_RELAX_TLS_LD_TO_LE)

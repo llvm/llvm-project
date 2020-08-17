@@ -1437,6 +1437,14 @@ static void sortSection(OutputSection *sec,
   if (name == ".init" || name == ".fini")
     return;
 
+  // IRelative relocations that usually live in the .rel[a].dyn section should
+  // be proccessed last by the dynamic loader. To achieve that we add synthetic
+  // sections in the required order from the begining so that the in.relaIplt
+  // section is placed last in an output section. Here we just do not apply
+  // sorting for an output section which holds the in.relaIplt section.
+  if (in.relaIplt->getParent() == sec)
+    return;
+
   // Sort input sections by priority using the list provided by
   // --symbol-ordering-file or --shuffle-sections=. This is a least significant
   // digit radix sort. The sections may be sorted stably again by a more

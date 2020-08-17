@@ -49,7 +49,7 @@ PlatformKind mapToPlatformKind(const Triple &Target) {
   case Triple::WatchOS:
     return Target.isSimulatorEnvironment() ? PlatformKind::watchOSSimulator
                                            : PlatformKind::watchOS;
-    // TODO: add bridgeOS once in llvm::Triple
+    // TODO: add bridgeOS & driverKit once in llvm::Triple
   }
   llvm_unreachable("Unknown Target Triple");
 }
@@ -83,6 +83,8 @@ StringRef getPlatformName(PlatformKind Platform) {
     return "tvOS Simulator";
   case PlatformKind::watchOSSimulator:
     return "watchOS Simulator";
+  case PlatformKind::driverKit:
+    return "DriverKit";
   }
   llvm_unreachable("Unknown llvm.MachO.PlatformKind enum");
 }

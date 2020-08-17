@@ -21,6 +21,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
@@ -271,6 +272,38 @@ public:
 private:
   StringRef path;
 };
+
+class LCBuildVersion : public LoadCommand {
+public:
+  LCBuildVersion(const PlatformInfo &platform) : platform(platform) {}
+
+  const int ntools = 1;
+
+  uint32_t getSize() const override {
+    return sizeof(build_version_command) + ntools * sizeof(build_tool_version);
+  }
+
+  void writeTo(uint8_t *buf) const override {
+    auto *c = reinterpret_cast<build_version_command *>(buf);
+    c->cmd = LC_BUILD_VERSION;
+    c->cmdsize = getSize();
+    c->platform = static_cast<uint32_t>(platform.kind);
+    c->minos = ((platform.minimum.getMajor() << 020) |
+                (platform.minimum.getMinor().getValueOr(0) << 010) |
+                platform.minimum.getSubminor().getValueOr(0));
+    c->sdk = ((platform.sdk.getMajor() << 020) |
+              (platform.sdk.getMinor().getValueOr(0) << 010) |
+              platform.sdk.getSubminor().getValueOr(0));
+    c->ntools = ntools;
+    auto *t = reinterpret_cast<build_tool_version *>(&c[1]);
+    t->tool = TOOL_LD;
+    t->version = (LLVM_VERSION_MAJOR << 020) | (LLVM_VERSION_MINOR << 010) |
+                 LLVM_VERSION_PATCH;
+  }
+
+  const PlatformInfo &platform;
+};
+
 } // namespace
 
 void Writer::scanRelocations() {
@@ -306,6 +339,8 @@ void Writer::createLoadCommands() {
   default:
     llvm_unreachable("unhandled output file type");
   }
+
+  in.header->addLoadCommand(make<LCBuildVersion>(config->platform));
 
   uint8_t segIndex = 0;
   for (OutputSegment *seg : outputSegments) {

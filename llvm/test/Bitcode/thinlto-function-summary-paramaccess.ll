@@ -230,7 +230,7 @@ entry:
 }
 
 ; SSI-LABEL: for function 'CallMany2'
-; SSI: p[]: empty-set, @Callee(arg0, [-715,125))
+; SSI: p[]: empty-set, @Callee(arg0, [-715,125)), @Callee2(arg1, [-33,-32))
 ; BC-NEXT: <PARAM_ACCESS op0=0 op1=0 op2=0 op3=2 op4=0 op5=[[CALLEE]] op6=1431 op7=250 op8=1 op9=[[CALLEE2:-?[0-9]+]] op10=67 op11=65/>
 ; BC-NEXT: <PERMODULE
 ; DIS-DAG: = gv: (name: "CallMany2", summaries: {{.*}} calls: ((callee: ^{{.*}}), (callee: ^{{.*}})), params: ((param: 0, offset: [0, -1], calls: ((callee: ^{{.*}}, param: 0, offset: [-715, 124]), (callee: ^{{.*}}, param: 1, offset: [-33, -33]))))))) ; guid = 16654048340802466690
@@ -286,8 +286,8 @@ entry:
 
 
 ; COMBINED: <FLAGS op0=0/>
-; COMBINED-NEXT: <VALUE_GUID op0=1 op1=[[CALLEE1:72710208629861106]]/>
-; COMBINED-NEXT: <VALUE_GUID op0=2 op1=[[CALLEE2:900789920918863816]]/>
+; COMBINED-NEXT: <VALUE_GUID op0=[[CALLEE1:1]] op1=72710208629861106/>
+; COMBINED-NEXT: <VALUE_GUID op0=[[CALLEE2:2]] op1=900789920918863816/>
 ; COMBINED-NEXT: <VALUE_GUID op0=3 op1=1075564720951610524/>
 ; COMBINED-NEXT: <VALUE_GUID op0=4 op1=1417835201204712148/>
 ; COMBINED-NEXT: <VALUE_GUID op0=5 op1=2949024673554120799/>

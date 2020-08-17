@@ -969,10 +969,10 @@ define amdgpu_kernel void @dynamic_insertelement_v2i8(<2 x i8> addrspace(1)* %ou
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshl_b32 s4, s4, 3
 ; VI-NEXT:    v_lshlrev_b16_e64 v0, s4, -1
-; VI-NEXT:    v_and_b32_e32 v1, 0x505, v0
-; VI-NEXT:    v_xor_b32_e32 v0, -1, v0
-; VI-NEXT:    v_and_b32_e32 v0, s6, v0
-; VI-NEXT:    v_or_b32_e32 v0, v1, v0
+; VI-NEXT:    v_not_b32_e32 v1, v0
+; VI-NEXT:    v_and_b32_e32 v1, s6, v1
+; VI-NEXT:    v_and_b32_e32 v0, 0x505, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <2 x i8> %a, i8 5, i32 %b

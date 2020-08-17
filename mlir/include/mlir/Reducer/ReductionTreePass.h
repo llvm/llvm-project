@@ -47,7 +47,8 @@ public:
   ReductionTreePass(const Tester *test) : test(test) {}
 
   ReductionTreePass(const ReductionTreePass &pass)
-      : root(new ReductionNode(pass.root->getModule().clone(), nullptr)),
+      : ReductionTreeBase<ReductionTreePass<Reducer, mode>>(pass),
+        root(new ReductionNode(pass.root->getModule().clone(), nullptr)),
         test(pass.test) {}
 
   /// Runs the pass instance in the pass pipeline.

@@ -499,19 +499,14 @@ static MachineInstr *foldPatchpoint(MachineFunction &MF, MachineInstr &MI,
   // Return false if any operands requested for folding are not foldable (not
   // part of the stackmap's live values).
   for (unsigned Op : Ops) {
+    // Caller is expected to avoid passing in tied operands
+    assert(!MI.getOperand(Op).isTied());
     if (Op < NumDefs) {
       assert(DefToFoldIdx == MI.getNumOperands() && "Folding multiple defs");
       DefToFoldIdx = Op;
     } else if (Op < StartIdx) {
       return nullptr;
     }
-    // When called from regalloc (InlineSpiller), operands must be untied,
-    // and regalloc will take care of (re)loading operand from memory.
-    // But when called from other places (e.g. peephole pass),
-    // we cannot fold operand which are tied - callers are unaware they
-    // need to reload destination register.
-    if (MI.getOperand(Op).isTied())
-      return nullptr;
   }
 
   MachineInstr *NewMI =

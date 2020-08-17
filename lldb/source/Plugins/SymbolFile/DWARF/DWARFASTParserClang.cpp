@@ -230,31 +230,73 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
   return type_sp;
 }
 
-static void CompleteExternalTagDeclType(TypeSystemClang &ast,
-                                        ClangASTImporter &ast_importer,
-                                        clang::DeclContext *decl_ctx,
-                                        DWARFDIE die,
-                                        const char *type_name_cstr) {
+static void ForcefullyCompleteType(CompilerType type) {
+  bool started = TypeSystemClang::StartTagDeclarationDefinition(type);
+  lldbassert(started && "Unable to start a class type definition.");
+  TypeSystemClang::CompleteTagDeclarationDefinition(type);
+  const clang::TagDecl *td = ClangUtil::GetAsTagDecl(type);
+  auto &ts = llvm::cast<TypeSystemClang>(*type.GetTypeSystem());
+  ts.GetMetadata(td)->SetIsForcefullyCompleted();
+}
+
+/// Complete a type from debug info, or mark it as forcefully completed if
+/// there is no definition of the type in the current Module. Call this function
+/// in contexts where the usual C++ rules require a type to be complete (base
+/// class, member, etc.).
+static void RequireCompleteType(CompilerType type) {
+  // Technically, enums can be incomplete too, but we don't handle those as they
+  // are emitted even under -flimit-debug-info.
+  if (!TypeSystemClang::IsCXXClassType(type))
+    return;
+
+  if (type.GetCompleteType())
+    return;
+
+  // No complete definition in this module.  Mark the class as complete to
+  // satisfy local ast invariants, but make a note of the fact that
+  // it is not _really_ complete so we can later search for a definition in a
+  // different module.
+  // Since we provide layout assistance, layouts of types containing this class
+  // will be correct even if we  are not able to find the definition elsewhere.
+  ForcefullyCompleteType(type);
+}
+
+/// This function serves a similar purpose as RequireCompleteType above, but it
+/// avoids completing the type if it is not immediately necessary. It only
+/// ensures we _can_ complete the type later.
+static void PrepareContextToReceiveMembers(TypeSystemClang &ast,
+                                           ClangASTImporter &ast_importer,
+                                           clang::DeclContext *decl_ctx,
+                                           DWARFDIE die,
+                                           const char *type_name_cstr) {
   auto *tag_decl_ctx = clang::dyn_cast<clang::TagDecl>(decl_ctx);
   if (!tag_decl_ctx)
+    return; // Non-tag context are always ready.
+
+  // We have already completed the type, or we have found its definition and are
+  // ready to complete it later (cf. ParseStructureLikeDIE).
+  if (tag_decl_ctx->isCompleteDefinition() || tag_decl_ctx->isBeingDefined())
     return;
+
+  // We reach this point of the tag was present in the debug info as a
+  // declaration only. If it was imported from another AST context (in the
+  // gmodules case), we can complete the type by doing a full import.
 
   // If this type was not imported from an external AST, there's nothing to do.
   CompilerType type = ast.GetTypeForDecl(tag_decl_ctx);
-  if (!type || !ast_importer.CanImport(type))
-    return;
-
-  auto qual_type = ClangUtil::GetQualType(type);
-  if (!ast_importer.RequireCompleteType(qual_type)) {
+  if (type && ast_importer.CanImport(type)) {
+    auto qual_type = ClangUtil::GetQualType(type);
+    if (ast_importer.RequireCompleteType(qual_type))
+      return;
     die.GetDWARF()->GetObjectFile()->GetModule()->ReportError(
         "Unable to complete the Decl context for DIE '%s' at offset "
         "0x%8.8x.\nPlease file a bug report.",
         type_name_cstr ? type_name_cstr : "", die.GetOffset());
-    // We need to make the type look complete otherwise, we might crash in
-    // Clang when adding children.
-    if (TypeSystemClang::StartTagDeclarationDefinition(type))
-      TypeSystemClang::CompleteTagDeclarationDefinition(type);
   }
+
+  // We don't have a type definition and/or the import failed. We must
+  // forcefully complete the type to avoid crashes.
+  ForcefullyCompleteType(type);
 }
 
 ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
@@ -1173,7 +1215,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
       }
 
       if (!function_decl) {
-        const char *name = attrs.name.GetCString();
+        llvm::StringRef name = attrs.name.GetStringRef();
 
         // We currently generate function templates with template parameters in
         // their name. In order to get closer to the AST that clang generates
@@ -1197,12 +1239,12 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
           template_function_decl = m_ast.CreateFunctionDeclaration(
               ignore_containing_context ? m_ast.GetTranslationUnitDecl()
                                         : containing_decl_ctx,
-              GetOwningClangModule(die), attrs.name.GetCString(), clang_type,
+              GetOwningClangModule(die), attrs.name.GetStringRef(), clang_type,
               attrs.storage, attrs.is_inline);
           clang::FunctionTemplateDecl *func_template_decl =
               m_ast.CreateFunctionTemplateDecl(
                   containing_decl_ctx, GetOwningClangModule(die),
-                  template_function_decl, name, template_param_infos);
+                  template_function_decl, template_param_infos);
           m_ast.CreateFunctionTemplateSpecializationInfo(
               template_function_decl, func_template_decl, template_param_infos);
         }
@@ -1264,7 +1306,7 @@ TypeSP DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
   if (attrs.byte_stride == 0 && attrs.bit_stride == 0)
     attrs.byte_stride = element_type->GetByteSize(nullptr).getValueOr(0);
   CompilerType array_element_type = element_type->GetForwardCompilerType();
-  CompleteType(array_element_type);
+  RequireCompleteType(array_element_type);
 
   uint64_t array_element_bit_stride =
       attrs.byte_stride * 8 + attrs.bit_stride;
@@ -1317,28 +1359,6 @@ TypeSP DWARFASTParserClang::ParsePointerToMemberType(
                                   Type::ResolveState::Forward);
   }
   return nullptr;
-}
-
-void DWARFASTParserClang::CompleteType(CompilerType type) {
-  // Technically, enums can be incomplete too, but we don't handle those as they
-  // are emitted even under -flimit-debug-info.
-  if (!TypeSystemClang::IsCXXClassType(type))
-    return;
-
-  if (type.GetCompleteType())
-    return;
-
-  // No complete definition in this module.  Mark the class as complete to
-  // satisfy local ast invariants, but make a note of the fact that
-  // it is not _really_ complete so we can later search for a definition in a
-  // different module.
-  // Since we provide layout assistance, layouts of types containing this class
-  // will be correct even if we  are not able to find the definition elsewhere.
-  bool started = TypeSystemClang::StartTagDeclarationDefinition(type);
-  lldbassert(started && "Unable to start a class type definition.");
-  TypeSystemClang::CompleteTagDeclarationDefinition(type);
-  const clang::TagDecl *td = ClangUtil::GetAsTagDecl(type);
-  m_ast.GetMetadata(td)->SetIsForcefullyCompleted();
 }
 
 TypeSP DWARFASTParserClang::UpdateSymbolContextScopeForType(
@@ -1560,13 +1580,8 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     clang::DeclContext *decl_ctx =
         GetClangDeclContextContainingDIE(die, nullptr);
 
-    // If your decl context is a record that was imported from another
-    // AST context (in the gmodules case), we need to make sure the type
-    // backing the Decl is complete before adding children to it. This is
-    // not an issue in the non-gmodules case because the debug info will
-    // always contain a full definition of parent types in that case.
-    CompleteExternalTagDeclType(m_ast, GetClangASTImporter(), decl_ctx, die,
-                                attrs.name.GetCString());
+    PrepareContextToReceiveMembers(m_ast, GetClangASTImporter(), decl_ctx, die,
+                                   attrs.name.GetCString());
 
     if (attrs.accessibility == eAccessNone && decl_ctx) {
       // Check the decl context that contains this class/struct/union. If
@@ -2016,7 +2031,7 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
         clang::TypeSourceInfo *type_source_info =
             base_class->getTypeSourceInfo();
         if (type_source_info)
-          CompleteType(m_ast.GetType(type_source_info->getType()));
+          RequireCompleteType(m_ast.GetType(type_source_info->getType()));
       }
 
       m_ast.TransferBaseClasses(clang_type.GetOpaqueQualType(),
@@ -2685,7 +2700,7 @@ void DWARFASTParserClang::ParseSingleMember(
           }
         }
 
-        CompleteType(member_clang_type);
+        RequireCompleteType(member_clang_type);
 
         field_decl = TypeSystemClang::AddFieldToRecordType(
             class_clang_type, name, member_clang_type, accessibility,

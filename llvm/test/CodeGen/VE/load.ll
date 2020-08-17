@@ -1,6 +1,19 @@
 ; RUN: llc < %s -mtriple=ve-unknown-unknown | FileCheck %s
 
 ; Function Attrs: norecurse nounwind readonly
+define fp128 @loadf128(fp128* nocapture readonly %0) {
+; CHECK-LABEL: loadf128:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    ld %s2, 8(, %s0)
+; CHECK-NEXT:    ld %s3, (, %s0)
+; CHECK-NEXT:    or %s0, 0, %s2
+; CHECK-NEXT:    or %s1, 0, %s3
+; CHECK-NEXT:    or %s11, 0, %s9
+  %2 = load fp128, fp128* %0, align 16
+  ret fp128 %2
+}
+
+; Function Attrs: norecurse nounwind readonly
 define double @loadf64(double* nocapture readonly %0) {
 ; CHECK-LABEL: loadf64:
 ; CHECK:       .LBB{{[0-9]+}}_2:
@@ -18,6 +31,18 @@ define float @loadf32(float* nocapture readonly %0) {
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = load float, float* %0, align 16
   ret float %2
+}
+
+; Function Attrs: norecurse nounwind readonly
+define i128 @loadi128(i128* nocapture readonly %0) {
+; CHECK-LABEL: loadi128:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    ld %s2, (, %s0)
+; CHECK-NEXT:    ld %s1, 8(, %s0)
+; CHECK-NEXT:    or %s0, 0, %s2
+; CHECK-NEXT:    or %s11, 0, %s9
+  %2 = load i128, i128* %0, align 16
+  ret i128 %2
 }
 
 ; Function Attrs: norecurse nounwind readonly
@@ -127,6 +152,18 @@ define i64 @loadi8zext(i8* nocapture readonly %0) {
 }
 
 ; Function Attrs: norecurse nounwind readonly
+define fp128 @loadf128stk() {
+; CHECK-LABEL: loadf128stk:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    ld %s1, 176(, %s11)
+; CHECK-NEXT:    ld %s0, 184(, %s11)
+; CHECK-NEXT:    or %s11, 0, %s9
+  %addr = alloca fp128, align 16
+  %1 = load fp128, fp128* %addr, align 16
+  ret fp128 %1
+}
+
+; Function Attrs: norecurse nounwind readonly
 define double @loadf64stk() {
 ; CHECK-LABEL: loadf64stk:
 ; CHECK:       .LBB{{[0-9]+}}_2:
@@ -146,6 +183,18 @@ define float @loadf32stk() {
   %addr = alloca float, align 16
   %1 = load float, float* %addr, align 16
   ret float %1
+}
+
+; Function Attrs: norecurse nounwind readonly
+define i128 @loadi128stk() {
+; CHECK-LABEL: loadi128stk:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    ld %s0, 176(, %s11)
+; CHECK-NEXT:    ld %s1, 184(, %s11)
+; CHECK-NEXT:    or %s11, 0, %s9
+  %addr = alloca i128, align 16
+  %1 = load i128, i128* %addr, align 16
+  ret i128 %1
 }
 
 ; Function Attrs: norecurse nounwind readonly

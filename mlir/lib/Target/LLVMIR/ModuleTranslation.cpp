@@ -302,7 +302,8 @@ ModuleTranslation::ModuleTranslation(Operation *module,
     : mlirModule(module), llvmModule(std::move(llvmModule)),
       debugTranslation(
           std::make_unique<DebugTranslation>(module, *this->llvmModule)),
-      ompDialect(module->getContext()->getOrLoadDialect<omp::OpenMPDialect>()),
+      ompDialect(
+          module->getContext()->getRegisteredDialect<omp::OpenMPDialect>()),
       typeTranslator(this->llvmModule->getContext()) {
   assert(satisfiesLLVMModule(mlirModule) &&
          "mlirModule should honor LLVM's module semantics.");
@@ -943,11 +944,11 @@ ModuleTranslation::lookupValues(ValueRange values) {
 
 std::unique_ptr<llvm::Module> ModuleTranslation::prepareLLVMModule(
     Operation *m, llvm::LLVMContext &llvmContext, StringRef name) {
-  auto *dialect = m->getContext()->getOrLoadDialect<LLVM::LLVMDialect>();
-  assert(dialect && "LLVM dialect must be registered");
-
   auto llvmModule = std::make_unique<llvm::Module>(name, llvmContext);
-  llvmModule->setDataLayout(dialect->getDataLayout());
+
+  if (auto dataLayoutAttr =
+          m->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName()))
+    llvmModule->setDataLayout(dataLayoutAttr.cast<StringAttr>().getValue());
 
   // Inject declarations for `malloc` and `free` functions that can be used in
   // memref allocation/deallocation coming from standard ops lowering.

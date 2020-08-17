@@ -43,10 +43,6 @@ public:
   /// Returns the pass managers held by this adaptor.
   MutableArrayRef<OpPassManager> getPassManagers() { return mgrs; }
 
-  /// Populate the set of dependent dialects for the passes in the current
-  /// adaptor.
-  void getDependentDialects(DialectRegistry &dialects) const override;
-
   /// Return the async pass managers held by this parallel adaptor.
   MutableArrayRef<SmallVector<OpPassManager, 1>> getParallelPassManagers() {
     return asyncExecutors;

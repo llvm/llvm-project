@@ -345,7 +345,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         $Class[[Foo]] *$LocalVariable[[FP]] = ($Class[[Foo]]*)$LocalVariable[[B]];
         int $LocalVariable[[I]] = (int)$LocalVariable[[B]];
       }
-    )cpp"
+    )cpp",
       R"cpp(
       struct $Class[[B]] {};
       struct $Class[[A]] {

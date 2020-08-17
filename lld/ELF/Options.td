@@ -394,15 +394,19 @@ defm threads
          "Number of threads. '1' disables multi-threading. By default all "
          "available hardware threads are used">;
 
-def time_trace: F<"time-trace">, HelpText<"Record time trace">;
-def time_trace_file_eq: J<"time-trace-file=">, HelpText<"Specify time trace output file">;
+def time_trace: FF<"time-trace">, HelpText<"Record time trace">;
+def time_trace_file_eq: JJ<"time-trace-file=">, HelpText<"Specify time trace output file">;
 
-defm time_trace_granularity: Eq<"time-trace-granularity",
+defm time_trace_granularity: EEq<"time-trace-granularity",
   "Minimum time granularity (in microseconds) traced by time profiler">;
 
-defm toc_optimize : B<"toc-optimize",
+defm toc_optimize : BB<"toc-optimize",
     "(PowerPC64) Enable TOC related optimizations (default)",
     "(PowerPC64) Disable TOC related optimizations">;
+
+defm pcrel_optimize : BB<"pcrel-optimize",
+    "(PowerPC64) Enable PC-relative optimizations (default)",
+    "(PowerPC64) Disable PC-relative optimizations">;
 
 def trace: F<"trace">, HelpText<"Print the names of the input files">;
 
@@ -411,7 +415,7 @@ defm trace_symbol: Eq<"trace-symbol", "Trace references to symbols">;
 defm undefined: Eq<"undefined", "Force undefined symbol during linking">,
   MetaVarName<"<symbol>">;
 
-defm undefined_glob: Eq<"undefined-glob", "Force undefined symbol during linking">,
+defm undefined_glob: EEq<"undefined-glob", "Force undefined symbol during linking">,
   MetaVarName<"<pattern>">;
 
 def unique: F<"unique">, HelpText<"Creates a separate output section for every orphan input section">;

@@ -11,8 +11,8 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
 # RUN: lld -flavor darwinnew -o %t %t.o -headerpad 0
 # RUN: llvm-objdump --macho --all-headers %t | FileCheck %s --check-prefix=PAD0
-# PAD0:      magic        cputype  cpusubtype  caps    filetype ncmds sizeofcmds
-# PAD0-NEXT: MH_MAGIC_64  X86_64   ALL         LIB64   EXECUTE  8     [[#%u, CMDSIZE:]] {{.*}}
+# PAD0:      magic        cputype  cpusubtype  caps    filetype ncmds sizeofcmds               flags
+# PAD0-NEXT: MH_MAGIC_64  X86_64   ALL         LIB64   EXECUTE  9     [[#%u, CMDSIZE:]] {{.*}}
 # PAD0:      sectname __text
 # PAD0-NEXT: segname __TEXT
 # PAD0-NEXT: addr
@@ -21,8 +21,8 @@
 
 # RUN: lld -flavor darwinnew -o %t %t.o -headerpad 11
 # RUN: llvm-objdump --macho --all-headers %t | FileCheck %s --check-prefix=PAD11
-# PAD11:      magic        cputype  cpusubtype  caps    filetype ncmds sizeofcmds
-# PAD11-NEXT: MH_MAGIC_64  X86_64   ALL         LIB64   EXECUTE  8     [[#%u, CMDSIZE:]] {{.*}}
+# PAD11:      magic        cputype  cpusubtype  caps    filetype ncmds sizeofcmds               flags
+# PAD11-NEXT: MH_MAGIC_64  X86_64   ALL         LIB64   EXECUTE  9     [[#%u, CMDSIZE:]] {{.*}}
 # PAD11:      sectname __text
 # PAD11-NEXT: segname __TEXT
 # PAD11-NEXT: addr

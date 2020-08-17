@@ -164,6 +164,15 @@ enum {
   GIM_CheckMemorySizeEqualToLLT,
   GIM_CheckMemorySizeLessThanLLT,
   GIM_CheckMemorySizeGreaterThanLLT,
+
+  /// Check if this is a vector that can be treated as a vector splat
+  /// constant. This is valid for both G_BUILD_VECTOR as well as
+  /// G_BUILD_VECTOR_TRUNC. For AllOnes refers to individual bits, so a -1
+  /// element.
+  /// - InsnID - Instruction ID
+  GIM_CheckIsBuildVectorAllOnes,
+  GIM_CheckIsBuildVectorAllZeros,
+
   /// Check a generic C++ instruction predicate
   /// - InsnID - Instruction ID
   /// - PredicateID - The ID of the predicate function to call

@@ -37,8 +37,9 @@ static inline size_t complementary_span(const char *src, const char *segment) {
 // is found is then stored within 'context' for subsequent calls. Subsequent
 // calls will use 'context' when a nullptr is passed in for 'src'. Once the null
 // terminating character is reached, returns a nullptr.
-static inline char *string_token(char *src, const char *delimiter_string,
-                                 char **saveptr) {
+static inline char *string_token(char *__restrict src,
+                                 const char *__restrict delimiter_string,
+                                 char **__restrict saveptr) {
   cpp::Bitset<256> delimiter_set;
   for (; *delimiter_string; ++delimiter_string)
     delimiter_set.set(*delimiter_string);

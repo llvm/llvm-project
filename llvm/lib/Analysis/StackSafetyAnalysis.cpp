@@ -22,6 +22,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -51,6 +52,10 @@ STATISTIC(NumCombinedParamAccessesAfter,
           "Number of total param accesses after generateParamAccessSummary.");
 STATISTIC(NumCombinedDataFlowNodes,
           "Number of total nodes in combined index for dataflow processing.");
+STATISTIC(NumIndexCalleeUnhandled, "Number of index callee which are unhandled.");
+STATISTIC(NumIndexCalleeMultipleWeak, "Number of index callee non-unique weak.");
+STATISTIC(NumIndexCalleeMultipleExternal, "Number of index callee non-unique external.");
+
 
 static cl::opt<int> StackSafetyMaxIterations("stack-safety-max-iterations",
                                              cl::init(20), cl::Hidden);
@@ -603,7 +608,45 @@ StackSafetyDataFlowAnalysis<CalleeTy>::run() {
   return Functions;
 }
 
-FunctionSummary *resolveCallee(GlobalValueSummary *S) {
+FunctionSummary *findCalleeFunctionSummary(ValueInfo VI, StringRef ModuleId) {
+  if (!VI)
+    return nullptr;
+  auto SummaryList = VI.getSummaryList();
+  GlobalValueSummary* S = nullptr;
+  for (const auto& GVS : SummaryList) {
+    if (!GVS->isLive())
+      continue;
+    if (const AliasSummary *AS = dyn_cast<AliasSummary>(GVS.get()))
+      if (!AS->hasAliasee())
+        continue;
+    if (!isa<FunctionSummary>(GVS->getBaseObject()))
+      continue;
+    if (GlobalValue::isLocalLinkage(GVS->linkage())) {
+      if (GVS->modulePath() == ModuleId) {
+        S = GVS.get();
+        break;
+      }
+    } else if (GlobalValue::isExternalLinkage(GVS->linkage())) {
+      if (S) {
+        ++NumIndexCalleeMultipleExternal;
+        return nullptr;
+      }
+      S = GVS.get();
+    } else if (GlobalValue::isWeakLinkage(GVS->linkage())) {
+      if (S) {
+        ++NumIndexCalleeMultipleWeak;
+        return nullptr;
+      }
+      S = GVS.get();
+    } else if (GlobalValue::isAvailableExternallyLinkage(GVS->linkage()) ||
+               GlobalValue::isLinkOnceLinkage(GVS->linkage())) {
+      if (SummaryList.size() == 1)
+        S = GVS.get();
+      // According thinLTOResolvePrevailingGUID these are unlikely prevailing.
+    } else {
+      ++NumIndexCalleeUnhandled;
+    }
+  };
   while (S) {
     if (!S->isLive() || !S->isDSOLocal())
       return nullptr;
@@ -635,15 +678,6 @@ const Function *findCalleeInModule(const GlobalValue *GV) {
   return nullptr;
 }
 
-GlobalValueSummary *getGlobalValueSummary(const ModuleSummaryIndex *Index,
-                                          uint64_t ValueGUID) {
-  auto VI = Index->getValueInfo(ValueGUID);
-  if (!VI || VI.getSummaryList().empty())
-    return nullptr;
-  auto &Summary = VI.getSummaryList()[0];
-  return Summary.get();
-}
-
 const ConstantRange *findParamAccess(const FunctionSummary &FS,
                                      uint32_t ParamNo) {
   assert(FS.isLive());
@@ -667,10 +701,9 @@ void resolveAllCalls(UseInfo<GlobalValue> &Use,
 
     if (!Index)
       return Use.updateRange(FullSet);
-    GlobalValueSummary *GVS =
-        getGlobalValueSummary(Index, C.first.Callee->getGUID());
-
-    FunctionSummary *FS = resolveCallee(GVS);
+    FunctionSummary *FS =
+        findCalleeFunctionSummary(Index->getValueInfo(C.first.Callee->getGUID()),
+                                  C.first.Callee->getParent()->getModuleIdentifier());
     ++NumModuleCalleeLookupTotal;
     if (!FS) {
       ++NumModuleCalleeLookupFailed;
@@ -785,7 +818,7 @@ const StackSafetyGlobalInfo::InfoTy &StackSafetyGlobalInfo::getInfo() const {
 }
 
 std::vector<FunctionSummary::ParamAccess>
-StackSafetyInfo::getParamAccesses() const {
+StackSafetyInfo::getParamAccesses(ModuleSummaryIndex &Index) const {
   // Implementation transforms internal representation of parameter information
   // into FunctionSummary format.
   std::vector<FunctionSummary::ParamAccess> ParamAccesses;
@@ -810,13 +843,16 @@ StackSafetyInfo::getParamAccesses() const {
         ParamAccesses.pop_back();
         break;
       }
-      Param.Calls.emplace_back(C.first.ParamNo, C.first.Callee->getGUID(),
+      Param.Calls.emplace_back(C.first.ParamNo,
+                               Index.getOrInsertValueInfo(C.first.Callee),
                                C.second);
-      llvm::sort(Param.Calls, [](const FunctionSummary::ParamAccess::Call &L,
-                                 const FunctionSummary::ParamAccess::Call &R) {
-        return std::tie(L.ParamNo, L.Callee) < std::tie(R.ParamNo, R.Callee);
-      });
     }
+  }
+  for (FunctionSummary::ParamAccess &Param : ParamAccesses) {
+    sort(Param.Calls, [](const FunctionSummary::ParamAccess::Call &L,
+                         const FunctionSummary::ParamAccess::Call &R) {
+      return std::tie(L.ParamNo, L.Callee) < std::tie(R.ParamNo, R.Callee);
+    });
   }
   return ParamAccesses;
 }
@@ -995,8 +1031,8 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
           US.Range = PS.Use;
           for (auto &Call : PS.Calls) {
             assert(!Call.Offsets.isFullSet());
-            FunctionSummary *S = resolveCallee(
-                Index.findSummaryInModule(Call.Callee, FS->modulePath()));
+            FunctionSummary *S =
+                findCalleeFunctionSummary(Call.Callee, FS->modulePath());
             ++NumCombinedCalleeLookupTotal;
             if (!S) {
               ++NumCombinedCalleeLookupFailed;

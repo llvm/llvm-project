@@ -541,6 +541,7 @@ def S_NOR_B64 : SOP2_64 <"s_nor_b64",
 >;
 } // End isCommutable = 1
 
+// There are also separate patterns for types other than i32
 def S_ANDN2_B32 : SOP2_32 <"s_andn2_b32",
   [(set i32:$sdst, (UniformBinFrag<and> i32:$src0, (UniformUnaryFrag<not> i32:$src1)))]
 >;
@@ -1330,6 +1331,24 @@ def : GCNPat<
   (S_AND_B32 (S_MOV_B32 (i32 0xffff)), $src)
 >;
 
+// FIXME: ValueType should have isVector field
+class ScalarNot2Pat<Instruction inst, SDPatternOperator op, ValueType vt,
+                    bit isVector = 1> : GCNPat<
+  (UniformBinFrag<op> vt:$src0, (UniformUnaryFrag<!if(isVector, vnot, not)> vt:$src1)),
+  (inst getSOPSrcForVT<vt>.ret:$src0, getSOPSrcForVT<vt>.ret:$src1)
+>;
+
+// Match these for some more types
+// TODO: i1
+def : ScalarNot2Pat<S_ANDN2_B32, and, i16, 0>;
+def : ScalarNot2Pat<S_ANDN2_B32, and, v2i16>;
+def : ScalarNot2Pat<S_ANDN2_B64, and, v4i16>;
+def : ScalarNot2Pat<S_ANDN2_B64, and, v2i32>;
+
+def : ScalarNot2Pat<S_ORN2_B32, or, i16, 0>;
+def : ScalarNot2Pat<S_ORN2_B32, or, v2i16>;
+def : ScalarNot2Pat<S_ORN2_B64, or, v4i16>;
+def : ScalarNot2Pat<S_ORN2_B64, or, v2i32>;
 
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.

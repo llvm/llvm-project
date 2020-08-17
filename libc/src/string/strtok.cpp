@@ -15,9 +15,8 @@ namespace __llvm_libc {
 
 static char *strtok_str = nullptr;
 
-// TODO: Place restrict qualifier where necessary for this and other function
-// arguments.
-char *LLVM_LIBC_ENTRYPOINT(strtok)(char *src, const char *delimiter_string) {
+char *LLVM_LIBC_ENTRYPOINT(strtok)(char *__restrict src,
+                                   const char *__restrict delimiter_string) {
   return internal::string_token(src, delimiter_string, &strtok_str);
 }
 

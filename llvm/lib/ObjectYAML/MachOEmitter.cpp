@@ -288,8 +288,9 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
         if (0 == strncmp(&Sec.segname[0], "__DWARF", sizeof(Sec.segname))) {
           StringRef SectName(Sec.sectname,
                              strnlen(Sec.sectname, sizeof(Sec.sectname)));
-          auto EmitFunc = DWARFYAML::getDWARFEmitterByName(SectName.substr(2));
           if (Obj.DWARF.getNonEmptySectionNames().count(SectName.substr(2))) {
+            auto EmitFunc =
+                DWARFYAML::getDWARFEmitterByName(SectName.substr(2));
             if (Error Err = EmitFunc(OS, Obj.DWARF))
               return Err;
           }

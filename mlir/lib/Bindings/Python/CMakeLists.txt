@@ -17,8 +17,12 @@ endif()
 # The actual extension library produces a shared-object or DLL and has
 # sources that must be compiled in accordance with pybind11 needs (RTTI and
 # exceptions).
+# TODO: Link the libraries separately once a helper function is available
+# to more generically add a pybind11 compliant library.
 add_library(MLIRBindingsPythonExtension ${PYEXT_LINK_MODE}
   MainModule.cpp
+  IRModules.cpp
+  PybindUtils.cpp
 )
 
 target_include_directories(MLIRBindingsPythonExtension PRIVATE
@@ -65,6 +69,7 @@ endif()
 
 target_link_libraries(MLIRBindingsPythonExtension
   PRIVATE
-  MLIRIR
+  MLIRCAPIIR
+  MLIRCAPIRegistration
   ${PYEXT_LIBADD}
 )

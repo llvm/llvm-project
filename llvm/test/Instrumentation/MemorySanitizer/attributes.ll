@@ -49,3 +49,6 @@ entry:
 ; CHECK-NOT: writeonly
 ; CHECK-NOT: argmemonly
 ; CHECK-NOT: speculatable
+
+; CHECK: Function Attrs: nounwind readnone willreturn
+; CHECK-NEXT: declare void @llvm.donothing
