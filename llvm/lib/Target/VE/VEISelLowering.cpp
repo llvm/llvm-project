@@ -873,12 +873,12 @@ SDValue VETargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
 
 /// Custom Lower {
 
-SDValue VETargetLowering::LowerGlobalAddress(SDValue Op,
+SDValue VETargetLowering::lowerGlobalAddress(SDValue Op,
                                              SelectionDAG &DAG) const {
   return makeAddress(Op, DAG);
 }
 
-SDValue VETargetLowering::LowerBlockAddress(SDValue Op,
+SDValue VETargetLowering::lowerBlockAddress(SDValue Op,
                                             SelectionDAG &DAG) const {
   return makeAddress(Op, DAG);
 }
@@ -889,9 +889,9 @@ SDValue VETargetLowering::lowerConstantPool(SDValue Op,
 }
 
 SDValue
-VETargetLowering::LowerToTLSGeneralDynamicModel(SDValue Op,
+VETargetLowering::lowerToTLSGeneralDynamicModel(SDValue Op,
                                                 SelectionDAG &DAG) const {
-  SDLoc dl(Op);
+  SDLoc DL(Op);
 
   // Generate the following code:
   //   t1: ch,glue = callseq_start t0, 0, 0
@@ -907,13 +907,13 @@ VETargetLowering::LowerToTLSGeneralDynamicModel(SDValue Op,
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   const uint32_t *Mask = Subtarget->getRegisterInfo()->getCallPreservedMask(
       DAG.getMachineFunction(), CallingConv::C);
-  Chain = DAG.getCALLSEQ_START(Chain, 64, 0, dl);
+  Chain = DAG.getCALLSEQ_START(Chain, 64, 0, DL);
   SDValue Args[] = {Chain, Label, DAG.getRegisterMask(Mask), Chain.getValue(1)};
-  Chain = DAG.getNode(VEISD::GETTLSADDR, dl, NodeTys, Args);
-  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(64, dl, true),
-                             DAG.getIntPtrConstant(0, dl, true),
-                             Chain.getValue(1), dl);
-  Chain = DAG.getCopyFromReg(Chain, dl, VE::SX0, PtrVT, Chain.getValue(1));
+  Chain = DAG.getNode(VEISD::GETTLSADDR, DL, NodeTys, Args);
+  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(64, DL, true),
+                             DAG.getIntPtrConstant(0, DL, true),
+                             Chain.getValue(1), DL);
+  Chain = DAG.getCopyFromReg(Chain, DL, VE::SX0, PtrVT, Chain.getValue(1));
 
   // GETTLSADDR will be codegen'ed as call. Inform MFI that function has calls.
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
@@ -928,14 +928,14 @@ VETargetLowering::LowerToTLSGeneralDynamicModel(SDValue Op,
   return Chain;
 }
 
-SDValue VETargetLowering::LowerGlobalTLSAddress(SDValue Op,
+SDValue VETargetLowering::lowerGlobalTLSAddress(SDValue Op,
                                                 SelectionDAG &DAG) const {
   // The current implementation of nld (2.26) doesn't allow local exec model
   // code described in VE-tls_v1.1.pdf (*1) as its input. Instead, we always
   // generate the general dynamic model code sequence.
   //
   // *1: https://www.nec.com/en/global/prod/hpc/aurora/document/VE-tls_v1.1.pdf
-  return LowerToTLSGeneralDynamicModel(Op, DAG);
+  return lowerToTLSGeneralDynamicModel(Op, DAG);
 }
 
 // Lower a f128 load into two f64 loads.
@@ -1050,7 +1050,7 @@ SDValue VETargetLowering::lowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   return SDValue();
 }
 
-SDValue VETargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
+SDValue VETargetLowering::lowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   VEMachineFunctionInfo *FuncInfo = MF.getInfo<VEMachineFunctionInfo>();
   auto PtrVT = getPointerTy(DAG.getDataLayout());
@@ -1069,7 +1069,7 @@ SDValue VETargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
                       MachinePointerInfo(SV));
 }
 
-SDValue VETargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
+SDValue VETargetLowering::lowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   SDNode *Node = Op.getNode();
   EVT VT = Node->getValueType(0);
   SDValue InChain = Node->getOperand(0);
@@ -1192,23 +1192,23 @@ SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   default:
     llvm_unreachable("Should not custom lower this!");
   case ISD::BlockAddress:
-    return LowerBlockAddress(Op, DAG);
+    return lowerBlockAddress(Op, DAG);
   case ISD::ConstantPool:
     return lowerConstantPool(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return lowerDYNAMIC_STACKALLOC(Op, DAG);
   case ISD::GlobalAddress:
-    return LowerGlobalAddress(Op, DAG);
+    return lowerGlobalAddress(Op, DAG);
   case ISD::GlobalTLSAddress:
-    return LowerGlobalTLSAddress(Op, DAG);
+    return lowerGlobalTLSAddress(Op, DAG);
   case ISD::LOAD:
     return lowerLOAD(Op, DAG);
   case ISD::STORE:
     return lowerSTORE(Op, DAG);
   case ISD::VASTART:
-    return LowerVASTART(Op, DAG);
+    return lowerVASTART(Op, DAG);
   case ISD::VAARG:
-    return LowerVAARG(Op, DAG);
+    return lowerVAARG(Op, DAG);
   }
 }
 /// } Custom Lower
