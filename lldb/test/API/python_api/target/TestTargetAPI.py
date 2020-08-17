@@ -154,6 +154,7 @@ class TargetAPITestCase(TestBase):
     @add_test_categories(['pyapi'])
     @skipIfWindows  # stdio manipulation unsupported on Windows
     @skipIfRemote   # stdio manipulation unsupported on remote iOS devices<rdar://problem/54581135>
+    @skipIfReproducer  # stdout not captured by reproducers
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     @no_debug_info_test
     def test_launch_simple(self):
