@@ -1787,7 +1787,8 @@ struct DSEState {
     // eliminated if the access is killed along all paths to the exit. Collect
     // the blocks with killing (=completely overwriting MemoryDefs) and check if
     // they cover all paths from DomAccess to any function exit.
-    SmallPtrSet<BasicBlock *, 16> KillingBlocks = {KillingDef->getBlock()};
+    SmallPtrSet<Instruction *, 16> KillingDefs;
+    KillingDefs.insert(KillingDef->getMemoryInst());
     LLVM_DEBUG({
       dbgs() << "  Checking for reads of " << *DomAccess;
       if (isa<MemoryDef>(DomAccess))
@@ -1816,6 +1817,13 @@ struct DSEState {
       --ScanLimit;
 
       if (isa<MemoryPhi>(UseAccess)) {
+        if (any_of(KillingDefs, [this, UseAccess](Instruction *KI) {
+              return DT.properlyDominates(KI->getParent(),
+                                          UseAccess->getBlock());
+            })) {
+          LLVM_DEBUG(dbgs() << " ... skipping, dominated by killing block\n");
+          continue;
+        }
         LLVM_DEBUG(dbgs() << "\n    ... adding PHI uses\n");
         PushMemUses(UseAccess);
         continue;
@@ -1823,6 +1831,13 @@ struct DSEState {
 
       Instruction *UseInst = cast<MemoryUseOrDef>(UseAccess)->getMemoryInst();
       LLVM_DEBUG(dbgs() << " (" << *UseInst << ")\n");
+
+      if (any_of(KillingDefs, [this, UseInst](Instruction *KI) {
+            return DT.dominates(KI, UseInst);
+          })) {
+        LLVM_DEBUG(dbgs() << " ... skipping, dominated by killing def\n");
+        continue;
+      }
 
       if (isNoopIntrinsic(cast<MemoryUseOrDef>(UseAccess))) {
         LLVM_DEBUG(dbgs() << "    ... adding uses of intrinsic\n");
@@ -1868,9 +1883,9 @@ struct DSEState {
             if (PostOrderNumbers.find(MaybeKillingBlock)->second <
                 PostOrderNumbers.find(DomAccess->getBlock())->second) {
 
-              LLVM_DEBUG(dbgs() << "    ... found killing block "
-                                << MaybeKillingBlock->getName() << "\n");
-              KillingBlocks.insert(MaybeKillingBlock);
+              LLVM_DEBUG(dbgs()
+                         << "    ... found killing def " << *UseInst << "\n");
+              KillingDefs.insert(UseInst);
             }
           }
         } else
@@ -1882,8 +1897,12 @@ struct DSEState {
     // that the location is killed (=overwritten) along all paths from DomAccess
     // to the exit.
     if (DefVisibleToCallerAfterRet) {
+      SmallPtrSet<BasicBlock *, 16> KillingBlocks;
+      for (Instruction *KD : KillingDefs)
+        KillingBlocks.insert(KD->getParent());
       assert(!KillingBlocks.empty() &&
              "Expected at least a single killing block");
+
       // Find the common post-dominator of all killing blocks.
       BasicBlock *CommonPred = *KillingBlocks.begin();
       for (auto I = std::next(KillingBlocks.begin()), E = KillingBlocks.end();
