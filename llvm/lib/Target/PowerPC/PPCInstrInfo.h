@@ -567,14 +567,16 @@ public:
   /// up. Before calling this function,
   /// 1. Ensure that \p RegNo liveness is killed after instruction \p EndMI.
   /// 2. Ensure that there is no new definition between (\p StartMI, \p EndMI)
-  ///    and possible definition for \p RegNo is \p StartMI or \p EndMI.
+  ///    and possible definition for \p RegNo is \p StartMI or \p EndMI. For
+  ///    pre-RA cases, definition may be \p StartMI through COPY, \p StartMI
+  ///    will be adjust to true definition.
   /// 3. We can do accurate fixup for the case when all instructions between
   ///    [\p StartMI, \p EndMI] are in same basic block.
   /// 4. For the case when \p StartMI and \p EndMI are not in same basic block,
   ///    we conservatively clear kill flag for all uses of \p RegNo for pre-RA
   ///    and for post-RA, we give an assertion as without reaching definition
   ///    analysis post-RA, \p StartMI and \p EndMI are hard to keep right.
-  void fixupIsDeadOrKill(MachineInstr &StartMI, MachineInstr &EndMI,
+  void fixupIsDeadOrKill(MachineInstr *StartMI, MachineInstr *EndMI,
                          unsigned RegNo) const;
   void replaceInstrWithLI(MachineInstr &MI, const LoadImmediateInfo &LII) const;
   void replaceInstrOperandWithImm(MachineInstr &MI, unsigned OpNo,
