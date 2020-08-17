@@ -986,6 +986,13 @@ defm LD1BSX : LOADm<"ld1b.sx", 0x05, I32, i32, sextloadi8>;
 let cx = 1, DecoderMethod = "DecodeLoadI32" in
 defm LD1BZX : LOADm<"ld1b.zx", 0x05, I32, i32, zextloadi8>;
 
+// LDQ pseudo instructions
+let mayLoad = 1, hasSideEffects = 0 in {
+  def LDQrii : Pseudo<(outs F128:$dest), (ins MEMrii:$addr),
+                      "# pseudo ldq $dest, $addr",
+                      [(set f128:$dest, (load ADDRrii:$addr))]>;
+}
+
 // Multiclass for store instructions.
 let mayStore = 1 in
 multiclass STOREm<string opcStr, bits<8> opc, RegisterClass RC, ValueType Ty,
@@ -1030,6 +1037,13 @@ defm ST2B : STOREm<"st2b", 0x14, I32, i32, truncstorei16>;
 // Section 8.2.11 - ST1B
 let DecoderMethod = "DecodeStoreI32" in
 defm ST1B : STOREm<"st1b", 0x15, I32, i32, truncstorei8>;
+
+// STQ pseudo instructions
+let mayStore = 1, hasSideEffects = 0 in {
+  def STQrii : Pseudo<(outs), (ins MEMrii:$addr, F128:$sx),
+                      "# pseudo stq $sx, $addr",
+                      [(store f128:$sx, ADDRrii:$addr)]>;
+}
 
 // Section 8.2.12 - DLDS
 let DecoderMethod = "DecodeLoadI64" in
@@ -1307,13 +1321,13 @@ let cw = 1, cx = 1 in
 defm FMINS : RRFm<"fmin.s", 0x3E, F32, f32, fminnum, simm7fp, mimmfp32>;
 
 // Section 8.7.7 - FAQ (Floating Add Quadruple)
-defm FADDQ : RRFm<"fadd.q", 0x6C, F128, f128>;
+defm FADDQ : RRFm<"fadd.q", 0x6C, F128, f128, fadd>;
 
 // Section 8.7.8 - FSQ (Floating Subtract Quadruple)
-defm FSUBQ : RRFm<"fsub.q", 0x7C, F128, f128>;
+defm FSUBQ : RRFm<"fsub.q", 0x7C, F128, f128, fsub>;
 
 // Section 8.7.9 - FMQ (Floating Subtract Quadruple)
-defm FMULQ : RRFm<"fmul.q", 0x6D, F128, f128>;
+defm FMULQ : RRFm<"fmul.q", 0x6D, F128, f128, fmul>;
 
 // Section 8.7.10 - FCQ (Floating Compare Quadruple)
 defm FCMPQ : RRNCbm<"fcmp.q", 0x7D, I64, f64, F128, f128, null_frag, simm7fp,
@@ -1630,6 +1644,14 @@ multiclass TRUNC64m<SDPatternOperator from,
 defm : TRUNC64m<truncstorei8, ST1Brri, ST1Brii, ST1Bzri, ST1Bzii>;
 defm : TRUNC64m<truncstorei16, ST2Brri, ST2Brii, ST2Bzri, ST2Bzii>;
 defm : TRUNC64m<truncstorei32, STLrri, STLrii, STLzri, ST1Bzii>;
+
+// Address calculation and its optimization
+def : Pat<(VEhi tconstpool:$in), (LEASLzii 0, 0, tconstpool:$in)>;
+def : Pat<(VElo tconstpool:$in),
+          (ANDrm (LEAzii 0, 0, tconstpool:$in), !add(32, 64))>;
+def : Pat<(add (VEhi tconstpool:$in1), (VElo tconstpool:$in2)),
+          (LEASLrii (ANDrm (LEAzii 0, 0, tconstpool:$in2), !add(32, 64)), 0,
+                    (tconstpool:$in1))>;
 
 // Address calculation and its optimization
 def : Pat<(VEhi tglobaladdr:$in), (LEASLzii 0, 0, tglobaladdr:$in)>;
