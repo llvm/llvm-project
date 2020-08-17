@@ -154,6 +154,12 @@ public:
 
   bool isValueOptional() const { return Def->getValueAsBit("isValueOptional"); }
 
+  bool isValueList() const { return Def->getValueAsBit("isValueList"); }
+
+  StringRef getDefaultValue() const {
+    return Def->getValueAsString("defaultValue");
+  }
+
   bool isImplict() const { return Def->getValueAsBit("isImplicit"); }
 };
 

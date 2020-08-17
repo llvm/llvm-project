@@ -121,9 +121,10 @@ def ACCC_DeviceResident : Clause<"device_resident"> {
 
 // 2.4
 def ACCC_DeviceType : Clause<"device_type"> {
-  // (DeviceType, "*"
-  let flangClassValue = "std::list<Name>";
+  let flangClassValue = "Name";
+  let defaultValue = "*";
   let isValueOptional = 1;
+  let isValueList = 1;
 }
 
 // 2.6.6
