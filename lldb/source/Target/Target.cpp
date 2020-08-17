@@ -2919,23 +2919,23 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
   switch (m_process_sp->WaitForProcessToStop(llvm::None, nullptr, false,
                                              hijack_listener_sp, nullptr)) {
   case eStateStopped: {
-    if (!launch_info.GetFlags().Test(eLaunchFlagStopAtEntry)) {
-      if (synchronous_execution) {
-        // Now we have handled the stop-from-attach, and we are just
-        // switching to a synchronous resume.  So we should switch to the
-        // SyncResume hijacker.
-        m_process_sp->RestoreProcessEvents();
-        m_process_sp->ResumeSynchronous(stream);
-      } else {
-        m_process_sp->RestoreProcessEvents();
-        error = m_process_sp->PrivateResume();
-      }
-      if (!error.Success()) {
-        Status error2;
-        error2.SetErrorStringWithFormat(
-            "process resume at entry point failed: %s", error.AsCString());
-        error = error2;
-      }
+    if (launch_info.GetFlags().Test(eLaunchFlagStopAtEntry))
+      break;
+    if (synchronous_execution) {
+      // Now we have handled the stop-from-attach, and we are just
+      // switching to a synchronous resume.  So we should switch to the
+      // SyncResume hijacker.
+      m_process_sp->RestoreProcessEvents();
+      m_process_sp->ResumeSynchronous(stream);
+    } else {
+      m_process_sp->RestoreProcessEvents();
+      error = m_process_sp->PrivateResume();
+    }
+    if (!error.Success()) {
+      Status error2;
+      error2.SetErrorStringWithFormat(
+          "process resume at entry point failed: %s", error.AsCString());
+      error = error2;
     }
   } break;
   case eStateExited: {
