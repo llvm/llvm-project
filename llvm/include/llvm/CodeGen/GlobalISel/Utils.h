@@ -228,5 +228,15 @@ LLT getGCDType(LLT OrigTy, LLT TargetTy);
 /// If \p MI is not a splat, returns None.
 Optional<int> getSplatIndex(MachineInstr &MI);
 
+/// Return true if the specified instruction is a G_BUILD_VECTOR or
+/// G_BUILD_VECTOR_TRUNC where all of the elements are 0 or undef.
+bool isBuildVectorAllZeros(const MachineInstr &MI,
+                           const MachineRegisterInfo &MRI);
+
+/// Return true if the specified instruction is a G_BUILD_VECTOR or
+/// G_BUILD_VECTOR_TRUNC where all of the elements are ~0 or undef.
+bool isBuildVectorAllOnes(const MachineInstr &MI,
+                          const MachineRegisterInfo &MRI);
+
 } // End namespace llvm.
 #endif

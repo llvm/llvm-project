@@ -13,6 +13,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -27,6 +28,7 @@
 #define DEBUG_TYPE "globalisel-utils"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 
 Register llvm::constrainRegToClass(MachineRegisterInfo &MRI,
                                    const TargetInstrInfo &TII,
@@ -666,4 +668,38 @@ Optional<int> llvm::getSplatIndex(MachineInstr &MI) {
     return None;
 
   return SplatValue;
+}
+
+static bool isBuildVectorOp(unsigned Opcode) {
+  return Opcode == TargetOpcode::G_BUILD_VECTOR ||
+         Opcode == TargetOpcode::G_BUILD_VECTOR_TRUNC;
+}
+
+// TODO: Handle mixed undef elements.
+static bool isBuildVectorConstantSplat(const MachineInstr &MI,
+                                       const MachineRegisterInfo &MRI,
+                                       int64_t SplatValue) {
+  if (!isBuildVectorOp(MI.getOpcode()))
+    return false;
+
+  const unsigned NumOps = MI.getNumOperands();
+  for (unsigned I = 1; I != NumOps; ++I) {
+    Register Element = MI.getOperand(I).getReg();
+    int64_t ElementValue;
+    if (!mi_match(Element, MRI, m_ICst(ElementValue)) ||
+        ElementValue != SplatValue)
+      return false;
+  }
+
+  return true;
+}
+
+bool llvm::isBuildVectorAllZeros(const MachineInstr &MI,
+                                 const MachineRegisterInfo &MRI) {
+  return isBuildVectorConstantSplat(MI, MRI, 0);
+}
+
+bool llvm::isBuildVectorAllOnes(const MachineInstr &MI,
+                                const MachineRegisterInfo &MRI) {
+  return isBuildVectorConstantSplat(MI, MRI, -1);
 }
