@@ -21,7 +21,7 @@
 ; GCN:    VGPRBlocks: 2
 ; GCN:    NumVGPRsForWavesPerEU: 10
 define amdgpu_kernel void @max_10_vgprs(i32 addrspace(1)* %p) #0 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid = load volatile i32, i32 addrspace(1)* undef
   %p1 = getelementptr inbounds i32, i32 addrspace(1)* %p, i32 %tid
   %p2 = getelementptr inbounds i32, i32 addrspace(1)* %p1, i32 4
   %p3 = getelementptr inbounds i32, i32 addrspace(1)* %p2, i32 8
@@ -73,7 +73,7 @@ define amdgpu_kernel void @max_10_vgprs(i32 addrspace(1)* %p) #0 {
 ; GFX908: VGPRBlocks: 2
 ; GFX908: NumVGPRsForWavesPerEU: 10
 define amdgpu_kernel void @max_10_vgprs_used_9a(i32 addrspace(1)* %p) #0 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid = load volatile i32, i32 addrspace(1)* undef
   call void asm sideeffect "", "a,a,a,a,a,a,a,a,a"(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9)
   %p1 = getelementptr inbounds i32, i32 addrspace(1)* %p, i32 %tid
   %p2 = getelementptr inbounds i32, i32 addrspace(1)* %p1, i32 4
@@ -142,7 +142,7 @@ define amdgpu_kernel void @max_10_vgprs_used_9a(i32 addrspace(1)* %p) #0 {
 ; GCN:    VGPRBlocks: 2
 ; GCN:    NumVGPRsForWavesPerEU: 10
 define amdgpu_kernel void @max_10_vgprs_used_1a_partial_spill(i64 addrspace(1)* %p) #0 {
-  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid = load volatile i32, i32 addrspace(1)* undef
   call void asm sideeffect "", "a"(i32 1)
   %p1 = getelementptr inbounds i64, i64 addrspace(1)* %p, i32 %tid
   %p2 = getelementptr inbounds i64, i64 addrspace(1)* %p1, i32 8

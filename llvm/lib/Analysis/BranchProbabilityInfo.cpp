@@ -122,8 +122,8 @@ static const uint32_t CC_NONTAKEN_WEIGHT = 64;
 static const uint32_t PH_TAKEN_WEIGHT = 20;
 static const uint32_t PH_NONTAKEN_WEIGHT = 12;
 
-static const uint32_t INTH_TAKEN_WEIGHT = 20;
-static const uint32_t INTH_NONTAKEN_WEIGHT = 12;
+static const uint32_t ZH_TAKEN_WEIGHT = 20;
+static const uint32_t ZH_NONTAKEN_WEIGHT = 12;
 
 static const uint32_t FPH_TAKEN_WEIGHT = 20;
 static const uint32_t FPH_NONTAKEN_WEIGHT = 12;
@@ -856,7 +856,7 @@ bool BranchProbabilityInfo::calcLoopBranchHeuristics(const BasicBlock *BB,
   return true;
 }
 
-bool BranchProbabilityInfo::calcIntegerHeuristics(const BasicBlock *BB,
+bool BranchProbabilityInfo::calcZeroHeuristics(const BasicBlock *BB,
                                                const TargetLibraryInfo *TLI) {
   const BranchInst *BI = dyn_cast<BranchInst>(BB->getTerminator());
   if (!BI || !BI->isConditional())
@@ -873,21 +873,10 @@ bool BranchProbabilityInfo::calcIntegerHeuristics(const BasicBlock *BB,
     return dyn_cast<ConstantInt>(V);
   };
 
-  BranchProbability TakenProb(INTH_TAKEN_WEIGHT,
-                              INTH_TAKEN_WEIGHT + INTH_NONTAKEN_WEIGHT);
-  BranchProbability UntakenProb(INTH_NONTAKEN_WEIGHT,
-                                INTH_TAKEN_WEIGHT + INTH_NONTAKEN_WEIGHT);
   Value *RHS = CI->getOperand(1);
   ConstantInt *CV = GetConstantInt(RHS);
-  if (!CV) {
-    // X == Y -> Unlikely
-    // Otherwise -> Likely
-    if (CI->isTrueWhenEqual())
-      std::swap(TakenProb, UntakenProb);
-    setEdgeProbability(
-        BB, SmallVector<BranchProbability, 2>({TakenProb, UntakenProb}));
-    return true;
-  }
+  if (!CV)
+    return false;
 
   // If the LHS is the result of AND'ing a value with a single bit bitmask,
   // we don't have information about probabilities.
@@ -975,6 +964,10 @@ bool BranchProbabilityInfo::calcIntegerHeuristics(const BasicBlock *BB,
     return false;
   }
 
+  BranchProbability TakenProb(ZH_TAKEN_WEIGHT,
+                              ZH_TAKEN_WEIGHT + ZH_NONTAKEN_WEIGHT);
+  BranchProbability UntakenProb(ZH_NONTAKEN_WEIGHT,
+                                ZH_TAKEN_WEIGHT + ZH_NONTAKEN_WEIGHT);
   if (!isProb)
     std::swap(TakenProb, UntakenProb);
 
@@ -1228,7 +1221,7 @@ void BranchProbabilityInfo::calculate(const Function &F, const LoopInfo &LI,
       continue;
     if (calcPointerHeuristics(BB))
       continue;
-    if (calcIntegerHeuristics(BB, TLI))
+    if (calcZeroHeuristics(BB, TLI))
       continue;
     if (calcFloatingPointHeuristics(BB))
       continue;

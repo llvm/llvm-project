@@ -471,18 +471,22 @@ void GenerateFlangClauseParserClass(const std::vector<Record *> &Clauses,
     // Clause has a non generic class.
     if (!Clause.getFlangClass().empty())
       continue;
-    // G
     if (!Clause.getFlangClassValue().empty()) {
-      if (Clause.isValueOptional()) {
-        OS << "WRAPPER_CLASS(" << Clause.getFormattedParserClassName()
-           << ", std::optional<" << Clause.getFlangClassValue() << ">);\n";
+      OS << "WRAPPER_CLASS(" << Clause.getFormattedParserClassName() << ", ";
+      if (Clause.isValueOptional() && Clause.isValueList()) {
+        OS << "std::optional<std::list<" << Clause.getFlangClassValue()
+           << ">>";
+      } else if (Clause.isValueOptional()) {
+        OS << "std::optional<" << Clause.getFlangClassValue() << ">";
+      } else if (Clause.isValueList()) {
+        OS << "std::list<" << Clause.getFlangClassValue() << ">";
       } else {
-        OS << "WRAPPER_CLASS(" << Clause.getFormattedParserClassName() << ", "
-           << Clause.getFlangClassValue() << ");\n";
+        OS << Clause.getFlangClassValue();
       }
     } else {
-      OS << "EMPTY_CLASS(" << Clause.getFormattedParserClassName() << ");\n";
+      OS << "EMPTY_CLASS(" << Clause.getFormattedParserClassName();
     }
+    OS << ");\n";
   }
 }
 
@@ -521,6 +525,63 @@ void GenerateFlangClauseDump(const std::vector<Record *> &Clauses,
   }
 }
 
+// Generate Unparse functions for clauses classes in the Flang parse-tree
+// If the clause is a non-generic class, no entry is generated.
+void GenerateFlangClauseUnparse(const std::vector<Record *> &Clauses,
+                                const DirectiveLanguage &DirLang,
+                                raw_ostream &OS) {
+
+  IfDefScope Scope("GEN_FLANG_CLAUSE_UNPARSE", OS);
+
+  OS << "\n";
+
+  for (const auto &C : Clauses) {
+    Clause Clause{C};
+    // Clause has a non generic class.
+    if (!Clause.getFlangClass().empty())
+      continue;
+    if (!Clause.getFlangClassValue().empty()) {
+      if (Clause.isValueOptional() && Clause.getDefaultValue().empty()) {
+        OS << "void Unparse(const " << DirLang.getFlangClauseBaseClass()
+           << "::" << Clause.getFormattedParserClassName() << " &x) {\n";
+        OS << "  Word(\"" << Clause.getName().upper() << "\");\n";
+
+        OS << "  Walk(\"(\", x.v, \")\");\n";
+        OS << "}\n";
+      } else if (Clause.isValueOptional()) {
+        OS << "void Unparse(const " << DirLang.getFlangClauseBaseClass()
+           << "::" << Clause.getFormattedParserClassName() << " &x) {\n";
+        OS << "  Word(\"" << Clause.getName().upper() << "\");\n";
+        OS << "  Put(\"(\");\n";
+        OS << "  if (x.v.has_value())\n";
+        if (Clause.isValueList())
+          OS << "    Walk(x.v, \",\");\n";
+        else
+          OS << "    Walk(x.v);\n";
+        OS << "  else\n";
+        OS << "    Put(\"" << Clause.getDefaultValue() << "\");\n";
+        OS << "  Put(\")\");\n";
+        OS << "}\n";
+      } else {
+        OS << "void Unparse(const " << DirLang.getFlangClauseBaseClass()
+           << "::" << Clause.getFormattedParserClassName() << " &x) {\n";
+        OS << "  Word(\"" << Clause.getName().upper() << "\");\n";
+        OS << "  Put(\"(\");\n";
+        if (Clause.isValueList())
+          OS << "  Walk(x.v, \",\");\n";
+        else
+          OS << "  Walk(x.v);\n";
+        OS << "  Put(\")\");\n";
+        OS << "}\n";
+      }
+    } else {
+      OS << "void Before(const " << DirLang.getFlangClauseBaseClass()
+         << "::" << Clause.getFormattedParserClassName() << " &) { Word(\""
+         << Clause.getName().upper() << "\"); }\n";
+    }
+  }
+}
+
 // Generate the implemenation section for the enumeration in the directive
 // language
 void EmitDirectivesFlangImpl(const std::vector<Record *> &Directives,
@@ -537,6 +598,8 @@ void EmitDirectivesFlangImpl(const std::vector<Record *> &Directives,
   GenerateFlangClauseParserClassList(Clauses, OS);
 
   GenerateFlangClauseDump(Clauses, DirectiveLanguage, OS);
+
+  GenerateFlangClauseUnparse(Clauses, DirectiveLanguage, OS);
 }
 
 // Generate the implemenation section for the enumeration in the directive

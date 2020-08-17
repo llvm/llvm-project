@@ -1,5 +1,6 @@
 // RUN: %clang_dfsan %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
 // RUN: %clang_dfsan -mllvm -dfsan-args-abi %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
+// RUN: %clang_dfsan -DFAST_16_LABELS -mllvm -dfsan-fast-16-labels %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
 // RUN: %clang_dfsan -DSTRICT_DATA_DEPENDENCIES %s -o %t && %run %t
 // RUN: %clang_dfsan -DSTRICT_DATA_DEPENDENCIES -mllvm -dfsan-args-abi %s -o %t && %run %t
 
@@ -952,10 +953,19 @@ void test_snprintf() {
 }
 
 int main(void) {
+#ifdef FAST_16_LABELS
+  i_label = 1;
+  j_label = 2;
+  k_label = 4;
+#else
   i_label = dfsan_create_label("i", 0);
   j_label = dfsan_create_label("j", 0);
   k_label = dfsan_create_label("k", 0);
+#endif
   i_j_label = dfsan_union(i_label, j_label);
+  assert(i_j_label != i_label);
+  assert(i_j_label != j_label);
+  assert(i_j_label != k_label);
 
   test_calloc();
   test_clock_gettime();
