@@ -286,6 +286,9 @@ protected:
   static lldb::SectionType GetSectionType(llvm::StringRef sect_name,
                                           const section_header_t &sect);
 
+  llvm::StringRef
+  GetReflectionSectionIdentifier(swift::ReflectionSectionKind section);
+
   typedef std::vector<section_header_t> SectionHeaderColl;
   typedef SectionHeaderColl::iterator SectionHeaderCollIter;
   typedef SectionHeaderColl::const_iterator SectionHeaderCollConstIter;

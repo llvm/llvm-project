@@ -40,6 +40,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MipsABIFlags.h"
+#include "swift/ABI/ObjectFile.h"
 
 #define CASE_AND_STREAM(s, def, width)                                         \
   case def:                                                                    \
@@ -3392,4 +3393,10 @@ ObjectFileELF::GetLoadableData(Target &target) {
     loadables.push_back(loadable);
   }
   return loadables;
+}
+
+llvm::StringRef ObjectFileELF::GetReflectionSectionIdentifier(
+    swift::ReflectionSectionKind section) {
+  swift::SwiftObjectFileFormatELF file_format_elf;
+  return file_format_elf.getSectionName(section);
 }

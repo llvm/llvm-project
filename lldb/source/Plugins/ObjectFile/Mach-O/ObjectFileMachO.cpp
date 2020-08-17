@@ -47,6 +47,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 #include "ObjectFileMachO.h"
+#include "swift/ABI/ObjectFile.h"
 
 #if defined(__APPLE__) &&                                                      \
     (defined(__arm__) || defined(__arm64__) || defined(__aarch64__))
@@ -6512,4 +6513,10 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
                  // this process
   }
   return false;
+}
+
+llvm::StringRef ObjectFileMachO::GetReflectionSectionIdentifier(
+    swift::ReflectionSectionKind section) {
+  swift::SwiftObjectFileFormatMachO file_format_mach_o;
+  return file_format_mach_o.getSectionName(section);
 }
