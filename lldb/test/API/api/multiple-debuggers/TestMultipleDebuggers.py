@@ -18,6 +18,7 @@ class TestMultipleSimultaneousDebuggers(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfNoSBHeaders
+    @skipIfWindows
     def test_multiple_debuggers(self):
         env = {self.dylibPath: self.getLLDBLibraryEnvVal()}
 
