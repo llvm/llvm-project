@@ -1,5 +1,6 @@
 # FIXME(kirillbobyrev): Check if gRPC and Protobuf headers can be included at
 # configure time.
+find_package(Threads REQUIRED)
 if (GRPC_INSTALL_PATH)
   # This setup requires gRPC to be built from sources using CMake and installed
   # to ${GRPC_INSTALL_PATH} via -DCMAKE_INSTALL_PREFIX=${GRPC_INSTALL_PATH}.

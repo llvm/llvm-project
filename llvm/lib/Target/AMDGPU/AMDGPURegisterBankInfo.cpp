@@ -2987,7 +2987,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(MI, MRI, 3); // Index
       return;
     }
-    case Intrinsic::amdgcn_ballot:
     case Intrinsic::amdgcn_interp_p1:
     case Intrinsic::amdgcn_interp_p2:
     case Intrinsic::amdgcn_interp_mov:
@@ -3015,6 +3014,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     case Intrinsic::amdgcn_ubfe:
       applyMappingBFEIntrinsic(OpdMapper, false);
       return;
+    case Intrinsic::amdgcn_ballot:
+      // Use default handling and insert copy to vcc source.
+      break;
     }
     break;
   }

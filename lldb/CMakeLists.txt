@@ -36,7 +36,7 @@ endif()
 
 if (LLDB_ENABLE_PYTHON)
   execute_process(
-    COMMAND ${PYTHON_EXECUTABLE}
+    COMMAND ${Python3_EXECUTABLE}
         -c "import distutils.sysconfig; print(distutils.sysconfig.get_python_lib(True, False, ''))"
     OUTPUT_VARIABLE LLDB_PYTHON_DEFAULT_RELATIVE_PATH
     OUTPUT_STRIP_TRAILING_WHITESPACE)

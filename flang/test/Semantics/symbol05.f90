@@ -33,7 +33,7 @@ subroutine s2
 contains
  !DEF: /s2/s (Subroutine) Subprogram
  subroutine s
-  !DEF: /s2/s/x HostAssoc INTEGER(4)
+  !DEF: /s2/s/x (Implicit) HostAssoc INTEGER(4)
   x = 1
   !DEF: /s2/s/w (Implicit) ObjectEntity INTEGER(4)
   w = 1
