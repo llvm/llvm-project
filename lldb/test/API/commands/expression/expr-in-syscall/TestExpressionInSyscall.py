@@ -74,9 +74,8 @@ class ExprSyscallTestCase(TestBase):
         thread = process.GetSelectedThread()
 
         # try evaluating a couple of expressions in this state
-        self.expect("expr release_flag = 1", substrs=[" = 1"])
-        self.expect("print (int)getpid()",
-                    substrs=[str(process.GetProcessID())])
+        self.expect_expr("release_flag = 1", result_value="1")
+        self.expect_expr("(int)getpid()", result_value=str(process.GetProcessID()))
 
         # and run the process to completion
         process.Continue()
