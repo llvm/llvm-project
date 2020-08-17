@@ -10,7 +10,7 @@
 # CHECK-NEXT: minos 10.14.1
 # CHECK-NEXT: ntools 1
 # CHECK-NEXT: tool ld
-# CHECK-NEXT: version {{[1-9][0-9]\.[0-9]+}}
+# CHECK-NEXT: version {{[0-9\.]+}}
 # CHECK-NEXT: Load command [[#]]
 
 .text
