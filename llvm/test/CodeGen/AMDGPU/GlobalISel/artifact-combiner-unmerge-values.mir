@@ -194,9 +194,11 @@ body:             |
     ; CHECK: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[ANYEXT1]](s16)
     ; CHECK: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[ANYEXT]](s16)
     ; CHECK: [[ZEXT3:%[0-9]+]]:_(s32) = G_ZEXT [[ANYEXT1]](s16)
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[ZEXT]](s32), [[ZEXT1]](s32), [[ZEXT2]](s32), [[ZEXT3]](s32)
-    ; CHECK: [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
-    ; CHECK: S_ENDPGM 0, implicit [[UV4]](<2 x s16>), implicit [[UV5]](<2 x s16>), implicit [[UV6]](<2 x s16>), implicit [[UV7]](<2 x s16>)
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[ZEXT]](s32)
+    ; CHECK: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[ZEXT1]](s32)
+    ; CHECK: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[ZEXT2]](s32)
+    ; CHECK: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[ZEXT3]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[BITCAST]](<2 x s16>), implicit [[BITCAST1]](<2 x s16>), implicit [[BITCAST2]](<2 x s16>), implicit [[BITCAST3]](<2 x s16>)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %2:_(s32), %3:_(s32) = G_UNMERGE_VALUES %0(<2 x s32>)
@@ -341,9 +343,7 @@ body:             |
     ; CHECK: [[SEXT1:%[0-9]+]]:_(s64) = G_SEXT [[UV1]](s32)
     ; CHECK: [[SEXT2:%[0-9]+]]:_(s64) = G_SEXT [[UV2]](s32)
     ; CHECK: [[SEXT3:%[0-9]+]]:_(s64) = G_SEXT [[UV3]](s32)
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[SEXT]](s64), [[SEXT1]](s64), [[SEXT2]](s64), [[SEXT3]](s64)
-    ; CHECK: [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64), [[UV6:%[0-9]+]]:_(s64), [[UV7:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s64>)
-    ; CHECK: S_ENDPGM 0, implicit [[UV4]](s64), implicit [[UV5]](s64), implicit [[UV6]](s64), implicit [[UV7]](s64)
+    ; CHECK: S_ENDPGM 0, implicit [[SEXT]](s64), implicit [[SEXT1]](s64), implicit [[SEXT2]](s64), implicit [[SEXT3]](s64)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
     %2:_(<4 x s32>) = G_CONCAT_VECTORS %0, %1
@@ -365,9 +365,7 @@ body:             |
     ; CHECK: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[UV1]](s32)
     ; CHECK: [[ZEXT2:%[0-9]+]]:_(s64) = G_ZEXT [[UV2]](s32)
     ; CHECK: [[ZEXT3:%[0-9]+]]:_(s64) = G_ZEXT [[UV3]](s32)
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[ZEXT]](s64), [[ZEXT1]](s64), [[ZEXT2]](s64), [[ZEXT3]](s64)
-    ; CHECK: [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64), [[UV6:%[0-9]+]]:_(s64), [[UV7:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s64>)
-    ; CHECK: S_ENDPGM 0, implicit [[UV4]](s64), implicit [[UV5]](s64), implicit [[UV6]](s64), implicit [[UV7]](s64)
+    ; CHECK: S_ENDPGM 0, implicit [[ZEXT]](s64), implicit [[ZEXT1]](s64), implicit [[ZEXT2]](s64), implicit [[ZEXT3]](s64)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
     %2:_(<4 x s32>) = G_CONCAT_VECTORS %0, %1
@@ -389,9 +387,7 @@ body:             |
     ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[UV1]](s32)
     ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s64) = G_ANYEXT [[UV2]](s32)
     ; CHECK: [[ANYEXT3:%[0-9]+]]:_(s64) = G_ANYEXT [[UV3]](s32)
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[ANYEXT]](s64), [[ANYEXT1]](s64), [[ANYEXT2]](s64), [[ANYEXT3]](s64)
-    ; CHECK: [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64), [[UV6:%[0-9]+]]:_(s64), [[UV7:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s64>)
-    ; CHECK: S_ENDPGM 0, implicit [[UV4]](s64), implicit [[UV5]](s64), implicit [[UV6]](s64), implicit [[UV7]](s64)
+    ; CHECK: S_ENDPGM 0, implicit [[ANYEXT]](s64), implicit [[ANYEXT1]](s64), implicit [[ANYEXT2]](s64), implicit [[ANYEXT3]](s64)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
     %2:_(<4 x s32>) = G_CONCAT_VECTORS %0, %1
@@ -477,9 +473,11 @@ body:             |
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[COPY1]](<2 x s32>)
     ; CHECK: [[TRUNC2:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[COPY2]](<2 x s32>)
     ; CHECK: [[TRUNC3:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[COPY3]](<2 x s32>)
-    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<2 x s16>), [[TRUNC1]](<2 x s16>), [[TRUNC2]](<2 x s16>), [[TRUNC3]](<2 x s16>)
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<8 x s16>)
-    ; CHECK: S_ENDPGM 0, implicit [[UV]](s32), implicit [[UV1]](s32), implicit [[UV2]](s32), implicit [[UV3]](s32)
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[TRUNC]](<2 x s16>)
+    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[TRUNC1]](<2 x s16>)
+    ; CHECK: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[TRUNC2]](<2 x s16>)
+    ; CHECK: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[TRUNC3]](<2 x s16>)
+    ; CHECK: S_ENDPGM 0, implicit [[BITCAST]](s32), implicit [[BITCAST1]](s32), implicit [[BITCAST2]](s32), implicit [[BITCAST3]](s32)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
     %2:_(<2 x s32>) = COPY $vgpr4_vgpr5
@@ -503,9 +501,9 @@ body:             |
     ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32)
     ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[BUILD_VECTOR]](<2 x s32>)
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[BUILD_VECTOR1]](<2 x s32>)
-    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<2 x s16>), [[TRUNC1]](<2 x s16>)
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<4 x s16>)
-    ; CHECK: S_ENDPGM 0, implicit [[UV]](s32), implicit [[UV1]](s32)
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[TRUNC]](<2 x s16>)
+    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[TRUNC1]](<2 x s16>)
+    ; CHECK: S_ENDPGM 0, implicit [[BITCAST]](s32), implicit [[BITCAST1]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -544,9 +542,9 @@ body:             |
     ; CHECK: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY4]], [[C1]]
     ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY [[LSHR1]](s32)
     ; CHECK: [[AND3:%[0-9]+]]:_(s32) = G_AND [[COPY5]], [[C1]]
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[AND]](s32), [[AND1]](s32), [[AND2]](s32), [[AND3]](s32)
-    ; CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<4 x s32>)
-    ; CHECK: S_ENDPGM 0, implicit [[UV]](s64), implicit [[UV1]](s64)
+    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[AND]](s32), [[AND1]](s32)
+    ; CHECK: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[AND2]](s32), [[AND3]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[MV]](s64), implicit [[MV1]](s64)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s16>) = COPY $vgpr1
     %2:_(<4 x s16>) = G_CONCAT_VECTORS %0, %1
