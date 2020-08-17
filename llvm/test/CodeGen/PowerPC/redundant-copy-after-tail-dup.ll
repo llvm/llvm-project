@@ -17,28 +17,24 @@
 define dso_local i1 @t(%class.A* %this, i32 %color, i32 %vertex) local_unnamed_addr {
 ; CHECK-P9-LABEL: t:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    bc 12, 4*cr5+lt, .LBB0_3
+; CHECK-P9-NEXT:    li r5, 1
+; CHECK-P9-NEXT:    bc 12, 4*cr5+lt, .LBB0_4
 ; CHECK-P9-NEXT:  # %bb.1: # %land.lhs.true
-; CHECK-P9-NEXT:    li r4, 1
-; CHECK-P9-NEXT:    bc 4, 4*cr5+lt, .LBB0_4
-; CHECK-P9-NEXT:  # %bb.2: # %cleanup16
-; CHECK-P9-NEXT:    mr r3, r4
-; CHECK-P9-NEXT:    blr
-; CHECK-P9-NEXT:  .LBB0_3: # %lor.lhs.false
-; CHECK-P9-NEXT:    cmplwi r4, 0
-; CHECK-P9-NEXT:    beq cr0, .LBB0_6
-; CHECK-P9-NEXT:  .LBB0_4: # %for.inc
+; CHECK-P9-NEXT:    bc 12, 4*cr5+lt, .LBB0_5
+; CHECK-P9-NEXT:  .LBB0_2: # %for.inc
 ; CHECK-P9-NEXT:    lhz r3, 5308(r3)
 ; CHECK-P9-NEXT:    cmplwi r3, 2
-; CHECK-P9-NEXT:    bge- cr0, .LBB0_7
-; CHECK-P9-NEXT:  # %bb.5: # %land.lhs.true.1
+; CHECK-P9-NEXT:    bge- cr0, .LBB0_6
+; CHECK-P9-NEXT:  # %bb.3: # %land.lhs.true.1
 ; CHECK-P9-NEXT:    li r3, 0
 ; CHECK-P9-NEXT:    blr
-; CHECK-P9-NEXT:  .LBB0_6:
-; CHECK-P9-NEXT:    li r4, 1
-; CHECK-P9-NEXT:    mr r3, r4
+; CHECK-P9-NEXT:  .LBB0_4: # %lor.lhs.false
+; CHECK-P9-NEXT:    cmplwi r4, 0
+; CHECK-P9-NEXT:    bne cr0, .LBB0_2
+; CHECK-P9-NEXT:  .LBB0_5: # %cleanup16
+; CHECK-P9-NEXT:    mr r3, r5
 ; CHECK-P9-NEXT:    blr
-; CHECK-P9-NEXT:  .LBB0_7: # %lor.lhs.false.1
+; CHECK-P9-NEXT:  .LBB0_6: # %lor.lhs.false.1
 entry:
   br i1 undef, label %land.lhs.true, label %lor.lhs.false
 
