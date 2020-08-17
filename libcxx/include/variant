@@ -595,7 +595,7 @@ struct __base {
   __visit_alt_impl(index_sequence<_Is...>, _Vis&& __vis, _Vs&&... __vs) {
     using __multi = __multi<__uncvref_t<_Vs>::__size()...>;
     constexpr auto __dispatch = [](auto... __is) {
-      return +[](_Vis&& __vis_, _Vs&&... __vs_) {
+      return +[](_Vis&& __vis_, _Vs&&... __vs_) -> decltype(auto) {
         return __invoke_constexpr(
             _VSTD::forward<_Vis>(__vis_),
             __access::__base::__get_alt<decltype(__is)::value>(
