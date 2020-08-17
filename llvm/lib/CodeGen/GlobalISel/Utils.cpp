@@ -340,7 +340,7 @@ Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
   return ValueAndVReg{Val.getSExtValue(), VReg};
 }
 
-const llvm::ConstantFP *
+const ConstantFP *
 llvm::getConstantFPVRegVal(Register VReg, const MachineRegisterInfo &MRI) {
   MachineInstr *MI = MRI.getVRegDef(VReg);
   if (TargetOpcode::G_FCONSTANT != MI->getOpcode())
@@ -350,12 +350,12 @@ llvm::getConstantFPVRegVal(Register VReg, const MachineRegisterInfo &MRI) {
 
 namespace {
 struct DefinitionAndSourceRegister {
-  llvm::MachineInstr *MI;
+  MachineInstr *MI;
   Register Reg;
 };
 } // namespace
 
-static llvm::Optional<DefinitionAndSourceRegister>
+static Optional<DefinitionAndSourceRegister>
 getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
   Register DefSrcReg = Reg;
   auto *DefMI = MRI.getVRegDef(Reg);
@@ -373,8 +373,8 @@ getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
   return DefinitionAndSourceRegister{DefMI, DefSrcReg};
 }
 
-llvm::MachineInstr *llvm::getDefIgnoringCopies(Register Reg,
-                                               const MachineRegisterInfo &MRI) {
+MachineInstr *llvm::getDefIgnoringCopies(Register Reg,
+                                         const MachineRegisterInfo &MRI) {
   Optional<DefinitionAndSourceRegister> DefSrcReg =
       getDefSrcRegIgnoringCopies(Reg, MRI);
   return DefSrcReg ? DefSrcReg->MI : nullptr;
@@ -387,8 +387,8 @@ Register llvm::getSrcRegIgnoringCopies(Register Reg,
   return DefSrcReg ? DefSrcReg->Reg : Register();
 }
 
-llvm::MachineInstr *llvm::getOpcodeDef(unsigned Opcode, Register Reg,
-                                       const MachineRegisterInfo &MRI) {
+MachineInstr *llvm::getOpcodeDef(unsigned Opcode, Register Reg,
+                                 const MachineRegisterInfo &MRI) {
   MachineInstr *DefMI = getDefIgnoringCopies(Reg, MRI);
   return DefMI && DefMI->getOpcode() == Opcode ? DefMI : nullptr;
 }
