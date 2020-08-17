@@ -1894,10 +1894,12 @@ ELFDumper<ELFT>::findDynamic(const ELFFile<ELFT> *Obj) {
 
   if (DynamicPhdr && DynamicPhdr->p_offset + DynamicPhdr->p_filesz >
                          ObjF->getMemoryBufferRef().getBufferSize()) {
-    reportWarning(
-        createError(
-            "PT_DYNAMIC segment offset + size exceeds the size of the file"),
-        ObjF->getFileName());
+    reportUniqueWarning(createError(
+        "PT_DYNAMIC segment offset (0x" +
+        Twine::utohexstr(DynamicPhdr->p_offset) + ") + file size (0x" +
+        Twine::utohexstr(DynamicPhdr->p_filesz) +
+        ") exceeds the size of the file (0x" +
+        Twine::utohexstr(ObjF->getMemoryBufferRef().getBufferSize()) + ")"));
     // Don't use the broken dynamic header.
     DynamicPhdr = nullptr;
   }
