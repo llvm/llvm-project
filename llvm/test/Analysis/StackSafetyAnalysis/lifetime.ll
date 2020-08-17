@@ -742,7 +742,7 @@ if.end:
 ; MAY-NEXT: Alive: <x y>
 ; MUST-NEXT: Alive: <y>
 
-ret void
+  ret void
 }
 
 define void @unreachable() {
@@ -778,7 +778,62 @@ end:
 ; CHECK: end:
 ; CHECK-NEXT: Alive: <x y>
 
-ret void
+  ret void
+}
+
+define void @non_alloca(i8* %p) {
+; CHECK-LABEL: define void @non_alloca
+entry:
+; CHECK: entry:
+; MAY-NEXT: Alive: <x y>
+; MUST-NEXT: Alive: <>
+  %x = alloca i8, align 4
+  %y = alloca i8, align 4
+
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %p)
+; CHECK: call void @llvm.lifetime.start.p0i8(i64 4, i8* %p)
+; MAY-NEXT: Alive: <x y>
+; MUST-NEXT: Alive: <>
+
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %x)
+; CHECK: call void @llvm.lifetime.start.p0i8(i64 4, i8* %x)
+; MAY-NEXT: Alive: <x y>
+; MUST-NEXT: Alive: <>
+
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %p)
+; CHECK: call void @llvm.lifetime.end.p0i8(i64 4, i8* %p)
+; MAY-NEXT: Alive: <x y>
+; MUST-NEXT: Alive: <>
+
+  ret void
+}
+
+define void @select_alloca(i1 %v) {
+; CHECK-LABEL: define void @select_alloca
+entry:
+; CHECK: entry:
+; MAY-NEXT: Alive: <x y>
+; MUST-NEXT: Alive: <>
+  %x = alloca i8, align 4
+  %y = alloca i8, align 4
+  %cxcy = select i1 %v, i8* %x, i8* %y
+
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %cxcy)
+; CHECK: call void @llvm.lifetime.start.p0i8(i64 1, i8* %cxcy)
+; MAY-NEXT: Alive: <x y>
+; MUST-NEXT: Alive: <>
+
+  call void @llvm.lifetime.start.p0i8(i64 1, i8* %x)
+; CHECK: call void @llvm.lifetime.start.p0i8(i64 1, i8* %x)
+; MAY-NEXT: Alive: <x y>
+; MUST-NEXT: Alive: <>
+
+  call void @llvm.lifetime.end.p0i8(i64 1, i8* %x)
+; CHECK: call void @llvm.lifetime.end.p0i8(i64 1, i8* %x)
+; MAY-NEXT: Alive: <x y>
+; MUST-NEXT: Alive: <>
+
+  ret void
 }
 
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
