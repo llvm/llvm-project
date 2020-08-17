@@ -2942,26 +2942,20 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
     bool with_shell = !!launch_info.GetShell();
     const int exit_status = m_process_sp->GetExitStatus();
     const char *exit_desc = m_process_sp->GetExitDescription();
-#define LAUNCH_SHELL_MESSAGE                                                   \
-  "\n'r' and 'run' are aliases that default to launching through a "           \
-  "shell.\nTry launching without going through a shell by using 'process "     \
-  "launch'."
-    if (exit_desc && exit_desc[0]) {
-      if (with_shell)
-        error.SetErrorStringWithFormat(
-            "process exited with status %i (%s)" LAUNCH_SHELL_MESSAGE,
-            exit_status, exit_desc);
-      else
-        error.SetErrorStringWithFormat("process exited with status %i (%s)",
-                                       exit_status, exit_desc);
-    } else {
-      if (with_shell)
-        error.SetErrorStringWithFormat(
-            "process exited with status %i" LAUNCH_SHELL_MESSAGE, exit_status);
-      else
-        error.SetErrorStringWithFormat("process exited with status %i",
-                                       exit_status);
-    }
+    std::string desc;
+    if (exit_desc && exit_desc[0])
+      desc = " (" + std::string(exit_desc) + ')';
+    if (with_shell)
+      error.SetErrorStringWithFormat(
+          "process exited with status %i%s\n"
+          "'r' and 'run' are aliases that default to launching through a "
+          "shell.\n"
+          "Try launching without going through a shell by using "
+          "'process launch'.",
+          exit_status, desc.c_str());
+    else
+      error.SetErrorStringWithFormat("process exited with status %i%s",
+                                     exit_status, desc.c_str());
   } break;
   default:
     error.SetErrorStringWithFormat("initial process state wasn't stopped: %s",
