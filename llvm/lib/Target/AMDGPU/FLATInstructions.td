@@ -909,9 +909,8 @@ def : FlatLoadSignedPat <GLOBAL_LOAD_DWORDX4, load_global, vt>;
 def : FlatStoreSignedPat <GLOBAL_STORE_DWORDX4, store_global, vt, VReg_128>;
 }
 
-// FIXME: Should be using signed pat
-def : FlatLoadPat <GLOBAL_LOAD_DWORD, atomic_load_32_global, i32>;
-def : FlatLoadPat <GLOBAL_LOAD_DWORDX2, atomic_load_64_global, i64>;
+def : FlatLoadSignedPat <GLOBAL_LOAD_DWORD, atomic_load_32_global, i32>;
+def : FlatLoadSignedPat <GLOBAL_LOAD_DWORDX2, atomic_load_64_global, i64>;
 
 def : FlatStoreSignedPat <GLOBAL_STORE_BYTE, truncstorei8_global, i32, VGPR_32>;
 def : FlatStoreSignedPat <GLOBAL_STORE_BYTE, truncstorei8_global, i16, VGPR_32>;
