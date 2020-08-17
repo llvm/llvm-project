@@ -3218,7 +3218,6 @@ AMDGPUInstructionSelector::selectFlatOffsetImpl(MachineOperand &Root) const {
   InstructionSelector::ComplexRendererFns Default = {{
       [=](MachineInstrBuilder &MIB) { MIB.addReg(Root.getReg()); },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },  // offset
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }  // slc
     }};
 
   if (!STI.hasFlatInstOffsets())
@@ -3242,7 +3241,6 @@ AMDGPUInstructionSelector::selectFlatOffsetImpl(MachineOperand &Root) const {
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addReg(BasePtr); },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Offset.getValue()); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }  // slc
     }};
 }
 
