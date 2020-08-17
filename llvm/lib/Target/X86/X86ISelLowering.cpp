@@ -10720,10 +10720,11 @@ is256BitLaneRepeatedShuffleMask(MVT VT, ArrayRef<int> Mask,
 
 /// Test whether a target shuffle mask is equivalent within each sub-lane.
 /// Unlike isRepeatedShuffleMask we must respect SM_SentinelZero.
-static bool isRepeatedTargetShuffleMask(unsigned LaneSizeInBits, MVT VT,
+static bool isRepeatedTargetShuffleMask(unsigned LaneSizeInBits,
+                                        unsigned EltSizeInBits,
                                         ArrayRef<int> Mask,
                                         SmallVectorImpl<int> &RepeatedMask) {
-  int LaneSize = LaneSizeInBits / VT.getScalarSizeInBits();
+  int LaneSize = LaneSizeInBits / EltSizeInBits;
   RepeatedMask.assign(LaneSize, SM_SentinelUndef);
   int Size = Mask.size();
   for (int i = 0; i < Size; ++i) {
@@ -10752,6 +10753,15 @@ static bool isRepeatedTargetShuffleMask(unsigned LaneSizeInBits, MVT VT,
       return false;
   }
   return true;
+}
+
+/// Test whether a target shuffle mask is equivalent within each sub-lane.
+/// Unlike isRepeatedShuffleMask we must respect SM_SentinelZero.
+static bool isRepeatedTargetShuffleMask(unsigned LaneSizeInBits, MVT VT,
+                                        ArrayRef<int> Mask,
+                                        SmallVectorImpl<int> &RepeatedMask) {
+  return isRepeatedTargetShuffleMask(LaneSizeInBits, VT.getScalarSizeInBits(),
+                                     Mask, RepeatedMask);
 }
 
 /// Checks whether the vector elements referenced by two shuffle masks are
