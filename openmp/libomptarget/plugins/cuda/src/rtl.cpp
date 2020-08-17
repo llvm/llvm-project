@@ -89,10 +89,6 @@ struct omptarget_device_environmentTy {
   int32_t debug_level;
 };
 
-/// List that contains all the kernels.
-/// FIXME: we may need this to be per device and per library.
-std::list<KernelTy> KernelsList;
-
 namespace {
 bool checkResult(CUresult Err, const char *ErrMsg) {
   if (Err == CUDA_SUCCESS)
@@ -121,7 +117,11 @@ int memcpyDtoD(const void *SrcPtr, void *DstPtr, int64_t Size,
 
 // Structure contains per-device data
 struct DeviceDataTy {
+  /// List that contains all the kernels.
+  std::list<KernelTy> KernelsList;
+
   std::list<FuncOrGblEntryTy> FuncGblEntries;
+
   CUcontext Context = nullptr;
   // Device properties
   int ThreadsPerBlock = 0;
@@ -568,6 +568,7 @@ public:
     const __tgt_offload_entry *HostBegin = Image->EntriesBegin;
     const __tgt_offload_entry *HostEnd = Image->EntriesEnd;
 
+    std::list<KernelTy> &KernelsList = DeviceData[DeviceId].KernelsList;
     for (const __tgt_offload_entry *E = HostBegin; E != HostEnd; ++E) {
       if (!E->addr) {
         // We return nullptr when something like this happens, the host should
