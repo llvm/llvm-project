@@ -469,14 +469,12 @@ entry:
   ret void
 }
 
-; FIXME: LTO should match NOLTO
 define void @TestCrossModuleTwice() #0 {
 ; CHECK-DAG: @TestCrossModuleTwice dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:
 ; CHECK-NEXT: allocas uses:
 ; LOCAL-NEXT: z[1]: empty-set, @Write1DiffModule(arg0, [0,1)){{$}}
-; NOLTO-NEXT: z[1]: [0,1), @Write1DiffModule(arg0, [0,1)){{$}}
-; LTO-NEXT: z[1]: full-set, @Write1DiffModule(arg0, [0,1)){{$}}
+; GLOBAL-NEXT: z[1]: [0,1), @Write1DiffModule(arg0, [0,1)){{$}}
 ; CHECK-EMPTY:
 entry:
   %z = alloca i8, align 4
