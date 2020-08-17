@@ -170,6 +170,11 @@ dfsan_label __dfsan_union(dfsan_label l1, dfsan_label l2) {
   if (l2 == 0)
     return l1;
 
+  // If no labels have been created, yet l1 and l2 are non-zero, we are using
+  // fast16labels mode.
+  if (atomic_load(&__dfsan_last_label, memory_order_relaxed) == 0)
+    return l1 | l2;
+
   if (l1 > l2)
     Swap(l1, l2);
 
