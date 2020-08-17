@@ -1419,7 +1419,7 @@ static TemplateParameterList *CreateTemplateParameterList(
 
 clang::FunctionTemplateDecl *TypeSystemClang::CreateFunctionTemplateDecl(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
-    clang::FunctionDecl *func_decl, const char *name,
+    clang::FunctionDecl *func_decl,
     const TemplateParameterInfos &template_param_infos) {
   //    /// Create a function template node.
   ASTContext &ast = getASTContext();

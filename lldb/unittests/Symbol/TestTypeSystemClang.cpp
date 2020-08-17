@@ -566,7 +566,7 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateConstruction) {
   // Create the actual function template.
   clang::FunctionTemplateDecl *func_template =
       m_ast->CreateFunctionTemplateDecl(TU, OptionalClangModuleID(), func,
-                                        "foo", empty_params);
+                                        empty_params);
 
   EXPECT_EQ(TU, func_template->getDeclContext());
   EXPECT_EQ("foo", func_template->getName());
@@ -598,7 +598,7 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateInRecordConstruction) {
   // Create the actual function template.
   clang::FunctionTemplateDecl *func_template =
       m_ast->CreateFunctionTemplateDecl(record, OptionalClangModuleID(), func,
-                                        "foo", empty_params);
+                                        empty_params);
 
   EXPECT_EQ(record, func_template->getDeclContext());
   EXPECT_EQ("foo", func_template->getName());
