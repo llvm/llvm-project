@@ -19,4 +19,4 @@ class InvalidArgsLogTestCase(TestBase):
     @no_debug_info_test
     def test_enable_empty(self):
         self.expect("log enable lldb all -f this/is/not/a/valid/path", error=True,
-                    substrs=["Unable to open log file 'this/is/not/a/valid/path': No such file or directory\n"])
+                    substrs=["Unable to open log file 'this/is/not/a/valid/path': ", "\n"])
