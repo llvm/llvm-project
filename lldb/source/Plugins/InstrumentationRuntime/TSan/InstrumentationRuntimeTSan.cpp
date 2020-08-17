@@ -855,6 +855,8 @@ bool InstrumentationRuntimeTSan::NotifyBreakpointHit(
         });
     report->GetAsDictionary()->AddBooleanItem("all_addresses_are_same",
                                               all_addresses_are_same);
+  } else {
+    stop_reason_description = "unknown ThreadSanitizer stop reason";
   }
 
   // Make sure this is the right process
