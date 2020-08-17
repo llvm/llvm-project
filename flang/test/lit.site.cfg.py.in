@@ -13,6 +13,7 @@ config.python_executable = "@PYTHON_EXECUTABLE@"
 config.c_executable = "@CMAKE_C_COMPILER@"
 config.cplusplus_executable = "@CMAKE_CXX_COMPILER@"
 config.macos_sysroot = "@CMAKE_OSX_SYSROOT@"
+config.flang_standalone_build = "@FLANG_STANDALONE_BUILD@"
 
 # Control the regression test for flang-new driver
 import lit.util

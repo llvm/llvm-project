@@ -99,12 +99,12 @@ public:
     addConversion(
         [&](fir::RecordType derived) { return convertRecordType(derived); });
     addConversion([&](fir::FieldType field) {
-      return mlir::LLVM::LLVMType::getInt32Ty(llvmDialect);
+      return mlir::LLVM::LLVMType::getInt32Ty(field.getContext());
     });
     addConversion([&](fir::HeapType heap) { return convertPointerLike(heap); });
     addConversion([&](fir::IntType intr) { return convertIntegerType(intr); });
     addConversion([&](fir::LenType field) {
-      return mlir::LLVM::LLVMType::getInt32Ty(llvmDialect);
+      return mlir::LLVM::LLVMType::getInt32Ty(field.getContext());
     });
     addConversion(
         [&](fir::LogicalType logical) { return convertLogicalType(logical); });
@@ -125,7 +125,8 @@ public:
     addConversion(
         [&](mlir::ComplexType cmplx) { return convertComplexType(cmplx); });
     addConversion([&](mlir::NoneType none) {
-      return mlir::LLVM::LLVMType::getStructTy(llvmDialect, {});
+      return mlir::LLVM::LLVMStructType::getLiteral(none.getContext(),
+                                                    llvm::None);
     });
 
     // FIXME: https://reviews.llvm.org/D82831 introduced an automatic
@@ -156,19 +157,19 @@ public:
   // This returns the type of a single column. Rows are added by the caller.
   // fir.dims<r>  -->  llvm<"[r x [3 x i64]]">
   mlir::LLVM::LLVMType dimsType() {
-    auto i64Ty{mlir::LLVM::LLVMType::getInt64Ty(llvmDialect)};
+    auto i64Ty = mlir::LLVM::LLVMType::getInt64Ty(&getContext());
     return mlir::LLVM::LLVMType::getArrayTy(i64Ty, 3);
   }
 
   // i32 is used here because LLVM wants i32 constants when indexing into struct
   // types. Indexing into other aggregate types is more flexible.
   mlir::LLVM::LLVMType offsetType() {
-    return mlir::LLVM::LLVMType::getInt32Ty(llvmDialect);
+    return mlir::LLVM::LLVMType::getInt32Ty(&getContext());
   }
 
   // i64 can be used to index into aggregates like arrays
   mlir::LLVM::LLVMType indexType() {
-    return mlir::LLVM::LLVMType::getInt64Ty(llvmDialect);
+    return mlir::LLVM::LLVMType::getInt64Ty(&getContext());
   }
 
   // TODO
@@ -186,42 +187,43 @@ public:
       parts.push_back(eleTy);
     else
       parts.push_back(eleTy.getPointerTo());
-    parts.push_back(fir::getDescFieldTypeModel<1>()(llvmDialect));
-    parts.push_back(fir::getDescFieldTypeModel<2>()(llvmDialect));
-    parts.push_back(fir::getDescFieldTypeModel<3>()(llvmDialect));
-    parts.push_back(fir::getDescFieldTypeModel<4>()(llvmDialect));
-    parts.push_back(fir::getDescFieldTypeModel<5>()(llvmDialect));
-    parts.push_back(fir::getDescFieldTypeModel<6>()(llvmDialect));
+    parts.push_back(fir::getDescFieldTypeModel<1>()(&getContext()));
+    parts.push_back(fir::getDescFieldTypeModel<2>()(&getContext()));
+    parts.push_back(fir::getDescFieldTypeModel<3>()(&getContext()));
+    parts.push_back(fir::getDescFieldTypeModel<4>()(&getContext()));
+    parts.push_back(fir::getDescFieldTypeModel<5>()(&getContext()));
+    parts.push_back(fir::getDescFieldTypeModel<6>()(&getContext()));
     if (rank > 0) {
-      auto rowTy = fir::getDescFieldTypeModel<7>()(llvmDialect);
+      auto rowTy = fir::getDescFieldTypeModel<7>()(&getContext());
       parts.push_back(mlir::LLVM::LLVMType::getArrayTy(rowTy, rank));
     }
     // opt-type-ptr: i8* (see fir.tdesc)
     if (requiresExtendedDesc()) {
-      parts.push_back(fir::getExtendedDescFieldTypeModel<8>()(llvmDialect));
-      parts.push_back(fir::getExtendedDescFieldTypeModel<9>()(llvmDialect));
-      auto rowTy = fir::getExtendedDescFieldTypeModel<10>()(llvmDialect);
+      parts.push_back(fir::getExtendedDescFieldTypeModel<8>()(&getContext()));
+      parts.push_back(fir::getExtendedDescFieldTypeModel<9>()(&getContext()));
+      auto rowTy = fir::getExtendedDescFieldTypeModel<10>()(&getContext());
       unsigned numLenParams = 0; // FIXME
       parts.push_back(mlir::LLVM::LLVMType::getArrayTy(rowTy, numLenParams));
     }
-    return mlir::LLVM::LLVMType::getStructTy(llvmDialect, parts).getPointerTo();
+    return mlir::LLVM::LLVMType::getStructTy(&getContext(), parts)
+        .getPointerTo();
   }
 
   // fir.boxchar<n>  -->  llvm<"{ ix*, i64 }">   where ix is kind mapping
   mlir::LLVM::LLVMType convertBoxCharType(fir::BoxCharType boxchar) {
     auto ptrTy = convertCharType(boxchar.getEleTy()).getPointerTo();
-    auto i64Ty = mlir::LLVM::LLVMType::getInt64Ty(llvmDialect);
+    auto i64Ty = mlir::LLVM::LLVMType::getInt64Ty(&getContext());
     SmallVector<mlir::LLVM::LLVMType, 2> tuple{ptrTy, i64Ty};
-    return mlir::LLVM::LLVMType::getStructTy(llvmDialect, tuple);
+    return mlir::LLVM::LLVMType::getStructTy(&getContext(), tuple);
   }
 
   // fir.boxproc<any>  -->  llvm<"{ any*, i8* }">
   mlir::LLVM::LLVMType convertBoxProcType(fir::BoxProcType boxproc) {
     auto funcTy = convertType(boxproc.getEleTy());
     auto ptrTy = unwrap(funcTy).getPointerTo();
-    auto i8Ty = mlir::LLVM::LLVMType::getInt8Ty(llvmDialect);
+    auto i8Ty = mlir::LLVM::LLVMType::getInt8Ty(&getContext());
     SmallVector<mlir::LLVM::LLVMType, 2> tuple{ptrTy, i8Ty};
-    return mlir::LLVM::LLVMType::getStructTy(llvmDialect, tuple);
+    return mlir::LLVM::LLVMType::getStructTy(&getContext(), tuple);
   }
 
   unsigned characterBitsize(fir::CharacterType charTy) {
@@ -230,7 +232,7 @@ public:
 
   // fir.char<n>  -->  llvm<"ix*">   where ix is scaled by kind mapping
   mlir::LLVM::LLVMType convertCharType(fir::CharacterType charTy) {
-    return mlir::LLVM::LLVMType::getIntNTy(llvmDialect,
+    return mlir::LLVM::LLVMType::getIntNTy(&getContext(),
                                            characterBitsize(charTy));
   }
 
@@ -243,24 +245,24 @@ public:
   mlir::LLVM::LLVMType convertComplexType(fir::KindTy kind) {
     auto realTy = convertComplexPartType(kind);
     SmallVector<mlir::LLVM::LLVMType, 2> tuple{realTy, realTy};
-    return mlir::LLVM::LLVMType::getStructTy(llvmDialect, tuple);
+    return mlir::LLVM::LLVMType::getStructTy(&getContext(), tuple);
   }
 
   mlir::LLVM::LLVMType getDefaultInt() {
     // FIXME: this should be tied to the front-end default
-    return mlir::LLVM::LLVMType::getInt64Ty(llvmDialect);
+    return mlir::LLVM::LLVMType::getInt64Ty(&getContext());
   }
 
   // fir.int<n>  -->  llvm.ix   where ix is a kind mapping
   mlir::LLVM::LLVMType convertIntegerType(fir::IntType intTy) {
     return mlir::LLVM::LLVMType::getIntNTy(
-        llvmDialect, kindMapping.getIntegerBitsize(intTy.getFKind()));
+        &getContext(), kindMapping.getIntegerBitsize(intTy.getFKind()));
   }
 
   // fir.logical<n>  -->  llvm.ix  where ix is a kind mapping
   mlir::LLVM::LLVMType convertLogicalType(fir::LogicalType boolTy) {
     return mlir::LLVM::LLVMType::getIntNTy(
-        llvmDialect, kindMapping.getLogicalBitsize(boolTy.getFKind()));
+        &getContext(), kindMapping.getLogicalBitsize(boolTy.getFKind()));
   }
 
   template <typename A>
@@ -288,12 +290,12 @@ public:
 
   // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
   mlir::LLVM::LLVMType convertRecordType(fir::RecordType derived) {
-    auto name{derived.getName()};
+    auto name = derived.getName();
     // The cache is needed to keep a unique mapping from name -> StructType
-    auto iter{identStructCache.find(name)};
+    auto iter = identStructCache.find(name);
     if (iter != identStructCache.end())
       return iter->second;
-    auto st{mlir::LLVM::LLVMType::createStructTy(llvmDialect, name)};
+    auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);
     identStructCache[name] = st;
     SmallVector<mlir::LLVM::LLVMType, 8> members;
     for (auto mem : derived.getTypeList())
@@ -328,21 +330,21 @@ public:
     SmallVector<mlir::LLVM::LLVMType, 8> members;
     for (auto mem : inMembers)
       members.push_back(convertType(mem).cast<mlir::LLVM::LLVMType>());
-    return mlir::LLVM::LLVMType::getStructTy(llvmDialect, members);
+    return mlir::LLVM::LLVMType::getStructTy(&getContext(), members);
   }
 
   // complex<T>  --> llvm<"{t,t}">
   mlir::LLVM::LLVMType convertComplexType(mlir::ComplexType complex) {
     auto eleTy = unwrap(convertType(complex.getElementType()));
     SmallVector<mlir::LLVM::LLVMType, 2> tuple{eleTy, eleTy};
-    return mlir::LLVM::LLVMType::getStructTy(llvmDialect, tuple);
+    return mlir::LLVM::LLVMType::getStructTy(&getContext(), tuple);
   }
 
   // fir.tdesc<any>  -->  llvm<"i8*">
   // FIXME: for now use a void*, however pointer identity is not sufficient for
   // the f18 object v. class distinction
   mlir::LLVM::LLVMType convertTypeDescType(mlir::MLIRContext *ctx) {
-    return mlir::LLVM::LLVMType::getInt8PtrTy(llvmDialect);
+    return mlir::LLVM::LLVMType::getInt8PtrTy(&getContext());
   }
 
   /// Convert llvm::Type::TypeID to mlir::LLVM::LLVMType
@@ -350,17 +352,17 @@ public:
                                       fir::KindTy kind) {
     switch (typeID) {
     case llvm::Type::TypeID::HalfTyID:
-      return mlir::LLVM::LLVMType::getHalfTy(llvmDialect);
+      return mlir::LLVM::LLVMType::getHalfTy(&getContext());
     case llvm::Type::TypeID::FloatTyID:
-      return mlir::LLVM::LLVMType::getFloatTy(llvmDialect);
+      return mlir::LLVM::LLVMType::getFloatTy(&getContext());
     case llvm::Type::TypeID::DoubleTyID:
-      return mlir::LLVM::LLVMType::getDoubleTy(llvmDialect);
+      return mlir::LLVM::LLVMType::getDoubleTy(&getContext());
     case llvm::Type::TypeID::X86_FP80TyID:
-      return mlir::LLVM::LLVMType::getX86_FP80Ty(llvmDialect);
+      return mlir::LLVM::LLVMType::getX86_FP80Ty(&getContext());
     case llvm::Type::TypeID::FP128TyID:
-      return mlir::LLVM::LLVMType::getFP128Ty(llvmDialect);
+      return mlir::LLVM::LLVMType::getFP128Ty(&getContext());
     default:
-      emitError(UnknownLoc::get(llvmDialect->getContext()))
+      emitError(UnknownLoc::get(&getContext()))
           << "unsupported type: !fir.real<" << kind << ">";
       return {};
     }
@@ -445,8 +447,8 @@ pruneNamedAttrDict(AttributeTy attrs, ArrayRef<StringRef> omitNames) {
   return result;
 }
 
-inline mlir::LLVM::LLVMType getVoidPtrType(mlir::LLVM::LLVMDialect *dialect) {
-  return mlir::LLVM::LLVMType::getInt8PtrTy(dialect);
+inline mlir::LLVM::LLVMType getVoidPtrType(mlir::MLIRContext *context) {
+  return mlir::LLVM::LLVMType::getInt8PtrTy(context);
 }
 
 namespace {
@@ -459,8 +461,6 @@ public:
       : mlir::OpConversionPattern<FromOp>(lowering, ctx, 1) {}
 
 protected:
-  LLVMContext &getLLVMContext() const { return lowerTy().getLLVMContext(); }
-  mlir::LLVM::LLVMDialect *getDialect() const { return lowerTy().getDialect(); }
   mlir::Type convertType(mlir::Type ty) const {
     return lowerTy().convertType(ty);
   }
@@ -468,7 +468,7 @@ protected:
     return lowerTy().unwrap(ty);
   }
   mlir::LLVM::LLVMType voidPtrTy() const {
-    return getVoidPtrType(getDialect());
+    return getVoidPtrType(&lowerTy().getContext());
   }
 
   mlir::LLVM::ConstantOp
@@ -616,17 +616,17 @@ struct AllocaOpConversion : public FIROpConversion<fir::AllocaOp> {
 } // namespace
 
 static mlir::LLVM::LLVMFuncOp
-getMalloc(fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter,
-          mlir::LLVM::LLVMDialect *dialect) {
+getMalloc(fir::AllocMemOp op, mlir::ConversionPatternRewriter &rewriter) {
   auto module = op.getParentOfType<mlir::ModuleOp>();
   if (auto mallocFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("malloc"))
     return mallocFunc;
   mlir::OpBuilder moduleBuilder(
       op.getParentOfType<mlir::ModuleOp>().getBodyRegion());
-  auto indexType = mlir::LLVM::LLVMType::getInt64Ty(dialect);
+  auto indexType = mlir::LLVM::LLVMType::getInt64Ty(op.getContext());
   return moduleBuilder.create<mlir::LLVM::LLVMFuncOp>(
       rewriter.getUnknownLoc(), "malloc",
-      mlir::LLVM::LLVMType::getFunctionTy(getVoidPtrType(dialect), indexType,
+      mlir::LLVM::LLVMType::getFunctionTy(getVoidPtrType(op.getContext()),
+                                          indexType,
                                           /*isVarArg=*/false));
 }
 
@@ -639,8 +639,7 @@ struct AllocMemOpConversion : public FIROpConversion<fir::AllocMemOp> {
   matchAndRewrite(fir::AllocMemOp heap, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto ty = convertType(heap.getType());
-    auto dialect = getDialect();
-    auto mallocFunc = getMalloc(heap, rewriter, dialect);
+    auto mallocFunc = getMalloc(heap, rewriter);
     auto loc = heap.getLoc();
     auto ity = lowerTy().indexType();
     auto c1 = genConstantIndex(loc, ity, rewriter, 1);
@@ -657,17 +656,17 @@ struct AllocMemOpConversion : public FIROpConversion<fir::AllocMemOp> {
 } // namespace
 
 /// obtain the free() function
-static mlir::LLVM::LLVMFuncOp getFree(fir::FreeMemOp op,
-                                      mlir::ConversionPatternRewriter &rewriter,
-                                      mlir::LLVM::LLVMDialect *dialect) {
+static mlir::LLVM::LLVMFuncOp
+getFree(fir::FreeMemOp op, mlir::ConversionPatternRewriter &rewriter) {
   auto module = op.getParentOfType<mlir::ModuleOp>();
   if (auto freeFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("free"))
     return freeFunc;
   mlir::OpBuilder moduleBuilder(module.getBodyRegion());
-  auto voidType = mlir::LLVM::LLVMType::getVoidTy(dialect);
+  auto voidType = mlir::LLVM::LLVMType::getVoidTy(op.getContext());
   return moduleBuilder.create<mlir::LLVM::LLVMFuncOp>(
       rewriter.getUnknownLoc(), "free",
-      mlir::LLVM::LLVMType::getFunctionTy(voidType, getVoidPtrType(dialect),
+      mlir::LLVM::LLVMType::getFunctionTy(voidType,
+                                          getVoidPtrType(op.getContext()),
                                           /*isVarArg=*/false));
 }
 
@@ -679,13 +678,12 @@ struct FreeMemOpConversion : public FIROpConversion<fir::FreeMemOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::FreeMemOp freemem, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    auto dialect = getDialect();
-    auto freeFunc = getFree(freemem, rewriter, dialect);
+    auto freeFunc = getFree(freemem, rewriter);
     auto bitcast = rewriter.create<mlir::LLVM::BitcastOp>(
         freemem.getLoc(), voidPtrTy(), operands[0]);
     freemem.setAttr("callee", rewriter.getSymbolRefAttr(freeFunc));
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
-        freemem, mlir::LLVM::LLVMType::getVoidTy(dialect),
+        freemem, mlir::LLVM::LLVMType::getVoidTy(freemem.getContext()),
         SmallVector<mlir::Value, 1>{bitcast}, freemem.getAttrs());
     return success();
   }
@@ -879,7 +877,7 @@ struct BoxTypeDescOpConversion : public FIROpConversion<fir::BoxTypeDescOp> {
     auto pty = unwrap(ty).getPointerTo();
     auto p = rewriter.create<mlir::LLVM::GEPOp>(loc, pty, args);
     auto ld = rewriter.create<mlir::LLVM::LoadOp>(loc, ty, p);
-    auto i8ptr = mlir::LLVM::LLVMType::getInt8PtrTy(getDialect());
+    auto i8ptr = mlir::LLVM::LLVMType::getInt8PtrTy(boxtypedesc.getContext());
     rewriter.replaceOpWithNewOp<mlir::LLVM::IntToPtrOp>(boxtypedesc, i8ptr, ld);
     return success();
   }
@@ -1034,6 +1032,17 @@ struct ConstfOpConversion : public FIROpConversion<fir::ConstfOp> {
 struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
   using FIROpConversion::FIROpConversion;
 
+  static bool isFloatingPointTy(mlir::LLVM::LLVMType ty) {
+    return ty.isa<mlir::LLVM::LLVMHalfType>() ||
+           ty.isa<mlir::LLVM::LLVMBFloatType>() ||
+           ty.isa<mlir::LLVM::LLVMFloatType>() ||
+           ty.isa<mlir::LLVM::LLVMDoubleType>() ||
+           ty.isa<mlir::LLVM::LLVMFP128Type>() ||
+           ty.isa<mlir::LLVM::LLVMX86FP80Type>() ||
+           ty.isa<mlir::LLVM::LLVMPPCFP128Type>() ||
+           ty.isa<mlir::LLVM::LLVMX86MMXType>();
+  }
+
   mlir::LogicalResult
   matchAndRewrite(fir::ConvertOp convert, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
@@ -1041,18 +1050,22 @@ struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
     auto fromTy = unwrap(fromTy_);
     auto toTy_ = convertType(convert.res().getType());
     auto toTy = unwrap(toTy_);
-    auto *fromLLVMTy = fromTy.getUnderlyingType();
-    auto *toLLVMTy = toTy.getUnderlyingType();
     auto &op0 = operands[0];
-    if (fromLLVMTy == toLLVMTy) {
+    if (fromTy == toTy) {
       rewriter.replaceOp(convert, op0);
       return success();
     }
     auto loc = convert.getLoc();
     auto convertFpToFp = [&](mlir::Value val, unsigned fromBits,
                              unsigned toBits, mlir::Type toTy) -> mlir::Value {
-      // FIXME: what if different reps (F16, BF16) are the same size?
-      assert(fromBits != toBits);
+      if (fromBits == toBits) {
+        // TODO: Converting between two floating-point representations with the
+        // same bitwidth is not allowed for now.
+        mlir::emitError(loc,
+                        "cannot implicitly convert between two floating-point "
+                        "representations of the same bitwidth");
+        return {};
+      }
       if (fromBits > toBits)
         return rewriter.create<mlir::LLVM::FPTruncOp>(loc, toTy, val);
       return rewriter.create<mlir::LLVM::FPExtOp>(loc, toTy, val);
@@ -1071,8 +1084,8 @@ struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
           rewriter.create<mlir::LLVM::ExtractValueOp>(loc, fromTy_, op0, one);
       auto ty = convertType(getComplexEleTy(convert.value().getType()));
       auto nt = convertType(getComplexEleTy(convert.res().getType()));
-      auto fromBits = unwrap(ty).getUnderlyingType()->getPrimitiveSizeInBits();
-      auto toBits = unwrap(nt).getUnderlyingType()->getPrimitiveSizeInBits();
+      auto fromBits = unwrap(ty).getPrimitiveSizeInBits();
+      auto toBits = unwrap(nt).getPrimitiveSizeInBits();
       auto rc = convertFpToFp(rp, fromBits, toBits, nt);
       auto ic = convertFpToFp(ip, fromBits, toBits, nt);
       auto un = rewriter.create<mlir::LLVM::UndefOp>(loc, toTy_);
@@ -1082,22 +1095,22 @@ struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
                                                              ic, one);
       return mlir::success();
     }
-    if (fromLLVMTy->isFloatingPointTy()) {
-      if (toLLVMTy->isFloatingPointTy()) {
-        auto fromBits = fromLLVMTy->getPrimitiveSizeInBits();
-        auto toBits = toLLVMTy->getPrimitiveSizeInBits();
+    if (isFloatingPointTy(fromTy)) {
+      if (isFloatingPointTy(toTy)) {
+        auto fromBits = fromTy.getPrimitiveSizeInBits();
+        auto toBits = toTy.getPrimitiveSizeInBits();
         auto v = convertFpToFp(op0, fromBits, toBits, toTy);
         rewriter.replaceOp(convert, v);
         return mlir::success();
       }
-      if (toLLVMTy->isIntegerTy()) {
+      if (toTy.isIntegerTy()) {
         rewriter.replaceOpWithNewOp<mlir::LLVM::FPToSIOp>(convert, toTy, op0);
         return mlir::success();
       }
-    } else if (fromLLVMTy->isIntegerTy()) {
-      if (toLLVMTy->isIntegerTy()) {
-        std::size_t fromBits{fromLLVMTy->getIntegerBitWidth()};
-        std::size_t toBits{toLLVMTy->getIntegerBitWidth()};
+    } else if (fromTy.isIntegerTy()) {
+      if (toTy.isIntegerTy()) {
+        std::size_t fromBits{fromTy.getIntegerBitWidth()};
+        std::size_t toBits{toTy.getIntegerBitWidth()};
         assert(fromBits != toBits);
         if (fromBits > toBits) {
           rewriter.replaceOpWithNewOp<mlir::LLVM::TruncOp>(convert, toTy, op0);
@@ -1106,20 +1119,20 @@ struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
         rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(convert, toTy, op0);
         return mlir::success();
       }
-      if (toLLVMTy->isFloatingPointTy()) {
+      if (isFloatingPointTy(toTy)) {
         rewriter.replaceOpWithNewOp<mlir::LLVM::SIToFPOp>(convert, toTy, op0);
         return mlir::success();
       }
-      if (toLLVMTy->isPointerTy()) {
+      if (toTy.isPointerTy()) {
         rewriter.replaceOpWithNewOp<mlir::LLVM::IntToPtrOp>(convert, toTy, op0);
         return mlir::success();
       }
-    } else if (fromLLVMTy->isPointerTy()) {
-      if (toLLVMTy->isIntegerTy()) {
+    } else if (fromTy.isPointerTy()) {
+      if (toTy.isIntegerTy()) {
         rewriter.replaceOpWithNewOp<mlir::LLVM::PtrToIntOp>(convert, toTy, op0);
         return mlir::success();
       }
-      if (toLLVMTy->isPointerTy()) {
+      if (toTy.isPointerTy()) {
         rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(convert, toTy, op0);
         return mlir::success();
       }
@@ -1205,7 +1218,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
   /// Generate an alloca of size `size` and cast it to type `toTy`
   mlir::LLVM::AllocaOp
   genAllocaWithType(mlir::Location loc, mlir::LLVM::LLVMType toTy,
-                    unsigned alignment, mlir::LLVM::LLVMDialect *dialect,
+                    unsigned alignment,
                     mlir::ConversionPatternRewriter &rewriter) const {
     auto thisPt = rewriter.saveInsertionPoint();
     auto *thisBlock = rewriter.getInsertionBlock();
@@ -1235,11 +1248,9 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
   mlir::Value integerCast(mlir::Location loc,
                           mlir::ConversionPatternRewriter &rewriter,
                           mlir::LLVM::LLVMType ty, mlir::Value val) const {
-    auto toSize = ty.getUnderlyingType()->getPrimitiveSizeInBits();
-    auto fromSize = val.getType()
-                        .cast<mlir::LLVM::LLVMType>()
-                        .getUnderlyingType()
-                        ->getPrimitiveSizeInBits();
+    auto toSize = ty.getPrimitiveSizeInBits();
+    auto fromSize =
+        val.getType().cast<mlir::LLVM::LLVMType>().getPrimitiveSizeInBits();
     if (toSize < fromSize)
       return rewriter.create<mlir::LLVM::TruncOp>(loc, ty, val);
     if (toSize > fromSize)
@@ -1346,11 +1357,10 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
     assert(!embox.getShape());
 
     auto loc = embox.getLoc();
-    auto *dialect = getDialect();
     auto boxTy = embox.getType().dyn_cast<fir::BoxType>();
     assert(boxTy);
     auto ty = unwrap(lowerTy().convertBoxType(boxTy, 0));
-    auto alloca = genAllocaWithType(loc, ty, defaultAlign, dialect, rewriter);
+    auto alloca = genAllocaWithType(loc, ty, defaultAlign, rewriter);
     auto c0 = genConstantOffset(loc, rewriter, 0);
 
     // Basic pattern to write a field in the descriptor
@@ -1396,12 +1406,11 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::XEmboxOp> {
   matchAndRewrite(fir::XEmboxOp xbox, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto loc = xbox.getLoc();
-    auto *dialect = getDialect();
     auto rank = xbox.getRank();
     auto boxTy = xbox.getType().dyn_cast<fir::BoxType>();
     assert(boxTy);
     auto ty = unwrap(lowerTy().convertBoxType(boxTy, rank));
-    auto alloca = genAllocaWithType(loc, ty, defaultAlign, dialect, rewriter);
+    auto alloca = genAllocaWithType(loc, ty, defaultAlign, rewriter);
     auto c0 = genConstantOffset(loc, rewriter, 0);
 
     // Basic pattern to write a field in the descriptor
@@ -1436,7 +1445,7 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::XEmboxOp> {
     storeField(6, /*addend*/ c0, intCast);
 
     // Generate the triples in the dims field of the descriptor
-    auto i64Ty = mlir::LLVM::LLVMType::getInt64Ty(dialect);
+    auto i64Ty = mlir::LLVM::LLVMType::getInt64Ty(xbox.getContext());
     auto i64PtrTy = i64Ty.getPointerTo();
     assert(xbox.shapeOperands().size());
     unsigned shapeOff = 1;
@@ -1540,18 +1549,17 @@ struct ValueOpCommon {
   static void toRowMajor(llvm::SmallVectorImpl<mlir::Attribute> &attrs,
                          mlir::LLVM::LLVMType ty) {
     assert(ty && "type is null");
-    auto *llTy = ty.getUnderlyingType();
     const auto end = attrs.size();
     for (std::remove_const_t<decltype(end)> i = 0; i < end; ++i) {
-      if (auto *seq = dyn_cast<llvm::ArrayType>(llTy)) {
+      if (auto seq = ty.dyn_cast<mlir::LLVM::LLVMArrayType>()) {
         const auto dim = getDimension(seq);
         if (dim > 1) {
           std::reverse(attrs.begin() + i, attrs.begin() + i + dim);
           i += dim - 1;
         }
-        llTy = getArrayElementType(seq);
-      } else if (auto *st = dyn_cast<llvm::StructType>(llTy)) {
-        llTy = st->getElementType(attrs[i].cast<mlir::IntegerAttr>().getInt());
+        ty = getArrayElementType(seq);
+      } else if (auto st = ty.dyn_cast<mlir::LLVM::LLVMStructType>()) {
+        ty = st.getBody()[attrs[i].cast<mlir::IntegerAttr>().getInt()];
       } else {
         llvm_unreachable("index into invalid type");
       }
@@ -1559,18 +1567,20 @@ struct ValueOpCommon {
   }
 
 private:
-  static unsigned getDimension(llvm::ArrayType *ty) {
+  static unsigned getDimension(mlir::LLVM::LLVMArrayType ty) {
     unsigned result = 1;
-    for (auto *eleTy = dyn_cast<llvm::ArrayType>(ty->getElementType()); eleTy;
-         eleTy = dyn_cast<llvm::ArrayType>(eleTy->getElementType()))
+    for (auto eleTy = ty.getElementType().dyn_cast<mlir::LLVM::LLVMArrayType>();
+         eleTy;
+         eleTy = eleTy.getElementType().dyn_cast<mlir::LLVM::LLVMArrayType>())
       ++result;
     return result;
   }
 
-  static llvm::Type *getArrayElementType(llvm::ArrayType *ty) {
-    auto *eleTy = ty->getElementType();
-    while (auto *arrTy = dyn_cast<llvm::ArrayType>(eleTy))
-      eleTy = arrTy->getElementType();
+  static mlir::LLVM::LLVMType
+  getArrayElementType(mlir::LLVM::LLVMArrayType ty) {
+    auto eleTy = ty.getElementType();
+    while (auto arrTy = eleTy.dyn_cast<mlir::LLVM::LLVMArrayType>())
+      eleTy = arrTy.getElementType();
     return eleTy;
   }
 };
@@ -1697,12 +1707,11 @@ struct XArrayCoorOpConversion
   mlir::Value asType(mlir::Location loc,
                      mlir::ConversionPatternRewriter &rewriter,
                      mlir::LLVM::LLVMType toTy, mlir::Value val) const {
-    auto *fromLLVMTy = unwrap(convertType(val.getType())).getUnderlyingType();
-    auto *toLLVMTy = toTy.getUnderlyingType();
-    assert(fromLLVMTy->isIntegerTy() && toLLVMTy->isIntegerTy());
-    if (fromLLVMTy->getIntegerBitWidth() < toLLVMTy->getIntegerBitWidth())
+    auto fromTy = unwrap(convertType(val.getType()));
+    assert(fromTy.isIntegerTy() && toTy.isIntegerTy());
+    if (fromTy.getIntegerBitWidth() < toTy.getIntegerBitWidth())
       return rewriter.create<mlir::LLVM::SExtOp>(loc, toTy, val);
-    if (fromLLVMTy->getIntegerBitWidth() > toLLVMTy->getIntegerBitWidth())
+    if (fromTy.getIntegerBitWidth() > toTy.getIntegerBitWidth())
       return rewriter.create<mlir::LLVM::TruncOp>(loc, toTy, val);
     return val;
   }
@@ -2734,7 +2743,7 @@ struct FIRToLLVMLoweringPass
     if (disableFirToLLVMIR)
       return;
 
-    auto *context{&getContext()};
+    auto *context = getModule().getContext();
     FIRToLLVMTypeConverter typeConverter{context, uniquer};
     auto loc = mlir::UnknownLoc::get(context);
     mlir::OwningRewritePatternList pattern;
@@ -2792,13 +2801,16 @@ struct LLVMIRLoweringPass
     if (disableLLVM)
       return;
 
-    if (auto llvmModule = mlir::translateModuleToLLVMIR(getModule())) {
+    auto optName = getModule().getName();
+    llvm::LLVMContext llvmCtx;
+    if (auto llvmModule = mlir::translateModuleToLLVMIR(
+            getModule(), llvmCtx, optName ? *optName : "FIRModule")) {
       llvmModule->print(output, nullptr);
       return;
     }
 
-    auto *ctxt = getModule().getContext();
-    mlir::emitError(mlir::UnknownLoc::get(ctxt), "could not emit LLVM-IR\n");
+    auto *ctx = getModule().getContext();
+    mlir::emitError(mlir::UnknownLoc::get(ctx), "could not emit LLVM-IR\n");
     signalPassFailure();
   }
 
