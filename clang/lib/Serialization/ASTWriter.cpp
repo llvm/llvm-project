@@ -4178,11 +4178,11 @@ void ASTWriter::WriteFloatControlPragmaOptions(Sema &SemaRef) {
     return;
 
   RecordData Record;
-  Record.push_back(SemaRef.FpPragmaStack.CurrentValue);
+  Record.push_back(SemaRef.FpPragmaStack.CurrentValue.getAsOpaqueInt());
   AddSourceLocation(SemaRef.FpPragmaStack.CurrentPragmaLocation, Record);
   Record.push_back(SemaRef.FpPragmaStack.Stack.size());
   for (const auto &StackEntry : SemaRef.FpPragmaStack.Stack) {
-    Record.push_back(StackEntry.Value);
+    Record.push_back(StackEntry.Value.getAsOpaqueInt());
     AddSourceLocation(StackEntry.PragmaLocation, Record);
     AddSourceLocation(StackEntry.PragmaPushLocation, Record);
     AddString(StackEntry.StackSlotLabel, Record);
