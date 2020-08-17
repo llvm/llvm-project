@@ -48341,7 +48341,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case X86ISD::FHSUB:
     case X86ISD::PACKSS:
     case X86ISD::PACKUS:
-      if (!IsSplat && VT.is256BitVector() && Subtarget.hasInt256()) {
+      if (!IsSplat && VT.is256BitVector() &&
+          (VT.isFloatingPoint() || Subtarget.hasInt256())) {
         SmallVector<SDValue, 2> LHS, RHS;
         for (unsigned i = 0; i != NumOps; ++i) {
           LHS.push_back(Ops[i].getOperand(0));
