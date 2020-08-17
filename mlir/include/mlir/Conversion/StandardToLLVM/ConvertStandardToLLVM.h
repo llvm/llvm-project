@@ -105,6 +105,9 @@ public:
   /// pointers to memref descriptors for arguments.
   LLVM::LLVMType convertFunctionTypeCWrapper(FunctionType type);
 
+  /// Returns the data layout to use during and after conversion.
+  const llvm::DataLayout &getDataLayout() { return options.dataLayout; }
+
   /// Gets the LLVM representation of the index type. The returned type is an
   /// integer type with the size configured for this type converter.
   LLVM::LLVMType getIndexType();
