@@ -47,7 +47,9 @@
 #include "ExportTrie.h"
 #include "InputSection.h"
 #include "MachOStructs.h"
+#include "ObjC.h"
 #include "OutputSection.h"
+#include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Target.h"
@@ -116,7 +118,7 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
   return None;
 }
 
-static const load_command *findCommand(const mach_header_64 *hdr,
+const load_command *macho::findCommand(const mach_header_64 *hdr,
                                        uint32_t type) {
   const uint8_t *p =
       reinterpret_cast<const uint8_t *>(hdr) + sizeof(mach_header_64);
@@ -137,8 +139,10 @@ void InputFile::parseSections(ArrayRef<section_64> sections) {
   for (const section_64 &sec : sections) {
     InputSection *isec = make<InputSection>();
     isec->file = this;
-    isec->name = StringRef(sec.sectname, strnlen(sec.sectname, 16));
-    isec->segname = StringRef(sec.segname, strnlen(sec.segname, 16));
+    isec->name =
+        StringRef(sec.sectname, strnlen(sec.sectname, sizeof(sec.sectname)));
+    isec->segname =
+        StringRef(sec.segname, strnlen(sec.segname, sizeof(sec.segname)));
     isec->data = {isZeroFill(sec.flags) ? nullptr : buf + sec.offset,
                   static_cast<size_t>(sec.size)};
     if (sec.align >= 32)
@@ -474,14 +478,14 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella)
     case SymbolKind::ObjectiveCClass:
       // XXX ld64 only creates these symbols when -ObjC is passed in. We may
       // want to emulate that.
-      addSymbol("_OBJC_CLASS_$_" + symbol->getName());
-      addSymbol("_OBJC_METACLASS_$_" + symbol->getName());
+      addSymbol(objc::klass + symbol->getName());
+      addSymbol(objc::metaclass + symbol->getName());
       break;
     case SymbolKind::ObjectiveCClassEHType:
-      addSymbol("_OBJC_EHTYPE_$_" + symbol->getName());
+      addSymbol(objc::ehtype + symbol->getName());
       break;
     case SymbolKind::ObjectiveCInstanceVariable:
-      addSymbol("_OBJC_IVAR_$_" + symbol->getName());
+      addSymbol(objc::ivar + symbol->getName());
       break;
     }
   }
