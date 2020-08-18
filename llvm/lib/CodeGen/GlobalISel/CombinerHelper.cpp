@@ -646,7 +646,7 @@ bool CombinerHelper::matchSextInRegOfLoad(
   // anyway for most targets.
   if (!isPowerOf2_32(NewSizeBits))
     return false;
-  MatchInfo = {LoadDef->getOperand(0).getReg(), NewSizeBits};
+  MatchInfo = std::make_tuple(LoadDef->getOperand(0).getReg(), NewSizeBits);
   return true;
 }
 
@@ -1963,7 +1963,7 @@ bool CombinerHelper::matchAshrShlToSextInreg(
   if (!isLegalOrBeforeLegalizer(
           {TargetOpcode::G_SEXT_INREG, {MRI.getType(Src)}}))
     return false;
-  MatchInfo = {Src, ShlCst};
+  MatchInfo = std::make_tuple(Src, ShlCst);
   return true;
 }
 bool CombinerHelper::applyAshShlToSextInreg(
