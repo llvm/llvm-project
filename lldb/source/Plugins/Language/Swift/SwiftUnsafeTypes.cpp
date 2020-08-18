@@ -313,7 +313,7 @@ bool SwiftUnsafePointer::Update() {
     LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
              "{0}: Couldn't get {1} type system.", __FUNCTION__,
              type.GetTypeName());
-    return nullptr;
+    return false;
   }
 
   CompilerType argument_type =
