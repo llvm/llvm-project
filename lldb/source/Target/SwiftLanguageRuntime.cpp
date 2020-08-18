@@ -333,12 +333,12 @@ static bool HasReflectionInfo(ObjectFile *obj_file) {
       swift::ReflectionSectionKind::reflstr);
 
   bool hasReflectionSection = false;
-  hasReflectionSection |= findSectionInObject(field_md);
-  hasReflectionSection |= findSectionInObject(assocty);
-  hasReflectionSection |= findSectionInObject(builtin);
-  hasReflectionSection |= findSectionInObject(capture);
-  hasReflectionSection |= findSectionInObject(typeref);
-  hasReflectionSection |= findSectionInObject(reflstr);
+  hasReflectionSection |= findSectionInObject(field_md.str());
+  hasReflectionSection |= findSectionInObject(assocty.str());
+  hasReflectionSection |= findSectionInObject(builtin.str());
+  hasReflectionSection |= findSectionInObject(capture.str());
+  hasReflectionSection |= findSectionInObject(typeref.str());
+  hasReflectionSection |= findSectionInObject(reflstr.str());
   return hasReflectionSection;
 }
 
