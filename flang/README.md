@@ -8,30 +8,30 @@ F18 was subsequently accepted into the LLVM project and rechristened as Flang.
 
 ## Getting Started
 
-Read more about flang in the [documentation directory](documentation).
-Start with the [compiler overview](documentation/Overview.md).
+Read more about flang in the [docs directory](docs).
+Start with the [compiler overview](docs/Overview.md).
 
 To better understand Fortran as a language
 and the specific grammar accepted by flang,
-read [Fortran For C Programmers](documentation/FortranForCProgrammers.md)
+read [Fortran For C Programmers](docs/FortranForCProgrammers.md)
 and
-flang's specifications of the [Fortran grammar](documentation/f2018-grammar.txt)
+flang's specifications of the [Fortran grammar](docs/f2018-grammar.txt)
 and
-the [OpenMP grammar](documentation/OpenMP-4.5-grammar.txt).
+the [OpenMP grammar](docs/OpenMP-4.5-grammar.txt).
 
 Treatment of language extensions is covered
-in [this document](documentation/Extensions.md).
+in [this document](docs/Extensions.md).
 
 To understand the compilers handling of intrinsics,
-see the [discussion of intrinsics](documentation/Intrinsics.md).
+see the [discussion of intrinsics](docs/Intrinsics.md).
 
 To understand how a flang program communicates with libraries at runtime,
-see the discussion of [runtime descriptors](documentation/RuntimeDescriptor.md).
+see the discussion of [runtime descriptors](docs/RuntimeDescriptor.md).
 
 If you're interested in contributing to the compiler,
-read the [style guide](documentation/C++style.md)
+read the [style guide](docs/C++style.md)
 and
-also review [how flang uses modern C++ features](documentation/C++17.md).
+also review [how flang uses modern C++ features](docs/C++17.md).
 
 ## Supported C++ compilers
 
