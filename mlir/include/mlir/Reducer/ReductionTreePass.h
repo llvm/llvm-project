@@ -34,7 +34,7 @@ enum TraversalMode { SinglePath, MultiPath, Concurrent, Backtrack };
 // class.
 class ReductionTreeUtils {
 public:
-  void updateGoldenModule(ModuleOp &golden, ModuleOp reduced);
+  static void updateGoldenModule(ModuleOp &golden, ModuleOp reduced);
 };
 
 /// This class defines the Reduction Tree Pass. It provides a framework to
