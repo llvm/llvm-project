@@ -154,21 +154,15 @@ protected:
 
   void addOperation(AbstractOperation opInfo);
 
-  /// This method is used by derived classes to add their types to the set.
+  /// Register a set of type classes with this dialect.
   template <typename... Args> void addTypes() {
-    (void)std::initializer_list<int>{
-        0, (addType(Args::getTypeID(), AbstractType::get<Args>(*this)), 0)...};
+    (void)std::initializer_list<int>{0, (addType<Args>(), 0)...};
   }
-  void addType(TypeID typeID, AbstractType &&typeInfo);
 
-  /// This method is used by derived classes to add their attributes to the set.
+  /// Register a set of attribute classes with this dialect.
   template <typename... Args> void addAttributes() {
-    (void)std::initializer_list<int>{
-        0,
-        (addAttribute(Args::getTypeID(), AbstractAttribute::get<Args>(*this)),
-         0)...};
+    (void)std::initializer_list<int>{0, (addAttribute<Args>(), 0)...};
   }
-  void addAttribute(TypeID typeID, AbstractAttribute &&attrInfo);
 
   /// Enable support for unregistered operations.
   void allowUnknownOperations(bool allow = true) { unknownOpsAllowed = allow; }
@@ -188,6 +182,22 @@ protected:
 private:
   Dialect(const Dialect &) = delete;
   void operator=(Dialect &) = delete;
+
+  /// Register an attribute instance with this dialect.
+  template <typename T> void addAttribute() {
+    // Add this attribute to the dialect and register it with the uniquer.
+    addAttribute(T::getTypeID(), AbstractAttribute::get<T>(*this));
+    detail::AttributeUniquer::registerAttribute<T>(context);
+  }
+  void addAttribute(TypeID typeID, AbstractAttribute &&attrInfo);
+
+  /// Register a type instance with this dialect.
+  template <typename T> void addType() {
+    // Add this type to the dialect and register it with the uniquer.
+    addType(T::getTypeID(), AbstractType::get<T>(*this));
+    detail::TypeUniquer::registerType<T>(context);
+  }
+  void addType(TypeID typeID, AbstractType &&typeInfo);
 
   /// The namespace of this dialect.
   StringRef name;

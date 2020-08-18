@@ -271,7 +271,7 @@ private:
   /// Mapping between attribute kind and a pair comprised of a base alias name
   /// and a unique list of attributes belonging to this kind sorted by location
   /// seen in the module.
-  llvm::MapVector<unsigned, std::pair<StringRef, std::vector<Attribute>>>
+  llvm::MapVector<TypeID, std::pair<StringRef, std::vector<Attribute>>>
       attrKindToAlias;
 
   /// Set of types known to be used within the module.
@@ -301,13 +301,13 @@ void AliasState::initialize(
   llvm::StringSet<> usedAliases;
 
   // Collect the set of aliases from each dialect.
-  SmallVector<std::pair<unsigned, StringRef>, 8> attributeKindAliases;
+  SmallVector<std::pair<TypeID, StringRef>, 8> attributeKindAliases;
   SmallVector<std::pair<Attribute, StringRef>, 8> attributeAliases;
   SmallVector<std::pair<Type, StringRef>, 16> typeAliases;
 
   // AffineMap/Integer set have specific kind aliases.
-  attributeKindAliases.emplace_back(StandardAttributes::AffineMap, "map");
-  attributeKindAliases.emplace_back(StandardAttributes::IntegerSet, "set");
+  attributeKindAliases.emplace_back(AffineMapAttr::getTypeID(), "map");
+  attributeKindAliases.emplace_back(IntegerSetAttr::getTypeID(), "set");
 
   for (auto &interface : interfaces) {
     interface.getAttributeKindAliases(attributeKindAliases);
@@ -317,7 +317,7 @@ void AliasState::initialize(
 
   // Setup the attribute kind aliases.
   StringRef alias;
-  unsigned attrKind;
+  TypeID attrKind;
   for (auto &attrAliasPair : attributeKindAliases) {
     std::tie(attrKind, alias) = attrAliasPair;
     assert(!alias.empty() && "expected non-empty alias string");
@@ -420,7 +420,7 @@ void AliasState::recordAttributeReference(Attribute attr) {
     return;
 
   // If this attribute kind has an alias, then record one for this attribute.
-  auto alias = attrKindToAlias.find(static_cast<unsigned>(attr.getKind()));
+  auto alias = attrKindToAlias.find(attr.getTypeID());
   if (alias == attrKindToAlias.end())
     return;
   std::pair<StringRef, int> attrAlias(alias->second.first,

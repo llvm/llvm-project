@@ -756,7 +756,7 @@ public:
   /// all attributes of the given kind in the form : <alias>[0-9]+. These
   /// aliases must not contain `.`.
   virtual void getAttributeKindAliases(
-      SmallVectorImpl<std::pair<unsigned, StringRef>> &aliases) const {}
+      SmallVectorImpl<std::pair<TypeID, StringRef>> &aliases) const {}
   /// Hook for defining Attribute aliases. These aliases must not contain `.` or
   /// end with a numeric digit([0-9]+).
   virtual void getAttributeAliases(
