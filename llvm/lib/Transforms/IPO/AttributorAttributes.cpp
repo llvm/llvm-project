@@ -1687,21 +1687,33 @@ struct AANonNullImpl : AANonNull {
     Value &V = getAssociatedValue();
     if (!NullIsDefined &&
         hasAttr({Attribute::NonNull, Attribute::Dereferenceable},
-                /* IgnoreSubsumingPositions */ false, &A))
+                /* IgnoreSubsumingPositions */ false, &A)) {
       indicateOptimisticFixpoint();
-    else if (isa<ConstantPointerNull>(V))
+      return;
+    }
+
+    if (isa<ConstantPointerNull>(V)) {
       indicatePessimisticFixpoint();
-    else
-      AANonNull::initialize(A);
+      return;
+    }
+
+    AANonNull::initialize(A);
 
     bool CanBeNull = true;
-    if (V.getPointerDereferenceableBytes(A.getDataLayout(), CanBeNull))
-      if (!CanBeNull)
+    if (V.getPointerDereferenceableBytes(A.getDataLayout(), CanBeNull)) {
+      if (!CanBeNull) {
         indicateOptimisticFixpoint();
+        return;
+      }
+    }
 
-    if (!getState().isAtFixpoint())
-      if (Instruction *CtxI = getCtxI())
-        followUsesInMBEC(*this, A, getState(), *CtxI);
+    if (isa<GlobalValue>(&getAssociatedValue())) {
+      indicatePessimisticFixpoint();
+      return;
+    }
+
+    if (Instruction *CtxI = getCtxI())
+      followUsesInMBEC(*this, A, getState(), *CtxI);
   }
 
   /// See followUsesInMBEC
@@ -1778,9 +1790,14 @@ struct AANonNullFloating : public AANonNullImpl {
 
 /// NonNull attribute for function return value.
 struct AANonNullReturned final
-    : AAReturnedFromReturnedValues<AANonNull, AANonNullImpl> {
+    : AAReturnedFromReturnedValues<AANonNull, AANonNull> {
   AANonNullReturned(const IRPosition &IRP, Attributor &A)
-      : AAReturnedFromReturnedValues<AANonNull, AANonNullImpl>(IRP, A) {}
+      : AAReturnedFromReturnedValues<AANonNull, AANonNull>(IRP, A) {}
+
+  /// See AbstractAttribute::getAsStr().
+  const std::string getAsStr() const override {
+    return getAssumed() ? "nonnull" : "may-null";
+  }
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(nonnull) }
