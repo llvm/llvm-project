@@ -159,9 +159,6 @@ private:
 namespace {
 struct ToyToLLVMLoweringPass
     : public PassWrapper<ToyToLLVMLoweringPass, OperationPass<ModuleOp>> {
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<LLVM::LLVMDialect, scf::SCFDialect>();
-  }
   void runOnOperation() final;
 };
 } // end anonymous namespace
