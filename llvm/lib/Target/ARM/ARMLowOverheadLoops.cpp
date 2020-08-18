@@ -226,6 +226,7 @@ namespace {
     MachineInstr *Dec = nullptr;
     MachineInstr *End = nullptr;
     MachineInstr *VCTP = nullptr;
+    MachineOperand TPNumElements;
     SmallPtrSet<MachineInstr*, 4> SecondaryVCTPs;
     VPTBlock *CurrentBlock = nullptr;
     SetVector<MachineInstr*> CurrentPredicate;
@@ -239,7 +240,8 @@ namespace {
     LowOverheadLoop(MachineLoop &ML, MachineLoopInfo &MLI,
                     ReachingDefAnalysis &RDA, const TargetRegisterInfo &TRI,
                     const ARMBaseInstrInfo &TII)
-      : ML(ML), MLI(MLI), RDA(RDA), TRI(TRI), TII(TII) {
+        : ML(ML), MLI(MLI), RDA(RDA), TRI(TRI), TII(TII),
+          TPNumElements(MachineOperand::CreateImm(0)) {
       MF = ML.getHeader()->getParent();
       if (auto *MBB = ML.getLoopPreheader())
         Preheader = MBB;
@@ -291,11 +293,10 @@ namespace {
 
     SmallVectorImpl<VPTBlock> &getVPTBlocks() { return VPTBlocks; }
 
-    // Return the loop iteration count, or the number of elements if we're tail
-    // predicating.
-    MachineOperand &getCount() {
-      return IsTailPredicationLegal() ?
-        VCTP->getOperand(1) : Start->getOperand(0);
+    // Return the operand for the loop start instruction. This will be the loop
+    // iteration count, or the number of elements if we're tail predicating.
+    MachineOperand &getLoopStartOperand() {
+      return IsTailPredicationLegal() ? TPNumElements : Start->getOperand(0);
     }
 
     unsigned getStartOpcode() const {
@@ -453,7 +454,8 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   // of the iteration count, to the loop start instruction. The number of
   // elements is provided to the vctp instruction, so we need to check that
   // we can use this register at InsertPt.
-  Register NumElements = VCTP->getOperand(1).getReg();
+  TPNumElements = VCTP->getOperand(1);
+  Register NumElements = TPNumElements.getReg();
 
   // If the register is defined within loop, then we can't perform TP.
   // TODO: Check whether this is just a mov of a register that would be
@@ -466,9 +468,8 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   // The element count register maybe defined after InsertPt, in which case we
   // need to try to move either InsertPt or the def so that the [w|d]lstp can
   // use the value.
-  // TODO: On failing to move an instruction, check if the count is provided by
-  // a mov and whether we can use the mov operand directly.
   MachineBasicBlock *InsertBB = StartInsertPt->getParent();
+
   if (!RDA.isReachingDefLiveOut(StartInsertPt, NumElements)) {
     if (auto *ElemDef = RDA.getLocalLiveOutMIDef(InsertBB, NumElements)) {
       if (RDA.isSafeToMoveForwards(ElemDef, StartInsertPt)) {
@@ -482,9 +483,21 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
                               StartInsertPt);
         LLVM_DEBUG(dbgs() << "ARM Loops: Moved start past: " << *ElemDef);
       } else {
-        LLVM_DEBUG(dbgs() << "ARM Loops: Unable to move element count to loop "
-                   << "start instruction.\n");
-        return false;
+        // If we fail to move an instruction and the element count is provided
+        // by a mov, use the mov operand if it will have the same value at the
+        // insertion point
+        MachineOperand Operand = ElemDef->getOperand(1);
+        if (isMovRegOpcode(ElemDef->getOpcode()) &&
+            RDA.getUniqueReachingMIDef(ElemDef, Operand.getReg()) ==
+                RDA.getUniqueReachingMIDef(StartInsertPt, Operand.getReg())) {
+          TPNumElements = Operand;
+          NumElements = TPNumElements.getReg();
+        } else {
+          LLVM_DEBUG(dbgs()
+                     << "ARM Loops: Unable to move element count to loop "
+                     << "start instruction.\n");
+          return false;
+        }
       }
     }
   }
