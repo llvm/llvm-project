@@ -11361,14 +11361,8 @@ static bool matchShuffleAsVPMOV(ArrayRef<int> Mask, bool SwappedOps,
 //     t51: v8i16 = vector_shuffle<0,2,4,6,12,13,14,15> t41, t21
 //   t18: v2i64 = bitcast t51
 //
-// Without avx512vl, this is lowered to:
-//
-// vpmovqd %zmm0, %ymm0
-// vpshufb {{.*#+}} xmm0 =
-// xmm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero
-//
-// But when avx512vl is available, one can just use a single vpmovdw
-// instruction.
+// One can just use a single vpmovdw instruction, without avx512vl we need to
+// use the zmm variant and extract the lower subvector, padding with zeroes.
 // TODO: Merge with lowerShuffleAsVTRUNC.
 static SDValue lowerShuffleWithVPMOV(const SDLoc &DL, MVT VT, SDValue V1,
                                      SDValue V2, ArrayRef<int> Mask,
@@ -11400,11 +11394,6 @@ static SDValue lowerShuffleWithVPMOV(const SDLoc &DL, MVT VT, SDValue V1,
   SDValue Src = V1.getOperand(0).getOperand(0);
   MVT SrcVT = Src.getSimpleValueType();
 
-  // The vptrunc** instructions truncating 128 bit and 256 bit vectors
-  // are only available with avx512vl.
-  if (!SrcVT.is512BitVector() && !Subtarget.hasVLX())
-    return SDValue();
-
   // Down Convert Word to Byte is only available with avx512bw. The case with
   // 256-bit output doesn't contain a shuffle and is therefore not handled here.
   if (SrcVT.getVectorElementType() == MVT::i16 && VT == MVT::v16i8 &&
@@ -11417,7 +11406,7 @@ static SDValue lowerShuffleWithVPMOV(const SDLoc &DL, MVT VT, SDValue V1,
       !matchShuffleAsVPMOV(Mask, SwappedOps, 4))
     return SDValue();
 
-  return DAG.getNode(X86ISD::VTRUNC, DL, VT, Src);
+  return getAVX512TruncNode(DL, VT, Src, Subtarget, DAG, true);
 }
 
 // Attempt to match binary shuffle patterns as a truncate.
