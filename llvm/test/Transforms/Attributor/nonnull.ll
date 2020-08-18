@@ -1364,5 +1364,36 @@ define void @nonnull_assume_neg(i8* %arg) {
 declare void @use_i8_ptr(i8* nofree nocapture readnone) nounwind
 declare void @use_i8_ptr_ret(i8* nofree nocapture readnone) nounwind willreturn
 
+define i8* @nonnull_function_ptr_1() {
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@nonnull_function_ptr_1()
+; IS__TUNIT____-NEXT:    [[BC:%.*]] = bitcast i8* ()* @nonnull_function_ptr_1 to i8*
+; IS__TUNIT____-NEXT:    ret i8* [[BC]]
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@nonnull_function_ptr_1()
+; IS__CGSCC____-NEXT:    [[BC:%.*]] = bitcast i8* ()* @nonnull_function_ptr_1 to i8*
+; IS__CGSCC____-NEXT:    ret i8* [[BC]]
+;
+  %bc = bitcast i8*()* @nonnull_function_ptr_1 to i8*
+  ret i8* %bc
+}
+
+declare i8* @function_decl()
+define i8* @nonnull_function_ptr_2() {
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@nonnull_function_ptr_2()
+; IS__TUNIT____-NEXT:    [[BC:%.*]] = bitcast i8* ()* @function_decl to i8*
+; IS__TUNIT____-NEXT:    ret i8* [[BC]]
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@nonnull_function_ptr_2()
+; IS__CGSCC____-NEXT:    [[BC:%.*]] = bitcast i8* ()* @function_decl to i8*
+; IS__CGSCC____-NEXT:    ret i8* [[BC]]
+;
+  %bc = bitcast i8*()* @function_decl to i8*
+  ret i8* %bc
+}
+
 attributes #0 = { null_pointer_is_valid }
 attributes #1 = { nounwind willreturn}
