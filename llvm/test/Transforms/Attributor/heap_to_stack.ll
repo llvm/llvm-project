@@ -450,10 +450,11 @@ define i32 @irreducible_cfg(i32 %0) {
 ; IS________OPM-NEXT:    [[TMP14]] = add nsw i32 [[DOT1]], 1
 ; IS________OPM-NEXT:    br label [[TMP8]]
 ; IS________OPM:       15:
-; IS________OPM-NEXT:    [[TMP16:%.*]] = bitcast i32* [[TMP3]] to i8*
-; IS________OPM-NEXT:    call void @free(i8* nocapture [[TMP16]])
-; IS________OPM-NEXT:    [[TMP17:%.*]] = load i32, i32* [[TMP3]], align 4
-; IS________OPM-NEXT:    ret i32 [[TMP17]]
+; IS________OPM-NEXT:    [[TMP16:%.*]] = load i32, i32* [[TMP3]], align 4
+; IS________OPM-NEXT:    [[TMP17:%.*]] = bitcast i32* [[TMP3]] to i8*
+; IS________OPM-NEXT:    call void @free(i8* nocapture [[TMP17]])
+; IS________OPM-NEXT:    [[TMP18:%.*]] = load i32, i32* [[TMP3]], align 4
+; IS________OPM-NEXT:    ret i32 [[TMP18]]
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@irreducible_cfg
 ; IS________NPM-SAME: (i32 [[TMP0:%.*]])

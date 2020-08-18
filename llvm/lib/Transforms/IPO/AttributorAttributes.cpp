@@ -6628,7 +6628,9 @@ struct AAMemoryLocationFunction final : public AAMemoryLocationImpl {
       LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Accessed locations for " << I
                         << ": " << getMemoryLocationsAsStr(MLK) << "\n");
       removeAssumedBits(inverseLocation(MLK, false, false));
-      return true;
+      // Stop once only the valid bit set in the *not assumed location*, thus
+      // once we don't actually exclude any memory locations in the state.
+      return getAssumedNotAccessedLocation() != VALID_STATE;
     };
 
     if (!A.checkForAllReadWriteInstructions(CheckRWInst, *this))
