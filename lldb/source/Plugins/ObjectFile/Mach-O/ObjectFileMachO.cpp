@@ -1628,7 +1628,7 @@ void ObjectFileMachO::ProcessSegmentCommand(const load_command &load_cmd_,
   } else if (unified_section_sp) {
     if (is_dsym && unified_section_sp->GetFileAddress() != load_cmd.vmaddr) {
       // Check to see if the module was read from memory?
-      if (module_sp->GetObjectFile()->GetBaseAddress().IsValid()) {
+      if (module_sp->GetObjectFile()->IsInMemory()) {
         // We have a module that is in memory and needs to have its file
         // address adjusted. We need to do this because when we load a file
         // from memory, its addresses will be slid already, yet the addresses
