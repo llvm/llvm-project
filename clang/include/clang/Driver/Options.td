@@ -903,6 +903,12 @@ def fprofile_exclude_files_EQ : Joined<["-"], "fprofile-exclude-files=">,
 def fprofile_update_EQ : Joined<["-"], "fprofile-update=">,
     Group<f_Group>, Flags<[CC1Option, CoreOption]>, Values<"atomic,prefer-atomic,single">,
     MetaVarName<"<method>">, HelpText<"Set update method of profile counters (atomic,prefer-atomic,single)">;
+def fpseudo_probe_for_profiling : Flag<["-"], "fpseudo-probe-for-profiling">,
+    Group<f_Group>, Flags<[NoXarchOption, CC1Option]>,
+    HelpText<"Emit pseudo probes for sample profiler">;
+def fno_pseudo_probe_for_profiling : Flag<["-"], "fno-pseudo-probe-for-profiling">,
+    Group<f_Group>, Flags<[NoXarchOption, CC1Option]>,
+    HelpText<"Do not emit pseudo probes for sample profiler.">;
 def forder_file_instrumentation : Flag<["-"], "forder-file-instrumentation">,
     Group<f_Group>, Flags<[CC1Option, CoreOption]>,
     HelpText<"Generate instrumented code to collect order file into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;

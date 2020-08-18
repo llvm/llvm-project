@@ -1094,10 +1094,15 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
                         CSAction, CodeGenOpts.DebugInfoForProfiling);
   } else if (!CodeGenOpts.SampleProfileFile.empty())
     // -fprofile-sample-use
+    PGOOpt = PGOOptions(
+        CodeGenOpts.SampleProfileFile, "", CodeGenOpts.ProfileRemappingFile,
+        PGOOptions::SampleUse, PGOOptions::NoCSAction,
+        CodeGenOpts.DebugInfoForProfiling, CodeGenOpts.PseudoProbeForProfiling);
+  else if (CodeGenOpts.PseudoProbeForProfiling)
+    // -fpseudo-probe-for-profiling
     PGOOpt =
-        PGOOptions(CodeGenOpts.SampleProfileFile, "",
-                   CodeGenOpts.ProfileRemappingFile, PGOOptions::SampleUse,
-                   PGOOptions::NoCSAction, CodeGenOpts.DebugInfoForProfiling);
+        PGOOptions("", "", "", PGOOptions::NoAction, PGOOptions::NoCSAction,
+                   CodeGenOpts.DebugInfoForProfiling, true);
   else if (CodeGenOpts.DebugInfoForProfiling)
     // -fdebug-info-for-profiling
     PGOOpt = PGOOptions("", "", "", PGOOptions::NoAction,

@@ -5636,6 +5636,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
   Args.AddLastArg(CmdArgs, options::OPT_fprofile_remapping_file_EQ);
 
+  if (Args.hasFlag(options::OPT_fpseudo_probe_for_profiling,
+                   options::OPT_fno_pseudo_probe_for_profiling, false))
+    CmdArgs.push_back("-fpseudo-probe-for-profiling");
+
   RenderBuiltinOptions(TC, RawTriple, Args, CmdArgs);
 
   if (!Args.hasFlag(options::OPT_fassume_sane_operator_new,
