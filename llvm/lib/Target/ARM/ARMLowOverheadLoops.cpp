@@ -1342,7 +1342,7 @@ MachineInstr* ARMLowOverheadLoops::ExpandLoopStart(LowOverheadLoop &LoLoop) {
   MachineBasicBlock *MBB = InsertPt->getParent();
   bool IsDo = Start->getOpcode() == ARM::t2DoLoopStart;
   unsigned Opc = LoLoop.getStartOpcode();
-  MachineOperand &Count = LoLoop.getCount();
+  MachineOperand &Count = LoLoop.getLoopStartOperand();
 
   MachineInstrBuilder MIB =
     BuildMI(*MBB, InsertPt, InsertPt->getDebugLoc(), TII->get(Opc));
