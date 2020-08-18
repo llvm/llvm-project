@@ -43,7 +43,7 @@ class SwiftCompletionTest(PExpectTest):
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
-    @skipUnlessDarwin
+    @skipIf(oslist=['windows'])
     def test_lldb_command_completion(self):
 
         self.launch(extra_args=["--repl"], executable=None, dimensions=(100,500))

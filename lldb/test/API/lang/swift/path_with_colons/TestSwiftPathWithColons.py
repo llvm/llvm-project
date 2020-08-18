@@ -28,7 +28,7 @@ class TestSwiftPathWithColon(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipUnlessDarwin
+    @skipIf(oslist=['windows'])
     @skipIfiOSSimulator
     @swiftTest
     def test_path_with_colon(self):
