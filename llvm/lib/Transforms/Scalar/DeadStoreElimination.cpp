@@ -1762,11 +1762,11 @@ struct DSEState {
       if (CB->onlyAccessesInaccessibleMemory())
         return false;
 
-    ModRefInfo MR = BatchAA.getModRefInfo(UseInst, DefLoc);
-    // If necessary, perform additional analysis.
-    if (isRefSet(MR))
-      MR = AA.callCapturesBefore(UseInst, DefLoc, &DT);
-    return isRefSet(MR);
+    // NOTE: For calls, the number of stores removed could be slightly improved
+    // by using AA.callCapturesBefore(UseInst, DefLoc, &DT), but that showed to
+    // be expensive compared to the benefits in practice. For now, avoid more
+    // expensive analysis to limit compile-time.
+    return isRefSet(BatchAA.getModRefInfo(UseInst, DefLoc));
   }
 
   // Find a MemoryDef writing to \p DefLoc and dominating \p Current, with no
