@@ -652,6 +652,16 @@ TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
     return nullptr;
   }
 
+  // Check the TuneCPU name if specified.
+  if (!Opts->TuneCPU.empty() && !Target->isValidCPUName(Opts->TuneCPU)) {
+    Diags.Report(diag::err_target_unknown_cpu) << Opts->TuneCPU;
+    SmallVector<StringRef, 32> ValidList;
+    Target->fillValidCPUList(ValidList);
+    if (!ValidList.empty())
+      Diags.Report(diag::note_valid_options) << llvm::join(ValidList, ", ");
+    return nullptr;
+  }
+
   // Set the target ABI if specified.
   if (!Opts->ABI.empty() && !Target->setABI(Opts->ABI)) {
     Diags.Report(diag::err_target_unknown_abi) << Opts->ABI;
