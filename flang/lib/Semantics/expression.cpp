@@ -98,11 +98,10 @@ static std::optional<DynamicTypeWithLength> AnalyzeTypeSpec(
 class ArgumentAnalyzer {
 public:
   explicit ArgumentAnalyzer(ExpressionAnalyzer &context)
-      : context_{context}, allowAssumedType_{false} {}
+      : context_{context}, isProcedureCall_{false} {}
   ArgumentAnalyzer(ExpressionAnalyzer &context, parser::CharBlock source,
-      bool allowAssumedType = false)
-      : context_{context}, source_{source}, allowAssumedType_{
-                                                allowAssumedType} {}
+      bool isProcedureCall = false)
+      : context_{context}, source_{source}, isProcedureCall_{isProcedureCall} {}
   bool fatalErrors() const { return fatalErrors_; }
   ActualArguments &&GetActuals() {
     CHECK(!fatalErrors_);
@@ -167,7 +166,7 @@ private:
   ActualArguments actuals_;
   parser::CharBlock source_;
   bool fatalErrors_{false};
-  const bool allowAssumedType_;
+  const bool isProcedureCall_; // false for user-defined op or assignment
   const Symbol *sawDefinedOp_{nullptr};
 };
 
@@ -2003,7 +2002,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
     std::optional<parser::StructureConstructor> *structureConstructor) {
   const parser::Call &call{funcRef.v};
   auto restorer{GetContextualMessages().SetLocation(call.source)};
-  ArgumentAnalyzer analyzer{*this, call.source, true /* allowAssumedType */};
+  ArgumentAnalyzer analyzer{*this, call.source, true /* isProcedureCall */};
   for (const auto &arg : std::get<std::list<parser::ActualArgSpec>>(call.t)) {
     analyzer.Analyze(arg, false /* not subroutine call */);
   }
@@ -2042,7 +2041,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
 void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
   const parser::Call &call{callStmt.v};
   auto restorer{GetContextualMessages().SetLocation(call.source)};
-  ArgumentAnalyzer analyzer{*this, call.source, true /* allowAssumedType */};
+  ArgumentAnalyzer analyzer{*this, call.source, true /* isProcedureCall */};
   const auto &actualArgList{std::get<std::list<parser::ActualArgSpec>>(call.t)};
   for (const auto &arg : actualArgList) {
     analyzer.Analyze(arg, true /* is subroutine call */);
@@ -2982,7 +2981,7 @@ std::optional<ActualArgument> ArgumentAnalyzer::AnalyzeExpr(
   source_.ExtendToCover(expr.source);
   if (const Symbol * assumedTypeDummy{AssumedTypeDummy(expr)}) {
     expr.typedExpr.Reset(new GenericExprWrapper{}, GenericExprWrapper::Deleter);
-    if (allowAssumedType_) {
+    if (isProcedureCall_) {
       return ActualArgument{ActualArgument::AssumedType{*assumedTypeDummy}};
     } else {
       context_.SayAt(expr.source,
@@ -2990,6 +2989,16 @@ std::optional<ActualArgument> ArgumentAnalyzer::AnalyzeExpr(
       return std::nullopt;
     }
   } else if (MaybeExpr argExpr{context_.Analyze(expr)}) {
+    if (!isProcedureCall_ && IsProcedure(*argExpr)) {
+      if (IsFunction(*argExpr)) {
+        context_.SayAt(
+            expr.source, "Function call must have argument list"_err_en_US);
+      } else {
+        context_.SayAt(
+            expr.source, "Subroutine name is not allowed here"_err_en_US);
+      }
+      return std::nullopt;
+    }
     return ActualArgument{context_.Fold(std::move(*argExpr))};
   } else {
     return std::nullopt;

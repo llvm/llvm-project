@@ -132,3 +132,12 @@ subroutine s10(a, n)
   real a(n)
   a(1:n) = 0.0  ! should not get a second error here
 end
+
+subroutine s11
+  intrinsic :: sin
+  real :: a
+  !ERROR: Function call must have argument list
+  a = sin
+  !ERROR: Subroutine name is not allowed here
+  a = s11
+end
