@@ -397,7 +397,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
 }
 
 DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella)
-    : InputFile(DylibKind, MemoryBufferRef()) {
+    : InputFile(DylibKind, interface) {
   if (umbrella == nullptr)
     umbrella = this;
 
