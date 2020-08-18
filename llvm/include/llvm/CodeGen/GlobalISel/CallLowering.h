@@ -208,6 +208,11 @@ protected:
     return static_cast<const XXXTargetLowering *>(TLI);
   }
 
+  /// \returns Flags corresponding to the attributes on the \p ArgIdx-th
+  /// parameter of \p Call.
+  ISD::ArgFlagsTy getAttributesForArgIdx(const CallBase &Call,
+                                         unsigned ArgIdx) const;
+
   template <typename FuncInfoTy>
   void setArgFlags(ArgInfo &Arg, unsigned OpIdx, const DataLayout &DL,
                    const FuncInfoTy &FuncInfo) const;

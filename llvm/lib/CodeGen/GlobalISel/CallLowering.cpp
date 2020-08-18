@@ -30,6 +30,34 @@ using namespace llvm;
 
 void CallLowering::anchor() {}
 
+ISD::ArgFlagsTy CallLowering::getAttributesForArgIdx(const CallBase &Call,
+                                                     unsigned ArgIdx) const {
+  ISD::ArgFlagsTy Flags;
+  if (Call.paramHasAttr(ArgIdx, Attribute::SExt))
+    Flags.setSExt();
+  if (Call.paramHasAttr(ArgIdx, Attribute::ZExt))
+    Flags.setZExt();
+  if (Call.paramHasAttr(ArgIdx, Attribute::InReg))
+    Flags.setInReg();
+  if (Call.paramHasAttr(ArgIdx, Attribute::StructRet))
+    Flags.setSRet();
+  if (Call.paramHasAttr(ArgIdx, Attribute::Nest))
+    Flags.setNest();
+  if (Call.paramHasAttr(ArgIdx, Attribute::ByVal))
+    Flags.setByVal();
+  if (Call.paramHasAttr(ArgIdx, Attribute::Preallocated))
+    Flags.setPreallocated();
+  if (Call.paramHasAttr(ArgIdx, Attribute::InAlloca))
+    Flags.setInAlloca();
+  if (Call.paramHasAttr(ArgIdx, Attribute::Returned))
+    Flags.setReturned();
+  if (Call.paramHasAttr(ArgIdx, Attribute::SwiftSelf))
+    Flags.setSwiftSelf();
+  if (Call.paramHasAttr(ArgIdx, Attribute::SwiftError))
+    Flags.setSwiftError();
+  return Flags;
+}
+
 bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
                              ArrayRef<Register> ResRegs,
                              ArrayRef<ArrayRef<Register>> ArgRegs,
@@ -44,7 +72,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   unsigned i = 0;
   unsigned NumFixedArgs = CB.getFunctionType()->getNumParams();
   for (auto &Arg : CB.args()) {
-    ArgInfo OrigArg{ArgRegs[i], Arg->getType(), ISD::ArgFlagsTy{},
+    ArgInfo OrigArg{ArgRegs[i], Arg->getType(), getAttributesForArgIdx(CB, i),
                     i < NumFixedArgs};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CB);
     Info.OrigArgs.push_back(OrigArg);
