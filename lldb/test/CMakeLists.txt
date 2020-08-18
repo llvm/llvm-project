@@ -77,6 +77,7 @@ if(NOT LLDB_BUILT_STANDALONE)
     dsymutil
     llvm-strip
     not
+    split-file
     yaml2obj
   )
 endif()
