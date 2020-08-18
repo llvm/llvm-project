@@ -2058,41 +2058,68 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     }
   }
 
-  // Now if the user fully specified the triple, let that override the one
-  // we got from executable's options:
-  if (target.GetArchitecture().IsFullySpecifiedTriple()) {
-    swift_ast_sp->SetTriple(target.GetArchitecture().GetTriple());
-  } else {
-    bool set_triple = false;
-    PlatformSP platform_sp(target.GetPlatform());
-    llvm::Triple target_triple = target.GetArchitecture().GetTriple();
-    if (platform_sp && !target_triple.hasEnvironment()) {
-      llvm::VersionTuple version =
-          platform_sp->GetOSVersion(target.GetProcessSP().get());
-      std::string buffer;
-      llvm::raw_string_ostream(buffer)
-          << target_triple.getArchName() << '-' << target_triple.getVendorName()
-          << '-' << llvm::Triple::getOSTypeName(target_triple.getOS())
-          << version.getAsString();
-      swift_ast_sp->SetTriple(llvm::Triple(buffer));
-      set_triple = true;
-    }
-
-    if (!set_triple) {
+  {
+    auto get_executable_triple = [&]() -> llvm::Triple {
+      if (!exe_module_sp)
+        return {};
       auto type_system_or_err =
           exe_module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
       if (!type_system_or_err) {
         llvm::consumeError(type_system_or_err.takeError());
         return {};
       }
+      auto *exe_ast_ctx =
+          llvm::dyn_cast_or_null<SwiftASTContext>(&type_system_or_err.get());
+      if (!exe_ast_ctx)
+        return {};
+      return exe_ast_ctx->GetLanguageOptions().Target;
+    };
 
-      if (ModuleSP exe_module_sp = target.GetExecutableModule()) {
-        auto *exe_swift_ctx =
-            llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
-        if (exe_swift_ctx)
-          swift_ast_sp->SetTriple(exe_swift_ctx->GetLanguageOptions().Target);
+    llvm::Triple computed_triple;
+    llvm::Triple target_triple = target.GetArchitecture().GetTriple();
+
+    if (target.GetArchitecture().IsFullySpecifiedTriple()) {
+      // If a fully specified triple was passed in, for example
+      // through CreateTargetWithFileAndTargetTriple(), prefer that.
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Fully specified target triple %s.",
+                 target_triple.str().c_str());
+      computed_triple = target_triple;
+    } else {
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Underspecified target triple %s.",
+                 target_triple.str().c_str());
+      PlatformSP platform_sp(target.GetPlatform());
+      if (platform_sp && !target_triple.hasEnvironment()) {
+        llvm::VersionTuple version =
+            platform_sp->GetOSVersion(target.GetProcessSP().get());
+        std::string buffer;
+        llvm::raw_string_ostream(buffer)
+            << target_triple.getArchName() << '-'
+            << target_triple.getVendorName() << '-'
+            << llvm::Triple::getOSTypeName(target_triple.getOS())
+            << version.getAsString();
+        computed_triple = llvm::Triple(buffer);
+      } else {
+        computed_triple = get_executable_triple();
       }
     }
+
+    if (computed_triple.getOS() == llvm::Triple::MacOSX) {
+      // Handle the case where an apparent macOS binary has been
+      // force-loaded as a macCatalyst process. The Xcode test
+      // runner works this way.
+      llvm::Triple exe_triple = get_executable_triple();
+      if (exe_triple.getOS() == llvm::Triple::IOS &&
+          exe_triple.getEnvironment() == llvm::Triple::MacABI) {
+        LOG_PRINTF(LIBLLDB_LOG_TYPES, "Adjusting triple a macCatalyst.");
+        computed_triple.setOSAndEnvironmentName(
+            exe_triple.getOSAndEnvironmentName());
+      }
+    }
+    if (computed_triple == llvm::Triple()) {
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Failed to compute triple.");
+      return {};
+    }
+    swift_ast_sp->SetTriple(computed_triple);
   }
 
   llvm::Triple triple = swift_ast_sp->GetTriple();
@@ -2270,7 +2297,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   }
 
   return swift_ast_sp;
-}
+  }
 
 void SwiftASTContext::EnumerateSupportedLanguages(
     std::set<lldb::LanguageType> &languages_for_types,
