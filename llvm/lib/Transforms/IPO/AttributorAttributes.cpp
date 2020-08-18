@@ -2017,10 +2017,9 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
         if (idx >= Callee->arg_size())
           break;
         Value *ArgVal = CB.getArgOperand(idx);
-        if (!ArgVal)
+        if (!ArgVal || !ArgVal->getType()->isPointerTy())
           continue;
-        IRPosition CalleeArgumentIRP =
-            IRPosition::argument(*Callee->getArg(idx));
+        IRPosition CalleeArgumentIRP = IRPosition::callsite_argument(CB, idx);
         if (!CalleeArgumentIRP.hasAttr({Attribute::NoUndef}))
           continue;
         auto &NonNullAA = A.getAAFor<AANonNull>(*this, CalleeArgumentIRP);
@@ -2068,10 +2067,12 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
           if (isa<UndefValue>(V)) {
             FoundUB = true;
           } else {
-            auto &NonNullAA = A.getAAFor<AANonNull>(
-                *this, IRPosition::returned(*getAnchorScope()));
-            if (NonNullAA.isKnownNonNull() && isa<ConstantPointerNull>(V))
-              FoundUB = true;
+            if (isa<ConstantPointerNull>(V)) {
+              auto &NonNullAA = A.getAAFor<AANonNull>(
+                  *this, IRPosition::returned(*getAnchorScope()));
+              if (NonNullAA.isKnownNonNull())
+                FoundUB = true;
+            }
           }
 
           if (FoundUB)
