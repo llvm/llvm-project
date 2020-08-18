@@ -434,10 +434,8 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCase(EF_AMDGPU_XNACK);
     BCase(EF_AMDGPU_SRAM_ECC);
     break;
-  case ELF::EM_X86_64:
-    break;
   default:
-    llvm_unreachable("Unsupported architecture");
+    break;
   }
 #undef BCase
 #undef BCaseMask
