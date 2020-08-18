@@ -23,7 +23,6 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def ROCDL_Dialect : Dialect {
   let name = "rocdl";
   let cppNamespace = "ROCDL";
-  let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
 //===----------------------------------------------------------------------===//

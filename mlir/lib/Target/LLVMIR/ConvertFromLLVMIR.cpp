@@ -836,7 +836,6 @@ LogicalResult Importer::processBasicBlock(llvm::BasicBlock *bb, Block *block) {
 OwningModuleRef
 mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
                               MLIRContext *context) {
-  context->loadDialect<LLVMDialect>();
   OwningModuleRef module(ModuleOp::create(
       FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
 

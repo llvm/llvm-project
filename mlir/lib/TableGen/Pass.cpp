@@ -69,8 +69,6 @@ Pass::Pass(const llvm::Record *def) : def(def) {
     options.push_back(PassOption(init));
   for (auto *init : def->getValueAsListOfDefs("statistics"))
     statistics.push_back(PassStatistic(init));
-  for (StringRef dialect : def->getValueAsListOfStrings("dependentDialects"))
-    dependentDialects.push_back(dialect);
 }
 
 StringRef Pass::getArgument() const {
@@ -89,9 +87,6 @@ StringRef Pass::getDescription() const {
 
 StringRef Pass::getConstructor() const {
   return def->getValueAsString("constructor");
-}
-ArrayRef<StringRef> Pass::getDependentDialects() const {
-  return dependentDialects;
 }
 
 ArrayRef<PassOption> Pass::getOptions() const { return options; }
