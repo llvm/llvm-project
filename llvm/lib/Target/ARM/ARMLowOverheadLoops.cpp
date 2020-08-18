@@ -782,7 +782,7 @@ bool LowOverheadLoop::ValidateLiveOuts() {
   // the false lanes are zeroed and here we're trying to track that those false
   // lanes remain zero, or where they change, the differences are masked away
   // by their user(s).
-  // All MVE loads and stores have to be predicated, so we know that any load
+  // All MVE stores have to be predicated, so we know that any predicate load
   // operands, or stored results are equivalent already. Other explicitly
   // predicated instructions will perform the same operation in the original
   // loop and the tail-predicated form too. Because of this, we can insert
@@ -1038,8 +1038,8 @@ bool LowOverheadLoop::ValidateMVEInst(MachineInstr* MI) {
   }
 
   // If the instruction is already explicitly predicated, then the conversion
-  // will be fine, but ensure that all memory operations are predicated.
-  return !IsUse && MI->mayLoadOrStore() ? false : true;
+  // will be fine, but ensure that all store operations are predicated.
+  return !IsUse && MI->mayStore() ? false : true;
 }
 
 bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &mf) {
