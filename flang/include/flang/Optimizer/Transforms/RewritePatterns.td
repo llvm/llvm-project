@@ -17,18 +17,29 @@
 include "mlir/IR/OpBase.td"
 include "flang/Optimizer/Dialect/FIROps.td"
 
-def TypesAreIdentical : Constraint<CPred<"$0.getType() == $1.getType()">>;
+def IdenticalTypePred : Constraint<CPred<"$0.getType() == $1.getType()">>;
+def IntegerTypePred : Constraint<CPred<"fir::isa_integer($0.getType())">>;
 
-def ConvertConvertOptPattern : Pat<(fir_ConvertOp (fir_ConvertOp $arg)),
-                                   (fir_ConvertOp $arg)>;
+def SmallerWidthPred
+    : Constraint<CPred<"$0.getType().getIntOrFloatBitWidth() < $1.getType().getIntOrFloatBitWidth()">>;
 
+def ConvertConvertOptPattern
+    : Pat<(fir_ConvertOp (fir_ConvertOp $arg)),
+          (fir_ConvertOp $arg),
+          [(IntegerTypePred $arg)]>;
 
-def RedundantConvertOptPattern : Pat<(fir_ConvertOp:$res $arg),
-                                     (replaceWithValue $arg),
-                                     [(TypesAreIdentical $res, $arg)]>;
+def RedundantConvertOptPattern
+    : Pat<(fir_ConvertOp:$res $arg),
+          (replaceWithValue $arg),
+          [(IdenticalTypePred $res, $arg)
+          ,(IntegerTypePred $arg)]>;
 
-def CombineConvertOptPattern : Pat<(fir_ConvertOp:$res (fir_ConvertOp $arg)),
-                                     (replaceWithValue $arg),
-                                     [(TypesAreIdentical $res, $arg)]>;
+def CombineConvertOptPattern
+    : Pat<(fir_ConvertOp:$res(fir_ConvertOp:$irm $arg)),
+          (replaceWithValue $arg),
+          [(IdenticalTypePred $res, $arg)
+          ,(IntegerTypePred $arg)
+          ,(IntegerTypePred $irm)
+          ,(SmallerWidthPred $arg, $irm)]>;
 
 #endif // FIR_REWRITE_PATTERNS
