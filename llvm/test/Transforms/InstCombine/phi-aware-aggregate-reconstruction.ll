@@ -420,3 +420,60 @@ end:
   %i8 = insertvalue { i32, i32 } %i7, i32 %i3, 1
   ret { i32, i32 } %i8
 }
+
+; Most basic test - diamond structure, but with a switch, which results in multiple duplicate predecessors
+define { i32, i32 } @test8({ i32, i32 } %agg_left, { i32, i32 } %agg_right, i1 %c, i32 %val_left, i32 %val_right) {
+; CHECK-LABEL: @test8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    switch i32 [[VAL_LEFT:%.*]], label [[IMPOSSIBLE:%.*]] [
+; CHECK-NEXT:    i32 -42, label [[END:%.*]]
+; CHECK-NEXT:    i32 42, label [[END]]
+; CHECK-NEXT:    ]
+; CHECK:       right:
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    switch i32 [[VAL_RIGHT:%.*]], label [[IMPOSSIBLE]] [
+; CHECK-NEXT:    i32 42, label [[END]]
+; CHECK-NEXT:    i32 -42, label [[END]]
+; CHECK-NEXT:    ]
+; CHECK:       impossible:
+; CHECK-NEXT:    unreachable
+; CHECK:       end:
+; CHECK-NEXT:    [[I8_MERGED:%.*]] = phi { i32, i32 } [ [[AGG_RIGHT:%.*]], [[RIGHT]] ], [ [[AGG_RIGHT]], [[RIGHT]] ], [ [[AGG_LEFT:%.*]], [[LEFT]] ], [ [[AGG_LEFT]], [[LEFT]] ]
+; CHECK-NEXT:    call void @baz()
+; CHECK-NEXT:    ret { i32, i32 } [[I8_MERGED]]
+;
+entry:
+  br i1 %c, label %left, label %right
+
+left:
+  %i0 = extractvalue { i32, i32 } %agg_left, 0
+  %i2 = extractvalue { i32, i32 } %agg_left, 1
+  call void @foo()
+  switch i32 %val_left, label %impossible [
+  i32 -42, label %end
+  i32 42, label %end
+  ]
+
+right:
+  %i3 = extractvalue { i32, i32 } %agg_right, 0
+  %i4 = extractvalue { i32, i32 } %agg_right, 1
+  call void @bar()
+  switch i32 %val_right, label %impossible [
+  i32 42, label %end
+  i32 -42, label %end
+  ]
+
+impossible:
+  unreachable
+
+end:
+  %i5 = phi i32 [ %i0, %left ], [ %i0, %left ], [ %i3, %right ], [ %i3, %right ]
+  %i6 = phi i32 [ %i2, %left ], [ %i2, %left ], [ %i4, %right ], [ %i4, %right ]
+  call void @baz()
+  %i7 = insertvalue { i32, i32 } undef, i32 %i5, 0
+  %i8 = insertvalue { i32, i32 } %i7, i32 %i6, 1
+  ret { i32, i32 } %i8
+}
