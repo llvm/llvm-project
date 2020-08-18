@@ -10,11 +10,10 @@
 
 --- !ELF
 FileHeader:
-  Class:     ELFCLASS64
-  Data:      ELFDATA2LSB
-  OSABI:     ELFOSABI_GNU
-  Type:      ET_REL
-  Machine:   EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  OSABI: ELFOSABI_GNU
+  Type:  ET_REL
 Symbols:
   - Name:    foo
     Type:    STT_OBJECT

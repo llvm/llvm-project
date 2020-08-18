@@ -122,11 +122,10 @@
 
 --- !ELF
 FileHeader:
-  Class:    ELFCLASS64
-  Data:     ELFDATA2LSB
-  Type:     ET_REL
-  Machine:  EM_X86_64
-  Flags:    []
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  Flags: []
 Sections:
   - Name:  allflags
     Type:  SHT_PROGBITS
