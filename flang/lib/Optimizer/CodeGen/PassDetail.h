@@ -9,6 +9,7 @@
 #ifndef OPTMIZER_CODEGEN_PASSDETAIL_H
 #define OPTMIZER_CODEGEN_PASSDETAIL_H
 
+#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
 

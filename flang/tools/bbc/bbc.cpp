@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 ///
 /// \file
 /// This is a tool for translating Fortran sources to the FIR dialect of MLIR.
@@ -19,6 +23,7 @@
 #include "flang/Lower/Support/Verifier.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/OptPasses.h"
+#include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "flang/Parser/characters.h"
@@ -137,7 +142,10 @@ static void printModule(mlir::ModuleOp mlirModule, llvm::raw_ostream &out) {
   out << '\n';
 }
 
-// Convert Fortran input to MLIR (target is FIR dialect)
+//===----------------------------------------------------------------------===//
+// Translate Fortran input to FIR, a dialect of MLIR.
+//===----------------------------------------------------------------------===//
+
 static mlir::LogicalResult convertFortranSourceToMLIR(
     std::string path, Fortran::parser::Options options,
     const ProgramName &programPrefix,
@@ -211,13 +219,18 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     return mlir::failure();
   }
 
-  // MLIR+FIR
+  // translate to FIR dialect of MLIR
+  llvm::Triple triple(fir::determineTargetTriple(targetTriple));
   fir::NameUniquer nameUniquer;
   auto burnside = Fortran::lower::LoweringBridge::create(
       semanticsContext.defaultKinds(), semanticsContext.intrinsics(),
       parsing.cooked());
   burnside.lower(parseTree, nameUniquer, semanticsContext);
   mlir::ModuleOp mlirModule = burnside.getModule();
+  fir::KindMapping kindMap(mlirModule.getContext());
+  fir::setTargetTriple(mlirModule, triple);
+  fir::setNameUniquer(mlirModule, nameUniquer);
+  fir::setKindMapping(mlirModule, kindMap);
   std::error_code ec;
   std::string outputName = outputFilename;
   if (!outputName.size())
@@ -308,9 +321,8 @@ int main(int argc, char **argv) {
   if (includeDirs.size() == 0)
     includeDirs.push_back(".");
 
-  if (!intrinsicModuleDir.empty()) {
+  if (!intrinsicModuleDir.empty())
     includeDirs.insert(includeDirs.begin(), intrinsicModuleDir);
-  }
 
   Fortran::parser::Options options;
   options.predefinitions.emplace_back("__F18", "1");

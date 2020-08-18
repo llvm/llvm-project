@@ -29,7 +29,7 @@ TEST(RTBuilderTest, ComplexRuntimeInterface) {
   auto c99_cacosf_funcTy = c99_cacosf_signature.cast<mlir::FunctionType>();
   EXPECT_EQ(c99_cacosf_funcTy.getNumInputs(), 1u);
   EXPECT_EQ(c99_cacosf_funcTy.getNumResults(), 1u);
-  auto cplx_ty = fir::CplxType::get(&ctx, 4);
+  auto cplx_ty = fir::ComplexType::get(&ctx, 4);
   EXPECT_EQ(c99_cacosf_funcTy.getInput(0), cplx_ty);
   EXPECT_EQ(c99_cacosf_funcTy.getResult(0), cplx_ty);
 }

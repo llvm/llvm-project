@@ -15,6 +15,7 @@ add_flang_library(FIROptimizer
 
   CodeGen/CodeGen.cpp
   CodeGen/PreCGRewrite.cpp
+  CodeGen/Target.cpp
 
   Transforms/ControlFlowConverter.cpp
   Transforms/CSE.cpp

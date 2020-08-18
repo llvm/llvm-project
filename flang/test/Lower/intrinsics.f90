@@ -13,7 +13,7 @@ end subroutine
 ! CHECK-LABEL: abs_testr
 subroutine abs_testr(a, b)
   real :: a, b
-  ! CHECK: call @llvm.fabs.f32
+  ! CHECK: fir.call @llvm.fabs.f32
   b = abs(a)
 end subroutine
 
@@ -23,7 +23,7 @@ subroutine abs_testz(a, b)
   real :: b
   ! CHECK: fir.extract_value
   ! CHECK: fir.extract_value
-  ! CHECK: call @{{.*}}hypot
+  ! CHECK: fir.call @{{.*}}hypot
   b = abs(a)
 end subroutine
 
@@ -40,7 +40,7 @@ end subroutine
 ! CHECK-LABEL: aint_test
 subroutine aint_test(a, b)
   real :: a, b
-  ! CHECK: call @llvm.trunc.f32
+  ! CHECK: fir.call @llvm.trunc.f32
   b = aint(a)
 end subroutine
 
@@ -48,7 +48,7 @@ end subroutine
 ! CHECK-LABEL: anint_test
 subroutine anint_test(a, b)
   real :: a, b
-  ! CHECK: call @llvm.round.f32
+  ! CHECK: fir.call @llvm.round.f32
   b = anint(a)
 end subroutine
 
@@ -106,7 +106,7 @@ subroutine ceiling_test1(i, a)
   integer :: i
   real :: a
   i = ceiling(a)
-  ! CHECK: %[[f:.*]] = call @llvm.ceil.f32
+  ! CHECK: %[[f:.*]] = fir.call @llvm.ceil.f32
   ! CHECK: fir.convert %[[f]] : (f32) -> i32
 end subroutine
 ! CHECK-LABEL: ceiling_test2
@@ -114,7 +114,7 @@ subroutine ceiling_test2(i, a)
   integer(8) :: i
   real :: a
   i = ceiling(a, 8)
-  ! CHECK: %[[f:.*]] = call @llvm.ceil.f32
+  ! CHECK: %[[f:.*]] = fir.call @llvm.ceil.f32
   ! CHECK: fir.convert %[[f]] : (f32) -> i64
 end subroutine
 
@@ -135,7 +135,7 @@ subroutine floor_test1(i, a)
   integer :: i
   real :: a
   i = floor(a)
-  ! CHECK: %[[f:.*]] = call @llvm.floor.f32
+  ! CHECK: %[[f:.*]] = fir.call @llvm.floor.f32
   ! CHECK: fir.convert %[[f]] : (f32) -> i32
 end subroutine
 ! CHECK-LABEL: floor_test2
@@ -143,7 +143,7 @@ subroutine floor_test2(i, a)
   integer(8) :: i
   real :: a
   i = floor(a, 8)
-  ! CHECK: %[[f:.*]] = call @llvm.floor.f32
+  ! CHECK: %[[f:.*]] = fir.call @llvm.floor.f32
   ! CHECK: fir.convert %[[f]] : (f32) -> i64
 end subroutine
 
@@ -242,14 +242,14 @@ subroutine nint_test1(i, a)
   integer :: i
   real :: a
   i = nint(a)
-  ! CHECK: call @llvm.lround.i32.f32
+  ! CHECK: fir.call @llvm.lround.i32.f32
 end subroutine
 ! CHECK-LABEL: nint_test2
 subroutine nint_test2(i, a)
   integer(8) :: i
   real(8) :: a
   i = nint(a, 8)
-  ! CHECK: call @llvm.lround.i64.f64
+  ! CHECK: fir.call @llvm.lround.i64.f64
 end subroutine
 
 
@@ -270,7 +270,7 @@ end subroutine
 ! CHECK-LABEL: sign_testr
 subroutine sign_testr(a, b, c)
   real a, b, c
-  ! CHECK-DAG: call {{.*}}fabs
+  ! CHECK-DAG: fir.call {{.*}}fabs
   ! CHECK-DAG: fir.negf
   ! CHECK-DAG: fir.cmpf "olt"
   ! CHECK: select
@@ -281,6 +281,6 @@ end subroutine
 ! CHECK-LABEL: sqrt_testr
 subroutine sqrt_testr(a, b)
   real :: a, b
-  ! CHECK: call {{.*}}sqrt
+  ! CHECK: fir.call {{.*}}sqrt
   b = sqrt(a)
 end subroutine

@@ -92,7 +92,7 @@ integer function test_stmt_character(c, j)
    func(argc, argj) = len_trim(argc, 4) + argj
    !CHECK-DAG: %[[j:.*]] = fir.load %arg1
    !CHECK-DAG: %[[c4:.*]] = constant 4 :
-   !CHECK-DAG: %[[len_trim:.*]] = call @fir.len_trim.i32.bc1.i32(%[[c]], %[[c4]])
+   !CHECK-DAG: %[[len_trim:.*]] = fir.call @fir.len_trim.i32.bc1.i32(%[[c]], %[[c4]])
    !CHECK: addi %[[len_trim]], %[[j]]
    test_stmt_character = func(c, j)
 end function  
@@ -101,7 +101,7 @@ end function
 ! CHECK-LABEL: @_QPbug247
 subroutine bug247(r)
   I(R) = R
-  ! CHECK: call {{.*}}OutputInteger
+  ! CHECK: fir.call {{.*}}OutputInteger
   PRINT *, I(2.5)
-  ! CHECK: call {{.*}}EndIo
+  ! CHECK: fir.call {{.*}}EndIo
 END subroutine bug247

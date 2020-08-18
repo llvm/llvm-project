@@ -14,7 +14,7 @@
 ! CHECK-LABEL: func @_QPpass_foo() {
 subroutine pass_foo()
   external :: foo
-  ! CHECK: %[[f:.*]] = constant @_QPfoo
+  ! CHECK: %[[f:.*]] = fir.address_of(@_QPfoo)
   ! CHECK: fir.convert %[[f]] : ((!fir.ref<!fir.array<2x5xi32>>) -> ()) -> (() -> ())
   call bar(foo)
 end subroutine
@@ -42,7 +42,7 @@ end subroutine
 ! CHECK-LABEL: func @_QPpass_foo2() {
 subroutine pass_foo2()
   external :: foo2
-  ! CHECK: %[[f:.*]] = constant @_QPfoo2
+  ! CHECK: %[[f:.*]] = fir.address_of(@_QPfoo2)
   ! CHECK: fir.convert %[[f]] : ((!fir.ref<!fir.array<2x5xi32>>) -> ()) -> (() -> ())
   call bar(foo2)
 end subroutine
@@ -68,7 +68,7 @@ end subroutine
 ! CHECK-LABEL: func @_QPpass_foo3() {
 subroutine pass_foo3()
   external :: foo3
-  ! CHECK: %[[f:.*]] = constant @_QPfoo3
+  ! CHECK: %[[f:.*]] = fir.address_of(@_QPfoo3)
   ! CHECK: fir.convert %[[f]] : ((!fir.ref<!fir.array<2x5xi32>>) -> ()) -> (() -> ())
   call bar(foo3)
 end subroutine
@@ -89,7 +89,7 @@ end subroutine
 ! CHECK-LABEL: func @_QPpass_foo4() {
 subroutine pass_foo4()
   external :: foo4
-  ! CHECK: %[[f:.*]] = constant @_QPfoo4
+  ! CHECK: %[[f:.*]] = fir.address_of(@_QPfoo4)
   ! CHECK: fir.convert %[[f]] : ((!fir.ref<!fir.array<2x5xi32>>) -> ()) -> (() -> ())
   call bar(foo4)
 end subroutine
@@ -103,7 +103,7 @@ end subroutine
 ! CHECK-LABEL: func @_QPpass_foo5() {
 subroutine pass_foo5()
   external :: foo5
-  ! CHECK: %[[f:.*]] = constant @_QPfoo5
+  ! CHECK: %[[f:.*]] = fir.address_of(@_QPfoo5)
   ! CHECK: fir.convert %[[f]] : ((!fir.ref<!fir.array<2x5xi32>>) -> ()) -> (() -> ())
   call bar(foo5)
 end subroutine
@@ -129,7 +129,7 @@ end subroutine
 ! CHECK-LABEL: func @_QPpass_foo6() {
 subroutine pass_foo6()
   external :: foo6
-  ! CHECK: %[[f:.*]] = constant @_QPfoo6 : (!fir.ref<!fir.array<10xi32>>) -> ()
+  ! CHECK: %[[f:.*]] = fir.address_of(@_QPfoo6) : (!fir.ref<!fir.array<10xi32>>) -> ()
   ! CHECK: fir.convert %[[f]] : ((!fir.ref<!fir.array<10xi32>>) -> ()) -> (() -> ())
   call bar(foo6)
 end subroutine
@@ -144,7 +144,7 @@ end subroutine
 ! CHECK-LABEL: func @_QPcall_foo7(%arg0: !fir.ref<!fir.array<10xi32>>) -> f32 {
 function call_foo7(i)
   integer :: i(10)
-  ! CHECK: %[[f:.*]] = constant @_QPfoo7 : () -> ()
+  ! CHECK: %[[f:.*]] = fir.address_of(@_QPfoo7) : () -> ()
   ! CHECK: %[[funccast:.*]] = fir.convert %[[f]] : (() -> ()) -> ((!fir.ref<!fir.array<10xi32>>) -> f32)
   ! CHECK: fir.call %[[funccast]](%arg0) : (!fir.ref<!fir.array<10xi32>>) -> f32
   call_foo7 =  foo7(i)
