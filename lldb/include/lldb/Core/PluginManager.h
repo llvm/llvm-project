@@ -330,6 +330,14 @@ public:
   static SymbolVendorCreateInstance
   GetSymbolVendorCreateCallbackAtIndex(uint32_t idx);
 
+  // Trace
+  static bool RegisterPlugin(ConstString name, const char *description,
+                             TraceCreateInstance create_callback);
+
+  static bool UnregisterPlugin(TraceCreateInstance create_callback);
+
+  static TraceCreateInstance GetTraceCreateCallback(ConstString plugin_name);
+
   // UnwindAssembly
   static bool RegisterPlugin(ConstString name, const char *description,
                              UnwindAssemblyCreateInstance create_callback);
