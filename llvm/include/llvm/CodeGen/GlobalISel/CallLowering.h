@@ -213,6 +213,12 @@ protected:
   ISD::ArgFlagsTy getAttributesForArgIdx(const CallBase &Call,
                                          unsigned ArgIdx) const;
 
+  /// Adds flags to \p Flags based off of the attributes in \p Attrs.
+  /// \p OpIdx is the index in \p Attrs to add flags from.
+  void addArgFlagsFromAttributes(ISD::ArgFlagsTy &Flags,
+                                 const AttributeList &Attrs,
+                                 unsigned OpIdx) const;
+
   template <typename FuncInfoTy>
   void setArgFlags(ArgInfo &Arg, unsigned OpIdx, const DataLayout &DL,
                    const FuncInfoTy &FuncInfo) const;
