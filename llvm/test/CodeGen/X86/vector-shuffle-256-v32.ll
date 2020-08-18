@@ -4843,19 +4843,13 @@ define <32 x i8> @shuffle_v32i8_shift_00_02_04_06_08_10_12_14_16_18_20_22_24_26_
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    retq
 ;
-; AVX512VLBW-LABEL: shuffle_v32i8_shift_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30_32_34_36_38_40_42_44_46_48_50_52_54_56_58_60_62:
-; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512VLBW-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512VLBW-NEXT:    vpsrlw $8, %zmm0, %zmm0
-; AVX512VLBW-NEXT:    vpmovwb %zmm0, %ymm0
-; AVX512VLBW-NEXT:    retq
-;
-; AVX512VLVBMI-LABEL: shuffle_v32i8_shift_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30_32_34_36_38_40_42_44_46_48_50_52_54_56_58_60_62:
-; AVX512VLVBMI:       # %bb.0:
-; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,45,47,49,51,53,55,57,59,61,63]
-; AVX512VLVBMI-NEXT:    vpermt2b %ymm1, %ymm2, %ymm0
-; AVX512VLVBMI-NEXT:    retq
+; AVX512VL-LABEL: shuffle_v32i8_shift_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30_32_34_36_38_40_42_44_46_48_50_52_54_56_58_60_62:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VL-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512VL-NEXT:    vpsrlw $8, %zmm0, %zmm0
+; AVX512VL-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512VL-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: shuffle_v32i8_shift_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30_32_34_36_38_40_42_44_46_48_50_52_54_56_58_60_62:
 ; XOPAVX1:       # %bb.0:
