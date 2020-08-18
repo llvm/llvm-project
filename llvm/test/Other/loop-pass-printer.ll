@@ -1,19 +1,19 @@
 ; This test checks -print-after/before on loop passes
 ; Besides of the loop itself it should be dumping loop pre-header and exits.
 ;
-; RUN: opt < %s 2>&1 -disable-output \
+; RUN: opt -enable-new-pm=0 < %s 2>&1 -disable-output \
 ; RUN: 	   -loop-deletion -print-before=loop-deletion \
 ; RUN:	   | FileCheck %s -check-prefix=DEL
 ; RUN: opt < %s 2>&1 -disable-output \
 ; RUN: 	   -passes='loop(loop-deletion)' -print-before-all \
 ; RUN:	   | FileCheck %s -check-prefix=DEL
-; RUN: opt < %s 2>&1 -disable-output \
+; RUN: opt -enable-new-pm=0 < %s 2>&1 -disable-output \
 ; RUN: 	   -loop-unroll -print-after=loop-unroll -filter-print-funcs=bar \
 ; RUN:	   | FileCheck %s -check-prefix=BAR -check-prefix=BAR-OLD
 ; RUN: opt < %s 2>&1 -disable-output \
 ; RUN: 	   -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -print-after-all -filter-print-funcs=bar \
 ; RUN:	   | FileCheck %s -check-prefix=BAR
-; RUN: opt < %s 2>&1 -disable-output \
+; RUN: opt -enable-new-pm=0 < %s 2>&1 -disable-output \
 ; RUN: 	   -loop-unroll -print-after=loop-unroll -filter-print-funcs=foo -print-module-scope \
 ; RUN:	   | FileCheck %s -check-prefix=FOO-MODULE -check-prefix=FOO-MODULE-OLD
 ; RUN: opt < %s 2>&1 -disable-output \
