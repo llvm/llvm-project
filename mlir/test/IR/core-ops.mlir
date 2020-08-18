@@ -554,6 +554,18 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: = fptosi {{.*}} : f16 to i64
   %162 = fptosi %half : f16 to i64
 
+  // CHECK: floorf %arg1 : f32
+  %163 = "std.floorf"(%f) : (f32) -> f32
+
+  // CHECK: %{{[0-9]+}} = floorf %arg1 : f32
+  %164 = floorf %f : f32
+
+  // CHECK: %{{[0-9]+}} = floorf %cst_8 : vector<4xf32>
+  %165 = floorf %vcf32 : vector<4xf32>
+
+  // CHECK: %{{[0-9]+}} = floorf %arg0 : tensor<4x4x?xf32>
+  %166 = floorf %t : tensor<4x4x?xf32>
+
   return
 }
 
