@@ -11,7 +11,7 @@
 define internal void @vfu1(%struct.MYstr* byval align 4 %u) nounwind {
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@vfu1
-; IS__CGSCC_OPM-SAME: (%struct.MYstr* noalias nocapture nofree nonnull writeonly byval align 8 dereferenceable(8) [[U:%.*]])
+; IS__CGSCC_OPM-SAME: (%struct.MYstr* noalias nocapture nofree noundef nonnull writeonly byval align 8 dereferenceable(8) [[U:%.*]])
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* [[U]], i32 0, i32 1
 ; IS__CGSCC_OPM-NEXT:    store i32 99, i32* [[TMP0]], align 4
@@ -52,7 +52,7 @@ return:                                           ; preds = %entry
 define internal i32 @vfu2(%struct.MYstr* byval align 4 %u) nounwind readonly {
 ; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readonly willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@vfu2
-; IS__TUNIT_OPM-SAME: (%struct.MYstr* noalias nocapture nofree nonnull readonly byval align 8 dereferenceable(8) [[U:%.*]])
+; IS__TUNIT_OPM-SAME: (%struct.MYstr* noalias nocapture nofree noundef nonnull readonly byval align 8 dereferenceable(8) [[U:%.*]])
 ; IS__TUNIT_OPM-NEXT:  entry:
 ; IS__TUNIT_OPM-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* @mystr, i32 0, i32 1
 ; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
@@ -104,7 +104,7 @@ define i32 @unions() nounwind {
 ; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@unions()
 ; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(%struct.MYstr* nocapture nofree nonnull readonly byval align 8 dereferenceable(8) @mystr)
+; IS__TUNIT_OPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(%struct.MYstr* nocapture nofree noundef nonnull readonly byval align 8 dereferenceable(8) @mystr)
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[RESULT]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind willreturn
@@ -132,7 +132,7 @@ entry:
 define internal i32 @vfu2_v2(%struct.MYstr* byval align 4 %u) nounwind readonly {
 ; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@vfu2_v2
-; IS__TUNIT_OPM-SAME: (%struct.MYstr* noalias nocapture nofree nonnull byval align 8 dereferenceable(8) [[U:%.*]])
+; IS__TUNIT_OPM-SAME: (%struct.MYstr* noalias nocapture nofree noundef nonnull byval align 8 dereferenceable(8) [[U:%.*]])
 ; IS__TUNIT_OPM-NEXT:  entry:
 ; IS__TUNIT_OPM-NEXT:    [[Z:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* [[U]], i32 0, i32 1
 ; IS__TUNIT_OPM-NEXT:    store i32 99, i32* [[Z]], align 4
@@ -165,7 +165,7 @@ define internal i32 @vfu2_v2(%struct.MYstr* byval align 4 %u) nounwind readonly 
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@vfu2_v2
-; IS__CGSCC_OPM-SAME: (%struct.MYstr* noalias nocapture nofree nonnull byval align 8 dereferenceable(8) [[U:%.*]])
+; IS__CGSCC_OPM-SAME: (%struct.MYstr* noalias nocapture nofree noundef nonnull byval align 8 dereferenceable(8) [[U:%.*]])
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[Z:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* [[U]], i32 0, i32 1
 ; IS__CGSCC_OPM-NEXT:    store i32 99, i32* [[Z]], align 4
@@ -212,7 +212,7 @@ define i32 @unions_v2() nounwind {
 ; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@unions_v2()
 ; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(%struct.MYstr* nocapture nofree nonnull readonly byval align 8 dereferenceable(8) @mystr)
+; IS__TUNIT_OPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(%struct.MYstr* nocapture nofree noundef nonnull readonly byval align 8 dereferenceable(8) @mystr)
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[RESULT]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
@@ -228,7 +228,7 @@ define i32 @unions_v2() nounwind {
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@unions_v2()
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(%struct.MYstr* noalias nocapture nofree nonnull readnone byval align 8 dereferenceable(8) @mystr)
+; IS__CGSCC_OPM-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(%struct.MYstr* noalias nocapture nofree noundef nonnull readnone byval align 8 dereferenceable(8) @mystr)
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[RESULT]]
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readonly willreturn

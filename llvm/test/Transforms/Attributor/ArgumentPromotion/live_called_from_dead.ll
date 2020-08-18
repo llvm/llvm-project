@@ -13,7 +13,7 @@ define internal void @dead() {
 define internal i32 @test(i32* %X, i32* %Y) {
 ; IS__CGSCC_OPM: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@test
-; IS__CGSCC_OPM-SAME: (i32* noalias nocapture nofree writeonly align 4 [[X:%.*]])
+; IS__CGSCC_OPM-SAME: (i32* noalias nocapture nofree noundef writeonly align 4 [[X:%.*]])
 ; IS__CGSCC_OPM-NEXT:    br i1 true, label [[LIVE:%.*]], label [[DEAD:%.*]]
 ; IS__CGSCC_OPM:       live:
 ; IS__CGSCC_OPM-NEXT:    store i32 0, i32* [[X]], align 4
@@ -23,7 +23,7 @@ define internal i32 @test(i32* %X, i32* %Y) {
 ;
 ; IS__CGSCC_NPM: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test
-; IS__CGSCC_NPM-SAME: (i32* noalias nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[X:%.*]])
+; IS__CGSCC_NPM-SAME: (i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[X:%.*]])
 ; IS__CGSCC_NPM-NEXT:    br i1 true, label [[LIVE:%.*]], label [[DEAD:%.*]]
 ; IS__CGSCC_NPM:       live:
 ; IS__CGSCC_NPM-NEXT:    store i32 0, i32* [[X]], align 4
@@ -46,14 +46,14 @@ define internal i32 @caller(i32* %B) {
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@caller()
 ; IS__CGSCC_OPM-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; IS__CGSCC_OPM-NEXT:    store i32 1, i32* [[A]], align 4
-; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[A]])
+; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]])
 ; IS__CGSCC_OPM-NEXT:    ret i32 0
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@caller()
 ; IS__CGSCC_NPM-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; IS__CGSCC_NPM-NEXT:    store i32 1, i32* [[A]], align 4
-; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[A]])
+; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]])
 ; IS__CGSCC_NPM-NEXT:    ret i32 undef
 ;
   %A = alloca i32

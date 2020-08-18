@@ -9,7 +9,7 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 define internal i32 @callee(i1 %C, i32* %P) {
 ; IS__TUNIT_OPM: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@callee
-; IS__TUNIT_OPM-SAME: (i1 [[C:%.*]], i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
+; IS__TUNIT_OPM-SAME: (i1 [[C:%.*]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
 ; IS__TUNIT_OPM-NEXT:    br label [[F:%.*]]
 ; IS__TUNIT_OPM:       T:
 ; IS__TUNIT_OPM-NEXT:    unreachable
@@ -31,7 +31,7 @@ define internal i32 @callee(i1 %C, i32* %P) {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@callee
-; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
+; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
 ; IS__CGSCC____-NEXT:    br label [[F:%.*]]
 ; IS__CGSCC____:       T:
 ; IS__CGSCC____-NEXT:    unreachable
@@ -54,7 +54,7 @@ define i32 @foo() {
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@foo()
 ; IS__TUNIT_OPM-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; IS__TUNIT_OPM-NEXT:    store i32 17, i32* [[A]], align 4
-; IS__TUNIT_OPM-NEXT:    [[X:%.*]] = call i32 @callee(i1 false, i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[A]])
+; IS__TUNIT_OPM-NEXT:    [[X:%.*]] = call i32 @callee(i1 false, i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]])
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[X]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
@@ -69,7 +69,7 @@ define i32 @foo() {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@foo()
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; IS__CGSCC____-NEXT:    store i32 17, i32* [[A]], align 4
-; IS__CGSCC____-NEXT:    [[X:%.*]] = call i32 @callee(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[A]])
+; IS__CGSCC____-NEXT:    [[X:%.*]] = call i32 @callee(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]])
 ; IS__CGSCC____-NEXT:    ret i32 [[X]]
 ;
   %A = alloca i32         ; <i32*> [#uses=2]
