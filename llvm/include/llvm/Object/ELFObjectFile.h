@@ -51,6 +51,12 @@ class ELFObjectFileBase : public ObjectFile {
   friend class ELFSectionRef;
   friend class ELFSymbolRef;
 
+  SubtargetFeatures getMIPSFeatures() const;
+  SubtargetFeatures getARMFeatures() const;
+  SubtargetFeatures getRISCVFeatures() const;
+
+  StringRef getAMDGPUCPUName() const;
+
 protected:
   ELFObjectFileBase(unsigned int Type, MemoryBufferRef Source);
 
@@ -80,11 +86,7 @@ public:
 
   SubtargetFeatures getFeatures() const override;
 
-  SubtargetFeatures getMIPSFeatures() const;
-
-  SubtargetFeatures getARMFeatures() const;
-
-  SubtargetFeatures getRISCVFeatures() const;
+  Optional<StringRef> tryGetCPUName() const override;
 
   void setARMSubArch(Triple &TheTriple) const override;
 

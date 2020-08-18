@@ -3460,6 +3460,10 @@ struct OmpDependClause {
 // 2.7.1 nowait-clause -> NOWAIT
 EMPTY_CLASS(OmpNowait);
 
+// dist_schedule clause does not fit in generic clause class for tablegen.
+// Therefore it is declared separatly here.
+WRAPPER_CLASS(OmpDistScheduleClause, std::optional<ScalarIntExpr>);
+
 // OpenMP Clauses
 struct OmpClause {
   UNION_CLASS_BOILERPLATE(OmpClause);

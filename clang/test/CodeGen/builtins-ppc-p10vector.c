@@ -97,6 +97,36 @@ vector unsigned long long test_vpextd(void) {
   return vec_pext(vulla, vullb);
 }
 
+unsigned int test_vec_extractm_uc(void) {
+  // CHECK: @llvm.ppc.altivec.vextractbm(<16 x i8> %{{.+}})
+  // CHECK-NEXT: ret i32
+  return vec_extractm(vuca);
+}
+
+unsigned int test_vec_extractm_us(void) {
+  // CHECK: @llvm.ppc.altivec.vextracthm(<8 x i16> %{{.+}})
+  // CHECK-NEXT: ret i32
+  return vec_extractm(vusa);
+}
+
+unsigned int test_vec_extractm_ui(void) {
+  // CHECK: @llvm.ppc.altivec.vextractwm(<4 x i32> %{{.+}})
+  // CHECK-NEXT: ret i32
+  return vec_extractm(vuia);
+}
+
+unsigned int test_vec_extractm_ull(void) {
+  // CHECK: @llvm.ppc.altivec.vextractdm(<2 x i64> %{{.+}})
+  // CHECK-NEXT: ret i32
+  return vec_extractm(vulla);
+}
+
+unsigned int test_vec_extractm_u128(void) {
+  // CHECK: @llvm.ppc.altivec.vextractqm(<1 x i128> %{{.+}})
+  // CHECK-NEXT: ret i32
+  return vec_extractm(vui128a);
+}
+
 vector unsigned long long test_vcfuged(void) {
   // CHECK: @llvm.ppc.altivec.vcfuged(<2 x i64>
   // CHECK-NEXT: ret <2 x i64>

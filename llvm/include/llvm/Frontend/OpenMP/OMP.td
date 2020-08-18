@@ -184,6 +184,7 @@ def OMPC_Hint : Clause<"hint"> {
 }
 def OMPC_DistSchedule : Clause<"dist_schedule"> {
   let clangClass = "OMPDistScheduleClause";
+  let flangClass = "OmpDistScheduleClause";
   let flangClassValue = "ScalarIntExpr";
   let isValueOptional = 1;
 }
@@ -201,11 +202,13 @@ def OMPC_From : Clause<"from"> {
 }
 def OMPC_UseDevicePtr : Clause<"use_device_ptr"> {
   let clangClass = "OMPUseDevicePtrClause";
-  let flangClassValue = "std::list<Name>";
+  let flangClassValue = "Name";
+  let isValueList = 1;
 }
 def OMPC_IsDevicePtr : Clause<"is_device_ptr"> {
   let clangClass = "OMPIsDevicePtrClause";
-  let flangClassValue = "std::list<Name>";
+  let flangClassValue = "Name";
+  let isValueList = 1;
 }
 def OMPC_TaskReduction : Clause<"task_reduction"> {
   let clangClass = "OMPTaskReductionClause";
@@ -260,7 +263,8 @@ def OMPC_UseDeviceAddr : Clause<"use_device_addr"> {
   let clangClass = "OMPUseDeviceAddrClause";
 }
 def OMPC_Uniform : Clause<"uniform"> {
-  let flangClassValue = "std::list<Name>";
+  let flangClassValue = "Name";
+  let isValueList = 1;
 }
 def OMPC_DeviceType : Clause<"device_type"> {}
 def OMPC_Match : Clause<"match"> {}

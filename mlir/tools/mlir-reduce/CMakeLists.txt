@@ -32,6 +32,7 @@ set(LIBS
   )
 
 add_llvm_tool(mlir-reduce
+  OptReductionPass.cpp
   Passes/FunctionReducer.cpp
   ReductionNode.cpp
   ReductionTreePass.cpp

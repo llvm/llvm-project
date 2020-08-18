@@ -207,6 +207,19 @@ TEST_F(TargetDeclTest, UsingDecl) {
   )cpp";
   EXPECT_DECLS("MemberExpr", {"using X::foo", Rel::Alias},
                {"int foo()", Rel::Underlying});
+
+  Code = R"cpp(
+      template <typename T>
+      struct Base {
+        void waldo() {}
+      };
+      template <typename T>
+      struct Derived : Base<T> {
+        using Base<T>::[[waldo]];
+      };
+    )cpp";
+  EXPECT_DECLS("UnresolvedUsingValueDecl", {"using Base<T>::waldo", Rel::Alias},
+               {"void waldo()", Rel::Underlying});
 }
 
 TEST_F(TargetDeclTest, ConstructorInitList) {
@@ -442,6 +455,28 @@ TEST_F(TargetDeclTest, Concept) {
   )cpp";
   EXPECT_DECLS("ConceptSpecializationExpr",
                {"template <typename T> concept Fooable = true;"});
+
+  // constrained-parameter
+  Code = R"cpp(
+    template <typename T>
+    concept Fooable = true;
+
+    template <[[Fooable]] T>
+    void bar(T t);
+  )cpp";
+  EXPECT_DECLS("ConceptSpecializationExpr",
+               {"template <typename T> concept Fooable = true;"});
+
+  // partial-concept-id
+  Code = R"cpp(
+    template <typename T, typename U>
+    concept Fooable = true;
+
+    template <[[Fooable]]<int> T>
+    void bar(T t);
+  )cpp";
+  EXPECT_DECLS("ConceptSpecializationExpr",
+               {"template <typename T, typename U> concept Fooable = true;"});
 }
 
 TEST_F(TargetDeclTest, FunctionTemplate) {

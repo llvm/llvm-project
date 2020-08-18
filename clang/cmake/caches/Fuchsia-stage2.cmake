@@ -242,7 +242,6 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-nm
   llvm-objcopy
   llvm-objdump
-  llvm-pdbutil
   llvm-profdata
   llvm-rc
   llvm-ranlib

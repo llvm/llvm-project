@@ -5,7 +5,10 @@
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: @array(!llvm.array<16 x float>, !llvm.array<32 x vec<4 x float>>)
-func @array(!spv.array<16xf32>, !spv.array< 32 x vector<4xf32> >) -> ()
+func @array(!spv.array<16 x f32>, !spv.array< 32 x vector<4xf32> >) -> ()
+
+// CHECK-LABEL: @array_with_natural_stride(!llvm.array<16 x float>)
+func @array_with_natural_stride(!spv.array<16 x f32, stride=4>) -> ()
 
 //===----------------------------------------------------------------------===//
 // Pointer type
@@ -36,3 +39,6 @@ func @struct(!spv.struct<f64>) -> ()
 
 // CHECK-LABEL: @struct_nested(!llvm.struct<packed (i32, struct<packed (i64, i32)>)>)
 func @struct_nested(!spv.struct<i32, !spv.struct<i64, i32>>)
+
+// CHECK-LABEL: @struct_with_natural_offset(!llvm.struct<(i8, i32)>)
+func @struct_with_natural_offset(!spv.struct<i8[0], i32[4]>) -> ()

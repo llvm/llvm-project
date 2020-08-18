@@ -128,10 +128,10 @@ entry:
 define void @foo() {
 ; CHECK-LABEL: define {{[^@]+}}@foo()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @broker(i32 (i32)* nonnull @cb0, i32 (i32)* nonnull @cb1, i32 (i32)* nonnull @cb0, i32 0, i32 1)
-; CHECK-NEXT:    call void @broker(i32 (i32)* nonnull @cb1, i32 (i32)* nonnull @cb2, i32 (i32)* nonnull @cb2, i32 0, i32 1)
-; CHECK-NEXT:    call void @broker(i32 (i32)* nonnull @cb3, i32 (i32)* nonnull @cb2, i32 (i32)* nonnull @cb3, i32 0, i32 1)
-; CHECK-NEXT:    call void @broker(i32 (i32)* nonnull @cb4, i32 (i32)* nonnull @cb4, i32 (i32)* nonnull @cb4, i32 0, i32 1)
+; CHECK-NEXT:    call void @broker(i32 (i32)* noundef nonnull @cb0, i32 (i32)* noundef nonnull @cb1, i32 (i32)* noundef nonnull @cb0, i32 0, i32 1)
+; CHECK-NEXT:    call void @broker(i32 (i32)* noundef nonnull @cb1, i32 (i32)* noundef nonnull @cb2, i32 (i32)* noundef nonnull @cb2, i32 0, i32 1)
+; CHECK-NEXT:    call void @broker(i32 (i32)* noundef nonnull @cb3, i32 (i32)* noundef nonnull @cb2, i32 (i32)* noundef nonnull @cb3, i32 0, i32 1)
+; CHECK-NEXT:    call void @broker(i32 (i32)* noundef nonnull @cb4, i32 (i32)* noundef nonnull @cb4, i32 (i32)* noundef nonnull @cb4, i32 0, i32 1)
 ; CHECK-NEXT:    ret void
 ;
 entry:

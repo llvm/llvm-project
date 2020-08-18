@@ -18,6 +18,7 @@ class MCAsmInfo;
 class MCInst;
 class MCOperand;
 class MCInstrInfo;
+class MCInstrAnalysis;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class raw_ostream;
@@ -48,6 +49,7 @@ protected:
   const MCAsmInfo &MAI;
   const MCInstrInfo &MII;
   const MCRegisterInfo &MRI;
+  const MCInstrAnalysis *MIA = nullptr;
 
   /// True if we are printing marked up assembly.
   bool UseMarkup = false;
@@ -62,6 +64,9 @@ protected:
   /// address (e.g. bl 0x20004). This is useful for a stream disassembler
   /// (llvm-objdump -d).
   bool PrintBranchImmAsAddress = false;
+
+  /// If true, symbolize branch target and memory reference operands.
+  bool SymbolizeOperands = false;
 
   /// Utility function for printing annotations.
   void printAnnotation(raw_ostream &OS, StringRef Annot);
@@ -114,6 +119,9 @@ public:
   void setPrintBranchImmAsAddress(bool Value) {
     PrintBranchImmAsAddress = Value;
   }
+
+  void setSymbolizeOperands(bool Value) { SymbolizeOperands = Value; }
+  void setMCInstrAnalysis(const MCInstrAnalysis *Value) { MIA = Value; }
 
   /// Utility function to print immediates in decimal or hex.
   format_object<int64_t> formatImm(int64_t Value) const {

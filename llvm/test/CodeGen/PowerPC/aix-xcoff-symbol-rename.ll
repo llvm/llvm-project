@@ -18,6 +18,9 @@
 ; This is f"o"
 @"f\22o\22" = common global i32 0, align 4
 
+; This is f=o
+@"f\3do" = internal global i32 0, align 4
+
 define internal i32 @f$o() {
 entry:
   %call = call i32 bitcast (i32 (...)* @"f\40o" to i32 ()*)()
@@ -27,8 +30,10 @@ entry:
 ; This is f&o
 define i32 @"f\26o"() {
 entry:
-  %call = call i32 @f$o()
-  ret i32 %call
+  %tmp = call i32 @f$o()
+  %tmp1 = load i32, i32* @"f\3do"
+  %tmp2 = add i32 %tmp, %tmp1
+  ret i32 %tmp2
 }
 
 ; This is f&_o
@@ -84,12 +89,17 @@ declare i32 @"f\40o"(...)
 ; ASM-NEXT:    .vbyte  4, 10                   # 0xa
 ; ASM-NEXT:    .comm _Renamed..2222f_o_[RW],4,2
 ; ASM-NEXT:    .rename _Renamed..2222f_o_[RW],"f""o"""
+; ASM-NEXT:    .lcomm  _Renamed..3df_o,4,_Renamed..3df_o[BS],2
+; ASM-NEXT:    .rename _Renamed..3df_o[BS],"f=o"
 ; ASM-NEXT:    .extern ._Renamed..40f_o[PR]
 ; ASM-NEXT:    .rename ._Renamed..40f_o[PR],".f@o"
 ; ASM-NEXT:    .extern _Renamed..40f_o[DS]
 ; ASM-NEXT:    .rename _Renamed..40f_o[DS],"f@o"
 ; ASM-NEXT:    .toc
 ; ASM-NEXT:  L..C0:
+; ASM-NEXT:    .tc _Renamed..3df_o[TC],_Renamed..3df_o[BS]
+; ASM-NEXT:    .rename _Renamed..3df_o[TC],"f=o"
+; ASM-NEXT:  L..C1:
 ; ASM-NEXT:    .tc _Renamed..40f_o[TC],_Renamed..40f_o[DS]
 ; ASM-NEXT:    .rename _Renamed..40f_o[TC],"f@o"
 
@@ -115,47 +125,59 @@ declare i32 @"f\40o"(...)
 ; OBJ-NEXT:        34: 90 01 00 08   stw 0, 8(1)
 ; OBJ-NEXT:        38: 94 21 ff c0   stwu 1, -64(1)
 ; OBJ-NEXT:        3c: 4b ff ff c5   bl 0x0
-; OBJ-NEXT:        40: 38 21 00 40   addi 1, 1, 64
-; OBJ-NEXT:        44: 80 01 00 08   lwz 0, 8(1)
-; OBJ-NEXT:        48: 7c 08 03 a6   mtlr 0
-; OBJ-NEXT:        4c: 4e 80 00 20   blr
+; OBJ-NEXT:        40: 80 82 00 00   lwz 4, 0(2)
+; OBJ-NEXT:                          00000042:  R_TOC        (idx: 24) f=o[TC]
+; OBJ-NEXT:        44: 80 84 00 00   lwz 4, 0(4)
+; OBJ-NEXT:        48: 7c 63 22 14   add 3, 3, 4
+; OBJ-NEXT:        4c: 38 21 00 40   addi 1, 1, 64
+; OBJ-NEXT:        50: 80 01 00 08   lwz 0, 8(1)
+; OBJ-NEXT:        54: 7c 08 03 a6   mtlr 0
+; OBJ-NEXT:        58: 4e 80 00 20   blr
+; OBJ-NEXT:        5c: 60 00 00 00   nop
 ; OBJ-EMPTY:
-; OBJ-NEXT:  00000050 (idx: 10) .f&_o:
-; OBJ-NEXT:        50: 80 62 00 00   lwz 3, 0(2)
-; OBJ-NEXT:                          00000052:  R_TOC        (idx: 24) f@o[TC]
-; OBJ-NEXT:        54: 4e 80 00 20   blr
+; OBJ-NEXT:  00000060 (idx: 10) .f&_o:
+; OBJ-NEXT:        60: 80 62 00 04   lwz 3, 4(2)
+; OBJ-NEXT:                          00000062:  R_TOC        (idx: 26) f@o[TC]
+; OBJ-NEXT:        64: 4e 80 00 20   blr
 ; OBJ-EMPTY:
 ; OBJ-NEXT:  Disassembly of section .data:
 ; OBJ-EMPTY:
-; OBJ-NEXT:  00000058 (idx: 14) f`o:
-; OBJ-NEXT:        58: 00 00 00 0a   <unknown>
+; OBJ-NEXT:  00000068 (idx: 14) f`o:
+; OBJ-NEXT:        68: 00 00 00 0a   <unknown>
 ; OBJ-EMPTY:
-; OBJ-NEXT:  0000005c (idx: 16) f$o[DS]:
-; OBJ-NEXT:        5c: 00 00 00 00   <unknown>
-; OBJ-NEXT:                          0000005c:  R_POS        (idx: 6) .f$o
-; OBJ-NEXT:        60: 00 00 00 80   <unknown>
-; OBJ-NEXT:                          00000060:  R_POS        (idx: 22) TOC[TC0]
-; OBJ-NEXT:        64: 00 00 00 00   <unknown>
+; OBJ-NEXT:  0000006c (idx: 16) f$o[DS]:
+; OBJ-NEXT:        6c: 00 00 00 00   <unknown>
+; OBJ-NEXT:                          0000006c:  R_POS        (idx: 6) .f$o
+; OBJ-NEXT:        70: 00 00 00 90   <unknown>
+; OBJ-NEXT:                          00000070:  R_POS        (idx: 22) TOC[TC0]
+; OBJ-NEXT:        74: 00 00 00 00   <unknown>
 ; OBJ-EMPTY:
-; OBJ-NEXT:  00000068 (idx: 18) f&o[DS]:
-; OBJ-NEXT:        68: 00 00 00 30   <unknown>
-; OBJ-NEXT:                          00000068:  R_POS        (idx: 8) .f&o
-; OBJ-NEXT:        6c: 00 00 00 80   <unknown>
-; OBJ-NEXT:                          0000006c:  R_POS        (idx: 22) TOC[TC0]
-; OBJ-NEXT:        70: 00 00 00 00   <unknown>
-; OBJ-EMPTY:
-; OBJ-NEXT:  00000074 (idx: 20) f&_o[DS]:
-; OBJ-NEXT:        74: 00 00 00 50   <unknown>
-; OBJ-NEXT:                          00000074:  R_POS        (idx: 10) .f&_o
-; OBJ-NEXT:        78: 00 00 00 80   <unknown>
-; OBJ-NEXT:                          00000078:  R_POS        (idx: 22) TOC[TC0]
-; OBJ-NEXT:        7c: 00 00 00 00   <unknown>
-; OBJ-EMPTY:
-; OBJ-NEXT:  00000080 (idx: 24) f@o[TC]:
+; OBJ-NEXT:  00000078 (idx: 18) f&o[DS]:
+; OBJ-NEXT:        78: 00 00 00 30   <unknown>
+; OBJ-NEXT:                          00000078:  R_POS        (idx: 8) .f&o
+; OBJ-NEXT:        7c: 00 00 00 90   <unknown>
+; OBJ-NEXT:                          0000007c:  R_POS        (idx: 22) TOC[TC0]
 ; OBJ-NEXT:        80: 00 00 00 00   <unknown>
-; OBJ-NEXT:                          00000080:  R_POS        (idx: 2) f@o[DS]
+; OBJ-EMPTY:
+; OBJ-NEXT:  00000084 (idx: 20) f&_o[DS]:
+; OBJ-NEXT:        84: 00 00 00 60   <unknown>
+; OBJ-NEXT:                          00000084:  R_POS        (idx: 10) .f&_o
+; OBJ-NEXT:        88: 00 00 00 90   <unknown>
+; OBJ-NEXT:                          00000088:  R_POS        (idx: 22) TOC[TC0]
+; OBJ-NEXT:        8c: 00 00 00 00   <unknown>
+; OBJ-EMPTY:
+; OBJ-NEXT:  00000090 (idx: 24) f=o[TC]:
+; OBJ-NEXT:        90: 00 00 00 9c   <unknown>
+; OBJ-NEXT:                          00000090:  R_POS        (idx: 30) f=o[BS]
+; OBJ-EMPTY:
+; OBJ-NEXT:  00000094 (idx: 26) f@o[TC]:
+; OBJ-NEXT:        94: 00 00 00 00   <unknown>
+; OBJ-NEXT:                          00000094:  R_POS        (idx: 2) f@o[DS]
 ; OBJ-EMPTY:
 ; OBJ-NEXT:  Disassembly of section .bss:
 ; OBJ-EMPTY:
-; OBJ-NEXT:  00000084 (idx: 26) f"o"[RW]:
+; OBJ-NEXT:  00000098 (idx: 28) f"o"[RW]:
+; OBJ-NEXT:  ...
+; OBJ-EMPTY:
+; OBJ-NEXT:  0000009c (idx: 30) f=o[BS]:
 ; OBJ-NEXT:  ...

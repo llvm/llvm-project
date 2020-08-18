@@ -750,6 +750,8 @@ public:
       Changed = tryCombineMerges(MI, DeadInsts, UpdatedDefs, WrapperObserver);
       break;
     case TargetOpcode::G_MERGE_VALUES:
+    case TargetOpcode::G_BUILD_VECTOR:
+    case TargetOpcode::G_CONCAT_VECTORS:
       // If any of the users of this merge are an unmerge, then add them to the
       // artifact worklist in case there's folding that can be done looking up.
       for (MachineInstr &U : MRI.use_instructions(MI.getOperand(0).getReg())) {

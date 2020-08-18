@@ -334,12 +334,13 @@ bool SymbolCollector::handleDeclOccurrence(
   if (IsOnlyRef && !CollectRef)
     return true;
 
-  // Do not store references to main-file symbols.
   // Unlike other fields, e.g. Symbols (which use spelling locations), we use
   // file locations for references (as it aligns the behavior of clangd's
   // AST-based xref).
   // FIXME: we should try to use the file locations for other fields.
-  if (CollectRef && (!IsMainFileOnly || ND->isExternallyVisible()) &&
+  if (CollectRef &&
+      (!IsMainFileOnly || Opts.CollectMainFileRefs ||
+       ND->isExternallyVisible()) &&
       !isa<NamespaceDecl>(ND) &&
       (Opts.RefsInHeaders ||
        SM.getFileID(SM.getFileLoc(Loc)) == SM.getMainFileID()))

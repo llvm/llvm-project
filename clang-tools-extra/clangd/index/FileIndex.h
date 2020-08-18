@@ -104,7 +104,7 @@ private:
 /// FIXME: Expose an interface to remove files that are closed.
 class FileIndex : public MergedIndex {
 public:
-  FileIndex(bool UseDex = true);
+  FileIndex(bool UseDex = true, bool CollectMainFileRefs = false);
 
   /// Update preamble symbols of file \p Path with all declarations in \p AST
   /// and macros in \p PP.
@@ -118,6 +118,7 @@ public:
 
 private:
   bool UseDex; // FIXME: this should be always on.
+  bool CollectMainFileRefs;
 
   // Contains information from each file's preamble only. Symbols and relations
   // are sharded per declaration file to deduplicate multiple symbols and reduce
@@ -152,7 +153,7 @@ using SlabTuple = std::tuple<SymbolSlab, RefSlab, RelationSlab>;
 /// Retrieves symbols and refs of local top level decls in \p AST (i.e.
 /// `AST.getLocalTopLevelDecls()`).
 /// Exposed to assist in unit tests.
-SlabTuple indexMainDecls(ParsedAST &AST);
+SlabTuple indexMainDecls(ParsedAST &AST, bool CollectMainFileRefs = false);
 
 /// Index declarations from \p AST and macros from \p PP that are declared in
 /// included headers.

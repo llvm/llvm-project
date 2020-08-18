@@ -21,6 +21,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/Path.h"
 
 #include <vector>
 
@@ -32,16 +33,42 @@ static cl::opt<std::string> TrainingLog(
 
 static cl::opt<std::string> TFModelUnderTrainingPath(
     "ml-inliner-model-under-training", cl::Hidden,
-    cl::desc("Path to SavedModel from the previous training iteration."));
+    cl::desc(R"(Path to SavedModel from the previous training iteration.
+The directory is also expected to contain a JSON specification of the 
+outputs expected to be logged, where the first entry must be the 
+inlining decision. The file containing the specification should be 
+called output_spec.json. The expected JSON value is an array of 
+dictionaries. Each dictionary should have 2 keys: 
+
+- "tensor_spec, followed by the TensorSpec description of the
+output; and 
+- "logging_name", a string indicating the name to use when
+logging the output values. 
+
+Example:
+[
+  {
+    "logging_name" : "some_name", 
+    "tensor_spec" : { 
+      "name" : "model_name", 
+      "port" : 0,
+      "shape" : [2, 3],
+      "type" : "float"
+      }
+  }
+]
+
+The first value must always correspond to the decision.)"));
+
+static cl::opt<std::string> TFOutputSpecOverride(
+    "ml-inliner-output-spec-override", cl::Hidden,
+    cl::desc("Override the path to the output spec json file. See "
+             "-ml-inliner-model-under-training documentation for the "
+             "specification of that file."));
 
 static cl::opt<std::string> TFFeedPrefix("ml-inliner-trained-model-feed-prefix",
                                          cl::Hidden, cl::init("action_"),
                                          cl::desc("Prefix for feature names."));
-
-static cl::opt<std::string> TFDecisionName(
-    "ml-inliner-trained-model-decision-name", cl::Hidden,
-    cl::init("StatefulPartitionedCall"),
-    cl::desc("Name of the graph operation representing the decision."));
 
 namespace {
 /// An InlineEvent, used by TrainingLogger.
@@ -69,9 +96,10 @@ struct InlineEvent {
 /// Because this is a protobuf, we cannot just stream the events as they come.
 /// Internally, TrainingLogger stores data in column-major format, because that
 /// lines up with how TF SequenceExample represents it.
+class ModelUnderTrainingRunner;
 class TrainingLogger final {
 public:
-  TrainingLogger(StringRef LogFileName);
+  TrainingLogger(StringRef LogFileName, const ModelUnderTrainingRunner *MUTR);
 
   /// Log one inlining event.
   void logInlineEvent(const InlineEvent &Event,
@@ -157,9 +185,13 @@ private:
   }
 
   StringRef LogFileName;
+  const ModelUnderTrainingRunner *const MUTR;
   std::vector<InlineFeatures> Features;
   std::vector<int64_t> DefaultDecisions;
-  std::vector<int64_t> Decisions;
+  // We store all outputs as data blobs, but we always expect to have one, the
+  // first one, representing the decision. While we could track that separately,
+  // for uniformity, we store it, generically, here.
+  std::vector<std::vector<char>> Outputs;
   std::vector<bool> Effects;
   std::vector<int64_t> Rewards;
 };
@@ -336,8 +368,22 @@ public:
   int64_t getFeature(int Index) const override;
   bool isValid() const { return !!Evaluator; }
 
+  const std::vector<std::string> outputNames() const { return OutputNames; }
+
+  const std::vector<TensorSpec> outputSpecs() const { return OutputSpecs; }
+
+  const Optional<TFModelEvaluator::EvaluationResult> &
+  lastEvaluationResult() const {
+    return LastEvaluationResult;
+  }
+
 private:
   std::unique_ptr<TFModelEvaluator> Evaluator;
+  std::vector<std::string> OutputNames;
+  std::vector<TensorSpec> OutputSpecs;
+  Optional<TFModelEvaluator::EvaluationResult> LastEvaluationResult;
+
+  bool loadOutputSpecs(LLVMContext &Ctx, StringRef FileName);
 
   // The training framework needs some additional features.
   const std::vector<TensorSpec> TrainingOnlyFeatures{
@@ -348,10 +394,15 @@ private:
 };
 } // namespace
 
-TrainingLogger::TrainingLogger(StringRef LogFileName)
-    : LogFileName(LogFileName) {
+TrainingLogger::TrainingLogger(StringRef LogFileName,
+                               const ModelUnderTrainingRunner *MUTR)
+    : LogFileName(LogFileName), MUTR(MUTR) {
   for (size_t I = 0; I < NumberOfFeatures; ++I)
     Features.push_back(InlineFeatures());
+
+  // The first output is the inlining decision.
+  auto OutputCount = MUTR ? MUTR->outputSpecs().size() : 1;
+  Outputs.assign(OutputCount, std::vector<char>());
 }
 
 /// Log one inlining event.
@@ -360,16 +411,27 @@ void TrainingLogger::logInlineEvent(const InlineEvent &Event,
   for (size_t I = 0; I < NumberOfFeatures; ++I)
     Features[I].push_back(ModelRunner.getFeature(I));
 
-  Decisions.push_back(Event.AdvisedDecision);
   Effects.push_back(Event.Effect);
   Rewards.push_back(Event.Reward);
   DefaultDecisions.push_back(Event.DefaultDecision);
+  int64_t Advice = static_cast<int64_t>(Event.AdvisedDecision);
+  const char *AdviceData = reinterpret_cast<const char *>(&Advice);
+  Outputs[0].insert(Outputs[0].end(), AdviceData, AdviceData + sizeof(int64_t));
+  for (size_t I = 1; I < Outputs.size(); ++I) {
+    const auto &Result = *MUTR->lastEvaluationResult();
+    auto &Spec = MUTR->outputSpecs()[I];
+    const char *RawData =
+        reinterpret_cast<const char *>(Result.getUntypedTensorValue(I));
+    Outputs[I].insert(Outputs[I].end(), RawData,
+                      RawData +
+                          Spec.getElementCount() * Spec.getElementByteSize());
+  }
 }
 
 void TrainingLogger::print() {
   std::error_code EC;
   raw_fd_ostream OutFile(LogFileName, EC);
-  size_t NumberOfRecords = Decisions.size();
+  size_t NumberOfRecords = Rewards.size();
   if (NumberOfRecords == 0)
     return;
 
@@ -383,12 +445,17 @@ void TrainingLogger::print() {
       OutFile, TensorSpec::createSpec<int64_t>(DefaultDecisionName, {1}),
       DefaultDecisions.data(), NumberOfRecords);
 
-  writeTensorsAsFeatureLists(OutFile,
-                             TensorSpec::createSpec<int64_t>(DecisionName, {1}),
-                             Decisions.data(), NumberOfRecords);
+  writeRawTensorsAsFeatureLists(
+      OutFile, TensorSpec::createSpec<int64_t>(DecisionName, {1}),
+      Outputs[0].data(), NumberOfRecords);
   writeTensorsAsFeatureLists(OutFile,
                              TensorSpec::createSpec<int64_t>(RewardName, {1}),
                              Rewards.data(), NumberOfRecords);
+
+  for (size_t I = 1; I < Outputs.size(); ++I)
+    writeRawTensorsAsFeatureLists(OutFile, MUTR->outputSpecs()[I],
+                                  Outputs[I].data(), NumberOfRecords,
+                                  StringRef(MUTR->outputNames()[I]));
 
   OutFile << "}\n";
 }
@@ -472,13 +539,19 @@ ModelUnderTrainingRunner::ModelUnderTrainingRunner(LLVMContext &Ctx,
                                                    const std::string &ModelPath)
     : MLModelRunner(Ctx) {
   std::vector<TensorSpec> InputSpecs;
-  std::vector<TensorSpec> OutputSpecs;
   for (size_t I = 0; I < NumberOfFeatures; ++I)
     InputSpecs.push_back(
         TensorSpec::createSpec<int64_t>(TFFeedPrefix + FeatureNameMap[I], {1}));
   InputSpecs.insert(InputSpecs.end(), TrainingOnlyFeatures.begin(),
                     TrainingOnlyFeatures.end());
-  OutputSpecs.push_back(TensorSpec::createSpec<int64_t>(TFDecisionName, {1}));
+  SmallVector<char, 128> OutputSpecsPath;
+  StringRef OutputSpecPath = TFOutputSpecOverride;
+  if (OutputSpecPath.empty()) {
+    llvm::sys::path::append(OutputSpecsPath, ModelPath, "output_spec.json");
+    OutputSpecPath = {OutputSpecsPath.data(), OutputSpecsPath.size()};
+  }
+  if (!loadOutputSpecs(Ctx, OutputSpecPath))
+    return;
 
   Evaluator =
       std::make_unique<TFModelEvaluator>(ModelPath, InputSpecs, OutputSpecs);
@@ -489,13 +562,70 @@ ModelUnderTrainingRunner::ModelUnderTrainingRunner(LLVMContext &Ctx,
   }
 }
 
+bool ModelUnderTrainingRunner::loadOutputSpecs(LLVMContext &Ctx,
+                                               StringRef FileName) {
+  auto BufferOrError = MemoryBuffer::getFileOrSTDIN(FileName);
+  if (!BufferOrError) {
+    Ctx.emitError("Error opening output specs file: " + FileName + " : " +
+                  BufferOrError.getError().message());
+    return false;
+  }
+  auto ParsedJSONValues = json::parse(BufferOrError.get()->getBuffer());
+  if (!ParsedJSONValues) {
+    Ctx.emitError("Could not parse specs file: " + FileName);
+    return false;
+  }
+  auto ValuesArray = ParsedJSONValues->getAsArray();
+  if (!ValuesArray) {
+    Ctx.emitError("Expected an array of {tensor_spec:<TensorSpec>, "
+                  "logging_name:<name>} dictionaries");
+    return false;
+  }
+
+  for (const auto &Value : *ValuesArray)
+    if (const auto *Obj = Value.getAsObject())
+      if (const auto *SpecPart = Obj->get("tensor_spec"))
+        if (auto TensorSpec = getTensorSpecFromJSON(Ctx, *SpecPart))
+          if (auto LoggingName = Obj->getString("logging_name")) {
+            if (!TensorSpec->isElementType<int64_t>() &&
+                !TensorSpec->isElementType<int32_t>() &&
+                !TensorSpec->isElementType<float>()) {
+              Ctx.emitError(
+                  "Only int64, int32, and float tensors are supported. "
+                  "Found unsupported type for tensor named " +
+                  TensorSpec->name());
+              return false;
+            }
+            OutputNames.push_back(LoggingName->str());
+            OutputSpecs.push_back(*TensorSpec);
+          }
+
+  if (ValuesArray->size() != OutputNames.size()) {
+    Ctx.emitError(
+        "Unable to parse output spec. It should be a json file containing an "
+        "array of dictionaries. Each dictionary must have a 'tensor_spec' key, "
+        "with a json object describing a TensorSpec; and a 'logging_name' key, "
+        "which is a string to use as name when logging this tensor in the "
+        "training log.");
+    return false;
+  }
+  assert(OutputNames.size() == OutputSpecs.size());
+  if (OutputNames.empty() || OutputNames[0] != DecisionName) {
+    Ctx.emitError("The first output spec must describe the decision tensor, "
+                  "and must have the logging_name " +
+                  StringRef(DecisionName));
+    return false;
+  }
+  return true;
+}
+
 bool ModelUnderTrainingRunner::run() {
-  auto ER = Evaluator->evaluate();
-  if (!ER.hasValue()) {
+  LastEvaluationResult = Evaluator->evaluate();
+  if (!LastEvaluationResult.hasValue()) {
     Ctx.emitError("Error evaluating model.");
     return false;
   }
-  int64_t Decision = *ER->getTensorValue<int64_t>(0);
+  int64_t Decision = *LastEvaluationResult->getTensorValue<int64_t>(0);
   return static_cast<bool>(Decision);
 }
 
@@ -521,22 +651,24 @@ std::unique_ptr<InlineAdvisor> llvm::getDevelopmentModeAdvisor(
   }
 
   std::unique_ptr<MLModelRunner> Runner;
-
+  ModelUnderTrainingRunner *MUTRPtr = nullptr;
   bool IsDoingInference = false;
   if (TFModelUnderTrainingPath.empty())
     Runner.reset(new NoInferenceModelRunner(Ctx));
   else {
-    Runner = std::make_unique<ModelUnderTrainingRunner>(
+    auto MUTR = std::make_unique<ModelUnderTrainingRunner>(
         Ctx, TFModelUnderTrainingPath);
-    if (!Runner) {
+    if (!MUTR || !MUTR->isValid()) {
       Ctx.emitError("Could not load the policy model from the provided path");
       return nullptr;
     }
     IsDoingInference = true;
+    MUTRPtr = MUTR.get();
+    Runner = std::move(MUTR);
   }
   std::unique_ptr<TrainingLogger> Logger;
   if (!TrainingLog.empty())
-    Logger = std::make_unique<TrainingLogger>(TrainingLog);
+    Logger = std::make_unique<TrainingLogger>(TrainingLog, MUTRPtr);
 
   return std::make_unique<DevelopmentModeMLInlineAdvisor>(
       M, MAM, std::move(Runner), GetDefaultAdvice, IsDoingInference,

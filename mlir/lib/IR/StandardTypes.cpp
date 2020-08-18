@@ -300,7 +300,7 @@ ArrayRef<int64_t> VectorType::getShape() const { return getImpl()->getShape(); }
 static LogicalResult checkTensorElementType(Location location,
                                             Type elementType) {
   if (!TensorType::isValidElementType(elementType))
-    return emitError(location, "invalid tensor element type");
+    return emitError(location, "invalid tensor element type: ") << elementType;
   return success();
 }
 

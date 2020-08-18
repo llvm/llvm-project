@@ -8,7 +8,7 @@
 define internal i32* @incdec(i1 %C, i32* %V) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@incdec
-; IS__TUNIT____-SAME: (i1 [[C:%.*]], i32* noalias nofree nonnull returned align 4 dereferenceable(4) "no-capture-maybe-returned" [[V:%.*]])
+; IS__TUNIT____-SAME: (i1 [[C:%.*]], i32* noalias nofree noundef nonnull returned align 4 dereferenceable(4) "no-capture-maybe-returned" [[V:%.*]])
 ; IS__TUNIT____-NEXT:    [[X:%.*]] = load i32, i32* [[V]], align 4
 ; IS__TUNIT____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__TUNIT____:       T:
@@ -22,7 +22,7 @@ define internal i32* @incdec(i1 %C, i32* %V) {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@incdec
-; IS__CGSCC____-SAME: (i1 [[C:%.*]], i32* nofree nonnull returned align 4 dereferenceable(4) "no-capture-maybe-returned" [[V:%.*]])
+; IS__CGSCC____-SAME: (i1 [[C:%.*]], i32* nofree noundef nonnull returned align 4 dereferenceable(4) "no-capture-maybe-returned" [[V:%.*]])
 ; IS__CGSCC____-NEXT:    [[X:%.*]] = load i32, i32* [[V]], align 4
 ; IS__CGSCC____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC____:       T:
@@ -78,7 +78,7 @@ define void @caller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@caller
 ; IS__TUNIT____-SAME: (i1 [[C:%.*]]) [[ATTR2:#.*]] personality i32 (...)* @__gxx_personality_v0
 ; IS__TUNIT____-NEXT:    [[Q:%.*]] = alloca i32, align 4
-; IS__TUNIT____-NEXT:    [[W:%.*]] = call align 4 i32* @incdec(i1 [[C]], i32* noalias nofree nonnull align 4 dereferenceable(4) "no-capture-maybe-returned" [[Q]])
+; IS__TUNIT____-NEXT:    [[W:%.*]] = call align 4 i32* @incdec(i1 [[C]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) "no-capture-maybe-returned" [[Q]])
 ; IS__TUNIT____-NEXT:    [[S1:%.*]] = call { i32, i32 } @foo(i32 1, i32 2)
 ; IS__TUNIT____-NEXT:    [[X1:%.*]] = extractvalue { i32, i32 } [[S1]], 0
 ; IS__TUNIT____-NEXT:    [[S2:%.*]] = call { i32, i32 } @foo(i32 3, i32 4)
@@ -97,7 +97,7 @@ define void @caller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller
 ; IS__CGSCC____-SAME: (i1 [[C:%.*]]) [[ATTR1:#.*]] personality i32 (...)* @__gxx_personality_v0
 ; IS__CGSCC____-NEXT:    [[Q:%.*]] = alloca i32, align 4
-; IS__CGSCC____-NEXT:    [[W:%.*]] = call align 4 i32* @incdec(i1 [[C]], i32* noalias nofree nonnull align 4 dereferenceable(4) [[Q]])
+; IS__CGSCC____-NEXT:    [[W:%.*]] = call align 4 i32* @incdec(i1 [[C]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[Q]])
 ; IS__CGSCC____-NEXT:    [[S1:%.*]] = call { i32, i32 } @foo(i32 1, i32 2)
 ; IS__CGSCC____-NEXT:    [[X1:%.*]] = extractvalue { i32, i32 } [[S1]], 0
 ; IS__CGSCC____-NEXT:    [[S2:%.*]] = call { i32, i32 } @foo(i32 3, i32 4)

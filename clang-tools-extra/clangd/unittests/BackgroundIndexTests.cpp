@@ -229,6 +229,61 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
                        FileURI("unittest:///root/B.cc")}));
 }
 
+TEST_F(BackgroundIndexTest, MainFileRefs) {
+  MockFS FS;
+  FS.Files[testPath("root/A.h")] = R"cpp(
+      void header_sym();
+      )cpp";
+  FS.Files[testPath("root/A.cc")] =
+      "#include \"A.h\"\nstatic void main_sym() { (void)header_sym; }";
+
+  // Check the behaviour with CollectMainFileRefs = false (the default).
+  {
+    llvm::StringMap<std::string> Storage;
+    size_t CacheHits = 0;
+    MemoryShardStorage MSS(Storage, CacheHits);
+    OverlayCDB CDB(/*Base=*/nullptr);
+    BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                        /*Opts=*/{});
+
+    tooling::CompileCommand Cmd;
+    Cmd.Filename = testPath("root/A.cc");
+    Cmd.Directory = testPath("root");
+    Cmd.CommandLine = {"clang++", testPath("root/A.cc")};
+    CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
+
+    ASSERT_TRUE(Idx.blockUntilIdleForTest());
+    EXPECT_THAT(
+        runFuzzyFind(Idx, ""),
+        UnorderedElementsAre(AllOf(Named("header_sym"), NumReferences(1U)),
+                             AllOf(Named("main_sym"), NumReferences(0U))));
+  }
+
+  // Check the behaviour with CollectMainFileRefs = true.
+  {
+    llvm::StringMap<std::string> Storage;
+    size_t CacheHits = 0;
+    MemoryShardStorage MSS(Storage, CacheHits);
+    OverlayCDB CDB(/*Base=*/nullptr);
+    BackgroundIndex::Options Opts;
+    Opts.CollectMainFileRefs = true;
+    BackgroundIndex Idx(
+        FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
+
+    tooling::CompileCommand Cmd;
+    Cmd.Filename = testPath("root/A.cc");
+    Cmd.Directory = testPath("root");
+    Cmd.CommandLine = {"clang++", testPath("root/A.cc")};
+    CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
+
+    ASSERT_TRUE(Idx.blockUntilIdleForTest());
+    EXPECT_THAT(
+        runFuzzyFind(Idx, ""),
+        UnorderedElementsAre(AllOf(Named("header_sym"), NumReferences(1U)),
+                             AllOf(Named("main_sym"), NumReferences(1U))));
+  }
+}
+
 TEST_F(BackgroundIndexTest, ShardStorageTest) {
   MockFS FS;
   FS.Files[testPath("root/A.h")] = R"cpp(

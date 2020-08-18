@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=x86_64-- -O2 -debug-pass=Structure < %s -o /dev/null 2>&1 | FileCheck --check-prefixes=CHECK,%llvmcheckext %s 
+; RUN: opt -enable-new-pm=0 -mtriple=x86_64-- -O2 -debug-pass=Structure < %s -o /dev/null 2>&1 | FileCheck --check-prefixes=CHECK,%llvmcheckext %s 
 
 ; REQUIRES: asserts
 

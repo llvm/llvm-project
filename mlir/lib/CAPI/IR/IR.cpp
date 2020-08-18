@@ -8,6 +8,7 @@
 
 #include "mlir-c/IR.h"
 
+#include "mlir/CAPI/IR.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/Operation.h"
@@ -16,46 +17,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
-
-/* ========================================================================== */
-/* Definitions of methods for non-owning structures used in C API.            */
-/* ========================================================================== */
-
-#define DEFINE_C_API_PTR_METHODS(name, cpptype)                                \
-  static name wrap(cpptype *cpp) { return name{cpp}; }                         \
-  static cpptype *unwrap(name c) { return static_cast<cpptype *>(c.ptr); }
-
-DEFINE_C_API_PTR_METHODS(MlirContext, MLIRContext)
-DEFINE_C_API_PTR_METHODS(MlirOperation, Operation)
-DEFINE_C_API_PTR_METHODS(MlirBlock, Block)
-DEFINE_C_API_PTR_METHODS(MlirRegion, Region)
-
-#define DEFINE_C_API_METHODS(name, cpptype)                                    \
-  static name wrap(cpptype cpp) { return name{cpp.getAsOpaquePointer()}; }     \
-  static cpptype unwrap(name c) { return cpptype::getFromOpaquePointer(c.ptr); }
-
-DEFINE_C_API_METHODS(MlirAttribute, Attribute)
-DEFINE_C_API_METHODS(MlirLocation, Location);
-DEFINE_C_API_METHODS(MlirType, Type)
-DEFINE_C_API_METHODS(MlirValue, Value)
-DEFINE_C_API_METHODS(MlirModule, ModuleOp)
-
-template <typename CppTy, typename CTy>
-static ArrayRef<CppTy> unwrapList(intptr_t size, CTy *first,
-                                  SmallVectorImpl<CppTy> &storage) {
-  static_assert(
-      std::is_same<decltype(unwrap(std::declval<CTy>())), CppTy>::value,
-      "incompatible C and C++ types");
-
-  if (size == 0)
-    return llvm::None;
-
-  assert(storage.empty() && "expected to populate storage");
-  storage.reserve(size);
-  for (intptr_t i = 0; i < size; ++i)
-    storage.push_back(unwrap(*(first + i)));
-  return storage;
-}
 
 /* ========================================================================== */
 /* Printing helper.                                                           */
@@ -387,6 +348,8 @@ void mlirValuePrint(MlirValue value, MlirPrintCallback callback,
 MlirType mlirTypeParseGet(MlirContext context, const char *type) {
   return wrap(mlir::parseType(type, unwrap(context)));
 }
+
+int mlirTypeEqual(MlirType t1, MlirType t2) { return unwrap(t1) == unwrap(t2); }
 
 void mlirTypePrint(MlirType type, MlirPrintCallback callback, void *userData) {
   CallbackOstream stream(callback, userData);
