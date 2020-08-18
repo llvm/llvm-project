@@ -382,7 +382,7 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
       return false;
     case MVE_ASRLi:
     case MVE_ASRLr:
-    case MVE_LSRL:	
+    case MVE_LSRL:
     case MVE_SQRSHR:
     case MVE_SQSHL:
     case MVE_SRSHR:
@@ -393,7 +393,7 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VABDf32:
     case MVE_VABDs16:
     case MVE_VABDs32:
-    case MVE_VABDs8:	
+    case MVE_VABDs8:
     case MVE_VABDu16:
     case MVE_VABDu32:
     case MVE_VABDu8:
@@ -609,6 +609,42 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VIWDUPu16:
     case MVE_VIWDUPu32:
     case MVE_VIWDUPu8:
+    case MVE_VLD20_8:
+    case MVE_VLD21_8:
+    case MVE_VLD20_16:
+    case MVE_VLD21_16:
+    case MVE_VLD20_32:
+    case MVE_VLD21_32:
+    case MVE_VLD20_8_wb:
+    case MVE_VLD21_8_wb:
+    case MVE_VLD20_16_wb:
+    case MVE_VLD21_16_wb:
+    case MVE_VLD20_32_wb:
+    case MVE_VLD21_32_wb:
+    case MVE_VLD40_8:
+    case MVE_VLD41_8:
+    case MVE_VLD42_8:
+    case MVE_VLD43_8:
+    case MVE_VLD40_16:
+    case MVE_VLD41_16:
+    case MVE_VLD42_16:
+    case MVE_VLD43_16:
+    case MVE_VLD40_32:
+    case MVE_VLD41_32:
+    case MVE_VLD42_32:
+    case MVE_VLD43_32:
+    case MVE_VLD40_8_wb:
+    case MVE_VLD41_8_wb:
+    case MVE_VLD42_8_wb:
+    case MVE_VLD43_8_wb:
+    case MVE_VLD40_16_wb:
+    case MVE_VLD41_16_wb:
+    case MVE_VLD42_16_wb:
+    case MVE_VLD43_16_wb:
+    case MVE_VLD40_32_wb:
+    case MVE_VLD41_32_wb:
+    case MVE_VLD42_32_wb:
+    case MVE_VLD43_32_wb:
     case MVE_VLDRBS16:
     case MVE_VLDRBS16_post:
     case MVE_VLDRBS16_pre:
@@ -657,9 +693,9 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VLDRWU32_rq_u:
     case MVE_VMOVimmf32:
     case MVE_VMOVimmi16:
-    case MVE_VMOVimmi32:	
+    case MVE_VMOVimmi32:
     case MVE_VMOVimmi64:
-    case MVE_VMOVimmi8:	
+    case MVE_VMOVimmi8:
     case MVE_VMOVNi16bh:
     case MVE_VMOVNi16th:
     case MVE_VMOVNi32bh:
@@ -679,7 +715,7 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VMULLTs8:
     case MVE_VMULLTu16:
     case MVE_VMULLTu32:
-    case MVE_VMULLTu8:	
+    case MVE_VMULLTu8:
     case MVE_VMUL_qr_f16:
     case MVE_VMUL_qr_f32:
     case MVE_VMUL_qr_i16:
@@ -702,7 +738,7 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VORR:
     case MVE_VORRimmi16:
     case MVE_VORRimmi32:
-    case MVE_VPST:	
+    case MVE_VPST:
     case MVE_VQABSs16:
     case MVE_VQABSs32:
     case MVE_VQABSs8:
@@ -814,7 +850,7 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VRHADDs32:
     case MVE_VRHADDs8:
     case MVE_VRHADDu16:
-    case MVE_VRHADDu32:	
+    case MVE_VRHADDu32:
     case MVE_VRHADDu8:
     case MVE_VRINTf16A:
     case MVE_VRINTf16M:
@@ -825,12 +861,12 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VRINTf32A:
     case MVE_VRINTf32M:
     case MVE_VRINTf32N:
-    case MVE_VRINTf32P:	
-    case MVE_VRINTf32X:	
+    case MVE_VRINTf32P:
+    case MVE_VRINTf32X:
     case MVE_VRINTf32Z:
     case MVE_VRSHL_by_vecs16:
     case MVE_VRSHL_by_vecs32:
-    case MVE_VRSHL_by_vecs8:	
+    case MVE_VRSHL_by_vecs8:
     case MVE_VRSHL_by_vecu16:
     case MVE_VRSHL_by_vecu32:
     case MVE_VRSHL_by_vecu8:
@@ -887,7 +923,7 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VSTRB16_rq:
     case MVE_VSTRB32:
     case MVE_VSTRB32_post:
-    case MVE_VSTRB32_pre:	
+    case MVE_VSTRB32_pre:
     case MVE_VSTRB32_rq:
     case MVE_VSTRB8_rq:
     case MVE_VSTRBU8:
@@ -957,7 +993,9 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     for (auto &Op : Desc.operands()) {
       // Only check instructions that access the MQPR regs.
       if ((Op.OperandType & MCOI::OPERAND_REGISTER) == 0 ||
-          Op.RegClass != ARM::MQPRRegClassID)
+          (Op.RegClass != ARM::MQPRRegClassID &&
+           Op.RegClass != ARM::QQPRRegClassID &&
+           Op.RegClass != ARM::QQQQPRRegClassID))
         continue;
 
       uint64_t Flags = MII->get(i).TSFlags;
