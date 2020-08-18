@@ -30,7 +30,6 @@ class TestSwiftArrayType(lldbtest.TestBase):
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     @swiftTest
-    @skipIf(bugnumber='rdar://30663811', oslist=['linux'])
     def test_array(self):
         """Check formatting for Swift.Array<T>"""
         self.build()
