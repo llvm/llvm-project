@@ -24513,6 +24513,12 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue Src2 = Op.getOperand(2);
       SDValue Src3 = Op.getOperand(3);
 
+      if (IntrData->Type == INTR_TYPE_3OP_IMM8 &&
+          Src3.getValueType() != MVT::i8) {
+        Src3 = DAG.getTargetConstant(
+            cast<ConstantSDNode>(Src3)->getZExtValue() & 0xff, dl, MVT::i8);
+      }
+
       // We specify 2 possible opcodes for intrinsics with rounding modes.
       // First, we check if the intrinsic may have non-default rounding mode,
       // (IntrData->Opc1 != 0), then we check the rounding mode operand.
