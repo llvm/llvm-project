@@ -25,6 +25,9 @@ class GuiViewLargeCommandTest(PExpectTest):
         self.expect("run", substrs=["stop reason ="])
 
         escape_key = chr(27).encode()
+        left_key = chr(27)+'OD' # for vt100 terminal (lldbexpect sets TERM=vt100)
+        right_key = chr(27)+'OC'
+        ctrl_l = chr(12)
 
         # Start the GUI and close the welcome window.
         self.child.sendline("gui")
@@ -44,6 +47,20 @@ class GuiViewLargeCommandTest(PExpectTest):
         self.child.expect_exact("Variables")
         self.child.expect_exact("(int) a_variable_with_a_very_looooooooooooooooooooooooooooooo"+chr(27))
         self.child.expect_exact("(int) shortvar = 1"+chr(27))
+
+        # Scroll the sources view twice to the right.
+        self.child.send(right_key)
+        self.child.send(right_key)
+        # Force a redraw, otherwise curses will optimize the drawing to not draw all 'o'.
+        self.child.send(ctrl_l)
+        # The source code is indented by two spaces, so there'll be just two extra 'o' on the right.
+        self.child.expect_exact("int a_variable_with_a_very_looooooooooooooooooooooooooooo"+chr(27))
+
+        # And scroll back to the left.
+        self.child.send(left_key)
+        self.child.send(left_key)
+        self.child.send(ctrl_l)
+        self.child.expect_exact("int a_variable_with_a_very_looooooooooooooooooooooooooo"+chr(27))
 
         # Press escape to quit the gui
         self.child.send(escape_key)
