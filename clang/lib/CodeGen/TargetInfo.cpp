@@ -2502,12 +2502,17 @@ static bool checkAVXParamFeature(DiagnosticsEngine &Diag,
                                  const llvm::StringMap<bool> &CallerMap,
                                  const llvm::StringMap<bool> &CalleeMap,
                                  QualType Ty, StringRef Feature,
-                                 bool IsArgument) {
+                                 bool IsArgument, const llvm::Triple &TT) {
   bool CallerHasFeat = CallerMap.lookup(Feature);
   bool CalleeHasFeat = CalleeMap.lookup(Feature);
-  if (!CallerHasFeat && !CalleeHasFeat)
+  if (!CallerHasFeat && !CalleeHasFeat) {
+    // Darwin doesn't enable AVX/AVX512 by default to support Rosetta 2, so it's
+    // user's responsibility to use AVX/AVX512 safely.
+    if (TT.isOSDarwin())
+      return false;
     return Diag.Report(CallLoc, diag::warn_avx_calling_convention)
            << IsArgument << Ty << Feature;
+  }
 
   // Mixing calling conventions here is very clearly an error.
   if (!CallerHasFeat || !CalleeHasFeat)
@@ -2525,13 +2530,14 @@ static bool checkAVXParam(DiagnosticsEngine &Diag, ASTContext &Ctx,
                           const llvm::StringMap<bool> &CalleeMap, QualType Ty,
                           bool IsArgument) {
   uint64_t Size = Ctx.getTypeSize(Ty);
+  const llvm::Triple &TT = Ctx.getTargetInfo().getTriple();
   if (Size > 256)
     return checkAVXParamFeature(Diag, CallLoc, CallerMap, CalleeMap, Ty,
-                                "avx512f", IsArgument);
+                                "avx512f", IsArgument, TT);
 
   if (Size > 128)
     return checkAVXParamFeature(Diag, CallLoc, CallerMap, CalleeMap, Ty, "avx",
-                                IsArgument);
+                                IsArgument, TT);
 
   return false;
 }

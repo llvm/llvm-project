@@ -1,6 +1,9 @@
-// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -verify=no256,no512 -o - -S
-// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx -verify=no512 -o - -S
+// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -verify=no256,no512,no256-err,no512-err -o - -S
+// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx -verify=no512,no512-err -o - -S
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -target-feature +avx512f -verify=both -o - -S
+
+// RUN: %clang_cc1 %s -triple=x86_64-apple-macos -verify=no256-err,no512-err -o - -S
+// RUN: %clang_cc1 %s -triple=x86_64-apple-macos -target-feature +avx -verify=no512-err -o - -S
 // REQUIRES: x86-registered-target
 
 // both-no-diagnostics
@@ -31,12 +34,12 @@ void call_warn(void) {
 // If only 1 side has an attribute, error.
 void call_errors(void) {
   avx256Type t1;
-  takesAvx256(t1); // no256-error {{AVX vector argument of type 'avx256Type' (vector of 16 'short' values) without 'avx' enabled changes the ABI}}
+  takesAvx256(t1); // no256-err-error {{AVX vector argument of type 'avx256Type' (vector of 16 'short' values) without 'avx' enabled changes the ABI}}
   avx512fType t2;
-  takesAvx512(t2); // no512-error {{AVX vector argument of type 'avx512fType' (vector of 32 'short' values) without 'avx512f' enabled changes the ABI}}
+  takesAvx512(t2); // no512-err-error {{AVX vector argument of type 'avx512fType' (vector of 32 'short' values) without 'avx512f' enabled changes the ABI}}
 
-  variadic_err(1, t1); // no256-error {{AVX vector argument of type 'avx256Type' (vector of 16 'short' values) without 'avx' enabled changes the ABI}}
-  variadic_err(3, t2); // no512-error {{AVX vector argument of type 'avx512fType' (vector of 32 'short' values) without 'avx512f' enabled changes the ABI}}
+  variadic_err(1, t1); // no256-err-error {{AVX vector argument of type 'avx256Type' (vector of 16 'short' values) without 'avx' enabled changes the ABI}}
+  variadic_err(3, t2); // no512-err-error {{AVX vector argument of type 'avx512fType' (vector of 32 'short' values) without 'avx512f' enabled changes the ABI}}
 }
 
 // These two don't diagnose anything, since these are valid calls.
