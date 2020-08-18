@@ -442,6 +442,28 @@ TEST_F(TargetDeclTest, Concept) {
   )cpp";
   EXPECT_DECLS("ConceptSpecializationExpr",
                {"template <typename T> concept Fooable = true;"});
+
+  // constrained-parameter
+  Code = R"cpp(
+    template <typename T>
+    concept Fooable = true;
+
+    template <[[Fooable]] T>
+    void bar(T t);
+  )cpp";
+  EXPECT_DECLS("ConceptSpecializationExpr",
+               {"template <typename T> concept Fooable = true;"});
+
+  // partial-concept-id
+  Code = R"cpp(
+    template <typename T, typename U>
+    concept Fooable = true;
+
+    template <[[Fooable]]<int> T>
+    void bar(T t);
+  )cpp";
+  EXPECT_DECLS("ConceptSpecializationExpr",
+               {"template <typename T, typename U> concept Fooable = true;"});
 }
 
 TEST_F(TargetDeclTest, FunctionTemplate) {
