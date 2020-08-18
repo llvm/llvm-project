@@ -1,5 +1,5 @@
 // UNSUPPORTED: -windows-
-// RUN: mlir-reduce %s -test %S/failure-test.sh | FileCheck %s
+// RUN: mlir-reduce %s -test %S/failure-test.sh -pass-test function-reducer | FileCheck %s
 // This input should be reduced by the pass pipeline so that only 
 // the @simple5 function remains as this is the shortest function 
 // containing the interesting behavior.
