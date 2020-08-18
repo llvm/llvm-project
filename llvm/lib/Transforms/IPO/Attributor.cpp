@@ -1481,9 +1481,8 @@ static Function *internalizeFunction(Function &F) {
   FunctionType *FnTy = F.getFunctionType();
 
   // create a copy of the current function
-  Function *Copied =
-      Function::Create(FnTy, GlobalValue::PrivateLinkage, F.getAddressSpace(),
-                       F.getName() + ".internalized");
+  Function *Copied = Function::Create(FnTy, F.getLinkage(), F.getAddressSpace(),
+                                      F.getName() + ".internalized");
   ValueToValueMapTy VMap;
   auto *NewFArgIt = Copied->arg_begin();
   for (auto &Arg : F.args()) {
@@ -1495,6 +1494,11 @@ static Function *internalizeFunction(Function &F) {
 
   // Copy the body of the original function to the new one
   CloneFunctionInto(Copied, &F, VMap, /* ModuleLevelChanges */ false, Returns);
+
+  // Set the linakage and visibility late as CloneFunctionInto has some implicit
+  // requirements.
+  Copied->setVisibility(GlobalValue::DefaultVisibility);
+  Copied->setLinkage(GlobalValue::PrivateLinkage);
 
   // Copy metadata
   SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
