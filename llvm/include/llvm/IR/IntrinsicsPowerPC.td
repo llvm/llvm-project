@@ -434,6 +434,18 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   def int_ppc_altivec_vprtybq : GCCBuiltin<"__builtin_altivec_vprtybq">,
               Intrinsic<[llvm_v1i128_ty],[llvm_v1i128_ty],[IntrNoMem]>;
 
+  // P10 Vector Extract with Mask
+  def int_ppc_altivec_vextractbm : GCCBuiltin<"__builtin_altivec_vextractbm">,
+              Intrinsic<[llvm_i32_ty], [llvm_v16i8_ty], [IntrNoMem]>;
+  def int_ppc_altivec_vextracthm : GCCBuiltin<"__builtin_altivec_vextracthm">,
+              Intrinsic<[llvm_i32_ty], [llvm_v8i16_ty], [IntrNoMem]>;
+  def int_ppc_altivec_vextractwm : GCCBuiltin<"__builtin_altivec_vextractwm">,
+              Intrinsic<[llvm_i32_ty], [llvm_v4i32_ty], [IntrNoMem]>;
+  def int_ppc_altivec_vextractdm : GCCBuiltin<"__builtin_altivec_vextractdm">,
+              Intrinsic<[llvm_i32_ty], [llvm_v2i64_ty], [IntrNoMem]>;
+  def int_ppc_altivec_vextractqm : GCCBuiltin<"__builtin_altivec_vextractqm">,
+              Intrinsic<[llvm_i32_ty], [llvm_v1i128_ty], [IntrNoMem]>;
+
   // P10 Vector Parallel Bits Deposit/Extract Doubleword Builtins.
   def int_ppc_altivec_vpdepd : GCCBuiltin<"__builtin_altivec_vpdepd">,
               Intrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty],

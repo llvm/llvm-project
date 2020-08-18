@@ -298,6 +298,13 @@ BUILTIN(__builtin_altivec_vrldmi, "V2ULLiV2ULLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vrlwnm, "V4UiV4UiV4Ui", "")
 BUILTIN(__builtin_altivec_vrldnm, "V2ULLiV2ULLiV2ULLi", "")
 
+// P10 Vector Extract with Mask built-ins.
+BUILTIN(__builtin_altivec_vextractbm, "UiV16Uc", "")
+BUILTIN(__builtin_altivec_vextracthm, "UiV8Us", "")
+BUILTIN(__builtin_altivec_vextractwm, "UiV4Ui", "")
+BUILTIN(__builtin_altivec_vextractdm, "UiV2ULLi", "")
+BUILTIN(__builtin_altivec_vextractqm, "UiV1ULLLi", "")
+
 // P10 Vector Parallel Bits built-ins.
 BUILTIN(__builtin_altivec_vpdepd, "V2ULLiV2ULLiV2ULLi", "")
 BUILTIN(__builtin_altivec_vpextd, "V2ULLiV2ULLiV2ULLi", "")
