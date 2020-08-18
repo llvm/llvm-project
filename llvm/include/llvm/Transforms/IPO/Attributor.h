@@ -3560,6 +3560,36 @@ struct AAPotentialValues
   static const char ID;
 };
 
+/// An abstract interface for all noundef attributes.
+struct AANoUndef
+    : public IRAttribute<Attribute::NoUndef,
+                         StateWrapper<BooleanState, AbstractAttribute>> {
+  AANoUndef(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// Return true if we assume that the underlying value is noundef.
+  bool isAssumedNoUndef() const { return getAssumed(); }
+
+  /// Return true if we know that underlying value is noundef.
+  bool isKnownNoUndef() const { return getKnown(); }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AANoUndef &createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AANoUndef"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is AANoUndef
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
 /// Run options, used by the pass manager.
 enum AttributorRunOption {
   NONE = 0,

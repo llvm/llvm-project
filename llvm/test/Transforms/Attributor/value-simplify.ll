@@ -321,12 +321,12 @@ define i32 @ipccp3() {
 define internal i32* @test_inalloca(i32* inalloca %a) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_inalloca
-; IS__TUNIT____-SAME: (i32* inalloca noalias nofree returned writeonly align 536870912 "no-capture-maybe-returned" [[A:%.*]])
+; IS__TUNIT____-SAME: (i32* inalloca noalias nofree noundef returned writeonly align 536870912 "no-capture-maybe-returned" [[A:%.*]])
 ; IS__TUNIT____-NEXT:    ret i32* [[A]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_inalloca
-; IS__CGSCC____-SAME: (i32* inalloca noalias nofree returned writeonly align 536870912 "no-capture-maybe-returned" [[A:%.*]])
+; IS__CGSCC____-SAME: (i32* inalloca noalias nofree noundef returned writeonly align 536870912 "no-capture-maybe-returned" [[A:%.*]])
 ; IS__CGSCC____-NEXT:    ret i32* [[A]]
 ;
   ret i32* %a
@@ -334,12 +334,12 @@ define internal i32* @test_inalloca(i32* inalloca %a) {
 define i32* @complicated_args_inalloca() {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@complicated_args_inalloca()
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nocapture nofree writeonly align 536870912 null)
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nocapture nofree noundef writeonly align 536870912 null)
 ; IS__TUNIT____-NEXT:    ret i32* [[CALL]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@complicated_args_inalloca()
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nocapture nofree writeonly align 536870912 null)
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nocapture nofree noundef writeonly align 536870912 null)
 ; IS__CGSCC____-NEXT:    ret i32* [[CALL]]
 ;
   %call = call i32* @test_inalloca(i32* null)
@@ -349,12 +349,12 @@ define i32* @complicated_args_inalloca() {
 define internal i32* @test_preallocated(i32* preallocated(i32) %a) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_preallocated
-; IS__TUNIT____-SAME: (i32* noalias nofree returned writeonly preallocated(i32) align 536870912 "no-capture-maybe-returned" [[A:%.*]])
+; IS__TUNIT____-SAME: (i32* noalias nofree noundef returned writeonly preallocated(i32) align 536870912 "no-capture-maybe-returned" [[A:%.*]])
 ; IS__TUNIT____-NEXT:    ret i32* [[A]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_preallocated
-; IS__CGSCC____-SAME: (i32* noalias nofree returned writeonly preallocated(i32) align 536870912 "no-capture-maybe-returned" [[A:%.*]])
+; IS__CGSCC____-SAME: (i32* noalias nofree noundef returned writeonly preallocated(i32) align 536870912 "no-capture-maybe-returned" [[A:%.*]])
 ; IS__CGSCC____-NEXT:    ret i32* [[A]]
 ;
   ret i32* %a
@@ -363,25 +363,25 @@ define i32* @complicated_args_preallocated() {
 ; IS__TUNIT_OPM: Function Attrs: nounwind
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@complicated_args_preallocated()
 ; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 1)
-; IS__TUNIT_OPM-NEXT:    [[CALL:%.*]] = call i32* @test_preallocated(i32* noalias nocapture nofree writeonly preallocated(i32) align 536870912 null) [[ATTR5:#.*]] [ "preallocated"(token [[C]]) ]
+; IS__TUNIT_OPM-NEXT:    [[CALL:%.*]] = call i32* @test_preallocated(i32* noalias nocapture nofree noundef writeonly preallocated(i32) align 536870912 null) [[ATTR5:#.*]] [ "preallocated"(token [[C]]) ]
 ; IS__TUNIT_OPM-NEXT:    ret i32* [[CALL]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: nounwind
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@complicated_args_preallocated()
 ; IS__TUNIT_NPM-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 1)
-; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = call i32* @test_preallocated(i32* noalias nocapture nofree writeonly preallocated(i32) align 536870912 null) [[ATTR4:#.*]] [ "preallocated"(token [[C]]) ]
+; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = call i32* @test_preallocated(i32* noalias nocapture nofree noundef writeonly preallocated(i32) align 536870912 null) [[ATTR4:#.*]] [ "preallocated"(token [[C]]) ]
 ; IS__TUNIT_NPM-NEXT:    ret i32* [[CALL]]
 ;
 ; IS__CGSCC_OPM: Function Attrs: nounwind
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@complicated_args_preallocated()
 ; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 1)
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32* @test_preallocated(i32* noalias nocapture nofree writeonly preallocated(i32) align 536870912 null) [[ATTR6:#.*]] [ "preallocated"(token [[C]]) ]
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32* @test_preallocated(i32* noalias nocapture nofree noundef writeonly preallocated(i32) align 536870912 null) [[ATTR6:#.*]] [ "preallocated"(token [[C]]) ]
 ; IS__CGSCC_OPM-NEXT:    ret i32* [[CALL]]
 ;
 ; IS__CGSCC_NPM: Function Attrs: nounwind
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@complicated_args_preallocated()
 ; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 1)
-; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32* @test_preallocated(i32* noalias nocapture nofree writeonly preallocated(i32) align 536870912 null) [[ATTR5:#.*]] [ "preallocated"(token [[C]]) ]
+; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32* @test_preallocated(i32* noalias nocapture nofree noundef writeonly preallocated(i32) align 536870912 null) [[ATTR5:#.*]] [ "preallocated"(token [[C]]) ]
 ; IS__CGSCC_NPM-NEXT:    ret i32* [[CALL]]
 ;
   %c = call token @llvm.call.preallocated.setup(i32 1)
@@ -393,13 +393,13 @@ define internal void @test_sret(%struct.X* sret %a, %struct.X** %b) {
 ;
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_sret
-; IS__TUNIT____-SAME: (%struct.X* noalias nofree nonnull sret writeonly align 536870912 dereferenceable(8) [[A:%.*]], %struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B:%.*]])
+; IS__TUNIT____-SAME: (%struct.X* noalias nofree noundef nonnull sret writeonly align 536870912 dereferenceable(8) [[A:%.*]], %struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B:%.*]])
 ; IS__TUNIT____-NEXT:    store %struct.X* [[A]], %struct.X** [[B]], align 8
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_sret
-; IS__CGSCC____-SAME: (%struct.X* noalias nofree nonnull sret writeonly align 536870912 dereferenceable(8) [[A:%.*]], %struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B:%.*]])
+; IS__CGSCC____-SAME: (%struct.X* noalias nofree noundef nonnull sret writeonly align 536870912 dereferenceable(8) [[A:%.*]], %struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B:%.*]])
 ; IS__CGSCC____-NEXT:    store %struct.X* [[A]], %struct.X** [[B]], align 8
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -412,14 +412,13 @@ define void @complicated_args_sret(%struct.X** %b) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@complicated_args_sret
 ; IS__TUNIT____-SAME: (%struct.X** nocapture nofree writeonly [[B:%.*]])
-; IS__TUNIT____-NEXT:    call void @test_sret(%struct.X* noalias nocapture nofree writeonly align 536870912 null, %struct.X** nocapture nofree writeonly align 8 [[B]])
+; IS__TUNIT____-NEXT:    call void @test_sret(%struct.X* noalias nocapture nofree noundef writeonly align 536870912 null, %struct.X** nocapture nofree writeonly align 8 [[B]])
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@complicated_args_sret
 ; IS__CGSCC____-SAME: (%struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B:%.*]])
-; IS__CGSCC____-NEXT:    call void @test_sret(%struct.X* noalias nocapture nofree nonnull writeonly align 536870912 dereferenceable(8) null, %struct.X** nocapture nofree nonnull writeonly align 8 dereferenceable(8) [[B]])
-; IS__CGSCC____-NEXT:    ret void
+; IS__CGSCC____-NEXT:    unreachable
 ;
   call void @test_sret(%struct.X* null, %struct.X** %b)
   ret void
@@ -428,12 +427,12 @@ define void @complicated_args_sret(%struct.X** %b) {
 define internal %struct.X* @test_nest(%struct.X* nest %a) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_nest
-; IS__TUNIT____-SAME: (%struct.X* nest noalias nofree readnone returned align 536870912 "no-capture-maybe-returned" [[A:%.*]])
+; IS__TUNIT____-SAME: (%struct.X* nest noalias nofree noundef readnone returned align 536870912 "no-capture-maybe-returned" [[A:%.*]])
 ; IS__TUNIT____-NEXT:    ret %struct.X* [[A]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_nest
-; IS__CGSCC____-SAME: (%struct.X* nest noalias nofree readnone returned align 536870912 "no-capture-maybe-returned" [[A:%.*]])
+; IS__CGSCC____-SAME: (%struct.X* nest noalias nofree noundef readnone returned align 536870912 "no-capture-maybe-returned" [[A:%.*]])
 ; IS__CGSCC____-NEXT:    ret %struct.X* [[A]]
 ;
   ret %struct.X* %a
@@ -441,12 +440,12 @@ define internal %struct.X* @test_nest(%struct.X* nest %a) {
 define %struct.X* @complicated_args_nest() {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@complicated_args_nest()
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call %struct.X* @test_nest(%struct.X* noalias nocapture nofree readnone align 536870912 null)
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call %struct.X* @test_nest(%struct.X* noalias nocapture nofree noundef readnone align 536870912 null)
 ; IS__TUNIT____-NEXT:    ret %struct.X* [[CALL]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@complicated_args_nest()
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call %struct.X* @test_nest(%struct.X* noalias nocapture nofree readnone align 536870912 null)
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call %struct.X* @test_nest(%struct.X* noalias nocapture nofree noundef readnone align 536870912 null)
 ; IS__CGSCC____-NEXT:    ret %struct.X* [[CALL]]
 ;
   %call = call %struct.X* @test_nest(%struct.X* null)
@@ -457,7 +456,7 @@ define %struct.X* @complicated_args_nest() {
 define internal void @test_byval(%struct.X* byval %a) {
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@test_byval
-; IS__CGSCC_OPM-SAME: (%struct.X* noalias nocapture nofree nonnull writeonly byval align 8 dereferenceable(8) [[A:%.*]])
+; IS__CGSCC_OPM-SAME: (%struct.X* noalias nocapture nofree noundef nonnull writeonly byval align 8 dereferenceable(8) [[A:%.*]])
 ; IS__CGSCC_OPM-NEXT:    [[G0:%.*]] = getelementptr [[STRUCT_X:%.*]], %struct.X* [[A]], i32 0, i32 0
 ; IS__CGSCC_OPM-NEXT:    store i8* null, i8** [[G0]], align 8
 ; IS__CGSCC_OPM-NEXT:    ret void

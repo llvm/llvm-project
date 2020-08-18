@@ -12,14 +12,14 @@ target triple = "x86_64-unknown-linux-gnu"
 define internal fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #0 {
 ;
 ; NOT_TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512
-; NOT_TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
+; NOT_TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
 ; NOT_TUNIT_NPM-NEXT:  bb:
 ; NOT_TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1]], align 64
 ; NOT_TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; NOT_TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512
-; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]])
+; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]])
 ; IS__TUNIT_NPM-NEXT:  bb:
 ; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
@@ -41,8 +41,8 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>*
 ; IS__TUNIT_OPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__TUNIT_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__TUNIT_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__TUNIT_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
@@ -53,9 +53,9 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>*
 ; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load <8 x i64>, <8 x i64>* [[TMP]], align 64
-; IS__TUNIT_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]])
+; IS__TUNIT_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]])
 ; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
@@ -66,8 +66,8 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>*
 ; IS__CGSCC_OPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__CGSCC_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__CGSCC_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__CGSCC_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
@@ -78,8 +78,8 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>*
 ; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__CGSCC_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__CGSCC_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_NPM-NEXT:    ret void
@@ -99,14 +99,14 @@ bb:
 define internal fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #1 {
 ;
 ; NOT_TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256
-; NOT_TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
+; NOT_TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
 ; NOT_TUNIT_NPM-NEXT:  bb:
 ; NOT_TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1]], align 64
 ; NOT_TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; NOT_TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256
-; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]])
+; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]])
 ; IS__TUNIT_NPM-NEXT:  bb:
 ; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
@@ -128,8 +128,8 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__TUNIT_OPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__TUNIT_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__TUNIT_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__TUNIT_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
@@ -140,9 +140,9 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load <8 x i64>, <8 x i64>* [[TMP]], align 64
-; IS__TUNIT_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]])
+; IS__TUNIT_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]])
 ; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
@@ -153,8 +153,8 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__CGSCC_OPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__CGSCC_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__CGSCC_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__CGSCC_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
@@ -165,8 +165,8 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__CGSCC_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__CGSCC_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_NPM-NEXT:    ret void
@@ -186,14 +186,14 @@ bb:
 define internal fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #1 {
 ;
 ; NOT_TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256
-; NOT_TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
+; NOT_TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
 ; NOT_TUNIT_NPM-NEXT:  bb:
 ; NOT_TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1]], align 64
 ; NOT_TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; NOT_TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256
-; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]])
+; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]])
 ; IS__TUNIT_NPM-NEXT:  bb:
 ; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
@@ -215,8 +215,8 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__TUNIT_OPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__TUNIT_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__TUNIT_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__TUNIT_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
@@ -227,9 +227,9 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load <8 x i64>, <8 x i64>* [[TMP]], align 64
-; IS__TUNIT_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]])
+; IS__TUNIT_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]])
 ; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
@@ -240,8 +240,8 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__CGSCC_OPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__CGSCC_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__CGSCC_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__CGSCC_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
@@ -252,8 +252,8 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__CGSCC_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__CGSCC_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_NPM-NEXT:    ret void
@@ -273,14 +273,14 @@ bb:
 define internal fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #0 {
 ;
 ; NOT_TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512
-; NOT_TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
+; NOT_TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
 ; NOT_TUNIT_NPM-NEXT:  bb:
 ; NOT_TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1]], align 64
 ; NOT_TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; NOT_TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512
-; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]])
+; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]])
 ; IS__TUNIT_NPM-NEXT:  bb:
 ; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
@@ -302,8 +302,8 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>*
 ; IS__TUNIT_OPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__TUNIT_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__TUNIT_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__TUNIT_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
@@ -314,9 +314,9 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>*
 ; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load <8 x i64>, <8 x i64>* [[TMP]], align 64
-; IS__TUNIT_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]])
+; IS__TUNIT_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]])
 ; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
@@ -327,8 +327,8 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>*
 ; IS__CGSCC_OPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__CGSCC_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__CGSCC_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__CGSCC_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
@@ -339,8 +339,8 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>*
 ; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__CGSCC_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__CGSCC_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_NPM-NEXT:    ret void
@@ -360,14 +360,14 @@ bb:
 define internal fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #1 {
 ;
 ; NOT_TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256
-; NOT_TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
+; NOT_TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
 ; NOT_TUNIT_NPM-NEXT:  bb:
 ; NOT_TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1]], align 64
 ; NOT_TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; NOT_TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256
-; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* noalias nocapture nofree nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
+; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
 ; IS__TUNIT_NPM-NEXT:  bb:
 ; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1]], align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
@@ -387,8 +387,8 @@ define void @avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__TUNIT_OPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__TUNIT_OPM-NEXT:    call fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__TUNIT_OPM-NEXT:    call fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__TUNIT_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
@@ -399,8 +399,8 @@ define void @avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__TUNIT_NPM-NEXT:    call fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__TUNIT_NPM-NEXT:    call fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
@@ -411,8 +411,8 @@ define void @avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__CGSCC_OPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__CGSCC_OPM-NEXT:    call fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__CGSCC_OPM-NEXT:    call fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__CGSCC_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
@@ -423,8 +423,8 @@ define void @avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>*
 ; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__CGSCC_NPM-NEXT:    call fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__CGSCC_NPM-NEXT:    call fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_NPM-NEXT:    ret void
@@ -444,14 +444,14 @@ bb:
 define internal fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #2 {
 ;
 ; NOT_TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256
-; NOT_TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
+; NOT_TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
 ; NOT_TUNIT_NPM-NEXT:  bb:
 ; NOT_TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1]], align 64
 ; NOT_TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; NOT_TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256
-; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* noalias nocapture nofree nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
+; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
 ; IS__TUNIT_NPM-NEXT:  bb:
 ; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1]], align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
@@ -471,8 +471,8 @@ define void @avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>*
 ; IS__TUNIT_OPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__TUNIT_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__TUNIT_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__TUNIT_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
@@ -483,8 +483,8 @@ define void @avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>*
 ; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__TUNIT_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__TUNIT_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
@@ -495,8 +495,8 @@ define void @avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>*
 ; IS__CGSCC_OPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__CGSCC_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__CGSCC_OPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__CGSCC_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
@@ -507,8 +507,8 @@ define void @avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>*
 ; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__CGSCC_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__CGSCC_NPM-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_NPM-NEXT:    ret void
@@ -528,14 +528,14 @@ bb:
 define internal fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #3 {
 ;
 ; NOT_TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256
-; NOT_TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
+; NOT_TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
 ; NOT_TUNIT_NPM-NEXT:  bb:
 ; NOT_TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1]], align 64
 ; NOT_TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; NOT_TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256
-; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]])
+; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]])
 ; IS__TUNIT_NPM-NEXT:  bb:
 ; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
@@ -557,8 +557,8 @@ define void @avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* %ar
 ; IS__TUNIT_OPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__TUNIT_OPM-NEXT:    call fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__TUNIT_OPM-NEXT:    call fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__TUNIT_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
@@ -569,9 +569,9 @@ define void @avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* %ar
 ; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load <8 x i64>, <8 x i64>* [[TMP]], align 64
-; IS__TUNIT_NPM-NEXT:    call fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]])
+; IS__TUNIT_NPM-NEXT:    call fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]])
 ; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
@@ -582,8 +582,8 @@ define void @avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* %ar
 ; IS__CGSCC_OPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__CGSCC_OPM-NEXT:    call fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__CGSCC_OPM-NEXT:    call fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__CGSCC_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
@@ -594,8 +594,8 @@ define void @avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* %ar
 ; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__CGSCC_NPM-NEXT:    call fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__CGSCC_NPM-NEXT:    call fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_NPM-NEXT:    ret void
@@ -615,14 +615,14 @@ bb:
 define internal fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #4 {
 ;
 ; NOT_TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256
-; NOT_TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
+; NOT_TUNIT_NPM-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]])
 ; NOT_TUNIT_NPM-NEXT:  bb:
 ; NOT_TUNIT_NPM-NEXT:    [[TMP:%.*]] = load <8 x i64>, <8 x i64>* [[ARG1]], align 64
 ; NOT_TUNIT_NPM-NEXT:    store <8 x i64> [[TMP]], <8 x i64>* [[ARG]], align 64
 ; NOT_TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256
-; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]])
+; IS__TUNIT_NPM-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]])
 ; IS__TUNIT_NPM-NEXT:  bb:
 ; IS__TUNIT_NPM-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP0]], <8 x i64>* [[ARG1_PRIV]], align 64
@@ -644,8 +644,8 @@ define void @avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* %ar
 ; IS__TUNIT_OPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__TUNIT_OPM-NEXT:    call fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__TUNIT_OPM-NEXT:    call fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__TUNIT_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
@@ -656,9 +656,9 @@ define void @avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* %ar
 ; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load <8 x i64>, <8 x i64>* [[TMP]], align 64
-; IS__TUNIT_NPM-NEXT:    call fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]])
+; IS__TUNIT_NPM-NEXT:    call fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]])
 ; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__TUNIT_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
@@ -669,8 +669,8 @@ define void @avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* %ar
 ; IS__CGSCC_OPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__CGSCC_OPM-NEXT:    call fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__CGSCC_OPM-NEXT:    call fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__CGSCC_OPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
@@ -681,8 +681,8 @@ define void @avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* %ar
 ; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = bitcast <8 x i64>* [[TMP]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
-; IS__CGSCC_NPM-NEXT:    call fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* noalias nocapture nofree nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree nonnull readonly align 64 dereferenceable(64) [[TMP]])
+; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 64 dereferenceable(64) [[TMP3]], i8 0, i64 32, i1 false)
+; IS__CGSCC_NPM-NEXT:    call fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[TMP2]], <8 x i64>* noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[TMP]])
 ; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = load <8 x i64>, <8 x i64>* [[TMP2]], align 64
 ; IS__CGSCC_NPM-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; IS__CGSCC_NPM-NEXT:    ret void
