@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -610,6 +611,67 @@ bool CombinerHelper::applySextTruncSextLoad(MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::G_SEXT_INREG);
   Builder.setInstrAndDebugLoc(MI);
   Builder.buildCopy(MI.getOperand(0).getReg(), MI.getOperand(1).getReg());
+  MI.eraseFromParent();
+  return true;
+}
+
+bool CombinerHelper::matchSextInRegOfLoad(
+    MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_SEXT_INREG);
+
+  // Only supports scalars for now.
+  if (MRI.getType(MI.getOperand(0).getReg()).isVector())
+    return false;
+
+  Register SrcReg = MI.getOperand(1).getReg();
+  MachineInstr *LoadDef = getOpcodeDef(TargetOpcode::G_LOAD, SrcReg, MRI);
+  if (!LoadDef || !MRI.hasOneNonDBGUse(LoadDef->getOperand(0).getReg()))
+    return false;
+
+  // If the sign extend extends from a narrower width than the load's width,
+  // then we can narrow the load width when we combine to a G_SEXTLOAD.
+  auto &MMO = **LoadDef->memoperands_begin();
+  // Don't do this for non-simple loads.
+  if (MMO.isAtomic() || MMO.isVolatile())
+    return false;
+
+  // Avoid widening the load at all.
+  unsigned NewSizeBits =
+      std::min((uint64_t)MI.getOperand(2).getImm(), MMO.getSizeInBits());
+
+  // Don't generate G_SEXTLOADs with a < 1 byte width.
+  if (NewSizeBits < 8)
+    return false;
+  // Don't bother creating a non-power-2 sextload, it will likely be broken up
+  // anyway for most targets.
+  if (!isPowerOf2_32(NewSizeBits))
+    return false;
+  MatchInfo = {LoadDef->getOperand(0).getReg(), NewSizeBits};
+  return true;
+}
+
+bool CombinerHelper::applySextInRegOfLoad(
+    MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_SEXT_INREG);
+  Register LoadReg;
+  unsigned ScalarSizeBits;
+  std::tie(LoadReg, ScalarSizeBits) = MatchInfo;
+  auto *LoadDef = MRI.getVRegDef(LoadReg);
+  assert(LoadDef && "Expected a load reg");
+
+  // If we have the following:
+  // %ld = G_LOAD %ptr, (load 2)
+  // %ext = G_SEXT_INREG %ld, 8
+  //    ==>
+  // %ld = G_SEXTLOAD %ptr (load 1)
+
+  auto &MMO = **LoadDef->memoperands_begin();
+  Builder.setInstrAndDebugLoc(MI);
+  auto &MF = Builder.getMF();
+  auto PtrInfo = MMO.getPointerInfo();
+  auto *NewMMO = MF.getMachineMemOperand(&MMO, PtrInfo, ScalarSizeBits / 8);
+  Builder.buildLoadInstr(TargetOpcode::G_SEXTLOAD, MI.getOperand(0).getReg(),
+                         LoadDef->getOperand(1).getReg(), *NewMMO);
   MI.eraseFromParent();
   return true;
 }

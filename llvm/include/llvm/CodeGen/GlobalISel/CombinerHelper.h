@@ -135,6 +135,10 @@ public:
   bool matchSextTruncSextLoad(MachineInstr &MI);
   bool applySextTruncSextLoad(MachineInstr &MI);
 
+  /// Match sext_inreg(load p), imm -> sextload p
+  bool matchSextInRegOfLoad(MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo);
+  bool applySextInRegOfLoad(MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo);
+
   bool matchElideBrByInvertingCond(MachineInstr &MI);
   void applyElideBrByInvertingCond(MachineInstr &MI);
   bool tryElideBrByInvertingCond(MachineInstr &MI);
