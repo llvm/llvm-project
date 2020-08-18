@@ -77,16 +77,16 @@ public:
   /// Custom Lower {
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
-  SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerLOAD(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSTORE(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerToTLSGeneralDynamicModel(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerToTLSGeneralDynamicModel(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVAARG(SDValue Op, SelectionDAG &DAG) const;
   /// } Custom Lower
 
   /// Custom DAGCombine {
