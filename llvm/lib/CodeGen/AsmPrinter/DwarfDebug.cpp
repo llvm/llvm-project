@@ -3305,14 +3305,14 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
 
 DwarfDebug::NonTypeUnitContext::NonTypeUnitContext(DwarfDebug *DD)
     : DD(DD),
-      TypeUnitsUnderConstruction(std::move(DD->TypeUnitsUnderConstruction)) {
+      TypeUnitsUnderConstruction(std::move(DD->TypeUnitsUnderConstruction)), AddrPoolUsed(DD->AddrPool.hasBeenUsed()) {
   DD->TypeUnitsUnderConstruction.clear();
-  assert(TypeUnitsUnderConstruction.empty() || !DD->AddrPool.hasBeenUsed());
+  DD->AddrPool.resetUsedFlag();
 }
 
 DwarfDebug::NonTypeUnitContext::~NonTypeUnitContext() {
   DD->TypeUnitsUnderConstruction = std::move(TypeUnitsUnderConstruction);
-  DD->AddrPool.resetUsedFlag();
+  DD->AddrPool.resetUsedFlag(AddrPoolUsed);
 }
 
 DwarfDebug::NonTypeUnitContext DwarfDebug::enterNonTypeUnitContext() {
