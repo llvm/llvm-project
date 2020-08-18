@@ -751,9 +751,7 @@ define half @select_fcmp_nnan_nsz_uge_negzero_unary_fneg(half %x) {
 
 define float @select_fneg(i1 %c, float %x) {
 ; CHECK-LABEL: @select_fneg(
-; CHECK-NEXT:    [[N:%.*]] = fneg float [[X:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], float [[N]], float [[X]]
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[S]])
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %n = fneg float %x
@@ -766,8 +764,7 @@ define float @select_fneg_use1(i1 %c, float %x) {
 ; CHECK-LABEL: @select_fneg_use1(
 ; CHECK-NEXT:    [[N:%.*]] = fneg float [[X:%.*]]
 ; CHECK-NEXT:    call void @use(float [[N]])
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], float [[X]], float [[N]]
-; CHECK-NEXT:    [[FABS:%.*]] = call fast float @llvm.fabs.f32(float [[S]])
+; CHECK-NEXT:    [[FABS:%.*]] = call fast float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %n = fneg float %x
@@ -782,7 +779,7 @@ define float @select_fneg_use2(i1 %c, float %x) {
 ; CHECK-NEXT:    [[N:%.*]] = fneg arcp float [[X:%.*]]
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], float [[N]], float [[X]]
 ; CHECK-NEXT:    call void @use(float [[S]])
-; CHECK-NEXT:    [[FABS:%.*]] = call nnan nsz float @llvm.fabs.f32(float [[S]])
+; CHECK-NEXT:    [[FABS:%.*]] = call nnan nsz float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %n = fneg arcp float %x
@@ -794,9 +791,7 @@ define float @select_fneg_use2(i1 %c, float %x) {
 
 define <2 x float> @select_fneg_vec(<2 x i1> %c, <2 x float> %x) {
 ; CHECK-LABEL: @select_fneg_vec(
-; CHECK-NEXT:    [[N:%.*]] = fneg <2 x float> [[X:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = select fast <2 x i1> [[C:%.*]], <2 x float> [[X]], <2 x float> [[N]]
-; CHECK-NEXT:    [[FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[S]])
+; CHECK-NEXT:    [[FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
   %n = fneg <2 x float> %x
