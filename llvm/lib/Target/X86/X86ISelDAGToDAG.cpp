@@ -1038,11 +1038,11 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
         Res = CurDAG->getNode(X86ISD::STRICT_VRNDSCALE, dl,
                               {N->getValueType(0), MVT::Other},
                               {N->getOperand(0), N->getOperand(1),
-                               CurDAG->getTargetConstant(Imm, dl, MVT::i8)});
+                               CurDAG->getTargetConstant(Imm, dl, MVT::i32)});
       else
         Res = CurDAG->getNode(X86ISD::VRNDSCALE, dl, N->getValueType(0),
                               N->getOperand(0),
-                              CurDAG->getTargetConstant(Imm, dl, MVT::i8));
+                              CurDAG->getTargetConstant(Imm, dl, MVT::i32));
       --I;
       CurDAG->ReplaceAllUsesWith(N, Res.getNode());
       ++I;
