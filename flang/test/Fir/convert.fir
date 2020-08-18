@@ -1,6 +1,6 @@
-// RUN: tco %s | FileCheck %s
+// RUN: tco --target=x86_64-unknown-linux-gnu %s | FileCheck %s
 
-// CHECK-LABEL: define { double, double } @c({ float, float }
+// CHECK-LABEL: define { double, double } @c(<2 x float> %
 func @c(%x : !fir.complex<4>) -> !fir.complex<8> {
 // CHECK: %[[R:.*]] = extractvalue { float, float } %{{.*}}, 0
 // CHECK: %[[I:.*]] = extractvalue { float, float } %{{.*}}, 1

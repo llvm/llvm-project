@@ -32,6 +32,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#define DEBUG_TYPE "flang-lower-expr"
 
 #define TODO() llvm_unreachable("not yet implemented")
 
@@ -362,7 +363,7 @@ private:
           Fortran::lower::getUnrestrictedIntrinsicSymbolRefAttr(
               builder, getLoc(), genericName, signature);
       mlir::Value funcPtr =
-          builder.create<mlir::ConstantOp>(getLoc(), signature, symbolRefAttr);
+          builder.create<fir::AddrOfOp>(getLoc(), signature, symbolRefAttr);
       return funcPtr;
     }
     const auto *symbol = proc.GetSymbol();
@@ -374,7 +375,7 @@ private:
     }
     auto name = converter.mangleName(*symbol);
     auto func = Fortran::lower::getOrDeclareFunction(name, proc, converter);
-    mlir::Value funcPtr = builder.create<mlir::ConstantOp>(
+    mlir::Value funcPtr = builder.create<fir::AddrOfOp>(
         getLoc(), func.getType(), builder.getSymbolRefAttr(name));
     return funcPtr;
   }
@@ -1350,6 +1351,7 @@ private:
       }
     }
     auto result = genval(details.stmtFunction().value());
+    LLVM_DEBUG(llvm::errs() << "stmt-function: " << result << '\n');
     // Remove dummy local arguments from the map.
     for (const auto *dummySymbol : details.dummyArgs())
       symMap.erase(*dummySymbol);
@@ -1469,7 +1471,7 @@ private:
       if (callSiteType.getNumResults() != funcOpType.getNumResults() ||
           callSiteType.getNumInputs() != funcOpType.getNumInputs())
         funcPointer =
-            builder.create<mlir::ConstantOp>(getLoc(), funcOpType, symbolAttr);
+            builder.create<fir::AddrOfOp>(getLoc(), funcOpType, symbolAttr);
       else
         funcSymbolAttr = symbolAttr;
     }
@@ -1585,6 +1587,8 @@ mlir::Value Fortran::lower::createSomeExpression(
     const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr,
     Fortran::lower::SymMap &symMap) {
   Fortran::lower::ExpressionContext unused;
+  LLVM_DEBUG(llvm::errs() << "expr: "; expr.AsFortran(llvm::errs());
+             llvm::errs() << '\n');
   return ExprLowering{loc, converter, symMap, unused}.genValue(expr);
 }
 
@@ -1593,6 +1597,8 @@ fir::ExtendedValue Fortran::lower::createSomeExtendedExpression(
     const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr,
     Fortran::lower::SymMap &symMap,
     const Fortran::lower::ExpressionContext &context) {
+  LLVM_DEBUG(llvm::errs() << "expr: "; expr.AsFortran(llvm::errs());
+             llvm::errs() << '\n');
   return ExprLowering{loc, converter, symMap, context}.genExtValue(expr);
 }
 
@@ -1601,6 +1607,8 @@ mlir::Value Fortran::lower::createSomeAddress(
     const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr,
     Fortran::lower::SymMap &symMap) {
   Fortran::lower::ExpressionContext unused;
+  LLVM_DEBUG(llvm::errs() << "address: "; expr.AsFortran(llvm::errs());
+             llvm::errs() << '\n');
   return ExprLowering{loc, converter, symMap, unused}.genAddr(expr);
 }
 
@@ -1609,6 +1617,8 @@ fir::ExtendedValue Fortran::lower::createSomeExtendedAddress(
     const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr,
     Fortran::lower::SymMap &symMap,
     const Fortran::lower::ExpressionContext &context) {
+  LLVM_DEBUG(llvm::errs() << "address: "; expr.AsFortran(llvm::errs());
+             llvm::errs() << '\n');
   return ExprLowering{loc, converter, symMap, context}.genExtAddr(expr);
 }
 
@@ -1618,6 +1628,7 @@ fir::ExtendedValue Fortran::lower::createStringLiteral(
   assert(str.size() == len);
   Fortran::lower::SymMap unused1;
   Fortran::lower::ExpressionContext unused2;
+  LLVM_DEBUG(llvm::errs() << "string-lit: \"" << str << "\"\n");
   return ExprLowering{loc, converter, unused1, unused2}.genStringLit(str, len);
 }
 

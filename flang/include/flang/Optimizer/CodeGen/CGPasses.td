@@ -16,18 +16,29 @@
 
 include "mlir/Pass/PassBase.td"
 
-def CodeGenRewrite : Pass<"cg-rewrite"> {
+def CodeGenRewrite : Pass<"cg-rewrite", "mlir::ModuleOp"> {
   let summary = "Rewrite some FIR ops into their code-gen forms.";
   let description = [{
     Fuse specific subgraphs into single Ops for code generation.
   }];
   let constructor = "fir::createFirCodeGenRewritePass()";
-  let dependentDialects = [
-    "fir::FIROpsDialect", "fir::FIRCodeGenDialect", "mlir::BuiltinDialect",
-    "mlir::LLVM::LLVMDialect", "mlir::omp::OpenMPDialect"
-  ];
-  let statistics = [
-    Statistic<"numDCE", "num-dce'd", "Number of operations eliminated">
+  let dependentDialects = ["fir::FIROpsDialect"];
+}
+
+def TargetRewrite : Pass<"target-rewrite", "mlir::ModuleOp"> {
+  let summary = "Rewrite some FIR dialect into target specific forms. "
+                "Certain abstractions in the FIR dialect need to be rewritten "
+                "to reflect representations that may differ based on the "
+                "target machine.";
+  let constructor = "fir::createFirTargetRewritePass()";
+  let dependentDialects = ["fir::FIROpsDialect"];
+  let options = [
+    Option<"noCharacterConversion", "no-character-conversion",
+           "bool", /*default=*/"false",
+           "Disable target-specific conversion of CHARACTER.">,
+    Option<"noComplexConversion", "no-complex-conversion",
+           "bool", /*default=*/"false",
+           "Disable target-specific conversion of COMPLEX.">
   ];
 }
 

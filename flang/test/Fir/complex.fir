@@ -1,12 +1,12 @@
 // RUN: cc -c %S/print_complex.c
-// RUN: tco %s | FileCheck %s --check-prefix=LLVMIR
-// RUN: tco %s | llc | as -o %t
+// RUN: tco --target=x86_64-unknown-linux-gnu %s | FileCheck %s --check-prefix=LLVMIR
+// RUN: tco --target=x86_64-unknown-linux-gnu %s | llc | as -o %t
 // RUN: cc %t print_complex.o
 // RUN: ./a.out | FileCheck %s --check-prefix=EXECHECK
 
 // EXECHECK: <0.935893, 2.252526>
 
-// LLVMIR-LABEL: define { float, float } @foo
+// LLVMIR-LABEL: define <2 x float> @foo(<2 x float> %
 func @foo(%a : !fir.complex<4>, %b : !fir.complex<4>, %c : !fir.complex<4>, %d : !fir.complex<4>, %e : !fir.complex<4>) -> !fir.complex<4> {
   // LLVMIR-COUNT-2: extractvalue
   // LLVMIR: fadd float
@@ -23,7 +23,7 @@ func @foo(%a : !fir.complex<4>, %b : !fir.complex<4>, %c : !fir.complex<4>, %d :
   return %4 : !fir.complex<4>
 }
 
-// LLVMIR-LABEL: define float @real_part({ float, float } %0)
+// LLVMIR-LABEL: define float @real_part(<2 x float> %0)
 func @real_part(%a : !fir.complex<4>) -> f32 {
   %0 = constant 0 : i32
   // LLVMIR: extractvalue
@@ -31,7 +31,7 @@ func @real_part(%a : !fir.complex<4>) -> f32 {
   return %1 : f32
 }
 
-// LLVMIR-LABEL: define { float, float } @conj
+// LLVMIR-LABEL: define <2 x float> @conj(<2 x float> %
 func @conj(%a : !fir.complex<4>) -> !fir.complex<4> {
   %0 = constant 1 : i32
   // LLVMIR: extractvalue

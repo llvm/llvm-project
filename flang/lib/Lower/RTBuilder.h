@@ -194,13 +194,13 @@ constexpr TypeBuilderFunc getModel<bool &>() {
 template <>
 constexpr TypeBuilderFunc getModel<c_float_complex_t>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return fir::CplxType::get(context, sizeof(float));
+    return fir::ComplexType::get(context, sizeof(float));
   };
 }
 template <>
 constexpr TypeBuilderFunc getModel<c_double_complex_t>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
-    return fir::CplxType::get(context, sizeof(double));
+    return fir::ComplexType::get(context, sizeof(double));
   };
 }
 template <>
