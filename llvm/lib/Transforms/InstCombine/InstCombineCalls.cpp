@@ -1230,13 +1230,21 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::fabs: {
-    Value *Cond;
-    Constant *LHS, *RHS;
+    Value *Cond, *TVal, *FVal;
     if (match(II->getArgOperand(0),
-              m_Select(m_Value(Cond), m_Constant(LHS), m_Constant(RHS)))) {
-      CallInst *Call0 = Builder.CreateCall(II->getCalledFunction(), {LHS});
-      CallInst *Call1 = Builder.CreateCall(II->getCalledFunction(), {RHS});
-      return SelectInst::Create(Cond, Call0, Call1);
+              m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))) {
+      // fabs (select Cond, TrueC, FalseC) --> select Cond, AbsT, AbsF
+      if (isa<Constant>(TVal) && isa<Constant>(FVal)) {
+        CallInst *AbsT = Builder.CreateCall(II->getCalledFunction(), {TVal});
+        CallInst *AbsF = Builder.CreateCall(II->getCalledFunction(), {FVal});
+        return SelectInst::Create(Cond, AbsT, AbsF);
+      }
+      // fabs (select Cond, -FVal, FVal) --> fabs FVal
+      if (match(TVal, m_FNeg(m_Specific(FVal))))
+        return replaceOperand(*II, 0, FVal);
+      // fabs (select Cond, TVal, -TVal) --> fabs TVal
+      if (match(FVal, m_FNeg(m_Specific(TVal))))
+        return replaceOperand(*II, 0, TVal);
     }
 
     LLVM_FALLTHROUGH;
