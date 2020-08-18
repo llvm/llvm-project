@@ -1301,7 +1301,8 @@ bool getPredefinedStyle(StringRef Name, FormatStyle::LanguageKind Language,
   return true;
 }
 
-std::error_code parseConfiguration(StringRef Text, FormatStyle *Style) {
+std::error_code parseConfiguration(StringRef Text, FormatStyle *Style,
+                                   bool AllowUnknownOptions) {
   assert(Style);
   FormatStyle::LanguageKind Language = Style->Language;
   assert(Language != FormatStyle::LK_None);
@@ -1315,6 +1316,7 @@ std::error_code parseConfiguration(StringRef Text, FormatStyle *Style) {
   // Mapping also uses the context to get the language to find the correct
   // base style.
   Input.setContext(Style);
+  Input.setAllowUnknownKeys(AllowUnknownOptions);
   Input >> Styles;
   if (Input.error())
     return Input.error();
@@ -2818,8 +2820,8 @@ const char *DefaultFallbackStyle = "LLVM";
 
 llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
                                      StringRef FallbackStyleName,
-                                     StringRef Code,
-                                     llvm::vfs::FileSystem *FS) {
+                                     StringRef Code, llvm::vfs::FileSystem *FS,
+                                     bool AllowUnknownOptions) {
   if (!FS) {
     FS = llvm::vfs::getRealFileSystem().get();
   }
@@ -2831,7 +2833,8 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
 
   if (StyleName.startswith("{")) {
     // Parse YAML/JSON style from the command line.
-    if (std::error_code ec = parseConfiguration(StyleName, &Style))
+    if (std::error_code ec =
+            parseConfiguration(StyleName, &Style, AllowUnknownOptions))
       return make_string_error("Error parsing -style: " + ec.message());
     return Style;
   }
@@ -2875,8 +2878,8 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
             FS->getBufferForFile(ConfigFile.str());
         if (std::error_code EC = Text.getError())
           return make_string_error(EC.message());
-        if (std::error_code ec =
-                parseConfiguration(Text.get()->getBuffer(), &Style)) {
+        if (std::error_code ec = parseConfiguration(
+                Text.get()->getBuffer(), &Style, AllowUnknownOptions)) {
           if (ec == ParseError::Unsuitable) {
             if (!UnsuitableConfigFiles.empty())
               UnsuitableConfigFiles.append(", ");
