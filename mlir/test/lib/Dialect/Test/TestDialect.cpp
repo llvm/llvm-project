@@ -156,7 +156,7 @@ static Type parseTestType(DialectAsmParser &parser,
   StringRef name;
   if (parser.parseLess() || parser.parseKeyword(&name))
     return Type();
-  auto rec = TestRecursiveType::create(parser.getBuilder().getContext(), name);
+  auto rec = TestRecursiveType::get(parser.getBuilder().getContext(), name);
 
   // If this type already has been parsed above in the stack, expect just the
   // name.
