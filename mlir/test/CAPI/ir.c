@@ -12,6 +12,7 @@
 
 #include "mlir-c/IR.h"
 #include "mlir-c/Registration.h"
+#include "mlir-c/StandardTypes.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -240,6 +241,145 @@ static void printFirstOfEach(MlirOperation operation) {
   fprintf(stderr, "\n");
 }
 
+/// Dumps instances of all standard types to check that C API works correctly.
+/// Additionally, performs simple identity checks that a standard type
+/// constructed with C API can be inspected and has the expected type. The
+/// latter achieves full coverage of C API for standard types. Returns 0 on
+/// success and a non-zero error code on failure.
+static int printStandardTypes(MlirContext ctx) {
+  // Integer types.
+  MlirType i32 = mlirIntegerTypeGet(ctx, 32);
+  MlirType si32 = mlirIntegerTypeSignedGet(ctx, 32);
+  MlirType ui32 = mlirIntegerTypeUnsignedGet(ctx, 32);
+  if (!mlirTypeIsAInteger(i32) || mlirTypeIsAF32(i32))
+    return 1;
+  if (!mlirTypeIsAInteger(si32) || !mlirIntegerTypeIsSigned(si32))
+    return 2;
+  if (!mlirTypeIsAInteger(ui32) || !mlirIntegerTypeIsUnsigned(ui32))
+    return 3;
+  if (mlirTypeEqual(i32, ui32) || mlirTypeEqual(i32, si32))
+    return 4;
+  if (mlirIntegerTypeGetWidth(i32) != mlirIntegerTypeGetWidth(si32))
+    return 5;
+  mlirTypeDump(i32);
+  fprintf(stderr, "\n");
+  mlirTypeDump(si32);
+  fprintf(stderr, "\n");
+  mlirTypeDump(ui32);
+  fprintf(stderr, "\n");
+
+  // Index type.
+  MlirType index = mlirIndexTypeGet(ctx);
+  if (!mlirTypeIsAIndex(index))
+    return 6;
+  mlirTypeDump(index);
+  fprintf(stderr, "\n");
+
+  // Floating-point types.
+  MlirType bf16 = mlirBF16TypeGet(ctx);
+  MlirType f16 = mlirF16TypeGet(ctx);
+  MlirType f32 = mlirF32TypeGet(ctx);
+  MlirType f64 = mlirF64TypeGet(ctx);
+  if (!mlirTypeIsABF16(bf16))
+    return 7;
+  if (!mlirTypeIsAF16(f16))
+    return 9;
+  if (!mlirTypeIsAF32(f32))
+    return 10;
+  if (!mlirTypeIsAF64(f64))
+    return 11;
+  mlirTypeDump(bf16);
+  fprintf(stderr, "\n");
+  mlirTypeDump(f16);
+  fprintf(stderr, "\n");
+  mlirTypeDump(f32);
+  fprintf(stderr, "\n");
+  mlirTypeDump(f64);
+  fprintf(stderr, "\n");
+
+  // None type.
+  MlirType none = mlirNoneTypeGet(ctx);
+  if (!mlirTypeIsANone(none))
+    return 12;
+  mlirTypeDump(none);
+  fprintf(stderr, "\n");
+
+  // Complex type.
+  MlirType cplx = mlirComplexTypeGet(f32);
+  if (!mlirTypeIsAComplex(cplx) ||
+      !mlirTypeEqual(mlirComplexTypeGetElementType(cplx), f32))
+    return 13;
+  mlirTypeDump(cplx);
+  fprintf(stderr, "\n");
+
+  // Vector (and Shaped) type. ShapedType is a common base class for vectors,
+  // memrefs and tensors, one cannot create instances of this class so it is
+  // tested on an instance of vector type.
+  int64_t shape[] = {2, 3};
+  MlirType vector =
+      mlirVectorTypeGet(sizeof(shape) / sizeof(int64_t), shape, f32);
+  if (!mlirTypeIsAVector(vector) || !mlirTypeIsAShaped(vector))
+    return 14;
+  if (!mlirTypeEqual(mlirShapedTypeGetElementType(vector), f32) ||
+      !mlirShapedTypeHasRank(vector) || mlirShapedTypeGetRank(vector) != 2 ||
+      mlirShapedTypeGetDimSize(vector, 0) != 2 ||
+      mlirShapedTypeIsDynamicDim(vector, 0) ||
+      mlirShapedTypeGetDimSize(vector, 1) != 3 ||
+      !mlirShapedTypeHasStaticShape(vector))
+    return 15;
+  mlirTypeDump(vector);
+  fprintf(stderr, "\n");
+
+  // Ranked tensor type.
+  MlirType rankedTensor =
+      mlirRankedTensorTypeGet(sizeof(shape) / sizeof(int64_t), shape, f32);
+  if (!mlirTypeIsATensor(rankedTensor) ||
+      !mlirTypeIsARankedTensor(rankedTensor))
+    return 16;
+  mlirTypeDump(rankedTensor);
+  fprintf(stderr, "\n");
+
+  // Unranked tensor type.
+  MlirType unrankedTensor = mlirUnrankedTensorTypeGet(f32);
+  if (!mlirTypeIsATensor(unrankedTensor) ||
+      !mlirTypeIsAUnrankedTensor(unrankedTensor) ||
+      mlirShapedTypeHasRank(unrankedTensor))
+    return 17;
+  mlirTypeDump(unrankedTensor);
+  fprintf(stderr, "\n");
+
+  // MemRef type.
+  MlirType memRef = mlirMemRefTypeContiguousGet(
+      f32, sizeof(shape) / sizeof(int64_t), shape, 2);
+  if (!mlirTypeIsAMemRef(memRef) ||
+      mlirMemRefTypeGetNumAffineMaps(memRef) != 0 ||
+      mlirMemRefTypeGetMemorySpace(memRef) != 2)
+    return 18;
+  mlirTypeDump(memRef);
+  fprintf(stderr, "\n");
+
+  // Unranked MemRef type.
+  MlirType unrankedMemRef = mlirUnrankedMemRefTypeGet(f32, 4);
+  if (!mlirTypeIsAUnrankedMemRef(unrankedMemRef) ||
+      mlirTypeIsAMemRef(unrankedMemRef) ||
+      mlirUnrankedMemrefGetMemorySpace(unrankedMemRef) != 4)
+    return 19;
+  mlirTypeDump(unrankedMemRef);
+  fprintf(stderr, "\n");
+
+  // Tuple type.
+  MlirType types[] = {unrankedMemRef, f32};
+  MlirType tuple = mlirTupleTypeGet(ctx, 2, types);
+  if (!mlirTypeIsATuple(tuple) || mlirTupleTypeGetNumTypes(tuple) != 2 ||
+      !mlirTypeEqual(mlirTupleTypeGetType(tuple, 0), unrankedMemRef) ||
+      !mlirTypeEqual(mlirTupleTypeGetType(tuple, 1), f32))
+    return 20;
+  mlirTypeDump(tuple);
+  fprintf(stderr, "\n");
+
+  return 0;
+}
+
 int main() {
   mlirRegisterAllDialects();
   MlirContext ctx = mlirContextCreate();
@@ -293,6 +433,31 @@ int main() {
   // clang-format on
 
   mlirModuleDestroy(moduleOp);
+
+  // clang-format off
+  // CHECK-LABEL: @types
+  // CHECK: i32
+  // CHECK: si32
+  // CHECK: ui32
+  // CHECK: index
+  // CHECK: bf16
+  // CHECK: f16
+  // CHECK: f32
+  // CHECK: f64
+  // CHECK: none
+  // CHECK: complex<f32>
+  // CHECK: vector<2x3xf32>
+  // CHECK: tensor<2x3xf32>
+  // CHECK: tensor<*xf32>
+  // CHECK: memref<2x3xf32, 2>
+  // CHECK: memref<*xf32, 4>
+  // CHECK: tuple<memref<*xf32, 4>, f32>
+  // CHECK: 0
+  // clang-format on
+  fprintf(stderr, "@types");
+  int errcode = printStandardTypes(ctx);
+  fprintf(stderr, "%d\n", errcode);
+
   mlirContextDestroy(ctx);
 
   return 0;

@@ -75,6 +75,28 @@ check if an object is null by using `mlirXIsNull(MlirX)`. API functions do _not_
 expect null objects as arguments unless explicitly stated otherwise. API
 functions _may_ return null objects.
 
+### Type Hierarchies
+
+MLIR objects can form type hierarchies in C++. For example, all IR classes
+representing types are derived from `mlir::Type`, some of them may also be also
+derived from common base classes such as `mlir::ShapedType` or dialect-specific
+base classes. Type hierarchies are exposed to C API through naming conventions
+as follows.
+
+-   Only the top-level class of each hierarchy is exposed, e.g. `MlirType` is
+    defined as a type but `MlirShapedType` is not. This avoids the need for
+    explicit upcasting when passing an object of a derived type to a function
+    that expects a base type (this happens more often in core/standard APIs,
+    while downcasting usually involves further checks anyway).
+-   A type `Y` that derives from `X` provides a function `int mlirXIsAY(MlirX)`
+    that returns a non-zero value if the given dynamic instance of `X` is also
+    an instance of `Y`. For example, `int MlirTypeIsAInteger(MlirType)`.
+-   A function that expects a derived type as its first argument takes the base
+    type instead and documents the expectation by using `Y` in its name
+    `MlirY<...>(MlirX, ...)`. This function asserts that the dynamic instance of
+    its first argument is `Y`, and it is the responsibility of the caller to
+    ensure it is indeed the case.
+
 ### Conversion To String and Printing
 
 IR objects can be converted to a string representation, for example for
@@ -96,11 +118,11 @@ allocation and avoid unnecessary allocation and copying inside the printer.
 For convenience, `mlirXDump(MlirX)` functions are provided to print the given
 object to the standard error stream.
 
-### Common Patterns
+## Common Patterns
 
 The API adopts the following patterns for recurrent functionality in MLIR.
 
-#### Indexed Components
+### Indexed Components
 
 An object has an _indexed component_ if it has fields accessible using a
 zero-based contiguous integer index, typically arrays. For example, an
@@ -120,7 +142,7 @@ Note that the name of subobject in the function does not necessarily match the
 type of the subobject. For example, `mlirOperationGetOperand` returns a
 `MlirValue`.
 
-#### Iterable Components
+### Iterable Components
 
 An object has an _iterable component_ if it has iterators accessing its fields
 in some order other than integer indexing, typically linked lists. For example,
@@ -146,3 +168,17 @@ for (iter = mlirXGetFirst<Y>(x); !mlirYIsNull(iter);
   /* User 'iter'. */
 }
 ```
+
+## Extending the API
+
+### Extensions for Dialect Attributes and Types
+
+Dialect attributes and types can follow the example of standard attrbutes and
+types, provided that implementations live in separate directories, i.e.
+`include/mlir-c/<...>Dialect/` and `lib/CAPI/<...>Dialect/`. The core APIs
+provide implementation-private headers in `include/mlir/CAPI/IR` that allow one
+to convert between opaque C structures for core IR components and their C++
+counterparts. `wrap` converts a C++ class into a C structure and `unwrap` does
+the inverse conversion. Once the a C++ object is available, the API
+implementation should rely on `isa` to implement `mlirXIsAY` and is expected to
+use `cast` inside other API calls.
