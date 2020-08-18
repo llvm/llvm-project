@@ -2019,8 +2019,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
         Value *ArgVal = CB.getArgOperand(idx);
         if (!ArgVal || !ArgVal->getType()->isPointerTy())
           continue;
-        IRPosition CalleeArgumentIRP =
-            IRPosition::argument(*Callee->getArg(idx));
+        IRPosition CalleeArgumentIRP = IRPosition::callsite_argument(CB, idx);
         if (!CalleeArgumentIRP.hasAttr({Attribute::NoUndef}))
           continue;
         auto &NonNullAA = A.getAAFor<AANonNull>(*this, CalleeArgumentIRP);
