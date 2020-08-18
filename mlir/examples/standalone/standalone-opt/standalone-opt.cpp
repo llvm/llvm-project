@@ -24,9 +24,16 @@
 int main(int argc, char **argv) {
   mlir::registerAllDialects();
   mlir::registerAllPasses();
-
-  mlir::registerDialect<mlir::standalone::StandaloneDialect>();
   // TODO: Register standalone passes here.
 
-  return failed(mlir::MlirOptMain(argc, argv, "Standalone optimizer driver\n"));
+  mlir::DialectRegistry registry;
+  registry.insert<mlir::standalone::StandaloneDialect>();
+  registry.insert<mlir::StandardOpsDialect>();
+  // Add the following to include *all* MLIR Core dialects, or selectively
+  // include what you need like above. You only need to register dialects that
+  // will be *parsed* by the tool, not the one generated
+  // registerAllDialects(registry);
+
+  return failed(
+      mlir::MlirOptMain(argc, argv, "Standalone optimizer driver\n", registry));
 }

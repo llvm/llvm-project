@@ -81,13 +81,18 @@ static LogicalResult processBuffer(raw_ostream &os,
                                    std::unique_ptr<MemoryBuffer> ownedBuffer,
                                    bool verifyDiagnostics, bool verifyPasses,
                                    bool allowUnregisteredDialects,
-                                   const PassPipelineCLParser &passPipeline) {
+                                   bool preloadDialectsInContext,
+                                   const PassPipelineCLParser &passPipeline,
+                                   DialectRegistry &registry) {
   // Tell sourceMgr about this buffer, which is what the parser will pick up.
   SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());
 
   // Parse the input file.
-  MLIRContext context;
+  MLIRContext context(/*loadAllDialects=*/preloadDialectsInContext);
+  registry.appendTo(context.getDialectRegistry());
+  if (preloadDialectsInContext)
+    registry.loadAll(&context);
   context.allowUnregisteredDialects(allowUnregisteredDialects);
   context.printOpOnDiagnostic(!verifyDiagnostics);
 
@@ -115,9 +120,10 @@ static LogicalResult processBuffer(raw_ostream &os,
 LogicalResult mlir::MlirOptMain(raw_ostream &outputStream,
                                 std::unique_ptr<MemoryBuffer> buffer,
                                 const PassPipelineCLParser &passPipeline,
-                                bool splitInputFile, bool verifyDiagnostics,
-                                bool verifyPasses,
-                                bool allowUnregisteredDialects) {
+                                DialectRegistry &registry, bool splitInputFile,
+                                bool verifyDiagnostics, bool verifyPasses,
+                                bool allowUnregisteredDialects,
+                                bool preloadDialectsInContext) {
   // The split-input-file mode is a very specific mode that slices the file
   // up into small pieces and checks each independently.
   if (splitInputFile)
@@ -126,15 +132,19 @@ LogicalResult mlir::MlirOptMain(raw_ostream &outputStream,
         [&](std::unique_ptr<MemoryBuffer> chunkBuffer, raw_ostream &os) {
           return processBuffer(os, std::move(chunkBuffer), verifyDiagnostics,
                                verifyPasses, allowUnregisteredDialects,
-                               passPipeline);
+                               preloadDialectsInContext, passPipeline,
+                               registry);
         },
         outputStream);
 
   return processBuffer(outputStream, std::move(buffer), verifyDiagnostics,
-                       verifyPasses, allowUnregisteredDialects, passPipeline);
+                       verifyPasses, allowUnregisteredDialects,
+                       preloadDialectsInContext, passPipeline, registry);
 }
 
-LogicalResult mlir::MlirOptMain(int argc, char **argv, StringRef toolName) {
+LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
+                                DialectRegistry &registry,
+                                bool preloadDialectsInContext) {
   static cl::opt<std::string> inputFilename(
       cl::Positional, cl::desc("<input file>"), cl::init("-"));
 
@@ -180,25 +190,19 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, StringRef toolName) {
   {
     llvm::raw_string_ostream os(helpHeader);
     MLIRContext context;
-    interleaveComma(context.getRegisteredDialects(), os, [&](Dialect *dialect) {
-      StringRef name = dialect->getNamespace();
-      // filter the builtin dialect.
-      if (name.empty())
-        os << "<builtin>";
-      else
-        os << name;
+    interleaveComma(registry, os, [&](auto &registryEntry) {
+      StringRef name = registryEntry.first;
+      os << name;
     });
   }
   // Parse pass names in main to ensure static initialization completed.
   cl::ParseCommandLineOptions(argc, argv, helpHeader);
 
   if (showDialects) {
-    llvm::outs() << "Registered Dialects:\n";
-    MLIRContext context;
+    llvm::outs() << "Available Dialects:\n";
     interleave(
-        context.getRegisteredDialects(), llvm::outs(),
-        [](Dialect *dialect) { llvm::outs() << dialect->getNamespace(); },
-        "\n");
+        registry, llvm::outs(),
+        [](auto &registryEntry) { llvm::outs() << registryEntry.first; }, "\n");
     return success();
   }
 
@@ -216,9 +220,9 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, StringRef toolName) {
     return failure();
   }
 
-  if (failed(MlirOptMain(output->os(), std::move(file), passPipeline,
+  if (failed(MlirOptMain(output->os(), std::move(file), passPipeline, registry,
                          splitInputFile, verifyDiagnostics, verifyPasses,
-                         allowUnregisteredDialects)))
+                         allowUnregisteredDialects, preloadDialectsInContext)))
     return failure();
 
   // Keep the output file if the invocation of MlirOptMain was successful.
