@@ -38,7 +38,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
     @skipIf(archs=['ppc64le'], bugnumber='SR-10214')
     @swiftTest
     # This test needs a working Remote Mirrors implementation.
-    @skipIf(oslist=['linux', 'windows'])
+    @skipIf(oslist=['windows'])
     def test_dwarf_importer(self):
         lldb.SBDebugger.MemoryPressureDetected()
         self.runCmd("settings set symbols.use-swift-dwarfimporter true")
@@ -70,7 +70,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
     @skipIf(archs=['ppc64le'], bugnumber='SR-10214')
     @swiftTest
     # This test needs a working Remote Mirrors implementation.
-    @skipIf(oslist=['linux', 'windows'])
+    @skipIf(oslist=['windows'])
     def test_dwarf_importer_exprs(self):
         lldb.SBDebugger.MemoryPressureDetected()
         self.runCmd("settings set symbols.use-swift-dwarfimporter true")
