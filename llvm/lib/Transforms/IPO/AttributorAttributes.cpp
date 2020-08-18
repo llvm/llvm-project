@@ -449,7 +449,7 @@ static void clampReturnedValueStates(Attributor &A, const AAType &QueryingAA,
     const AAType &AA = A.getAAFor<AAType>(QueryingAA, RVPos);
     LLVM_DEBUG(dbgs() << "[Attributor] RV: " << RV << " AA: " << AA.getAsStr()
                       << " @ " << RVPos << "\n");
-    const StateType &AAS = static_cast<const StateType &>(AA.getState());
+    const StateType &AAS = AA.getState();
     if (T.hasValue())
       *T &= AAS;
     else
@@ -511,7 +511,7 @@ static void clampCallSiteArgumentStates(Attributor &A, const AAType &QueryingAA,
     const AAType &AA = A.getAAFor<AAType>(QueryingAA, ACSArgPos);
     LLVM_DEBUG(dbgs() << "[Attributor] ACS: " << *ACS.getInstruction()
                       << " AA: " << AA.getAsStr() << " @" << ACSArgPos << "\n");
-    const StateType &AAS = static_cast<const StateType &>(AA.getState());
+    const StateType &AAS = AA.getState();
     if (T.hasValue())
       *T &= AAS;
     else
@@ -568,8 +568,7 @@ struct AACallSiteReturnedFromReturned : public BaseType {
 
     IRPosition FnPos = IRPosition::returned(*AssociatedFunction);
     const AAType &AA = A.getAAFor<AAType>(*this, FnPos);
-    return clampStateAndIndicateChange(
-        S, static_cast<const StateType &>(AA.getState()));
+    return clampStateAndIndicateChange(S, AA.getState());
   }
 };
 
@@ -749,9 +748,7 @@ struct AANoUnwindCallSite final : AANoUnwindImpl {
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
     auto &FnAA = A.getAAFor<AANoUnwind>(*this, FnPos);
-    return clampStateAndIndicateChange(
-        getState(),
-        static_cast<const AANoUnwind::StateType &>(FnAA.getState()));
+    return clampStateAndIndicateChange(getState(), FnAA.getState());
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -1401,8 +1398,7 @@ struct AANoSyncCallSite final : AANoSyncImpl {
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
     auto &FnAA = A.getAAFor<AANoSync>(*this, FnPos);
-    return clampStateAndIndicateChange(
-        getState(), static_cast<const AANoSync::StateType &>(FnAA.getState()));
+    return clampStateAndIndicateChange(getState(), FnAA.getState());
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -1467,8 +1463,7 @@ struct AANoFreeCallSite final : AANoFreeImpl {
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
     auto &FnAA = A.getAAFor<AANoFree>(*this, FnPos);
-    return clampStateAndIndicateChange(
-        getState(), static_cast<const AANoFree::StateType &>(FnAA.getState()));
+    return clampStateAndIndicateChange(getState(), FnAA.getState());
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -1550,8 +1545,7 @@ struct AANoFreeCallSiteArgument final : AANoFreeFloating {
       return indicatePessimisticFixpoint();
     const IRPosition &ArgPos = IRPosition::argument(*Arg);
     auto &ArgAA = A.getAAFor<AANoFree>(*this, ArgPos);
-    return clampStateAndIndicateChange(
-        getState(), static_cast<const AANoFree::StateType &>(ArgAA.getState()));
+    return clampStateAndIndicateChange(getState(), ArgAA.getState());
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -1769,8 +1763,7 @@ struct AANonNullFloating : public AANonNullImpl {
           T.indicatePessimisticFixpoint();
       } else {
         // Use abstract attribute information.
-        const AANonNull::StateType &NS =
-            static_cast<const AANonNull::StateType &>(AA.getState());
+        const AANonNull::StateType &NS = AA.getState();
         T ^= NS;
       }
       return T.isValidState();
@@ -1924,9 +1917,7 @@ struct AANoRecurseCallSite final : AANoRecurseImpl {
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
     auto &FnAA = A.getAAFor<AANoRecurse>(*this, FnPos);
-    return clampStateAndIndicateChange(
-        getState(),
-        static_cast<const AANoRecurse::StateType &>(FnAA.getState()));
+    return clampStateAndIndicateChange(getState(), FnAA.getState());
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -2339,9 +2330,7 @@ struct AAWillReturnCallSite final : AAWillReturnImpl {
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
     auto &FnAA = A.getAAFor<AAWillReturn>(*this, FnPos);
-    return clampStateAndIndicateChange(
-        getState(),
-        static_cast<const AAWillReturn::StateType &>(FnAA.getState()));
+    return clampStateAndIndicateChange(getState(), FnAA.getState());
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -2735,8 +2724,7 @@ struct AANoAliasCallSiteReturned final : AANoAliasImpl {
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::returned(*F);
     auto &FnAA = A.getAAFor<AANoAlias>(*this, FnPos);
-    return clampStateAndIndicateChange(
-        getState(), static_cast<const AANoAlias::StateType &>(FnAA.getState()));
+    return clampStateAndIndicateChange(getState(), FnAA.getState());
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -2926,8 +2914,7 @@ struct AAIsDeadCallSiteArgument : public AAIsDeadValueImpl {
       return indicatePessimisticFixpoint();
     const IRPosition &ArgPos = IRPosition::argument(*Arg);
     auto &ArgAA = A.getAAFor<AAIsDead>(*this, ArgPos);
-    return clampStateAndIndicateChange(
-        getState(), static_cast<const AAIsDead::StateType &>(ArgAA.getState()));
+    return clampStateAndIndicateChange(getState(), ArgAA.getState());
   }
 
   /// See AbstractAttribute::manifest(...).
@@ -3547,7 +3534,7 @@ struct AADereferenceableFloating : AADereferenceableImpl {
         DerefBytes = Base->getPointerDereferenceableBytes(DL, CanBeNull);
         T.GlobalState.indicatePessimisticFixpoint();
       } else {
-        const DerefState &DS = static_cast<const DerefState &>(AA.getState());
+        const DerefState &DS = AA.getState();
         DerefBytes = DS.DerefBytesState.getAssumed();
         T.GlobalState &= DS.GlobalState;
       }
@@ -3829,8 +3816,7 @@ struct AAAlignFloating : AAAlignImpl {
         T.indicatePessimisticFixpoint();
       } else {
         // Use abstract attribute information.
-        const AAAlign::StateType &DS =
-            static_cast<const AAAlign::StateType &>(AA.getState());
+        const AAAlign::StateType &DS = AA.getState();
         T ^= DS;
       }
       return T.isValidState();
@@ -3985,9 +3971,7 @@ struct AANoReturnCallSite final : AANoReturnImpl {
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
     auto &FnAA = A.getAAFor<AANoReturn>(*this, FnPos);
-    return clampStateAndIndicateChange(
-        getState(),
-        static_cast<const AANoReturn::StateType &>(FnAA.getState()));
+    return clampStateAndIndicateChange(getState(), FnAA.getState());
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -4374,9 +4358,7 @@ struct AANoCaptureCallSiteArgument final : AANoCaptureImpl {
       return indicatePessimisticFixpoint();
     const IRPosition &ArgPos = IRPosition::argument(*Arg);
     auto &ArgAA = A.getAAFor<AANoCapture>(*this, ArgPos);
-    return clampStateAndIndicateChange(
-        getState(),
-        static_cast<const AANoCapture::StateType &>(ArgAA.getState()));
+    return clampStateAndIndicateChange(getState(), ArgAA.getState());
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -5880,9 +5862,7 @@ struct AAMemoryBehaviorCallSiteArgument final : AAMemoryBehaviorArgument {
     Argument *Arg = getAssociatedArgument();
     const IRPosition &ArgPos = IRPosition::argument(*Arg);
     auto &ArgAA = A.getAAFor<AAMemoryBehavior>(*this, ArgPos);
-    return clampStateAndIndicateChange(
-        getState(),
-        static_cast<const AAMemoryBehavior::StateType &>(ArgAA.getState()));
+    return clampStateAndIndicateChange(getState(), ArgAA.getState());
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -5965,9 +5945,7 @@ struct AAMemoryBehaviorCallSite final : AAMemoryBehaviorImpl {
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
     auto &FnAA = A.getAAFor<AAMemoryBehavior>(*this, FnPos);
-    return clampStateAndIndicateChange(
-        getState(),
-        static_cast<const AAMemoryBehavior::StateType &>(FnAA.getState()));
+    return clampStateAndIndicateChange(getState(), FnAA.getState());
   }
 
   /// See AbstractAttribute::trackStatistics()
