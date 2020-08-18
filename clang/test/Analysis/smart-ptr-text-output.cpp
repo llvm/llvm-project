@@ -36,14 +36,15 @@ void derefAfterCtrWithNullVariable() {
 }
 
 void derefAfterRelease() {
-  std::unique_ptr<A> P(new A());
+  std::unique_ptr<A> P(new A()); // expected-note {{Smart pointer 'P' is constructed}}
+  // FIXME: should mark region as uninteresting after release, so above note will not be there
   P.release(); // expected-note {{Smart pointer 'P' is released and set to null}}
   P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
   // expected-note@-1{{Dereference of null smart pointer 'P'}}
 }
 
 void derefAfterReset() {
-  std::unique_ptr<A> P(new A());
+  std::unique_ptr<A> P(new A()); // expected-note {{Smart pointer 'P' is constructed}}
   P.reset(); // expected-note {{Smart pointer 'P' reset using a null value}}
   P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
   // expected-note@-1{{Dereference of null smart pointer 'P'}}
@@ -51,7 +52,7 @@ void derefAfterReset() {
 
 void derefAfterResetWithNull() {
   A *NullInnerPtr = nullptr; // expected-note {{'NullInnerPtr' initialized to a null pointer value}}
-  std::unique_ptr<A> P(new A());
+  std::unique_ptr<A> P(new A()); // expected-note {{Smart pointer 'P' is constructed}}
   P.reset(NullInnerPtr); // expected-note {{Smart pointer 'P' reset using a null value}}
   P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
   // expected-note@-1{{Dereference of null smart pointer 'P'}}
@@ -67,7 +68,7 @@ void derefOnReleasedNullRawPtr() {
 }
 
 void derefOnSwappedNullPtr() {
-  std::unique_ptr<A> P(new A());
+  std::unique_ptr<A> P(new A()); // expected-note {{Smart pointer 'P' is constructed}}
   std::unique_ptr<A> PNull; // expected-note {{Default constructed smart pointer 'PNull' is null}}
   P.swap(PNull); // expected-note {{Swapped null smart pointer 'PNull' with smart pointer 'P'}}
   PNull->foo(); // No warning.
@@ -77,13 +78,11 @@ void derefOnSwappedNullPtr() {
 
 // FIXME: Fix this test when "std::swap" is modeled seperately.
 void derefOnStdSwappedNullPtr() {
-  std::unique_ptr<A> P;
+  std::unique_ptr<A> P; // expected-note {{Default constructed smart pointer 'P' is null}}
   std::unique_ptr<A> PNull; // expected-note {{Default constructed smart pointer 'PNull' is null}}
   std::swap(P, PNull); // expected-note@Inputs/system-header-simulator-cxx.h:978 {{Swapped null smart pointer 'PNull' with smart pointer 'P'}}
   // expected-note@-1 {{Calling 'swap<A>'}}
   // expected-note@-2 {{Returning from 'swap<A>'}}
-  PNull->foo(); // expected-warning {{Dereference of null smart pointer 'PNull' [alpha.cplusplus.SmartPtr]}}
-  // expected-note@-1{{Dereference of null smart pointer 'PNull'}}
   P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
   // expected-note@-1{{Dereference of null smart pointer 'P'}}
 }
