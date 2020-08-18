@@ -37,20 +37,6 @@ def getCompiler():
     return os.path.abspath(compiler)
 
 
-def getArchFlag():
-    """Returns the flag required to specify the arch"""
-    compiler = getCompiler()
-    if compiler is None:
-        return ""
-    elif "gcc" in compiler:
-        archflag = "-m"
-    elif "clang" in compiler:
-        archflag = "-arch"
-    else:
-        archflag = None
-
-    return ("ARCHFLAG=" + archflag) if archflag else ""
-
 def getMake(test_subdir, test_name):
     """Returns the invocation for GNU make.
        The first argument is a tuple of the relative path to the testcase
