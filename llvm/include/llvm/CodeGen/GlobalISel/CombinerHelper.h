@@ -294,6 +294,12 @@ public:
   bool applyBuildInstructionSteps(MachineInstr &MI,
                                   InstructionStepsMatchInfo &MatchInfo);
 
+  /// Match ashr (shl x, C), C -> sext_inreg (C)
+  bool matchAshrShlToSextInreg(MachineInstr &MI,
+                               std::tuple<Register, int64_t> &MatchInfo);
+  bool applyAshShlToSextInreg(MachineInstr &MI,
+                              std::tuple<Register, int64_t> &MatchInfo);
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI);

@@ -284,6 +284,15 @@ def hoist_logic_op_with_same_opcode_hands: GICombineRule <
   (apply [{ return Helper.applyBuildInstructionSteps(*${root}, ${info});}])
 >;
 
+// Fold ashr (shl x, C), C -> sext_inreg (C)
+def shl_ashr_to_sext_inreg_matchinfo : GIDefMatchData<"std::tuple<Register, int64_t>">;
+def shl_ashr_to_sext_inreg : GICombineRule<
+  (defs root:$root, shl_ashr_to_sext_inreg_matchinfo:$info),
+  (match (wip_match_opcode G_ASHR): $root,
+    [{ return Helper.matchAshrShlToSextInreg(*${root}, ${info}); }]),
+  (apply [{ return Helper.applyAshShlToSextInreg(*${root}, ${info});}])
+>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -301,4 +310,5 @@ def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl]>;
 def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
     combines_for_extload, combine_indexed_load_store, undef_combines,
     identity_combines, simplify_add_to_sub,
-    hoist_logic_op_with_same_opcode_hands]>;
+    hoist_logic_op_with_same_opcode_hands,
+    shl_ashr_to_sext_inreg]>;
