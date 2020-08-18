@@ -945,7 +945,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // For each predecessor, what is the source aggregate,
   // from which all the elements were originally extracted from?
   // Note that we want for the map to have stable iteration order!
-  SmallMapVector<BasicBlock *, Value *, 4> SourceAggregates;
+  SmallDenseMap<BasicBlock *, Value *, 4> SourceAggregates;
   for (BasicBlock *Pred : Preds) {
     std::pair<decltype(SourceAggregates)::iterator, bool> IV =
         SourceAggregates.insert({Pred, nullptr});
