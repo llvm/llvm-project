@@ -12,6 +12,7 @@
 
 #include "Parser.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/Dialect.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Parser.h"
@@ -727,7 +728,7 @@ Operation *OperationParser::parseGenericOperation() {
   // Get location information for the operation.
   auto srcLocation = getEncodedSourceLocation(getToken().getLoc());
 
-  auto name = getToken().getStringValue();
+  std::string name = getToken().getStringValue();
   if (name.empty())
     return (emitError("empty operation name is invalid"), nullptr);
   if (name.find('\0') != StringRef::npos)
@@ -736,6 +737,15 @@ Operation *OperationParser::parseGenericOperation() {
   consumeToken(Token::string);
 
   OperationState result(srcLocation, name);
+
+  // Lazy load dialects in the context as needed.
+  if (!result.name.getAbstractOperation()) {
+    StringRef dialectName = StringRef(name).split('.').first;
+    if (!getContext()->getLoadedDialect(dialectName) &&
+        getContext()->getOrLoadDialect(dialectName)) {
+      result.name = OperationName(name, getContext());
+    }
+  }
 
   // Parse the operand list.
   SmallVector<SSAUseInfo, 8> operandInfos;
@@ -1442,17 +1452,28 @@ private:
 
 Operation *
 OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
-  auto opLoc = getToken().getLoc();
-  auto opName = getTokenSpelling();
+  llvm::SMLoc opLoc = getToken().getLoc();
+  StringRef opName = getTokenSpelling();
 
   auto *opDefinition = AbstractOperation::lookup(opName, getContext());
-  if (!opDefinition && !opName.contains('.')) {
-    // If the operation name has no namespace prefix we treat it as a standard
-    // operation and prefix it with "std".
-    // TODO: Would it be better to just build a mapping of the registered
-    // operations in the standard dialect?
-    opDefinition =
-        AbstractOperation::lookup(Twine("std." + opName).str(), getContext());
+  if (!opDefinition) {
+    if (opName.contains('.')) {
+      // This op has a dialect, we try to check if we can register it in the
+      // context on the fly.
+      StringRef dialectName = opName.split('.').first;
+      if (!getContext()->getLoadedDialect(dialectName) &&
+          getContext()->getOrLoadDialect(dialectName)) {
+        opDefinition = AbstractOperation::lookup(opName, getContext());
+      }
+    } else {
+      // If the operation name has no namespace prefix we treat it as a standard
+      // operation and prefix it with "std".
+      // TODO: Would it be better to just build a mapping of the registered
+      // operations in the standard dialect?
+      if (getContext()->getOrLoadDialect("std"))
+        opDefinition = AbstractOperation::lookup(Twine("std." + opName).str(),
+                                                 getContext());
+    }
   }
 
   if (!opDefinition) {

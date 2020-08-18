@@ -21,12 +21,14 @@ class MemoryBuffer;
 } // end namespace llvm
 
 namespace mlir {
+class DialectRegistry;
 class PassPipelineCLParser;
 
 /// Perform the core processing behind `mlir-opt`:
 /// - outputStream is the stream where the resulting IR is printed.
 /// - buffer is the in-memory file to parser and process.
 /// - passPipeline is the specification of the pipeline that will be applied.
+/// - registry should contain all the dialects that can be parsed in the source.
 /// - splitInputFile will look for a "-----" marker in the input file, and load
 /// each chunk in an individual ModuleOp processed separately.
 /// - verifyDiagnostics enables a verification mode where comments starting with
@@ -35,13 +37,25 @@ class PassPipelineCLParser;
 /// - verifyPasses enables the IR verifier in-between each pass in the pipeline.
 /// - allowUnregisteredDialects allows to parse and create operation without
 /// registering the Dialect in the MLIRContext.
+/// - preloadDialectsInContext will trigger the upfront loading of all
+///   dialects from the global registry in the MLIRContext. This option is
+///   deprecated and will be removed soon.
 LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
                           std::unique_ptr<llvm::MemoryBuffer> buffer,
                           const PassPipelineCLParser &passPipeline,
-                          bool splitInputFile, bool verifyDiagnostics,
-                          bool verifyPasses, bool allowUnregisteredDialects);
+                          DialectRegistry &registry, bool splitInputFile,
+                          bool verifyDiagnostics, bool verifyPasses,
+                          bool allowUnregisteredDialects,
+                          bool preloadDialectsInContext = true);
 
 /// Implementation for tools like `mlir-opt`.
-LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef toolName);
+/// - toolName is used for the header displayed by `--help`.
+/// - registry should contain all the dialects that can be parsed in the source.
+/// - preloadDialectsInContext will trigger the upfront loading of all
+///   dialects from the global registry in the MLIRContext. This option is
+///   deprecated and will be removed soon.
+LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
+                          DialectRegistry &registry,
+                          bool preloadDialectsInContext = true);
 
 } // end namespace mlir
