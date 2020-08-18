@@ -4705,9 +4705,75 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
       indicatePessimisticFixpoint();
   }
 
+  /// Check if \p ICmp is an equality comparison (==/!=) with at least one
+  /// nullptr. If so, try to simplify it using AANonNull on the other operand.
+  /// Return true if successful, in that case SimplifiedAssociatedValue will be
+  /// updated and \p Changed is set appropriately.
+  bool checkForNullPtrCompare(Attributor &A, ICmpInst *ICmp,
+                              ChangeStatus &Changed) {
+    if (!ICmp)
+      return false;
+    if (!ICmp->isEquality())
+      return false;
+
+    // This is a comparison with == or !-. We check for nullptr now.
+    bool Op0IsNull = isa<ConstantPointerNull>(ICmp->getOperand(0));
+    bool Op1IsNull = isa<ConstantPointerNull>(ICmp->getOperand(1));
+    if (!Op0IsNull && !Op1IsNull)
+      return false;
+
+    LLVMContext &Ctx = ICmp->getContext();
+    // Check for `nullptr ==/!= nullptr` first:
+    if (Op0IsNull && Op1IsNull) {
+      Value *NewVal = ConstantInt::get(
+          Type::getInt1Ty(Ctx), ICmp->getPredicate() == CmpInst::ICMP_EQ);
+      SimplifiedAssociatedValue = NewVal;
+      indicateOptimisticFixpoint();
+      assert(!SimplifiedAssociatedValue.hasValue() &&
+             "Did not expect non-fixed value for constant comparison");
+      Changed = ChangeStatus::CHANGED;
+      return true;
+    }
+
+    // Left is the nullptr ==/!= non-nullptr case. We'll use AANonNull on the
+    // non-nullptr operand and if we assume it's non-null we can conclude the
+    // result of the comparison.
+    assert((Op0IsNull || Op1IsNull) &&
+           "Expected nullptr versus non-nullptr comparison at this point");
+
+    // The index is the operand that we assume is not null.
+    unsigned PtrIdx = Op0IsNull;
+    auto &PtrNonNullAA = A.getAAFor<AANonNull>(
+        *this, IRPosition::value(*ICmp->getOperand(PtrIdx)));
+    if (!PtrNonNullAA.isAssumedNonNull())
+      return false;
+
+    // The new value depends on the predicate, true for != and false for ==.
+    Value *NewVal = ConstantInt::get(Type::getInt1Ty(Ctx),
+                                     ICmp->getPredicate() == CmpInst::ICMP_NE);
+
+    assert((!SimplifiedAssociatedValue.hasValue() ||
+            SimplifiedAssociatedValue == NewVal) &&
+           "Did not expect to change value for zero-comparison");
+
+    bool HasValueBefore = SimplifiedAssociatedValue.hasValue();
+    SimplifiedAssociatedValue = NewVal;
+
+    if (PtrNonNullAA.isKnownNonNull())
+      indicateOptimisticFixpoint();
+
+    Changed = HasValueBefore ? ChangeStatus::UNCHANGED : ChangeStatus ::CHANGED;
+    return true;
+  }
+
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     bool HasValueBefore = SimplifiedAssociatedValue.hasValue();
+
+    ChangeStatus Changed;
+    if (checkForNullPtrCompare(A, dyn_cast<ICmpInst>(&getAnchorValue()),
+                               Changed))
+      return Changed;
 
     auto VisitValueCB = [&](Value &V, const Instruction *CtxI, bool &,
                             bool Stripped) -> bool {

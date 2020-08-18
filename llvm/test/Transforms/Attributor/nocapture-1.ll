@@ -672,18 +672,12 @@ define i1 @nocaptureInboundsGEPICmp(i32* %x) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@nocaptureInboundsGEPICmp
 ; IS__TUNIT____-SAME: (i32* nocapture nofree readnone [[X:%.*]])
-; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[X]], i32 5
-; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
-; IS__TUNIT____-NEXT:    [[TMP3:%.*]] = icmp eq i8* [[TMP2]], null
-; IS__TUNIT____-NEXT:    ret i1 [[TMP3]]
+; IS__TUNIT____-NEXT:    ret i1 false
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@nocaptureInboundsGEPICmp
 ; IS__CGSCC____-SAME: (i32* nocapture nofree readnone [[X:%.*]])
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[X]], i32 5
-; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
-; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = icmp eq i8* [[TMP2]], null
-; IS__CGSCC____-NEXT:    ret i1 [[TMP3]]
+; IS__CGSCC____-NEXT:    ret i1 false
 ;
   %1 = getelementptr inbounds i32, i32* %x, i32 5
   %2 = bitcast i32* %1 to i8*
@@ -695,22 +689,16 @@ define i1 @nocaptureInboundsGEPICmpRev(i32* %x) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@nocaptureInboundsGEPICmpRev
 ; IS__TUNIT____-SAME: (i32* nocapture nofree readnone [[X:%.*]])
-; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[X]], i32 5
-; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
-; IS__TUNIT____-NEXT:    [[TMP3:%.*]] = icmp eq i8* null, [[TMP2]]
-; IS__TUNIT____-NEXT:    ret i1 [[TMP3]]
+; IS__TUNIT____-NEXT:    ret i1 true
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@nocaptureInboundsGEPICmpRev
 ; IS__CGSCC____-SAME: (i32* nocapture nofree readnone [[X:%.*]])
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[X]], i32 5
-; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
-; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = icmp eq i8* null, [[TMP2]]
-; IS__CGSCC____-NEXT:    ret i1 [[TMP3]]
+; IS__CGSCC____-NEXT:    ret i1 true
 ;
   %1 = getelementptr inbounds i32, i32* %x, i32 5
   %2 = bitcast i32* %1 to i8*
-  %3 = icmp eq i8* null, %2
+  %3 = icmp ne i8* null, %2
   ret i1 %3
 }
 
