@@ -233,6 +233,11 @@ def setoeq_or_seteq : PatFrags<(ops node:$lhs, node:$rhs),
 def setone_or_setne : PatFrags<(ops node:$lhs, node:$rhs),
                                 [(setone node:$lhs, node:$rhs),
                                  (setne node:$lhs, node:$rhs)]>;
+def AArch64mul_p_oneuse : PatFrag<(ops node:$pred, node:$src1, node:$src2),
+                                  (AArch64mul_p node:$pred, node:$src1, node:$src2), [{
+  return N->hasOneUse();
+}]>;
+
 
 let Predicates = [HasSVE] in {
   defm RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;
@@ -281,8 +286,8 @@ let Predicates = [HasSVE] in {
 
   defm MAD_ZPmZZ : sve_int_mladdsub_vvv_pred<0b0, "mad", int_aarch64_sve_mad>;
   defm MSB_ZPmZZ : sve_int_mladdsub_vvv_pred<0b1, "msb", int_aarch64_sve_msb>;
-  defm MLA_ZPmZZ : sve_int_mlas_vvv_pred<0b0, "mla", int_aarch64_sve_mla>;
-  defm MLS_ZPmZZ : sve_int_mlas_vvv_pred<0b1, "mls", int_aarch64_sve_mls>;
+  defm MLA_ZPmZZ : sve_int_mlas_vvv_pred<0b0, "mla", int_aarch64_sve_mla, add, AArch64mul_p_oneuse>;
+  defm MLS_ZPmZZ : sve_int_mlas_vvv_pred<0b1, "mls", int_aarch64_sve_mls, sub, AArch64mul_p_oneuse>;
 
   // SVE predicated integer reductions.
   defm SADDV_VPZ : sve_int_reduce_0_saddv<0b000, "saddv", int_aarch64_sve_saddv>;
