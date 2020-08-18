@@ -56,8 +56,6 @@ DEFINE_C_API_STRUCT(MlirType, const void);
 DEFINE_C_API_STRUCT(MlirLocation, const void);
 DEFINE_C_API_STRUCT(MlirModule, const void);
 
-#undef DEFINE_C_API_STRUCT
-
 /** Named MLIR attribute.
  *
  * A named attribute is essentially a (name, attribute) pair where the name is
@@ -313,6 +311,9 @@ void mlirValuePrint(MlirValue value, MlirPrintCallback callback,
 
 /** Parses a type. The type is owned by the context. */
 MlirType mlirTypeParseGet(MlirContext context, const char *type);
+
+/** Checks if two types are equal. */
+int mlirTypeEqual(MlirType t1, MlirType t2);
 
 /** Prints a location by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
