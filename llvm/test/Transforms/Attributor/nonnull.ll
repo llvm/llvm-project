@@ -427,7 +427,7 @@ define internal i32* @f1(i32* %arg) {
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[BB6:%.*]], label [[BB4:%.*]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 1
-; CHECK-NEXT:    [[TMP5B:%.*]] = tail call nonnull i32* @f3(i32* nofree nonnull readonly [[TMP5]])
+; CHECK-NEXT:    [[TMP5B:%.*]] = tail call i32* @f3(i32* nofree nonnull readonly [[TMP5]])
 ; CHECK-NEXT:    [[TMP5C:%.*]] = getelementptr inbounds i32, i32* [[TMP5B]], i64 -1
 ; CHECK-NEXT:    br label [[BB9]]
 ; CHECK:       bb6:
