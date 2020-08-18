@@ -1740,7 +1740,7 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
     if (GVKind.isBSSLocal())
       OutStreamer->emitXCOFFLocalCommonSymbol(
-          OutContext.getOrCreateSymbol(GVSym->getUnqualifiedName()), Size,
+          OutContext.getOrCreateSymbol(GVSym->getSymbolTableName()), Size,
           GVSym, Alignment.value());
     else
       OutStreamer->emitCommonSymbol(GVSym, Size, Alignment.value());
