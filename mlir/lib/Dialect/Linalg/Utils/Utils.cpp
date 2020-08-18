@@ -334,21 +334,31 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
   SmallVector<DistributionMethod, 0> distributionMethod;
   if (distributionOptions) {
     auto &options = distributionOptions.getValue();
-    unsigned index = 0;
     OpBuilder &builder = edsc::ScopedContext::getBuilderRef();
     Location loc = edsc::ScopedContext::getLocation();
     distributionMethod.assign(distributionOptions->distributionMethod.begin(),
                               distributionOptions->distributionMethod.end());
-    for (auto iteratorType : enumerate(iteratorTypes))
-      if (isParallelIteratorType(iteratorType.value()) &&
-          index < distributionMethod.size()) {
+    SmallVector<SubViewOp::Range, 2> parallelLoopRanges;
+    for (auto iteratorType : enumerate(iteratorTypes)) {
+      if (isParallelIteratorType(iteratorType.value()))
+        parallelLoopRanges.push_back(loopRanges[iteratorType.index()]);
+    }
+    if (distributionMethod.size() < parallelLoopRanges.size())
+      parallelLoopRanges.resize(distributionMethod.size());
+    SmallVector<ProcInfo, 2> procInfo =
+        options.procInfo(builder, loc, parallelLoopRanges);
+    unsigned index = 0;
+    for (auto iteratorType : enumerate(iteratorTypes)) {
+      if (index >= procInfo.size())
+        break;
+      if (isParallelIteratorType(iteratorType.value())) {
         unsigned i = iteratorType.index();
-        ProcInfo procInfo = options.procInfo(builder, loc, index);
-        updateBoundsForCyclicDistribution(builder, loc, procInfo.procId,
-                                          procInfo.nprocs, lbsStorage[i],
+        updateBoundsForCyclicDistribution(builder, loc, procInfo[index].procId,
+                                          procInfo[index].nprocs, lbsStorage[i],
                                           ubsStorage[i], stepsStorage[i]);
         index++;
       }
+    }
   }
   ValueRange lbs(lbsStorage), ubs(ubsStorage), steps(stepsStorage);
   generateParallelLoopNest(lbs, ubs, steps, iteratorTypes, bodyBuilderFn, ivs,
