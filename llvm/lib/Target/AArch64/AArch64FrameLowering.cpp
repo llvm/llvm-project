@@ -1694,11 +1694,10 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   StackOffset DeallocateBefore = {}, DeallocateAfter = SVEStackSize;
   MachineBasicBlock::iterator RestoreBegin = LastPopI, RestoreEnd = LastPopI;
   if (int64_t CalleeSavedSize = AFI->getSVECalleeSavedStackSize()) {
-    RestoreBegin = std::prev(RestoreEnd);;
-    while (IsSVECalleeSave(RestoreBegin) &&
-           RestoreBegin != MBB.begin())
+    RestoreBegin = std::prev(RestoreEnd);
+    while (RestoreBegin != MBB.begin() &&
+           IsSVECalleeSave(std::prev(RestoreBegin)))
       --RestoreBegin;
-    ++RestoreBegin;
 
     assert(IsSVECalleeSave(RestoreBegin) &&
            IsSVECalleeSave(std::prev(RestoreEnd)) && "Unexpected instruction");
