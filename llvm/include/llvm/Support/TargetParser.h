@@ -113,12 +113,18 @@ enum ArchFeatureKind : uint32_t {
   FEATURE_FAST_DENORMAL_F32 = 1 << 5,
 
   // Wavefront 32 is available.
-  FEATURE_WAVE32 = 1 << 6
+  FEATURE_WAVE32 = 1 << 6,
+
+  // Xnack is available.
+  FEATURE_XNACK = 1 << 7,
+
+  // Sram-ecc is available.
+  FEATURE_SRAM_ECC = 1 << 8,
 };
 
 StringRef getArchNameAMDGCN(GPUKind AK);
 StringRef getArchNameR600(GPUKind AK);
-StringRef getCanonicalArchName(StringRef Arch);
+StringRef getCanonicalArchName(const Triple &T, StringRef Arch);
 GPUKind parseArchAMDGCN(StringRef CPU);
 GPUKind parseArchR600(StringRef CPU);
 unsigned getArchAttrAMDGCN(GPUKind AK);
