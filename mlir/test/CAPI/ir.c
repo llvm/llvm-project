@@ -381,8 +381,8 @@ static int printStandardTypes(MlirContext ctx) {
 }
 
 int main() {
+  mlirRegisterAllDialects();
   MlirContext ctx = mlirContextCreate();
-  mlirRegisterAllDialects(ctx);
   MlirLocation location = mlirLocationUnknownGet(ctx);
 
   MlirModule moduleOp = makeAdd(ctx, location);

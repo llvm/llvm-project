@@ -14,7 +14,6 @@
 
 #include "mlir/Support/LLVM.h"
 #include <string>
-#include <vector>
 
 namespace llvm {
 class Record;
@@ -26,7 +25,7 @@ namespace tblgen {
 // and provides helper methods for accessing them.
 class Dialect {
 public:
-  explicit Dialect(const llvm::Record *def);
+  explicit Dialect(const llvm::Record *def) : def(def) {}
 
   // Returns the name of this dialect.
   StringRef getName() const;
@@ -43,10 +42,6 @@ public:
 
   // Returns the description of the dialect. Returns empty string if none.
   StringRef getDescription() const;
-
-  // Returns the list of dialect (class names) that this dialect depends on.
-  // These are dialects that will be loaded on construction of this dialect.
-  ArrayRef<StringRef> getDependentDialects() const;
 
   // Returns the dialects extra class declaration code.
   llvm::Optional<StringRef> getExtraClassDeclaration() const;
@@ -75,7 +70,6 @@ public:
 
 private:
   const llvm::Record *def;
-  std::vector<StringRef> dependentDialects;
 };
 } // end namespace tblgen
 } // end namespace mlir

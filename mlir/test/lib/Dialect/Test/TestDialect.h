@@ -37,8 +37,6 @@ namespace mlir {
 #define GET_OP_CLASSES
 #include "TestOps.h.inc"
 
-void registerTestDialect(DialectRegistry &registry);
-
 } // end namespace mlir
 
 #endif // MLIR_TESTDIALECT_H
