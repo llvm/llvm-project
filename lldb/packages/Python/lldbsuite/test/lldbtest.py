@@ -67,6 +67,7 @@ from . import lldbutil
 from . import test_categories
 from lldbsuite.support import encoded_file
 from lldbsuite.support import funcutils
+from lldbsuite.test.builders import get_builder
 
 # See also dotest.parseOptionsAndInitTestdirs(), where the environment variables
 # LLDB_COMMAND_TRACE is set from '-t' option.
@@ -463,17 +464,7 @@ def getsource_if_available(obj):
 
 
 def builder_module():
-    if sys.platform.startswith("freebsd"):
-        return __import__("builder_freebsd")
-    if sys.platform.startswith("openbsd"):
-        return __import__("builder_openbsd")
-    if sys.platform.startswith("netbsd"):
-        return __import__("builder_netbsd")
-    if sys.platform.startswith("linux"):
-        # sys.platform with Python-3.x returns 'linux', but with
-        # Python-2.x it returns 'linux2'.
-        return __import__("builder_linux")
-    return __import__("builder_" + sys.platform)
+    return get_builder(sys.platform)
 
 
 class Base(unittest2.TestCase):
@@ -498,7 +489,7 @@ class Base(unittest2.TestCase):
             mydir = TestBase.compute_mydir(__file__)
         '''
         # /abs/path/to/packages/group/subdir/mytest.py -> group/subdir
-        rel_prefix = test_file[len(os.environ["LLDB_TEST_SRC"]) + 1:]
+        rel_prefix = test_file[len(configuration.test_src_root) + 1:]
         return os.path.dirname(rel_prefix)
 
     def TraceOn(self):
@@ -522,15 +513,11 @@ class Base(unittest2.TestCase):
         # Save old working directory.
         cls.oldcwd = os.getcwd()
 
-        # Change current working directory if ${LLDB_TEST_SRC} is defined.
-        # See also dotest.py which sets up ${LLDB_TEST_SRC}.
-        if ("LLDB_TEST_SRC" in os.environ):
-            full_dir = os.path.join(os.environ["LLDB_TEST_SRC"],
-                                    cls.mydir)
-            if traceAlways:
-                print("Change dir to:", full_dir, file=sys.stderr)
-            os.chdir(full_dir)
-            lldb.SBReproducer.SetWorkingDirectory(full_dir)
+        full_dir = os.path.join(configuration.test_src_root, cls.mydir)
+        if traceAlways:
+            print("Change dir to:", full_dir, file=sys.stderr)
+        os.chdir(full_dir)
+        lldb.SBReproducer.SetWorkingDirectory(full_dir)
 
         # Set platform context.
         cls.platformContext = lldbplatformutil.createPlatformContext()
@@ -664,7 +651,7 @@ class Base(unittest2.TestCase):
 
     def getSourceDir(self):
         """Return the full path to the current test."""
-        return os.path.join(os.environ["LLDB_TEST_SRC"], self.mydir)
+        return os.path.join(configuration.test_src_root, self.mydir)
 
     def getBuildDirBasename(self):
         return self.__class__.__module__ + "." + self.testMethodName
@@ -1127,7 +1114,7 @@ class Base(unittest2.TestCase):
 
         <session-dir>/<arch>-<compiler>-<test-file>.<test-class>.<test-method>
         """
-        dname = os.path.join(os.environ["LLDB_TEST_SRC"],
+        dname = os.path.join(configuration.test_src_root,
                              os.environ["LLDB_SESSION_DIRNAME"])
         if not os.path.isdir(dname):
             os.mkdir(dname)
@@ -1828,7 +1815,7 @@ class TestBase(Base):
         - The build methods buildDefault, buildDsym, and buildDwarf are used to
           build the binaries used during a particular test scenario.  A plugin
           should be provided for the sys.platform running the test suite.  The
-          Mac OS X implementation is located in plugins/darwin.py.
+          Mac OS X implementation is located in builders/darwin.py.
     """
 
     # Subclasses can set this to true (if they don't depend on debug info) to avoid running the

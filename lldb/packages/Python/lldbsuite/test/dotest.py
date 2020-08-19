@@ -490,7 +490,6 @@ def setupSysPath():
         sys.exit(-1)
 
     os.environ["LLDB_TEST"] = scriptPath
-    os.environ["LLDB_TEST_SRC"] = lldbsuite.lldb_test_root
 
     # Set up the root build directory.
     if not configuration.test_build_dir:
@@ -802,15 +801,6 @@ def getVersionForSDK(sdk):
     return ver
 
 
-def setDefaultTripleForPlatform():
-    if configuration.lldb_platform_name == 'ios-simulator':
-        triple_str = 'x86_64-apple-ios%s' % (
-            getVersionForSDK('iphonesimulator'))
-        os.environ['TRIPLE'] = triple_str
-        return {'TRIPLE': triple_str}
-    return {}
-
-
 def checkCompiler():
     # Add some intervention here to sanity check that the compiler requested is sane.
     # If found not to be an executable program, we abort.
@@ -985,14 +975,6 @@ def run_suite():
                 exitTestSuite(1)
         else:
             configuration.lldb_platform_url = None
-
-    platform_changes = setDefaultTripleForPlatform()
-    first = True
-    for key in platform_changes:
-        if first:
-            print("Environment variables setup for platform support:")
-            first = False
-        print("%s = %s" % (key, platform_changes[key]))
 
     if configuration.lldb_platform_working_dir:
         print("Setting remote platform working directory to '%s'..." %

@@ -103,6 +103,10 @@ verbose = 0
 # because it doesn't work under a debugger
 testdirs = [lldbsuite.lldb_test_root]
 
+# The root of the test case tree (where the actual tests reside, not the test
+# infrastructure).
+test_src_root = lldbsuite.lldb_test_root
+
 # Separator string.
 separator = '-' * 70
 
