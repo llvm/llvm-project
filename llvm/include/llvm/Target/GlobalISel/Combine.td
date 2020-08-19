@@ -299,6 +299,14 @@ def shl_ashr_to_sext_inreg : GICombineRule<
     [{ return Helper.matchAshrShlToSextInreg(*${root}, ${info}); }]),
   (apply [{ return Helper.applyAshShlToSextInreg(*${root}, ${info});}])
 >;
+// Fold (x & mask) -> x when (x & mask) is known to equal x.
+def and_trivial_mask_matchinfo : GIDefMatchData<"Register">;
+def and_trivial_mask: GICombineRule <
+  (defs root:$root, and_trivial_mask_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_AND):$root,
+         [{ return Helper.matchAndWithTrivialMask(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
+>;
 
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
