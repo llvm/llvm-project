@@ -35,13 +35,11 @@ private:
   ElementCount(unsigned Min, bool Scalable) : Min(Min), Scalable(Scalable) {}
 
 public:
-  /// No default constructor. Users should use one of the `get*`
-  /// static methods below, as they should always make a conscious
-  /// choice on the type of `ElementCount` they are requesting.
-  ElementCount() = delete;
   unsigned Min;  // Minimum number of vector elements.
   bool Scalable; // If true, NumElements is a multiple of 'Min' determined
                  // at runtime rather than compile time.
+
+  ElementCount() = default;
 
   ElementCount operator*(unsigned RHS) {
     return { Min * RHS, Scalable };
