@@ -193,7 +193,7 @@ bool InstructionSelector::executeMatchTable(
       CurrentIdx = MatchTable[CurrentIdx + (Opcode - LowerBound)];
       if (!CurrentIdx) {
         CurrentIdx = Default;
-	break;
+        break;
       }
       OnFailResumeAt.push_back(Default);
       break;
