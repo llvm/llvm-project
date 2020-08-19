@@ -35,8 +35,7 @@
 // TMP-SAME: "-target-feature" "+sram-ecc"
 // TMP-SAME: "-target-feature" "+xnack"
 
-// CHECK: [[LLD:"[^"]*lld[^"]*"]]
-// CHECK-SAME: "-plugin-opt=mcpu=gfx908"
+// CHECK: [[LLD:"[^"]*lld[^"]*"]] {{.*}} "-plugin-opt=mcpu=gfx908"
 // CHECK-SAME: "-plugin-opt=-mattr=+sram-ecc,+xnack"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
@@ -44,8 +43,7 @@
 // CHECK-SAME: "-target-feature" "-sram-ecc"
 // CHECK-SAME: "-target-feature" "+xnack"
 
-// CHECK: [[LLD]]
-// CHECK-SAME: "-plugin-opt=mcpu=gfx908"
+// CHECK: [[LLD]] {{.*}} "-plugin-opt=mcpu=gfx908"
 // CHECK-SAME: "-plugin-opt=-mattr=-sram-ecc,+xnack"
 
 // CHECK: {{"[^"]*clang-offload-bundler[^"]*"}}
