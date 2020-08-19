@@ -400,3 +400,60 @@ func @transfer_read_simple(%A : memref<2x2xf32>) -> vector<2x2xf32> {
   %0 = vector.transfer_read %A[%c0, %c0], %f0 : memref<2x2xf32>, vector<2x2xf32>
   return %0 : vector<2x2xf32>
 }
+
+func @transfer_read_minor_identity(%A : memref<?x?x?x?xf32>) -> vector<3x3xf32> {
+  %c0 = constant 0 : index
+  %f0 = constant 0.0 : f32
+  %0 = vector.transfer_read %A[%c0, %c0, %c0, %c0], %f0
+    { permutation_map = affine_map<(d0, d1, d2, d3) -> (d2, d3)> }
+      : memref<?x?x?x?xf32>, vector<3x3xf32>
+  return %0 : vector<3x3xf32>
+}
+
+// CHECK-LABEL: transfer_read_minor_identity(
+//  CHECK-SAME:   %[[A:.*]]: memref<?x?x?x?xf32>) -> vector<3x3xf32>
+//       CHECK:   %[[c0:.*]] = constant 0 : index
+//       CHECK:   %[[cst:.*]] = constant 0.000000e+00 : f32
+//       CHECK:   %[[c2:.*]] = constant 2 : index
+//       CHECK:   %[[cst0:.*]] = constant dense<0.000000e+00> : vector<3xf32>
+//       CHECK:   %[[m:.*]] = alloca() {alignment = 128 : i64} : memref<3xvector<3xf32>>
+//       CHECK:   %[[d:.*]] = dim %[[A]], %[[c2]] : memref<?x?x?x?xf32>
+//       CHECK:   affine.for %[[arg1:.*]] = 0 to 3 {
+//       CHECK:      %[[cmp:.*]] = cmpi "slt", %[[arg1]], %[[d]] : index
+//       CHECK:      scf.if %[[cmp]] {
+//       CHECK:        %[[tr:.*]] = vector.transfer_read %[[A]][%[[c0]], %[[c0]], %[[arg1]], %[[c0]]], %[[cst]] : memref<?x?x?x?xf32>, vector<3xf32>
+//       CHECK:        store %[[tr]], %[[m]][%[[arg1]]] : memref<3xvector<3xf32>>
+//       CHECK:      } else {
+//       CHECK:        store %[[cst0]], %[[m]][%[[arg1]]] : memref<3xvector<3xf32>>
+//       CHECK:      }
+//       CHECK:    }
+//       CHECK:    %[[cast:.*]] = vector.type_cast %[[m]] : memref<3xvector<3xf32>> to memref<vector<3x3xf32>>
+//       CHECK:    %[[ret:.*]]  = load %[[cast]][] : memref<vector<3x3xf32>>
+//       CHECK:    return %[[ret]] : vector<3x3xf32>
+
+func @transfer_write_minor_identity(%A : vector<3x3xf32>, %B : memref<?x?x?x?xf32>) {
+  %c0 = constant 0 : index
+  %f0 = constant 0.0 : f32
+  vector.transfer_write %A, %B[%c0, %c0, %c0, %c0]
+    { permutation_map = affine_map<(d0, d1, d2, d3) -> (d2, d3)> }
+      : vector<3x3xf32>, memref<?x?x?x?xf32>
+  return
+}
+
+// CHECK-LABEL: transfer_write_minor_identity(
+//  CHECK-SAME:   %[[A:.*]]: vector<3x3xf32>,
+//  CHECK-SAME:   %[[B:.*]]: memref<?x?x?x?xf32>)
+//       CHECK:   %[[c0:.*]] = constant 0 : index
+//       CHECK:   %[[c2:.*]] = constant 2 : index
+//       CHECK:   %[[m:.*]] = alloca() {alignment = 128 : i64} : memref<3xvector<3xf32>>
+//       CHECK:   %[[cast:.*]] = vector.type_cast %[[m]] : memref<3xvector<3xf32>> to memref<vector<3x3xf32>>
+//       CHECK:   store %[[A]], %[[cast]][] : memref<vector<3x3xf32>>
+//       CHECK:   %[[d:.*]] = dim %[[B]], %[[c2]] : memref<?x?x?x?xf32>
+//       CHECK:   affine.for %[[arg2:.*]] = 0 to 3 {
+//       CHECK:      %[[cmp:.*]] = cmpi "slt", %[[arg2]], %[[d]] : index
+//       CHECK:      scf.if %[[cmp]] {
+//       CHECK:        %[[tmp:.*]] = load %[[m]][%[[arg2]]] : memref<3xvector<3xf32>>
+//       CHECK:        vector.transfer_write %[[tmp]], %[[B]][%[[c0]], %[[c0]], %[[arg2]], %[[c0]]] : vector<3xf32>, memref<?x?x?x?xf32>
+//       CHECK:      }
+//       CHECK:    }
+//       CHECK:    return
