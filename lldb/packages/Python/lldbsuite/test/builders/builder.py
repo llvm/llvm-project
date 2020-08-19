@@ -231,7 +231,8 @@ class Builder:
                   architecture=None,
                   compiler=None,
                   dictionary=None,
-                  testdir=None):
+                  testdir=None,
+                  testname=None):
         # False signifies that we cannot handle building with dSYM.
         return False
 
