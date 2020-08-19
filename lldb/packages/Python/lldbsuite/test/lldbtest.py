@@ -65,9 +65,9 @@ from . import lldbplatformutil
 from . import lldbtest_config
 from . import lldbutil
 from . import test_categories
-from lldbsuite.builders import get_builder
 from lldbsuite.support import encoded_file
 from lldbsuite.support import funcutils
+from lldbsuite.test.builders import get_builder
 
 # See also dotest.parseOptionsAndInitTestdirs(), where the environment variables
 # LLDB_COMMAND_TRACE is set from '-t' option.
