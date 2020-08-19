@@ -559,7 +559,8 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateConstruction) {
   CompilerType clang_type =
       m_ast->CreateFunctionType(int_type, nullptr, 0U, false, 0U);
   FunctionDecl *func = m_ast->CreateFunctionDeclaration(
-      TU, OptionalClangModuleID(), "foo", clang_type, 0, false);
+      TU, OptionalClangModuleID(), "foo", clang_type, StorageClass::SC_None,
+      false);
   TypeSystemClang::TemplateParameterInfos empty_params;
 
   // Create the actual function template.
@@ -590,7 +591,8 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateInRecordConstruction) {
   // 1. FunctionDecls can't be in a Record (only CXXMethodDecls can).
   // 2. It is mirroring the behavior of DWARFASTParserClang::ParseSubroutine.
   FunctionDecl *func = m_ast->CreateFunctionDeclaration(
-      TU, OptionalClangModuleID(), "foo", clang_type, 0, false);
+      TU, OptionalClangModuleID(), "foo", clang_type, StorageClass::SC_None,
+      false);
   TypeSystemClang::TemplateParameterInfos empty_params;
 
   // Create the actual function template.
