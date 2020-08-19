@@ -404,6 +404,10 @@ defm toc_optimize : B<"toc-optimize",
     "(PowerPC64) Enable TOC related optimizations (default)",
     "(PowerPC64) Disable TOC related optimizations">;
 
+defm pcrel_optimize : B<"pcrel-optimize",
+    "(PowerPC64) Enable PC-relative optimizations (default)",
+    "(PowerPC64) Disable PC-relative optimizations">;
+
 def trace: F<"trace">, HelpText<"Print the names of the input files">;
 
 defm trace_symbol: Eq<"trace-symbol", "Trace references to symbols">;
