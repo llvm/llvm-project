@@ -11333,19 +11333,16 @@ static SDValue getAVX512TruncNode(const SDLoc &DL, MVT DstVT, SDValue Src,
   return Trunc;
 }
 
-static bool matchShuffleAsVPMOV(ArrayRef<int> Mask, bool SwappedOps,
-                                int Delta) {
+static bool matchShuffleAsVPMOV(ArrayRef<int> Mask, int Delta) {
   int Size = (int)Mask.size();
   int Split = Size / Delta;
-  int TruncatedVectorStart = SwappedOps ? Size : 0;
 
   // Match for mask starting with e.g.: <8, 10, 12, 14,... or <0, 2, 4, 6,...
-  if (!isSequentialOrUndefInRange(Mask, 0, Split, TruncatedVectorStart, Delta))
+  if (!isSequentialOrUndefInRange(Mask, 0, Split, 0, Delta))
     return false;
 
   // The rest of the mask should not refer to the truncated vector's elements.
-  if (isAnyInRange(Mask.slice(Split, Size - Split), TruncatedVectorStart,
-                   TruncatedVectorStart + Size))
+  if (isAnyInRange(Mask.slice(Split, Size - Split), 0, Size))
     return false;
 
   return true;
@@ -11372,16 +11369,10 @@ static SDValue lowerShuffleWithVPMOV(const SDLoc &DL, MVT VT, SDValue V1,
                                      const X86Subtarget &Subtarget,
                                      SelectionDAG &DAG) {
   assert((VT == MVT::v16i8 || VT == MVT::v8i16) && "Unexpected VTRUNC type");
-  bool SwappedOps = false;
 
   // TODO: Convert to use Zeroable bitmask.
-  if (!ISD::isBuildVectorAllZeros(V2.getNode())) {
-    if (!ISD::isBuildVectorAllZeros(V1.getNode()))
-      return SDValue();
-
-    std::swap(V1, V2);
-    SwappedOps = true;
-  }
+  if (!ISD::isBuildVectorAllZeros(V2.getNode()))
+    return SDValue();
 
   // Look for:
   //
@@ -11405,8 +11396,7 @@ static SDValue lowerShuffleWithVPMOV(const SDLoc &DL, MVT VT, SDValue V1,
 
   // The first half/quarter of the mask should refer to every second/fourth
   // element of the vector truncated and bitcasted.
-  if (!matchShuffleAsVPMOV(Mask, SwappedOps, 2) &&
-      !matchShuffleAsVPMOV(Mask, SwappedOps, 4))
+  if (!matchShuffleAsVPMOV(Mask, 2) && !matchShuffleAsVPMOV(Mask, 4))
     return SDValue();
 
   return getAVX512TruncNode(DL, VT, Src, Subtarget, DAG, true);
