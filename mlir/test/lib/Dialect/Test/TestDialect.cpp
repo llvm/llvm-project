@@ -21,10 +21,6 @@
 
 using namespace mlir;
 
-void mlir::registerTestDialect(DialectRegistry &registry) {
-  registry.insert<TestDialect>();
-}
-
 //===----------------------------------------------------------------------===//
 // TestDialect Interfaces
 //===----------------------------------------------------------------------===//

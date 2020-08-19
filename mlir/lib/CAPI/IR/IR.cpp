@@ -10,7 +10,6 @@
 
 #include "mlir/CAPI/IR.h"
 #include "mlir/IR/Attributes.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
@@ -51,7 +50,7 @@ private:
 /* ========================================================================== */
 
 MlirContext mlirContextCreate() {
-  auto *context = new MLIRContext(/*loadAllDialects=*/false);
+  auto *context = new MLIRContext;
   return wrap(context);
 }
 

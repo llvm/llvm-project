@@ -768,10 +768,6 @@ struct TestTypeConversionProducer
 
 struct TestTypeConversionDriver
     : public PassWrapper<TestTypeConversionDriver, OperationPass<ModuleOp>> {
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<TestDialect>();
-  }
-
   void runOnOperation() override {
     // Initialize the type converter.
     TypeConverter converter;

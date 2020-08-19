@@ -1244,7 +1244,6 @@ template <typename NamedStructuredOpType>
 static ParseResult parseNamedStructuredOp(OpAsmParser &parser,
                                           OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 8> operandsInfo;
-  result.getContext()->getOrLoadDialect<StandardOpsDialect>();
 
   // Optional attributes may be added.
   if (parser.parseOperandList(operandsInfo) ||
