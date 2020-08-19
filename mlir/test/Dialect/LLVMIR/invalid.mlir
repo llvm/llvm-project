@@ -603,3 +603,10 @@ func @invalid_ordering_in_fence() {
   // expected-error @+1 {{can be given only acquire, release, acq_rel, and seq_cst orderings}}
   llvm.fence syncscope("agent") monotonic
 }
+
+// -----
+
+// expected-error @+1 {{invalid data layout descriptor}}
+module attributes {llvm.data_layout = "#vjkr32"} {
+  func @invalid_data_layout()
+}
