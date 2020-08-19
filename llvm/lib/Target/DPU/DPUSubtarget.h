@@ -16,8 +16,8 @@
 
 #include "DPUFrameLowering.h"
 #include "DPUInstrInfo.h"
-#include "DPUTargetLowering.h"
 #include "DPUSelectionDAGInfo.h"
+#include "DPUTargetLowering.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
