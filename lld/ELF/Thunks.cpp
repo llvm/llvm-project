@@ -301,7 +301,7 @@ public:
 // callee's global entry point into r12 without a save of R2.
 class PPC64R12SetupStub final : public Thunk {
 public:
-  PPC64R12SetupStub(Symbol &dest) : Thunk(dest, 0) {}
+  PPC64R12SetupStub(Symbol &dest) : Thunk(dest, 0) { alignment = 16; }
   uint32_t size() override { return 16; }
   void writeTo(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
@@ -316,7 +316,7 @@ public:
 // 2) Transferring control to the target function through an indirect branch.
 class PPC64PCRelPLTStub final : public Thunk {
 public:
-  PPC64PCRelPLTStub(Symbol &dest) : Thunk(dest, 0) {}
+  PPC64PCRelPLTStub(Symbol &dest) : Thunk(dest, 0) { alignment = 16; }
   uint32_t size() override { return 16; }
   void writeTo(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
