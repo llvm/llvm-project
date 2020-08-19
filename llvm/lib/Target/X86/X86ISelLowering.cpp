@@ -33856,6 +33856,9 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     }
     break;
   }
+  case X86ISD::VTRUNC:
+  case X86ISD::VTRUNCS:
+  case X86ISD::VTRUNCUS:
   case X86ISD::CVTSI2P:
   case X86ISD::CVTUI2P:
   case X86ISD::CVTP2SI:
@@ -33872,7 +33875,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case X86ISD::VMFPROUND:
   case X86ISD::CVTPS2PH:
   case X86ISD::MCVTPS2PH: {
-    // Conversions - upper elements are known zero.
+    // Truncations/Conversions - upper elements are known zero.
     EVT SrcVT = Op.getOperand(0).getValueType();
     if (SrcVT.isVector()) {
       unsigned NumSrcElts = SrcVT.getVectorNumElements();
