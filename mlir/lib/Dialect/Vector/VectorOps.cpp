@@ -48,10 +48,10 @@ static MaskFormat get1DMaskFormat(Value mask) {
     // when a mix is detected.
     if (auto denseElts = c.value().dyn_cast<DenseIntElementsAttr>()) {
       int64_t val = 0;
-      for (llvm::APInt b : denseElts)
-        if (b.getBoolValue() && val >= 0)
+      for (bool b : denseElts.getValues<bool>())
+        if (b && val >= 0)
           val++;
-        else if (!b.getBoolValue() && val <= 0)
+        else if (!b && val <= 0)
           val--;
         else
           return MaskFormat::Unknown;
