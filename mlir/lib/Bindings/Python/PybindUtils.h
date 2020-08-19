@@ -20,7 +20,8 @@ namespace python {
 // python runtime.
 // Correct usage:
 //   throw SetPyError(PyExc_ValueError, "Foobar'd");
-pybind11::error_already_set SetPyError(PyObject *excClass, llvm::Twine message);
+pybind11::error_already_set SetPyError(PyObject *excClass,
+                                       const llvm::Twine &message);
 
 } // namespace python
 } // namespace mlir
