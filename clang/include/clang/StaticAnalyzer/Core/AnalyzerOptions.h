@@ -162,6 +162,7 @@ enum UserModeKind {
 class AnalyzerOptions : public RefCountedBase<AnalyzerOptions> {
 public:
   using ConfigTable = llvm::StringMap<std::string>;
+  using CheckersAndPackagesTy = std::vector<std::pair<std::string, bool>>;
 
   /// Retrieves the list of checkers generated from Checkers.td. This doesn't
   /// contain statically linked but non-generated checkers and plugin checkers!
@@ -195,86 +196,9 @@ public:
                                   size_t InitialPad, size_t EntryWidth,
                                   size_t MinLineWidth = 0);
 
-  /// Pairs of checker/package name and enable/disable.
-  std::vector<std::pair<std::string, bool>> CheckersAndPackages;
-
-  /// Vector of checker/package names which will not emit warnings.
-  std::vector<std::string> SilencedCheckersAndPackages;
-
-  /// A key-value table of use-specified configuration values.
-  // TODO: This shouldn't be public.
-  ConfigTable Config;
-  AnalysisStores AnalysisStoreOpt = RegionStoreModel;
-  AnalysisConstraints AnalysisConstraintsOpt = RangeConstraintsModel;
-  AnalysisDiagClients AnalysisDiagOpt = PD_HTML;
-  AnalysisPurgeMode AnalysisPurgeOpt = PurgeStmt;
-
-  std::string AnalyzeSpecificFunction;
-
-  /// File path to which the exploded graph should be dumped.
-  std::string DumpExplodedGraphTo;
-
-  /// Store full compiler invocation for reproducible instructions in the
-  /// generated report.
-  std::string FullCompilerInvocation;
-
-  /// The maximum number of times the analyzer visits a block.
-  unsigned maxBlockVisitOnPath;
-
-  /// Disable all analyzer checkers.
-  ///
-  /// This flag allows one to disable analyzer checkers on the code processed by
-  /// the given analysis consumer. Note, the code will get parsed and the
-  /// command-line options will get checked.
-  unsigned DisableAllCheckers : 1;
-
-  unsigned ShowCheckerHelp : 1;
-  unsigned ShowCheckerHelpAlpha : 1;
-  unsigned ShowCheckerHelpDeveloper : 1;
-
-  unsigned ShowCheckerOptionList : 1;
-  unsigned ShowCheckerOptionAlphaList : 1;
-  unsigned ShowCheckerOptionDeveloperList : 1;
-
-  unsigned ShowEnabledCheckerList : 1;
-  unsigned ShowConfigOptionsList : 1;
-  unsigned ShouldEmitErrorsOnInvalidConfigValue : 1;
-  unsigned AnalyzeAll : 1;
-  unsigned AnalyzerDisplayProgress : 1;
-  unsigned AnalyzeNestedBlocks : 1;
-
-  unsigned eagerlyAssumeBinOpBifurcation : 1;
-
-  unsigned TrimGraph : 1;
-  unsigned visualizeExplodedGraphWithGraphViz : 1;
-  unsigned UnoptimizedCFG : 1;
-  unsigned PrintStats : 1;
-
-  /// Do not re-analyze paths leading to exhausted nodes with a different
-  /// strategy. We get better code coverage when retry is enabled.
-  unsigned NoRetryExhausted : 1;
-
-  /// Emit analyzer warnings as errors.
-  unsigned AnalyzerWerror : 1;
-
-  /// The inlining stack depth limit.
-  // Cap the stack depth at 4 calls (5 stack frames, base + 4 calls).
-  unsigned InlineMaxStackDepth = 5;
-
-  /// The mode of function selection used during inlining.
-  AnalysisInliningMode InliningMode = NoRedundancy;
-
-  // Create a field for each -analyzer-config option.
-#define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
-                                             SHALLOW_VAL, DEEP_VAL)            \
-  ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, SHALLOW_VAL)
-
-#define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)                \
-  TYPE NAME;
-
+#define ANALYZEROPT(NAME, BITS, DESCRIPTION) unsigned NAME : BITS;
+#define TYPED_ANALYZEROPT(TYPE, NAME, DESCRIPTION) TYPE NAME;
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.def"
-#undef ANALYZER_OPTION
-#undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
 
   // Create an array of all -analyzer-config command line options. Sort it in
   // the constructor.
@@ -299,15 +223,19 @@ public:
   }
 
   AnalyzerOptions()
-      : DisableAllCheckers(false), ShowCheckerHelp(false),
-        ShowCheckerHelpAlpha(false), ShowCheckerHelpDeveloper(false),
-        ShowCheckerOptionList(false), ShowCheckerOptionAlphaList(false),
+      : AnalysisStoreOpt(RegionStoreModel),
+        AnalysisConstraintsOpt(RangeConstraintsModel), AnalysisDiagOpt(PD_HTML),
+        AnalysisPurgeOpt(PurgeStmt), DisableAllCheckers(false),
+        ShowCheckerHelp(false), ShowCheckerHelpAlpha(false),
+        ShowCheckerHelpDeveloper(false), ShowCheckerOptionList(false),
+        ShowCheckerOptionAlphaList(false),
         ShowCheckerOptionDeveloperList(false), ShowEnabledCheckerList(false),
         ShowConfigOptionsList(false), AnalyzeAll(false),
         AnalyzerDisplayProgress(false), AnalyzeNestedBlocks(false),
         eagerlyAssumeBinOpBifurcation(false), TrimGraph(false),
         visualizeExplodedGraphWithGraphViz(false), UnoptimizedCFG(false),
-        PrintStats(false), NoRetryExhausted(false), AnalyzerWerror(false) {
+        PrintStats(false), NoRetryExhausted(false), AnalyzerWerror(false),
+        InlineMaxStackDepth(5), InliningMode(NoRedundancy) {
     llvm::sort(AnalyzerConfigCmdFlags);
   }
 

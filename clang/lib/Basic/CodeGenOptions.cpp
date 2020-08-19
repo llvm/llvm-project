@@ -10,8 +10,9 @@
 #include <string.h>
 
 namespace clang {
-
-CodeGenOptions::CodeGenOptions() {
+CodeGenOptions::CodeGenOptions()
+    : FPDenormalMode(llvm::DenormalMode::getIEEE()),
+      FP32DenormalMode(llvm::DenormalMode::getIEEE()), Argv0(nullptr) {
 #define CODEGENOPT(Name, Bits, Default) Name = Default;
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default) set##Name(Default);
 #include "clang/Basic/CodeGenOptions.def"

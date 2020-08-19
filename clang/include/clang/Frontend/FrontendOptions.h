@@ -226,94 +226,14 @@ public:
 /// FrontendOptions - Options for controlling the behavior of the frontend.
 class FrontendOptions {
 public:
-  /// Disable memory freeing on exit.
-  unsigned DisableFree : 1;
+  using PluginArgsTy =
+      std::unordered_map<std::string, std::vector<std::string>>;
 
-  /// When generating PCH files, instruct the AST writer to create relocatable
-  /// PCH files.
-  unsigned RelocatablePCH : 1;
-
-  /// Show the -help text.
-  unsigned ShowHelp : 1;
-
-  /// Show frontend performance metrics and statistics.
-  unsigned ShowStats : 1;
-
-  /// Show timers for individual actions.
-  unsigned ShowTimers : 1;
-
-  /// print the supported cpus for the current target
-  unsigned PrintSupportedCPUs : 1;
-
-  /// Output time trace profile.
-  unsigned TimeTrace : 1;
-
-  /// Show the -version text.
-  unsigned ShowVersion : 1;
-
-  /// Apply fixes even if there are unfixable errors.
-  unsigned FixWhatYouCan : 1;
-
-  /// Apply fixes only for warnings.
-  unsigned FixOnlyWarnings : 1;
-
-  /// Apply fixes and recompile.
-  unsigned FixAndRecompile : 1;
-
-  /// Apply fixes to temporary files.
-  unsigned FixToTemporaries : 1;
-
-  /// Emit ARC errors even if the migrator can fix them.
-  unsigned ARCMTMigrateEmitARCErrors : 1;
-
-  /// Skip over function bodies to speed up parsing in cases you do not need
-  /// them (e.g. with code completion).
-  unsigned SkipFunctionBodies : 1;
-
-  /// Whether we can use the global module index if available.
-  unsigned UseGlobalModuleIndex : 1;
-
-  /// Whether we can generate the global module index if needed.
-  unsigned GenerateGlobalModuleIndex : 1;
-
-  /// Whether we include declaration dumps in AST dumps.
-  unsigned ASTDumpDecls : 1;
-
-  /// Whether we deserialize all decls when forming AST dumps.
-  unsigned ASTDumpAll : 1;
-
-  /// Whether we include lookup table dumps in AST dumps.
-  unsigned ASTDumpLookups : 1;
-
-  /// Whether we include declaration type dumps in AST dumps.
-  unsigned ASTDumpDeclTypes : 1;
-
-  /// Whether we are performing an implicit module build.
-  unsigned BuildingImplicitModule : 1;
-
-  /// Whether we should embed all used files into the PCM file.
-  unsigned ModulesEmbedAllFiles : 1;
-
-  /// Whether timestamps should be written to the produced PCH file.
-  unsigned IncludeTimestamps : 1;
-
-  /// Should a temporary file be used during compilation.
-  unsigned UseTemporary : 1;
-
-  /// When using -emit-module, treat the modulemap as a system module.
-  unsigned IsSystemModule : 1;
+  using InputsTy = llvm::SmallVector<FrontendInputFile, 0>;
 
   CodeCompleteOptions CodeCompleteOpts;
 
-  /// Specifies the output format of the AST.
-  ASTDumpOutputFormat ASTDumpFormat = ADOF_Default;
-
-  enum {
-    ARCMT_None,
-    ARCMT_Check,
-    ARCMT_Modify,
-    ARCMT_Migrate
-  } ARCMTAction = ARCMT_None;
+  enum { ARCMT_None, ARCMT_Check, ARCMT_Modify, ARCMT_Migrate };
 
   enum {
     ObjCMT_None = 0,
@@ -360,92 +280,18 @@ public:
     /// Enable converting setter/getter expressions to property-dot syntx.
     ObjCMT_PropertyDotSyntax = 0x1000,
 
-    ObjCMT_MigrateDecls = (ObjCMT_ReadonlyProperty | ObjCMT_ReadwriteProperty |
-                           ObjCMT_Annotation | ObjCMT_Instancetype |
-                           ObjCMT_NsMacros | ObjCMT_ProtocolConformance |
-                           ObjCMT_NsAtomicIOSOnlyProperty |
-                           ObjCMT_DesignatedInitializer),
+    ObjCMT_MigrateDecls =
+        (ObjCMT_ReadonlyProperty | ObjCMT_ReadwriteProperty |
+         ObjCMT_Annotation | ObjCMT_Instancetype | ObjCMT_NsMacros |
+         ObjCMT_ProtocolConformance | ObjCMT_NsAtomicIOSOnlyProperty |
+         ObjCMT_DesignatedInitializer),
     ObjCMT_MigrateAll = (ObjCMT_Literals | ObjCMT_Subscripting |
                          ObjCMT_MigrateDecls | ObjCMT_PropertyDotSyntax)
   };
-  unsigned ObjCMTAction = ObjCMT_None;
-  std::string ObjCMTWhiteListPath;
 
-  std::string MTMigrateDir;
-  std::string ARCMTMigrateReportOut;
-
-  /// The input files and their types.
-  SmallVector<FrontendInputFile, 0> Inputs;
-
-  /// When the input is a module map, the original module map file from which
-  /// that map was inferred, if any (for umbrella modules).
-  std::string OriginalModuleMap;
-
-  /// The output file, if any.
-  std::string OutputFile;
-
-  /// If given, the new suffix for fix-it rewritten files.
-  std::string FixItSuffix;
-
-  /// If given, filter dumped AST Decl nodes by this substring.
-  std::string ASTDumpFilter;
-
-  /// If given, enable code completion at the provided location.
-  ParsedSourceLocation CodeCompletionAt;
-
-  /// The frontend action to perform.
-  frontend::ActionKind ProgramAction = frontend::ParseSyntaxOnly;
-
-  /// The name of the action to run when using a plugin action.
-  std::string ActionName;
-
-  /// Args to pass to the plugins
-  std::unordered_map<std::string,std::vector<std::string>> PluginArgs;
-
-  /// The list of plugin actions to run in addition to the normal action.
-  std::vector<std::string> AddPluginActions;
-
-  /// The list of plugins to load.
-  std::vector<std::string> Plugins;
-
-  /// The list of module file extensions.
-  std::vector<std::shared_ptr<ModuleFileExtension>> ModuleFileExtensions;
-
-  /// The list of module map files to load before processing the input.
-  std::vector<std::string> ModuleMapFiles;
-
-  /// The list of additional prebuilt module files to load before
-  /// processing the input.
-  std::vector<std::string> ModuleFiles;
-
-  /// The list of files to embed into the compiled module file.
-  std::vector<std::string> ModulesEmbedFiles;
-
-  /// The list of AST files to merge.
-  std::vector<std::string> ASTMergeFiles;
-
-  /// A list of arguments to forward to LLVM's option processing; this
-  /// should only be used for debugging and experimental features.
-  std::vector<std::string> LLVMArgs;
-
-  /// File name of the file that will provide record layouts
-  /// (in the format produced by -fdump-record-layouts).
-  std::string OverrideRecordLayoutsFile;
-
-  /// Auxiliary triple for CUDA/HIP compilation.
-  std::string AuxTriple;
-
-  /// Auxiliary target CPU for CUDA/HIP compilation.
-  Optional<std::string> AuxTargetCPU;
-
-  /// Auxiliary target features for CUDA/HIP compilation.
-  Optional<std::vector<std::string>> AuxTargetFeatures;
-
-  /// Filename to write statistics to.
-  std::string StatsFile;
-
-  /// Minimum time granularity (in microseconds) traced by time profiler.
-  unsigned TimeTraceGranularity;
+#define FRONTENDOPT(Name, Bits, Description) unsigned Name : Bits;
+#define TYPED_FRONTENDOPT(Type, Name, Description) Type Name;
+#include "clang/Frontend/FrontendOptions.def"
 
 public:
   FrontendOptions()
@@ -453,11 +299,14 @@ public:
         ShowStats(false), ShowTimers(false), TimeTrace(false),
         ShowVersion(false), FixWhatYouCan(false), FixOnlyWarnings(false),
         FixAndRecompile(false), FixToTemporaries(false),
-        ARCMTMigrateEmitARCErrors(false), SkipFunctionBodies(false),
-        UseGlobalModuleIndex(true), GenerateGlobalModuleIndex(true),
-        ASTDumpDecls(false), ASTDumpLookups(false),
-        BuildingImplicitModule(false), ModulesEmbedAllFiles(false),
-        IncludeTimestamps(true), UseTemporary(true), TimeTraceGranularity(500) {}
+        ARCMTAction(ARCMT_None), ARCMTMigrateEmitARCErrors(false),
+        SkipFunctionBodies(false), UseGlobalModuleIndex(true),
+        GenerateGlobalModuleIndex(true), ASTDumpDecls(false),
+        ASTDumpLookups(false), BuildingImplicitModule(false),
+        ModulesEmbedAllFiles(false), IncludeTimestamps(true),
+        UseTemporary(true), ASTDumpFormat(ADOF_Default),
+        ObjCMTAction(ObjCMT_None), ProgramAction(frontend::ParseSyntaxOnly),
+        TimeTraceGranularity(500), DashX() {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

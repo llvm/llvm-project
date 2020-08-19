@@ -14,17 +14,20 @@
 //
 //===----------------------------------------------------------------------===//
 #ifndef CODEGENOPT
-#  error Define the CODEGENOPT macro to handle language options
+#error Define the CODEGENOPT macro to handle language options
 #endif
 
 #ifndef VALUE_CODEGENOPT
-#  define VALUE_CODEGENOPT(Name, Bits, Default) \
-CODEGENOPT(Name, Bits, Default)
+#define VALUE_CODEGENOPT(Name, Bits, Default) CODEGENOPT(Name, Bits, Default)
 #endif
 
 #ifndef ENUM_CODEGENOPT
-#  define ENUM_CODEGENOPT(Name, Type, Bits, Default) \
-CODEGENOPT(Name, Bits, Default)
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default)                             \
+  CODEGENOPT(Name, Bits, Default)
+#endif
+
+#ifndef TYPED_CODEGENOPT
+#define TYPED_CODEGENOPT(Type, Name, Description)
 #endif
 
 CODEGENOPT(DisableIntegratedAS, 1, 0) ///< -no-integrated-as
@@ -395,6 +398,226 @@ CODEGENOPT(KeepStaticConsts, 1, 0)
 /// Whether to not follow the AAPCS that enforce at least one read before storing to a volatile bitfield
 CODEGENOPT(ForceAAPCSBitfieldLoad, 1, 0)
 
+TYPED_CODEGENOPT(
+    std::string, BBSections,
+    "This field stores one of the allowed values for the option "
+    "-fbasic-block-sections=.  The allowed values with this option are: "
+    "{\"labels\", \"all\", \"list=<file>\", \"none\"}. \"labels\":      Only "
+    "generate basic block symbols (labels) for all basic blocks, do not "
+    "generate unique sections for basic blocks. Use the machine basic block id "
+    "in the symbol name to associate profile info from virtual address to "
+    "machine basic block. \"all\" :        Generate basic block sections for "
+    "all basic blocks. \"list=<file>\": Generate basic block sections for a "
+    "subset of basic blocks. The functions and the machine basic block ids are "
+    "specified in the file. \"none\":        Disable sections/labels for basic "
+    "blocks.")
+
+TYPED_CODEGENOPT(std::string, CodeModel, "The code model to use (-mcmodel).")
+
+TYPED_CODEGENOPT(std::string, CoverageDataFile,
+                 "The filename with path we use for coverage data files. The "
+                 "runtime allows further manipulation with the GCOV_PREFIX and "
+                 "GCOV_PREFIX_STRIP environment variables. The filename with "
+                 "path we use for coverage notes files.")
+TYPED_CODEGENOPT(std::string, CoverageNotesFile, "")
+
+TYPED_CODEGENOPT(
+    std::string, ProfileFilterFiles,
+    "Regexes separated by a semi-colon to filter the files to instrument.")
+
+TYPED_CODEGENOPT(
+    std::string, ProfileExcludeFiles,
+    "Regexes separated by a semi-colon to filter the files to not instrument.")
+
+TYPED_CODEGENOPT(CoverageVersionTy, CoverageVersion,
+                 "The version string to put into coverage files.")
+
+TYPED_CODEGENOPT(std::string, DebugPass,
+                 "Enable additional debugging information.")
+
+TYPED_CODEGENOPT(std::string, DebugCompilationDir,
+                 "The string to embed in debug information as the current "
+                 "working directory.")
+
+TYPED_CODEGENOPT(std::string, DwarfDebugFlags,
+                 "The string to embed in the debug information for the compile "
+                 "unit, if non-empty.")
+
+TYPED_CODEGENOPT(std::string, RecordCommandLine,
+                 "The string containing the commandline for the "
+                 "llvm.commandline metadata, if non-empty.")
+
+TYPED_CODEGENOPT(DebugPrefixMapTy, DebugPrefixMap, "")
+
+TYPED_CODEGENOPT(std::string, FloatABI,
+                 "The ABI to use for passing floating point arguments.")
+
+TYPED_CODEGENOPT(llvm::DenormalMode, FPDenormalMode,
+                 "The floating-point denormal mode to use.")
+
+TYPED_CODEGENOPT(llvm::DenormalMode, FP32DenormalMode,
+                 "The floating-point denormal mode to use, for float.")
+
+TYPED_CODEGENOPT(std::string, LimitFloatPrecision,
+                 "The float precision limit to use, if non-empty.")
+
+TYPED_CODEGENOPT(std::vector<BitcodeFileToLink>, LinkBitcodeFiles,
+                 "The files specified here are linked in to the module before "
+                 "optimizations.")
+
+TYPED_CODEGENOPT(
+    std::string, MainFileName,
+    "The user provided name for the \"main file\", if non-empty. This is "
+    "useful in situations where the input file name does not match the "
+    "original input file, for example with -save-temps.")
+
+TYPED_CODEGENOPT(std::string, SplitDwarfFile,
+                 "The name for the split debug info file used for the "
+                 "DW_AT_[GNU_]dwo_name attribute in the skeleton CU.")
+
+TYPED_CODEGENOPT(
+    std::string, SplitDwarfOutput,
+    "Output filename for the split debug info, not used in the skeleton CU.")
+
+TYPED_CODEGENOPT(llvm::Reloc::Model, RelocationModel,
+                 "The name of the relocation model to use.")
+
+TYPED_CODEGENOPT(std::string, ThreadModel, "The thread model to use")
+
+TYPED_CODEGENOPT(std::string, TrapFuncName,
+                 "If not an empty string, trap intrinsics are lowered to calls "
+                 "to this function instead of to trap instructions.")
+
+TYPED_CODEGENOPT(std::vector<std::string>, DependentLibraries,
+                 "A list of dependent libraries.")
+
+TYPED_CODEGENOPT(std::vector<std::string>, LinkerOptions,
+                 "A list of linker options to embed in the object file.")
+
+TYPED_CODEGENOPT(
+    std::string, InstrProfileOutput,
+    "Name of the profile file to use as output for -fprofile-instr-generate, "
+    "-fprofile-generate, and -fcs-profile-generate.")
+
+TYPED_CODEGENOPT(std::string, SampleProfileFile,
+                 "Name of the profile file to use with -fprofile-sample-use.")
+
+TYPED_CODEGENOPT(
+    std::string, ProfileInstrumentUsePath,
+    "Name of the profile file to use as input for -fprofile-instr-use")
+
+TYPED_CODEGENOPT(
+    std::string, ProfileRemappingFile,
+    "Name of the profile remapping file to apply to the profile data supplied "
+    "by -fprofile-sample-use or -fprofile-instr-use.")
+
+TYPED_CODEGENOPT(std::string, ThinLTOIndexFile,
+                 "Name of the function summary index file to use for ThinLTO "
+                 "function importing.")
+
+TYPED_CODEGENOPT(
+    std::string, ThinLinkBitcodeFile,
+    "Name of a file that can optionally be written with minimized bitcode to "
+    "be used as input for the ThinLTO thin link step, which only needs the "
+    "summary and module symbol table (and not, e.g. any debug metadata).")
+
+TYPED_CODEGENOPT(std::string, SaveTempsFilePrefix,
+                 "Prefix to use for -save-temps output.")
+
+TYPED_CODEGENOPT(
+    std::string, CudaGpuBinaryFileName,
+    "Name of file passed with -fcuda-include-gpubinary option to forward to "
+    "CUDA runtime back-end for incorporating them into host-side object file.")
+
+TYPED_CODEGENOPT(std::string, OptRecordFile,
+                 "The name of the file to which the backend should save YAML "
+                 "optimization records.")
+
+TYPED_CODEGENOPT(std::string, OptRecordPasses,
+                 "The regex that filters the passes that should be saved to "
+                 "the optimization records.")
+
+TYPED_CODEGENOPT(std::string, OptRecordFormat,
+                 "The format used for serializing remarks (default: YAML)")
+
+TYPED_CODEGENOPT(
+    std::string, SymbolPartition,
+    "The name of the partition that symbols are assigned to, specified with "
+    "-fsymbol-partition (see https://lld.llvm.org/Partitions.html).")
+
+TYPED_CODEGENOPT(
+    std::shared_ptr<llvm::Regex>, OptimizationRemarkPattern,
+    "Regular expression to select optimizations for which we should enable "
+    "optimization remarks. Transformation passes whose name matches this "
+    "expression (and support this feature), will emit a diagnostic whenever "
+    "they perform a transformation. This is enabled by the -Rpass=regexp flag.")
+
+TYPED_CODEGENOPT(
+    std::shared_ptr<llvm::Regex>, OptimizationRemarkMissedPattern,
+    "Regular expression to select optimizations for which we should enable "
+    "missed optimization remarks. Transformation passes whose name matches "
+    "this expression (and support this feature), will emit a diagnostic "
+    "whenever they tried but failed to perform a transformation. This is "
+    "enabled by the -Rpass-missed=regexp flag.")
+
+TYPED_CODEGENOPT(
+    std::shared_ptr<llvm::Regex>, OptimizationRemarkAnalysisPattern,
+    "Regular expression to select optimizations for which we should enable "
+    "optimization analyses. Transformation passes whose name matches this "
+    "expression (and support this feature), will emit a diagnostic whenever "
+    "they want to explain why they decided to apply or not apply a given "
+    "transformation. This is enabled by the -Rpass-analysis=regexp flag.")
+
+TYPED_CODEGENOPT(std::vector<std::string>, RewriteMapFiles,
+                 "Set of files defining the rules for the symbol rewriting.")
+
+TYPED_CODEGENOPT(SanitizerSet, SanitizeRecover,
+                 "Set of sanitizer checks that are non-fatal (i.e. execution "
+                 "should be continued when possible).")
+
+TYPED_CODEGENOPT(SanitizerSet, SanitizeTrap,
+                 "Set of sanitizer checks that trap rather than diagnose.")
+
+TYPED_CODEGENOPT(std::vector<uint8_t>, CmdArgs,
+                 "List of backend command-line options for -fembed-bitcode.")
+
+TYPED_CODEGENOPT(std::vector<std::string>, NoBuiltinFuncs,
+                 "A list of all -fno-builtin-* function names (e.g., memset).")
+
+TYPED_CODEGENOPT(std::vector<std::string>, Reciprocals, "")
+
+TYPED_CODEGENOPT(std::string, PreferVectorWidth,
+                 "The preferred width for auto-vectorization transforms. This "
+                 "is intended to override default transforms based on the "
+                 "width of the architected vector registers.")
+
+TYPED_CODEGENOPT(XRayInstrSet, XRayInstrumentationBundle,
+                 "Set of XRay instrumentation kinds to emit.")
+
+TYPED_CODEGENOPT(std::vector<std::string>, DefaultFunctionAttrs, "")
+
+TYPED_CODEGENOPT(
+    std::vector<std::string>, PassPlugins,
+    "List of dynamic shared object files to be loaded as pass plugins.")
+
+TYPED_CODEGENOPT(
+    std::vector<std::string>, SanitizeCoverageAllowlistFiles,
+    "Path to allowlist file specifying which objects (files, functions) should "
+    "exclusively be instrumented by sanitizer coverage pass.")
+
+TYPED_CODEGENOPT(std::vector<std::string>, SanitizeCoverageBlocklistFiles,
+                 "Path to blocklist file specifying which objects (files, "
+                 "functions) listed for instrumentation by sanitizer coverage "
+                 "pass should actually not be instrumented.")
+
+TYPED_CODEGENOPT(
+    const char *, Argv0,
+    "Executable and command-line used to create a given CompilerInvocation. "
+    "Most of the time this will be the full -cc1 command.")
+
+TYPED_CODEGENOPT(ArrayRef<const char *>, CommandLineArgs, "")
+
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
 #undef VALUE_CODEGENOPT
+#undef TYPED_CODEGENOPT

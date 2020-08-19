@@ -78,6 +78,10 @@
      COMPATIBLE_VALUE_LANGOPT(Name, Bits, Default, Description)
 #endif
 
+#ifndef TYPED_LANGOPT
+#define TYPED_LANGOPT(Type, Name, Descritpion)
+#endif
+
 // FIXME: A lot of the BENIGN_ options should be COMPATIBLE_ instead.
 LANGOPT(C99               , 1, 0, "C99")
 LANGOPT(C11               , 1, 0, "C11")
@@ -384,6 +388,73 @@ LANGOPT(RelativeCXXABIVTables, 1, 0,
 
 LANGOPT(ArmSveVectorBits, 32, 0, "SVE vector size in bits")
 
+TYPED_LANGOPT(SanitizerSet, Sanitize, "Set of enabled sanitizers.")
+
+TYPED_LANGOPT(std::vector<std::string>, SanitizerBlacklistFiles,
+              "Paths to blacklist files specifying which objects (files, "
+              "functions, variables) should not be instrumented.")
+
+TYPED_LANGOPT(std::vector<std::string>, XRayAlwaysInstrumentFiles,
+              "Paths to the XRay \"always instrument\" files specifying which "
+              "objects (files, functions, variables) should be imbued with the "
+              "XRay \"always instrument\" attribute. WARNING: This is a "
+              "deprecated field and will go away in the future.")
+
+TYPED_LANGOPT(std::vector<std::string>, XRayNeverInstrumentFiles,
+              "Paths to the XRay \"never instrument\" files specifying which "
+              "objects (files, functions, variables) should be imbued with the "
+              "XRay \"never instrument\" attribute. WARNING: This is a "
+              "deprecated field and will go away in the future.")
+
+TYPED_LANGOPT(std::vector<std::string>, XRayAttrListFiles,
+              "Paths to the XRay attribute list files, specifying which "
+              "objects (files, functions, variables) should be imbued with the "
+              "appropriate XRay attribute(s).")
+
+TYPED_LANGOPT(clang::ObjCRuntime, ObjCRuntime, "")
+
+TYPED_LANGOPT(CoreFoundationABI, CFRuntime, "")
+
+TYPED_LANGOPT(std::string, ObjCConstantStringClass, "")
+
+TYPED_LANGOPT(
+    std::string, OverflowHandler,
+    "The name of the handler function to be called when -ftrapv is specified. "
+    "If none is specified, abort (GCC-compatible behaviour).")
+
+TYPED_LANGOPT(
+    std::string, ModuleName,
+    "The module currently being compiled as specified by -fmodule-name.")
+
+TYPED_LANGOPT(
+    std::string, CurrentModule,
+    "The name of the current module, of which the main source file is a part. "
+    "If CompilingModule is set, we are compiling the interface of this module, "
+    "otherwise we are compiling an implementation file of it. This starts as "
+    "ModuleName in case -fmodule-name is provided and changes during "
+    "compilation to reflect the current module.")
+
+TYPED_LANGOPT(std::vector<std::string>, ModuleFeatures,
+              "The names of any features to enable in module 'requires' decls "
+              "in addition to the hard-coded list in Module.cpp and the target "
+              "features. This list is sorted.")
+
+TYPED_LANGOPT(std::vector<std::string>, NoBuiltinFuncs,
+              "A list of all -fno-builtin-* function names (e.g., memset).")
+
+TYPED_LANGOPT(
+    std::vector<llvm::Triple>, OMPTargetTriples,
+    "Triples of the OpenMP targets that the host code codegen should take into "
+    "account in order to generate accurate offloading descriptors.")
+
+TYPED_LANGOPT(std::string, OMPHostIRFile,
+              "Name of the IR file that contains the result of the OpenMP "
+              "target host code generation.")
+
+TYPED_LANGOPT(bool, IsHeaderFile,
+              "Indicates whether the front-end is explicitly told that the "
+              "input is a header file (i.e. -x c-header).")
+
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT
 #undef BENIGN_LANGOPT
@@ -393,3 +464,4 @@ LANGOPT(ArmSveVectorBits, 32, 0, "SVE vector size in bits")
 #undef VALUE_LANGOPT
 #undef COMPATIBLE_VALUE_LANGOPT
 #undef BENIGN_VALUE_LANGOPT
+#undef TYPED_LANGOPT
