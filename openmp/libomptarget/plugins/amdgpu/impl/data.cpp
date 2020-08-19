@@ -133,15 +133,15 @@ atmi_status_t Runtime::Memfree(void *ptr) {
 static hsa_status_t invoke_hsa_copy(void *dest, const void *src, size_t size,
                                     hsa_agent_t agent) {
   // TODO: Use thread safe signal
-  hsa_signal_store_release(IdentityCopySignal, 1);
+  hsa_signal_store_screlease(IdentityCopySignal, 1);
 
   hsa_status_t err = hsa_amd_memory_async_copy(dest, agent, src, agent, size, 0,
                                                NULL, IdentityCopySignal);
   ErrorCheck(Copy async between memory pools, err);
 
   // TODO: async reports errors in the signal, use NE 1
-  hsa_signal_wait_acquire(IdentityCopySignal, HSA_SIGNAL_CONDITION_EQ, 0,
-                          UINT64_MAX, ATMI_WAIT_STATE);
+  hsa_signal_wait_scacquire(IdentityCopySignal, HSA_SIGNAL_CONDITION_EQ, 0,
+                            UINT64_MAX, ATMI_WAIT_STATE);
 
   return err;
 }
