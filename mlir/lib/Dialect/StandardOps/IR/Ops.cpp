@@ -1780,6 +1780,14 @@ bool FPToSIOp::areCastCompatible(Type a, Type b) {
 }
 
 //===----------------------------------------------------------------------===//
+// FPToUIOp
+//===----------------------------------------------------------------------===//
+
+bool FPToUIOp::areCastCompatible(Type a, Type b) {
+  return a.isa<FloatType>() && b.isSignlessInteger();
+}
+
+//===----------------------------------------------------------------------===//
 // FPTruncOp
 //===----------------------------------------------------------------------===//
 
@@ -2303,6 +2311,15 @@ OpFoldResult SubIOp::fold(ArrayRef<Attribute> operands) {
 
   return constFoldBinaryOp<IntegerAttr>(operands,
                                         [](APInt a, APInt b) { return a - b; });
+}
+
+//===----------------------------------------------------------------------===//
+// UIToFPOp
+//===----------------------------------------------------------------------===//
+
+// uitofp is applicable from integer types to float types.
+bool UIToFPOp::areCastCompatible(Type a, Type b) {
+  return a.isSignlessInteger() && b.isa<FloatType>();
 }
 
 //===----------------------------------------------------------------------===//
