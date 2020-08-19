@@ -4495,6 +4495,7 @@ CompilerType TypeSystemClang::CreateTypedef(
         clang_ast, decl_ctx, clang::SourceLocation(), clang::SourceLocation(),
         &clang_ast.Idents.get(typedef_name),
         clang_ast.getTrivialTypeSourceInfo(qual_type));
+    decl_ctx->addDecl(decl);
     SetOwningModule(decl, TypePayloadClang(payload).GetOwningModule());
 
     clang::TagDecl *tdecl = nullptr;

@@ -2538,6 +2538,7 @@ FileCheck output:
         value_check = ValueCheck(type=result_type, value=result_value,
                                  summary=result_summary, children=result_children)
         value_check.check_value(self, eval_result, str(eval_result))
+        return eval_result
 
     def invoke(self, obj, name, trace=False):
         """Use reflection to call a method dynamically with no argument."""
