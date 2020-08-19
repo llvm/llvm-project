@@ -48,8 +48,7 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
         # Launch the process using simctl
         self.assertIsNotNone(deviceUDID)
         exe_name = 'test_simulator_platform_{}'.format(platform)
-        sdkroot = subprocess.check_output(['xcrun', '--show-sdk-path', '--sdk',
-                                           sdk]).decode("utf-8")
+        sdkroot = lldbutil.get_xcode_sdk_root(sdk)
         self.build(dictionary={ 'EXE': exe_name, 'SDKROOT': sdkroot.strip(),
                                 'ARCH': arch })
         exe_path = self.getBuildArtifact(exe_name)
