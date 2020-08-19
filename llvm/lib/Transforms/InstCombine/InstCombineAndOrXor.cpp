@@ -3130,6 +3130,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  Type *Ty = I.getType();
 
   // Fold (X & M) ^ (Y & ~M) -> (X & M) | (Y & ~M)
   // This it a special case in haveNoCommonBitsSet, but the computeKnownBits
@@ -3201,7 +3202,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
         match(C, m_Negative())) {
       // We matched a negative constant, so propagating undef is unsafe.
       // Clamp undef elements to -1.
-      Type *EltTy = C->getType()->getScalarType();
+      Type *EltTy = Ty->getScalarType();
       C = Constant::replaceUndefsWith(C, ConstantInt::getAllOnesValue(EltTy));
       return BinaryOperator::CreateLShr(ConstantExpr::getNot(C), Y);
     }
@@ -3211,7 +3212,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
         match(C, m_NonNegative())) {
       // We matched a non-negative constant, so propagating undef is unsafe.
       // Clamp undef elements to 0.
-      Type *EltTy = C->getType()->getScalarType();
+      Type *EltTy = Ty->getScalarType();
       C = Constant::replaceUndefsWith(C, ConstantInt::getNullValue(EltTy));
       return BinaryOperator::CreateAShr(ConstantExpr::getNot(C), Y);
     }
@@ -3254,26 +3255,22 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     if (match(Op1, m_APInt(RHSC))) {
       Value *X;
       const APInt *C;
-      if (RHSC->isSignMask() && match(Op0, m_Sub(m_APInt(C), m_Value(X)))) {
-        // (C - X) ^ signmask -> (C + signmask - X)
-        Constant *NewC = ConstantInt::get(I.getType(), *C + *RHSC);
-        return BinaryOperator::CreateSub(NewC, X);
-      }
-      if (RHSC->isSignMask() && match(Op0, m_Add(m_Value(X), m_APInt(C)))) {
-        // (X + C) ^ signmask -> (X + C + signmask)
-        Constant *NewC = ConstantInt::get(I.getType(), *C + *RHSC);
-        return BinaryOperator::CreateAdd(X, NewC);
-      }
+      // (C - X) ^ signmaskC --> (C + signmaskC) - X
+      if (RHSC->isSignMask() && match(Op0, m_Sub(m_APInt(C), m_Value(X))))
+        return BinaryOperator::CreateSub(ConstantInt::get(Ty, *C + *RHSC), X);
 
-      // (X|C1)^C2 -> X^(C1^C2) iff X&~C1 == 0
+      // (X + C) ^ signmaskC --> X + (C + signmaskC)
+      if (RHSC->isSignMask() && match(Op0, m_Add(m_Value(X), m_APInt(C))))
+        return BinaryOperator::CreateAdd(X, ConstantInt::get(Ty, *C + *RHSC));
+
+      // (X | C) ^ RHSC --> X ^ (C ^ RHSC) iff X & C == 0
       if (match(Op0, m_Or(m_Value(X), m_APInt(C))) &&
-          MaskedValueIsZero(X, *C, 0, &I)) {
-        Constant *NewC = ConstantInt::get(I.getType(), *C ^ *RHSC);
-        return BinaryOperator::CreateXor(X, NewC);
-      }
+          MaskedValueIsZero(X, *C, 0, &I))
+        return BinaryOperator::CreateXor(X, ConstantInt::get(Ty, *C ^ *RHSC));
     }
   }
 
+  // FIXME: This should not be limited to scalar (pull into APInt match above).
   if (ConstantInt *RHSC = dyn_cast<ConstantInt>(Op1)) {
     if (BinaryOperator *Op0I = dyn_cast<BinaryOperator>(Op0)) {
       if (ConstantInt *Op0CI = dyn_cast<ConstantInt>(Op0I->getOperand(1))) {
@@ -3294,7 +3291,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
             Value *Opnd0 = Builder.CreateLShr(E1->getOperand(0), C2);
             Opnd0->takeName(Op0I);
             cast<Instruction>(Opnd0)->setDebugLoc(I.getDebugLoc());
-            Value *FoldVal = ConstantInt::get(Opnd0->getType(), FoldConst);
+            Value *FoldVal = ConstantInt::get(Ty, FoldConst);
 
             return BinaryOperator::CreateXor(Opnd0, FoldVal);
           }
@@ -3388,7 +3385,6 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     std::swap(Op0, Op1);
 
   const APInt *ShAmt;
-  Type *Ty = I.getType();
   if (match(Op1, m_AShr(m_Value(A), m_APInt(ShAmt))) &&
       Op1->hasNUses(2) && *ShAmt == Ty->getScalarSizeInBits() - 1 &&
       match(Op0, m_OneUse(m_c_Add(m_Specific(A), m_Specific(Op1))))) {
