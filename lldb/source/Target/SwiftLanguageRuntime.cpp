@@ -310,7 +310,7 @@ public:
 };
 
 static bool HasReflectionInfo(ObjectFile *obj_file) {
-  auto findSectionInObject = [&](StringRef name) {
+  auto findSectionInObject = [&](std::string name) {
     ConstString section_name(name);
     SectionSP section_sp =
         obj_file->GetSectionList()->FindSectionByName(section_name);
