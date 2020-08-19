@@ -3718,7 +3718,7 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
    NUMVECTORS};
 
 #define SVE_ELTTY(ELTTY, ELTS, NUMVECTORS)                                     \
-  {ELTTY, llvm::ElementCount(ELTS, true), NUMVECTORS};
+  {ELTTY, llvm::ElementCount::getScalable(ELTS), NUMVECTORS};
 
   switch (Ty->getKind()) {
   default:
