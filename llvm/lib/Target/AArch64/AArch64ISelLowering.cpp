@@ -11985,8 +11985,7 @@ static SDValue LowerSVEIntrinsicEXT(SDNode *N, SelectionDAG &DAG) {
 
   unsigned ElemSize = VT.getVectorElementType().getSizeInBits() / 8;
   unsigned ByteSize = VT.getSizeInBits().getKnownMinSize() / 8;
-  EVT ByteVT =
-      EVT::getVectorVT(Ctx, MVT::i8, ElementCount::getScalable(ByteSize));
+  EVT ByteVT = EVT::getVectorVT(Ctx, MVT::i8, { ByteSize, true });
 
   // Convert everything to the domain of EXT (i.e bytes).
   SDValue Op0 = DAG.getNode(ISD::BITCAST, dl, ByteVT, N->getOperand(1));

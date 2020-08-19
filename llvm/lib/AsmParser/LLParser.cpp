@@ -7395,7 +7395,7 @@ int LLParser::ParseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
   // All vector parameters should have the same vector width.
   ElementCount GEPWidth = BaseType->isVectorTy()
                               ? cast<VectorType>(BaseType)->getElementCount()
-                              : ElementCount::getFixed(0);
+                              : ElementCount(0, false);
 
   while (EatIfPresent(lltok::comma)) {
     if (Lex.getKind() == lltok::MetadataVar) {
@@ -7408,7 +7408,7 @@ int LLParser::ParseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
 
     if (auto *ValVTy = dyn_cast<VectorType>(Val->getType())) {
       ElementCount ValNumEl = ValVTy->getElementCount();
-      if (GEPWidth != ElementCount::getFixed(0) && GEPWidth != ValNumEl)
+      if (GEPWidth != ElementCount(0, false) && GEPWidth != ValNumEl)
         return Error(EltLoc,
           "getelementptr vector index has a wrong number of elements");
       GEPWidth = ValNumEl;

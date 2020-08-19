@@ -619,7 +619,7 @@ FixedVectorType *FixedVectorType::get(Type *ElementType, unsigned NumElts) {
                                             "be an integer, floating point, or "
                                             "pointer type.");
 
-  auto EC = ElementCount::getFixed(NumElts);
+  ElementCount EC(NumElts, false);
 
   LLVMContextImpl *pImpl = ElementType->getContext().pImpl;
   VectorType *&Entry = ElementType->getContext()
@@ -641,7 +641,7 @@ ScalableVectorType *ScalableVectorType::get(Type *ElementType,
                                             "be an integer, floating point, or "
                                             "pointer type.");
 
-  auto EC = ElementCount::getScalable(MinNumElts);
+  ElementCount EC(MinNumElts, true);
 
   LLVMContextImpl *pImpl = ElementType->getContext().pImpl;
   VectorType *&Entry = ElementType->getContext()

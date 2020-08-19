@@ -134,9 +134,7 @@ namespace Intrinsic {
       unsigned Pointer_AddressSpace;
       unsigned Struct_NumElements;
       unsigned Argument_Info;
-      // There is no default constructor in `ElementCount`, so we need
-      // to explicitly initialize this field with a value.
-      ElementCount Vector_Width = ElementCount::getFixed(0);
+      ElementCount Vector_Width;
     };
 
     enum ArgKind {
@@ -192,7 +190,8 @@ namespace Intrinsic {
     static IITDescriptor getVector(unsigned Width, bool IsScalable) {
       IITDescriptor Result;
       Result.Kind = Vector;
-      Result.Vector_Width = ElementCount::get(Width, IsScalable);
+      Result.Vector_Width.Min = Width;
+      Result.Vector_Width.Scalable = IsScalable;
       return Result;
     }
   };
