@@ -11329,8 +11329,7 @@ static SDValue lowerShuffleWithVPMOV(const SDLoc &DL, ArrayRef<int> Mask,
                                      MVT VT, SDValue V1, SDValue V2,
                                      SelectionDAG &DAG,
                                      const X86Subtarget &Subtarget) {
-  if (VT != MVT::v16i8 && VT != MVT::v8i16)
-    return SDValue();
+  assert((VT == MVT::v16i8 || VT == MVT::v8i16) && "Unexpected VTRUNC type");
 
   if (Mask.size() != VT.getVectorNumElements())
     return SDValue();
@@ -14732,6 +14731,11 @@ static SDValue lowerV8I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                                    Zeroable, Subtarget, DAG))
     return ZExt;
 
+  // Try to use lower using a truncation.
+  if (SDValue V =
+          lowerShuffleWithVPMOV(DL, Mask, MVT::v8i16, V1, V2, DAG, Subtarget))
+    return V;
+
   int NumV2Inputs = count_if(Mask, [](int M) { return M >= 8; });
 
   if (NumV2Inputs == 0) {
@@ -14915,6 +14919,11 @@ static SDValue lowerV16I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (SDValue ZExt = lowerShuffleAsZeroOrAnyExtend(DL, MVT::v16i8, V1, V2, Mask,
                                                    Zeroable, Subtarget, DAG))
     return ZExt;
+
+  // Try to use lower using a truncation.
+  if (SDValue V =
+          lowerShuffleWithVPMOV(DL, Mask, MVT::v16i8, V1, V2, DAG, Subtarget))
+    return V;
 
   // See if we can use SSE4A Extraction / Insertion.
   if (Subtarget.hasSSE4A())
@@ -18002,9 +18011,6 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, const X86Subtarget &Subtarget,
     ShuffleVectorSDNode::commuteMask(Mask);
     std::swap(V1, V2);
   }
-
-  if (SDValue V = lowerShuffleWithVPMOV(DL, Mask, VT, V1, V2, DAG, Subtarget))
-    return V;
 
   // For each vector width, delegate to a specialized lowering routine.
   if (VT.is128BitVector())
