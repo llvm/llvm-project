@@ -93,11 +93,24 @@ void SwiftAggLowering::addTypedData(QualType type, CharUnits begin) {
     // Just add it all as opaque.
     addOpaqueData(begin, begin + CGM.getContext().getTypeSizeInChars(type));
 
-  // Everything else is scalar and should not convert as an LLVM aggregate.
+    // Atomic types.
+  } else if (const auto *atomicType = type->getAs<AtomicType>()) {
+    auto valueType = atomicType->getValueType();
+    auto atomicSize = CGM.getContext().getTypeSizeInChars(atomicType);
+    auto valueSize = CGM.getContext().getTypeSizeInChars(valueType);
+
+    addTypedData(atomicType->getValueType(), begin);
+
+    // Add atomic padding.
+    auto atomicPadding = atomicSize - valueSize;
+    if (atomicPadding > CharUnits::Zero())
+      addOpaqueData(begin + valueSize, begin + atomicSize);
+
+    // Everything else is scalar and should not convert as an LLVM aggregate.
   } else {
     // We intentionally convert as !ForMem because we want to preserve
     // that a type was an i1.
-    auto llvmType = CGM.getTypes().ConvertType(type);
+    auto *llvmType = CGM.getTypes().ConvertType(type);
     addTypedData(llvmType, begin);
   }
 }
