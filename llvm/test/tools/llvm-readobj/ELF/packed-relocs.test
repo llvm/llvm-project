@@ -49,7 +49,7 @@ Symbols:
 
 # RUN: yaml2obj --docnum=1 -DSHOFFSET=0xffffffff %s -o %t1.broken
 # RUN: llvm-readobj --relocations %t1.broken 2>&1 | FileCheck -DFILE=%t1.broken --check-prefix=BROKEN-RELA-LLVM %s
-# RUN: not llvm-readelf --relocations %t1.broken 2>&1 | FileCheck -DFILE=%t1.broken --check-prefix=BROKEN-RELA-GNU %s
+# RUN: llvm-readelf --relocations %t1.broken 2>&1 | FileCheck -DFILE=%t1.broken --check-prefix=BROKEN-RELA-GNU %s
 
 # BROKEN-RELA-LLVM:      Relocations [
 # BROKEN-RELA-LLVM-NEXT:   Section (1) .rela.dyn {
@@ -57,8 +57,10 @@ Symbols:
 # BROKEN-RELA-LLVM-NEXT:   }
 # BROKEN-RELA-LLVM-NEXT: ]
 
-## FIXME: GNU still reports an error before trying to dump relocations.
-# BROKEN-RELA-GNU: error: '[[FILE]]': section [index 1] has a sh_offset (0xffffffff) + sh_size (0x3a) that is greater than the file size (0x238)
+# BROKEN-RELA-GNU:      warning: '[[FILE]]': unable to get the number of relocations in SHT_ANDROID_RELA section with index 1: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x3a) that is greater than the file size (0x238)
+# BROKEN-RELA-GNU:      Relocation section '.rela.dyn' at offset 0xffffffff contains <?> entries:
+# BROKEN-RELA-GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# BROKEN-RELA-GNU-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_ANDROID_RELA section with index 1: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x3a) that is greater than the file size (0x238)
 
 ## Check we report a warning when the sh_link field of the SHT_ANDROID_RELA section is broken.
 
@@ -130,7 +132,7 @@ Symbols:
 
 # RUN: yaml2obj --docnum=2 -DSHOFFSET=0xffffffff %s -o %t2.broken
 # RUN: llvm-readobj --relocations %t2.broken 2>&1 | FileCheck -DFILE=%t2.broken --check-prefix=BROKEN-REL-LLVM %s
-# RUN: not llvm-readelf --relocations %t2.broken 2>&1 | FileCheck -DFILE=%t2.broken --check-prefix=BROKEN-REL-GNU %s
+# RUN: llvm-readelf --relocations %t2.broken 2>&1 | FileCheck -DFILE=%t2.broken --check-prefix=BROKEN-REL-GNU %s
 
 # BROKEN-REL-LLVM:      Relocations [
 # BROKEN-REL-LLVM-NEXT:   Section (1) .rel.dyn {
@@ -138,8 +140,10 @@ Symbols:
 # BROKEN-REL-LLVM-NEXT:   }
 # BROKEN-REL-LLVM-NEXT: ]
 
-## FIXME: GNU still reports an error before trying to dump relocations.
-# BROKEN-REL-GNU: error: '[[FILE]]': section [index 1] has a sh_offset (0xffffffff) + sh_size (0x12) that cannot be represented
+# BROKEN-REL-GNU:      warning: '[[FILE]]': unable to get the number of relocations in SHT_ANDROID_REL section with index 1: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x12) that cannot be represented
+# BROKEN-REL-GNU:      Relocation section '.rel.dyn' at offset 0xffffffff contains <?> entries:
+# BROKEN-REL-GNU-NEXT:  Offset     Info    Type                Sym. Value  Symbol's Name
+# BROKEN-REL-GNU-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_ANDROID_REL section with index 1: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x12) that cannot be represented
 
 ## Check we report a warning when the sh_link field of the SHT_ANDROID_REL section is broken.
 
