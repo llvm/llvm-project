@@ -2712,7 +2712,7 @@ struct SimplifyAffineParallel : public OpRewritePattern<AffineParallelOp> {
       lbExprs.push_back(zeroExpr);
 
       // Adjust the upper bound expression: 'range / step'
-      auto ubExpr = ranges.getResult(i).floorDiv(step);
+      auto ubExpr = ranges.getResult(i).ceilDiv(step);
       ubExprs.push_back(ubExpr);
 
       // Adjust the corresponding IV: 'lb + i * step'

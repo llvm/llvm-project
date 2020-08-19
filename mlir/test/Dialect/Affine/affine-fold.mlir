@@ -52,7 +52,7 @@ func @affine_parallel_partial_range1() {
 func @simplify_parallel() {
   %cst = constant 1.0 : f32
   %0 = alloc() : memref<2x4xf32>
-  // CHECK: affine.parallel (%[[i:.*]], %[[j:.*]]) = (0, 0) to (3, 2) {
+  // CHECK: affine.parallel (%[[i:.*]], %[[j:.*]]) = (0, 0) to (4, 2) {
   affine.parallel (%i, %j) = (0, 1) to (10, 5) step (3, 2) {
     // CHECK: affine.parallel (%[[k:.*]]) = (0) to (%[[j]] * 2 - %[[i]] * 3 + 1) {
     affine.parallel (%k) = (%i) to (%j) {
