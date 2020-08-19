@@ -1445,8 +1445,8 @@ TEST_F(PatternMatchTest, ConstantPredicateType) {
   EXPECT_TRUE(match(CF32Pi, cstfp_pred_ty<always_true_pred<APFloat>>()));
   EXPECT_FALSE(match(CF32Pi, cstfp_pred_ty<always_false_pred<APFloat>>()));
 
-  ElementCount FixedEC(4, false);
-  ElementCount ScalableEC(4, true);
+  auto FixedEC = ElementCount::getFixed(4);
+  auto ScalableEC = ElementCount::getScalable(4);
 
   // Vector splat
 

@@ -997,7 +997,7 @@ Value *IRBuilderBase::CreateStripInvariantGroup(Value *Ptr) {
 
 Value *IRBuilderBase::CreateVectorSplat(unsigned NumElts, Value *V,
                                         const Twine &Name) {
-  ElementCount EC(NumElts, false);
+  auto EC = ElementCount::getFixed(NumElts);
   return CreateVectorSplat(EC, V, Name);
 }
 
