@@ -131,7 +131,35 @@ define void @empty_func() {
   unreachable
 }
 
+; Check that the option causes RA and EXEC to be spilled to memory.
+
+; CHECK-LABEL: no_vgprs_to_spill_into:
+; CHECK: %bb.0:
+
+; WAVE64: s_or_saveexec_b64 s[4:5], -1
+; WAVE64-NEXT: v_mov_b32_e32 v0, s30
+; WAVE64-NEXT: buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
+; WAVE64-NEXT: v_mov_b32_e32 v0, s31
+; WAVE64-NEXT: buffer_store_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; WAVE64-NEXT: .cfi_offset 16, 0
+; WAVE64-NEXT: v_mov_b32_e32 v0, s4
+; WAVE64-NEXT: buffer_store_dword v0, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
+; WAVE64-NEXT: v_mov_b32_e32 v0, s5
+; WAVE64-NEXT: buffer_store_dword v0, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
+; WAVE64-NEXT: .cfi_offset 17, 512
+; WAVE64-NEXT: s_mov_b64 exec, s[4:5]
+ 
+define void @no_vgprs_to_spill_into() #1 {
+  call void asm sideeffect "",
+    "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7},~{v8},~{v9}
+    ,~{v10},~{v11},~{v12},~{v13},~{v14},~{v15},~{v16},~{v17},~{v18},~{v19}
+    ,~{v20},~{v21},~{v22},~{v23},~{v24}"()
+
+  ret void
+}
+
 attributes #0 = { nounwind }
+attributes #1 = { nounwind "amdgpu-waves-per-eu"="10,10" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}

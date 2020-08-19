@@ -425,10 +425,15 @@ bool SIMachineFunctionInfo::allocateVGPRSpillToAGPR(MachineFunction &MF,
   return Spill.FullyAllocated;
 }
 
-void SIMachineFunctionInfo::removeDeadFrameIndices(MachineFrameInfo &MFI) {
-  // The FP & BP spills haven't been inserted yet, so keep them around.
+void SIMachineFunctionInfo::removeDeadFrameIndices(MachineFunction &MF) {
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  // RA, EXEC, FP & BP spills haven't been inserted yet, so keep them around.
   for (auto &R : SGPRToVGPRSpills) {
-    if (R.first != FramePointerSaveIndex && R.first != BasePointerSaveIndex)
+    if (R.first != FramePointerSaveIndex && R.first != BasePointerSaveIndex &&
+        (!TRI->isCFISavedRegsSpillEnabled() ||
+         (R.first != ReturnAddressSaveIndex && R.first != EXECSaveIndex)))
       MFI.RemoveStackObject(R.first);
   }
 
@@ -436,7 +441,9 @@ void SIMachineFunctionInfo::removeDeadFrameIndices(MachineFrameInfo &MFI) {
   // ID.
   for (int i = MFI.getObjectIndexBegin(), e = MFI.getObjectIndexEnd(); i != e;
        ++i)
-    if (i != FramePointerSaveIndex && i != BasePointerSaveIndex)
+    if (i != FramePointerSaveIndex && i != BasePointerSaveIndex &&
+        (!TRI->isCFISavedRegsSpillEnabled() ||
+         (i != ReturnAddressSaveIndex && i != EXECSaveIndex)))
       MFI.setStackID(i, TargetStackID::Default);
 
   for (auto &R : VGPRToAGPRSpills) {
