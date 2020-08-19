@@ -2501,8 +2501,21 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
       DwarfExpr.addExpression(std::move(ExprCursor));
       return;
   } else if (Value.isConstantFP()) {
-    APInt RawBytes = Value.getConstantFP()->getValueAPF().bitcastToAPInt();
-    DwarfExpr.addUnsignedConstant(RawBytes);
+    if (AP.getDwarfVersion() >= 4 && AP.getDwarfDebug()->tuneForGDB()) {
+      DwarfExpr.addConstantFP(Value.getConstantFP()->getValueAPF(), AP);
+      return;
+    } else if (Value.getConstantFP()
+                   ->getValueAPF()
+                   .bitcastToAPInt()
+                   .getBitWidth() <= 64 /*bits*/)
+      DwarfExpr.addUnsignedConstant(
+          Value.getConstantFP()->getValueAPF().bitcastToAPInt());
+    else
+      LLVM_DEBUG(
+          dbgs()
+          << "Skipped DwarfExpression creation for ConstantFP of size"
+          << Value.getConstantFP()->getValueAPF().bitcastToAPInt().getBitWidth()
+          << " bits\n");
   }
   DwarfExpr.addExpression(std::move(ExprCursor));
 }
