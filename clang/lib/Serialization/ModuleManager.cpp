@@ -59,7 +59,7 @@ ModuleFile *ModuleManager::lookupByModuleName(StringRef Name) const {
 }
 
 ModuleFile *ModuleManager::lookup(const FileEntry *File) const {
-  auto Known = Modules.find(File);
+  auto Known = Modules.find(EntryKey{File});
   if (Known == Modules.end())
     return nullptr;
 
@@ -72,7 +72,7 @@ ModuleManager::lookupBuffer(StringRef Name) {
                                /*CacheFailure=*/false);
   if (!Entry)
     return nullptr;
-  return std::move(InMemoryBuffers[*Entry]);
+  return std::move(InMemoryBuffers[EntryKey{*Entry}]);
 }
 
 static bool checkSignature(ASTFileSignature Signature,
@@ -133,7 +133,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   }
 
   // Check whether we already loaded this module, before
-  if (ModuleFile *ModuleEntry = Modules.lookup(Entry)) {
+  if (ModuleFile *ModuleEntry = Modules.lookup(EntryKey{Entry})) {
     // Check the stored signature.
     if (checkSignature(ModuleEntry->Signature, ExpectedSignature, ErrorStr))
       return OutOfDate;
@@ -208,7 +208,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     return OutOfDate;
 
   // We're keeping this module.  Store it everywhere.
-  Module = Modules[Entry] = NewModule.get();
+  Module = Modules[EntryKey{Entry}] = NewModule.get();
 
   updateModuleImports(*NewModule, ImportedBy, ImportLoc);
 
@@ -255,7 +255,7 @@ void ModuleManager::removeModules(ModuleIterator First, ModuleMap *modMap) {
 
   // Delete the modules and erase them from the various structures.
   for (ModuleIterator victim = First; victim != Last; ++victim) {
-    Modules.erase(victim->File);
+    Modules.erase(EntryKey{victim->File});
 
     if (modMap) {
       StringRef ModuleName = victim->ModuleName;
@@ -274,7 +274,7 @@ ModuleManager::addInMemoryBuffer(StringRef FileName,
                                  std::unique_ptr<llvm::MemoryBuffer> Buffer) {
   const FileEntry *Entry =
       FileMgr.getVirtualFile(FileName, Buffer->getBufferSize(), 0);
-  InMemoryBuffers[Entry] = std::move(Buffer);
+  InMemoryBuffers[EntryKey{Entry}] = std::move(Buffer);
 }
 
 ModuleManager::VisitState *ModuleManager::allocateVisitState() {
