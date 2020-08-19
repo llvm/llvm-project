@@ -1696,8 +1696,7 @@ static StringRef segmentTypeToString(unsigned Arch, unsigned Type) {
 
 static std::string getGNUPtType(unsigned Arch, unsigned Type) {
   StringRef Seg = segmentTypeToString(Arch, Type);
-  // GNU doesn't recognize PT_OPENBSD_*.
-  if (Seg.empty() || Seg.startswith("PT_OPENBSD_"))
+  if (Seg.empty())
     return std::string("<unknown>: ") + to_string(format_hex(Type, 1));
 
   // E.g. "PT_ARM_EXIDX" -> "EXIDX".
