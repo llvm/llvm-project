@@ -735,6 +735,7 @@ static LogicalResult verify(TensorReshapeOp op) {
   return success();
 }
 
+namespace {
 /// Reshape of a splat constant can be replaced with a constant of the result
 /// type.
 struct FoldReshapeWithConstant : OpRewritePattern<TensorReshapeOp> {
@@ -752,6 +753,7 @@ struct FoldReshapeWithConstant : OpRewritePattern<TensorReshapeOp> {
     return success();
   }
 };
+} // namespace
 
 void TensorReshapeOp::getCanonicalizationPatterns(
     OwningRewritePatternList &results, MLIRContext *context) {
@@ -1288,6 +1290,7 @@ static LogicalResult verifyNamedStructuredOp(NamedStructuredOpType op) {
   return verifyGenericOp<NamedStructuredOpType>(op);
 }
 
+namespace {
 struct EraseDeadLinalgOp : public RewritePattern {
   EraseDeadLinalgOp(PatternBenefit benefit = 1)
       : RewritePattern(benefit, MatchAnyOpTypeTag()) {}
@@ -1312,6 +1315,7 @@ struct EraseDeadLinalgOp : public RewritePattern {
     return failure();
   }
 };
+} // namespace
 
 #define CANONICALIZERS_AND_FOLDERS(XXX)                                        \
   void XXX::getCanonicalizationPatterns(OwningRewritePatternList &results,     \
