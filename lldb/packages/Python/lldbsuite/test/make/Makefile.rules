@@ -172,7 +172,7 @@ endif
 # CC defaults to clang.
 #
 # If you change the defaults of CC, be sure to also change it in the file
-# test/plugins/builder_base.py, which provides a Python way to return the
+# test/builders/builder_base.py, which provides a Python way to return the
 # value of the make variable CC -- getCompiler().
 #
 # See also these functions:
