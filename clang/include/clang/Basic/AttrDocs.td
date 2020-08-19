@@ -1898,6 +1898,9 @@ the target with or without a "-mno-" in front corresponding to the absence
 of the feature, as well as ``arch="CPU"`` which will change the default "CPU"
 for the function.
 
+For X86, the attribute also allows ``tune="CPU"`` to optimize the generated
+code for the given CPU without changing the available instructions.
+
 For AArch64, the attribute also allows the "branch-protection=<args>" option,
 where the permissible arguments and their effect on code generation are the same
 as for the command-line option ``-mbranch-protection``.

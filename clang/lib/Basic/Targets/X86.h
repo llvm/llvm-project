@@ -296,6 +296,10 @@ public:
     return "";
   }
 
+  bool supportsTargetAttributeTune() const override {
+    return true;
+  }
+
   bool isValidCPUName(StringRef Name) const override {
     bool Only64Bit = getTriple().getArch() != llvm::Triple::x86;
     return llvm::X86::parseArchX86(Name, Only64Bit) != llvm::X86::CK_None;
