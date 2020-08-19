@@ -3714,11 +3714,11 @@ QualType ASTContext::getIncompleteArrayType(QualType elementType,
 ASTContext::BuiltinVectorTypeInfo
 ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
 #define SVE_INT_ELTTY(BITS, ELTS, SIGNED, NUMVECTORS)                          \
-  {getIntTypeForBitwidth(BITS, SIGNED), llvm::ElementCount(ELTS, true),        \
+  {getIntTypeForBitwidth(BITS, SIGNED), llvm::ElementCount::getScalable(ELTS), \
    NUMVECTORS};
 
 #define SVE_ELTTY(ELTTY, ELTS, NUMVECTORS)                                     \
-  {ELTTY, llvm::ElementCount(ELTS, true), NUMVECTORS};
+  {ELTTY, llvm::ElementCount::getScalable(ELTS), NUMVECTORS};
 
   switch (Ty->getKind()) {
   default:
