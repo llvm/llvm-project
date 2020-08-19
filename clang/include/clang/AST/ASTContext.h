@@ -60,6 +60,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/TypeSize.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -1296,6 +1297,21 @@ public:
 
   /// Returns a vla type where known sizes are replaced with [*].
   QualType getVariableArrayDecayedType(QualType Ty) const;
+
+  // Convenience struct to return information about a builtin vector type.
+  struct BuiltinVectorTypeInfo {
+    QualType ElementType;
+    llvm::ElementCount EC;
+    unsigned NumVectors;
+    BuiltinVectorTypeInfo(QualType ElementType, llvm::ElementCount EC,
+                          unsigned NumVectors)
+        : ElementType(ElementType), EC(EC), NumVectors(NumVectors) {}
+  };
+
+  /// Returns the element type, element count and number of vectors
+  /// (in case of tuple) for a builtin vector type.
+  BuiltinVectorTypeInfo
+  getBuiltinVectorTypeInfo(const BuiltinType *VecTy) const;
 
   /// Return the unique reference to a scalable vector type of the specified
   /// element type and scalable number of elements.

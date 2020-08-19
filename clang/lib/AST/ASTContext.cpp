@@ -3634,6 +3634,119 @@ QualType ASTContext::getIncompleteArrayType(QualType elementType,
   return QualType(newType, 0);
 }
 
+ASTContext::BuiltinVectorTypeInfo
+ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
+#define SVE_INT_ELTTY(BITS, ELTS, SIGNED, NUMVECTORS)                          \
+  {getIntTypeForBitwidth(BITS, SIGNED), llvm::ElementCount(ELTS, true),        \
+   NUMVECTORS};
+
+#define SVE_ELTTY(ELTTY, ELTS, NUMVECTORS)                                     \
+  {ELTTY, llvm::ElementCount(ELTS, true), NUMVECTORS};
+
+  switch (Ty->getKind()) {
+  default:
+    llvm_unreachable("Unsupported builtin vector type");
+  case BuiltinType::SveInt8:
+    return SVE_INT_ELTTY(8, 16, true, 1);
+  case BuiltinType::SveUint8:
+    return SVE_INT_ELTTY(8, 16, false, 1);
+  case BuiltinType::SveInt8x2:
+    return SVE_INT_ELTTY(8, 16, true, 2);
+  case BuiltinType::SveUint8x2:
+    return SVE_INT_ELTTY(8, 16, false, 2);
+  case BuiltinType::SveInt8x3:
+    return SVE_INT_ELTTY(8, 16, true, 3);
+  case BuiltinType::SveUint8x3:
+    return SVE_INT_ELTTY(8, 16, false, 3);
+  case BuiltinType::SveInt8x4:
+    return SVE_INT_ELTTY(8, 16, true, 4);
+  case BuiltinType::SveUint8x4:
+    return SVE_INT_ELTTY(8, 16, false, 4);
+  case BuiltinType::SveInt16:
+    return SVE_INT_ELTTY(16, 8, true, 1);
+  case BuiltinType::SveUint16:
+    return SVE_INT_ELTTY(16, 8, false, 1);
+  case BuiltinType::SveInt16x2:
+    return SVE_INT_ELTTY(16, 8, true, 2);
+  case BuiltinType::SveUint16x2:
+    return SVE_INT_ELTTY(16, 8, false, 2);
+  case BuiltinType::SveInt16x3:
+    return SVE_INT_ELTTY(16, 8, true, 3);
+  case BuiltinType::SveUint16x3:
+    return SVE_INT_ELTTY(16, 8, false, 3);
+  case BuiltinType::SveInt16x4:
+    return SVE_INT_ELTTY(16, 8, true, 4);
+  case BuiltinType::SveUint16x4:
+    return SVE_INT_ELTTY(16, 8, false, 4);
+  case BuiltinType::SveInt32:
+    return SVE_INT_ELTTY(32, 4, true, 1);
+  case BuiltinType::SveUint32:
+    return SVE_INT_ELTTY(32, 4, false, 1);
+  case BuiltinType::SveInt32x2:
+    return SVE_INT_ELTTY(32, 4, true, 2);
+  case BuiltinType::SveUint32x2:
+    return SVE_INT_ELTTY(32, 4, false, 2);
+  case BuiltinType::SveInt32x3:
+    return SVE_INT_ELTTY(32, 4, true, 3);
+  case BuiltinType::SveUint32x3:
+    return SVE_INT_ELTTY(32, 4, false, 3);
+  case BuiltinType::SveInt32x4:
+    return SVE_INT_ELTTY(32, 4, true, 4);
+  case BuiltinType::SveUint32x4:
+    return SVE_INT_ELTTY(32, 4, false, 4);
+  case BuiltinType::SveInt64:
+    return SVE_INT_ELTTY(64, 2, true, 1);
+  case BuiltinType::SveUint64:
+    return SVE_INT_ELTTY(64, 2, false, 1);
+  case BuiltinType::SveInt64x2:
+    return SVE_INT_ELTTY(64, 2, true, 2);
+  case BuiltinType::SveUint64x2:
+    return SVE_INT_ELTTY(64, 2, false, 2);
+  case BuiltinType::SveInt64x3:
+    return SVE_INT_ELTTY(64, 2, true, 3);
+  case BuiltinType::SveUint64x3:
+    return SVE_INT_ELTTY(64, 2, false, 3);
+  case BuiltinType::SveInt64x4:
+    return SVE_INT_ELTTY(64, 2, true, 4);
+  case BuiltinType::SveUint64x4:
+    return SVE_INT_ELTTY(64, 2, false, 4);
+  case BuiltinType::SveBool:
+    return SVE_ELTTY(BoolTy, 16, 1);
+  case BuiltinType::SveFloat16:
+    return SVE_ELTTY(HalfTy, 8, 1);
+  case BuiltinType::SveFloat16x2:
+    return SVE_ELTTY(HalfTy, 8, 2);
+  case BuiltinType::SveFloat16x3:
+    return SVE_ELTTY(HalfTy, 8, 3);
+  case BuiltinType::SveFloat16x4:
+    return SVE_ELTTY(HalfTy, 8, 4);
+  case BuiltinType::SveFloat32:
+    return SVE_ELTTY(FloatTy, 4, 1);
+  case BuiltinType::SveFloat32x2:
+    return SVE_ELTTY(FloatTy, 4, 2);
+  case BuiltinType::SveFloat32x3:
+    return SVE_ELTTY(FloatTy, 4, 3);
+  case BuiltinType::SveFloat32x4:
+    return SVE_ELTTY(FloatTy, 4, 4);
+  case BuiltinType::SveFloat64:
+    return SVE_ELTTY(DoubleTy, 2, 1);
+  case BuiltinType::SveFloat64x2:
+    return SVE_ELTTY(DoubleTy, 2, 2);
+  case BuiltinType::SveFloat64x3:
+    return SVE_ELTTY(DoubleTy, 2, 3);
+  case BuiltinType::SveFloat64x4:
+    return SVE_ELTTY(DoubleTy, 2, 4);
+  case BuiltinType::SveBFloat16:
+    return SVE_ELTTY(BFloat16Ty, 8, 1);
+  case BuiltinType::SveBFloat16x2:
+    return SVE_ELTTY(BFloat16Ty, 8, 2);
+  case BuiltinType::SveBFloat16x3:
+    return SVE_ELTTY(BFloat16Ty, 8, 3);
+  case BuiltinType::SveBFloat16x4:
+    return SVE_ELTTY(BFloat16Ty, 8, 4);
+  }
+}
+
 /// getScalableVectorType - Return the unique reference to a scalable vector
 /// type of the specified element type and size. VectorType must be a built-in
 /// type.
