@@ -54,3 +54,4 @@ autoconf/autom4te.cache
 .vs
 # clangd index
 .clangd
+.cache
