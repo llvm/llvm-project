@@ -142,8 +142,8 @@ dumpPubSection(const DWARFContext &DCtx, const DWARFSection &Section,
   Y.UnitSize = Sets[0].Size;
 
   for (const DWARFDebugPubTable::Entry &E : Sets[0].Entries)
-    Y.Entries.push_back(
-        DWARFYAML::PubEntry{E.SecOffset, E.Descriptor.toBits(), E.Name});
+    Y.Entries.push_back(DWARFYAML::PubEntry{(uint32_t)E.SecOffset,
+                                            E.Descriptor.toBits(), E.Name});
 
   return Y;
 }
