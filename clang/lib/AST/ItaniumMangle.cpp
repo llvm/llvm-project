@@ -657,6 +657,8 @@ void CXXNameMangler::mangle(GlobalDecl GD) {
     mangleName(FD);
   else if (const MSGuidDecl *GuidD = dyn_cast<MSGuidDecl>(GD.getDecl()))
     mangleName(GuidD);
+  else if (const BindingDecl *BD = dyn_cast<BindingDecl>(GD.getDecl()))
+    mangleName(BD);
   else
     llvm_unreachable("unexpected kind of global decl");
 }
