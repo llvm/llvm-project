@@ -26,8 +26,8 @@ class TestArgumentPassingRestrictions(TestBase):
     lldbutil.run_to_source_breakpoint(self, '// break here',
             lldb.SBFileSpec("main.cpp"))
 
-    self.expect("expr returnPassByRef()",
-            substrs=['(PassByRef)', '= 11223344'])
+    self.expect_expr("returnPassByRef()", result_type="PassByRef", result_children=[
+        ValueCheck(name="x", value="11223344")
+    ])
 
-    self.expect("expr takePassByRef(p)",
-            substrs=['(int)', '= 42'])
+    self.expect_expr("takePassByRef(p)", result_type="int", result_value="42")
