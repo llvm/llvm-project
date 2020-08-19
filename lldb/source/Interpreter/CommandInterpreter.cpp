@@ -2090,6 +2090,22 @@ static void GetHomeInitFile(llvm::SmallVectorImpl<char> &init_file,
   FileSystem::Instance().Resolve(init_file);
 }
 
+static void GetHomeREPLInitFile(llvm::SmallVectorImpl<char> &init_file,
+                                LanguageType language) {
+  std::string init_file_name;
+
+  switch (language) {
+  // TODO: Add support for a language used with a REPL.
+  default:
+    return;
+  }
+
+  llvm::sys::path::home_directory(init_file);
+  llvm::sys::path::append(init_file, init_file_name);
+
+  FileSystem::Instance().Resolve(init_file);
+}
+
 static void GetCwdInitFile(llvm::SmallVectorImpl<char> &init_file) {
   llvm::StringRef s = ".lldbinit";
   init_file.assign(s.begin(), s.end());
@@ -2164,15 +2180,27 @@ void CommandInterpreter::SourceInitFileCwd(CommandReturnObject &result) {
 
 /// We will first see if there is an application specific ".lldbinit" file
 /// whose name is "~/.lldbinit" followed by a "-" and the name of the program.
-/// If this file doesn't exist, we fall back to just the "~/.lldbinit" file.
-void CommandInterpreter::SourceInitFileHome(CommandReturnObject &result) {
+/// If this file doesn't exist, we fall back to the REPL init file or the
+/// default home init file in "~/.lldbinit".
+void CommandInterpreter::SourceInitFileHome(CommandReturnObject &result,
+                                            bool is_repl) {
   if (m_skip_lldbinit_files) {
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
     return;
   }
 
   llvm::SmallString<128> init_file;
-  GetHomeInitFile(init_file);
+
+  if (is_repl) {
+    LanguageType language = {};
+    TargetSP target_sp = GetDebugger().GetSelectedTarget();
+    if (target_sp)
+      language = target_sp->GetLanguage();
+    GetHomeREPLInitFile(init_file, language);
+  }
+
+  if (init_file.empty())
+    GetHomeInitFile(init_file);
 
   if (!m_skip_app_init_files) {
     llvm::StringRef program_name =
