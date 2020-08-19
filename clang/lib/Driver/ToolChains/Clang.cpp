@@ -2081,8 +2081,13 @@ void Clang::AddX86TargetArgs(const ArgList &Args,
     if (Name == "native")
       Name = llvm::sys::getHostCPUName();
 
-    CmdArgs.push_back("-tune-cpu");
-    CmdArgs.push_back(Args.MakeArgString(Name));
+    // Ignore generic either from getHostCPUName or from command line.
+    // FIXME: We need to support this eventually but isValidCPUName and the
+    // backend aren't ready for it yet.
+    if (Name != "generic") {
+      CmdArgs.push_back("-tune-cpu");
+      CmdArgs.push_back(Args.MakeArgString(Name));
+    }
   }
 }
 
