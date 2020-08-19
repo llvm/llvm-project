@@ -171,7 +171,7 @@ EXTERN int omp_target_memcpy(void *dst, void *src, size_t length,
     // First try to use D2D memcpy which is more efficient. If fails, fall back
     // to unefficient way.
     if (SrcDev.isDataExchangable(DstDev)) {
-      rc = SrcDev.data_exchange(srcAddr, DstDev, dstAddr, length, nullptr);
+      rc = SrcDev.dataExchange(srcAddr, DstDev, dstAddr, length, nullptr);
       if (rc == OFFLOAD_SUCCESS)
         return OFFLOAD_SUCCESS;
     }
