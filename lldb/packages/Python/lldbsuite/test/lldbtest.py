@@ -65,6 +65,7 @@ from . import lldbplatformutil
 from . import lldbtest_config
 from . import lldbutil
 from . import test_categories
+from lldbsuite.builders import get_builder
 from lldbsuite.support import encoded_file
 from lldbsuite.support import funcutils
 
@@ -532,17 +533,7 @@ def getsource_if_available(obj):
 
 
 def builder_module():
-    if sys.platform.startswith("freebsd"):
-        return __import__("builder_freebsd")
-    if sys.platform.startswith("openbsd"):
-        return __import__("builder_openbsd")
-    if sys.platform.startswith("netbsd"):
-        return __import__("builder_netbsd")
-    if sys.platform.startswith("linux"):
-        # sys.platform with Python-3.x returns 'linux', but with
-        # Python-2.x it returns 'linux2'.
-        return __import__("builder_linux")
-    return __import__("builder_" + sys.platform)
+    return get_builder(sys.platform)
 
 
 class Base(unittest2.TestCase):
@@ -1891,7 +1882,7 @@ class TestBase(Base):
         - The build methods buildDefault, buildDsym, and buildDwarf are used to
           build the binaries used during a particular test scenario.  A plugin
           should be provided for the sys.platform running the test suite.  The
-          Mac OS X implementation is located in plugins/darwin.py.
+          Mac OS X implementation is located in builders/darwin.py.
     """
 
     # Subclasses can set this to true (if they don't depend on debug info) to avoid running the
