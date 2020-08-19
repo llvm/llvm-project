@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TARGET_DPU_DPUTARGETLOWERING_H
 #define LLVM_LIB_TARGET_DPU_DPUTARGETLOWERING_H
 
+#include "DPUISelLowering.h"
 #include "DPURegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 
@@ -90,6 +91,11 @@ public:
 
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
+
+  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
+    return (SrcAS == DPUADDR_SPACE::WRAM && DestAS == DPUADDR_SPACE::MRAM) ||
+           (SrcAS == DPUADDR_SPACE::MRAM && DestAS == DPUADDR_SPACE::WRAM);
+  }
 
 private:
   CodeGenOpt::Level optLevel;

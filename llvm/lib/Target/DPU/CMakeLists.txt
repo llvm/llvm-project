@@ -25,6 +25,7 @@ add_llvm_target(DPUCodeGen
         DPUMergeComboInstrPass.cpp
         DPUResolveMacroInstrPass.cpp
         DPUMacroFusion.cpp
+        DPUSelectionDAGInfo.cpp
         )
 
 add_subdirectory(AsmParser)
