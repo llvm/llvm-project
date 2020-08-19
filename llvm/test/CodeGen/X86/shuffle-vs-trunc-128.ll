@@ -61,8 +61,7 @@ define void @shuffle_v16i8_to_v8i8(<16 x i8>* %L, <8 x i8>* %S) nounwind {
 ; AVX512BWVL-LABEL: shuffle_v16i8_to_v8i8:
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512BWVL-NEXT:    vpmovwb %xmm0, %xmm0
-; AVX512BWVL-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512BWVL-NEXT:    vpmovwb %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    retq
   %vec = load <16 x i8>, <16 x i8>* %L
   %strided.vec = shufflevector <16 x i8> %vec, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -159,8 +158,7 @@ define void @shuffle_v8i16_to_v4i16(<8 x i16>* %L, <4 x i16>* %S) nounwind {
 ; AVX512VL-LABEL: shuffle_v8i16_to_v4i16:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512VL-NEXT:    vpmovdw %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512VL-NEXT:    vpmovdw %xmm0, (%rsi)
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: shuffle_v8i16_to_v4i16:
@@ -173,8 +171,7 @@ define void @shuffle_v8i16_to_v4i16(<8 x i16>* %L, <4 x i16>* %S) nounwind {
 ; AVX512BWVL-LABEL: shuffle_v8i16_to_v4i16:
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512BWVL-NEXT:    vpmovdw %xmm0, %xmm0
-; AVX512BWVL-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512BWVL-NEXT:    vpmovdw %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    retq
   %vec = load <8 x i16>, <8 x i16>* %L
   %strided.vec = shufflevector <8 x i16> %vec, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -338,8 +335,7 @@ define void @shuffle_v16i8_to_v4i8(<16 x i8>* %L, <4 x i8>* %S) nounwind {
 ; AVX512VL-LABEL: shuffle_v16i8_to_v4i8:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512VL-NEXT:    vpmovdb %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovd %xmm0, (%rsi)
+; AVX512VL-NEXT:    vpmovdb %xmm0, (%rsi)
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: shuffle_v16i8_to_v4i8:
@@ -352,8 +348,7 @@ define void @shuffle_v16i8_to_v4i8(<16 x i8>* %L, <4 x i8>* %S) nounwind {
 ; AVX512BWVL-LABEL: shuffle_v16i8_to_v4i8:
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512BWVL-NEXT:    vpmovdb %xmm0, %xmm0
-; AVX512BWVL-NEXT:    vmovd %xmm0, (%rsi)
+; AVX512BWVL-NEXT:    vpmovdb %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    retq
   %vec = load <16 x i8>, <16 x i8>* %L
   %strided.vec = shufflevector <16 x i8> %vec, <16 x i8> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
@@ -456,8 +451,7 @@ define void @shuffle_v8i16_to_v2i16(<8 x i16>* %L, <2 x i16>* %S) nounwind {
 ; AVX512VL-LABEL: shuffle_v8i16_to_v2i16:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512VL-NEXT:    vpmovqw %xmm0, %xmm0
-; AVX512VL-NEXT:    vmovd %xmm0, (%rsi)
+; AVX512VL-NEXT:    vpmovqw %xmm0, (%rsi)
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: shuffle_v8i16_to_v2i16:
@@ -470,8 +464,7 @@ define void @shuffle_v8i16_to_v2i16(<8 x i16>* %L, <2 x i16>* %S) nounwind {
 ; AVX512BWVL-LABEL: shuffle_v8i16_to_v2i16:
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512BWVL-NEXT:    vpmovqw %xmm0, %xmm0
-; AVX512BWVL-NEXT:    vmovd %xmm0, (%rsi)
+; AVX512BWVL-NEXT:    vpmovqw %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    retq
   %vec = load <8 x i16>, <8 x i16>* %L
   %strided.vec = shufflevector <8 x i16> %vec, <8 x i16> undef, <2 x i32> <i32 0, i32 4>
@@ -576,8 +569,7 @@ define void @shuffle_v16i8_to_v2i8(<16 x i8>* %L, <2 x i8>* %S) nounwind {
 ; AVX512VL-LABEL: shuffle_v16i8_to_v2i8:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512VL-NEXT:    vpmovqb %xmm0, %xmm0
-; AVX512VL-NEXT:    vpextrw $0, %xmm0, (%rsi)
+; AVX512VL-NEXT:    vpmovqb %xmm0, (%rsi)
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: shuffle_v16i8_to_v2i8:
@@ -590,8 +582,7 @@ define void @shuffle_v16i8_to_v2i8(<16 x i8>* %L, <2 x i8>* %S) nounwind {
 ; AVX512BWVL-LABEL: shuffle_v16i8_to_v2i8:
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512BWVL-NEXT:    vpmovqb %xmm0, %xmm0
-; AVX512BWVL-NEXT:    vpextrw $0, %xmm0, (%rsi)
+; AVX512BWVL-NEXT:    vpmovqb %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    retq
   %vec = load <16 x i8>, <16 x i8>* %L
   %strided.vec = shufflevector <16 x i8> %vec, <16 x i8> undef, <2 x i32> <i32 0, i32 8>
