@@ -96,8 +96,8 @@ define i64 @test_sdiv_canonicalize_constexpr(i64 %L1) {
 
 define i32 @sdiv_abs_nsw(i32 %x) {
 ; CHECK-LABEL: @sdiv_abs_nsw(
-; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[R:%.*]] = sdiv i32 [[A]], [[X]]
+; CHECK-NEXT:    [[DOTINV:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[DOTINV]], i32 1, i32 -1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = call i32 @llvm.abs.i32(i32 %x, i1 true)
@@ -107,14 +107,16 @@ define i32 @sdiv_abs_nsw(i32 %x) {
 
 define <4 x i32> @sdiv_abs_nsw_vec(<4 x i32> %x) {
 ; CHECK-LABEL: @sdiv_abs_nsw_vec(
-; CHECK-NEXT:    [[A:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[R:%.*]] = sdiv <4 x i32> [[X]], [[A]]
+; CHECK-NEXT:    [[DOTINV:%.*]] = icmp sgt <4 x i32> [[X:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[DOTINV]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %a = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %x, i1 true)
   %r = sdiv <4 x i32> %x, %a
   ret <4 x i32> %r
 }
+
+; Negative test - requires poison int min (nsw)
 
 define i32 @sdiv_abs(i32 %x) {
 ; CHECK-LABEL: @sdiv_abs(
@@ -126,6 +128,8 @@ define i32 @sdiv_abs(i32 %x) {
   %r = sdiv i32 %a, %x
   ret i32 %r
 }
+
+; Negative test
 
 define i32 @sdiv_abs_extra_use(i32 %x) {
 ; CHECK-LABEL: @sdiv_abs_extra_use(
