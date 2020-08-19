@@ -135,6 +135,10 @@ public:
   bool matchSextTruncSextLoad(MachineInstr &MI);
   bool applySextTruncSextLoad(MachineInstr &MI);
 
+  /// Match sext_inreg(load p), imm -> sextload p
+  bool matchSextInRegOfLoad(MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo);
+  bool applySextInRegOfLoad(MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo);
+
   bool matchElideBrByInvertingCond(MachineInstr &MI);
   void applyElideBrByInvertingCond(MachineInstr &MI);
   bool tryElideBrByInvertingCond(MachineInstr &MI);
@@ -293,6 +297,12 @@ public:
   /// Replace \p MI with a series of instructions described in \p MatchInfo.
   bool applyBuildInstructionSteps(MachineInstr &MI,
                                   InstructionStepsMatchInfo &MatchInfo);
+
+  /// Match ashr (shl x, C), C -> sext_inreg (C)
+  bool matchAshrShlToSextInreg(MachineInstr &MI,
+                               std::tuple<Register, int64_t> &MatchInfo);
+  bool applyAshShlToSextInreg(MachineInstr &MI,
+                              std::tuple<Register, int64_t> &MatchInfo);
 
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.

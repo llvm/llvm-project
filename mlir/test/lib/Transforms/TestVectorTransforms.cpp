@@ -8,6 +8,9 @@
 
 #include <type_traits>
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorTransforms.h"
@@ -128,6 +131,11 @@ struct TestVectorTransferFullPartialSplitPatterns
   TestVectorTransferFullPartialSplitPatterns() = default;
   TestVectorTransferFullPartialSplitPatterns(
       const TestVectorTransferFullPartialSplitPatterns &pass) {}
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<AffineDialect, linalg::LinalgDialect, scf::SCFDialect>();
+  }
+
   Option<bool> useLinalgOps{
       *this, "use-linalg-copy",
       llvm::cl::desc("Split using a unmasked vector.transfer + linalg.fill + "

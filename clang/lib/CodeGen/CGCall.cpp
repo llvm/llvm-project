@@ -2521,6 +2521,9 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
             // bytes).
             if (ArrTy->getSizeModifier() == ArrayType::Static) {
               QualType ETy = ArrTy->getElementType();
+              llvm::Align Alignment =
+                  CGM.getNaturalTypeAlignment(ETy).getAsAlign();
+              AI->addAttrs(llvm::AttrBuilder().addAlignmentAttr(Alignment));
               uint64_t ArrSize = ArrTy->getSize().getZExtValue();
               if (!ETy->isIncompleteType() && ETy->isConstantSizeType() &&
                   ArrSize) {
@@ -2540,10 +2543,15 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
             // For C99 VLAs with the static keyword, we don't know the size so
             // we can't use the dereferenceable attribute, but in addrspace(0)
             // we know that it must be nonnull.
-            if (ArrTy->getSizeModifier() == VariableArrayType::Static &&
-                !getContext().getTargetAddressSpace(ArrTy->getElementType()) &&
-                !CGM.getCodeGenOpts().NullPointerIsValid)
-              AI->addAttr(llvm::Attribute::NonNull);
+            if (ArrTy->getSizeModifier() == VariableArrayType::Static) {
+              QualType ETy = ArrTy->getElementType();
+              llvm::Align Alignment =
+                  CGM.getNaturalTypeAlignment(ETy).getAsAlign();
+              AI->addAttrs(llvm::AttrBuilder().addAlignmentAttr(Alignment));
+              if (!getContext().getTargetAddressSpace(ETy) &&
+                  !CGM.getCodeGenOpts().NullPointerIsValid)
+                AI->addAttr(llvm::Attribute::NonNull);
+            }
           }
 
           // Set `align` attribute if any.

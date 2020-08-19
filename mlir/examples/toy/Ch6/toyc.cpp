@@ -255,10 +255,10 @@ int main(int argc, char **argv) {
 
   // If we aren't dumping the AST, then we are compiling with/to MLIR.
 
-  // Register our Dialect with MLIR.
-  mlir::registerDialect<mlir::toy::ToyDialect>();
+  mlir::MLIRContext context(/*loadAllDialects=*/false);
+  // Load our Dialect in this MLIR Context.
+  context.getOrLoadDialect<mlir::toy::ToyDialect>();
 
-  mlir::MLIRContext context;
   mlir::OwningModuleRef module;
   if (int error = loadAndProcessMLIR(context, module))
     return error;

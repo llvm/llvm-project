@@ -120,8 +120,7 @@ spirv::InterfaceVarABIAttr::get(IntegerAttr descriptorSet, IntegerAttr binding,
                                 IntegerAttr storageClass) {
   assert(descriptorSet && binding);
   MLIRContext *context = descriptorSet.getContext();
-  return Base::get(context, spirv::AttrKind::InterfaceVarABI, descriptorSet,
-                   binding, storageClass);
+  return Base::get(context, descriptorSet, binding, storageClass);
 }
 
 StringRef spirv::InterfaceVarABIAttr::getKindName() {
@@ -195,8 +194,7 @@ spirv::VerCapExtAttr spirv::VerCapExtAttr::get(IntegerAttr version,
                                                ArrayAttr extensions) {
   assert(version && capabilities && extensions);
   MLIRContext *context = version.getContext();
-  return Base::get(context, spirv::AttrKind::VerCapExt, version, capabilities,
-                   extensions);
+  return Base::get(context, version, capabilities, extensions);
 }
 
 StringRef spirv::VerCapExtAttr::getKindName() { return "vce"; }
@@ -272,7 +270,7 @@ spirv::TargetEnvAttr spirv::TargetEnvAttr::get(spirv::VerCapExtAttr triple,
                                                DictionaryAttr limits) {
   assert(triple && limits && "expected valid triple and limits");
   MLIRContext *context = triple.getContext();
-  return Base::get(context, spirv::AttrKind::TargetEnv, triple, limits);
+  return Base::get(context, triple, limits);
 }
 
 StringRef spirv::TargetEnvAttr::getKindName() { return "target_env"; }

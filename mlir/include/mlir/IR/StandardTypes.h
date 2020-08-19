@@ -38,33 +38,6 @@ struct TupleTypeStorage;
 
 } // namespace detail
 
-namespace StandardTypes {
-enum Kind {
-  // Floating point.
-  BF16 = Type::Kind::FIRST_STANDARD_TYPE,
-  F16,
-  F32,
-  F64,
-  FIRST_FLOATING_POINT_TYPE = BF16,
-  LAST_FLOATING_POINT_TYPE = F64,
-
-  // Target pointer sized integer, used (e.g.) in affine mappings.
-  Index,
-
-  // Derived types.
-  Integer,
-  Vector,
-  RankedTensor,
-  UnrankedTensor,
-  MemRef,
-  UnrankedMemRef,
-  Complex,
-  Tuple,
-  None,
-};
-
-} // namespace StandardTypes
-
 //===----------------------------------------------------------------------===//
 // ComplexType
 //===----------------------------------------------------------------------===//

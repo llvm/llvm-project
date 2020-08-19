@@ -3608,18 +3608,24 @@ LegalizerHelper::fewerElementsVectorBuildVector(MachineInstr &MI,
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::fewerElementsVectorExtractVectorElt(MachineInstr &MI,
-                                                     unsigned TypeIdx,
-                                                     LLT NarrowVecTy) {
-  assert(TypeIdx == 1 && "not a vector type index");
+LegalizerHelper::fewerElementsVectorExtractInsertVectorElt(MachineInstr &MI,
+                                                           unsigned TypeIdx,
+                                                           LLT NarrowVecTy) {
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcVec = MI.getOperand(1).getReg();
+  Register InsertVal;
+  bool IsInsert = MI.getOpcode() == TargetOpcode::G_INSERT_VECTOR_ELT;
+
+  assert((IsInsert ? TypeIdx == 0 : TypeIdx == 1) && "not a vector type index");
+  if (IsInsert)
+    InsertVal = MI.getOperand(2).getReg();
+
+  Register Idx = MI.getOperand(MI.getNumOperands() - 1).getReg();
 
   // TODO: Handle total scalarization case.
   if (!NarrowVecTy.isVector())
     return UnableToLegalize;
 
-  Register DstReg = MI.getOperand(0).getReg();
-  Register SrcVec = MI.getOperand(1).getReg();
-  Register Idx = MI.getOperand(2).getReg();
   LLT VecTy = MRI.getType(SrcVec);
 
   // If the index is a constant, we can really break this down as you would
@@ -3637,8 +3643,8 @@ LegalizerHelper::fewerElementsVectorExtractVectorElt(MachineInstr &MI,
     LLT GCDTy = extractGCDType(VecParts, VecTy, NarrowVecTy, SrcVec);
 
     // Build a sequence of NarrowTy pieces in VecParts for this operand.
-    buildLCMMergePieces(VecTy, NarrowVecTy, GCDTy, VecParts,
-                        TargetOpcode::G_ANYEXT);
+    LLT LCMTy = buildLCMMergePieces(VecTy, NarrowVecTy, GCDTy, VecParts,
+                                    TargetOpcode::G_ANYEXT);
 
     unsigned NewNumElts = NarrowVecTy.getNumElements();
 
@@ -3647,12 +3653,26 @@ LegalizerHelper::fewerElementsVectorExtractVectorElt(MachineInstr &MI,
     auto NewIdx =
         MIRBuilder.buildConstant(IdxTy, IdxVal - NewNumElts * PartIdx);
 
-    MIRBuilder.buildExtractVectorElement(DstReg, VecParts[PartIdx], NewIdx);
+    if (IsInsert) {
+      LLT PartTy = MRI.getType(VecParts[PartIdx]);
+
+      // Use the adjusted index to insert into one of the subvectors.
+      auto InsertPart = MIRBuilder.buildInsertVectorElement(
+          PartTy, VecParts[PartIdx], InsertVal, NewIdx);
+      VecParts[PartIdx] = InsertPart.getReg(0);
+
+      // Recombine the inserted subvector with the others to reform the result
+      // vector.
+      buildWidenedRemergeToDst(DstReg, LCMTy, VecParts);
+    } else {
+      MIRBuilder.buildExtractVectorElement(DstReg, VecParts[PartIdx], NewIdx);
+    }
+
     MI.eraseFromParent();
     return Legalized;
   }
 
-  // With a variable index, we can't perform the extract in a smaller type, so
+  // With a variable index, we can't perform the operation in a smaller type, so
   // we're forced to expand this.
   //
   // TODO: We could emit a chain of compare/select to figure out which piece to
@@ -3992,7 +4012,8 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_BUILD_VECTOR:
     return fewerElementsVectorBuildVector(MI, TypeIdx, NarrowTy);
   case G_EXTRACT_VECTOR_ELT:
-    return fewerElementsVectorExtractVectorElt(MI, TypeIdx, NarrowTy);
+  case G_INSERT_VECTOR_ELT:
+    return fewerElementsVectorExtractInsertVectorElt(MI, TypeIdx, NarrowTy);
   case G_LOAD:
   case G_STORE:
     return reduceLoadStoreWidth(MI, TypeIdx, NarrowTy);

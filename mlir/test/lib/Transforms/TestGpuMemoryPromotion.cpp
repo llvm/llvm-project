@@ -13,6 +13,9 @@
 
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/MemoryPromotion.h"
+#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SPIRV/SPIRVDialect.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/Pass/Pass.h"
 
@@ -26,6 +29,10 @@ namespace {
 class TestGpuMemoryPromotionPass
     : public PassWrapper<TestGpuMemoryPromotionPass,
                          OperationPass<gpu::GPUFuncOp>> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<StandardOpsDialect, scf::SCFDialect>();
+  }
+
   void runOnOperation() override {
     gpu::GPUFuncOp op = getOperation();
     for (unsigned i = 0, e = op.getNumArguments(); i < e; ++i) {

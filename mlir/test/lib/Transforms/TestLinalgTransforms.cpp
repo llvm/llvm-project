@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -29,6 +30,16 @@ struct TestLinalgTransforms
     : public PassWrapper<TestLinalgTransforms, FunctionPass> {
   TestLinalgTransforms() = default;
   TestLinalgTransforms(const TestLinalgTransforms &pass) {}
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    // clang-format off
+    registry.insert<AffineDialect,
+                    scf::SCFDialect,
+                    StandardOpsDialect,
+                    vector::VectorDialect,
+                    gpu::GPUDialect>();
+    // clang-format on
+  }
 
   void runOnFunction() override;
 
@@ -289,19 +300,16 @@ static void fillPromotionCallBackPatterns(MLIRContext *ctx,
 }
 
 template <typename IdOp, typename NProcsOp>
-static ProcInfo getGpuProcIds(OpBuilder &b, Location loc, unsigned loopNum) {
+static SmallVector<ProcInfo, 2>
+getGpuProcIds(OpBuilder &b, Location loc,
+              ArrayRef<SubViewOp::Range> parallelLoopRanges) {
   Type indexType = b.getIndexType();
-  switch (loopNum) {
-  case 0:
-    return {b.create<IdOp>(loc, indexType, b.getStringAttr("y")),
-            b.create<NProcsOp>(loc, indexType, b.getStringAttr("y"))};
-  case 1:
-    return {b.create<IdOp>(loc, indexType, b.getStringAttr("x")),
-            b.create<NProcsOp>(loc, indexType, b.getStringAttr("x"))};
-  default:
-    llvm_unreachable("test patterns handles only upto 2-level nested loops");
-  }
-  return {nullptr, nullptr};
+  SmallVector<ProcInfo, 2> procInfo(2);
+  procInfo[0] = {b.create<IdOp>(loc, indexType, b.getStringAttr("y")),
+                 b.create<NProcsOp>(loc, indexType, b.getStringAttr("y"))};
+  procInfo[1] = {b.create<IdOp>(loc, indexType, b.getStringAttr("x")),
+                 b.create<NProcsOp>(loc, indexType, b.getStringAttr("x"))};
+  return procInfo;
 }
 
 static void fillTileAndDistributePatterns(MLIRContext *context,
