@@ -108,6 +108,7 @@ bool ARMTTIImpl::shouldFavorPostInc() const {
 
 Optional<Instruction *>
 ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
+  using namespace PatternMatch;
   Intrinsic::ID IID = II.getIntrinsicID();
   switch (IID) {
   default:
@@ -209,6 +210,29 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return &II;
     }
     break;
+  }
+  case Intrinsic::arm_mve_vmldava: {
+    Instruction *I = cast<Instruction>(&II);
+    if (I->hasOneUse()) {
+      auto *User = cast<Instruction>(*I->user_begin());
+      Value *OpZ;
+      if (match(User, m_c_Add(m_Specific(I), m_Value(OpZ))) &&
+          match(I->getOperand(3), m_Zero())) {
+        Value *OpX = I->getOperand(4);
+        Value *OpY = I->getOperand(5);
+        Type *OpTy = OpX->getType();
+
+        IC.Builder.SetInsertPoint(User);
+        Value *V =
+            IC.Builder.CreateIntrinsic(Intrinsic::arm_mve_vmldava, {OpTy},
+                                       {I->getOperand(0), I->getOperand(1),
+                                        I->getOperand(2), OpZ, OpX, OpY});
+
+        IC.replaceInstUsesWith(*User, V);
+        return IC.eraseInstFromFunction(*User);
+      }
+    }
+    return None;
   }
   }
   return None;
