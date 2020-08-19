@@ -168,10 +168,15 @@ AMDGPUTargetAsmStreamer::AMDGPUTargetAsmStreamer(MCStreamer &S,
 
 // A hook for emitting stuff at the end.
 // We use it for emitting the accumulated PAL metadata as directives.
+// The PAL metadata is reset after it is emitted.
 void AMDGPUTargetAsmStreamer::finish() {
   std::string S;
   getPALMetadata()->toString(S);
   OS << S;
+
+  // Reset the pal metadata so its data will not affect a compilation that
+  // reuses this object.
+  getPALMetadata()->reset();
 }
 
 void AMDGPUTargetAsmStreamer::EmitDirectiveAMDGCNTarget(StringRef Target) {
@@ -423,6 +428,7 @@ MCELFStreamer &AMDGPUTargetELFStreamer::getStreamer() {
 
 // A hook for emitting stuff at the end.
 // We use it for emitting the accumulated PAL metadata as a .note record.
+// The PAL metadata is reset after it is emitted.
 void AMDGPUTargetELFStreamer::finish() {
   std::string Blob;
   const char *Vendor = getPALMetadata()->getVendor();
@@ -432,6 +438,10 @@ void AMDGPUTargetELFStreamer::finish() {
     return;
   EmitNote(Vendor, MCConstantExpr::create(Blob.size(), getContext()), Type,
            [&](MCELFStreamer &OS) { OS.emitBytes(Blob); });
+
+  // Reset the pal metadata so its data will not affect a compilation that
+  // reuses this object.
+  getPALMetadata()->reset();
 }
 
 void AMDGPUTargetELFStreamer::EmitNote(
