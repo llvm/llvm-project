@@ -44,11 +44,13 @@ getDirectBrEncoding(const MCInst &MI, unsigned OpNo,
                     SmallVectorImpl<MCFixup> &Fixups,
                     const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
-  if (MO.isReg() || MO.isImm()) return getMachineOpValue(MI, MO, Fixups, STI);
 
+  if (MO.isReg() || MO.isImm())
+    return getMachineOpValue(MI, MO, Fixups, STI);
   // Add a fixup for the branch target.
   Fixups.push_back(MCFixup::create(0, MO.getExpr(),
-                                   ((MI.getOpcode() == PPC::BL8_NOTOC)
+                                   ((MI.getOpcode() == PPC::BL8_NOTOC ||
+                                     MI.getOpcode() == PPC::BL8_NOTOC_TLS)
                                         ? (MCFixupKind)PPC::fixup_ppc_br24_notoc
                                         : (MCFixupKind)PPC::fixup_ppc_br24)));
   return 0;
@@ -229,8 +231,10 @@ PPCMCCodeEmitter::getMemRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
     (void)SRE;
     // Currently these are the only valid PCRelative Relocations.
     assert((SRE->getKind() == MCSymbolRefExpr::VK_PCREL ||
-            SRE->getKind() == MCSymbolRefExpr::VK_PPC_GOT_PCREL) &&
-           "VariantKind must be VK_PCREL or VK_PPC_GOT_PCREL");
+            SRE->getKind() == MCSymbolRefExpr::VK_PPC_GOT_PCREL ||
+            SRE->getKind() == MCSymbolRefExpr::VK_PPC_GOT_TLSGD_PCREL) &&
+           "VariantKind must be VK_PCREL or VK_PPC_GOT_PCREL or "
+           "VK_PPC_GOT_TLSGD_PCREL");
     // Generate the fixup for the relocation.
     Fixups.push_back(
         MCFixup::create(0, Expr,

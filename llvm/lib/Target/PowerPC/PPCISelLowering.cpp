@@ -1472,6 +1472,8 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::LD_VSX_LH:       return "PPCISD::LD_VSX_LH";
   case PPCISD::FP_EXTEND_HALF:  return "PPCISD::FP_EXTEND_HALF";
   case PPCISD::MAT_PCREL_ADDR:  return "PPCISD::MAT_PCREL_ADDR";
+  case PPCISD::TLS_DYNAMIC_MAT_PCREL_ADDR:
+    return "PPCISD::TLS_DYNAMIC_MAT_PCREL_ADDR";
   case PPCISD::LD_SPLAT:        return "PPCISD::LD_SPLAT";
   case PPCISD::FNMSUB:          return "PPCISD::FNMSUB";
   case PPCISD::STRICT_FCTIDZ:
@@ -2999,6 +3001,12 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddress(SDValue Op,
   }
 
   if (Model == TLSModel::GeneralDynamic) {
+    if (Subtarget.isUsingPCRelativeCalls()) {
+      SDValue TGA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0,
+                                               PPCII::MO_GOT_TLSGD_PCREL_FLAG);
+      return DAG.getNode(PPCISD::TLS_DYNAMIC_MAT_PCREL_ADDR, dl, PtrVT, TGA);
+    }
+
     SDValue TGA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, 0);
     SDValue GOTPtr;
     if (is64bit) {

@@ -138,6 +138,9 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       case MCSymbolRefExpr::VK_PPC_GOT_PCREL:
         Type = ELF::R_PPC64_GOT_PCREL34;
         break;
+      case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_PCREL:
+        Type = ELF::R_PPC64_GOT_TLSGD_PCREL34;
+        break;
       }
       break;
     case FK_Data_4:
