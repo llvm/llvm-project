@@ -1618,9 +1618,10 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
 }
 
 static bool compareByFilePosition(InputSection *a, InputSection *b) {
-  InputSection *la = a->getLinkOrderDep();
-  InputSection *lb = b->getLinkOrderDep();
-  // SHF_LINK_ORDER sections with non-zero sh_link are ordered before others.
+  InputSection *la = a->flags & SHF_LINK_ORDER ? a->getLinkOrderDep() : nullptr;
+  InputSection *lb = b->flags & SHF_LINK_ORDER ? b->getLinkOrderDep() : nullptr;
+  // SHF_LINK_ORDER sections with non-zero sh_link are ordered before
+  // non-SHF_LINK_ORDER sections and SHF_LINK_ORDER sections with zero sh_link.
   if (!la || !lb)
     return la && !lb;
   OutputSection *aOut = la->getParent();
@@ -1642,44 +1643,34 @@ template <class ELFT> void Writer<ELFT>::resolveShfLinkOrder() {
         sec->type == SHT_ARM_EXIDX)
       continue;
 
-    // Link order may be distributed across several InputSectionDescriptions
-    // but sort must consider them all at once.
+    // Link order may be distributed across several InputSectionDescriptions.
+    // Sorting is performed separately.
     std::vector<InputSection **> scriptSections;
     std::vector<InputSection *> sections;
-    bool started = false, stopped = false;
     for (BaseCommand *base : sec->sectionCommands) {
-      if (auto *isd = dyn_cast<InputSectionDescription>(base)) {
-        for (InputSection *&isec : isd->sections) {
-          if (!(isec->flags & SHF_LINK_ORDER)) {
-            if (started)
-              stopped = true;
-          } else if (stopped) {
-            error(toString(isec) + ": SHF_LINK_ORDER sections in " + sec->name +
-                  " are not contiguous");
-          } else {
-            started = true;
-
-            scriptSections.push_back(&isec);
-            sections.push_back(isec);
-
-            InputSection *link = isec->getLinkOrderDep();
-            if (link && !link->getParent())
-              error(toString(isec) + ": sh_link points to discarded section " +
-                    toString(link));
-          }
+      auto *isd = dyn_cast<InputSectionDescription>(base);
+      if (!isd)
+        continue;
+      bool hasLinkOrder = false;
+      scriptSections.clear();
+      sections.clear();
+      for (InputSection *&isec : isd->sections) {
+        if (isec->flags & SHF_LINK_ORDER) {
+          InputSection *link = isec->getLinkOrderDep();
+          if (link && !link->getParent())
+            error(toString(isec) + ": sh_link points to discarded section " +
+                  toString(link));
+          hasLinkOrder = true;
         }
-      } else if (started) {
-        stopped = true;
+        scriptSections.push_back(&isec);
+        sections.push_back(isec);
+      }
+      if (hasLinkOrder && errorCount() == 0) {
+        llvm::stable_sort(sections, compareByFilePosition);
+        for (int i = 0, n = sections.size(); i != n; ++i)
+          *scriptSections[i] = sections[i];
       }
     }
-
-    if (errorCount())
-      continue;
-
-    llvm::stable_sort(sections, compareByFilePosition);
-
-    for (int i = 0, n = sections.size(); i < n; ++i)
-      *scriptSections[i] = sections[i];
   }
 }
 
