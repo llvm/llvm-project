@@ -70,6 +70,7 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {eStopHookIDCompletion, CommandCompletions::StopHookIDs},
       {eThreadIndexCompletion, CommandCompletions::ThreadIndexes},
       {eWatchPointIDCompletion, CommandCompletions::WatchPointIDs},
+      {eBreakpointNameCompletion, CommandCompletions::BreakpointNames},
       {eNoCompletion, nullptr} // This one has to be last in the list.
   };
 
@@ -617,13 +618,26 @@ void CommandCompletions::Breakpoints(CommandInterpreter &interpreter,
   }
 }
 
+void CommandCompletions::BreakpointNames(CommandInterpreter &interpreter,
+                                         CompletionRequest &request,
+                                         SearchFilter *searcher) {
+  lldb::TargetSP target = interpreter.GetDebugger().GetSelectedTarget();
+  if (!target)
+    return;
+
+  std::vector<std::string> name_list;
+  target->GetBreakpointNames(name_list);
+
+  for (const std::string &name : name_list)
+    request.TryCompleteCurrentArg(name);
+}
+
 void CommandCompletions::ProcessPluginNames(CommandInterpreter &interpreter,
                                             CompletionRequest &request,
                                             SearchFilter *searcher) {
   PluginManager::AutoCompleteProcessName(request.GetCursorArgumentPrefix(),
                                          request);
 }
-
 void CommandCompletions::DisassemblyFlavors(CommandInterpreter &interpreter,
                                             CompletionRequest &request,
                                             SearchFilter *searcher) {
