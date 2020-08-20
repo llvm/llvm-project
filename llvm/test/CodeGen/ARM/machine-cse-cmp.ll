@@ -52,7 +52,7 @@ entry:
 ; CHECK-LABEL: f3:
 ; CHECK-NOT: sub
 ; CHECK: cmp
-; CHECK: bge
+; CHECK: blt
 %0 = load i32, i32* %offset, align 4
 %cmp = icmp slt i32 %0, %size
 %s = sub nsw i32 %0, %size
