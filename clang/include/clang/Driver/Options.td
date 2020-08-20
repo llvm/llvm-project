@@ -2296,6 +2296,11 @@ defm implicit_modules : BoolFOption<"implicit-modules",
   NegFlag<SetFalse, [CC1Option]>, PosFlag<SetTrue>, BothFlags<[NoXarchOption,CoreOption]>>;
 def fretain_comments_from_system_headers : Flag<["-"], "fretain-comments-from-system-headers">, Group<f_Group>, Flags<[CC1Option]>,
   MarshallingInfoFlag<LangOpts<"RetainCommentsFromSystemHeaders">>;
+def fmodule_header : Flag <["-"], "fmodule-header">, Group<f_Group>,
+  Flags<[NoXarchOption]>, HelpText<"Build a C++20 Header Unit from a header.">;
+def fmodule_header_EQ : Joined<["-"], "fmodule-header=">, Group<f_Group>,
+  Flags<[NoXarchOption]>, MetaVarName<"<kind>">,
+  HelpText<"Build a C++20 Header Unit from a header that should be found in the user (fmodule-header=user) or system (fmodule-header=system) search path.">;
 
 def fno_knr_functions : Flag<["-"], "fno-knr-functions">, Group<f_Group>,
   MarshallingInfoFlag<LangOpts<"DisableKNRFunctions">>,
