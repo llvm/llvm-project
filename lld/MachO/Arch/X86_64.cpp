@@ -34,7 +34,7 @@ struct X86_64 : TargetInfo {
   void writeStubHelperEntry(uint8_t *buf, const DylibSymbol &,
                             uint64_t entryAddr) const override;
 
-  void prepareSymbolRelocation(lld::macho::Symbol &, const InputSection *,
+  void prepareSymbolRelocation(lld::macho::Symbol *, const InputSection *,
                                const Reloc &) override;
   uint64_t resolveSymbolVA(uint8_t *buf, const lld::macho::Symbol &,
                            uint8_t type) const override;
@@ -217,25 +217,25 @@ void X86_64::writeStubHelperEntry(uint8_t *buf, const DylibSymbol &sym,
                    in.stubHelper->addr);
 }
 
-void X86_64::prepareSymbolRelocation(lld::macho::Symbol &sym,
+void X86_64::prepareSymbolRelocation(lld::macho::Symbol *sym,
                                      const InputSection *isec, const Reloc &r) {
   switch (r.type) {
   case X86_64_RELOC_GOT_LOAD:
     // TODO: implement mov -> lea relaxation for non-dynamic symbols
   case X86_64_RELOC_GOT:
     in.got->addEntry(sym);
-    if (sym.isTlv())
+    if (sym->isTlv())
       error("found GOT relocation referencing thread-local variable in " +
             toString(isec));
     break;
   case X86_64_RELOC_BRANCH: {
     // TODO: weak dysyms should go into the weak binding section instead
-    if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
-      in.stubs->addEntry(*dysym);
+    if (auto *dysym = dyn_cast<DylibSymbol>(sym))
+      in.stubs->addEntry(dysym);
     break;
   }
   case X86_64_RELOC_UNSIGNED: {
-    if (auto *dysym = dyn_cast<DylibSymbol>(&sym)) {
+    if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
       if (r.length != 3) {
         error("X86_64_RELOC_UNSIGNED referencing the dynamic symbol " +
               dysym->getName() + " must have r_length = 3");
@@ -251,17 +251,17 @@ void X86_64::prepareSymbolRelocation(lld::macho::Symbol &sym,
   case X86_64_RELOC_SIGNED_4:
     break;
   case X86_64_RELOC_TLV:
-    if (isa<DylibSymbol>(&sym)) {
+    if (isa<DylibSymbol>(sym)) {
       in.tlvPointers->addEntry(sym);
     } else {
-      assert(isa<Defined>(&sym));
+      assert(isa<Defined>(sym));
       // TLV relocations on x86_64 are always used with a movq opcode, which
       // can be converted to leaq opcodes if they reference a defined symbol.
       // (This is in contrast to GOT relocations, which can be used with
       // non-movq opcodes.) As such, there is no need to add an entry to
       // tlvPointers here.
     }
-    if (!sym.isTlv())
+    if (!sym->isTlv())
       error(
           "found X86_64_RELOC_TLV referencing a non-thread-local variable in " +
           toString(isec));

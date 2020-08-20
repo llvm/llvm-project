@@ -89,10 +89,13 @@ NonLazyPointerSectionBase::NonLazyPointerSectionBase(const char *segname,
   flags = MachO::S_NON_LAZY_SYMBOL_POINTERS;
 }
 
-void NonLazyPointerSectionBase::addEntry(Symbol &sym) {
-  if (entries.insert(&sym)) {
-    assert(sym.gotIndex == UINT32_MAX);
-    sym.gotIndex = entries.size() - 1;
+void NonLazyPointerSectionBase::addEntry(Symbol *sym) {
+  if (entries.insert(sym)) {
+    assert(sym->gotIndex == UINT32_MAX);
+    sym->gotIndex = entries.size() - 1;
+
+    if (auto *dysym = dyn_cast<DylibSymbol>(sym))
+      in.binding->addEntry(dysym, this, sym->gotIndex * WordSize);
   }
 }
 
@@ -104,11 +107,6 @@ void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
 
 BindingSection::BindingSection()
     : LinkEditSection(segment_names::linkEdit, section_names::binding) {}
-
-bool BindingSection::isNeeded() const {
-  return bindings.size() != 0 || in.got->isNeeded() ||
-         in.tlvPointers->isNeeded();
-}
 
 namespace {
 struct Binding {
@@ -125,7 +123,7 @@ struct Binding {
 // The bind opcode "interpreter" remembers the values of each binding field, so
 // we only need to encode the differences between bindings. Hence the use of
 // lastBinding.
-static void encodeBinding(const DylibSymbol &dysym, const OutputSection *osec,
+static void encodeBinding(const DylibSymbol *dysym, const OutputSection *osec,
                           uint64_t outSecOff, int64_t addend,
                           Binding &lastBinding, raw_svector_ostream &os) {
   using namespace llvm::MachO;
@@ -143,15 +141,15 @@ static void encodeBinding(const DylibSymbol &dysym, const OutputSection *osec,
     lastBinding.offset = offset;
   }
 
-  if (lastBinding.ordinal != dysym.file->ordinal) {
-    if (dysym.file->ordinal <= BIND_IMMEDIATE_MASK) {
+  if (lastBinding.ordinal != dysym->file->ordinal) {
+    if (dysym->file->ordinal <= BIND_IMMEDIATE_MASK) {
       os << static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
-                                 dysym.file->ordinal);
+                                 dysym->file->ordinal);
     } else {
       os << static_cast<uint8_t>(MachO::BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB);
-      encodeULEB128(dysym.file->ordinal, os);
+      encodeULEB128(dysym->file->ordinal, os);
     }
-    lastBinding.ordinal = dysym.file->ordinal;
+    lastBinding.ordinal = dysym->file->ordinal;
   }
 
   if (lastBinding.addend != addend) {
@@ -161,27 +159,18 @@ static void encodeBinding(const DylibSymbol &dysym, const OutputSection *osec,
   }
 
   os << static_cast<uint8_t>(BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM)
-     << dysym.getName() << '\0'
+     << dysym->getName() << '\0'
      << static_cast<uint8_t>(BIND_OPCODE_SET_TYPE_IMM | BIND_TYPE_POINTER)
      << static_cast<uint8_t>(BIND_OPCODE_DO_BIND);
   // DO_BIND causes dyld to both perform the binding and increment the offset
   lastBinding.offset += WordSize;
 }
 
-static bool encodeNonLazyPointerSection(NonLazyPointerSectionBase *osec,
-                                        Binding &lastBinding,
-                                        raw_svector_ostream &os) {
-  bool didEncode = false;
-  size_t idx = 0;
-  for (const Symbol *sym : osec->getEntries()) {
-    if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
-      didEncode = true;
-      encodeBinding(*dysym, osec, idx * WordSize, /*addend=*/0, lastBinding,
-                    os);
-    }
-    ++idx;
-  }
-  return didEncode;
+uint64_t BindingEntry::getVA() const {
+  if (auto *isec = section.dyn_cast<const InputSection *>())
+    return isec->getVA() + offset;
+  auto *osec = section.get<const OutputSection *>();
+  return osec->addr + offset;
 }
 
 // Emit bind opcodes, which are a stream of byte-sized opcodes that dyld
@@ -200,30 +189,23 @@ static bool encodeNonLazyPointerSection(NonLazyPointerSectionBase *osec,
 void BindingSection::finalizeContents() {
   raw_svector_ostream os{contents};
   Binding lastBinding;
-  bool didEncode = encodeNonLazyPointerSection(in.got, lastBinding, os);
-  didEncode |= encodeNonLazyPointerSection(in.tlvPointers, lastBinding, os);
 
-  // Sorting the relocations by segment and address allows us to encode them
-  // more compactly.
+  // Since bindings are delta-encoded, sorting them allows for a more compact
+  // result. Note that sorting by address alone ensures that bindings for the
+  // same segment / section are located together.
   llvm::sort(bindings, [](const BindingEntry &a, const BindingEntry &b) {
-    OutputSegment *segA = a.isec->parent->parent;
-    OutputSegment *segB = b.isec->parent->parent;
-    if (segA != segB)
-      return segA->fileOff < segB->fileOff;
-    OutputSection *osecA = a.isec->parent;
-    OutputSection *osecB = b.isec->parent;
-    if (osecA != osecB)
-      return osecA->addr < osecB->addr;
-    if (a.isec != b.isec)
-      return a.isec->outSecOff < b.isec->outSecOff;
-    return a.offset < b.offset;
+    return a.getVA() < b.getVA();
   });
   for (const BindingEntry &b : bindings) {
-    didEncode = true;
-    encodeBinding(*b.dysym, b.isec->parent, b.isec->outSecOff + b.offset,
-                  b.addend, lastBinding, os);
+    if (auto *isec = b.section.dyn_cast<const InputSection *>()) {
+      encodeBinding(b.dysym, isec->parent, isec->outSecOff + b.offset, b.addend,
+                    lastBinding, os);
+    } else {
+      auto *osec = b.section.get<const OutputSection *>();
+      encodeBinding(b.dysym, osec, b.offset, b.addend, lastBinding, os);
+    }
   }
-  if (didEncode)
+  if (!bindings.empty())
     os << static_cast<uint8_t>(MachO::BIND_OPCODE_DONE);
 }
 
@@ -246,9 +228,9 @@ void StubsSection::writeTo(uint8_t *buf) const {
   }
 }
 
-void StubsSection::addEntry(DylibSymbol &sym) {
-  if (entries.insert(&sym))
-    sym.stubsIndex = entries.size() - 1;
+void StubsSection::addEntry(DylibSymbol *sym) {
+  if (entries.insert(sym))
+    sym->stubsIndex = entries.size() - 1;
 }
 
 StubHelperSection::StubHelperSection()
@@ -279,7 +261,7 @@ void StubHelperSection::setup() {
           "Needed to perform lazy binding.");
     return;
   }
-  in.got->addEntry(*stubBinder);
+  in.got->addEntry(stubBinder);
 
   inputSections.push_back(in.imageLoaderCache);
   symtab->addDefined("__dyld_private", in.imageLoaderCache, 0,
