@@ -574,24 +574,6 @@ void SBCommandInterpreter::SourceInitFileInHomeDirectory(
   }
 }
 
-void SBCommandInterpreter::SourceInitFileInHomeDirectory(
-    SBCommandReturnObject &result, bool is_repl) {
-  LLDB_RECORD_METHOD(void, SBCommandInterpreter, SourceInitFileInHomeDirectory,
-                     (lldb::SBCommandReturnObject &, bool), result, is_repl);
-
-  result.Clear();
-  if (IsValid()) {
-    TargetSP target_sp(m_opaque_ptr->GetDebugger().GetSelectedTarget());
-    std::unique_lock<std::recursive_mutex> lock;
-    if (target_sp)
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
-    m_opaque_ptr->SourceInitFileHome(result.ref(), is_repl);
-  } else {
-    result->AppendError("SBCommandInterpreter is not valid");
-    result->SetStatus(eReturnStatusFailed);
-  }
-}
-
 void SBCommandInterpreter::SourceInitFileInCurrentWorkingDirectory(
     SBCommandReturnObject &result) {
   LLDB_RECORD_METHOD(void, SBCommandInterpreter,
@@ -940,9 +922,6 @@ void RegisterMethods<SBCommandInterpreterRunOptions>(Registry &R) {
   LLDB_REGISTER_METHOD(void, SBCommandInterpreter,
                        SourceInitFileInHomeDirectory,
                        (lldb::SBCommandReturnObject &));
-  LLDB_REGISTER_METHOD(void, SBCommandInterpreter,
-                       SourceInitFileInHomeDirectory,
-                       (lldb::SBCommandReturnObject &, bool));
   LLDB_REGISTER_METHOD(void, SBCommandInterpreter,
                        SourceInitFileInCurrentWorkingDirectory,
                        (lldb::SBCommandReturnObject &));
