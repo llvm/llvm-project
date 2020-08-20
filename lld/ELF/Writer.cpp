@@ -1234,13 +1234,7 @@ static bool shouldSkip(BaseCommand *cmd) {
 static std::vector<BaseCommand *>::iterator
 findOrphanPos(std::vector<BaseCommand *>::iterator b,
               std::vector<BaseCommand *>::iterator e) {
-  // OutputSections without the SHF_ALLOC flag are not part of the memory image
-  // and their addresses usually don't matter. Place any orphan sections without
-  // the SHF_ALLOC flag at the end so that these do not affect the address
-  // assignment of OutputSections with the SHF_ALLOC flag.
   OutputSection *sec = cast<OutputSection>(*e);
-  if (!(sec->flags & SHF_ALLOC))
-    return e;
 
   // Find the first element that has as close a rank as possible.
   auto i = std::max_element(b, e, [=](BaseCommand *a, BaseCommand *b) {
@@ -2589,7 +2583,11 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
       if (p->p_type == PT_LOAD && (p->p_flags & PF_X))
         lastRX = p;
 
+  // Layout SHF_ALLOC sections before non-SHF_ALLOC sections. A non-SHF_ALLOC
+  // will not occupy file offsets contained by a PT_LOAD.
   for (OutputSection *sec : outputSections) {
+    if (!(sec->flags & SHF_ALLOC))
+      continue;
     off = setFileOffset(sec, off);
 
     // If this is a last section of the last executable segment and that
@@ -2599,6 +2597,9 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
         lastRX->lastSec == sec)
       off = alignTo(off, config->commonPageSize);
   }
+  for (OutputSection *sec : outputSections)
+    if (!(sec->flags & SHF_ALLOC))
+      off = setFileOffset(sec, off);
 
   sectionHeaderOff = alignTo(off, config->wordsize);
   fileSize = sectionHeaderOff + (outputSections.size() + 1) * sizeof(Elf_Shdr);
