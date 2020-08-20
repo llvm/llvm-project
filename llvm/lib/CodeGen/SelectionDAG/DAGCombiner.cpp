@@ -641,14 +641,18 @@ namespace {
     // Classify the origin of a stored value.
     enum class StoreSource { Unknown, Constant, Extract, Load };
     StoreSource getStoreSource(SDValue StoreVal) {
-      if (isa<ConstantSDNode>(StoreVal) || isa<ConstantFPSDNode>(StoreVal))
+      switch (StoreVal.getOpcode()) {
+      case ISD::Constant:
+      case ISD::ConstantFP:
         return StoreSource::Constant;
-      if (StoreVal.getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
-          StoreVal.getOpcode() == ISD::EXTRACT_SUBVECTOR)
+      case ISD::EXTRACT_VECTOR_ELT:
+      case ISD::EXTRACT_SUBVECTOR:
         return StoreSource::Extract;
-      if (isa<LoadSDNode>(StoreVal))
+      case ISD::LOAD:
         return StoreSource::Load;
-      return StoreSource::Unknown;
+      default:
+        return StoreSource::Unknown;
+      }
     }
 
     /// This is a helper function for visitMUL to check the profitability
