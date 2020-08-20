@@ -1751,6 +1751,7 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
   // we have a decl for the function and it has a target attribute then
   // parse that and add it to the feature set.
   StringRef TargetCPU = getTarget().getTargetOpts().CPU;
+  StringRef TuneCPU = getTarget().getTargetOpts().TuneCPU;
   std::vector<std::string> Features;
   const auto *FD = dyn_cast_or_null<FunctionDecl>(GD.getDecl());
   FD = FD ? FD->getMostRecentDecl() : FD;
@@ -1783,6 +1784,10 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
 
   if (TargetCPU != "") {
     Attrs.addAttribute("target-cpu", TargetCPU);
+    AddedAttr = true;
+  }
+  if (TuneCPU != "") {
+    Attrs.addAttribute("tune-cpu", TuneCPU);
     AddedAttr = true;
   }
   if (!Features.empty()) {
