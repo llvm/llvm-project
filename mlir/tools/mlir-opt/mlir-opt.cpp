@@ -48,6 +48,7 @@ void registerTestConstantFold();
 void registerTestConvertGPUKernelToCubinPass();
 void registerTestConvertGPUKernelToHsacoPass();
 void registerTestDominancePass();
+void registerTestDialect(DialectRegistry &);
 void registerTestExpandTanhPass();
 void registerTestFunc();
 void registerTestGpuMemoryPromotionPass();
@@ -130,5 +131,10 @@ int main(int argc, char **argv) {
 #ifdef MLIR_INCLUDE_TESTS
   registerTestPasses();
 #endif
-  return failed(MlirOptMain(argc, argv, "MLIR modular optimizer driver"));
+  DialectRegistry registry;
+  registerAllDialects(registry);
+  registerTestDialect(registry);
+  return failed(MlirOptMain(argc, argv, "MLIR modular optimizer driver\n",
+                            registry,
+                            /*preloadDialectsInContext=*/false));
 }
