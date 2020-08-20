@@ -198,19 +198,23 @@ enum class DistributionMethod {
 };
 
 /// Callback function type used to get processor ID, and number of processors
-/// used for distribution.
+/// used for distribution for all parallel loops generated.
 struct ProcInfo {
   Value procId;
   Value nprocs;
 };
-using ProcInfoCallBackFn =
-    std::function<ProcInfo(OpBuilder &b, Location loc, unsigned loopNum)>;
+using ProcInfoCallBackFn = std::function<SmallVector<ProcInfo, 2>(
+    OpBuilder &b, Location loc, ArrayRef<SubViewOp::Range> parallelLoopRanges)>;
 
 /// Options that allow distribution of loops generated in Linalg transforms to
 /// processors while generating the loops.
 struct LinalgLoopDistributionOptions {
-  /// Callback function that returns the Value for processor ID, and number of
-  /// processors used to execute a given loop.
+  /// Callback function that returns the Values for processor ID (`procId`), and
+  /// number of processors (`nprocs`) used to execute the parallel loops. The
+  /// number of `{procId, nprocs}` pairs returned must be equal to the number of
+  /// `parallelLoopRanges` passed into the callback, which in-turn is same as
+  /// the number of parallel loops for which the `distributionMethod` is
+  /// specified below.
   ProcInfoCallBackFn procInfo;
   /// Specification of how to distribute the `scf.parallel` loops that are
   /// generated. As the `scf.parallel` loop is generated, the elements of this
