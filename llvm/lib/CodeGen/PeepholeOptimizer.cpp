@@ -1357,9 +1357,6 @@ bool PeepholeOptimizer::foldImmediate(
     MachineOperand &MO = MI.getOperand(i);
     if (!MO.isReg() || MO.isDef())
       continue;
-    // Ignore dead implicit defs.
-    if (MO.isImplicit() && MO.isDead())
-      continue;
     Register Reg = MO.getReg();
     if (!Reg.isVirtual())
       continue;
