@@ -1041,7 +1041,7 @@ CommandObject::ArgumentTableEntry CommandObject::g_arguments_data[] = {
     { eArgTypeBoolean, "boolean", CommandCompletions::eNoCompletion, { nullptr, false }, "A Boolean value: 'true' or 'false'" },
     { eArgTypeBreakpointID, "breakpt-id", CommandCompletions::eNoCompletion, { BreakpointIDHelpTextCallback, false }, nullptr },
     { eArgTypeBreakpointIDRange, "breakpt-id-list", CommandCompletions::eNoCompletion, { BreakpointIDRangeHelpTextCallback, false }, nullptr },
-    { eArgTypeBreakpointName, "breakpoint-name", CommandCompletions::eNoCompletion, { BreakpointNameHelpTextCallback, false }, nullptr },
+    { eArgTypeBreakpointName, "breakpoint-name", CommandCompletions::eBreakpointNameCompletion, { BreakpointNameHelpTextCallback, false }, nullptr },
     { eArgTypeByteSize, "byte-size", CommandCompletions::eNoCompletion, { nullptr, false }, "Number of bytes to use." },
     { eArgTypeClassName, "class-name", CommandCompletions::eNoCompletion, { nullptr, false }, "Then name of a class from the debug information in the program." },
     { eArgTypeCommandName, "cmd-name", CommandCompletions::eNoCompletion, { nullptr, false }, "A debugger command (may be multiple words), without any options or arguments." },

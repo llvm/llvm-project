@@ -44,10 +44,11 @@ public:
     eStopHookIDCompletion = (1u << 16),
     eThreadIndexCompletion = (1u << 17),
     eWatchPointIDCompletion = (1u << 18),
+    eBreakpointNameCompletion = (1u << 19),
     // This item serves two purposes.  It is the last element in the enum, so
     // you can add custom enums starting from here in your Option class. Also
     // if you & in this bit the base code will not process the option.
-    eCustomCompletion = (1u << 19)
+    eCustomCompletion = (1u << 20)
   };
 
   static bool InvokeCommonCompletionCallbacks(
@@ -100,6 +101,10 @@ public:
 
   static void Breakpoints(CommandInterpreter &interpreter,
                           CompletionRequest &request, SearchFilter *searcher);
+
+  static void BreakpointNames(CommandInterpreter &interpreter,
+                              CompletionRequest &request,
+                              SearchFilter *searcher);
 
   static void ProcessPluginNames(CommandInterpreter &interpreter,
                                  CompletionRequest &request,
