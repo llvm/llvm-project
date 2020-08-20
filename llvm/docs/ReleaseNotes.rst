@@ -172,6 +172,11 @@ During this release ...
        }
      }
 
+  Please note that support for lazy binding of SVE function calls is
+  incomplete. When you interface user code with SVE functions that are
+  provided through shared libraries, avoid using lazy binding. If you
+  use lazy binding, the results could be corrupted.
+
 Changes to the MIPS Target
 --------------------------
 
