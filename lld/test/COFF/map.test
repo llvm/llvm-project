@@ -1,7 +1,7 @@
-# RUN: yaml2obj < %p/Inputs/export.yaml > %t-dll.obj
+# RUN: yaml2obj %p/Inputs/export.yaml -o %t-dll.obj
 # RUN: lld-link /out:%t.dll /dll %t-dll.obj /implib:%t-dll.lib \
 # RUN:   /export:exportfn1 /export:exportfn2
-# RUN: yaml2obj < %p/Inputs/map.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/map.yaml -o %t.obj
 # RUN: lld-link /out:%t.exe /entry:main %t.obj %t-dll.lib /map:%T/foo.map  /lldmap
 # RUN: FileCheck -check-prefix=MAP -strict-whitespace %s < %T/foo.map
 # RUN: FileCheck -check-prefix=LLDMAP -strict-whitespace %s < %t.map

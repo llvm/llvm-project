@@ -1,5 +1,5 @@
-# RUN: yaml2obj < %s > %t.obj
-# RUN: yaml2obj %p/Inputs/generic.yaml > %t2.obj
+# RUN: yaml2obj %s -o %t.obj
+# RUN: yaml2obj %p/Inputs/generic.yaml -o %t2.obj
 
 # RUN: lld-link /out:%t.exe /debug /entry:main %t.obj %t2.obj /nodefaultlib
 # RUN: llvm-pdbutil dump --types --type-data %t.pdb | FileCheck %s

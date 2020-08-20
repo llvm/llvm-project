@@ -1,6 +1,6 @@
 # REQUIRES: arm
 
-# RUN: yaml2obj < %s > %t.obj
+# RUN: yaml2obj %s -o %t.obj
 # RUN: llvm-objdump -s %t.obj | FileCheck %s --check-prefix BEFORE
 # RUN: lld-link /entry:function /subsystem:console /out:%t.exe %t.obj
 # RUN: llvm-objdump -s %t.exe | FileCheck %s --check-prefix AFTER
