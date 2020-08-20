@@ -444,11 +444,12 @@ void sat_sassasas() {
 // UNSIGNED-NEXT:  entry:
 // UNSIGNED-NEXT:    [[TMP0:%.*]] = load i16, i16* @usa, align 2
 // UNSIGNED-NEXT:    [[TMP1:%.*]] = load i16, i16* @usa_sat, align 2
-// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i16 [[TMP0]] to i15
-// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = trunc i16 [[TMP1]] to i15
-// UNSIGNED-NEXT:    [[TMP2:%.*]] = call i15 @llvm.usub.sat.i15(i15 [[RESIZE]], i15 [[RESIZE1]])
-// UNSIGNED-NEXT:    [[RESIZE2:%.*]] = zext i15 [[TMP2]] to i16
-// UNSIGNED-NEXT:    store i16 [[RESIZE2]], i16* @usa_sat, align 2
+// UNSIGNED-NEXT:    [[TMP2:%.*]] = call i16 @llvm.ssub.sat.i16(i16 [[TMP0]], i16 [[TMP1]])
+// UNSIGNED-NEXT:    [[TMP3:%.*]] = icmp slt i16 [[TMP2]], 0
+// UNSIGNED-NEXT:    [[SATMIN:%.*]] = select i1 [[TMP3]], i16 0, i16 [[TMP2]]
+// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i16 [[SATMIN]] to i15
+// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = zext i15 [[RESIZE]] to i16
+// UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @usa_sat, align 2
 // UNSIGNED-NEXT:    ret void
 //
 void sat_usasusausas() {
@@ -469,11 +470,13 @@ void sat_usasusausas() {
 // UNSIGNED-NEXT:  entry:
 // UNSIGNED-NEXT:    [[TMP0:%.*]] = load i32, i32* @ua, align 4
 // UNSIGNED-NEXT:    [[TMP1:%.*]] = load i16, i16* @usa_sat, align 2
-// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i32 [[TMP0]] to i31
-// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = zext i16 [[TMP1]] to i31
-// UNSIGNED-NEXT:    [[UPSCALE:%.*]] = shl i31 [[RESIZE1]], 8
-// UNSIGNED-NEXT:    [[TMP2:%.*]] = call i31 @llvm.usub.sat.i31(i31 [[RESIZE]], i31 [[UPSCALE]])
-// UNSIGNED-NEXT:    [[RESIZE2:%.*]] = zext i31 [[TMP2]] to i32
+// UNSIGNED-NEXT:    [[RESIZE:%.*]] = zext i16 [[TMP1]] to i32
+// UNSIGNED-NEXT:    [[UPSCALE:%.*]] = shl i32 [[RESIZE]], 8
+// UNSIGNED-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ssub.sat.i32(i32 [[TMP0]], i32 [[UPSCALE]])
+// UNSIGNED-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], 0
+// UNSIGNED-NEXT:    [[SATMIN:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]
+// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = trunc i32 [[SATMIN]] to i31
+// UNSIGNED-NEXT:    [[RESIZE2:%.*]] = zext i31 [[RESIZE1]] to i32
 // UNSIGNED-NEXT:    store i32 [[RESIZE2]], i32* @ua_sat, align 4
 // UNSIGNED-NEXT:    ret void
 //
@@ -533,11 +536,12 @@ void sat_sassasui() {
 // UNSIGNED-NEXT:  entry:
 // UNSIGNED-NEXT:    [[TMP0:%.*]] = load i16, i16* @uf_sat, align 2
 // UNSIGNED-NEXT:    [[TMP1:%.*]] = load i16, i16* @uf_sat, align 2
-// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i16 [[TMP0]] to i15
-// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = trunc i16 [[TMP1]] to i15
-// UNSIGNED-NEXT:    [[TMP2:%.*]] = call i15 @llvm.usub.sat.i15(i15 [[RESIZE]], i15 [[RESIZE1]])
-// UNSIGNED-NEXT:    [[RESIZE2:%.*]] = zext i15 [[TMP2]] to i16
-// UNSIGNED-NEXT:    store i16 [[RESIZE2]], i16* @uf_sat, align 2
+// UNSIGNED-NEXT:    [[TMP2:%.*]] = call i16 @llvm.ssub.sat.i16(i16 [[TMP0]], i16 [[TMP1]])
+// UNSIGNED-NEXT:    [[TMP3:%.*]] = icmp slt i16 [[TMP2]], 0
+// UNSIGNED-NEXT:    [[SATMIN:%.*]] = select i1 [[TMP3]], i16 0, i16 [[TMP2]]
+// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i16 [[SATMIN]] to i15
+// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = zext i15 [[RESIZE]] to i16
+// UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @uf_sat, align 2
 // UNSIGNED-NEXT:    ret void
 //
 void sat_ufsufsufs() {
