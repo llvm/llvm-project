@@ -51,17 +51,23 @@ static llvm::Error InitializeFileSystem() {
       FileSystem::Initialize();
     }
 
-    llvm::Expected<std::string> cwd =
-        loader->LoadBuffer<WorkingDirectoryProvider>();
-    if (!cwd)
-      return cwd.takeError();
-
-    llvm::StringRef working_dir = llvm::StringRef(*cwd).rtrim();
+    // Set the current working directory form the reproducer.
+    llvm::Expected<std::string> working_dir =
+        repro::GetDirectoryFrom<WorkingDirectoryProvider>(loader);
+    if (!working_dir)
+      return working_dir.takeError();
     if (std::error_code ec = FileSystem::Instance()
                                  .GetVirtualFileSystem()
-                                 ->setCurrentWorkingDirectory(working_dir)) {
+                                 ->setCurrentWorkingDirectory(*working_dir)) {
       return llvm::errorCodeToError(ec);
     }
+
+    // Set the home directory from the reproducer.
+    llvm::Expected<std::string> home_dir =
+        repro::GetDirectoryFrom<HomeDirectoryProvider>(loader);
+    if (!home_dir)
+      return home_dir.takeError();
+    FileSystem::Instance().SetHomeDirectory(*home_dir);
 
     return llvm::Error::success();
   }
