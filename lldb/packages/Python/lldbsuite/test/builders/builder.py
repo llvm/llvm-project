@@ -20,6 +20,13 @@ class Builder:
         compiler = lldbutil.which(compiler)
         return os.path.abspath(compiler)
 
+    def getExtraMakeArgs(self):
+        """
+        Helper function to return extra argumentsfor the make system. This
+        method is meant to be overridden by platform specific builders.
+        """
+        return ""
+
     def getMake(self, test_subdir, test_name):
         """Returns the invocation for GNU make.
         The first argument is a tuple of the relative path to the testcase
@@ -101,15 +108,6 @@ class Builder:
         else:
             return ""
 
-    def getDsymutilSpec(self):
-        """
-        Helper function to return the key-value string to specify the dsymutil
-        used for the make system.
-        """
-        if configuration.dsymutil:
-            return "DSYMUTIL={}".format(configuration.dsymutil)
-        return ""
-
     def getSDKRootSpec(self):
         """
         Helper function to return the key-value string to specify the SDK root
@@ -143,7 +141,7 @@ class Builder:
                 "all",
                 self.getArchSpec(architecture),
                 self.getCCSpec(compiler),
-                self.getDsymutilSpec(),
+                self.getExtraMakeArgs(),
                 self.getSDKRootSpec(),
                 self.getModuleCacheSpec(),
                 self.getCmdLine(dictionary)
@@ -168,7 +166,7 @@ class Builder:
                 "MAKE_DSYM=NO",
                 self.getArchSpec(architecture),
                 self.getCCSpec(compiler),
-                self.getDsymutilSpec(),
+                self.getExtraMakeArgs(),
                 self.getSDKRootSpec(),
                 self.getModuleCacheSpec(),
                 self.getCmdLine(dictionary)
@@ -192,7 +190,7 @@ class Builder:
                 "MAKE_DSYM=NO", "MAKE_DWO=YES",
                 self.getArchSpec(architecture),
                 self.getCCSpec(compiler),
-                self.getDsymutilSpec(),
+                self.getExtraMakeArgs(),
                 self.getSDKRootSpec(),
                 self.getModuleCacheSpec(),
                 self.getCmdLine(dictionary)
@@ -216,7 +214,7 @@ class Builder:
                 "MAKE_DSYM=NO", "MAKE_GMODULES=YES",
                 self.getArchSpec(architecture),
                 self.getCCSpec(compiler),
-                self.getDsymutilSpec(),
+                self.getExtraMakeArgs(),
                 self.getSDKRootSpec(),
                 self.getModuleCacheSpec(),
                 self.getCmdLine(dictionary)
