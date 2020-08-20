@@ -95,6 +95,7 @@ BackgroundIndex::BackgroundIndex(
     BackgroundIndexStorage::Factory IndexStorageFactory, Options Opts)
     : SwapIndex(std::make_unique<MemIndex>()), TFS(TFS), CDB(CDB),
       ContextProvider(std::move(Opts.ContextProvider)),
+      CollectMainFileRefs(Opts.CollectMainFileRefs),
       Rebuilder(this, &IndexedSymbols, Opts.ThreadPoolSize),
       IndexStorageFactory(std::move(IndexStorageFactory)),
       Queue(std::move(Opts.OnProgress)),
@@ -301,6 +302,7 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
       return false; // Skip files that haven't changed, without errors.
     return true;
   };
+  IndexOpts.CollectMainFileRefs = CollectMainFileRefs;
 
   IndexFileIn Index;
   auto Action = createStaticIndexingAction(
