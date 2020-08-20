@@ -175,6 +175,8 @@ if(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
         endif()
       endif()
     endif()
+  else()
+    set(LLVM_ENABLE_TERMINFO 0)
   endif()
 endif()
 
