@@ -18,10 +18,10 @@ function(add_fp_unittest name)
 
   add_libc_unittest(${name} ${MATH_UNITTEST_UNPARSED_ARGUMENTS})
   get_fq_target_name(${name} fq_target_name)
-  target_link_libraries(${fq_target_name} PRIVATE LibcFPTestHelpers)
   if(MATH_UNITTEST_NEED_MPFR)
     target_link_libraries(${fq_target_name} PRIVATE libcMPFRWrapper -lmpfr -lgmp)
   endif()
+  target_link_libraries(${fq_target_name} PRIVATE LibcFPTestHelpers)
 endfunction(add_fp_unittest)
 
 add_fp_unittest(
