@@ -1765,7 +1765,7 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm : unpred_store<         store, nxv4f16, ST1H_S_IMM, PTRUE_S>;
   defm : unpred_store<         store, nxv2f16, ST1H_D_IMM, PTRUE_D>;
   defm : unpred_store<         store, nxv4f32,   ST1W_IMM, PTRUE_S>;
-  defm : unpred_store<         store, nxv4f32, ST1W_D_IMM, PTRUE_D>;
+  defm : unpred_store<         store, nxv2f32, ST1W_D_IMM, PTRUE_D>;
   defm : unpred_store<         store, nxv2f64,   ST1D_IMM, PTRUE_D>;
 
   multiclass unpred_load<PatFrag Load, ValueType Ty, Instruction RegImmInst,
