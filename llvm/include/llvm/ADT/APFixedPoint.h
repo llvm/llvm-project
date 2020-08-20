@@ -1,4 +1,4 @@
-//===- FixedPoint.h - Fixed point constant handling -------------*- C++ -*-===//
+//===- APFixedPoint.h - Fixed point constant handling -----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,23 +9,20 @@
 /// \file
 /// Defines the fixed point number interface.
 /// This is a class for abstracting various operations performed on fixed point
-/// types described in ISO/IEC JTC1 SC22 WG14 N1169 starting at clause 4.
+/// types.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_BASIC_FIXEDPOINT_H
-#define LLVM_CLANG_BASIC_FIXEDPOINT_H
+#ifndef LLVM_ADT_APFIXEDPOINT_H
+#define LLVM_ADT_APFIXEDPOINT_H
 
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 
-namespace clang {
+namespace llvm {
 
-class ASTContext;
-class QualType;
-
-/// The fixed point semantics work similarly to llvm::fltSemantics. The width
+/// The fixed point semantics work similarly to fltSemantics. The width
 /// specifies the whole bit width of the underlying scaled integer (with padding
 /// if any). The scale represents the number of fractional bits in this type.
 /// When HasUnsignedPadding is true and this type is unsigned, the first bit
@@ -88,26 +85,21 @@ private:
 /// info about the fixed point type's width, sign, scale, and saturation, and
 /// provides different operations that would normally be performed on fixed point
 /// types.
-///
-/// Semantically this does not represent any existing C type other than fixed
-/// point types and should eventually be moved to LLVM if fixed point types gain
-/// native IR support.
 class APFixedPoint {
 public:
-  APFixedPoint(const llvm::APInt &Val, const FixedPointSemantics &Sema)
+  APFixedPoint(const APInt &Val, const FixedPointSemantics &Sema)
       : Val(Val, !Sema.isSigned()), Sema(Sema) {
     assert(Val.getBitWidth() == Sema.getWidth() &&
            "The value should have a bit width that matches the Sema width");
   }
 
   APFixedPoint(uint64_t Val, const FixedPointSemantics &Sema)
-      : APFixedPoint(llvm::APInt(Sema.getWidth(), Val, Sema.isSigned()),
-                     Sema) {}
+      : APFixedPoint(APInt(Sema.getWidth(), Val, Sema.isSigned()), Sema) {}
 
   // Zero initialization.
   APFixedPoint(const FixedPointSemantics &Sema) : APFixedPoint(0, Sema) {}
 
-  llvm::APSInt getValue() const { return llvm::APSInt(Val, !Sema.isSigned()); }
+  APSInt getValue() const { return APSInt(Val, !Sema.isSigned()); }
   inline unsigned getWidth() const { return Sema.getWidth(); }
   inline unsigned getScale() const { return Sema.getScale(); }
   inline bool isSaturated() const { return Sema.isSaturated(); }
@@ -149,7 +141,7 @@ public:
 
   /// Return the integral part of this fixed point number, rounded towards
   /// zero. (-2.5k -> -2)
-  llvm::APSInt getIntPart() const {
+  APSInt getIntPart() const {
     if (Val < 0 && Val != -Val) // Cover the case when we have the min val
       return -(-Val >> getScale());
     else
@@ -164,12 +156,12 @@ public:
   ///
   /// If the overflow parameter is provided, set this value to true or false to
   /// indicate if this operation results in an overflow.
-  llvm::APSInt convertToInt(unsigned DstWidth, bool DstSign,
-                            bool *Overflow = nullptr) const;
+  APSInt convertToInt(unsigned DstWidth, bool DstSign,
+                      bool *Overflow = nullptr) const;
 
-  void toString(llvm::SmallVectorImpl<char> &Str) const;
+  void toString(SmallVectorImpl<char> &Str) const;
   std::string toString() const {
-    llvm::SmallString<40> S;
+    SmallString<40> S;
     toString(S);
     return std::string(S.str());
   }
@@ -198,21 +190,20 @@ public:
   /// and in the same semantics as the provided target semantics. If the value
   /// is not able to fit in the specified fixed point semantics, and the
   /// overflow parameter is provided, it is set to true.
-  static APFixedPoint getFromIntValue(const llvm::APSInt &Value,
+  static APFixedPoint getFromIntValue(const APSInt &Value,
                                       const FixedPointSemantics &DstFXSema,
                                       bool *Overflow = nullptr);
 
 private:
-  llvm::APSInt Val;
+  APSInt Val;
   FixedPointSemantics Sema;
 };
 
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                                     const APFixedPoint &FX) {
+inline raw_ostream &operator<<(raw_ostream &OS, const APFixedPoint &FX) {
   OS << FX.toString();
   return OS;
 }
 
-}  // namespace clang
+}  // namespace llvm
 
 #endif
