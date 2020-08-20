@@ -271,6 +271,11 @@ static cl::opt<bool>
                            cl::desc("Prefer in-loop vector reductions, "
                                     "overriding the targets preference."));
 
+static cl::opt<bool> PreferPredicatedReductionSelect(
+    "prefer-predicated-reduction-select", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Prefer predicating a reduction operation over an after loop select."));
+
 cl::opt<bool> EnableVPlanNativePath(
     "enable-vplan-native-path", cl::init(false), cl::Hidden,
     cl::desc("Enable VPlan-native vectorization path with "
@@ -3917,6 +3922,18 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
       }
       assert(Sel && "Reduction exit feeds no select");
       VectorLoopValueMap.resetVectorValue(LoopExitInst, Part, Sel);
+
+      // If the target can create a predicated operator for the reduction at no
+      // extra cost in the loop (for example a predicated vadd), it can be
+      // cheaper for the select to remain in the loop than be sunk out of it,
+      // and so use the select value for the phi instead of the old
+      // LoopExitValue.
+      RecurrenceDescriptor RdxDesc = Legal->getReductionVars()[Phi];
+      if (PreferPredicatedReductionSelect) {
+        auto *VecRdxPhi = cast<PHINode>(getOrCreateVectorValue(Phi, Part));
+        VecRdxPhi->setIncomingValueForBlock(
+            LI->getLoopFor(LoopVectorBody)->getLoopLatch(), Sel);
+      }
     }
   }
 
