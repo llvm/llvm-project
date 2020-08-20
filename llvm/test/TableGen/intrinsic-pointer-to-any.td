@@ -6,10 +6,7 @@
 // case, so TableGen would hit an assertion in EncodeFixedType that was checking
 // to ensure that the substitution being processed was correctly replaced.
 
-class IntrinsicProperty<bit is_default = 0> {
-  bit IsDefault = is_default;
-}
-
+class IntrinsicProperty;
 class SDNodeProperty;
 
 class ValueType<int size, int value> {
@@ -35,7 +32,6 @@ class Intrinsic<list<LLVMType> ret_types> {
   list<IntrinsicProperty> IntrProperties = [];
   list<SDNodeProperty> Properties = [];
   bit isTarget = 0;
-  bit DisableDefaultAttributes = 1;
 }
 
 class LLVMQualPointerType<LLVMType elty>
