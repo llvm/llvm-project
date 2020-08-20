@@ -75,7 +75,7 @@ static llvm::Error InitializeFileSystem() {
 
     repro::WorkingDirectoryProvider &wp =
         g->GetOrCreate<repro::WorkingDirectoryProvider>();
-    fp.RecordInterestingDirectory(wp.GetWorkingDirectory());
+    fp.RecordInterestingDirectory(wp.GetDirectory());
 
     return llvm::Error::success();
   }

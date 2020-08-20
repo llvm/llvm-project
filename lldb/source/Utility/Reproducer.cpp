@@ -290,15 +290,6 @@ void VersionProvider::Keep() {
   os << m_version << "\n";
 }
 
-void WorkingDirectoryProvider::Keep() {
-  FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
-  std::error_code ec;
-  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
-  if (ec)
-    return;
-  os << m_cwd << "\n";
-}
-
 void FileProvider::RecordInterestingDirectory(const llvm::Twine &dir) {
   if (m_collector)
     m_collector->addFile(dir);
