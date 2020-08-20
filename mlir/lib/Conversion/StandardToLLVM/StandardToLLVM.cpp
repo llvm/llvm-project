@@ -125,7 +125,7 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx)
 /// Create an LLVMTypeConverter using custom LowerToLLVMOptions.
 LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
                                      const LowerToLLVMOptions &options)
-    : llvmDialect(ctx->getOrLoadDialect<LLVM::LLVMDialect>()),
+    : llvmDialect(ctx->getRegisteredDialect<LLVM::LLVMDialect>()),
       options(options) {
   assert(llvmDialect && "LLVM IR dialect is not registered");
   if (options.indexBitwidth == kDeriveIndexBitwidthFromDataLayout)

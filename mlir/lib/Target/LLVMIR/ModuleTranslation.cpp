@@ -302,7 +302,8 @@ ModuleTranslation::ModuleTranslation(Operation *module,
     : mlirModule(module), llvmModule(std::move(llvmModule)),
       debugTranslation(
           std::make_unique<DebugTranslation>(module, *this->llvmModule)),
-      ompDialect(module->getContext()->getOrLoadDialect<omp::OpenMPDialect>()),
+      ompDialect(
+          module->getContext()->getRegisteredDialect<omp::OpenMPDialect>()),
       typeTranslator(this->llvmModule->getContext()) {
   assert(satisfiesLLVMModule(mlirModule) &&
          "mlirModule should honor LLVM's module semantics.");
@@ -943,8 +944,8 @@ ModuleTranslation::lookupValues(ValueRange values) {
 
 std::unique_ptr<llvm::Module> ModuleTranslation::prepareLLVMModule(
     Operation *m, llvm::LLVMContext &llvmContext, StringRef name) {
-  m->getContext()->getOrLoadDialect<LLVM::LLVMDialect>();
   auto llvmModule = std::make_unique<llvm::Module>(name, llvmContext);
+
   if (auto dataLayoutAttr =
           m->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName()))
     llvmModule->setDataLayout(dataLayoutAttr.cast<StringAttr>().getValue());
