@@ -74,8 +74,6 @@ void initializeModuleCache(CompilerInvocation &CI) {
   ASSERT_FALSE(
       llvm::sys::fs::createUniqueDirectory("module-cache", ModuleCachePath));
   CI.getHeaderSearchOpts().ModuleCachePath = ModuleCachePath.c_str();
-  llvm::errs() << "MC: " << ModuleCachePath << "\n";
-  llvm::errs().flush();
 }
 
 void deleteModuleCache(const std::string ModuleCachePath) {
