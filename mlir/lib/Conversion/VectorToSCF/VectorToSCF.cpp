@@ -224,7 +224,10 @@ static Value setAllocAtFunctionEntry(MemRefType memRefMinorVectorType,
                                      Operation *op) {
   auto &b = ScopedContext::getBuilderRef();
   OpBuilder::InsertionGuard guard(b);
-  b.setInsertionPointToStart(&op->getParentOfType<FuncOp>().front());
+  Operation *scope =
+      op->getParentWithTrait<OpTrait::AutomaticAllocationScope>();
+  assert(scope && "Expected op to be inside automatic allocation scope");
+  b.setInsertionPointToStart(&scope->getRegion(0).front());
   Value res =
       std_alloca(memRefMinorVectorType, ValueRange{}, b.getI64IntegerAttr(128));
   return res;
