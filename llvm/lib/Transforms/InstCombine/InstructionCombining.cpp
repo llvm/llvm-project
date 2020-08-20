@@ -127,7 +127,7 @@ DEBUG_COUNTER(VisitCounter, "instcombine-visit",
 // FIXME: these limits eventually should be as low as 2.
 static constexpr unsigned InstCombineDefaultMaxIterations = 1000;
 #ifndef NDEBUG
-static constexpr unsigned InstCombineDefaultInfiniteLoopThreshold = 10;
+static constexpr unsigned InstCombineDefaultInfiniteLoopThreshold = 100;
 #else
 static constexpr unsigned InstCombineDefaultInfiniteLoopThreshold = 1000;
 #endif
