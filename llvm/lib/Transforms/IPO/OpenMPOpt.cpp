@@ -42,6 +42,13 @@ static cl::opt<bool> PrintICVValues("openmp-print-icv-values", cl::init(false),
 static cl::opt<bool> PrintOpenMPKernels("openmp-print-gpu-kernels",
                                         cl::init(false), cl::Hidden);
 
+static cl::opt<bool> HideMemoryTransferLatency(
+    "openmp-hide-memory-transfer-latency",
+    cl::desc("[WIP] Tries to hide the latency of host to device memory"
+             " transfers"),
+    cl::Hidden, cl::init(false));
+
+
 STATISTIC(NumOpenMPRuntimeCallsDeduplicated,
           "Number of OpenMP runtime calls deduplicated");
 STATISTIC(NumOpenMPParallelRegionsDeleted,
@@ -508,6 +515,8 @@ struct OpenMPOpt {
 
     Changed |= deduplicateRuntimeCalls();
     Changed |= deleteParallelRegions();
+    if (HideMemoryTransferLatency)
+      Changed |= hideMemTransfersLatency();
 
     return Changed;
   }
@@ -664,6 +673,63 @@ private:
     }
 
     return Changed;
+  }
+
+  /// Tries to hide the latency of runtime calls that involve host to
+  /// device memory transfers by splitting them into their "issue" and "wait"
+  /// versions. The "issue" is moved upwards as much as possible. The "wait" is
+  /// moved downards as much as possible. The "issue" issues the memory transfer
+  /// asynchronously, returning a handle. The "wait" waits in the returned
+  /// handle for the memory transfer to finish.
+  bool hideMemTransfersLatency() {
+    auto &RFI = OMPInfoCache.RFIs[OMPRTL___tgt_target_data_begin_mapper];
+    bool Changed = false;
+    auto SplitMemTransfers = [&](Use &U, Function &Decl) {
+      auto *RTCall = getCallIfRegularCall(U, &RFI);
+      if (!RTCall)
+        return false;
+
+      bool WasSplit = splitTargetDataBeginRTC(RTCall);
+      Changed |= WasSplit;
+      return WasSplit;
+    };
+    RFI.foreachUse(SCC, SplitMemTransfers);
+
+    return Changed;
+  }
+
+  /// Splits \p RuntimeCall into its "issue" and "wait" counterparts.
+  bool splitTargetDataBeginRTC(CallInst *RuntimeCall) {
+    auto &IRBuilder = OMPInfoCache.OMPBuilder;
+    // Add "issue" runtime call declaration:
+    // declare %struct.tgt_async_info @__tgt_target_data_begin_issue(i64, i32,
+    //   i8**, i8**, i64*, i64*)
+    FunctionCallee IssueDecl = IRBuilder.getOrCreateRuntimeFunction(
+        M, OMPRTL___tgt_target_data_begin_mapper_issue);
+
+    // Change RuntimeCall call site for its asynchronous version.
+    SmallVector<Value *, 8> Args;
+    for (auto &Arg : RuntimeCall->args())
+      Args.push_back(Arg.get());
+
+    CallInst *IssueCallsite =
+        CallInst::Create(IssueDecl, Args, "handle", RuntimeCall);
+    RuntimeCall->eraseFromParent();
+
+    // Add "wait" runtime call declaration:
+    // declare void @__tgt_target_data_begin_wait(i64, %struct.__tgt_async_info)
+    FunctionCallee WaitDecl = IRBuilder.getOrCreateRuntimeFunction(
+        M, OMPRTL___tgt_target_data_begin_mapper_wait);
+
+    // Add call site to WaitDecl.
+    Value *WaitParams[2] = {
+        IssueCallsite->getArgOperand(0), // device_id.
+        IssueCallsite // returned handle.
+    };
+    CallInst::Create(WaitDecl, WaitParams, /*NameStr=*/"",
+                     IssueCallsite->getNextNode());
+
+    return true;
   }
 
   static Value *combinedIdentStruct(Value *CurrentIdent, Value *NextIdent,
