@@ -3488,7 +3488,7 @@ AMDGPUInstructionSelector::selectDS64Bit4ByteAlignedImpl(MachineOperand &Root) c
 std::pair<Register, int64_t>
 AMDGPUInstructionSelector::getPtrBaseWithConstantOffset(
   Register Root, const MachineRegisterInfo &MRI) const {
-  MachineInstr *RootI = MRI.getVRegDef(Root);
+  MachineInstr *RootI = getDefIgnoringCopies(Root, MRI);
   if (RootI->getOpcode() != TargetOpcode::G_PTR_ADD)
     return {Root, 0};
 
@@ -3679,6 +3679,11 @@ bool AMDGPUInstructionSelector::selectMUBUFAddr64Impl(
 bool AMDGPUInstructionSelector::selectMUBUFOffsetImpl(
   MachineOperand &Root, Register &RSrcReg, Register &SOffset,
   int64_t &Offset) const {
+
+  // FIXME: Pattern should not reach here.
+  if (STI.useFlatForGlobal())
+    return false;
+
   MUBUFAddressData AddrData = parseMUBUFAddress(Root.getReg());
   if (shouldUseAddr64(AddrData))
     return false;
