@@ -32,6 +32,7 @@ class LegalizerInfo;
 class Legalizer;
 class MachineRegisterInfo;
 class GISelChangeObserver;
+class TargetLowering;
 
 class LegalizerHelper {
 public:
@@ -45,6 +46,7 @@ public:
 private:
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;
+  const TargetLowering &TLI;
 
 public:
   enum LegalizeResult {
@@ -62,6 +64,7 @@ public:
 
   /// Expose LegalizerInfo so the clients can re-use.
   const LegalizerInfo &getLegalizerInfo() const { return LI; }
+  const TargetLowering &getTargetLowering() const { return TLI; }
 
   LegalizerHelper(MachineFunction &MF, GISelChangeObserver &Observer,
                   MachineIRBuilder &B);

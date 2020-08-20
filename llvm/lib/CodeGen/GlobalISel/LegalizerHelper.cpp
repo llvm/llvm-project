@@ -90,14 +90,16 @@ LegalizerHelper::LegalizerHelper(MachineFunction &MF,
                                  GISelChangeObserver &Observer,
                                  MachineIRBuilder &Builder)
     : MIRBuilder(Builder), Observer(Observer), MRI(MF.getRegInfo()),
-      LI(*MF.getSubtarget().getLegalizerInfo()) {
+      LI(*MF.getSubtarget().getLegalizerInfo()),
+      TLI(*MF.getSubtarget().getTargetLowering()) {
   MIRBuilder.setChangeObserver(Observer);
 }
 
 LegalizerHelper::LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI,
                                  GISelChangeObserver &Observer,
                                  MachineIRBuilder &B)
-    : MIRBuilder(B), Observer(Observer), MRI(MF.getRegInfo()), LI(LI) {
+  : MIRBuilder(B), Observer(Observer), MRI(MF.getRegInfo()), LI(LI),
+    TLI(*MF.getSubtarget().getTargetLowering()) {
   MIRBuilder.setChangeObserver(Observer);
 }
 LegalizerHelper::LegalizeResult
@@ -5714,7 +5716,6 @@ LegalizerHelper::lowerDynStackAlloc(MachineInstr &MI) {
   LLT PtrTy = MRI.getType(Dst);
   LLT IntPtrTy = LLT::scalar(PtrTy.getSizeInBits());
 
-  const auto &TLI = *MF.getSubtarget().getTargetLowering();
   Register SPReg = TLI.getStackPointerRegisterToSaveRestore();
   auto SPTmp = MIRBuilder.buildCopy(PtrTy, SPReg);
   SPTmp = MIRBuilder.buildCast(IntPtrTy, SPTmp);
@@ -6118,8 +6119,6 @@ LegalizerHelper::lowerBitreverse(MachineInstr &MI) {
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerReadWriteRegister(MachineInstr &MI) {
   MachineFunction &MF = MIRBuilder.getMF();
-  const TargetSubtargetInfo &STI = MF.getSubtarget();
-  const TargetLowering *TLI = STI.getTargetLowering();
 
   bool IsRead = MI.getOpcode() == TargetOpcode::G_READ_REGISTER;
   int NameOpIdx = IsRead ? 1 : 0;
@@ -6130,7 +6129,7 @@ LegalizerHelper::lowerReadWriteRegister(MachineInstr &MI) {
   const MDString *RegStr = cast<MDString>(
     cast<MDNode>(MI.getOperand(NameOpIdx).getMetadata())->getOperand(0));
 
-  Register PhysReg = TLI->getRegisterByName(RegStr->getString().data(), Ty, MF);
+  Register PhysReg = TLI.getRegisterByName(RegStr->getString().data(), Ty, MF);
   if (!PhysReg.isValid())
     return UnableToLegalize;
 
