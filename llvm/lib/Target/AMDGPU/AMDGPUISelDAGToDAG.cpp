@@ -555,8 +555,8 @@ const TargetRegisterClass *AMDGPUDAGToDAGISel::getOperandRegClass(SDNode *N,
                                                           unsigned OpNo) const {
   if (!N->isMachineOpcode()) {
     if (N->getOpcode() == ISD::CopyToReg) {
-      unsigned Reg = cast<RegisterSDNode>(N->getOperand(1))->getReg();
-      if (Register::isVirtualRegister(Reg)) {
+      Register Reg = cast<RegisterSDNode>(N->getOperand(1))->getReg();
+      if (Reg.isVirtual()) {
         MachineRegisterInfo &MRI = CurDAG->getMachineFunction().getRegInfo();
         return MRI.getRegClass(Reg);
       }
