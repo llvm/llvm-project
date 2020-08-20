@@ -13,7 +13,8 @@
 
 #include "mlir-c/IR.h"
 
-namespace py = pybind11;
+namespace mlir {
+namespace python {
 
 class PyMlirContext;
 class PyMlirModule;
@@ -48,6 +49,9 @@ public:
   MlirModule module;
 };
 
-void populateIRSubmodule(py::module &m);
+void populateIRSubmodule(pybind11::module &m);
+
+} // namespace python
+} // namespace mlir
 
 #endif // MLIR_BINDINGS_PYTHON_IRMODULES_H
