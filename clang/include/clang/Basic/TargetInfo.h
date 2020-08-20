@@ -1150,6 +1150,11 @@ public:
     return true;
   }
 
+  /// brief Determine whether this TargetInfo supports tune in target attribute.
+  virtual bool supportsTargetAttributeTune() const {
+    return false;
+  }
+
   /// Use the specified ABI.
   ///
   /// \return False on error (invalid ABI name).
