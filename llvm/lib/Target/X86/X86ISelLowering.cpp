@@ -11415,7 +11415,7 @@ static SDValue lowerShuffleAsVTRUNC(const SDLoc &DL, MVT VT, SDValue V1,
     SDValue Src = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, V1, V2);
 
     MVT SrcSVT = MVT::getIntegerVT(SrcEltBits);
-    MVT SrcVT = MVT::getVectorVT(SrcSVT, 256 / SrcEltBits);
+    MVT SrcVT = MVT::getVectorVT(SrcSVT, NumSrcElts);
     Src = DAG.getBitcast(SrcVT, Src);
 
     if (SrcVT.getVectorNumElements() == NumElts)
