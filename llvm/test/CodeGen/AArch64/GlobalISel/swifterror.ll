@@ -513,3 +513,67 @@ a:
   %error = load %swift_error*, %swift_error** %error_ptr
   ret %swift_error* %error
 }
+
+; foo takes a swifterror parameter. We should be able to see that even when
+; it isn't explicitly on the call.
+define float @swifterror_param_not_on_call(i8* %error_ref) {
+; CHECK-LABEL: swifterror_param_not_on_call:
+; CHECK: mov [[ID:x[0-9]+]], x0
+; CHECK: bl {{.*}}foo
+; CHECK: mov x0, x21
+; CHECK: cbnz x21
+; Access part of the error object and save it to error_ref
+; CHECK: ldrb [[CODE:w[0-9]+]], [x0, #8]
+; CHECK: strb [[CODE]], [{{.*}}[[ID]]]
+; CHECK: bl {{.*}}free
+
+entry:
+  %error_ptr_ref = alloca swifterror %swift_error*
+  store %swift_error* null, %swift_error** %error_ptr_ref
+  %call = call float @foo(%swift_error** %error_ptr_ref)
+  %error_from_foo = load %swift_error*, %swift_error** %error_ptr_ref
+  %had_error_from_foo = icmp ne %swift_error* %error_from_foo, null
+  %tmp = bitcast %swift_error* %error_from_foo to i8*
+  br i1 %had_error_from_foo, label %handler, label %cont
+cont:
+  %v1 = getelementptr inbounds %swift_error, %swift_error* %error_from_foo, i64 0, i32 1
+  %t = load i8, i8* %v1
+  store i8 %t, i8* %error_ref
+  br label %handler
+handler:
+  call void @free(i8* %tmp)
+  ret float 1.0
+}
+
+; foo_sret takes an sret parameter and a swifterror parameter. We should be
+; able to see that, even if it's not explicitly on the call.
+define float @swifterror_param_not_on_call2(i8* %error_ref) {
+; CHECK-LABEL: swifterror_param_not_on_call2:
+; CHECK: mov [[ID:x[0-9]+]], x0
+; CHECK: mov [[ZERO:x[0-9]+]], xzr
+; CHECK: bl {{.*}}foo_sret
+; CHECK: mov x0, x21
+; CHECK: cbnz x21
+; Access part of the error object and save it to error_ref
+; CHECK: ldrb [[CODE:w[0-9]+]], [x0, #8]
+; CHECK: strb [[CODE]], [{{.*}}[[ID]]]
+; CHECK: bl {{.*}}free
+
+entry:
+  %s = alloca %struct.S, align 8
+  %error_ptr_ref = alloca swifterror %swift_error*
+  store %swift_error* null, %swift_error** %error_ptr_ref
+  call void @foo_sret(%struct.S* %s, i32 1, %swift_error** %error_ptr_ref)
+  %error_from_foo = load %swift_error*, %swift_error** %error_ptr_ref
+  %had_error_from_foo = icmp ne %swift_error* %error_from_foo, null
+  %tmp = bitcast %swift_error* %error_from_foo to i8*
+  br i1 %had_error_from_foo, label %handler, label %cont
+cont:
+  %v1 = getelementptr inbounds %swift_error, %swift_error* %error_from_foo, i64 0, i32 1
+  %t = load i8, i8* %v1
+  store i8 %t, i8* %error_ref
+  br label %handler
+handler:
+  call void @free(i8* %tmp)
+  ret float 1.0
+}
