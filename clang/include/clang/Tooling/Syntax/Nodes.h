@@ -56,6 +56,7 @@ enum class NodeKind : uint16_t {
   StringUserDefinedLiteralExpression,
   IdExpression,
   MemberExpression,
+  ThisExpression,
 
   // Statements.
   UnknownStatement,
@@ -311,6 +312,16 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::UnknownExpression;
   }
+};
+
+/// Models a this expression `this`. C++ [expr.prim.this]
+class ThisExpression final : public Expression {
+public:
+  ThisExpression() : Expression(NodeKind::ThisExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::ThisExpression;
+  }
+  Leaf *thisKeyword();
 };
 
 /// Models a parenthesized expression `(E)`. C++ [expr.prim.paren]
