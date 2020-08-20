@@ -25,11 +25,16 @@ namespace mlir {
 // Test Fixture
 //===----------------------------------------------------------------------===//
 
+static MLIRContext &getContext() {
+  static MLIRContext ctx(false);
+  ctx.getOrLoadDialect<TestDialect>();
+  return ctx;
+}
 /// Test fixture for providing basic utilities for testing.
 class OpBuildGenTest : public ::testing::Test {
 protected:
   OpBuildGenTest()
-      : ctx{}, builder(&ctx), loc(builder.getUnknownLoc()),
+      : ctx(getContext()), builder(&ctx), loc(builder.getUnknownLoc()),
         i32Ty(builder.getI32Type()), f32Ty(builder.getF32Type()),
         cstI32(builder.create<TableGenConstant>(loc, i32Ty)),
         cstF32(builder.create<TableGenConstant>(loc, f32Ty)),
@@ -86,7 +91,7 @@ protected:
   }
 
 protected:
-  MLIRContext ctx;
+  MLIRContext &ctx;
   OpBuilder builder;
   Location loc;
   Type i32Ty;
