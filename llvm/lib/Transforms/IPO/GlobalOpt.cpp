@@ -468,19 +468,16 @@ static bool CanDoGlobalSRA(GlobalVariable *GV) {
 /// Copy over the debug info for a variable to its SRA replacements.
 static void transferSRADebugInfo(GlobalVariable *GV, GlobalVariable *NGV,
                                  uint64_t FragmentOffsetInBits,
-                                 uint64_t FragmentSizeInBits) {
+                                 uint64_t FragmentSizeInBits,
+                                 uint64_t VarSize) {
   SmallVector<DIGlobalVariableExpression *, 1> GVs;
   GV->getDebugInfo(GVs);
   for (auto *GVE : GVs) {
     DIVariable *Var = GVE->getVariable();
-    Optional<uint64_t> VarSize = Var->getSizeInBits();
-
     DIExpression *Expr = GVE->getExpression();
     // If the FragmentSize is smaller than the variable,
     // emit a fragment expression.
-    // If the variable size is unknown a fragment must be
-    // emitted to be safe.
-    if (!VarSize || FragmentSizeInBits < *VarSize) {
+    if (FragmentSizeInBits < VarSize) {
       if (auto E = DIExpression::createFragmentExpression(
               Expr, FragmentOffsetInBits, FragmentSizeInBits))
         Expr = *E;
@@ -505,6 +502,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
   assert(GV->hasLocalLinkage());
   Constant *Init = GV->getInitializer();
   Type *Ty = Init->getType();
+  uint64_t VarSize = DL.getTypeSizeInBits(Ty);
 
   std::map<unsigned, GlobalVariable *> NewGlobals;
 
@@ -560,7 +558,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
       // Copy over the debug info for the variable.
       uint64_t Size = DL.getTypeAllocSizeInBits(NGV->getValueType());
       uint64_t FragmentOffsetInBits = Layout.getElementOffsetInBits(ElementIdx);
-      transferSRADebugInfo(GV, NGV, FragmentOffsetInBits, Size);
+      transferSRADebugInfo(GV, NGV, FragmentOffsetInBits, Size, VarSize);
     } else {
       uint64_t EltSize = DL.getTypeAllocSize(ElTy);
       Align EltAlign = DL.getABITypeAlign(ElTy);
@@ -573,7 +571,7 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
       if (NewAlign > EltAlign)
         NGV->setAlignment(NewAlign);
       transferSRADebugInfo(GV, NGV, FragmentSizeInBits * ElementIdx,
-                           FragmentSizeInBits);
+                           FragmentSizeInBits, VarSize);
     }
   }
 
