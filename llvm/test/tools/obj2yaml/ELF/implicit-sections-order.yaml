@@ -37,7 +37,7 @@
 # OUTPUT-NEXT:   Class:   ELFCLASS64
 # OUTPUT-NEXT:   Data:    ELFDATA2LSB
 # OUTPUT-NEXT:   Type:    ET_DYN
-# OUTPUT-NEXT:   Machine: EM_X86_64
+# OUTPUT-NEXT:   Machine: EM_NONE
 # OUTPUT-NEXT: Sections:
 # OUTPUT-NEXT:   - Name: .foo.1
 # OUTPUT-NEXT:     Type: SHT_PROGBITS
@@ -69,10 +69,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name: .foo.1
     Type: SHT_PROGBITS
@@ -128,7 +127,7 @@ DynamicSymbols:
 # OUTPUT2-NEXT:   Class:   ELFCLASS64
 # OUTPUT2-NEXT:   Data:    ELFDATA2LSB
 # OUTPUT2-NEXT:   Type:    ET_DYN
-# OUTPUT2-NEXT:   Machine: EM_X86_64
+# OUTPUT2-NEXT:   Machine: EM_NONE
 # OUTPUT2-NEXT: Sections:
 # OUTPUT2-NEXT:   - Name: .foo.1
 # OUTPUT2-NEXT:     Type: SHT_PROGBITS

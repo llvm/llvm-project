@@ -32,10 +32,9 @@
 # so use a custom dynamic symbol table section instead.
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_386
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 Sections:
   - Name: .dynstr
     Type: SHT_STRTAB
