@@ -11,10 +11,7 @@ class LLVMType<ValueType vt> {
 
 def llvm_i32_ty        : LLVMType<i32>;
 
-class IntrinsicProperty<bit is_default = 0> {
-  bit IsDefault = is_default;
-}
-
+class IntrinsicProperty;
 def IntrNoMem : IntrinsicProperty;
 def IntrHasSideEffects : IntrinsicProperty;
 
@@ -30,8 +27,6 @@ class Intrinsic<list<LLVMType> ret_types,
   list<LLVMType> ParamTypes = param_types;
   list<IntrinsicProperty> IntrProperties = intr_properties;
   let Properties = sd_properties;
-  bit DisableDefaultAttributes = 1;
-
 
   bit isTarget = 0;
 }
