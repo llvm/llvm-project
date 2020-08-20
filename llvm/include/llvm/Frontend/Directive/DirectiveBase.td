@@ -95,6 +95,11 @@ class Clause<string c> {
 
   // List of allowed clause values
   list<ClauseVal> allowedClauseValues = [];
+  // If set to 1, value class is part of a list. Single class by default.
+  bit isValueList = 0;
+
+  // Define a default value such as "*".
+  string defaultValue = "";
 
   // Is clause implicit? If clause is set as implicit, the default kind will
   // be return in get<LanguageName>ClauseKind instead of their own kind.

@@ -355,7 +355,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyprivate &) {
 void OmpStructureChecker::Enter(const parser::OmpClause::Device &) {
   CheckAllowed(llvm::omp::Clause::OMPC_device);
 }
-void OmpStructureChecker::Enter(const parser::OmpClause::DistSchedule &) {
+void OmpStructureChecker::Enter(const parser::OmpDistScheduleClause &) {
   CheckAllowed(llvm::omp::Clause::OMPC_dist_schedule);
 }
 void OmpStructureChecker::Enter(const parser::OmpClause::Final &) {

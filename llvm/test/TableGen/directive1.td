@@ -231,5 +231,13 @@ def TDL_DirA : Directive<"dira"> {
 // GEN-NEXT:  NODE(TdlClause, Clauseb)
 // GEN-EMPTY:
 // GEN-NEXT:  #endif // GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
-
-
+// GEN-EMPTY:
+// GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_UNPARSE
+// GEN-NEXT:  #undef GEN_FLANG_CLAUSE_UNPARSE
+// GEN-EMPTY:
+// GEN-NEXT:  void Unparse(const TdlClause::Clauseb &x) {
+// GEN-NEXT:    Word("CLAUSEB");
+// GEN-NEXT:    Walk("(", x.v, ")");
+// GEN-NEXT:  }
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_UNPARSE
