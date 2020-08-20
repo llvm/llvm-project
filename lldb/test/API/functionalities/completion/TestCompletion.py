@@ -644,3 +644,21 @@ class CommandLineCompletionTestCase(TestBase):
                                   ['1',
                                    '2'])
 
+    def test_complete_breakpoint_with_names(self):
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact('a.out'))
+        self.assertTrue(target, VALID_TARGET)
+
+        # test breakpoint read dedicated
+        self.complete_from_to('breakpoint read -N ', 'breakpoint read -N ')
+        self.complete_from_to('breakpoint read -f breakpoints.json -N ', ['mm'])
+        self.complete_from_to('breakpoint read -f breakpoints.json -N n', 'breakpoint read -f breakpoints.json -N n')
+        self.complete_from_to('breakpoint read -f breakpoints_invalid.json -N ', 'breakpoint read -f breakpoints_invalid.json -N ')
+
+        # test common breapoint name completion
+        bp1 = target.BreakpointCreateByName('main', 'a.out')
+        self.assertTrue(bp1)
+        self.assertEqual(bp1.GetNumLocations(), 1)
+        self.complete_from_to('breakpoint set -N n', 'breakpoint set -N n')
+        self.assertTrue(bp1.AddNameWithErrorHandling("nn"))
+        self.complete_from_to('breakpoint set -N ', 'breakpoint set -N nn')
