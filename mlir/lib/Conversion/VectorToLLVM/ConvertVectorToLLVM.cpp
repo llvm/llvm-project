@@ -136,8 +136,8 @@ LogicalResult getMemRefAlignment(LLVMTypeConverter &typeConverter, T op,
 }
 
 // Helper that returns the base address of a memref.
-LogicalResult getBase(ConversionPatternRewriter &rewriter, Location loc,
-                      Value memref, MemRefType memRefType, Value &base) {
+static LogicalResult getBase(ConversionPatternRewriter &rewriter, Location loc,
+                             Value memref, MemRefType memRefType, Value &base) {
   // Inspect stride and offset structure.
   //
   // TODO: flat memory only for now, generalize
@@ -153,8 +153,9 @@ LogicalResult getBase(ConversionPatternRewriter &rewriter, Location loc,
 }
 
 // Helper that returns a pointer given a memref base.
-LogicalResult getBasePtr(ConversionPatternRewriter &rewriter, Location loc,
-                         Value memref, MemRefType memRefType, Value &ptr) {
+static LogicalResult getBasePtr(ConversionPatternRewriter &rewriter,
+                                Location loc, Value memref,
+                                MemRefType memRefType, Value &ptr) {
   Value base;
   if (failed(getBase(rewriter, loc, memref, memRefType, base)))
     return failure();
@@ -164,9 +165,9 @@ LogicalResult getBasePtr(ConversionPatternRewriter &rewriter, Location loc,
 }
 
 // Helper that returns a bit-casted pointer given a memref base.
-LogicalResult getBasePtr(ConversionPatternRewriter &rewriter, Location loc,
-                         Value memref, MemRefType memRefType, Type type,
-                         Value &ptr) {
+static LogicalResult getBasePtr(ConversionPatternRewriter &rewriter,
+                                Location loc, Value memref,
+                                MemRefType memRefType, Type type, Value &ptr) {
   Value base;
   if (failed(getBase(rewriter, loc, memref, memRefType, base)))
     return failure();
@@ -178,9 +179,10 @@ LogicalResult getBasePtr(ConversionPatternRewriter &rewriter, Location loc,
 
 // Helper that returns vector of pointers given a memref base and an index
 // vector.
-LogicalResult getIndexedPtrs(ConversionPatternRewriter &rewriter, Location loc,
-                             Value memref, Value indices, MemRefType memRefType,
-                             VectorType vType, Type iType, Value &ptrs) {
+static LogicalResult getIndexedPtrs(ConversionPatternRewriter &rewriter,
+                                    Location loc, Value memref, Value indices,
+                                    MemRefType memRefType, VectorType vType,
+                                    Type iType, Value &ptrs) {
   Value base;
   if (failed(getBase(rewriter, loc, memref, memRefType, base)))
     return failure();

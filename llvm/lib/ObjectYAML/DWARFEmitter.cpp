@@ -800,9 +800,9 @@ static Expected<uint64_t> writeListEntry(raw_ostream &OS,
 }
 
 template <typename EntryType>
-Error writeDWARFLists(raw_ostream &OS,
-                      ArrayRef<DWARFYAML::ListTable<EntryType>> Tables,
-                      bool IsLittleEndian, bool Is64BitAddrSize) {
+static Error writeDWARFLists(raw_ostream &OS,
+                             ArrayRef<DWARFYAML::ListTable<EntryType>> Tables,
+                             bool IsLittleEndian, bool Is64BitAddrSize) {
   for (const DWARFYAML::ListTable<EntryType> &Table : Tables) {
     // sizeof(version) + sizeof(address_size) + sizeof(segment_selector_size) +
     // sizeof(offset_entry_count) = 8
