@@ -390,15 +390,15 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
 }
 
 // Copy data from current device to destination device directly
-int32_t DeviceTy::data_exchange(void *SrcPtr, DeviceTy DstDev, void *DstPtr,
-                                int64_t Size, __tgt_async_info *AsyncInfoPtr) {
-  if (!AsyncInfoPtr || !RTL->data_exchange_async || !RTL->synchronize) {
+int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
+                               int64_t Size, __tgt_async_info *AsyncInfo) {
+  if (!AsyncInfo || !RTL->data_exchange_async || !RTL->synchronize) {
     assert(RTL->data_exchange && "RTL->data_exchange is nullptr");
     return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
                               Size);
   } else
     return RTL->data_exchange_async(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID,
-                                    DstPtr, Size, AsyncInfoPtr);
+                                    DstPtr, Size, AsyncInfo);
 }
 
 // Run region on device

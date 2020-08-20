@@ -214,8 +214,8 @@ struct DeviceTy {
   int32_t retrieveData(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size,
                        __tgt_async_info *AsyncInfoPtr);
   // Copy data from current device to destination device directly
-  int32_t data_exchange(void *SrcPtr, DeviceTy DstDev, void *DstPtr,
-                        int64_t Size, __tgt_async_info *AsyncInfoPtr);
+  int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
+                       int64_t Size, __tgt_async_info *AsyncInfo);
 
   int32_t runRegion(void *TgtEntryPtr, void **TgtVarsPtr, ptrdiff_t *TgtOffsets,
                     int32_t TgtVarsSize, __tgt_async_info *AsyncInfoPtr);
