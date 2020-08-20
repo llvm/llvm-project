@@ -1,4 +1,5 @@
 import re
+import os
 import subprocess
 
 from .builder import Builder
@@ -53,9 +54,12 @@ class BuilderDarwin(Builder):
         if configuration.dsymutil:
             args['DSYMUTIL'] = configuration.dsymutil
 
-        os, _ = self.getOsAndEnv()
-        if os and os != "macosx":
-            args['CODESIGN'] = 'codesign'
+        operating_system, _ = self.getOsAndEnv()
+        if operating_system and operating_system != "macosx":
+            builder_dir = os.path.dirname(os.path.abspath(__file__))
+            test_dir = os.path.dirname(builder_dir)
+            entitlements = os.path.join(test_dir, 'make', 'entitlements.plist')
+            args['CODESIGN'] = 'codesign --entitlements {}'.format(entitlements)
 
         # Return extra args as a formatted string.
         return ' '.join(
