@@ -801,8 +801,7 @@ define i1 @parent8(i8* %a, i8* %bogus1, i8* %b) personality i8* bitcast (i32 (..
 ; CHECK-NEXT:    invoke void @use2nonnull(i8* nonnull [[A]], i8* nonnull [[B]])
 ; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]
 ; CHECK:       cont:
-; CHECK-NEXT:    [[NULL_CHECK:%.*]] = icmp eq i8* [[B]], null
-; CHECK-NEXT:    ret i1 [[NULL_CHECK]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       exc:
 ; CHECK-NEXT:    [[LP:%.*]] = landingpad { i8*, i32 }
 ; CHECK-NEXT:    filter [0 x i8*] zeroinitializer
