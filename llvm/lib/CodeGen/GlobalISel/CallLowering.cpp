@@ -65,6 +65,12 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
                              std::function<unsigned()> GetCalleeReg) const {
   CallLoweringInfo Info;
   const DataLayout &DL = MIRBuilder.getDataLayout();
+  MachineFunction &MF = MIRBuilder.getMF();
+  bool CanBeTailCalled = CB.isTailCall() &&
+                         isInTailCallPosition(CB, MF.getTarget()) &&
+                         (MF.getFunction()
+                              .getFnAttribute("disable-tail-calls")
+                              .getValueAsString() != "true");
 
   // First step is to marshall all the function's parameters into the correct
   // physregs and memory locations. Gather the sequence of argument types that
@@ -75,6 +81,12 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
     ArgInfo OrigArg{ArgRegs[i], Arg->getType(), getAttributesForArgIdx(CB, i),
                     i < NumFixedArgs};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CB);
+
+    // If we have an explicit sret argument that is an Instruction, (i.e., it
+    // might point to function-local memory), we can't meaningfully tail-call.
+    if (OrigArg.Flags[0].isSRet() && isa<Instruction>(&Arg))
+      CanBeTailCalled = false;
+
     Info.OrigArgs.push_back(OrigArg);
     ++i;
   }
@@ -91,16 +103,11 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   if (!Info.OrigRet.Ty->isVoidTy())
     setArgFlags(Info.OrigRet, AttributeList::ReturnIndex, DL, CB);
 
-  MachineFunction &MF = MIRBuilder.getMF();
   Info.KnownCallees = CB.getMetadata(LLVMContext::MD_callees);
   Info.CallConv = CB.getCallingConv();
   Info.SwiftErrorVReg = SwiftErrorVReg;
   Info.IsMustTailCall = CB.isMustTailCall();
-  Info.IsTailCall =
-      CB.isTailCall() && isInTailCallPosition(CB, MF.getTarget()) &&
-      (MF.getFunction()
-           .getFnAttribute("disable-tail-calls")
-           .getValueAsString() != "true");
+  Info.IsTailCall = CanBeTailCalled;
   Info.IsVarArg = CB.getFunctionType()->isVarArg();
   return lowerCall(MIRBuilder, Info);
 }
