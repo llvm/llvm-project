@@ -25,6 +25,7 @@ class Builder:
         Helper function to return extra argumentsfor the make system. This
         method is meant to be overridden by platform specific builders.
         """
+        return ""
 
     def getArchCFlags(self, architecture):
         """Returns the ARCH_CFLAGS for the make system."""
