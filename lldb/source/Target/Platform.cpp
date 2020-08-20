@@ -85,7 +85,7 @@ PlatformProperties::PlatformProperties() {
     return;
 
   llvm::SmallString<64> user_home_dir;
-  if (!llvm::sys::path::home_directory(user_home_dir))
+  if (!FileSystem::Instance().GetHomeDirectory(user_home_dir))
     return;
 
   module_cache_dir = FileSpec(user_home_dir.c_str());
