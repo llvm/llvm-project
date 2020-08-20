@@ -131,6 +131,7 @@ PIPE_OPERATOR(AAValueConstantRange)
 PIPE_OPERATOR(AAPrivatizablePtr)
 PIPE_OPERATOR(AAUndefinedBehavior)
 PIPE_OPERATOR(AAPotentialValues)
+PIPE_OPERATOR(AANoUndef)
 
 #undef PIPE_OPERATOR
 } // namespace llvm
@@ -7625,6 +7626,119 @@ struct AAPotentialValuesCallSiteArgument : AAPotentialValuesFloating {
   }
 };
 
+/// ------------------------ NoUndef Attribute ---------------------------------
+struct AANoUndefImpl : AANoUndef {
+  AANoUndefImpl(const IRPosition &IRP, Attributor &A) : AANoUndef(IRP, A) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    Value &V = getAssociatedValue();
+    if (isa<UndefValue>(V))
+      indicatePessimisticFixpoint();
+    else if (isa<FreezeInst>(V))
+      indicateOptimisticFixpoint();
+    else if (isGuaranteedNotToBeUndefOrPoison(&V))
+      indicateOptimisticFixpoint();
+    else
+      AANoUndef::initialize(A);
+  }
+
+  /// See followUsesInMBEC
+  bool followUseInMBEC(Attributor &A, const Use *U, const Instruction *I,
+                       AANoUndef::StateType &State) {
+    const Value *UseV = U->get();
+    const DominatorTree *DT = nullptr;
+    if (Function *F = getAnchorScope())
+      DT = A.getInfoCache().getAnalysisResultForFunction<DominatorTreeAnalysis>(
+          *F);
+    State.setKnown(isGuaranteedNotToBeUndefOrPoison(UseV, I, DT));
+    bool TrackUse = false;
+    // Track use for instructions which must produce undef or poison bits when
+    // at least one operand contains such bits.
+    if (isa<CastInst>(*I) || isa<GetElementPtrInst>(*I))
+      TrackUse = true;
+    return TrackUse;
+  }
+
+  /// See AbstractAttribute::getAsStr().
+  const std::string getAsStr() const override {
+    return getAssumed() ? "noundef" : "may-undef-or-poison";
+  }
+};
+
+struct AANoUndefFloating : public AANoUndefImpl {
+  AANoUndefFloating(const IRPosition &IRP, Attributor &A)
+      : AANoUndefImpl(IRP, A) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AANoUndefImpl::initialize(A);
+    if (!getState().isAtFixpoint())
+      if (Instruction *CtxI = getCtxI())
+        followUsesInMBEC(*this, A, getState(), *CtxI);
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    auto VisitValueCB = [&](Value &V, const Instruction *CtxI,
+                            AANoUndef::StateType &T, bool Stripped) -> bool {
+      const auto &AA = A.getAAFor<AANoUndef>(*this, IRPosition::value(V));
+      if (!Stripped && this == &AA) {
+        T.indicatePessimisticFixpoint();
+      } else {
+        const AANoUndef::StateType &S =
+            static_cast<const AANoUndef::StateType &>(AA.getState());
+        T ^= S;
+      }
+      return T.isValidState();
+    };
+
+    StateType T;
+    if (!genericValueTraversal<AANoUndef, StateType>(
+            A, getIRPosition(), *this, T, VisitValueCB, getCtxI()))
+      return indicatePessimisticFixpoint();
+
+    return clampStateAndIndicateChange(getState(), T);
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(noundef) }
+};
+
+struct AANoUndefReturned final
+    : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl> {
+  AANoUndefReturned(const IRPosition &IRP, Attributor &A)
+      : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl>(IRP, A) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(noundef) }
+};
+
+struct AANoUndefArgument final
+    : AAArgumentFromCallSiteArguments<AANoUndef, AANoUndefImpl> {
+  AANoUndefArgument(const IRPosition &IRP, Attributor &A)
+      : AAArgumentFromCallSiteArguments<AANoUndef, AANoUndefImpl>(IRP, A) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(noundef) }
+};
+
+struct AANoUndefCallSiteArgument final : AANoUndefFloating {
+  AANoUndefCallSiteArgument(const IRPosition &IRP, Attributor &A)
+      : AANoUndefFloating(IRP, A) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override { STATS_DECLTRACK_CSARG_ATTR(noundef) }
+};
+
+struct AANoUndefCallSiteReturned final
+    : AACallSiteReturnedFromReturned<AANoUndef, AANoUndefImpl> {
+  AANoUndefCallSiteReturned(const IRPosition &IRP, Attributor &A)
+      : AACallSiteReturnedFromReturned<AANoUndef, AANoUndefImpl>(IRP, A) {}
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(noundef) }
+};
 } // namespace
 
 const char AAReturnedValues::ID = 0;
@@ -7649,6 +7763,7 @@ const char AAMemoryBehavior::ID = 0;
 const char AAMemoryLocation::ID = 0;
 const char AAValueConstantRange::ID = 0;
 const char AAPotentialValues::ID = 0;
+const char AANoUndef::ID = 0;
 
 // Macro magic to create the static generator function for attributes that
 // follow the naming scheme.
@@ -7759,6 +7874,7 @@ CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAAlign)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoCapture)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAValueConstantRange)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPotentialValues)
+CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoUndef)
 
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAValueSimplify)
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAIsDead)

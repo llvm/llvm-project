@@ -29,7 +29,7 @@ define i32* @func1() {
 }
 
 ; UTC_ARGS: --disable
-; CHECK-LABEL: define internal nonnull align 4 dereferenceable(4) i32* @func1a()
+; CHECK-LABEL: define internal noundef nonnull align 4 dereferenceable(4) i32* @func1a()
 ; CHECK-NEXT: ret i32* getelementptr inbounds ([1 x i32], [1 x i32]* @var1, i32 0, i32 0)
 define internal i32* @func1a([1 x i32]* %arg) {
   %ptr = getelementptr inbounds [1 x i32], [1 x i32]* %arg, i64 0, i64 0
@@ -40,7 +40,7 @@ define internal i32* @func1a([1 x i32]* %arg) {
 define internal void @func2a(i32* %0) {
 ; CHECK: Function Attrs: nofree nosync nounwind willreturn writeonly
 ; CHECK-LABEL: define {{[^@]+}}@func2a
-; CHECK-SAME: (i32* nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]])
+; CHECK-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]])
 ; CHECK-NEXT:    store i32 0, i32* @var2, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -50,7 +50,7 @@ define internal void @func2a(i32* %0) {
 
 define i32 @func2() {
 ; CHECK-LABEL: define {{[^@]+}}@func2()
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 (i32*, ...) bitcast (void (i32*)* @func2a to i32 (i32*, ...)*)(i32* nonnull align 4 dereferenceable(4) @var2)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 (i32*, ...) bitcast (void (i32*)* @func2a to i32 (i32*, ...)*)(i32* noundef nonnull align 4 dereferenceable(4) @var2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* @var2, align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
@@ -62,7 +62,7 @@ define i32 @func2() {
 define i32 @func3(i1 %false) {
 ; CHECK-LABEL: define {{[^@]+}}@func3
 ; CHECK-SAME: (i1 [[FALSE:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 (i32*, ...) bitcast (void (i32*)* @func2a to i32 (i32*, ...)*)(i32* nonnull align 4 dereferenceable(4) @var2)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 (i32*, ...) bitcast (void (i32*)* @func2a to i32 (i32*, ...)*)(i32* noundef nonnull align 4 dereferenceable(4) @var2)
 ; CHECK-NEXT:    br i1 [[FALSE]], label [[USE_BB:%.*]], label [[RET_BB:%.*]]
 ; CHECK:       use_bb:
 ; CHECK-NEXT:    ret i32 [[TMP1]]

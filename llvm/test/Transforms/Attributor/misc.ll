@@ -13,10 +13,10 @@ define internal void @internal(void (i8*)* %fp) {
 ; CHECK-SAME: (void (i8*)* nonnull [[FP:%.*]])
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @foo(i32* noalias nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[A]])
+; CHECK-NEXT:    call void @foo(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]])
 ; CHECK-NEXT:    call void [[FP]](i8* bitcast (void (i32*)* @foo to i8*))
-; CHECK-NEXT:    call void @callback1(void (i32*)* nonnull @foo)
-; CHECK-NEXT:    call void @callback2(void (i8*)* bitcast (void (i32*)* @foo to void (i8*)*))
+; CHECK-NEXT:    call void @callback1(void (i32*)* noundef nonnull @foo)
+; CHECK-NEXT:    call void @callback2(void (i8*)* noundef bitcast (void (i32*)* @foo to void (i8*)*))
 ; CHECK-NEXT:    call void @callback2(void (i8*)* nonnull [[FP]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[A]] to i8*
 ; CHECK-NEXT:    call void [[FP]](i8* [[TMP1]])
@@ -42,9 +42,9 @@ define void @external(void (i8*)* %fp) {
 ; CHECK-SAME: (void (i8*)* [[FP:%.*]])
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @foo(i32* noalias nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[A]])
-; CHECK-NEXT:    call void @callback1(void (i32*)* nonnull @foo)
-; CHECK-NEXT:    call void @callback2(void (i8*)* bitcast (void (i32*)* @foo to void (i8*)*))
+; CHECK-NEXT:    call void @foo(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]])
+; CHECK-NEXT:    call void @callback1(void (i32*)* noundef nonnull @foo)
+; CHECK-NEXT:    call void @callback2(void (i8*)* noundef bitcast (void (i32*)* @foo to void (i8*)*))
 ; CHECK-NEXT:    call void @callback2(void (i8*)* [[FP]])
 ; CHECK-NEXT:    call void [[FP]](i8* bitcast (void (i32*)* @foo to i8*))
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[A]] to i8*

@@ -459,7 +459,7 @@ declare void @llvm.x86.sse2.clflush(i8*)
 define void @i_totally_sync() {
 ; CHECK: Function Attrs: nounwind
 ; CHECK-LABEL: define {{[^@]+}}@i_totally_sync()
-; CHECK-NEXT:    tail call void @llvm.x86.sse2.clflush(i8* nonnull align 4 dereferenceable(4) bitcast (i32* @a to i8*))
+; CHECK-NEXT:    tail call void @llvm.x86.sse2.clflush(i8* noundef nonnull align 4 dereferenceable(4) bitcast (i32* @a to i8*))
 ; CHECK-NEXT:    ret void
 ;
   tail call void @llvm.x86.sse2.clflush(i8* bitcast (i32* @a to i8*))
