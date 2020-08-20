@@ -166,6 +166,7 @@ static FileSpec MakeAbsolute(const FileSpec &file_spec) {
 
 Generator::Generator(FileSpec root) : m_root(MakeAbsolute(std::move(root))) {
   GetOrCreate<repro::WorkingDirectoryProvider>();
+  GetOrCreate<repro::HomeDirectoryProvider>();
 }
 
 Generator::~Generator() {
@@ -306,6 +307,7 @@ char FileProvider::ID = 0;
 char ProviderBase::ID = 0;
 char VersionProvider::ID = 0;
 char WorkingDirectoryProvider::ID = 0;
+char HomeDirectoryProvider::ID = 0;
 const char *CommandProvider::Info::file = "command-interpreter.yaml";
 const char *CommandProvider::Info::name = "command-interpreter";
 const char *FileProvider::Info::file = "files.yaml";
@@ -314,3 +316,5 @@ const char *VersionProvider::Info::file = "version.txt";
 const char *VersionProvider::Info::name = "version";
 const char *WorkingDirectoryProvider::Info::file = "cwd.txt";
 const char *WorkingDirectoryProvider::Info::name = "cwd";
+const char *HomeDirectoryProvider::Info::file = "home.txt";
+const char *HomeDirectoryProvider::Info::name = "home";

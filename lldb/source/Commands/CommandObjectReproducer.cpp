@@ -31,6 +31,7 @@ enum ReproducerProvider {
   eReproducerProviderProcessInfo,
   eReproducerProviderVersion,
   eReproducerProviderWorkingDirectory,
+  eReproducerProviderHomeDirectory,
   eReproducerProviderNone
 };
 
@@ -64,6 +65,11 @@ static constexpr OptionEnumValueElement g_reproducer_provider_type[] = {
         eReproducerProviderWorkingDirectory,
         "cwd",
         "Working Directory",
+    },
+    {
+        eReproducerProviderHomeDirectory,
+        "home",
+        "Home Directory",
     },
     {
         eReproducerProviderNone,
@@ -433,12 +439,23 @@ protected:
     }
     case eReproducerProviderWorkingDirectory: {
       Expected<std::string> cwd =
-          loader->LoadBuffer<WorkingDirectoryProvider>();
+          repro::GetDirectoryFrom<WorkingDirectoryProvider>(loader);
       if (!cwd) {
         SetError(result, cwd.takeError());
         return false;
       }
       result.AppendMessage(*cwd);
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return true;
+    }
+    case eReproducerProviderHomeDirectory: {
+      Expected<std::string> home =
+          repro::GetDirectoryFrom<HomeDirectoryProvider>(loader);
+      if (!home) {
+        SetError(result, home.takeError());
+        return false;
+      }
+      result.AppendMessage(*home);
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return true;
     }
