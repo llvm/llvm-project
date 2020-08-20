@@ -214,7 +214,7 @@ Dialect *Operation::getDialect() {
 
   // If this operation hasn't been registered or doesn't have abstract
   // operation, try looking up the dialect name in the context.
-  return getContext()->getLoadedDialect(getName().getDialect());
+  return getContext()->getRegisteredDialect(getName().getDialect());
 }
 
 Region *Operation::getParentRegion() {

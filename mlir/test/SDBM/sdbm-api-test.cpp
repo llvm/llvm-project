@@ -19,19 +19,18 @@
 
 using namespace mlir;
 
+// Load the SDBM dialect
+static DialectRegistration<SDBMDialect> SDBMRegistration;
 
 static MLIRContext *ctx() {
-  static thread_local MLIRContext context(/*loadAllDialects=*/false);
-  static thread_local bool once =
-      (context.getOrLoadDialect<SDBMDialect>(), true);
-  (void)once;
+  static thread_local MLIRContext context;
   return &context;
 }
 
 static SDBMDialect *dialect() {
   static thread_local SDBMDialect *d = nullptr;
   if (!d) {
-    d = ctx()->getOrLoadDialect<SDBMDialect>();
+    d = ctx()->getRegisteredDialect<SDBMDialect>();
   }
   return d;
 }
