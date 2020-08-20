@@ -6841,9 +6841,8 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                  M, DAG, Ops);
 
     // Handle BUFFER_LOAD_BYTE/UBYTE/SHORT/USHORT overloaded intrinsics
-    if (!LoadVT.isVector() &&
-        (LoadVT.getScalarType() == MVT::i8 ||
-         LoadVT.getScalarType() == MVT::i16))
+    if (LoadVT.getScalarType() == MVT::i8 ||
+        LoadVT.getScalarType() == MVT::i16)
       return handleByteShortBufferLoads(DAG, LoadVT, DL, Ops, M);
 
     return getMemIntrinsicNode(Opc, DL, Op->getVTList(), Ops, IntVT,
@@ -7394,8 +7393,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     // Handle BUFFER_STORE_BYTE/SHORT overloaded intrinsics
     EVT VDataType = VData.getValueType().getScalarType();
-    if (!VData.getValueType().isVector() &&
-        (VDataType == MVT::i8 || VDataType == MVT::i16))
+    if (VDataType == MVT::i8 || VDataType == MVT::i16)
       return handleByteShortBufferStores(DAG, VDataType, DL, Ops, M);
 
     return DAG.getMemIntrinsicNode(Opc, DL, Op->getVTList(), Ops,
