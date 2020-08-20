@@ -2822,7 +2822,8 @@ void InnerLoopVectorizer::emitSCEVChecks(Loop *L, BasicBlock *Bypass) {
       return;
 
   assert(!(SCEVCheckBlock->getParent()->hasOptSize() ||
-           OptForSizeBasedOnProfile) &&
+           (OptForSizeBasedOnProfile &&
+            Cost->Hints->getForce() != LoopVectorizeHints::FK_Enabled)) &&
          "Cannot SCEV check stride or overflow when optimizing for size");
 
   SCEVCheckBlock->setName("vector.scevcheck");
@@ -7914,12 +7915,17 @@ static ScalarEpilogueLowering getScalarEpilogueLowering(
     BlockFrequencyInfo *BFI, TargetTransformInfo *TTI, TargetLibraryInfo *TLI,
     AssumptionCache *AC, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
     LoopVectorizationLegality &LVL) {
-  bool OptSize =
-      F->hasOptSize() || llvm::shouldOptimizeForSize(L->getHeader(), PSI, BFI,
-                                                     PGSOQueryType::IRPass);
   // 1) OptSize takes precedence over all other options, i.e. if this is set,
   // don't look at hints or options, and don't request a scalar epilogue.
-  if (OptSize)
+  // (For PGSO, as shouldOptimizeForSize isn't currently accessible from
+  // LoopAccessInfo (due to code dependency and not being able to reliably get
+  // PSI/BFI from a loop analysis under NPM), we cannot suppress the collection
+  // of strides in LoopAccessInfo::analyzeLoop() and vectorize without
+  // versioning when the vectorization is forced, unlike hasOptSize. So revert
+  // back to the old way and vectorize with versioning when forced. See D81345.)
+  if (F->hasOptSize() || (llvm::shouldOptimizeForSize(L->getHeader(), PSI, BFI,
+                                                      PGSOQueryType::IRPass) &&
+                          Hints.getForce() != LoopVectorizeHints::FK_Enabled))
     return CM_ScalarEpilogueNotAllowedOptSize;
 
   bool PredicateOptDisabled = PreferPredicateOverEpilog.getNumOccurrences() &&
