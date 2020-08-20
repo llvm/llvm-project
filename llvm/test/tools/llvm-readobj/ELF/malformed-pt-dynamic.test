@@ -51,9 +51,72 @@
 
 # WARN2-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1119) + file size (0x10) exceeds the size of the file (0x1118)
 
+## Case C: test we report a warning when the offset + the file size of the PT_DYNAMIC is so large a
+##         value that it overflows the platform address size type.
+
+# RUN: yaml2obj %s -DOFFSET=0xffffffffffffffff -o %t3
+# RUN: not llvm-readobj %t3 --dynamic-table 2>&1 | FileCheck -DFILE=%t3 %s --check-prefix=WARN3
+# RUN: not llvm-readelf %t3 --dynamic-table 2>&1 | FileCheck -DFILE=%t3 %s --check-prefix=WARN3
+
+# WARN3: warning: '[[FILE]]': PT_DYNAMIC segment offset (0xffffffffffffffff) + file size (0x10) exceeds the size of the file (0x1130)
+# WARN3: error:   '[[FILE]]': Invalid data was encountered while parsing the file
+
+# RUN: yaml2obj %s -DNOHEADERS=true -DOFFSET=0xffffffffffffffff -o %t3.noheaders
+# RUN: llvm-readobj %t3.noheaders --dynamic-table 2>&1 | \
+# RUN:   FileCheck -DFILE=%t3.noheaders %s --check-prefix=WARN3-NOHEADERS
+# RUN: llvm-readelf %t3.noheaders --dynamic-table 2>&1 | \
+# RUN:   FileCheck -DFILE=%t3.noheaders %s --check-prefix=WARN3-NOHEADERS
+
+# WARN3-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0xffffffffffffffff) + file size (0x10) exceeds the size of the file (0x1118)
+
+# RUN: yaml2obj %s -DFILESIZE=0xffffffffffffffff -o %t4
+# RUN: llvm-readobj %t4 --dynamic-table 2>&1 | FileCheck -DFILE=%t4 %s --check-prefix=WARN4
+# RUN: llvm-readelf %t4 --dynamic-table 2>&1 | FileCheck -DFILE=%t4 %s --check-prefix=WARN4
+
+# WARN4: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0xffffffffffffffff) exceeds the size of the file (0x1130)
+
+# RUN: yaml2obj %s -DNOHEADERS=true -DFILESIZE=0xffffffffffffffff -o %t4.noheaders
+# RUN: llvm-readobj %t4.noheaders --dynamic-table 2>&1 | \
+# RUN:   FileCheck -DFILE=%t4.noheaders %s --check-prefix=WARN4-NOHEADERS
+# RUN: llvm-readelf %t4.noheaders --dynamic-table 2>&1 | \
+# RUN:   FileCheck -DFILE=%t4.noheaders %s --check-prefix=WARN4-NOHEADERS
+
+# WARN4-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0xffffffffffffffff) exceeds the size of the file (0x1118)
+
+## Case D: the same as "Case C", but for a 32-bit object.
+
+# RUN: yaml2obj %s -DBITS=32 -DOFFSET=0xffffffff -o %t5
+# RUN: not llvm-readobj %t5 --dynamic-table 2>&1 | FileCheck -DFILE=%t5 %s --check-prefix=WARN5
+# RUN: not llvm-readelf %t5 --dynamic-table 2>&1 | FileCheck -DFILE=%t5 %s --check-prefix=WARN5
+
+# WARN5: warning: '[[FILE]]': PT_DYNAMIC segment offset (0xffffffff) + file size (0x8) exceeds the size of the file (0x10c8)
+# WARN5: error:   '[[FILE]]': Invalid data was encountered while parsing the file
+
+# RUN: yaml2obj %s -DNOHEADERS=true -DBITS=32 -DOFFSET=0xffffffff -o %t5.noheaders
+# RUN: llvm-readobj %t5.noheaders --dynamic-table 2>&1 | \
+# RUN:   FileCheck -DFILE=%t5.noheaders %s --check-prefix=WARN5-NOHEADERS
+# RUN: llvm-readelf %t5.noheaders --dynamic-table 2>&1 | \
+# RUN:   FileCheck -DFILE=%t5.noheaders %s --check-prefix=WARN5-NOHEADERS
+
+# WARN5-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0xffffffff) + file size (0x8) exceeds the size of the file (0x10ac)
+
+# RUN: yaml2obj %s -DBITS=32 -DFILESIZE=0xffffffff -o %t6
+# RUN: llvm-readobj %t6 --dynamic-table 2>&1 | FileCheck -DFILE=%t6 %s --check-prefix=WARN6
+# RUN: llvm-readelf %t6 --dynamic-table 2>&1 | FileCheck -DFILE=%t6 %s --check-prefix=WARN6
+
+# WARN6: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0xffffffff) exceeds the size of the file (0x10c8)
+
+# RUN: yaml2obj %s -DNOHEADERS=true -DBITS=32 -DFILESIZE=0xffffffff -o %t6.noheaders
+# RUN: llvm-readobj %t6.noheaders --dynamic-table 2>&1 | \
+# RUN:   FileCheck -DFILE=%t6.noheaders %s --check-prefix=WARN6-NOHEADERS
+# RUN: llvm-readelf %t6.noheaders --dynamic-table 2>&1 | \
+# RUN:   FileCheck -DFILE=%t6.noheaders %s --check-prefix=WARN6-NOHEADERS
+
+# WARN6-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0xffffffff) exceeds the size of the file (0x10ac)
+
 --- !ELF
 FileHeader:
-  Class: ELFCLASS64
+  Class: ELFCLASS[[BITS=64]]
   Data:  ELFDATA2LSB
   Type:  ET_EXEC
 Sections:
