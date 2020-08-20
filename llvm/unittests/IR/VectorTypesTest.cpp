@@ -59,13 +59,13 @@ TEST(VectorTypesTest, FixedLength) {
       dyn_cast<FixedVectorType>(VectorType::get(Int32Ty, V8Int32Ty));
   EXPECT_VTY_EQ(V8Int32Ty, V8Int32Ty2);
 
-  auto *V8Int16Ty =
-      dyn_cast<FixedVectorType>(VectorType::get(Int16Ty, {8, false}));
+  auto *V8Int16Ty = dyn_cast<FixedVectorType>(
+      VectorType::get(Int16Ty, ElementCount::getFixed(8)));
   ASSERT_NE(nullptr, V8Int16Ty);
   EXPECT_EQ(V8Int16Ty->getNumElements(), 8U);
   EXPECT_EQ(V8Int16Ty->getElementType()->getScalarSizeInBits(), 16U);
 
-  ElementCount EltCnt(4, false);
+  auto EltCnt = ElementCount::getFixed(4);
   auto *V4Int64Ty = dyn_cast<FixedVectorType>(VectorType::get(Int64Ty, EltCnt));
   ASSERT_NE(nullptr, V4Int64Ty);
   EXPECT_EQ(V4Int64Ty->getNumElements(), 4U);
@@ -153,13 +153,13 @@ TEST(VectorTypesTest, Scalable) {
       dyn_cast<ScalableVectorType>(VectorType::get(Int32Ty, ScV8Int32Ty));
   EXPECT_VTY_EQ(ScV8Int32Ty, ScV8Int32Ty2);
 
-  auto *ScV8Int16Ty =
-      dyn_cast<ScalableVectorType>(VectorType::get(Int16Ty, {8, true}));
+  auto *ScV8Int16Ty = dyn_cast<ScalableVectorType>(
+      VectorType::get(Int16Ty, ElementCount::getScalable(8)));
   ASSERT_NE(nullptr, ScV8Int16Ty);
   EXPECT_EQ(ScV8Int16Ty->getMinNumElements(), 8U);
   EXPECT_EQ(ScV8Int16Ty->getElementType()->getScalarSizeInBits(), 16U);
 
-  ElementCount EltCnt(4, true);
+  auto EltCnt = ElementCount::getScalable(4);
   auto *ScV4Int64Ty =
       dyn_cast<ScalableVectorType>(VectorType::get(Int64Ty, EltCnt));
   ASSERT_NE(nullptr, ScV4Int64Ty);
@@ -225,14 +225,15 @@ TEST(VectorTypesTest, BaseVectorType) {
   Type *Int16Ty = Type::getInt16Ty(Ctx);
   Type *Int32Ty = Type::getInt32Ty(Ctx);
 
-  std::array<VectorType *, 8> VTys = {VectorType::get(Int16Ty, {4, true}),
-                                      VectorType::get(Int16Ty, {4, false}),
-                                      VectorType::get(Int16Ty, {2, true}),
-                                      VectorType::get(Int16Ty, {2, false}),
-                                      VectorType::get(Int32Ty, {4, true}),
-                                      VectorType::get(Int32Ty, {4, false}),
-                                      VectorType::get(Int32Ty, {2, true}),
-                                      VectorType::get(Int32Ty, {2, false})};
+  std::array<VectorType *, 8> VTys = {
+      VectorType::get(Int16Ty, ElementCount::getScalable(4)),
+      VectorType::get(Int16Ty, ElementCount::getFixed(4)),
+      VectorType::get(Int16Ty, ElementCount::getScalable(2)),
+      VectorType::get(Int16Ty, ElementCount::getFixed(2)),
+      VectorType::get(Int32Ty, ElementCount::getScalable(4)),
+      VectorType::get(Int32Ty, ElementCount::getFixed(4)),
+      VectorType::get(Int32Ty, ElementCount::getScalable(2)),
+      VectorType::get(Int32Ty, ElementCount::getFixed(2))};
 
   /*
     The comparison matrix is symmetric, so we only check the upper triangle:
