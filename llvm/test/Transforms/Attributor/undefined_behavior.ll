@@ -1032,8 +1032,7 @@ declare void @callee_ptr_arg(i32*)
 
 define void @callsite_noundef_2() {
 ; CHECK-LABEL: define {{[^@]+}}@callsite_noundef_2()
-; CHECK-NEXT:    call void @callee_ptr_arg(i32* noundef undef)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    unreachable
 ;
   call void @callee_ptr_arg(i32* noundef undef)
   ret void
