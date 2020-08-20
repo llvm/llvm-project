@@ -1237,7 +1237,7 @@ mapping.
                                              Registers.
    96-127         *Reserved*                 *Reserved for frequently accessed
                                              registers using DWARF 1-byte ULEB.*
-   128            SCC               32       Scalar Condition Code Register.
+   128            STATUS            32       Status Register.
    129-511        *Reserved*                 *Reserved for future Scalar
                                              Architectural Registers.*
    512            VCC_32            32       Vector Condition Code Register
@@ -1246,7 +1246,7 @@ mapping.
    513-1023       *Reserved*                 *Reserved for future Vector
                                              Architectural Registers when
                                              executing in wavefront 32 mode.*
-   768            VCC_64            32       Vector Condition Code Register
+   768            VCC_64            64       Vector Condition Code Register
                                              when executing in wavefront 64
                                              mode.
    769-1023       *Reserved*                 *Reserved for future Vector
