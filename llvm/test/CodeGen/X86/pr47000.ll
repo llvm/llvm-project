@@ -16,17 +16,15 @@ define <4 x half> @doTheTestMod(<4 x half> %0, <4 x half> %1) nounwind {
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    movw 176(%esp), %dx
 ; CHECK-NEXT:    movw 172(%esp), %si
-; CHECK-NEXT:    movw 164(%esp), %di
-; CHECK-NEXT:    movw 166(%esp), %bx
+; CHECK-NEXT:    movw 168(%esp), %di
+; CHECK-NEXT:    movw 164(%esp), %bx
 ; CHECK-NEXT:    movw 160(%esp), %bp
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    movw 156(%esp), %ax
 ; CHECK-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
+; CHECK-NEXT:    movw 152(%esp), %ax
+; CHECK-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
 ; CHECK-NEXT:    movw 148(%esp), %ax
-; CHECK-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw 150(%esp), %ax
-; CHECK-NEXT:    movw %ax, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
-; CHECK-NEXT:    movw {{[-0-9]+}}(%e{{[sb]}}p), %ax # 2-byte Reload
 ; CHECK-NEXT:    movw %ax, 112(%esp)
 ; CHECK-NEXT:    movw {{[-0-9]+}}(%e{{[sb]}}p), %ax # 2-byte Reload
 ; CHECK-NEXT:    movw %ax, 114(%esp)
@@ -35,8 +33,8 @@ define <4 x half> @doTheTestMod(<4 x half> %0, <4 x half> %1) nounwind {
 ; CHECK-NEXT:    movw %bp, 118(%esp)
 ; CHECK-NEXT:    movw %dx, 110(%esp)
 ; CHECK-NEXT:    movw %si, 108(%esp)
-; CHECK-NEXT:    movw %bx, 106(%esp)
-; CHECK-NEXT:    movw %di, 104(%esp)
+; CHECK-NEXT:    movw %di, 106(%esp)
+; CHECK-NEXT:    movw %bx, 104(%esp)
 ; CHECK-NEXT:    movzwl 118(%esp), %edx
 ; CHECK-NEXT:    movzwl 116(%esp), %esi
 ; CHECK-NEXT:    movzwl 114(%esp), %edi
