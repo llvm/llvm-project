@@ -477,7 +477,7 @@ MachineMemOperand *MachineFunction::getMachineMemOperand(
 MachineMemOperand *MachineFunction::getMachineMemOperand(
     const MachineMemOperand *MMO, MachinePointerInfo &PtrInfo, uint64_t Size) {
   return new (Allocator) MachineMemOperand(
-      PtrInfo, MMO->getFlags(), Size, Alignment, AAMDNodes(), nullptr,
+      PtrInfo, MMO->getFlags(), Size, MMO->getBaseAlign(), AAMDNodes(), nullptr,
       MMO->getSyncScopeID(), MMO->getOrdering(), MMO->getFailureOrdering());
 }
 

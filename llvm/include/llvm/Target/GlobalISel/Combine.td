@@ -132,6 +132,13 @@ def sext_trunc_sextload : GICombineRule<
          [{ return Helper.matchSextTruncSextLoad(*${d}); }]),
   (apply [{ Helper.applySextTruncSextLoad(*${d}); }])>;
 
+def sext_inreg_of_load_matchdata : GIDefMatchData<"std::tuple<Register, unsigned>">;
+def sext_inreg_of_load : GICombineRule<
+  (defs root:$root, sext_inreg_of_load_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SEXT_INREG):$root,
+         [{ return Helper.matchSextInRegOfLoad(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.applySextInRegOfLoad(*${root}, ${matchinfo}); }])>;
+
 def combine_indexed_load_store : GICombineRule<
   (defs root:$root, indexed_load_store_matchdata:$matchinfo),
   (match (wip_match_opcode G_LOAD, G_SEXTLOAD, G_ZEXTLOAD, G_STORE):$root,
@@ -311,4 +318,4 @@ def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
     combines_for_extload, combine_indexed_load_store, undef_combines,
     identity_combines, simplify_add_to_sub,
     hoist_logic_op_with_same_opcode_hands,
-    shl_ashr_to_sext_inreg]>;
+    shl_ashr_to_sext_inreg, sext_inreg_of_load]>;
