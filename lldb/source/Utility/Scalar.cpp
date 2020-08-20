@@ -197,13 +197,9 @@ void Scalar::GetValue(Stream *s, bool show_type) const {
   }
 }
 
-Scalar::Type Scalar::GetBestTypeForBitSize(size_t bit_size, bool sign) {
-  return sign ? e_sint : e_uint;
-}
-
 void Scalar::TruncOrExtendTo(uint16_t bits, bool sign) {
   m_integer = sign ? m_integer.sextOrTrunc(bits) : m_integer.zextOrTrunc(bits);
-  m_type = GetBestTypeForBitSize(bits, sign);
+  m_type = sign ? e_sint : e_uint;
 }
 
 bool Scalar::IntegralPromote(uint16_t bits, bool sign) {
@@ -260,16 +256,6 @@ const char *Scalar::GetValueTypeAsCString(Scalar::Type type) {
     return "float";
   }
   return "???";
-}
-
-Scalar::Type
-Scalar::GetValueTypeForSignedIntegerWithByteSize(size_t byte_size) {
-  return e_sint;
-}
-
-Scalar::Type
-Scalar::GetValueTypeForUnsignedIntegerWithByteSize(size_t byte_size) {
-  return e_uint;
 }
 
 bool Scalar::MakeSigned() {
@@ -768,12 +754,7 @@ Status Scalar::SetValueFromData(const DataExtractor &data,
   case lldb::eEncodingSint: {
     if (data.GetByteSize() < byte_size)
       return Status("insufficient data");
-    Type type = GetBestTypeForBitSize(byte_size*8, encoding == lldb::eEncodingSint);
-    if (type == e_void) {
-      return Status("unsupported integer byte size: %" PRIu64 "",
-                    static_cast<uint64_t>(byte_size));
-    }
-    m_type = type;
+    m_type = encoding == lldb::eEncodingSint ? e_sint : e_uint;
     if (data.GetByteOrder() == endian::InlHostByteOrder()) {
       m_integer = APInt::getNullValue(8 * byte_size);
       llvm::LoadIntFromMemory(m_integer, data.GetDataStart(), byte_size);
