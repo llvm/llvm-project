@@ -243,22 +243,21 @@ void LegalizerHelper::insertParts(Register DstReg,
   }
 }
 
-/// Return the result registers of G_UNMERGE_VALUES \p MI in \p Regs
+/// Append the result registers of G_UNMERGE_VALUES \p MI to \p Regs.
 static void getUnmergeResults(SmallVectorImpl<Register> &Regs,
                               const MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES);
 
+  const int StartIdx = Regs.size();
   const int NumResults = MI.getNumOperands() - 1;
-  Regs.resize(NumResults);
+  Regs.resize(Regs.size() + NumResults);
   for (int I = 0; I != NumResults; ++I)
-    Regs[I] = MI.getOperand(I).getReg();
+    Regs[StartIdx + I] = MI.getOperand(I).getReg();
 }
 
-LLT LegalizerHelper::extractGCDType(SmallVectorImpl<Register> &Parts, LLT DstTy,
-                                    LLT NarrowTy, Register SrcReg) {
+void LegalizerHelper::extractGCDType(SmallVectorImpl<Register> &Parts,
+                                     LLT GCDTy, Register SrcReg) {
   LLT SrcTy = MRI.getType(SrcReg);
-
-  LLT GCDTy = getGCDType(getGCDType(SrcTy, NarrowTy), DstTy);
   if (SrcTy == GCDTy) {
     // If the source already evenly divides the result type, we don't need to do
     // anything.
@@ -268,7 +267,13 @@ LLT LegalizerHelper::extractGCDType(SmallVectorImpl<Register> &Parts, LLT DstTy,
     auto Unmerge = MIRBuilder.buildUnmerge(GCDTy, SrcReg);
     getUnmergeResults(Parts, *Unmerge);
   }
+}
 
+LLT LegalizerHelper::extractGCDType(SmallVectorImpl<Register> &Parts, LLT DstTy,
+                                    LLT NarrowTy, Register SrcReg) {
+  LLT SrcTy = MRI.getType(SrcReg);
+  LLT GCDTy = getGCDType(getGCDType(SrcTy, NarrowTy), DstTy);
+  extractGCDType(Parts, GCDTy, SrcReg);
   return GCDTy;
 }
 
@@ -3610,6 +3615,34 @@ LegalizerHelper::fewerElementsVectorBuildVector(MachineInstr &MI,
 }
 
 LegalizerHelper::LegalizeResult
+LegalizerHelper::fewerElementsVectorConcatVectors(MachineInstr &MI,
+                                                  unsigned TypeIdx,
+                                                  LLT NarrowTy) {
+  if (TypeIdx != 1)
+    return UnableToLegalize;
+
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+  LLT GCDTy = getGCDType(getGCDType(SrcTy, NarrowTy), DstTy);
+
+  // Break into a common type
+  SmallVector<Register, 16> Parts;
+  for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I)
+    extractGCDType(Parts, GCDTy, MI.getOperand(I).getReg());
+
+  // Build the requested new merge, padding with undef.
+  LLT LCMTy = buildLCMMergePieces(DstTy, NarrowTy, GCDTy, Parts,
+                                  TargetOpcode::G_ANYEXT);
+
+  // Pack into the original result register.
+  buildWidenedRemergeToDst(DstReg, LCMTy, Parts);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
 LegalizerHelper::fewerElementsVectorExtractInsertVectorElt(MachineInstr &MI,
                                                            unsigned TypeIdx,
                                                            LLT NarrowVecTy) {
@@ -4013,6 +4046,8 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     return fewerElementsVectorUnmergeValues(MI, TypeIdx, NarrowTy);
   case G_BUILD_VECTOR:
     return fewerElementsVectorBuildVector(MI, TypeIdx, NarrowTy);
+  case G_CONCAT_VECTORS:
+    return fewerElementsVectorConcatVectors(MI, TypeIdx, NarrowTy);
   case G_EXTRACT_VECTOR_ELT:
   case G_INSERT_VECTOR_ELT:
     return fewerElementsVectorExtractInsertVectorElt(MI, TypeIdx, NarrowTy);

@@ -198,10 +198,18 @@ private:
                    LLT PartTy, ArrayRef<Register> PartRegs,
                    LLT LeftoverTy = LLT(), ArrayRef<Register> LeftoverRegs = {});
 
-  /// Unmerge \p SrcReg into \p Parts with the greatest common divisor type with
-  /// \p DstTy and \p NarrowTy. Returns the GCD type.
+  /// Unmerge \p SrcReg into smaller sized values, and append them to \p
+  /// Parts. The elements of \p Parts will be the greatest common divisor type
+  /// of \p DstTy, \p NarrowTy and the type of \p SrcReg. This will compute and
+  /// return the GCD type.
   LLT extractGCDType(SmallVectorImpl<Register> &Parts, LLT DstTy,
                      LLT NarrowTy, Register SrcReg);
+
+  /// Unmerge \p SrcReg into \p GCDTy typed registers. This will append all of
+  /// the unpacked registers to \p Parts. This version is if the common unmerge
+  /// type is already known.
+  void extractGCDType(SmallVectorImpl<Register> &Parts, LLT GCDTy,
+                      Register SrcReg);
 
   /// Produce a merge of values in \p VRegs to define \p DstReg. Perform a merge
   /// from the least common multiple type, and convert as appropriate to \p
@@ -282,10 +290,12 @@ public:
   LegalizeResult fewerElementsVectorBuildVector(MachineInstr &MI,
                                                 unsigned TypeIdx,
                                                 LLT NarrowTy);
+  LegalizeResult fewerElementsVectorConcatVectors(MachineInstr &MI,
+                                                  unsigned TypeIdx,
+                                                  LLT NarrowTy);
   LegalizeResult fewerElementsVectorExtractInsertVectorElt(MachineInstr &MI,
                                                            unsigned TypeIdx,
                                                            LLT NarrowTy);
-
   LegalizeResult
   reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
 
