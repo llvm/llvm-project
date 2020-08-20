@@ -2349,11 +2349,6 @@ DerivedArgList *MachO::TranslateArgs(const DerivedArgList &Args,
     }
   }
 
-  if (getTriple().isX86())
-    if (!Args.hasArgNoClaim(options::OPT_mtune_EQ))
-      DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_mtune_EQ),
-                        "core2");
-
   // Add the arch options based on the particular spelling of -arch, to match
   // how the driver driver works.
   if (!BoundArch.empty()) {
