@@ -3415,8 +3415,7 @@ define i64 @v_sdiv_i64_24bit(i64 %num, i64 %den) {
 ; CGP-NEXT:    v_cmp_ge_f32_e64 vcc, |v3|, |v2|
 ; CGP-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; CGP-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
-; CGP-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
-; CGP-NEXT:    v_ashrrev_i32_e32 v0, 7, v0
+; CGP-NEXT:    v_bfe_i32 v0, v0, 0, 25
 ; CGP-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; CGP-NEXT:    s_setpc_b64 s[30:31]
   %num.mask = and i64 %num, 16777215
@@ -3736,10 +3735,8 @@ define <2 x i64> @v_sdiv_v2i64_24bit(<2 x i64> %num, <2 x i64> %den) {
 ; CGP-NEXT:    v_cmp_ge_f32_e64 vcc, |v5|, |v3|
 ; CGP-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; CGP-NEXT:    v_add_i32_e32 v2, vcc, v4, v2
-; CGP-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
-; CGP-NEXT:    v_lshlrev_b32_e32 v2, 7, v2
-; CGP-NEXT:    v_ashrrev_i32_e32 v0, 7, v0
-; CGP-NEXT:    v_ashrrev_i32_e32 v2, 7, v2
+; CGP-NEXT:    v_bfe_i32 v0, v0, 0, 25
+; CGP-NEXT:    v_bfe_i32 v2, v2, 0, 25
 ; CGP-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; CGP-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; CGP-NEXT:    s_setpc_b64 s[30:31]
