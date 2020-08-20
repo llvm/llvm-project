@@ -769,39 +769,39 @@ let hasSideEffects = 0 in {
   def XSCVDPSXDS : XX2Form<60, 344,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvdpsxds $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (PPCfctidz f64:$XB))]>;
+                      [(set f64:$XT, (PPCany_fctidz f64:$XB))]>;
   let isCodeGenOnly = 1 in
   def XSCVDPSXDSs : XX2Form<60, 344,
                       (outs vssrc:$XT), (ins vssrc:$XB),
                       "xscvdpsxds $XT, $XB", IIC_VecFP,
-                      [(set f32:$XT, (PPCfctidz f32:$XB))]>;
+                      [(set f32:$XT, (PPCany_fctidz f32:$XB))]>;
   def XSCVDPSXWS : XX2Form<60, 88,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvdpsxws $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (PPCfctiwz f64:$XB))]>;
+                      [(set f64:$XT, (PPCany_fctiwz f64:$XB))]>;
   let isCodeGenOnly = 1 in
   def XSCVDPSXWSs : XX2Form<60, 88,
                       (outs vssrc:$XT), (ins vssrc:$XB),
                       "xscvdpsxws $XT, $XB", IIC_VecFP,
-                      [(set f32:$XT, (PPCfctiwz f32:$XB))]>;
+                      [(set f32:$XT, (PPCany_fctiwz f32:$XB))]>;
   def XSCVDPUXDS : XX2Form<60, 328,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvdpuxds $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (PPCfctiduz f64:$XB))]>;
+                      [(set f64:$XT, (PPCany_fctiduz f64:$XB))]>;
   let isCodeGenOnly = 1 in
   def XSCVDPUXDSs : XX2Form<60, 328,
                       (outs vssrc:$XT), (ins vssrc:$XB),
                       "xscvdpuxds $XT, $XB", IIC_VecFP,
-                      [(set f32:$XT, (PPCfctiduz f32:$XB))]>;
+                      [(set f32:$XT, (PPCany_fctiduz f32:$XB))]>;
   def XSCVDPUXWS : XX2Form<60, 72,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvdpuxws $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (PPCfctiwuz f64:$XB))]>;
+                      [(set f64:$XT, (PPCany_fctiwuz f64:$XB))]>;
   let isCodeGenOnly = 1 in
   def XSCVDPUXWSs : XX2Form<60, 72,
                       (outs vssrc:$XT), (ins vssrc:$XB),
                       "xscvdpuxws $XT, $XB", IIC_VecFP,
-                      [(set f32:$XT, (PPCfctiwuz f32:$XB))]>;
+                      [(set f32:$XT, (PPCany_fctiwuz f32:$XB))]>;
   def XSCVSPDP : XX2Form<60, 329,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvspdp $XT, $XB", IIC_VecFP, []>;
@@ -1479,9 +1479,8 @@ let Predicates = [HasVSX, HasP9Vector] in {
                                           f128:$vB))]>;
   }
 
-  // FIXME: Setting the hasSideEffects flag here to match current behaviour.
   // Truncate & Convert QP -> (Un)Signed (D)Word (dword[1] is set to zero)
-  let hasSideEffects = 1 in {
+  let mayRaiseFPException = 1 in {
     def XSCVQPSDZ : X_VT5_XO5_VB5<63, 25, 836, "xscvqpsdz", []>;
     def XSCVQPSWZ : X_VT5_XO5_VB5<63,  9, 836, "xscvqpswz", []>;
     def XSCVQPUDZ : X_VT5_XO5_VB5<63, 17, 836, "xscvqpudz", []>;
@@ -3764,11 +3763,11 @@ def : Pat<(f128 (uint_to_fp ScalarLoads.ZELi8)),
           (f128 (XSCVUDQP (LXSIBZX xoaddr:$src)))>;
 
 // Truncate & Convert QP -> (Un)Signed (D)Word.
-def : Pat<(i64 (fp_to_sint f128:$src)), (i64 (MFVRD (XSCVQPSDZ $src)))>;
-def : Pat<(i64 (fp_to_uint f128:$src)), (i64 (MFVRD (XSCVQPUDZ $src)))>;
-def : Pat<(i32 (fp_to_sint f128:$src)),
+def : Pat<(i64 (any_fp_to_sint f128:$src)), (i64 (MFVRD (XSCVQPSDZ $src)))>;
+def : Pat<(i64 (any_fp_to_uint f128:$src)), (i64 (MFVRD (XSCVQPUDZ $src)))>;
+def : Pat<(i32 (any_fp_to_sint f128:$src)),
           (i32 (MFVSRWZ (COPY_TO_REGCLASS (XSCVQPSWZ $src), VFRC)))>;
-def : Pat<(i32 (fp_to_uint f128:$src)),
+def : Pat<(i32 (any_fp_to_uint f128:$src)),
           (i32 (MFVSRWZ (COPY_TO_REGCLASS (XSCVQPUWZ $src), VFRC)))>;
 
 // Instructions for store(fptosi).

@@ -215,6 +215,28 @@ def PPCfnmsub     : SDNode<"PPCISD::FNMSUB"    , SDTFPTernaryOp>;
 
 def PPCextswsli : SDNode<"PPCISD::EXTSWSLI" , SDT_PPCextswsli>;
 
+def PPCstrict_fctidz : SDNode<"PPCISD::STRICT_FCTIDZ",
+                              SDTFPUnaryOp, [SDNPHasChain]>;
+def PPCstrict_fctiwz : SDNode<"PPCISD::STRICT_FCTIWZ",
+                              SDTFPUnaryOp, [SDNPHasChain]>;
+def PPCstrict_fctiduz : SDNode<"PPCISD::STRICT_FCTIDUZ",
+                               SDTFPUnaryOp, [SDNPHasChain]>;
+def PPCstrict_fctiwuz : SDNode<"PPCISD::STRICT_FCTIWUZ",
+                                SDTFPUnaryOp, [SDNPHasChain]>;
+
+def PPCany_fctidz : PatFrags<(ops node:$op),
+                             [(PPCstrict_fctidz node:$op),
+                              (PPCfctidz node:$op)]>;
+def PPCany_fctiwz : PatFrags<(ops node:$op),
+                             [(PPCstrict_fctiwz node:$op),
+                              (PPCfctiwz node:$op)]>;
+def PPCany_fctiduz : PatFrags<(ops node:$op),
+                              [(PPCstrict_fctiduz node:$op),
+                               (PPCfctiduz node:$op)]>;
+def PPCany_fctiwuz : PatFrags<(ops node:$op),
+                              [(PPCstrict_fctiwuz node:$op),
+                               (PPCfctiwuz node:$op)]>;
+
 // Move 2 i64 values into a VSX register
 def PPCbuild_fp128: SDNode<"PPCISD::BUILD_FP128",
                            SDTypeProfile<1, 2,
@@ -2632,7 +2654,7 @@ let Uses = [RM], mayRaiseFPException = 1, hasSideEffects = 0 in {
                           []>;
   defm FCTIWZ : XForm_26r<63, 15, (outs f8rc:$frD), (ins f8rc:$frB),
                           "fctiwz", "$frD, $frB", IIC_FPGeneral,
-                          [(set f64:$frD, (PPCfctiwz f64:$frB))]>;
+                          [(set f64:$frD, (PPCany_fctiwz f64:$frB))]>;
 
   defm FRSP   : XForm_26r<63, 12, (outs f4rc:$frD), (ins f8rc:$frB),
                           "frsp", "$frD, $frB", IIC_FPGeneral,
