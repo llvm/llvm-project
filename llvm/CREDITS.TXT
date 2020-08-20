@@ -522,9 +522,9 @@ N: Li Jia He
 E: hljhehlj@cn.ibm.com
 D: PowerPC Backend Developer
 
-N: Zixuan Wu
-E: wuzish@cn.ibm.com
-D: PowerPC Backend Developer
+N: Zi Xuan Wu
+N: Zeson
+E: zixuan.wu@linux.alibaba.com
 
 N: Kang Zhang
 E: shkzhang@cn.ibm.com
