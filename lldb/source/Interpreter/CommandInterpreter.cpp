@@ -2084,7 +2084,7 @@ static void GetHomeInitFile(llvm::SmallVectorImpl<char> &init_file,
     init_file_name.append(suffix.str());
   }
 
-  llvm::sys::path::home_directory(init_file);
+  FileSystem::Instance().GetHomeDirectory(init_file);
   llvm::sys::path::append(init_file, init_file_name);
 
   FileSystem::Instance().Resolve(init_file);
@@ -2100,7 +2100,7 @@ static void GetHomeREPLInitFile(llvm::SmallVectorImpl<char> &init_file,
     return;
   }
 
-  llvm::sys::path::home_directory(init_file);
+  FileSystem::Instance().GetHomeDirectory(init_file);
   llvm::sys::path::append(init_file, init_file_name);
 
   FileSystem::Instance().Resolve(init_file);
