@@ -1739,13 +1739,6 @@ struct AANonNullFloating : public AANonNullImpl {
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    if (!NullIsDefined) {
-      const auto &DerefAA =
-          A.getAAFor<AADereferenceable>(*this, getIRPosition());
-      if (DerefAA.getAssumedDereferenceableBytes())
-        return ChangeStatus::UNCHANGED;
-    }
-
     const DataLayout &DL = A.getDataLayout();
 
     DominatorTree *DT = nullptr;
