@@ -41,6 +41,7 @@ A *return_null() {
 
 void derefAfterValidCtr() {
   std::unique_ptr<A> P(new A());
+  clang_analyzer_numTimesReached(); // expected-warning {{1}}
   P->foo(); // No warning.
 }
 
@@ -50,17 +51,20 @@ void derefOfUnknown(std::unique_ptr<A> P) {
 
 void derefAfterDefaultCtr() {
   std::unique_ptr<A> P;
+  clang_analyzer_numTimesReached(); // expected-warning {{1}}
   P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
 }
 
 void derefAfterCtrWithNull() {
   std::unique_ptr<A> P(nullptr);
+  clang_analyzer_numTimesReached(); // expected-warning {{1}}
   *P; // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
 }
 
 void derefAfterCtrWithNullVariable() {
   A *InnerPtr = nullptr;
   std::unique_ptr<A> P(InnerPtr);
+  clang_analyzer_numTimesReached(); // expected-warning {{1}}
   P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
 }
 
@@ -87,6 +91,7 @@ void derefAfterResetWithNull() {
 void derefAfterResetWithNonNull() {
   std::unique_ptr<A> P;
   P.reset(new A());
+  clang_analyzer_numTimesReached(); // expected-warning {{1}}
   P->foo(); // No warning.
 }
 
@@ -116,37 +121,40 @@ void pass_smart_ptr_by_const_rvalue_ref(const std::unique_ptr<A> &&a);
 void pass_smart_ptr_by_ptr(std::unique_ptr<A> *a);
 void pass_smart_ptr_by_const_ptr(const std::unique_ptr<A> *a);
 
-void regioninvalidationTest() {
-  {
-    std::unique_ptr<A> P;
-    pass_smart_ptr_by_ref(P);
-    P->foo(); // no-warning
-  }
-  {
-    std::unique_ptr<A> P;
-    pass_smart_ptr_by_const_ref(P);
-    P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
-  }
-  {
-    std::unique_ptr<A> P;
-    pass_smart_ptr_by_rvalue_ref(std::move(P));
-    P->foo(); // no-warning
-  }
-  {
-    std::unique_ptr<A> P;
-    pass_smart_ptr_by_const_rvalue_ref(std::move(P));
-    P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
-  }
-  {
-    std::unique_ptr<A> P;
-    pass_smart_ptr_by_ptr(&P);
-    P->foo();
-  }
-  {
-    std::unique_ptr<A> P;
-    pass_smart_ptr_by_const_ptr(&P);
-    P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
-  }
+void regioninvalidationWithPassByRef() {
+  std::unique_ptr<A> P;
+  pass_smart_ptr_by_ref(P);
+  P->foo(); // no-warning
+}
+
+void regioninvalidationWithPassByCostRef() {
+  std::unique_ptr<A> P;
+  pass_smart_ptr_by_const_ref(P);
+  P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+}
+
+void regioninvalidationWithPassByRValueRef() {
+  std::unique_ptr<A> P;
+  pass_smart_ptr_by_rvalue_ref(std::move(P));
+  P->foo(); // no-warning
+}
+
+void regioninvalidationWithPassByConstRValueRef() {
+  std::unique_ptr<A> P;
+  pass_smart_ptr_by_const_rvalue_ref(std::move(P));
+  P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+}
+
+void regioninvalidationWithPassByPtr() {
+  std::unique_ptr<A> P;
+  pass_smart_ptr_by_ptr(&P);
+  P->foo();
+}
+
+void regioninvalidationWithPassByConstPtr() {
+  std::unique_ptr<A> P;
+  pass_smart_ptr_by_const_ptr(&P);
+  P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
 }
 
 struct StructWithSmartPtr {
@@ -160,37 +168,40 @@ void pass_struct_with_smart_ptr_by_const_rvalue_ref(const StructWithSmartPtr &&a
 void pass_struct_with_smart_ptr_by_ptr(StructWithSmartPtr *a);
 void pass_struct_with_smart_ptr_by_const_ptr(const StructWithSmartPtr *a);
 
-void regioninvalidationTestWithinStruct() {
-  {
-    StructWithSmartPtr S;
-    pass_struct_with_smart_ptr_by_ref(S);
-    S.P->foo(); // no-warning
-  }
-  {
-    StructWithSmartPtr S;
-    pass_struct_with_smart_ptr_by_const_ref(S);
-    S.P->foo(); // expected-warning {{Dereference of null smart pointer 'S.P' [alpha.cplusplus.SmartPtr]}}
-  }
-  {
-    StructWithSmartPtr S;
-    pass_struct_with_smart_ptr_by_rvalue_ref(std::move(S));
-    S.P->foo(); // no-warning
-  }
-  {
-    StructWithSmartPtr S;
-    pass_struct_with_smart_ptr_by_const_rvalue_ref(std::move(S));
-    S.P->foo(); // expected-warning {{Dereference of null smart pointer 'S.P' [alpha.cplusplus.SmartPtr]}}
-  }
-  {
-    StructWithSmartPtr S;
-    pass_struct_with_smart_ptr_by_ptr(&S);
-    S.P->foo();
-  }
-  {
-    StructWithSmartPtr S;
-    pass_struct_with_smart_ptr_by_const_ptr(&S);
-    S.P->foo(); // expected-warning {{Dereference of null smart pointer 'S.P' [alpha.cplusplus.SmartPtr]}}
-  }
+void regioninvalidationWithinStructPassByRef() {
+  StructWithSmartPtr S;
+  pass_struct_with_smart_ptr_by_ref(S);
+  S.P->foo(); // no-warning
+}
+
+void regioninvalidationWithinStructPassByConstRef() {
+  StructWithSmartPtr S;
+  pass_struct_with_smart_ptr_by_const_ref(S);
+  S.P->foo(); // expected-warning {{Dereference of null smart pointer 'S.P' [alpha.cplusplus.SmartPtr]}}
+}
+
+void regioninvalidationWithinStructPassByRValueRef() {
+  StructWithSmartPtr S;
+  pass_struct_with_smart_ptr_by_rvalue_ref(std::move(S));
+  S.P->foo(); // no-warning
+}
+
+void regioninvalidationWithinStructPassByConstRValueRef() {
+  StructWithSmartPtr S;
+  pass_struct_with_smart_ptr_by_const_rvalue_ref(std::move(S));
+  S.P->foo(); // expected-warning {{Dereference of null smart pointer 'S.P' [alpha.cplusplus.SmartPtr]}}
+}
+
+void regioninvalidationWithinStructPassByPtr() {
+  StructWithSmartPtr S;
+  pass_struct_with_smart_ptr_by_ptr(&S);
+  S.P->foo(); // no-warning
+}
+
+void regioninvalidationWithinStructPassByConstPtr() {
+  StructWithSmartPtr S;
+  pass_struct_with_smart_ptr_by_const_ptr(&S);
+  S.P->foo(); // expected-warning {{Dereference of null smart pointer 'S.P' [alpha.cplusplus.SmartPtr]}}
 }
 
 void derefAfterAssignment() {
@@ -217,12 +228,18 @@ void derefOnSwappedNullPtr() {
   (*P).foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
 }
 
-void derefOnStdSwappedNullPtr() {
+void derefOnFirstStdSwappedNullPtr() {
+  std::unique_ptr<A> P;
+  std::unique_ptr<A> PNull;
+  std::swap(P, PNull);
+  P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefOnSecondStdSwappedNullPtr() {
   std::unique_ptr<A> P;
   std::unique_ptr<A> PNull;
   std::swap(P, PNull);
   PNull->foo(); // expected-warning {{Dereference of null smart pointer 'PNull' [alpha.cplusplus.SmartPtr]}}
-  P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
 }
 
 void derefOnSwappedValidPtr() {
