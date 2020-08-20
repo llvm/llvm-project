@@ -120,8 +120,6 @@ public:
                              const char *help, const char *syntax);
 
   void SourceInitFileInHomeDirectory(lldb::SBCommandReturnObject &result);
-  void SourceInitFileInHomeDirectory(lldb::SBCommandReturnObject &result,
-                                     bool is_repl);
 
   void
   SourceInitFileInCurrentWorkingDirectory(lldb::SBCommandReturnObject &result);
