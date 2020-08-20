@@ -45,25 +45,28 @@ inline constexpr CallType operator|(CallType LHS, CallType RHS) {
 
 struct ForwardingCallObject {
 
-  template <class... Args> bool operator()(Args &&...) & {
+  template <class... Args>
+  ForwardingCallObject& operator()(Args&&...) & {
     set_call<Args &&...>(CT_NonConst | CT_LValue);
-    return true;
+    return *this;
   }
 
-  template <class... Args> bool operator()(Args &&...) const & {
+  template <class... Args>
+  const ForwardingCallObject& operator()(Args&&...) const & {
     set_call<Args &&...>(CT_Const | CT_LValue);
-    return true;
+    return *this;
   }
 
-  // Don't allow the call operator to be invoked as an rvalue.
-  template <class... Args> bool operator()(Args &&...) && {
+  template <class... Args>
+  ForwardingCallObject&& operator()(Args&&...) && {
     set_call<Args &&...>(CT_NonConst | CT_RValue);
-    return true;
+    return std::move(*this);
   }
 
-  template <class... Args> bool operator()(Args &&...) const && {
+  template <class... Args>
+  const ForwardingCallObject&& operator()(Args&&...) const && {
     set_call<Args &&...>(CT_Const | CT_RValue);
-    return true;
+    return std::move(*this);
   }
 
   template <class... Args> static void set_call(CallType type) {
@@ -239,6 +242,60 @@ void test_argument_forwarding() {
   }
 }
 
+void test_return_type() {
+  using Fn = ForwardingCallObject;
+  Fn obj{};
+  const Fn &cobj = obj;
+  { // test call operator forwarding - no variant
+    static_assert(std::is_same_v<decltype(std::visit(obj)), Fn&>);
+    static_assert(std::is_same_v<decltype(std::visit(cobj)), const Fn&>);
+    static_assert(std::is_same_v<decltype(std::visit(std::move(obj))), Fn&&>);
+    static_assert(std::is_same_v<decltype(std::visit(std::move(cobj))), const Fn&&>);
+  }
+  { // test call operator forwarding - single variant, single arg
+    using V = std::variant<int>;
+    V v(42);
+    static_assert(std::is_same_v<decltype(std::visit(obj, v)), Fn&>);
+    static_assert(std::is_same_v<decltype(std::visit(cobj, v)), const Fn&>);
+    static_assert(std::is_same_v<decltype(std::visit(std::move(obj), v)), Fn&&>);
+    static_assert(std::is_same_v<decltype(std::visit(std::move(cobj), v)), const Fn&&>);
+  }
+  { // test call operator forwarding - single variant, multi arg
+    using V = std::variant<int, long, double>;
+    V v(42l);
+    static_assert(std::is_same_v<decltype(std::visit(obj, v)), Fn&>);
+    static_assert(std::is_same_v<decltype(std::visit(cobj, v)), const Fn&>);
+    static_assert(std::is_same_v<decltype(std::visit(std::move(obj), v)), Fn&&>);
+    static_assert(std::is_same_v<decltype(std::visit(std::move(cobj), v)), const Fn&&>);
+  }
+  { // test call operator forwarding - multi variant, multi arg
+    using V = std::variant<int, long, double>;
+    using V2 = std::variant<int *, std::string>;
+    V v(42l);
+    V2 v2("hello");
+    static_assert(std::is_same_v<decltype(std::visit(obj, v, v2)), Fn&>);
+    static_assert(std::is_same_v<decltype(std::visit(cobj, v, v2)), const Fn&>);
+    static_assert(std::is_same_v<decltype(std::visit(std::move(obj), v, v2)), Fn&&>);
+    static_assert(std::is_same_v<decltype(std::visit(std::move(cobj), v, v2)), const Fn&&>);
+  }
+  {
+    using V = std::variant<int, long, double, std::string>;
+    V v1(42l), v2("hello"), v3(101), v4(1.1);
+    static_assert(std::is_same_v<decltype(std::visit(obj, v1, v2, v3, v4)), Fn&>);
+    static_assert(std::is_same_v<decltype(std::visit(cobj, v1, v2, v3, v4)), const Fn&>);
+    static_assert(std::is_same_v<decltype(std::visit(std::move(obj), v1, v2, v3, v4)), Fn&&>);
+    static_assert(std::is_same_v<decltype(std::visit(std::move(cobj), v1, v2, v3, v4)), const Fn&&>);
+  }
+  {
+    using V = std::variant<int, long, double, int*, std::string>;
+    V v1(42l), v2("hello"), v3(nullptr), v4(1.1);
+    static_assert(std::is_same_v<decltype(std::visit(obj, v1, v2, v3, v4)), Fn&>);
+    static_assert(std::is_same_v<decltype(std::visit(cobj, v1, v2, v3, v4)), const Fn&>);
+    static_assert(std::is_same_v<decltype(std::visit(std::move(obj), v1, v2, v3, v4)), Fn&&>);
+    static_assert(std::is_same_v<decltype(std::visit(std::move(cobj), v1, v2, v3, v4)), const Fn&&>);
+  }
+}
+
 struct ReturnFirst {
   template <class... Args> constexpr int operator()(int f, Args &&...) const {
     return f;
@@ -368,6 +425,7 @@ void test_caller_accepts_nonconst() {
 int main(int, char**) {
   test_call_operator_forwarding();
   test_argument_forwarding();
+  test_return_type();
   test_constexpr();
   test_exceptions();
   test_caller_accepts_nonconst();
