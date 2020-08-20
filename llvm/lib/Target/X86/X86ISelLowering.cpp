@@ -11297,6 +11297,9 @@ static SDValue getAVX512TruncNode(const SDLoc &DL, MVT DstVT, SDValue Src,
   unsigned NumSrcElts = SrcVT.getVectorNumElements();
   unsigned DstEltSizeInBits = DstVT.getScalarSizeInBits();
 
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(SrcVT))
+    return SDValue();
+
   // Perform a direct ISD::TRUNCATE if possible.
   if (NumSrcElts == NumDstElts)
     return DAG.getNode(ISD::TRUNCATE, DL, DstVT, Src);
