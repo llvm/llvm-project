@@ -3330,9 +3330,9 @@ CastInst::castIsValid(Instruction::CastOps op, Value *S, Type *DstTy) {
   // scalar types means that checking that vector lengths match also checks that
   // scalars are not being converted to vectors or vectors to scalars).
   ElementCount SrcEC = SrcIsVec ? cast<VectorType>(SrcTy)->getElementCount()
-                                : ElementCount(0, false);
+                                : ElementCount::getFixed(0);
   ElementCount DstEC = DstIsVec ? cast<VectorType>(DstTy)->getElementCount()
-                                : ElementCount(0, false);
+                                : ElementCount::getFixed(0);
 
   // Switch on the opcode provided
   switch (op) {
@@ -3390,9 +3390,9 @@ CastInst::castIsValid(Instruction::CastOps op, Value *S, Type *DstTy) {
     if (SrcIsVec && DstIsVec)
       return SrcEC == DstEC;
     if (SrcIsVec)
-      return SrcEC == ElementCount(1, false);
+      return SrcEC == ElementCount::getFixed(1);
     if (DstIsVec)
-      return DstEC == ElementCount(1, false);
+      return DstEC == ElementCount::getFixed(1);
 
     return true;
   }
