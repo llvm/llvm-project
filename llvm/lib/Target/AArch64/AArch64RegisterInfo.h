@@ -122,6 +122,7 @@ public:
                                MachineFunction &MF) const override;
 
   unsigned getLocalAddressRegister(const MachineFunction &MF) const;
+  bool regNeedsCFI(unsigned Reg, unsigned &RegToUseForCFI) const;
 };
 
 } // end namespace llvm
