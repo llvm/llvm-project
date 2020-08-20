@@ -209,12 +209,14 @@ OPTIONS
     A non-symbolized branch instruction with a local target and pc-relative memory access like
 
   .. code-block:: none
+
       cmp eax, dword ptr [rip + 4112]
       jge 0x20117e <_start+0x25>
 
   might become
 
   .. code-block:: none
+
      <L0>:
        cmp eax, dword ptr <g>
        jge	<L0>
