@@ -66,10 +66,10 @@ define amdgpu_kernel void @fmul_fadd_contract_v2f16(<2 x half> addrspace(1)* %ou
 ; GFX9-FLUSH: v_pk_add_f16 [[ADD0:v[0-9]+]], [[R1]], [[R1]]
 ; GFX9-FLUSH: v_pk_add_f16 [[RESULT:v[0-9]+]], [[ADD0]], [[R2]]
 
-; GFX9-FLUSH: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX9-FLUSH: global_store_dword v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
 
 ; GFX9-DENORM: v_pk_fma_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
-; GFX9-DENORM: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX9-DENORM: global_store_dword v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @fmuladd_2.0_a_b_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
@@ -90,10 +90,10 @@ define amdgpu_kernel void @fmuladd_2.0_a_b_v2f16(<2 x half> addrspace(1)* %out, 
 ; GFX9-FLUSH: v_pk_add_f16 [[ADD0:v[0-9]+]], [[R1]], [[R1]]
 ; GFX9-FLUSH: v_pk_add_f16 [[RESULT:v[0-9]+]], [[ADD0]], [[R2]]
 
-; GFX9-FLUSH: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX9-FLUSH: global_store_dword v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
 
 ; GFX9-DENORM: v_pk_fma_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
-; GFX9-DENORM: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX9-DENORM: global_store_dword v{{[0-9]+}}, [[RESULT]], s{{\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @fmuladd_a_2.0_b_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.0 = getelementptr <2 x half>, <2 x half> addrspace(1)* %out, i32 %tid
@@ -118,7 +118,8 @@ define amdgpu_kernel void @fmuladd_a_2.0_b_v2f16(<2 x half> addrspace(1)* %out, 
 ; GFX9-DENORM-STRICT: v_pk_add_f16 [[RESULT:v[0-9]+]], [[ADD0]], [[R2]]
 
 ; GFX9-DENORM-CONTRACT: v_pk_fma_f16 [[RESULT:v[0-9]+]], [[R1]], 2.0, [[R2]]
-; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+
+; GCN: {{flat|global}}_store_dword v{{.+}}, [[RESULT]]
 define amdgpu_kernel void @fadd_a_a_b_v2f16(<2 x half> addrspace(1)* %out,
                             <2 x half> addrspace(1)* %in1,
                             <2 x half> addrspace(1)* %in2) #0 {

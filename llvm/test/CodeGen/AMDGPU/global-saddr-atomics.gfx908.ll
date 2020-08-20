@@ -10,10 +10,7 @@
 define amdgpu_ps void @global_fadd_saddr_f32_nortn(i8 addrspace(1)* inreg %sbase, i32 %voffset, float %data) {
 ; GCN-LABEL: global_fadd_saddr_f32_nortn:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mov_b32_e32 v3, s3
-; GCN-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
-; GCN-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GCN-NEXT:    global_atomic_add_f32 v[2:3], v1, off
+; GCN-NEXT:    global_atomic_add_f32 v0, v1, s[2:3]
 ; GCN-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
@@ -25,10 +22,7 @@ define amdgpu_ps void @global_fadd_saddr_f32_nortn(i8 addrspace(1)* inreg %sbase
 define amdgpu_ps void @global_fadd_saddr_f32_nortn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, float %data) {
 ; GCN-LABEL: global_fadd_saddr_f32_nortn_neg128:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mov_b32_e32 v3, s3
-; GCN-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
-; GCN-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GCN-NEXT:    global_atomic_add_f32 v[2:3], v1, off offset:-128
+; GCN-NEXT:    global_atomic_add_f32 v0, v1, s[2:3] offset:-128
 ; GCN-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
@@ -41,10 +35,7 @@ define amdgpu_ps void @global_fadd_saddr_f32_nortn_neg128(i8 addrspace(1)* inreg
 define amdgpu_ps void @global_fadd_saddr_v2f16_nortn(i8 addrspace(1)* inreg %sbase, i32 %voffset, <2 x half> %data) {
 ; GCN-LABEL: global_fadd_saddr_v2f16_nortn:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mov_b32_e32 v3, s3
-; GCN-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
-; GCN-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GCN-NEXT:    global_atomic_pk_add_f16 v[2:3], v1, off
+; GCN-NEXT:    global_atomic_pk_add_f16 v0, v1, s[2:3]
 ; GCN-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
@@ -56,10 +47,7 @@ define amdgpu_ps void @global_fadd_saddr_v2f16_nortn(i8 addrspace(1)* inreg %sba
 define amdgpu_ps void @global_fadd_saddr_v2f16_nortn_neg128(i8 addrspace(1)* inreg %sbase, i32 %voffset, <2 x half> %data) {
 ; GCN-LABEL: global_fadd_saddr_v2f16_nortn_neg128:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mov_b32_e32 v3, s3
-; GCN-NEXT:    v_add_co_u32_e32 v2, vcc, s2, v0
-; GCN-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GCN-NEXT:    global_atomic_pk_add_f16 v[2:3], v1, off offset:-128
+; GCN-NEXT:    global_atomic_pk_add_f16 v0, v1, s[2:3] offset:-128
 ; GCN-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, i8 addrspace(1)* %sbase, i64 %zext.offset
