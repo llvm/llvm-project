@@ -109,11 +109,13 @@ endfunction()
 
 function(add_asm_sources output)
   set(${output} ${ARGN} PARENT_SCOPE)
-  # Make sure ASM language is available.
-  # We explicitly mark the source files as ASM, so they don't get passed to the
-  # C/CXX compiler and hopes that it recognizes them as assembly.
-  enable_language(ASM)
-  set_source_files_properties(${ARGN} PROPERTIES LANGUAGE ASM)
+  # Xcode will try to compile asm files as C ('clang -x c'), and that will fail.
+  if (${CMAKE_GENERATOR} STREQUAL "Xcode")
+    enable_language(ASM)
+  else()
+    # Pass ASM file directly to the C++ compiler.
+    set_source_files_properties(${ARGN} PROPERTIES LANGUAGE C)
+  endif()
 endfunction()
 
 macro(set_output_name output name arch)
