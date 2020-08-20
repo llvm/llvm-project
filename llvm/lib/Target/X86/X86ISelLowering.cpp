@@ -11249,7 +11249,6 @@ static SDValue lowerShuffleWithUNPCK256(const SDLoc &DL, MVT VT,
 
 // Check if the mask can be mapped to a TRUNCATE or VTRUNC, truncating the
 // source into the lower elements and zeroing the upper elements.
-// TODO: Merge with matchShuffleAsVPMOV.
 static bool matchShuffleAsVTRUNC(MVT &SrcVT, MVT &DstVT, MVT VT,
                                  ArrayRef<int> Mask, const APInt &Zeroable,
                                  const X86Subtarget &Subtarget) {
@@ -11333,21 +11332,6 @@ static SDValue getAVX512TruncNode(const SDLoc &DL, MVT DstVT, SDValue Src,
   return Trunc;
 }
 
-static bool matchShuffleAsVPMOV(ArrayRef<int> Mask, int Delta) {
-  int Size = (int)Mask.size();
-  int Split = Size / Delta;
-
-  // Match for mask starting with e.g.: <8, 10, 12, 14,... or <0, 2, 4, 6,...
-  if (!isSequentialOrUndefInRange(Mask, 0, Split, 0, Delta))
-    return false;
-
-  // The rest of the mask should not refer to the truncated vector's elements.
-  if (isAnyInRange(Mask.slice(Split, Size - Split), 0, Size))
-    return false;
-
-  return true;
-}
-
 // Try to lower trunc+vector_shuffle to a vpmovdb or a vpmovdw instruction.
 //
 // An example is the following:
@@ -11366,40 +11350,44 @@ static bool matchShuffleAsVPMOV(ArrayRef<int> Mask, int Delta) {
 // TODO: Merge with lowerShuffleAsVTRUNC.
 static SDValue lowerShuffleWithVPMOV(const SDLoc &DL, MVT VT, SDValue V1,
                                      SDValue V2, ArrayRef<int> Mask,
+                                     const APInt &Zeroable,
                                      const X86Subtarget &Subtarget,
                                      SelectionDAG &DAG) {
   assert((VT == MVT::v16i8 || VT == MVT::v8i16) && "Unexpected VTRUNC type");
-
-  // TODO: Convert to use Zeroable bitmask.
-  if (!ISD::isBuildVectorAllZeros(V2.getNode()))
+  if (!Subtarget.hasAVX512())
     return SDValue();
 
-  // Look for:
-  //
-  // bitcast (truncate <8 x i32> %vec to <8 x i16>) to <16 x i8>
-  // bitcast (truncate <4 x i64> %vec to <4 x i32>) to <8 x i16>
-  //
-  // and similar ones.
-  if (V1.getOpcode() != ISD::BITCAST)
-    return SDValue();
-  if (V1.getOperand(0).getOpcode() != ISD::TRUNCATE)
-    return SDValue();
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  unsigned MaxScale = 64 / EltSizeInBits;
+  for (unsigned Scale = 2; Scale <= MaxScale; Scale += Scale) {
+    unsigned NumSrcElts = NumElts / Scale;
+    unsigned UpperElts = NumElts - NumSrcElts;
+    if (!isSequentialOrUndefInRange(Mask, 0, NumSrcElts, 0, Scale) ||
+        !Zeroable.extractBits(UpperElts, NumSrcElts).isAllOnesValue())
+      continue;
 
-  SDValue Src = V1.getOperand(0).getOperand(0);
-  MVT SrcVT = Src.getSimpleValueType();
+    SDValue Src = V1;
+    if (!Src.hasOneUse())
+      return SDValue();
 
-  // Down Convert Word to Byte is only available with avx512bw. The case with
-  // 256-bit output doesn't contain a shuffle and is therefore not handled here.
-  if (SrcVT.getVectorElementType() == MVT::i16 && VT == MVT::v16i8 &&
-      !Subtarget.hasBWI())
-    return SDValue();
+    Src = peekThroughOneUseBitcasts(Src);
+    if (Src.getOpcode() != ISD::TRUNCATE ||
+        Src.getScalarValueSizeInBits() != (EltSizeInBits * Scale))
+      return SDValue();
+    Src = Src.getOperand(0);
 
-  // The first half/quarter of the mask should refer to every second/fourth
-  // element of the vector truncated and bitcasted.
-  if (!matchShuffleAsVPMOV(Mask, 2) && !matchShuffleAsVPMOV(Mask, 4))
-    return SDValue();
+    // VPMOVWB is only available with avx512bw.
+    MVT SrcVT = Src.getSimpleValueType();
+    if (SrcVT.getVectorElementType() == MVT::i16 && VT == MVT::v16i8 &&
+        !Subtarget.hasBWI())
+      return SDValue();
 
-  return getAVX512TruncNode(DL, VT, Src, Subtarget, DAG, true);
+    bool UndefUppers = isUndefInRange(Mask, NumSrcElts, UpperElts);
+    return getAVX512TruncNode(DL, VT, Src, Subtarget, DAG, !UndefUppers);
+  }
+
+  return SDValue();
 }
 
 // Attempt to match binary shuffle patterns as a truncate.
@@ -14806,8 +14794,8 @@ static SDValue lowerV8I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return ZExt;
 
   // Try to use lower using a truncation.
-  if (SDValue V =
-          lowerShuffleWithVPMOV(DL, MVT::v8i16, V1, V2, Mask, Subtarget, DAG))
+  if (SDValue V = lowerShuffleWithVPMOV(DL, MVT::v8i16, V1, V2, Mask, Zeroable,
+                                        Subtarget, DAG))
     return V;
 
   int NumV2Inputs = count_if(Mask, [](int M) { return M >= 8; });
@@ -15018,8 +15006,8 @@ static SDValue lowerV16I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return ZExt;
 
   // Try to use lower using a truncation.
-  if (SDValue V =
-          lowerShuffleWithVPMOV(DL, MVT::v16i8, V1, V2, Mask, Subtarget, DAG))
+  if (SDValue V = lowerShuffleWithVPMOV(DL, MVT::v16i8, V1, V2, Mask, Zeroable,
+                                        Subtarget, DAG))
     return V;
 
   if (SDValue V = lowerShuffleAsVTRUNC(DL, MVT::v16i8, V1, V2, Mask, Zeroable,
