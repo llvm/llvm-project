@@ -34,6 +34,9 @@ protected:
 
   ::testing::AssertionResult treeDumpEqual(StringRef Code, StringRef Tree);
 
+  ::testing::AssertionResult
+  treeDumpEqualOnAnnotations(StringRef CodeWithAnnotations,
+                             ArrayRef<StringRef> TreeDumps);
   /// Finds the deepest node in the tree that covers exactly \p R.
   /// FIXME: implement this efficiently and move to public syntax tree API.
   syntax::Node *nodeByRange(llvm::Annotations::Range R, syntax::Node *Root);

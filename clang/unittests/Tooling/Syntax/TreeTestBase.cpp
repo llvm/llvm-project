@@ -180,6 +180,35 @@ SyntaxTreeTest::buildTree(StringRef Code, const TestClangConfig &ClangConfig) {
   return ::testing::AssertionSuccess();
 }
 
+::testing::AssertionResult
+SyntaxTreeTest::treeDumpEqualOnAnnotations(StringRef CodeWithAnnotations,
+                                           ArrayRef<StringRef> TreeDumps) {
+  SCOPED_TRACE(llvm::join(GetParam().getCommandLineArgs(), " "));
+
+  auto AnnotatedCode = llvm::Annotations(CodeWithAnnotations);
+  auto *Root = buildTree(AnnotatedCode.code(), GetParam());
+
+  if (Diags->getClient()->getNumErrors() != 0) {
+    return ::testing::AssertionFailure()
+           << "Source file has syntax errors, they were printed to the test "
+              "log";
+  }
+
+  bool failed = false;
+  auto AnnotatedRanges = AnnotatedCode.ranges();
+  assert(AnnotatedRanges.size() == TreeDumps.size());
+  for (auto i = 0ul; i < AnnotatedRanges.size(); i++) {
+    auto *AnnotatedNode = nodeByRange(AnnotatedRanges[i], Root);
+    assert(AnnotatedNode);
+    auto AnnotatedNodeDump =
+        std::string(StringRef(AnnotatedNode->dump(*Arena)).trim());
+    // EXPECT_EQ shows the diff between the two strings if they are different.
+    EXPECT_EQ(TreeDumps[i].trim().str(), AnnotatedNodeDump);
+    if (AnnotatedNodeDump != TreeDumps[i].trim().str())
+      failed = true;
+  }
+  return failed ? ::testing::AssertionFailure() : ::testing::AssertionSuccess();
+}
 syntax::Node *SyntaxTreeTest::nodeByRange(llvm::Annotations::Range R,
                                           syntax::Node *Root) {
   ArrayRef<syntax::Token> Toks = tokens(Root);
