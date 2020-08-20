@@ -1243,7 +1243,13 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
       return TC_Failed;
     }
     if (SrcType->isIntegralOrEnumerationType()) {
-      Kind = CK_IntegralCast;
+      // [expr.static.cast]p10 If the enumeration type has a fixed underlying
+      // type, the value is first converted to that type by integral conversion
+      const EnumType *Enum = DestType->getAs<EnumType>();
+      Kind = Enum->getDecl()->isFixed() &&
+                     Enum->getDecl()->getIntegerType()->isBooleanType()
+                 ? CK_IntegralToBoolean
+                 : CK_IntegralCast;
       return TC_Success;
     } else if (SrcType->isRealFloatingType())   {
       Kind = CK_FloatingToIntegral;
@@ -2656,6 +2662,8 @@ static void DiagnoseBadFunctionCast(Sema &Self, const ExprResult &SrcExpr,
   if (SrcType->isComplexType() && DestType->isComplexType())
     return;
   if (SrcType->isComplexIntegerType() && DestType->isComplexIntegerType())
+    return;
+  if (SrcType->isFixedPointType() && DestType->isFixedPointType())
     return;
 
   Self.Diag(SrcExpr.get()->getExprLoc(),

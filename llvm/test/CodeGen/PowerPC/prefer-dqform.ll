@@ -12,26 +12,27 @@ target triple = "powerpc64le-unknown-linux-gnu"
 define void @test(i32* dereferenceable(4) %.ial, i32* noalias dereferenceable(4) %.m, i32* noalias dereferenceable(4) %.n, [0 x %_elem_type_of_a]*  %.a, i32* noalias dereferenceable(4) %.lda, [0 x %_elem_type_of_x]* noalias %.x, [0 x %_elem_type_of_y]* noalias %.y) {
 ; CHECK-P9-LABEL: test:
 ; CHECK-P9:       .LBB0_2: # %_loop_2_do_
-; CHECK-P9:         lxvx
-; CHECK-P9:         lxvx
-; CHECK-P9-DAG:     lxvx
-; CHECK-P9-DAG:     lxvx
-; CHECK-P9-DAG:     xvmaddadp
-; CHECK-P9-DAG:     xvmaddadp
-; CHECK-P9-DAG:     stxvx
-; CHECK-P9:         stxvx
+; CHECK-P9:         lxv vs1, -16(r4)
+; CHECK-P9:         lxv vs2, 0(r4)
+; CHECK-P9-DAG:     lxv vs3, -16(r3)
+; CHECK-P9-DAG:     lxv vs4, 0(r3)
+; CHECK-P9-DAG:     xvmaddadp vs1, vs3, vs1
+; CHECK-P9-DAG:     stxv vs1, -16(r4)
+; CHECK-P9-DAG:     xvmaddadp vs2, vs4, vs0
+; CHECK-P9:         stxv vs2, 0(r4)
 ; CHECK-P9:         bdnz .LBB0_2
 ;
+; FIXME: use pair load/store instructions lxvp/stxvp
 ; CHECK-P10-LABEL: test:
 ; CHECK-P10:       .LBB0_2: # %_loop_2_do_
-; CHECK-P10:         lxvx
-; CHECK-P10:         lxvx
-; CHECK-P10-DAG:     lxvx
-; CHECK-P10-DAG:     lxvx
-; CHECK-P10-DAG:     xvmaddadp
-; CHECK-P10-DAG:     xvmaddadp
-; CHECK-P10-DAG:     stxvx
-; CHECK-P10:         stxvx
+; CHECK-P10:         lxv vs1, -16(r4)
+; CHECK-P10:         lxv vs2, 0(r4)
+; CHECK-P10-DAG:     lxv vs3, -16(r3)
+; CHECK-P10-DAG:     lxv vs4, 0(r3)
+; CHECK-P10-DAG:     xvmaddadp vs1, vs3, vs1
+; CHECK-P10-DAG:     xvmaddadp vs2, vs4, vs0
+; CHECK-P10-DAG:     stxv vs1, -16(r4)
+; CHECK-P10:         stxv vs2, 0(r4)
 ; CHECK-P10:         bdnz .LBB0_2
 test_entry:
   %_conv5 = ptrtoint [0 x %_elem_type_of_a]* %.a to i64

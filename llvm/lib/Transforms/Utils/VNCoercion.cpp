@@ -393,7 +393,7 @@ int analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
   if (!Src)
     return -1;
 
-  GlobalVariable *GV = dyn_cast<GlobalVariable>(GetUnderlyingObject(Src, DL));
+  GlobalVariable *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(Src));
   if (!GV || !GV->isConstant() || !GV->hasDefinitiveInitializer())
     return -1;
 

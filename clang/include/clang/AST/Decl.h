@@ -265,6 +265,8 @@ public:
   // FIXME: Deprecated, move clients to getName().
   std::string getNameAsString() const { return Name.getAsString(); }
 
+  /// Pretty-print the unqualified name of this declaration. Can be overloaded
+  /// by derived classes to provide a more user-friendly name when appropriate.
   virtual void printName(raw_ostream &os) const;
 
   /// Get the actual, stored name of the declaration, which may be a special

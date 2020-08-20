@@ -1,6 +1,6 @@
 # REQUIRES: arm
 
-# RUN: yaml2obj %s >%t
+# RUN: yaml2obj %s -o %t
 # RUN: %lldb -c %t -o "target symbols add %S/Inputs/stack-cfi-arm.syms" \
 # RUN:   -o "image show-unwind -n func0" -b | FileCheck %s
 

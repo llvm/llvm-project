@@ -172,7 +172,7 @@ bool MVEGatherScatterLowering::isLegalTypeAndAlignment(unsigned NumElements,
   return false;
 }
 
-bool checkOffsetSize(Value *Offsets, unsigned TargetElemCount) {
+static bool checkOffsetSize(Value *Offsets, unsigned TargetElemCount) {
   // Offsets that are not of type <N x i32> are sign extended by the
   // getelementptr instruction, and MVE gathers/scatters treat the offset as
   // unsigned. Thus, if the element size is smaller than 32, we can only allow
@@ -1030,9 +1030,8 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
   return true;
 }
 
-Value *CheckAndCreateOffsetAdd(Value *X, Value *Y, Value *GEP,
-                               IRBuilder<> &Builder) {
-
+static Value *CheckAndCreateOffsetAdd(Value *X, Value *Y, Value *GEP,
+                                      IRBuilder<> &Builder) {
   // Splat the non-vector value to a vector of the given type - if the value is
   // a constant (and its value isn't too big), we can even use this opportunity
   // to scale it to the size of the vector elements

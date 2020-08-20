@@ -733,7 +733,7 @@ information. An optional group is defined by wrapping a set of elements within
 An example of an operation with an optional group is `std.return`, which has a
 variadic number of operands.
 
-```
+```tablegen
 def ReturnOp : ... {
   let arguments = (ins Variadic<AnyType>:$operands);
 
@@ -741,6 +741,36 @@ def ReturnOp : ... {
   // of operands.
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
+```
+
+##### Unit Attributes
+
+In MLIR, the [`unit` Attribute](LangRef.md#unit-attribute) is special in that it
+only has one possible value, i.e. it derives meaning from its existence. When a
+unit attribute is used to anchor an optional group and is not the first element
+of the group, the presence of the unit attribute can be directly correlated with
+the presence of the optional group itself. As such, in these situations the unit
+attribute will not be printed or present in the output and will be automatically
+inferred when parsing by the presence of the optional group itself.
+
+For example, the following operation:
+
+```tablegen
+def FooOp : ... {
+  let arguments = (ins UnitAttr:$is_read_only);
+
+  let assemblyFormat = "attr-dict (`is_read_only` $is_read_only^)?";
+}
+```
+
+would be formatted as such:
+
+```mlir
+// When the unit attribute is present:
+foo.op is_read_only
+
+// When the unit attribute is not present:
+foo.op
 ```
 
 #### Requirements

@@ -43,7 +43,7 @@ uint64_t
     __prof_cnts_sect_data[0] COMPILER_RT_SECTION(INSTR_PROF_CNTS_SECT_NAME);
 uint32_t
     __prof_orderfile_sect_data[0] COMPILER_RT_SECTION(INSTR_PROF_ORDERFILE_SECT_NAME);
-char __prof_nms_sect_data[0] COMPILER_RT_SECTION(INSTR_PROF_NAME_SECT_NAME);
+const char __prof_nms_sect_data[0] COMPILER_RT_SECTION(INSTR_PROF_NAME_SECT_NAME);
 ValueProfNode __prof_vnodes_sect_data[0] COMPILER_RT_SECTION(INSTR_PROF_VNODES_SECT_NAME);
 
 COMPILER_RT_VISIBILITY const __llvm_profile_data *

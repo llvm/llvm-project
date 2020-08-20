@@ -712,6 +712,8 @@ int bar(int n){
 // OMP45:       [[BP:%.+]] = alloca [1 x i8*]
 // OMP45:       [[P:%.+]] = alloca [1 x i8*]
 // OMP45:       [[LOCAL_THIS1:%.+]] = load [[S2]]*, [[S2]]** [[LOCAL_THIS]]
+
+// OMP45:       call void @__kmpc_critical(
 // OMP45:       [[ARR_IDX:%.+]] = getelementptr inbounds [[S2]], [[S2]]* [[LOCAL_THIS1]], i[[SZ]] 0
 // OMP45:       [[ARR_IDX2:%.+]] = getelementptr inbounds [[S2]], [[S2]]* [[LOCAL_THIS1]], i[[SZ]] 0
 
@@ -731,6 +733,7 @@ int bar(int n){
 // OMP45:       call void [[HVT0:@.+]]([[S2]]* [[LOCAL_THIS1]])
 // OMP45-NEXT:  br label %[[END]]
 // OMP45:       [[END]]
+// OMP45:       call void @__kmpc_end_critical(
 
 // Check that the offloading functions are emitted and that the arguments are
 // correct and loaded correctly for the target regions of the callees of bar().
@@ -826,7 +829,7 @@ int bar(int n){
 // OMP50:       call void [[HVT0:@.+]]([[S2]]* [[LOCAL_THIS1]])
 // OMP50-NEXT:  br label %[[END]]
 // OMP50:       [[END]]
- 
+
 void bar () {
 #define pragma_target _Pragma("omp target")
 pragma_target
@@ -838,6 +841,7 @@ class S2 {
 
 public:
   void zee() {
+#pragma omp critical
     #pragma omp target map(this[0])
       a++;
   }

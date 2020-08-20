@@ -1,5 +1,5 @@
-; RUN: opt < %s -loop-unswitch -loop-unswitch-threshold=0 -verify-loop-info -S < %s 2>&1 | FileCheck %s
-; RUN: opt < %s -loop-unswitch -loop-unswitch-threshold=0 -verify-loop-info -enable-mssa-loop-dependency=true -verify-memoryssa -S < %s 2>&1 | FileCheck %s
+; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -loop-unswitch-threshold=0 -verify-loop-info -S < %s 2>&1 | FileCheck %s
+; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -loop-unswitch-threshold=0 -verify-loop-info -enable-mssa-loop-dependency=true -verify-memoryssa -S < %s 2>&1 | FileCheck %s
 
 ; This test contains two trivial unswitch condition in one loop. 
 ; LoopUnswitch pass should be able to unswitch the second one 

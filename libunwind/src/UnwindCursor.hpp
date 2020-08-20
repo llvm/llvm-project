@@ -1759,12 +1759,12 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(pint_t pc,
     }
   }
 
-  // extact personality routine, if encoding says function has one
+  // extract personality routine, if encoding says function has one
   uint32_t personalityIndex = (encoding & UNWIND_PERSONALITY_MASK) >>
                               (__builtin_ctz(UNWIND_PERSONALITY_MASK));
   if (personalityIndex != 0) {
     --personalityIndex; // change 1-based to zero-based index
-    if (personalityIndex > sectionHeader.personalityArrayCount()) {
+    if (personalityIndex >= sectionHeader.personalityArrayCount()) {
       _LIBUNWIND_DEBUG_LOG("found encoding 0x%08X with personality index %d,  "
                             "but personality table has only %d entries",
                             encoding, personalityIndex,

@@ -564,12 +564,12 @@ void LoopIdiomRecognize::collectStores(BasicBlock *BB) {
       break;
     case LegalStoreKind::Memset: {
       // Find the base pointer.
-      Value *Ptr = GetUnderlyingObject(SI->getPointerOperand(), *DL);
+      Value *Ptr = getUnderlyingObject(SI->getPointerOperand());
       StoreRefsForMemset[Ptr].push_back(SI);
     } break;
     case LegalStoreKind::MemsetPattern: {
       // Find the base pointer.
-      Value *Ptr = GetUnderlyingObject(SI->getPointerOperand(), *DL);
+      Value *Ptr = getUnderlyingObject(SI->getPointerOperand());
       StoreRefsForMemsetPattern[Ptr].push_back(SI);
     } break;
     case LegalStoreKind::Memcpy:

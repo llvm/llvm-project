@@ -287,16 +287,24 @@ SBProcess SBTarget::LaunchSimple(char const **argv, char const **envp,
                      (const char **, const char **, const char *), argv, envp,
                      working_directory);
 
-  char *stdin_path = nullptr;
-  char *stdout_path = nullptr;
-  char *stderr_path = nullptr;
-  uint32_t launch_flags = 0;
-  bool stop_at_entry = false;
+  TargetSP target_sp = GetSP();
+  if (!target_sp)
+    return LLDB_RECORD_RESULT(SBProcess());
+
+  SBLaunchInfo launch_info = GetLaunchInfo();
+
+  if (Module *exe_module = target_sp->GetExecutableModulePointer())
+    launch_info.SetExecutableFile(exe_module->GetPlatformFileSpec(),
+                                  /*add_as_first_arg*/ true);
+  if (argv)
+    launch_info.SetArguments(argv, /*append*/ true);
+  if (envp)
+    launch_info.SetEnvironmentEntries(envp, /*append*/ false);
+  if (working_directory)
+    launch_info.SetWorkingDirectory(working_directory);
+
   SBError error;
-  SBListener listener = GetDebugger().GetListener();
-  return LLDB_RECORD_RESULT(Launch(listener, argv, envp, stdin_path,
-                                   stdout_path, stderr_path, working_directory,
-                                   launch_flags, stop_at_entry, error));
+  return LLDB_RECORD_RESULT(Launch(launch_info, error));
 }
 
 SBError SBTarget::Install() {
@@ -1783,7 +1791,7 @@ lldb::SBSymbolContextList SBTarget::FindFunctions(const char *name,
                      (const char *, uint32_t), name, name_type_mask);
 
   lldb::SBSymbolContextList sb_sc_list;
-  if (!name | !name[0])
+  if (!name || !name[0])
     return LLDB_RECORD_RESULT(sb_sc_list);
 
   TargetSP target_sp(GetSP());

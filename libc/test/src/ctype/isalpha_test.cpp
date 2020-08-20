@@ -7,20 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/ctype/isalpha.h"
+
 #include "utils/UnitTest/Test.h"
 
-// Helper function that makes a call to isalpha a bit cleaner
-// for use with testing utilities, since it explicitly requires
-// a boolean value for EXPECT_TRUE and EXPECT_FALSE.
-bool call_isalpha(int c) { return __llvm_libc::isalpha(c); }
-
 TEST(IsAlpha, DefaultLocale) {
-  // Loops through all characters, verifying that letters return true
-  // and everything else returns false.
+  // Loops through all characters, verifying that letters return a
+  // non-zero integer and everything else returns zero.
   for (int ch = 0; ch < 255; ++ch) {
     if (('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z'))
-      EXPECT_TRUE(call_isalpha(ch));
+      EXPECT_NE(__llvm_libc::isalpha(ch), 0);
     else
-      EXPECT_FALSE(call_isalpha(ch));
+      EXPECT_EQ(__llvm_libc::isalpha(ch), 0);
   }
 }

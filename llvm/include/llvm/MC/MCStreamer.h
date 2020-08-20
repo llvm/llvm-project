@@ -777,6 +777,9 @@ public:
   virtual void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                         SMLoc Loc = SMLoc());
 
+  virtual void emitNops(int64_t NumBytes, int64_t ControlledNopLength,
+                        SMLoc Loc);
+
   /// Emit NumBytes worth of zeros.
   /// This function properly handles data in virtual sections.
   void emitZeros(uint64_t NumBytes);

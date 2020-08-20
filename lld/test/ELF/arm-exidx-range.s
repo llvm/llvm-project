@@ -3,7 +3,7 @@
 // RUN: echo "SECTIONS { \
 // RUN:         . = 0x80000000; \
 // RUN:         .text : { *(.text) } \
-// RUN:         .vectors 0xffff0000 : { *(.vectors) } \
+// RUN:         .vectors 0xffff0000 : AT(0xffff0000) { *(.vectors) } \
 // RUN: } " > %t.script
 // RUN: ld.lld --script %t.script %t.o -o %t
 // RUN: llvm-readobj -x .ARM.exidx %t | FileCheck %s

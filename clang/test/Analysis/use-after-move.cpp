@@ -974,3 +974,19 @@ void getAfterMove(std::unique_ptr<A> P) {
   // TODO: Warn on a null dereference here.
   a->foo();
 }
+
+struct OtherMoveSafeClasses {
+  std::packaged_task<int(void)> Task;
+
+  void test() {
+    // Test the suppression caused by use-after-move semantics of
+    // std::package_task being different from other standard classes.
+    // Only warn in aggressive mode. Don't say that the object
+    // is left in unspecified state after move.
+    std::packaged_task<int(void)> Task2 = std::move(Task);
+    // aggressive-note@-1   {{Object 'Task' is moved}}
+    std::packaged_task<int(void)> Task3 = std::move(Task);
+    // aggressive-warning@-1{{Moved-from object 'Task' is moved}}
+    // aggressive-note@-2   {{Moved-from object 'Task' is moved}}
+  }
+};

@@ -1,4 +1,5 @@
-; RUN: opt -disable-output -licm -print-memoryssa -enable-mssa-loop-dependency=true < %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -loop-simplify -licm -enable-new-pm=0 -print-memoryssa -enable-mssa-loop-dependency=true < %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -aa-pipeline=basic-aa -passes='loop-mssa(licm),print<memoryssa>' < %s 2>&1 | FileCheck %s
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-LABEL: @main()
@@ -46,11 +47,11 @@ if.end569:                                        ; preds = %if.else568, %if.the
 
 
 ; CHECK-LABEL: @f()
-; CHECK: 8 = MemoryPhi(
 ; CHECK: 7 = MemoryPhi(
-; CHECK: 11 = MemoryPhi(
+; CHECK: 6 = MemoryPhi(
 ; CHECK: 10 = MemoryPhi(
 ; CHECK: 9 = MemoryPhi(
+; CHECK: 8 = MemoryPhi(
 define void @f() {
 entry:
   %e = alloca i16, align 1

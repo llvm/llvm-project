@@ -1,16 +1,20 @@
-This test checks that when inlined frames are not shown (-i=0) and the output
+This test checks that when inlined frames are not shown (--no-inlines) and the output
 style is set to GNU (--output-style=GNU) the name of an inlined function is not
 replaced with the name of the top caller function. At the same time, the current
 behavior of llvm-symbolizer is preserved with --output-style=LLVM or when
 the option is not specified.
 
-RUN: llvm-symbolizer -i=0 -e %p/Inputs/addr.exe 0x40054d \
+RUN: llvm-symbolizer --no-inlines -e %p/Inputs/addr.exe 0x40054d \
+RUN:   | FileCheck %s --check-prefix=LLVM --implicit-check-not=inctwo
+## Before 2020-08-04, asan_symbolize.py passed --inlining=false if 'symbolize_inline_frames'
+## is set to false. Support this compatibility alias for a while.
+RUN: llvm-symbolizer --inlining=false -e %p/Inputs/addr.exe 0x40054d \
 RUN:   | FileCheck %s --check-prefix=LLVM --implicit-check-not=inctwo
 
-RUN: llvm-symbolizer --output-style=LLVM -i=0 -e %p/Inputs/addr.exe 0x40054d \
+RUN: llvm-symbolizer --output-style=LLVM --no-inlines -e %p/Inputs/addr.exe 0x40054d \
 RUN:   | FileCheck %s --check-prefix=LLVM --implicit-check-not=inctwo
 
-RUN: llvm-symbolizer --output-style=GNU -i=0 -e %p/Inputs/addr.exe 0x40054d \
+RUN: llvm-symbolizer --output-style=GNU --no-inlines -e %p/Inputs/addr.exe 0x40054d \
 RUN:   | FileCheck %s --check-prefix=GNU --implicit-check-not=main
 
 RUN: llvm-addr2line -f -e %p/Inputs/addr.exe 0x40054d \

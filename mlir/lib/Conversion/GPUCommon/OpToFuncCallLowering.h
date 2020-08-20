@@ -85,7 +85,7 @@ private:
       return operand;
 
     return rewriter.create<LLVM::FPExtOp>(
-        operand.getLoc(), LLVM::LLVMType::getFloatTy(&type.getDialect()),
+        operand.getLoc(), LLVM::LLVMType::getFloatTy(rewriter.getContext()),
         operand);
   }
 

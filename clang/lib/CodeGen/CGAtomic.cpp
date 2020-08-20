@@ -307,7 +307,14 @@ static RValue emitAtomicLibcall(CodeGenFunction &CGF,
   const CGFunctionInfo &fnInfo =
     CGF.CGM.getTypes().arrangeBuiltinFunctionCall(resultType, args);
   llvm::FunctionType *fnTy = CGF.CGM.getTypes().GetFunctionType(fnInfo);
-  llvm::FunctionCallee fn = CGF.CGM.CreateRuntimeFunction(fnTy, fnName);
+  llvm::AttrBuilder fnAttrB;
+  fnAttrB.addAttribute(llvm::Attribute::NoUnwind);
+  fnAttrB.addAttribute(llvm::Attribute::WillReturn);
+  llvm::AttributeList fnAttrs = llvm::AttributeList::get(
+      CGF.getLLVMContext(), llvm::AttributeList::FunctionIndex, fnAttrB);
+
+  llvm::FunctionCallee fn =
+      CGF.CGM.CreateRuntimeFunction(fnTy, fnName, fnAttrs);
   auto callee = CGCallee::forDirect(fn);
   return CGF.EmitCall(fnInfo, callee, ReturnValueSlot(), args);
 }
@@ -807,10 +814,20 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   bool Oversized = getContext().toBits(sizeChars) > MaxInlineWidthInBits;
   bool Misaligned = (Ptr.getAlignment() % sizeChars) != 0;
   bool UseLibcall = Misaligned | Oversized;
+  CharUnits MaxInlineWidth =
+      getContext().toCharUnitsFromBits(MaxInlineWidthInBits);
 
-  if (UseLibcall) {
-    CGM.getDiags().Report(E->getBeginLoc(), diag::warn_atomic_op_misaligned)
-        << !Oversized;
+  DiagnosticsEngine &Diags = CGM.getDiags();
+
+  if (Misaligned) {
+    Diags.Report(E->getBeginLoc(), diag::warn_atomic_op_misaligned)
+        << (int)sizeChars.getQuantity()
+        << (int)Ptr.getAlignment().getQuantity();
+  }
+
+  if (Oversized) {
+    Diags.Report(E->getBeginLoc(), diag::warn_atomic_op_oversized)
+        << (int)sizeChars.getQuantity() << (int)MaxInlineWidth.getQuantity();
   }
 
   llvm::Value *Order = EmitScalarExpr(E->getOrder());

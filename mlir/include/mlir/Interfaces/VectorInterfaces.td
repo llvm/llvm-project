@@ -137,8 +137,9 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*methodName=*/"getVectorType",
       /*args=*/(ins),
       /*methodBody=*/"",
-      /*defaultImplementation=*/
-        "return $_op.vector().getType().template cast<VectorType>();"
+      /*defaultImplementation=*/[{
+        return $_op.vector().getType().template dyn_cast<VectorType>();
+        }]
     >,
     InterfaceMethod<
       /*desc=*/[{ Return the number of dimensions that participate in the
@@ -159,6 +160,19 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/
         "return $_op.getMemRefType().getRank() - $_op.getTransferRank();"
+    >,
+    InterfaceMethod<
+      /*desc=*/[{ Returns true if at least one of the dimensions is masked.}],
+      /*retTy=*/"bool",
+      /*methodName=*/"hasMaskedDim",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        for (unsigned idx = 0, e = $_op.getTransferRank(); idx < e; ++idx)
+          if ($_op.isMaskedDim(idx))
+            return true;
+        return false;
+      }]
     >,
     InterfaceMethod<
       /*desc=*/[{

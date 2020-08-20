@@ -322,7 +322,7 @@ struct CXXFunctionSummaryFormat : public TypeSummaryImpl {
 
   const char *GetTextualInfo() const { return m_description.c_str(); }
 
-  void SetBackendFunction(Callback cb_func) { m_impl = cb_func; }
+  void SetBackendFunction(Callback cb_func) { m_impl = std::move(cb_func); }
 
   void SetTextualInfo(const char *descr) {
     if (descr)

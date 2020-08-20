@@ -15,12 +15,12 @@ define internal %0 @foo(i1 %Q) {
 ; IS__TUNIT____-NEXT:    br i1 [[Q]], label [[T:%.*]], label [[F:%.*]]
 ; IS__TUNIT____:       T:
 ; IS__TUNIT____-NEXT:    [[MRV:%.*]] = insertvalue [[TMP0:%.*]] undef, i32 21, 0
-; IS__TUNIT____-NEXT:    [[MRV1:%.*]] = insertvalue [[TMP0]] %mrv, i32 22, 1
-; IS__TUNIT____-NEXT:    ret [[TMP0]] %mrv1
+; IS__TUNIT____-NEXT:    [[MRV1:%.*]] = insertvalue [[TMP0]] [[MRV]], i32 22, 1
+; IS__TUNIT____-NEXT:    ret [[TMP0]] [[MRV1]]
 ; IS__TUNIT____:       F:
 ; IS__TUNIT____-NEXT:    [[MRV2:%.*]] = insertvalue [[TMP0]] undef, i32 21, 0
-; IS__TUNIT____-NEXT:    [[MRV3:%.*]] = insertvalue [[TMP0]] %mrv2, i32 23, 1
-; IS__TUNIT____-NEXT:    ret [[TMP0]] %mrv3
+; IS__TUNIT____-NEXT:    [[MRV3:%.*]] = insertvalue [[TMP0]] [[MRV2]], i32 23, 1
+; IS__TUNIT____-NEXT:    ret [[TMP0]] [[MRV3]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@foo
@@ -28,12 +28,12 @@ define internal %0 @foo(i1 %Q) {
 ; IS__CGSCC____-NEXT:    br i1 [[Q]], label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC____:       T:
 ; IS__CGSCC____-NEXT:    [[MRV:%.*]] = insertvalue [[TMP0:%.*]] undef, i32 21, 0
-; IS__CGSCC____-NEXT:    [[MRV1:%.*]] = insertvalue [[TMP0]] %mrv, i32 22, 1
-; IS__CGSCC____-NEXT:    ret [[TMP0]] %mrv1
+; IS__CGSCC____-NEXT:    [[MRV1:%.*]] = insertvalue [[TMP0]] [[MRV]], i32 22, 1
+; IS__CGSCC____-NEXT:    ret [[TMP0]] [[MRV1]]
 ; IS__CGSCC____:       F:
 ; IS__CGSCC____-NEXT:    [[MRV2:%.*]] = insertvalue [[TMP0]] undef, i32 21, 0
-; IS__CGSCC____-NEXT:    [[MRV3:%.*]] = insertvalue [[TMP0]] %mrv2, i32 23, 1
-; IS__CGSCC____-NEXT:    ret [[TMP0]] %mrv3
+; IS__CGSCC____-NEXT:    [[MRV3:%.*]] = insertvalue [[TMP0]] [[MRV2]], i32 23, 1
+; IS__CGSCC____-NEXT:    ret [[TMP0]] [[MRV3]]
 ;
   br i1 %Q, label %T, label %F
 
@@ -55,11 +55,11 @@ define internal %0 @bar(i1 %Q) {
 ; IS__TUNIT____-NEXT:    [[A:%.*]] = insertvalue [[TMP0:%.*]] undef, i32 21, 0
 ; IS__TUNIT____-NEXT:    br i1 [[Q]], label [[T:%.*]], label [[F:%.*]]
 ; IS__TUNIT____:       T:
-; IS__TUNIT____-NEXT:    [[B:%.*]] = insertvalue [[TMP0]] %A, i32 22, 1
-; IS__TUNIT____-NEXT:    ret [[TMP0]] %B
+; IS__TUNIT____-NEXT:    [[B:%.*]] = insertvalue [[TMP0]] [[A]], i32 22, 1
+; IS__TUNIT____-NEXT:    ret [[TMP0]] [[B]]
 ; IS__TUNIT____:       F:
-; IS__TUNIT____-NEXT:    [[C:%.*]] = insertvalue [[TMP0]] %A, i32 23, 1
-; IS__TUNIT____-NEXT:    ret [[TMP0]] %C
+; IS__TUNIT____-NEXT:    [[C:%.*]] = insertvalue [[TMP0]] [[A]], i32 23, 1
+; IS__TUNIT____-NEXT:    ret [[TMP0]] [[C]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@bar
@@ -67,11 +67,11 @@ define internal %0 @bar(i1 %Q) {
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = insertvalue [[TMP0:%.*]] undef, i32 21, 0
 ; IS__CGSCC____-NEXT:    br i1 [[Q]], label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC____:       T:
-; IS__CGSCC____-NEXT:    [[B:%.*]] = insertvalue [[TMP0]] %A, i32 22, 1
-; IS__CGSCC____-NEXT:    ret [[TMP0]] %B
+; IS__CGSCC____-NEXT:    [[B:%.*]] = insertvalue [[TMP0]] [[A]], i32 22, 1
+; IS__CGSCC____-NEXT:    ret [[TMP0]] [[B]]
 ; IS__CGSCC____:       F:
-; IS__CGSCC____-NEXT:    [[C:%.*]] = insertvalue [[TMP0]] %A, i32 23, 1
-; IS__CGSCC____-NEXT:    ret [[TMP0]] %C
+; IS__CGSCC____-NEXT:    [[C:%.*]] = insertvalue [[TMP0]] [[A]], i32 23, 1
+; IS__CGSCC____-NEXT:    ret [[TMP0]] [[C]]
 ;
   %A = insertvalue %0 undef, i32 21, 0
   br i1 %Q, label %T, label %F
@@ -90,13 +90,13 @@ define %0 @caller(i1 %Q) {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@caller
 ; IS__TUNIT____-SAME: (i1 [[Q:%.*]])
 ; IS__TUNIT____-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]])
-; IS__TUNIT____-NEXT:    ret [[TMP0]] %X
+; IS__TUNIT____-NEXT:    ret [[TMP0]] [[X]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller
 ; IS__CGSCC____-SAME: (i1 [[Q:%.*]])
 ; IS__CGSCC____-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]])
-; IS__CGSCC____-NEXT:    ret [[TMP0]] %X
+; IS__CGSCC____-NEXT:    ret [[TMP0]] [[X]]
 ;
   %X = call %0 @foo(i1 %Q)
   %A = extractvalue %0 %X, 0
@@ -115,11 +115,11 @@ define i32 @caller2(i1 %Q) {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@caller2
 ; IS__TUNIT____-SAME: (i1 [[Q:%.*]])
 ; IS__TUNIT____-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]])
-; IS__TUNIT____-NEXT:    [[A:%.*]] = extractvalue [[TMP0]] %X, 0
-; IS__TUNIT____-NEXT:    [[B:%.*]] = extractvalue [[TMP0]] %X, 1
+; IS__TUNIT____-NEXT:    [[A:%.*]] = extractvalue [[TMP0]] [[X]], 0
+; IS__TUNIT____-NEXT:    [[B:%.*]] = extractvalue [[TMP0]] [[X]], 1
 ; IS__TUNIT____-NEXT:    [[Y:%.*]] = call [[TMP0]] @bar(i1 [[Q]])
-; IS__TUNIT____-NEXT:    [[C:%.*]] = extractvalue [[TMP0]] %Y, 0
-; IS__TUNIT____-NEXT:    [[D:%.*]] = extractvalue [[TMP0]] %Y, 1
+; IS__TUNIT____-NEXT:    [[C:%.*]] = extractvalue [[TMP0]] [[Y]], 0
+; IS__TUNIT____-NEXT:    [[D:%.*]] = extractvalue [[TMP0]] [[Y]], 1
 ; IS__TUNIT____-NEXT:    [[M:%.*]] = add i32 [[A]], [[C]]
 ; IS__TUNIT____-NEXT:    [[N:%.*]] = add i32 [[B]], [[D]]
 ; IS__TUNIT____-NEXT:    [[R:%.*]] = add i32 [[N]], [[M]]
@@ -129,11 +129,11 @@ define i32 @caller2(i1 %Q) {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller2
 ; IS__CGSCC____-SAME: (i1 [[Q:%.*]])
 ; IS__CGSCC____-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]])
-; IS__CGSCC____-NEXT:    [[A:%.*]] = extractvalue [[TMP0]] %X, 0
-; IS__CGSCC____-NEXT:    [[B:%.*]] = extractvalue [[TMP0]] %X, 1
+; IS__CGSCC____-NEXT:    [[A:%.*]] = extractvalue [[TMP0]] [[X]], 0
+; IS__CGSCC____-NEXT:    [[B:%.*]] = extractvalue [[TMP0]] [[X]], 1
 ; IS__CGSCC____-NEXT:    [[Y:%.*]] = call [[TMP0]] @bar(i1 [[Q]])
-; IS__CGSCC____-NEXT:    [[C:%.*]] = extractvalue [[TMP0]] %Y, 0
-; IS__CGSCC____-NEXT:    [[D:%.*]] = extractvalue [[TMP0]] %Y, 1
+; IS__CGSCC____-NEXT:    [[C:%.*]] = extractvalue [[TMP0]] [[Y]], 0
+; IS__CGSCC____-NEXT:    [[D:%.*]] = extractvalue [[TMP0]] [[Y]], 1
 ; IS__CGSCC____-NEXT:    [[M:%.*]] = add i32 [[A]], [[C]]
 ; IS__CGSCC____-NEXT:    [[N:%.*]] = add i32 [[B]], [[D]]
 ; IS__CGSCC____-NEXT:    [[R:%.*]] = add i32 [[N]], [[M]]

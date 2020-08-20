@@ -9,7 +9,7 @@
 define i1 @invokecaller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@invokecaller
-; IS__TUNIT____-SAME: (i1 [[C:%.*]]) #0 personality i32 (...)* @__gxx_personality_v0
+; IS__TUNIT____-SAME: (i1 [[C:%.*]]) [[ATTR0:#.*]] personality i32 (...)* @__gxx_personality_v0
 ; IS__TUNIT____-NEXT:    [[X:%.*]] = call i32 @foo(i1 [[C]])
 ; IS__TUNIT____-NEXT:    br label [[OK:%.*]]
 ; IS__TUNIT____:       OK:
@@ -19,7 +19,7 @@ define i1 @invokecaller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@invokecaller
-; IS__CGSCC____-SAME: (i1 [[C:%.*]]) #0 personality i32 (...)* @__gxx_personality_v0
+; IS__CGSCC____-SAME: (i1 [[C:%.*]]) [[ATTR0:#.*]] personality i32 (...)* @__gxx_personality_v0
 ; IS__CGSCC____-NEXT:    [[X:%.*]] = call i32 @foo(i1 [[C]])
 ; IS__CGSCC____-NEXT:    br label [[OK:%.*]]
 ; IS__CGSCC____:       OK:

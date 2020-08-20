@@ -1,3 +1,7 @@
+# UNSUPPORTED: system-windows
+# This test is unsupported on windows because it creates paths
+# longer than MAX_PATH
+
 # Recreate the folder structure in a temp directory we can remove later.
 RUN: rm -rf %t
 RUN: mkdir -p %t/Inputs

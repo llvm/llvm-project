@@ -7,20 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/ctype/isdigit.h"
+
 #include "utils/UnitTest/Test.h"
 
-// Helper function that makes a call to isdigit a bit cleaner
-// for use with testing utilities, since it explicitly requires
-// a boolean value for EXPECT_TRUE and EXPECT_FALSE.
-bool call_isdigit(int c) { return __llvm_libc::isdigit(c); }
-
 TEST(IsDigit, DefaultLocale) {
-  // Loops through all characters, verifying that numbers return true
-  // and everything else returns false.
+  // Loops through all characters, verifying that numbers return a
+  // non-zero integer and everything else returns zero.
   for (int ch = 0; ch < 255; ++ch) {
     if ('0' <= ch && ch <= '9')
-      EXPECT_TRUE(call_isdigit(ch));
+      EXPECT_NE(__llvm_libc::isdigit(ch), 0);
     else
-      EXPECT_FALSE(call_isdigit(ch));
+      EXPECT_EQ(__llvm_libc::isdigit(ch), 0);
   }
 }

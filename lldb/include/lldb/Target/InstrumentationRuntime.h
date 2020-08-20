@@ -53,7 +53,7 @@ protected:
   lldb::ModuleSP GetRuntimeModuleSP() { return m_runtime_module; }
 
   void SetRuntimeModuleSP(lldb::ModuleSP module_sp) {
-    m_runtime_module = module_sp;
+    m_runtime_module = std::move(module_sp);
   }
 
   lldb::user_id_t GetBreakpointID() const { return m_breakpoint_id; }

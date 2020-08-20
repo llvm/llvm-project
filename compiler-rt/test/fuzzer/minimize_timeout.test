@@ -1,0 +1,6 @@
+RUN: %cpp_compiler %S/TimeoutTest.cpp -o %t-TimeoutTest
+RUN: mkdir -p %t.dir
+
+RUN: echo 'Hi!?' > %t.dir/not_minimal_timeout
+RUN: %run %t-TimeoutTest -minimize_crash=1 %t.dir/not_minimal_timeout -timeout=1 -max_total_time=3 2>&1 | FileCheck %s
+CHECK: CRASH_MIN: failed to minimize beyond {{.*}}minimized-from{{.*}} (3 bytes), exiting

@@ -46,42 +46,28 @@ TEST(DWARFDie, getLocations) {
                 BlockData:       [ 0x47 ]
               - Value:           20
               - Value:           25
+    debug_loclists:
+      - AddressSize:      4
+        OffsetEntryCount: 0
+        Lists:
+          - Entries:
+              - Operator: DW_LLE_start_length
+                Values:   [ 0x01, 0x02 ]
+              - Operator: DW_LLE_end_of_list
+          - Entries:
+              - Operator: DW_LLE_startx_length
+                Values:   [ 0x01, 0x02 ]
+              - Operator: DW_LLE_end_of_list
+          - Entries:
+              - Operator: DW_LLE_start_length
+                Values:   [ 0x01, 0x02 ]
+              ## end_of_list intentionally missing.
   )";
   Expected<StringMap<std::unique_ptr<MemoryBuffer>>> Sections =
       DWARFYAML::emitDebugSections(StringRef(yamldata),
-                                   /*IsLittleEndian=*/true);
+                                   /*IsLittleEndian=*/true,
+                                   /*Is64BitAddrSize=*/false);
   ASSERT_THAT_EXPECTED(Sections, Succeeded());
-  std::vector<uint8_t> Loclists{
-      // Header
-      0, 0, 0, 0, // Length
-      5, 0,       // Version
-      4,          // Address size
-      0,          // Segment selector size
-      0, 0, 0, 0, // Offset entry count
-      // First location list.
-      DW_LLE_start_length, // First entry
-      1, 0, 0, 0,          // Start offset
-      2,                   // Length
-      0,                   // Expression length
-      DW_LLE_end_of_list,
-      // Second location list.
-      DW_LLE_startx_length, // First entry
-      1,                    // Start index
-      2,                    // Length
-      0,                    // Expression length
-      DW_LLE_end_of_list,
-      // Third location list.
-      DW_LLE_start_length, // First entry
-      1, 0, 0, 0,          // Start offset
-      2,                   // Length
-      0,                   // Expression length
-                           // end_of_list intentionally missing
-  };
-  Loclists[0] = Loclists.size() - 4;
-  Sections->try_emplace(
-      "debug_loclists",
-      MemoryBuffer::getMemBuffer(toStringRef(Loclists), "debug_loclists",
-                                 /*RequiresNullTerminator=*/false));
   std::unique_ptr<DWARFContext> Ctx =
       DWARFContext::create(*Sections, 4, /*isLittleEndian=*/true);
   DWARFCompileUnit *CU = Ctx->getCompileUnitForOffset(0);

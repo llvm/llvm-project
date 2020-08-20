@@ -45,8 +45,6 @@ class TempEnvVar {
     EXPECT_EQ(nullptr, old_value) << old_value;
 #if HAVE_SETENV
     setenv(name, value, true);
-#else
-#   define SKIP_ENVIRONMENT_TESTS
 #endif
   }
 
@@ -137,36 +135,6 @@ TEST(CommandLineTest, ModifyExisitingOption) {
   ASSERT_EQ(cl::Hidden, TestOption.getOptionHiddenFlag()) <<
     "Failed to modify option's hidden flag.";
 }
-#ifndef SKIP_ENVIRONMENT_TESTS
-
-const char test_env_var[] = "LLVM_TEST_COMMAND_LINE_FLAGS";
-
-cl::opt<std::string> EnvironmentTestOption("env-test-opt");
-TEST(CommandLineTest, ParseEnvironment) {
-  TempEnvVar TEV(test_env_var, "-env-test-opt=hello");
-  EXPECT_EQ("", EnvironmentTestOption);
-  cl::ParseEnvironmentOptions("CommandLineTest", test_env_var);
-  EXPECT_EQ("hello", EnvironmentTestOption);
-}
-
-// This test used to make valgrind complain
-// ("Conditional jump or move depends on uninitialised value(s)")
-//
-// Warning: Do not run any tests after this one that try to gain access to
-// registered command line options because this will likely result in a
-// SEGFAULT. This can occur because the cl::opt in the test below is declared
-// on the stack which will be destroyed after the test completes but the
-// command line system will still hold a pointer to a deallocated cl::Option.
-TEST(CommandLineTest, ParseEnvironmentToLocalVar) {
-  // Put cl::opt on stack to check for proper initialization of fields.
-  StackOption<std::string> EnvironmentTestOptionLocal("env-test-opt-local");
-  TempEnvVar TEV(test_env_var, "-env-test-opt-local=hello-local");
-  EXPECT_EQ("", EnvironmentTestOptionLocal);
-  cl::ParseEnvironmentOptions("CommandLineTest", test_env_var);
-  EXPECT_EQ("hello-local", EnvironmentTestOptionLocal);
-}
-
-#endif  // SKIP_ENVIRONMENT_TESTS
 
 TEST(CommandLineTest, UseOptionCategory) {
   StackOption<int> TestOption2("test-option", cl::cat(TestCategory));

@@ -80,3 +80,53 @@ func @shape_eq(%a : tensor<?xindex>, %b : tensor<?xindex>) -> i1 {
   %result = shape.shape_eq %a, %b : tensor<?xindex>, tensor<?xindex>
   return %result : i1
 }
+
+// -----
+
+// Don't lower `shape.broadcast` if a `shape.shape` type is involved.
+// CHECK-LABEL: @broadcast
+func @broadcast(%a : tensor<?xindex>, %b : !shape.shape) -> !shape.shape {
+  // CHECK: shape.broadcast
+  %c = shape.broadcast %a, %b : tensor<?xindex>, !shape.shape -> !shape.shape
+  return %c : !shape.shape
+}
+
+// -----
+
+// CHECK-LABEL: @broadcast
+// CHECK-SAME:  (%[[LHS:.*]]: tensor<?xindex>, %[[RHS:.*]]: tensor<?xindex>)
+func @broadcast(%a : tensor<?xindex>, %b : tensor<?xindex>) {
+  // CHECK: %[[C0:.*]] = constant 0 : index
+  // CHECK: %[[C1:.*]] = constant 1 : index
+  // CHECK: %[[LHS_RANK:.*]] = dim %[[LHS]], %[[C0]] : tensor<?xindex>
+  // CHECK: %[[RHS_RANK:.*]] = dim %[[RHS]], %[[C0]] : tensor<?xindex>
+  // CHECK: %[[LHS_SMALLER:.*]] = cmpi "ule", %[[LHS_RANK]], %[[RHS_RANK]]
+  // CHECK: %[[ARG:.*]]:4 = scf.if %[[LHS_SMALLER]] -> (index, tensor<?xindex>, index, tensor<?xindex>) {
+  // CHECK:   scf.yield %[[LHS_RANK]], %[[LHS]], %[[RHS_RANK]], %[[RHS]] : index, tensor<?xindex>, index, tensor<?xindex>
+  // CHECK: } else {
+  // CHECK:   scf.yield %[[RHS_RANK]], %[[RHS]], %[[LHS_RANK]], %[[LHS]] : index, tensor<?xindex>, index, tensor<?xindex>
+  // CHECK: }
+  // CHECK: %[[MEM:.*]] = alloca(%[[ARG]]#2) : memref<?xindex>
+  // CHECK: %[[RANK_DIFF:.*]] = subi %[[ARG]]#2, %[[ARG]]#0 : index
+  // CHECK: scf.for %[[IV:.*]] = %[[C0]] to %[[RANK_DIFF]] step %[[C1]] {
+  // CHECK:   %[[EXTENT:.*]] = extract_element %[[ARG]]#3[%[[IV]]] : tensor<?xindex>
+  // CHECK:   store %[[EXTENT]], %[[MEM]][%[[IV]]] : memref<?xindex>
+  // CHECK: }
+  // CHECK: scf.for %[[IV:.*]] = %[[RANK_DIFF]] to %[[ARG]]#2 step %[[C1]] {
+  // CHECK:   %[[GREATER_OPERAND_EXTENT:.*]] = extract_element %[[ARG]]#3[%[[IV]]] : tensor<?xindex>
+  // CHECK:   %[[GREATER_OPERAND_EXTENT_IS_ONE:.*]] = cmpi "eq", %[[GREATER_OPERAND_EXTENT]], %[[C1]] : index
+  // CHECK:   %[[EXTENT:.*]] = scf.if %[[GREATER_OPERAND_EXTENT_IS_ONE]] -> (index) {
+  // CHECK:     %[[IV_SHIFTED:.*]] = subi %[[IV]], %[[RANK_DIFF]] : index
+  // CHECK:     %[[SMALLER_OPERAND_EXTENT:.*]] = extract_element %[[ARG]]#1[%[[IV_SHIFTED]]] : tensor<?xindex>
+  // CHECK:     scf.yield %[[SMALLER_OPERAND_EXTENT]] : index
+  // CHECK:   } else {
+  // CHECK:     scf.yield %[[GREATER_OPERAND_EXTENT]] : index
+  // CHECK:   }
+  // CHECK:   store %[[EXTENT]], %[[MEM]][%[[IV]]] : memref<?xindex>
+  // CHECK: }
+  // CHECK: %[[BROADCASTED:.*]] = tensor_load %[[MEM]] : memref<?xindex>
+  %0 = shape.broadcast %a, %b
+      : tensor<?xindex>, tensor<?xindex> -> tensor<?xindex>
+  return
+}
+

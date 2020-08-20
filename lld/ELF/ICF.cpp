@@ -74,6 +74,7 @@
 
 #include "ICF.h"
 #include "Config.h"
+#include "EhFrame.h"
 #include "LinkerScript.h"
 #include "OutputSections.h"
 #include "SymbolTable.h"
@@ -459,10 +460,23 @@ template <class ELFT> void ICF<ELFT>::run() {
   for (Symbol *sym : symtab->symbols())
     sym->isPreemptible = computeIsPreemptible(*sym);
 
+  // Two text sections may have identical content and relocations but different
+  // LSDA, e.g. the two functions may have catch blocks of different types. If a
+  // text section is referenced by a .eh_frame FDE with LSDA, it is not
+  // eligible. This is implemented by iterating over CIE/FDE and setting
+  // eqClass[0] to the referenced text section from a live FDE.
+  //
+  // If two .gcc_except_table have identical semantics (usually identical
+  // content with PC-relative encoding), we will lose folding opportunity.
+  uint32_t uniqueId = 0;
+  for (Partition &part : partitions)
+    part.ehFrame->iterateFDEWithLSDA<ELFT>(
+        [&](InputSection &s) { s.eqClass[0] = ++uniqueId; });
+
   // Collect sections to merge.
   for (InputSectionBase *sec : inputSections) {
     auto *s = cast<InputSection>(sec);
-    if (isEligible(s))
+    if (isEligible(s) && s->eqClass[0] == 0)
       sections.push_back(s);
   }
 
@@ -470,6 +484,9 @@ template <class ELFT> void ICF<ELFT>::run() {
   parallelForEach(
       sections, [&](InputSection *s) { s->eqClass[0] = xxHash64(s->data()); });
 
+  // Perform 2 rounds of relocation hash propagation. 2 is an empirical value to
+  // reduce the average sizes of equivalence classes, i.e. segregate() which has
+  // a large time complexity will have less work to do.
   for (unsigned cnt = 0; cnt != 2; ++cnt) {
     parallelForEach(sections, [&](InputSection *s) {
       if (s->areRelocsRela)

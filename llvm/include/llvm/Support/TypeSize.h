@@ -26,15 +26,20 @@ namespace llvm {
 template <typename T> struct DenseMapInfo;
 
 class ElementCount {
+private:
+  /// Prevent code from using initializer-list contructors like
+  /// ElementCount EC = {<unsigned>, <bool>}. The static `get*`
+  /// methods below are preferred, as users should always make a
+  /// conscious choice on the type of `ElementCount` they are
+  /// requesting.
+  ElementCount(unsigned Min, bool Scalable) : Min(Min), Scalable(Scalable) {}
+
 public:
   unsigned Min;  // Minimum number of vector elements.
   bool Scalable; // If true, NumElements is a multiple of 'Min' determined
                  // at runtime rather than compile time.
 
   ElementCount() = default;
-
-  ElementCount(unsigned Min, bool Scalable)
-  : Min(Min), Scalable(Scalable) {}
 
   ElementCount operator*(unsigned RHS) {
     return { Min * RHS, Scalable };
@@ -54,7 +59,13 @@ public:
   bool operator!=(unsigned RHS) const { return !(*this == RHS); }
 
   ElementCount NextPowerOf2() const {
-    return ElementCount(llvm::NextPowerOf2(Min), Scalable);
+    return {(unsigned)llvm::NextPowerOf2(Min), Scalable};
+  }
+
+  static ElementCount getFixed(unsigned Min) { return {Min, false}; }
+  static ElementCount getScalable(unsigned Min) { return {Min, true}; }
+  static ElementCount get(unsigned Min, bool Scalable) {
+    return {Min, Scalable};
   }
 };
 
@@ -129,6 +140,38 @@ public:
 
   TypeSize operator/(unsigned RHS) const {
     return { MinSize / RHS, IsScalable };
+  }
+
+  TypeSize &operator-=(TypeSize RHS) {
+    assert(IsScalable == RHS.IsScalable &&
+           "Subtraction using mixed scalable and fixed types");
+    MinSize -= RHS.MinSize;
+    return *this;
+  }
+
+  TypeSize &operator+=(TypeSize RHS) {
+    assert(IsScalable == RHS.IsScalable &&
+           "Addition using mixed scalable and fixed types");
+    MinSize += RHS.MinSize;
+    return *this;
+  }
+
+  friend TypeSize operator-(const TypeSize &LHS, const TypeSize &RHS) {
+    assert(LHS.IsScalable == RHS.IsScalable &&
+           "Arithmetic using mixed scalable and fixed types");
+    return {LHS.MinSize - RHS.MinSize, LHS.IsScalable};
+  }
+
+  friend TypeSize operator/(const TypeSize &LHS, const TypeSize &RHS) {
+    assert(LHS.IsScalable == RHS.IsScalable &&
+           "Arithmetic using mixed scalable and fixed types");
+    return {LHS.MinSize / RHS.MinSize, LHS.IsScalable};
+  }
+
+  friend TypeSize operator%(const TypeSize &LHS, const TypeSize &RHS) {
+    assert(LHS.IsScalable == RHS.IsScalable &&
+           "Arithmetic using mixed scalable and fixed types");
+    return {LHS.MinSize % RHS.MinSize, LHS.IsScalable};
   }
 
   // Return the minimum size with the assumption that the size is exact.
@@ -247,8 +290,12 @@ inline TypeSize alignTo(TypeSize Size, uint64_t Align) {
 }
 
 template <> struct DenseMapInfo<ElementCount> {
-  static inline ElementCount getEmptyKey() { return {~0U, true}; }
-  static inline ElementCount getTombstoneKey() { return {~0U - 1, false}; }
+  static inline ElementCount getEmptyKey() {
+    return ElementCount::getScalable(~0U);
+  }
+  static inline ElementCount getTombstoneKey() {
+    return ElementCount::getFixed(~0U - 1);
+  }
   static unsigned getHashValue(const ElementCount& EltCnt) {
     if (EltCnt.Scalable)
       return (EltCnt.Min * 37U) - 1U;

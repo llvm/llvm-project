@@ -20,9 +20,9 @@
 # LLVM:        StringTableSectionIndex: 255
 # LLVM-NEXT: }
 # LLVM-NEXT: Sections [
-# LLVM-NEXT: warning: '[[FILE]]': section header string table index 255 does not exist
 # LLVM-NEXT: Section {
 # LLVM-NEXT:   Index: 0
+# LLVM-NEXT: warning: '[[FILE]]': unable to get the name of SHT_NULL section with index 0: section header string table index 255 does not exist
 # LLVM-NEXT:   Name: <?> (0)
 # LLVM-NEXT:   Type: SHT_NULL (0x0)
 # LLVM-NEXT:   Flags [ (0x0)
@@ -36,8 +36,10 @@
 # LLVM-NEXT:   EntrySize: 0
 # LLVM-NEXT: }
 # LLVM:      Index: 1
+# LLVM-NEXT: warning: '[[FILE]]': unable to get the name of SHT_STRTAB section with index 1: section header string table index 255 does not exist
 # LLVM-NEXT: Name: <?> (11)
 # LLVM:      Index: 2
+# LLVM-NEXT: warning: '[[FILE]]': unable to get the name of SHT_STRTAB section with index 2: section header string table index 255 does not exist
 # LLVM-NEXT: Name: <?> (1)
 
 --- !ELF
@@ -45,5 +47,4 @@ FileHeader:
   Class:     ELFCLASS64
   Data:      ELFDATA2LSB
   Type:      ET_REL
-  Machine:   EM_X86_64
   EShStrNdx: 0xFF

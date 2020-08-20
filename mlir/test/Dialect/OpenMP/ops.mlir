@@ -99,14 +99,14 @@ func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_threads :
 
   // CHECK omp.parallel shared(%{{.*}} : memref<i32>) copyin(%{{.*}} : memref<i32>, %{{.*}} : memref<i32>)
   omp.parallel shared(%data_var : memref<i32>) copyin(%data_var : memref<i32>, %data_var : memref<i32>) {
-    omp.parallel if(%if_cond) {
+    omp.parallel if(%if_cond: i1) {
       omp.terminator
     }
     omp.terminator
   }
 
   // CHECK omp.parallel if(%{{.*}}) num_threads(%{{.*}} : si32) private(%{{.*}} : memref<i32>) proc_bind(close)
-  omp.parallel num_threads(%num_threads : si32) if(%if_cond) 
+  omp.parallel num_threads(%num_threads : si32) if(%if_cond: i1)
                private(%data_var : memref<i32>) proc_bind(close) {
     omp.terminator
   }

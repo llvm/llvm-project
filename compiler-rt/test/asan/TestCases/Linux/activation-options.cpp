@@ -1,6 +1,8 @@
 // Test for ASAN_OPTIONS=start_deactivated=1 mode.
 // Main executable is uninstrumented, but linked to ASan runtime. The shared
 // library is instrumented.
+// Fails with debug checks: https://bugs.llvm.org/show_bug.cgi?id=46862
+// XFAIL: !compiler-rt-optimized
 
 // RUN: %clangxx_asan -O0 -DSHARED_LIB %s -fPIC -shared -o %t-so.so
 // RUN: %clangxx -O0 %s -c -o %t.o

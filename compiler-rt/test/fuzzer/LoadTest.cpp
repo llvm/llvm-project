@@ -14,10 +14,10 @@ const int kArraySize = 1234567;
 int array[kArraySize];
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
-  if (Size < 8) return 0;
+  if (Size != 8)
+    return 0;
   uint64_t a = 0;
   memcpy(&a, Data, 8);
   Sink = array[a % (kArraySize + 1)];
   return 0;
 }
-

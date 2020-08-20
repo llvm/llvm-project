@@ -10,14 +10,14 @@
 define i32* @foo(%struct.ST* %s) nounwind uwtable readnone optsize ssp {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind optsize readnone ssp uwtable willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@foo
-; IS__TUNIT____-SAME: (%struct.ST* nofree readnone [[S:%.*]]) #0
+; IS__TUNIT____-SAME: (%struct.ST* nofree readnone [[S:%.*]]) [[ATTR0:#.*]]
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_ST:%.*]], %struct.ST* [[S]], i64 1, i32 2, i32 1, i64 5, i64 13
 ; IS__TUNIT____-NEXT:    ret i32* [[ARRAYIDX]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind optsize readnone ssp uwtable willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@foo
-; IS__CGSCC____-SAME: (%struct.ST* nofree readnone [[S:%.*]]) #0
+; IS__CGSCC____-SAME: (%struct.ST* nofree readnone [[S:%.*]]) [[ATTR0:#.*]]
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_ST:%.*]], %struct.ST* [[S]], i64 1, i32 2, i32 1, i64 5, i64 13
 ; IS__CGSCC____-NEXT:    ret i32* [[ARRAYIDX]]

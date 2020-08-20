@@ -9,3 +9,9 @@ add_gen_header(
   DEPENDS
     libc.src.__support.common
 )
+
+add_header(
+  app_h
+  HDR
+    app.h
+)

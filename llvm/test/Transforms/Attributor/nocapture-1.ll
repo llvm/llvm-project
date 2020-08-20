@@ -163,7 +163,7 @@ declare void @throw_if_bit_set(i8*, i8) readonly
 define i1 @c6(i8* %q, i8 %bit) personality i32 (...)* @__gxx_personality_v0 {
 ; CHECK: Function Attrs: nounwind readonly
 ; CHECK-LABEL: define {{[^@]+}}@c6
-; CHECK-SAME: (i8* readonly [[Q:%.*]], i8 [[BIT:%.*]]) #4 personality i32 (...)* @__gxx_personality_v0
+; CHECK-SAME: (i8* readonly [[Q:%.*]], i8 [[BIT:%.*]]) [[ATTR4:#.*]] personality i32 (...)* @__gxx_personality_v0
 ; CHECK-NEXT:    invoke void @throw_if_bit_set(i8* readonly [[Q]], i8 [[BIT]])
 ; CHECK-NEXT:    to label [[RET0:%.*]] unwind label [[RET1:%.*]]
 ; CHECK:       ret0:
@@ -459,7 +459,7 @@ define i8* @test4_2(i8* %x4_2, i8* %y4_2, i8* %z4_2, i1 %c) {
 ; CHECK-SAME: (i8* nocapture nofree readnone [[X4_2:%.*]], i8* nofree readnone returned "no-capture-maybe-returned" [[Y4_2:%.*]], i8* nocapture nofree readnone [[Z4_2:%.*]], i1 [[C:%.*]])
 ; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    call void @test4_1(i8* noalias nocapture nofree readnone align 536870912 null, i1 [[C]])
+; CHECK-NEXT:    call void @test4_1(i8* noalias nocapture nofree noundef readnone align 536870912 null, i1 [[C]])
 ; CHECK-NEXT:    store i32* null, i32** @g, align 8
 ; CHECK-NEXT:    br label [[F]]
 ; CHECK:       f:
@@ -672,18 +672,12 @@ define i1 @nocaptureInboundsGEPICmp(i32* %x) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@nocaptureInboundsGEPICmp
 ; IS__TUNIT____-SAME: (i32* nocapture nofree readnone [[X:%.*]])
-; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[X]], i32 5
-; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
-; IS__TUNIT____-NEXT:    [[TMP3:%.*]] = icmp eq i8* [[TMP2]], null
-; IS__TUNIT____-NEXT:    ret i1 [[TMP3]]
+; IS__TUNIT____-NEXT:    ret i1 false
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@nocaptureInboundsGEPICmp
 ; IS__CGSCC____-SAME: (i32* nocapture nofree readnone [[X:%.*]])
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[X]], i32 5
-; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
-; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = icmp eq i8* [[TMP2]], null
-; IS__CGSCC____-NEXT:    ret i1 [[TMP3]]
+; IS__CGSCC____-NEXT:    ret i1 false
 ;
   %1 = getelementptr inbounds i32, i32* %x, i32 5
   %2 = bitcast i32* %1 to i8*
@@ -695,22 +689,16 @@ define i1 @nocaptureInboundsGEPICmpRev(i32* %x) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@nocaptureInboundsGEPICmpRev
 ; IS__TUNIT____-SAME: (i32* nocapture nofree readnone [[X:%.*]])
-; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[X]], i32 5
-; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
-; IS__TUNIT____-NEXT:    [[TMP3:%.*]] = icmp eq i8* null, [[TMP2]]
-; IS__TUNIT____-NEXT:    ret i1 [[TMP3]]
+; IS__TUNIT____-NEXT:    ret i1 true
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@nocaptureInboundsGEPICmpRev
 ; IS__CGSCC____-SAME: (i32* nocapture nofree readnone [[X:%.*]])
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[X]], i32 5
-; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP1]] to i8*
-; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = icmp eq i8* null, [[TMP2]]
-; IS__CGSCC____-NEXT:    ret i1 [[TMP3]]
+; IS__CGSCC____-NEXT:    ret i1 true
 ;
   %1 = getelementptr inbounds i32, i32* %x, i32 5
   %2 = bitcast i32* %1 to i8*
-  %3 = icmp eq i8* null, %2
+  %3 = icmp ne i8* null, %2
   ret i1 %3
 }
 
@@ -759,7 +747,7 @@ declare void @unknown(i8*)
 define void @test_callsite() {
 ; CHECK-LABEL: define {{[^@]+}}@test_callsite()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @unknown(i8* noalias nocapture align 536870912 null)
+; CHECK-NEXT:    call void @unknown(i8* noalias nocapture noundef align 536870912 null)
 ; CHECK-NEXT:    ret void
 ;
 entry:

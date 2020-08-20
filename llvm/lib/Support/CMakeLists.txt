@@ -2,6 +2,19 @@ if(LLVM_ENABLE_ZLIB)
   set(imported_libs ZLIB::ZLIB)
 endif()
 
+function(get_system_libname libpath libname)
+  get_filename_component(libpath ${libpath} NAME)
+  if( CMAKE_FIND_LIBRARY_PREFIXES )
+    string(REPLACE ";" "|" PREFIXES "${CMAKE_FIND_LIBRARY_PREFIXES}")
+    string(REGEX REPLACE "^(${PREFIXES})" "" libpath ${libpath})
+  endif()
+  if( CMAKE_FIND_LIBRARY_SUFFIXES )
+    string(REPLACE ";" "|" SUFFIXES "${CMAKE_FIND_LIBRARY_SUFFIXES}")
+    string(REGEX REPLACE "(${SUFFIXES})$" "" libpath ${libpath})
+  endif()
+  set(${libname} "${libpath}" PARENT_SCOPE)
+endfunction()
+
 if( MSVC OR MINGW )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
@@ -21,10 +34,8 @@ elseif( CMAKE_HOST_UNIX )
     STRING(REGEX REPLACE "^lib" "" Backtrace_LIBFILE ${Backtrace_LIBFILE})
     set(system_libs ${system_libs} ${Backtrace_LIBFILE})
   endif()
-  if(LLVM_ENABLE_TERMINFO)
-    if(HAVE_TERMINFO)
-      set(system_libs ${system_libs} ${TERMINFO_LIBS})
-    endif()
+  if( LLVM_ENABLE_TERMINFO )
+    set(imported_libs ${imported_libs} "${TERMINFO_LIB}")
   endif()
   if( LLVM_ENABLE_THREADS AND (HAVE_LIBATOMIC OR HAVE_CXX_LIBATOMICS64) )
     set(system_libs ${system_libs} atomic)
@@ -56,6 +67,7 @@ add_llvm_component_library(LLVMSupport
   ABIBreak.cpp
   ARMTargetParser.cpp
   AMDGPUMetadata.cpp
+  APFixedPoint.cpp
   APFloat.cpp
   APInt.cpp
   APSInt.cpp
@@ -208,18 +220,13 @@ if(LLVM_ENABLE_ZLIB)
   if(NOT zlib_library)
     get_property(zlib_library TARGET ZLIB::ZLIB PROPERTY LOCATION)
   endif()
-  get_filename_component(zlib_library ${zlib_library} NAME)
-  if(CMAKE_STATIC_LIBRARY_PREFIX AND CMAKE_STATIC_LIBRARY_SUFFIX AND
-      zlib_library MATCHES "^${CMAKE_STATIC_LIBRARY_PREFIX}.*${CMAKE_STATIC_LIBRARY_SUFFIX}$")
-    STRING(REGEX REPLACE "^${CMAKE_STATIC_LIBRARY_PREFIX}" "" zlib_library ${zlib_library})
-    STRING(REGEX REPLACE "${CMAKE_STATIC_LIBRARY_SUFFIX}$" "" zlib_library ${zlib_library})
-  endif()
-  if(CMAKE_SHARED_LIBRARY_PREFIX AND CMAKE_SHARED_LIBRARY_SUFFIX AND
-      zlib_library MATCHES "^${CMAKE_SHARED_LIBRARY_PREFIX}.*${CMAKE_SHARED_LIBRARY_SUFFIX}$")
-    STRING(REGEX REPLACE "^${CMAKE_SHARED_LIBRARY_PREFIX}" "" zlib_library ${zlib_library})
-    STRING(REGEX REPLACE "${CMAKE_SHARED_LIBRARY_SUFFIX}$" "" zlib_library ${zlib_library})
-  endif()
+  get_system_libname(${zlib_library} zlib_library)
   set(llvm_system_libs ${llvm_system_libs} "${zlib_library}")
+endif()
+
+if(LLVM_ENABLE_TERMINFO)
+  get_system_libname(${TERMINFO_LIB} terminfo_library)
+  set(llvm_system_libs ${llvm_system_libs} "${terminfo_library}")
 endif()
 
 set_property(TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS "${llvm_system_libs}")

@@ -17,7 +17,7 @@ various parts of this script (see `--plugins`). This is useful for situations
 where it is necessary to handle site-specific quirks (e.g. binaries with debug
 symbols only accessible via a remote service) without having to modify the
 script itself.
-  
+
 """
 import argparse
 import bisect
@@ -92,7 +92,7 @@ class LLVMSymbolizer(Symbolizer):
            '--use-symbol-table=true',
            '--demangle=%s' % demangle,
            '--functions=linkage',
-           '--inlining=true',
+           '--inlines',
            '--default-arch=%s' % self.default_arch]
     if self.system == 'Darwin':
       for hint in self.dsym_hints:

@@ -17,6 +17,82 @@
 
 // -----
 
+def SPV_GroupBroadcastOp : SPV_Op<"GroupBroadcast",
+  [NoSideEffect, AllTypesMatch<["value", "result"]>]> {
+  let summary = [{
+    Return the Value of the invocation identified by the local id LocalId to
+    all invocations in the group.
+  }];
+
+  let description = [{
+    All invocations of this module within Execution must reach this point of
+    execution.
+
+    Behavior is undefined if this instruction is used in control flow that
+    is non-uniform within Execution.
+
+    Result Type  must be a scalar or vector of floating-point type, integer
+    type, or Boolean type.
+
+    Execution must be Workgroup or Subgroup Scope.
+
+     The type of Value must be the same as Result Type.
+
+    LocalId must be an integer datatype. It can be a scalar, or a vector
+    with 2 components or a vector with 3 components. LocalId must be the
+    same for all invocations in the group.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    scope ::= `"Workgroup"` | `"Subgroup"`
+    integer-float-scalar-vector-type ::= integer-type | float-type |
+                               `vector<` integer-literal `x` integer-type `>` |
+                               `vector<` integer-literal `x` float-type `>`
+    localid-type ::= integer-type |
+                   `vector<` integer-literal `x` integer-type `>`
+    group-broadcast-op ::= ssa-id `=` `spv.GroupBroadcast` scope ssa_use,
+                   ssa_use `:` integer-float-scalar-vector-type `,` localid-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %scalar_value = ... : f32
+    %vector_value = ... : vector<4xf32>
+    %scalar_localid = ... : i32
+    %vector_localid = ... : vector<3xi32>
+    %0 = spv.GroupBroadcast "Subgroup" %scalar_value, %scalar_localid : f32, i32
+    %1 = spv.GroupBroadcast "Workgroup" %vector_value, %vector_localid :
+      vector<4xf32>, vector<3xi32>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_5>,
+    Extension<[]>,
+    Capability<[SPV_C_Groups]>
+  ];
+
+  let arguments = (ins
+    SPV_ScopeAttr:$execution_scope,
+    SPV_Type:$value,
+    SPV_ScalarOrVectorOf<SPV_Integer>:$localid
+  );
+
+  let results = (outs
+    SPV_Type:$result
+  );
+
+  let assemblyFormat = [{
+    $execution_scope operands attr-dict `:` type($value) `,` type($localid)
+  }];
+
+}
+
+// -----
+
 def SPV_SubgroupBallotKHROp : SPV_Op<"SubgroupBallotKHR", []> {
   let summary = "See extension SPV_KHR_shader_ballot";
 

@@ -372,6 +372,12 @@ def FeatureERMSB
           "ermsb", "HasERMSB", "true",
           "REP MOVS/STOS are fast">;
 
+// Icelake and newer processors have Fast Short REP MOV.
+def FeatureFSRM
+    : SubtargetFeature<
+          "fsrm", "HasFSRM", "true",
+          "REP MOVSB of short lengths is faster">;
+
 // Bulldozer and newer processors can merge CMP/TEST (but not other
 // instructions) with conditional branches.
 def FeatureBranchFusion
@@ -713,7 +719,8 @@ def ProcessorFeatures {
                                                   FeatureVPOPCNTDQ,
                                                   FeatureGFNI,
                                                   FeatureCLWB,
-                                                  FeatureRDPID];
+                                                  FeatureRDPID,
+                                                  FeatureFSRM];
   list<SubtargetFeature> ICLTuning = CNLTuning;
   list<SubtargetFeature> ICLFeatures =
     !listconcat(CNLFeatures, ICLAdditionalFeatures);
@@ -1018,12 +1025,12 @@ def ProcessorFeatures {
 
 class Proc<string Name, list<SubtargetFeature> Features,
            list<SubtargetFeature> TuneFeatures>
- : ProcessorModel<Name, GenericModel, !listconcat(Features, TuneFeatures)>;
+ : ProcessorModel<Name, GenericModel, Features, TuneFeatures>;
 
 class ProcModel<string Name, SchedMachineModel Model,
                 list<SubtargetFeature> Features,
                 list<SubtargetFeature> TuneFeatures>
- : ProcessorModel<Name, Model, !listconcat(Features, TuneFeatures)>;
+ : ProcessorModel<Name, Model, Features, TuneFeatures>;
 
 // NOTE: CMPXCHG8B is here for legacy compatibility so that it is only disabled
 // if i386/i486 is specifically requested.

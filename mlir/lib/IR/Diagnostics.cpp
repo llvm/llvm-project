@@ -366,43 +366,38 @@ struct SourceMgrDiagnosticHandlerImpl {
 
 /// Return a processable FileLineColLoc from the given location.
 static Optional<FileLineColLoc> getFileLineColLoc(Location loc) {
-  switch (loc->getKind()) {
-  case StandardAttributes::NameLocation:
+  if (auto nameLoc = loc.dyn_cast<NameLoc>())
     return getFileLineColLoc(loc.cast<NameLoc>().getChildLoc());
-  case StandardAttributes::FileLineColLocation:
-    return loc.cast<FileLineColLoc>();
-  case StandardAttributes::CallSiteLocation:
-    // Process the callee of a callsite location.
+  if (auto fileLoc = loc.dyn_cast<FileLineColLoc>())
+    return fileLoc;
+  if (auto callLoc = loc.dyn_cast<CallSiteLoc>())
     return getFileLineColLoc(loc.cast<CallSiteLoc>().getCallee());
-  case StandardAttributes::FusedLocation:
+  if (auto fusedLoc = loc.dyn_cast<FusedLoc>()) {
     for (auto subLoc : loc.cast<FusedLoc>().getLocations()) {
       if (auto callLoc = getFileLineColLoc(subLoc)) {
         return callLoc;
       }
     }
     return llvm::None;
-  default:
-    return llvm::None;
   }
+  return llvm::None;
 }
 
 /// Return a processable CallSiteLoc from the given location.
 static Optional<CallSiteLoc> getCallSiteLoc(Location loc) {
-  switch (loc->getKind()) {
-  case StandardAttributes::NameLocation:
+  if (auto nameLoc = loc.dyn_cast<NameLoc>())
     return getCallSiteLoc(loc.cast<NameLoc>().getChildLoc());
-  case StandardAttributes::CallSiteLocation:
-    return loc.cast<CallSiteLoc>();
-  case StandardAttributes::FusedLocation:
+  if (auto callLoc = loc.dyn_cast<CallSiteLoc>())
+    return callLoc;
+  if (auto fusedLoc = loc.dyn_cast<FusedLoc>()) {
     for (auto subLoc : loc.cast<FusedLoc>().getLocations()) {
       if (auto callLoc = getCallSiteLoc(subLoc)) {
         return callLoc;
       }
     }
     return llvm::None;
-  default:
-    return llvm::None;
   }
+  return llvm::None;
 }
 
 /// Given a diagnostic kind, returns the LLVM DiagKind.

@@ -11,7 +11,7 @@
 define i32 @bar() {
 ; CHECK-LABEL: define {{[^@]+}}@bar()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo(i32* nonnull align 4 dereferenceable(4) @g)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo(i32* noundef nonnull align 4 dereferenceable(4) @g)
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
 entry:

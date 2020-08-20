@@ -97,6 +97,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_ATTRIBUTOR_H
 #define LLVM_TRANSFORMS_IPO_ATTRIBUTOR_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -115,6 +116,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -155,8 +157,8 @@ public:
   using DepTy = PointerIntPair<AADepGraphNode *, 1>;
 
 protected:
-  /// Set of dependency graph nodes which this one depends on.
-  /// The bit encodes if it is optional.
+  /// Set of dependency graph nodes which should be updated if this one
+  /// is updated. The bit encodes if it is optional.
   TinyPtrVector<DepTy> Deps;
 
   static AADepGraphNode *DepGetVal(DepTy &DT) { return DT.getPointer(); }
@@ -184,6 +186,11 @@ public:
   friend struct AADepGraph;
 };
 
+/// The data structure for the dependency graph
+///
+/// Note that in this graph if there is an edge from A to B (A -> B),
+/// then it means that B depends on A, and when the state of A is
+/// updated, node B should also be updated
 struct AADepGraph {
   AADepGraph() {}
   ~AADepGraph() {}
@@ -197,7 +204,6 @@ struct AADepGraph {
   /// requires a single entry point, so we maintain a fake("synthetic") root
   /// node that depends on every node.
   AADepGraphNode SyntheticRoot;
-
   AADepGraphNode *GetEntryNode() { return &SyntheticRoot; }
 
   iterator begin() { return SyntheticRoot.child_begin(); }
@@ -2007,7 +2013,7 @@ struct StateWrapper : public BaseType, public StateTy {
   StateType &getState() override { return *this; }
 
   /// See AbstractAttribute::getState(...).
-  const AbstractState &getState() const override { return *this; }
+  const StateType &getState() const override { return *this; }
 };
 
 /// Helper class that provides common functionality to manifest IR attributes.
@@ -3296,7 +3302,7 @@ struct AAValueConstantRange
 
   /// See AbstractAttribute::getState(...).
   IntegerRangeState &getState() override { return *this; }
-  const AbstractState &getState() const override { return *this; }
+  const IntegerRangeState &getState() const override { return *this; }
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAValueConstantRange &createForPosition(const IRPosition &IRP,
@@ -3336,6 +3342,246 @@ struct AAValueConstantRange
 
   /// This function should return true if the type of the \p AA is
   /// AAValueConstantRange
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+/// A class for a set state.
+/// The assumed boolean state indicates whether the corresponding set is full
+/// set or not. If the assumed state is false, this is the worst state. The
+/// worst state (invalid state) of set of potential values is when the set
+/// contains every possible value (i.e. we cannot in any way limit the value
+/// that the target position can take). That never happens naturally, we only
+/// force it. As for the conditions under which we force it, see
+/// AAPotentialValues.
+template <typename MemberTy, typename KeyInfo = DenseMapInfo<MemberTy>>
+struct PotentialValuesState : AbstractState {
+  using SetTy = DenseSet<MemberTy, KeyInfo>;
+
+  PotentialValuesState() : IsValidState(true) {}
+
+  PotentialValuesState(bool IsValid) : IsValidState(IsValid) {}
+
+  /// See AbstractState::isValidState(...)
+  bool isValidState() const override { return IsValidState.isValidState(); }
+
+  /// See AbstractState::isAtFixpoint(...)
+  bool isAtFixpoint() const override { return IsValidState.isAtFixpoint(); }
+
+  /// See AbstractState::indicatePessimisticFixpoint(...)
+  ChangeStatus indicatePessimisticFixpoint() override {
+    return IsValidState.indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractState::indicateOptimisticFixpoint(...)
+  ChangeStatus indicateOptimisticFixpoint() override {
+    return IsValidState.indicateOptimisticFixpoint();
+  }
+
+  /// Return the assumed state
+  PotentialValuesState &getAssumed() { return *this; }
+  const PotentialValuesState &getAssumed() const { return *this; }
+
+  /// Return this set. We should check whether this set is valid or not by
+  /// isValidState() before calling this function.
+  const SetTy &getAssumedSet() const {
+    assert(isValidState() && "This set shoud not be used when it is invalid!");
+    return Set;
+  }
+
+  bool operator==(const PotentialValuesState &RHS) const {
+    if (isValidState() != RHS.isValidState())
+      return false;
+    if (!isValidState() && !RHS.isValidState())
+      return true;
+    return Set == RHS.getAssumedSet();
+  }
+
+  /// Maximum number of potential values to be tracked.
+  /// This is set by -attributor-max-potential-values command line option
+  static unsigned MaxPotentialValues;
+
+  /// Return empty set as the best state of potential values.
+  static PotentialValuesState getBestState() {
+    return PotentialValuesState(true);
+  }
+
+  static PotentialValuesState getBestState(PotentialValuesState &PVS) {
+    return getBestState();
+  }
+
+  /// Return full set as the worst state of potential values.
+  static PotentialValuesState getWorstState() {
+    return PotentialValuesState(false);
+  }
+
+  /// Union assumed set with the passed value.
+  void unionAssumed(const MemberTy &C) { insert(C); }
+
+  /// Union assumed set with assumed set of the passed state \p PVS.
+  void unionAssumed(const PotentialValuesState &PVS) { unionWith(PVS); }
+
+  /// "Clamp" this state with \p PVS.
+  PotentialValuesState operator^=(const PotentialValuesState &PVS) {
+    IsValidState ^= PVS.IsValidState;
+    unionAssumed(PVS);
+    return *this;
+  }
+
+  PotentialValuesState operator&=(const PotentialValuesState &PVS) {
+    IsValidState &= PVS.IsValidState;
+    unionAssumed(PVS);
+    return *this;
+  }
+
+private:
+  /// Check the size of this set, and invalidate when the size is no
+  /// less than \p MaxPotentialValues threshold.
+  void checkAndInvalidate() {
+    if (Set.size() >= MaxPotentialValues)
+      indicatePessimisticFixpoint();
+  }
+
+  /// Insert an element into this set.
+  void insert(const MemberTy &C) {
+    if (!isValidState())
+      return;
+    Set.insert(C);
+    checkAndInvalidate();
+  }
+
+  /// Take union with R.
+  void unionWith(const PotentialValuesState &R) {
+    /// If this is a full set, do nothing.;
+    if (!isValidState())
+      return;
+    /// If R is full set, change L to a full set.
+    if (!R.isValidState()) {
+      indicatePessimisticFixpoint();
+      return;
+    }
+    for (const MemberTy &C : R.Set)
+      Set.insert(C);
+    checkAndInvalidate();
+  }
+
+  /// Take intersection with R.
+  void intersectWith(const PotentialValuesState &R) {
+    /// If R is a full set, do nothing.
+    if (!R.isValidState())
+      return;
+    /// If this is a full set, change this to R.
+    if (!isValidState()) {
+      *this = R;
+      return;
+    }
+    SetTy IntersectSet;
+    for (const MemberTy &C : Set) {
+      if (R.Set.count(C))
+        IntersectSet.insert(C);
+    }
+    Set = IntersectSet;
+  }
+
+  /// A helper state which indicate whether this state is valid or not.
+  BooleanState IsValidState;
+
+  /// Container for potential values
+  SetTy Set;
+};
+
+using PotentialConstantIntValuesState = PotentialValuesState<APInt>;
+
+raw_ostream &operator<<(raw_ostream &OS,
+                        const PotentialConstantIntValuesState &R);
+
+/// An abstract interface for potential values analysis.
+///
+/// This AA collects potential values for each IR position.
+/// An assumed set of potential values is initialized with the empty set (the
+/// best state) and it will grow monotonically as we find more potential values
+/// for this position.
+/// The set might be forced to the worst state, that is, to contain every
+/// possible value for this position in 2 cases.
+///   1. We surpassed the \p MaxPotentialValues threshold. This includes the
+///      case that this position is affected (e.g. because of an operation) by a
+///      Value that is in the worst state.
+///   2. We tried to initialize on a Value that we cannot handle (e.g. an
+///      operator we do not currently handle).
+///
+/// TODO: Support values other than constant integers.
+struct AAPotentialValues
+    : public StateWrapper<PotentialConstantIntValuesState, AbstractAttribute> {
+  using Base = StateWrapper<PotentialConstantIntValuesState, AbstractAttribute>;
+  AAPotentialValues(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// See AbstractAttribute::getState(...).
+  PotentialConstantIntValuesState &getState() override { return *this; }
+  const PotentialConstantIntValuesState &getState() const override {
+    return *this;
+  }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAPotentialValues &createForPosition(const IRPosition &IRP,
+                                              Attributor &A);
+
+  /// Return assumed constant for the associated value
+  Optional<ConstantInt *>
+  getAssumedConstantInt(Attributor &A,
+                        const Instruction *CtxI = nullptr) const {
+    if (!isValidState())
+      return nullptr;
+    if (getAssumedSet().size() == 1)
+      return cast<ConstantInt>(ConstantInt::get(getAssociatedValue().getType(),
+                                                *(getAssumedSet().begin())));
+    if (getAssumedSet().size() == 0)
+      return llvm::None;
+
+    return nullptr;
+  }
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAPotentialValues"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAPotentialValues
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+/// An abstract interface for all noundef attributes.
+struct AANoUndef
+    : public IRAttribute<Attribute::NoUndef,
+                         StateWrapper<BooleanState, AbstractAttribute>> {
+  AANoUndef(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// Return true if we assume that the underlying value is noundef.
+  bool isAssumedNoUndef() const { return getAssumed(); }
+
+  /// Return true if we know that underlying value is noundef.
+  bool isKnownNoUndef() const { return getKnown(); }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AANoUndef &createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AANoUndef"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is AANoUndef
   static bool classof(const AbstractAttribute *AA) {
     return (AA->getIdAddr() == &ID);
   }

@@ -12,9 +12,9 @@ L1:
   // expected-note@+1 {{expected an expression statement}}
   {
     foo();
-    goto L1; // expected-error {{use of undeclared label 'L1'}}
+    goto L1;
   }
-  goto L2; // expected-error {{use of undeclared label 'L2'}}
+  goto L2;
 #pragma omp atomic
   // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an l-value expression with scalar type}}
   // expected-note@+1 {{expected an expression statement}}

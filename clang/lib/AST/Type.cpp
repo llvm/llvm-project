@@ -308,10 +308,8 @@ ConstantMatrixType::ConstantMatrixType(QualType matrixType, unsigned nRows,
 ConstantMatrixType::ConstantMatrixType(TypeClass tc, QualType matrixType,
                                        unsigned nRows, unsigned nColumns,
                                        QualType canonType)
-    : MatrixType(tc, matrixType, canonType) {
-  ConstantMatrixTypeBits.NumRows = nRows;
-  ConstantMatrixTypeBits.NumColumns = nColumns;
-}
+    : MatrixType(tc, matrixType, canonType), NumRows(nRows),
+      NumColumns(nColumns) {}
 
 DependentSizedMatrixType::DependentSizedMatrixType(
     const ASTContext &CTX, QualType ElementType, QualType CanonicalType,
@@ -4339,10 +4337,10 @@ CXXRecordDecl *MemberPointerType::getMostRecentCXXRecordDecl() const {
 
 void clang::FixedPointValueToString(SmallVectorImpl<char> &Str,
                                     llvm::APSInt Val, unsigned Scale) {
-  FixedPointSemantics FXSema(Val.getBitWidth(), Scale, Val.isSigned(),
-                             /*IsSaturated=*/false,
-                             /*HasUnsignedPadding=*/false);
-  APFixedPoint(Val, FXSema).toString(Str);
+  llvm::FixedPointSemantics FXSema(Val.getBitWidth(), Scale, Val.isSigned(),
+                                   /*IsSaturated=*/false,
+                                   /*HasUnsignedPadding=*/false);
+  llvm::APFixedPoint(Val, FXSema).toString(Str);
 }
 
 AutoType::AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,

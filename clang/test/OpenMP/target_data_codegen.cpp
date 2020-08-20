@@ -256,10 +256,16 @@ ST<int> gb;
 double gc[100];
 
 // PRESENT=0x1000 | TARGET_PARAM=0x20 | TO=0x1 = 0x1021
-// CK1A: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1021]]]
+// CK1A: [[MTYPE00Begin:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1021]]]
+
+// TARGET_PARAM=0x20 | TO=0x1 = 0x21
+// CK1A: [[MTYPE00End:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x21]]]
 
 // PRESENT=0x1000 | CLOSE=0x400 | TARGET_PARAM=0x20 | ALWAYS=0x4 | TO=0x1 = 0x1425
-// CK1A: [[MTYPE01:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1425]]]
+// CK1A: [[MTYPE01Begin:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1425]]]
+
+// CLOSE=0x400 | TARGET_PARAM=0x20 | ALWAYS=0x4 | TO=0x1 = 0x425
+// CK1A: [[MTYPE01End:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x425]]]
 
 // CK1A-LABEL: _Z3fooi
 void foo(int arg) {
@@ -267,7 +273,7 @@ void foo(int arg) {
   float lb[arg];
 
   // Region 00
-  // CK1A-DAG: call void @__tgt_target_data_begin_mapper(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i[[sz:32|64]]* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}})
+  // CK1A-DAG: call void @__tgt_target_data_begin_mapper(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i[[sz:32|64]]* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00Begin]]{{.+}})
   // CK1A-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK1A-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
   // CK1A-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
@@ -285,7 +291,7 @@ void foo(int arg) {
   // CK1A-32-DAG: [[CSVAL032]] = mul nuw i32 %{{[^,]+}}, 4
   // CK1A: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
 
-  // CK1A-DAG: call void @__tgt_target_data_end_mapper(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i[[sz]]* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00]]{{.+}})
+  // CK1A-DAG: call void @__tgt_target_data_end_mapper(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i[[sz]]* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE00End]]{{.+}})
   // CK1A-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
   // CK1A-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P]]
   // CK1A-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S]]
@@ -293,7 +299,7 @@ void foo(int arg) {
   {++arg;}
 
   // Region 01
-  // CK1A-DAG: call void @__tgt_target_data_begin_mapper(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i[[sz]]* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE01]]{{.+}})
+  // CK1A-DAG: call void @__tgt_target_data_begin_mapper(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i[[sz]]* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE01Begin]]{{.+}})
   // CK1A-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
   // CK1A-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
   // CK1A-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S:%[^,]+]]
@@ -311,7 +317,7 @@ void foo(int arg) {
   // CK1A-32-DAG: [[CSVAL032]] = mul nuw i32 %{{[^,]+}}, 4
   // CK1A: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
 
-  // CK1A-DAG: call void @__tgt_target_data_end_mapper(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i[[sz]]* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE01]]{{.+}})
+  // CK1A-DAG: call void @__tgt_target_data_end_mapper(i64 -1, i32 1, i8** [[GEPBP:%.+]], i8** [[GEPP:%.+]], i[[sz]]* [[GEPS:%.+]], {{.+}}getelementptr {{.+}}[1 x i{{.+}}]* [[MTYPE01End]]{{.+}})
   // CK1A-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
   // CK1A-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P]]
   // CK1A-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[S]]

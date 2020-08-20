@@ -471,7 +471,7 @@ public:
     return &InstrItins;
   }
 
-  void ParseSubtargetFeatures(StringRef CPU, StringRef FS);
+  void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
   Generation getGeneration() const {
     return (Generation)Gen;
@@ -1210,6 +1210,10 @@ public:
     return getWavefrontSize() == 32;
   }
 
+  bool isWave64() const {
+    return getWavefrontSize() == 64;
+  }
+
   const TargetRegisterClass *getBoolRC() const {
     return getRegisterInfo()->getBoolRC();
   }
@@ -1291,7 +1295,7 @@ public:
     return &TSInfo;
   }
 
-  void ParseSubtargetFeatures(StringRef CPU, StringRef FS);
+  void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
 
   Generation getGeneration() const {
     return Gen;

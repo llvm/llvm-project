@@ -800,6 +800,15 @@ void VPBlendRecipe::print(raw_ostream &O, const Twine &Indent,
   }
 }
 
+void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
+                              VPSlotTracker &SlotTracker) const {
+  O << "\"REDUCE of" << *I << " as ";
+  ChainOp->printAsOperand(O, SlotTracker);
+  O << " + reduce(";
+  VecOp->printAsOperand(O, SlotTracker);
+  O << ")";
+}
+
 void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
   O << "\"" << (IsUniform ? "CLONE " : "REPLICATE ")

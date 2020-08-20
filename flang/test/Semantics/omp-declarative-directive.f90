@@ -28,7 +28,7 @@ subroutine declare_simd_2
   use m1
   procedure (sub) sub1
   !ERROR: Internal: no symbol found for 'sub1'
-  !ERROR: NOTINBRANCH and INBRANCH are mutually exclusive and may not appear on the same DECLARE SIMD directive
+  !ERROR: NOTINBRANCH and INBRANCH clauses are mutually exclusive and may not appear on the same DECLARE SIMD directive
   !$omp declare simd(sub1) inbranch notinbranch
   procedure (sub), pointer::p
   p=>sub1

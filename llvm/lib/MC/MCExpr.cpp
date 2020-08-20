@@ -145,6 +145,7 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
     case MCBinaryExpr::Mul:  OS <<  '*'; break;
     case MCBinaryExpr::NE:   OS << "!="; break;
     case MCBinaryExpr::Or:   OS <<  '|'; break;
+    case MCBinaryExpr::OrNot: OS << '!'; break;
     case MCBinaryExpr::Shl:  OS << "<<"; break;
     case MCBinaryExpr::Sub:  OS <<  '-'; break;
     case MCBinaryExpr::Xor:  OS <<  '^'; break;
@@ -321,6 +322,8 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_PPC_GOT_TLSLD_HA: return "got@tlsld@ha";
   case VK_PPC_GOT_PCREL:
     return "got@pcrel";
+  case VK_PPC_GOT_TLSGD_PCREL:
+    return "got@tlsgd@pcrel";
   case VK_PPC_TLSLD: return "tlsld";
   case VK_PPC_LOCAL: return "local";
   case VK_PPC_NOTOC: return "notoc";
@@ -453,6 +456,7 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("got@tlsld@h", VK_PPC_GOT_TLSLD_HI)
     .Case("got@tlsld@ha", VK_PPC_GOT_TLSLD_HA)
     .Case("got@pcrel", VK_PPC_GOT_PCREL)
+    .Case("got@tlsgd@pcrel", VK_PPC_GOT_TLSGD_PCREL)
     .Case("notoc", VK_PPC_NOTOC)
     .Case("gdgot", VK_Hexagon_GD_GOT)
     .Case("gdplt", VK_Hexagon_GD_PLT)
@@ -920,6 +924,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
     case MCBinaryExpr::Mul:  Result = LHS * RHS; break;
     case MCBinaryExpr::NE:   Result = LHS != RHS; break;
     case MCBinaryExpr::Or:   Result = LHS | RHS; break;
+    case MCBinaryExpr::OrNot: Result = LHS | ~RHS; break;
     case MCBinaryExpr::Shl:  Result = uint64_t(LHS) << uint64_t(RHS); break;
     case MCBinaryExpr::Sub:  Result = LHS - RHS; break;
     case MCBinaryExpr::Xor:  Result = LHS ^ RHS; break;

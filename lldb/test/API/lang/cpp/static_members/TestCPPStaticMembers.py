@@ -15,7 +15,7 @@ class CPPStaticMembersTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @unittest2.expectedFailure  # llvm.org/pr15401
+    @expectedFailure  # llvm.org/pr15401
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_with_run_command(self):
         """Test that member variables have the correct layout, scope and qualifiers when stopped inside and outside C++ methods"""

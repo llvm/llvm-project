@@ -3549,8 +3549,10 @@ void IndexBitcodeWriter::writeModStrings() {
 
 /// Write the function type metadata related records that need to appear before
 /// a function summary entry (whether per-module or combined).
+template <typename Fn>
 static void writeFunctionTypeMetadataRecords(BitstreamWriter &Stream,
-                                             FunctionSummary *FS) {
+                                             FunctionSummary *FS,
+                                             Fn GetValueID) {
   if (!FS->type_tests().empty())
     Stream.EmitRecord(bitc::FS_TYPE_TESTS, FS->type_tests());
 
@@ -3600,16 +3602,25 @@ static void writeFunctionTypeMetadataRecords(BitstreamWriter &Stream,
   if (!FS->paramAccesses().empty()) {
     Record.clear();
     for (auto &Arg : FS->paramAccesses()) {
+      size_t UndoSize = Record.size();
       Record.push_back(Arg.ParamNo);
       WriteRange(Arg.Use);
       Record.push_back(Arg.Calls.size());
       for (auto &Call : Arg.Calls) {
         Record.push_back(Call.ParamNo);
-        Record.push_back(Call.Callee);
+        Optional<unsigned> ValueID = GetValueID(Call.Callee);
+        if (!ValueID) {
+          // If ValueID is unknown we can't drop just this call, we must drop
+          // entire parameter.
+          Record.resize(UndoSize);
+          break;
+        }
+        Record.push_back(*ValueID);
         WriteRange(Call.Offsets);
       }
     }
-    Stream.EmitRecord(bitc::FS_PARAM_ACCESS, Record);
+    if (!Record.empty())
+      Stream.EmitRecord(bitc::FS_PARAM_ACCESS, Record);
   }
 }
 
@@ -3706,7 +3717,11 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
   NameVals.push_back(ValueID);
 
   FunctionSummary *FS = cast<FunctionSummary>(Summary);
-  writeFunctionTypeMetadataRecords(Stream, FS);
+
+  writeFunctionTypeMetadataRecords(
+      Stream, FS, [&](const ValueInfo &VI) -> Optional<unsigned> {
+        return {VE.getValueID(VI.getValue())};
+      });
 
   auto SpecialRefCnts = FS->specialRefCounts();
   NameVals.push_back(getEncodedGVSummaryFlags(FS->flags()));
@@ -4083,8 +4098,38 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
       return;
     }
 
+    auto GetValueId = [&](const ValueInfo &VI) -> Optional<unsigned> {
+      GlobalValue::GUID GUID = VI.getGUID();
+      Optional<unsigned> CallValueId = getValueId(GUID);
+      if (CallValueId)
+        return CallValueId;
+      // For SamplePGO, the indirect call targets for local functions will
+      // have its original name annotated in profile. We try to find the
+      // corresponding PGOFuncName as the GUID.
+      GUID = Index.getGUIDFromOriginalID(GUID);
+      if (!GUID)
+        return None;
+      CallValueId = getValueId(GUID);
+      if (!CallValueId)
+        return None;
+      // The mapping from OriginalId to GUID may return a GUID
+      // that corresponds to a static variable. Filter it out here.
+      // This can happen when
+      // 1) There is a call to a library function which does not have
+      // a CallValidId;
+      // 2) There is a static variable with the  OriginalGUID identical
+      // to the GUID of the library function in 1);
+      // When this happens, the logic for SamplePGO kicks in and
+      // the static variable in 2) will be found, which needs to be
+      // filtered out.
+      auto *GVSum = Index.getGlobalValueSummary(GUID, false);
+      if (GVSum && GVSum->getSummaryKind() == GlobalValueSummary::GlobalVarKind)
+        return None;
+      return CallValueId;
+    };
+
     auto *FS = cast<FunctionSummary>(S);
-    writeFunctionTypeMetadataRecords(Stream, FS);
+    writeFunctionTypeMetadataRecords(Stream, FS, GetValueId);
     getReferencedTypeIds(FS, ReferencedTypeIds);
 
     NameVals.push_back(*ValueId);
@@ -4126,33 +4171,9 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     for (auto &EI : FS->calls()) {
       // If this GUID doesn't have a value id, it doesn't have a function
       // summary and we don't need to record any calls to it.
-      GlobalValue::GUID GUID = EI.first.getGUID();
-      auto CallValueId = getValueId(GUID);
-      if (!CallValueId) {
-        // For SamplePGO, the indirect call targets for local functions will
-        // have its original name annotated in profile. We try to find the
-        // corresponding PGOFuncName as the GUID.
-        GUID = Index.getGUIDFromOriginalID(GUID);
-        if (GUID == 0)
-          continue;
-        CallValueId = getValueId(GUID);
-        if (!CallValueId)
-          continue;
-        // The mapping from OriginalId to GUID may return a GUID
-        // that corresponds to a static variable. Filter it out here.
-        // This can happen when
-        // 1) There is a call to a library function which does not have
-        // a CallValidId;
-        // 2) There is a static variable with the  OriginalGUID identical
-        // to the GUID of the library function in 1);
-        // When this happens, the logic for SamplePGO kicks in and
-        // the static variable in 2) will be found, which needs to be
-        // filtered out.
-        auto *GVSum = Index.getGlobalValueSummary(GUID, false);
-        if (GVSum &&
-            GVSum->getSummaryKind() == GlobalValueSummary::GlobalVarKind)
-          continue;
-      }
+      Optional<unsigned> CallValueId = GetValueId(EI.first);
+      if (!CallValueId)
+        continue;
       NameVals.push_back(*CallValueId);
       if (HasProfileData)
         NameVals.push_back(static_cast<uint8_t>(EI.second.Hotness));
@@ -4740,6 +4761,9 @@ static const char *getSectionNameForBitcode(const Triple &T) {
   case Triple::Wasm:
   case Triple::UnknownObjectFormat:
     return ".llvmbc";
+  case Triple::GOFF:
+    llvm_unreachable("GOFF is not yet implemented");
+    break;
   case Triple::XCOFF:
     llvm_unreachable("XCOFF is not yet implemented");
     break;
@@ -4756,6 +4780,9 @@ static const char *getSectionNameForCommandline(const Triple &T) {
   case Triple::Wasm:
   case Triple::UnknownObjectFormat:
     return ".llvmcmd";
+  case Triple::GOFF:
+    llvm_unreachable("GOFF is not yet implemented");
+    break;
   case Triple::XCOFF:
     llvm_unreachable("XCOFF is not yet implemented");
     break;

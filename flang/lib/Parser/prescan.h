@@ -64,7 +64,7 @@ public:
   TokenSequence TokenizePreprocessorDirective();
   Provenance GetCurrentProvenance() const { return GetProvenance(at_); }
 
-  template <typename... A> Message &Say(A &&... a) {
+  template <typename... A> Message &Say(A &&...a) {
     Message &m{messages_.Say(std::forward<A>(a)...)};
     std::optional<ProvenanceRange> range{m.GetProvenanceRange(cooked_)};
     CHECK(!range || cooked_.IsValid(*range));
@@ -95,14 +95,18 @@ private:
     at_ = at;
     column_ = 1;
     tabInCurrentLine_ = false;
-    slashInCurrentLine_ = false;
-    preventHollerith_ = false;
-    delimiterNesting_ = 0;
   }
 
   void BeginSourceLineAndAdvance() {
     BeginSourceLine(nextLine_);
     NextLine();
+  }
+
+  void BeginStatementAndAdvance() {
+    BeginSourceLineAndAdvance();
+    slashInCurrentStatement_ = false;
+    preventHollerith_ = false;
+    delimiterNesting_ = 0;
   }
 
   Provenance GetProvenance(const char *sourceChar) const {
@@ -199,8 +203,8 @@ private:
   const char *at_{nullptr}; // next character to process; < nextLine_
   int column_{1}; // card image column position of next character
   bool tabInCurrentLine_{false};
-  bool slashInCurrentLine_{false};
-  bool preventHollerith_{false};
+  bool slashInCurrentStatement_{false};
+  bool preventHollerith_{false}; // CHARACTER*4HIMOM not Hollerith
   bool inCharLiteral_{false};
   bool inPreprocessorDirective_{false};
 

@@ -1560,11 +1560,11 @@ class TemplateDiff {
         if (!Tree.HasChildren()) {
           // If we're dealing with a template specialization with zero
           // arguments, there are no children; special-case this.
-          OS << FromTD->getNameAsString() << "<>";
+          OS << FromTD->getDeclName() << "<>";
           return;
         }
 
-        OS << FromTD->getNameAsString() << '<';
+        OS << FromTD->getDeclName() << '<';
         Tree.MoveToChild();
         unsigned NumElideArgs = 0;
         bool AllArgsElided = true;
@@ -1724,7 +1724,7 @@ class TemplateDiff {
     }
 
     if (Same) {
-      OS << "template " << FromTD->getNameAsString();
+      OS << "template " << FromTD->getDeclName();
     } else if (!PrintTree) {
       OS << (FromDefault ? "(default) template " : "template ");
       Bold();

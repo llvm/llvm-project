@@ -11,7 +11,7 @@ define i64 @fn2() {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@fn2()
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 undef) #0, !range !0
+; IS__TUNIT____-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 undef) [[ATTR0:#.*]], [[RNG0:!range !.*]]
 ; IS__TUNIT____-NEXT:    ret i64 [[CALL2]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
@@ -34,7 +34,7 @@ define i64 @fn2b(i32 %arg) {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    [[CONV:%.*]] = sext i32 [[ARG]] to i64
 ; IS__TUNIT____-NEXT:    [[DIV:%.*]] = sdiv i64 8, [[CONV]]
-; IS__TUNIT____-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 [[DIV]]) #0, !range !0
+; IS__TUNIT____-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 [[DIV]]) [[ATTR0]], [[RNG0]]
 ; IS__TUNIT____-NEXT:    ret i64 [[CALL2]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
@@ -57,7 +57,7 @@ define i64 @fn2c() {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@fn2c()
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 42) #0, !range !0
+; IS__TUNIT____-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 42) [[ATTR0]], [[RNG0]]
 ; IS__TUNIT____-NEXT:    ret i64 [[CALL2]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn

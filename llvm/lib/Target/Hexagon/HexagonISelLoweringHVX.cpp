@@ -1659,7 +1659,7 @@ HexagonTargetLowering::SplitHvxMemOp(SDValue Op, SelectionDAG &DAG) const {
   MVT SingleTy = typeSplit(MemTy).first;
   SDValue Chain = BN->getChain();
   SDValue Base0 = BN->getBasePtr();
-  SDValue Base1 = DAG.getMemBasePlusOffset(Base0, HwLen, dl);
+  SDValue Base1 = DAG.getMemBasePlusOffset(Base0, TypeSize::Fixed(HwLen), dl);
 
   MachineMemOperand *MOp0 = nullptr, *MOp1 = nullptr;
   if (MachineMemOperand *MMO = BN->getMemOperand()) {

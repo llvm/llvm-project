@@ -81,7 +81,8 @@ private:
   ImplicitRules *parent_;
   SemanticsContext &context_;
   bool inheritFromParent_{false}; // look in parent if not specified here
-  bool isImplicitNoneType_{false};
+  bool isImplicitNoneType_{
+      context_.IsEnabled(common::LanguageFeature::ImplicitNoneTypeAlways)};
   bool isImplicitNoneExternal_{false};
   // map_ contains the mapping between letters and types that were defined
   // by the IMPLICIT statements of the related scope. It does not contain
@@ -117,7 +118,7 @@ public:
   Message &Say(const SourceName &, MessageFixedText &&);
   // Emit a formatted message associated with a source location.
   template <typename... A>
-  Message &Say(const SourceName &source, MessageFixedText &&msg, A &&... args) {
+  Message &Say(const SourceName &source, MessageFixedText &&msg, A &&...args) {
     return context_->Say(source, std::move(msg), std::forward<A>(args)...);
   }
 
@@ -213,12 +214,12 @@ public:
     }
   }
 
-  template <typename... A> Message &Say(A &&... args) {
+  template <typename... A> Message &Say(A &&...args) {
     return messageHandler_.Say(std::forward<A>(args)...);
   }
   template <typename... A>
   Message &Say(
-      const parser::Name &name, MessageFixedText &&text, const A &... args) {
+      const parser::Name &name, MessageFixedText &&text, const A &...args) {
     return messageHandler_.Say(name.source, std::move(text), args...);
   }
 
@@ -509,6 +510,7 @@ public:
   Symbol &MakeSymbol(Scope &, const SourceName &, Attrs);
   Symbol &MakeSymbol(const SourceName &, Attrs = Attrs{});
   Symbol &MakeSymbol(const parser::Name &, Attrs = Attrs{});
+  Symbol &MakeHostAssocSymbol(const parser::Name &, const Symbol &);
 
   template <typename D>
   common::IfNoLvalue<Symbol &, D> MakeSymbol(
@@ -1289,7 +1291,6 @@ public:
     ResolveName(*parser::Unwrap<parser::Name>(x.name));
   }
   void Post(const parser::ProcComponentRef &);
-  bool Pre(const parser::ActualArg &);
   bool Pre(const parser::FunctionReference &);
   bool Pre(const parser::CallStmt &);
   bool Pre(const parser::ImportStmt &);
@@ -1547,7 +1548,7 @@ bool AttrsVisitor::IsConflictingAttr(Attr attrName) {
   return HaveAttrConflict(attrName, Attr::INTENT_IN, Attr::INTENT_INOUT) ||
       HaveAttrConflict(attrName, Attr::INTENT_IN, Attr::INTENT_OUT) ||
       HaveAttrConflict(attrName, Attr::INTENT_INOUT, Attr::INTENT_OUT) ||
-      HaveAttrConflict(attrName, Attr::PASS, Attr::NOPASS) ||
+      HaveAttrConflict(attrName, Attr::PASS, Attr::NOPASS) || // C781
       HaveAttrConflict(attrName, Attr::PURE, Attr::IMPURE) ||
       HaveAttrConflict(attrName, Attr::PUBLIC, Attr::PRIVATE) ||
       HaveAttrConflict(attrName, Attr::RECURSIVE, Attr::NON_RECURSIVE);
@@ -1682,9 +1683,8 @@ bool ImplicitRulesVisitor::Pre(const parser::ImplicitStmt &x) {
                          Say("IMPLICIT statement after IMPLICIT NONE or "
                              "IMPLICIT NONE(TYPE) statement"_err_en_US);
                          return false;
-                       } else {
-                         implicitRules().set_isImplicitNoneType(false);
                        }
+                       implicitRules().set_isImplicitNoneType(false);
                        return true;
                      },
                  },
@@ -1744,12 +1744,16 @@ bool ImplicitRulesVisitor::HandleImplicitNone(
     return false;
   }
   prevImplicitNone_ = currStmtSource();
+  bool implicitNoneTypeNever{
+      context().IsEnabled(common::LanguageFeature::ImplicitNoneTypeNever)};
   if (nameSpecs.empty()) {
-    prevImplicitNoneType_ = currStmtSource();
-    implicitRules().set_isImplicitNoneType(true);
-    if (prevImplicit_) {
-      Say("IMPLICIT NONE statement after IMPLICIT statement"_err_en_US);
-      return false;
+    if (!implicitNoneTypeNever) {
+      prevImplicitNoneType_ = currStmtSource();
+      implicitRules().set_isImplicitNoneType(true);
+      if (prevImplicit_) {
+        Say("IMPLICIT NONE statement after IMPLICIT statement"_err_en_US);
+        return false;
+      }
     }
   } else {
     int sawType{0};
@@ -1761,13 +1765,15 @@ bool ImplicitRulesVisitor::HandleImplicitNone(
         ++sawExternal;
         break;
       case ImplicitNoneNameSpec::Type:
-        prevImplicitNoneType_ = currStmtSource();
-        implicitRules().set_isImplicitNoneType(true);
-        if (prevImplicit_) {
-          Say("IMPLICIT NONE(TYPE) after IMPLICIT statement"_err_en_US);
-          return false;
+        if (!implicitNoneTypeNever) {
+          prevImplicitNoneType_ = currStmtSource();
+          implicitRules().set_isImplicitNoneType(true);
+          if (prevImplicit_) {
+            Say("IMPLICIT NONE(TYPE) after IMPLICIT statement"_err_en_US);
+            return false;
+          }
+          ++sawType;
         }
-        ++sawType;
         break;
       }
     }
@@ -2002,6 +2008,14 @@ Symbol &ScopeHandler::MakeSymbol(const SourceName &name, Attrs attrs) {
 }
 Symbol &ScopeHandler::MakeSymbol(const parser::Name &name, Attrs attrs) {
   return Resolve(name, MakeSymbol(name.source, attrs));
+}
+Symbol &ScopeHandler::MakeHostAssocSymbol(
+    const parser::Name &name, const Symbol &hostSymbol) {
+  Symbol &symbol{MakeSymbol(name, HostAssocDetails{hostSymbol})};
+  name.symbol = &symbol;
+  symbol.attrs() = hostSymbol.attrs(); // TODO: except PRIVATE, PUBLIC?
+  symbol.flags() = hostSymbol.flags();
+  return symbol;
 }
 Symbol &ScopeHandler::CopySymbol(const SourceName &name, const Symbol &symbol) {
   CHECK(!FindInScope(currScope(), name));
@@ -3299,8 +3313,7 @@ Symbol &DeclarationVisitor::HandleAttributeStmt(
         (currScope().kind() == Scope::Kind::Subprogram ||
             currScope().kind() == Scope::Kind::Block)) {
       if (auto *hostSymbol{FindSymbol(name)}) {
-        name.symbol = nullptr;
-        symbol = &MakeSymbol(name, HostAssocDetails{*hostSymbol});
+        symbol = &MakeHostAssocSymbol(name, *hostSymbol);
       }
     }
   } else if (symbol && symbol->has<UseDetails>()) {
@@ -4575,9 +4588,7 @@ Symbol *DeclarationVisitor::DeclareLocalEntity(const parser::Name &name) {
   if (!PassesLocalityChecks(name, prev)) {
     return nullptr;
   }
-  Symbol &symbol{MakeSymbol(name, HostAssocDetails{prev})};
-  name.symbol = &symbol;
-  return &symbol;
+  return &MakeHostAssocSymbol(name, prev);
 }
 
 Symbol *DeclarationVisitor::DeclareStatementEntity(const parser::Name &name,
@@ -4876,9 +4887,7 @@ bool ConstructVisitor::Pre(const parser::LocalitySpec::Shared &x) {
     }
     Symbol &prev{FindOrDeclareEnclosingEntity(name)};
     if (PassesSharedLocalityChecks(name, prev)) {
-      auto &symbol{MakeSymbol(name, HostAssocDetails{prev})};
-      symbol.set(Symbol::Flag::LocalityShared);
-      name.symbol = &symbol; // override resolution to parent
+      MakeHostAssocSymbol(name, prev).set(Symbol::Flag::LocalityShared);
     }
   }
   return false;
@@ -5311,23 +5320,6 @@ const DeclTypeSpec &ConstructVisitor::ToDeclTypeSpec(
 
 // ResolveNamesVisitor implementation
 
-// Ensures that bare undeclared intrinsic procedure names passed as actual
-// arguments get recognized as being intrinsics.
-bool ResolveNamesVisitor::Pre(const parser::ActualArg &arg) {
-  if (const auto *expr{std::get_if<Indirection<parser::Expr>>(&arg.u)}) {
-    if (const auto *designator{
-            std::get_if<Indirection<parser::Designator>>(&expr->value().u)}) {
-      if (const auto *dataRef{
-              std::get_if<parser::DataRef>(&designator->value().u)}) {
-        if (const auto *name{std::get_if<parser::Name>(&dataRef->u)}) {
-          NameIsKnownOrIntrinsic(*name);
-        }
-      }
-    }
-  }
-  return true;
-}
-
 bool ResolveNamesVisitor::Pre(const parser::FunctionReference &x) {
   HandleCall(Symbol::Flag::Function, x.v);
   return false;
@@ -5431,8 +5423,7 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
       return nullptr; // reported an error
     }
     if (IsUplevelReference(*symbol)) {
-      name.symbol = nullptr;
-      MakeSymbol(name, HostAssocDetails{*symbol});
+      MakeHostAssocSymbol(name, *symbol);
     } else if (IsDummy(*symbol) ||
         (!symbol->GetType() && FindCommonBlockContaining(*symbol))) {
       ConvertToObjectEntity(*symbol);
@@ -5749,7 +5740,8 @@ void ResolveNamesVisitor::HandleProcedureName(
     // error was reported
   } else {
     symbol = &Resolve(name, symbol)->GetUltimate();
-    if (ConvertToProcEntity(*symbol) && IsIntrinsic(symbol->name())) {
+    if (ConvertToProcEntity(*symbol) && IsIntrinsic(symbol->name()) &&
+        !IsDummy(*symbol)) {
       symbol->attrs().set(Attr::INTRINSIC);
       // 8.2(3): ignore type from intrinsic in type-declaration-stmt
       symbol->get<ProcEntityDetails>().set_interface(ProcInterface{});
@@ -5909,7 +5901,8 @@ bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
   Walk(std::get<2>(x.t));
   Walk(std::get<3>(x.t));
   Walk(std::get<4>(x.t));
-  const std::list<parser::DeclarationConstruct> &decls{std::get<5>(x.t)};
+  Walk(std::get<5>(x.t));
+  const std::list<parser::DeclarationConstruct> &decls{std::get<6>(x.t)};
   for (const auto &decl : decls) {
     if (const auto *spec{
             std::get_if<parser::SpecificationConstruct>(&decl.u)}) {

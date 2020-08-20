@@ -544,7 +544,6 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
 
   MapVector<AllocaInst *, AllocaInfo> Allocas; // need stable iteration order
   SmallVector<Instruction *, 8> RetVec;
-  DenseMap<Value *, AllocaInst *> AllocaForValue;
   SmallVector<Instruction *, 4> UnrecognizedLifetimes;
 
   for (auto &BB : *F) {
@@ -566,8 +565,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
       auto *II = dyn_cast<IntrinsicInst>(I);
       if (II && (II->getIntrinsicID() == Intrinsic::lifetime_start ||
                  II->getIntrinsicID() == Intrinsic::lifetime_end)) {
-        AllocaInst *AI =
-            llvm::findAllocaForValue(II->getArgOperand(1), AllocaForValue);
+        AllocaInst *AI = findAllocaForValue(II->getArgOperand(1));
         if (!AI) {
           UnrecognizedLifetimes.push_back(I);
           continue;

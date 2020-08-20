@@ -143,9 +143,17 @@ struct BufferedStackTrace : public StackTrace {
   friend class FastUnwindTest;
 };
 
+#if defined(__s390x__)
+static const uptr kFrameSize = 160;
+#elif defined(__s390__)
+static const uptr kFrameSize = 96;
+#else
+static const uptr kFrameSize = 2 * sizeof(uhwptr);
+#endif
+
 // Check if given pointer points into allocated stack area.
 static inline bool IsValidFrame(uptr frame, uptr stack_top, uptr stack_bottom) {
-  return frame > stack_bottom && frame < stack_top - 2 * sizeof (uhwptr);
+  return frame > stack_bottom && frame < stack_top - kFrameSize;
 }
 
 }  // namespace __sanitizer

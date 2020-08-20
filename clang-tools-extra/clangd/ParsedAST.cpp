@@ -238,10 +238,6 @@ private:
 
 } // namespace
 
-void dumpAST(ParsedAST &AST, llvm::raw_ostream &OS) {
-  AST.getASTContext().getTranslationUnitDecl()->dump(OS, true);
-}
-
 llvm::Optional<ParsedAST>
 ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
                  std::unique_ptr<clang::CompilerInvocation> CI,
@@ -428,15 +424,15 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     CTFinder.matchAST(Clang->getASTContext());
   }
 
+  // XXX: This is messy: clang-tidy checks flush some diagnostics at EOF.
+  // However Action->EndSourceFile() would destroy the ASTContext!
+  // So just inform the preprocessor of EOF, while keeping everything alive.
+  Clang->getPreprocessor().EndSourceFile();
   // UnitDiagsConsumer is local, we can not store it in CompilerInstance that
   // has a longer lifetime.
   Clang->getDiagnostics().setClient(new IgnoreDiagnostics);
   // CompilerInstance won't run this callback, do it directly.
   ASTDiags.EndSourceFile();
-  // XXX: This is messy: clang-tidy checks flush some diagnostics at EOF.
-  // However Action->EndSourceFile() would destroy the ASTContext!
-  // So just inform the preprocessor of EOF, while keeping everything alive.
-  Clang->getPreprocessor().EndSourceFile();
 
   std::vector<Diag> Diags = CompilerInvocationDiags;
   // Add diagnostics from the preamble, if any.

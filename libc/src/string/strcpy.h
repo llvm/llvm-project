@@ -13,7 +13,7 @@
 
 namespace __llvm_libc {
 
-char *strcpy(char *dest, const char *src);
+char *strcpy(char *__restrict dest, const char *__restrict src);
 
 } // namespace __llvm_libc
 

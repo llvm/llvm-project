@@ -202,7 +202,7 @@ can further inspect them and report diagnostics.
 
   void AwesomeFunctionNamesCheck::check(const MatchFinder::MatchResult &Result) {
     const auto *MatchedDecl = Result.Nodes.getNodeAs<FunctionDecl>("x");
-    if (MatchedDecl->getName().startswith("awesome_"))
+    if (!MatchedDecl->getIdentifier() || MatchedDecl->getName().startswith("awesome_"))
       return;
     diag(MatchedDecl->getLocation(), "function %0 is insufficiently awesome")
         << MatchedDecl

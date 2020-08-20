@@ -151,6 +151,10 @@ class GenericTester(TestBase):
         # This test uses a #include of "basic_type.cpp" so we need to enable
         # always setting inlined breakpoints.
         self.runCmd('settings set target.inline-breakpoint-strategy always')
+
+        # Inherit TCC permissions. We can leave this set.
+        self.runCmd('settings set target.inherit-tcc true')
+
         # And add hooks to restore the settings during tearDown().
         self.addTearDownHook(lambda: self.runCmd(
             "settings set target.inline-breakpoint-strategy headers"))

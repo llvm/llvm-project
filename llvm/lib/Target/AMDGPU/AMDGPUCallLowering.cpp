@@ -357,16 +357,6 @@ void AMDGPUCallLowering::splitToValueTypes(
   }
 }
 
-// Get the appropriate type to make \p OrigTy \p Factor times bigger.
-static LLT getMultipleType(LLT OrigTy, int Factor) {
-  if (OrigTy.isVector()) {
-    return LLT::vector(OrigTy.getNumElements() * Factor,
-                       OrigTy.getElementType());
-  }
-
-  return LLT::scalar(OrigTy.getSizeInBits() * Factor);
-}
-
 // TODO: Move to generic code
 static void unpackRegsToOrigType(MachineIRBuilder &B,
                                  ArrayRef<Register> DstRegs,
@@ -376,34 +366,51 @@ static void unpackRegsToOrigType(MachineIRBuilder &B,
                                  LLT PartTy) {
   assert(DstRegs.size() > 1 && "Nothing to unpack");
 
-  const unsigned SrcSize = SrcTy.getSizeInBits();
   const unsigned PartSize = PartTy.getSizeInBits();
 
   if (SrcTy.isVector() && !PartTy.isVector() &&
       PartSize > SrcTy.getElementType().getSizeInBits()) {
     // Vector was scalarized, and the elements extended.
-    auto UnmergeToEltTy = B.buildUnmerge(SrcTy.getElementType(),
-                                                  SrcReg);
+    auto UnmergeToEltTy = B.buildUnmerge(SrcTy.getElementType(), SrcReg);
     for (int i = 0, e = DstRegs.size(); i != e; ++i)
       B.buildAnyExt(DstRegs[i], UnmergeToEltTy.getReg(i));
     return;
   }
 
-  if (SrcSize % PartSize == 0) {
+  LLT GCDTy = getGCDType(SrcTy, PartTy);
+  if (GCDTy == PartTy) {
+    // If this already evenly divisible, we can create a simple unmerge.
     B.buildUnmerge(DstRegs, SrcReg);
     return;
   }
 
-  const int NumRoundedParts = (SrcSize + PartSize - 1) / PartSize;
+  MachineRegisterInfo &MRI = *B.getMRI();
+  LLT DstTy = MRI.getType(DstRegs[0]);
+  LLT LCMTy = getLCMType(SrcTy, PartTy);
 
-  LLT BigTy = getMultipleType(PartTy, NumRoundedParts);
-  auto ImpDef = B.buildUndef(BigTy);
+  const unsigned LCMSize = LCMTy.getSizeInBits();
+  const unsigned DstSize = DstTy.getSizeInBits();
+  const unsigned SrcSize = SrcTy.getSizeInBits();
 
-  auto Big = B.buildInsert(BigTy, ImpDef.getReg(0), SrcReg, 0).getReg(0);
+  Register UnmergeSrc = SrcReg;
+  if (LCMSize != SrcSize) {
+    // Widen to the common type.
+    Register Undef = B.buildUndef(SrcTy).getReg(0);
+    SmallVector<Register, 8> MergeParts(1, SrcReg);
+    for (unsigned Size = SrcSize; Size != LCMSize; Size += SrcSize)
+      MergeParts.push_back(Undef);
 
-  int64_t Offset = 0;
-  for (unsigned i = 0, e = DstRegs.size(); i != e; ++i, Offset += PartSize)
-    B.buildExtract(DstRegs[i], Big, Offset);
+    UnmergeSrc = B.buildMerge(LCMTy, MergeParts).getReg(0);
+  }
+
+  // Unmerge to the original registers and pad with dead defs.
+  SmallVector<Register, 8> UnmergeResults(DstRegs.begin(), DstRegs.end());
+  for (unsigned Size = DstSize * DstRegs.size(); Size != LCMSize;
+       Size += DstSize) {
+    UnmergeResults.push_back(MRI.createGenericVirtualRegister(DstTy));
+  }
+
+  B.buildUnmerge(UnmergeResults, UnmergeSrc);
 }
 
 /// Lower the return value for the already existing \p Ret. This assumes that

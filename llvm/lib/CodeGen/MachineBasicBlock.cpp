@@ -100,6 +100,17 @@ MCSymbol *MachineBasicBlock::getSymbol() const {
   return CachedMCSymbol;
 }
 
+MCSymbol *MachineBasicBlock::getEndSymbol() const {
+  if (!CachedEndMCSymbol) {
+    const MachineFunction *MF = getParent();
+    MCContext &Ctx = MF->getContext();
+    auto Prefix = Ctx.getAsmInfo()->getPrivateLabelPrefix();
+    CachedEndMCSymbol = Ctx.getOrCreateSymbol(Twine(Prefix) + "BB_END" +
+                                              Twine(MF->getFunctionNumber()) +
+                                              "_" + Twine(getNumber()));
+  }
+  return CachedEndMCSymbol;
+}
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const MachineBasicBlock &MBB) {
   MBB.print(OS);

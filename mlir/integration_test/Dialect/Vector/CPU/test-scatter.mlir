@@ -11,34 +11,20 @@ func @scatter8(%base: memref<?xf32>,
   return
 }
 
-func @printmem(%A: memref<?xf32>) {
-  %f = constant 0.0: f32
-  %0 = vector.broadcast %f : f32 to vector<8xf32>
-  %1 = constant 0: index
-  %2 = load %A[%1] : memref<?xf32>
-  %3 = vector.insert %2, %0[0] : f32 into vector<8xf32>
-  %4 = constant 1: index
-  %5 = load %A[%4] : memref<?xf32>
-  %6 = vector.insert %5, %3[1] : f32 into vector<8xf32>
-  %7 = constant 2: index
-  %8 = load %A[%7] : memref<?xf32>
-  %9 = vector.insert %8, %6[2] : f32 into vector<8xf32>
-  %10 = constant 3: index
-  %11 = load %A[%10] : memref<?xf32>
-  %12 = vector.insert %11, %9[3] : f32 into vector<8xf32>
-  %13 = constant 4: index
-  %14 = load %A[%13] : memref<?xf32>
-  %15 = vector.insert %14, %12[4] : f32 into vector<8xf32>
-  %16 = constant 5: index
-  %17 = load %A[%16] : memref<?xf32>
-  %18 = vector.insert %17, %15[5] : f32 into vector<8xf32>
-  %19 = constant 6: index
-  %20 = load %A[%19] : memref<?xf32>
-  %21 = vector.insert %20, %18[6] : f32 into vector<8xf32>
-  %22 = constant 7: index
-  %23 = load %A[%22] : memref<?xf32>
-  %24 = vector.insert %23, %21[7] : f32 into vector<8xf32>
-  vector.print %24 : vector<8xf32>
+func @printmem8(%A: memref<?xf32>) {
+  %c0 = constant 0: index
+  %c1 = constant 1: index
+  %c8 = constant 8: index
+  %z = constant 0.0: f32
+  %m = vector.broadcast %z : f32 to vector<8xf32>
+  %mem = scf.for %i = %c0 to %c8 step %c1
+    iter_args(%m_iter = %m) -> (vector<8xf32>) {
+    %c = load %A[%i] : memref<?xf32>
+    %i32 = index_cast %i : index to i32
+    %m_new = vector.insertelement %c, %m_iter[%i32 : i32] : vector<8xf32>
+    scf.yield %m_new : vector<8xf32>
+  }
+  vector.print %mem : vector<8xf32>
   return
 }
 
@@ -104,31 +90,27 @@ func @entry() {
   vector.print %idx : vector<8xi32>
   // CHECK: ( 7, 0, 1, 6, 2, 4, 5, 3 )
 
-  call @printmem(%A) : (memref<?xf32>) -> ()
+  call @printmem8(%A) : (memref<?xf32>) -> ()
   // CHECK: ( 0, 1, 2, 3, 4, 5, 6, 7 )
 
   call @scatter8(%A, %idx, %none, %val)
     : (memref<?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>) -> ()
-
-  call @printmem(%A) : (memref<?xf32>) -> ()
+  call @printmem8(%A) : (memref<?xf32>) -> ()
   // CHECK: ( 0, 1, 2, 3, 4, 5, 6, 7 )
 
   call @scatter8(%A, %idx, %some, %val)
     : (memref<?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>) -> ()
-
-  call @printmem(%A) : (memref<?xf32>) -> ()
+  call @printmem8(%A) : (memref<?xf32>) -> ()
   // CHECK: ( 1, 2, 2, 3, 4, 5, 3, 0 )
 
   call @scatter8(%A, %idx, %more, %val)
     : (memref<?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>) -> ()
-
-  call @printmem(%A) : (memref<?xf32>) -> ()
+  call @printmem8(%A) : (memref<?xf32>) -> ()
   // CHECK: ( 1, 2, 2, 7, 4, 5, 3, 0 )
 
   call @scatter8(%A, %idx, %all, %val)
     : (memref<?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>) -> ()
-
-  call @printmem(%A) : (memref<?xf32>) -> ()
+  call @printmem8(%A) : (memref<?xf32>) -> ()
   // CHECK: ( 1, 2, 4, 7, 5, 6, 3, 0 )
 
   return

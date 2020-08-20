@@ -59,18 +59,17 @@ ExternalFileUnit &ExternalFileUnit::LookUpOrCreateAnonymous(
   ExternalFileUnit &result{
       GetUnitMap().LookUpOrCreate(unit, terminator, exists)};
   if (!exists) {
-    // I/O to an unconnected unit reads/creates a local file, e.g. fort.7
-    std::size_t pathMaxLen{32};
-    auto path{SizedNew<char>{terminator}(pathMaxLen)};
-    std::snprintf(path.get(), pathMaxLen, "fort.%d", unit);
     IoErrorHandler handler{terminator};
-    result.OpenUnit(
-        dir == Direction::Input ? OpenStatus::Old : OpenStatus::Replace,
-        Action::ReadWrite, Position::Rewind, std::move(path),
-        std::strlen(path.get()), Convert::Native, handler);
+    result.OpenAnonymousUnit(
+        dir == Direction::Input ? OpenStatus::Unknown : OpenStatus::Replace,
+        Action::ReadWrite, Position::Rewind, Convert::Native, handler);
     result.isUnformatted = isUnformatted;
   }
   return result;
+}
+
+ExternalFileUnit *ExternalFileUnit::LookUp(const char *path) {
+  return GetUnitMap().LookUp(path);
 }
 
 ExternalFileUnit &ExternalFileUnit::CreateNew(
@@ -125,10 +124,7 @@ void ExternalFileUnit::OpenUnit(OpenStatus status, std::optional<Action> action,
       handler.SignalError(IostatOpenBadRecl,
           "OPEN(UNIT=%d,ACCESS='DIRECT',RECL=%jd): record length is invalid",
           unitNumber(), static_cast<std::intmax_t>(*recordLength));
-    } else if (!totalBytes) {
-      handler.SignalError(IostatOpenUnknownSize,
-          "OPEN(UNIT=%d,ACCESS='DIRECT'): file size is not known");
-    } else if (*totalBytes % *recordLength != 0) {
+    } else if (totalBytes && (*totalBytes % *recordLength != 0)) {
       handler.SignalError(IostatOpenBadAppend,
           "OPEN(UNIT=%d,ACCESS='DIRECT',RECL=%jd): record length is not an "
           "even divisor of the file size %jd",
@@ -137,7 +133,7 @@ void ExternalFileUnit::OpenUnit(OpenStatus status, std::optional<Action> action,
     }
   }
   if (position == Position::Append) {
-    if (*totalBytes && recordLength && *recordLength) {
+    if (totalBytes && recordLength && *recordLength) {
       endfileRecordNumber = 1 + (*totalBytes / *recordLength);
     } else {
       // Fake it so that we can backspace relative from the end
@@ -147,6 +143,17 @@ void ExternalFileUnit::OpenUnit(OpenStatus status, std::optional<Action> action,
   } else {
     currentRecordNumber = 1;
   }
+}
+
+void ExternalFileUnit::OpenAnonymousUnit(OpenStatus status,
+    std::optional<Action> action, Position position, Convert convert,
+    IoErrorHandler &handler) {
+  // I/O to an unconnected unit reads/creates a local file, e.g. fort.7
+  std::size_t pathMaxLen{32};
+  auto path{SizedNew<char>{handler}(pathMaxLen)};
+  std::snprintf(path.get(), pathMaxLen, "fort.%d", unitNumber_);
+  OpenUnit(status, action, position, std::move(path), std::strlen(path.get()),
+      convert, handler);
 }
 
 void ExternalFileUnit::CloseUnit(CloseStatus status, IoErrorHandler &handler) {

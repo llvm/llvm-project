@@ -1271,11 +1271,26 @@ int computeHostNumPhysicalCores() {
   }
   return CPU_COUNT(&Enabled);
 }
-#elif (defined(__linux__) &&                                                   \
-       (defined(__ppc__) || defined(__powerpc__) || defined(__s390x__)))
-#include <unistd.h>
+#elif defined(__linux__) && defined(__powerpc__)
+int computeHostNumPhysicalCores() {
+  cpu_set_t Affinity;
+  if (sched_getaffinity(0, sizeof(Affinity), &Affinity) == 0)
+    return CPU_COUNT(&Affinity);
 
-// Gets the number of *physical cores* on the machine.
+  // The call to sched_getaffinity() may have failed because the Affinity
+  // mask is too small for the number of CPU's on the system (i.e. the
+  // system has more than 1024 CPUs). Allocate a mask large enough for
+  // twice as many CPUs.
+  cpu_set_t *DynAffinity;
+  DynAffinity = CPU_ALLOC(2048);
+  if (sched_getaffinity(0, CPU_ALLOC_SIZE(2048), DynAffinity) == 0) {
+    int NumCPUs = CPU_COUNT(DynAffinity);
+    CPU_FREE(DynAffinity);
+    return NumCPUs;
+  }
+  return -1;
+}
+#elif defined(__linux__) && defined(__s390x__)
 int computeHostNumPhysicalCores() { return sysconf(_SC_NPROCESSORS_ONLN); }
 #elif defined(__APPLE__) && defined(__x86_64__)
 #include <sys/param.h>
@@ -1295,6 +1310,28 @@ int computeHostNumPhysicalCores() {
       return -1;
   }
   return count;
+}
+#elif defined(__MVS__)
+int computeHostNumPhysicalCores() {
+  enum {
+    // Byte offset of the pointer to the Communications Vector Table (CVT) in
+    // the Prefixed Save Area (PSA). The table entry is a 31-bit pointer and
+    // will be zero-extended to uintptr_t.
+    FLCCVT = 16,
+    // Byte offset of the pointer to the Common System Data Area (CSD) in the
+    // CVT. The table entry is a 31-bit pointer and will be zero-extended to
+    // uintptr_t.
+    CVTCSD = 660,
+    // Byte offset to the number of live CPs in the LPAR, stored as a signed
+    // 32-bit value in the table.
+    CSD_NUMBER_ONLINE_STANDARD_CPS = 264,
+  };
+  char *PSA = 0;
+  char *CVT = reinterpret_cast<char *>(
+      static_cast<uintptr_t>(reinterpret_cast<unsigned int &>(PSA[FLCCVT])));
+  char *CSD = reinterpret_cast<char *>(
+      static_cast<uintptr_t>(reinterpret_cast<unsigned int &>(CVT[CVTCSD])));
+  return reinterpret_cast<int &>(CSD[CSD_NUMBER_ONLINE_STANDARD_CPS]);
 }
 #elif defined(_WIN32) && LLVM_ENABLE_THREADS != 0
 // Defined in llvm/lib/Support/Windows/Threading.inc

@@ -917,16 +917,11 @@ let cx = 0, DecoderMethod = "DecodeLoadI64" in
 defm LEA : RMm<"lea", 0x06, I64>;
 let cx = 1, DecoderMethod = "DecodeLoadI64" in
 defm LEASL : RMm<"lea.sl", 0x06, I64>;
-let cx = 0, DecoderMethod = "DecodeLoadI32", isCodeGenOnly = 1 in
-defm LEA32 : RMm<"lea", 0x06, I32>;
 
 def : Pat<(iPTR ADDRrri:$addr), (LEArri MEMrri:$addr)>;
 def : Pat<(iPTR ADDRrii:$addr), (LEArii MEMrii:$addr)>;
 def : Pat<(add I64:$base, simm32:$disp), (LEArii $base, 0, (LO32 $disp))>;
 def : Pat<(add I64:$base, lozero:$disp), (LEASLrii $base, 0, (HI32 $disp))>;
-def : Pat<(add I32:$base, simm32:$disp),
-          (LEA32rii (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $base, sub_i32), 0,
-                    (LO32 $disp))>;
 
 def lea_add : PatFrags<(ops node:$base, node:$idx, node:$disp),
                        [(add (add node:$base, node:$idx), node:$disp),
@@ -991,6 +986,13 @@ defm LD1BSX : LOADm<"ld1b.sx", 0x05, I32, i32, sextloadi8>;
 let cx = 1, DecoderMethod = "DecodeLoadI32" in
 defm LD1BZX : LOADm<"ld1b.zx", 0x05, I32, i32, zextloadi8>;
 
+// LDQ pseudo instructions
+let mayLoad = 1, hasSideEffects = 0 in {
+  def LDQrii : Pseudo<(outs F128:$dest), (ins MEMrii:$addr),
+                      "# pseudo ldq $dest, $addr",
+                      [(set f128:$dest, (load ADDRrii:$addr))]>;
+}
+
 // Multiclass for store instructions.
 let mayStore = 1 in
 multiclass STOREm<string opcStr, bits<8> opc, RegisterClass RC, ValueType Ty,
@@ -1035,6 +1037,13 @@ defm ST2B : STOREm<"st2b", 0x14, I32, i32, truncstorei16>;
 // Section 8.2.11 - ST1B
 let DecoderMethod = "DecodeStoreI32" in
 defm ST1B : STOREm<"st1b", 0x15, I32, i32, truncstorei8>;
+
+// STQ pseudo instructions
+let mayStore = 1, hasSideEffects = 0 in {
+  def STQrii : Pseudo<(outs), (ins MEMrii:$addr, F128:$sx),
+                      "# pseudo stq $sx, $addr",
+                      [(store f128:$sx, ADDRrii:$addr)]>;
+}
 
 // Section 8.2.12 - DLDS
 let DecoderMethod = "DecodeLoadI64" in
@@ -1181,15 +1190,12 @@ let cw = 1 in defm MINSL : RRm<"mins.l", 0x68, I64, i64>;
 
 // Section 8.5.1 - AND (AND)
 defm AND : RRm<"and", 0x44, I64, i64, and>;
-let isCodeGenOnly = 1 in defm AND32 : RRm<"and", 0x44, I32, i32, and>;
 
 // Section 8.5.2 - OR (OR)
 defm OR : RRm<"or", 0x45, I64, i64, or>;
-let isCodeGenOnly = 1 in defm OR32 : RRm<"or", 0x45, I32, i32, or>;
 
 // Section 8.5.3 - XOR (Exclusive OR)
 defm XOR : RRm<"xor", 0x46, I64, i64, xor>;
-let isCodeGenOnly = 1 in defm XOR32 : RRm<"xor", 0x46, I32, i32, xor>;
 
 // Section 8.5.4 - EQV (Equivalence)
 defm EQV : RRm<"eqv", 0x47, I64, i64>;
@@ -1203,7 +1209,10 @@ defm NND : RRNCm<"nnd", 0x54, I64, i64, and_not>;
 defm MRG : RRMRGm<"mrg", 0x56, I64, i64>;
 
 // Section 8.5.7 - LDZ (Leading Zero Count)
-defm LDZ : RRI1m<"ldz", 0x67, I64, i64, ctlz>;
+def ctlz_pat : PatFrags<(ops node:$src),
+                        [(ctlz node:$src),
+                         (ctlz_zero_undef node:$src)]>;
+defm LDZ : RRI1m<"ldz", 0x67, I64, i64, ctlz_pat>;
 
 // Section 8.5.8 - PCNT (Population Count)
 defm PCNT : RRI1m<"pcnt", 0x38, I64, i64, ctpop>;
@@ -1213,6 +1222,16 @@ defm BRV : RRI1m<"brv", 0x39, I64, i64, bitreverse>;
 
 // Section 8.5.10 - BSWP (Byte Swap)
 defm BSWP : RRSWPm<"bswp", 0x2B, I64, i64>;
+def : Pat<(i64 (bswap i64:$src)),
+          (BSWPri $src, 0)>;
+def : Pat<(i64 (bswap (i64 mimm:$src))),
+          (BSWPmi (MIMM $src), 0)>;
+def : Pat<(i32 (bswap i32:$src)),
+          (EXTRACT_SUBREG
+              (BSWPri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $src, sub_i32), 1),
+              sub_i32)>;
+def : Pat<(i32 (bswap (i32 mimm:$src))),
+          (EXTRACT_SUBREG (BSWPmi (MIMM $src), 1), sub_i32)>;
 
 // Section 8.5.11 - CMOV (Conditional Move)
 let cw = 0, cw2 = 0 in defm CMOVL : RRCMOVm<"cmov.l.${cfw}", 0x3B, I64, i64>;
@@ -1302,13 +1321,13 @@ let cw = 1, cx = 1 in
 defm FMINS : RRFm<"fmin.s", 0x3E, F32, f32, fminnum, simm7fp, mimmfp32>;
 
 // Section 8.7.7 - FAQ (Floating Add Quadruple)
-defm FADDQ : RRFm<"fadd.q", 0x6C, F128, f128>;
+defm FADDQ : RRFm<"fadd.q", 0x6C, F128, f128, fadd>;
 
 // Section 8.7.8 - FSQ (Floating Subtract Quadruple)
-defm FSUBQ : RRFm<"fsub.q", 0x7C, F128, f128>;
+defm FSUBQ : RRFm<"fsub.q", 0x7C, F128, f128, fsub>;
 
 // Section 8.7.9 - FMQ (Floating Subtract Quadruple)
-defm FMULQ : RRFm<"fmul.q", 0x6D, F128, f128>;
+defm FMULQ : RRFm<"fmul.q", 0x6D, F128, f128, fmul>;
 
 // Section 8.7.10 - FCQ (Floating Compare Quadruple)
 defm FCMPQ : RRNCbm<"fcmp.q", 0x7D, I64, f64, F128, f128, null_frag, simm7fp,
@@ -1482,10 +1501,11 @@ defm SHMB : SHMm<"shm.b", 0x31, I64>;
 //===----------------------------------------------------------------------===//
 
 // Small immediates.
-def : Pat<(i32 simm7:$val), (OR32im (LO7 $val), 0)>;
+def : Pat<(i32 simm7:$val), (EXTRACT_SUBREG (ORim (LO7 $val), 0), sub_i32)>;
 def : Pat<(i64 simm7:$val), (ORim (LO7 $val), 0)>;
 // Medium immediates.
-def : Pat<(i32 simm32:$val), (LEA32zii 0, 0, (LO32 $val))>;
+def : Pat<(i32 simm32:$val),
+          (EXTRACT_SUBREG (LEAzii 0, 0, (LO32 $val)), sub_i32)>;
 def : Pat<(i64 simm32:$val), (LEAzii 0, 0, (LO32 $val))>;
 def : Pat<(i64 uimm32:$val), (ANDrm (LEAzii 0, 0, (LO32 $val)), !add(32, 64))>;
 // Arbitrary immediates.
@@ -1526,8 +1546,8 @@ def : Pat<(sext_inreg I64:$src, i8),
           (SRALri (SLLri $src, 56), 56)>;
 def : Pat<(sext_inreg (i32 (trunc i64:$src)), i8),
           (EXTRACT_SUBREG (SRALri (SLLri $src, 56), 56), sub_i32)>;
-def : Pat<(and (trunc i64:$src), 0xff),
-          (AND32rm (EXTRACT_SUBREG $src, sub_i32), !add(56, 64))>;
+def : Pat<(i32 (and (trunc i64:$src), 0xff)),
+          (EXTRACT_SUBREG (ANDrm $src, !add(56, 64)), sub_i32)>;
 
 // Cast to i16
 def : Pat<(sext_inreg I32:$src, i16),
@@ -1536,8 +1556,8 @@ def : Pat<(sext_inreg I64:$src, i16),
           (SRALri (SLLri $src, 48), 48)>;
 def : Pat<(sext_inreg (i32 (trunc i64:$src)), i16),
           (EXTRACT_SUBREG (SRALri (SLLri $src, 48), 48), sub_i32)>;
-def : Pat<(and (trunc i64:$src), 0xffff),
-          (AND32rm (EXTRACT_SUBREG $src, sub_i32), !add(48, 64))>;
+def : Pat<(i32 (and (trunc i64:$src), 0xffff)),
+          (EXTRACT_SUBREG (ANDrm $src, !add(48, 64)), sub_i32)>;
 
 // Cast to i32
 def : Pat<(i32 (trunc i64:$src)),
@@ -1624,6 +1644,14 @@ multiclass TRUNC64m<SDPatternOperator from,
 defm : TRUNC64m<truncstorei8, ST1Brri, ST1Brii, ST1Bzri, ST1Bzii>;
 defm : TRUNC64m<truncstorei16, ST2Brri, ST2Brii, ST2Bzri, ST2Bzii>;
 defm : TRUNC64m<truncstorei32, STLrri, STLrii, STLzri, ST1Bzii>;
+
+// Address calculation and its optimization
+def : Pat<(VEhi tconstpool:$in), (LEASLzii 0, 0, tconstpool:$in)>;
+def : Pat<(VElo tconstpool:$in),
+          (ANDrm (LEAzii 0, 0, tconstpool:$in), !add(32, 64))>;
+def : Pat<(add (VEhi tconstpool:$in1), (VElo tconstpool:$in2)),
+          (LEASLrii (ANDrm (LEAzii 0, 0, tconstpool:$in2), !add(32, 64)), 0,
+                    (tconstpool:$in1))>;
 
 // Address calculation and its optimization
 def : Pat<(VEhi tglobaladdr:$in), (LEASLzii 0, 0, tglobaladdr:$in)>;
@@ -1982,24 +2010,20 @@ def : Pat<(f32 (bitconvert i32:$op)),
           (EXTRACT_SUBREG (SLLri (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
             $op, sub_i32), 32), sub_f32)>;
 
-// Bits operations pattern matchings.
-def : Pat<(i32 (ctpop i32:$src)),
-          (EXTRACT_SUBREG (PCNTr (ANDrm (INSERT_SUBREG
-            (i64 (IMPLICIT_DEF)), $src, sub_i32), !add(32, 64))), sub_i32)>;
-def : Pat<(i32 (ctlz i32:$src)),
-          (EXTRACT_SUBREG (LDZr (SLLri (INSERT_SUBREG
-            (i64 (IMPLICIT_DEF)), $src, sub_i32), 32)), sub_i32)>;
-def : Pat<(i64 (bswap i64:$src)),
-          (BSWPri $src, 0)>;
-def : Pat<(i32 (bswap i32:$src)),
-          (EXTRACT_SUBREG (BSWPri (INSERT_SUBREG
-            (i64 (IMPLICIT_DEF)), $src, sub_i32), 1), sub_i32)>;
+// Optimize code A generated by `(unsigned char)c << 5` to B.
+// A) sla.w.sx %s0, %s0, 5
+//    lea %s1, 224           ; 0xE0
+//    and %s0, %s0, %s1
+// B) sla.w.sx %s0, %s0, 5
+//    and %s0, %s0, (56)0
 
-// Several special pattern matches to optimize code
-
-def : Pat<(i32 (and i32:$lhs, 0xff)),
-          (AND32rm $lhs, !add(56, 64))>;
-def : Pat<(i32 (and i32:$lhs, 0xffff)),
-          (AND32rm $lhs, !add(48, 64))>;
-def : Pat<(i32 (and i32:$lhs, 0xffffffff)),
-          (AND32rm $lhs, !add(32, 64))>;
+def : Pat<(i32 (and i32:$val, 0xff)),
+          (EXTRACT_SUBREG
+              (ANDrm (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $val, sub_i32),
+                     !add(56, 64)), sub_i32)>;
+def : Pat<(i32 (and i32:$val, 0xffff)),
+          (EXTRACT_SUBREG
+              (ANDrm (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $val, sub_i32),
+                     !add(48, 64)), sub_i32)>;
+def : Pat<(i64 (and i64:$val, 0xffffffff)),
+          (ANDrm $val, !add(32, 64))>;

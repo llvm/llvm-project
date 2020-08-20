@@ -146,7 +146,8 @@ body:             |
     %4:gpr(s32) = COPY $edx
     %2:gpr(s8) = G_TRUNC %4(s32)
     %5:gpr(s32) = G_CONSTANT i32 0
-    %6:gpr(s1) = G_ICMP intpred(sgt), %0(s32), %5
+    %8:gpr(s8) = G_ICMP intpred(sgt), %0(s32), %5
+    %6:gpr(s1) = G_TRUNC %8(s8)
     G_BRCOND %6(s1), %bb.3
 
   bb.2.cond.false:
@@ -205,7 +206,8 @@ body:             |
     %4:gpr(s32) = COPY $edx
     %2:gpr(s16) = G_TRUNC %4(s32)
     %5:gpr(s32) = G_CONSTANT i32 0
-    %6:gpr(s1) = G_ICMP intpred(sgt), %0(s32), %5
+    %8:gpr(s8) = G_ICMP intpred(sgt), %0(s32), %5
+    %6:gpr(s1) = G_TRUNC %8(s8)
     G_BRCOND %6(s1), %bb.3
 
   bb.2.cond.false:
@@ -231,6 +233,7 @@ registers:
   - { id: 3, class: gpr, preferred-register: '' }
   - { id: 4, class: gpr, preferred-register: '' }
   - { id: 5, class: gpr, preferred-register: '' }
+  - { id: 6, class: gpr, preferred-register: '' }
 body:             |
   ; ALL-LABEL: name: test_i32
   ; ALL: bb.0.entry:
@@ -262,7 +265,8 @@ body:             |
     %1(s32) = COPY $esi
     %2(s32) = COPY $edx
     %3(s32) = G_CONSTANT i32 0
-    %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+    %6(s8) = G_ICMP intpred(sgt), %0(s32), %3
+    %4:gpr(s1) = G_TRUNC %6(s8)
     G_BRCOND %4(s1), %bb.2
     G_BR %bb.3
 
@@ -294,6 +298,7 @@ registers:
   - { id: 3, class: gpr, preferred-register: '' }
   - { id: 4, class: gpr, preferred-register: '' }
   - { id: 5, class: gpr, preferred-register: '' }
+  - { id: 6, class: gpr, preferred-register: '' }
 body:             |
   ; ALL-LABEL: name: test_i64
   ; ALL: bb.0.entry:
@@ -325,7 +330,8 @@ body:             |
     %1(s64) = COPY $rsi
     %2(s64) = COPY $rdx
     %3(s32) = G_CONSTANT i32 0
-    %4(s1) = G_ICMP intpred(sgt), %0(s32), %3
+    %6(s8) = G_ICMP intpred(sgt), %0(s32), %3
+    %4:gpr(s1) = G_TRUNC %6(s8)
     G_BRCOND %4(s1), %bb.2
     G_BR %bb.3
 
@@ -396,7 +402,8 @@ body:             |
     %4:vecr(s128) = COPY $xmm1
     %2:vecr(s32) = G_TRUNC %4(s128)
     %5:gpr(s32) = G_CONSTANT i32 0
-    %6:gpr(s1) = G_ICMP intpred(sgt), %0(s32), %5
+    %9:gpr(s8) = G_ICMP intpred(sgt), %0(s32), %5
+    %6:gpr(s1) = G_TRUNC %9(s8)
     G_BRCOND %6(s1), %bb.3
 
   bb.2.cond.false:
@@ -457,7 +464,8 @@ body:             |
     %4:vecr(s128) = COPY $xmm1
     %2:vecr(s64) = G_TRUNC %4(s128)
     %5:gpr(s32) = G_CONSTANT i32 0
-    %6:gpr(s1) = G_ICMP intpred(sgt), %0(s32), %5
+    %9:gpr(s8) = G_ICMP intpred(sgt), %0(s32), %5
+    %6:gpr(s1) = G_TRUNC %9(s8)
     G_BRCOND %6(s1), %bb.3
 
   bb.2.cond.false:

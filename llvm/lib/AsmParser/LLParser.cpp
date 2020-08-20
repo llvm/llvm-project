@@ -7395,7 +7395,7 @@ int LLParser::ParseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
   // All vector parameters should have the same vector width.
   ElementCount GEPWidth = BaseType->isVectorTy()
                               ? cast<VectorType>(BaseType)->getElementCount()
-                              : ElementCount(0, false);
+                              : ElementCount::getFixed(0);
 
   while (EatIfPresent(lltok::comma)) {
     if (Lex.getKind() == lltok::MetadataVar) {
@@ -7408,7 +7408,7 @@ int LLParser::ParseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
 
     if (auto *ValVTy = dyn_cast<VectorType>(Val->getType())) {
       ElementCount ValNumEl = ValVTy->getElementCount();
-      if (GEPWidth != ElementCount(0, false) && GEPWidth != ValNumEl)
+      if (GEPWidth != ElementCount::getFixed(0) && GEPWidth != ValNumEl)
         return Error(EltLoc,
           "getelementptr vector index has a wrong number of elements");
       GEPWidth = ValNumEl;
@@ -7786,13 +7786,11 @@ bool LLParser::ParseTypeIdCompatibleVtableEntry(unsigned ID) {
   // Now that the TI vector is finalized, it is safe to save the locations
   // of any forward GV references that need updating later.
   for (auto I : IdToIndexMap) {
+    auto &Infos = ForwardRefValueInfos[I.first];
     for (auto P : I.second) {
       assert(TI[P.first].VTableVI == EmptyVI &&
              "Forward referenced ValueInfo expected to be empty");
-      auto FwdRef = ForwardRefValueInfos.insert(std::make_pair(
-          I.first, std::vector<std::pair<ValueInfo *, LocTy>>()));
-      FwdRef.first->second.push_back(
-          std::make_pair(&TI[P.first].VTableVI, P.second));
+      Infos.emplace_back(&TI[P.first].VTableVI, P.second);
     }
   }
 
@@ -8445,9 +8443,7 @@ bool LLParser::ParseAliasSummary(std::string Name, GlobalValue::GUID GUID,
 
   // Record forward reference if the aliasee is not parsed yet.
   if (AliaseeVI.getRef() == FwdVIRef) {
-    auto FwdRef = ForwardRefAliasees.insert(
-        std::make_pair(GVId, std::vector<std::pair<AliasSummary *, LocTy>>()));
-    FwdRef.first->second.push_back(std::make_pair(AS.get(), Loc));
+    ForwardRefAliasees[GVId].emplace_back(AS.get(), Loc);
   } else {
     auto Summary = Index->findSummaryInModule(AliaseeVI, ModulePath);
     assert(Summary && "Aliasee must be a definition");
@@ -8588,13 +8584,11 @@ bool LLParser::ParseOptionalCalls(std::vector<FunctionSummary::EdgeTy> &Calls) {
   // Now that the Calls vector is finalized, it is safe to save the locations
   // of any forward GV references that need updating later.
   for (auto I : IdToIndexMap) {
+    auto &Infos = ForwardRefValueInfos[I.first];
     for (auto P : I.second) {
       assert(Calls[P.first].first.getRef() == FwdVIRef &&
              "Forward referenced ValueInfo expected to be empty");
-      auto FwdRef = ForwardRefValueInfos.insert(std::make_pair(
-          I.first, std::vector<std::pair<ValueInfo *, LocTy>>()));
-      FwdRef.first->second.push_back(
-          std::make_pair(&Calls[P.first].first, P.second));
+      Infos.emplace_back(&Calls[P.first].first, P.second);
     }
   }
 
@@ -8675,13 +8669,11 @@ bool LLParser::ParseOptionalVTableFuncs(VTableFuncList &VTableFuncs) {
   // Now that the VTableFuncs vector is finalized, it is safe to save the
   // locations of any forward GV references that need updating later.
   for (auto I : IdToIndexMap) {
+    auto &Infos = ForwardRefValueInfos[I.first];
     for (auto P : I.second) {
       assert(VTableFuncs[P.first].FuncVI == EmptyVI &&
              "Forward referenced ValueInfo expected to be empty");
-      auto FwdRef = ForwardRefValueInfos.insert(std::make_pair(
-          I.first, std::vector<std::pair<ValueInfo *, LocTy>>()));
-      FwdRef.first->second.push_back(
-          std::make_pair(&VTableFuncs[P.first].FuncVI, P.second));
+      Infos.emplace_back(&VTableFuncs[P.first].FuncVI, P.second);
     }
   }
 
@@ -8730,7 +8722,8 @@ bool LLParser::ParseParamAccessOffset(ConstantRange &Range) {
 
 /// ParamAccessCall
 ///   := '(' 'callee' ':' GVReference ',' ParamNo ',' ParamAccessOffset ')'
-bool LLParser::ParseParamAccessCall(FunctionSummary::ParamAccess::Call &Call) {
+bool LLParser::ParseParamAccessCall(FunctionSummary::ParamAccess::Call &Call,
+                                    IdLocListType &IdLocList) {
   if (ParseToken(lltok::lparen, "expected '(' here") ||
       ParseToken(lltok::kw_callee, "expected 'callee' here") ||
       ParseToken(lltok::colon, "expected ':' here"))
@@ -8738,10 +8731,12 @@ bool LLParser::ParseParamAccessCall(FunctionSummary::ParamAccess::Call &Call) {
 
   unsigned GVId;
   ValueInfo VI;
+  LocTy Loc = Lex.getLoc();
   if (ParseGVReference(VI, GVId))
     return true;
 
-  Call.Callee = VI.getGUID();
+  Call.Callee = VI;
+  IdLocList.emplace_back(GVId, Loc);
 
   if (ParseToken(lltok::comma, "expected ',' here") ||
       ParseParamNo(Call.ParamNo) ||
@@ -8758,7 +8753,8 @@ bool LLParser::ParseParamAccessCall(FunctionSummary::ParamAccess::Call &Call) {
 /// ParamAccess
 ///   := '(' ParamNo ',' ParamAccessOffset [',' OptionalParamAccessCalls]? ')'
 /// OptionalParamAccessCalls := '(' Call [',' Call]* ')'
-bool LLParser::ParseParamAccess(FunctionSummary::ParamAccess &Param) {
+bool LLParser::ParseParamAccess(FunctionSummary::ParamAccess &Param,
+                                IdLocListType &IdLocList) {
   if (ParseToken(lltok::lparen, "expected '(' here") ||
       ParseParamNo(Param.ParamNo) ||
       ParseToken(lltok::comma, "expected ',' here") ||
@@ -8772,7 +8768,7 @@ bool LLParser::ParseParamAccess(FunctionSummary::ParamAccess &Param) {
       return true;
     do {
       FunctionSummary::ParamAccess::Call Call;
-      if (ParseParamAccessCall(Call))
+      if (ParseParamAccessCall(Call, IdLocList))
         return true;
       Param.Calls.push_back(Call);
     } while (EatIfPresent(lltok::comma));
@@ -8798,15 +8794,32 @@ bool LLParser::ParseOptionalParamAccesses(
       ParseToken(lltok::lparen, "expected '(' here"))
     return true;
 
+  IdLocListType VContexts;
+  size_t CallsNum = 0;
   do {
     FunctionSummary::ParamAccess ParamAccess;
-    if (ParseParamAccess(ParamAccess))
+    if (ParseParamAccess(ParamAccess, VContexts))
       return true;
-    Params.push_back(ParamAccess);
+    CallsNum += ParamAccess.Calls.size();
+    assert(VContexts.size() == CallsNum);
+    Params.emplace_back(std::move(ParamAccess));
   } while (EatIfPresent(lltok::comma));
 
   if (ParseToken(lltok::rparen, "expected ')' here"))
     return true;
+
+  // Now that the Params is finalized, it is safe to save the locations
+  // of any forward GV references that need updating later.
+  IdLocListType::const_iterator ItContext = VContexts.begin();
+  for (auto &PA : Params) {
+    for (auto &C : PA.Calls) {
+      if (C.Callee.getRef() == FwdVIRef)
+        ForwardRefValueInfos[ItContext->first].emplace_back(&C.Callee,
+                                                            ItContext->second);
+      ++ItContext;
+    }
+  }
+  assert(ItContext == VContexts.end());
 
   return false;
 }
@@ -8856,12 +8869,11 @@ bool LLParser::ParseOptionalRefs(std::vector<ValueInfo> &Refs) {
   // Now that the Refs vector is finalized, it is safe to save the locations
   // of any forward GV references that need updating later.
   for (auto I : IdToIndexMap) {
+    auto &Infos = ForwardRefValueInfos[I.first];
     for (auto P : I.second) {
       assert(Refs[P.first].getRef() == FwdVIRef &&
              "Forward referenced ValueInfo expected to be empty");
-      auto FwdRef = ForwardRefValueInfos.insert(std::make_pair(
-          I.first, std::vector<std::pair<ValueInfo *, LocTy>>()));
-      FwdRef.first->second.push_back(std::make_pair(&Refs[P.first], P.second));
+      Infos.emplace_back(&Refs[P.first], P.second);
     }
   }
 
@@ -8951,13 +8963,11 @@ bool LLParser::ParseTypeTests(std::vector<GlobalValue::GUID> &TypeTests) {
   // Now that the TypeTests vector is finalized, it is safe to save the
   // locations of any forward GV references that need updating later.
   for (auto I : IdToIndexMap) {
+    auto &Ids = ForwardRefTypeIds[I.first];
     for (auto P : I.second) {
       assert(TypeTests[P.first] == 0 &&
              "Forward referenced type id GUID expected to be 0");
-      auto FwdRef = ForwardRefTypeIds.insert(std::make_pair(
-          I.first, std::vector<std::pair<GlobalValue::GUID *, LocTy>>()));
-      FwdRef.first->second.push_back(
-          std::make_pair(&TypeTests[P.first], P.second));
+      Ids.emplace_back(&TypeTests[P.first], P.second);
     }
   }
 
@@ -8992,13 +9002,11 @@ bool LLParser::ParseVFuncIdList(
   // Now that the VFuncIdList vector is finalized, it is safe to save the
   // locations of any forward GV references that need updating later.
   for (auto I : IdToIndexMap) {
+    auto &Ids = ForwardRefTypeIds[I.first];
     for (auto P : I.second) {
       assert(VFuncIdList[P.first].GUID == 0 &&
              "Forward referenced type id GUID expected to be 0");
-      auto FwdRef = ForwardRefTypeIds.insert(std::make_pair(
-          I.first, std::vector<std::pair<GlobalValue::GUID *, LocTy>>()));
-      FwdRef.first->second.push_back(
-          std::make_pair(&VFuncIdList[P.first].GUID, P.second));
+      Ids.emplace_back(&VFuncIdList[P.first].GUID, P.second);
     }
   }
 
@@ -9031,13 +9039,11 @@ bool LLParser::ParseConstVCallList(
   // Now that the ConstVCallList vector is finalized, it is safe to save the
   // locations of any forward GV references that need updating later.
   for (auto I : IdToIndexMap) {
+    auto &Ids = ForwardRefTypeIds[I.first];
     for (auto P : I.second) {
       assert(ConstVCallList[P.first].VFunc.GUID == 0 &&
              "Forward referenced type id GUID expected to be 0");
-      auto FwdRef = ForwardRefTypeIds.insert(std::make_pair(
-          I.first, std::vector<std::pair<GlobalValue::GUID *, LocTy>>()));
-      FwdRef.first->second.push_back(
-          std::make_pair(&ConstVCallList[P.first].VFunc.GUID, P.second));
+      Ids.emplace_back(&ConstVCallList[P.first].VFunc.GUID, P.second);
     }
   }
 

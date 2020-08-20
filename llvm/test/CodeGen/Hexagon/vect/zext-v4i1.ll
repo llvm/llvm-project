@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon -hexagon-instsimplify=0 < %s | FileCheck %s
 
 ; Check that this compiles successfully.
 ; CHECK: vcmph.eq

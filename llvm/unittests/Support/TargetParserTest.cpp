@@ -610,16 +610,13 @@ TEST(TargetParserTest, ARMExtensionFeatures) {
     // test +extension
     Features.clear();
     ARM::getExtensionFeatures(E.first, Features);
-    auto Found =
-        std::find(std::begin(Features), std::end(Features), E.second.at(0));
-    EXPECT_TRUE(Found != std::end(Features));
+    EXPECT_TRUE(llvm::is_contained(Features, E.second.at(0)));
     EXPECT_TRUE(Extensions.size() == Features.size());
 
     // test -extension
     Features.clear();
     ARM::getExtensionFeatures(~E.first, Features);
-    Found = std::find(std::begin(Features), std::end(Features), E.second.at(1));
-    EXPECT_TRUE(Found != std::end(Features));
+    EXPECT_TRUE(llvm::is_contained(Features, E.second.at(1)));
     EXPECT_TRUE(Extensions.size() == Features.size());
   }
 }
@@ -1227,27 +1224,24 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   AArch64::getExtensionFeatures(ExtVal, Features);
   EXPECT_TRUE(Extensions.size() == Features.size());
 
-  auto B = std::begin(Features);
-  auto E = std::end(Features);
-
-  EXPECT_TRUE(std::find(B, E, "+crc") != E);
-  EXPECT_TRUE(std::find(B, E, "+crypto") != E);
-  EXPECT_TRUE(std::find(B, E, "+fp-armv8") != E);
-  EXPECT_TRUE(std::find(B, E, "+neon") != E);
-  EXPECT_TRUE(std::find(B, E, "+fullfp16") != E);
-  EXPECT_TRUE(std::find(B, E, "+spe") != E);
-  EXPECT_TRUE(std::find(B, E, "+ras") != E);
-  EXPECT_TRUE(std::find(B, E, "+lse") != E);
-  EXPECT_TRUE(std::find(B, E, "+rdm") != E);
-  EXPECT_TRUE(std::find(B, E, "+dotprod") != E);
-  EXPECT_TRUE(std::find(B, E, "+rcpc") != E);
-  EXPECT_TRUE(std::find(B, E, "+fp16fml") != E);
-  EXPECT_TRUE(std::find(B, E, "+sve") != E);
-  EXPECT_TRUE(std::find(B, E, "+sve2") != E);
-  EXPECT_TRUE(std::find(B, E, "+sve2-aes") != E);
-  EXPECT_TRUE(std::find(B, E, "+sve2-sm4") != E);
-  EXPECT_TRUE(std::find(B, E, "+sve2-sha3") != E);
-  EXPECT_TRUE(std::find(B, E, "+sve2-bitperm") != E);
+  EXPECT_TRUE(llvm::is_contained(Features, "+crc"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+crypto"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+fp-armv8"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+neon"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+fullfp16"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+spe"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+ras"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+lse"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+rdm"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+dotprod"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+rcpc"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+fp16fml"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve2"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve2-aes"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sm4"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve2-sha3"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve2-bitperm"));
 }
 
 TEST(TargetParserTest, AArch64ArchFeatures) {

@@ -209,6 +209,9 @@ public:
     }
   }
 
+  int getCFInstrCost(unsigned Opcode,
+                     TTI::TargetCostKind CostKind);
+
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                        TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
                        const Instruction *I = nullptr);
@@ -248,6 +251,7 @@ public:
                                   Align Alignment, TTI::TargetCostKind CostKind,
                                   const Instruction *I = nullptr);
 
+  bool maybeLoweredToCall(Instruction &I);
   bool isLoweredToCall(const Function *F);
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                 AssumptionCache &AC,

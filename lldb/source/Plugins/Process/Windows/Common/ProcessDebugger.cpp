@@ -227,22 +227,20 @@ Status ProcessDebugger::DestroyProcess(const lldb::StateType state) {
     debugger_thread = m_session_data->m_debugger;
   }
 
-  Status error;
-  if (state != eStateExited && state != eStateDetached) {
-    LLDB_LOG(
-        log, "Shutting down process {0}.",
-        debugger_thread->GetProcess().GetNativeProcess().GetSystemHandle());
-    error = debugger_thread->StopDebugging(true);
-
-    // By the time StopDebugging returns, there is no more debugger thread, so
-    // we can be assured that no other thread will race for the session data.
-    m_session_data.reset();
-  } else {
-    error.SetErrorStringWithFormat("cannot destroy process %" PRIx64
-                                   " while state = %d",
-                                   GetDebuggedProcessId(), state);
-    LLDB_LOG(log, "error: {0}", error);
+  if (state == eStateExited || state == eStateDetached) {
+    LLDB_LOG(log, "warning: cannot destroy process {0} while state = {1}.",
+             GetDebuggedProcessId(), state);
+    return Status();
   }
+
+  LLDB_LOG(log, "Shutting down process {0}.",
+           debugger_thread->GetProcess().GetNativeProcess().GetSystemHandle());
+  auto error = debugger_thread->StopDebugging(true);
+
+  // By the time StopDebugging returns, there is no more debugger thread, so
+  // we can be assured that no other thread will race for the session data.
+  m_session_data.reset();
+
   return error;
 }
 

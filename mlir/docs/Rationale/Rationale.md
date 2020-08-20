@@ -458,13 +458,6 @@ experience. When we do, we should chat with benoitjacob@ and
 This section describes the design decisions that shaped the dialect extensible
 type system present in MLIR.
 
-#### Reserving dialect type kinds
-
-Dialects that wish to define type extensions must reserve a range of type kinds
-within a '.def' file within the core IR library. This means that every dialect
-wishing to define custom types must modify this file, but it guarantees that all
-type casting checkings are performed in O(1) time.
-
 #### Interactions between dialects
 
 There are two different interactions between dialects that are important to

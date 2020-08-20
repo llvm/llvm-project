@@ -1,6 +1,6 @@
 # COMDAT sections with non-external linkage should not be merged by ICF.
 
-# RUN: yaml2obj < %s > %t1.obj
+# RUN: yaml2obj %s -o %t1.obj
 # RUN: sed s/foo/main/ %s | yaml2obj > %t2.obj
 # RUN: lld-link /out:%t.exe /entry:main /subsystem:console /verbose \
 # RUN:   %t1.obj %t2.obj > %t.log 2>&1

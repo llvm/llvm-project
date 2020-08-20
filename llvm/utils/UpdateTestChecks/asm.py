@@ -371,4 +371,5 @@ def build_function_body_dictionary_for_triple(args, raw_tool_output, triple, pre
 def add_asm_checks(output_lines, comment_marker, prefix_list, func_dict, func_name):
   # Label format is based on ASM string.
   check_label_format = '{} %s-LABEL: %s%s:'.format(comment_marker)
-  common.add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, True, False)
+  global_vars_seen_dict = {}
+  common.add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, check_label_format, True, False, global_vars_seen_dict)

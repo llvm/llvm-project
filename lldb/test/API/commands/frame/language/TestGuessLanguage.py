@@ -53,7 +53,7 @@ class TestFrameGuessLanguage(TestBase):
         # environment variables, add them using SetArguments or
         # SetEnvironmentEntries
 
-        launch_info = lldb.SBLaunchInfo(None)
+        launch_info = target.GetLaunchInfo()
         process = target.Launch(launch_info, error)
         self.assertTrue(process, PROCESS_IS_VALID)
 

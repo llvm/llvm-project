@@ -131,7 +131,7 @@ private:
   std::unique_ptr<FrontendAction> Action;
   /// Tokens recorded after the preamble finished.
   ///   - Includes all spelled tokens for the main file.
-  ///   - Includes expanded tokens produced **after** preabmle.
+  ///   - Includes expanded tokens produced **after** preamble.
   ///   - Does not have spelled or expanded tokens for files from preamble.
   syntax::TokenBuffer Tokens;
 
@@ -145,10 +145,6 @@ private:
   IncludeStructure Includes;
   CanonicalIncludes CanonIncludes;
 };
-
-/// For testing/debugging purposes. Note that this method deserializes all
-/// unserialized Decls, so use with care.
-void dumpAST(ParsedAST &AST, llvm::raw_ostream &OS);
 
 } // namespace clangd
 } // namespace clang

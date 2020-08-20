@@ -44,6 +44,23 @@ void mlir::getLoopIVs(Operation &op, SmallVectorImpl<AffineForOp> *loops) {
   std::reverse(loops->begin(), loops->end());
 }
 
+/// Populates 'ops' with IVs of the loops surrounding `op`, along with
+/// `affine.if` operations interleaved between these loops, ordered from the
+/// outermost `affine.for` operation to the innermost one.
+void mlir::getEnclosingAffineForAndIfOps(Operation &op,
+                                         SmallVectorImpl<Operation *> *ops) {
+  ops->clear();
+  Operation *currOp = op.getParentOp();
+
+  // Traverse up the hierarchy collecting all `affine.for` and `affine.if`
+  // operations.
+  while (currOp && (isa<AffineIfOp, AffineForOp>(currOp))) {
+    ops->push_back(currOp);
+    currOp = currOp->getParentOp();
+  }
+  std::reverse(ops->begin(), ops->end());
+}
+
 // Populates 'cst' with FlatAffineConstraints which represent slice bounds.
 LogicalResult
 ComputationSliceState::getAsConstraints(FlatAffineConstraints *cst) {

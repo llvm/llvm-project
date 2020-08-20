@@ -1,11 +1,11 @@
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt -amdgpu-enable-global-sgpr-addr < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
 @lds = addrspace(3) global [512 x float] undef, align 4
 
 ; GCN-LABEL: @simple_write2st64_one_val_f32_0_1
 ; CI-DAG: s_mov_b32 m0
-; GFX9-NOT: m0n
+; GFX9-NOT: m0
 
 ; GCN-DAG: {{buffer|global}}_load_dword [[VAL:v[0-9]+]]
 ; GCN-DAG: v_lshlrev_b32_e32 [[VPTR:v[0-9]+]], 2, v{{[0-9]+}}
@@ -30,8 +30,8 @@ define amdgpu_kernel void @simple_write2st64_one_val_f32_0_1(float addrspace(1)*
 ; CI-DAG: buffer_load_dword [[VAL0:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; CI-DAG: buffer_load_dword [[VAL1:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 
-; GFX9-DAG: global_load_dword [[VAL0:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}{{$}}
-; GFX9-DAG: global_load_dword [[VAL1:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} offset:4
+; GFX9-DAG: global_load_dword [[VAL0:v[0-9]+]], v{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]$}}
+; GFX9-DAG: global_load_dword [[VAL1:v[0-9]+]], v{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}} offset:4{{$}}
 
 
 ; GCN-DAG: v_lshlrev_b32_e32 [[VPTR:v[0-9]+]], 2, v{{[0-9]+}}
@@ -59,8 +59,8 @@ define amdgpu_kernel void @simple_write2st64_two_val_f32_2_5(float addrspace(1)*
 ; CI-DAG: buffer_load_dword [[VAL0:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; CI-DAG: buffer_load_dword [[VAL1:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 
-; GFX9-DAG: global_load_dword [[VAL0:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}{{$}}
-; GFX9-DAG: global_load_dword [[VAL1:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} offset:4
+; GFX9-DAG: global_load_dword [[VAL0:v[0-9]+]], v{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}{{$}}
+; GFX9-DAG: global_load_dword [[VAL1:v[0-9]+]], v{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}} offset:4
 
 ; GCN-DAG: v_lshlrev_b32_e32 [[SHL:v[0-9]+]], 2, v{{[0-9]+}}
 ; GCN-DAG: v_add_{{i|u}}32_e32 [[VPTR:v[0-9]+]], {{(vcc, )?}}s{{[0-9]+}}, [[SHL]]
@@ -87,8 +87,8 @@ define amdgpu_kernel void @simple_write2st64_two_val_max_offset_f32(float addrsp
 ; CI-DAG: buffer_load_dwordx2 [[VAL0:v\[[0-9]+:[0-9]+\]]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; CI-DAG: buffer_load_dwordx2 [[VAL1:v\[[0-9]+:[0-9]+\]]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8
 
-; GFX9-DAG: global_load_dwordx2 [[VAL0:v\[[0-9]+:[0-9]+\]]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}{{$}}
-; GFX9-DAG: global_load_dwordx2 [[VAL1:v\[[0-9]+:[0-9]+\]]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} offset:8
+; GFX9-DAG: global_load_dwordx2 [[VAL0:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]$}}
+; GFX9-DAG: global_load_dwordx2 [[VAL1:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}} offset:8
 
 ; GCN-DAG: v_lshlrev_b32_e32 [[SHL:v[0-9]+]], 3, v{{[0-9]+}}
 ; GCN-DAG: v_add_{{i|u}}32_e32 [[VPTR:v[0-9]+]], {{(vcc, )?}}s{{[0-9]+}}, [[SHL]]

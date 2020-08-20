@@ -36,10 +36,6 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// Create a legacy pass that does instruction simplification on each
-/// instruction in a function.
-FunctionPass *createInstSimplifyLegacyPass();
-
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_INSTSIMPLIFYPASS_H

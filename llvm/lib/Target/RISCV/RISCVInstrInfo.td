@@ -1012,8 +1012,8 @@ def : Pat<(riscv_tail (iPTR tglobaladdr:$dst)),
 def : Pat<(riscv_tail (iPTR texternalsym:$dst)),
           (PseudoTAIL texternalsym:$dst)>;
 
-let isCall = 0, isBarrier = 0, isCodeGenOnly = 0, hasSideEffects = 0,
-    mayStore = 0, mayLoad = 0 in
+let isCall = 0, isBarrier = 1, isBranch = 1, isTerminator = 1,
+    isCodeGenOnly = 0, hasSideEffects = 0, mayStore = 0, mayLoad = 0 in
 def PseudoJump : Pseudo<(outs GPR:$rd), (ins pseudo_jump_symbol:$target), []> {
   let AsmString = "jump\t$target, $rd";
 }

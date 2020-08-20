@@ -32,15 +32,6 @@ struct TargetEnvAttributeStorage;
 struct VerCapExtAttributeStorage;
 } // namespace detail
 
-/// SPIR-V dialect-specific attribute kinds.
-namespace AttrKind {
-enum Kind {
-  InterfaceVarABI = Attribute::FIRST_SPIRV_ATTR, /// Interface var ABI
-  TargetEnv,                                     /// Target environment
-  VerCapExt, /// (version, extension, capability) triple
-};
-} // namespace AttrKind
-
 /// An attribute that specifies the information regarding the interface
 /// variable: descriptor set, binding, storage class.
 class InterfaceVarABIAttr
@@ -67,10 +58,6 @@ public:
 
   /// Returns `spirv::StorageClass`.
   Optional<StorageClass> getStorageClass();
-
-  static bool kindof(unsigned kind) {
-    return kind == AttrKind::InterfaceVarABI;
-  }
 
   static LogicalResult verifyConstructionInvariants(Location loc,
                                                     IntegerAttr descriptorSet,
@@ -123,8 +110,6 @@ public:
   /// Returns the capabilities as an integer array attribute.
   ArrayAttr getCapabilitiesAttr();
 
-  static bool kindof(unsigned kind) { return kind == AttrKind::VerCapExt; }
-
   static LogicalResult verifyConstructionInvariants(Location loc,
                                                     IntegerAttr version,
                                                     ArrayAttr capabilities,
@@ -164,8 +149,6 @@ public:
 
   /// Returns the target resource limits.
   ResourceLimitsAttr getResourceLimits();
-
-  static bool kindof(unsigned kind) { return kind == AttrKind::TargetEnv; }
 
   static LogicalResult verifyConstructionInvariants(Location loc,
                                                     VerCapExtAttr triple,

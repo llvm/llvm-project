@@ -309,6 +309,9 @@ static void checkOptions() {
   if (config->tocOptimize && config->emachine != EM_PPC64)
     error("--toc-optimize is only supported on the PowerPC64 target");
 
+  if (config->pcRelOptimize && config->emachine != EM_PPC64)
+    error("--pcrel--optimize is only supported on the PowerPC64 target");
+
   if (config->pie && config->shared)
     error("-shared and -pie may not be used together");
 
@@ -966,10 +969,10 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
   config->ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
   config->ltoBasicBlockSections =
-      args.getLastArgValue(OPT_lto_basicblock_sections);
+      args.getLastArgValue(OPT_lto_basic_block_sections);
   config->ltoUniqueBasicBlockSectionNames =
-      args.hasFlag(OPT_lto_unique_bb_section_names,
-                   OPT_no_lto_unique_bb_section_names, false);
+      args.hasFlag(OPT_lto_unique_basic_block_section_names,
+                   OPT_no_lto_unique_basic_block_section_names, false);
   config->mapFile = args.getLastArgValue(OPT_Map);
   config->mipsGotSize = args::getInteger(args, OPT_mips_got_size, 0xfff0);
   config->mergeArmExidx =
@@ -1288,6 +1291,8 @@ static void setConfigs(opt::InputArgList &args) {
 
   config->tocOptimize =
       args.hasFlag(OPT_toc_optimize, OPT_no_toc_optimize, m == EM_PPC64);
+  config->pcRelOptimize =
+      args.hasFlag(OPT_pcrel_optimize, OPT_no_pcrel_optimize, m == EM_PPC64);
 }
 
 // Returns a value of "-format" option.
@@ -1306,6 +1311,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
   std::vector<std::tuple<bool, bool, bool>> stack;
 
   // Iterate over argv to process input files and positional arguments.
+  InputFile::isInGroup = false;
   for (auto *arg : args) {
     switch (arg->getOption().getID()) {
     case OPT_library:
@@ -1852,7 +1858,7 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
       continue;
 
     Symbol *real = addUndefined(saver.save("__real_" + name));
-    Symbol *wrap = addUndefined(saver.save("__wrap_" + name));
+    Symbol *wrap = addUnusedUndefined(saver.save("__wrap_" + name));
     v.push_back({sym, real, wrap});
 
     // We want to tell LTO not to inline symbols to be overwritten
@@ -1862,7 +1868,8 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
 
     // Tell LTO not to eliminate these symbols.
     sym->isUsedInRegularObj = true;
-    wrap->isUsedInRegularObj = true;
+    if (!wrap->isUndefined())
+      wrap->isUsedInRegularObj = true;
   }
   return v;
 }

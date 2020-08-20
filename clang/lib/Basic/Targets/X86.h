@@ -144,6 +144,11 @@ public:
     LongDoubleFormat = &llvm::APFloat::x87DoubleExtended();
     AddrSpaceMap = &X86AddrSpaceMap;
     HasStrictFP = true;
+
+    bool IsWinCOFF =
+        getTriple().isOSWindows() && getTriple().isOSBinFormatCOFF();
+    if (IsWinCOFF)
+      MaxVectorAlign = MaxTLSAlign = 8192u * getCharWidth();
   }
 
   const char *getLongDoubleMangling() const override {
@@ -289,6 +294,10 @@ public:
         MMX3DNowLevel == NoMMX3DNow)
       return "no-mmx";
     return "";
+  }
+
+  bool supportsTargetAttributeTune() const override {
+    return true;
   }
 
   bool isValidCPUName(StringRef Name) const override {

@@ -41,10 +41,16 @@ using ::testing::ElementsAre;
 using ::testing::Eq;
 using ::testing::IsEmpty;
 using ::testing::Matcher;
+using ::testing::UnorderedElementsAre;
 using ::testing::UnorderedElementsAreArray;
 
 MATCHER_P2(FileRange, File, Range, "") {
   return Location{URIForFile::canonicalize(File, testRoot()), Range} == arg;
+}
+MATCHER(DeclRange, "") {
+  const LocatedSymbol &Sym = ::testing::get<0>(arg);
+  const Range &Range = ::testing::get<1>(arg);
+  return Sym.PreferredDeclaration.range == Range;
 }
 
 // Extracts ranges from an annotated example, and constructs a matcher for a
@@ -264,19 +270,23 @@ MATCHER_P3(Sym, Name, Decl, DefOrNone, "") {
                      << llvm::to_string(arg.PreferredDeclaration);
     return false;
   }
+  if (!Def && !arg.Definition)
+    return true;
   if (Def && !arg.Definition) {
     *result_listener << "Has no definition";
     return false;
   }
-  if (Def && arg.Definition->range != *Def) {
+  if (!Def && arg.Definition) {
+    *result_listener << "Definition is " << llvm::to_string(arg.Definition);
+    return false;
+  }
+  if (arg.Definition->range != *Def) {
     *result_listener << "Definition is " << llvm::to_string(arg.Definition);
     return false;
   }
   return true;
 }
-::testing::Matcher<LocatedSymbol> Sym(std::string Name, Range Decl) {
-  return Sym(Name, Decl, llvm::None);
-}
+
 MATCHER_P(Sym, Name, "") { return arg.Name == Name; }
 
 MATCHER_P(RangeIs, R, "") { return arg.range == R; }
@@ -674,7 +684,57 @@ TEST(LocateSymbol, All) {
           enum class E { [[A]], B };
           E e = E::A^;
         };
-      )cpp"};
+      )cpp",
+
+      R"objc(
+        @protocol Dog;
+        @protocol $decl[[Dog]]
+        - (void)bark;
+        @end
+        id<Do^g> getDoggo() {
+          return 0;
+        }
+      )objc",
+
+      R"objc(
+        @interface Cat
+        @end
+        @implementation Cat
+        @end
+        @interface $decl[[Cat]] (Exte^nsion)
+        - (void)meow;
+        @end
+        @implementation $def[[Cat]] (Extension)
+        - (void)meow {}
+        @end
+      )objc",
+
+      R"objc(
+        @class $decl[[Foo]];
+        Fo^o * getFoo() {
+          return 0;
+        }
+      )objc",
+
+      R"objc(// Prefer interface definition over forward declaration
+        @class Foo;
+        @interface $decl[[Foo]]
+        @end
+        Fo^o * getFoo() {
+          return 0;
+        }
+      )objc",
+
+      R"objc(
+        @class Foo;
+        @interface $decl[[Foo]]
+        @end
+        @implementation $def[[Foo]]
+        @end
+        Fo^o * getFoo() {
+          return 0;
+        }
+      )objc"};
   for (const char *Test : Tests) {
     Annotations T(Test);
     llvm::Optional<Range> WantDecl;
@@ -692,6 +752,7 @@ TEST(LocateSymbol, All) {
     // FIXME: Auto-completion in a template requires disabling delayed template
     // parsing.
     TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
+    TU.ExtraArgs.push_back("-xobjective-c++");
 
     auto AST = TU.build();
     auto Results = locateSymbolAt(AST, T.point());
@@ -705,6 +766,90 @@ TEST(LocateSymbol, All) {
       if (Results[0].Definition)
         GotDef = Results[0].Definition->range;
       EXPECT_EQ(WantDef, GotDef) << Test;
+    }
+  }
+}
+
+TEST(LocateSymbol, AllMulti) {
+  // Ranges in tests:
+  //   $declN is the declaration location
+  //   $defN is the definition location (if absent, symbol has no definition)
+  //
+  // NOTE:
+  //   N starts at 0.
+  struct ExpectedRanges {
+    Range WantDecl;
+    llvm::Optional<Range> WantDef;
+  };
+  const char *Tests[] = {
+      R"objc(
+        @interface $decl0[[Cat]]
+        @end
+        @implementation $def0[[Cat]]
+        @end
+        @interface $decl1[[Ca^t]] (Extension)
+        - (void)meow;
+        @end
+        @implementation $def1[[Cat]] (Extension)
+        - (void)meow {}
+        @end
+      )objc",
+
+      R"objc(
+        @interface $decl0[[Cat]]
+        @end
+        @implementation $def0[[Cat]]
+        @end
+        @interface $decl1[[Cat]] (Extension)
+        - (void)meow;
+        @end
+        @implementation $def1[[Ca^t]] (Extension)
+        - (void)meow {}
+        @end
+      )objc",
+
+      R"objc(
+        @interface $decl0[[Cat]]
+        @end
+        @interface $decl1[[Ca^t]] ()
+        - (void)meow;
+        @end
+        @implementation $def0[[$def1[[Cat]]]]
+        - (void)meow {}
+        @end
+      )objc",
+  };
+  for (const char *Test : Tests) {
+    Annotations T(Test);
+    std::vector<ExpectedRanges> Ranges;
+    for (int Idx = 0; true; Idx++) {
+      bool HasDecl = !T.ranges("decl" + std::to_string(Idx)).empty();
+      bool HasDef = !T.ranges("def" + std::to_string(Idx)).empty();
+      if (!HasDecl && !HasDef)
+        break;
+      ExpectedRanges Range;
+      if (HasDecl)
+        Range.WantDecl = T.range("decl" + std::to_string(Idx));
+      if (HasDef)
+        Range.WantDef = T.range("def" + std::to_string(Idx));
+      Ranges.push_back(Range);
+    }
+
+    TestTU TU;
+    TU.Code = std::string(T.code());
+    TU.ExtraArgs.push_back("-xobjective-c++");
+
+    auto AST = TU.build();
+    auto Results = locateSymbolAt(AST, T.point());
+
+    ASSERT_THAT(Results, ::testing::SizeIs(Ranges.size())) << Test;
+    for (size_t Idx = 0; Idx < Ranges.size(); Idx++) {
+      EXPECT_EQ(Results[Idx].PreferredDeclaration.range, Ranges[Idx].WantDecl)
+          << "($decl" << Idx << ")" << Test;
+      llvm::Optional<Range> GotDef;
+      if (Results[Idx].Definition)
+        GotDef = Results[Idx].Definition->range;
+      EXPECT_EQ(GotDef, Ranges[Idx].WantDef) << "($def" << Idx << ")" << Test;
     }
   }
 }
@@ -771,7 +916,7 @@ TEST(LocateSymbol, TextualSmoke) {
   auto AST = TU.build();
   auto Index = TU.index();
   EXPECT_THAT(locateSymbolAt(AST, T.point(), Index.get()),
-              ElementsAre(Sym("MyClass", T.range())));
+              ElementsAre(Sym("MyClass", T.range(), T.range())));
 }
 
 TEST(LocateSymbol, Textual) {
@@ -891,18 +1036,20 @@ TEST(LocateSymbol, Ambiguous) {
   // FIXME: Target the constructor as well.
   EXPECT_THAT(locateSymbolAt(AST, T.point("9")), ElementsAre(Sym("Foo")));
   EXPECT_THAT(locateSymbolAt(AST, T.point("10")),
-              ElementsAre(Sym("Foo", T.range("ConstructorLoc"))));
+              ElementsAre(Sym("Foo", T.range("ConstructorLoc"), llvm::None)));
   EXPECT_THAT(locateSymbolAt(AST, T.point("11")),
-              ElementsAre(Sym("Foo", T.range("ConstructorLoc"))));
+              ElementsAre(Sym("Foo", T.range("ConstructorLoc"), llvm::None)));
   // These assertions are unordered because the order comes from
   // CXXRecordDecl::lookupDependentName() which doesn't appear to provide
   // an order guarantee.
   EXPECT_THAT(locateSymbolAt(AST, T.point("12")),
-              UnorderedElementsAre(Sym("bar", T.range("NonstaticOverload1")),
-                                   Sym("bar", T.range("NonstaticOverload2"))));
-  EXPECT_THAT(locateSymbolAt(AST, T.point("13")),
-              UnorderedElementsAre(Sym("baz", T.range("StaticOverload1")),
-                                   Sym("baz", T.range("StaticOverload2"))));
+              UnorderedElementsAre(
+                  Sym("bar", T.range("NonstaticOverload1"), llvm::None),
+                  Sym("bar", T.range("NonstaticOverload2"), llvm::None)));
+  EXPECT_THAT(
+      locateSymbolAt(AST, T.point("13")),
+      UnorderedElementsAre(Sym("baz", T.range("StaticOverload1"), llvm::None),
+                           Sym("baz", T.range("StaticOverload2"), llvm::None)));
 }
 
 TEST(LocateSymbol, TextualDependent) {
@@ -932,20 +1079,95 @@ TEST(LocateSymbol, TextualDependent) {
   // interaction between locateASTReferent() and
   // locateSymbolNamedTextuallyAt().
   auto Results = locateSymbolAt(AST, Source.point(), Index.get());
-  EXPECT_THAT(Results, UnorderedElementsAre(
-                           Sym("uniqueMethodName", Header.range("FooLoc")),
-                           Sym("uniqueMethodName", Header.range("BarLoc"))));
+  EXPECT_THAT(Results,
+              UnorderedElementsAre(
+                  Sym("uniqueMethodName", Header.range("FooLoc"), llvm::None),
+                  Sym("uniqueMethodName", Header.range("BarLoc"), llvm::None)));
 }
 
-TEST(LocateSymbol, TemplateTypedefs) {
-  auto T = Annotations(R"cpp(
-    template <class T> struct function {};
-    template <class T> using callback = function<T()>;
+TEST(LocateSymbol, Alias) {
+  const char *Tests[] = {
+      R"cpp(
+      template <class T> struct function {};
+      template <class T> using [[callback]] = function<T()>;
 
-    c^allback<int> foo;
-  )cpp");
-  auto AST = TestTU::withCode(T.code()).build();
-  EXPECT_THAT(locateSymbolAt(AST, T.point()), ElementsAre(Sym("callback")));
+      c^allback<int> foo;
+    )cpp",
+
+      // triggered on non-definition of a renaming alias: should not give any
+      // underlying decls.
+      R"cpp(
+      class Foo {};
+      typedef Foo [[Bar]];
+
+      B^ar b;
+    )cpp",
+      R"cpp(
+      class Foo {};
+      using [[Bar]] = Foo; // definition
+      Ba^r b;
+    )cpp",
+
+      // triggered on the underlying decl of a renaming alias.
+      R"cpp(
+      class [[Foo]];
+      using Bar = Fo^o;
+    )cpp",
+
+      // triggered on definition of a non-renaming alias: should give underlying
+      // decls.
+      R"cpp(
+      namespace ns { class [[Foo]] {}; }
+      using ns::F^oo;
+    )cpp",
+
+      R"cpp(
+      namespace ns { int [[x]](char); int [[x]](double); }
+      using ns::^x;
+    )cpp",
+
+      R"cpp(
+      namespace ns { int [[x]](char); int x(double); }
+      using ns::x;
+      int y = ^x('a');
+    )cpp",
+
+      R"cpp(
+      namespace ns { class [[Foo]] {}; }
+      using ns::Foo;
+      F^oo f;
+    )cpp",
+
+      // other cases that don't matter much.
+      R"cpp(
+      class Foo {};
+      typedef Foo [[Ba^r]];
+    )cpp",
+      R"cpp(
+      class Foo {};
+      using [[B^ar]] = Foo;
+    )cpp",
+
+      // Member of dependent base
+      R"cpp(
+      template <typename T>
+      struct Base {
+        void [[waldo]]() {}
+      };
+      template <typename T>
+      struct Derived : Base<T> {
+        using Base<T>::w^aldo;
+      };
+    )cpp",
+  };
+
+  for (const auto* Case : Tests) {
+    SCOPED_TRACE(Case);
+    auto T = Annotations(Case);
+    auto AST = TestTU::withCode(T.code()).build();
+    EXPECT_THAT(locateSymbolAt(AST, T.point()),
+                ::testing::UnorderedPointwise(DeclRange(), T.ranges()));
+  }
 }
 
 TEST(LocateSymbol, RelPathsInCompileCommand) {
@@ -992,20 +1214,23 @@ int [[bar_not_preamble]];
   auto Locations =
       runLocateSymbolAt(Server, FooCpp, SourceAnnotations.point("p1"));
   EXPECT_TRUE(bool(Locations)) << "findDefinitions returned an error";
-  EXPECT_THAT(*Locations, ElementsAre(Sym("foo", SourceAnnotations.range())));
+  EXPECT_THAT(*Locations, ElementsAre(Sym("foo", SourceAnnotations.range(),
+                                          SourceAnnotations.range())));
 
   // Go to a definition in header_in_preamble.h.
   Locations = runLocateSymbolAt(Server, FooCpp, SourceAnnotations.point("p2"));
   EXPECT_TRUE(bool(Locations)) << "findDefinitions returned an error";
   EXPECT_THAT(
       *Locations,
-      ElementsAre(Sym("bar_preamble", HeaderInPreambleAnnotations.range())));
+      ElementsAre(Sym("bar_preamble", HeaderInPreambleAnnotations.range(),
+                      HeaderInPreambleAnnotations.range())));
 
   // Go to a definition in header_not_in_preamble.h.
   Locations = runLocateSymbolAt(Server, FooCpp, SourceAnnotations.point("p3"));
   EXPECT_TRUE(bool(Locations)) << "findDefinitions returned an error";
   EXPECT_THAT(*Locations,
               ElementsAre(Sym("bar_not_preamble",
+                              HeaderNotInPreambleAnnotations.range(),
                               HeaderNotInPreambleAnnotations.range())));
 }
 
@@ -1039,21 +1264,25 @@ TEST(GoToInclude, All) {
   // Test include in preamble.
   auto Locations = runLocateSymbolAt(Server, FooCpp, SourceAnnotations.point());
   ASSERT_TRUE(bool(Locations)) << "locateSymbolAt returned an error";
-  EXPECT_THAT(*Locations, ElementsAre(Sym("foo.h", HeaderAnnotations.range())));
+  EXPECT_THAT(*Locations, ElementsAre(Sym("foo.h", HeaderAnnotations.range(),
+                                          HeaderAnnotations.range())));
 
   // Test include in preamble, last char.
   Locations = runLocateSymbolAt(Server, FooCpp, SourceAnnotations.point("2"));
   ASSERT_TRUE(bool(Locations)) << "locateSymbolAt returned an error";
-  EXPECT_THAT(*Locations, ElementsAre(Sym("foo.h", HeaderAnnotations.range())));
+  EXPECT_THAT(*Locations, ElementsAre(Sym("foo.h", HeaderAnnotations.range(),
+                                          HeaderAnnotations.range())));
 
   Locations = runLocateSymbolAt(Server, FooCpp, SourceAnnotations.point("3"));
   ASSERT_TRUE(bool(Locations)) << "locateSymbolAt returned an error";
-  EXPECT_THAT(*Locations, ElementsAre(Sym("foo.h", HeaderAnnotations.range())));
+  EXPECT_THAT(*Locations, ElementsAre(Sym("foo.h", HeaderAnnotations.range(),
+                                          HeaderAnnotations.range())));
 
   // Test include outside of preamble.
   Locations = runLocateSymbolAt(Server, FooCpp, SourceAnnotations.point("6"));
   ASSERT_TRUE(bool(Locations)) << "locateSymbolAt returned an error";
-  EXPECT_THAT(*Locations, ElementsAre(Sym("foo.h", HeaderAnnotations.range())));
+  EXPECT_THAT(*Locations, ElementsAre(Sym("foo.h", HeaderAnnotations.range(),
+                                          HeaderAnnotations.range())));
 
   // Test a few positions that do not result in Locations.
   Locations = runLocateSymbolAt(Server, FooCpp, SourceAnnotations.point("4"));
@@ -1062,11 +1291,13 @@ TEST(GoToInclude, All) {
 
   Locations = runLocateSymbolAt(Server, FooCpp, SourceAnnotations.point("5"));
   ASSERT_TRUE(bool(Locations)) << "locateSymbolAt returned an error";
-  EXPECT_THAT(*Locations, ElementsAre(Sym("foo.h", HeaderAnnotations.range())));
+  EXPECT_THAT(*Locations, ElementsAre(Sym("foo.h", HeaderAnnotations.range(),
+                                          HeaderAnnotations.range())));
 
   Locations = runLocateSymbolAt(Server, FooCpp, SourceAnnotations.point("7"));
   ASSERT_TRUE(bool(Locations)) << "locateSymbolAt returned an error";
-  EXPECT_THAT(*Locations, ElementsAre(Sym("foo.h", HeaderAnnotations.range())));
+  EXPECT_THAT(*Locations, ElementsAre(Sym("foo.h", HeaderAnnotations.range(),
+                                          HeaderAnnotations.range())));
 
   // Objective C #import directive.
   Annotations ObjC(R"objc(
@@ -1078,7 +1309,8 @@ TEST(GoToInclude, All) {
   Server.addDocument(FooM, ObjC.code());
   Locations = runLocateSymbolAt(Server, FooM, ObjC.point());
   ASSERT_TRUE(bool(Locations)) << "locateSymbolAt returned an error";
-  EXPECT_THAT(*Locations, ElementsAre(Sym("foo.h", HeaderAnnotations.range())));
+  EXPECT_THAT(*Locations, ElementsAre(Sym("foo.h", HeaderAnnotations.range(),
+                                          HeaderAnnotations.range())));
 }
 
 TEST(LocateSymbol, WithPreamble) {
@@ -1103,7 +1335,7 @@ TEST(LocateSymbol, WithPreamble) {
   // LocateSymbol goes to a #include file: the result comes from the preamble.
   EXPECT_THAT(
       cantFail(runLocateSymbolAt(Server, FooCpp, FooWithHeader.point())),
-      ElementsAre(Sym("foo.h", FooHeader.range())));
+      ElementsAre(Sym("foo.h", FooHeader.range(), FooHeader.range())));
 
   // Only preamble is built, and no AST is built in this request.
   Server.addDocument(FooCpp, FooWithoutHeader.code(), "null",
@@ -1112,7 +1344,7 @@ TEST(LocateSymbol, WithPreamble) {
   // stale one.
   EXPECT_THAT(
       cantFail(runLocateSymbolAt(Server, FooCpp, FooWithoutHeader.point())),
-      ElementsAre(Sym("foo", FooWithoutHeader.range())));
+      ElementsAre(Sym("foo", FooWithoutHeader.range(), llvm::None)));
 
   // Reset test environment.
   runAddDocument(Server, FooCpp, FooWithHeader.code());
@@ -1122,7 +1354,7 @@ TEST(LocateSymbol, WithPreamble) {
   // Use the AST being built in above request.
   EXPECT_THAT(
       cantFail(runLocateSymbolAt(Server, FooCpp, FooWithoutHeader.point())),
-      ElementsAre(Sym("foo", FooWithoutHeader.range())));
+      ElementsAre(Sym("foo", FooWithoutHeader.range(), llvm::None)));
 }
 
 TEST(LocateSymbol, NearbyTokenSmoke) {
@@ -1133,7 +1365,7 @@ TEST(LocateSymbol, NearbyTokenSmoke) {
   auto AST = TestTU::withCode(T.code()).build();
   // We don't pass an index, so can't hit index-based fallback.
   EXPECT_THAT(locateSymbolAt(AST, T.point()),
-              ElementsAre(Sym("err", T.range())));
+              ElementsAre(Sym("err", T.range(), T.range())));
 }
 
 TEST(LocateSymbol, NearbyIdentifier) {

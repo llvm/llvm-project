@@ -17,4 +17,5 @@ add_mlir_dialect_library(MLIRSCFTransforms
   MLIRSCF
   MLIRStandardOps
   MLIRSupport
-  )
+  MLIRTransformUtils
+)

@@ -320,7 +320,7 @@ void __sanitizer_print_memory_profile(size_t top_percent,
 /// signal callback runs during the switch, it will not benefit from stack
 /// use-after-return detection.
 ///
-/// \param fake_stack_save [out] Fake stack save location.
+/// \param[out] fake_stack_save Fake stack save location.
 /// \param bottom Bottom address of stack.
 /// \param size Size of stack in bytes.
 void __sanitizer_start_switch_fiber(void **fake_stack_save,
@@ -335,8 +335,8 @@ void __sanitizer_start_switch_fiber(void **fake_stack_save,
 /// <c>__sanitizer_start_switch_fiber()</c>.
 ///
 /// \param fake_stack_save Fake stack save location.
-/// \param bottom_old [out] Bottom address of old stack.
-/// \param size_old [out] Size of old stack in bytes.
+/// \param[out] bottom_old Bottom address of old stack.
+/// \param[out] size_old Size of old stack in bytes.
 void __sanitizer_finish_switch_fiber(void *fake_stack_save,
                                      const void **bottom_old,
                                      size_t *size_old);

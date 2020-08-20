@@ -17,8 +17,6 @@
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 
@@ -70,8 +68,7 @@ struct AffineInlinerInterface : public DialectInlinerInterface {
 // AffineDialect
 //===----------------------------------------------------------------------===//
 
-AffineDialect::AffineDialect(MLIRContext *context)
-    : Dialect(getDialectNamespace(), context) {
+void AffineDialect::initialize() {
   addOperations<AffineDmaStartOp, AffineDmaWaitOp,
 #define GET_OP_LIST
 #include "mlir/Dialect/Affine/IR/AffineOps.cpp.inc"
@@ -2509,7 +2506,8 @@ OpBuilder AffineParallelOp::getBodyBuilder() {
 }
 
 void AffineParallelOp::setLowerBounds(ValueRange lbOperands, AffineMap map) {
-  assert(lbOperands.size() == map.getNumInputs());
+  assert(lbOperands.size() == map.getNumInputs() &&
+         "operands to map must match number of inputs");
   assert(map.getNumResults() >= 1 && "bounds map has at least one result");
 
   auto ubOperands = getUpperBoundsOperands();
@@ -2518,38 +2516,47 @@ void AffineParallelOp::setLowerBounds(ValueRange lbOperands, AffineMap map) {
   newOperands.append(ubOperands.begin(), ubOperands.end());
   getOperation()->setOperands(newOperands);
 
-  setAttr(getLowerBoundsMapAttrName(), AffineMapAttr::get(map));
+  lowerBoundsMapAttr(AffineMapAttr::get(map));
 }
 
 void AffineParallelOp::setUpperBounds(ValueRange ubOperands, AffineMap map) {
-  assert(ubOperands.size() == map.getNumInputs());
+  assert(ubOperands.size() == map.getNumInputs() &&
+         "operands to map must match number of inputs");
   assert(map.getNumResults() >= 1 && "bounds map has at least one result");
 
   SmallVector<Value, 4> newOperands(getLowerBoundsOperands());
   newOperands.append(ubOperands.begin(), ubOperands.end());
   getOperation()->setOperands(newOperands);
 
-  setAttr(getUpperBoundsMapAttrName(), AffineMapAttr::get(map));
+  upperBoundsMapAttr(AffineMapAttr::get(map));
 }
 
 void AffineParallelOp::setLowerBoundsMap(AffineMap map) {
-  auto lbMap = lowerBoundsMap();
+  AffineMap lbMap = lowerBoundsMap();
   assert(lbMap.getNumDims() == map.getNumDims() &&
          lbMap.getNumSymbols() == map.getNumSymbols());
   (void)lbMap;
-  setAttr(getLowerBoundsMapAttrName(), AffineMapAttr::get(map));
+  lowerBoundsMapAttr(AffineMapAttr::get(map));
 }
 
 void AffineParallelOp::setUpperBoundsMap(AffineMap map) {
-  auto ubMap = upperBoundsMap();
+  AffineMap ubMap = upperBoundsMap();
   assert(ubMap.getNumDims() == map.getNumDims() &&
          ubMap.getNumSymbols() == map.getNumSymbols());
   (void)ubMap;
-  setAttr(getUpperBoundsMapAttrName(), AffineMapAttr::get(map));
+  upperBoundsMapAttr(AffineMapAttr::get(map));
+}
+
+SmallVector<int64_t, 8> AffineParallelOp::getSteps() {
+  SmallVector<int64_t, 8> result;
+  for (Attribute attr : steps()) {
+    result.push_back(attr.cast<IntegerAttr>().getInt());
+  }
+  return result;
 }
 
 void AffineParallelOp::setSteps(ArrayRef<int64_t> newSteps) {
-  setAttr(getStepsAttrName(), getBodyBuilder().getI64ArrayAttr(newSteps));
+  stepsAttr(getBodyBuilder().getI64ArrayAttr(newSteps));
 }
 
 static LogicalResult verify(AffineParallelOp op) {
@@ -2583,175 +2590,6 @@ static LogicalResult verify(AffineParallelOp op) {
   return success();
 }
 
-namespace {
-/// This pattern removes affine.parallel ops with no induction variables.
-struct AffineParallelRank0LoopRemover
-    : public OpRewritePattern<AffineParallelOp> {
-  using OpRewritePattern<AffineParallelOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(AffineParallelOp op,
-                                PatternRewriter &rewriter) const override {
-    // Check that there are no induction variables
-    if (op.getNumDims())
-      return failure();
-
-    // Only remove ops that don't have any custom attributes (i.e. those not
-    // defined by the op itself).
-    StringSet<> opAttrs{AffineParallelOp::getReductionsAttrName(),
-                        AffineParallelOp::getLowerBoundsMapAttrName(),
-                        AffineParallelOp::getUpperBoundsMapAttrName(),
-                        AffineParallelOp::getStepsAttrName()};
-    for (auto attr : op.getAttrs()) {
-      if (!opAttrs.count(attr.first.strref()))
-        return failure();
-    }
-
-    // Remove the affine.parallel wrapper, retain the body in the same location
-    auto &parentOps = rewriter.getInsertionBlock()->getOperations();
-    auto &parallelBodyOps = op.region().front().getOperations();
-    auto yield = mlir::cast<AffineYieldOp>(std::prev(parallelBodyOps.end()));
-    for (auto it : zip(op.getResults(), yield.operands())) {
-      std::get<0>(it).replaceAllUsesWith(std::get<1>(it));
-    }
-    parentOps.splice(mlir::Block::iterator(op), parallelBodyOps,
-                     parallelBodyOps.begin(), std::prev(parallelBodyOps.end()));
-    rewriter.eraseOp(op);
-    return success();
-  }
-};
-
-/// This pattern removes indexes that go over an empty range.
-struct AffineParallelTripCount1IndexRemover
-    : public OpRewritePattern<AffineParallelOp> {
-  using OpRewritePattern<AffineParallelOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(AffineParallelOp op,
-                                PatternRewriter &rewriter) const override {
-    auto ranges = op.getRangesValueMap();
-    auto body = op.getBody();
-    SmallVector<AffineExpr, 6> newLowerBounds;
-    SmallVector<AffineExpr, 6> newUpperBounds;
-    SmallVector<int64_t, 6> newSteps;
-    SmallVector<BlockArgument, 6> argsToRemove;
-    for (unsigned i = 0, e = body->getNumArguments(); i < e; i++) {
-      // Is the range a constant value matching the step size?
-      auto constExpr = ranges.getResult(i).dyn_cast<AffineConstantExpr>();
-      int64_t step = op.steps()[i].template cast<IntegerAttr>().getInt();
-      if (constExpr && constExpr.getValue() == step) {
-        // Mark argument for removal and replacement with 0.
-        argsToRemove.push_back(body->getArgument(i));
-      } else {
-        // Keep argument
-        newLowerBounds.push_back(op.lowerBoundsMap().getResult(i));
-        newUpperBounds.push_back(op.upperBoundsMap().getResult(i));
-        newSteps.push_back(step);
-      }
-    }
-
-    // If no arguments need removal, return failure to match.
-    if (argsToRemove.empty())
-      return failure();
-
-    // After this point, there will be no need to rollback the rewriter.
-    for (auto arg : argsToRemove) {
-      auto argNumber = arg.getArgNumber();
-      auto lowerBoundValue = rewriter.create<AffineApplyOp>(
-          op.getLoc(), op.lowerBoundsMap().getSubMap({argNumber}),
-          op.getLowerBoundsOperands());
-      arg.replaceAllUsesWith(lowerBoundValue);
-      body->eraseArgument(argNumber);
-    }
-
-    // Update attributes and return success
-    auto newLower = AffineMap::get(op.lowerBoundsMap().getNumDims(),
-                                   op.lowerBoundsMap().getNumSymbols(),
-                                   newLowerBounds, op.getContext());
-    auto newUpper = AffineMap::get(op.upperBoundsMap().getNumDims(),
-                                   op.upperBoundsMap().getNumSymbols(),
-                                   newUpperBounds, op.getContext());
-    op.setAttr(AffineParallelOp::getLowerBoundsMapAttrName(),
-               AffineMapAttr::get(newLower));
-    op.setAttr(AffineParallelOp::getUpperBoundsMapAttrName(),
-               AffineMapAttr::get(newUpper));
-    op.setSteps(newSteps);
-    return success();
-  }
-};
-
-struct SimplifyAffineParallel : public OpRewritePattern<AffineParallelOp> {
-  using OpRewritePattern<AffineParallelOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(AffineParallelOp op,
-                                PatternRewriter &rewriter) const override {
-
-    auto stepsAttrs = op.steps();
-    auto lbMap = op.lowerBoundsMap();
-
-    SmallVector<int, 8> steps;
-    bool isWorkPending = false;
-    for (unsigned i = 0, e = stepsAttrs.size(); i < e; ++i) {
-      auto step = stepsAttrs[i].cast<IntegerAttr>().getInt();
-      steps.push_back(step);
-      auto lbExpr = lbMap.getResult(i).dyn_cast<AffineConstantExpr>();
-      isWorkPending |= (!lbExpr || lbExpr.getValue() || step != 1);
-    }
-
-    // No need to do any work if the parallel op is already simplified.
-    if (!isWorkPending)
-      return failure();
-
-    auto ranges = op.getRangesValueMap();
-    auto zeroExpr = rewriter.getAffineConstantExpr(0);
-    rewriter.setInsertionPointToStart(op.getBody());
-    SmallVector<AffineExpr, 8> lbExprs;
-    SmallVector<AffineExpr, 8> ubExprs;
-    for (unsigned i = 0, e = steps.size(); i < e; ++i) {
-      auto step = steps[i];
-
-      // Adjust the lower bound to be 0.
-      lbExprs.push_back(zeroExpr);
-
-      // Adjust the upper bound expression: 'range / step'
-      auto ubExpr = ranges.getResult(i).ceilDiv(step);
-      ubExprs.push_back(ubExpr);
-
-      // Adjust the corresponding IV: 'lb + i * step'
-      auto iv = op.getBody()->getArgument(i);
-      auto lbExpr = lbMap.getResult(i);
-      auto nDims = lbMap.getNumDims();
-      auto expr = lbExpr + rewriter.getAffineDimExpr(nDims) * step;
-      auto map = AffineMap::get(/*dimCount=*/nDims + 1,
-                                /*symbolCount=*/lbMap.getNumSymbols(), expr);
-
-      // Use an 'affine.apply' op that will be simplified later in subsequent
-      // canonicalizations.
-      auto lbOperands = op.getLowerBoundsOperands();
-      auto dimOperands = lbOperands.take_front(nDims);
-      auto symbolOperands = lbOperands.drop_front(nDims);
-      SmallVector<Value, 8> applyOperands{dimOperands};
-      applyOperands.push_back(iv);
-      applyOperands.append(symbolOperands.begin(), symbolOperands.end());
-      auto apply =
-          rewriter.create<AffineApplyOp>(op.getLoc(), map, applyOperands);
-      iv.replaceAllUsesExcept(apply, SmallPtrSet<Operation *, 1>{apply});
-    }
-
-    SmallVector<int64_t, 8> newSteps(op.getNumDims(), 1);
-    op.setSteps(newSteps);
-    auto newLowerMap = AffineMap::get(/*dimCount=*/0, /*symbolCount=*/0,
-                                      lbExprs, rewriter.getContext());
-    op.setLowerBounds({}, newLowerMap);
-    auto newUpperMap =
-        AffineMap::get(ranges.getNumDims(), ranges.getNumSymbols(), ubExprs,
-                       rewriter.getContext());
-    op.setUpperBounds(ranges.getOperands(), newUpperMap);
-
-    return success();
-  }
-};
-
-} // end anonymous namespace
-
 LogicalResult AffineValueMap::canonicalize() {
   SmallVector<Value, 4> newOperands{operands};
   auto newMap = getAffineMap();
@@ -2764,11 +2602,11 @@ LogicalResult AffineValueMap::canonicalize() {
 
 /// Canonicalize the bounds of the given loop.
 static LogicalResult canonicalizeLoopBounds(AffineParallelOp op) {
-  auto lb = op.getLowerBoundsValueMap();
-  auto lbCanonicalized = succeeded(lb.canonicalize());
+  AffineValueMap lb = op.getLowerBoundsValueMap();
+  bool lbCanonicalized = succeeded(lb.canonicalize());
 
-  auto ub = op.getUpperBoundsValueMap();
-  auto ubCanonicalized = succeeded(ub.canonicalize());
+  AffineValueMap ub = op.getUpperBoundsValueMap();
+  bool ubCanonicalized = succeeded(ub.canonicalize());
 
   // Any canonicalization change always leads to updated map(s).
   if (!lbCanonicalized && !ubCanonicalized)
@@ -2780,12 +2618,6 @@ static LogicalResult canonicalizeLoopBounds(AffineParallelOp op) {
     op.setUpperBounds(ub.getOperands(), ub.getAffineMap());
 
   return success();
-}
-
-void AffineParallelOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SimplifyAffineParallel, AffineParallelRank0LoopRemover,
-                 AffineParallelTripCount1IndexRemover>(context);
 }
 
 LogicalResult AffineParallelOp::fold(ArrayRef<Attribute> operands,
@@ -2801,13 +2633,8 @@ static void print(OpAsmPrinter &p, AffineParallelOp op) {
   p.printAffineMapOfSSAIds(op.upperBoundsMapAttr(),
                            op.getUpperBoundsOperands());
   p << ')';
-  SmallVector<int64_t, 4> steps;
-  bool elideSteps = true;
-  for (auto attr : op.steps()) {
-    auto step = attr.cast<IntegerAttr>().getInt();
-    elideSteps &= (step == 1);
-    steps.push_back(step);
-  }
+  SmallVector<int64_t, 8> steps = op.getSteps();
+  bool elideSteps = llvm::all_of(steps, [](int64_t step) { return step == 1; });
   if (!elideSteps) {
     p << " step (";
     llvm::interleaveComma(steps, p);
@@ -2943,13 +2770,12 @@ static ParseResult parseAffineParallelOp(OpAsmParser &parser,
 //===----------------------------------------------------------------------===//
 
 static LogicalResult verify(AffineYieldOp op) {
-  auto parentOp = op.getParentOp();
+  auto *parentOp = op.getParentOp();
   auto results = parentOp->getResults();
   auto operands = op.getOperands();
 
   if (!isa<AffineParallelOp, AffineIfOp, AffineForOp>(parentOp))
-    return op.emitOpError()
-           << "affine.terminate only terminates If, For or Parallel regions";
+    return op.emitOpError() << "only terminates affine.if/for/parallel regions";
   if (parentOp->getNumResults() != op.getNumOperands())
     return op.emitOpError() << "parent of yield must have same number of "
                                "results as the yield operands";

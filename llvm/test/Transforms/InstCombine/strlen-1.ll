@@ -219,4 +219,57 @@ define i32 @test2(i8* %str) #0 {
   ret i32 %len
 }
 
+; Test cases for PR47149.
+define i1 @strlen0_after_write_to_first_byte_global() {
+; CHECK-LABEL: @strlen0_after_write_to_first_byte_global(
+; CHECK-NEXT:    store i8 49, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @a, i32 0, i32 0), align 16
+; CHECK-NEXT:    [[LEN:%.*]] = tail call i32 @strlen(i8* nonnull dereferenceable(1) getelementptr inbounds ([32 x i8], [32 x i8]* @a, i32 0, i32 0))
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[LEN]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  store i8 49, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @a, i64 0, i64 0), align 16
+  %len = tail call i32 @strlen(i8* nonnull dereferenceable(1) getelementptr inbounds ([32 x i8], [32 x i8]* @a, i64 0, i64 0))
+  %cmp = icmp eq i32 %len, 0
+  ret i1 %cmp
+}
+
+define i1 @strlen0_after_write_to_second_byte_global() {
+; CHECK-LABEL: @strlen0_after_write_to_second_byte_global(
+; CHECK-NEXT:    store i8 49, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @a, i32 0, i32 1), align 16
+; CHECK-NEXT:    [[LEN:%.*]] = tail call i32 @strlen(i8* nonnull dereferenceable(1) getelementptr inbounds ([32 x i8], [32 x i8]* @a, i32 0, i32 0))
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[LEN]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  store i8 49, i8* getelementptr inbounds ([32 x i8], [32 x i8]* @a, i64 0, i64 1), align 16
+  %len = tail call i32 @strlen(i8* nonnull dereferenceable(1) getelementptr inbounds ([32 x i8], [32 x i8]* @a, i64 0, i64 0))
+  %cmp = icmp eq i32 %len, 0
+  ret i1 %cmp
+}
+
+define i1 @strlen0_after_write_to_first_byte(i8 *%ptr) {
+; CHECK-LABEL: @strlen0_after_write_to_first_byte(
+; CHECK-NEXT:    store i8 49, i8* [[PTR:%.*]], align 1
+; CHECK-NEXT:    ret i1 false
+;
+  store i8 49, i8* %ptr
+  %len = tail call i32 @strlen(i8* nonnull dereferenceable(1) %ptr)
+  %cmp = icmp eq i32 %len, 0
+  ret i1 %cmp
+}
+
+define i1 @strlen0_after_write_to_second_byte(i8 *%ptr) {
+; CHECK-LABEL: @strlen0_after_write_to_second_byte(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, i8* [[PTR:%.*]], i32 1
+; CHECK-NEXT:    store i8 49, i8* [[GEP]], align 1
+; CHECK-NEXT:    [[STRLENFIRST:%.*]] = load i8, i8* [[PTR]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[STRLENFIRST]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep = getelementptr i8, i8* %ptr, i64 1
+  store i8 49, i8* %gep
+  %len = tail call i32 @strlen(i8* nonnull dereferenceable(1) %ptr)
+  %cmp = icmp eq i32 %len, 0
+  ret i1 %cmp
+}
+
 attributes #0 = { null_pointer_is_valid }

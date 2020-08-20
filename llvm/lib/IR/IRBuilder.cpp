@@ -42,13 +42,14 @@ using namespace llvm;
 /// created.
 GlobalVariable *IRBuilderBase::CreateGlobalString(StringRef Str,
                                                   const Twine &Name,
-                                                  unsigned AddressSpace) {
+                                                  unsigned AddressSpace,
+                                                  Module *M) {
   Constant *StrConstant = ConstantDataArray::getString(Context, Str);
-  Module &M = *BB->getParent()->getParent();
-  auto *GV = new GlobalVariable(M, StrConstant->getType(), true,
-                                GlobalValue::PrivateLinkage, StrConstant, Name,
-                                nullptr, GlobalVariable::NotThreadLocal,
-                                AddressSpace);
+  if (!M)
+    M = BB->getParent()->getParent();
+  auto *GV = new GlobalVariable(
+      *M, StrConstant->getType(), true, GlobalValue::PrivateLinkage,
+      StrConstant, Name, nullptr, GlobalVariable::NotThreadLocal, AddressSpace);
   GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   GV->setAlignment(Align(1));
   return GV;
@@ -996,17 +997,22 @@ Value *IRBuilderBase::CreateStripInvariantGroup(Value *Ptr) {
 
 Value *IRBuilderBase::CreateVectorSplat(unsigned NumElts, Value *V,
                                         const Twine &Name) {
-  assert(NumElts > 0 && "Cannot splat to an empty vector!");
+  auto EC = ElementCount::getFixed(NumElts);
+  return CreateVectorSplat(EC, V, Name);
+}
+
+Value *IRBuilderBase::CreateVectorSplat(ElementCount EC, Value *V,
+                                        const Twine &Name) {
+  assert(EC.Min > 0 && "Cannot splat to an empty vector!");
 
   // First insert it into an undef vector so we can shuffle it.
   Type *I32Ty = getInt32Ty();
-  Value *Undef = UndefValue::get(FixedVectorType::get(V->getType(), NumElts));
+  Value *Undef = UndefValue::get(VectorType::get(V->getType(), EC));
   V = CreateInsertElement(Undef, V, ConstantInt::get(I32Ty, 0),
                           Name + ".splatinsert");
 
   // Shuffle the value across the desired number of elements.
-  Value *Zeros =
-      ConstantAggregateZero::get(FixedVectorType::get(I32Ty, NumElts));
+  Value *Zeros = ConstantAggregateZero::get(VectorType::get(I32Ty, EC));
   return CreateShuffleVector(V, Undef, Zeros, Name + ".splat");
 }
 

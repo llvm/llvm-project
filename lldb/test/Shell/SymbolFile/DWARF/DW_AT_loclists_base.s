@@ -5,7 +5,7 @@
 
 # CHECK-LABEL: image lookup -v -s lookup_loclists
 # CHECK: Variable: {{.*}}, name = "x0", type = "int", location = DW_OP_reg0 RAX,
-# CHECK: Variable: {{.*}}, name = "x1", type = "int", location = ,
+# CHECK-NOT: Variable:
 
 loclists:
         nop
@@ -28,7 +28,7 @@ lookup_loclists:
         .short  5                       # Version
         .byte   8                       # Address size
         .byte   0                       # Segment selector size
-        .long   1                       # Offset entry count
+        .long   2                       # Offset entry count
 .Lloclists_table_base:
         .long   .Ldebug_loc0-.Lloclists_table_base
         .long   .Ldebug_loc1-.Lloclists_table_base

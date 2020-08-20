@@ -107,7 +107,7 @@ bool llvm::objcarc::CanUse(const Instruction *Inst, const Value *Ptr,
   } else if (const StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
     // Special-case stores, because we don't care about the stored value, just
     // the store address.
-    const Value *Op = GetUnderlyingObjCPtr(SI->getPointerOperand(), DL);
+    const Value *Op = GetUnderlyingObjCPtr(SI->getPointerOperand());
     // If we can't tell what the underlying object was, assume there is a
     // dependence.
     return IsPotentialRetainableObjPtr(Op, *PA.getAA()) &&

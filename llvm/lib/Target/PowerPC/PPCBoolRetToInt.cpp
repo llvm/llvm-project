@@ -59,7 +59,7 @@ using namespace llvm;
 
 namespace {
 
-#define DEBUG_TYPE "bool-ret-to-int"
+#define DEBUG_TYPE "ppc-bool-ret-to-int"
 
 STATISTIC(NumBoolRetPromotion,
           "Number of times a bool feeding a RetInst was promoted to an int");
@@ -280,8 +280,8 @@ private:
 } // end anonymous namespace
 
 char PPCBoolRetToInt::ID = 0;
-INITIALIZE_PASS(PPCBoolRetToInt, "bool-ret-to-int",
-                "Convert i1 constants to i32/i64 if they are returned",
-                false, false)
+INITIALIZE_PASS(PPCBoolRetToInt, "ppc-bool-ret-to-int",
+                "Convert i1 constants to i32/i64 if they are returned", false,
+                false)
 
 FunctionPass *llvm::createPPCBoolRetToIntPass() { return new PPCBoolRetToInt(); }

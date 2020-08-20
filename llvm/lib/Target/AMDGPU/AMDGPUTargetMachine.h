@@ -62,6 +62,8 @@ public:
             AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ||
             AddrSpace == AMDGPUAS::REGION_ADDRESS) ? -1 : 0;
   }
+
+  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
 };
 
 //===----------------------------------------------------------------------===//

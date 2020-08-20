@@ -94,6 +94,7 @@ group("test") {
     "//llvm/tools/llvm-readobj:symlinks",
     "//llvm/tools/obj2yaml",
     "//llvm/tools/opt",
+    "//llvm/tools/split-file",
     "//llvm/tools/yaml2obj",
     "//llvm/utils/FileCheck",
     "//llvm/utils/count",

@@ -6,6 +6,7 @@ import os
 import platform
 import shlex
 import shutil
+import subprocess
 
 import lit.formats
 
@@ -33,7 +34,6 @@ def mkdir_p(path):
 
 
 def find_sanitizer_runtime(name):
-  import subprocess
   resource_dir = subprocess.check_output(
       [config.cmake_cxx_compiler,
        '-print-resource-dir']).decode('utf-8').strip()
@@ -60,7 +60,6 @@ def find_python_interpreter():
     return copied_python
 
   # Find the "real" python binary.
-  import shutil, subprocess
   real_python = subprocess.check_output([
       config.python_executable,
       os.path.join(os.path.dirname(os.path.realpath(__file__)),

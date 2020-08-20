@@ -151,8 +151,7 @@ def LLVM_ICmpOp : LLVM_OneResultOp<"icmp", [NoSideEffect]>,
   let builders = [OpBuilder<
     "OpBuilder &b, OperationState &result, ICmpPredicate predicate, Value lhs, "
     "Value rhs", [{
-      LLVMDialect *dialect = &lhs.getType().cast<LLVMType>().getDialect();
-      build(b, result, LLVMType::getInt1Ty(dialect),
+      build(b, result, LLVMType::getInt1Ty(lhs.getType().getContext()),
             b.getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs);
     }]>];
   let parser = [{ return parseCmpOp<ICmpPredicate>(parser, result); }];
@@ -198,8 +197,7 @@ def LLVM_FCmpOp : LLVM_OneResultOp<"fcmp", [NoSideEffect]>,
   let builders = [OpBuilder<
     "OpBuilder &b, OperationState &result, FCmpPredicate predicate, Value lhs, "
     "Value rhs", [{
-      LLVMDialect *dialect = &lhs.getType().cast<LLVMType>().getDialect();
-      build(b, result, LLVMType::getInt1Ty(dialect),
+      build(b, result, LLVMType::getInt1Ty(lhs.getType().getContext()),
             b.getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs);
     }]>];
   let parser = [{ return parseCmpOp<FCmpPredicate>(parser, result); }];
@@ -1041,6 +1039,16 @@ def LLVM_masked_scatter
   let assemblyFormat = "$value `,` $ptrs `,` $mask attr-dict `:` "
     "type($value) `,` type($mask) `into` type($ptrs)";
 }
+
+/// Create a call to Masked Expand Load intrinsic.
+def LLVM_masked_expandload
+    : LLVM_IntrOp<"masked.expandload", [0], [], [], 1>,
+      Arguments<(ins LLVM_Type, LLVM_Type, LLVM_Type)>;
+
+/// Create a call to Masked Compress Store intrinsic.
+def LLVM_masked_compressstore
+    : LLVM_IntrOp<"masked.compressstore", [], [0], [], 0>,
+    Arguments<(ins LLVM_Type, LLVM_Type, LLVM_Type)>;
 
 //
 // Atomic operations.

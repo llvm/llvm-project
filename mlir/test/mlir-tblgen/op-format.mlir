@@ -83,6 +83,20 @@ test.format_operand_e_op %i64, %memref : i64, memref<1xf64>
 }) { arg_names = ["i", "j", "k"] } : () -> ()
 
 //===----------------------------------------------------------------------===//
+// Format optional attributes
+//===----------------------------------------------------------------------===//
+
+// CHECK: test.format_optional_unit_attribute is_optional
+test.format_optional_unit_attribute is_optional
+
+// CHECK: test.format_optional_unit_attribute
+// CHECK-NOT: is_optional
+test.format_optional_unit_attribute
+
+// CHECK: test.format_optional_unit_attribute_no_elide unit
+test.format_optional_unit_attribute_no_elide unit
+
+//===----------------------------------------------------------------------===//
 // Format optional operands and results
 //===----------------------------------------------------------------------===//
 

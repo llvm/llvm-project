@@ -93,7 +93,7 @@ else()
       macosx/cfcpp/CFCMutableSet.cpp
       macosx/cfcpp/CFCString.cpp
       )
-    if(IOS)
+    if(APPLE_EMBEDDED)
       set_property(SOURCE macosx/Host.mm APPEND PROPERTY
                COMPILE_DEFINITIONS "NO_XPC_SERVICES=1")
     endif()

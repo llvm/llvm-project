@@ -9,14 +9,15 @@
 #include "gtest/gtest.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/InitAllDialects.h"
 #include "flang/Parser/parse-tree.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 class OpenMPLoweringTest : public testing::Test {
 protected:
   void SetUp() override {
-    mlir::registerDialect<mlir::omp::OpenMPDialect>();
-    mlir::registerAllDialects(&ctx);
+    ctx.loadDialect<mlir::omp::OpenMPDialect>();
+    mlir::registerAllDialects(ctx.getDialectRegistry());
     mlirOpBuilder.reset(new mlir::OpBuilder(&ctx));
   }
 
@@ -69,6 +70,33 @@ TEST_F(OpenMPLoweringTest, TaskYield) {
 
   EXPECT_EQ(taskYieldOp.getOperationName(), "omp.taskyield");
   EXPECT_EQ(succeeded(taskYieldOp.verify()), true);
+}
+
+TEST_F(OpenMPLoweringTest, EmptyParallel) {
+  // Construct a dummy parse tree node for `!OMP parallel`.
+  struct Fortran::parser::OmpSimpleStandaloneDirective parallelDirective(
+      llvm::omp::Directive::OMPD_parallel);
+
+  // Check and lower the `!OMP parallel` node to `ParallelOp` operation of
+  // OpenMPDialect.
+  EXPECT_EQ(parallelDirective.v, llvm::omp::Directive::OMPD_parallel);
+  auto insertPt = mlirOpBuilder->saveInsertionPoint();
+  llvm::ArrayRef<mlir::Type> argTy;
+  mlir::ValueRange range;
+  llvm::SmallVector<int32_t, 6> operandSegmentSizes(6 /*Size=*/, 0 /*Value=*/);
+  // create and insert the operation.
+  auto parallelOp = mlirOpBuilder->create<mlir::omp::ParallelOp>(
+      mlirOpBuilder->getUnknownLoc(), argTy, range);
+  parallelOp.setAttr(mlir::omp::ParallelOp::getOperandSegmentSizeAttr(),
+      mlirOpBuilder->getI32VectorAttr(operandSegmentSizes));
+  parallelOp.getRegion().push_back(new mlir::Block{});
+  auto &block = parallelOp.getRegion().back();
+  mlirOpBuilder->setInsertionPointToStart(&block);
+  // ensure the block is well-formed.
+  mlirOpBuilder->create<mlir::omp::TerminatorOp>(
+      mlirOpBuilder->getUnknownLoc());
+  mlirOpBuilder->restoreInsertionPoint(insertPt);
+  EXPECT_EQ(succeeded(parallelOp.verify()), true);
 }
 
 // main() from gtest_main

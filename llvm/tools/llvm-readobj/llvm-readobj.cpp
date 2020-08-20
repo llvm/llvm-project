@@ -63,7 +63,7 @@ namespace opts {
       DependentLibraries("dependent-libraries",
                          cl::desc("Display the dependent libraries section"));
 
-  // --headers -e
+  // --headers, -e
   cl::opt<bool>
       Headers("headers",
           cl::desc("Equivalent to setting: --file-headers, --program-headers, "

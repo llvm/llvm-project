@@ -52,7 +52,6 @@ FunctionPass *createSIAnnotateControlFlowPass();
 FunctionPass *createSIFoldOperandsPass();
 FunctionPass *createSIPeepholeSDWAPass();
 FunctionPass *createSILowerI1CopiesPass();
-FunctionPass *createSIFixupVectorISelPass();
 FunctionPass *createSIAddIMGInitPass();
 FunctionPass *createSIShrinkInstructionsPass();
 FunctionPass *createSILoadStoreOptimizerPass();
@@ -147,9 +146,6 @@ extern char &SIFixSGPRCopiesID;
 
 void initializeSIFixVGPRCopiesPass(PassRegistry &);
 extern char &SIFixVGPRCopiesID;
-
-void initializeSIFixupVectorISelPass(PassRegistry &);
-extern char &SIFixupVectorISelID;
 
 void initializeSILowerI1CopiesPass(PassRegistry &);
 extern char &SILowerI1CopiesID;
@@ -281,8 +277,6 @@ enum TargetIndex {
 };
 }
 
-} // End namespace llvm
-
 /// OpenCL uses address spaces to differentiate between
 /// various memory regions on the hardware. On the CPU
 /// all of the address spaces point to the same memory,
@@ -338,5 +332,18 @@ namespace AMDGPUAS {
     UNKNOWN_ADDRESS_SPACE = ~0u,
   };
 }
+
+namespace AMDGPU {
+
+// FIXME: Missing constant_32bit
+inline bool isFlatGlobalAddrSpace(unsigned AS) {
+  return AS == AMDGPUAS::GLOBAL_ADDRESS ||
+         AS == AMDGPUAS::FLAT_ADDRESS ||
+         AS == AMDGPUAS::CONSTANT_ADDRESS ||
+         AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
+}
+}
+
+} // End namespace llvm
 
 #endif

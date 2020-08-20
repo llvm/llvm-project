@@ -1710,6 +1710,8 @@ bool DAGTypeLegalizer::ExpandFloatOperand(SDNode *N, unsigned OpNo) {
   case ISD::LRINT:      Res = ExpandFloatOp_LRINT(N); break;
   case ISD::LLRINT:     Res = ExpandFloatOp_LLRINT(N); break;
   case ISD::SELECT_CC:  Res = ExpandFloatOp_SELECT_CC(N); break;
+  case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS:
   case ISD::SETCC:      Res = ExpandFloatOp_SETCC(N); break;
   case ISD::STORE:      Res = ExpandFloatOp_STORE(cast<StoreSDNode>(N),
                                                   OpNo); break;
@@ -1735,7 +1737,8 @@ bool DAGTypeLegalizer::ExpandFloatOperand(SDNode *N, unsigned OpNo) {
 void DAGTypeLegalizer::FloatExpandSetCCOperands(SDValue &NewLHS,
                                                 SDValue &NewRHS,
                                                 ISD::CondCode &CCCode,
-                                                const SDLoc &dl) {
+                                                const SDLoc &dl, SDValue &Chain,
+                                                bool IsSignaling) {
   SDValue LHSLo, LHSHi, RHSLo, RHSHi;
   GetExpandedFloat(NewLHS, LHSLo, LHSHi);
   GetExpandedFloat(NewRHS, RHSLo, RHSHi);
@@ -1747,25 +1750,31 @@ void DAGTypeLegalizer::FloatExpandSetCCOperands(SDValue &NewLHS,
   //         BNE crN, L:
   //         FCMPU crN, lo1, lo2
   // The following can be improved, but not that much.
-  SDValue Tmp1, Tmp2, Tmp3;
-  Tmp1 = DAG.getSetCC(dl, getSetCCResultType(LHSHi.getValueType()),
-                      LHSHi, RHSHi, ISD::SETOEQ);
-  Tmp2 = DAG.getSetCC(dl, getSetCCResultType(LHSLo.getValueType()),
-                      LHSLo, RHSLo, CCCode);
+  SDValue Tmp1, Tmp2, Tmp3, OutputChain;
+  Tmp1 = DAG.getSetCC(dl, getSetCCResultType(LHSHi.getValueType()), LHSHi,
+                      RHSHi, ISD::SETOEQ, Chain, IsSignaling);
+  OutputChain = Tmp1->getNumValues() > 1 ? Tmp1.getValue(1) : SDValue();
+  Tmp2 = DAG.getSetCC(dl, getSetCCResultType(LHSLo.getValueType()), LHSLo,
+                      RHSLo, CCCode, OutputChain, IsSignaling);
+  OutputChain = Tmp2->getNumValues() > 1 ? Tmp2.getValue(1) : SDValue();
   Tmp3 = DAG.getNode(ISD::AND, dl, Tmp1.getValueType(), Tmp1, Tmp2);
-  Tmp1 = DAG.getSetCC(dl, getSetCCResultType(LHSHi.getValueType()),
-                      LHSHi, RHSHi, ISD::SETUNE);
-  Tmp2 = DAG.getSetCC(dl, getSetCCResultType(LHSHi.getValueType()),
-                      LHSHi, RHSHi, CCCode);
+  Tmp1 = DAG.getSetCC(dl, getSetCCResultType(LHSHi.getValueType()), LHSHi,
+                      RHSHi, ISD::SETUNE, OutputChain, IsSignaling);
+  OutputChain = Tmp1->getNumValues() > 1 ? Tmp1.getValue(1) : SDValue();
+  Tmp2 = DAG.getSetCC(dl, getSetCCResultType(LHSHi.getValueType()), LHSHi,
+                      RHSHi, CCCode, OutputChain, IsSignaling);
+  OutputChain = Tmp2->getNumValues() > 1 ? Tmp2.getValue(1) : SDValue();
   Tmp1 = DAG.getNode(ISD::AND, dl, Tmp1.getValueType(), Tmp1, Tmp2);
   NewLHS = DAG.getNode(ISD::OR, dl, Tmp1.getValueType(), Tmp1, Tmp3);
   NewRHS = SDValue();   // LHS is the result, not a compare.
+  Chain = OutputChain;
 }
 
 SDValue DAGTypeLegalizer::ExpandFloatOp_BR_CC(SDNode *N) {
   SDValue NewLHS = N->getOperand(2), NewRHS = N->getOperand(3);
   ISD::CondCode CCCode = cast<CondCodeSDNode>(N->getOperand(1))->get();
-  FloatExpandSetCCOperands(NewLHS, NewRHS, CCCode, SDLoc(N));
+  SDValue Chain;
+  FloatExpandSetCCOperands(NewLHS, NewRHS, CCCode, SDLoc(N), Chain);
 
   // If ExpandSetCCOperands returned a scalar, we need to compare the result
   // against zero to select between true and false values.
@@ -1863,7 +1872,8 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_FP_TO_UINT(SDNode *N) {
 SDValue DAGTypeLegalizer::ExpandFloatOp_SELECT_CC(SDNode *N) {
   SDValue NewLHS = N->getOperand(0), NewRHS = N->getOperand(1);
   ISD::CondCode CCCode = cast<CondCodeSDNode>(N->getOperand(4))->get();
-  FloatExpandSetCCOperands(NewLHS, NewRHS, CCCode, SDLoc(N));
+  SDValue Chain;
+  FloatExpandSetCCOperands(NewLHS, NewRHS, CCCode, SDLoc(N), Chain);
 
   // If ExpandSetCCOperands returned a scalar, we need to compare the result
   // against zero to select between true and false values.
@@ -1879,20 +1889,25 @@ SDValue DAGTypeLegalizer::ExpandFloatOp_SELECT_CC(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::ExpandFloatOp_SETCC(SDNode *N) {
-  SDValue NewLHS = N->getOperand(0), NewRHS = N->getOperand(1);
-  ISD::CondCode CCCode = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  FloatExpandSetCCOperands(NewLHS, NewRHS, CCCode, SDLoc(N));
+  bool IsStrict = N->isStrictFPOpcode();
+  SDValue NewLHS = N->getOperand(IsStrict ? 1 : 0);
+  SDValue NewRHS = N->getOperand(IsStrict ? 2 : 1);
+  SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
+  ISD::CondCode CCCode =
+      cast<CondCodeSDNode>(N->getOperand(IsStrict ? 3 : 2))->get();
+  FloatExpandSetCCOperands(NewLHS, NewRHS, CCCode, SDLoc(N), Chain,
+                           N->getOpcode() == ISD::STRICT_FSETCCS);
 
-  // If ExpandSetCCOperands returned a scalar, use it.
-  if (!NewRHS.getNode()) {
-    assert(NewLHS.getValueType() == N->getValueType(0) &&
-           "Unexpected setcc expansion!");
-    return NewLHS;
+  // FloatExpandSetCCOperands always returned a scalar.
+  assert(!NewRHS.getNode() && "Expect to return scalar");
+  assert(NewLHS.getValueType() == N->getValueType(0) &&
+         "Unexpected setcc expansion!");
+  if (Chain) {
+    ReplaceValueWith(SDValue(N, 0), NewLHS);
+    ReplaceValueWith(SDValue(N, 1), Chain);
+    return SDValue();
   }
-
-  // Otherwise, update N to have the operands specified.
-  return SDValue(DAG.UpdateNodeOperands(N, NewLHS, NewRHS,
-                                DAG.getCondCode(CCCode)), 0);
+  return NewLHS;
 }
 
 SDValue DAGTypeLegalizer::ExpandFloatOp_STORE(SDNode *N, unsigned OpNo) {

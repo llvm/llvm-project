@@ -90,9 +90,8 @@ bool DIEDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
 
 DwarfUnit::DwarfUnit(dwarf::Tag UnitTag, const DICompileUnit *Node,
                      AsmPrinter *A, DwarfDebug *DW, DwarfFile *DWU)
-    : DIEUnit(A->getDwarfVersion(), A->MAI->getCodePointerSize(), UnitTag),
-      CUNode(Node), Asm(A), DD(DW), DU(DWU), IndexTyDie(nullptr) {
-}
+    : DIEUnit(UnitTag), CUNode(Node), Asm(A), DD(DW), DU(DWU),
+      IndexTyDie(nullptr) {}
 
 DwarfTypeUnit::DwarfTypeUnit(DwarfCompileUnit &CU, AsmPrinter *A,
                              DwarfDebug *DW, DwarfFile *DWU,
@@ -335,7 +334,7 @@ void DwarfUnit::addOpAddress(DIELoc &Die, const MCSymbol *Sym) {
   }
 
   addUInt(Die, dwarf::DW_FORM_data1, dwarf::DW_OP_addr);
-  addLabel(Die, dwarf::DW_FORM_udata, Sym);
+  addLabel(Die, dwarf::DW_FORM_addr, Sym);
 }
 
 void DwarfUnit::addLabelDelta(DIE &Die, dwarf::Attribute Attribute,
@@ -892,6 +891,11 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
       }
     }
 
+    // Add template parameters to a class, structure or union types.
+    if (Tag == dwarf::DW_TAG_class_type ||
+        Tag == dwarf::DW_TAG_structure_type || Tag == dwarf::DW_TAG_union_type)
+      addTemplateParams(Buffer, CTy->getTemplateParams());
+
     // Add elements to structure type.
     DINodeArray Elements = CTy->getElements();
     for (const auto *Element : Elements) {
@@ -960,12 +964,6 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
 
     if (CTy->isObjcClassComplete())
       addFlag(Buffer, dwarf::DW_AT_APPLE_objc_complete_type);
-
-    // Add template parameters to a class, structure or union types.
-    // FIXME: The support isn't in the metadata for this yet.
-    if (Tag == dwarf::DW_TAG_class_type ||
-        Tag == dwarf::DW_TAG_structure_type || Tag == dwarf::DW_TAG_union_type)
-      addTemplateParams(Buffer, CTy->getTemplateParams());
 
     // Add the type's non-standard calling convention.
     uint8_t CC = 0;

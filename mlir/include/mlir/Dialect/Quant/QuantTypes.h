@@ -31,15 +31,6 @@ struct UniformQuantizedPerAxisTypeStorage;
 
 } // namespace detail
 
-namespace QuantizationTypes {
-enum Kind {
-  Any = Type::FIRST_QUANTIZATION_TYPE,
-  UniformQuantized,
-  UniformQuantizedPerAxis,
-  LAST_USED_QUANTIZATION_TYPE = UniformQuantizedPerAxis,
-};
-} // namespace QuantizationTypes
-
 /// Enumeration of bit-mapped flags related to quantized types.
 namespace QuantizationFlags {
 enum FlagValue {
@@ -71,10 +62,7 @@ public:
                                int64_t storageTypeMax);
 
   /// Support method to enable LLVM-style type casting.
-  static bool classof(Type type) {
-    return type.getKind() >= Type::FIRST_QUANTIZATION_TYPE &&
-           type.getKind() <= QuantizationTypes::LAST_USED_QUANTIZATION_TYPE;
-  }
+  static bool classof(Type type);
 
   /// Gets the minimum possible stored by a storageType. storageTypeMin must
   /// be greater than or equal to this value.
@@ -211,9 +199,6 @@ class AnyQuantizedType
 public:
   using Base::Base;
 
-  /// Support method to enable LLVM-style type casting.
-  static bool kindof(unsigned kind) { return kind == QuantizationTypes::Any; }
-
   /// Gets an instance of the type with all parameters specified but not
   /// checked.
   static AnyQuantizedType get(unsigned flags, Type storageType,
@@ -292,11 +277,6 @@ public:
                                int64_t zeroPoint, int64_t storageTypeMin,
                                int64_t storageTypeMax);
 
-  /// Support method to enable LLVM-style type casting.
-  static bool kindof(unsigned kind) {
-    return kind == QuantizationTypes::UniformQuantized;
-  }
-
   /// Gets the scale term. The scale designates the difference between the real
   /// values corresponding to consecutive quantized values differing by 1.
   double getScale() const;
@@ -356,11 +336,6 @@ public:
                                ArrayRef<int64_t> zeroPoints,
                                int32_t quantizedDimension,
                                int64_t storageTypeMin, int64_t storageTypeMax);
-
-  /// Support method to enable LLVM-style type casting.
-  static bool kindof(unsigned kind) {
-    return kind == QuantizationTypes::UniformQuantizedPerAxis;
-  }
 
   /// Gets the quantization scales. The scales designate the difference between
   /// the real values corresponding to consecutive quantized values differing

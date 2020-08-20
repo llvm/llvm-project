@@ -136,6 +136,18 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::FreeBSD, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
+  T = Triple("s390x-ibm-zos");
+  EXPECT_EQ(Triple::systemz, T.getArch());
+  EXPECT_EQ(Triple::IBM, T.getVendor());
+  EXPECT_EQ(Triple::ZOS, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("systemz-ibm-zos");
+  EXPECT_EQ(Triple::systemz, T.getArch());
+  EXPECT_EQ(Triple::IBM, T.getVendor());
+  EXPECT_EQ(Triple::ZOS, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
   T = Triple("arm-none-none-eabi");
   EXPECT_EQ(Triple::arm, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
@@ -1314,6 +1326,15 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ(Triple::ELF, Triple("i686-pc-windows-msvc-elf").getObjectFormat());
   EXPECT_EQ(Triple::ELF, Triple("i686-pc-cygwin-elf").getObjectFormat());
 
+  EXPECT_EQ(Triple::ELF, Triple("systemz-ibm-linux").getObjectFormat());
+  EXPECT_EQ(Triple::ELF, Triple("systemz-ibm-unknown").getObjectFormat());
+
+  EXPECT_EQ(Triple::GOFF, Triple("s390x-ibm-zos").getObjectFormat());
+  EXPECT_EQ(Triple::GOFF, Triple("systemz-ibm-zos").getObjectFormat());
+  EXPECT_EQ(Triple::GOFF, Triple("s390x-ibm-zos-goff").getObjectFormat());
+  EXPECT_EQ(Triple::GOFF, Triple("s390x-unknown-zos-goff").getObjectFormat());
+  EXPECT_EQ(Triple::GOFF, Triple("s390x---goff").getObjectFormat());
+
   EXPECT_EQ(Triple::Wasm, Triple("wasm32-unknown-unknown").getObjectFormat());
   EXPECT_EQ(Triple::Wasm, Triple("wasm64-unknown-unknown").getObjectFormat());
   EXPECT_EQ(Triple::Wasm, Triple("wasm32-wasi").getObjectFormat());
@@ -1360,6 +1381,9 @@ TEST(TripleTest, FileFormat) {
 
   T.setObjectFormat(Triple::XCOFF);
   EXPECT_EQ(Triple::XCOFF, T.getObjectFormat());
+
+  T.setObjectFormat(Triple::GOFF);
+  EXPECT_EQ(Triple::GOFF, T.getObjectFormat());
 }
 
 TEST(TripleTest, NormalizeWindows) {

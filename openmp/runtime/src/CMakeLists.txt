@@ -202,21 +202,27 @@ if(WIN32)
     IMPORT_PREFIX "" IMPORT_SUFFIX "" # control generated import library name when building omp
     ARCHIVE_OUTPUT_NAME ${LIBOMP_GENERATED_IMP_LIB_FILENAME}
   )
-  # Get generated import library from creating omp
-  get_target_property(LIBOMP_IMPORT_LIB_DIRECTORY omp ARCHIVE_OUTPUT_DIRECTORY)
-  if(LIBOMP_IMPORT_LIB_DIRECTORY)
-    set(LIBOMP_GENERATED_IMP_LIB ${LIBOMP_IMPORT_LIB_DIRECTORY}/${LIBOMP_GENERATED_IMP_LIB_FILENAME})
+
+  if(MSVC)
+    # Get generated import library from creating omp
+    get_target_property(LIBOMP_IMPORT_LIB_DIRECTORY omp ARCHIVE_OUTPUT_DIRECTORY)
+    if(LIBOMP_IMPORT_LIB_DIRECTORY)
+      set(LIBOMP_GENERATED_IMP_LIB ${LIBOMP_IMPORT_LIB_DIRECTORY}/${LIBOMP_GENERATED_IMP_LIB_FILENAME})
+    else()
+      set(LIBOMP_GENERATED_IMP_LIB ${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_GENERATED_IMP_LIB_FILENAME})
+    endif()
+    set_source_files_properties(${LIBOMP_GENERATED_IMP_LIB} PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE)
+    # Create new import library that is just the previously created one + kmp_import.cpp
+    add_library(ompimp STATIC ${LIBOMP_GENERATED_IMP_LIB} kmp_import.cpp)
+    set_target_properties(ompimp PROPERTIES
+      PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_IMP_LIB_FILE}"
+      LINKER_LANGUAGE C
+    )
+    add_dependencies(ompimp omp) # ensure generated import library is created first
+    set(LIBOMP_IMP_LIB_TARGET ompimp)
   else()
-    set(LIBOMP_GENERATED_IMP_LIB ${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_GENERATED_IMP_LIB_FILENAME})
+    set(LIBOMP_IMP_LIB_TARGET omp)
   endif()
-  set_source_files_properties(${LIBOMP_GENERATED_IMP_LIB} PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE)
-  # Create new import library that is just the previously created one + kmp_import.cpp
-  add_library(ompimp STATIC ${LIBOMP_GENERATED_IMP_LIB} kmp_import.cpp)
-  set_target_properties(ompimp PROPERTIES
-    PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_IMP_LIB_FILE}"
-    LINKER_LANGUAGE C
-  )
-  add_dependencies(ompimp omp) # ensure generated import library is created first
 
   # Create def file to designate exported functions
   libomp_get_gdflags(LIBOMP_GDFLAGS) # generate-def.pl flags (Windows only)
@@ -290,7 +296,7 @@ else()
 endif()
 if(WIN32)
   install(TARGETS omp RUNTIME DESTINATION bin)
-  install(TARGETS ompimp ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+  install(TARGETS ${LIBOMP_IMP_LIB_TARGET} ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}")
   # Create aliases (regular copies) of the library for backwards compatibility
   set(LIBOMP_ALIASES "libiomp5md")
   foreach(alias IN LISTS LIBOMP_ALIASES)

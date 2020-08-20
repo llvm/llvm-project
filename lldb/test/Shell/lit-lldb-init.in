@@ -4,3 +4,4 @@ settings set plugin.process.gdb-remote.packet-timeout 60
 settings set interpreter.echo-comment-commands false
 settings set symbols.clang-modules-cache-path "@LLDB_TEST_MODULE_CACHE_LLDB@"
 settings set target.auto-apply-fixits false
+settings set target.inherit-tcc true

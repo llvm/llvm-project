@@ -2634,3 +2634,32 @@ func @should_not_fuse_since_top_level_non_affine_users(%in0 : memref<32xf32>,
 // CHECK:  affine.for
 // CHECK:    mulf
 // CHECK:    subf
+
+// -----
+
+// MAXIMAL-LABEL: func @fuse_minor_affine_map
+func @fuse_minor_affine_map(%in: memref<128xf32>, %out: memref<20x512xf32>) {
+  %tmp = alloc() : memref<128xf32>
+
+  affine.for %arg4 = 0 to 128 {
+    %ld = affine.load %in[%arg4] : memref<128xf32>
+    affine.store %ld, %tmp[%arg4] : memref<128xf32>
+  }
+
+  affine.for %arg3 = 0 to 20 {
+    affine.for %arg4 = 0 to 512 {
+      %ld = affine.load %tmp[%arg4 mod 128] : memref<128xf32>
+      affine.store %ld, %out[%arg3, %arg4] : memref<20x512xf32>
+    }
+  }
+
+  return
+}
+
+// TODO: The size of the private memref is not properly computed in the presence
+// of the 'mod' operation. It should be memref<1xf32> instead of
+// memref<128xf32>: https://bugs.llvm.org/show_bug.cgi?id=46973
+// MAXIMAL:       alloc() : memref<128xf32>
+// MAXIMAL:       affine.for
+// MAXIMAL-NEXT:    affine.for
+// MAXIMAL-NOT:   affine.for

@@ -729,15 +729,15 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
   assert(IntermediateVT.isScalableVector() == ValueVT.isScalableVector() &&
          "Mixing scalable and fixed vectors when copying in parts");
 
-  ElementCount DestEltCnt;
+  Optional<ElementCount> DestEltCnt;
 
   if (IntermediateVT.isVector())
     DestEltCnt = IntermediateVT.getVectorElementCount() * NumIntermediates;
   else
-    DestEltCnt = ElementCount(NumIntermediates, false);
+    DestEltCnt = ElementCount::getFixed(NumIntermediates);
 
   EVT BuiltVectorTy = EVT::getVectorVT(
-      *DAG.getContext(), IntermediateVT.getScalarType(), DestEltCnt);
+      *DAG.getContext(), IntermediateVT.getScalarType(), DestEltCnt.getValue());
   if (ValueVT != BuiltVectorTy) {
     if (SDValue Widened = widenVectorToPartType(DAG, Val, DL, BuiltVectorTy))
       Val = Widened;
@@ -1843,7 +1843,8 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     for (unsigned i = 0; i != NumValues; ++i) {
       // An aggregate return value cannot wrap around the address space, so
       // offsets to its parts don't wrap either.
-      SDValue Ptr = DAG.getObjectPtrOffset(getCurSDLoc(), RetPtr, Offsets[i]);
+      SDValue Ptr = DAG.getObjectPtrOffset(getCurSDLoc(), RetPtr,
+                                           TypeSize::Fixed(Offsets[i]));
 
       SDValue Val = RetOp.getValue(RetOp.getResNo() + i);
       if (MemVTs[i] != ValueVTs[i])
@@ -3005,20 +3006,6 @@ void SelectionDAGBuilder::visitUnreachable(const UnreachableInst &I) {
   DAG.setRoot(DAG.getNode(ISD::TRAP, getCurSDLoc(), MVT::Other, DAG.getRoot()));
 }
 
-void SelectionDAGBuilder::visitFSub(const User &I) {
-  // -0.0 - X --> fneg
-  Type *Ty = I.getType();
-  if (isa<Constant>(I.getOperand(0)) &&
-      I.getOperand(0) == ConstantFP::getZeroValueForNegation(Ty)) {
-    SDValue Op2 = getValue(I.getOperand(1));
-    setValue(&I, DAG.getNode(ISD::FNEG, getCurSDLoc(),
-                             Op2.getValueType(), Op2));
-    return;
-  }
-
-  visitBinary(I, ISD::FSUB);
-}
-
 void SelectionDAGBuilder::visitUnary(const User &I, unsigned Opcode) {
   SDNodeFlags Flags;
 
@@ -3425,7 +3412,7 @@ void SelectionDAGBuilder::visitAddrSpaceCast(const User &I) {
   unsigned SrcAS = SV->getType()->getPointerAddressSpace();
   unsigned DestAS = I.getType()->getPointerAddressSpace();
 
-  if (!TLI.isNoopAddrSpaceCast(SrcAS, DestAS))
+  if (!TM.isNoopAddrSpaceCast(SrcAS, DestAS))
     N = DAG.getAddrSpaceCast(getCurSDLoc(), DestVT, N, SrcAS, DestAS);
 
   setValue(&I, N);
@@ -3759,7 +3746,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
   bool IsVectorGEP = I.getType()->isVectorTy();
   ElementCount VectorElementCount =
       IsVectorGEP ? cast<VectorType>(I.getType())->getElementCount()
-                  : ElementCount(0, false);
+                  : ElementCount::getFixed(0);
 
   if (IsVectorGEP && !N.getValueType().isVector()) {
     LLVMContext &Context = *DAG.getContext();
@@ -4181,7 +4168,8 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
       Root = Chain;
       ChainI = 0;
     }
-    SDValue Add = DAG.getMemBasePlusOffset(Ptr, Offsets[i], dl, Flags);
+    SDValue Add =
+        DAG.getMemBasePlusOffset(Ptr, TypeSize::Fixed(Offsets[i]), dl, Flags);
     SDValue Val = SDValue(Src.getNode(), Src.getResNo() + i);
     if (MemVTs[i] != ValueVTs[i])
       Val = DAG.getPtrExtOrTrunc(Val, dl, MemVTs[i]);
@@ -6268,12 +6256,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Zero = DAG.getConstant(0, sdl, VT);
     SDValue ShAmt = DAG.getNode(ISD::UREM, sdl, VT, Z, BitWidthC);
 
-    auto FunnelOpcode = IsFSHL ? ISD::FSHL : ISD::FSHR;
-    if (TLI.isOperationLegalOrCustom(FunnelOpcode, VT)) {
-      setValue(&I, DAG.getNode(FunnelOpcode, sdl, VT, X, Y, Z));
-      return;
-    }
-
     // When X == Y, this is rotate. If the data type has a power-of-2 size, we
     // avoid the select that is necessary in the general case to filter out
     // the 0-shift possibility that leads to UB.
@@ -6300,6 +6282,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       SDValue ShX = DAG.getNode(ISD::SHL, sdl, VT, X, IsFSHL ? ShAmt : NShAmt);
       SDValue ShY = DAG.getNode(ISD::SRL, sdl, VT, X, IsFSHL ? NShAmt : ShAmt);
       setValue(&I, DAG.getNode(ISD::OR, sdl, VT, ShX, ShY));
+      return;
+    }
+
+    auto FunnelOpcode = IsFSHL ? ISD::FSHL : ISD::FSHR;
+    if (TLI.isOperationLegalOrCustom(FunnelOpcode, VT)) {
+      setValue(&I, DAG.getNode(FunnelOpcode, sdl, VT, X, Y, Z));
       return;
     }
 
@@ -6344,6 +6332,18 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Op1 = getValue(I.getArgOperand(0));
     SDValue Op2 = getValue(I.getArgOperand(1));
     setValue(&I, DAG.getNode(ISD::USUBSAT, sdl, Op1.getValueType(), Op1, Op2));
+    return;
+  }
+  case Intrinsic::sshl_sat: {
+    SDValue Op1 = getValue(I.getArgOperand(0));
+    SDValue Op2 = getValue(I.getArgOperand(1));
+    setValue(&I, DAG.getNode(ISD::SSHLSAT, sdl, Op1.getValueType(), Op1, Op2));
+    return;
+  }
+  case Intrinsic::ushl_sat: {
+    SDValue Op1 = getValue(I.getArgOperand(0));
+    SDValue Op2 = getValue(I.getArgOperand(1));
+    setValue(&I, DAG.getNode(ISD::USHLSAT, sdl, Op1.getValueType(), Op1, Op2));
     return;
   }
   case Intrinsic::smul_fix:
@@ -6636,7 +6636,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         cast<ConstantInt>(I.getArgOperand(0))->getSExtValue();
     Value *const ObjectPtr = I.getArgOperand(1);
     SmallVector<const Value *, 4> Allocas;
-    GetUnderlyingObjects(ObjectPtr, Allocas, *DL);
+    getUnderlyingObjects(ObjectPtr, Allocas);
 
     for (SmallVectorImpl<const Value*>::iterator Object = Allocas.begin(),
            E = Allocas.end(); Object != E; ++Object) {

@@ -101,6 +101,10 @@ static cl::opt<bool> EnableInitialCFGCleanup("hexagon-initial-cfg-cleanup",
   cl::Hidden, cl::ZeroOrMore, cl::init(true),
   cl::desc("Simplify the CFG after atomic expansion pass"));
 
+static cl::opt<bool> EnableInstSimplify("hexagon-instsimplify", cl::Hidden,
+                                        cl::ZeroOrMore, cl::init(true),
+                                        cl::desc("Enable instsimplify"));
+
 /// HexagonTargetMachineModule - Note that this is used on hosts that
 /// cannot link in a library unless there are references into the
 /// library.  In particular, it seems that it is not possible to get
@@ -312,7 +316,8 @@ void HexagonPassConfig::addIRPasses() {
   bool NoOpt = (getOptLevel() == CodeGenOpt::None);
 
   if (!NoOpt) {
-    addPass(createConstantPropagationPass());
+    if (EnableInstSimplify)
+      addPass(createInstSimplifyLegacyPass());
     addPass(createDeadCodeEliminationPass());
   }
 

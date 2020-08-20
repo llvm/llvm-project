@@ -382,8 +382,7 @@ static RETSIGTYPE SignalHandler(int Sig) {
               OneShotPipeSignalFunction.exchange(nullptr))
         return OldOneShotPipeFunction();
 
-    if (std::find(std::begin(IntSigs), std::end(IntSigs), Sig)
-        != std::end(IntSigs)) {
+    if (llvm::is_contained(IntSigs, Sig)) {
       if (auto OldInterruptFunction = InterruptFunction.exchange(nullptr))
         return OldInterruptFunction();
 

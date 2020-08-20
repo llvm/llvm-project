@@ -1,3 +1,4 @@
+add_subdirectory(CAPI)
 add_subdirectory(EDSC)
 add_subdirectory(mlir-cpu-runner)
 add_subdirectory(SDBM)
@@ -40,6 +41,7 @@ configure_lit_site_cfg(
 set(MLIR_TEST_DEPENDS
   FileCheck count not
   MLIRUnitTests
+  mlir-capi-ir-test
   mlir-cpu-runner
   mlir-edsc-builder-api-test
   mlir-linalg-ods-gen

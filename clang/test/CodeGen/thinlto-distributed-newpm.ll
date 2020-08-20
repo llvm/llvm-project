@@ -23,7 +23,6 @@
 ; CHECK-O: Running pass: WholeProgramDevirtPass
 ; CHECK-O: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O: Running pass: LowerTypeTestsPass
-; CHECK-O: Invalidating all non-preserved analyses for:
 ; CHECK-O: Invalidating analysis: InnerAnalysisManagerProxy
 ; CHECK-O: Running pass: ForceFunctionAttrsPass
 ; CHECK-O: Starting {{.*}}Module pass manager run.
@@ -47,7 +46,6 @@
 ; CHECK-O: Running pass: IPSCCPPass
 ; CHECK-O: Running pass: CalledValuePropagationPass
 ; CHECK-O: Running pass: GlobalOptPass
-; CHECK-O: Invalidating all non-preserved analyses for:
 ; CHECK-O: Invalidating analysis: InnerAnalysisManagerProxy
 ; CHECK-O: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O: Running pass: PromotePass
@@ -77,7 +75,6 @@
 ; CHECK-O: Starting CGSCC pass manager run.
 ; CHECK-O: Running pass: InlinerPass on (main)
 ; CHECK-O: Running pass: PostOrderFunctionAttrsPass on (main)
-; CHECK-O: Invalidating all non-preserved analyses for: (main)
 ; CHECK-O: Clearing all analysis results for: main
 ; CHECK-O3: Running pass: ArgumentPromotionPass on (main)
 ; CHECK-O3: Running analysis: TargetIRAnalysis on main
@@ -100,6 +97,7 @@
 ; CHECK-O: Running pass: JumpThreadingPass on main
 ; CHECK-O: Running analysis: LazyValueAnalysis on main
 ; CHECK-O: Running pass: CorrelatedValuePropagationPass on main
+; CHECK-O: Invalidating analysis: LazyValueAnalysis on main
 ; CHECK-O: Running pass: SimplifyCFGPass on main
 ; CHECK-O3: Running pass: AggressiveInstCombinePass on main
 ; CHECK-O: Running pass: InstCombinePass on main
@@ -143,13 +141,10 @@
 ; CHECK-O: Running pass: InstCombinePass on main
 ; CHECK-O: Finished {{.*}}Function pass manager run.
 ; CHECK-O: Finished CGSCC pass manager run.
-; CHECK-O: Invalidating all non-preserved analyses for:
-; CHECK-O: Invalidating all non-preserved analyses for: main
 ; CHECK-O: Invalidating analysis: DominatorTreeAnalysis on main
 ; CHECK-O: Invalidating analysis: BasicAA on main
 ; CHECK-O: Invalidating analysis: AAManager on main
 ; CHECK-O: Invalidating analysis: MemorySSAAnalysis on main
-; CHECK-O: Invalidating analysis: LazyValueAnalysis on main
 ; CHECK-O: Invalidating analysis: LoopAnalysis on main
 ; CHECK-O: Invalidating analysis: PhiValuesAnalysis on main
 ; CHECK-O: Invalidating analysis: MemoryDependenceAnalysis on main

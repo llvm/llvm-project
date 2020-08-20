@@ -86,12 +86,28 @@ define i32 @extractelement_idx_large_bound(<vscale x 4 x i32> %a) {
   ret i32 %r
 }
 
-define i32 @insert_extract_element_same_vec_idx_2(<vscale x 4 x i32> %a) {
+define i32 @insert_extract_element_same_vec_idx_2() {
 ; CHECK-LABEL: @insert_extract_element_same_vec_idx_2(
 ; CHECK-NEXT:    ret i32 1
 ;
   %v = insertelement <vscale x 4 x i32> undef, i32 1, i64 4
   %r = extractelement <vscale x 4 x i32> %v, i64 4
+  ret i32 %r
+}
+
+define i32 @insert_extract_element_same_vec_idx_3() {
+; CHECK-LABEL: @insert_extract_element_same_vec_idx_3(
+; CHECK-NEXT:    ret i32 1
+;
+  %r = extractelement <vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 1, i64 4), i64 4
+  ret i32 %r
+}
+
+define i32 @insert_extract_element_same_vec_idx_4() {
+; CHECK-LABEL: @insert_extract_element_same_vec_idx_4(
+; CHECK-NEXT:    ret i32 1
+;
+  %r = extractelement <vscale x 4 x i32> insertelement (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 1, i32 4), i32 2, i64 3), i64 4
   ret i32 %r
 }
 

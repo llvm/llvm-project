@@ -19,12 +19,11 @@
 #include "support/Logger.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
 
@@ -46,6 +45,11 @@ llvm::Expected<llvm::DenseSet<SymbolID>> getIDs(IDRange IDs) {
   return Result;
 }
 
+llvm::Error makeStringError(llvm::StringRef Message) {
+  return llvm::make_error<llvm::StringError>(Message,
+                                             llvm::inconvertibleErrorCode());
+}
+
 } // namespace
 
 Marshaller::Marshaller(llvm::StringRef RemoteIndexRoot,
@@ -55,14 +59,16 @@ Marshaller::Marshaller(llvm::StringRef RemoteIndexRoot,
     assert(llvm::sys::path::is_absolute(RemoteIndexRoot));
     assert(RemoteIndexRoot ==
            llvm::sys::path::convert_to_slash(RemoteIndexRoot));
-    assert(RemoteIndexRoot.endswith(llvm::sys::path::get_separator()));
     this->RemoteIndexRoot = RemoteIndexRoot.str();
+    if (!RemoteIndexRoot.endswith(llvm::sys::path::get_separator()))
+      *this->RemoteIndexRoot += llvm::sys::path::get_separator();
   }
   if (!LocalIndexRoot.empty()) {
     assert(llvm::sys::path::is_absolute(LocalIndexRoot));
     assert(LocalIndexRoot == llvm::sys::path::convert_to_slash(LocalIndexRoot));
-    assert(LocalIndexRoot.endswith(llvm::sys::path::get_separator()));
     this->LocalIndexRoot = LocalIndexRoot.str();
+    if (!LocalIndexRoot.endswith(llvm::sys::path::get_separator()))
+      *this->LocalIndexRoot += llvm::sys::path::get_separator();
   }
   assert(!RemoteIndexRoot.empty() || !LocalIndexRoot.empty());
 }
@@ -124,20 +130,13 @@ Marshaller::fromProtobuf(const RelationsRequest *Message) {
   return Req;
 }
 
-llvm::Optional<clangd::Symbol> Marshaller::fromProtobuf(const Symbol &Message) {
-  if (!Message.has_info() || !Message.has_canonical_declaration()) {
-    elog("Cannot convert Symbol from protobuf (missing info, definition or "
-         "declaration): {0}",
-         Message.DebugString());
-    return llvm::None;
-  }
+llvm::Expected<clangd::Symbol> Marshaller::fromProtobuf(const Symbol &Message) {
+  if (!Message.has_info() || !Message.has_canonical_declaration())
+    return makeStringError("Missing info or declaration.");
   clangd::Symbol Result;
   auto ID = SymbolID::fromStr(Message.id());
-  if (!ID) {
-    elog("Cannot parse SymbolID {0} given protobuf: {1}", ID.takeError(),
-         Message.DebugString());
-    return llvm::None;
-  }
+  if (!ID)
+    return ID.takeError();
   Result.ID = *ID;
   Result.SymInfo = fromProtobuf(Message.info());
   Result.Name = Message.name();
@@ -148,11 +147,8 @@ llvm::Optional<clangd::Symbol> Marshaller::fromProtobuf(const Symbol &Message) {
       Result.Definition = *Definition;
   }
   auto Declaration = fromProtobuf(Message.canonical_declaration());
-  if (!Declaration) {
-    elog("Cannot convert Symbol from protobuf (invalid declaration): {0}",
-         Message.DebugString());
-    return llvm::None;
-  }
+  if (!Declaration)
+    return Declaration.takeError();
   Result.CanonicalDeclaration = *Declaration;
   Result.References = Message.references();
   Result.Origin = static_cast<clangd::SymbolOrigin>(Message.origin());
@@ -164,49 +160,36 @@ llvm::Optional<clangd::Symbol> Marshaller::fromProtobuf(const Symbol &Message) {
   Result.Type = Message.type();
   for (const auto &Header : Message.headers()) {
     auto SerializedHeader = fromProtobuf(Header);
-    if (SerializedHeader)
-      Result.IncludeHeaders.push_back(*SerializedHeader);
-    else
-      elog("Cannot convert HeaderWithIncludes from protobuf: {0}",
-           Header.DebugString());
+    if (!SerializedHeader)
+      return SerializedHeader.takeError();
+    Result.IncludeHeaders.push_back(*SerializedHeader);
   }
   Result.Flags = static_cast<clangd::Symbol::SymbolFlag>(Message.flags());
   return Result;
 }
 
-llvm::Optional<clangd::Ref> Marshaller::fromProtobuf(const Ref &Message) {
-  if (!Message.has_location()) {
-    elog("Cannot convert Ref from protobuf (missing location): {0}",
-         Message.DebugString());
-    return llvm::None;
-  }
+llvm::Expected<clangd::Ref> Marshaller::fromProtobuf(const Ref &Message) {
+  if (!Message.has_location())
+    return makeStringError("Missing location.");
   clangd::Ref Result;
   auto Location = fromProtobuf(Message.location());
-  if (!Location) {
-    elog("Cannot convert Ref from protobuf (invalid location): {0}",
-         Message.DebugString());
-    return llvm::None;
-  }
+  if (!Location)
+    return Location.takeError();
   Result.Location = *Location;
   Result.Kind = static_cast<clangd::RefKind>(Message.kind());
   return Result;
 }
 
-llvm::Optional<std::pair<clangd::SymbolID, clangd::Symbol>>
+llvm::Expected<std::pair<clangd::SymbolID, clangd::Symbol>>
 Marshaller::fromProtobuf(const Relation &Message) {
   auto SubjectID = SymbolID::fromStr(Message.subject_id());
-  if (!SubjectID) {
-    elog("Cannot convert Relation from protobuf (invalid Subject ID): {0}",
-         SubjectID.takeError());
-    return llvm::None;
-  }
-  if (!Message.has_object()) {
-    elog("Cannot convert Relation from protobuf (missing Object): {0}");
-    return llvm::None;
-  }
+  if (!SubjectID)
+    return SubjectID.takeError();
+  if (!Message.has_object())
+    return makeStringError("Missing Object.");
   auto Object = fromProtobuf(Message.object());
   if (!Object)
-    return llvm::None;
+    return Object.takeError();
   return std::make_pair(*SubjectID, *Object);
 }
 
@@ -258,27 +241,21 @@ RelationsRequest Marshaller::toProtobuf(const clangd::RelationsRequest &From) {
   return RPCRequest;
 }
 
-llvm::Optional<Symbol> Marshaller::toProtobuf(const clangd::Symbol &From) {
+llvm::Expected<Symbol> Marshaller::toProtobuf(const clangd::Symbol &From) {
   Symbol Result;
   Result.set_id(From.ID.str());
   *Result.mutable_info() = toProtobuf(From.SymInfo);
   Result.set_name(From.Name.str());
   if (*From.Definition.FileURI) {
     auto Definition = toProtobuf(From.Definition);
-    if (!Definition) {
-      elog("Can not convert Symbol to protobuf (invalid definition) {0}: {1}",
-           From, From.Definition);
-      return llvm::None;
-    }
+    if (!Definition)
+      return Definition.takeError();
     *Result.mutable_definition() = *Definition;
   }
   Result.set_scope(From.Scope.str());
   auto Declaration = toProtobuf(From.CanonicalDeclaration);
-  if (!Declaration) {
-    elog("Can not convert Symbol to protobuf (invalid declaration) {0}: {1}",
-         From, From.CanonicalDeclaration);
-    return llvm::None;
-  }
+  if (!Declaration)
+    return Declaration.takeError();
   *Result.mutable_canonical_declaration() = *Declaration;
   Result.set_references(From.References);
   Result.set_origin(static_cast<uint32_t>(From.Origin));
@@ -291,11 +268,8 @@ llvm::Optional<Symbol> Marshaller::toProtobuf(const clangd::Symbol &From) {
   Result.set_type(From.Type.str());
   for (const auto &Header : From.IncludeHeaders) {
     auto Serialized = toProtobuf(Header);
-    if (!Serialized) {
-      elog("Can not convert IncludeHeaderWithReferences to protobuf: {0}",
-           Header.IncludeHeader);
-      continue;
-    }
+    if (!Serialized)
+      return Serialized.takeError();
     auto *NextHeader = Result.add_headers();
     *NextHeader = *Serialized;
   }
@@ -303,64 +277,59 @@ llvm::Optional<Symbol> Marshaller::toProtobuf(const clangd::Symbol &From) {
   return Result;
 }
 
-llvm::Optional<Ref> Marshaller::toProtobuf(const clangd::Ref &From) {
+llvm::Expected<Ref> Marshaller::toProtobuf(const clangd::Ref &From) {
   Ref Result;
   Result.set_kind(static_cast<uint32_t>(From.Kind));
   auto Location = toProtobuf(From.Location);
-  if (!Location) {
-    elog("Can not convert Reference to protobuf (invalid location) {0}: {1}",
-         From, From.Location);
-    return llvm::None;
-  }
+  if (!Location)
+    return Location.takeError();
   *Result.mutable_location() = *Location;
   return Result;
 }
 
-llvm::Optional<Relation> Marshaller::toProtobuf(const clangd::SymbolID &Subject,
+llvm::Expected<Relation> Marshaller::toProtobuf(const clangd::SymbolID &Subject,
                                                 const clangd::Symbol &Object) {
   Relation Result;
   *Result.mutable_subject_id() = Subject.str();
   auto SerializedObject = toProtobuf(Object);
-  if (!SerializedObject) {
-    elog("Can not convert Relation to protobuf (invalid symbol): {0}", Object);
-    return llvm::None;
-  }
+  if (!SerializedObject)
+    return SerializedObject.takeError();
   *Result.mutable_object() = *SerializedObject;
   return Result;
 }
 
-llvm::Optional<std::string>
+llvm::Expected<std::string>
 Marshaller::relativePathToURI(llvm::StringRef RelativePath) {
   assert(LocalIndexRoot);
   assert(RelativePath == llvm::sys::path::convert_to_slash(
                              RelativePath, llvm::sys::path::Style::posix));
-  if (RelativePath.empty()) {
-    return llvm::None;
-  }
-  if (llvm::sys::path::is_absolute(RelativePath)) {
-    return llvm::None;
-  }
+  if (RelativePath.empty())
+    return makeStringError("Empty relative path.");
+  if (llvm::sys::path::is_absolute(RelativePath))
+    return makeStringError(
+        llvm::formatv("RelativePath '{0}' is absolute.", RelativePath).str());
   llvm::SmallString<256> FullPath = llvm::StringRef(*LocalIndexRoot);
   llvm::sys::path::append(FullPath, RelativePath);
   auto Result = URI::createFile(FullPath);
   return Result.toString();
 }
 
-llvm::Optional<std::string> Marshaller::uriToRelativePath(llvm::StringRef URI) {
+llvm::Expected<std::string> Marshaller::uriToRelativePath(llvm::StringRef URI) {
   assert(RemoteIndexRoot);
   auto ParsedURI = URI::parse(URI);
-  if (!ParsedURI) {
-    elog("Remote index got bad URI from client {0}: {1}", URI,
-         ParsedURI.takeError());
-    return llvm::None;
-  }
-  if (ParsedURI->scheme() != "file") {
-    return llvm::None;
-  }
+  if (!ParsedURI)
+    return ParsedURI.takeError();
+  if (ParsedURI->scheme() != "file")
+    return makeStringError(
+        llvm::formatv("Can not use URI schemes other than file, given: '{0}'.",
+                      URI)
+            .str());
   llvm::SmallString<256> Result = ParsedURI->body();
-  if (!llvm::sys::path::replace_path_prefix(Result, *RemoteIndexRoot, "")) {
-    return llvm::None;
-  }
+  if (!llvm::sys::path::replace_path_prefix(Result, *RemoteIndexRoot, ""))
+    return makeStringError(
+        llvm::formatv("File path '{0}' doesn't start with '{1}'.", Result.str(),
+                      *RemoteIndexRoot)
+            .str());
   // Make sure the result has UNIX slashes.
   return llvm::sys::path::convert_to_slash(Result,
                                            llvm::sys::path::Style::posix);
@@ -401,31 +370,31 @@ SymbolInfo Marshaller::toProtobuf(const clang::index::SymbolInfo &Info) {
   return Result;
 }
 
-llvm::Optional<clangd::SymbolLocation>
+llvm::Expected<clangd::SymbolLocation>
 Marshaller::fromProtobuf(const SymbolLocation &Message) {
   clangd::SymbolLocation Location;
   auto URIString = relativePathToURI(Message.file_path());
   if (!URIString)
-    return llvm::None;
+    return URIString.takeError();
   Location.FileURI = Strings.save(*URIString).begin();
   Location.Start = fromProtobuf(Message.start());
   Location.End = fromProtobuf(Message.end());
   return Location;
 }
 
-llvm::Optional<SymbolLocation>
+llvm::Expected<SymbolLocation>
 Marshaller::toProtobuf(const clangd::SymbolLocation &Location) {
   remote::SymbolLocation Result;
   auto RelativePath = uriToRelativePath(Location.FileURI);
   if (!RelativePath)
-    return llvm::None;
+    return RelativePath.takeError();
   *Result.mutable_file_path() = *RelativePath;
   *Result.mutable_start() = toProtobuf(Location.Start);
   *Result.mutable_end() = toProtobuf(Location.End);
   return Result;
 }
 
-llvm::Optional<HeaderWithReferences> Marshaller::toProtobuf(
+llvm::Expected<HeaderWithReferences> Marshaller::toProtobuf(
     const clangd::Symbol::IncludeHeaderWithReferences &IncludeHeader) {
   HeaderWithReferences Result;
   Result.set_references(IncludeHeader.References);
@@ -436,18 +405,18 @@ llvm::Optional<HeaderWithReferences> Marshaller::toProtobuf(
   }
   auto RelativePath = uriToRelativePath(Header);
   if (!RelativePath)
-    return llvm::None;
+    return RelativePath.takeError();
   Result.set_header(*RelativePath);
   return Result;
 }
 
-llvm::Optional<clangd::Symbol::IncludeHeaderWithReferences>
+llvm::Expected<clangd::Symbol::IncludeHeaderWithReferences>
 Marshaller::fromProtobuf(const HeaderWithReferences &Message) {
   std::string Header = Message.header();
-  if (Header.front() != '<' && Header.front() != '"') {
+  if (!isLiteralInclude(Header)) {
     auto URIString = relativePathToURI(Header);
     if (!URIString)
-      return llvm::None;
+      return URIString.takeError();
     Header = *URIString;
   }
   return clangd::Symbol::IncludeHeaderWithReferences{Strings.save(Header),

@@ -1,6 +1,6 @@
 ! RUN: %S/test_errors.sh %s %t %f18
 ! Confirm enforcement of constraints and restrictions in 7.5.7.3
-! and C733, C734 and C779, C780, C781, C782, C783, C784, and C785.
+! and C733, C734 and C779, C780, C782, C783, C784, and C785.
 
 module m
   !ERROR: An ABSTRACT derived type must be extensible

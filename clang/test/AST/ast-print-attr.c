@@ -15,3 +15,14 @@ using C = int (*)() [[gnu::cdecl]];
 int fun_asm() asm("test");
 // CHECK: int var_asm asm("test");
 int var_asm asm("test");
+
+
+@interface NSString
+@end
+
+extern NSString *const MyErrorDomain;
+// CHECK: enum __attribute__((ns_error_domain(MyErrorDomain))) MyErrorEnum {
+enum __attribute__((ns_error_domain(MyErrorDomain))) MyErrorEnum {
+  MyErrFirst,
+  MyErrSecond,
+};

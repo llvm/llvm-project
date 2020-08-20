@@ -190,8 +190,7 @@ namespace Intrinsic {
     static IITDescriptor getVector(unsigned Width, bool IsScalable) {
       IITDescriptor Result;
       Result.Kind = Vector;
-      Result.Vector_Width.Min = Width;
-      Result.Vector_Width.Scalable = IsScalable;
+      Result.Vector_Width = ElementCount::get(Width, IsScalable);
       return Result;
     }
   };

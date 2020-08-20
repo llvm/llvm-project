@@ -9,3 +9,7 @@ add_subdirectory(LLJITWithTargetProcessControl)
 add_subdirectory(OrcV2CBindingsAddObjectFile)
 add_subdirectory(OrcV2CBindingsBasicUsage)
 add_subdirectory(OrcV2CBindingsReflectProcessSymbols)
+
+if(CMAKE_HOST_UNIX)
+  add_subdirectory(LLJITWithChildProcess)
+endif()

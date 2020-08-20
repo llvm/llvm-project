@@ -34,6 +34,7 @@ namespace llvm {
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class PredicatedScalarEvolution;
+class VPRecipeBuilder;
 
 /// VPlan-based builder utility analogous to IRBuilder.
 class VPBuilder {
@@ -294,6 +295,13 @@ private:
   /// according to the information gathered by Legal when it checked if it is
   /// legal to vectorize the loop. This method creates VPlans using VPRecipes.
   void buildVPlansWithVPRecipes(unsigned MinVF, unsigned MaxVF);
+
+  /// Adjust the recipes for any inloop reductions. The chain of instructions
+  /// leading from the loop exit instr to the phi need to be converted to
+  /// reductions, with one operand being vector and the other being the scalar
+  /// reduction chain.
+  void adjustRecipesForInLoopReductions(VPlanPtr &Plan,
+                                        VPRecipeBuilder &RecipeBuilder);
 };
 
 } // namespace llvm

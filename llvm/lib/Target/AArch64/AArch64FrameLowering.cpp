@@ -148,6 +148,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -399,12 +400,102 @@ static bool ShouldSignReturnAddress(MachineFunction &MF) {
   return false;
 }
 
+// Convenience function to create a DWARF expression for
+//   Expr + NumBytes + NumVGScaledBytes * AArch64::VG
+static void appendVGScaledOffsetExpr(SmallVectorImpl<char> &Expr,
+                                     int NumBytes, int NumVGScaledBytes, unsigned VG,
+                                     llvm::raw_string_ostream &Comment) {
+  uint8_t buffer[16];
+
+  if (NumBytes) {
+    Expr.push_back(dwarf::DW_OP_consts);
+    Expr.append(buffer, buffer + encodeSLEB128(NumBytes, buffer));
+    Expr.push_back((uint8_t)dwarf::DW_OP_plus);
+    Comment << (NumBytes < 0 ? " - " : " + ") << std::abs(NumBytes);
+  }
+
+  if (NumVGScaledBytes) {
+    Expr.push_back((uint8_t)dwarf::DW_OP_consts);
+    Expr.append(buffer, buffer + encodeSLEB128(NumVGScaledBytes, buffer));
+
+    Expr.push_back((uint8_t)dwarf::DW_OP_bregx);
+    Expr.append(buffer, buffer + encodeULEB128(VG, buffer));
+    Expr.push_back(0);
+
+    Expr.push_back((uint8_t)dwarf::DW_OP_mul);
+    Expr.push_back((uint8_t)dwarf::DW_OP_plus);
+
+    Comment << (NumVGScaledBytes < 0 ? " - " : " + ")
+            << std::abs(NumVGScaledBytes) << " * VG";
+  }
+}
+
+// Creates an MCCFIInstruction:
+//    { DW_CFA_def_cfa_expression, ULEB128 (sizeof expr), expr }
+MCCFIInstruction AArch64FrameLowering::createDefCFAExpressionFromSP(
+    const TargetRegisterInfo &TRI, const StackOffset &OffsetFromSP) const {
+  int64_t NumBytes, NumVGScaledBytes;
+  OffsetFromSP.getForDwarfOffset(NumBytes, NumVGScaledBytes);
+
+  std::string CommentBuffer = "sp";
+  llvm::raw_string_ostream Comment(CommentBuffer);
+
+  // Build up the expression (SP + NumBytes + NumVGScaledBytes * AArch64::VG)
+  SmallString<64> Expr;
+  Expr.push_back((uint8_t)(dwarf::DW_OP_breg0 + /*SP*/ 31));
+  Expr.push_back(0);
+  appendVGScaledOffsetExpr(Expr, NumBytes, NumVGScaledBytes,
+                           TRI.getDwarfRegNum(AArch64::VG, true), Comment);
+
+  // Wrap this into DW_CFA_def_cfa.
+  SmallString<64> DefCfaExpr;
+  DefCfaExpr.push_back(dwarf::DW_CFA_def_cfa_expression);
+  uint8_t buffer[16];
+  DefCfaExpr.append(buffer,
+                    buffer + encodeULEB128(Expr.size(), buffer));
+  DefCfaExpr.append(Expr.str());
+  return MCCFIInstruction::createEscape(nullptr, DefCfaExpr.str(),
+                                        Comment.str());
+}
+
+MCCFIInstruction AArch64FrameLowering::createCfaOffset(
+    const TargetRegisterInfo &TRI, unsigned Reg,
+    const StackOffset &OffsetFromDefCFA) const {
+  int64_t NumBytes, NumVGScaledBytes;
+  OffsetFromDefCFA.getForDwarfOffset(NumBytes, NumVGScaledBytes);
+
+  unsigned DwarfReg = TRI.getDwarfRegNum(Reg, true);
+
+  // Non-scalable offsets can use DW_CFA_offset directly.
+  if (!NumVGScaledBytes)
+    return MCCFIInstruction::createOffset(nullptr, DwarfReg, NumBytes);
+
+  std::string CommentBuffer;
+  llvm::raw_string_ostream Comment(CommentBuffer);
+  Comment << printReg(Reg, &TRI) << "  @ cfa";
+
+  // Build up expression (NumBytes + NumVGScaledBytes * AArch64::VG)
+  SmallString<64> OffsetExpr;
+  appendVGScaledOffsetExpr(OffsetExpr, NumBytes, NumVGScaledBytes,
+                           TRI.getDwarfRegNum(AArch64::VG, true), Comment);
+
+  // Wrap this into DW_CFA_expression
+  SmallString<64> CfaExpr;
+  CfaExpr.push_back(dwarf::DW_CFA_expression);
+  uint8_t buffer[16];
+  CfaExpr.append(buffer, buffer + encodeULEB128(DwarfReg, buffer));
+  CfaExpr.append(buffer, buffer + encodeULEB128(OffsetExpr.size(), buffer));
+  CfaExpr.append(OffsetExpr.str());
+
+  return MCCFIInstruction::createEscape(nullptr, CfaExpr.str(), Comment.str());
+}
+
 void AArch64FrameLowering::emitCalleeSavedFrameMoves(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetSubtargetInfo &STI = MF.getSubtarget();
-  const MCRegisterInfo *MRI = STI.getRegisterInfo();
+  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
   const TargetInstrInfo *TII = STI.getInstrInfo();
   DebugLoc DL = MBB.findDebugLoc(MBBI);
 
@@ -415,11 +506,26 @@ void AArch64FrameLowering::emitCalleeSavedFrameMoves(
 
   for (const auto &Info : CSI) {
     unsigned Reg = Info.getReg();
-    int64_t Offset =
-        MFI.getObjectOffset(Info.getFrameIdx()) - getOffsetOfLocalArea();
-    unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
-    unsigned CFIIndex = MF.addFrameInst(
-        MCCFIInstruction::createOffset(nullptr, DwarfReg, Offset));
+
+    // Not all unwinders may know about SVE registers, so assume the lowest
+    // common demoninator.
+    unsigned NewReg;
+    if (static_cast<const AArch64RegisterInfo *>(TRI)->regNeedsCFI(Reg, NewReg))
+      Reg = NewReg;
+    else
+      continue;
+
+    StackOffset Offset;
+    if (MFI.getStackID(Info.getFrameIdx()) == TargetStackID::SVEVector) {
+      AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+      Offset = StackOffset(MFI.getObjectOffset(Info.getFrameIdx()), MVT::nxv1i8) -
+               StackOffset(AFI->getCalleeSavedStackSize(MFI), MVT::i8);
+    } else {
+      Offset = {MFI.getObjectOffset(Info.getFrameIdx()) -
+                    getOffsetOfLocalArea(),
+                MVT::i8};
+    }
+    unsigned CFIIndex = MF.addFrameInst(createCfaOffset(*TRI, Reg, Offset));
     BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
         .setMIFlags(MachineInstr::FrameSetup);
@@ -1383,9 +1489,18 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
           .addCFIIndex(CFIIndex)
           .setMIFlags(MachineInstr::FrameSetup);
     } else {
-      // Encode the stack size of the leaf function.
-      unsigned CFIIndex = MF.addFrameInst(
-          MCCFIInstruction::cfiDefCfaOffset(nullptr, MFI.getStackSize()));
+      unsigned CFIIndex;
+      if (SVEStackSize) {
+        const TargetSubtargetInfo &STI = MF.getSubtarget();
+        const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+        StackOffset TotalSize =
+            SVEStackSize + StackOffset((int64_t)MFI.getStackSize(), MVT::i8);
+        CFIIndex = MF.addFrameInst(createDefCFAExpressionFromSP(TRI, TotalSize));
+      } else {
+        // Encode the stack size of the leaf function.
+        CFIIndex = MF.addFrameInst(
+            MCCFIInstruction::cfiDefCfaOffset(nullptr, MFI.getStackSize()));
+      }
       BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlags(MachineInstr::FrameSetup);
@@ -2006,6 +2121,7 @@ static void computeCalleeSaveRegisterPairs(
   // available unwind codes.  This flag assures that the alignment fixup is done
   // only once, as intened.
   bool FixupDone = false;
+
   for (unsigned i = 0; i < Count; ++i) {
     RegPairInfo RPI;
     RPI.Reg1 = CSI[i].getReg();

@@ -77,14 +77,14 @@ int prev_no_target2(void);
 int __attribute__((target("arch=ivybridge")))  prev_no_target2(void);
 
 void __attribute__((target("sse4.2"))) addtl_attrs(void);
-//expected-error@+2 {{attribute 'target' multiversioning cannot be combined}}
+//expected-error@+2 {{attribute 'target' multiversioning cannot be combined with attribute 'no_caller_saved_registers'}}
 void __attribute__((no_caller_saved_registers,target("arch=sandybridge")))
 addtl_attrs(void);
 
-//expected-error@+1 {{attribute 'target' multiversioning cannot be combined}}
+//expected-error@+1 {{attribute 'target' multiversioning cannot be combined with attribute 'no_caller_saved_registers'}}
 void __attribute__((target("default"), no_caller_saved_registers)) addtl_attrs2(void);
 
-//expected-error@+2 {{attribute 'target' multiversioning cannot be combined}}
+//expected-error@+2 {{attribute 'target' multiversioning cannot be combined with attribute 'no_caller_saved_registers'}}
 //expected-note@+2 {{function multiversioning caused by this declaration}}
 void __attribute__((no_caller_saved_registers,target("sse4.2"))) addtl_attrs3(void);
 void __attribute__((target("arch=sandybridge")))  addtl_attrs3(void);
@@ -101,3 +101,10 @@ __vectorcall int __attribute__((target("arch=sandybridge")))  diff_cc(void);
 int __attribute__((target("sse4.2"))) diff_ret(void);
 // expected-error@+1 {{multiversioned function declaration has a different return type}}
 short __attribute__((target("arch=sandybridge")))  diff_ret(void);
+
+void __attribute__((target("sse4.2"), nothrow, used, nonnull(1))) addtl_attrs5(int*);
+void __attribute__((target("arch=sandybridge"))) addtl_attrs5(int*);
+
+void __attribute__((target("sse4.2"))) addtl_attrs6(int*);
+void __attribute__((target("arch=sandybridge"), nothrow, used, nonnull)) addtl_attrs6(int*);
+

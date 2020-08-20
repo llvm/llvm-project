@@ -153,8 +153,8 @@ static bool IsMasked(Instruction *I) {
     return false;
 
   Intrinsic::ID ID = Call->getIntrinsicID();
-  // TODO: Support gather/scatter expand/compress operations.
-  return ID == Intrinsic::masked_store || ID == Intrinsic::masked_load;
+  return ID == Intrinsic::masked_store || ID == Intrinsic::masked_load ||
+         isGatherScatter(Call);
 }
 
 bool MVETailPredication::runOnLoop(Loop *L, LPPassManager&) {
@@ -233,9 +233,20 @@ bool MVETailPredication::runOnLoop(Loop *L, LPPassManager&) {
 }
 
 static FixedVectorType *getVectorType(IntrinsicInst *I) {
-  unsigned TypeOp = I->getIntrinsicID() == Intrinsic::masked_load ? 0 : 1;
-  auto *PtrTy = cast<PointerType>(I->getOperand(TypeOp)->getType());
-  auto *VecTy = cast<FixedVectorType>(PtrTy->getElementType());
+  unsigned ID = I->getIntrinsicID();
+  FixedVectorType *VecTy;
+  if (ID == Intrinsic::masked_load || isGather(I)) {
+    if (ID == Intrinsic::arm_mve_vldr_gather_base_wb ||
+        ID == Intrinsic::arm_mve_vldr_gather_base_wb_predicated)
+      // then the type is a StructType
+      VecTy = dyn_cast<FixedVectorType>(I->getType()->getContainedType(0));
+    else
+      VecTy = dyn_cast<FixedVectorType>(I->getType());
+  } else if (ID == Intrinsic::masked_store) {
+    VecTy = dyn_cast<FixedVectorType>(I->getOperand(0)->getType());
+  } else {
+    VecTy = dyn_cast<FixedVectorType>(I->getOperand(2)->getType());
+  }
   assert(VecTy && "No scalable vectors expected here");
   return VecTy;
 }
@@ -254,11 +265,12 @@ bool MVETailPredication::IsPredicatedVectorLoop() {
       switch (Int->getIntrinsicID()) {
       case Intrinsic::get_active_lane_mask:
         ActiveLaneMask = true;
-        LLVM_FALLTHROUGH;
+        continue;
       case Intrinsic::sadd_sat:
       case Intrinsic::uadd_sat:
       case Intrinsic::ssub_sat:
       case Intrinsic::usub_sat:
+      case Intrinsic::experimental_vector_reduce_add:
         continue;
       case Intrinsic::fma:
       case Intrinsic::trunc:
@@ -269,11 +281,10 @@ bool MVETailPredication::IsPredicatedVectorLoop() {
       case Intrinsic::fabs:
         if (ST->hasMVEFloatOps())
           continue;
-        LLVM_FALLTHROUGH;
+        break;
       default:
         break;
       }
-
       if (IsMasked(&I)) {
         auto *VecTy = getVectorType(Int);
         unsigned Lanes = VecTy->getNumElements();
@@ -361,20 +372,27 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
   bool ForceTailPredication =
     EnableTailPredication == TailPredication::ForceEnabledNoReductions ||
     EnableTailPredication == TailPredication::ForceEnabled;
+
   // 1) Test whether entry to the loop is protected by a conditional
   // BTC + 1 < 0. In other words, if the scalar trip count overflows,
   // becomes negative, we shouldn't enter the loop and creating
   // tripcount expression BTC + 1 is not safe. So, check that BTC
   // isn't max. This is evaluated in unsigned, because the semantics
   // of @get.active.lane.mask is a ULE comparison.
-
-  int VectorWidth = VecTy->getNumElements();
   auto *BackedgeTakenCount = ActiveLaneMask->getOperand(1);
   auto *BTC = SE->getSCEV(BackedgeTakenCount);
+  auto *MaxBTC = SE->getConstantMaxBackedgeTakenCount(L);
 
-  if (!llvm::cannotBeMaxInLoop(BTC, L, *SE, false /*Signed*/) &&
+  if (isa<SCEVCouldNotCompute>(MaxBTC)) {
+    LLVM_DEBUG(dbgs() << "ARM TP: Can't compute SCEV BTC expression: ";
+               BTC->dump());
+    return false;
+  }
+
+  APInt MaxInt = APInt(BTC->getType()->getScalarSizeInBits(), ~0);
+  if (cast<SCEVConstant>(MaxBTC)->getAPInt().eq(MaxInt) &&
       !ForceTailPredication) {
-    LLVM_DEBUG(dbgs() << "ARM TP: Overflow possible, BTC can be max: ";
+    LLVM_DEBUG(dbgs() << "ARM TP: Overflow possible, BTC can be int max: ";
                BTC->dump());
     return false;
   }
@@ -396,6 +414,7 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
   //
   auto *TC = SE->getSCEV(TripCount);
   unsigned SizeInBits = TripCount->getType()->getScalarSizeInBits();
+  int VectorWidth = VecTy->getNumElements();
   auto Diff =  APInt(SizeInBits, ~0) - APInt(SizeInBits, VectorWidth);
   uint64_t MaxMinusVW = Diff.getZExtValue();
   uint64_t UpperboundTC = SE->getSignedRange(TC).getUpper().getZExtValue();
@@ -403,7 +422,7 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
   if (UpperboundTC > MaxMinusVW && !ForceTailPredication) {
     LLVM_DEBUG(dbgs() << "ARM TP: Overflow possible in tripcount rounding:\n";
                dbgs() << "upperbound(TC) <= UINT_MAX - VectorWidth\n";
-               dbgs() << UpperboundTC << " <= " << MaxMinusVW << "== false\n";);
+               dbgs() << UpperboundTC << " <= " << MaxMinusVW << " == false\n";);
     return false;
   }
 
@@ -452,10 +471,10 @@ bool MVETailPredication::IsSafeActiveMask(IntrinsicInst *ActiveLaneMask,
     return false;
   }
 
-  // 3) Find out if IV is an induction phi. Note that We can't use Loop
+  // 3) Find out if IV is an induction phi. Note that we can't use Loop
   // helpers here to get the induction variable, because the hardware loop is
-  // no longer in loopsimplify form, and also the hwloop intrinsic use a
-  // different counter.  Using SCEV, we check that the induction is of the
+  // no longer in loopsimplify form, and also the hwloop intrinsic uses a
+  // different counter. Using SCEV, we check that the induction is of the
   // form i = i + 4, where the increment must be equal to the VectorWidth.
   auto *IV = ActiveLaneMask->getOperand(0);
   auto *IVExpr = SE->getSCEV(IV);
@@ -581,7 +600,8 @@ bool MVETailPredication::TryConvert(Value *TripCount) {
   // Walk through the masked intrinsics and try to find whether the predicate
   // operand is generated by intrinsic @llvm.get.active.lane.mask().
   for (auto *I : MaskedInsts) {
-    unsigned PredOp = I->getIntrinsicID() == Intrinsic::masked_load ? 2 : 3;
+    unsigned PredOp =
+        (I->getIntrinsicID() == Intrinsic::masked_load || isGather(I)) ? 2 : 3;
     auto *Predicate = dyn_cast<Instruction>(I->getArgOperand(PredOp));
     if (!Predicate || Predicates.count(Predicate))
       continue;

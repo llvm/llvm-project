@@ -1,7 +1,7 @@
 // RUN: %clang -### %s -target aarch64-none-elf \
-// RUN:   --coverage -fuse-ld=lld --ld-path=ld -nostdlib -r -rdynamic -static -static-pie \
+// RUN:   --coverage -e _start -fuse-ld=lld --ld-path=ld -nostdlib -r -rdynamic -static -static-pie \
 // RUN:   2>&1 | FileCheck --check-prefix=FORWARD %s
-// FORWARD: gcc{{[^"]*}}" "--coverage" "-fuse-ld=lld" "--ld-path=ld" "-nostdlib" "-r" "-rdynamic" "-static" "-static-pie"
+// FORWARD: gcc{{[^"]*}}" "--coverage" "-fuse-ld=lld" "--ld-path=ld" "-nostdlib" "-rdynamic" "-static" "-static-pie" "-o" "a.out" "{{.*}}.o" "-e" "_start" "-r"
 
 // Check that we don't try to forward -Xclang or -mlinker-version to GCC.
 // PR12920 -- Check also we may not forward W_Group options to GCC.

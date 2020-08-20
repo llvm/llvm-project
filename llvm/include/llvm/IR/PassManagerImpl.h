@@ -94,10 +94,6 @@ inline void AnalysisManager<IRUnitT, ExtraArgTs...>::invalidate(
   if (PA.allAnalysesInSetPreserved<AllAnalysesOn<IRUnitT>>())
     return;
 
-  if (DebugLogging)
-    dbgs() << "Invalidating all non-preserved analyses for: " << IR.getName()
-           << "\n";
-
   // Track whether each analysis's result is invalidated in
   // IsResultInvalidated.
   SmallDenseMap<AnalysisKey *, bool, 8> IsResultInvalidated;

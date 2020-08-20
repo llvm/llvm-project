@@ -1084,6 +1084,7 @@ not made control-dependent on any additional values, e.g., unrolling a loop
 executed by all work items.
 
 Sample usage:
+
 .. code-block:: c
 
   void convfunc(void) __attribute__((convergent));
@@ -1896,6 +1897,9 @@ The current set of options correspond to the existing "subtarget features" for
 the target with or without a "-mno-" in front corresponding to the absence
 of the feature, as well as ``arch="CPU"`` which will change the default "CPU"
 for the function.
+
+For X86, the attribute also allows ``tune="CPU"`` to optimize the generated
+code for the given CPU without changing the available instructions.
 
 For AArch64, the attribute also allows the "branch-protection=<args>" option,
 where the permissible arguments and their effect on code generation are the same
@@ -3133,11 +3137,12 @@ distinguish USM (Unified Shared Memory) pointers that access global device
 memory from those that access global host memory. These new address spaces are
 a subset of the ``__global/opencl_global`` address space, the full address space
 set model for OpenCL 2.0 with the extension looks as follows:
-  generic->global->host
-                 ->device
-         ->private
-         ->local
-  constant
+
+  | generic->global->host
+  |                ->device
+  |        ->private
+  |        ->local
+  | constant
 
 As ``global_device`` and ``global_host`` are a subset of
 ``__global/opencl_global`` address spaces it is allowed to convert
@@ -3334,6 +3339,38 @@ def NoAliasDocs : Documentation {
 The ``noalias`` attribute indicates that the only memory accesses inside
 function are loads and stores from objects pointed to by its pointer-typed
 arguments, with arbitrary offsets.
+  }];
+}
+
+def NSErrorDomainDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+In Cocoa frameworks in Objective-C, one can group related error codes in enums
+and categorize these enums with error domains.
+
+The ``ns_error_domain`` attribute indicates a global ``NSString`` constant
+representing the error domain that an error code belongs to. For pointer
+uniqueness and code size this is a constant symbol, not a literal.
+
+The domain and error code need to be used together. The ``ns_error_domain``
+attribute links error codes to their domain at the source level.
+
+This metadata is useful for documentation purposes, for static analysis, and for
+improving interoperability between Objective-C and Swift. It is not used for
+code generation in Objective-C.
+
+For example:
+
+  .. code-block:: objc
+
+    #define NS_ERROR_ENUM(_type, _name, _domain)  \
+      enum _name : _type _name; enum __attribute__((ns_error_domain(_domain))) _name : _type
+
+    extern NSString *const MyErrorDomain;
+    typedef NS_ERROR_ENUM(unsigned char, MyErrorEnum, MyErrorDomain) {
+      MyErrFirst,
+      MyErrSecond,
+    };
   }];
 }
 

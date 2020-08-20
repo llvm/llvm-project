@@ -3358,9 +3358,9 @@ define <32 x i8> @shuffle_v32i8_42_45_12_13_35_35_60_40_17_22_29_44_33_12_48_51_
 ; AVX1-NEXT:    vpshufb {{.*#+}} xmm2 = zero,zero,xmm2[u,u],zero,zero,xmm2[12],zero,xmm2[u,u,u],zero,zero,xmm2[u,0,3]
 ; AVX1-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[10,13,u,u,3,3],zero,xmm1[8,u,u,u,12,1,u],zero,zero
 ; AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm2 = xmm4[u,u],zero,zero,xmm4[u,u,u,u,1,6,13,u,u],zero,xmm4[u,u]
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,u,12,13,u,u,u,u],zero,zero,zero,xmm0[u,u,12,u,u]
-; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm2 = xmm4[u,u,u,u,u,u,u,u,1,6,13,u,u,u,u,u]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,u,12,13,u,u,u,u,u,u,u,u,u,12,u,u]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5],xmm0[6,7]
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,255,0,0,255,255,255,255,0,0,0,255,255,0,255,255]
 ; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
@@ -4843,19 +4843,13 @@ define <32 x i8> @shuffle_v32i8_shift_00_02_04_06_08_10_12_14_16_18_20_22_24_26_
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    retq
 ;
-; AVX512VLBW-LABEL: shuffle_v32i8_shift_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30_32_34_36_38_40_42_44_46_48_50_52_54_56_58_60_62:
-; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512VLBW-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512VLBW-NEXT:    vpsrlw $8, %zmm0, %zmm0
-; AVX512VLBW-NEXT:    vpmovwb %zmm0, %ymm0
-; AVX512VLBW-NEXT:    retq
-;
-; AVX512VLVBMI-LABEL: shuffle_v32i8_shift_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30_32_34_36_38_40_42_44_46_48_50_52_54_56_58_60_62:
-; AVX512VLVBMI:       # %bb.0:
-; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} ymm2 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,45,47,49,51,53,55,57,59,61,63]
-; AVX512VLVBMI-NEXT:    vpermt2b %ymm1, %ymm2, %ymm0
-; AVX512VLVBMI-NEXT:    retq
+; AVX512VL-LABEL: shuffle_v32i8_shift_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30_32_34_36_38_40_42_44_46_48_50_52_54_56_58_60_62:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VL-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512VL-NEXT:    vpsrlw $8, %zmm0, %zmm0
+; AVX512VL-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512VL-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: shuffle_v32i8_shift_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30_32_34_36_38_40_42_44_46_48_50_52_54_56_58_60_62:
 ; XOPAVX1:       # %bb.0:

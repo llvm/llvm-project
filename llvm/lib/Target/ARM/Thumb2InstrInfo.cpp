@@ -258,6 +258,22 @@ void Thumb2InstrInfo::expandLoadStackGuard(
     expandLoadStackGuardBase(MI, ARM::t2MOVi32imm, ARM::t2LDRi12);
 }
 
+MachineInstr *Thumb2InstrInfo::commuteInstructionImpl(MachineInstr &MI,
+                                                      bool NewMI,
+                                                      unsigned OpIdx1,
+                                                      unsigned OpIdx2) const {
+  switch (MI.getOpcode()) {
+  case ARM::MVE_VMAXNMAf16:
+  case ARM::MVE_VMAXNMAf32:
+  case ARM::MVE_VMINNMAf16:
+  case ARM::MVE_VMINNMAf32:
+    // Don't allow predicated instructions to be commuted.
+    if (getVPTInstrPredicate(MI) != ARMVCC::None)
+      return nullptr;
+  }
+  return ARMBaseInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
+}
+
 void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator &MBBI,
                                   const DebugLoc &dl, Register DestReg,

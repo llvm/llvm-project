@@ -94,10 +94,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 ProgramHeaders:
 ## Check we can create a PT_LOAD with arbitrary (we used .hash, .gnu.hash)
 ## and implicit sections (we use .dynsym, .dynstr). It also checks that the
@@ -270,10 +269,9 @@ DynamicSymbols: []
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 ProgramHeaders:
   - Type:  PT_LOAD
     Flags: [ PF_W, PF_R ]
@@ -349,10 +347,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 ProgramHeaders:
   - Type:  PT_LOAD
     Flags: [ PF_R ]
@@ -385,10 +382,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 ProgramHeaders:
   - Type:  PT_LOAD
     Flags: [ PF_R ]
@@ -450,10 +446,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 ProgramHeaders:
 ## Case 1: the segment contains a single SHT_NOBITS section.
   - Type:  PT_LOAD
@@ -528,10 +523,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 ProgramHeaders:
 ## Case 1: the .bar section is placed after the .foo section in the file.
 ##         Check we report an error about the violation of the order.
@@ -608,10 +602,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 ProgramHeaders:
   - Type:  PT_LOAD
     Flags: [ PF_W, PF_R ]
@@ -657,10 +650,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 ProgramHeaders:
   - Type:  PT_LOAD
     Flags: [ PF_W, PF_R ]

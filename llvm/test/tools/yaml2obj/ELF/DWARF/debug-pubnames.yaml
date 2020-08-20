@@ -37,14 +37,12 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    [[ENDIAN]]
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  [[ENDIAN]]
+  Type:  ET_EXEC
 DWARF:
   debug_pubnames:
-    Length:
-      TotalLength: 0x1234
+    Length:     0x1234
     Version:    2
     UnitOffset: 0x1234
     UnitSize:   0x4321
@@ -87,10 +85,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:    .debug_pubnames
     Type:    SHT_PROGBITS
@@ -108,10 +105,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name: .debug_pubnames
     Type: SHT_PROGBITS
@@ -126,18 +122,16 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name: .debug_pubnames
     Type: SHT_PROGBITS
     Size: 0x10
 DWARF:
   debug_pubnames:
-    Length:
-      TotalLength: 0x1234
+    Length:     0x1234
     Version:    2
     UnitOffset: 0x1234
     UnitSize:   0x4321
@@ -150,18 +144,16 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:    .debug_pubnames
     Type:    SHT_PROGBITS
     Content: "00"
 DWARF:
   debug_pubnames:
-    Length:
-      TotalLength: 0x1234
+    Length:     0x1234
     Version:    2
     UnitOffset: 0x1234
     UnitSize:   0x4321
@@ -179,10 +171,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:         .debug_pubnames
     Type:         SHT_STRTAB  ## SHT_PROGBITS by default.
@@ -205,10 +196,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:         .debug_pubnames
     Type:         SHT_STRTAB  ## SHT_PROGBITS by default.
@@ -223,8 +213,7 @@ Sections:
     Type:         SHT_STRTAB
 DWARF:
   debug_pubnames:
-    Length:
-      TotalLength: 0x1234
+    Length:     0x1234
     Version:    2
     UnitOffset: 0x1234
     UnitSize:   0x4321

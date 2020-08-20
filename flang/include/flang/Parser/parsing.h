@@ -62,8 +62,6 @@ public:
         o, cooked_.GetProvenanceRange(CharBlock(at)), message, echoSourceLine);
   }
 
-  bool ForTesting(std::string path, llvm::raw_ostream &);
-
 private:
   Options options_;
   CookedSource cooked_;

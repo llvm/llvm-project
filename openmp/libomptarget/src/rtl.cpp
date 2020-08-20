@@ -23,11 +23,13 @@
 
 // List of all plugins that can support offloading.
 static const char *RTLNames[] = {
+    /* PowerPC target       */ "libomptarget.rtl.ppc64.so",
+    /* x86_64 target        */ "libomptarget.rtl.x86_64.so",
+    /* CUDA target          */ "libomptarget.rtl.cuda.so",
+    /* AArch64 target       */ "libomptarget.rtl.aarch64.so",
     /* SX-Aurora VE target  */ "libomptarget.rtl.ve.so",
-    /* PowerPC target */ "libomptarget.rtl.ppc64.so",
-    /* x86_64 target  */ "libomptarget.rtl.x86_64.so",
-    /* CUDA target    */ "libomptarget.rtl.cuda.so",
-    /* AArch64 target */ "libomptarget.rtl.aarch64.so"};
+    /* AMDGPU target        */ "libomptarget.rtl.amdgpu.so",
+};
 
 RTLsTy *RTLs;
 std::mutex *RTLsMtx;
@@ -262,7 +264,7 @@ void RTLsTy::RegisterRequires(int64_t flags) {
 
   // TODO: insert any other missing checks
 
-  DP("New requires flags %ld compatible with existing %ld!\n",
+  DP("New requires flags %" PRId64 " compatible with existing %" PRId64 "!\n",
      flags, RequiresFlags);
 }
 

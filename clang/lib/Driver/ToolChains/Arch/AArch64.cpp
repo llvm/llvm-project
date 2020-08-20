@@ -376,9 +376,11 @@ fp16_fml_fallthrough:
       D.Diag(diag::err_drv_invalid_sve_vector_bits);
 
   if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
-                               options::OPT_munaligned_access))
+                               options::OPT_munaligned_access)) {
     if (A->getOption().matches(options::OPT_mno_unaligned_access))
       Features.push_back("+strict-align");
+  } else if (Triple.isOSOpenBSD())
+    Features.push_back("+strict-align");
 
   if (Args.hasArg(options::OPT_ffixed_x1))
     Features.push_back("+reserve-x1");

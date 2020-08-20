@@ -28,12 +28,9 @@ body:             |
   ; CHECK:   $lr = MOVr killed $r6, 14 /* CC::al */, $noreg, $noreg
   ; CHECK: bb.2:
   ; CHECK:   liveins: $lr
-  ; CHECK:   $r0 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r1 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r2 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r3 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r4 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r5 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   early-clobber $sp = STR_PRE_IMM killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+  ; CHECK:   BL @OUTLINED_FUNCTION_1
+  ; CHECK:   $lr, $sp = LDR_POST_IMM $sp, $noreg, 8, 14 /* CC::al */, $noreg
   ; CHECK: bb.3:
   ; CHECK:   liveins: $lr, $r0, $r6, $r7, $r8, $r9, $r10, $r11
   ; CHECK:   $r6 = MOVr killed $lr, 14 /* CC::al */, $noreg, $noreg
@@ -98,12 +95,9 @@ body:             |
   ; CHECK:   $lr = tMOVr killed $r6, 14 /* CC::al */, $noreg
   ; CHECK: bb.2:
   ; CHECK:   liveins: $lr
-  ; CHECK:   $r0 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r1 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r2 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r3 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r4 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $r5 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   early-clobber $sp = t2STR_PRE killed $lr, $sp, -8, 14 /* CC::al */, $noreg
+  ; CHECK:   tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_0
+  ; CHECK:   $lr, $sp = t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
   ; CHECK: bb.3:
   ; CHECK:   liveins: $lr, $r0, $r6, $r7
   ; CHECK:   $r6 = tMOVr killed $lr, 14 /* CC::al */, $noreg

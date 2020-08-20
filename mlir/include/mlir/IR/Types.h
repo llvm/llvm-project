@@ -21,6 +21,7 @@ class IndexType;
 class IntegerType;
 class MLIRContext;
 class TypeStorage;
+class TypeRange;
 
 namespace detail {
 struct FunctionTypeStorage;
@@ -33,21 +34,16 @@ struct OpaqueTypeStorage;
 ///
 /// Some types are "primitives" meaning they do not have any parameters, for
 /// example the Index type.  Parametric types have additional information that
-/// differentiates the types of the same kind between them, for example the
-/// Integer type has bitwidth, making i8 and i16 belong to the same kind by be
-/// different instances of the IntegerType.  Type parameters are part of the
-/// unique immutable key.  The mutable component of the type can be modified
-/// after the type is created, but cannot affect the identity of the type.
+/// differentiates the types of the same class, for example the Integer type has
+/// bitwidth, making i8 and i16 belong to the same kind by be different
+/// instances of the IntegerType. Type parameters are part of the unique
+/// immutable key.  The mutable component of the type can be modified after the
+/// type is created, but cannot affect the identity of the type.
 ///
 /// Types are constructed and uniqued via the 'detail::TypeUniquer' class.
 ///
 /// Derived type classes are expected to implement several required
 /// implementation hooks:
-///  * Required:
-///    - static bool kindof(unsigned kind);
-///      * Returns if the provided type kind corresponds to an instance of the
-///        current type. Used for isa/dyn_cast casting functionality.
-///
 ///  * Optional:
 ///    - static LogicalResult verifyConstructionInvariants(Location loc,
 ///                                                        Args... args)
@@ -57,20 +53,19 @@ struct OpaqueTypeStorage;
 ///      * This method is expected to return failure if a type cannot be
 ///        constructed with 'args', success otherwise.
 ///      * 'args' must correspond with the arguments passed into the
-///        'TypeBase::get' call after the type kind.
+///        'TypeBase::get' call.
 ///
 ///
 /// Type storage objects inherit from TypeStorage and contain the following:
-///    - The type kind (for LLVM-style RTTI).
 ///    - The dialect that defined the type.
 ///    - Any parameters of the type.
 ///    - An optional mutable component.
 /// For non-parametric types, a convenience DefaultTypeStorage is provided.
 /// Parametric storage types must derive TypeStorage and respect the following:
 ///    - Define a type alias, KeyTy, to a type that uniquely identifies the
-///      instance of the type within its kind.
+///      instance of the type.
 ///      * The key type must be constructible from the values passed into the
-///        detail::TypeUniquer::get call after the type kind.
+///        detail::TypeUniquer::get call.
 ///      * If the KeyTy does not have an llvm::DenseMapInfo specialization, the
 ///        storage class must define a hashing method:
 ///         'static unsigned hashKey(const KeyTy &)'
@@ -88,23 +83,6 @@ struct OpaqueTypeStorage;
 //       the key.
 class Type {
 public:
-  /// Integer identifier for all the concrete type kinds.
-  /// Note: This is not an enum class as each dialect will likely define a
-  /// separate enumeration for the specific types that they define. Not being an
-  /// enum class also simplifies the handling of type kinds by not requiring
-  /// casts for each use.
-  enum Kind {
-    // Builtin types.
-    Function,
-    Opaque,
-    LAST_BUILTIN_TYPE = Opaque,
-
-  // Reserve type kinds for dialect specific type system extensions.
-#define DEFINE_SYM_KIND_RANGE(Dialect)                                         \
-  FIRST_##Dialect##_TYPE, LAST_##Dialect##_TYPE = FIRST_##Dialect##_TYPE + 0xff,
-#include "DialectSymbolRegistry.def"
-  };
-
   /// Utility class for implementing types.
   template <typename ConcreteType, typename BaseType, typename StorageType,
             template <typename T> class... Traits>
@@ -136,8 +114,9 @@ public:
   // Support type casting Type to itself.
   static bool classof(Type) { return true; }
 
-  /// Return the classification for this type.
-  unsigned getKind() const;
+  /// Return a unique identifier for the concrete type. This is used to support
+  /// dynamic type casting.
+  TypeID getTypeID() { return impl->getAbstractType().getTypeID(); }
 
   /// Return the LLVMContext in which this type was uniqued.
   MLIRContext *getContext() const;
@@ -190,9 +169,6 @@ public:
   void dump();
 
   friend ::llvm::hash_code hash_value(Type arg);
-
-  unsigned getSubclassData() const;
-  void setSubclassData(unsigned val);
 
   /// Methods for supporting PointerLikeTypeTraits.
   const void *getAsOpaquePointer() const {
@@ -259,25 +235,18 @@ class FunctionType
 public:
   using Base::Base;
 
-  static FunctionType get(ArrayRef<Type> inputs, ArrayRef<Type> results,
+  static FunctionType get(TypeRange inputs, TypeRange results,
                           MLIRContext *context);
 
   // Input types.
-  unsigned getNumInputs() const { return getSubclassData(); }
-
+  unsigned getNumInputs() const;
   Type getInput(unsigned i) const { return getInputs()[i]; }
-
   ArrayRef<Type> getInputs() const;
 
   // Result types.
   unsigned getNumResults() const;
-
   Type getResult(unsigned i) const { return getResults()[i]; }
-
   ArrayRef<Type> getResults() const;
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool kindof(unsigned kind) { return kind == Kind::Function; }
 };
 
 //===----------------------------------------------------------------------===//
@@ -312,8 +281,6 @@ public:
   static LogicalResult verifyConstructionInvariants(Location loc,
                                                     Identifier dialect,
                                                     StringRef typeData);
-
-  static bool kindof(unsigned kind) { return kind == Kind::Opaque; }
 };
 
 // Make Type hashable.

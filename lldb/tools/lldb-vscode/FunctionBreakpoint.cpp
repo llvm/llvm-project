@@ -27,4 +27,4 @@ void FunctionBreakpoint::SetBreakpoint() {
     SetHitCondition();
 }
 
-}
+} // namespace lldb_vscode

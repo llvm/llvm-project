@@ -15,6 +15,7 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align4(i32 %n) {
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_lshl2_add_u32 s4, s4, 15
 ; GFX9-NEXT:    s_and_b32 s4, s4, -16
+; GFX9-NEXT:    s_movk_i32 s32, 0x400
 ; GFX9-NEXT:    s_lshl_b32 s4, s4, 6
 ; GFX9-NEXT:    s_add_u32 s4, s32, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
@@ -26,6 +27,7 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align4(i32 %n) {
 ; GFX10-LABEL: kernel_dynamic_stackalloc_sgpr_align4:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_add_u32 s6, s6, s9
+; GFX10-NEXT:    s_movk_i32 s32, 0x200
 ; GFX10-NEXT:    s_mov_b32 s33, 0
 ; GFX10-NEXT:    s_addc_u32 s7, s7, 0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s6
@@ -117,6 +119,7 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align16(i32 %n) {
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_lshl2_add_u32 s4, s4, 15
 ; GFX9-NEXT:    s_and_b32 s4, s4, -16
+; GFX9-NEXT:    s_movk_i32 s32, 0x400
 ; GFX9-NEXT:    s_lshl_b32 s4, s4, 6
 ; GFX9-NEXT:    s_add_u32 s4, s32, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
@@ -128,6 +131,7 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align16(i32 %n) {
 ; GFX10-LABEL: kernel_dynamic_stackalloc_sgpr_align16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_add_u32 s6, s6, s9
+; GFX10-NEXT:    s_movk_i32 s32, 0x200
 ; GFX10-NEXT:    s_mov_b32 s33, 0
 ; GFX10-NEXT:    s_addc_u32 s7, s7, 0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s6
@@ -219,6 +223,7 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align32(i32 %n) {
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_lshl2_add_u32 s4, s4, 15
 ; GFX9-NEXT:    s_and_b32 s4, s4, -16
+; GFX9-NEXT:    s_movk_i32 s32, 0x800
 ; GFX9-NEXT:    s_lshl_b32 s4, s4, 6
 ; GFX9-NEXT:    s_add_u32 s4, s32, s4
 ; GFX9-NEXT:    s_and_b32 s4, s4, 0xfffff800
@@ -231,6 +236,7 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align32(i32 %n) {
 ; GFX10-LABEL: kernel_dynamic_stackalloc_sgpr_align32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_add_u32 s6, s6, s9
+; GFX10-NEXT:    s_movk_i32 s32, 0x400
 ; GFX10-NEXT:    s_mov_b32 s33, 0
 ; GFX10-NEXT:    s_addc_u32 s7, s7, 0
 ; GFX10-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s6

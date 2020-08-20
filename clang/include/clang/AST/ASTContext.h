@@ -43,6 +43,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
@@ -60,6 +61,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/TypeSize.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -72,6 +74,8 @@
 
 namespace llvm {
 
+class APFixedPoint;
+class FixedPointSemantics;
 struct fltSemantics;
 template <typename T, unsigned N> class SmallPtrSet;
 
@@ -79,7 +83,6 @@ template <typename T, unsigned N> class SmallPtrSet;
 
 namespace clang {
 
-class APFixedPoint;
 class APValue;
 class ASTMutationListener;
 class ASTRecordLayout;
@@ -97,7 +100,6 @@ class ParentMapContext;
 class DynTypedNode;
 class DynTypedNodeList;
 class Expr;
-class FixedPointSemantics;
 class GlobalDecl;
 class MangleContext;
 class MangleNumberingContext;
@@ -999,6 +1001,9 @@ public:
   // Implicitly-declared type 'struct _GUID'.
   mutable TagDecl *MSGuidTagDecl = nullptr;
 
+  /// Keep track of CUDA/HIP static device variables referenced by host code.
+  llvm::DenseSet<const VarDecl *> CUDAStaticDeviceVarReferencedByHost;
+
   ASTContext(LangOptions &LOpts, SourceManager &SM, IdentifierTable &idents,
              SelectorTable &sels, Builtin::Context &builtins);
   ASTContext(const ASTContext &) = delete;
@@ -1296,6 +1301,21 @@ public:
 
   /// Returns a vla type where known sizes are replaced with [*].
   QualType getVariableArrayDecayedType(QualType Ty) const;
+
+  // Convenience struct to return information about a builtin vector type.
+  struct BuiltinVectorTypeInfo {
+    QualType ElementType;
+    llvm::ElementCount EC;
+    unsigned NumVectors;
+    BuiltinVectorTypeInfo(QualType ElementType, llvm::ElementCount EC,
+                          unsigned NumVectors)
+        : ElementType(ElementType), EC(EC), NumVectors(NumVectors) {}
+  };
+
+  /// Returns the element type, element count and number of vectors
+  /// (in case of tuple) for a builtin vector type.
+  BuiltinVectorTypeInfo
+  getBuiltinVectorTypeInfo(const BuiltinType *VecTy) const;
 
   /// Return the unique reference to a scalable vector type of the specified
   /// element type and scalable number of elements.
@@ -1965,9 +1985,9 @@ public:
 
   unsigned char getFixedPointScale(QualType Ty) const;
   unsigned char getFixedPointIBits(QualType Ty) const;
-  FixedPointSemantics getFixedPointSemantics(QualType Ty) const;
-  APFixedPoint getFixedPointMax(QualType Ty) const;
-  APFixedPoint getFixedPointMin(QualType Ty) const;
+  llvm::FixedPointSemantics getFixedPointSemantics(QualType Ty) const;
+  llvm::APFixedPoint getFixedPointMax(QualType Ty) const;
+  llvm::APFixedPoint getFixedPointMin(QualType Ty) const;
 
   DeclarationNameInfo getNameForTemplate(TemplateName Name,
                                          SourceLocation NameLoc) const;
@@ -3029,6 +3049,12 @@ public:
 
   /// Return a new OMPTraitInfo object owned by this context.
   OMPTraitInfo &getNewOMPTraitInfo();
+
+  /// Whether a C++ static variable may be externalized.
+  bool mayExternalizeStaticVar(const Decl *D) const;
+
+  /// Whether a C++ static variable should be externalized.
+  bool shouldExternalizeStaticVar(const Decl *D) const;
 
 private:
   /// All OMPTraitInfo objects live in this collection, one per

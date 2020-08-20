@@ -493,7 +493,7 @@ int Driver::MainLoop() {
   // Before we handle any options from the command line, we parse the
   // .lldbinit file in the user's home directory.
   SBCommandReturnObject result;
-  sb_interpreter.SourceInitFileInHomeDirectory(result);
+  sb_interpreter.SourceInitFileInHomeDirectory(result, m_option_data.m_repl);
   if (m_option_data.m_debug_mode) {
     result.PutError(m_debugger.GetErrorFile());
     result.PutOutput(m_debugger.GetOutputFile());
@@ -853,10 +853,11 @@ int main(int argc, char const *argv[]) {
 
   // Parse arguments.
   LLDBOptTable T;
-  unsigned MAI;
-  unsigned MAC;
+  unsigned MissingArgIndex;
+  unsigned MissingArgCount;
   ArrayRef<const char *> arg_arr = makeArrayRef(argv + 1, argc - 1);
-  opt::InputArgList input_args = T.ParseArgs(arg_arr, MAI, MAC);
+  opt::InputArgList input_args =
+      T.ParseArgs(arg_arr, MissingArgIndex, MissingArgCount);
   llvm::StringRef argv0 = llvm::sys::path::filename(argv[0]);
 
   if (input_args.hasArg(OPT_help)) {
@@ -864,11 +865,19 @@ int main(int argc, char const *argv[]) {
     return 0;
   }
 
+  // Check for missing argument error.
+  if (MissingArgCount) {
+    WithColor::error() << "argument to '"
+                       << input_args.getArgString(MissingArgIndex)
+                       << "' is missing\n";
+  }
   // Error out on unknown options.
   if (input_args.hasArg(OPT_UNKNOWN)) {
     for (auto *arg : input_args.filtered(OPT_UNKNOWN)) {
       WithColor::error() << "unknown option: " << arg->getSpelling() << '\n';
     }
+  }
+  if (MissingArgCount || input_args.hasArg(OPT_UNKNOWN)) {
     llvm::errs() << "Use '" << argv0
                  << " --help' for a complete list of options.\n";
     return 1;

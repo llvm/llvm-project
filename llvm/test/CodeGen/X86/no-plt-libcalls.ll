@@ -17,7 +17,7 @@ define void @printf_call() {
 }
 
 ; CHECK: Function Attrs: nofree nounwind nonlazybind
-; CHECK-NEXT: declare i32 @puts(i8* nocapture readonly)
+; CHECK-NEXT: declare noundef i32 @puts(i8* nocapture noundef readonly)
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 7, !"RtLibUseGOT", i32 1}

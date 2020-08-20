@@ -1,5 +1,6 @@
 // RUN: %clang_dfsan %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
 // RUN: %clang_dfsan -mllvm -dfsan-args-abi %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
+// RUN: %clang_dfsan -DFAST_16_LABELS -mllvm -dfsan-fast-16-labels %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
 // RUN: %clang_dfsan -DSTRICT_DATA_DEPENDENCIES %s -o %t && %run %t
 // RUN: %clang_dfsan -DSTRICT_DATA_DEPENDENCIES -mllvm -dfsan-args-abi %s -o %t && %run %t
 
@@ -537,24 +538,24 @@ void test_strtoll() {
 }
 
 void test_strtoul() {
-  char buf[] = "0xffffffffffffaa";
+  char buf[] = "ffffffffffffaa";
   char *endptr = NULL;
   dfsan_set_label(i_label, buf + 1, 1);
   dfsan_set_label(j_label, buf + 2, 1);
   long unsigned int ret = strtol(buf, &endptr, 16);
   assert(ret == 72057594037927850);
-  assert(endptr == buf + 16);
+  assert(endptr == buf + 14);
   ASSERT_LABEL(ret, i_j_label);
 }
 
 void test_strtoull() {
-  char buf[] = "0xffffffffffffffaa";
+  char buf[] = "ffffffffffffffaa";
   char *endptr = NULL;
   dfsan_set_label(i_label, buf + 1, 1);
   dfsan_set_label(j_label, buf + 2, 1);
   long long unsigned int ret = strtoull(buf, &endptr, 16);
   assert(ret == 0xffffffffffffffaa);
-  assert(endptr == buf + 18);
+  assert(endptr == buf + 16);
   ASSERT_LABEL(ret, i_j_label);
 }
 
@@ -952,10 +953,19 @@ void test_snprintf() {
 }
 
 int main(void) {
+#ifdef FAST_16_LABELS
+  i_label = 1;
+  j_label = 2;
+  k_label = 4;
+#else
   i_label = dfsan_create_label("i", 0);
   j_label = dfsan_create_label("j", 0);
   k_label = dfsan_create_label("k", 0);
+#endif
   i_j_label = dfsan_union(i_label, j_label);
+  assert(i_j_label != i_label);
+  assert(i_j_label != j_label);
+  assert(i_j_label != k_label);
 
   test_calloc();
   test_clock_gettime();

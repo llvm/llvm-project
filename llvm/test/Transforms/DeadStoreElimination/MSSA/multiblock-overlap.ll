@@ -110,3 +110,33 @@ bb9:                                              ; preds = %bb8, %bb7
   store double 6.0, double* %tmp3, align 8
   ret void
 }
+
+; Test case from PR46513. Make sure we do not crash.
+; TODO: we should be able to shorten store i32 844283136, i32* %cast.i32 to a
+; store of i16.
+define void @overlap_no_dominance([4 x i8]* %arg, i1 %c)  {
+; CHECK-LABEL: @overlap_no_dominance(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB13:%.*]], label [[BB9:%.*]]
+; CHECK:       bb9:
+; CHECK-NEXT:    [[CAST_I32:%.*]] = bitcast [4 x i8]* [[ARG:%.*]] to i32*
+; CHECK-NEXT:    store i32 844283136, i32* [[CAST_I32]], align 4
+; CHECK-NEXT:    br label [[BB13]]
+; CHECK:       bb13:
+; CHECK-NEXT:    [[CAST_I16:%.*]] = bitcast [4 x i8]* [[ARG]] to i16*
+; CHECK-NEXT:    store i16 0, i16* [[CAST_I16]], align 4
+; CHECK-NEXT:    ret void
+;
+bb:
+  br i1 %c, label %bb13, label %bb9
+
+bb9:                                              ; preds = %bb
+  %cast.i32 = bitcast [4 x i8]* %arg to i32*
+  store i32 844283136, i32* %cast.i32, align 4
+  br label %bb13
+
+bb13:                                             ; preds = %bb9, %bb
+  %cast.i16 = bitcast [4 x i8]* %arg to i16*
+  store i16 0, i16* %cast.i16, align 4
+  ret void
+}

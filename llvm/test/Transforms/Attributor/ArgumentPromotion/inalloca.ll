@@ -12,7 +12,7 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 define internal i32 @f(%struct.ss* inalloca  %s) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@f
-; IS__TUNIT____-SAME: (%struct.ss* inalloca noalias nocapture nofree nonnull align 4 dereferenceable(8) [[S:%.*]])
+; IS__TUNIT____-SAME: (%struct.ss* inalloca noalias nocapture nofree noundef nonnull align 4 dereferenceable(8) [[S:%.*]])
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    [[F0:%.*]] = getelementptr [[STRUCT_SS:%.*]], %struct.ss* [[S]], i32 0, i32 0
 ; IS__TUNIT____-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
@@ -23,7 +23,7 @@ define internal i32 @f(%struct.ss* inalloca  %s) {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@f
-; IS__CGSCC____-SAME: (%struct.ss* inalloca nocapture nofree nonnull align 4 dereferenceable(8) [[S:%.*]])
+; IS__CGSCC____-SAME: (%struct.ss* inalloca nocapture nofree noundef nonnull align 4 dereferenceable(8) [[S:%.*]])
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[F0:%.*]] = getelementptr [[STRUCT_SS:%.*]], %struct.ss* [[S]], i32 0, i32 0
 ; IS__CGSCC____-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
@@ -50,7 +50,7 @@ define i32 @main() {
 ; IS__TUNIT____-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; IS__TUNIT____-NEXT:    store i32 1, i32* [[F0]], align 4
 ; IS__TUNIT____-NEXT:    store i32 2, i32* [[F1]], align 4
-; IS__TUNIT____-NEXT:    [[R:%.*]] = call i32 @f(%struct.ss* inalloca noalias nocapture nofree nonnull align 4 dereferenceable(8) [[S]])
+; IS__TUNIT____-NEXT:    [[R:%.*]] = call i32 @f(%struct.ss* inalloca noalias nocapture nofree noundef nonnull align 4 dereferenceable(8) [[S]])
 ; IS__TUNIT____-NEXT:    ret i32 [[R]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
@@ -61,7 +61,7 @@ define i32 @main() {
 ; IS__CGSCC____-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
 ; IS__CGSCC____-NEXT:    store i32 1, i32* [[F0]], align 4
 ; IS__CGSCC____-NEXT:    store i32 2, i32* [[F1]], align 4
-; IS__CGSCC____-NEXT:    [[R:%.*]] = call i32 @f(%struct.ss* inalloca noalias nocapture nofree nonnull align 4 dereferenceable(8) [[S]])
+; IS__CGSCC____-NEXT:    [[R:%.*]] = call i32 @f(%struct.ss* inalloca noalias nocapture nofree noundef nonnull align 4 dereferenceable(8) [[S]])
 ; IS__CGSCC____-NEXT:    ret i32 [[R]]
 ;
 entry:
@@ -78,7 +78,7 @@ entry:
 define internal i1 @g(%struct.ss* %a, %struct.ss* inalloca %b) nounwind  {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@g
-; IS__CGSCC____-SAME: (%struct.ss* nocapture nofree nonnull readnone align 4 dereferenceable(8) [[A:%.*]], %struct.ss* inalloca nocapture nofree nonnull writeonly align 4 dereferenceable(8) [[B:%.*]])
+; IS__CGSCC____-SAME: (%struct.ss* nocapture nofree noundef nonnull readnone align 4 dereferenceable(8) [[A:%.*]], %struct.ss* inalloca nocapture nofree noundef nonnull writeonly align 4 dereferenceable(8) [[B:%.*]])
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    ret i1 undef
 ;

@@ -172,6 +172,10 @@ namespace nondeducible {
   template<typename A = int,
            typename ...B>
   X(float) -> X<A, B...>; // ok
+
+  template <typename> struct UnnamedTemplateParam {};
+  template <typename>                                  // expected-note {{non-deducible template parameter (anonymous)}}
+  UnnamedTemplateParam() -> UnnamedTemplateParam<int>; // expected-error {{deduction guide template contains a template parameter that cannot be deduced}}
 }
 
 namespace default_args_from_ctor {

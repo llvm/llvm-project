@@ -606,13 +606,11 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueImpl(
 static bool InstructionDereferencesPointer(Instruction *I, Value *Ptr) {
   if (LoadInst *L = dyn_cast<LoadInst>(I)) {
     return L->getPointerAddressSpace() == 0 &&
-           GetUnderlyingObject(L->getPointerOperand(),
-                               L->getModule()->getDataLayout()) == Ptr;
+           getUnderlyingObject(L->getPointerOperand()) == Ptr;
   }
   if (StoreInst *S = dyn_cast<StoreInst>(I)) {
     return S->getPointerAddressSpace() == 0 &&
-           GetUnderlyingObject(S->getPointerOperand(),
-                               S->getModule()->getDataLayout()) == Ptr;
+           getUnderlyingObject(S->getPointerOperand()) == Ptr;
   }
   if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I)) {
     if (MI->isVolatile()) return false;
@@ -622,13 +620,11 @@ static bool InstructionDereferencesPointer(Instruction *I, Value *Ptr) {
     if (!Len || Len->isZero()) return false;
 
     if (MI->getDestAddressSpace() == 0)
-      if (GetUnderlyingObject(MI->getRawDest(),
-                              MI->getModule()->getDataLayout()) == Ptr)
+      if (getUnderlyingObject(MI->getRawDest()) == Ptr)
         return true;
     if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI))
       if (MTI->getSourceAddressSpace() == 0)
-        if (GetUnderlyingObject(MTI->getRawSource(),
-                                MTI->getModule()->getDataLayout()) == Ptr)
+        if (getUnderlyingObject(MTI->getRawSource()) == Ptr)
           return true;
   }
   return false;
@@ -641,11 +637,10 @@ static bool InstructionDereferencesPointer(Instruction *I, Value *Ptr) {
 static bool isObjectDereferencedInBlock(Value *Val, BasicBlock *BB) {
   assert(Val->getType()->isPointerTy());
 
-  const DataLayout &DL = BB->getModule()->getDataLayout();
-  Value *UnderlyingVal = GetUnderlyingObject(Val, DL);
-  // If 'GetUnderlyingObject' didn't converge, skip it. It won't converge
+  Value *UnderlyingVal = getUnderlyingObject(Val);
+  // If 'getUnderlyingObject' didn't converge, skip it. It won't converge
   // inside InstructionDereferencesPointer either.
-  if (UnderlyingVal == GetUnderlyingObject(UnderlyingVal, DL, 1))
+  if (UnderlyingVal == getUnderlyingObject(UnderlyingVal, 1))
     for (Instruction &I : *BB)
       if (InstructionDereferencesPointer(&I, UnderlyingVal))
         return true;
@@ -1226,11 +1221,11 @@ static bool usesOperand(User *Usr, Value *Op) {
 }
 
 // Return true if the instruction type of Val is supported by
-// constantFoldUser(). Currently CastInst and BinaryOperator only.  Call this
-// before calling constantFoldUser() to find out if it's even worth attempting
-// to call it.
+// constantFoldUser(). Currently CastInst, BinaryOperator and FreezeInst only.
+// Call this before calling constantFoldUser() to find out if it's even worth
+// attempting to call it.
 static bool isOperationFoldable(User *Usr) {
-  return isa<CastInst>(Usr) || isa<BinaryOperator>(Usr);
+  return isa<CastInst>(Usr) || isa<BinaryOperator>(Usr) || isa<FreezeInst>(Usr);
 }
 
 // Check if Usr can be simplified to an integer constant when the value of one
@@ -1261,6 +1256,9 @@ static ValueLatticeElement constantFoldUser(User *Usr, Value *Op,
             SimplifyBinOp(BO->getOpcode(), LHS, RHS, DL))) {
       return ValueLatticeElement::getRange(ConstantRange(C->getValue()));
     }
+  } else if (isa<FreezeInst>(Usr)) {
+    assert(cast<FreezeInst>(Usr)->getOperand(0) == Op && "Operand 0 isn't Op");
+    return ValueLatticeElement::getRange(ConstantRange(OpConstVal));
   }
   return ValueLatticeElement::getOverdefined();
 }

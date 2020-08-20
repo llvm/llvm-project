@@ -1562,7 +1562,7 @@ public:
       if (Value *Ptr = getPointerOperand(V))
         return getUnderlyingObjectThroughLoads(Ptr);
       else if (V->getType()->isPointerTy())
-        return GetUnderlyingObject(V, DL);
+        return getUnderlyingObject(V);
       return V;
     }
 

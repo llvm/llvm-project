@@ -110,15 +110,15 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
   PassManager pm(m.getContext());
   applyPassManagerCLOptions(pm);
 
+  const char gpuBinaryAnnotation[] = "nvvm.cubin";
   pm.addPass(createGpuKernelOutliningPass());
   auto &kernelPm = pm.nest<gpu::GPUModuleOp>();
   kernelPm.addPass(createStripDebugInfoPass());
   kernelPm.addPass(createLowerGpuOpsToNVVMOpsPass());
   kernelPm.addPass(createConvertGPUKernelToBlobPass(
       translateModuleToNVVMIR, compilePtxToCubin, "nvptx64-nvidia-cuda",
-      "sm_35", "+ptx60", "nvvm.cubin"));
-  pm.addPass(createLowerToLLVMPass());
-  pm.addPass(createConvertGpuLaunchFuncToGpuRuntimeCallsPass());
+      "sm_35", "+ptx60", gpuBinaryAnnotation));
+  pm.addPass(createGpuToLLVMConversionPass(gpuBinaryAnnotation));
 
   return pm.run(m);
 }

@@ -6,6 +6,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1011 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10-DL %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10-DL %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10-DL %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1031 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10-DL %s
 
 define amdgpu_kernel void @idot8_acc32(<8 x i4> addrspace(1)* %src1,
 ; GFX7-LABEL: idot8_acc32:

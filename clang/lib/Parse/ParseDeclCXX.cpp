@@ -3379,7 +3379,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
     FPOptionsOverride NewOverrides;
     Actions.CurFPFeatures = NewOverrides.applyOverrides(getLangOpts());
     Actions.FpPragmaStack.Act(Tok.getLocation(), Sema::PSK_Reset, StringRef(),
-                              0 /*unused*/);
+                              {} /*unused*/);
 
     SourceLocation SavedPrevTokLocation = PrevTokLocation;
     ParseLexedPragmas(getCurrentClass());

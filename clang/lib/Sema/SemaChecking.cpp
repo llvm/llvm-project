@@ -2557,52 +2557,151 @@ bool Sema::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   return SemaBuiltinConstantArgRange(TheCall, i, l, u + l);
 }
 
-bool Sema::CheckBPFBuiltinFunctionCall(unsigned BuiltinID,
-                                       CallExpr *TheCall) {
-  assert((BuiltinID == BPF::BI__builtin_preserve_field_info ||
-          BuiltinID == BPF::BI__builtin_btf_type_id) &&
-         "unexpected ARM builtin");
-
-  if (checkArgCount(*this, TheCall, 2))
-    return true;
-
-  Expr *Arg;
-  if (BuiltinID == BPF::BI__builtin_btf_type_id) {
-    // The second argument needs to be a constant int
-    Arg = TheCall->getArg(1);
-    if (!Arg->isIntegerConstantExpr(Context)) {
-      Diag(Arg->getBeginLoc(), diag::err_btf_type_id_not_const)
-          << 2 << Arg->getSourceRange();
-      return true;
-    }
-
-    TheCall->setType(Context.UnsignedIntTy);
+static bool isValidBPFPreserveFieldInfoArg(Expr *Arg) {
+  if (Arg->getType()->getAsPlaceholderType())
     return false;
-  }
 
   // The first argument needs to be a record field access.
   // If it is an array element access, we delay decision
   // to BPF backend to check whether the access is a
   // field access or not.
-  Arg = TheCall->getArg(0);
-  if (Arg->getType()->getAsPlaceholderType() ||
-      (Arg->IgnoreParens()->getObjectKind() != OK_BitField &&
-       !dyn_cast<MemberExpr>(Arg->IgnoreParens()) &&
-       !dyn_cast<ArraySubscriptExpr>(Arg->IgnoreParens()))) {
-    Diag(Arg->getBeginLoc(), diag::err_preserve_field_info_not_field)
-        << 1 << Arg->getSourceRange();
+  return (Arg->IgnoreParens()->getObjectKind() == OK_BitField ||
+          dyn_cast<MemberExpr>(Arg->IgnoreParens()) ||
+          dyn_cast<ArraySubscriptExpr>(Arg->IgnoreParens()));
+}
+
+static bool isValidBPFPreserveTypeInfoArg(Expr *Arg) {
+  QualType ArgType = Arg->getType();
+  if (ArgType->getAsPlaceholderType())
+    return false;
+
+  // for TYPE_EXISTENCE/TYPE_SIZEOF reloc type
+  // format:
+  //   1. __builtin_preserve_type_info(*(<type> *)0, flag);
+  //   2. <type> var;
+  //      __builtin_preserve_type_info(var, flag);
+  if (!dyn_cast<DeclRefExpr>(Arg->IgnoreParens()) &&
+      !dyn_cast<UnaryOperator>(Arg->IgnoreParens()))
+    return false;
+
+  // Typedef type.
+  if (ArgType->getAs<TypedefType>())
     return true;
+
+  // Record type or Enum type.
+  const Type *Ty = ArgType->getUnqualifiedDesugaredType();
+  if (const auto *RT = Ty->getAs<RecordType>()) {
+    if (!RT->getDecl()->getDeclName().isEmpty())
+      return true;
+  } else if (const auto *ET = Ty->getAs<EnumType>()) {
+    if (!ET->getDecl()->getDeclName().isEmpty())
+      return true;
   }
+
+  return false;
+}
+
+static bool isValidBPFPreserveEnumValueArg(Expr *Arg) {
+  QualType ArgType = Arg->getType();
+  if (ArgType->getAsPlaceholderType())
+    return false;
+
+  // for ENUM_VALUE_EXISTENCE/ENUM_VALUE reloc type
+  // format:
+  //   __builtin_preserve_enum_value(*(<enum_type> *)<enum_value>,
+  //                                 flag);
+  const auto *UO = dyn_cast<UnaryOperator>(Arg->IgnoreParens());
+  if (!UO)
+    return false;
+
+  const auto *CE = dyn_cast<CStyleCastExpr>(UO->getSubExpr());
+  if (!CE || CE->getCastKind() != CK_IntegralToPointer)
+    return false;
+
+  // The integer must be from an EnumConstantDecl.
+  const auto *DR = dyn_cast<DeclRefExpr>(CE->getSubExpr());
+  if (!DR)
+    return false;
+
+  const EnumConstantDecl *Enumerator =
+      dyn_cast<EnumConstantDecl>(DR->getDecl());
+  if (!Enumerator)
+    return false;
+
+  // The type must be EnumType.
+  const Type *Ty = ArgType->getUnqualifiedDesugaredType();
+  const auto *ET = Ty->getAs<EnumType>();
+  if (!ET)
+    return false;
+
+  // The enum value must be supported.
+  for (auto *EDI : ET->getDecl()->enumerators()) {
+    if (EDI == Enumerator)
+      return true;
+  }
+
+  return false;
+}
+
+bool Sema::CheckBPFBuiltinFunctionCall(unsigned BuiltinID,
+                                       CallExpr *TheCall) {
+  assert((BuiltinID == BPF::BI__builtin_preserve_field_info ||
+          BuiltinID == BPF::BI__builtin_btf_type_id ||
+          BuiltinID == BPF::BI__builtin_preserve_type_info ||
+          BuiltinID == BPF::BI__builtin_preserve_enum_value) &&
+         "unexpected BPF builtin");
+
+  if (checkArgCount(*this, TheCall, 2))
+    return true;
 
   // The second argument needs to be a constant int
-  Arg = TheCall->getArg(1);
-  if (!Arg->isIntegerConstantExpr(Context)) {
-    Diag(Arg->getBeginLoc(), diag::err_preserve_field_info_not_const)
-        << 2 << Arg->getSourceRange();
+  Expr *Arg = TheCall->getArg(1);
+  Optional<llvm::APSInt> Value = Arg->getIntegerConstantExpr(Context);
+  diag::kind kind;
+  if (!Value) {
+    if (BuiltinID == BPF::BI__builtin_preserve_field_info)
+      kind = diag::err_preserve_field_info_not_const;
+    else if (BuiltinID == BPF::BI__builtin_btf_type_id)
+      kind = diag::err_btf_type_id_not_const;
+    else if (BuiltinID == BPF::BI__builtin_preserve_type_info)
+      kind = diag::err_preserve_type_info_not_const;
+    else
+      kind = diag::err_preserve_enum_value_not_const;
+    Diag(Arg->getBeginLoc(), kind) << 2 << Arg->getSourceRange();
     return true;
   }
 
-  TheCall->setType(Context.UnsignedIntTy);
+  // The first argument
+  Arg = TheCall->getArg(0);
+  bool InvalidArg = false;
+  bool ReturnUnsignedInt = true;
+  if (BuiltinID == BPF::BI__builtin_preserve_field_info) {
+    if (!isValidBPFPreserveFieldInfoArg(Arg)) {
+      InvalidArg = true;
+      kind = diag::err_preserve_field_info_not_field;
+    }
+  } else if (BuiltinID == BPF::BI__builtin_preserve_type_info) {
+    if (!isValidBPFPreserveTypeInfoArg(Arg)) {
+      InvalidArg = true;
+      kind = diag::err_preserve_type_info_invalid;
+    }
+  } else if (BuiltinID == BPF::BI__builtin_preserve_enum_value) {
+    if (!isValidBPFPreserveEnumValueArg(Arg)) {
+      InvalidArg = true;
+      kind = diag::err_preserve_enum_value_invalid;
+    }
+    ReturnUnsignedInt = false;
+  }
+
+  if (InvalidArg) {
+    Diag(Arg->getBeginLoc(), kind) << 1 << Arg->getSourceRange();
+    return true;
+  }
+
+  if (ReturnUnsignedInt)
+    TheCall->setType(Context.UnsignedIntTy);
+  else
+    TheCall->setType(Context.UnsignedLongTy);
   return false;
 }
 
@@ -3606,16 +3705,12 @@ bool Sema::CheckX86BuiltinGatherScatterScale(unsigned BuiltinID,
 enum { TileRegLow = 0, TileRegHigh = 7 };
 
 bool Sema::CheckX86BuiltinTileArgumentsRange(CallExpr *TheCall,
-                                    ArrayRef<int> ArgNums) {
+                                             ArrayRef<int> ArgNums) {
   for (int ArgNum : ArgNums) {
     if (SemaBuiltinConstantArgRange(TheCall, ArgNum, TileRegLow, TileRegHigh))
       return true;
   }
   return false;
-}
-
-bool Sema::CheckX86BuiltinTileArgumentsRange(CallExpr *TheCall, int ArgNum) {
-  return SemaBuiltinConstantArgRange(TheCall, ArgNum, TileRegLow, TileRegHigh);
 }
 
 bool Sema::CheckX86BuiltinTileDuplicate(CallExpr *TheCall,
@@ -3624,9 +3719,14 @@ bool Sema::CheckX86BuiltinTileDuplicate(CallExpr *TheCall,
   // each bit to represent the usage of them in bitset.
   std::bitset<TileRegHigh + 1> ArgValues;
   for (int ArgNum : ArgNums) {
-    llvm::APSInt Arg;
-    SemaBuiltinConstantArg(TheCall, ArgNum, Arg);
-    int ArgExtValue = Arg.getExtValue();
+    Expr *Arg = TheCall->getArg(ArgNum);
+    if (Arg->isTypeDependent() || Arg->isValueDependent())
+      continue;
+
+    llvm::APSInt Result;
+    if (SemaBuiltinConstantArg(TheCall, ArgNum, Result))
+      return true;
+    int ArgExtValue = Result.getExtValue();
     assert((ArgExtValue >= TileRegLow || ArgExtValue <= TileRegHigh) &&
            "Incorrect tile register num.");
     if (ArgValues.test(ArgExtValue))
@@ -4950,6 +5050,11 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
              Op == AtomicExpr::AO__opencl_atomic_load)
                 ? 0
                 : 1);
+
+  if (ValType->isExtIntType()) {
+    Diag(Ptr->getExprLoc(), diag::err_atomic_builtin_ext_int_prohibit);
+    return ExprError();
+  }
 
   return AE;
 }
@@ -10269,10 +10374,16 @@ static IntRange GetExprRange(ASTContext &C, const Expr *E, unsigned MaxWidth,
                           MaxWidth, InConstantContext);
 
     // Otherwise, conservatively merge.
-    IntRange L =
-        GetExprRange(C, CO->getTrueExpr(), MaxWidth, InConstantContext);
-    IntRange R =
-        GetExprRange(C, CO->getFalseExpr(), MaxWidth, InConstantContext);
+    // GetExprRange requires an integer expression, but a throw expression
+    // results in a void type.
+    Expr *E = CO->getTrueExpr();
+    IntRange L = E->getType()->isVoidType()
+                     ? IntRange{0, true}
+                     : GetExprRange(C, E, MaxWidth, InConstantContext);
+    E = CO->getFalseExpr();
+    IntRange R = E->getType()->isVoidType()
+                     ? IntRange{0, true}
+                     : GetExprRange(C, E, MaxWidth, InConstantContext);
     return IntRange::join(L, R);
   }
 
@@ -10693,15 +10804,16 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
       S.Context.hasSameUnqualifiedType(Constant->getType(), Other->getType()))
     return false;
 
-  // TODO: Investigate using GetExprRange() to get tighter bounds
-  // on the bit ranges.
+  IntRange OtherValueRange =
+      GetExprRange(S.Context, Other, S.isConstantEvaluated());
+
   QualType OtherT = Other->getType();
   if (const auto *AT = OtherT->getAs<AtomicType>())
     OtherT = AT->getValueType();
-  IntRange OtherRange = IntRange::forValueOfType(S.Context, OtherT);
+  IntRange OtherTypeRange = IntRange::forValueOfType(S.Context, OtherT);
 
   // Special case for ObjC BOOL on targets where its a typedef for a signed char
-  // (Namely, macOS).
+  // (Namely, macOS). FIXME: IntRange::forValueOfType should do this.
   bool IsObjCSignedCharBool = S.getLangOpts().ObjC &&
                               S.NSAPIObj->isObjCBOOLType(OtherT) &&
                               OtherT->isSpecificBuiltinType(BuiltinType::SChar);
@@ -10711,16 +10823,31 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
   bool OtherIsBooleanDespiteType =
       !OtherT->isBooleanType() && Other->isKnownToHaveBooleanValue();
   if (OtherIsBooleanDespiteType || IsObjCSignedCharBool)
-    OtherRange = IntRange::forBoolType();
+    OtherTypeRange = OtherValueRange = IntRange::forBoolType();
 
-  // Determine the promoted range of the other type and see if a comparison of
-  // the constant against that range is tautological.
-  PromotedRange OtherPromotedRange(OtherRange, Value.getBitWidth(),
-                                   Value.isUnsigned());
-  auto Cmp = OtherPromotedRange.compare(Value);
+  // Check if all values in the range of possible values of this expression
+  // lead to the same comparison outcome.
+  PromotedRange OtherPromotedValueRange(OtherValueRange, Value.getBitWidth(),
+                                        Value.isUnsigned());
+  auto Cmp = OtherPromotedValueRange.compare(Value);
   auto Result = PromotedRange::constantValue(E->getOpcode(), Cmp, RhsConstant);
   if (!Result)
     return false;
+
+  // Also consider the range determined by the type alone. This allows us to
+  // classify the warning under the proper diagnostic group.
+  bool TautologicalTypeCompare = false;
+  {
+    PromotedRange OtherPromotedTypeRange(OtherTypeRange, Value.getBitWidth(),
+                                         Value.isUnsigned());
+    auto TypeCmp = OtherPromotedTypeRange.compare(Value);
+    if (auto TypeResult = PromotedRange::constantValue(E->getOpcode(), TypeCmp,
+                                                       RhsConstant)) {
+      TautologicalTypeCompare = true;
+      Cmp = TypeCmp;
+      Result = TypeResult;
+    }
+  }
 
   // Suppress the diagnostic for an in-range comparison if the constant comes
   // from a macro or enumerator. We don't want to diagnose
@@ -10748,6 +10875,14 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
     OS << (BL->getValue() ? "YES" : "NO");
   } else {
     OS << Value;
+  }
+
+  if (!TautologicalTypeCompare) {
+    S.Diag(E->getOperatorLoc(), diag::warn_tautological_compare_value_range)
+        << RhsConstant << OtherValueRange.Width << OtherValueRange.NonNegative
+        << E->getOpcodeStr() << OS.str() << *Result
+        << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
+    return true;
   }
 
   if (IsObjCSignedCharBool) {
@@ -10928,7 +11063,7 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
         BitfieldEnumDecl->getNumPositiveBits() > 0 &&
         BitfieldEnumDecl->getNumNegativeBits() == 0) {
       S.Diag(InitLoc, diag::warn_no_underlying_type_specified_for_enum_bitfield)
-        << BitfieldEnumDecl->getNameAsString();
+          << BitfieldEnumDecl;
     }
   }
 
@@ -11708,9 +11843,9 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
       Expr::EvalResult Result;
       if (E->EvaluateAsFixedPoint(Result, S.Context, Expr::SE_AllowSideEffects,
                                   S.isConstantEvaluated())) {
-        APFixedPoint Value = Result.Val.getFixedPoint();
-        APFixedPoint MaxVal = S.Context.getFixedPointMax(T);
-        APFixedPoint MinVal = S.Context.getFixedPointMin(T);
+        llvm::APFixedPoint Value = Result.Val.getFixedPoint();
+        llvm::APFixedPoint MaxVal = S.Context.getFixedPointMax(T);
+        llvm::APFixedPoint MinVal = S.Context.getFixedPointMin(T);
         if (Value > MaxVal || Value < MinVal) {
           S.DiagRuntimeBehavior(E->getExprLoc(), E,
                                 S.PDiag(diag::warn_impcast_fixed_point_range)
@@ -11725,7 +11860,7 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
       if (!S.isConstantEvaluated() &&
           E->EvaluateAsFixedPoint(Result, S.Context,
                                   Expr::SE_AllowSideEffects)) {
-        APFixedPoint FXResult = Result.Val.getFixedPoint();
+        llvm::APFixedPoint FXResult = Result.Val.getFixedPoint();
 
         bool Overflowed;
         llvm::APSInt IntResult = FXResult.convertToInt(
@@ -11750,7 +11885,7 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
         llvm::APSInt Value = Result.Val.getInt();
 
         bool Overflowed;
-        APFixedPoint IntResult = APFixedPoint::getFromIntValue(
+        llvm::APFixedPoint IntResult = llvm::APFixedPoint::getFromIntValue(
             Value, S.Context.getFixedPointSemantics(T), &Overflowed);
 
         if (Overflowed) {

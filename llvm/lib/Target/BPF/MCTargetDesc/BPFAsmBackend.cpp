@@ -43,11 +43,6 @@ public:
 
   unsigned getNumFixupKinds() const override { return 1; }
 
-  bool mayNeedRelaxation(const MCInst &Inst,
-                         const MCSubtargetInfo &STI) const override {
-    return false;
-  }
-
   bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
 };
 

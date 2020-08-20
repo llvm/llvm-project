@@ -351,7 +351,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
     if (DstSize == 128 && !Query.Types[0].isVector())
       return false; // Extending to a scalar s128 needs narrowing.
-    
+
     // Make sure that we have something that will fit in a register, and
     // make sure it's a power of 2.
     if (DstSize < 8 || DstSize > 128 || !isPowerOf2_32(DstSize))
@@ -675,6 +675,27 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(MachineInstr &MI,
                   .addGlobalAddress(GV, 0, OpFlags | AArch64II::MO_PAGE);
   // Set the regclass on the dest reg too.
   MRI.setRegClass(ADRP.getReg(0), &AArch64::GPR64RegClass);
+
+  // MO_TAGGED on the page indicates a tagged address. Set the tag now. We do so
+  // by creating a MOVK that sets bits 48-63 of the register to (global address
+  // + 0x100000000 - PC) >> 48. The additional 0x100000000 offset here is to
+  // prevent an incorrect tag being generated during relocation when the the
+  // global appears before the code section. Without the offset, a global at
+  // `0x0f00'0000'0000'1000` (i.e. at `0x1000` with tag `0xf`) that's referenced
+  // by code at `0x2000` would result in `0x0f00'0000'0000'1000 - 0x2000 =
+  // 0x0eff'ffff'ffff'f000`, meaning the tag would be incorrectly set to `0xe`
+  // instead of `0xf`.
+  // This assumes that we're in the small code model so we can assume a binary
+  // size of <= 4GB, which makes the untagged PC relative offset positive. The
+  // binary must also be loaded into address range [0, 2^48). Both of these
+  // properties need to be ensured at runtime when using tagged addresses.
+  if (OpFlags & AArch64II::MO_TAGGED) {
+    ADRP = MIRBuilder.buildInstr(AArch64::MOVKXi, {LLT::pointer(0, 64)}, {ADRP})
+               .addGlobalAddress(GV, 0x100000000,
+                                 AArch64II::MO_PREL | AArch64II::MO_G3)
+               .addImm(48);
+    MRI.setRegClass(ADRP.getReg(0), &AArch64::GPR64RegClass);
+  }
 
   MIRBuilder.buildInstr(AArch64::G_ADD_LOW, {DstReg}, {ADRP})
       .addGlobalAddress(GV, 0,

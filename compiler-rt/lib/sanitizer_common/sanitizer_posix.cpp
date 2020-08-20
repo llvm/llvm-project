@@ -354,11 +354,11 @@ int GetNamedMappingFd(const char *name, uptr size, int *flags) {
   int fd = ReserveStandardFds(
       internal_open(shmname, O_RDWR | O_CREAT | O_TRUNC | o_cloexec, S_IRWXU));
   CHECK_GE(fd, 0);
-  if (!o_cloexec) {
-    int res = fcntl(fd, F_SETFD, FD_CLOEXEC);
-    CHECK_EQ(0, res);
-  }
   int res = internal_ftruncate(fd, size);
+#if !defined(O_CLOEXEC)
+  res = fcntl(fd, F_SETFD, FD_CLOEXEC);
+  CHECK_EQ(0, res);
+#endif
   CHECK_EQ(0, res);
   res = internal_unlink(shmname);
   CHECK_EQ(0, res);

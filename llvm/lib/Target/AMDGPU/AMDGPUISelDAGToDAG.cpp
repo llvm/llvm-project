@@ -233,11 +233,9 @@ private:
 
   template <bool IsSigned>
   bool SelectFlatOffset(SDNode *N, SDValue Addr, SDValue &VAddr,
-                        SDValue &Offset, SDValue &SLC) const;
-  bool SelectFlatAtomic(SDNode *N, SDValue Addr, SDValue &VAddr,
-                        SDValue &Offset, SDValue &SLC) const;
-  bool SelectFlatAtomicSigned(SDNode *N, SDValue Addr, SDValue &VAddr,
-                              SDValue &Offset, SDValue &SLC) const;
+                        SDValue &Offset) const;
+  bool SelectGlobalSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
+                         SDValue &VOffset, SDValue &Offset) const;
 
   bool SelectSMRDOffset(SDValue ByteOffsetNode, SDValue &Offset,
                         bool &Imm) const;
@@ -557,8 +555,8 @@ const TargetRegisterClass *AMDGPUDAGToDAGISel::getOperandRegClass(SDNode *N,
                                                           unsigned OpNo) const {
   if (!N->isMachineOpcode()) {
     if (N->getOpcode() == ISD::CopyToReg) {
-      unsigned Reg = cast<RegisterSDNode>(N->getOperand(1))->getReg();
-      if (Register::isVirtualRegister(Reg)) {
+      Register Reg = cast<RegisterSDNode>(N->getOperand(1))->getReg();
+      if (Reg.isVirtual()) {
         MachineRegisterInfo &MRI = CurDAG->getMachineFunction().getRegInfo();
         return MRI.getRegClass(Reg);
       }
@@ -1662,8 +1660,7 @@ template <bool IsSigned>
 bool AMDGPUDAGToDAGISel::SelectFlatOffset(SDNode *N,
                                           SDValue Addr,
                                           SDValue &VAddr,
-                                          SDValue &Offset,
-                                          SDValue &SLC) const {
+                                          SDValue &Offset) const {
   int64_t OffsetVal = 0;
 
   if (Subtarget->hasFlatInstOffsets() &&
@@ -1752,24 +1749,70 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffset(SDNode *N,
 
   VAddr = Addr;
   Offset = CurDAG->getTargetConstant(OffsetVal, SDLoc(), MVT::i16);
-  SLC = CurDAG->getTargetConstant(0, SDLoc(), MVT::i1);
   return true;
 }
 
-bool AMDGPUDAGToDAGISel::SelectFlatAtomic(SDNode *N,
-                                          SDValue Addr,
-                                          SDValue &VAddr,
-                                          SDValue &Offset,
-                                          SDValue &SLC) const {
-  return SelectFlatOffset<false>(N, Addr, VAddr, Offset, SLC);
+// If this matches zero_extend i32:x, return x
+static SDValue matchZExtFromI32(SDValue Op) {
+  if (Op.getOpcode() != ISD::ZERO_EXTEND)
+    return SDValue();
+
+  SDValue ExtSrc = Op.getOperand(0);
+  return (ExtSrc.getValueType() == MVT::i32) ? ExtSrc : SDValue();
 }
 
-bool AMDGPUDAGToDAGISel::SelectFlatAtomicSigned(SDNode *N,
-                                                SDValue Addr,
-                                                SDValue &VAddr,
-                                                SDValue &Offset,
-                                                SDValue &SLC) const {
-  return SelectFlatOffset<true>(N, Addr, VAddr, Offset, SLC);
+// Match (64-bit SGPR base) + (zext vgpr offset) + sext(imm offset)
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
+                                           SDValue Addr,
+                                           SDValue &SAddr,
+                                           SDValue &VOffset,
+                                           SDValue &Offset) const {
+  int64_t ImmOffset = 0;
+
+  // Match the immediate offset first, which canonically is moved as low as
+  // possible.
+  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    SDValue LHS = Addr.getOperand(0);
+    SDValue RHS = Addr.getOperand(1);
+
+    int64_t COffsetVal = cast<ConstantSDNode>(RHS)->getSExtValue();
+    const SIInstrInfo *TII = Subtarget->getInstrInfo();
+
+    // TODO: Could split larger constant into VGPR offset.
+    if (TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::GLOBAL_ADDRESS, true)) {
+      Addr = LHS;
+      ImmOffset = COffsetVal;
+    }
+  }
+
+  // Match the variable offset.
+  if (Addr.getOpcode() != ISD::ADD)
+    return false;
+
+  SDValue LHS = Addr.getOperand(0);
+  SDValue RHS = Addr.getOperand(1);
+
+  if (!LHS->isDivergent()) {
+    // add (i64 sgpr), (zero_extend (i32 vgpr))
+    if (SDValue ZextRHS = matchZExtFromI32(RHS)) {
+      SAddr = LHS;
+      VOffset = ZextRHS;
+    }
+  }
+
+  if (!SAddr && !RHS->isDivergent()) {
+    // add (zero_extend (i32 vgpr)), (i64 sgpr)
+    if (SDValue ZextLHS = matchZExtFromI32(LHS)) {
+      SAddr = RHS;
+      VOffset = ZextLHS;
+    }
+  }
+
+  if (!SAddr)
+    return false;
+
+  Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i16);
+  return true;
 }
 
 bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDValue ByteOffsetNode,

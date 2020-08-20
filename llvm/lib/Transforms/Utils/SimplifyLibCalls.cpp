@@ -608,9 +608,19 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilderBase &B) {
     return Dst;
   }
 
-  // Let strncpy handle the zero padding
-  if (Len > SrcLen + 1)
-    return nullptr;
+  // strncpy(a, "a", 4) - > memcpy(a, "a\0\0\0", 4)
+  if (Len > SrcLen + 1) {
+    if (Len <= 128) {
+      StringRef Str;
+      if (!getConstantStringInfo(Src, Str))
+        return nullptr;
+      std::string SrcStr = Str.str();
+      SrcStr.resize(Len, '\0');
+      Src = B.CreateGlobalString(SrcStr, "str");
+    } else {
+      return nullptr;
+    }
+  }
 
   Type *PT = Callee->getFunctionType()->getParamType(0);
   // strncpy(x, s, c) -> memcpy(align 1 x, align 1 s, c) [s and c are constant]
@@ -2484,6 +2494,30 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
     // sprintf(dest, "%s", str) -> llvm.memcpy(align 1 dest, align 1 str,
     // strlen(str)+1)
     if (!CI->getArgOperand(2)->getType()->isPointerTy())
+      return nullptr;
+
+    if (CI->use_empty())
+      // sprintf(dest, "%s", str) -> strcpy(dest, str)
+      return emitStrCpy(CI->getArgOperand(0), CI->getArgOperand(2), B, TLI);
+
+    uint64_t SrcLen = GetStringLength(CI->getArgOperand(2));
+    if (SrcLen) {
+      B.CreateMemCpy(
+          CI->getArgOperand(0), Align(1), CI->getArgOperand(2), Align(1),
+          ConstantInt::get(DL.getIntPtrType(CI->getContext()), SrcLen));
+      // Returns total number of characters written without null-character.
+      return ConstantInt::get(CI->getType(), SrcLen - 1);
+    } else if (Value *V = emitStpCpy(CI->getArgOperand(0), CI->getArgOperand(2),
+                                     B, TLI)) {
+      // sprintf(dest, "%s", str) -> stpcpy(dest, str) - dest
+      Value *PtrDiff = B.CreatePtrDiff(V, CI->getArgOperand(0));
+      return B.CreateIntCast(PtrDiff, CI->getType(), false);
+    }
+
+    bool OptForSize = CI->getFunction()->hasOptSize() ||
+                      llvm::shouldOptimizeForSize(CI->getParent(), PSI, BFI,
+                                                  PGSOQueryType::IRPass);
+    if (OptForSize)
       return nullptr;
 
     Value *Len = emitStrLen(CI->getArgOperand(2), B, DL, TLI);

@@ -17,7 +17,7 @@ const int nullIndex = std::numeric_limits<int>::max();
 
 /// Construct a Simplex object with `nVar` variables.
 Simplex::Simplex(unsigned nVar)
-    : nRow(0), nCol(2), tableau(0, 2 + nVar), empty(false) {
+    : nRow(0), nCol(2), nRedundant(0), tableau(0, 2 + nVar), empty(false) {
   colUnknown.push_back(nullIndex);
   colUnknown.push_back(nullIndex);
   for (unsigned i = 0; i < nVar; ++i) {
@@ -239,7 +239,7 @@ void Simplex::pivot(unsigned pivotRow, unsigned pivotCol) {
   }
   normalizeRow(pivotRow);
 
-  for (unsigned row = 0; row < nRow; ++row) {
+  for (unsigned row = nRedundant; row < nRow; ++row) {
     if (row == pivotRow)
       continue;
     if (tableau(row, pivotCol) == 0) // Nothing to do.
@@ -303,7 +303,7 @@ Optional<unsigned> Simplex::findPivotRow(Optional<unsigned> skipRow,
                                          unsigned col) const {
   Optional<unsigned> retRow;
   int64_t retElem, retConst;
-  for (unsigned row = 0; row < nRow; ++row) {
+  for (unsigned row = nRedundant; row < nRow; ++row) {
     if (skipRow && row == *skipRow)
       continue;
     int64_t elem = tableau(row, col);
@@ -413,7 +413,7 @@ void Simplex::undo(UndoLogEntry entry) {
         // coefficients for every row. But the unknown is a constraint,
         // so it was added initially as a row. Such a row could never have been
         // pivoted to a column. So a pivot row will always be found.
-        for (unsigned i = 0; i < nRow; ++i) {
+        for (unsigned i = nRedundant; i < nRow; ++i) {
           if (tableau(i, column) != 0) {
             row = i;
             break;
@@ -435,6 +435,8 @@ void Simplex::undo(UndoLogEntry entry) {
     con.pop_back();
   } else if (entry == UndoLogEntry::UnmarkEmpty) {
     empty = false;
+  } else if (entry == UndoLogEntry::UnmarkLastRedundant) {
+    nRedundant--;
   }
 }
 
@@ -480,6 +482,65 @@ Optional<Fraction> Simplex::computeOptimum(Direction direction,
   return optimum;
 }
 
+/// Redundant constraints are those that are in row orientation and lie in
+/// rows 0 to nRedundant - 1.
+bool Simplex::isMarkedRedundant(unsigned constraintIndex) const {
+  const Unknown &u = con[constraintIndex];
+  return u.orientation == Orientation::Row && u.pos < nRedundant;
+}
+
+/// Mark the specified row redundant.
+///
+/// This is done by moving the unknown to the end of the block of redundant
+/// rows (namely, to row nRedundant) and incrementing nRedundant to
+/// accomodate the new redundant row.
+void Simplex::markRowRedundant(Unknown &u) {
+  assert(u.orientation == Orientation::Row &&
+         "Unknown should be in row position!");
+  swapRows(u.pos, nRedundant);
+  ++nRedundant;
+  undoLog.emplace_back(UndoLogEntry::UnmarkLastRedundant);
+}
+
+/// Find a subset of constraints that is redundant and mark them redundant.
+void Simplex::detectRedundant() {
+  // It is not meaningful to talk about redundancy for empty sets.
+  if (empty)
+    return;
+
+  // Iterate through the constraints and check for each one if it can attain
+  // negative sample values. If it can, it's not redundant. Otherwise, it is.
+  // We mark redundant constraints redundant.
+  //
+  // Constraints that get marked redundant in one iteration are not respected
+  // when checking constraints in later iterations. This prevents, for example,
+  // two identical constraints both being marked redundant since each is
+  // redundant given the other one. In this example, only the first of the
+  // constraints that is processed will get marked redundant, as it should be.
+  for (Unknown &u : con) {
+    if (u.orientation == Orientation::Column) {
+      unsigned column = u.pos;
+      Optional<unsigned> pivotRow = findPivotRow({}, Direction::Down, column);
+      // If no downward pivot is returned, the constraint is unbounded below
+      // and hence not redundant.
+      if (!pivotRow)
+        continue;
+      pivot(*pivotRow, column);
+    }
+
+    unsigned row = u.pos;
+    Optional<Fraction> minimum = computeRowOptimum(Direction::Down, row);
+    if (!minimum || *minimum < Fraction(0, 1)) {
+      // Constraint is unbounded below or can attain negative sample values and
+      // hence is not redundant.
+      restoreRow(u);
+      continue;
+    }
+
+    markRowRedundant(u);
+  }
+}
+
 bool Simplex::isUnbounded() {
   if (empty)
     return false;
@@ -506,7 +567,7 @@ bool Simplex::isUnbounded() {
 /// The product constraints and variables are stored as: first A's, then B's.
 ///
 /// The product tableau has row layout:
-///   A's rows, B's rows.
+///   A's redundant rows, B's redundant rows, A's other rows, B's other rows.
 ///
 /// It has column layout:
 ///   denominator, constant, A's columns, B's columns.
@@ -569,9 +630,14 @@ Simplex Simplex::makeProduct(const Simplex &a, const Simplex &b) {
     result.nRow++;
   };
 
-  for (unsigned row = 0; row < a.nRow; ++row)
+  result.nRedundant = a.nRedundant + b.nRedundant;
+  for (unsigned row = 0; row < a.nRedundant; ++row)
     appendRowFromA(row);
-  for (unsigned row = 0; row < b.nRow; ++row)
+  for (unsigned row = 0; row < b.nRedundant; ++row)
+    appendRowFromB(row);
+  for (unsigned row = a.nRedundant; row < a.nRow; ++row)
+    appendRowFromA(row);
+  for (unsigned row = b.nRedundant; row < b.nRow; ++row)
     appendRowFromB(row);
 
   return result;

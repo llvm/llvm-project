@@ -16,6 +16,7 @@
 
 #include "../PassDetail.h"
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
+#include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SCF/EDSC/Builders.h"
 #include "mlir/Dialect/SCF/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
@@ -203,7 +204,10 @@ Value NDTransferOpHelper<ConcreteOp>::emitInBoundsCondition(
   Value inBoundsCondition;
   majorIvsPlusOffsets.reserve(majorIvs.size());
   unsigned idx = 0;
-  for (auto it : llvm::zip(majorIvs, majorOffsets, memrefBounds.getUbs())) {
+  SmallVector<Value, 4> bounds =
+      linalg::applyMapToValues(rewriter, xferOp.getLoc(),
+                               xferOp.permutation_map(), memrefBounds.getUbs());
+  for (auto it : llvm::zip(majorIvs, majorOffsets, bounds)) {
     Value iv = std::get<0>(it), off = std::get<1>(it), ub = std::get<2>(it);
     using namespace mlir::edsc::op;
     majorIvsPlusOffsets.push_back(iv + off);
@@ -224,7 +228,10 @@ static Value setAllocAtFunctionEntry(MemRefType memRefMinorVectorType,
                                      Operation *op) {
   auto &b = ScopedContext::getBuilderRef();
   OpBuilder::InsertionGuard guard(b);
-  b.setInsertionPointToStart(&op->getParentOfType<FuncOp>().front());
+  Operation *scope =
+      op->getParentWithTrait<OpTrait::AutomaticAllocationScope>();
+  assert(scope && "Expected op to be inside automatic allocation scope");
+  b.setInsertionPointToStart(&scope->getRegion(0).front());
   Value res =
       std_alloca(memRefMinorVectorType, ValueRange{}, b.getI64IntegerAttr(128));
   return res;

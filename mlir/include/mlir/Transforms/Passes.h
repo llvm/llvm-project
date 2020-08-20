@@ -14,19 +14,19 @@
 #ifndef MLIR_TRANSFORMS_PASSES_H
 #define MLIR_TRANSFORMS_PASSES_H
 
-#include "mlir/Support/LLVM.h"
-#include <functional>
+#include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/LocationSnapshot.h"
+#include "mlir/Transforms/ViewOpGraph.h"
+#include "mlir/Transforms/ViewRegionGraph.h"
 #include <limits>
 
 namespace mlir {
 
 class AffineForOp;
-class FuncOp;
-class ModuleOp;
-class Pass;
 
-template <typename T>
-class OperationPass;
+//===----------------------------------------------------------------------===//
+// Passes
+//===----------------------------------------------------------------------===//
 
 /// Creates an instance of the BufferPlacement pass.
 std::unique_ptr<Pass> createBufferPlacementPass();
@@ -95,6 +95,15 @@ std::unique_ptr<Pass> createSymbolDCEPass();
 /// Creates an interprocedural pass to normalize memrefs to have a trivial
 /// (identity) layout map.
 std::unique_ptr<OperationPass<ModuleOp>> createNormalizeMemRefsPass();
+
+//===----------------------------------------------------------------------===//
+// Registration
+//===----------------------------------------------------------------------===//
+
+/// Generate the code for registering passes.
+#define GEN_PASS_REGISTRATION
+#include "mlir/Transforms/Passes.h.inc"
+
 } // end namespace mlir
 
 #endif // MLIR_TRANSFORMS_PASSES_H

@@ -154,8 +154,7 @@ static bool hasVectorOperands(const MachineInstr &MI,
                               const SIRegisterInfo *TRI) {
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-    if (!MI.getOperand(i).isReg() ||
-        !Register::isVirtualRegister(MI.getOperand(i).getReg()))
+    if (!MI.getOperand(i).isReg() || !MI.getOperand(i).getReg().isVirtual())
       continue;
 
     if (TRI->hasVectorRegisters(MRI.getRegClass(MI.getOperand(i).getReg())))
@@ -171,14 +170,14 @@ getCopyRegClasses(const MachineInstr &Copy,
   Register DstReg = Copy.getOperand(0).getReg();
   Register SrcReg = Copy.getOperand(1).getReg();
 
-  const TargetRegisterClass *SrcRC = Register::isVirtualRegister(SrcReg)
+  const TargetRegisterClass *SrcRC = SrcReg.isVirtual()
                                          ? MRI.getRegClass(SrcReg)
                                          : TRI.getPhysRegClass(SrcReg);
 
   // We don't really care about the subregister here.
   // SrcRC = TRI.getSubRegClass(SrcRC, Copy.getOperand(1).getSubReg());
 
-  const TargetRegisterClass *DstRC = Register::isVirtualRegister(DstReg)
+  const TargetRegisterClass *DstRC = DstReg.isVirtual()
                                          ? MRI.getRegClass(DstReg)
                                          : TRI.getPhysRegClass(DstReg);
 
@@ -206,8 +205,7 @@ static bool tryChangeVGPRtoSGPRinCopy(MachineInstr &MI,
   auto &Src = MI.getOperand(1);
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = Src.getReg();
-  if (!Register::isVirtualRegister(SrcReg) ||
-      !Register::isVirtualRegister(DstReg))
+  if (!SrcReg.isVirtual() || !DstReg.isVirtual())
     return false;
 
   for (const auto &MO : MRI.reg_nodbg_operands(DstReg)) {
@@ -255,7 +253,7 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
     return false;
 
   // It is illegal to have vreg inputs to a physreg defining reg_sequence.
-  if (Register::isPhysicalRegister(CopyUse.getOperand(0).getReg()))
+  if (CopyUse.getOperand(0).getReg().isPhysical())
     return false;
 
   const TargetRegisterClass *SrcRC, *DstRC;
@@ -619,7 +617,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         const TargetRegisterClass *SrcRC, *DstRC;
         std::tie(SrcRC, DstRC) = getCopyRegClasses(MI, *TRI, *MRI);
 
-        if (!Register::isVirtualRegister(DstReg)) {
+        if (!DstReg.isVirtual()) {
           // If the destination register is a physical register there isn't
           // really much we can do to fix this.
           // Some special instructions use M0 as an input. Some even only use
@@ -639,7 +637,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
 
         if (isVGPRToSGPRCopy(SrcRC, DstRC, *TRI)) {
           Register SrcReg = MI.getOperand(1).getReg();
-          if (!Register::isVirtualRegister(SrcReg)) {
+          if (!SrcReg.isVirtual()) {
             TII->moveToVALU(MI, MDT);
             break;
           }
@@ -721,7 +719,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
           // that can't be resolved in later operand folding pass
           bool Resolved = false;
           for (MachineOperand *MO : {&Src0, &Src1}) {
-            if (Register::isVirtualRegister(MO->getReg())) {
+            if (MO->getReg().isVirtual()) {
               MachineInstr *DefMI = MRI->getVRegDef(MO->getReg());
               if (DefMI && TII->isFoldableCopy(*DefMI)) {
                 const MachineOperand &Def = DefMI->getOperand(0);

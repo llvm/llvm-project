@@ -148,6 +148,9 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR8] in {
       def BL8_NOTOC : IForm<18, 0, 1, (outs),
                             (ins calltarget:$func),
                             "bl $func", IIC_BrB, []>;
+      def BL8_NOTOC_TLS : IForm<18, 0, 1, (outs),
+                                (ins tlscall:$func),
+                                "bl $func", IIC_BrB, []>;
     }
   }
   let Uses = [CTR8, RM] in {
@@ -1457,7 +1460,7 @@ defm FCTIDU : XForm_26r<63, 942, (outs f8rc:$frD), (ins f8rc:$frB),
                         []>, isPPC64;
 defm FCTIDZ : XForm_26r<63, 815, (outs f8rc:$frD), (ins f8rc:$frB),
                         "fctidz", "$frD, $frB", IIC_FPGeneral,
-                        [(set f64:$frD, (PPCfctidz f64:$frB))]>, isPPC64;
+                        [(set f64:$frD, (PPCany_fctidz f64:$frB))]>, isPPC64;
 
 defm FCFIDU  : XForm_26r<63, 974, (outs f8rc:$frD), (ins f8rc:$frB),
                         "fcfidu", "$frD, $frB", IIC_FPGeneral,
@@ -1470,10 +1473,10 @@ defm FCFIDUS : XForm_26r<59, 974, (outs f4rc:$frD), (ins f8rc:$frB),
                         [(set f32:$frD, (PPCfcfidus f64:$frB))]>, isPPC64;
 defm FCTIDUZ : XForm_26r<63, 943, (outs f8rc:$frD), (ins f8rc:$frB),
                         "fctiduz", "$frD, $frB", IIC_FPGeneral,
-                        [(set f64:$frD, (PPCfctiduz f64:$frB))]>, isPPC64;
+                        [(set f64:$frD, (PPCany_fctiduz f64:$frB))]>, isPPC64;
 defm FCTIWUZ : XForm_26r<63, 143, (outs f8rc:$frD), (ins f8rc:$frB),
                         "fctiwuz", "$frD, $frB", IIC_FPGeneral,
-                        [(set f64:$frD, (PPCfctiwuz f64:$frB))]>, isPPC64;
+                        [(set f64:$frD, (PPCany_fctiwuz f64:$frB))]>, isPPC64;
 }
 
 

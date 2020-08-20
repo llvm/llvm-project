@@ -111,6 +111,9 @@ let Definition = "target" in {
   def DisableSTDIO: Property<"disable-stdio", "Boolean">,
     DefaultFalse,
     Desc<"Disable stdin/stdout for process (e.g. for a GUI application)">;
+  def InheritTCC: Property<"inherit-tcc", "Boolean">,
+    DefaultFalse,
+    Desc<"Inherit the TCC permissions from the inferior's parent instead of making the process itself responsible.">;
   def InlineStrategy: Property<"inline-breakpoint-strategy", "Enum">,
     DefaultEnumValue<"eInlineBreakpointsAlways">,
     EnumValues<"OptionEnumValues(g_inline_breakpoint_enums)">,
@@ -214,6 +217,9 @@ let Definition = "process" in {
   def UtilityExpressionTimeout: Property<"utility-expression-timeout", "UInt64">,
     DefaultUnsignedValue<15>,
     Desc<"The time in seconds to wait for LLDB-internal utility expressions.">;
+  def SteppingRunsAllThreads: Property<"run-all-threads", "Boolean">,
+    DefaultFalse,
+    Desc<"If true, stepping operations will run all threads.  This is equivalent to setting the run-mode option to 'all-threads'.">;
 }
 
 let Definition = "platform" in {

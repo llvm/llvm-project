@@ -545,7 +545,7 @@ public:
   /// if the condition says to stop and false otherwise.
   ///
   void SetPrecondition(lldb::BreakpointPreconditionSP precondition_sp) {
-    m_precondition_sp = precondition_sp;
+    m_precondition_sp = std::move(precondition_sp);
   }
 
   bool EvaluatePrecondition(StoppointCallbackContext &context);

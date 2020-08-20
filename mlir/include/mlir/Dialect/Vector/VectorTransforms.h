@@ -17,6 +17,11 @@
 namespace mlir {
 class MLIRContext;
 class OwningRewritePatternList;
+class VectorTransferOpInterface;
+
+namespace scf {
+class IfOp;
+} // namespace scf
 
 /// Collect a set of patterns to convert from the Vector dialect to itself.
 /// Should be merged with populateVectorToSCFLoweringPattern.
@@ -104,6 +109,69 @@ private:
   FilterConstraintType filter;
 };
 
+/// Split a vector.transfer operation into an unmasked fastpath and a slowpath.
+/// If `ifOp` is not null and the result is `success, the `ifOp` points to the
+/// newly created conditional upon function return.
+/// To accomodate for the fact that the original vector.transfer indexing may be
+/// arbitrary and the slow path indexes @[0...0] in the temporary buffer, the
+/// scf.if op returns a view and values of type index.
+/// At this time, only vector.transfer_read case is implemented.
+///
+/// Example (a 2-D vector.transfer_read):
+/// ```
+///    %1 = vector.transfer_read %0[...], %pad : memref<A...>, vector<...>
+/// ```
+/// is transformed into:
+/// ```
+///    %1:3 = scf.if (%inBounds) {
+///      // fastpath, direct cast
+///      memref_cast %A: memref<A...> to compatibleMemRefType
+///      scf.yield %view : compatibleMemRefType, index, index
+///    } else {
+///      // slowpath, masked vector.transfer or linalg.copy.
+///      memref_cast %alloc: memref<B...> to compatibleMemRefType
+///      scf.yield %4 : compatibleMemRefType, index, index
+//     }
+///    %0 = vector.transfer_read %1#0[%1#1, %1#2] {masked = [false ... false]}
+/// ```
+/// where `alloc` is a top of the function alloca'ed buffer of one vector.
+///
+/// Preconditions:
+///  1. `xferOp.permutation_map()` must be a minor identity map
+///  2. the rank of the `xferOp.memref()` and the rank of the `xferOp.vector()`
+///  must be equal. This will be relaxed in the future but requires
+///  rank-reducing subviews.
+LogicalResult
+splitFullAndPartialTransferPrecondition(VectorTransferOpInterface xferOp);
+LogicalResult splitFullAndPartialTransfer(
+    OpBuilder &b, VectorTransferOpInterface xferOp,
+    VectorTransformsOptions options = VectorTransformsOptions(),
+    scf::IfOp *ifOp = nullptr);
+
+/// Apply `splitFullAndPartialTransfer` selectively via a pattern. This pattern
+/// may take an extra filter to perform selection at a finer granularity.
+struct VectorTransferFullPartialRewriter : public RewritePattern {
+  using FilterConstraintType =
+      std::function<LogicalResult(VectorTransferOpInterface op)>;
+
+  explicit VectorTransferFullPartialRewriter(
+      MLIRContext *context,
+      VectorTransformsOptions options = VectorTransformsOptions(),
+      FilterConstraintType filter =
+          [](VectorTransferOpInterface op) { return success(); },
+      PatternBenefit benefit = 1)
+      : RewritePattern(benefit, MatchAnyOpTypeTag()), options(options),
+        filter(filter) {}
+
+  /// Performs the rewrite.
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override;
+
+private:
+  VectorTransformsOptions options;
+  FilterConstraintType filter;
+};
+
 } // namespace vector
 
 //===----------------------------------------------------------------------===//
@@ -140,9 +208,8 @@ public:
       : OpRewritePattern<vector::ContractionOp>(context),
         vectorTransformsOptions(vectorTransformsOptions), filter(constraint) {}
 
-  LogicalResult match(vector::ContractionOp op) const override;
-  void rewrite(vector::ContractionOp op,
-               PatternRewriter &rewriter) const override;
+  LogicalResult matchAndRewrite(vector::ContractionOp op,
+                                PatternRewriter &rewriter) const override;
 
 private:
   /// Options to control the vector patterns.
@@ -182,9 +249,53 @@ public:
       : OpRewritePattern<vector::ContractionOp>(context),
         vectorTransformsOptions(vectorTransformsOptions), filter(constraint) {}
 
-  LogicalResult match(vector::ContractionOp op) const override;
-  void rewrite(vector::ContractionOp op,
-               PatternRewriter &rewriter) const override;
+  LogicalResult matchAndRewrite(vector::ContractionOp op,
+                                PatternRewriter &rewriter) const override;
+
+private:
+  /// Options to control the vector patterns.
+  vector::VectorTransformsOptions vectorTransformsOptions;
+  FilterConstraintType filter;
+};
+
+/// Progressive lowering of a `vector.contract %a, %b, %c` with row-major matmul
+/// semantics to an output-size-unrolled sequence:
+/// ```
+///    %out = constant ... : vector<MxNxelt_type>
+///    %bt = vector.transpose %b, [1, 0]
+///    %aRow0 = vector.extract %a[0]
+///    %btRow0 = vector.extract %bt[0]
+///    %c00 = vector.reduce %atRow0, %bRow0
+///    %out00 = vector.insert %c00, %out[0, 0]
+///    ...
+///    %aRowLast = vector.extract %at[M-1]
+///    %btRowLast = vector.extract %b[N-1]
+///    %cLastLast = vector.reduce %atRowLast, %bRowLast
+///    %outcLastLast = vector.insert %cLastLast, %out[M-1, N-1]
+/// ```
+///
+/// This only kicks in when VectorTransformsOptions is set to Dot and
+/// the vector.contract op is a row-major matmul or matvec.
+class ContractionOpToDotLowering
+    : public OpRewritePattern<vector::ContractionOp> {
+public:
+  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+  using FilterConstraintType =
+      std::function<LogicalResult(vector::ContractionOp op)>;
+
+  static LogicalResult defaultFilter(vector::ContractionOp op) {
+    return success();
+  }
+
+  ContractionOpToDotLowering(
+      vector::VectorTransformsOptions vectorTransformsOptions,
+      MLIRContext *context, FilterConstraintType constraint = defaultFilter)
+      : OpRewritePattern<vector::ContractionOp>(context),
+        vectorTransformsOptions(vectorTransformsOptions),
+        filter(defaultFilter) {}
+
+  LogicalResult matchAndRewrite(vector::ContractionOp op,
+                                PatternRewriter &rewriter) const override;
 
 private:
   /// Options to control the vector patterns.

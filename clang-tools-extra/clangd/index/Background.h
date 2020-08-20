@@ -124,22 +124,28 @@ private:
 
 // Builds an in-memory index by by running the static indexer action over
 // all commands in a compilation database. Indexing happens in the background.
-// FIXME: it should also persist its state on disk for fast start.
 // FIXME: it should watch for changes to files on disk.
 class BackgroundIndex : public SwapIndex {
 public:
-  /// If BuildIndexPeriodMs is greater than 0, the symbol index will only be
-  /// rebuilt periodically (one per \p BuildIndexPeriodMs); otherwise, index is
-  /// rebuilt for each indexed file.
-  BackgroundIndex(
-      Context BackgroundContext, const ThreadsafeFS &,
-      const GlobalCompilationDatabase &CDB,
-      BackgroundIndexStorage::Factory IndexStorageFactory,
-      // Arbitrary value to ensure some concurrency in tests.
-      // In production an explicit value is passed.
-      size_t ThreadPoolSize = 4,
-      std::function<void(BackgroundQueue::Stats)> OnProgress = nullptr,
-      std::function<Context(PathRef)> ContextProvider = nullptr);
+  struct Options {
+    // Arbitrary value to ensure some concurrency in tests.
+    // In production an explicit value is specified.
+    size_t ThreadPoolSize = 4;
+    // Callback that provides notifications as indexing makes progress.
+    std::function<void(BackgroundQueue::Stats)> OnProgress = nullptr;
+    // Function called to obtain the Context to use while indexing the specified
+    // file. Called with the empty string for other tasks.
+    // (When called, the context from BackgroundIndex construction is active).
+    std::function<Context(PathRef)> ContextProvider = nullptr;
+    // Whether to collect references to main-file-only symbols.
+    bool CollectMainFileRefs = false;
+  };
+
+  /// Creates a new background index and starts its threads.
+  /// The current Context will be propagated to each worker thread.
+  BackgroundIndex(const ThreadsafeFS &, const GlobalCompilationDatabase &CDB,
+                  BackgroundIndexStorage::Factory IndexStorageFactory,
+                  Options Opts);
   ~BackgroundIndex(); // Blocks while the current task finishes.
 
   // Enqueue translation units for indexing.
@@ -183,8 +189,8 @@ private:
   // configuration
   const ThreadsafeFS &TFS;
   const GlobalCompilationDatabase &CDB;
-  Context BackgroundContext;
   std::function<Context(PathRef)> ContextProvider;
+  bool CollectMainFileRefs;
 
   llvm::Error index(tooling::CompileCommand);
 

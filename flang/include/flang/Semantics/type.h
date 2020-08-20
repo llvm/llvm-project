@@ -53,7 +53,7 @@ public:
   static Bound Assumed() { return Bound(Category::Assumed); }
   static Bound Deferred() { return Bound(Category::Deferred); }
   explicit Bound(MaybeSubscriptIntExpr &&expr) : expr_{std::move(expr)} {}
-  explicit Bound(int bound);
+  explicit Bound(common::ConstantSubscript bound);
   Bound(const Bound &) = default;
   Bound(Bound &&) = default;
   Bound &operator=(const Bound &) = default;

@@ -4483,6 +4483,10 @@ def : Pat<(v1i64 (int_aarch64_neon_fcvtps (v1f64 FPR64:$Rn))),
           (FCVTPSv1i64 FPR64:$Rn)>;
 def : Pat<(v1i64 (int_aarch64_neon_fcvtpu (v1f64 FPR64:$Rn))),
           (FCVTPUv1i64 FPR64:$Rn)>;
+def : Pat<(v1i64 (int_aarch64_neon_fcvtzs (v1f64 FPR64:$Rn))),
+          (FCVTZSv1i64 FPR64:$Rn)>;
+def : Pat<(v1i64 (int_aarch64_neon_fcvtzu (v1f64 FPR64:$Rn))),
+          (FCVTZUv1i64 FPR64:$Rn)>;
 
 def : Pat<(f16 (int_aarch64_neon_frecpe (f16 FPR16:$Rn))),
           (FRECPEv1f16 FPR16:$Rn)>;

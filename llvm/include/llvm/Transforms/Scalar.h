@@ -530,6 +530,13 @@ Pass *createLoopSimplifyCFGPass();
 // transformations.
 //
 Pass *createWarnMissedTransformationsPass();
+
+//===----------------------------------------------------------------------===//
+//
+// This pass does instruction simplification on each
+// instruction in a function.
+//
+FunctionPass *createInstSimplifyLegacyPass();
 } // End llvm namespace
 
 #endif

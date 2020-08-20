@@ -26,9 +26,9 @@ func @main() {
   %6 = memref_cast %3 : memref<?xf32> to memref<*xf32>
   %7 = memref_cast %4 : memref<?xf32> to memref<*xf32>
   %8 = memref_cast %5 : memref<?xf32> to memref<*xf32>
-  call @mgpuMemHostRegisterFloat(%6) : (memref<*xf32>) -> ()
-  call @mgpuMemHostRegisterFloat(%7) : (memref<*xf32>) -> ()
-  call @mgpuMemHostRegisterFloat(%8) : (memref<*xf32>) -> ()
+  gpu.host_register %6 : memref<*xf32>
+  gpu.host_register %7 : memref<*xf32>
+  gpu.host_register %8 : memref<*xf32>
   %9 = call @mgpuMemGetDeviceMemRef1dFloat(%3) : (memref<?xf32>) -> (memref<?xf32>)
   %10 = call @mgpuMemGetDeviceMemRef1dFloat(%4) : (memref<?xf32>) -> (memref<?xf32>)
   %11 = call @mgpuMemGetDeviceMemRef1dFloat(%5) : (memref<?xf32>) -> (memref<?xf32>)
@@ -38,6 +38,5 @@ func @main() {
   return
 }
 
-func @mgpuMemHostRegisterFloat(%ptr : memref<*xf32>)
 func @mgpuMemGetDeviceMemRef1dFloat(%ptr : memref<?xf32>) -> (memref<?xf32>)
 func @print_memref_f32(%ptr : memref<*xf32>)

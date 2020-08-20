@@ -22,11 +22,19 @@
 namespace clang {
 namespace CodeGen {
 
-class CGOpenMPRuntimeNVPTX : public CGOpenMPRuntimeGPU {
+class CGOpenMPRuntimeNVPTX final : public CGOpenMPRuntimeGPU {
 
 public:
   explicit CGOpenMPRuntimeNVPTX(CodeGenModule &CGM);
+
+  /// Get the GPU warp size.
   llvm::Value *getGPUWarpSize(CodeGenFunction &CGF) override;
+
+  /// Get the id of the current thread on the GPU.
+  llvm::Value *getGPUThreadID(CodeGenFunction &CGF) override;
+
+  /// Get the maximum number of threads in a block of the GPU.
+  llvm::Value *getGPUNumThreads(CodeGenFunction &CGF) override;
 };
 
 } // CodeGen namespace.

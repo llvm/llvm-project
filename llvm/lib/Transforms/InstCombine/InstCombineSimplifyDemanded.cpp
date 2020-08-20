@@ -110,7 +110,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
                                                  unsigned Depth,
                                                  Instruction *CxtI) {
   assert(V != nullptr && "Null pointer of Value???");
-  assert(Depth <= 6 && "Limit Search Depth");
+  assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
   uint32_t BitWidth = DemandedMask.getBitWidth();
   Type *VTy = V->getType();
   assert(
@@ -127,7 +127,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
   if (DemandedMask.isNullValue())     // Not demanding any bits from V.
     return UndefValue::get(VTy);
 
-  if (Depth == 6)        // Limit search depth.
+  if (Depth == MaxAnalysisRecursionDepth)
     return nullptr;
 
   Instruction *I = dyn_cast<Instruction>(V);
@@ -256,10 +256,20 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       return InsertNewInstWith(And, *I);
     }
 
-    // If the RHS is a constant, see if we can simplify it.
-    // FIXME: for XOR, we prefer to force bits to 1 if they will make a -1.
-    if (ShrinkDemandedConstant(I, 1, DemandedMask))
-      return I;
+    // If the RHS is a constant, see if we can change it. Don't alter a -1
+    // constant because that's a canonical 'not' op, and that is better for
+    // combining, SCEV, and codegen.
+    const APInt *C;
+    if (match(I->getOperand(1), m_APInt(C)) && !C->isAllOnesValue()) {
+      if ((*C | ~DemandedMask).isAllOnesValue()) {
+        // Force bits to 1 to create a 'not' op.
+        I->setOperand(1, ConstantInt::getAllOnesValue(VTy));
+        return I;
+      }
+      // If we can't turn this into a 'not', try to shrink the constant.
+      if (ShrinkDemandedConstant(I, 1, DemandedMask))
+        return I;
+    }
 
     // If our LHS is an 'and' and if it has one use, and if any of the bits we
     // are flipping are known to be set, then the xor is just resetting those

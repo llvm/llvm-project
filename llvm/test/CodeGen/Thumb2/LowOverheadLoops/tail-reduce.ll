@@ -1,6 +1,4 @@
 ; RUN: opt -mtriple=thumbv8.1m.main -mve-tail-predication -tail-predication=enabled -mattr=+mve %s -S -o - | FileCheck %s
-; RUN: opt -mtriple=thumbv8.1m.main -mve-tail-predication -tail-predication=force-enabled \
-; RUN:    -mattr=+mve %s -S -o - | FileCheck %s --check-prefix=FORCE
 
 ; CHECK-LABEL: reduction_i32
 ; CHECK: phi i32 [ 0, %vector.ph ]
@@ -136,16 +134,15 @@ for.cond.cleanup:
   ret i16 %res.0
 }
 
-; The vector loop is not guarded with an entry check (N == 0).
-; This means we can't calculate a precise range for the backedge count in
-; @llvm.get.active.lane.mask, and are assuming overflow can happen and thus
-; we can't insert the VCTP here.
+; The vector loop is not guarded with an entry check (N == 0). Check that
+; despite this we can still calculate a precise enough range for the
+; backedge count to safely insert a vctp here.
 ;
 ; CHECK-LABEL: @reduction_not_guarded
 ;
 ; CHECK:     vector.body:
-; CHECK-NOT: @llvm.arm.mve.vctp
-; CHECK:     @llvm.get.active.lane.mask.v8i1.i32
+; CHECK:     @llvm.arm.mve.vctp
+; CHECK-NOT: @llvm.get.active.lane.mask.v8i1.i32
 ; CHECK:     ret
 ;
 define i16 @reduction_not_guarded(i16* nocapture readonly %A, i16 %B, i32 %N) local_unnamed_addr {
@@ -196,24 +193,10 @@ middle.block:                                     ; preds = %vector.body
   ret i16 %tmp9
 }
 
-; Without forcing tail-predication, we bail because overflow analysis says:
-;
-;   overflow possible in: {(-1 + (sext i16 %Size to i32)),+,-1}<nw><%for.body>
-;
 ; CHECK-LABEL: @Correlation
-;
-; CHECK: vector.body:
-; CHECK-NOT: @llvm.arm.mve.vctp
-; CHECK:     %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
-;
-; FORCE-LABEL: @Correlation
-; FORCE: vector.ph:                                        ; preds = %for.body
-; FORCE:   %trip.count.minus.1 = add i32 %{{.*}}, -1
-; FORCE:   call void @llvm.set.loop.iterations.i32(i32 %{{.*}})
-; FORCE:   br label %vector.body
-; FORCE: vector.body:                                      ; preds = %vector.body, %vector.ph
-; FORCE:   %[[VCTP:.*]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 %{{.*}})
-; FORCE:   call <4 x i16> @llvm.masked.load.v4i16.p0v4i16({{.*}}, <4 x i1> %[[VCTP]]{{.*}}
+; CHECK:       vector.body:
+; CHECK:       @llvm.arm.mve.vctp
+; CHECK-NOT:   %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask
 ;
 define dso_local void @Correlation(i16* nocapture readonly %Input, i16* nocapture %Output, i16 signext %Size, i16 signext %N, i16 signext %Scale) local_unnamed_addr #0 {
 entry:

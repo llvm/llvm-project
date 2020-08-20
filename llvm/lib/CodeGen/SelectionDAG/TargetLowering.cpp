@@ -250,7 +250,7 @@ bool TargetLowering::findOptimalMemOpLowering(
       bool Fast;
       if (NumMemOps && Op.allowOverlap() && NewVTSize < Size &&
           allowsMisalignedMemoryAccesses(
-              VT, DstAS, Op.isFixedDstAlign() ? Op.getDstAlign().value() : 0,
+              VT, DstAS, Op.isFixedDstAlign() ? Op.getDstAlign().value() : 1,
               MachineMemOperand::MONone, &Fast) &&
           Fast)
         VTSize = Size;
@@ -3588,7 +3588,8 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
             shouldReduceLoadWidth(Lod, ISD::NON_EXTLOAD, newVT)) {
           SDValue Ptr = Lod->getBasePtr();
           if (bestOffset != 0)
-            Ptr = DAG.getMemBasePlusOffset(Ptr, bestOffset, dl);
+            Ptr =
+                DAG.getMemBasePlusOffset(Ptr, TypeSize::Fixed(bestOffset), dl);
           unsigned NewAlign = MinAlign(Lod->getAlignment(), bestOffset);
           SDValue NewLoad = DAG.getLoad(
               newVT, dl, Lod->getChain(), Ptr,
@@ -3901,20 +3902,20 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
     // TODO: Support this for vectors after legalize ops.
     if (!VT.isVector() || DCI.isBeforeLegalizeOps()) {
       // SETUGT X, SINTMAX  -> SETLT X, 0
-      if (Cond == ISD::SETUGT &&
-          C1 == APInt::getSignedMaxValue(OperandBitSize))
+      // SETUGE X, SINTMIN -> SETLT X, 0
+      if ((Cond == ISD::SETUGT && C1.isMaxSignedValue()) ||
+          (Cond == ISD::SETUGE && C1.isMinSignedValue()))
         return DAG.getSetCC(dl, VT, N0,
                             DAG.getConstant(0, dl, N1.getValueType()),
                             ISD::SETLT);
 
       // SETULT X, SINTMIN  -> SETGT X, -1
-      if (Cond == ISD::SETULT &&
-          C1 == APInt::getSignedMinValue(OperandBitSize)) {
-        SDValue ConstMinusOne =
-            DAG.getConstant(APInt::getAllOnesValue(OperandBitSize), dl,
-                            N1.getValueType());
-        return DAG.getSetCC(dl, VT, N0, ConstMinusOne, ISD::SETGT);
-      }
+      // SETULE X, SINTMAX  -> SETGT X, -1
+      if ((Cond == ISD::SETULT && C1.isMinSignedValue()) ||
+          (Cond == ISD::SETULE && C1.isMaxSignedValue()))
+        return DAG.getSetCC(dl, VT, N0,
+                            DAG.getAllOnesConstant(dl, N1.getValueType()),
+                            ISD::SETGT);
     }
   }
 
@@ -4322,8 +4323,8 @@ const char *TargetLowering::LowerXConstraint(EVT ConstraintVT) const {
 }
 
 SDValue TargetLowering::LowerAsmOutputForConstraint(
-    SDValue &Chain, SDValue &Flag, SDLoc DL, const AsmOperandInfo &OpInfo,
-    SelectionDAG &DAG) const {
+    SDValue &Chain, SDValue &Flag, const SDLoc &DL,
+    const AsmOperandInfo &OpInfo, SelectionDAG &DAG) const {
   return SDValue();
 }
 
@@ -5928,7 +5929,7 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
 // Legalization Utilities
 //===----------------------------------------------------------------------===//
 
-bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, SDLoc dl,
+bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl,
                                     SDValue LHS, SDValue RHS,
                                     SmallVectorImpl<SDValue> &Result,
                                     EVT HiLoVT, SelectionDAG &DAG,
@@ -6116,7 +6117,7 @@ bool TargetLowering::expandMUL(SDNode *N, SDValue &Lo, SDValue &Hi, EVT HiLoVT,
                                SDValue LL, SDValue LH, SDValue RL,
                                SDValue RH) const {
   SmallVector<SDValue, 2> Result;
-  bool Ok = expandMUL_LOHI(N->getOpcode(), N->getValueType(0), N,
+  bool Ok = expandMUL_LOHI(N->getOpcode(), N->getValueType(0), SDLoc(N),
                            N->getOperand(0), N->getOperand(1), Result, HiLoVT,
                            DAG, Kind, LL, LH, RL, RH);
   if (Ok) {
@@ -6723,6 +6724,9 @@ TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
   EVT DstVT = LD->getValueType(0);
   ISD::LoadExtType ExtType = LD->getExtensionType();
 
+  if (SrcVT.isScalableVector())
+    report_fatal_error("Cannot scalarize scalable vector loads");
+
   unsigned NumElem = SrcVT.getVectorNumElements();
 
   EVT SrcEltVT = SrcVT.getScalarType();
@@ -6789,7 +6793,7 @@ TargetLowering::scalarizeVectorLoad(LoadSDNode *LD,
                        SrcEltVT, MinAlign(LD->getAlignment(), Idx * Stride),
                        LD->getMemOperand()->getFlags(), LD->getAAInfo());
 
-    BasePTR = DAG.getObjectPtrOffset(SL, BasePTR, Stride);
+    BasePTR = DAG.getObjectPtrOffset(SL, BasePTR, TypeSize::Fixed(Stride));
 
     Vals.push_back(ScalarLoad.getValue(0));
     LoadChains.push_back(ScalarLoad.getValue(1));
@@ -6809,6 +6813,9 @@ SDValue TargetLowering::scalarizeVectorStore(StoreSDNode *ST,
   SDValue BasePtr = ST->getBasePtr();
   SDValue Value = ST->getValue();
   EVT StVT = ST->getMemoryVT();
+
+  if (StVT.isScalableVector())
+    report_fatal_error("Cannot scalarize scalable vector stores");
 
   // The type of the data we want to save
   EVT RegVT = Value.getValueType();
@@ -6860,7 +6867,8 @@ SDValue TargetLowering::scalarizeVectorStore(StoreSDNode *ST,
     SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, RegSclVT, Value,
                               DAG.getVectorIdxConstant(Idx, SL));
 
-    SDValue Ptr = DAG.getObjectPtrOffset(SL, BasePtr, Idx * Stride);
+    SDValue Ptr =
+        DAG.getObjectPtrOffset(SL, BasePtr, TypeSize::Fixed(Idx * Stride));
 
     // This scalar TruncStore may be illegal, but we legalize it later.
     SDValue Store = DAG.getTruncStore(
@@ -6996,7 +7004,7 @@ TargetLowering::expandUnalignedLoad(LoadSDNode *LD, SelectionDAG &DAG) const {
                         NewLoadedVT, Alignment, LD->getMemOperand()->getFlags(),
                         LD->getAAInfo());
 
-    Ptr = DAG.getObjectPtrOffset(dl, Ptr, IncrementSize);
+    Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::Fixed(IncrementSize));
     Hi = DAG.getExtLoad(HiExtType, dl, VT, Chain, Ptr,
                         LD->getPointerInfo().getWithOffset(IncrementSize),
                         NewLoadedVT, MinAlign(Alignment, IncrementSize),
@@ -7006,7 +7014,7 @@ TargetLowering::expandUnalignedLoad(LoadSDNode *LD, SelectionDAG &DAG) const {
                         NewLoadedVT, Alignment, LD->getMemOperand()->getFlags(),
                         LD->getAAInfo());
 
-    Ptr = DAG.getObjectPtrOffset(dl, Ptr, IncrementSize);
+    Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::Fixed(IncrementSize));
     Lo = DAG.getExtLoad(ISD::ZEXTLOAD, dl, VT, Chain, Ptr,
                         LD->getPointerInfo().getWithOffset(IncrementSize),
                         NewLoadedVT, MinAlign(Alignment, IncrementSize),
@@ -7124,8 +7132,8 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
          "Unaligned store of unknown type.");
   // Get the half-size VT
   EVT NewStoredVT = StoreMemVT.getHalfSizedIntegerVT(*DAG.getContext());
-  int NumBits = NewStoredVT.getSizeInBits();
-  int IncrementSize = NumBits / 8;
+  unsigned NumBits = NewStoredVT.getSizeInBits().getFixedSize();
+  unsigned IncrementSize = NumBits / 8;
 
   // Divide the stored value in two parts.
   SDValue ShiftAmount = DAG.getConstant(
@@ -7140,7 +7148,7 @@ SDValue TargetLowering::expandUnalignedStore(StoreSDNode *ST,
                              Ptr, ST->getPointerInfo(), NewStoredVT, Alignment,
                              ST->getMemOperand()->getFlags());
 
-  Ptr = DAG.getObjectPtrOffset(dl, Ptr, IncrementSize);
+  Ptr = DAG.getObjectPtrOffset(dl, Ptr, TypeSize::Fixed(IncrementSize));
   Alignment = MinAlign(Alignment, IncrementSize);
   Store2 = DAG.getTruncStore(
       Chain, dl, DAG.getDataLayout().isLittleEndian() ? Hi : Lo, Ptr,
@@ -7195,16 +7203,26 @@ static SDValue clampDynamicVectorIndex(SelectionDAG &DAG,
                                        SDValue Idx,
                                        EVT VecVT,
                                        const SDLoc &dl) {
-  if (isa<ConstantSDNode>(Idx))
+  if (!VecVT.isScalableVector() && isa<ConstantSDNode>(Idx))
     return Idx;
 
   EVT IdxVT = Idx.getValueType();
-  unsigned NElts = VecVT.getVectorNumElements();
-  if (isPowerOf2_32(NElts)) {
-    APInt Imm = APInt::getLowBitsSet(IdxVT.getSizeInBits(),
-                                     Log2_32(NElts));
-    return DAG.getNode(ISD::AND, dl, IdxVT, Idx,
-                       DAG.getConstant(Imm, dl, IdxVT));
+  unsigned NElts = VecVT.getVectorMinNumElements();
+  if (VecVT.isScalableVector()) {
+    SDValue VS = DAG.getVScale(dl, IdxVT,
+                               APInt(IdxVT.getSizeInBits().getFixedSize(),
+                                     NElts));
+    SDValue Sub = DAG.getNode(ISD::SUB, dl, IdxVT, VS,
+                              DAG.getConstant(1, dl, IdxVT));
+
+    return DAG.getNode(ISD::UMIN, dl, IdxVT, Idx, Sub);
+  } else {
+    if (isPowerOf2_32(NElts)) {
+      APInt Imm = APInt::getLowBitsSet(IdxVT.getSizeInBits(),
+                                       Log2_32(NElts));
+      return DAG.getNode(ISD::AND, dl, IdxVT, Idx,
+                         DAG.getConstant(Imm, dl, IdxVT));
+    }
   }
 
   return DAG.getNode(ISD::UMIN, dl, IdxVT, Idx,
@@ -7221,8 +7239,8 @@ SDValue TargetLowering::getVectorElementPointer(SelectionDAG &DAG,
   EVT EltVT = VecVT.getVectorElementType();
 
   // Calculate the element offset and add it to the pointer.
-  unsigned EltSize = EltVT.getSizeInBits() / 8; // FIXME: should be ABI size.
-  assert(EltSize * 8 == EltVT.getSizeInBits() &&
+  unsigned EltSize = EltVT.getSizeInBits().getFixedSize() / 8; // FIXME: should be ABI size.
+  assert(EltSize * 8 == EltVT.getSizeInBits().getFixedSize() &&
          "Converting bits to bytes lost precision");
 
   Index = clampDynamicVectorIndex(DAG, Index, VecVT, dl);
@@ -7316,6 +7334,7 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::SUB, dl, VT, Max, RHS);
   }
 
+  // uadd.sat(a, b) -> umin(a, ~b) + b
   if (Opcode == ISD::UADDSAT && isOperationLegalOrCustom(ISD::UMIN, VT)) {
     SDValue InvRHS = DAG.getNOT(dl, RHS, VT);
     SDValue Min = DAG.getNode(ISD::UMIN, dl, VT, LHS, InvRHS);
@@ -7383,6 +7402,41 @@ SDValue TargetLowering::expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const {
     Result = DAG.getSelect(dl, VT, SumNeg, SatMax, SatMin);
     return DAG.getSelect(dl, VT, Overflow, Result, SumDiff);
   }
+}
+
+SDValue TargetLowering::expandShlSat(SDNode *Node, SelectionDAG &DAG) const {
+  unsigned Opcode = Node->getOpcode();
+  bool IsSigned = Opcode == ISD::SSHLSAT;
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+  EVT VT = LHS.getValueType();
+  SDLoc dl(Node);
+
+  assert((Node->getOpcode() == ISD::SSHLSAT ||
+          Node->getOpcode() == ISD::USHLSAT) &&
+          "Expected a SHLSAT opcode");
+  assert(VT == RHS.getValueType() && "Expected operands to be the same type");
+  assert(VT.isInteger() && "Expected operands to be integers");
+
+  // If LHS != (LHS << RHS) >> RHS, we have overflow and must saturate.
+
+  unsigned BW = VT.getScalarSizeInBits();
+  SDValue Result = DAG.getNode(ISD::SHL, dl, VT, LHS, RHS);
+  SDValue Orig =
+      DAG.getNode(IsSigned ? ISD::SRA : ISD::SRL, dl, VT, Result, RHS);
+
+  SDValue SatVal;
+  if (IsSigned) {
+    SDValue SatMin = DAG.getConstant(APInt::getSignedMinValue(BW), dl, VT);
+    SDValue SatMax = DAG.getConstant(APInt::getSignedMaxValue(BW), dl, VT);
+    SatVal = DAG.getSelectCC(dl, LHS, DAG.getConstant(0, dl, VT),
+                             SatMin, SatMax, ISD::SETLT);
+  } else {
+    SatVal = DAG.getConstant(APInt::getMaxValue(BW), dl, VT);
+  }
+  Result = DAG.getSelectCC(dl, LHS, Orig, SatVal, Result, ISD::SETNE);
+
+  return Result;
 }
 
 SDValue

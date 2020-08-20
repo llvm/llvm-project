@@ -6,8 +6,7 @@
 # CHECK:        [[C:%.*]]:fpr32 = COPY $s2
 # CHECK-NEXT:   [[B:%.*]]:fpr32 = COPY $s1
 # CHECK-NEXT:   [[A:%.*]]:fpr32 = COPY $s0
-# CHECK-NEXT:   [[MUL:%.*]]:fpr32 = nnan ninf nsz arcp contract afn reassoc FMULSrr [[B]], [[A]]
-# CHECK-NEXT:   fpr32 = nnan ninf nsz arcp contract afn reassoc FADDSrr killed [[MUL]], [[C]]
+# CHECK-NEXT:   :fpr32 = FMADDSrrr [[B]], [[A]], [[C]]
 ---
 name:            scalar_fmadd_fast
 alignment:       4
@@ -46,8 +45,7 @@ body:             |
 # CHECK:        [[C:%.*]]:fpr32 = COPY $s2
 # CHECK-NEXT:   [[B:%.*]]:fpr32 = COPY $s1
 # CHECK-NEXT:   [[A:%.*]]:fpr32 = COPY $s0
-# CHECK-NEXT:   [[MUL:%.*]]:fpr32 = contract FMULSrr [[B]], [[A]]
-# CHECK-NEXT:   fpr32 = contract FADDSrr killed [[MUL]], [[C]]
+# CHECK-NEXT:   :fpr32 = FMADDSrrr [[B]], [[A]], [[C]]
 
 ---
 name:            scalar_fmadd_contract
@@ -81,7 +79,7 @@ body:             |
 
 ...
 
-# Do not create FMADD, because we don't have the contract flag on moth instructions.
+# Do not create FMADD, because we don't have the contract flag on the FADD.
 
 # CHECK-LABEL: name: scalar_fmadd_contract_op0
 # CHECK:        [[C:%.*]]:fpr32 = COPY $s2
@@ -121,14 +119,13 @@ body:             |
 
 ...
 
-# Do not create FMADD, because we don't have the contract flag on moth instructions.
+# Do create FMADD, because we have the contract flag on the FADD.
 #
 # CHECK-LABEL: name: scalar_fmadd_contract_op1
 # CHECK:        [[C:%.*]]:fpr32 = COPY $s2
 # CHECK-NEXT:   [[B:%.*]]:fpr32 = COPY $s1
 # CHECK-NEXT:   [[A:%.*]]:fpr32 = COPY $s0
-# CHECK-NEXT:   [[MUL:%.*]]:fpr32 = FMULSrr [[B]], [[A]]
-# CHECK-NEXT:   fpr32 = contract FADDSrr killed [[MUL]], [[C]]
+# CHECK-NEXT:   :fpr32 = FMADDSrrr [[B]], [[A]], [[C]]
 
 ---
 name:            scalar_fmadd_contract_op1
@@ -203,14 +200,13 @@ body:             |
 
 ...
 
-# Can create FMADD, because both the fmul and fadd have all fast-math flags.
+# Can create FMLA, because both the fmul and fadd have all fast-math flags.
 #
 # CHECK-LABEL: name: vector_fmadd_fast
 # CHECK:       [[C:%.*]]:fpr128 = COPY $q2
 # CHECK-NEXT:  [[B:%.*]]:fpr128 = COPY $q1
 # CHECK-NEXT:  [[A:%.*]]:fpr128 = COPY $q0
-# CHECK-NEXT:  [[MUL:%.*]]:fpr128 = nnan ninf nsz arcp contract afn reassoc FMULv2f64 [[B]], [[A]]
-# CHECK-NEXT:  fpr128 = nnan ninf nsz arcp contract afn reassoc FADDv2f64 killed [[MUL]], [[C]]
+# CHECK-NEXT:  fpr128 = FMLAv2f64 [[C]], [[B]], [[A]]
 ---
 name:            vector_fmadd_fast
 alignment:       4
@@ -243,14 +239,13 @@ body:             |
 
 ...
 
-# Can create FMADD, because both the fmul and fadd have the contract fast-math flag.
+# Can create FMLA, because both the fmul and fadd have the contract fast-math flag.
 #
 # CHECK-LABEL: name: vector_fmadd_contract
 # CHECK:       [[C:%.*]]:fpr128 = COPY $q2
 # CHECK-NEXT:  [[B:%.*]]:fpr128 = COPY $q1
 # CHECK-NEXT:  [[A:%.*]]:fpr128 = COPY $q0
-# CHECK-NEXT:  [[MUL:%.*]]:fpr128 = contract FMULv2f64 [[B]], [[A]]
-# CHECK-NEXT:  fpr128 = contract FADDv2f64 killed [[MUL]], [[C]]
+# CHECK-NEXT:  fpr128 = FMLAv2f64 [[C]], [[B]], [[A]]
 ---
 name:            vector_fmadd_contract
 alignment:       4
@@ -283,7 +278,7 @@ body:             |
 
 ...
 
-# Do not create FMADD, because we don't have the contract flag on moth instructions.
+# Do not create FMLA, because we don't have the contract flag on the FADD.
 #
 # CHECK-LABEL: name: vector_fmadd_contract_op0
 # CHECK:       [[C:%.*]]:fpr128 = COPY $q2
@@ -323,14 +318,13 @@ body:             |
 
 ...
 
-# Do not create FMADD, because we don't have the contract flag on moth instructions.
+# Do create FMLA, because we have the contract flag on the FADD.
 #
 # CHECK-LABEL: name: vector_fmadd_contract_op1
 # CHECK:       [[C:%.*]]:fpr128 = COPY $q2
 # CHECK-NEXT:  [[B:%.*]]:fpr128 = COPY $q1
 # CHECK-NEXT:  [[A:%.*]]:fpr128 = COPY $q0
-# CHECK-NEXT:  [[MUL:%.*]]:fpr128 = FMULv2f64 [[B]], [[A]]
-# CHECK-NEXT:  fpr128 = contract FADDv2f64 killed [[MUL]], [[C]]
+# CHECK-NEXT:  fpr128 = FMLAv2f64 [[C]], [[B]], [[A]]
 
 ---
 name:            vector_fmadd_contract_op1
@@ -364,7 +358,7 @@ body:             |
 
 ...
 
-# Do not create FMADD, as nsz flag does not allow it.
+# Do not create FMLA, as nsz flag does not allow it.
 #
 # CHECK-LABEL: name: vector_fmadd_nsz
 # CHECK:       [[C:%.*]]:fpr128 = COPY $q2

@@ -274,12 +274,12 @@ LogicalResult mlir::replaceAllMemRefUsesWith(
     // for the memref to be used in a non-dereferencing way outside of the
     // region where this replacement is happening.
     if (!isMemRefDereferencingOp(*op)) {
-      // Currently we support the following non-dereferencing types to be a
-      // candidate for replacement: Dealloc and CallOp.
-      // TODO: Add support for other kinds of ops.
       if (!allowNonDereferencingOps)
         return failure();
-      if (!(isa<DeallocOp, CallOp>(*op)))
+      // Currently we support the following non-dereferencing ops to be a
+      // candidate for replacement: Dealloc, CallOp and ReturnOp.
+      // TODO: Add support for other kinds of ops.
+      if (!isa<DeallocOp, CallOp, ReturnOp>(*op))
         return failure();
     }
 

@@ -15,7 +15,7 @@ $foo_inline = comdat any
 
 @__profn_foo_inline = linkonce_odr hidden constant [10 x i8] c"foo_inline"
 
-; ELF: @__profc_foo_inline = linkonce_odr hidden global{{.*}}, section "__llvm_prf_cnts", comdat, align 8
+; ELF: @__profc_foo_inline = linkonce_odr hidden global{{.*}}, section "__llvm_prf_cnts", comdat($__profd_foo_inline), align 8
 ; ELF: @__profd_foo_inline = linkonce_odr hidden global{{.*}}, section "__llvm_prf_data", comdat, align 8
 ; COFF: @__profc_foo_inline = linkonce_odr hidden global{{.*}}, section ".lprfc$M", comdat, align 8
 ; COFF: @__profd_foo_inline = linkonce_odr hidden global{{.*}}, section ".lprfd$M", comdat, align 8
@@ -28,7 +28,7 @@ $foo_extern = comdat any
 
 @__profn_foo_extern = linkonce_odr hidden constant [10 x i8] c"foo_extern"
 
-; ELF: @__profc_foo_extern = linkonce_odr hidden global{{.*}}, section "__llvm_prf_cnts", comdat, align 8
+; ELF: @__profc_foo_extern = linkonce_odr hidden global{{.*}}, section "__llvm_prf_cnts", comdat($__profd_foo_extern), align 8
 ; ELF: @__profd_foo_extern = linkonce_odr hidden global{{.*}}, section "__llvm_prf_data", comdat, align 8
 ; COFF: @__profc_foo_extern = linkonce_odr hidden global{{.*}}, section ".lprfc$M", comdat, align 8
 ; COFF: @__profd_foo_extern = linkonce_odr hidden global{{.*}}, section ".lprfd$M", comdat, align 8

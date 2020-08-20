@@ -95,6 +95,7 @@ mkdir -p "${LLVM_BUILD_DIR}"
   xcrun cmake \
     -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
     -GNinja \
+    -DCMAKE_MAKE_PROGRAM="$(xcrun --find ninja)" \
     -DCMAKE_INSTALL_PREFIX="${LLVM_INSTALL_DIR}" \
     -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" \
     -DCMAKE_OSX_ARCHITECTURES="x86_64" \

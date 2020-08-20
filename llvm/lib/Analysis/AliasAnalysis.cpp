@@ -641,8 +641,7 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
   if (!DT)
     return ModRefInfo::ModRef;
 
-  const Value *Object =
-      GetUnderlyingObject(MemLoc.Ptr, I->getModule()->getDataLayout());
+  const Value *Object = getUnderlyingObject(MemLoc.Ptr);
   if (!isIdentifiedObject(Object) || isa<GlobalValue>(Object) ||
       isa<Constant>(Object))
     return ModRefInfo::ModRef;

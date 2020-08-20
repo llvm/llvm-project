@@ -308,8 +308,7 @@ DWARF:
     - int
     - char
   debug_pubnames:  
-    Length:
-      TotalLength:       23
+    Length:          23
     Version:         2
     UnitOffset:      0
     UnitSize:        121
@@ -317,8 +316,7 @@ DWARF:
       - DieOffset:       0x0000002A
         Name:            main
   debug_pubtypes:  
-    Length:
-      TotalLength:       31
+    Length:          31
     Version:         2
     UnitOffset:      0
     UnitSize:        121
@@ -331,8 +329,7 @@ DWARF:
 
 #CHECK: DWARF:           
 #CHECK:   debug_pubnames:  
-#CHECK:     Length:
-#CHECK:       TotalLength:       23
+#CHECK:     Length:          0x0000000000000017
 #CHECK:     Version:         2
 #CHECK:     UnitOffset:      0
 #CHECK:     UnitSize:        121
@@ -340,8 +337,7 @@ DWARF:
 #CHECK:       - DieOffset:       0x0000002A
 #CHECK:         Name:            main
 #CHECK:   debug_pubtypes:  
-#CHECK:     Length:
-#CHECK:       TotalLength:       31
+#CHECK:     Length:          0x000000000000001F
 #CHECK:     Version:         2
 #CHECK:     UnitOffset:      0
 #CHECK:     UnitSize:        121
@@ -372,7 +368,6 @@ DWARF:
 # EMPTY-NEXT:     reserved1:       0x00000000
 # EMPTY-NEXT:     reserved2:       0x00000000
 # EMPTY-NEXT:     reserved3:       0x00000000
-# EMPTY-NEXT:     content:         ''
 # EMPTY-NEXT:   - sectname:        __debug_pubtypes
 # EMPTY-NEXT:     segname:         __DWARF
 # EMPTY-NEXT:     addr:            0x0000000000000000
@@ -385,7 +380,6 @@ DWARF:
 # EMPTY-NEXT:     reserved1:       0x00000000
 # EMPTY-NEXT:     reserved2:       0x00000000
 # EMPTY-NEXT:     reserved3:       0x00000000
-# EMPTY-NEXT:     content:         ''
 # EMPTY-NEXT: ...
 
 --- !mach-o
@@ -436,3 +430,62 @@ LoadCommands:
         reserved2: 0x00000000
         reserved3: 0x00000000
 DWARF:
+
+## c) Test that obj2yaml is able to dump a __debug_pubnames section whose length field is greater than the section size.
+
+# RUN: yaml2obj --docnum=3 %s | obj2yaml | FileCheck %s --check-prefix=INVALID-LENGTH
+
+#      INVALID-LENGTH: DWARF:
+# INVALID-LENGTH-NEXT:   debug_pubnames:
+# INVALID-LENGTH-NEXT:     Length:          0x00000000DEADBEEF
+# INVALID-LENGTH-NEXT:     Version:         2
+# INVALID-LENGTH-NEXT:     UnitOffset:      0
+# INVALID-LENGTH-NEXT:     UnitSize:        121
+# INVALID-LENGTH-NEXT:     Entries:
+# INVALID-LENGTH-NEXT:       - DieOffset:       0x0000002A
+# INVALID-LENGTH-NEXT:         Name:            main
+
+--- !mach-o
+FileHeader:
+  magic:      0xFEEDFACF
+  cputype:    0x01000007
+  cpusubtype: 0x00000003
+  filetype:   0x0000000A
+  ncmds:      1
+  sizeofcmds: 1888
+  flags:      0x00000000
+  reserved:   0x00000000
+LoadCommands:
+  - cmd:      LC_SEGMENT_64
+    cmdsize:  152
+    segname:  __DWARF
+    vmaddr:   0x00000000
+    vmsize:   0x00000000
+    fileoff:  0
+    filesize: 0xffff
+    maxprot:  0
+    initprot: 0
+    nsects:   1
+    flags:    0
+    Sections:
+      - sectname:  __debug_pubnames
+        segname:   __DWARF
+        addr:      0x0000000000000000
+        size:      24
+        offset:    0x000000b8
+        align:     0
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x00000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+DWARF:
+  debug_pubnames:
+    Length:     0xdeadbeef
+    Version:    2
+    UnitOffset: 0
+    UnitSize:   121
+    Entries:
+      - DieOffset: 0x0000002A
+        Name:      main

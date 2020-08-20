@@ -41,11 +41,6 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
   populateSPIRVToLLVMConversionPatterns(context, converter, patterns);
   populateSPIRVToLLVMFunctionConversionPatterns(context, converter, patterns);
 
-  // Currently pulls in Std to LLVM conversion patterns
-  // that help with testing. This allows to convert
-  // function arguments to LLVM.
-  populateStdToLLVMConversionPatterns(converter, patterns);
-
   ConversionTarget target(getContext());
   target.addIllegalDialect<spirv::SPIRVDialect>();
   target.addLegalDialect<LLVM::LLVMDialect>();

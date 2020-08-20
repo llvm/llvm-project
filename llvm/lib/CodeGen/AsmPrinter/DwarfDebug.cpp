@@ -13,30 +13,18 @@
 #include "DwarfDebug.h"
 #include "ByteStreamer.h"
 #include "DIEHash.h"
-#include "DebugLocEntry.h"
-#include "DebugLocStream.h"
 #include "DwarfCompileUnit.h"
 #include "DwarfExpression.h"
-#include "DwarfFile.h"
 #include "DwarfUnit.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -46,14 +34,11 @@
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
@@ -71,15 +56,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 #include <algorithm>
-#include <cassert>
 #include <cstddef>
-#include <cstdint>
 #include <iterator>
 #include <string>
-#include <utility>
-#include <vector>
 
 using namespace llvm;
 
@@ -146,6 +126,11 @@ static cl::opt<DefaultOnOff> DwarfSectionsAsReferences(
     cl::values(clEnumVal(Default, "Default for platform"),
                clEnumVal(Enable, "Enabled"), clEnumVal(Disable, "Disabled")),
     cl::init(Default));
+
+static cl::opt<bool>
+    UseGNUDebugMacro("use-gnu-debug-macro", cl::Hidden,
+                     cl::desc("Emit the GNU .debug_macro format with DWARF <5"),
+                     cl::init(false));
 
 enum LinkageNameOption {
   DefaultLinkageNames,
@@ -427,6 +412,11 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
   // Emit call-site-param debug info for GDB and LLDB, if the target supports
   // the debug entry values feature. It can also be enabled explicitly.
   EmitDebugEntryValues = Asm->TM.Options.ShouldEmitDebugEntryValues();
+
+  // It is unclear if the GCC .debug_macro extension is well-specified
+  // for split DWARF. For now, do not allow LLVM to emit it.
+  UseDebugMacroSection =
+      DwarfVersion >= 5 || (UseGNUDebugMacro && !useSplitDwarf());
 
   Asm->OutStreamer->getContext().setDwarfVersion(DwarfVersion);
 }
@@ -1346,15 +1336,18 @@ void DwarfDebug::finalizeModuleInfo() {
     // If compile Unit has macros, emit "DW_AT_macro_info/DW_AT_macros"
     // attribute.
     if (CUNode->getMacros()) {
-      if (getDwarfVersion() >= 5) {
+      if (UseDebugMacroSection) {
         if (useSplitDwarf())
           TheCU.addSectionDelta(
               TheCU.getUnitDie(), dwarf::DW_AT_macros, U.getMacroLabelBegin(),
               TLOF.getDwarfMacroDWOSection()->getBeginSymbol());
-        else
-          U.addSectionLabel(U.getUnitDie(), dwarf::DW_AT_macros,
-                            U.getMacroLabelBegin(),
+        else {
+          dwarf::Attribute MacrosAttr = getDwarfVersion() >= 5
+                                            ? dwarf::DW_AT_macros
+                                            : dwarf::DW_AT_GNU_macros;
+          U.addSectionLabel(U.getUnitDie(), MacrosAttr, U.getMacroLabelBegin(),
                             TLOF.getDwarfMacroSection()->getBeginSymbol());
+        }
       } else {
         if (useSplitDwarf())
           TheCU.addSectionDelta(
@@ -2508,8 +2501,21 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
       DwarfExpr.addExpression(std::move(ExprCursor));
       return;
   } else if (Value.isConstantFP()) {
-    APInt RawBytes = Value.getConstantFP()->getValueAPF().bitcastToAPInt();
-    DwarfExpr.addUnsignedConstant(RawBytes);
+    if (AP.getDwarfVersion() >= 4 && AP.getDwarfDebug()->tuneForGDB()) {
+      DwarfExpr.addConstantFP(Value.getConstantFP()->getValueAPF(), AP);
+      return;
+    } else if (Value.getConstantFP()
+                   ->getValueAPF()
+                   .bitcastToAPInt()
+                   .getBitWidth() <= 64 /*bits*/)
+      DwarfExpr.addUnsignedConstant(
+          Value.getConstantFP()->getValueAPF().bitcastToAPInt());
+    else
+      LLVM_DEBUG(
+          dbgs()
+          << "Skipped DwarfExpression creation for ConstantFP of size"
+          << Value.getConstantFP()->getValueAPF().bitcastToAPInt().getBitWidth()
+          << " bits\n");
   }
   DwarfExpr.addExpression(std::move(ExprCursor));
 }
@@ -2978,16 +2984,17 @@ void DwarfDebug::emitDebugRangesDWO() {
                       Asm->getObjFileLowering().getDwarfRnglistsDWOSection());
 }
 
-/// Emit the header of a DWARF 5 macro section.
+/// Emit the header of a DWARF 5 macro section, or the GNU extension for
+/// DWARF 4.
 static void emitMacroHeader(AsmPrinter *Asm, const DwarfDebug &DD,
-                            const DwarfCompileUnit &CU) {
+                            const DwarfCompileUnit &CU, uint16_t DwarfVersion) {
   enum HeaderFlagMask {
 #define HANDLE_MACRO_FLAG(ID, NAME) MACRO_FLAG_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
   };
   uint8_t Flags = 0;
   Asm->OutStreamer->AddComment("Macro information version");
-  Asm->emitInt16(5);
+  Asm->emitInt16(DwarfVersion >= 5 ? DwarfVersion : 4);
   // We are setting Offset and line offset flags unconditionally here,
   // since we're only supporting DWARF32 and line offset should be mostly
   // present.
@@ -3016,40 +3023,44 @@ void DwarfDebug::handleMacroNodes(DIMacroNodeArray Nodes, DwarfCompileUnit &U) {
 void DwarfDebug::emitMacro(DIMacro &M) {
   StringRef Name = M.getName();
   StringRef Value = M.getValue();
-  bool UseMacro = getDwarfVersion() >= 5;
 
-  if (UseMacro) {
-    unsigned Type = M.getMacinfoType() == dwarf::DW_MACINFO_define
-                        ? dwarf::DW_MACRO_define_strx
-                        : dwarf::DW_MACRO_undef_strx;
-    Asm->OutStreamer->AddComment(dwarf::MacroString(Type));
-    Asm->emitULEB128(Type);
-    Asm->OutStreamer->AddComment("Line Number");
-    Asm->emitULEB128(M.getLine());
-    Asm->OutStreamer->AddComment("Macro String");
-    if (!Value.empty())
-      Asm->emitULEB128(this->InfoHolder.getStringPool()
-                           .getIndexedEntry(*Asm, (Name + " " + Value).str())
-                           .getIndex());
-    else
-      // DW_MACRO_undef_strx doesn't have a value, so just emit the macro
-      // string.
-      Asm->emitULEB128(this->InfoHolder.getStringPool()
-                           .getIndexedEntry(*Asm, (Name).str())
-                           .getIndex());
+  // There should be one space between the macro name and the macro value in
+  // define entries. In undef entries, only the macro name is emitted.
+  std::string Str = Value.empty() ? Name.str() : (Name + " " + Value).str();
+
+  if (UseDebugMacroSection) {
+    if (getDwarfVersion() >= 5) {
+      unsigned Type = M.getMacinfoType() == dwarf::DW_MACINFO_define
+                          ? dwarf::DW_MACRO_define_strx
+                          : dwarf::DW_MACRO_undef_strx;
+      Asm->OutStreamer->AddComment(dwarf::MacroString(Type));
+      Asm->emitULEB128(Type);
+      Asm->OutStreamer->AddComment("Line Number");
+      Asm->emitULEB128(M.getLine());
+      Asm->OutStreamer->AddComment("Macro String");
+      Asm->emitULEB128(
+          InfoHolder.getStringPool().getIndexedEntry(*Asm, Str).getIndex());
+    } else {
+      unsigned Type = M.getMacinfoType() == dwarf::DW_MACINFO_define
+                          ? dwarf::DW_MACRO_GNU_define_indirect
+                          : dwarf::DW_MACRO_GNU_undef_indirect;
+      Asm->OutStreamer->AddComment(dwarf::GnuMacroString(Type));
+      Asm->emitULEB128(Type);
+      Asm->OutStreamer->AddComment("Line Number");
+      Asm->emitULEB128(M.getLine());
+      Asm->OutStreamer->AddComment("Macro String");
+      // FIXME: Add support for DWARF64.
+      Asm->OutStreamer->emitSymbolValue(
+          InfoHolder.getStringPool().getEntry(*Asm, Str).getSymbol(),
+          /*Size=*/4);
+    }
   } else {
     Asm->OutStreamer->AddComment(dwarf::MacinfoString(M.getMacinfoType()));
     Asm->emitULEB128(M.getMacinfoType());
     Asm->OutStreamer->AddComment("Line Number");
     Asm->emitULEB128(M.getLine());
     Asm->OutStreamer->AddComment("Macro String");
-    Asm->OutStreamer->emitBytes(Name);
-    if (!Value.empty()) {
-      // There should be one space between macro name and macro value.
-      Asm->emitInt8(' ');
-      Asm->OutStreamer->AddComment("Macro Value=");
-      Asm->OutStreamer->emitBytes(Value);
-    }
+    Asm->OutStreamer->emitBytes(Str);
     Asm->emitInt8('\0');
   }
 }
@@ -3079,10 +3090,10 @@ void DwarfDebug::emitMacroFile(DIMacroFile &F, DwarfCompileUnit &U) {
   // DWARFv5 macro and DWARFv4 macinfo share some common encodings,
   // so for readibility/uniformity, We are explicitly emitting those.
   assert(F.getMacinfoType() == dwarf::DW_MACINFO_start_file);
-  bool UseMacro = getDwarfVersion() >= 5;
-  if (UseMacro)
-    emitMacroFileImpl(F, U, dwarf::DW_MACRO_start_file,
-                      dwarf::DW_MACRO_end_file, dwarf::MacroString);
+  if (UseDebugMacroSection)
+    emitMacroFileImpl(
+        F, U, dwarf::DW_MACRO_start_file, dwarf::DW_MACRO_end_file,
+        (getDwarfVersion() >= 5) ? dwarf::MacroString : dwarf::GnuMacroString);
   else
     emitMacroFileImpl(F, U, dwarf::DW_MACINFO_start_file,
                       dwarf::DW_MACINFO_end_file, dwarf::MacinfoString);
@@ -3099,8 +3110,8 @@ void DwarfDebug::emitDebugMacinfoImpl(MCSection *Section) {
       continue;
     Asm->OutStreamer->SwitchSection(Section);
     Asm->OutStreamer->emitLabel(U.getMacroLabelBegin());
-    if (getDwarfVersion() >= 5)
-      emitMacroHeader(Asm, *this, U);
+    if (UseDebugMacroSection)
+      emitMacroHeader(Asm, *this, U, getDwarfVersion());
     handleMacroNodes(Macros, U);
     Asm->OutStreamer->AddComment("End Of Macro List Mark");
     Asm->emitInt8(0);
@@ -3110,14 +3121,14 @@ void DwarfDebug::emitDebugMacinfoImpl(MCSection *Section) {
 /// Emit macros into a debug macinfo/macro section.
 void DwarfDebug::emitDebugMacinfo() {
   auto &ObjLower = Asm->getObjFileLowering();
-  emitDebugMacinfoImpl(getDwarfVersion() >= 5
+  emitDebugMacinfoImpl(UseDebugMacroSection
                            ? ObjLower.getDwarfMacroSection()
                            : ObjLower.getDwarfMacinfoSection());
 }
 
 void DwarfDebug::emitDebugMacinfoDWO() {
   auto &ObjLower = Asm->getObjFileLowering();
-  emitDebugMacinfoImpl(getDwarfVersion() >= 5
+  emitDebugMacinfoImpl(UseDebugMacroSection
                            ? ObjLower.getDwarfMacroDWOSection()
                            : ObjLower.getDwarfMacinfoDWOSection());
 }
@@ -3307,14 +3318,14 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
 
 DwarfDebug::NonTypeUnitContext::NonTypeUnitContext(DwarfDebug *DD)
     : DD(DD),
-      TypeUnitsUnderConstruction(std::move(DD->TypeUnitsUnderConstruction)) {
+      TypeUnitsUnderConstruction(std::move(DD->TypeUnitsUnderConstruction)), AddrPoolUsed(DD->AddrPool.hasBeenUsed()) {
   DD->TypeUnitsUnderConstruction.clear();
-  assert(TypeUnitsUnderConstruction.empty() || !DD->AddrPool.hasBeenUsed());
+  DD->AddrPool.resetUsedFlag();
 }
 
 DwarfDebug::NonTypeUnitContext::~NonTypeUnitContext() {
   DD->TypeUnitsUnderConstruction = std::move(TypeUnitsUnderConstruction);
-  DD->AddrPool.resetUsedFlag();
+  DD->AddrPool.resetUsedFlag(AddrPoolUsed);
 }
 
 DwarfDebug::NonTypeUnitContext DwarfDebug::enterNonTypeUnitContext() {

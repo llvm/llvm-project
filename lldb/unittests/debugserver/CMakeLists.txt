@@ -4,9 +4,6 @@
 # of the debugserver communication path. If you are looking for a non-darwin
 # remote debugging server, please use lldb-server.
 
-include_directories(${LLDB_SOURCE_DIR}/tools/debugserver/source
-                    ${LLDB_SOURCE_DIR}/tools/debugserver/source/MacOSX)
-
 add_lldb_unittest(debugserverTests
   JSONTest.cpp
   RNBSocketTest.cpp
@@ -20,7 +17,11 @@ add_lldb_unittest(debugserverTests
     Support
   )
 
-if(IOS)
+target_include_directories(debugserverTests PRIVATE
+  ${LLDB_SOURCE_DIR}/tools/debugserver/source
+  ${LLDB_SOURCE_DIR}/tools/debugserver/source/MacOSX)
+
+if(APPLE_EMBEDDED)
   set_property(TARGET debugserverTests APPEND PROPERTY COMPILE_DEFINITIONS
       WITH_LOCKDOWN
       WITH_FBS

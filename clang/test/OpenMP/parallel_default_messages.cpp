@@ -1,3 +1,5 @@
+
+
 // RUN: %clang_cc1 -verify=expected,ge40 -fopenmp -ferror-limit 100 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,ge40 -fopenmp-simd -ferror-limit 100 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,ge40 -fopenmp-version=50 -fopenmp -ferror-limit 100 -o - %s -Wuninitialized

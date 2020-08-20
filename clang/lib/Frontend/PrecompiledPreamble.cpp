@@ -208,6 +208,11 @@ public:
     Callbacks.AfterPCHEmitted(Writer);
   }
 
+  bool BeginSourceFileAction(CompilerInstance &CI) override {
+    assert(CI.getLangOpts().CompilingPCH);
+    return ASTFrontendAction::BeginSourceFileAction(CI);
+  }
+
   bool shouldEraseOutputFiles() override { return !hasEmittedPreamblePCH(); }
   bool hasCodeCompletionSupport() const override { return false; }
   bool hasASTFileSupport() const override { return false; }
@@ -395,6 +400,8 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
 
   auto PreambleDepCollector = std::make_shared<PreambleDependencyCollector>();
   Clang->addDependencyCollector(PreambleDepCollector);
+
+  Clang->getLangOpts().CompilingPCH = true;
 
   // Remap the main source file to the preamble buffer.
   StringRef MainFilePath = FrontendOpts.Inputs[0].getFile();

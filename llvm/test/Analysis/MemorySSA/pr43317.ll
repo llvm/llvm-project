@@ -1,4 +1,5 @@
-; RUN: opt -disable-output -licm -print-memoryssa -enable-mssa-loop-dependency=true < %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -licm -enable-new-pm=0 -print-memoryssa -enable-mssa-loop-dependency=true < %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -passes='loop-mssa(licm),print<memoryssa>' < %s 2>&1 | FileCheck %s
 @v_274 = external dso_local global i64, align 1
 @v_295 = external dso_local global i16, align 1
 @v_335 = external dso_local global i32, align 1

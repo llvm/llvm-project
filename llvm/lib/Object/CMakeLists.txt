@@ -23,6 +23,7 @@ add_llvm_component_library(LLVMObject
   SymbolSize.cpp
   TapiFile.cpp
   TapiUniversal.cpp
+  MachOUniversalWriter.cpp
   WasmObjectFile.cpp
   WindowsMachineFlag.cpp
   WindowsResource.cpp

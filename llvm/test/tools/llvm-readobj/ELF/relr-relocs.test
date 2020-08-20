@@ -1,7 +1,7 @@
 ## This is a test to test how SHT_RELR sections are dumped.
 
-# RUN: yaml2obj --docnum=1 %s \
-# RUN:   | llvm-readobj --relocations --raw-relr - \
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --relocations --raw-relr %t1 \
 # RUN:   | FileCheck --check-prefix=RAW-LLVM1 %s
 # RAW-LLVM1:      Section (1) .relr.dyn {
 # RAW-LLVM1-NEXT:   0x10D60
@@ -11,9 +11,7 @@
 # RAW-LLVM1-NEXT:   0xA700550400009
 # RAW-LLVM1-NEXT: }
 
-# RUN: yaml2obj --docnum=1 %s \
-# RUN:   | llvm-readobj --relocations - \
-# RUN:   | FileCheck --check-prefix=LLVM1 %s
+# RUN: llvm-readobj --relocations %t1 | FileCheck --check-prefix=LLVM1 %s
 # LLVM1:      Section (1) .relr.dyn {
 # LLVM1-NEXT:   0x10D60 R_X86_64_RELATIVE - 0x0
 # LLVM1-NEXT:   0x10D68 R_X86_64_RELATIVE - 0x0
@@ -38,8 +36,7 @@
 # LLVM1-NEXT:   0x20390 R_X86_64_RELATIVE - 0x0
 # LLVM1-NEXT: }
 
-# RUN: yaml2obj --docnum=1 %s \
-# RUN:   | llvm-readelf -relocations -raw-relr - \
+# RUN: llvm-readelf --relocations --raw-relr %t1 \
 # RUN:   | FileCheck --check-prefix=RAW-GNU1 %s
 # RAW-GNU1:      Relocation section '.relr.dyn' at offset 0x40 contains 5 entries:
 # RAW-GNU1:      0000000000010d60
@@ -48,9 +45,7 @@
 # RAW-GNU1-NEXT: 00000000000f0501
 # RAW-GNU1-NEXT: 000a700550400009
 
-# RUN: yaml2obj --docnum=1 %s \
-# RUN:   | llvm-readelf -relocations - \
-# RUN:   | FileCheck --check-prefix=GNU1 %s
+# RUN: llvm-readelf --relocations %t1 | FileCheck --check-prefix=GNU1 %s
 # GNU1:      Relocation section '.relr.dyn' at offset 0x40 contains 21 entries:
 # GNU1:      0000000000010d60  0000000000000008 R_X86_64_RELATIVE
 # GNU1-NEXT: 0000000000010d68  0000000000000008 R_X86_64_RELATIVE
@@ -80,7 +75,6 @@ FileHeader:
   Data:    ELFDATA2LSB
   Type:    ET_DYN
   Machine: EM_X86_64
-
 Sections:
   - Name:  .relr.dyn
     Type:  SHT_RELR
@@ -88,9 +82,9 @@ Sections:
     Entries: [ 0x0000000000010D60, 0x0000000000000103, 0x0000000000020000,
                0x00000000000F0501, 0x000A700550400009 ]
 
-# RUN: yaml2obj --docnum=2 %s \
-# RUN:   | llvm-readobj --relocations --raw-relr - \
-# RUN:   | FileCheck --check-prefix=RAW-LLVM2 %s
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj --relocations --raw-relr %t2 | \
+# RUN:   FileCheck --check-prefix=RAW-LLVM2 %s
 # RAW-LLVM2:      Section (1) .relr.dyn {
 # RAW-LLVM2-NEXT:   0x10D60
 # RAW-LLVM2-NEXT:   0x103
@@ -99,9 +93,7 @@ Sections:
 # RAW-LLVM2-NEXT:   0x50400009
 # RAW-LLVM2-NEXT: }
 
-# RUN: yaml2obj --docnum=2 %s \
-# RUN:   | llvm-readobj --relocations - \
-# RUN:   | FileCheck --check-prefix=LLVM2 %s
+# RUN: llvm-readobj --relocations %t2 | FileCheck --check-prefix=LLVM2 %s
 # LLVM2:      Section (1) .relr.dyn {
 # LLVM2-NEXT:   0x10D60 R_386_RELATIVE - 0x0
 # LLVM2-NEXT:   0x10D64 R_386_RELATIVE - 0x0
@@ -119,9 +111,8 @@ Sections:
 # LLVM2-NEXT:   0x200F4 R_386_RELATIVE - 0x0
 # LLVM2-NEXT: }
 
-# RUN: yaml2obj --docnum=2 %s \
-# RUN:   | llvm-readelf -relocations -raw-relr - \
-# RUN:   | FileCheck --check-prefix=RAW-GNU2 %s
+# RUN: llvm-readelf --relocations --raw-relr %t2 | \
+# RUN:   FileCheck --check-prefix=RAW-GNU2 %s
 # RAW-GNU2:      Relocation section '.relr.dyn' at offset 0x34 contains 5 entries:
 # RAW-GNU2:      00010d60
 # RAW-GNU2-NEXT: 00000103
@@ -129,9 +120,7 @@ Sections:
 # RAW-GNU2-NEXT: 000f0501
 # RAW-GNU2-NEXT: 50400009
 
-# RUN: yaml2obj --docnum=2 %s \
-# RUN:   | llvm-readelf -relocations - \
-# RUN:   | FileCheck --check-prefix=GNU2 %s
+# RUN: llvm-readelf --relocations %t2 | FileCheck --check-prefix=GNU2 %s
 # GNU2:      Relocation section '.relr.dyn' at offset 0x34 contains 14 entries:
 # GNU2:      00010d60  00000008 R_386_RELATIVE
 # GNU2-NEXT: 00010d64  00000008 R_386_RELATIVE
@@ -154,10 +143,61 @@ FileHeader:
   Data:    ELFDATA2LSB
   Type:    ET_DYN
   Machine: EM_386
-
 Sections:
-  - Name:  .relr.dyn
-    Type:  SHT_RELR
-    Flags: [ SHF_ALLOC ]
+  - Name:    .relr.dyn
+    Type:    SHT_RELR
+    Flags:   [ SHF_ALLOC ]
     Entries: [ 0x00010D60, 0x00000103, 0x00020000,
                0x000F0501, 0x50400009 ]
+    EntSize: [[ENTSIZE=<none>]]
+    ShType:  [[SHTYPE=<none>]]
+    Link:    [[LINK=""]]
+
+## Check we report a warning when we are unable to dump relocations
+## for a SHT_RELR/SHT_ANDROID_RELR section.
+
+## Case A: check the case when relocations can't be read from an SHT_RELR section.
+# RUN: yaml2obj --docnum=2 -DENTSIZE=1 %s -o %t2.broken
+# RUN: llvm-readobj --relocations %t2.broken 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.broken --check-prefix=BROKEN-LLVM %s -DSECNAME=SHT_RELR
+# RUN: llvm-readelf --relocations %t2.broken 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.broken --check-prefix=BROKEN-GNU %s -DSECNAME=SHT_RELR
+
+# BROKEN-LLVM:      Relocations [
+# BROKEN-LLVM-NEXT:   Section (1) .relr.dyn {
+# BROKEN-LLVM-NEXT: warning: '[[FILE]]': unable to read relocations from [[SECNAME]] section with index 1: section [index 1] has an invalid sh_entsize: 1
+# BROKEN-LLVM-NEXT:   }
+# BROKEN-LLVM-NEXT: ]
+
+# BROKEN-GNU:      warning: '[[FILE]]': unable to get the number of relocations in [[SECNAME]] section with index 1: section [index 1] has an invalid sh_entsize: 1
+# BROKEN-GNU:      Relocation section '.relr.dyn' at offset 0x34 contains <?> entries:
+# BROKEN-GNU-NEXT:  Offset     Info    Type                Sym. Value  Symbol's Name
+# BROKEN-GNU-NEXT: warning: '[[FILE]]': unable to read relocations from [[SECNAME]] section with index 1: section [index 1] has an invalid sh_entsize: 1
+
+## Case B: check the case when relocations can't be read from an SHT_ANDROID_RELR section.
+##         SHT_ANDROID_RELR = 0x6fffff00.
+# RUN: yaml2obj --docnum=2 -DENTSIZE=1 -DSHTYPE=0x6fffff00 %s -o %t2.broken.android
+# RUN: llvm-readobj --relocations %t2.broken.android 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.broken.android --check-prefix=BROKEN-LLVM %s -DSECNAME=SHT_ANDROID_RELR
+# RUN: llvm-readelf --relocations %t2.broken.android 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.broken.android --check-prefix=BROKEN-GNU %s -DSECNAME=SHT_ANDROID_RELR
+
+## Check the behavior when the sh_link field of the SHT_RELR/SHT_ANDROID_RELR section
+## is set to an arbitrary value. Normally, it is set to 0, because such sections contains
+## only relative relocations and do not have an associated symbol table, like other
+## relocation sections.
+
+## Case A: check we do not report warnings when the sh_link field is set to an arbitrary value
+##         and the --relocations option is requested.
+# RUN: yaml2obj --docnum=2 -DLINK=0xff %s -o %t2.has.link
+# RUN: llvm-readobj --relocations %t2.has.link 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.has.link --check-prefix=LLVM2 %s --implicit-check-not=warning:
+# RUN: llvm-readelf --relocations %t2.has.link 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.has.link --check-prefix=GNU2 %s --implicit-check-not=warning:
+
+## Case B: check we do not report warnings when the sh_link field is set to an arbitrary value
+##         and --relocations and --raw-relr options are requested.
+# RUN: llvm-readobj --relocations --raw-relr %t2.has.link | \
+# RUN:   FileCheck -DFILE=%t2.has.link --check-prefix=RAW-LLVM2 %s
+# RUN: llvm-readelf --relocations --raw-relr %t2.has.link 2>&1 | \
+# RUN:   FileCheck -DFILE=%t2.has.link --check-prefix=RAW-GNU2 %s

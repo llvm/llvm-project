@@ -38,8 +38,9 @@ body:             |
 
     ; ALL-LABEL: name: test_zext_i1
     ; ALL: [[COPY:%[0-9]+]]:gr8 = COPY $dil
-    ; ALL: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_8bit
-    ; ALL: [[AND64ri8_:%[0-9]+]]:gr64 = AND64ri8 [[SUBREG_TO_REG]], 1, implicit-def $eflags
+    ; ALL: [[DEF:%[0-9]+]]:gr64 = IMPLICIT_DEF
+    ; ALL: [[INSERT_SUBREG:%[0-9]+]]:gr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_8bit
+    ; ALL: [[AND64ri8_:%[0-9]+]]:gr64 = AND64ri8 [[INSERT_SUBREG]], 1, implicit-def $eflags
     ; ALL: $rax = COPY [[AND64ri8_]]
     ; ALL: RET 0, implicit $rax
     %0(s8) = COPY $dil

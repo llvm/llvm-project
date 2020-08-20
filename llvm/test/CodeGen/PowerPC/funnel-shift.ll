@@ -18,12 +18,11 @@ declare <4 x i32> @llvm.fshr.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 define i32 @fshl_i32(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: fshl_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi. 5, 5, 31
+; CHECK-NEXT:    clrlwi 5, 5, 27
 ; CHECK-NEXT:    subfic 6, 5, 32
-; CHECK-NEXT:    slw 5, 3, 5
+; CHECK-NEXT:    slw 3, 3, 5
 ; CHECK-NEXT:    srw 4, 4, 6
-; CHECK-NEXT:    or 4, 5, 4
-; CHECK-NEXT:    iseleq 3, 3, 4
+; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    blr
   %f = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %z)
   ret i32 %f
@@ -32,12 +31,11 @@ define i32 @fshl_i32(i32 %x, i32 %y, i32 %z) {
 define i64 @fshl_i64(i64 %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: fshl_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi. 5, 5, 63
+; CHECK-NEXT:    clrlwi 5, 5, 26
 ; CHECK-NEXT:    subfic 6, 5, 64
-; CHECK-NEXT:    sld 5, 3, 5
+; CHECK-NEXT:    sld 3, 3, 5
 ; CHECK-NEXT:    srd 4, 4, 6
-; CHECK-NEXT:    or 4, 5, 4
-; CHECK-NEXT:    iseleq 3, 3, 4
+; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    blr
   %f = call i64 @llvm.fshl.i64(i64 %x, i64 %y, i64 %z)
   ret i64 %f
@@ -138,12 +136,11 @@ define i8 @fshl_i8_const_fold() {
 define i32 @fshr_i32(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: fshr_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi. 5, 5, 31
+; CHECK-NEXT:    clrlwi 5, 5, 27
 ; CHECK-NEXT:    subfic 6, 5, 32
-; CHECK-NEXT:    srw 5, 4, 5
+; CHECK-NEXT:    srw 4, 4, 5
 ; CHECK-NEXT:    slw 3, 3, 6
-; CHECK-NEXT:    or 3, 3, 5
-; CHECK-NEXT:    iseleq 3, 4, 3
+; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    blr
   %f = call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %z)
   ret i32 %f
@@ -152,12 +149,11 @@ define i32 @fshr_i32(i32 %x, i32 %y, i32 %z) {
 define i64 @fshr_i64(i64 %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: fshr_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi. 5, 5, 63
+; CHECK-NEXT:    clrlwi 5, 5, 26
 ; CHECK-NEXT:    subfic 6, 5, 64
-; CHECK-NEXT:    srd 5, 4, 5
+; CHECK-NEXT:    srd 4, 4, 5
 ; CHECK-NEXT:    sld 3, 3, 6
-; CHECK-NEXT:    or 3, 3, 5
-; CHECK-NEXT:    iseleq 3, 4, 3
+; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    blr
   %f = call i64 @llvm.fshr.i64(i64 %x, i64 %y, i64 %z)
   ret i64 %f

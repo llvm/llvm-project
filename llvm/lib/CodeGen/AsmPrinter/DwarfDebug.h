@@ -114,7 +114,7 @@ public:
 ///
 /// Variables that have been optimized out use none of these fields.
 class DbgVariable : public DbgEntity {
-  /// Offset in DebugLocs.
+  /// Index of the entry list in DebugLocs.
   unsigned DebugLocListIndex = ~0u;
   /// DW_OP_LLVM_tag_offset value from DebugLocs.
   Optional<uint8_t> DebugLocListTagOffset;
@@ -371,6 +371,9 @@ class DwarfDebug : public DebugHandlerBase {
 
   /// Generate DWARF v4 type units.
   bool GenerateTypeUnits;
+
+  /// Emit a .debug_macro section instead of .debug_macinfo.
+  bool UseDebugMacroSection;
 
   /// DWARF5 Experimental Options
   /// @{
@@ -645,6 +648,7 @@ public:
   class NonTypeUnitContext {
     DwarfDebug *DD;
     decltype(DwarfDebug::TypeUnitsUnderConstruction) TypeUnitsUnderConstruction;
+    bool AddrPoolUsed;
     friend class DwarfDebug;
     NonTypeUnitContext(DwarfDebug *DD);
   public:

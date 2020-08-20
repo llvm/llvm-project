@@ -25,7 +25,7 @@
        '("alwaysinline" "argmemonly" "builtin" "cold" "convergent" "inaccessiblememonly"
          "inaccessiblemem_or_argmemonly" "inlinehint" "jumptable" "minsize" "naked" "nobuiltin"
          "noduplicate" "noimplicitfloat" "noinline" "nonlazybind" "noredzone" "noreturn"
-         "norecurse" "nounwind" "optnone" "optsize" "readnone" "readonly" "returns_twice"
+         "norecurse" "noundef" "nounwind" "optnone" "optsize" "readnone" "readonly" "returns_twice"
          "speculatable" "ssp" "sspreq" "sspstrong" "safestack" "sanitize_address" "sanitize_hwaddress" "sanitize_memtag"
          "sanitize_thread" "sanitize_memory" "strictfp" "uwtable" "writeonly" "immarg") 'symbols) . font-lock-constant-face)
    ;; Variables
@@ -64,7 +64,7 @@
    ;; Floating-point operators
    `(,(regexp-opt '("fadd" "fsub" "fneg" "fmul" "fdiv" "frem") 'symbols) . font-lock-keyword-face)
    ;; Special instructions
-   `(,(regexp-opt '("phi" "tail" "call" "select" "to" "shl" "lshr" "ashr" "fcmp" "icmp" "va_arg" "landingpad") 'symbols) . font-lock-keyword-face)
+   `(,(regexp-opt '("phi" "tail" "call" "select" "to" "shl" "lshr" "ashr" "fcmp" "icmp" "va_arg" "landingpad" "freeze") 'symbols) . font-lock-keyword-face)
    ;; Control instructions
    `(,(regexp-opt '("ret" "br" "switch" "invoke" "resume" "unwind" "unreachable" "indirectbr") 'symbols) . font-lock-keyword-face)
    ;; Memory operators

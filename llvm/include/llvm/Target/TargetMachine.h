@@ -271,6 +271,11 @@ public:
     return Options.BBSectionsFuncListBuf.get();
   }
 
+  /// Returns true if a cast between SrcAS and DestAS is a noop.
+  virtual bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const {
+    return false;
+  }
+
   /// Get a \c TargetIRAnalysis appropriate for the target.
   ///
   /// This is used to construct the new pass manager's target IR analysis pass,

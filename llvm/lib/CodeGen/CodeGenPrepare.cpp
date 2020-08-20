@@ -4322,7 +4322,7 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
     unsigned SrcAS
       = AddrInst->getOperand(0)->getType()->getPointerAddressSpace();
     unsigned DestAS = AddrInst->getType()->getPointerAddressSpace();
-    if (TLI.isNoopAddrSpaceCast(SrcAS, DestAS))
+    if (TLI.getTargetMachine().isNoopAddrSpaceCast(SrcAS, DestAS))
       return matchAddr(AddrInst->getOperand(0), Depth);
     return false;
   }

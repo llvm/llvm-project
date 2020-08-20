@@ -91,6 +91,7 @@ public:
   std::chrono::seconds GetUtilityExpressionTimeout() const;
   bool GetOSPluginReportsAllThreads() const;
   void SetOSPluginReportsAllThreads(bool does_report);
+  bool GetSteppingRunsAllThreads() const;
 
 protected:
   Process *m_process; // Can be nullptr for global ProcessProperties
@@ -326,7 +327,7 @@ public:
   }
 
   void SetStopEventForLastNaturalStopID(lldb::EventSP event_sp) {
-    m_last_natural_stop_event = event_sp;
+    m_last_natural_stop_event = std::move(event_sp);
   }
 
   lldb::EventSP GetStopEventForStopID(uint32_t stop_id) const {
@@ -2163,7 +2164,7 @@ public:
   public:
     ProcessEventHijacker(Process &process, lldb::ListenerSP listener_sp)
         : m_process(process) {
-      m_process.HijackProcessEvents(listener_sp);
+      m_process.HijackProcessEvents(std::move(listener_sp));
     }
 
     ~ProcessEventHijacker() { m_process.RestoreProcessEvents(); }

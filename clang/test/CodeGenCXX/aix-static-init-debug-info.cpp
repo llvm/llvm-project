@@ -40,13 +40,13 @@ X v;
 // CHECK:   ret void, !dbg ![[DBGVAR24]]
 // CHECK: }
 
-// CHECK: define void @__sinit80000000_clang_c3236cbaa79f2bae3a15e6379a05f625() [[ATTR:#[0-9]+]] !dbg ![[DBGVAR25:[0-9]+]] {
+// CHECK: define internal void @_GLOBAL__sub_I__() [[ATTR:#[0-9]+]] !dbg ![[DBGVAR25:[0-9]+]] {
 // CHECK: entry:
 // CHECK:   call void @__cxx_global_var_init(), !dbg ![[DBGVAR26:[0-9]+]]
 // CHECK:   ret void
 // CHECK: }
 
-// CHECK: define void @__sterm80000000_clang_c3236cbaa79f2bae3a15e6379a05f625() [[ATTR:#[0-9]+]] !dbg ![[DBGVAR27:[0-9]+]] {
+// CHECK: define internal void @_GLOBAL__D_a() [[ATTR:#[0-9]+]] !dbg ![[DBGVAR27:[0-9]+]] {
 // CHECK: entry:
 // CHECK:   call void @__finalize_v(), !dbg ![[DBGVAR28:[0-9]+]]
 // CHECK:   ret void
@@ -58,7 +58,7 @@ X v;
 // CHECK: ![[DBGVAR21]] = !DILocation(line: 14, column: 3, scope: ![[DBGVAR20]])
 // CHECK: ![[DBGVAR22]] = distinct !DISubprogram(linkageName: "__finalize_v", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: 14, type: !{{[0-9]+}}, scopeLine: 14, flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !{{[0-9]+}}, retainedNodes: !{{[0-9]+}})
 // CHECK: ![[DBGVAR24]] = !DILocation(line: 14, column: 3, scope: ![[DBGVAR22]])
-// CHECK: ![[DBGVAR25]] = distinct !DISubprogram(linkageName: "__sinit80000000_clang_c3236cbaa79f2bae3a15e6379a05f625", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, type: !{{[0-9]+}}, flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: !{{[0-9]+}}, retainedNodes: !{{[0-9]+}})
+// CHECK: ![[DBGVAR25]] = distinct !DISubprogram(linkageName: "_GLOBAL__sub_I__", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, type: !{{[0-9]+}}, flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !{{[0-9]+}}, retainedNodes: !{{[0-9]+}})
 // CHECK: ![[DBGVAR26]] = !DILocation(line: 0, scope: ![[DBGVAR25]])
-// CHECK: ![[DBGVAR27]] = distinct !DISubprogram(linkageName: "__sterm80000000_clang_c3236cbaa79f2bae3a15e6379a05f625", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, type: !{{[0-9]+}}, flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: !{{[0-9]+}}, retainedNodes: !{{[0-9]+}})
+// CHECK: ![[DBGVAR27]] = distinct !DISubprogram(linkageName: "_GLOBAL__D_a", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, type: !{{[0-9]+}}, flags: DIFlagArtificial, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !{{[0-9]+}}, retainedNodes: !{{[0-9]+}})
 // CHECK: ![[DBGVAR28]] = !DILocation(line: 0, scope: ![[DBGVAR27]])

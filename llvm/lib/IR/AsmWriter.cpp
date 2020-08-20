@@ -3089,7 +3089,7 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
     printTypeIdInfo(*TIdInfo);
 
   auto PrintRange = [&](const ConstantRange &Range) {
-    Out << "[" << Range.getLower() << ", " << Range.getSignedMax() << "]";
+    Out << "[" << Range.getSignedMin() << ", " << Range.getSignedMax() << "]";
   };
 
   if (!FS->paramAccesses().empty()) {
@@ -3105,7 +3105,7 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
         FieldSeparator IFS;
         for (auto &Call : PS.Calls) {
           Out << IFS;
-          Out << "(callee: ^" << Machine.getGUIDSlot(Call.Callee);
+          Out << "(callee: ^" << Machine.getGUIDSlot(Call.Callee.getGUID());
           Out << ", param: " << Call.ParamNo;
           Out << ", offset: ";
           PrintRange(Call.Offsets);

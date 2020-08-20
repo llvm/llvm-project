@@ -436,6 +436,17 @@ namespace llvm {
     /// PLD.
     MAT_PCREL_ADDR,
 
+    /// TLS_DYNAMIC_MAT_PCREL_ADDR = Materialize a PC Relative address for
+    /// TLS global address when using dynamic access models. This can be done
+    /// through an add like PADDI.
+    TLS_DYNAMIC_MAT_PCREL_ADDR,
+
+    // Constrained conversion from floating point to int
+    STRICT_FCTIDZ = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+    STRICT_FCTIWZ,
+    STRICT_FCTIDUZ,
+    STRICT_FCTIWUZ,
+
     /// CHAIN = STBRX CHAIN, GPRC, Ptr, Type - This is a
     /// byte-swapping store instruction.  It byte-swaps the low "Type" bits of
     /// the GPRC input, then stores it through Ptr.  Type can be either i16 or
@@ -1022,11 +1033,6 @@ namespace llvm {
       }
     };
 
-    bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
-      // Addrspacecasts are always noops.
-      return true;
-    }
-
     bool canReuseLoadAddress(SDValue Op, EVT MemVT, ReuseLoadInfo &RLI,
                              SelectionDAG &DAG,
                              ISD::LoadExtType ET = ISD::NON_EXTLOAD) const;
@@ -1097,6 +1103,7 @@ namespace llvm {
     SDValue LowerSHL_PARTS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSRL_PARTS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSRA_PARTS(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerFunnelShift(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;

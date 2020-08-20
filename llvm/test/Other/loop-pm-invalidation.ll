@@ -27,7 +27,6 @@ define void @no_loops() {
 ; CHECK-LOOP-INV-NEXT: Running pass: LCSSAPass
 ; CHECK-LOOP-INV-NEXT: Finished {{.*}}Function pass manager run
 ; CHECK-LOOP-INV-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}LoopAnalysis
-; CHECK-LOOP-INV-NEXT: Invalidating all non-preserved analyses
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: LoopAnalysis
 ; CHECK-LOOP-INV-NEXT: Starting {{.*}}Function pass manager run
 ; CHECK-LOOP-INV-NEXT: Running pass: LoopSimplifyPass
@@ -45,7 +44,6 @@ define void @no_loops() {
 ; CHECK-SCEV-INV-NEXT: Running pass: LCSSAPass
 ; CHECK-SCEV-INV-NEXT: Finished {{.*}}Function pass manager run
 ; CHECK-SCEV-INV-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}ScalarEvolutionAnalysis
-; CHECK-SCEV-INV-NEXT: Invalidating all non-preserved analyses
 ; CHECK-SCEV-INV-NEXT: Starting {{.*}}Function pass manager run
 ; CHECK-SCEV-INV-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-SCEV-INV-NEXT: Running pass: LCSSAPass
@@ -74,7 +72,6 @@ define void @one_loop(i1* %ptr) {
 ; CHECK-LOOP-INV-NEXT: Running pass: NoOpLoopPass
 ; CHECK-LOOP-INV-NEXT: Finished {{.*}}Loop pass manager run.
 ; CHECK-LOOP-INV-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}LoopAnalysis
-; CHECK-LOOP-INV-NEXT: Invalidating all non-preserved analyses
 ; CHECK-LOOP-INV-NEXT: Clearing all analysis results for: <possibly invalidated loop>
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: LoopAnalysis
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: ScalarEvolutionAnalysis
@@ -108,7 +105,6 @@ define void @one_loop(i1* %ptr) {
 ; CHECK-SCEV-INV-NEXT: Running pass: NoOpLoopPass
 ; CHECK-SCEV-INV-NEXT: Finished {{.*}}Loop pass manager run.
 ; CHECK-SCEV-INV-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}ScalarEvolutionAnalysis
-; CHECK-SCEV-INV-NEXT: Invalidating all non-preserved analyses
 ; CHECK-SCEV-INV-NEXT: Clearing all analysis results for: <possibly invalidated loop>
 ; CHECK-SCEV-INV-NEXT: Invalidating analysis: ScalarEvolutionAnalysis
 ; CHECK-SCEV-INV-NEXT: Invalidating analysis: InnerAnalysisManagerProxy<{{.*}}Loop
@@ -155,7 +151,6 @@ define void @nested_loops(i1* %ptr) {
 ; CHECK-LOOP-INV-NEXT: Running pass: NoOpLoopPass
 ; CHECK-LOOP-INV: Finished {{.*}}Loop pass manager run.
 ; CHECK-LOOP-INV-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}LoopAnalysis
-; CHECK-LOOP-INV-NEXT: Invalidating all non-preserved analyses
 ; CHECK-LOOP-INV-NEXT: Clearing all analysis results for: <possibly invalidated loop>
 ; CHECK-LOOP-INV-NEXT: Clearing all analysis results for: <possibly invalidated loop>
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: LoopAnalysis
@@ -196,7 +191,6 @@ define void @nested_loops(i1* %ptr) {
 ; CHECK-SCEV-INV-NEXT: Running pass: NoOpLoopPass
 ; CHECK-SCEV-INV: Finished {{.*}}Loop pass manager run.
 ; CHECK-SCEV-INV-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}ScalarEvolutionAnalysis
-; CHECK-SCEV-INV-NEXT: Invalidating all non-preserved analyses
 ; CHECK-SCEV-INV-NEXT: Clearing all analysis results for: <possibly invalidated loop>
 ; CHECK-SCEV-INV-NEXT: Clearing all analysis results for: <possibly invalidated loop>
 ; CHECK-SCEV-INV-NEXT: Invalidating analysis: ScalarEvolutionAnalysis
@@ -251,7 +245,6 @@ define void @dead_loop() {
 ; CHECK-LOOP-INV-NEXT: Running pass: NoOpLoopPass
 ; CHECK-LOOP-INV-NEXT: Finished {{.*}}Loop pass manager run.
 ; CHECK-LOOP-INV-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}LoopAnalysis
-; CHECK-LOOP-INV-NEXT: Invalidating all non-preserved analyses
 ; CHECK-LOOP-INV-NEXT: Clearing all analysis results for: <possibly invalidated loop>
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: LoopAnalysis
 ; CHECK-LOOP-INV-NEXT: Invalidating analysis: ScalarEvolutionAnalysis
@@ -285,7 +278,6 @@ define void @dead_loop() {
 ; CHECK-SCEV-INV-NEXT: Running pass: NoOpLoopPass
 ; CHECK-SCEV-INV-NEXT: Finished {{.*}}Loop pass manager run.
 ; CHECK-SCEV-INV-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}ScalarEvolutionAnalysis
-; CHECK-SCEV-INV-NEXT: Invalidating all non-preserved analyses
 ; CHECK-SCEV-INV-NEXT: Clearing all analysis results for: <possibly invalidated loop>
 ; CHECK-SCEV-INV-NEXT: Invalidating analysis: ScalarEvolutionAnalysis
 ; CHECK-SCEV-INV-NEXT: Invalidating analysis: InnerAnalysisManagerProxy<{{.*}}Loop
@@ -316,9 +308,7 @@ define void @dead_loop() {
 ; CHECK-SCEV-INV-AFTER-DELETE-NEXT: Running pass: LoopDeletionPass
 ; CHECK-SCEV-INV-AFTER-DELETE-NEXT: Clearing all analysis results for:
 ; CHECK-SCEV-INV-AFTER-DELETE-NEXT: Finished {{.*}}Loop pass manager run.
-; CHECK-SCEV-INV-AFTER-DELETE-NEXT: Invalidating all non-preserved analyses
 ; CHECK-SCEV-INV-AFTER-DELETE-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}ScalarEvolutionAnalysis
-; CHECK-SCEV-INV-AFTER-DELETE-NEXT: Invalidating all non-preserved analyses
 ; CHECK-SCEV-INV-AFTER-DELETE-NEXT: Invalidating analysis: ScalarEvolutionAnalysis
 ; CHECK-SCEV-INV-AFTER-DELETE-NEXT: Invalidating analysis: InnerAnalysisManagerProxy<{{.*}}Loop
 ; CHECK-SCEV-INV-AFTER-DELETE-NEXT: Starting {{.*}}Function pass manager run

@@ -420,8 +420,6 @@ define i8 @v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; SSE2-SSSE3-LABEL: v8i8:
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    pcmpgtb %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm0
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
@@ -429,8 +427,6 @@ define i8 @v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; AVX12-LABEL: v8i8:
 ; AVX12:       # %bb.0:
 ; AVX12-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm0
-; AVX12-NEXT:    vpmovsxbw %xmm0, %xmm0
-; AVX12-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX12-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX12-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX12-NEXT:    retq

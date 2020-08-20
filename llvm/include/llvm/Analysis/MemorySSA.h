@@ -1214,6 +1214,8 @@ public:
 
   BasicBlock *getPhiArgBlock() const { return DefIterator.getPhiArgBlock(); }
 
+  bool performedPhiTranslation() const { return PerformedPhiTranslation; }
+
 private:
   void fillInCurrentPair() {
     CurrentPair.first = *DefIterator;
@@ -1226,6 +1228,7 @@ private:
                                         false)) {
         if (Translator.getAddr() != Location.Ptr) {
           CurrentPair.second = Location.getWithNewPtr(Translator.getAddr());
+          PerformedPhiTranslation = true;
           return;
         }
       } else {
@@ -1240,8 +1243,9 @@ private:
   memoryaccess_def_iterator DefIterator;
   MemoryLocation Location;
   MemoryAccess *OriginalAccess = nullptr;
-  bool WalkingPhi = false;
   DominatorTree *DT = nullptr;
+  bool WalkingPhi = false;
+  bool PerformedPhiTranslation = false;
 };
 
 inline upward_defs_iterator upward_defs_begin(const MemoryAccessPair &Pair,

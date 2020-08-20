@@ -38,10 +38,9 @@ public:
   Marshaller() = delete;
   Marshaller(llvm::StringRef RemoteIndexRoot, llvm::StringRef LocalIndexRoot);
 
-  // FIXME(kirillbobyrev): Switch from Optional to Expected.
-  llvm::Optional<clangd::Symbol> fromProtobuf(const Symbol &Message);
-  llvm::Optional<clangd::Ref> fromProtobuf(const Ref &Message);
-  llvm::Optional<std::pair<clangd::SymbolID, clangd::Symbol>>
+  llvm::Expected<clangd::Symbol> fromProtobuf(const Symbol &Message);
+  llvm::Expected<clangd::Ref> fromProtobuf(const Ref &Message);
+  llvm::Expected<std::pair<clangd::SymbolID, clangd::Symbol>>
   fromProtobuf(const Relation &Message);
 
   llvm::Expected<clangd::LookupRequest>
@@ -61,9 +60,9 @@ public:
   RefsRequest toProtobuf(const clangd::RefsRequest &From);
   RelationsRequest toProtobuf(const clangd::RelationsRequest &From);
 
-  llvm::Optional<Symbol> toProtobuf(const clangd::Symbol &From);
-  llvm::Optional<Ref> toProtobuf(const clangd::Ref &From);
-  llvm::Optional<Relation> toProtobuf(const clangd::SymbolID &Subject,
+  llvm::Expected<Symbol> toProtobuf(const clangd::Symbol &From);
+  llvm::Expected<Ref> toProtobuf(const clangd::Ref &From);
+  llvm::Expected<Relation> toProtobuf(const clangd::SymbolID &Subject,
                                       const clangd::Symbol &Object);
 
   /// Translates \p RelativePath into the absolute path and builds URI for the
@@ -72,23 +71,23 @@ public:
   /// provided by the client.
   ///
   /// The relative path passed over the wire has unix slashes.
-  llvm::Optional<std::string> relativePathToURI(llvm::StringRef RelativePath);
+  llvm::Expected<std::string> relativePathToURI(llvm::StringRef RelativePath);
   /// Translates a URI from the server's backing index to a relative path
   /// suitable to send over the wire to the client.
-  llvm::Optional<std::string> uriToRelativePath(llvm::StringRef URI);
+  llvm::Expected<std::string> uriToRelativePath(llvm::StringRef URI);
 
 private:
   clangd::SymbolLocation::Position fromProtobuf(const Position &Message);
   Position toProtobuf(const clangd::SymbolLocation::Position &Position);
   clang::index::SymbolInfo fromProtobuf(const SymbolInfo &Message);
   SymbolInfo toProtobuf(const clang::index::SymbolInfo &Info);
-  llvm::Optional<clangd::SymbolLocation>
+  llvm::Expected<clangd::SymbolLocation>
   fromProtobuf(const SymbolLocation &Message);
-  llvm::Optional<SymbolLocation>
+  llvm::Expected<SymbolLocation>
   toProtobuf(const clangd::SymbolLocation &Location);
-  llvm::Optional<HeaderWithReferences>
+  llvm::Expected<HeaderWithReferences>
   toProtobuf(const clangd::Symbol::IncludeHeaderWithReferences &IncludeHeader);
-  llvm::Optional<clangd::Symbol::IncludeHeaderWithReferences>
+  llvm::Expected<clangd::Symbol::IncludeHeaderWithReferences>
   fromProtobuf(const HeaderWithReferences &Message);
 
   /// RemoteIndexRoot and LocalIndexRoot are absolute paths to the project (on

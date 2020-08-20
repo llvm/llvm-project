@@ -151,3 +151,9 @@ vmfge.vv v8, v20, v4
 # CHECK-ENCODING: [0x57,0x14,0x4a,0x66]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
 # CHECK-UNKNOWN: 57 14 4a 66 <unknown>
+
+vmfeq.vv v0, v4, v20, v0.t
+# CHECK-INST: vmfeq.vv v0, v4, v20, v0.t
+# CHECK-ENCODING: [0x57,0x10,0x4a,0x60]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Instructions)
+# CHECK-UNKNOWN: 57 10 4a 60 <unknown>

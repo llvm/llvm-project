@@ -218,7 +218,7 @@ public:
   // Creating related types
 
   virtual CompilerType
-  GetArrayElementType(lldb::opaque_compiler_type_t type, uint64_t *stride,
+  GetArrayElementType(lldb::opaque_compiler_type_t type,
                       ExecutionContextScope *exe_scope) = 0;
 
   virtual CompilerType GetArrayType(lldb::opaque_compiler_type_t type,
@@ -523,6 +523,22 @@ protected:
                               ///multi-threaded environments.
   collection m_map;
   bool m_clear_in_progress;
+
+private:
+  typedef llvm::function_ref<lldb::TypeSystemSP()> CreateCallback;
+  /// Finds the type system for the given language. If no type system could be
+  /// found for a language and a CreateCallback was provided, the value returned
+  /// by the callback will be treated as the TypeSystem for the language.
+  ///
+  /// \param language The language for which the type system should be found.
+  /// \param create_callback A callback that will be called if no previously
+  ///                        created TypeSystem that fits the given language
+  ///                        could found. Can be omitted if a non-existent
+  ///                        type system should be treated as an error instead.
+  /// \return The found type system or an error.
+  llvm::Expected<TypeSystem &> GetTypeSystemForLanguage(
+      lldb::LanguageType language,
+      llvm::Optional<CreateCallback> create_callback = llvm::None);
 };
 
 } // namespace lldb_private

@@ -134,7 +134,7 @@ unsigned AMDGPUInliner::getInlineThreshold(CallBase &CB) const {
                 Ty->getAddressSpace() != AMDGPUAS::FLAT_ADDRESS))
       continue;
 
-    PtrArg = GetUnderlyingObject(PtrArg, DL);
+    PtrArg = getUnderlyingObject(PtrArg);
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(PtrArg)) {
       if (!AI->isStaticAlloca() || !AIVisited.insert(AI).second)
         continue;

@@ -16,7 +16,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Frontend/AnalysisConsumer.h"
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 #include "gtest/gtest.h"
 
 // FIXME: Use GTEST_SKIP() instead if GTest is updated to version 1.10.0

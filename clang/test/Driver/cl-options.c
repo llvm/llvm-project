@@ -586,6 +586,9 @@
 // RUN: %clang_cl -### /c -flto -- %s 2>&1 | FileCheck -check-prefix=LTO %s
 // LTO: -flto
 
+// RUN: %clang_cl -### /c -flto -fno-lto -- %s 2>&1 | FileCheck -check-prefix=LTO-NO %s
+// LTO-NO-NOT: "-flto"
+
 // RUN: %clang_cl -### /c -flto=thin -- %s 2>&1 | FileCheck -check-prefix=LTO-THIN %s
 // LTO-THIN: -flto=thin
 

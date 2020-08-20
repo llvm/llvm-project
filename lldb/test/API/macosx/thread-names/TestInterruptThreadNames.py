@@ -23,7 +23,7 @@ class TestInterruptThreadNames(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
-        launch_info = lldb.SBLaunchInfo(None)
+        launch_info = target.GetLaunchInfo()
         error = lldb.SBError()
         self.dbg.SetAsync(True)
         process = target.Launch(launch_info, error)

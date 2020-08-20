@@ -22,9 +22,9 @@ using namespace mlir;
 
 /// Given an operation, find the parent region that folded constants should be
 /// inserted into.
-static Region *getInsertionRegion(
-    DialectInterfaceCollection<OpFolderDialectInterface> &interfaces,
-    Block *insertionBlock) {
+static Region *
+getInsertionRegion(DialectInterfaceCollection<DialectFoldInterface> &interfaces,
+                   Block *insertionBlock) {
   while (Region *region = insertionBlock->getParent()) {
     // Insert in this region for any of the following scenarios:
     //  * The parent is unregistered, or is known to be isolated from above.

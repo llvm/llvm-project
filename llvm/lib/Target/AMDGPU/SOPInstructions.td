@@ -408,8 +408,14 @@ class SOP2_64_32_32 <string opName, list<dag> pattern=[]> : SOP2_Pseudo <
 class UniformUnaryFrag<SDPatternOperator Op> : PatFrag <
   (ops node:$src0),
   (Op $src0),
-  [{ return !N->isDivergent(); }]
->;
+  [{ return !N->isDivergent(); }]> {
+  // This check is unnecessary as it's captured by the result register
+  // bank constraint.
+  //
+  // FIXME: Should add a way for the emitter to recognize this is a
+  // trivially true predicate to eliminate the check.
+  let GISelPredicateCode = [{return true;}];
+}
 
 class UniformBinFrag<SDPatternOperator Op> : PatFrag <
   (ops node:$src0, node:$src1),
@@ -463,10 +469,15 @@ def S_MAX_U32 : SOP2_32 <"s_max_u32",
 } // End isCommutable = 1
 } // End Defs = [SCC]
 
+// This pattern is restricted to certain subtargets (practically GFX8Plus)
+// because isel sometimes produces an sreg_64 copy to SCC as a by-product
+// of this pattern, and only for subtargets with hasScalarCompareEq64
+// is it possible to map such copy to a single instruction (S_CMP_LG_U64).
 class SelectPat<SDPatternOperator select> : PatFrag <
   (ops node:$src1, node:$src2),
   (select SCC, $src1, $src2),
-  [{ return N->getOperand(0)->hasOneUse() && !N->isDivergent(); }]
+  [{ return Subtarget->hasScalarCompareEq64() &&
+            N->getOperand(0)->hasOneUse() && !N->isDivergent(); }]
 >;
 
 let Uses = [SCC] in {
@@ -530,6 +541,7 @@ def S_NOR_B64 : SOP2_64 <"s_nor_b64",
 >;
 } // End isCommutable = 1
 
+// There are also separate patterns for types other than i32
 def S_ANDN2_B32 : SOP2_32 <"s_andn2_b32",
   [(set i32:$sdst, (UniformBinFrag<and> i32:$src0, (UniformUnaryFrag<not> i32:$src1)))]
 >;
@@ -1319,6 +1331,24 @@ def : GCNPat<
   (S_AND_B32 (S_MOV_B32 (i32 0xffff)), $src)
 >;
 
+// FIXME: ValueType should have isVector field
+class ScalarNot2Pat<Instruction inst, SDPatternOperator op, ValueType vt,
+                    bit isVector = 1> : GCNPat<
+  (UniformBinFrag<op> vt:$src0, (UniformUnaryFrag<!if(isVector, vnot, not)> vt:$src1)),
+  (inst getSOPSrcForVT<vt>.ret:$src0, getSOPSrcForVT<vt>.ret:$src1)
+>;
+
+// Match these for some more types
+// TODO: i1
+def : ScalarNot2Pat<S_ANDN2_B32, and, i16, 0>;
+def : ScalarNot2Pat<S_ANDN2_B32, and, v2i16>;
+def : ScalarNot2Pat<S_ANDN2_B64, and, v4i16>;
+def : ScalarNot2Pat<S_ANDN2_B64, and, v2i32>;
+
+def : ScalarNot2Pat<S_ORN2_B32, or, i16, 0>;
+def : ScalarNot2Pat<S_ORN2_B32, or, v2i16>;
+def : ScalarNot2Pat<S_ORN2_B64, or, v4i16>;
+def : ScalarNot2Pat<S_ORN2_B64, or, v2i32>;
 
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.

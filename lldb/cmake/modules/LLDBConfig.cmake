@@ -56,7 +56,7 @@ add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" Li
 add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
 add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLDB" LibLZMA LIBLZMA_FOUND)
 add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" LuaAndSwig LUAANDSWIG_FOUND)
-add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in LLDB" PythonInterpAndLibs PYTHONINTERPANDLIBS_FOUND)
+add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in LLDB" PythonAndSwig PYTHONANDSWIG_FOUND)
 add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 LIBXML2_FOUND VERSION 2.8)
 
 option(LLDB_USE_SYSTEM_SIX "Use six.py shipped with system and do not install a copy of it" OFF)
@@ -143,9 +143,9 @@ if (LLDB_ENABLE_PYTHON)
     "Embed PYTHONHOME in the binary. If set to OFF, PYTHONHOME environment variable will be used to to locate Python."
     ${default_embed_python_home})
 
-  include_directories(${PYTHON_INCLUDE_DIRS})
+  include_directories(${Python3_INCLUDE_DIRS})
   if (LLDB_EMBED_PYTHON_HOME)
-    get_filename_component(PYTHON_HOME "${PYTHON_EXECUTABLE}" DIRECTORY)
+    get_filename_component(PYTHON_HOME "${Python3_EXECUTABLE}" DIRECTORY)
     set(LLDB_PYTHON_HOME "${PYTHON_HOME}" CACHE STRING
       "Path to use as PYTHONHOME in lldb. If a relative path is specified, it will be resolved at runtime relative to liblldb directory.")
   endif()
@@ -267,7 +267,7 @@ endif()
 
 # Find Apple-specific libraries or frameworks that may be needed.
 if (APPLE)
-  if(NOT IOS)
+  if(NOT APPLE_EMBEDDED)
     find_library(CARBON_LIBRARY Carbon)
     find_library(CORE_SERVICES_LIBRARY CoreServices)
   endif()

@@ -311,9 +311,36 @@ bool VEInstrInfo::reverseBranchCondition(
 }
 
 static bool IsAliasOfSX(Register Reg) {
-  return VE::I8RegClass.contains(Reg) || VE::I16RegClass.contains(Reg) ||
-         VE::I32RegClass.contains(Reg) || VE::I64RegClass.contains(Reg) ||
+  return VE::I32RegClass.contains(Reg) || VE::I64RegClass.contains(Reg) ||
          VE::F32RegClass.contains(Reg);
+}
+
+static void copyPhysSubRegs(MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator I, const DebugLoc &DL,
+                            MCRegister DestReg, MCRegister SrcReg, bool KillSrc,
+                            const MCInstrDesc &MCID, unsigned int NumSubRegs,
+                            const unsigned *SubRegIdx,
+                            const TargetRegisterInfo *TRI) {
+  MachineInstr *MovMI = nullptr;
+
+  for (unsigned Idx = 0; Idx != NumSubRegs; ++Idx) {
+    Register SubDest = TRI->getSubReg(DestReg, SubRegIdx[Idx]);
+    Register SubSrc = TRI->getSubReg(SrcReg, SubRegIdx[Idx]);
+    assert(SubDest && SubSrc && "Bad sub-register");
+
+    if (MCID.getOpcode() == VE::ORri) {
+      // generate "ORri, dest, src, 0" instruction.
+      MachineInstrBuilder MIB =
+          BuildMI(MBB, I, DL, MCID, SubDest).addReg(SubSrc).addImm(0);
+      MovMI = MIB.getInstr();
+    } else {
+      llvm_unreachable("Unexpected reg-to-reg copy instruction");
+    }
+  }
+  // Add implicit super-register defs and kills to the last MovMI.
+  MovMI->addRegisterDefined(DestReg, TRI);
+  if (KillSrc)
+    MovMI->addRegisterKilled(SrcReg, TRI, true);
 }
 
 void VEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
@@ -325,6 +352,12 @@ void VEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, get(VE::ORri), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc))
         .addImm(0);
+  } else if (VE::F128RegClass.contains(DestReg, SrcReg)) {
+    // Use two instructions.
+    const unsigned SubRegIdx[] = {VE::sub_even, VE::sub_odd};
+    unsigned int NumSubRegs = 2;
+    copyPhysSubRegs(MBB, I, DL, DestReg, SrcReg, KillSrc, get(VE::ORri),
+                    NumSubRegs, SubRegIdx, &getRegisterInfo());
   } else {
     const TargetRegisterInfo *TRI = &getRegisterInfo();
     dbgs() << "Impossible reg-to-reg copy from " << printReg(SrcReg, TRI)
@@ -342,7 +375,8 @@ unsigned VEInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
   if (MI.getOpcode() == VE::LDrii ||    // I64
       MI.getOpcode() == VE::LDLSXrii || // I32
-      MI.getOpcode() == VE::LDUrii      // F32
+      MI.getOpcode() == VE::LDUrii ||   // F32
+      MI.getOpcode() == VE::LDQrii      // F128 (pseudo)
   ) {
     if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
         MI.getOperand(2).getImm() == 0 && MI.getOperand(3).isImm() &&
@@ -363,7 +397,8 @@ unsigned VEInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                          int &FrameIndex) const {
   if (MI.getOpcode() == VE::STrii ||  // I64
       MI.getOpcode() == VE::STLrii || // I32
-      MI.getOpcode() == VE::STUrii    // F32
+      MI.getOpcode() == VE::STUrii || // F32
+      MI.getOpcode() == VE::STQrii    // F128 (pseudo)
   ) {
     if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&
         MI.getOperand(1).getImm() == 0 && MI.getOperand(2).isImm() &&
@@ -412,6 +447,13 @@ void VEInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
         .addImm(0)
         .addReg(SrcReg, getKillRegState(isKill))
         .addMemOperand(MMO);
+  } else if (VE::F128RegClass.hasSubClassEq(RC)) {
+    BuildMI(MBB, I, DL, get(VE::STQrii))
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addImm(0)
+        .addReg(SrcReg, getKillRegState(isKill))
+        .addMemOperand(MMO);
   } else
     report_fatal_error("Can't store this register to stack slot");
 }
@@ -445,6 +487,12 @@ void VEInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
         .addMemOperand(MMO);
   } else if (RC == &VE::F32RegClass) {
     BuildMI(MBB, I, DL, get(VE::LDUrii), DestReg)
+        .addFrameIndex(FI)
+        .addImm(0)
+        .addImm(0)
+        .addMemOperand(MMO);
+  } else if (VE::F128RegClass.hasSubClassEq(RC)) {
+    BuildMI(MBB, I, DL, get(VE::LDQrii), DestReg)
         .addFrameIndex(FI)
         .addImm(0)
         .addImm(0)

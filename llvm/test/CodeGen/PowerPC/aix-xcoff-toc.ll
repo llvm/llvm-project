@@ -137,7 +137,7 @@ define void @foobar() {
 ; SYM-NEXT: }
 ; SYM-NEXT: Symbol {
 ; SYM-NEXT:   Index: [[#UNDEF_INDX+6]]
-; SYM-NEXT:   Name: foo
+; SYM-NEXT:   Name: .foo
 ; SYM-NEXT:   Value (RelocatableAddress): 0x0
 ; SYM-NEXT:   Section: N_UNDEF
 ; SYM-NEXT:   Type: 0x0
@@ -145,6 +145,26 @@ define void @foobar() {
 ; SYM-NEXT:   NumberOfAuxEntries: 1
 ; SYM-NEXT:   CSECT Auxiliary Entry {
 ; SYM-NEXT:     Index: [[#UNDEF_INDX+7]]
+; SYM-NEXT:     SectionLen: 0
+; SYM-NEXT:     ParameterHashIndex: 0x0
+; SYM-NEXT:     TypeChkSectNum: 0x0
+; SYM-NEXT:     SymbolAlignmentLog2: 0
+; SYM-NEXT:     SymbolType: XTY_ER (0x0)
+; SYM-NEXT:     StorageMappingClass: XMC_PR (0x0)
+; SYM-NEXT:     StabInfoIndex: 0x0
+; SYM-NEXT:     StabSectNum: 0x0
+; SYM-NEXT:   }
+; SYM-NEXT: }
+; SYM-NEXT: Symbol {
+; SYM-NEXT:   Index: [[#UNDEF_INDX+8]]
+; SYM-NEXT:   Name: foo
+; SYM-NEXT:   Value (RelocatableAddress): 0x0
+; SYM-NEXT:   Section: N_UNDEF
+; SYM-NEXT:   Type: 0x0
+; SYM-NEXT:   StorageClass: C_EXT (0x2)
+; SYM-NEXT:   NumberOfAuxEntries: 1
+; SYM-NEXT:   CSECT Auxiliary Entry {
+; SYM-NEXT:     Index: [[#UNDEF_INDX+9]]
 ; SYM-NEXT:     SectionLen: 0
 ; SYM-NEXT:     ParameterHashIndex: 0x0
 ; SYM-NEXT:     TypeChkSectNum: 0x0

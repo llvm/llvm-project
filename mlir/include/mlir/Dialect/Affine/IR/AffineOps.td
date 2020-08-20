@@ -642,6 +642,7 @@ def AffineParallelOp : Affine_Op<"parallel",
     void setUpperBounds(ValueRange operands, AffineMap map);
     void setUpperBoundsMap(AffineMap map);
 
+    SmallVector<int64_t, 8> getSteps();
     void setSteps(ArrayRef<int64_t> newSteps);
 
     static StringRef getReductionsAttrName() { return "reductions"; }
@@ -650,7 +651,6 @@ def AffineParallelOp : Affine_Op<"parallel",
     static StringRef getStepsAttrName() { return "steps"; }
   }];
 
-  let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
 

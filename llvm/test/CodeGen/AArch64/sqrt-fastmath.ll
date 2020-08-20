@@ -445,6 +445,90 @@ define <4 x double> @d4rsqrt(<4 x double> %a) #0 {
   ret <4 x double> %2
 }
 
+define double @sqrt_fdiv_common_operand(double %x) nounwind {
+; FAULT-LABEL: sqrt_fdiv_common_operand:
+; FAULT:       // %bb.0:
+; FAULT-NEXT:    fsqrt d1, d0
+; FAULT-NEXT:    fdiv d0, d0, d1
+; FAULT-NEXT:    ret
+;
+; CHECK-LABEL: sqrt_fdiv_common_operand:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    frsqrte d1, d0
+; CHECK-NEXT:    fmul d2, d1, d1
+; CHECK-NEXT:    frsqrts d2, d0, d2
+; CHECK-NEXT:    fmul d1, d1, d2
+; CHECK-NEXT:    fmul d2, d1, d1
+; CHECK-NEXT:    frsqrts d2, d0, d2
+; CHECK-NEXT:    fmul d1, d1, d2
+; CHECK-NEXT:    fmul d2, d1, d1
+; CHECK-NEXT:    frsqrts d2, d0, d2
+; CHECK-NEXT:    fmul d1, d1, d2
+; CHECK-NEXT:    fmul d0, d0, d1
+; CHECK-NEXT:    ret
+  %sqrt = call fast double @llvm.sqrt.f64(double %x)
+  %r = fdiv fast double %x, %sqrt
+  ret double %r
+}
+
+define <2 x double> @sqrt_fdiv_common_operand_vec(<2 x double> %x) nounwind {
+; FAULT-LABEL: sqrt_fdiv_common_operand_vec:
+; FAULT:       // %bb.0:
+; FAULT-NEXT:    fsqrt v1.2d, v0.2d
+; FAULT-NEXT:    fdiv v0.2d, v0.2d, v1.2d
+; FAULT-NEXT:    ret
+;
+; CHECK-LABEL: sqrt_fdiv_common_operand_vec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    frsqrte v1.2d, v0.2d
+; CHECK-NEXT:    fmul v2.2d, v1.2d, v1.2d
+; CHECK-NEXT:    frsqrts v2.2d, v0.2d, v2.2d
+; CHECK-NEXT:    fmul v1.2d, v1.2d, v2.2d
+; CHECK-NEXT:    fmul v2.2d, v1.2d, v1.2d
+; CHECK-NEXT:    frsqrts v2.2d, v0.2d, v2.2d
+; CHECK-NEXT:    fmul v1.2d, v1.2d, v2.2d
+; CHECK-NEXT:    fmul v2.2d, v1.2d, v1.2d
+; CHECK-NEXT:    frsqrts v2.2d, v0.2d, v2.2d
+; CHECK-NEXT:    fmul v1.2d, v1.2d, v2.2d
+; CHECK-NEXT:    fmul v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+  %sqrt = call <2 x double> @llvm.sqrt.v2f64(<2 x double> %x)
+  %r = fdiv arcp reassoc <2 x double> %x, %sqrt
+  ret <2 x double> %r
+}
+
+define double @sqrt_fdiv_common_operand_extra_use(double %x, double* %p) nounwind {
+; FAULT-LABEL: sqrt_fdiv_common_operand_extra_use:
+; FAULT:       // %bb.0:
+; FAULT-NEXT:    fsqrt d1, d0
+; FAULT-NEXT:    fdiv d0, d0, d1
+; FAULT-NEXT:    str d1, [x0]
+; FAULT-NEXT:    ret
+;
+; CHECK-LABEL: sqrt_fdiv_common_operand_extra_use:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    frsqrte d1, d0
+; CHECK-NEXT:    fmul d2, d1, d1
+; CHECK-NEXT:    frsqrts d2, d0, d2
+; CHECK-NEXT:    fmul d1, d1, d2
+; CHECK-NEXT:    fmul d2, d1, d1
+; CHECK-NEXT:    frsqrts d2, d0, d2
+; CHECK-NEXT:    fmul d1, d1, d2
+; CHECK-NEXT:    fmul d2, d1, d1
+; CHECK-NEXT:    frsqrts d2, d0, d2
+; CHECK-NEXT:    fmul d1, d1, d2
+; CHECK-NEXT:    fcmp d0, #0.0
+; CHECK-NEXT:    fmul d1, d0, d1
+; CHECK-NEXT:    fcsel d0, d0, d1, eq
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %sqrt = call fast double @llvm.sqrt.f64(double %x)
+  store double %sqrt, double* %p
+  %r = fdiv fast double %x, %sqrt
+  ret double %r
+}
+
 attributes #0 = { "unsafe-fp-math"="true" }
 attributes #1 = { "unsafe-fp-math"="true" "denormal-fp-math"="ieee" }
 

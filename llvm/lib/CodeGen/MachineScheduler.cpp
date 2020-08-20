@@ -18,6 +18,7 @@
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveInterval.h"
@@ -72,6 +73,8 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "machine-scheduler"
+
+STATISTIC(NumClustered, "Number of load/store pairs clustered");
 
 namespace llvm {
 
@@ -1298,7 +1301,7 @@ void ScheduleDAGMILive::computeDFSResult() {
 /// The cyclic path estimation identifies a def-use pair that crosses the back
 /// edge and considers the depth and height of the nodes. For example, consider
 /// the following instruction sequence where each instruction has unit latency
-/// and defines an epomymous virtual register:
+/// and defines an eponymous virtual register:
 ///
 /// a->b(a,c)->c(b)->d(c)->exit
 ///
@@ -1623,17 +1626,34 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
 
     LLVM_DEBUG(dbgs() << "Cluster ld/st SU(" << SUa->NodeNum << ") - SU("
                       << SUb->NodeNum << ")\n");
+    ++NumClustered;
 
-    // Copy successor edges from SUa to SUb. Interleaving computation
-    // dependent on SUa can prevent load combining due to register reuse.
-    // Predecessor edges do not need to be copied from SUb to SUa since
-    // nearby loads should have effectively the same inputs.
-    for (const SDep &Succ : SUa->Succs) {
-      if (Succ.getSUnit() == SUb)
-        continue;
-      LLVM_DEBUG(dbgs() << "  Copy Succ SU(" << Succ.getSUnit()->NodeNum
-                        << ")\n");
-      DAG->addEdge(Succ.getSUnit(), SDep(SUb, SDep::Artificial));
+    if (IsLoad) {
+      // Copy successor edges from SUa to SUb. Interleaving computation
+      // dependent on SUa can prevent load combining due to register reuse.
+      // Predecessor edges do not need to be copied from SUb to SUa since
+      // nearby loads should have effectively the same inputs.
+      for (const SDep &Succ : SUa->Succs) {
+        if (Succ.getSUnit() == SUb)
+          continue;
+        LLVM_DEBUG(dbgs() << "  Copy Succ SU(" << Succ.getSUnit()->NodeNum
+                          << ")\n");
+        DAG->addEdge(Succ.getSUnit(), SDep(SUb, SDep::Artificial));
+      }
+    } else {
+      // Copy predecessor edges from SUb to SUa to avoid the SUnits that
+      // SUb dependent on scheduled in-between SUb and SUa. Successor edges
+      // do not need to be copied from SUa to SUb since no one will depend
+      // on stores.
+      // Notice that, we don't need to care about the memory dependency as
+      // we won't try to cluster them if they have any memory dependency.
+      for (const SDep &Pred : SUb->Preds) {
+        if (Pred.getSUnit() == SUa)
+          continue;
+        LLVM_DEBUG(dbgs() << "  Copy Pred SU(" << Pred.getSUnit()->NodeNum
+                          << ")\n");
+        DAG->addEdge(SUa, SDep(Pred.getSUnit(), SDep::Artificial));
+      }
     }
 
     LLVM_DEBUG(dbgs() << "  Curr cluster length: " << ClusterLength

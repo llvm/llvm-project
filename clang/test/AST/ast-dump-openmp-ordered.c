@@ -74,8 +74,7 @@ void test_three(int x) {
 // CHECK-NEXT:         | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         | | `-CompoundStmt {{.*}} <col:31, line:18:3>
 // CHECK-NEXT:         | |   `-OMPOrderedDirective {{.*}} <line:17:1, col:35> openmp_standalone_directive
-// CHECK-NEXT:         | |     |-OMPDependClause {{.*}} <col:21, <invalid sloc>>
-// CHECK-NEXT:         | |     `-<<<NULL>>>
+// CHECK-NEXT:         | |     `-OMPDependClause {{.*}} <col:21, <invalid sloc>>
 // CHECK-NEXT:         | |-ImplicitParamDecl {{.*}} <line:15:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-ordered.c:15:1) *const restrict'
 // CHECK-NEXT:         | `-VarDecl {{.*}} <line:16:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:         |   `-IntegerLiteral {{.*}} <col:16> 'int' 0

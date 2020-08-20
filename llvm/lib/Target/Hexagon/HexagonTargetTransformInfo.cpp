@@ -21,6 +21,7 @@
 #include "llvm/IR/User.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 
 using namespace llvm;
@@ -113,7 +114,7 @@ unsigned HexagonTTIImpl::getRegisterBitWidth(bool Vector) const {
 }
 
 unsigned HexagonTTIImpl::getMinVectorRegisterBitWidth() const {
-  return useHVX() ? ST.getVectorLength()*8 : 0;
+  return useHVX() ? ST.getVectorLength()*8 : 32;
 }
 
 unsigned HexagonTTIImpl::getMinimumVF(unsigned ElemWidth) const {

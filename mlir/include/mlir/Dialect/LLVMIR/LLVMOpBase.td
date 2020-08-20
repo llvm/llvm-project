@@ -19,17 +19,21 @@ include "mlir/IR/OpBase.td"
 def LLVM_Dialect : Dialect {
   let name = "llvm";
   let cppNamespace = "LLVM";
+
+  /// FIXME: at the moment this is a dependency of the translation to LLVM IR,
+  /// not really one of this dialect per-se.
+  let dependentDialects = ["omp::OpenMPDialect"];
+
   let hasRegionArgAttrVerify = 1;
+  let hasOperationAttrVerify = 1;
   let extraClassDeclaration = [{
-    ~LLVMDialect();
-    llvm::LLVMContext &getLLVMContext();
-    llvm::Module &getLLVMModule();
-    llvm::sys::SmartMutex<true> &getLLVMContextMutex();
+    /// Name of the data layout attributes.
+    static StringRef getDataLayoutAttrName() { return "llvm.data_layout"; }
 
-  private:
-    friend LLVMType;
-
-    std::unique_ptr<detail::LLVMDialectImpl> impl;
+    /// Verifies if the given string is a well-formed data layout descriptor.
+    /// Uses `reportError` to report errors.
+    static LogicalResult verifyDataLayoutString(
+        StringRef descr, llvm::function_ref<void (const Twine &)> reportError);
   }];
 }
 
@@ -57,8 +61,7 @@ class LLVMI<int width>
          "$_self.cast<::mlir::LLVM::LLVMType>().isIntegerTy(" # width # ")">]>,
          "LLVM dialect " # width # "-bit integer">,
       BuildableType<
-        "::mlir::LLVM::LLVMType::getIntNTy("
-        "$_builder.getContext()->getRegisteredDialect<LLVM::LLVMDialect>(),"
+        "::mlir::LLVM::LLVMType::getIntNTy($_builder.getContext(),"
          # width # ")">;
 
 def LLVMI1 : LLVMI<1>;

@@ -11,7 +11,7 @@
 # RUN:   -z dead-reloc-in-nonalloc=.not_debug=0xbbbbbbbb %t.o -o - | cmp %t -
 
 # COMMON:      Contents of section .debug_addr:
-# COMMON-NEXT:  0000 [[ADDR:[0-9a-f]+]] 00000000 ffffffff ffffffff
+# COMMON-NEXT:  0000 [[ADDR:[0-9a-f]+]] 00000000 00000000 00000000
 
 # AA:          Contents of section .debug_info:
 # AA-NEXT:      0000 [[ADDR]] 00000000 aaaaaaaa 00000000

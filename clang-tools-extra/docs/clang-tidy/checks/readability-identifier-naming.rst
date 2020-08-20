@@ -51,6 +51,7 @@ The following options are describe below:
  - :option:`EnumCase`, :option:`EnumPrefix`, :option:`EnumSuffix`
  - :option:`EnumConstantCase`, :option:`EnumConstantPrefix`, :option:`EnumConstantSuffix`
  - :option:`FunctionCase`, :option:`FunctionPrefix`, :option:`FunctionSuffix`
+ - :option:`GetConfigPerFile`
  - :option:`GlobalConstantCase`, :option:`GlobalConstantPrefix`, :option:`GlobalConstantSuffix`
  - :option:`GlobalConstantPointerCase`, :option:`GlobalConstantPointerPrefix`, :option:`GlobalConstantPointerSuffix`
  - :option:`GlobalFunctionCase`, :option:`GlobalFunctionPrefix`, :option:`GlobalFunctionSuffix`
@@ -712,6 +713,13 @@ After:
 .. code-block:: c++
 
     char pre_my_function_string_post();
+
+.. option:: GetConfigPerFile
+
+    When `true` the check will look for the configuration for where an
+    identifier is declared. Useful for when included header files use a 
+    different style. 
+    Default value is `true`.
 
 .. option:: GlobalConstantCase
 

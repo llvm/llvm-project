@@ -6,13 +6,75 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "config/linux/app.h"
 #include "config/linux/syscall.h"
+#include "include/sys/mman.h"
 #include "include/sys/syscall.h"
+#include "src/string/memcpy.h"
+#include "src/sys/mman/mmap.h"
 
+#include <asm/prctl.h>
 #include <linux/auxvec.h>
+#include <linux/elf.h>
 #include <stdint.h>
 
 extern "C" int main(int, char **, char **);
+
+namespace __llvm_libc {
+
+#ifdef SYS_mmap2
+static constexpr long mmapSyscallNumber = SYS_mmap2;
+#elif SYS_mmap
+static constexpr long mmapSyscallNumber = SYS_mmap;
+#else
+#error "Target platform does not have SYS_mmap or SYS_mmap2 defined"
+#endif
+
+// TODO: Declare var an extern var in config/linux/app.h so that other
+// libc functions can make use of the application wide information. For
+// example, mmap can pick up the page size from here.
+AppProperties app;
+
+// TODO: The function is x86_64 specific. Move it to config/linux/app.h
+// and generalize it. Also, dynamic loading is not handled currently.
+void initTLS() {
+  if (app.tls.size == 0)
+    return;
+
+  // We will assume the alignment is always a power of two.
+  uintptr_t tlsSize = (app.tls.size + app.tls.align) & -app.tls.align;
+
+  // Per the x86_64 TLS ABI, the entry pointed to by the thread pointer is the
+  // address of the TLS block. So, we add more size to accomodate this address
+  // entry.
+  size_t tlsSizeWithAddr = tlsSize + sizeof(uintptr_t);
+
+  // We cannot call the mmap function here as the functions set errno on
+  // failure. Since errno is implemented via a thread local variable, we cannot
+  // use errno before TLS is setup.
+  long mmapRetVal = __llvm_libc::syscall(
+      mmapSyscallNumber, nullptr, tlsSizeWithAddr, PROT_READ | PROT_WRITE,
+      MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  // We cannot check the return value with MAP_FAILED as that is the return
+  // of the mmap function and not the mmap syscall.
+  if (mmapRetVal < 0 && static_cast<uintptr_t>(mmapRetVal) > -app.pageSize)
+    __llvm_libc::syscall(SYS_exit, 1);
+  uintptr_t *tlsAddr = reinterpret_cast<uintptr_t *>(mmapRetVal);
+
+  // x86_64 TLS faces down from the thread pointer with the first entry
+  // pointing to the address of the first real TLS byte.
+  uintptr_t endPtr = reinterpret_cast<uintptr_t>(tlsAddr) + tlsSize;
+  *reinterpret_cast<uintptr_t *>(endPtr) = endPtr;
+
+  __llvm_libc::memcpy(tlsAddr, reinterpret_cast<const void *>(app.tls.address),
+                      app.tls.size);
+  if (__llvm_libc::syscall(SYS_arch_prctl, ARCH_SET_FS, endPtr) == -1)
+    __llvm_libc::syscall(SYS_exit, 1);
+}
+
+} // namespace __llvm_libc
+
+using __llvm_libc::app;
 
 struct Args {
   // At the language level, argc is an int. But we use uint64_t as the x86_64
@@ -53,11 +115,36 @@ extern "C" void _start() {
 
   // After the env array, is the aux-vector. The end of the aux-vector is
   // denoted by an AT_NULL entry.
+  Elf64_Phdr *programHdrTable = nullptr;
+  uintptr_t programHdrCount;
   for (AuxEntry *aux_entry = reinterpret_cast<AuxEntry *>(env_end_marker + 1);
        aux_entry->type != AT_NULL; ++aux_entry) {
-    // TODO: Read the aux vector and store necessary information in a libc wide
-    // data structure.
+    switch (aux_entry->type) {
+    case AT_PHDR:
+      programHdrTable = reinterpret_cast<Elf64_Phdr *>(aux_entry->value);
+      break;
+    case AT_PHNUM:
+      programHdrCount = aux_entry->value;
+      break;
+    case AT_PAGESZ:
+      app.pageSize = aux_entry->value;
+      break;
+    default:
+      break; // TODO: Read other useful entries from the aux vector.
+    }
   }
+
+  for (uintptr_t i = 0; i < programHdrCount; ++i) {
+    Elf64_Phdr *phdr = programHdrTable + i;
+    if (phdr->p_type != PT_TLS)
+      continue;
+    // TODO: p_vaddr value has to be adjusted for static-pie executables.
+    app.tls.address = phdr->p_vaddr;
+    app.tls.size = phdr->p_memsz;
+    app.tls.align = phdr->p_align;
+  }
+
+  __llvm_libc::initTLS();
 
   __llvm_libc::syscall(SYS_exit,
                        main(args->argc, reinterpret_cast<char **>(args->argv),

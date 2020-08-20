@@ -1314,18 +1314,18 @@ define <64 x i8> @test_bitreverse_v64i8(<64 x i8> %a) nounwind {
 ; AVX512F-NEXT:    vpand %ymm2, %ymm1, %ymm3
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm4 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240,0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
 ; AVX512F-NEXT:    vpshufb %ymm3, %ymm4, %ymm3
+; AVX512F-NEXT:    vpand %ymm2, %ymm0, %ymm5
+; AVX512F-NEXT:    vpshufb %ymm5, %ymm4, %ymm4
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm3, %zmm4, %zmm3
 ; AVX512F-NEXT:    vpsrlw $4, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpand %ymm2, %ymm1, %ymm1
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm5 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
-; AVX512F-NEXT:    vpshufb %ymm1, %ymm5, %ymm1
-; AVX512F-NEXT:    vpor %ymm1, %ymm3, %ymm1
-; AVX512F-NEXT:    vpand %ymm2, %ymm0, %ymm3
-; AVX512F-NEXT:    vpshufb %ymm3, %ymm4, %ymm3
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm4 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; AVX512F-NEXT:    vpshufb %ymm1, %ymm4, %ymm1
 ; AVX512F-NEXT:    vpsrlw $4, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpand %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vpshufb %ymm0, %ymm5, %ymm0
-; AVX512F-NEXT:    vpor %ymm0, %ymm3, %ymm0
+; AVX512F-NEXT:    vpshufb %ymm0, %ymm4, %ymm0
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vporq %zmm0, %zmm3, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_bitreverse_v64i8:
@@ -1591,19 +1591,19 @@ define <32 x i16> @test_bitreverse_v32i16(<32 x i16> %a) nounwind {
 ; AVX512F-NEXT:    vpand %ymm3, %ymm1, %ymm4
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm5 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240,0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
 ; AVX512F-NEXT:    vpshufb %ymm4, %ymm5, %ymm4
-; AVX512F-NEXT:    vpsrlw $4, %ymm1, %ymm1
-; AVX512F-NEXT:    vpand %ymm3, %ymm1, %ymm1
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm6 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
-; AVX512F-NEXT:    vpshufb %ymm1, %ymm6, %ymm1
-; AVX512F-NEXT:    vpor %ymm1, %ymm4, %ymm1
 ; AVX512F-NEXT:    vpshufb %ymm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpand %ymm3, %ymm0, %ymm2
 ; AVX512F-NEXT:    vpshufb %ymm2, %ymm5, %ymm2
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm4, %zmm2, %zmm2
+; AVX512F-NEXT:    vpsrlw $4, %ymm1, %ymm1
+; AVX512F-NEXT:    vpand %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm4 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; AVX512F-NEXT:    vpshufb %ymm1, %ymm4, %ymm1
 ; AVX512F-NEXT:    vpsrlw $4, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpand %ymm3, %ymm0, %ymm0
-; AVX512F-NEXT:    vpshufb %ymm0, %ymm6, %ymm0
-; AVX512F-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; AVX512F-NEXT:    vpshufb %ymm0, %ymm4, %ymm0
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vporq %zmm0, %zmm2, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_bitreverse_v32i16:
@@ -1887,19 +1887,19 @@ define <16 x i32> @test_bitreverse_v16i32(<16 x i32> %a) nounwind {
 ; AVX512F-NEXT:    vpand %ymm3, %ymm1, %ymm4
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm5 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240,0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
 ; AVX512F-NEXT:    vpshufb %ymm4, %ymm5, %ymm4
-; AVX512F-NEXT:    vpsrlw $4, %ymm1, %ymm1
-; AVX512F-NEXT:    vpand %ymm3, %ymm1, %ymm1
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm6 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
-; AVX512F-NEXT:    vpshufb %ymm1, %ymm6, %ymm1
-; AVX512F-NEXT:    vpor %ymm1, %ymm4, %ymm1
 ; AVX512F-NEXT:    vpshufb %ymm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpand %ymm3, %ymm0, %ymm2
 ; AVX512F-NEXT:    vpshufb %ymm2, %ymm5, %ymm2
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm4, %zmm2, %zmm2
+; AVX512F-NEXT:    vpsrlw $4, %ymm1, %ymm1
+; AVX512F-NEXT:    vpand %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm4 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; AVX512F-NEXT:    vpshufb %ymm1, %ymm4, %ymm1
 ; AVX512F-NEXT:    vpsrlw $4, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpand %ymm3, %ymm0, %ymm0
-; AVX512F-NEXT:    vpshufb %ymm0, %ymm6, %ymm0
-; AVX512F-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; AVX512F-NEXT:    vpshufb %ymm0, %ymm4, %ymm0
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vporq %zmm0, %zmm2, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_bitreverse_v16i32:
@@ -2191,19 +2191,19 @@ define <8 x i64> @test_bitreverse_v8i64(<8 x i64> %a) nounwind {
 ; AVX512F-NEXT:    vpand %ymm3, %ymm1, %ymm4
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm5 = [0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240,0,128,64,192,32,160,96,224,16,144,80,208,48,176,112,240]
 ; AVX512F-NEXT:    vpshufb %ymm4, %ymm5, %ymm4
-; AVX512F-NEXT:    vpsrlw $4, %ymm1, %ymm1
-; AVX512F-NEXT:    vpand %ymm3, %ymm1, %ymm1
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm6 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
-; AVX512F-NEXT:    vpshufb %ymm1, %ymm6, %ymm1
-; AVX512F-NEXT:    vpor %ymm1, %ymm4, %ymm1
 ; AVX512F-NEXT:    vpshufb %ymm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpand %ymm3, %ymm0, %ymm2
 ; AVX512F-NEXT:    vpshufb %ymm2, %ymm5, %ymm2
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm4, %zmm2, %zmm2
+; AVX512F-NEXT:    vpsrlw $4, %ymm1, %ymm1
+; AVX512F-NEXT:    vpand %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm4 = [0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15,0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15]
+; AVX512F-NEXT:    vpshufb %ymm1, %ymm4, %ymm1
 ; AVX512F-NEXT:    vpsrlw $4, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpand %ymm3, %ymm0, %ymm0
-; AVX512F-NEXT:    vpshufb %ymm0, %ymm6, %ymm0
-; AVX512F-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; AVX512F-NEXT:    vpshufb %ymm0, %ymm4, %ymm0
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512F-NEXT:    vporq %zmm0, %zmm2, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_bitreverse_v8i64:

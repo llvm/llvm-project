@@ -174,6 +174,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
   // XXX - What does the member GPU mean if device name string passed here?
   if (isAMDGCN(getTriple())) {
     switch (llvm::AMDGPU::parseArchAMDGCN(CPU)) {
+    case GK_GFX1031:
     case GK_GFX1030:
       Features["ci-insts"] = true;
       Features["dot1-insts"] = true;
@@ -356,6 +357,23 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
     StringRef CanonName = isAMDGCN(getTriple()) ?
       getArchNameAMDGCN(GPUKind) : getArchNameR600(GPUKind);
     Builder.defineMacro(Twine("__") + Twine(CanonName) + Twine("__"));
+    if (isAMDGCN(getTriple())) {
+      Builder.defineMacro("__amdgcn_processor__",
+                          Twine("\"") + Twine(CanonName) + Twine("\""));
+      Builder.defineMacro("__amdgcn_target_id__",
+                          Twine("\"") + Twine(getTargetID().getValue()) +
+                              Twine("\""));
+      for (auto F : getAllPossibleTargetIDFeatures(getTriple(), CanonName)) {
+        auto Loc = OffloadArchFeatures.find(F);
+        if (Loc != OffloadArchFeatures.end()) {
+          std::string NewF = F.str();
+          std::replace(NewF.begin(), NewF.end(), '-', '_');
+          Builder.defineMacro(Twine("__amdgcn_feature_") + Twine(NewF) +
+                                  Twine("__"),
+                              Loc->second ? "1" : "0");
+        }
+      }
+    }
   }
 
   // TODO: __HAS_FMAF__, __HAS_LDEXPF__, __HAS_FP64__ are deprecated and will be

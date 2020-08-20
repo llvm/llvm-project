@@ -29,7 +29,7 @@ namespace {
 
 class MachOWriter {
 public:
-  MachOWriter(MachOYAML::Object &Obj) : Obj(Obj), is64Bit(true), fileStart(0) {
+  MachOWriter(MachOYAML::Object &Obj) : Obj(Obj), fileStart(0) {
     is64Bit = Obj.Header.magic == MachO::MH_MAGIC_64 ||
               Obj.Header.magic == MachO::MH_CIGAM_64;
     memset(reinterpret_cast<void *>(&Header), 0, sizeof(MachO::mach_header_64));
@@ -285,33 +285,15 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
           return createStringError(
               errc::invalid_argument,
               "wrote too much data somewhere, section offsets don't line up");
-        if (0 == strncmp(&Sec.segname[0], "__DWARF", 16)) {
-          Error Err = Error::success();
-          cantFail(std::move(Err));
-
-          if (0 == strncmp(&Sec.sectname[0], "__debug_str", 16))
-            Err = DWARFYAML::emitDebugStr(OS, Obj.DWARF);
-          else if (0 == strncmp(&Sec.sectname[0], "__debug_abbrev", 16))
-            Err = DWARFYAML::emitDebugAbbrev(OS, Obj.DWARF);
-          else if (0 == strncmp(&Sec.sectname[0], "__debug_aranges", 16))
-            Err = DWARFYAML::emitDebugAranges(OS, Obj.DWARF);
-          else if (0 == strncmp(&Sec.sectname[0], "__debug_ranges", 16))
-            Err = DWARFYAML::emitDebugRanges(OS, Obj.DWARF);
-          else if (0 == strncmp(&Sec.sectname[0], "__debug_pubnames", 16)) {
-            if (Obj.DWARF.PubNames)
-              Err = DWARFYAML::emitPubSection(OS, *Obj.DWARF.PubNames,
-                                              Obj.IsLittleEndian);
-          } else if (0 == strncmp(&Sec.sectname[0], "__debug_pubtypes", 16)) {
-            if (Obj.DWARF.PubTypes)
-              Err = DWARFYAML::emitPubSection(OS, *Obj.DWARF.PubTypes,
-                                              Obj.IsLittleEndian);
-          } else if (0 == strncmp(&Sec.sectname[0], "__debug_info", 16))
-            Err = DWARFYAML::emitDebugInfo(OS, Obj.DWARF);
-          else if (0 == strncmp(&Sec.sectname[0], "__debug_line", 16))
-            Err = DWARFYAML::emitDebugLine(OS, Obj.DWARF);
-
-          if (Err)
-            return Err;
+        if (0 == strncmp(&Sec.segname[0], "__DWARF", sizeof(Sec.segname))) {
+          StringRef SectName(Sec.sectname,
+                             strnlen(Sec.sectname, sizeof(Sec.sectname)));
+          if (Obj.DWARF.getNonEmptySectionNames().count(SectName.substr(2))) {
+            auto EmitFunc =
+                DWARFYAML::getDWARFEmitterByName(SectName.substr(2));
+            if (Error Err = EmitFunc(OS, Obj.DWARF))
+              return Err;
+          }
 
           continue;
         }

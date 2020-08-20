@@ -2,7 +2,7 @@
 
 ## Check that we report a warning when sh_link references a non-existent section.
 
-# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: yaml2obj %s --docnum=1 -DLINK=0xFF -o %t1
 # RUN: llvm-readobj -V %t1 2>&1 | FileCheck %s --check-prefix=INVALID-LINK-LLVM --implicit-check-not="warning:" -DFILE=%t1
 # RUN: llvm-readelf -V %t1 2>&1 | FileCheck %s --check-prefix=INVALID-LINK-GNU --implicit-check-not="warning:" -DFILE=%t1
 
@@ -14,41 +14,27 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:    .gnu.version_d
     Type:    SHT_GNU_verdef
-    Link:    0xFF
+    Link:    [[LINK]]
     Info:    0x0
     Entries: []
 
 ## Check that we report a warning when the sh_link field of a SHT_GNU_verdef section references a non-string table section.
 
-# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: yaml2obj %s --docnum=1 -DLINK=0x0 -o %t2
 # RUN: llvm-readobj -V %t2 2>&1 | FileCheck %s --check-prefix=INVALID-STRING-TABLE -DFILE=%t2
 # RUN: llvm-readelf -V %t2 2>&1 | FileCheck %s --check-prefix=INVALID-STRING-TABLE -DFILE=%t2
 
 # INVALID-STRING-TABLE: warning: '[[FILE]]': invalid string table linked to SHT_GNU_verdef section with index 1: invalid sh_type for string table section [index 0]: expected SHT_STRTAB, but got SHT_NULL
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
-Sections:
-  - Name:    .gnu.version_d
-    Type:    SHT_GNU_verdef
-    Link:    0x0
-    Info:    0x0
-    Entries: []
-
 ## Check that we report a warning when we can't read the content of the SHT_GNU_verdef section.
 
-# RUN: yaml2obj %s --docnum=3 -o %t3
+# RUN: yaml2obj %s --docnum=2 -o %t3
 # RUN: llvm-readobj -V %t3 2>&1 | FileCheck %s --check-prefix=INVALID-DATA -DFILE=%t3
 # RUN: llvm-readelf -V %t3 2>&1 | FileCheck %s --check-prefix=INVALID-DATA -DFILE=%t3
 
@@ -56,10 +42,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:     .gnu.version_d
     Type:     SHT_GNU_verdef
@@ -73,7 +58,7 @@ DynamicSymbols:
 ## Check that we report a warning when a SHT_GNU_verdef section contains a version definition
 ## that goes past the end of the section.
 
-# RUN: yaml2obj %s --docnum=4 -o %t4
+# RUN: yaml2obj %s --docnum=3 -o %t4
 # RUN: llvm-readobj -V %t4 2>&1 | FileCheck %s --check-prefix=DEF-PAST-END -DFILE=%t4
 # RUN: llvm-readelf -V %t4 2>&1 | FileCheck %s --check-prefix=DEF-PAST-END -DFILE=%t4
 
@@ -81,10 +66,9 @@ DynamicSymbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:    .gnu.version_d
     Type:    SHT_GNU_verdef
@@ -104,7 +88,7 @@ DynamicSymbols:
 ## Check that we report a warning when a SHT_GNU_verdef section contains a version definition
 ## that refers to an auxiliary entry that goes past the end of the section.
 
-# RUN: yaml2obj %s --docnum=5 -o %t5
+# RUN: yaml2obj %s --docnum=4 -o %t5
 # RUN: llvm-readobj -V %t5 2>&1 | FileCheck %s --check-prefix=AUX-PAST-END -DFILE=%t5
 # RUN: llvm-readelf -V %t5 2>&1 | FileCheck %s --check-prefix=AUX-PAST-END -DFILE=%t5
 
@@ -112,10 +96,9 @@ DynamicSymbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:    .gnu.version_d
     Type:    SHT_GNU_verdef
@@ -135,7 +118,7 @@ DynamicSymbols:
 ## Check that we can dump a SHT_GNU_verdef section properly even if it contains version names strings
 ## that overrun the linked string table.
 
-# RUN: yaml2obj %s --docnum=6 -o %t6
+# RUN: yaml2obj %s --docnum=5 -o %t6
 # RUN: llvm-readobj -V %t6 2>&1 | FileCheck %s --check-prefix=PAST-STRTAB-END-LLVM --implicit-check-not="warning:" -DFILE=%t6
 # RUN: llvm-readelf -V %t6 2>&1 | FileCheck %s --check-prefix=PAST-STRTAB-END-GNU --implicit-check-not="warning:" -DFILE=%t6
 
@@ -157,10 +140,9 @@ DynamicSymbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:    .gnu.version_d
     Type:    SHT_GNU_verdef
@@ -180,7 +162,7 @@ DynamicSymbols:
 
 ## Check we report a warning when a version definition is not correctly aligned in memory.
 
-# RUN: yaml2obj %s --docnum=7 -o %t7
+# RUN: yaml2obj %s --docnum=6 -o %t7
 # RUN: llvm-readobj -V %t7 2>&1 | FileCheck %s --check-prefix=MISALIGNED-DEF -DFILE=%t7
 # RUN: llvm-readelf -V %t7 2>&1 | FileCheck %s --check-prefix=MISALIGNED-DEF -DFILE=%t7
 
@@ -188,10 +170,9 @@ DynamicSymbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Type: Fill
     Size: 0x1
@@ -211,7 +192,7 @@ DynamicSymbols:
 
 ## Check we report a warning when an auxiliary entry is not correctly aligned in memory.
 
-# RUN: yaml2obj %s --docnum=8 -o %t8
+# RUN: yaml2obj %s --docnum=7 -o %t8
 # RUN: llvm-readobj -V %t8 2>&1 | FileCheck %s --check-prefix=MISALIGNED-AUX -DFILE=%t8
 # RUN: llvm-readelf -V %t8 2>&1 | FileCheck %s --check-prefix=MISALIGNED-AUX -DFILE=%t8
 
@@ -219,10 +200,9 @@ DynamicSymbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:  .gnu.version_d
     Type:  SHT_GNU_verdef
@@ -237,7 +217,7 @@ DynamicSymbols:
 
 ## Check how we handle a version definition entry with an unsupported version.
 
-# RUN: yaml2obj %s --docnum=9 -o %t9
+# RUN: yaml2obj %s --docnum=8 -o %t9
 # RUN: llvm-readobj -V %t9 2>&1 | FileCheck %s --check-prefix=UNSUPPORTED-VERSION -DFILE=%t9
 # RUN: llvm-readelf -V %t9 2>&1 | FileCheck %s --check-prefix=UNSUPPORTED-VERSION -DFILE=%t9
 
@@ -245,10 +225,9 @@ DynamicSymbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name: .gnu.version_d
     Type: SHT_GNU_verdef
@@ -266,7 +245,7 @@ DynamicSymbols:
 ## Check we report a warning when trying to print version symbols, but SHT_GNU_verdef
 ## is invalid due to any reason.
 
-# RUN: yaml2obj %s --docnum=10 -o %t10
+# RUN: yaml2obj %s --docnum=9 -o %t10
 # RUN: llvm-readobj -V %t10 2>&1 | FileCheck %s --check-prefix=INVALID-VERDEF-LLVM -DFILE=%t10
 # RUN: llvm-readelf -V %t10 2>&1 | FileCheck %s --check-prefix=INVALID-VERDEF-GNU -DFILE=%t10
 
@@ -287,10 +266,9 @@ DynamicSymbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:         .gnu.version
     Type:         SHT_GNU_versym

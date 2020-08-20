@@ -36,6 +36,7 @@ using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
 
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")
+
 //===----------------------------------------------------------------------===//
 // Transformations exposed as rewrite patterns.
 //===----------------------------------------------------------------------===//
@@ -234,4 +235,178 @@ LogicalResult mlir::linalg::applyStagedPatterns(
     }
   }
   return success();
+}
+
+/// Traverse `e` and return an AffineExpr where all occurrences of `dim` have
+/// been replaced by either:
+///  - `min` if `positivePath` is true when we reach an occurrence of `dim`
+///  - `max` if `positivePath` is true when we reach an occurrence of `dim`
+/// `positivePath` is negated each time we hit a multiplicative or divisive
+/// binary op with a constant negative coefficient.
+static AffineExpr substWithMin(AffineExpr e, AffineExpr dim, AffineExpr min,
+                               AffineExpr max, bool positivePath = true) {
+  if (e == dim)
+    return positivePath ? min : max;
+  if (auto bin = e.dyn_cast<AffineBinaryOpExpr>()) {
+    AffineExpr lhs = bin.getLHS();
+    AffineExpr rhs = bin.getRHS();
+    if (bin.getKind() == mlir::AffineExprKind::Add)
+      return substWithMin(lhs, dim, min, max, positivePath) +
+             substWithMin(rhs, dim, min, max, positivePath);
+
+    auto c1 = bin.getLHS().dyn_cast<AffineConstantExpr>();
+    auto c2 = bin.getRHS().dyn_cast<AffineConstantExpr>();
+    if (c1 && c1.getValue() < 0)
+      return getAffineBinaryOpExpr(
+          bin.getKind(), c1, substWithMin(rhs, dim, min, max, !positivePath));
+    if (c2 && c2.getValue() < 0)
+      return getAffineBinaryOpExpr(
+          bin.getKind(), substWithMin(lhs, dim, min, max, !positivePath), c2);
+    return getAffineBinaryOpExpr(
+        bin.getKind(), substWithMin(lhs, dim, min, max, positivePath),
+        substWithMin(rhs, dim, min, max, positivePath));
+  }
+  return e;
+}
+
+/// Given the `lbVal`, `ubVal` and `stepVal` of a loop, append `lbVal` and
+/// `ubVal` to `dims` and `stepVal` to `symbols`.
+/// Create new AffineDimExpr (`%lb` and `%ub`) and AffineSymbolExpr (`%step`)
+/// with positions matching the newly appended values. Substitute occurrences of
+/// `dimExpr` by either the min expression (i.e. `%lb`) or the max expression
+/// (i.e. `%lb + %step * floordiv(%ub -1 - %lb, %step)`), depending on whether
+/// the induction variable is used with a positive or negative  coefficient.
+static AffineExpr substituteLoopInExpr(AffineExpr expr, AffineExpr dimExpr,
+                                       Value lbVal, Value ubVal, Value stepVal,
+                                       SmallVectorImpl<Value> &dims,
+                                       SmallVectorImpl<Value> &symbols) {
+  MLIRContext *ctx = lbVal.getContext();
+  AffineExpr lb = getAffineDimExpr(dims.size(), ctx);
+  dims.push_back(lbVal);
+  AffineExpr ub = getAffineDimExpr(dims.size(), ctx);
+  dims.push_back(ubVal);
+  AffineExpr step = getAffineSymbolExpr(symbols.size(), ctx);
+  symbols.push_back(stepVal);
+  LLVM_DEBUG(DBGS() << "Before: " << expr << "\n");
+  AffineExpr ee = substWithMin(expr, dimExpr, lb,
+                               lb + step * ((ub - 1) - lb).floorDiv(step));
+  LLVM_DEBUG(DBGS() << "After: " << expr << "\n");
+  return ee;
+}
+
+/// Traverse the `dims` and substitute known min or max expressions in place of
+/// induction variables in `exprs`.
+static AffineMap substitute(AffineMap map, SmallVectorImpl<Value> &dims,
+                            SmallVectorImpl<Value> &symbols) {
+  auto exprs = llvm::to_vector<4>(map.getResults());
+  for (AffineExpr &expr : exprs) {
+    bool substituted = true;
+    while (substituted) {
+      substituted = false;
+      for (unsigned dimIdx = 0; dimIdx < dims.size(); ++dimIdx) {
+        Value dim = dims[dimIdx];
+        AffineExpr dimExpr = getAffineDimExpr(dimIdx, expr.getContext());
+        LLVM_DEBUG(DBGS() << "Subst: " << dim << " @ " << dimExpr << "\n");
+        AffineExpr substitutedExpr;
+        if (auto forOp = scf::getForInductionVarOwner(dim))
+          substitutedExpr = substituteLoopInExpr(
+              expr, dimExpr, forOp.lowerBound(), forOp.upperBound(),
+              forOp.step(), dims, symbols);
+
+        if (auto parallelForOp = scf::getParallelForInductionVarOwner(dim))
+          for (unsigned idx = 0, e = parallelForOp.getNumLoops(); idx < e;
+               ++idx)
+            substitutedExpr = substituteLoopInExpr(
+                expr, dimExpr, parallelForOp.lowerBound()[idx],
+                parallelForOp.upperBound()[idx], parallelForOp.step()[idx],
+                dims, symbols);
+
+        if (!substitutedExpr)
+          continue;
+
+        substituted = (substitutedExpr != expr);
+        expr = substitutedExpr;
+      }
+    }
+
+    // Cleanup and simplify the results.
+    // This needs to happen outside of the loop iterating on dims.size() since
+    // it modifies dims.
+    SmallVector<Value, 4> operands(dims.begin(), dims.end());
+    operands.append(symbols.begin(), symbols.end());
+    auto map = AffineMap::get(dims.size(), symbols.size(), exprs,
+                              exprs.front().getContext());
+
+    LLVM_DEBUG(DBGS() << "Map to simplify: " << map << "\n");
+
+    // Pull in affine.apply operations and compose them fully into the
+    // result.
+    fullyComposeAffineMapAndOperands(&map, &operands);
+    canonicalizeMapAndOperands(&map, &operands);
+    map = simplifyAffineMap(map);
+    // Assign the results.
+    exprs.assign(map.getResults().begin(), map.getResults().end());
+    dims.assign(operands.begin(), operands.begin() + map.getNumDims());
+    symbols.assign(operands.begin() + map.getNumDims(), operands.end());
+
+    LLVM_DEBUG(DBGS() << "Map simplified: " << map << "\n");
+  }
+
+  assert(!exprs.empty() && "Unexpected empty exprs");
+  return AffineMap::get(dims.size(), symbols.size(), exprs, map.getContext());
+}
+
+LogicalResult AffineMinSCFCanonicalizationPattern::matchAndRewrite(
+    AffineMinOp minOp, PatternRewriter &rewriter) const {
+  LLVM_DEBUG(DBGS() << "Canonicalize AffineMinSCF: " << *minOp.getOperation()
+                    << "\n");
+
+  SmallVector<Value, 4> dims(minOp.getDimOperands()),
+      symbols(minOp.getSymbolOperands());
+  AffineMap map = substitute(minOp.getAffineMap(), dims, symbols);
+
+  LLVM_DEBUG(DBGS() << "Resulting map: " << map << "\n");
+
+  // Check whether any of the expressions, when subtracted from all other
+  // expressions, produces only >= 0 constants. If so, it is the min.
+  for (auto e : minOp.getAffineMap().getResults()) {
+    LLVM_DEBUG(DBGS() << "Candidate min: " << e << "\n");
+    if (!e.isSymbolicOrConstant())
+      continue;
+
+    auto isNonPositive = [](AffineExpr e) {
+      if (auto cst = e.dyn_cast<AffineConstantExpr>())
+        return cst.getValue() < 0;
+      return true;
+    };
+
+    // Build the subMap and check everything is statically known to be
+    // positive.
+    SmallVector<AffineExpr, 4> subExprs;
+    subExprs.reserve(map.getNumResults());
+    for (auto ee : map.getResults())
+      subExprs.push_back(ee - e);
+    MLIRContext *ctx = minOp.getContext();
+    AffineMap subMap = simplifyAffineMap(
+        AffineMap::get(map.getNumDims(), map.getNumSymbols(), subExprs, ctx));
+    LLVM_DEBUG(DBGS() << "simplified subMap: " << subMap << "\n");
+    if (llvm::any_of(subMap.getResults(), isNonPositive))
+      continue;
+
+    // Static min found.
+    if (auto cst = e.dyn_cast<AffineConstantExpr>()) {
+      rewriter.replaceOpWithNewOp<ConstantIndexOp>(minOp, cst.getValue());
+    } else {
+      auto resultMap = AffineMap::get(0, map.getNumSymbols(), {e}, ctx);
+      SmallVector<Value, 4> resultOperands = dims;
+      resultOperands.append(symbols.begin(), symbols.end());
+      canonicalizeMapAndOperands(&resultMap, &resultOperands);
+      resultMap = simplifyAffineMap(resultMap);
+      rewriter.replaceOpWithNewOp<AffineApplyOp>(minOp, resultMap,
+                                                 resultOperands);
+    }
+    return success();
+  }
+
+  return failure();
 }

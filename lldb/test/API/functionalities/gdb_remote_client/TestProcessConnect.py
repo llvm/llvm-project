@@ -6,6 +6,7 @@ from lldbsuite.test.decorators import *
 from gdbclientutils import *
 
 
+@skipIfRemote
 class TestProcessConnect(GDBRemoteTestBase):
 
     NO_DEBUG_INFO_TESTCASE = True

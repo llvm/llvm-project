@@ -1759,17 +1759,10 @@ public:
     return "";
   }
 
-  /// Returns true if a cast between SrcAS and DestAS is a noop.
-  virtual bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const {
-    return false;
-  }
-
   /// Returns true if a cast from SrcAS to DestAS is "cheap", such that e.g. we
   /// are happy to sink it into basic blocks. A cast may be free, but not
   /// necessarily a no-op. e.g. a free truncate from a 64-bit to 32-bit pointer.
-  virtual bool isFreeAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const {
-    return isNoopAddrSpaceCast(SrcAS, DestAS);
-  }
+  virtual bool isFreeAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const;
 
   /// Return true if the pointer arguments to CI should be aligned by aligning
   /// the object whose address is being passed. If so then MinSize is set to the
@@ -4189,7 +4182,7 @@ public:
 
   // Lower custom output constraints. If invalid, return SDValue().
   virtual SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue &Flag,
-                                              SDLoc DL,
+                                              const SDLoc &DL,
                                               const AsmOperandInfo &OpInfo,
                                               SelectionDAG &DAG) const;
 
@@ -4270,7 +4263,7 @@ public:
   /// \param RL Low bits of the RHS of the MUL.  See LL for meaning
   /// \param RH High bits of the RHS of the MUL.  See LL for meaning.
   /// \returns true if the node has been expanded, false if it has not
-  bool expandMUL_LOHI(unsigned Opcode, EVT VT, SDLoc dl, SDValue LHS,
+  bool expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl, SDValue LHS,
                       SDValue RHS, SmallVectorImpl<SDValue> &Result, EVT HiLoVT,
                       SelectionDAG &DAG, MulExpansionKind Kind,
                       SDValue LL = SDValue(), SDValue LH = SDValue(),
@@ -4397,6 +4390,10 @@ public:
   /// Method for building the DAG expansion of ISD::[US][ADD|SUB]SAT. This
   /// method accepts integers as its arguments.
   SDValue expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Method for building the DAG expansion of ISD::[US]SHLSAT. This
+  /// method accepts integers as its arguments.
+  SDValue expandShlSat(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Method for building the DAG expansion of ISD::[U|S]MULFIX[SAT]. This
   /// method accepts integers as its arguments.

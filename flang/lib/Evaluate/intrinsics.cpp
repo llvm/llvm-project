@@ -30,7 +30,7 @@ class FoldingContext;
 
 // This file defines the supported intrinsic procedures and implements
 // their recognition and validation.  It is largely table-driven.  See
-// documentation/intrinsics.md and section 16 of the Fortran 2018 standard
+// docs/intrinsics.md and section 16 of the Fortran 2018 standard
 // for full details on each of the intrinsics.  Be advised, they have
 // complicated details, and the design of these tables has to accommodate
 // that complexity.
@@ -1129,9 +1129,10 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             d.rank == Rank::elementalOrBOZ) {
           continue;
         } else {
+          const IntrinsicDummyArgument &nextParam{dummy[j + 1]};
           messages.Say(
-              "Typeless (BOZ) not allowed for '%s=' argument"_err_en_US,
-              d.keyword);
+              "Typeless (BOZ) not allowed for both '%s=' & '%s=' arguments"_err_en_US, // C7109
+              d.keyword, nextParam.keyword);
         }
       } else {
         // NULL(), procedure, or procedure pointer
@@ -1258,7 +1259,11 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         break;
       case Rank::shape:
         CHECK(!shapeArgSize);
-        if (rank == 1) {
+        if (rank != 1) {
+          messages.Say(
+              "'shape=' argument must be an array of rank 1"_err_en_US);
+          return std::nullopt;
+        } else {
           if (auto shape{GetShape(context, *arg)}) {
             if (auto constShape{AsConstantShape(context, *shape)}) {
               shapeArgSize = constShape->At(ConstantSubscripts{1}).ToInt64();

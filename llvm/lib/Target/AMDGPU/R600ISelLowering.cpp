@@ -338,7 +338,7 @@ R600TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
   case R600::MASK_WRITE: {
     Register maskedRegister = MI.getOperand(0).getReg();
-    assert(Register::isVirtualRegister(maskedRegister));
+    assert(maskedRegister.isVirtual());
     MachineInstr * defInstr = MRI.getVRegDef(maskedRegister);
     TII->addFlag(*defInstr, 0, MO_FLAG_MASK);
     break;

@@ -39,6 +39,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TargetParser.h"
@@ -365,7 +366,7 @@ static void getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     break;
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
-    amdgpu::getAMDGPUTargetFeatures(D, Args, Features);
+    amdgpu::getAMDGPUTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::msp430:
     msp430::getMSP430TargetFeatures(D, Args, Features);
@@ -975,6 +976,9 @@ static void RenderDebugEnablingArgs(const ArgList &Args, ArgStringList &CmdArgs,
     break;
   case codegenoptions::FullDebugInfo:
     CmdArgs.push_back("-debug-info-kind=standalone");
+    break;
+  case codegenoptions::UnusedTypeInfo:
+    CmdArgs.push_back("-debug-info-kind=unused-types");
     break;
   default:
     break;
@@ -1883,7 +1887,8 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
   if (T.isOSBinFormatELF()) {
     switch (getToolChain().getArch()) {
     case llvm::Triple::ppc64: {
-      if (T.isMusl() || (T.isOSFreeBSD() && T.getOSMajorVersion() >= 13))
+      if ((T.isOSFreeBSD() && T.getOSMajorVersion() >= 13) ||
+          T.isOSOpenBSD() || T.isMusl())
         ABIName = "elfv2";
       else
         ABIName = "elfv1";
@@ -2066,6 +2071,23 @@ void Clang::AddX86TargetArgs(const ArgList &Args,
     CmdArgs.push_back("-mfloat-abi");
     CmdArgs.push_back("soft");
     CmdArgs.push_back("-mstack-alignment=4");
+  }
+
+  // Handle -mtune.
+  // FIXME: We should default to "generic" unless -march is set to match gcc.
+  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mtune_EQ)) {
+    StringRef Name = A->getValue();
+
+    if (Name == "native")
+      Name = llvm::sys::getHostCPUName();
+
+    // Ignore generic either from getHostCPUName or from command line.
+    // FIXME: We need to support this eventually but isValidCPUName and the
+    // backend aren't ready for it yet.
+    if (Name != "generic") {
+      CmdArgs.push_back("-tune-cpu");
+      CmdArgs.push_back(Args.MakeArgString(Name));
+    }
   }
 }
 
@@ -2974,7 +2996,7 @@ static void RenderSCPOptions(const ToolChain &TC, const ArgList &Args,
     return;
 
   if (Args.hasFlag(options::OPT_fstack_clash_protection,
-                   options::OPT_fnostack_clash_protection, false))
+                   options::OPT_fno_stack_clash_protection, false))
     CmdArgs.push_back("-fstack-clash-protection");
 }
 
@@ -3781,8 +3803,14 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
           TC.GetDefaultStandaloneDebug());
   if (const Arg *A = Args.getLastArg(options::OPT_fstandalone_debug))
     (void)checkDebugInfoOption(A, Args, D, TC);
-  if (DebugInfoKind == codegenoptions::LimitedDebugInfo && NeedFullDebug)
-    DebugInfoKind = codegenoptions::FullDebugInfo;
+
+  if (DebugInfoKind == codegenoptions::LimitedDebugInfo) {
+    if (Args.hasFlag(options::OPT_fno_eliminate_unused_debug_types,
+                     options::OPT_feliminate_unused_debug_types, false))
+      DebugInfoKind = codegenoptions::UnusedTypeInfo;
+    else if (NeedFullDebug)
+      DebugInfoKind = codegenoptions::FullDebugInfo;
+  }
 
   if (Args.hasFlag(options::OPT_gembed_source, options::OPT_gno_embed_source,
                    false)) {

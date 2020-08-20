@@ -35,8 +35,7 @@ bool GPUDialect::isKernel(Operation *op) {
   return static_cast<bool>(isKernelAttr);
 }
 
-GPUDialect::GPUDialect(MLIRContext *context)
-    : Dialect(getDialectNamespace(), context) {
+void GPUDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/GPU/GPUOps.cpp.inc"

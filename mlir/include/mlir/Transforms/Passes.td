@@ -102,7 +102,7 @@ def AffinePipelineDataTransfer
   let constructor = "mlir::createPipelineDataTransferPass()";
 }
 
-def BufferPlacement : Pass<"buffer-placement"> {
+def BufferPlacement : FunctionPass<"buffer-placement"> {
   let summary = "Optimizes placement of alloc and dealloc operations";
   let description = [{
     This pass implements an algorithm to optimize the placement of alloc and
@@ -162,6 +162,8 @@ def BufferPlacement : Pass<"buffer-placement"> {
 
   }];
   let constructor = "mlir::createBufferPlacementPass()";
+  // TODO: this pass likely shouldn't depend on Linalg?
+  let dependentDialects = ["linalg::LinalgDialect"];
 }
 
 def Canonicalizer : Pass<"canonicalize"> {

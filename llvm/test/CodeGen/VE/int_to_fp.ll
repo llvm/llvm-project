@@ -71,7 +71,7 @@ entry:
 define float @ui2f(i32 %a) {
 ; CHECK-LABEL: ui2f:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cvt.d.l %s0, %s0
 ; CHECK-NEXT:    cvt.s.d %s0, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -172,7 +172,7 @@ entry:
 define double @ui2d(i32 %a) {
 ; CHECK-LABEL: ui2d:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
+; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cvt.d.l %s0, %s0
 ; CHECK-NEXT:    or %s11, 0, %s9
 entry:

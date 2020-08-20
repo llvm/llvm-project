@@ -1845,13 +1845,8 @@ bool FastISel::selectOperator(const User *I, unsigned Opcode) {
     return selectBinaryOp(I, ISD::FADD);
   case Instruction::Sub:
     return selectBinaryOp(I, ISD::SUB);
-  case Instruction::FSub: {
-    // FNeg is currently represented in LLVM IR as a special case of FSub.
-    Value *X;
-    if (match(I, m_FNeg(m_Value(X))))
-       return selectFNeg(I, X);
+  case Instruction::FSub:
     return selectBinaryOp(I, ISD::FSUB);
-  }
   case Instruction::Mul:
     return selectBinaryOp(I, ISD::MUL);
   case Instruction::FMul:

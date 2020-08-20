@@ -149,7 +149,6 @@
 ; RUN:     -passes='require<no-op-module>,cgscc(require<no-op-cgscc>,function(require<no-op-function>))' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-NO-OP-INVALIDATION
 ; CHECK-NO-OP-INVALIDATION: Starting llvm::Module pass manager run
-; CHECK-NO-OP-INVALIDATION-NOT: Invalidating all non-preserved analyses
 
 ; RUN: opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='require<no-op-module>,require<no-op-module>,require<no-op-module>' %s 2>&1 \
@@ -450,7 +449,6 @@
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: LoopAnalysis
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: AssumptionAnalysis
-; CHECK-REPEAT-LOOP-PASS-NEXT: Invalidating all non-preserved analyses
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: LCSSAPass
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Finished llvm::Function pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: AAManager
@@ -471,7 +469,6 @@
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Finished Loop pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Finished Loop pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Finished llvm::Function pass manager run
-; CHECK-REPEAT-LOOP-PASS-NEXT: Invalidating all non-preserved analyses
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Finished llvm::Module pass manager run
 
 define void @foo(i1 %x, i8* %p1, i8* %p2) {

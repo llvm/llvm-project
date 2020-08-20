@@ -1037,7 +1037,7 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
       SmallSetVector<const Argument *, 4> NAPtrArgs;
       for (const Value *V : PtrArgs) {
         SmallVector<const Value *, 4> Objects;
-        GetUnderlyingObjects(V, Objects, DL, /* LI = */ nullptr);
+        getUnderlyingObjects(V, Objects, /* LI = */ nullptr);
 
         for (const Value *O : Objects)
           ObjSet.insert(O);

@@ -18,27 +18,6 @@ namespace __llvm_libc {
 namespace testing {
 namespace mpfr {
 
-struct Tolerance {
-  // Number of bits used to represent the fractional
-  // part of a value of type 'float'.
-  static constexpr unsigned int floatPrecision = 23;
-
-  // Number of bits used to represent the fractional
-  // part of a value of type 'double'.
-  static constexpr unsigned int doublePrecision = 52;
-
-  // The base precision of the number. For example, for values of
-  // type float, the base precision is the value |floatPrecision|.
-  unsigned int basePrecision;
-
-  unsigned int width; // Number of valid LSB bits in |value|.
-
-  // The bits in the tolerance value. The tolerance value will be
-  // sum(bits[width - i] * 2 ^ (- basePrecision - i)) for |i| in
-  // range [1, width].
-  uint32_t bits;
-};
-
 enum class Operation : int {
   Abs,
   Ceil,
@@ -48,13 +27,14 @@ enum class Operation : int {
   Floor,
   Round,
   Sin,
+  Sqrt,
   Trunc
 };
 
 namespace internal {
 
 template <typename T>
-bool compare(Operation op, T input, T libcOutput, const Tolerance &t);
+bool compare(Operation op, T input, T libcOutput, double t);
 
 template <typename T> class MPFRMatcher : public testing::Matcher<T> {
   static_assert(__llvm_libc::cpp::IsFloatingPointType<T>::Value,
@@ -62,16 +42,16 @@ template <typename T> class MPFRMatcher : public testing::Matcher<T> {
 
   Operation operation;
   T input;
-  Tolerance tolerance;
   T matchValue;
+  double ulpTolerance;
 
 public:
-  MPFRMatcher(Operation op, T testInput, Tolerance &t)
-      : operation(op), input(testInput), tolerance(t) {}
+  MPFRMatcher(Operation op, T testInput, double ulpTolerance)
+      : operation(op), input(testInput), ulpTolerance(ulpTolerance) {}
 
   bool match(T libcResult) {
     matchValue = libcResult;
-    return internal::compare(operation, input, libcResult, tolerance);
+    return internal::compare(operation, input, libcResult, ulpTolerance);
   }
 
   void explainError(testutils::StreamWrapper &OS) override;
@@ -79,9 +59,10 @@ public:
 
 } // namespace internal
 
-template <typename T>
+template <typename T, typename U>
 __attribute__((no_sanitize("address")))
-internal::MPFRMatcher<T> getMPFRMatcher(Operation op, T input, Tolerance t) {
+typename cpp::EnableIfType<cpp::IsSameV<U, double>, internal::MPFRMatcher<T>>
+getMPFRMatcher(Operation op, T input, U t) {
   static_assert(
       __llvm_libc::cpp::IsFloatingPointType<T>::Value,
       "getMPFRMatcher can only be used to match floating point results.");

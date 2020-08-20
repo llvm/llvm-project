@@ -5,7 +5,6 @@
 ; CHECK: Running pass: BDCEPass on H
 ; CHECK: Running analysis: DemandedBitsAnalysis on H
 ; CHECK: Running pass: SROA on H
-; CHECK: Invalidating all non-preserved analyses for: H
 ; CHECK: Invalidating analysis: DemandedBitsAnalysis on H
 ; CHECK: Running pass: BDCEPass on H
 ; CHECK: Running analysis: DemandedBitsAnalysis on H

@@ -9,6 +9,7 @@
 # needing a waterfall. For all other instruction variants, and when we are
 # on non-ADDR64 hardware, we emit a waterfall loop.
 
+
 # W64-LABEL: name: idxen
 # W64-LABEL:  bb.0:
 # W64-NEXT: successors: %bb.1({{.*}})
@@ -18,12 +19,14 @@
 # W64-NEXT: successors: %bb.1({{.*}}), %bb.2({{.*}})
 # W64: [[SRSRC0:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub0, implicit $exec
 # W64: [[SRSRC1:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub1, implicit $exec
+# W64: [[STMP0:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1
+# W64: [[CMP0:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[STMP0]], [[VRSRC]].sub0_sub1, implicit $exec
 # W64: [[SRSRC2:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub2, implicit $exec
 # W64: [[SRSRC3:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub3, implicit $exec
-# W64: [[SRSRC:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1, [[SRSRC2]], %subreg.sub2, [[SRSRC3]], %subreg.sub3
-# W64: [[CMP0:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[SRSRC]].sub0_sub1, [[VRSRC]].sub0_sub1, implicit $exec
-# W64: [[CMP1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[SRSRC]].sub2_sub3, [[VRSRC]].sub2_sub3, implicit $exec
+# W64: [[STMP1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[SRSRC2]], %subreg.sub0, [[SRSRC3]], %subreg.sub1
+# W64: [[CMP1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[STMP1]], [[VRSRC]].sub2_sub3, implicit $exec
 # W64: [[CMP:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[CMP0]], [[CMP1]], implicit-def $scc
+# W64: [[SRSRC:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1, [[SRSRC2]], %subreg.sub2, [[SRSRC3]], %subreg.sub3
 # W64: [[TMPEXEC:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[CMP]], implicit-def $exec, implicit-def $scc, implicit $exec
 # W64: {{[0-9]+}}:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN %4, killed [[SRSRC]], 0, 0, 0, 0, 0, 0, 0, implicit $exec
 # W64: $exec = S_XOR_B64_term $exec, [[TMPEXEC]], implicit-def $scc
@@ -40,12 +43,14 @@
 # W32-NEXT: successors: %bb.1({{.*}}), %bb.2({{.*}})
 # W32: [[SRSRC0:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub0, implicit $exec
 # W32: [[SRSRC1:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub1, implicit $exec
+# W32: [[STMP0:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1
+# W32: [[CMP0:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[STMP0]], [[VRSRC]].sub0_sub1, implicit $exec
 # W32: [[SRSRC2:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub2, implicit $exec
 # W32: [[SRSRC3:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub3, implicit $exec
-# W32: [[SRSRC:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1, [[SRSRC2]], %subreg.sub2, [[SRSRC3]], %subreg.sub3
-# W32: [[CMP0:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[SRSRC]].sub0_sub1, [[VRSRC]].sub0_sub1, implicit $exec
-# W32: [[CMP1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[SRSRC]].sub2_sub3, [[VRSRC]].sub2_sub3, implicit $exec
+# W32: [[STMP1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[SRSRC2]], %subreg.sub0, [[SRSRC3]], %subreg.sub1
+# W32: [[CMP1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[STMP1]], [[VRSRC]].sub2_sub3, implicit $exec
 # W32: [[CMP:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[CMP0]], [[CMP1]], implicit-def $scc
+# W32: [[SRSRC:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1, [[SRSRC2]], %subreg.sub2, [[SRSRC3]], %subreg.sub3
 # W32: [[TMPEXEC:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[CMP]], implicit-def $exec, implicit-def $scc, implicit $exec
 # W32: {{[0-9]+}}:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN %4, killed [[SRSRC]], 0, 0, 0, 0, 0, 0, 0, implicit $exec
 # TODO: S_XOR_B32_term should be `implicit-def $scc`
@@ -87,12 +92,14 @@ body:             |
 # W64-NEXT: successors: %bb.1({{.*}}), %bb.2({{.*}})
 # W64: [[SRSRC0:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub0, implicit $exec
 # W64: [[SRSRC1:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub1, implicit $exec
+# W64: [[STMP0:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1
+# W64: [[CMP0:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[STMP0]], [[VRSRC]].sub0_sub1, implicit $exec
 # W64: [[SRSRC2:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub2, implicit $exec
 # W64: [[SRSRC3:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub3, implicit $exec
-# W64: [[SRSRC:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1, [[SRSRC2]], %subreg.sub2, [[SRSRC3]], %subreg.sub3
-# W64: [[CMP0:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[SRSRC]].sub0_sub1, [[VRSRC]].sub0_sub1, implicit $exec
-# W64: [[CMP1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[SRSRC]].sub2_sub3, [[VRSRC]].sub2_sub3, implicit $exec
+# W64: [[STMP1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[SRSRC2]], %subreg.sub0, [[SRSRC3]], %subreg.sub1
+# W64: [[CMP1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[STMP1]], [[VRSRC]].sub2_sub3, implicit $exec
 # W64: [[CMP:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[CMP0]], [[CMP1]], implicit-def $scc
+# W64: [[SRSRC:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1, [[SRSRC2]], %subreg.sub2, [[SRSRC3]], %subreg.sub3
 # W64: [[TMPEXEC:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[CMP]], implicit-def $exec, implicit-def $scc, implicit $exec
 # W64: {{[0-9]+}}:vgpr_32 = BUFFER_LOAD_FORMAT_X_OFFEN %4, killed [[SRSRC]], 0, 0, 0, 0, 0, 0, 0, implicit $exec
 # W64: $exec = S_XOR_B64_term $exec, [[TMPEXEC]], implicit-def $scc
@@ -109,12 +116,14 @@ body:             |
 # W32-NEXT: successors: %bb.1({{.*}}), %bb.2({{.*}})
 # W32: [[SRSRC0:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub0, implicit $exec
 # W32: [[SRSRC1:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub1, implicit $exec
+# W32: [[STMP0:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1
+# W32: [[CMP0:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[STMP0]], [[VRSRC]].sub0_sub1, implicit $exec
 # W32: [[SRSRC2:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub2, implicit $exec
 # W32: [[SRSRC3:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub3, implicit $exec
-# W32: [[SRSRC:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1, [[SRSRC2]], %subreg.sub2, [[SRSRC3]], %subreg.sub3
-# W32: [[CMP0:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[SRSRC]].sub0_sub1, [[VRSRC]].sub0_sub1, implicit $exec
-# W32: [[CMP1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[SRSRC]].sub2_sub3, [[VRSRC]].sub2_sub3, implicit $exec
+# W32: [[STMP1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[SRSRC2]], %subreg.sub0, [[SRSRC3]], %subreg.sub1
+# W32: [[CMP1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[STMP1]], [[VRSRC]].sub2_sub3, implicit $exec
 # W32: [[CMP:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[CMP0]], [[CMP1]], implicit-def $scc
+# W32: [[SRSRC:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1, [[SRSRC2]], %subreg.sub2, [[SRSRC3]], %subreg.sub3
 # W32: [[TMPEXEC:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[CMP]], implicit-def $exec, implicit-def $scc, implicit $exec
 # W32: {{[0-9]+}}:vgpr_32 = BUFFER_LOAD_FORMAT_X_OFFEN %4, killed [[SRSRC]], 0, 0, 0, 0, 0, 0, 0, implicit $exec
 # TODO: S_XOR_B32_term should be `implicit-def $scc`
@@ -156,12 +165,14 @@ body:             |
 # W64-NEXT: successors: %bb.1({{.*}}), %bb.2({{.*}})
 # W64: [[SRSRC0:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub0, implicit $exec
 # W64: [[SRSRC1:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub1, implicit $exec
+# W64: [[STMP0:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1
+# W64: [[CMP0:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[STMP0]], [[VRSRC]].sub0_sub1, implicit $exec
 # W64: [[SRSRC2:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub2, implicit $exec
 # W64: [[SRSRC3:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub3, implicit $exec
-# W64: [[SRSRC:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1, [[SRSRC2]], %subreg.sub2, [[SRSRC3]], %subreg.sub3
-# W64: [[CMP0:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[SRSRC]].sub0_sub1, [[VRSRC]].sub0_sub1, implicit $exec
-# W64: [[CMP1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[SRSRC]].sub2_sub3, [[VRSRC]].sub2_sub3, implicit $exec
+# W64: [[STMP1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[SRSRC2]], %subreg.sub0, [[SRSRC3]], %subreg.sub1
+# W64: [[CMP1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[STMP1]], [[VRSRC]].sub2_sub3, implicit $exec
 # W64: [[CMP:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[CMP0]], [[CMP1]], implicit-def $scc
+# W64: [[SRSRC:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1, [[SRSRC2]], %subreg.sub2, [[SRSRC3]], %subreg.sub3
 # W64: [[TMPEXEC:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[CMP]], implicit-def $exec, implicit-def $scc, implicit $exec
 # W64: {{[0-9]+}}:vgpr_32 = BUFFER_LOAD_FORMAT_X_BOTHEN %4, killed [[SRSRC]], 0, 0, 0, 0, 0, 0, 0, implicit $exec
 # W64: $exec = S_XOR_B64_term $exec, [[TMPEXEC]], implicit-def $scc
@@ -178,12 +189,14 @@ body:             |
 # W32-NEXT: successors: %bb.1({{.*}}), %bb.2({{.*}})
 # W32: [[SRSRC0:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub0, implicit $exec
 # W32: [[SRSRC1:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub1, implicit $exec
+# W32: [[STMP0:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1
+# W32: [[CMP0:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[STMP0]], [[VRSRC]].sub0_sub1, implicit $exec
 # W32: [[SRSRC2:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub2, implicit $exec
 # W32: [[SRSRC3:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub3, implicit $exec
-# W32: [[SRSRC:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1, [[SRSRC2]], %subreg.sub2, [[SRSRC3]], %subreg.sub3
-# W32: [[CMP0:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[SRSRC]].sub0_sub1, [[VRSRC]].sub0_sub1, implicit $exec
-# W32: [[CMP1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[SRSRC]].sub2_sub3, [[VRSRC]].sub2_sub3, implicit $exec
+# W32: [[STMP1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[SRSRC2]], %subreg.sub0, [[SRSRC3]], %subreg.sub1
+# W32: [[CMP1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[STMP1]], [[VRSRC]].sub2_sub3, implicit $exec
 # W32: [[CMP:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[CMP0]], [[CMP1]], implicit-def $scc
+# W32: [[SRSRC:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1, [[SRSRC2]], %subreg.sub2, [[SRSRC3]], %subreg.sub3
 # W32: [[TMPEXEC:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[CMP]], implicit-def $exec, implicit-def $scc, implicit $exec
 # W32: {{[0-9]+}}:vgpr_32 = BUFFER_LOAD_FORMAT_X_BOTHEN %4, killed [[SRSRC]], 0, 0, 0, 0, 0, 0, 0, implicit $exec
 # TODO: S_XOR_B32_term should be `implicit-def $scc`
@@ -262,12 +275,14 @@ body:             |
 # W64-NO-ADDR64-NEXT: successors: %bb.1({{.*}}), %bb.2({{.*}})
 # W64-NO-ADDR64: [[SRSRC0:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub0, implicit $exec
 # W64-NO-ADDR64: [[SRSRC1:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub1, implicit $exec
+# W64-NO-ADDR64: [[STMP0:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1
+# W64-NO-ADDR64: [[CMP0:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[STMP0]], [[VRSRC]].sub0_sub1, implicit $exec
 # W64-NO-ADDR64: [[SRSRC2:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub2, implicit $exec
 # W64-NO-ADDR64: [[SRSRC3:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub3, implicit $exec
-# W64-NO-ADDR64: [[SRSRC:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1, [[SRSRC2]], %subreg.sub2, [[SRSRC3]], %subreg.sub3
-# W64-NO-ADDR64: [[CMP0:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[SRSRC]].sub0_sub1, [[VRSRC]].sub0_sub1, implicit $exec
-# W64-NO-ADDR64: [[CMP1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[SRSRC]].sub2_sub3, [[VRSRC]].sub2_sub3, implicit $exec
+# W64-NO-ADDR64: [[STMP1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[SRSRC2]], %subreg.sub0, [[SRSRC3]], %subreg.sub1
+# W64-NO-ADDR64: [[CMP1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[STMP1]], [[VRSRC]].sub2_sub3, implicit $exec
 # W64-NO-ADDR64: [[CMP:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[CMP0]], [[CMP1]], implicit-def $scc
+# W64-NO-ADDR64: [[SRSRC:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1, [[SRSRC2]], %subreg.sub2, [[SRSRC3]], %subreg.sub3
 # W64-NO-ADDR64: [[TMPEXEC:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[CMP]], implicit-def $exec, implicit-def $scc, implicit $exec
 # W64-NO-ADDR64: {{[0-9]+}}:vgpr_32 = BUFFER_LOAD_FORMAT_X_OFFSET killed [[SRSRC]], 0, 0, 0, 0, 0, 0, 0, implicit $exec
 # W64-NO-ADDR64: $exec = S_XOR_B64_term $exec, [[TMPEXEC]], implicit-def $scc
@@ -282,12 +297,14 @@ body:             |
 # W32-NEXT: successors: %bb.1({{.*}}), %bb.2({{.*}})
 # W32: [[SRSRC0:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub0, implicit $exec
 # W32: [[SRSRC1:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub1, implicit $exec
+# W32: [[STMP0:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1
+# W32: [[CMP0:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[STMP0]], [[VRSRC]].sub0_sub1, implicit $exec
 # W32: [[SRSRC2:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub2, implicit $exec
 # W32: [[SRSRC3:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[VRSRC]].sub3, implicit $exec
-# W32: [[SRSRC:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1, [[SRSRC2]], %subreg.sub2, [[SRSRC3]], %subreg.sub3
-# W32: [[CMP0:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[SRSRC]].sub0_sub1, [[VRSRC]].sub0_sub1, implicit $exec
-# W32: [[CMP1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[SRSRC]].sub2_sub3, [[VRSRC]].sub2_sub3, implicit $exec
+# W32: [[STMP1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[SRSRC2]], %subreg.sub0, [[SRSRC3]], %subreg.sub1
+# W32: [[CMP1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U64_e64 [[STMP1]], [[VRSRC]].sub2_sub3, implicit $exec
 # W32: [[CMP:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_B32 [[CMP0]], [[CMP1]], implicit-def $scc
+# W32: [[SRSRC:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[SRSRC0]], %subreg.sub0, [[SRSRC1]], %subreg.sub1, [[SRSRC2]], %subreg.sub2, [[SRSRC3]], %subreg.sub3
 # W32: [[TMPEXEC:%[0-9]+]]:sreg_32_xm0_xexec = S_AND_SAVEEXEC_B32 killed [[CMP]], implicit-def $exec, implicit-def $scc, implicit $exec
 # W32: {{[0-9]+}}:vgpr_32 = BUFFER_LOAD_FORMAT_X_OFFSET killed [[SRSRC]], 0, 0, 0, 0, 0, 0, 0, implicit $exec
 # TODO: S_XOR_B32_term should be `implicit-def $scc`

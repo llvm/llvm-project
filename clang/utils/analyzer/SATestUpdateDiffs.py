@@ -15,7 +15,7 @@ from subprocess import check_call
 Verbose = 0
 
 
-def update_reference_results(project: ProjectInfo):
+def update_reference_results(project: ProjectInfo, git: bool = False):
     test_info = SATestBuild.TestInfo(project)
     tester = SATestBuild.ProjectTester(test_info)
     project_dir = tester.get_project_dir()
@@ -27,9 +27,10 @@ def update_reference_results(project: ProjectInfo):
     created_results_path = tester.get_output_dir()
 
     if not os.path.exists(created_results_path):
-        print("New results not found, was SATestBuild.py previously run?",
+        print(f"Skipping project '{project.name}', "
+              f"it doesn't have newer results.",
               file=sys.stderr)
-        sys.exit(1)
+        return
 
     build_log_path = SATestBuild.get_build_log_path(ref_results_path)
     build_log_dir = os.path.dirname(os.path.abspath(build_log_path))
@@ -45,7 +46,8 @@ def update_reference_results(project: ProjectInfo):
         # Remove reference results: in git, and then again for a good measure
         # with rm, as git might not remove things fully if there are empty
         # directories involved.
-        run_cmd(f"git rm -r -q '{ref_results_path}'")
+        if git:
+            run_cmd(f"git rm -r -q '{ref_results_path}'")
         shutil.rmtree(ref_results_path)
 
         # Replace reference results with a freshly computed once.
@@ -60,22 +62,11 @@ def update_reference_results(project: ProjectInfo):
         # Clean up the generated difference results.
         SATestBuild.cleanup_reference_results(ref_results_path)
 
-        run_cmd(f"git add '{ref_results_path}'")
+        if git:
+            run_cmd(f"git add '{ref_results_path}'")
 
 
-# TODO: use argparse
-def main(argv):
-    if len(argv) == 2 and argv[1] in ("-h", "--help"):
-        print("Update static analyzer reference results based "
-              "\non the previous run of SATestBuild.py.\n"
-              "\nN.B.: Assumes that SATestBuild.py was just run",
-              file=sys.stderr)
-        sys.exit(1)
-
-    project_map = ProjectMap()
-    for project in project_map.projects:
-        update_reference_results(project)
-
-
-if __name__ == '__main__':
-    main(sys.argv)
+if __name__ == "__main__":
+    print("SATestUpdateDiffs.py should not be used on its own.")
+    print("Please use 'SATest.py update' instead")
+    sys.exit(1)

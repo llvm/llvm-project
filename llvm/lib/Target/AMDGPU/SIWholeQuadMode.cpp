@@ -279,7 +279,7 @@ void SIWholeQuadMode::markInstructionUses(const MachineInstr &MI, char Flag,
     // Handle physical registers that we need to track; this is mostly relevant
     // for VCC, which can appear as the (implicit) input of a uniform branch,
     // e.g. when a loop counter is stored in a VGPR.
-    if (!Register::isVirtualRegister(Reg)) {
+    if (!Reg.isVirtual()) {
       if (Reg == AMDGPU::EXEC || Reg == AMDGPU::EXEC_LO)
         continue;
 
@@ -363,7 +363,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
             LowerToCopyInstrs.push_back(&MI);
           } else {
             Register Reg = Inactive.getReg();
-            if (Register::isVirtualRegister(Reg)) {
+            if (Reg.isVirtual()) {
               for (MachineInstr &DefMI : MRI->def_instructions(Reg))
                 markInstruction(DefMI, StateWWM, Worklist);
             }
@@ -393,7 +393,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
 
             Register Reg = MO.getReg();
 
-            if (!Register::isVirtualRegister(Reg) &&
+            if (!Reg.isVirtual() &&
                 TRI->hasVectorRegisters(TRI->getPhysRegClass(Reg))) {
               Flags = StateWQM;
               break;
@@ -835,9 +835,8 @@ void SIWholeQuadMode::lowerCopyInstrs() {
     const Register Reg = MI->getOperand(0).getReg();
 
     if (TRI->isVGPR(*MRI, Reg)) {
-      const TargetRegisterClass *regClass = Register::isVirtualRegister(Reg)
-                                                ? MRI->getRegClass(Reg)
-                                                : TRI->getPhysRegClass(Reg);
+      const TargetRegisterClass *regClass =
+          Reg.isVirtual() ? MRI->getRegClass(Reg) : TRI->getPhysRegClass(Reg);
 
       const unsigned MovOp = TII->getMovOpcode(regClass);
       MI->setDesc(TII->get(MovOp));

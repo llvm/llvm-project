@@ -65,19 +65,6 @@ struct StructTypeStorage;
 
 } // namespace detail
 
-namespace TypeKind {
-enum Kind {
-  Array = Type::FIRST_SPIRV_TYPE,
-  CooperativeMatrix,
-  Image,
-  Matrix,
-  Pointer,
-  RuntimeArray,
-  Struct,
-  LAST_SPIRV_TYPE = Struct,
-};
-}
-
 // Base SPIR-V type for providing availability queries.
 class SPIRVType : public Type {
 public:
@@ -170,8 +157,6 @@ class ArrayType : public Type::TypeBase<ArrayType, CompositeType,
 public:
   using Base::Base;
 
-  static bool kindof(unsigned kind) { return kind == TypeKind::Array; }
-
   static ArrayType get(Type elementType, unsigned elementCount);
 
   /// Returns an array type with the given stride in bytes.
@@ -201,8 +186,6 @@ class ImageType
     : public Type::TypeBase<ImageType, SPIRVType, detail::ImageTypeStorage> {
 public:
   using Base::Base;
-
-  static bool kindof(unsigned kind) { return kind == TypeKind::Image; }
 
   static ImageType
   get(Type elementType, Dim dim,
@@ -243,8 +226,6 @@ class PointerType : public Type::TypeBase<PointerType, SPIRVType,
 public:
   using Base::Base;
 
-  static bool kindof(unsigned kind) { return kind == TypeKind::Pointer; }
-
   static PointerType get(Type pointeeType, StorageClass storageClass);
 
   Type getPointeeType() const;
@@ -263,8 +244,6 @@ class RuntimeArrayType
                             detail::RuntimeArrayTypeStorage> {
 public:
   using Base::Base;
-
-  static bool kindof(unsigned kind) { return kind == TypeKind::RuntimeArray; }
 
   static RuntimeArrayType get(Type elementType);
 
@@ -317,8 +296,6 @@ public:
                   static_cast<uint32_t>(other.decoration));
     }
   };
-
-  static bool kindof(unsigned kind) { return kind == TypeKind::Struct; }
 
   /// Construct a StructType with at least one member.
   static StructType get(ArrayRef<Type> memberTypes,
@@ -385,10 +362,6 @@ class CooperativeMatrixNVType
 public:
   using Base::Base;
 
-  static bool kindof(unsigned kind) {
-    return kind == TypeKind::CooperativeMatrix;
-  }
-
   static CooperativeMatrixNVType get(Type elementType, spirv::Scope scope,
                                      unsigned rows, unsigned columns);
   Type getElementType() const;
@@ -411,8 +384,6 @@ class MatrixType : public Type::TypeBase<MatrixType, CompositeType,
                                          detail::MatrixTypeStorage> {
 public:
   using Base::Base;
-
-  static bool kindof(unsigned kind) { return kind == TypeKind::Matrix; }
 
   static MatrixType get(Type columnType, uint32_t columnCount);
 

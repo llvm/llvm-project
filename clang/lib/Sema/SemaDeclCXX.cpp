@@ -1066,8 +1066,9 @@ static IsTupleLike isTupleLike(Sema &S, SourceLocation Loc, QualType T,
     TemplateArgumentListInfo &Args;
     ICEDiagnoser(LookupResult &R, TemplateArgumentListInfo &Args)
         : R(R), Args(Args) {}
-    void diagnoseNotICE(Sema &S, SourceLocation Loc, SourceRange SR) override {
-      S.Diag(Loc, diag::err_decomp_decl_std_tuple_size_not_constant)
+    Sema::SemaDiagnosticBuilder diagnoseNotICE(Sema &S,
+                                               SourceLocation Loc) override {
+      return S.Diag(Loc, diag::err_decomp_decl_std_tuple_size_not_constant)
           << printTemplateArgs(S.Context.getPrintingPolicy(), Args);
     }
   } Diagnoser(R, Args);
@@ -3577,8 +3578,10 @@ namespace {
         Base = SubME->getBase();
       }
 
-      if (!isa<CXXThisExpr>(Base->IgnoreParenImpCasts()))
+      if (!isa<CXXThisExpr>(Base->IgnoreParenImpCasts())) {
+        Visit(Base);
         return;
+      }
 
       if (AddressOf && AllPODFields)
         return;
@@ -8022,10 +8025,10 @@ private:
     if (ReturnFalse.isInvalid())
       return StmtError();
 
-    return S.ActOnIfStmt(Loc, false, nullptr,
+    return S.ActOnIfStmt(Loc, false, Loc, nullptr,
                          S.ActOnCondition(nullptr, Loc, NotCond.get(),
                                           Sema::ConditionKind::Boolean),
-                         ReturnFalse.get(), SourceLocation(), nullptr);
+                         Loc, ReturnFalse.get(), SourceLocation(), nullptr);
   }
 
   StmtResult visitSubobjectArray(QualType Type, llvm::APInt Size,
@@ -8177,9 +8180,9 @@ private:
         return StmtError();
 
       // if (...)
-      return S.ActOnIfStmt(Loc, /*IsConstexpr=*/false, InitStmt, Cond,
-                           ReturnStmt.get(), /*ElseLoc=*/SourceLocation(),
-                           /*Else=*/nullptr);
+      return S.ActOnIfStmt(Loc, /*IsConstexpr=*/false, Loc, InitStmt, Cond, Loc,
+                           ReturnStmt.get(),
+                           /*ElseLoc=*/SourceLocation(), /*Else=*/nullptr);
     }
 
     case DefaultedComparisonKind::NotEqual:
@@ -8212,7 +8215,7 @@ static void lookupOperatorsForDefaultedComparison(Sema &Self, Scope *S,
                                                   UnresolvedSetImpl &Operators,
                                                   OverloadedOperatorKind Op) {
   auto Lookup = [&](OverloadedOperatorKind OO) {
-    Self.LookupOverloadedOperatorName(OO, S, QualType(), QualType(), Operators);
+    Self.LookupOverloadedOperatorName(OO, S, Operators);
   };
 
   // Every defaulted operator looks up itself.

@@ -119,6 +119,7 @@ syn keyword llvmKeyword
       \ norecurse
       \ noredzone
       \ noreturn
+      \ noundef
       \ nounwind
       \ optnone
       \ optsize

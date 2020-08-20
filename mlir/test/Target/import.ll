@@ -3,22 +3,22 @@
 %struct.t = type {}
 %struct.s = type { %struct.t, i64 }
 
-; CHECK: llvm.mlir.global external @g1() : !llvm<"{ {}, i64 }">
+; CHECK: llvm.mlir.global external @g1() : !llvm.struct<"struct.s", (struct<"struct.t", ()>, i64)>
 @g1 = external global %struct.s, align 8
 ; CHECK: llvm.mlir.global external @g2() : !llvm.double
 @g2 = external global double, align 8
 ; CHECK: llvm.mlir.global internal @g3("string")
 @g3 = internal global [6 x i8] c"string"
 
-; CHECK: llvm.mlir.global external @g5() : !llvm<"<8 x i32>">
+; CHECK: llvm.mlir.global external @g5() : !llvm.vec<8 x i32>
 @g5 = external global <8 x i32>
 
 @g4 = external global i32, align 8
-; CHECK: llvm.mlir.global internal constant @int_gep() : !llvm<"i32*"> {
-; CHECK-DAG:   %[[addr:[0-9]+]] = llvm.mlir.addressof @g4 : !llvm<"i32*">
+; CHECK: llvm.mlir.global internal constant @int_gep() : !llvm.ptr<i32> {
+; CHECK-DAG:   %[[addr:[0-9]+]] = llvm.mlir.addressof @g4 : !llvm.ptr<i32>
 ; CHECK-DAG:   %[[c2:[0-9]+]] = llvm.mlir.constant(2 : i32) : !llvm.i32
-; CHECK-NEXT:  %[[gepinit:[0-9]+]] = llvm.getelementptr %[[addr]][%[[c2]]] : (!llvm<"i32*">, !llvm.i32) -> !llvm<"i32*">
-; CHECK-NEXT:  llvm.return %[[gepinit]] : !llvm<"i32*">
+; CHECK-NEXT:  %[[gepinit:[0-9]+]] = llvm.getelementptr %[[addr]][%[[c2]]] : (!llvm.ptr<i32>, !llvm.i32) -> !llvm.ptr<i32>
+; CHECK-NEXT:  llvm.return %[[gepinit]] : !llvm.ptr<i32>
 ; CHECK-NEXT: }
 @int_gep = internal constant i32* getelementptr (i32, i32* @g4, i32 2)
 
@@ -53,15 +53,15 @@
 ; Sequential constants.
 ;
 
-; CHECK: llvm.mlir.global internal constant @vector_constant(dense<[1, 2]> : vector<2xi32>) : !llvm<"<2 x i32>">
+; CHECK: llvm.mlir.global internal constant @vector_constant(dense<[1, 2]> : vector<2xi32>) : !llvm.vec<2 x i32>
 @vector_constant = internal constant <2 x i32> <i32 1, i32 2>
-; CHECK: llvm.mlir.global internal constant @array_constant(dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf32>) : !llvm<"[2 x float]">
+; CHECK: llvm.mlir.global internal constant @array_constant(dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf32>) : !llvm.array<2 x float>
 @array_constant = internal constant [2 x float] [float 1., float 2.]
-; CHECK: llvm.mlir.global internal constant @nested_array_constant(dense<[{{\[}}1, 2], [3, 4]]> : tensor<2x2xi32>) : !llvm<"[2 x [2 x i32]]">
+; CHECK: llvm.mlir.global internal constant @nested_array_constant(dense<[{{\[}}1, 2], [3, 4]]> : tensor<2x2xi32>) : !llvm.array<2 x array<2 x i32>>
 @nested_array_constant = internal constant [2 x [2 x i32]] [[2 x i32] [i32 1, i32 2], [2 x i32] [i32 3, i32 4]]
-; CHECK: llvm.mlir.global internal constant @nested_array_constant3(dense<[{{\[}}[1, 2], [3, 4]]]> : tensor<1x2x2xi32>) : !llvm<"[1 x [2 x [2 x i32]]]">
+; CHECK: llvm.mlir.global internal constant @nested_array_constant3(dense<[{{\[}}[1, 2], [3, 4]]]> : tensor<1x2x2xi32>) : !llvm.array<1 x array<2 x array<2 x i32>>>
 @nested_array_constant3 = internal constant [1 x [2 x [2 x i32]]] [[2 x [2 x i32]] [[2 x i32] [i32 1, i32 2], [2 x i32] [i32 3, i32 4]]]
-; CHECK: llvm.mlir.global internal constant @nested_array_vector(dense<[{{\[}}[1, 2], [3, 4]]]> : vector<1x2x2xi32>) : !llvm<"[1 x [2 x <2 x i32>]]">
+; CHECK: llvm.mlir.global internal constant @nested_array_vector(dense<[{{\[}}[1, 2], [3, 4]]]> : vector<1x2x2xi32>) : !llvm.array<1 x array<2 x vec<2 x i32>>>
 @nested_array_vector = internal constant [1 x [2 x <2 x i32>]] [[2 x <2 x i32>] [<2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>]]
 
 ;
@@ -84,13 +84,13 @@ declare float @fe(i32)
 ; CHECK-DAG: %[[c43:[0-9]+]] = llvm.mlir.constant(43 : i32) : !llvm.i32
 define internal dso_local i32 @f1(i64 %a) norecurse {
 entry:
-; CHECK: %{{[0-9]+}} = llvm.inttoptr %arg0 : !llvm.i64 to !llvm<"i64*">
+; CHECK: %{{[0-9]+}} = llvm.inttoptr %arg0 : !llvm.i64 to !llvm.ptr<i64>
   %aa = inttoptr i64 %a to i64*
-; %[[addrof:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm<"double*">
-; %[[addrof2:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm<"double*">
-; %{{[0-9]+}} = llvm.inttoptr %arg0 : !llvm.i64 to !llvm<"i64*">
-; %{{[0-9]+}} = llvm.ptrtoint %[[addrof2]] : !llvm<"double*"> to !llvm.i64
-; %{{[0-9]+}} = llvm.getelementptr %[[addrof]][%3] : (!llvm<"double*">, !llvm.i32) -> !llvm<"double*">
+; %[[addrof:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm.ptr<double>
+; %[[addrof2:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm.ptr<double>
+; %{{[0-9]+}} = llvm.inttoptr %arg0 : !llvm.i64 to !llvm.ptr<i64>
+; %{{[0-9]+}} = llvm.ptrtoint %[[addrof2]] : !llvm.ptr<double> to !llvm.i64
+; %{{[0-9]+}} = llvm.getelementptr %[[addrof]][%3] : (!llvm.ptr<double>, !llvm.i32) -> !llvm.ptr<double>
   %bb = ptrtoint double* @g2 to i64
   %cc = getelementptr double, double* @g2, i32 2
 ; CHECK: %[[b:[0-9]+]] = llvm.trunc %arg0 : !llvm.i64 to !llvm.i32
@@ -161,18 +161,18 @@ next:
   br label %end
 }
 
-; CHECK-LABEL: llvm.func @f3() -> !llvm<"i32*">
+; CHECK-LABEL: llvm.func @f3() -> !llvm.ptr<i32>
 define i32* @f3() {
-; CHECK: %[[c:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm<"double*">
-; CHECK: %[[b:[0-9]+]] = llvm.bitcast %[[c]] : !llvm<"double*"> to !llvm<"i32*">
-; CHECK: llvm.return %[[b]] : !llvm<"i32*">
+; CHECK: %[[c:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm.ptr<double>
+; CHECK: %[[b:[0-9]+]] = llvm.bitcast %[[c]] : !llvm.ptr<double> to !llvm.ptr<i32>
+; CHECK: llvm.return %[[b]] : !llvm.ptr<i32>
   ret i32* bitcast (double* @g2 to i32*)
 }
 
-; CHECK-LABEL: llvm.func @f4() -> !llvm<"i32*">
+; CHECK-LABEL: llvm.func @f4() -> !llvm.ptr<i32>
 define i32* @f4() {
-; CHECK: %[[b:[0-9]+]] = llvm.mlir.null : !llvm<"i32*">
-; CHECK: llvm.return %[[b]] : !llvm<"i32*">
+; CHECK: %[[b:[0-9]+]] = llvm.mlir.null : !llvm.ptr<i32>
+; CHECK: llvm.return %[[b]] : !llvm.ptr<i32>
   ret i32* bitcast (double* null to i32*)
 }
 
@@ -198,7 +198,7 @@ define void @f5(i32 %d) {
   ret void
 }
 
-; CHECK-LABEL: llvm.func @f6(%arg0: !llvm<"void (i16)*">)
+; CHECK-LABEL: llvm.func @f6(%arg0: !llvm.ptr<func<void (i16)>>)
 define void @f6(void (i16) *%fn) {
 ; CHECK: %[[c:[0-9]+]] = llvm.mlir.constant(0 : i16) : !llvm.i16
 ; CHECK: llvm.call %arg0(%[[c]])
@@ -243,7 +243,7 @@ define void @FPArithmetic(float %a, float %b, double %c, double %d) {
 ; CHECK-LABEL: @precaller
 define i32 @precaller() {
   %1 = alloca i32 ()*
-  ; CHECK: %[[func:.*]] = llvm.mlir.addressof @callee : !llvm<"i32 ()*">
+  ; CHECK: %[[func:.*]] = llvm.mlir.addressof @callee : !llvm.ptr<func<i32 ()>>
   ; CHECK: llvm.store %[[func]], %[[loc:.*]]
   store i32 ()* @callee, i32 ()** %1
   ; CHECK: %[[indir:.*]] = llvm.load %[[loc]]
@@ -261,7 +261,7 @@ define i32 @callee() {
 ; CHECK-LABEL: @postcaller
 define i32 @postcaller() {
   %1 = alloca i32 ()*
-  ; CHECK: %[[func:.*]] = llvm.mlir.addressof @callee : !llvm<"i32 ()*">
+  ; CHECK: %[[func:.*]] = llvm.mlir.addressof @callee : !llvm.ptr<func<i32 ()>>
   ; CHECK: llvm.store %[[func]], %[[loc:.*]]
   store i32 ()* @callee, i32 ()** %1
   ; CHECK: %[[indir:.*]] = llvm.load %[[loc]]
@@ -279,16 +279,16 @@ declare i32 @__gxx_personality_v0(...)
 
 ; CHECK-LABEL: @invokeLandingpad
 define i32 @invokeLandingpad() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
-  ; CHECK: %[[a1:[0-9]+]] = llvm.bitcast %{{[0-9]+}} : !llvm<"i8***"> to !llvm<"i8*">
-  ; CHECK: %[[a3:[0-9]+]] = llvm.alloca %{{[0-9]+}} x !llvm.i8 : (!llvm.i32) -> !llvm<"i8*">
+  ; CHECK: %[[a1:[0-9]+]] = llvm.bitcast %{{[0-9]+}} : !llvm.ptr<ptr<ptr<i8>>> to !llvm.ptr<i8>
+  ; CHECK: %[[a3:[0-9]+]] = llvm.alloca %{{[0-9]+}} x !llvm.i8 : (!llvm.i32) -> !llvm.ptr<i8>
   %1 = alloca i8
-  ; CHECK: llvm.invoke @foo(%[[a3]]) to ^bb2 unwind ^bb1 : (!llvm<"i8*">) -> ()
+  ; CHECK: llvm.invoke @foo(%[[a3]]) to ^bb2 unwind ^bb1 : (!llvm.ptr<i8>) -> ()
   invoke void @foo(i8* %1) to label %4 unwind label %2
 
 ; CHECK: ^bb1:
-  ; CHECK: %{{[0-9]+}} = llvm.landingpad (catch %{{[0-9]+}} : !llvm<"i8**">) (catch %[[a1]] : !llvm<"i8*">) (filter %{{[0-9]+}} : !llvm<"[1 x i8]">) : !llvm<"{ i8*, i32 }">
+  ; CHECK: %{{[0-9]+}} = llvm.landingpad (catch %{{[0-9]+}} : !llvm.ptr<ptr<i8>>) (catch %[[a1]] : !llvm.ptr<i8>) (filter %{{[0-9]+}} : !llvm.array<1 x i8>) : !llvm.struct<(ptr<i8>, i32)>
   %3 = landingpad { i8*, i32 } catch i8** @_ZTIi catch i8* bitcast (i8*** @_ZTIii to i8*)
-  ; FIXME: Change filter to a constant array once they are handled. 
+  ; FIXME: Change filter to a constant array once they are handled.
   ; Currently, even though it parses this, LLVM module is broken
           filter [1 x i8] [i8 1]
   resume { i8*, i32 } %3
@@ -298,7 +298,7 @@ define i32 @invokeLandingpad() personality i8* bitcast (i32 (...)* @__gxx_person
   ret i32 1
 
 ; CHECK: ^bb3:
-  ; CHECK: %{{[0-9]+}} = llvm.invoke @bar(%[[a3]]) to ^bb2 unwind ^bb1 : (!llvm<"i8*">) -> !llvm<"i8*">
+  ; CHECK: %{{[0-9]+}} = llvm.invoke @bar(%[[a3]]) to ^bb2 unwind ^bb1 : (!llvm.ptr<i8>) -> !llvm.ptr<i8>
   %6 = invoke i8* @bar(i8* %1) to label %4 unwind label %2
 
 ; CHECK: ^bb4:

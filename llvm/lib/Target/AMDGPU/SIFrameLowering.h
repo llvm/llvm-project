@@ -71,6 +71,8 @@ private:
 
 public:
   bool hasFP(const MachineFunction &MF) const override;
+
+  bool requiresStackPointerReference(const MachineFunction &MF) const;
 };
 
 } // end namespace llvm

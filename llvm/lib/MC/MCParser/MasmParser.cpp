@@ -1720,8 +1720,6 @@ static unsigned getGNUBinOpPrecedence(AsmToken::TokenKind K,
     return 4;
 
   // High Intermediate Precedence: |, &, ^
-  //
-  // FIXME: gas seems to support '!' as an infix operator?
   case AsmToken::Pipe:
     Kind = MCBinaryExpr::Or;
     return 5;

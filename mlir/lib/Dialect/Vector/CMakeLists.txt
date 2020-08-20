@@ -11,10 +11,12 @@ add_mlir_dialect_library(MLIRVector
   MLIRVectorOpsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAffineEDSC
   MLIREDSC
   MLIRIR
   MLIRStandardOps
   MLIRAffineOps
+  MLIRLinalgOps
   MLIRSCF
   MLIRLoopAnalysis
   MLIRSideEffectInterfaces

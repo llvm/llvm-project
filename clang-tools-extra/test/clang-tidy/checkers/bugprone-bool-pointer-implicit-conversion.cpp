@@ -74,9 +74,31 @@ void foo() {
     bool *b;
   } d = { SomeFunction() };
 
-  if (d.b)
-    (void)*d.b; // no-warning
+  if (d.b) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: dubious check of 'bool *' against 'nullptr'
+    // CHECK-FIXES: if (*d.b) {
+  }
 
-#define CHECK(b) if (b) {}
+  if (d.b) {
+    (void)*d.b; // no-warning
+  }
+
+#define CHECK(b) \
+  if (b) {       \
+  }
   CHECK(c)
 }
+
+struct H {
+  bool *b;
+  void foo() const {
+    if (b) {
+      // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: dubious check of 'bool *' against 'nullptr'
+      // CHECK-FIXES: if (*b) {
+    }
+
+    if (b) {
+      (void)*b; // no-warning
+    }
+  }
+};

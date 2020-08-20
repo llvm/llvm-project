@@ -494,8 +494,7 @@ void CodeViewDebug::recordLocalVariable(LocalVariable &&Var,
 
 static void addLocIfNotPresent(SmallVectorImpl<const DILocation *> &Locs,
                                const DILocation *Loc) {
-  auto B = Locs.begin(), E = Locs.end();
-  if (std::find(B, E, Loc) == E)
+  if (!llvm::is_contained(Locs, Loc))
     Locs.push_back(Loc);
 }
 

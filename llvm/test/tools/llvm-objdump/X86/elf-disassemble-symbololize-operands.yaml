@@ -1,0 +1,48 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump %t -d --symbolize-operands --x86-asm-syntax=intel --no-show-raw-insn --no-leading-addr | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=INTEL
+# RUN: llvm-objdump %t -d --symbolize-operands --x86-asm-syntax=att --no-show-raw-insn --no-leading-addr | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=ATT
+
+## Expect to find the branch labels and global variable name.
+# ATT:      <_start>:
+# ATT-NEXT:   pushq %rax
+# ATT-NEXT: <L1>:
+# ATT-NEXT:   cmpl  , %eax <symbol>
+# ATT-NEXT:   jge    <L0>
+# ATT-NEXT:   jmp    <L1>
+# ATT-NEXT: <L0>:
+# ATT-NEXT:   retq
+
+# INTEL:      <_start>:
+# INTEL-NEXT:   push rax
+# INTEL-NEXT: <L1>:
+# INTEL-NEXT:   cmp  eax, dword ptr <symbol>
+# INTEL-NEXT:   jge   <L0>
+# INTEL-NEXT:   jmp   <L1>
+# INTEL-NEXT: <L0>:
+# INTEL-NEXT:   ret
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Address: 0x4000
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: '503b05051000007d02ebf6c3'
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Address: 0x5000
+Symbols:
+  - Name:    _start
+    Section: .text
+    Value:   0x4000  
+  - Name:    symbol
+    Section: .data
+    Value:   0x500c

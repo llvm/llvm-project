@@ -182,12 +182,6 @@ public:
     }
   }
 
-  bool mayNeedRelaxation(const MCInst &Inst,
-                         const MCSubtargetInfo &STI) const override {
-    // FIXME.
-    return false;
-  }
-
   bool fixupNeedsRelaxation(const MCFixup &Fixup,
                             uint64_t Value,
                             const MCRelaxableFragment *DF,

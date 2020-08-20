@@ -4,6 +4,19 @@
 // RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++2a %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 
+#if __cplusplus >= 201103L
+namespace dr2338 { // dr2338: 12
+namespace B {
+enum E : bool { Zero, One };
+static_assert((int)(E)2 == 1, "");
+} // namespace B
+namespace D {
+enum class E : bool { Zero, One };
+static_assert((int)(E)2 == 1, "");
+} // namespace D
+} // namespace dr2338
+#endif
+
 namespace dr2346 { // dr2346: 11
   void test() {
     const int i2 = 0;
@@ -113,3 +126,35 @@ namespace dr2387 { // dr2387: 9
   extern template const int d<const int>;
 #endif
 }
+
+#if __cplusplus >= 201103L
+namespace dr2303 { // dr2303: 12
+template <typename... T>
+struct A;
+template <>
+struct A<> {};
+template <typename T, typename... Ts>
+struct A<T, Ts...> : A<Ts...> {};
+struct B : A<int, int> {};
+struct C : A<int, int>, A<int> {}; // expected-warning {{direct base 'A<int>' is inaccessible}}
+struct D : A<int>, A<int, int> {}; // expected-warning {{direct base 'A<int>' is inaccessible}}
+struct E : A<int, int> {};
+struct F : B, E {};
+
+template <typename... T>
+void f(const A<T...> &) {
+  static_assert(sizeof...(T) == 2, "Should only match A<int,int>");
+}
+template <typename... T>
+void f2(const A<T...> *);
+
+void g() {
+  f(B{}); // This is no longer ambiguous.
+  B b;
+  f2(&b);
+  f(C{});
+  f(D{});
+  f(F{}); // expected-error {{ambiguous conversion from derived class}}
+}
+} //namespace dr2303
+#endif

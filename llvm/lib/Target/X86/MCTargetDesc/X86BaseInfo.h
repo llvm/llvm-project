@@ -62,6 +62,8 @@ namespace X86 {
     IP_HAS_LOCK = 16,
     IP_HAS_NOTRACK = 32,
     IP_USE_VEX3 = 64,
+    IP_USE_DISP8 = 128,
+    IP_USE_DISP32 = 256,
   };
 
   enum OperandType : unsigned {

@@ -1,4 +1,4 @@
-; RUN: opt -loop-unswitch %s -S | FileCheck %s
+; RUN: opt -loop-unswitch -enable-new-pm=0 %s -S | FileCheck %s
 
 ; We want to check that the loop does not get split (so only 2 callbr's not 4).
 ; It's ok to modify this test in the future should we allow the loop containing

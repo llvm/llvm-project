@@ -384,10 +384,12 @@ In `NativeCodeCall`, we can use placeholders like `$_builder`, `$N`. The former
 is called _special placeholder_, while the latter is called _positional
 placeholder_.
 
-`NativeCodeCall` right now only supports two special placeholders: `$_builder`
-and `$_self`:
+`NativeCodeCall` right now only supports three special placeholders:
+`$_builder`, `$_loc`, and `$_self`:
 
 *   `$_builder` will be replaced by the current `mlir::PatternRewriter`.
+*   `$_loc` will be replaced by the fused location or custom location (as
+    determined by location directive).
 *   `$_self` will be replaced with the entity `NativeCodeCall` is attached to.
 
 We have seen how `$_builder` can be used in the above; it allows us to pass a

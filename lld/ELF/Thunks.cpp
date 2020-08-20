@@ -277,6 +277,8 @@ public:
   uint32_t size() override { return 20; }
   void writeTo(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
+  bool isCompatibleWith(const InputSection &isec,
+                        const Relocation &rel) const override;
 };
 
 // PPC64 R2 Save Stub
@@ -299,7 +301,7 @@ public:
 // callee's global entry point into r12 without a save of R2.
 class PPC64R12SetupStub final : public Thunk {
 public:
-  PPC64R12SetupStub(Symbol &dest) : Thunk(dest, 0) {}
+  PPC64R12SetupStub(Symbol &dest) : Thunk(dest, 0) { alignment = 16; }
   uint32_t size() override { return 16; }
   void writeTo(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
@@ -314,10 +316,12 @@ public:
 // 2) Transferring control to the target function through an indirect branch.
 class PPC64PCRelPLTStub final : public Thunk {
 public:
-  PPC64PCRelPLTStub(Symbol &dest) : Thunk(dest, 0) {}
+  PPC64PCRelPLTStub(Symbol &dest) : Thunk(dest, 0) { alignment = 16; }
   uint32_t size() override { return 16; }
   void writeTo(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
+  bool isCompatibleWith(const InputSection &isec,
+                        const Relocation &rel) const override;
 };
 
 // A bl instruction uses a signed 24 bit offset, with an implicit 4 byte
@@ -863,6 +867,11 @@ void PPC64PltCallStub::addSymbols(ThunkSection &isec) {
   s->file = destination.file;
 }
 
+bool PPC64PltCallStub::isCompatibleWith(const InputSection &isec,
+                                        const Relocation &rel) const {
+  return rel.type == R_PPC64_REL24 || rel.type == R_PPC64_REL14;
+}
+
 void PPC64R2SaveStub::writeTo(uint8_t *buf) {
   int64_t offset = destination.getVA() - (getThunkTargetSym()->getVA() + 4);
   // The branch offset needs to fit in 26 bits.
@@ -910,6 +919,11 @@ void PPC64PCRelPLTStub::writeTo(uint8_t *buf) {
 void PPC64PCRelPLTStub::addSymbols(ThunkSection &isec) {
   addSymbol(saver.save("__plt_pcrel_" + destination.getName()), STT_FUNC, 0,
             isec);
+}
+
+bool PPC64PCRelPLTStub::isCompatibleWith(const InputSection &isec,
+                                         const Relocation &rel) const {
+  return rel.type == R_PPC64_REL24_NOTOC;
 }
 
 void PPC64LongBranchThunk::writeTo(uint8_t *buf) {

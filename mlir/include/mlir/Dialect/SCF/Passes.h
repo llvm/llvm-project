@@ -13,12 +13,9 @@
 #ifndef MLIR_DIALECT_SCF_PASSES_H_
 #define MLIR_DIALECT_SCF_PASSES_H_
 
-#include "llvm/ADT/ArrayRef.h"
-#include <memory>
+#include "mlir/Pass/Pass.h"
 
 namespace mlir {
-
-class Pass;
 
 /// Creates a pass that specializes for loop for unrolling and
 /// vectorization.
@@ -34,6 +31,14 @@ std::unique_ptr<Pass> createParallelLoopSpecializationPass();
 /// Creates a pass which tiles innermost parallel loops.
 std::unique_ptr<Pass>
 createParallelLoopTilingPass(llvm::ArrayRef<int64_t> tileSize = {});
+
+//===----------------------------------------------------------------------===//
+// Registration
+//===----------------------------------------------------------------------===//
+
+/// Generate the code for registering passes.
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/SCF/Passes.h.inc"
 
 } // namespace mlir
 

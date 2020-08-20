@@ -51,18 +51,18 @@ int main(int argc, char **argv) {
 }
 
 // CHECK-LABEL: @main
-// CHECK:       void @__kmpc_taskgroup(%struct.ident_t* @0, i32 [[GTID:%.+]])
+// CHECK:       void @__kmpc_taskgroup(%struct.ident_t* @1, i32 [[GTID:%.+]])
 // CHECK:       [[TD1:%.+]] = call i8* @__kmpc_taskred_init(i32 [[GTID]], i32 3, i8* %
 // CHECK-NEXT:  store i8* [[TD1]], i8** [[TD1_ADDR:%[^,]+]],
-// CHECK-NEXT:  call void @__kmpc_taskgroup(%struct.ident_t* @0, i32 [[GTID]])
+// CHECK-NEXT:  call void @__kmpc_taskgroup(%struct.ident_t* @1, i32 [[GTID]])
 // CHECK:       [[TD2:%.+]] = call i8* @__kmpc_taskred_init(i32 [[GTID]], i32 2, i8* %
 // CHECK-NEXT:  store i8* [[TD2]], i8** [[TD2_ADDR:%[^,]+]],
-// CHECK-NEXT:  call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @0, i32 5, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i64, i16*, i8**, i8**)* [[OMP_PARALLEL:@.+]] to void (i32*, i32*, ...)*), i32* %{{.+}}, i64 %{{.+}}, i16* %{{.+}}, i8** [[TD1_ADDR]], i8** [[TD2_ADDR]])
-// CHECK-NEXT:  call void @__kmpc_end_taskgroup(%struct.ident_t* @0, i32 [[GTID]])
-// CHECK-NEXT:  call void @__kmpc_end_taskgroup(%struct.ident_t* @0, i32 [[GTID]])
+// CHECK-NEXT:  call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @1, i32 5, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i64, i16*, i8**, i8**)* [[OMP_PARALLEL:@.+]] to void (i32*, i32*, ...)*), i32* %{{.+}}, i64 %{{.+}}, i16* %{{.+}}, i8** [[TD1_ADDR]], i8** [[TD2_ADDR]])
+// CHECK-NEXT:  call void @__kmpc_end_taskgroup(%struct.ident_t* @1, i32 [[GTID]])
+// CHECK-NEXT:  call void @__kmpc_end_taskgroup(%struct.ident_t* @1, i32 [[GTID]])
 
 // CHECK:       define internal void [[OMP_PARALLEL]](
-// CHECK:       [[TASK_T:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @0, i32 [[GTID:%.+]], i32 1, i64 56, i64 40, i32 (i32, i8*)* bitcast (i32 (i32, [[T:%.+]]*)* [[OMP_TASK:@.+]] to i32 (i32, i8*)*))
+// CHECK:       [[TASK_T:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @1, i32 [[GTID:%.+]], i32 1, i64 56, i64 40, i32 (i32, i8*)* bitcast (i32 (i32, [[T:%.+]]*)* [[OMP_TASK:@.+]] to i32 (i32, i8*)*))
 // CHECK-NEXT:  [[TASK_T_WITH_PRIVS:%.+]] = bitcast i8* [[TASK_T]] to [[T]]*
 // CHECK:       [[PRIVS:%.+]] = getelementptr inbounds [[T]], [[T]]* [[TASK_T_WITH_PRIVS]], i32 0, i32 1
 // CHECK:       [[TD1_REF:%.+]] = getelementptr inbounds [[PRIVATES]], [[PRIVATES]]* [[PRIVS]], i32 0, i32 0
@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT:  [[TD2_REF:%.+]] = getelementptr inbounds [[PRIVATES]], [[PRIVATES]]* [[PRIVS]], i32 0, i32 1
 // CHECK-NEXT:  [[TD2:%.+]] = load i8*, i8** %{{.+}},
 // CHECK-NEXT:  store i8* [[TD2]], i8** [[TD2_REF]],
-// CHECK-NEXT:  call i32 @__kmpc_omp_task(%struct.ident_t* @0, i32 [[GTID]], i8* [[TASK_T]])
+// CHECK-NEXT:  call i32 @__kmpc_omp_task(%struct.ident_t* @1, i32 [[GTID]], i8* [[TASK_T]])
 // CHECK-NEXT:  ret void
 // CHECK-NEXT:  }
 

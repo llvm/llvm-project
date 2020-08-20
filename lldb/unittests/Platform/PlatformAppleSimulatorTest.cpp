@@ -8,9 +8,7 @@
 
 #include "gtest/gtest.h"
 
-#include "Plugins/Platform/MacOSX/PlatformAppleTVSimulator.h"
-#include "Plugins/Platform/MacOSX/PlatformAppleWatchSimulator.h"
-#include "Plugins/Platform/MacOSX/PlatformiOSSimulator.h"
+#include "Plugins/Platform/MacOSX/PlatformAppleSimulator.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
@@ -20,8 +18,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 class PlatformAppleSimulatorTest : public ::testing::Test {
-  SubsystemRAII<FileSystem, HostInfo, PlatformAppleTVSimulator,
-                PlatformiOSSimulator, PlatformAppleWatchSimulator>
+  SubsystemRAII<FileSystem, HostInfo, PlatformAppleSimulator>
       subsystems;
 };
 

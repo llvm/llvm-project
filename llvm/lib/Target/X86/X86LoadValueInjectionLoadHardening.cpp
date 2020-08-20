@@ -369,7 +369,7 @@ X86LoadValueInjectionLoadHardeningPass::getGadgetGraph(
 
           // Use RDF to find all the uses of `Def`
           rdf::NodeSet Uses;
-          RegisterRef DefReg = DFG.getPRI().normalize(Def.Addr->getRegRef(DFG));
+          RegisterRef DefReg = Def.Addr->getRegRef(DFG);
           for (auto UseID : L.getAllReachedUses(DefReg, Def)) {
             auto Use = DFG.addr<UseNode *>(UseID);
             if (Use.Addr->getFlags() & NodeAttrs::PhiRef) { // phi node

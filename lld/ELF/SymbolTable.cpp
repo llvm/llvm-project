@@ -42,6 +42,8 @@ void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
 
   if (real->exportDynamic)
     sym->exportDynamic = true;
+  if (sym->isUndefined())
+    sym->isUsedInRegularObj = false;
 
   // Now renaming is complete, and no one refers to real. We drop real from
   // .symtab and .dynsym. If real is undefined, it is important that we don't

@@ -1,4 +1,4 @@
-# RUN: yaml2obj %S/Inputs/stack-cfi-parsing.yaml > %t
+# RUN: yaml2obj %S/Inputs/stack-cfi-parsing.yaml -o %t
 # RUN: %lldb -c %t -o "target symbols add %S/Inputs/stack-cfi-parsing.syms" \
 # RUN:   -s %s -b | FileCheck %s
 

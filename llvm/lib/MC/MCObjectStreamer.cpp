@@ -819,6 +819,16 @@ void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
   insert(new MCFillFragment(Expr, Size, NumValues, Loc));
 }
 
+void MCObjectStreamer::emitNops(int64_t NumBytes, int64_t ControlledNopLength,
+                                SMLoc Loc) {
+  // Emit an NOP fragment.
+  MCDataFragment *DF = getOrCreateDataFragment();
+  flushPendingLabels(DF, DF->getContents().size());
+
+  assert(getCurrentSectionOnly() && "need a section");
+  insert(new MCNopsFragment(NumBytes, ControlledNopLength, Loc));
+}
+
 void MCObjectStreamer::emitFileDirective(StringRef Filename) {
   getAssembler().addFileName(Filename);
 }

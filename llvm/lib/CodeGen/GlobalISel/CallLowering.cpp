@@ -30,6 +30,51 @@ using namespace llvm;
 
 void CallLowering::anchor() {}
 
+/// Helper function which updates \p Flags when \p AttrFn returns true.
+static void
+addFlagsUsingAttrFn(ISD::ArgFlagsTy &Flags,
+                    const std::function<bool(Attribute::AttrKind)> &AttrFn) {
+  if (AttrFn(Attribute::SExt))
+    Flags.setSExt();
+  if (AttrFn(Attribute::ZExt))
+    Flags.setZExt();
+  if (AttrFn(Attribute::InReg))
+    Flags.setInReg();
+  if (AttrFn(Attribute::StructRet))
+    Flags.setSRet();
+  if (AttrFn(Attribute::Nest))
+    Flags.setNest();
+  if (AttrFn(Attribute::ByVal))
+    Flags.setByVal();
+  if (AttrFn(Attribute::Preallocated))
+    Flags.setPreallocated();
+  if (AttrFn(Attribute::InAlloca))
+    Flags.setInAlloca();
+  if (AttrFn(Attribute::Returned))
+    Flags.setReturned();
+  if (AttrFn(Attribute::SwiftSelf))
+    Flags.setSwiftSelf();
+  if (AttrFn(Attribute::SwiftError))
+    Flags.setSwiftError();
+}
+
+ISD::ArgFlagsTy CallLowering::getAttributesForArgIdx(const CallBase &Call,
+                                                     unsigned ArgIdx) const {
+  ISD::ArgFlagsTy Flags;
+  addFlagsUsingAttrFn(Flags, [&Call, &ArgIdx](Attribute::AttrKind Attr) {
+    return Call.paramHasAttr(ArgIdx, Attr);
+  });
+  return Flags;
+}
+
+void CallLowering::addArgFlagsFromAttributes(ISD::ArgFlagsTy &Flags,
+                                             const AttributeList &Attrs,
+                                             unsigned OpIdx) const {
+  addFlagsUsingAttrFn(Flags, [&Attrs, &OpIdx](Attribute::AttrKind Attr) {
+    return Attrs.hasAttribute(OpIdx, Attr);
+  });
+}
+
 bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
                              ArrayRef<Register> ResRegs,
                              ArrayRef<ArrayRef<Register>> ArgRegs,
@@ -37,6 +82,12 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
                              std::function<unsigned()> GetCalleeReg) const {
   CallLoweringInfo Info;
   const DataLayout &DL = MIRBuilder.getDataLayout();
+  MachineFunction &MF = MIRBuilder.getMF();
+  bool CanBeTailCalled = CB.isTailCall() &&
+                         isInTailCallPosition(CB, MF.getTarget()) &&
+                         (MF.getFunction()
+                              .getFnAttribute("disable-tail-calls")
+                              .getValueAsString() != "true");
 
   // First step is to marshall all the function's parameters into the correct
   // physregs and memory locations. Gather the sequence of argument types that
@@ -44,9 +95,15 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   unsigned i = 0;
   unsigned NumFixedArgs = CB.getFunctionType()->getNumParams();
   for (auto &Arg : CB.args()) {
-    ArgInfo OrigArg{ArgRegs[i], Arg->getType(), ISD::ArgFlagsTy{},
+    ArgInfo OrigArg{ArgRegs[i], Arg->getType(), getAttributesForArgIdx(CB, i),
                     i < NumFixedArgs};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CB);
+
+    // If we have an explicit sret argument that is an Instruction, (i.e., it
+    // might point to function-local memory), we can't meaningfully tail-call.
+    if (OrigArg.Flags[0].isSRet() && isa<Instruction>(&Arg))
+      CanBeTailCalled = false;
+
     Info.OrigArgs.push_back(OrigArg);
     ++i;
   }
@@ -63,16 +120,11 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   if (!Info.OrigRet.Ty->isVoidTy())
     setArgFlags(Info.OrigRet, AttributeList::ReturnIndex, DL, CB);
 
-  MachineFunction &MF = MIRBuilder.getMF();
   Info.KnownCallees = CB.getMetadata(LLVMContext::MD_callees);
   Info.CallConv = CB.getCallingConv();
   Info.SwiftErrorVReg = SwiftErrorVReg;
   Info.IsMustTailCall = CB.isMustTailCall();
-  Info.IsTailCall =
-      CB.isTailCall() && isInTailCallPosition(CB, MF.getTarget()) &&
-      (MF.getFunction()
-           .getFnAttribute("disable-tail-calls")
-           .getValueAsString() != "true");
+  Info.IsTailCall = CanBeTailCalled;
   Info.IsVarArg = CB.getFunctionType()->isVarArg();
   return lowerCall(MIRBuilder, Info);
 }
@@ -83,24 +135,7 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
                                const FuncInfoTy &FuncInfo) const {
   auto &Flags = Arg.Flags[0];
   const AttributeList &Attrs = FuncInfo.getAttributes();
-  if (Attrs.hasAttribute(OpIdx, Attribute::ZExt))
-    Flags.setZExt();
-  if (Attrs.hasAttribute(OpIdx, Attribute::SExt))
-    Flags.setSExt();
-  if (Attrs.hasAttribute(OpIdx, Attribute::InReg))
-    Flags.setInReg();
-  if (Attrs.hasAttribute(OpIdx, Attribute::StructRet))
-    Flags.setSRet();
-  if (Attrs.hasAttribute(OpIdx, Attribute::SwiftSelf))
-    Flags.setSwiftSelf();
-  if (Attrs.hasAttribute(OpIdx, Attribute::SwiftError))
-    Flags.setSwiftError();
-  if (Attrs.hasAttribute(OpIdx, Attribute::ByVal))
-    Flags.setByVal();
-  if (Attrs.hasAttribute(OpIdx, Attribute::Preallocated))
-    Flags.setPreallocated();
-  if (Attrs.hasAttribute(OpIdx, Attribute::InAlloca))
-    Flags.setInAlloca();
+  addArgFlagsFromAttributes(Flags, Attrs, OpIdx);
 
   if (Flags.isByVal() || Flags.isInAlloca() || Flags.isPreallocated()) {
     Type *ElementTy = cast<PointerType>(Arg.Ty)->getElementType();
@@ -117,8 +152,6 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
       FrameAlign = Align(getTLI()->getByValTypeAlignment(ElementTy, DL));
     Flags.setByValAlign(FrameAlign);
   }
-  if (Attrs.hasAttribute(OpIdx, Attribute::Nest))
-    Flags.setNest();
   Flags.setOrigAlign(DL.getABITypeAlign(Arg.Ty));
 }
 
@@ -195,98 +228,99 @@ bool CallLowering::handleAssignments(CCState &CCInfo,
   unsigned NumArgs = Args.size();
   for (unsigned i = 0; i != NumArgs; ++i) {
     EVT CurVT = EVT::getEVT(Args[i].Ty);
-    if (!CurVT.isSimple() ||
-        Handler.assignArg(i, CurVT.getSimpleVT(), CurVT.getSimpleVT(),
-                          CCValAssign::Full, Args[i], Args[i].Flags[0],
-                          CCInfo)) {
-      MVT NewVT = TLI->getRegisterTypeForCallingConv(
-          F.getContext(), F.getCallingConv(), EVT(CurVT));
+    if (CurVT.isSimple() &&
+        !Handler.assignArg(i, CurVT.getSimpleVT(), CurVT.getSimpleVT(),
+                           CCValAssign::Full, Args[i], Args[i].Flags[0],
+                           CCInfo))
+      continue;
 
-      // If we need to split the type over multiple regs, check it's a scenario
-      // we currently support.
-      unsigned NumParts = TLI->getNumRegistersForCallingConv(
-          F.getContext(), F.getCallingConv(), CurVT);
-      if (NumParts > 1) {
-        // For now only handle exact splits.
-        if (NewVT.getSizeInBits() * NumParts != CurVT.getSizeInBits())
+    MVT NewVT = TLI->getRegisterTypeForCallingConv(
+        F.getContext(), F.getCallingConv(), EVT(CurVT));
+
+    // If we need to split the type over multiple regs, check it's a scenario
+    // we currently support.
+    unsigned NumParts = TLI->getNumRegistersForCallingConv(
+        F.getContext(), F.getCallingConv(), CurVT);
+    if (NumParts > 1) {
+      // For now only handle exact splits.
+      if (NewVT.getSizeInBits() * NumParts != CurVT.getSizeInBits())
+        return false;
+    }
+
+    // For incoming arguments (physregs to vregs), we could have values in
+    // physregs (or memlocs) which we want to extract and copy to vregs.
+    // During this, we might have to deal with the LLT being split across
+    // multiple regs, so we have to record this information for later.
+    //
+    // If we have outgoing args, then we have the opposite case. We have a
+    // vreg with an LLT which we want to assign to a physical location, and
+    // we might have to record that the value has to be split later.
+    if (Handler.isIncomingArgumentHandler()) {
+      if (NumParts == 1) {
+        // Try to use the register type if we couldn't assign the VT.
+        if (Handler.assignArg(i, NewVT, NewVT, CCValAssign::Full, Args[i],
+                              Args[i].Flags[0], CCInfo))
           return false;
-      }
-
-      // For incoming arguments (physregs to vregs), we could have values in
-      // physregs (or memlocs) which we want to extract and copy to vregs.
-      // During this, we might have to deal with the LLT being split across
-      // multiple regs, so we have to record this information for later.
-      //
-      // If we have outgoing args, then we have the opposite case. We have a
-      // vreg with an LLT which we want to assign to a physical location, and
-      // we might have to record that the value has to be split later.
-      if (Handler.isIncomingArgumentHandler()) {
-        if (NumParts == 1) {
-          // Try to use the register type if we couldn't assign the VT.
-          if (Handler.assignArg(i, NewVT, NewVT, CCValAssign::Full, Args[i],
-                                Args[i].Flags[0], CCInfo))
-            return false;
-        } else {
-          // We're handling an incoming arg which is split over multiple regs.
-          // E.g. passing an s128 on AArch64.
-          ISD::ArgFlagsTy OrigFlags = Args[i].Flags[0];
-          Args[i].OrigRegs.push_back(Args[i].Regs[0]);
-          Args[i].Regs.clear();
-          Args[i].Flags.clear();
-          LLT NewLLT = getLLTForMVT(NewVT);
-          // For each split register, create and assign a vreg that will store
-          // the incoming component of the larger value. These will later be
-          // merged to form the final vreg.
-          for (unsigned Part = 0; Part < NumParts; ++Part) {
-            Register Reg =
-                MIRBuilder.getMRI()->createGenericVirtualRegister(NewLLT);
-            ISD::ArgFlagsTy Flags = OrigFlags;
-            if (Part == 0) {
-              Flags.setSplit();
-            } else {
-              Flags.setOrigAlign(Align(1));
-              if (Part == NumParts - 1)
-                Flags.setSplitEnd();
-            }
-            Args[i].Regs.push_back(Reg);
-            Args[i].Flags.push_back(Flags);
-            if (Handler.assignArg(i + Part, NewVT, NewVT, CCValAssign::Full,
-                                  Args[i], Args[i].Flags[Part], CCInfo)) {
-              // Still couldn't assign this smaller part type for some reason.
-              return false;
-            }
-          }
-        }
       } else {
-        // Handling an outgoing arg that might need to be split.
-        if (NumParts < 2)
-          return false; // Don't know how to deal with this type combination.
-
-        // This type is passed via multiple registers in the calling convention.
-        // We need to extract the individual parts.
-        Register LargeReg = Args[i].Regs[0];
-        LLT SmallTy = LLT::scalar(NewVT.getSizeInBits());
-        auto Unmerge = MIRBuilder.buildUnmerge(SmallTy, LargeReg);
-        assert(Unmerge->getNumOperands() == NumParts + 1);
+        // We're handling an incoming arg which is split over multiple regs.
+        // E.g. passing an s128 on AArch64.
         ISD::ArgFlagsTy OrigFlags = Args[i].Flags[0];
-        // We're going to replace the regs and flags with the split ones.
+        Args[i].OrigRegs.push_back(Args[i].Regs[0]);
         Args[i].Regs.clear();
         Args[i].Flags.clear();
-        for (unsigned PartIdx = 0; PartIdx < NumParts; ++PartIdx) {
+        LLT NewLLT = getLLTForMVT(NewVT);
+        // For each split register, create and assign a vreg that will store
+        // the incoming component of the larger value. These will later be
+        // merged to form the final vreg.
+        for (unsigned Part = 0; Part < NumParts; ++Part) {
+          Register Reg =
+              MIRBuilder.getMRI()->createGenericVirtualRegister(NewLLT);
           ISD::ArgFlagsTy Flags = OrigFlags;
-          if (PartIdx == 0) {
+          if (Part == 0) {
             Flags.setSplit();
           } else {
             Flags.setOrigAlign(Align(1));
-            if (PartIdx == NumParts - 1)
+            if (Part == NumParts - 1)
               Flags.setSplitEnd();
           }
-          Args[i].Regs.push_back(Unmerge.getReg(PartIdx));
+          Args[i].Regs.push_back(Reg);
           Args[i].Flags.push_back(Flags);
-          if (Handler.assignArg(i + PartIdx, NewVT, NewVT, CCValAssign::Full,
-                                Args[i], Args[i].Flags[PartIdx], CCInfo))
+          if (Handler.assignArg(i + Part, NewVT, NewVT, CCValAssign::Full,
+                                Args[i], Args[i].Flags[Part], CCInfo)) {
+            // Still couldn't assign this smaller part type for some reason.
             return false;
+          }
         }
+      }
+    } else {
+      // Handling an outgoing arg that might need to be split.
+      if (NumParts < 2)
+        return false; // Don't know how to deal with this type combination.
+
+      // This type is passed via multiple registers in the calling convention.
+      // We need to extract the individual parts.
+      Register LargeReg = Args[i].Regs[0];
+      LLT SmallTy = LLT::scalar(NewVT.getSizeInBits());
+      auto Unmerge = MIRBuilder.buildUnmerge(SmallTy, LargeReg);
+      assert(Unmerge->getNumOperands() == NumParts + 1);
+      ISD::ArgFlagsTy OrigFlags = Args[i].Flags[0];
+      // We're going to replace the regs and flags with the split ones.
+      Args[i].Regs.clear();
+      Args[i].Flags.clear();
+      for (unsigned PartIdx = 0; PartIdx < NumParts; ++PartIdx) {
+        ISD::ArgFlagsTy Flags = OrigFlags;
+        if (PartIdx == 0) {
+          Flags.setSplit();
+        } else {
+          Flags.setOrigAlign(Align(1));
+          if (PartIdx == NumParts - 1)
+            Flags.setSplitEnd();
+        }
+        Args[i].Regs.push_back(Unmerge.getReg(PartIdx));
+        Args[i].Flags.push_back(Flags);
+        if (Handler.assignArg(i + PartIdx, NewVT, NewVT, CCValAssign::Full,
+                              Args[i], Args[i].Flags[PartIdx], CCInfo))
+          return false;
       }
     }
   }

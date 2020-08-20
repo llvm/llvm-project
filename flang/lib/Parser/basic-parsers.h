@@ -636,14 +636,14 @@ private:
 
 template <typename RESULT, typename... PARSER>
 inline constexpr auto applyFunction(
-    ApplicableFunctionPointer<RESULT, PARSER...> f, const PARSER &... parser) {
+    ApplicableFunctionPointer<RESULT, PARSER...> f, const PARSER &...parser) {
   return ApplyFunction<ApplicableFunctionPointer, RESULT, PARSER...>{
       f, parser...};
 }
 
 template <typename RESULT, typename... PARSER>
 inline /* not constexpr */ auto applyLambda(
-    ApplicableFunctionObject<RESULT, PARSER...> f, const PARSER &... parser) {
+    ApplicableFunctionObject<RESULT, PARSER...> f, const PARSER &...parser) {
   return ApplyFunction<ApplicableFunctionObject, RESULT, PARSER...>{
       f, parser...};
 }

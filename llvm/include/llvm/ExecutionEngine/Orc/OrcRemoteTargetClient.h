@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/OrcRemoteTargetRPCAPI.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
@@ -329,6 +330,220 @@ public:
     std::vector<EHFrame> RegisteredEHFrames;
   };
 
+  class RPCMMAlloc : public jitlink::JITLinkMemoryManager::Allocation {
+    using AllocationMap = DenseMap<unsigned, sys::MemoryBlock>;
+    using FinalizeContinuation =
+        jitlink::JITLinkMemoryManager::Allocation::FinalizeContinuation;
+    using ProtectionFlags = sys::Memory::ProtectionFlags;
+    using SegmentsRequestMap =
+        DenseMap<unsigned, jitlink::JITLinkMemoryManager::SegmentRequest>;
+
+    RPCMMAlloc(OrcRemoteTargetClient &Client, ResourceIdMgr::ResourceId Id)
+        : Client(Client), Id(Id) {}
+
+  public:
+    static Expected<std::unique_ptr<RPCMMAlloc>>
+    Create(OrcRemoteTargetClient &Client, ResourceIdMgr::ResourceId Id,
+           const SegmentsRequestMap &Request) {
+      auto *MM = new RPCMMAlloc(Client, Id);
+
+      if (Error Err = MM->allocateHostBlocks(Request))
+        return std::move(Err);
+
+      if (Error Err = MM->allocateTargetBlocks())
+        return std::move(Err);
+
+      return std::unique_ptr<RPCMMAlloc>(MM);
+    }
+
+    MutableArrayRef<char> getWorkingMemory(ProtectionFlags Seg) override {
+      assert(HostSegBlocks.count(Seg) && "No allocation for segment");
+      return {static_cast<char *>(HostSegBlocks[Seg].base()),
+              HostSegBlocks[Seg].allocatedSize()};
+    }
+
+    JITTargetAddress getTargetMemory(ProtectionFlags Seg) override {
+      assert(TargetSegBlocks.count(Seg) && "No allocation for segment");
+      return pointerToJITTargetAddress(TargetSegBlocks[Seg].base());
+    }
+
+    void finalizeAsync(FinalizeContinuation OnFinalize) override {
+      // Host allocations (working memory) remain ReadWrite.
+      OnFinalize(copyAndProtect());
+    }
+
+    Error deallocate() override {
+      // TODO: Cannot release target allocation. RPCAPI has no function
+      // symmetric to reserveMem(). Add RPC call like freeMem()?
+      return errorCodeToError(sys::Memory::releaseMappedMemory(HostAllocation));
+    }
+
+  private:
+    OrcRemoteTargetClient &Client;
+    ResourceIdMgr::ResourceId Id;
+    AllocationMap HostSegBlocks;
+    AllocationMap TargetSegBlocks;
+    JITTargetAddress TargetSegmentAddr;
+    sys::MemoryBlock HostAllocation;
+
+    Error allocateHostBlocks(const SegmentsRequestMap &Request) {
+      unsigned TargetPageSize = Client.getPageSize();
+
+      if (!isPowerOf2_64(static_cast<uint64_t>(TargetPageSize)))
+        return make_error<StringError>("Host page size is not a power of 2",
+                                       inconvertibleErrorCode());
+
+      auto TotalSize = calcTotalAllocSize(Request, TargetPageSize);
+      if (!TotalSize)
+        return TotalSize.takeError();
+
+      // Allocate one slab to cover all the segments.
+      const sys::Memory::ProtectionFlags ReadWrite =
+          static_cast<sys::Memory::ProtectionFlags>(sys::Memory::MF_READ |
+                                                    sys::Memory::MF_WRITE);
+      std::error_code EC;
+      HostAllocation =
+          sys::Memory::allocateMappedMemory(*TotalSize, nullptr, ReadWrite, EC);
+      if (EC)
+        return errorCodeToError(EC);
+
+      char *SlabAddr = static_cast<char *>(HostAllocation.base());
+#ifndef NDEBUG
+      char *SlabAddrEnd = SlabAddr + HostAllocation.allocatedSize();
+#endif
+
+      // Allocate segment memory from the slab.
+      for (auto &KV : Request) {
+        const auto &Seg = KV.second;
+
+        uint64_t SegmentSize = Seg.getContentSize() + Seg.getZeroFillSize();
+        uint64_t AlignedSegmentSize = alignTo(SegmentSize, TargetPageSize);
+
+        // Zero out zero-fill memory.
+        char *ZeroFillBegin = SlabAddr + Seg.getContentSize();
+        memset(ZeroFillBegin, 0, Seg.getZeroFillSize());
+
+        // Record the block for this segment.
+        HostSegBlocks[KV.first] =
+            sys::MemoryBlock(SlabAddr, AlignedSegmentSize);
+
+        SlabAddr += AlignedSegmentSize;
+        assert(SlabAddr <= SlabAddrEnd && "Out of range");
+      }
+
+      return Error::success();
+    }
+
+    Error allocateTargetBlocks() {
+      // Reserve memory for all blocks on the target. We need as much space on
+      // the target as we allocated on the host.
+      TargetSegmentAddr = Client.reserveMem(Id, HostAllocation.allocatedSize(),
+                                            Client.getPageSize());
+      if (!TargetSegmentAddr)
+        return make_error<StringError>("Failed to reserve memory on the target",
+                                       inconvertibleErrorCode());
+
+      // Map memory blocks into the allocation, that match the host allocation.
+      JITTargetAddress TargetAllocAddr = TargetSegmentAddr;
+      for (const auto &KV : HostSegBlocks) {
+        size_t TargetAllocSize = KV.second.allocatedSize();
+
+        TargetSegBlocks[KV.first] =
+            sys::MemoryBlock(jitTargetAddressToPointer<void *>(TargetAllocAddr),
+                             TargetAllocSize);
+
+        TargetAllocAddr += TargetAllocSize;
+        assert(TargetAllocAddr - TargetSegmentAddr <=
+                   HostAllocation.allocatedSize() &&
+               "Out of range on target");
+      }
+
+      return Error::success();
+    }
+
+    Error copyAndProtect() {
+      unsigned Permissions = 0u;
+
+      // Copy segments one by one.
+      for (auto &KV : TargetSegBlocks) {
+        Permissions |= KV.first;
+
+        const sys::MemoryBlock &TargetBlock = KV.second;
+        const sys::MemoryBlock &HostBlock = HostSegBlocks.lookup(KV.first);
+
+        size_t TargetAllocSize = TargetBlock.allocatedSize();
+        auto TargetAllocAddr = pointerToJITTargetAddress(TargetBlock.base());
+        auto *HostAllocBegin = static_cast<const char *>(HostBlock.base());
+
+        bool CopyErr =
+            Client.writeMem(TargetAllocAddr, HostAllocBegin, TargetAllocSize);
+        if (CopyErr)
+          return createStringError(inconvertibleErrorCode(),
+                                   "Failed to copy %d segment to the target",
+                                   KV.first);
+      }
+
+      // Set permission flags for all segments at once.
+      bool ProtectErr =
+          Client.setProtections(Id, TargetSegmentAddr, Permissions);
+      if (ProtectErr)
+        return createStringError(inconvertibleErrorCode(),
+                                 "Failed to apply permissions for %d segment "
+                                 "on the target",
+                                 Permissions);
+      return Error::success();
+    }
+
+    static Expected<size_t>
+    calcTotalAllocSize(const SegmentsRequestMap &Request,
+                       unsigned TargetPageSize) {
+      size_t TotalSize = 0;
+      for (const auto &KV : Request) {
+        const auto &Seg = KV.second;
+
+        if (Seg.getAlignment() > TargetPageSize)
+          return make_error<StringError>("Cannot request alignment higher than "
+                                         "page alignment on target",
+                                         inconvertibleErrorCode());
+
+        TotalSize = alignTo(TotalSize, TargetPageSize);
+        TotalSize += Seg.getContentSize();
+        TotalSize += Seg.getZeroFillSize();
+      }
+
+      return TotalSize;
+    }
+  };
+
+  class RemoteJITLinkMemoryManager : public jitlink::JITLinkMemoryManager {
+  public:
+    RemoteJITLinkMemoryManager(OrcRemoteTargetClient &Client,
+                               ResourceIdMgr::ResourceId Id)
+        : Client(Client), Id(Id) {}
+
+    RemoteJITLinkMemoryManager(const RemoteJITLinkMemoryManager &) = delete;
+    RemoteJITLinkMemoryManager(RemoteJITLinkMemoryManager &&) = default;
+
+    RemoteJITLinkMemoryManager &
+    operator=(const RemoteJITLinkMemoryManager &) = delete;
+    RemoteJITLinkMemoryManager &
+    operator=(RemoteJITLinkMemoryManager &&) = delete;
+
+    ~RemoteJITLinkMemoryManager() {
+      Client.destroyRemoteAllocator(Id);
+      LLVM_DEBUG(dbgs() << "Destroyed remote allocator " << Id << "\n");
+    }
+
+    Expected<std::unique_ptr<Allocation>>
+    allocate(const SegmentsRequestMap &Request) override {
+      return RPCMMAlloc::Create(Client, Id, Request);
+    }
+
+  private:
+    OrcRemoteTargetClient &Client;
+    ResourceIdMgr::ResourceId Id;
+  };
+
   /// Remote indirect stubs manager.
   class RemoteIndirectStubsManager : public IndirectStubsManager {
   public:
@@ -504,6 +719,14 @@ public:
     return callB<exec::CallIntVoid>(Addr);
   }
 
+  /// Call the int(int) function at the given address in the target and return
+  /// its result.
+  Expected<int> callIntInt(JITTargetAddress Addr, int Arg) {
+    LLVM_DEBUG(dbgs() << "Calling int(*)(int) " << format("0x%016" PRIx64, Addr)
+                      << "\n");
+    return callB<exec::CallIntInt>(Addr, Arg);
+  }
+
   /// Call the int(int, char*[]) function at the given address in the target and
   /// return its result.
   Expected<int> callMain(JITTargetAddress Addr,
@@ -530,6 +753,18 @@ public:
       return std::move(Err);
     return std::unique_ptr<RemoteRTDyldMemoryManager>(
         new RemoteRTDyldMemoryManager(*this, Id));
+  }
+
+  /// Create a JITLink-compatible memory manager which will allocate working
+  /// memory on the host and target memory on the remote target.
+  Expected<std::unique_ptr<RemoteJITLinkMemoryManager>>
+  createRemoteJITLinkMemoryManager() {
+    auto Id = AllocatorIds.getNext();
+    if (auto Err = callB<mem::CreateRemoteAllocator>(Id))
+      return std::move(Err);
+    LLVM_DEBUG(dbgs() << "Created remote allocator " << Id << "\n");
+    return std::unique_ptr<RemoteJITLinkMemoryManager>(
+        new RemoteJITLinkMemoryManager(*this, Id));
   }
 
   /// Create an RCIndirectStubsManager that will allocate stubs on the remote

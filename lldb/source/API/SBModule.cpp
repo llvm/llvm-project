@@ -67,8 +67,8 @@ SBModule::SBModule(lldb::SBProcess &process, lldb::addr_t header_addr)
 }
 
 const SBModule &SBModule::operator=(const SBModule &rhs) {
-  LLDB_RECORD_METHOD(const lldb::SBModule &,
-                     SBModule, operator=,(const lldb::SBModule &), rhs);
+  LLDB_RECORD_METHOD(const lldb::SBModule &, SBModule, operator=,
+                     (const lldb::SBModule &), rhs);
 
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
@@ -107,7 +107,6 @@ SBFileSpec SBModule::GetFileSpec() const {
 lldb::SBFileSpec SBModule::GetPlatformFileSpec() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBFileSpec, SBModule,
                                    GetPlatformFileSpec);
-
 
   SBFileSpec file_spec;
   ModuleSP module_sp(GetSP());
@@ -187,7 +186,7 @@ const char *SBModule::GetUUIDString() const {
 }
 
 bool SBModule::operator==(const SBModule &rhs) const {
-  LLDB_RECORD_METHOD_CONST(bool, SBModule, operator==,(const lldb::SBModule &),
+  LLDB_RECORD_METHOD_CONST(bool, SBModule, operator==, (const lldb::SBModule &),
                            rhs);
 
   if (m_opaque_sp)
@@ -196,7 +195,7 @@ bool SBModule::operator==(const SBModule &rhs) const {
 }
 
 bool SBModule::operator!=(const SBModule &rhs) const {
-  LLDB_RECORD_METHOD_CONST(bool, SBModule, operator!=,(const lldb::SBModule &),
+  LLDB_RECORD_METHOD_CONST(bool, SBModule, operator!=, (const lldb::SBModule &),
                            rhs);
 
   if (m_opaque_sp)
@@ -625,7 +624,7 @@ uint32_t SBModule::GetVersion(uint32_t *versions, uint32_t num_versions) {
     ++result;
   if (version.getMinor())
     ++result;
-  if(version.getSubminor())
+  if (version.getSubminor())
     ++result;
 
   if (!versions)
@@ -690,17 +689,24 @@ uint32_t SBModule::GetNumberAllocatedModules() {
   return Module::GetNumberAllocatedModules();
 }
 
+void SBModule::GarbageCollectAllocatedModules() {
+  LLDB_RECORD_STATIC_METHOD_NO_ARGS(void, SBModule,
+                                    GarbageCollectAllocatedModules);
+
+  const bool mandatory = false;
+  ModuleList::RemoveOrphanSharedModules(mandatory);
+}
+
 namespace lldb_private {
 namespace repro {
 
-template <>
-void RegisterMethods<SBModule>(Registry &R) {
+template <> void RegisterMethods<SBModule>(Registry &R) {
   LLDB_REGISTER_CONSTRUCTOR(SBModule, ());
   LLDB_REGISTER_CONSTRUCTOR(SBModule, (const lldb::SBModuleSpec &));
   LLDB_REGISTER_CONSTRUCTOR(SBModule, (const lldb::SBModule &));
   LLDB_REGISTER_CONSTRUCTOR(SBModule, (lldb::SBProcess &, lldb::addr_t));
-  LLDB_REGISTER_METHOD(const lldb::SBModule &,
-                       SBModule, operator=,(const lldb::SBModule &));
+  LLDB_REGISTER_METHOD(const lldb::SBModule &, SBModule, operator=,
+                       (const lldb::SBModule &));
   LLDB_REGISTER_METHOD_CONST(bool, SBModule, IsValid, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBModule, operator bool, ());
   LLDB_REGISTER_METHOD(void, SBModule, Clear, ());
@@ -714,10 +720,10 @@ void RegisterMethods<SBModule>(Registry &R) {
   LLDB_REGISTER_METHOD(bool, SBModule, SetRemoteInstallFileSpec,
                        (lldb::SBFileSpec &));
   LLDB_REGISTER_METHOD_CONST(const char *, SBModule, GetUUIDString, ());
-  LLDB_REGISTER_METHOD_CONST(bool,
-                             SBModule, operator==,(const lldb::SBModule &));
-  LLDB_REGISTER_METHOD_CONST(bool,
-                             SBModule, operator!=,(const lldb::SBModule &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBModule, operator==,
+                             (const lldb::SBModule &));
+  LLDB_REGISTER_METHOD_CONST(bool, SBModule, operator!=,
+                             (const lldb::SBModule &));
   LLDB_REGISTER_METHOD(lldb::SBAddress, SBModule, ResolveFileAddress,
                        (lldb::addr_t));
   LLDB_REGISTER_METHOD(lldb::SBSymbolContext, SBModule,
@@ -736,8 +742,7 @@ void RegisterMethods<SBModule>(Registry &R) {
   LLDB_REGISTER_METHOD(lldb::SBSymbolContextList, SBModule, FindSymbols,
                        (const char *, lldb::SymbolType));
   LLDB_REGISTER_METHOD(size_t, SBModule, GetNumSections, ());
-  LLDB_REGISTER_METHOD(lldb::SBSection, SBModule, GetSectionAtIndex,
-                       (size_t));
+  LLDB_REGISTER_METHOD(lldb::SBSection, SBModule, GetSectionAtIndex, (size_t));
   LLDB_REGISTER_METHOD(lldb::SBSymbolContextList, SBModule, FindFunctions,
                        (const char *, uint32_t));
   LLDB_REGISTER_METHOD(lldb::SBValueList, SBModule, FindGlobalVariables,
@@ -745,28 +750,25 @@ void RegisterMethods<SBModule>(Registry &R) {
   LLDB_REGISTER_METHOD(lldb::SBValue, SBModule, FindFirstGlobalVariable,
                        (lldb::SBTarget &, const char *));
   LLDB_REGISTER_METHOD(lldb::SBType, SBModule, FindFirstType, (const char *));
-  LLDB_REGISTER_METHOD(lldb::SBType, SBModule, GetBasicType,
-                       (lldb::BasicType));
+  LLDB_REGISTER_METHOD(lldb::SBType, SBModule, GetBasicType, (lldb::BasicType));
   LLDB_REGISTER_METHOD(lldb::SBTypeList, SBModule, FindTypes, (const char *));
-  LLDB_REGISTER_METHOD(lldb::SBType, SBModule, GetTypeByID,
-                       (lldb::user_id_t));
+  LLDB_REGISTER_METHOD(lldb::SBType, SBModule, GetTypeByID, (lldb::user_id_t));
   LLDB_REGISTER_METHOD(lldb::SBTypeList, SBModule, GetTypes, (uint32_t));
-  LLDB_REGISTER_METHOD(lldb::SBSection, SBModule, FindSection,
-                       (const char *));
+  LLDB_REGISTER_METHOD(lldb::SBSection, SBModule, FindSection, (const char *));
   LLDB_REGISTER_METHOD(lldb::ByteOrder, SBModule, GetByteOrder, ());
   LLDB_REGISTER_METHOD(const char *, SBModule, GetTriple, ());
   LLDB_REGISTER_METHOD(uint32_t, SBModule, GetAddressByteSize, ());
-  LLDB_REGISTER_METHOD(uint32_t, SBModule, GetVersion,
-                       (uint32_t *, uint32_t));
-  LLDB_REGISTER_METHOD_CONST(lldb::SBFileSpec, SBModule, GetSymbolFileSpec,
-                             ());
+  LLDB_REGISTER_METHOD(uint32_t, SBModule, GetVersion, (uint32_t *, uint32_t));
+  LLDB_REGISTER_METHOD_CONST(lldb::SBFileSpec, SBModule, GetSymbolFileSpec, ());
   LLDB_REGISTER_METHOD_CONST(lldb::SBAddress, SBModule,
                              GetObjectFileHeaderAddress, ());
   LLDB_REGISTER_METHOD_CONST(lldb::SBAddress, SBModule,
                              GetObjectFileEntryPointAddress, ());
   LLDB_REGISTER_STATIC_METHOD(uint32_t, SBModule, GetNumberAllocatedModules,
                               ());
+  LLDB_REGISTER_STATIC_METHOD(void, SBModule, GarbageCollectAllocatedModules,
+                              ());
 }
 
-}
-}
+} // namespace repro
+} // namespace lldb_private

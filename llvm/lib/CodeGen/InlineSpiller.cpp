@@ -810,6 +810,14 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   bool WasCopy = MI->isCopy();
   Register ImpReg;
 
+  // TII::foldMemoryOperand will do what we need here for statepoint
+  // (fold load into use and remove corresponding def). We will replace
+  // uses of removed def with loads (spillAroundUses).
+  // For that to work we need to untie def and use to pass it through
+  // foldMemoryOperand and signal foldPatchpoint that it is allowed to
+  // fold them.
+  bool UntieRegs = MI->getOpcode() == TargetOpcode::STATEPOINT;
+
   // Spill subregs if the target allows it.
   // We always want to spill subregs for stackmap/patchpoint pseudos.
   bool SpillSubRegs = TII.isSubregFoldable() ||
@@ -828,6 +836,9 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
       ImpReg = MO.getReg();
       continue;
     }
+
+    if (UntieRegs && MO.isTied())
+      MI->untieRegOperand(Idx);
 
     if (!SpillSubRegs && MO.getSubReg())
       return false;

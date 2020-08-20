@@ -20,4 +20,4 @@ define void @foo() {
 entry:
   ret void
 }
-; CHECK: call void @__sanitizer_cov_bool_flag_init(i1* bitcast (i1** @__start___sancov_bools to i1*), i1* bitcast (i1** @__stop___sancov_bools to i1*))
+; CHECK: call void @__sanitizer_cov_bool_flag_init(i1* @__start___sancov_bools, i1* @__stop___sancov_bools)

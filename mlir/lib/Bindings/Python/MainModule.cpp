@@ -10,18 +10,16 @@
 
 #include <pybind11/pybind11.h>
 
-#include "mlir/IR/MLIRContext.h"
+#include "IRModules.h"
 
+namespace py = pybind11;
 using namespace mlir;
+using namespace mlir::python;
 
 PYBIND11_MODULE(_mlir, m) {
   m.doc() = "MLIR Python Native Extension";
 
-  m.def("get_test_value", []() {
-    // This is just calling a method on the MLIRContext as a smoketest
-    // for linkage.
-    MLIRContext context;
-    return std::make_tuple(std::string("From the native module"),
-                           context.isMultithreadingEnabled());
-  });
+  // Define and populate IR submodule.
+  auto irModule = m.def_submodule("ir", "MLIR IR Bindings");
+  populateIRSubmodule(irModule);
 }

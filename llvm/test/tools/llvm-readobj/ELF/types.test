@@ -1,5 +1,5 @@
 # Show that llvm-readobj can handle all standard ELF types.
-# RUN: yaml2obj %s --docnum=1 -o %t.none
+# RUN: yaml2obj %s -DTYPE=ET_NONE -o %t.none
 # RUN: llvm-readobj --file-headers %t.none | FileCheck %s --check-prefix=LLVM-NONE
 # RUN: llvm-readelf --file-headers %t.none | FileCheck %s --check-prefix=GNU-NONE
 
@@ -8,109 +8,58 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_NONE
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  [[TYPE]]
 
-# RUN: yaml2obj %s --docnum=2 -o %t.rel
+# RUN: yaml2obj %s -DTYPE=ET_REL -o %t.rel
 # RUN: llvm-readobj --file-headers %t.rel | FileCheck %s --check-prefix=LLVM-REL
 # RUN: llvm-readelf --file-headers %t.rel | FileCheck %s --check-prefix=GNU-REL
 
 # LLVM-REL: Type: Relocatable (0x1)
 # GNU-REL:  Type: REL (Relocatable file)
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-
-
-# RUN: yaml2obj %s --docnum=3 -o %t.exec
+# RUN: yaml2obj %s -DTYPE=ET_EXEC -o %t.exec
 # RUN: llvm-readobj --file-headers %t.exec | FileCheck %s --check-prefix=LLVM-EXEC
 # RUN: llvm-readelf --file-headers %t.exec | FileCheck %s --check-prefix=GNU-EXEC
 
 # LLVM-EXEC: Type: Executable (0x2)
 # GNU-EXEC:  Type: EXEC (Executable file)
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
-
-# RUN: yaml2obj %s --docnum=4 -o %t.so
+# RUN: yaml2obj %s -DTYPE=ET_DYN -o %t.so
 # RUN: llvm-readobj --file-headers %t.so | FileCheck %s --check-prefix=LLVM-SO
 # RUN: llvm-readelf --file-headers %t.so | FileCheck %s --check-prefix=GNU-SO
 
 # LLVM-SO: Type: SharedObject (0x3)
 # GNU-SO:  Type: DYN (Shared object file)
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
-
-# RUN: yaml2obj %s --docnum=5 -o %t.core
+# RUN: yaml2obj %s -DTYPE=ET_CORE -o %t.core
 # RUN: llvm-readobj --file-headers %t.core | FileCheck %s --check-prefix=LLVM-CORE
 # RUN: llvm-readelf --file-headers %t.core | FileCheck %s --check-prefix=GNU-CORE
 
 # LLVM-CORE: Type: Core (0x4)
 # GNU-CORE:  Type: CORE (Core file)
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_CORE
-  Machine: EM_X86_64
-
 # Show that llvm-readobj can handle an unknown ELF type.
-# RUN: yaml2obj %s --docnum=6 -o %t.unknown
+# RUN: yaml2obj %s -DTYPE=0x42 -o %t.unknown
 # RUN: llvm-readobj --file-headers %t.unknown | FileCheck %s --check-prefix=LLVM-UNKNOWN
 # RUN: llvm-readelf --file-headers %t.unknown | FileCheck %s --check-prefix=GNU-UNKNOWN
 
 # LLVM-UNKNOWN: Type: 0x42
 # GNU-UNKNOWN:  Type: 42
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    0x42
-  Machine: EM_X86_64
-
 # Show that llvm-readobj can handle an unknown OS-specific ELF type.
-# RUN: yaml2obj %s --docnum=7 -o %t.os
+# RUN: yaml2obj %s -DTYPE=0xfe00 -o %t.os
 # RUN: llvm-readobj --file-headers %t.os | FileCheck %s --check-prefix=LLVM-OS
 # RUN: llvm-readelf --file-headers %t.os | FileCheck %s --check-prefix=GNU-OS
 
 # LLVM-OS: Type: 0xFE00
 # GNU-OS:  Type: fe00
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    0xfe00
-  Machine: EM_X86_64
-
 # Show that llvm-readobj can handle an unknown machine-specific ELF type.
-# RUN: yaml2obj %s --docnum=8 -o %t.proc
+# RUN: yaml2obj %s -DTYPE=0xff00 -o %t.proc
 # RUN: llvm-readobj --file-headers %t.proc | FileCheck %s --check-prefix=LLVM-PROC
 # RUN: llvm-readelf --file-headers %t.proc | FileCheck %s --check-prefix=GNU-PROC
 
 # LLVM-PROC: Type: 0xFF00
 # GNU-PROC:  Type: ff00
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    0xff00
-  Machine: EM_X86_64

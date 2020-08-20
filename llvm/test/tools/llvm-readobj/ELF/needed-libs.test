@@ -21,10 +21,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:  .dynstr
     Type:  SHT_STRTAB
@@ -46,7 +45,7 @@ Sections:
       - Tag:   DT_NEEDED
         Value: 0x1111111
       - Tag:   DT_STRSZ
-        Value: 0xD
+        Value: [[SIZE=0xD]]
       - Tag:   DT_NULL
         Value: 0x0
 ProgramHeaders:
@@ -74,10 +73,9 @@ ProgramHeaders:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:  .dynstr
     Type:  SHT_STRTAB

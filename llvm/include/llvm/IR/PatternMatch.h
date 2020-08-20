@@ -1442,6 +1442,12 @@ inline CastClass_match<OpTy, Instruction::PtrToInt> m_PtrToInt(const OpTy &Op) {
   return CastClass_match<OpTy, Instruction::PtrToInt>(Op);
 }
 
+/// Matches IntToPtr.
+template <typename OpTy>
+inline CastClass_match<OpTy, Instruction::IntToPtr> m_IntToPtr(const OpTy &Op) {
+  return CastClass_match<OpTy, Instruction::IntToPtr>(Op);
+}
+
 /// Matches Trunc.
 template <typename OpTy>
 inline CastClass_match<OpTy, Instruction::Trunc> m_Trunc(const OpTy &Op) {
@@ -1590,6 +1596,17 @@ struct MaxMin_match {
   MaxMin_match(const LHS_t &LHS, const RHS_t &RHS) : L(LHS), R(RHS) {}
 
   template <typename OpTy> bool match(OpTy *V) {
+    if (auto *II = dyn_cast<IntrinsicInst>(V)) {
+      Intrinsic::ID IID = II->getIntrinsicID();
+      if ((IID == Intrinsic::smax && Pred_t::match(ICmpInst::ICMP_SGT)) ||
+          (IID == Intrinsic::smin && Pred_t::match(ICmpInst::ICMP_SLT)) ||
+          (IID == Intrinsic::umax && Pred_t::match(ICmpInst::ICMP_UGT)) ||
+          (IID == Intrinsic::umin && Pred_t::match(ICmpInst::ICMP_ULT))) {
+        Value *LHS = II->getOperand(0), *RHS = II->getOperand(1);
+        return (L.match(LHS) && R.match(RHS)) ||
+               (Commutable && L.match(RHS) && R.match(LHS));
+      }
+    }
     // Look for "(x pred y) ? x : y" or "(x pred y) ? y : x".
     auto *SI = dyn_cast<SelectInst>(V);
     if (!SI)
@@ -1695,6 +1712,17 @@ template <typename LHS, typename RHS>
 inline MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty> m_UMin(const LHS &L,
                                                              const RHS &R) {
   return MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline match_combine_or<
+    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty>,
+                     MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty>>,
+    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty>,
+                     MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty>>>
+m_MaxOrMin(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_CombineOr(m_SMax(L, R), m_SMin(L, R)),
+                     m_CombineOr(m_UMax(L, R), m_UMin(L, R)));
 }
 
 /// Match an 'ordered' floating point maximum function.
@@ -2048,6 +2076,15 @@ m_Neg(const ValTy &V) {
   return m_Sub(m_ZeroInt(), V);
 }
 
+/// Matches a 'Neg' as 'sub nsw 0, V'.
+template <typename ValTy>
+inline OverflowingBinaryOp_match<cst_pred_ty<is_zero_int>, ValTy,
+                                 Instruction::Sub,
+                                 OverflowingBinaryOperator::NoSignedWrap>
+m_NSWNeg(const ValTy &V) {
+  return m_NSWSub(m_ZeroInt(), V);
+}
+
 /// Matches a 'Not' as 'xor V, -1' or 'xor -1, V'.
 template <typename ValTy>
 inline BinaryOp_match<ValTy, cst_pred_ty<is_all_ones>, Instruction::Xor, true>
@@ -2078,6 +2115,17 @@ template <typename LHS, typename RHS>
 inline MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty, true>
 m_c_UMax(const LHS &L, const RHS &R) {
   return MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty, true>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline match_combine_or<
+    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty, true>,
+                     MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty, true>>,
+    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty, true>,
+                     MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty, true>>>
+m_c_MaxOrMin(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_CombineOr(m_c_SMax(L, R), m_c_SMin(L, R)),
+                     m_CombineOr(m_c_UMax(L, R), m_c_UMin(L, R)));
 }
 
 /// Matches FAdd with LHS and RHS in either order.

@@ -3115,6 +3115,16 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
                        Keywords.kw_lock))
         return Style.SpaceBeforeParens == FormatStyle::SBPO_ControlStatements ||
                spaceRequiredBeforeParens(Right);
+
+    // space between method modifier and opening parenthesis of a tuple return
+    // type
+    if (Left.isOneOf(tok::kw_public, tok::kw_private, tok::kw_protected,
+                     tok::kw_virtual, tok::kw_extern, tok::kw_static,
+                     Keywords.kw_internal, Keywords.kw_abstract,
+                     Keywords.kw_sealed, Keywords.kw_override,
+                     Keywords.kw_async, Keywords.kw_unsafe) &&
+        Right.is(tok::l_paren))
+      return true;
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
     if (Left.is(TT_JsFatArrow))
       return true;

@@ -80,7 +80,7 @@ public:
 #define ABSTRACT_SVAL_WITH_KIND(Id, Parent) Id ## Kind,
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.def"
   };
-  enum { BaseBits = 2, BaseMask = 0x3 };
+  enum { BaseBits = 2, BaseMask = 0b11 };
 
 protected:
   const void *Data = nullptr;
@@ -116,7 +116,7 @@ public:
 
   unsigned getRawKind() const { return Kind; }
   BaseKind getBaseKind() const { return (BaseKind) (Kind & BaseMask); }
-  unsigned getSubKind() const { return (Kind & ~BaseMask) >> BaseBits; }
+  unsigned getSubKind() const { return Kind >> BaseBits; }
 
   // This method is required for using SVal in a FoldingSetNode.  It
   // extracts a unique signature for this SVal object.
@@ -181,12 +181,6 @@ public:
   /// \param IncludeBaseRegions The boolean that controls whether the search
   /// should continue to the base regions if the region is not symbolic.
   SymbolRef getAsSymbol(bool IncludeBaseRegions = false) const;
-
-  /// getAsSymbolicExpression - If this Sval wraps a symbolic expression then
-  ///  return that expression.  Otherwise return NULL.
-  const SymExpr *getAsSymbolicExpression() const;
-
-  const SymExpr *getAsSymExpr() const;
 
   const MemRegion *getAsRegion() const;
 
@@ -526,7 +520,7 @@ class PointerToMember : public NonLoc {
 
 public:
   using PTMDataType =
-      llvm::PointerUnion<const DeclaratorDecl *, const PointerToMemberData *>;
+      llvm::PointerUnion<const NamedDecl *, const PointerToMemberData *>;
 
   const PTMDataType getPTMData() const {
     return PTMDataType::getFromOpaqueValue(const_cast<void *>(Data));
@@ -534,7 +528,7 @@ public:
 
   bool isNullMemberPointer() const;
 
-  const DeclaratorDecl *getDecl() const;
+  const NamedDecl *getDecl() const;
 
   template<typename AdjustedDecl>
   const AdjustedDecl *getDeclAs() const {

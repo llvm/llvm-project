@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-amdgpu-aa=0 -mattr=+flat-for-global -denormal-fp-math=preserve-sign -amdgpu-enable-global-sgpr-addr -enable-misched=false < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX89 %s
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-amdgpu-aa=0 -mattr=+flat-for-global -denormal-fp-math=preserve-sign -enable-misched=false < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX89 %s
 
 ; GCN-LABEL: {{^}}v_insertelement_v2i16_dynamic_vgpr:
 
@@ -15,7 +15,7 @@
 ; CI-DAG: v_lshl_b32_e32 [[MASK:v[0-9]+]], 0xffff, [[SCALED_IDX]]
 
 ; GCN: v_bfi_b32 [[RESULT:v[0-9]+]], [[MASK]], [[K]], [[VEC]]
-; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GCN: {{flat|global}}_store_dword v{{.+}}, [[RESULT]]
 define amdgpu_kernel void @v_insertelement_v2i16_dynamic_vgpr(<2 x i16> addrspace(1)* %out, <2 x i16> addrspace(1)* %in, i32 addrspace(1)* %idx.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64

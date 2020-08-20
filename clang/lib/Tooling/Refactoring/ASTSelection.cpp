@@ -218,7 +218,7 @@ static void dump(const SelectedASTNode &Node, llvm::raw_ostream &OS,
   if (const Decl *D = Node.Node.get<Decl>()) {
     OS << D->getDeclKindName() << "Decl";
     if (const auto *ND = dyn_cast<NamedDecl>(D))
-      OS << " \"" << ND->getNameAsString() << '"';
+      OS << " \"" << ND->getDeclName() << '"';
   } else if (const Stmt *S = Node.Node.get<Stmt>()) {
     OS << S->getStmtClassName();
   }

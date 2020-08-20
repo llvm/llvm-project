@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
@@ -112,8 +113,7 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
 // SPIR-V Dialect
 //===----------------------------------------------------------------------===//
 
-SPIRVDialect::SPIRVDialect(MLIRContext *context)
-    : Dialect(getDialectNamespace(), context) {
+void SPIRVDialect::initialize() {
   addTypes<ArrayType, CooperativeMatrixNVType, ImageType, MatrixType,
            PointerType, RuntimeArrayType, StructType>();
 
@@ -728,31 +728,11 @@ static void print(MatrixType type, DialectAsmPrinter &os) {
 }
 
 void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
-  switch (type.getKind()) {
-  case TypeKind::Array:
-    print(type.cast<ArrayType>(), os);
-    return;
-  case TypeKind::CooperativeMatrix:
-    print(type.cast<CooperativeMatrixNVType>(), os);
-    return;
-  case TypeKind::Pointer:
-    print(type.cast<PointerType>(), os);
-    return;
-  case TypeKind::RuntimeArray:
-    print(type.cast<RuntimeArrayType>(), os);
-    return;
-  case TypeKind::Image:
-    print(type.cast<ImageType>(), os);
-    return;
-  case TypeKind::Struct:
-    print(type.cast<StructType>(), os);
-    return;
-  case TypeKind::Matrix:
-    print(type.cast<MatrixType>(), os);
-    return;
-  default:
-    llvm_unreachable("unhandled SPIR-V type");
-  }
+  TypeSwitch<Type>(type)
+      .Case<ArrayType, CooperativeMatrixNVType, PointerType, RuntimeArrayType,
+            ImageType, StructType, MatrixType>(
+          [&](auto type) { print(type, os); })
+      .Default([](Type) { llvm_unreachable("unhandled SPIR-V type"); });
 }
 
 //===----------------------------------------------------------------------===//

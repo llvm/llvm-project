@@ -35,7 +35,7 @@ define internal void @bar(%p_t %p)  {
 ; CHECK: Function Attrs: nosync nounwind readnone willreturn
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: (i16* nocapture nofree readnone [[P:%.*]])
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i16* [[P]], metadata !3, metadata !DIExpression()) #3, !dbg !5
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i16* [[P]], [[META3:metadata !.*]], metadata !DIExpression()) [[ATTR3:#.*]], [[DBG5:!dbg !.*]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.dbg.value(metadata %p_t %p, metadata !4, metadata !5), !dbg !6

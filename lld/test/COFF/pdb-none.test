@@ -1,5 +1,5 @@
-# RUN: yaml2obj < %p/Inputs/pdb1.yaml > %t1.obj
-# RUN: yaml2obj < %p/Inputs/pdb2.yaml > %t2.obj
+# RUN: yaml2obj %p/Inputs/pdb1.yaml -o %t1.obj
+# RUN: yaml2obj %p/Inputs/pdb2.yaml -o %t2.obj
 # RUN: rm -f %t.pdb %t.dll
 # RUN: lld-link /debug /debugtype:pdata /pdb:%t.pdb /dll /out:%t.dll /entry:main /nodefaultlib \
 # RUN:   %t1.obj %t2.obj

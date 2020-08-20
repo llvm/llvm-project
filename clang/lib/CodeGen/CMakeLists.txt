@@ -58,6 +58,7 @@ add_clang_library(clangCodeGen
   CGObjCRuntime.cpp
   CGOpenCLRuntime.cpp
   CGOpenMPRuntime.cpp
+  CGOpenMPRuntimeAMDGCN.cpp
   CGOpenMPRuntimeGPU.cpp
   CGOpenMPRuntimeNVPTX.cpp
   CGRecordLayoutBuilder.cpp

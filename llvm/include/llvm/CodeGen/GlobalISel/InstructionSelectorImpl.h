@@ -193,7 +193,7 @@ bool InstructionSelector::executeMatchTable(
       CurrentIdx = MatchTable[CurrentIdx + (Opcode - LowerBound)];
       if (!CurrentIdx) {
         CurrentIdx = Default;
-	break;
+        break;
       }
       OnFailResumeAt.push_back(Default);
       break;
@@ -319,6 +319,35 @@ bool InstructionSelector::executeMatchTable(
       if (!testImmPredicate_APFloat(Predicate, Value))
         if (handleReject() == RejectAndGiveUp)
           return false;
+      break;
+    }
+    case GIM_CheckIsBuildVectorAllOnes:
+    case GIM_CheckIsBuildVectorAllZeros: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+
+      DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
+                      dbgs() << CurrentIdx
+                             << ": GIM_CheckBuildVectorAll{Zeros|Ones}(MIs["
+                             << InsnID << "])\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+
+      const MachineInstr *MI = State.MIs[InsnID];
+      assert((MI->getOpcode() == TargetOpcode::G_BUILD_VECTOR ||
+              MI->getOpcode() == TargetOpcode::G_BUILD_VECTOR_TRUNC) &&
+             "Expected G_BUILD_VECTOR or G_BUILD_VECTOR_TRUNC");
+
+      if (MatcherOpcode == GIM_CheckIsBuildVectorAllOnes) {
+        if (!isBuildVectorAllOnes(*MI, MRI)) {
+          if (handleReject() == RejectAndGiveUp)
+            return false;
+        }
+      } else {
+        if (!isBuildVectorAllZeros(*MI, MRI)) {
+          if (handleReject() == RejectAndGiveUp)
+            return false;
+        }
+      }
+
       break;
     }
     case GIM_CheckCxxInsnPredicate: {

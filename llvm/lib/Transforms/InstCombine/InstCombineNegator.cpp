@@ -43,6 +43,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
+#include <cassert>
+#include <cstdint>
 #include <functional>
 #include <tuple>
 #include <type_traits>
@@ -182,6 +184,10 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
       }
       return BO;
     }
+    // While we could negate exact arithmetic shift:
+    //   ashr exact %x, C  -->   sdiv exact i8 %x, -1<<C
+    // iff C != 0 and C u< bitwidth(%x), we don't want to,
+    // because division is *THAT* much worse than a shift.
     break;
   }
   case Instruction::SExt:
@@ -255,20 +261,16 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     return NegatedPHI;
   }
   case Instruction::Select: {
-    {
-      // `abs`/`nabs` is always negatible.
-      Value *LHS, *RHS;
-      SelectPatternFlavor SPF =
-          matchSelectPattern(I, LHS, RHS, /*CastOp=*/nullptr, Depth).Flavor;
-      if (SPF == SPF_ABS || SPF == SPF_NABS) {
-        auto *NewSelect = cast<SelectInst>(I->clone());
-        // Just swap the operands of the select.
-        NewSelect->swapValues();
-        // Don't swap prof metadata, we didn't change the branch behavior.
-        NewSelect->setName(I->getName() + ".neg");
-        Builder.Insert(NewSelect);
-        return NewSelect;
-      }
+    if (isKnownNegation(I->getOperand(1), I->getOperand(2))) {
+      // Of one hand of select is known to be negation of another hand,
+      // just swap the hands around.
+      auto *NewSelect = cast<SelectInst>(I->clone());
+      // Just swap the operands of the select.
+      NewSelect->swapValues();
+      // Don't swap prof metadata, we didn't change the branch behavior.
+      NewSelect->setName(I->getName() + ".neg");
+      Builder.Insert(NewSelect);
+      return NewSelect;
     }
     // `select` is negatible if both hands of `select` are negatible.
     Value *NegOp1 = negate(I->getOperand(1), Depth + 1);
@@ -324,10 +326,16 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
   }
   case Instruction::Shl: {
     // `shl` is negatible if the first operand is negatible.
-    Value *NegOp0 = negate(I->getOperand(0), Depth + 1);
-    if (!NegOp0) // Early return.
+    if (Value *NegOp0 = negate(I->getOperand(0), Depth + 1))
+      return Builder.CreateShl(NegOp0, I->getOperand(1), I->getName() + ".neg");
+    // Otherwise, `shl %x, C` can be interpreted as `mul %x, 1<<C`.
+    auto *Op1C = dyn_cast<Constant>(I->getOperand(1));
+    if (!Op1C) // Early return.
       return nullptr;
-    return Builder.CreateShl(NegOp0, I->getOperand(1), I->getName() + ".neg");
+    return Builder.CreateMul(
+        I->getOperand(0),
+        ConstantExpr::getShl(Constant::getAllOnesValue(Op1C->getType()), Op1C),
+        I->getName() + ".neg");
   }
   case Instruction::Or:
     if (!haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1), DL, &AC, I,
@@ -341,13 +349,32 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     LLVM_FALLTHROUGH;
   case Instruction::Add: {
     // `add` is negatible if both of its operands are negatible.
-    Value *NegOp0 = negate(I->getOperand(0), Depth + 1);
-    if (!NegOp0) // Early return.
+    SmallVector<Value *, 2> NegatedOps, NonNegatedOps;
+    for (Value *Op : I->operands()) {
+      // Can we sink the negation into this operand?
+      if (Value *NegOp = negate(Op, Depth + 1)) {
+        NegatedOps.emplace_back(NegOp); // Successfully negated operand!
+        continue;
+      }
+      // Failed to sink negation into this operand. IFF we started from negation
+      // and we manage to sink negation into one operand, we can still do this.
+      if (!IsTrulyNegation)
+        return nullptr;
+      NonNegatedOps.emplace_back(Op); // Just record which operand that was.
+    }
+    assert((NegatedOps.size() + NonNegatedOps.size()) == 2 &&
+           "Internal consistency sanity check.");
+    // Did we manage to sink negation into both of the operands?
+    if (NegatedOps.size() == 2) // Then we get to keep the `add`!
+      return Builder.CreateAdd(NegatedOps[0], NegatedOps[1],
+                               I->getName() + ".neg");
+    assert(IsTrulyNegation && "We should have early-exited then.");
+    // Completely failed to sink negation?
+    if (NonNegatedOps.size() == 2)
       return nullptr;
-    Value *NegOp1 = negate(I->getOperand(1), Depth + 1);
-    if (!NegOp1)
-      return nullptr;
-    return Builder.CreateAdd(NegOp0, NegOp1, I->getName() + ".neg");
+    // 0-(a+b) --> (-a)-b
+    return Builder.CreateSub(NegatedOps[0], NonNegatedOps[0],
+                             I->getName() + ".neg");
   }
   case Instruction::Xor:
     // `xor` is negatible if one of its operands is invertible.
