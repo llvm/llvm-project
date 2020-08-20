@@ -1567,8 +1567,8 @@ namespace RecursiveOpaqueExpr {
 
 namespace VLASizeof {
 
-  void f(int k) {
-    int arr[k]; // expected-warning {{C99}}
+  void f(int k) { // expected-note {{here}}
+    int arr[k]; // expected-warning {{C99}} expected-note {{non-const variable 'k'}}
     constexpr int n = 1 +
         sizeof(arr) // expected-error {{constant expression}}
         * 3;

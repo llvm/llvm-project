@@ -26,7 +26,7 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
   #pragma omp target simd collapse () // expected-error {{expected expression}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   // expected-error@+3 {{expected ')'}} expected-note@+3 {{to match this '('}}
-  // expected-error@+2 2 {{expression is not an integral constant expression}}
+  // expected-error@+2 2 {{integral constant expression}}
   // expected-note@+1 2 {{read of non-const variable 'argc' is not allowed in a constant expression}}
   #pragma omp target simd collapse (argc 
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
@@ -42,13 +42,13 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
 #endif
   // expected-error@+3 2 {{directive '#pragma omp target simd' cannot contain more than one 'collapse' clause}}
   // expected-error@+2 {{argument to 'collapse' clause must be a strictly positive integer value}}
-  // expected-error@+1 2 {{expression is not an integral constant expression}}
+  // expected-error@+1 2 {{integral constant expression}}
   #pragma omp target simd collapse (foobool(argc)), collapse (true), collapse (-5)
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   #pragma omp target simd collapse (S) // expected-error {{'S' does not refer to a value}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   // expected-note@+2 {{read of non-const variable 'j' is not allowed in a constant expression}}
-  // expected-error@+1 {{expression is not an integral constant expression}}
+  // expected-error@+1 {{integral constant expression}}
   #pragma omp target simd collapse (j=2) // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   #pragma omp target simd collapse (1)
@@ -75,12 +75,12 @@ int main(int argc, char **argv) {
 #if __cplusplus >= 201103L
   // expected-note@+2 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
 #endif
-  #pragma omp target simd collapse (foobool(1) > 0 ? 1 : 2) // expected-error {{expression is not an integral constant expression}}
+  #pragma omp target simd collapse (foobool(1) > 0 ? 1 : 2) // expected-error {{integral constant expression}}
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
 #if __cplusplus >= 201103L
   // expected-note@+5 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
 #endif
-  // expected-error@+3 {{expression is not an integral constant expression}}
+  // expected-error@+3 {{integral constant expression}}
   // expected-error@+2 2 {{directive '#pragma omp target simd' cannot contain more than one 'collapse' clause}}
   // expected-error@+1 {{argument to 'collapse' clause must be a strictly positive integer value}}
   #pragma omp target simd collapse (foobool(argc)), collapse (true), collapse (-5) 
@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
   #pragma omp target simd collapse (S1) // expected-error {{'S1' does not refer to a value}}
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
   // expected-note@+2 {{read of non-const variable 'j' is not allowed in a constant expression}}
-  // expected-error@+1 {{expression is not an integral constant expression}}
+  // expected-error@+1 {{integral constant expression}}
   #pragma omp target simd collapse (j=2) // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
   // expected-error@+3 {{statement after '#pragma omp target simd' must be a for loop}}

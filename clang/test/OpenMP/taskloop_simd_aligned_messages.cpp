@@ -151,7 +151,7 @@ template<class I, class C> int foomain(I argc, C **argv) {
   for (I k = 0; k < argc; ++k) ++k;
   int v = 0;
   // expected-note@+2 {{initializer of 'j' is not a constant expression}}
-  // expected-error@+1 {{expression is not an integral constant expression}}
+  // expected-error@+1 {{integral constant expression}}
   #pragma omp taskloop simd aligned(f:j)
   for (I k = 0; k < argc; ++k) { ++k; v += j; }
   #pragma omp taskloop simd aligned(f)
