@@ -29,8 +29,11 @@
 // Header from ATMI interface
 #include "atmi_interop_hsa.h"
 #include "atmi_runtime.h"
-// Header from hostcall
-#include "amd_hostcall.h"
+
+// hostrpc interface, FIXME: consider moving to its own include
+extern "C" unsigned long hostrpc_assign_buffer(hsa_queue_t * this_Q, uint32_t device_id);
+extern "C" hsa_status_t hostrpc_init();
+extern "C" hsa_status_t hostrpc_terminate();
 
 #include "internal.h"
 
@@ -421,7 +424,7 @@ public:
       return;
     }
     // Init hostcall soon after initializing ATMI
-    atmi_hostcall_init();
+    hostrpc_init();
 
     HSAAgents = find_gpu_agents();
     NumberOfDevices = (int)HSAAgents.size();
@@ -509,7 +512,7 @@ public:
     deviceStateStore.clear();
     KernelArgPoolMap.clear();
     // Terminate hostcall before finalizing ATMI
-    atmi_hostcall_terminate();
+    hostrpc_terminate();
     atmi_finalize();
   }
 };
@@ -1644,7 +1647,7 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
       if (g_atmi_hostcall_required) {
         {
           impl_args->hostcall_ptr =
-              atmi_hostcall_assign_buffer(queue, device_id);
+              hostrpc_assign_buffer(queue, device_id);
         }
       }
 

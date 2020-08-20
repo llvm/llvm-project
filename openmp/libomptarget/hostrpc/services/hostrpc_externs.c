@@ -1,14 +1,10 @@
 /*
- *   atmi_hostcall.c: atmi integration of hostcall.
- *                    This source implements a linked list queue in c.
- *                    hostcall buffers and pointer to their consumer
- *                    are placed on the linked list queue (hcb).
+ *   hostrpc_externs.c: Definition of hostrpc externals
  *
- *   Written by Greg Rodgers
 
 MIT License
 
-Copyright © 2019 Advanced Micro Devices, Inc.
+Copyright © 2020 Advanced Micro Devices, Inc.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -30,15 +26,13 @@ SOFTWARE.
 
 */
 
-#include "../../../hostrpc/src/hostrpc.h"
-#include "amd_hostcall.h"
-#include "atmi_interop_hsa.h"
-#include "atmi_runtime.h"
-#include "hostcall_impl.h"
-#include "hsa/hsa_ext_amd.h"
+#include "hostrpc_internal.h"
+#include "hsa_ext_amd.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
+// FIXME, move some of this to hostrpc_internal.h
 typedef struct atl_hcq_element_s atl_hcq_element_t;
 struct atl_hcq_element_s {
   buffer_t *hcb;
@@ -109,40 +103,9 @@ static buffer_t *atl_hcq_create_buffer(unsigned int num_packets) {
   return (buffer_t *)newbuffer;
 }
 
-// FIXME: Clean up this diagnostic and die properly
-hsa_status_t atmi_hostcall_version_check(unsigned int device_vrm) {
-  uint device_version_release = device_vrm >> 6;
-  if (device_version_release != HOSTRPC_VERSION_RELEASE) {
-    printf("ERROR Incompatible device and host release\n      Device "
-           "release(%d)\n      Host release(%d)\n",
-           device_version_release, HOSTRPC_VERSION_RELEASE);
-    return HSA_STATUS_ERROR;
-  }
-  if (device_vrm > HOSTRPC_VRM) {
-    printf("ERROR Incompatible device and host version \n       Device "
-           "version(%d)\n      Host version(%d)\n",
-           device_vrm, HOSTRPC_VERSION_RELEASE);
-    return HSA_STATUS_ERROR;
-  }
-  if (device_vrm < HOSTRPC_VRM) {
-    unsigned int host_ver = ((unsigned int)HOSTRPC_VRM) >> 12;
-    unsigned int host_rel = (((unsigned int)HOSTRPC_VRM) << 20) >> 26;
-    unsigned int host_mod = (((unsigned int)HOSTRPC_VRM) << 26) >> 26;
-    unsigned int dev_ver = ((unsigned int)device_vrm) >> 12;
-    unsigned int dev_rel = (((unsigned int)device_vrm) << 20) >> 26;
-    unsigned int dev_mod = (((unsigned int)device_vrm) << 26) >> 26;
-    printf("WARNING:  Device mod version < host mod version \n          Device "
-           "version: %d.%d.%d\n          Host version:   %d.%d.%d\n",
-           dev_ver, dev_rel, dev_mod, host_ver, host_rel, host_mod);
-    printf("          Please consider upgrading hostcall on your host\n");
-  }
-  return HSA_STATUS_SUCCESS;
-}
-
-// These three external functions are called by atmi.
-// ATMI uses the header atmi_hostcall.h to reference these.
+// The following  three external functions are called by plugin.
 //
-unsigned long atmi_hostcall_assign_buffer(hsa_queue_t *this_Q,
+unsigned long hostrpc_assign_buffer(hsa_queue_t *this_Q,
                                           uint32_t device_id) {
   atl_hcq_element_t *llq_elem;
   llq_elem = atl_hcq_find_by_hsa_q(this_Q);
@@ -181,9 +144,9 @@ unsigned long atmi_hostcall_assign_buffer(hsa_queue_t *this_Q,
   return (unsigned long)llq_elem->hcb;
 }
 
-hsa_status_t atmi_hostcall_init() { return HSA_STATUS_SUCCESS; }
+hsa_status_t hostrpc_init() { return HSA_STATUS_SUCCESS; }
 
-hsa_status_t atmi_hostcall_terminate() {
+hsa_status_t hostrpc_terminate() {
   atl_hcq_element_t *this_front = atl_hcq_front;
   atl_hcq_element_t *last_front;
   int reverse_counter = atl_hcq_size();

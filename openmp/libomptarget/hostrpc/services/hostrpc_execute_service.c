@@ -1,6 +1,6 @@
 
 /*
- *   hostrpc_handlers.c:  These are the services for the hostrpc system
+ *   hostrpc_execute_service.c:  These are the host services for the hostrpc system
  *
  *   Written by Greg Rodgers
 
@@ -28,8 +28,8 @@ SOFTWARE.
 
 */
 
-#include "../../../hostrpc/src/hostrpc.h"
-#include "atmi_runtime.h"
+#include "../src/hostrpc.h"
+#include "hostrpc_internal.h"
 #include <ctype.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -53,6 +53,9 @@ typedef enum hostrpc_status_t {
   HOSTRPC_INVALID_ID_ERROR = 9,
   HOSTRPC_ERROR_INVALID_REQUEST = 10,
   HOSTRPC_EXCEED_MAXVARGS_ERROR = 11,
+  HOSTRPC_WRONGVERSION_ERROR = 12,
+  HOSTRPC_OLDHOSTVERSIONMOD_ERROR = 13,
+  HOSTRPC_INVALIDSERVICE_ERROR = 14,
 } hostrpc_status_t;
 
 // MAXVARGS is more than a static array size.
@@ -115,7 +118,7 @@ struct hostrpc_ValistExt {
 } __attribute__((packed));
 typedef struct hostrpc_ValistExt hostrpc_ValistExt_t;
 
-/// Prototype for host fallback function also stored in hostcall_stubs.h
+/// Prototype for host fallback functions
 typedef uint32_t hostrpc_varfn_uint_t(void *, ...);
 typedef uint64_t hostrpc_varfn_uint64_t(void *, ...);
 typedef double hostrpc_varfn_double_t(void *, ...);
@@ -201,7 +204,7 @@ static void hostrpc_handler_SERVICE_FUNCTIONCALL(uint64_t *payload) {
 }
 
 // This is the host function for the demo vector_product_zeros
-int vector_product_zeros(int N, int *A, int *B, int *C) {
+static int local_vector_product_zeros(int N, int *A, int *B, int *C) {
   int zeros = 0;
   for (int i = 0; i < N; i++) {
     C[i] = A[i] * B[i];
@@ -210,6 +213,7 @@ int vector_product_zeros(int N, int *A, int *B, int *C) {
   }
   return zeros;
 }
+
 
 // This is the service for the demo of vector_product_zeros
 static void hostrpc_handler_SERVICE_DEMO(uint64_t *payload) {
@@ -225,17 +229,66 @@ static void hostrpc_handler_SERVICE_DEMO(uint64_t *payload) {
   copyerr = atmi_memcpy(A, A_D, N * sizeof(int));
   copyerr = atmi_memcpy(B, B_D, N * sizeof(int));
 
-  int num_zeros = vector_product_zeros(N, A, B, C);
+  int num_zeros = local_vector_product_zeros(N, A, B, C);
   copyerr = atmi_memcpy(C_D, C, N * sizeof(int));
   payload[0] = (uint64_t)copyerr;
   payload[1] = (uint64_t)num_zeros;
 }
 
-//  This is the only extern, when this is merged remove it
-//  TODO: rewrite hostcall.cpp as hostrpc.c and merge
-//  atmi_hostcall.c and hostrpc_handlers.c into a single hostrpc.c
-extern void handlePayload(uint32_t service, uint64_t *payload) {
-  switch (service) {
+// FIXME: Clean up this diagnostic and die properly
+static bool hostrpc_version_checked;
+static hostrpc_status_t hostrpc_version_check(unsigned int device_vrm) {
+  uint device_version_release = device_vrm >> 6;
+  if (device_version_release != HOSTRPC_VERSION_RELEASE) {
+    printf("ERROR Incompatible device and host release\n      Device "
+           "release(%d)\n      Host release(%d)\n",
+           device_version_release, HOSTRPC_VERSION_RELEASE);
+    return HOSTRPC_WRONGVERSION_ERROR;
+  }
+  if (device_vrm > HOSTRPC_VRM) {
+    printf("ERROR Incompatible device and host version \n       Device "
+           "version(%d)\n      Host version(%d)\n",
+           device_vrm, HOSTRPC_VERSION_RELEASE);
+    return HOSTRPC_OLDHOSTVERSIONMOD_ERROR;
+  }
+  if (device_vrm < HOSTRPC_VRM) {
+    unsigned int host_ver = ((unsigned int)HOSTRPC_VRM) >> 12;
+    unsigned int host_rel = (((unsigned int)HOSTRPC_VRM) << 20) >> 26;
+    unsigned int host_mod = (((unsigned int)HOSTRPC_VRM) << 26) >> 26;
+    unsigned int dev_ver = ((unsigned int)device_vrm) >> 12;
+    unsigned int dev_rel = (((unsigned int)device_vrm) << 20) >> 26;
+    unsigned int dev_mod = (((unsigned int)device_vrm) << 26) >> 26;
+    printf("WARNING:  Device mod version < host mod version \n          Device "
+           "version: %d.%d.%d\n          Host version:   %d.%d.%d\n",
+           dev_ver, dev_rel, dev_mod, host_ver, host_rel, host_mod);
+    printf("          Please consider upgrading hostrpc on your host\n");
+  }
+  return HOSTRPC_SUCCESS; 
+}
+
+static void hostrpc_abort(int rc){ 
+  printf("hostrpc_abort called with code %d\n",rc);
+  abort(); 
+}
+
+// The architecture-specific implementation of hostrpc will 
+// call this single external function for each service request. 
+// Host service functions are architecturally independent.
+extern void hostrpc_execute_service(uint32_t service, uint64_t *payload) {
+  
+  // split the 32-bit service number into service_id and VRM to be checked
+  // if device hostrpc or stubs are ahead of this host runtime.
+  uint service_id = (service <<16 ) >> 16;
+  if (!hostrpc_version_checked) {
+    uint device_vrm = ((uint) service >> 16 );
+    hostrpc_status_t err =
+    hostrpc_version_check(device_vrm);
+    if ( err != HOSTRPC_SUCCESS)
+      hostrpc_abort(err);
+    hostrpc_version_checked = true;
+  }
+
+  switch (service_id) {
   case HOSTRPC_SERVICE_PRINTF:
     hostrpc_handler_SERVICE_PRINTF(payload);
     break;
@@ -264,6 +317,7 @@ extern void handlePayload(uint32_t service, uint64_t *payload) {
     hostrpc_handler_SERVICE_DEMO(payload);
     break;
   default:
+    hostrpc_abort(HOSTRPC_INVALIDSERVICE_ERROR);
     printf("ERROR: hostrpc got a bad service id:%d\n", service);
   }
 }
@@ -568,7 +622,7 @@ static uint64_t getuint32(char *val) {
   uint32_t i32 = *(uint32_t *)val;
   return (uint64_t)i32;
 }
-uint64_t getuint64(char *val) { return *(uint64_t *)val; }
+static uint64_t getuint64(char *val) { return *(uint64_t *)val; }
 
 static void *getfnptr(char *val) {
   uint64_t ival = *(uint64_t *)val;

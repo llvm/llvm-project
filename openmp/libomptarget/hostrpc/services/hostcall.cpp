@@ -1,8 +1,7 @@
-#include "hostcall_impl.h"
 
-#include <hsa/hsa.h>
+#include "hsa.h"
+#include "hostrpc_internal.h"
 
-#include "amd_hostcall.h"
 #include <assert.h>
 #include <atomic>
 #include <cstring>
@@ -175,9 +174,7 @@ get_payload(buffer_t *buffer, ulong ptr)
     return buffer->payloads + get_ptr_index(ptr, buffer->index_size);
 }
 
-static bool hostcall_version_checked;
-
-extern "C" void handlePayload(uint32_t service, uint64_t *payload);
+extern "C" void hostrpc_execute_service(uint32_t service, uint64_t *payload);
 
 void
 amd_hostcall_consumer_t::process_packets(buffer_t *buffer,
@@ -206,17 +203,7 @@ amd_hostcall_consumer_t::process_packets(buffer_t *buffer,
         auto header = get_header(buffer, iter);
         next = header->next;
 
-	// Check if device hostcall or stubs are ahead of this host runtime 
-        uint service = ((uint) header->service <<16 ) >> 16;
-        if (!hostcall_version_checked) {
-            uint device_vrm = ((uint) header->service >> 16 );
-	    hsa_status_t err = 
-              atmi_hostcall_version_check(device_vrm);
-	    if ( err != HSA_STATUS_SUCCESS ) 
-               std::quick_exit(EXIT_FAILURE);
-            hostcall_version_checked = true;
-        }
-        WHEN_DEBUG(std::cout << "packet service: " << (uint32_t)service
+        WHEN_DEBUG(std::cout << "packet service: " << (uint32_t)header->service
                              << std::endl);
 
         auto payload = get_payload(buffer, iter);
@@ -230,7 +217,7 @@ amd_hostcall_consumer_t::process_packets(buffer_t *buffer,
             if (flag == 0)
                 continue;
             uint64_t *slot = payload->slots[wi];
-            handlePayload(service, slot);
+            hostrpc_execute_service(header->service, slot);
         }
         __atomic_store_n(&header->control, reset_ready_flag(header->control),
                          std::memory_order_release);

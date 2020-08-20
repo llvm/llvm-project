@@ -12,6 +12,7 @@
 ##===----------------------------------------------------------------------===##
 
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+add_subdirectory(services)
 # find the llvm compiler
 find_package(LLVM QUIET CONFIG
   PATHS
