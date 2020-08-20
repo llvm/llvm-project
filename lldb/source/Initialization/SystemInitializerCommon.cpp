@@ -39,6 +39,51 @@ SystemInitializerCommon::SystemInitializerCommon() {}
 
 SystemInitializerCommon::~SystemInitializerCommon() {}
 
+/// Initialize the FileSystem based on the current reproducer mode.
+static llvm::Error InitializeFileSystem() {
+  auto &r = repro::Reproducer::Instance();
+  if (repro::Loader *loader = r.GetLoader()) {
+    FileSpec vfs_mapping = loader->GetFile<FileProvider::Info>();
+    if (vfs_mapping) {
+      if (llvm::Error e = FileSystem::Initialize(vfs_mapping))
+        return e;
+    } else {
+      FileSystem::Initialize();
+    }
+
+    llvm::Expected<std::string> cwd =
+        loader->LoadBuffer<WorkingDirectoryProvider>();
+    if (!cwd)
+      return cwd.takeError();
+
+    llvm::StringRef working_dir = llvm::StringRef(*cwd).rtrim();
+    if (std::error_code ec = FileSystem::Instance()
+                                 .GetVirtualFileSystem()
+                                 ->setCurrentWorkingDirectory(working_dir)) {
+      return llvm::errorCodeToError(ec);
+    }
+
+    return llvm::Error::success();
+  }
+
+  if (repro::Generator *g = r.GetGenerator()) {
+    repro::VersionProvider &vp = g->GetOrCreate<repro::VersionProvider>();
+    vp.SetVersion(lldb_private::GetVersion());
+
+    repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
+    FileSystem::Initialize(fp.GetFileCollector());
+
+    repro::WorkingDirectoryProvider &wp =
+        g->GetOrCreate<repro::WorkingDirectoryProvider>();
+    fp.RecordInterestingDirectory(wp.GetWorkingDirectory());
+
+    return llvm::Error::success();
+  }
+
+  FileSystem::Initialize();
+  return llvm::Error::success();
+}
+
 llvm::Error SystemInitializerCommon::Initialize() {
 #if defined(_WIN32)
   const char *disable_crash_dialog_var = getenv("LLDB_DISABLE_CRASH_DIALOG");
@@ -69,36 +114,8 @@ llvm::Error SystemInitializerCommon::Initialize() {
       return e;
   }
 
-  auto &r = repro::Reproducer::Instance();
-  if (repro::Loader *loader = r.GetLoader()) {
-    FileSpec vfs_mapping = loader->GetFile<FileProvider::Info>();
-    if (vfs_mapping) {
-      if (llvm::Error e = FileSystem::Initialize(vfs_mapping))
-        return e;
-    } else {
-      FileSystem::Initialize();
-    }
-    if (llvm::Expected<std::string> cwd =
-            loader->LoadBuffer<WorkingDirectoryProvider>()) {
-      llvm::StringRef working_dir = llvm::StringRef(*cwd).rtrim();
-      if (std::error_code ec = FileSystem::Instance()
-                                   .GetVirtualFileSystem()
-                                   ->setCurrentWorkingDirectory(working_dir)) {
-        return llvm::errorCodeToError(ec);
-      }
-    } else {
-      return cwd.takeError();
-    }
-  } else if (repro::Generator *g = r.GetGenerator()) {
-    repro::VersionProvider &vp = g->GetOrCreate<repro::VersionProvider>();
-    vp.SetVersion(lldb_private::GetVersion());
-    repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
-    FileSystem::Initialize(fp.GetFileCollector());
-    repro::WorkingDirectoryProvider &wp = g->GetOrCreate<repro::WorkingDirectoryProvider>();
-    fp.RecordInterestingDirectory(wp.GetWorkingDirectory());
-  } else {
-    FileSystem::Initialize();
-  }
+  if (auto e = InitializeFileSystem())
+    return e;
 
   Log::Initialize();
   HostInfo::Initialize();
