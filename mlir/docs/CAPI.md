@@ -97,10 +97,27 @@ as follows.
     its first argument is `Y`, and it is the responsibility of the caller to
     ensure it is indeed the case.
 
+### Returning String References
+
+Numerous MLIR functions return instances of `StringRef` to refer to a non-owning
+segment of a string. This segment may or may not be null-terminated. In C API,
+these functions take an additional callback argument of type
+`MlirStringCallback` (pointer to a function with signature `void (*)(const char
+*, intptr_t, void *)`) and a pointer to user-defined data. This callback is
+invoked with a pointer to the string segment, its size and is forwarded the
+user-defined data. The caller is in charge of managing the string segment
+according to its memory model: for strings owned by the object (e.g., string
+attributes), the caller can store the pointer and the size and use them directly
+as long as the parent object is live or copy the string to a new location with a
+null terminator if expected; for generated strings (e.g., in printing), the
+caller is expected to copy the string segment if it intends to use it later.
+
+**Note:** this interface may be revised in the near future.
+
 ### Conversion To String and Printing
 
 IR objects can be converted to a string representation, for example for
-printing, using `mlirXPrint(MlirX, MlirPrintCallback, void *)` functions. These
+printing, using `mlirXPrint(MlirX, MlirStringCallback, void *)` functions. These
 functions accept take arguments a callback with signature `void (*)(const char
 *, intptr_t, void *)` and a pointer to user-defined data. They call the callback
 and supply it with chunks of the string representation, provided as a pointer to
