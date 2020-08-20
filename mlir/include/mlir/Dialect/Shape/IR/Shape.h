@@ -29,56 +29,28 @@ namespace shape {
 /// Alias type for extent tensors.
 RankedTensorType getExtentTensorType(MLIRContext *ctx);
 
-namespace ShapeTypes {
-enum Kind {
-  Component = Type::FIRST_SHAPE_TYPE,
-  Element,
-  Shape,
-  Size,
-  ValueShape,
-  Witness,
-  LAST_SHAPE_TYPE = Witness
-};
-} // namespace ShapeTypes
-
 /// The component type corresponding to shape, element type and attribute.
 class ComponentType : public Type::TypeBase<ComponentType, Type, TypeStorage> {
 public:
   using Base::Base;
-
-  static ComponentType get(MLIRContext *context) {
-    return Base::get(context, ShapeTypes::Kind::Component);
-  }
 };
 
 /// The element type of the shaped type.
 class ElementType : public Type::TypeBase<ElementType, Type, TypeStorage> {
 public:
   using Base::Base;
-
-  static ElementType get(MLIRContext *context) {
-    return Base::get(context, ShapeTypes::Kind::Element);
-  }
 };
 
 /// The shape descriptor type represents rank and dimension sizes.
 class ShapeType : public Type::TypeBase<ShapeType, Type, TypeStorage> {
 public:
   using Base::Base;
-
-  static ShapeType get(MLIRContext *context) {
-    return Base::get(context, ShapeTypes::Kind::Shape);
-  }
 };
 
 /// The type of a single dimension.
 class SizeType : public Type::TypeBase<SizeType, Type, TypeStorage> {
 public:
   using Base::Base;
-
-  static SizeType get(MLIRContext *context) {
-    return Base::get(context, ShapeTypes::Kind::Size);
-  }
 };
 
 /// The ValueShape represents a (potentially unknown) runtime value and shape.
@@ -86,10 +58,6 @@ class ValueShapeType
     : public Type::TypeBase<ValueShapeType, Type, TypeStorage> {
 public:
   using Base::Base;
-
-  static ValueShapeType get(MLIRContext *context) {
-    return Base::get(context, ShapeTypes::Kind::ValueShape);
-  }
 };
 
 /// The Witness represents a runtime constraint, to be used as shape related
@@ -97,10 +65,6 @@ public:
 class WitnessType : public Type::TypeBase<WitnessType, Type, TypeStorage> {
 public:
   using Base::Base;
-
-  static WitnessType get(MLIRContext *context) {
-    return Base::get(context, ShapeTypes::Kind::Witness);
-  }
 };
 
 #define GET_OP_CLASSES

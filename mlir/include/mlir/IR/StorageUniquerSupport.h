@@ -82,29 +82,29 @@ public:
     return detail::InterfaceMap::template get<Traits<ConcreteT>...>();
   }
 
-protected:
   /// Get or create a new ConcreteT instance within the ctx. This
   /// function is guaranteed to return a non null object and will assert if
   /// the arguments provided are invalid.
   template <typename... Args>
-  static ConcreteT get(MLIRContext *ctx, unsigned kind, Args... args) {
+  static ConcreteT get(MLIRContext *ctx, Args... args) {
     // Ensure that the invariants are correct for construction.
     assert(succeeded(ConcreteT::verifyConstructionInvariants(
         generateUnknownStorageLocation(ctx), args...)));
-    return UniquerT::template get<ConcreteT>(ctx, kind, args...);
+    return UniquerT::template get<ConcreteT>(ctx, args...);
   }
 
   /// Get or create a new ConcreteT instance within the ctx, defined at
   /// the given, potentially unknown, location. If the arguments provided are
   /// invalid then emit errors and return a null object.
   template <typename LocationT, typename... Args>
-  static ConcreteT getChecked(LocationT loc, unsigned kind, Args... args) {
+  static ConcreteT getChecked(LocationT loc, Args... args) {
     // If the construction invariants fail then we return a null attribute.
     if (failed(ConcreteT::verifyConstructionInvariants(loc, args...)))
       return ConcreteT();
-    return UniquerT::template get<ConcreteT>(loc.getContext(), kind, args...);
+    return UniquerT::template get<ConcreteT>(loc.getContext(), args...);
   }
 
+protected:
   /// Mutate the current storage instance. This will not change the unique key.
   /// The arguments are forwarded to 'ConcreteT::mutate'.
   template <typename... Args> LogicalResult mutate(Args &&...args) {

@@ -25,27 +25,28 @@ namespace detail {
 
 // Base storage class for SDBMExpr.
 struct SDBMExprStorage : public StorageUniquer::BaseStorage {
-  SDBMExprKind getKind() {
-    return static_cast<SDBMExprKind>(BaseStorage::getKind());
-  }
+  SDBMExprKind getKind() { return kind; }
 
   SDBMDialect *dialect;
+  SDBMExprKind kind;
 };
 
 // Storage class for SDBM sum and stripe expressions.
 struct SDBMBinaryExprStorage : public SDBMExprStorage {
-  using KeyTy = std::pair<SDBMDirectExpr, SDBMConstantExpr>;
+  using KeyTy = std::tuple<unsigned, SDBMDirectExpr, SDBMConstantExpr>;
 
   bool operator==(const KeyTy &key) const {
-    return std::get<0>(key) == lhs && std::get<1>(key) == rhs;
+    return static_cast<SDBMExprKind>(std::get<0>(key)) == kind &&
+           std::get<1>(key) == lhs && std::get<2>(key) == rhs;
   }
 
   static SDBMBinaryExprStorage *
   construct(StorageUniquer::StorageAllocator &allocator, const KeyTy &key) {
     auto *result = allocator.allocate<SDBMBinaryExprStorage>();
-    result->lhs = std::get<0>(key);
-    result->rhs = std::get<1>(key);
+    result->lhs = std::get<1>(key);
+    result->rhs = std::get<2>(key);
     result->dialect = result->lhs.getDialect();
+    result->kind = static_cast<SDBMExprKind>(std::get<0>(key));
     return result;
   }
 
@@ -67,6 +68,7 @@ struct SDBMDiffExprStorage : public SDBMExprStorage {
     result->lhs = std::get<0>(key);
     result->rhs = std::get<1>(key);
     result->dialect = result->lhs.getDialect();
+    result->kind = SDBMExprKind::Diff;
     return result;
   }
 
@@ -84,6 +86,7 @@ struct SDBMConstantExprStorage : public SDBMExprStorage {
   construct(StorageUniquer::StorageAllocator &allocator, const KeyTy &key) {
     auto *result = allocator.allocate<SDBMConstantExprStorage>();
     result->constant = key;
+    result->kind = SDBMExprKind::Constant;
     return result;
   }
 
@@ -92,14 +95,18 @@ struct SDBMConstantExprStorage : public SDBMExprStorage {
 
 // Storage class for SDBM dimension and symbol expressions.
 struct SDBMTermExprStorage : public SDBMExprStorage {
-  using KeyTy = unsigned;
+  using KeyTy = std::pair<unsigned, unsigned>;
 
-  bool operator==(const KeyTy &key) const { return position == key; }
+  bool operator==(const KeyTy &key) const {
+    return kind == static_cast<SDBMExprKind>(key.first) &&
+           position == key.second;
+  }
 
   static SDBMTermExprStorage *
   construct(StorageUniquer::StorageAllocator &allocator, const KeyTy &key) {
     auto *result = allocator.allocate<SDBMTermExprStorage>();
-    result->position = key;
+    result->kind = static_cast<SDBMExprKind>(key.first);
+    result->position = key.second;
     return result;
   }
 
@@ -117,6 +124,7 @@ struct SDBMNegExprStorage : public SDBMExprStorage {
     auto *result = allocator.allocate<SDBMNegExprStorage>();
     result->expr = key;
     result->dialect = key.getDialect();
+    result->kind = SDBMExprKind::Neg;
     return result;
   }
 
