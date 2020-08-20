@@ -216,7 +216,11 @@ Instruction *InstCombiner::visitMul(BinaryOperator &I) {
 
     if (match(&I, m_Mul(m_Value(NewOp), m_Constant(C1)))) {
       // Replace X*(2^C) with X << C, where C is either a scalar or a vector.
-      if (Constant *NewCst = getLogBase2(NewOp->getType(), C1)) {
+      // Note that we need to sanitize undef multipliers to 1,
+      // to avoid introducing poison.
+      Constant *SafeC1 = Constant::replaceUndefsWith(
+          C1, ConstantInt::get(C1->getType()->getScalarType(), 1));
+      if (Constant *NewCst = getLogBase2(NewOp->getType(), SafeC1)) {
         BinaryOperator *Shl = BinaryOperator::CreateShl(NewOp, NewCst);
 
         if (I.hasNoUnsignedWrap())
