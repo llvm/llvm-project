@@ -23,10 +23,6 @@ static const double negInf = FPBits::negInf();
 
 namespace mpfr = __llvm_libc::testing::mpfr;
 
-// Zero tolerance; As in, exact match with MPFR result.
-static constexpr mpfr::Tolerance tolerance{mpfr::Tolerance::doublePrecision, 0,
-                                           0};
-
 TEST(FabsTest, SpecialNumbers) {
   EXPECT_FP_EQ(nan, __llvm_libc::fabs(nan));
 
@@ -45,6 +41,6 @@ TEST(FabsTest, InDoubleRange) {
     double x = FPBits(v);
     if (isnan(x) || isinf(x))
       continue;
-    ASSERT_MPFR_MATCH(mpfr::Operation::Abs, x, __llvm_libc::fabs(x), tolerance);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Abs, x, __llvm_libc::fabs(x), 0.0);
   }
 }
