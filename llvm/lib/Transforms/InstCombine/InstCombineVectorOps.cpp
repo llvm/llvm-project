@@ -931,17 +931,24 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
 
   // Arbitrary predecessor count limit.
   static const int PredCountLimit = 64;
-  // Don't bother if there are too many predecessors.
-  if (UseBB->hasNPredecessorsOrMore(PredCountLimit + 1))
-    return nullptr;
+
+  // Cache the (non-uniqified!) list of predecessors in a vector,
+  // checking the limit at the same time for efficiency.
+  SmallVector<BasicBlock *, 4> Preds; // May have duplicates!
+  for (BasicBlock *Pred : predecessors(UseBB)) {
+    // Don't bother if there are too many predecessors.
+    if (Preds.size() >= PredCountLimit) // FIXME: only count duplicates once?
+      return nullptr;
+    Preds.emplace_back(Pred);
+  }
 
   // For each predecessor, what is the source aggregate,
   // from which all the elements were originally extracted from?
   // Note that we want for the map to have stable iteration order!
   SmallMapVector<BasicBlock *, Value *, 4> SourceAggregates;
-  for (BasicBlock *PredBB : predecessors(UseBB)) {
+  for (BasicBlock *Pred : Preds) {
     std::pair<decltype(SourceAggregates)::iterator, bool> IV =
-        SourceAggregates.insert({PredBB, nullptr});
+        SourceAggregates.insert({Pred, nullptr});
     // Did we already evaluate this predecessor?
     if (!IV.second)
       continue;
@@ -949,7 +956,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     // Let's hope that when coming from predecessor Pred, all elements of the
     // aggregate produced by OrigIVI must have been originally extracted from
     // the same aggregate. Is that so? Can we find said original aggregate?
-    SourceAggregate = FindCommonSourceAggregate(UseBB, PredBB);
+    SourceAggregate = FindCommonSourceAggregate(UseBB, Pred);
     if (Describe(SourceAggregate) != AggregateDescription::Found)
       return nullptr; // Give up.
     IV.first->second = *SourceAggregate;
@@ -958,13 +965,14 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // All good! Now we just need to thread the source aggregates here.
   // Note that we have to insert the new PHI here, ourselves, because we can't
   // rely on InstCombinerImpl::run() inserting it into the right basic block.
+  // Note that the same block can be a predecessor more than once,
+  // and we need to preserve that invariant for the PHI node.
   BuilderTy::InsertPointGuard Guard(Builder);
   Builder.SetInsertPoint(UseBB->getFirstNonPHI());
-  auto *PHI = Builder.CreatePHI(AggTy, SourceAggregates.size(),
-                                OrigIVI.getName() + ".merged");
-  for (const std::pair<BasicBlock *, Value *> &SourceAggregate :
-       SourceAggregates)
-    PHI->addIncoming(SourceAggregate.second, SourceAggregate.first);
+  auto *PHI =
+      Builder.CreatePHI(AggTy, Preds.size(), OrigIVI.getName() + ".merged");
+  for (BasicBlock *Pred : Preds)
+    PHI->addIncoming(SourceAggregates[Pred], Pred);
 
   ++NumAggregateReconstructionsSimplified;
   OrigIVI.replaceAllUsesWith(PHI);
