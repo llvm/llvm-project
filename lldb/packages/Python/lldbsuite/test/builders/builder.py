@@ -25,6 +25,9 @@ class Builder:
         Helper function to return extra argumentsfor the make system. This
         method is meant to be overridden by platform specific builders.
         """
+
+    def getArchCFlags(self, architecture):
+        """Returns the ARCH_CFLAGS for the make system."""
         return ""
 
     def getMake(self, test_subdir, test_name):
@@ -139,6 +142,7 @@ class Builder:
         commands.append(
             self.getMake(testdir, testname) + [
                 "all",
+                self.getArchCFlags(architecture),
                 self.getArchSpec(architecture),
                 self.getCCSpec(compiler),
                 self.getExtraMakeArgs(),
@@ -164,6 +168,7 @@ class Builder:
         commands.append(
             self.getMake(testdir, testname) + [
                 "MAKE_DSYM=NO",
+                self.getArchCFlags(architecture),
                 self.getArchSpec(architecture),
                 self.getCCSpec(compiler),
                 self.getExtraMakeArgs(),
@@ -188,6 +193,7 @@ class Builder:
         commands.append(
             self.getMake(testdir, testname) + [
                 "MAKE_DSYM=NO", "MAKE_DWO=YES",
+                self.getArchCFlags(architecture),
                 self.getArchSpec(architecture),
                 self.getCCSpec(compiler),
                 self.getExtraMakeArgs(),
@@ -212,6 +218,7 @@ class Builder:
         commands.append(
             self.getMake(testdir, testname) + [
                 "MAKE_DSYM=NO", "MAKE_GMODULES=YES",
+                self.getArchCFlags(architecture),
                 self.getArchSpec(architecture),
                 self.getCCSpec(compiler),
                 self.getExtraMakeArgs(),
