@@ -103,26 +103,6 @@ Changes to the AArch64 Backend
 * Clearly error out on unsupported relocations when targeting COFF, instead
   of silently accepting some (without being able to do what was requested).
 
-Changes to the ARM Backend
---------------------------
-
-During this release ...
-
-* Implemented C-language intrinsics for the full Arm v8.1-M MVE instruction
-  set. ``<arm_mve.h>`` now supports the complete API defined in the Arm C
-  Language Extensions.
-
-* Added support for assembly for the optional Custom Datapath Extension (CDE)
-  for Arm M-profile targets.
-
-* Implemented C-language intrinsics ``<arm_cde.h>`` for the CDE instruction set.
-
-* Clang now defaults to ``-fomit-frame-pointer`` when targeting non-Android
-  Linux for arm and thumb when optimizations are enabled. Users that were
-  previously not specifying a value and relying on the implicit compiler
-  default may wish to specify ``-fno-omit-frame-pointer`` to get the old
-  behavior. This improves compatibility with GCC.
-
 * Clang adds support for the following macros that enable the
   C-intrinsics from the `Arm C language extensions for SVE
   <https://developer.arm.com/documentation/100987/>`_ (version
@@ -176,6 +156,26 @@ During this release ...
   incomplete. When you interface user code with SVE functions that are
   provided through shared libraries, avoid using lazy binding. If you
   use lazy binding, the results could be corrupted.
+
+Changes to the ARM Backend
+--------------------------
+
+During this release ...
+
+* Implemented C-language intrinsics for the full Arm v8.1-M MVE instruction
+  set. ``<arm_mve.h>`` now supports the complete API defined in the Arm C
+  Language Extensions.
+
+* Added support for assembly for the optional Custom Datapath Extension (CDE)
+  for Arm M-profile targets.
+
+* Implemented C-language intrinsics ``<arm_cde.h>`` for the CDE instruction set.
+
+* Clang now defaults to ``-fomit-frame-pointer`` when targeting non-Android
+  Linux for arm and thumb when optimizations are enabled. Users that were
+  previously not specifying a value and relying on the implicit compiler
+  default may wish to specify ``-fno-omit-frame-pointer`` to get the old
+  behavior. This improves compatibility with GCC.
 
 Changes to the MIPS Target
 --------------------------
