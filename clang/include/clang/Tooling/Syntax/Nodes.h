@@ -55,6 +55,7 @@ enum class NodeKind : uint16_t {
   CharUserDefinedLiteralExpression,
   StringUserDefinedLiteralExpression,
   IdExpression,
+  MemberExpression,
 
   // Statements.
   UnknownStatement,
@@ -173,7 +174,10 @@ enum class NodeRole : uint8_t {
   ParametersAndQualifiers_trailingReturn,
   IdExpression_id,
   IdExpression_qualifier,
-  ParenExpression_subExpression
+  ParenExpression_subExpression,
+  MemberExpression_object,
+  MemberExpression_accessToken,
+  MemberExpression_member,
 };
 /// For debugging purposes.
 raw_ostream &operator<<(raw_ostream &OS, NodeRole R);
@@ -320,6 +324,26 @@ public:
   Leaf *openParen();
   Expression *subExpression();
   Leaf *closeParen();
+};
+
+/// Models a class member access. C++ [expr.ref]
+/// member-expression:
+///   expression -> template_opt id-expression
+///   expression .  template_opt id-expression
+/// e.g. `x.a`, `xp->a`
+///
+/// Note: An implicit member access inside a class, i.e. `a` instead of
+/// `this->a`, is an `id-expression`.
+class MemberExpression final : public Expression {
+public:
+  MemberExpression() : Expression(NodeKind::MemberExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::MemberExpression;
+  }
+  Expression *object();
+  Leaf *accessToken();
+  Leaf *templateKeyword();
+  IdExpression *member();
 };
 
 /// Expression for literals. C++ [lex.literal]

@@ -491,19 +491,20 @@ struct X {
   operator int();
 };
 void test(X x) {
-  // TODO: Expose `id-expression` from `MemberExpr`
   [[x.operator int()]];
 }
 )cpp",
       {R"txt(
 UnknownExpression
-|-UnknownExpression
+|-MemberExpression
 | |-IdExpression
 | | `-UnqualifiedId
 | |   `-x
 | |-.
-| |-operator
-| `-int
+| `-IdExpression
+|   `-UnqualifiedId
+|     |-operator
+|     `-int
 |-(
 `-)
 )txt"}));
@@ -542,19 +543,20 @@ TEST_P(SyntaxTreeTest, UnqualifiedId_Destructor) {
       R"cpp(
 struct X { };
 void test(X x) {
-  // TODO: Expose `id-expression` from `MemberExpr`
   [[x.~X()]];
 }
 )cpp",
       {R"txt(
 UnknownExpression
-|-UnknownExpression
+|-MemberExpression
 | |-IdExpression
 | | `-UnqualifiedId
 | |   `-x
 | |-.
-| |-~
-| `-X
+| `-IdExpression
+|   `-UnqualifiedId
+|     |-~
+|     `-X
 |-(
 `-)
 )txt"}));
@@ -568,18 +570,23 @@ TEST_P(SyntaxTreeTest, UnqualifiedId_DecltypeDestructor) {
       R"cpp(
 struct X { };
 void test(X x) {
-  // TODO: Expose `id-expression` from `MemberExpr`
+  // FIXME: Make `decltype(x)` a child of `MemberExpression`. It is currently
+  // not because `Expr::getSourceRange()` returns the range of `x.~` for the
+  // `MemberExpr` instead of the expected `x.~decltype(x)`, this is a bug in
+  // clang.
   [[x.~decltype(x)()]];
 }
 )cpp",
       {R"txt(
 UnknownExpression
-|-UnknownExpression
+|-MemberExpression
 | |-IdExpression
 | | `-UnqualifiedId
 | |   `-x
 | |-.
-| `-~
+| `-IdExpression
+|   `-UnqualifiedId
+|     `-~
 |-decltype
 |-(
 |-x
@@ -624,6 +631,9 @@ namespace n {
   struct S { };
 }
 void test() {
+  // FIXME: Remove the `UnknownExpression` wrapping `s1` and `s2`. This
+  // `UnknownExpression` comes from a leaf `CXXConstructExpr` in the
+  // ClangAST. We need to ignore leaf implicit nodes.
   [[::n::S s1]];
   [[n::S s2]];
 }
@@ -1756,6 +1766,9 @@ TEST_P(SyntaxTreeTest, OverloadedOperator_Plus) {
 struct X {
   friend X operator+(X, const X&);
 };
+// FIXME: Remove additional `UnknownExpression` wrapping `x`. For that, ignore
+// implicit copy constructor called on `x`. This should've been ignored already,
+// as we `IgnoreImplicit` when traversing an `Stmt`.
 void test(X x, X y) {
   [[x + y]];
 }
@@ -1958,6 +1971,366 @@ PostfixUnaryOperatorExpression
 | `-UnqualifiedId
 |   `-x
 `-++
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest, MemberExpression_SimpleWithDot) {
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+struct S {
+  int a;
+};
+void test(struct S s) {
+  [[s.a]];
+}
+)cpp",
+      {R"txt(
+MemberExpression
+|-IdExpression
+| `-UnqualifiedId
+|   `-s
+|-.
+`-IdExpression
+  `-UnqualifiedId
+    `-a
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest, MemberExpression_StaticDataMember) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+struct S {
+  static int a;
+};
+void test(S s) {
+  [[s.a]];
+}
+)cpp",
+      {R"txt(
+MemberExpression
+|-IdExpression
+| `-UnqualifiedId
+|   `-s
+|-.
+`-IdExpression
+  `-UnqualifiedId
+    `-a
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest, MemberExpression_SimpleWithArrow) {
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+struct S {
+  int a;
+};
+void test(struct S* sp) {
+  [[sp->a]];
+}
+)cpp",
+      {R"txt(
+MemberExpression
+|-IdExpression
+| `-UnqualifiedId
+|   `-sp
+|-->
+`-IdExpression
+  `-UnqualifiedId
+    `-a
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest, MemberExpression_Chaining) {
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+struct S {
+  struct S* next;
+};
+void test(struct S s){
+  [[s.next->next]];
+}
+)cpp",
+      {R"txt(
+MemberExpression
+|-MemberExpression
+| |-IdExpression
+| | `-UnqualifiedId
+| |   `-s
+| |-.
+| `-IdExpression
+|   `-UnqualifiedId
+|     `-next
+|-->
+`-IdExpression
+  `-UnqualifiedId
+    `-next
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest, MemberExpression_OperatorFunction) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+struct S {
+  bool operator!();
+};
+void test(S s) {
+  [[s.operator!()]];
+}
+)cpp",
+      {R"txt(
+UnknownExpression
+|-MemberExpression
+| |-IdExpression
+| | `-UnqualifiedId
+| |   `-s
+| |-.
+| `-IdExpression
+|   `-UnqualifiedId
+|     |-operator
+|     `-!
+|-(
+`-)
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest, MemberExpression_Implicit) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+struct S {
+  int a;
+  int test(){
+    // FIXME: Remove the `UnknownExpression` wrapping `a`. This
+    // `UnknownExpression` comes from an implicit leaf `CXXThisExpr`.
+    [[a]];
+  }
+};
+)cpp",
+      {R"txt(
+IdExpression
+`-UnqualifiedId
+  `-UnknownExpression
+    `-a
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest, MemberExpression_VariableTemplate) {
+  if (!GetParam().isCXX14OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+struct S {
+  template<typename T>
+  static constexpr T x = 42;
+};
+// FIXME: `<int>` should be a child of `MemberExpression` and `;` of
+// `ExpressionStatement`. This is a bug in clang, in `getSourceRange` methods.
+void test(S s) [[{
+  s.x<int>;
+}]]
+)cpp",
+      {R"txt(
+CompoundStatement
+|-{
+|-ExpressionStatement
+| `-MemberExpression
+|   |-IdExpression
+|   | `-UnqualifiedId
+|   |   `-s
+|   |-.
+|   `-IdExpression
+|     `-UnqualifiedId
+|       `-x
+|-<
+|-int
+|->
+|-;
+`-}
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest, MemberExpression_FunctionTemplate) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+struct S {
+  template<typename T>
+  T f();
+};
+void test(S* sp){
+  [[sp->f<int>()]];
+}
+)cpp",
+      {R"txt(
+UnknownExpression
+|-MemberExpression
+| |-IdExpression
+| | `-UnqualifiedId
+| |   `-sp
+| |-->
+| `-IdExpression
+|   `-UnqualifiedId
+|     |-f
+|     |-<
+|     |-int
+|     `->
+|-(
+`-)
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest, MemberExpression_FunctionTemplateWithTemplateKeyword) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+struct S {
+  template<typename T>
+  T f();
+};
+void test(S s){
+  [[s.template f<int>()]];
+}
+)cpp",
+      {R"txt(
+UnknownExpression
+|-MemberExpression
+| |-IdExpression
+| | `-UnqualifiedId
+| |   `-s
+| |-.
+| |-template
+| `-IdExpression
+|   `-UnqualifiedId
+|     |-f
+|     |-<
+|     |-int
+|     `->
+|-(
+`-)
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest, MemberExpression_WithQualifier) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+struct Base {
+  void f();
+};
+struct S : public Base {};
+void test(S s){
+  [[s.Base::f()]];
+  [[s.::S::~S()]];
+}
+)cpp",
+      {R"txt(
+UnknownExpression
+|-MemberExpression
+| |-IdExpression
+| | `-UnqualifiedId
+| |   `-s
+| |-.
+| `-IdExpression
+|   |-NestedNameSpecifier
+|   | |-IdentifierNameSpecifier
+|   | | `-Base
+|   | `-::
+|   `-UnqualifiedId
+|     `-f
+|-(
+`-)
+      )txt",
+       R"txt(
+UnknownExpression
+|-MemberExpression
+| |-IdExpression
+| | `-UnqualifiedId
+| |   `-s
+| |-.
+| `-IdExpression
+|   |-NestedNameSpecifier
+|   | |-::
+|   | |-IdentifierNameSpecifier
+|   | | `-S
+|   | `-::
+|   `-UnqualifiedId
+|     |-~
+|     `-S
+|-(
+`-)
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest, MemberExpression_Complex) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+template<typename T>
+struct U {
+  template<typename U>
+  U f();
+};
+struct S {
+  U<int> getU();
+};
+void test(S* sp) {
+  // FIXME: The first 'template' keyword is a child of `NestedNameSpecifier`,
+  // but it should be a child of `MemberExpression` according to the grammar.
+  // However one might argue that the 'template' keyword fits better inside
+  // `NestedNameSpecifier` because if we change `U<int>` to `UI` we would like
+  // equally to change the `NameSpecifier` `template U<int>` to just `UI`.
+  [[sp->getU().template U<int>::template f<int>()]];
+}
+)cpp",
+      {R"txt(
+UnknownExpression
+|-MemberExpression
+| |-UnknownExpression
+| | |-MemberExpression
+| | | |-IdExpression
+| | | | `-UnqualifiedId
+| | | |   `-sp
+| | | |-->
+| | | `-IdExpression
+| | |   `-UnqualifiedId
+| | |     `-getU
+| | |-(
+| | `-)
+| |-.
+| `-IdExpression
+|   |-NestedNameSpecifier
+|   | |-SimpleTemplateNameSpecifier
+|   | | |-template
+|   | | |-U
+|   | | |-<
+|   | | |-int
+|   | | `->
+|   | `-::
+|   |-template
+|   `-UnqualifiedId
+|     |-f
+|     |-<
+|     |-int
+|     `->
+|-(
+`-)
 )txt"}));
 }
 
