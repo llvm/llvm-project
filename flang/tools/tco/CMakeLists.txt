@@ -4,8 +4,9 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsDescs
   AllTargetsInfos
 )
+llvm_map_components_to_libnames(llvm_libs ${LLVM_LINK_COMPONENTS})
 
-add_llvm_tool(tco tco.cpp)
+add_flang_tool(tco tco.cpp)
 llvm_update_compile_flags(tco)
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 target_link_libraries(tco PRIVATE
@@ -24,4 +25,5 @@ target_link_libraries(tco PRIVATE
   MLIRStandardToLLVM
   MLIRSupport
   MLIRVectorToLLVM
+  ${llvm_libs}
 )
