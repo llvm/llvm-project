@@ -200,13 +200,13 @@ void test7(int a[b(0)]) {
 // Make sure we emit dereferenceable or nonnull when the static keyword is
 // provided.
 void test8(int a[static 3]) { }
-// CHECK: define void @test8(i32* dereferenceable(12) %a)
+// CHECK: define void @test8(i32* align 4 dereferenceable(12) %a)
 
 void test9(int n, int a[static n]) { }
-// NULL-INVALID: define void @test9(i32 %n, i32* nonnull %a)
-// NULL-VALID: define void @test9(i32 %n, i32* %a)
+// NULL-INVALID: define void @test9(i32 %n, i32* nonnull align 4 %a)
+// NULL-VALID: define void @test9(i32 %n, i32* align 4 %a)
 
 // Make sure a zero-sized static array extent is still required to be nonnull.
 void test10(int a[static 0]) {}
-// NULL-INVALID: define void @test10(i32* nonnull %a)
-// NULL-VALID: define void @test10(i32* %a)
+// NULL-INVALID: define void @test10(i32* nonnull align 4 %a)
+// NULL-VALID: define void @test10(i32* align 4 %a)
