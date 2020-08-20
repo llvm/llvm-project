@@ -167,7 +167,7 @@ TEST(XCOFFObjectFileTest, XCOFFTracebackTableTruncatedAtMandatory) {
       TTOrErr.takeError(),
       FailedWithMessage(
           "unexpected end of data at offset 0x6 while reading [0x0, 0x8)"));
-  EXPECT_EQ(Size, 0);
+  EXPECT_EQ(Size, 0UL);
 }
 
 TEST(XCOFFObjectFileTest, XCOFFTracebackTableTruncatedAtParmsType) {
