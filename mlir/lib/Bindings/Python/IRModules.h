@@ -17,36 +17,42 @@ namespace mlir {
 namespace python {
 
 class PyMlirContext;
-class PyMlirModule;
+class PyModule;
 
 /// Wrapper around MlirContext.
 class PyMlirContext {
 public:
   PyMlirContext() { context = mlirContextCreate(); }
   ~PyMlirContext() { mlirContextDestroy(context); }
-  /// Parses the module from asm.
-  PyMlirModule parse(const std::string &module);
 
   MlirContext context;
 };
 
 /// Wrapper around MlirModule.
-class PyMlirModule {
+class PyModule {
 public:
-  PyMlirModule(MlirModule module) : module(module) {}
-  PyMlirModule(PyMlirModule &) = delete;
-  PyMlirModule(PyMlirModule &&other) {
+  PyModule(MlirModule module) : module(module) {}
+  PyModule(PyModule &) = delete;
+  PyModule(PyModule &&other) {
     module = other.module;
     other.module.ptr = nullptr;
   }
-  ~PyMlirModule() {
+  ~PyModule() {
     if (module.ptr)
       mlirModuleDestroy(module);
   }
-  /// Dumps the module.
-  void dump();
 
   MlirModule module;
+};
+
+/// Wrapper around the generic MlirType.
+/// The lifetime of a type is bound by the PyContext that created it.
+class PyType {
+public:
+  PyType(MlirType type) : type(type) {}
+  bool operator==(const PyType &other);
+
+  MlirType type;
 };
 
 void populateIRSubmodule(pybind11::module &m);
