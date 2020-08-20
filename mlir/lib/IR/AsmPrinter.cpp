@@ -1650,6 +1650,9 @@ void ModulePrinter::printType(Type type) {
       .Case<UnrankedMemRefType>([&](UnrankedMemRefType memrefTy) {
         os << "memref<*x";
         printType(memrefTy.getElementType());
+        // Only print the memory space if it is the non-default one.
+        if (memrefTy.getMemorySpace())
+          os << ", " << memrefTy.getMemorySpace();
         os << '>';
       })
       .Case<ComplexType>([&](ComplexType complexTy) {
