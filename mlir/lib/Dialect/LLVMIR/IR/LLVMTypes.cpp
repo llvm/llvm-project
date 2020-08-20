@@ -18,6 +18,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/TypeSupport.h"
 
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/TypeSize.h"
 
 using namespace mlir;
@@ -33,6 +34,40 @@ bool LLVMType::classof(Type type) {
 
 LLVMDialect &LLVMType::getDialect() {
   return static_cast<LLVMDialect &>(Type::getDialect());
+}
+
+//----------------------------------------------------------------------------//
+// Misc type utilities.
+
+llvm::TypeSize LLVMType::getPrimitiveSizeInBits() {
+  return llvm::TypeSwitch<LLVMType, llvm::TypeSize>(*this)
+      .Case<LLVMHalfType, LLVMBFloatType>(
+          [](LLVMType) { return llvm::TypeSize::Fixed(16); })
+      .Case<LLVMFloatType>([](LLVMType) { return llvm::TypeSize::Fixed(32); })
+      .Case<LLVMDoubleType, LLVMX86MMXType>(
+          [](LLVMType) { return llvm::TypeSize::Fixed(64); })
+      .Case<LLVMIntegerType>([](LLVMIntegerType intTy) {
+        return llvm::TypeSize::Fixed(intTy.getBitWidth());
+      })
+      .Case<LLVMX86FP80Type>([](LLVMType) { return llvm::TypeSize::Fixed(80); })
+      .Case<LLVMPPCFP128Type, LLVMFP128Type>(
+          [](LLVMType) { return llvm::TypeSize::Fixed(128); })
+      .Case<LLVMVectorType>([](LLVMVectorType t) {
+        llvm::TypeSize elementSize =
+            t.getElementType().getPrimitiveSizeInBits();
+        llvm::ElementCount elementCount = t.getElementCount();
+        assert(!elementSize.isScalable() &&
+               "vector type should have fixed-width elements");
+        return llvm::TypeSize(elementSize.getFixedSize() * elementCount.Min,
+                              elementCount.Scalable);
+      })
+      .Default([](LLVMType ty) {
+        assert((ty.isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
+                       LLVMTokenType, LLVMStructType, LLVMArrayType,
+                       LLVMPointerType, LLVMFunctionType>()) &&
+               "unexpected missing support for primitive type");
+        return llvm::TypeSize::Fixed(0);
+      });
 }
 
 //----------------------------------------------------------------------------//
