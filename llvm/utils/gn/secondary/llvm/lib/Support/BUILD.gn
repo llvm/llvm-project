@@ -34,6 +34,7 @@ static_library("Support") {
     "AArch64TargetParser.cpp",
     "ABIBreak.cpp",
     "AMDGPUMetadata.cpp",
+    "APFixedPoint.cpp",
     "APFloat.cpp",
     "APInt.cpp",
     "APSInt.cpp",
