@@ -17,6 +17,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -24,6 +25,8 @@
 #include <cstdint>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "dwarfdebug"
 
 void DwarfExpression::emitConstu(uint64_t Value) {
   if (Value < 32)
@@ -217,6 +220,31 @@ void DwarfExpression::addUnsignedConstant(const APInt &Value) {
     addOpPiece(std::min(Size - Offset, 64u), Offset);
     Offset += 64;
   }
+}
+
+void DwarfExpression::addConstantFP(const APFloat &APF, const AsmPrinter &AP) {
+  assert(isImplicitLocation() || isUnknownLocation());
+  APInt API = APF.bitcastToAPInt();
+  int NumBytes = API.getBitWidth() / 8;
+  if (NumBytes == 4 /*float*/ || NumBytes == 8 /*double*/) {
+    // FIXME: Add support for `long double`.
+    emitOp(dwarf::DW_OP_implicit_value);
+    emitUnsigned(NumBytes /*Size of the block in bytes*/);
+
+    const uint64_t *Value = API.getRawData();
+    const bool IsLittleEndian = AP.getDataLayout().isLittleEndian();
+    uint64_t Swapped = support::endian::byte_swap(
+        *Value, IsLittleEndian ? support::little : support::big);
+
+    const char *SwappedBytes = reinterpret_cast<const char *>(&Swapped);
+    for (int i = 0; i < NumBytes; ++i)
+      emitData1(SwappedBytes[i]);
+
+    return;
+  }
+  LLVM_DEBUG(
+      dbgs() << "Skipped DW_OP_implicit_value creation for ConstantFP of size: "
+             << API.getBitWidth() << " bits\n");
 }
 
 bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
