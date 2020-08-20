@@ -84,7 +84,6 @@ STATISTIC(NumFastStores, "Number of stores deleted");
 STATISTIC(NumFastOther, "Number of other instrs removed");
 STATISTIC(NumCompletePartials, "Number of stores dead by later partials");
 STATISTIC(NumModifiedStores, "Number of stores modified");
-STATISTIC(NumNoopStores, "Number of noop stores deleted");
 STATISTIC(NumCFGChecks, "Number of stores modified");
 STATISTIC(NumCFGTries, "Number of stores modified");
 STATISTIC(NumCFGSuccess, "Number of stores modified");
@@ -2158,7 +2157,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
     if (isRemovable(SI) && State.storeIsNoop(KillingDef, SILoc, SILocUnd)) {
       LLVM_DEBUG(dbgs() << "DSE: Remove No-Op Store:\n  DEAD: " << *SI << '\n');
       State.deleteDeadInstruction(SI);
-      NumNoopStores++;
+      NumRedundantStores++;
       MadeChange = true;
       continue;
     }
