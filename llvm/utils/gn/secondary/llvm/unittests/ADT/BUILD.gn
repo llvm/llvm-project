@@ -10,6 +10,7 @@ unittest("ADTTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "APFixedPointTest.cpp",
     "APFloatTest.cpp",
     "APIntTest.cpp",
     "APSIntTest.cpp",
