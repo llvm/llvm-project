@@ -15,16 +15,15 @@
 CONST_AS char * __clc_amdgcn_dispatch_ptr(void) __asm("llvm.amdgcn.dispatch.ptr");
 #endif
 
-_CLC_DEF size_t get_local_size(uint dim)
-{
-	CONST_AS uint * ptr = (CONST_AS uint *) __dispatch_ptr();
-	switch (dim) {
-	case 0:
-		return ptr[1] & 0xffffu;
-	case 1:
-		return ptr[1] >> 16;
-	case 2:
-		return ptr[2] & 0xffffu;
-	}
-	return 1;
+_CLC_DEF _CLC_OVERLOAD size_t get_local_size(uint dim) {
+  CONST_AS uint *ptr = (CONST_AS uint *)__dispatch_ptr();
+  switch (dim) {
+  case 0:
+    return ptr[1] & 0xffffu;
+  case 1:
+    return ptr[1] >> 16;
+  case 2:
+    return ptr[2] & 0xffffu;
+  }
+  return 1;
 }
