@@ -182,6 +182,7 @@ public:
     case DISubrangeKind:
     case DIEnumeratorKind:
     case DIBasicTypeKind:
+    case DIStringTypeKind:
     case DIDerivedTypeKind:
     case DICompositeTypeKind:
     case DISubroutineTypeKind:
@@ -451,6 +452,7 @@ public:
     default:
       return false;
     case DIBasicTypeKind:
+    case DIStringTypeKind:
     case DIDerivedTypeKind:
     case DICompositeTypeKind:
     case DISubroutineTypeKind:
@@ -697,6 +699,7 @@ public:
     default:
       return false;
     case DIBasicTypeKind:
+    case DIStringTypeKind:
     case DIDerivedTypeKind:
     case DICompositeTypeKind:
     case DISubroutineTypeKind:
@@ -747,6 +750,12 @@ public:
   DEFINE_MDNODE_GET(DIBasicType, (unsigned Tag, StringRef Name),
                     (Tag, Name, 0, 0, 0, FlagZero))
   DEFINE_MDNODE_GET(DIBasicType,
+                    (unsigned Tag, StringRef Name, uint64_t SizeInBits),
+                    (Tag, Name, SizeInBits, 0, 0, FlagZero))
+  DEFINE_MDNODE_GET(DIBasicType,
+                    (unsigned Tag, MDString *Name, uint64_t SizeInBits),
+                    (Tag, Name, SizeInBits, 0, 0, FlagZero))
+  DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits,
                      uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
                     (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags))
@@ -768,6 +777,81 @@ public:
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIBasicTypeKind;
   }
+};
+
+/// String type, Fortran CHARACTER(n)
+class DIStringType : public DIType {
+  friend class LLVMContextImpl;
+  friend class MDNode;
+
+  unsigned Encoding;
+
+  DIStringType(LLVMContext &C, StorageType Storage, unsigned Tag,
+               uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+               ArrayRef<Metadata *> Ops)
+      : DIType(C, DIStringTypeKind, Storage, Tag, 0, SizeInBits, AlignInBits, 0,
+               FlagZero, Ops),
+        Encoding(Encoding) {}
+  ~DIStringType() = default;
+
+  static DIStringType *getImpl(LLVMContext &Context, unsigned Tag,
+                               StringRef Name, Metadata *StringLength,
+                               Metadata *StrLenExp, uint64_t SizeInBits,
+                               uint32_t AlignInBits, unsigned Encoding,
+                               StorageType Storage, bool ShouldCreate = true) {
+    return getImpl(Context, Tag, getCanonicalMDString(Context, Name),
+                   StringLength, StrLenExp, SizeInBits, AlignInBits, Encoding,
+                   Storage, ShouldCreate);
+  }
+  static DIStringType *getImpl(LLVMContext &Context, unsigned Tag,
+                               MDString *Name, Metadata *StringLength,
+                               Metadata *StrLenExp, uint64_t SizeInBits,
+                               uint32_t AlignInBits, unsigned Encoding,
+                               StorageType Storage, bool ShouldCreate = true);
+
+  TempDIStringType cloneImpl() const {
+    return getTemporary(getContext(), getTag(), getRawName(),
+                        getRawStringLength(), getRawStringLengthExp(),
+                        getSizeInBits(), getAlignInBits(), getEncoding());
+  }
+
+public:
+  DEFINE_MDNODE_GET(DIStringType,
+                    (unsigned Tag, StringRef Name, uint64_t SizeInBits,
+                     uint32_t AlignInBits),
+                    (Tag, Name, nullptr, nullptr, SizeInBits, AlignInBits, 0))
+  DEFINE_MDNODE_GET(DIStringType,
+                    (unsigned Tag, MDString *Name, Metadata *StringLength,
+                     Metadata *StringLengthExp, uint64_t SizeInBits,
+                     uint32_t AlignInBits, unsigned Encoding),
+                    (Tag, Name, StringLength, StringLengthExp, SizeInBits,
+                     AlignInBits, Encoding))
+  DEFINE_MDNODE_GET(DIStringType,
+                    (unsigned Tag, StringRef Name, Metadata *StringLength,
+                     Metadata *StringLengthExp, uint64_t SizeInBits,
+                     uint32_t AlignInBits, unsigned Encoding),
+                    (Tag, Name, StringLength, StringLengthExp, SizeInBits,
+                     AlignInBits, Encoding))
+
+  TempDIStringType clone() const { return cloneImpl(); }
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DIStringTypeKind;
+  }
+
+  DIVariable *getStringLength() const {
+    return cast_or_null<DIVariable>(getRawStringLength());
+  }
+
+  DIExpression *getStringLengthExp() const {
+    return cast_or_null<DIExpression>(getRawStringLengthExp());
+  }
+
+  unsigned getEncoding() const { return Encoding; }
+
+  Metadata *getRawStringLength() const { return getOperand(3); }
+
+  Metadata *getRawStringLengthExp() const { return getOperand(4); }
 };
 
 /// Derived types.

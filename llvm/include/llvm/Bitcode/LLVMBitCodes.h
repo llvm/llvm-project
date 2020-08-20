@@ -338,7 +338,10 @@ enum MetadataCodes {
   METADATA_INDEX_OFFSET = 38,           // [offset]
   METADATA_INDEX = 39,                  // [bitpos]
   METADATA_LABEL = 40,                  // [distinct, scope, name, file, line]
-  METADATA_COMMON_BLOCK = 44,     // [distinct, scope, name, variable,...]
+  METADATA_STRING_TYPE = 41,            // [distinct, name, size, align,...]
+  // Codes 42 and 43 are reserved for support for Fortran array specific debug
+  // info.
+  METADATA_COMMON_BLOCK = 44 // [distinct, scope, name, variable,...]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each
