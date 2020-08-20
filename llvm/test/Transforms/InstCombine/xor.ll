@@ -4,6 +4,8 @@
 @G1 = global i32 0
 @G2 = global i32 0
 
+declare void @use(i8)
+
 define i1 @test0(i1 %A) {
 ; CHECK-LABEL: @test0(
 ; CHECK-NEXT:    ret i1 [[A:%.*]]
@@ -1009,4 +1011,153 @@ define i32 @not_is_canonical(i32 %x, i32 %y) {
   %add = add i32 %sub, %y
   %mul = shl i32 %add, 2
   ret i32 %mul
+}
+
+define i8 @not_shl(i8 %x) {
+; CHECK-LABEL: @not_shl(
+; CHECK-NEXT:    [[A:%.*]] = shl i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], -128
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = shl i8 %x, 7
+  %r = xor i8 %a, 128
+  ret i8 %r
+}
+
+define <2 x i8> @not_shl_vec(<2 x i8> %x) {
+; CHECK-LABEL: @not_shl_vec(
+; CHECK-NEXT:    [[A:%.*]] = shl <2 x i8> [[X:%.*]], <i8 5, i8 5>
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[A]], <i8 -32, i8 -32>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a = shl <2 x i8> %x, <i8 5, i8 5>
+  %r = xor <2 x i8> %a, <i8 224, i8 224>
+  ret <2 x i8> %r
+}
+
+define i8 @not_shl_extra_use(i8 %x) {
+; CHECK-LABEL: @not_shl_extra_use(
+; CHECK-NEXT:    [[A:%.*]] = shl i8 [[X:%.*]], 7
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], -128
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = shl i8 %x, 7
+  call void @use(i8 %a)
+  %r = xor i8 %a, 128
+  ret i8 %r
+}
+
+define i8 @not_shl_wrong_const(i8 %x) {
+; CHECK-LABEL: @not_shl_wrong_const(
+; CHECK-NEXT:    [[A:%.*]] = shl i8 [[X:%.*]], 6
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], -128
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = shl i8 %x, 6
+  %r = xor i8 %a, 128
+  ret i8 %r
+}
+
+define i8 @not_lshr(i8 %x) {
+; CHECK-LABEL: @not_lshr(
+; CHECK-NEXT:    [[A:%.*]] = lshr i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], 7
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = lshr i8 %x, 5
+  %r = xor i8 %a, 7
+  ret i8 %r
+}
+
+define <2 x i8> @not_lshr_vec(<2 x i8> %x) {
+; CHECK-LABEL: @not_lshr_vec(
+; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 7, i8 7>
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[A]], <i8 1, i8 1>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a = lshr <2 x i8> %x, <i8 7, i8 7>
+  %r = xor <2 x i8> %a, <i8 1, i8 1>
+  ret <2 x i8> %r
+}
+
+define i8 @not_lshr_extra_use(i8 %x) {
+; CHECK-LABEL: @not_lshr_extra_use(
+; CHECK-NEXT:    [[A:%.*]] = lshr i8 [[X:%.*]], 5
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], 7
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = lshr i8 %x, 5
+  call void @use(i8 %a)
+  %r = xor i8 %a, 7
+  ret i8 %r
+}
+
+define i8 @not_lshr_wrong_const(i8 %x) {
+; CHECK-LABEL: @not_lshr_wrong_const(
+; CHECK-NEXT:    [[A:%.*]] = lshr i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], 3
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = lshr i8 %x, 5
+  %r = xor i8 %a, 3
+  ret i8 %r
+}
+
+define i8 @ashr_not(i8 %x) {
+; CHECK-LABEL: @ashr_not(
+; CHECK-NEXT:    [[N:%.*]] = ashr i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[N]], -1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %n = xor i8 %x, -1
+  %r = ashr i8 %n, 5
+  ret i8 %r
+}
+
+define i8 @not_ashr(i8 %x) {
+; CHECK-LABEL: @not_ashr(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], -1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = ashr i8 %x, 5
+  %r = xor i8 %a, -1
+  ret i8 %r
+}
+
+define <2 x i8> @not_ashr_vec(<2 x i8> %x) {
+; CHECK-LABEL: @not_ashr_vec(
+; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 7, i8 7>
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[A]], <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a = ashr <2 x i8> %x, <i8 7, i8 7>
+  %r = xor <2 x i8> %a, <i8 -1, i8 -1>
+  ret <2 x i8> %r
+}
+
+define i8 @not_ashr_extra_use(i8 %x) {
+; CHECK-LABEL: @not_ashr_extra_use(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 5
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], -1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = ashr i8 %x, 5
+  call void @use(i8 %a)
+  %r = xor i8 %a, -1
+  ret i8 %r
+}
+
+define i8 @not_ashr_wrong_const(i8 %x) {
+; CHECK-LABEL: @not_ashr_wrong_const(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], -2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = ashr i8 %x, 5
+  %r = xor i8 %a, -2
+  ret i8 %r
 }
