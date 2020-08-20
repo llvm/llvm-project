@@ -2454,7 +2454,7 @@ typedef decltype(sizeof(void *)) size_t;
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, Namespaces) {
+TEST_P(SyntaxTreeTest, Namespace_Nested) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -2462,9 +2462,6 @@ TEST_P(SyntaxTreeTest, Namespaces) {
       R"cpp(
 namespace a { namespace b {} }
 namespace a::b {}
-namespace {}
-
-namespace foo = a;
 )cpp",
       R"txt(
 *: TranslationUnit
@@ -2478,82 +2475,91 @@ namespace foo = a;
 | | |-{
 | | `-}
 | `-}
-|-NamespaceDefinition
-| |-namespace
-| |-a
-| |-::
-| |-b
-| |-{
-| `-}
-|-NamespaceDefinition
-| |-namespace
-| |-{
-| `-}
-`-NamespaceAliasDefinition
+`-NamespaceDefinition
   |-namespace
-  |-foo
-  |-=
   |-a
-  `-;
+  |-::
+  |-b
+  |-{
+  `-}
 )txt"));
+}
+
+TEST_P(SyntaxTreeTest, Namespace_Unnamed) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+namespace {}
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-NamespaceDefinition
+  |-namespace
+  |-{
+  `-}
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, Namespace_Alias) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+namespace a {}
+[[namespace foo = a;]]
+)cpp",
+      {R"txt(
+NamespaceAliasDefinition
+|-namespace
+|-foo
+|-=
+|-a
+`-;
+)txt"}));
 }
 
 TEST_P(SyntaxTreeTest, UsingDirective) {
   if (!GetParam().isCXX()) {
     return;
   }
-  EXPECT_TRUE(treeDumpEqual(
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
 namespace ns {}
-using namespace ::ns;
+[[using namespace ::ns;]]
 )cpp",
-      R"txt(
-*: TranslationUnit
-|-NamespaceDefinition
-| |-namespace
-| |-ns
-| |-{
-| `-}
-`-UsingNamespaceDirective
-  |-using
-  |-namespace
-  |-NestedNameSpecifier
-  | `-::
-  |-ns
-  `-;
-)txt"));
+      {R"txt(
+UsingNamespaceDirective
+|-using
+|-namespace
+|-NestedNameSpecifier
+| `-::
+|-ns
+`-;
+)txt"}));
 }
 
 TEST_P(SyntaxTreeTest, UsingDeclaration) {
   if (!GetParam().isCXX()) {
     return;
   }
-  EXPECT_TRUE(treeDumpEqual(
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
 namespace ns { int a; }
-using ns::a;
+[[using ns::a;]]
 )cpp",
-      R"txt(
-*: TranslationUnit
-|-NamespaceDefinition
-| |-namespace
-| |-ns
-| |-{
-| |-SimpleDeclaration
-| | |-int
-| | |-SimpleDeclarator
-| | | `-a
-| | `-;
-| `-}
-`-UsingDeclaration
-  |-using
-  |-NestedNameSpecifier
-  | |-IdentifierNameSpecifier
-  | | `-ns
-  | `-::
-  |-a
-  `-;
-)txt"));
+      {R"txt(
+UsingDeclaration
+|-using
+|-NestedNameSpecifier
+| |-IdentifierNameSpecifier
+| | `-ns
+| `-::
+|-a
+`-;
+)txt"}));
 }
 
 TEST_P(SyntaxTreeTest, FreeStandingClasses) {
