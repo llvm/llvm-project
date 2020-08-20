@@ -3254,6 +3254,79 @@ AMDGPUInstructionSelector::selectFlatOffsetSigned(MachineOperand &Root) const {
   return selectFlatOffsetImpl<true>(Root);
 }
 
+/// Match a zero extend from a 32-bit value to 64-bits.
+static Register matchZeroExtendFromS32(MachineRegisterInfo &MRI, Register Reg) {
+  Register ZExtSrc;
+  if (mi_match(Reg, MRI, m_GZExt(m_Reg(ZExtSrc))))
+    return MRI.getType(ZExtSrc) == LLT::scalar(32) ? ZExtSrc : Register();
+
+  // Match legalized form %zext = G_MERGE_VALUES (s32 %x), (s32 0)
+  const MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
+  if (Def->getOpcode() != AMDGPU::G_MERGE_VALUES)
+    return false;
+
+  int64_t MergeRHS;
+  if (mi_match(Def->getOperand(2).getReg(), MRI, m_ICst(MergeRHS)) &&
+      MergeRHS == 0) {
+    return Def->getOperand(1).getReg();
+  }
+
+  return Register();
+}
+
+// Match (64-bit SGPR base) + (zext vgpr offset) + sext(imm offset)
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
+  Register PtrBase;
+  int64_t ImmOffset;
+
+  // Match the immediate offset first, which canonically is moved as low as
+  // possible.
+  std::tie(PtrBase, ImmOffset) = getPtrBaseWithConstantOffset(Root.getReg(),
+                                                              *MRI);
+
+  // TODO: Could split larger constant into VGPR offset.
+  if (ImmOffset != 0 &&
+      !TII.isLegalFLATOffset(ImmOffset, AMDGPUAS::GLOBAL_ADDRESS, true)) {
+    PtrBase = Root.getReg();
+    ImmOffset = 0;
+  }
+
+  // Match the variable offset.
+  const MachineInstr *PtrBaseDef = getDefIgnoringCopies(PtrBase, *MRI);
+  if (PtrBaseDef->getOpcode() != AMDGPU::G_PTR_ADD)
+    return None;
+
+  // Look through the SGPR->VGPR copy.
+  Register PtrBaseSrc =
+    getSrcRegIgnoringCopies(PtrBaseDef->getOperand(1).getReg(), *MRI);
+  if (!PtrBaseSrc)
+    return None;
+
+  const RegisterBank *BaseRB = RBI.getRegBank(PtrBaseSrc, *MRI, TRI);
+  if (BaseRB->getID() != AMDGPU::SGPRRegBankID)
+    return None;
+
+  Register SAddr = PtrBaseSrc;
+  Register PtrBaseOffset = PtrBaseDef->getOperand(2).getReg();
+
+  // It's possible voffset is an SGPR here, but the copy to VGPR will be
+  // inserted later.
+  Register VOffset = matchZeroExtendFromS32(*MRI, PtrBaseOffset);
+  if (!VOffset)
+    return None;
+
+  return {{[=](MachineInstrBuilder &MIB) { // saddr
+             MIB.addReg(SAddr);
+           },
+           [=](MachineInstrBuilder &MIB) { // voffset
+             MIB.addReg(VOffset);
+           },
+           [=](MachineInstrBuilder &MIB) { // offset
+             MIB.addImm(ImmOffset);
+           }}};
+}
+
 static bool isStackPtrRelative(const MachinePointerInfo &PtrInfo) {
   auto PSV = PtrInfo.V.dyn_cast<const PseudoSourceValue *>();
   return PSV && PSV->isStack();
