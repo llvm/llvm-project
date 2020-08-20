@@ -1495,7 +1495,7 @@ static uint64_t acquire_available_packet_id(hsa_queue_t *queue) {
   bool full = true;
   while (full) {
     full =
-        packet_id >= (queue->size + hsa_queue_load_read_index_acquire(queue));
+        packet_id >= (queue->size + hsa_queue_load_read_index_scacquire(queue));
   }
   return packet_id;
 }
@@ -1652,9 +1652,9 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
 
     hsa_signal_store_relaxed(queue->doorbell_signal, packet_id);
 
-    while (hsa_signal_wait_acquire(packet->completion_signal,
-                                   HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX,
-                                   HSA_WAIT_STATE_BLOCKED) != 0)
+    while (hsa_signal_wait_scacquire(packet->completion_signal,
+                                     HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX,
+                                     HSA_WAIT_STATE_BLOCKED) != 0)
       ;
 
     assert(ArgPool);
