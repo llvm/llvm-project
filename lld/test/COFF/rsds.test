@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t.obj
+# RUN: yaml2obj %s -o %t.obj
 
 # RUN: rm -f %t.dll %t.pdb
 # RUN: lld-link /debug /pdbaltpath:test.pdb /dll /out:%t.dll /entry:DllMain %t.obj

@@ -1,6 +1,6 @@
 # REQUIRES: x86
 
-# RUN: yaml2obj %S/Inputs/unwind-via-stack-cfi.yaml > %t
+# RUN: yaml2obj %S/Inputs/unwind-via-stack-cfi.yaml -o %t
 # RUN: %lldb -c %t -o "target symbols add %S/Inputs/unwind-via-stack-cfi.syms" \
 # RUN:   -s %s -b | FileCheck %s
 

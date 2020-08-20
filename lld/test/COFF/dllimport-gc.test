@@ -1,9 +1,9 @@
-# RUN: yaml2obj < %p/Inputs/export.yaml > %t-lib.obj
+# RUN: yaml2obj %p/Inputs/export.yaml -o %t-lib.obj
 # RUN: lld-link /out:%t.dll /dll %t-lib.obj /implib:%t.lib /export:exportfn1
 
-# RUN: yaml2obj < %p/Inputs/oldname.yaml > %t-oldname.obj
+# RUN: yaml2obj %p/Inputs/oldname.yaml -o %t-oldname.obj
 
-# RUN: yaml2obj < %s > %t.obj
+# RUN: yaml2obj %s -o %t.obj
 
 # RUN: lld-link /out:%t1.exe /entry:main %t.obj %t-oldname.obj %t.lib
 # RUN: llvm-readobj --coff-imports %t1.exe | FileCheck -check-prefix=REF %s
