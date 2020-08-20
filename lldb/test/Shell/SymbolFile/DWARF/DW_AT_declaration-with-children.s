@@ -4,9 +4,8 @@
 
 # REQUIRES: x86
 
-# RUN: rm -rf %t
 # RUN: split-file %s %t
-# RUN: llvm-mc --triple x86_64-pc-linux %t/asm --filetype=obj > %t.o
+# RUN: llvm-mc --triple x86_64-pc-linux %t/asm --filetype=obj -o %t.o
 # RUN: %lldb -o "settings set interpreter.stop-command-source-on-error false" \
 # RUN:   -s %t/commands -o exit %t.o 2>&1 | FileCheck %s
 
