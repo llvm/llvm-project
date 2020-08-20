@@ -706,7 +706,6 @@ static ShuffleOps collectShuffleElements(Value *V, SmallVectorImpl<int> &Mask,
 /// This potentially deals with PHI indirections.
 Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     InsertValueInst &OrigIVI) {
-  BasicBlock *UseBB = OrigIVI.getParent();
   Type *AggTy = OrigIVI.getType();
   unsigned NumAggElts;
   switch (AggTy->getTypeID()) {
@@ -806,11 +805,11 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // If found, return the source aggregate from which the extraction was.
   // If \p PredBB is provided, does PHI translation of an \p Elt first.
   auto FindSourceAggregate =
-      [&](Value *Elt, unsigned EltIdx,
+      [&](Value *Elt, unsigned EltIdx, Optional<BasicBlock *> UseBB,
           Optional<BasicBlock *> PredBB) -> Optional<Value *> {
     // For now(?), only deal with, at most, a single level of PHI indirection.
-    if (PredBB)
-      Elt = Elt->DoPHITranslation(UseBB, *PredBB);
+    if (UseBB && PredBB)
+      Elt = Elt->DoPHITranslation(*UseBB, *PredBB);
     // FIXME: deal with multiple levels of PHI indirection?
 
     // Did we find an extraction?
@@ -834,7 +833,8 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // see if we can find appropriate source aggregate for each of the elements,
   // and see it's the same aggregate for each element. If so, return it.
   auto FindCommonSourceAggregate =
-      [&](Optional<BasicBlock *> PredBB) -> Optional<Value *> {
+      [&](Optional<BasicBlock *> UseBB,
+          Optional<BasicBlock *> PredBB) -> Optional<Value *> {
     Optional<Value *> SourceAggregate;
 
     for (auto I : enumerate(AggElts)) {
@@ -848,7 +848,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
       // FIXME: we could special-case undef element, IFF we know that in the
       //        source aggregate said element isn't poison.
       Optional<Value *> SourceAggregateForElement =
-          FindSourceAggregate(*I.value(), I.index(), PredBB);
+          FindSourceAggregate(*I.value(), I.index(), UseBB, PredBB);
 
       // Okay, what have we found? Does that correlate with previous findings?
 
@@ -884,7 +884,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   Optional<Value *> SourceAggregate;
 
   // Can we find the source aggregate without looking at predecessors?
-  SourceAggregate = FindCommonSourceAggregate(/*PredBB=*/None);
+  SourceAggregate = FindCommonSourceAggregate(/*UseBB=*/None, /*PredBB=*/None);
   if (Describe(SourceAggregate) != AggregateDescription::NotFound) {
     if (Describe(SourceAggregate) == AggregateDescription::FoundMismatch)
       return nullptr; // Conflicting source aggregates!
@@ -892,12 +892,20 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     return replaceInstUsesWith(OrigIVI, *SourceAggregate);
   }
 
+  // Okay, apparently we need to look at predecessors.
+
+  BasicBlock *UseBB = OrigIVI.getParent();
+
+  // If *all* of the elements are basic-block-independent, meaning they are
+  // either function arguments, or constant expressions, then if we didn't
+  // handle them without predecessor-aware folding, we won't handle them now.
+  if (!UseBB)
+    return nullptr;
+
   // If we didn't manage to find source aggregate without looking at
   // predecessors, and there are no predecessors to look at, then we're done.
   if (pred_empty(UseBB))
     return nullptr;
-
-  // Okay, apparently we need to look at predecessors.
 
   // Arbitrary predecessor count limit.
   static const int PredCountLimit = 64;
@@ -909,9 +917,9 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // from which all the elements were originally extracted from?
   // Note that we want for the map to have stable iteration order!
   SmallMapVector<BasicBlock *, Value *, 4> SourceAggregates;
-  for (BasicBlock *Pred : predecessors(UseBB)) {
+  for (BasicBlock *PredBB : predecessors(UseBB)) {
     std::pair<decltype(SourceAggregates)::iterator, bool> IV =
-        SourceAggregates.insert({Pred, nullptr});
+        SourceAggregates.insert({PredBB, nullptr});
     // Did we already evaluate this predecessor?
     if (!IV.second)
       continue;
@@ -919,7 +927,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     // Let's hope that when coming from predecessor Pred, all elements of the
     // aggregate produced by OrigIVI must have been originally extracted from
     // the same aggregate. Is that so? Can we find said original aggregate?
-    SourceAggregate = FindCommonSourceAggregate(Pred);
+    SourceAggregate = FindCommonSourceAggregate(UseBB, PredBB);
     if (Describe(SourceAggregate) != AggregateDescription::Found)
       return nullptr; // Give up.
     IV.first->second = *SourceAggregate;
