@@ -881,35 +881,46 @@ public:
     return true;
   }
 
-  bool WalkUpFromMemberExpr(MemberExpr *S) {
-    if (auto QualifierLoc = S->getQualifierLoc())
+  syntax::IdExpression *buildIdExpression(NestedNameSpecifierLoc QualifierLoc,
+                                          SourceLocation TemplateKeywordLoc,
+                                          SourceRange UnqualifiedIdLoc,
+                                          ASTPtr From) {
+    if (QualifierLoc) {
       Builder.markChild(QualifierLoc, syntax::NodeRole::IdExpression_qualifier);
-
-    auto TemplateKeywordLoc = S->getTemplateKeywordLoc();
-    if (TemplateKeywordLoc.isValid())
-      Builder.markChildToken(TemplateKeywordLoc,
-                             syntax::NodeRole::TemplateKeyword);
+      if (TemplateKeywordLoc.isValid())
+        Builder.markChildToken(TemplateKeywordLoc,
+                               syntax::NodeRole::TemplateKeyword);
+    }
 
     auto *TheUnqualifiedId = new (allocator()) syntax::UnqualifiedId;
-    Builder.foldNode(Builder.getRange(S->getMemberLoc(), S->getEndLoc()),
-                     TheUnqualifiedId, nullptr);
-
+    Builder.foldNode(Builder.getRange(UnqualifiedIdLoc), TheUnqualifiedId,
+                     nullptr);
     Builder.markChild(TheUnqualifiedId, syntax::NodeRole::IdExpression_id);
 
-    auto *TheIdExpression = new (allocator()) syntax::IdExpression;
-    auto MemberRange =
-        Builder.getRange(S->hasQualifier() ? S->getQualifierLoc().getBeginLoc()
-                                           : S->getMemberLoc(),
-                         S->getEndLoc());
+    auto IdExpressionBeginLoc =
+        QualifierLoc ? QualifierLoc.getBeginLoc() : UnqualifiedIdLoc.getBegin();
 
+    auto *TheIdExpression = new (allocator()) syntax::IdExpression;
+    Builder.foldNode(
+        Builder.getRange(IdExpressionBeginLoc, UnqualifiedIdLoc.getEnd()),
+        TheIdExpression, From);
+
+    return TheIdExpression;
+  }
+
+  bool WalkUpFromMemberExpr(MemberExpr *S) {
     // For `MemberExpr` with implicit `this->` we generate a simple
     // `id-expression` syntax node, beacuse an implicit `member-expression` is
     // syntactically undistinguishable from an `id-expression`
     if (S->isImplicitAccess()) {
-      Builder.foldNode(MemberRange, TheIdExpression, S);
+      buildIdExpression(S->getQualifierLoc(), S->getTemplateKeywordLoc(),
+                        SourceRange(S->getMemberLoc(), S->getEndLoc()), S);
       return true;
     }
-    Builder.foldNode(MemberRange, TheIdExpression, nullptr);
+
+    auto *TheIdExpression = buildIdExpression(
+        S->getQualifierLoc(), S->getTemplateKeywordLoc(),
+        SourceRange(S->getMemberLoc(), S->getEndLoc()), nullptr);
 
     Builder.markChild(TheIdExpression,
                       syntax::NodeRole::MemberExpression_member);
@@ -925,45 +936,17 @@ public:
   }
 
   bool WalkUpFromDeclRefExpr(DeclRefExpr *S) {
-    if (auto QualifierLoc = S->getQualifierLoc())
-      Builder.markChild(QualifierLoc, syntax::NodeRole::IdExpression_qualifier);
+    buildIdExpression(S->getQualifierLoc(), S->getTemplateKeywordLoc(),
+                      SourceRange(S->getLocation(), S->getEndLoc()), S);
 
-    auto TemplateKeywordLoc = S->getTemplateKeywordLoc();
-    if (TemplateKeywordLoc.isValid())
-      Builder.markChildToken(TemplateKeywordLoc,
-                             syntax::NodeRole::TemplateKeyword);
-
-    auto *unqualifiedId = new (allocator()) syntax::UnqualifiedId;
-
-    Builder.foldNode(Builder.getRange(S->getLocation(), S->getEndLoc()),
-                     unqualifiedId, nullptr);
-
-    Builder.markChild(unqualifiedId, syntax::NodeRole::IdExpression_id);
-
-    Builder.foldNode(Builder.getExprRange(S),
-                     new (allocator()) syntax::IdExpression, S);
     return true;
   }
 
   // Same logic as DeclRefExpr.
   bool WalkUpFromDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *S) {
-    if (auto QualifierLoc = S->getQualifierLoc())
-      Builder.markChild(QualifierLoc, syntax::NodeRole::IdExpression_qualifier);
+    buildIdExpression(S->getQualifierLoc(), S->getTemplateKeywordLoc(),
+                      SourceRange(S->getLocation(), S->getEndLoc()), S);
 
-    auto TemplateKeywordLoc = S->getTemplateKeywordLoc();
-    if (TemplateKeywordLoc.isValid())
-      Builder.markChildToken(TemplateKeywordLoc,
-                             syntax::NodeRole::TemplateKeyword);
-
-    auto *unqualifiedId = new (allocator()) syntax::UnqualifiedId;
-
-    Builder.foldNode(Builder.getRange(S->getLocation(), S->getEndLoc()),
-                     unqualifiedId, nullptr);
-
-    Builder.markChild(unqualifiedId, syntax::NodeRole::IdExpression_id);
-
-    Builder.foldNode(Builder.getExprRange(S),
-                     new (allocator()) syntax::IdExpression, S);
     return true;
   }
 
