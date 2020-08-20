@@ -703,6 +703,10 @@ bool IsAssumedRank(const ActualArgument &arg) {
 bool IsProcedure(const Expr<SomeType> &expr) {
   return std::holds_alternative<ProcedureDesignator>(expr.u);
 }
+bool IsFunction(const Expr<SomeType> &expr) {
+  const auto *designator{std::get_if<ProcedureDesignator>(&expr.u)};
+  return designator && designator->GetType().has_value();
+}
 
 bool IsProcedurePointer(const Expr<SomeType> &expr) {
   return std::visit(common::visitors{
