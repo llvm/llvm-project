@@ -84,18 +84,15 @@ class GCNRegBankReassign : public MachineFunctionPass {
   class Candidate {
   public:
     Candidate(MachineInstr *mi, Register reg, unsigned subreg,
-              unsigned freebanks, unsigned weight)
-        : MI(mi), Reg(reg), SubReg(subreg), FreeBanks(freebanks),
-          Weight(weight) {}
-
-    bool operator< (const Candidate& RHS) const { return Weight < RHS.Weight; }
+              unsigned freebanks)
+        : MI(mi), Reg(reg), SubReg(subreg), FreeBanks(freebanks) {}
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     void dump(const GCNRegBankReassign *P) const {
       MI->dump();
       dbgs() << P->printReg(Reg) << " to banks ";
       dumpFreeBanks(FreeBanks);
-      dbgs() << " weight " << Weight << '\n';
+      dbgs() << '\n';
     }
 #endif
 
@@ -103,16 +100,35 @@ class GCNRegBankReassign : public MachineFunctionPass {
     Register Reg;
     unsigned SubReg;
     unsigned FreeBanks;
-    unsigned Weight;
   };
 
-  class CandidateList : public std::list<Candidate> {
+  class CandidateList : public std::map<unsigned, std::list<Candidate>> {
   public:
-    // Speedup subsequent sort.
-    void push(const Candidate&& C) {
-      if (C.Weight) push_back(C);
-      else push_front(C);
+    void push(unsigned Weight, const Candidate&& C) {
+      operator[](Weight).push_front(C);
     }
+
+    Candidate &back() {
+      return rbegin()->second.back();
+    }
+
+    void pop_back() {
+      rbegin()->second.pop_back();
+      if (rbegin()->second.empty())
+        erase(rbegin()->first);
+    }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    void dump(const GCNRegBankReassign *P) const {
+      dbgs() << "\nCandidates:\n\n";
+      for (auto &B : *this) {
+        dbgs() << " Weight " << B.first << ":\n";
+        for (auto &C : B.second)
+          C.dump(P);
+      }
+      dbgs() << "\n\n";
+    }
+#endif
   };
 
 public:
@@ -601,11 +617,11 @@ void GCNRegBankReassign::collectCandidates(MachineInstr& MI,
       unsigned FreeBanks1 = getFreeBanks(Reg1, SubReg1, Mask1, UsedBanks);
       unsigned FreeBanks2 = getFreeBanks(Reg2, SubReg2, Mask2, UsedBanks);
       if (FreeBanks1)
-        Candidates.push(Candidate(&MI, Reg1, SubReg1, FreeBanks1,
-                                  Weight + ((Size2 > Size1) ? 1 : 0)));
+        Candidates.push(Weight + ((Size2 > Size1) ? 1 : 0),
+                        Candidate(&MI, Reg1, SubReg1, FreeBanks1));
       if (FreeBanks2)
-        Candidates.push(Candidate(&MI, Reg2, SubReg2, FreeBanks2,
-                                  Weight + ((Size1 > Size2) ? 1 : 0)));
+        Candidates.push(Weight + ((Size1 > Size2) ? 1 : 0),
+                        Candidate(&MI, Reg2, SubReg2, FreeBanks2));
     }
   }
 }
@@ -761,9 +777,15 @@ unsigned GCNRegBankReassign::collectCandidates(MachineFunction &MF,
 }
 
 void GCNRegBankReassign::removeCandidates(Register Reg) {
-  Candidates.remove_if([Reg, this](const Candidate& C) {
-    return C.MI->readsRegister(Reg, TRI);
-  });
+  typename CandidateList::iterator Next;
+  for (auto I = Candidates.begin(), E = Candidates.end(); I != E; I = Next) {
+    Next = std::next(I);
+    I->second.remove_if([Reg, this](const Candidate& C) {
+      return C.MI->readsRegister(Reg, TRI);
+    });
+    if (I->second.empty())
+      Candidates.erase(I);
+  }
 }
 
 bool GCNRegBankReassign::verifyCycles(MachineFunction &MF,
@@ -808,11 +830,7 @@ bool GCNRegBankReassign::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "=== " << StallCycles << " stall cycles detected in "
                   "function " << MF.getName() << '\n');
 
-  Candidates.sort();
-
-  LLVM_DEBUG(dbgs() << "\nCandidates:\n\n";
-        for (auto C : Candidates) C.dump(this);
-        dbgs() << "\n\n");
+  LLVM_DEBUG(Candidates.dump(this));
 
   unsigned CyclesSaved = 0;
   while (!Candidates.empty()) {
@@ -827,12 +845,8 @@ bool GCNRegBankReassign::runOnMachineFunction(MachineFunction &MF) {
     if (LocalCyclesSaved) {
       removeCandidates(C.Reg);
       computeStallCycles(C.Reg, AMDGPU::NoRegister, 0, -1, true);
-      Candidates.sort();
 
-      LLVM_DEBUG(dbgs() << "\nCandidates:\n\n";
-            for (auto C : Candidates)
-              C.dump(this);
-            dbgs() << "\n\n");
+      LLVM_DEBUG(Candidates.dump(this));
     }
   }
   NumStallsRecovered += CyclesSaved;
