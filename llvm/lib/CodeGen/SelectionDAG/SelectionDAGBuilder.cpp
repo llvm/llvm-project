@@ -1084,9 +1084,8 @@ SDValue SelectionDAGBuilder::getControlRoot() {
 
 void SelectionDAGBuilder::visit(const Instruction &I) {
   // Set up outgoing PHI node register values before emitting the terminator.
-  if (I.isTerminator()) {
-    HandlePHINodesInSuccessorBlocks(I.getParent());
-  }
+  if (I.isTerminator())
+    HandlePHINodesInSuccessorBlocks(I.getParent(), true);
 
   // Increase the SDNodeOrder if dealing with a non-debug instruction.
   if (!isa<DbgInfoIntrinsic>(I))
@@ -2838,6 +2837,9 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
   assert(I.isInlineAsm() && "Only know how to handle inlineasm callbr");
   visitInlineAsm(I);
   CopyToExportRegsIfNeeded(&I);
+
+  // Set up outgoing PHI node register values before emitting the branch.
+  HandlePHINodesInSuccessorBlocks(I.getParent(), false);
 
   // Retrieve successors.
   MachineBasicBlock *Return = FuncInfo.MBBMap[I.getDefaultDest()];
@@ -9990,10 +9992,10 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
 /// directly add them, because expansion might result in multiple MBB's for one
 /// BB.  As such, the start of the BB might correspond to a different MBB than
 /// the end.
-void
-SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
+void SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(
+    const BasicBlock *LLVMBB, bool Preprocess) {
   const Instruction *TI = LLVMBB->getTerminator();
-
+  const CallBrInst *CI = dyn_cast<CallBrInst>(TI);
   SmallPtrSet<MachineBasicBlock *, 4> SuccsHandled;
 
   // Check PHI nodes in successors that expect a value to be available from this
@@ -10001,6 +10003,21 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
   for (unsigned succ = 0, e = TI->getNumSuccessors(); succ != e; ++succ) {
     const BasicBlock *SuccBB = TI->getSuccessor(succ);
     if (!isa<PHINode>(SuccBB->begin())) continue;
+
+    if (CI) {
+      if (Preprocess) {
+        // Don't push PHI node values back before an INLINEASM_BR instruction on
+        // the default branch.
+        if (SuccBB == CI->getDefaultDest())
+          continue;
+      } else {
+        // Don't push PHI node values back after an INLINEASM_BR instruction on
+        // the indirect branch.
+        if (SuccBB != CI->getDefaultDest())
+          continue;
+      }
+    }
+
     MachineBasicBlock *SuccMBB = FuncInfo.MBBMap[SuccBB];
 
     // If this terminator has multiple identical successors (common for
