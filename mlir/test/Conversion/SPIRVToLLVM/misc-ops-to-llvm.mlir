@@ -21,6 +21,23 @@ func @select_vector(%arg0: vector<2xi1>, %arg1: vector<2xi32>) {
 }
 
 //===----------------------------------------------------------------------===//
+// spv.EntryPoint and spv.ExecutionMode
+//===----------------------------------------------------------------------===//
+
+//      CHECK: module {
+// CHECK-NEXT:   llvm.func @empty
+// CHECK-NEXT:     llvm.return
+// CHECK-NEXT:   }
+// CHECK-NEXT: }
+spv.module Logical GLSL450 {
+  spv.func @empty() -> () "None" {
+    spv.Return
+  }
+  spv.EntryPoint "GLCompute" @empty
+  spv.ExecutionMode @empty "LocalSize", 1, 1, 1
+}
+
+//===----------------------------------------------------------------------===//
 // spv.Undef
 //===----------------------------------------------------------------------===//
 
