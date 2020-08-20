@@ -1004,3 +1004,37 @@ onone:
 ondefault:
   ret i32* undef
 }
+
+define noundef i32 @returned_nonnnull_noundef_int() {
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@returned_nonnnull_noundef_int()
+; IS__TUNIT____-NEXT:    ret i32 0
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@returned_nonnnull_noundef_int()
+; IS__CGSCC____-NEXT:    ret i32 0
+;
+  ret i32 0
+}
+
+declare void @callee_int_arg(i32)
+
+define void @callsite_noundef_1() {
+; CHECK-LABEL: define {{[^@]+}}@callsite_noundef_1()
+; CHECK-NEXT:    call void @callee_int_arg(i32 noundef 0)
+; CHECK-NEXT:    ret void
+;
+  call void @callee_int_arg(i32 noundef 0)
+  ret void
+}
+
+declare void @callee_ptr_arg(i32*)
+
+define void @callsite_noundef_2() {
+; CHECK-LABEL: define {{[^@]+}}@callsite_noundef_2()
+; CHECK-NEXT:    call void @callee_ptr_arg(i32* noundef undef)
+; CHECK-NEXT:    ret void
+;
+  call void @callee_ptr_arg(i32* noundef undef)
+  ret void
+}
