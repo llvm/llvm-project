@@ -355,6 +355,117 @@ SubtargetFeatures ELFObjectFileBase::getFeatures() const {
   }
 }
 
+Optional<StringRef> ELFObjectFileBase::tryGetCPUName() const {
+  switch (getEMachine()) {
+  case ELF::EM_AMDGPU:
+    return getAMDGPUCPUName();
+  default:
+    return None;
+  }
+}
+
+StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
+  assert(getEMachine() == ELF::EM_AMDGPU);
+  unsigned CPU = getPlatformFlags() & ELF::EF_AMDGPU_MACH;
+
+  switch (CPU) {
+  // Radeon HD 2000/3000 Series (R600).
+  case ELF::EF_AMDGPU_MACH_R600_R600:
+    return "r600";
+  case ELF::EF_AMDGPU_MACH_R600_R630:
+    return "r630";
+  case ELF::EF_AMDGPU_MACH_R600_RS880:
+    return "rs880";
+  case ELF::EF_AMDGPU_MACH_R600_RV670:
+    return "rv670";
+
+  // Radeon HD 4000 Series (R700).
+  case ELF::EF_AMDGPU_MACH_R600_RV710:
+    return "rv710";
+  case ELF::EF_AMDGPU_MACH_R600_RV730:
+    return "rv730";
+  case ELF::EF_AMDGPU_MACH_R600_RV770:
+    return "rv770";
+
+  // Radeon HD 5000 Series (Evergreen).
+  case ELF::EF_AMDGPU_MACH_R600_CEDAR:
+    return "cedar";
+  case ELF::EF_AMDGPU_MACH_R600_CYPRESS:
+    return "cypress";
+  case ELF::EF_AMDGPU_MACH_R600_JUNIPER:
+    return "juniper";
+  case ELF::EF_AMDGPU_MACH_R600_REDWOOD:
+    return "redwood";
+  case ELF::EF_AMDGPU_MACH_R600_SUMO:
+    return "sumo";
+
+  // Radeon HD 6000 Series (Northern Islands).
+  case ELF::EF_AMDGPU_MACH_R600_BARTS:
+    return "barts";
+  case ELF::EF_AMDGPU_MACH_R600_CAICOS:
+    return "caicos";
+  case ELF::EF_AMDGPU_MACH_R600_CAYMAN:
+    return "cayman";
+  case ELF::EF_AMDGPU_MACH_R600_TURKS:
+    return "turks";
+
+  // AMDGCN GFX6.
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX600:
+    return "gfx600";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX601:
+    return "gfx601";
+
+  // AMDGCN GFX7.
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX700:
+    return "gfx700";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX701:
+    return "gfx701";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX702:
+    return "gfx702";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX703:
+    return "gfx703";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX704:
+    return "gfx704";
+
+  // AMDGCN GFX8.
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX801:
+    return "gfx801";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX802:
+    return "gfx802";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX803:
+    return "gfx803";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX810:
+    return "gfx810";
+
+  // AMDGCN GFX9.
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX900:
+    return "gfx900";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX902:
+    return "gfx902";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX904:
+    return "gfx904";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX906:
+    return "gfx906";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX908:
+    return "gfx908";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX909:
+    return "gfx909";
+
+  // AMDGCN GFX10.
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1010:
+    return "gfx1010";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1011:
+    return "gfx1011";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1012:
+    return "gfx1012";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1030:
+    return "gfx1030";
+
+  default:
+    llvm_unreachable("Unknown EF_AMDGPU_MACH value");
+  }
+}
+
 // FIXME Encode from a tablegen description or target parser.
 void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
   if (TheTriple.getSubArch() != Triple::NoSubArch)
