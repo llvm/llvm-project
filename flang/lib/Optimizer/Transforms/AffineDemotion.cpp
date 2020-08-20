@@ -77,6 +77,14 @@ public:
   matchAndRewrite(fir::ConvertOp op,
                   mlir::PatternRewriter &rewriter) const override {
     if (op.res().getType().isa<mlir::MemRefType>()) {
+      if (auto refTy = op.value().getType().dyn_cast<fir::ReferenceType>())
+        if (auto arrTy = refTy.getEleTy().dyn_cast<fir::SequenceType>()) {
+          fir::SequenceType::Shape flatShape = {fir::SequenceType::getUnknownExtent()};
+          auto flatArrTy = fir::SequenceType::get(flatShape, arrTy.getEleTy());
+          auto flatTy = fir::ReferenceType::get(flatArrTy);
+          rewriter.replaceOpWithNewOp<fir::ConvertOp>(op, flatTy, op.value());
+          return success();
+        }
       rewriter.startRootUpdate(op.getParentOp());
       op.getResult().replaceAllUsesWith(op.value());
       rewriter.finalizeRootUpdate(op.getParentOp());

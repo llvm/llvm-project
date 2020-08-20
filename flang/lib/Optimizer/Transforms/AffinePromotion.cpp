@@ -24,12 +24,6 @@
 
 #define DEBUG_TYPE "flang-affine-promotion"
 
-/// disable FIR to affine dialect conversion
-static llvm::cl::opt<bool>
-    disableAffinePromo("disable-affine-promotion",
-                       llvm::cl::desc("disable FIR to Affine pass"),
-                       llvm::cl::init(true));
-
 using namespace fir;
 
 namespace {
@@ -57,13 +51,13 @@ private:
     return analyzeMemoryAccess(loopOperation) &&
            analyzeBody(loopOperation, functionAnalysis);
   }
-  bool analyzeArrayReference(mlir::Value);
+  bool analyzeReference(mlir::Value);
   bool analyzeMemoryAccess(fir::DoLoopOp loopOperation) {
     for (auto loadOp : loopOperation.getOps<fir::LoadOp>())
-      if (!analyzeArrayReference(loadOp.memref()))
+      if (!analyzeReference(loadOp.memref()))
         return false;
     for (auto storeOp : loopOperation.getOps<fir::StoreOp>())
-      if (!analyzeArrayReference(storeOp.memref()))
+      if (!analyzeReference(storeOp.memref()))
         return false;
     return true;
   }
@@ -234,17 +228,23 @@ bool analyzeCoordinate(mlir::Value coordinate) {
     return false;
   }
 }
-bool AffineLoopAnalysis::analyzeArrayReference(mlir::Value arrayRef) {
-  bool canPromote = true;
-  if (auto acoOp = arrayRef.getDefiningOp<ArrayCoorOp>()) {
+bool AffineLoopAnalysis::analyzeReference(mlir::Value memref) {
+  if (auto acoOp = memref.getDefiningOp<ArrayCoorOp>()) {
+    bool canPromote = true;
     for (auto coordinate : acoOp.indices())
       canPromote = canPromote && analyzeCoordinate(coordinate);
-  } else {
-    LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: cannot promote loop, "
-                               "array reference uses non ArrayCoorOp\n";);
-    canPromote = false;
+    return canPromote;
   }
-  return canPromote;
+  if (auto coOp = memref.getDefiningOp<CoordinateOp>()) {
+    LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: cannot promote loop, "
+                               "array uses non ArrayCoorOp\n";
+               coOp.dump(););
+
+    return false;
+  }
+  LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: unknown type of memory "
+                             "reference for array load\n";);
+  return false;
 }
 
 bool AffineLoopAnalysis::analyzeBody(fir::DoLoopOp loopOperation,
@@ -315,7 +315,7 @@ void populateIndexArgs(fir::ArrayCoorOp acoOp, fir::ShapeOp shape,
   auto one = rewriter.create<mlir::ConstantOp>(
       acoOp.getLoc(), rewriter.getIndexType(), rewriter.getIndexAttr(1));
   auto end = shape.extents().size();
-  for (decltype(end) i = 0; i < end; ++(++i)) {
+  for (decltype(end) i = 0; i < end; ++i) {
     indexArgs.push_back(one);
     indexArgs.push_back(*iter++);
     indexArgs.push_back(one);
@@ -527,8 +527,6 @@ class AffineDialectPromotion
     : public AffineDialectPromotionBase<AffineDialectPromotion> {
 public:
   void runOnFunction() override {
-    if (disableAffinePromo)
-      return;
 
     auto *context = &getContext();
     auto function = getFunction();
