@@ -153,6 +153,12 @@ CUDA Support in Clang
 
 - ...
 
+X86 Support in Clang
+--------------------
+
+- The x86 intrinsics ``_mm_popcnt_u32`` and ``_mm_popcnt_u64`` may now be used
+  within constexpr expressions.
+
 Internal API Changes
 --------------------
 
