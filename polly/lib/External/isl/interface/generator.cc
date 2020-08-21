@@ -157,7 +157,7 @@ void generator::extract_class_automatic_conversions(const isl_class &clazz)
 
 	for (fi = constructors.begin(); fi != constructors.end(); ++fi) {
 		FunctionDecl *fd = *fi;
-		string name = fd->getName();
+		string name = fd->getName().str();
 		if (automatic_conversion_functions.count(name) != 0)
 			extract_automatic_conversion(fd);
 	}
@@ -184,7 +184,7 @@ void generator::extract_automatic_conversions()
 void generator::add_subclass(RecordDecl *decl, const string &super_name,
 	const string &sub_name)
 {
-	string name = decl->getName();
+	string name = decl->getName().str();
 
 	classes[sub_name].name = name;
 	classes[sub_name].superclass_name = super_name;
@@ -200,7 +200,7 @@ void generator::add_subclass(RecordDecl *decl, const string &super_name,
  */
 void generator::add_class(RecordDecl *decl)
 {
-	return add_subclass(decl, "", decl->getName());
+	return add_subclass(decl, "", decl->getName().str());
 }
 
 /* Given a function "fn_type" that returns the subclass type
@@ -285,7 +285,7 @@ static bool handled_sets_enum(isl_class *c, FunctionDecl *fd)
 	if (!enum_type)
 		return false;
 	decl = enum_type->getDecl();
-	enum_name = decl->getName();
+	enum_name = decl->getName().str();
 	enum_name = enum_name.substr(4);
 	fd_name = c->method_name(fd);
 	pos = fd_name.find(enum_name);
@@ -329,6 +329,21 @@ static bool sets_persistent_callback(isl_class *c, FunctionDecl *fd)
 			 c->set_callback_prefix) == 0;
 }
 
+/* Does this function take any enum arguments?
+ */
+static bool takes_enums(FunctionDecl *fd)
+{
+	unsigned n;
+
+	n = fd->getNumParams();
+	for (unsigned i = 0; i < n; ++i) {
+		ParmVarDecl *param = fd->getParamDecl(i);
+		if (param->getType()->getAs<EnumType>())
+			return true;
+	}
+	return false;
+}
+
 /* Sorting function that places declaration of functions
  * with a shorter name first.
  */
@@ -338,9 +353,13 @@ static bool less_name(const FunctionDecl *a, const FunctionDecl *b)
 }
 
 /* Collect all functions that belong to a certain type, separating
- * constructors from methods that set persistent callback and
+ * constructors from methods that set an enum value,
+ * methods that set a persistent callback and
  * from regular methods, while keeping track of the _to_str,
- * _copy and _free functions, if any, separately.  If there are any overloaded
+ * _copy and _free functions, if any, separately.
+ * Methods that accept any enum arguments that are not specifically handled
+ * are not supported.
+ * If there are any overloaded
  * functions, then they are grouped based on their name after removing the
  * argument type suffix.
  * Check for functions that describe subclasses before considering
@@ -360,7 +379,7 @@ generator::generator(SourceManager &SM, set<RecordDecl *> &exported_types,
 
 	for (in = functions.begin(); in != functions.end(); ++in) {
 		FunctionDecl *decl = *in;
-		functions_by_name[decl->getName()] = decl;
+		functions_by_name[decl->getName().str()] = decl;
 	}
 
 	for (it = exported_types.begin(); it != exported_types.end(); ++it)
@@ -392,6 +411,9 @@ generator::generator(SourceManager &SM, set<RecordDecl *> &exported_types,
 		} else if (handled_sets_enum(c, method)) {
 		} else if (sets_persistent_callback(c, method)) {
 			c->persistent_callbacks.insert(method);
+		} else if (takes_enums(method)) {
+			std::string name = method->getName().str();
+			die(name + " has unhandled enum argument");
 		} else {
 			string fullname = c->name_without_type_suffixes(method);
 			c->methods[fullname].insert(method);
@@ -792,7 +814,7 @@ string isl_class::name_without_type_suffixes(FunctionDecl *method)
 	int num_params;
 	string name;
 
-	name = method->getName();
+	name = method->getName().str();
 	if (!generator::is_overload(method))
 		return name;
 
