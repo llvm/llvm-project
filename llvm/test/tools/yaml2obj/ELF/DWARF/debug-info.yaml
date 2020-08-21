@@ -279,6 +279,7 @@ DWARF:
     - Length:        0x5678
       ## Test DWARFv4
       Version:       4
+      AbbrevTableID: 0
       AbbrOffset:    0x5678
       AddrSize:      4
       Entries:
@@ -886,7 +887,7 @@ DWARF:
 
 ## RUN: not yaml2obj --docnum=16 %s 2>&1 | FileCheck %s --check-prefix=NO-ABBREV
 
-# NO-ABBREV: yaml2obj: error: non-empty compilation unit should have an associated abbrev table
+# NO-ABBREV: yaml2obj: error: cannot find abbrev table whose ID is 0 for compilation unit with index 0
 
 --- !ELF
 FileHeader:
@@ -902,3 +903,101 @@ DWARF:
         - AbbrCode: 1
           Values:
             - Value: 0x1234
+
+## o) Test that yaml2obj is able to generate compilation units according to the
+## associated abbrev table that is referenced by the 'AbbrevTableID'.
+
+# RUN: yaml2obj --docnum=17 %s -o %t17.o
+# RUN: llvm-readelf --hex-dump=.debug_info %t17.o | FileCheck %s --check-prefix=MULTI-TABLES
+
+#      MULTI-TABLES: Hex dump of section '.debug_info':
+# MULTI-TABLES-NEXT: 0x00000000 0c000000 04000800 00000801 34120000 ............4...
+##                              ^-------                            unit_length (4-byte)
+##                                       ^---                       version (2-byte)
+##                                           ^--------              debug_abbrev_offset (4-byte)
+##                                                    ^-            address_size (1-byte)
+##                                                      ^-          abbrev_code (ULEB128) 0x01
+##                                                         ^------- Form: DW_FORM_data4 (4-byte) 0x1234
+# MULTI-TABLES-NEXT: 0x00000010 0c000000 04000800 00000801 21430000 ............!C..
+##                              ^-------                            unit_length (4-byte)
+##                                       ^---                       version (2-byte)
+##                                           ^--------              debug_abbrev_offset (4-byte)
+##                                                    ^-            address_size (1-byte)
+##                                                      ^-          abbrev_code (ULEB128) 0x01
+##                                                         ^------- Form: DW_FORM_data4 (4-byte) 0x4321
+# MULTI-TABLES-NEXT: 0x00000020 10000000 04000000 00000801 78560000 ............xV..
+##                              ^-------                            unit_length (4-byte)
+##                                       ^---                       version (2-byte)
+##                                           ^--------              debug_abbrev_offset (4-byte)
+##                                                    ^-            address_size (1-byte)
+##                                                      ^-          abbrev_code (ULEB128) 0x01
+##                                                         ^------- Form: DW_FORM_addr (8-byte) 0x5678
+# MULTI-TABLES-NEXT: 0x00000030 00000000 0b000000 04001000 00000801 ................
+##                              --------
+##                                       ^-------                   unit_length (4-byte)
+##                                                ^---              version (2-byte)
+##                                                    ^--------     debug_abbrev_offset (4-byte)
+##                                                             ^-   address_size (1-byte)
+##                                                               ^- abbrev_code (ULEB128) 0x01
+# MULTI-TABLES-NEXT: 0x00000040 e58e02                              ...
+##                              ^-----                              Form: DW_FORM_udata (ULEB128) 0x8765
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_addr
+    - ID: 2
+      Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_data4
+    - ID: 1
+      Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_udata
+  debug_info:
+    - Version:       4
+      AbbrevTableID: 2
+      AbbrOffset:    8
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x1234
+    - Version:       4
+      AbbrevTableID: 2
+      AbbrOffset:    8
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x4321
+    - Version:       4
+      AbbrevTableID: 0
+      AbbrOffset:    0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x5678
+    - Version:       4
+      AbbrevTableID: 1
+      AbbrOffset:    16
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x8765
