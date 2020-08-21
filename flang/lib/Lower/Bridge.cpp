@@ -21,6 +21,7 @@
 #include "flang/Lower/FIRBuilder.h"
 #include "flang/Lower/IO.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/OpenACC.h"
 #include "flang/Lower/OpenMP.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
@@ -1057,7 +1058,13 @@ private:
     mlir::emitWarning(toLocation(), "ignoring all compiler directives");
   }
 
-  void genFIR(const Fortran::parser::OpenACCConstruct &) { TODO(); }
+  void genFIR(const Fortran::parser::OpenACCConstruct &acc) {
+    auto insertPt = builder->saveInsertionPoint();
+    genOpenACCConstruct(*this, getEval(), acc);
+    for (auto &e : getEval().getNestedEvaluations())
+      genFIR(e);
+    builder->restoreInsertionPoint(insertPt);
+  }
 
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
     genOpenMPConstruct(*this, getEval(), omp);
