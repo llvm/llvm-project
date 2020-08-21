@@ -19,4 +19,3 @@ Interpolation parameter to read:
     p10          Parameter *P10*.
     p20          Parameter *P20*.
     ============ ===================================
-
