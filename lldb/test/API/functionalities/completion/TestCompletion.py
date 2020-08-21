@@ -85,6 +85,31 @@ class CommandLineCompletionTestCase(TestBase):
                               ['mips',
                                'arm64'])
 
+    def test_process_load(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(self, '// Break here', lldb.SBFileSpec("main.cpp"))
+        self.complete_from_to('process load Makef', 'process load Makefile')
+
+    @skipUnlessPlatform(["linux"])
+    def test_process_unload(self):
+        """Test the completion for "process unload <index>" """
+        # This tab completion should not work without a running process.
+        self.complete_from_to('process unload ',
+                              'process unload ')
+
+        self.build()
+        lldbutil.run_to_source_breakpoint(self, '// Break here', lldb.SBFileSpec("main.cpp"))
+        err = lldb.SBError()
+        self.process().LoadImage(lldb.SBFileSpec(self.getBuildArtifact("libshared.so")), err)
+        self.assertSuccess(err)
+
+        self.complete_from_to('process unload ',
+                              'process unload 0')
+
+        self.process().UnloadImage(0)
+        self.complete_from_to('process unload ',
+                              'process unload ')
+
     def test_process_plugin_completion(self):
         subcommands = ['attach -P', 'connect -p', 'launch -p']
 
