@@ -1,5 +1,5 @@
 # RUN: mkdir -p %t.dir
-# RUN: yaml2obj < %s > %t.dir/foo.obj
+# RUN: yaml2obj %s -o %t.dir/foo.obj
 
 # RUN: rm -f %t.dir/foo.sys
 # RUN: cd %t.dir; lld-link /driver foo.obj

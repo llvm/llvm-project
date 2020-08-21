@@ -8,6 +8,7 @@
 # FULL-NEXT: explicitKernArgSize: 128
 # FULL-NEXT: maxKernArgAlign: 64
 # FULL-NEXT: ldsSize: 2048
+# FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: true
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     true
@@ -81,6 +82,7 @@ body:             |
 # FULL-NEXT: explicitKernArgSize: 0
 # FULL-NEXT: maxKernArgAlign: 1
 # FULL-NEXT: ldsSize: 0
+# FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     false
@@ -121,6 +123,7 @@ body:             |
 # FULL-NEXT: explicitKernArgSize: 0
 # FULL-NEXT: maxKernArgAlign: 1
 # FULL-NEXT: ldsSize: 0
+# FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     false
@@ -162,6 +165,7 @@ body:             |
 # FULL-NEXT: explicitKernArgSize: 0
 # FULL-NEXT: maxKernArgAlign: 1
 # FULL-NEXT: ldsSize: 0
+# FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: true
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     false
@@ -279,6 +283,23 @@ name: parse_spilled_regs
 machineFunctionInfo:
   hasSpilledSGPRs: true
   hasSpilledVGPRs: true
+
+body:             |
+  bb.0:
+    S_ENDPGM 0
+
+...
+
+---
+# ALL-LABEL: name: dyn_lds_with_alignment
+
+# FULL: ldsSize: 0
+# FULL-NEXT: dynLDSAlign: 8
+
+# SIMPLE: dynLDSAlign: 8
+name: dyn_lds_with_alignment
+machineFunctionInfo:
+  dynLDSAlign: 8
 
 body:             |
   bb.0:

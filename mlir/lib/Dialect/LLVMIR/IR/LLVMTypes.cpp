@@ -483,7 +483,7 @@ LLVMType LLVMVectorType::getElementType() {
 
 llvm::ElementCount LLVMVectorType::getElementCount() {
   // Both derived classes share the implementation type.
-  return llvm::ElementCount(
+  return llvm::ElementCount::get(
       static_cast<detail::LLVMTypeAndSizeStorage *>(impl)->numElements,
       isa<LLVMScalableVectorType>());
 }

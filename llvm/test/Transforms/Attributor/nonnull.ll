@@ -427,7 +427,7 @@ define internal i32* @f1(i32* %arg) {
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[BB6:%.*]], label [[BB4:%.*]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 1
-; CHECK-NEXT:    [[TMP5B:%.*]] = tail call nonnull i32* @f3(i32* nofree nonnull readonly [[TMP5]])
+; CHECK-NEXT:    [[TMP5B:%.*]] = tail call i32* @f3(i32* nofree nonnull readonly [[TMP5]])
 ; CHECK-NEXT:    [[TMP5C:%.*]] = getelementptr inbounds i32, i32* [[TMP5B]], i64 -1
 ; CHECK-NEXT:    br label [[BB9]]
 ; CHECK:       bb6:
@@ -801,8 +801,7 @@ define i1 @parent8(i8* %a, i8* %bogus1, i8* %b) personality i8* bitcast (i32 (..
 ; CHECK-NEXT:    invoke void @use2nonnull(i8* nonnull [[A]], i8* nonnull [[B]])
 ; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]
 ; CHECK:       cont:
-; CHECK-NEXT:    [[NULL_CHECK:%.*]] = icmp eq i8* [[B]], null
-; CHECK-NEXT:    ret i1 [[NULL_CHECK]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       exc:
 ; CHECK-NEXT:    [[LP:%.*]] = landingpad { i8*, i32 }
 ; CHECK-NEXT:    filter [0 x i8*] zeroinitializer

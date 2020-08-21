@@ -1441,6 +1441,8 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
                                         OnlyIfReducedTy);
   case Instruction::ExtractValue:
     return ConstantExpr::getExtractValue(Ops[0], getIndices(), OnlyIfReducedTy);
+  case Instruction::FNeg:
+    return ConstantExpr::getFNeg(Ops[0]);
   case Instruction::ShuffleVector:
     return ConstantExpr::getShuffleVector(Ops[0], Ops[1], getShuffleMask(),
                                           OnlyIfReducedTy);
@@ -2245,7 +2247,7 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   unsigned AS = C->getType()->getPointerAddressSpace();
   Type *ReqTy = DestTy->getPointerTo(AS);
 
-  ElementCount EltCount = {0, false};
+  auto EltCount = ElementCount::getFixed(0);
   if (VectorType *VecTy = dyn_cast<VectorType>(C->getType()))
     EltCount = VecTy->getElementCount();
   else
@@ -2938,7 +2940,7 @@ Constant *ConstantDataVector::getSplat(unsigned NumElts, Constant *V) {
       return getFP(V->getType(), Elts);
     }
   }
-  return ConstantVector::getSplat({NumElts, false}, V);
+  return ConstantVector::getSplat(ElementCount::getFixed(NumElts), V);
 }
 
 

@@ -55,6 +55,8 @@ enum class NodeKind : uint16_t {
   CharUserDefinedLiteralExpression,
   StringUserDefinedLiteralExpression,
   IdExpression,
+  MemberExpression,
+  ThisExpression,
 
   // Statements.
   UnknownStatement,
@@ -173,7 +175,10 @@ enum class NodeRole : uint8_t {
   ParametersAndQualifiers_trailingReturn,
   IdExpression_id,
   IdExpression_qualifier,
-  ParenExpression_subExpression
+  ParenExpression_subExpression,
+  MemberExpression_object,
+  MemberExpression_accessToken,
+  MemberExpression_member,
 };
 /// For debugging purposes.
 raw_ostream &operator<<(raw_ostream &OS, NodeRole R);
@@ -309,6 +314,16 @@ public:
   }
 };
 
+/// Models a this expression `this`. C++ [expr.prim.this]
+class ThisExpression final : public Expression {
+public:
+  ThisExpression() : Expression(NodeKind::ThisExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::ThisExpression;
+  }
+  Leaf *thisKeyword();
+};
+
 /// Models a parenthesized expression `(E)`. C++ [expr.prim.paren]
 /// e.g. `(3 + 2)` in `a = 1 + (3 + 2);`
 class ParenExpression final : public Expression {
@@ -320,6 +335,26 @@ public:
   Leaf *openParen();
   Expression *subExpression();
   Leaf *closeParen();
+};
+
+/// Models a class member access. C++ [expr.ref]
+/// member-expression:
+///   expression -> template_opt id-expression
+///   expression .  template_opt id-expression
+/// e.g. `x.a`, `xp->a`
+///
+/// Note: An implicit member access inside a class, i.e. `a` instead of
+/// `this->a`, is an `id-expression`.
+class MemberExpression final : public Expression {
+public:
+  MemberExpression() : Expression(NodeKind::MemberExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::MemberExpression;
+  }
+  Expression *object();
+  Leaf *accessToken();
+  Leaf *templateKeyword();
+  IdExpression *member();
 };
 
 /// Expression for literals. C++ [lex.literal]

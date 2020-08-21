@@ -47,21 +47,20 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-LABEL: fshl_i37:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lis 6, -8857
-; CHECK-NEXT:    clrldi 5, 5, 27
+; CHECK-NEXT:    sldi 4, 4, 27
 ; CHECK-NEXT:    ori 6, 6, 51366
-; CHECK-NEXT:    clrldi 4, 4, 27
 ; CHECK-NEXT:    sldi 6, 6, 32
 ; CHECK-NEXT:    oris 6, 6, 3542
 ; CHECK-NEXT:    ori 6, 6, 31883
 ; CHECK-NEXT:    mulhdu 6, 5, 6
 ; CHECK-NEXT:    rldicl 6, 6, 59, 5
 ; CHECK-NEXT:    mulli 6, 6, 37
-; CHECK-NEXT:    sub. 5, 5, 6
-; CHECK-NEXT:    subfic 6, 5, 37
-; CHECK-NEXT:    sld 5, 3, 5
+; CHECK-NEXT:    sub 5, 5, 6
+; CHECK-NEXT:    clrlwi 5, 5, 26
+; CHECK-NEXT:    subfic 6, 5, 64
+; CHECK-NEXT:    sld 3, 3, 5
 ; CHECK-NEXT:    srd 4, 4, 6
-; CHECK-NEXT:    or 4, 5, 4
-; CHECK-NEXT:    iseleq 3, 3, 4
+; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    blr
   %f = call i37 @llvm.fshl.i37(i37 %x, i37 %y, i37 %z)
   ret i37 %f
@@ -165,7 +164,7 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-LABEL: fshr_i37:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lis 6, -8857
-; CHECK-NEXT:    clrldi 5, 5, 27
+; CHECK-NEXT:    sldi 4, 4, 27
 ; CHECK-NEXT:    ori 6, 6, 51366
 ; CHECK-NEXT:    sldi 6, 6, 32
 ; CHECK-NEXT:    oris 6, 6, 3542
@@ -173,13 +172,13 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-NEXT:    mulhdu 6, 5, 6
 ; CHECK-NEXT:    rldicl 6, 6, 59, 5
 ; CHECK-NEXT:    mulli 6, 6, 37
-; CHECK-NEXT:    sub. 5, 5, 6
-; CHECK-NEXT:    clrldi 6, 4, 27
-; CHECK-NEXT:    subfic 7, 5, 37
-; CHECK-NEXT:    srd 5, 6, 5
-; CHECK-NEXT:    sld 3, 3, 7
-; CHECK-NEXT:    or 3, 3, 5
-; CHECK-NEXT:    iseleq 3, 4, 3
+; CHECK-NEXT:    sub 5, 5, 6
+; CHECK-NEXT:    addi 5, 5, 27
+; CHECK-NEXT:    clrlwi 5, 5, 26
+; CHECK-NEXT:    subfic 6, 5, 64
+; CHECK-NEXT:    srd 4, 4, 5
+; CHECK-NEXT:    sld 3, 3, 6
+; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    blr
   %f = call i37 @llvm.fshr.i37(i37 %x, i37 %y, i37 %z)
   ret i37 %f

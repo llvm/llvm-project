@@ -314,7 +314,7 @@ protected:
   bool AutoWaitcntBeforeBarrier;
   bool CodeObjectV3;
   bool UnalignedScratchAccess;
-  bool UnalignedBufferAccess;
+  bool UnalignedAccessMode;
   bool HasApertureRegs;
   bool EnableXNACK;
   bool DoesNotSupportXNACK;
@@ -395,6 +395,8 @@ protected:
   bool HasMFMAInlineLiteralBug;
   bool HasVertexCache;
   short TexVTXClauseSize;
+  bool UnalignedBufferAccess;
+  bool UnalignedDSAccess;
   bool ScalarizeGlobal;
 
   bool HasVcmpxPermlaneHazard;
@@ -666,6 +668,11 @@ public:
     return CIInsts && EnableDS128;
   }
 
+  /// \return If target supports ds_read/write_b96/128.
+  bool hasDS96AndDS128() const {
+    return CIInsts;
+  }
+
   /// Have v_trunc_f64, v_ceil_f64, v_rndne_f64
   bool haveRoundOpsF64() const {
     return CIInsts;
@@ -696,8 +703,24 @@ public:
     return UnalignedBufferAccess;
   }
 
+  bool hasUnalignedBufferAccessEnabled() const {
+    return UnalignedBufferAccess && UnalignedAccessMode;
+  }
+
+  bool hasUnalignedDSAccess() const {
+    return UnalignedDSAccess;
+  }
+
+  bool hasUnalignedDSAccessEnabled() const {
+    return UnalignedDSAccess && UnalignedAccessMode;
+  }
+
   bool hasUnalignedScratchAccess() const {
     return UnalignedScratchAccess;
+  }
+
+  bool hasUnalignedAccessMode() const {
+    return UnalignedAccessMode;
   }
 
   bool hasApertureRegs() const {

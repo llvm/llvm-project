@@ -326,6 +326,11 @@ public:
   virtual void mergeBlocks(Block *source, Block *dest,
                            ValueRange argValues = llvm::None);
 
+  // Merge the operations of block 'source' before the operation 'op'. Source
+  // block should not have existing predecessors or successors.
+  void mergeBlockBefore(Block *source, Operation *op,
+                        ValueRange argValues = llvm::None);
+
   /// Split the operations starting at "before" (inclusive) out of the given
   /// block into a new block, and return it.
   virtual Block *splitBlock(Block *block, Block::iterator before);

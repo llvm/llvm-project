@@ -515,6 +515,18 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
   return NewCI;
 }
 
+CallInst *CallInst::CreateWithReplacedBundle(CallInst *CI, OperandBundleDef OpB,
+                                             Instruction *InsertPt) {
+  SmallVector<OperandBundleDef, 2> OpDefs;
+  for (unsigned i = 0, e = CI->getNumOperandBundles(); i < e; ++i) {
+    auto ChildOB = CI->getOperandBundleAt(i);
+    if (ChildOB.getTagName() != OpB.getTag())
+      OpDefs.emplace_back(ChildOB);
+  }
+  OpDefs.emplace_back(OpB);
+  return CallInst::Create(CI, OpDefs, InsertPt);
+}
+
 // Update profile weight for call instruction by scaling it using the ratio
 // of S/T. The meaning of "branch_weights" meta data for call instruction is
 // transfered to represent call count.
@@ -826,6 +838,18 @@ InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
   return NewII;
 }
 
+InvokeInst *InvokeInst::CreateWithReplacedBundle(InvokeInst *II,
+                                                 OperandBundleDef OpB,
+                                                 Instruction *InsertPt) {
+  SmallVector<OperandBundleDef, 2> OpDefs;
+  for (unsigned i = 0, e = II->getNumOperandBundles(); i < e; ++i) {
+    auto ChildOB = II->getOperandBundleAt(i);
+    if (ChildOB.getTagName() != OpB.getTag())
+      OpDefs.emplace_back(ChildOB);
+  }
+  OpDefs.emplace_back(OpB);
+  return InvokeInst::Create(II, OpDefs, InsertPt);
+}
 
 LandingPadInst *InvokeInst::getLandingPadInst() const {
   return cast<LandingPadInst>(getUnwindDest()->getFirstNonPHI());
@@ -3330,9 +3354,9 @@ CastInst::castIsValid(Instruction::CastOps op, Value *S, Type *DstTy) {
   // scalar types means that checking that vector lengths match also checks that
   // scalars are not being converted to vectors or vectors to scalars).
   ElementCount SrcEC = SrcIsVec ? cast<VectorType>(SrcTy)->getElementCount()
-                                : ElementCount(0, false);
+                                : ElementCount::getFixed(0);
   ElementCount DstEC = DstIsVec ? cast<VectorType>(DstTy)->getElementCount()
-                                : ElementCount(0, false);
+                                : ElementCount::getFixed(0);
 
   // Switch on the opcode provided
   switch (op) {
@@ -3390,9 +3414,9 @@ CastInst::castIsValid(Instruction::CastOps op, Value *S, Type *DstTy) {
     if (SrcIsVec && DstIsVec)
       return SrcEC == DstEC;
     if (SrcIsVec)
-      return SrcEC == ElementCount(1, false);
+      return SrcEC == ElementCount::getFixed(1);
     if (DstIsVec)
-      return DstEC == ElementCount(1, false);
+      return DstEC == ElementCount::getFixed(1);
 
     return true;
   }

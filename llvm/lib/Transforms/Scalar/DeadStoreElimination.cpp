@@ -371,27 +371,24 @@ enum OverwriteResult {
   OW_Complete,
   OW_End,
   OW_PartialEarlierWithFullLater,
+  OW_MaybePartial,
   OW_Unknown
 };
 
 } // end anonymous namespace
 
 /// Return 'OW_Complete' if a store to the 'Later' location completely
-/// overwrites a store to the 'Earlier' location, 'OW_End' if the end of the
-/// 'Earlier' location is completely overwritten by 'Later', 'OW_Begin' if the
-/// beginning of the 'Earlier' location is overwritten by 'Later'.
-/// 'OW_PartialEarlierWithFullLater' means that an earlier (big) store was
-/// overwritten by a latter (smaller) store which doesn't write outside the big
-/// store's memory locations. Returns 'OW_Unknown' if nothing can be determined.
+/// overwrites a store to the 'Earlier' location. Return OW_MaybePartial
+/// if \p Later does not completely overwrite \p Earlier, but they both
+/// write to the same underlying object. In that case, use isPartialOverwrite to
+/// check if \p Later partially overwrites \p Earlier. Returns 'OW_Unknown' if
+/// nothing can be determined.
 static OverwriteResult isOverwrite(const MemoryLocation &Later,
                                    const MemoryLocation &Earlier,
                                    const DataLayout &DL,
                                    const TargetLibraryInfo &TLI,
                                    int64_t &EarlierOff, int64_t &LaterOff,
-                                   Instruction *DepWrite,
-                                   InstOverlapIntervalsTy &IOL,
-                                   AliasAnalysis &AA,
-                                   const Function *F) {
+                                   AliasAnalysis &AA, const Function *F) {
   // FIXME: Vet that this works for size upper-bounds. Seems unlikely that we'll
   // get imprecise values here, though (except for unknown sizes).
   if (!Later.Size.isPrecise() || !Earlier.Size.isPrecise())
@@ -459,6 +456,27 @@ static OverwriteResult isOverwrite(const MemoryLocation &Later,
       uint64_t(EarlierOff - LaterOff) + EarlierSize <= LaterSize)
     return OW_Complete;
 
+  // Later may overwrite earlier completely with other partial writes.
+  return OW_MaybePartial;
+}
+
+/// Return 'OW_Complete' if a store to the 'Later' location completely
+/// overwrites a store to the 'Earlier' location, 'OW_End' if the end of the
+/// 'Earlier' location is completely overwritten by 'Later', 'OW_Begin' if the
+/// beginning of the 'Earlier' location is overwritten by 'Later'.
+/// 'OW_PartialEarlierWithFullLater' means that an earlier (big) store was
+/// overwritten by a latter (smaller) store which doesn't write outside the big
+/// store's memory locations. Returns 'OW_Unknown' if nothing can be determined.
+/// NOTE: This function must only be called if both \p Later and \p Earlier
+/// write to the same underlying object with valid \p EarlierOff and \p
+/// LaterOff.
+static OverwriteResult isPartialOverwrite(const MemoryLocation &Later,
+                                          const MemoryLocation &Earlier,
+                                          int64_t EarlierOff, int64_t LaterOff,
+                                          Instruction *DepWrite,
+                                          InstOverlapIntervalsTy &IOL) {
+  const uint64_t LaterSize = Later.Size.getValue();
+  const uint64_t EarlierSize = Earlier.Size.getValue();
   // We may now overlap, although the overlap is not complete. There might also
   // be other incomplete overlaps, and together, they might cover the complete
   // earlier write.
@@ -1074,8 +1092,7 @@ static bool tryToShortenBegin(Instruction *EarlierWrite,
   return false;
 }
 
-static bool removePartiallyOverlappedStores(AliasAnalysis *AA,
-                                            const DataLayout &DL,
+static bool removePartiallyOverlappedStores(const DataLayout &DL,
                                             InstOverlapIntervalsTy &IOL) {
   bool Changed = false;
   for (auto OI : IOL) {
@@ -1309,8 +1326,11 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
           !isPossibleSelfRead(Inst, Loc, DepWrite, *TLI, *AA)) {
         int64_t InstWriteOffset, DepWriteOffset;
         OverwriteResult OR = isOverwrite(Loc, DepLoc, DL, *TLI, DepWriteOffset,
-                                         InstWriteOffset, DepWrite, IOL, *AA,
-                                         BB.getParent());
+                                         InstWriteOffset, *AA, BB.getParent());
+        if (OR == OW_MaybePartial)
+          OR = isPartialOverwrite(Loc, DepLoc, DepWriteOffset, InstWriteOffset,
+                                  DepWrite, IOL);
+
         if (OR == OW_Complete) {
           LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: " << *DepWrite
                             << "\n  KILLER: " << *Inst << '\n');
@@ -1388,7 +1408,7 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
   }
 
   if (EnablePartialOverwriteTracking)
-    MadeChange |= removePartiallyOverlappedStores(AA, DL, IOL);
+    MadeChange |= removePartiallyOverlappedStores(DL, IOL);
 
   // If this block ends in a return, unwind, or unreachable, all allocas are
   // dead at its end, which means stores to them are also dead.
@@ -1616,13 +1636,9 @@ struct DSEState {
 
     int64_t InstWriteOffset, DepWriteOffset;
     auto CC = getLocForWriteEx(UseInst);
-    InstOverlapIntervalsTy IOL;
-
     const DataLayout &DL = F.getParent()->getDataLayout();
-
-    return CC &&
-           isOverwrite(*CC, DefLoc, DL, TLI, DepWriteOffset, InstWriteOffset,
-                       UseInst, IOL, AA, &F) == OW_Complete;
+    return CC && isOverwrite(*CC, DefLoc, DL, TLI, DepWriteOffset,
+                             InstWriteOffset, AA, &F) == OW_Complete;
   }
 
   /// Returns true if \p Def is not read before returning from the function.
@@ -2045,6 +2061,11 @@ struct DSEState {
         return isStrongerThanMonotonic(LI->getOrdering());
       if (auto *SI = dyn_cast<StoreInst>(NI))
         return isStrongerThanMonotonic(SI->getOrdering());
+      if (auto *ARMW = dyn_cast<AtomicRMWInst>(NI))
+        return isStrongerThanMonotonic(ARMW->getOrdering());
+      if (auto *CmpXchg = dyn_cast<AtomicCmpXchgInst>(NI))
+        return isStrongerThanMonotonic(CmpXchg->getSuccessOrdering()) ||
+               isStrongerThanMonotonic(CmpXchg->getFailureOrdering());
       llvm_unreachable("other instructions should be skipped in MemorySSA");
     }
     return false;
@@ -2263,12 +2284,16 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
       } else {
         // Check if NI overwrites SI.
         int64_t InstWriteOffset, DepWriteOffset;
-        auto Iter = State.IOLs.insert(
-            std::make_pair<BasicBlock *, InstOverlapIntervalsTy>(
-                NI->getParent(), InstOverlapIntervalsTy()));
-        auto &IOL = Iter.first->second;
         OverwriteResult OR = isOverwrite(SILoc, NILoc, DL, TLI, DepWriteOffset,
-                                         InstWriteOffset, NI, IOL, AA, &F);
+                                         InstWriteOffset, State.AA, &F);
+        if (OR == OW_MaybePartial) {
+          auto Iter = State.IOLs.insert(
+              std::make_pair<BasicBlock *, InstOverlapIntervalsTy>(
+                  NI->getParent(), InstOverlapIntervalsTy()));
+          auto &IOL = Iter.first->second;
+          OR = isPartialOverwrite(SILoc, NILoc, DepWriteOffset, InstWriteOffset,
+                                  NI, IOL);
+        }
 
         if (EnablePartialStoreMerging && OR == OW_PartialEarlierWithFullLater) {
           auto *Earlier = dyn_cast<StoreInst>(NI);
@@ -2310,7 +2335,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
 
   if (EnablePartialOverwriteTracking)
     for (auto &KV : State.IOLs)
-      MadeChange |= removePartiallyOverlappedStores(&AA, DL, KV.second);
+      MadeChange |= removePartiallyOverlappedStores(DL, KV.second);
 
   MadeChange |= State.eliminateDeadWritesAtEndOfFunction();
   return MadeChange;

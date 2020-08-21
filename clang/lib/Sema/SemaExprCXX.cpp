@@ -1760,12 +1760,10 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
             // C++1y [expr.new]p6: Every constant-expression in a noptr-new-declarator
             //   shall be a converted constant expression (5.19) of type std::size_t
             //   and shall evaluate to a strictly positive value.
-            unsigned IntWidth = Context.getTargetInfo().getIntWidth();
-            assert(IntWidth && "Builtin type of size 0?");
-            llvm::APSInt Value(IntWidth);
+            llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
             Array.NumElts
              = CheckConvertedConstantExpression(NumElts, Context.getSizeType(), Value,
-                                                CCEK_NewExpr)
+                                                CCEK_ArrayBound)
                  .get();
           } else {
             Array.NumElts

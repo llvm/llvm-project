@@ -82,8 +82,8 @@ CHECK: "#source variables with location":22
 CHECK: "#call site entries":7
 CHECK: "sum_all_variables(#bytes in parent scope)":2817
 CHECK: "sum_all_variables(#bytes in parent scope covered by DW_AT_location)":1160
-CHECK: "#bytes witin functions":594
-CHECK: "#bytes witin inlined functions":345
+CHECK: "#bytes within functions":594
+CHECK: "#bytes within inlined functions":345
 CHECK: "#params":12
 CHECK: "#params with source location":12
 CHECK: "#params with type":12

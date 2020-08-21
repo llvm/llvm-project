@@ -1,4 +1,4 @@
-# RUN: yaml2obj %S/Inputs/unwind-via-stack-win.yaml > %t
+# RUN: yaml2obj %S/Inputs/unwind-via-stack-win.yaml -o %t
 # RUN: %lldb -c %t \
 # RUN:   -o "target symbols add %S/Inputs/unwind-via-raSearch.syms" \
 # RUN:   -s %s -b | FileCheck %s

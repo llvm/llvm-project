@@ -488,6 +488,13 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
   StringRef Name = "__tls_get_addr";
   MCSymbol *TlsGetAddr = OutContext.getOrCreateSymbol(Name);
   MCSymbolRefExpr::VariantKind Kind = MCSymbolRefExpr::VK_None;
+  unsigned Opcode = PPC::BL8_NOP_TLS;
+
+  assert(MI->getNumOperands() >= 3 && "Expecting at least 3 operands from MI");
+  if (MI->getOperand(2).getTargetFlags() == PPCII::MO_GOT_TLSGD_PCREL_FLAG) {
+    Kind = MCSymbolRefExpr::VK_PPC_NOTOC;
+    Opcode = PPC::BL8_NOTOC_TLS;
+  }
   const Module *M = MF->getFunction().getParent();
 
   assert(MI->getOperand(0).isReg() &&
@@ -515,10 +522,9 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
   MCSymbol *MOSymbol = getSymbol(GValue);
   const MCExpr *SymVar = MCSymbolRefExpr::create(MOSymbol, VK, OutContext);
   EmitToStreamer(*OutStreamer,
-                 MCInstBuilder(Subtarget->isPPC64() ?
-                               PPC::BL8_NOP_TLS : PPC::BL_TLS)
-                 .addExpr(TlsRef)
-                 .addExpr(SymVar));
+                 MCInstBuilder(Subtarget->isPPC64() ? Opcode : PPC::BL_TLS)
+                     .addExpr(TlsRef)
+                     .addExpr(SymVar));
 }
 
 /// Map a machine operand for a TOC pseudo-machine instruction to its

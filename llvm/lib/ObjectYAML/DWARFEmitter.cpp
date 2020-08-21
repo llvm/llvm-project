@@ -96,24 +96,27 @@ Error DWARFYAML::emitDebugStr(raw_ostream &OS, const DWARFYAML::Data &DI) {
 
 Error DWARFYAML::emitDebugAbbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
   uint64_t AbbrevCode = 0;
-  for (auto AbbrevDecl : DI.AbbrevDecls) {
-    AbbrevCode = AbbrevDecl.Code ? (uint64_t)*AbbrevDecl.Code : AbbrevCode + 1;
-    encodeULEB128(AbbrevCode, OS);
-    encodeULEB128(AbbrevDecl.Tag, OS);
-    OS.write(AbbrevDecl.Children);
-    for (auto Attr : AbbrevDecl.Attributes) {
-      encodeULEB128(Attr.Attribute, OS);
-      encodeULEB128(Attr.Form, OS);
-      if (Attr.Form == dwarf::DW_FORM_implicit_const)
-        encodeSLEB128(Attr.Value, OS);
+  for (const DWARFYAML::AbbrevTable &AbbrevTable : DI.DebugAbbrev) {
+    for (const DWARFYAML::Abbrev &AbbrevDecl : AbbrevTable.Table) {
+      AbbrevCode =
+          AbbrevDecl.Code ? (uint64_t)*AbbrevDecl.Code : AbbrevCode + 1;
+      encodeULEB128(AbbrevCode, OS);
+      encodeULEB128(AbbrevDecl.Tag, OS);
+      OS.write(AbbrevDecl.Children);
+      for (auto Attr : AbbrevDecl.Attributes) {
+        encodeULEB128(Attr.Attribute, OS);
+        encodeULEB128(Attr.Form, OS);
+        if (Attr.Form == dwarf::DW_FORM_implicit_const)
+          encodeSLEB128(Attr.Value, OS);
+      }
+      encodeULEB128(0, OS);
+      encodeULEB128(0, OS);
     }
-    encodeULEB128(0, OS);
-    encodeULEB128(0, OS);
-  }
 
-  // The abbreviations for a given compilation unit end with an entry consisting
-  // of a 0 byte for the abbreviation code.
-  OS.write_zeros(1);
+    // The abbreviations for a given compilation unit end with an entry
+    // consisting of a 0 byte for the abbreviation code.
+    OS.write_zeros(1);
+  }
 
   return Error::success();
 }
@@ -243,7 +246,8 @@ Error DWARFYAML::emitDebugGNUPubtypes(raw_ostream &OS, const Data &DI) {
                         /*IsGNUStyle=*/true);
 }
 
-static Expected<uint64_t> writeDIE(ArrayRef<DWARFYAML::Abbrev> AbbrevDecls,
+static Expected<uint64_t> writeDIE(const DWARFYAML::Data &DI, uint64_t CUIndex,
+                                   uint64_t AbbrevTableID,
                                    const dwarf::FormParams &Params,
                                    const DWARFYAML::Entry &Entry,
                                    raw_ostream &OS, bool IsLittleEndian) {
@@ -252,6 +256,17 @@ static Expected<uint64_t> writeDIE(ArrayRef<DWARFYAML::Abbrev> AbbrevDecls,
   uint32_t AbbrCode = Entry.AbbrCode;
   if (AbbrCode == 0 || Entry.Values.empty())
     return OS.tell() - EntryBegin;
+
+  Expected<uint64_t> AbbrevTableIndexOrErr =
+      DI.getAbbrevTableIndexByID(AbbrevTableID);
+  if (!AbbrevTableIndexOrErr)
+    return createStringError(errc::invalid_argument,
+                             toString(AbbrevTableIndexOrErr.takeError()) +
+                                 " for compilation unit with index " +
+                                 utostr(CUIndex));
+
+  ArrayRef<DWARFYAML::Abbrev> AbbrevDecls(
+      DI.DebugAbbrev[*AbbrevTableIndexOrErr].Table);
 
   if (AbbrCode > AbbrevDecls.size())
     return createStringError(
@@ -374,7 +389,8 @@ static Expected<uint64_t> writeDIE(ArrayRef<DWARFYAML::Abbrev> AbbrevDecls,
 }
 
 Error DWARFYAML::emitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
-  for (const DWARFYAML::Unit &Unit : DI.CompileUnits) {
+  for (uint64_t I = 0; I < DI.CompileUnits.size(); ++I) {
+    const DWARFYAML::Unit &Unit = DI.CompileUnits[I];
     uint8_t AddrSize;
     if (Unit.AddrSize)
       AddrSize = *Unit.AddrSize;
@@ -392,9 +408,11 @@ Error DWARFYAML::emitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
     std::string EntryBuffer;
     raw_string_ostream EntryBufferOS(EntryBuffer);
 
+    uint64_t AbbrevTableID = Unit.AbbrevTableID.getValueOr(I);
     for (const DWARFYAML::Entry &Entry : Unit.Entries) {
-      if (Expected<uint64_t> EntryLength = writeDIE(
-              DI.AbbrevDecls, Params, Entry, EntryBufferOS, DI.IsLittleEndian))
+      if (Expected<uint64_t> EntryLength =
+              writeDIE(DI, I, AbbrevTableID, Params, Entry, EntryBufferOS,
+                       DI.IsLittleEndian))
         Length += *EntryLength;
       else
         return EntryLength.takeError();

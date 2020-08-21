@@ -1397,14 +1397,44 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
 
   if (AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
       AddrSpace == AMDGPUAS::REGION_ADDRESS) {
-    // ds_read/write_b64 require 8-byte alignment, but we can do a 4 byte
-    // aligned, 8 byte access in a single operation using ds_read2/write2_b32
-    // with adjacent offsets.
-    bool AlignedBy4 = Alignment >= Align(4);
-    if (IsFast)
-      *IsFast = AlignedBy4;
+    // Check if alignment requirements for ds_read/write instructions are
+    // disabled.
+    if (Subtarget->hasUnalignedDSAccessEnabled()) {
+      if (IsFast)
+        *IsFast = true;
+      return true;
+    }
 
-    return AlignedBy4;
+    if (Size == 64) {
+      // ds_read/write_b64 require 8-byte alignment, but we can do a 4 byte
+      // aligned, 8 byte access in a single operation using ds_read2/write2_b32
+      // with adjacent offsets.
+      bool AlignedBy4 = Alignment >= Align(4);
+      if (IsFast)
+        *IsFast = AlignedBy4;
+
+      return AlignedBy4;
+    }
+    if (Size == 96) {
+      // ds_read/write_b96 require 16-byte alignment on gfx8 and older.
+      bool Aligned =
+          Alignment >= Align(Subtarget->hasUnalignedDSAccess() ? 4 : 16);
+      if (IsFast)
+        *IsFast = Aligned;
+
+      return Aligned;
+    }
+    if (Size == 128) {
+      // ds_read/write_b128 require 16-byte alignment on gfx8 and older, but we
+      // can do a 8 byte aligned, 16 byte access in a single operation using
+      // ds_read2/write2_b64.
+      bool Aligned =
+          Alignment >= Align(Subtarget->hasUnalignedDSAccess() ? 4 : 8);
+      if (IsFast)
+        *IsFast = Aligned;
+
+      return Aligned;
+    }
   }
 
   // FIXME: We have to be conservative here and assume that flat operations
@@ -1420,7 +1450,9 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
     return AlignedBy4;
   }
 
-  if (Subtarget->hasUnalignedBufferAccess()) {
+  if (Subtarget->hasUnalignedBufferAccessEnabled() &&
+      !(AddrSpace == AMDGPUAS::LOCAL_ADDRESS ||
+        AddrSpace == AMDGPUAS::REGION_ADDRESS)) {
     // If we have an uniform constant load, it still requires using a slow
     // buffer instruction if unaligned.
     if (IsFast) {
@@ -1927,26 +1959,26 @@ void SITargetLowering::allocateHSAUserSGPRs(CCState &CCInfo,
                                             const SIRegisterInfo &TRI,
                                             SIMachineFunctionInfo &Info) const {
   if (Info.hasImplicitBufferPtr()) {
-    unsigned ImplicitBufferPtrReg = Info.addImplicitBufferPtr(TRI);
+    Register ImplicitBufferPtrReg = Info.addImplicitBufferPtr(TRI);
     MF.addLiveIn(ImplicitBufferPtrReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(ImplicitBufferPtrReg);
   }
 
   // FIXME: How should these inputs interact with inreg / custom SGPR inputs?
   if (Info.hasPrivateSegmentBuffer()) {
-    unsigned PrivateSegmentBufferReg = Info.addPrivateSegmentBuffer(TRI);
+    Register PrivateSegmentBufferReg = Info.addPrivateSegmentBuffer(TRI);
     MF.addLiveIn(PrivateSegmentBufferReg, &AMDGPU::SGPR_128RegClass);
     CCInfo.AllocateReg(PrivateSegmentBufferReg);
   }
 
   if (Info.hasDispatchPtr()) {
-    unsigned DispatchPtrReg = Info.addDispatchPtr(TRI);
+    Register DispatchPtrReg = Info.addDispatchPtr(TRI);
     MF.addLiveIn(DispatchPtrReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(DispatchPtrReg);
   }
 
   if (Info.hasQueuePtr()) {
-    unsigned QueuePtrReg = Info.addQueuePtr(TRI);
+    Register QueuePtrReg = Info.addQueuePtr(TRI);
     MF.addLiveIn(QueuePtrReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(QueuePtrReg);
   }
@@ -1961,13 +1993,13 @@ void SITargetLowering::allocateHSAUserSGPRs(CCState &CCInfo,
   }
 
   if (Info.hasDispatchID()) {
-    unsigned DispatchIDReg = Info.addDispatchID(TRI);
+    Register DispatchIDReg = Info.addDispatchID(TRI);
     MF.addLiveIn(DispatchIDReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(DispatchIDReg);
   }
 
   if (Info.hasFlatScratchInit()) {
-    unsigned FlatScratchInitReg = Info.addFlatScratchInit(TRI);
+    Register FlatScratchInitReg = Info.addFlatScratchInit(TRI);
     MF.addLiveIn(FlatScratchInitReg, &AMDGPU::SGPR_64RegClass);
     CCInfo.AllocateReg(FlatScratchInitReg);
   }
@@ -1983,25 +2015,25 @@ void SITargetLowering::allocateSystemSGPRs(CCState &CCInfo,
                                            CallingConv::ID CallConv,
                                            bool IsShader) const {
   if (Info.hasWorkGroupIDX()) {
-    unsigned Reg = Info.addWorkGroupIDX();
+    Register Reg = Info.addWorkGroupIDX();
     MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
     CCInfo.AllocateReg(Reg);
   }
 
   if (Info.hasWorkGroupIDY()) {
-    unsigned Reg = Info.addWorkGroupIDY();
+    Register Reg = Info.addWorkGroupIDY();
     MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
     CCInfo.AllocateReg(Reg);
   }
 
   if (Info.hasWorkGroupIDZ()) {
-    unsigned Reg = Info.addWorkGroupIDZ();
+    Register Reg = Info.addWorkGroupIDZ();
     MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
     CCInfo.AllocateReg(Reg);
   }
 
   if (Info.hasWorkGroupInfo()) {
-    unsigned Reg = Info.addWorkGroupInfo();
+    Register Reg = Info.addWorkGroupInfo();
     MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
     CCInfo.AllocateReg(Reg);
   }
@@ -5017,7 +5049,7 @@ SDValue SITargetLowering::LowerRETURNADDR(SDValue Op,
 
   const SIRegisterInfo *TRI = getSubtarget()->getRegisterInfo();
   // Get the return address reg and mark it as an implicit live-in
-  unsigned Reg = MF.addLiveIn(TRI->getReturnAddressReg(MF), getRegClassFor(VT, Op.getNode()->isDivergent()));
+  Register Reg = MF.addLiveIn(TRI->getReturnAddressReg(MF), getRegClassFor(VT, Op.getNode()->isDivergent()));
 
   return DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, VT);
 }
@@ -5113,7 +5145,7 @@ SDValue SITargetLowering::lowerTRAP(SDValue Op, SelectionDAG &DAG) const {
 
   MachineFunction &MF = DAG.getMachineFunction();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  unsigned UserSGPR = Info->getQueuePtrUserSGPR();
+  Register UserSGPR = Info->getQueuePtrUserSGPR();
   assert(UserSGPR != AMDGPU::NoRegister);
   SDValue QueuePtr = CreateLiveInRegister(
     DAG, &AMDGPU::SReg_64RegClass, UserSGPR, MVT::i64);
@@ -5572,15 +5604,32 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
                                              SDValue Op,
                                              SelectionDAG &DAG) const {
   GlobalAddressSDNode *GSD = cast<GlobalAddressSDNode>(Op);
+  SDLoc DL(GSD);
+  EVT PtrVT = Op.getValueType();
+
   const GlobalValue *GV = GSD->getGlobal();
   if ((GSD->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS &&
        shouldUseLDSConstAddress(GV)) ||
       GSD->getAddressSpace() == AMDGPUAS::REGION_ADDRESS ||
-      GSD->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS)
+      GSD->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS) {
+    if (GSD->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS &&
+        GV->hasExternalLinkage()) {
+      Type *Ty = GV->getValueType();
+      // HIP uses an unsized array `extern __shared__ T s[]` or similar
+      // zero-sized type in other languages to declare the dynamic shared
+      // memory which size is not known at the compile time. They will be
+      // allocated by the runtime and placed directly after the static
+      // allocated ones. They all share the same offset.
+      if (DAG.getDataLayout().getTypeAllocSize(Ty).isZero()) {
+        assert(PtrVT == MVT::i32 && "32-bit pointer is expected.");
+        // Adjust alignment for that dynamic shared memory array.
+        MFI->setDynLDSAlign(DAG.getDataLayout(), *cast<GlobalVariable>(GV));
+        return SDValue(
+            DAG.getMachineNode(AMDGPU::GET_GROUPSTATICSIZE, DL, PtrVT), 0);
+      }
+    }
     return AMDGPUTargetLowering::LowerGlobalAddress(MFI, Op, DAG);
-
-  SDLoc DL(GSD);
-  EVT PtrVT = Op.getValueType();
+  }
 
   if (GSD->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
     SDValue GA = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, GSD->getOffset(),
@@ -7923,9 +7972,12 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
       llvm_unreachable("unsupported private_element_size");
     }
   } else if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
-    // Use ds_read_b128 if possible.
-    if (Subtarget->useDS128() && Load->getAlignment() >= 16 &&
-        MemVT.getStoreSize() == 16)
+    // Use ds_read_b128 or ds_read_b96 when possible.
+    if (Subtarget->hasDS96AndDS128() &&
+        ((Subtarget->useDS128() && MemVT.getStoreSize() == 16) ||
+         MemVT.getStoreSize() == 12) &&
+        allowsMisalignedMemoryAccessesImpl(MemVT.getSizeInBits(), AS,
+                                           Load->getAlign()))
       return SDValue();
 
     if (NumElements > 2)
@@ -8393,9 +8445,12 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
       llvm_unreachable("unsupported private_element_size");
     }
   } else if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
-    // Use ds_write_b128 if possible.
-    if (Subtarget->useDS128() && Store->getAlignment() >= 16 &&
-        VT.getStoreSize() == 16 && NumElements != 3)
+    // Use ds_write_b128 or ds_write_b96 when possible.
+    if (Subtarget->hasDS96AndDS128() &&
+        ((Subtarget->useDS128() && VT.getStoreSize() == 16) ||
+         (VT.getStoreSize() == 12)) &&
+        allowsMisalignedMemoryAccessesImpl(VT.getSizeInBits(), AS,
+                                           Store->getAlign()))
       return SDValue();
 
     if (NumElements > 2)
@@ -10804,8 +10859,7 @@ SDNode *SITargetLowering::legalizeTargetIndependentNode(SDNode *Node,
 
     // Insert a copy to a VReg_1 virtual register so LowerI1Copies doesn't have
     // to try understanding copies to physical registers.
-    if (SrcVal.getValueType() == MVT::i1 &&
-        Register::isPhysicalRegister(DestReg->getReg())) {
+    if (SrcVal.getValueType() == MVT::i1 && DestReg->getReg().isPhysical()) {
       SDLoc SL(Node);
       MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
       SDValue VReg = DAG.getRegister(
@@ -10940,8 +10994,7 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
         MachineOperand &Op = MI.getOperand(I);
         if ((OpInfo[I].RegClass != llvm::AMDGPU::AV_64RegClassID &&
              OpInfo[I].RegClass != llvm::AMDGPU::AV_32RegClassID) ||
-            !Register::isVirtualRegister(Op.getReg()) ||
-            !TRI->isAGPR(MRI, Op.getReg()))
+            !Op.getReg().isVirtual() || !TRI->isAGPR(MRI, Op.getReg()))
           continue;
         auto *Src = MRI.getUniqueVRegDef(Op.getReg());
         if (!Src || !Src->isCopy() ||

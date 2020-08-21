@@ -99,7 +99,8 @@ struct VFShape {
   // Retrieve the VFShape that can be used to map a (scalar) function to itself,
   // with VF = 1.
   static VFShape getScalarShape(const CallInst &CI) {
-    return VFShape::get(CI, /*EC*/ {1, false}, /*HasGlobalPredicate*/ false);
+    return VFShape::get(CI, ElementCount::getFixed(1),
+                        /*HasGlobalPredicate*/ false);
   }
 
   // Retrieve the basic vectorization shape of the function, where all
@@ -305,7 +306,7 @@ typedef unsigned ID;
 inline Type *ToVectorTy(Type *Scalar, unsigned VF, bool isScalable = false) {
   if (Scalar->isVoidTy() || VF == 1)
     return Scalar;
-  return VectorType::get(Scalar, {VF, isScalable});
+  return VectorType::get(Scalar, ElementCount::get(VF, isScalable));
 }
 
 /// Identify if the intrinsic is trivially vectorizable.

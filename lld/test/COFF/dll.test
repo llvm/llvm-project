@@ -1,5 +1,5 @@
 # REQUIRES: x86
-# RUN: yaml2obj < %p/Inputs/export.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/export.yaml -o %t.obj
 # RUN: lld-link /out:%t.dll /dll %t.obj /export:exportfn1 /export:exportfn2 \
 # RUN:   /export:mangled
 # RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=EXPORT %s
@@ -13,7 +13,7 @@ EXPORT-NEXT:       2   0x1010  exportfn2
 EXPORT-NEXT:       3   0x1010  exportfn3
 EXPORT-NEXT:       4   0x1010  mangled
 
-# RUN: yaml2obj < %p/Inputs/export2.yaml > %t5.obj
+# RUN: yaml2obj %p/Inputs/export2.yaml -o %t5.obj
 # RUN: rm -f %t5.lib
 # RUN: llvm-ar cru %t5.lib %t5.obj
 # RUN: lld-link /out:%t5.dll /dll %t.obj %t5.lib /export:mangled2
@@ -40,7 +40,7 @@ EXPORT-LTO-NEXT:       3   0x1030  exportfn3
 
 # RUN: lld-link /out:%t.dll /dll %t.obj /implib:%t2.lib \
 # RUN:   /export:exportfn1 /export:exportfn2
-# RUN: yaml2obj < %p/Inputs/import.yaml > %t2.obj
+# RUN: yaml2obj %p/Inputs/import.yaml -o %t2.obj
 # RUN: lld-link /out:%t2.exe /entry:main %t2.obj %t2.lib
 # RUN: llvm-readobj --coff-imports %t2.exe | FileCheck -check-prefix=IMPORT %s
 

@@ -14,6 +14,16 @@
 #ifndef __IA32INTRIN_H
 #define __IA32INTRIN_H
 
+/* Define the default attributes for the functions in this file. */
+#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
+#define __DEFAULT_FN_ATTRS_SSE42 __attribute__((__always_inline__, __nodebug__, __target__("sse4.2")))
+
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
+#else
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
+#endif
+
 /** Find the first set bit starting from the lsb. Result is undefined if
  *  input is 0.
  *
@@ -26,7 +36,7 @@
  *     A 32-bit integer operand.
  *  \returns A 32-bit integer containing the bit number.
  */
-static __inline__ int __attribute__((__always_inline__, __nodebug__))
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __bsfd(int __A) {
   return __builtin_ctz(__A);
 }
@@ -43,7 +53,7 @@ __bsfd(int __A) {
  *     A 32-bit integer operand.
  *  \returns A 32-bit integer containing the bit number.
  */
-static __inline__ int __attribute__((__always_inline__, __nodebug__))
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __bsrd(int __A) {
   return 31 - __builtin_clz(__A);
 }
@@ -59,12 +69,12 @@ __bsrd(int __A) {
  *     A 32-bit integer operand.
  *  \returns A 32-bit integer containing the swapped bytes.
  */
-static __inline__ int __attribute__((__always_inline__, __nodebug__))
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __bswapd(int __A) {
   return __builtin_bswap32(__A);
 }
 
-static __inline__ int __attribute__((__always_inline__, __nodebug__))
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 _bswap(int __A) {
   return __builtin_bswap32(__A);
 }
@@ -85,7 +95,7 @@ _bswap(int __A) {
  *     A 64-bit integer operand.
  *  \returns A 32-bit integer containing the bit number.
  */
-static __inline__ int __attribute__((__always_inline__, __nodebug__))
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __bsfq(long long __A) {
   return __builtin_ctzll(__A);
 }
@@ -102,7 +112,7 @@ __bsfq(long long __A) {
  *     A 64-bit integer operand.
  *  \returns A 32-bit integer containing the bit number.
  */
-static __inline__ int __attribute__((__always_inline__, __nodebug__))
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __bsrq(long long __A) {
   return 63 - __builtin_clzll(__A);
 }
@@ -118,7 +128,7 @@ __bsrq(long long __A) {
  *     A 64-bit integer operand.
  *  \returns A 64-bit integer containing the swapped bytes.
  */
-static __inline__ long long __attribute__((__always_inline__, __nodebug__))
+static __inline__ long long __DEFAULT_FN_ATTRS_CONSTEXPR
 __bswapq(long long __A) {
   return __builtin_bswap64(__A);
 }
@@ -138,7 +148,7 @@ __bswapq(long long __A) {
  *  \returns A 32-bit integer containing the number of bits with value 1 in the
  *     source operand.
  */
-static __inline__ int __attribute__((__always_inline__, __nodebug__))
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __popcntd(unsigned int __A)
 {
   return __builtin_popcount(__A);
@@ -159,7 +169,7 @@ __popcntd(unsigned int __A)
  *  \returns A 64-bit integer containing the number of bits with value 1 in the
  *     source operand.
  */
-static __inline__ long long __attribute__((__always_inline__, __nodebug__))
+static __inline__ long long __DEFAULT_FN_ATTRS_CONSTEXPR
 __popcntq(unsigned long long __A)
 {
   return __builtin_popcountll(__A);
@@ -169,26 +179,26 @@ __popcntq(unsigned long long __A)
 #endif /* __x86_64__ */
 
 #ifdef __x86_64__
-static __inline__ unsigned long long __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 __readeflags(void)
 {
   return __builtin_ia32_readeflags_u64();
 }
 
-static __inline__ void __attribute__((__always_inline__, __nodebug__))
+static __inline__ void __DEFAULT_FN_ATTRS
 __writeeflags(unsigned long long __f)
 {
   __builtin_ia32_writeeflags_u64(__f);
 }
 
 #else /* !__x86_64__ */
-static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned int __DEFAULT_FN_ATTRS
 __readeflags(void)
 {
   return __builtin_ia32_readeflags_u32();
 }
 
-static __inline__ void __attribute__((__always_inline__, __nodebug__))
+static __inline__ void __DEFAULT_FN_ATTRS
 __writeeflags(unsigned int __f)
 {
   __builtin_ia32_writeeflags_u32(__f);
@@ -278,7 +288,7 @@ _castu64_f64(unsigned long long __A) {
  *  \returns The result of adding operand \a __C to the CRC-32C checksum of
  *     operand \a __D.
  */
-static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__, __target__("sse4.2")))
+static __inline__ unsigned int __DEFAULT_FN_ATTRS_SSE42
 __crc32b(unsigned int __C, unsigned char __D)
 {
   return __builtin_ia32_crc32qi(__C, __D);
@@ -299,7 +309,7 @@ __crc32b(unsigned int __C, unsigned char __D)
  *  \returns The result of adding operand \a __C to the CRC-32C checksum of
  *     operand \a __D.
  */
-static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__, __target__("sse4.2")))
+static __inline__ unsigned int __DEFAULT_FN_ATTRS_SSE42
 __crc32w(unsigned int __C, unsigned short __D)
 {
   return __builtin_ia32_crc32hi(__C, __D);
@@ -320,7 +330,7 @@ __crc32w(unsigned int __C, unsigned short __D)
  *  \returns The result of adding operand \a __C to the CRC-32C checksum of
  *     operand \a __D.
  */
-static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__, __target__("sse4.2")))
+static __inline__ unsigned int __DEFAULT_FN_ATTRS_SSE42
 __crc32d(unsigned int __C, unsigned int __D)
 {
   return __builtin_ia32_crc32si(__C, __D);
@@ -342,20 +352,20 @@ __crc32d(unsigned int __C, unsigned int __D)
  *  \returns The result of adding operand \a __C to the CRC-32C checksum of
  *     operand \a __D.
  */
-static __inline__ unsigned long long __attribute__((__always_inline__, __nodebug__, __target__("sse4.2")))
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS_SSE42
 __crc32q(unsigned long long __C, unsigned long long __D)
 {
   return __builtin_ia32_crc32di(__C, __D);
 }
 #endif /* __x86_64__ */
 
-static __inline__ unsigned long long __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 __rdpmc(int __A) {
   return __builtin_ia32_rdpmc(__A);
 }
 
 /* __rdtscp */
-static __inline__ unsigned long long __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 __rdtscp(unsigned int *__A) {
   return __builtin_ia32_rdtscp(__A);
 }
@@ -364,48 +374,48 @@ __rdtscp(unsigned int *__A) {
 
 #define _rdpmc(A) __rdpmc(A)
 
-static __inline__ void __attribute__((__always_inline__, __nodebug__))
+static __inline__ void __DEFAULT_FN_ATTRS
 _wbinvd(void) {
   __builtin_ia32_wbinvd();
 }
 
-static __inline__ unsigned char __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned char __DEFAULT_FN_ATTRS
 __rolb(unsigned char __X, int __C) {
   return __builtin_rotateleft8(__X, __C);
 }
 
-static __inline__ unsigned char __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned char __DEFAULT_FN_ATTRS
 __rorb(unsigned char __X, int __C) {
   return __builtin_rotateright8(__X, __C);
 }
 
-static __inline__ unsigned short __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned short __DEFAULT_FN_ATTRS
 __rolw(unsigned short __X, int __C) {
   return __builtin_rotateleft16(__X, __C);
 }
 
-static __inline__ unsigned short __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned short __DEFAULT_FN_ATTRS
 __rorw(unsigned short __X, int __C) {
   return __builtin_rotateright16(__X, __C);
 }
 
-static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned int __DEFAULT_FN_ATTRS
 __rold(unsigned int __X, int __C) {
   return __builtin_rotateleft32(__X, __C);
 }
 
-static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned int __DEFAULT_FN_ATTRS
 __rord(unsigned int __X, int __C) {
   return __builtin_rotateright32(__X, __C);
 }
 
 #ifdef __x86_64__
-static __inline__ unsigned long long __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 __rolq(unsigned long long __X, int __C) {
   return __builtin_rotateleft64(__X, __C);
 }
 
-static __inline__ unsigned long long __attribute__((__always_inline__, __nodebug__))
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS
 __rorq(unsigned long long __X, int __C) {
   return __builtin_rotateright64(__X, __C);
 }
@@ -428,5 +438,9 @@ __rorq(unsigned long long __X, int __C) {
 /* These are not builtins so need to be provided in all modes. */
 #define _rotwl(a,b) __rolw((a), (b))
 #define _rotwr(a,b) __rorw((a), (b))
+
+#undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_SSE42
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 
 #endif /* __IA32INTRIN_H */

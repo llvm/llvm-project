@@ -134,6 +134,28 @@ def PPCfctiwz : SDNode<"PPCISD::FCTIWZ", SDTFPUnaryOp, []>;
 def PPCfctiduz: SDNode<"PPCISD::FCTIDUZ",SDTFPUnaryOp, []>;
 def PPCfctiwuz: SDNode<"PPCISD::FCTIWUZ",SDTFPUnaryOp, []>;
 
+def PPCstrict_fcfid : SDNode<"PPCISD::STRICT_FCFID",
+                             SDTFPUnaryOp, [SDNPHasChain]>;
+def PPCstrict_fcfidu : SDNode<"PPCISD::STRICT_FCFIDU",
+                              SDTFPUnaryOp, [SDNPHasChain]>;
+def PPCstrict_fcfids : SDNode<"PPCISD::STRICT_FCFIDS",
+                             SDTFPRoundOp, [SDNPHasChain]>;
+def PPCstrict_fcfidus : SDNode<"PPCISD::STRICT_FCFIDUS",
+                              SDTFPRoundOp, [SDNPHasChain]>;
+
+def PPCany_fcfid : PatFrags<(ops node:$op),
+                             [(PPCfcfid node:$op),
+                              (PPCstrict_fcfid node:$op)]>;
+def PPCany_fcfidu : PatFrags<(ops node:$op),
+                             [(PPCfcfidu node:$op),
+                              (PPCstrict_fcfidu node:$op)]>;
+def PPCany_fcfids : PatFrags<(ops node:$op),
+                              [(PPCfcfids node:$op),
+                               (PPCstrict_fcfids node:$op)]>;
+def PPCany_fcfidus : PatFrags<(ops node:$op),
+                              [(PPCfcfidus node:$op),
+                               (PPCstrict_fcfidus node:$op)]>;
+
 def PPCcv_fp_to_uint_in_vsr:
     SDNode<"PPCISD::FP_TO_UINT_IN_VSR", SDT_PPCcv_fp_to_int, []>;
 def PPCcv_fp_to_sint_in_vsr:
@@ -214,6 +236,28 @@ def PPCshl        : SDNode<"PPCISD::SHL"       , SDTIntShiftOp>;
 def PPCfnmsub     : SDNode<"PPCISD::FNMSUB"    , SDTFPTernaryOp>;
 
 def PPCextswsli : SDNode<"PPCISD::EXTSWSLI" , SDT_PPCextswsli>;
+
+def PPCstrict_fctidz : SDNode<"PPCISD::STRICT_FCTIDZ",
+                              SDTFPUnaryOp, [SDNPHasChain]>;
+def PPCstrict_fctiwz : SDNode<"PPCISD::STRICT_FCTIWZ",
+                              SDTFPUnaryOp, [SDNPHasChain]>;
+def PPCstrict_fctiduz : SDNode<"PPCISD::STRICT_FCTIDUZ",
+                               SDTFPUnaryOp, [SDNPHasChain]>;
+def PPCstrict_fctiwuz : SDNode<"PPCISD::STRICT_FCTIWUZ",
+                                SDTFPUnaryOp, [SDNPHasChain]>;
+
+def PPCany_fctidz : PatFrags<(ops node:$op),
+                             [(PPCstrict_fctidz node:$op),
+                              (PPCfctidz node:$op)]>;
+def PPCany_fctiwz : PatFrags<(ops node:$op),
+                             [(PPCstrict_fctiwz node:$op),
+                              (PPCfctiwz node:$op)]>;
+def PPCany_fctiduz : PatFrags<(ops node:$op),
+                              [(PPCstrict_fctiduz node:$op),
+                               (PPCfctiduz node:$op)]>;
+def PPCany_fctiwuz : PatFrags<(ops node:$op),
+                              [(PPCstrict_fctiwuz node:$op),
+                               (PPCfctiwuz node:$op)]>;
 
 // Move 2 i64 values into a VSX register
 def PPCbuild_fp128: SDNode<"PPCISD::BUILD_FP128",
@@ -317,6 +361,8 @@ def PPCprobedalloca : SDNode<"PPCISD::PROBED_ALLOCA", SDTDynOp, [SDNPHasChain]>;
 
 // PC Relative Specific Nodes
 def PPCmatpcreladdr : SDNode<"PPCISD::MAT_PCREL_ADDR", SDTIntUnaryOp, []>;
+def PPCtlsdynamatpcreladdr : SDNode<"PPCISD::TLS_DYNAMIC_MAT_PCREL_ADDR",
+                                    SDTIntUnaryOp, []>;
 
 //===----------------------------------------------------------------------===//
 // PowerPC specific transformation functions and pattern fragments.
@@ -2632,7 +2678,7 @@ let Uses = [RM], mayRaiseFPException = 1, hasSideEffects = 0 in {
                           []>;
   defm FCTIWZ : XForm_26r<63, 15, (outs f8rc:$frD), (ins f8rc:$frB),
                           "fctiwz", "$frD, $frB", IIC_FPGeneral,
-                          [(set f64:$frD, (PPCfctiwz f64:$frB))]>;
+                          [(set f64:$frD, (PPCany_fctiwz f64:$frB))]>;
 
   defm FRSP   : XForm_26r<63, 12, (outs f4rc:$frD), (ins f8rc:$frB),
                           "frsp", "$frD, $frB", IIC_FPGeneral,

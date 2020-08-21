@@ -167,7 +167,7 @@ void bazzz() {bazz();}
 #pragma omp declare target to(bazzz) device_type(nohost) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}}
 void any() {bazz();} // host5-error {{function with 'device_type(nohost)' is not available on host}}
 void host1() {bazz();} // host5-error {{function with 'device_type(nohost)' is not available on host}}
-#pragma omp declare target to(host1) device_type(host) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} dev5-note 4 {{marked as 'device_type(host)' here}}
+#pragma omp declare target to(host1) device_type(host) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} dev5-note 3 {{marked as 'device_type(host)' here}}
 void host2() {bazz();} //host5-error {{function with 'device_type(nohost)' is not available on host}}
 #pragma omp declare target to(host2)
 void device() {host1();} // dev5-error {{function with 'device_type(host)' is not available on device}}
@@ -183,7 +183,7 @@ void any4() {any2();}
 #pragma omp end declare target
 
 void any5() {any();}
-void any6() {host1();} // dev5-error {{function with 'device_type(host)' is not available on device}}
+void any6() {host1();}
 void any7() {device();} // host5-error {{function with 'device_type(nohost)' is not available on host}}
 void any8() {any2();}
 

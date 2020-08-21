@@ -881,46 +881,82 @@ public:
     return true;
   }
 
-  bool WalkUpFromDeclRefExpr(DeclRefExpr *S) {
-    if (auto QualifierLoc = S->getQualifierLoc())
+  syntax::IdExpression *buildIdExpression(NestedNameSpecifierLoc QualifierLoc,
+                                          SourceLocation TemplateKeywordLoc,
+                                          SourceRange UnqualifiedIdLoc,
+                                          ASTPtr From) {
+    if (QualifierLoc) {
       Builder.markChild(QualifierLoc, syntax::NodeRole::IdExpression_qualifier);
+      if (TemplateKeywordLoc.isValid())
+        Builder.markChildToken(TemplateKeywordLoc,
+                               syntax::NodeRole::TemplateKeyword);
+    }
 
-    auto TemplateKeywordLoc = S->getTemplateKeywordLoc();
-    if (TemplateKeywordLoc.isValid())
-      Builder.markChildToken(TemplateKeywordLoc,
-                             syntax::NodeRole::TemplateKeyword);
+    auto *TheUnqualifiedId = new (allocator()) syntax::UnqualifiedId;
+    Builder.foldNode(Builder.getRange(UnqualifiedIdLoc), TheUnqualifiedId,
+                     nullptr);
+    Builder.markChild(TheUnqualifiedId, syntax::NodeRole::IdExpression_id);
 
-    auto *unqualifiedId = new (allocator()) syntax::UnqualifiedId;
+    auto IdExpressionBeginLoc =
+        QualifierLoc ? QualifierLoc.getBeginLoc() : UnqualifiedIdLoc.getBegin();
 
-    Builder.foldNode(Builder.getRange(S->getLocation(), S->getEndLoc()),
-                     unqualifiedId, nullptr);
+    auto *TheIdExpression = new (allocator()) syntax::IdExpression;
+    Builder.foldNode(
+        Builder.getRange(IdExpressionBeginLoc, UnqualifiedIdLoc.getEnd()),
+        TheIdExpression, From);
 
-    Builder.markChild(unqualifiedId, syntax::NodeRole::IdExpression_id);
+    return TheIdExpression;
+  }
+
+  bool WalkUpFromMemberExpr(MemberExpr *S) {
+    // For `MemberExpr` with implicit `this->` we generate a simple
+    // `id-expression` syntax node, beacuse an implicit `member-expression` is
+    // syntactically undistinguishable from an `id-expression`
+    if (S->isImplicitAccess()) {
+      buildIdExpression(S->getQualifierLoc(), S->getTemplateKeywordLoc(),
+                        SourceRange(S->getMemberLoc(), S->getEndLoc()), S);
+      return true;
+    }
+
+    auto *TheIdExpression = buildIdExpression(
+        S->getQualifierLoc(), S->getTemplateKeywordLoc(),
+        SourceRange(S->getMemberLoc(), S->getEndLoc()), nullptr);
+
+    Builder.markChild(TheIdExpression,
+                      syntax::NodeRole::MemberExpression_member);
+
+    Builder.markExprChild(S->getBase(),
+                          syntax::NodeRole::MemberExpression_object);
+    Builder.markChildToken(S->getOperatorLoc(),
+                           syntax::NodeRole::MemberExpression_accessToken);
 
     Builder.foldNode(Builder.getExprRange(S),
-                     new (allocator()) syntax::IdExpression, S);
+                     new (allocator()) syntax::MemberExpression, S);
+    return true;
+  }
+
+  bool WalkUpFromDeclRefExpr(DeclRefExpr *S) {
+    buildIdExpression(S->getQualifierLoc(), S->getTemplateKeywordLoc(),
+                      SourceRange(S->getLocation(), S->getEndLoc()), S);
+
     return true;
   }
 
   // Same logic as DeclRefExpr.
   bool WalkUpFromDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *S) {
-    if (auto QualifierLoc = S->getQualifierLoc())
-      Builder.markChild(QualifierLoc, syntax::NodeRole::IdExpression_qualifier);
+    buildIdExpression(S->getQualifierLoc(), S->getTemplateKeywordLoc(),
+                      SourceRange(S->getLocation(), S->getEndLoc()), S);
 
-    auto TemplateKeywordLoc = S->getTemplateKeywordLoc();
-    if (TemplateKeywordLoc.isValid())
-      Builder.markChildToken(TemplateKeywordLoc,
-                             syntax::NodeRole::TemplateKeyword);
+    return true;
+  }
 
-    auto *unqualifiedId = new (allocator()) syntax::UnqualifiedId;
-
-    Builder.foldNode(Builder.getRange(S->getLocation(), S->getEndLoc()),
-                     unqualifiedId, nullptr);
-
-    Builder.markChild(unqualifiedId, syntax::NodeRole::IdExpression_id);
-
-    Builder.foldNode(Builder.getExprRange(S),
-                     new (allocator()) syntax::IdExpression, S);
+  bool WalkUpFromCXXThisExpr(CXXThisExpr *S) {
+    if (!S->isImplicit()) {
+      Builder.markChildToken(S->getLocation(),
+                             syntax::NodeRole::IntroducerKeyword);
+      Builder.foldNode(Builder.getExprRange(S),
+                       new (allocator()) syntax::ThisExpression, S);
+    }
     return true;
   }
 

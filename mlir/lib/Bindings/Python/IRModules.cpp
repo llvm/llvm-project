@@ -55,13 +55,13 @@ static const char kDumpDocstring[] =
 namespace {
 
 /// Accumulates into a python string from a method that accepts an
-/// MlirPrintCallback.
+/// MlirStringCallback.
 struct PyPrintAccumulator {
   py::list parts;
 
   void *getUserData() { return this; }
 
-  MlirPrintCallback getCallback() {
+  MlirStringCallback getCallback() {
     return [](const char *part, intptr_t size, void *userData) {
       PyPrintAccumulator *printAccum =
           static_cast<PyPrintAccumulator *>(userData);

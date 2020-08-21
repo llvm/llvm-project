@@ -11843,9 +11843,9 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
       Expr::EvalResult Result;
       if (E->EvaluateAsFixedPoint(Result, S.Context, Expr::SE_AllowSideEffects,
                                   S.isConstantEvaluated())) {
-        APFixedPoint Value = Result.Val.getFixedPoint();
-        APFixedPoint MaxVal = S.Context.getFixedPointMax(T);
-        APFixedPoint MinVal = S.Context.getFixedPointMin(T);
+        llvm::APFixedPoint Value = Result.Val.getFixedPoint();
+        llvm::APFixedPoint MaxVal = S.Context.getFixedPointMax(T);
+        llvm::APFixedPoint MinVal = S.Context.getFixedPointMin(T);
         if (Value > MaxVal || Value < MinVal) {
           S.DiagRuntimeBehavior(E->getExprLoc(), E,
                                 S.PDiag(diag::warn_impcast_fixed_point_range)
@@ -11860,7 +11860,7 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
       if (!S.isConstantEvaluated() &&
           E->EvaluateAsFixedPoint(Result, S.Context,
                                   Expr::SE_AllowSideEffects)) {
-        APFixedPoint FXResult = Result.Val.getFixedPoint();
+        llvm::APFixedPoint FXResult = Result.Val.getFixedPoint();
 
         bool Overflowed;
         llvm::APSInt IntResult = FXResult.convertToInt(
@@ -11885,7 +11885,7 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
         llvm::APSInt Value = Result.Val.getInt();
 
         bool Overflowed;
-        APFixedPoint IntResult = APFixedPoint::getFromIntValue(
+        llvm::APFixedPoint IntResult = llvm::APFixedPoint::getFromIntValue(
             Value, S.Context.getFixedPointSemantics(T), &Overflowed);
 
         if (Overflowed) {

@@ -8,8 +8,8 @@
 
 ; Deep Wrapper enabled
 
-; RUN: opt -attributor -attributor-manifest-internal  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=5 -attributor-allow-deep-wrappers -disable-inlining -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_CGSCC_NPM,NOT_CGSCC_OPM,NOT_TUNIT_NPM,IS__TUNIT____,IS________OPM,IS__TUNIT_OPM,CHECK_ENABLED,NOT_CGSCC_NPM_ENABLED,NOT_CGSCC_OPM_ENABLED,NOT_TUNIT_NPM_ENABLED,IS__TUNIT_____ENABLED,IS________OPM_ENABLED,IS__TUNIT_OPM_ENABLED
-; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=5 -attributor-allow-deep-wrappers -disable-inlining -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_CGSCC_OPM,NOT_CGSCC_NPM,NOT_TUNIT_OPM,IS__TUNIT____,IS________NPM,IS__TUNIT_NPM,CHECK_ENABLED,NOT_CGSCC_OPM_ENABLED,NOT_CGSCC_NPM_ENABLED,NOT_TUNIT_OPM_ENABLED,IS__TUNIT_____ENABLED,IS________NPM_ENABLED,IS__TUNIT_NPM_ENABLED
+; RUN: opt -attributor -attributor-manifest-internal  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=7 -attributor-allow-deep-wrappers -disable-inlining -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_CGSCC_NPM,NOT_CGSCC_OPM,NOT_TUNIT_NPM,IS__TUNIT____,IS________OPM,IS__TUNIT_OPM,CHECK_ENABLED,NOT_CGSCC_NPM_ENABLED,NOT_CGSCC_OPM_ENABLED,NOT_TUNIT_NPM_ENABLED,IS__TUNIT_____ENABLED,IS________OPM_ENABLED,IS__TUNIT_OPM_ENABLED
+; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal  -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=7 -attributor-allow-deep-wrappers -disable-inlining -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_CGSCC_OPM,NOT_CGSCC_NPM,NOT_TUNIT_OPM,IS__TUNIT____,IS________NPM,IS__TUNIT_NPM,CHECK_ENABLED,NOT_CGSCC_OPM_ENABLED,NOT_CGSCC_NPM_ENABLED,NOT_TUNIT_OPM_ENABLED,IS__TUNIT_____ENABLED,IS________NPM_ENABLED,IS__TUNIT_NPM_ENABLED
 ; RUN: opt -attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -attributor-allow-deep-wrappers -disable-inlining -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_NPM,IS__CGSCC____,IS________OPM,IS__CGSCC_OPM,CHECK_ENABLED,NOT_TUNIT_NPM_ENABLED,NOT_TUNIT_OPM_ENABLED,NOT_CGSCC_NPM_ENABLED,IS__CGSCC_____ENABLED,IS________OPM_ENABLED,IS__CGSCC_OPM_ENABLED
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -attributor-allow-deep-wrappers -disable-inlining -S < %s | FileCheck %s --check-prefixes=CHECK,NOT_TUNIT_NPM,NOT_TUNIT_OPM,NOT_CGSCC_OPM,IS__CGSCC____,IS________NPM,IS__CGSCC_NPM,CHECK_ENABLED,NOT_TUNIT_NPM_ENABLED,NOT_TUNIT_OPM_ENABLED,NOT_CGSCC_OPM_ENABLED,IS__CGSCC_____ENABLED,IS________NPM_ENABLED,IS__CGSCC_NPM_ENABLED
 ; RUN: opt -attributor -attributor-cgscc -disable-inlining -attributor-allow-deep-wrappers -S < %s | FileCheck %s --check-prefix=DWRAPPER
@@ -140,4 +140,34 @@ entry:
   %ret3 = call i32 @inner3(i32 %ret1, i32 %ret2)
   %ret4 = call i32 @inner4(i32 %ret3, i32 %ret3)
   ret i32 %ret4
+}
+
+
+define linkonce_odr void @unused_arg(i8) {
+; CHECK_DISABLED-LABEL: define {{[^@]+}}@unused_arg
+; CHECK_DISABLED-SAME: (i8 [[TMP0:%.*]])
+; CHECK_DISABLED-NEXT:    unreachable
+;
+  unreachable
+}
+
+define void @unused_arg_caller() {
+; CHECK_DISABLED-LABEL: define {{[^@]+}}@unused_arg_caller()
+; CHECK_DISABLED-NEXT:    call void @unused_arg(i8 0)
+; CHECK_DISABLED-NEXT:    ret void
+;
+; IS__TUNIT_____ENABLED: Function Attrs: nofree noreturn nosync nounwind readnone willreturn
+; IS__TUNIT_____ENABLED-LABEL: define {{[^@]+}}@unused_arg_caller()
+; IS__TUNIT_____ENABLED-NEXT:    unreachable
+;
+; IS__CGSCC_____ENABLED: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; IS__CGSCC_____ENABLED-LABEL: define {{[^@]+}}@unused_arg_caller()
+; IS__CGSCC_____ENABLED-NEXT:    unreachable
+;
+; DWRAPPER: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; DWRAPPER-LABEL: define {{[^@]+}}@unused_arg_caller()
+; DWRAPPER-NEXT:    unreachable
+;
+  call void @unused_arg(i8 0)
+  ret void
 }

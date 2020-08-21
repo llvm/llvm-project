@@ -310,76 +310,77 @@ LinkEditData:
     - _main
 DWARF:           
   debug_abbrev:    
-    - Code:            0x00000001
-      Tag:             DW_TAG_compile_unit
-      Children:        DW_CHILDREN_yes
-      Attributes:      
-        - Attribute:       DW_AT_producer
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_language
-          Form:            DW_FORM_data2
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_stmt_list
-          Form:            DW_FORM_sec_offset
-        - Attribute:       DW_AT_comp_dir
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
-    - Code:            0x00000002
-      Tag:             DW_TAG_subprogram
-      Children:        DW_CHILDREN_yes
-      Attributes:      
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
-        - Attribute:       DW_AT_frame_base
-          Form:            DW_FORM_exprloc
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_decl_file
-          Form:            DW_FORM_data1
-        - Attribute:       DW_AT_decl_line
-          Form:            DW_FORM_data1
-        - Attribute:       DW_AT_prototyped
-          Form:            DW_FORM_flag_present
-        - Attribute:       DW_AT_type
-          Form:            DW_FORM_ref4
-        - Attribute:       DW_AT_external
-          Form:            DW_FORM_flag_present
-    - Code:            0x00000003
-      Tag:             DW_TAG_formal_parameter
-      Children:        DW_CHILDREN_no
-      Attributes:      
-        - Attribute:       DW_AT_location
-          Form:            DW_FORM_exprloc
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_decl_file
-          Form:            DW_FORM_data1
-        - Attribute:       DW_AT_decl_line
-          Form:            DW_FORM_data1
-        - Attribute:       DW_AT_type
-          Form:            DW_FORM_ref4
-    - Code:            0x00000004
-      Tag:             DW_TAG_base_type
-      Children:        DW_CHILDREN_no
-      Attributes:      
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_encoding
-          Form:            DW_FORM_data1
-        - Attribute:       DW_AT_byte_size
-          Form:            DW_FORM_data1
-    - Code:            0x00000005
-      Tag:             DW_TAG_pointer_type
-      Children:        DW_CHILDREN_no
-      Attributes:      
-        - Attribute:       DW_AT_type
-          Form:            DW_FORM_ref4
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_producer
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_comp_dir
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+        - Code:            0x00000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_frame_base
+              Form:            DW_FORM_exprloc
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_prototyped
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+        - Code:            0x00000003
+          Tag:             DW_TAG_formal_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_location
+              Form:            DW_FORM_exprloc
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x00000004
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+        - Code:            0x00000005
+          Tag:             DW_TAG_pointer_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
   debug_aranges:   
     - Length:              44
       Version:             2
@@ -511,10 +512,11 @@ DWARF:
 
 #      DWARF32: DWARF:
 #      DWARF32:   debug_info:
-# DWARF32-NEXT:     - Length:     0x0000000000000075
-# DWARF32-NEXT:       Version:    4
-# DWARF32-NEXT:       AbbrOffset: 0
-# DWARF32-NEXT:       AddrSize:   8
+# DWARF32-NEXT:     - Length:        0x0000000000000075
+# DWARF32-NEXT:       Version:       4
+# DWARF32-NEXT:       AbbrevTableID: 0
+# DWARF32-NEXT:       AbbrOffset:    0
+# DWARF32-NEXT:       AddrSize:      8
 # DWARF32-NEXT:       Entries:
 # DWARF32-NEXT:         - AbbrCode: 0x00000001
 # DWARF32-NEXT:           Values:
@@ -580,10 +582,11 @@ DWARF:
 # RUN:   obj2yaml | FileCheck %s --check-prefix=DWARF32-YAML
 
 #      DWARF32-YAML: debug_info:
-# DWARF32-YAML-NEXT:   - Length:     0x000000000000000C
-# DWARF32-YAML-NEXT:     Version:    4
-# DWARF32-YAML-NEXT:     AbbrOffset: 0
-# DWARF32-YAML-NEXT:     AddrSize:   8
+# DWARF32-YAML-NEXT:   - Length:        0x000000000000000C
+# DWARF32-YAML-NEXT:     Version:       4
+# DWARF32-YAML-NEXT:     AbbrevTableID: 0
+# DWARF32-YAML-NEXT:     AbbrOffset:    0
+# DWARF32-YAML-NEXT:     AddrSize:      8
 # DWARF32-YAML-NEXT:     Entries:
 # DWARF32-YAML-NEXT:       - AbbrCode: 0x00000001
 # DWARF32-YAML-NEXT:         Values:
@@ -637,13 +640,14 @@ LoadCommands:
         reserved2: 0x00000000
         reserved3: 0x00000000
 DWARF:
-  debug_abbrev:    
-    - Code:     1
-      Tag:      DW_TAG_compile_unit
-      Children: DW_CHILDREN_no
-      Attributes:
-        - Attribute: DW_AT_low_pc
-          Form:      DW_FORM_addr
+  debug_abbrev:
+    - Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_addr
   debug_info:
     - Format:     [[FORMAT]]
       Length:     12
@@ -661,12 +665,237 @@ DWARF:
 # RUN:   obj2yaml | FileCheck %s --check-prefix=DWARF64-YAML
 
 #      DWARF64-YAML: debug_info:
-# DWARF64-YAML-NEXT:   - Format:     DWARF64
-# DWARF64-YAML-NEXT:     Length:     0x000000000000000C
-# DWARF64-YAML-NEXT:     Version:    4
-# DWARF64-YAML-NEXT:     AbbrOffset: 0
-# DWARF64-YAML-NEXT:     AddrSize:   8
+# DWARF64-YAML-NEXT:   - Format:        DWARF64
+# DWARF64-YAML-NEXT:     Length:        0x000000000000000C
+# DWARF64-YAML-NEXT:     Version:       4
+# DWARF64-YAML-NEXT:     AbbrevTableID: 0
+# DWARF64-YAML-NEXT:     AbbrOffset:    0
+# DWARF64-YAML-NEXT:     AddrSize:      8
 # DWARF64-YAML-NEXT:     Entries:
 # DWARF64-YAML-NEXT:       - AbbrCode: 0x00000001
 # DWARF64-YAML-NEXT:         Values:
 # DWARF64-YAML-NEXT:           - Value: 0x0000000000001234
+
+## c) Test that yaml2obj is able to generate compilation units according to the
+## associated abbrev table that is referenced by the 'AbbrevTableID' and obj2yaml
+## is able to convert it back.
+
+# RUN: yaml2obj --docnum=3 %s | obj2yaml | FileCheck %s --check-prefix=MULTI-TABLES
+
+#      MULTI-TABLES: DWARF:
+# MULTI-TABLES-NEXT:   debug_abbrev:
+# MULTI-TABLES-NEXT:     - ID: 0
+# MULTI-TABLES-NEXT:       Table:
+# MULTI-TABLES-NEXT:         - Code:     0x0000000000000001
+# MULTI-TABLES-NEXT:           Tag:      DW_TAG_compile_unit
+# MULTI-TABLES-NEXT:           Children: DW_CHILDREN_no
+# MULTI-TABLES-NEXT:           Attributes:
+# MULTI-TABLES-NEXT:             - Attribute: DW_AT_low_pc
+# MULTI-TABLES-NEXT:               Form:      DW_FORM_addr
+# MULTI-TABLES-NEXT:     - ID: 1
+# MULTI-TABLES-NEXT:       Table:
+# MULTI-TABLES-NEXT:         - Code:     0x0000000000000001
+# MULTI-TABLES-NEXT:           Tag:      DW_TAG_compile_unit
+# MULTI-TABLES-NEXT:           Children: DW_CHILDREN_no
+# MULTI-TABLES-NEXT:           Attributes:
+# MULTI-TABLES-NEXT:             - Attribute: DW_AT_low_pc
+# MULTI-TABLES-NEXT:               Form:      DW_FORM_data4
+# MULTI-TABLES-NEXT:     - ID: 2
+# MULTI-TABLES-NEXT:       Table:
+# MULTI-TABLES-NEXT:         - Code:     0x0000000000000001
+# MULTI-TABLES-NEXT:           Tag:      DW_TAG_compile_unit
+# MULTI-TABLES-NEXT:           Children: DW_CHILDREN_no
+# MULTI-TABLES-NEXT:           Attributes:
+# MULTI-TABLES-NEXT:             - Attribute: DW_AT_low_pc
+# MULTI-TABLES-NEXT:               Form:      DW_FORM_udata
+# MULTI-TABLES-NEXT:   debug_info:
+# MULTI-TABLES-NEXT:     - Length:        0x000000000000000C
+# MULTI-TABLES-NEXT:       Version:       4
+# MULTI-TABLES-NEXT:       AbbrevTableID: 1
+# MULTI-TABLES-NEXT:       AbbrOffset:    0x0000000000000008
+# MULTI-TABLES-NEXT:       AddrSize:      8
+# MULTI-TABLES-NEXT:       Entries:
+# MULTI-TABLES-NEXT:         - AbbrCode: 0x00000001
+# MULTI-TABLES-NEXT:           Values:
+# MULTI-TABLES-NEXT:             - Value: 0x0000000000001234
+# MULTI-TABLES-NEXT:     - Length:        0x000000000000000C
+# MULTI-TABLES-NEXT:       Version:       4
+# MULTI-TABLES-NEXT:       AbbrevTableID: 1
+# MULTI-TABLES-NEXT:       AbbrOffset:    0x0000000000000008
+# MULTI-TABLES-NEXT:       AddrSize:      8
+# MULTI-TABLES-NEXT:       Entries:
+# MULTI-TABLES-NEXT:         - AbbrCode: 0x00000001
+# MULTI-TABLES-NEXT:           Values:
+# MULTI-TABLES-NEXT:             - Value: 0x0000000000004321
+# MULTI-TABLES-NEXT:     - Length:        0x0000000000000010
+# MULTI-TABLES-NEXT:       Version:       4
+# MULTI-TABLES-NEXT:       AbbrevTableID: 0
+# MULTI-TABLES-NEXT:       AbbrOffset:    0x0000000000000000
+# MULTI-TABLES-NEXT:       AddrSize:      8
+# MULTI-TABLES-NEXT:       Entries:
+# MULTI-TABLES-NEXT:         - AbbrCode: 0x00000001
+# MULTI-TABLES-NEXT:           Values:
+# MULTI-TABLES-NEXT:             - Value: 0x0000000000005678
+# MULTI-TABLES-NEXT:     - Length:        0x000000000000000B
+# MULTI-TABLES-NEXT:       Version:       4
+# MULTI-TABLES-NEXT:       AbbrevTableID: 2
+# MULTI-TABLES-NEXT:       AbbrOffset:    0x0000000000000010
+# MULTI-TABLES-NEXT:       AddrSize:      8
+# MULTI-TABLES-NEXT:       Entries:
+# MULTI-TABLES-NEXT:         - AbbrCode: 0x00000001
+# MULTI-TABLES-NEXT:           Values:
+# MULTI-TABLES-NEXT:             - Value: 0x0000000000008765
+# MULTI-TABLES-NEXT: ...
+
+--- !mach-o
+FileHeader:
+  magic:      0xFEEDFACF
+  cputype:    0x01000007
+  cpusubtype: 0x00000003
+  filetype:   0x0000000A
+  ncmds:      1
+  sizeofcmds: 232
+  flags:      0x00000000
+  reserved:   0x00000000
+LoadCommands:
+  - cmd:      LC_SEGMENT_64
+    cmdsize:  232
+    segname:  __DWARF
+    vmaddr:   0x00
+    vmsize:   0x00
+    fileoff:  0x00
+    filesize: 0x00
+    maxprot:  0
+    initprot: 0
+    nsects:   2
+    flags:    0
+    Sections:
+      - sectname:  __debug_abbrev
+        segname:   __DWARF
+        addr:      0x00
+        size:      24
+        offset:    528
+        align:     0
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x00000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+      - sectname:  __debug_info
+        segname:   __DWARF
+        addr:      0x00
+        size:      67
+        offset:    1070
+        align:     0
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x00000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_addr
+    - ID: 2
+      Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_data4
+    - ID: 1
+      Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_udata
+  debug_info:
+    - Version:       4
+      AbbrevTableID: 2
+      AbbrOffset:    8
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x1234
+    - Version:       4
+      AbbrevTableID: 2
+      AbbrOffset:    8
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x4321
+    - Version:       4
+      AbbrevTableID: 0
+      AbbrOffset:    0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x5678
+    - Version:       4
+      AbbrevTableID: 1
+      AbbrOffset:    16
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x8765
+
+## d) Test that yaml2obj emits an error message when a compilation unit doesn't have
+## an associated abbrev table.
+
+# RUN: not yaml2obj --docnum=4 %s 2>&1 | FileCheck %s --check-prefix=MISSING-ABBREV
+
+# MISSING-ABBREV: yaml2obj: error: cannot find abbrev table whose ID is 0 for compilation unit with index 0
+
+--- !mach-o
+FileHeader:
+  magic:      0xFEEDFACF
+  cputype:    0x01000007
+  cpusubtype: 0x00000003
+  filetype:   0x0000000A
+  ncmds:      1
+  sizeofcmds: 232
+  flags:      0x00000000
+  reserved:   0x00000000
+LoadCommands:
+  - cmd:      LC_SEGMENT_64
+    cmdsize:  152
+    segname:  __DWARF
+    vmaddr:   0x00
+    vmsize:   0x00
+    fileoff:  0x00
+    filesize: 0x00
+    maxprot:  0
+    initprot: 0
+    nsects:   2
+    flags:    0
+    Sections:
+      - sectname:  __debug_info
+        segname:   __DWARF
+        addr:      0x00
+        size:      64
+        offset:    1070
+        align:     0
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x00000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+DWARF:
+  debug_info:
+    - Version:    4
+      AbbrOffset: 0x00
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x1234

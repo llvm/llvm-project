@@ -1,4 +1,4 @@
-# RUN: yaml2obj < %p/Inputs/ret42.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
 
 # RUN: mkdir -p %T/out/tmp
 # RUN: cp %t.obj %T/out/out1.obj

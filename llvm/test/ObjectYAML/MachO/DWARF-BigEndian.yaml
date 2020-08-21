@@ -274,103 +274,104 @@ DWARF:
     - a
     - N
     - t
-  debug_abbrev:    
-    - Code:            0x00000001
-      Tag:             DW_TAG_compile_unit
-      Children:        DW_CHILDREN_yes
-      Attributes:      
-        - Attribute:       DW_AT_producer
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_language
-          Form:            DW_FORM_data2
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_stmt_list
-          Form:            DW_FORM_sec_offset
-        - Attribute:       DW_AT_comp_dir
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
-    - Code:            0x00000002
-      Tag:             DW_TAG_base_type
-      Children:        DW_CHILDREN_no
-      Attributes:      
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_encoding
-          Form:            DW_FORM_data1
-        - Attribute:       DW_AT_byte_size
-          Form:            DW_FORM_data1
-    - Code:            0x00000003
-      Tag:             DW_TAG_typedef
-      Children:        DW_CHILDREN_no
-      Attributes:      
-        - Attribute:       DW_AT_type
-          Form:            DW_FORM_ref4
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_decl_file
-          Form:            DW_FORM_data1
-        - Attribute:       DW_AT_decl_line
-          Form:            DW_FORM_data1
-    - Code:            0x00000004
-      Tag:             DW_TAG_subprogram
-      Children:        DW_CHILDREN_yes
-      Attributes:      
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
-        - Attribute:       DW_AT_frame_base
-          Form:            DW_FORM_exprloc
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_decl_file
-          Form:            DW_FORM_data1
-        - Attribute:       DW_AT_decl_line
-          Form:            DW_FORM_data1
-        - Attribute:       DW_AT_prototyped
-          Form:            DW_FORM_flag_present
-        - Attribute:       DW_AT_type
-          Form:            DW_FORM_ref4
-        - Attribute:       DW_AT_external
-          Form:            DW_FORM_flag_present
-    - Code:            0x00000005
-      Tag:             DW_TAG_formal_parameter
-      Children:        DW_CHILDREN_no
-      Attributes:      
-        - Attribute:       DW_AT_location
-          Form:            DW_FORM_exprloc
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_decl_file
-          Form:            DW_FORM_data1
-        - Attribute:       DW_AT_decl_line
-          Form:            DW_FORM_data1
-        - Attribute:       DW_AT_type
-          Form:            DW_FORM_ref4
-    - Code:            0x00000006
-      Tag:             DW_TAG_variable
-      Children:        DW_CHILDREN_no
-      Attributes:      
-        - Attribute:       DW_AT_location
-          Form:            DW_FORM_exprloc
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_decl_file
-          Form:            DW_FORM_data1
-        - Attribute:       DW_AT_decl_line
-          Form:            DW_FORM_data1
-        - Attribute:       DW_AT_type
-          Form:            DW_FORM_ref4
-    - Code:            0x00000007
-      Tag:             DW_TAG_const_type
-      Children:        DW_CHILDREN_no
-      Attributes:      
-        - Attribute:       DW_AT_type
-          Form:            DW_FORM_ref4       
+  debug_abbrev:
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_producer
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+            - Attribute:       DW_AT_comp_dir
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+        - Code:            0x00000002
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_encoding
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+        - Code:            0x00000003
+          Tag:             DW_TAG_typedef
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+        - Code:            0x00000004
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_frame_base
+              Form:            DW_FORM_exprloc
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_prototyped
+              Form:            DW_FORM_flag_present
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_external
+              Form:            DW_FORM_flag_present
+        - Code:            0x00000005
+          Tag:             DW_TAG_formal_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_location
+              Form:            DW_FORM_exprloc
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x00000006
+          Tag:             DW_TAG_variable
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_location
+              Form:            DW_FORM_exprloc
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_decl_line
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x00000007
+          Tag:             DW_TAG_const_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
 ...
 
 #CHECK: DWARF:           

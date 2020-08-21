@@ -904,6 +904,8 @@ private:
   SDValue LowerSVEStructLoad(unsigned Intrinsic, ArrayRef<SDValue> LoadOps,
                              EVT VT, SelectionDAG &DAG, const SDLoc &DL) const;
 
+  SDValue LowerFixedLengthVectorIntDivideToSVE(SDValue Op,
+                                               SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorIntExtendToSVE(SDValue Op,
                                                SelectionDAG &DAG) const;
   SDValue LowerFixedLengthVectorLoadToSVE(SDValue Op, SelectionDAG &DAG) const;

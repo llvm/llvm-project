@@ -88,7 +88,7 @@ E: hfinkel@anl.gov
 D: The loop reroller, alias analysis and the PowerPC target
 
 N: Dan Gohman
-E: sunfish@mozilla.com
+E: llvm@sunfishcode.online
 D: WebAssembly Backend (lib/Target/WebAssembly/*)
 
 N: Renato Golin

@@ -153,6 +153,22 @@ CUDA Support in Clang
 
 - ...
 
+X86 Support in Clang
+--------------------
+
+- The x86 intrinsics ``_mm_popcnt_u32``, ``_mm_popcnt_u64``, ``_popcnt32``,
+  ``_popcnt64``, ``__popcntd`` and ``__popcntq``  may now be used within
+  constexpr expressions.
+
+- The x86 intrinsics ``_bit_scan_forward``, ``__bsfd`` and ``__bsfq`` may now
+  be used within constexpr expressions.
+
+- The x86 intrinsics ``_bit_scan_reverse``, ``__bsrd`` and ``__bsrq`` may now
+  be used within constexpr expressions.
+
+- The x86 intrinsics ``__bswap``, ``__bswapd``, ``__bswap64`` and ``__bswapq``
+  may now be used within constexpr expressions.
+
 Internal API Changes
 --------------------
 

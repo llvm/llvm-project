@@ -901,15 +901,13 @@ bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
 
   // TODO: use the function scope once we have call site AAReturnedValues.
   const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
-  const auto *LivenessAA =
-      CheckBBLivenessOnly ? nullptr
-                          : &(getAAFor<AAIsDead>(QueryingAA, QueryIRP,
-                                                 /* TrackDependence */ false));
+  const auto &LivenessAA =
+      getAAFor<AAIsDead>(QueryingAA, QueryIRP, /* TrackDependence */ false);
 
   auto &OpcodeInstMap =
       InfoCache.getOpcodeInstMapForFunction(*AssociatedFunction);
   if (!checkForAllInstructionsImpl(this, OpcodeInstMap, Pred, &QueryingAA,
-                                   LivenessAA, Opcodes, CheckBBLivenessOnly))
+                                   &LivenessAA, Opcodes, CheckBBLivenessOnly))
     return false;
 
   return true;
@@ -2225,7 +2223,7 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
         Functions.insert(NewF);
 
         // Update call graph
-        CGUpdater.registerOutlinedFunction(*NewF);
+        CGUpdater.replaceFunctionWith(*F, *NewF);
         for (const Use &U : NewF->uses())
           if (CallBase *CB = dyn_cast<CallBase>(U.getUser())) {
             auto *CallerF = CB->getCaller();

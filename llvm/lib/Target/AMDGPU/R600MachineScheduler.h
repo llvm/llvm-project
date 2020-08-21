@@ -80,7 +80,7 @@ private:
   bool VLIW5;
 
   int getInstKind(SUnit *SU);
-  bool regBelongsToClass(unsigned Reg, const TargetRegisterClass *RC) const;
+  bool regBelongsToClass(Register Reg, const TargetRegisterClass *RC) const;
   AluKind getAluKind(SUnit *SU) const;
   void LoadAlu();
   unsigned AvailablesAluCount() const;

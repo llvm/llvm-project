@@ -30,46 +30,47 @@ DWARF:
     - main
     - inline1
   debug_abbrev:
-    - Code:            0x0000000000000001
-      Tag:             DW_TAG_compile_unit
-      Children:        DW_CHILDREN_yes
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_language
-          Form:            DW_FORM_data2
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_stmt_list
-          Form:            DW_FORM_sec_offset
-    - Code:            0x0000000000000002
-      Tag:             DW_TAG_subprogram
-      Children:        DW_CHILDREN_yes
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_decl_file
-          Form:            DW_FORM_data1
-        - Attribute:       DW_AT_call_line
-          Form:            DW_FORM_data1
-    - Code:            0x0000000000000003
-      Tag:             DW_TAG_inlined_subroutine
-      Children:        DW_CHILDREN_no
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
-        - Attribute:       DW_AT_call_file
-          Form:            DW_FORM_data1
-        - Attribute:       DW_AT_call_line
-          Form:            DW_FORM_data1
+    - Table:
+        - Code:            0x0000000000000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_stmt_list
+              Form:            DW_FORM_sec_offset
+        - Code:            0x0000000000000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_decl_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_call_line
+              Form:            DW_FORM_data1
+        - Code:            0x0000000000000003
+          Tag:             DW_TAG_inlined_subroutine
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+            - Attribute:       DW_AT_call_file
+              Form:            DW_FORM_data1
+            - Attribute:       DW_AT_call_line
+              Form:            DW_FORM_data1
   debug_info:
     - Length:          0x0000000000000046
       Version:         4

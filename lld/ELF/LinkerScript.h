@@ -59,6 +59,10 @@ struct ExprValue {
   uint64_t val;
   uint64_t alignment = 1;
 
+  // The original st_type if the expression represents a symbol. Any operation
+  // resets type to STT_NOTYPE.
+  uint8_t type = llvm::ELF::STT_NOTYPE;
+
   // Original source location. Used for error messages.
   std::string loc;
 };

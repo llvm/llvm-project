@@ -893,16 +893,12 @@ struct TestMergeSingleBlockOps
         op.getParentOfType<SingleBlockImplicitTerminatorOp>();
     if (!parentOp)
       return failure();
-    Block &parentBlock = parentOp.region().front();
     Block &innerBlock = op.region().front();
     TerminatorOp innerTerminator =
         cast<TerminatorOp>(innerBlock.getTerminator());
-    Block *parentPrologue =
-        rewriter.splitBlock(&parentBlock, Block::iterator(op));
+    rewriter.mergeBlockBefore(&innerBlock, op);
     rewriter.eraseOp(innerTerminator);
-    rewriter.mergeBlocks(&innerBlock, &parentBlock, {});
     rewriter.eraseOp(op);
-    rewriter.mergeBlocks(parentPrologue, &parentBlock, {});
     rewriter.updateRootInPlace(op, [] {});
     return success();
   }

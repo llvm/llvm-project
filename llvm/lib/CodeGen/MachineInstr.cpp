@@ -1217,7 +1217,7 @@ bool MachineInstr::isSafeToMove(AAResults *AA, bool &SawStore) const {
 
   // See if this instruction does a load.  If so, we have to guarantee that the
   // loaded value doesn't change between the load and the its intended
-  // destination. The check for isInvariantLoad gives the targe the chance to
+  // destination. The check for isInvariantLoad gives the target the chance to
   // classify the load as always returning a constant, e.g. a constant pool
   // load.
   if (mayLoad() && !isDereferenceableInvariantLoad(AA))

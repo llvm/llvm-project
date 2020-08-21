@@ -680,7 +680,29 @@ foreach vt = VReg_64.RegTypes in {
 defm : DSReadPat_mc <DS_READ_B64, vt, "load_align8_local">;
 }
 
-defm : DSReadPat_mc <DS_READ_B128, v4i32, "load_align16_local">;
+let SubtargetPredicate = isGFX7GFX8 in {
+
+foreach vt = VReg_96.RegTypes in {
+defm : DSReadPat_mc <DS_READ_B96, vt, "load_align16_local">;
+}
+
+foreach vt = VReg_128.RegTypes in {
+defm : DSReadPat_mc <DS_READ_B128, vt, "load_align16_local">;
+}
+
+}
+
+let SubtargetPredicate = isGFX9Plus in {
+
+foreach vt = VReg_96.RegTypes in {
+defm : DSReadPat_mc <DS_READ_B96, vt, "load_local">;
+}
+
+foreach vt = VReg_128.RegTypes in {
+defm : DSReadPat_mc <DS_READ_B128, vt, "load_local">;
+}
+
+}
 
 } // End AddedComplexity = 100
 
@@ -761,6 +783,18 @@ class DS64Bit4ByteAlignedWritePat<DS_Pseudo inst, ValueType vt, PatFrag frag> : 
               (i1 0))
 >;
 
+class DS128Bit8ByteAlignedReadPat<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat <
+  (vt:$value (frag (DS128Bit8ByteAligned i32:$ptr, i8:$offset0, i8:$offset1))),
+  (inst $ptr, $offset0, $offset1, (i1 0))
+>;
+
+class DS128Bit8ByteAlignedWritePat<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat<
+  (frag vt:$value, (DS128Bit8ByteAligned i32:$ptr, i8:$offset0, i8:$offset1)),
+  (inst $ptr, (i64 (EXTRACT_SUBREG VReg_128:$value, sub0_sub1)),
+              (i64 (EXTRACT_SUBREG VReg_128:$value, sub2_sub3)), $offset0, $offset1,
+              (i1 0))
+>;
+
 multiclass DS64Bit4ByteAlignedPat_mc<ValueType vt> {
   let OtherPredicates = [LDSRequiresM0Init, isGFX7Plus] in {
     def : DS64Bit4ByteAlignedReadPat<DS_READ2_B32, vt, load_local_m0>;
@@ -773,10 +807,26 @@ multiclass DS64Bit4ByteAlignedPat_mc<ValueType vt> {
   }
 }
 
+multiclass DS128Bit8ByteAlignedPat_mc<ValueType vt> {
+  let OtherPredicates = [LDSRequiresM0Init, isGFX7Plus] in {
+    def : DS128Bit8ByteAlignedReadPat<DS_READ2_B64, vt, load_local_m0>;
+    def : DS128Bit8ByteAlignedWritePat<DS_WRITE2_B64, vt, store_local_m0>;
+  }
+
+  let OtherPredicates = [NotLDSRequiresM0Init] in {
+    def : DS128Bit8ByteAlignedReadPat<DS_READ2_B64_gfx9, vt, load_local>;
+    def : DS128Bit8ByteAlignedWritePat<DS_WRITE2_B64_gfx9, vt, store_local>;
+  }
+}
+
 // v2i32 loads are split into i32 loads on SI during lowering, due to a bug
 // related to bounds checking.
 foreach vt = VReg_64.RegTypes in {
 defm : DS64Bit4ByteAlignedPat_mc<vt>;
+}
+
+foreach vt = VReg_128.RegTypes in {
+defm : DS128Bit8ByteAlignedPat_mc<vt>;
 }
 
 let AddedComplexity = 100 in {
@@ -785,7 +835,29 @@ foreach vt = VReg_64.RegTypes in {
 defm : DSWritePat_mc <DS_WRITE_B64, vt, "store_align8_local">;
 }
 
-defm : DSWritePat_mc <DS_WRITE_B128, v4i32, "store_align16_local">;
+let SubtargetPredicate = isGFX7GFX8 in {
+
+foreach vt = VReg_96.RegTypes in {
+defm : DSWritePat_mc <DS_WRITE_B96, vt, "store_align16_local">;
+}
+
+foreach vt = VReg_128.RegTypes in {
+defm : DSWritePat_mc <DS_WRITE_B128, vt, "store_align16_local">;
+}
+
+}
+
+let SubtargetPredicate = isGFX9Plus in {
+
+foreach vt = VReg_96.RegTypes in {
+defm : DSWritePat_mc <DS_WRITE_B96, vt, "store_local">;
+}
+
+foreach vt = VReg_128.RegTypes in {
+defm : DSWritePat_mc <DS_WRITE_B128, vt, "store_local">;
+}
+
+}
 
 } // End AddedComplexity = 100
 class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag, bit gds=0> : GCNPat <

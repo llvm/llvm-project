@@ -53,12 +53,119 @@ static APFloat fmed3AMDGCN(const APFloat &Src0, const APFloat &Src1,
   return maxnum(Src0, Src1);
 }
 
+// Check if a value can be converted to a 16-bit value without losing
+// precision.
+static bool canSafelyConvertTo16Bit(Value &V) {
+  Type *VTy = V.getType();
+  if (VTy->isHalfTy() || VTy->isIntegerTy(16)) {
+    // The value is already 16-bit, so we don't want to convert to 16-bit again!
+    return false;
+  }
+  if (ConstantFP *ConstFloat = dyn_cast<ConstantFP>(&V)) {
+    // We need to check that if we cast the index down to a half, we do not lose
+    // precision.
+    APFloat FloatValue(ConstFloat->getValueAPF());
+    bool LosesInfo = true;
+    FloatValue.convert(APFloat::IEEEhalf(), APFloat::rmTowardZero, &LosesInfo);
+    return !LosesInfo;
+  }
+  Value *CastSrc;
+  if (match(&V, m_FPExt(PatternMatch::m_Value(CastSrc))) ||
+      match(&V, m_SExt(PatternMatch::m_Value(CastSrc))) ||
+      match(&V, m_ZExt(PatternMatch::m_Value(CastSrc)))) {
+    Type *CastSrcTy = CastSrc->getType();
+    if (CastSrcTy->isHalfTy() || CastSrcTy->isIntegerTy(16))
+      return true;
+  }
+
+  return false;
+}
+
+// Convert a value to 16-bit.
+Value *convertTo16Bit(Value &V, InstCombiner::BuilderTy &Builder) {
+  Type *VTy = V.getType();
+  if (isa<FPExtInst>(&V) || isa<SExtInst>(&V) || isa<ZExtInst>(&V))
+    return cast<Instruction>(&V)->getOperand(0);
+  if (VTy->isIntegerTy())
+    return Builder.CreateIntCast(&V, Type::getInt16Ty(V.getContext()), false);
+  if (VTy->isFloatingPointTy())
+    return Builder.CreateFPCast(&V, Type::getHalfTy(V.getContext()));
+
+  llvm_unreachable("Should never be called!");
+}
+
+static Optional<Instruction *>
+simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
+                             const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr,
+                             IntrinsicInst &II, InstCombiner &IC) {
+  if (!ST->hasA16() && !ST->hasG16())
+    return None;
+
+  bool FloatCoord = false;
+  // true means derivatives can be converted to 16 bit, coordinates not
+  bool OnlyDerivatives = false;
+
+  for (unsigned OperandIndex = ImageDimIntr->GradientStart;
+       OperandIndex < ImageDimIntr->VAddrEnd; OperandIndex++) {
+    Value *Coord = II.getOperand(OperandIndex);
+    // If the values are not derived from 16-bit values, we cannot optimize.
+    if (!canSafelyConvertTo16Bit(*Coord)) {
+      if (OperandIndex < ImageDimIntr->CoordStart ||
+          ImageDimIntr->GradientStart == ImageDimIntr->CoordStart) {
+        return None;
+      }
+      // All gradients can be converted, so convert only them
+      OnlyDerivatives = true;
+      break;
+    }
+
+    assert(OperandIndex == ImageDimIntr->GradientStart ||
+           FloatCoord == Coord->getType()->isFloatingPointTy());
+    FloatCoord = Coord->getType()->isFloatingPointTy();
+  }
+
+  if (OnlyDerivatives) {
+    if (!ST->hasG16())
+      return None;
+  } else {
+    if (!ST->hasA16())
+      OnlyDerivatives = true; // Only supports G16
+  }
+
+  Type *CoordType = FloatCoord ? Type::getHalfTy(II.getContext())
+                               : Type::getInt16Ty(II.getContext());
+
+  SmallVector<Type *, 4> ArgTys;
+  if (!Intrinsic::getIntrinsicSignature(II.getCalledFunction(), ArgTys))
+    return None;
+
+  ArgTys[ImageDimIntr->GradientTyArg] = CoordType;
+  if (!OnlyDerivatives)
+    ArgTys[ImageDimIntr->CoordTyArg] = CoordType;
+  Function *I =
+      Intrinsic::getDeclaration(II.getModule(), II.getIntrinsicID(), ArgTys);
+
+  SmallVector<Value *, 8> Args(II.arg_operands());
+
+  unsigned EndIndex =
+      OnlyDerivatives ? ImageDimIntr->CoordStart : ImageDimIntr->VAddrEnd;
+  for (unsigned OperandIndex = ImageDimIntr->GradientStart;
+       OperandIndex < EndIndex; OperandIndex++) {
+    Args[OperandIndex] =
+        convertTo16Bit(*II.getOperand(OperandIndex), IC.Builder);
+  }
+
+  CallInst *NewCall = IC.Builder.CreateCall(I, Args);
+  NewCall->takeName(&II);
+  NewCall->copyMetadata(II);
+  NewCall->copyFastMathFlags(&II);
+  return IC.replaceInstUsesWith(II, NewCall);
+}
+
 Optional<Instruction *>
 GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
   switch (IID) {
-  default:
-    break;
   case Intrinsic::amdgcn_rcp: {
     Value *Src = II.getArgOperand(0);
 
@@ -714,6 +821,12 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
 
     break;
+  }
+  default: {
+    if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
+            AMDGPU::getImageDimIntrinsicInfo(II.getIntrinsicID())) {
+      return simplifyAMDGCNImageIntrinsic(ST, ImageDimIntr, II, IC);
+    }
   }
   }
   return None;

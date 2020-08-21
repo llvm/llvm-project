@@ -9,10 +9,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_386
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name: .foo
     Type: SHT_PROGBITS

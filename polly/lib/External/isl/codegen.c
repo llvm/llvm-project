@@ -214,6 +214,7 @@ int main(int argc, char **argv)
 	assert(options);
 	ctx = isl_ctx_alloc_with_options(&options_args, options);
 	isl_options_set_ast_build_detect_min_max(ctx, 1);
+	isl_options_set_ast_print_outermost_block(ctx, 0);
 	argc = cg_options_parse(options, argc, argv, ISL_ARG_ALL);
 
 	s = isl_stream_new_file(ctx, stdin);

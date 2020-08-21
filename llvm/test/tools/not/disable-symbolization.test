@@ -1,0 +1,5 @@
+# RUN: not --crash printenv > %t || true
+# RUN: FileCheck %s < %t
+
+# CHECK-DAG: LLVM_DISABLE_CRASH_REPORT=1
+# CHECK-DAG: LLVM_DISABLE_SYMBOLIZATION=1

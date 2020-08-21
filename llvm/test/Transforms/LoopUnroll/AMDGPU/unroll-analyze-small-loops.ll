@@ -1,8 +1,9 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -loop-unroll -unroll-threshold=150 < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -loop-unroll < %s | FileCheck %s
 
 ; Test that max iterations count to analyze (specific for the target)
 ; is enough to make the inner loop completely unrolled
-define hidden void @foo(float addrspace(1)* %ptrG, float addrspace(3)* %ptrL, i32 %A, i32 %A2, i32 %M) {
+; CHECK-LABEL: foo
+define void @foo(float addrspace(5)* %ptrB, float addrspace(5)* %ptrC, i32 %A, i32 %A2, float %M) {
 bb:
   br label %bb2
 
@@ -28,22 +29,28 @@ bb10:                                             ; preds = %for.body
   %cmpj = icmp ult i32 %i11, 8
   br i1 %cmpj, label %bb7, label %bb4
 
-; CHECK: for.body:
+; CHECK-LABEL: for.body
 ; CHECK-NOT: %phi = phi {{.*}}
-for.body:                                         ; preds = %for.body, %bb4
-  %phi = phi i32 [ 0, %bb4 ], [ %k, %for.body ]
-  %mul = shl nuw nsw i32 %phi, 5
-  %add1 = add i32 %A, %mul
-  %add2 = add i32 %add1, %M
-  %arrayidx = getelementptr inbounds float, float addrspace(3)* %ptrL, i32 %add2
-  %bc = bitcast float addrspace(3)* %arrayidx to i32 addrspace(3)*
-  %ld = load i32, i32 addrspace(3)* %bc, align 4
+for.body:                                       ; preds = %bb4, %for.body
+  %phi = phi i32 [ 0, %bb4 ], [ %inc, %for.body ]
+  %mul = shl nuw nsw i32 %phi, 6
+  %add = add i32 %A, %mul
+  %arrayidx = getelementptr inbounds float, float addrspace(5)* %ptrC, i32 %add
+  %ld1 = load float, float addrspace(5)* %arrayidx, align 4
   %mul2 = shl nuw nsw i32 %phi, 3
-  %add3 = add nuw nsw i32 %mul2, %A2
-  %arrayidx2 = getelementptr inbounds float, float addrspace(1)* %ptrG, i32 %add3
-  %bc2 = bitcast float addrspace(1)* %arrayidx2 to i32 addrspace(1)*
-  store i32 %ld, i32 addrspace(1)* %bc2, align 4
-  %k = add nuw nsw i32 %phi, 1
-  %cmpk = icmp ult i32 %k, 32
-  br i1 %cmpk, label %for.body, label %bb10
+  %add2 = add i32 %A2, %mul2
+  %arrayidx2 = getelementptr inbounds float, float addrspace(5)* %ptrB, i32 %add2
+  %ld2 = load float, float addrspace(5)* %arrayidx2, align 4
+  %mul3 = fmul contract float %M, %ld2
+  %add3 = fadd contract float %ld1, %mul3
+  store float %add3, float addrspace(5)* %arrayidx, align 4
+  %add1 = add nuw nsw i32 %add, 2048
+  %arrayidx3 = getelementptr inbounds float, float addrspace(5)* %ptrC, i32 %add1
+  %ld3 = load float, float addrspace(5)* %arrayidx3, align 4
+  %mul4 = fmul contract float %ld2, %M
+  %add4 = fadd contract float %ld3, %mul4
+  store float %add4, float addrspace(5)* %arrayidx3, align 4
+  %inc = add nuw nsw i32 %phi, 1
+  %cmpi = icmp ult i32 %phi, 31
+  br i1 %cmpi, label %for.body, label %bb10
 }

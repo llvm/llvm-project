@@ -12476,18 +12476,23 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     }
 
     if (!Var->isInvalidDecl() && RealDecl->hasAttr<LoaderUninitializedAttr>()) {
+      if (Var->getStorageClass() == SC_Extern) {
+        Diag(Var->getLocation(), diag::err_loader_uninitialized_extern_decl)
+            << Var;
+        Var->setInvalidDecl();
+        return;
+      }
+      if (RequireCompleteType(Var->getLocation(), Var->getType(),
+                              diag::err_typecheck_decl_incomplete_type)) {
+        Var->setInvalidDecl();
+        return;
+      }
       if (CXXRecordDecl *RD = Var->getType()->getAsCXXRecordDecl()) {
         if (!RD->hasTrivialDefaultConstructor()) {
           Diag(Var->getLocation(), diag::err_loader_uninitialized_trivial_ctor);
           Var->setInvalidDecl();
           return;
         }
-      }
-      if (Var->getStorageClass() == SC_Extern) {
-        Diag(Var->getLocation(), diag::err_loader_uninitialized_extern_decl)
-            << Var;
-        Var->setInvalidDecl();
-        return;
       }
     }
 

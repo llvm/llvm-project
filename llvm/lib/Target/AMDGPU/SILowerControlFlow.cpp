@@ -504,7 +504,7 @@ SILowerControlFlow::skipIgnoreExecInstsTrivialSucc(
 void SILowerControlFlow::emitEndCf(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-  unsigned CFMask = MI.getOperand(0).getReg();
+  Register CFMask = MI.getOperand(0).getReg();
   MachineInstr *Def = MRI.getUniqueVRegDef(CFMask);
   const DebugLoc &DL = MI.getDebugLoc();
 
@@ -541,7 +541,7 @@ void SILowerControlFlow::emitEndCf(MachineInstr &MI) {
 void SILowerControlFlow::findMaskOperands(MachineInstr &MI, unsigned OpNo,
        SmallVectorImpl<MachineOperand> &Src) const {
   MachineOperand &Op = MI.getOperand(OpNo);
-  if (!Op.isReg() || !Register::isVirtualRegister(Op.getReg())) {
+  if (!Op.isReg() || !Op.getReg().isVirtual()) {
     Src.push_back(Op);
     return;
   }
@@ -561,7 +561,7 @@ void SILowerControlFlow::findMaskOperands(MachineInstr &MI, unsigned OpNo,
 
   for (const auto &SrcOp : Def->explicit_operands())
     if (SrcOp.isReg() && SrcOp.isUse() &&
-        (Register::isVirtualRegister(SrcOp.getReg()) || SrcOp.getReg() == Exec))
+        (SrcOp.getReg().isVirtual() || SrcOp.getReg() == Exec))
       Src.push_back(SrcOp);
 }
 

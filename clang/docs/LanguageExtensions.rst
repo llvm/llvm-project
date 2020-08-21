@@ -1810,8 +1810,6 @@ Query for this feature with ``__has_builtin(__builtin_readcyclecounter)``. Note
 that even if present, its use may depend on run-time privilege or other OS
 controlled state.
 
-.. _langext-__builtin_shufflevector:
-
 ``__builtin_dump_struct``
 -------------------------
 
@@ -1857,6 +1855,8 @@ structure and their values for debugging purposes. The builtin accepts a pointer
 to a structure to dump the fields of, and a pointer to a formatted output
 function whose signature must be: ``int (*)(const char *, ...)`` and must
 support the format specifiers used by ``printf()``.
+
+.. _langext-__builtin_shufflevector:
 
 ``__builtin_shufflevector``
 ---------------------------

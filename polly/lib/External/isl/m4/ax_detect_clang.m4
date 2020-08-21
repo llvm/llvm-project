@@ -20,10 +20,14 @@ CLANG_LDFLAGS=`$LLVM_CONFIG --ldflags`
 CLANG_RFLAG=`echo "$CLANG_LDFLAGS" | $SED -e 's/-L/-R/g'`
 targets=`$LLVM_CONFIG --targets-built`
 components="$targets asmparser bitreader support mc"
-$LLVM_CONFIG --components | $GREP option > /dev/null 2> /dev/null
-if test $? -eq 0; then
-	components="$components option"
-fi
+# Link in option and frontendopenmp components when available
+# since they may be used by the clang libraries.
+for c in option frontendopenmp; do
+	$LLVM_CONFIG --components | $GREP $c > /dev/null 2> /dev/null
+	if test $? -eq 0; then
+		components="$components $c"
+	fi
+done
 CLANG_LIBS=`$LLVM_CONFIG --libs $components`
 systemlibs=`$LLVM_CONFIG --system-libs 2> /dev/null | tail -1`
 if test $? -eq 0; then
@@ -32,9 +36,46 @@ fi
 CLANG_PREFIX=`$LLVM_CONFIG --prefix`
 AC_DEFINE_UNQUOTED(CLANG_PREFIX, ["$CLANG_PREFIX"], [Clang installation prefix])
 
+# If $CLANG_PREFIX/bin/clang cannot find the standard include files,
+# then see if setting sysroot to `xcode-select -p`/SDKs/MacOSX.sdk helps.
+# This may be required on some versions of OS X since they lack /usr/include.
+# If so, set CLANG_SYSROOT accordingly.
+SAVE_CC="$CC"
+CC="$CLANG_PREFIX/bin/clang"
+AC_MSG_CHECKING(
+	[whether $CLANG_PREFIX/bin/clang can find standard include files])
+found_header=no
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <stdio.h>]], [[]])],
+	[found_header=yes])
+AC_MSG_RESULT([$found_header])
+if test "x$found_header" != "xyes"; then
+	AC_CHECK_PROG(XCODE_SELECT, xcode-select, xcode-select, [])
+	if test -z "$XCODE_SELECT"; then
+		AC_MSG_ERROR([Cannot find xcode-select])
+	fi
+	sysroot=`$XCODE_SELECT -p`/SDKs/MacOSX.sdk
+	SAVE_CPPFLAGS="$CPPFLAGS"
+	CPPFLAGS="$CPPFLAGS -isysroot $sysroot"
+	AC_MSG_CHECKING(
+		[whether standard include files can be found with sysroot set])
+	found_header=no
+	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <stdio.h>]], [[]])],
+		[found_header=yes])
+	AC_MSG_RESULT([$found_header])
+	CPPFLAGS="$SAVE_CPPFLAGS"
+	if test "x$found_header" != "xyes"; then
+		AC_MSG_ERROR([Cannot find standard include files])
+	else
+		AC_DEFINE_UNQUOTED([CLANG_SYSROOT], ["$sysroot"],
+			[Define to sysroot if needed])
+	fi
+fi
+CC="$SAVE_CC"
+
+AC_LANG_PUSH(C++)
+
 SAVE_CPPFLAGS="$CPPFLAGS"
 CPPFLAGS="$CLANG_CXXFLAGS $CPPFLAGS"
-AC_LANG_PUSH(C++)
 AC_CHECK_HEADER([clang/Basic/SourceLocation.h], [],
 	[AC_ERROR([clang header file not found])])
 AC_EGREP_HEADER([getDefaultTargetTriple], [llvm/Support/Host.h], [],
@@ -176,12 +217,27 @@ AC_TRY_COMPILE([
 AC_CHECK_HEADER([llvm/Option/Arg.h],
 	[AC_DEFINE([HAVE_LLVM_OPTION_ARG_H], [],
 		   [Define if llvm/Option/Arg.h exists])])
-AC_LANG_POP
 CPPFLAGS="$SAVE_CPPFLAGS"
 
 SAVE_LDFLAGS="$LDFLAGS"
 LDFLAGS="$CLANG_LDFLAGS $LDFLAGS"
-AC_SUBST(LIB_CLANG_EDIT)
-AC_CHECK_LIB([clangEdit], [main], [LIB_CLANG_EDIT=-lclangEdit], [])
+
+# Use single libclang-cpp shared library when available.
+# Otherwise, use a selection of clang libraries that appears to work.
+AC_CHECK_LIB([clang-cpp], [main], [have_lib_clang=yes], [have_lib_clang=no])
+if test "$have_lib_clang" = yes; then
+	CLANG_LIBS="-lclang-cpp $CLANG_LIBS"
+else
+	CLANG_LIBS="-lclangBasic -lclangDriver $CLANG_LIBS"
+	CLANG_LIBS="-lclangAnalysis -lclangAST -lclangLex $CLANG_LIBS"
+	LDFLAGS="$CLANG_LDFLAGS $CLANG_LIBS $SAVE_LDFLAGS"
+	AC_CHECK_LIB([clangEdit], [main], [LIB_CLANG_EDIT=-lclangEdit], [])
+	CLANG_LIBS="$LIB_CLANG_EDIT $CLANG_LIBS"
+	CLANG_LIBS="-lclangParse -lclangSema $CLANG_LIBS"
+	CLANG_LIBS="-lclangFrontend -lclangSerialization $CLANG_LIBS"
+fi
+
 LDFLAGS="$SAVE_LDFLAGS"
+
+AC_LANG_POP
 ])

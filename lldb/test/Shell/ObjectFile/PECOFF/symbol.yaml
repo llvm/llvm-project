@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: lldb-test symbols %t | FileCheck %s
 
 ## The .file symbol isn't checked, but is included to test that the symbol

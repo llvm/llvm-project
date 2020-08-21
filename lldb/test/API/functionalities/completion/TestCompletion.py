@@ -85,6 +85,31 @@ class CommandLineCompletionTestCase(TestBase):
                               ['mips',
                                'arm64'])
 
+    def test_process_load(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(self, '// Break here', lldb.SBFileSpec("main.cpp"))
+        self.complete_from_to('process load Makef', 'process load Makefile')
+
+    @skipUnlessPlatform(["linux"])
+    def test_process_unload(self):
+        """Test the completion for "process unload <index>" """
+        # This tab completion should not work without a running process.
+        self.complete_from_to('process unload ',
+                              'process unload ')
+
+        self.build()
+        lldbutil.run_to_source_breakpoint(self, '// Break here', lldb.SBFileSpec("main.cpp"))
+        err = lldb.SBError()
+        self.process().LoadImage(lldb.SBFileSpec(self.getBuildArtifact("libshared.so")), err)
+        self.assertSuccess(err)
+
+        self.complete_from_to('process unload ',
+                              'process unload 0')
+
+        self.process().UnloadImage(0)
+        self.complete_from_to('process unload ',
+                              'process unload ')
+
     def test_process_plugin_completion(self):
         subcommands = ['attach -P', 'connect -p', 'launch -p']
 
@@ -644,3 +669,21 @@ class CommandLineCompletionTestCase(TestBase):
                                   ['1',
                                    '2'])
 
+    def test_complete_breakpoint_with_names(self):
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact('a.out'))
+        self.assertTrue(target, VALID_TARGET)
+
+        # test breakpoint read dedicated
+        self.complete_from_to('breakpoint read -N ', 'breakpoint read -N ')
+        self.complete_from_to('breakpoint read -f breakpoints.json -N ', ['mm'])
+        self.complete_from_to('breakpoint read -f breakpoints.json -N n', 'breakpoint read -f breakpoints.json -N n')
+        self.complete_from_to('breakpoint read -f breakpoints_invalid.json -N ', 'breakpoint read -f breakpoints_invalid.json -N ')
+
+        # test common breapoint name completion
+        bp1 = target.BreakpointCreateByName('main', 'a.out')
+        self.assertTrue(bp1)
+        self.assertEqual(bp1.GetNumLocations(), 1)
+        self.complete_from_to('breakpoint set -N n', 'breakpoint set -N n')
+        self.assertTrue(bp1.AddNameWithErrorHandling("nn"))
+        self.complete_from_to('breakpoint set -N ', 'breakpoint set -N nn')

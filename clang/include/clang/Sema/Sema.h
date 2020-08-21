@@ -1912,6 +1912,12 @@ public:
 
   bool isModuleVisible(const Module *M, bool ModulePrivate = false);
 
+  // When loading a non-modular PCH files, this is used to restore module
+  // visibility.
+  void makeModuleVisible(Module *Mod, SourceLocation ImportLoc) {
+    VisibleModules.setVisible(Mod, ImportLoc);
+  }
+
   /// Determine whether a declaration is visible to name lookup.
   bool isVisible(const NamedDecl *D) {
     return D->isUnconditionallyVisible() || isVisibleSlow(D);
@@ -3213,7 +3219,7 @@ public:
     CCEK_CaseValue,   ///< Expression in a case label.
     CCEK_Enumerator,  ///< Enumerator value with fixed underlying type.
     CCEK_TemplateArg, ///< Value of a non-type template parameter.
-    CCEK_NewExpr,     ///< Constant expression in a noptr-new-declarator.
+    CCEK_ArrayBound,  ///< Array bound in array declarator or new-expression.
     CCEK_ConstexprIf, ///< Condition in a constexpr if statement.
     CCEK_ExplicitBool ///< Condition in an explicit(bool) specifier.
   };
@@ -11588,9 +11594,12 @@ public:
 
     VerifyICEDiagnoser(bool Suppress = false) : Suppress(Suppress) { }
 
-    virtual void diagnoseNotICE(Sema &S, SourceLocation Loc, SourceRange SR) =0;
-    virtual void diagnoseFold(Sema &S, SourceLocation Loc, SourceRange SR);
-    virtual ~VerifyICEDiagnoser() { }
+    virtual SemaDiagnosticBuilder
+    diagnoseNotICEType(Sema &S, SourceLocation Loc, QualType T);
+    virtual SemaDiagnosticBuilder diagnoseNotICE(Sema &S,
+                                                 SourceLocation Loc) = 0;
+    virtual SemaDiagnosticBuilder diagnoseFold(Sema &S, SourceLocation Loc);
+    virtual ~VerifyICEDiagnoser() {}
   };
 
   /// VerifyIntegerConstantExpression - Verifies that an expression is an ICE,

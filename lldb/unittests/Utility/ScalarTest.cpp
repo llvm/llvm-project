@@ -16,6 +16,7 @@
 #include "llvm/Testing/Support/Error.h"
 
 using namespace lldb_private;
+using llvm::APFloat;
 using llvm::APInt;
 using llvm::Failed;
 using llvm::Succeeded;
@@ -304,12 +305,12 @@ TEST(ScalarTest, Promotion) {
 
   EXPECT_FALSE(a.IntegralPromote(64, true));
 
-  EXPECT_TRUE(a.FloatPromote(Scalar::e_double));
-  EXPECT_EQ(Scalar::e_double, a.GetType());
+  EXPECT_TRUE(a.FloatPromote(APFloat::IEEEdouble()));
+  EXPECT_EQ(Scalar::e_float, a.GetType());
   EXPECT_EQ(47.0, a.Double());
 
-  EXPECT_FALSE(a.FloatPromote(Scalar::e_float));
-  EXPECT_TRUE(a.FloatPromote(Scalar::e_long_double));
+  EXPECT_FALSE(a.FloatPromote(APFloat::IEEEsingle()));
+  EXPECT_TRUE(a.FloatPromote(APFloat::x87DoubleExtended()));
   EXPECT_EQ(47.0L, a.LongDouble());
 }
 

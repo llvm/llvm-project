@@ -580,7 +580,7 @@ func @index_cast(%arg0: index, %arg1: i1) {
   return
 }
 
-// Checking conversion of integer types to floating point.
+// Checking conversion of signed integer types to floating point.
 // CHECK-LABEL: @sitofp
 func @sitofp(%arg0 : i32, %arg1 : i64) {
 // CHECK-NEXT: = llvm.sitofp {{.*}} : !llvm.i32 to !llvm.float
@@ -591,6 +591,20 @@ func @sitofp(%arg0 : i32, %arg1 : i64) {
   %2 = sitofp %arg1: i64 to f32
 // CHECK-NEXT: = llvm.sitofp {{.*}} : !llvm.i64 to !llvm.double
   %3 = sitofp %arg1: i64 to f64
+  return
+}
+
+// Checking conversion of unsigned integer types to floating point.
+// CHECK-LABEL: @uitofp
+func @uitofp(%arg0 : i32, %arg1 : i64) {
+// CHECK-NEXT: = llvm.uitofp {{.*}} : !llvm.i32 to !llvm.float
+  %0 = uitofp %arg0: i32 to f32
+// CHECK-NEXT: = llvm.uitofp {{.*}} : !llvm.i32 to !llvm.double
+  %1 = uitofp %arg0: i32 to f64
+// CHECK-NEXT: = llvm.uitofp {{.*}} : !llvm.i64 to !llvm.float
+  %2 = uitofp %arg1: i64 to f32
+// CHECK-NEXT: = llvm.uitofp {{.*}} : !llvm.i64 to !llvm.double
+  %3 = uitofp %arg1: i64 to f64
   return
 }
 
@@ -631,6 +645,21 @@ func @fptosi(%arg0 : f32, %arg1 : f64) {
   %3 = fptosi %arg1: f64 to i64
   return
 }
+
+// Checking conversion of floating point to integer types.
+// CHECK-LABEL: @fptoui
+func @fptoui(%arg0 : f32, %arg1 : f64) {
+// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.float to !llvm.i32
+  %0 = fptoui %arg0: f32 to i32
+// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.float to !llvm.i64
+  %1 = fptoui %arg0: f32 to i64
+// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.double to !llvm.i32
+  %2 = fptoui %arg1: f64 to i32
+// CHECK-NEXT: = llvm.fptoui {{.*}} : !llvm.double to !llvm.i64
+  %3 = fptoui %arg1: f64 to i64
+  return
+}
+
 
 // Checking conversion of integer types to floating point.
 // CHECK-LABEL: @fptrunc

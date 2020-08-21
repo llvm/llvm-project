@@ -138,28 +138,65 @@ public:
   static char ID;
 };
 
-/// Provider for the LLDB current working directory.
+/// Abstract provider to storing directory paths.
+template <typename T> class DirectoryProvider : public repro::Provider<T> {
+public:
+  DirectoryProvider(const FileSpec &root) : Provider<T>(root) {}
+  void SetDirectory(std::string directory) {
+    m_directory = std::move(directory);
+  }
+  llvm::StringRef GetDirectory() { return m_directory; }
+
+  void Keep() override {
+    FileSpec file = this->GetRoot().CopyByAppendingPathComponent(T::Info::file);
+    std::error_code ec;
+    llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
+    if (ec)
+      return;
+    os << m_directory << "\n";
+  }
+
+protected:
+  std::string m_directory;
+};
+
+/// Provider for the current working directory.
 ///
 /// When the reproducer is kept, it writes lldb's current working directory to
 /// a file named cwd.txt in the reproducer root.
-class WorkingDirectoryProvider : public Provider<WorkingDirectoryProvider> {
+class WorkingDirectoryProvider
+    : public DirectoryProvider<WorkingDirectoryProvider> {
 public:
-  WorkingDirectoryProvider(const FileSpec &directory) : Provider(directory) {
+  WorkingDirectoryProvider(const FileSpec &directory)
+      : DirectoryProvider(directory) {
     llvm::SmallString<128> cwd;
     if (std::error_code EC = llvm::sys::fs::current_path(cwd))
       return;
-    m_cwd = std::string(cwd.str());
+    SetDirectory(std::string(cwd));
   }
-
-  void Update(llvm::StringRef path) { m_cwd = std::string(path); }
-  llvm::StringRef GetWorkingDirectory() { return m_cwd; }
-
   struct Info {
     static const char *name;
     static const char *file;
   };
-  void Keep() override;
-  std::string m_cwd;
+  static char ID;
+};
+
+/// Provider for the home directory.
+///
+/// When the reproducer is kept, it writes the user's home directory to a file
+/// a file named home.txt in the reproducer root.
+class HomeDirectoryProvider : public DirectoryProvider<HomeDirectoryProvider> {
+public:
+  HomeDirectoryProvider(const FileSpec &directory)
+      : DirectoryProvider(directory) {
+    llvm::SmallString<128> home_dir;
+    llvm::sys::path::home_directory(home_dir);
+    SetDirectory(std::string(home_dir));
+  }
+  struct Info {
+    static const char *name;
+    static const char *file;
+  };
   static char ID;
 };
 
@@ -476,6 +513,15 @@ private:
   std::vector<std::string> m_files;
   unsigned m_index = 0;
 };
+
+/// Helper to read directories written by the DirectoryProvider.
+template <typename T>
+llvm::Expected<std::string> GetDirectoryFrom(repro::Loader *loader) {
+  llvm::Expected<std::string> dir = loader->LoadBuffer<T>();
+  if (!dir)
+    return dir.takeError();
+  return std::string(llvm::StringRef(*dir).rtrim());
+}
 
 } // namespace repro
 } // namespace lldb_private

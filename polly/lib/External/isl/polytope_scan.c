@@ -75,7 +75,7 @@ error:
 	return NULL;
 }
 
-static struct isl_mat *isl_basic_set_samples(struct isl_basic_set *bset)
+static __isl_give isl_mat *isl_basic_set_samples(__isl_take isl_basic_set *bset)
 {
 	struct isl_mat *T;
 	struct isl_mat *samples;
