@@ -75,3 +75,14 @@ namespace test5 {
   template<typename...Ts> U<Ts...>& f(); // expected-error {{pack expansion used as argument for non-pack parameter of alias template}}
   double &s1 = f(); // expected-error {{no matching function}}
 }
+
+namespace test6 {
+struct T {
+  T() = delete; // expected-note {{has been explicitly marked deleted here}}
+};
+
+void func() {
+  // verify that no -Wunused-value diagnostic.
+  (T(T())); // expected-error {{call to deleted constructor}}
+}
+}
