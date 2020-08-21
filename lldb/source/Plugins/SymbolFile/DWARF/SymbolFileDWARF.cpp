@@ -3169,44 +3169,18 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                     DataExtractor(debug_info_data, block_offset, block_length),
                     die.GetCU());
               } else if (DWARFFormValue::IsDataForm(form_value.Form())) {
-                // Retrieve the value as a data expression.
-                uint32_t data_offset = attributes.DIEOffsetAtIndex(i);
-                if (auto data_length = form_value.GetFixedSize())
-                  location = DWARFExpression(
-                      module,
-                      DataExtractor(debug_info_data, data_offset, *data_length),
-                      die.GetCU());
-                else {
-                  const uint8_t *data_pointer = form_value.BlockData();
-                  if (data_pointer) {
-                    form_value.Unsigned();
-                  } else if (DWARFFormValue::IsDataForm(form_value.Form())) {
-                    // we need to get the byte size of the type later after we
-                    // create the variable
-                    const_value = form_value;
-                  }
-                }
-              } else {
-                // Retrieve the value as a string expression.
-                if (form_value.Form() == DW_FORM_strp) {
-                  uint32_t data_offset = attributes.DIEOffsetAtIndex(i);
-                  if (auto data_length = form_value.GetFixedSize())
-                    location = DWARFExpression(module,
-                                               DataExtractor(debug_info_data,
-                                                             data_offset,
-                                                             *data_length),
-                                               die.GetCU());
-                } else {
-                  const char *str = form_value.AsCString();
-                  uint32_t string_offset =
-                      str - (const char *)debug_info_data.GetDataStart();
-                  uint32_t string_length = strlen(str) + 1;
-                  location = DWARFExpression(module,
-                                             DataExtractor(debug_info_data,
-                                                           string_offset,
-                                                           string_length),
-                                             die.GetCU());
-                }
+                // Constant value size does not have to match the size of the
+                // variable. We will fetch the size of the type after we create
+                // it.
+                const_value = form_value;
+              } else if (const char *str = form_value.AsCString()) {
+                uint32_t string_length = strlen(str) + 1;
+                location = DWARFExpression(
+                    module,
+                    DataExtractor(str, string_length,
+                                  die.GetCU()->GetByteOrder(),
+                                  die.GetCU()->GetAddressByteSize()),
+                    die.GetCU());
               }
             }
             break;
