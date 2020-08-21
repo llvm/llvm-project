@@ -23,6 +23,19 @@ static_assert(is_trivially_copyable<Optional<int>>::value,
 static_assert(is_trivially_copyable<Optional<std::array<int, 3>>>::value,
               "trivially copyable");
 
+void OptionalWorksInConstexpr() {
+  constexpr auto x1 = Optional<int>();
+  constexpr Optional<int> x2{};
+  static_assert(!x1.hasValue() && !x2.hasValue(),
+                "Default construction and hasValue() are contexpr");
+  constexpr auto y1 = Optional<int>(3);
+  constexpr Optional<int> y2{3};
+  static_assert(y1.getValue() == y2.getValue() && y1.getValue() == 3,
+                "Construction with value and getValue() are constexpr");
+  static_assert(Optional<int>{3} >= 2 && Optional<int>{1} < Optional<int>{2},
+                "Comparisons work in constexpr");
+}
+
 namespace {
 
 struct NonDefaultConstructible {
