@@ -479,6 +479,10 @@ static_library("builtins") {
     sources += [ "riscv/mulsi3.S" ]
   }
 
+  if (current_cpu == "riscv64") {
+    sources += [ "riscv/muldi3.S" ]
+  }
+
   if (current_cpu == "ve") {
     sources += [
       "ve/grow_stack.S",
