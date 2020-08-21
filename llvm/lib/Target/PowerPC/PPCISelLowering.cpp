@@ -221,6 +221,13 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 
     if (isPPC64 || Subtarget.hasFPCVT()) {
+      setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i1, Promote);
+      AddPromotedToType(ISD::STRICT_SINT_TO_FP, MVT::i1,
+                        isPPC64 ? MVT::i64 : MVT::i32);
+      setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i1, Promote);
+      AddPromotedToType(ISD::STRICT_UINT_TO_FP, MVT::i1,
+                        isPPC64 ? MVT::i64 : MVT::i32);
+
       setOperationAction(ISD::SINT_TO_FP, MVT::i1, Promote);
       AddPromotedToType (ISD::SINT_TO_FP, MVT::i1,
                          isPPC64 ? MVT::i64 : MVT::i32);
@@ -228,6 +235,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       AddPromotedToType(ISD::UINT_TO_FP, MVT::i1,
                         isPPC64 ? MVT::i64 : MVT::i32);
     } else {
+      setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i1, Custom);
+      setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i1, Custom);
       setOperationAction(ISD::SINT_TO_FP, MVT::i1, Custom);
       setOperationAction(ISD::UINT_TO_FP, MVT::i1, Custom);
     }
@@ -454,6 +463,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::FP_TO_SINT, MVT::i32, Custom);
 
     // PowerPC does not have [U|S]INT_TO_FP
+    setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i32, Expand);
+    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i32, Expand);
     setOperationAction(ISD::SINT_TO_FP, MVT::i32, Expand);
     setOperationAction(ISD::UINT_TO_FP, MVT::i32, Expand);
   }
@@ -585,6 +596,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     // They also have instructions for converting between i64 and fp.
     setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i64, Custom);
     setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i64, Expand);
+    setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i64, Custom);
+    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i64, Expand);
     setOperationAction(ISD::FP_TO_SINT, MVT::i64, Custom);
     setOperationAction(ISD::FP_TO_UINT, MVT::i64, Expand);
     setOperationAction(ISD::SINT_TO_FP, MVT::i64, Custom);
@@ -594,8 +607,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i32, Custom);
     setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
 
-    if (Subtarget.hasLFIWAX() || Subtarget.isPPC64())
+    if (Subtarget.hasLFIWAX() || Subtarget.isPPC64()) {
       setOperationAction(ISD::SINT_TO_FP, MVT::i32, Custom);
+      setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i32, Custom);
+    }
   } else {
     // PowerPC does not have FP_TO_UINT on 32-bit implementations.
     if (Subtarget.hasSPE()) {
@@ -612,6 +627,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     if (Subtarget.has64BitSupport()) {
       setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i64, Custom);
       setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i64, Custom);
+      setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i64, Custom);
+      setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i64, Custom);
       setOperationAction(ISD::FP_TO_SINT, MVT::i64, Custom);
       setOperationAction(ISD::FP_TO_UINT, MVT::i64, Custom);
       setOperationAction(ISD::SINT_TO_FP, MVT::i64, Custom);
@@ -620,6 +637,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
     setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i32, Custom);
     setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::i32, Custom);
+    setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::i32, Custom);
+    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::i32, Custom);
     setOperationAction(ISD::FP_TO_SINT, MVT::i32, Custom);
     setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
     setOperationAction(ISD::SINT_TO_FP, MVT::i32, Custom);
@@ -1484,6 +1503,14 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "PPCISD::STRICT_FCTIDUZ";
   case PPCISD::STRICT_FCTIWUZ:
     return "PPCISD::STRICT_FCTIWUZ";
+  case PPCISD::STRICT_FCFID:
+    return "PPCISD::STRICT_FCFID";
+  case PPCISD::STRICT_FCFIDU:
+    return "PPCISD::STRICT_FCFIDU";
+  case PPCISD::STRICT_FCFIDS:
+    return "PPCISD::STRICT_FCFIDS";
+  case PPCISD::STRICT_FCFIDUS:
+    return "PPCISD::STRICT_FCFIDUS";
   }
   return nullptr;
 }
@@ -7985,6 +8012,14 @@ static unsigned getPPCStrictOpcode(unsigned Opc) {
     return PPCISD::STRICT_FCTIDUZ;
   case PPCISD::FCTIWUZ:
     return PPCISD::STRICT_FCTIWUZ;
+  case PPCISD::FCFID:
+    return PPCISD::STRICT_FCFID;
+  case PPCISD::FCFIDU:
+    return PPCISD::STRICT_FCFIDU;
+  case PPCISD::FCFIDS:
+    return PPCISD::STRICT_FCFIDS;
+  case PPCISD::FCFIDUS:
+    return PPCISD::STRICT_FCFIDUS;
   }
 }
 
@@ -8152,6 +8187,10 @@ bool PPCTargetLowering::canReuseLoadAddress(SDValue Op, EVT MemVT,
                                             ReuseLoadInfo &RLI,
                                             SelectionDAG &DAG,
                                             ISD::LoadExtType ET) const {
+  // Conservatively skip reusing for constrained FP nodes.
+  if (Op->isStrictFPOpcode())
+    return false;
+
   SDLoc dl(Op);
   bool ValidFPToUint = Op.getOpcode() == ISD::FP_TO_UINT &&
                        (Subtarget.hasFPCVT() || Op.getValueType() == MVT::i32);
@@ -8235,7 +8274,9 @@ bool PPCTargetLowering::directMoveIsProfitable(const SDValue &Op) const {
       continue;
 
     if (UI->getOpcode() != ISD::SINT_TO_FP &&
-        UI->getOpcode() != ISD::UINT_TO_FP)
+        UI->getOpcode() != ISD::UINT_TO_FP &&
+        UI->getOpcode() != ISD::STRICT_SINT_TO_FP &&
+        UI->getOpcode() != ISD::STRICT_UINT_TO_FP)
       return true;
   }
 
@@ -8243,8 +8284,10 @@ bool PPCTargetLowering::directMoveIsProfitable(const SDValue &Op) const {
 }
 
 static SDValue convertIntToFP(SDValue Op, SDValue Src, SelectionDAG &DAG,
-                              const PPCSubtarget &Subtarget) {
-  bool IsSigned = Op.getOpcode() == ISD::SINT_TO_FP;
+                              const PPCSubtarget &Subtarget,
+                              SDValue Chain = SDValue()) {
+  bool IsSigned = Op.getOpcode() == ISD::SINT_TO_FP ||
+                  Op.getOpcode() == ISD::STRICT_SINT_TO_FP;
   SDLoc dl(Op);
   // If we have FCFIDS, then use it when converting to single-precision.
   // Otherwise, convert to double-precision and then round.
@@ -8252,7 +8295,13 @@ static SDValue convertIntToFP(SDValue Op, SDValue Src, SelectionDAG &DAG,
   unsigned ConvOpc = IsSingle ? (IsSigned ? PPCISD::FCFIDS : PPCISD::FCFIDUS)
                               : (IsSigned ? PPCISD::FCFID : PPCISD::FCFIDU);
   EVT ConvTy = IsSingle ? MVT::f32 : MVT::f64;
-  return DAG.getNode(ConvOpc, dl, ConvTy, Src);
+  if (Op->isStrictFPOpcode()) {
+    if (!Chain)
+      Chain = Op.getOperand(0);
+    return DAG.getNode(getPPCStrictOpcode(ConvOpc), dl, {ConvTy, MVT::Other},
+                       {Chain, Src});
+  } else
+    return DAG.getNode(ConvOpc, dl, ConvTy, Src);
 }
 
 /// Custom lowers integer to floating point conversions to use
@@ -8266,9 +8315,10 @@ SDValue PPCTargetLowering::LowerINT_TO_FPDirectMove(SDValue Op,
          "Invalid floating point type as target of conversion");
   assert(Subtarget.hasFPCVT() &&
          "Int to FP conversions with direct moves require FPCVT");
-  SDValue Src = Op.getOperand(0);
+  SDValue Src = Op.getOperand(Op->isStrictFPOpcode() ? 1 : 0);
   bool WordInt = Src.getSimpleValueType().SimpleTy == MVT::i32;
-  bool Signed = Op.getOpcode() == ISD::SINT_TO_FP;
+  bool Signed = Op.getOpcode() == ISD::SINT_TO_FP ||
+                Op.getOpcode() == ISD::STRICT_SINT_TO_FP;
   unsigned MovOpc = (WordInt && !Signed) ? PPCISD::MTVSRZ : PPCISD::MTVSRA;
   SDValue Mov = DAG.getNode(MovOpc, dl, MVT::f64, Src);
   return convertIntToFP(Op, Mov, DAG, Subtarget);
@@ -8347,8 +8397,11 @@ SDValue PPCTargetLowering::LowerINT_TO_FPVector(SDValue Op, SelectionDAG &DAG,
 SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
                                           SelectionDAG &DAG) const {
   SDLoc dl(Op);
-  SDValue Src = Op.getOperand(0);
-  bool IsSigned = Op.getOpcode() == ISD::SINT_TO_FP;
+  bool IsSigned = Op.getOpcode() == ISD::SINT_TO_FP ||
+                  Op.getOpcode() == ISD::STRICT_SINT_TO_FP;
+  bool IsStrict = Op->isStrictFPOpcode();
+  SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
+  SDValue Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
 
   EVT InVT = Src.getValueType();
   EVT OutVT = Op.getValueType();
@@ -8467,16 +8520,16 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
       int FrameIdx = MFI.CreateStackObject(4, Align(4), false);
       SDValue FIdx = DAG.getFrameIndex(FrameIdx, PtrVT);
 
-      SDValue Store =
-          DAG.getStore(DAG.getEntryNode(), dl, SINT.getOperand(0), FIdx,
-                       MachinePointerInfo::getFixedStack(
-                           DAG.getMachineFunction(), FrameIdx));
+      SDValue Store = DAG.getStore(Chain, dl, SINT.getOperand(0), FIdx,
+                                   MachinePointerInfo::getFixedStack(
+                                       DAG.getMachineFunction(), FrameIdx));
+      Chain = Store;
 
       assert(cast<StoreSDNode>(Store)->getMemoryVT() == MVT::i32 &&
              "Expected an i32 store");
 
       RLI.Ptr = FIdx;
-      RLI.Chain = Store;
+      RLI.Chain = Chain;
       RLI.MPI =
           MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FrameIdx);
       RLI.Alignment = Align(4);
@@ -8489,14 +8542,22 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
                                      PPCISD::LFIWZX : PPCISD::LFIWAX,
                                      dl, DAG.getVTList(MVT::f64, MVT::Other),
                                      Ops, MVT::i32, MMO);
+      Chain = Bits.getValue(1);
     } else
       Bits = DAG.getNode(ISD::BITCAST, dl, MVT::f64, SINT);
 
-    SDValue FP = convertIntToFP(Op, Bits, DAG, Subtarget);
+    SDValue FP = convertIntToFP(Op, Bits, DAG, Subtarget, Chain);
+    if (IsStrict)
+      Chain = FP.getValue(1);
 
-    if (Op.getValueType() == MVT::f32 && !Subtarget.hasFPCVT())
-      FP = DAG.getNode(ISD::FP_ROUND, dl,
-                       MVT::f32, FP, DAG.getIntPtrConstant(0, dl));
+    if (Op.getValueType() == MVT::f32 && !Subtarget.hasFPCVT()) {
+      if (IsStrict)
+        FP = DAG.getNode(ISD::STRICT_FP_ROUND, dl, {MVT::f32, MVT::Other},
+                         {Chain, FP, DAG.getIntPtrConstant(0, dl)});
+      else
+        FP = DAG.getNode(ISD::FP_ROUND, dl, MVT::f32, FP,
+                         DAG.getIntPtrConstant(0, dl));
+    }
     return FP;
   }
 
@@ -8518,15 +8579,16 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
       int FrameIdx = MFI.CreateStackObject(4, Align(4), false);
       SDValue FIdx = DAG.getFrameIndex(FrameIdx, PtrVT);
 
-      SDValue Store = DAG.getStore(DAG.getEntryNode(), dl, Src, FIdx,
+      SDValue Store = DAG.getStore(Chain, dl, Src, FIdx,
                                    MachinePointerInfo::getFixedStack(
                                        DAG.getMachineFunction(), FrameIdx));
+      Chain = Store;
 
       assert(cast<StoreSDNode>(Store)->getMemoryVT() == MVT::i32 &&
              "Expected an i32 store");
 
       RLI.Ptr = FIdx;
-      RLI.Chain = Store;
+      RLI.Chain = Chain;
       RLI.MPI =
           MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FrameIdx);
       RLI.Alignment = Align(4);
@@ -8539,6 +8601,7 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
     Ld = DAG.getMemIntrinsicNode(IsSigned ? PPCISD::LFIWAX : PPCISD::LFIWZX, dl,
                                  DAG.getVTList(MVT::f64, MVT::Other), Ops,
                                  MVT::i32, MMO);
+    Chain = Ld.getValue(1);
     if (ReusingLoad)
       spliceIntoChain(RLI.ResChain, Ld.getValue(1), DAG);
   } else {
@@ -8552,20 +8615,29 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
 
     // STD the extended value into the stack slot.
     SDValue Store = DAG.getStore(
-        DAG.getEntryNode(), dl, Ext64, FIdx,
+        Chain, dl, Ext64, FIdx,
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FrameIdx));
+    Chain = Store;
 
     // Load the value as a double.
     Ld = DAG.getLoad(
-        MVT::f64, dl, Store, FIdx,
+        MVT::f64, dl, Chain, FIdx,
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FrameIdx));
+    Chain = Ld.getValue(1);
   }
 
   // FCFID it and return it.
-  SDValue FP = convertIntToFP(Op, Ld, DAG, Subtarget);
-  if (Op.getValueType() == MVT::f32 && !Subtarget.hasFPCVT())
-    FP = DAG.getNode(ISD::FP_ROUND, dl, MVT::f32, FP,
-                     DAG.getIntPtrConstant(0, dl));
+  SDValue FP = convertIntToFP(Op, Ld, DAG, Subtarget, Chain);
+  if (IsStrict)
+    Chain = FP.getValue(1);
+  if (Op.getValueType() == MVT::f32 && !Subtarget.hasFPCVT()) {
+    if (IsStrict)
+      FP = DAG.getNode(ISD::STRICT_FP_ROUND, dl, {MVT::f32, MVT::Other},
+                       {Chain, FP, DAG.getIntPtrConstant(0, dl)});
+    else
+      FP = DAG.getNode(ISD::FP_ROUND, dl, MVT::f32, FP,
+                       DAG.getIntPtrConstant(0, dl));
+  }
   return FP;
 }
 
@@ -10533,6 +10605,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STRICT_FP_TO_SINT:
   case ISD::FP_TO_UINT:
   case ISD::FP_TO_SINT:         return LowerFP_TO_INT(Op, DAG, SDLoc(Op));
+  case ISD::STRICT_UINT_TO_FP:
+  case ISD::STRICT_SINT_TO_FP:
   case ISD::UINT_TO_FP:
   case ISD::SINT_TO_FP:         return LowerINT_TO_FP(Op, DAG);
   case ISD::FLT_ROUNDS_:        return LowerFLT_ROUNDS_(Op, DAG);

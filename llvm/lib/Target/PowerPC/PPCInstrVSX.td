@@ -808,11 +808,11 @@ let hasSideEffects = 0 in {
   def XSCVSXDDP : XX2Form<60, 376,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvsxddp $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (PPCfcfid f64:$XB))]>;
+                      [(set f64:$XT, (PPCany_fcfid f64:$XB))]>;
   def XSCVUXDDP : XX2Form<60, 360,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvuxddp $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (PPCfcfidu f64:$XB))]>;
+                      [(set f64:$XT, (PPCany_fcfidu f64:$XB))]>;
 
   def XVCVDPSP : XX2Form<60, 393,
                       (outs vsrc:$XT), (ins vsrc:$XB),
@@ -1271,11 +1271,11 @@ let Predicates = [HasVSX, HasP8Vector] in {
   def XSCVSXDSP : XX2Form<60, 312,
                       (outs vssrc:$XT), (ins vsfrc:$XB),
                       "xscvsxdsp $XT, $XB", IIC_VecFP,
-                      [(set f32:$XT, (PPCfcfids f64:$XB))]>;
+                      [(set f32:$XT, (PPCany_fcfids f64:$XB))]>;
   def XSCVUXDSP : XX2Form<60, 296,
                       (outs vssrc:$XT), (ins vsfrc:$XB),
                       "xscvuxdsp $XT, $XB", IIC_VecFP,
-                      [(set f32:$XT, (PPCfcfidus f64:$XB))]>;
+                      [(set f32:$XT, (PPCany_fcfidus f64:$XB))]>;
 
   // Conversions between vector and scalar single precision
   def XSCVDPSPN : XX2Form<60, 267, (outs vsrc:$XT), (ins vssrc:$XB),
@@ -3571,25 +3571,25 @@ def : Pat<(fneg (PPCfnmsub f128:$A, f128:$B, f128:$C)),
 def : Pat<(PPCfnmsub f128:$A, f128:$B, (fneg f128:$C)),
           (XSNMADDQP $C, $A, $B)>;
 
-def : Pat<(f128 (sint_to_fp i64:$src)),
+def : Pat<(f128 (any_sint_to_fp i64:$src)),
           (f128 (XSCVSDQP (COPY_TO_REGCLASS $src, VFRC)))>;
-def : Pat<(f128 (sint_to_fp (i64 (PPCmfvsr f64:$src)))),
+def : Pat<(f128 (any_sint_to_fp (i64 (PPCmfvsr f64:$src)))),
           (f128 (XSCVSDQP $src))>;
-def : Pat<(f128 (sint_to_fp (i32 (PPCmfvsr f64:$src)))),
+def : Pat<(f128 (any_sint_to_fp (i32 (PPCmfvsr f64:$src)))),
           (f128 (XSCVSDQP (VEXTSW2Ds $src)))>;
-def : Pat<(f128 (uint_to_fp i64:$src)),
+def : Pat<(f128 (any_uint_to_fp i64:$src)),
           (f128 (XSCVUDQP (COPY_TO_REGCLASS $src, VFRC)))>;
-def : Pat<(f128 (uint_to_fp (i64 (PPCmfvsr f64:$src)))),
+def : Pat<(f128 (any_uint_to_fp (i64 (PPCmfvsr f64:$src)))),
           (f128 (XSCVUDQP $src))>;
 
 // Convert (Un)Signed Word -> QP.
-def : Pat<(f128 (sint_to_fp i32:$src)),
+def : Pat<(f128 (any_sint_to_fp i32:$src)),
           (f128 (XSCVSDQP (MTVSRWA $src)))>;
-def : Pat<(f128 (sint_to_fp (i32 (load xoaddr:$src)))),
+def : Pat<(f128 (any_sint_to_fp (i32 (load xoaddr:$src)))),
           (f128 (XSCVSDQP (LIWAX xoaddr:$src)))>;
-def : Pat<(f128 (uint_to_fp i32:$src)),
+def : Pat<(f128 (any_uint_to_fp i32:$src)),
           (f128 (XSCVUDQP (MTVSRWZ $src)))>;
-def : Pat<(f128 (uint_to_fp (i32 (load xoaddr:$src)))),
+def : Pat<(f128 (any_uint_to_fp (i32 (load xoaddr:$src)))),
           (f128 (XSCVUDQP (LIWZX xoaddr:$src)))>;
 
 // Pattern for matching Vector HP -> Vector SP intrinsic. Defined as a
