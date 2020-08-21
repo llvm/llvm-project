@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the Opt Reduction Pass Wrapper. It creates a pass to run
-// any optimization pass within it and only replaces the output module with the
-// transformed version if it is smaller and interesting.
+// This file defines the Opt Reduction Pass Wrapper. It creates a MLIR pass to
+// run any optimization pass within it and only replaces the output module with
+// the transformed version if it is smaller and interesting.
 //
 //===----------------------------------------------------------------------===//
 
@@ -28,7 +28,7 @@ namespace mlir {
 
 class OptReductionPass : public OptReductionBase<OptReductionPass> {
 public:
-  OptReductionPass(const Tester *test, MLIRContext *context,
+  OptReductionPass(const Tester &test, MLIRContext *context,
                    std::unique_ptr<Pass> optPass);
 
   OptReductionPass(const OptReductionPass &srcPass);
@@ -41,7 +41,7 @@ private:
   MLIRContext *context;
 
   // This is used to test the interesting behavior of the transformed module.
-  const Tester *test;
+  const Tester &test;
 
   // Points to the mlir-opt pass to be called.
   std::unique_ptr<Pass> optPass;

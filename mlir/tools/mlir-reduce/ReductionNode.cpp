@@ -26,8 +26,16 @@ ReductionNode::ReductionNode(ModuleOp module, ReductionNode *parent)
     parent->linkVariant(this);
 }
 
+ReductionNode::ReductionNode(ModuleOp module, ReductionNode *parent,
+                             std::vector<bool> transformSpace)
+    : module(module), evaluated(false), transformSpace(transformSpace) {
+
+  if (parent != nullptr)
+    parent->linkVariant(this);
+}
+
 /// Calculates and updates the size and interesting values of the module.
-void ReductionNode::measureAndTest(const Tester *test) {
+void ReductionNode::measureAndTest(const Tester &test) {
   SmallString<128> filepath;
   int fd;
 
@@ -46,7 +54,7 @@ void ReductionNode::measureAndTest(const Tester *test) {
     llvm::report_fatal_error("Error emitting bitcode to file '" + filepath);
 
   size = out.os().tell();
-  interesting = test->isInteresting(filepath);
+  interesting = test.isInteresting(filepath);
   evaluated = true;
 }
 
@@ -67,6 +75,9 @@ ReductionNode *ReductionNode::getVariant(unsigned long index) const {
   return nullptr;
 }
 
+/// Returns the number of child variants.
+int ReductionNode::variantsSize() const { return variants.size(); }
+
 /// Returns true if the child variants vector is empty.
 bool ReductionNode::variantsEmpty() const { return variants.empty(); }
 
@@ -77,7 +88,7 @@ void ReductionNode::linkVariant(ReductionNode *newVariant) {
 }
 
 /// Sort the child variants and remove the uninteresting ones.
-void ReductionNode::organizeVariants(const Tester *test) {
+void ReductionNode::organizeVariants(const Tester &test) {
   // Ensure all variants are evaluated.
   for (auto &var : variants)
     if (!var->isEvaluated())
@@ -106,4 +117,14 @@ void ReductionNode::organizeVariants(const Tester *test) {
 
   // Remove uninteresting variants.
   variants.resize(interestingCount);
+}
+
+/// Returns the number of non transformed indices.
+int ReductionNode::transformSpaceSize() {
+  return std::count(transformSpace.begin(), transformSpace.end(), false);
+}
+
+/// Returns a vector of the transformable indices in the Module.
+const std::vector<bool> ReductionNode::getTransformSpace() {
+  return transformSpace;
 }
