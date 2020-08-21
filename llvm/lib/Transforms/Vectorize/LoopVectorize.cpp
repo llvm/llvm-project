@@ -3929,7 +3929,10 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
       // and so use the select value for the phi instead of the old
       // LoopExitValue.
       RecurrenceDescriptor RdxDesc = Legal->getReductionVars()[Phi];
-      if (PreferPredicatedReductionSelect) {
+      if (PreferPredicatedReductionSelect ||
+          TTI->preferPredicatedReductionSelect(
+              RdxDesc.getRecurrenceBinOp(RdxDesc.getRecurrenceKind()),
+              Phi->getType(), TargetTransformInfo::ReductionFlags())) {
         auto *VecRdxPhi = cast<PHINode>(getOrCreateVectorValue(Phi, Part));
         VecRdxPhi->setIncomingValueForBlock(
             LI->getLoopFor(LoopVectorBody)->getLoopLatch(), Sel);

@@ -1589,35 +1589,28 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
                                  const LoopAccessInfo *LAI) {
   LLVM_DEBUG(dbgs() << "Tail-predication: checking allowed instructions\n");
 
-  // If there are live-out values, it is probably a reduction, which needs a
-  // final reduction step after the loop. MVE has a VADDV instruction to reduce
-  // integer vectors, but doesn't have an equivalent one for float vectors. A
-  // live-out value that is not recognised as a reduction will result in the
-  // tail-predicated loop to be reverted to a non-predicated loop and this is
-  // very expensive, i.e. it has a significant performance impact. So, in this
-  // case it's better not to tail-predicate the loop, which is what we check
-  // here. Thus, we allow only 1 live-out value, which has to be an integer
-  // reduction, which matches the loops supported by ARMLowOverheadLoops.
-  // It is important to keep ARMLowOverheadLoops and canTailPredicateLoop in
-  // sync with each other.
+  // If there are live-out values, it is probably a reduction. We can predicate
+  // most reduction operations freely under MVE using a combination of
+  // prefer-predicated-reduction-select and inloop reductions. We limit this to
+  // floating point and integer reductions, but don't check for operators
+  // specifically here. If the value ends up not being a reduction (and so the
+  // vectorizer cannot tailfold the loop), we should fall back to standard
+  // vectorization automatically.
   SmallVector< Instruction *, 8 > LiveOuts;
   LiveOuts = llvm::findDefsUsedOutsideOfLoop(L);
-  bool IntReductionsDisabled =
+  bool ReductionsDisabled =
       EnableTailPredication == TailPredication::EnabledNoReductions ||
       EnableTailPredication == TailPredication::ForceEnabledNoReductions;
 
   for (auto *I : LiveOuts) {
-    if (!I->getType()->isIntegerTy()) {
-      LLVM_DEBUG(dbgs() << "Don't tail-predicate loop with non-integer "
+    if (!I->getType()->isIntegerTy() && !I->getType()->isFloatTy() &&
+        !I->getType()->isHalfTy()) {
+      LLVM_DEBUG(dbgs() << "Don't tail-predicate loop with non-integer/float "
                            "live-out value\n");
       return false;
     }
-    if (I->getOpcode() != Instruction::Add) {
-      LLVM_DEBUG(dbgs() << "Only add reductions supported\n");
-      return false;
-    }
-    if (IntReductionsDisabled) {
-      LLVM_DEBUG(dbgs() << "Integer add reductions not enabled\n");
+    if (ReductionsDisabled) {
+      LLVM_DEBUG(dbgs() << "Reductions not enabled\n");
       return false;
     }
   }
@@ -1810,4 +1803,11 @@ void ARMTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
 bool ARMTTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
                                        TTI::ReductionFlags Flags) const {
   return ST->hasMVEIntegerOps();
+}
+
+bool ARMTTIImpl::preferPredicatedReductionSelect(
+    unsigned Opcode, Type *Ty, TTI::ReductionFlags Flags) const {
+  if (!ST->hasMVEIntegerOps())
+    return false;
+  return true;
 }
