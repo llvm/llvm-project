@@ -277,7 +277,7 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
                                 const unsigned *Features,
                                 unsigned *Type, unsigned *Subtype) {
 #define testFeature(F)                                                         \
-  (Features[F / 32] & (F % 32)) != 0
+  (Features[F / 32] & (1 << (F % 32))) != 0
 
   // We select CPU strings to match the code in Host.cpp, but we don't use them
   // in compiler-rt.
