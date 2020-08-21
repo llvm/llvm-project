@@ -253,7 +253,7 @@ public:
     // canonicalization pipeline.
     if (PI.runBeforePass<Function>(LoopCanonicalizationFPM, F)) {
       PA = LoopCanonicalizationFPM.run(F, AM);
-      PI.runAfterPass<Function>(LoopCanonicalizationFPM, F);
+      PI.runAfterPass<Function>(LoopCanonicalizationFPM, F, PA);
     }
 
     // Get the loop structure for this function
@@ -337,9 +337,9 @@ public:
 
       // Do not pass deleted Loop into the instrumentation.
       if (Updater.skipCurrentLoop())
-        PI.runAfterPassInvalidated<Loop>(Pass);
+        PI.runAfterPassInvalidated<Loop>(Pass, PassPA);
       else
-        PI.runAfterPass<Loop>(Pass, *L);
+        PI.runAfterPass<Loop>(Pass, *L, PassPA);
 
       // FIXME: We should verify the set of analyses relevant to Loop passes
       // are preserved.
