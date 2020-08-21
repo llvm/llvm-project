@@ -1873,7 +1873,7 @@ MachineBasicBlock *AMDGPUMachineCFGStructurizer::createIfBlock(
                     ? SinglePred->findDebugLoc(SinglePred->getFirstTerminator())
                     : DebugLoc();
 
-  unsigned Reg =
+  Register Reg =
       TII->insertEQ(IfBB, IfBB->begin(), DL, IfReg,
                     SelectBB->getNumber() /* CodeBBStart->getNumber() */);
   if (&(*(IfBB->getParent()->begin())) == IfBB) {
@@ -2335,7 +2335,7 @@ MachineBasicBlock *AMDGPUMachineCFGStructurizer::createIfRegion(
         TII->removeBranch(*RegionExit);
 
         // We need to create a backedge if there is a loop
-        unsigned Reg = TII->insertNE(
+        Register Reg = TII->insertNE(
             RegionExit, RegionExit->instr_end(), DL,
             CurrentRegion->getRegionMRT()->getInnerOutputRegister(),
             CurrentRegion->getRegionMRT()->getEntry()->getNumber());
@@ -2394,7 +2394,7 @@ MachineBasicBlock *AMDGPUMachineCFGStructurizer::createIfRegion(
       TII->removeBranch(*RegionExit);
 
       // We need to create a backedge if there is a loop
-      unsigned Reg =
+      Register Reg =
           TII->insertNE(RegionExit, RegionExit->instr_end(), DL,
                         CurrentRegion->getRegionMRT()->getInnerOutputRegister(),
                         CurrentRegion->getRegionMRT()->getEntry()->getNumber());

@@ -657,7 +657,7 @@ void SILowerI1Copies::lowerPhis() {
       }
     }
 
-    unsigned NewReg = SSAUpdater.GetValueInMiddleOfBlock(&MBB);
+    Register NewReg = SSAUpdater.GetValueInMiddleOfBlock(&MBB);
     if (NewReg != DstReg) {
       MRI->replaceRegWith(NewReg, DstReg);
       MI->eraseFromParent();
