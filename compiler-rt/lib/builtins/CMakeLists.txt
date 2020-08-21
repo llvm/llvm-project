@@ -574,7 +574,10 @@ set(riscv32_SOURCES
   riscv/mulsi3.S
   ${riscv_SOURCES}
 )
-set(riscv64_SOURCES ${riscv_SOURCES})
+set(riscv64_SOURCES
+  riscv/muldi3.S
+  ${riscv_SOURCES}
+)
 
 set(sparc_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 set(sparcv9_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
