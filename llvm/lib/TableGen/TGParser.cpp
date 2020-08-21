@@ -2203,6 +2203,8 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
           break;
         default:
           Init *RHSResult = ParseValue(CurRec, ItemType, ParseNameMode);
+          if (!RHSResult)
+            return nullptr;
           Result = BinOpInit::getListConcat(LHS, RHSResult);
         }
         break;
@@ -2239,6 +2241,8 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
 
       default:
         Init *RHSResult = ParseValue(CurRec, nullptr, ParseNameMode);
+        if (!RHSResult)
+          return nullptr;
         RHS = dyn_cast<TypedInit>(RHSResult);
         if (!RHS) {
           Error(PasteLoc, "RHS of paste is not typed!");
