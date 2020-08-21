@@ -9076,6 +9076,10 @@ ConstantFPSDNode *llvm::isConstOrConstSplatFP(SDValue N, bool AllowUndefs) {
       return CN;
   }
 
+  if (N.getOpcode() == ISD::SPLAT_VECTOR)
+    if (ConstantFPSDNode *CN = dyn_cast<ConstantFPSDNode>(N.getOperand(0)))
+      return CN;
+
   return nullptr;
 }
 
