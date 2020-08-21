@@ -1,6 +1,6 @@
 ! Test affine pipeline
 ! RUN: bbc --emit-fir --gen-array-coor=true %s -o - | tco --flang-memref-dataflow-opt --fir-loop-result-opt --canonicalize  --loop-invariant-code-motion --promote-to-affine --affine-loop-invariant-code-motion --simplify-affine-structures --memref-dataflow-opt --cse --demote-affine --lower-affine | tco | llc | as -o %t
-! RUN: cc %t %S/arr-driver.c
+! RUN: %CC -std=c99 %t %S/arr-driver.c
 ! RUN: ./a.out | FileCheck %s
 
 ! CHECK: f1dc: success

@@ -51,20 +51,20 @@ private:
     return analyzeMemoryAccess(loopOperation) &&
            analyzeBody(loopOperation, functionAnalysis);
   }
-  bool analyzeReference(mlir::Value);
+  bool analyzeReference(mlir::Value, mlir::Operation *);
   bool analyzeMemoryAccess(fir::DoLoopOp loopOperation) {
     for (auto loadOp : loopOperation.getOps<fir::LoadOp>())
-      if (!analyzeReference(loadOp.memref()))
+      if (!analyzeReference(loadOp.memref(), loadOp))
         return false;
     for (auto storeOp : loopOperation.getOps<fir::StoreOp>())
-      if (!analyzeReference(storeOp.memref()))
+      if (!analyzeReference(storeOp.memref(), storeOp))
         return false;
     return true;
   }
 };
 
 /// Calculates arguments for creating an IntegerSet symCount, dimCount are the
-/// final number of symbols and dimensions of the affine map. If integer set if
+/// final number of symbols and dimensions of the affine map. Integer set if
 /// possible is in Optional IntegerSet
 class AffineIfCondition {
 public:
@@ -213,37 +213,43 @@ private:
   llvm::DenseMap<mlir::Operation *, AffineIfAnalysis> ifAnalysisMap;
 };
 
-bool analyzeCoordinate(mlir::Value coordinate) {
+bool analyzeCoordinate(mlir::Value coordinate, mlir::Operation *op) {
   if (auto blockArg = coordinate.dyn_cast<mlir::BlockArgument>()) {
     if (isa<fir::DoLoopOp>(blockArg.getOwner()->getParentOp())) {
       return true;
     } else {
-      llvm::dbgs() << "AffineLoopAnalysis: array coordinate is not a "
-                      "loop induction variable (owner not loopOp)\n";
+      LLVM_DEBUG(llvm::dbgs()
+                     << "AffineLoopAnalysis: array coordinate is not a "
+                        "loop induction variable (owner not loopOp)\n";
+                 op->dump(););
       return false;
     }
   } else {
-    llvm::dbgs() << "AffineLoopAnalysis: array coordinate is not a loop "
-                    "induction variable (not a block argument)\n";
+    LLVM_DEBUG(llvm::dbgs()
+                   << "AffineLoopAnalysis: array coordinate is not a loop "
+                      "induction variable (not a block argument)\n";
+               op->dump(); coordinate.getDefiningOp()->dump(););
     return false;
   }
 }
-bool AffineLoopAnalysis::analyzeReference(mlir::Value memref) {
+bool AffineLoopAnalysis::analyzeReference(mlir::Value memref,
+                                          mlir::Operation *op) {
   if (auto acoOp = memref.getDefiningOp<ArrayCoorOp>()) {
     bool canPromote = true;
     for (auto coordinate : acoOp.indices())
-      canPromote = canPromote && analyzeCoordinate(coordinate);
+      canPromote = canPromote && analyzeCoordinate(coordinate, op);
     return canPromote;
   }
   if (auto coOp = memref.getDefiningOp<CoordinateOp>()) {
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: cannot promote loop, "
-                               "array uses non ArrayCoorOp\n";
-               coOp.dump(););
+                               "array memory operation uses non ArrayCoorOp\n";
+               op->dump(); coOp.dump(););
 
     return false;
   }
   LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: unknown type of memory "
-                             "reference for array load\n";);
+                             "reference for array load\n";
+             op->dump(););
   return false;
 }
 
@@ -311,38 +317,48 @@ mlir::Type coordinateArrayElement(fir::ArrayCoorOp op) {
 void populateIndexArgs(fir::ArrayCoorOp acoOp, fir::ShapeOp shape,
                        SmallVectorImpl<mlir::Value> &indexArgs,
                        mlir::PatternRewriter &rewriter) {
-  auto iter = shape.extents().begin();
   auto one = rewriter.create<mlir::ConstantOp>(
       acoOp.getLoc(), rewriter.getIndexType(), rewriter.getIndexAttr(1));
-  auto end = shape.extents().size();
-  for (decltype(end) i = 0; i < end; ++i) {
+  auto extents = shape.extents();
+  for (auto i = extents.begin(); i < extents.end(); i++) {
     indexArgs.push_back(one);
-    indexArgs.push_back(*iter++);
+    indexArgs.push_back(*i);
     indexArgs.push_back(one);
   }
 }
+
 void populateIndexArgs(fir::ArrayCoorOp acoOp, fir::ShapeShiftOp shape,
                        SmallVectorImpl<mlir::Value> &indexArgs,
                        mlir::PatternRewriter &rewriter) {
-  auto iter = shape.pairs().begin();
   auto one = rewriter.create<mlir::ConstantOp>(
       acoOp.getLoc(), rewriter.getIndexType(), rewriter.getIndexAttr(1));
-  auto end = shape.pairs().size();
-  for (decltype(end) i = 0; i < end; ++(++i)) {
-    indexArgs.push_back(*iter++);
-    indexArgs.push_back(*iter++);
+  auto extents = shape.pairs();
+  for (auto i = extents.begin(); i < extents.end();) {
+    indexArgs.push_back(*i++);
+    indexArgs.push_back(*i++);
     indexArgs.push_back(one);
   }
 }
+void populateIndexArgs(fir::ArrayCoorOp acoOp, fir::SliceOp slice,
+                       SmallVectorImpl<mlir::Value> &indexArgs,
+                       mlir::PatternRewriter &rewriter) {
+  auto extents = slice.triples();
+  for (auto i = extents.begin(); i < extents.end();) {
+    indexArgs.push_back(*i++);
+    indexArgs.push_back(*i++);
+    indexArgs.push_back(*i++);
+  }
+}
+
 void populateIndexArgs(fir::ArrayCoorOp acoOp,
                        SmallVectorImpl<mlir::Value> &indexArgs,
                        mlir::PatternRewriter &rewriter) {
-  if (auto shape = acoOp.shape().getDefiningOp<ShapeOp>()) {
+  if (auto shape = acoOp.shape().getDefiningOp<ShapeOp>())
     return populateIndexArgs(acoOp, shape, indexArgs, rewriter);
-  }
   if (auto shapeShift = acoOp.shape().getDefiningOp<ShapeShiftOp>())
     return populateIndexArgs(acoOp, shapeShift, indexArgs, rewriter);
-  llvm::dbgs() << "AffinePromotion: need to populateIndexArgs for slice\n";
+  if (auto slice = acoOp.shape().getDefiningOp<SliceOp>())
+    return populateIndexArgs(acoOp, slice, indexArgs, rewriter);
   return;
 }
 

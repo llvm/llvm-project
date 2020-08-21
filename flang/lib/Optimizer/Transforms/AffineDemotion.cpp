@@ -77,6 +77,10 @@ public:
   matchAndRewrite(fir::ConvertOp op,
                   mlir::PatternRewriter &rewriter) const override {
     if (op.res().getType().isa<mlir::MemRefType>()) {
+      // due to index calculation moving to affine maps we still need to
+      // add converts for sequence types this has a side effect of losing
+      // some information about arrays with known dimensions by creating:
+      // fir.convert %arg0 : (!fir.ref<!fir.array<5xi32>>) -> !fir.ref<!fir.array<?xi32>>
       if (auto refTy = op.value().getType().dyn_cast<fir::ReferenceType>())
         if (auto arrTy = refTy.getEleTy().dyn_cast<fir::SequenceType>()) {
           fir::SequenceType::Shape flatShape = {fir::SequenceType::getUnknownExtent()};
