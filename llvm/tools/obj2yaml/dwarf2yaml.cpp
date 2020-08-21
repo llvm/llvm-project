@@ -23,7 +23,6 @@ using namespace llvm;
 void dumpDebugAbbrev(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   auto AbbrevSetPtr = DCtx.getDebugAbbrev();
   if (AbbrevSetPtr) {
-    uint64_t AbbrevTableID = 0;
     for (auto AbbrvDeclSet : *AbbrevSetPtr) {
       Y.DebugAbbrev.emplace_back();
       for (auto AbbrvDecl : AbbrvDeclSet.second) {
@@ -40,7 +39,6 @@ void dumpDebugAbbrev(DWARFContext &DCtx, DWARFYAML::Data &Y) {
             AttAbrv.Value = Attribute.getImplicitConstValue();
           Abbrv.Attributes.push_back(AttAbrv);
         }
-        Y.DebugAbbrev.back().ID = AbbrevTableID++;
         Y.DebugAbbrev.back().Table.push_back(Abbrv);
       }
     }
@@ -174,14 +172,6 @@ void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {
     NewUnit.Version = CU->getVersion();
     if (NewUnit.Version >= 5)
       NewUnit.Type = (dwarf::UnitType)CU->getUnitType();
-    const DWARFDebugAbbrev *DebugAbbrev = DCtx.getDebugAbbrev();
-    NewUnit.AbbrevTableID = std::distance(
-        DebugAbbrev->begin(),
-        std::find_if(
-            DebugAbbrev->begin(), DebugAbbrev->end(),
-            [&](const std::pair<uint64_t, DWARFAbbreviationDeclarationSet> &P) {
-              return P.first == CU->getAbbreviations()->getOffset();
-            }));
     NewUnit.AbbrOffset = CU->getAbbreviations()->getOffset();
     NewUnit.AddrSize = CU->getAddressByteSize();
     for (auto DIE : CU->dies()) {
