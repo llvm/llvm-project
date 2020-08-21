@@ -771,6 +771,11 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     UpperCmdArgs.push_back("-idir");
     UpperCmdArgs.push_back(Arg->getValue(0));
   }
+  for (auto Arg : Args.filtered(options::OPT_isystem)) {
+    Arg->claim();
+    UpperCmdArgs.push_back("-idir");
+    UpperCmdArgs.push_back(Arg->getValue(0));
+  }
 
   // Add user-defined module directories
   for (auto Arg : Args.filtered(options::OPT_ModuleDir, options::OPT_J)) {
