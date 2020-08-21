@@ -281,9 +281,6 @@ namespace clang {
     static Decl *getMostRecentDeclImpl(...);
     static Decl *getMostRecentDecl(Decl *D);
 
-    static void mergeInheritableAttributes(ASTReader &Reader, Decl *D,
-                                           Decl *Previous);
-
     template <typename DeclT>
     static void attachPreviousDeclImpl(ASTReader &Reader,
                                        Redeclarable<DeclT> *D, Decl *Previous,
@@ -3514,19 +3511,6 @@ Decl *ASTReader::getMostRecentExistingDecl(Decl *D) {
   return ASTDeclReader::getMostRecentDecl(D->getCanonicalDecl());
 }
 
-void ASTDeclReader::mergeInheritableAttributes(ASTReader &Reader, Decl *D,
-                                               Decl *Previous) {
-  InheritableAttr *NewAttr = nullptr;
-  ASTContext &Context = Reader.getContext();
-  const auto *IA = Previous->getAttr<MSInheritanceAttr>();
-
-  if (IA && !D->hasAttr<MSInheritanceAttr>()) {
-    NewAttr = cast<InheritableAttr>(IA->clone(Context));
-    NewAttr->setInherited(true);
-    D->addAttr(NewAttr);
-  }
-}
-
 template<typename DeclT>
 void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
                                            Redeclarable<DeclT> *D,
@@ -3685,12 +3669,6 @@ void ASTDeclReader::attachPreviousDecl(ASTReader &Reader, Decl *D,
   if (auto *TD = dyn_cast<TemplateDecl>(D))
     inheritDefaultTemplateArguments(Reader.getContext(),
                                     cast<TemplateDecl>(Previous), TD);
-
-  // If any of the declaration in the chain contains an Inheritable attribute,
-  // it needs to be added to all the declarations in the redeclarable chain.
-  // FIXME: Only the logic of merging MSInheritableAttr is present, it should
-  // be extended for all inheritable attributes.
-  mergeInheritableAttributes(Reader, D, Previous);
 }
 
 template<typename DeclT>
