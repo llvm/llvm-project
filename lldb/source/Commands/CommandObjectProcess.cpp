@@ -923,6 +923,17 @@ public:
 
   ~CommandObjectProcessLoad() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_exe_ctx.HasProcessScope())
+      return;
+
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
+        request, nullptr);
+  }
+
   Options *GetOptions() override { return &m_options; }
 
 protected:
@@ -987,6 +998,24 @@ public:
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused) {}
 
   ~CommandObjectProcessUnload() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+
+    if (request.GetCursorIndex() || !m_exe_ctx.HasProcessScope())
+      return;
+
+    Process *process = m_exe_ctx.GetProcessPtr();
+
+    const std::vector<lldb::addr_t> &tokens = process->GetImageTokens();
+    const size_t token_num = tokens.size();
+    for (size_t i = 0; i < token_num; ++i) {
+      if (tokens[i] == LLDB_INVALID_IMAGE_TOKEN)
+        continue;
+      request.TryCompleteCurrentArg(std::to_string(i));
+    }
+  }
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
