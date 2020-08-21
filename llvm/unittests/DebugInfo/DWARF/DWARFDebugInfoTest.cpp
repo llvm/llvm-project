@@ -2487,7 +2487,6 @@ TEST(DWARFDebugInfo, TestDwarfVerifyCUDontShareLineTable) {
               - Value:           0x0000000000000000
       - Length:          16
         Version:         4
-        AbbrevTableID:   0
         AbbrOffset:      0
         AddrSize:        8
         Entries:

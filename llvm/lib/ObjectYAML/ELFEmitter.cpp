@@ -944,7 +944,7 @@ static bool shouldEmitDWARF(DWARFYAML::Data &DWARF, StringRef Name) {
 
 template <class ELFT>
 Expected<uint64_t> emitDWARF(typename ELFT::Shdr &SHeader, StringRef Name,
-                             DWARFYAML::Data &DWARF,
+                             const DWARFYAML::Data &DWARF,
                              ContiguousBlobAccumulator &CBA) {
   // We are unable to predict the size of debug data, so we request to write 0
   // bytes. This should always return us an output stream unless CBA is already
