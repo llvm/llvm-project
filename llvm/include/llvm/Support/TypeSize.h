@@ -26,7 +26,7 @@ namespace llvm {
 template <typename T> struct DenseMapInfo;
 
 class ElementCount {
-private:
+public:
   /// Prevent code from using initializer-list contructors like
   /// ElementCount EC = {<unsigned>, <bool>}. The static `get*`
   /// methods below are preferred, as users should always make a
