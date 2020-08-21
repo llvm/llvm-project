@@ -769,7 +769,7 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
   Visited.insert(&MI);
   while (!worklist.empty()) {
     const MachineInstr *Instr = worklist.pop_back_val();
-    unsigned Reg = Instr->getOperand(0).getReg();
+    Register Reg = Instr->getOperand(0).getReg();
     for (const auto &Use : MRI->use_operands(Reg)) {
       const MachineInstr *UseMI = Use.getParent();
       AllAGPRUses &= (UseMI->isCopy() &&
@@ -818,11 +818,11 @@ void SIFixSGPRCopies::processPHINode(MachineInstr &MI) {
 
   bool hasVGPRInput = false;
   for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
-    unsigned InputReg = MI.getOperand(i).getReg();
+    Register InputReg = MI.getOperand(i).getReg();
     MachineInstr *Def = MRI->getVRegDef(InputReg);
     if (TRI->isVectorRegister(*MRI, InputReg)) {
       if (Def->isCopy()) {
-        unsigned SrcReg = Def->getOperand(1).getReg();
+        Register SrcReg = Def->getOperand(1).getReg();
         const TargetRegisterClass *RC =
           TRI->getRegClassForReg(*MRI, SrcReg);
         if (TRI->isSGPRClass(RC))
