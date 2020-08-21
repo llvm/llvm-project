@@ -36,7 +36,7 @@
  *     A 32-bit integer operand.
  *  \returns A 32-bit integer containing the bit number.
  */
-static __inline__ int __DEFAULT_FN_ATTRS
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __bsfd(int __A) {
   return __builtin_ctz(__A);
 }
@@ -53,7 +53,7 @@ __bsfd(int __A) {
  *     A 32-bit integer operand.
  *  \returns A 32-bit integer containing the bit number.
  */
-static __inline__ int __DEFAULT_FN_ATTRS
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __bsrd(int __A) {
   return 31 - __builtin_clz(__A);
 }
@@ -95,7 +95,7 @@ _bswap(int __A) {
  *     A 64-bit integer operand.
  *  \returns A 32-bit integer containing the bit number.
  */
-static __inline__ int __DEFAULT_FN_ATTRS
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __bsfq(long long __A) {
   return __builtin_ctzll(__A);
 }
@@ -112,7 +112,7 @@ __bsfq(long long __A) {
  *     A 64-bit integer operand.
  *  \returns A 32-bit integer containing the bit number.
  */
-static __inline__ int __DEFAULT_FN_ATTRS
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __bsrq(long long __A) {
   return 63 - __builtin_clzll(__A);
 }
