@@ -69,12 +69,12 @@ __bsrd(int __A) {
  *     A 32-bit integer operand.
  *  \returns A 32-bit integer containing the swapped bytes.
  */
-static __inline__ int __DEFAULT_FN_ATTRS
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 __bswapd(int __A) {
   return __builtin_bswap32(__A);
 }
 
-static __inline__ int __DEFAULT_FN_ATTRS
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
 _bswap(int __A) {
   return __builtin_bswap32(__A);
 }
@@ -128,7 +128,7 @@ __bsrq(long long __A) {
  *     A 64-bit integer operand.
  *  \returns A 64-bit integer containing the swapped bytes.
  */
-static __inline__ long long __DEFAULT_FN_ATTRS
+static __inline__ long long __DEFAULT_FN_ATTRS_CONSTEXPR
 __bswapq(long long __A) {
   return __builtin_bswap64(__A);
 }
