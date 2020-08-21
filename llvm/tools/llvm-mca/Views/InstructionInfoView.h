@@ -36,6 +36,7 @@
 
 #include "Views/View.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -56,6 +57,19 @@ class InstructionInfoView : public View {
   bool PrintEncodings;
   llvm::ArrayRef<llvm::MCInst> Source;
   llvm::MCInstPrinter &MCIP;
+
+  struct InstructionInfoViewData {
+    unsigned NumMicroOpcodes = 0;
+    unsigned Latency = 0;
+    Optional<double> RThroughput = 0.0;
+    bool mayLoad = false;
+    bool mayStore = false;
+    bool hasUnmodeledSideEffects = false;
+  };
+  using IIVDVec = SmallVector<InstructionInfoViewData, 16>;
+
+  /// Place the data into the array of InstructionInfoViewData IIVD.
+  void collectData(MutableArrayRef<InstructionInfoViewData> IIVD) const;
 
 public:
   InstructionInfoView(const llvm::MCSubtargetInfo &ST,
