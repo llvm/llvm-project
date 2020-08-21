@@ -556,6 +556,12 @@ BUILTIN(__builtin_pack_vector_int128, "V1LLLiULLiULLi", "")
 // Set the floating point rounding mode
 BUILTIN(__builtin_setrnd, "di", "")
 
+// Get content from current FPSCR
+BUILTIN(__builtin_readflm, "d", "")
+
+// Set content of FPSCR, and return its content before update
+BUILTIN(__builtin_setflm, "dd", "")
+
 // Cache built-ins
 BUILTIN(__builtin_dcbf, "vvC*", "")
 
