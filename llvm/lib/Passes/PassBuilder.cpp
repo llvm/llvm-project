@@ -36,6 +36,7 @@
 #include "llvm/Analysis/IVUsers.h"
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineSizeEstimatorAnalysis.h"
+#include "llvm/Analysis/InstCount.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
