@@ -1,5 +1,5 @@
 ; RUN: llvm-as %s -o %t.o
-; RUN: %ld64 -lto_library %llvmshlibdir/libLTO.dylib -dylib -arch x86_64 -macosx_version_min 10.10.0 -lSystem -o %t.dylib %t.o -save-temps  -undefined dynamic_lookup -exported_symbol _c -exported_symbol _b  -exported_symbol _GlobLinkonce
+; RUN: %ld64 -lto_library %llvmshlibdir/libLTO.dylib -dylib -arch x86_64 -macosx_version_min 10.10.0 -o %t.dylib %t.o -save-temps  -undefined dynamic_lookup -exported_symbol _c -exported_symbol _b  -exported_symbol _GlobLinkonce
 
 ; RUN: llvm-dis %t.dylib.lto.opt.bc -o - | FileCheck --check-prefix=IR %s
 ; check that @a is no longer a linkonce_odr definition
