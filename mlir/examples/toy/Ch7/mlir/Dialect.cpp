@@ -475,7 +475,7 @@ StructType StructType::get(llvm::ArrayRef<mlir::Type> elementTypes) {
 
   // Call into a helper 'get' method in 'TypeBase' to get a uniqued instance
   // of this type. The first parameter is the context to unique in. The
-  // parameters after the type kind are forwarded to the storage instance.
+  // parameters after the context are forwarded to the storage instance.
   mlir::MLIRContext *ctx = elementTypes.front().getContext();
   return Base::get(ctx, elementTypes);
 }

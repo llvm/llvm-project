@@ -3,15 +3,15 @@
 import mlir
 
 def run(f):
-  print("TEST:", f.__name__)
+  print("\nTEST:", f.__name__)
   f()
 
 # Verify successful parse.
 # CHECK-LABEL: TEST: testParseSuccess
 # CHECK: module @successfulParse
 def testParseSuccess():
-  ctx = mlir.ir.MlirContext()
-  module = ctx.parse(r"""module @successfulParse {}""")
+  ctx = mlir.ir.Context()
+  module = ctx.parse_module(r"""module @successfulParse {}""")
   module.dump()  # Just outputs to stderr. Verifies that it functions.
   print(str(module))
 
@@ -22,9 +22,9 @@ run(testParseSuccess)
 # CHECK-LABEL: TEST: testParseError
 # CHECK: testParseError: Unable to parse module assembly (see diagnostics)
 def testParseError():
-  ctx = mlir.ir.MlirContext()
+  ctx = mlir.ir.Context()
   try:
-    module = ctx.parse(r"""}SYNTAX ERROR{""")
+    module = ctx.parse_module(r"""}SYNTAX ERROR{""")
   except ValueError as e:
     print("testParseError:", e)
   else:
@@ -40,8 +40,8 @@ run(testParseError)
 # CHECK: func @roundtripUnicode()
 # CHECK: foo = "\F0\9F\98\8A"
 def testRoundtripUnicode():
-  ctx = mlir.ir.MlirContext()
-  module = ctx.parse(r"""
+  ctx = mlir.ir.Context()
+  module = ctx.parse_module(r"""
     func @roundtripUnicode() attributes { foo = "😊" }
   """)
   print(str(module))

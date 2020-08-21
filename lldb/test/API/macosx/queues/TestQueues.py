@@ -226,8 +226,8 @@ class TestQueues(TestBase):
                 "requested_qos.printable_name",
                 stream),
             "Get QoS printable string for user initiated QoS thread")
-        self.assertTrue(
-            stream.GetData() == "User Initiated",
+        self.assertEqual(
+            stream.GetData(), "User Initiated",
             "user initiated QoS thread name is valid")
         stream.Clear()
         self.assertTrue(
@@ -235,8 +235,8 @@ class TestQueues(TestBase):
                 "requested_qos.printable_name",
                 stream),
             "Get QoS printable string for user interactive QoS thread")
-        self.assertTrue(
-            stream.GetData() == "User Interactive",
+        self.assertEqual(
+            stream.GetData(), "User Interactive",
             "user interactive QoS thread name is valid")
         stream.Clear()
         self.assertTrue(
@@ -244,8 +244,8 @@ class TestQueues(TestBase):
                 "requested_qos.printable_name",
                 stream),
             "Get QoS printable string for utility QoS thread")
-        self.assertTrue(
-            stream.GetData() == "Utility",
+        self.assertEqual(
+            stream.GetData(), "Utility",
             "utility QoS thread name is valid")
         stream.Clear()
         self.assertTrue(
@@ -256,15 +256,15 @@ class TestQueues(TestBase):
         qosName = stream.GetData()
         self.assertTrue(
             qosName == "User Initiated" or qosName == "Default",
-            "unspecified QoS thread name is valid")
+            "unspecified QoS thread name is valid: " + str(qosName))
         stream.Clear()
         self.assertTrue(
             background_thread.GetInfoItemByPathAsString(
                 "requested_qos.printable_name",
                 stream),
             "Get QoS printable string for background QoS thread")
-        self.assertTrue(
-            stream.GetData() == "Background",
+        self.assertEqual(
+            stream.GetData(), "Background",
             "background QoS thread name is valid")
 
     @skipIfDarwin # rdar://50379398

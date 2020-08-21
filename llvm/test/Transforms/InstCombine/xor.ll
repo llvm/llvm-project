@@ -996,7 +996,7 @@ define i4 @or_or_xor_use2(i4 %x, i4 %y, i4 %z, i4* %p) {
 }
 
 ; PR32706 - https://bugs.llvm.org/show_bug.cgi?id=32706
-; TODO: Pin an xor constant operand to -1 if possible because 'not' is better for SCEV and codegen.
+; Pin an xor constant operand to -1 if possible because 'not' is better for SCEV and codegen.
 
 define i32 @not_is_canonical(i32 %x, i32 %y) {
 ; CHECK-LABEL: @not_is_canonical(

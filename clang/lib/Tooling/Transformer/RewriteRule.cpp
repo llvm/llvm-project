@@ -242,7 +242,7 @@ public:
 } // namespace
 
 template <typename T>
-llvm::Expected<SmallVector<clang::transformer::Edit, 1>>
+static llvm::Expected<SmallVector<clang::transformer::Edit, 1>>
 rewriteDescendantsImpl(const T &Node, RewriteRule Rule,
                        const MatchResult &Result) {
   ApplyRuleCallback Callback(std::move(Rule));

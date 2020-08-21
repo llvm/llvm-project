@@ -116,6 +116,9 @@ MlirModule mlirModuleCreateEmpty(MlirLocation location);
 /** Parses a module from the string and transfers ownership to the caller. */
 MlirModule mlirModuleCreateParse(MlirContext context, const char *module);
 
+/** Checks whether a module is null. */
+inline int mlirModuleIsNull(MlirModule module) { return !module.ptr; }
+
 /** Takes a module owned by the caller and deletes it. */
 void mlirModuleDestroy(MlirModule module);
 
@@ -311,6 +314,9 @@ void mlirValuePrint(MlirValue value, MlirPrintCallback callback,
 
 /** Parses a type. The type is owned by the context. */
 MlirType mlirTypeParseGet(MlirContext context, const char *type);
+
+/** Checks whether a type is null. */
+inline int mlirTypeIsNull(MlirType type) { return !type.ptr; }
 
 /** Checks if two types are equal. */
 int mlirTypeEqual(MlirType t1, MlirType t2);

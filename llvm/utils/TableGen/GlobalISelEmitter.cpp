@@ -3504,6 +3504,12 @@ private:
   Optional<const CodeGenRegisterClass *>
   inferRegClassFromPattern(TreePatternNode *N);
 
+  // Add builtin predicates.
+  Expected<InstructionMatcher &>
+  addBuiltinPredicates(const Record *SrcGIEquivOrNull,
+                       const TreePredicateFn &Predicate,
+                       InstructionMatcher &InsnMatcher, bool &HasAddedMatcher);
+
 public:
   /// Takes a sequence of \p Rules and group them based on the predicates
   /// they share. \p MatcherStorage is used as a memory container
@@ -3611,6 +3617,147 @@ GlobalISelEmitter::importRulePredicates(RuleMatcher &M,
   return Error::success();
 }
 
+Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
+    const Record *SrcGIEquivOrNull, const TreePredicateFn &Predicate,
+    InstructionMatcher &InsnMatcher, bool &HasAddedMatcher) {
+  if (Predicate.isLoad() || Predicate.isStore() || Predicate.isAtomic()) {
+    if (const ListInit *AddrSpaces = Predicate.getAddressSpaces()) {
+      SmallVector<unsigned, 4> ParsedAddrSpaces;
+
+      for (Init *Val : AddrSpaces->getValues()) {
+        IntInit *IntVal = dyn_cast<IntInit>(Val);
+        if (!IntVal)
+          return failedImport("Address space is not an integer");
+        ParsedAddrSpaces.push_back(IntVal->getValue());
+      }
+
+      if (!ParsedAddrSpaces.empty()) {
+        InsnMatcher.addPredicate<MemoryAddressSpacePredicateMatcher>(
+            0, ParsedAddrSpaces);
+      }
+    }
+
+    int64_t MinAlign = Predicate.getMinAlignment();
+    if (MinAlign > 0)
+      InsnMatcher.addPredicate<MemoryAlignmentPredicateMatcher>(0, MinAlign);
+  }
+
+  // G_LOAD is used for both non-extending and any-extending loads.
+  if (Predicate.isLoad() && Predicate.isNonExtLoad()) {
+    InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
+        0, MemoryVsLLTSizePredicateMatcher::EqualTo, 0);
+    return InsnMatcher;
+  }
+  if (Predicate.isLoad() && Predicate.isAnyExtLoad()) {
+    InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
+        0, MemoryVsLLTSizePredicateMatcher::LessThan, 0);
+    return InsnMatcher;
+  }
+
+  if (Predicate.isStore()) {
+    if (Predicate.isTruncStore()) {
+      // FIXME: If MemoryVT is set, we end up with 2 checks for the MMO size.
+      InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
+          0, MemoryVsLLTSizePredicateMatcher::LessThan, 0);
+      return InsnMatcher;
+    }
+    if (Predicate.isNonTruncStore()) {
+      // We need to check the sizes match here otherwise we could incorrectly
+      // match truncating stores with non-truncating ones.
+      InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
+          0, MemoryVsLLTSizePredicateMatcher::EqualTo, 0);
+    }
+  }
+
+  // No check required. We already did it by swapping the opcode.
+  if (!SrcGIEquivOrNull->isValueUnset("IfSignExtend") &&
+      Predicate.isSignExtLoad())
+    return InsnMatcher;
+
+  // No check required. We already did it by swapping the opcode.
+  if (!SrcGIEquivOrNull->isValueUnset("IfZeroExtend") &&
+      Predicate.isZeroExtLoad())
+    return InsnMatcher;
+
+  // No check required. G_STORE by itself is a non-extending store.
+  if (Predicate.isNonTruncStore())
+    return InsnMatcher;
+
+  if (Predicate.isLoad() || Predicate.isStore() || Predicate.isAtomic()) {
+    if (Predicate.getMemoryVT() != nullptr) {
+      Optional<LLTCodeGen> MemTyOrNone =
+          MVTToLLT(getValueType(Predicate.getMemoryVT()));
+
+      if (!MemTyOrNone)
+        return failedImport("MemVT could not be converted to LLT");
+
+      // MMO's work in bytes so we must take care of unusual types like i1
+      // don't round down.
+      unsigned MemSizeInBits =
+          llvm::alignTo(MemTyOrNone->get().getSizeInBits(), 8);
+
+      InsnMatcher.addPredicate<MemorySizePredicateMatcher>(0,
+                                                           MemSizeInBits / 8);
+      return InsnMatcher;
+    }
+  }
+
+  if (Predicate.isLoad() || Predicate.isStore()) {
+    // No check required. A G_LOAD/G_STORE is an unindexed load.
+    if (Predicate.isUnindexed())
+      return InsnMatcher;
+  }
+
+  if (Predicate.isAtomic()) {
+    if (Predicate.isAtomicOrderingMonotonic()) {
+      InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("Monotonic");
+      return InsnMatcher;
+    }
+    if (Predicate.isAtomicOrderingAcquire()) {
+      InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("Acquire");
+      return InsnMatcher;
+    }
+    if (Predicate.isAtomicOrderingRelease()) {
+      InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("Release");
+      return InsnMatcher;
+    }
+    if (Predicate.isAtomicOrderingAcquireRelease()) {
+      InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+          "AcquireRelease");
+      return InsnMatcher;
+    }
+    if (Predicate.isAtomicOrderingSequentiallyConsistent()) {
+      InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+          "SequentiallyConsistent");
+      return InsnMatcher;
+    }
+  }
+
+  if (Predicate.isAtomicOrderingAcquireOrStronger()) {
+    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+        "Acquire", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
+    return InsnMatcher;
+  }
+  if (Predicate.isAtomicOrderingWeakerThanAcquire()) {
+    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+        "Acquire", AtomicOrderingMMOPredicateMatcher::AO_WeakerThan);
+    return InsnMatcher;
+  }
+
+  if (Predicate.isAtomicOrderingReleaseOrStronger()) {
+    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+        "Release", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
+    return InsnMatcher;
+  }
+  if (Predicate.isAtomicOrderingWeakerThanRelease()) {
+    InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
+        "Release", AtomicOrderingMMOPredicateMatcher::AO_WeakerThan);
+    return InsnMatcher;
+  }
+  HasAddedMatcher = false;
+  return InsnMatcher;
+}
+
 Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     RuleMatcher &Rule, InstructionMatcher &InsnMatcher,
     const TreePatternNode *Src, unsigned &TempOpIdx) {
@@ -3652,6 +3799,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
 
   for (const TreePredicateCall &Call : Src->getPredicateCalls()) {
     const TreePredicateFn &Predicate = Call.Fn;
+    bool HasAddedBuiltinMatcher = true;
     if (Predicate.isAlwaysTrue())
       continue;
 
@@ -3660,150 +3808,19 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       continue;
     }
 
-    // An address space check is needed in all contexts if there is one.
-    if (Predicate.isLoad() || Predicate.isStore() || Predicate.isAtomic()) {
-      if (const ListInit *AddrSpaces = Predicate.getAddressSpaces()) {
-        SmallVector<unsigned, 4> ParsedAddrSpaces;
-
-        for (Init *Val : AddrSpaces->getValues()) {
-          IntInit *IntVal = dyn_cast<IntInit>(Val);
-          if (!IntVal)
-            return failedImport("Address space is not an integer");
-          ParsedAddrSpaces.push_back(IntVal->getValue());
-        }
-
-        if (!ParsedAddrSpaces.empty()) {
-          InsnMatcher.addPredicate<MemoryAddressSpacePredicateMatcher>(
-            0, ParsedAddrSpaces);
-        }
-      }
-
-      int64_t MinAlign = Predicate.getMinAlignment();
-      if (MinAlign > 0)
-        InsnMatcher.addPredicate<MemoryAlignmentPredicateMatcher>(0, MinAlign);
-    }
-
-    // G_LOAD is used for both non-extending and any-extending loads.
-    if (Predicate.isLoad() && Predicate.isNonExtLoad()) {
-      InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
-          0, MemoryVsLLTSizePredicateMatcher::EqualTo, 0);
-      continue;
-    }
-    if (Predicate.isLoad() && Predicate.isAnyExtLoad()) {
-      InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
-          0, MemoryVsLLTSizePredicateMatcher::LessThan, 0);
-      continue;
-    }
-
-    if (Predicate.isStore()) {
-      if (Predicate.isTruncStore()) {
-        // FIXME: If MemoryVT is set, we end up with 2 checks for the MMO size.
-        InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
-            0, MemoryVsLLTSizePredicateMatcher::LessThan, 0);
-        continue;
-      }
-      if (Predicate.isNonTruncStore()) {
-        // We need to check the sizes match here otherwise we could incorrectly
-        // match truncating stores with non-truncating ones.
-        InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
-            0, MemoryVsLLTSizePredicateMatcher::EqualTo, 0);
-      }
-    }
-
-    // No check required. We already did it by swapping the opcode.
-    if (!SrcGIEquivOrNull->isValueUnset("IfSignExtend") &&
-        Predicate.isSignExtLoad())
-      continue;
-
-    // No check required. We already did it by swapping the opcode.
-    if (!SrcGIEquivOrNull->isValueUnset("IfZeroExtend") &&
-        Predicate.isZeroExtLoad())
-      continue;
-
-    // No check required. G_STORE by itself is a non-extending store.
-    if (Predicate.isNonTruncStore())
-      continue;
-
-    if (Predicate.isLoad() || Predicate.isStore() || Predicate.isAtomic()) {
-      if (Predicate.getMemoryVT() != nullptr) {
-        Optional<LLTCodeGen> MemTyOrNone =
-            MVTToLLT(getValueType(Predicate.getMemoryVT()));
-
-        if (!MemTyOrNone)
-          return failedImport("MemVT could not be converted to LLT");
-
-        // MMO's work in bytes so we must take care of unusual types like i1
-        // don't round down.
-        unsigned MemSizeInBits =
-            llvm::alignTo(MemTyOrNone->get().getSizeInBits(), 8);
-
-        InsnMatcher.addPredicate<MemorySizePredicateMatcher>(
-            0, MemSizeInBits / 8);
-        continue;
-      }
-    }
-
-    if (Predicate.isLoad() || Predicate.isStore()) {
-      // No check required. A G_LOAD/G_STORE is an unindexed load.
-      if (Predicate.isUnindexed())
-        continue;
-    }
-
-    if (Predicate.isAtomic()) {
-      if (Predicate.isAtomicOrderingMonotonic()) {
-        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
-            "Monotonic");
-        continue;
-      }
-      if (Predicate.isAtomicOrderingAcquire()) {
-        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("Acquire");
-        continue;
-      }
-      if (Predicate.isAtomicOrderingRelease()) {
-        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("Release");
-        continue;
-      }
-      if (Predicate.isAtomicOrderingAcquireRelease()) {
-        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
-            "AcquireRelease");
-        continue;
-      }
-      if (Predicate.isAtomicOrderingSequentiallyConsistent()) {
-        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
-            "SequentiallyConsistent");
-        continue;
-      }
-
-      if (Predicate.isAtomicOrderingAcquireOrStronger()) {
-        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
-            "Acquire", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
-        continue;
-      }
-      if (Predicate.isAtomicOrderingWeakerThanAcquire()) {
-        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
-            "Acquire", AtomicOrderingMMOPredicateMatcher::AO_WeakerThan);
-        continue;
-      }
-
-      if (Predicate.isAtomicOrderingReleaseOrStronger()) {
-        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
-            "Release", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
-        continue;
-      }
-      if (Predicate.isAtomicOrderingWeakerThanRelease()) {
-        InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
-            "Release", AtomicOrderingMMOPredicateMatcher::AO_WeakerThan);
-        continue;
-      }
-    }
+    auto InsnMatcherOrError = addBuiltinPredicates(
+        SrcGIEquivOrNull, Predicate, InsnMatcher, HasAddedBuiltinMatcher);
+    if (auto Error = InsnMatcherOrError.takeError())
+      return std::move(Error);
 
     if (Predicate.hasGISelPredicateCode()) {
       InsnMatcher.addPredicate<GenericInstructionPredicateMatcher>(Predicate);
       continue;
     }
-
-    return failedImport("Src pattern child has predicate (" +
-                        explainPredicates(Src) + ")");
+    if (!HasAddedBuiltinMatcher) {
+      return failedImport("Src pattern child has predicate (" +
+                          explainPredicates(Src) + ")");
+    }
   }
 
   bool IsAtomic = false;

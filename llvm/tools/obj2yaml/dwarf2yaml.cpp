@@ -10,6 +10,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugPubTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
@@ -118,32 +119,31 @@ Error dumpDebugRanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   return ErrorSuccess();
 }
 
-static DWARFYAML::PubSection dumpPubSection(const DWARFContext &DCtx,
-                                            const DWARFSection &Section,
-                                            bool IsGNUStyle) {
+static Optional<DWARFYAML::PubSection>
+dumpPubSection(const DWARFContext &DCtx, const DWARFSection &Section,
+               bool IsGNUStyle) {
+  DWARFYAML::PubSection Y;
   DWARFDataExtractor PubSectionData(DCtx.getDWARFObj(), Section,
                                     DCtx.isLittleEndian(), 0);
-  DWARFYAML::PubSection Y;
-  uint64_t Offset = 0;
-  uint64_t Length = PubSectionData.getU32(&Offset);
-  if (Length == dwarf::DW_LENGTH_DWARF64) {
-    Y.Format = dwarf::DWARF64;
-    Y.Length = PubSectionData.getU64(&Offset);
-  } else {
-    Y.Format = dwarf::DWARF32;
-    Y.Length = Length;
-  }
-  Y.Version = PubSectionData.getU16(&Offset);
-  Y.UnitOffset = PubSectionData.getU32(&Offset);
-  Y.UnitSize = PubSectionData.getU32(&Offset);
-  while (Offset < Y.Length) {
-    DWARFYAML::PubEntry NewEntry;
-    NewEntry.DieOffset = PubSectionData.getU32(&Offset);
-    if (IsGNUStyle)
-      NewEntry.Descriptor = PubSectionData.getU8(&Offset);
-    NewEntry.Name = PubSectionData.getCStr(&Offset);
-    Y.Entries.push_back(NewEntry);
-  }
+  DWARFDebugPubTable Table;
+  // We ignore any errors that don't prevent parsing the section, since we can
+  // still represent such sections.
+  Table.extract(PubSectionData, IsGNUStyle,
+                [](Error Err) { consumeError(std::move(Err)); });
+  ArrayRef<DWARFDebugPubTable::Set> Sets = Table.getData();
+  if (Sets.empty())
+    return None;
+
+  // FIXME: Currently, obj2yaml only supports dumping the first pubtable.
+  Y.Format = Sets[0].Format;
+  Y.Length = Sets[0].Length;
+  Y.Version = Sets[0].Version;
+  Y.UnitOffset = Sets[0].Offset;
+  Y.UnitSize = Sets[0].Size;
+
+  for (const DWARFDebugPubTable::Entry &E : Sets[0].Entries)
+    Y.Entries.push_back(DWARFYAML::PubEntry{(uint32_t)E.SecOffset,
+                                            E.Descriptor.toBits(), E.Name});
 
   return Y;
 }
@@ -151,23 +151,16 @@ static DWARFYAML::PubSection dumpPubSection(const DWARFContext &DCtx,
 void dumpDebugPubSections(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   const DWARFObject &D = DCtx.getDWARFObj();
 
-  const DWARFSection PubNames = D.getPubnamesSection();
-  if (!PubNames.Data.empty())
-    Y.PubNames = dumpPubSection(DCtx, PubNames, /*IsGNUStyle=*/false);
-
-  const DWARFSection PubTypes = D.getPubtypesSection();
-  if (!PubTypes.Data.empty())
-    Y.PubTypes = dumpPubSection(DCtx, PubTypes, /*IsGNUStyle=*/false);
-
-  const DWARFSection GNUPubNames = D.getGnuPubnamesSection();
-  if (!GNUPubNames.Data.empty())
-    // TODO: Test dumping .debug_gnu_pubnames section.
-    Y.GNUPubNames = dumpPubSection(DCtx, GNUPubNames, /*IsGNUStyle=*/true);
-
-  const DWARFSection GNUPubTypes = D.getGnuPubtypesSection();
-  if (!GNUPubTypes.Data.empty())
-    // TODO: Test dumping .debug_gnu_pubtypes section.
-    Y.GNUPubTypes = dumpPubSection(DCtx, GNUPubTypes, /*IsGNUStyle=*/true);
+  Y.PubNames =
+      dumpPubSection(DCtx, D.getPubnamesSection(), /*IsGNUStyle=*/false);
+  Y.PubTypes =
+      dumpPubSection(DCtx, D.getPubtypesSection(), /*IsGNUStyle=*/false);
+  // TODO: Test dumping .debug_gnu_pubnames section.
+  Y.GNUPubNames =
+      dumpPubSection(DCtx, D.getGnuPubnamesSection(), /*IsGNUStyle=*/true);
+  // TODO: Test dumping .debug_gnu_pubtypes section.
+  Y.GNUPubTypes =
+      dumpPubSection(DCtx, D.getGnuPubtypesSection(), /*IsGNUStyle=*/true);
 }
 
 void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {

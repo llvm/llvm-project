@@ -7317,7 +7317,7 @@ in :ref:`amdgpu-processors`.
 Set to zero each time a
 :ref:`amdgpu-amdhsa-assembler-directive-amdgpu_hsa_kernel` directive is
 encountered. At each instruction, if the current value of this symbol is less
-than or equal to the maximum VPGR number explicitly referenced within that
+than or equal to the maximum VGPR number explicitly referenced within that
 instruction then the symbol value is updated to equal that VGPR number plus
 one.
 
@@ -7327,7 +7327,7 @@ one.
 Set to zero each time a
 :ref:`amdgpu-amdhsa-assembler-directive-amdgpu_hsa_kernel` directive is
 encountered. At each instruction, if the current value of this symbol is less
-than or equal to the maximum VPGR number explicitly referenced within that
+than or equal to the maximum VGPR number explicitly referenced within that
 instruction then the symbol value is updated to equal that SGPR number plus
 one.
 
@@ -7494,7 +7494,7 @@ of this symbol is less than or equal to the maximum VGPR number explicitly
 referenced within that instruction then the symbol value is updated to equal
 that VGPR number plus one.
 
-May be used to set the `.amdhsa_next_free_vpgr` directive in
+May be used to set the `.amdhsa_next_free_vgpr` directive in
 :ref:`amdhsa-kernel-directives-table`.
 
 May be set at any time, e.g. manually set to zero at the start of each kernel.

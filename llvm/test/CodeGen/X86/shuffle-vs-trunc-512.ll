@@ -233,8 +233,7 @@ define void @shuffle_v64i8_to_v8i8(<64 x i8>* %L, <8 x i8>* %S) nounwind {
 ; AVX512-LABEL: shuffle_v64i8_to_v8i8:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm0
-; AVX512-NEXT:    vpmovqb %zmm0, %xmm0
-; AVX512-NEXT:    vmovq %xmm0, (%rsi)
+; AVX512-NEXT:    vpmovqb %zmm0, (%rsi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %vec = load <64 x i8>, <64 x i8>* %L
@@ -500,7 +499,6 @@ define <16 x i8> @trunc_v8i64_to_v8i8_return_v16i8(<8 x i64> %vec) nounwind {
 ; AVX512-LABEL: trunc_v8i64_to_v8i8_return_v16i8:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovqb %zmm0, %xmm0
-; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %truncated = trunc <8 x i64> %vec to <8 x i8>
