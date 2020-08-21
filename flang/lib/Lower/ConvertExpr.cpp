@@ -710,8 +710,19 @@ private:
         {len}, fir::CharacterType::get(builder.getContext(), KIND));
     auto consLit = [&]() -> fir::StringLitOp {
       auto context = builder.getContext();
-      auto strAttr =
-          mlir::StringAttr::get((const char *)value.c_str(), context);
+      mlir::Attribute strAttr;
+      if constexpr (std::is_same_v<std::decay_t<decltype(value)>,
+                                   std::string>) {
+        strAttr = mlir::StringAttr::get(value, context);
+      } else {
+        using ET = typename std::decay_t<decltype(value)>::value_type;
+        std::int64_t size = static_cast<std::int64_t>(value.size());
+        auto shape = mlir::VectorType::get(
+            llvm::ArrayRef<std::int64_t>{size},
+            mlir::IntegerType::get(sizeof(ET) * 8, builder.getContext()));
+        strAttr = mlir::DenseElementsAttr::get(
+            shape, llvm::ArrayRef<ET>{value.data(), value.size()});
+      }
       auto valTag = mlir::Identifier::get(fir::StringLitOp::value(), context);
       mlir::NamedAttribute dataAttr(valTag, strAttr);
       auto sizeTag = mlir::Identifier::get(fir::StringLitOp::size(), context);
@@ -1604,6 +1615,7 @@ fir::ExtendedValue Fortran::lower::createSomeExtendedAddress(
 fir::ExtendedValue Fortran::lower::createStringLiteral(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     llvm::StringRef str, uint64_t len) {
+  assert(str.size() == len);
   Fortran::lower::SymMap unused1;
   Fortran::lower::ExpressionContext unused2;
   return ExprLowering{loc, converter, unused1, unused2}.genStringLit(str, len);
