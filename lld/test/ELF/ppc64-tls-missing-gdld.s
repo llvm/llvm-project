@@ -4,23 +4,23 @@
 # RUN: not ld.lld --shared %t1.o -o /dev/null 2>&1 | FileCheck %s
 # RUN: not ld.lld --shared %t2.o -o /dev/null 2>&1 | FileCheck %s
 
-# CHECK:      ld.lld: error: Call to __tls_get_addr is missing a R_PPC64_TLSGD/R_PPC64_TLSLD relocation.
+# CHECK:      ld.lld: error: call to __tls_get_addr is missing a R_PPC64_TLSGD/R_PPC64_TLSLD relocation
 # CHECK-NEXT:   defined in {{.*}}.o
 # CHECK-NEXT:   referenced by {{.*}}.o:(.text+0x8)
 
-# CHECK:      ld.lld: error: Call to __tls_get_addr is missing a R_PPC64_TLSGD/R_PPC64_TLSLD relocation.
+# CHECK:      ld.lld: error: call to __tls_get_addr is missing a R_PPC64_TLSGD/R_PPC64_TLSLD relocation
 # CHECK-NEXT:   defined in {{.*}}.o
 # CHECK-NEXT:   referenced by {{.*}}.o:(.text+0x18)
 
-# CHECK:      ld.lld: error: Call to __tls_get_addr is missing a R_PPC64_TLSGD/R_PPC64_TLSLD relocation.
+# CHECK:      ld.lld: error: call to __tls_get_addr is missing a R_PPC64_TLSGD/R_PPC64_TLSLD relocation
 # CHECK-NEXT:   defined in {{.*}}.o
 # CHECK-NEXT:   referenced by {{.*}}.o:(.text+0x28)
 
-# CHECK:      ld.lld: error: Call to __tls_get_addr is missing a R_PPC64_TLSGD/R_PPC64_TLSLD relocation.
+# CHECK:      ld.lld: error: call to __tls_get_addr is missing a R_PPC64_TLSGD/R_PPC64_TLSLD relocation
 # CHECK-NEXT:   defined in {{.*}}.o
 # CHECK-NEXT:   referenced by {{.*}}.o:(.text+0x38)
 
-# CHECK:      ld.lld: error: Call to __tls_get_addr is missing a R_PPC64_TLSGD/R_PPC64_TLSLD relocation.
+# CHECK:      ld.lld: error: call to __tls_get_addr is missing a R_PPC64_TLSGD/R_PPC64_TLSLD relocation
 # CHECK-NEXT:   defined in {{.*}}.o
 # CHECK-NEXT:   referenced by {{.*}}.o:(.text+0x40)
 
