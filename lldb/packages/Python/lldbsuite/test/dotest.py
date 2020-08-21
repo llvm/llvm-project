@@ -416,10 +416,6 @@ def parseOptionsAndInitTestdirs():
 
     if args.replay_path:
         configuration.replay_path = args.replay_path
-
-    # rerun-related arguments
-    configuration.rerun_all_issues = args.rerun_all_issues
-
     if args.lldb_platform_name:
         configuration.lldb_platform_name = args.lldb_platform_name
     if args.lldb_platform_url:
