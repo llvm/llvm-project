@@ -187,6 +187,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     CodeObjectV3(false),
     UnalignedScratchAccess(false),
     UnalignedBufferAccess(false),
+    UnalignedAccessMode(false),
 
     HasApertureRegs(false),
     EnableXNACK(false),
@@ -257,6 +258,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     HasUnpackedD16VMem(false),
     LDSMisalignedBug(false),
     HasMFMAInlineLiteralBug(false),
+    UnalignedDSAccess(false),
 
     ScalarizeGlobal(false),
 
