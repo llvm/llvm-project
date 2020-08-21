@@ -160,6 +160,9 @@ X86 Support in Clang
   ``_popcnt64``, ``__popcntd`` and ``__popcntq``  may now be used within
   constexpr expressions.
 
+- The x86 intrinsics ``__bswap``, ``__bswapd``, ``__bswap64`` and ``__bswapq``
+  may now be used within constexpr expressions.
+
 Internal API Changes
 --------------------
 
