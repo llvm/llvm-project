@@ -2978,25 +2978,34 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddress(SDValue Op,
   }
 
   if (Model == TLSModel::InitialExec) {
-    SDValue TGA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, 0);
-    SDValue TGATLS = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0,
-                                                PPCII::MO_TLS);
-    SDValue GOTPtr;
-    if (is64bit) {
-      setUsesTOCBasePtr(DAG);
-      SDValue GOTReg = DAG.getRegister(PPC::X2, MVT::i64);
-      GOTPtr = DAG.getNode(PPCISD::ADDIS_GOT_TPREL_HA, dl,
-                           PtrVT, GOTReg, TGA);
+    bool IsPCRel = Subtarget.isUsingPCRelativeCalls();
+    SDValue TGA = DAG.getTargetGlobalAddress(
+        GV, dl, PtrVT, 0, IsPCRel ? PPCII::MO_GOT_TPREL_PCREL_FLAG : 0);
+    SDValue TGATLS = DAG.getTargetGlobalAddress(
+        GV, dl, PtrVT, 0,
+        IsPCRel ? (PPCII::MO_TLS | PPCII::MO_PCREL_FLAG) : PPCII::MO_TLS);
+    SDValue TPOffset;
+    if (IsPCRel) {
+      SDValue MatPCRel = DAG.getNode(PPCISD::MAT_PCREL_ADDR, dl, PtrVT, TGA);
+      TPOffset = DAG.getLoad(MVT::i64, dl, DAG.getEntryNode(), MatPCRel,
+                             MachinePointerInfo());
     } else {
-      if (!TM.isPositionIndependent())
-        GOTPtr = DAG.getNode(PPCISD::PPC32_GOT, dl, PtrVT);
-      else if (picLevel == PICLevel::SmallPIC)
-        GOTPtr = DAG.getNode(PPCISD::GlobalBaseReg, dl, PtrVT);
-      else
-        GOTPtr = DAG.getNode(PPCISD::PPC32_PICGOT, dl, PtrVT);
+      SDValue GOTPtr;
+      if (is64bit) {
+        setUsesTOCBasePtr(DAG);
+        SDValue GOTReg = DAG.getRegister(PPC::X2, MVT::i64);
+        GOTPtr =
+            DAG.getNode(PPCISD::ADDIS_GOT_TPREL_HA, dl, PtrVT, GOTReg, TGA);
+      } else {
+        if (!TM.isPositionIndependent())
+          GOTPtr = DAG.getNode(PPCISD::PPC32_GOT, dl, PtrVT);
+        else if (picLevel == PICLevel::SmallPIC)
+          GOTPtr = DAG.getNode(PPCISD::GlobalBaseReg, dl, PtrVT);
+        else
+          GOTPtr = DAG.getNode(PPCISD::PPC32_PICGOT, dl, PtrVT);
+      }
+      TPOffset = DAG.getNode(PPCISD::LD_GOT_TPREL_L, dl, PtrVT, TGA, GOTPtr);
     }
-    SDValue TPOffset = DAG.getNode(PPCISD::LD_GOT_TPREL_L, dl,
-                                   PtrVT, TGA, GOTPtr);
     return DAG.getNode(PPCISD::ADD_TLS, dl, PtrVT, TPOffset, TGATLS);
   }
 
