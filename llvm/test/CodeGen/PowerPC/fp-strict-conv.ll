@@ -178,4 +178,152 @@ entry:
   ret i32 %conv
 }
 
+define double @i32_to_d(i32 signext %m) #0 {
+; CHECK-LABEL: i32_to_d:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mtfprwa f0, r3
+; CHECK-NEXT:    xscvsxddp f1, f0
+; CHECK-NEXT:    blr
+;
+; NOVSX-LABEL: i32_to_d:
+; NOVSX:       # %bb.0: # %entry
+; NOVSX-NEXT:    addi r4, r1, -4
+; NOVSX-NEXT:    stw r3, -4(r1)
+; NOVSX-NEXT:    lfiwax f0, 0, r4
+; NOVSX-NEXT:    fcfid f1, f0
+; NOVSX-NEXT:    blr
+entry:
+  %conv = tail call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret double %conv
+}
+
+define double @i64_to_d(i64 %m) #0 {
+; CHECK-LABEL: i64_to_d:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    xscvsxddp f1, f0
+; CHECK-NEXT:    blr
+;
+; NOVSX-LABEL: i64_to_d:
+; NOVSX:       # %bb.0: # %entry
+; NOVSX-NEXT:    std r3, -8(r1)
+; NOVSX-NEXT:    lfd f0, -8(r1)
+; NOVSX-NEXT:    fcfid f1, f0
+; NOVSX-NEXT:    blr
+entry:
+  %conv = tail call double @llvm.experimental.constrained.sitofp.f64.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret double %conv
+}
+
+define double @u32_to_d(i32 zeroext %m) #0 {
+; CHECK-LABEL: u32_to_d:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mtfprwz f0, r3
+; CHECK-NEXT:    xscvuxddp f1, f0
+; CHECK-NEXT:    blr
+;
+; NOVSX-LABEL: u32_to_d:
+; NOVSX:       # %bb.0: # %entry
+; NOVSX-NEXT:    addi r4, r1, -4
+; NOVSX-NEXT:    stw r3, -4(r1)
+; NOVSX-NEXT:    lfiwzx f0, 0, r4
+; NOVSX-NEXT:    fcfidu f1, f0
+; NOVSX-NEXT:    blr
+entry:
+  %conv = tail call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret double %conv
+}
+
+define double @u64_to_d(i64 %m) #0 {
+; CHECK-LABEL: u64_to_d:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    xscvuxddp f1, f0
+; CHECK-NEXT:    blr
+;
+; NOVSX-LABEL: u64_to_d:
+; NOVSX:       # %bb.0: # %entry
+; NOVSX-NEXT:    std r3, -8(r1)
+; NOVSX-NEXT:    lfd f0, -8(r1)
+; NOVSX-NEXT:    fcfidu f1, f0
+; NOVSX-NEXT:    blr
+entry:
+  %conv = tail call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret double %conv
+}
+
+define float @i32_to_f(i32 signext %m) #0 {
+; CHECK-LABEL: i32_to_f:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mtfprwa f0, r3
+; CHECK-NEXT:    xscvsxdsp f1, f0
+; CHECK-NEXT:    blr
+;
+; NOVSX-LABEL: i32_to_f:
+; NOVSX:       # %bb.0: # %entry
+; NOVSX-NEXT:    addi r4, r1, -4
+; NOVSX-NEXT:    stw r3, -4(r1)
+; NOVSX-NEXT:    lfiwax f0, 0, r4
+; NOVSX-NEXT:    fcfids f1, f0
+; NOVSX-NEXT:    blr
+entry:
+  %conv = tail call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret float %conv
+}
+
+define float @i64_to_f(i64 %m) #0 {
+; CHECK-LABEL: i64_to_f:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    xscvsxdsp f1, f0
+; CHECK-NEXT:    blr
+;
+; NOVSX-LABEL: i64_to_f:
+; NOVSX:       # %bb.0: # %entry
+; NOVSX-NEXT:    std r3, -8(r1)
+; NOVSX-NEXT:    lfd f0, -8(r1)
+; NOVSX-NEXT:    fcfids f1, f0
+; NOVSX-NEXT:    blr
+entry:
+  %conv = tail call float @llvm.experimental.constrained.sitofp.f32.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret float %conv
+}
+
+define float @u32_to_f(i32 zeroext %m) #0 {
+; CHECK-LABEL: u32_to_f:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mtfprwz f0, r3
+; CHECK-NEXT:    xscvuxdsp f1, f0
+; CHECK-NEXT:    blr
+;
+; NOVSX-LABEL: u32_to_f:
+; NOVSX:       # %bb.0: # %entry
+; NOVSX-NEXT:    addi r4, r1, -4
+; NOVSX-NEXT:    stw r3, -4(r1)
+; NOVSX-NEXT:    lfiwzx f0, 0, r4
+; NOVSX-NEXT:    fcfidus f1, f0
+; NOVSX-NEXT:    blr
+entry:
+  %conv = tail call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret float %conv
+}
+
+define float @u64_to_f(i64 %m) #0 {
+; CHECK-LABEL: u64_to_f:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    xscvuxdsp f1, f0
+; CHECK-NEXT:    blr
+;
+; NOVSX-LABEL: u64_to_f:
+; NOVSX:       # %bb.0: # %entry
+; NOVSX-NEXT:    std r3, -8(r1)
+; NOVSX-NEXT:    lfd f0, -8(r1)
+; NOVSX-NEXT:    fcfidus f1, f0
+; NOVSX-NEXT:    blr
+entry:
+  %conv = tail call float @llvm.experimental.constrained.uitofp.f32.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret float %conv
+}
+
 attributes #0 = { strictfp }
