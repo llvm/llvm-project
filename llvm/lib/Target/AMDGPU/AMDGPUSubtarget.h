@@ -315,6 +315,7 @@ protected:
   bool CodeObjectV3;
   bool UnalignedScratchAccess;
   bool UnalignedBufferAccess;
+  bool UnalignedAccessMode;
   bool HasApertureRegs;
   bool EnableXNACK;
   bool DoesNotSupportXNACK;
@@ -394,6 +395,7 @@ protected:
   bool HasMFMAInlineLiteralBug;
   bool HasVertexCache;
   short TexVTXClauseSize;
+  bool UnalignedDSAccess;
   bool ScalarizeGlobal;
 
   bool HasVcmpxPermlaneHazard;
@@ -697,6 +699,14 @@ public:
 
   bool hasUnalignedScratchAccess() const {
     return UnalignedScratchAccess;
+  }
+
+  bool hasUnalignedAccessMode() const {
+    return UnalignedAccessMode;
+  }
+
+  bool hasUnalignedDSAccess() const {
+    return UnalignedDSAccess;
   }
 
   bool hasApertureRegs() const {

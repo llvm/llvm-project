@@ -509,8 +509,8 @@ define amdgpu_kernel void @write2_sgemm_sequence(float addrspace(1)* %C, i32 %ld
 ; CI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; GCN: ds_write2_b32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}} offset0:2 offset1:3{{$}}
-; GCN: ds_write2_b32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}} offset1:1{{$}}
+; GCN-DAG: ds_write2_b32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}} offset0:2 offset1:3{{$}}
+; GCN-DAG: ds_write2_b32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}} offset1:1{{$}}
 define amdgpu_kernel void @simple_write2_v4f32_superreg_align4(<4 x float> addrspace(3)* %out, <4 x float> addrspace(1)* %in) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %in
