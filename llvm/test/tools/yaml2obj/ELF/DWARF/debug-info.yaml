@@ -115,95 +115,96 @@ FileHeader:
   Type:  ET_EXEC
 DWARF:
   debug_abbrev:
-    - Code:     1
-      Tag:      DW_TAG_compile_unit
-      Children: DW_CHILDREN_no
-      Attributes:
-        - Attribute: 0x01
-          Form:      DW_FORM_addr           ## 0x01
-        - Attribute: 0x01
-          Form:      DW_FORM_block2         ## 0x03
-        - Attribute: 0x01
-          Form:      DW_FORM_block4         ## 0x04
-        - Attribute: 0x01
-          Form:      DW_FORM_data2          ## 0x05
-        - Attribute: 0x01
-          Form:      DW_FORM_data4          ## 0x06
-        - Attribute: 0x01
-          Form:      DW_FORM_data8          ## 0x07
-        - Attribute: 0x01
-          Form:      DW_FORM_string         ## 0x08
-        - Attribute: 0x01
-          Form:      DW_FORM_block          ## 0x09
-        - Attribute: 0x01
-          Form:      DW_FORM_block1         ## 0x0a
-        - Attribute: 0x01
-          Form:      DW_FORM_data1          ## 0x0b
-        - Attribute: 0x01
-          Form:      DW_FORM_flag           ## 0x0c
-        - Attribute: 0x01
-          Form:      DW_FORM_sdata          ## 0x0d
-        - Attribute: 0x01
-          Form:      DW_FORM_strp           ## 0x0e
-        - Attribute: 0x01
-          Form:      DW_FORM_udata          ## 0x0f
-        - Attribute: 0x01
-          Form:      DW_FORM_ref_addr       ## 0x10
-        - Attribute: 0x01
-          Form:      DW_FORM_ref1           ## 0x11
-        - Attribute: 0x01
-          Form:      DW_FORM_ref2           ## 0x12
-        - Attribute: 0x01
-          Form:      DW_FORM_ref4           ## 0x13
-        - Attribute: 0x01
-          Form:      DW_FORM_ref8           ## 0x14
-        - Attribute: 0x01
-          Form:      DW_FORM_ref_udata      ## 0x15
-        - Attribute: 0x01
-          Form:      DW_FORM_indirect       ## 0x16
-        - Attribute: 0x01
-          Form:      DW_FORM_sec_offset     ## 0x17
-        - Attribute: 0x01
-          Form:      DW_FORM_exprloc        ## 0x18
-        - Attribute: 0x01
-          Form:      DW_FORM_strx           ## 0x1a
-        - Attribute: 0x01
-          Form:      DW_FORM_addrx          ## 0x1b
-        - Attribute: 0x01
-          Form:      DW_FORM_ref_sup4       ## 0x1c
-        - Attribute: 0x01
-          Form:      DW_FORM_strp_sup       ## 0x1d
-        - Attribute: 0x01
-          Form:      DW_FORM_data16         ## 0x1e
-        - Attribute: 0x01
-          Form:      DW_FORM_line_strp      ## 0x1f
-        - Attribute: 0x01
-          Form:      DW_FORM_ref_sig8       ## 0x20
-        - Attribute: 0x01
-          Form:      DW_FORM_implicit_const ## 0x21
-          Value:     0x01
-        - Attribute: 0x01
-          Form:      DW_FORM_loclistx       ## 0x22
-        - Attribute: 0x01
-          Form:      DW_FORM_rnglistx       ## 0x23
-        - Attribute: 0x01
-          Form:      DW_FORM_ref_sup8       ## 0x24
-        - Attribute: 0x01
-          Form:      DW_FORM_strx1          ## 0x25
-        - Attribute: 0x01
-          Form:      DW_FORM_strx2          ## 0x26
-        - Attribute: 0x01
-          Form:      DW_FORM_strx3          ## 0x27
-        - Attribute: 0x01
-          Form:      DW_FORM_strx4          ## 0x28
-        - Attribute: 0x01
-          Form:      DW_FORM_addrx1         ## 0x29
-        - Attribute: 0x01
-          Form:      DW_FORM_addrx2         ## 0x2a
-        - Attribute: 0x01
-          Form:      DW_FORM_addrx3         ## 0x2b
-        - Attribute: 0x01
-          Form:      DW_FORM_addrx4         ## 0x2c
+    - Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: 0x01
+              Form:      DW_FORM_addr           ## 0x01
+            - Attribute: 0x01
+              Form:      DW_FORM_block2         ## 0x03
+            - Attribute: 0x01
+              Form:      DW_FORM_block4         ## 0x04
+            - Attribute: 0x01
+              Form:      DW_FORM_data2          ## 0x05
+            - Attribute: 0x01
+              Form:      DW_FORM_data4          ## 0x06
+            - Attribute: 0x01
+              Form:      DW_FORM_data8          ## 0x07
+            - Attribute: 0x01
+              Form:      DW_FORM_string         ## 0x08
+            - Attribute: 0x01
+              Form:      DW_FORM_block          ## 0x09
+            - Attribute: 0x01
+              Form:      DW_FORM_block1         ## 0x0a
+            - Attribute: 0x01
+              Form:      DW_FORM_data1          ## 0x0b
+            - Attribute: 0x01
+              Form:      DW_FORM_flag           ## 0x0c
+            - Attribute: 0x01
+              Form:      DW_FORM_sdata          ## 0x0d
+            - Attribute: 0x01
+              Form:      DW_FORM_strp           ## 0x0e
+            - Attribute: 0x01
+              Form:      DW_FORM_udata          ## 0x0f
+            - Attribute: 0x01
+              Form:      DW_FORM_ref_addr       ## 0x10
+            - Attribute: 0x01
+              Form:      DW_FORM_ref1           ## 0x11
+            - Attribute: 0x01
+              Form:      DW_FORM_ref2           ## 0x12
+            - Attribute: 0x01
+              Form:      DW_FORM_ref4           ## 0x13
+            - Attribute: 0x01
+              Form:      DW_FORM_ref8           ## 0x14
+            - Attribute: 0x01
+              Form:      DW_FORM_ref_udata      ## 0x15
+            - Attribute: 0x01
+              Form:      DW_FORM_indirect       ## 0x16
+            - Attribute: 0x01
+              Form:      DW_FORM_sec_offset     ## 0x17
+            - Attribute: 0x01
+              Form:      DW_FORM_exprloc        ## 0x18
+            - Attribute: 0x01
+              Form:      DW_FORM_strx           ## 0x1a
+            - Attribute: 0x01
+              Form:      DW_FORM_addrx          ## 0x1b
+            - Attribute: 0x01
+              Form:      DW_FORM_ref_sup4       ## 0x1c
+            - Attribute: 0x01
+              Form:      DW_FORM_strp_sup       ## 0x1d
+            - Attribute: 0x01
+              Form:      DW_FORM_data16         ## 0x1e
+            - Attribute: 0x01
+              Form:      DW_FORM_line_strp      ## 0x1f
+            - Attribute: 0x01
+              Form:      DW_FORM_ref_sig8       ## 0x20
+            - Attribute: 0x01
+              Form:      DW_FORM_implicit_const ## 0x21
+              Value:     0x01
+            - Attribute: 0x01
+              Form:      DW_FORM_loclistx       ## 0x22
+            - Attribute: 0x01
+              Form:      DW_FORM_rnglistx       ## 0x23
+            - Attribute: 0x01
+              Form:      DW_FORM_ref_sup8       ## 0x24
+            - Attribute: 0x01
+              Form:      DW_FORM_strx1          ## 0x25
+            - Attribute: 0x01
+              Form:      DW_FORM_strx2          ## 0x26
+            - Attribute: 0x01
+              Form:      DW_FORM_strx3          ## 0x27
+            - Attribute: 0x01
+              Form:      DW_FORM_strx4          ## 0x28
+            - Attribute: 0x01
+              Form:      DW_FORM_addrx1         ## 0x29
+            - Attribute: 0x01
+              Form:      DW_FORM_addrx2         ## 0x2a
+            - Attribute: 0x01
+              Form:      DW_FORM_addrx3         ## 0x2b
+            - Attribute: 0x01
+              Form:      DW_FORM_addrx4         ## 0x2c
   debug_info:
     - Length:     0x1234
       Version:    5
@@ -266,20 +267,20 @@ DWARF:
             - Value: 0x1234             ## DW_FORM_addrx2
             - Value: 0x123456           ## DW_FORM_addrx3 (unimplemented)
             - Value: 0x12345678         ## DW_FORM_addrx4
-    - Length:     0x1234
-      Version:    5
+    - Length:        0x1234
+      Version:       5
       ## Test another unit type.
-      UnitType:   DW_UT_compile
-      AbbrOffset: 0x1234
-      AddrSize:   4
+      UnitType:      DW_UT_compile
+      AbbrOffset:    0x1234
+      AddrSize:      4
       Entries:
         - AbbrCode: 0
           Values:   []
-    - Length:     0x5678
+    - Length:        0x5678
       ## Test DWARFv4
-      Version:    4
-      AbbrOffset: 0x5678
-      AddrSize:   4
+      Version:       4
+      AbbrOffset:    0x5678
+      AddrSize:      4
       Entries:
         - AbbrCode: 1
           Values:
@@ -440,10 +441,11 @@ Sections:
     Size: 0x10
 DWARF:
   debug_abbrev:
-    - Code:       1
-      Tag:        DW_TAG_compile_unit
-      Children:   DW_CHILDREN_no
-      Attributes: []
+    - Table:
+        - Code:       1
+          Tag:        DW_TAG_compile_unit
+          Children:   DW_CHILDREN_no
+          Attributes: []
   debug_info:
     - Length:     0x1234
       Version:    5
@@ -467,10 +469,11 @@ Sections:
     Content: "00"
 DWARF:
   debug_abbrev:
-    - Code:       1
-      Tag:        DW_TAG_compile_unit
-      Children:   DW_CHILDREN_no
-      Attributes: []
+    - Table:
+        - Code:       1
+          Tag:        DW_TAG_compile_unit
+          Children:   DW_CHILDREN_no
+          Attributes: []
   debug_info:
     - Length:     0x1234
       Version:    5
@@ -532,10 +535,11 @@ Sections:
     Type:         SHT_STRTAB
 DWARF:
   debug_abbrev:
-    - Code:       1
-      Tag:        DW_TAG_compile_unit
-      Children:   DW_CHILDREN_no
-      Attributes: []
+    - Table:
+        - Code:       1
+          Tag:        DW_TAG_compile_unit
+          Children:   DW_CHILDREN_no
+          Attributes: []
   debug_info:
     - Length:     0x1234
       Version:    5
@@ -597,20 +601,21 @@ FileHeader:
   Type:  ET_EXEC
 DWARF:
   debug_abbrev:
-    - Tag:        DW_TAG_compile_unit
-      Children:   DW_CHILDREN_yes
-      Attributes:
-        - Attribute: DW_AT_low_pc
-          Form:      DW_FORM_data4
-        - Attribute: DW_AT_high_pc
-          Form:      DW_FORM_data2
-    - Tag:        DW_TAG_subprogram
-      Children:   DW_CHILDREN_no
-      Attributes:
-        - Attribute: DW_AT_low_pc
-          Form:      DW_FORM_data2
-        - Attribute: DW_AT_high_pc
-          Form:      DW_FORM_data4
+    - Table:
+        - Tag:        DW_TAG_compile_unit
+          Children:   DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_data4
+            - Attribute: DW_AT_high_pc
+              Form:      DW_FORM_data2
+        - Tag:        DW_TAG_subprogram
+          Children:   DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_data2
+            - Attribute: DW_AT_high_pc
+              Form:      DW_FORM_data4
   debug_info:
     - Length:     0x1234
       Version:    5
@@ -647,6 +652,8 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_EXEC
 DWARF:
+  debug_abbrev:
+    - Table: []
   debug_info:
     - Length:     0x1234
       Version:    5
@@ -774,34 +781,35 @@ DWARF:
     - "/home/v/x/llvm/playground"
     - "main"
   debug_abbrev:
-    - Code:     1
-      Tag:      DW_TAG_compile_unit
-      Children: DW_CHILDREN_yes
-      Attributes:
-        - Attribute: DW_AT_producer
-          Form:      DW_FORM_strp
-        - Attribute: DW_AT_language
-          Form:      DW_FORM_data2
-        - Attribute: DW_AT_name
-          Form:      DW_FORM_strp
-        - Attribute: DW_AT_stmt_list
-          Form:      DW_FORM_sec_offset
-        - Attribute: DW_AT_comp_dir
-          Form:      DW_FORM_strp
-        - Attribute: DW_AT_low_pc
-          Form:      DW_FORM_addr
-        - Attribute: DW_AT_high_pc
-          Form:      DW_FORM_data4
-    - Code: 2
-      Tag:  DW_TAG_subprogram
-      Children: DW_CHILDREN_no
-      Attributes:
-        - Attribute: DW_AT_low_pc
-          Form:      DW_FORM_addr
-        - Attribute: DW_AT_high_pc
-          Form:      DW_FORM_data4
-        - Attribute: DW_AT_name
-          Form:      DW_FORM_strp
+    - Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_producer
+              Form:      DW_FORM_strp
+            - Attribute: DW_AT_language
+              Form:      DW_FORM_data2
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_strp
+            - Attribute: DW_AT_stmt_list
+              Form:      DW_FORM_sec_offset
+            - Attribute: DW_AT_comp_dir
+              Form:      DW_FORM_strp
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form:      DW_FORM_data4
+        - Code: 2
+          Tag:  DW_TAG_subprogram
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form:      DW_FORM_data4
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_strp
   debug_info:
     - Version:    4
       AbbrOffset: 0x00
@@ -873,3 +881,24 @@ DWARF:
   debug_info:
     - Version:    4
       AbbrOffset: 0x00
+
+## n) Test that yaml2obj emits an error message when a compilation unit has values but there is no associated abbrev table.
+
+## RUN: not yaml2obj --docnum=16 %s 2>&1 | FileCheck %s --check-prefix=NO-ABBREV
+
+# NO-ABBREV: yaml2obj: error: non-empty compilation unit should have an associated abbrev table
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_info:
+    - Version:    4
+      AbbrOffset: 0x00
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x1234

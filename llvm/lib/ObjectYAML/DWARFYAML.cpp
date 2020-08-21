@@ -32,7 +32,7 @@ SetVector<StringRef> DWARFYAML::Data::getNonEmptySectionNames() const {
     SecNames.insert("debug_line");
   if (!DebugAddr.empty())
     SecNames.insert("debug_addr");
-  if (!AbbrevDecls.empty())
+  if (!DebugAbbrev.empty())
     SecNames.insert("debug_abbrev");
   if (!CompileUnits.empty())
     SecNames.insert("debug_info");
@@ -60,7 +60,7 @@ void MappingTraits<DWARFYAML::Data>::mapping(IO &IO, DWARFYAML::Data &DWARF) {
   DWARFYAML::DWARFContext DWARFCtx;
   IO.setContext(&DWARFCtx);
   IO.mapOptional("debug_str", DWARF.DebugStrings);
-  IO.mapOptional("debug_abbrev", DWARF.AbbrevDecls);
+  IO.mapOptional("debug_abbrev", DWARF.DebugAbbrev);
   IO.mapOptional("debug_aranges", DWARF.DebugAranges);
   if (!DWARF.DebugRanges.empty() || !IO.outputting())
     IO.mapOptional("debug_ranges", DWARF.DebugRanges);
@@ -76,6 +76,11 @@ void MappingTraits<DWARFYAML::Data>::mapping(IO &IO, DWARFYAML::Data &DWARF) {
   IO.mapOptional("debug_rnglists", DWARF.DebugRnglists);
   IO.mapOptional("debug_loclists", DWARF.DebugLoclists);
   IO.setContext(OldContext);
+}
+
+void MappingTraits<DWARFYAML::AbbrevTable>::mapping(
+    IO &IO, DWARFYAML::AbbrevTable &AbbrevTable) {
+  IO.mapOptional("Table", AbbrevTable.Table);
 }
 
 void MappingTraits<DWARFYAML::Abbrev>::mapping(IO &IO,
