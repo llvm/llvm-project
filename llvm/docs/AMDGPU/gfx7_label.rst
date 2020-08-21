@@ -34,4 +34,3 @@ Examples:
 
   label_3 = label_2 + 4
   label_4:
-
