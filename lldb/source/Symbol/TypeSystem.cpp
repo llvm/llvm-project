@@ -317,16 +317,16 @@ llvm::Expected<TypeSystem &> TypeSystemMap::GetTypeSystemForLanguage(
 
 llvm::Expected<TypeSystem &>
 TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
-                                        Module *module, bool can_create,
+                                        Target *target, bool can_create,
 // BEGIN: SWIFT
                                         const char *compiler_options) {
 // END: SWIFT
   if (can_create) {
     return GetTypeSystemForLanguage(
-        language, llvm::Optional<CreateCallback>([language, module,
+        language, llvm::Optional<CreateCallback>([language, target,
 // BEGIN SWIFT
                                                   compiler_options]() {
-          return TypeSystem::CreateInstance(language, module, compiler_options);
+          return TypeSystem::CreateInstance(language, target, compiler_options);
 // END SWIFT
         }));
   }
@@ -335,11 +335,11 @@ TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
 
 llvm::Expected<TypeSystem &>
 TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
-                                        Target *target, bool can_create) {
+                                        Module *module, bool can_create) {
   if (can_create) {
     return GetTypeSystemForLanguage(
-        language, llvm::Optional<CreateCallback>([language, target]() {
-          return TypeSystem::CreateInstance(language, target);
+        language, llvm::Optional<CreateCallback>([language, module]() {
+          return TypeSystem::CreateInstance(language, module);
         }));
   }
   return GetTypeSystemForLanguage(language);
