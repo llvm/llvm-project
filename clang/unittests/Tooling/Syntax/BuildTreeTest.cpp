@@ -24,27 +24,27 @@ int main() {}
 void foo() {}
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 |-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-main
+| |-'int'
+| |-SimpleDeclarator SimpleDeclaration_declarator
+| | |-'main'
 | | `-ParametersAndQualifiers
-| |   |-(
-| |   `-)
+| |   |-'(' OpenParen
+| |   `-')' CloseParen
 | `-CompoundStatement
-|   |-{
-|   `-}
+|   |-'{' OpenParen
+|   `-'}' CloseParen
 `-SimpleDeclaration
-  |-void
-  |-SimpleDeclarator
-  | |-foo
+  |-'void'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'foo'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   `-)
+  |   |-'(' OpenParen
+  |   `-')' CloseParen
   `-CompoundStatement
-    |-{
-    `-}
+    |-'{' OpenParen
+    `-'}' CloseParen
 )txt"));
 }
 
@@ -55,20 +55,20 @@ int a;
 int b = 42;
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 |-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | `-a
-| `-;
+| |-'int'
+| |-SimpleDeclarator SimpleDeclaration_declarator
+| | `-'a'
+| `-';'
 `-SimpleDeclaration
-  |-int
-  |-SimpleDeclarator
-  | |-b
-  | |-=
+  |-'int'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'b'
+  | |-'='
   | `-IntegerLiteralExpression
-  |   `-42
-  `-;
+  |   `-'42' LiteralToken
+  `-';'
 )txt"));
 }
 
@@ -78,26 +78,26 @@ TEST_P(SyntaxTreeTest, SimpleFunction) {
 void foo(int a, int b) {}
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-void
-  |-SimpleDeclarator
-  | |-foo
+  |-'void'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'foo'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   |-SimpleDeclaration
-  |   | |-int
-  |   | `-SimpleDeclarator
-  |   |   `-a
-  |   |-,
-  |   |-SimpleDeclaration
-  |   | |-int
-  |   | `-SimpleDeclarator
-  |   |   `-b
-  |   `-)
+  |   |-'(' OpenParen
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | |-'int'
+  |   | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   `-'a'
+  |   |-','
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | |-'int'
+  |   | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   `-'b'
+  |   `-')' CloseParen
   `-CompoundStatement
-    |-{
-    `-}
+    |-'{' OpenParen
+    `-'}' CloseParen
 )txt"));
 }
 
@@ -110,36 +110,36 @@ void test() {
 }
 )cpp",
       {R"txt(
-IfStatement
-|-if
-|-(
+IfStatement CompoundStatement_statement
+|-'if' IntroducerKeyword
+|-'('
 |-IntegerLiteralExpression
-| `-1
-|-)
-`-CompoundStatement
-  |-{
-  `-}
+| `-'1' LiteralToken
+|-')'
+`-CompoundStatement IfStatement_thenStatement
+  |-'{' OpenParen
+  `-'}' CloseParen
   )txt",
        R"txt(
-IfStatement
-|-if
-|-(
+IfStatement CompoundStatement_statement
+|-'if' IntroducerKeyword
+|-'('
 |-IntegerLiteralExpression
-| `-1
-|-)
-|-CompoundStatement
-| |-{
-| `-}
-|-else
-`-IfStatement
-  |-if
-  |-(
+| `-'1' LiteralToken
+|-')'
+|-CompoundStatement IfStatement_thenStatement
+| |-'{' OpenParen
+| `-'}' CloseParen
+|-'else' IfStatement_elseKeyword
+`-IfStatement IfStatement_elseStatement
+  |-'if' IntroducerKeyword
+  |-'('
   |-IntegerLiteralExpression
-  | `-0
-  |-)
-  `-CompoundStatement
-    |-{
-    `-}
+  | `-'0' LiteralToken
+  |-')'
+  `-CompoundStatement IfStatement_thenStatement
+    |-'{' OpenParen
+    `-'}' CloseParen
 )txt"}));
 }
 
@@ -151,15 +151,15 @@ void test() {
 }
 )cpp",
       {R"txt(
-ForStatement
-|-for
-|-(
-|-;
-|-;
-|-)
-`-CompoundStatement
-  |-{
-  `-}
+ForStatement CompoundStatement_statement
+|-'for' IntroducerKeyword
+|-'('
+|-';'
+|-';'
+|-')'
+`-CompoundStatement BodyStatement
+  |-'{' OpenParen
+  `-'}' CloseParen
 )txt"}));
 }
 
@@ -176,20 +176,20 @@ void test() {
 }
 )cpp",
       {R"txt(
-RangeBasedForStatement
-|-for
-|-(
+RangeBasedForStatement CompoundStatement_statement
+|-'for' IntroducerKeyword
+|-'('
 |-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | `-x
-| `-:
+| |-'int'
+| |-SimpleDeclarator SimpleDeclaration_declarator
+| | `-'x'
+| `-':'
 |-IdExpression
-| `-UnqualifiedId
-|   `-a
-|-)
-`-EmptyStatement
-  `-;
+| `-UnqualifiedId IdExpression_id
+|   `-'a'
+|-')'
+`-EmptyStatement BodyStatement
+  `-';'
 )txt"}));
 }
 
@@ -201,15 +201,15 @@ void test() {
 }
 )cpp",
       {R"txt(
-DeclarationStatement
+DeclarationStatement CompoundStatement_statement
 |-SimpleDeclaration
-| |-int
-| `-SimpleDeclarator
-|   |-a
-|   |-=
+| |-'int'
+| `-SimpleDeclarator SimpleDeclaration_declarator
+|   |-'a'
+|   |-'='
 |   `-IntegerLiteralExpression
-|     `-10
-`-;
+|     `-'10' LiteralToken
+`-';'
 )txt"}));
 }
 
@@ -224,25 +224,25 @@ void test() {
 }
 )cpp",
       {R"txt(
-SwitchStatement
-|-switch
-|-(
+SwitchStatement CompoundStatement_statement
+|-'switch' IntroducerKeyword
+|-'('
 |-IntegerLiteralExpression
-| `-1
-|-)
-`-CompoundStatement
-  |-{
-  |-CaseStatement
-  | |-case
-  | |-IntegerLiteralExpression
-  | | `-0
-  | |-:
-  | `-DefaultStatement
-  |   |-default
-  |   |-:
-  |   `-EmptyStatement
-  |     `-;
-  `-}
+| `-'1' LiteralToken
+|-')'
+`-CompoundStatement BodyStatement
+  |-'{' OpenParen
+  |-CaseStatement CompoundStatement_statement
+  | |-'case' IntroducerKeyword
+  | |-IntegerLiteralExpression CaseStatement_value
+  | | `-'0' LiteralToken
+  | |-':'
+  | `-DefaultStatement BodyStatement
+  |   |-'default' IntroducerKeyword
+  |   |-':'
+  |   `-EmptyStatement BodyStatement
+  |     `-';'
+  `-'}' CloseParen
 )txt"}));
 }
 
@@ -254,21 +254,21 @@ void test() {
 }
 )cpp",
       {R"txt(
-WhileStatement
-|-while
-|-(
+WhileStatement CompoundStatement_statement
+|-'while' IntroducerKeyword
+|-'('
 |-IntegerLiteralExpression
-| `-1
-|-)
-`-CompoundStatement
-  |-{
-  |-ContinueStatement
-  | |-continue
-  | `-;
-  |-BreakStatement
-  | |-break
-  | `-;
-  `-}
+| `-'1' LiteralToken
+|-')'
+`-CompoundStatement BodyStatement
+  |-'{' OpenParen
+  |-ContinueStatement CompoundStatement_statement
+  | |-'continue' IntroducerKeyword
+  | `-';'
+  |-BreakStatement CompoundStatement_statement
+  | |-'break' IntroducerKeyword
+  | `-';'
+  `-'}' CloseParen
 )txt"}));
 }
 
@@ -283,14 +283,14 @@ int test() {
 }
 )cpp",
       {R"txt(
-UnknownStatement
-|-foo
-|-:
+UnknownStatement CompoundStatement_statement
+|-'foo'
+|-':'
 `-ReturnStatement
-  |-return
-  |-IntegerLiteralExpression
-  | `-100
-  `-;
+  |-'return' IntroducerKeyword
+  |-IntegerLiteralExpression ReturnStatement_value
+  | `-'100' LiteralToken
+  `-';'
 )txt"}));
 }
 
