@@ -15,6 +15,8 @@
 // CHECK: llvm.call @runOnVulkan(%[[Vulkan_Runtime_ptr]]) : (!llvm.ptr<i8>) -> !llvm.void
 // CHECK: llvm.call @deinitVulkan(%[[Vulkan_Runtime_ptr]]) : (!llvm.ptr<i8>) -> !llvm.void
 
+// CHECK: llvm.func @bindMemRef1DHalf(!llvm.ptr<i8>, !llvm.i32, !llvm.i32, !llvm.ptr<struct<(ptr<i16>, ptr<i16>, i64, array<1 x i64>, array<1 x i64>)>>)
+
 module attributes {gpu.container_module} {
   llvm.func @malloc(!llvm.i64) -> !llvm.ptr<i8>
   llvm.func @foo() {
