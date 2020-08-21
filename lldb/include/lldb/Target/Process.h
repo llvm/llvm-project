@@ -739,6 +739,12 @@ public:
 
   void SetShouldDetach(bool b) { m_should_detach = b; }
 
+  /// Get the image vector for the current process.
+  ///
+  /// \return
+  ///     The constant reference to the member m_image_tokens.
+  const std::vector<lldb::addr_t>& GetImageTokens() { return m_image_tokens; }
+
   /// Get the image information address for the current process.
   ///
   /// Some runtimes have system functions that can help dynamic loaders locate
