@@ -7715,7 +7715,8 @@ struct AANoUndefImpl : AANoUndef {
       indicatePessimisticFixpoint();
     else if (isa<FreezeInst>(V))
       indicateOptimisticFixpoint();
-    else if (isGuaranteedNotToBeUndefOrPoison(&V))
+    else if (getPositionKind() != IRPosition::IRP_RETURNED &&
+             isGuaranteedNotToBeUndefOrPoison(&V))
       indicateOptimisticFixpoint();
     else
       AANoUndef::initialize(A);

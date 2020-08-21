@@ -234,7 +234,7 @@ define align 4 i8* @test7() #0 {
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test7()
-; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = tail call nonnull align 8 dereferenceable(1) i8* @f1()
+; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = tail call noundef nonnull align 8 dereferenceable(1) i8* @f1()
 ; IS__CGSCC_NPM-NEXT:    ret i8* [[C]]
 ;
   %c = tail call i8* @f1(i8* align 8 dereferenceable(1) @a1)
@@ -328,12 +328,12 @@ define align 4 i32* @test7b(i32* align 32 %p) #0 {
 ; TEST 8
 define void @test8_helper() {
 ; CHECK-LABEL: define {{[^@]+}}@test8_helper()
-; CHECK-NEXT:    [[PTR0:%.*]] = tail call noundef i32* @unknown()
-; CHECK-NEXT:    [[PTR1:%.*]] = tail call noundef align 4 i32* @unknown()
-; CHECK-NEXT:    [[PTR2:%.*]] = tail call noundef align 8 i32* @unknown()
-; CHECK-NEXT:    tail call void @test8(i32* noalias nocapture noundef readnone align 4 [[PTR1]], i32* noalias nocapture noundef readnone align 4 [[PTR1]], i32* noalias nocapture noundef readnone [[PTR0]])
-; CHECK-NEXT:    tail call void @test8(i32* noalias nocapture noundef readnone align 8 [[PTR2]], i32* noalias nocapture noundef readnone align 4 [[PTR1]], i32* noalias nocapture noundef readnone align 4 [[PTR1]])
-; CHECK-NEXT:    tail call void @test8(i32* noalias nocapture noundef readnone align 8 [[PTR2]], i32* noalias nocapture noundef readnone align 4 [[PTR1]], i32* noalias nocapture noundef readnone align 4 [[PTR1]])
+; CHECK-NEXT:    [[PTR0:%.*]] = tail call i32* @unknown()
+; CHECK-NEXT:    [[PTR1:%.*]] = tail call align 4 i32* @unknown()
+; CHECK-NEXT:    [[PTR2:%.*]] = tail call align 8 i32* @unknown()
+; CHECK-NEXT:    tail call void @test8(i32* noalias nocapture readnone align 4 [[PTR1]], i32* noalias nocapture readnone align 4 [[PTR1]], i32* noalias nocapture readnone [[PTR0]])
+; CHECK-NEXT:    tail call void @test8(i32* noalias nocapture readnone align 8 [[PTR2]], i32* noalias nocapture readnone align 4 [[PTR1]], i32* noalias nocapture readnone align 4 [[PTR1]])
+; CHECK-NEXT:    tail call void @test8(i32* noalias nocapture readnone align 8 [[PTR2]], i32* noalias nocapture readnone align 4 [[PTR1]], i32* noalias nocapture readnone align 4 [[PTR1]])
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = tail call i32* @unknown()
@@ -350,10 +350,10 @@ declare void @user_i32_ptr(i32* nocapture readnone) nounwind
 define internal void @test8(i32* %a, i32* %b, i32* %c) {
 ; IS__TUNIT____: Function Attrs: nounwind
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test8
-; IS__TUNIT____-SAME: (i32* noalias nocapture noundef readnone align 4 [[A:%.*]], i32* noalias nocapture noundef readnone align 4 [[B:%.*]], i32* noalias nocapture noundef readnone [[C:%.*]])
-; IS__TUNIT____-NEXT:    call void @user_i32_ptr(i32* noalias nocapture noundef readnone align 4 [[A]])
-; IS__TUNIT____-NEXT:    call void @user_i32_ptr(i32* noalias nocapture noundef readnone align 4 [[B]])
-; IS__TUNIT____-NEXT:    call void @user_i32_ptr(i32* noalias nocapture noundef readnone [[C]])
+; IS__TUNIT____-SAME: (i32* noalias nocapture readnone align 4 [[A:%.*]], i32* noalias nocapture readnone align 4 [[B:%.*]], i32* noalias nocapture readnone [[C:%.*]])
+; IS__TUNIT____-NEXT:    call void @user_i32_ptr(i32* noalias nocapture readnone align 4 [[A]])
+; IS__TUNIT____-NEXT:    call void @user_i32_ptr(i32* noalias nocapture readnone align 4 [[B]])
+; IS__TUNIT____-NEXT:    call void @user_i32_ptr(i32* noalias nocapture readnone [[C]])
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nounwind

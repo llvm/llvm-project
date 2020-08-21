@@ -314,8 +314,8 @@ define double* @ptr_scc_r1(double* %a, double* %r, double* %b) #0 {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@ptr_scc_r1
 ; IS__TUNIT____-SAME: (double* nofree readnone [[A:%.*]], double* nofree readnone returned [[R:%.*]], double* nocapture nofree readnone [[B:%.*]])
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call noundef double* @ptr_sink_r0(double* noalias nofree readnone "no-capture-maybe-returned" [[R]])
-; IS__TUNIT____-NEXT:    [[CALL1:%.*]] = call double* @ptr_scc_r2(double* noalias nofree readnone [[R]], double* noalias nofree readnone [[A]], double* noalias nofree noundef readnone [[CALL]])
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call double* @ptr_sink_r0(double* noalias nofree readnone "no-capture-maybe-returned" [[R]])
+; IS__TUNIT____-NEXT:    [[CALL1:%.*]] = call double* @ptr_scc_r2(double* noalias nofree readnone [[R]], double* noalias nofree readnone [[A]], double* noalias nofree readnone [[CALL]])
 ; IS__TUNIT____-NEXT:    ret double* [[CALL1]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree noinline nosync nounwind readnone uwtable
@@ -323,7 +323,7 @@ define double* @ptr_scc_r1(double* %a, double* %r, double* %b) #0 {
 ; IS__CGSCC____-SAME: (double* nofree readnone [[A:%.*]], double* nofree readnone returned [[R:%.*]], double* nocapture nofree readnone [[B:%.*]])
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call double* @ptr_sink_r0(double* noalias nofree readnone [[R]])
-; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call double* @ptr_scc_r2(double* noalias nofree readnone [[R]], double* noalias nofree readnone [[A]], double* noalias nofree noundef readnone [[CALL]])
+; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call double* @ptr_scc_r2(double* noalias nofree readnone [[R]], double* noalias nofree readnone [[A]], double* noalias nofree readnone [[CALL]])
 ; IS__CGSCC____-NEXT:    ret double* [[CALL1]]
 ;
 entry:
@@ -340,20 +340,20 @@ define double* @ptr_scc_r2(double* %a, double* %b, double* %r) #0 {
 ; IS__TUNIT____-NEXT:    [[CMP:%.*]] = icmp ugt double* [[A]], [[B]]
 ; IS__TUNIT____-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; IS__TUNIT____:       if.then:
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call noundef double* @ptr_sink_r0(double* noalias nofree readnone "no-capture-maybe-returned" [[R]])
-; IS__TUNIT____-NEXT:    [[CALL1:%.*]] = call double* @ptr_scc_r2(double* noalias nofree readnone [[B]], double* noalias nofree readnone [[A]], double* noalias nofree noundef readnone [[CALL]])
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call double* @ptr_sink_r0(double* noalias nofree readnone "no-capture-maybe-returned" [[R]])
+; IS__TUNIT____-NEXT:    [[CALL1:%.*]] = call double* @ptr_scc_r2(double* noalias nofree readnone [[B]], double* noalias nofree readnone [[A]], double* noalias nofree readnone [[CALL]])
 ; IS__TUNIT____-NEXT:    br label [[RETURN:%.*]]
 ; IS__TUNIT____:       if.end:
 ; IS__TUNIT____-NEXT:    [[CMP2:%.*]] = icmp ult double* [[A]], [[B]]
 ; IS__TUNIT____-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_END12:%.*]]
 ; IS__TUNIT____:       if.then3:
-; IS__TUNIT____-NEXT:    [[CALL4:%.*]] = call noundef double* @ptr_sink_r0(double* noalias nofree readnone "no-capture-maybe-returned" [[B]])
-; IS__TUNIT____-NEXT:    [[CALL5:%.*]] = call noundef double* @ptr_scc_r1(double* noalias nofree readnone [[A]], double* noalias nofree readnone [[B]], double* noalias nocapture nofree readnone undef)
-; IS__TUNIT____-NEXT:    [[CALL6:%.*]] = call noundef double* @ptr_scc_r2(double* noalias nofree readnone [[R]], double* noalias nofree readnone [[R]], double* noalias nofree readnone [[R]])
-; IS__TUNIT____-NEXT:    [[CALL7:%.*]] = call noundef double* @ptr_scc_r1(double* noalias nofree readnone [[A]], double* noalias nofree noundef readnone [[CALL6]], double* noalias nocapture nofree readnone undef)
-; IS__TUNIT____-NEXT:    [[CALL8:%.*]] = call noundef double* @ptr_scc_r2(double* noalias nofree readnone [[A]], double* noalias nofree readnone [[B]], double* noalias nofree readnone [[R]])
-; IS__TUNIT____-NEXT:    [[CALL9:%.*]] = call noundef double* @ptr_scc_r2(double* noalias nofree noundef readnone [[CALL5]], double* noalias nofree noundef readnone [[CALL7]], double* noalias nofree noundef readnone [[CALL8]])
-; IS__TUNIT____-NEXT:    [[CALL11:%.*]] = call double* @ptr_scc_r1(double* noalias nofree noundef readnone [[CALL4]], double* noalias nofree noundef readnone [[CALL9]], double* noalias nocapture nofree noundef readnone undef)
+; IS__TUNIT____-NEXT:    [[CALL4:%.*]] = call double* @ptr_sink_r0(double* noalias nofree readnone "no-capture-maybe-returned" [[B]])
+; IS__TUNIT____-NEXT:    [[CALL5:%.*]] = call double* @ptr_scc_r1(double* noalias nofree readnone [[A]], double* noalias nofree readnone [[B]], double* noalias nocapture nofree readnone undef)
+; IS__TUNIT____-NEXT:    [[CALL6:%.*]] = call double* @ptr_scc_r2(double* noalias nofree readnone [[R]], double* noalias nofree readnone [[R]], double* noalias nofree readnone [[R]])
+; IS__TUNIT____-NEXT:    [[CALL7:%.*]] = call double* @ptr_scc_r1(double* noalias nofree readnone [[A]], double* noalias nofree readnone [[CALL6]], double* noalias nocapture nofree readnone undef)
+; IS__TUNIT____-NEXT:    [[CALL8:%.*]] = call double* @ptr_scc_r2(double* noalias nofree readnone [[A]], double* noalias nofree readnone [[B]], double* noalias nofree readnone [[R]])
+; IS__TUNIT____-NEXT:    [[CALL9:%.*]] = call double* @ptr_scc_r2(double* noalias nofree readnone [[CALL5]], double* noalias nofree readnone [[CALL7]], double* noalias nofree readnone [[CALL8]])
+; IS__TUNIT____-NEXT:    [[CALL11:%.*]] = call double* @ptr_scc_r1(double* noalias nofree readnone [[CALL4]], double* noalias nofree readnone [[CALL9]], double* noalias nocapture nofree readnone undef)
 ; IS__TUNIT____-NEXT:    br label [[RETURN]]
 ; IS__TUNIT____:       if.end12:
 ; IS__TUNIT____-NEXT:    [[CMP13:%.*]] = icmp eq double* [[A]], [[B]]
@@ -378,19 +378,19 @@ define double* @ptr_scc_r2(double* %a, double* %b, double* %r) #0 {
 ; IS__CGSCC____-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; IS__CGSCC____:       if.then:
 ; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call double* @ptr_sink_r0(double* noalias nofree readnone [[R]])
-; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call double* @ptr_scc_r2(double* noalias nofree readnone [[B]], double* noalias nofree readnone [[A]], double* noalias nofree noundef readnone [[CALL]])
+; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call double* @ptr_scc_r2(double* noalias nofree readnone [[B]], double* noalias nofree readnone [[A]], double* noalias nofree readnone [[CALL]])
 ; IS__CGSCC____-NEXT:    br label [[RETURN:%.*]]
 ; IS__CGSCC____:       if.end:
 ; IS__CGSCC____-NEXT:    [[CMP2:%.*]] = icmp ult double* [[A]], [[B]]
 ; IS__CGSCC____-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_END12:%.*]]
 ; IS__CGSCC____:       if.then3:
 ; IS__CGSCC____-NEXT:    [[CALL4:%.*]] = call double* @ptr_sink_r0(double* noalias nofree readnone [[B]])
-; IS__CGSCC____-NEXT:    [[CALL5:%.*]] = call noundef double* @ptr_scc_r1(double* noalias nofree readnone [[A]], double* noalias nofree readnone [[B]], double* noalias nocapture nofree readnone undef)
-; IS__CGSCC____-NEXT:    [[CALL6:%.*]] = call noundef double* @ptr_scc_r2(double* noalias nofree readnone [[R]], double* noalias nofree readnone [[R]], double* noalias nofree readnone [[R]])
-; IS__CGSCC____-NEXT:    [[CALL7:%.*]] = call noundef double* @ptr_scc_r1(double* noalias nofree readnone [[A]], double* noalias nofree noundef readnone [[CALL6]], double* noalias nocapture nofree readnone undef)
-; IS__CGSCC____-NEXT:    [[CALL8:%.*]] = call noundef double* @ptr_scc_r2(double* noalias nofree readnone [[A]], double* noalias nofree readnone [[B]], double* noalias nofree readnone [[R]])
-; IS__CGSCC____-NEXT:    [[CALL9:%.*]] = call noundef double* @ptr_scc_r2(double* noalias nofree noundef readnone [[CALL5]], double* noalias nofree noundef readnone [[CALL7]], double* noalias nofree noundef readnone [[CALL8]])
-; IS__CGSCC____-NEXT:    [[CALL11:%.*]] = call double* @ptr_scc_r1(double* noalias nofree noundef readnone [[CALL4]], double* noalias nofree noundef readnone [[CALL9]], double* noalias nocapture nofree noundef readnone undef)
+; IS__CGSCC____-NEXT:    [[CALL5:%.*]] = call double* @ptr_scc_r1(double* noalias nofree readnone [[A]], double* noalias nofree readnone [[B]], double* noalias nocapture nofree readnone undef)
+; IS__CGSCC____-NEXT:    [[CALL6:%.*]] = call double* @ptr_scc_r2(double* noalias nofree readnone [[R]], double* noalias nofree readnone [[R]], double* noalias nofree readnone [[R]])
+; IS__CGSCC____-NEXT:    [[CALL7:%.*]] = call double* @ptr_scc_r1(double* noalias nofree readnone [[A]], double* noalias nofree readnone [[CALL6]], double* noalias nocapture nofree readnone undef)
+; IS__CGSCC____-NEXT:    [[CALL8:%.*]] = call double* @ptr_scc_r2(double* noalias nofree readnone [[A]], double* noalias nofree readnone [[B]], double* noalias nofree readnone [[R]])
+; IS__CGSCC____-NEXT:    [[CALL9:%.*]] = call double* @ptr_scc_r2(double* noalias nofree readnone [[CALL5]], double* noalias nofree readnone [[CALL7]], double* noalias nofree readnone [[CALL8]])
+; IS__CGSCC____-NEXT:    [[CALL11:%.*]] = call double* @ptr_scc_r1(double* noalias nofree readnone [[CALL4]], double* noalias nofree readnone [[CALL9]], double* noalias nocapture nofree readnone undef)
 ; IS__CGSCC____-NEXT:    br label [[RETURN]]
 ; IS__CGSCC____:       if.end12:
 ; IS__CGSCC____-NEXT:    [[CMP13:%.*]] = icmp eq double* [[A]], [[B]]
@@ -1433,7 +1433,7 @@ define i32* @dont_use_const() #0 {
 ;
 ; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@dont_use_const()
-; IS__CGSCC____-NEXT:    [[C:%.*]] = musttail call nonnull dereferenceable(1) i32* @ret_const()
+; IS__CGSCC____-NEXT:    [[C:%.*]] = musttail call noundef nonnull dereferenceable(1) i32* @ret_const()
 ; IS__CGSCC____-NEXT:    ret i32* [[C]]
 ;
   %c = musttail call i32* @ret_const()
