@@ -32,7 +32,7 @@ typedef std::map<uint64_t, std::vector<NewArchiveMember>>
 cl::OptionCategory LibtoolCategory("llvm-libtool-darwin Options");
 
 static cl::opt<std::string> OutputFile("o", cl::desc("Specify output filename"),
-                                       cl::value_desc("filename"), cl::Required,
+                                       cl::value_desc("filename"),
                                        cl::cat(LibtoolCategory));
 
 static cl::list<std::string> InputFiles(cl::Positional,
@@ -44,14 +44,14 @@ static cl::opt<std::string> ArchType(
     "arch_only", cl::desc("Specify architecture type for output library"),
     cl::value_desc("arch_type"), cl::ZeroOrMore, cl::cat(LibtoolCategory));
 
-enum class Operation { Static };
+enum class Operation { None, Static };
 
 static cl::opt<Operation> LibraryOperation(
     cl::desc("Library Type: "),
     cl::values(
         clEnumValN(Operation::Static, "static",
                    "Produce a statically linked library from the input files")),
-    cl::Required, cl::cat(LibtoolCategory));
+    cl::init(Operation::None), cl::cat(LibtoolCategory));
 
 static cl::opt<bool> DeterministicOption(
     "D", cl::desc("Use zero for timestamps and UIDs/GIDs (Default)"),
@@ -80,6 +80,10 @@ static cl::list<std::string> LibrarySearchDirs(
         "L<dir> adds <dir> to the list of directories in which to search for"
         " libraries"),
     cl::ZeroOrMore, cl::Prefix, cl::cat(LibtoolCategory));
+
+static cl::opt<bool>
+    VersionOption("V", cl::desc("Print the version number and exit"),
+                  cl::cat(LibtoolCategory));
 
 static const std::array<std::string, 3> StandardSearchDirs{
     "/lib",
@@ -444,6 +448,23 @@ static Expected<Config> parseCommandLine(int Argc, char **Argv) {
   Config C;
   cl::ParseCommandLineOptions(Argc, Argv, "llvm-libtool-darwin\n");
 
+  if (LibraryOperation == Operation::None) {
+    if (!VersionOption) {
+      std::string Error;
+      raw_string_ostream Stream(Error);
+      LibraryOperation.error("must be specified", "", Stream);
+      return createStringError(std::errc::invalid_argument, Error.c_str());
+    }
+    return C;
+  }
+
+  if (OutputFile.empty()) {
+    std::string Error;
+    raw_string_ostream Stream(Error);
+    OutputFile.error("must be specified", "o", Stream);
+    return createStringError(std::errc::invalid_argument, Error.c_str());
+  }
+
   if (DeterministicOption && NonDeterministicOption)
     return createStringError(std::errc::invalid_argument,
                              "cannot specify both -D and -U flags");
@@ -483,8 +504,13 @@ int main(int Argc, char **Argv) {
     return EXIT_FAILURE;
   }
 
+  if (VersionOption)
+    cl::PrintVersionMessage();
+
   Config C = *ConfigOrErr;
   switch (LibraryOperation) {
+  case Operation::None:
+    break;
   case Operation::Static:
     if (Error E = createStaticLibrary(C)) {
       WithColor::defaultErrorHandler(std::move(E));
