@@ -117,7 +117,6 @@ public:
 
   // Creating related types
   CompilerType GetArrayElementType(lldb::opaque_compiler_type_t type,
-                                   uint64_t *stride,
                                    ExecutionContextScope *exe_scope) override;
   CompilerType GetCanonicalType(lldb::opaque_compiler_type_t type) override;
   int GetFunctionArgumentCount(lldb::opaque_compiler_type_t type) override;
