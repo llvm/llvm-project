@@ -763,11 +763,35 @@ int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
 int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                                    TTI::TargetCostKind CostKind,
                                    const Instruction *I) {
-  // TODO: Handle other cost kinds.
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+
+  // Thumb scalar code size cost for select.
+  if (CostKind == TTI::TCK_CodeSize && ISD == ISD::SELECT &&
+      ST->isThumb() && !ValTy->isVectorTy()) {
+    // Assume expensive structs.
+    if (TLI->getValueType(DL, ValTy, true) == MVT::Other)
+      return TTI::TCC_Expensive;
+
+    // Select costs can vary because they:
+    // - may require one or more conditional mov (including an IT),
+    // - can't operate directly on immediates,
+    // - require live flags, which we can't copy around easily.
+    int Cost = TLI->getTypeLegalizationCost(DL, ValTy).first;
+
+    // Possible IT instruction for Thumb2, or more for Thumb1.
+    ++Cost;
+
+    // i1 values may need rematerialising by using mov immediates and/or
+    // flag setting instructions.
+    if (ValTy->isIntegerTy(1))
+      ++Cost;
+
+    return Cost;
+  }
+
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, CostKind, I);
 
-  int ISD = TLI->InstructionOpcodeToISD(Opcode);
   // On NEON a vector select gets lowered to vbsl.
   if (ST->hasNEON() && ValTy->isVectorTy() && ISD == ISD::SELECT) {
     // Lowering of some vector selects is currently far from perfect.
