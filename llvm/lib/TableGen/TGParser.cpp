@@ -671,8 +671,10 @@ ParseSubMultiClassReference(MultiClass *CurMC) {
 
 /// ParseRangePiece - Parse a bit/value range.
 ///   RangePiece ::= INTVAL
+///   RangePiece ::= INTVAL '...' INTVAL
 ///   RangePiece ::= INTVAL '-' INTVAL
-///   RangePiece ::= INTVAL INTVAL
+///   RangePiece ::= INTVAL INTVAL 
+// The last two forms are deprecated.
 bool TGParser::ParseRangePiece(SmallVectorImpl<unsigned> &Ranges,
                                TypedInit *FirstItem) {
   Init *CurVal = FirstItem;
@@ -693,6 +695,8 @@ bool TGParser::ParseRangePiece(SmallVectorImpl<unsigned> &Ranges,
   default:
     Ranges.push_back(Start);
     return false;
+
+  case tgtok::dotdotdot:
   case tgtok::minus: {
     Lex.Lex(); // eat
 
@@ -2167,7 +2171,7 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
       }
       break;
     }
-    case tgtok::period: {
+    case tgtok::dot: {
       if (Lex.Lex() != tgtok::Id) {  // eat the .
         TokError("expected field identifier after '.'");
         return nullptr;
