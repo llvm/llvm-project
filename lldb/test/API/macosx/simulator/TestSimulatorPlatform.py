@@ -46,15 +46,16 @@ class TestSimulatorPlatformLaunching(TestBase):
     def run_with(self, arch, os, vers, env, expected_load_command):
         env_list = [env] if env else []
         triple = '-'.join([arch, 'apple', os + vers] + env_list)
+        sdk = lldbutil.get_xcode_sdk(os, env)
 
         version_min = ''
-        if vers:
-            if env == 'simulator':
-                version_min = '-m{}-simulator-version-min={}'.format(os, vers)
-            elif os == 'macosx':
-                version_min = '-m{}-version-min={}'.format(os, vers)
+        if not vers:
+            vers = lldbutil.get_xcode_sdk_version(sdk)
+        if env == 'simulator':
+            version_min = '-m{}-simulator-version-min={}'.format(os, vers)
+        elif os == 'macosx':
+            version_min = '-m{}-version-min={}'.format(os, vers)
 
-        sdk = lldbutil.get_xcode_sdk(os, env)
         sdk_root = lldbutil.get_xcode_sdk_root(sdk)
 
         self.build(
