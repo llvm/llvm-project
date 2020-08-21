@@ -25,7 +25,7 @@ struct SimplifyCFGOptions {
   bool ForwardSwitchCondToPhi = false;
   bool ConvertSwitchToLookupTable = false;
   bool NeedCanonicalLoop = true;
-  bool HoistCommonInsts = false;
+  bool HoistCommonInsts = true;
   bool SinkCommonInsts = false;
   bool SimplifyCondBranch = true;
   bool FoldTwoEntryPHINode = true;
