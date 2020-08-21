@@ -1072,6 +1072,11 @@ def isGFX7GFX10 :
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX10">,
   AssemblerPredicate<(all_of (not FeatureGCN3Encoding), FeatureCIInsts)>;
 
+def isGFX7GFX8 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS">,
+  AssemblerPredicate<(all_of FeatureSouthernIslands, FeatureCIInsts)>;
+
 def isGFX7GFX8GFX9 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS ||"
             "Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
