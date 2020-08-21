@@ -292,5 +292,4 @@ if ((CMAKE_SYSTEM_NAME MATCHES "Android") AND LLVM_BUILD_STATIC AND
   add_definitions(-DANDROID_USE_ACCEPT_WORKAROUND)
 endif()
 
-find_package(Backtrace)
 include(LLDBGenerateConfig)
