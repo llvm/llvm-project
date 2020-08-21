@@ -246,7 +246,8 @@ Error DWARFYAML::emitDebugGNUPubtypes(raw_ostream &OS, const Data &DI) {
                         /*IsGNUStyle=*/true);
 }
 
-static Expected<uint64_t> writeDIE(ArrayRef<DWARFYAML::AbbrevTable> AbbrevTable,
+static Expected<uint64_t> writeDIE(const DWARFYAML::Data &DI, uint64_t CUIndex,
+                                   uint64_t AbbrevTableID,
                                    const dwarf::FormParams &Params,
                                    const DWARFYAML::Entry &Entry,
                                    raw_ostream &OS, bool IsLittleEndian) {
@@ -256,12 +257,16 @@ static Expected<uint64_t> writeDIE(ArrayRef<DWARFYAML::AbbrevTable> AbbrevTable,
   if (AbbrCode == 0 || Entry.Values.empty())
     return OS.tell() - EntryBegin;
 
-  if (AbbrevTable.empty())
-    return createStringError(
-        errc::invalid_argument,
-        "non-empty compilation unit should have an associated abbrev table");
+  Expected<uint64_t> AbbrevTableIndexOrErr =
+      DI.getAbbrevTableIndexByID(AbbrevTableID);
+  if (!AbbrevTableIndexOrErr)
+    return createStringError(errc::invalid_argument,
+                             toString(AbbrevTableIndexOrErr.takeError()) +
+                                 " for compilation unit with index " +
+                                 utostr(CUIndex));
 
-  ArrayRef<DWARFYAML::Abbrev> AbbrevDecls(AbbrevTable[0].Table);
+  ArrayRef<DWARFYAML::Abbrev> AbbrevDecls(
+      DI.DebugAbbrev[*AbbrevTableIndexOrErr].Table);
 
   if (AbbrCode > AbbrevDecls.size())
     return createStringError(
@@ -384,7 +389,8 @@ static Expected<uint64_t> writeDIE(ArrayRef<DWARFYAML::AbbrevTable> AbbrevTable,
 }
 
 Error DWARFYAML::emitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
-  for (const DWARFYAML::Unit &Unit : DI.CompileUnits) {
+  for (uint64_t I = 0; I < DI.CompileUnits.size(); ++I) {
+    const DWARFYAML::Unit &Unit = DI.CompileUnits[I];
     uint8_t AddrSize;
     if (Unit.AddrSize)
       AddrSize = *Unit.AddrSize;
@@ -402,9 +408,11 @@ Error DWARFYAML::emitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
     std::string EntryBuffer;
     raw_string_ostream EntryBufferOS(EntryBuffer);
 
+    uint64_t AbbrevTableID = Unit.AbbrevTableID.getValueOr(I);
     for (const DWARFYAML::Entry &Entry : Unit.Entries) {
-      if (Expected<uint64_t> EntryLength = writeDIE(
-              DI.DebugAbbrev, Params, Entry, EntryBufferOS, DI.IsLittleEndian))
+      if (Expected<uint64_t> EntryLength =
+              writeDIE(DI, I, AbbrevTableID, Params, Entry, EntryBufferOS,
+                       DI.IsLittleEndian))
         Length += *EntryLength;
       else
         return EntryLength.takeError();
