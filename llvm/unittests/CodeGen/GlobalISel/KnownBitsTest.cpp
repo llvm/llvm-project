@@ -511,3 +511,47 @@ TEST_F(AArch64GISelMITest, TestMetadata) {
   Mask.flipAllBits();
   EXPECT_EQ(Mask.getZExtValue(), Res.Zero.getZExtValue());
 }
+
+TEST_F(AArch64GISelMITest, TestKnownBitsExt) {
+  StringRef MIRString = "  %c1:_(s16) = G_CONSTANT i16 1\n"
+                        "  %x:_(s16) = G_IMPLICIT_DEF\n"
+                        "  %y:_(s16) = G_AND %x, %c1\n"
+                        "  %anyext:_(s32) = G_ANYEXT %y(s16)\n"
+                        "  %r1:_(s32) = COPY %anyext\n"
+                        "  %zext:_(s32) = G_ZEXT %y(s16)\n"
+                        "  %r2:_(s32) = COPY %zext\n"
+                        "  %sext:_(s32) = G_SEXT %y(s16)\n"
+                        "  %r3:_(s32) = COPY %sext\n";
+  setUp(MIRString);
+  if (!TM)
+    return;
+  Register CopyRegAny = Copies[Copies.size() - 3];
+  Register CopyRegZ = Copies[Copies.size() - 2];
+  Register CopyRegS = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+  MachineInstr *Copy;
+  Register SrcReg;
+  KnownBits Res;
+
+  Copy = MRI->getVRegDef(CopyRegAny);
+  SrcReg = Copy->getOperand(1).getReg();
+  Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ((uint64_t)32, Res.getBitWidth());
+  EXPECT_EQ((uint64_t)0, Res.One.getZExtValue());
+  EXPECT_EQ((uint64_t)0x0000fffe, Res.Zero.getZExtValue());
+
+  Copy = MRI->getVRegDef(CopyRegZ);
+  SrcReg = Copy->getOperand(1).getReg();
+  Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ((uint64_t)32, Res.getBitWidth());
+  EXPECT_EQ((uint64_t)0, Res.One.getZExtValue());
+  EXPECT_EQ((uint64_t)0xfffffffe, Res.Zero.getZExtValue());
+
+  Copy = MRI->getVRegDef(CopyRegS);
+  SrcReg = Copy->getOperand(1).getReg();
+  Res = Info.getKnownBits(SrcReg);
+  EXPECT_EQ((uint64_t)32, Res.getBitWidth());
+  EXPECT_EQ((uint64_t)0, Res.One.getZExtValue());
+  EXPECT_EQ((uint64_t)0xfffffffe, Res.Zero.getZExtValue());
+}
