@@ -515,6 +515,7 @@ DWARF:
 # DWARF32-NEXT:     - Length:        0x0000000000000076
 # DWARF32-NEXT:       Version:       5
 # DWARF32-NEXT:       UnitType:      DW_UT_compile
+# DWARF32-NEXT:       AbbrevTableID: 0
 # DWARF32-NEXT:       AbbrOffset:    0
 # DWARF32-NEXT:       AddrSize:      8
 # DWARF32-NEXT:       Entries:
@@ -585,6 +586,7 @@ DWARF:
 # DWARF32-YAML-NEXT:   - Length:        0x000000000000000C
 # DWARF32-YAML-NEXT:     Version:       5
 # DWARF32-YAML-NEXT:     UnitType:      DW_UT_compile
+# DWARF32-YAML-NEXT:     AbbrevTableID: 0
 # DWARF32-YAML-NEXT:     AbbrOffset:    0x0000000000000000
 # DWARF32-YAML-NEXT:     AddrSize:      8
 # DWARF32-YAML-NEXT:     Entries:
@@ -670,6 +672,7 @@ DWARF:
 # DWARF64-YAML-NEXT:     Length:        0x0000000000000014
 # DWARF64-YAML-NEXT:     Version:       5
 # DWARF64-YAML-NEXT:     UnitType:      DW_UT_compile
+# DWARF64-YAML-NEXT:     AbbrevTableID: 0
 # DWARF64-YAML-NEXT:     AbbrOffset:    0x0000000000000000
 # DWARF64-YAML-NEXT:     AddrSize:      8
 # DWARF64-YAML-NEXT:     Entries:
