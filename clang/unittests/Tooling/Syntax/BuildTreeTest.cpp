@@ -305,48 +305,48 @@ void test() {
 }
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-void
-  |-SimpleDeclarator
-  | |-test
+  |-'void'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'test'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   `-)
+  |   |-'(' OpenParen
+  |   `-')' CloseParen
   `-CompoundStatement
-    |-{
-    |-ExpressionStatement
-    | |-UnknownExpression
+    |-'{' OpenParen
+    |-ExpressionStatement CompoundStatement_statement
+    | |-UnknownExpression ExpressionStatement_expression
     | | |-IdExpression
-    | | | `-UnqualifiedId
-    | | |   `-test
-    | | |-(
-    | | `-)
-    | `-;
-    |-IfStatement
-    | |-if
-    | |-(
+    | | | `-UnqualifiedId IdExpression_id
+    | | |   `-'test'
+    | | |-'('
+    | | `-')'
+    | `-';'
+    |-IfStatement CompoundStatement_statement
+    | |-'if' IntroducerKeyword
+    | |-'('
     | |-IntegerLiteralExpression
-    | | `-1
-    | |-)
-    | |-ExpressionStatement
-    | | |-UnknownExpression
+    | | `-'1' LiteralToken
+    | |-')'
+    | |-ExpressionStatement IfStatement_thenStatement
+    | | |-UnknownExpression ExpressionStatement_expression
     | | | |-IdExpression
-    | | | | `-UnqualifiedId
-    | | | |   `-test
-    | | | |-(
-    | | | `-)
-    | | `-;
-    | |-else
-    | `-ExpressionStatement
-    |   |-UnknownExpression
+    | | | | `-UnqualifiedId IdExpression_id
+    | | | |   `-'test'
+    | | | |-'('
+    | | | `-')'
+    | | `-';'
+    | |-'else' IfStatement_elseKeyword
+    | `-ExpressionStatement IfStatement_elseStatement
+    |   |-UnknownExpression ExpressionStatement_expression
     |   | |-IdExpression
-    |   | | `-UnqualifiedId
-    |   | |   `-test
-    |   | |-(
-    |   | `-)
-    |   `-;
-    `-}
+    |   | | `-UnqualifiedId IdExpression_id
+    |   | |   `-'test'
+    |   | |-'('
+    |   | `-')'
+    |   `-';'
+    `-'}' CloseParen
 )txt"));
 }
 
@@ -358,9 +358,9 @@ void test(int a) {
 }
 )cpp",
       {R"txt(
-IdExpression
-`-UnqualifiedId
-  `-a
+IdExpression ExpressionStatement_expression
+`-UnqualifiedId IdExpression_id
+  `-'a'
 )txt"}));
 }
 
@@ -378,20 +378,20 @@ void test(X x) {
 }
 )cpp",
       {R"txt(
-UnknownExpression
+UnknownExpression ExpressionStatement_expression
 |-IdExpression
-| `-UnqualifiedId
-|   |-operator
-|   `-+
-|-(
+| `-UnqualifiedId IdExpression_id
+|   |-'operator'
+|   `-'+'
+|-'('
 |-IdExpression
-| `-UnqualifiedId
-|   `-x
-|-,
+| `-UnqualifiedId IdExpression_id
+|   `-'x'
+|-','
 |-IdExpression
-| `-UnqualifiedId
-|   `-x
-`-)
+| `-UnqualifiedId IdExpression_id
+|   `-'x'
+`-')'
 )txt"}));
 }
 
@@ -409,18 +409,18 @@ void test(X x) {
 }
 )cpp",
       {R"txt(
-UnknownExpression
+UnknownExpression ExpressionStatement_expression
 |-MemberExpression
-| |-IdExpression
-| | `-UnqualifiedId
-| |   `-x
-| |-.
-| `-IdExpression
-|   `-UnqualifiedId
-|     |-operator
-|     `-int
-|-(
-`-)
+| |-IdExpression MemberExpression_object
+| | `-UnqualifiedId IdExpression_id
+| |   `-'x'
+| |-'.' MemberExpression_accessToken
+| `-IdExpression MemberExpression_member
+|   `-UnqualifiedId IdExpression_id
+|     |-'operator'
+|     `-'int'
+|-'('
+`-')'
 )txt"}));
 }
 
@@ -436,16 +436,16 @@ void test() {
 }
 )cpp",
       {R"txt(
-UnknownExpression
+UnknownExpression ExpressionStatement_expression
 |-IdExpression
-| `-UnqualifiedId
-|   |-operator
-|   |-""
-|   `-_w
-|-(
+| `-UnqualifiedId IdExpression_id
+|   |-'operator'
+|   |-'""'
+|   `-'_w'
+|-'('
 |-CharacterLiteralExpression
-| `-'1'
-`-)
+| `-''1'' LiteralToken
+`-')'
 )txt"}));
 }
 
@@ -461,18 +461,18 @@ void test(X x) {
 }
 )cpp",
       {R"txt(
-UnknownExpression
+UnknownExpression ExpressionStatement_expression
 |-MemberExpression
-| |-IdExpression
-| | `-UnqualifiedId
-| |   `-x
-| |-.
-| `-IdExpression
-|   `-UnqualifiedId
-|     |-~
-|     `-X
-|-(
-`-)
+| |-IdExpression MemberExpression_object
+| | `-UnqualifiedId IdExpression_id
+| |   `-'x'
+| |-'.' MemberExpression_accessToken
+| `-IdExpression MemberExpression_member
+|   `-UnqualifiedId IdExpression_id
+|     |-'~'
+|     `-'X'
+|-'('
+`-')'
 )txt"}));
 }
 
@@ -492,21 +492,21 @@ void test(X x) {
 }
 )cpp",
       {R"txt(
-UnknownExpression
+UnknownExpression ExpressionStatement_expression
 |-MemberExpression
-| |-IdExpression
-| | `-UnqualifiedId
-| |   `-x
-| |-.
-| `-IdExpression
-|   `-UnqualifiedId
-|     `-~
-|-decltype
-|-(
-|-x
-|-)
-|-(
-`-)
+| |-IdExpression MemberExpression_object
+| | `-UnqualifiedId IdExpression_id
+| |   `-'x'
+| |-'.' MemberExpression_accessToken
+| `-IdExpression MemberExpression_member
+|   `-UnqualifiedId IdExpression_id
+|     `-'~'
+|-'decltype'
+|-'('
+|-'x'
+|-')'
+|-'('
+`-')'
 )txt"}));
 }
 
@@ -523,15 +523,15 @@ void test() {
 }
 )cpp",
       {R"txt(
-UnknownExpression
+UnknownExpression ExpressionStatement_expression
 |-IdExpression
-| `-UnqualifiedId
-|   |-f
-|   |-<
-|   |-int
-|   `->
-|-(
-`-)
+| `-UnqualifiedId IdExpression_id
+|   |-'f'
+|   |-'<'
+|   |-'int'
+|   `-'>'
+|-'('
+`-')'
 )txt"}));
 }
 
@@ -555,25 +555,25 @@ void test() {
       {R"txt(
 SimpleDeclaration
 |-NestedNameSpecifier
-| |-::
-| |-IdentifierNameSpecifier
-| | `-n
-| `-::
-|-S
-`-SimpleDeclarator
+| |-'::' List_delimiter
+| |-IdentifierNameSpecifier List_element
+| | `-'n'
+| `-'::' List_delimiter
+|-'S'
+`-SimpleDeclarator SimpleDeclaration_declarator
   `-UnknownExpression
-    `-s1
+    `-'s1'
 )txt",
        R"txt(
 SimpleDeclaration
 |-NestedNameSpecifier
-| |-IdentifierNameSpecifier
-| | `-n
-| `-::
-|-S
-`-SimpleDeclarator
+| |-IdentifierNameSpecifier List_element
+| | `-'n'
+| `-'::' List_delimiter
+|-'S'
+`-SimpleDeclarator SimpleDeclaration_declarator
   `-UnknownExpression
-    `-s2
+    `-'s2'
 )txt"}));
 }
 
@@ -595,33 +595,33 @@ void test() {
       {R"txt(
 SimpleDeclaration
 |-NestedNameSpecifier
-| |-::
-| |-SimpleTemplateNameSpecifier
-| | |-template
-| | |-ST
-| | |-<
-| | |-int
-| | `->
-| `-::
-|-S
-`-SimpleDeclarator
+| |-'::' List_delimiter
+| |-SimpleTemplateNameSpecifier List_element
+| | |-'template'
+| | |-'ST'
+| | |-'<'
+| | |-'int'
+| | `-'>'
+| `-'::' List_delimiter
+|-'S'
+`-SimpleDeclarator SimpleDeclaration_declarator
   `-UnknownExpression
-    `-s1
+    `-'s1'
 )txt",
        R"txt(
 SimpleDeclaration
 |-NestedNameSpecifier
-| |-::
-| |-SimpleTemplateNameSpecifier
-| | |-ST
-| | |-<
-| | |-int
-| | `->
-| `-::
-|-S
-`-SimpleDeclarator
+| |-'::' List_delimiter
+| |-SimpleTemplateNameSpecifier List_element
+| | |-'ST'
+| | |-'<'
+| | |-'int'
+| | `-'>'
+| `-'::' List_delimiter
+|-'S'
+`-SimpleDeclarator SimpleDeclaration_declarator
   `-UnknownExpression
-    `-s2
+    `-'s2'
 )txt"}));
 }
 
@@ -639,21 +639,21 @@ void test(S s) {
 }
 )cpp",
       {R"txt(
-UnknownExpression
+UnknownExpression ExpressionStatement_expression
 |-IdExpression
-| |-NestedNameSpecifier
-| | |-DecltypeNameSpecifier
-| | | |-decltype
-| | | |-(
+| |-NestedNameSpecifier IdExpression_qualifier
+| | |-DecltypeNameSpecifier List_element
+| | | |-'decltype'
+| | | |-'('
 | | | |-IdExpression
-| | | | `-UnqualifiedId
-| | | |   `-s
-| | | `-)
-| | `-::
-| `-UnqualifiedId
-|   `-f
-|-(
-`-)
+| | | | `-UnqualifiedId IdExpression_id
+| | | |   `-'s'
+| | | `-')'
+| | `-'::' List_delimiter
+| `-UnqualifiedId IdExpression_id
+|   `-'f'
+|-'('
+`-')'
 )txt"}));
 }
 
@@ -673,35 +673,35 @@ void test() {
 }
 )cpp",
       {R"txt(
-UnknownExpression
+UnknownExpression ExpressionStatement_expression
 |-IdExpression
-| |-NestedNameSpecifier
-| | |-IdentifierNameSpecifier
-| | | `-S
-| | `-::
-| `-UnqualifiedId
-|   |-f
-|   |-<
-|   |-int
-|   `->
-|-(
-`-)
+| |-NestedNameSpecifier IdExpression_qualifier
+| | |-IdentifierNameSpecifier List_element
+| | | `-'S'
+| | `-'::' List_delimiter
+| `-UnqualifiedId IdExpression_id
+|   |-'f'
+|   |-'<'
+|   |-'int'
+|   `-'>'
+|-'('
+`-')'
 )txt",
        R"txt(
-UnknownExpression
+UnknownExpression ExpressionStatement_expression
 |-IdExpression
-| |-NestedNameSpecifier
-| | |-IdentifierNameSpecifier
-| | | `-S
-| | `-::
-| |-template
-| `-UnqualifiedId
-|   |-f
-|   |-<
-|   |-int
-|   `->
-|-(
-`-)
+| |-NestedNameSpecifier IdExpression_qualifier
+| | |-IdentifierNameSpecifier List_element
+| | | `-'S'
+| | `-'::' List_delimiter
+| |-'template' TemplateKeyword
+| `-UnqualifiedId IdExpression_id
+|   |-'f'
+|   |-'<'
+|   |-'int'
+|   `-'>'
+|-'('
+`-')'
 )txt"}));
 }
 
@@ -723,28 +723,28 @@ void test() {
 }
 )cpp",
       {R"txt(
-UnknownExpression
+UnknownExpression ExpressionStatement_expression
 |-IdExpression
-| |-NestedNameSpecifier
-| | |-::
-| | |-IdentifierNameSpecifier
-| | | `-n
-| | |-::
-| | |-SimpleTemplateNameSpecifier
-| | | |-template
-| | | |-ST
-| | | |-<
-| | | |-int
-| | | `->
-| | `-::
-| |-template
-| `-UnqualifiedId
-|   |-f
-|   |-<
-|   |-int
-|   `->
-|-(
-`-)
+| |-NestedNameSpecifier IdExpression_qualifier
+| | |-'::' List_delimiter
+| | |-IdentifierNameSpecifier List_element
+| | | `-'n'
+| | |-'::' List_delimiter
+| | |-SimpleTemplateNameSpecifier List_element
+| | | |-'template'
+| | | |-'ST'
+| | | |-'<'
+| | | |-'int'
+| | | `-'>'
+| | `-'::' List_delimiter
+| |-'template' TemplateKeyword
+| `-UnqualifiedId IdExpression_id
+|   |-'f'
+|   |-'<'
+|   |-'int'
+|   `-'>'
+|-'('
+`-')'
 )txt"}));
 }
 
@@ -767,55 +767,55 @@ void test() {
 }
 )cpp",
       {R"txt(
-UnknownExpression
+UnknownExpression ExpressionStatement_expression
 |-IdExpression
-| |-NestedNameSpecifier
-| | |-IdentifierNameSpecifier
-| | | `-T
-| | |-::
-| | |-SimpleTemplateNameSpecifier
-| | | |-template
-| | | |-U
-| | | |-<
-| | | |-int
-| | | `->
-| | `-::
-| `-UnqualifiedId
-|   `-f
-|-(
-`-)
+| |-NestedNameSpecifier IdExpression_qualifier
+| | |-IdentifierNameSpecifier List_element
+| | | `-'T'
+| | |-'::' List_delimiter
+| | |-SimpleTemplateNameSpecifier List_element
+| | | |-'template'
+| | | |-'U'
+| | | |-'<'
+| | | |-'int'
+| | | `-'>'
+| | `-'::' List_delimiter
+| `-UnqualifiedId IdExpression_id
+|   `-'f'
+|-'('
+`-')'
 )txt",
        R"txt(
-UnknownExpression
+UnknownExpression ExpressionStatement_expression
 |-IdExpression
-| |-NestedNameSpecifier
-| | |-IdentifierNameSpecifier
-| | | `-T
-| | |-::
-| | |-IdentifierNameSpecifier
-| | | `-U
-| | `-::
-| `-UnqualifiedId
-|   `-f
-|-(
-`-)
+| |-NestedNameSpecifier IdExpression_qualifier
+| | |-IdentifierNameSpecifier List_element
+| | | `-'T'
+| | |-'::' List_delimiter
+| | |-IdentifierNameSpecifier List_element
+| | | `-'U'
+| | `-'::' List_delimiter
+| `-UnqualifiedId IdExpression_id
+|   `-'f'
+|-'('
+`-')'
 )txt",
        R"txt(
-UnknownExpression
+UnknownExpression ExpressionStatement_expression
 |-IdExpression
-| |-NestedNameSpecifier
-| | |-IdentifierNameSpecifier
-| | | `-T
-| | `-::
-| |-template
-| `-UnqualifiedId
-|   |-f
-|   |-<
+| |-NestedNameSpecifier IdExpression_qualifier
+| | |-IdentifierNameSpecifier List_element
+| | | `-'T'
+| | `-'::' List_delimiter
+| |-'template' TemplateKeyword
+| `-UnqualifiedId IdExpression_id
+|   |-'f'
+|   |-'<'
 |   |-IntegerLiteralExpression
-|   | `-0
-|   `->
-|-(
-`-)
+|   | `-'0' LiteralToken
+|   `-'>'
+|-'('
+`-')'
 )txt"}));
 }
 
@@ -832,8 +832,8 @@ struct S {
 };
 )cpp",
       {R"txt(
-ThisExpression
-`-this
+ThisExpression ReturnStatement_value
+`-'this' IntroducerKeyword
 )txt"}));
 }
 
@@ -851,13 +851,13 @@ struct S {
 };
 )cpp",
       {R"txt(
-MemberExpression
-|-ThisExpression
-| `-this
-|-->
-`-IdExpression
-  `-UnqualifiedId
-    `-a
+MemberExpression ExpressionStatement_expression
+|-ThisExpression MemberExpression_object
+| `-'this' IntroducerKeyword
+|-'->' MemberExpression_accessToken
+`-IdExpression MemberExpression_member
+  `-UnqualifiedId IdExpression_id
+    `-'a'
 )txt"}));
 }
 
@@ -875,9 +875,9 @@ struct S {
 };
 )cpp",
       {R"txt(
-IdExpression
-`-UnqualifiedId
-  `-a
+IdExpression ExpressionStatement_expression
+`-UnqualifiedId IdExpression_id
+  `-'a'
 )txt"}));
 }
 
@@ -891,35 +891,35 @@ void test() {
 }
 )cpp",
       {R"txt(
-ParenExpression
-|-(
-|-IntegerLiteralExpression
-| `-1
-`-)
+ParenExpression ExpressionStatement_expression
+|-'(' OpenParen
+|-IntegerLiteralExpression ParenExpression_subExpression
+| `-'1' LiteralToken
+`-')' CloseParen
 )txt",
        R"txt(
-ParenExpression
-|-(
-|-ParenExpression
-| |-(
-| |-IntegerLiteralExpression
-| | `-1
-| `-)
-`-)
+ParenExpression ExpressionStatement_expression
+|-'(' OpenParen
+|-ParenExpression ParenExpression_subExpression
+| |-'(' OpenParen
+| |-IntegerLiteralExpression ParenExpression_subExpression
+| | `-'1' LiteralToken
+| `-')' CloseParen
+`-')' CloseParen
 )txt",
        R"txt(
-ParenExpression
-|-(
-|-BinaryOperatorExpression
-| |-IntegerLiteralExpression
-| | `-1
-| |-+
-| `-ParenExpression
-|   |-(
-|   |-IntegerLiteralExpression
-|   | `-2
-|   `-)
-`-)
+ParenExpression ExpressionStatement_expression
+|-'(' OpenParen
+|-BinaryOperatorExpression ParenExpression_subExpression
+| |-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+| | `-'1' LiteralToken
+| |-'+' OperatorExpression_operatorToken
+| `-ParenExpression BinaryOperatorExpression_rightHandSide
+|   |-'(' OpenParen
+|   |-IntegerLiteralExpression ParenExpression_subExpression
+|   | `-'2' LiteralToken
+|   `-')' CloseParen
+`-')' CloseParen
 )txt"}));
 }
 
@@ -935,8 +935,8 @@ void test() {
 }
     )cpp",
       {R"txt(
-CharUserDefinedLiteralExpression
-`-'2'_c
+CharUserDefinedLiteralExpression ExpressionStatement_expression
+`-''2'_c' LiteralToken
 )txt"}));
 }
 
@@ -955,8 +955,8 @@ void test() {
 }
     )cpp",
       {R"txt(
-StringUserDefinedLiteralExpression
-`-"12"_s
+StringUserDefinedLiteralExpression ExpressionStatement_expression
+`-'"12"_s' LiteralToken
 )txt"}));
 }
 
@@ -978,16 +978,16 @@ void test() {
 }
     )cpp",
       {R"txt(
-IntegerUserDefinedLiteralExpression
-`-12_i
+IntegerUserDefinedLiteralExpression ExpressionStatement_expression
+`-'12_i' LiteralToken
 )txt",
        R"txt(
-IntegerUserDefinedLiteralExpression
-`-12_r
+IntegerUserDefinedLiteralExpression ExpressionStatement_expression
+`-'12_r' LiteralToken
 )txt",
        R"txt(
-IntegerUserDefinedLiteralExpression
-`-12_t
+IntegerUserDefinedLiteralExpression ExpressionStatement_expression
+`-'12_t' LiteralToken
 )txt"}));
 }
 
@@ -1009,16 +1009,16 @@ void test() {
 }
     )cpp",
       {R"txt(
-FloatUserDefinedLiteralExpression
-`-1.2_f
+FloatUserDefinedLiteralExpression ExpressionStatement_expression
+`-'1.2_f' LiteralToken
 )txt",
        R"txt(
-FloatUserDefinedLiteralExpression
-`-1.2_r
+FloatUserDefinedLiteralExpression ExpressionStatement_expression
+`-'1.2_r' LiteralToken
 )txt",
        R"txt(
-FloatUserDefinedLiteralExpression
-`-1.2_t
+FloatUserDefinedLiteralExpression ExpressionStatement_expression
+`-'1.2_t' LiteralToken
 )txt"}));
 }
 
@@ -1034,12 +1034,12 @@ void test() {
 }
 )cpp",
       {R"txt(
-IntegerLiteralExpression
-`-12ll
+IntegerLiteralExpression ExpressionStatement_expression
+`-'12ll' LiteralToken
 )txt",
        R"txt(
-IntegerLiteralExpression
-`-12ull
+IntegerLiteralExpression ExpressionStatement_expression
+`-'12ull' LiteralToken
 )txt"}));
 }
 
@@ -1054,8 +1054,8 @@ void test() {
 }
 )cpp",
       {R"txt(
-IntegerLiteralExpression
-`-0b1100
+IntegerLiteralExpression ExpressionStatement_expression
+`-'0b1100' LiteralToken
 )txt"}));
 }
 
@@ -1070,8 +1070,8 @@ void test() {
 }
 )cpp",
       {R"txt(
-IntegerLiteralExpression
-`-1'2'0ull
+IntegerLiteralExpression ExpressionStatement_expression
+`-'1'2'0ull' LiteralToken
 )txt"}));
 }
 
@@ -1088,28 +1088,28 @@ void test() {
 }
 )cpp",
       {R"txt(
-CharacterLiteralExpression
-`-'a'
+CharacterLiteralExpression ExpressionStatement_expression
+`-''a'' LiteralToken
 )txt",
        R"txt(
-CharacterLiteralExpression
-`-'\n'
+CharacterLiteralExpression ExpressionStatement_expression
+`-''\n'' LiteralToken
 )txt",
        R"txt(
-CharacterLiteralExpression
-`-'\x20'
+CharacterLiteralExpression ExpressionStatement_expression
+`-''\x20'' LiteralToken
 )txt",
        R"txt(
-CharacterLiteralExpression
-`-'\0'
+CharacterLiteralExpression ExpressionStatement_expression
+`-''\0'' LiteralToken
 )txt",
        R"txt(
-CharacterLiteralExpression
-`-L'a'
+CharacterLiteralExpression ExpressionStatement_expression
+`-'L'a'' LiteralToken
 )txt",
        R"txt(
-CharacterLiteralExpression
-`-L'α'
+CharacterLiteralExpression ExpressionStatement_expression
+`-'L'α'' LiteralToken
 )txt"}));
 }
 
@@ -1127,20 +1127,20 @@ void test() {
 }
 )cpp",
       {R"txt(
-CharacterLiteralExpression
-`-u'a'
+CharacterLiteralExpression ExpressionStatement_expression
+`-'u'a'' LiteralToken
 )txt",
        R"txt(
-CharacterLiteralExpression
-`-u'構'
+CharacterLiteralExpression ExpressionStatement_expression
+`-'u'構'' LiteralToken
 )txt",
        R"txt(
-CharacterLiteralExpression
-`-U'a'
+CharacterLiteralExpression ExpressionStatement_expression
+`-'U'a'' LiteralToken
 )txt",
        R"txt(
-CharacterLiteralExpression
-`-U'🌲'
+CharacterLiteralExpression ExpressionStatement_expression
+`-'U'🌲'' LiteralToken
 )txt"}));
 }
 
@@ -1156,12 +1156,12 @@ void test() {
 }
 )cpp",
       {R"txt(
-CharacterLiteralExpression
-`-u8'a'
+CharacterLiteralExpression ExpressionStatement_expression
+`-'u8'a'' LiteralToken
 )txt",
        R"txt(
-CharacterLiteralExpression
-`-u8'\x7f'
+CharacterLiteralExpression ExpressionStatement_expression
+`-'u8'\x7f'' LiteralToken
 )txt"}));
 }
 
@@ -1176,20 +1176,20 @@ void test() {
 }
 )cpp",
       {R"txt(
-FloatingLiteralExpression
-`-1e-2
+FloatingLiteralExpression ExpressionStatement_expression
+`-'1e-2' LiteralToken
 )txt",
        R"txt(
-FloatingLiteralExpression
-`-2.
+FloatingLiteralExpression ExpressionStatement_expression
+`-'2.' LiteralToken
 )txt",
        R"txt(
-FloatingLiteralExpression
-`-.2
+FloatingLiteralExpression ExpressionStatement_expression
+`-'.2' LiteralToken
 )txt",
        R"txt(
-FloatingLiteralExpression
-`-2.f
+FloatingLiteralExpression ExpressionStatement_expression
+`-'2.f' LiteralToken
 )txt"}));
 }
 
@@ -1207,20 +1207,20 @@ void test() {
 }
 )cpp",
       {R"txt(
-FloatingLiteralExpression
-`-0xfp1
+FloatingLiteralExpression ExpressionStatement_expression
+`-'0xfp1' LiteralToken
 )txt",
        R"txt(
-FloatingLiteralExpression
-`-0xf.p1
+FloatingLiteralExpression ExpressionStatement_expression
+`-'0xf.p1' LiteralToken
 )txt",
        R"txt(
-FloatingLiteralExpression
-`-0x.fp1
+FloatingLiteralExpression ExpressionStatement_expression
+`-'0x.fp1' LiteralToken
 )txt",
        R"txt(
-FloatingLiteralExpression
-`-0xf.fp1f
+FloatingLiteralExpression ExpressionStatement_expression
+`-'0xf.fp1f' LiteralToken
 )txt"}));
 }
 
@@ -1233,12 +1233,12 @@ void test() {
 }
 )cpp",
       {R"txt(
-StringLiteralExpression
-`-"a\n\0\x20"
+StringLiteralExpression ExpressionStatement_expression
+`-'"a\n\0\x20"' LiteralToken
 )txt",
        R"txt(
-StringLiteralExpression
-`-L"αβ"
+StringLiteralExpression ExpressionStatement_expression
+`-'L"αβ"' LiteralToken
 )txt"}));
 }
 
@@ -1255,16 +1255,16 @@ void test() {
 }
 )cpp",
       {R"txt(
-StringLiteralExpression
-`-u8"a\x1f\x05"
+StringLiteralExpression ExpressionStatement_expression
+`-'u8"a\x1f\x05"' LiteralToken
 )txt",
        R"txt(
-StringLiteralExpression
-`-u"C++抽象構文木"
+StringLiteralExpression ExpressionStatement_expression
+`-'u"C++抽象構文木"' LiteralToken
 )txt",
        R"txt(
-StringLiteralExpression
-`-U"📖🌲\n"
+StringLiteralExpression ExpressionStatement_expression
+`-'U"📖🌲\n"' LiteralToken
 )txt"}));
 }
 
@@ -1282,23 +1282,23 @@ TEST_P(SyntaxTreeTest, StringLiteral_Raw) {
       "  Hello \"Syntax\" \\\"\n"
       "  )SyntaxTree\";\n"
       "}\n",
-      "*: TranslationUnit\n"
+      "TranslationUnit Detached\n"
       "`-SimpleDeclaration\n"
-      "  |-void\n"
-      "  |-SimpleDeclarator\n"
-      "  | |-test\n"
+      "  |-'void'\n"
+      "  |-SimpleDeclarator SimpleDeclaration_declarator\n"
+      "  | |-'test'\n"
       "  | `-ParametersAndQualifiers\n"
-      "  |   |-(\n"
-      "  |   `-)\n"
+      "  |   |-'(' OpenParen\n"
+      "  |   `-')' CloseParen\n"
       "  `-CompoundStatement\n"
-      "    |-{\n"
-      "    |-ExpressionStatement\n"
-      "    | |-StringLiteralExpression\n"
-      "    | | `-R\"SyntaxTree(\n"
+      "    |-'{' OpenParen\n"
+      "    |-ExpressionStatement CompoundStatement_statement\n"
+      "    | |-StringLiteralExpression ExpressionStatement_expression\n"
+      "    | | `-'R\"SyntaxTree(\n"
       "  Hello \"Syntax\" \\\"\n"
-      "  )SyntaxTree\"\n"
-      "    | `-;\n"
-      "    `-}\n"));
+      "  )SyntaxTree\"' LiteralToken\n"
+      "    | `-';'\n"
+      "    `-'}' CloseParen\n"));
 }
 
 TEST_P(SyntaxTreeTest, BoolLiteral) {
@@ -1313,12 +1313,12 @@ void test() {
 }
 )cpp",
       {R"txt(
-BoolLiteralExpression
-`-true
+BoolLiteralExpression ExpressionStatement_expression
+`-'true' LiteralToken
 )txt",
        R"txt(
-BoolLiteralExpression
-`-false
+BoolLiteralExpression ExpressionStatement_expression
+`-'false' LiteralToken
 )txt"}));
 }
 
@@ -1333,8 +1333,8 @@ void test() {
 }
 )cpp",
       {R"txt(
-CxxNullPtrExpression
-`-nullptr
+CxxNullPtrExpression ExpressionStatement_expression
+`-'nullptr' LiteralToken
 )txt"}));
 }
 
@@ -1347,18 +1347,18 @@ void test(int a) {
 }
 )cpp",
       {R"txt(
-PostfixUnaryOperatorExpression
-|-IdExpression
-| `-UnqualifiedId
-|   `-a
-`-++
+PostfixUnaryOperatorExpression ExpressionStatement_expression
+|-IdExpression UnaryOperatorExpression_operand
+| `-UnqualifiedId IdExpression_id
+|   `-'a'
+`-'++' OperatorExpression_operatorToken
 )txt",
        R"txt(
-PostfixUnaryOperatorExpression
-|-IdExpression
-| `-UnqualifiedId
-|   `-a
-`---
+PostfixUnaryOperatorExpression ExpressionStatement_expression
+|-IdExpression UnaryOperatorExpression_operand
+| `-UnqualifiedId IdExpression_id
+|   `-'a'
+`-'--' OperatorExpression_operatorToken
 )txt"}));
 }
 
@@ -1377,74 +1377,74 @@ void test(int a, int *ap) {
 }
 )cpp",
       {R"txt(
-PrefixUnaryOperatorExpression
-|---
-`-IdExpression
-  `-UnqualifiedId
-    `-a
+PrefixUnaryOperatorExpression ExpressionStatement_expression
+|-'--' OperatorExpression_operatorToken
+`-IdExpression UnaryOperatorExpression_operand
+  `-UnqualifiedId IdExpression_id
+    `-'a'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression
-|-++
-`-IdExpression
-  `-UnqualifiedId
-    `-a
+PrefixUnaryOperatorExpression ExpressionStatement_expression
+|-'++' OperatorExpression_operatorToken
+`-IdExpression UnaryOperatorExpression_operand
+  `-UnqualifiedId IdExpression_id
+    `-'a'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression
-|-~
-`-IdExpression
-  `-UnqualifiedId
-    `-a
+PrefixUnaryOperatorExpression ExpressionStatement_expression
+|-'~' OperatorExpression_operatorToken
+`-IdExpression UnaryOperatorExpression_operand
+  `-UnqualifiedId IdExpression_id
+    `-'a'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression
-|--
-`-IdExpression
-  `-UnqualifiedId
-    `-a
+PrefixUnaryOperatorExpression ExpressionStatement_expression
+|-'-' OperatorExpression_operatorToken
+`-IdExpression UnaryOperatorExpression_operand
+  `-UnqualifiedId IdExpression_id
+    `-'a'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression
-|-+
-`-IdExpression
-  `-UnqualifiedId
-    `-a
+PrefixUnaryOperatorExpression ExpressionStatement_expression
+|-'+' OperatorExpression_operatorToken
+`-IdExpression UnaryOperatorExpression_operand
+  `-UnqualifiedId IdExpression_id
+    `-'a'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression
-|-&
-`-IdExpression
-  `-UnqualifiedId
-    `-a
+PrefixUnaryOperatorExpression ExpressionStatement_expression
+|-'&' OperatorExpression_operatorToken
+`-IdExpression UnaryOperatorExpression_operand
+  `-UnqualifiedId IdExpression_id
+    `-'a'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression
-|-*
-`-IdExpression
-  `-UnqualifiedId
-    `-ap
+PrefixUnaryOperatorExpression ExpressionStatement_expression
+|-'*' OperatorExpression_operatorToken
+`-IdExpression UnaryOperatorExpression_operand
+  `-UnqualifiedId IdExpression_id
+    `-'ap'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression
-|-!
-`-IdExpression
-  `-UnqualifiedId
-    `-a
+PrefixUnaryOperatorExpression ExpressionStatement_expression
+|-'!' OperatorExpression_operatorToken
+`-IdExpression UnaryOperatorExpression_operand
+  `-UnqualifiedId IdExpression_id
+    `-'a'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression
-|-__real
-`-IdExpression
-  `-UnqualifiedId
-    `-a
+PrefixUnaryOperatorExpression ExpressionStatement_expression
+|-'__real' OperatorExpression_operatorToken
+`-IdExpression UnaryOperatorExpression_operand
+  `-UnqualifiedId IdExpression_id
+    `-'a'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression
-|-__imag
-`-IdExpression
-  `-UnqualifiedId
-    `-a
+PrefixUnaryOperatorExpression ExpressionStatement_expression
+|-'__imag' OperatorExpression_operatorToken
+`-IdExpression UnaryOperatorExpression_operand
+  `-UnqualifiedId IdExpression_id
+    `-'a'
 )txt"}));
 }
 
@@ -1460,18 +1460,18 @@ void test(int a, bool b) {
 }
 )cpp",
       {R"txt(
-PrefixUnaryOperatorExpression
-|-compl
-`-IdExpression
-  `-UnqualifiedId
-    `-a
+PrefixUnaryOperatorExpression ExpressionStatement_expression
+|-'compl' OperatorExpression_operatorToken
+`-IdExpression UnaryOperatorExpression_operand
+  `-UnqualifiedId IdExpression_id
+    `-'a'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression
-|-not
-`-IdExpression
-  `-UnqualifiedId
-    `-b
+PrefixUnaryOperatorExpression ExpressionStatement_expression
+|-'not' OperatorExpression_operatorToken
+`-IdExpression UnaryOperatorExpression_operand
+  `-UnqualifiedId IdExpression_id
+    `-'b'
 )txt"}));
 }
 
@@ -1489,63 +1489,63 @@ void test(int a) {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression
-|-IntegerLiteralExpression
-| `-1
-|--
-`-IntegerLiteralExpression
-  `-2
+BinaryOperatorExpression ExpressionStatement_expression
+|-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+| `-'1' LiteralToken
+|-'-' OperatorExpression_operatorToken
+`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+  `-'2' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression
-|-IntegerLiteralExpression
-| `-1
-|-==
-`-IntegerLiteralExpression
-  `-2
+BinaryOperatorExpression ExpressionStatement_expression
+|-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+| `-'1' LiteralToken
+|-'==' OperatorExpression_operatorToken
+`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+  `-'2' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression
-|-IdExpression
-| `-UnqualifiedId
-|   `-a
-|-=
-`-IntegerLiteralExpression
-  `-1
+BinaryOperatorExpression ExpressionStatement_expression
+|-IdExpression BinaryOperatorExpression_leftHandSide
+| `-UnqualifiedId IdExpression_id
+|   `-'a'
+|-'=' OperatorExpression_operatorToken
+`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+  `-'1' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression
-|-IdExpression
-| `-UnqualifiedId
-|   `-a
-|-<<=
-`-IntegerLiteralExpression
-  `-1
+BinaryOperatorExpression ExpressionStatement_expression
+|-IdExpression BinaryOperatorExpression_leftHandSide
+| `-UnqualifiedId IdExpression_id
+|   `-'a'
+|-'<<=' OperatorExpression_operatorToken
+`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+  `-'1' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression
-|-IntegerLiteralExpression
-| `-1
-|-||
-`-IntegerLiteralExpression
-  `-0
+BinaryOperatorExpression ExpressionStatement_expression
+|-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+| `-'1' LiteralToken
+|-'||' OperatorExpression_operatorToken
+`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+  `-'0' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression
-|-IntegerLiteralExpression
-| `-1
-|-&
-`-IntegerLiteralExpression
-  `-2
+BinaryOperatorExpression ExpressionStatement_expression
+|-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+| `-'1' LiteralToken
+|-'&' OperatorExpression_operatorToken
+`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+  `-'2' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression
-|-IdExpression
-| `-UnqualifiedId
-|   `-a
-|-!=
-`-IntegerLiteralExpression
-  `-3
+BinaryOperatorExpression ExpressionStatement_expression
+|-IdExpression BinaryOperatorExpression_leftHandSide
+| `-UnqualifiedId IdExpression_id
+|   `-'a'
+|-'!=' OperatorExpression_operatorToken
+`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+  `-'3' LiteralToken
 )txt"}));
 }
 
@@ -1563,37 +1563,37 @@ void test(int a) {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression
-|-BoolLiteralExpression
-| `-true
-|-||
-`-BoolLiteralExpression
-  `-false
+BinaryOperatorExpression ExpressionStatement_expression
+|-BoolLiteralExpression BinaryOperatorExpression_leftHandSide
+| `-'true' LiteralToken
+|-'||' OperatorExpression_operatorToken
+`-BoolLiteralExpression BinaryOperatorExpression_rightHandSide
+  `-'false' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression
-|-BoolLiteralExpression
-| `-true
-|-or
-`-BoolLiteralExpression
-  `-false
+BinaryOperatorExpression ExpressionStatement_expression
+|-BoolLiteralExpression BinaryOperatorExpression_leftHandSide
+| `-'true' LiteralToken
+|-'or' OperatorExpression_operatorToken
+`-BoolLiteralExpression BinaryOperatorExpression_rightHandSide
+  `-'false' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression
-|-IntegerLiteralExpression
-| `-1
-|-bitand
-`-IntegerLiteralExpression
-  `-2
+BinaryOperatorExpression ExpressionStatement_expression
+|-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+| `-'1' LiteralToken
+|-'bitand' OperatorExpression_operatorToken
+`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+  `-'2' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression
-|-IdExpression
-| `-UnqualifiedId
-|   `-a
-|-xor_eq
-`-IntegerLiteralExpression
-  `-3
+BinaryOperatorExpression ExpressionStatement_expression
+|-IdExpression BinaryOperatorExpression_leftHandSide
+| `-UnqualifiedId IdExpression_id
+|   `-'a'
+|-'xor_eq' OperatorExpression_operatorToken
+`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+  `-'3' LiteralToken
 )txt"}));
 }
 
@@ -1605,26 +1605,26 @@ void test() {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression
-|-ParenExpression
-| |-(
-| |-BinaryOperatorExpression
-| | |-IntegerLiteralExpression
-| | | `-1
-| | |-+
-| | `-IntegerLiteralExpression
-| |   `-2
-| `-)
-|-*
-`-ParenExpression
-  |-(
-  |-BinaryOperatorExpression
-  | |-IntegerLiteralExpression
-  | | `-4
-  | |-/
-  | `-IntegerLiteralExpression
-  |   `-2
-  `-)
+BinaryOperatorExpression ExpressionStatement_expression
+|-ParenExpression BinaryOperatorExpression_leftHandSide
+| |-'(' OpenParen
+| |-BinaryOperatorExpression ParenExpression_subExpression
+| | |-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+| | | `-'1' LiteralToken
+| | |-'+' OperatorExpression_operatorToken
+| | `-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+| |   `-'2' LiteralToken
+| `-')' CloseParen
+|-'*' OperatorExpression_operatorToken
+`-ParenExpression BinaryOperatorExpression_rightHandSide
+  |-'(' OpenParen
+  |-BinaryOperatorExpression ParenExpression_subExpression
+  | |-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+  | | `-'4' LiteralToken
+  | |-'/' OperatorExpression_operatorToken
+  | `-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+  |   `-'2' LiteralToken
+  `-')' CloseParen
 )txt"}));
 }
 
@@ -1637,32 +1637,32 @@ void test(int a, int b) {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression
-|-BinaryOperatorExpression
-| |-IdExpression
-| | `-UnqualifiedId
-| |   `-a
-| |-+
-| `-IdExpression
-|   `-UnqualifiedId
-|     `-b
-|-+
-`-IntegerLiteralExpression
-  `-42
+BinaryOperatorExpression ExpressionStatement_expression
+|-BinaryOperatorExpression BinaryOperatorExpression_leftHandSide
+| |-IdExpression BinaryOperatorExpression_leftHandSide
+| | `-UnqualifiedId IdExpression_id
+| |   `-'a'
+| |-'+' OperatorExpression_operatorToken
+| `-IdExpression BinaryOperatorExpression_rightHandSide
+|   `-UnqualifiedId IdExpression_id
+|     `-'b'
+|-'+' OperatorExpression_operatorToken
+`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+  `-'42' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression
-|-IdExpression
-| `-UnqualifiedId
-|   `-a
-|-=
-`-BinaryOperatorExpression
-  |-IdExpression
-  | `-UnqualifiedId
-  |   `-b
-  |-=
-  `-IntegerLiteralExpression
-    `-42
+BinaryOperatorExpression ExpressionStatement_expression
+|-IdExpression BinaryOperatorExpression_leftHandSide
+| `-UnqualifiedId IdExpression_id
+|   `-'a'
+|-'=' OperatorExpression_operatorToken
+`-BinaryOperatorExpression BinaryOperatorExpression_rightHandSide
+  |-IdExpression BinaryOperatorExpression_leftHandSide
+  | `-UnqualifiedId IdExpression_id
+  |   `-'b'
+  |-'=' OperatorExpression_operatorToken
+  `-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+    `-'42' LiteralToken
 )txt"}));
 }
 
@@ -1675,36 +1675,36 @@ void test() {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression
-|-BinaryOperatorExpression
-| |-IntegerLiteralExpression
-| | `-1
-| |-+
-| `-BinaryOperatorExpression
-|   |-IntegerLiteralExpression
-|   | `-2
-|   |-*
-|   `-IntegerLiteralExpression
-|     `-3
-|-+
-`-IntegerLiteralExpression
-  `-4
+BinaryOperatorExpression ExpressionStatement_expression
+|-BinaryOperatorExpression BinaryOperatorExpression_leftHandSide
+| |-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+| | `-'1' LiteralToken
+| |-'+' OperatorExpression_operatorToken
+| `-BinaryOperatorExpression BinaryOperatorExpression_rightHandSide
+|   |-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+|   | `-'2' LiteralToken
+|   |-'*' OperatorExpression_operatorToken
+|   `-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+|     `-'3' LiteralToken
+|-'+' OperatorExpression_operatorToken
+`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+  `-'4' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression
-|-BinaryOperatorExpression
-| |-IntegerLiteralExpression
-| | `-1
-| |-%
-| `-IntegerLiteralExpression
-|   `-2
-|-+
-`-BinaryOperatorExpression
-  |-IntegerLiteralExpression
-  | `-3
-  |-*
-  `-IntegerLiteralExpression
-    `-4
+BinaryOperatorExpression ExpressionStatement_expression
+|-BinaryOperatorExpression BinaryOperatorExpression_leftHandSide
+| |-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+| | `-'1' LiteralToken
+| |-'%' OperatorExpression_operatorToken
+| `-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+|   `-'2' LiteralToken
+|-'+' OperatorExpression_operatorToken
+`-BinaryOperatorExpression BinaryOperatorExpression_rightHandSide
+  |-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+  | `-'3' LiteralToken
+  |-'*' OperatorExpression_operatorToken
+  `-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+    `-'4' LiteralToken
 )txt"}));
 }
 
@@ -1722,14 +1722,14 @@ void test(X x, X y) {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression
-|-IdExpression
-| `-UnqualifiedId
-|   `-x
-|-=
-`-IdExpression
-  `-UnqualifiedId
-    `-y
+BinaryOperatorExpression ExpressionStatement_expression
+|-IdExpression BinaryOperatorExpression_leftHandSide
+| `-UnqualifiedId IdExpression_id
+|   `-'x'
+|-'=' OperatorExpression_operatorToken
+`-IdExpression BinaryOperatorExpression_rightHandSide
+  `-UnqualifiedId IdExpression_id
+    `-'y'
 )txt"}));
 }
 
@@ -1750,15 +1750,15 @@ void test(X x, X y) {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression
-|-UnknownExpression
+BinaryOperatorExpression ExpressionStatement_expression
+|-UnknownExpression BinaryOperatorExpression_leftHandSide
 | `-IdExpression
-|   `-UnqualifiedId
-|     `-x
-|-+
-`-IdExpression
-  `-UnqualifiedId
-    `-y
+|   `-UnqualifiedId IdExpression_id
+|     `-'x'
+|-'+' OperatorExpression_operatorToken
+`-IdExpression BinaryOperatorExpression_rightHandSide
+  `-UnqualifiedId IdExpression_id
+    `-'y'
 )txt"}));
 }
 
@@ -1776,14 +1776,14 @@ void test(X x, X y) {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression
-|-IdExpression
-| `-UnqualifiedId
-|   `-x
-|-<
-`-IdExpression
-  `-UnqualifiedId
-    `-y
+BinaryOperatorExpression ExpressionStatement_expression
+|-IdExpression BinaryOperatorExpression_leftHandSide
+| `-UnqualifiedId IdExpression_id
+|   `-'x'
+|-'<' OperatorExpression_operatorToken
+`-IdExpression BinaryOperatorExpression_rightHandSide
+  `-UnqualifiedId IdExpression_id
+    `-'y'
 )txt"}));
 }
 
@@ -1801,14 +1801,14 @@ void test(X x, X y) {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression
-|-IdExpression
-| `-UnqualifiedId
-|   `-x
-|-<<
-`-IdExpression
-  `-UnqualifiedId
-    `-y
+BinaryOperatorExpression ExpressionStatement_expression
+|-IdExpression BinaryOperatorExpression_leftHandSide
+| `-UnqualifiedId IdExpression_id
+|   `-'x'
+|-'<<' OperatorExpression_operatorToken
+`-IdExpression BinaryOperatorExpression_rightHandSide
+  `-UnqualifiedId IdExpression_id
+    `-'y'
 )txt"}));
 }
 
@@ -1826,14 +1826,14 @@ void test(X x, X y) {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression
-|-IdExpression
-| `-UnqualifiedId
-|   `-x
-|-,
-`-IdExpression
-  `-UnqualifiedId
-    `-y
+BinaryOperatorExpression ExpressionStatement_expression
+|-IdExpression BinaryOperatorExpression_leftHandSide
+| `-UnqualifiedId IdExpression_id
+|   `-'x'
+|-',' OperatorExpression_operatorToken
+`-IdExpression BinaryOperatorExpression_rightHandSide
+  `-UnqualifiedId IdExpression_id
+    `-'y'
 )txt"}));
 }
 
@@ -1851,14 +1851,14 @@ void test(X* xp, int X::* pmi) {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression
-|-IdExpression
-| `-UnqualifiedId
-|   `-xp
-|-->*
-`-IdExpression
-  `-UnqualifiedId
-    `-pmi
+BinaryOperatorExpression ExpressionStatement_expression
+|-IdExpression BinaryOperatorExpression_leftHandSide
+| `-UnqualifiedId IdExpression_id
+|   `-'xp'
+|-'->*' OperatorExpression_operatorToken
+`-IdExpression BinaryOperatorExpression_rightHandSide
+  `-UnqualifiedId IdExpression_id
+    `-'pmi'
 )txt"}));
 }
 
@@ -1876,11 +1876,11 @@ void test(X x) {
 }
 )cpp",
       {R"txt(
-PrefixUnaryOperatorExpression
-|-!
-`-IdExpression
-  `-UnqualifiedId
-    `-x
+PrefixUnaryOperatorExpression ExpressionStatement_expression
+|-'!' OperatorExpression_operatorToken
+`-IdExpression UnaryOperatorExpression_operand
+  `-UnqualifiedId IdExpression_id
+    `-'x'
 )txt"}));
 }
 
@@ -1898,11 +1898,11 @@ void test(X x) {
 }
 )cpp",
       {R"txt(
-PrefixUnaryOperatorExpression
-|-&
-`-IdExpression
-  `-UnqualifiedId
-    `-x
+PrefixUnaryOperatorExpression ExpressionStatement_expression
+|-'&' OperatorExpression_operatorToken
+`-IdExpression UnaryOperatorExpression_operand
+  `-UnqualifiedId IdExpression_id
+    `-'x'
 )txt"}));
 }
 
@@ -1920,11 +1920,11 @@ void test(X x) {
 }
 )cpp",
       {R"txt(
-PrefixUnaryOperatorExpression
-|-++
-`-IdExpression
-  `-UnqualifiedId
-    `-x
+PrefixUnaryOperatorExpression ExpressionStatement_expression
+|-'++' OperatorExpression_operatorToken
+`-IdExpression UnaryOperatorExpression_operand
+  `-UnqualifiedId IdExpression_id
+    `-'x'
 )txt"}));
 }
 
@@ -1942,11 +1942,11 @@ void test(X x) {
 }
 )cpp",
       {R"txt(
-PostfixUnaryOperatorExpression
-|-IdExpression
-| `-UnqualifiedId
-|   `-x
-`-++
+PostfixUnaryOperatorExpression ExpressionStatement_expression
+|-IdExpression UnaryOperatorExpression_operand
+| `-UnqualifiedId IdExpression_id
+|   `-'x'
+`-'++' OperatorExpression_operatorToken
 )txt"}));
 }
 
@@ -1961,14 +1961,14 @@ void test(struct S s) {
 }
 )cpp",
       {R"txt(
-MemberExpression
-|-IdExpression
-| `-UnqualifiedId
-|   `-s
-|-.
-`-IdExpression
-  `-UnqualifiedId
-    `-a
+MemberExpression ExpressionStatement_expression
+|-IdExpression MemberExpression_object
+| `-UnqualifiedId IdExpression_id
+|   `-'s'
+|-'.' MemberExpression_accessToken
+`-IdExpression MemberExpression_member
+  `-UnqualifiedId IdExpression_id
+    `-'a'
 )txt"}));
 }
 
@@ -1986,14 +1986,14 @@ void test(S s) {
 }
 )cpp",
       {R"txt(
-MemberExpression
-|-IdExpression
-| `-UnqualifiedId
-|   `-s
-|-.
-`-IdExpression
-  `-UnqualifiedId
-    `-a
+MemberExpression ExpressionStatement_expression
+|-IdExpression MemberExpression_object
+| `-UnqualifiedId IdExpression_id
+|   `-'s'
+|-'.' MemberExpression_accessToken
+`-IdExpression MemberExpression_member
+  `-UnqualifiedId IdExpression_id
+    `-'a'
 )txt"}));
 }
 
@@ -2008,14 +2008,14 @@ void test(struct S* sp) {
 }
 )cpp",
       {R"txt(
-MemberExpression
-|-IdExpression
-| `-UnqualifiedId
-|   `-sp
-|-->
-`-IdExpression
-  `-UnqualifiedId
-    `-a
+MemberExpression ExpressionStatement_expression
+|-IdExpression MemberExpression_object
+| `-UnqualifiedId IdExpression_id
+|   `-'sp'
+|-'->' MemberExpression_accessToken
+`-IdExpression MemberExpression_member
+  `-UnqualifiedId IdExpression_id
+    `-'a'
 )txt"}));
 }
 
@@ -2030,19 +2030,19 @@ void test(struct S s){
 }
 )cpp",
       {R"txt(
-MemberExpression
-|-MemberExpression
-| |-IdExpression
-| | `-UnqualifiedId
-| |   `-s
-| |-.
-| `-IdExpression
-|   `-UnqualifiedId
-|     `-next
-|-->
-`-IdExpression
-  `-UnqualifiedId
-    `-next
+MemberExpression ExpressionStatement_expression
+|-MemberExpression MemberExpression_object
+| |-IdExpression MemberExpression_object
+| | `-UnqualifiedId IdExpression_id
+| |   `-'s'
+| |-'.' MemberExpression_accessToken
+| `-IdExpression MemberExpression_member
+|   `-UnqualifiedId IdExpression_id
+|     `-'next'
+|-'->' MemberExpression_accessToken
+`-IdExpression MemberExpression_member
+  `-UnqualifiedId IdExpression_id
+    `-'next'
 )txt"}));
 }
 
@@ -2060,18 +2060,18 @@ void test(S s) {
 }
 )cpp",
       {R"txt(
-UnknownExpression
+UnknownExpression ExpressionStatement_expression
 |-MemberExpression
-| |-IdExpression
-| | `-UnqualifiedId
-| |   `-s
-| |-.
-| `-IdExpression
-|   `-UnqualifiedId
-|     |-operator
-|     `-!
-|-(
-`-)
+| |-IdExpression MemberExpression_object
+| | `-UnqualifiedId IdExpression_id
+| |   `-'s'
+| |-'.' MemberExpression_accessToken
+| `-IdExpression MemberExpression_member
+|   `-UnqualifiedId IdExpression_id
+|     |-'operator'
+|     `-'!'
+|-'('
+`-')'
 )txt"}));
 }
 
@@ -2093,21 +2093,21 @@ void test(S s) [[{
 )cpp",
       {R"txt(
 CompoundStatement
-|-{
-|-ExpressionStatement
-| `-MemberExpression
-|   |-IdExpression
-|   | `-UnqualifiedId
-|   |   `-s
-|   |-.
-|   `-IdExpression
-|     `-UnqualifiedId
-|       `-x
-|-<
-|-int
-|->
-|-;
-`-}
+|-'{' OpenParen
+|-ExpressionStatement CompoundStatement_statement
+| `-MemberExpression ExpressionStatement_expression
+|   |-IdExpression MemberExpression_object
+|   | `-UnqualifiedId IdExpression_id
+|   |   `-'s'
+|   |-'.' MemberExpression_accessToken
+|   `-IdExpression MemberExpression_member
+|     `-UnqualifiedId IdExpression_id
+|       `-'x'
+|-'<'
+|-'int'
+|-'>'
+|-';'
+`-'}' CloseParen
 )txt"}));
 }
 
@@ -2126,20 +2126,20 @@ void test(S* sp){
 }
 )cpp",
       {R"txt(
-UnknownExpression
+UnknownExpression ExpressionStatement_expression
 |-MemberExpression
-| |-IdExpression
-| | `-UnqualifiedId
-| |   `-sp
-| |-->
-| `-IdExpression
-|   `-UnqualifiedId
-|     |-f
-|     |-<
-|     |-int
-|     `->
-|-(
-`-)
+| |-IdExpression MemberExpression_object
+| | `-UnqualifiedId IdExpression_id
+| |   `-'sp'
+| |-'->' MemberExpression_accessToken
+| `-IdExpression MemberExpression_member
+|   `-UnqualifiedId IdExpression_id
+|     |-'f'
+|     |-'<'
+|     |-'int'
+|     `-'>'
+|-'('
+`-')'
 )txt"}));
 }
 
@@ -2158,21 +2158,21 @@ void test(S s){
 }
 )cpp",
       {R"txt(
-UnknownExpression
+UnknownExpression ExpressionStatement_expression
 |-MemberExpression
-| |-IdExpression
-| | `-UnqualifiedId
-| |   `-s
-| |-.
-| |-template
-| `-IdExpression
-|   `-UnqualifiedId
-|     |-f
-|     |-<
-|     |-int
-|     `->
-|-(
-`-)
+| |-IdExpression MemberExpression_object
+| | `-UnqualifiedId IdExpression_id
+| |   `-'s'
+| |-'.' MemberExpression_accessToken
+| |-'template'
+| `-IdExpression MemberExpression_member
+|   `-UnqualifiedId IdExpression_id
+|     |-'f'
+|     |-'<'
+|     |-'int'
+|     `-'>'
+|-'('
+`-')'
 )txt"}));
 }
 
@@ -2192,40 +2192,40 @@ void test(S s){
 }
 )cpp",
       {R"txt(
-UnknownExpression
+UnknownExpression ExpressionStatement_expression
 |-MemberExpression
-| |-IdExpression
-| | `-UnqualifiedId
-| |   `-s
-| |-.
-| `-IdExpression
-|   |-NestedNameSpecifier
-|   | |-IdentifierNameSpecifier
-|   | | `-Base
-|   | `-::
-|   `-UnqualifiedId
-|     `-f
-|-(
-`-)
+| |-IdExpression MemberExpression_object
+| | `-UnqualifiedId IdExpression_id
+| |   `-'s'
+| |-'.' MemberExpression_accessToken
+| `-IdExpression MemberExpression_member
+|   |-NestedNameSpecifier IdExpression_qualifier
+|   | |-IdentifierNameSpecifier List_element
+|   | | `-'Base'
+|   | `-'::' List_delimiter
+|   `-UnqualifiedId IdExpression_id
+|     `-'f'
+|-'('
+`-')'
       )txt",
        R"txt(
-UnknownExpression
+UnknownExpression ExpressionStatement_expression
 |-MemberExpression
-| |-IdExpression
-| | `-UnqualifiedId
-| |   `-s
-| |-.
-| `-IdExpression
-|   |-NestedNameSpecifier
-|   | |-::
-|   | |-IdentifierNameSpecifier
-|   | | `-S
-|   | `-::
-|   `-UnqualifiedId
-|     |-~
-|     `-S
-|-(
-`-)
+| |-IdExpression MemberExpression_object
+| | `-UnqualifiedId IdExpression_id
+| |   `-'s'
+| |-'.' MemberExpression_accessToken
+| `-IdExpression MemberExpression_member
+|   |-NestedNameSpecifier IdExpression_qualifier
+|   | |-'::' List_delimiter
+|   | |-IdentifierNameSpecifier List_element
+|   | | `-'S'
+|   | `-'::' List_delimiter
+|   `-UnqualifiedId IdExpression_id
+|     |-'~'
+|     `-'S'
+|-'('
+`-')'
 )txt"}));
 }
 
@@ -2253,37 +2253,37 @@ void test(S* sp) {
 }
 )cpp",
       {R"txt(
-UnknownExpression
+UnknownExpression ExpressionStatement_expression
 |-MemberExpression
-| |-UnknownExpression
+| |-UnknownExpression MemberExpression_object
 | | |-MemberExpression
-| | | |-IdExpression
-| | | | `-UnqualifiedId
-| | | |   `-sp
-| | | |-->
-| | | `-IdExpression
-| | |   `-UnqualifiedId
-| | |     `-getU
-| | |-(
-| | `-)
-| |-.
-| `-IdExpression
-|   |-NestedNameSpecifier
-|   | |-SimpleTemplateNameSpecifier
-|   | | |-template
-|   | | |-U
-|   | | |-<
-|   | | |-int
-|   | | `->
-|   | `-::
-|   |-template
-|   `-UnqualifiedId
-|     |-f
-|     |-<
-|     |-int
-|     `->
-|-(
-`-)
+| | | |-IdExpression MemberExpression_object
+| | | | `-UnqualifiedId IdExpression_id
+| | | |   `-'sp'
+| | | |-'->' MemberExpression_accessToken
+| | | `-IdExpression MemberExpression_member
+| | |   `-UnqualifiedId IdExpression_id
+| | |     `-'getU'
+| | |-'('
+| | `-')'
+| |-'.' MemberExpression_accessToken
+| `-IdExpression MemberExpression_member
+|   |-NestedNameSpecifier IdExpression_qualifier
+|   | |-SimpleTemplateNameSpecifier List_element
+|   | | |-'template'
+|   | | |-'U'
+|   | | |-'<'
+|   | | |-'int'
+|   | | `-'>'
+|   | `-'::' List_delimiter
+|   |-'template' TemplateKeyword
+|   `-UnqualifiedId IdExpression_id
+|     |-'f'
+|     |-'<'
+|     |-'int'
+|     `-'>'
+|-'('
+`-')'
 )txt"}));
 }
 
