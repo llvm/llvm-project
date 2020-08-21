@@ -1758,12 +1758,12 @@ define void @call_via_pointer_with_dead_args(i32* %a, i32* %b, void (i32*, i32*,
 ; FIXME: We have to prevent the propagation of %fp in the new pm CGSCC pass until the CallGraphUpdater can handle the new call edge.
 define internal void @call_via_pointer_with_dead_args_internal_a(i32* %a, i32* %b, void (i32*, i32*, i32*, i64, i32**)* %fp) {
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_a
-; NOT_CGSCC_NPM-SAME: (i32* [[A:%.*]], i32* nonnull align 128 dereferenceable(4) [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull [[FP:%.*]])
+; NOT_CGSCC_NPM-SAME: (i32* [[A:%.*]], i32* noundef nonnull align 128 dereferenceable(4) [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree noundef nonnull [[FP:%.*]])
 ; NOT_CGSCC_NPM-NEXT:    call void @called_via_pointer(i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[B]], i32* [[A]], i64 -1, i32** null)
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_a
-; IS__CGSCC____-SAME: (i32* [[A:%.*]], i32* nonnull align 128 dereferenceable(4) [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull [[FP:%.*]])
+; IS__CGSCC____-SAME: (i32* [[A:%.*]], i32* noundef nonnull align 128 dereferenceable(4) [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree noundef nonnull [[FP:%.*]])
 ; IS__CGSCC____-NEXT:    call void [[FP]](i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[B]], i32* [[A]], i64 -1, i32** null)
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -1772,12 +1772,12 @@ define internal void @call_via_pointer_with_dead_args_internal_a(i32* %a, i32* %
 }
 define internal void @call_via_pointer_with_dead_args_internal_b(i32* %a, i32* %b, void (i32*, i32*, i32*, i64, i32**)* %fp) {
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_b
-; NOT_CGSCC_NPM-SAME: (i32* [[A:%.*]], i32* nonnull align 128 dereferenceable(4) [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull [[FP:%.*]])
+; NOT_CGSCC_NPM-SAME: (i32* [[A:%.*]], i32* noundef nonnull align 128 dereferenceable(4) [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree noundef nonnull [[FP:%.*]])
 ; NOT_CGSCC_NPM-NEXT:    call void @called_via_pointer_internal_2(i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[B]], i32* [[A]], i64 -1, i32** null)
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_b
-; IS__CGSCC____-SAME: (i32* [[A:%.*]], i32* nonnull align 128 dereferenceable(4) [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull [[FP:%.*]])
+; IS__CGSCC____-SAME: (i32* [[A:%.*]], i32* noundef nonnull align 128 dereferenceable(4) [[B:%.*]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree noundef nonnull [[FP:%.*]])
 ; IS__CGSCC____-NEXT:    call void [[FP]](i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[B]], i32* [[A]], i64 -1, i32** null)
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -1785,17 +1785,29 @@ define internal void @call_via_pointer_with_dead_args_internal_b(i32* %a, i32* %
   ret void
 }
 define void @call_via_pointer_with_dead_args_caller(i32* %a, i32* %b) {
-; CHECK-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_caller
-; CHECK-SAME: (i32* [[A:%.*]], i32* [[B:%.*]])
-; CHECK-NEXT:    [[PTR1:%.*]] = alloca i32, align 128
-; CHECK-NEXT:    [[PTR2:%.*]] = alloca i32, align 128
-; CHECK-NEXT:    [[PTR3:%.*]] = alloca i32, align 128
-; CHECK-NEXT:    [[PTR4:%.*]] = alloca i32, align 128
-; CHECK-NEXT:    call void @call_via_pointer_with_dead_args(i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[PTR1]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull @called_via_pointer)
-; CHECK-NEXT:    call void @call_via_pointer_with_dead_args(i32* [[A]], i32* nonnull align 128 dereferenceable(4) [[PTR2]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull @called_via_pointer_internal_1)
-; CHECK-NEXT:    call void @call_via_pointer_with_dead_args_internal_a(i32* [[B]], i32* nonnull align 128 dereferenceable(4) [[PTR3]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull @called_via_pointer)
-; CHECK-NEXT:    call void @call_via_pointer_with_dead_args_internal_b(i32* [[B]], i32* nonnull align 128 dereferenceable(4) [[PTR4]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree nonnull @called_via_pointer_internal_2)
-; CHECK-NEXT:    ret void
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_caller
+; NOT_CGSCC_NPM-SAME: (i32* [[A:%.*]], i32* [[B:%.*]])
+; NOT_CGSCC_NPM-NEXT:    [[PTR1:%.*]] = alloca i32, align 128
+; NOT_CGSCC_NPM-NEXT:    [[PTR2:%.*]] = alloca i32, align 128
+; NOT_CGSCC_NPM-NEXT:    [[PTR3:%.*]] = alloca i32, align 128
+; NOT_CGSCC_NPM-NEXT:    [[PTR4:%.*]] = alloca i32, align 128
+; NOT_CGSCC_NPM-NEXT:    call void @call_via_pointer_with_dead_args(i32* [[A]], i32* noundef nonnull align 128 dereferenceable(4) [[PTR1]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree noundef @called_via_pointer)
+; NOT_CGSCC_NPM-NEXT:    call void @call_via_pointer_with_dead_args(i32* [[A]], i32* noundef nonnull align 128 dereferenceable(4) [[PTR2]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree noundef @called_via_pointer_internal_1)
+; NOT_CGSCC_NPM-NEXT:    call void @call_via_pointer_with_dead_args_internal_a(i32* [[B]], i32* noundef nonnull align 128 dereferenceable(4) [[PTR3]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree noundef @called_via_pointer)
+; NOT_CGSCC_NPM-NEXT:    call void @call_via_pointer_with_dead_args_internal_b(i32* [[B]], i32* noundef nonnull align 128 dereferenceable(4) [[PTR4]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree noundef @called_via_pointer_internal_2)
+; NOT_CGSCC_NPM-NEXT:    ret void
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_caller
+; IS__CGSCC____-SAME: (i32* [[A:%.*]], i32* [[B:%.*]])
+; IS__CGSCC____-NEXT:    [[PTR1:%.*]] = alloca i32, align 128
+; IS__CGSCC____-NEXT:    [[PTR2:%.*]] = alloca i32, align 128
+; IS__CGSCC____-NEXT:    [[PTR3:%.*]] = alloca i32, align 128
+; IS__CGSCC____-NEXT:    [[PTR4:%.*]] = alloca i32, align 128
+; IS__CGSCC____-NEXT:    call void @call_via_pointer_with_dead_args(i32* [[A]], i32* noundef nonnull align 128 dereferenceable(4) [[PTR1]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree noundef nonnull @called_via_pointer)
+; IS__CGSCC____-NEXT:    call void @call_via_pointer_with_dead_args(i32* [[A]], i32* noundef nonnull align 128 dereferenceable(4) [[PTR2]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree noundef nonnull @called_via_pointer_internal_1)
+; IS__CGSCC____-NEXT:    call void @call_via_pointer_with_dead_args_internal_a(i32* [[B]], i32* noundef nonnull align 128 dereferenceable(4) [[PTR3]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree noundef nonnull @called_via_pointer)
+; IS__CGSCC____-NEXT:    call void @call_via_pointer_with_dead_args_internal_b(i32* [[B]], i32* noundef nonnull align 128 dereferenceable(4) [[PTR4]], void (i32*, i32*, i32*, i64, i32**)* nocapture nofree noundef nonnull @called_via_pointer_internal_2)
+; IS__CGSCC____-NEXT:    ret void
 ;
   %ptr1 = alloca i32, align 128
   %ptr2 = alloca i32, align 128
@@ -1908,7 +1920,7 @@ define i32 @main() {
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[G_0]], 1
 ; CHECK-NEXT:    br label [[FOR_COND_0]]
 ; CHECK:       for.end.0:
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias i8* @malloc(i64 8)
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @malloc(i64 8)
 ; CHECK-NEXT:    store i8* [[CALL]], i8** bitcast (%struct.a** @e to i8**), align 8
 ; CHECK-NEXT:    [[B:%.*]] = bitcast i8* [[CALL]] to %struct.a**
 ; CHECK-NEXT:    store %struct.a* null, %struct.a** [[B]], align 8
@@ -1985,7 +1997,7 @@ define void @bad_gep() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[M:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* noalias nocapture nonnull dereferenceable(1) [[N]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* noalias nocapture noundef nonnull dereferenceable(1) [[N]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    unreachable
@@ -1994,7 +2006,7 @@ define void @bad_gep() {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* noalias nocapture nonnull dereferenceable(1) [[N]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* noalias nocapture noundef nonnull dereferenceable(1) [[N]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

@@ -548,17 +548,13 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
 
       uint64_t HeaderSize = DWARFListTableHeader::getHeaderSize(Header.getFormat());
       uint64_t Offset = getLocSectionBase();
-      DWARFDataExtractor Data(Context.getDWARFObj(), *LocSection,
-                              isLittleEndian, getAddressByteSize());
+      const DWARFDataExtractor &Data = LocTable->getData();
       if (Offset < HeaderSize)
         return createStringError(errc::invalid_argument,
                                  "did not detect a valid"
                                  " list table with base = 0x%" PRIx64 "\n",
                                  Offset);
       Offset -= HeaderSize;
-      if (auto *IndexEntry = Header.getIndexEntry())
-        if (const auto *Contrib = IndexEntry->getContribution(DW_SECT_LOCLISTS))
-          Offset += Contrib->Offset;
       if (Error E = LoclistTableHeader->extract(Data, &Offset))
         return createStringError(errc::invalid_argument,
                                  "parsing a loclist table: " +
@@ -1008,4 +1004,14 @@ DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor & DA) {
   if (!DescOrError)
     return DescOrError.takeError();
   return *DescOrError;
+}
+
+Optional<uint64_t> DWARFUnit::getRnglistOffset(uint32_t Index) {
+  if (!RngListTable)
+    return None;
+  DataExtractor RangesData(RangeSection->Data, isLittleEndian,
+                           getAddressByteSize());
+  if (Optional<uint64_t> Off = RngListTable->getOffsetEntry(RangesData, Index))
+    return *Off + RangeSectionBase;
+  return None;
 }

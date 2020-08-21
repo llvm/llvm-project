@@ -930,6 +930,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     return selectBallot(I);
   case Intrinsic::amdgcn_reloc_constant:
     return selectRelocConstant(I);
+  case Intrinsic::amdgcn_groupstaticsize:
+    return selectGroupStaticSize(I);
   case Intrinsic::returnaddress:
     return selectReturnAddress(I);
   default:
@@ -1135,6 +1137,33 @@ bool AMDGPUInstructionSelector::selectRelocConstant(MachineInstr &I) const {
 
   I.eraseFromParent();
   return true;
+}
+
+bool AMDGPUInstructionSelector::selectGroupStaticSize(MachineInstr &I) const {
+  Triple::OSType OS = MF->getTarget().getTargetTriple().getOS();
+
+  Register DstReg = I.getOperand(0).getReg();
+  const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
+  unsigned Mov = DstRB->getID() == AMDGPU::SGPRRegBankID ?
+    AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
+
+  MachineBasicBlock *MBB = I.getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+
+  auto MIB = BuildMI(*MBB, &I, DL, TII.get(Mov), DstReg);
+
+  if (OS == Triple::AMDHSA || OS == Triple::AMDPAL) {
+    const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
+    MIB.addImm(MFI->getLDSSize());
+  } else {
+    Module *M = MF->getFunction().getParent();
+    const GlobalValue *GV
+      = Intrinsic::getDeclaration(M, Intrinsic::amdgcn_groupstaticsize);
+    MIB.addGlobalAddress(GV, 0, SIInstrInfo::MO_ABS32_LO);
+  }
+
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
 bool AMDGPUInstructionSelector::selectReturnAddress(MachineInstr &I) const {
@@ -2043,6 +2072,8 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
 bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
   MachineOperand &ImmOp = I.getOperand(1);
+  Register DstReg = I.getOperand(0).getReg();
+  unsigned Size = MRI->getType(DstReg).getSizeInBits();
 
   // The AMDGPU backend only supports Imm operands and not CImm or FPImm.
   if (ImmOp.isFPImm()) {
@@ -2050,26 +2081,27 @@ bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
     ImmOp.ChangeToImmediate(Imm.getZExtValue());
   } else if (ImmOp.isCImm()) {
     ImmOp.ChangeToImmediate(ImmOp.getCImm()->getSExtValue());
-  }
-
-  Register DstReg = I.getOperand(0).getReg();
-  unsigned Size;
-  bool IsSgpr;
-  const RegisterBank *RB = MRI->getRegBankOrNull(I.getOperand(0).getReg());
-  if (RB) {
-    IsSgpr = RB->getID() == AMDGPU::SGPRRegBankID;
-    Size = MRI->getType(DstReg).getSizeInBits();
   } else {
-    const TargetRegisterClass *RC = TRI.getRegClassForReg(*MRI, DstReg);
-    IsSgpr = TRI.isSGPRClass(RC);
-    Size = TRI.getRegSizeInBits(*RC);
+    llvm_unreachable("Not supported by g_constants");
   }
 
-  if (Size != 32 && Size != 64)
-    return false;
+  const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
+  const bool IsSgpr = DstRB->getID() == AMDGPU::SGPRRegBankID;
 
-  unsigned Opcode = IsSgpr ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
-  if (Size == 32) {
+  unsigned Opcode;
+  if (DstRB->getID() == AMDGPU::VCCRegBankID) {
+    Opcode = STI.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+  } else {
+    Opcode = IsSgpr ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
+
+    // We should never produce s1 values on banks other than VCC. If the user of
+    // this already constrained the register, we may incorrectly think it's VCC
+    // if it wasn't originally.
+    if (Size == 1)
+      return false;
+  }
+
+  if (Size != 64) {
     I.setDesc(TII.get(Opcode));
     I.addImplicitDefUseOperands(*MF);
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);

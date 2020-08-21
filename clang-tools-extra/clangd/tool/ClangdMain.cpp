@@ -450,6 +450,13 @@ opt<bool> EnableConfig{
     init(true),
 };
 
+opt<bool> CollectMainFileRefs{
+    "collect-main-file-refs",
+    cat(Misc),
+    desc("Store references to main-file-only symbols in the index"),
+    init(false),
+};
+
 #if CLANGD_ENABLE_REMOTE
 opt<std::string> RemoteIndexAddress{
     "remote-index-address",
@@ -682,6 +689,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   if (!ResourceDir.empty())
     Opts.ResourceDir = ResourceDir;
   Opts.BuildDynamicSymbolIndex = EnableIndex;
+  Opts.CollectMainFileRefs = CollectMainFileRefs;
   std::unique_ptr<SymbolIndex> StaticIdx;
   std::future<void> AsyncIndexLoad; // Block exit while loading the index.
   if (EnableIndex && !IndexFile.empty()) {

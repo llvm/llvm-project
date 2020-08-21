@@ -6,26 +6,17 @@ define void @arm_cmplx_mag_squared_q15_mve(i16* %pSrc, i16* %pDst, i32 %blockSiz
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    subs.w r12, r2, #8
-; CHECK-NEXT:    mov.w r3, #-1
-; CHECK-NEXT:    csinv r3, r3, r12, pl
-; CHECK-NEXT:    add.w r12, r3, r2
-; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #3
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    dlstp.16 lr, r2
 ; CHECK-NEXT:  .LBB0_1: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vld20.16 {q0, q1}, [r0]
-; CHECK-NEXT:    vctp.16 r2
-; CHECK-NEXT:    subs r2, #8
 ; CHECK-NEXT:    vld21.16 {q0, q1}, [r0]!
-; CHECK-NEXT:    vpstttt
-; CHECK-NEXT:    vmulht.s16 q2, q1, q1
-; CHECK-NEXT:    vmulht.s16 q0, q0, q0
-; CHECK-NEXT:    vqaddt.s16 q0, q0, q2
-; CHECK-NEXT:    vshrt.s16 q0, q0, #1
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrht.16 q0, [r1], #16
-; CHECK-NEXT:    le lr, .LBB0_1
+; CHECK-NEXT:    vmulh.s16 q2, q1, q1
+; CHECK-NEXT:    vmulh.s16 q0, q0, q0
+; CHECK-NEXT:    vqadd.s16 q0, q0, q2
+; CHECK-NEXT:    vshr.s16 q0, q0, #1
+; CHECK-NEXT:    vstrh.16 q0, [r1], #16
+; CHECK-NEXT:    letp lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %do.end
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -148,25 +139,14 @@ define i32 @good2(i32* nocapture readonly %x, i32* nocapture readonly %y, i32 %n
 ; CHECK-LABEL: good2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    mov r3, r2
-; CHECK-NEXT:    cmp r2, #4
-; CHECK-NEXT:    it ge
-; CHECK-NEXT:    movge r3, #4
-; CHECK-NEXT:    subs r3, r2, r3
-; CHECK-NEXT:    add.w r12, r3, #3
-; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
 ; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB3_1: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vctp.32 r2
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r0], #16
-; CHECK-NEXT:    subs r2, #4
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vmlavat.s32 r12, q1, q0
-; CHECK-NEXT:    le lr, .LBB3_1
+; CHECK-NEXT:    vmlava.s32 r12, q1, q0
+; CHECK-NEXT:    letp lr, .LBB3_1
 ; CHECK-NEXT:  @ %bb.2: @ %do.end
 ; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    pop {r7, pc}

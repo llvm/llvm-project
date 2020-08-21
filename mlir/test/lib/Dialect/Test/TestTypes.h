@@ -26,10 +26,6 @@ struct TestType : public Type::TypeBase<TestType, Type, TypeStorage,
                                         TestTypeInterface::Trait> {
   using Base::Base;
 
-  static TestType get(MLIRContext *context) {
-    return Base::get(context, Type::Kind::FIRST_PRIVATE_EXPERIMENTAL_9_TYPE);
-  }
-
   /// Provide a definition for the necessary interface methods.
   void printTypeC(Location loc) const {
     emitRemark(loc) << *this << " - TestC";
@@ -72,9 +68,8 @@ class TestRecursiveType
 public:
   using Base::Base;
 
-  static TestRecursiveType create(MLIRContext *ctx, StringRef name) {
-    return Base::get(ctx, Type::Kind::FIRST_PRIVATE_EXPERIMENTAL_9_TYPE + 1,
-                     name);
+  static TestRecursiveType get(MLIRContext *ctx, StringRef name) {
+    return Base::get(ctx, name);
   }
 
   /// Body getter and setter.

@@ -1,51 +1,75 @@
-# If the offset and/or size fields of the PT_DYNAMIC field become corrupted,
-# we should report a sensible message.
+## If the offset and/or size fields of the PT_DYNAMIC field become corrupted,
+## we should report a sensible message.
 
-# Creating such a malformed file is hard. The easiest way to simulate it is to
-# truncate the file. Note that the section headers must first be stripped or
-# llvm-readobj will fail to parse the file due to the section header table
-# offset pointing outside the file.
+## Case A: Test case where the size of the PT_DYNAMIC header is too large to fit in the file,
+##         but the start is within the file.
 
-# RUN: yaml2obj %s -o %t.base
-# RUN: llvm-objcopy --strip-sections %t.base %t.stripped
+## Case A.1: the section header table is present in the object. Check that we report a warning about the
+##           broken PT_DYNAMIC header, check we dump the dynamic table.
+# RUN: yaml2obj %s -DFILESIZE=0x131 -o %t1
+# RUN: llvm-readobj %t1 --dynamic-table 2>&1 | FileCheck -DFILE=%t1 %s --check-prefixes=WARN1,WARN1-LLVM
+# RUN: llvm-readelf %t1 --dynamic-table 2>&1 | FileCheck -DFILE=%t1 %s --check-prefixes=WARN1,WARN1-GNU
 
-# Test case where the size is too large to fit in the file, but the start is
-# within the file.
-# RUN: cp %t.stripped %t.truncated1
-# RUN: %python -c "with open(r'%t.truncated1', 'r+') as f: f.truncate(0x1001)"
-# RUN: llvm-readobj %t.truncated1 --dynamic-table 2>&1 | \
-# RUN:   FileCheck -DFILE=%t.truncated1 %s --check-prefix=WARN1
+# WARN1: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0x131) exceeds the size of the file (0x1130)
 
-# WARN1: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0x10) exceeds the size of the file (0x1001)
+# WARN1-LLVM:      DynamicSection [ (1 entries)
+# WARN1-LLVM-NEXT:   Tag                Type Name/Value
+# WARN1-LLVM-NEXT:   0x0000000000000000 NULL 0x0
+# WARN1-LLVM-NEXT: ]
 
-# Test case where the offset is too large to be in the file.
-# RUN: cp %t.stripped %t.truncated2
-# RUN: %python -c "with open(r'%t.truncated2', 'r+') as f: f.truncate(0xFFF)"
-# RUN: llvm-readobj %t.truncated2 --dynamic-table 2>&1 | \
-# RUN:   FileCheck -DFILE=%t.truncated2 %s  --check-prefix=WARN2
+# WARN1-GNU:       Dynamic section at offset 0x1000 contains 1 entries:
+# WARN1-GNU-NEXT:   Tag                Type   Name/Value
+# WARN1-GNU-NEXT:   0x0000000000000000 (NULL) 0x0
 
-# WARN2: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0x10) exceeds the size of the file (0xfff)
+## Case A.2: in this case we drop section headers. The dynamic table is not dumped.
+# RUN: yaml2obj %s -DFILESIZE=0x119 -DNOHEADERS=true -o %t1.noheaders
+# RUN: llvm-readobj %t1.noheaders --dynamic-table 2>&1 | FileCheck -DFILE=%t1.noheaders %s \
+# RUN:   --check-prefix=WARN1-NOHEADERS --implicit-check-not="DynamicSection ["
+# RUN: llvm-readelf %t1.noheaders --dynamic-table 2>&1 | FileCheck -DFILE=%t1.noheaders %s \
+# RUN:   --check-prefix=WARN1-NOHEADERS --implicit-check-not="Dynamic section"
+
+# WARN1-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1000) + file size (0x119) exceeds the size of the file (0x1118)
+
+## Case B: Test case where the offset of the PT_DYNAMIC header is too large to be in the file.
+
+## Case B.1: the section header table is present in the object. Check that we report a warning about the
+##           broken PT_DYNAMIC header, but document that we do not dump the dynamic table, because
+##           return an error earlier.
+# RUN: yaml2obj %s -DOFFSET=0x1131 -o %t2
+# RUN: not llvm-readobj %t2 --dynamic-table 2>&1 | FileCheck -DFILE=%t2 %s --check-prefix=WARN2
+# RUN: not llvm-readelf %t2 --dynamic-table 2>&1 | FileCheck -DFILE=%t2 %s --check-prefix=WARN2
+
+# WARN2: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1131) + file size (0x10) exceeds the size of the file (0x1130)
+# WARN2: error: '[[FILE]]': Invalid data was encountered while parsing the file
+
+## Case B.2: in this case we drop section headers. The dynamic table is not dumped.
+# RUN: yaml2obj %s -DOFFSET=0x1119 -DNOHEADERS=true -o %t2.noheaders
+# RUN: llvm-readobj %t2.noheaders --dynamic-table 2>&1 | FileCheck -DFILE=%t2.noheaders %s \
+# RUN:   --check-prefix=WARN2-NOHEADERS --implicit-check-not="DynamicSection ["
+# RUN: llvm-readelf %t2.noheaders --dynamic-table 2>&1 | FileCheck -DFILE=%t2.noheaders %s \
+# RUN:   --check-prefix=WARN2-NOHEADERS --implicit-check-not="Dynamic section"
+
+# WARN2-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1119) + file size (0x10) exceeds the size of the file (0x1118)
 
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64
   Data:    ELFDATA2LSB
   Type:    ET_EXEC
-  Machine: EM_X86_64
+  Machine: EM_NONE
 Sections:
-  - Name:         .dynamic
-    Type:         SHT_DYNAMIC
-    Address:      0x1000
-    AddressAlign: 0x1000
+  - Name:     .dynamic
+    Type:     SHT_DYNAMIC
+    Address:  0x1000
+    Offset:   0x1000
+    ShOffset: [[OFFSET=<none>]]
     Entries:
       - Tag:   DT_NULL
         Value: 0
 ProgramHeaders:
-  - Type: PT_LOAD
-    VAddr: 0x1000
+  - Type:     PT_DYNAMIC
+    FileSize: [[FILESIZE=<none>]]
     Sections:
       - Section: .dynamic
-  - Type: PT_DYNAMIC
-    VAddr: 0x1000
-    Sections:
-      - Section: .dynamic
+SectionHeaderTable:
+  NoHeaders: [[NOHEADERS=false]]

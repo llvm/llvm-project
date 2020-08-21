@@ -30,6 +30,51 @@ using namespace llvm;
 
 void CallLowering::anchor() {}
 
+/// Helper function which updates \p Flags when \p AttrFn returns true.
+static void
+addFlagsUsingAttrFn(ISD::ArgFlagsTy &Flags,
+                    const std::function<bool(Attribute::AttrKind)> &AttrFn) {
+  if (AttrFn(Attribute::SExt))
+    Flags.setSExt();
+  if (AttrFn(Attribute::ZExt))
+    Flags.setZExt();
+  if (AttrFn(Attribute::InReg))
+    Flags.setInReg();
+  if (AttrFn(Attribute::StructRet))
+    Flags.setSRet();
+  if (AttrFn(Attribute::Nest))
+    Flags.setNest();
+  if (AttrFn(Attribute::ByVal))
+    Flags.setByVal();
+  if (AttrFn(Attribute::Preallocated))
+    Flags.setPreallocated();
+  if (AttrFn(Attribute::InAlloca))
+    Flags.setInAlloca();
+  if (AttrFn(Attribute::Returned))
+    Flags.setReturned();
+  if (AttrFn(Attribute::SwiftSelf))
+    Flags.setSwiftSelf();
+  if (AttrFn(Attribute::SwiftError))
+    Flags.setSwiftError();
+}
+
+ISD::ArgFlagsTy CallLowering::getAttributesForArgIdx(const CallBase &Call,
+                                                     unsigned ArgIdx) const {
+  ISD::ArgFlagsTy Flags;
+  addFlagsUsingAttrFn(Flags, [&Call, &ArgIdx](Attribute::AttrKind Attr) {
+    return Call.paramHasAttr(ArgIdx, Attr);
+  });
+  return Flags;
+}
+
+void CallLowering::addArgFlagsFromAttributes(ISD::ArgFlagsTy &Flags,
+                                             const AttributeList &Attrs,
+                                             unsigned OpIdx) const {
+  addFlagsUsingAttrFn(Flags, [&Attrs, &OpIdx](Attribute::AttrKind Attr) {
+    return Attrs.hasAttribute(OpIdx, Attr);
+  });
+}
+
 bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
                              ArrayRef<Register> ResRegs,
                              ArrayRef<ArrayRef<Register>> ArgRegs,
@@ -37,6 +82,12 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
                              std::function<unsigned()> GetCalleeReg) const {
   CallLoweringInfo Info;
   const DataLayout &DL = MIRBuilder.getDataLayout();
+  MachineFunction &MF = MIRBuilder.getMF();
+  bool CanBeTailCalled = CB.isTailCall() &&
+                         isInTailCallPosition(CB, MF.getTarget()) &&
+                         (MF.getFunction()
+                              .getFnAttribute("disable-tail-calls")
+                              .getValueAsString() != "true");
 
   // First step is to marshall all the function's parameters into the correct
   // physregs and memory locations. Gather the sequence of argument types that
@@ -44,9 +95,15 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   unsigned i = 0;
   unsigned NumFixedArgs = CB.getFunctionType()->getNumParams();
   for (auto &Arg : CB.args()) {
-    ArgInfo OrigArg{ArgRegs[i], Arg->getType(), ISD::ArgFlagsTy{},
+    ArgInfo OrigArg{ArgRegs[i], Arg->getType(), getAttributesForArgIdx(CB, i),
                     i < NumFixedArgs};
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, CB);
+
+    // If we have an explicit sret argument that is an Instruction, (i.e., it
+    // might point to function-local memory), we can't meaningfully tail-call.
+    if (OrigArg.Flags[0].isSRet() && isa<Instruction>(&Arg))
+      CanBeTailCalled = false;
+
     Info.OrigArgs.push_back(OrigArg);
     ++i;
   }
@@ -63,16 +120,11 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   if (!Info.OrigRet.Ty->isVoidTy())
     setArgFlags(Info.OrigRet, AttributeList::ReturnIndex, DL, CB);
 
-  MachineFunction &MF = MIRBuilder.getMF();
   Info.KnownCallees = CB.getMetadata(LLVMContext::MD_callees);
   Info.CallConv = CB.getCallingConv();
   Info.SwiftErrorVReg = SwiftErrorVReg;
   Info.IsMustTailCall = CB.isMustTailCall();
-  Info.IsTailCall =
-      CB.isTailCall() && isInTailCallPosition(CB, MF.getTarget()) &&
-      (MF.getFunction()
-           .getFnAttribute("disable-tail-calls")
-           .getValueAsString() != "true");
+  Info.IsTailCall = CanBeTailCalled;
   Info.IsVarArg = CB.getFunctionType()->isVarArg();
   return lowerCall(MIRBuilder, Info);
 }
@@ -83,24 +135,7 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
                                const FuncInfoTy &FuncInfo) const {
   auto &Flags = Arg.Flags[0];
   const AttributeList &Attrs = FuncInfo.getAttributes();
-  if (Attrs.hasAttribute(OpIdx, Attribute::ZExt))
-    Flags.setZExt();
-  if (Attrs.hasAttribute(OpIdx, Attribute::SExt))
-    Flags.setSExt();
-  if (Attrs.hasAttribute(OpIdx, Attribute::InReg))
-    Flags.setInReg();
-  if (Attrs.hasAttribute(OpIdx, Attribute::StructRet))
-    Flags.setSRet();
-  if (Attrs.hasAttribute(OpIdx, Attribute::SwiftSelf))
-    Flags.setSwiftSelf();
-  if (Attrs.hasAttribute(OpIdx, Attribute::SwiftError))
-    Flags.setSwiftError();
-  if (Attrs.hasAttribute(OpIdx, Attribute::ByVal))
-    Flags.setByVal();
-  if (Attrs.hasAttribute(OpIdx, Attribute::Preallocated))
-    Flags.setPreallocated();
-  if (Attrs.hasAttribute(OpIdx, Attribute::InAlloca))
-    Flags.setInAlloca();
+  addArgFlagsFromAttributes(Flags, Attrs, OpIdx);
 
   if (Flags.isByVal() || Flags.isInAlloca() || Flags.isPreallocated()) {
     Type *ElementTy = cast<PointerType>(Arg.Ty)->getElementType();
@@ -117,8 +152,6 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
       FrameAlign = Align(getTLI()->getByValTypeAlignment(ElementTy, DL));
     Flags.setByValAlign(FrameAlign);
   }
-  if (Attrs.hasAttribute(OpIdx, Attribute::Nest))
-    Flags.setNest();
   Flags.setOrigAlign(DL.getABITypeAlign(Arg.Ty));
 }
 

@@ -219,9 +219,6 @@ static void invoke_and_release_block(void *param) {
 DISPATCH_INTERCEPT(dispatch, false)
 DISPATCH_INTERCEPT(dispatch_barrier, true)
 
-DISPATCH_INTERCEPT_SYNC_F(dispatch_async_and_wait_f, false)
-DISPATCH_INTERCEPT_SYNC_B(dispatch_async_and_wait, false)
-
 DECLARE_REAL(void, dispatch_after_f, dispatch_time_t when,
              dispatch_queue_t queue, void *context, dispatch_function_t work)
 
@@ -749,8 +746,6 @@ void InitializeLibdispatchInterceptors() {
   INTERCEPT_FUNCTION(dispatch_barrier_async_f);
   INTERCEPT_FUNCTION(dispatch_barrier_sync);
   INTERCEPT_FUNCTION(dispatch_barrier_sync_f);
-  INTERCEPT_FUNCTION(dispatch_async_and_wait);
-  INTERCEPT_FUNCTION(dispatch_async_and_wait_f);
   INTERCEPT_FUNCTION(dispatch_after);
   INTERCEPT_FUNCTION(dispatch_after_f);
   INTERCEPT_FUNCTION(dispatch_once);

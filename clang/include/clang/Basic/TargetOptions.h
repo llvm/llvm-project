@@ -35,6 +35,9 @@ public:
   /// If given, the name of the target CPU to generate code for.
   std::string CPU;
 
+  /// If given, the name of the target CPU to tune code for.
+  std::string TuneCPU;
+
   /// If given, the unit to use for floating point math.
   std::string FPMath;
 

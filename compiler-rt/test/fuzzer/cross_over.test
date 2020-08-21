@@ -12,7 +12,7 @@ RUN: echo -n ABCDE00000 > %t-corpus/A
 RUN: echo -n ZZZZZFGHIJ > %t-corpus/B
 
 
-RUN: not %run %t-CrossOverTest -max_len=10 -seed=1 -runs=10000000 %t-corpus
+RUN: not %run %t-CrossOverTest -max_len=10 -reduce_inputs=0 -seed=1 -runs=10000000 %t-corpus
 
 # Test the same thing but using -seed_inputs instead of passing the corpus dir.
-RUN: not %run %t-CrossOverTest -max_len=10 -seed=1 -runs=10000000 -seed_inputs=%t-corpus/A,%t-corpus/B
+RUN: not %run %t-CrossOverTest -max_len=10 -reduce_inputs=0 -seed=1 -runs=10000000 -seed_inputs=%t-corpus/A,%t-corpus/B

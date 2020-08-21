@@ -586,8 +586,6 @@ static OutputSection *findByName(ArrayRef<BaseCommand *> vec,
 static OutputSection *createSection(InputSectionBase *isec,
                                     StringRef outsecName) {
   OutputSection *sec = script->createOutputSection(outsecName, "<internal>");
-  if (!(isec->flags & SHF_ALLOC))
-    sec->addrExpr = [] { return 0; };
   sec->recordSection(isec);
   return sec;
 }
@@ -852,21 +850,27 @@ static OutputSection *findFirstSection(PhdrEntry *load) {
 void LinkerScript::assignOffsets(OutputSection *sec) {
   const bool sameMemRegion = ctx->memRegion == sec->memRegion;
   const bool prevLMARegionIsDefault = ctx->lmaRegion == nullptr;
+  const uint64_t savedDot = dot;
   ctx->memRegion = sec->memRegion;
   ctx->lmaRegion = sec->lmaRegion;
-  if (ctx->memRegion)
-    dot = ctx->memRegion->curPos;
 
-  if (sec->addrExpr)
-    setDot(sec->addrExpr, sec->location, false);
+  if (sec->flags & SHF_ALLOC) {
+    if (ctx->memRegion)
+      dot = ctx->memRegion->curPos;
+    if (sec->addrExpr)
+      setDot(sec->addrExpr, sec->location, false);
 
-  // If the address of the section has been moved forward by an explicit
-  // expression so that it now starts past the current curPos of the enclosing
-  // region, we need to expand the current region to account for the space
-  // between the previous section, if any, and the start of this section.
-  if (ctx->memRegion && ctx->memRegion->curPos < dot)
-    expandMemoryRegion(ctx->memRegion, dot - ctx->memRegion->curPos,
-                       ctx->memRegion->name, sec->name);
+    // If the address of the section has been moved forward by an explicit
+    // expression so that it now starts past the current curPos of the enclosing
+    // region, we need to expand the current region to account for the space
+    // between the previous section, if any, and the start of this section.
+    if (ctx->memRegion && ctx->memRegion->curPos < dot)
+      expandMemoryRegion(ctx->memRegion, dot - ctx->memRegion->curPos,
+                         ctx->memRegion->name, sec->name);
+  } else {
+    // Non-SHF_ALLOC sections have zero addresses.
+    dot = 0;
+  }
 
   switchTo(sec);
 
@@ -918,6 +922,11 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
     for (InputSection *sec : cast<InputSectionDescription>(base)->sections)
       output(sec);
   }
+
+  // Non-SHF_ALLOC sections do not affect the addresses of other OutputSections
+  // as they are not part of the process image.
+  if (!(sec->flags & SHF_ALLOC))
+    dot = savedDot;
 }
 
 static bool isDiscardable(OutputSection &sec) {

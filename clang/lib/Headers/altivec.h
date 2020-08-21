@@ -16815,6 +16815,34 @@ static vector signed char __ATTRS_o_ai vec_nabs(vector signed char __a) {
 }
 
 #ifdef __POWER10_VECTOR__
+
+/* vec_extractm */
+
+static __inline__ unsigned int __ATTRS_o_ai
+vec_extractm(vector unsigned char __a) {
+  return __builtin_altivec_vextractbm(__a);
+}
+
+static __inline__ unsigned int __ATTRS_o_ai
+vec_extractm(vector unsigned short __a) {
+  return __builtin_altivec_vextracthm(__a);
+}
+
+static __inline__ unsigned int __ATTRS_o_ai
+vec_extractm(vector unsigned int __a) {
+  return __builtin_altivec_vextractwm(__a);
+}
+
+static __inline__ unsigned int __ATTRS_o_ai
+vec_extractm(vector unsigned long long __a) {
+  return __builtin_altivec_vextractdm(__a);
+}
+
+static __inline__ unsigned int __ATTRS_o_ai
+vec_extractm(vector unsigned __int128 __a) {
+  return __builtin_altivec_vextractqm(__a);
+}
+
 /* vec_pdep */
 
 static __inline__ vector unsigned long long __ATTRS_o_ai

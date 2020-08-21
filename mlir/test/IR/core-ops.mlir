@@ -554,6 +554,18 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: = fptosi {{.*}} : f16 to i64
   %162 = fptosi %half : f16 to i64
 
+  // CHECK: floorf %arg1 : f32
+  %163 = "std.floorf"(%f) : (f32) -> f32
+
+  // CHECK: %{{[0-9]+}} = floorf %arg1 : f32
+  %164 = floorf %f : f32
+
+  // CHECK: %{{[0-9]+}} = floorf %cst_8 : vector<4xf32>
+  %165 = floorf %vcf32 : vector<4xf32>
+
+  // CHECK: %{{[0-9]+}} = floorf %arg0 : tensor<4x4x?xf32>
+  %166 = floorf %t : tensor<4x4x?xf32>
+
   return
 }
 
@@ -702,6 +714,11 @@ func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>, %arg2 : memref<64
   %5 = memref_cast %4 : memref<*xf32> to memref<4xf32>
   return
 }
+
+// Check that unranked memrefs with non-default memory space roundtrip
+// properly.
+// CHECK-LABEL: @unranked_memref_roundtrip(memref<*xf32, 4>)
+func @unranked_memref_roundtrip(memref<*xf32, 4>)
 
 // CHECK-LABEL: func @memref_view(%arg0
 func @memref_view(%arg0 : index, %arg1 : index, %arg2 : index) {

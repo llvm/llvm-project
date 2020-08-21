@@ -965,19 +965,24 @@ let Predicates = [IsISA3_1] in {
               RegConstraint<"$vDi = $vD">, NoEncode<"$vDi">;
   def VEXTRACTBM : VXForm_RD5_XO5_RS5<1602, 8, (outs gprc:$rD), (ins vrrc:$vB),
                                       "vextractbm $rD, $vB", IIC_VecGeneral,
-                                      []>;
+                                      [(set i32:$rD,
+                                      (int_ppc_altivec_vextractbm v16i8:$vB))]>;
   def VEXTRACTHM : VXForm_RD5_XO5_RS5<1602, 9, (outs gprc:$rD), (ins vrrc:$vB),
                                       "vextracthm $rD, $vB", IIC_VecGeneral,
-                                      []>;
+                                      [(set i32:$rD,
+                                      (int_ppc_altivec_vextracthm v8i16:$vB))]>;
   def VEXTRACTWM : VXForm_RD5_XO5_RS5<1602, 10, (outs gprc:$rD), (ins vrrc:$vB),
                                       "vextractwm $rD, $vB", IIC_VecGeneral,
-                                      []>;
+                                      [(set i32:$rD,
+                                      (int_ppc_altivec_vextractwm v4i32:$vB))]>;
   def VEXTRACTDM : VXForm_RD5_XO5_RS5<1602, 11, (outs gprc:$rD), (ins vrrc:$vB),
                                       "vextractdm $rD, $vB", IIC_VecGeneral,
-                                      []>;
+                                      [(set i32:$rD,
+                                      (int_ppc_altivec_vextractdm v2i64:$vB))]>;
   def VEXTRACTQM : VXForm_RD5_XO5_RS5<1602, 12, (outs gprc:$rD), (ins vrrc:$vB),
                                       "vextractqm $rD, $vB", IIC_VecGeneral,
-                                      []>;
+                                      [(set i32:$rD,
+                                      (int_ppc_altivec_vextractqm v1i128:$vB))]>;
   def VEXPANDBM : VXForm_RD5_XO5_RS5<1602, 0, (outs vrrc:$vD), (ins vrrc:$vB),
                                      "vexpandbm $vD, $vB", IIC_VecGeneral,
                                      []>;
