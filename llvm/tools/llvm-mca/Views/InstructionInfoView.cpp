@@ -20,9 +20,8 @@ namespace mca {
 void InstructionInfoView::printView(raw_ostream &OS) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
-  std::string Instruction;
-  raw_string_ostream InstrStream(Instruction);
 
+  ArrayRef<llvm::MCInst> Source = getSource();
   if (!Source.size())
     return;
 
@@ -82,14 +81,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     }
 
     const MCInst &Inst = std::get<1>(I.value());
-    MCIP.printInst(&Inst, 0, "", STI, InstrStream);
-    InstrStream.flush();
-
-    // Consume any tabs or spaces at the beginning of the string.
-    StringRef Str(Instruction);
-    Str = Str.ltrim();
-    TempStream << Str << '\n';
-    Instruction = "";
+    TempStream << printInstructionString(Inst) << '\n';
   }
 
   TempStream.flush();
@@ -98,8 +90,9 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
 
 void InstructionInfoView::collectData(
     MutableArrayRef<InstructionInfoViewData> IIVD) const {
+  const llvm::MCSubtargetInfo &STI = getSubTargetInfo();
   const MCSchedModel &SM = STI.getSchedModel();
-  for (auto I : zip(Source, IIVD)) {
+  for (auto I : zip(getSource(), IIVD)) {
     const MCInst &Inst = std::get<0>(I);
     InstructionInfoViewData &IIVDEntry = std::get<1>(I);
     const MCInstrDesc &MCDesc = MCII.get(Inst.getOpcode());
