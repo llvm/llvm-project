@@ -307,13 +307,7 @@ void __kmpc_fork_call(ident_t *loc, kmp_int32 argc, kmpc_micro microtask, ...) {
     __kmp_fork_call(loc, gtid, fork_context_intel, argc,
                     VOLATILE_CAST(microtask_t) microtask, // "wrapped" task
                     VOLATILE_CAST(launch_t) __kmp_invoke_task_func,
-/* TODO: revert workaround for Intel(R) 64 tracker #96 */
-#if (KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64) && KMP_OS_LINUX
-                    &ap
-#else
-                    ap
-#endif
-                    );
+                    kmp_va_addr_of(ap));
 #if INCLUDE_SSC_MARKS
     SSC_MARK_JOINING();
 #endif
@@ -407,16 +401,10 @@ void __kmpc_fork_teams(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
   KMP_DEBUG_ASSERT(this_thr->th.th_teams_size.nteams >= 1);
   KMP_DEBUG_ASSERT(this_thr->th.th_teams_size.nth >= 1);
 
-  __kmp_fork_call(loc, gtid, fork_context_intel, argc,
-                  VOLATILE_CAST(microtask_t)
-                      __kmp_teams_master, // "wrapped" task
-                  VOLATILE_CAST(launch_t) __kmp_invoke_teams_master,
-#if (KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64) && KMP_OS_LINUX
-                  &ap
-#else
-                  ap
-#endif
-                  );
+  __kmp_fork_call(
+      loc, gtid, fork_context_intel, argc,
+      VOLATILE_CAST(microtask_t) __kmp_teams_master, // "wrapped" task
+      VOLATILE_CAST(launch_t) __kmp_invoke_teams_master, kmp_va_addr_of(ap));
   __kmp_join_call(loc, gtid
 #if OMPT_SUPPORT
                   ,
