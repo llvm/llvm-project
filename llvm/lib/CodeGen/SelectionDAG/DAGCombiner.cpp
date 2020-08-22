@@ -6867,7 +6867,11 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
     Stores.push_back(Store);
     Chain = Store->getChain();
   }
-  // Handle the simple type only.
+  // There is no reason to continue if we do not have at least a pair of stores.
+  if (Stores.size() < 2)
+    return SDValue();
+
+  // Handle simple types only.
   LLVMContext &Context = *DAG.getContext();
   unsigned NumStores = Stores.size();
   unsigned NarrowNumBits = N->getMemoryVT().getSizeInBits();
@@ -6880,21 +6884,20 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
     return SDValue();
 
   // Check if all bytes of the source value that we are looking at are stored
-  // to the same base address. Collect bytes offsets from Base address into
-  // ByteOffsets.
+  // to the same base address. Collect offsets from Base address into OffsetMap.
   SDValue SourceValue;
   SmallVector<int64_t, 8> OffsetMap(NumStores, INT64_MAX);
   int64_t FirstOffset = INT64_MAX;
   StoreSDNode *FirstStore = nullptr;
   Optional<BaseIndexOffset> Base;
   for (auto Store : Stores) {
-    // All the stores store different byte of the CombinedValue. A truncate is
-    // required to get that byte value.
+    // All the stores store different parts of the CombinedValue. A truncate is
+    // required to get the partial value.
     SDValue Trunc = Store->getValue();
     if (Trunc.getOpcode() != ISD::TRUNCATE)
       return SDValue();
-    // A shift operation is required to get the right byte offset, except the
-    // first byte.
+    // Other than the first/last part, a shift operation is required to get the
+    // offset.
     int64_t Offset = 0;
     SDValue WideVal = Trunc.getOperand(0);
     if ((WideVal.getOpcode() == ISD::SRL || WideVal.getOpcode() == ISD::SRA) &&
@@ -6962,9 +6965,8 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
   // converted to an explicit bswap sequence. This way we end up with a single
   // store and byte shuffling instead of several stores and byte shuffling.
   const DataLayout &Layout = DAG.getDataLayout();
-  bool NeedsBswap = Layout.isBigEndian() != *IsBigEndian;
-  if (NeedsBswap && LegalOperations &&
-      !TLI.isOperationLegal(ISD::BSWAP, WideVT))
+  bool NeedBswap = Layout.isBigEndian() != *IsBigEndian;
+  if (NeedBswap && LegalOperations && !TLI.isOperationLegal(ISD::BSWAP, WideVT))
     return SDValue();
 
   // Check that a store of the wide type is both allowed and fast on the target
@@ -6981,7 +6983,7 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
     SourceValue = DAG.getNode(ISD::TRUNCATE, DL, WideVT, SourceValue);
   }
 
-  if (NeedsBswap)
+  if (NeedBswap)
     SourceValue = DAG.getNode(ISD::BSWAP, DL, WideVT, SourceValue);
 
   SDValue NewStore =
