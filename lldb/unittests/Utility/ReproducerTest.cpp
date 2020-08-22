@@ -9,12 +9,12 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Reproducer.h"
+#include "lldb/Utility/ReproducerProvider.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
-
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Reproducer.h"
 
 using namespace llvm;
 using namespace lldb_private;

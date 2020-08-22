@@ -14,7 +14,6 @@
 #include "lldb/Utility/Environment.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/NameMatches.h"
-#include "lldb/Utility/Reproducer.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <vector>
 
@@ -217,40 +216,7 @@ protected:
 };
 
 namespace repro {
-class ProcessInfoRecorder : public AbstractRecorder {
-public:
-  ProcessInfoRecorder(const FileSpec &filename, std::error_code &ec)
-      : AbstractRecorder(filename, ec) {}
-
-  static llvm::Expected<std::unique_ptr<ProcessInfoRecorder>>
-  Create(const FileSpec &filename);
-
-  void Record(const ProcessInstanceInfoList &process_infos);
-};
-
-class ProcessInfoProvider : public repro::Provider<ProcessInfoProvider> {
-public:
-  struct Info {
-    static const char *name;
-    static const char *file;
-  };
-
-  ProcessInfoProvider(const FileSpec &directory) : Provider(directory) {}
-
-  ProcessInfoRecorder *GetNewProcessInfoRecorder();
-
-  void Keep() override;
-  void Discard() override;
-
-  static char ID;
-
-private:
-  std::unique_ptr<llvm::raw_fd_ostream> m_stream_up;
-  std::vector<std::unique_ptr<ProcessInfoRecorder>> m_process_info_recorders;
-};
-
 llvm::Optional<ProcessInstanceInfoList> GetReplayProcessInstanceInfoList();
-
 } // namespace repro
 } // namespace lldb_private
 
