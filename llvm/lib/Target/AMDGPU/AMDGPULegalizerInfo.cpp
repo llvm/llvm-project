@@ -1497,6 +1497,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     };
 
     auto &Builder = getActionDefinitionsBuilder(Op)
+      .legalIf(all(isRegisterType(0), isRegisterType(1)))
       .lowerFor({{S16, V2S16}})
       .lowerIf([=](const LegalityQuery &Query) {
           const LLT BigTy = Query.Types[BigTyIdx];
@@ -1552,19 +1553,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         }
         return std::make_pair(BigTyIdx, LLT::scalar(NewSizeInBits));
       })
-      .legalIf([=](const LegalityQuery &Query) {
-          const LLT &BigTy = Query.Types[BigTyIdx];
-          const LLT &LitTy = Query.Types[LitTyIdx];
-
-          if (BigTy.isVector() && BigTy.getSizeInBits() < 32)
-            return false;
-          if (LitTy.isVector() && LitTy.getSizeInBits() < 32)
-            return false;
-
-          return BigTy.getSizeInBits() % 16 == 0 &&
-                 LitTy.getSizeInBits() % 16 == 0 &&
-                 BigTy.getSizeInBits() <= MaxRegisterSize;
-        })
       // Any vectors left are the wrong size. Scalarize them.
       .scalarize(0)
       .scalarize(1);
