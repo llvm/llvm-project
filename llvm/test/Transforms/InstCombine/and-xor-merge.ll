@@ -28,11 +28,9 @@ define i32 @test2(i32 %x, i32 %y, i32 %z) {
 
 define i32 @PR38761(i32 %a, i32 %b) {
 ; CHECK-LABEL: @PR38761(
-; CHECK-NEXT:    [[A_LOBIT:%.*]] = lshr i32 [[A:%.*]], 31
-; CHECK-NEXT:    [[A_LOBIT_NOT:%.*]] = xor i32 [[A_LOBIT]], 1
-; CHECK-NEXT:    [[B_LOBIT:%.*]] = lshr i32 [[B:%.*]], 31
-; CHECK-NEXT:    [[B_LOBIT_NOT:%.*]] = xor i32 [[B_LOBIT]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A_LOBIT_NOT]], [[B_LOBIT_NOT]]
+; CHECK-NEXT:    [[B_LOBIT_NOT1_DEMORGAN:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[B_LOBIT_NOT1:%.*]] = xor i32 [[B_LOBIT_NOT1_DEMORGAN]], -1
+; CHECK-NEXT:    [[AND:%.*]] = lshr i32 [[B_LOBIT_NOT1]], 31
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %a.lobit = lshr i32 %a, 31

@@ -1015,8 +1015,8 @@ define i32 @not_is_canonical(i32 %x, i32 %y) {
 
 define i8 @not_shl(i8 %x) {
 ; CHECK-LABEL: @not_shl(
-; CHECK-NEXT:    [[A:%.*]] = shl i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], -128
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = shl i8 [[TMP1]], 7
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = shl i8 %x, 7
@@ -1026,14 +1026,16 @@ define i8 @not_shl(i8 %x) {
 
 define <2 x i8> @not_shl_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @not_shl_vec(
-; CHECK-NEXT:    [[A:%.*]] = shl <2 x i8> [[X:%.*]], <i8 5, i8 5>
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[A]], <i8 -32, i8 -32>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[R:%.*]] = shl <2 x i8> [[TMP1]], <i8 5, i8 5>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = shl <2 x i8> %x, <i8 5, i8 5>
   %r = xor <2 x i8> %a, <i8 224, i8 224>
   ret <2 x i8> %r
 }
+
+; negative test
 
 define i8 @not_shl_extra_use(i8 %x) {
 ; CHECK-LABEL: @not_shl_extra_use(
@@ -1048,6 +1050,8 @@ define i8 @not_shl_extra_use(i8 %x) {
   ret i8 %r
 }
 
+; negative test
+
 define i8 @not_shl_wrong_const(i8 %x) {
 ; CHECK-LABEL: @not_shl_wrong_const(
 ; CHECK-NEXT:    [[A:%.*]] = shl i8 [[X:%.*]], 6
@@ -1061,8 +1065,8 @@ define i8 @not_shl_wrong_const(i8 %x) {
 
 define i8 @not_lshr(i8 %x) {
 ; CHECK-LABEL: @not_lshr(
-; CHECK-NEXT:    [[A:%.*]] = lshr i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[TMP1]], 5
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = lshr i8 %x, 5
@@ -1072,14 +1076,16 @@ define i8 @not_lshr(i8 %x) {
 
 define <2 x i8> @not_lshr_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @not_lshr_vec(
-; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 7, i8 7>
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[A]], <i8 1, i8 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> [[TMP1]], <i8 7, i8 7>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = lshr <2 x i8> %x, <i8 7, i8 7>
   %r = xor <2 x i8> %a, <i8 1, i8 1>
   ret <2 x i8> %r
 }
+
+; negative test
 
 define i8 @not_lshr_extra_use(i8 %x) {
 ; CHECK-LABEL: @not_lshr_extra_use(
@@ -1093,6 +1099,8 @@ define i8 @not_lshr_extra_use(i8 %x) {
   %r = xor i8 %a, 7
   ret i8 %r
 }
+
+; negative test
 
 define i8 @not_lshr_wrong_const(i8 %x) {
 ; CHECK-LABEL: @not_lshr_wrong_const(
@@ -1115,6 +1123,8 @@ define i8 @ashr_not(i8 %x) {
   %r = ashr i8 %n, 5
   ret i8 %r
 }
+
+; Unlike the logicial shifts, 'not' is canonicalized after ashr.
 
 define i8 @not_ashr(i8 %x) {
 ; CHECK-LABEL: @not_ashr(
