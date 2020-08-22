@@ -29,6 +29,7 @@ add_flang_library(FortranRuntime
   ISO_Fortran_binding.cpp
   allocatable.cpp
   buffer.cpp
+  clock.cpp
   complex-reduction.c
   copy.cpp
   character.cpp

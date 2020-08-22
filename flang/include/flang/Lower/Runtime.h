@@ -20,6 +20,19 @@
 #ifndef FORTRAN_LOWER_RUNTIME_H
 #define FORTRAN_LOWER_RUNTIME_H
 
+namespace llvm {
+template <typename T>
+class Optional;
+}
+
+namespace mlir {
+class Location;
+}
+
+namespace fir {
+class CharBoxValue;
+}
+
 namespace Fortran {
 
 namespace parser {
@@ -38,6 +51,7 @@ struct UnlockStmt;
 namespace lower {
 
 class AbstractConverter;
+class FirOpBuilder;
 
 // Lowering of Fortran statement related runtime (other than IO and maths)
 
@@ -54,6 +68,9 @@ void genSyncMemoryStatement(AbstractConverter &,
 void genSyncTeamStatement(AbstractConverter &, const parser::SyncTeamStmt &);
 void genUnlockStatement(AbstractConverter &, const parser::UnlockStmt &);
 void genPauseStatement(AbstractConverter &, const parser::PauseStmt &);
+
+void genDateAndTime(FirOpBuilder &, mlir::Location,
+                    llvm::Optional<fir::CharBoxValue> date);
 
 } // namespace lower
 } // namespace Fortran
