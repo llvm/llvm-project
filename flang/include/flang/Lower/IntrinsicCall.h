@@ -10,6 +10,7 @@
 #define FORTRAN_LOWER_INTRINSICCALL_H
 
 #include "flang/Lower/FIRBuilder.h"
+#include "llvm/ADT/Optional.h"
 
 namespace fir {
 class ExtendedValue;
@@ -32,7 +33,8 @@ namespace Fortran::lower {
 /// with arguments \p args and expected result type \p resultType.
 /// Returned mlir::Value is the returned Fortran intrinsic value.
 fir::ExtendedValue genIntrinsicCall(FirOpBuilder &, mlir::Location,
-                                    llvm::StringRef name, mlir::Type resultType,
+                                    llvm::StringRef name,
+                                    llvm::Optional<mlir::Type> resultType,
                                     llvm::ArrayRef<fir::ExtendedValue> args);
 
 /// Get SymbolRefAttr of runtime (or wrapper function containing inlined

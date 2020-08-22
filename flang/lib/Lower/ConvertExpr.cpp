@@ -1284,9 +1284,10 @@ private:
   fir::ExtendedValue
   genIntrinsicRef(const Fortran::evaluate::ProcedureRef &procRef,
                   const Fortran::evaluate::SpecificIntrinsic &intrinsic,
-                  mlir::ArrayRef<mlir::Type> resultType) {
-    if (resultType.size() != 1)
-      TODO(); // Intrinsic subroutine
+                  mlir::ArrayRef<mlir::Type> resultTypes) {
+    llvm::Optional<mlir::Type> resultType;
+    if (resultTypes.size() == 1)
+      resultType = resultTypes[0];
 
     llvm::SmallVector<fir::ExtendedValue, 2> operands;
     // Lower arguments
@@ -1304,8 +1305,8 @@ private:
     }
     // Let the intrinsic library lower the intrinsic procedure call
     llvm::StringRef name = intrinsic.name;
-    return Fortran::lower::genIntrinsicCall(builder, getLoc(), name,
-                                            resultType[0], operands);
+    return Fortran::lower::genIntrinsicCall(builder, getLoc(), name, resultType,
+                                            operands);
   }
 
   template <typename A>
@@ -1363,7 +1364,7 @@ private:
   genProcedureRef(const Fortran::evaluate::ProcedureRef &procRef,
                   mlir::ArrayRef<mlir::Type> resultType) {
     if (const auto *intrinsic = procRef.proc().GetSpecificIntrinsic())
-      return genIntrinsicRef(procRef, *intrinsic, resultType[0]);
+      return genIntrinsicRef(procRef, *intrinsic, resultType);
 
     if (isStatementFunctionCall(procRef))
       return genStmtFunctionRef(procRef, resultType);

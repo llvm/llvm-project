@@ -29,6 +29,7 @@ add_flang_library(FortranRuntime
   ISO_Fortran_binding.cpp
   allocatable.cpp
   buffer.cpp
+  clock.cpp
   character.cpp
   connection.cpp
   derived.cpp
