@@ -847,6 +847,13 @@ public:
   FunctionModRefBehavior getModRefBehavior(const CallBase *Call) {
     return AA.getModRefBehavior(Call);
   }
+  bool isMustAlias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
+    return alias(LocA, LocB) == MustAlias;
+  }
+  bool isMustAlias(const Value *V1, const Value *V2) {
+    return alias(MemoryLocation(V1, LocationSize::precise(1)),
+                 MemoryLocation(V2, LocationSize::precise(1))) == MustAlias;
+  }
 };
 
 /// Temporary typedef for legacy code that uses a generic \c AliasAnalysis
