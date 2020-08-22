@@ -184,6 +184,7 @@ add_llvm_component_library(LLVMCodeGen
 
   LiveDebugValues/LiveDebugValues.cpp
   LiveDebugValues/VarLocBasedImpl.cpp
+  LiveDebugValues/InstrRefBasedImpl.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen

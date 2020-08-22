@@ -28,4 +28,5 @@ public:
 
 // Factory functions for LiveDebugValues implementations.
 extern LDVImpl *makeVarLocBasedLiveDebugValues();
+extern LDVImpl *makeInstrRefBasedLiveDebugValues();
 } // namespace llvm
