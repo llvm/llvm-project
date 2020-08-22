@@ -163,7 +163,7 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     string(REPLACE ${CMAKE_CFG_INTDIR} "\$\{CMAKE_INSTALL_CONFIG_NAME\}" LLDB_PYTHON_INSTALL_PATH ${LLDB_PYTHON_INSTALL_PATH})
     string(REPLACE ${CMAKE_CFG_INTDIR} "\$\{CMAKE_INSTALL_CONFIG_NAME\}" lldb_python_target_dir ${lldb_python_target_dir})
   endif()
-  set(python_scripts_target "lldb-python-scripts")
+  set(python_scripts_target "${swig_target}-scripts")
   set(python_scripts_install_target "install-${python_scripts_target}")
   add_custom_target(${python_scripts_target})
   add_dependencies(${python_scripts_target} ${swig_target})
