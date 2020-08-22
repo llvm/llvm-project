@@ -68,6 +68,7 @@ static_library("CodeGen") {
     "LatencyPriorityQueue.cpp",
     "LazyMachineBlockFrequencyInfo.cpp",
     "LexicalScopes.cpp",
+    "LiveDebugValues/InstrRefBasedImpl.cpp",
     "LiveDebugValues/LiveDebugValues.cpp",
     "LiveDebugValues/VarLocBasedImpl.cpp",
     "LiveDebugVariables.cpp",
