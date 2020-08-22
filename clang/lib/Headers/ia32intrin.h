@@ -16,6 +16,7 @@
 
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
+#define __DEFAULT_FN_ATTRS_CAST __attribute__((__always_inline__))
 #define __DEFAULT_FN_ATTRS_SSE42 __attribute__((__always_inline__, __nodebug__, __target__("sse4.2")))
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
@@ -215,7 +216,7 @@ __writeeflags(unsigned int __f)
  *     A 32-bit float value.
  *  \returns a 32-bit unsigned integer containing the converted value.
  */
-static __inline__ unsigned int __attribute__((__always_inline__))
+static __inline__ unsigned int __DEFAULT_FN_ATTRS_CAST
 _castf32_u32(float __A) {
   unsigned int D;
   __builtin_memcpy(&D, &__A, sizeof(__A));
@@ -232,7 +233,7 @@ _castf32_u32(float __A) {
  *     A 64-bit float value.
  *  \returns a 64-bit unsigned integer containing the converted value.
  */
-static __inline__ unsigned long long __attribute__((__always_inline__))
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS_CAST
 _castf64_u64(double __A) {
   unsigned long long D;
   __builtin_memcpy(&D, &__A, sizeof(__A));
@@ -249,7 +250,7 @@ _castf64_u64(double __A) {
  *     A 32-bit unsigned integer value.
  *  \returns a 32-bit float value containing the converted value.
  */
-static __inline__ float __attribute__((__always_inline__))
+static __inline__ float __DEFAULT_FN_ATTRS_CAST
 _castu32_f32(unsigned int __A) {
   float D;
   __builtin_memcpy(&D, &__A, sizeof(__A));
@@ -266,7 +267,7 @@ _castu32_f32(unsigned int __A) {
  *     A 64-bit unsigned integer value.
  *  \returns a 64-bit float value containing the converted value.
  */
-static __inline__ double __attribute__((__always_inline__))
+static __inline__ double __DEFAULT_FN_ATTRS_CAST
 _castu64_f64(unsigned long long __A) {
   double D;
   __builtin_memcpy(&D, &__A, sizeof(__A));
@@ -440,6 +441,7 @@ __rorq(unsigned long long __X, int __C) {
 #define _rotwr(a,b) __rorw((a), (b))
 
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_CAST
 #undef __DEFAULT_FN_ATTRS_SSE42
 #undef __DEFAULT_FN_ATTRS_CONSTEXPR
 
