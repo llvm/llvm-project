@@ -68,9 +68,6 @@ if ("${LLDB_TEST_COMPILER}" STREQUAL "")
 endif()
 
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
-  # All tests are currently flaky on Windows, so rerun them all once when they fail.
-  set(LLDB_TEST_COMMON_ARGS ${LLDB_TEST_COMMON_ARGS} --rerun-all-issues)
-
   set(LLDB_TEST_DEBUG_TEST_CRASHES
     0
     CACHE BOOL "(Windows only) Enables debugging of tests in the test suite by showing the crash dialog when lldb crashes")
