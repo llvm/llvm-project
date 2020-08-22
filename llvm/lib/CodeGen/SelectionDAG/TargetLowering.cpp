@@ -6140,7 +6140,7 @@ bool TargetLowering::expandMUL(SDNode *N, SDValue &Lo, SDValue &Hi, EVT HiLoVT,
 }
 
 // Check that (every element of) Z is undef or not an exact multiple of BW.
-static bool isNonZeroModBitWidth(SDValue Z, unsigned BW) {
+static bool isNonZeroModBitWidthOrUndef(SDValue Z, unsigned BW) {
   return ISD::matchUnaryPredicate(
       Z,
       [=](ConstantSDNode *C) { return !C || C->getAPIntValue().urem(BW) != 0; },
@@ -6167,21 +6167,9 @@ bool TargetLowering::expandFunnelShift(SDNode *Node, SDValue &Result,
 
   EVT ShVT = Z.getValueType();
 
-  assert(isPowerOf2_32(BW) && "Expecting the type bitwidth to be a power of 2");
-
-  // If a funnel shift in the other direction is more supported, use it.
-  unsigned RevOpcode = IsFSHL ? ISD::FSHR : ISD::FSHL;
-  if (!isOperationLegalOrCustom(Node->getOpcode(), VT) &&
-      isOperationLegalOrCustom(RevOpcode, VT)) {
-    SDValue Zero = DAG.getConstant(0, DL, ShVT);
-    SDValue Sub = DAG.getNode(ISD::SUB, DL, ShVT, Zero, Z);
-    Result = DAG.getNode(RevOpcode, DL, VT, X, Y, Sub);
-    return true;
-  }
-
   SDValue ShX, ShY;
   SDValue ShAmt, InvShAmt;
-  if (isNonZeroModBitWidth(Z, BW)) {
+  if (isNonZeroModBitWidthOrUndef(Z, BW)) {
     // fshl: X << C | Y >> (BW - C)
     // fshr: X << (BW - C) | Y >> C
     // where C = Z % BW is not zero
