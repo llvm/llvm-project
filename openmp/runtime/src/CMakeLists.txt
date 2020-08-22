@@ -207,9 +207,9 @@ if(WIN32)
     # Get generated import library from creating omp
     get_target_property(LIBOMP_IMPORT_LIB_DIRECTORY omp ARCHIVE_OUTPUT_DIRECTORY)
     if(LIBOMP_IMPORT_LIB_DIRECTORY)
-      set(LIBOMP_GENERATED_IMP_LIB ${LIBOMP_IMPORT_LIB_DIRECTORY}/${LIBOMP_GENERATED_IMP_LIB_FILENAME})
+      set(LIBOMP_GENERATED_IMP_LIB ${LIBOMP_IMPORT_LIB_DIRECTORY}/$(ConfigurationName)/${LIBOMP_GENERATED_IMP_LIB_FILENAME})
     else()
-      set(LIBOMP_GENERATED_IMP_LIB ${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_GENERATED_IMP_LIB_FILENAME})
+      set(LIBOMP_GENERATED_IMP_LIB ${CMAKE_CURRENT_BINARY_DIR}/$(ConfigurationName)/${LIBOMP_GENERATED_IMP_LIB_FILENAME})
     endif()
     set_source_files_properties(${LIBOMP_GENERATED_IMP_LIB} PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE)
     # Create new import library that is just the previously created one + kmp_import.cpp
