@@ -352,6 +352,21 @@ SPIR-V Dialect op                     | LLVM Dialect op
 `spv.ULessThan`                       | `llvm.icmp "ult"`
 `spv.ULessThanEqual`                  | `llvm.icmp "ule"`
 
+### `spv.EntryPoint` and `spv.ExecutionMode`
+
+**Note: these conversions are likely to be changed in the future**
+
+First of all, it is important to note that there is no direct representation of
+entry points in LLVM. At the moment, we choose to **remove these ops**, assuming
+that the module generated from SPIR-V has no other internal functions (This
+assumption is actually made in [`mlir-spirv-cpu-runner`](#`mlir-spirv-cpu-runner`)).
+
+However, these ops can be used to see which functions in the module are entry
+point functions. `spv.ExecutionMode` also carries the metadata associated with
+the entry point such as `LocalSize`, which indicates the workgroup size in the
+x, y, and z dimensions. It will be useful to represent this on the LLVM side
+(TODO).
+
 ### Logical ops
 
 Logical ops follow a similar pattern as bitwise ops, with the difference that
@@ -377,6 +392,25 @@ modelled with `xor` operation with a mask with all bits set.
 
 This section describes the conversion patterns for SPIR-V dialect operations
 that concern memory.
+
+#### `spv.AccessChain`
+
+`spv.AccessChain` is mapped to `llvm.getelementptr` op. In order to create a
+valid LLVM op, we also add a 0 index to the `spv.AccessChain`'s indices list in
+order to go through the pointer.
+
+```mlir
+// Access the 1st element of the array
+%i   = spv.constant 1: i32
+%var = spv.Variable : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Function>
+%el  = spv.AccessChain %var[%i, %i] : !spv.ptr<!spv.struct<f32, !spv.array<4xf32>>, Function>, i32, i32
+
+// Corresponding LLVM dialect code
+%i   = ...
+%var = ...
+%0   = llvm.mlir.constant(0 : i32) : !llvm.i32
+%el  = llvm.getelementptr %var[%0, %i, %i] : (!llvm.ptr<struct<packed (float, array<4 x float>)>>, !llvm.i32, !llvm.i32, !llvm.i32)
+```
 
 #### `spv.Load` and `spv.Store`
 
@@ -434,15 +468,18 @@ module {
 }
 ```
 
-At the moment, only current invocation is in conversion's scope. This means that
-global variables with pointers of `Input`, `Output` and `Private` storage
-classes are supported. Moreover, `bind` that specifies the descriptor set and
-binding number and `built_in` that specifies SPIR-V `BuiltIn` decoration have
-also no conversion.
+The SPIR-V to LLVM conversion does not involve modelling of workgroups.
+Hence, we say that only current invocation is in conversion's scope. This means
+that global variables with pointers of `Input`, `Output`, and `Private` storage
+classes are supported. Also, `StorageBuffer` storage class is allowed for
+executing [`mlir-spirv-cpu-runner`](#`mlir-spirv-cpu-runner`).
 
-Currently `llvm.mlir.global`s are created with `private` linkage for
-`Private` storage class and `External` for `Input`/`Output` storage classes,
-based on SPIR-V spec:
+Moreover, `bind` that specifies the descriptor set and the binding number and
+`built_in` that specifies SPIR-V `BuiltIn` decoration have no conversion into
+LLVM dialect.
+
+Currently `llvm.mlir.global`s are created with `private` linkage for `Private`
+storage class and `External` for other storage classes, based on SPIR-V spec:
 
 > By default, functions and global variables are private to a module and cannot
 be accessed by other modules. However, a module may be written to export or
@@ -559,14 +596,11 @@ There is no support of the following ops:
 
 As well as:
 
-*   spv.AccessChain
 *   spv.CompositeConstruct
 *   spv.CompositeExtract
 *   spv.CompositeInsert
 *   spv.ControlBarrier
 *   spv.CopyMemory
-*   spv.EntryPoint
-*   spv.ExecutionMode
 *   spv.FMod
 *   spv.GLSL.SAbs
 *   spv.GLSL.SSign
@@ -743,12 +777,9 @@ to LLVM ops. At the moment, SPIR-V module attributes are ignored.
 
 `spv._module_end` is mapped to an equivalent terminator `ModuleTerminatorOp`.
 
-## SPIR-V special ops
+## `mlir-spirv-cpu-runner`
 
-**Note: this section is due to be implemented in August**
-
-This section describes how SPIR-V specific ops, *e.g* `spv.specConstant`, are
-modelled in LLVM. It also provides information on `mlir-spirv-runner`.
+**Note: this is a section in progress, more information will appear soon**
 
 [LLVMFunctionAttributes]: https://llvm.org/docs/LangRef.html#function-attributes
 [SPIRVFunctionAttributes]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#_a_id_function_control_a_function_control
