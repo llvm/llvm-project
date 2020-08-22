@@ -17,6 +17,7 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_COMBINER_HELPER_H
 #define LLVM_CODEGEN_GLOBALISEL_COMBINER_HELPER_H
 
+#include "llvm/ADT/APFloat.h"
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/Support/Alignment.h"
@@ -265,6 +266,12 @@ public:
   /// Transform X, Y = G_UNMERGE(G_ZEXT(Z)) -> X = G_ZEXT(Z); Y = G_CONSTANT 0
   bool matchCombineUnmergeZExtToZExt(MachineInstr &MI);
   bool applyCombineUnmergeZExtToZExt(MachineInstr &MI);
+
+  /// Transform fp_instr(cst) to constant result of the fp operation.
+  bool matchCombineConstantFoldFpUnary(MachineInstr &MI,
+                                       Optional<APFloat> &Cst);
+  bool applyCombineConstantFoldFpUnary(MachineInstr &MI,
+                                       Optional<APFloat> &Cst);
 
   /// Transform IntToPtr(PtrToInt(x)) to x if cast is in the same address space.
   bool matchCombineI2PToP2I(MachineInstr &MI, Register &Reg);
