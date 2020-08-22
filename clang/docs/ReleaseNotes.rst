@@ -56,6 +56,10 @@ Improvements to Clang's diagnostics
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- The builtin intrinsics ``__builtin_bitreverse8``, ``__builtin_bitreverse16``,
+  ``__builtin_bitreverse32`` and ``__builtin_bitreverse64`` may now be used
+  within constant expressions.
+
 - The builtin intrinsics ``__builtin_rotateleft8``, ``__builtin_rotateleft16``,
   ``__builtin_rotateleft32`` and ``__builtin_rotateleft64`` may now be used
   within constant expressions.

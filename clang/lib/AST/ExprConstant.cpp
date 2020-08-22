@@ -11180,6 +11180,17 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(AlignedVal, E);
   }
 
+  case Builtin::BI__builtin_bitreverse8:
+  case Builtin::BI__builtin_bitreverse16:
+  case Builtin::BI__builtin_bitreverse32:
+  case Builtin::BI__builtin_bitreverse64: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+
+    return Success(Val.reverseBits(), E);
+  }
+
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
   case Builtin::BI__builtin_bswap64: {

@@ -1984,7 +1984,7 @@ Query for this feature with ``__has_builtin(__builtin_convertvector)``.
 
 The '``__builtin_bitreverse``' family of builtins is used to reverse
 the bitpattern of an integer value; for example ``0b10110110`` becomes
-``0b01101101``.
+``0b01101101``. These builtins can be used within constant expressions.
 
 ``__builtin_rotateleft``
 ------------------------
