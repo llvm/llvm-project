@@ -58,8 +58,7 @@ using namespace llvm;
 
 /// Allow disabling BasicAA from the AA results. This is particularly useful
 /// when testing to isolate a single AA implementation.
-static cl::opt<bool> DisableBasicAA("disable-basic-aa", cl::Hidden,
-                                    cl::init(false));
+cl::opt<bool> DisableBasicAA("disable-basic-aa", cl::Hidden, cl::init(false));
 
 AAResults::AAResults(AAResults &&Arg)
     : TLI(Arg.TLI), AAs(std::move(Arg.AAs)), AADeps(std::move(Arg.AADeps)) {

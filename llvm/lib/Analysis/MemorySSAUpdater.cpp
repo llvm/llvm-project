@@ -783,24 +783,32 @@ void MemorySSAUpdater::updateExitBlocksForClonedLoop(
 void MemorySSAUpdater::applyUpdates(ArrayRef<CFGUpdate> Updates,
                                     DominatorTree &DT) {
   SmallVector<CFGUpdate, 4> DeleteUpdates;
+  SmallVector<CFGUpdate, 4> RevDeleteUpdates;
   SmallVector<CFGUpdate, 4> InsertUpdates;
   for (auto &Update : Updates) {
     if (Update.getKind() == DT.Insert)
       InsertUpdates.push_back({DT.Insert, Update.getFrom(), Update.getTo()});
-    else
+    else {
       DeleteUpdates.push_back({DT.Delete, Update.getFrom(), Update.getTo()});
+      RevDeleteUpdates.push_back({DT.Insert, Update.getFrom(), Update.getTo()});
+    }
   }
 
   if (!DeleteUpdates.empty()) {
-    // Update for inserted edges: use newDT and snapshot CFG as if deletes had
-    // not occurred.
-    // FIXME: This creates a new DT, so it's more expensive to do mix
-    // delete/inserts vs just inserts. We can do an incremental update on the DT
-    // to revert deletes, than re-delete the edges. Teaching DT to do this, is
-    // part of a pending cleanup.
-    DominatorTree NewDT(DT, DeleteUpdates);
-    GraphDiff<BasicBlock *> GD(DeleteUpdates, /*ReverseApplyUpdates=*/true);
-    applyInsertUpdates(InsertUpdates, NewDT, &GD);
+    SmallVector<CFGUpdate, 0> Empty;
+    // Deletes are reversed applied, because this CFGView is pretending the
+    // deletes did not happen yet, hence the edges still exist.
+    DT.applyUpdates(Empty, RevDeleteUpdates);
+
+    // Note: the MSSA update below doesn't distinguish between a GD with
+    // (RevDelete,false) and (Delete, true), but this matters for the DT
+    // updates above; for "children" purposes they are equivalent; but the
+    // updates themselves convey the desired update, used inside DT only.
+    GraphDiff<BasicBlock *> GD(RevDeleteUpdates);
+    applyInsertUpdates(InsertUpdates, DT, &GD);
+    // Update DT to redelete edges; this matches the real CFG so we can perform
+    // the standard update without a postview of the CFG.
+    DT.applyUpdates(DeleteUpdates);
   } else {
     GraphDiff<BasicBlock *> GD;
     applyInsertUpdates(InsertUpdates, DT, &GD);

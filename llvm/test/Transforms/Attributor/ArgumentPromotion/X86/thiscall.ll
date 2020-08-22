@@ -48,18 +48,18 @@ entry:
 define void @exportedfun(%struct.a* %a) {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@exportedfun
 ; IS__TUNIT____-SAME: (%struct.a* nocapture nofree readnone [[A:%.*]])
-; IS__TUNIT____-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call noundef i8* @llvm.stacksave()
+; IS__TUNIT____-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call i8* @llvm.stacksave()
 ; IS__TUNIT____-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
 ; IS__TUNIT____-NEXT:    call x86_thiscallcc void @internalfun(%struct.a* noalias nocapture nofree readnone undef, <{ [[STRUCT_A]] }>* inalloca noundef nonnull align 4 dereferenceable(1) [[ARGMEM]])
-; IS__TUNIT____-NEXT:    call void @llvm.stackrestore(i8* noundef [[INALLOCA_SAVE]])
+; IS__TUNIT____-NEXT:    call void @llvm.stackrestore(i8* [[INALLOCA_SAVE]])
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@exportedfun
 ; IS__CGSCC____-SAME: (%struct.a* nocapture nofree readnone [[A:%.*]])
-; IS__CGSCC____-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call noundef i8* @llvm.stacksave()
+; IS__CGSCC____-NEXT:    [[INALLOCA_SAVE:%.*]] = tail call i8* @llvm.stacksave()
 ; IS__CGSCC____-NEXT:    [[ARGMEM:%.*]] = alloca inalloca <{ [[STRUCT_A:%.*]] }>, align 4
 ; IS__CGSCC____-NEXT:    call x86_thiscallcc void @internalfun(%struct.a* noalias nocapture nofree readnone [[A]], <{ [[STRUCT_A]] }>* inalloca noundef nonnull align 4 dereferenceable(1) [[ARGMEM]])
-; IS__CGSCC____-NEXT:    call void @llvm.stackrestore(i8* noundef [[INALLOCA_SAVE]])
+; IS__CGSCC____-NEXT:    call void @llvm.stackrestore(i8* [[INALLOCA_SAVE]])
 ; IS__CGSCC____-NEXT:    ret void
 ;
   %inalloca.save = tail call i8* @llvm.stacksave()
