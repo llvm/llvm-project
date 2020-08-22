@@ -703,8 +703,9 @@ body: |
     ; GFX6: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[C5]], [[C]](s32)
     ; GFX6: [[OR4:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
     ; GFX6: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR4]](s32)
-    ; GFX6: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>)
-    ; GFX6: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
+    ; GFX6: [[DEF1:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+    ; GFX6: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>), [[DEF1]](<2 x s16>)
+    ; GFX6: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<6 x s16>), 0
     ; GFX6: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT1]](<3 x s16>), 0
     ; GFX6: $vgpr0_vgpr1 = COPY [[INSERT1]](<4 x s16>)
     ; GFX8-LABEL: name: test_intrinsic_round_v3s16
@@ -762,8 +763,9 @@ body: |
     ; GFX8: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[C5]], [[C]](s32)
     ; GFX8: [[OR4:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
     ; GFX8: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR4]](s32)
-    ; GFX8: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>)
-    ; GFX8: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
+    ; GFX8: [[DEF1:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+    ; GFX8: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>), [[DEF1]](<2 x s16>)
+    ; GFX8: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<6 x s16>), 0
     ; GFX8: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT1]](<3 x s16>), 0
     ; GFX8: $vgpr0_vgpr1 = COPY [[INSERT1]](<4 x s16>)
     ; GFX9-LABEL: name: test_intrinsic_round_v3s16
@@ -817,8 +819,9 @@ body: |
     ; GFX9: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FADD5]](s16)
     ; GFX9: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; GFX9: [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT2]](s32), [[DEF1]](s32)
-    ; GFX9: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-    ; GFX9: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
+    ; GFX9: [[DEF2:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[DEF2]](<2 x s16>)
+    ; GFX9: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<6 x s16>), 0
     ; GFX9: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT1]](<3 x s16>), 0
     ; GFX9: $vgpr0_vgpr1 = COPY [[INSERT1]](<4 x s16>)
     %0:_(<4 x s16>) = COPY $vgpr0_vgpr1

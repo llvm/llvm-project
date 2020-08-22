@@ -354,8 +354,9 @@ body: |
     ; SI: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[C1]], [[C]](s32)
     ; SI: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
     ; SI: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-    ; SI: [[CONCAT_VECTORS1:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>)
-    ; SI: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS1]](<4 x s16>), 0
+    ; SI: [[DEF2:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+    ; SI: [[CONCAT_VECTORS1:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>), [[DEF2]](<2 x s16>)
+    ; SI: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS1]](<6 x s16>), 0
     ; SI: S_NOP 0, implicit [[EXTRACT]](<3 x s16>)
     ; VI-LABEL: name: test_ffloor_v3s16
     ; VI: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
@@ -385,8 +386,9 @@ body: |
     ; VI: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[C1]], [[C]](s32)
     ; VI: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
     ; VI: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-    ; VI: [[CONCAT_VECTORS1:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>)
-    ; VI: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS1]](<4 x s16>), 0
+    ; VI: [[DEF2:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+    ; VI: [[CONCAT_VECTORS1:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>), [[DEF2]](<2 x s16>)
+    ; VI: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS1]](<6 x s16>), 0
     ; VI: S_NOP 0, implicit [[EXTRACT]](<3 x s16>)
     ; GFX9-LABEL: name: test_ffloor_v3s16
     ; GFX9: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
@@ -412,8 +414,9 @@ body: |
     ; GFX9: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FFLOOR2]](s16)
     ; GFX9: [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; GFX9: [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT2]](s32), [[DEF2]](s32)
-    ; GFX9: [[CONCAT_VECTORS1:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-    ; GFX9: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS1]](<4 x s16>), 0
+    ; GFX9: [[DEF3:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[CONCAT_VECTORS1:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>), [[DEF3]](<2 x s16>)
+    ; GFX9: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS1]](<6 x s16>), 0
     ; GFX9: S_NOP 0, implicit [[EXTRACT]](<3 x s16>)
     %0:_(<3 x s16>) = G_IMPLICIT_DEF
     %1:_(<3 x s16>) = G_FFLOOR %0

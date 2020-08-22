@@ -287,15 +287,12 @@ public:
   LegalizeResult fewerElementsVectorUnmergeValues(MachineInstr &MI,
                                                   unsigned TypeIdx,
                                                   LLT NarrowTy);
-  LegalizeResult fewerElementsVectorBuildVector(MachineInstr &MI,
-                                                unsigned TypeIdx,
-                                                LLT NarrowTy);
-  LegalizeResult fewerElementsVectorConcatVectors(MachineInstr &MI,
-                                                  unsigned TypeIdx,
-                                                  LLT NarrowTy);
+  LegalizeResult fewerElementsVectorMerge(MachineInstr &MI, unsigned TypeIdx,
+                                          LLT NarrowTy);
   LegalizeResult fewerElementsVectorExtractInsertVectorElt(MachineInstr &MI,
                                                            unsigned TypeIdx,
                                                            LLT NarrowTy);
+
   LegalizeResult
   reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
 
