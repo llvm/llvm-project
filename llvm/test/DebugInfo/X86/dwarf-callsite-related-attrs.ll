@@ -20,7 +20,7 @@
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis -o /dev/null
 
 ; VERIFY: No errors.
-; STATS: "#call site DIEs":6
+; STATS: "#call site DIEs": 6,
 
 @sink = global i32 0, align 4, !dbg !0
 
