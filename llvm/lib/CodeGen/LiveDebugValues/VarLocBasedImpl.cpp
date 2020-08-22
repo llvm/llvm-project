@@ -801,7 +801,7 @@ private:
   /// had their instruction creation deferred.
   void flushPendingLocs(VarLocInMBB &PendingInLocs, VarLocMap &VarLocIDs);
 
-  bool ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC);
+  bool ExtendRanges(MachineFunction &MF, TargetPassConfig *TPC) override;
 
 public:
   /// Default construct and initialize the pass.
