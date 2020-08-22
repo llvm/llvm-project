@@ -65,7 +65,7 @@ namespace lld {
 
             switch (rel.type) {
                 case R_P2_32: {
-                    *loc = val;
+                    write32le(loc, val);
                     break;
                 }
                 case R_P2_20: {
