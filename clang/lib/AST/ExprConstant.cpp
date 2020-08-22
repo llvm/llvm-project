@@ -11347,6 +11347,30 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(Val.countPopulation(), E);
   }
 
+  case Builtin::BI__builtin_rotateleft8:
+  case Builtin::BI__builtin_rotateleft16:
+  case Builtin::BI__builtin_rotateleft32:
+  case Builtin::BI__builtin_rotateleft64: {
+    APSInt Val, Amt;
+    if (!EvaluateInteger(E->getArg(0), Val, Info) ||
+        !EvaluateInteger(E->getArg(1), Amt, Info))
+      return false;
+
+    return Success(Val.rotl(Amt.urem(Val.getBitWidth())), E);
+  }
+
+  case Builtin::BI__builtin_rotateright8:
+  case Builtin::BI__builtin_rotateright16:
+  case Builtin::BI__builtin_rotateright32:
+  case Builtin::BI__builtin_rotateright64: {
+    APSInt Val, Amt;
+    if (!EvaluateInteger(E->getArg(0), Val, Info) ||
+        !EvaluateInteger(E->getArg(1), Amt, Info))
+      return false;
+
+    return Success(Val.rotr(Amt.urem(Val.getBitWidth())), E);
+  }
+
   case Builtin::BIstrlen:
   case Builtin::BIwcslen:
     // A call to strlen is not a constant expression.
