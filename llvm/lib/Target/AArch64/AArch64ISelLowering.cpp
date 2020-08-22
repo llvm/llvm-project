@@ -3742,9 +3742,17 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
     return LowerFixedLengthVectorIntExtendToSVE(Op, DAG);
-  case ISD::SIGN_EXTEND_INREG:
+  case ISD::SIGN_EXTEND_INREG: {
+    // Only custom lower when ExtraVT has a legal byte based element type.
+    EVT ExtraVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
+    EVT ExtraEltVT = ExtraVT.getVectorElementType();
+    if ((ExtraEltVT != MVT::i8) && (ExtraEltVT != MVT::i16) &&
+        (ExtraEltVT != MVT::i32) && (ExtraEltVT != MVT::i64))
+      return SDValue();
+
     return LowerToPredicatedOp(Op, DAG,
                                AArch64ISD::SIGN_EXTEND_INREG_MERGE_PASSTHRU);
+  }
   case ISD::TRUNCATE:
     return LowerTRUNCATE(Op, DAG);
   case ISD::LOAD:
