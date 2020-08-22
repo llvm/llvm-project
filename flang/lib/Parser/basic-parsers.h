@@ -800,13 +800,14 @@ inline constexpr auto nonemptySeparated(PA p, PB sep) {
 // must discard its result in order to be compatible in type with other
 // parsers in an alternative, e.g. "x >> ok || y >> ok" is type-safe even
 // when x and y have distinct result types.
-constexpr struct OkParser {
+struct OkParser {
   using resultType = Success;
   constexpr OkParser() {}
   static constexpr std::optional<Success> Parse(ParseState &) {
     return Success{};
   }
-} ok;
+};
+constexpr OkParser ok;
 
 // A variant of recovery() above for convenience.
 template <typename PA, typename PB>
