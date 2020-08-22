@@ -504,7 +504,20 @@ public:
   /// \param B - The second IRInstructionCandidate, operand values, and current
   /// operand mappings to compare.
   /// \returns true if the IRSimilarityCandidates operands are compatible.
-  static bool compareOperandMapping(OperandMapping A, OperandMapping B);
+  static bool compareNonCommutativeOperandMapping(OperandMapping A,
+                                                  OperandMapping B);
+
+  /// Compare the operands in \p A and \p B and check that the current mapping
+  /// of global value numbers from \p A to \p B and \p B to \A is consistent
+  /// given that the operands are commutative.
+  ///
+  /// \param A - The first IRInstructionCandidate, operand values, and current
+  /// operand mappings to compare.
+  /// \param B - The second IRInstructionCandidate, operand values, and current
+  /// operand mappings to compare.
+  /// \returns true if the IRSimilarityCandidates operands are compatible.
+  static bool compareCommutativeOperandMapping(OperandMapping A,
+                                               OperandMapping B);
 
   /// Compare the start and end indices of the two IRSimilarityCandidates for
   /// whether they overlap. If the start instruction of one
