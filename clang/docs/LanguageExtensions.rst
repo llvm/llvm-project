@@ -3676,3 +3676,17 @@ The following x86-specific intrinsics can be used in constant expressions:
 * ``_popcnt64``
 * ``__popcntd``
 * ``__popcntq``
+* ``__rolb``
+* ``__rolw``
+* ``__rold``
+* ``__rolq``
+* ``__rorb``
+* ``__rorw``
+* ``__rord``
+* ``__rorq``
+* ``_rotl``
+* ``_rotr``
+* ``_rotwl``
+* ``_rotwr``
+* ``_lrotl``
+* ``_lrotr``

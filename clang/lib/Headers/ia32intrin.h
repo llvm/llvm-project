@@ -373,43 +373,43 @@ _wbinvd(void) {
   __builtin_ia32_wbinvd();
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
+static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
 __rolb(unsigned char __X, int __C) {
   return __builtin_rotateleft8(__X, __C);
 }
 
-static __inline__ unsigned char __DEFAULT_FN_ATTRS
+static __inline__ unsigned char __DEFAULT_FN_ATTRS_CONSTEXPR
 __rorb(unsigned char __X, int __C) {
   return __builtin_rotateright8(__X, __C);
 }
 
-static __inline__ unsigned short __DEFAULT_FN_ATTRS
+static __inline__ unsigned short __DEFAULT_FN_ATTRS_CONSTEXPR
 __rolw(unsigned short __X, int __C) {
   return __builtin_rotateleft16(__X, __C);
 }
 
-static __inline__ unsigned short __DEFAULT_FN_ATTRS
+static __inline__ unsigned short __DEFAULT_FN_ATTRS_CONSTEXPR
 __rorw(unsigned short __X, int __C) {
   return __builtin_rotateright16(__X, __C);
 }
 
-static __inline__ unsigned int __DEFAULT_FN_ATTRS
+static __inline__ unsigned int __DEFAULT_FN_ATTRS_CONSTEXPR
 __rold(unsigned int __X, int __C) {
   return __builtin_rotateleft32(__X, __C);
 }
 
-static __inline__ unsigned int __DEFAULT_FN_ATTRS
+static __inline__ unsigned int __DEFAULT_FN_ATTRS_CONSTEXPR
 __rord(unsigned int __X, int __C) {
   return __builtin_rotateright32(__X, __C);
 }
 
 #ifdef __x86_64__
-static __inline__ unsigned long long __DEFAULT_FN_ATTRS
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS_CONSTEXPR
 __rolq(unsigned long long __X, int __C) {
   return __builtin_rotateleft64(__X, __C);
 }
 
-static __inline__ unsigned long long __DEFAULT_FN_ATTRS
+static __inline__ unsigned long long __DEFAULT_FN_ATTRS_CONSTEXPR
 __rorq(unsigned long long __X, int __C) {
   return __builtin_rotateright64(__X, __C);
 }
