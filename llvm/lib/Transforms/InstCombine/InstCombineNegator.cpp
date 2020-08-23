@@ -244,6 +244,13 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
   }
 
   switch (I->getOpcode()) {
+  case Instruction::Freeze: {
+    // `freeze` is negatible if its operand is negatible.
+    Value *NegOp = negate(I->getOperand(0), Depth + 1);
+    if (!NegOp) // Early return.
+      return nullptr;
+    return Builder.CreateFreeze(NegOp, I->getName() + ".neg");
+  }
   case Instruction::PHI: {
     // `phi` is negatible if all the incoming values are negatible.
     auto *PHI = cast<PHINode>(I);
