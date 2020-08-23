@@ -116,3 +116,18 @@ void noNoteTagsForNonMatchingBugType() {
   P->foo(); // expected-warning {{Dereference of null smart pointer 'P' of type 'std::unique_ptr' [cplusplus.Move]}}
   // expected-note@-1 {{Dereference of null smart pointer 'P' of type 'std::unique_ptr'}}
 }
+
+void derefOnRawPtrFromGetOnNullPtr() {
+  std::unique_ptr<A> P; // FIXME: add note "Default constructed smart pointer 'P' is null"
+  P.get()->foo(); // expected-warning {{Called C++ object pointer is null [core.CallAndMessage]}}
+  // expected-note@-1 {{Called C++ object pointer is null}}
+}
+
+void derefOnRawPtrFromGetOnValidPtr() {
+  std::unique_ptr<A> P(new A());
+  P.get()->foo(); // No warning.
+}
+
+void derefOnRawPtrFromGetOnUnknownPtr(std::unique_ptr<A> P) {
+  P.get()->foo(); // No warning.
+}

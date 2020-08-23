@@ -7,6 +7,7 @@
 
 void clang_analyzer_warnIfReached();
 void clang_analyzer_numTimesReached();
+void clang_analyzer_eval(bool);
 
 void derefAfterMove(std::unique_ptr<int> P) {
   std::unique_ptr<int> Q = std::move(P);
@@ -251,4 +252,27 @@ void derefOnSwappedValidPtr() {
   std::swap(P, PValid);
   P->foo(); // No warning.
   PValid->foo(); // No warning.
+}
+
+void derefOnRawPtrFromGetOnNullPtr() {
+  std::unique_ptr<A> P;
+  P.get()->foo(); // expected-warning {{Called C++ object pointer is null [core.CallAndMessage]}}
+}
+
+void derefOnRawPtrFromGetOnValidPtr() {
+  std::unique_ptr<A> P(new A());
+  P.get()->foo(); // No warning.
+}
+
+void derefOnRawPtrFromGetOnUnknownPtr(std::unique_ptr<A> P) {
+  P.get()->foo(); // No warning.
+}
+
+void derefOnRawPtrFromMultipleGetOnUnknownPtr(std::unique_ptr<A> P) {
+  A *X = P.get();
+  A *Y = P.get();
+  clang_analyzer_eval(X == Y); // expected-warning{{TRUE}}
+  if (!X) {
+    Y->foo(); // expected-warning {{Called C++ object pointer is null [core.CallAndMessage]}}
+  }
 }
