@@ -154,8 +154,9 @@ TEST(IRInstructionMapper, PredicateDifferentiation) {
   ASSERT_TRUE(UnsignedVec[0] != UnsignedVec[1]);
 }
 
-// Checks that predicates with the same swapped predicate map to different
-// values.
+// Checks that predicates where that can be considered the same when the
+// operands are swapped, i.e. greater than to less than are mapped to the same
+// unsigned integer.
 TEST(IRInstructionMapper, PredicateIsomorphism) {
   StringRef ModuleString = R"(
                           define i32 @f(i32 %a, i32 %b) {
@@ -177,7 +178,7 @@ TEST(IRInstructionMapper, PredicateIsomorphism) {
 
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
   ASSERT_TRUE(UnsignedVec.size() == 3);
-  ASSERT_TRUE(UnsignedVec[0] != UnsignedVec[1]);
+  ASSERT_TRUE(UnsignedVec[0] == UnsignedVec[1]);
 }
 
 // Checks that the same predicate maps to the same value.
@@ -1375,6 +1376,49 @@ TEST(IRSimilarityCandidate, CheckIdenticalInstructions) {
   ASSERT_TRUE(IRSimilarityCandidate::isSimilar(Cand1, Cand2));
 }
 
+// Checks that comparison instructions are found to be similar instructions
+// when the operands are flipped and the predicate is also swapped.
+TEST(IRSimilarityCandidate, PredicateIsomorphism) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = icmp sgt i32 %a, %b
+                             %1 = add i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = icmp slt i32 %a, %b
+                             %3 = add i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  getVectors(*M, InstrList, UnsignedVec);
+
+
+  ASSERT_TRUE(InstrList.size() > 5);
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  std::vector<IRInstructionData *>::iterator Start, End;
+  Start = InstrList.begin();
+  End = InstrList.begin();
+  
+  std::advance(End, 1);
+  IRSimilarityCandidate Cand1(0, 2, *Start, *End);
+
+  Start = InstrList.begin();
+  End = InstrList.begin();
+  
+  std::advance(Start, 3);
+  std::advance(End, 4);
+  IRSimilarityCandidate Cand2(3, 2, *Start, *End);
+
+  ASSERT_TRUE(IRSimilarityCandidate::isSimilar(Cand1, Cand2));
+}
+
 // Checks that IRSimilarityCandidates wrapping these two regions of instructions
 // are able to differentiate between instructions that have different opcodes.
 TEST(IRSimilarityCandidate, CheckRegionsDifferentInstruction) {
@@ -1565,6 +1609,61 @@ TEST(IRSimilarityCandidate, DifferentStructure) {
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
 
   ASSERT_FALSE(longSimCandCompare(InstrList, true));
+}
+
+// Checks that comparison instructions are found to have the same structure
+// when the operands are flipped and the predicate is also swapped.
+TEST(IRSimilarityCandidate, PredicateIsomorphismStructure) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = icmp sgt i32 %a, %b
+                             %1 = add i32 %a, %b
+                             br label %bb1
+                          bb1:
+                             %2 = icmp slt i32 %b, %a
+                             %3 = add i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  getVectors(*M, InstrList, UnsignedVec);
+
+  ASSERT_TRUE(InstrList.size() > 5);
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  ASSERT_TRUE(longSimCandCompare(InstrList, true));
+}
+
+// Checks that different predicates are counted as diferent.
+TEST(IRSimilarityCandidate, PredicateDifference) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = icmp sge i32 %a, %b
+                             %1 = add i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = icmp slt i32 %b, %a
+                             %3 = add i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  getVectors(*M, InstrList, UnsignedVec);
+
+  ASSERT_TRUE(InstrList.size() > 5);
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  ASSERT_FALSE(longSimCandCompare(InstrList));
 }
 
 // Checks that the same structure is recognized between two candidates. The
@@ -1779,6 +1878,39 @@ TEST(IRSimilarityIdentifier, MappingSimilarity) {
                           bb1:
                              %2 = add i32 %c, %d
                              %3 = sub i32 %d, %c
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<std::vector<IRSimilarityCandidate>> SimilarityCandidates;
+  getSimilarities(*M, SimilarityCandidates);
+
+  ASSERT_TRUE(SimilarityCandidates.size() == 1);
+  for (std::vector<IRSimilarityCandidate> &Cands : SimilarityCandidates) {
+    ASSERT_TRUE(Cands.size() == 2);
+    unsigned InstIdx = 0;
+    for (IRSimilarityCandidate &Cand : Cands) {
+      ASSERT_TRUE(Cand.getStartIdx() == InstIdx);
+      InstIdx += 3;
+    }
+  }
+}
+
+// Check that we find instances of swapped predicate isomorphism.  That is,
+// for predicates that can be flipped, e.g. greater than to less than,
+// we can identify that instances of these different literal predicates, but are
+// the same within a single swap can be found.
+TEST(IRSimilarityIdentifier, PredicateIsomorphism) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = add i32 %a, %b
+                             %1 = icmp sgt i32 %b, %a
+                             br label %bb1
+                          bb1:
+                             %2 = add i32 %a, %b
+                             %3 = icmp slt i32 %a, %b
                              ret i32 0
                           })";
   LLVMContext Context;
