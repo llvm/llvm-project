@@ -95,8 +95,11 @@ struct TranslationParser : public llvm::cl::parser<const TranslateFunction *> {
                        size_t globalWidth) const override;
 };
 
-/// Implementation for tools like `mlir-translate`. ToolName is used for the
-/// header displayed by `--help`.
+/// Translate to/from an MLIR module from/to an external representation (e.g.
+/// LLVM IR, SPIRV binary, ...). This is the entry point for the implementation
+/// of tools like `mlir-translate`. The translation to perform is parsed from
+/// the command line. The `toolName` argument is used for the header displayed
+/// by `--help`.
 LogicalResult mlirTranslateMain(int argc, char **argv,
                                 llvm::StringRef toolName);
 
