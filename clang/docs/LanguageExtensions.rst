@@ -3603,3 +3603,76 @@ and alignment as the smallest basic type that can contain them. Types that are l
 than 64 bits are handled in the same way as _int128 is handled; they are conceptually
 treated as struct of register size chunks. They number of chunks are the smallest
 number that can contain the types which does not necessarily mean a power-of-2 size.
+
+Intrinsics Support within Constant Expressions
+==============================================
+
+The following builtin intrinsics can be used in constant expressions:
+
+* ``__builtin_bitreverse8``
+* ``__builtin_bitreverse16``
+* ``__builtin_bitreverse32``
+* ``__builtin_bitreverse64``
+* ``__builtin_bswap16``
+* ``__builtin_bswap32``
+* ``__builtin_bswap64``
+* ``__builtin_clrsb``
+* ``__builtin_clrsbl``
+* ``__builtin_clrsbll``
+* ``__builtin_clz``
+* ``__builtin_clzl``
+* ``__builtin_clzll``
+* ``__builtin_clzs``
+* ``__builtin_ctz``
+* ``__builtin_ctzl``
+* ``__builtin_ctzll``
+* ``__builtin_ctzs``
+* ``__builtin_ffs``
+* ``__builtin_ffsl``
+* ``__builtin_ffsll``
+* ``__builtin_fpclassify``
+* ``__builtin_inf``
+* ``__builtin_isinf``
+* ``__builtin_isinf_sign``
+* ``__builtin_isfinite``
+* ``__builtin_isnan``
+* ``__builtin_isnormal``
+* ``__builtin_nan``
+* ``__builtin_nans``
+* ``__builtin_parity``
+* ``__builtin_parityl``
+* ``__builtin_parityll``
+* ``__builtin_popcount``
+* ``__builtin_popcountl``
+* ``__builtin_popcountll``
+* ``__builtin_rotateleft8``
+* ``__builtin_rotateleft16``
+* ``__builtin_rotateleft32``
+* ``__builtin_rotateleft64``
+* ``__builtin_rotateright8``
+* ``__builtin_rotateright16``
+* ``__builtin_rotateright32``
+* ``__builtin_rotateright64``
+
+The following x86-specific intrinsics can be used in constant expressions:
+
+* ``_bit_scan_forward``
+* ``_bit_scan_reverse``
+* ``__bsfd``
+* ``__bsfq``
+* ``__bsrd``
+* ``__bsrq``
+* ``__bswap``
+* ``__bswapd``
+* ``__bswap64``
+* ``__bswapq``
+* ``_castf32_u32``
+* ``_castf64_u64``
+* ``_castu32_f32``
+* ``_castu64_f64``
+* ``_mm_popcnt_u32``
+* ``_mm_popcnt_u64``
+* ``_popcnt32``
+* ``_popcnt64``
+* ``__popcntd``
+* ``__popcntq``
