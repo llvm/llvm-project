@@ -45,7 +45,8 @@ translateLLVMAVX512ModuleToLLVMIR(Operation *m, llvm::LLVMContext &llvmContext,
 namespace mlir {
 void registerAVX512ToLLVMIRTranslation() {
   TranslateFromMLIRRegistration reg(
-      "avx512-mlir-to-llvmir", [](ModuleOp module, raw_ostream &output) {
+      "avx512-mlir-to-llvmir",
+      [](ModuleOp module, raw_ostream &output) {
         llvm::LLVMContext llvmContext;
         auto llvmModule = translateLLVMAVX512ModuleToLLVMIR(
             module, llvmContext, "LLVMDialectModule");
@@ -54,6 +55,9 @@ void registerAVX512ToLLVMIRTranslation() {
 
         llvmModule->print(output, nullptr);
         return success();
+      },
+      [](DialectRegistry &registry) {
+        registry.insert<LLVM::LLVMAVX512Dialect, LLVM::LLVMDialect>();
       });
 }
 } // namespace mlir
