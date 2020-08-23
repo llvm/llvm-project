@@ -182,6 +182,12 @@ X86 Support in Clang
 - The x86 intrinsics ``_castf32_u32``, ``_castf64_u64``, ``_castu32_f32`` and
   ``_castu64_f64`` may now be used within constant expressions.
 
+- The x86 intrinsics ``__rolb``, ``__rolw``, ``__rold``, ``__rolq`, ``_rotl``,
+  ``_rotwl`` and ``_lrotl`` may now be used within constant expressions.
+
+- The x86 intrinsics ``__rorb``, ``__rorw``, ``__rord``, ``__rorq`, ``_rotr``,
+  ``_rotwr`` and ``_lrotr`` may now be used within constant expressions.
+
 Internal API Changes
 --------------------
 
