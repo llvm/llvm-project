@@ -107,9 +107,7 @@ define <4 x i32> @abs_of_neg_vec(<4 x i32> %x) {
 
 define i32 @abs_of_select_neg_true_val(i1 %b, i32 %x) {
 ; CHECK-LABEL: @abs_of_select_neg_true_val(
-; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B:%.*]], i32 [[NEG]], i32 [[X]]
-; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[SEL]], i1 true)
+; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    ret i32 [[ABS]]
 ;
   %neg = sub i32 0, %x
@@ -120,9 +118,7 @@ define i32 @abs_of_select_neg_true_val(i1 %b, i32 %x) {
 
 define <4 x i32> @abs_of_select_neg_false_val(<4 x i1> %b, <4 x i32> %x) {
 ; CHECK-LABEL: @abs_of_select_neg_false_val(
-; CHECK-NEXT:    [[NEG:%.*]] = sub <4 x i32> zeroinitializer, [[X:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[B:%.*]], <4 x i32> [[X]], <4 x i32> [[NEG]]
-; CHECK-NEXT:    [[ABS:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[SEL]], i1 false)
+; CHECK-NEXT:    [[ABS:%.*]] = call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[X:%.*]], i1 false)
 ; CHECK-NEXT:    ret <4 x i32> [[ABS]]
 ;
   %neg = sub <4 x i32> zeroinitializer, %x
