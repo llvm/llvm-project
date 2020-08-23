@@ -1,0 +1,12 @@
+# RUN: opt -module-summary %p/Inputs/main-mod.ll -o main-mod.bc
+# RUN: opt -module-summary %p/Inputs/foo-mod.ll -o foo-mod.bc
+# RUN: opt -module-summary %p/Inputs/bar-mod.ll -o bar-mod.bc
+
+# RUN: llvm-lto -thinlto -o main-foo-bar main-mod.bc foo-mod.bc bar-mod.bc
+
+# RUN: LLJITWithThinLTOSummaries main-foo-bar.thinlto.bc 2>&1 | FileCheck %s
+
+# CHECK: About to load module: main-mod.bc
+# CHECK: About to load module: foo-mod.bc
+# CHECK: About to load module: bar-mod.bc
+# CHECK: 'main' finished with exit code: 0

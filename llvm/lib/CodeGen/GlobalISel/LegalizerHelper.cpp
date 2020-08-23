@@ -3555,72 +3555,24 @@ LegalizerHelper::fewerElementsVectorUnmergeValues(MachineInstr &MI,
   return Legalized;
 }
 
+// Handle FewerElementsVector a G_BUILD_VECTOR or G_CONCAT_VECTORS that produces
+// a vector
+//
+// Create a G_BUILD_VECTOR or G_CONCAT_VECTORS of NarrowTy pieces, padding with
+// undef as necessary.
+//
+// %3:_(<3 x s16>) = G_BUILD_VECTOR %0, %1, %2
+//   -> <2 x s16>
+//
+// %4:_(s16) = G_IMPLICIT_DEF
+// %5:_(<2 x s16>) = G_BUILD_VECTOR %0, %1
+// %6:_(<2 x s16>) = G_BUILD_VECTOR %2, %4
+// %7:_(<2 x s16>) = G_IMPLICIT_DEF
+// %8:_(<6 x s16>) = G_CONCAT_VECTORS %5, %6, %7
+// %3:_(<3 x s16>), %8:_(<3 x s16>) = G_UNMERGE_VALUES %8
 LegalizerHelper::LegalizeResult
-LegalizerHelper::fewerElementsVectorBuildVector(MachineInstr &MI,
-                                                unsigned TypeIdx,
-                                                LLT NarrowTy) {
-  assert(TypeIdx == 0 && "not a vector type index");
-  Register DstReg = MI.getOperand(0).getReg();
-  LLT DstTy = MRI.getType(DstReg);
-  LLT SrcTy = DstTy.getElementType();
-
-  int DstNumElts = DstTy.getNumElements();
-  int NarrowNumElts = NarrowTy.getNumElements();
-  int NumConcat = (DstNumElts + NarrowNumElts - 1) / NarrowNumElts;
-  LLT WidenedDstTy = LLT::vector(NarrowNumElts * NumConcat, SrcTy);
-
-  SmallVector<Register, 8> ConcatOps;
-  SmallVector<Register, 8> SubBuildVector;
-
-  Register UndefReg;
-  if (WidenedDstTy != DstTy)
-    UndefReg = MIRBuilder.buildUndef(SrcTy).getReg(0);
-
-  // Create a G_CONCAT_VECTORS of NarrowTy pieces, padding with undef as
-  // necessary.
-  //
-  // %3:_(<3 x s16>) = G_BUILD_VECTOR %0, %1, %2
-  //   -> <2 x s16>
-  //
-  // %4:_(s16) = G_IMPLICIT_DEF
-  // %5:_(<2 x s16>) = G_BUILD_VECTOR %0, %1
-  // %6:_(<2 x s16>) = G_BUILD_VECTOR %2, %4
-  // %7:_(<4 x s16>) = G_CONCAT_VECTORS %5, %6
-  // %3:_(<3 x s16>) = G_EXTRACT %7, 0
-  for (int I = 0; I != NumConcat; ++I) {
-    for (int J = 0; J != NarrowNumElts; ++J) {
-      int SrcIdx = NarrowNumElts * I + J;
-
-      if (SrcIdx < DstNumElts) {
-        Register SrcReg = MI.getOperand(SrcIdx + 1).getReg();
-        SubBuildVector.push_back(SrcReg);
-      } else
-        SubBuildVector.push_back(UndefReg);
-    }
-
-    auto BuildVec = MIRBuilder.buildBuildVector(NarrowTy, SubBuildVector);
-    ConcatOps.push_back(BuildVec.getReg(0));
-    SubBuildVector.clear();
-  }
-
-  if (DstTy == WidenedDstTy)
-    MIRBuilder.buildConcatVectors(DstReg, ConcatOps);
-  else {
-    auto Concat = MIRBuilder.buildConcatVectors(WidenedDstTy, ConcatOps);
-    MIRBuilder.buildExtract(DstReg, Concat, 0);
-  }
-
-  MI.eraseFromParent();
-  return Legalized;
-}
-
-LegalizerHelper::LegalizeResult
-LegalizerHelper::fewerElementsVectorConcatVectors(MachineInstr &MI,
-                                                  unsigned TypeIdx,
-                                                  LLT NarrowTy) {
-  if (TypeIdx != 1)
-    return UnableToLegalize;
-
+LegalizerHelper::fewerElementsVectorMerge(MachineInstr &MI, unsigned TypeIdx,
+                                          LLT NarrowTy) {
   Register DstReg = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(DstReg);
   LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
@@ -4045,9 +3997,12 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_UNMERGE_VALUES:
     return fewerElementsVectorUnmergeValues(MI, TypeIdx, NarrowTy);
   case G_BUILD_VECTOR:
-    return fewerElementsVectorBuildVector(MI, TypeIdx, NarrowTy);
+    assert(TypeIdx == 0 && "not a vector type index");
+    return fewerElementsVectorMerge(MI, TypeIdx, NarrowTy);
   case G_CONCAT_VECTORS:
-    return fewerElementsVectorConcatVectors(MI, TypeIdx, NarrowTy);
+    if (TypeIdx != 1) // TODO: This probably does work as expected already.
+      return UnableToLegalize;
+    return fewerElementsVectorMerge(MI, TypeIdx, NarrowTy);
   case G_EXTRACT_VECTOR_ELT:
   case G_INSERT_VECTOR_ELT:
     return fewerElementsVectorExtractInsertVectorElt(MI, TypeIdx, NarrowTy);

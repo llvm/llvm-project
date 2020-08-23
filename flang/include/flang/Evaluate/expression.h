@@ -745,7 +745,7 @@ public:
   using Result = SomeKind<CAT>;
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
   int GetKind() const;
-  common::MapTemplate<Expr, CategoryTypes<CAT>> u;
+  common::MapTemplate<evaluate::Expr, CategoryTypes<CAT>> u;
 };
 
 template <> class Expr<SomeCharacter> : public ExpressionBase<SomeCharacter> {

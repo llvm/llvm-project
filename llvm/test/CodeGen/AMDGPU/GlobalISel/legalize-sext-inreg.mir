@@ -761,8 +761,9 @@ body: |
     ; GFX8: [[SHL4:%[0-9]+]]:_(s32) = G_SHL [[C2]], [[C]](s32)
     ; GFX8: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL4]]
     ; GFX8: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-    ; GFX8: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>)
-    ; GFX8: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
+    ; GFX8: [[DEF1:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+    ; GFX8: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>), [[DEF1]](<2 x s16>)
+    ; GFX8: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<6 x s16>), 0
     ; GFX8: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[COPY]], [[EXTRACT1]](<3 x s16>), 0
     ; GFX8: $vgpr0_vgpr1 = COPY [[INSERT1]](<4 x s16>)
     ; GFX6-LABEL: name: test_sext_inreg_v3s16_1
@@ -796,8 +797,9 @@ body: |
     ; GFX6: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[C2]], [[C]](s32)
     ; GFX6: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL1]]
     ; GFX6: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-    ; GFX6: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>)
-    ; GFX6: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
+    ; GFX6: [[DEF1:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
+    ; GFX6: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>), [[DEF1]](<2 x s16>)
+    ; GFX6: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<6 x s16>), 0
     ; GFX6: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[COPY]], [[EXTRACT1]](<3 x s16>), 0
     ; GFX6: $vgpr0_vgpr1 = COPY [[INSERT1]](<4 x s16>)
     %0:_(<4 x s16>) = COPY $vgpr0_vgpr1

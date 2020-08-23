@@ -655,10 +655,11 @@ TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
   }
 
   // Check the TuneCPU name if specified.
-  if (!Opts->TuneCPU.empty() && !Target->isValidCPUName(Opts->TuneCPU)) {
+  if (!Opts->TuneCPU.empty() &&
+      !Target->isValidTuneCPUName(Opts->TuneCPU)) {
     Diags.Report(diag::err_target_unknown_cpu) << Opts->TuneCPU;
     SmallVector<StringRef, 32> ValidList;
-    Target->fillValidCPUList(ValidList);
+    Target->fillValidTuneCPUList(ValidList);
     if (!ValidList.empty())
       Diags.Report(diag::note_valid_options) << llvm::join(ValidList, ", ");
     return nullptr;

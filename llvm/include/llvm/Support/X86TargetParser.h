@@ -130,7 +130,7 @@ CPUKind parseArchX86(StringRef CPU, bool Only64Bit = false);
 /// Provide a list of valid CPU names. If \p Only64Bit is true, the list will
 /// only contain 64-bit capable CPUs.
 void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values,
-                          bool ArchIs32Bit);
+                          bool Only64Bit = false);
 
 /// Get the key feature prioritizing target multiversioning.
 ProcessorFeatures getKeyFeature(CPUKind Kind);

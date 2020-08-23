@@ -466,8 +466,7 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
   }
 }
 
-/// Print machine-readable output.
-/// The machine-readable format is single-line JSON output.
+/// Print human-readable output.
 /// \{
 static void printDatum(json::OStream &J, const char *Key, json::Value Value) {
   J.attribute(Key, Value);
@@ -593,7 +592,7 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
 
   // Print summary.
   OS.SetBufferSize(1024);
-  json::OStream J(OS);
+  json::OStream J(OS, 2);
   J.objectBegin();
   J.attribute("version", Version);
   LLVM_DEBUG(llvm::dbgs() << "Variable location quality metrics\n";
