@@ -11,10 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVModule.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Serialization.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/Dialect.h"
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Module.h"
 #include "mlir/Parser.h"
@@ -105,8 +107,12 @@ static LogicalResult serializeModule(ModuleOp module, raw_ostream &output) {
 namespace mlir {
 void registerToSPIRVTranslation() {
   TranslateFromMLIRRegistration toBinary(
-      "serialize-spirv", [](ModuleOp module, raw_ostream &output) {
+      "serialize-spirv",
+      [](ModuleOp module, raw_ostream &output) {
         return serializeModule(module, output);
+      },
+      [](DialectRegistry &registry) {
+        registry.insert<spirv::SPIRVDialect>();
       });
 }
 } // namespace mlir
@@ -147,15 +153,23 @@ static LogicalResult roundTripModule(ModuleOp srcModule, bool emitDebugInfo,
 namespace mlir {
 void registerTestRoundtripSPIRV() {
   TranslateFromMLIRRegistration roundtrip(
-      "test-spirv-roundtrip", [](ModuleOp module, raw_ostream &output) {
+      "test-spirv-roundtrip",
+      [](ModuleOp module, raw_ostream &output) {
         return roundTripModule(module, /*emitDebugInfo=*/false, output);
+      },
+      [](DialectRegistry &registry) {
+        registry.insert<spirv::SPIRVDialect>();
       });
 }
 
 void registerTestRoundtripDebugSPIRV() {
   TranslateFromMLIRRegistration roundtrip(
-      "test-spirv-roundtrip-debug", [](ModuleOp module, raw_ostream &output) {
+      "test-spirv-roundtrip-debug",
+      [](ModuleOp module, raw_ostream &output) {
         return roundTripModule(module, /*emitDebugInfo=*/true, output);
+      },
+      [](DialectRegistry &registry) {
+        registry.insert<spirv::SPIRVDialect>();
       });
 }
 } // namespace mlir
