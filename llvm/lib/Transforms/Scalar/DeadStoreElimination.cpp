@@ -1519,6 +1519,7 @@ struct DSEState {
   DominatorTree &DT;
   PostDominatorTree &PDT;
   const TargetLibraryInfo &TLI;
+  const DataLayout &DL;
 
   // All MemoryDefs that potentially could kill other MemDefs.
   SmallVector<MemoryDef *, 64> MemDefs;
@@ -1542,7 +1543,8 @@ struct DSEState {
 
   DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA, DominatorTree &DT,
            PostDominatorTree &PDT, const TargetLibraryInfo &TLI)
-      : F(F), AA(AA), BatchAA(AA), MSSA(MSSA), DT(DT), PDT(PDT), TLI(TLI) {}
+      : F(F), AA(AA), BatchAA(AA), MSSA(MSSA), DT(DT), PDT(PDT), TLI(TLI),
+        DL(F.getParent()->getDataLayout()) {}
 
   static DSEState get(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
                       DominatorTree &DT, PostDominatorTree &PDT,
@@ -1644,7 +1646,6 @@ struct DSEState {
 
     int64_t InstWriteOffset, DepWriteOffset;
     auto CC = getLocForWriteEx(UseInst);
-    const DataLayout &DL = F.getParent()->getDataLayout();
     return CC && isOverwrite(*CC, DefLoc, DL, TLI, DepWriteOffset,
                              InstWriteOffset, BatchAA, &F) == OW_Complete;
   }
@@ -1734,10 +1735,8 @@ struct DSEState {
 
     // If the terminator is a free-like call, all accesses to the underlying
     // object can be considered terminated.
-    if (MaybeTermLoc->second) {
-      DataLayout DL = MaybeTerm->getParent()->getModule()->getDataLayout();
+    if (MaybeTermLoc->second)
       DefLoc = MemoryLocation(getUnderlyingObject(DefLoc.Ptr));
-    }
     return BatchAA.isMustAlias(MaybeTermLoc->first, DefLoc);
   }
 
@@ -2155,7 +2154,6 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
                                   MemorySSA &MSSA, DominatorTree &DT,
                                   PostDominatorTree &PDT,
                                   const TargetLibraryInfo &TLI) {
-  const DataLayout &DL = F.getParent()->getDataLayout();
   bool MadeChange = false;
 
   DSEState State = DSEState::get(F, AA, MSSA, DT, PDT, TLI);
@@ -2292,8 +2290,9 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
       } else {
         // Check if NI overwrites SI.
         int64_t InstWriteOffset, DepWriteOffset;
-        OverwriteResult OR = isOverwrite(SILoc, NILoc, DL, TLI, DepWriteOffset,
-                                         InstWriteOffset, State.BatchAA, &F);
+        OverwriteResult OR =
+            isOverwrite(SILoc, NILoc, State.DL, TLI, DepWriteOffset,
+                        InstWriteOffset, State.BatchAA, &F);
         if (OR == OW_MaybePartial) {
           auto Iter = State.IOLs.insert(
               std::make_pair<BasicBlock *, InstOverlapIntervalsTy>(
@@ -2311,7 +2310,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
           // TODO: implement tryToMergeParialOverlappingStores using MemorySSA.
           if (Earlier && Later && DT.dominates(Earlier, Later)) {
             if (Constant *Merged = tryToMergePartialOverlappingStores(
-                    Earlier, Later, InstWriteOffset, DepWriteOffset, DL,
+                    Earlier, Later, InstWriteOffset, DepWriteOffset, State.DL,
                     State.BatchAA, &DT)) {
 
               // Update stored value of earlier store to merged constant.
@@ -2343,7 +2342,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
 
   if (EnablePartialOverwriteTracking)
     for (auto &KV : State.IOLs)
-      MadeChange |= removePartiallyOverlappedStores(DL, KV.second);
+      MadeChange |= removePartiallyOverlappedStores(State.DL, KV.second);
 
   MadeChange |= State.eliminateDeadWritesAtEndOfFunction();
   return MadeChange;
