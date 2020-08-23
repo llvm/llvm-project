@@ -4,8 +4,12 @@
 ; RUN: cat %t | FileCheck -implicit-check-not=uninteresting %s
 ; REQUIRES: plugins
 
-; We're testing all direct uses of %interesting are conserved
+; We're testing all direct uses of %interesting are conserved. The terminator
+; (ret) must also be preserved.
+
 ; CHECK-COUNT-5: %interesting
+; CHECK: ret
+
 define i32 @main() #0 {
 entry:
   %uninteresting1 = alloca i32, align 4
@@ -18,6 +22,5 @@ entry:
   store i32 %uninteresting3, i32* %interesting, align 4
   %1 = load i32, i32* %interesting, align 4
   store i32 %1, i32* %uninteresting2, align 4
-  ; CHECK-NOT: ret
   ret i32 0
 }
