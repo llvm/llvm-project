@@ -56,13 +56,15 @@ private:
   void handleReset(const CallEvent &Call, CheckerContext &C) const;
   void handleRelease(const CallEvent &Call, CheckerContext &C) const;
   void handleSwap(const CallEvent &Call, CheckerContext &C) const;
+  void handleGet(const CallEvent &Call, CheckerContext &C) const;
 
   using SmartPtrMethodHandlerFn =
       void (SmartPtrModeling::*)(const CallEvent &Call, CheckerContext &) const;
   CallDescriptionMap<SmartPtrMethodHandlerFn> SmartPtrMethodHandlers{
       {{"reset"}, &SmartPtrModeling::handleReset},
       {{"release"}, &SmartPtrModeling::handleRelease},
-      {{"swap", 1}, &SmartPtrModeling::handleSwap}};
+      {{"swap", 1}, &SmartPtrModeling::handleSwap},
+      {{"get"}, &SmartPtrModeling::handleGet}};
 };
 } // end of anonymous namespace
 
@@ -343,6 +345,33 @@ void SmartPtrModeling::handleSwap(const CallEvent &Call,
         OS << " with smart pointer ";
         ThisRegion->printPretty(OS);
       }));
+}
+
+void SmartPtrModeling::handleGet(const CallEvent &Call,
+                                 CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  const auto *IC = dyn_cast<CXXInstanceCall>(&Call);
+  if (!IC)
+    return;
+
+  const MemRegion *ThisRegion = IC->getCXXThisVal().getAsRegion();
+  if (!ThisRegion)
+    return;
+
+  SVal InnerPointerVal;
+  if (const auto *InnerValPtr = State->get<TrackedRegionMap>(ThisRegion)) {
+    InnerPointerVal = *InnerValPtr;
+  } else {
+    const auto *CallExpr = Call.getOriginExpr();
+    InnerPointerVal = C.getSValBuilder().conjureSymbolVal(
+        CallExpr, C.getLocationContext(), Call.getResultType(), C.blockCount());
+    State = State->set<TrackedRegionMap>(ThisRegion, InnerPointerVal);
+  }
+
+  State = State->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
+                          InnerPointerVal);
+  // TODO: Add NoteTag, for how the raw pointer got using 'get' method.
+  C.addTransition(State);
 }
 
 void ento::registerSmartPtrModeling(CheckerManager &Mgr) {
