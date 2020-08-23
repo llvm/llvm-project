@@ -6856,6 +6856,14 @@ static SDValue stripTruncAndExt(SDValue Value) {
 /// =>
 ///  *((i32)p) = BSWAP(val);
 SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
+  // The matching looks for "store (trunc x)" patterns that appear early but are
+  // likely to be replaced by truncating store nodes during combining.
+  // TODO: If there is evidence that running this later would help, this
+  //       limitation could be removed. Legality checks may need to be added
+  //       for the created store and optional bswap/rotate.
+  if (LegalOperations)
+    return SDValue();
+
   // Collect all the stores in the chain.
   SDValue Chain;
   SmallVector<StoreSDNode *, 8> Stores;
@@ -6878,9 +6886,6 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
   unsigned WideNumBits = NumStores * NarrowNumBits;
   EVT WideVT = EVT::getIntegerVT(Context, WideNumBits);
   if (WideVT != MVT::i16 && WideVT != MVT::i32 && WideVT != MVT::i64)
-    return SDValue();
-
-  if (LegalOperations && !TLI.isOperationLegal(ISD::STORE, WideVT))
     return SDValue();
 
   // Check if all bytes of the source value that we are looking at are stored
@@ -6960,16 +6965,8 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
   if (!IsBigEndian.hasValue())
     return SDValue();
 
-  // If the store needs byte swap check if the target supports it.
-  // Before legalize we can introduce illegal bswaps which will be later
-  // converted to an explicit bswap sequence. This way we end up with a single
-  // store and byte shuffling instead of several stores and byte shuffling.
-  const DataLayout &Layout = DAG.getDataLayout();
-  bool NeedBswap = Layout.isBigEndian() != *IsBigEndian;
-  if (NeedBswap && LegalOperations && !TLI.isOperationLegal(ISD::BSWAP, WideVT))
-    return SDValue();
-
   // Check that a store of the wide type is both allowed and fast on the target
+  const DataLayout &Layout = DAG.getDataLayout();
   bool Fast = false;
   bool Allowed = TLI.allowsMemoryAccess(Context, Layout, WideVT,
                                         *FirstStore->getMemOperand(), &Fast);
@@ -6983,6 +6980,10 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
     SourceValue = DAG.getNode(ISD::TRUNCATE, DL, WideVT, SourceValue);
   }
 
+  // Before legalize we can introduce illegal bswaps which will be later
+  // converted to an explicit bswap sequence. This way we end up with a single
+  // store and byte shuffling instead of several stores and byte shuffling.
+  bool NeedBswap = Layout.isBigEndian() != *IsBigEndian;
   if (NeedBswap)
     SourceValue = DAG.getNode(ISD::BSWAP, DL, WideVT, SourceValue);
 
