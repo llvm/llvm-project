@@ -438,14 +438,14 @@ entry:
 ; Function Attrs: alwaysinline nounwind
 define protected i32 @atomic_max_unsigned_global(i32 addrspace(1)* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile max i32 addrspace(1)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile umax i32 addrspace(1)* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
 define protected i32 @atomic_min_unsigned_global(i32 addrspace(1)* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile min i32 addrspace(1)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile umin i32 addrspace(1)* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
@@ -473,14 +473,14 @@ entry:
 ; Function Attrs: alwaysinline nounwind
 define protected i32 @atomic_max_unsigned_local(i32 addrspace(3)* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile max i32 addrspace(3)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile umax i32 addrspace(3)* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
 define protected i32 @atomic_min_unsigned_local(i32 addrspace(3)* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile min i32 addrspace(3)* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile umin i32 addrspace(3)* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
@@ -508,14 +508,14 @@ entry:
 ; Function Attrs: alwaysinline nounwind
 define protected i32 @atomic_max_unsigned(i32* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile max i32* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile umax i32* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
 define protected i32 @atomic_min_unsigned(i32* %x, i32 %y) #2 {
 entry:
-  %ret = atomicrmw volatile min i32* %x, i32 %y seq_cst
+  %ret = atomicrmw volatile umin i32* %x, i32 %y seq_cst
   ret i32 %ret
 }
 
@@ -648,14 +648,14 @@ entry:
 ; Function Attrs: alwaysinline nounwind
 define protected i64 @atomic_max_uint64_global(i64 addrspace(1)* %x, i64 %y) #2 {
 entry:
-  %ret = atomicrmw volatile max i64 addrspace(1)* %x, i64 %y seq_cst
+  %ret = atomicrmw volatile umax i64 addrspace(1)* %x, i64 %y seq_cst
   ret i64 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
 define protected i64 @atomic_min_uint64_global(i64 addrspace(1)* %x, i64 %y) #2 {
 entry:
-  %ret = atomicrmw volatile min i64 addrspace(1)* %x, i64 %y seq_cst
+  %ret = atomicrmw volatile umin i64 addrspace(1)* %x, i64 %y seq_cst
   ret i64 %ret
 }
 
@@ -683,14 +683,14 @@ entry:
 ; Function Attrs: alwaysinline nounwind
 define protected i64 @atomic_max_uint64_local(i64 addrspace(3)* %x, i64 %y) #2 {
 entry:
-  %ret = atomicrmw volatile max i64 addrspace(3)* %x, i64 %y seq_cst
+  %ret = atomicrmw volatile umax i64 addrspace(3)* %x, i64 %y seq_cst
   ret i64 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
 define protected i64 @atomic_min_uint64_local(i64 addrspace(3)* %x, i64 %y) #2 {
 entry:
-  %ret = atomicrmw volatile min i64 addrspace(3)* %x, i64 %y seq_cst
+  %ret = atomicrmw volatile umin i64 addrspace(3)* %x, i64 %y seq_cst
   ret i64 %ret
 }
 
@@ -718,14 +718,14 @@ entry:
 ; Function Attrs: alwaysinline nounwind
 define protected i64 @atomic_max_uint64(i64* %x, i64 %y) #2 {
 entry:
-  %ret = atomicrmw volatile max i64* %x, i64 %y seq_cst
+  %ret = atomicrmw volatile umax i64* %x, i64 %y seq_cst
   ret i64 %ret
 }
 
 ; Function Attrs: alwaysinline nounwind
 define protected i64 @atomic_min_uint64(i64* %x, i64 %y) #2 {
 entry:
-  %ret = atomicrmw volatile min i64* %x, i64 %y seq_cst
+  %ret = atomicrmw volatile umin i64* %x, i64 %y seq_cst
   ret i64 %ret
 }
 
