@@ -21,6 +21,7 @@ class StringRef;
 } // namespace llvm
 
 namespace mlir {
+class DialectRegistry;
 struct LogicalResult;
 class MLIRContext;
 class ModuleOp;
@@ -91,6 +92,12 @@ struct TranslationParser : public llvm::cl::parser<const TranslateFunction *> {
   void printOptionInfo(const llvm::cl::Option &o,
                        size_t globalWidth) const override;
 };
+
+/// Implementation for tools like `mlir-translate`. ToolName is used for the
+/// header displayed by `--help`.
+LogicalResult mlirTranslateMain(int argc, char **argv,
+                                llvm::StringRef toolName);
+
 } // namespace mlir
 
 #endif // MLIR_TRANSLATION_H
