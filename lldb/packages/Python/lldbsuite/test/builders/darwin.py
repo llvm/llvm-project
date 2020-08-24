@@ -4,27 +4,10 @@ import subprocess
 
 from .builder import Builder
 from lldbsuite.test import configuration
+import lldbsuite.test.lldbutil as lldbutil
 
 REMOTE_PLATFORM_NAME_RE = re.compile(r"^remote-(.+)$")
 SIMULATOR_PLATFORM_RE = re.compile(r"^(.+)-simulator$")
-
-
-def get_sdk(os, env):
-    if os == "ios":
-        if env == "simulator":
-            return "iphonesimulator"
-        if env == "macabi":
-            return "macosx"
-        return "iphoneos"
-    elif os == "tvos":
-        if env == "simulator":
-            return "appletvsimulator"
-        return "appletvos"
-    elif os == "watchos":
-        if env == "simulator":
-            return "watchsimulator"
-        return "watchos"
-    return os
 
 
 def get_os_env_from_platform(platform):
@@ -92,13 +75,11 @@ class BuilderDarwin(Builder):
             return ""
 
         # Get the SDK from the os and env.
-        sdk = get_sdk(os, env)
+        sdk = lldbutil.get_xcode_sdk(os, env)
         if not sdk:
             return ""
 
-        version = subprocess.check_output(
-            ["xcrun", "--sdk", sdk,
-             "--show-sdk-version"]).rstrip().decode('utf-8')
+        version = lldbutil.get_xcode_sdk_version(sdk)
         if not version:
             return ""
 
