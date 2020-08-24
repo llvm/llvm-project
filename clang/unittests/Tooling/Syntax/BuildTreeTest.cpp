@@ -3342,45 +3342,63 @@ void test() {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, ArraySubscriptsInDeclarators) {
+TEST_P(SyntaxTreeTest, ArrayDeclarator_Simple) {
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
 int a[10];
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-int
+  |-SimpleDeclarator
+  | |-a
+  | `-ArraySubscript
+  |   |-[
+  |   |-IntegerLiteralExpression
+  |   | `-10
+  |   `-]
+  `-;
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, ArrayDeclarator_Multidimensional) {
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
 int b[1][2][3];
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-int
+  |-SimpleDeclarator
+  | |-b
+  | |-ArraySubscript
+  | | |-[
+  | | |-IntegerLiteralExpression
+  | | | `-1
+  | | `-]
+  | |-ArraySubscript
+  | | |-[
+  | | |-IntegerLiteralExpression
+  | | | `-2
+  | | `-]
+  | `-ArraySubscript
+  |   |-[
+  |   |-IntegerLiteralExpression
+  |   | `-3
+  |   `-]
+  `-;
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, ArrayDeclarator_UnknownBound) {
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
 int c[] = {1,2,3};
 )cpp",
       R"txt(
 *: TranslationUnit
-|-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-a
-| | `-ArraySubscript
-| |   |-[
-| |   |-IntegerLiteralExpression
-| |   | `-10
-| |   `-]
-| `-;
-|-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-b
-| | |-ArraySubscript
-| | | |-[
-| | | |-IntegerLiteralExpression
-| | | | `-1
-| | | `-]
-| | |-ArraySubscript
-| | | |-[
-| | | |-IntegerLiteralExpression
-| | | | `-2
-| | | `-]
-| | `-ArraySubscript
-| |   |-[
-| |   |-IntegerLiteralExpression
-| |   | `-3
-| |   `-]
-| `-;
 `-SimpleDeclaration
   |-int
   |-SimpleDeclarator
@@ -3405,7 +3423,7 @@ int c[] = {1,2,3};
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, StaticArraySubscriptsInDeclarators) {
+TEST_P(SyntaxTreeTest, ArrayDeclarator_Static) {
   if (!GetParam().isC99OrLater()) {
     return;
   }
