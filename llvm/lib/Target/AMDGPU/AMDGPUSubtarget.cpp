@@ -438,6 +438,21 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getWavesPerEU(
   return Requested;
 }
 
+static unsigned getReqdWorkGroupSize(const Function &Kernel, unsigned Dim) {
+  auto Node = Kernel.getMetadata("reqd_work_group_size");
+  if (Node && Node->getNumOperands() == 3)
+    return mdconst::extract<ConstantInt>(Node->getOperand(Dim))->getZExtValue();
+  return std::numeric_limits<unsigned>::max();
+}
+
+unsigned AMDGPUSubtarget::getMaxWorkitemID(const Function &Kernel,
+                                           unsigned Dimension) const {
+  unsigned ReqdSize = getReqdWorkGroupSize(Kernel, Dimension);
+  if (ReqdSize != std::numeric_limits<unsigned>::max())
+    return ReqdSize - 1;
+  return getFlatWorkGroupSizes(Kernel).second - 1;
+}
+
 bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
   Function *Kernel = I->getParent()->getParent();
   unsigned MinSize = 0;
@@ -474,11 +489,11 @@ bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
       default:
         break;
       }
+
       if (Dim <= 3) {
-        if (auto Node = Kernel->getMetadata("reqd_work_group_size"))
-          if (Node->getNumOperands() == 3)
-            MinSize = MaxSize = mdconst::extract<ConstantInt>(
-                                  Node->getOperand(Dim))->getZExtValue();
+        unsigned ReqdSize = getReqdWorkGroupSize(*Kernel, Dim);
+        if (ReqdSize != std::numeric_limits<unsigned>::max())
+          MinSize = MaxSize = ReqdSize;
       }
     }
   }
