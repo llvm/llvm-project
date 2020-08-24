@@ -4725,8 +4725,6 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    if (request.GetCursorIndex())
-      return;
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eStopHookIDCompletion,
         request, nullptr);

@@ -224,3 +224,65 @@ end:
   %r = phi { i32, i32 } [ %i0, %left ], [ %i1, %right ]
   ret { i32, i32 } %r
 }
+
+; More complex aggregates are fine, too, as long as indicies match.
+define {{ i32, i32 }, { i32, i32 }} @test7({{ i32, i32 }, { i32, i32 }} %agg, i32 %val_left, i32 %val_right, i1 %c) {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    [[I0:%.*]] = insertvalue { { i32, i32 }, { i32, i32 } } [[AGG:%.*]], i32 [[VAL_LEFT:%.*]], 0, 0
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       right:
+; CHECK-NEXT:    [[I1:%.*]] = insertvalue { { i32, i32 }, { i32, i32 } } [[AGG]], i32 [[VAL_RIGHT:%.*]], 0, 0
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[R:%.*]] = phi { { i32, i32 }, { i32, i32 } } [ [[I0]], [[LEFT]] ], [ [[I1]], [[RIGHT]] ]
+; CHECK-NEXT:    ret { { i32, i32 }, { i32, i32 } } [[R]]
+;
+entry:
+  br i1 %c, label %left, label %right
+
+left:
+  %i0 = insertvalue {{ i32, i32 }, { i32, i32 }} %agg, i32 %val_left, 0, 0
+  br label %end
+
+right:
+  %i1 = insertvalue {{ i32, i32 }, { i32, i32 }} %agg, i32 %val_right, 0, 0
+  br label %end
+
+end:
+  %r = phi {{ i32, i32 }, { i32, i32 }} [ %i0, %left ], [ %i1, %right ]
+  ret {{ i32, i32 }, { i32, i32 }} %r
+}
+
+; The indicies must fully match, on all levels.
+define {{ i32, i32 }, { i32, i32 }} @test8({{ i32, i32 }, { i32, i32 }} %agg, i32 %val_left, i32 %val_right, i1 %c) {
+; CHECK-LABEL: @test8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    [[I0:%.*]] = insertvalue { { i32, i32 }, { i32, i32 } } [[AGG:%.*]], i32 [[VAL_LEFT:%.*]], 0, 0
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       right:
+; CHECK-NEXT:    [[I1:%.*]] = insertvalue { { i32, i32 }, { i32, i32 } } [[AGG]], i32 [[VAL_RIGHT:%.*]], 0, 1
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[R:%.*]] = phi { { i32, i32 }, { i32, i32 } } [ [[I0]], [[LEFT]] ], [ [[I1]], [[RIGHT]] ]
+; CHECK-NEXT:    ret { { i32, i32 }, { i32, i32 } } [[R]]
+;
+entry:
+  br i1 %c, label %left, label %right
+
+left:
+  %i0 = insertvalue {{ i32, i32 }, { i32, i32 }} %agg, i32 %val_left, 0, 0
+  br label %end
+
+right:
+  %i1 = insertvalue {{ i32, i32 }, { i32, i32 }} %agg, i32 %val_right, 0, 1
+  br label %end
+
+end:
+  %r = phi {{ i32, i32 }, { i32, i32 }} [ %i0, %left ], [ %i1, %right ]
+  ret {{ i32, i32 }, { i32, i32 }} %r
+}
