@@ -105,6 +105,61 @@ void ProcessInfoRecorder::Record(const ProcessInstanceInfoList &process_infos) {
   m_os.flush();
 }
 
+void SymbolFileProvider::AddSymbolFile(const UUID *uuid,
+                                       const FileSpec &module_file,
+                                       const FileSpec &symbol_file) {
+  if (!uuid || (!module_file && !symbol_file))
+    return;
+  m_symbol_files.emplace_back(uuid->GetAsString(), module_file.GetPath(),
+                              symbol_file.GetPath());
+}
+
+void SymbolFileProvider::Keep() {
+  FileSpec file = this->GetRoot().CopyByAppendingPathComponent(Info::file);
+  std::error_code ec;
+  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
+  if (ec)
+    return;
+
+  // Remove duplicates.
+  llvm::sort(m_symbol_files.begin(), m_symbol_files.end());
+  m_symbol_files.erase(
+      std::unique(m_symbol_files.begin(), m_symbol_files.end()),
+      m_symbol_files.end());
+
+  llvm::yaml::Output yout(os);
+  yout << m_symbol_files;
+}
+
+SymbolFileLoader::SymbolFileLoader(Loader *loader) {
+  if (!loader)
+    return;
+
+  FileSpec file = loader->GetFile<SymbolFileProvider::Info>();
+  if (!file)
+    return;
+
+  auto error_or_file = llvm::MemoryBuffer::getFile(file.GetPath());
+  if (auto err = error_or_file.getError())
+    return;
+
+  llvm::yaml::Input yin((*error_or_file)->getBuffer());
+  yin >> m_symbol_files;
+}
+
+std::pair<FileSpec, FileSpec>
+SymbolFileLoader::GetPaths(const UUID *uuid) const {
+  if (!uuid)
+    return {};
+
+  auto it = std::lower_bound(m_symbol_files.begin(), m_symbol_files.end(),
+                             SymbolFileProvider::Entry(uuid->GetAsString()));
+  if (it == m_symbol_files.end())
+    return {};
+  return std::make_pair<FileSpec, FileSpec>(FileSpec(it->module_path),
+                                            FileSpec(it->symbol_path));
+}
+
 void ProviderBase::anchor() {}
 char CommandProvider::ID = 0;
 char FileProvider::ID = 0;
@@ -113,6 +168,7 @@ char VersionProvider::ID = 0;
 char WorkingDirectoryProvider::ID = 0;
 char HomeDirectoryProvider::ID = 0;
 char ProcessInfoProvider::ID = 0;
+char SymbolFileProvider::ID = 0;
 const char *CommandProvider::Info::file = "command-interpreter.yaml";
 const char *CommandProvider::Info::name = "command-interpreter";
 const char *FileProvider::Info::file = "files.yaml";
@@ -125,3 +181,5 @@ const char *HomeDirectoryProvider::Info::file = "home.txt";
 const char *HomeDirectoryProvider::Info::name = "home";
 const char *ProcessInfoProvider::Info::file = "process-info.yaml";
 const char *ProcessInfoProvider::Info::name = "process-info";
+const char *SymbolFileProvider::Info::file = "symbol-files.yaml";
+const char *SymbolFileProvider::Info::name = "symbol-files";
