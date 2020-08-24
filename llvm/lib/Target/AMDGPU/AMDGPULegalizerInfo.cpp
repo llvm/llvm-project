@@ -2372,7 +2372,6 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
     if (WideMemSize == ValSize) {
       MachineFunction &MF = B.getMF();
 
-      // FIXME: This is losing AA metadata
       MachineMemOperand *WideMMO =
           MF.getMachineMemOperand(MMO, 0, WideMemSize / 8);
       Observer.changingInstr(MI);
@@ -2387,7 +2386,6 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
 
     LLT WideTy = widenToNextPowerOf2(ValTy);
 
-    // FIXME: This is losing AA metadata
     Register WideLoad;
     if (!WideTy.isVector()) {
       WideLoad = B.buildLoadFromOffset(WideTy, PtrReg, *MMO, 0).getReg(0);
