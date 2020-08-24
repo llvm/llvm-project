@@ -1937,6 +1937,10 @@ public:
     Put("\n");
     EndOpenACC();
   }
+  void Unparse(const AccWaitArgument &x) {
+    Walk("DEVNUM:", std::get<std::optional<ScalarIntExpr>>(x.t), ":");
+    Walk(std::get<std::list<ScalarIntExpr>>(x.t), ",");
+  }
   void Unparse(const OpenACCWaitConstruct &x) {
     BeginOpenACC();
     Word("!$ACC ");
