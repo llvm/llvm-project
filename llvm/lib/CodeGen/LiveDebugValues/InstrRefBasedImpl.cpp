@@ -363,9 +363,6 @@ public:
   DbgValueProperties(const DIExpression *DIExpr, bool Indirect)
       : DIExpr(DIExpr), Indirect(Indirect) {}
 
-  DbgValueProperties(const DbgValueProperties &Cpy)
-      : DIExpr(Cpy.DIExpr), Indirect(Cpy.Indirect) {}
-
   /// Extract properties from an existing DBG_VALUE instruction.
   DbgValueProperties(const MachineInstr &MI) {
     assert(MI.isDebugValue());
