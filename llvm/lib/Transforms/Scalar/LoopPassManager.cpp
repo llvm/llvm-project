@@ -47,9 +47,9 @@ PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
 
     // do not pass deleted Loop into the instrumentation
     if (U.skipCurrentLoop())
-      PI.runAfterPassInvalidated<Loop>(*Pass);
+      PI.runAfterPassInvalidated<Loop>(*Pass, PassPA);
     else
-      PI.runAfterPass<Loop>(*Pass, L);
+      PI.runAfterPass<Loop>(*Pass, L, PassPA);
 
     // If the loop was deleted, abort the run and return to the outer walk.
     if (U.skipCurrentLoop()) {
