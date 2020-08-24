@@ -4059,133 +4059,119 @@ TEST_P(SyntaxTreeTest, MemberPointers) {
   if (!GetParam().isCXX()) {
     return;
   }
-  EXPECT_TRUE(treeDumpEqual(
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
 struct X {};
-int X::* a;
-const int X::* b;
+[[int X::* a;]]
+[[const int X::* b;]]
 )cpp",
-      R"txt(
-*: TranslationUnit
-|-SimpleDeclaration
-| |-struct
-| |-X
-| |-{
-| |-}
-| `-;
-|-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-MemberPointer
-| | | |-X
-| | | |-::
-| | | `-*
-| | `-a
-| `-;
-`-SimpleDeclaration
-  |-const
-  |-int
-  |-SimpleDeclarator
-  | |-MemberPointer
-  | | |-X
-  | | |-::
-  | | `-*
-  | `-b
-  `-;
-)txt"));
+      {R"txt(
+SimpleDeclaration
+|-int
+|-SimpleDeclarator
+| |-MemberPointer
+| | |-X
+| | |-::
+| | `-*
+| `-a
+`-;
+)txt",
+       R"txt(
+SimpleDeclaration
+|-const
+|-int
+|-SimpleDeclarator
+| |-MemberPointer
+| | |-X
+| | |-::
+| | `-*
+| `-b
+`-;
+)txt"}));
 }
 
 TEST_P(SyntaxTreeTest, MemberFunctionPointer) {
   if (!GetParam().isCXX()) {
     return;
   }
-  EXPECT_TRUE(treeDumpEqual(
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
 struct X {
   struct Y {};
 };
-void (X::*xp)();
-void (X::**xpp)(const int*);
+[[void (X::*xp)();]]
+[[void (X::**xpp)(const int*);]]
 // FIXME: Generate the right syntax tree for this type,
 // i.e. create a syntax node for the outer member pointer
-void (X::Y::*xyp)(const int*, char);
+[[void (X::Y::*xyp)(const int*, char);]]
 )cpp",
-      R"txt(
-*: TranslationUnit
-|-SimpleDeclaration
-| |-struct
-| |-X
-| |-{
-| |-SimpleDeclaration
-| | |-struct
-| | |-Y
-| | |-{
-| | |-}
-| | `-;
-| |-}
-| `-;
-|-SimpleDeclaration
-| |-void
-| |-SimpleDeclarator
-| | |-ParenDeclarator
-| | | |-(
-| | | |-MemberPointer
-| | | | |-X
-| | | | |-::
-| | | | `-*
-| | | |-xp
-| | | `-)
-| | `-ParametersAndQualifiers
-| |   |-(
-| |   `-)
-| `-;
-|-SimpleDeclaration
-| |-void
-| |-SimpleDeclarator
-| | |-ParenDeclarator
-| | | |-(
-| | | |-MemberPointer
-| | | | |-X
-| | | | |-::
-| | | | `-*
-| | | |-*
-| | | |-xpp
-| | | `-)
-| | `-ParametersAndQualifiers
-| |   |-(
-| |   |-SimpleDeclaration
-| |   | |-const
-| |   | |-int
-| |   | `-SimpleDeclarator
-| |   |   `-*
-| |   `-)
-| `-;
-`-SimpleDeclaration
-  |-void
-  |-SimpleDeclarator
-  | |-ParenDeclarator
-  | | |-(
-  | | |-X
-  | | |-::
-  | | |-MemberPointer
-  | | | |-Y
-  | | | |-::
-  | | | `-*
-  | | |-xyp
-  | | `-)
-  | `-ParametersAndQualifiers
-  |   |-(
-  |   |-SimpleDeclaration
-  |   | |-const
-  |   | |-int
-  |   | `-SimpleDeclarator
-  |   |   `-*
-  |   |-,
-  |   |-SimpleDeclaration
-  |   | `-char
-  |   `-)
-  `-;
-)txt"));
+      {R"txt(
+SimpleDeclaration
+|-void
+|-SimpleDeclarator
+| |-ParenDeclarator
+| | |-(
+| | |-MemberPointer
+| | | |-X
+| | | |-::
+| | | `-*
+| | |-xp
+| | `-)
+| `-ParametersAndQualifiers
+|   |-(
+|   `-)
+`-;
+)txt",
+       R"txt(
+SimpleDeclaration
+|-void
+|-SimpleDeclarator
+| |-ParenDeclarator
+| | |-(
+| | |-MemberPointer
+| | | |-X
+| | | |-::
+| | | `-*
+| | |-*
+| | |-xpp
+| | `-)
+| `-ParametersAndQualifiers
+|   |-(
+|   |-SimpleDeclaration
+|   | |-const
+|   | |-int
+|   | `-SimpleDeclarator
+|   |   `-*
+|   `-)
+`-;
+)txt",
+       R"txt(
+SimpleDeclaration
+|-void
+|-SimpleDeclarator
+| |-ParenDeclarator
+| | |-(
+| | |-X
+| | |-::
+| | |-MemberPointer
+| | | |-Y
+| | | |-::
+| | | `-*
+| | |-xyp
+| | `-)
+| `-ParametersAndQualifiers
+|   |-(
+|   |-SimpleDeclaration
+|   | |-const
+|   | |-int
+|   | `-SimpleDeclarator
+|   |   `-*
+|   |-,
+|   |-SimpleDeclaration
+|   | `-char
+|   `-)
+`-;
+)txt"}));
 }
 
 TEST_P(SyntaxTreeTest, ComplexDeclarator) {
