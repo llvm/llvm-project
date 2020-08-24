@@ -75,6 +75,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Coroutines.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
@@ -920,6 +921,14 @@ bool SampleProfileLoader::inlineCallInstruction(CallBase &CB) {
 
   Function *CalledFunction = CB.getCalledFunction();
   assert(CalledFunction);
+
+  // When callee coroutine function is inlined into caller coroutine function
+  // before coro-split pass,
+  // coro-early pass can not handle this quiet well.
+  // So we won't inline the coroutine function if it have not been unsplited
+  if (CalledFunction->hasFnAttribute(CORO_PRESPLIT_ATTR))
+    return false;
+
   DebugLoc DLoc = CB.getDebugLoc();
   BasicBlock *BB = CB.getParent();
   InlineParams Params = getInlineParams();
