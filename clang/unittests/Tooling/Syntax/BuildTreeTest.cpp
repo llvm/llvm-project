@@ -2570,61 +2570,47 @@ TEST_P(SyntaxTreeTest, StaticMemberFunction) {
   if (!GetParam().isCXX11OrLater()) {
     return;
   }
-  EXPECT_TRUE(treeDumpEqual(
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
 struct S {
-  static void f(){}
+  [[static void f(){}]]
 };
 )cpp",
-      R"txt(
-*: TranslationUnit
-`-SimpleDeclaration
-  |-struct
-  |-S
+      {R"txt(
+SimpleDeclaration
+|-static
+|-void
+|-SimpleDeclarator
+| |-f
+| `-ParametersAndQualifiers
+|   |-(
+|   `-)
+`-CompoundStatement
   |-{
-  |-SimpleDeclaration
-  | |-static
-  | |-void
-  | |-SimpleDeclarator
-  | | |-f
-  | | `-ParametersAndQualifiers
-  | |   |-(
-  | |   `-)
-  | `-CompoundStatement
-  |   |-{
-  |   `-}
-  |-}
-  `-;
-)txt"));
+  `-}
+)txt"}));
 }
 
 TEST_P(SyntaxTreeTest, ConversionMemberFunction) {
   if (!GetParam().isCXX()) {
     return;
   }
-  EXPECT_TRUE(treeDumpEqual(
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
 struct X {
-  operator int();
+  [[operator int();]]
 };
 )cpp",
-      R"txt(
-*: TranslationUnit
-`-SimpleDeclaration
-  |-struct
-  |-X
-  |-{
-  |-SimpleDeclaration
-  | |-SimpleDeclarator
-  | | |-operator
-  | | |-int
-  | | `-ParametersAndQualifiers
-  | |   |-(
-  | |   `-)
-  | `-;
-  |-}
-  `-;
-)txt"));
+      {R"txt(
+SimpleDeclaration
+|-SimpleDeclarator
+| |-operator
+| |-int
+| `-ParametersAndQualifiers
+|   |-(
+|   `-)
+`-;
+)txt"}));
 }
 
 TEST_P(SyntaxTreeTest, LiteralOperatorDeclaration) {
@@ -2687,76 +2673,62 @@ TEST_P(SyntaxTreeTest, OverloadedOperatorDeclaration) {
   if (!GetParam().isCXX()) {
     return;
   }
-  EXPECT_TRUE(treeDumpEqual(
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
 struct X {
-  X& operator=(const X&);
+  [[X& operator=(const X&);]]
 };
 )cpp",
-      R"txt(
-*: TranslationUnit
-`-SimpleDeclaration
-  |-struct
-  |-X
-  |-{
-  |-SimpleDeclaration
-  | |-X
-  | |-SimpleDeclarator
-  | | |-&
-  | | |-operator
-  | | |-=
-  | | `-ParametersAndQualifiers
-  | |   |-(
-  | |   |-SimpleDeclaration
-  | |   | |-const
-  | |   | |-X
-  | |   | `-SimpleDeclarator
-  | |   |   `-&
-  | |   `-)
-  | `-;
-  |-}
-  `-;
-)txt"));
+      {R"txt(
+SimpleDeclaration
+|-X
+|-SimpleDeclarator
+| |-&
+| |-operator
+| |-=
+| `-ParametersAndQualifiers
+|   |-(
+|   |-SimpleDeclaration
+|   | |-const
+|   | |-X
+|   | `-SimpleDeclarator
+|   |   `-&
+|   `-)
+`-;
+)txt"}));
 }
 
 TEST_P(SyntaxTreeTest, OverloadedOperatorFriendDeclarataion) {
   if (!GetParam().isCXX()) {
     return;
   }
-  EXPECT_TRUE(treeDumpEqual(
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
 struct X {
-  friend X operator+(X, const X&);
+  [[friend X operator+(X, const X&);]]
 };
 )cpp",
-      R"txt(
-*: TranslationUnit
+      {R"txt(
+UnknownDeclaration
 `-SimpleDeclaration
-  |-struct
+  |-friend
   |-X
-  |-{
-  |-UnknownDeclaration
-  | `-SimpleDeclaration
-  |   |-friend
-  |   |-X
-  |   |-SimpleDeclarator
-  |   | |-operator
-  |   | |-+
-  |   | `-ParametersAndQualifiers
-  |   |   |-(
-  |   |   |-SimpleDeclaration
-  |   |   | `-X
-  |   |   |-,
-  |   |   |-SimpleDeclaration
-  |   |   | |-const
-  |   |   | |-X
-  |   |   | `-SimpleDeclarator
-  |   |   |   `-&
-  |   |   `-)
-  |   `-;
-  |-}
+  |-SimpleDeclarator
+  | |-operator
+  | |-+
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   |-SimpleDeclaration
+  |   | `-X
+  |   |-,
+  |   |-SimpleDeclaration
+  |   | |-const
+  |   | |-X
+  |   | `-SimpleDeclarator
+  |   |   `-&
+  |   `-)
   `-;
-)txt"));
+)txt"}));
 }
 
 TEST_P(SyntaxTreeTest, ClassTemplateDeclaration) {
@@ -2847,38 +2819,31 @@ TEST_P(SyntaxTreeTest, StaticMemberFunctionTemplate) {
   if (!GetParam().isCXX()) {
     return;
   }
-  EXPECT_TRUE(treeDumpEqual(
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
 struct S {
-  template<typename U>
-  static U f();
+  [[template<typename U>
+  static U f();]]
 };
 )cpp",
-      R"txt(
-*: TranslationUnit
+      {R"txt(
+TemplateDeclaration
+|-template
+|-<
+|-UnknownDeclaration
+| |-typename
+| `-U
+|->
 `-SimpleDeclaration
-  |-struct
-  |-S
-  |-{
-  |-TemplateDeclaration
-  | |-template
-  | |-<
-  | |-UnknownDeclaration
-  | | |-typename
-  | | `-U
-  | |->
-  | `-SimpleDeclaration
-  |   |-static
-  |   |-U
-  |   |-SimpleDeclarator
-  |   | |-f
-  |   | `-ParametersAndQualifiers
-  |   |   |-(
-  |   |   `-)
-  |   `-;
-  |-}
+  |-static
+  |-U
+  |-SimpleDeclarator
+  | |-f
+  | `-ParametersAndQualifiers
+  |   |-(
+  |   `-)
   `-;
-)txt"));
+)txt"}));
 }
 
 TEST_P(SyntaxTreeTest, NestedTemplates) {
