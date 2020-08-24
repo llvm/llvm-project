@@ -21,7 +21,10 @@ class TestSimulatorPlatformLaunching(TestBase):
         for line in load_cmds.split('\n'):
             if expected_load_command in line:
               found += 1
-        self.assertEquals(found, 1, "wrong load command")
+        self.assertEquals(
+            found, 1, "wrong number of load commands for {}".format(
+                expected_load_command))
+
 
     def check_debugserver(self, log, expected_platform, expected_version):
         """scan the debugserver packet log"""
