@@ -2515,55 +2515,65 @@ UsingDeclaration
 )txt"}));
 }
 
-TEST_P(SyntaxTreeTest, FreeStandingClasses) {
-  // Free-standing classes, must live inside a SimpleDeclaration.
-  EXPECT_TRUE(treeDumpEqual(
+TEST_P(SyntaxTreeTest, FreeStandingClass_ForwardDeclaration) {
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
-struct X;
-struct X {};
-
-struct Y *y1;
-struct Y {} *y2;
-
-struct {} *a1;
+[[struct X;]]
+[[struct Y *y1;]]
 )cpp",
-      R"txt(
-*: TranslationUnit
-|-SimpleDeclaration
-| |-struct
-| |-X
-| `-;
-|-SimpleDeclaration
-| |-struct
-| |-X
-| |-{
-| |-}
-| `-;
-|-SimpleDeclaration
-| |-struct
-| |-Y
-| |-SimpleDeclarator
-| | |-*
-| | `-y1
-| `-;
-|-SimpleDeclaration
-| |-struct
-| |-Y
-| |-{
-| |-}
-| |-SimpleDeclarator
-| | |-*
-| | `-y2
-| `-;
-`-SimpleDeclaration
-  |-struct
-  |-{
-  |-}
-  |-SimpleDeclarator
-  | |-*
-  | `-a1
-  `-;
-)txt"));
+      {R"txt(
+SimpleDeclaration
+|-struct
+|-X
+`-;
+)txt",
+       R"txt(
+SimpleDeclaration
+|-struct
+|-Y
+|-SimpleDeclarator
+| |-*
+| `-y1
+`-;
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest, FreeStandingClasses_Definition) {
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+[[struct X {};]]
+[[struct Y {} *y2;]]
+[[struct {} *a1;]]
+)cpp",
+      {R"txt(
+SimpleDeclaration
+|-struct
+|-X
+|-{
+|-}
+`-;
+)txt",
+       R"txt(
+SimpleDeclaration
+|-struct
+|-Y
+|-{
+|-}
+|-SimpleDeclarator
+| |-*
+| `-y2
+`-;
+)txt",
+       R"txt(
+SimpleDeclaration
+|-struct
+|-{
+|-}
+|-SimpleDeclarator
+| |-*
+| `-a1
+`-;
+)txt"}));
 }
 
 TEST_P(SyntaxTreeTest, StaticMemberFunction) {
