@@ -45,6 +45,8 @@ class StringRef;
 class TargetLibraryInfo;
 class Value;
 
+constexpr unsigned MaxAnalysisRecursionDepth = 6;
+
   /// Determine which bits of V are known to be either zero or one and return
   /// them in the KnownZero/KnownOne bit sets.
   ///

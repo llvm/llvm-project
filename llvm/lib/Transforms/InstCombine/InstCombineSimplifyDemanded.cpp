@@ -110,7 +110,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
                                                  unsigned Depth,
                                                  Instruction *CxtI) {
   assert(V != nullptr && "Null pointer of Value???");
-  assert(Depth <= 6 && "Limit Search Depth");
+  assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
   uint32_t BitWidth = DemandedMask.getBitWidth();
   Type *VTy = V->getType();
   assert(
@@ -127,7 +127,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
   if (DemandedMask.isNullValue())     // Not demanding any bits from V.
     return UndefValue::get(VTy);
 
-  if (Depth == 6)        // Limit search depth.
+  if (Depth == MaxAnalysisRecursionDepth)
     return nullptr;
 
   Instruction *I = dyn_cast<Instruction>(V);
