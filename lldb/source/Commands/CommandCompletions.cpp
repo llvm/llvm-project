@@ -71,6 +71,10 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {eThreadIndexCompletion, CommandCompletions::ThreadIndexes},
       {eWatchPointIDCompletion, CommandCompletions::WatchPointIDs},
       {eBreakpointNameCompletion, CommandCompletions::BreakpointNames},
+      {eProcessIDCompletion, CommandCompletions::ProcessIDs},
+      {eProcessNameCompletion, CommandCompletions::ProcessNames},
+      {eRemoteDiskFileCompletion, CommandCompletions::RemoteDiskFiles},
+      {eRemoteDiskDirectoryCompletion, CommandCompletions::RemoteDiskDirectories},
       {eNoCompletion, nullptr} // This one has to be last in the list.
   };
 
@@ -484,6 +488,24 @@ void CommandCompletions::DiskDirectories(const llvm::Twine &partial_file_name,
   DiskFilesOrDirectories(partial_file_name, true, matches, Resolver);
 }
 
+void CommandCompletions::RemoteDiskFiles(CommandInterpreter &interpreter,
+                                         CompletionRequest &request,
+                                         SearchFilter *searcher) {
+  lldb::PlatformSP platform_sp =
+      interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform();
+  if (platform_sp)
+    platform_sp->AutoCompleteDiskFileOrDirectory(request, false);
+}
+
+void CommandCompletions::RemoteDiskDirectories(CommandInterpreter &interpreter,
+                                               CompletionRequest &request,
+                                               SearchFilter *searcher) {
+  lldb::PlatformSP platform_sp =
+      interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform();
+  if (platform_sp)
+    platform_sp->AutoCompleteDiskFileOrDirectory(request, true);
+}
+
 void CommandCompletions::Modules(CommandInterpreter &interpreter,
                                  CompletionRequest &request,
                                  SearchFilter *searcher) {
@@ -647,6 +669,33 @@ void CommandCompletions::DisassemblyFlavors(CommandInterpreter &interpreter,
   for (const char *flavor : flavors) {
     request.TryCompleteCurrentArg(flavor);
   }
+}
+
+void CommandCompletions::ProcessIDs(CommandInterpreter &interpreter,
+                                    CompletionRequest &request,
+                                    SearchFilter *searcher) {
+  lldb::PlatformSP platform_sp(interpreter.GetPlatform(true));
+  if (!platform_sp)
+    return;
+  ProcessInstanceInfoList process_infos;
+  ProcessInstanceInfoMatch match_info;
+  platform_sp->FindProcesses(match_info, process_infos);
+  for (const ProcessInstanceInfo &info : process_infos)
+    request.TryCompleteCurrentArg(std::to_string(info.GetProcessID()),
+                                  info.GetNameAsStringRef());
+}
+
+void CommandCompletions::ProcessNames(CommandInterpreter &interpreter,
+                                      CompletionRequest &request,
+                                      SearchFilter *searcher) {
+  lldb::PlatformSP platform_sp(interpreter.GetPlatform(true));
+  if (!platform_sp)
+    return;
+  ProcessInstanceInfoList process_infos;
+  ProcessInstanceInfoMatch match_info;
+  platform_sp->FindProcesses(match_info, process_infos);
+  for (const ProcessInstanceInfo &info : process_infos)
+    request.TryCompleteCurrentArg(info.GetNameAsStringRef());
 }
 
 void CommandCompletions::TypeLanguages(CommandInterpreter &interpreter,

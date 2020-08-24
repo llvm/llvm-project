@@ -3442,7 +3442,9 @@ bool AMDGPULegalizerInfo::legalizeIsAddrSpace(MachineInstr &MI,
                                               MachineIRBuilder &B,
                                               unsigned AddrSpace) const {
   Register ApertureReg = getSegmentAperture(AddrSpace, MRI, B);
-  auto Hi32 = B.buildExtract(LLT::scalar(32), MI.getOperand(2).getReg(), 32);
+  auto Unmerge = B.buildUnmerge(LLT::scalar(32), MI.getOperand(2).getReg());
+  Register Hi32 = Unmerge.getReg(1);
+
   B.buildICmp(ICmpInst::ICMP_EQ, MI.getOperand(0), Hi32, ApertureReg);
   MI.eraseFromParent();
   return true;
