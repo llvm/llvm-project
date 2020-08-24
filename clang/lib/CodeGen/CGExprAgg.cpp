@@ -1976,28 +1976,28 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
   // Get data size info for this aggregate. Don't copy the tail padding if this
   // might be a potentially-overlapping subobject, since the tail padding might
   // be occupied by a different object. Otherwise, copying it is fine.
-  std::pair<CharUnits, CharUnits> TypeInfo;
+  TypeInfoChars TypeInfo;
   if (MayOverlap)
     TypeInfo = getContext().getTypeInfoDataSizeInChars(Ty);
   else
     TypeInfo = getContext().getTypeInfoInChars(Ty);
 
   llvm::Value *SizeVal = nullptr;
-  if (TypeInfo.first.isZero()) {
+  if (TypeInfo.Width.isZero()) {
     // But note that getTypeInfo returns 0 for a VLA.
     if (auto *VAT = dyn_cast_or_null<VariableArrayType>(
             getContext().getAsArrayType(Ty))) {
       QualType BaseEltTy;
       SizeVal = emitArrayLength(VAT, BaseEltTy, DestPtr);
       TypeInfo = getContext().getTypeInfoInChars(BaseEltTy);
-      assert(!TypeInfo.first.isZero());
+      assert(!TypeInfo.Width.isZero());
       SizeVal = Builder.CreateNUWMul(
           SizeVal,
-          llvm::ConstantInt::get(SizeTy, TypeInfo.first.getQuantity()));
+          llvm::ConstantInt::get(SizeTy, TypeInfo.Width.getQuantity()));
     }
   }
   if (!SizeVal) {
-    SizeVal = llvm::ConstantInt::get(SizeTy, TypeInfo.first.getQuantity());
+    SizeVal = llvm::ConstantInt::get(SizeTy, TypeInfo.Width.getQuantity());
   }
 
   // FIXME: If we have a volatile struct, the optimizer can remove what might
