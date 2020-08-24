@@ -953,8 +953,6 @@ int processDataBefore(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
 
 /// Process data after launching the kernel, including transferring data back to
 /// host if needed and deallocating target memory of (first-)private variables.
-/// FIXME: This function has correctness issue that target memory might be
-/// deallocated when they're being used.
 int processDataAfter(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
                      void **ArgBases, void **Args, int64_t *ArgSizes,
                      int64_t *ArgTypes, void **ArgMappers,
