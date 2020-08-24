@@ -468,6 +468,12 @@ class CommandLineCompletionTestCase(TestBase):
         for subcommand in subcommands:
             self.complete_from_to('thread ' + subcommand + ' ', ['1'])
 
+    def test_common_completion_type_category_name(self):
+        subcommands = ['delete', 'list', 'enable', 'disable', 'define']
+        for subcommand in subcommands:
+            self.complete_from_to('type category ' + subcommand + ' ', ['default'])
+        self.complete_from_to('type filter add -w ', ['default'])
+
     def test_command_argument_completion(self):
         """Test completion of command arguments"""
         self.complete_from_to("watchpoint set variable -", ["-w", "-s"])
