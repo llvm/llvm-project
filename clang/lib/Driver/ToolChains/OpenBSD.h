@@ -54,6 +54,8 @@ public:
   OpenBSD(const Driver &D, const llvm::Triple &Triple,
           const llvm::opt::ArgList &Args);
 
+  bool HasNativeLLVMSupport() const override;
+
   bool IsMathErrnoDefault() const override { return false; }
   bool IsObjCNonFragileABIDefault() const override { return true; }
   bool isPIEDefault() const override { return true; }
@@ -69,10 +71,13 @@ public:
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
 
-  bool HasNativeLLVMSupport() const override;
-
+  void addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                             llvm::opt::ArgStringList &CC1Args) const override;
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const override;
+
+  std::string getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
+                            FileType Type = ToolChain::FT_Static) const override;
 
   unsigned GetDefaultStackProtectorLevel(bool KernelOrKext) const override {
     return 2;
