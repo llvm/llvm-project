@@ -34,6 +34,10 @@ public:
 class TestConvertCallOp
     : public PassWrapper<TestConvertCallOp, OperationPass<ModuleOp>> {
 public:
+  void getDependentDialects(DialectRegistry &registry) const final {
+    registry.insert<LLVM::LLVMDialect>();
+  }
+
   void runOnOperation() override {
     ModuleOp m = getOperation();
 
