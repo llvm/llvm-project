@@ -724,7 +724,7 @@ public:
     return nullptr;
   }
 
-  /// Analyze the loop code, return true if it cannot be understoo. Upon
+  /// Analyze the loop code, return true if it cannot be understood. Upon
   /// success, this function returns false and returns information about the
   /// induction variable and compare instruction used at the end.
   virtual bool analyzeLoop(MachineLoop &L, MachineInstr *&IndVarInst,
@@ -771,7 +771,7 @@ public:
 
   /// Second variant of isProfitableToIfCvt. This one
   /// checks for the case where two basic blocks from true and false path
-  /// of a if-then-else (diamond) are predicated on mutally exclusive
+  /// of a if-then-else (diamond) are predicated on mutually exclusive
   /// predicates, where the probability of the true path being taken is given
   /// by Probability, and Confidence is a measure of our confidence that it
   /// will be properly predicted.
