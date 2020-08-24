@@ -32,7 +32,5 @@ static void registerTestTranslations() {
 int main(int argc, char **argv) {
   registerAllTranslations();
   registerTestTranslations();
-  // TODO: remove the global dialect registry
-  registerAllDialects();
   return failed(mlirTranslateMain(argc, argv, "MLIR Translation Testing Tool"));
 }
