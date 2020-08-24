@@ -3800,79 +3800,72 @@ TEST_P(SyntaxTreeTest, DynamicExceptionSpecification) {
   if (!GetParam().supportsCXXDynamicExceptionSpecification()) {
     return;
   }
-  EXPECT_TRUE(treeDumpEqual(
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
 struct MyException1 {};
 struct MyException2 {};
-int a() throw();
-int b() throw(...);
-int c() throw(MyException1);
-int d() throw(MyException1, MyException2);
+[[int a() throw();]]
+[[int b() throw(...);]]
+[[int c() throw(MyException1);]]
+[[int d() throw(MyException1, MyException2);]]
 )cpp",
-      R"txt(
-*: TranslationUnit
-|-SimpleDeclaration
-| |-struct
-| |-MyException1
-| |-{
-| |-}
-| `-;
-|-SimpleDeclaration
-| |-struct
-| |-MyException2
-| |-{
-| |-}
-| `-;
-|-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-a
-| | `-ParametersAndQualifiers
-| |   |-(
-| |   |-)
-| |   |-throw
-| |   |-(
-| |   `-)
-| `-;
-|-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-b
-| | `-ParametersAndQualifiers
-| |   |-(
-| |   |-)
-| |   |-throw
-| |   |-(
-| |   |-...
-| |   `-)
-| `-;
-|-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-c
-| | `-ParametersAndQualifiers
-| |   |-(
-| |   |-)
-| |   |-throw
-| |   |-(
-| |   |-MyException1
-| |   `-)
-| `-;
-`-SimpleDeclaration
-  |-int
-  |-SimpleDeclarator
-  | |-d
-  | `-ParametersAndQualifiers
-  |   |-(
-  |   |-)
-  |   |-throw
-  |   |-(
-  |   |-MyException1
-  |   |-,
-  |   |-MyException2
-  |   `-)
-  `-;
-)txt"));
+      {R"txt(
+SimpleDeclaration
+|-int
+|-SimpleDeclarator
+| |-a
+| `-ParametersAndQualifiers
+|   |-(
+|   |-)
+|   |-throw
+|   |-(
+|   `-)
+`-;
+)txt",
+       R"txt(
+SimpleDeclaration
+|-int
+|-SimpleDeclarator
+| |-b
+| `-ParametersAndQualifiers
+|   |-(
+|   |-)
+|   |-throw
+|   |-(
+|   |-...
+|   `-)
+`-;
+)txt",
+       R"txt(
+SimpleDeclaration
+|-int
+|-SimpleDeclarator
+| |-c
+| `-ParametersAndQualifiers
+|   |-(
+|   |-)
+|   |-throw
+|   |-(
+|   |-MyException1
+|   `-)
+`-;
+)txt",
+       R"txt(
+SimpleDeclaration
+|-int
+|-SimpleDeclarator
+| |-d
+| `-ParametersAndQualifiers
+|   |-(
+|   |-)
+|   |-throw
+|   |-(
+|   |-MyException1
+|   |-,
+|   |-MyException2
+|   `-)
+`-;
+)txt"}));
 }
 
 TEST_P(SyntaxTreeTest, NoexceptExceptionSpecification) {
