@@ -176,13 +176,6 @@ struct CodeGenIntrinsic {
     return Properties & (1 << Prop);
   }
 
-  /// Goes through all IntrProperties and sets to true ones that have IsDefault
-  /// value set to true.
-  void setDefaultProperties(Record *R);
-
-  /// Helper function to set property \p Name to true;
-  void setProperty(Record *R);
-
   /// Returns true if the parameter at \p ParamIdx is a pointer type. Returns
   /// false if the parameter is not a pointer, or \p ParamIdx is greater than
   /// the size of \p IS.ParamVTs.
