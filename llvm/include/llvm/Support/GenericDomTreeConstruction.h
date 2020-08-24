@@ -107,8 +107,19 @@ struct SemiNCAInfo {
   static SmallVector<NodePtr, 8> getChildren(NodePtr N, BatchUpdatePtr BUI) {
     if (BUI)
       return BUI->PreViewCFG.template getChildren<Inversed>(N);
-    GraphDiffT GD;
-    return GD.template getChildren<Inversed>(N);
+    return getChildren<Inversed>(N);
+  }
+
+  template <bool Inversed>
+  static SmallVector<NodePtr, 8> getChildren(NodePtr N) {
+    using DirectedNodeT =
+        std::conditional_t<Inversed, Inverse<NodePtr>, NodePtr>;
+    auto R = children<DirectedNodeT>(N);
+    SmallVector<NodePtr, 8> Res(detail::reverse_if<!Inversed>(R));
+
+    // Remove nullptr children for clang.
+    llvm::erase_value(Res, nullptr);
+    return Res;
   }
 
   NodePtr getIDom(NodePtr BB) const {
