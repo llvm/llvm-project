@@ -321,7 +321,7 @@ to an entity of type ``bits<4>``.
               :| "." `TokIdentifier`
    RangeList: `RangePiece` ("," `RangePiece`)*
    RangePiece: `TokInteger`
-             :| `TokInteger` ".." `TokInteger`
+             :| `TokInteger` "..." `TokInteger`
              :| `TokInteger` "-" `TokInteger`
              :| `TokInteger` `TokInteger`
 
