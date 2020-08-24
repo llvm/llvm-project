@@ -275,37 +275,21 @@ if.false:
 }
 
 define void @f7_2(i1 %c) {
-; NOT_CGSCC_NPM: Function Attrs: nounwind willreturn
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@f7_2
-; NOT_CGSCC_NPM-SAME: (i1 [[C:%.*]])
-; NOT_CGSCC_NPM-NEXT:    [[PTR:%.*]] = tail call noundef nonnull align 4 dereferenceable(4) i32* @unkown_ptr()
-; NOT_CGSCC_NPM-NEXT:    [[A:%.*]] = tail call i32 @unkown_f(i32* noundef nonnull align 4 dereferenceable(4) [[PTR]])
-; NOT_CGSCC_NPM-NEXT:    [[ARG_A_0:%.*]] = load i32, i32* [[PTR]], align 4
-; NOT_CGSCC_NPM-NEXT:    [[B:%.*]] = tail call i32 @unkown_f(i32* noundef nonnull align 4 dereferenceable(4) [[PTR]])
-; NOT_CGSCC_NPM-NEXT:    br i1 [[C]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
-; NOT_CGSCC_NPM:       if.true:
-; NOT_CGSCC_NPM-NEXT:    [[C:%.*]] = tail call i32 @unkown_f(i32* noundef nonnull align 4 dereferenceable(8) [[PTR]])
-; NOT_CGSCC_NPM-NEXT:    [[D:%.*]] = tail call i32 @unkown_f(i32* noundef nonnull align 4 dereferenceable(8) [[PTR]])
-; NOT_CGSCC_NPM-NEXT:    [[E:%.*]] = tail call i32 @unkown_f(i32* noundef nonnull align 4 dereferenceable(8) [[PTR]])
-; NOT_CGSCC_NPM-NEXT:    ret void
-; NOT_CGSCC_NPM:       if.false:
-; NOT_CGSCC_NPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM: Function Attrs: nounwind willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f7_2
-; IS__CGSCC_NPM-SAME: (i1 [[C:%.*]])
-; IS__CGSCC_NPM-NEXT:    [[PTR:%.*]] = tail call nonnull align 4 dereferenceable(4) i32* @unkown_ptr()
-; IS__CGSCC_NPM-NEXT:    [[A:%.*]] = tail call i32 @unkown_f(i32* noundef nonnull align 4 dereferenceable(4) [[PTR]])
-; IS__CGSCC_NPM-NEXT:    [[ARG_A_0:%.*]] = load i32, i32* [[PTR]], align 4
-; IS__CGSCC_NPM-NEXT:    [[B:%.*]] = tail call i32 @unkown_f(i32* noundef nonnull align 4 dereferenceable(4) [[PTR]])
-; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
-; IS__CGSCC_NPM:       if.true:
-; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = tail call i32 @unkown_f(i32* noundef nonnull align 4 dereferenceable(8) [[PTR]])
-; IS__CGSCC_NPM-NEXT:    [[D:%.*]] = tail call i32 @unkown_f(i32* noundef nonnull align 4 dereferenceable(8) [[PTR]])
-; IS__CGSCC_NPM-NEXT:    [[E:%.*]] = tail call i32 @unkown_f(i32* noundef nonnull align 4 dereferenceable(8) [[PTR]])
-; IS__CGSCC_NPM-NEXT:    ret void
-; IS__CGSCC_NPM:       if.false:
-; IS__CGSCC_NPM-NEXT:    ret void
+; CHECK: Function Attrs: nounwind willreturn
+; CHECK-LABEL: define {{[^@]+}}@f7_2
+; CHECK-SAME: (i1 [[C:%.*]])
+; CHECK-NEXT:    [[PTR:%.*]] = tail call nonnull align 4 dereferenceable(4) i32* @unkown_ptr()
+; CHECK-NEXT:    [[A:%.*]] = tail call i32 @unkown_f(i32* nonnull align 4 dereferenceable(4) [[PTR]])
+; CHECK-NEXT:    [[ARG_A_0:%.*]] = load i32, i32* [[PTR]], align 4
+; CHECK-NEXT:    [[B:%.*]] = tail call i32 @unkown_f(i32* nonnull align 4 dereferenceable(4) [[PTR]])
+; CHECK-NEXT:    br i1 [[C]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    [[C:%.*]] = tail call i32 @unkown_f(i32* nonnull align 4 dereferenceable(8) [[PTR]])
+; CHECK-NEXT:    [[D:%.*]] = tail call i32 @unkown_f(i32* nonnull align 4 dereferenceable(8) [[PTR]])
+; CHECK-NEXT:    [[E:%.*]] = tail call i32 @unkown_f(i32* nonnull align 4 dereferenceable(8) [[PTR]])
+; CHECK-NEXT:    ret void
+; CHECK:       if.false:
+; CHECK-NEXT:    ret void
 ;
   %ptr =  tail call i32* @unkown_ptr()
   %A = tail call i32 @unkown_f(i32* %ptr)
@@ -1033,41 +1017,23 @@ define void @nonnull_assume_call(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4) {
 ; ATTRIBUTOR-NEXT:    call void @unknown()
 ; ATTRIBUTOR-NEXT:    ret void
 ;
-; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@nonnull_assume_call
-; NOT_CGSCC_OPM-SAME: (i8* [[ARG1:%.*]], i8* [[ARG2:%.*]], i8* [[ARG3:%.*]], i8* [[ARG4:%.*]])
-; NOT_CGSCC_OPM-NEXT:    call void @unknown()
-; NOT_CGSCC_OPM-NEXT:    [[P:%.*]] = call noundef nonnull dereferenceable(101) i32* @unkown_ptr()
-; NOT_CGSCC_OPM-NEXT:    call void @unknown_use32(i32* noundef nonnull dereferenceable(101) [[P]])
-; NOT_CGSCC_OPM-NEXT:    call void @unknown_use8(i8* dereferenceable_or_null(42) [[ARG4]])
-; NOT_CGSCC_OPM-NEXT:    call void @unknown_use8(i8* nonnull [[ARG3]])
-; NOT_CGSCC_OPM-NEXT:    call void @unknown_use8(i8* dereferenceable_or_null(31) [[ARG2]])
-; NOT_CGSCC_OPM-NEXT:    call void @unknown_use8(i8* nonnull dereferenceable(2) [[ARG1]])
-; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i32* [[P]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
-; NOT_CGSCC_OPM-NEXT:    call void @unknown_use8(i8* nonnull dereferenceable(2) [[ARG1]])
-; NOT_CGSCC_OPM-NEXT:    call void @unknown_use8(i8* dereferenceable_or_null(31) [[ARG2]])
-; NOT_CGSCC_OPM-NEXT:    call void @unknown_use8(i8* nonnull [[ARG3]])
-; NOT_CGSCC_OPM-NEXT:    call void @unknown_use8(i8* dereferenceable_or_null(42) [[ARG4]])
-; NOT_CGSCC_OPM-NEXT:    call void @unknown_use32(i32* noundef nonnull dereferenceable(101) [[P]])
-; NOT_CGSCC_OPM-NEXT:    call void @unknown()
-; NOT_CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@nonnull_assume_call
-; IS__CGSCC_OPM-SAME: (i8* [[ARG1:%.*]], i8* [[ARG2:%.*]], i8* [[ARG3:%.*]], i8* [[ARG4:%.*]])
-; IS__CGSCC_OPM-NEXT:    call void @unknown()
-; IS__CGSCC_OPM-NEXT:    [[P:%.*]] = call nonnull dereferenceable(101) i32* @unkown_ptr()
-; IS__CGSCC_OPM-NEXT:    call void @unknown_use32(i32* noundef nonnull dereferenceable(101) [[P]])
-; IS__CGSCC_OPM-NEXT:    call void @unknown_use8(i8* dereferenceable_or_null(42) [[ARG4]])
-; IS__CGSCC_OPM-NEXT:    call void @unknown_use8(i8* nonnull [[ARG3]])
-; IS__CGSCC_OPM-NEXT:    call void @unknown_use8(i8* dereferenceable_or_null(31) [[ARG2]])
-; IS__CGSCC_OPM-NEXT:    call void @unknown_use8(i8* nonnull dereferenceable(2) [[ARG1]])
-; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i32* [[P]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
-; IS__CGSCC_OPM-NEXT:    call void @unknown_use8(i8* nonnull dereferenceable(2) [[ARG1]])
-; IS__CGSCC_OPM-NEXT:    call void @unknown_use8(i8* dereferenceable_or_null(31) [[ARG2]])
-; IS__CGSCC_OPM-NEXT:    call void @unknown_use8(i8* nonnull [[ARG3]])
-; IS__CGSCC_OPM-NEXT:    call void @unknown_use8(i8* dereferenceable_or_null(42) [[ARG4]])
-; IS__CGSCC_OPM-NEXT:    call void @unknown_use32(i32* noundef nonnull dereferenceable(101) [[P]])
-; IS__CGSCC_OPM-NEXT:    call void @unknown()
-; IS__CGSCC_OPM-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@nonnull_assume_call
+; CHECK-SAME: (i8* [[ARG1:%.*]], i8* [[ARG2:%.*]], i8* [[ARG3:%.*]], i8* [[ARG4:%.*]])
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    [[P:%.*]] = call nonnull dereferenceable(101) i32* @unkown_ptr()
+; CHECK-NEXT:    call void @unknown_use32(i32* nonnull dereferenceable(101) [[P]])
+; CHECK-NEXT:    call void @unknown_use8(i8* dereferenceable_or_null(42) [[ARG4]])
+; CHECK-NEXT:    call void @unknown_use8(i8* nonnull [[ARG3]])
+; CHECK-NEXT:    call void @unknown_use8(i8* dereferenceable_or_null(31) [[ARG2]])
+; CHECK-NEXT:    call void @unknown_use8(i8* nonnull dereferenceable(2) [[ARG1]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i32* [[P]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
+; CHECK-NEXT:    call void @unknown_use8(i8* nonnull dereferenceable(2) [[ARG1]])
+; CHECK-NEXT:    call void @unknown_use8(i8* dereferenceable_or_null(31) [[ARG2]])
+; CHECK-NEXT:    call void @unknown_use8(i8* nonnull [[ARG3]])
+; CHECK-NEXT:    call void @unknown_use8(i8* dereferenceable_or_null(42) [[ARG4]])
+; CHECK-NEXT:    call void @unknown_use32(i32* nonnull dereferenceable(101) [[P]])
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    ret void
 ;
   call void @unknown()
   %p = call i32* @unkown_ptr()
