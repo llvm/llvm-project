@@ -75,11 +75,7 @@ public:
                     llvm::APFloat::rmNearestTiesToEven, &ignore);
   }
   Scalar(llvm::APInt v)
-      : m_type(GetBestTypeForBitSize(v.getBitWidth(), true)),
-        m_integer(std::move(v)), m_float(0.0f) {}
-
-  /// Return the most efficient Scalar::Type for the requested bit size.
-  static Type GetBestTypeForBitSize(size_t bit_size, bool sign);
+      : m_type(e_sint), m_integer(std::move(v)), m_float(0.0f) {}
 
   bool SignExtend(uint32_t bit_pos);
 
@@ -125,12 +121,6 @@ public:
   bool MakeUnsigned();
 
   static const char *GetValueTypeAsCString(Scalar::Type value_type);
-
-  static Scalar::Type
-  GetValueTypeForSignedIntegerWithByteSize(size_t byte_size);
-
-  static Scalar::Type
-  GetValueTypeForUnsignedIntegerWithByteSize(size_t byte_size);
 
   // All operators can benefits from the implicit conversions that will happen
   // automagically by the compiler, so no temporary objects will need to be

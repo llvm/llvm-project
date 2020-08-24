@@ -74,25 +74,23 @@ class Type;
   /// This is the base class for unary cast operator classes.
   class SCEVCastExpr : public SCEV {
   protected:
-    const SCEV *const Op;
+    std::array<const SCEV *, 1> Operands;
     Type *Ty;
 
     SCEVCastExpr(const FoldingSetNodeIDRef ID,
                  unsigned SCEVTy, const SCEV *op, Type *ty);
 
   public:
-    const SCEV *getOperand() const { return Op; }
+    const SCEV *getOperand() const { return Operands[0]; }
     const SCEV *getOperand(unsigned i) const {
       assert(i == 0 && "Operand index out of range!");
-      return Op;
+      return Operands[0];
     }
     using op_iterator = const SCEV *const *;
     using op_range = iterator_range<op_iterator>;
 
-    op_iterator op_begin() const { return &Op; }
-    op_iterator op_end() const { return &Op + 1; }
     op_range operands() const {
-      return make_range(op_begin(), op_end());
+      return make_range(Operands.begin(), Operands.end());
     }
     size_t getNumOperands() const { return 1; }
     Type *getType() const { return Ty; }
