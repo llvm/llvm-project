@@ -146,6 +146,8 @@ public:
                              const char *auto_repeat_command);
 
   void SourceInitFileInHomeDirectory(lldb::SBCommandReturnObject &result);
+  void SourceInitFileInHomeDirectory(lldb::SBCommandReturnObject &result,
+                                     bool is_repl);
 
   void
   SourceInitFileInCurrentWorkingDirectory(lldb::SBCommandReturnObject &result);
