@@ -1671,9 +1671,22 @@ PredicateListMatcher<PredicateMatcher>::getNoPredicateComment() const {
 /// Generates code to check the opcode of an instruction.
 class InstructionOpcodeMatcher : public InstructionPredicateMatcher {
 protected:
-  const CodeGenInstruction *I;
+  // Allow matching one to several, similar opcodes that share properties. This
+  // is to handle patterns where one SelectionDAG operation maps to multiple
+  // GlobalISel ones (e.g. G_BUILD_VECTOR and G_BUILD_VECTOR_TRUNC). The first
+  // is treated as the canonical opcode.
+  SmallVector<const CodeGenInstruction *, 2> Insts;
 
   static DenseMap<const CodeGenInstruction *, unsigned> OpcodeValues;
+
+
+  MatchTableRecord getInstValue(const CodeGenInstruction *I) const {
+    const auto VI = OpcodeValues.find(I);
+    if (VI != OpcodeValues.end())
+      return MatchTable::NamedValue(I->Namespace, I->TheDef->getName(),
+                                    VI->second);
+    return MatchTable::NamedValue(I->Namespace, I->TheDef->getName());
+  }
 
 public:
   static void initOpcodeValuesMap(const CodeGenTarget &Target) {
@@ -1684,8 +1697,13 @@ public:
       OpcodeValues[I] = OpcodeValue++;
   }
 
-  InstructionOpcodeMatcher(unsigned InsnVarID, const CodeGenInstruction *I)
-      : InstructionPredicateMatcher(IPM_Opcode, InsnVarID), I(I) {}
+  InstructionOpcodeMatcher(unsigned InsnVarID,
+                           ArrayRef<const CodeGenInstruction *> I)
+      : InstructionPredicateMatcher(IPM_Opcode, InsnVarID),
+        Insts(I.begin(), I.end()) {
+    assert((Insts.size() == 1 || Insts.size() == 2) &&
+           "unexpected number of opcode alternatives");
+  }
 
   static bool classof(const PredicateMatcher *P) {
     return P->getKind() == IPM_Opcode;
@@ -1693,22 +1711,36 @@ public:
 
   bool isIdentical(const PredicateMatcher &B) const override {
     return InstructionPredicateMatcher::isIdentical(B) &&
-           I == cast<InstructionOpcodeMatcher>(&B)->I;
+           Insts == cast<InstructionOpcodeMatcher>(&B)->Insts;
   }
+
+  bool hasValue() const override {
+    return Insts.size() == 1 && OpcodeValues.count(Insts[0]);
+  }
+
+  // TODO: This is used for the SwitchMatcher optimization. We should be able to
+  // return a list of the opcodes to match.
   MatchTableRecord getValue() const override {
+    assert(Insts.size() == 1);
+
+    const CodeGenInstruction *I = Insts[0];
     const auto VI = OpcodeValues.find(I);
     if (VI != OpcodeValues.end())
       return MatchTable::NamedValue(I->Namespace, I->TheDef->getName(),
                                     VI->second);
     return MatchTable::NamedValue(I->Namespace, I->TheDef->getName());
   }
-  bool hasValue() const override { return OpcodeValues.count(I); }
 
   void emitPredicateOpcodes(MatchTable &Table,
                             RuleMatcher &Rule) const override {
-    Table << MatchTable::Opcode("GIM_CheckOpcode") << MatchTable::Comment("MI")
-          << MatchTable::IntValue(InsnVarID) << getValue()
-          << MatchTable::LineBreak;
+    StringRef CheckType = Insts.size() == 1 ?
+                          "GIM_CheckOpcode" : "GIM_CheckOpcodeIsEither";
+    Table << MatchTable::Opcode(CheckType) << MatchTable::Comment("MI")
+          << MatchTable::IntValue(InsnVarID);
+
+    for (const CodeGenInstruction *I : Insts)
+      Table << getInstValue(I);
+    Table << MatchTable::LineBreak;
   }
 
   /// Compare the priority of this object and B.
@@ -1726,20 +1758,32 @@ public:
     // using instruction frequency information to improve compile time.
     if (const InstructionOpcodeMatcher *BO =
             dyn_cast<InstructionOpcodeMatcher>(&B))
-      return I->TheDef->getName() < BO->I->TheDef->getName();
+      return Insts[0]->TheDef->getName() < BO->Insts[0]->TheDef->getName();
 
     return false;
   };
 
   bool isConstantInstruction() const {
-    return I->TheDef->getName() == "G_CONSTANT";
+    return Insts.size() == 1 && Insts[0]->TheDef->getName() == "G_CONSTANT";
   }
 
-  StringRef getOpcode() const { return I->TheDef->getName(); }
-  bool isVariadicNumOperands() const { return I->Operands.isVariadic; }
+  // The first opcode is the canonical opcode, and later are alternatives.
+  StringRef getOpcode() const {
+    return Insts[0]->TheDef->getName();
+  }
+
+  ArrayRef<const CodeGenInstruction *> getAlternativeOpcodes() {
+    return Insts;
+  }
+
+  bool isVariadicNumOperands() const {
+    // If one is variadic, they all should be.
+    return Insts[0]->Operands.isVariadic;
+  }
 
   StringRef getOperandType(unsigned OpIdx) const {
-    return I->Operands[OpIdx].OperandType;
+    // Types expected to be uniform for all alternatives.
+    return Insts[0]->Operands[OpIdx].OperandType;
   }
 };
 
@@ -4141,8 +4185,16 @@ Error GlobalISelEmitter::importChildMatcher(
       InstructionOperandMatcher &InsnOperand = **MaybeInsnOperand;
 
       ValueTypeByHwMode VTy = ChildTypes.front().getValueTypeByHwMode();
+
+      const CodeGenInstruction &BuildVector
+        = Target.getInstruction(RK.getDef("G_BUILD_VECTOR"));
+      const CodeGenInstruction &BuildVectorTrunc
+        = Target.getInstruction(RK.getDef("G_BUILD_VECTOR_TRUNC"));
+
+      // Treat G_BUILD_VECTOR as the canonical opcode, and G_BUILD_VECTOR_TRUNC
+      // as an alternative.
       InsnOperand.getInsnMatcher().addPredicate<InstructionOpcodeMatcher>(
-          &Target.getInstruction(RK.getDef("G_BUILD_VECTOR")));
+      makeArrayRef({&BuildVector, &BuildVectorTrunc}));
 
       // TODO: Handle both G_BUILD_VECTOR and G_BUILD_VECTOR_TRUNC We could
       // theoretically not emit any opcode check, but getOpcodeMatcher currently

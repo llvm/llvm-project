@@ -112,6 +112,14 @@ enum {
   /// - InsnID - Instruction ID
   /// - Expected opcode
   GIM_CheckOpcode,
+
+  /// Check the opcode on the specified instruction, checking 2 acceptable
+  /// alternatives.
+  /// - InsnID - Instruction ID
+  /// - Expected opcode
+  /// - Alternative expected opcode
+  GIM_CheckOpcodeIsEither,
+
   /// Check the instruction has the right number of operands
   /// - InsnID - Instruction ID
   /// - Expected number of operands
