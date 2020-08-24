@@ -65,7 +65,7 @@ int tmain(int argc, char **argv) { // expected-note {{declared here}}
   foo();
   #pragma omp critical (name2) hint(+ // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   foo();
-  #pragma omp critical (name2) hint(argc) // expected-error {{expression is not an integral constant expression}} expected-note {{read of non-const variable 'argc' is not allowed in a constant expression}}
+  #pragma omp critical (name2) hint(argc) // expected-error {{integral constant expression}} expected-note {{read of non-const variable 'argc' is not allowed in a constant expression}}
   foo();
   #pragma omp critical (name) hint(N) // expected-error {{argument to 'hint' clause must be a strictly positive integer value}} expected-error {{constructs with the same name must have a 'hint' clause with the same value}} expected-note {{'hint' clause with value '4'}}
   foo();
@@ -128,7 +128,7 @@ int main(int argc, char **argv) { // expected-note {{declared here}}
   foo();
   #pragma omp critical (name2) hint(+ // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   foo();
-  #pragma omp critical (name2) hint(argc) // expected-error {{expression is not an integral constant expression}} expected-note {{read of non-const variable 'argc' is not allowed in a constant expression}}
+  #pragma omp critical (name2) hint(argc) // expected-error {{integral constant expression}} expected-note {{read of non-const variable 'argc' is not allowed in a constant expression}}
   foo();
   #pragma omp critical (name) hint(23) // expected-note {{previous 'hint' clause with value '23'}}
   foo();

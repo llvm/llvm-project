@@ -387,9 +387,9 @@ void hint() {
   a += 1;
 #pragma omp atomic hint(+ // omp45-error {{unexpected OpenMP clause 'hint' in directive '#pragma omp atomic'}} expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   a += 1;
-#pragma omp atomic hint(a // omp45-error {{unexpected OpenMP clause 'hint' in directive '#pragma omp atomic'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expression is not an integer constant expression}}
+#pragma omp atomic hint(a // omp45-error {{unexpected OpenMP clause 'hint' in directive '#pragma omp atomic'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{integer constant expression}}
   a += 1;
-#pragma omp atomic hint(a) // omp45-error {{unexpected OpenMP clause 'hint' in directive '#pragma omp atomic'}} omp50-error {{expression is not an integer constant expression}}
+#pragma omp atomic hint(a) // omp45-error {{unexpected OpenMP clause 'hint' in directive '#pragma omp atomic'}} omp50-error {{integer constant expression}}
   a += 1;
 #pragma omp atomic hint(1) hint(1) // omp45-error 2 {{unexpected OpenMP clause 'hint' in directive '#pragma omp atomic'}} expected-error {{directive '#pragma omp atomic' cannot contain more than one 'hint' clause}}
   a += 1;
