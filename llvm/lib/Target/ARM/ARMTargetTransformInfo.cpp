@@ -52,6 +52,8 @@ extern cl::opt<TailPredication::Mode> EnableTailPredication;
 
 extern cl::opt<bool> EnableMaskedGatherScatters;
 
+extern cl::opt<unsigned> MVEMaxSupportedInterleaveFactor;
+
 /// Convert a vector load intrinsic into a simple llvm load instruction.
 /// This is beneficial when the underlying object being addressed comes
 /// from a constant, since we get constant-folding for free.
@@ -1643,7 +1645,6 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
   PredicatedScalarEvolution PSE = LAI->getPSE();
   SmallVector<Instruction *, 16> LoadStores;
   int ICmpCount = 0;
-  int Stride = 0;
 
   for (BasicBlock *BB : L->blocks()) {
     for (Instruction &I : BB->instructionsWithoutDebug()) {
@@ -1662,22 +1663,38 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
         LLVM_DEBUG(dbgs() << "Unsupported Type: "; T->dump());
         return false;
       }
-
       if (isa<StoreInst>(I) || isa<LoadInst>(I)) {
         Value *Ptr = isa<LoadInst>(I) ? I.getOperand(0) : I.getOperand(1);
         int64_t NextStride = getPtrStride(PSE, Ptr, L);
-        // TODO: for now only allow consecutive strides of 1. We could support
-        // other strides as long as it is uniform, but let's keep it simple for
-        // now.
-        if (Stride == 0 && NextStride == 1) {
-          Stride = NextStride;
+        if (NextStride == 1) {
+          // TODO: for now only allow consecutive strides of 1. We could support
+          // other strides as long as it is uniform, but let's keep it simple
+          // for now.
           continue;
-        }
-        if (Stride != NextStride) {
-          LLVM_DEBUG(dbgs() << "Different strides found, can't "
-                               "tail-predicate\n.");
+        } else if (NextStride == -1 ||
+                   (NextStride == 2 && MVEMaxSupportedInterleaveFactor >= 2) ||
+                   (NextStride == 4 && MVEMaxSupportedInterleaveFactor >= 4)) {
+          LLVM_DEBUG(dbgs()
+                     << "Consecutive strides of 2 found, vld2/vstr2 can't "
+                        "be tail-predicated\n.");
           return false;
+          // TODO: don't tail predicate if there is a reversed load?
+        } else if (EnableMaskedGatherScatters) {
+          // Gather/scatters do allow loading from arbitrary strides, at
+          // least if they are loop invariant.
+          // TODO: Loop variant strides should in theory work, too, but
+          // this requires further testing.
+          const SCEV *PtrScev =
+              replaceSymbolicStrideSCEV(PSE, llvm::ValueToValueMap(), Ptr);
+          if (auto AR = dyn_cast<SCEVAddRecExpr>(PtrScev)) {
+            const SCEV *Step = AR->getStepRecurrence(*PSE.getSE());
+            if (PSE.getSE()->isLoopInvariant(Step, L))
+              continue;
+          }
         }
+        LLVM_DEBUG(dbgs() << "Bad stride found, can't "
+                             "tail-predicate\n.");
+        return false;
       }
     }
   }
