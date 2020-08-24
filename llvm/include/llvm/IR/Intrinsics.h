@@ -134,9 +134,7 @@ namespace Intrinsic {
       unsigned Pointer_AddressSpace;
       unsigned Struct_NumElements;
       unsigned Argument_Info;
-      // There is no default constructor in `ElementCount`, so we need
-      // to explicitly initialize this field with a value.
-      ElementCount Vector_Width = ElementCount::getFixed(0);
+      ElementCount Vector_Width;
     };
 
     enum ArgKind {
