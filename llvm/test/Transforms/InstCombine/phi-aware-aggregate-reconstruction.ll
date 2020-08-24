@@ -477,3 +477,52 @@ end:
   %i8 = insertvalue { i32, i32 } %i7, i32 %i6, 1
   ret { i32, i32 } %i8
 }
+
+; The insertion of first element could have been split/hoisted into the predecessors.
+define { i32, i32 } @test9({ i32, i32 } %agg_left, { i32, i32 } %agg_right, i1 %c) {
+; CHECK-LABEL: @test9(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    [[I0:%.*]] = extractvalue { i32, i32 } [[AGG_LEFT:%.*]], 0
+; CHECK-NEXT:    [[I1:%.*]] = extractvalue { i32, i32 } [[AGG_LEFT]], 1
+; CHECK-NEXT:    [[I2:%.*]] = insertvalue { i32, i32 } undef, i32 [[I0]], 0
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       right:
+; CHECK-NEXT:    [[I3:%.*]] = extractvalue { i32, i32 } [[AGG_RIGHT:%.*]], 0
+; CHECK-NEXT:    [[I4:%.*]] = extractvalue { i32, i32 } [[AGG_RIGHT]], 1
+; CHECK-NEXT:    [[I5:%.*]] = insertvalue { i32, i32 } undef, i32 [[I3]], 0
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[I6:%.*]] = phi { i32, i32 } [ [[I2]], [[LEFT]] ], [ [[I5]], [[RIGHT]] ]
+; CHECK-NEXT:    [[I7:%.*]] = phi i32 [ [[I1]], [[LEFT]] ], [ [[I4]], [[RIGHT]] ]
+; CHECK-NEXT:    call void @baz()
+; CHECK-NEXT:    [[I8:%.*]] = insertvalue { i32, i32 } [[I6]], i32 [[I7]], 1
+; CHECK-NEXT:    ret { i32, i32 } [[I8]]
+;
+entry:
+  br i1 %c, label %left, label %right
+
+left:
+  %i0 = extractvalue { i32, i32 } %agg_left, 0
+  %i1 = extractvalue { i32, i32 } %agg_left, 1
+  %i2 = insertvalue { i32, i32 } undef, i32 %i0, 0
+  call void @foo()
+  br label %end
+
+right:
+  %i3 = extractvalue { i32, i32 } %agg_right, 0
+  %i4 = extractvalue { i32, i32 } %agg_right, 1
+  %i5 = insertvalue { i32, i32 } undef, i32 %i3, 0
+  call void @bar()
+  br label %end
+
+end:
+  %i6 = phi { i32, i32 } [ %i2, %left ], [ %i5, %right ]
+  %i7 = phi i32 [ %i1, %left ], [ %i4, %right ]
+  call void @baz()
+  %i8 = insertvalue { i32, i32 } %i6, i32 %i7, 1
+  ret { i32, i32 } %i8
+}
