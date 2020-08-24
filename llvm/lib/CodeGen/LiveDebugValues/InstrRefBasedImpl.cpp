@@ -2347,7 +2347,7 @@ std::tuple<Optional<ValueIDNum>, bool> InstrRefBasedLDV::pickVPHILoc(
 
   // If there were no locations at all, return an empty result.
   if (Locs.empty())
-    return {None, false};
+    return std::tuple<Optional<ValueIDNum>, bool>(None, false);
 
   // Lambda for seeking a common location within a range of location-sets.
   typedef SmallVector<SmallVector<LocIdx, 4>, 8>::iterator LocsIt;
@@ -2382,12 +2382,12 @@ std::tuple<Optional<ValueIDNum>, bool> InstrRefBasedLDV::pickVPHILoc(
   }
 
   if (!TheLoc)
-    return {None, false};
+    return std::tuple<Optional<ValueIDNum>, bool>(None, false);
 
   // Return a PHI-value-number for the found location.
   LocIdx L = *TheLoc;
   ValueIDNum PHIVal = {(unsigned)MBB.getNumber(), 0, L};
-  return {PHIVal, ValidForAllLocs};
+  return std::tuple<Optional<ValueIDNum>, bool>(PHIVal, ValidForAllLocs);
 }
 
 std::tuple<bool, bool> InstrRefBasedLDV::vlocJoin(
