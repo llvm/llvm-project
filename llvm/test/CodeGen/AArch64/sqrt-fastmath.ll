@@ -493,7 +493,7 @@ define <2 x double> @sqrt_fdiv_common_operand_vec(<2 x double> %x) nounwind {
 ; CHECK-NEXT:    fmul v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %sqrt = call <2 x double> @llvm.sqrt.v2f64(<2 x double> %x)
-  %r = fdiv arcp reassoc <2 x double> %x, %sqrt
+  %r = fdiv nsz arcp reassoc <2 x double> %x, %sqrt
   ret <2 x double> %r
 }
 
