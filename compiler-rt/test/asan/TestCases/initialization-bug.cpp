@@ -8,10 +8,6 @@
 // FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=186
 // XFAIL: windows-msvc
 
-// The test is expected to fail on OS X Yosemite and older
-// UNSUPPORTED: osx-no-ld64-live_support
-// UNSUPPORTED: ios
-
 #include <cstdio>
 
 // The structure of the test is:
