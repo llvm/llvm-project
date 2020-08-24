@@ -51,7 +51,7 @@ public:
         : user_source(user_source), script_source(), interpreter(interp),
           stop_on_error(true) {}
 
-    ~CommandData() = default;
+    virtual ~CommandData() = default;
 
     static const char *GetSerializationKey() { return "BKPTCMDData"; }
 
