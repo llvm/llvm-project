@@ -1539,7 +1539,9 @@ public:
 
   /// Set the list of instructions for this statement. It replaces the current
   /// list.
-  void setInstructions(ArrayRef<Instruction *> Range);
+  void setInstructions(ArrayRef<Instruction *> Range) {
+    Instructions.assign(Range.begin(), Range.end());
+  }
 
   std::vector<Instruction *>::const_iterator insts_begin() const {
     return Instructions.begin();
@@ -1947,7 +1949,7 @@ private:
   void addScopStmt(Region *R, StringRef Name, Loop *SurroundingLoop,
                    std::vector<Instruction *> EntryBlockInstructions);
 
-  /// Removes @p Stmt from the StmtMap and InstStmtMap.
+  /// Removes @p Stmt from the StmtMap.
   void removeFromStmtMap(ScopStmt &Stmt);
 
   /// Removes all statements where the entry block of the statement does not
@@ -2359,12 +2361,6 @@ public:
   ScopStmt *getStmtFor(Instruction *Inst) const {
     return InstStmtMap.lookup(Inst);
   }
-
-  /// Update the content of InstStmtMap for @p Stmt. @p OldList contains the
-  /// previous instructions in @p Stmt and is updated to contain the
-  /// instructions in @p NewList.
-  void updateInstStmtMap(ArrayRef<Instruction *> OldList,
-                         ArrayRef<Instruction *> NewList, ScopStmt *Stmt);
 
   /// Return the number of statements in the SCoP.
   size_t getSize() const { return Stmts.size(); }

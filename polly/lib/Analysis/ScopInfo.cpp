@@ -1249,11 +1249,6 @@ BasicBlock *ScopStmt::getEntryBlock() const {
 
 unsigned ScopStmt::getNumIterators() const { return NestLoops.size(); }
 
-void ScopStmt::setInstructions(ArrayRef<Instruction *> Range) {
-  getParent()->updateInstStmtMap(Instructions, Range, this);
-  Instructions.assign(Range.begin(), Range.end());
-}
-
 const char *ScopStmt::getBaseName() const { return BaseName.c_str(); }
 
 Loop *ScopStmt::getLoopForDimension(unsigned Dimension) const {
@@ -1733,10 +1728,8 @@ Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
 Scop::~Scop() = default;
 
 void Scop::removeFromStmtMap(ScopStmt &Stmt) {
-  for (Instruction *Inst : Stmt.getInstructions()) {
-    assert(!InstStmtMap.count(Inst) || InstStmtMap.lookup(Inst) == &Stmt);
+  for (Instruction *Inst : Stmt.getInstructions())
     InstStmtMap.erase(Inst);
-  }
 
   if (Stmt.isRegionStmt()) {
     for (BasicBlock *BB : Stmt.getRegion()->blocks()) {
@@ -1745,10 +1738,8 @@ void Scop::removeFromStmtMap(ScopStmt &Stmt) {
       // part of the statement's instruction list.
       if (BB == Stmt.getEntryBlock())
         continue;
-      for (Instruction &Inst : *BB) {
-        assert(!InstStmtMap.count(&Inst) || InstStmtMap.lookup(&Inst) == &Stmt);
+      for (Instruction &Inst : *BB)
         InstStmtMap.erase(&Inst);
-      }
     }
   } else {
     auto StmtMapIt = StmtMap.find(Stmt.getBasicBlock());
@@ -1756,16 +1747,9 @@ void Scop::removeFromStmtMap(ScopStmt &Stmt) {
       StmtMapIt->second.erase(std::remove(StmtMapIt->second.begin(),
                                           StmtMapIt->second.end(), &Stmt),
                               StmtMapIt->second.end());
-    for (Instruction *Inst : Stmt.getInstructions()) {
-      assert(!InstStmtMap.count(Inst) || InstStmtMap.lookup(Inst) == &Stmt);
+    for (Instruction *Inst : Stmt.getInstructions())
       InstStmtMap.erase(Inst);
-    }
   }
-
-#ifndef NDEBUG
-  for (auto kv : InstStmtMap)
-    assert(kv.getSecond() != &Stmt);
-#endif
 }
 
 void Scop::removeStmts(std::function<bool(ScopStmt &)> ShouldDelete,
@@ -2485,19 +2469,6 @@ ArrayRef<ScopStmt *> Scop::getStmtListFor(RegionNode *RN) const {
 
 ArrayRef<ScopStmt *> Scop::getStmtListFor(Region *R) const {
   return getStmtListFor(R->getEntry());
-}
-
-void Scop::updateInstStmtMap(ArrayRef<Instruction *> OldList,
-                             ArrayRef<Instruction *> NewList, ScopStmt *Stmt) {
-  for (Instruction *OldInst : OldList) {
-    assert(getStmtFor(OldInst) == Stmt);
-    InstStmtMap.erase(OldInst);
-  }
-
-  for (Instruction *NewInst : NewList) {
-    assert(InstStmtMap.lookup(NewInst) == nullptr);
-    InstStmtMap[NewInst] = Stmt;
-  }
 }
 
 int Scop::getRelativeLoopDepth(const Loop *L) const {
