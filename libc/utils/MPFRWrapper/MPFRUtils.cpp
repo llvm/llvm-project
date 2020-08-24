@@ -65,31 +65,6 @@ public:
     mpfr_set_sj(value, x, MPFR_RNDN);
   }
 
-  template <typename XType> MPFRNumber(XType x, const Tolerance &t) {
-    mpfr_init2(value, mpfrPrecision);
-    mpfr_set_zero(value, 1); // Set to positive zero.
-    MPFRNumber xExponent(fputil::FPBits<XType>(x).getExponent());
-    // E = 2^E
-    mpfr_exp2(xExponent.value, xExponent.value, MPFR_RNDN);
-    uint32_t bitMask = 1 << (t.width - 1);
-    for (int n = -t.basePrecision; bitMask > 0; bitMask >>= 1) {
-      --n;
-      if (t.bits & bitMask) {
-        // delta = -n
-        MPFRNumber delta(n);
-
-        // delta = 2^(-n)
-        mpfr_exp2(delta.value, delta.value, MPFR_RNDN);
-
-        // delta = E * 2^(-n)
-        mpfr_mul(delta.value, delta.value, xExponent.value, MPFR_RNDN);
-
-        // tolerance += delta
-        mpfr_add(value, value, delta.value, MPFR_RNDN);
-      }
-    }
-  }
-
   template <typename XType,
             cpp::EnableIfType<cpp::IsFloatingPointType<XType>::Value, int> = 0>
   MPFRNumber(Operation op, XType rawValue) {
@@ -134,18 +109,6 @@ public:
   }
 
   ~MPFRNumber() { mpfr_clear(value); }
-
-  // Returns true if |other| is within the |tolerance| value of this
-  // number.
-  bool isEqual(const MPFRNumber &other, const MPFRNumber &tolerance) const {
-    MPFRNumber difference;
-    if (mpfr_cmp(value, other.value) >= 0)
-      mpfr_sub(difference.value, value, other.value, MPFR_RNDN);
-    else
-      mpfr_sub(difference.value, other.value, value, MPFR_RNDN);
-
-    return mpfr_lessequal_p(difference.value, tolerance.value);
-  }
 
   std::string str() const {
     // 200 bytes should be more than sufficient to hold a 100-digit number
@@ -234,33 +197,14 @@ void MPFRMatcher<T>::explainError(testutils::StreamWrapper &OS) {
   __llvm_libc::fputil::testing::describeValue(
       "   MPFR rounded: ", mpfrResult.as<T>(), OS);
   OS << '\n';
-  if (useULP) {
-    OS << "      ULP error: " << std::to_string(mpfrResult.ulp(matchValue))
-       << '\n';
-  } else {
-    MPFRNumber mpfrToleranceValue = MPFRNumber(matchValue, tolerance);
-    OS << "Tolerance value: " << mpfrToleranceValue.str() << '\n';
-  }
+  OS << "      ULP error: " << std::to_string(mpfrResult.ulp(matchValue))
+     << '\n';
 }
 
 template void MPFRMatcher<float>::explainError(testutils::StreamWrapper &);
 template void MPFRMatcher<double>::explainError(testutils::StreamWrapper &);
 template void
 MPFRMatcher<long double>::explainError(testutils::StreamWrapper &);
-
-template <typename T>
-bool compare(Operation op, T input, T libcResult, const Tolerance &t) {
-  MPFRNumber mpfrResult(op, input);
-  MPFRNumber mpfrLibcResult(libcResult);
-  MPFRNumber mpfrToleranceValue(libcResult, t);
-
-  return mpfrResult.isEqual(mpfrLibcResult, mpfrToleranceValue);
-};
-
-template bool compare<float>(Operation, float, float, const Tolerance &);
-template bool compare<double>(Operation, double, double, const Tolerance &);
-template bool compare<long double>(Operation, long double, long double,
-                                   const Tolerance &);
 
 template <typename T>
 bool compare(Operation op, T input, T libcResult, double ulpError) {
