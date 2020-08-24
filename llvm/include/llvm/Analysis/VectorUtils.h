@@ -300,17 +300,13 @@ namespace Intrinsic {
 typedef unsigned ID;
 }
 
-/// A helper function for converting Scalar types to vector types. If
-/// the incoming type is void, we return void. If the EC represents a
-/// scalar, we return the scalar type.
-inline Type *ToVectorTy(Type *Scalar, ElementCount EC) {
-  if (Scalar->isVoidTy() || EC.isScalar())
+/// A helper function for converting Scalar types to vector types.
+/// If the incoming type is void, we return void. If the VF is 1, we return
+/// the scalar type.
+inline Type *ToVectorTy(Type *Scalar, unsigned VF, bool isScalable = false) {
+  if (Scalar->isVoidTy() || VF == 1)
     return Scalar;
-  return VectorType::get(Scalar, EC);
-}
-
-inline Type *ToVectorTy(Type *Scalar, unsigned VF) {
-  return ToVectorTy(Scalar, ElementCount::getFixed(VF));
+  return VectorType::get(Scalar, ElementCount::get(VF, isScalable));
 }
 
 /// Identify if the intrinsic is trivially vectorizable.
