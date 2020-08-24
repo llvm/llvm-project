@@ -124,3 +124,33 @@ def testIntegerType():
   print("unsigned:", mlir.ir.IntegerType.get_unsigned(ctx, 64))
 
 run(testIntegerType)
+
+# CHECK-LABEL: TEST: testIndexType
+def testIndexType():
+  ctx = mlir.ir.Context()
+  # CHECK: index type: index
+  print("index type:", mlir.ir.IndexType(ctx))
+
+run(testIndexType)
+
+# CHECK-LABEL: TEST: testFloatType
+def testFloatType():
+  ctx = mlir.ir.Context()
+  # CHECK: float: bf16
+  print("float:", mlir.ir.BF16Type(ctx))
+  # CHECK: float: f16
+  print("float:", mlir.ir.F16Type(ctx))
+  # CHECK: float: f32
+  print("float:", mlir.ir.F32Type(ctx))
+  # CHECK: float: f64
+  print("float:", mlir.ir.F64Type(ctx))
+
+run(testFloatType)
+
+# CHECK-LABEL: TEST: testNoneType
+def testNoneType():
+  ctx = mlir.ir.Context()
+  # CHECK: none type: none
+  print("none type:", mlir.ir.NoneType(ctx))
+
+run(testNoneType)
