@@ -648,8 +648,8 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
              "DW_OP_entry_value)",
              GlobalStats.LocalVarScopeEntryValueBytesCovered);
 
-  printDatum(J, "#bytes witin functions", GlobalStats.FunctionSize);
-  printDatum(J, "#bytes witin inlined functions",
+  printDatum(J, "#bytes within functions", GlobalStats.FunctionSize);
+  printDatum(J, "#bytes within inlined functions",
              GlobalStats.InlineFunctionSize);
 
   // Print the summary for formal parameters.
