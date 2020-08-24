@@ -2723,6 +2723,63 @@ namespace foo { void fun(); }
 
 void foo::fun() {
   ff();
+})cpp"},
+            // If all other using are fully qualified, add ::
+            {R"cpp(
+#include "test.hpp"
+
+using ::one::two::cc;
+using ::one::two::ee;
+
+void fun() {
+  one::two::f^f();
+})cpp",
+             R"cpp(
+#include "test.hpp"
+
+using ::one::two::cc;
+using ::one::two::ff;using ::one::two::ee;
+
+void fun() {
+  ff();
+})cpp"},
+            // Make sure we don't add :: if it's already there
+            {R"cpp(
+#include "test.hpp"
+
+using ::one::two::cc;
+using ::one::two::ee;
+
+void fun() {
+  ::one::two::f^f();
+})cpp",
+             R"cpp(
+#include "test.hpp"
+
+using ::one::two::cc;
+using ::one::two::ff;using ::one::two::ee;
+
+void fun() {
+  ff();
+})cpp"},
+            // If even one using doesn't start with ::, do not add it
+            {R"cpp(
+#include "test.hpp"
+
+using ::one::two::cc;
+using one::two::ee;
+
+void fun() {
+  one::two::f^f();
+})cpp",
+             R"cpp(
+#include "test.hpp"
+
+using ::one::two::cc;
+using one::two::ff;using one::two::ee;
+
+void fun() {
+  ff();
 })cpp"}};
   llvm::StringMap<std::string> EditedFiles;
   for (const auto &Case : Cases) {
