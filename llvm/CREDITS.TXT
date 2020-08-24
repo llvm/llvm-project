@@ -163,7 +163,7 @@ E: foldr@codedgers.com
 D: Author of llvmc2
 
 N: Dan Gohman
-E: sunfish@mozilla.com
+E: llvm@sunfishcode.online
 D: Miscellaneous bug fixes
 D: WebAssembly Backend
 
