@@ -11395,6 +11395,42 @@ void SITargetLowering::computeKnownBitsForFrameIndex(
   Known.Zero.setHighBits(getSubtarget()->getKnownHighZeroBitsForFrameIndex());
 }
 
+static void knownBitsForWorkitemID(const GCNSubtarget &ST, GISelKnownBits &KB,
+                                   KnownBits &Known, unsigned Dim) {
+  unsigned MaxValue =
+      ST.getMaxWorkitemID(KB.getMachineFunction().getFunction(), Dim);
+  Known.Zero.setHighBits(countLeadingZeros(MaxValue));
+}
+
+void SITargetLowering::computeKnownBitsForTargetInstr(
+    GISelKnownBits &KB, Register R, KnownBits &Known, const APInt &DemandedElts,
+    const MachineRegisterInfo &MRI, unsigned Depth) const {
+  const MachineInstr *MI = MRI.getVRegDef(R);
+  switch (MI->getOpcode()) {
+  case AMDGPU::G_INTRINSIC: {
+    switch (MI->getIntrinsicID())
+    case Intrinsic::amdgcn_workitem_id_x:
+      knownBitsForWorkitemID(*getSubtarget(), KB, Known, 0);
+      break;
+    case Intrinsic::amdgcn_workitem_id_y:
+      knownBitsForWorkitemID(*getSubtarget(), KB, Known, 1);
+      break;
+    case Intrinsic::amdgcn_workitem_id_z:
+      knownBitsForWorkitemID(*getSubtarget(), KB, Known, 2);
+      break;
+    case Intrinsic::amdgcn_mbcnt_lo:
+    case Intrinsic::amdgcn_mbcnt_hi: {
+      // These return at most the wavefront size - 1.
+      unsigned Size = MRI.getType(R).getSizeInBits();
+      Known.Zero.setHighBits(Size - getSubtarget()->getWavefrontSizeLog2());
+      break;
+    }
+    default:
+      break;
+  }
+  }
+}
+
 Align SITargetLowering::computeKnownAlignForTargetInstr(
   GISelKnownBits &KB, Register R, const MachineRegisterInfo &MRI,
   unsigned Depth) const {

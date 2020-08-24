@@ -420,6 +420,11 @@ public:
   void computeKnownBitsForFrameIndex(int FrameIdx,
                                      KnownBits &Known,
                                      const MachineFunction &MF) const override;
+  void computeKnownBitsForTargetInstr(GISelKnownBits &Analysis, Register R,
+                                      KnownBits &Known,
+                                      const APInt &DemandedElts,
+                                      const MachineRegisterInfo &MRI,
+                                      unsigned Depth = 0) const override;
 
   Align computeKnownAlignForTargetInstr(GISelKnownBits &Analysis, Register R,
                                         const MachineRegisterInfo &MRI,
