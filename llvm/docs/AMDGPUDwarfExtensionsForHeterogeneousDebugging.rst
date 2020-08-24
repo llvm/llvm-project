@@ -106,7 +106,7 @@ programming languages used in ML and HPC. The extensions also include improved
 support for optimized code on any architecture. Some of the generalizations may
 also benefit other issues that have been raised.
 
-The extensions have evolved though collaboration with many individuals and
+The extensions have evolved through collaboration with many individuals and
 active prototyping within the GDB debugger and LLVM compiler. Input has also
 been very much appreciated from the developers working on the Perforce TotalView
 HPC Debugger and GCC compiler.
@@ -147,7 +147,7 @@ be generated to describe the CFI as only a single expression is required for
 the whole vector register, rather than a separate expression for each lane's
 dword of the vector register. It also allows the compiler to produce DWARF
 that indexes the vector register if it spills scalar registers into portions
-of a vector registers.
+of a vector register.
 
 Since DWARF stack value entries have a base type and AMDGPU registers are a
 vector of dwords, the ability to specify that a base type is a vector is
