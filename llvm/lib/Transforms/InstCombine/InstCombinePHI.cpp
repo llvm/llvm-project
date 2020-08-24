@@ -46,7 +46,7 @@ void InstCombinerImpl::PHIArgMergedDebugLoc(Instruction *Inst, PHINode &PN) {
 
 /// If we have something like phi [add (a,b), add(a,c)] and if a/b/c and the
 /// adds all have a single use, turn this into a phi and a single binop.
-Instruction *InstCombinerImpl::FoldPHIArgBinOpIntoPHI(PHINode &PN) {
+Instruction *InstCombinerImpl::foldPHIArgBinOpIntoPHI(PHINode &PN) {
   Instruction *FirstInst = cast<Instruction>(PN.getIncomingValue(0));
   assert(isa<BinaryOperator>(FirstInst) || isa<CmpInst>(FirstInst));
   unsigned Opc = FirstInst->getOpcode();
@@ -139,7 +139,7 @@ Instruction *InstCombinerImpl::FoldPHIArgBinOpIntoPHI(PHINode &PN) {
   return NewBinOp;
 }
 
-Instruction *InstCombinerImpl::FoldPHIArgGEPIntoPHI(PHINode &PN) {
+Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
   GetElementPtrInst *FirstInst =cast<GetElementPtrInst>(PN.getIncomingValue(0));
 
   SmallVector<Value*, 16> FixedOperands(FirstInst->op_begin(),
@@ -293,7 +293,7 @@ static bool isSafeAndProfitableToSinkLoad(LoadInst *L) {
   return true;
 }
 
-Instruction *InstCombinerImpl::FoldPHIArgLoadIntoPHI(PHINode &PN) {
+Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
   LoadInst *FirstLI = cast<LoadInst>(PN.getIncomingValue(0));
 
   // FIXME: This is overconservative; this transform is allowed in some cases
@@ -407,7 +407,7 @@ Instruction *InstCombinerImpl::FoldPHIArgLoadIntoPHI(PHINode &PN) {
 /// TODO: This function could handle other cast types, but then it might
 /// require special-casing a cast from the 'i1' type. See the comment in
 /// FoldPHIArgOpIntoPHI() about pessimizing illegal integer types.
-Instruction *InstCombinerImpl::FoldPHIArgZextsIntoPHI(PHINode &Phi) {
+Instruction *InstCombinerImpl::foldPHIArgZextsIntoPHI(PHINode &Phi) {
   // We cannot create a new instruction after the PHI if the terminator is an
   // EHPad because there is no valid insertion point.
   if (Instruction *TI = Phi.getParent()->getTerminator())
@@ -481,7 +481,7 @@ Instruction *InstCombinerImpl::FoldPHIArgZextsIntoPHI(PHINode &Phi) {
 /// If all operands to a PHI node are the same "unary" operator and they all are
 /// only used by the PHI, PHI together their inputs, and do the operation once,
 /// to the result of the PHI.
-Instruction *InstCombinerImpl::FoldPHIArgOpIntoPHI(PHINode &PN) {
+Instruction *InstCombinerImpl::foldPHIArgOpIntoPHI(PHINode &PN) {
   // We cannot create a new instruction after the PHI if the terminator is an
   // EHPad because there is no valid insertion point.
   if (Instruction *TI = PN.getParent()->getTerminator())
@@ -491,9 +491,9 @@ Instruction *InstCombinerImpl::FoldPHIArgOpIntoPHI(PHINode &PN) {
   Instruction *FirstInst = cast<Instruction>(PN.getIncomingValue(0));
 
   if (isa<GetElementPtrInst>(FirstInst))
-    return FoldPHIArgGEPIntoPHI(PN);
+    return foldPHIArgGEPIntoPHI(PN);
   if (isa<LoadInst>(FirstInst))
-    return FoldPHIArgLoadIntoPHI(PN);
+    return foldPHIArgLoadIntoPHI(PN);
 
   // Scan the instruction, looking for input operations that can be folded away.
   // If all input operands to the phi are the same instruction (e.g. a cast from
@@ -516,7 +516,7 @@ Instruction *InstCombinerImpl::FoldPHIArgOpIntoPHI(PHINode &PN) {
     // otherwise call FoldPHIArgBinOpIntoPHI.
     ConstantOp = dyn_cast<Constant>(FirstInst->getOperand(1));
     if (!ConstantOp)
-      return FoldPHIArgBinOpIntoPHI(PN);
+      return foldPHIArgBinOpIntoPHI(PN);
   } else {
     return nullptr;  // Cannot fold this operation.
   }
@@ -960,7 +960,7 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
   if (Value *V = SimplifyInstruction(&PN, SQ.getWithInstruction(&PN)))
     return replaceInstUsesWith(PN, V);
 
-  if (Instruction *Result = FoldPHIArgZextsIntoPHI(PN))
+  if (Instruction *Result = foldPHIArgZextsIntoPHI(PN))
     return Result;
 
   // If all PHI operands are the same operation, pull them through the PHI,
@@ -972,7 +972,7 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
       // FIXME: The hasOneUse check will fail for PHIs that use the value more
       // than themselves more than once.
       PN.getIncomingValue(0)->hasOneUse())
-    if (Instruction *Result = FoldPHIArgOpIntoPHI(PN))
+    if (Instruction *Result = foldPHIArgOpIntoPHI(PN))
       return Result;
 
   // If this is a trivial cycle in the PHI node graph, remove it.  Basically, if
