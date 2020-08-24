@@ -628,6 +628,7 @@
 // PPCPOWER10:#define _ARCH_PWR7 1
 // PPCPOWER10:#define _ARCH_PWR8 1
 // PPCPOWER10:#define _ARCH_PWR9 1
+// PPCPOWER10:#define __MMA__ 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu future -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCFUTURE %s
 //
@@ -645,6 +646,10 @@
 // PPCFUTURE:#define _ARCH_PWR8 1
 // PPCFUTURE:#define _ARCH_PWR9 1
 // PPCFUTURE:#define _ARCH_PWR_FUTURE 1
+// PPCFUTURE:#define __MMA__ 1
+//
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-feature +mma -target-cpu power9 -fno-signed-char < /dev/null | FileCheck -check-prefix PPC-MMA %s
+// PPC-MMA:#define __MMA__ 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-feature +float128 -target-cpu power9 -fno-signed-char < /dev/null | FileCheck -check-prefix PPC-FLOAT128 %s
 // PPC-FLOAT128:#define __FLOAT128__ 1
