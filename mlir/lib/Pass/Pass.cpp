@@ -751,11 +751,17 @@ LogicalResult PassManager::run(ModuleOp module) {
   // Construct an analysis manager for the pipeline.
   ModuleAnalysisManager am(module, instrumentor.get());
 
+  // Notify the context that we start running a pipeline for book keeping.
+  module.getContext()->enterMultiThreadedExecution();
+
   // If reproducer generation is enabled, run the pass manager with crash
   // handling enabled.
   LogicalResult result = crashReproducerFileName
                              ? runWithCrashRecovery(module, am)
                              : OpPassManager::run(module, am);
+
+  // Notify the context that the run is done.
+  module.getContext()->exitMultiThreadedExecution();
 
   // Dump all of the pass statistics if necessary.
   if (passStatisticsMode)
