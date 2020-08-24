@@ -39,6 +39,10 @@ struct Abbrev {
   std::vector<AttributeAbbrev> Attributes;
 };
 
+struct AbbrevTable {
+  std::vector<Abbrev> Table;
+};
+
 struct ARangeDescriptor {
   llvm::yaml::Hex64 Address;
   yaml::Hex64 Length;
@@ -203,7 +207,7 @@ template <typename EntryType> struct ListTable {
 struct Data {
   bool IsLittleEndian;
   bool Is64BitAddrSize;
-  std::vector<Abbrev> AbbrevDecls;
+  std::vector<AbbrevTable> DebugAbbrev;
   std::vector<StringRef> DebugStrings;
   Optional<std::vector<StringOffsetsTable>> DebugStrOffsets;
   Optional<std::vector<ARange>> DebugAranges;
@@ -231,6 +235,7 @@ struct Data {
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::AttributeAbbrev)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::Abbrev)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::AbbrevTable)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::ARangeDescriptor)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::ARange)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::RangeEntry)
@@ -262,6 +267,10 @@ namespace yaml {
 
 template <> struct MappingTraits<DWARFYAML::Data> {
   static void mapping(IO &IO, DWARFYAML::Data &DWARF);
+};
+
+template <> struct MappingTraits<DWARFYAML::AbbrevTable> {
+  static void mapping(IO &IO, DWARFYAML::AbbrevTable &AbbrevTable);
 };
 
 template <> struct MappingTraits<DWARFYAML::Abbrev> {
