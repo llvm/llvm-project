@@ -905,6 +905,68 @@ UnknownExpression
 )txt"}));
 }
 
+TEST_P(SyntaxTreeTest, This_Simple) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+struct S {
+  S* test(){
+    return [[this]];
+  }
+};
+)cpp",
+      {R"txt(
+ThisExpression
+`-this
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest, This_ExplicitMemberAccess) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+struct S {
+  int a;
+  void test(){
+    [[this->a]];
+  }
+};
+)cpp",
+      {R"txt(
+MemberExpression
+|-ThisExpression
+| `-this
+|-->
+`-IdExpression
+  `-UnqualifiedId
+    `-a
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest, This_ImplicitMemberAccess) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+struct S {
+  int a;
+  void test(){
+    [[a]];
+  }
+};
+)cpp",
+      {R"txt(
+IdExpression
+`-UnqualifiedId
+  `-a
+)txt"}));
+}
+
 TEST_P(SyntaxTreeTest, ParenExpr) {
   EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
@@ -2096,29 +2158,6 @@ UnknownExpression
 |     `-!
 |-(
 `-)
-)txt"}));
-}
-
-TEST_P(SyntaxTreeTest, MemberExpression_Implicit) {
-  if (!GetParam().isCXX()) {
-    return;
-  }
-  EXPECT_TRUE(treeDumpEqualOnAnnotations(
-      R"cpp(
-struct S {
-  int a;
-  int test(){
-    // FIXME: Remove the `UnknownExpression` wrapping `a`. This
-    // `UnknownExpression` comes from an implicit leaf `CXXThisExpr`.
-    [[a]];
-  }
-};
-)cpp",
-      {R"txt(
-IdExpression
-`-UnqualifiedId
-  `-UnknownExpression
-    `-a
 )txt"}));
 }
 

@@ -20,6 +20,8 @@ raw_ostream &syntax::operator<<(raw_ostream &OS, NodeKind K) {
     return OS << "UnknownExpression";
   case NodeKind::ParenExpression:
     return OS << "ParenExpression";
+  case NodeKind::ThisExpression:
+    return OS << "ThisExpression";
   case NodeKind::IntegerLiteralExpression:
     return OS << "IntegerLiteralExpression";
   case NodeKind::CharacterLiteralExpression:
@@ -284,6 +286,11 @@ syntax::Expression *syntax::ParenExpression::subExpression() {
 
 syntax::Leaf *syntax::ParenExpression::closeParen() {
   return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::CloseParen));
+}
+
+syntax::Leaf *syntax::ThisExpression::thisKeyword() {
+  return cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::IntroducerKeyword));
 }
 
 syntax::Leaf *syntax::LiteralExpression::literalToken() {

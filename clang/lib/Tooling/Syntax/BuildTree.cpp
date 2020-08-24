@@ -950,6 +950,16 @@ public:
     return true;
   }
 
+  bool WalkUpFromCXXThisExpr(CXXThisExpr *S) {
+    if (!S->isImplicit()) {
+      Builder.markChildToken(S->getLocation(),
+                             syntax::NodeRole::IntroducerKeyword);
+      Builder.foldNode(Builder.getExprRange(S),
+                       new (allocator()) syntax::ThisExpression, S);
+    }
+    return true;
+  }
+
   bool WalkUpFromParenExpr(ParenExpr *S) {
     Builder.markChildToken(S->getLParen(), syntax::NodeRole::OpenParen);
     Builder.markExprChild(S->getSubExpr(),
