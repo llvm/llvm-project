@@ -83,3 +83,9 @@ character(len=*), parameter :: cvar10 = 4_"abcd"
 !ERROR: CHARACTER(KIND=8) is not a supported type
 character(len=*), parameter :: cvar11 = 8_"abcd"
 end program
+
+subroutine s(a, b)
+  character(*,2) :: a
+  !ERROR: KIND value (8) not valid for CHARACTER
+  character(*,8) :: b
+end
