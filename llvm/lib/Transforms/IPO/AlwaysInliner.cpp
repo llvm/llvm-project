@@ -22,7 +22,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Transforms/Coroutines.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/Inliner.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -45,14 +44,7 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
   SmallSetVector<CallBase *, 16> Calls;
   bool Changed = false;
   SmallVector<Function *, 16> InlinedFunctions;
-  for (Function &F : M) {
-    // When callee coroutine function is inlined into caller coroutine function
-    // before coro-split pass,
-    // coro-early pass can not handle this quiet well.
-    // So we won't inline the coroutine function if it have not been unsplited
-    if (F.hasFnAttribute(CORO_PRESPLIT_ATTR))
-      continue;
-
+  for (Function &F : M)
     if (!F.isDeclaration() && F.hasFnAttribute(Attribute::AlwaysInline) &&
         isInlineViable(F).isSuccess()) {
       Calls.clear();
@@ -74,7 +66,6 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
       // invalidation issues while deleting functions.
       InlinedFunctions.push_back(&F);
     }
-  }
 
   // Remove any live functions.
   erase_if(InlinedFunctions, [&](Function *F) {
@@ -166,13 +157,6 @@ InlineCost AlwaysInlinerLegacyPass::getInlineCost(CallBase &CB) {
   // that are viable for inlining.
   if (!Callee)
     return InlineCost::getNever("indirect call");
-
-  // When callee coroutine function is inlined into caller coroutine function
-  // before coro-split pass,
-  // coro-early pass can not handle this quiet well.
-  // So we won't inline the coroutine function if it have not been unsplited
-  if (Callee->hasFnAttribute(CORO_PRESPLIT_ATTR))
-    return InlineCost::getNever("unsplited coroutine call");
 
   // FIXME: We shouldn't even get here for declarations.
   if (Callee->isDeclaration())
