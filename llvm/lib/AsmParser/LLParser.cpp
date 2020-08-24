@@ -4637,6 +4637,27 @@ bool LLParser::ParseDIBasicType(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
+/// ParseDIStringType:
+///   ::= !DIStringType(name: "character(4)", size: 32, align: 32)
+bool LLParser::ParseDIStringType(MDNode *&Result, bool IsDistinct) {
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  OPTIONAL(tag, DwarfTagField, (dwarf::DW_TAG_string_type));                   \
+  OPTIONAL(name, MDStringField, );                                             \
+  OPTIONAL(stringLength, MDField, );                                           \
+  OPTIONAL(stringLengthExpression, MDField, );                                 \
+  OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
+  OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
+  OPTIONAL(encoding, DwarfAttEncodingField, );
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+
+  Result = GET_OR_DISTINCT(DIStringType,
+                           (Context, tag.Val, name.Val, stringLength.Val,
+                            stringLengthExpression.Val, size.Val, align.Val,
+                            encoding.Val));
+  return false;
+}
+
 /// ParseDIDerivedType:
 ///   ::= !DIDerivedType(tag: DW_TAG_pointer_type, name: "int", file: !0,
 ///                      line: 7, scope: !1, baseType: !2, size: 32,
