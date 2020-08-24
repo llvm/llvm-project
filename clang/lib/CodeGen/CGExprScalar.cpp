@@ -3587,6 +3587,14 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
   case BO_Div:
     Result = FPBuilder.CreateDiv(LHS, LHSFixedSema, RHS, RHSFixedSema);
     break;
+  case BO_ShlAssign:
+  case BO_Shl:
+    Result = FPBuilder.CreateShl(LHS, LHSFixedSema, RHS);
+    break;
+  case BO_ShrAssign:
+  case BO_Shr:
+    Result = FPBuilder.CreateShr(LHS, LHSFixedSema, RHS);
+    break;
   case BO_LT:
     return FPBuilder.CreateLT(LHS, LHSFixedSema, RHS, RHSFixedSema);
   case BO_GT:
@@ -3602,13 +3610,9 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
     return FPBuilder.CreateEQ(LHS, LHSFixedSema, RHS, RHSFixedSema);
   case BO_NE:
     return FPBuilder.CreateNE(LHS, LHSFixedSema, RHS, RHSFixedSema);
-  case BO_Shl:
-  case BO_Shr:
   case BO_Cmp:
   case BO_LAnd:
   case BO_LOr:
-  case BO_ShlAssign:
-  case BO_ShrAssign:
     llvm_unreachable("Found unimplemented fixed point binary operation");
   case BO_PtrMemD:
   case BO_PtrMemI:
@@ -3625,8 +3629,12 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
     llvm_unreachable("Found unsupported binary operation for fixed point types.");
   }
 
+  bool IsShift = BinaryOperator::isShiftOp(op.Opcode) ||
+                 BinaryOperator::isShiftAssignOp(op.Opcode);
   // Convert to the result type.
-  return FPBuilder.CreateFixedToFixed(Result, CommonFixedSema, ResultFixedSema);
+  return FPBuilder.CreateFixedToFixed(Result, IsShift ? LHSFixedSema
+                                                      : CommonFixedSema,
+                                      ResultFixedSema);
 }
 
 Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
@@ -3753,6 +3761,10 @@ Value *ScalarExprEmitter::ConstrainShiftValue(Value *LHS, Value *RHS,
 }
 
 Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
+  // TODO: This misses out on the sanitizer check below.
+  if (Ops.isFixedPointOp())
+    return EmitFixedPointBinOp(Ops);
+
   // LLVM requires the LHS and RHS to be the same type: promote or truncate the
   // RHS to the same size as the LHS.
   Value *RHS = Ops.RHS;
@@ -3820,6 +3832,10 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
 }
 
 Value *ScalarExprEmitter::EmitShr(const BinOpInfo &Ops) {
+  // TODO: This misses out on the sanitizer check below.
+  if (Ops.isFixedPointOp())
+    return EmitFixedPointBinOp(Ops);
+
   // LLVM requires the LHS and RHS to be the same type: promote or truncate the
   // RHS to the same size as the LHS.
   Value *RHS = Ops.RHS;
