@@ -233,7 +233,7 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     CPU = "generic";
 
   if (TuneCPU.empty())
-    TuneCPU = "generic";
+    TuneCPU = "i586"; // FIXME: "generic" is more modern than llc tests expect.
 
   std::string FullFS = X86_MC::ParseX86Triple(TargetTriple);
   assert(!FullFS.empty() && "Failed to parse X86 triple");
