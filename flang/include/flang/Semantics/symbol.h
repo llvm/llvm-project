@@ -386,6 +386,8 @@ class HostAssocDetails {
 public:
   HostAssocDetails(const Symbol &symbol) : symbol_{symbol} {}
   const Symbol &symbol() const { return symbol_; }
+  bool implicitOrSpecExprError{false};
+  bool implicitOrExplicitTypeError{false};
 
 private:
   SymbolRef symbol_;
@@ -481,6 +483,7 @@ public:
       Subroutine, // symbol is a subroutine
       StmtFunction, // symbol is a statement function (Function is set too)
       Implicit, // symbol is implicitly typed
+      ImplicitOrError, // symbol must be implicitly typed or it's an error
       ModFile, // symbol came from .mod file
       ParentComp, // symbol is the "parent component" of an extended type
       CrayPointer, CrayPointee,
@@ -488,14 +491,12 @@ public:
       LocalityLocalInit, // named in LOCAL_INIT locality-spec
       LocalityShared, // named in SHARED locality-spec
       InDataStmt, // initialized in a DATA statement
-
       // OpenACC data-sharing attribute
       AccPrivate, AccFirstPrivate, AccShared,
       // OpenACC data-mapping attribute
       AccCopyIn, AccCopyOut, AccCreate, AccDelete, AccPresent,
       // OpenACC miscellaneous flags
       AccCommonBlock, AccThreadPrivate, AccReduction, AccNone, AccPreDetermined,
-
       // OpenMP data-sharing attribute
       OmpShared, OmpPrivate, OmpLinear, OmpFirstPrivate, OmpLastPrivate,
       // OpenMP data-mapping attribute

@@ -81,11 +81,6 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   equivalenceBlock_.clear();
 }
 
-static bool InCommonBlock(const Symbol &symbol) {
-  const auto *details{symbol.detailsIf<ObjectEntityDetails>()};
-  return details && details->commonBlock();
-}
-
 void ComputeOffsetsHelper::DoScope(Scope &scope) {
   if (scope.symbol() && scope.IsParameterizedDerivedType()) {
     return; // only process instantiations of parameterized derived types
