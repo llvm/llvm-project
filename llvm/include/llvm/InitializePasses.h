@@ -192,7 +192,7 @@ void initializeInferAddressSpacesPass(PassRegistry&);
 void initializeInferFunctionAttrsLegacyPassPass(PassRegistry&);
 void initializeInjectTLIMappingsLegacyPass(PassRegistry &);
 void initializeInlineCostAnalysisPass(PassRegistry&);
-void initializeInstCountPass(PassRegistry&);
+void initializeInstCountLegacyPassPass(PassRegistry &);
 void initializeInstNamerPass(PassRegistry&);
 void initializeInstSimplifyLegacyPassPass(PassRegistry &);
 void initializeInstrProfilingLegacyPassPass(PassRegistry&);
