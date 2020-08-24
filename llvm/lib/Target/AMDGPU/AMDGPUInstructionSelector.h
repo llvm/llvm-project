@@ -202,10 +202,16 @@ private:
   InstructionSelector::ComplexRendererFns
   selectDS1Addr1Offset(MachineOperand &Root) const;
 
-  std::pair<Register, unsigned>
-  selectDS64Bit4ByteAlignedImpl(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectDS64Bit4ByteAligned(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
+  selectDS128Bit8ByteAligned(MachineOperand &Root) const;
+
+  std::pair<Register, unsigned>
+  selectDSReadWrite2Impl(MachineOperand &Root, bool IsDS128) const;
+  InstructionSelector::ComplexRendererFns
+  selectDSReadWrite2(MachineOperand &Root, bool IsDS128) const;
 
   std::pair<Register, int64_t>
   getPtrBaseWithConstantOffset(Register Root,
