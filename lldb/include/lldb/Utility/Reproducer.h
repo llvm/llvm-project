@@ -181,6 +181,25 @@ public:
   static char ID;
 };
 
+/// Provider for the home directory.
+///
+/// When the reproducer is kept, it writes the user's home directory to a file
+/// a file named home.txt in the reproducer root.
+class HomeDirectoryProvider : public DirectoryProvider<HomeDirectoryProvider> {
+public:
+  HomeDirectoryProvider(const FileSpec &directory)
+      : DirectoryProvider(directory) {
+    llvm::SmallString<128> home_dir;
+    llvm::sys::path::home_directory(home_dir);
+    SetDirectory(std::string(home_dir));
+  }
+  struct Info {
+    static const char *name;
+    static const char *file;
+  };
+  static char ID;
+};
+
 /// The recorder is a small object handed out by a provider to record data. It
 /// is commonly used in combination with a MultiProvider which is meant to
 /// record information for multiple instances of the same source of data.
@@ -494,6 +513,15 @@ private:
   std::vector<std::string> m_files;
   unsigned m_index = 0;
 };
+
+/// Helper to read directories written by the DirectoryProvider.
+template <typename T>
+llvm::Expected<std::string> GetDirectoryFrom(repro::Loader *loader) {
+  llvm::Expected<std::string> dir = loader->LoadBuffer<T>();
+  if (!dir)
+    return dir.takeError();
+  return std::string(llvm::StringRef(*dir).rtrim());
+}
 
 } // namespace repro
 } // namespace lldb_private
