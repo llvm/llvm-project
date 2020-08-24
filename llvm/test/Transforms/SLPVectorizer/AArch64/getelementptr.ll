@@ -51,13 +51,13 @@ define i32 @getelementptr_4x32(i32* nocapture readonly %g, i32 %n, i32 %x, i32 %
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[Z:%.*]], i32 3
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP21:%.*]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP20:%.*]], i32 1
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP3]], [[FOR_COND_CLEANUP_LOOPEXIT:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[SUM_0_LCSSA]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x i32> [ zeroinitializer, [[FOR_BODY_PREHEADER]] ], [ [[TMP21]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x i32> [ zeroinitializer, [[FOR_BODY_PREHEADER]] ], [ [[TMP20]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[T4:%.*]] = shl nsw i32 [[TMP5]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> undef, i32 [[T4]], i32 0
@@ -83,12 +83,11 @@ define i32 @getelementptr_4x32(i32* nocapture readonly %g, i32 %n, i32 %x, i32 %
 ; CHECK-NEXT:    [[TMP17:%.*]] = sext i32 [[TMP16]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, i32* [[G]], i64 [[TMP17]]
 ; CHECK-NEXT:    [[T12:%.*]] = load i32, i32* [[ARRAYIDX15]], align 4
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x i32> undef, i32 [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i32> [[TMP18]], i32 [[ADD11]], i32 1
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x i32> <i32 1, i32 undef>, i32 [[T12]], i32 1
-; CHECK-NEXT:    [[TMP21]] = add nsw <2 x i32> [[TMP19]], [[TMP20]]
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i32> [[TMP21]], i32 0
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[TMP22]], [[N]]
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[ADD11]], i32 1
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i32> <i32 1, i32 undef>, i32 [[T12]], i32 1
+; CHECK-NEXT:    [[TMP20]] = add nsw <2 x i32> [[TMP18]], [[TMP19]]
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <2 x i32> [[TMP20]], i32 0
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[TMP21]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]]
 ;
 entry:
@@ -157,13 +156,13 @@ define i32 @getelementptr_2x32(i32* nocapture readonly %g, i32 %n, i32 %x, i32 %
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[Z:%.*]], i32 1
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP18:%.*]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP17:%.*]], i32 1
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP2]], [[FOR_COND_CLEANUP_LOOPEXIT:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[SUM_0_LCSSA]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ zeroinitializer, [[FOR_BODY_PREHEADER]] ], [ [[TMP18]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ zeroinitializer, [[FOR_BODY_PREHEADER]] ], [ [[TMP17]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[T4:%.*]] = shl nsw i32 [[TMP4]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[T4]] to i64
@@ -188,12 +187,11 @@ define i32 @getelementptr_2x32(i32* nocapture readonly %g, i32 %n, i32 %x, i32 %
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext i32 [[TMP13]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, i32* [[G]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[T12:%.*]] = load i32, i32* [[ARRAYIDX15]], align 4
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i32> undef, i32 [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x i32> [[TMP15]], i32 [[ADD11]], i32 1
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <2 x i32> <i32 1, i32 undef>, i32 [[T12]], i32 1
-; CHECK-NEXT:    [[TMP18]] = add nsw <2 x i32> [[TMP16]], [[TMP17]]
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i32> [[TMP18]], i32 0
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[TMP19]], [[N]]
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[ADD11]], i32 1
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x i32> <i32 1, i32 undef>, i32 [[T12]], i32 1
+; CHECK-NEXT:    [[TMP17]] = add nsw <2 x i32> [[TMP15]], [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x i32> [[TMP17]], i32 0
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[TMP18]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]]
 ;
 entry:

@@ -1161,6 +1161,17 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       return I->getOperand(0);
     }
 
+    // If we only demand the element that is being inserted and that element
+    // was extracted from the same index in another vector with the same type,
+    // replace this insert with that other vector.
+    Value *Vec;
+    if (PreInsertDemandedElts == 0 &&
+        match(I->getOperand(1),
+              m_ExtractElt(m_Value(Vec), m_SpecificInt(IdxNo))) &&
+        Vec->getType() == I->getType()) {
+      return Vec;
+    }
+
     // The inserted element is defined.
     UndefElts.clearBit(IdxNo);
     break;
