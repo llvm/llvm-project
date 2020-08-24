@@ -111,7 +111,7 @@ TYPE_PARSER("AUTO" >> construct<AccClause>(construct<AccClause::Auto>()) ||
         construct<AccClause>(construct<AccClause::Vector>(maybe(
             parenthesized(("LENGTH:" >> scalarIntExpr || scalarIntExpr))))) ||
     "WAIT" >> construct<AccClause>(construct<AccClause::Wait>(
-                  maybe(Parser<AccWaitArgument>{}))) ||
+                  maybe(parenthesized(Parser<AccWaitArgument>{})))) ||
     "WORKER" >>
         construct<AccClause>(construct<AccClause::Worker>(maybe(
             parenthesized(("NUM:" >> scalarIntExpr || scalarIntExpr))))) ||
@@ -125,8 +125,10 @@ TYPE_PARSER(construct<AccObjectList>(nonemptyList(Parser<AccObject>{})))
 TYPE_PARSER(construct<AccObjectListWithModifier>(
     maybe(Parser<AccDataModifier>{}), Parser<AccObjectList>{}))
 
-TYPE_PARSER(construct<AccWaitArgument>(
-    maybe("DEVNUM:" >> scalarIntExpr / ":"), nonemptyList(scalarIntExpr)))
+// 2.16.3 (2485) wait-argument is:
+//   [devnum : int-expr :] [queues :] int-expr-list
+TYPE_PARSER(construct<AccWaitArgument>(maybe("DEVNUM:" >> scalarIntExpr / ":"),
+    "QUEUES:" >> nonemptyList(scalarIntExpr) || nonemptyList(scalarIntExpr)))
 
 // 2.9 (1609) size-expr is one of:
 //   int-expr

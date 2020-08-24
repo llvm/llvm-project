@@ -187,6 +187,30 @@ program openacc_clause_validity
   !ERROR: Unmatched END PARALLEL LOOP directive
   !$acc end parallel loop
 
+  !$acc kernels wait(1, 2) async(3)
+  !$acc end kernels
+
+  !$acc kernels wait(queues: 1, 2) async(3)
+  !$acc end kernels
+
+  !$acc kernels wait(devnum: 1: 1, 2) async(3)
+  !$acc end kernels
+
+  !$acc kernels wait(devnum: 1: queues: 1, 2) async(3)
+  !$acc end kernels
+
+  !$acc wait(1)
+  !$acc wait(1, 2)
+
+  !$acc wait(queues: 1)
+  !$acc wait(queues: 1, 2)
+
+  !$acc wait(devnum: 1: 3)
+  !$acc wait(devnum: 1: 3, 4)
+
+  !$acc wait(devnum: 1: queues: 3)
+  !$acc wait(devnum: 1: queues: 3, 4)
+
  contains
 
    subroutine sub1(a)
