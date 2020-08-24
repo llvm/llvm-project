@@ -289,6 +289,18 @@ public:
   /// Parse a '->' token if present
   virtual ParseResult parseOptionalArrow() = 0;
 
+  /// Parse a `{` token.
+  virtual ParseResult parseLBrace() = 0;
+
+  /// Parse a `{` token if present.
+  virtual ParseResult parseOptionalLBrace() = 0;
+
+  /// Parse a `}` token.
+  virtual ParseResult parseRBrace() = 0;
+
+  /// Parse a `}` token if present.
+  virtual ParseResult parseOptionalRBrace() = 0;
+
   /// Parse a `:` token.
   virtual ParseResult parseColon() = 0;
 
@@ -303,6 +315,9 @@ public:
 
   /// Parse a `=` token.
   virtual ParseResult parseEqual() = 0;
+
+  /// Parse a `=` token if present.
+  virtual ParseResult parseOptionalEqual() = 0;
 
   /// Parse a '<' token.
   virtual ParseResult parseLess() = 0;
@@ -344,6 +359,9 @@ public:
   /// Parse a `)` token if present.
   virtual ParseResult parseOptionalRParen() = 0;
 
+  /// Parses a '?' if present.
+  virtual ParseResult parseOptionalQuestion() = 0;
+
   /// Parse a `[` token.
   virtual ParseResult parseLSquare() = 0;
 
@@ -363,6 +381,26 @@ public:
   // Attribute Parsing
   //===--------------------------------------------------------------------===//
 
+  /// Parse an arbitrary attribute of a given type and return it in result.
+  virtual ParseResult parseAttribute(Attribute &result, Type type = {}) = 0;
+
+  /// Parse an attribute of a specific kind and type.
+  template <typename AttrType>
+  ParseResult parseAttribute(AttrType &result, Type type = {}) {
+    llvm::SMLoc loc = getCurrentLocation();
+
+    // Parse any kind of attribute.
+    Attribute attr;
+    if (parseAttribute(attr))
+      return failure();
+
+    // Check for the right kind of attribute.
+    if (!(result = attr.dyn_cast<AttrType>()))
+      return emitError(loc, "invalid kind of attribute specified");
+
+    return success();
+  }
+
   /// Parse an arbitrary attribute and return it in result.  This also adds the
   /// attribute to the specified attribute list with the specified name.
   ParseResult parseAttribute(Attribute &result, StringRef attrName,
@@ -377,13 +415,6 @@ public:
     return parseAttribute(result, Type(), attrName, attrs);
   }
 
-  /// Parse an arbitrary attribute of a given type and return it in result. This
-  /// also adds the attribute to the specified attribute list with the specified
-  /// name.
-  virtual ParseResult parseAttribute(Attribute &result, Type type,
-                                     StringRef attrName,
-                                     NamedAttrList &attrs) = 0;
-
   /// Parse an optional attribute.
   virtual OptionalParseResult parseOptionalAttribute(Attribute &result,
                                                      Type type,
@@ -395,7 +426,9 @@ public:
     return parseOptionalAttribute(result, Type(), attrName, attrs);
   }
 
-  /// Parse an attribute of a specific kind and type.
+  /// Parse an arbitrary attribute of a given type and return it in result. This
+  /// also adds the attribute to the specified attribute list with the specified
+  /// name.
   template <typename AttrType>
   ParseResult parseAttribute(AttrType &result, Type type, StringRef attrName,
                              NamedAttrList &attrs) {
@@ -403,7 +436,7 @@ public:
 
     // Parse any kind of attribute.
     Attribute attr;
-    if (parseAttribute(attr, type, attrName, attrs))
+    if (parseAttribute(attr, type))
       return failure();
 
     // Check for the right kind of attribute.
@@ -411,6 +444,7 @@ public:
     if (!result)
       return emitError(loc, "invalid kind of attribute specified");
 
+    attrs.append(attrName, result);
     return success();
   }
 
