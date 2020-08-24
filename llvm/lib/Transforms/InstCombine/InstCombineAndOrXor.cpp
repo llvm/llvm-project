@@ -3267,6 +3267,24 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       if (match(Op0, m_Or(m_Value(X), m_APInt(C))) &&
           MaskedValueIsZero(X, *C, 0, &I))
         return BinaryOperator::CreateXor(X, ConstantInt::get(Ty, *C ^ *RHSC));
+
+      // If RHSC is inverting the remaining bits of shifted X,
+      // canonicalize to a 'not' before the shift to help SCEV and codegen:
+      // (X << C) ^ RHSC --> ~X << C
+      if (match(Op0, m_OneUse(m_Shl(m_Value(X), m_APInt(C)))) &&
+          *RHSC == APInt::getAllOnesValue(Ty->getScalarSizeInBits()).shl(*C)) {
+        Value *NotX = Builder.CreateNot(X);
+        return BinaryOperator::CreateShl(NotX, ConstantInt::get(Ty, *C));
+      }
+      // (X >>u C) ^ RHSC --> ~X >>u C
+      if (match(Op0, m_OneUse(m_LShr(m_Value(X), m_APInt(C)))) &&
+          *RHSC == APInt::getAllOnesValue(Ty->getScalarSizeInBits()).lshr(*C)) {
+        Value *NotX = Builder.CreateNot(X);
+        return BinaryOperator::CreateLShr(NotX, ConstantInt::get(Ty, *C));
+      }
+      // TODO: We could handle 'ashr' here as well. That would be matching
+      //       a 'not' op and moving it before the shift. Doing that requires
+      //       preventing the inverse fold in canShiftBinOpWithConstantRHS().
     }
   }
 

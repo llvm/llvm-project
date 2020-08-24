@@ -6,8 +6,8 @@
 define i32 @test1(i32 %a, i32 %b) nounwind readnone {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[DOTLOBIT:%.*]] = lshr i32 [[TMP1]], 31
-; CHECK-NEXT:    [[DOTLOBIT_NOT:%.*]] = xor i32 [[DOTLOBIT]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    [[DOTLOBIT_NOT:%.*]] = lshr i32 [[TMP2]], 31
 ; CHECK-NEXT:    ret i32 [[DOTLOBIT_NOT]]
 ;
   %t0 = icmp sgt i32 %a, -1
@@ -36,8 +36,8 @@ define i32 @test2(i32 %a, i32 %b) nounwind readnone {
 define i32 @test3(i32 %a, i32 %b) nounwind readnone {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[T2_UNSHIFTED:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[T2_UNSHIFTED_LOBIT:%.*]] = lshr i32 [[T2_UNSHIFTED]], 31
-; CHECK-NEXT:    [[T2_UNSHIFTED_LOBIT_NOT:%.*]] = xor i32 [[T2_UNSHIFTED_LOBIT]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[T2_UNSHIFTED]], -1
+; CHECK-NEXT:    [[T2_UNSHIFTED_LOBIT_NOT:%.*]] = lshr i32 [[TMP1]], 31
 ; CHECK-NEXT:    ret i32 [[T2_UNSHIFTED_LOBIT_NOT]]
 ;
   %t0 = lshr i32 %a, 31
@@ -68,8 +68,8 @@ define <2 x i32> @test3vec(<2 x i32> %a, <2 x i32> %b) nounwind readnone {
 define i32 @test3i(i32 %a, i32 %b) nounwind readnone {
 ; CHECK-LABEL: @test3i(
 ; CHECK-NEXT:    [[T01:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[T01]], 31
-; CHECK-NEXT:    [[T4:%.*]] = xor i32 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[T01]], -1
+; CHECK-NEXT:    [[T4:%.*]] = lshr i32 [[TMP1]], 31
 ; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %t0 = lshr i32 %a, 29
