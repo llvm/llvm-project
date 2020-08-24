@@ -2982,6 +2982,31 @@ lldb::user_id_t GDBRemoteCommunicationClient::GetFileSize(
   return UINT64_MAX;
 }
 
+void GDBRemoteCommunicationClient::AutoCompleteDiskFileOrDirectory(
+    CompletionRequest &request, bool only_dir) {
+  lldb_private::StreamString stream;
+  stream.PutCString("qPathComplete:");
+  stream.PutHex32(only_dir ? 1 : 0);
+  stream.PutChar(',');
+  stream.PutStringAsRawHex8(request.GetCursorArgumentPrefix());
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(stream.GetString(), response, false) ==
+      PacketResult::Success) {
+    StreamString strm;
+    char ch = response.GetChar();
+    if (ch != 'M')
+      return;
+    while (response.Peek()) {
+      strm.Clear();
+      while ((ch = response.GetHexU8(0, false)) != '\0')
+        strm.PutChar(ch);
+      request.AddCompletion(strm.GetString());
+      if (response.GetChar() != ',')
+        break;
+    }
+  }
+}
+
 Status
 GDBRemoteCommunicationClient::GetFilePermissions(const FileSpec &file_spec,
                                                  uint32_t &file_permissions) {
