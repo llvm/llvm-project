@@ -132,8 +132,11 @@ bool ValueObjectVariable::UpdateValue() {
   if (variable->GetLocationIsConstantValueData()) {
     // expr doesn't contain DWARF bytes, it contains the constant variable
     // value bytes themselves...
-    if (expr.GetExpressionData(m_data))
+    if (expr.GetExpressionData(m_data)) {
+       if (m_data.GetDataStart() && m_data.GetByteSize())
+        m_value.SetBytes(m_data.GetDataStart(), m_data.GetByteSize());
       m_value.SetContext(Value::eContextTypeVariable, variable);
+    }
     else
       m_error.SetErrorString("empty constant data");
     // constant bytes can't be edited - sorry
