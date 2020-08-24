@@ -73,6 +73,8 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {eBreakpointNameCompletion, CommandCompletions::BreakpointNames},
       {eProcessIDCompletion, CommandCompletions::ProcessIDs},
       {eProcessNameCompletion, CommandCompletions::ProcessNames},
+      {eRemoteDiskFileCompletion, CommandCompletions::RemoteDiskFiles},
+      {eRemoteDiskDirectoryCompletion, CommandCompletions::RemoteDiskDirectories},
       {eNoCompletion, nullptr} // This one has to be last in the list.
   };
 
@@ -484,6 +486,24 @@ void CommandCompletions::DiskDirectories(const llvm::Twine &partial_file_name,
                                          StringList &matches,
                                          TildeExpressionResolver &Resolver) {
   DiskFilesOrDirectories(partial_file_name, true, matches, Resolver);
+}
+
+void CommandCompletions::RemoteDiskFiles(CommandInterpreter &interpreter,
+                                         CompletionRequest &request,
+                                         SearchFilter *searcher) {
+  lldb::PlatformSP platform_sp =
+      interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform();
+  if (platform_sp)
+    platform_sp->AutoCompleteDiskFileOrDirectory(request, false);
+}
+
+void CommandCompletions::RemoteDiskDirectories(CommandInterpreter &interpreter,
+                                               CompletionRequest &request,
+                                               SearchFilter *searcher) {
+  lldb::PlatformSP platform_sp =
+      interpreter.GetDebugger().GetPlatformList().GetSelectedPlatform();
+  if (platform_sp)
+    platform_sp->AutoCompleteDiskFileOrDirectory(request, true);
 }
 
 void CommandCompletions::Modules(CommandInterpreter &interpreter,
