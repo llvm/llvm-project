@@ -1923,6 +1923,9 @@ public:
         x.u);
   }
   void Unparse(const AccObjectList &x) { Walk(x.v, ","); }
+  void Unparse(const AccReductionOperator::Operator &x) {
+    Word(AccReductionOperator::EnumToString(x));
+  }
   void Unparse(const AccObjectListWithReduction &x) {
     Walk(std::get<AccReductionOperator>(x.t));
     Put(":");

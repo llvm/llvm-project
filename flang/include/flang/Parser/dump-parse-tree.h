@@ -82,6 +82,7 @@ public:
   NODE(parser, AccObjectListWithModifier)
   NODE(parser, AccObjectListWithReduction)
   NODE(parser, AccReductionOperator)
+  NODE_ENUM(parser::AccReductionOperator, Operator)
   NODE(parser, AccSizeExpr)
   NODE(parser, AccSizeExprList)
   NODE(parser, AccStandaloneDirective)
