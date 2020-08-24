@@ -6156,6 +6156,18 @@ bool TargetLowering::expandFunnelShift(SDNode *Node, SDValue &Result,
 
   EVT ShVT = Z.getValueType();
 
+  assert(isPowerOf2_32(BW) && "Expecting the type bitwidth to be a power of 2");
+
+  // If a funnel shift in the other direction is more supported, use it.
+  unsigned RevOpcode = IsFSHL ? ISD::FSHR : ISD::FSHL;
+  if (!isOperationLegalOrCustom(Node->getOpcode(), VT) &&
+      isOperationLegalOrCustom(RevOpcode, VT)) {
+    SDValue Zero = DAG.getConstant(0, DL, ShVT);
+    SDValue Sub = DAG.getNode(ISD::SUB, DL, ShVT, Zero, Z);
+    Result = DAG.getNode(RevOpcode, DL, VT, X, Y, Sub);
+    return true;
+  }
+
   SDValue ShX, ShY;
   SDValue ShAmt, InvShAmt;
   if (isNonZeroModBitWidth(Z, BW)) {

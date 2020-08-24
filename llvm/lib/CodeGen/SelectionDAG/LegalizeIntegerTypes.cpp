@@ -207,6 +207,16 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::FREEZE:
     Res = PromoteIntRes_FREEZE(N);
     break;
+
+  case ISD::ROTL:
+  case ISD::ROTR:
+    Res = PromoteIntRes_Rotate(N);
+    break;
+
+  case ISD::FSHL:
+  case ISD::FSHR:
+    Res = PromoteIntRes_FunnelShift(N);
+    break;
   }
 
   // If the result is null then the sub-method took care of registering it.
@@ -1103,6 +1113,43 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SRL(SDNode *N) {
   if (getTypeAction(RHS.getValueType()) == TargetLowering::TypePromoteInteger)
     RHS = ZExtPromotedInteger(RHS);
   return DAG.getNode(ISD::SRL, SDLoc(N), LHS.getValueType(), LHS, RHS);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_Rotate(SDNode *N) {
+  // Lower the rotate to shifts and ORs which can be promoted.
+  SDValue Res;
+  TLI.expandROT(N, Res, DAG);
+  ReplaceValueWith(SDValue(N, 0), Res);
+  return SDValue();
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_FunnelShift(SDNode *N) {
+  SDValue Hi = GetPromotedInteger(N->getOperand(0));
+  SDValue Lo = GetPromotedInteger(N->getOperand(1));
+  SDValue Amount = GetPromotedInteger(N->getOperand(2));
+
+  unsigned OldBits = N->getOperand(0).getScalarValueSizeInBits();
+  unsigned NewBits = Hi.getScalarValueSizeInBits();
+
+  // Shift Lo up to occupy the upper bits of the promoted type.
+  SDLoc DL(N);
+  EVT VT = Lo.getValueType();
+  Lo = DAG.getNode(ISD::SHL, DL, VT, Lo,
+                   DAG.getConstant(NewBits - OldBits, DL, VT));
+
+  // Amount has to be interpreted modulo the old bit width.
+  Amount =
+      DAG.getNode(ISD::UREM, DL, VT, Amount, DAG.getConstant(OldBits, DL, VT));
+
+  unsigned Opcode = N->getOpcode();
+  if (Opcode == ISD::FSHR) {
+    // Increase Amount to shift the result into the lower bits of the promoted
+    // type.
+    Amount = DAG.getNode(ISD::ADD, DL, VT, Amount,
+                         DAG.getConstant(NewBits - OldBits, DL, VT));
+  }
+
+  return DAG.getNode(Opcode, DL, VT, Hi, Lo, Amount);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_TRUNCATE(SDNode *N) {
@@ -2059,6 +2106,16 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VECREDUCE_SMIN:
   case ISD::VECREDUCE_UMAX:
   case ISD::VECREDUCE_UMIN: ExpandIntRes_VECREDUCE(N, Lo, Hi); break;
+
+  case ISD::ROTL:
+  case ISD::ROTR:
+    ExpandIntRes_Rotate(N, Lo, Hi);
+    break;
+
+  case ISD::FSHL:
+  case ISD::FSHR:
+    ExpandIntRes_FunnelShift(N, Lo, Hi);
+    break;
   }
 
   // If Lo/Hi is null, the sub-method took care of registering results etc.
@@ -3892,6 +3949,22 @@ void DAGTypeLegalizer::ExpandIntRes_VECREDUCE(SDNode *N,
   // TODO For VECREDUCE_(AND|OR|XOR) we could split the vector and calculate
   // both halves independently.
   SDValue Res = TLI.expandVecReduce(N, DAG);
+  SplitInteger(Res, Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_Rotate(SDNode *N,
+                                           SDValue &Lo, SDValue &Hi) {
+  // Lower the rotate to shifts and ORs which can be expanded.
+  SDValue Res;
+  TLI.expandROT(N, Res, DAG);
+  SplitInteger(Res, Lo, Hi);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_FunnelShift(SDNode *N,
+                                                SDValue &Lo, SDValue &Hi) {
+  // Lower the funnel shift to shifts and ORs which can be expanded.
+  SDValue Res;
+  TLI.expandFunnelShift(N, Res, DAG);
   SplitInteger(Res, Lo, Hi);
 }
 
