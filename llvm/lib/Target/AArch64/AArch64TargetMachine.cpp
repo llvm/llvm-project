@@ -466,7 +466,6 @@ void AArch64PassConfig::addIRPasses() {
                                             .forwardSwitchCondToPhi(true)
                                             .convertSwitchToLookupTable(true)
                                             .needCanonicalLoops(false)
-                                            .hoistCommonInsts(true)
                                             .sinkCommonInsts(true)));
 
   // Run LoopDataPrefetch
