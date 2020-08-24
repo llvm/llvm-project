@@ -10,11 +10,10 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   [[OSABI]]
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: [[OSABI]]
 
 ## EI_OSABI is set to ELFOSABI_HPUX.
 # RUN: yaml2obj %s -DOSABI=ELFOSABI_HPUX -o %t.osabi.hpux

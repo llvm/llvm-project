@@ -1,7 +1,7 @@
 ## Check how the GNU Hash section is dumped with --gnu-hash-table.
 
-# RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_X86_64 %s -o %t.x64
-# RUN: yaml2obj --docnum=1 -DBITS=32 -DMACHINE=EM_386 %s -o %t.x32
+# RUN: yaml2obj --docnum=1 -DBITS=64 %s -o %t.x64
+# RUN: yaml2obj --docnum=1 -DBITS=32 %s -o %t.x32
 
 # RUN: llvm-readobj --gnu-hash-table %t.x64 | FileCheck %s
 # RUN: llvm-readelf --gnu-hash-table %t.x64 | FileCheck %s
@@ -21,10 +21,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS[[BITS]]
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: [[MACHINE]]
+  Class: ELFCLASS[[BITS]]
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:  .gnu.hash
     Type:  SHT_GNU_HASH
@@ -82,10 +81,9 @@ ProgramHeaders:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:  .gnu.hash
     Type:  SHT_GNU_HASH
@@ -132,10 +130,9 @@ ProgramHeaders:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:  .gnu.hash
     Type:  SHT_GNU_HASH
@@ -186,10 +183,9 @@ ProgramHeaders:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:  .gnu.hash
     Type:  SHT_GNU_HASH
@@ -257,10 +253,9 @@ ProgramHeaders:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:  .gnu.hash
     Type:  SHT_GNU_HASH

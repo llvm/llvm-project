@@ -12,10 +12,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    [[TYPE]]
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  [[TYPE]]
 
 # RUN: yaml2obj %s -DTYPE=ET_REL -o %t2
 # RUN: llvm-readobj -h %t2 | FileCheck %s --match-full-lines --check-prefix LLVM-REL

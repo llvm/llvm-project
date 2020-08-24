@@ -7,7 +7,7 @@
 # CHECK-NEXT:   Class:   ELFCLASS64
 # CHECK-NEXT:   Data:    ELFDATA2LSB
 # CHECK-NEXT:   Type:    ET_REL
-# CHECK-NEXT:   Machine: EM_X86_64
+# CHECK-NEXT:   Machine: EM_NONE
 # CHECK-NEXT: Symbols:
 # CHECK-NEXT:   - Name: default
 # CHECK-NEXT:   - Name: internal
@@ -20,10 +20,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 Symbols:
   - Name:  default
     Other: [ STV_DEFAULT ]
