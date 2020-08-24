@@ -90,6 +90,7 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
     AMDGPU::FeaturePromoteAlloca,
     AMDGPU::FeatureUnalignedBufferAccess,
     AMDGPU::FeatureUnalignedScratchAccess,
+    AMDGPU::FeatureUnalignedAccessMode,
 
     AMDGPU::FeatureAutoWaitcntBeforeBarrier,
 
