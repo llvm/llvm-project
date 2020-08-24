@@ -117,10 +117,10 @@ def testIntegerType():
   print("u32 unsigned:", u32.is_unsigned)
 
   # CHECK: signless: i16
-  print("signless:", mlir.ir.IntegerType.signless(ctx, 16))
+  print("signless:", mlir.ir.IntegerType.get_signless(ctx, 16))
   # CHECK: signed: si8
-  print("signed:", mlir.ir.IntegerType.signed(ctx, 8))
+  print("signed:", mlir.ir.IntegerType.get_signed(ctx, 8))
   # CHECK: unsigned: ui64
-  print("unsigned:", mlir.ir.IntegerType.unsigned(ctx, 64))
+  print("unsigned:", mlir.ir.IntegerType.get_unsigned(ctx, 64))
 
 run(testIntegerType)

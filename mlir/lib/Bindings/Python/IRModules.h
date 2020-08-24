@@ -45,6 +45,39 @@ public:
   MlirModule module;
 };
 
+/// Wrapper around the generic MlirAttribute.
+/// The lifetime of a type is bound by the PyContext that created it.
+class PyAttribute {
+public:
+  PyAttribute(MlirAttribute attr) : attr(attr) {}
+  bool operator==(const PyAttribute &other);
+
+  MlirAttribute attr;
+};
+
+/// Represents a Python MlirNamedAttr, carrying an optional owned name.
+/// TODO: Refactor this and the C-API to be based on an Identifier owned
+/// by the context so as to avoid ownership issues here.
+class PyNamedAttribute {
+public:
+  /// Constructs a PyNamedAttr that retains an owned name. This should be
+  /// used in any code that originates an MlirNamedAttribute from a python
+  /// string.
+  /// The lifetime of the PyNamedAttr must extend to the lifetime of the
+  /// passed attribute.
+  PyNamedAttribute(MlirAttribute attr, std::string ownedName);
+
+  MlirNamedAttribute namedAttr;
+
+private:
+  // Since the MlirNamedAttr contains an internal pointer to the actual
+  // memory of the owned string, it must be heap allocated to remain valid.
+  // Otherwise, strings that fit within the small object optimization threshold
+  // will have their memory address change as the containing object is moved,
+  // resulting in an invalid aliased pointer.
+  std::unique_ptr<std::string> ownedName;
+};
+
 /// Wrapper around the generic MlirType.
 /// The lifetime of a type is bound by the PyContext that created it.
 class PyType {
