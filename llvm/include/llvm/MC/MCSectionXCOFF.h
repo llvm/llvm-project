@@ -66,6 +66,11 @@ public:
   XCOFF::StorageClass getStorageClass() const {
     return QualName->getStorageClass();
   }
+
+  XCOFF::VisibilityType getVisibilityType() const {
+    return QualName->getVisibilityType();
+  }
+
   XCOFF::SymbolType getCSectType() const { return Type; }
   MCSymbolXCOFF *getQualNameSymbol() const { return QualName; }
 
