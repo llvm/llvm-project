@@ -21,6 +21,7 @@
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>
+#include <unordered_map>
 #include <vector>
 
 namespace llvm {
@@ -40,6 +41,7 @@ struct Abbrev {
 };
 
 struct AbbrevTable {
+  Optional<uint64_t> ID;
   std::vector<Abbrev> Table;
 };
 
@@ -110,6 +112,7 @@ struct Unit {
   uint16_t Version;
   Optional<uint8_t> AddrSize;
   llvm::dwarf::UnitType Type; // Added in DWARF 5
+  Optional<uint64_t> AbbrevTableID;
   yaml::Hex64 AbbrOffset;
   std::vector<Entry> Entries;
 };
@@ -228,6 +231,10 @@ struct Data {
   bool isEmpty() const;
 
   SetVector<StringRef> getNonEmptySectionNames() const;
+  Expected<uint64_t> getAbbrevTableIndexByID(uint64_t ID) const;
+
+private:
+  mutable std::unordered_map<uint64_t, uint64_t> AbbrevTableID2Index;
 };
 
 } // end namespace DWARFYAML

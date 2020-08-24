@@ -306,3 +306,28 @@ DWARF:
         - Tag:        DW_TAG_subprogram
           Children:   DW_CHILDREN_no
           Attributes: []
+
+## i) Test that yaml2obj emits an error message when there are non-empty compilation units
+## and multiple abbrev tables are assigned the same ID.
+
+## RUN: not yaml2obj --docnum=9 %s 2>&1 | FileCheck %s --check-prefix=ID-COLLISION
+
+# ID-COLLISION: yaml2obj: error: the ID (1) of abbrev table with index 1 has been used by abbrev table with index 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_abbrev:
+    - ID: 1
+    - ID: 1
+  debug_info:
+    - Version:    4
+      AbbrOffset: 0x00
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x1234
