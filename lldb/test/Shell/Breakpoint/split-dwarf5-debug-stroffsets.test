@@ -1,9 +1,9 @@
 # RUN: rm -rf %t.dir
 # RUN: mkdir %t.dir
 # RUN: cd %t.dir
-# RUN: yaml2obj %p/Inputs/split-dwarf5-debug-stroffsets-file1.dwo.yaml > %t.dir/file1.dwo
-# RUN: yaml2obj %p/Inputs/split-dwarf5-debug-stroffsets-file2.dwo.yaml > %t.dir/file2.dwo
-# RUN: yaml2obj %p/Inputs/split-dwarf5-debug-stroffsets-main.yaml      > %t.dir/test
+# RUN: yaml2obj %p/Inputs/split-dwarf5-debug-stroffsets-file1.dwo.yaml -o %t.dir/file1.dwo
+# RUN: yaml2obj %p/Inputs/split-dwarf5-debug-stroffsets-file2.dwo.yaml -o %t.dir/file2.dwo
+# RUN: yaml2obj %p/Inputs/split-dwarf5-debug-stroffsets-main.yaml      -o %t.dir/test
 # RUN: lldb-test breakpoints %t.dir/test %s | FileCheck %s
 
 # This test checks that source code location is shown correctly

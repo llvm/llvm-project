@@ -1,5 +1,5 @@
 # Tests that /ignore:4217 suppresses "locally defined symbol imported" warnings.
-# RUN: yaml2obj < %s > %t.obj
+# RUN: yaml2obj %s -o %t.obj
 
 # RUN: lld-link -entry:main -out:%t.exe %t.obj 2>&1 \
 # RUN:     | FileCheck -check-prefix=WARNINGS %s
