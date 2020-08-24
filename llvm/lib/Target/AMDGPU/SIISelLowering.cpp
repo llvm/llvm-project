@@ -4333,6 +4333,12 @@ MVT SITargetLowering::getScalarShiftAmountTy(const DataLayout &, EVT VT) const {
   return (VT == MVT::i16) ? MVT::i16 : MVT::i32;
 }
 
+LLT SITargetLowering::getPreferredShiftAmountTy(LLT Ty) const {
+  return (Ty.getScalarSizeInBits() <= 16 && Subtarget->has16BitInsts())
+             ? Ty.changeElementSize(16)
+             : Ty.changeElementSize(32);
+}
+
 // Answering this is somewhat tricky and depends on the specific device which
 // have different rates for fma or all f64 operations.
 //
