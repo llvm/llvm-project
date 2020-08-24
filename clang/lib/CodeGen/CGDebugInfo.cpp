@@ -2545,12 +2545,11 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
     // We use the lower 64 bits for debug info.
 
     uint64_t Signature = 0;
-    if (const auto &ModSig = Mod.getSignature()) {
-      for (unsigned I = 0; I != sizeof(Signature); ++I)
-        Signature |= (uint64_t)ModSig[I] << (I * 8);
-    } else {
+    if (const auto &ModSig = Mod.getSignature())
+      Signature = ModSig.truncatedValue();
+    else
       Signature = ~1ULL;
-    }
+
     llvm::DIBuilder DIB(CGM.getModule());
     SmallString<0> PCM;
     if (!llvm::sys::path::is_absolute(Mod.getASTFile()))
