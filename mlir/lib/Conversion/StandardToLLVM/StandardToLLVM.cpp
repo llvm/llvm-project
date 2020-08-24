@@ -2630,6 +2630,11 @@ struct SIToFPLowering
   using Super::Super;
 };
 
+struct UIToFPLowering
+    : public OneToOneConvertToLLVMPattern<UIToFPOp, LLVM::UIToFPOp> {
+  using Super::Super;
+};
+
 struct FPExtLowering
     : public OneToOneConvertToLLVMPattern<FPExtOp, LLVM::FPExtOp> {
   using Super::Super;
@@ -2637,6 +2642,11 @@ struct FPExtLowering
 
 struct FPToSILowering
     : public OneToOneConvertToLLVMPattern<FPToSIOp, LLVM::FPToSIOp> {
+  using Super::Super;
+};
+
+struct FPToUILowering
+    : public OneToOneConvertToLLVMPattern<FPToUIOp, LLVM::FPToUIOp> {
   using Super::Super;
 };
 
@@ -3293,6 +3303,7 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       Log2OpLowering,
       FPExtLowering,
       FPToSILowering,
+      FPToUILowering,
       FPTruncLowering,
       ImOpLowering,
       IndexCastOpLowering,
@@ -3320,6 +3331,7 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       SubFOpLowering,
       SubIOpLowering,
       TruncateIOpLowering,
+      UIToFPLowering,
       UnsignedDivIOpLowering,
       UnsignedRemIOpLowering,
       UnsignedShiftRightOpLowering,
