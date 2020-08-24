@@ -5571,15 +5571,32 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
                                              SDValue Op,
                                              SelectionDAG &DAG) const {
   GlobalAddressSDNode *GSD = cast<GlobalAddressSDNode>(Op);
+  SDLoc DL(GSD);
+  EVT PtrVT = Op.getValueType();
+
   const GlobalValue *GV = GSD->getGlobal();
   if ((GSD->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS &&
        shouldUseLDSConstAddress(GV)) ||
       GSD->getAddressSpace() == AMDGPUAS::REGION_ADDRESS ||
-      GSD->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS)
+      GSD->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS) {
+    if (GSD->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS &&
+        GV->hasExternalLinkage()) {
+      Type *Ty = GV->getValueType();
+      // HIP uses an unsized array `extern __shared__ T s[]` or similar
+      // zero-sized type in other languages to declare the dynamic shared
+      // memory which size is not known at the compile time. They will be
+      // allocated by the runtime and placed directly after the static
+      // allocated ones. They all share the same offset.
+      if (DAG.getDataLayout().getTypeAllocSize(Ty).isZero()) {
+        assert(PtrVT == MVT::i32 && "32-bit pointer is expected.");
+        // Adjust alignment for that dynamic shared memory array.
+        MFI->setDynLDSAlign(DAG.getDataLayout(), *cast<GlobalVariable>(GV));
+        return SDValue(
+            DAG.getMachineNode(AMDGPU::GET_GROUPSTATICSIZE, DL, PtrVT), 0);
+      }
+    }
     return AMDGPUTargetLowering::LowerGlobalAddress(MFI, Op, DAG);
-
-  SDLoc DL(GSD);
-  EVT PtrVT = Op.getValueType();
+  }
 
   if (GSD->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
     SDValue GA = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, GSD->getOffset(),
