@@ -2494,7 +2494,7 @@ UsingNamespaceDirective
 )txt"}));
 }
 
-TEST_P(SyntaxTreeTest, UsingDeclaration) {
+TEST_P(SyntaxTreeTest, UsingDeclaration_Namespace) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -2513,6 +2513,59 @@ UsingDeclaration
 |-a
 `-;
 )txt"}));
+}
+
+TEST_P(SyntaxTreeTest, UsingDeclaration_ClassMember) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+template <class T> struct X {
+  [[using T::foo;]]
+  [[using typename T::bar;]]
+};
+)cpp",
+      {R"txt(
+UsingDeclaration
+|-using
+|-NestedNameSpecifier
+| |-IdentifierNameSpecifier
+| | `-T
+| `-::
+|-foo
+`-;
+)txt",
+       R"txt(
+UsingDeclaration
+|-using
+|-typename
+|-NestedNameSpecifier
+| |-IdentifierNameSpecifier
+| | `-T
+| `-::
+|-bar
+`-;
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest, UsingTypeAlias) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+using type = int;
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-TypeAliasDeclaration
+  |-using
+  |-type
+  |-=
+  |-int
+  `-;
+)txt"));
 }
 
 TEST_P(SyntaxTreeTest, FreeStandingClass_ForwardDeclaration) {
@@ -3005,52 +3058,6 @@ template <class T> struct X<T>::Y {};
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, TemplatesUsingUsing) {
-  if (!GetParam().isCXX()) {
-    return;
-  }
-  EXPECT_TRUE(treeDumpEqual(
-      R"cpp(
-template <class T> struct X {
-  using T::foo;
-  using typename T::bar;
-};
-)cpp",
-      R"txt(
-*: TranslationUnit
-`-TemplateDeclaration
-  |-template
-  |-<
-  |-UnknownDeclaration
-  | |-class
-  | `-T
-  |->
-  `-SimpleDeclaration
-    |-struct
-    |-X
-    |-{
-    |-UsingDeclaration
-    | |-using
-    | |-NestedNameSpecifier
-    | | |-IdentifierNameSpecifier
-    | | | `-T
-    | | `-::
-    | |-foo
-    | `-;
-    |-UsingDeclaration
-    | |-using
-    | |-typename
-    | |-NestedNameSpecifier
-    | | |-IdentifierNameSpecifier
-    | | | `-T
-    | | `-::
-    | |-bar
-    | `-;
-    |-}
-    `-;
-)txt"));
-}
-
 TEST_P(SyntaxTreeTest, ExplicitClassTemplateInstantation_Definition) {
   if (!GetParam().isCXX()) {
     return;
@@ -3150,25 +3157,6 @@ TemplateDeclaration
   |-}
   `-;
 )txt"}));
-}
-
-TEST_P(SyntaxTreeTest, UsingType) {
-  if (!GetParam().isCXX()) {
-    return;
-  }
-  EXPECT_TRUE(treeDumpEqual(
-      R"cpp(
-using type = int;
-)cpp",
-      R"txt(
-*: TranslationUnit
-`-TypeAliasDeclaration
-  |-using
-  |-type
-  |-=
-  |-int
-  `-;
-)txt"));
 }
 
 TEST_P(SyntaxTreeTest, EmptyDeclaration) {
