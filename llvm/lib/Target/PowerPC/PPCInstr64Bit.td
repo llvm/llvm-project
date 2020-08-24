@@ -148,6 +148,9 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR8] in {
       def BL8_NOTOC : IForm<18, 0, 1, (outs),
                             (ins calltarget:$func),
                             "bl $func", IIC_BrB, []>;
+      def BL8_NOTOC_TLS : IForm<18, 0, 1, (outs),
+                                (ins tlscall:$func),
+                                "bl $func", IIC_BrB, []>;
     }
   }
   let Uses = [CTR8, RM] in {
