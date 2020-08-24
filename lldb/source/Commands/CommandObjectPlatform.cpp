@@ -1331,6 +1331,14 @@ public:
 
   ~CommandObjectPlatformProcessInfo() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eProcessIDCompletion,
+        request, nullptr);
+  }
+
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     Target *target = GetDebugger().GetSelectedTarget().get();
@@ -1445,46 +1453,6 @@ public:
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
       return llvm::makeArrayRef(g_platform_process_attach_options);
-    }
-
-    void HandleOptionArgumentCompletion(
-        CompletionRequest &request, OptionElementVector &opt_element_vector,
-        int opt_element_index, CommandInterpreter &interpreter) override {
-      int opt_arg_pos = opt_element_vector[opt_element_index].opt_arg_pos;
-      int opt_defs_index = opt_element_vector[opt_element_index].opt_defs_index;
-
-      // We are only completing the name option for now...
-
-      // Are we in the name?
-      if (GetDefinitions()[opt_defs_index].short_option != 'n')
-        return;
-
-      // Look to see if there is a -P argument provided, and if so use that
-      // plugin, otherwise use the default plugin.
-
-      const char *partial_name = nullptr;
-      partial_name = request.GetParsedLine().GetArgumentAtIndex(opt_arg_pos);
-
-      PlatformSP platform_sp(interpreter.GetPlatform(true));
-      if (!platform_sp)
-        return;
-
-      ProcessInstanceInfoList process_infos;
-      ProcessInstanceInfoMatch match_info;
-      if (partial_name) {
-        match_info.GetProcessInfo().GetExecutableFile().SetFile(
-            partial_name, FileSpec::Style::native);
-        match_info.SetNameMatchType(NameMatch::StartsWith);
-      }
-      platform_sp->FindProcesses(match_info, process_infos);
-      const uint32_t num_matches = process_infos.size();
-      if (num_matches == 0)
-        return;
-
-      for (uint32_t i = 0; i < num_matches; ++i) {
-        request.AddCompletion(process_infos[i].GetNameAsStringRef());
-      }
-      return;
     }
 
     // Options table: Required for subclasses of Options.
