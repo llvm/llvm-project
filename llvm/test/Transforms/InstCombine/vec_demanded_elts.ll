@@ -21,7 +21,7 @@ define i32 @test2(float %f) {
 define void @get_image() nounwind {
 ; CHECK-LABEL: @get_image(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @fgetc(i8* null) #0
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @fgetc(i8* null) [[ATTR0:#.*]]
 ; CHECK-NEXT:    br i1 false, label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3]]
@@ -745,4 +745,72 @@ define <4 x i8> @select_cond_(<4 x i8> %x, <4 x i8> %min, <4 x i1> %cmp, i1 %poi
   %vecins = shufflevector <4 x i8> %x, <4 x i8> %min, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   %r = select <4 x i1> %ins, <4 x i8> %vecins, <4 x i8> %x
   ret <4 x i8> %r
+}
+
+define <4 x float> @ins_of_ext(<4 x float> %x, float %y) {
+; CHECK-LABEL: @ins_of_ext(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x float> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[E0]], i32 0
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[I0]], float [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[I1]], float [[Y]], i32 2
+; CHECK-NEXT:    [[I3:%.*]] = insertelement <4 x float> [[I2]], float [[Y]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[I3]]
+;
+  %e0 = extractelement <4 x float> %x, i32 0
+  %i0 = insertelement <4 x float> undef, float %e0, i32 0
+  %i1 = insertelement <4 x float> %i0, float %y, i32 1
+  %i2 = insertelement <4 x float> %i1, float %y, i32 2
+  %i3 = insertelement <4 x float> %i2, float %y, i32 3
+  ret <4 x float> %i3
+}
+
+define <4 x float> @ins_of_ext_twice(<4 x float> %x, float %y) {
+; CHECK-LABEL: @ins_of_ext_twice(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x float> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[E0]], i32 0
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x float> [[X]], i32 1
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[I0]], float [[E1]], i32 1
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[I1]], float [[Y:%.*]], i32 2
+; CHECK-NEXT:    [[I3:%.*]] = insertelement <4 x float> [[I2]], float [[Y]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[I3]]
+;
+  %e0 = extractelement <4 x float> %x, i32 0
+  %i0 = insertelement <4 x float> undef, float %e0, i32 0
+  %e1 = extractelement <4 x float> %x, i32 1
+  %i1 = insertelement <4 x float> %i0, float %e1, i32 1
+  %i2 = insertelement <4 x float> %i1, float %y, i32 2
+  %i3 = insertelement <4 x float> %i2, float %y, i32 3
+  ret <4 x float> %i3
+}
+
+define <4 x float> @ins_of_ext_wrong_demand(<4 x float> %x, float %y) {
+; CHECK-LABEL: @ins_of_ext_wrong_demand(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x float> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[E0]], i32 0
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[I0]], float [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[I1]], float [[Y]], i32 2
+; CHECK-NEXT:    ret <4 x float> [[I2]]
+;
+  %e0 = extractelement <4 x float> %x, i32 0
+  %i0 = insertelement <4 x float> undef, float %e0, i32 0
+  %i1 = insertelement <4 x float> %i0, float %y, i32 1
+  %i2 = insertelement <4 x float> %i1, float %y, i32 2
+  ret <4 x float> %i2
+}
+
+define <4 x float> @ins_of_ext_wrong_type(<5 x float> %x, float %y) {
+; CHECK-LABEL: @ins_of_ext_wrong_type(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <5 x float> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[E0]], i32 0
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[I0]], float [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[I1]], float [[Y]], i32 2
+; CHECK-NEXT:    [[I3:%.*]] = insertelement <4 x float> [[I2]], float [[Y]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[I3]]
+;
+  %e0 = extractelement <5 x float> %x, i32 0
+  %i0 = insertelement <4 x float> undef, float %e0, i32 0
+  %i1 = insertelement <4 x float> %i0, float %y, i32 1
+  %i2 = insertelement <4 x float> %i1, float %y, i32 2
+  %i3 = insertelement <4 x float> %i2, float %y, i32 3
+  ret <4 x float> %i3
 }
