@@ -134,6 +134,28 @@ def PPCfctiwz : SDNode<"PPCISD::FCTIWZ", SDTFPUnaryOp, []>;
 def PPCfctiduz: SDNode<"PPCISD::FCTIDUZ",SDTFPUnaryOp, []>;
 def PPCfctiwuz: SDNode<"PPCISD::FCTIWUZ",SDTFPUnaryOp, []>;
 
+def PPCstrict_fcfid : SDNode<"PPCISD::STRICT_FCFID",
+                             SDTFPUnaryOp, [SDNPHasChain]>;
+def PPCstrict_fcfidu : SDNode<"PPCISD::STRICT_FCFIDU",
+                              SDTFPUnaryOp, [SDNPHasChain]>;
+def PPCstrict_fcfids : SDNode<"PPCISD::STRICT_FCFIDS",
+                             SDTFPRoundOp, [SDNPHasChain]>;
+def PPCstrict_fcfidus : SDNode<"PPCISD::STRICT_FCFIDUS",
+                              SDTFPRoundOp, [SDNPHasChain]>;
+
+def PPCany_fcfid : PatFrags<(ops node:$op),
+                             [(PPCfcfid node:$op),
+                              (PPCstrict_fcfid node:$op)]>;
+def PPCany_fcfidu : PatFrags<(ops node:$op),
+                             [(PPCfcfidu node:$op),
+                              (PPCstrict_fcfidu node:$op)]>;
+def PPCany_fcfids : PatFrags<(ops node:$op),
+                              [(PPCfcfids node:$op),
+                               (PPCstrict_fcfids node:$op)]>;
+def PPCany_fcfidus : PatFrags<(ops node:$op),
+                              [(PPCfcfidus node:$op),
+                               (PPCstrict_fcfidus node:$op)]>;
+
 def PPCcv_fp_to_uint_in_vsr:
     SDNode<"PPCISD::FP_TO_UINT_IN_VSR", SDT_PPCcv_fp_to_int, []>;
 def PPCcv_fp_to_sint_in_vsr:
