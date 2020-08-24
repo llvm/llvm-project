@@ -8945,7 +8945,7 @@ ASTReader::ReadSourceRange(ModuleFile &F, const RecordData &Record,
   return SourceRange(beg, end);
 }
 
-static FixedPointSemantics
+static llvm::FixedPointSemantics
 ReadFixedPointSemantics(const SmallVectorImpl<uint64_t> &Record,
                         unsigned &Idx) {
   unsigned Width = Record[Idx++];
@@ -8954,8 +8954,8 @@ ReadFixedPointSemantics(const SmallVectorImpl<uint64_t> &Record,
   bool IsSigned = Tmp & 0x1;
   bool IsSaturated = Tmp & 0x2;
   bool HasUnsignedPadding = Tmp & 0x4;
-  return FixedPointSemantics(Width, Scale, IsSigned, IsSaturated,
-                             HasUnsignedPadding);
+  return llvm::FixedPointSemantics(Width, Scale, IsSigned, IsSaturated,
+                                   HasUnsignedPadding);
 }
 
 static const llvm::fltSemantics &
@@ -8978,8 +8978,8 @@ APValue ASTRecordReader::readAPValue() {
     return APValue(readAPFloat(FloatSema));
   }
   case APValue::FixedPoint: {
-    FixedPointSemantics FPSema = ReadFixedPointSemantics(Record, Idx);
-    return APValue(APFixedPoint(readAPInt(), FPSema));
+    llvm::FixedPointSemantics FPSema = ReadFixedPointSemantics(Record, Idx);
+    return APValue(llvm::APFixedPoint(readAPInt(), FPSema));
   }
   case APValue::ComplexInt: {
     llvm::APSInt First = readAPSInt();

@@ -1,4 +1,4 @@
-//===- unittests/Basic/FixedPointTest.cpp -- fixed point number tests -----===//
+//===- unittests/ADT/FixedPointTest.cpp -- fixed point number tests -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Basic/FixedPoint.h"
+#include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/APSInt.h"
 #include "gtest/gtest.h"
 
-using clang::APFixedPoint;
-using clang::FixedPointSemantics;
+using llvm::APFixedPoint;
+using llvm::FixedPointSemantics;
 using llvm::APInt;
 using llvm::APSInt;
 
