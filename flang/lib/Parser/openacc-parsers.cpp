@@ -145,8 +145,19 @@ TYPE_PARSER(construct<AccGangArgument>(maybe(scalarIntExpr),
         maybe(","_tok / "STATIC:" >> Parser<AccSizeExpr>{})))
 
 // 2.5.13 Reduction
-TYPE_PARSER(construct<AccReductionOperator>(Parser<DefinedOperator>{}) ||
-    construct<AccReductionOperator>(Parser<ProcedureDesignator>{}))
+// Operator for reduction
+TYPE_PARSER(sourced(construct<AccReductionOperator>(
+    first("+" >> pure(AccReductionOperator::Operator::Plus),
+        "*" >> pure(AccReductionOperator::Operator::Multiply),
+        "MAX" >> pure(AccReductionOperator::Operator::Max),
+        "MIN" >> pure(AccReductionOperator::Operator::Min),
+        "IAND" >> pure(AccReductionOperator::Operator::Iand),
+        "IOR" >> pure(AccReductionOperator::Operator::Ior),
+        "IEOR" >> pure(AccReductionOperator::Operator::Ieor),
+        ".AND." >> pure(AccReductionOperator::Operator::And),
+        ".OR." >> pure(AccReductionOperator::Operator::Or),
+        ".EQV." >> pure(AccReductionOperator::Operator::Eqv),
+        ".NEQV." >> pure(AccReductionOperator::Operator::Neqv)))))
 
 // 2.5.14 Default clause
 TYPE_PARSER(construct<AccDefaultClause>(
