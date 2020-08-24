@@ -3051,84 +3051,105 @@ template <class T> struct X {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, ExplicitTemplateInstantations) {
+TEST_P(SyntaxTreeTest, ExplicitClassTemplateInstantation_Definition) {
   if (!GetParam().isCXX()) {
     return;
   }
-  EXPECT_TRUE(treeDumpEqual(
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
 template <class T> struct X {};
-template <class T> struct X<T*> {};
-template <> struct X<int> {};
-
-template struct X<double>;
-extern template struct X<float>;
+[[template struct X<double>;]]
 )cpp",
-      R"txt(
-*: TranslationUnit
-|-TemplateDeclaration
-| |-template
-| |-<
-| |-UnknownDeclaration
-| | |-class
-| | `-T
-| |->
-| `-SimpleDeclaration
-|   |-struct
-|   |-X
-|   |-{
-|   |-}
-|   `-;
-|-TemplateDeclaration
-| |-template
-| |-<
-| |-UnknownDeclaration
-| | |-class
-| | `-T
-| |->
-| `-SimpleDeclaration
-|   |-struct
-|   |-X
-|   |-<
-|   |-T
-|   |-*
-|   |->
-|   |-{
-|   |-}
-|   `-;
-|-TemplateDeclaration
-| |-template
-| |-<
-| |->
-| `-SimpleDeclaration
-|   |-struct
-|   |-X
-|   |-<
-|   |-int
-|   |->
-|   |-{
-|   |-}
-|   `-;
-|-ExplicitTemplateInstantiation
-| |-template
-| `-SimpleDeclaration
-|   |-struct
-|   |-X
-|   |-<
-|   |-double
-|   |->
-|   `-;
-`-ExplicitTemplateInstantiation
-  |-extern
-  |-template
-  `-SimpleDeclaration
-    |-struct
-    |-X
-    |-<
-    |-float
-    |->
-    `-;
-)txt"));
+      {R"txt(
+ExplicitTemplateInstantiation
+|-template
+`-SimpleDeclaration
+  |-struct
+  |-X
+  |-<
+  |-double
+  |->
+  `-;
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest, ExplicitClassTemplateInstantation_Declaration) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+template <class T> struct X {};
+[[extern template struct X<float>;]]
+)cpp",
+      {R"txt(
+ExplicitTemplateInstantiation
+|-extern
+|-template
+`-SimpleDeclaration
+  |-struct
+  |-X
+  |-<
+  |-float
+  |->
+  `-;
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest, ClassTemplateSpecialization_Partial) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+template <class T> struct X {};
+[[template <class T> struct X<T*> {};]]
+)cpp",
+      {R"txt(
+TemplateDeclaration
+|-template
+|-<
+|-UnknownDeclaration
+| |-class
+| `-T
+|->
+`-SimpleDeclaration
+  |-struct
+  |-X
+  |-<
+  |-T
+  |-*
+  |->
+  |-{
+  |-}
+  `-;
+)txt"}));
+}
+
+TEST_P(SyntaxTreeTest, ClassTemplateSpecialization_Full) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+template <class T> struct X {};
+[[template <> struct X<int> {};]]
+)cpp",
+      {R"txt(
+TemplateDeclaration
+|-template
+|-<
+|->
+`-SimpleDeclaration
+  |-struct
+  |-X
+  |-<
+  |-int
+  |->
+  |-{
+  |-}
+  `-;
+)txt"}));
 }
 
 TEST_P(SyntaxTreeTest, UsingType) {
