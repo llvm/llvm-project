@@ -18,6 +18,9 @@ __isl_give isl_space *isl_multi_##BASE##_get_space(			\
 	__isl_keep isl_multi_##BASE *multi);				\
 __isl_give isl_space *isl_multi_##BASE##_get_domain_space(		\
 	__isl_keep isl_multi_##BASE *multi);				\
+__isl_export								\
+__isl_give isl_##BASE##_list *isl_multi_##BASE##_get_list(		\
+	__isl_keep isl_multi_##BASE *multi);				\
 __isl_constructor							\
 __isl_give isl_multi_##BASE *isl_multi_##BASE##_from_##BASE##_list(	\
 	__isl_take isl_space *space, __isl_take isl_##BASE##_list *list); \
@@ -117,6 +120,16 @@ __isl_export								\
 __isl_give isl_multi_##BASE *isl_multi_##BASE##_neg(		 	\
 	__isl_take isl_multi_##BASE *multi);
 
+#define ISL_DECLARE_MULTI_MIN_MAX(BASE)					\
+__isl_export								\
+__isl_give isl_multi_##BASE *isl_multi_##BASE##_min(			\
+	__isl_take isl_multi_##BASE *multi1,				\
+	__isl_take isl_multi_##BASE *multi2);				\
+__isl_export								\
+__isl_give isl_multi_##BASE *isl_multi_##BASE##_max(			\
+	__isl_take isl_multi_##BASE *multi1,				\
+	__isl_take isl_multi_##BASE *multi2);
+
 #define ISL_DECLARE_MULTI_ADD_CONSTANT(BASE)				\
 __isl_overload								\
 __isl_give isl_multi_##BASE *isl_multi_##BASE##_add_constant_val(	\
@@ -154,6 +167,12 @@ __isl_give isl_multi_##BASE *isl_multi_##BASE##_add_dims(		\
 __isl_give isl_multi_##BASE *						\
 isl_multi_##BASE##_project_domain_on_params(				\
 	__isl_take isl_multi_##BASE *multi);
+
+#define ISL_DECLARE_MULTI_INSERT_DOMAIN(BASE)				\
+__isl_export								\
+__isl_give isl_multi_##BASE *						\
+isl_multi_##BASE##_insert_domain(__isl_take isl_multi_##BASE *multi,	\
+	__isl_take isl_space *domain);
 
 #define ISL_DECLARE_MULTI_LOCALS(BASE)					\
 __isl_export								\
@@ -212,6 +231,13 @@ __isl_give isl_multi_##BASE *						\
 isl_multi_##BASE##_bind_domain_wrapped_domain(				\
 	__isl_take isl_multi_##BASE *multi,				\
 	__isl_take isl_multi_id *tuple);
+
+#define ISL_DECLARE_MULTI_UNBIND_PARAMS(BASE)				\
+__isl_export								\
+__isl_give isl_multi_##BASE *						\
+isl_multi_##BASE##_unbind_params_insert_domain(				\
+	__isl_take isl_multi_##BASE *multi,				\
+	__isl_take isl_multi_id *domain);
 
 #define ISL_DECLARE_MULTI_PARAM(BASE)					\
 __isl_overload								\

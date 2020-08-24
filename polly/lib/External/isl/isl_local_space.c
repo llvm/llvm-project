@@ -90,9 +90,10 @@ __isl_give isl_local_space *isl_local_space_alloc(__isl_take isl_space *space,
 	return isl_local_space_alloc_div(space, div);
 }
 
-__isl_give isl_local_space *isl_local_space_from_space(__isl_take isl_space *dim)
+__isl_give isl_local_space *isl_local_space_from_space(
+	__isl_take isl_space *space)
 {
-	return isl_local_space_alloc(dim, 0);
+	return isl_local_space_alloc(space, 0);
 }
 
 __isl_give isl_local_space *isl_local_space_copy(__isl_keep isl_local_space *ls)
@@ -534,19 +535,19 @@ __isl_give isl_local_space *isl_local_space_set_from_params(
 }
 
 __isl_give isl_local_space *isl_local_space_reset_space(
-	__isl_take isl_local_space *ls, __isl_take isl_space *dim)
+	__isl_take isl_local_space *ls, __isl_take isl_space *space)
 {
 	ls = isl_local_space_cow(ls);
-	if (!ls || !dim)
+	if (!ls || !space)
 		goto error;
 
 	isl_space_free(ls->dim);
-	ls->dim = dim;
+	ls->dim = space;
 
 	return ls;
 error:
 	isl_local_space_free(ls);
-	isl_space_free(dim);
+	isl_space_free(space);
 	return NULL;
 }
 

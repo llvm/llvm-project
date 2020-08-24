@@ -194,7 +194,7 @@ error:
 	return NULL;
 }
 
-struct isl_vec *isl_vec_copy(struct isl_vec *vec)
+__isl_give isl_vec *isl_vec_copy(__isl_keep isl_vec *vec)
 {
 	if (!vec)
 		return NULL;
@@ -203,7 +203,7 @@ struct isl_vec *isl_vec_copy(struct isl_vec *vec)
 	return vec;
 }
 
-struct isl_vec *isl_vec_dup(struct isl_vec *vec)
+__isl_give isl_vec *isl_vec_dup(__isl_keep isl_vec *vec)
 {
 	struct isl_vec *vec2;
 
@@ -216,7 +216,7 @@ struct isl_vec *isl_vec_dup(struct isl_vec *vec)
 	return vec2;
 }
 
-struct isl_vec *isl_vec_cow(struct isl_vec *vec)
+__isl_give isl_vec *isl_vec_cow(__isl_take isl_vec *vec)
 {
 	struct isl_vec *vec2;
 	if (!vec)
@@ -370,7 +370,7 @@ error:
 	return NULL;
 }
 
-void isl_vec_dump(struct isl_vec *vec)
+void isl_vec_dump(__isl_keep isl_vec *vec)
 {
 	isl_printer *printer;
 
@@ -431,7 +431,7 @@ __isl_give isl_vec *isl_vec_clr(__isl_take isl_vec *vec)
 	return vec;
 }
 
-void isl_vec_lcm(struct isl_vec *vec, isl_int *lcm)
+void isl_vec_lcm(__isl_keep isl_vec *vec, isl_int *lcm)
 {
 	isl_seq_lcm(vec->block.data, vec->size, lcm);
 }
@@ -452,7 +452,7 @@ __isl_give isl_vec *isl_vec_ceil(__isl_take isl_vec *vec)
 	return vec;
 }
 
-struct isl_vec *isl_vec_normalize(struct isl_vec *vec)
+__isl_give isl_vec *isl_vec_normalize(__isl_take isl_vec *vec)
 {
 	if (!vec)
 		return NULL;

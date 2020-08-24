@@ -2080,10 +2080,12 @@ static __isl_give isl_basic_set *add_constraints_dim_map(
 	__isl_take isl_basic_set *dst, __isl_take isl_basic_set *src,
 	__isl_take isl_dim_map *dim_map)
 {
-	int n_eq, n_ineq;
+	isl_size n_eq, n_ineq;
 
 	n_eq = isl_basic_set_n_equality(src);
 	n_ineq = isl_basic_set_n_inequality(src);
+	if (n_eq < 0 || n_ineq < 0)
+		dst = isl_basic_set_free(dst);
 	dst = isl_basic_set_extend_constraints(dst, n_eq, n_ineq);
 	dst = isl_basic_set_add_constraints_dim_map(dst, src, dim_map);
 	return dst;
@@ -2561,12 +2563,17 @@ static int parametric_intra_edge_multiplicity(struct isl_sched_edge *edge,
 static isl_stat update_count(__isl_take isl_basic_set *bset,
 	int f, int *n_eq, int *n_ineq)
 {
-	if (!bset)
+	isl_size eq, ineq;
+
+	eq = isl_basic_set_n_equality(bset);
+	ineq = isl_basic_set_n_inequality(bset);
+	isl_basic_set_free(bset);
+
+	if (eq < 0 || ineq < 0)
 		return isl_stat_error;
 
-	*n_eq += isl_basic_set_n_equality(bset);
-	*n_ineq += isl_basic_set_n_inequality(bset);
-	isl_basic_set_free(bset);
+	*n_eq += eq;
+	*n_ineq += ineq;
 
 	return isl_stat_ok;
 }
@@ -4404,7 +4411,7 @@ static isl_stat setup_carry_lp(isl_ctx *ctx, struct isl_sched_graph *graph,
 {
 	int i;
 	int k;
-	isl_space *dim;
+	isl_space *space;
 	unsigned total;
 	int n_eq, n_ineq;
 
@@ -4418,11 +4425,11 @@ static isl_stat setup_carry_lp(isl_ctx *ctx, struct isl_sched_graph *graph,
 	if (count_all_constraints(intra, inter, &n_eq, &n_ineq) < 0)
 		return isl_stat_error;
 
-	dim = isl_space_set_alloc(ctx, 0, total);
+	space = isl_space_set_alloc(ctx, 0, total);
 	isl_basic_set_free(graph->lp);
 	n_eq += 3;
 	n_ineq += n_edge;
-	graph->lp = isl_basic_set_alloc_space(dim, 0, n_eq, n_ineq);
+	graph->lp = isl_basic_set_alloc_space(space, 0, n_eq, n_ineq);
 	graph->lp = isl_basic_set_set_rational(graph->lp);
 
 	k = isl_basic_set_alloc_equality(graph->lp);
@@ -5007,13 +5014,13 @@ static isl_stat add_lineality(__isl_take isl_set *set, void *user)
 	struct isl_exploit_lineality_data *data = user;
 	isl_basic_set *hull;
 	isl_size dim;
-	int n_eq;
+	isl_size n_eq;
 
 	set = isl_set_remove_divs(set);
 	hull = isl_set_unshifted_simple_hull(set);
 	dim = isl_basic_set_dim(hull, isl_dim_set);
 	n_eq = isl_basic_set_n_equality(hull);
-	if (dim < 0)
+	if (dim < 0 || n_eq < 0)
 		goto error;
 	if (dim != n_eq)
 		return add_non_trivial_lineality(hull, data);
@@ -7318,7 +7325,7 @@ static isl_stat compute_weights(struct isl_sched_graph *graph,
 		struct isl_sched_node *dst = edge->dst;
 		isl_basic_map *hull;
 		isl_bool prox;
-		isl_size n_in, n_out;
+		isl_size n_in, n_out, n;
 
 		prox = is_non_empty_proximity(edge);
 		if (prox < 0)
@@ -7350,10 +7357,11 @@ static isl_stat compute_weights(struct isl_sched_graph *graph,
 							isl_dim_in, 0, n_in);
 		hull = isl_basic_map_drop_constraints_not_involving_dims(hull,
 							isl_dim_out, 0, n_out);
-		if (!hull)
-			return isl_stat_error;
-		edge->weight = isl_basic_map_n_equality(hull);
+		n = isl_basic_map_n_equality(hull);
 		isl_basic_map_free(hull);
+		if (n < 0)
+			return isl_stat_error;
+		edge->weight = n;
 
 		if (edge->weight > graph->max_weight)
 			graph->max_weight = edge->weight;
