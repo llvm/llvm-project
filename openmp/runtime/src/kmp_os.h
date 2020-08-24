@@ -14,8 +14,9 @@
 #define KMP_OS_H
 
 #include "kmp_config.h"
-#include <stdlib.h>
 #include <atomic>
+#include <stdarg.h>
+#include <stdlib.h>
 
 #define KMP_FTN_PLAIN 1
 #define KMP_FTN_APPEND 2
