@@ -1104,7 +1104,7 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
   // a jmp insn must be modified to shrink the jmp insn or to flip the jmp
   // insn.  This is primarily used to relax and optimize jumps created with
   // basic block sections.
-  if (auto *sec = dyn_cast<InputSection>(this)) {
+  if (isa<InputSection>(this)) {
     for (const JumpInstrMod &jumpMod : jumpInstrMods) {
       uint64_t offset = jumpMod.offset;
       uint8_t *bufLoc = buf + offset;
