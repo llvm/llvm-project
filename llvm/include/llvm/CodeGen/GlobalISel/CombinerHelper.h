@@ -310,7 +310,7 @@ public:
   /// LHS & mask == LHS. (E.g., an all-ones value.)
   ///
   /// \param [in] MI - The G_AND instruction.
-  /// \param [out] Reg - A register the G_AND should be replaced with on
+  /// \param [out] Replacement - A register the G_AND should be replaced with on
   /// success.
   bool matchAndWithTrivialMask(MachineInstr &MI, Register &Replacement);
 
