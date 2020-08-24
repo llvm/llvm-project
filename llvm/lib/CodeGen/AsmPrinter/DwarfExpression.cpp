@@ -231,14 +231,16 @@ void DwarfExpression::addConstantFP(const APFloat &APF, const AsmPrinter &AP) {
     emitOp(dwarf::DW_OP_implicit_value);
     emitUnsigned(NumBytes /*Size of the block in bytes*/);
 
-    const uint64_t *Value = API.getRawData();
-    const bool IsLittleEndian = AP.getDataLayout().isLittleEndian();
-    uint64_t Swapped = support::endian::byte_swap(
-        *Value, IsLittleEndian ? support::little : support::big);
+    // The loop below is emitting the value starting at least significant byte,
+    // so we need to perform a byte-swap to get the byte order correct in case
+    // of a big-endian target.
+    if (AP.getDataLayout().isBigEndian())
+      API = API.byteSwap();
 
-    const char *SwappedBytes = reinterpret_cast<const char *>(&Swapped);
-    for (int i = 0; i < NumBytes; ++i)
-      emitData1(SwappedBytes[i]);
+    for (int i = 0; i < NumBytes; ++i) {
+      emitData1(API.getZExtValue() & 0xFF);
+      API = API.lshr(8);
+    }
 
     return;
   }
