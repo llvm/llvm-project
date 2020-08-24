@@ -821,7 +821,7 @@ let hasSideEffects = 0 in {
   def XVCVDPSXDS : XX2Form<60, 472,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvdpsxds $XT, $XB", IIC_VecFP,
-                      [(set v2i64:$XT, (fp_to_sint v2f64:$XB))]>;
+                      [(set v2i64:$XT, (any_fp_to_sint v2f64:$XB))]>;
   def XVCVDPSXWS : XX2Form<60, 216,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvdpsxws $XT, $XB", IIC_VecFP,
@@ -829,7 +829,7 @@ let hasSideEffects = 0 in {
   def XVCVDPUXDS : XX2Form<60, 456,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvdpuxds $XT, $XB", IIC_VecFP,
-                      [(set v2i64:$XT, (fp_to_uint v2f64:$XB))]>;
+                      [(set v2i64:$XT, (any_fp_to_uint v2f64:$XB))]>;
   def XVCVDPUXWS : XX2Form<60, 200,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvdpuxws $XT, $XB", IIC_VecFP,
@@ -845,18 +845,18 @@ let hasSideEffects = 0 in {
   def XVCVSPSXWS : XX2Form<60, 152,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvspsxws $XT, $XB", IIC_VecFP,
-                      [(set v4i32:$XT, (fp_to_sint v4f32:$XB))]>;
+                      [(set v4i32:$XT, (any_fp_to_sint v4f32:$XB))]>;
   def XVCVSPUXDS : XX2Form<60, 392,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvspuxds $XT, $XB", IIC_VecFP, []>;
   def XVCVSPUXWS : XX2Form<60, 136,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvspuxws $XT, $XB", IIC_VecFP,
-                      [(set v4i32:$XT, (fp_to_uint v4f32:$XB))]>;
+                      [(set v4i32:$XT, (any_fp_to_uint v4f32:$XB))]>;
   def XVCVSXDDP : XX2Form<60, 504,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvsxddp $XT, $XB", IIC_VecFP,
-                      [(set v2f64:$XT, (sint_to_fp v2i64:$XB))]>;
+                      [(set v2f64:$XT, (any_sint_to_fp v2i64:$XB))]>;
   def XVCVSXDSP : XX2Form<60, 440,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvsxdsp $XT, $XB", IIC_VecFP,
@@ -868,11 +868,11 @@ let hasSideEffects = 0 in {
   def XVCVSXWSP : XX2Form<60, 184,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvsxwsp $XT, $XB", IIC_VecFP,
-                      [(set v4f32:$XT, (sint_to_fp v4i32:$XB))]>;
+                      [(set v4f32:$XT, (any_sint_to_fp v4i32:$XB))]>;
   def XVCVUXDDP : XX2Form<60, 488,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvuxddp $XT, $XB", IIC_VecFP,
-                      [(set v2f64:$XT, (uint_to_fp v2i64:$XB))]>;
+                      [(set v2f64:$XT, (any_uint_to_fp v2i64:$XB))]>;
   def XVCVUXDSP : XX2Form<60, 424,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvuxdsp $XT, $XB", IIC_VecFP,
@@ -884,7 +884,7 @@ let hasSideEffects = 0 in {
   def XVCVUXWSP : XX2Form<60, 168,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvuxwsp $XT, $XB", IIC_VecFP,
-                      [(set v4f32:$XT, (uint_to_fp v4i32:$XB))]>;
+                      [(set v4f32:$XT, (any_uint_to_fp v4i32:$XB))]>;
 
   // Rounding Instructions respecting current rounding mode
   def XSRDPIC : XX2Form<60, 107,
