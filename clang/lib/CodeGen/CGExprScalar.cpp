@@ -32,6 +32,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/FixedPointBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -356,11 +357,6 @@ public:
   /// and an integer.
   Value *EmitFixedPointConversion(Value *Src, QualType SrcTy, QualType DstTy,
                                   SourceLocation Loc);
-  Value *EmitFixedPointConversion(Value *Src,
-                                  llvm::FixedPointSemantics &SrcFixedSema,
-                                  llvm::FixedPointSemantics &DstFixedSema,
-                                  SourceLocation Loc,
-                                  bool DstIsInteger = false);
 
   /// Emit a conversion from the specified complex type to the specified
   /// destination type, where the destination type is an LLVM scalar type.
@@ -1447,91 +1443,17 @@ Value *ScalarExprEmitter::EmitFixedPointConversion(Value *Src, QualType SrcTy,
                                                    SourceLocation Loc) {
   auto SrcFPSema = CGF.getContext().getFixedPointSemantics(SrcTy);
   auto DstFPSema = CGF.getContext().getFixedPointSemantics(DstTy);
-  return EmitFixedPointConversion(Src, SrcFPSema, DstFPSema, Loc,
-                                  DstTy->isIntegerType());
-}
-
-Value *ScalarExprEmitter::EmitFixedPointConversion(
-    Value *Src, llvm::FixedPointSemantics &SrcFPSema,
-    llvm::FixedPointSemantics &DstFPSema,
-    SourceLocation Loc, bool DstIsInteger) {
-  using llvm::APFixedPoint;
-  using llvm::APInt;
-  using llvm::ConstantInt;
-  using llvm::Value;
-
-  unsigned SrcWidth = SrcFPSema.getWidth();
-  unsigned DstWidth = DstFPSema.getWidth();
-  unsigned SrcScale = SrcFPSema.getScale();
-  unsigned DstScale = DstFPSema.getScale();
-  bool SrcIsSigned = SrcFPSema.isSigned();
-  bool DstIsSigned = DstFPSema.isSigned();
-
-  llvm::Type *DstIntTy = Builder.getIntNTy(DstWidth);
-
-  Value *Result = Src;
-  unsigned ResultWidth = SrcWidth;
-
-  // Downscale.
-  if (DstScale < SrcScale) {
-    // When converting to integers, we round towards zero. For negative numbers,
-    // right shifting rounds towards negative infinity. In this case, we can
-    // just round up before shifting.
-    if (DstIsInteger && SrcIsSigned) {
-      Value *Zero = llvm::Constant::getNullValue(Result->getType());
-      Value *IsNegative = Builder.CreateICmpSLT(Result, Zero);
-      Value *LowBits = ConstantInt::get(
-          CGF.getLLVMContext(), APInt::getLowBitsSet(ResultWidth, SrcScale));
-      Value *Rounded = Builder.CreateAdd(Result, LowBits);
-      Result = Builder.CreateSelect(IsNegative, Rounded, Result);
-    }
-
-    Result = SrcIsSigned
-                 ? Builder.CreateAShr(Result, SrcScale - DstScale, "downscale")
-                 : Builder.CreateLShr(Result, SrcScale - DstScale, "downscale");
-  }
-
-  if (!DstFPSema.isSaturated()) {
-    // Resize.
-    Result = Builder.CreateIntCast(Result, DstIntTy, SrcIsSigned, "resize");
-
-    // Upscale.
-    if (DstScale > SrcScale)
-      Result = Builder.CreateShl(Result, DstScale - SrcScale, "upscale");
-  } else {
-    // Adjust the number of fractional bits.
-    if (DstScale > SrcScale) {
-      // Compare to DstWidth to prevent resizing twice.
-      ResultWidth = std::max(SrcWidth + DstScale - SrcScale, DstWidth);
-      llvm::Type *UpscaledTy = Builder.getIntNTy(ResultWidth);
-      Result = Builder.CreateIntCast(Result, UpscaledTy, SrcIsSigned, "resize");
-      Result = Builder.CreateShl(Result, DstScale - SrcScale, "upscale");
-    }
-
-    // Handle saturation.
-    bool LessIntBits = DstFPSema.getIntegralBits() < SrcFPSema.getIntegralBits();
-    if (LessIntBits) {
-      Value *Max = ConstantInt::get(
-          CGF.getLLVMContext(),
-          APFixedPoint::getMax(DstFPSema).getValue().extOrTrunc(ResultWidth));
-      Value *TooHigh = SrcIsSigned ? Builder.CreateICmpSGT(Result, Max)
-                                   : Builder.CreateICmpUGT(Result, Max);
-      Result = Builder.CreateSelect(TooHigh, Max, Result, "satmax");
-    }
-    // Cannot overflow min to dest type if src is unsigned since all fixed
-    // point types can cover the unsigned min of 0.
-    if (SrcIsSigned && (LessIntBits || !DstIsSigned)) {
-      Value *Min = ConstantInt::get(
-          CGF.getLLVMContext(),
-          APFixedPoint::getMin(DstFPSema).getValue().extOrTrunc(ResultWidth));
-      Value *TooLow = Builder.CreateICmpSLT(Result, Min);
-      Result = Builder.CreateSelect(TooLow, Min, Result, "satmin");
-    }
-
-    // Resize the integer part to get the final destination size.
-    if (ResultWidth != DstWidth)
-      Result = Builder.CreateIntCast(Result, DstIntTy, SrcIsSigned, "resize");
-  }
+  llvm::FixedPointBuilder<CGBuilderTy> FPBuilder(Builder);
+  llvm::Value *Result;
+  if (DstTy->isIntegerType())
+    Result = FPBuilder.CreateFixedToInteger(Src, SrcFPSema,
+                                            DstFPSema.getWidth(),
+                                            DstFPSema.isSigned());
+  else if (SrcTy->isIntegerType())
+    Result =  FPBuilder.CreateIntegerToFixed(Src, SrcFPSema.isSigned(),
+                                             DstFPSema);
+  else
+    Result = FPBuilder.CreateFixedToFixed(Src, SrcFPSema, DstFPSema);
   return Result;
 }
 
@@ -2668,12 +2590,9 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     // Now, convert from our invented integer literal to the type of the unary
     // op. This will upscale and saturate if necessary. This value can become
     // undef in some cases.
-    auto SrcSema =
-        llvm::FixedPointSemantics::GetIntegerSemantics(
-            value->getType()->getScalarSizeInBits(), /*IsSigned=*/true);
+    llvm::FixedPointBuilder<CGBuilderTy> FPBuilder(Builder);
     auto DstSema = CGF.getContext().getFixedPointSemantics(Info.Ty);
-    Info.RHS = EmitFixedPointConversion(Info.RHS, SrcSema, DstSema,
-                                        E->getExprLoc());
+    Info.RHS = FPBuilder.CreateIntegerToFixed(Info.RHS, true, DstSema);
     value = EmitFixedPointBinOp(Info);
 
   // Objective-C pointer types.
@@ -3596,91 +3515,52 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
   auto ResultFixedSema = Ctx.getFixedPointSemantics(ResultTy);
   auto CommonFixedSema = LHSFixedSema.getCommonSemantics(RHSFixedSema);
 
-  // Convert the operands to the full precision type.
-  Value *FullLHS = EmitFixedPointConversion(LHS, LHSFixedSema, CommonFixedSema,
-                                            op.E->getExprLoc());
-  Value *FullRHS = EmitFixedPointConversion(RHS, RHSFixedSema, CommonFixedSema,
-                                            op.E->getExprLoc());
-
   // Perform the actual operation.
   Value *Result;
+  llvm::FixedPointBuilder<CGBuilderTy> FPBuilder(Builder);
   switch (op.Opcode) {
   case BO_AddAssign:
-  case BO_Add: {
-    if (CommonFixedSema.isSaturated()) {
-      llvm::Intrinsic::ID IID = CommonFixedSema.isSigned()
-                                    ? llvm::Intrinsic::sadd_sat
-                                    : llvm::Intrinsic::uadd_sat;
-      Result = Builder.CreateBinaryIntrinsic(IID, FullLHS, FullRHS);
-    } else {
-      Result = Builder.CreateAdd(FullLHS, FullRHS);
-    }
+  case BO_Add:
+    Result = FPBuilder.CreateAdd(LHS, LHSFixedSema, RHS, RHSFixedSema);
     break;
-  }
   case BO_SubAssign:
-  case BO_Sub: {
-    if (CommonFixedSema.isSaturated()) {
-      llvm::Intrinsic::ID IID = CommonFixedSema.isSigned()
-                                    ? llvm::Intrinsic::ssub_sat
-                                    : llvm::Intrinsic::usub_sat;
-      Result = Builder.CreateBinaryIntrinsic(IID, FullLHS, FullRHS);
-    } else {
-      Result = Builder.CreateSub(FullLHS, FullRHS);
-    }
+  case BO_Sub:
+    Result = FPBuilder.CreateSub(LHS, LHSFixedSema, RHS, RHSFixedSema);
     break;
-  }
   case BO_MulAssign:
-  case BO_Mul: {
-    llvm::Intrinsic::ID IID;
-    if (CommonFixedSema.isSaturated())
-      IID = CommonFixedSema.isSigned() ? llvm::Intrinsic::smul_fix_sat
-                                       : llvm::Intrinsic::umul_fix_sat;
-    else
-      IID = CommonFixedSema.isSigned() ? llvm::Intrinsic::smul_fix
-                                       : llvm::Intrinsic::umul_fix;
-    Result = Builder.CreateIntrinsic(IID, {FullLHS->getType()},
-        {FullLHS, FullRHS, Builder.getInt32(CommonFixedSema.getScale())});
+  case BO_Mul:
+    Result = FPBuilder.CreateMul(LHS, LHSFixedSema, RHS, RHSFixedSema);
     break;
-  }
   case BO_DivAssign:
-  case BO_Div: {
-    llvm::Intrinsic::ID IID;
-    if (CommonFixedSema.isSaturated())
-      IID = CommonFixedSema.isSigned() ? llvm::Intrinsic::sdiv_fix_sat
-                                       : llvm::Intrinsic::udiv_fix_sat;
-    else
-      IID = CommonFixedSema.isSigned() ? llvm::Intrinsic::sdiv_fix
-                                       : llvm::Intrinsic::udiv_fix;
-    Result = Builder.CreateIntrinsic(IID, {FullLHS->getType()},
-        {FullLHS, FullRHS, Builder.getInt32(CommonFixedSema.getScale())});
-    break;    
-  }
+  case BO_Div:
+    Result = FPBuilder.CreateDiv(LHS, LHSFixedSema, RHS, RHSFixedSema);
+    break;
+  case BO_ShlAssign:
+  case BO_Shl:
+    Result = FPBuilder.CreateShl(LHS, LHSFixedSema, RHS);
+    break;
+  case BO_ShrAssign:
+  case BO_Shr:
+    Result = FPBuilder.CreateShr(LHS, LHSFixedSema, RHS);
+    break;
   case BO_LT:
-    return CommonFixedSema.isSigned() ? Builder.CreateICmpSLT(FullLHS, FullRHS)
-                                      : Builder.CreateICmpULT(FullLHS, FullRHS);
+    return FPBuilder.CreateLT(LHS, LHSFixedSema, RHS, RHSFixedSema);
   case BO_GT:
-    return CommonFixedSema.isSigned() ? Builder.CreateICmpSGT(FullLHS, FullRHS)
-                                      : Builder.CreateICmpUGT(FullLHS, FullRHS);
+    return FPBuilder.CreateGT(LHS, LHSFixedSema, RHS, RHSFixedSema);
   case BO_LE:
-    return CommonFixedSema.isSigned() ? Builder.CreateICmpSLE(FullLHS, FullRHS)
-                                      : Builder.CreateICmpULE(FullLHS, FullRHS);
+    return FPBuilder.CreateLE(LHS, LHSFixedSema, RHS, RHSFixedSema);
   case BO_GE:
-    return CommonFixedSema.isSigned() ? Builder.CreateICmpSGE(FullLHS, FullRHS)
-                                      : Builder.CreateICmpUGE(FullLHS, FullRHS);
+    return FPBuilder.CreateGE(LHS, LHSFixedSema, RHS, RHSFixedSema);
   case BO_EQ:
     // For equality operations, we assume any padding bits on unsigned types are
     // zero'd out. They could be overwritten through non-saturating operations
     // that cause overflow, but this leads to undefined behavior.
-    return Builder.CreateICmpEQ(FullLHS, FullRHS);
+    return FPBuilder.CreateEQ(LHS, LHSFixedSema, RHS, RHSFixedSema);
   case BO_NE:
-    return Builder.CreateICmpNE(FullLHS, FullRHS);
-  case BO_Shl:
-  case BO_Shr:
+    return FPBuilder.CreateNE(LHS, LHSFixedSema, RHS, RHSFixedSema);
   case BO_Cmp:
   case BO_LAnd:
   case BO_LOr:
-  case BO_ShlAssign:
-  case BO_ShrAssign:
     llvm_unreachable("Found unimplemented fixed point binary operation");
   case BO_PtrMemD:
   case BO_PtrMemI:
@@ -3697,9 +3577,12 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
     llvm_unreachable("Found unsupported binary operation for fixed point types.");
   }
 
+  bool IsShift = BinaryOperator::isShiftOp(op.Opcode) ||
+                 BinaryOperator::isShiftAssignOp(op.Opcode);
   // Convert to the result type.
-  return EmitFixedPointConversion(Result, CommonFixedSema, ResultFixedSema,
-                                  op.E->getExprLoc());
+  return FPBuilder.CreateFixedToFixed(Result, IsShift ? LHSFixedSema
+                                                      : CommonFixedSema,
+                                      ResultFixedSema);
 }
 
 Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
@@ -3826,6 +3709,10 @@ Value *ScalarExprEmitter::ConstrainShiftValue(Value *LHS, Value *RHS,
 }
 
 Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
+  // TODO: This misses out on the sanitizer check below.
+  if (Ops.isFixedPointOp())
+    return EmitFixedPointBinOp(Ops);
+
   // LLVM requires the LHS and RHS to be the same type: promote or truncate the
   // RHS to the same size as the LHS.
   Value *RHS = Ops.RHS;
@@ -3893,6 +3780,10 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
 }
 
 Value *ScalarExprEmitter::EmitShr(const BinOpInfo &Ops) {
+  // TODO: This misses out on the sanitizer check below.
+  if (Ops.isFixedPointOp())
+    return EmitFixedPointBinOp(Ops);
+
   // LLVM requires the LHS and RHS to be the same type: promote or truncate the
   // RHS to the same size as the LHS.
   Value *RHS = Ops.RHS;

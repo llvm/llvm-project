@@ -567,3 +567,50 @@ void div_csa() {
   c /= sa;
 }
 
+
+// CHECK-LABEL: @shft_ai(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @i, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* @a, align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    store i32 [[TMP2]], i32* @a, align 4
+// CHECK-NEXT:    ret void
+//
+void shft_ai() {
+  a <<= i;
+}
+
+// SIGNED-LABEL: @shft_sufi(
+// SIGNED-NEXT:  entry:
+// SIGNED-NEXT:    [[TMP0:%.*]] = load i32, i32* @i, align 4
+// SIGNED-NEXT:    [[TMP1:%.*]] = load i16, i16* @suf, align 2
+// SIGNED-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP0]] to i16
+// SIGNED-NEXT:    [[TMP3:%.*]] = call i16 @llvm.ushl.sat.i16(i16 [[TMP1]], i16 [[TMP2]])
+// SIGNED-NEXT:    store i16 [[TMP3]], i16* @suf, align 2
+// SIGNED-NEXT:    ret void
+//
+// UNSIGNED-LABEL: @shft_sufi(
+// UNSIGNED-NEXT:  entry:
+// UNSIGNED-NEXT:    [[TMP0:%.*]] = load i32, i32* @i, align 4
+// UNSIGNED-NEXT:    [[TMP1:%.*]] = load i16, i16* @suf, align 2
+// UNSIGNED-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP0]] to i16
+// UNSIGNED-NEXT:    [[TMP3:%.*]] = call i16 @llvm.sshl.sat.i16(i16 [[TMP1]], i16 [[TMP2]])
+// UNSIGNED-NEXT:    store i16 [[TMP3]], i16* @suf, align 2
+// UNSIGNED-NEXT:    ret void
+//
+void shft_sufi() {
+  suf <<= i;
+}
+
+// CHECK-LABEL: @shft_ulai(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @i, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i64, i64* @ula, align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP0]] to i64
+// CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP1]], [[TMP2]]
+// CHECK-NEXT:    store i64 [[TMP3]], i64* @ula, align 8
+// CHECK-NEXT:    ret void
+//
+void shft_ulai() {
+  ula >>= i;
+}

@@ -148,9 +148,9 @@ void inc_slf() {
 // UNSIGNED-LABEL: @inc_sua(
 // UNSIGNED-NEXT:  entry:
 // UNSIGNED-NEXT:    [[TMP0:%.*]] = load i32, i32* @sua, align 4
-// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i32 [[TMP0]] to i31
-// UNSIGNED-NEXT:    [[TMP1:%.*]] = call i31 @llvm.uadd.sat.i31(i31 [[RESIZE]], i31 32768)
-// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = zext i31 [[TMP1]] to i32
+// UNSIGNED-NEXT:    [[TMP1:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[TMP0]], i32 32768)
+// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i32 [[TMP1]] to i31
+// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = zext i31 [[RESIZE]] to i32
 // UNSIGNED-NEXT:    store i32 [[RESIZE1]], i32* @sua, align 4
 // UNSIGNED-NEXT:    ret void
 //
@@ -168,9 +168,9 @@ void inc_sua() {
 // UNSIGNED-LABEL: @inc_susa(
 // UNSIGNED-NEXT:  entry:
 // UNSIGNED-NEXT:    [[TMP0:%.*]] = load i16, i16* @susa, align 2
-// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i16 [[TMP0]] to i15
-// UNSIGNED-NEXT:    [[TMP1:%.*]] = call i15 @llvm.uadd.sat.i15(i15 [[RESIZE]], i15 128)
-// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = zext i15 [[TMP1]] to i16
+// UNSIGNED-NEXT:    [[TMP1:%.*]] = call i16 @llvm.sadd.sat.i16(i16 [[TMP0]], i16 128)
+// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i16 [[TMP1]] to i15
+// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = zext i15 [[RESIZE]] to i16
 // UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @susa, align 2
 // UNSIGNED-NEXT:    ret void
 //
@@ -188,9 +188,9 @@ void inc_susa() {
 // UNSIGNED-LABEL: @inc_suf(
 // UNSIGNED-NEXT:  entry:
 // UNSIGNED-NEXT:    [[TMP0:%.*]] = load i16, i16* @suf, align 2
-// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i16 [[TMP0]] to i15
-// UNSIGNED-NEXT:    [[TMP1:%.*]] = call i15 @llvm.uadd.sat.i15(i15 [[RESIZE]], i15 -1)
-// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = zext i15 [[TMP1]] to i16
+// UNSIGNED-NEXT:    [[TMP1:%.*]] = call i16 @llvm.sadd.sat.i16(i16 [[TMP0]], i16 32767)
+// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i16 [[TMP1]] to i15
+// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = zext i15 [[RESIZE]] to i16
 // UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @suf, align 2
 // UNSIGNED-NEXT:    ret void
 //
@@ -329,9 +329,11 @@ void dec_slf() {
 // UNSIGNED-LABEL: @dec_sua(
 // UNSIGNED-NEXT:  entry:
 // UNSIGNED-NEXT:    [[TMP0:%.*]] = load i32, i32* @sua, align 4
-// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i32 [[TMP0]] to i31
-// UNSIGNED-NEXT:    [[TMP1:%.*]] = call i31 @llvm.usub.sat.i31(i31 [[RESIZE]], i31 32768)
-// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = zext i31 [[TMP1]] to i32
+// UNSIGNED-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ssub.sat.i32(i32 [[TMP0]], i32 32768)
+// UNSIGNED-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 0
+// UNSIGNED-NEXT:    [[SATMIN:%.*]] = select i1 [[TMP2]], i32 0, i32 [[TMP1]]
+// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i32 [[SATMIN]] to i31
+// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = zext i31 [[RESIZE]] to i32
 // UNSIGNED-NEXT:    store i32 [[RESIZE1]], i32* @sua, align 4
 // UNSIGNED-NEXT:    ret void
 //
@@ -349,9 +351,11 @@ void dec_sua() {
 // UNSIGNED-LABEL: @dec_susa(
 // UNSIGNED-NEXT:  entry:
 // UNSIGNED-NEXT:    [[TMP0:%.*]] = load i16, i16* @susa, align 2
-// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i16 [[TMP0]] to i15
-// UNSIGNED-NEXT:    [[TMP1:%.*]] = call i15 @llvm.usub.sat.i15(i15 [[RESIZE]], i15 128)
-// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = zext i15 [[TMP1]] to i16
+// UNSIGNED-NEXT:    [[TMP1:%.*]] = call i16 @llvm.ssub.sat.i16(i16 [[TMP0]], i16 128)
+// UNSIGNED-NEXT:    [[TMP2:%.*]] = icmp slt i16 [[TMP1]], 0
+// UNSIGNED-NEXT:    [[SATMIN:%.*]] = select i1 [[TMP2]], i16 0, i16 [[TMP1]]
+// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i16 [[SATMIN]] to i15
+// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = zext i15 [[RESIZE]] to i16
 // UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @susa, align 2
 // UNSIGNED-NEXT:    ret void
 //
@@ -369,9 +373,11 @@ void dec_susa() {
 // UNSIGNED-LABEL: @dec_suf(
 // UNSIGNED-NEXT:  entry:
 // UNSIGNED-NEXT:    [[TMP0:%.*]] = load i16, i16* @suf, align 2
-// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i16 [[TMP0]] to i15
-// UNSIGNED-NEXT:    [[TMP1:%.*]] = call i15 @llvm.usub.sat.i15(i15 [[RESIZE]], i15 -1)
-// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = zext i15 [[TMP1]] to i16
+// UNSIGNED-NEXT:    [[TMP1:%.*]] = call i16 @llvm.ssub.sat.i16(i16 [[TMP0]], i16 32767)
+// UNSIGNED-NEXT:    [[TMP2:%.*]] = icmp slt i16 [[TMP1]], 0
+// UNSIGNED-NEXT:    [[SATMIN:%.*]] = select i1 [[TMP2]], i16 0, i16 [[TMP1]]
+// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i16 [[SATMIN]] to i15
+// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = zext i15 [[RESIZE]] to i16
 // UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @suf, align 2
 // UNSIGNED-NEXT:    ret void
 //
@@ -456,9 +462,11 @@ void neg_sf() {
 // UNSIGNED-LABEL: @neg_susa(
 // UNSIGNED-NEXT:  entry:
 // UNSIGNED-NEXT:    [[TMP0:%.*]] = load i16, i16* @susa, align 2
-// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i16 [[TMP0]] to i15
-// UNSIGNED-NEXT:    [[TMP1:%.*]] = call i15 @llvm.usub.sat.i15(i15 0, i15 [[RESIZE]])
-// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = zext i15 [[TMP1]] to i16
+// UNSIGNED-NEXT:    [[TMP1:%.*]] = call i16 @llvm.ssub.sat.i16(i16 0, i16 [[TMP0]])
+// UNSIGNED-NEXT:    [[TMP2:%.*]] = icmp slt i16 [[TMP1]], 0
+// UNSIGNED-NEXT:    [[SATMIN:%.*]] = select i1 [[TMP2]], i16 0, i16 [[TMP1]]
+// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i16 [[SATMIN]] to i15
+// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = zext i15 [[RESIZE]] to i16
 // UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @susa, align 2
 // UNSIGNED-NEXT:    ret void
 //
@@ -476,9 +484,11 @@ void neg_susa() {
 // UNSIGNED-LABEL: @neg_suf(
 // UNSIGNED-NEXT:  entry:
 // UNSIGNED-NEXT:    [[TMP0:%.*]] = load i16, i16* @suf, align 2
-// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i16 [[TMP0]] to i15
-// UNSIGNED-NEXT:    [[TMP1:%.*]] = call i15 @llvm.usub.sat.i15(i15 0, i15 [[RESIZE]])
-// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = zext i15 [[TMP1]] to i16
+// UNSIGNED-NEXT:    [[TMP1:%.*]] = call i16 @llvm.ssub.sat.i16(i16 0, i16 [[TMP0]])
+// UNSIGNED-NEXT:    [[TMP2:%.*]] = icmp slt i16 [[TMP1]], 0
+// UNSIGNED-NEXT:    [[SATMIN:%.*]] = select i1 [[TMP2]], i16 0, i16 [[TMP1]]
+// UNSIGNED-NEXT:    [[RESIZE:%.*]] = trunc i16 [[SATMIN]] to i15
+// UNSIGNED-NEXT:    [[RESIZE1:%.*]] = zext i15 [[RESIZE]] to i16
 // UNSIGNED-NEXT:    store i16 [[RESIZE1]], i16* @suf, align 2
 // UNSIGNED-NEXT:    ret void
 //

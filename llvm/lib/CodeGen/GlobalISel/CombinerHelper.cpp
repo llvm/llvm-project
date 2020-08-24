@@ -44,6 +44,10 @@ CombinerHelper::CombinerHelper(GISelChangeObserver &Observer,
   (void)this->KB;
 }
 
+const TargetLowering &CombinerHelper::getTargetLowering() const {
+  return *Builder.getMF().getSubtarget().getTargetLowering();
+}
+
 bool CombinerHelper::isLegalOrBeforeLegalizer(
     const LegalityQuery &Query) const {
   return !LI || LI->getAction(Query).Action == LegalizeActions::Legal;
@@ -1498,6 +1502,59 @@ bool CombinerHelper::applyCombineMulToShl(MachineInstr &MI,
   MI.setDesc(MIB.getTII().get(TargetOpcode::G_SHL));
   MI.getOperand(2).setReg(ShiftCst.getReg(0));
   Observer.changedInstr(MI);
+  return true;
+}
+
+// shl ([sza]ext x), y => zext (shl x, y), if shift does not overflow source
+bool CombinerHelper::matchCombineShlOfExtend(MachineInstr &MI,
+                                             RegisterImmPair &MatchData) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHL && KB);
+
+  Register LHS = MI.getOperand(1).getReg();
+
+  Register ExtSrc;
+  if (!mi_match(LHS, MRI, m_GAnyExt(m_Reg(ExtSrc))) &&
+      !mi_match(LHS, MRI, m_GZExt(m_Reg(ExtSrc))) &&
+      !mi_match(LHS, MRI, m_GSExt(m_Reg(ExtSrc))))
+    return false;
+
+  // TODO: Should handle vector splat.
+  Register RHS = MI.getOperand(2).getReg();
+  auto MaybeShiftAmtVal = getConstantVRegValWithLookThrough(RHS, MRI);
+  if (!MaybeShiftAmtVal)
+    return false;
+
+  if (LI) {
+    LLT SrcTy = MRI.getType(ExtSrc);
+
+    // We only really care about the legality with the shifted value. We can
+    // pick any type the constant shift amount, so ask the target what to
+    // use. Otherwise we would have to guess and hope it is reported as legal.
+    LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(SrcTy);
+    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SHL, {SrcTy, ShiftAmtTy}}))
+      return false;
+  }
+
+  int64_t ShiftAmt = MaybeShiftAmtVal->Value;
+  MatchData.Reg = ExtSrc;
+  MatchData.Imm = ShiftAmt;
+
+  unsigned MinLeadingZeros = KB->getKnownZeroes(ExtSrc).countLeadingOnes();
+  return MinLeadingZeros >= ShiftAmt;
+}
+
+bool CombinerHelper::applyCombineShlOfExtend(MachineInstr &MI,
+                                             const RegisterImmPair &MatchData) {
+  Register ExtSrcReg = MatchData.Reg;
+  int64_t ShiftAmtVal = MatchData.Imm;
+
+  LLT ExtSrcTy = MRI.getType(ExtSrcReg);
+  Builder.setInstrAndDebugLoc(MI);
+  auto ShiftAmt = Builder.buildConstant(ExtSrcTy, ShiftAmtVal);
+  auto NarrowShift =
+      Builder.buildShl(ExtSrcTy, ExtSrcReg, ShiftAmt, MI.getFlags());
+  Builder.buildZExt(MI.getOperand(0), NarrowShift);
+  MI.eraseFromParent();
   return true;
 }
 
