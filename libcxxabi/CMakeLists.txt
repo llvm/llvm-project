@@ -21,6 +21,11 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
   )
 
+set(LIBCXXABI_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
+set(LIBCXXABI_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
+set(LIBCXXABI_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../libcxx" CACHE PATH
+        "Specify path to libc++ source.")
+
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXXABI_STANDALONE_BUILD)
   project(libcxxabi CXX C)
 
@@ -28,6 +33,16 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXXABI_STANDALONE_B
   set(PACKAGE_VERSION 11.0.0git)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
+
+  # Add the CMake module path of libcxx so we can reuse HandleOutOfTreeLLVM.cmake
+  set(LIBCXXABI_LIBCXX_CMAKE_PATH "${LIBCXXABI_LIBCXX_PATH}/cmake/Modules")
+  list(APPEND CMAKE_MODULE_PATH "${LIBCXXABI_LIBCXX_CMAKE_PATH}")
+
+  # In a standalone build, we don't have llvm to automatically generate the
+  # llvm-lit script for us.  So we need to provide an explicit directory that
+  # the configurator should write the script into.
+  set(LIBCXXABI_STANDALONE_BUILD 1)
+  set(LLVM_LIT_OUTPUT_DIR "${LIBCXXABI_BINARY_DIR}/bin")
 
   # Find the LLVM sources and simulate LLVM CMake options.
   include(HandleOutOfTreeLLVM)
@@ -126,8 +141,6 @@ if (NOT LIBCXXABI_ENABLE_SHARED AND NOT LIBCXXABI_ENABLE_STATIC)
   message(FATAL_ERROR "libc++abi must be built as either a shared or static library.")
 endif()
 
-set(LIBCXXABI_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../libcxx" CACHE PATH
-    "Specify path to libc++ source.")
 set(LIBCXXABI_LIBCXX_INCLUDES "${LIBCXXABI_LIBCXX_PATH}/include" CACHE PATH
     "Specify path to libc++ includes.")
 message(STATUS "Libc++abi will be using libc++ includes from ${LIBCXXABI_LIBCXX_INCLUDES}")
@@ -150,9 +163,6 @@ set(CMAKE_MODULE_PATH
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
   ${CMAKE_MODULE_PATH}
   )
-
-set(LIBCXXABI_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
-set(LIBCXXABI_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++)
@@ -475,20 +485,6 @@ endif()
 add_subdirectory(src)
 
 if (LIBCXXABI_INCLUDE_TESTS)
-  if (LIBCXXABI_STANDALONE_BUILD AND NOT LIBCXXABI_ENABLE_SHARED)
-    # We can't reasonably test the system C++ library with a static
-    # libc++abi.  We either need to be able to replace libc++abi at
-    # run time (with a shared libc++abi), or we need to be able to
-    # replace the C++ runtime (with a non- standalone build).
-    message(WARNING "The libc++abi tests aren't valid when libc++abi "
-                    "is built standalone (i.e. outside of "
-                    "llvm/projects/libcxxabi ) and is built without "
-                    "a shared library.  Either build a shared "
-                    "library, build libc++abi at the same time as "
-                    "you build libc++, or do without testing.  No "
-                    "check target will be available!")
-  else()
-    add_subdirectory(test)
-    add_subdirectory(fuzz)
-  endif()
+  add_subdirectory(test)
+  add_subdirectory(fuzz)
 endif()

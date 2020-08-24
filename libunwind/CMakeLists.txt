@@ -1,3 +1,7 @@
+if (NOT IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/../libcxx")
+  message(FATAL_ERROR "libunwind requires being built in a monorepo layout with libcxx available")
+endif()
+
 #===============================================================================
 # Setup Project
 #===============================================================================
@@ -15,103 +19,31 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
   )
 
+set(LIBUNWIND_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
+set(LIBUNWIND_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
+set(LIBUNWIND_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../libcxx" CACHE PATH
+        "Specify path to libc++ source.")
+
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBUNWIND_STANDALONE_BUILD)
   project(libunwind LANGUAGES C CXX ASM)
-
-  # Rely on llvm-config.
-  set(CONFIG_OUTPUT)
-  if(NOT LLVM_CONFIG_PATH)
-    find_program(LLVM_CONFIG_PATH "llvm-config")
-  endif()
-  if (DEFINED LLVM_PATH)
-    set(LLVM_INCLUDE_DIR ${LLVM_INCLUDE_DIR} CACHE PATH "Path to llvm/include")
-    set(LLVM_PATH ${LLVM_PATH} CACHE PATH "Path to LLVM source tree")
-    set(LLVM_MAIN_SRC_DIR ${LLVM_PATH})
-    set(LLVM_CMAKE_PATH "${LLVM_PATH}/cmake/modules")
-  elseif(LLVM_CONFIG_PATH)
-    message(STATUS "Found LLVM_CONFIG_PATH as ${LLVM_CONFIG_PATH}")
-    set(CONFIG_COMMAND ${LLVM_CONFIG_PATH} "--includedir" "--prefix" "--src-root")
-    execute_process(COMMAND ${CONFIG_COMMAND}
-                    RESULT_VARIABLE HAD_ERROR
-                    OUTPUT_VARIABLE CONFIG_OUTPUT)
-    if (NOT HAD_ERROR)
-      string(REGEX REPLACE "[ \t]*[\r\n]+[ \t]*" ";"
-             CONFIG_OUTPUT ${CONFIG_OUTPUT})
-    else()
-      string(REPLACE ";" " " CONFIG_COMMAND_STR "${CONFIG_COMMAND}")
-      message(STATUS "${CONFIG_COMMAND_STR}")
-      message(FATAL_ERROR "llvm-config failed with status ${HAD_ERROR}")
-    endif()
-
-    list(GET CONFIG_OUTPUT 0 INCLUDE_DIR)
-    list(GET CONFIG_OUTPUT 1 LLVM_OBJ_ROOT)
-    list(GET CONFIG_OUTPUT 2 MAIN_SRC_DIR)
-
-    set(LLVM_INCLUDE_DIR ${INCLUDE_DIR} CACHE PATH "Path to llvm/include")
-    set(LLVM_BINARY_DIR ${LLVM_OBJ_ROOT} CACHE PATH "Path to LLVM build tree")
-    set(LLVM_MAIN_SRC_DIR ${MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
-    set(LLVM_LIT_PATH "${LLVM_PATH}/utils/lit/lit.py")
-
-    # --cmakedir is supported since llvm r291218 (4.0 release)
-    execute_process(
-      COMMAND ${LLVM_CONFIG_PATH} --cmakedir
-      RESULT_VARIABLE HAD_ERROR
-      OUTPUT_VARIABLE CONFIG_OUTPUT
-      ERROR_QUIET)
-    if(NOT HAD_ERROR)
-      string(STRIP "${CONFIG_OUTPUT}" LLVM_CMAKE_PATH_FROM_LLVM_CONFIG)
-      file(TO_CMAKE_PATH "${LLVM_CMAKE_PATH_FROM_LLVM_CONFIG}" LLVM_CMAKE_PATH)
-    else()
-      file(TO_CMAKE_PATH "${LLVM_BINARY_DIR}" LLVM_BINARY_DIR_CMAKE_STYLE)
-      set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR_CMAKE_STYLE}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
-    endif()
-  else()
-    message(WARNING "UNSUPPORTED LIBUNWIND CONFIGURATION DETECTED: "
-                    "llvm-config not found and LLVM_MAIN_SRC_DIR not defined. "
-                    "Reconfigure with -DLLVM_CONFIG=path/to/llvm-config "
-                    "or -DLLVM_PATH=path/to/llvm-source-root.")
-  endif()
-
-  if (EXISTS ${LLVM_CMAKE_PATH})
-    list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
-    include("${LLVM_CMAKE_PATH}/AddLLVM.cmake")
-    include("${LLVM_CMAKE_PATH}/HandleLLVMOptions.cmake")
-  else()
-    message(WARNING "Not found: ${LLVM_CMAKE_PATH}")
-  endif()
 
   set(PACKAGE_NAME libunwind)
   set(PACKAGE_VERSION 12.0.0git)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
-  if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
-    set(LLVM_LIT ${LLVM_MAIN_SRC_DIR}/utils/lit/lit.py)
-  else()
-    # Seek installed Lit.
-    find_program(LLVM_LIT "lit.py" ${LLVM_MAIN_SRC_DIR}/utils/lit
-                 DOC "Path to lit.py")
-  endif()
+  # Add the CMake module path of libcxx so we can reuse HandleOutOfTreeLLVM.cmake
+  set(LIBUNWIND_LIBCXX_CMAKE_PATH "${LIBUNWIND_LIBCXX_PATH}/cmake/Modules")
+  list(APPEND CMAKE_MODULE_PATH "${LIBUNWIND_LIBCXX_CMAKE_PATH}")
 
-  if (LLVM_LIT)
-    # Define the default arguments to use with 'lit', and an option for the user
-    # to override.
-    set(LIT_ARGS_DEFAULT "-sv")
-    if (MSVC OR XCODE)
-      set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
-    endif()
-    set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
+  # In a standalone build, we don't have llvm to automatically generate the
+  # llvm-lit script for us.  So we need to provide an explicit directory that
+  # the configurator should write the script into.
+  set(LIBUNWIND_STANDALONE_BUILD 1)
+  set(LLVM_LIT_OUTPUT_DIR "${LIBUNWIND_BINARY_DIR}/bin")
 
-    # On Win32 hosts, provide an option to specify the path to the GnuWin32 tools.
-    if (WIN32 AND NOT CYGWIN)
-      set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Path to GnuWin32 tools")
-    endif()
-  else()
-    set(LLVM_INCLUDE_TESTS OFF)
-  endif()
-
-  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
-  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
+  # Find the LLVM sources and simulate LLVM CMake options.
+  include(HandleOutOfTreeLLVM)
 else()
   set(LLVM_LIT "${CMAKE_SOURCE_DIR}/utils/lit/lit.py")
 endif()
@@ -156,6 +88,8 @@ set(LIBUNWIND_TEST_COMPILER_FLAGS "" CACHE STRING
     "Additional compiler flags for test programs.")
 set(LIBUNWIND_TEST_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test/lit.site.cfg.in" CACHE STRING
     "The Lit testing configuration to use when running the tests.")
+set(LIBUNWIND_TEST_PARAMS "" CACHE STRING
+    "A list of parameters to run the Lit test suite with.")
 
 if (NOT LIBUNWIND_ENABLE_SHARED AND NOT LIBUNWIND_ENABLE_STATIC)
   message(FATAL_ERROR "libunwind must be built as either a shared or static library.")
@@ -181,9 +115,6 @@ option(LIBUNWIND_HERMETIC_STATIC_LIBRARY
 set(CMAKE_MODULE_PATH
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
     ${CMAKE_MODULE_PATH})
-
-set(LIBUNWIND_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
-set(LIBUNWIND_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBUNWIND_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++)
