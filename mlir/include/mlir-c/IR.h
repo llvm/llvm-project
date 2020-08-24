@@ -336,6 +336,9 @@ void mlirTypeDump(MlirType type);
 /** Parses an attribute. The attribute is owned by the context. */
 MlirAttribute mlirAttributeParseGet(MlirContext context, const char *attr);
 
+/** Checks whether an attribute is null. */
+inline int mlirAttributeIsNull(MlirAttribute attr) { return !attr.ptr; }
+
 /** Checks if two attributes are equal. */
 int mlirAttributeEqual(MlirAttribute a1, MlirAttribute a2);
 
