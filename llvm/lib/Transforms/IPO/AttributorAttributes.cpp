@@ -7023,6 +7023,9 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
       return;
     }
 
+    if (isa<CallBase>(&V))
+      return;
+
     if (isa<BinaryOperator>(&V) || isa<CmpInst>(&V) || isa<CastInst>(&V))
       return;
     // If it is a load instruction with range metadata, use it.
