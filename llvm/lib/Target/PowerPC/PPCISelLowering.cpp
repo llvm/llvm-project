@@ -824,6 +824,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::SELECT, MVT::v4i32,
                        Subtarget.useCRBits() ? Legal : Expand);
     setOperationAction(ISD::STORE , MVT::v4i32, Legal);
+    setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v4i32, Legal);
+    setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v4i32, Legal);
+    setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v4i32, Legal);
+    setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v4i32, Legal);
     setOperationAction(ISD::FP_TO_SINT, MVT::v4i32, Legal);
     setOperationAction(ISD::FP_TO_UINT, MVT::v4i32, Legal);
     setOperationAction(ISD::SINT_TO_FP, MVT::v4i32, Legal);
@@ -1002,6 +1006,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
       setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2i64, Legal);
 
+      setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v2i64, Legal);
+      setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v2i64, Legal);
+      setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::v2i64, Legal);
+      setOperationAction(ISD::STRICT_FP_TO_UINT, MVT::v2i64, Legal);
       setOperationAction(ISD::SINT_TO_FP, MVT::v2i64, Legal);
       setOperationAction(ISD::UINT_TO_FP, MVT::v2i64, Legal);
       setOperationAction(ISD::FP_TO_SINT, MVT::v2i64, Legal);
@@ -1010,6 +1018,14 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       // Custom handling for partial vectors of integers converted to
       // floating point. We already have optimal handling for v2i32 through
       // the DAG combine, so those aren't necessary.
+      setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v2i8, Custom);
+      setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v4i8, Custom);
+      setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v2i16, Custom);
+      setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v4i16, Custom);
+      setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v2i8, Custom);
+      setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v4i8, Custom);
+      setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v2i16, Custom);
+      setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v4i16, Custom);
       setOperationAction(ISD::UINT_TO_FP, MVT::v2i8, Custom);
       setOperationAction(ISD::UINT_TO_FP, MVT::v4i8, Custom);
       setOperationAction(ISD::UINT_TO_FP, MVT::v2i16, Custom);
@@ -8346,17 +8362,19 @@ static SDValue widenVec(SelectionDAG &DAG, SDValue Vec, const SDLoc &dl) {
 
 SDValue PPCTargetLowering::LowerINT_TO_FPVector(SDValue Op, SelectionDAG &DAG,
                                                 const SDLoc &dl) const {
-
+  bool IsStrict = Op->isStrictFPOpcode();
   unsigned Opc = Op.getOpcode();
-  assert((Opc == ISD::UINT_TO_FP || Opc == ISD::SINT_TO_FP) &&
+  SDValue Src = Op.getOperand(IsStrict ? 1 : 0);
+  assert((Opc == ISD::UINT_TO_FP || Opc == ISD::SINT_TO_FP ||
+          Opc == ISD::STRICT_UINT_TO_FP || Opc == ISD::STRICT_SINT_TO_FP) &&
          "Unexpected conversion type");
   assert((Op.getValueType() == MVT::v2f64 || Op.getValueType() == MVT::v4f32) &&
          "Supports conversions to v2f64/v4f32 only.");
 
-  bool SignedConv = Opc == ISD::SINT_TO_FP;
+  bool SignedConv = Opc == ISD::SINT_TO_FP || Opc == ISD::STRICT_SINT_TO_FP;
   bool FourEltRes = Op.getValueType() == MVT::v4f32;
 
-  SDValue Wide = widenVec(DAG, Op.getOperand(0), dl);
+  SDValue Wide = widenVec(DAG, Src, dl);
   EVT WideVT = Wide.getValueType();
   unsigned WideNumElts = WideVT.getVectorNumElements();
   MVT IntermediateVT = FourEltRes ? MVT::v4i32 : MVT::v2i64;
@@ -8381,7 +8399,7 @@ SDValue PPCTargetLowering::LowerINT_TO_FPVector(SDValue Op, SelectionDAG &DAG,
   SDValue Extend;
   if (SignedConv) {
     Arrange = DAG.getBitcast(IntermediateVT, Arrange);
-    EVT ExtVT = Op.getOperand(0).getValueType();
+    EVT ExtVT = Src.getValueType();
     if (Subtarget.hasP9Altivec())
       ExtVT = EVT::getVectorVT(*DAG.getContext(), WideVT.getVectorElementType(),
                                IntermediateVT.getVectorNumElements());
@@ -8390,6 +8408,10 @@ SDValue PPCTargetLowering::LowerINT_TO_FPVector(SDValue Op, SelectionDAG &DAG,
                          DAG.getValueType(ExtVT));
   } else
     Extend = DAG.getNode(ISD::BITCAST, dl, IntermediateVT, Arrange);
+
+  if (IsStrict)
+    return DAG.getNode(Opc, dl, {Op.getValueType(), MVT::Other},
+                       {Op.getOperand(0), Extend});
 
   return DAG.getNode(Opc, dl, Op.getValueType(), Extend);
 }
@@ -10646,6 +10668,28 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ATOMIC_CMP_SWAP:
     return LowerATOMIC_CMP_SWAP(Op, DAG);
   }
+}
+
+void PPCTargetLowering::LowerOperationWrapper(SDNode *N,
+                                              SmallVectorImpl<SDValue> &Results,
+                                              SelectionDAG &DAG) const {
+  SDValue Res = LowerOperation(SDValue(N, 0), DAG);
+
+  if (!Res.getNode())
+    return;
+
+  // Take the return value as-is if original node has only one result.
+  if (N->getNumValues() == 1) {
+    Results.push_back(Res);
+    return;
+  }
+
+  // New node should have the same number of results.
+  assert((N->getNumValues() == Res->getNumValues()) &&
+      "Lowering returned the wrong number of results!");
+
+  for (unsigned i = 0; i < N->getNumValues(); ++i)
+    Results.push_back(Res.getValue(i));
 }
 
 void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
