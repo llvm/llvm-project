@@ -49,6 +49,7 @@ public:
     eProcessNameCompletion = (1u << 21),
     eRemoteDiskFileCompletion = (1u << 22),
     eRemoteDiskDirectoryCompletion = (1u << 23),
+    eTypeCategoryNameCompletion = (1u << 24),
     // This item serves two purposes.  It is the last element in the enum, so
     // you can add custom enums starting from here in your Option class. Also
     // if you & in this bit the base code will not process the option.
@@ -146,6 +147,10 @@ public:
 
   static void WatchPointIDs(CommandInterpreter &interpreter,
                             CompletionRequest &request, SearchFilter *searcher);
+
+  static void TypeCategoryNames(CommandInterpreter &interpreter,
+                                CompletionRequest &request,
+                                SearchFilter *searcher);
 };
 
 } // namespace lldb_private

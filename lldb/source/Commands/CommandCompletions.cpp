@@ -13,6 +13,7 @@
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -74,7 +75,9 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {eProcessIDCompletion, CommandCompletions::ProcessIDs},
       {eProcessNameCompletion, CommandCompletions::ProcessNames},
       {eRemoteDiskFileCompletion, CommandCompletions::RemoteDiskFiles},
-      {eRemoteDiskDirectoryCompletion, CommandCompletions::RemoteDiskDirectories},
+      {eRemoteDiskDirectoryCompletion,
+       CommandCompletions::RemoteDiskDirectories},
+      {eTypeCategoryNameCompletion, CommandCompletions::TypeCategoryNames},
       {eNoCompletion, nullptr} // This one has to be last in the list.
   };
 
@@ -779,4 +782,15 @@ void CommandCompletions::WatchPointIDs(CommandInterpreter &interpreter,
     request.TryCompleteCurrentArg(std::to_string(wp_sp->GetID()),
                                   strm.GetString());
   }
+}
+
+void CommandCompletions::TypeCategoryNames(CommandInterpreter &interpreter,
+                                           CompletionRequest &request,
+                                           SearchFilter *searcher) {
+  DataVisualization::Categories::ForEach(
+      [&request](const lldb::TypeCategoryImplSP &category_sp) {
+        request.TryCompleteCurrentArg(category_sp->GetName(),
+                                      category_sp->GetDescription());
+        return true;
+      });
 }
