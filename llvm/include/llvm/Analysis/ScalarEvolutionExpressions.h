@@ -82,6 +82,16 @@ class Type;
 
   public:
     const SCEV *getOperand() const { return Op; }
+    const SCEV *getOperand(unsigned i) const {
+      assert(i == 0 && "Operand index out of range!");
+      return Op;
+    }
+    using op_iterator = const SCEV *const *;
+    using op_range = iterator_range<op_iterator>;
+    op_range operands() const {
+      return make_range(&Op, &Op + 1);
+    }
+    size_t getNumOperands() const { return 1; }
     Type *getType() const { return Ty; }
 
     /// Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -263,16 +273,28 @@ class Type;
   class SCEVUDivExpr : public SCEV {
     friend class ScalarEvolution;
 
-    const SCEV *LHS;
-    const SCEV *RHS;
+    std::array<const SCEV*, 2> Operands;
 
     SCEVUDivExpr(const FoldingSetNodeIDRef ID, const SCEV *lhs, const SCEV *rhs)
-        : SCEV(ID, scUDivExpr, computeExpressionSize({lhs, rhs})), LHS(lhs),
-          RHS(rhs) {}
+        : SCEV(ID, scUDivExpr, computeExpressionSize({lhs, rhs})) {
+        Operands[0] = lhs;
+        Operands[1] = rhs;
+      }
 
   public:
-    const SCEV *getLHS() const { return LHS; }
-    const SCEV *getRHS() const { return RHS; }
+    const SCEV *getLHS() const { return Operands[0]; }
+    const SCEV *getRHS() const { return Operands[1]; }
+    size_t getNumOperands() const { return 2; }
+    const SCEV *getOperand(unsigned i) const {
+      assert((i == 0 || i == 1) && "Operand index out of range!");
+      return i == 0 ? getLHS() : getRHS();
+    }
+
+    using op_iterator = const SCEV *const *;
+    using op_range = iterator_range<op_iterator>;
+    op_range operands() const {
+      return make_range(Operands.begin(), Operands.end());
+    }
 
     Type *getType() const {
       // In most cases the types of LHS and RHS will be the same, but in some
