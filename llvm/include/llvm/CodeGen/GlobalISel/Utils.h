@@ -245,5 +245,9 @@ bool isBuildVectorAllOnes(const MachineInstr &MI,
 /// the value \p Val contains a true value.
 bool isConstTrueVal(const TargetLowering &TLI, int64_t Val, bool IsVector,
                     bool IsFP);
+
+/// Returns an integer representing true, as defined by the
+/// TargetBooleanContents.
+int64_t getICmpTrueVal(const TargetLowering &TLI, bool IsVector, bool IsFP);
 } // End namespace llvm.
 #endif

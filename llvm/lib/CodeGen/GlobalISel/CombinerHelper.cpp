@@ -881,14 +881,12 @@ void CombinerHelper::applyCombineIndexedLoadStore(
   LLVM_DEBUG(dbgs() << "    Combinined to indexed operation");
 }
 
-bool CombinerHelper::matchElideBrByInvertingCond(MachineInstr &MI) {
+bool CombinerHelper::matchOptBrCondByInvertingCond(MachineInstr &MI) {
   if (MI.getOpcode() != TargetOpcode::G_BR)
     return false;
 
   // Try to match the following:
   // bb1:
-  //   %c(s32) = G_ICMP pred, %a, %b
-  //   %c1(s1) = G_TRUNC %c(s32)
   //   G_BRCOND %c1, %bb2
   //   G_BR %bb3
   // bb2:
@@ -898,7 +896,7 @@ bool CombinerHelper::matchElideBrByInvertingCond(MachineInstr &MI) {
   // The above pattern does not have a fall through to the successor bb2, always
   // resulting in a branch no matter which path is taken. Here we try to find
   // and replace that pattern with conditional branch to bb3 and otherwise
-  // fallthrough to bb2.
+  // fallthrough to bb2. This is generally better for branch predictors.
 
   MachineBasicBlock *MBB = MI.getParent();
   MachineBasicBlock::iterator BrIt(MI);
@@ -913,40 +911,34 @@ bool CombinerHelper::matchElideBrByInvertingCond(MachineInstr &MI) {
   // Check that the next block is the conditional branch target.
   if (!MBB->isLayoutSuccessor(BrCond->getOperand(1).getMBB()))
     return false;
-
-  MachineInstr *CmpMI = MRI.getVRegDef(BrCond->getOperand(0).getReg());
-  if (!CmpMI || CmpMI->getOpcode() != TargetOpcode::G_ICMP ||
-      !MRI.hasOneNonDBGUse(CmpMI->getOperand(0).getReg()))
-    return false;
   return true;
 }
 
-bool CombinerHelper::tryElideBrByInvertingCond(MachineInstr &MI) {
-  if (!matchElideBrByInvertingCond(MI))
-    return false;
-  applyElideBrByInvertingCond(MI);
-  return true;
-}
-
-void CombinerHelper::applyElideBrByInvertingCond(MachineInstr &MI) {
+void CombinerHelper::applyOptBrCondByInvertingCond(MachineInstr &MI) {
   MachineBasicBlock *BrTarget = MI.getOperand(0).getMBB();
   MachineBasicBlock::iterator BrIt(MI);
   MachineInstr *BrCond = &*std::prev(BrIt);
-  MachineInstr *CmpMI = MRI.getVRegDef(BrCond->getOperand(0).getReg());
 
-  CmpInst::Predicate InversePred = CmpInst::getInversePredicate(
-      (CmpInst::Predicate)CmpMI->getOperand(1).getPredicate());
+  Builder.setInstrAndDebugLoc(*BrCond);
+  LLT Ty = MRI.getType(BrCond->getOperand(0).getReg());
+  // FIXME: Does int/fp matter for this? If so, we might need to restrict
+  // this to i1 only since we might not know for sure what kind of
+  // compare generated the condition value.
+  auto True = Builder.buildConstant(
+      Ty, getICmpTrueVal(getTargetLowering(), false, false));
+  auto Xor = Builder.buildXor(Ty, BrCond->getOperand(0), True);
 
-  // Invert the G_ICMP condition.
-  Observer.changingInstr(*CmpMI);
-  CmpMI->getOperand(1).setPredicate(InversePred);
-  Observer.changedInstr(*CmpMI);
+  auto *FallthroughBB = BrCond->getOperand(1).getMBB();
+  Observer.changingInstr(MI);
+  MI.getOperand(0).setMBB(FallthroughBB);
+  Observer.changedInstr(MI);
 
-  // Change the conditional branch target.
+  // Change the conditional branch to use the inverted condition and
+  // new target block.
   Observer.changingInstr(*BrCond);
+  BrCond->getOperand(0).setReg(Xor.getReg(0));
   BrCond->getOperand(1).setMBB(BrTarget);
   Observer.changedInstr(*BrCond);
-  MI.eraseFromParent();
 }
 
 static bool shouldLowerMemFuncForSize(const MachineFunction &MF) {
