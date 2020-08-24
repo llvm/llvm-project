@@ -61,6 +61,7 @@ private:
   void CheckSubprogram(const Symbol &, const SubprogramDetails &);
   void CheckAssumedTypeEntity(const Symbol &, const ObjectEntityDetails &);
   void CheckDerivedType(const Symbol &, const DerivedTypeDetails &);
+  void CheckHostAssoc(const Symbol &, const HostAssocDetails &);
   void CheckGeneric(const Symbol &, const GenericDetails &);
   std::optional<std::vector<Procedure>> Characterize(const SymbolVector &);
   bool CheckDefinedOperator(const SourceName &, const GenericKind &,
@@ -147,7 +148,10 @@ void CheckHelper::Check(const Symbol &symbol) {
     CheckVolatile(symbol, isAssociated, derived);
   }
   if (isAssociated) {
-    return; // only care about checking VOLATILE on associated symbols
+    if (const auto *details{symbol.detailsIf<HostAssocDetails>()}) {
+      CheckHostAssoc(symbol, *details);
+    }
+    return; // no other checks on associated symbols
   }
   if (IsPointer(symbol)) {
     CheckPointer(symbol);
@@ -755,6 +759,21 @@ void CheckHelper::CheckDerivedType(
   if (HasIntrinsicTypeName(symbol)) { // C729
     messages_.Say("A derived type name cannot be the name of an intrinsic"
                   " type"_err_en_US);
+  }
+}
+
+void CheckHelper::CheckHostAssoc(
+    const Symbol &symbol, const HostAssocDetails &details) {
+  const Symbol &hostSymbol{details.symbol()};
+  if (hostSymbol.test(Symbol::Flag::ImplicitOrError)) {
+    if (details.implicitOrSpecExprError) {
+      messages_.Say("Implicitly typed local entity '%s' not allowed in"
+                    " specification expression"_err_en_US,
+          symbol.name());
+    } else if (details.implicitOrExplicitTypeError) {
+      messages_.Say(
+          "No explicit type declared for '%s'"_err_en_US, symbol.name());
+    }
   }
 }
 
