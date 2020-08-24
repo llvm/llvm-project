@@ -1557,7 +1557,8 @@ public:
         S.shouldIgnoreInHostDeviceCheck(FD) || InUsePath.count(FD))
       return;
     // Finalize analysis of OpenMP-specific constructs.
-    if (Caller && S.LangOpts.OpenMP && UsePath.size() == 1)
+    if (Caller && S.LangOpts.OpenMP && UsePath.size() == 1 &&
+        (ShouldEmitRootNode || InOMPDeviceContext))
       S.finalizeOpenMPDelayedAnalysis(Caller, FD, Loc);
     if (Caller)
       S.DeviceKnownEmittedFns[FD] = {Caller, Loc};
