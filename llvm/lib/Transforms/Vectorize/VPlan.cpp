@@ -300,7 +300,8 @@ void VPRegionBlock::execute(VPTransformState *State) {
 
   for (unsigned Part = 0, UF = State->UF; Part < UF; ++Part) {
     State->Instance->Part = Part;
-    for (unsigned Lane = 0, VF = State->VF; Lane < VF; ++Lane) {
+    assert(!State->VF.Scalable && "VF is assumed to be non scalable.");
+    for (unsigned Lane = 0, VF = State->VF.Min; Lane < VF; ++Lane) {
       State->Instance->Lane = Lane;
       // Visit the VPBlocks connected to \p this, starting from it.
       for (VPBlockBase *Block : RPOT) {
@@ -387,7 +388,7 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     Value *ScalarBTC = State.get(getOperand(1), {Part, 0});
 
     auto *Int1Ty = Type::getInt1Ty(Builder.getContext());
-    auto *PredTy = FixedVectorType::get(Int1Ty, State.VF);
+    auto *PredTy = FixedVectorType::get(Int1Ty, State.VF.Min);
     Instruction *Call = Builder.CreateIntrinsic(
         Intrinsic::get_active_lane_mask, {PredTy, ScalarBTC->getType()},
         {VIVElem0, ScalarBTC}, nullptr, "active.lane.mask");
@@ -838,14 +839,15 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
   Value *CanonicalIV = State.CanonicalIV;
   Type *STy = CanonicalIV->getType();
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
-  auto VF = State.VF;
-  Value *VStart = VF == 1
-                      ? CanonicalIV
-                      : Builder.CreateVectorSplat(VF, CanonicalIV, "broadcast");
+  ElementCount VF = State.VF;
+  assert(!VF.Scalable && "the code following assumes non scalables ECs");
+  Value *VStart = VF.isScalar() ? CanonicalIV
+                                : Builder.CreateVectorSplat(VF.Min, CanonicalIV,
+                                                            "broadcast");
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part) {
     SmallVector<Constant *, 8> Indices;
-    for (unsigned Lane = 0; Lane < VF; ++Lane)
-      Indices.push_back(ConstantInt::get(STy, Part * VF + Lane));
+    for (unsigned Lane = 0; Lane < VF.Min; ++Lane)
+      Indices.push_back(ConstantInt::get(STy, Part * VF.Min + Lane));
     // If VF == 1, there is only one iteration in the loop above, thus the
     // element pushed back into Indices is ConstantInt::get(STy, Part)
     Constant *VStep = VF == 1 ? Indices.back() : ConstantVector::get(Indices);
