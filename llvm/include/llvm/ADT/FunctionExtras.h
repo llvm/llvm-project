@@ -64,12 +64,12 @@ template <typename ReturnT, typename... ParamTs> class UniqueFunctionBase {
 protected:
   static constexpr size_t InlineStorageSize = sizeof(void *) * 3;
 
-  // MSVC has a bug and ICEs if we give it a particular dependent value
-  // expression as part of the `std::conditional` below. To work around this,
-  // we build that into a template struct's constexpr bool.
-  template <typename T> struct IsSizeLessThanThresholdT {
-    static constexpr bool value = sizeof(T) <= (2 * sizeof(void *));
-  };
+  template <typename T, class = void>
+  struct IsSizeLessThanThresholdT : std::false_type {};
+
+  template <typename T>
+  struct IsSizeLessThanThresholdT<
+      T, std::enable_if_t<sizeof(T) <= 2 * sizeof(void *)>> : std::true_type {};
 
   // Provide a type function to map parameters that won't observe extra copies
   // or moves and which are small enough to likely pass in register to values
