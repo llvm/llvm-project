@@ -26,12 +26,14 @@
 #include "lldb/Host/FileAction.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/GDBRemote.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/Utility/TildeExpressionResolver.h"
 #include "lldb/Utility/UriParser.h"
 
 #include "lldb/Utility/StringExtractorGDBRemote.h"
@@ -68,6 +70,9 @@ GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qProcessInfo,
       &GDBRemoteCommunicationServerPlatform::Handle_qProcessInfo);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_qPathComplete,
+      &GDBRemoteCommunicationServerPlatform::Handle_qPathComplete);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_QSetWorkingDir,
       &GDBRemoteCommunicationServerPlatform::Handle_QSetWorkingDir);
@@ -330,6 +335,38 @@ GDBRemoteCommunicationServerPlatform::Handle_qProcessInfo(
 
   StreamString response;
   CreateProcessInfoResponse_DebugServerStyle(proc_info, response);
+  return SendPacketNoLock(response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerPlatform::Handle_qPathComplete(
+    StringExtractorGDBRemote &packet) {
+  packet.SetFilePos(::strlen("qPathComplete:"));
+  const bool only_dir = (packet.GetHexMaxU32(false, 0) == 1);
+  if (packet.GetChar() != ',')
+    return SendErrorResponse(85);
+  std::string path;
+  packet.GetHexByteString(path);
+
+  StringList matches;
+  StandardTildeExpressionResolver resolver;
+  if (only_dir)
+    CommandCompletions::DiskDirectories(path, matches, resolver);
+  else
+    CommandCompletions::DiskFiles(path, matches, resolver);
+
+  StreamString response;
+  response.PutChar('M');
+  llvm::StringRef separator;
+  std::sort(matches.begin(), matches.end());
+  for (const auto &match : matches) {
+    response << separator;
+    separator = ",";
+    // encode result strings into hex bytes to avoid unexpected error caused by
+    // special characters like '$'.
+    response.PutStringAsRawHex8(match.c_str());
+  }
+
   return SendPacketNoLock(response.GetString());
 }
 

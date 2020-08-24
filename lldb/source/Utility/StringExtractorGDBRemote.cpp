@@ -233,6 +233,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_qPlatform_chmod;
       if (PACKET_MATCHES("qProcessInfo"))
         return eServerPacketType_qProcessInfo;
+      if (PACKET_STARTS_WITH("qPathComplete:"))
+        return eServerPacketType_qPathComplete;
       break;
 
     case 'Q':
