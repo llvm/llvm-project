@@ -126,6 +126,8 @@ raw_ostream &syntax::operator<<(raw_ostream &OS, NodeKind K) {
     return OS << "SimpleTemplateNameSpecifier";
   case NodeKind::NestedNameSpecifier:
     return OS << "NestedNameSpecifier";
+  case NodeKind::MemberExpression:
+    return OS << "MemberExpression";
   }
   llvm_unreachable("unknown node kind");
 }
@@ -202,6 +204,12 @@ raw_ostream &syntax::operator<<(raw_ostream &OS, NodeRole R) {
     return OS << "IdExpression_qualifier";
   case syntax::NodeRole::ParenExpression_subExpression:
     return OS << "ParenExpression_subExpression";
+  case syntax::NodeRole::MemberExpression_object:
+    return OS << "MemberExpression_object";
+  case syntax::NodeRole::MemberExpression_accessToken:
+    return OS << "MemberExpression_accessToken";
+  case syntax::NodeRole::MemberExpression_member:
+    return OS << "MemberExpression_member";
   }
   llvm_unreachable("invalid role");
 }
@@ -228,6 +236,26 @@ syntax::NestedNameSpecifier::specifiersAndDoubleColons() {
          specifierAndDoubleColon.delimiter});
   }
   return Children;
+}
+
+syntax::Expression *syntax::MemberExpression::object() {
+  return cast_or_null<syntax::Expression>(
+      findChild(syntax::NodeRole::MemberExpression_object));
+}
+
+syntax::Leaf *syntax::MemberExpression::templateKeyword() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::TemplateKeyword));
+}
+
+syntax::Leaf *syntax::MemberExpression::accessToken() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::MemberExpression_accessToken));
+}
+
+syntax::IdExpression *syntax::MemberExpression::member() {
+  return cast_or_null<syntax::IdExpression>(
+      findChild(syntax::NodeRole::MemberExpression_member));
 }
 
 syntax::NestedNameSpecifier *syntax::IdExpression::qualifier() {

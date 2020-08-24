@@ -881,6 +881,49 @@ public:
     return true;
   }
 
+  bool WalkUpFromMemberExpr(MemberExpr *S) {
+    if (auto QualifierLoc = S->getQualifierLoc())
+      Builder.markChild(QualifierLoc, syntax::NodeRole::IdExpression_qualifier);
+
+    auto TemplateKeywordLoc = S->getTemplateKeywordLoc();
+    if (TemplateKeywordLoc.isValid())
+      Builder.markChildToken(TemplateKeywordLoc,
+                             syntax::NodeRole::TemplateKeyword);
+
+    auto *TheUnqualifiedId = new (allocator()) syntax::UnqualifiedId;
+    Builder.foldNode(Builder.getRange(S->getMemberLoc(), S->getEndLoc()),
+                     TheUnqualifiedId, nullptr);
+
+    Builder.markChild(TheUnqualifiedId, syntax::NodeRole::IdExpression_id);
+
+    auto *TheIdExpression = new (allocator()) syntax::IdExpression;
+    auto MemberRange =
+        Builder.getRange(S->hasQualifier() ? S->getQualifierLoc().getBeginLoc()
+                                           : S->getMemberLoc(),
+                         S->getEndLoc());
+
+    // For `MemberExpr` with implicit `this->` we generate a simple
+    // `id-expression` syntax node, beacuse an implicit `member-expression` is
+    // syntactically undistinguishable from an `id-expression`
+    if (S->isImplicitAccess()) {
+      Builder.foldNode(MemberRange, TheIdExpression, S);
+      return true;
+    }
+    Builder.foldNode(MemberRange, TheIdExpression, nullptr);
+
+    Builder.markChild(TheIdExpression,
+                      syntax::NodeRole::MemberExpression_member);
+
+    Builder.markExprChild(S->getBase(),
+                          syntax::NodeRole::MemberExpression_object);
+    Builder.markChildToken(S->getOperatorLoc(),
+                           syntax::NodeRole::MemberExpression_accessToken);
+
+    Builder.foldNode(Builder.getExprRange(S),
+                     new (allocator()) syntax::MemberExpression, S);
+    return true;
+  }
+
   bool WalkUpFromDeclRefExpr(DeclRefExpr *S) {
     if (auto QualifierLoc = S->getQualifierLoc())
       Builder.markChild(QualifierLoc, syntax::NodeRole::IdExpression_qualifier);
