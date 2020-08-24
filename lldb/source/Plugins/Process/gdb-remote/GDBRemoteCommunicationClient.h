@@ -375,6 +375,9 @@ public:
 
   lldb::user_id_t GetFileSize(const FileSpec &file_spec);
 
+  void AutoCompleteDiskFileOrDirectory(CompletionRequest &request,
+                                       bool only_dir);
+
   Status GetFilePermissions(const FileSpec &file_spec,
                             uint32_t &file_permissions);
 
