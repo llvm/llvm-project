@@ -172,12 +172,14 @@ public:
 /// Information about vectorization costs
 struct VectorizationFactor {
   // Vector width with best cost
-  unsigned Width;
+  ElementCount Width;
   // Cost of the loop with that width
   unsigned Cost;
 
   // Width 1 means no vectorization, cost 0 means uncomputed cost.
-  static VectorizationFactor Disabled() { return {1, 0}; }
+  static VectorizationFactor Disabled() {
+    return {ElementCount::getFixed(1), 0};
+  }
 
   bool operator==(const VectorizationFactor &rhs) const {
     return Width == rhs.Width && Cost == rhs.Cost;
@@ -227,7 +229,10 @@ class LoopVectorizationPlanner {
   /// A builder used to construct the current plan.
   VPBuilder Builder;
 
-  unsigned BestVF = 0;
+  /// The best number of elements of the vector types used in the
+  /// transformed loop. BestVF = None means that vectorization is
+  /// disabled.
+  Optional<ElementCount> BestVF = None;
   unsigned BestUF = 0;
 
 public:
@@ -242,14 +247,14 @@ public:
 
   /// Plan how to best vectorize, return the best VF and its cost, or None if
   /// vectorization and interleaving should be avoided up front.
-  Optional<VectorizationFactor> plan(unsigned UserVF, unsigned UserIC);
+  Optional<VectorizationFactor> plan(ElementCount UserVF, unsigned UserIC);
 
   /// Use the VPlan-native path to plan how to best vectorize, return the best
   /// VF and its cost.
-  VectorizationFactor planInVPlanNativePath(unsigned UserVF);
+  VectorizationFactor planInVPlanNativePath(ElementCount UserVF);
 
   /// Finalize the best decision and dispose of all other VPlans.
-  void setBestPlan(unsigned VF, unsigned UF);
+  void setBestPlan(ElementCount VF, unsigned UF);
 
   /// Generate the IR code for the body of the vectorized loop according to the
   /// best selected VPlan.
@@ -264,7 +269,7 @@ public:
   /// \p Predicate on Range.Start, possibly decreasing Range.End such that the
   /// returned value holds for the entire \p Range.
   static bool
-  getDecisionAndClampRange(const std::function<bool(unsigned)> &Predicate,
+  getDecisionAndClampRange(const std::function<bool(ElementCount)> &Predicate,
                            VFRange &Range);
 
 protected:
