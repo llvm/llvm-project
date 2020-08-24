@@ -1068,7 +1068,7 @@ CommandObject::ArgumentTableEntry CommandObject::g_arguments_data[] = {
     { eArgTypeLogCategory, "log-category", CommandCompletions::eNoCompletion, { nullptr, false }, "The name of a category within a log channel, e.g. all (try \"log list\" to see a list of all channels and their categories." },
     { eArgTypeLogChannel, "log-channel", CommandCompletions::eNoCompletion, { nullptr, false }, "The name of a log channel, e.g. process.gdb-remote (try \"log list\" to see a list of all channels and their categories)." },
     { eArgTypeMethod, "method", CommandCompletions::eNoCompletion, { nullptr, false }, "A C++ method name." },
-    { eArgTypeName, "name", CommandCompletions::eNoCompletion, { nullptr, false }, "Help text goes here." },
+    { eArgTypeName, "name", CommandCompletions::eTypeCategoryNameCompletion, { nullptr, false }, "Help text goes here." },
     { eArgTypeNewPathPrefix, "new-path-prefix", CommandCompletions::eNoCompletion, { nullptr, false }, "Help text goes here." },
     { eArgTypeNumLines, "num-lines", CommandCompletions::eNoCompletion, { nullptr, false }, "The number of lines to use." },
     { eArgTypeNumberPerLine, "number-per-line", CommandCompletions::eNoCompletion, { nullptr, false }, "The number of items per line to display." },
