@@ -33,6 +33,9 @@ read the [style guide](docs/C++style.md)
 and
 also review [how flang uses modern C++ features](docs/C++17.md).
 
+If you are interested in writing new documentation, follow 
+[markdown style guide from LLVM](https://github.com/llvm/llvm-project/blob/master/llvm/docs/MarkdownQuickstartTemplate.md).
+
 ## Supported C++ compilers
 
 Flang is written in C++17.
@@ -215,4 +218,26 @@ make doxygen-flang
 It will generate html in
 
     <build-dir>/tools/flang/docs/doxygen/html # for flang docs
+```
+## Generate Sphinx-based Documentation
+<!TODO: Add webpage once we have a website.
+!>
+Flang documentation should preferably be written in `markdown(.md)` syntax (they can be in `reStructuredText(.rst)` format as well but markdown is recommended in first place), it
+is mostly meant to be processed by the Sphinx documentation generation
+system to create HTML pages which would be hosted on the webpage of flang and
+updated periodically.
+
+If you would like to generate and view the HTML locally, install
+Sphinx <http://sphinx-doc.org/> and then:
+
+- Pass `-DLLVM_ENABLE_SPHINX=ON -DSPHINX_WARNINGS_AS_ERRORS=OFF` to the cmake command.
+
+```
+cd ~/llvm-project/build
+cmake -DLLVM_ENABLE_SPHINX=ON -DSPHINX_WARNINGS_AS_ERRORS=OFF ../llvm
+make docs-flang-html
+
+It will generate html in
+
+   $BROWSER <build-dir>/tools/flang/docs/html/
 ```
