@@ -6167,6 +6167,32 @@ bool TargetLowering::expandFunnelShift(SDNode *Node, SDValue &Result,
 
   EVT ShVT = Z.getValueType();
 
+  // If a funnel shift in the other direction is more supported, use it.
+  unsigned RevOpcode = IsFSHL ? ISD::FSHR : ISD::FSHL;
+  if (!isOperationLegalOrCustom(Node->getOpcode(), VT) &&
+      isOperationLegalOrCustom(RevOpcode, VT) && isPowerOf2_32(BW)) {
+    if (isNonZeroModBitWidthOrUndef(Z, BW)) {
+      // fshl X, Y, Z -> fshr X, Y, -Z
+      // fshr X, Y, Z -> fshl X, Y, -Z
+      SDValue Zero = DAG.getConstant(0, DL, ShVT);
+      Z = DAG.getNode(ISD::SUB, DL, VT, Zero, Z);
+    } else {
+      // fshl X, Y, Z -> fshr (srl X, 1), (fshr X, Y, 1), ~Z
+      // fshr X, Y, Z -> fshl (fshl X, Y, 1), (shl Y, 1), ~Z
+      SDValue One = DAG.getConstant(1, DL, ShVT);
+      if (IsFSHL) {
+        Y = DAG.getNode(RevOpcode, DL, VT, X, Y, One);
+        X = DAG.getNode(ISD::SRL, DL, VT, X, One);
+      } else {
+        X = DAG.getNode(RevOpcode, DL, VT, X, Y, One);
+        Y = DAG.getNode(ISD::SHL, DL, VT, Y, One);
+      }
+      Z = DAG.getNOT(DL, Z, ShVT);
+    }
+    Result = DAG.getNode(RevOpcode, DL, VT, X, Y, Z);
+    return true;
+  }
+
   SDValue ShX, ShY;
   SDValue ShAmt, InvShAmt;
   if (isNonZeroModBitWidthOrUndef(Z, BW)) {
