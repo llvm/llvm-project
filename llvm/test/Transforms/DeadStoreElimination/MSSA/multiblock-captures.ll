@@ -184,11 +184,16 @@ exit:
   ret i8* %m
 }
 
-; We can remove the first store 'store i8 0, i8* %m' even though there is a
+; We *could* remove the first store 'store i8 0, i8* %m' even though there is a
 ; throwing instruction between them, because %m escapes after the killing store.
+; But this would require using PointerMayBeCapturedBefore in
+; isInvisibleToCallerBeforeRet, which we currently do not do to limit
+; compile-time, as this appears to hardly ever lead to more stores eliminated
+; in practice.
 define i8* @test_malloc_capture_7() {
 ; CHECK-LABEL: @test_malloc_capture_7(
 ; CHECK-NEXT:    [[M:%.*]] = call i8* @malloc(i64 24)
+; CHECK-NEXT:    store i8 0, i8* [[M]], align 1
 ; CHECK-NEXT:    call void @may_throw()
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
