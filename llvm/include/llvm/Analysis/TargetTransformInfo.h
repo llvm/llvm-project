@@ -128,6 +128,11 @@ public:
 
   IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI,
                           unsigned Factor);
+  IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI,
+                          ElementCount Factor)
+      : IntrinsicCostAttributes(Id, CI, Factor.Min) {
+    assert(!Factor.Scalable);
+  }
 
   IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI,
                           unsigned Factor, unsigned ScalarCost);
