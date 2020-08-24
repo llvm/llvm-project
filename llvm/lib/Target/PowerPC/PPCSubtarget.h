@@ -107,6 +107,7 @@ protected:
   bool HasP10Vector;
   bool HasPrefixInstrs;
   bool HasPCRelativeMemops;
+  bool HasMMA;
   bool HasFCPSGN;
   bool HasFSQRT;
   bool HasFRE, HasFRES, HasFRSQRTE, HasFRSQRTES;
@@ -260,6 +261,7 @@ public:
   bool hasP10Vector() const { return HasP10Vector; }
   bool hasPrefixInstrs() const { return HasPrefixInstrs; }
   bool hasPCRelativeMemops() const { return HasPCRelativeMemops; }
+  bool hasMMA() const { return HasMMA; }
   bool pairedVectorMemops() const { return PairedVectorMemops; }
   bool hasMFOCRF() const { return HasMFOCRF; }
   bool hasISEL() const { return HasISEL; }
