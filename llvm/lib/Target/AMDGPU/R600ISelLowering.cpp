@@ -1608,7 +1608,7 @@ SDValue R600TargetLowering::LowerFormalArguments(
     }
 
     if (AMDGPU::isShader(CallConv)) {
-      unsigned Reg = MF.addLiveIn(VA.getLocReg(), &R600::R600_Reg128RegClass);
+      Register Reg = MF.addLiveIn(VA.getLocReg(), &R600::R600_Reg128RegClass);
       SDValue Register = DAG.getCopyFromReg(Chain, DL, Reg, VT);
       InVals.push_back(Register);
       continue;
