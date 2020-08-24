@@ -258,29 +258,6 @@ OpenBSD::OpenBSD(const Driver &D, const llvm::Triple &Triple,
   getFilePaths().push_back(getDriver().SysRoot + "/usr/lib");
 }
 
-void OpenBSD::AddCXXStdlibLibArgs(const ArgList &Args,
-                                  ArgStringList &CmdArgs) const {
-  bool Profiling = Args.hasArg(options::OPT_pg);
-
-  CmdArgs.push_back(Profiling ? "-lc++_p" : "-lc++");
-  CmdArgs.push_back(Profiling ? "-lc++abi_p" : "-lc++abi");
-}
-
-Tool *OpenBSD::buildAssembler() const {
-  return new tools::openbsd::Assembler(*this);
-}
-
-Tool *OpenBSD::buildLinker() const { return new tools::openbsd::Linker(*this); }
-
-void OpenBSD::addClangTargetOptions(const ArgList &DriverArgs,
-                                    ArgStringList &CC1Args,
-                                    Action::OffloadKind) const {
-  // Support for .init_array is still new (Aug 2016).
-  if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
-                          options::OPT_fno_use_init_array, false))
-    CC1Args.push_back("-fno-use-init-array");
-}
-
 void OpenBSD::AddClangSystemIncludeArgs(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {
@@ -313,5 +290,42 @@ void OpenBSD::AddClangSystemIncludeArgs(
 
   addExternCSystemInclude(DriverArgs, CC1Args, D.SysRoot + "/usr/include");
 }
+
+void OpenBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
+                                    llvm::opt::ArgStringList &CC1Args) const {
+  addSystemInclude(DriverArgs, CC1Args,
+                   getDriver().SysRoot + "/usr/include/c++/v1");
+}
+
+void OpenBSD::AddCXXStdlibLibArgs(const ArgList &Args,
+                                  ArgStringList &CmdArgs) const {
+  bool Profiling = Args.hasArg(options::OPT_pg);
+
+  CmdArgs.push_back(Profiling ? "-lc++_p" : "-lc++");
+  CmdArgs.push_back(Profiling ? "-lc++abi_p" : "-lc++abi");
+}
+
+std::string OpenBSD::getCompilerRT(const ArgList &Args,
+                                   StringRef Component,
+                                   FileType Type) const {
+  SmallString<128> Path(getDriver().SysRoot);
+  llvm::sys::path::append(Path, "/usr/lib/libcompiler_rt.a");
+  return std::string(Path.str());
+}
+
+void OpenBSD::addClangTargetOptions(const ArgList &DriverArgs,
+                                    ArgStringList &CC1Args,
+                                    Action::OffloadKind) const {
+  // Support for .init_array is still new (Aug 2016).
+  if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
+                          options::OPT_fno_use_init_array, false))
+    CC1Args.push_back("-fno-use-init-array");
+}
+
+Tool *OpenBSD::buildAssembler() const {
+  return new tools::openbsd::Assembler(*this);
+}
+
+Tool *OpenBSD::buildLinker() const { return new tools::openbsd::Linker(*this); }
 
 bool OpenBSD::HasNativeLLVMSupport() const { return true; }
