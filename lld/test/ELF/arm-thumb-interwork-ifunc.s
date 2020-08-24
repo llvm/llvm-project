@@ -3,6 +3,11 @@
 // RUN: ld.lld %t.o -o %t
 // RUN: llvm-objdump --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t | FileCheck %s
 
+/// A symbol assignment defined alias inherits st_type and gets the same treatment.
+// RUN: llvm-mc --triple=armv7a-linux-gnueabihf -arm-add-build-attributes -filetype=obj --defsym ALIAS=1 -o %t1.o %s
+// RUN: ld.lld --defsym foo=foo1 %t1.o -o %t1
+// RUN: llvm-objdump --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t | FileCheck %s
+
 /// Non-preemptible ifuncs are called via a PLT entry which is always Arm
 /// state, expect the ARM callers to go direct to the PLT entry, Thumb
 /// branches are indirected via state change thunks, the bl is changed to blx.
@@ -10,9 +15,15 @@
  .syntax unified
  .text
  .balign 0x1000
+.ifdef ALIAS
+ .type foo1 STT_GNU_IFUNC
+ .globl foo1
+foo1:
+.else
  .type foo STT_GNU_IFUNC
  .globl foo
 foo:
+.endif
  bx lr
 
  .section .text.1, "ax", %progbits
