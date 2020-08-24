@@ -732,11 +732,6 @@ public:
 
   /// Attach to a remote system via a URL
   ///
-  /// \param[in] strm
-  ///     A stream where output intended for the user
-  ///     (if the driver has a way to display that) generated during
-  ///     the connection.  This may be nullptr if no output is needed.A
-  ///
   /// \param[in] remote_url
   ///     The URL format that we are connecting to.
   ///
@@ -919,11 +914,6 @@ public:
   }
 
   /// Attach to a remote system via a URL
-  ///
-  /// \param[in] strm
-  ///     A stream where output intended for the user
-  ///     (if the driver has a way to display that) generated during
-  ///     the connection.  This may be nullptr if no output is needed.A
   ///
   /// \param[in] remote_url
   ///     The URL format that we are connecting to.
@@ -2258,7 +2248,7 @@ void PruneThreadPlans();
 
   /// Dump the thread plans associated with thread with \a tid.
   ///
-  /// \param[in/out] strm
+  /// \param[in,out] strm
   ///     The stream to which to dump the output
   ///
   /// \param[in] tid
@@ -2285,7 +2275,7 @@ void PruneThreadPlans();
 
   /// Dump all the thread plans for this process.
   ///
-  /// \param[in/out] strm
+  /// \param[in,out] strm
   ///     The stream to which to dump the output
   ///
   /// \param[in] desc_level
