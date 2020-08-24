@@ -64,6 +64,34 @@ TEST(Modules, PreambleBuildVisibility) {
   EXPECT_TRUE(TU.build().getDiagnostics().empty());
 }
 
+TEST(Modules, Diagnostic) {
+  // Produce a diagnostic while building an implicit module. Use
+  // -fmodules-strict-decluse, but any non-silenced diagnostic will do.
+  TestTU TU = TestTU::withCode(R"cpp(
+    /*error-ok*/
+    #include "modular.h"
+
+    void bar() {}
+)cpp");
+  TU.OverlayRealFileSystemForModules = true;
+  TU.ExtraArgs.push_back("-fmodule-map-file=" + testPath("m.modulemap"));
+  TU.ExtraArgs.push_back("-fmodules");
+  TU.ExtraArgs.push_back("-fimplicit-modules");
+  TU.ExtraArgs.push_back("-fmodules-strict-decluse");
+  TU.AdditionalFiles["modular.h"] = R"cpp(
+    #include "non-modular.h"
+  )cpp";
+  TU.AdditionalFiles["non-modular.h"] = "";
+  TU.AdditionalFiles["m.modulemap"] = R"modulemap(
+    module M {
+      header "modular.h"
+    }
+)modulemap";
+
+  // Test that we do not crash.
+  TU.build();
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
