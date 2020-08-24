@@ -5,6 +5,8 @@ Test the lldb command line completion mechanism.
 
 
 import os
+from multiprocessing import Process
+import psutil
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -116,6 +118,27 @@ class CommandLineCompletionTestCase(TestBase):
         for subcommand in subcommands:
             self.complete_from_to('process ' + subcommand + ' mac',
                                   'process ' + subcommand + ' mach-o-core')
+
+    @skipIfRemote
+    def test_common_completion_process_pid_and_name(self):
+        # The LLDB process itself and the process already attached to are both
+        # ignored by the process discovery mechanism, thus we need a process known 
+        # to us here.
+        self.build()
+        server = self.spawnSubprocess(
+            self.getBuildArtifact("a.out"),
+            ["-x"], # Arg "-x" makes the subprocess wait for input thus it won't be terminated too early
+            install_remote=False)
+        self.assertIsNotNone(server)
+        pid = server.pid
+
+        self.complete_from_to('process attach -p ', [str(pid)])
+        self.complete_from_to('platform process attach -p ', [str(pid)])
+        self.complete_from_to('platform process info ', [str(pid)])
+
+        pname = psutil.Process(pid).name()  # FIXME: psutil doesn't work for remote
+        self.complete_from_to('process attach -n ', [str(pname)])
+        self.complete_from_to('platform process attach -n ', [str(pname)])
 
     def test_process_signal(self):
         # The tab completion for "process signal"  won't work without a running process.
