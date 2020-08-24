@@ -154,6 +154,10 @@ public:
   /// Call into the Host to see if it can help find the file.
   bool ResolveExecutableLocation(FileSpec &file_spec);
 
+  /// Get the user home directory.
+  bool GetHomeDirectory(llvm::SmallVectorImpl<char> &path) const;
+  bool GetHomeDirectory(FileSpec &file_spec) const;
+
   enum EnumerateDirectoryResult {
     /// Enumerate next entry in the current directory.
     eEnumerateDirectoryResultNext,

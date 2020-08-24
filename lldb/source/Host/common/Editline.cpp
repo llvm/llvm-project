@@ -210,7 +210,7 @@ private:
     // Compute the history path lazily.
     if (m_path.empty() && m_history && !m_prefix.empty()) {
       llvm::SmallString<128> lldb_history_file;
-      llvm::sys::path::home_directory(lldb_history_file);
+      FileSystem::Instance().GetHomeDirectory(lldb_history_file);
       llvm::sys::path::append(lldb_history_file, ".lldb");
 
       // LLDB stores its history in ~/.lldb/. If for some reason this directory
