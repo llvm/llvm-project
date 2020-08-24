@@ -1,6 +1,6 @@
 // Test to make sure basic initialization order errors are caught.
 
-// RUN: %clangxx_asan %macos_min_target_10_11 -O0 %s %p/Helpers/initialization-bug-extra2.cpp -o %t-INIT-ORDER-EXE
+// RUN: %clangxx_asan %min_macos_deployment_target=10.11 -O0 %s %p/Helpers/initialization-bug-extra2.cpp -o %t-INIT-ORDER-EXE
 // RUN: %env_asan_opts=check_initialization_order=true not %run %t-INIT-ORDER-EXE 2>&1 | FileCheck %s
 
 // Do not test with optimization -- the error may be optimized away.
