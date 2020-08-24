@@ -132,6 +132,157 @@ define i32 @test15() {
   ret i32 %x
 }
 
+@z = common global i64 0, align 4
+@a = common global i64 0, align 4
+
+; Be conservative, do not kill regular store.
+define i64 @test_atomicrmw_0() {
+; CHECK-LABEL: @test_atomicrmw_0(
+; CHECK-NEXT:    store i64 1, i64* @z, align 8
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add i64* @z, i64 -1 monotonic
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+  store i64 1, i64* @z
+  %res = atomicrmw add i64* @z, i64 -1 monotonic
+  ret i64 %res
+}
+
+; Be conservative, do not kill regular store.
+define i64 @test_atomicrmw_1() {
+; CHECK-LABEL: @test_atomicrmw_1(
+; CHECK-NEXT:    store i64 1, i64* @z, align 8
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add i64* @z, i64 -1 acq_rel
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+  store i64 1, i64* @z
+  %res = atomicrmw add i64* @z, i64 -1 acq_rel
+  ret i64 %res
+}
+
+; Monotonic atomicrmw should not block eliminating no-aliasing stores.
+define i64 @test_atomicrmw_2() {
+; CHECK-LABEL: @test_atomicrmw_2(
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add i64* @a, i64 -1 monotonic
+; CHECK-NEXT:    store i64 2, i64* @z, align 8
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+  store i64 1, i64* @z
+  %res = atomicrmw add i64* @a, i64 -1 monotonic
+  store i64 2, i64* @z
+  ret i64 %res
+}
+
+; Be conservative, do not eliminate stores across atomic operations > monotonic.
+define i64 @test_atomicrmw_3() {
+; CHECK-LABEL: @test_atomicrmw_3(
+; CHECK-NEXT:    store i64 1, i64* @z, align 8
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add i64* @a, i64 -1 release
+; CHECK-NEXT:    store i64 2, i64* @z, align 8
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+  store i64 1, i64* @z
+  %res = atomicrmw add i64* @a, i64 -1 release
+  store i64 2, i64* @z
+  ret i64 %res
+}
+
+; Be conservative, do not eliminate may-alias stores.
+define i64 @test_atomicrmw_4(i64* %ptr) {
+; CHECK-LABEL: @test_atomicrmw_4(
+; CHECK-NEXT:    store i64 1, i64* @z, align 8
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add i64* [[PTR:%.*]], i64 -1 monotonic
+; CHECK-NEXT:    store i64 2, i64* @z, align 8
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+  store i64 1, i64* @z
+  %res = atomicrmw add i64* %ptr, i64 -1 monotonic
+  store i64 2, i64* @z
+  ret i64 %res
+}
+
+; Be conservative, do not eliminate aliasing stores.
+define i64 @test_atomicrmw_5() {
+; CHECK-LABEL: @test_atomicrmw_5(
+; CHECK-NEXT:    store i64 1, i64* @z, align 8
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw add i64* @z, i64 -1 monotonic
+; CHECK-NEXT:    store i64 2, i64* @z, align 8
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+  store i64 1, i64* @z
+  %res = atomicrmw add i64* @z, i64 -1 monotonic
+  store i64 2, i64* @z
+  ret i64 %res
+}
+
+; Be conservative, do not eliminate non-monotonic cmpxchg.
+define { i32, i1} @test_cmpxchg_1() {
+; CHECK-LABEL: @test_cmpxchg_1(
+; CHECK-NEXT:    store i32 1, i32* @x, align 4
+; CHECK-NEXT:    [[RET:%.*]] = cmpxchg volatile i32* @x, i32 10, i32 20 seq_cst monotonic
+; CHECK-NEXT:    store i32 2, i32* @x, align 4
+; CHECK-NEXT:    ret { i32, i1 } [[RET]]
+;
+  store i32 1, i32* @x
+  %ret = cmpxchg volatile i32* @x, i32 10, i32 20 seq_cst monotonic
+  store i32 2, i32* @x
+  ret { i32, i1 } %ret
+}
+
+; Monotonic cmpxchg should not block DSE for non-aliasing stores.
+define { i32, i1} @test_cmpxchg_2() {
+; CHECK-LABEL: @test_cmpxchg_2(
+; CHECK-NEXT:    [[RET:%.*]] = cmpxchg volatile i32* @y, i32 10, i32 20 monotonic monotonic
+; CHECK-NEXT:    store i32 2, i32* @x, align 4
+; CHECK-NEXT:    ret { i32, i1 } [[RET]]
+;
+  store i32 1, i32* @x
+  %ret = cmpxchg volatile i32* @y, i32 10, i32 20 monotonic monotonic
+  store i32 2, i32* @x
+  ret { i32, i1 } %ret
+}
+
+; Be conservative, do not eliminate non-monotonic cmpxchg.
+define { i32, i1} @test_cmpxchg_3() {
+; CHECK-LABEL: @test_cmpxchg_3(
+; CHECK-NEXT:    store i32 1, i32* @x, align 4
+; CHECK-NEXT:    [[RET:%.*]] = cmpxchg volatile i32* @y, i32 10, i32 20 seq_cst seq_cst
+; CHECK-NEXT:    store i32 2, i32* @x, align 4
+; CHECK-NEXT:    ret { i32, i1 } [[RET]]
+;
+  store i32 1, i32* @x
+  %ret = cmpxchg volatile i32* @y, i32 10, i32 20 seq_cst seq_cst
+  store i32 2, i32* @x
+  ret { i32, i1 } %ret
+}
+
+; Be conservative, do not eliminate may-alias stores.
+define { i32, i1} @test_cmpxchg_4(i32* %ptr) {
+; CHECK-LABEL: @test_cmpxchg_4(
+; CHECK-NEXT:    store i32 1, i32* @x, align 4
+; CHECK-NEXT:    [[RET:%.*]] = cmpxchg volatile i32* [[PTR:%.*]], i32 10, i32 20 monotonic monotonic
+; CHECK-NEXT:    store i32 2, i32* @x, align 4
+; CHECK-NEXT:    ret { i32, i1 } [[RET]]
+;
+  store i32 1, i32* @x
+  %ret = cmpxchg volatile i32* %ptr, i32 10, i32 20 monotonic monotonic
+  store i32 2, i32* @x
+  ret { i32, i1 } %ret
+}
+
+; Be conservative, do not eliminate alias stores.
+define { i32, i1} @test_cmpxchg_5(i32* %ptr) {
+; CHECK-LABEL: @test_cmpxchg_5(
+; CHECK-NEXT:    store i32 1, i32* @x, align 4
+; CHECK-NEXT:    [[RET:%.*]] = cmpxchg volatile i32* @x, i32 10, i32 20 monotonic monotonic
+; CHECK-NEXT:    store i32 2, i32* @x, align 4
+; CHECK-NEXT:    ret { i32, i1 } [[RET]]
+;
+  store i32 1, i32* @x
+  %ret = cmpxchg volatile i32* @x, i32 10, i32 20 monotonic monotonic
+  store i32 2, i32* @x
+  ret { i32, i1 } %ret
+}
+
 ; **** Noop load->store tests **************************************************
 
 ; We can optimize unordered atomic loads or stores.

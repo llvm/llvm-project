@@ -2061,6 +2061,11 @@ struct DSEState {
         return isStrongerThanMonotonic(LI->getOrdering());
       if (auto *SI = dyn_cast<StoreInst>(NI))
         return isStrongerThanMonotonic(SI->getOrdering());
+      if (auto *ARMW = dyn_cast<AtomicRMWInst>(NI))
+        return isStrongerThanMonotonic(ARMW->getOrdering());
+      if (auto *CmpXchg = dyn_cast<AtomicCmpXchgInst>(NI))
+        return isStrongerThanMonotonic(CmpXchg->getSuccessOrdering()) ||
+               isStrongerThanMonotonic(CmpXchg->getFailureOrdering());
       llvm_unreachable("other instructions should be skipped in MemorySSA");
     }
     return false;
