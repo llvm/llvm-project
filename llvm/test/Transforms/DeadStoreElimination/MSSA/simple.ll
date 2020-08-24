@@ -285,8 +285,15 @@ define void @test21() {
   ret void
 }
 
+; Currently elimination of stores at the end of a function is limited to a
+; single underlying object, for compile-time. This case appears to not be
+; very important in practice.
 define void @test22(i1 %i, i32 %k, i32 %m) nounwind {
 ; CHECK-LABEL: @test22(
+; CHECK-NEXT:    [[K_ADDR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[M_ADDR:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[K_ADDR_M_ADDR:%.*]] = select i1 [[I:%.*]], i32* [[K_ADDR]], i32* [[M_ADDR]]
+; CHECK-NEXT:    store i32 0, i32* [[K_ADDR_M_ADDR]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %k.addr = alloca i32
@@ -305,7 +312,7 @@ define noalias i8* @test23() nounwind uwtable ssp {
 ; CHECK-NEXT:    store i8 97, i8* [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [2 x i8], [2 x i8]* [[X]], i64 0, i64 1
 ; CHECK-NEXT:    store i8 0, i8* [[ARRAYIDX1]], align 1
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @strdup(i8* [[ARRAYIDX]]) #3
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @strdup(i8* [[ARRAYIDX]])
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %x = alloca [2 x i8], align 1
@@ -343,7 +350,7 @@ define i8* @test25(i8* %p) nounwind {
 ; CHECK-NEXT:    [[P_4:%.*]] = getelementptr i8, i8* [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP:%.*]] = load i8, i8* [[P_4]], align 1
 ; CHECK-NEXT:    store i8 0, i8* [[P_4]], align 1
-; CHECK-NEXT:    [[Q:%.*]] = call i8* @strdup(i8* [[P]]) #6
+; CHECK-NEXT:    [[Q:%.*]] = call i8* @strdup(i8* [[P]])
 ; CHECK-NEXT:    store i8 [[TMP]], i8* [[P_4]], align 1
 ; CHECK-NEXT:    ret i8* [[Q]]
 ;
@@ -711,7 +718,7 @@ define void @test44_volatile(i32* %P) {
 
 define void @test45_volatile(i32* %P) {
 ; CHECK-LABEL: @test45_volatile(
-; CHECK-NEXT:    store volatile i32 2, i32* [[P]], align 4
+; CHECK-NEXT:    store volatile i32 2, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    store volatile i32 3, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;

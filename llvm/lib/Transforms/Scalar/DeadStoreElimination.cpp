@@ -2096,17 +2096,17 @@ struct DSEState {
       auto DefLoc = getLocForWriteEx(DefI);
       if (!DefLoc)
         continue;
-      getUnderlyingObjects(DefLoc->Ptr, Pointers);
 
-      bool CanKill = true;
-      for (const Value *Pointer : Pointers) {
-        if (!InvisibleToCallerAfterRet.count(Pointer)) {
-          CanKill = false;
-          break;
-        }
-      }
+      // NOTE: Currently eliminating writes at the end of a function is limited
+      // to MemoryDefs with a single underlying object, to save compile-time. In
+      // practice it appears the case with multiple underlying objects is very
+      // uncommon. If it turns out to be important, we can use
+      // getUnderlyingObjects here instead.
+      const Value *UO = getUnderlyingObject(DefLoc->Ptr);
+      if (!UO || !InvisibleToCallerAfterRet.count(UO))
+        continue;
 
-      if (CanKill && isWriteAtEndOfFunction(Def)) {
+      if (isWriteAtEndOfFunction(Def)) {
         // See through pointer-to-pointer bitcasts
         LLVM_DEBUG(dbgs() << "   ... MemoryDef is not accessed until the end "
                              "of the function\n");
