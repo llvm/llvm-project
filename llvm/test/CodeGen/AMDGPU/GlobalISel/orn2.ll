@@ -346,8 +346,7 @@ define amdgpu_ps i32 @s_orn2_v2i16(<2 x i16> inreg %src0, <2 x i16> inreg %src1)
 ;
 ; GFX9-LABEL: s_orn2_v2i16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_xor_b32 s0, s3, -1
-; GFX9-NEXT:    s_or_b32 s0, s2, s0
+; GFX9-NEXT:    s_orn2_b32 s0, s2, s3
 ; GFX9-NEXT:    ; return to shader part epilog
   %not.src1 = xor <2 x i16> %src1, <i16 -1, i16 -1>
   %or = or <2 x i16> %src0, %not.src1
@@ -371,8 +370,7 @@ define amdgpu_ps i32 @s_orn2_v2i16_commute(<2 x i16> inreg %src0, <2 x i16> inre
 ;
 ; GFX9-LABEL: s_orn2_v2i16_commute:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_xor_b32 s0, s3, -1
-; GFX9-NEXT:    s_or_b32 s0, s0, s2
+; GFX9-NEXT:    s_orn2_b32 s0, s2, s3
 ; GFX9-NEXT:    ; return to shader part epilog
   %not.src1 = xor <2 x i16> %src1, <i16 -1, i16 -1>
   %or = or <2 x i16> %not.src1, %src0
@@ -397,7 +395,7 @@ define amdgpu_ps { i32, i32 } @s_orn2_v2i16_multi_use(<2 x i16> inreg %src0, <2 
 ; GFX9-LABEL: s_orn2_v2i16_multi_use:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_xor_b32 s1, s3, -1
-; GFX9-NEXT:    s_or_b32 s0, s2, s1
+; GFX9-NEXT:    s_orn2_b32 s0, s2, s3
 ; GFX9-NEXT:    ; return to shader part epilog
   %not.src1 = xor <2 x i16> %src1, <i16 -1, i16 -1>
   %or = or <2 x i16> %src0, %not.src1
@@ -429,9 +427,8 @@ define amdgpu_ps { i32, i32 } @s_orn2_v2i16_multi_foldable_use(<2 x i16> inreg %
 ;
 ; GFX9-LABEL: s_orn2_v2i16_multi_foldable_use:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_xor_b32 s1, s4, -1
-; GFX9-NEXT:    s_or_b32 s0, s2, s1
-; GFX9-NEXT:    s_or_b32 s1, s3, s1
+; GFX9-NEXT:    s_orn2_b32 s0, s2, s4
+; GFX9-NEXT:    s_orn2_b32 s1, s3, s4
 ; GFX9-NEXT:    ; return to shader part epilog
   %not.src2 = xor <2 x i16> %src2, <i16 -1, i16 -1>
   %or0 = or <2 x i16> %src0, %not.src2
