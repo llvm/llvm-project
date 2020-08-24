@@ -270,6 +270,7 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
   case llvm::Triple::Linux:
   case llvm::Triple::Hurd:
   case llvm::Triple::Solaris:
+  case llvm::Triple::OpenBSD:
     llvm_unreachable("Include management is handled in the driver.");
 
   case llvm::Triple::CloudABI: {
@@ -423,6 +424,7 @@ void InitHeaderSearch::AddDefaultIncludePaths(const LangOptions &Lang,
   case llvm::Triple::Emscripten:
   case llvm::Triple::Linux:
   case llvm::Triple::Hurd:
+  case llvm::Triple::OpenBSD:
   case llvm::Triple::Solaris:
   case llvm::Triple::WASI:
   case llvm::Triple::AIX:
