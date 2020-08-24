@@ -615,16 +615,16 @@ public:
 
   /// Try to rotate an operation below a PHI node, using PHI nodes for
   /// its operands.
-  Instruction *FoldPHIArgOpIntoPHI(PHINode &PN);
-  Instruction *FoldPHIArgBinOpIntoPHI(PHINode &PN);
-  Instruction *FoldPHIArgGEPIntoPHI(PHINode &PN);
-  Instruction *FoldPHIArgLoadIntoPHI(PHINode &PN);
-  Instruction *FoldPHIArgZextsIntoPHI(PHINode &PN);
+  Instruction *foldPHIArgOpIntoPHI(PHINode &PN);
+  Instruction *foldPHIArgBinOpIntoPHI(PHINode &PN);
+  Instruction *foldPHIArgGEPIntoPHI(PHINode &PN);
+  Instruction *foldPHIArgLoadIntoPHI(PHINode &PN);
+  Instruction *foldPHIArgZextsIntoPHI(PHINode &PN);
 
   /// If an integer typed PHI has only one use which is an IntToPtr operation,
   /// replace the PHI with an existing pointer typed PHI if it exists. Otherwise
   /// insert a new pointer typed PHI and replace the original one.
-  Instruction *FoldIntegerTypedPHI(PHINode &PN);
+  Instruction *foldIntegerTypedPHI(PHINode &PN);
 
   /// Helper function for FoldPHIArgXIntoPHI() to set debug location for the
   /// folded operation.
