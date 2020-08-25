@@ -1367,7 +1367,6 @@ TEST(DWARFDebugInfo, TestEmptyChildren) {
                          "      - Code:            0x00000001\n"
                          "        Tag:             DW_TAG_compile_unit\n"
                          "        Children:        DW_CHILDREN_yes\n"
-                         "        Attributes:\n"
                          "debug_info:\n"
                          "  - Version:         4\n"
                          "    AbbrOffset:      0\n"
