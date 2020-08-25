@@ -1142,8 +1142,8 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
 
   // Kill dead defs after the scan to ensure that multiple defs of the same
   // register are allocated identically. We didn't need to do this for uses
-  // because we are crerating our own kill flags, and they are always at the
-  // last use.
+  // because we are creating our own kill flags, and they are always at the last
+  // use.
   for (Register VirtReg : VirtDead)
     killVirtReg(VirtReg);
   VirtDead.clear();
