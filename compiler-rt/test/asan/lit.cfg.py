@@ -42,6 +42,17 @@ def push_dynamic_library_lookup_path(config, new_path):
       (new_path, config.environment.get(dynamic_library_lookup_var, '')))
     config.environment[dynamic_library_lookup_var] = new_ld_32_library_path
 
+  if platform.system() == 'SunOS':
+    dynamic_library_lookup_var = 'LD_LIBRARY_PATH_32'
+    new_ld_library_path_32 = os.path.pathsep.join(
+      (new_path, config.environment.get(dynamic_library_lookup_var, '')))
+    config.environment[dynamic_library_lookup_var] = new_ld_library_path_32
+
+    dynamic_library_lookup_var = 'LD_LIBRARY_PATH_64'
+    new_ld_library_path_64 = os.path.pathsep.join(
+      (new_path, config.environment.get(dynamic_library_lookup_var, '')))
+    config.environment[dynamic_library_lookup_var] = new_ld_library_path_64
+
 # Setup config name.
 config.name = 'AddressSanitizer' + config.name_suffix
 
