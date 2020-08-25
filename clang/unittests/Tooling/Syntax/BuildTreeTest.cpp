@@ -3962,13 +3962,11 @@ int *(d)(int);
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, ConstVolatileQualifiers) {
+TEST_P(SyntaxTreeTest, Declaration_ConstVolatileQualifiers_SimpleConst) {
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
 const int west = -1;
 int const east = 1;
-const int const universal = 0;
-const int const *const *volatile b;
 )cpp",
       R"txt(
 *: TranslationUnit
@@ -3983,25 +3981,45 @@ const int const *const *volatile b;
 | |   `-IntegerLiteralExpression
 | |     `-1
 | `-;
-|-SimpleDeclaration
-| |-int
-| |-const
-| |-SimpleDeclarator
-| | |-east
-| | |-=
-| | `-IntegerLiteralExpression
-| |   `-1
-| `-;
-|-SimpleDeclaration
-| |-const
-| |-int
-| |-const
-| |-SimpleDeclarator
-| | |-universal
-| | |-=
-| | `-IntegerLiteralExpression
-| |   `-0
-| `-;
+`-SimpleDeclaration
+  |-int
+  |-const
+  |-SimpleDeclarator
+  | |-east
+  | |-=
+  | `-IntegerLiteralExpression
+  |   `-1
+  `-;
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, Declaration_ConstVolatileQualifiers_MultipleConst) {
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+const int const universal = 0;
+)cpp",
+      R"txt(
+*: TranslationUnit
+`-SimpleDeclaration
+  |-const
+  |-int
+  |-const
+  |-SimpleDeclarator
+  | |-universal
+  | |-=
+  | `-IntegerLiteralExpression
+  |   `-0
+  `-;
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, Declaration_ConstVolatileQualifiers_ConstAndVolatile) {
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+const int const *const *volatile b;
+)cpp",
+      R"txt(
+*: TranslationUnit
 `-SimpleDeclaration
   |-const
   |-int
