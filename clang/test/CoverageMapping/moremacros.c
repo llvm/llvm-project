@@ -9,18 +9,16 @@ int main(int argc, const char *argv[]) {
   // CHECK-NEXT: File 0, [[@LINE+1]]:7 -> [[@LINE+1]]:12 = #0
   if (!argc) {} // CHECK: File 0, [[@LINE]]:14 -> [[@LINE]]:16 = #1
 
-  // CHECK-NEXT: File 0, [[@LINE+4]]:7 -> [[@LINE+4]]:12 = #0
-  // CHECK-NEXT: Gap,File 0, [[@LINE+3]]:13 -> [[@LINE+3]]:14 = #2
+  // CHECK-NEXT: File 0, [[@LINE+3]]:7 -> [[@LINE+3]]:12 = #0
   // CHECK-NEXT: Expansion,File 0, [[@LINE+2]]:14 -> [[@LINE+2]]:19 = #2
   // CHECK-NEXT: File 0, [[@LINE+1]]:19 -> [[@LINE+4]]:8 = #2
   if (!argc) LBRAC
     return 0;
   // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:8 = #2
-  RBRAC // CHECK-NEXT: [[@LINE]]:8 -> [[@LINE+7]]:3 = (#0 - #2)
+  RBRAC // CHECK-NEXT: [[@LINE]]:8 -> [[@LINE+6]]:3 = (#0 - #2)
 
-  // CHECK-NEXT: File 0, [[@LINE+5]]:3 -> [[@LINE+16]]:2 = (#0 - #2)
-  // CHECK-NEXT: File 0, [[@LINE+4]]:7 -> [[@LINE+4]]:12 = (#0 - #2)
-  // CHECK-NEXT: Gap,File 0, [[@LINE+3]]:13 -> [[@LINE+3]]:14 = #3
+  // CHECK-NEXT: File 0, [[@LINE+4]]:3 -> [[@LINE+15]]:2 = (#0 - #2)
+  // CHECK-NEXT: File 0, [[@LINE+3]]:7 -> [[@LINE+3]]:12 = (#0 - #2)
   // CHECK-NEXT: Expansion,File 0, [[@LINE+2]]:14 -> [[@LINE+2]]:19 = #3
   // CHECK-NEXT: File 0, [[@LINE+1]]:19 -> [[@LINE+3]]:4 = #3
   if (!argc) LBRAC
