@@ -483,12 +483,15 @@ private:
       }
     }
     uptr TotalReleasedBytes = 0;
+    auto SkipRegion = [this, First, ClassId](uptr RegionIndex) {
+      return (PossibleRegions[First + RegionIndex] - 1U) != ClassId;
+    };
     if (First && Last) {
       const uptr Base = First * RegionSize;
       const uptr NumberOfRegions = Last - First + 1U;
       ReleaseRecorder Recorder(Base);
       releaseFreeMemoryToOS(Sci->FreeList, Base, RegionSize, NumberOfRegions,
-                            BlockSize, &Recorder);
+                            BlockSize, &Recorder, SkipRegion);
       if (Recorder.getReleasedRangesCount() > 0) {
         Sci->ReleaseInfo.PushedBlocksAtLastRelease = Sci->Stats.PushedBlocks;
         Sci->ReleaseInfo.RangesReleased += Recorder.getReleasedRangesCount();

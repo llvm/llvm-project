@@ -16930,27 +16930,28 @@ to:
 
 ::
 
-      %m[i] = icmp ule (%base + i), %n
+      %m[i] = icmp ult (%base + i), %n
 
 where ``%m`` is a vector (mask) of active/inactive lanes with its elements
 indexed by ``i``,  and ``%base``, ``%n`` are the two arguments to
-``llvm.get.active.lane.mask.*``, ``%imcp`` is an integer compare and ``ule``
-the unsigned less-than-equal comparison operator.  Overflow cannot occur in
-``(%base + i)`` and its comparison against ``%n`` as it is performed in integer
-numbers and not in machine numbers.  The above is equivalent to:
+``llvm.get.active.lane.mask.*``, ``%icmp`` is an integer compare and ``ult``
+the unsigned less-than comparison operator.  Overflow cannot occur in
+``(%base + i)`` and its comparison against ``%n`` with ``%n > 0``, as it is
+performed in integer numbers and not in machine numbers. The above is
+equivalent to:
 
 ::
 
       %m = @llvm.get.active.lane.mask(%base, %n)
 
-This can, for example, be emitted by the loop vectorizer. Then, ``%base`` is
-the first element of the vector induction variable (VIV), and ``%n`` is the
-Back-edge Taken Count (BTC). Thus, these intrinsics perform an element-wise
-less than or equal comparison of VIV with BTC, producing a mask of true/false
-values representing active/inactive vector lanes, except if the VIV overflows
-in which case they return false in the lanes where the VIV overflows.  The
-arguments are scalar types to accommodate scalable vector types, for which it is
-unknown what the type of the step vector needs to be that enumerate its
+This can, for example, be emitted by the loop vectorizer in which case
+``%base`` is the first element of the vector induction variable (VIV) and
+``%n`` is the loop tripcount. Thus, these intrinsics perform an element-wise
+less than comparison of VIV with the loop tripcount, producing a mask of
+true/false values representing active/inactive vector lanes, except if the VIV
+overflows in which case they return false in the lanes where the VIV overflows.
+The arguments are scalar types to accommodate scalable vector types, for which
+it is unknown what the type of the step vector needs to be that enumerate its
 lanes without overflow.
 
 This mask ``%m`` can e.g. be used in masked load/store instructions. These
