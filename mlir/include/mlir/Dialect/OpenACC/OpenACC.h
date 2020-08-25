@@ -35,7 +35,7 @@ namespace acc {
 ///
 /// Value can be combined bitwise to reflect the mapping applied to the
 /// construct. e.g. `acc.loop gang vector`, the `gang` and `vector` could be
-/// combined and the final mapping value would be 5 (4 & 1).
+/// combined and the final mapping value would be 5 (4 | 1).
 enum OpenACCExecMapping { NONE = 0, VECTOR = 1, WORKER = 2, GANG = 4, SEQ = 8 };
 
 } // end namespace acc
