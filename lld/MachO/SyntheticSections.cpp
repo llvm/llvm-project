@@ -91,11 +91,10 @@ NonLazyPointerSectionBase::NonLazyPointerSectionBase(const char *segname,
 
 void NonLazyPointerSectionBase::addEntry(Symbol *sym) {
   if (entries.insert(sym)) {
-    assert(sym->gotIndex == UINT32_MAX);
+    assert(!sym->isInGot());
     sym->gotIndex = entries.size() - 1;
 
-    if (auto *dysym = dyn_cast<DylibSymbol>(sym))
-      in.binding->addEntry(dysym, this, sym->gotIndex * WordSize);
+    addNonLazyBindingEntries(sym, this, sym->gotIndex * WordSize);
   }
 }
 
@@ -117,13 +116,13 @@ struct Binding {
 };
 } // namespace
 
-// Encode a sequence of opcodes that tell dyld to write the address of dysym +
+// Encode a sequence of opcodes that tell dyld to write the address of symbol +
 // addend at osec->addr + outSecOff.
 //
 // The bind opcode "interpreter" remembers the values of each binding field, so
 // we only need to encode the differences between bindings. Hence the use of
 // lastBinding.
-static void encodeBinding(const DylibSymbol *dysym, const OutputSection *osec,
+static void encodeBinding(const Symbol *sym, const OutputSection *osec,
                           uint64_t outSecOff, int64_t addend,
                           Binding &lastBinding, raw_svector_ostream &os) {
   using namespace llvm::MachO;
@@ -141,17 +140,6 @@ static void encodeBinding(const DylibSymbol *dysym, const OutputSection *osec,
     lastBinding.offset = offset;
   }
 
-  if (lastBinding.ordinal != dysym->file->ordinal) {
-    if (dysym->file->ordinal <= BIND_IMMEDIATE_MASK) {
-      os << static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
-                                 dysym->file->ordinal);
-    } else {
-      os << static_cast<uint8_t>(MachO::BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB);
-      encodeULEB128(dysym->file->ordinal, os);
-    }
-    lastBinding.ordinal = dysym->file->ordinal;
-  }
-
   if (lastBinding.addend != addend) {
     os << static_cast<uint8_t>(BIND_OPCODE_SET_ADDEND_SLEB);
     encodeSLEB128(addend, os);
@@ -159,18 +147,33 @@ static void encodeBinding(const DylibSymbol *dysym, const OutputSection *osec,
   }
 
   os << static_cast<uint8_t>(BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM)
-     << dysym->getName() << '\0'
+     << sym->getName() << '\0'
      << static_cast<uint8_t>(BIND_OPCODE_SET_TYPE_IMM | BIND_TYPE_POINTER)
      << static_cast<uint8_t>(BIND_OPCODE_DO_BIND);
   // DO_BIND causes dyld to both perform the binding and increment the offset
   lastBinding.offset += WordSize;
 }
 
-uint64_t BindingEntry::getVA() const {
+// Non-weak bindings need to have their dylib ordinal encoded as well.
+static void encodeDylibOrdinal(const DylibSymbol *dysym, Binding &lastBinding,
+                               raw_svector_ostream &os) {
+  using namespace llvm::MachO;
+  if (lastBinding.ordinal != dysym->file->ordinal) {
+    if (dysym->file->ordinal <= BIND_IMMEDIATE_MASK) {
+      os << static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_ORDINAL_IMM |
+                                 dysym->file->ordinal);
+    } else {
+      os << static_cast<uint8_t>(BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB);
+      encodeULEB128(dysym->file->ordinal, os);
+    }
+    lastBinding.ordinal = dysym->file->ordinal;
+  }
+}
+
+uint64_t BindingTarget::getVA() const {
   if (auto *isec = section.dyn_cast<const InputSection *>())
     return isec->getVA() + offset;
-  auto *osec = section.get<const OutputSection *>();
-  return osec->addr + offset;
+  return section.get<const OutputSection *>()->addr + offset;
 }
 
 // Emit bind opcodes, which are a stream of byte-sized opcodes that dyld
@@ -194,15 +197,17 @@ void BindingSection::finalizeContents() {
   // result. Note that sorting by address alone ensures that bindings for the
   // same segment / section are located together.
   llvm::sort(bindings, [](const BindingEntry &a, const BindingEntry &b) {
-    return a.getVA() < b.getVA();
+    return a.target.getVA() < b.target.getVA();
   });
   for (const BindingEntry &b : bindings) {
-    if (auto *isec = b.section.dyn_cast<const InputSection *>()) {
-      encodeBinding(b.dysym, isec->parent, isec->outSecOff + b.offset, b.addend,
-                    lastBinding, os);
+    encodeDylibOrdinal(b.dysym, lastBinding, os);
+    if (auto *isec = b.target.section.dyn_cast<const InputSection *>()) {
+      encodeBinding(b.dysym, isec->parent, isec->outSecOff + b.target.offset,
+                    b.target.addend, lastBinding, os);
     } else {
-      auto *osec = b.section.get<const OutputSection *>();
-      encodeBinding(b.dysym, osec, b.offset, b.addend, lastBinding, os);
+      auto *osec = b.target.section.get<const OutputSection *>();
+      encodeBinding(b.dysym, osec, b.target.offset, b.target.addend,
+                    lastBinding, os);
     }
   }
   if (!bindings.empty())
@@ -211,6 +216,56 @@ void BindingSection::finalizeContents() {
 
 void BindingSection::writeTo(uint8_t *buf) const {
   memcpy(buf, contents.data(), contents.size());
+}
+
+WeakBindingSection::WeakBindingSection()
+    : LinkEditSection(segment_names::linkEdit, section_names::weakBinding) {}
+
+void WeakBindingSection::finalizeContents() {
+  raw_svector_ostream os{contents};
+  Binding lastBinding;
+
+  // Since bindings are delta-encoded, sorting them allows for a more compact
+  // result.
+  llvm::sort(bindings,
+             [](const WeakBindingEntry &a, const WeakBindingEntry &b) {
+               return a.target.getVA() < b.target.getVA();
+             });
+  for (const WeakBindingEntry &b : bindings) {
+    if (auto *isec = b.target.section.dyn_cast<const InputSection *>()) {
+      encodeBinding(b.symbol, isec->parent, isec->outSecOff + b.target.offset,
+                    b.target.addend, lastBinding, os);
+    } else {
+      auto *osec = b.target.section.get<const OutputSection *>();
+      encodeBinding(b.symbol, osec, b.target.offset, b.target.addend,
+                    lastBinding, os);
+    }
+  }
+  if (!bindings.empty())
+    os << static_cast<uint8_t>(MachO::BIND_OPCODE_DONE);
+}
+
+void WeakBindingSection::writeTo(uint8_t *buf) const {
+  memcpy(buf, contents.data(), contents.size());
+}
+
+void macho::addNonLazyBindingEntries(const Symbol *sym,
+                                     SectionPointerUnion section,
+                                     uint64_t offset, int64_t addend) {
+  if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
+    in.binding->addEntry(dysym, section, offset, addend);
+    if (dysym->isWeakDef())
+      in.weakBinding->addEntry(sym, section, offset, addend);
+  } else if (auto *defined = dyn_cast<Defined>(sym)) {
+    if (defined->isWeakDef() && defined->isExternal())
+      in.weakBinding->addEntry(sym, section, offset, addend);
+  } else if (isa<DSOHandle>(sym)) {
+    error("cannot bind to " + DSOHandle::name);
+  } else {
+    // Undefined symbols are filtered out in scanRelocations(); we should never
+    // get here
+    llvm_unreachable("cannot bind to an undefined symbol");
+  }
 }
 
 StubsSection::StubsSection()
