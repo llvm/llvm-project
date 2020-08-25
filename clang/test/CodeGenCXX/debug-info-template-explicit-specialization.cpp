@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple -debug-info-kind=limited %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple -debug-info-kind=limited %s -o - | FileCheck %
+
+// Make sure this still works with constructor homing.
+// RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple -debug-info-kind=constructor %s -o - | FileCheck %s
 
 // Run again with -gline-tables-only or -gline-directives-only and verify we don't crash.  We won't output
 // type info at all.
