@@ -749,9 +749,7 @@ define <4 x i8> @select_cond_(<4 x i8> %x, <4 x i8> %min, <4 x i1> %cmp, i1 %poi
 
 define <4 x float> @ins_of_ext(<4 x float> %x, float %y) {
 ; CHECK-LABEL: @ins_of_ext(
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x float> [[X:%.*]], i32 0
-; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[E0]], i32 0
-; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[I0]], float [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[X:%.*]], float [[Y:%.*]], i32 1
 ; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[I1]], float [[Y]], i32 2
 ; CHECK-NEXT:    [[I3:%.*]] = insertelement <4 x float> [[I2]], float [[Y]], i32 3
 ; CHECK-NEXT:    ret <4 x float> [[I3]]
@@ -766,11 +764,7 @@ define <4 x float> @ins_of_ext(<4 x float> %x, float %y) {
 
 define <4 x float> @ins_of_ext_twice(<4 x float> %x, float %y) {
 ; CHECK-LABEL: @ins_of_ext_twice(
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x float> [[X:%.*]], i32 0
-; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[E0]], i32 0
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x float> [[X]], i32 1
-; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[I0]], float [[E1]], i32 1
-; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[I1]], float [[Y:%.*]], i32 2
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[X:%.*]], float [[Y:%.*]], i32 2
 ; CHECK-NEXT:    [[I3:%.*]] = insertelement <4 x float> [[I2]], float [[Y]], i32 3
 ; CHECK-NEXT:    ret <4 x float> [[I3]]
 ;
@@ -782,6 +776,9 @@ define <4 x float> @ins_of_ext_twice(<4 x float> %x, float %y) {
   %i3 = insertelement <4 x float> %i2, float %y, i32 3
   ret <4 x float> %i3
 }
+
+; Negative test - element 3 of the result must be undef to be poison safe.
+; TODO: Could convert insert/extract to identity shuffle with undef mask elements.
 
 define <4 x float> @ins_of_ext_wrong_demand(<4 x float> %x, float %y) {
 ; CHECK-LABEL: @ins_of_ext_wrong_demand(
@@ -797,6 +794,9 @@ define <4 x float> @ins_of_ext_wrong_demand(<4 x float> %x, float %y) {
   %i2 = insertelement <4 x float> %i1, float %y, i32 2
   ret <4 x float> %i2
 }
+
+; Negative test - can't replace i0 with x.
+; TODO: Could convert insert/extract to identity shuffle with undef mask elements.
 
 define <4 x float> @ins_of_ext_wrong_type(<5 x float> %x, float %y) {
 ; CHECK-LABEL: @ins_of_ext_wrong_type(
@@ -819,9 +819,7 @@ define <4 x float> @ins_of_ext_wrong_type(<5 x float> %x, float %y) {
 
 define <4 x i4> @ins_of_ext_undef_elts_propagation(<4 x i4> %v, <4 x i4> %v2, i4 %x) {
 ; CHECK-LABEL: @ins_of_ext_undef_elts_propagation(
-; CHECK-NEXT:    [[V0:%.*]] = extractelement <4 x i4> [[V:%.*]], i32 0
-; CHECK-NEXT:    [[T0:%.*]] = insertelement <4 x i4> undef, i4 [[V0]], i32 0
-; CHECK-NEXT:    [[T2:%.*]] = insertelement <4 x i4> [[T0]], i4 [[X:%.*]], i32 2
+; CHECK-NEXT:    [[T2:%.*]] = insertelement <4 x i4> [[V:%.*]], i4 [[X:%.*]], i32 2
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i4> [[T2]], <4 x i4> [[V2:%.*]], <4 x i32> <i32 0, i32 6, i32 2, i32 7>
 ; CHECK-NEXT:    ret <4 x i4> [[R]]
 ;
@@ -836,11 +834,7 @@ define <4 x i4> @ins_of_ext_undef_elts_propagation(<4 x i4> %v, <4 x i4> %v2, i4
 
 define <8 x i4> @ins_of_ext_undef_elts_propagation2(<8 x i4> %v, <8 x i4> %v2, i4 %x) {
 ; CHECK-LABEL: @ins_of_ext_undef_elts_propagation2(
-; CHECK-NEXT:    [[I15:%.*]] = extractelement <8 x i4> [[V:%.*]], i32 0
-; CHECK-NEXT:    [[I16:%.*]] = insertelement <8 x i4> undef, i4 [[I15]], i32 0
-; CHECK-NEXT:    [[I17:%.*]] = extractelement <8 x i4> [[V]], i32 1
-; CHECK-NEXT:    [[I18:%.*]] = insertelement <8 x i4> [[I16]], i4 [[I17]], i32 1
-; CHECK-NEXT:    [[I19:%.*]] = insertelement <8 x i4> [[I18]], i4 [[X:%.*]], i32 2
+; CHECK-NEXT:    [[I19:%.*]] = insertelement <8 x i4> [[V:%.*]], i4 [[X:%.*]], i32 2
 ; CHECK-NEXT:    [[I20:%.*]] = shufflevector <8 x i4> [[I19]], <8 x i4> [[V2:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 11, i32 10, i32 9, i32 8, i32 undef>
 ; CHECK-NEXT:    [[I21:%.*]] = shufflevector <8 x i4> [[I20]], <8 x i4> [[V]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 15>
 ; CHECK-NEXT:    ret <8 x i4> [[I21]]
