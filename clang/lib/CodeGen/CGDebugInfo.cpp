@@ -2260,6 +2260,25 @@ static bool hasExplicitMemberDefinition(CXXRecordDecl::method_iterator I,
   return false;
 }
 
+static bool canUseCtorHoming(const CXXRecordDecl *RD) {
+  // Constructor homing can be used for classes that have at least one
+  // constructor and have no trivial or constexpr constructors.
+  // Skip this optimization if the class or any of its methods are marked
+  // dllimport.
+  if (RD->isLambda() || RD->hasConstexprNonCopyMoveConstructor() ||
+      isClassOrMethodDLLImport(RD))
+    return false;
+
+  if (RD->ctors().empty())
+    return false;
+
+  for (const auto *Ctor : RD->ctors())
+    if (Ctor->isTrivial() && !Ctor->isCopyOrMoveConstructor())
+      return false;
+
+  return true;
+}
+
 static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
                                  bool DebugTypeExtRefs, const RecordDecl *RD,
                                  const LangOptions &LangOpts) {
@@ -2294,23 +2313,6 @@ static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
       !isClassOrMethodDLLImport(CXXDecl))
     return true;
 
-  // In constructor debug mode, only emit debug info for a class when its
-  // constructor is emitted. Skip this optimization if the class or any of
-  // its methods are marked dllimport.
-  //
-  // This applies to classes that don't have any trivial constructors and have
-  // at least one constructor.
-  if (DebugKind == codegenoptions::DebugInfoConstructor &&
-      !CXXDecl->isLambda() && !CXXDecl->hasConstexprNonCopyMoveConstructor() &&
-      !isClassOrMethodDLLImport(CXXDecl)) {
-    if (CXXDecl->ctors().empty())
-      return false;
-    for (const auto *Ctor : CXXDecl->ctors())
-      if (Ctor->isTrivial() && !Ctor->isCopyOrMoveConstructor())
-        return false;
-    return true;
-  }
-
   TemplateSpecializationKind Spec = TSK_Undeclared;
   if (const auto *SD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
     Spec = SD->getSpecializationKind();
@@ -2318,6 +2320,12 @@ static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
   if (Spec == TSK_ExplicitInstantiationDeclaration &&
       hasExplicitMemberDefinition(CXXDecl->method_begin(),
                                   CXXDecl->method_end()))
+    return true;
+
+  // In constructor homing mode, only emit complete debug info for a class
+  // when its constructor is emitted.
+  if ((DebugKind == codegenoptions::DebugInfoConstructor) &&
+      canUseCtorHoming(CXXDecl))
     return true;
 
   return false;
