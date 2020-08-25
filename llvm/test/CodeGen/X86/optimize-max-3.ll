@@ -1,5 +1,5 @@
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux -asm-verbose=false | FileCheck %s
-; RUN: llc < %s -mcpu=generic -mtriple=x86_64-win32 -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-linux -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-win32 -asm-verbose=false | FileCheck %s
 
 ; LSR's OptimizeMax should eliminate the select (max).
 
