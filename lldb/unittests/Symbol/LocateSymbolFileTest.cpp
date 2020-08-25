@@ -14,6 +14,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Reproducer.h"
 
 using namespace lldb_private;
 
@@ -27,15 +28,22 @@ public:
 TEST_F(
     SymbolsTest,
     TerminateLocateExecutableSymbolFileForUnknownExecutableAndUnknownSymbolFile) {
+  EXPECT_THAT_ERROR(
+      repro::Reproducer::Initialize(repro::ReproducerMode::Off, llvm::None),
+      llvm::Succeeded());
   ModuleSpec module_spec;
   FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
   FileSpec symbol_file_spec =
       Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
   EXPECT_TRUE(symbol_file_spec.GetFilename().IsEmpty());
+  repro::Reproducer::Terminate();
 }
 
 TEST_F(SymbolsTest,
        LocateExecutableSymbolFileForUnknownExecutableAndMissingSymbolFile) {
+  EXPECT_THAT_ERROR(
+      repro::Reproducer::Initialize(repro::ReproducerMode::Off, llvm::None),
+      llvm::Succeeded());
   ModuleSpec module_spec;
   // using a GUID here because the symbol file shouldn't actually exist on disk
   module_spec.GetSymbolFileSpec().SetFile(
@@ -44,4 +52,5 @@ TEST_F(SymbolsTest,
   FileSpec symbol_file_spec =
       Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
   EXPECT_TRUE(symbol_file_spec.GetFilename().IsEmpty());
+  repro::Reproducer::Terminate();
 }
