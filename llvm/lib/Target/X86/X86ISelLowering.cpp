@@ -44622,7 +44622,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
       return SDValue();
     };
     if (SDValue Extract = IsExtractedElement(StoredVal)) {
-      SDValue Trunc = peekThroughOneUseBitcasts(Extract.getOperand(0));
+      SDValue Trunc = peekThroughOneUseBitcasts(Extract);
       if (Trunc.getOpcode() == X86ISD::VTRUNC) {
         SDValue Src = Trunc.getOperand(0);
         MVT DstVT = Trunc.getSimpleValueType();
