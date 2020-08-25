@@ -1,5 +1,5 @@
 ! RUN: %f18 -E %s 2>&1 | FileCheck %s
-! CHECK: if(77 7.eq.777)then
+! CHECK: if(777.eq.777)then
 * \ newline allowed in #define
       integer, parameter :: KWM = 666
 #define KWM 77\
