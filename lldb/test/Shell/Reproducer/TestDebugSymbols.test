@@ -1,0 +1,14 @@
+# REQUIRES: system-darwin
+
+# RUN: rm -rf %t.repro
+# RUN: env LLDB_APPLE_DSYMFORUUID_EXECUTABLE=%S/Inputs/dsymforuuid.sh %lldb --capture --capture-path %t.repro -c %S/Inputs/core -o 'reproducer generate'
+
+# RUN: cat %t.repro/symbol-files.yaml | FileCheck %s --check-prefix YAML
+# YAML: AD52358C-94F8-3796-ADD6-B20FFAC00E5C
+# YAML: /path/to/unstripped/executable
+# YAML: /path/to/foo.dSYM/Contents/Resources/DWARF/foo
+
+# RUN: %lldb -b -o 'reproducer dump -p symbol-files -f %t.repro' | FileCheck %s --check-prefix DUMP
+# DUMP: uuid: AD52358C-94F8-3796-ADD6-B20FFAC00E5C
+# DUMP-NEXT: module path: /path/to/unstripped/executable
+# DUMP-NEXT: symbol path: /path/to/foo.dSYM/Contents/Resources/DWARF/foo
