@@ -479,7 +479,6 @@ namespace HexagonISD {
     findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT)
         const override;
 
-    bool isHvxOperation(SDValue Op) const;
     bool isHvxOperation(SDNode *N) const;
     SDValue LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const;
     void LowerHvxOperationWrapper(SDNode *N, SmallVectorImpl<SDValue> &Results,
