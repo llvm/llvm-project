@@ -6524,9 +6524,10 @@ void LLVMStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
 
   for (const Elf_Phdr &Phdr : *PhdrsOrErr) {
     DictScope P(W, "ProgramHeader");
-    W.printHex("Type",
-               segmentTypeToString(Obj->getHeader()->e_machine, Phdr.p_type),
-               Phdr.p_type);
+    StringRef Type =
+        segmentTypeToString(Obj->getHeader()->e_machine, Phdr.p_type);
+
+    W.printHex("Type", Type.empty() ? "Unknown" : Type, Phdr.p_type);
     W.printHex("Offset", Phdr.p_offset);
     W.printHex("VirtualAddress", Phdr.p_vaddr);
     W.printHex("PhysicalAddress", Phdr.p_paddr);
