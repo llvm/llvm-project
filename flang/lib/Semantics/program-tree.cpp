@@ -112,6 +112,10 @@ ProgramTree ProgramTree::Build(const parser::BlockData &x) {
   return result.set_stmt(stmt).set_endStmt(end);
 }
 
+ProgramTree ProgramTree::Build(const parser::CompilerDirective &) {
+  DIE("ProgramTree::Build() called for CompilerDirective");
+}
+
 const parser::ParentIdentifier &ProgramTree::GetParentId() const {
   const auto *stmt{
       std::get<const parser::Statement<parser::SubmoduleStmt> *>(stmt_)};

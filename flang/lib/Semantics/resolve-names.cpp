@@ -6226,6 +6226,11 @@ void ResolveNamesVisitor::Post(const parser::AssignedGotoStmt &x) {
 }
 
 bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
+  if (std::holds_alternative<common::Indirection<parser::CompilerDirective>>(
+          x.u)) {
+    // TODO: global directives
+    return true;
+  }
   auto root{ProgramTree::Build(x)};
   SetScope(context().globalScope());
   ResolveSpecificationParts(root);
