@@ -21,29 +21,22 @@ using namespace lldb_private;
 namespace {
 class SymbolsTest : public ::testing::Test {
 public:
-  SubsystemRAII<FileSystem, HostInfo> subsystems;
+  SubsystemRAII<repro::Reproducer, FileSystem, HostInfo> subsystems;
 };
 } // namespace
 
 TEST_F(
     SymbolsTest,
     TerminateLocateExecutableSymbolFileForUnknownExecutableAndUnknownSymbolFile) {
-  EXPECT_THAT_ERROR(
-      repro::Reproducer::Initialize(repro::ReproducerMode::Off, llvm::None),
-      llvm::Succeeded());
   ModuleSpec module_spec;
   FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
   FileSpec symbol_file_spec =
       Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
   EXPECT_TRUE(symbol_file_spec.GetFilename().IsEmpty());
-  repro::Reproducer::Terminate();
 }
 
 TEST_F(SymbolsTest,
        LocateExecutableSymbolFileForUnknownExecutableAndMissingSymbolFile) {
-  EXPECT_THAT_ERROR(
-      repro::Reproducer::Initialize(repro::ReproducerMode::Off, llvm::None),
-      llvm::Succeeded());
   ModuleSpec module_spec;
   // using a GUID here because the symbol file shouldn't actually exist on disk
   module_spec.GetSymbolFileSpec().SetFile(
@@ -52,5 +45,4 @@ TEST_F(SymbolsTest,
   FileSpec symbol_file_spec =
       Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
   EXPECT_TRUE(symbol_file_spec.GetFilename().IsEmpty());
-  repro::Reproducer::Terminate();
 }
