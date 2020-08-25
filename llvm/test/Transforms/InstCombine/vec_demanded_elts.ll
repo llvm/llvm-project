@@ -749,7 +749,9 @@ define <4 x i8> @select_cond_(<4 x i8> %x, <4 x i8> %min, <4 x i1> %cmp, i1 %poi
 
 define <4 x float> @ins_of_ext(<4 x float> %x, float %y) {
 ; CHECK-LABEL: @ins_of_ext(
-; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[X:%.*]], float [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x float> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[E0]], i32 0
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[I0]], float [[Y:%.*]], i32 1
 ; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[I1]], float [[Y]], i32 2
 ; CHECK-NEXT:    [[I3:%.*]] = insertelement <4 x float> [[I2]], float [[Y]], i32 3
 ; CHECK-NEXT:    ret <4 x float> [[I3]]
@@ -764,7 +766,11 @@ define <4 x float> @ins_of_ext(<4 x float> %x, float %y) {
 
 define <4 x float> @ins_of_ext_twice(<4 x float> %x, float %y) {
 ; CHECK-LABEL: @ins_of_ext_twice(
-; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[X:%.*]], float [[Y:%.*]], i32 2
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x float> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[E0]], i32 0
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x float> [[X]], i32 1
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[I0]], float [[E1]], i32 1
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[I1]], float [[Y:%.*]], i32 2
 ; CHECK-NEXT:    [[I3:%.*]] = insertelement <4 x float> [[I2]], float [[Y]], i32 3
 ; CHECK-NEXT:    ret <4 x float> [[I3]]
 ;
@@ -776,9 +782,6 @@ define <4 x float> @ins_of_ext_twice(<4 x float> %x, float %y) {
   %i3 = insertelement <4 x float> %i2, float %y, i32 3
   ret <4 x float> %i3
 }
-
-; Negative test - element 3 of the result must be undef to be poison safe.
-; TODO: Could convert insert/extract to identity shuffle with undef mask elements.
 
 define <4 x float> @ins_of_ext_wrong_demand(<4 x float> %x, float %y) {
 ; CHECK-LABEL: @ins_of_ext_wrong_demand(
@@ -794,9 +797,6 @@ define <4 x float> @ins_of_ext_wrong_demand(<4 x float> %x, float %y) {
   %i2 = insertelement <4 x float> %i1, float %y, i32 2
   ret <4 x float> %i2
 }
-
-; Negative test - can't replace i0 with x.
-; TODO: Could convert insert/extract to identity shuffle with undef mask elements.
 
 define <4 x float> @ins_of_ext_wrong_type(<5 x float> %x, float %y) {
 ; CHECK-LABEL: @ins_of_ext_wrong_type(
