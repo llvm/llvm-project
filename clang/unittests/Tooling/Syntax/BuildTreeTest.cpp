@@ -3007,55 +3007,37 @@ namespace n {
 )txt"));
 }
 
-TEST_P(SyntaxTreeTest, Templates2) {
+TEST_P(SyntaxTreeTest, ClassTemplate_MemberClassDefinition) {
   if (!GetParam().isCXX()) {
     return;
   }
-  EXPECT_TRUE(treeDumpEqual(
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
 template <class T> struct X { struct Y; };
-template <class T> struct X<T>::Y {};
+[[template <class T> struct X<T>::Y {};]]
 )cpp",
-      R"txt(
-*: TranslationUnit
-|-TemplateDeclaration
-| |-template
-| |-<
-| |-UnknownDeclaration
-| | |-class
-| | `-T
-| |->
-| `-SimpleDeclaration
-|   |-struct
-|   |-X
-|   |-{
-|   |-SimpleDeclaration
-|   | |-struct
-|   | |-Y
-|   | `-;
-|   |-}
-|   `-;
-`-TemplateDeclaration
-  |-template
-  |-<
-  |-UnknownDeclaration
-  | |-class
-  | `-T
-  |->
-  `-SimpleDeclaration
-    |-struct
-    |-NestedNameSpecifier
-    | |-SimpleTemplateNameSpecifier
-    | | |-X
-    | | |-<
-    | | |-T
-    | | `->
-    | `-::
-    |-Y
-    |-{
-    |-}
-    `-;
-)txt"));
+      {R"txt(
+TemplateDeclaration
+|-template
+|-<
+|-UnknownDeclaration
+| |-class
+| `-T
+|->
+`-SimpleDeclaration
+  |-struct
+  |-NestedNameSpecifier
+  | |-SimpleTemplateNameSpecifier
+  | | |-X
+  | | |-<
+  | | |-T
+  | | `->
+  | `-::
+  |-Y
+  |-{
+  |-}
+  `-;
+)txt"}));
 }
 
 TEST_P(SyntaxTreeTest, ExplicitClassTemplateInstantation_Definition) {
