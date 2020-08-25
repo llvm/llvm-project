@@ -50,13 +50,10 @@ namespace llvm {
 namespace mca {
 
 /// A view that prints out generic instruction information.
-class InstructionInfoView : public View {
-  const llvm::MCSubtargetInfo &STI;
+class InstructionInfoView : public InstructionView {
   const llvm::MCInstrInfo &MCII;
   CodeEmitter &CE;
   bool PrintEncodings;
-  llvm::ArrayRef<llvm::MCInst> Source;
-  llvm::MCInstPrinter &MCIP;
 
   struct InstructionInfoViewData {
     unsigned NumMicroOpcodes = 0;
@@ -76,8 +73,8 @@ public:
                       const llvm::MCInstrInfo &II, CodeEmitter &C,
                       bool ShouldPrintEncodings, llvm::ArrayRef<llvm::MCInst> S,
                       llvm::MCInstPrinter &IP)
-      : STI(ST), MCII(II), CE(C), PrintEncodings(ShouldPrintEncodings),
-        Source(S), MCIP(IP) {}
+      : InstructionView(ST, IP, S), MCII(II), CE(C),
+        PrintEncodings(ShouldPrintEncodings) {}
 
   void printView(llvm::raw_ostream &OS) const override;
 };
