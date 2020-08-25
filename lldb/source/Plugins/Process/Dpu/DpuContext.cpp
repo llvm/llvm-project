@@ -67,6 +67,7 @@ void DpuContext::UpdateContext(struct dpu_context_t *new_context) {
   dpu_free_dpu_context(m_context);
   delete m_context;
   m_context = new_context;
+  UpdateRunningThreads();
 }
 
 void DpuContext::UpdateRunningThreads() {
