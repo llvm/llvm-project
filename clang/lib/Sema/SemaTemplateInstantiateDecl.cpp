@@ -2053,6 +2053,13 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     // typedef (C++ [dcl.typedef]p4).
     if (Previous.isSingleTagDecl())
       Previous.clear();
+
+    // Filter out previous declarations that don't match the scope. The only
+    // effect this has is to remove declarations found in inline namespaces
+    // for friend declarations with unqualified names.
+    SemaRef.FilterLookupForScope(Previous, DC, /*Scope*/ nullptr,
+                                 /*ConsiderLinkage*/ true,
+                                 QualifierLoc.hasQualifier());
   }
 
   SemaRef.CheckFunctionDeclaration(/*Scope*/ nullptr, Function, Previous,
