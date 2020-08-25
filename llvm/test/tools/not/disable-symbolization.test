@@ -1,5 +1,6 @@
-# RUN: not --crash printenv > %t || true
-# RUN: FileCheck %s < %t
+## 'env' may not exist on Windows. %t will be empty.
+# RUN: not --crash env > %t || true
+# RUN: cmp -s %t /dev/null || FileCheck %s < %t
 
 # CHECK-DAG: LLVM_DISABLE_CRASH_REPORT=1
 # CHECK-DAG: LLVM_DISABLE_SYMBOLIZATION=1
