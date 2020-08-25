@@ -27,6 +27,7 @@ using namespace lldb_private::repro;
 enum ReproducerProvider {
   eReproducerProviderCommands,
   eReproducerProviderFiles,
+  eReproducerProviderSymbolFiles,
   eReproducerProviderGDB,
   eReproducerProviderProcessInfo,
   eReproducerProviderVersion,
@@ -45,6 +46,11 @@ static constexpr OptionEnumValueElement g_reproducer_provider_type[] = {
         eReproducerProviderFiles,
         "files",
         "Files",
+    },
+    {
+        eReproducerProviderSymbolFiles,
+        "symbol-files",
+        "Symbol Files",
     },
     {
         eReproducerProviderGDB,
@@ -424,6 +430,29 @@ protected:
 
       // Return the string.
       result.AppendMessage(str);
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return true;
+    }
+    case eReproducerProviderSymbolFiles: {
+      Expected<std::string> symbol_files =
+          loader->LoadBuffer<SymbolFileProvider>();
+      if (!symbol_files) {
+        SetError(result, symbol_files.takeError());
+        return false;
+      }
+
+      std::vector<SymbolFileProvider::Entry> entries;
+      llvm::yaml::Input yin(*symbol_files);
+      yin >> entries;
+
+      for (const auto &entry : entries) {
+        result.AppendMessageWithFormat("- uuid:        %s\n",
+                                       entry.uuid.c_str());
+        result.AppendMessageWithFormat("  module path: %s\n",
+                                       entry.module_path.c_str());
+        result.AppendMessageWithFormat("  symbol path: %s\n",
+                                       entry.symbol_path.c_str());
+      }
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return true;
     }
