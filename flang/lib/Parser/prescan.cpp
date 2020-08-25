@@ -245,8 +245,9 @@ void Prescanner::NextLine() {
   }
 }
 
-void Prescanner::LabelField(TokenSequence &token, int outCol) {
+void Prescanner::LabelField(TokenSequence &token) {
   const char *bad{nullptr};
+  int outCol{1};
   for (; *at_ != '\n' && column_ <= 6; ++at_) {
     if (*at_ == '\t') {
       ++at_;
@@ -256,20 +257,26 @@ void Prescanner::LabelField(TokenSequence &token, int outCol) {
     if (*at_ != ' ' &&
         !(*at_ == '0' && column_ == 6)) { // '0' in column 6 becomes space
       EmitChar(token, *at_);
+      ++outCol;
       if (!bad && !IsDecimalDigit(*at_)) {
         bad = at_;
       }
-      ++outCol;
     }
     ++column_;
   }
-  if (outCol > 1) {
+  if (outCol == 1) { // empty label field
+    // Emit a space so that, if the line is rescanned after preprocessing,
+    // a leading 'C' or 'D' won't be left-justified and then accidentally
+    // misinterpreted as a comment card.
+    EmitChar(token, ' ');
+    ++outCol;
+  } else {
     if (bad && !preprocessor_.IsNameDefined(token.CurrentOpenToken())) {
       Say(GetProvenance(bad),
           "Character in fixed-form label field must be a digit"_en_US);
     }
-    token.CloseToken();
   }
+  token.CloseToken();
   SkipToNextSignificantCharacter();
   if (IsDecimalDigit(*at_)) {
     Say(GetProvenance(at_),
