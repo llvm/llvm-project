@@ -15,6 +15,7 @@
 #define LLVMIR_OP_BASE
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def LLVM_Dialect : Dialect {
   let name = "llvm";
@@ -212,13 +213,15 @@ class LLVM_OneResultIntrOp<string mnem, list<int> overloadedResults = [],
 
 // LLVM vector reduction over a single vector.
 class LLVM_VectorReduction<string mnem>
-    : LLVM_OneResultIntrOp<"experimental.vector.reduce." # mnem, [], [0], []>,
+    : LLVM_OneResultIntrOp<"experimental.vector.reduce." # mnem,
+                           [], [0], [NoSideEffect]>,
       Arguments<(ins LLVM_Type)>;
 
 // LLVM vector reduction over a single vector, with an initial value,
 // and with permission to reassociate the reduction operations.
 class LLVM_VectorReductionV2<string mnem>
-    : LLVM_OpBase<LLVM_Dialect, "intr.experimental.vector.reduce.v2." # mnem, []>,
+    : LLVM_OpBase<LLVM_Dialect, "intr.experimental.vector.reduce.v2." # mnem,
+                  [NoSideEffect]>,
       Results<(outs LLVM_Type:$res)>,
       Arguments<(ins LLVM_Type, LLVM_Type,
                  DefaultValuedAttr<BoolAttr, "false">:$reassoc)> {

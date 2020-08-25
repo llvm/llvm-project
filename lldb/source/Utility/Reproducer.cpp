@@ -73,6 +73,10 @@ llvm::Error Reproducer::Initialize(ReproducerMode mode,
   return Error::success();
 }
 
+void Reproducer::Initialize() {
+  llvm::cantFail(Initialize(repro::ReproducerMode::Off, llvm::None));
+}
+
 bool Reproducer::Initialized() { return InstanceImpl().operator bool(); }
 
 void Reproducer::Terminate() {

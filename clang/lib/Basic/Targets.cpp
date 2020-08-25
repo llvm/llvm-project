@@ -452,6 +452,8 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     switch (os) {
     case llvm::Triple::Linux:
       return new LinuxTargetInfo<SystemZTargetInfo>(Triple, Opts);
+    case llvm::Triple::ZOS:
+      return new ZOSTargetInfo<SystemZTargetInfo>(Triple, Opts);
     default:
       return new SystemZTargetInfo(Triple, Opts);
     }

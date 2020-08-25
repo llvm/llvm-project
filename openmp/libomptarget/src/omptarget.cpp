@@ -822,6 +822,167 @@ uint64_t getLoopTripCount(int64_t DeviceId) {
   return LoopTripCount;
 }
 
+/// A class manages private arguments in a target region.
+class PrivateArgumentManagerTy {
+  /// A data structure for the information of first-private arguments. We can
+  /// use this information to optimize data transfer by packing all
+  /// first-private arguments and transfer them all at once.
+  struct FirstPrivateArgInfoTy {
+    /// The index of the element in \p TgtArgs corresponding to the argument
+    const int Index;
+    /// Host pointer begin
+    const char *HstPtrBegin;
+    /// Host pointer end
+    const char *HstPtrEnd;
+    /// Aligned size
+    const int64_t AlignedSize;
+
+    FirstPrivateArgInfoTy(int Index, const void *HstPtr, int64_t Size)
+        : Index(Index), HstPtrBegin(reinterpret_cast<const char *>(HstPtr)),
+          HstPtrEnd(HstPtrBegin + Size), AlignedSize(Size + Size % Alignment) {}
+  };
+
+  /// A vector of target pointers for all private arguments
+  std::vector<void *> TgtPtrs;
+
+  /// A vector of information of all first-private arguments to be packed
+  std::vector<FirstPrivateArgInfoTy> FirstPrivateArgInfo;
+  /// Host buffer for all arguments to be packed
+  std::vector<char> FirstPrivateArgBuffer;
+  /// The total size of all arguments to be packed
+  int64_t FirstPrivateArgSize = 0;
+
+  /// A reference to the \p DeviceTy object
+  DeviceTy &Device;
+  /// A pointer to a \p __tgt_async_info object
+  __tgt_async_info *AsyncInfo;
+
+  // TODO: What would be the best value here? Should we make it configurable?
+  // If the size is larger than this threshold, we will allocate and transfer it
+  // immediately instead of packing it.
+  static constexpr const int64_t FirstPrivateArgSizeThreshold = 1024;
+
+public:
+  /// Constructor
+  PrivateArgumentManagerTy(DeviceTy &Dev, __tgt_async_info *AsyncInfo)
+      : Device(Dev), AsyncInfo(AsyncInfo) {}
+
+  /// A a private argument
+  int addArg(void *HstPtr, int64_t ArgSize, int64_t ArgOffset,
+             bool IsFirstPrivate, void *&TgtPtr, int TgtArgsIndex) {
+    // If the argument is not first-private, or its size is greater than a
+    // predefined threshold, we will allocate memory and issue the transfer
+    // immediately.
+    if (ArgSize > FirstPrivateArgSizeThreshold || !IsFirstPrivate) {
+      TgtPtr = Device.allocData(ArgSize, HstPtr);
+      if (!TgtPtr) {
+        DP("Data allocation for %sprivate array " DPxMOD " failed.\n",
+           (IsFirstPrivate ? "first-" : ""), DPxPTR(HstPtr));
+        return OFFLOAD_FAIL;
+      }
+#ifdef OMPTARGET_DEBUG
+      void *TgtPtrBase = (void *)((intptr_t)TgtPtr + ArgOffset);
+      DP("Allocated %" PRId64 " bytes of target memory at " DPxMOD
+         " for %sprivate array " DPxMOD " - pushing target argument " DPxMOD
+         "\n",
+         ArgSize, DPxPTR(TgtPtr), (IsFirstPrivate ? "first-" : ""),
+         DPxPTR(HstPtr), DPxPTR(TgtPtrBase));
+#endif
+      // If first-private, copy data from host
+      if (IsFirstPrivate) {
+        int Ret = Device.submitData(TgtPtr, HstPtr, ArgSize, AsyncInfo);
+        if (Ret != OFFLOAD_SUCCESS) {
+          DP("Copying data to device failed, failed.\n");
+          return OFFLOAD_FAIL;
+        }
+      }
+      TgtPtrs.push_back(TgtPtr);
+    } else {
+      DP("Firstprivate array " DPxMOD " of size %" PRId64 " will be packed\n",
+         DPxPTR(HstPtr), ArgSize);
+      // When reach this point, the argument must meet all following
+      // requirements:
+      // 1. Its size does not exceed the threshold (see the comment for
+      // FirstPrivateArgSizeThreshold);
+      // 2. It must be first-private (needs to be mapped to target device).
+      // We will pack all this kind of arguments to transfer them all at once
+      // to reduce the number of data transfer. We will not take
+      // non-first-private arguments, aka. private arguments that doesn't need
+      // to be mapped to target device, into account because data allocation
+      // can be very efficient with memory manager.
+
+      // Placeholder value
+      TgtPtr = nullptr;
+      FirstPrivateArgInfo.emplace_back(TgtArgsIndex, HstPtr, ArgSize);
+      FirstPrivateArgSize += FirstPrivateArgInfo.back().AlignedSize;
+    }
+
+    return OFFLOAD_SUCCESS;
+  }
+
+  /// Pack first-private arguments, replace place holder pointers in \p TgtArgs,
+  /// and start the transfer.
+  int packAndTransfer(std::vector<void *> &TgtArgs) {
+    if (!FirstPrivateArgInfo.empty()) {
+      assert(FirstPrivateArgSize != 0 &&
+             "FirstPrivateArgSize is 0 but FirstPrivateArgInfo is empty");
+      FirstPrivateArgBuffer.resize(FirstPrivateArgSize, 0);
+      auto Itr = FirstPrivateArgBuffer.begin();
+      // Copy all host data to this buffer
+      for (FirstPrivateArgInfoTy &Info : FirstPrivateArgInfo) {
+        std::copy(Info.HstPtrBegin, Info.HstPtrEnd, Itr);
+        Itr = std::next(Itr, Info.AlignedSize);
+      }
+      // Allocate target memory
+      void *TgtPtr =
+          Device.allocData(FirstPrivateArgSize, FirstPrivateArgBuffer.data());
+      if (TgtPtr == nullptr) {
+        DP("Failed to allocate target memory for private arguments.\n");
+        return OFFLOAD_FAIL;
+      }
+      TgtPtrs.push_back(TgtPtr);
+      DP("Allocated %" PRId64 " bytes of target memory at " DPxMOD "\n",
+         FirstPrivateArgSize, DPxPTR(TgtPtr));
+      // Transfer data to target device
+      int Ret = Device.submitData(TgtPtr, FirstPrivateArgBuffer.data(),
+                                  FirstPrivateArgSize, AsyncInfo);
+      if (Ret != OFFLOAD_SUCCESS) {
+        DP("Failed to submit data of private arguments.\n");
+        return OFFLOAD_FAIL;
+      }
+      // Fill in all placeholder pointers
+      auto TP = reinterpret_cast<uintptr_t>(TgtPtr);
+      for (FirstPrivateArgInfoTy &Info : FirstPrivateArgInfo) {
+        void *&Ptr = TgtArgs[Info.Index];
+        assert(Ptr == nullptr && "Target pointer is already set by mistaken");
+        Ptr = reinterpret_cast<void *>(TP);
+        TP += Info.AlignedSize;
+        DP("Firstprivate array " DPxMOD " of size %" PRId64 " mapped to " DPxMOD
+           "\n",
+           DPxPTR(Info.HstPtrBegin), Info.HstPtrEnd - Info.HstPtrBegin,
+           DPxPTR(Ptr));
+      }
+    }
+
+    return OFFLOAD_SUCCESS;
+  }
+
+  /// Free all target memory allocated for private arguments
+  int free() {
+    for (void *P : TgtPtrs) {
+      int Ret = Device.deleteData(P);
+      if (Ret != OFFLOAD_SUCCESS) {
+        DP("Deallocation of (first-)private arrays failed.\n");
+        return OFFLOAD_FAIL;
+      }
+    }
+
+    TgtPtrs.clear();
+
+    return OFFLOAD_SUCCESS;
+  }
+};
+
 /// Process data before launching the kernel, including calling targetDataBegin
 /// to map and transfer data to target device, transferring (first-)private
 /// variables.
@@ -830,7 +991,7 @@ int processDataBefore(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
                       int64_t *ArgTypes, void **ArgMappers,
                       std::vector<void *> &TgtArgs,
                       std::vector<ptrdiff_t> &TgtOffsets,
-                      std::vector<void *> &FPArrays,
+                      PrivateArgumentManagerTy &PrivateArgumentManager,
                       __tgt_async_info *AsyncInfo) {
   DeviceTy &Device = Devices[DeviceId];
   int Ret = targetDataBegin(Device, ArgNum, ArgBases, Args, ArgSizes, ArgTypes,
@@ -900,33 +1061,15 @@ int processDataBefore(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
       TgtPtrBegin = HstPtrBase;
       TgtBaseOffset = 0;
     } else if (ArgTypes[I] & OMP_TGT_MAPTYPE_PRIVATE) {
-      // Allocate memory for (first-)private array
-      TgtPtrBegin = Device.allocData(ArgSizes[I], HstPtrBegin);
-      if (!TgtPtrBegin) {
-        DP("Data allocation for %sprivate array " DPxMOD " failed, "
-           "abort target.\n",
-           (ArgTypes[I] & OMP_TGT_MAPTYPE_TO ? "first-" : ""),
-           DPxPTR(HstPtrBegin));
-        return OFFLOAD_FAIL;
-      }
-      FPArrays.push_back(TgtPtrBegin);
       TgtBaseOffset = (intptr_t)HstPtrBase - (intptr_t)HstPtrBegin;
-#ifdef OMPTARGET_DEBUG
-      void *TgtPtrBase = (void *)((intptr_t)TgtPtrBegin + TgtBaseOffset);
-      DP("Allocated %" PRId64 " bytes of target memory at " DPxMOD " for "
-         "%sprivate array " DPxMOD " - pushing target argument " DPxMOD "\n",
-         ArgSizes[I], DPxPTR(TgtPtrBegin),
-         (ArgTypes[I] & OMP_TGT_MAPTYPE_TO ? "first-" : ""),
-         DPxPTR(HstPtrBegin), DPxPTR(TgtPtrBase));
-#endif
-      // If first-private, copy data from host
-      if (ArgTypes[I] & OMP_TGT_MAPTYPE_TO) {
-        Ret =
-            Device.submitData(TgtPtrBegin, HstPtrBegin, ArgSizes[I], AsyncInfo);
-        if (Ret != OFFLOAD_SUCCESS) {
-          DP("Copying data to device failed, failed.\n");
-          return OFFLOAD_FAIL;
-        }
+      const bool IsFirstPrivate = ArgTypes[I] & OMP_TGT_MAPTYPE_TO;
+      Ret = PrivateArgumentManager.addArg(HstPtrBegin, ArgSizes[I],
+                                          TgtBaseOffset, IsFirstPrivate,
+                                          TgtPtrBegin, TgtArgs.size());
+      if (Ret != OFFLOAD_SUCCESS) {
+        DP("Failed to process %sprivate argument " DPxMOD "\n",
+           (IsFirstPrivate ? "first-" : ""), DPxPTR(HstPtrBegin));
+        return OFFLOAD_FAIL;
       }
     } else {
       if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)
@@ -948,6 +1091,13 @@ int processDataBefore(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
   assert(TgtArgs.size() == TgtOffsets.size() &&
          "Size mismatch in arguments and offsets");
 
+  // Pack and transfer first-private arguments
+  Ret = PrivateArgumentManager.packAndTransfer(TgtArgs);
+  if (Ret != OFFLOAD_SUCCESS) {
+    DP("Failed to pack and transfer first private arguments\n");
+    return OFFLOAD_FAIL;
+  }
+
   return OFFLOAD_SUCCESS;
 }
 
@@ -956,7 +1106,7 @@ int processDataBefore(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
 int processDataAfter(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
                      void **ArgBases, void **Args, int64_t *ArgSizes,
                      int64_t *ArgTypes, void **ArgMappers,
-                     std::vector<void *> &FPArrays,
+                     PrivateArgumentManagerTy &PrivateArgumentManager,
                      __tgt_async_info *AsyncInfo) {
   DeviceTy &Device = Devices[DeviceId];
 
@@ -968,13 +1118,11 @@ int processDataAfter(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
     return OFFLOAD_FAIL;
   }
 
-  // Deallocate (first-)private arrays
-  for (void *P : FPArrays) {
-    Ret = Device.deleteData(P);
-    if (Ret != OFFLOAD_SUCCESS) {
-      DP("Deallocation of (first-)private arrays failed.\n");
-      return OFFLOAD_FAIL;
-    }
+  // Free target memory for private arguments
+  Ret = PrivateArgumentManager.free();
+  if (Ret != OFFLOAD_SUCCESS) {
+    DP("Failed to deallocate target memory for private args\n");
+    return OFFLOAD_FAIL;
   }
 
   return OFFLOAD_SUCCESS;
@@ -1014,12 +1162,13 @@ int target(int64_t DeviceId, void *HostPtr, int32_t ArgNum, void **ArgBases,
 
   std::vector<void *> TgtArgs;
   std::vector<ptrdiff_t> TgtOffsets;
-  std::vector<void *> FPArrays;
+
+  PrivateArgumentManagerTy PrivateArgumentManager(Device, &AsyncInfo);
 
   // Process data, such as data mapping, before launching the kernel
   int Ret = processDataBefore(DeviceId, HostPtr, ArgNum, ArgBases, Args,
                               ArgSizes, ArgTypes, ArgMappers, TgtArgs,
-                              TgtOffsets, FPArrays, &AsyncInfo);
+                              TgtOffsets, PrivateArgumentManager, &AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
     DP("Failed to process data before launching the kernel.\n");
     return OFFLOAD_FAIL;
@@ -1049,7 +1198,8 @@ int target(int64_t DeviceId, void *HostPtr, int32_t ArgNum, void **ArgBases,
   // Transfer data back and deallocate target memory for (first-)private
   // variables
   Ret = processDataAfter(DeviceId, HostPtr, ArgNum, ArgBases, Args, ArgSizes,
-                         ArgTypes, ArgMappers, FPArrays, &AsyncInfo);
+                         ArgTypes, ArgMappers, PrivateArgumentManager,
+                         &AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
     DP("Failed to process data after launching the kernel.\n");
     return OFFLOAD_FAIL;

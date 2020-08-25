@@ -3132,6 +3132,8 @@ HexagonTargetLowering::ReplaceNodeResults(SDNode *N,
 SDValue
 HexagonTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
       const {
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
   if (isHvxOperation(N)) {
     if (SDValue V = PerformHvxDAGCombine(N, DCI))
       return V;

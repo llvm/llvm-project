@@ -1809,8 +1809,9 @@ HexagonTargetLowering::isHvxOperation(SDNode *N) const {
   auto IsHvxTy = [this] (EVT Ty) {
     return Ty.isSimple() && Subtarget.isHVXVectorType(Ty.getSimpleVT(), true);
   };
-  auto IsHvxOp = [this] (SDValue Op) {
-    return Subtarget.isHVXVectorType(ty(Op), true);
+  auto IsHvxOp = [this](SDValue Op) {
+    return Op.getValueType().isSimple() &&
+           Subtarget.isHVXVectorType(ty(Op), true);
   };
   return llvm::any_of(N->values(), IsHvxTy) || llvm::any_of(N->ops(), IsHvxOp);
 }

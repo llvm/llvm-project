@@ -197,6 +197,7 @@ public:
   static Reproducer &Instance();
   static llvm::Error Initialize(ReproducerMode mode,
                                 llvm::Optional<FileSpec> root);
+  static void Initialize();
   static bool Initialized();
   static void Terminate();
 
