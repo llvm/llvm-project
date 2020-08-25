@@ -546,7 +546,7 @@ private:
         R += std::string(
             formatv("- '{0}' covers '{1}'+{2} tokens\n", It->second->kind(),
                     It->first->text(A.sourceManager()), CoveredTokens));
-        R += It->second->dump(A);
+        R += It->second->dump(A.sourceManager());
       }
       return R;
     }
