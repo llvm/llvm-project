@@ -61,15 +61,13 @@ int main() {
   starts_a_scope
   ends_a_scope
 
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:3 -> [[@LINE+3]]:17 = #0
-  // CHECK-NEXT: Gap,File 0, [[@LINE+2]]:3 -> [[@LINE+3]]:5 = #8
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+2]]:3 -> [[@LINE+2]]:17 = #0
   // CHECK-NEXT: Expansion,File 0, [[@LINE+2]]:5 -> [[@LINE+2]]:16 = #8
   starts_a_while
     simple_stmt;
 
   x = 0;
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+5]]:3 -> [[@LINE+5]]:17 = #0
-  // CHECK-NEXT: Gap,File 0, [[@LINE+4]]:3 -> [[@LINE+4]]:18 = #9
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+4]]:3 -> [[@LINE+4]]:17 = #0
   // CHECK-NEXT: File 0, [[@LINE+3]]:18 -> [[@LINE+5]]:15 = #9
   // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:5 -> [[@LINE+3]]:16 = #9
   // CHECK-NEXT: Expansion,File 0, [[@LINE+3]]:3 -> [[@LINE+3]]:15 = #9
