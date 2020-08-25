@@ -184,10 +184,11 @@ static syntax::NodeKind getOperatorNodeKind(const CXXOperatorCallExpr &E) {
   case OO_Array_New:
   case OO_Array_Delete:
   case OO_Coawait:
-  case OO_Call:
   case OO_Subscript:
   case OO_Arrow:
     return syntax::NodeKind::UnknownExpression;
+  case OO_Call:
+    return syntax::NodeKind::CallExpression;
   case OO_Conditional: // not overloadable
   case NUM_OVERLOADED_OPERATORS:
   case OO_None:
@@ -1042,6 +1043,46 @@ public:
     return true;
   }
 
+  syntax::CallArguments *buildCallArguments(CallExpr::arg_range Args) {
+    for (const auto &Arg : Args) {
+      Builder.markExprChild(Arg, syntax::NodeRole::List_element);
+      const auto *DelimiterToken =
+          std::next(Builder.findToken(Arg->getEndLoc()));
+      if (DelimiterToken->kind() == clang::tok::TokenKind::comma)
+        Builder.markChildToken(DelimiterToken,
+                               syntax::NodeRole::List_delimiter);
+    }
+
+    auto *Arguments = new (allocator()) syntax::CallArguments;
+    if (!Args.empty())
+      Builder.foldNode(Builder.getRange((*Args.begin())->getBeginLoc(),
+                                        (*(Args.end() - 1))->getEndLoc()),
+                       Arguments, nullptr);
+
+    return Arguments;
+  }
+
+  bool WalkUpFromCallExpr(CallExpr *S) {
+    Builder.markExprChild(S->getCallee(),
+                          syntax::NodeRole::CallExpression_callee);
+
+    const auto *LParenToken =
+        std::next(Builder.findToken(S->getCallee()->getEndLoc()));
+    // FIXME: Assert that `LParenToken` is indeed a `l_paren` once we have fixed
+    // the test on decltype desctructors.
+    if (LParenToken->kind() == clang::tok::l_paren)
+      Builder.markChildToken(LParenToken, syntax::NodeRole::OpenParen);
+
+    Builder.markChild(buildCallArguments(S->arguments()),
+                      syntax::NodeRole::CallExpression_arguments);
+
+    Builder.markChildToken(S->getRParenLoc(), syntax::NodeRole::CloseParen);
+
+    Builder.foldNode(Builder.getRange(S->getSourceRange()),
+                     new (allocator()) syntax::CallExpression, S);
+    return true;
+  }
+
   bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *S) {
     // To construct a syntax tree of the same shape for calls to built-in and
     // user-defined operators, ignore the `DeclRefExpr` that refers to the
@@ -1100,8 +1141,29 @@ public:
                        new (allocator()) syntax::PostfixUnaryOperatorExpression,
                        S);
       return true;
+    case syntax::NodeKind::CallExpression: {
+      Builder.markExprChild(S->getArg(0),
+                            syntax::NodeRole::CallExpression_callee);
+
+      const auto *LParenToken =
+          std::next(Builder.findToken(S->getArg(0)->getEndLoc()));
+      // FIXME: Assert that `LParenToken` is indeed a `l_paren` once we have
+      // fixed the test on decltype desctructors.
+      if (LParenToken->kind() == clang::tok::l_paren)
+        Builder.markChildToken(LParenToken, syntax::NodeRole::OpenParen);
+
+      Builder.markChild(buildCallArguments(CallExpr::arg_range(
+                            S->arg_begin() + 1, S->arg_end())),
+                        syntax::NodeRole::CallExpression_arguments);
+
+      Builder.markChildToken(S->getRParenLoc(), syntax::NodeRole::CloseParen);
+
+      Builder.foldNode(Builder.getRange(S->getSourceRange()),
+                       new (allocator()) syntax::CallExpression, S);
+      return true;
+    }
     case syntax::NodeKind::UnknownExpression:
-      return RecursiveASTVisitor::WalkUpFromCXXOperatorCallExpr(S);
+      return WalkUpFromExpr(S);
     default:
       llvm_unreachable("getOperatorNodeKind() does not return this value");
     }
