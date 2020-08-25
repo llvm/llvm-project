@@ -372,6 +372,8 @@ public:
 
   Expected<ArrayRef<XCOFFRelocation32>>
   relocations(const XCOFFSectionHeader32 &) const;
+
+  static bool classof(const Binary *B) { return B->isXCOFF(); }
 }; // XCOFFObjectFile
 
 class XCOFFSymbolRef {

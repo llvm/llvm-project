@@ -6,12 +6,31 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 using namespace llvm::object;
+
+TEST(XCOFFObjectFileTest, XCOFFObjectType) {
+  // Create an arbitrary object of a non-XCOFF type and test that
+  // dyn_cast<XCOFFObjectFile> returns null for it.
+  char Buf[sizeof(typename ELF64LE::Ehdr)] = {};
+  memcpy(Buf, "\177ELF", 4);
+
+  auto *EHdr = reinterpret_cast<typename ELF64LE::Ehdr *>(Buf);
+  EHdr->e_ident[llvm::ELF::EI_CLASS] = llvm::ELF::ELFCLASS64;
+  EHdr->e_ident[llvm::ELF::EI_DATA] = llvm::ELF::ELFDATA2LSB;
+
+  MemoryBufferRef Source(StringRef(Buf, sizeof(Buf)), "non-XCOFF");
+  Expected<std::unique_ptr<ObjectFile>> ObjOrErr =
+      ObjectFile::createObjectFile(Source);
+  ASSERT_THAT_EXPECTED(ObjOrErr, Succeeded());
+
+  EXPECT_TRUE(dyn_cast<XCOFFObjectFile>((*ObjOrErr).get()) == nullptr);
+}
 
 TEST(XCOFFObjectFileTest, doesXCOFFTracebackTableBegin) {
   EXPECT_TRUE(doesXCOFFTracebackTableBegin({0, 0, 0, 0}));
