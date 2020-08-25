@@ -138,7 +138,6 @@ define dso_local void @varying_outer_2d_reduction(i16* nocapture readonly %Input
 ; NOREDUCTIONS-NEXT:  .LBB0_8: @ %for.end17
 ; NOREDUCTIONS-NEXT:    add sp, #4
 ; NOREDUCTIONS-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, pc}
-;
 entry:
   %conv = sext i16 %N to i32
   %cmp36 = icmp sgt i16 %N, 0
@@ -178,7 +177,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %i9 = phi i32 [ %i7, %vector.ph ], [ %i17, %vector.body ]
   %lsr.iv4850 = bitcast i16* %lsr.iv48 to <4 x i16>*
   %lsr.iv45 = bitcast i16* %lsr.iv to <4 x i16>*
-  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %i8)
   %wide.masked.load = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %lsr.iv45, i32 2, <4 x i1> %active.lane.mask, <4 x i16> undef)
   %i10 = sext <4 x i16> %wide.masked.load to <4 x i32>
   %wide.masked.load42 = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %lsr.iv4850, i32 2, <4 x i1> %active.lane.mask, <4 x i16> undef)

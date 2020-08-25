@@ -9,6 +9,7 @@ define arm_aapcs_vfpcc void @usub_sat(i16* noalias nocapture readonly %pSrcA, i1
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
+; CHECK-NEXT:    subs r3, #1
 ; CHECK-NEXT:    dlstp.16 lr, r3
 ; CHECK-NEXT:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -58,6 +59,7 @@ define arm_aapcs_vfpcc void @ssub_sat(i16* noalias nocapture readonly %pSrcA, i1
 ; CHECK-NEXT:    cmp r3, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
+; CHECK-NEXT:    subs r3, #1
 ; CHECK-NEXT:    dlstp.16 lr, r3
 ; CHECK-NEXT:  .LBB1_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
