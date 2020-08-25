@@ -3231,34 +3231,34 @@ void test() {
   HALF_IF HALF_IF_2 else {}
 })cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-void
-  |-SimpleDeclarator
-  | |-test
+  |-'void'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'test'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   `-)
+  |   |-'(' OpenParen
+  |   `-')' CloseParen
   `-CompoundStatement
-    |-{
-    |-IfStatement
-    | |-I: if
-    | |-I: (
-    | |-I: BinaryOperatorExpression
-    | | |-I: IntegerLiteralExpression
-    | | | `-I: 1
-    | | |-I: +
-    | | `-I: IntegerLiteralExpression
-    | |   `-I: 1
-    | |-I: )
-    | |-I: CompoundStatement
-    | | |-I: {
-    | | `-I: }
-    | |-else
-    | `-CompoundStatement
-    |   |-{
-    |   `-}
-    `-}
+    |-'{' OpenParen
+    |-IfStatement CompoundStatement_statement
+    | |-'if' IntroducerKeyword unmodifiable
+    | |-'(' unmodifiable
+    | |-BinaryOperatorExpression unmodifiable
+    | | |-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide unmodifiable
+    | | | `-'1' LiteralToken unmodifiable
+    | | |-'+' OperatorExpression_operatorToken unmodifiable
+    | | `-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide unmodifiable
+    | |   `-'1' LiteralToken unmodifiable
+    | |-')' unmodifiable
+    | |-CompoundStatement IfStatement_thenStatement unmodifiable
+    | | |-'{' OpenParen unmodifiable
+    | | `-'}' CloseParen unmodifiable
+    | |-'else' IfStatement_elseKeyword
+    | `-CompoundStatement IfStatement_elseStatement
+    |   |-'{' OpenParen
+    |   `-'}' CloseParen
+    `-'}' CloseParen
 )txt"));
 }
 
@@ -3280,31 +3280,31 @@ void test() {
 }
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-void
-  |-SimpleDeclarator
-  | |-test
+  |-'void'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'test'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   `-)
+  |   |-'(' OpenParen
+  |   `-')' CloseParen
   `-CompoundStatement
-    |-{
-    |-CompoundStatement
-    | |-{
-    | |-ExpressionStatement
-    | | |-IntegerLiteralExpression
-    | | | `-1
-    | | `-;
-    | `-}
-    |-CompoundStatement
-    | |-{
-    | |-ExpressionStatement
-    | | |-IntegerLiteralExpression
-    | | | `-2
-    | | `-;
-    | `-}
-    `-}
+    |-'{' OpenParen
+    |-CompoundStatement CompoundStatement_statement
+    | |-'{' OpenParen
+    | |-ExpressionStatement CompoundStatement_statement
+    | | |-IntegerLiteralExpression ExpressionStatement_expression
+    | | | `-'1' LiteralToken
+    | | `-';'
+    | `-'}' CloseParen
+    |-CompoundStatement CompoundStatement_statement
+    | |-'{' OpenParen
+    | |-ExpressionStatement CompoundStatement_statement
+    | | |-IntegerLiteralExpression ExpressionStatement_expression
+    | | | `-'2' LiteralToken
+    | | `-';'
+    | `-'}' CloseParen
+    `-'}' CloseParen
 )txt"));
 }
 
