@@ -7265,6 +7265,8 @@ private:
     // &p, &p, sizeof(float*), TARGET_PARAM | TO | FROM
     //
     // map(p[1:24])
+    // &p, &p[1], 24*sizeof(float), TARGET_PARAM | TO | FROM | PTR_AND_OBJ
+    // in unified shared memory mode or for local pointers
     // p, &p[1], 24*sizeof(float), TARGET_PARAM | TO | FROM
     //
     // map(s)
@@ -7400,6 +7402,7 @@ private:
     // Track if the map information being generated is the first for a list of
     // components.
     bool IsExpressionFirstInfo = true;
+    bool FirstPointerInComplexData = false;
     Address BP = Address::invalid();
     const Expr *AssocExpr = I->getAssociatedExpression();
     const auto *AE = dyn_cast<ArraySubscriptExpr>(AssocExpr);
@@ -7442,10 +7445,15 @@ private:
       QualType Ty =
           I->getAssociatedDeclaration()->getType().getNonReferenceType();
       if (Ty->isAnyPointerType() && std::next(I) != CE) {
-        BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
-
-        // We do not need to generate individual map information for the
-        // pointer, it can be associated with the combined storage.
+        // No need to generate individual map information for the pointer, it
+        // can be associated with the combined storage if shared memory mode is
+        // active or the base declaration is not global variable.
+        const auto *VD = dyn_cast<VarDecl>(I->getAssociatedDeclaration());
+         if (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
+            !VD || VD->hasLocalStorage())
+          BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
+        else
+          FirstPointerInComplexData = IsCaptureFirstInfo;
         ++I;
       }
     }
@@ -7481,8 +7489,19 @@ private:
         EncounteredME = dyn_cast<MemberExpr>(I->getAssociatedExpression());
         // If we encounter a PTR_AND_OBJ entry from now on it should be marked
         // as MEMBER_OF the parent struct.
-        if (EncounteredME)
+        if (EncounteredME) {
           ShouldBeMemberOf = true;
+          // Do not emit as complex pointer if this is actually not array-like
+          // expression.
+          if (FirstPointerInComplexData) {
+            QualType Ty = std::prev(I)
+                              ->getAssociatedDeclaration()
+                              ->getType()
+                              .getNonReferenceType();
+            BP = CGF.EmitLoadOfPointer(BP, Ty->castAs<PointerType>());
+            FirstPointerInComplexData = false;
+          }
+        }
       }
 
       auto Next = std::next(I);
@@ -7615,10 +7634,11 @@ private:
           // same expression except for the first one. We also need to signal
           // this map is the first one that relates with the current capture
           // (there is a set of entries for each capture).
-          OpenMPOffloadMappingFlags Flags = getMapTypeBits(
-              MapType, MapModifiers, IsImplicit,
-              !IsExpressionFirstInfo || RequiresReference,
-              IsCaptureFirstInfo && !RequiresReference);
+          OpenMPOffloadMappingFlags Flags =
+              getMapTypeBits(MapType, MapModifiers, IsImplicit,
+                             !IsExpressionFirstInfo || RequiresReference ||
+                                 FirstPointerInComplexData,
+                             IsCaptureFirstInfo && !RequiresReference);
 
           if (!IsExpressionFirstInfo) {
             // If we have a PTR_AND_OBJ pair where the OBJ is a pointer as well,
@@ -7676,6 +7696,7 @@ private:
 
         IsExpressionFirstInfo = false;
         IsCaptureFirstInfo = false;
+        FirstPointerInComplexData = false;
       }
     }
   }
@@ -7906,6 +7927,10 @@ public:
     // emission of that entry until the whole struct has been processed.
     llvm::MapVector<const ValueDecl *, SmallVector<DeferredDevicePtrEntryTy, 4>>
         DeferredInfo;
+    MapBaseValuesArrayTy UseDevicePtrBasePointers;
+    MapValuesArrayTy UseDevicePtrPointers;
+    MapValuesArrayTy UseDevicePtrSizes;
+    MapFlagsArrayTy UseDevicePtrTypes;
 
     for (const auto *C :
          CurExecDir->getClausesOfKind<OMPUseDevicePtrClause>()) {
@@ -7922,15 +7947,27 @@ public:
         // We potentially have map information for this declaration already.
         // Look for the first set of components that refer to it.
         if (It != Info.end()) {
-          auto CI = std::find_if(
-              It->second.begin(), It->second.end(), [VD](const MapInfo &MI) {
-                return MI.Components.back().getAssociatedDeclaration() == VD;
-              });
+          auto *CI = llvm::find_if(It->second, [VD](const MapInfo &MI) {
+            return MI.Components.back().getAssociatedDeclaration() == VD;
+          });
           // If we found a map entry, signal that the pointer has to be returned
           // and move on to the next declaration.
+          // Exclude cases where the base pointer is mapped as array subscript,
+          // array section or array shaping. The base address is passed as a
+          // pointer to base in this case and cannot be used as a base for
+          // use_device_ptr list item.
           if (CI != It->second.end()) {
-            CI->ReturnDevicePointer = true;
-            continue;
+            auto PrevCI = std::next(CI->Components.rbegin());
+            const auto *VarD = dyn_cast<VarDecl>(VD);
+            if (CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory() ||
+                isa<MemberExpr>(IE) ||
+                !VD->getType().getNonReferenceType()->isPointerType() ||
+                PrevCI == CI->Components.rend() ||
+                isa<MemberExpr>(PrevCI->getAssociatedExpression()) || !VarD ||
+                VarD->hasLocalStorage()) {
+              CI->ReturnDevicePointer = true;
+              continue;
+            }
           }
         }
 
@@ -7951,10 +7988,12 @@ public:
         } else {
           llvm::Value *Ptr =
               CGF.EmitLoadOfScalar(CGF.EmitLValue(IE), IE->getExprLoc());
-          BasePointers.emplace_back(Ptr, VD);
-          Pointers.push_back(Ptr);
-          Sizes.push_back(llvm::Constant::getNullValue(CGF.Int64Ty));
-          Types.push_back(OMP_MAP_RETURN_PARAM | OMP_MAP_TARGET_PARAM);
+          UseDevicePtrBasePointers.emplace_back(Ptr, VD);
+          UseDevicePtrPointers.push_back(Ptr);
+          UseDevicePtrSizes.push_back(
+              llvm::Constant::getNullValue(CGF.Int64Ty));
+          UseDevicePtrTypes.push_back(OMP_MAP_RETURN_PARAM |
+                                      OMP_MAP_TARGET_PARAM);
         }
       }
     }
@@ -8015,10 +8054,12 @@ public:
             Ptr = CGF.EmitLValue(IE).getPointer(CGF);
           else
             Ptr = CGF.EmitScalarExpr(IE);
-          BasePointers.emplace_back(Ptr, VD);
-          Pointers.push_back(Ptr);
-          Sizes.push_back(llvm::Constant::getNullValue(CGF.Int64Ty));
-          Types.push_back(OMP_MAP_RETURN_PARAM | OMP_MAP_TARGET_PARAM);
+          UseDevicePtrBasePointers.emplace_back(Ptr, VD);
+          UseDevicePtrPointers.push_back(Ptr);
+          UseDevicePtrSizes.push_back(
+              llvm::Constant::getNullValue(CGF.Int64Ty));
+          UseDevicePtrTypes.push_back(OMP_MAP_RETURN_PARAM |
+                                      OMP_MAP_TARGET_PARAM);
         }
       }
     }
@@ -8108,6 +8149,12 @@ public:
       Sizes.append(CurSizes.begin(), CurSizes.end());
       Types.append(CurTypes.begin(), CurTypes.end());
     }
+    // Append data for use_device_ptr clauses.
+    BasePointers.append(UseDevicePtrBasePointers.begin(),
+                        UseDevicePtrBasePointers.end());
+    Pointers.append(UseDevicePtrPointers.begin(), UseDevicePtrPointers.end());
+    Sizes.append(UseDevicePtrSizes.begin(), UseDevicePtrSizes.end());
+    Types.append(UseDevicePtrTypes.begin(), UseDevicePtrTypes.end());
   }
 
   /// Generate all the base pointers, section pointers, sizes and map types for
