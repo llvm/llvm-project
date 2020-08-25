@@ -4,7 +4,7 @@
 
 # RUN: yaml2obj --docnum=1 %s -o %t1.o
 # RUN: llvm-readobj --sections --section-data %t1.o | \
-# RUN:   FileCheck -DSIZE=54 -DADDRALIGN=1 %s --check-prefixes=SHDR,CONTENT
+# RUN:   FileCheck -DSIZE=59 -DADDRALIGN=1 %s --check-prefixes=SHDR,CONTENT
 
 #         SHDR: Index: 1
 #    SHDR-NEXT: Name: .debug_abbrev (1)
@@ -51,12 +51,14 @@
 ##                        ^-     DW_CHILDREN_yes     1-byte             ^-   abbreviation code ULEB128
 ##                          ^-   DW_AT_producer      ULEB128              ^- DW_TAG_subprogram ULEB128
 ##                            ^- DW_FORM_strp        ULEB128
-# CONTENT-NEXT:   0030: 01110100 0000 |......|
-##                      ^-            DW_CHILDREN_yes 1-byte
-##                        ^-          DW_AT_low_pc    ULEB128
-##                          ^-        DW_FORM_addr    UELB128
-##                            ^----   attr terminator
-##                                 ^- abbrev table terminator
+# CONTENT-NEXT:   0030: 01110100 00031100                           000000   |...........|
+##                      ^-                DW_CHILDREN_yes 1-byte    ^---     attr terminator
+##                        ^-              DW_AT_low_pc    ULEB128       ^-   abbrev table terminator
+##                          ^-            DW_FORM_addr    UELB128
+##                            ^----       attr terminator
+##                                 ^-     abbrev code ULEB128 (0x03)
+##                                   ^-   DW_TAG_compile_unit
+##                                     ^- DW_CHILDREN_no
 # CONTENT-NEXT: )
 
 --- !ELF
@@ -116,6 +118,10 @@ DWARF:
           Attributes:
             - Attribute: DW_AT_low_pc
               Form:      DW_FORM_addr
+        ## Test that if the 'Attributes' field is not specified, yaml2obj emits
+        ## a terminating entry, 0 for the attribute, 0 for the form.
+        - Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_no
 
 ## b) Generate the .debug_abbrev section from raw section content.
 
@@ -179,7 +185,6 @@ DWARF:
         - Code:       1
           Tag:        DW_TAG_compile_unit
           Children:   DW_CHILDREN_no
-          Attributes: []
 
 ## e) Test that yaml2obj emits an error message when both the "Content" and the
 ## "debug_abbrev" entry are specified at the same time.
@@ -201,7 +206,6 @@ DWARF:
         - Code:       1
           Tag:        DW_TAG_compile_unit
           Children:   DW_CHILDREN_no
-          Attributes: []
 
 ## f) Test that all the properties can be overridden by the section header when
 ## the "debug_abbrev" entry doesn't exist.
@@ -261,7 +265,6 @@ DWARF:
         - Code:       1
           Tag:        DW_TAG_compile_unit
           Children:   DW_CHILDREN_no
-          Attributes: []
 
 ## h) Test that yaml2obj automatically generates abbreviation codes for us.
 
@@ -288,24 +291,18 @@ DWARF:
     - Table:
         - Tag:        DW_TAG_compile_unit
           Children:   DW_CHILDREN_no
-          Attributes: []
         - Tag:        DW_TAG_subprogram
           Children:   DW_CHILDREN_no
-          Attributes: []
         - Code:       4
           Tag:        DW_TAG_subprogram
           Children:   DW_CHILDREN_no
-          Attributes: []
         - Code:       4
           Tag:        DW_TAG_subprogram
           Children:   DW_CHILDREN_no
-          Attributes: []
         - Tag:        DW_TAG_subprogram
           Children:   DW_CHILDREN_no
-          Attributes: []
         - Tag:        DW_TAG_subprogram
           Children:   DW_CHILDREN_no
-          Attributes: []
 
 ## i) Test that yaml2obj emits an error message when there are non-empty compilation units
 ## and multiple abbrev tables are assigned the same ID.
