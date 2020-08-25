@@ -440,6 +440,9 @@ static int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo,
 #if defined(_LIBUNWIND_USE_FRAME_HEADER_CACHE)
   if (ProcessFrameHeaderCache.find(pinfo, pinfo_size, data))
     return 1;
+#else
+  // Avoid warning about unused variable.
+  (void)pinfo_size;
 #endif
 
   Elf_Addr image_base = calculateImageBase(pinfo);

@@ -33,14 +33,16 @@
 ## Case B: Test case where the offset of the PT_DYNAMIC header is too large to be in the file.
 
 ## Case B.1: the section header table is present in the object. Check that we report a warning about the
-##           broken PT_DYNAMIC header, but document that we do not dump the dynamic table, because
-##           return an error earlier.
+##           broken PT_DYNAMIC header. Check we also report a warning about broken fields of the SHT_DYNAMIC section.
 # RUN: yaml2obj %s -DOFFSET=0x1131 -o %t2
-# RUN: not llvm-readobj %t2 --dynamic-table 2>&1 | FileCheck -DFILE=%t2 %s --check-prefix=WARN2
-# RUN: not llvm-readelf %t2 --dynamic-table 2>&1 | FileCheck -DFILE=%t2 %s --check-prefix=WARN2
+# RUN: llvm-readobj %t2 --dynamic-table 2>&1 | FileCheck -DFILE=%t2 %s \
+# RUN:   --check-prefix=WARN2 --implicit-check-not=warning:
+# RUN: llvm-readelf %t2 --dynamic-table 2>&1 | FileCheck -DFILE=%t2 %s \
+# RUN:   --check-prefix=WARN2 --implicit-check-not=warning:
 
 # WARN2: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1131) + file size (0x10) exceeds the size of the file (0x1130)
-# WARN2: error: '[[FILE]]': Invalid data was encountered while parsing the file
+# WARN2: warning: '[[FILE]]': unable to read the dynamic table from SHT_DYNAMIC section with index 1: offset (0x1131) + size (0x10) is greater than the file size (0x1130)
+# WARN2: warning: '[[FILE]]': no valid dynamic table was found
 
 ## Case B.2: in this case we drop section headers. The dynamic table is not dumped.
 # RUN: yaml2obj %s -DOFFSET=0x1119 -DNOHEADERS=true -o %t2.noheaders
@@ -52,14 +54,18 @@
 # WARN2-NOHEADERS: warning: '[[FILE]]': PT_DYNAMIC segment offset (0x1119) + file size (0x10) exceeds the size of the file (0x1118)
 
 ## Case C: test we report a warning when the offset + the file size of the PT_DYNAMIC is so large a
-##         value that it overflows the platform address size type.
+##         value that it overflows the platform address size type. Check we also report a warning about
+##         broken fields of the SHT_DYNAMIC section.
 
 # RUN: yaml2obj %s -DOFFSET=0xffffffffffffffff -o %t3
-# RUN: not llvm-readobj %t3 --dynamic-table 2>&1 | FileCheck -DFILE=%t3 %s --check-prefix=WARN3
-# RUN: not llvm-readelf %t3 --dynamic-table 2>&1 | FileCheck -DFILE=%t3 %s --check-prefix=WARN3
+# RUN: llvm-readobj %t3 --dynamic-table 2>&1 | FileCheck -DFILE=%t3 %s \
+# RUN:   --check-prefix=WARN3 --implicit-check-not=warning:
+# RUN: llvm-readelf %t3 --dynamic-table 2>&1 | FileCheck -DFILE=%t3 %s \
+# RUN:   --check-prefix=WARN3 --implicit-check-not=warning:
 
 # WARN3: warning: '[[FILE]]': PT_DYNAMIC segment offset (0xffffffffffffffff) + file size (0x10) exceeds the size of the file (0x1130)
-# WARN3: error:   '[[FILE]]': Invalid data was encountered while parsing the file
+# WARN3: warning: '[[FILE]]': unable to read the dynamic table from SHT_DYNAMIC section with index 1: offset (0xffffffffffffffff) + size (0x10) is greater than the file size (0x1130)
+# WARN3: warning: '[[FILE]]': no valid dynamic table was found
 
 # RUN: yaml2obj %s -DNOHEADERS=true -DOFFSET=0xffffffffffffffff -o %t3.noheaders
 # RUN: llvm-readobj %t3.noheaders --dynamic-table 2>&1 | \
@@ -86,11 +92,14 @@
 ## Case D: the same as "Case C", but for a 32-bit object.
 
 # RUN: yaml2obj %s -DBITS=32 -DOFFSET=0xffffffff -o %t5
-# RUN: not llvm-readobj %t5 --dynamic-table 2>&1 | FileCheck -DFILE=%t5 %s --check-prefix=WARN5
-# RUN: not llvm-readelf %t5 --dynamic-table 2>&1 | FileCheck -DFILE=%t5 %s --check-prefix=WARN5
+# RUN: llvm-readobj %t5 --dynamic-table 2>&1 | FileCheck -DFILE=%t5 %s \
+# RUN:   --check-prefix=WARN5 --implicit-check-not=warning:
+# RUN: llvm-readelf %t5 --dynamic-table 2>&1 | FileCheck -DFILE=%t5 %s \
+# RUN:   --check-prefix=WARN5 --implicit-check-not=warning:
 
 # WARN5: warning: '[[FILE]]': PT_DYNAMIC segment offset (0xffffffff) + file size (0x8) exceeds the size of the file (0x10c8)
-# WARN5: error:   '[[FILE]]': Invalid data was encountered while parsing the file
+# WARN5: warning: '[[FILE]]': unable to read the dynamic table from SHT_DYNAMIC section with index 1: offset (0xffffffff) + size (0x8) is greater than the file size (0x10c8)
+# WARN5: warning: '[[FILE]]': no valid dynamic table was found
 
 # RUN: yaml2obj %s -DNOHEADERS=true -DBITS=32 -DOFFSET=0xffffffff -o %t5.noheaders
 # RUN: llvm-readobj %t5.noheaders --dynamic-table 2>&1 | \

@@ -522,7 +522,8 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
   MCSymbol *MOSymbol = getSymbol(GValue);
   const MCExpr *SymVar = MCSymbolRefExpr::create(MOSymbol, VK, OutContext);
   EmitToStreamer(*OutStreamer,
-                 MCInstBuilder(Subtarget->isPPC64() ? Opcode : PPC::BL_TLS)
+                 MCInstBuilder(Subtarget->isPPC64() ? Opcode
+                                                    : (unsigned)PPC::BL_TLS)
                      .addExpr(TlsRef)
                      .addExpr(SymVar));
 }

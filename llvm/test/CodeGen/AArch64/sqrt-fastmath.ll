@@ -448,8 +448,7 @@ define <4 x double> @d4rsqrt(<4 x double> %a) #0 {
 define double @sqrt_fdiv_common_operand(double %x) nounwind {
 ; FAULT-LABEL: sqrt_fdiv_common_operand:
 ; FAULT:       // %bb.0:
-; FAULT-NEXT:    fsqrt d1, d0
-; FAULT-NEXT:    fdiv d0, d0, d1
+; FAULT-NEXT:    fsqrt d0, d0
 ; FAULT-NEXT:    ret
 ;
 ; CHECK-LABEL: sqrt_fdiv_common_operand:
@@ -474,8 +473,7 @@ define double @sqrt_fdiv_common_operand(double %x) nounwind {
 define <2 x double> @sqrt_fdiv_common_operand_vec(<2 x double> %x) nounwind {
 ; FAULT-LABEL: sqrt_fdiv_common_operand_vec:
 ; FAULT:       // %bb.0:
-; FAULT-NEXT:    fsqrt v1.2d, v0.2d
-; FAULT-NEXT:    fdiv v0.2d, v0.2d, v1.2d
+; FAULT-NEXT:    fsqrt v0.2d, v0.2d
 ; FAULT-NEXT:    ret
 ;
 ; CHECK-LABEL: sqrt_fdiv_common_operand_vec:
@@ -493,16 +491,15 @@ define <2 x double> @sqrt_fdiv_common_operand_vec(<2 x double> %x) nounwind {
 ; CHECK-NEXT:    fmul v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
   %sqrt = call <2 x double> @llvm.sqrt.v2f64(<2 x double> %x)
-  %r = fdiv arcp reassoc <2 x double> %x, %sqrt
+  %r = fdiv arcp nsz reassoc <2 x double> %x, %sqrt
   ret <2 x double> %r
 }
 
 define double @sqrt_fdiv_common_operand_extra_use(double %x, double* %p) nounwind {
 ; FAULT-LABEL: sqrt_fdiv_common_operand_extra_use:
 ; FAULT:       // %bb.0:
-; FAULT-NEXT:    fsqrt d1, d0
-; FAULT-NEXT:    fdiv d0, d0, d1
-; FAULT-NEXT:    str d1, [x0]
+; FAULT-NEXT:    fsqrt d0, d0
+; FAULT-NEXT:    str d0, [x0]
 ; FAULT-NEXT:    ret
 ;
 ; CHECK-LABEL: sqrt_fdiv_common_operand_extra_use:

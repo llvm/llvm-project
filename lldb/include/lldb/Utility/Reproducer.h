@@ -22,6 +22,7 @@
 #include <vector>
 
 namespace lldb_private {
+class UUID;
 namespace repro {
 
 class Reproducer;

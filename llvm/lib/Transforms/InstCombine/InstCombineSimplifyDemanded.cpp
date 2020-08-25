@@ -130,6 +130,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
   if (Depth == MaxAnalysisRecursionDepth)
     return nullptr;
 
+  if (isa<ScalableVectorType>(VTy))
+    return nullptr;
+
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I) {
     computeKnownBits(V, Known, Depth, CxtI);

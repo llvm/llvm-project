@@ -243,12 +243,16 @@ private:
 
   TYPEDEF_ELF_TYPES(ELFT)
 
-  DynRegionInfo createDRI(uint64_t Offset, uint64_t Size, uint64_t EntSize) {
+  Expected<DynRegionInfo> createDRI(uint64_t Offset, uint64_t Size,
+                                    uint64_t EntSize) {
     const ELFFile<ELFT> *Obj = ObjF->getELFFile();
     if (Offset + Size < Offset || Offset + Size > Obj->getBufSize())
-      reportError(errorCodeToError(llvm::object::object_error::parse_failed),
-                  ObjF->getFileName());
-    return {Obj->base() + Offset, Size, EntSize, ObjF->getFileName()};
+      return createError("offset (0x" + Twine::utohexstr(Offset) +
+                         ") + size (0x" + Twine::utohexstr(Size) +
+                         ") is greater than the file size (0x" +
+                         Twine::utohexstr(Obj->getBufSize()) + ")");
+    return DynRegionInfo(Obj->base() + Offset, Size, EntSize,
+                         ObjF->getFileName());
   }
 
   void printAttributes();
@@ -1925,11 +1929,12 @@ void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
   DynRegionInfo FromPhdr(ObjF->getFileName());
   bool IsPhdrTableValid = false;
   if (DynamicPhdr) {
-    FromPhdr = createDRI(DynamicPhdr->p_offset, DynamicPhdr->p_filesz,
-                         sizeof(Elf_Dyn));
+    // Use cantFail(), because p_offset/p_filesz fields of a PT_DYNAMIC are
+    // validated in findDynamic() and so createDRI() is not expected to fail.
+    FromPhdr = cantFail(createDRI(DynamicPhdr->p_offset, DynamicPhdr->p_filesz,
+                                  sizeof(Elf_Dyn)));
     FromPhdr.SizePrintName = "PT_DYNAMIC size";
     FromPhdr.EntSizePrintName = "";
-
     IsPhdrTableValid = !FromPhdr.getAsArrayRef<Elf_Dyn>().empty();
   }
 
@@ -1940,12 +1945,18 @@ void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
   DynRegionInfo FromSec(ObjF->getFileName());
   bool IsSecTableValid = false;
   if (DynamicSec) {
-    FromSec =
+    Expected<DynRegionInfo> RegOrErr =
         createDRI(DynamicSec->sh_offset, DynamicSec->sh_size, sizeof(Elf_Dyn));
-    FromSec.Context = describe(*DynamicSec);
-    FromSec.EntSizePrintName = "";
-
-    IsSecTableValid = !FromSec.getAsArrayRef<Elf_Dyn>().empty();
+    if (RegOrErr) {
+      FromSec = *RegOrErr;
+      FromSec.Context = describe(*DynamicSec);
+      FromSec.EntSizePrintName = "";
+      IsSecTableValid = !FromSec.getAsArrayRef<Elf_Dyn>().empty();
+    } else {
+      reportUniqueWarning(createError("unable to read the dynamic table from " +
+                                      describe(*DynamicSec) + ": " +
+                                      toString(RegOrErr.takeError())));
+    }
   }
 
   // When we only have information from one of the SHT_DYNAMIC section header or
@@ -2029,13 +2040,21 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> *ObjF,
         DotDynsymSec = &Sec;
 
       if (!DynSymRegion) {
-        DynSymRegion = createDRI(Sec.sh_offset, Sec.sh_size, Sec.sh_entsize);
-        DynSymRegion->Context = describe(Sec);
+        Expected<DynRegionInfo> RegOrErr =
+            createDRI(Sec.sh_offset, Sec.sh_size, Sec.sh_entsize);
+        if (RegOrErr) {
+          DynSymRegion = *RegOrErr;
+          DynSymRegion->Context = describe(Sec);
 
-        if (Expected<StringRef> E = Obj->getStringTableForSymtab(Sec))
-          DynamicStringTable = *E;
-        else
-          reportWarning(E.takeError(), ObjF->getFileName());
+          if (Expected<StringRef> E = Obj->getStringTableForSymtab(Sec))
+            DynamicStringTable = *E;
+          else
+            reportWarning(E.takeError(), ObjF->getFileName());
+        } else {
+          reportUniqueWarning(createError(
+              "unable to read dynamic symbols from " + describe(Sec) + ": " +
+              toString(RegOrErr.takeError())));
+        }
       }
       break;
     case ELF::SHT_SYMTAB_SHNDX:
@@ -6505,9 +6524,10 @@ void LLVMStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
 
   for (const Elf_Phdr &Phdr : *PhdrsOrErr) {
     DictScope P(W, "ProgramHeader");
-    W.printHex("Type",
-               segmentTypeToString(Obj->getHeader()->e_machine, Phdr.p_type),
-               Phdr.p_type);
+    StringRef Type =
+        segmentTypeToString(Obj->getHeader()->e_machine, Phdr.p_type);
+
+    W.printHex("Type", Type.empty() ? "Unknown" : Type, Phdr.p_type);
     W.printHex("Offset", Phdr.p_offset);
     W.printHex("VirtualAddress", Phdr.p_vaddr);
     W.printHex("PhysicalAddress", Phdr.p_paddr);

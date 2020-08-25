@@ -903,14 +903,12 @@ define <4 x float> @div_sqrt_v4f32(<4 x float> %x, <4 x float> %y) {
 define double @sqrt_fdiv_common_operand(double %x) nounwind {
 ; SSE-LABEL: sqrt_fdiv_common_operand:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    sqrtsd %xmm0, %xmm1
-; SSE-NEXT:    divsd %xmm1, %xmm0
+; SSE-NEXT:    sqrtsd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sqrt_fdiv_common_operand:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm1
-; AVX-NEXT:    vdivsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %sqrt = call fast double @llvm.sqrt.f64(double %x)
   %r = fdiv fast double %x, %sqrt
@@ -920,33 +918,29 @@ define double @sqrt_fdiv_common_operand(double %x) nounwind {
 define <2 x double> @sqrt_fdiv_common_operand_vec(<2 x double> %x) nounwind {
 ; SSE-LABEL: sqrt_fdiv_common_operand_vec:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    sqrtpd %xmm0, %xmm1
-; SSE-NEXT:    divpd %xmm1, %xmm0
+; SSE-NEXT:    sqrtpd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sqrt_fdiv_common_operand_vec:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vsqrtpd %xmm0, %xmm1
-; AVX-NEXT:    vdivpd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vsqrtpd %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %sqrt = call <2 x double> @llvm.sqrt.v2f64(<2 x double> %x)
-  %r = fdiv arcp reassoc <2 x double> %x, %sqrt
+  %r = fdiv arcp nsz reassoc <2 x double> %x, %sqrt
   ret <2 x double> %r
 }
 
 define double @sqrt_fdiv_common_operand_extra_use(double %x, double* %p) nounwind {
 ; SSE-LABEL: sqrt_fdiv_common_operand_extra_use:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    sqrtsd %xmm0, %xmm1
-; SSE-NEXT:    movsd %xmm1, (%rdi)
-; SSE-NEXT:    divsd %xmm1, %xmm0
+; SSE-NEXT:    sqrtsd %xmm0, %xmm0
+; SSE-NEXT:    movsd %xmm0, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sqrt_fdiv_common_operand_extra_use:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm1
-; AVX-NEXT:    vmovsd %xmm1, (%rdi)
-; AVX-NEXT:    vdivsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vmovsd %xmm0, (%rdi)
 ; AVX-NEXT:    retq
   %sqrt = call fast double @llvm.sqrt.f64(double %x)
   store double %sqrt, double* %p

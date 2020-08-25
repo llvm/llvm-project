@@ -13,12 +13,14 @@
 #include "InstCombineInternal.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
+
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
@@ -27,6 +29,9 @@ using namespace llvm::PatternMatch;
 static cl::opt<unsigned>
 MaxNumPhis("instcombine-max-num-phis", cl::init(512),
            cl::desc("Maximum number phis to handle in intptr/ptrint folding"));
+
+STATISTIC(NumPHIsOfInsertValues,
+          "Number of phi-of-insertvalue turned into insertvalue-of-phis");
 
 /// The PHI arguments will be folded into a single operation with a PHI node
 /// as input. The debug location of the single operation will be the merged
@@ -289,6 +294,46 @@ Instruction *InstCombinerImpl::foldIntegerTypedPHI(PHINode &PN) {
   // The PtrToCast + IntToPtr will be simplified later
   return CastInst::CreateBitOrPointerCast(NewPtrPHI,
                                           IntToPtr->getOperand(0)->getType());
+}
+
+/// If we have something like phi [insertvalue(a,b,0), insertvalue(c,d,0)],
+/// turn this into a phi[a,c] and phi[b,d] and a single insertvalue.
+Instruction *
+InstCombinerImpl::foldPHIArgInsertValueInstructionIntoPHI(PHINode &PN) {
+  auto *FirstIVI = cast<InsertValueInst>(PN.getIncomingValue(0));
+
+  // Scan to see if all operands are `insertvalue`'s with the same indicies,
+  // and all have a single use.
+  for (unsigned i = 1; i != PN.getNumIncomingValues(); ++i) {
+    auto *I = dyn_cast<InsertValueInst>(PN.getIncomingValue(i));
+    if (!I || !I->hasOneUse() || I->getIndices() != FirstIVI->getIndices())
+      return nullptr;
+  }
+
+  // For each operand of an `insertvalue`
+  std::array<PHINode *, 2> NewOperands;
+  for (int OpIdx : {0, 1}) {
+    auto *&NewOperand = NewOperands[OpIdx];
+    // Create a new PHI node to receive the values the operand has in each
+    // incoming basic block.
+    NewOperand = PHINode::Create(
+        FirstIVI->getOperand(OpIdx)->getType(), PN.getNumIncomingValues(),
+        FirstIVI->getOperand(OpIdx)->getName() + ".pn");
+    // And populate each operand's PHI with said values.
+    for (auto Incoming : zip(PN.blocks(), PN.incoming_values()))
+      NewOperand->addIncoming(
+          cast<InsertValueInst>(std::get<1>(Incoming))->getOperand(OpIdx),
+          std::get<0>(Incoming));
+    InsertNewInstBefore(NewOperand, PN);
+  }
+
+  // And finally, create `insertvalue` over the newly-formed PHI nodes.
+  auto *NewIVI = InsertValueInst::Create(NewOperands[0], NewOperands[1],
+                                         FirstIVI->getIndices(), PN.getName());
+
+  PHIArgMergedDebugLoc(NewIVI, PN);
+  ++NumPHIsOfInsertValues;
+  return NewIVI;
 }
 
 /// If we have something like phi [add (a,b), add(a,c)] and if a/b/c and the
@@ -741,6 +786,8 @@ Instruction *InstCombinerImpl::foldPHIArgOpIntoPHI(PHINode &PN) {
     return foldPHIArgGEPIntoPHI(PN);
   if (isa<LoadInst>(FirstInst))
     return foldPHIArgLoadIntoPHI(PN);
+  if (isa<InsertValueInst>(FirstInst))
+    return foldPHIArgInsertValueInstructionIntoPHI(PN);
 
   // Scan the instruction, looking for input operations that can be folded away.
   // If all input operands to the phi are the same instruction (e.g. a cast from

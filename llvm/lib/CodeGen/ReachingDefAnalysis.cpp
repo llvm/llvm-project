@@ -272,8 +272,10 @@ int ReachingDefAnalysis::getReachingDef(MachineInstr *MI, int PhysReg) const {
 }
 
 MachineInstr* ReachingDefAnalysis::getReachingLocalMIDef(MachineInstr *MI,
-                                                    int PhysReg) const {
-  return getInstFromId(MI->getParent(), getReachingDef(MI, PhysReg));
+                                                         int PhysReg) const {
+  return hasLocalDefBefore(MI, PhysReg)
+    ? getInstFromId(MI->getParent(), getReachingDef(MI, PhysReg))
+    : nullptr;
 }
 
 bool ReachingDefAnalysis::hasSameReachingDef(MachineInstr *A, MachineInstr *B,

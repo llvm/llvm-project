@@ -95,6 +95,7 @@ enum NodeType : unsigned {
 
   // Predicated instructions with the result of inactive lanes provided by the
   // last operand.
+  FNEG_MERGE_PASSTHRU,
   SIGN_EXTEND_INREG_MERGE_PASSTHRU,
   ZERO_EXTEND_INREG_MERGE_PASSTHRU,
 

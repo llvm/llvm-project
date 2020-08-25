@@ -68,8 +68,8 @@ public:
   void set_isImplicitNoneType(bool x) { isImplicitNoneType_ = x; }
   void set_isImplicitNoneExternal(bool x) { isImplicitNoneExternal_ = x; }
   void set_inheritFromParent(bool x) { inheritFromParent_ = x; }
-  // Get the implicit type for identifiers starting with ch. May be null.
-  const DeclTypeSpec *GetType(char ch) const;
+  // Get the implicit type for this name. May be null.
+  const DeclTypeSpec *GetType(SourceName) const;
   // Record the implicit type for the range of characters [fromLetter,
   // toLetter].
   void SetTypeMapping(const DeclTypeSpec &type, parser::Location fromLetter,
@@ -385,13 +385,20 @@ public:
   bool Pre(const parser::ImplicitSpec &);
   void Post(const parser::ImplicitSpec &);
 
-  ImplicitRules &implicitRules() { return *implicitRules_; }
-  const ImplicitRules &implicitRules() const { return *implicitRules_; }
+  const DeclTypeSpec *GetType(SourceName name) {
+    return implicitRules_->GetType(name);
+  }
   bool isImplicitNoneType() const {
-    return implicitRules().isImplicitNoneType();
+    return implicitRules_->isImplicitNoneType();
+  }
+  bool isImplicitNoneType(const Scope &scope) const {
+    return implicitRulesMap_->at(&scope).isImplicitNoneType();
   }
   bool isImplicitNoneExternal() const {
-    return implicitRules().isImplicitNoneExternal();
+    return implicitRules_->isImplicitNoneExternal();
+  }
+  void set_inheritFromParent(bool x) {
+    implicitRules_->set_inheritFromParent(x);
   }
 
 protected:
@@ -452,6 +459,8 @@ public:
   using ImplicitRulesVisitor::Pre;
 
   Scope &currScope() { return DEREF(currScope_); }
+  // The enclosing host procedure if current scope is in an internal procedure
+  Scope *GetHostProcedure();
   // The enclosing scope, skipping blocks and derived types.
   // TODO: Will return the scope of a FORALL or implied DO loop; is this ok?
   // If not, should call FindProgramUnitContaining() instead.
@@ -583,6 +592,8 @@ protected:
   const DeclTypeSpec &MakeLogicalType(
       const std::optional<parser::KindSelector> &);
 
+  bool inExecutionPart_{false};
+
 private:
   Scope *currScope_{nullptr};
 };
@@ -689,7 +700,6 @@ public:
 protected:
   // Set when we see a stmt function that is really an array element assignment
   bool badStmtFuncFound_{false};
-  bool inExecutionPart_{false};
 
 private:
   // Info about the current function: parse tree of the type in the PrefixSpec;
@@ -799,7 +809,6 @@ public:
   bool Pre(const parser::NamelistStmt::Group &);
   bool Pre(const parser::IoControlSpec &);
   bool Pre(const parser::CommonStmt::Block &);
-  void Post(const parser::CommonStmt::Block &);
   bool Pre(const parser::CommonBlockObject &);
   void Post(const parser::CommonBlockObject &);
   bool Pre(const parser::EquivalenceStmt &);
@@ -820,7 +829,7 @@ public:
 protected:
   bool BeginDecl();
   void EndDecl();
-  Symbol &DeclareObjectEntity(const parser::Name &, Attrs);
+  Symbol &DeclareObjectEntity(const parser::Name &, Attrs = Attrs{});
   // Make sure that there's an entity in an enclosing scope called Name
   Symbol &FindOrDeclareEnclosingEntity(const parser::Name &);
   // Declare a LOCAL/LOCAL_INIT entity. If there isn't a type specified
@@ -832,6 +841,8 @@ protected:
   // Return pointer to the new symbol, or nullptr on error.
   Symbol *DeclareStatementEntity(
       const parser::Name &, const std::optional<parser::IntegerTypeSpec> &);
+  Symbol &MakeCommonBlockSymbol(const parser::Name &);
+  Symbol &MakeCommonBlockSymbol(const std::optional<parser::Name> &);
   bool CheckUseError(const parser::Name &);
   void CheckAccessibility(const SourceName &, bool, Symbol &);
   void CheckCommonBlocks();
@@ -869,11 +880,8 @@ private:
   } derivedTypeInfo_;
   // Collect equivalence sets and process at end of specification part
   std::vector<const std::list<parser::EquivalenceObject> *> equivalenceSets_;
-  // Info about common blocks in the current scope
-  struct {
-    Symbol *curr{nullptr}; // common block currently being processed
-    std::set<SourceName> names; // names in any common block of scope
-  } commonBlockInfo_;
+  // Names of all common block objects in the scope
+  std::set<SourceName> commonBlockObjects_;
   // Info about about SAVE statements and attributes in current scope
   struct {
     std::optional<SourceName> saveAll; // "SAVE" without entity list
@@ -904,7 +912,6 @@ private:
   bool OkToAddComponent(const parser::Name &, const Symbol * = nullptr);
   ParamValue GetParamValue(
       const parser::TypeParamValue &, common::TypeParamAttr attr);
-  Symbol &MakeCommonBlockSymbol(const parser::Name &);
   void CheckCommonBlockDerivedType(const SourceName &, const Symbol &);
   std::optional<MessageFixedText> CheckSaveAttr(const Symbol &);
   Attrs HandleSaveName(const SourceName &, Attrs);
@@ -918,22 +925,25 @@ private:
   void Initialization(const parser::Name &, const parser::Initialization &,
       bool inComponentDecl);
   bool PassesLocalityChecks(const parser::Name &name, Symbol &symbol);
+  bool CheckForHostAssociatedImplicit(const parser::Name &);
 
   // Declare an object or procedure entity.
   // T is one of: EntityDetails, ObjectEntityDetails, ProcEntityDetails
   template <typename T>
   Symbol &DeclareEntity(const parser::Name &name, Attrs attrs) {
     Symbol &symbol{MakeSymbol(name, attrs)};
-    if (symbol.has<T>()) {
-      // OK
+    if (context().HasError(symbol) || symbol.has<T>()) {
+      return symbol; // OK or error already reported
     } else if (symbol.has<UnknownDetails>()) {
       symbol.set_details(T{});
+      return symbol;
     } else if (auto *details{symbol.detailsIf<EntityDetails>()}) {
       symbol.set_details(T{std::move(*details)});
+      return symbol;
     } else if (std::is_same_v<EntityDetails, T> &&
         (symbol.has<ObjectEntityDetails>() ||
             symbol.has<ProcEntityDetails>())) {
-      // OK
+      return symbol; // OK
     } else if (auto *details{symbol.detailsIf<UseDetails>()}) {
       Say(name.source,
           "'%s' is use-associated from module '%s' and cannot be re-declared"_err_en_US,
@@ -956,11 +966,17 @@ private:
           name, symbol, "'%s' is already declared as a procedure"_err_en_US);
     } else if (std::is_same_v<ProcEntityDetails, T> &&
         symbol.has<ObjectEntityDetails>()) {
-      SayWithDecl(
-          name, symbol, "'%s' is already declared as an object"_err_en_US);
+      if (InCommonBlock(symbol)) {
+        SayWithDecl(name, symbol,
+            "'%s' may not be a procedure as it is in a COMMON block"_err_en_US);
+      } else {
+        SayWithDecl(
+            name, symbol, "'%s' is already declared as an object"_err_en_US);
+      }
     } else {
       SayAlreadyDeclared(name, symbol);
     }
+    context().SetError(symbol);
     return symbol;
   }
 };
@@ -1334,6 +1350,7 @@ private:
   std::optional<SourceName> prevImportStmt_;
 
   void PreSpecificationConstruct(const parser::SpecificationConstruct &);
+  void CreateCommonBlockSymbols(const parser::CommonStmt &);
   void CreateGeneric(const parser::GenericSpec &);
   void FinishSpecificationPart(const std::list<parser::DeclarationConstruct> &);
   void AnalyzeStmtFunctionStmt(const parser::StmtFunctionStmt &);
@@ -1372,13 +1389,14 @@ bool ImplicitRules::isImplicitNoneExternal() const {
   }
 }
 
-const DeclTypeSpec *ImplicitRules::GetType(char ch) const {
+const DeclTypeSpec *ImplicitRules::GetType(SourceName name) const {
+  char ch{name.begin()[0]};
   if (isImplicitNoneType_) {
     return nullptr;
   } else if (auto it{map_.find(ch)}; it != map_.end()) {
     return &*it->second;
   } else if (inheritFromParent_) {
-    return parent_->GetType(ch);
+    return parent_->GetType(name);
   } else if (ch >= 'i' && ch <= 'n') {
     return &context_.MakeNumericType(TypeCategory::Integer);
   } else if (ch >= 'a' && ch <= 'z') {
@@ -1684,7 +1702,7 @@ bool ImplicitRulesVisitor::Pre(const parser::ImplicitStmt &x) {
                              "IMPLICIT NONE(TYPE) statement"_err_en_US);
                          return false;
                        }
-                       implicitRules().set_isImplicitNoneType(false);
+                       implicitRules_->set_isImplicitNoneType(false);
                        return true;
                      },
                  },
@@ -1704,7 +1722,7 @@ bool ImplicitRulesVisitor::Pre(const parser::LetterSpec &x) {
       return false;
     }
   }
-  implicitRules().SetTypeMapping(*GetDeclTypeSpec(), loLoc, hiLoc);
+  implicitRules_->SetTypeMapping(*GetDeclTypeSpec(), loLoc, hiLoc);
   return false;
 }
 
@@ -1749,7 +1767,7 @@ bool ImplicitRulesVisitor::HandleImplicitNone(
   if (nameSpecs.empty()) {
     if (!implicitNoneTypeNever) {
       prevImplicitNoneType_ = currStmtSource();
-      implicitRules().set_isImplicitNoneType(true);
+      implicitRules_->set_isImplicitNoneType(true);
       if (prevImplicit_) {
         Say("IMPLICIT NONE statement after IMPLICIT statement"_err_en_US);
         return false;
@@ -1761,13 +1779,13 @@ bool ImplicitRulesVisitor::HandleImplicitNone(
     for (const auto noneSpec : nameSpecs) {
       switch (noneSpec) {
       case ImplicitNoneNameSpec::External:
-        implicitRules().set_isImplicitNoneExternal(true);
+        implicitRules_->set_isImplicitNoneExternal(true);
         ++sawExternal;
         break;
       case ImplicitNoneNameSpec::Type:
         if (!implicitNoneTypeNever) {
           prevImplicitNoneType_ = currStmtSource();
-          implicitRules().set_isImplicitNoneType(true);
+          implicitRules_->set_isImplicitNoneType(true);
           if (prevImplicit_) {
             Say("IMPLICIT NONE(TYPE) after IMPLICIT statement"_err_en_US);
             return false;
@@ -1915,14 +1933,22 @@ void ScopeHandler::Say2(const parser::Name &name, MessageFixedText &&msg1,
   context().SetError(symbol, msg1.isFatal());
 }
 
-Scope &ScopeHandler::InclusiveScope() {
-  for (auto *scope{&currScope()};; scope = &scope->parent()) {
-    if (scope->kind() != Scope::Kind::Block && !scope->IsDerivedType() &&
-        !scope->IsStmtFunction()) {
-      return *scope;
+// T may be `Scope` or `const Scope`
+template <typename T> static T &GetInclusiveScope(T &scope) {
+  for (T *s{&scope}; !s->IsGlobal(); s = &s->parent()) {
+    if (s->kind() != Scope::Kind::Block && !s->IsDerivedType() &&
+        !s->IsStmtFunction()) {
+      return *s;
     }
   }
-  DIE("inclusive scope not found");
+  return scope;
+}
+
+Scope &ScopeHandler::InclusiveScope() { return GetInclusiveScope(currScope()); }
+
+Scope *ScopeHandler::GetHostProcedure() {
+  Scope &parent{InclusiveScope().parent()};
+  return parent.kind() == Scope::Kind::Subprogram ? &parent : nullptr;
 }
 
 Scope &ScopeHandler::NonDerivedTypeScope() {
@@ -2082,7 +2108,8 @@ void ScopeHandler::ApplyImplicitRules(Symbol &symbol) {
 }
 
 const DeclTypeSpec *ScopeHandler::GetImplicitType(Symbol &symbol) {
-  const DeclTypeSpec *type{implicitRules().GetType(symbol.name().begin()[0])};
+  const auto *type{implicitRulesMap_->at(&GetInclusiveScope(symbol.owner()))
+                       .GetType(symbol.name())};
   if (type) {
     if (const DerivedTypeSpec * derived{type->AsDerived()}) {
       // Resolve any forward-referenced derived type; a quick no-op else.
@@ -2992,7 +3019,7 @@ Symbol &SubprogramVisitor::PushSubprogramScope(
     if (isGeneric()) {
       GetGenericDetails().AddSpecificProc(*symbol, name.source);
     }
-    implicitRules().set_inheritFromParent(false);
+    set_inheritFromParent(false);
   }
   FindSymbol(name)->set(subpFlag); // PushScope() created symbol
   return *symbol;
@@ -3098,12 +3125,10 @@ void DeclarationVisitor::Post(const parser::TypeDeclarationStmt &) {
 }
 
 void DeclarationVisitor::Post(const parser::DimensionStmt::Declaration &x) {
-  const auto &name{std::get<parser::Name>(x.t)};
-  DeclareObjectEntity(name, Attrs{});
+  DeclareObjectEntity(std::get<parser::Name>(x.t));
 }
 void DeclarationVisitor::Post(const parser::CodimensionDecl &x) {
-  const auto &name{std::get<parser::Name>(x.t)};
-  DeclareObjectEntity(name, Attrs{});
+  DeclareObjectEntity(std::get<parser::Name>(x.t));
 }
 
 bool DeclarationVisitor::Pre(const parser::Initialization &) {
@@ -4211,18 +4236,7 @@ bool DeclarationVisitor::Pre(const parser::IoControlSpec &x) {
 
 bool DeclarationVisitor::Pre(const parser::CommonStmt::Block &x) {
   CheckNotInBlock("COMMON"); // C1107
-  const auto &optName{std::get<std::optional<parser::Name>>(x.t)};
-  parser::Name blankCommon;
-  blankCommon.source =
-      SourceName{currStmtSource().value().begin(), std::size_t{0}};
-  CHECK(!commonBlockInfo_.curr);
-  commonBlockInfo_.curr =
-      &MakeCommonBlockSymbol(optName ? *optName : blankCommon);
   return true;
-}
-
-void DeclarationVisitor::Post(const parser::CommonStmt::Block &) {
-  commonBlockInfo_.curr = nullptr;
 }
 
 bool DeclarationVisitor::Pre(const parser::CommonBlockObject &) {
@@ -4231,24 +4245,14 @@ bool DeclarationVisitor::Pre(const parser::CommonBlockObject &) {
 }
 
 void DeclarationVisitor::Post(const parser::CommonBlockObject &x) {
-  CHECK(commonBlockInfo_.curr);
   const auto &name{std::get<parser::Name>(x.t)};
-  auto &symbol{DeclareObjectEntity(name, Attrs{})};
-  ClearArraySpec();
-  ClearCoarraySpec();
-  auto *details{symbol.detailsIf<ObjectEntityDetails>()};
-  if (!details) {
-    return; // error was reported
-  }
-  commonBlockInfo_.curr->get<CommonBlockDetails>().add_object(symbol);
-  auto pair{commonBlockInfo_.names.insert(name.source)};
+  DeclareObjectEntity(name);
+  auto pair{commonBlockObjects_.insert(name.source)};
   if (!pair.second) {
     const SourceName &prev{*pair.first};
     Say2(name.source, "'%s' is already in a COMMON block"_err_en_US, prev,
         "Previous occurrence of '%s' in a COMMON block"_en_US);
-    return;
   }
-  details->set_commonBlock(*commonBlockInfo_.curr);
 }
 
 bool DeclarationVisitor::Pre(const parser::EquivalenceStmt &x) {
@@ -4409,7 +4413,7 @@ void DeclarationVisitor::CheckCommonBlocks() {
     }
   }
   // check objects in common blocks
-  for (const auto &name : commonBlockInfo_.names) {
+  for (const auto &name : commonBlockObjects_) {
     const auto *symbol{currScope().FindSymbol(name)};
     if (!symbol) {
       continue;
@@ -4443,11 +4447,19 @@ void DeclarationVisitor::CheckCommonBlocks() {
       }
     }
   }
-  commonBlockInfo_ = {};
+  commonBlockObjects_ = {};
 }
 
 Symbol &DeclarationVisitor::MakeCommonBlockSymbol(const parser::Name &name) {
   return Resolve(name, currScope().MakeCommonBlock(name.source));
+}
+Symbol &DeclarationVisitor::MakeCommonBlockSymbol(
+    const std::optional<parser::Name> &name) {
+  if (name) {
+    return MakeCommonBlockSymbol(*name);
+  } else {
+    return MakeCommonBlockSymbol(parser::Name{});
+  }
 }
 
 bool DeclarationVisitor::NameIsKnownOrIntrinsic(const parser::Name &name) {
@@ -4824,8 +4836,7 @@ void ConstructVisitor::ResolveIndexName(
     }
     name.symbol = nullptr;
   }
-  auto &symbol{DeclareObjectEntity(name, {})};
-
+  auto &symbol{DeclareObjectEntity(name)};
   if (symbol.GetType()) {
     // type came from explicit type-spec
   } else if (!prev) {
@@ -5419,10 +5430,15 @@ const parser::Name *DeclarationVisitor::ResolveDataRef(
 // If implicit types are allowed, ensure name is in the symbol table.
 // Otherwise, report an error if it hasn't been declared.
 const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
-  if (Symbol * symbol{FindSymbol(name)}) {
+  FindSymbol(name);
+  if (CheckForHostAssociatedImplicit(name)) {
+    return &name;
+  }
+  if (Symbol * symbol{name.symbol}) {
     if (CheckUseError(name)) {
       return nullptr; // reported an error
     }
+    symbol->set(Symbol::Flag::ImplicitOrError, false);
     if (IsUplevelReference(*symbol)) {
       MakeHostAssocSymbol(name, *symbol);
     } else if (IsDummy(*symbol) ||
@@ -5447,6 +5463,44 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
   ConvertToObjectEntity(*symbol);
   ApplyImplicitRules(*symbol);
   return &name;
+}
+
+// A specification expression may refer to a symbol in the host procedure that
+// is implicitly typed. Because specification parts are processed before
+// execution parts, this may be the first time we see the symbol. It can't be a
+// local in the current scope (because it's in a specification expression) so
+// either it is implicitly declared in the host procedure or it is an error.
+// We create a symbol in the host assuming it is the former; if that proves to
+// be wrong we report an error later in CheckDeclarations().
+bool DeclarationVisitor::CheckForHostAssociatedImplicit(
+    const parser::Name &name) {
+  if (inExecutionPart_) {
+    return false;
+  }
+  if (name.symbol) {
+    ApplyImplicitRules(*name.symbol);
+  }
+  Symbol *hostSymbol;
+  Scope *host{GetHostProcedure()};
+  if (!host || isImplicitNoneType(*host)) {
+    return false;
+  } else if (!name.symbol) {
+    hostSymbol = &MakeSymbol(*host, name.source, Attrs{});
+    ConvertToObjectEntity(*hostSymbol);
+    ApplyImplicitRules(*hostSymbol);
+    hostSymbol->set(Symbol::Flag::ImplicitOrError);
+  } else if (name.symbol->test(Symbol::Flag::ImplicitOrError)) {
+    hostSymbol = name.symbol;
+  } else {
+    return false;
+  }
+  Symbol &symbol{MakeHostAssocSymbol(name, *hostSymbol)};
+  if (isImplicitNoneType()) {
+    symbol.get<HostAssocDetails>().implicitOrExplicitTypeError = true;
+  } else {
+    symbol.get<HostAssocDetails>().implicitOrSpecExprError = true;
+  }
+  return true;
 }
 
 bool DeclarationVisitor::IsUplevelReference(const Symbol &symbol) {
@@ -5897,13 +5951,14 @@ static bool NeedsExplicitType(const Symbol &symbol) {
 }
 
 bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
-  Walk(std::get<0>(x.t));
-  Walk(std::get<1>(x.t));
-  Walk(std::get<2>(x.t));
-  Walk(std::get<3>(x.t));
-  Walk(std::get<4>(x.t));
-  Walk(std::get<5>(x.t));
-  const std::list<parser::DeclarationConstruct> &decls{std::get<6>(x.t)};
+  const auto &[accDecls, ompDecls, compilerDirectives, useStmts, importStmts,
+      implicitPart, decls] = x.t;
+  Walk(accDecls);
+  Walk(ompDecls);
+  Walk(compilerDirectives);
+  Walk(useStmts);
+  Walk(importStmts);
+  Walk(implicitPart);
   for (const auto &decl : decls) {
     if (const auto *spec{
             std::get_if<parser::SpecificationConstruct>(&decl.u)}) {
@@ -5920,22 +5975,39 @@ void ResolveNamesVisitor::PreSpecificationConstruct(
     const parser::SpecificationConstruct &spec) {
   std::visit(
       common::visitors{
-          [&](const Indirection<parser::DerivedTypeDef> &) {},
           [&](const parser::Statement<Indirection<parser::GenericStmt>> &y) {
             CreateGeneric(std::get<parser::GenericSpec>(y.statement.value().t));
           },
           [&](const Indirection<parser::InterfaceBlock> &y) {
             const auto &stmt{std::get<parser::Statement<parser::InterfaceStmt>>(
                 y.value().t)};
-            const auto *spec{std::get_if<std::optional<parser::GenericSpec>>(
-                &stmt.statement.u)};
-            if (spec && *spec) {
-              CreateGeneric(**spec);
+            if (const auto *spec{parser::Unwrap<parser::GenericSpec>(stmt)}) {
+              CreateGeneric(*spec);
+            }
+          },
+          [&](const parser::Statement<parser::OtherSpecificationStmt> &y) {
+            if (const auto *commonStmt{parser::Unwrap<parser::CommonStmt>(y)}) {
+              CreateCommonBlockSymbols(*commonStmt);
             }
           },
           [&](const auto &) {},
       },
       spec.u);
+}
+
+void ResolveNamesVisitor::CreateCommonBlockSymbols(
+    const parser::CommonStmt &commonStmt) {
+  for (const parser::CommonStmt::Block &block : commonStmt.blocks) {
+    const auto &[name, objects] = block.t;
+    Symbol &commonBlock{MakeCommonBlockSymbol(name)};
+    for (const auto &object : objects) {
+      Symbol &obj{DeclareObjectEntity(std::get<parser::Name>(object.t))};
+      if (auto *details{obj.detailsIf<ObjectEntityDetails>()}) {
+        details->set_commonBlock(commonBlock);
+        commonBlock.get<CommonBlockDetails>().add_object(obj);
+      }
+    }
+  }
 }
 
 void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {

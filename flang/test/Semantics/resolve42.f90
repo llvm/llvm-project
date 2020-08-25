@@ -11,11 +11,11 @@ subroutine s2
 end
 
 subroutine s3
+  !ERROR: 'x' may not be a procedure as it is in a COMMON block
   procedure(real) :: x
-  !ERROR: 'x' is already declared as a procedure
   common x
   common y
-  !ERROR: 'y' is already declared as an object
+  !ERROR: 'y' may not be a procedure as it is in a COMMON block
   procedure(real) :: y
 end
 

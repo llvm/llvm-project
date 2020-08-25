@@ -12,6 +12,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Reproducer.h"
+#include "lldb/Utility/UUID.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileCollector.h"
@@ -205,6 +206,41 @@ public:
   static char ID;
 };
 
+/// Provider for mapping UUIDs to symbol and executable files.
+class SymbolFileProvider : public Provider<SymbolFileProvider> {
+public:
+  SymbolFileProvider(const FileSpec &directory)
+      : Provider(directory), m_symbol_files() {}
+
+  void AddSymbolFile(const UUID *uuid, const FileSpec &module_path,
+                     const FileSpec &symbol_path);
+  void Keep() override;
+
+  struct Entry {
+    Entry() = default;
+    Entry(std::string uuid) : uuid(std::move(uuid)) {}
+    Entry(std::string uuid, std::string module_path, std::string symbol_path)
+        : uuid(std::move(uuid)), module_path(std::move(module_path)),
+          symbol_path(std::move(symbol_path)) {}
+
+    bool operator==(const Entry &rhs) const { return uuid == rhs.uuid; }
+    bool operator<(const Entry &rhs) const { return uuid < rhs.uuid; }
+
+    std::string uuid;
+    std::string module_path;
+    std::string symbol_path;
+  };
+
+  struct Info {
+    static const char *name;
+    static const char *file;
+  };
+  static char ID;
+
+private:
+  std::vector<Entry> m_symbol_files;
+};
+
 /// The MultiProvider is a provider that hands out recorder which can be used
 /// to capture data for different instances of the same object. The recorders
 /// can be passed around or stored as an instance member.
@@ -345,6 +381,16 @@ private:
   unsigned m_index = 0;
 };
 
+class SymbolFileLoader {
+public:
+  SymbolFileLoader(Loader *loader);
+  std::pair<FileSpec, FileSpec> GetPaths(const UUID *uuid) const;
+
+private:
+  // Sorted list of UUID to path mappings.
+  std::vector<SymbolFileProvider::Entry> m_symbol_files;
+};
+
 /// Helper to read directories written by the DirectoryProvider.
 template <typename T>
 llvm::Expected<std::string> GetDirectoryFrom(repro::Loader *loader) {
@@ -356,5 +402,21 @@ llvm::Expected<std::string> GetDirectoryFrom(repro::Loader *loader) {
 
 } // namespace repro
 } // namespace lldb_private
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(lldb_private::repro::SymbolFileProvider::Entry)
+
+namespace llvm {
+namespace yaml {
+template <>
+struct MappingTraits<lldb_private::repro::SymbolFileProvider::Entry> {
+  static void mapping(IO &io,
+                      lldb_private::repro::SymbolFileProvider::Entry &entry) {
+    io.mapRequired("uuid", entry.uuid);
+    io.mapRequired("module-path", entry.module_path);
+    io.mapRequired("symbol-path", entry.symbol_path);
+  }
+};
+} // namespace yaml
+} // namespace llvm
 
 #endif // LLDB_UTILITY_REPRODUCER_PROVIDER_H

@@ -232,7 +232,9 @@ public:
   size_t getTotalSizeEstimate();
 
   virtual ~DevelopmentModeMLInlineAdvisor();
-  void updateNativeSizeEstimate(int64_t Change) { CurrentNativeSize += Change; }
+  void updateNativeSizeEstimate(int64_t Change) {
+    *CurrentNativeSize += Change;
+  }
   void resetNativeSize(Function *F) {
     FAM.invalidate<InlineSizeEstimatorAnalysis>(*F);
   }
@@ -242,7 +244,7 @@ public:
   std::unique_ptr<MLInlineAdvice>
   getAdviceFromModel(CallBase &CB, OptimizationRemarkEmitter &ORE) override;
 
-  size_t getNativeSizeEstimate(const Function &F) const;
+  Optional<size_t> getNativeSizeEstimate(const Function &F) const;
 
 private:
   bool isLogging() const { return !!Logger; }
@@ -251,8 +253,8 @@ private:
   const bool IsDoingInference;
   std::unique_ptr<TrainingLogger> Logger;
 
-  const int32_t InitialNativeSize;
-  int32_t CurrentNativeSize = 0;
+  const Optional<int32_t> InitialNativeSize;
+  Optional<int32_t> CurrentNativeSize;
 };
 
 /// A variant of MLInlineAdvice that tracks all non-trivial inlining
@@ -261,9 +263,10 @@ class LoggingMLInlineAdvice : public MLInlineAdvice {
 public:
   LoggingMLInlineAdvice(DevelopmentModeMLInlineAdvisor *Advisor, CallBase &CB,
                         OptimizationRemarkEmitter &ORE, bool Recommendation,
-                        TrainingLogger &Logger, size_t CallerSizeEstimateBefore,
-                        size_t CalleeSizeEstimateBefore, bool DefaultDecision,
-                        bool Mandatory = false)
+                        TrainingLogger &Logger,
+                        Optional<size_t> CallerSizeEstimateBefore,
+                        Optional<size_t> CalleeSizeEstimateBefore,
+                        bool DefaultDecision, bool Mandatory = false)
       : MLInlineAdvice(Advisor, CB, ORE, Recommendation), Logger(Logger),
         CallerSizeEstimateBefore(CallerSizeEstimateBefore),
         CalleeSizeEstimateBefore(CalleeSizeEstimateBefore),
@@ -279,11 +282,12 @@ private:
     MLInlineAdvice::recordInliningImpl();
     getAdvisor()->resetNativeSize(Caller);
     int Reward = std::numeric_limits<int>::max();
-    if (!getAdvisor()->isForcedToStop()) {
-      int NativeSizeAfter = getAdvisor()->getNativeSizeEstimate(*Caller) +
-                            CalleeSizeEstimateBefore;
+    if (InlineSizeEstimatorAnalysis::isEvaluatorRequested() &&
+        !getAdvisor()->isForcedToStop()) {
+      int NativeSizeAfter = *getAdvisor()->getNativeSizeEstimate(*Caller) +
+                            *CalleeSizeEstimateBefore;
       Reward = NativeSizeAfter -
-               (CallerSizeEstimateBefore + CalleeSizeEstimateBefore);
+               (*CallerSizeEstimateBefore + *CalleeSizeEstimateBefore);
       getAdvisor()->updateNativeSizeEstimate(Reward);
     }
     log(Reward, /*Success=*/true);
@@ -292,10 +296,11 @@ private:
   void recordInliningWithCalleeDeletedImpl() override {
     MLInlineAdvice::recordInliningWithCalleeDeletedImpl();
     getAdvisor()->resetNativeSize(Caller);
-    if (!getAdvisor()->isForcedToStop()) {
-      int NativeSizeAfter = getAdvisor()->getNativeSizeEstimate(*Caller);
+    if (InlineSizeEstimatorAnalysis::isEvaluatorRequested() &&
+        !getAdvisor()->isForcedToStop()) {
+      int NativeSizeAfter = *getAdvisor()->getNativeSizeEstimate(*Caller);
       int Reward = NativeSizeAfter -
-                   (CallerSizeEstimateBefore + CalleeSizeEstimateBefore);
+                   (*CallerSizeEstimateBefore + *CalleeSizeEstimateBefore);
       getAdvisor()->updateNativeSizeEstimate(Reward);
       log(Reward, /*Success=*/true);
     }
@@ -324,8 +329,8 @@ private:
 
   static const int64_t NoReward = 0;
   TrainingLogger &Logger;
-  const size_t CallerSizeEstimateBefore;
-  const size_t CalleeSizeEstimateBefore;
+  const Optional<size_t> CallerSizeEstimateBefore;
+  const Optional<size_t> CalleeSizeEstimateBefore;
   const bool DefaultDecision;
   const bool Mandatory;
 };
@@ -448,9 +453,11 @@ void TrainingLogger::print() {
   writeRawTensorsAsFeatureLists(
       OutFile, TensorSpec::createSpec<int64_t>(DecisionName, {1}),
       Outputs[0].data(), NumberOfRecords);
-  writeTensorsAsFeatureLists(OutFile,
-                             TensorSpec::createSpec<int64_t>(RewardName, {1}),
-                             Rewards.data(), NumberOfRecords);
+
+  if (InlineSizeEstimatorAnalysis::isEvaluatorRequested())
+    writeTensorsAsFeatureLists(OutFile,
+                               TensorSpec::createSpec<int64_t>(RewardName, {1}),
+                               Rewards.data(), NumberOfRecords);
 
   for (size_t I = 1; I < Outputs.size(); ++I)
     writeRawTensorsAsFeatureLists(OutFile, MUTR->outputSpecs()[I],
@@ -479,8 +486,10 @@ DevelopmentModeMLInlineAdvisor::~DevelopmentModeMLInlineAdvisor() {
     Logger->print();
 }
 
-size_t
+Optional<size_t>
 DevelopmentModeMLInlineAdvisor::getNativeSizeEstimate(const Function &F) const {
+  if (!InlineSizeEstimatorAnalysis::isEvaluatorRequested())
+    return None;
   auto &R =
       FAM.getResult<InlineSizeEstimatorAnalysis>(const_cast<Function &>(F));
   if (!R) {
@@ -496,6 +505,7 @@ DevelopmentModeMLInlineAdvisor::getMandatoryAdvice(
     CallBase &CB, OptimizationRemarkEmitter &ORE) {
   if (!isLogging())
     return MLInlineAdvisor::getMandatoryAdvice(CB, ORE);
+
   return std::make_unique<LoggingMLInlineAdvice>(
       /*Advisor=*/this,
       /*CB=*/CB, /*ORE=*/ORE, /*Recommendation=*/true, /*Logger=*/*Logger,
@@ -524,13 +534,15 @@ DevelopmentModeMLInlineAdvisor::getAdviceFromModel(
 }
 
 size_t DevelopmentModeMLInlineAdvisor::getTotalSizeEstimate() {
+  if (!InlineSizeEstimatorAnalysis::isEvaluatorRequested())
+    return 0;
   size_t Ret = 0;
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
     if (isFunctionDeleted(&F))
       continue;
-    Ret += getNativeSizeEstimate(F);
+    Ret += *getNativeSizeEstimate(F);
   }
   return Ret;
 }
@@ -642,14 +654,6 @@ std::unique_ptr<InlineAdvisor> llvm::getDevelopmentModeAdvisor(
     Module &M, ModuleAnalysisManager &MAM,
     std::function<bool(CallBase &)> GetDefaultAdvice) {
   auto &Ctx = M.getContext();
-  if (TrainingLog.empty() !=
-      !InlineSizeEstimatorAnalysis::isEvaluatorRequested()) {
-    Ctx.emitError("For development mode, if training logs are requested, then "
-                  "a size estimator must be available; either that, or neither "
-                  "are specified.");
-    return nullptr;
-  }
-
   std::unique_ptr<MLModelRunner> Runner;
   ModelUnderTrainingRunner *MUTRPtr = nullptr;
   bool IsDoingInference = false;

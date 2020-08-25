@@ -3760,6 +3760,20 @@ bool PPCInstrInfo::simplifyToLI(MachineInstr &MI, MachineInstr &DefMI,
     }
     return false;
   }
+  case PPC::SUBFIC:
+  case PPC::SUBFIC8: {
+    // Only transform this if the CARRY implicit operand is dead.
+    if (MI.getNumOperands() > 3 && !MI.getOperand(3).isDead())
+      return false;
+    int64_t Minuend = MI.getOperand(2).getImm();
+    if (isInt<16>(Minuend - SExtImm)) {
+      ReplaceWithLI = true;
+      Is64BitLI = Opc == PPC::SUBFIC8;
+      NewImm = Minuend - SExtImm;
+      break;
+    }
+    return false;
+  }
   case PPC::RLDICL:
   case PPC::RLDICL_rec:
   case PPC::RLDICL_32:
