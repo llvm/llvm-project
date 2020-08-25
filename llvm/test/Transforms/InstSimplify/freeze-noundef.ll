@@ -97,8 +97,7 @@ define i1 @used_by_fncall(i1 %x) {
 ; CHECK-LABEL: @used_by_fncall(
 ; CHECK-NEXT:    [[Y:%.*]] = add nsw i1 [[X:%.*]], true
 ; CHECK-NEXT:    call void @use_i1(i1 [[Y]])
-; CHECK-NEXT:    [[F:%.*]] = freeze i1 [[Y]]
-; CHECK-NEXT:    ret i1 [[F]]
+; CHECK-NEXT:    ret i1 [[Y]]
 ;
   %y = add nsw i1 %x, 1
   call void @use_i1(i1 %y)
