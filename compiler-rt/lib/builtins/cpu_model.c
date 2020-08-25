@@ -84,6 +84,7 @@ enum ProcessorSubtypes {
   INTEL_COREI7_CASCADELAKE,
   INTEL_COREI7_TIGERLAKE,
   INTEL_COREI7_COOPERLAKE,
+  INTEL_COREI7_SAPPHIRERAPIDS,
   CPU_SUBTYPE_MAX
 };
 
@@ -405,6 +406,13 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       CPU = "icelake-server";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_ICELAKE_SERVER;
+      break;
+
+    // Sapphire Rapids:
+    case 0x8f:
+      CPU = "sapphirerapids";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_SAPPHIRERAPIDS;
       break;
 
     case 0x1c: // Most 45 nm Intel Atom processors
