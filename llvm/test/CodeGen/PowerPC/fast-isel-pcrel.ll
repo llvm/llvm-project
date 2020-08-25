@@ -13,17 +13,21 @@
 ; Function Attrs: noinline nounwind optnone
 define internal void @loadFP(double* %d) #0 {
 ; CHECK-LABEL: loadFP:
-; CHECK:       # %bb.0: # %entry
+; CHECK:         .localentry loadFP, 1
+; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -112(r1)
 ; CHECK-NEXT:    std r3, 104(r1)
 ; CHECK-NEXT:    paddi r3, 0, .L.str@PCREL, 1
 ; CHECK-NEXT:    bl printf@notoc
-; CHECK-NEXT:    addis r4, r2, .LCPI0_0@toc@ha
-; CHECK-NEXT:    lfd f0, .LCPI0_0@toc@l(r4)
 ; CHECK-NEXT:    ld r4, 104(r1)
-; CHECK-NEXT:    stfd f0, 0(r4)
+; CHECK-NEXT:    lis r5, 16403
+; CHECK-NEXT:    ori r5, r5, 62914
+; CHECK-NEXT:    sldi r5, r5, 32
+; CHECK-NEXT:    oris r5, r5, 36700
+; CHECK-NEXT:    ori r5, r5, 10486
+; CHECK-NEXT:    std r5, 0(r4)
 ; CHECK-NEXT:    addi r1, r1, 112
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0
@@ -42,21 +46,19 @@ declare signext i32 @printf(i8*, ...)
 ; Function Attrs: noinline nounwind optnone
 define internal void @loadGV() #0 {
 ; CHECK-LABEL: loadGV:
-; CHECK:       # %bb.0: # %entry
+; CHECK:         .localentry loadGV, 1
+; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -112(r1)
 ; CHECK-NEXT:    paddi r3, 0, .L.str.1@PCREL, 1
 ; CHECK-NEXT:    bl printf@notoc
-; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
-; CHECK-NEXT:    ld r4, .LC0@toc@l(r4)
+; CHECK-NEXT:    pld r4, stdout@got@pcrel(0), 1
 ; CHECK-NEXT:    ld r4, 0(r4)
 ; CHECK-NEXT:    li r5, 97
-; CHECK-NEXT:    extsw r5, r5
 ; CHECK-NEXT:    std r3, 104(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    mr r3, r5
-; CHECK-NEXT:    bl _IO_putc
-; CHECK-NEXT:    nop
+; CHECK-NEXT:    bl _IO_putc@notoc
 ; CHECK-NEXT:    addi r1, r1, 112
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0
