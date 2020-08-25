@@ -776,6 +776,8 @@ void InitializeLibdispatchInterceptors() {
   INTERCEPT_FUNCTION(dispatch_barrier_sync_f);
   INTERCEPT_FUNCTION(dispatch_async_and_wait);
   INTERCEPT_FUNCTION(dispatch_async_and_wait_f);
+  INTERCEPT_FUNCTION(dispatch_barrier_async_and_wait);
+  INTERCEPT_FUNCTION(dispatch_barrier_async_and_wait_f);
   INTERCEPT_FUNCTION(dispatch_after);
   INTERCEPT_FUNCTION(dispatch_after_f);
   INTERCEPT_FUNCTION(dispatch_once);
