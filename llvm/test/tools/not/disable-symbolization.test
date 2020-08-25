@@ -1,4 +1,6 @@
-## 'env' may not exist on Windows. %t will be empty.
+# When building on Windows under cmd.exe and GnuWin32, 'env' fails if no
+# arguments are provided.
+# UNSUPPORTED: system-windows
 # RUN: not --crash env > %t || true
 # RUN: cmp -s %t /dev/null || FileCheck %s < %t
 
