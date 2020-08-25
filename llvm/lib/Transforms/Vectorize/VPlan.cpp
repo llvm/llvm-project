@@ -384,14 +384,14 @@ void VPInstruction::generateInstruction(VPTransformState &State,
   case VPInstruction::ActiveLaneMask: {
     // Get first lane of vector induction variable.
     Value *VIVElem0 = State.get(getOperand(0), {Part, 0});
-    // Get first lane of backedge-taken-count.
-    Value *ScalarBTC = State.get(getOperand(1), {Part, 0});
+    // Get the original loop tripcount.
+    Value *ScalarTC = State.TripCount;
 
     auto *Int1Ty = Type::getInt1Ty(Builder.getContext());
     auto *PredTy = FixedVectorType::get(Int1Ty, State.VF.Min);
     Instruction *Call = Builder.CreateIntrinsic(
-        Intrinsic::get_active_lane_mask, {PredTy, ScalarBTC->getType()},
-        {VIVElem0, ScalarBTC}, nullptr, "active.lane.mask");
+        Intrinsic::get_active_lane_mask, {PredTy, ScalarTC->getType()},
+        {VIVElem0, ScalarTC}, nullptr, "active.lane.mask");
     State.set(this, Call, Part);
     break;
   }

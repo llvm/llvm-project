@@ -17,8 +17,7 @@ define dso_local void @sgt_loopguard(i8* noalias nocapture readonly %a, i8* noal
 ; COMMON:       vector.body:
 
 ; CHECK-TF:     %[[VIVELEM0:.*]] = extractelement <16 x i32> %vec.iv, i32 0
-; CHECK-TF:     %[[SCALARBTC:.*]] = extractelement <16 x i32> %broadcast.splat, i32 0
-; CHECK-TF:     %active.lane.mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 %[[VIVELEM0]], i32 %[[SCALARBTC]])
+; CHECK-TF:     %active.lane.mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 %[[VIVELEM0]], i32 %N)
 ; CHECK-TF:     llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %{{.*}}, i32 1, <16 x i1> %active.lane.mask
 ; CHECK-TF:     llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %{{.*}}, i32 1, <16 x i1> %active.lane.mask
 ; CHECK-TF:     llvm.masked.store.v16i8.p0v16i8(<16 x i8> %{{.*}}, <16 x i8>* %{{.*}}, i32 1, <16 x i1> %active.lane.mask)
