@@ -1949,6 +1949,7 @@ public:
     case MaskFormat::Unknown:
       return failure();
     }
+    llvm_unreachable("Unexpected 1DMaskFormat on MaskedLoad");
   }
 };
 } // namespace
@@ -1994,6 +1995,7 @@ public:
     case MaskFormat::Unknown:
       return failure();
     }
+    llvm_unreachable("Unexpected 1DMaskFormat on MaskedStore");
   }
 };
 } // namespace
@@ -2042,6 +2044,7 @@ public:
     case MaskFormat::Unknown:
       return failure();
     }
+    llvm_unreachable("Unexpected 1DMaskFormat on GatherFolder");
   }
 };
 } // namespace
@@ -2085,6 +2088,7 @@ public:
     case MaskFormat::Unknown:
       return failure();
     }
+    llvm_unreachable("Unexpected 1DMaskFormat on ScatterFolder");
   }
 };
 } // namespace
@@ -2134,6 +2138,7 @@ public:
     case MaskFormat::Unknown:
       return failure();
     }
+    llvm_unreachable("Unexpected 1DMaskFormat on ExpandLoadFolder");
   }
 };
 } // namespace
@@ -2180,6 +2185,7 @@ public:
     case MaskFormat::Unknown:
       return failure();
     }
+    llvm_unreachable("Unexpected 1DMaskFormat on CompressStoreFolder");
   }
 };
 } // namespace
