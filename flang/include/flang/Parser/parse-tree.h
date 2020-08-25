@@ -547,7 +547,8 @@ struct ProgramUnit {
   std::variant<common::Indirection<MainProgram>,
       common::Indirection<FunctionSubprogram>,
       common::Indirection<SubroutineSubprogram>, common::Indirection<Module>,
-      common::Indirection<Submodule>, common::Indirection<BlockData>>
+      common::Indirection<Submodule>, common::Indirection<BlockData>,
+      common::Indirection<CompilerDirective>>
       u;
 };
 

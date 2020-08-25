@@ -188,6 +188,8 @@ X86 Support in Clang
 - The x86 intrinsics ``__rorb``, ``__rorw``, ``__rord``, ``__rorq`, ``_rotr``,
   ``_rotwr`` and ``_lrotr`` may now be used within constant expressions.
 
+- Support for -march=sapphirerapids was added.
+
 Internal API Changes
 --------------------
 
