@@ -7155,10 +7155,16 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
     }
     VPValue *BTC = Plan->getOrCreateBackedgeTakenCount();
     bool TailFolded = !CM.isScalarEpilogueAllowed();
-    if (TailFolded && CM.TTI.emitGetActiveLaneMask())
-      BlockMask = Builder.createNaryOp(VPInstruction::ActiveLaneMask, {IV, BTC});
-    else
+
+    if (TailFolded && CM.TTI.emitGetActiveLaneMask()) {
+      // While ActiveLaneMask is a binary op that consumes the loop tripcount
+      // as a second argument, we only pass the IV here and extract the
+      // tripcount from the transform state where codegen of the VP instructions
+      // happen.
+      BlockMask = Builder.createNaryOp(VPInstruction::ActiveLaneMask, {IV});
+    } else {
       BlockMask = Builder.createNaryOp(VPInstruction::ICmpULE, {IV, BTC});
+    }
     return BlockMaskCache[BB] = BlockMask;
   }
 

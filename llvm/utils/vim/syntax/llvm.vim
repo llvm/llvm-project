@@ -55,6 +55,7 @@ syn keyword llvmKeyword
       \ available_externally
       \ blockaddress
       \ builtin
+      \ byref
       \ byval
       \ c
       \ catch
