@@ -814,3 +814,43 @@ define <4 x float> @ins_of_ext_wrong_type(<5 x float> %x, float %y) {
   %i3 = insertelement <4 x float> %i2, float %y, i32 3
   ret <4 x float> %i3
 }
+
+; This should reduce, but the shuffle mask must remain as-is (no extra undef).
+
+define <4 x i4> @ins_of_ext_undef_elts_propagation(<4 x i4> %v, <4 x i4> %v2, i4 %x) {
+; CHECK-LABEL: @ins_of_ext_undef_elts_propagation(
+; CHECK-NEXT:    [[V0:%.*]] = extractelement <4 x i4> [[V:%.*]], i32 0
+; CHECK-NEXT:    [[T0:%.*]] = insertelement <4 x i4> undef, i4 [[V0]], i32 0
+; CHECK-NEXT:    [[T2:%.*]] = insertelement <4 x i4> [[T0]], i4 [[X:%.*]], i32 2
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i4> [[T2]], <4 x i4> [[V2:%.*]], <4 x i32> <i32 0, i32 6, i32 2, i32 7>
+; CHECK-NEXT:    ret <4 x i4> [[R]]
+;
+  %v0 = extractelement <4 x i4> %v, i32 0
+  %t0 = insertelement <4 x i4> undef, i4 %v0, i32 0
+  %t2 = insertelement <4 x i4> %t0, i4 %x, i32 2
+  %r = shufflevector <4 x i4> %t2, <4 x i4> %v2, <4 x i32> <i32 0, i32 6, i32 2, i32 7>
+  ret <4 x i4> %r
+}
+
+; Similar to above, but more ops/uses to verify things work in more complicated cases.
+
+define <8 x i4> @ins_of_ext_undef_elts_propagation2(<8 x i4> %v, <8 x i4> %v2, i4 %x) {
+; CHECK-LABEL: @ins_of_ext_undef_elts_propagation2(
+; CHECK-NEXT:    [[I15:%.*]] = extractelement <8 x i4> [[V:%.*]], i32 0
+; CHECK-NEXT:    [[I16:%.*]] = insertelement <8 x i4> undef, i4 [[I15]], i32 0
+; CHECK-NEXT:    [[I17:%.*]] = extractelement <8 x i4> [[V]], i32 1
+; CHECK-NEXT:    [[I18:%.*]] = insertelement <8 x i4> [[I16]], i4 [[I17]], i32 1
+; CHECK-NEXT:    [[I19:%.*]] = insertelement <8 x i4> [[I18]], i4 [[X:%.*]], i32 2
+; CHECK-NEXT:    [[I20:%.*]] = shufflevector <8 x i4> [[I19]], <8 x i4> [[V2:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 11, i32 10, i32 9, i32 8, i32 undef>
+; CHECK-NEXT:    [[I21:%.*]] = shufflevector <8 x i4> [[I20]], <8 x i4> [[V]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 15>
+; CHECK-NEXT:    ret <8 x i4> [[I21]]
+;
+  %i15 = extractelement <8 x i4> %v, i32 0
+  %i16 = insertelement <8 x i4> undef, i4 %i15, i32 0
+  %i17 = extractelement <8 x i4> %v, i32 1
+  %i18 = insertelement <8 x i4> %i16, i4 %i17, i32 1
+  %i19 = insertelement <8 x i4> %i18, i4 %x, i32 2
+  %i20 = shufflevector <8 x i4> %i19, <8 x i4> %v2, <8 x i32> <i32 0, i32 1, i32 2, i32 11, i32 10, i32 9, i32 8, i32 undef>
+  %i21 = shufflevector <8 x i4> %i20, <8 x i4> %v, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 15>
+  ret <8 x i4> %i21
+}
