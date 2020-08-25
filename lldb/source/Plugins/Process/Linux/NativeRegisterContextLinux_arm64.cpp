@@ -118,7 +118,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
                                                : "<unknown register>");
 
   uint8_t *src;
-  uint32_t offset;
+  uint32_t offset = LLDB_INVALID_INDEX32;
   uint64_t sve_vg;
   std::vector<uint8_t> sve_reg_non_live;
 
@@ -172,7 +172,6 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
         offset = CalculateSVEOffset(GetRegisterInfoAtIndex(sve_reg_num));
       }
 
-      offset = CalculateSVEOffset(reg_info);
       assert(offset < GetSVEBufferSize());
       src = (uint8_t *)GetSVEBuffer() + offset;
     }
@@ -234,7 +233,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
                                                : "<unknown register>");
 
   uint8_t *dst;
-  uint32_t offset;
+  uint32_t offset = LLDB_INVALID_INDEX32;
   std::vector<uint8_t> sve_reg_non_live;
 
   if (IsGPR(reg)) {
@@ -291,7 +290,6 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
         offset = CalculateSVEOffset(GetRegisterInfoAtIndex(sve_reg_num));
       }
 
-      offset = CalculateSVEOffset(reg_info);
       assert(offset < GetSVEBufferSize());
       dst = (uint8_t *)GetSVEBuffer() + offset;
       ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
