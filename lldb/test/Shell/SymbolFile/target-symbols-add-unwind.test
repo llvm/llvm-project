@@ -24,3 +24,4 @@ image show-unwind -n main
 # CHECK: debug_frame UnwindPlan:
 # CHECK-NEXT: This UnwindPlan originally sourced from DWARF CFI
 # CHECK-NEXT: This UnwindPlan is sourced from the compiler: yes.
+# CHECK-NEXT: This UnwindPlan is for a trap handler function: no.
