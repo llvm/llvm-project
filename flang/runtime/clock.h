@@ -1,4 +1,4 @@
-//===-- runtime/clock.h -------------------------------------*- C++ -*-===//
+//===-- runtime/clock.h -----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,14 @@ class Descriptor;
 
 extern "C" {
 
-void RTNAME(DateAndTime)(char *date, std::size_t dateChars);
+/// Implement runtime for DATE_AND_TIME intrinsic.
+/// TODO:
+/// - Add VALUES argument (through descriptor).
+/// - Windows implementation (currently does nothing)
+void RTNAME(DateAndTime)(char *date, char *time, char *zone,
+    std::size_t dateChars, std::size_t timeChars, std::size_t zoneChars);
 }
+
+// TODO: CPU_TIME, SYSTEM_CLOCK
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_CLOCK_H_

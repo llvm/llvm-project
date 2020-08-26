@@ -183,20 +183,36 @@ void Fortran::lower::genPauseStatement(
 
 void Fortran::lower::genDateAndTime(Fortran::lower::FirOpBuilder &builder,
                                     mlir::Location loc,
-                                    llvm::Optional<fir::CharBoxValue> date) {
+                                    llvm::Optional<fir::CharBoxValue> date,
+                                    llvm::Optional<fir::CharBoxValue> time,
+                                    llvm::Optional<fir::CharBoxValue> zone) {
   auto callee = genRuntimeFunction<mkRTKey(DateAndTime)>(loc, builder);
   mlir::Type idxTy = builder.getIndexType();
+  mlir::Value zero;
+  auto splitArg = [&](llvm::Optional<fir::CharBoxValue> arg,
+                      mlir::Value &buffer, mlir::Value &len) {
+    if (arg) {
+      buffer = arg->getBuffer();
+      len = arg->getLen();
+    } else {
+      if (!zero)
+        zero = builder.createIntegerConstant(loc, idxTy, 0);
+      buffer = zero;
+      len = zero;
+    }
+  };
   mlir::Value dateBuffer;
   mlir::Value dateLen;
-  if (date) {
-    dateBuffer = date->getBuffer();
-    dateLen = date->getLen();
-  } else {
-    auto zero = builder.createIntegerConstant(loc, idxTy, 0);
-    dateBuffer = zero;
-    dateLen = zero;
-  }
-  llvm::SmallVector<mlir::Value, 2> args{dateBuffer, dateLen};
+  splitArg(date, dateBuffer, dateLen);
+  mlir::Value timeBuffer;
+  mlir::Value timeLen;
+  splitArg(time, timeBuffer, timeLen);
+  mlir::Value zoneBuffer;
+  mlir::Value zoneLen;
+  splitArg(zone, zoneBuffer, zoneLen);
+
+  llvm::SmallVector<mlir::Value, 2> args{dateBuffer, timeBuffer, zoneBuffer,
+                                         dateLen,    timeLen,    zoneLen};
   llvm::SmallVector<mlir::Value, 2> operands;
   for (const auto &op : llvm::zip(args, callee.getType().getInputs()))
     operands.emplace_back(
