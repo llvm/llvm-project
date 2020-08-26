@@ -1422,6 +1422,20 @@ bool AMDGPUInstructionSelector::selectDSAppendConsume(MachineInstr &MI,
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
+bool AMDGPUInstructionSelector::selectSBarrier(MachineInstr &MI) const {
+  if (TM.getOptLevel() > CodeGenOpt::None) {
+    unsigned WGSize = STI.getFlatWorkGroupSizes(MF->getFunction()).second;
+    if (WGSize <= STI.getWavefrontSize()) {
+      MachineBasicBlock *MBB = MI.getParent();
+      const DebugLoc &DL = MI.getDebugLoc();
+      BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::WAVE_BARRIER));
+      MI.eraseFromParent();
+      return true;
+    }
+  }
+  return selectImpl(MI, *CoverageInfo);
+}
+
 static bool parseTexFail(uint64_t TexFailCtrl, bool &TFE, bool &LWE,
                          bool &IsTexFail) {
   if (TexFailCtrl)
@@ -1726,6 +1740,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectDSAppendConsume(I, true);
   case Intrinsic::amdgcn_ds_consume:
     return selectDSAppendConsume(I, false);
+  case Intrinsic::amdgcn_s_barrier:
+    return selectSBarrier(I);
   default: {
     return selectImpl(I, *CoverageInfo);
   }
