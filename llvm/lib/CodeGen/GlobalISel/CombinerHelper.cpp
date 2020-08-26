@@ -1701,6 +1701,51 @@ bool CombinerHelper::applyCombineP2IToI2P(MachineInstr &MI, Register &Reg) {
   return true;
 }
 
+bool CombinerHelper::matchCombineAddP2IToPtrAdd(
+    MachineInstr &MI, std::pair<Register, bool> &PtrReg) {
+  assert(MI.getOpcode() == TargetOpcode::G_ADD);
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  LLT IntTy = MRI.getType(LHS);
+
+  // G_PTR_ADD always has the pointer in the LHS, so we may need to commute the
+  // instruction.
+  PtrReg.second = false;
+  for (Register SrcReg : {LHS, RHS}) {
+    if (mi_match(SrcReg, MRI, m_GPtrToInt(m_Reg(PtrReg.first)))) {
+      // Don't handle cases where the integer is implicitly converted to the
+      // pointer width.
+      LLT PtrTy = MRI.getType(PtrReg.first);
+      if (PtrTy.getScalarSizeInBits() == IntTy.getScalarSizeInBits())
+        return true;
+    }
+
+    PtrReg.second = true;
+  }
+
+  return false;
+}
+
+bool CombinerHelper::applyCombineAddP2IToPtrAdd(
+    MachineInstr &MI, std::pair<Register, bool> &PtrReg) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+
+  const bool DoCommute = PtrReg.second;
+  if (DoCommute)
+    std::swap(LHS, RHS);
+  LHS = PtrReg.first;
+
+  LLT PtrTy = MRI.getType(LHS);
+
+  Builder.setInstrAndDebugLoc(MI);
+  auto PtrAdd = Builder.buildPtrAdd(PtrTy, LHS, RHS);
+  Builder.buildPtrToInt(Dst, PtrAdd);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool CombinerHelper::matchAnyExplicitUseIsUndef(MachineInstr &MI) {
   return any_of(MI.explicit_uses(), [this](const MachineOperand &MO) {
     return MO.isReg() &&
