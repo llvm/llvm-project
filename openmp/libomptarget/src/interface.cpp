@@ -62,6 +62,8 @@ static void HandleTargetOutcome(bool success) {
       break;
     case tgt_mandatory:
       if (!success) {
+        if (InfoLevel > 0)
+          MESSAGE0("LIBOMPTARGET_INFO is not supported yet");
         FATAL_MESSAGE0(1, "failure of target construct while offloading is mandatory");
       }
       break;
@@ -303,7 +305,7 @@ EXTERN int __tgt_target_mapper(int64_t device_id, void *host_ptr,
   }
 
   if (CheckDeviceAndCtors(device_id) != OFFLOAD_SUCCESS) {
-    DP("Failed to get device %" PRId64 " ready\n", device_id);
+    REPORT("Failed to get device %" PRId64 " ready\n", device_id);
     HandleTargetOutcome(false);
     return OFFLOAD_FAIL;
   }
@@ -363,7 +365,7 @@ EXTERN int __tgt_target_teams_mapper(int64_t device_id, void *host_ptr,
   }
 
   if (CheckDeviceAndCtors(device_id) != OFFLOAD_SUCCESS) {
-    DP("Failed to get device %" PRId64 " ready\n", device_id);
+    REPORT("Failed to get device %" PRId64 " ready\n", device_id);
     HandleTargetOutcome(false);
     return OFFLOAD_FAIL;
   }
