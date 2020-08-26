@@ -6,7 +6,7 @@ LLVMFuzzerCustomMutator: {{.*}} lim: 4096 {{.*}}
 LLVMFuzzerCustomMutator: BINGO
 
 # len_control is disabled for custom mutators by default, test that it can be enabled.
-RUN: not %run %t-CustomMutatorTest -len_control=100 2>&1 | FileCheck %s --check-prefix=LLVMFuzzerCustomMutatorWithLenControl
+RUN: not %run %t-CustomMutatorTest -len_control=1000 2>&1 | FileCheck %s --check-prefix=LLVMFuzzerCustomMutatorWithLenControl
 LLVMFuzzerCustomMutatorWithLenControl: INFO: found LLVMFuzzerCustomMutator
 LLVMFuzzerCustomMutatorWithLenControl: In LLVMFuzzerCustomMutator
 LLVMFuzzerCustomMutatorWithLenControl: {{.*}} lim: {{[1-9][0-9]?}} {{.*}}

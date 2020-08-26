@@ -5803,7 +5803,7 @@ struct SourceWithCompletedTagList : clang::ExternalASTSource {
     Record->completeDefinition();
     CompletedTags.push_back(Tag);
   }
-  void CompleteType(ObjCInterfaceDecl *) override {}
+  using clang::ExternalASTSource::CompleteType;
 };
 
 TEST_P(ImportWithExternalSource, CompleteRecordBeforeImporting) {
