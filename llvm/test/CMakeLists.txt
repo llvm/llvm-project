@@ -153,6 +153,7 @@ if(LLVM_BUILD_EXAMPLES)
     Kaleidoscope-Ch5
     Kaleidoscope-Ch6
     Kaleidoscope-Ch7
+    LLJITWithThinLTOSummaries
     )
   if (NOT WIN32)
     list(APPEND LLVM_TEST_DEPENDS

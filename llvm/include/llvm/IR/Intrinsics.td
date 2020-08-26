@@ -83,6 +83,11 @@ class NoAlias<AttrIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
+// NoUndef - The specified argument is neither undef nor poison.
+class NoUndef<AttrIndex idx> : IntrinsicProperty {
+  int ArgNo = idx.Value;
+}
+
 class Align<AttrIndex idx, int align> : IntrinsicProperty {
   int ArgNo = idx.Value;
   int Align = align;
@@ -515,7 +520,8 @@ def int_readcyclecounter : Intrinsic<[llvm_i64_ty]>;
 
 // The assume intrinsic is marked as arbitrarily writing so that proper
 // control dependencies will be maintained.
-def int_assume        : Intrinsic<[], [llvm_i1_ty], [IntrWillReturn]>;
+def int_assume        : Intrinsic<[], [llvm_i1_ty], [IntrWillReturn,
+                                                     NoUndef<ArgIndex<0>>]>;
 
 // Stack Protector Intrinsic - The stackprotector intrinsic writes the stack
 // guard to the correct place on the stack frame.
@@ -1347,26 +1353,28 @@ def int_masked_store : Intrinsic<[], [llvm_anyvector_ty,
                                       LLVMAnyPointerType<LLVMMatchType<0>>,
                                       llvm_i32_ty,
                                       LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
-                                 [IntrArgMemOnly, IntrWillReturn, ImmArg<ArgIndex<2>>]>;
+                                 [IntrArgMemOnly, IntrWillReturn,
+                                  NoUndef<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
 def int_masked_load  : Intrinsic<[llvm_anyvector_ty],
                                  [LLVMAnyPointerType<LLVMMatchType<0>>, llvm_i32_ty,
                                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
                                  [IntrReadMem, IntrArgMemOnly, IntrWillReturn,
-                                  ImmArg<ArgIndex<1>>]>;
+                                  NoUndef<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 
 def int_masked_gather: Intrinsic<[llvm_anyvector_ty],
                                  [LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
                                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                   LLVMMatchType<0>],
                                  [IntrReadMem, IntrWillReturn,
-                                  ImmArg<ArgIndex<1>>]>;
+                                  NoUndef<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
 
 def int_masked_scatter: Intrinsic<[],
                                   [llvm_anyvector_ty,
                                    LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
                                    LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
-                                  [IntrWillReturn, ImmArg<ArgIndex<2>>]>;
+                                  [IntrWillReturn, NoUndef<ArgIndex<1>>,
+                                   ImmArg<ArgIndex<2>>]>;
 
 def int_masked_expandload: Intrinsic<[llvm_anyvector_ty],
                                      [LLVMPointerToElt<0>,

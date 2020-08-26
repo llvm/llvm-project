@@ -5093,16 +5093,6 @@ void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
 
     case Instruction::Call:
     case Instruction::Invoke: {
-      if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-        switch (II->getIntrinsicID()) {
-        case Intrinsic::assume:
-          Operands.insert(II->getArgOperand(0));
-          break;
-        default:
-          break;
-        }
-      }
-
       const CallBase *CB = cast<CallBase>(I);
       if (CB->isIndirectCall())
         Operands.insert(CB->getCalledOperand());

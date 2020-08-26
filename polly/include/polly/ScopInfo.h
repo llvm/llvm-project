@@ -2319,7 +2319,7 @@ public:
   ///                      ScopBuilder::buildAccessRelations. Therefore, if this
   ///                      method is called before buildAccessRelations, false
   ///                      must be passed.
-  void removeStmts(std::function<bool(ScopStmt &)> ShouldDelete,
+  void removeStmts(function_ref<bool(ScopStmt &)> ShouldDelete,
                    bool AfterHoisting = true);
 
   /// Get an isl string representing the context.

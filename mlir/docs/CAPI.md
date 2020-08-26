@@ -45,8 +45,8 @@ for creation functions). For example, `mlirOperationGetNumOperands` inspects an
 
 The *ownership* model is encoded in the naming convention as follows.
 
--   By default, the ownership is not transerred.
--   Functions that tranfer the ownership of the result to the caller can be in
+-   By default, the ownership is not transferred.
+-   Functions that transfer the ownership of the result to the caller can be in
     one of two forms:
     *   functions that create a new object have the name `mlirXCreate<...>`, for
         example, `mlirOperationCreate`;
@@ -127,7 +127,7 @@ stored and perform the copy. There is no guarantee that the pointer supplied to
 the callback points to a null-terminated string, the size argument should be
 used to find the end of the string. The callback may be called multiple times
 with consecutive chunks of the string representation (the printing itself is
-bufferred).
+buffered).
 
 *Rationale*: this approach allows the caller to have full control of the
 allocation and avoid unnecessary allocation and copying inside the printer.
@@ -143,9 +143,9 @@ The API adopts the following patterns for recurrent functionality in MLIR.
 
 An object has an _indexed component_ if it has fields accessible using a
 zero-based contiguous integer index, typically arrays. For example, an
-`MlirBlock` has its arguments as a indexed component. An object may have several
-such components. For example, an `MlirOperation` has attributes, operands,
-regions, results and successors.
+`MlirBlock` has its arguments as an indexed component. An object may have
+several such components. For example, an `MlirOperation` has attributes,
+operands, regions, results and successors.
 
 For indexed components, the following pair of functions is provided.
 
@@ -153,10 +153,10 @@ For indexed components, the following pair of functions is provided.
 -   `MlirY mlirXGet<Y>(MlirX, intptr_t pos)` returns 'pos'-th subobject.
 
 The sizes are accepted and returned as signed pointer-sized integers, i.e.
-`intptr_t`. This typedef is avalable in C99.
+`intptr_t`. This typedef is available in C99.
 
 Note that the name of subobject in the function does not necessarily match the
-type of the subobject. For example, `mlirOperationGetOperand` returns a
+type of the subobject. For example, `mlirOperationGetOperand` returns an
 `MlirValue`.
 
 ### Iterable Components
@@ -190,12 +190,12 @@ for (iter = mlirXGetFirst<Y>(x); !mlirYIsNull(iter);
 
 ### Extensions for Dialect Attributes and Types
 
-Dialect attributes and types can follow the example of standard attrbutes and
+Dialect attributes and types can follow the example of standard attributes and
 types, provided that implementations live in separate directories, i.e.
 `include/mlir-c/<...>Dialect/` and `lib/CAPI/<...>Dialect/`. The core APIs
 provide implementation-private headers in `include/mlir/CAPI/IR` that allow one
 to convert between opaque C structures for core IR components and their C++
 counterparts. `wrap` converts a C++ class into a C structure and `unwrap` does
-the inverse conversion. Once the a C++ object is available, the API
+the inverse conversion. Once the C++ object is available, the API
 implementation should rely on `isa` to implement `mlirXIsAY` and is expected to
 use `cast` inside other API calls.
