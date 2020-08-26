@@ -1,4 +1,4 @@
-// This test checks that the SEH directives emit the correct unwind data.
+// This test checks that the SEH directives don't cause the assembler to fail.
 
 // RUN: llvm-mc -triple aarch64-pc-win32 -filetype=obj %s | llvm-readobj -S -r - | FileCheck %s
 
@@ -15,7 +15,7 @@
 // CHECK-NEXT:   }
 // CHECK:        Section {
 // CHECK:          Name: .xdata
-// CHECK:          RawDataSize: 24
+// CHECK:          RawDataSize: 20
 // CHECK:          RelocationCount: 1
 // CHECK:          Characteristics [
 // CHECK-NEXT:       ALIGN_4BYTES
@@ -25,7 +25,7 @@
 // CHECK-NEXT:   }
 // CHECK:        Section {
 // CHECK:          Name: .pdata
-// CHECK:          RelocationCount: 6
+// CHECK:          RelocationCount: 4
 // CHECK:          Characteristics [
 // CHECK-NEXT:       ALIGN_4BYTES
 // CHECK-NEXT:       CNT_INITIALIZED_DATA
@@ -41,10 +41,8 @@
 // CHECK-NEXT:   Section (5) .pdata {
 // CHECK-NEXT:     0x0 IMAGE_REL_ARM64_ADDR32NB func
 // CHECK-NEXT:     0x4 IMAGE_REL_ARM64_ADDR32NB .xdata
-// CHECK-NEXT:     0x8 IMAGE_REL_ARM64_ADDR32NB func
+// CHECK-NEXT:     0x8 IMAGE_REL_ARM64_ADDR32NB smallFunc
 // CHECK-NEXT:     0xC IMAGE_REL_ARM64_ADDR32NB .xdata
-// CHECK-NEXT:     0x10 IMAGE_REL_ARM64_ADDR32NB smallFunc
-// CHECK-NEXT:     0x14 IMAGE_REL_ARM64_ADDR32NB .xdata
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
@@ -65,9 +63,6 @@ func:
     .seh_handlerdata
     .long 0
     .text
-    .seh_startchained
-    .seh_endprologue
-    .seh_endchained
     add sp, sp, #24
     ret
     .seh_endproc
