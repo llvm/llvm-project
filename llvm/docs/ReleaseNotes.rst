@@ -44,6 +44,9 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
+* The llgo frontend has been removed for now, but may be resurrected in the
+  future.
+
 * ...
 
 
