@@ -23,7 +23,35 @@ def get_os_env_from_platform(platform):
 def get_os_from_sdk(sdk):
     return sdk[:sdk.find('.')], ""
 
-from lldbsuite.test import configuration
+
+def get_os_and_env():
+    if configuration.lldb_platform_name:
+        return get_os_env_from_platform(configuration.lldb_platform_name)
+    if configuration.apple_sdk:
+        return get_os_from_sdk(configuration.apple_sdk)
+    return None, None
+
+
+def get_triple():
+    # Construct the vendor component.
+    vendor = "apple"
+
+    # Construct the os component.
+    os, env = get_os_and_env()
+    if os is None or env is None:
+        return None, None, None, None
+
+    # Get the SDK from the os and env.
+    sdk = lldbutil.get_xcode_sdk(os, env)
+    if not sdk:
+        return None, None, None, None
+
+    # Get the version from the SDK.
+    version = lldbutil.get_xcode_sdk_version(sdk)
+    if not version:
+        return None, None, None, None
+
+    return vendor, os, version, env
 
 
 class BuilderDarwin(Builder):
@@ -37,50 +65,24 @@ class BuilderDarwin(Builder):
         if configuration.dsymutil:
             args['DSYMUTIL'] = configuration.dsymutil
 
-        operating_system, _ = self.getOsAndEnv()
+        operating_system, _ = get_os_and_env()
         if operating_system and operating_system != "macosx":
             builder_dir = os.path.dirname(os.path.abspath(__file__))
             test_dir = os.path.dirname(builder_dir)
             entitlements = os.path.join(test_dir, 'make', 'entitlements.plist')
-            args['CODESIGN'] = 'codesign --entitlements {}'.format(entitlements)
+            args['CODESIGN'] = 'codesign --entitlements {}'.format(
+                entitlements)
 
         # Return extra args as a formatted string.
         return ' '.join(
             {'{}="{}"'.format(key, value)
              for key, value in args.items()})
-    def getOsAndEnv(self):
-        if configuration.lldb_platform_name:
-            return get_os_env_from_platform(configuration.lldb_platform_name)
-        elif configuration.apple_sdk:
-            return get_os_from_sdk(configuration.apple_sdk)
-        return None, None
 
     def getArchCFlags(self, architecture):
         """Returns the ARCH_CFLAGS for the make system."""
-
-        # Construct the arch component.
-        arch = architecture if architecture else configuration.arch
-        if not arch:
-            arch = subprocess.check_output(['machine'
-                                            ]).rstrip().decode('utf-8')
-        if not arch:
-            return ""
-
-        # Construct the vendor component.
-        vendor = "apple"
-
-        # Construct the os component.
-        os, env = self.getOsAndEnv()
-        if os is None or env is None:
-            return ""
-
-        # Get the SDK from the os and env.
-        sdk = lldbutil.get_xcode_sdk(os, env)
-        if not sdk:
-            return ""
-
-        version = lldbutil.get_xcode_sdk_version(sdk)
-        if not version:
+        # Get the triple components.
+        vendor, os, version, env = get_triple()
+        if not vendor or not os or not version or not env:
             return ""
 
         # Construct the triple from its components.
