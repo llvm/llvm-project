@@ -32,6 +32,8 @@ MaxNumPhis("instcombine-max-num-phis", cl::init(512),
 
 STATISTIC(NumPHIsOfInsertValues,
           "Number of phi-of-insertvalue turned into insertvalue-of-phis");
+STATISTIC(NumPHIsOfExtractValues,
+          "Number of phi-of-extractvalue turned into extractvalue-of-phi");
 
 /// The PHI arguments will be folded into a single operation with a PHI node
 /// as input. The debug location of the single operation will be the merged
@@ -334,6 +336,41 @@ InstCombinerImpl::foldPHIArgInsertValueInstructionIntoPHI(PHINode &PN) {
   PHIArgMergedDebugLoc(NewIVI, PN);
   ++NumPHIsOfInsertValues;
   return NewIVI;
+}
+
+/// If we have something like phi [extractvalue(a,0), extractvalue(b,0)],
+/// turn this into a phi[a,b] and a single extractvalue.
+Instruction *
+InstCombinerImpl::foldPHIArgExtractValueInstructionIntoPHI(PHINode &PN) {
+  auto *FirstEVI = cast<ExtractValueInst>(PN.getIncomingValue(0));
+
+  // Scan to see if all operands are `extractvalue`'s with the same indicies,
+  // and all have a single use.
+  for (unsigned i = 1; i != PN.getNumIncomingValues(); ++i) {
+    auto *I = dyn_cast<ExtractValueInst>(PN.getIncomingValue(i));
+    if (!I || !I->hasOneUse() || I->getIndices() != FirstEVI->getIndices())
+      return nullptr;
+  }
+
+  // Create a new PHI node to receive the values the aggregate operand has
+  // in each incoming basic block.
+  auto *NewAggregateOperand = PHINode::Create(
+      FirstEVI->getAggregateOperand()->getType(), PN.getNumIncomingValues(),
+      FirstEVI->getAggregateOperand()->getName() + ".pn");
+  // And populate the PHI with said values.
+  for (auto Incoming : zip(PN.blocks(), PN.incoming_values()))
+    NewAggregateOperand->addIncoming(
+        cast<ExtractValueInst>(std::get<1>(Incoming))->getAggregateOperand(),
+        std::get<0>(Incoming));
+  InsertNewInstBefore(NewAggregateOperand, PN);
+
+  // And finally, create `extractvalue` over the newly-formed PHI nodes.
+  auto *NewEVI = ExtractValueInst::Create(NewAggregateOperand,
+                                          FirstEVI->getIndices(), PN.getName());
+
+  PHIArgMergedDebugLoc(NewEVI, PN);
+  ++NumPHIsOfExtractValues;
+  return NewEVI;
 }
 
 /// If we have something like phi [add (a,b), add(a,c)] and if a/b/c and the
@@ -788,6 +825,8 @@ Instruction *InstCombinerImpl::foldPHIArgOpIntoPHI(PHINode &PN) {
     return foldPHIArgLoadIntoPHI(PN);
   if (isa<InsertValueInst>(FirstInst))
     return foldPHIArgInsertValueInstructionIntoPHI(PN);
+  if (isa<ExtractValueInst>(FirstInst))
+    return foldPHIArgExtractValueInstructionIntoPHI(PN);
 
   // Scan the instruction, looking for input operations that can be folded away.
   // If all input operands to the phi are the same instruction (e.g. a cast from

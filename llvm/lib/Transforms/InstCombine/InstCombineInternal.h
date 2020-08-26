@@ -618,6 +618,7 @@ public:
   Instruction *foldPHIArgOpIntoPHI(PHINode &PN);
   Instruction *foldPHIArgBinOpIntoPHI(PHINode &PN);
   Instruction *foldPHIArgInsertValueInstructionIntoPHI(PHINode &PN);
+  Instruction *foldPHIArgExtractValueInstructionIntoPHI(PHINode &PN);
   Instruction *foldPHIArgGEPIntoPHI(PHINode &PN);
   Instruction *foldPHIArgLoadIntoPHI(PHINode &PN);
   Instruction *foldPHIArgZextsIntoPHI(PHINode &PN);
