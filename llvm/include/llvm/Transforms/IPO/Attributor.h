@@ -2646,6 +2646,12 @@ public:
     return F.hasPersonalityFn() && !canSimplifyInvokeNoUnwind(&F);
   }
 
+  /// Return if the edge from \p From BB to \p To BB is assumed dead.
+  /// This is specifically useful in AAReachability.
+  virtual bool isEdgeDead(const BasicBlock *From, const BasicBlock *To) const {
+    return false;
+  }
+
   /// See AbstractAttribute::getName()
   const std::string getName() const override { return "AAIsDead"; }
 
