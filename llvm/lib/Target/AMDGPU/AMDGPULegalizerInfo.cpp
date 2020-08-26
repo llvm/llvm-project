@@ -2625,23 +2625,42 @@ bool AMDGPULegalizerInfo::legalizeBuildVector(
   return true;
 }
 
+// Check that this is a G_XOR x, -1
+static bool isNot(const MachineRegisterInfo &MRI, const MachineInstr &MI) {
+  if (MI.getOpcode() != TargetOpcode::G_XOR)
+    return false;
+  auto ConstVal = getConstantVRegVal(MI.getOperand(2).getReg(), MRI);
+  return ConstVal && *ConstVal == -1;
+}
+
 // Return the use branch instruction, otherwise null if the usage is invalid.
-static MachineInstr *verifyCFIntrinsic(MachineInstr &MI,
-                                       MachineRegisterInfo &MRI,
-                                       MachineInstr *&Br,
-                                       MachineBasicBlock *&UncondBrTarget) {
+static MachineInstr *
+verifyCFIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI, MachineInstr *&Br,
+                  MachineBasicBlock *&UncondBrTarget, bool &Negated) {
   Register CondDef = MI.getOperand(0).getReg();
   if (!MRI.hasOneNonDBGUse(CondDef))
     return nullptr;
 
   MachineBasicBlock *Parent = MI.getParent();
-  MachineInstr &UseMI = *MRI.use_instr_nodbg_begin(CondDef);
-  if (UseMI.getParent() != Parent ||
-      UseMI.getOpcode() != AMDGPU::G_BRCOND)
+  MachineInstr *UseMI = &*MRI.use_instr_nodbg_begin(CondDef);
+
+  if (isNot(MRI, *UseMI)) {
+    Register NegatedCond = UseMI->getOperand(0).getReg();
+    if (!MRI.hasOneNonDBGUse(NegatedCond))
+      return nullptr;
+
+    // We're deleting the def of this value, so we need to remove it.
+    UseMI->eraseFromParent();
+
+    UseMI = &*MRI.use_instr_nodbg_begin(NegatedCond);
+    Negated = true;
+  }
+
+  if (UseMI->getParent() != Parent || UseMI->getOpcode() != AMDGPU::G_BRCOND)
     return nullptr;
 
   // Make sure the cond br is followed by a G_BR, or is the last instruction.
-  MachineBasicBlock::iterator Next = std::next(UseMI.getIterator());
+  MachineBasicBlock::iterator Next = std::next(UseMI->getIterator());
   if (Next == Parent->end()) {
     MachineFunction::iterator NextMBB = std::next(Parent->getIterator());
     if (NextMBB == Parent->getParent()->end()) // Illegal intrinsic use.
@@ -2654,7 +2673,7 @@ static MachineInstr *verifyCFIntrinsic(MachineInstr &MI,
     UncondBrTarget = Br->getOperand(0).getMBB();
   }
 
-  return &UseMI;
+  return UseMI;
 }
 
 bool AMDGPULegalizerInfo::loadInputValue(Register DstReg, MachineIRBuilder &B,
@@ -4467,7 +4486,9 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_else: {
     MachineInstr *Br = nullptr;
     MachineBasicBlock *UncondBrTarget = nullptr;
-    if (MachineInstr *BrCond = verifyCFIntrinsic(MI, MRI, Br, UncondBrTarget)) {
+    bool Negated = false;
+    if (MachineInstr *BrCond =
+            verifyCFIntrinsic(MI, MRI, Br, UncondBrTarget, Negated)) {
       const SIRegisterInfo *TRI
         = static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
 
@@ -4475,6 +4496,10 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
       Register Use = MI.getOperand(3).getReg();
 
       MachineBasicBlock *CondBrTarget = BrCond->getOperand(1).getMBB();
+
+      if (Negated)
+        std::swap(CondBrTarget, UncondBrTarget);
+
       B.setInsertPt(B.getMBB(), BrCond->getIterator());
       if (IntrID == Intrinsic::amdgcn_if) {
         B.buildInstr(AMDGPU::SI_IF)
@@ -4510,12 +4535,17 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_loop: {
     MachineInstr *Br = nullptr;
     MachineBasicBlock *UncondBrTarget = nullptr;
-    if (MachineInstr *BrCond = verifyCFIntrinsic(MI, MRI, Br, UncondBrTarget)) {
+    bool Negated = false;
+    if (MachineInstr *BrCond =
+            verifyCFIntrinsic(MI, MRI, Br, UncondBrTarget, Negated)) {
       const SIRegisterInfo *TRI
         = static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
 
       MachineBasicBlock *CondBrTarget = BrCond->getOperand(1).getMBB();
       Register Reg = MI.getOperand(2).getReg();
+
+      if (Negated)
+        std::swap(CondBrTarget, UncondBrTarget);
 
       B.setInsertPt(B.getMBB(), BrCond->getIterator());
       B.buildInstr(AMDGPU::SI_LOOP)
