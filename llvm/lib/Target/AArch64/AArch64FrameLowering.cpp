@@ -1185,7 +1185,26 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   // For funclets the FP belongs to the containing function.
   if (!IsFunclet && HasFP) {
     // Only set up FP if we actually need to.
-    int64_t FPOffset = isTargetDarwin(MF) ? (AFI->getCalleeSavedStackSize() - 16) : 0;
+    int64_t FPOffset;
+
+    // The frame pointer needs to point to the location of the frame record
+    // (x28 and x29) within the callee saved register space.
+    if (isTargetDarwin(MF)) {
+      // On Darwin, these are located at the top of the CSR space.
+      FPOffset = (AFI->getCalleeSavedStackSize() - 16);
+    } else {
+      // On other systems, these are located in the middle of the CSR space,
+      // after the other GPRs and before the FPRs.
+      assert(MFI.isCalleeSavedInfoValid() && "CalleeSavedInfo not calculated");
+      if (MFI.getCalleeSavedInfo().empty()) {
+        FPOffset = 0;
+      } else {
+        FPOffset = AFI->getCalleeSavedStackSize(MFI, [](unsigned Reg) {
+          return AArch64::FPR64RegClass.contains(Reg) ||
+                 AArch64::FPR128RegClass.contains(Reg);
+        });
+      }
+    }
 
     if (CombineSPBump)
       FPOffset += AFI->getLocalStackSize();
@@ -1842,8 +1861,16 @@ static StackOffset getFPOffset(const MachineFunction &MF, int64_t ObjectOffset) 
 
   unsigned FixedObject =
       getFixedObjectSize(MF, AFI, IsWin64, /*IsFunclet=*/false);
-  unsigned FPAdjust = isTargetDarwin(MF)
-                        ? 16 : AFI->getCalleeSavedStackSize(MF.getFrameInfo());
+
+  // Compensate for the position of the frame record within the callee-saved
+  // register space.  On Darwin, this is a fixed offset.  On other systems,
+  // this is determined by the number of callee-saved GPRs, excluding FPRs.
+  unsigned FPAdjust =
+      isTargetDarwin(MF)
+          ? 16
+          : AFI->getCalleeSavedStackSize(MF.getFrameInfo(), [](unsigned Reg) {
+              return AArch64::GPR64RegClass.contains(Reg);
+            });
   return {ObjectOffset + FixedObject + FPAdjust, MVT::i8};
 }
 
