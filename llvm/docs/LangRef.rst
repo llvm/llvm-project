@@ -16937,9 +16937,9 @@ where ``%m`` is a vector (mask) of active/inactive lanes with its elements
 indexed by ``i``,  and ``%base``, ``%n`` are the two arguments to
 ``llvm.get.active.lane.mask.*``, ``%icmp`` is an integer compare and ``ult``
 the unsigned less-than comparison operator.  Overflow cannot occur in
-``(%base + i)`` and its comparison against ``%n`` with ``%n > 0``, as it is
-performed in integer numbers and not in machine numbers. The above is
-equivalent to:
+``(%base + i)`` and its comparison against ``%n`` as it is performed in integer
+numbers and not in machine numbers.  If ``%n`` is ``0``, then the result a
+poison value. The above is equivalent to:
 
 ::
 
