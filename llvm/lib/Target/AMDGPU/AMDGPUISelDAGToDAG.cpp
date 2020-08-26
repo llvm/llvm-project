@@ -1304,9 +1304,9 @@ bool AMDGPUDAGToDAGISel::SelectDSReadWrite2(SDValue Addr, SDValue &Base,
   } else if (const ConstantSDNode *CAddr = dyn_cast<ConstantSDNode>(Addr)) {
     unsigned OffsetValue0 = CAddr->getZExtValue() / Align;
     unsigned OffsetValue1 = OffsetValue0 + 1;
-    assert(Align * OffsetValue0 == CAddr->getZExtValue());
+    bool OffsetIsAligned = Align * OffsetValue0 == CAddr->getZExtValue();
 
-    if (isUInt<8>(OffsetValue0) && isUInt<8>(OffsetValue1)) {
+    if (isUInt<8>(OffsetValue0) && isUInt<8>(OffsetValue1) && OffsetIsAligned) {
       SDValue Zero = CurDAG->getTargetConstant(0, DL, MVT::i32);
       MachineSDNode *MovZero =
           CurDAG->getMachineNode(AMDGPU::V_MOV_B32_e32, DL, MVT::i32, Zero);
