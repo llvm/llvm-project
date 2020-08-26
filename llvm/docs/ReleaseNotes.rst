@@ -44,6 +44,13 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
+* The LLVM project has started the migration towards Python 3, and the build
+  system now prefers Python 3 whenever available.  If the Python 3 interpreter
+  (or libraries) are not found, the build system will, for the time being, fall
+  back to Python 2.  It is recommended that downstream projects migrate to
+  Python 3 as Python 2 has been end-of-life'd by the Python Software
+  Foundation.
+
 * The llgo frontend has been removed for now, but may be resurrected in the
   future.
 
