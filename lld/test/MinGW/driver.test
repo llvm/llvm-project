@@ -260,3 +260,11 @@ ALIGN: -align:0x2000
 RUN: ld.lld -### -m i386pe foo.o -no-seh | FileCheck -check-prefix NOSEH %s
 RUN: ld.lld -### -m i386pe foo.o --no-seh | FileCheck -check-prefix NOSEH %s
 NOSEH: -noseh
+
+RUN: ld.lld -### -m i386pep foo.o --no-allow-multiple-definition --allow-multiple-definition | FileCheck -check-prefix ALLOW_MULTIPLE_DEFINITION %s
+RUN: ld.lld -### -m i386pep foo.o -no-allow-multiple-definition -allow-multiple-definition | FileCheck -check-prefix ALLOW_MULTIPLE_DEFINITION %s
+ALLOW_MULTIPLE_DEFINITION: -force:multiple
+
+RUN: ld.lld -### -m i386pep foo.o --allow-multiple-definition --no-allow-multiple-definition | FileCheck -check-prefix NO_ALLOW_MULTIPLE_DEFINITION %s
+RUN: ld.lld -### -m i386pep foo.o -allow-multiple-definition -no-allow-multiple-definition | FileCheck -check-prefix NO_ALLOW_MULTIPLE_DEFINITION %s
+NO_ALLOW_MULTIPLE_DEFINITION-NOT: -force:multiple
