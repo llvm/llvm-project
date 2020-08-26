@@ -190,11 +190,11 @@ def COMPLETION_MSG(str_before, str_after, completions):
 
 
 def EXP_MSG(str, actual, exe):
-    '''A generic "'%s' returns expected result" message generator if exe.
-    Otherwise, it generates "'%s' matches expected result" message.'''
+    '''A generic "'%s' returned unexpected result" message generator if exe.
+    Otherwise, it generates "'%s' does not match expected result" message.'''
 
-    return "'%s' %s expected result, got '%s'" % (
-        str, 'returns' if exe else 'matches', actual.strip())
+    return "'%s' %s result, got '%s'" % (
+        str, 'returned unexpected' if exe else 'does not match expected', actual.strip())
 
 
 def SETTING_MSG(setting):
