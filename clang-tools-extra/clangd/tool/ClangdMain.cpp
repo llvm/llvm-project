@@ -291,9 +291,8 @@ opt<bool> RecoveryAST{
 opt<bool> RecoveryASTType{
     "recovery-ast-type",
     cat(Features),
-    desc("Preserve the type for recovery AST. Note that "
-         "this feature is experimental and may lead to crashes"),
-    init(false),
+    desc("Preserve the type for recovery AST."),
+    init(ClangdServer::Options().PreserveRecoveryASTType),
     Hidden,
 };
 
