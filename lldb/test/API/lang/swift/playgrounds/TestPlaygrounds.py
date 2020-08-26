@@ -22,8 +22,6 @@ import os.path
 import platform
 import unittest2
 
-import builder_darwin
-
 import sys
 if sys.version_info.major == 2:
     import commands as subprocess
@@ -61,17 +59,13 @@ class TestSwiftPlaygrounds(TestBase):
 
         # Create the target
         if force_target:
-            if lldb.remote_platform:
-                triple = builder_darwin.construct_triple(
-                    configuration.lldb_platform_name,
-                    builder_darwin.getEffectiveArchitecture(None))
-            else:
-                version, _, machine = platform.mac_ver()
-                triple = '%s-apple-macosx%s' % (machine, version)
+            # FIXME: Construct the triple for remote runs.
+            version, _, machine = platform.mac_ver()
+            triple = '%s-apple-macosx%s' % (machine, version)
             target = self.dbg.CreateTargetWithFileAndArch(exe, str(triple))
         else:
             target = self.dbg.CreateTarget(exe)
-            
+
         self.assertTrue(target, VALID_TARGET)
         self.registerSharedLibrariesWithTarget(target, ['libPlaygroundsRuntime.dylib'])
 
