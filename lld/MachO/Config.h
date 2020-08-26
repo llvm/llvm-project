@@ -33,6 +33,7 @@ struct PlatformInfo {
 struct Configuration {
   Symbol *entry;
   bool hasReexports = false;
+  bool allLoad = false;
   bool forceLoadObjC = false;
   uint32_t headerPad;
   llvm::StringRef installName;
