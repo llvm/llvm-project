@@ -252,6 +252,9 @@ public:
   template <typename OpTy, typename... Args>
   OpTy create(Location location, Args... args) {
     OperationState state(location, OpTy::getOperationName());
+    if (!state.name.getAbstractOperation())
+      llvm::report_fatal_error("Building op `" + state.name.getStringRef() +
+                               "` but it isn't registered in this MLIRContext");
     OpTy::build(*this, state, args...);
     auto *op = createOperation(state);
     auto result = dyn_cast<OpTy>(op);
