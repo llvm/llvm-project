@@ -448,7 +448,7 @@ bool compareBinaryOperationTwoOutputs(Operation op, const BinaryInput<T> &input,
 
   if (mpfrIntResult != libcResult.i) {
     if (op == Operation::RemQuo) {
-      if ((0x7 & mpfrIntResult) != libcResult.i)
+      if ((0x7 & mpfrIntResult) != (0x7 & libcResult.i))
         return false;
     } else {
       return false;

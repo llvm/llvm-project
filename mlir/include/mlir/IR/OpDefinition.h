@@ -1257,9 +1257,12 @@ public:
   static bool classof(Operation *op) {
     if (auto *abstractOp = op->getAbstractOperation())
       return TypeID::get<ConcreteType>() == abstractOp->typeID;
-    assert(op->getContext()->isOperationRegistered(
-               ConcreteType::getOperationName()) &&
-           "Casting attempt to an unregistered operation");
+#ifndef NDEBUG
+    if (op->getName().getStringRef() == ConcreteType::getOperationName())
+      llvm::report_fatal_error(
+          "classof on '" + ConcreteType::getOperationName() +
+          "' failed due to the operation not being registered");
+#endif
     return false;
   }
 
