@@ -6,10 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
 #ifdef _WIN32
@@ -88,6 +91,17 @@ TEST(CrashRecoveryTest, DumpStackCleanup) {
   EXPECT_FALSE(sys::fs::exists(Filename));
   EXPECT_EQ(GlobalInt, 1);
   llvm::CrashRecoveryContext::Disable();
+}
+
+TEST(CrashRecoveryTest, LimitedStackTrace) {
+  std::string Res;
+  llvm::raw_string_ostream RawStream(Res);
+  PrintStackTrace(RawStream, 1);
+  std::string Str = RawStream.str();
+  // FIXME: Handle "Depth" parameter in PrintStackTrace() function
+  // to print stack trace upto a specified Depth.
+  if (!Triple(sys::getProcessTriple()).isOSWindows())
+    EXPECT_EQ(std::string::npos, Str.find("#1"));
 }
 
 #ifdef _WIN32
