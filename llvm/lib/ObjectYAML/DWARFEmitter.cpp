@@ -452,10 +452,8 @@ Error DWARFYAML::emitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
   for (const auto &LineTable : DI.DebugLines) {
     writeInitialLength(LineTable.Format, LineTable.Length, OS,
                        DI.IsLittleEndian);
-    uint64_t SizeOfPrologueLength = LineTable.Format == dwarf::DWARF64 ? 8 : 4;
     writeInteger((uint16_t)LineTable.Version, OS, DI.IsLittleEndian);
-    cantFail(writeVariableSizedInteger(
-        LineTable.PrologueLength, SizeOfPrologueLength, OS, DI.IsLittleEndian));
+    writeDWARFOffset(LineTable.PrologueLength, LineTable.Format, OS, DI.IsLittleEndian);
     writeInteger((uint8_t)LineTable.MinInstLength, OS, DI.IsLittleEndian);
     if (LineTable.Version >= 4)
       writeInteger((uint8_t)LineTable.MaxOpsPerInst, OS, DI.IsLittleEndian);
