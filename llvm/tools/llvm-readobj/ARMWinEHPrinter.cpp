@@ -637,7 +637,7 @@ bool Decoder::opcode_save_reg_x(const uint8_t *OC, unsigned &Offset,
   Reg += 19;
   uint32_t Off = ((OC[Offset + 1] & 0x1F) + 1) << 3;
   if (Prologue)
-    SW.startLine() << format("0x%02x%02x              ; str x%u, [sp, #%u]!\n",
+    SW.startLine() << format("0x%02x%02x              ; str x%u, [sp, #-%u]!\n",
                              OC[Offset], OC[Offset + 1], Reg, Off);
   else
     SW.startLine() << format("0x%02x%02x              ; ldr x%u, [sp], #%u\n",
@@ -703,7 +703,7 @@ bool Decoder::opcode_save_freg(const uint8_t *OC, unsigned &Offset,
   Reg >>= 6;
   Reg += 8;
   uint32_t Off = (OC[Offset + 1] & 0x3F) << 3;
-  SW.startLine() << format("0x%02x%02x                ; %s d%u, [sp, #%u]\n",
+  SW.startLine() << format("0x%02x%02x              ; %s d%u, [sp, #%u]\n",
                            OC[Offset], OC[Offset + 1],
                            static_cast<const char *>(Prologue ? "str" : "ldr"),
                            Reg, Off);
