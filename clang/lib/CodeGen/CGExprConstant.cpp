@@ -1163,6 +1163,8 @@ public:
     case CK_FloatingToIntegral:
     case CK_FloatingToBoolean:
     case CK_FloatingCast:
+    case CK_FloatingToFixedPoint:
+    case CK_FixedPointToFloating:
     case CK_FixedPointCast:
     case CK_FixedPointToBoolean:
     case CK_FixedPointToIntegral:
