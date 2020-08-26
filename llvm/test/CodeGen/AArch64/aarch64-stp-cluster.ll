@@ -214,11 +214,11 @@ entry:
   ret void
 }
 
-; FIXME - The SU(4) and SU(7) can be clustered even with
+; Verify that the SU(4) and SU(7) can be clustered even with
 ; different preds
 ; CHECK: ********** MI Scheduling **********
 ; CHECK-LABEL: cluster_with_different_preds:%bb.0
-; CHECK-NOT:Cluster ld/st SU(4) - SU(7)
+; CHECK:Cluster ld/st SU(4) - SU(7)
 ; CHECK:SU(3):   STRWui %2:gpr32, %0:gpr64common, 0 ::
 ; CHECK:SU(4):   %3:gpr32 = LDRWui %1:gpr64common, 0 ::
 ; CHECK:Predecessors:
