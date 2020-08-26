@@ -25,6 +25,7 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
+#include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 #include "mlir/Dialect/Quant/QuantOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SDBM/SDBMDialect.h"
@@ -49,6 +50,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   scf::SCFDialect,
                   omp::OpenMPDialect,
                   pdl::PDLDialect,
+                  pdl_interp::PDLInterpDialect,
                   quant::QuantizationDialect,
                   spirv::SPIRVDialect,
                   StandardOpsDialect,

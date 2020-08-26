@@ -221,6 +221,9 @@ OptionalParseResult Parser::parseOptionalAttribute(Attribute &attribute,
     return result;
   }
 }
+OptionalParseResult Parser::parseOptionalAttribute(ArrayAttr &attribute) {
+  return parseOptionalAttributeWithToken(Token::l_square, attribute);
+}
 
 /// Attribute dictionary.
 ///
