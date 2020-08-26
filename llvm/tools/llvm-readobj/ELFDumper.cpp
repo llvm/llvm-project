@@ -1320,11 +1320,6 @@ static const EnumEntry<unsigned> ElfOSABI[] = {
   {"Standalone",   "Standalone App",       ELF::ELFOSABI_STANDALONE}
 };
 
-static const EnumEntry<unsigned> SymVersionFlags[] = {
-    {"Base", "BASE", VER_FLG_BASE},
-    {"Weak", "WEAK", VER_FLG_WEAK},
-    {"Info", "INFO", VER_FLG_INFO}};
-
 static const EnumEntry<unsigned> AMDGPUElfOSABI[] = {
   {"AMDGPU_HSA",    "AMDGPU - HSA",    ELF::ELFOSABI_AMDGPU_HSA},
   {"AMDGPU_PAL",    "AMDGPU - PAL",    ELF::ELFOSABI_AMDGPU_PAL},
@@ -6297,20 +6292,21 @@ void LLVMStyle<ELFT>::printSectionHeaders(const ELFO *Obj) {
 
     if (opts::SectionSymbols) {
       ListScope D(W, "Symbols");
-      const Elf_Shdr *Symtab = this->dumper()->getDotSymtabSec();
-      StringRef StrTable =
-          unwrapOrError(this->FileName, Obj->getStringTableForSymtab(*Symtab));
+      if (const Elf_Shdr *Symtab = this->dumper()->getDotSymtabSec()) {
+        StringRef StrTable = unwrapOrError(
+            this->FileName, Obj->getStringTableForSymtab(*Symtab));
 
-      for (const Elf_Sym &Sym :
-           unwrapOrError(this->FileName, Obj->symbols(Symtab))) {
-        const Elf_Shdr *SymSec = unwrapOrError(
-            this->FileName,
-            Obj->getSection(&Sym, Symtab, this->dumper()->getShndxTable()));
-        if (SymSec == &Sec)
-          printSymbol(
-              Obj, &Sym,
-              unwrapOrError(this->FileName, Obj->symbols(Symtab)).begin(),
-              StrTable, false, false);
+        for (const Elf_Sym &Sym :
+             unwrapOrError(this->FileName, Obj->symbols(Symtab))) {
+          const Elf_Shdr *SymSec = unwrapOrError(
+              this->FileName,
+              Obj->getSection(&Sym, Symtab, this->dumper()->getShndxTable()));
+          if (SymSec == &Sec)
+            printSymbol(
+                Obj, &Sym,
+                unwrapOrError(this->FileName, Obj->symbols(Symtab)).begin(),
+                StrTable, false, false);
+        }
       }
     }
 
@@ -6564,6 +6560,11 @@ void LLVMStyle<ELFT>::printVersionSymbolSection(const ELFFile<ELFT> *Obj,
                               &Syms[I], StrTable, /*IsDynamic=*/true));
   }
 }
+
+static const EnumEntry<unsigned> SymVersionFlags[] = {
+    {"Base", "BASE", VER_FLG_BASE},
+    {"Weak", "WEAK", VER_FLG_WEAK},
+    {"Info", "INFO", VER_FLG_INFO}};
 
 template <class ELFT>
 void LLVMStyle<ELFT>::printVersionDefinitionSection(const ELFFile<ELFT> *Obj,

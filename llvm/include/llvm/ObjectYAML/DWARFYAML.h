@@ -137,9 +137,9 @@ struct LineTableOpcode {
 
 struct LineTable {
   dwarf::DwarfFormat Format;
-  uint64_t Length;
+  Optional<uint64_t> Length;
   uint16_t Version;
-  uint64_t PrologueLength;
+  Optional<uint64_t> PrologueLength;
   uint8_t MinInstLength;
   uint8_t MaxOpsPerInst;
   uint8_t DefaultIsStmt;

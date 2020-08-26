@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Error.h"
 #include "obj2yaml.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -257,8 +256,9 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
       // ABI allows us to have one SHT_SYMTAB_SHNDX for each symbol table.
       // We only support having the SHT_SYMTAB_SHNDX for SHT_SYMTAB now.
       if (SymTabShndx)
-        return createStringError(obj2yaml_error::not_implemented,
-                                 "multiple SHT_SYMTAB_SHNDX sections are not supported");
+        return createStringError(
+            errc::not_supported,
+            "multiple SHT_SYMTAB_SHNDX sections are not supported");
       SymTabShndx = &Sec;
     }
   }
@@ -269,7 +269,7 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
     if (!SymTab ||
         SymTabShndx->sh_link != (unsigned)(SymTab - Sections.begin()))
       return createStringError(
-          obj2yaml_error::not_implemented,
+          errc::not_supported,
           "only SHT_SYMTAB_SHNDX associated with SHT_SYMTAB are supported");
 
     auto TableOrErr = Obj.getSHNDXTable(*SymTabShndx);

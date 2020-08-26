@@ -682,4 +682,13 @@
 // CLANG-NOT: "--dependent-lib=libcmt"
 // CLANG-NOT: "-vectorize-slp"
 
+// Validate that the default triple is used when run an empty tools dir is specified
+// RUN: %clang_cl -vctoolsdir "" -### -- %s 2>&1 | FileCheck %s --check-prefix VCTOOLSDIR
+// VCTOOLSDIR: "-cc1" "-triple" "x86_64-pc-windows-msvc19.11.0"
+
+// Validate that built-in include paths are based on the supplied path
+// RUN: %clang_cl -vctoolsdir "/fake" -### -- %s 2>&1 | FileCheck %s --check-prefix FAKEDIR
+// FAKEDIR: "-internal-isystem" "/fake{{.}}include"
+// FAKEDIR: "-internal-isystem" "/fake{{.}}atlmfc{{.}}include"
+
 void f() { }

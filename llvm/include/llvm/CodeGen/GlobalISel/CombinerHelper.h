@@ -251,6 +251,13 @@ public:
   bool matchCombineP2IToI2P(MachineInstr &MI, Register &Reg);
   bool applyCombineP2IToI2P(MachineInstr &MI, Register &Reg);
 
+  /// Transform G_ADD (G_PTRTOINT x), y -> G_PTRTOINT (G_PTR_ADD x, y)
+  /// Transform G_ADD y, (G_PTRTOINT x) -> G_PTRTOINT (G_PTR_ADD x, y)
+  bool matchCombineAddP2IToPtrAdd(MachineInstr &MI,
+                                  std::pair<Register, bool> &PtrRegAndCommute);
+  bool applyCombineAddP2IToPtrAdd(MachineInstr &MI,
+                                  std::pair<Register, bool> &PtrRegAndCommute);
+
   /// Return true if any explicit use operand on \p MI is defined by a
   /// G_IMPLICIT_DEF.
   bool matchAnyExplicitUseIsUndef(MachineInstr &MI);

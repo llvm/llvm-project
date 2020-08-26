@@ -268,6 +268,11 @@ namespace llvm {
       return SU->SchedClass;
     }
 
+    /// IsReachable - Checks if SU is reachable from TargetSU.
+    bool IsReachable(SUnit *SU, SUnit *TargetSU) {
+      return Topo.IsReachable(SU, TargetSU);
+    }
+
     /// Returns an iterator to the top of the current scheduling region.
     MachineBasicBlock::iterator begin() const { return RegionBegin; }
 
