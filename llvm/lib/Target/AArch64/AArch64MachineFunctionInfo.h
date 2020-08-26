@@ -194,15 +194,9 @@ public:
   // When CalleeSavedStackSize has not been set (for example when
   // some MachineIR pass is run in isolation), then recalculate
   // the CalleeSavedStackSize directly from the CalleeSavedInfo.
-  // RegisterFilter is a predicate to calculate the stack size for
-  // subsets of the callee-saved registers.  It should return true
-  // for registers that should be included in the size calculation,
-  // and false otherwise.
   // Note: This information can only be recalculated after PEI
   // has assigned offsets to the callee save objects.
-  unsigned getCalleeSavedStackSize(
-      const MachineFrameInfo &MFI,
-      llvm::function_ref<bool(unsigned)> RegisterFilter = nullptr) const {
+  unsigned getCalleeSavedStackSize(const MachineFrameInfo &MFI) const {
     bool ValidateCalleeSavedStackSize = false;
 
 #ifndef NDEBUG
@@ -212,24 +206,14 @@ public:
     ValidateCalleeSavedStackSize = HasCalleeSavedStackSize;
 #endif
 
-    if (RegisterFilter || !HasCalleeSavedStackSize ||
-        ValidateCalleeSavedStackSize) {
+    if (!HasCalleeSavedStackSize || ValidateCalleeSavedStackSize) {
       assert(MFI.isCalleeSavedInfoValid() && "CalleeSavedInfo not calculated");
       if (MFI.getCalleeSavedInfo().empty())
         return 0;
 
       int64_t MinOffset = std::numeric_limits<int64_t>::max();
       int64_t MaxOffset = std::numeric_limits<int64_t>::min();
-
-      bool AnyRegistersCounted = false;
       for (const auto &Info : MFI.getCalleeSavedInfo()) {
-        if (RegisterFilter) {
-          unsigned Reg = Info.getReg();
-          if (!RegisterFilter(Reg))
-            continue;
-        }
-
-        AnyRegistersCounted = true;
         int FrameIdx = Info.getFrameIdx();
         if (MFI.getStackID(FrameIdx) != TargetStackID::Default)
           continue;
@@ -237,15 +221,10 @@ public:
         int64_t ObjSize = MFI.getObjectSize(FrameIdx);
         MinOffset = std::min<int64_t>(Offset, MinOffset);
         MaxOffset = std::max<int64_t>(Offset + ObjSize, MaxOffset);
-        AnyRegistersCounted = true;
       }
 
-      if (!AnyRegistersCounted)
-        return 0;
-
       unsigned Size = alignTo(MaxOffset - MinOffset, 16);
-      assert((RegisterFilter || !HasCalleeSavedStackSize ||
-              getCalleeSavedStackSize() == Size) &&
+      assert((!HasCalleeSavedStackSize || getCalleeSavedStackSize() == Size) &&
              "Invalid size calculated for callee saves");
       return Size;
     }
