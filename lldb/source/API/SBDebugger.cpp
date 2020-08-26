@@ -220,7 +220,7 @@ SBDebugger SBDebugger::Create(bool source_init_files,
     interp.get()->SkipLLDBInitFiles(false);
     interp.get()->SkipAppInitFiles(false);
     SBCommandReturnObject result;
-    interp.SourceInitFileInHomeDirectory(result);
+    interp.SourceInitFileInHomeDirectory(result, false);
   } else {
     interp.get()->SkipLLDBInitFiles(true);
     interp.get()->SkipAppInitFiles(true);

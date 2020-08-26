@@ -40,7 +40,30 @@ AArch64RegisterInfo::AArch64RegisterInfo(const Triple &TT)
   AArch64_MC::initLLVMToCVRegMapping(this);
 }
 
-static bool hasSVEArgsOrReturn(const MachineFunction *MF) {
+/// Return whether the register needs a CFI entry. Not all unwinders may know
+/// about SVE registers, so we assume the lowest common denominator, i.e. the
+/// callee-saves required by the base ABI. For the SVE registers z8-z15 only the
+/// lower 64-bits (d8-d15) need to be saved. The lower 64-bits subreg is
+/// returned in \p RegToUseForCFI.
+bool AArch64RegisterInfo::regNeedsCFI(unsigned Reg,
+                                      unsigned &RegToUseForCFI) const {
+  if (AArch64::PPRRegClass.contains(Reg))
+    return false;
+
+  if (AArch64::ZPRRegClass.contains(Reg)) {
+    RegToUseForCFI = getSubReg(Reg, AArch64::dsub);
+    for (int I = 0; CSR_AArch64_AAPCS_SaveList[I]; ++I) {
+      if (CSR_AArch64_AAPCS_SaveList[I] == RegToUseForCFI)
+        return true;
+    }
+    return false;
+  }
+
+  RegToUseForCFI = Reg;
+  return true;
+}
+
+bool AArch64RegisterInfo::hasSVEArgsOrReturn(const MachineFunction *MF) {
   const Function &F = MF->getFunction();
   return isa<ScalableVectorType>(F.getReturnType()) ||
          any_of(F.args(), [](const Argument &Arg) {

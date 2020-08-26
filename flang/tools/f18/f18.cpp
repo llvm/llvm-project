@@ -368,19 +368,23 @@ std::string CompileOtherLanguage(std::string path, DriverOptions &driver) {
   return {};
 }
 
-void Link(std::vector<std::string> &relocatables, DriverOptions &driver) {
+void Link(std::vector<std::string> &liblist, std::vector<std::string> &objects,
+    DriverOptions &driver) {
   if (!ParentProcess()) {
     std::vector<char *> argv;
     for (size_t j{0}; j < driver.F18_FCArgs.size(); ++j) {
       argv.push_back(driver.F18_FCArgs[j].data());
     }
-    for (auto &relo : relocatables) {
-      argv.push_back(relo.data());
+    for (auto &obj : objects) {
+      argv.push_back(obj.data());
     }
     if (!driver.outputPath.empty()) {
       char dashO[3] = "-o";
       argv.push_back(dashO);
       argv.push_back(driver.outputPath.data());
+    }
+    for (auto &lib : liblist) {
+      argv.push_back(lib.data());
     }
     Exec(argv, driver.verbose);
   }
@@ -396,6 +400,7 @@ int main(int argc, char *const argv[]) {
   bool isPGF90{driver.F18_FCArgs.back().rfind("pgf90") != std::string::npos};
 
   std::list<std::string> args{argList(argc, argv)};
+  std::vector<std::string> objlist, liblist;
   std::string prefix{args.front()};
   args.pop_front();
   prefix += ": ";
@@ -412,32 +417,37 @@ int main(int argc, char *const argv[]) {
 
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;
 
-  std::vector<std::string> fortranSources, otherSources, relocatables;
+  std::vector<std::string> fortranSources, otherSources;
   bool anyFiles{false};
 
   while (!args.empty()) {
     std::string arg{std::move(args.front())};
+    auto dot{arg.rfind(".")};
+    std::string suffix{arg.substr(dot + 1)};
+    std::string prefix{arg.substr(0, 2)};
     args.pop_front();
     if (arg.empty()) {
     } else if (arg.at(0) != '-') {
       anyFiles = true;
-      auto dot{arg.rfind(".")};
       if (dot == std::string::npos) {
         driver.F18_FCArgs.push_back(arg);
       } else {
-        std::string suffix{arg.substr(dot + 1)};
         if (suffix == "f" || suffix == "F" || suffix == "ff" ||
             suffix == "f90" || suffix == "F90" || suffix == "ff90" ||
             suffix == "f95" || suffix == "F95" || suffix == "ff95" ||
             suffix == "cuf" || suffix == "CUF" || suffix == "f18" ||
             suffix == "F18" || suffix == "ff18") {
           fortranSources.push_back(arg);
-        } else if (suffix == "o" || suffix == "a") {
-          relocatables.push_back(arg);
+        } else if (suffix == "o" || suffix == "so") {
+          objlist.push_back(arg);
+        } else if (suffix == "a") {
+          liblist.push_back(arg);
         } else {
           otherSources.push_back(arg);
         }
       }
+    } else if (prefix == "-l" || suffix == "a") {
+      liblist.push_back(arg);
     } else if (arg == "-") {
       fortranSources.push_back("-");
     } else if (arg == "--") {
@@ -544,6 +554,11 @@ int main(int argc, char *const argv[]) {
       defaultKinds.set_defaultIntegerKind(8);
       defaultKinds.set_subscriptIntegerKind(8);
       defaultKinds.set_sizeIntegerKind(8);
+      if (isPGF90) {
+        driver.F18_FCArgs.push_back("-i8");
+      } else {
+        driver.F18_FCArgs.push_back("-fdefault-integer-8");
+      }
     } else if (arg == "-Mlargearray") {
     } else if (arg == "-Mnolargearray") {
     } else if (arg == "-flarge-sizes") {
@@ -585,8 +600,21 @@ int main(int argc, char *const argv[]) {
       driver.getDefinitionArgs = {arguments[0], arguments[1], arguments[2]};
     } else if (arg == "-fget-symbols-sources") {
       driver.getSymbolsSources = true;
-    } else if (arg == "-help" || arg == "--help" || arg == "-?") {
+    } else if (arg == "-h" || arg == "-help" || arg == "--help" || arg == "-?") {
       llvm::errs()
+          << "f18: LLVM Fortran compiler\n"
+          << "\n"
+          << "Usage: f18 [options] <input files>\n"
+          << "\n"
+          << "Defaults:\n"
+          << "  When invoked with input files, and no options to tell\n"
+          << "  it otherwise, f18 will unparse its input and pass that on to an\n"
+          << "  external compiler to continue the compilation.\n"
+          << "  The external compiler is specified by the F18_FC environment\n"
+          << "  variable. The default is 'gfortran'.\n"
+          << "  If invoked with no input files, f18 reads source code from\n"
+          << "  stdin and runs with -fdebug-measure-parse-tree -funparse.\n"
+          << "\n"
           << "f18 options:\n"
           << "  -Mfixed | -Mfree | -ffixed-form | -ffree-form   force the "
              "source form\n"
@@ -620,7 +648,8 @@ int main(int argc, char *const argv[]) {
           << "  -fget-symbols-sources\n"
           << "  -v -c -o -I -D -U    have their usual meanings\n"
           << "  -help                print this again\n"
-          << "Other options are passed through to the compiler.\n";
+          << "Unrecognised options are passed through to the external compiler\n"
+          << "set by F18_FC (see defaults).\n";
       return exitStatus;
     } else if (arg == "-V") {
       llvm::errs() << "\nf18 compiler (under development)\n";
@@ -668,23 +697,25 @@ int main(int argc, char *const argv[]) {
   if (!anyFiles) {
     driver.measureTree = true;
     driver.dumpUnparse = true;
+    llvm::outs() << "Enter Fortran source\n"
+                 << "Use EOF character (^D) to end file\n";
     CompileFortran("-", options, driver, defaultKinds);
     return exitStatus;
   }
   for (const auto &path : fortranSources) {
     std::string relo{CompileFortran(path, options, driver, defaultKinds)};
     if (!driver.compileOnly && !relo.empty()) {
-      relocatables.push_back(relo);
+      objlist.push_back(relo);
     }
   }
   for (const auto &path : otherSources) {
     std::string relo{CompileOtherLanguage(path, driver)};
     if (!driver.compileOnly && !relo.empty()) {
-      relocatables.push_back(relo);
+      objlist.push_back(relo);
     }
   }
-  if (!relocatables.empty()) {
-    Link(relocatables, driver);
+  if (!objlist.empty()) {
+    Link(liblist, objlist, driver);
   }
   return exitStatus;
 }

@@ -49,7 +49,7 @@
 
 // HAS_DEBUG-NOT: warning: debug
 // HAS_DEBUG: "-fcuda-is-device"
-// HAS_DEBUG-SAME: "-debug-info-kind={{constructor|line-tables-only}}"
+// HAS_DEBUG-SAME: "-debug-info-kind={{limited|line-tables-only}}"
 // HAS_DEBUG-SAME: "-dwarf-version=2"
 // HAS_DEBUG: ptxas
 // HAS_DEBUG-SAME: "-g"
