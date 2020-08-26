@@ -31,13 +31,13 @@
 ; RUN:   FileCheck %s -check-prefixes=CHECK,PREFER-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp \
-; RUN:   -prefer-predicate-over-epilog=false \
+; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue \
 ; RUN:   -tail-predication=enabled -loop-vectorize \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp \
-; RUN:   -prefer-predicate-over-epilog=true \
+; RUN:   -prefer-predicate-over-epilogue=predicate-dont-vectorize \
 ; RUN:   -tail-predication=enabled -loop-vectorize \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,FOLDING-OPT

@@ -178,13 +178,36 @@ static cl::opt<unsigned> TinyTripCountVectorThreshold(
              "value are vectorized only if no scalar iteration overheads "
              "are incurred."));
 
-// Indicates that an epilogue is undesired, predication is preferred.
-// This means that the vectorizer will try to fold the loop-tail (epilogue)
-// into the loop and predicate the loop body accordingly.
-static cl::opt<bool> PreferPredicateOverEpilog(
-    "prefer-predicate-over-epilog", cl::init(false), cl::Hidden,
-    cl::desc("Indicate that an epilogue is undesired, predication should be "
-             "used instead."));
+// Option prefer-predicate-over-epilogue indicates that an epilogue is undesired,
+// that predication is preferred, and this lists all options. I.e., the
+// vectorizer will try to fold the tail-loop (epilogue) into the vector body
+// and predicate the instructions accordingly. If tail-folding fails, there are
+// different fallback strategies depending on these values:
+namespace PreferPredicateTy {
+  enum Option {
+    ScalarEpilogue = 0,
+    PredicateElseScalarEpilogue,
+    PredicateOrDontVectorize
+  };
+}
+
+static cl::opt<PreferPredicateTy::Option> PreferPredicateOverEpilogue(
+    "prefer-predicate-over-epilogue",
+    cl::init(PreferPredicateTy::ScalarEpilogue),
+    cl::Hidden,
+    cl::desc("Tail-folding and predication preferences over creating a scalar "
+             "epilogue loop."),
+    cl::values(clEnumValN(PreferPredicateTy::ScalarEpilogue,
+                         "scalar-epilogue",
+                         "Don't tail-predicate loops, create scalar epilogue"),
+              clEnumValN(PreferPredicateTy::PredicateElseScalarEpilogue,
+                         "predicate-else-scalar-epilogue",
+                         "prefer tail-folding, create scalar epilogue if tail "
+                         "folding fails."),
+              clEnumValN(PreferPredicateTy::PredicateOrDontVectorize,
+                         "predicate-dont-vectorize",
+                         "prefers tail-folding, don't attempt vectorization if "
+                         "tail-folding fails.")));
 
 static cl::opt<bool> MaximizeBandwidth(
     "vectorizer-maximize-bandwidth", cl::init(false), cl::Hidden,
@@ -196,7 +219,7 @@ static cl::opt<bool> EnableInterleavedMemAccesses(
     cl::desc("Enable vectorization on interleaved memory accesses in a loop"));
 
 /// An interleave-group may need masking if it resides in a block that needs
-/// predication, or in order to mask away gaps. 
+/// predication, or in order to mask away gaps.
 static cl::opt<bool> EnableMaskedInterleavedMemAccesses(
     "enable-masked-interleaved-mem-accesses", cl::init(false), cl::Hidden,
     cl::desc("Enable vectorization on masked interleaved memory accesses in a loop"));
@@ -5241,6 +5264,19 @@ Optional<unsigned> LoopVectorizationCostModel::computeMaxVF(unsigned UserVF,
     return MaxVF;
   }
 
+  // If there was a tail-folding hint/switch, but we can't fold the tail by
+  // masking, fallback to a vectorization with a scalar epilogue.
+  if (ScalarEpilogueStatus == CM_ScalarEpilogueNotNeededUsePredicate) {
+    if (PreferPredicateOverEpilogue == PreferPredicateTy::PredicateOrDontVectorize) {
+      LLVM_DEBUG(dbgs() << "LV: Can't fold tail by masking: don't vectorize\n");
+      return None;
+    }
+    LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking: vectorize with a "
+                         "scalar epilogue instead.\n");
+    ScalarEpilogueStatus = CM_ScalarEpilogueAllowed;
+    return MaxVF;
+  }
+
   if (TC == 0) {
     reportVectorizationFailure(
         "Unable to calculate the loop count due to complex control flow",
@@ -8055,8 +8091,8 @@ static ScalarEpilogueLowering getScalarEpilogueLowering(
                           Hints.getForce() != LoopVectorizeHints::FK_Enabled))
     return CM_ScalarEpilogueNotAllowedOptSize;
 
-  bool PredicateOptDisabled = PreferPredicateOverEpilog.getNumOccurrences() &&
-                              !PreferPredicateOverEpilog;
+  bool PredicateOptDisabled = PreferPredicateOverEpilogue.getNumOccurrences() &&
+                              !PreferPredicateOverEpilogue;
 
   // 2) Next, if disabling predication is requested on the command line, honour
   // this and request a scalar epilogue.
@@ -8065,8 +8101,8 @@ static ScalarEpilogueLowering getScalarEpilogueLowering(
 
   // 3) and 4) look if enabling predication is requested on the command line,
   // with a loop hint, or if the TTI hook indicates this is profitable, request
-  // predication .
-  if (PreferPredicateOverEpilog ||
+  // predication.
+  if (PreferPredicateOverEpilogue ||
       Hints.getPredicate() == LoopVectorizeHints::FK_Enabled ||
       (TTI->preferPredicateOverEpilogue(L, LI, *SE, *AC, TLI, DT,
                                         LVL.getLAI()) &&
