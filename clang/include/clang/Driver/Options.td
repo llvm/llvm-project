@@ -698,7 +698,7 @@ def emit_ast : Flag<["-"], "emit-ast">,
 def emit_llvm : Flag<["-"], "emit-llvm">, Flags<[CC1Option]>, Group<Action_Group>,
   HelpText<"Use the LLVM representation for assembler and object files">;
 def emit_interface_stubs : Flag<["-"], "emit-interface-stubs">, Flags<[CC1Option]>, Group<Action_Group>,
-  HelpText<"Generate Inteface Stub Files.">;
+  HelpText<"Generate Interface Stub Files.">;
 def emit_merged_ifs : Flag<["-"], "emit-merged-ifs">,
   Flags<[CC1Option]>, Group<Action_Group>,
   HelpText<"Generate Interface Stub Files, emit merged text not binary.">;
@@ -1809,7 +1809,7 @@ def fstack_protector : Flag<["-"], "fstack-protector">, Group<f_Group>,
            "This uses a loose heuristic which considers functions vulnerable if they "
            "contain a char (or 8bit integer) array or constant sized calls to alloca "
            ", which are of greater size than ssp-buffer-size (default: 8 bytes). All "
-           "variable sized calls to alloca are considered vulnerable. A function with"
+           "variable sized calls to alloca are considered vulnerable. A function with "
            "a stack protector has a guard value added to the stack frame that is "
            "checked on function exit. The guard value must be positioned in the "
            "stack frame such that a buffer overflow from a vulnerable variable will "

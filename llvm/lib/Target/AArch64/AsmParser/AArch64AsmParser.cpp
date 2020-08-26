@@ -2071,14 +2071,14 @@ void AArch64Operand::print(raw_ostream &OS) const {
   case k_PSBHint:
     OS << getPSBHintName();
     break;
+  case k_BTIHint:
+    OS << getBTIHintName();
+    break;
   case k_Register:
     OS << "<register " << getReg() << ">";
     if (!getShiftExtendAmount() && !hasShiftExtendAmount())
       break;
     LLVM_FALLTHROUGH;
-  case k_BTIHint:
-    OS << getBTIHintName();
-    break;
   case k_ShiftExtend:
     OS << "<" << AArch64_AM::getShiftExtendName(getShiftExtendType()) << " #"
        << getShiftExtendAmount();
