@@ -169,12 +169,11 @@ private:
   void removeEmptyDomainStmts() {
     size_t NumStmtsBefore = S->getSize();
 
-    auto ShouldDelete = [](ScopStmt &Stmt) -> bool {
+    S->removeStmts([](ScopStmt &Stmt) -> bool {
       auto EffectiveDomain =
           Stmt.getDomain().intersect_params(Stmt.getParent()->getContext());
       return EffectiveDomain.is_empty();
-    };
-    S->removeStmts(ShouldDelete);
+    });
 
     assert(NumStmtsBefore >= S->getSize());
     EmptyDomainsRemoved = NumStmtsBefore - S->getSize();
