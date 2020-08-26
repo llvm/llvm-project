@@ -446,19 +446,38 @@ static LogicalResult verify(ReplaceOp op) {
 //===----------------------------------------------------------------------===//
 
 static ParseResult parseRewriteOp(OpAsmParser &p, OperationState &state) {
-  // If the first token isn't a '(', this is an external rewrite.
-  StringAttr nameAttr;
-  if (failed(p.parseOptionalLParen())) {
-    if (p.parseAttribute(nameAttr, "name", state.attributes) || p.parseLParen())
-      return failure();
-  }
-
   // Parse the root operand.
   OpAsmParser::OperandType rootOperand;
-  if (p.parseOperand(rootOperand) || p.parseRParen() ||
+  if (p.parseOperand(rootOperand) ||
       p.resolveOperand(rootOperand, p.getBuilder().getType<OperationType>(),
                        state.operands))
     return failure();
+
+  // Parse an external rewrite.
+  StringAttr nameAttr;
+  if (succeeded(p.parseOptionalKeyword("with"))) {
+    if (p.parseAttribute(nameAttr, "name", state.attributes))
+      return failure();
+
+    // Parse the optional set of constant parameters.
+    ArrayAttr constantParams;
+    OptionalParseResult constantParamResult = p.parseOptionalAttribute(
+        constantParams, "externalConstParams", state.attributes);
+    if (constantParamResult.hasValue() && failed(*constantParamResult))
+      return failure();
+
+    // Parse the optional additional arguments.
+    if (succeeded(p.parseOptionalLParen())) {
+      SmallVector<OpAsmParser::OperandType, 4> arguments;
+      SmallVector<Type, 4> argumentTypes;
+      llvm::SMLoc argumentLoc = p.getCurrentLocation();
+      if (p.parseOperandList(arguments) ||
+          p.parseColonTypeList(argumentTypes) || p.parseRParen() ||
+          p.resolveOperands(arguments, argumentTypes, argumentLoc,
+                            state.operands))
+        return failure();
+    }
+  }
 
   // If this isn't an external rewrite, parse the region body.
   Region &rewriteRegion = *state.addRegion();
@@ -468,27 +487,58 @@ static ParseResult parseRewriteOp(OpAsmParser &p, OperationState &state) {
       return failure();
     RewriteOp::ensureTerminator(rewriteRegion, p.getBuilder(), state.location);
   }
-  return success();
+
+  return p.parseOptionalAttrDictWithKeyword(state.attributes);
 }
 
 static void print(OpAsmPrinter &p, RewriteOp op) {
-  p << "pdl.rewrite";
+  p << "pdl.rewrite " << op.root();
   if (Optional<StringRef> name = op.name()) {
-    p << " \"" << *name << "\"(" << op.root() << ")";
-    return;
+    p << " with \"" << *name << "\"";
+
+    if (ArrayAttr constantParams = op.externalConstParamsAttr())
+      p << constantParams;
+
+    OperandRange externalArgs = op.externalArgs();
+    if (!externalArgs.empty())
+      p << "(" << externalArgs << " : " << externalArgs.getTypes() << ")";
+  } else {
+    p.printRegion(op.body(), /*printEntryBlockArgs=*/false,
+                  /*printBlockTerminators=*/false);
   }
 
-  p << "(" << op.root() << ")";
-  p.printRegion(op.body(), /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/false);
+  p.printOptionalAttrDictWithKeyword(op.getAttrs(),
+                                     {"name", "externalConstParams"});
 }
 
 static LogicalResult verify(RewriteOp op) {
   Region &rewriteRegion = op.body();
-  if (llvm::hasNItemsOrMore(rewriteRegion, 2)) {
-    return op.emitOpError()
-           << "expected rewrite region when specified to have a single block";
+
+  // Handle the case where the rewrite is external.
+  if (op.name()) {
+    if (!rewriteRegion.empty()) {
+      return op.emitOpError()
+             << "expected rewrite region to be empty when rewrite is external";
+    }
+    return success();
   }
+
+  // Otherwise, check that the rewrite region only contains a single block.
+  if (rewriteRegion.empty()) {
+    return op.emitOpError() << "expected rewrite region to be non-empty if "
+                               "external name is not specified";
+  }
+
+  // Check that no additional arguments were provided.
+  if (!op.externalArgs().empty()) {
+    return op.emitOpError() << "expected no external arguments when the "
+                               "rewrite is specified inline";
+  }
+  if (op.externalConstParams()) {
+    return op.emitOpError() << "expected no external constant parameters when "
+                               "the rewrite is specified inline";
+  }
+
   return success();
 }
 

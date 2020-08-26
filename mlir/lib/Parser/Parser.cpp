@@ -1045,14 +1045,36 @@ public:
   }
 
   /// Parse an optional attribute.
-  OptionalParseResult parseOptionalAttribute(Attribute &result, Type type,
-                                             StringRef attrName,
-                                             NamedAttrList &attrs) override {
+  /// Template utilities to simplify specifying multiple derived overloads.
+  template <typename AttrT>
+  OptionalParseResult
+  parseOptionalAttributeAndAddToList(AttrT &result, Type type,
+                                     StringRef attrName, NamedAttrList &attrs) {
     OptionalParseResult parseResult =
         parser.parseOptionalAttribute(result, type);
     if (parseResult.hasValue() && succeeded(*parseResult))
       attrs.push_back(parser.builder.getNamedAttr(attrName, result));
     return parseResult;
+  }
+  template <typename AttrT>
+  OptionalParseResult parseOptionalAttributeAndAddToList(AttrT &result,
+                                                         StringRef attrName,
+                                                         NamedAttrList &attrs) {
+    OptionalParseResult parseResult = parser.parseOptionalAttribute(result);
+    if (parseResult.hasValue() && succeeded(*parseResult))
+      attrs.push_back(parser.builder.getNamedAttr(attrName, result));
+    return parseResult;
+  }
+
+  OptionalParseResult parseOptionalAttribute(Attribute &result, Type type,
+                                             StringRef attrName,
+                                             NamedAttrList &attrs) override {
+    return parseOptionalAttributeAndAddToList(result, type, attrName, attrs);
+  }
+  OptionalParseResult parseOptionalAttribute(ArrayAttr &result,
+                                             StringRef attrName,
+                                             NamedAttrList &attrs) override {
+    return parseOptionalAttributeAndAddToList(result, attrName, attrs);
   }
 
   /// Parse a named dictionary into 'result' if it is present.

@@ -217,12 +217,12 @@ private:
 
 public:
   template <typename AttrTy>
-  llvm::iterator_range<attr_value_iterator<AttrTy>> getAsRange() {
+  iterator_range<attr_value_iterator<AttrTy>> getAsRange() {
     return llvm::make_range(attr_value_iterator<AttrTy>(begin()),
                             attr_value_iterator<AttrTy>(end()));
   }
-  template <typename AttrTy, typename UnderlyingTy>
-  auto getAsRange() {
+  template <typename AttrTy, typename UnderlyingTy = typename AttrTy::ValueType>
+  auto getAsValueRange() {
     return llvm::map_range(getAsRange<AttrTy>(), [](AttrTy attr) {
       return static_cast<UnderlyingTy>(attr.getValue());
     });
@@ -588,6 +588,9 @@ public:
 
   /// Returns the number of elements held by this attribute.
   int64_t getNumElements() const;
+
+  /// Returns the number of elements held by this attribute.
+  int64_t size() const { return getNumElements(); }
 
   /// Generates a new ElementsAttr by mapping each int value to a new
   /// underlying APInt. The new values can represent either an integer or float.

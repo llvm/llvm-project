@@ -226,7 +226,7 @@ bool LiteralElement::isValidLiteral(StringRef value) {
   // If there is only one character, this must either be punctuation or a
   // single character bare identifier.
   if (value.size() == 1)
-    return isalpha(front) || StringRef("_:,=<>()[]?").contains(front);
+    return isalpha(front) || StringRef("_:,=<>()[]{}?").contains(front);
 
   // Check the punctuation that are larger than a single character.
   if (value == "->")
@@ -583,6 +583,8 @@ static void genLiteralParser(StringRef value, OpMethodBody &body) {
               .Case("=", "Equal()")
               .Case("<", "Less()")
               .Case(">", "Greater()")
+              .Case("{", "LBrace()")
+              .Case("}", "RBrace()")
               .Case("(", "LParen()")
               .Case(")", "RParen()")
               .Case("[", "LSquare()")

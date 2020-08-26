@@ -139,6 +139,7 @@ public:
   ArrayAttr getF32ArrayAttr(ArrayRef<float> values);
   ArrayAttr getF64ArrayAttr(ArrayRef<double> values);
   ArrayAttr getStrArrayAttr(ArrayRef<StringRef> values);
+  ArrayAttr getTypeArrayAttr(TypeRange values);
 
   // Affine expressions and affine maps.
   AffineExpr getAffineDimExpr(unsigned position);

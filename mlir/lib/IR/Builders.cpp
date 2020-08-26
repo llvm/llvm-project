@@ -261,6 +261,12 @@ ArrayAttr Builder::getStrArrayAttr(ArrayRef<StringRef> values) {
   return getArrayAttr(attrs);
 }
 
+ArrayAttr Builder::getTypeArrayAttr(TypeRange values) {
+  auto attrs = llvm::to_vector<8>(llvm::map_range(
+      values, [](Type v) -> Attribute { return TypeAttr::get(v); }));
+  return getArrayAttr(attrs);
+}
+
 ArrayAttr Builder::getAffineMapArrayAttr(ArrayRef<AffineMap> values) {
   auto attrs = llvm::to_vector<8>(llvm::map_range(
       values, [](AffineMap v) -> Attribute { return AffineMapAttr::get(v); }));
