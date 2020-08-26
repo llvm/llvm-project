@@ -2870,20 +2870,32 @@ TEST_P(SyntaxTreeTest, Namespace_Nested) {
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
 namespace a { namespace b {} }
+)cpp",
+      R"txt(
+TranslationUnit Detached
+`-NamespaceDefinition
+  |-'namespace'
+  |-'a'
+  |-'{'
+  |-NamespaceDefinition
+  | |-'namespace'
+  | |-'b'
+  | |-'{'
+  | `-'}'
+  `-'}'
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, Namespace_NestedDefinition) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
 namespace a::b {}
 )cpp",
       R"txt(
 TranslationUnit Detached
-|-NamespaceDefinition
-| |-'namespace'
-| |-'a'
-| |-'{'
-| |-NamespaceDefinition
-| | |-'namespace'
-| | |-'b'
-| | |-'{'
-| | `-'}'
-| `-'}'
 `-NamespaceDefinition
   |-'namespace'
   |-'a'
@@ -3006,7 +3018,7 @@ UsingDeclaration
 }
 
 TEST_P(SyntaxTreeTest, UsingTypeAlias) {
-  if (!GetParam().isCXX()) {
+  if (!GetParam().isCXX11OrLater()) {
     return;
   }
   EXPECT_TRUE(treeDumpEqual(
@@ -3307,7 +3319,7 @@ TranslationUnit Detached
 }
 
 TEST_P(SyntaxTreeTest, VariableTemplateDeclaration) {
-  if (!GetParam().isCXX()) {
+  if (!GetParam().isCXX14OrLater()) {
     return;
   }
   EXPECT_TRUE(treeDumpEqual(
@@ -3616,20 +3628,32 @@ TEST_P(SyntaxTreeTest, StaticAssert) {
   EXPECT_TRUE(treeDumpEqual(
       R"cpp(
 static_assert(true, "message");
+)cpp",
+      R"txt(
+TranslationUnit Detached
+`-StaticAssertDeclaration
+  |-'static_assert'
+  |-'('
+  |-BoolLiteralExpression StaticAssertDeclaration_condition
+  | `-'true' LiteralToken
+  |-','
+  |-StringLiteralExpression StaticAssertDeclaration_message
+  | `-'"message"' LiteralToken
+  |-')'
+  `-';'
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, StaticAssert_WithoutMessage) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
 static_assert(true);
 )cpp",
       R"txt(
 TranslationUnit Detached
-|-StaticAssertDeclaration
-| |-'static_assert'
-| |-'('
-| |-BoolLiteralExpression StaticAssertDeclaration_condition
-| | `-'true' LiteralToken
-| |-','
-| |-StringLiteralExpression StaticAssertDeclaration_message
-| | `-'"message"' LiteralToken
-| |-')'
-| `-';'
 `-StaticAssertDeclaration
   |-'static_assert'
   |-'('
@@ -4165,7 +4189,7 @@ SimpleDeclaration
 }
 
 TEST_P(SyntaxTreeTest, ParametersAndQualifiers_InMemberFunctions_Ref) {
-  if (!GetParam().isCXX()) {
+  if (!GetParam().isCXX11OrLater()) {
     return;
   }
   EXPECT_TRUE(treeDumpEqualOnAnnotations(
