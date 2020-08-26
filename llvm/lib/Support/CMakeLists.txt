@@ -57,9 +57,7 @@ endif()
 
 # Link Z3 if the user wants to build it.
 if(LLVM_WITH_Z3)
-  set(Z3_LINK_FILES ${Z3_LIBRARIES})
-else()
-  set(Z3_LINK_FILES "")
+  set(system_libs ${system_libs} ${Z3_LIBRARIES})
 endif()
 
 add_llvm_component_library(LLVMSupport
@@ -206,7 +204,7 @@ add_llvm_component_library(LLVMSupport
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ADT
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Support
   ${Backtrace_INCLUDE_DIRS}
-  LINK_LIBS ${system_libs} ${imported_libs} ${delayload_flags} ${Z3_LINK_FILES}
+  LINK_LIBS ${system_libs} ${imported_libs} ${delayload_flags}
   )
 
 set(llvm_system_libs ${system_libs})
