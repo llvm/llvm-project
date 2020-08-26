@@ -1320,7 +1320,7 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
            "Splatted expr doesn't match with vector element type?");
 
     // Splat the element across to all elements
-    unsigned NumElements = cast<llvm::VectorType>(DstTy)->getNumElements();
+    unsigned NumElements = cast<llvm::FixedVectorType>(DstTy)->getNumElements();
     return Builder.CreateVectorSplat(NumElements, Src, "splat");
   }
 
@@ -1553,12 +1553,12 @@ Value *ScalarExprEmitter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
     Value *RHS = CGF.EmitScalarExpr(E->getExpr(1));
     Value *Mask;
 
-    llvm::VectorType *LTy = cast<llvm::VectorType>(LHS->getType());
+    auto *LTy = cast<llvm::FixedVectorType>(LHS->getType());
     unsigned LHSElts = LTy->getNumElements();
 
     Mask = RHS;
 
-    llvm::VectorType *MTy = cast<llvm::VectorType>(Mask->getType());
+    auto *MTy = cast<llvm::FixedVectorType>(Mask->getType());
 
     // Mask off the high bits of each shuffle index.
     Value *MaskBits =
@@ -1763,7 +1763,7 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
     return Visit(E->getInit(0));
   }
 
-  unsigned ResElts = VType->getNumElements();
+  unsigned ResElts = cast<llvm::FixedVectorType>(VType)->getNumElements();
 
   // Loop over initializers collecting the Value for each, and remembering
   // whether the source was swizzle (ExtVectorElementExpr).  This will allow
@@ -1787,7 +1787,8 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
       if (isa<ExtVectorElementExpr>(IE)) {
         llvm::ExtractElementInst *EI = cast<llvm::ExtractElementInst>(Init);
 
-        if (EI->getVectorOperandType()->getNumElements() == ResElts) {
+        if (cast<llvm::FixedVectorType>(EI->getVectorOperandType())
+                ->getNumElements() == ResElts) {
           llvm::ConstantInt *C = cast<llvm::ConstantInt>(EI->getIndexOperand());
           Value *LHS = nullptr, *RHS = nullptr;
           if (CurIdx == 0) {
@@ -1825,7 +1826,7 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
       continue;
     }
 
-    unsigned InitElts = VVT->getNumElements();
+    unsigned InitElts = cast<llvm::FixedVectorType>(VVT)->getNumElements();
 
     // If the initializer is an ExtVecEltExpr (a swizzle), and the swizzle's
     // input is the same width as the vector being constructed, generate an
@@ -1834,7 +1835,7 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
     if (isa<ExtVectorElementExpr>(IE)) {
       llvm::ShuffleVectorInst *SVI = cast<llvm::ShuffleVectorInst>(Init);
       Value *SVOp = SVI->getOperand(0);
-      llvm::VectorType *OpTy = cast<llvm::VectorType>(SVOp->getType());
+      auto *OpTy = cast<llvm::FixedVectorType>(SVOp->getType());
 
       if (OpTy->getNumElements() == ResElts) {
         for (unsigned j = 0; j != CurIdx; ++j) {
@@ -2170,7 +2171,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     llvm::Type *DstTy = ConvertType(DestTy);
     Value *Elt = Visit(const_cast<Expr*>(E));
     // Splat the element across to all elements
-    unsigned NumElements = cast<llvm::VectorType>(DstTy)->getNumElements();
+    unsigned NumElements = cast<llvm::FixedVectorType>(DstTy)->getNumElements();
     return Builder.CreateVectorSplat(NumElements, Elt, "splat");
   }
 
@@ -4331,7 +4332,7 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
     llvm::Value *RHS = Visit(rhsExpr);
 
     llvm::Type *condType = ConvertType(condExpr->getType());
-    llvm::VectorType *vecTy = cast<llvm::VectorType>(condType);
+    auto *vecTy = cast<llvm::FixedVectorType>(condType);
 
     unsigned numElem = vecTy->getNumElements();
     llvm::Type *elemType = vecTy->getElementType();
@@ -4534,10 +4535,14 @@ Value *ScalarExprEmitter::VisitAsTypeExpr(AsTypeExpr *E) {
   llvm::Type *DstTy = ConvertType(E->getType());
 
   llvm::Type *SrcTy = Src->getType();
-  unsigned NumElementsSrc = isa<llvm::VectorType>(SrcTy) ?
-    cast<llvm::VectorType>(SrcTy)->getNumElements() : 0;
-  unsigned NumElementsDst = isa<llvm::VectorType>(DstTy) ?
-    cast<llvm::VectorType>(DstTy)->getNumElements() : 0;
+  unsigned NumElementsSrc =
+      isa<llvm::VectorType>(SrcTy)
+          ? cast<llvm::FixedVectorType>(SrcTy)->getNumElements()
+          : 0;
+  unsigned NumElementsDst =
+      isa<llvm::VectorType>(DstTy)
+          ? cast<llvm::FixedVectorType>(DstTy)->getNumElements()
+          : 0;
 
   // Going from vec3 to non-vec3 is a special case and requires a shuffle
   // vector to get a vec4, then a bitcast if the target type is different.
