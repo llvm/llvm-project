@@ -3093,6 +3093,10 @@ struct AAIsDeadFunction : public AAIsDead {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override;
 
+  bool isEdgeDead(const BasicBlock *From, const BasicBlock *To) const override {
+    return !AssumedLiveEdges.count(std::make_pair(From, To));
+  }
+
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 
@@ -3169,6 +3173,9 @@ struct AAIsDeadFunction : public AAIsDead {
 
   /// Collection of instructions that are known to not transfer control.
   SmallSetVector<const Instruction *, 8> KnownDeadEnds;
+
+  /// Collection of all assumed live edges
+  DenseSet<std::pair<const BasicBlock *, const BasicBlock *>> AssumedLiveEdges;
 
   /// Collection of all assumed live BasicBlocks.
   DenseSet<const BasicBlock *> AssumedLiveBlocks;
@@ -3340,6 +3347,9 @@ ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
                "Non-terminator expected to have a single successor!");
         Worklist.push_back(AliveSuccessor);
       } else {
+        // record the assumed live edge
+        AssumedLiveEdges.insert(
+            std::make_pair(I->getParent(), AliveSuccessor->getParent()));
         if (assumeLive(A, *AliveSuccessor->getParent()))
           Worklist.push_back(AliveSuccessor);
       }
