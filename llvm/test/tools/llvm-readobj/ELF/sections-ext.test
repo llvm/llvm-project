@@ -217,3 +217,28 @@ Sections:
 Symbols:
   - Name:    foo
     Section: .text
+
+## Check the output for an arbitrary section when --section-symbols is requested,
+## but there is no symbol table in the object.
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj -S --section-symbols %t2 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not=warning: --check-prefix=NOSYMTAB
+
+# NOSYMTAB:      Section {
+# NOSYMTAB:        Index: 1
+# NOSYMTAB-NEXT:   Name: .foo
+# NOSYMTAB:        Symbols [
+# NOSYMTAB-NEXT:   ]
+# NOSYMTAB-NEXT: }
+# NOSYMTAB-NEXT: Section {
+# NOSYMTAB-NEXT:   Index: 2
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
