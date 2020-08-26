@@ -99,6 +99,7 @@ enum class NodeKind : uint16_t {
   ParametersAndQualifiers,
   MemberPointer,
   UnqualifiedId,
+  ParameterDeclarationList,
   // Nested Name Specifiers.
   NestedNameSpecifier,
   GlobalNameSpecifier,
@@ -173,7 +174,7 @@ enum class NodeRole : uint8_t {
   ExplicitTemplateInstantiation_declaration,
   ArraySubscript_sizeExpression,
   TrailingReturnType_declarator,
-  ParametersAndQualifiers_parameter,
+  ParametersAndQualifiers_parameters,
   ParametersAndQualifiers_trailingReturn,
   IdExpression_id,
   IdExpression_qualifier,
@@ -988,6 +989,19 @@ public:
   SimpleDeclarator *declarator();
 };
 
+/// Models a `parameter-declaration-list` which appears within
+/// `parameters-and-qualifiers`. See C++ [dcl.fct]
+class ParameterDeclarationList final : public List {
+public:
+  ParameterDeclarationList() : List(NodeKind::ParameterDeclarationList) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::ParameterDeclarationList;
+  }
+  std::vector<SimpleDeclaration *> parameterDeclarations();
+  std::vector<List::ElementAndDelimiter<syntax::SimpleDeclaration>>
+  parametersAndCommas();
+};
+
 /// Parameter list for a function type and a trailing return type, if the
 /// function has one.
 /// E.g.:
@@ -1006,8 +1020,7 @@ public:
     return N->kind() == NodeKind::ParametersAndQualifiers;
   }
   Leaf *lparen();
-  /// FIXME: use custom iterator instead of 'vector'.
-  std::vector<SimpleDeclaration *> parameters();
+  ParameterDeclarationList *parameters();
   Leaf *rparen();
   TrailingReturnType *trailingReturn();
 };

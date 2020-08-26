@@ -134,6 +134,8 @@ raw_ostream &syntax::operator<<(raw_ostream &OS, NodeKind K) {
     return OS << "MemberExpression";
   case NodeKind::CallArguments:
     return OS << "CallArguments";
+  case NodeKind::ParameterDeclarationList:
+    return OS << "ParameterDeclarationList";
   }
   llvm_unreachable("unknown node kind");
 }
@@ -200,8 +202,8 @@ raw_ostream &syntax::operator<<(raw_ostream &OS, NodeRole R) {
     return OS << "ArraySubscript_sizeExpression";
   case syntax::NodeRole::TrailingReturnType_declarator:
     return OS << "TrailingReturnType_declarator";
-  case syntax::NodeRole::ParametersAndQualifiers_parameter:
-    return OS << "ParametersAndQualifiers_parameter";
+  case syntax::NodeRole::ParametersAndQualifiers_parameters:
+    return OS << "ParametersAndQualifiers_parameters";
   case syntax::NodeRole::ParametersAndQualifiers_trailingReturn:
     return OS << "ParametersAndQualifiers_trailingReturn";
   case syntax::NodeRole::IdExpression_id:
@@ -265,6 +267,29 @@ syntax::CallArguments::argumentsAndCommas() {
     Children.push_back(
         {llvm::cast<syntax::Expression>(ArgumentAsNodeAndComma.element),
          ArgumentAsNodeAndComma.delimiter});
+  }
+  return Children;
+}
+
+std::vector<syntax::SimpleDeclaration *>
+syntax::ParameterDeclarationList::parameterDeclarations() {
+  auto ParametersAsNodes = getElementsAsNodes();
+  std::vector<syntax::SimpleDeclaration *> Children;
+  for (const auto &ParameterAsNode : ParametersAsNodes) {
+    Children.push_back(llvm::cast<syntax::SimpleDeclaration>(ParameterAsNode));
+  }
+  return Children;
+}
+
+std::vector<syntax::List::ElementAndDelimiter<syntax::SimpleDeclaration>>
+syntax::ParameterDeclarationList::parametersAndCommas() {
+  auto ParametersAsNodesAndCommas = getElementsAsNodesAndDelimiters();
+  std::vector<syntax::List::ElementAndDelimiter<syntax::SimpleDeclaration>>
+      Children;
+  for (const auto &ParameterAsNodeAndComma : ParametersAsNodesAndCommas) {
+    Children.push_back(
+        {llvm::cast<syntax::SimpleDeclaration>(ParameterAsNodeAndComma.element),
+         ParameterAsNodeAndComma.delimiter});
   }
   return Children;
 }
@@ -574,14 +599,10 @@ syntax::Leaf *syntax::ParametersAndQualifiers::lparen() {
   return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::OpenParen));
 }
 
-std::vector<syntax::SimpleDeclaration *>
+syntax::ParameterDeclarationList *
 syntax::ParametersAndQualifiers::parameters() {
-  std::vector<syntax::SimpleDeclaration *> Children;
-  for (auto *C = firstChild(); C; C = C->nextSibling()) {
-    if (C->role() == syntax::NodeRole::ParametersAndQualifiers_parameter)
-      Children.push_back(cast<syntax::SimpleDeclaration>(C));
-  }
-  return Children;
+  return cast_or_null<syntax::ParameterDeclarationList>(
+      findChild(syntax::NodeRole::ParametersAndQualifiers_parameters));
 }
 
 syntax::Leaf *syntax::ParametersAndQualifiers::rparen() {

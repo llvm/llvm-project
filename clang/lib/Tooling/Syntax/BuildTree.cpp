@@ -1209,11 +1209,29 @@ public:
     return true;
   }
 
+  syntax::ParameterDeclarationList *
+  buildParameterDeclarationList(ArrayRef<ParmVarDecl *> Params) {
+    for (auto *P : Params) {
+      Builder.markChild(P, syntax::NodeRole::List_element);
+      const auto *DelimiterToken = std::next(Builder.findToken(P->getEndLoc()));
+      if (DelimiterToken->kind() == clang::tok::TokenKind::comma)
+        Builder.markChildToken(DelimiterToken,
+                               syntax::NodeRole::List_delimiter);
+    }
+    auto *Parameters = new (allocator()) syntax::ParameterDeclarationList;
+    if (!Params.empty())
+      Builder.foldNode(Builder.getRange(Params.front()->getBeginLoc(),
+                                        Params.back()->getEndLoc()),
+                       Parameters, nullptr);
+    return Parameters;
+  }
+
   bool WalkUpFromFunctionTypeLoc(FunctionTypeLoc L) {
     Builder.markChildToken(L.getLParenLoc(), syntax::NodeRole::OpenParen);
-    for (auto *P : L.getParams()) {
-      Builder.markChild(P, syntax::NodeRole::ParametersAndQualifiers_parameter);
-    }
+
+    Builder.markChild(buildParameterDeclarationList(L.getParams()),
+                      syntax::NodeRole::ParametersAndQualifiers_parameters);
+
     Builder.markChildToken(L.getRParenLoc(), syntax::NodeRole::CloseParen);
     Builder.foldNode(Builder.getRange(L.getLParenLoc(), L.getEndLoc()),
                      new (allocator()) syntax::ParametersAndQualifiers, L);
