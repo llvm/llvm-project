@@ -618,7 +618,7 @@ Session::Session(Triple TT, uint64_t PageSize, Error &Err)
 
   if (!NoExec && !TT.isOSWindows())
     ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-        InProcessEHFrameRegistrar::getInstance()));
+        std::make_unique<InProcessEHFrameRegistrar>()));
 
   ObjLayer.addPlugin(std::make_unique<JITLinkSessionPlugin>(*this));
 
