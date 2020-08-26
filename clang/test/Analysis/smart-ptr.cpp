@@ -216,8 +216,7 @@ void derefAfterAssignment() {
     std::unique_ptr<A> P;
     std::unique_ptr<A> Q;
     Q = std::move(P);
-    // TODO: Fix test with expecting warning after '=' operator overloading modeling.
-    Q->foo(); // no-warning
+    Q->foo(); // expected-warning {{Dereference of null smart pointer 'Q' [alpha.cplusplus.SmartPtr]}}
   }
 }
 
@@ -275,4 +274,62 @@ void derefOnRawPtrFromMultipleGetOnUnknownPtr(std::unique_ptr<A> P) {
   if (!X) {
     Y->foo(); // expected-warning {{Called C++ object pointer is null [core.CallAndMessage]}}
   }
+}
+
+void derefOnMovedFromValidPtr() {
+  std::unique_ptr<A> PToMove(new A());
+  std::unique_ptr<A> P;
+  P = std::move(PToMove);
+  PToMove->foo(); // expected-warning {{Dereference of null smart pointer 'PToMove' [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefOnMovedToNullPtr() {
+  std::unique_ptr<A> PToMove(new A());
+  std::unique_ptr<A> P;
+  P = std::move(PToMove); // No note.
+  P->foo(); // No warning.
+}
+
+void derefOnNullPtrGotMovedFromValidPtr() {
+  std::unique_ptr<A> P(new A());
+  std::unique_ptr<A> PToMove;
+  P = std::move(PToMove);
+  P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefOnMovedFromUnknownPtr(std::unique_ptr<A> PToMove) {
+  std::unique_ptr<A> P;
+  P = std::move(PToMove);
+  P->foo(); // No warning.
+}
+
+void derefOnMovedUnknownPtr(std::unique_ptr<A> PToMove) {
+  std::unique_ptr<A> P;
+  P = std::move(PToMove);
+  PToMove->foo(); // expected-warning {{Dereference of null smart pointer 'PToMove' [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefOnAssignedNullPtrToNullSmartPtr() {
+  std::unique_ptr<A> P;
+  P = nullptr;
+  P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefOnAssignedZeroToNullSmartPtr() {
+  std::unique_ptr<A> P(new A());
+  P = 0;
+  P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefOnAssignedNullToUnknowSmartPtr(std::unique_ptr<A> P) {
+  P = nullptr;
+  P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+}
+
+std::unique_ptr<A> &&returnRValRefOfUniquePtr();
+
+void drefOnAssignedNullFromMethodPtrValidSmartPtr() {
+  std::unique_ptr<A> P(new A());
+  P = returnRValRefOfUniquePtr();
+  P->foo(); // No warning. 
 }
