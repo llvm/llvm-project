@@ -90,6 +90,60 @@ Non-comprehensive list of changes in this release
   a fixed hashing algorithm that prevents some collision when loading
   out-of-date profile informations. Clang can still read old profile files.
 
+- Clang adds support for the following macros that enable the
+  C-intrinsics from the `Arm C language extensions for SVE
+  <https://developer.arm.com/documentation/100987/>`_ (version
+  ``00bet5``, see section 2.1 for the list of intrinsics associated to
+  each macro):
+
+
+      =================================  =================
+      Preprocessor macro                 Target feature
+      =================================  =================
+      ``__ARM_FEATURE_SVE``              ``+sve``
+      ``__ARM_FEATURE_SVE_BF16``         ``+sve+bf16``
+      ``__ARM_FEATURE_SVE_MATMUL_FP32``  ``+sve+f32mm``
+      ``__ARM_FEATURE_SVE_MATMUL_FP64``  ``+sve+f64mm``
+      ``__ARM_FEATURE_SVE_MATMUL_INT8``  ``+sve+i8mm``
+      ``__ARM_FEATURE_SVE2``             ``+sve2``
+      ``__ARM_FEATURE_SVE2_AES``         ``+sve2-aes``
+      ``__ARM_FEATURE_SVE2_BITPERM``     ``+sve2-bitperm``
+      ``__ARM_FEATURE_SVE2_SHA3``        ``+sve2-sha3``
+      ``__ARM_FEATURE_SVE2_SM4``         ``+sve2-sm4``
+      =================================  =================
+
+  The macros enable users to write C/C++ `Vector Length Agnostic
+  (VLA)` loops, that can be executed on any CPU that implements the
+  underlying instructions supported by the C intrinsics, independently
+  of the hardware vector register size.
+
+  For example, the ``__ARM_FEATURE_SVE`` macro is enabled when
+  targeting AArch64 code generation by setting ``-march=armv8-a+sve``
+  on the command line.
+
+  .. code-block:: c
+     :caption: Example of VLA addition of two arrays with SVE ACLE.
+
+     // Compile with:
+     // `clang++ -march=armv8a+sve ...` (for c++)
+     // `clang -stc=c11 -march=armv8a+sve ...` (for c)
+     #include <arm_sve.h>
+
+     void VLA_add_arrays(double *x, double *y, double *out, unsigned N) {
+       for (unsigned i = 0; i < N; i += svcntd()) {
+         svbool_t Pg = svwhilelt_b64(i, N);
+         svfloat64_t vx = svld1(Pg, &x[i]);
+         svfloat64_t vy = svld1(Pg, &y[i]);
+         svfloat64_t vout = svadd_x(Pg, vx, vy);
+         svst1(Pg, &out[i], vout);
+       }
+     }
+
+  Please note that support for lazy binding of SVE function calls is
+  incomplete. When you interface user code with SVE functions that are
+  provided through shared libraries, avoid using lazy binding. If you
+  use lazy binding, the results could be corrupted.
+
 New Compiler Flags
 ------------------
 
