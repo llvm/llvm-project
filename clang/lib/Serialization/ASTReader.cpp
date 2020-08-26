@@ -390,8 +390,10 @@ static bool checkTargetOptions(const TargetOptions &TargetOpts,
   // We can tolerate different CPUs in many cases, notably when one CPU
   // supports a strict superset of another. When allowing compatible
   // differences skip this check.
-  if (!AllowCompatibleDifferences)
+  if (!AllowCompatibleDifferences) {
     CHECK_TARGET_OPT(CPU, "target CPU");
+    CHECK_TARGET_OPT(TuneCPU, "tune CPU");
+  }
 
 #undef CHECK_TARGET_OPT
 
@@ -5779,6 +5781,7 @@ bool ASTReader::ParseTargetOptions(const RecordData &Record, bool Complain,
   TargetOptions TargetOpts;
   TargetOpts.Triple = ReadString(Record, Idx);
   TargetOpts.CPU = ReadString(Record, Idx);
+  TargetOpts.TuneCPU = ReadString(Record, Idx);
   TargetOpts.ABI = ReadString(Record, Idx);
   for (unsigned N = Record[Idx++]; N; --N) {
     TargetOpts.FeaturesAsWritten.push_back(ReadString(Record, Idx));

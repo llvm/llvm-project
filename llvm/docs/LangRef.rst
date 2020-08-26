@@ -1157,10 +1157,11 @@ Currently, only the following parameter attributes are defined:
 ``align <n>`` or ``align(<n>)``
     This indicates that the pointer value may be assumed by the optimizer to
     have the specified alignment.  If the pointer value does not have the
-    specified alignment, behavior is undefined.
+    specified alignment, behavior is undefined. ``align 1`` has no effect on
+    non-byval, non-preallocated arguments.
 
     Note that this attribute has additional semantics when combined with the
-    ``byval`` attribute, which are documented there.
+    ``byval`` or ``preallocated`` attribute, which are documented there.
 
 .. _noalias:
 
@@ -12478,8 +12479,8 @@ overlap. It copies "len" bytes of memory over. If the argument is known
 to be aligned to some boundary, this can be specified as an attribute on
 the argument.
 
-If "len" is 0, the pointers may be NULL or dangling. However, they must still
-be appropriately aligned.
+If "len" is 0, the pointers may be NULL, dangling, ``undef``, or ``poison``
+pointers. However, they must still be appropriately aligned.
 
 .. _int_memcpy_inline:
 
@@ -12535,8 +12536,8 @@ overlap. It copies "len" bytes of memory over. If the argument is known
 to be aligned to some boundary, this can be specified as an attribute on
 the argument.
 
-If "len" is 0, the pointers may be NULL or dangling. However, they must still
-be appropriately aligned.
+If "len" is 0, the pointers may be NULL, dangling, ``undef``, or ``poison``
+pointers. However, they must still be appropriately aligned.
 
 The generated code is guaranteed not to call any external functions.
 
@@ -12595,8 +12596,8 @@ copies "len" bytes of memory over. If the argument is known to be
 aligned to some boundary, this can be specified as an attribute on
 the argument.
 
-If "len" is 0, the pointers may be NULL or dangling. However, they must still
-be appropriately aligned.
+If "len" is 0, the pointers may be NULL, dangling, ``undef``, or ``poison``
+pointers. However, they must still be appropriately aligned.
 
 .. _int_memset:
 
@@ -12650,8 +12651,8 @@ at the destination location. If the argument is known to be
 aligned to some boundary, this can be specified as an attribute on
 the argument.
 
-If "len" is 0, the pointers may be NULL or dangling. However, they must still
-be appropriately aligned.
+If "len" is 0, the pointer may be NULL, dangling, ``undef``, or ``poison``
+pointer. However, it must still be appropriately aligned.
 
 '``llvm.sqrt.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^

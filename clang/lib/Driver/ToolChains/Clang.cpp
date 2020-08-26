@@ -2074,20 +2074,27 @@ void Clang::AddX86TargetArgs(const ArgList &Args,
   }
 
   // Handle -mtune.
-  // FIXME: We should default to "generic" unless -march is set to match gcc.
+
+  // Default to "generic" unless -march is present.
+  std::string TuneCPU;
+  if (!Args.hasArg(clang::driver::options::OPT_march_EQ))
+    TuneCPU = "generic";
+
+  // Override based on -mtune.
   if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mtune_EQ)) {
     StringRef Name = A->getValue();
 
-    if (Name == "native")
+    if (Name == "native") {
       Name = llvm::sys::getHostCPUName();
+      if (!Name.empty())
+        TuneCPU = std::string(Name);
+    } else
+      TuneCPU = std::string(Name);
+  }
 
-    // Ignore generic either from getHostCPUName or from command line.
-    // FIXME: We need to support this eventually but isValidCPUName and the
-    // backend aren't ready for it yet.
-    if (Name != "generic") {
-      CmdArgs.push_back("-tune-cpu");
-      CmdArgs.push_back(Args.MakeArgString(Name));
-    }
+  if (!TuneCPU.empty()) {
+    CmdArgs.push_back("-tune-cpu");
+    CmdArgs.push_back(Args.MakeArgString(TuneCPU));
   }
 }
 

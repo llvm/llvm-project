@@ -3877,7 +3877,7 @@ std::string CompilerInvocation::getModuleHash() const {
 
   // Extend the signature with the target options.
   code = hash_combine(code, TargetOpts->Triple, TargetOpts->CPU,
-                      TargetOpts->ABI);
+                      TargetOpts->TuneCPU, TargetOpts->ABI);
   for (const auto &FeatureAsWritten : TargetOpts->FeaturesAsWritten)
     code = hash_combine(code, FeatureAsWritten);
 

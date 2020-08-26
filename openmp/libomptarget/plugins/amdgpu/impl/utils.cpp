@@ -97,9 +97,6 @@ void Environment::GetEnvAll() {
   std::string var = GetEnv("ATMI_HELP");
   if (!var.empty()) {
     std::cout << "ATMI_MAX_HSA_QUEUE_SIZE : positive integer" << std::endl
-              << "ATMI_MAX_KERNEL_TYPES : positive integer" << std::endl
-              << "ATMI_DEVICE_GPU_WORKERS : positive integer" << std::endl
-              << "ATMI_DEVICE_CPU_WORKERS : positive integer" << std::endl
               << "ATMI_DEBUG : 1 for printing out trace/debug info"
               << std::endl;
     exit(0);
@@ -108,26 +105,6 @@ void Environment::GetEnvAll() {
   var = GetEnv("ATMI_MAX_HSA_QUEUE_SIZE");
   if (!var.empty())
     max_queue_size_ = std::stoi(var);
-
-  var = GetEnv("ATMI_MAX_KERNEL_TYPES");
-  if (!var.empty())
-    max_kernel_types_ = std::stoi(var);
-
-  /* TODO: If we get a good use case for device-specific worker count, we
-   * should explore it, but let us keep the worker count uniform for all
-   * devices of a type until that time
-   */
-  var = GetEnv("ATMI_DEVICE_GPU_WORKERS");
-  if (!var.empty())
-    num_gpu_queues_ = std::stoi(var);
-
-  /* TODO: If we get a good use case for device-specific worker count, we
-   * should explore it, but let us keep the worker count uniform for all
-   * devices of a type until that time
-   */
-  var = GetEnv("ATMI_DEVICE_CPU_WORKERS");
-  if (!var.empty())
-    num_cpu_queues_ = std::stoi(var);
 
   var = GetEnv("ATMI_DEBUG");
   if (!var.empty())
