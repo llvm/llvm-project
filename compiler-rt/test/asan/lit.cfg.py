@@ -91,9 +91,12 @@ clang_asan_static_cxxflags = config.cxx_mode_flags + clang_asan_static_cflags
 asan_dynamic_flags = []
 if config.asan_dynamic:
   asan_dynamic_flags = ["-shared-libasan"]
-  # On Windows, we need to simulate "clang-cl /MD" on the clang driver side.
   if platform.system() == 'Windows':
+    # On Windows, we need to simulate "clang-cl /MD" on the clang driver side.
     asan_dynamic_flags += ["-D_MT", "-D_DLL", "-Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames"]
+  elif platform.system() == 'FreeBSD':
+    # On FreeBSD, we need to add -pthread to ensure pthread functions are available.
+    asan_dynamic_flags += ['-pthread']
   config.available_features.add("asan-dynamic-runtime")
 else:
   config.available_features.add("asan-static-runtime")

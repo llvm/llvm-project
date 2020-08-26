@@ -5,21 +5,21 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 
 %struct.ident_t = type { i32, i32, i32, i32, i8* }
 
-@0 = private unnamed_addr global %struct.ident_t { i32 0, i32 34, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str0, i32 0, i32 0) }, align 8
-@1 = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str1, i32 0, i32 0) }, align 8
-@2 = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str2, i32 0, i32 0) }, align 8
+@0 = private unnamed_addr constant %struct.ident_t { i32 0, i32 34, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str0, i32 0, i32 0) }, align 8
+@1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str1, i32 0, i32 0) }, align 8
+@2 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str2, i32 0, i32 0) }, align 8
 @.str0 = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
 @.str1 = private unnamed_addr constant [23 x i8] c";file001;loc0001;0;0;;\00", align 1
 @.str2 = private unnamed_addr constant [23 x i8] c";file002;loc0002;0;0;;\00", align 1
 
 ; UTC_ARGS: --disable
-; CHECK-DAG: @0 = private unnamed_addr global %struct.ident_t { i32 0, i32 34, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str0, i32 0, i32 0) }, align 8
-; CHECK-DAG: @1 = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str1, i32 0, i32 0) }, align 8
-; CHECK-DAG: @2 = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str2, i32 0, i32 0) }, align 8
+; CHECK-DAG: @0 = private unnamed_addr constant %struct.ident_t { i32 0, i32 34, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str0, i32 0, i32 0) }, align 8
+; CHECK-DAG: @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str1, i32 0, i32 0) }, align 8
+; CHECK-DAG: @2 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str2, i32 0, i32 0) }, align 8
 ; CHECK-DAG: @.str0 = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
 ; CHECK-DAG: @.str1 = private unnamed_addr constant [23 x i8] c";file001;loc0001;0;0;;\00", align 1
 ; CHECK-DAG: @.str2 = private unnamed_addr constant [23 x i8] c";file002;loc0002;0;0;;\00", align 1
-; CHECK-DAG: @3 = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str0, i32 0, i32 0) }, align 8
+; CHECK-DAG: @3 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str0, i32 0, i32 0) }, align 8
 ; UTC_ARGS: --enable
 
 

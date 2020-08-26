@@ -524,11 +524,11 @@
 
 // RUN: %clang_cl /Zi /c -### -- %s 2>&1 | FileCheck -check-prefix=Zi %s
 // Zi: "-gcodeview"
-// Zi: "-debug-info-kind=constructor"
+// Zi: "-debug-info-kind=limited"
 
 // RUN: %clang_cl /Z7 /c -### -- %s 2>&1 | FileCheck -check-prefix=Z7 %s
 // Z7: "-gcodeview"
-// Z7: "-debug-info-kind=constructor"
+// Z7: "-debug-info-kind=limited"
 
 // RUN: %clang_cl /Zd /c -### -- %s 2>&1 | FileCheck -check-prefix=Z7GMLT %s
 // Z7GMLT: "-gcodeview"
@@ -557,7 +557,7 @@
 // which made it "win". This test could not detect that bug.
 // RUN: %clang_cl /Z7 -gdwarf /c -### -- %s 2>&1 | FileCheck -check-prefix=Z7_gdwarf %s
 // Z7_gdwarf: "-gcodeview"
-// Z7_gdwarf: "-debug-info-kind=constructor"
+// Z7_gdwarf: "-debug-info-kind=limited"
 // Z7_gdwarf: "-dwarf-version=4"
 
 // RUN: %clang_cl -fmsc-version=1800 -TP -### -- %s 2>&1 | FileCheck -check-prefix=CXX11 %s

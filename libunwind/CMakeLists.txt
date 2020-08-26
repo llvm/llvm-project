@@ -137,6 +137,7 @@ option(LIBUNWIND_ENABLE_THREADS "Build libunwind with threading support." ON)
 option(LIBUNWIND_WEAK_PTHREAD_LIB "Use weak references to refer to pthread functions." OFF)
 option(LIBUNWIND_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 option(LIBUNWIND_INCLUDE_DOCS "Build the libunwind documentation." ${LLVM_INCLUDE_DOCS})
+option(LIBUNWIND_USE_FRAME_HEADER_CACHE "Cache frame headers for unwinding. Requires locking dl_iterate_phdr." OFF)
 
 set(LIBUNWIND_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")
@@ -363,6 +364,10 @@ if (LIBUNWIND_ENABLE_ARM_WMMX)
   # provide the option to explicitly enable support for WMMX registers in the
   # unwinder.
   add_compile_flags(-D__ARM_WMMX)
+endif()
+
+if(LIBUNWIND_USE_FRAME_HEADER_CACHE)
+  add_compile_definitions(_LIBUNWIND_USE_FRAME_HEADER_CACHE)
 endif()
 
 # This is the _ONLY_ place where add_definitions is called.

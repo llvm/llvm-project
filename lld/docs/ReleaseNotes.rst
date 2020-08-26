@@ -28,6 +28,10 @@ ELF Improvements
   chrome://tracing. The file can be specified with ``--time-trace-file``.
   Trace granularity can be specified with ``--time-trace-granularity``.
   (`D71060 <https://reviews.llvm.org/D71060>`_)
+* For ARM architectures the default max page size was increased to 64k.
+  This increases compatibility with systems where a non standard page
+  size was configured. This also is inline with GNU ld defaults.
+  (`D77330 <https://reviews.llvm.org/D77330>`_)
 * ...
 
 Breaking changes

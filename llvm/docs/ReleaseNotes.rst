@@ -44,6 +44,9 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
+* The llgo frontend has been removed for now, but may be resurrected in the
+  future.
+
 * ...
 
 
@@ -66,7 +69,9 @@ Changes to the LLVM IR
   added to describe the mapping between scalar functions and vector
   functions, to enable vectorization of call sites. The information
   provided by the attribute is interfaced via the API provided by the
-  ``VFDatabase`` class.
+  ``VFDatabase`` class. When scanning through the set of vector
+  functions associated with a scalar call, the loop vectorizer now
+  relies on ``VFDatabase``, instead of ``TargetLibraryInfo``.
 
 * `dereferenceable` attributes and metadata on pointers no longer imply
   anything about the alignment of the pointer in question. Previously, some
@@ -77,6 +82,17 @@ Changes to the LLVM IR
 * The DIModule metadata is extended to contain file and line number
   information. This information is used to represent Fortran modules debug
   info at IR level.
+
+* LLVM IR now supports two distinct ``llvm::FixedVectorType`` and
+  ``llvm::ScalableVectorType`` vector types, both derived from the
+  base class ``llvm::VectorType``. A number of algorithms dealing with
+  IR vector types have been updated to make sure they work for both
+  scalable and fixed vector types. Where possible, the code has been
+  made generic to cover both cases using the base class. Specifically,
+  places that were using the type ``unsigned`` to count the number of
+  lanes of a vector are now using ``llvm::ElementCount``. In places
+  where ``uint64_t`` was used to denote the size in bits of a IR type
+  we have partially migrated the codebase to using ``llvm::TypeSize``.
 
 Changes to building LLVM
 ------------------------
@@ -89,6 +105,12 @@ Changes to the AArch64 Backend
 
 * Clearly error out on unsupported relocations when targeting COFF, instead
   of silently accepting some (without being able to do what was requested).
+
+* Implemented codegen support for the SVE C-language intrinsics
+  documented in `Arm C Language Extensions (ACLE) for SVE
+  <https://developer.arm.com/documentation/100987/>`_ (version
+  ``00bet5``). For more information, see the ``clang`` 11 release
+  notes.
 
 Changes to the ARM Backend
 --------------------------

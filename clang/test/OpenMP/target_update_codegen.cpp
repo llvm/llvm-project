@@ -737,7 +737,7 @@ void lvalue(int **BB, int a, int b) {
   // CK13-64-DAG: [[ADD_PTR]] = getelementptr inbounds i32*, i32** [[B_VAL:%.+]], i64 [[IDX_EXT:%.+]]
   // CK13-32-DAG: [[ADD_PTR]] = getelementptr inbounds i32*, i32** [[B_VAL:%.+]], i32 [[A_ADDR:%.+]]
   // CK13-64-DAG: [[IDX_EXT]] = sext i32 [[TWO:%.+]] to i64
-  // CK13-DAG: [[B_VAL]] = load i32**, i32*** [[BB_ADDR]]
+  // CK13-DAG: [[B_VAL]] = load i32**, i32*** [[BB_ADDR:%.+]]
   #pragma omp target update to(*(*(BB+a)+b))
   *(*(BB+a)+b) = 1;
   #pragma omp target update from(*(*(BB+a)+b))
@@ -978,6 +978,7 @@ void lvalue_find_base(float **f, SSA *sa) {
   // CK17-DAG: [[FIVE]] = load i32, i32* [[I_2:%.+]],
   // CK17-DAG: [[I_2]] = getelementptr inbounds [[SSA:%.+]], [[SSA]]* [[FOUR:%.+]], i32 0, i32 0
   // CK17-DAG: [[FOUR]] = load [[SSA]]*, [[SSA]]** [[SSA_ADDR:%.+]],
+  // CK17-DAG: [[F]] = load float**, float*** [[F_ADDR:%.+]],
 
   #pragma omp target update to(*(sa->sa->i+*(1+sa->i+f)))
   *(sa->sa->i+*(1+sa->i+f)) = 1;

@@ -1026,8 +1026,8 @@ def : InstAlias<"mfamr $Rx", (MFSPR8 g8rc:$Rx, 29)>;
 foreach SPRG = 0-3 in {
   def : InstAlias<"mfsprg $RT, "#SPRG, (MFSPR8 g8rc:$RT, !add(SPRG, 272))>;
   def : InstAlias<"mfsprg"#SPRG#" $RT", (MFSPR8 g8rc:$RT, !add(SPRG, 272))>;
-  def : InstAlias<"mfsprg "#SPRG#", $RT", (MTSPR8 !add(SPRG, 272), g8rc:$RT)>;
-  def : InstAlias<"mfsprg"#SPRG#" $RT", (MTSPR8 !add(SPRG, 272), g8rc:$RT)>;
+  def : InstAlias<"mtsprg "#SPRG#", $RT", (MTSPR8 !add(SPRG, 272), g8rc:$RT)>;
+  def : InstAlias<"mtsprg"#SPRG#" $RT", (MTSPR8 !add(SPRG, 272), g8rc:$RT)>;
 }
 
 def : InstAlias<"mfasr $RT", (MFSPR8 g8rc:$RT, 280)>;

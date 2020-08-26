@@ -75,22 +75,24 @@ int foo(int n) {
   TT<long long, char> d;
   static long *plocal;
 
-  // CHECK:       [[ADD:%.+]] = add nsw i32
-  // CHECK:       store i32 [[ADD]], i32* [[DEVICE_CAP:%.+]],
-  // CHECK:       [[GEP:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 0
-  // CHECK:       [[DEV:%.+]] = load i32, i32* [[DEVICE_CAP]],
-  // CHECK:       store i32 [[DEV]], i32* [[GEP]],
-  // CHECK:       [[TASK:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @0, i32 [[GTID:%.+]], i32 1, i[[SZ]] {{20|40}}, i[[SZ]] 4, i32 (i32, i8*)* bitcast (i32 (i32, %{{.+}}*)* [[TASK_ENTRY0:@.+]] to i32 (i32, i8*)*))
-  // CHECK:       [[BC_TASK:%.+]] = bitcast i8* [[TASK]] to [[TASK_TY0:%.+]]*
-  // CHECK:       getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP_START:%.+]], i[[SZ]] 1
-  // CHECK:       getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP_START]], i[[SZ]] 2
-  // CHECK:       getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP_START]], i[[SZ]] 3
-  // CHECK:       [[DEP:%.+]] = bitcast %struct.kmp_depend_info* [[DEP_START]] to i8*
-  // CHECK:       call void @__kmpc_omp_wait_deps(%struct.ident_t* @0, i32 [[GTID]], i32 4, i8* [[DEP]], i32 0, i8* null)
-  // CHECK:       call void @__kmpc_omp_task_begin_if0(%struct.ident_t* @0, i32 [[GTID]], i8* [[TASK]])
-  // CHECK:       call i32 [[TASK_ENTRY0]](i32 [[GTID]], [[TASK_TY0]]* [[BC_TASK]])
-  // CHECK:       call void @__kmpc_omp_task_complete_if0(%struct.ident_t* @0, i32 [[GTID]], i8* [[TASK]])
-  #pragma omp target device(global + a) depend(in: global) depend(out: a, b, cn[4])
+// CHECK:       [[ADD:%.+]] = add nsw i32
+// CHECK:       store i32 [[ADD]], i32* [[DEVICE_CAP:%.+]],
+// CHECK:       [[GEP:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 0
+// CHECK:       [[DEV:%.+]] = load i32, i32* [[DEVICE_CAP]],
+// CHECK:       store i32 [[DEV]], i32* [[GEP]],
+// CHECK:       [[TASK:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @1, i32 [[GTID:%.+]], i32 1, i[[SZ]] {{20|40}}, i[[SZ]] 4, i32 (i32, i8*)* bitcast (i32 (i32, %{{.+}}*)* [[TASK_ENTRY0:@.+]] to i32 (i32, i8*)*))
+// CHECK:       [[BC_TASK:%.+]] = bitcast i8* [[TASK]] to [[TASK_TY0:%.+]]*
+// CHECK:       getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP_START:%.+]], i[[SZ]] 1
+// CHECK:       getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP_START]], i[[SZ]] 2
+// CHECK:       getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP_START]], i[[SZ]] 3
+// CHECK:       [[DEP:%.+]] = bitcast %struct.kmp_depend_info* [[DEP_START]] to i8*
+// CHECK:       call void @__kmpc_omp_wait_deps(%struct.ident_t* @1, i32 [[GTID]], i32 4, i8* [[DEP]], i32 0, i8* null)
+// CHECK:       call void @__kmpc_omp_task_begin_if0(%struct.ident_t* @1, i32 [[GTID]], i8* [[TASK]])
+// CHECK:       call i32 [[TASK_ENTRY0]](i32 [[GTID]], [[TASK_TY0]]* [[BC_TASK]])
+// CHECK:       call void @__kmpc_omp_task_complete_if0(%struct.ident_t* @1, i32 [[GTID]], i8* [[TASK]])
+#pragma omp target device(global + a) depend(in                   \
+                                             : global) depend(out \
+                                                              : a, b, cn[4])
   {
   }
 
@@ -121,12 +123,12 @@ int foo(int n) {
   // CHECK:       [[DEV1:%.+]] = load i32, i32* [[DEVICE_CAP]],
   // CHECK:       [[DEV2:%.+]] = sext i32 [[DEV1]] to i64
 
-  // CHECK:       [[TASK:%.+]] = call i8* @__kmpc_omp_target_task_alloc(%struct.ident_t* @0, i32 [[GTID]], i32 1, i[[SZ]] {{104|60}}, i[[SZ]] {{16|12}}, i32 (i32, i8*)* bitcast (i32 (i32, %{{.+}}*)* [[TASK_ENTRY1_:@.+]] to i32 (i32, i8*)*), i64 [[DEV2]])
+  // CHECK:       [[TASK:%.+]] = call i8* @__kmpc_omp_target_task_alloc(%struct.ident_t* @{{.*}}, i32 [[GTID]], i32 1, i[[SZ]] {{104|60}}, i[[SZ]] {{16|12}}, i32 (i32, i8*)* bitcast (i32 (i32, %{{.+}}*)* [[TASK_ENTRY1_:@.+]] to i32 (i32, i8*)*), i64 [[DEV2]])
   // CHECK:       [[BC_TASK:%.+]] = bitcast i8* [[TASK]] to [[TASK_TY1_:%.+]]*
   // CHECK:       getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP_START:%.+]], i[[SZ]] 1
   // CHECK:       getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP_START]], i[[SZ]] 2
   // CHECK:       [[DEP:%.+]] = bitcast %struct.kmp_depend_info* [[DEP_START]] to i8*
-  // CHECK:       call i32 @__kmpc_omp_task_with_deps(%struct.ident_t* @0, i32 [[GTID]], i8* [[TASK]], i32 3, i8* [[DEP]], i32 0, i8* null)
+  // CHECK:       call i32 @__kmpc_omp_task_with_deps(%struct.ident_t* @1, i32 [[GTID]], i8* [[TASK]], i32 3, i8* [[DEP]], i32 0, i8* null)
   // CHECK:       br label %[[EXIT:.+]]
 
   // CHECK:       [[ELSE]]:
@@ -137,30 +139,32 @@ int foo(int n) {
   // CHECK:       [[DEV1:%.+]] = load i32, i32* [[DEVICE_CAP]],
   // CHECK:       [[DEV2:%.+]] = sext i32 [[DEV1]] to i64
 
-  // CHECK:       [[TASK:%.+]] = call i8* @__kmpc_omp_target_task_alloc(%struct.ident_t* @0, i32 [[GTID]], i32 1, i[[SZ]] {{56|28}}, i[[SZ]] {{16|12}}, i32 (i32, i8*)* bitcast (i32 (i32, %{{.+}}*)* [[TASK_ENTRY1__:@.+]] to i32 (i32, i8*)*), i64 [[DEV2]])
+  // CHECK:       [[TASK:%.+]] = call i8* @__kmpc_omp_target_task_alloc(%struct.ident_t* @1, i32 [[GTID]], i32 1, i[[SZ]] {{56|28}}, i[[SZ]] {{16|12}}, i32 (i32, i8*)* bitcast (i32 (i32, %{{.+}}*)* [[TASK_ENTRY1__:@.+]] to i32 (i32, i8*)*), i64 [[DEV2]])
   // CHECK:       [[BC_TASK:%.+]] = bitcast i8* [[TASK]] to [[TASK_TY1__:%.+]]*
   // CHECK:       getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP_START:%.+]], i[[SZ]] 1
   // CHECK:       getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP_START]], i[[SZ]] 2
   // CHECK:       [[DEP:%.+]] = bitcast %struct.kmp_depend_info* [[DEP_START]] to i8*
-  // CHECK:       call i32 @__kmpc_omp_task_with_deps(%struct.ident_t* @0, i32 [[GTID]], i8* [[TASK]], i32 3, i8* [[DEP]], i32 0, i8* null)
+  // CHECK:       call i32 @__kmpc_omp_task_with_deps(%struct.ident_t* @1, i32 [[GTID]], i8* [[TASK]], i32 3, i8* [[DEP]], i32 0, i8* null)
   // CHECK:       br label %[[EXIT:.+]]
   // CHECK:       [[EXIT]]:
 
-  #pragma omp target device(global + a) nowait depend(inout: global, a, bn) if(a)
+#pragma omp target device(global + a) nowait depend(inout \
+                                                    : global, a, bn) if (a)
   {
     static int local1;
     *plocal = global;
     local1 = global;
   }
 
-  // CHECK:       [[TASK:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @0, i32 [[GTID]], i32 1, i[[SZ]] {{48|24}}, i[[SZ]] 4, i32 (i32, i8*)* bitcast (i32 (i32, %{{.+}}*)* [[TASK_ENTRY2:@.+]] to i32 (i32, i8*)*))
-  // CHECK:       [[BC_TASK:%.+]] = bitcast i8* [[TASK]] to [[TASK_TY2:%.+]]*
-  // CHECK:       [[DEP:%.+]] = bitcast %struct.kmp_depend_info* %{{.+}} to i8*
-  // CHECK:       call void @__kmpc_omp_wait_deps(%struct.ident_t* @0, i32 [[GTID]], i32 1, i8* [[DEP]], i32 0, i8* null)
-  // CHECK:       call void @__kmpc_omp_task_begin_if0(%struct.ident_t* @0, i32 [[GTID]], i8* [[TASK]])
-  // CHECK:       call i32 [[TASK_ENTRY2]](i32 [[GTID]], [[TASK_TY2]]* [[BC_TASK]])
-  // CHECK:       call void @__kmpc_omp_task_complete_if0(%struct.ident_t* @0, i32 [[GTID]], i8* [[TASK]])
-  #pragma omp target if(0) firstprivate(global) depend(out:global)
+// CHECK:       [[TASK:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @1, i32 [[GTID]], i32 1, i[[SZ]] {{48|24}}, i[[SZ]] 4, i32 (i32, i8*)* bitcast (i32 (i32, %{{.+}}*)* [[TASK_ENTRY2:@.+]] to i32 (i32, i8*)*))
+// CHECK:       [[BC_TASK:%.+]] = bitcast i8* [[TASK]] to [[TASK_TY2:%.+]]*
+// CHECK:       [[DEP:%.+]] = bitcast %struct.kmp_depend_info* %{{.+}} to i8*
+// CHECK:       call void @__kmpc_omp_wait_deps(%struct.ident_t* @1, i32 [[GTID]], i32 1, i8* [[DEP]], i32 0, i8* null)
+// CHECK:       call void @__kmpc_omp_task_begin_if0(%struct.ident_t* @1, i32 [[GTID]], i8* [[TASK]])
+// CHECK:       call i32 [[TASK_ENTRY2]](i32 [[GTID]], [[TASK_TY2]]* [[BC_TASK]])
+// CHECK:       call void @__kmpc_omp_task_complete_if0(%struct.ident_t* @1, i32 [[GTID]], i8* [[TASK]])
+#pragma omp target if (0) firstprivate(global) depend(out \
+                                                      : global)
   {
     global += 1;
   }

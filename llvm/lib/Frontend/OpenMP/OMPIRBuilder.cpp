@@ -185,16 +185,18 @@ void OpenMPIRBuilder::finalize() {
 }
 
 Value *OpenMPIRBuilder::getOrCreateIdent(Constant *SrcLocStr,
-                                         IdentFlag LocFlags) {
+                                         IdentFlag LocFlags,
+                                         unsigned Reserve2Flags) {
   // Enable "C-mode".
   LocFlags |= OMP_IDENT_FLAG_KMPC;
 
-  GlobalVariable *&DefaultIdent = IdentMap[{SrcLocStr, uint64_t(LocFlags)}];
-  if (!DefaultIdent) {
+  Value *&Ident =
+      IdentMap[{SrcLocStr, uint64_t(LocFlags) << 31 | Reserve2Flags}];
+  if (!Ident) {
     Constant *I32Null = ConstantInt::getNullValue(Int32);
-    Constant *IdentData[] = {I32Null,
-                             ConstantInt::get(Int32, uint64_t(LocFlags)),
-                             I32Null, I32Null, SrcLocStr};
+    Constant *IdentData[] = {
+        I32Null, ConstantInt::get(Int32, uint32_t(LocFlags)),
+        ConstantInt::get(Int32, Reserve2Flags), I32Null, SrcLocStr};
     Constant *Initializer = ConstantStruct::get(
         cast<StructType>(IdentPtr->getPointerElementType()), IdentData);
 
@@ -203,15 +205,16 @@ Value *OpenMPIRBuilder::getOrCreateIdent(Constant *SrcLocStr,
     for (GlobalVariable &GV : M.getGlobalList())
       if (GV.getType() == IdentPtr && GV.hasInitializer())
         if (GV.getInitializer() == Initializer)
-          return DefaultIdent = &GV;
+          return Ident = &GV;
 
-    DefaultIdent = new GlobalVariable(M, IdentPtr->getPointerElementType(),
-                                      /* isConstant = */ false,
-                                      GlobalValue::PrivateLinkage, Initializer);
-    DefaultIdent->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-    DefaultIdent->setAlignment(Align(8));
+    auto *GV = new GlobalVariable(M, IdentPtr->getPointerElementType(),
+                                  /* isConstant = */ true,
+                                  GlobalValue::PrivateLinkage, Initializer);
+    GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+    GV->setAlignment(Align(8));
+    Ident = GV;
   }
-  return DefaultIdent;
+  return Ident;
 }
 
 Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(StringRef LocStr) {
@@ -227,9 +230,28 @@ Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(StringRef LocStr) {
           GV.getInitializer() == Initializer)
         return SrcLocStr = ConstantExpr::getPointerCast(&GV, Int8Ptr);
 
-    SrcLocStr = Builder.CreateGlobalStringPtr(LocStr);
+    SrcLocStr = Builder.CreateGlobalStringPtr(LocStr, /* Name */ "",
+                                              /* AddressSpace */ 0, &M);
   }
   return SrcLocStr;
+}
+
+Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(StringRef FunctionName,
+                                                StringRef FileName,
+                                                unsigned Line,
+                                                unsigned Column) {
+  SmallString<128> Buffer;
+  Buffer.push_back(';');
+  Buffer.append(FileName);
+  Buffer.push_back(';');
+  Buffer.append(FunctionName);
+  Buffer.push_back(';');
+  Buffer.append(std::to_string(Line));
+  Buffer.push_back(';');
+  Buffer.append(std::to_string(Column));
+  Buffer.push_back(';');
+  Buffer.push_back(';');
+  return getOrCreateSrcLocStr(Buffer.str());
 }
 
 Constant *OpenMPIRBuilder::getOrCreateDefaultSrcLocStr() {
@@ -241,17 +263,13 @@ OpenMPIRBuilder::getOrCreateSrcLocStr(const LocationDescription &Loc) {
   DILocation *DIL = Loc.DL.get();
   if (!DIL)
     return getOrCreateDefaultSrcLocStr();
-  StringRef Filename =
+  StringRef FileName =
       !DIL->getFilename().empty() ? DIL->getFilename() : M.getName();
   StringRef Function = DIL->getScope()->getSubprogram()->getName();
   Function =
       !Function.empty() ? Function : Loc.IP.getBlock()->getParent()->getName();
-  std::string LineStr = std::to_string(DIL->getLine());
-  std::string ColumnStr = std::to_string(DIL->getColumn());
-  std::stringstream SrcLocStr;
-  SrcLocStr << ";" << Filename.data() << ";" << Function.data() << ";"
-            << LineStr << ";" << ColumnStr << ";;";
-  return getOrCreateSrcLocStr(SrcLocStr.str());
+  return getOrCreateSrcLocStr(Function, FileName, DIL->getLine(),
+                              DIL->getColumn());
 }
 
 Value *OpenMPIRBuilder::getOrCreateThreadID(Value *Ident) {
