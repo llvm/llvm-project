@@ -1525,6 +1525,41 @@ def Vector_ShapeCastOp :
   let hasFolder = 1;
 }
 
+def Vector_BitCastOp :
+  Vector_Op<"bitcast", [NoSideEffect, AllRanksMatch<["source", "result"]>]>,
+    Arguments<(ins AnyVector:$source)>,
+    Results<(outs AnyVector:$result)>{
+  let summary = "bitcast casts between vectors";
+  let description = [{
+    The bitcast operation casts between vectors of the same rank, the minor 1-D
+    vector size is casted to a vector with a different element type but same
+    bitwidth.
+
+    Example:
+
+    ```mlir
+    // Example casting to a smaller element type.
+    %1 = vector.bitcast %0 : vector<5x1x4x3xf32> to vector<5x1x4x6xi16>
+
+    // Example casting to a bigger element type.
+    %3 = vector.bitcast %2 : vector<10x12x8xi8> to vector<10x12x2xi32>
+
+    // Example casting to an element type of the same size.
+    %5 = vector.bitcast %4 : vector<5x1x4x3xf32> to vector<5x1x4x3xi32>
+    ```
+  }];
+  let extraClassDeclaration = [{
+    VectorType getSourceVectorType() {
+      return source().getType().cast<VectorType>();
+    }
+    VectorType getResultVectorType() {
+      return getResult().getType().cast<VectorType>();
+    }
+  }];
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
+  let hasFolder = 1;
+}
+
 def Vector_TypeCastOp :
   Vector_Op<"type_cast", [NoSideEffect]>,
     Arguments<(ins StaticShapeMemRefOf<[AnyType]>:$memref)>,
