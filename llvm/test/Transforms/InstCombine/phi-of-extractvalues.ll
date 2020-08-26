@@ -317,8 +317,6 @@ end:
 define i32 @test10({ i32, i32 } %agg_left, { i32, i32 } %agg_right, i1 %c0, i1 %c1) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[I0:%.*]] = extractvalue { i32, i32 } [[AGG_LEFT:%.*]], 0
-; CHECK-NEXT:    [[I1:%.*]] = extractvalue { i32, i32 } [[AGG_RIGHT:%.*]], 0
 ; CHECK-NEXT:    br i1 [[C0:%.*]], label [[END:%.*]], label [[DISPATCH:%.*]]
 ; CHECK:       dispatch:
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
@@ -327,7 +325,8 @@ define i32 @test10({ i32, i32 } %agg_left, { i32, i32 } %agg_right, i1 %c0, i1 %
 ; CHECK:       right:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[I0]], [[ENTRY:%.*]] ], [ [[I0]], [[LEFT]] ], [ [[I1]], [[RIGHT]] ]
+; CHECK-NEXT:    [[AGG_LEFT_PN:%.*]] = phi { i32, i32 } [ [[AGG_LEFT:%.*]], [[ENTRY:%.*]] ], [ [[AGG_LEFT]], [[LEFT]] ], [ [[AGG_RIGHT:%.*]], [[RIGHT]] ]
+; CHECK-NEXT:    [[R:%.*]] = extractvalue { i32, i32 } [[AGG_LEFT_PN]], 0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:

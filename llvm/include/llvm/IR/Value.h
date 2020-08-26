@@ -442,6 +442,16 @@ public:
   /// This is logically equivalent to getNumUses() >= N.
   bool hasNUsesOrMore(unsigned N) const;
 
+  /// Return true if there is exactly one user of this value.
+  ///
+  /// Note that this is not the same as "has one use". If a value has one use,
+  /// then there certainly is a single user. But if value has several uses,
+  /// it is possible that all uses are in a single user, or not.
+  ///
+  /// This check is potentially costly, since it requires traversing,
+  /// in the worst case, the whole use list of a value.
+  bool hasOneUser() const;
+
   /// Return true if there is exactly one use of this value that cannot be
   /// dropped.
   ///
