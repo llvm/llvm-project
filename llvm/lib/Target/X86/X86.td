@@ -1107,20 +1107,10 @@ def : ProcModel<"pentium-m", GenericPostRAModel,
                 [FeatureSlowUAMem16, FeatureInsertVZEROUPPER]>;
 
 foreach P = ["pentium4", "pentium4m"] in {
-//  def : ProcModel<P, GenericPostRAModel,
-//                  [FeatureX87, FeatureCMPXCHG8B, FeatureMMX, FeatureSSE2,
-//                   FeatureFXSR, FeatureNOPL, FeatureCMOV]>;
-//                  [FeatureSlowUAMem16, FeatureInsertVZEROUPPER]>;
-
-  // Since 'pentium4' is the default 32-bit CPU on Linux and Windows,
-  // give it more modern tunings.
-  // FIXME: This wouldn't be needed if we supported mtune.
-  def : ProcModel<P, SandyBridgeModel,
+  def : ProcModel<P, GenericPostRAModel,
                   [FeatureX87, FeatureCMPXCHG8B, FeatureMMX, FeatureSSE2,
                    FeatureFXSR, FeatureNOPL, FeatureCMOV],
-                  [FeatureSlow3OpsLEA, FeatureSlowDivide64,
-                   FeatureSlowIncDec, FeatureMacroFusion,
-                   FeatureInsertVZEROUPPER]>;
+                  [FeatureSlowUAMem16, FeatureInsertVZEROUPPER]>;
 }
 
 // Intel Quark.
