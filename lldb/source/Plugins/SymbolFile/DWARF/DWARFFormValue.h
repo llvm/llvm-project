@@ -42,6 +42,7 @@ public:
   DWARFFormValue(const DWARFUnit *unit) : m_unit(unit) {}
   DWARFFormValue(const DWARFUnit *unit, dw_form_t form)
       : m_unit(unit), m_form(form) {}
+  const DWARFUnit *GetUnit() const { return m_unit; }
   void SetUnit(const DWARFUnit *unit) { m_unit = unit; }
   dw_form_t Form() const { return m_form; }
   dw_form_t& FormRef() { return m_form; }
