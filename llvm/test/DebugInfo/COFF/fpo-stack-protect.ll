@@ -15,9 +15,9 @@
 ; CHECK:         subl    $20, %esp
 ; CHECK:         .cv_fpo_stackalloc      20
 ; CHECK:         .cv_fpo_endprologue
-; CHECK:         movl    28(%esp), %esi
 ; CHECK:         ___security_cookie
 
+; CHECK:         movl    28(%esp), %esi
 ; CHECK:         movl    %esi, {{[0-9]*}}(%esp)
 ; CHECK:         movl    %esi, {{[0-9]*}}(%esp)
 ; CHECK:         movl    %esi, {{[0-9]*}}(%esp)
@@ -30,7 +30,7 @@
 ; CHECK:         addl    $20, %esp
 ; CHECK:         popl    %esi
 ; CHECK:         retl
-; CHECK: Ltmp2:
+; CHECK: Ltmp3:
 ; CHECK:         .cv_fpo_endproc
 
 ; ModuleID = 't.c'

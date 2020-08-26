@@ -460,27 +460,6 @@ shared.  This is useful because some passes (i.e., TraceValues) insert a lot of
 string constants into the program, regardless of whether or not an existing
 string is available.
 
-``-constprop``: Simple constant propagation
--------------------------------------------
-
-This pass implements constant propagation and merging.  It looks for
-instructions involving only constant operands and replaces them with a constant
-value instead of an instruction.  For example:
-
-.. code-block:: llvm
-
-  add i32 1, 2
-
-becomes
-
-.. code-block:: llvm
-
-  i32 3
-
-NOTE: this pass has a habit of making definitions be dead.  It is a good idea
-to run a :ref:`Dead Instruction Elimination <passes-die>` pass sometime after
-running this pass.
-
 .. _passes-dce:
 
 ``-dce``: Dead Code Elimination
