@@ -162,66 +162,62 @@ raw_ostream &syntax::operator<<(raw_ostream &OS, NodeRole R) {
     return OS << "TemplateKeyword";
   case syntax::NodeRole::BodyStatement:
     return OS << "BodyStatement";
-  case syntax::NodeRole::List_element:
-    return OS << "List_element";
-  case syntax::NodeRole::List_delimiter:
-    return OS << "List_delimiter";
-  case syntax::NodeRole::CaseStatement_value:
-    return OS << "CaseStatement_value";
-  case syntax::NodeRole::IfStatement_thenStatement:
-    return OS << "IfStatement_thenStatement";
-  case syntax::NodeRole::IfStatement_elseKeyword:
-    return OS << "IfStatement_elseKeyword";
-  case syntax::NodeRole::IfStatement_elseStatement:
-    return OS << "IfStatement_elseStatement";
-  case syntax::NodeRole::OperatorExpression_operatorToken:
-    return OS << "OperatorExpression_operatorToken";
-  case syntax::NodeRole::UnaryOperatorExpression_operand:
-    return OS << "UnaryOperatorExpression_operand";
-  case syntax::NodeRole::BinaryOperatorExpression_leftHandSide:
-    return OS << "BinaryOperatorExpression_leftHandSide";
-  case syntax::NodeRole::BinaryOperatorExpression_rightHandSide:
-    return OS << "BinaryOperatorExpression_rightHandSide";
-  case syntax::NodeRole::ReturnStatement_value:
-    return OS << "ReturnStatement_value";
-  case syntax::NodeRole::ExpressionStatement_expression:
-    return OS << "ExpressionStatement_expression";
-  case syntax::NodeRole::CompoundStatement_statement:
-    return OS << "CompoundStatement_statement";
-  case syntax::NodeRole::StaticAssertDeclaration_condition:
-    return OS << "StaticAssertDeclaration_condition";
-  case syntax::NodeRole::StaticAssertDeclaration_message:
-    return OS << "StaticAssertDeclaration_message";
-  case syntax::NodeRole::SimpleDeclaration_declarator:
-    return OS << "SimpleDeclaration_declarator";
-  case syntax::NodeRole::TemplateDeclaration_declaration:
-    return OS << "TemplateDeclaration_declaration";
-  case syntax::NodeRole::ExplicitTemplateInstantiation_declaration:
-    return OS << "ExplicitTemplateInstantiation_declaration";
-  case syntax::NodeRole::ArraySubscript_sizeExpression:
-    return OS << "ArraySubscript_sizeExpression";
-  case syntax::NodeRole::TrailingReturnType_declarator:
-    return OS << "TrailingReturnType_declarator";
-  case syntax::NodeRole::ParametersAndQualifiers_parameters:
-    return OS << "ParametersAndQualifiers_parameters";
-  case syntax::NodeRole::ParametersAndQualifiers_trailingReturn:
-    return OS << "ParametersAndQualifiers_trailingReturn";
-  case syntax::NodeRole::IdExpression_id:
-    return OS << "IdExpression_id";
-  case syntax::NodeRole::IdExpression_qualifier:
-    return OS << "IdExpression_qualifier";
-  case syntax::NodeRole::ParenExpression_subExpression:
-    return OS << "ParenExpression_subExpression";
-  case syntax::NodeRole::MemberExpression_object:
-    return OS << "MemberExpression_object";
-  case syntax::NodeRole::MemberExpression_accessToken:
-    return OS << "MemberExpression_accessToken";
-  case syntax::NodeRole::MemberExpression_member:
-    return OS << "MemberExpression_member";
-  case syntax::NodeRole::CallExpression_callee:
-    return OS << "CallExpression_callee";
-  case syntax::NodeRole::CallExpression_arguments:
-    return OS << "CallExpression_arguments";
+  case syntax::NodeRole::ListElement:
+    return OS << "ListElement";
+  case syntax::NodeRole::ListDelimiter:
+    return OS << "ListDelimiter";
+  case syntax::NodeRole::CaseValue:
+    return OS << "CaseValue";
+  case syntax::NodeRole::ReturnValue:
+    return OS << "ReturnValue";
+  case syntax::NodeRole::ThenStatement:
+    return OS << "ThenStatement";
+  case syntax::NodeRole::ElseKeyword:
+    return OS << "ElseKeyword";
+  case syntax::NodeRole::ElseStatement:
+    return OS << "ElseStatement";
+  case syntax::NodeRole::OperatorToken:
+    return OS << "OperatorToken";
+  case syntax::NodeRole::Operand:
+    return OS << "Operand";
+  case syntax::NodeRole::LeftHandSide:
+    return OS << "LeftHandSide";
+  case syntax::NodeRole::RightHandSide:
+    return OS << "RightHandSide";
+  case syntax::NodeRole::Expression:
+    return OS << "Expression";
+  case syntax::NodeRole::Statement:
+    return OS << "Statement";
+  case syntax::NodeRole::Condition:
+    return OS << "Condition";
+  case syntax::NodeRole::Message:
+    return OS << "Message";
+  case syntax::NodeRole::Declarator:
+    return OS << "Declarator";
+  case syntax::NodeRole::Declaration:
+    return OS << "Declaration";
+  case syntax::NodeRole::Size:
+    return OS << "Size";
+  case syntax::NodeRole::Parameters:
+    return OS << "Parameters";
+  case syntax::NodeRole::TrailingReturn:
+    return OS << "TrailingReturn";
+  case syntax::NodeRole::UnqualifiedId:
+    return OS << "UnqualifiedId";
+  case syntax::NodeRole::Qualifier:
+    return OS << "Qualifier";
+  case syntax::NodeRole::SubExpression:
+    return OS << "SubExpression";
+  case syntax::NodeRole::Object:
+    return OS << "Object";
+  case syntax::NodeRole::AccessToken:
+    return OS << "AccessToken";
+  case syntax::NodeRole::Member:
+    return OS << "Member";
+  case syntax::NodeRole::Callee:
+    return OS << "Callee";
+  case syntax::NodeRole::Arguments:
+    return OS << "Arguments";
   }
   llvm_unreachable("invalid role");
 }
@@ -295,8 +291,7 @@ syntax::ParameterDeclarationList::parametersAndCommas() {
 }
 
 syntax::Expression *syntax::MemberExpression::object() {
-  return cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::MemberExpression_object));
+  return cast_or_null<syntax::Expression>(findChild(syntax::NodeRole::Object));
 }
 
 syntax::Leaf *syntax::MemberExpression::templateKeyword() {
@@ -306,17 +301,17 @@ syntax::Leaf *syntax::MemberExpression::templateKeyword() {
 
 syntax::Leaf *syntax::MemberExpression::accessToken() {
   return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::MemberExpression_accessToken));
+      findChild(syntax::NodeRole::AccessToken));
 }
 
 syntax::IdExpression *syntax::MemberExpression::member() {
   return cast_or_null<syntax::IdExpression>(
-      findChild(syntax::NodeRole::MemberExpression_member));
+      findChild(syntax::NodeRole::Member));
 }
 
 syntax::NestedNameSpecifier *syntax::IdExpression::qualifier() {
   return cast_or_null<syntax::NestedNameSpecifier>(
-      findChild(syntax::NodeRole::IdExpression_qualifier));
+      findChild(syntax::NodeRole::Qualifier));
 }
 
 syntax::Leaf *syntax::IdExpression::templateKeyword() {
@@ -326,7 +321,7 @@ syntax::Leaf *syntax::IdExpression::templateKeyword() {
 
 syntax::UnqualifiedId *syntax::IdExpression::unqualifiedId() {
   return cast_or_null<syntax::UnqualifiedId>(
-      findChild(syntax::NodeRole::IdExpression_id));
+      findChild(syntax::NodeRole::UnqualifiedId));
 }
 
 syntax::Leaf *syntax::ParenExpression::openParen() {
@@ -335,7 +330,7 @@ syntax::Leaf *syntax::ParenExpression::openParen() {
 
 syntax::Expression *syntax::ParenExpression::subExpression() {
   return cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::ParenExpression_subExpression));
+      findChild(syntax::NodeRole::SubExpression));
 }
 
 syntax::Leaf *syntax::ParenExpression::closeParen() {
@@ -353,32 +348,28 @@ syntax::Leaf *syntax::LiteralExpression::literalToken() {
 
 syntax::Expression *syntax::BinaryOperatorExpression::lhs() {
   return cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::BinaryOperatorExpression_leftHandSide));
+      findChild(syntax::NodeRole::LeftHandSide));
 }
 
 syntax::Leaf *syntax::UnaryOperatorExpression::operatorToken() {
-  return cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::OperatorExpression_operatorToken));
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::OperatorToken));
 }
 
 syntax::Expression *syntax::UnaryOperatorExpression::operand() {
-  return cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::UnaryOperatorExpression_operand));
+  return cast_or_null<syntax::Expression>(findChild(syntax::NodeRole::Operand));
 }
 
 syntax::Leaf *syntax::BinaryOperatorExpression::operatorToken() {
-  return cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::OperatorExpression_operatorToken));
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::OperatorToken));
 }
 
 syntax::Expression *syntax::BinaryOperatorExpression::rhs() {
   return cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::BinaryOperatorExpression_rightHandSide));
+      findChild(syntax::NodeRole::RightHandSide));
 }
 
 syntax::Expression *syntax::CallExpression::callee() {
-  return cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::CallExpression_callee));
+  return cast_or_null<syntax::Expression>(findChild(syntax::NodeRole::Callee));
 }
 
 syntax::Leaf *syntax::CallExpression::openParen() {
@@ -387,7 +378,7 @@ syntax::Leaf *syntax::CallExpression::openParen() {
 
 syntax::CallArguments *syntax::CallExpression::arguments() {
   return cast_or_null<syntax::CallArguments>(
-      findChild(syntax::NodeRole::CallExpression_arguments));
+      findChild(syntax::NodeRole::Arguments));
 }
 
 syntax::Leaf *syntax::CallExpression::closeParen() {
@@ -409,9 +400,9 @@ syntax::Leaf *syntax::CaseStatement::caseKeyword() {
       findChild(syntax::NodeRole::IntroducerKeyword));
 }
 
-syntax::Expression *syntax::CaseStatement::value() {
+syntax::Expression *syntax::CaseStatement::caseValue() {
   return cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::CaseStatement_value));
+      findChild(syntax::NodeRole::CaseValue));
 }
 
 syntax::Statement *syntax::CaseStatement::body() {
@@ -436,17 +427,16 @@ syntax::Leaf *syntax::IfStatement::ifKeyword() {
 
 syntax::Statement *syntax::IfStatement::thenStatement() {
   return cast_or_null<syntax::Statement>(
-      findChild(syntax::NodeRole::IfStatement_thenStatement));
+      findChild(syntax::NodeRole::ThenStatement));
 }
 
 syntax::Leaf *syntax::IfStatement::elseKeyword() {
-  return cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::IfStatement_elseKeyword));
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::ElseKeyword));
 }
 
 syntax::Statement *syntax::IfStatement::elseStatement() {
   return cast_or_null<syntax::Statement>(
-      findChild(syntax::NodeRole::IfStatement_elseStatement));
+      findChild(syntax::NodeRole::ElseStatement));
 }
 
 syntax::Leaf *syntax::ForStatement::forKeyword() {
@@ -484,9 +474,9 @@ syntax::Leaf *syntax::ReturnStatement::returnKeyword() {
       findChild(syntax::NodeRole::IntroducerKeyword));
 }
 
-syntax::Expression *syntax::ReturnStatement::value() {
+syntax::Expression *syntax::ReturnStatement::returnValue() {
   return cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::ReturnStatement_value));
+      findChild(syntax::NodeRole::ReturnValue));
 }
 
 syntax::Leaf *syntax::RangeBasedForStatement::forKeyword() {
@@ -501,7 +491,7 @@ syntax::Statement *syntax::RangeBasedForStatement::body() {
 
 syntax::Expression *syntax::ExpressionStatement::expression() {
   return cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::ExpressionStatement_expression));
+      findChild(syntax::NodeRole::Expression));
 }
 
 syntax::Leaf *syntax::CompoundStatement::lbrace() {
@@ -511,7 +501,7 @@ syntax::Leaf *syntax::CompoundStatement::lbrace() {
 std::vector<syntax::Statement *> syntax::CompoundStatement::statements() {
   std::vector<syntax::Statement *> Children;
   for (auto *C = firstChild(); C; C = C->nextSibling()) {
-    assert(C->role() == syntax::NodeRole::CompoundStatement_statement);
+    assert(C->role() == syntax::NodeRole::Statement);
     Children.push_back(cast<syntax::Statement>(C));
   }
   return Children;
@@ -523,19 +513,18 @@ syntax::Leaf *syntax::CompoundStatement::rbrace() {
 
 syntax::Expression *syntax::StaticAssertDeclaration::condition() {
   return cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::StaticAssertDeclaration_condition));
+      findChild(syntax::NodeRole::Condition));
 }
 
 syntax::Expression *syntax::StaticAssertDeclaration::message() {
-  return cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::StaticAssertDeclaration_message));
+  return cast_or_null<syntax::Expression>(findChild(syntax::NodeRole::Message));
 }
 
 std::vector<syntax::SimpleDeclarator *>
 syntax::SimpleDeclaration::declarators() {
   std::vector<syntax::SimpleDeclarator *> Children;
   for (auto *C = firstChild(); C; C = C->nextSibling()) {
-    if (C->role() == syntax::NodeRole::SimpleDeclaration_declarator)
+    if (C->role() == syntax::NodeRole::Declarator)
       Children.push_back(cast<syntax::SimpleDeclarator>(C));
   }
   return Children;
@@ -548,7 +537,7 @@ syntax::Leaf *syntax::TemplateDeclaration::templateKeyword() {
 
 syntax::Declaration *syntax::TemplateDeclaration::declaration() {
   return cast_or_null<syntax::Declaration>(
-      findChild(syntax::NodeRole::TemplateDeclaration_declaration));
+      findChild(syntax::NodeRole::Declaration));
 }
 
 syntax::Leaf *syntax::ExplicitTemplateInstantiation::templateKeyword() {
@@ -562,7 +551,7 @@ syntax::Leaf *syntax::ExplicitTemplateInstantiation::externKeyword() {
 
 syntax::Declaration *syntax::ExplicitTemplateInstantiation::declaration() {
   return cast_or_null<syntax::Declaration>(
-      findChild(syntax::NodeRole::ExplicitTemplateInstantiation_declaration));
+      findChild(syntax::NodeRole::Declaration));
 }
 
 syntax::Leaf *syntax::ParenDeclarator::lparen() {
@@ -577,9 +566,8 @@ syntax::Leaf *syntax::ArraySubscript::lbracket() {
   return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::OpenParen));
 }
 
-syntax::Expression *syntax::ArraySubscript::sizeExpression() {
-  return cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::ArraySubscript_sizeExpression));
+syntax::Expression *syntax::ArraySubscript::size() {
+  return cast_or_null<syntax::Expression>(findChild(syntax::NodeRole::Size));
 }
 
 syntax::Leaf *syntax::ArraySubscript::rbracket() {
@@ -592,7 +580,7 @@ syntax::Leaf *syntax::TrailingReturnType::arrowToken() {
 
 syntax::SimpleDeclarator *syntax::TrailingReturnType::declarator() {
   return cast_or_null<syntax::SimpleDeclarator>(
-      findChild(syntax::NodeRole::TrailingReturnType_declarator));
+      findChild(syntax::NodeRole::Declarator));
 }
 
 syntax::Leaf *syntax::ParametersAndQualifiers::lparen() {
@@ -602,7 +590,7 @@ syntax::Leaf *syntax::ParametersAndQualifiers::lparen() {
 syntax::ParameterDeclarationList *
 syntax::ParametersAndQualifiers::parameters() {
   return cast_or_null<syntax::ParameterDeclarationList>(
-      findChild(syntax::NodeRole::ParametersAndQualifiers_parameters));
+      findChild(syntax::NodeRole::Parameters));
 }
 
 syntax::Leaf *syntax::ParametersAndQualifiers::rparen() {
@@ -611,5 +599,5 @@ syntax::Leaf *syntax::ParametersAndQualifiers::rparen() {
 
 syntax::TrailingReturnType *syntax::ParametersAndQualifiers::trailingReturn() {
   return cast_or_null<syntax::TrailingReturnType>(
-      findChild(syntax::NodeRole::ParametersAndQualifiers_trailingReturn));
+      findChild(syntax::NodeRole::TrailingReturn));
 }
