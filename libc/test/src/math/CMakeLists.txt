@@ -333,6 +333,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   frexp_test
+  NEED_MPFR
   SUITE
     libc_math_unittests
   SRCS
@@ -345,6 +346,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   frexpf_test
+  NEED_MPFR
   SUITE
     libc_math_unittests
   SRCS
@@ -357,6 +359,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   frexpl_test
+  NEED_MPFR
   SUITE
     libc_math_unittests
   SRCS
