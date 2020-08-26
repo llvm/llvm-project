@@ -450,9 +450,14 @@ define { i32, i32 } @test8({ i32, i32 } %agg_left, { i32, i32 } %agg_right, i1 %
 ; CHECK:       impossible:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       end:
-; CHECK-NEXT:    [[I8_MERGED:%.*]] = phi { i32, i32 } [ [[AGG_RIGHT:%.*]], [[RIGHT]] ], [ [[AGG_RIGHT]], [[RIGHT]] ], [ [[AGG_LEFT:%.*]], [[LEFT]] ], [ [[AGG_LEFT]], [[LEFT]] ]
+; CHECK-NEXT:    [[AGG_LEFT_PN:%.*]] = phi { i32, i32 } [ [[AGG_LEFT:%.*]], [[LEFT]] ], [ [[AGG_LEFT]], [[LEFT]] ], [ [[AGG_RIGHT:%.*]], [[RIGHT]] ], [ [[AGG_RIGHT]], [[RIGHT]] ]
+; CHECK-NEXT:    [[AGG_LEFT_PN1:%.*]] = phi { i32, i32 } [ [[AGG_LEFT]], [[LEFT]] ], [ [[AGG_LEFT]], [[LEFT]] ], [ [[AGG_RIGHT]], [[RIGHT]] ], [ [[AGG_RIGHT]], [[RIGHT]] ]
+; CHECK-NEXT:    [[I6:%.*]] = extractvalue { i32, i32 } [[AGG_LEFT_PN1]], 1
+; CHECK-NEXT:    [[I5:%.*]] = extractvalue { i32, i32 } [[AGG_LEFT_PN]], 0
 ; CHECK-NEXT:    call void @baz()
-; CHECK-NEXT:    ret { i32, i32 } [[I8_MERGED]]
+; CHECK-NEXT:    [[I7:%.*]] = insertvalue { i32, i32 } undef, i32 [[I5]], 0
+; CHECK-NEXT:    [[I8:%.*]] = insertvalue { i32, i32 } [[I7]], i32 [[I6]], 1
+; CHECK-NEXT:    ret { i32, i32 } [[I8]]
 ;
 entry:
   br i1 %c, label %left, label %right

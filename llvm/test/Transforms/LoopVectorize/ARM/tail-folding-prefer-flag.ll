@@ -1,8 +1,9 @@
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -loop-vectorize -tail-predication=enabled -S < %s | \
 ; RUN:  FileCheck %s -check-prefix=CHECK
 
-; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -loop-vectorize -tail-predication=enabled -prefer-predicate-over-epilog -S < %s | \
-; RUN:   FileCheck -check-prefix=PREDFLAG %s
+; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp -loop-vectorize -tail-predication=enabled \
+; RUN:     -prefer-predicate-over-epilogue=predicate-dont-vectorize -S < %s | \
+; RUN:     FileCheck -check-prefix=PREDFLAG %s
 
 ; This test has a loop hint "predicate.predicate" set to false, so shouldn't
 ; get tail-folded, except with -prefer-predicate-over-epilog which then

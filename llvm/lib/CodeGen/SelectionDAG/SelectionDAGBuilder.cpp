@@ -6901,13 +6901,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     for (unsigned i = 0; i < VecWidth; i++) {
       OpsTripCount.push_back(TripCount);
       OpsIndex.push_back(Index);
-      OpsStepConstants.push_back(DAG.getConstant(i, DL, MVT::getVT(ElementTy)));
+      OpsStepConstants.push_back(
+          DAG.getConstant(i, DL, EVT::getEVT(ElementTy)));
     }
 
-    EVT CCVT = MVT::i1;
-    CCVT = EVT::getVectorVT(I.getContext(), CCVT, VecWidth);
+    EVT CCVT = EVT::getVectorVT(I.getContext(), MVT::i1, VecWidth);
 
-    auto VecTy = MVT::getVT(FixedVectorType::get(ElementTy, VecWidth));
+    auto VecTy = EVT::getEVT(FixedVectorType::get(ElementTy, VecWidth));
     SDValue VectorIndex = DAG.getBuildVector(VecTy, DL, OpsIndex);
     SDValue VectorStep = DAG.getBuildVector(VecTy, DL, OpsStepConstants);
     SDValue VectorInduction = DAG.getNode(

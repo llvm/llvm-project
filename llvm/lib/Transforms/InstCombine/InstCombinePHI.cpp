@@ -308,7 +308,7 @@ InstCombinerImpl::foldPHIArgInsertValueInstructionIntoPHI(PHINode &PN) {
   // and all have a single use.
   for (unsigned i = 1; i != PN.getNumIncomingValues(); ++i) {
     auto *I = dyn_cast<InsertValueInst>(PN.getIncomingValue(i));
-    if (!I || !I->hasOneUse() || I->getIndices() != FirstIVI->getIndices())
+    if (!I || !I->hasOneUser() || I->getIndices() != FirstIVI->getIndices())
       return nullptr;
   }
 
@@ -348,7 +348,7 @@ InstCombinerImpl::foldPHIArgExtractValueInstructionIntoPHI(PHINode &PN) {
   // and all have a single use.
   for (unsigned i = 1; i != PN.getNumIncomingValues(); ++i) {
     auto *I = dyn_cast<ExtractValueInst>(PN.getIncomingValue(i));
-    if (!I || !I->hasOneUse() || I->getIndices() != FirstEVI->getIndices() ||
+    if (!I || !I->hasOneUser() || I->getIndices() != FirstEVI->getIndices() ||
         I->getAggregateOperand()->getType() !=
             FirstEVI->getAggregateOperand()->getType())
       return nullptr;
@@ -376,7 +376,7 @@ InstCombinerImpl::foldPHIArgExtractValueInstructionIntoPHI(PHINode &PN) {
 }
 
 /// If we have something like phi [add (a,b), add(a,c)] and if a/b/c and the
-/// adds all have a single use, turn this into a phi and a single binop.
+/// adds all have a single user, turn this into a phi and a single binop.
 Instruction *InstCombinerImpl::foldPHIArgBinOpIntoPHI(PHINode &PN) {
   Instruction *FirstInst = cast<Instruction>(PN.getIncomingValue(0));
   assert(isa<BinaryOperator>(FirstInst) || isa<CmpInst>(FirstInst));
@@ -387,10 +387,10 @@ Instruction *InstCombinerImpl::foldPHIArgBinOpIntoPHI(PHINode &PN) {
   Type *LHSType = LHSVal->getType();
   Type *RHSType = RHSVal->getType();
 
-  // Scan to see if all operands are the same opcode, and all have one use.
+  // Scan to see if all operands are the same opcode, and all have one user.
   for (unsigned i = 1; i != PN.getNumIncomingValues(); ++i) {
     Instruction *I = dyn_cast<Instruction>(PN.getIncomingValue(i));
-    if (!I || I->getOpcode() != Opc || !I->hasOneUse() ||
+    if (!I || I->getOpcode() != Opc || !I->hasOneUser() ||
         // Verify type of the LHS matches so we don't fold cmp's of different
         // types.
         I->getOperand(0)->getType() != LHSType ||
@@ -486,11 +486,12 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
 
   bool AllInBounds = true;
 
-  // Scan to see if all operands are the same opcode, and all have one use.
+  // Scan to see if all operands are the same opcode, and all have one user.
   for (unsigned i = 1; i != PN.getNumIncomingValues(); ++i) {
-    GetElementPtrInst *GEP= dyn_cast<GetElementPtrInst>(PN.getIncomingValue(i));
-    if (!GEP || !GEP->hasOneUse() || GEP->getType() != FirstInst->getType() ||
-      GEP->getNumOperands() != FirstInst->getNumOperands())
+    GetElementPtrInst *GEP =
+        dyn_cast<GetElementPtrInst>(PN.getIncomingValue(i));
+    if (!GEP || !GEP->hasOneUser() || GEP->getType() != FirstInst->getType() ||
+        GEP->getNumOperands() != FirstInst->getNumOperands())
       return nullptr;
 
     AllInBounds &= GEP->isInBounds();
@@ -657,7 +658,7 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
   // Check to see if all arguments are the same operation.
   for (unsigned i = 1, e = PN.getNumIncomingValues(); i != e; ++i) {
     LoadInst *LI = dyn_cast<LoadInst>(PN.getIncomingValue(i));
-    if (!LI || !LI->hasOneUse())
+    if (!LI || !LI->hasOneUser())
       return nullptr;
 
     // We can't sink the load if the loaded value could be modified between
@@ -770,8 +771,8 @@ Instruction *InstCombinerImpl::foldPHIArgZextsIntoPHI(PHINode &Phi) {
   unsigned NumConsts = 0;
   for (Value *V : Phi.incoming_values()) {
     if (auto *Zext = dyn_cast<ZExtInst>(V)) {
-      // All zexts must be identical and have one use.
-      if (Zext->getSrcTy() != NarrowType || !Zext->hasOneUse())
+      // All zexts must be identical and have one user.
+      if (Zext->getSrcTy() != NarrowType || !Zext->hasOneUser())
         return nullptr;
       NewIncoming.push_back(Zext->getOperand(0));
       NumZexts++;
@@ -859,7 +860,7 @@ Instruction *InstCombinerImpl::foldPHIArgOpIntoPHI(PHINode &PN) {
   // Check to see if all arguments are the same operation.
   for (unsigned i = 1, e = PN.getNumIncomingValues(); i != e; ++i) {
     Instruction *I = dyn_cast<Instruction>(PN.getIncomingValue(i));
-    if (!I || !I->hasOneUse() || !I->isSameOperationAs(FirstInst))
+    if (!I || !I->hasOneUser() || !I->isSameOperationAs(FirstInst))
       return nullptr;
     if (CastSrcTy) {
       if (I->getOperand(0)->getType() != CastSrcTy)
@@ -1303,10 +1304,8 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
   if (isa<Instruction>(PN.getIncomingValue(0)) &&
       isa<Instruction>(PN.getIncomingValue(1)) &&
       cast<Instruction>(PN.getIncomingValue(0))->getOpcode() ==
-      cast<Instruction>(PN.getIncomingValue(1))->getOpcode() &&
-      // FIXME: The hasOneUse check will fail for PHIs that use the value more
-      // than themselves more than once.
-      PN.getIncomingValue(0)->hasOneUse())
+          cast<Instruction>(PN.getIncomingValue(1))->getOpcode() &&
+      PN.getIncomingValue(0)->hasOneUser())
     if (Instruction *Result = foldPHIArgOpIntoPHI(PN))
       return Result;
 

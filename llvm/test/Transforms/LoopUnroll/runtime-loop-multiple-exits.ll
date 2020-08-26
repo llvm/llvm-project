@@ -404,26 +404,26 @@ returnblock:                                         ; preds = %latchExit, %entr
 define i64 @test5(i64 %trip, i64 %add, i1 %cond) {
 ; EPILOG: test5(
 ; EPILOG:   exit1.loopexit:
-; EPILOG-NEXT:      %result.ph = phi i64 [ %ivy, %loop_exiting ], [ %ivy, %loop_exiting ], [ %ivy.1, %loop_exiting.1 ], [ %ivy.1, %loop_exiting.1 ], [ %ivy.2, %loop_exiting.2 ],
+; EPILOG-NEXT:      %iv.pn = phi i64 [ %iv, %loop_exiting ], [ %iv, %loop_exiting ], [ %iv_next, %loop_exiting.1 ], [ %iv_next, %loop_exiting.1 ], [ %iv_next.1, %loop_exiting.2 ], [ %iv_next.1, %loop_exiting.2 ], [ %iv_next.2, %loop_exiting.3 ], [ %iv_next.2, %loop_exiting.3 ], [ %iv_next.3, %loop_exiting.4 ], [ %iv_next.3, %loop_exiting.4 ], [ %iv_next.4, %loop_exiting.5 ], [ %iv_next.4, %loop_exiting.5 ], [ %iv_next.5, %loop_exiting.6 ], [ %iv_next.5, %loop_exiting.6 ], [ %iv_next.6, %loop_exiting.7 ], [ %iv_next.6, %loop_exiting.7 ]
 ; EPILOG-NEXT:      br label %exit1
 ; EPILOG:   exit1.loopexit2:
-; EPILOG-NEXT:      %ivy.epil = add i64 %iv.epil, %add
 ; EPILOG-NEXT:      br label %exit1
 ; EPILOG:   exit1:
-; EPILOG-NEXT:      %result = phi i64 [ %result.ph, %exit1.loopexit ], [ %ivy.epil, %exit1.loopexit2 ]
+; EPILOG-NEXT:      %iv.pn.pn = phi i64 [ %iv.pn, %exit1.loopexit ], [ %iv.epil, %exit1.loopexit2 ]
+; EPILOG-NEXT:      %result = add i64 %iv.pn.pn, %add
 ; EPILOG-NEXT:      ret i64 %result
 ; EPILOG:   loop_latch.7:
 ; EPILOG:      %niter.nsub.7 = add i64 %niter, -8
 
 ; PROLOG: test5(
 ; PROLOG:   exit1.loopexit:
-; PROLOG-NEXT:      %result.ph = phi i64 [ %ivy, %loop_exiting ], [ %ivy, %loop_exiting ], [ %ivy.1, %loop_exiting.1 ], [ %ivy.1, %loop_exiting.1 ], [ %ivy.2, %loop_exiting.2 ],
+; PROLOG-NEXT:      %iv.pn = phi i64 [ %iv, %loop_exiting ], [ %iv, %loop_exiting ], [ %iv_next, %loop_exiting.1 ], [ %iv_next, %loop_exiting.1 ], [ %iv_next.1, %loop_exiting.2 ], [ %iv_next.1, %loop_exiting.2 ], [ %iv_next.2, %loop_exiting.3 ], [ %iv_next.2, %loop_exiting.3 ], [ %iv_next.3, %loop_exiting.4 ], [ %iv_next.3, %loop_exiting.4 ], [ %iv_next.4, %loop_exiting.5 ], [ %iv_next.4, %loop_exiting.5 ], [ %iv_next.5, %loop_exiting.6 ], [ %iv_next.5, %loop_exiting.6 ], [ %iv_next.6, %loop_exiting.7 ], [ %iv_next.6, %loop_exiting.7 ]
 ; PROLOG-NEXT:      br label %exit1
 ; PROLOG:   exit1.loopexit1:
-; PROLOG-NEXT:      %ivy.prol = add i64 %iv.prol, %add
 ; PROLOG-NEXT:      br label %exit1
 ; PROLOG:   exit1:
-; PROLOG-NEXT:      %result = phi i64 [ %result.ph, %exit1.loopexit ], [ %ivy.prol, %exit1.loopexit1 ]
+; PROLOG-NEXT:      %iv.pn.pn = phi i64 [ %iv.pn, %exit1.loopexit ], [ %iv.prol, %exit1.loopexit1 ]
+; PROLOG-NEXT:      %result = add i64 %iv.pn.pn, %add
 ; PROLOG-NEXT:      ret i64 %result
 ; PROLOG:   loop_latch.7:
 ; PROLOG:      %iv_next.7 = add nuw nsw i64 %iv, 8

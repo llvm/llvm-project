@@ -71,6 +71,7 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ExitCodes.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Host.h"
@@ -87,7 +88,6 @@
 #include <utility>
 #if LLVM_ON_UNIX
 #include <unistd.h> // getpid
-#include <sysexits.h> // EX_IOERR
 #endif
 
 using namespace clang::driver;

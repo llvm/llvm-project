@@ -283,3 +283,75 @@ end:
   %r = phi {{ i32, i32 }, { i32, i32 }} [ %i0, %left ], [ %i1, %right ]
   ret {{ i32, i32 }, { i32, i32 }} %r
 }
+
+; It is fine if there are multiple uses of the PHI's value, as long as they are all in the PHI node itself
+define { i32, i32 } @test9({ i32, i32 } %agg, i32 %val_left, i32 %val_right, i1 %c0, i1 %c1) {
+; CHECK-LABEL: @test9(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C0:%.*]], label [[END:%.*]], label [[DISPATCH:%.*]]
+; CHECK:       dispatch:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       right:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[VAL_LEFT_PN:%.*]] = phi i32 [ [[VAL_LEFT:%.*]], [[ENTRY:%.*]] ], [ [[VAL_LEFT]], [[LEFT]] ], [ [[VAL_RIGHT:%.*]], [[RIGHT]] ]
+; CHECK-NEXT:    [[R:%.*]] = insertvalue { i32, i32 } [[AGG:%.*]], i32 [[VAL_LEFT_PN]], 0
+; CHECK-NEXT:    ret { i32, i32 } [[R]]
+;
+entry:
+  %i0 = insertvalue { i32, i32 } %agg, i32 %val_left, 0
+  %i1 = insertvalue { i32, i32 } %agg, i32 %val_right, 0
+  br i1 %c0, label %end, label %dispatch
+
+dispatch:
+  br i1 %c1, label %left, label %right
+
+left:
+  br label %end
+
+right:
+  br label %end
+
+end:
+  %r = phi { i32, i32 } [ %i0, %entry ], [ %i0, %left ], [ %i1, %right ]
+  ret { i32, i32 } %r
+}
+; Which isn't the case here, there is a legitimate external use.
+define { i32, i32 } @test10({ i32, i32 } %agg, i32 %val_left, i32 %val_right, i1 %c0, i1 %c1) {
+; CHECK-LABEL: @test10(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[I0:%.*]] = insertvalue { i32, i32 } [[AGG:%.*]], i32 [[VAL_LEFT:%.*]], 0
+; CHECK-NEXT:    [[I1:%.*]] = insertvalue { i32, i32 } [[AGG]], i32 [[VAL_RIGHT:%.*]], 0
+; CHECK-NEXT:    call void @usei32i32agg({ i32, i32 } [[I0]])
+; CHECK-NEXT:    br i1 [[C0:%.*]], label [[END:%.*]], label [[DISPATCH:%.*]]
+; CHECK:       dispatch:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       right:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[R:%.*]] = phi { i32, i32 } [ [[I0]], [[ENTRY:%.*]] ], [ [[I0]], [[LEFT]] ], [ [[I1]], [[RIGHT]] ]
+; CHECK-NEXT:    ret { i32, i32 } [[R]]
+;
+entry:
+  %i0 = insertvalue { i32, i32 } %agg, i32 %val_left, 0
+  %i1 = insertvalue { i32, i32 } %agg, i32 %val_right, 0
+  call void @usei32i32agg({ i32, i32 } %i0)
+  br i1 %c0, label %end, label %dispatch
+
+dispatch:
+  br i1 %c1, label %left, label %right
+
+left:
+  br label %end
+
+right:
+  br label %end
+
+end:
+  %r = phi { i32, i32 } [ %i0, %entry ], [ %i0, %left ], [ %i1, %right ]
+  ret { i32, i32 } %r
+}
