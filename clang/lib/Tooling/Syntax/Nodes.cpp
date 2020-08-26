@@ -52,6 +52,8 @@ raw_ostream &syntax::operator<<(raw_ostream &OS, NodeKind K) {
     return OS << "UnqualifiedId";
   case NodeKind::IdExpression:
     return OS << "IdExpression";
+  case NodeKind::CallExpression:
+    return OS << "CallExpression";
   case NodeKind::UnknownStatement:
     return OS << "UnknownStatement";
   case NodeKind::DeclarationStatement:
@@ -130,6 +132,8 @@ raw_ostream &syntax::operator<<(raw_ostream &OS, NodeKind K) {
     return OS << "NestedNameSpecifier";
   case NodeKind::MemberExpression:
     return OS << "MemberExpression";
+  case NodeKind::CallArguments:
+    return OS << "CallArguments";
   }
   llvm_unreachable("unknown node kind");
 }
@@ -212,6 +216,10 @@ raw_ostream &syntax::operator<<(raw_ostream &OS, NodeRole R) {
     return OS << "MemberExpression_accessToken";
   case syntax::NodeRole::MemberExpression_member:
     return OS << "MemberExpression_member";
+  case syntax::NodeRole::CallExpression_callee:
+    return OS << "CallExpression_callee";
+  case syntax::NodeRole::CallExpression_arguments:
+    return OS << "CallExpression_arguments";
   }
   llvm_unreachable("invalid role");
 }
@@ -236,6 +244,27 @@ syntax::NestedNameSpecifier::specifiersAndDoubleColons() {
     Children.push_back(
         {llvm::cast<syntax::NameSpecifier>(specifierAndDoubleColon.element),
          specifierAndDoubleColon.delimiter});
+  }
+  return Children;
+}
+
+std::vector<syntax::Expression *> syntax::CallArguments::arguments() {
+  auto ArgumentsAsNodes = getElementsAsNodes();
+  std::vector<syntax::Expression *> Children;
+  for (const auto &ArgumentAsNode : ArgumentsAsNodes) {
+    Children.push_back(llvm::cast<syntax::Expression>(ArgumentAsNode));
+  }
+  return Children;
+}
+
+std::vector<syntax::List::ElementAndDelimiter<syntax::Expression>>
+syntax::CallArguments::argumentsAndCommas() {
+  auto ArgumentsAsNodesAndCommas = getElementsAsNodesAndDelimiters();
+  std::vector<syntax::List::ElementAndDelimiter<syntax::Expression>> Children;
+  for (const auto &ArgumentAsNodeAndComma : ArgumentsAsNodesAndCommas) {
+    Children.push_back(
+        {llvm::cast<syntax::Expression>(ArgumentAsNodeAndComma.element),
+         ArgumentAsNodeAndComma.delimiter});
   }
   return Children;
 }
@@ -320,6 +349,24 @@ syntax::Leaf *syntax::BinaryOperatorExpression::operatorToken() {
 syntax::Expression *syntax::BinaryOperatorExpression::rhs() {
   return cast_or_null<syntax::Expression>(
       findChild(syntax::NodeRole::BinaryOperatorExpression_rightHandSide));
+}
+
+syntax::Expression *syntax::CallExpression::callee() {
+  return cast_or_null<syntax::Expression>(
+      findChild(syntax::NodeRole::CallExpression_callee));
+}
+
+syntax::Leaf *syntax::CallExpression::openParen() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::OpenParen));
+}
+
+syntax::CallArguments *syntax::CallExpression::arguments() {
+  return cast_or_null<syntax::CallArguments>(
+      findChild(syntax::NodeRole::CallExpression_arguments));
+}
+
+syntax::Leaf *syntax::CallExpression::closeParen() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::CloseParen));
 }
 
 syntax::Leaf *syntax::SwitchStatement::switchKeyword() {
