@@ -251,7 +251,7 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
 
   // ARM supports the MachineOutliner.
   setMachineOutliner(true);
-  setSupportsDefaultOutlining(false);
+  setSupportsDefaultOutlining(true);
 }
 
 ARMBaseTargetMachine::~ARMBaseTargetMachine() = default;

@@ -372,6 +372,9 @@ public:
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      const outliner::Candidate &C) const override;
 
+  /// Enable outlining by default at -Oz.
+  bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
+
 private:
   /// Returns an unused general-purpose register which can be used for
   /// constructing an outlined call if one exists. Returns 0 otherwise.

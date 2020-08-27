@@ -6129,3 +6129,8 @@ MachineBasicBlock::iterator ARMBaseInstrInfo::insertOutlinedCall(
   It--;
   return CallPt;
 }
+
+bool ARMBaseInstrInfo::shouldOutlineFromFunctionByDefault(
+    MachineFunction &MF) const {
+  return Subtarget.isMClass() && MF.getFunction().hasMinSize();
+}
