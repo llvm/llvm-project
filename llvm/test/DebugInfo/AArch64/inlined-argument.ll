@@ -4,14 +4,8 @@
 ; CHECK-NEXT:  DW_AT_location	(DW_OP_reg1 W1)
 ; CHECK-NEXT:  DW_AT_abstract_origin {{.*}}"resource"
 ;
-; XFAIL: *
-; This test now fails as it requires the single-location variable recognizer
-; to spot that the inlined function goes out of scope before the 'find.exit'
-; exit block. Previously, unchanging variable locations could be extended to
-; the end of the function, often erronously, and that's why this test used to
-; pass.
-; A future algorithm _should_ be able to recognize that "resource"/!37 covers
-; all blocks in its lexical scope.
+; Inlined variable "resource"/!37 covers all blocks in its lexical scope. Check
+; that it is given a single location.
 ;
 ; Generated from:
 ; typedef struct t *t_t;

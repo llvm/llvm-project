@@ -1538,13 +1538,6 @@ static bool validThroughout(LexicalScopes &LScopes,
   if (LScopeBegin->getParent() != MBB)
     return false;
 
-  // If there are instructions belonging to our scope in another block, and
-  // we're not a constant (see DWARF2 comment below), then we can't be
-  // validThroughout.
-  const MachineInstr *LScopeEnd = LSRange.back().second;
-  if (RangeEnd && LScopeEnd->getParent() != MBB)
-    return false;
-
   MachineBasicBlock::const_reverse_iterator Pred(DbgValue);
   for (++Pred; Pred != MBB->rend(); ++Pred) {
     if (Pred->getFlag(MachineInstr::FrameSetup))
@@ -1572,21 +1565,8 @@ static bool validThroughout(LexicalScopes &LScopes,
   if (DbgValue->getDebugOperand(0).isImm() && MBB->pred_empty())
     return true;
 
-  // Now check for situations where an "open-ended" DBG_VALUE isn't enough to
-  // determine eligibility for a single location, e.g. nested scopes, inlined
-  // functions.
-  // FIXME: For now we just handle a simple (but common) case where the scope
-  // is contained in MBB. We could be smarter here.
-  //
-  // At this point we know that our scope ends in MBB. So, if RangeEnd exists
-  // outside of the block we can ignore it; the location is just leaking outside
-  // its scope.
-  assert(LScopeEnd->getParent() == MBB && "Scope ends outside MBB");
-  if (RangeEnd->getParent() != DbgValue->getParent())
-    return true;
-
-  // The location range and variable's enclosing scope are both contained within
-  // MBB, test if location terminates before end of scope.
+  // Test if the location terminates before the end of the scope.
+  const MachineInstr *LScopeEnd = LSRange.back().second;
   if (Ordering.isBefore(RangeEnd, LScopeEnd))
     return false;
 
