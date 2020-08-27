@@ -7,6 +7,7 @@ define arm_aapcs_vfpcc <4 x i32> @test_v4i32(i32 %x, <4 x i32> %s0, <4 x i32> %s
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    bxeq lr
+; CHECK-NEXT:  .LBB0_1: @ %select.false
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -21,6 +22,7 @@ define arm_aapcs_vfpcc <8 x i16> @test_v8i16(i32 %x, <8 x i16> %s0, <8 x i16> %s
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    bxeq lr
+; CHECK-NEXT:  .LBB1_1: @ %select.false
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -35,6 +37,7 @@ define arm_aapcs_vfpcc <16 x i8> @test_v16i8(i32 %x, <16 x i8> %s0, <16 x i8> %s
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    bxeq lr
+; CHECK-NEXT:  .LBB2_1: @ %select.false
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -49,6 +52,7 @@ define arm_aapcs_vfpcc <2 x i64> @test_v2i64(i32 %x, <2 x i64> %s0, <2 x i64> %s
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    bxeq lr
+; CHECK-NEXT:  .LBB3_1: @ %select.false
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -63,6 +67,7 @@ define arm_aapcs_vfpcc <4 x float> @test_v4float(i32 %x, <4 x float> %s0, <4 x f
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    bxeq lr
+; CHECK-NEXT:  .LBB4_1: @ %select.false
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -77,6 +82,7 @@ define arm_aapcs_vfpcc <8 x half> @test_v8half(i32 %x, <8 x half> %s0, <8 x half
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    bxeq lr
+; CHECK-NEXT:  .LBB5_1: @ %select.false
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -91,6 +97,7 @@ define arm_aapcs_vfpcc <2 x double> @test_v2double(i32 %x, <2 x double> %s0, <2 
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    bxeq lr
+; CHECK-NEXT:  .LBB6_1: @ %select.false
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:

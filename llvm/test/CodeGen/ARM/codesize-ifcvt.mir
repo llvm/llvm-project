@@ -158,31 +158,37 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-V7-LABEL: name: test_nosize
   ; CHECK-V7: bb.0 (%ir-block.0):
-  ; CHECK-V7:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-V7:   successors: %bb.1(0x80000000)
   ; CHECK-V7:   liveins: $lr, $r7
   ; CHECK-V7:   renamable $r0 = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-V7:   t2CMPri killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK-V7:   tTAILJMPdND @extfunc, 1 /* CC::ne */, killed $cpsr, implicit $sp, implicit $sp
+  ; CHECK-V7: bb.1.b1:
+  ; CHECK-V7:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
+  ; CHECK-V7:   liveins: $r7, $lr
   ; CHECK-V7:   $sp = frame-setup t2STMDB_UPD $sp, 14 /* CC::al */, $noreg, killed $r7, killed $lr
   ; CHECK-V7:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK-V7:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK-V7:   frame-setup CFI_INSTRUCTION offset $r7, -8
   ; CHECK-V7:   renamable $r0 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-V7:   t2CMPri killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK-V7:   t2Bcc %bb.2, 1 /* CC::ne */, killed $cpsr
-  ; CHECK-V7: bb.1.b2:
-  ; CHECK-V7:   successors: %bb.3(0x80000000)
+  ; CHECK-V7:   t2Bcc %bb.3, 1 /* CC::ne */, killed $cpsr
+  ; CHECK-V7: bb.2.b2:
+  ; CHECK-V7:   successors: %bb.4(0x80000000)
   ; CHECK-V7:   tBL 14 /* CC::al */, $noreg, @extfunc, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $r0
-  ; CHECK-V7:   t2B %bb.3, 14 /* CC::al */, $noreg
-  ; CHECK-V7: bb.2.b3:
-  ; CHECK-V7:   successors: %bb.3(0x80000000)
+  ; CHECK-V7:   t2B %bb.4, 14 /* CC::al */, $noreg
+  ; CHECK-V7: bb.3.b3:
+  ; CHECK-V7:   successors: %bb.4(0x80000000)
   ; CHECK-V7:   renamable $r0 = t2LDRi12 undef renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from `i32* undef`)
   ; CHECK-V7:   renamable $r0 = t2ANDri killed renamable $r0, 256, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK-V7: bb.3.b5:
+  ; CHECK-V7: bb.4.b5:
+  ; CHECK-V7:   successors: %bb.5(0x50000000)
   ; CHECK-V7:   liveins: $r0
   ; CHECK-V7:   t2CMPri killed renamable $r0, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK-V7:   $sp = t2LDMIA_UPD $sp, 14 /* CC::al */, $noreg, def $r7, def $lr
   ; CHECK-V7:   tBX_RET 0 /* CC::eq */, killed $cpsr
+  ; CHECK-V7: bb.5.b7:
+  ; CHECK-V7:   liveins: $lr, $r7
   ; CHECK-V7:   tTAILJMPdND @extfunc, 14 /* CC::al */, $noreg, implicit $sp, implicit $sp
   ; CHECK-V8-LABEL: name: test_nosize
   ; CHECK-V8: bb.0 (%ir-block.0):
