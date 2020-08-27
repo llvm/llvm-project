@@ -189,6 +189,16 @@ def ConvertLinalgToSPIRV : Pass<"convert-linalg-to-spirv", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// OpenMPToLLVM
+//===----------------------------------------------------------------------===//
+
+def ConvertOpenMPToLLVM : Pass<"convert-openmp-to-llvm", "ModuleOp"> {
+  let summary = "Convert the OpenMP ops to OpenMP ops with LLVM dialect";
+  let constructor = "mlir::createConvertOpenMPToLLVMPass()";
+  let dependentDialects = ["LLVM::LLVMDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // SCFToStandard
 //===----------------------------------------------------------------------===//
 
