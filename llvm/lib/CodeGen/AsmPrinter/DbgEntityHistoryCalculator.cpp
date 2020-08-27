@@ -53,24 +53,6 @@ static Register isDescribedByReg(const MachineInstr &MI) {
                                        : Register();
 }
 
-/// Record instruction ordering so we can query their relative positions within
-/// a function. Meta instructions are given the same ordinal as the preceding
-/// non-meta instruction. Class state is invalid if MF is modified after
-/// calling initialize.
-class InstructionOrdering {
-public:
-  void initialize(const MachineFunction &MF);
-  void clear() { InstNumberMap.clear(); }
-
-  /// Check if instruction \p A comes before \p B, where \p A and \p B both
-  /// belong to the MachineFunction passed to initialize().
-  bool isBefore(const MachineInstr *A, const MachineInstr *B) const;
-
-private:
-  /// Each instruction is assigned an order number.
-  DenseMap<const MachineInstr *, unsigned> InstNumberMap;
-};
-
 void InstructionOrdering::initialize(const MachineFunction &MF) {
   // We give meta instructions the same ordinal as the preceding instruction
   // because this class is written for the task of comparing positions of
@@ -161,11 +143,9 @@ intersects(const MachineInstr *StartMI, const MachineInstr *EndMI,
   return None;
 }
 
-void DbgValueHistoryMap::trimLocationRanges(const MachineFunction &MF,
-                                            LexicalScopes &LScopes) {
-  InstructionOrdering Ordering;
-  Ordering.initialize(MF);
-
+void DbgValueHistoryMap::trimLocationRanges(
+    const MachineFunction &MF, LexicalScopes &LScopes,
+    const InstructionOrdering &Ordering) {
   // The indices of the entries we're going to remove for each variable.
   SmallVector<EntryIndex, 4> ToRemove;
   // Entry reference count for each variable. Clobbers left with no references

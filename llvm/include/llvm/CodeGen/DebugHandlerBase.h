@@ -110,6 +110,9 @@ protected:
   virtual void endFunctionImpl(const MachineFunction *MF) = 0;
   virtual void skippedNonDebugFunction() {}
 
+private:
+  InstructionOrdering InstOrdering;
+
   // AsmPrinterHandler overrides.
 public:
   void beginInstruction(const MachineInstr *MI) override;
@@ -129,8 +132,10 @@ public:
 
   /// If this type is derived from a base type then return base type size.
   static uint64_t getBaseTypeSize(const DIType *Ty);
+
+  const InstructionOrdering &getInstOrdering() const { return InstOrdering; }
 };
 
-}
+} // namespace llvm
 
 #endif
