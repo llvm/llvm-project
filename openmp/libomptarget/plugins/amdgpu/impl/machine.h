@@ -18,6 +18,7 @@ public:
   explicit ATLProcessor(hsa_agent_t agent,
                         atmi_devtype_t type = ATMI_DEVTYPE_ALL)
       : agent_(agent), type_(type) {
+    queues_.clear();
     memories_.clear();
   }
   void addMemory(const ATLMemory &p);
@@ -28,9 +29,16 @@ public:
   const std::vector<ATLMemory> &memories() const;
   atmi_devtype_t type() const { return type_; }
 
+  virtual void createQueues(const int count) {}
+  virtual void destroyQueues();
+  std::vector<hsa_queue_t *> queues() const { return queues_; }
+
+  int num_cus() const;
+
 protected:
   hsa_agent_t agent_;
   atmi_devtype_t type_;
+  std::vector<hsa_queue_t *> queues_;
   std::vector<ATLMemory> memories_;
 };
 
@@ -38,6 +46,7 @@ class ATLCPUProcessor : public ATLProcessor {
 public:
   explicit ATLCPUProcessor(hsa_agent_t agent)
       : ATLProcessor(agent, ATMI_DEVTYPE_CPU) {}
+  void createQueues(const int count);
 };
 
 class ATLGPUProcessor : public ATLProcessor {
@@ -45,15 +54,20 @@ public:
   explicit ATLGPUProcessor(hsa_agent_t agent,
                            atmi_devtype_t type = ATMI_DEVTYPE_dGPU)
       : ATLProcessor(agent, type) {}
+  void createQueues(const int count);
 };
 
 class ATLMemory {
 public:
   ATLMemory(hsa_amd_memory_pool_t pool, ATLProcessor p, atmi_memtype_t t)
       : memory_pool_(pool), processor_(p), type_(t) {}
+  ATLProcessor &processor() { return processor_; }
   hsa_amd_memory_pool_t memory() const { return memory_pool_; }
 
   atmi_memtype_t type() const { return type_; }
+
+  void *alloc(size_t s);
+  void free(void *p);
 
 private:
   hsa_amd_memory_pool_t memory_pool_;

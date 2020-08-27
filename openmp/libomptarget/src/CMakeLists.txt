@@ -16,7 +16,6 @@ set(src_files
   api.cpp
   device.cpp
   interface.cpp
-  MemoryManager.cpp
   rtl.cpp
   omptarget.cpp
 )
