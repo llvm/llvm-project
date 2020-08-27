@@ -15,9 +15,7 @@ target triple = "aarch64"
 ; the compiler. It happens to be the case that this will be the result.
 
 ; CHECK-LABEL: define <vscale x 8 x i1> @vscale_version()
-; CHECK-NEXT: %splatter = insertelement <vscale x 8 x i1> undef, i1 true, i32 0
-; CHECK-NEXT: %foo = shufflevector <vscale x 8 x i1> %splatter, <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT: ret <vscale x 8 x i1> %foo
+; CHECK-NEXT: ret <vscale x 8 x i1> shufflevector (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> undef, i1 true, i32 0), <vscale x 8 x i1> undef, <vscale x 8 x i32> zeroinitializer)
 
 define <vscale x 8 x i1> @vscale_version() {
   %splatter = insertelement <vscale x 8 x i1> undef, i1 true, i32 0
