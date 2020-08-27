@@ -282,7 +282,7 @@ struct __libcpp_timed_backoff_policy {
   bool operator()(chrono::nanoseconds __elapsed) const;
 };
 
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_THREAD_ABI_VISIBILITY
 bool __libcpp_timed_backoff_policy::operator()(chrono::nanoseconds __elapsed) const
 {
     if(__elapsed > chrono::milliseconds(128))
