@@ -1289,9 +1289,27 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
   if (isa<UndefValue>(CI.getArgOperand(1)))
     return true;
 
+  SmallVector<Register, 3> SrcRegs;
+
+  unsigned MinPtrSize = UINT_MAX;
+  for (auto AI = CI.arg_begin(), AE = CI.arg_end(); std::next(AI) != AE; ++AI) {
+    Register SrcReg = getOrCreateVReg(**AI);
+    LLT SrcTy = MRI->getType(SrcReg);
+    if (SrcTy.isPointer())
+      MinPtrSize = std::min(SrcTy.getSizeInBits(), MinPtrSize);
+    SrcRegs.push_back(SrcReg);
+  }
+
+  LLT SizeTy = LLT::scalar(MinPtrSize);
+
+  // The size operand should be the minimum of the pointer sizes.
+  Register &SizeOpReg = SrcRegs[SrcRegs.size() - 1];
+  if (MRI->getType(SizeOpReg) != SizeTy)
+    SizeOpReg = MIRBuilder.buildZExtOrTrunc(SizeTy, SizeOpReg).getReg(0);
+
   auto ICall = MIRBuilder.buildInstr(Opcode);
-  for (auto AI = CI.arg_begin(), AE = CI.arg_end(); std::next(AI) != AE; ++AI)
-    ICall.addUse(getOrCreateVReg(**AI));
+  for (Register SrcReg : SrcRegs)
+    ICall.addUse(SrcReg);
 
   Align DstAlign;
   Align SrcAlign;
