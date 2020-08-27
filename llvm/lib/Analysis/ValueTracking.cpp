@@ -4345,7 +4345,14 @@ findAllocaForValue(Value *V, DenseMap<Value *, AllocaInst *> &AllocaForValue) {
   AllocaInst *Res = nullptr;
   if (CastInst *CI = dyn_cast<CastInst>(V))
     Res = findAllocaForValue(CI->getOperand(0), AllocaForValue);
-  else if (PHINode *PN = dyn_cast<PHINode>(V)) {
+  else if (auto *SI = dyn_cast<SelectInst>(V)) {
+    Res = findAllocaForValue(SI->getTrueValue(), AllocaForValue);
+    if (!Res)
+      return nullptr;
+    AllocaInst *F = findAllocaForValue(SI->getFalseValue(), AllocaForValue);
+    if (F != Res)
+      return nullptr;
+  } else if (PHINode *PN = dyn_cast<PHINode>(V)) {
     for (Value *IncValue : PN->incoming_values()) {
       // Allow self-referencing phi-nodes.
       if (IncValue == PN)
