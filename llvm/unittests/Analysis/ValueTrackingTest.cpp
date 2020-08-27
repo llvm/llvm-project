@@ -1471,6 +1471,23 @@ const std::pair<const char *, bool> FindAllocaForValueTests[] = {
 
     {R"(
       define void @test(i1 %cond) {
+        %a = alloca i32
+        %r = select i1 %cond, i32* %a, i32* %a
+        ret void
+      })",
+     true},
+
+    {R"(
+      define void @test(i1 %cond) {
+        %a = alloca i32
+        %b = alloca i32
+        %r = select i1 %cond, i32* %a, i32* %b
+        ret void
+      })",
+     false},
+
+    {R"(
+      define void @test(i1 %cond) {
       entry:
         %a = alloca i64
         %a32 = bitcast i64* %a to i32*
