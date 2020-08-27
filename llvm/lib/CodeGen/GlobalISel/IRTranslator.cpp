@@ -1283,14 +1283,13 @@ bool IRTranslator::translateGetElementPtr(const User &U,
 
 bool IRTranslator::translateMemFunc(const CallInst &CI,
                                     MachineIRBuilder &MIRBuilder,
-                                    Intrinsic::ID ID) {
+                                    unsigned Opcode) {
 
   // If the source is undef, then just emit a nop.
   if (isa<UndefValue>(CI.getArgOperand(1)))
     return true;
 
-  ArrayRef<Register> Res;
-  auto ICall = MIRBuilder.buildIntrinsic(ID, Res, true);
+  auto ICall = MIRBuilder.buildInstr(Opcode);
   for (auto AI = CI.arg_begin(), AE = CI.arg_end(); std::next(AI) != AE; ++AI)
     ICall.addUse(getOrCreateVReg(**AI));
 
@@ -1321,7 +1320,7 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
   ICall.addMemOperand(MF->getMachineMemOperand(
       MachinePointerInfo(CI.getArgOperand(0)),
       MachineMemOperand::MOStore | VolFlag, 1, DstAlign));
-  if (ID != Intrinsic::memset)
+  if (Opcode != TargetOpcode::G_MEMSET)
     ICall.addMemOperand(MF->getMachineMemOperand(
         MachinePointerInfo(CI.getArgOperand(1)),
         MachineMemOperand::MOLoad | VolFlag, 1, SrcAlign));
@@ -1713,9 +1712,11 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                             MachineInstr::copyFlagsFromInstruction(CI));
     return true;
   case Intrinsic::memcpy:
+    return translateMemFunc(CI, MIRBuilder, TargetOpcode::G_MEMCPY);
   case Intrinsic::memmove:
+    return translateMemFunc(CI, MIRBuilder, TargetOpcode::G_MEMMOVE);
   case Intrinsic::memset:
-    return translateMemFunc(CI, MIRBuilder, ID);
+    return translateMemFunc(CI, MIRBuilder, TargetOpcode::G_MEMSET);
   case Intrinsic::eh_typeid_for: {
     GlobalValue *GV = ExtractTypeInfo(CI.getArgOperand(0));
     Register Reg = getOrCreateVReg(CI);

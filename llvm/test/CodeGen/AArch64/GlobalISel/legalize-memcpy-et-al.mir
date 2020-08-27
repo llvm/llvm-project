@@ -25,7 +25,7 @@ body:             |
     %1:_(p0) = COPY $x1
     %2:_(s32) = COPY $w2
     %3:_(s64) = G_ZEXT %2(s32)
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), %0(p0), %1(p0), %3(s64), 0
+    G_MEMCPY %0(p0), %1(p0), %3(s64), 0 :: (store unknown-size), (load unknown-size)
     RET_ReallyLR
 
 ...
@@ -50,7 +50,7 @@ body:             |
     %1:_(p0) = COPY $x1
     %2:_(s32) = COPY $w2
     %3:_(s64) = G_ZEXT %2(s32)
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), %0(p0), %1(p0), %3(s64), 1
+    G_MEMCPY %0(p0), %1(p0), %3(s64), 1 :: (store unknown-size), (load unknown-size)
     RET_ReallyLR
 
 ...
@@ -78,7 +78,7 @@ body:             |
     %1:_(p0) = COPY $x1
     %2:_(s32) = COPY $w2
     %3:_(s64) = G_ZEXT %2(s32)
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memmove), %0(p0), %1(p0), %3(s64), 0
+    G_MEMMOVE %0(p0), %1(p0), %3(s64), 0 :: (store unknown-size), (load unknown-size)
     RET_ReallyLR
 
 ...
@@ -108,7 +108,7 @@ body:             |
     %2:_(s32) = COPY $w2
     %3:_(s8) = G_TRUNC %1(s32)
     %4:_(s64) = G_ZEXT %2(s32)
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memset), %0(p0), %3(s8), %4(s64), 0
+    G_MEMSET %0(p0), %3(s8), %4(s64), 0 :: (store unknown-size)
     RET_ReallyLR
 
 ...
@@ -137,7 +137,7 @@ body:             |
     %1:_(p0) = COPY $x1
     %2:_(s32) = COPY $w2
     %3:_(s64) = G_ZEXT %2(s32)
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), %0(p0), %1(p0), %3(s64), 1
+    G_MEMCPY %0(p0), %1(p0), %3(s64), 1 :: (store unknown-size), (load unknown-size)
     $x0 = COPY %3
     RET_ReallyLR implicit $x0
 
@@ -166,5 +166,5 @@ body:             |
     %2:_(s32) = COPY $w2
     %4:_(s1) = G_CONSTANT i1 false
     %3:_(s64) = G_ZEXT %2(s32)
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), %0(p0), %1(p0), %3(s64), 1
+    G_MEMCPY %0(p0), %1(p0), %3(s64), 1 :: (store unknown-size), (load unknown-size)
     TCRETURNdi &memset, 0, csr_aarch64_aapcs, implicit $sp

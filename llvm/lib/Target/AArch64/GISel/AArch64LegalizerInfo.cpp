@@ -622,6 +622,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_DYN_STACKALLOC).lower();
 
+  getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
+
   computeTables();
   verify(*ST.getInstrInfo());
 }
@@ -706,19 +708,6 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(MachineInstr &MI,
 
 bool AArch64LegalizerInfo::legalizeIntrinsic(
   LegalizerHelper &Helper, MachineInstr &MI) const {
-  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
-  switch (MI.getIntrinsicID()) {
-  case Intrinsic::memcpy:
-  case Intrinsic::memset:
-  case Intrinsic::memmove:
-    if (createMemLibcall(MIRBuilder, *MIRBuilder.getMRI(), MI) ==
-        LegalizerHelper::UnableToLegalize)
-      return false;
-    MI.eraseFromParent();
-    return true;
-  default:
-    break;
-  }
   return true;
 }
 
