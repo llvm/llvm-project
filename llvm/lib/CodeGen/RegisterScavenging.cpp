@@ -154,25 +154,6 @@ void RegScavenger::determineKillsAndDefs() {
   }
 }
 
-void RegScavenger::unprocess() {
-  assert(Tracking && "Cannot unprocess because we're not tracking");
-
-  MachineInstr &MI = *MBBI;
-  if (!MI.isDebugInstr()) {
-    determineKillsAndDefs();
-
-    // Commit the changes.
-    setUnused(DefRegUnits);
-    setUsed(KillRegUnits);
-  }
-
-  if (MBBI == MBB->begin()) {
-    MBBI = MachineBasicBlock::iterator(nullptr);
-    Tracking = false;
-  } else
-    --MBBI;
-}
-
 void RegScavenger::forward() {
   // Move ptr forward.
   if (!Tracking) {
