@@ -29,7 +29,7 @@ struct X86_64 : TargetInfo {
                              const relocation_info &) const override;
   void relocateOne(uint8_t *loc, const Reloc &, uint64_t val) const override;
 
-  void writeStub(uint8_t *buf, const DylibSymbol &) const override;
+  void writeStub(uint8_t *buf, const macho::Symbol &) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
   void writeStubHelperEntry(uint8_t *buf, const DylibSymbol &,
                             uint64_t entryAddr) const override;
@@ -182,7 +182,7 @@ static constexpr uint8_t stub[] = {
     0xff, 0x25, 0, 0, 0, 0, // jmpq *__la_symbol_ptr(%rip)
 };
 
-void X86_64::writeStub(uint8_t *buf, const DylibSymbol &sym) const {
+void X86_64::writeStub(uint8_t *buf, const macho::Symbol &sym) const {
   memcpy(buf, stub, 2); // just copy the two nonzero bytes
   uint64_t stubAddr = in.stubs->addr + sym.stubsIndex * sizeof(stub);
   writeRipRelative(buf, stubAddr, sizeof(stub),
@@ -231,9 +231,23 @@ void X86_64::prepareSymbolRelocation(lld::macho::Symbol *sym,
     break;
   }
   case X86_64_RELOC_BRANCH: {
-    // TODO: weak dysyms should go into the weak binding section instead
-    if (auto *dysym = dyn_cast<DylibSymbol>(sym))
-      in.stubs->addEntry(dysym);
+    if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
+      if (in.stubs->addEntry(dysym)) {
+        if (sym->isWeakDef()) {
+          in.binding->addEntry(dysym, in.lazyPointers,
+                               sym->stubsIndex * WordSize);
+          in.weakBinding->addEntry(sym, in.lazyPointers,
+                                   sym->stubsIndex * WordSize);
+        } else {
+          in.lazyBinding->addEntry(dysym);
+        }
+      }
+    } else if (auto *defined = dyn_cast<Defined>(sym)) {
+      if (defined->isWeakDef() && defined->isExternal())
+        if (in.stubs->addEntry(sym))
+          in.weakBinding->addEntry(sym, in.lazyPointers,
+                                   sym->stubsIndex * WordSize);
+    }
     break;
   }
   case X86_64_RELOC_UNSIGNED: {
@@ -277,10 +291,11 @@ uint64_t X86_64::resolveSymbolVA(uint8_t *buf, const lld::macho::Symbol &sym,
   case X86_64_RELOC_GOT_LOAD:
   case X86_64_RELOC_GOT:
     return in.got->addr + sym.gotIndex * WordSize;
-  case X86_64_RELOC_BRANCH:
-    if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
-      return in.stubs->addr + dysym->stubsIndex * sizeof(stub);
+  case X86_64_RELOC_BRANCH: {
+    if (sym.isInStubs())
+      return in.stubs->addr + sym.stubsIndex * sizeof(stub);
     return sym.getVA();
+  }
   case X86_64_RELOC_UNSIGNED:
   case X86_64_RELOC_SIGNED:
   case X86_64_RELOC_SIGNED_1:

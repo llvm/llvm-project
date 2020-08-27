@@ -60,10 +60,15 @@ public:
   // Whether this symbol is in the GOT or TLVPointer sections.
   bool isInGot() const { return gotIndex != UINT32_MAX; }
 
+  // Whether this symbol is in the StubsSection.
+  bool isInStubs() const { return stubsIndex != UINT32_MAX; }
+
   // The index of this symbol in the GOT or the TLVPointer section, depending
   // on whether it is a thread-local. A given symbol cannot be referenced by
   // both these sections at once.
   uint32_t gotIndex = UINT32_MAX;
+
+  uint32_t stubsIndex = UINT32_MAX;
 
 protected:
   Symbol(Kind k, StringRefZ name) : symbolKind(k), name(name) {}
@@ -114,13 +119,13 @@ public:
       : Symbol(DylibKind, name), file(file), weakDef(isWeakDef), tlv(isTlv) {}
 
   bool isWeakDef() const override { return weakDef; }
-
   bool isTlv() const override { return tlv; }
+  bool hasStubsHelper() const { return stubsHelperIndex != UINT32_MAX; }
 
   static bool classof(const Symbol *s) { return s->kind() == DylibKind; }
 
   DylibFile *file;
-  uint32_t stubsIndex = UINT32_MAX;
+  uint32_t stubsHelperIndex = UINT32_MAX;
   uint32_t lazyBindOffset = UINT32_MAX;
 
 private:
