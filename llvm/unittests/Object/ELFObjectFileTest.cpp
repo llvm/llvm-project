@@ -14,13 +14,9 @@
 using namespace llvm;
 using namespace llvm::object;
 
-template <class ELFT>
-static Expected<ELFObjectFile<ELFT>> create(ArrayRef<uint8_t> Data) {
-  return ELFObjectFile<ELFT>::create(
-      MemoryBufferRef(toStringRef(Data), "Test buffer"));
-}
+namespace {
 
-// A class to initialize a buffer to represent an ELF object file.
+// A struct to initialize a buffer to represent an ELF object file.
 struct DataForTest {
   std::vector<uint8_t> Data;
 
@@ -59,69 +55,50 @@ struct DataForTest {
       Data = makeElfData<ELF::Elf64_Ehdr>(Class, Encoding, Machine);
     else {
       assert(Class == ELF::ELFCLASS32);
-      Data = makeElfData<ELF::Elf64_Ehdr>(Class, Encoding, Machine);
+      Data = makeElfData<ELF::Elf32_Ehdr>(Class, Encoding, Machine);
     }
   }
 };
 
+void checkFormatAndArch(const DataForTest &D, StringRef Fmt,
+                        Triple::ArchType Arch) {
+  Expected<std::unique_ptr<ObjectFile>> ELFObjOrErr =
+      object::ObjectFile::createELFObjectFile(
+          MemoryBufferRef(toStringRef(D.Data), "dummyELF"));
+  ASSERT_THAT_EXPECTED(ELFObjOrErr, Succeeded());
+
+  const ObjectFile &File = *(*ELFObjOrErr).get();
+  EXPECT_EQ(Fmt, File.getFileFormatName());
+  EXPECT_EQ(Arch, File.getArch());
+}
+
+} // namespace
+
 TEST(ELFObjectFileTest, MachineTestForVE) {
-  DataForTest Data(ELF::ELFCLASS64, ELF::ELFDATA2LSB, ELF::EM_VE);
-  auto ExpectedFile = create<ELF64LE>(Data.Data);
-  ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
-  const ELFObjectFile<ELF64LE> &File = *ExpectedFile;
-  EXPECT_EQ("elf64-ve", File.getFileFormatName());
-  EXPECT_EQ(Triple::ve, File.getArch());
+  checkFormatAndArch({ELF::ELFCLASS64, ELF::ELFDATA2LSB, ELF::EM_VE},
+                     "elf64-ve", Triple::ve);
 }
 
 TEST(ELFObjectFileTest, MachineTestForX86_64) {
-  DataForTest Data(ELF::ELFCLASS64, ELF::ELFDATA2LSB, ELF::EM_X86_64);
-  auto ExpectedFile = create<ELF64LE>(Data.Data);
-  ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
-  const ELFObjectFile<ELF64LE> &File = *ExpectedFile;
-  EXPECT_EQ("elf64-x86-64", File.getFileFormatName());
-  EXPECT_EQ(Triple::x86_64, File.getArch());
+  checkFormatAndArch({ELF::ELFCLASS64, ELF::ELFDATA2LSB, ELF::EM_X86_64},
+                     "elf64-x86-64", Triple::x86_64);
 }
 
 TEST(ELFObjectFileTest, MachineTestFor386) {
-  DataForTest Data(ELF::ELFCLASS32, ELF::ELFDATA2LSB, ELF::EM_386);
-  auto ExpectedFile = create<ELF32LE>(Data.Data);
-  ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
-  const ELFObjectFile<ELF32LE> &File = *ExpectedFile;
-  EXPECT_EQ("elf32-i386", File.getFileFormatName());
-  EXPECT_EQ(Triple::x86, File.getArch());
+  checkFormatAndArch({ELF::ELFCLASS32, ELF::ELFDATA2LSB, ELF::EM_386},
+                     "elf32-i386", Triple::x86);
 }
 
 TEST(ELFObjectFileTest, MachineTestForMIPS) {
-  {
-    DataForTest Data(ELF::ELFCLASS64, ELF::ELFDATA2LSB, ELF::EM_MIPS);
-    auto ExpectedFile = create<ELF64LE>(Data.Data);
-    ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
-    const ELFObjectFile<ELF64LE> &File = *ExpectedFile;
-    EXPECT_EQ("elf64-mips", File.getFileFormatName());
-    EXPECT_EQ(Triple::mips64el, File.getArch());
-  }
-  {
-    DataForTest Data(ELF::ELFCLASS64, ELF::ELFDATA2MSB, ELF::EM_MIPS);
-    auto ExpectedFile = create<ELF64BE>(Data.Data);
-    ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
-    const ELFObjectFile<ELF64BE> &File = *ExpectedFile;
-    EXPECT_EQ("elf64-mips", File.getFileFormatName());
-    EXPECT_EQ(Triple::mips64, File.getArch());
-  }
-  {
-    DataForTest Data(ELF::ELFCLASS32, ELF::ELFDATA2LSB, ELF::EM_MIPS);
-    auto ExpectedFile = create<ELF32LE>(Data.Data);
-    ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
-    const ELFObjectFile<ELF32LE> &File = *ExpectedFile;
-    EXPECT_EQ("elf32-mips", File.getFileFormatName());
-    EXPECT_EQ(Triple::mipsel, File.getArch());
-  }
-  {
-    DataForTest Data(ELF::ELFCLASS32, ELF::ELFDATA2MSB, ELF::EM_MIPS);
-    auto ExpectedFile = create<ELF32BE>(Data.Data);
-    ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
-    const ELFObjectFile<ELF32BE> &File = *ExpectedFile;
-    EXPECT_EQ("elf32-mips", File.getFileFormatName());
-    EXPECT_EQ(Triple::mips, File.getArch());
-  }
+  checkFormatAndArch({ELF::ELFCLASS64, ELF::ELFDATA2LSB, ELF::EM_MIPS},
+                     "elf64-mips", Triple::mips64el);
+
+  checkFormatAndArch({ELF::ELFCLASS64, ELF::ELFDATA2MSB, ELF::EM_MIPS},
+                     "elf64-mips", Triple::mips64);
+
+  checkFormatAndArch({ELF::ELFCLASS32, ELF::ELFDATA2LSB, ELF::EM_MIPS},
+                     "elf32-mips", Triple::mipsel);
+
+  checkFormatAndArch({ELF::ELFCLASS32, ELF::ELFDATA2MSB, ELF::EM_MIPS},
+                     "elf32-mips", Triple::mips);
 }
