@@ -1347,6 +1347,8 @@ ChangeStatus Attributor::run() {
 
 ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
   TimeTraceScope TimeScope(AA.getName() + "::updateAA");
+  assert(Phase == AttributorPhase::UPDATE &&
+         "We can update AA only in the update stage!");
 
   // Use a new dependence vector for this update.
   DependenceVector DV;
