@@ -5,10 +5,10 @@
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux %s -o %t
 # RUN: %lldb %t \
-# RUN:   -o "target variable udata data1 data2 data4 data8 string strp ref4" \
+# RUN:   -o "target variable udata data1 data2 data4 data8 string strp ref4 udata_ptr" \
 # RUN:   -o exit | FileCheck %s
 
-# CHECK-LABEL: target variable udata data1 data2 data4 data8 string strp ref4
+# CHECK-LABEL: target variable
 ## Variable specified via DW_FORM_udata. This is typical for clang (10).
 # CHECK: (unsigned long) udata = 4742474247424742
 ## Variables specified via fixed-size forms. This is typical for gcc (9).
@@ -22,6 +22,8 @@
 # CHECK: (char [7]) strp = "strp"
 ## Bogus attribute form. Let's make sure we don't crash at least.
 # CHECK: (char [7]) ref4 = <empty constant data>
+## A variable of pointer type.
+# CHECK: (unsigned long *) udata_ptr = 0xdeadbeefbaadf00d
 
         .section        .debug_abbrev,"",@progbits
         .byte   1                       # Abbreviation Code
@@ -31,6 +33,13 @@
         .byte   8                       # DW_FORM_string
         .byte   3                       # DW_AT_name
         .byte   8                       # DW_FORM_string
+        .byte   0                       # EOM(1)
+        .byte   0                       # EOM(2)
+        .byte   2                       # Abbreviation Code
+        .byte   15                      # DW_TAG_pointer_type
+        .byte   0                       # DW_CHILDREN_no
+        .byte   73                      # DW_AT_type
+        .byte   19                      # DW_FORM_ref4
         .byte   0                       # EOM(1)
         .byte   0                       # EOM(2)
         .byte   4                       # Abbreviation Code
@@ -109,6 +118,9 @@
         .asciz  "unsigned long"         # DW_AT_name
         .byte   8                       # DW_AT_byte_size
         .byte   7                       # DW_AT_encoding
+.Lulong_ptr:
+        .byte   2                       # Abbrev DW_TAG_pointer_type
+        .long   .Lulong-.Lcu_begin0     # DW_AT_type
 
         .byte   10                      # Abbrev DW_TAG_variable
         .asciz  "udata"                 # DW_AT_name
@@ -149,6 +161,11 @@
         .asciz  "ref4"                  # DW_AT_name
         .long   .Lchar_arr-.Lcu_begin0  # DW_AT_type
         .long   .Lulong-.Lcu_begin0     # DW_AT_const_value
+
+        .byte   10                      # Abbrev DW_TAG_variable
+        .asciz  "udata_ptr"             # DW_AT_name
+        .long   .Lulong_ptr-.Lcu_begin0 # DW_AT_type
+        .uleb128 0xdeadbeefbaadf00d     # DW_AT_const_value
 
         .byte   0                       # End Of Children Mark
 .Ldebug_info_end0:
