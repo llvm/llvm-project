@@ -561,6 +561,11 @@ void Writer::run() {
   if (in.stubHelper->isNeeded())
     in.stubHelper->setup();
 
+  for (const macho::Symbol *sym : symtab->getSymbols())
+    if (const auto *defined = dyn_cast<Defined>(sym))
+      if (defined->overridesWeakDef)
+        in.weakBinding->addNonWeakDefinition(defined);
+
   // Sort and assign sections to their respective segments. No more sections nor
   // segments may be created after these methods run.
   createOutputSections();

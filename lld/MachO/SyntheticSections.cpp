@@ -63,12 +63,10 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
   if (config->outputType == MachO::MH_DYLIB && !config->hasReexports)
     hdr->flags |= MachO::MH_NO_REEXPORTED_DYLIBS;
 
-  // TODO: ld64 also sets this flag if we have defined a non-weak symbol that
-  // overrides a weak symbol from an imported dylib.
-  if (in.exports->hasWeakSymbol)
+  if (in.exports->hasWeakSymbol || in.weakBinding->hasNonWeakDefinition())
     hdr->flags |= MachO::MH_WEAK_DEFINES;
 
-  if (in.exports->hasWeakSymbol || in.weakBinding->isNeeded())
+  if (in.exports->hasWeakSymbol || in.weakBinding->hasEntry())
     hdr->flags |= MachO::MH_BINDS_TO_WEAK;
 
   for (OutputSegment *seg : outputSegments) {
@@ -178,6 +176,14 @@ static void encodeDylibOrdinal(const DylibSymbol *dysym, Binding &lastBinding,
   }
 }
 
+static void encodeWeakOverride(const Defined *defined,
+                               raw_svector_ostream &os) {
+  using namespace llvm::MachO;
+  os << static_cast<uint8_t>(BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM |
+                             BIND_SYMBOL_FLAGS_NON_WEAK_DEFINITION)
+     << defined->getName() << '\0';
+}
+
 uint64_t BindingTarget::getVA() const {
   if (auto *isec = section.dyn_cast<const InputSection *>())
     return isec->getVA() + offset;
@@ -233,6 +239,9 @@ void WeakBindingSection::finalizeContents() {
   raw_svector_ostream os{contents};
   Binding lastBinding;
 
+  for (const Defined *defined : definitions)
+    encodeWeakOverride(defined, os);
+
   // Since bindings are delta-encoded, sorting them allows for a more compact
   // result.
   llvm::sort(bindings,
@@ -249,7 +258,7 @@ void WeakBindingSection::finalizeContents() {
                     lastBinding, os);
     }
   }
-  if (!bindings.empty())
+  if (!bindings.empty() || !definitions.empty())
     os << static_cast<uint8_t>(MachO::BIND_OPCODE_DONE);
 }
 
