@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -ferror-limit 100 -std=c++11 -o - %s -fopenmp-version=45 -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -ferror-limit 100 -std=c++11 -o - %s -fopenmp-version=50 -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -ferror-limit 100 -std=c++11 -o - %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -ferror-limit 100 -std=c++11 -o - %s -fopenmp-version=45 -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -ferror-limit 100 -std=c++11 -o - %s -fopenmp-version=50 -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -ferror-limit 100 -std=c++11 -o - %s -Wuninitialized
 
 void foo() {
 }

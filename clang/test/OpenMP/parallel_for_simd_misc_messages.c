@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45 %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=50 -verify=expected,omp50 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -verify=expected,omp50 %s -Wuninitialized
 
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -verify=expected,omp45 %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=50 -verify=expected,omp50 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -verify=expected,omp50 %s -Wuninitialized
 
 // expected-error@+1 {{unexpected OpenMP directive '#pragma omp parallel for simd'}}
 #pragma omp parallel for simd
