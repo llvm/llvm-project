@@ -2165,9 +2165,12 @@ raw_ostream &llvm::operator<<(raw_ostream &OS,
   OS << "set-state(< {";
   if (!S.isValidState())
     OS << "full-set";
-  else
+  else {
     for (auto &it : S.getAssumedSet())
       OS << it << ", ";
+    if (S.undefIsContained())
+      OS << "undef ";
+  }
   OS << "} >)";
 
   return OS;
