@@ -657,8 +657,8 @@ private:
 
     for (Function *F : SCC) {
       for (auto DeduplicableRuntimeCallID : DeduplicableRuntimeCallIDs)
-        deduplicateRuntimeCalls(*F,
-                                OMPInfoCache.RFIs[DeduplicableRuntimeCallID]);
+        Changed |= deduplicateRuntimeCalls(
+            *F, OMPInfoCache.RFIs[DeduplicableRuntimeCallID]);
 
       // __kmpc_global_thread_num is special as we can replace it with an
       // argument in enough cases to make it worth trying.
