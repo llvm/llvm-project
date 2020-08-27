@@ -252,25 +252,43 @@ define <64 x i16> @mpyh_128(<64 x i16> %v0, <64 x i16> %v1) #1 {
   ret <64 x i16> %p
 }
 
-; CHECK-LABEL: mpyw_64:
+; CHECK-LABEL: mpyw_64_v60:
 ; CHECK-DAG: r[[T00:[0-9]+]] = #16
 ; CHECK-DAG: v[[T01:[0-9]+]].w = vmpyio(v0.w,v1.h)
 ; CHECK:     v[[T02:[0-9]+]].w = vasl(v[[T01]].w,r[[T00]])
 ; CHECK:     v[[T02]].w += vmpyie(v0.w,v1.uh)
-define <16 x i32> @mpyw_64(<16 x i32> %v0, <16 x i32> %v1) #0 {
+define <16 x i32> @mpyw_64_v60(<16 x i32> %v0, <16 x i32> %v1) #0 {
   %p = mul <16 x i32> %v0, %v1
   ret <16 x i32> %p
 }
 
-; CHECK-LABEL: mpyw_128:
+; CHECK-LABEL: mpyw_128_v60:
 ; CHECK-DAG: r[[T10:[0-9]+]] = #16
 ; CHECK-DAG: v[[T11:[0-9]+]].w = vmpyio(v0.w,v1.h)
 ; CHECK:     v[[T12:[0-9]+]].w = vasl(v[[T11]].w,r[[T10]])
 ; CHECK:     v[[T12]].w += vmpyie(v0.w,v1.uh)
-define <32 x i32> @mpyw_128(<32 x i32> %v0, <32 x i32> %v1) #1 {
+define <32 x i32> @mpyw_128_v60(<32 x i32> %v0, <32 x i32> %v1) #1 {
+  %p = mul <32 x i32> %v0, %v1
+  ret <32 x i32> %p
+}
+
+; CHECK-LABEL: mpyw_64_v62:
+; CHECK: v[[T00:[0-9]+]]:[[T01:[0-9]+]] = vmpye(v0.w,v1.uh)
+; CHECK: v[[T00]]:[[T01]] += vmpyo(v0.w,v1.h)
+define <16 x i32> @mpyw_64_v62(<16 x i32> %v0, <16 x i32> %v1) #3 {
+  %p = mul <16 x i32> %v0, %v1
+  ret <16 x i32> %p
+}
+
+; CHECK-LABEL: mpyw_128_v62:
+; CHECK: v[[T00:[0-9]+]]:[[T01:[0-9]+]] = vmpye(v0.w,v1.uh)
+; CHECK: v[[T00]]:[[T01]] += vmpyo(v0.w,v1.h)
+define <32 x i32> @mpyw_128_v62(<32 x i32> %v0, <32 x i32> %v1) #4 {
   %p = mul <32 x i32> %v0, %v1
   ret <32 x i32> %p
 }
 
 attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length64b" }
 attributes #1 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length128b" }
+attributes #3 = { nounwind "target-cpu"="hexagonv62" "target-features"="+hvxv62,+hvx-length64b" }
+attributes #4 = { nounwind "target-cpu"="hexagonv62" "target-features"="+hvxv62,+hvx-length128b" }
