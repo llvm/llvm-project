@@ -2057,7 +2057,7 @@ public:
   /// Example: shufflevector <2 x n> A, <2 x n> B, <1,2,3>
   bool increasesLength() const {
     unsigned NumSourceElts =
-        cast<VectorType>(Op<0>()->getType())->getNumElements();
+        cast<FixedVectorType>(Op<0>()->getType())->getNumElements();
     unsigned NumMaskElts = ShuffleMask.size();
     return NumSourceElts < NumMaskElts;
   }
@@ -2250,7 +2250,8 @@ public:
 
   /// Return true if this shuffle mask is an extract subvector mask.
   bool isExtractSubvectorMask(int &Index) const {
-    int NumSrcElts = cast<VectorType>(Op<0>()->getType())->getNumElements();
+    int NumSrcElts =
+        cast<FixedVectorType>(Op<0>()->getType())->getNumElements();
     return isExtractSubvectorMask(ShuffleMask, NumSrcElts, Index);
   }
 
