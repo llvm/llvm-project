@@ -84,7 +84,7 @@ at the moment. Hence, we adhere to the following mapping:
     size of the previous struct elements) are **not** supported. In this case,
     offsets can be emulated with padding fields (*e.g.* integers). However, such
     a design would require index recalculation in the conversion of ops that
-    involve memmory addressing.
+    involve memory addressing.
 
 Examples of SPIR-V struct conversion are:
 ```mlir
@@ -204,7 +204,7 @@ to note:
     be:
 
     ```mlir
-    // Zero extending offest after broadcasting
+    // Zero extending offset after broadcasting
     %res_offset = llvm.zext %vec_offset: !llvm.vec<2 x i8> to !llvm.vec<2 x i32>
     ```
 
@@ -515,7 +515,7 @@ Also, at the moment initialization is only possible via `spv.constant`.
                                                                llvm.store %c, %res : !llvm.ptr<i64>
 ```
 
-Note that simple conversion to `alloca` may not be sufficent if the code has
+Note that simple conversion to `alloca` may not be sufficient if the code has
 some scoping. For example, if converting ops executed in a loop into `alloca`s,
 a stack overflow may occur. For this case, `stacksave`/`stackrestore` pair can
 be used (TODO).
@@ -618,7 +618,7 @@ As well as:
 
 `spv.Branch` and `spv.BranchConditional` are mapped to `llvm.br` and
 `llvm.cond_br`. Branch weigths for `spv.BranchConditional` are mapped to
-coresponding `branch_weights` attribute of `llvm.cond_br`. When translated to
+corresponding `branch_weights` attribute of `llvm.cond_br`. When translated to
 proper LLVM, `branch_weights` are converted into LLVM metadata associated with
 the conditional branch.
 
@@ -744,7 +744,7 @@ to LLVM dialect.
 
 ### `spv.func`
 This op declares or defines a SPIR-V function and it is converted to `llvm.func`.
-This conversion handles signarture conversion, and function control attributes
+This conversion handles signature conversion, and function control attributes
 remapping to LLVM dialect function [`passthrough` attribute](Dialects/LLVM.md#Attribute-pass-through).
 
 The following mapping is used to map [SPIR-V function control](SPIRVFunctionAttributes) to
