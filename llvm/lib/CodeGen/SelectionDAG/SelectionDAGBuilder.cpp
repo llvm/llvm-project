@@ -409,7 +409,7 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
       // as appropriate.
       for (unsigned i = 0; i != NumParts; ++i)
         Ops[i] = getCopyFromParts(DAG, DL, &Parts[i], 1,
-                                  PartVT, IntermediateVT, V);
+                                  PartVT, IntermediateVT, V, CallConv);
     } else if (NumParts > 0) {
       // If the intermediate type was expanded, build the intermediate
       // operands from the parts.
@@ -418,7 +418,7 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
       unsigned Factor = NumParts / NumIntermediates;
       for (unsigned i = 0; i != NumIntermediates; ++i)
         Ops[i] = getCopyFromParts(DAG, DL, &Parts[i * Factor], Factor,
-                                  PartVT, IntermediateVT, V);
+                                  PartVT, IntermediateVT, V, CallConv);
     }
 
     // Build a vector with BUILD_VECTOR or CONCAT_VECTORS from the
