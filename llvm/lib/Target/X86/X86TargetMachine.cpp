@@ -254,8 +254,9 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
 
   // Extract prefer-vector-width attribute.
   unsigned PreferVectorWidthOverride = 0;
-  if (F.hasFnAttribute("prefer-vector-width")) {
-    StringRef Val = F.getFnAttribute("prefer-vector-width").getValueAsString();
+  Attribute PreferVecWidthAttr = F.getFnAttribute("prefer-vector-width");
+  if (!PreferVecWidthAttr.hasAttribute(Attribute::None)) {
+    StringRef Val = PreferVecWidthAttr.getValueAsString();
     unsigned Width;
     if (!Val.getAsInteger(0, Width)) {
       Key += "prefer-vector-width=";
@@ -266,9 +267,9 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
 
   // Extract min-legal-vector-width attribute.
   unsigned RequiredVectorWidth = UINT32_MAX;
-  if (F.hasFnAttribute("min-legal-vector-width")) {
-    StringRef Val =
-        F.getFnAttribute("min-legal-vector-width").getValueAsString();
+  Attribute MinLegalVecWidthAttr = F.getFnAttribute("min-legal-vector-width");
+  if (!MinLegalVecWidthAttr.hasAttribute(Attribute::None)) {
+    StringRef Val = MinLegalVecWidthAttr.getValueAsString();
     unsigned Width;
     if (!Val.getAsInteger(0, Width)) {
       Key += "min-legal-vector-width=";
