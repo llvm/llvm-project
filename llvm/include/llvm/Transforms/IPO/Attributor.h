@@ -969,6 +969,7 @@ struct Attributor {
   /// attribute. Using this after Attributor started running is restricted to
   /// only the Attributor itself. Initial seeding of AAs can be done via this
   /// function.
+  /// NOTE: ForceUpdate is ignored in any stage other than the update stage.
   template <typename AAType>
   const AAType &getOrCreateAAFor(const IRPosition &IRP,
                                  const AbstractAttribute *QueryingAA = nullptr,
@@ -976,7 +977,7 @@ struct Attributor {
                                  DepClassTy DepClass = DepClassTy::OPTIONAL,
                                  bool ForceUpdate = false) {
     if (AAType *AAPtr = lookupAAFor<AAType>(IRP, QueryingAA, TrackDependence)) {
-      if (ForceUpdate)
+      if (ForceUpdate && Phase == AttributorPhase::UPDATE)
         updateAA(*AAPtr);
       return *AAPtr;
     }
@@ -1016,6 +1017,13 @@ struct Attributor {
     // not call update because that would again spawn new abstract attributes in
     // potentially unconnected code regions (=SCCs).
     if (FnScope && !Functions.count(const_cast<Function *>(FnScope))) {
+      AA.getState().indicatePessimisticFixpoint();
+      return AA;
+    }
+
+    // If this is queried in the manifest stage, we force the AA to indicate
+    // pessimistic fixpoint immediately.
+    if (Phase == AttributorPhase::MANIFEST) {
       AA.getState().indicatePessimisticFixpoint();
       return AA;
     }
