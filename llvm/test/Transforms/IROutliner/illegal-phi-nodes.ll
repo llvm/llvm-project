@@ -10,7 +10,7 @@ define void @function1(i32* %a, i32* %b) {
 ; CHECK-NEXT:    br label [[FIRST:%.*]]
 ; CHECK:       first:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 3, [[NEXT:%.*]] ]
-; CHECK-NEXT:    call void @function1.outlined(i32* [[A:%.*]], i32* [[B:%.*]])
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A:%.*]], i32* [[B:%.*]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       next:
 ; CHECK-NEXT:    br label [[FIRST]]
@@ -32,7 +32,7 @@ define void @function2(i32* %a, i32* %b) {
 ; CHECK-NEXT:    br label [[FIRST:%.*]]
 ; CHECK:       first:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 3, [[NEXT:%.*]] ]
-; CHECK-NEXT:    call void @function2.outlined(i32* [[A:%.*]], i32* [[B:%.*]])
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A:%.*]], i32* [[B:%.*]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       next:
 ; CHECK-NEXT:    br label [[FIRST]]
