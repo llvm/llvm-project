@@ -16,6 +16,7 @@
 #include "OutputSegment.h"
 #include "Target.h"
 
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -113,7 +114,7 @@ public:
 
   void writeTo(uint8_t *buf) const override;
 
-  void addEntry(Symbol &sym);
+  void addEntry(Symbol *sym);
 
 private:
   llvm::SetVector<const Symbol *> entries;
@@ -136,14 +137,20 @@ public:
                                   section_names::threadPtrs) {}
 };
 
+using SectionPointerUnion =
+    llvm::PointerUnion<const InputSection *, const OutputSection *>;
+
 struct BindingEntry {
   const DylibSymbol *dysym;
-  const InputSection *isec;
+  SectionPointerUnion section;
   uint64_t offset;
   int64_t addend;
-  BindingEntry(const DylibSymbol *dysym, const InputSection *isec,
+
+  BindingEntry(const DylibSymbol *dysym, SectionPointerUnion section,
                uint64_t offset, int64_t addend)
-      : dysym(dysym), isec(isec), offset(offset), addend(addend) {}
+      : dysym(dysym), section(section), offset(offset), addend(addend) {}
+
+  uint64_t getVA() const;
 };
 
 // Stores bind opcodes for telling dyld which symbols to load non-lazily.
@@ -156,12 +163,12 @@ public:
   // offsets are recorded in the LC_DYLD_INFO_ONLY load command, instead of in
   // section headers.
   bool isHidden() const override { return true; }
-  bool isNeeded() const override;
+  bool isNeeded() const override { return !bindings.empty(); }
   void writeTo(uint8_t *buf) const override;
 
-  void addEntry(const DylibSymbol *dysym, const InputSection *isec,
-                uint64_t offset, int64_t addend) {
-    bindings.emplace_back(dysym, isec, offset, addend);
+  void addEntry(const DylibSymbol *dysym, SectionPointerUnion section,
+                uint64_t offset, int64_t addend = 0) {
+    bindings.emplace_back(dysym, section, offset, addend);
   }
 
 private:
@@ -200,7 +207,7 @@ public:
 
   const llvm::SetVector<DylibSymbol *> &getEntries() const { return entries; }
 
-  void addEntry(DylibSymbol &sym);
+  void addEntry(DylibSymbol *sym);
 
 private:
   llvm::SetVector<DylibSymbol *> entries;

@@ -314,7 +314,7 @@ void Writer::scanRelocations() {
           error("undefined symbol " + s->getName() + ", referenced from " +
                 sys::path::filename(isec->file->getName()));
         else
-          target->prepareSymbolRelocation(*s, isec, r);
+          target->prepareSymbolRelocation(s, isec, r);
       }
     }
   }
