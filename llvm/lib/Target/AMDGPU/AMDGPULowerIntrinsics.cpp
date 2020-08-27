@@ -124,7 +124,6 @@ bool AMDGPULowerIntrinsics::makeLIDRangeMetadata(Function &F) const {
     return false;
 
   const TargetMachine &TM = TPC->getTM<TargetMachine>();
-  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
   bool Changed = false;
 
   for (auto *U : F.users()) {
@@ -132,6 +131,8 @@ bool AMDGPULowerIntrinsics::makeLIDRangeMetadata(Function &F) const {
     if (!CI)
       continue;
 
+    Function *Caller = CI->getParent()->getParent();
+    const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, *Caller);
     Changed |= ST.makeLIDRangeMetadata(CI);
   }
   return Changed;
