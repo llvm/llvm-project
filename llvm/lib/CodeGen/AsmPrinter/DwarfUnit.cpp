@@ -1417,8 +1417,10 @@ static bool hasVectorBeenPadded(const DICompositeType *CTy) {
          Elements[0]->getTag() == dwarf::DW_TAG_subrange_type &&
          "Invalid vector element array, expected one element of type subrange");
   const auto Subrange = cast<DISubrange>(Elements[0]);
-  const auto CI = Subrange->getCount().get<ConstantInt *>();
-  const int32_t NumVecElements = CI->getSExtValue();
+  const auto NumVecElements =
+      Subrange->getCount()
+          ? Subrange->getCount().get<ConstantInt *>()->getSExtValue()
+          : 0;
 
   // Ensure we found the element count and that the actual size is wide
   // enough to contain the requested size.
