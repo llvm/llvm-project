@@ -111,11 +111,28 @@ static cl::opt<unsigned>
     MemorySSAScanLimit("dse-memoryssa-scanlimit", cl::init(150), cl::Hidden,
                        cl::desc("The number of memory instructions to scan for "
                                 "dead store elimination (default = 100)"));
+static cl::opt<unsigned> MemorySSAUpwardsStepLimit(
+    "dse-memoryssa-walklimit", cl::init(70), cl::Hidden,
+    cl::desc("The maximum number of steps while walking upwards to find "
+             "MemoryDefs that may be killed (default = 70)"));
 
 static cl::opt<unsigned> MemorySSADefsPerBlockLimit(
     "dse-memoryssa-defs-per-block-limit", cl::init(5000), cl::Hidden,
     cl::desc("The number of MemoryDefs we consider as candidates to eliminated "
              "other stores per basic block (default = 5000)"));
+
+static cl::opt<unsigned> MemorySSASameBBStepCost(
+    "dse-memoryssa-samebb-cost", cl::init(1), cl::Hidden,
+    cl::desc(
+        "The cost of a step in the same basic block as the killing MemoryDef"
+        "(default = 1)"));
+
+static cl::opt<unsigned>
+    MemorySSAOtherBBStepCost("dse-memoryssa-otherbb-cost", cl::init(5),
+                             cl::Hidden,
+                             cl::desc("The cost of a step in a different basic "
+                                      "block than the killing MemoryDef"
+                                      "(default = 5)"));
 
 static cl::opt<unsigned> MemorySSAPathCheckLimit(
     "dse-memoryssa-path-check-limit", cl::init(50), cl::Hidden,
@@ -1442,16 +1459,17 @@ namespace {
 // in between both MemoryDefs. A bit more concretely:
 //
 // For all MemoryDefs StartDef:
-// 1. Get the next dominating clobbering MemoryDef (DomAccess) by walking
+// 1. Get the next dominating clobbering MemoryDef (EarlierAccess) by walking
 //    upwards.
-// 2. Check that there are no reads between DomAccess and the StartDef by
-//    checking all uses starting at DomAccess and walking until we see StartDef.
-// 3. For each found DomDef, check that:
-//   1. There are no barrier instructions between DomDef and StartDef (like
+// 2. Check that there are no reads between EarlierAccess and the StartDef by
+//    checking all uses starting at EarlierAccess and walking until we see
+//    StartDef.
+// 3. For each found EarlierDef, check that:
+//   1. There are no barrier instructions between EarlierDef and StartDef (like
 //       throws or stores with ordering constraints).
-//   2. StartDef is executed whenever DomDef is executed.
-//   3. StartDef completely overwrites DomDef.
-// 4. Erase DomDef from the function and MemorySSA.
+//   2. StartDef is executed whenever EarlierDef is executed.
+//   3. StartDef completely overwrites EarlierDef.
+// 4. Erase EarlierDef from the function and MemorySSA.
 
 // Returns true if \p M is an intrisnic that does not read or write memory.
 bool isNoopIntrinsic(MemoryUseOrDef *M) {
@@ -1792,13 +1810,12 @@ struct DSEState {
   Optional<MemoryAccess *>
   getDomMemoryDef(MemoryDef *KillingDef, MemoryAccess *Current,
                   MemoryLocation DefLoc, const Value *DefUO, CheckCache &Cache,
-                  unsigned &ScanLimit) {
-    if (ScanLimit == 0) {
+                  unsigned &ScanLimit, unsigned &WalkerStepLimit) {
+    if (ScanLimit == 0 || WalkerStepLimit == 0) {
       LLVM_DEBUG(dbgs() << "\n    ...  hit scan limit\n");
       return None;
     }
 
-    MemoryAccess *DomAccess;
     MemoryAccess *StartAccess = Current;
     bool StepAgain;
     LLVM_DEBUG(dbgs() << "  trying to get dominating access for " << *Current
@@ -1810,42 +1827,42 @@ struct DSEState {
       if (MSSA.isLiveOnEntryDef(Current))
         return None;
 
-      if (isa<MemoryPhi>(Current)) {
-        DomAccess = Current;
-        break;
-      }
-      MemoryUseOrDef *CurrentUD = cast<MemoryUseOrDef>(Current);
-      // Look for access that clobber DefLoc.
-      DomAccess = MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(CurrentUD,
-                                                                      DefLoc);
-      if (MSSA.isLiveOnEntryDef(DomAccess))
+      // Cost of a step. Accesses in the same block are more likely to be valid
+      // candidates for elimination, hence consider them cheaper.
+      unsigned StepCost = KillingDef->getBlock() == Current->getBlock()
+                              ? MemorySSASameBBStepCost
+                              : MemorySSAOtherBBStepCost;
+      if (WalkerStepLimit <= StepCost)
         return None;
+      WalkerStepLimit -= StepCost;
 
-      if (isa<MemoryPhi>(DomAccess))
+      if (isa<MemoryPhi>(Current))
         break;
 
-      // Check if we can skip DomDef for DSE.
-      MemoryDef *DomDef = dyn_cast<MemoryDef>(DomAccess);
-      if (DomDef && canSkipDef(DomDef, !isInvisibleToCallerBeforeRet(DefUO))) {
+      // Check if we can skip EarlierDef for DSE.
+      MemoryDef *CurrentDef = dyn_cast<MemoryDef>(Current);
+      if (CurrentDef &&
+          canSkipDef(CurrentDef, !isInvisibleToCallerBeforeRet(DefUO))) {
         StepAgain = true;
-        Current = DomDef->getDefiningAccess();
+        Current = CurrentDef->getDefiningAccess();
       }
-
     } while (StepAgain);
 
+    MemoryAccess *EarlierAccess = Current;
     // Accesses to objects accessible after the function returns can only be
     // eliminated if the access is killed along all paths to the exit. Collect
     // the blocks with killing (=completely overwriting MemoryDefs) and check if
-    // they cover all paths from DomAccess to any function exit.
+    // they cover all paths from EarlierAccess to any function exit.
     SmallPtrSet<Instruction *, 16> KillingDefs;
     KillingDefs.insert(KillingDef->getMemoryInst());
-    Instruction *DomMemInst = isa<MemoryDef>(DomAccess)
-                                  ? cast<MemoryDef>(DomAccess)->getMemoryInst()
-                                  : nullptr;
+    Instruction *EarlierMemInst =
+        isa<MemoryDef>(EarlierAccess)
+            ? cast<MemoryDef>(EarlierAccess)->getMemoryInst()
+            : nullptr;
     LLVM_DEBUG({
-      dbgs() << "  Checking for reads of " << *DomAccess;
-      if (DomMemInst)
-        dbgs() << " (" << *DomMemInst << ")\n";
+      dbgs() << "  Checking for reads of " << *EarlierAccess;
+      if (EarlierMemInst)
+        dbgs() << " (" << *EarlierMemInst << ")\n";
       else
         dbgs() << ")\n";
     });
@@ -1855,14 +1872,14 @@ struct DSEState {
       for (Use &U : Acc->uses())
         WorkList.insert(cast<MemoryAccess>(U.getUser()));
     };
-    PushMemUses(DomAccess);
+    PushMemUses(EarlierAccess);
 
     // Optimistically collect all accesses for reads. If we do not find any
     // read clobbers, add them to the cache.
     SmallPtrSet<MemoryAccess *, 16> KnownNoReads;
-    if (!DomMemInst || !DomMemInst->mayReadFromMemory())
-      KnownNoReads.insert(DomAccess);
-    // Check if DomDef may be read.
+    if (!EarlierMemInst || !EarlierMemInst->mayReadFromMemory())
+      KnownNoReads.insert(EarlierAccess);
+    // Check if EarlierDef may be read.
     for (unsigned I = 0; I < WorkList.size(); I++) {
       MemoryAccess *UseAccess = WorkList[I];
 
@@ -1928,15 +1945,15 @@ struct DSEState {
         LLVM_DEBUG(dbgs() << "    ... found read clobber\n");
         Cache.KnownReads.insert(UseAccess);
         Cache.KnownReads.insert(StartAccess);
-        Cache.KnownReads.insert(DomAccess);
+        Cache.KnownReads.insert(EarlierAccess);
         return None;
       }
 
-      // For the KillingDef and DomAccess we only have to check if it reads the
-      // memory location.
+      // For the KillingDef and EarlierAccess we only have to check if it reads
+      // the memory location.
       // TODO: It would probably be better to check for self-reads before
       // calling the function.
-      if (KillingDef == UseAccess || DomAccess == UseAccess) {
+      if (KillingDef == UseAccess || EarlierAccess == UseAccess) {
         LLVM_DEBUG(dbgs() << "    ... skipping killing def/dom access\n");
         continue;
       }
@@ -1945,7 +1962,7 @@ struct DSEState {
       // the original location. Otherwise we have to check uses of *all*
       // MemoryDefs we discover, including non-aliasing ones. Otherwise we might
       // miss cases like the following
-      //   1 = Def(LoE) ; <----- DomDef stores [0,1]
+      //   1 = Def(LoE) ; <----- EarlierDef stores [0,1]
       //   2 = Def(1)   ; (2, 1) = NoAlias,   stores [2,3]
       //   Use(2)       ; MayAlias 2 *and* 1, loads [0, 3].
       //                  (The Use points to the *first* Def it may alias)
@@ -1953,10 +1970,11 @@ struct DSEState {
       //                  stores [0,1]
       if (MemoryDef *UseDef = dyn_cast<MemoryDef>(UseAccess)) {
         if (isCompleteOverwrite(DefLoc, UseInst)) {
-          if (!isInvisibleToCallerAfterRet(DefUO) && UseAccess != DomAccess) {
+          if (!isInvisibleToCallerAfterRet(DefUO) &&
+              UseAccess != EarlierAccess) {
             BasicBlock *MaybeKillingBlock = UseInst->getParent();
             if (PostOrderNumbers.find(MaybeKillingBlock)->second <
-                PostOrderNumbers.find(DomAccess->getBlock())->second) {
+                PostOrderNumbers.find(EarlierAccess->getBlock())->second) {
 
               LLVM_DEBUG(dbgs()
                          << "    ... found killing def " << *UseInst << "\n");
@@ -1969,8 +1987,8 @@ struct DSEState {
     }
 
     // For accesses to locations visible after the function returns, make sure
-    // that the location is killed (=overwritten) along all paths from DomAccess
-    // to the exit.
+    // that the location is killed (=overwritten) along all paths from
+    // EarlierAccess to the exit.
     if (!isInvisibleToCallerAfterRet(DefUO)) {
       SmallPtrSet<BasicBlock *, 16> KillingBlocks;
       for (Instruction *KD : KillingDefs)
@@ -1988,22 +2006,23 @@ struct DSEState {
       }
 
       // If CommonPred is in the set of killing blocks, just check if it
-      // post-dominates DomAccess.
+      // post-dominates EarlierAccess.
       if (KillingBlocks.count(CommonPred)) {
-        if (PDT.dominates(CommonPred, DomAccess->getBlock()))
-          return {DomAccess};
+        if (PDT.dominates(CommonPred, EarlierAccess->getBlock()))
+          return {EarlierAccess};
         return None;
       }
 
-      // If the common post-dominator does not post-dominate DomAccess, there
-      // is a path from DomAccess to an exit not going through a killing block.
-      if (PDT.dominates(CommonPred, DomAccess->getBlock())) {
+      // If the common post-dominator does not post-dominate EarlierAccess,
+      // there is a path from EarlierAccess to an exit not going through a
+      // killing block.
+      if (PDT.dominates(CommonPred, EarlierAccess->getBlock())) {
         SetVector<BasicBlock *> WorkList;
 
-        // DomAccess's post-order number provides an upper bound of the blocks
-        // on a path starting at DomAccess.
+        // EarlierAccess's post-order number provides an upper bound of the
+        // blocks on a path starting at EarlierAccess.
         unsigned UpperBound =
-            PostOrderNumbers.find(DomAccess->getBlock())->second;
+            PostOrderNumbers.find(EarlierAccess->getBlock())->second;
 
         // If CommonPred is null, there are multiple exits from the function.
         // They all have to be added to the worklist.
@@ -2015,22 +2034,22 @@ struct DSEState {
 
         NumCFGTries++;
         // Check if all paths starting from an exit node go through one of the
-        // killing blocks before reaching DomAccess.
+        // killing blocks before reaching EarlierAccess.
         for (unsigned I = 0; I < WorkList.size(); I++) {
           NumCFGChecks++;
           BasicBlock *Current = WorkList[I];
           if (KillingBlocks.count(Current))
             continue;
-          if (Current == DomAccess->getBlock())
+          if (Current == EarlierAccess->getBlock())
             return None;
 
-          // DomAccess is reachable from the entry, so we don't have to explore
-          // unreachable blocks further.
+          // EarlierAccess is reachable from the entry, so we don't have to
+          // explore unreachable blocks further.
           if (!DT.isReachableFromEntry(Current))
             continue;
 
           unsigned CPO = PostOrderNumbers.find(Current)->second;
-          // Current block is not on a path starting at DomAccess.
+          // Current block is not on a path starting at EarlierAccess.
           if (CPO > UpperBound)
             continue;
           for (BasicBlock *Pred : predecessors(Current))
@@ -2040,14 +2059,15 @@ struct DSEState {
             return None;
         }
         NumCFGSuccess++;
-        return {DomAccess};
+        return {EarlierAccess};
       }
       return None;
     }
 
-    // No aliasing MemoryUses of DomAccess found, DomAccess is potentially dead.
+    // No aliasing MemoryUses of EarlierAccess found, EarlierAccess is
+    // potentially dead.
     Cache.KnownNoReads.insert(KnownNoReads.begin(), KnownNoReads.end());
-    return {DomAccess};
+    return {EarlierAccess};
   }
 
   // Delete dead memory defs
@@ -2248,6 +2268,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
                       << *KillingDef << " (" << *SI << ")\n");
 
     unsigned ScanLimit = MemorySSAScanLimit;
+    unsigned WalkerStepLimit = MemorySSAUpwardsStepLimit;
     // Worklist of MemoryAccesses that may be killed by KillingDef.
     SetVector<MemoryAccess *> ToCheck;
     ToCheck.insert(KillingDef->getDefiningAccess());
@@ -2259,22 +2280,23 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
       if (State.SkipStores.count(Current))
         continue;
 
-      Optional<MemoryAccess *> Next = State.getDomMemoryDef(
-          KillingDef, Current, SILoc, SILocUnd, Cache, ScanLimit);
+      Optional<MemoryAccess *> Next =
+          State.getDomMemoryDef(KillingDef, Current, SILoc, SILocUnd, Cache,
+                                ScanLimit, WalkerStepLimit);
 
       if (!Next) {
         LLVM_DEBUG(dbgs() << "  finished walk\n");
         continue;
       }
 
-      MemoryAccess *DomAccess = *Next;
-      LLVM_DEBUG(dbgs() << " Checking if we can kill " << *DomAccess);
-      if (isa<MemoryPhi>(DomAccess)) {
+      MemoryAccess *EarlierAccess = *Next;
+      LLVM_DEBUG(dbgs() << " Checking if we can kill " << *EarlierAccess);
+      if (isa<MemoryPhi>(EarlierAccess)) {
         LLVM_DEBUG(dbgs() << "\n  ... adding incoming values to worklist\n");
-        for (Value *V : cast<MemoryPhi>(DomAccess)->incoming_values()) {
+        for (Value *V : cast<MemoryPhi>(EarlierAccess)->incoming_values()) {
           MemoryAccess *IncomingAccess = cast<MemoryAccess>(V);
           BasicBlock *IncomingBlock = IncomingAccess->getBlock();
-          BasicBlock *PhiBlock = DomAccess->getBlock();
+          BasicBlock *PhiBlock = EarlierAccess->getBlock();
 
           // We only consider incoming MemoryAccesses that come before the
           // MemoryPhi. Otherwise we could discover candidates that do not
@@ -2285,7 +2307,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
         }
         continue;
       }
-      MemoryDef *NextDef = dyn_cast<MemoryDef>(DomAccess);
+      MemoryDef *NextDef = dyn_cast<MemoryDef>(EarlierAccess);
       Instruction *NI = NextDef->getMemoryInst();
       LLVM_DEBUG(dbgs() << " (" << *NI << ")\n");
 
