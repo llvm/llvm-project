@@ -78,7 +78,7 @@ protected:
   bool EnablePromoteAlloca;
   bool HasTrigReducedRange;
   unsigned MaxWavesPerEU;
-  int LocalMemorySize;
+  unsigned LocalMemorySize;
   char WavefrontSizeLog2;
 
 public:
@@ -202,7 +202,7 @@ public:
     return WavefrontSizeLog2;
   }
 
-  int getLocalMemorySize() const {
+  unsigned getLocalMemorySize() const {
     return LocalMemorySize;
   }
 
