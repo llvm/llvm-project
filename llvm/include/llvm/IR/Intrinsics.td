@@ -1353,28 +1353,26 @@ def int_masked_store : Intrinsic<[], [llvm_anyvector_ty,
                                       LLVMAnyPointerType<LLVMMatchType<0>>,
                                       llvm_i32_ty,
                                       LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
-                                 [IntrArgMemOnly, IntrWillReturn,
-                                  NoUndef<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+                                 [IntrArgMemOnly, IntrWillReturn, ImmArg<ArgIndex<2>>]>;
 
 def int_masked_load  : Intrinsic<[llvm_anyvector_ty],
                                  [LLVMAnyPointerType<LLVMMatchType<0>>, llvm_i32_ty,
                                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
                                  [IntrReadMem, IntrArgMemOnly, IntrWillReturn,
-                                  NoUndef<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
+                                  ImmArg<ArgIndex<1>>]>;
 
 def int_masked_gather: Intrinsic<[llvm_anyvector_ty],
                                  [LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
                                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                   LLVMMatchType<0>],
                                  [IntrReadMem, IntrWillReturn,
-                                  NoUndef<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
+                                  ImmArg<ArgIndex<1>>]>;
 
 def int_masked_scatter: Intrinsic<[],
                                   [llvm_anyvector_ty,
                                    LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
                                    LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
-                                  [IntrWillReturn, NoUndef<ArgIndex<1>>,
-                                   ImmArg<ArgIndex<2>>]>;
+                                  [IntrWillReturn, ImmArg<ArgIndex<2>>]>;
 
 def int_masked_expandload: Intrinsic<[llvm_anyvector_ty],
                                      [LLVMPointerToElt<0>,
