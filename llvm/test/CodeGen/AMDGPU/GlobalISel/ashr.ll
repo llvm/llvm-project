@@ -47,8 +47,8 @@ define i8 @v_ashr_i8_7(i8 %value) {
 ; GFX9-LABEL: v_ashr_i8_7:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, 7
-; GFX9-NEXT:    v_ashrrev_i16_sdwa v0, s4, sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX9-NEXT:    v_mov_b32_e32 v1, 7
+; GFX9-NEXT:    v_ashrrev_i16_sdwa v0, v1, sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %result = ashr i8 %value, 7
   ret i8 %result
