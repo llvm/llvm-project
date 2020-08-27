@@ -188,7 +188,7 @@ define dso_local void @forced_optsize(i64* noalias nocapture readonly %x_p, i64*
 ;
 ; xFORCED_OPTSIZE: remark: <unknown>:0:0: Code-size may be reduced by not forcing vectorization, or by source-code modifications eliminating the need for runtime checks (e.g., adding 'restrict').
 ; FORCED_OPTSIZE-LABEL: @forced_optsize(
-; FORCED_OPTSIZE:       vector.body:
+; FORCED_OPTSIZE-NOT:       vector.body:
 ;
 entry:
   br label %for.body

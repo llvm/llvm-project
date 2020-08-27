@@ -5075,15 +5075,8 @@ bool LoopVectorizationCostModel::runtimeChecksRequired() {
     return true;
   }
 
-  // FIXME: Avoid specializing for stride==1 instead of bailing out.
-  if (!Legal->getLAI()->getSymbolicStrides().empty()) {
-    reportVectorizationFailure("Runtime stride check is required with -Os/-Oz",
-        "runtime stride == 1 checks needed. Enable vectorization of "
-        "this loop with '#pragma clang loop vectorize(enable)' when "
-        "compiling with -Os/-Oz",
-        "CantVersionLoopWithOptForSize", ORE, TheLoop);
-    return true;
-  }
+  assert(Legal->getLAI()->getSymbolicStrides().empty() &&
+         "Specializing for stride == 1 under -Os/-Oz");
 
   return false;
 }
@@ -7919,7 +7912,7 @@ static ScalarEpilogueLowering getScalarEpilogueLowering(
                                                      PGSOQueryType::IRPass);
   // 1) OptSize takes precedence over all other options, i.e. if this is set,
   // don't look at hints or options, and don't request a scalar epilogue.
-  if (OptSize && Hints.getForce() != LoopVectorizeHints::FK_Enabled)
+  if (OptSize)
     return CM_ScalarEpilogueNotAllowedOptSize;
 
   bool PredicateOptDisabled = PreferPredicateOverEpilog.getNumOccurrences() &&
