@@ -1104,8 +1104,10 @@ struct Attributor {
     assert(!AAPtr && "Attribute already in map!");
     AAPtr = &AA;
 
-    DG.SyntheticRoot.Deps.push_back(
-        AADepGraphNode::DepTy(&AA, unsigned(DepClassTy::REQUIRED)));
+    // Register AA with the synthetic root only before the manifest stage.
+    if (Phase == AttributorPhase::SEEDING || Phase == AttributorPhase::UPDATE)
+      DG.SyntheticRoot.Deps.push_back(
+          AADepGraphNode::DepTy(&AA, unsigned(DepClassTy::REQUIRED)));
 
     return AA;
   }
