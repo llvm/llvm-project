@@ -61,6 +61,10 @@ __attribute__((destructor(101))) void deinit() {
 }
 
 void RTLsTy::LoadRTLs() {
+
+  if (char *envStr = getenv("LIBOMPTARGET_INFO")) {
+    InfoLevel = std::stoi(envStr);
+  }
 #ifdef OMPTARGET_DEBUG
   if (char *envStr = getenv("LIBOMPTARGET_DEBUG")) {
     DebugLevel = std::stoi(envStr);
