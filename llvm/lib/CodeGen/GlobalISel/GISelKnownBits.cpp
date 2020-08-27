@@ -488,6 +488,17 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   ComputeKnownBitsCache[R] = Known;
 }
 
+/// Compute number of sign bits for the intersection of \p Src0 and \p Src1
+unsigned GISelKnownBits::computeNumSignBitsMin(Register Src0, Register Src1,
+                                               const APInt &DemandedElts,
+                                               unsigned Depth) {
+  // Test src1 first, since we canonicalize simpler expressions to the RHS.
+  unsigned Src1SignBits = computeNumSignBits(Src1, DemandedElts, Depth);
+  if (Src1SignBits == 1)
+    return 1;
+  return std::min(computeNumSignBits(Src0, DemandedElts, Depth), Src1SignBits);
+}
+
 unsigned GISelKnownBits::computeNumSignBits(Register R,
                                             const APInt &DemandedElts,
                                             unsigned Depth) {
@@ -567,6 +578,11 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
     if (NumSrcSignBits > (NumSrcBits - DstTyBits))
       return NumSrcSignBits - (NumSrcBits - DstTyBits);
     break;
+  }
+  case TargetOpcode::G_SELECT: {
+    return computeNumSignBitsMin(MI.getOperand(2).getReg(),
+                                 MI.getOperand(3).getReg(), DemandedElts,
+                                 Depth + 1);
   }
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
