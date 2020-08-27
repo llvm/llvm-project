@@ -57,16 +57,15 @@ entry:
 define <2 x i64 addrspace(1)*> @test3(i1 %cnd, <2 x i64 addrspace(1)*>* %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subq $40, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    movaps (%rsi), %xmm0
 ; CHECK-NEXT:    movaps %xmm0, (%rsp)
-; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    callq do_safepoint
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    movaps (%rsp), %xmm0
-; CHECK-NEXT:    addq $40, %rsp
+; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
@@ -115,7 +114,7 @@ entry:
 ; Check that we can lower a constant typed as i128 correctly.  We don't have
 ; a representation of larger than 64 bit constant in the StackMap format. At
 ; the moment, this simply means spilling them, but there's a potential
-; optimization for values representable as sext(Con64).  
+; optimization for values representable as sext(Con64).
 define void @test5() gc "statepoint-example" {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
@@ -172,31 +171,17 @@ entry:
 ; CHECK: .long	0
 
 ; CHECK: .Ltmp2-test3
-; Check for the four spill slots
-; Stack Maps: 		Loc 3: Indirect 7+16	[encoding: .byte 3, .byte 0, .short 16, .short 7, .short 0, .int 16]
-; Stack Maps: 		Loc 4: Indirect 7+16	[encoding: .byte 3, .byte 0, .short 16, .short 7, .short 0, .int 16]
-; Stack Maps: 		Loc 5: Indirect 7+16	[encoding: .byte 3, .byte 0, .short 16, .short 7, .short 0, .int 16]
-; Stack Maps: 		Loc 6: Indirect 7+0	[encoding: .byte 3, .byte 0, .short 16, .short 7, .short 0, .int 0]
+; Check for the two spill slots
+; Stack Maps: 		Loc 3: Indirect 7+0	[encoding: .byte 3, .byte 0, .short 16, .short 7, .short 0, .int 0]
+; Stack Maps: 		Loc 4: Indirect 7+0	[encoding: .byte 3, .byte 0, .short 16, .short 7, .short 0, .int 0]
 ; CHECK: .byte	3
 ; CHECK: .byte	0
 ; CHECK: .short 16
 ; CHECK: .short	7
 ; CHECK: .short	0
-; CHECK: .long	16
+; CHECK: .long	0
 ; CHECK: .byte	3
-; CHECK: .byte	 0
-; CHECK: .short 16
-; CHECK: .short	7
-; CHECK: .short	0
-; CHECK: .long	16
-; CHECK: .byte	3
-; CHECK: .byte	 0
-; CHECK: .short 16
-; CHECK: .short	7
-; CHECK: .short	0
-; CHECK: .long	16
-; CHECK: .byte	3
-; CHECK: .byte	 0
+; CHECK: .byte	0
 ; CHECK: .short 16
 ; CHECK: .short	7
 ; CHECK: .short	0

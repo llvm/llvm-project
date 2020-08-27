@@ -4403,6 +4403,19 @@ Value *llvm::SimplifyExtractElementInst(Value *Vec, Value *Idx,
 
 /// See if we can fold the given phi. If not, returns null.
 static Value *SimplifyPHINode(PHINode *PN, const SimplifyQuery &Q) {
+  // Is there an identical PHI node before this one in this basic block?
+  for (PHINode &Src : PN->getParent()->phis()) {
+    // Once we've reached the PHI node we've been asked about, stop looking.
+    if (&Src == PN)
+      break;
+    // If the previous PHI is currently trivially dead, ignore it,
+    // it might have been already recorded as being dead.
+    if (Src.use_empty())
+      continue;
+    if (PN->isIdenticalToWhenDefined(&Src))
+      return &Src;
+  }
+
   // If all of the PHI's incoming values are the same then replace the PHI node
   // with the common value.
   Value *CommonValue = nullptr;
