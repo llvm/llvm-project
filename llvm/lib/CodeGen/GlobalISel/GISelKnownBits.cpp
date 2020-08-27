@@ -110,7 +110,8 @@ void GISelKnownBits::computeKnownBitsMin(Register Src0, Register Src1,
   computeKnownBitsImpl(Src0, Known2, DemandedElts, Depth);
 
   // Only known if known in both the LHS and RHS.
-  Known &= Known2;
+  Known.Zero &= Known.Zero;
+  Known.One &= Known.One;
 }
 
 void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
