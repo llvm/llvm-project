@@ -3111,18 +3111,15 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
       const char *name = nullptr;
       const char *mangled = nullptr;
       Declaration decl;
-      uint32_t i;
       DWARFFormValue type_die_form;
       DWARFExpression location;
       bool is_external = false;
       bool is_artificial = false;
-      bool location_is_const_value_data = false;
-      bool has_explicit_location = false;
-      DWARFFormValue const_value;
+      DWARFFormValue const_value_form, location_form;
       Variable::RangeList scope_ranges;
       // AccessType accessibility = eAccessNone;
 
-      for (i = 0; i < num_attributes; ++i) {
+      for (size_t i = 0; i < num_attributes; ++i) {
         dw_attr_t attr = attributes.AttributeAtIndex(i);
         DWARFFormValue form_value;
 
@@ -3152,65 +3149,11 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
             is_external = form_value.Boolean();
             break;
           case DW_AT_const_value:
-            // If we have already found a DW_AT_location attribute, ignore this
-            // attribute.
-            if (!has_explicit_location) {
-              location_is_const_value_data = true;
-              // The constant value will be either a block, a data value or a
-              // string.
-              auto debug_info_data = die.GetData();
-              if (DWARFFormValue::IsBlockForm(form_value.Form())) {
-                // Retrieve the value as a block expression.
-                uint32_t block_offset =
-                    form_value.BlockData() - debug_info_data.GetDataStart();
-                uint32_t block_length = form_value.Unsigned();
-                location = DWARFExpression(
-                    module,
-                    DataExtractor(debug_info_data, block_offset, block_length),
-                    die.GetCU());
-              } else if (DWARFFormValue::IsDataForm(form_value.Form())) {
-                // Constant value size does not have to match the size of the
-                // variable. We will fetch the size of the type after we create
-                // it.
-                const_value = form_value;
-              } else if (const char *str = form_value.AsCString()) {
-                uint32_t string_length = strlen(str) + 1;
-                location = DWARFExpression(
-                    module,
-                    DataExtractor(str, string_length,
-                                  die.GetCU()->GetByteOrder(),
-                                  die.GetCU()->GetAddressByteSize()),
-                    die.GetCU());
-              }
-            }
+            const_value_form = form_value;
             break;
-          case DW_AT_location: {
-            location_is_const_value_data = false;
-            has_explicit_location = true;
-            if (DWARFFormValue::IsBlockForm(form_value.Form())) {
-              auto data = die.GetData();
-
-              uint32_t block_offset =
-                  form_value.BlockData() - data.GetDataStart();
-              uint32_t block_length = form_value.Unsigned();
-              location = DWARFExpression(
-                  module, DataExtractor(data, block_offset, block_length),
-                  die.GetCU());
-            } else {
-              DataExtractor data = die.GetCU()->GetLocationData();
-              dw_offset_t offset = form_value.Unsigned();
-              if (form_value.Form() == DW_FORM_loclistx)
-                offset = die.GetCU()->GetLoclistOffset(offset).getValueOr(-1);
-              if (data.ValidOffset(offset)) {
-                data = DataExtractor(data, offset, data.GetByteSize() - offset);
-                location = DWARFExpression(module, data, die.GetCU());
-                assert(func_low_pc != LLDB_INVALID_ADDRESS);
-                location.SetLocationListAddresses(
-                    attributes.CompileUnitAtIndex(i)->GetBaseAddress(),
-                    func_low_pc);
-              }
-            }
-          } break;
+          case DW_AT_location:
+            location_form = form_value;
+            break;
           case DW_AT_specification:
             spec_die = form_value.Reference();
             break;
@@ -3233,6 +3176,66 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
           case DW_AT_sibling:
             break;
           }
+        }
+      }
+
+      // Prefer DW_AT_location over DW_AT_const_value. Both can be emitted e.g.
+      // for static constexpr member variables -- DW_AT_const_value will be
+      // present in the class declaration and DW_AT_location in the DIE defining
+      // the member.
+      bool location_is_const_value_data = false;
+      bool has_explicit_location = false;
+      bool use_type_size_for_value = false;
+      if (location_form.IsValid()) {
+        has_explicit_location = true;
+        if (DWARFFormValue::IsBlockForm(location_form.Form())) {
+          const DWARFDataExtractor &data = die.GetData();
+
+          uint32_t block_offset =
+              location_form.BlockData() - data.GetDataStart();
+          uint32_t block_length = location_form.Unsigned();
+          location = DWARFExpression(
+              module, DataExtractor(data, block_offset, block_length),
+              die.GetCU());
+        } else {
+          DataExtractor data = die.GetCU()->GetLocationData();
+          dw_offset_t offset = location_form.Unsigned();
+          if (location_form.Form() == DW_FORM_loclistx)
+            offset = die.GetCU()->GetLoclistOffset(offset).getValueOr(-1);
+          if (data.ValidOffset(offset)) {
+            data = DataExtractor(data, offset, data.GetByteSize() - offset);
+            location = DWARFExpression(module, data, die.GetCU());
+            assert(func_low_pc != LLDB_INVALID_ADDRESS);
+            location.SetLocationListAddresses(
+                location_form.GetUnit()->GetBaseAddress(), func_low_pc);
+          }
+        }
+      } else if (const_value_form.IsValid()) {
+        location_is_const_value_data = true;
+        // The constant value will be either a block, a data value or a
+        // string.
+        const DWARFDataExtractor &debug_info_data = die.GetData();
+        if (DWARFFormValue::IsBlockForm(const_value_form.Form())) {
+          // Retrieve the value as a block expression.
+          uint32_t block_offset =
+              const_value_form.BlockData() - debug_info_data.GetDataStart();
+          uint32_t block_length = const_value_form.Unsigned();
+          location = DWARFExpression(
+              module,
+              DataExtractor(debug_info_data, block_offset, block_length),
+              die.GetCU());
+        } else if (DWARFFormValue::IsDataForm(const_value_form.Form())) {
+          // Constant value size does not have to match the size of the
+          // variable. We will fetch the size of the type after we create
+          // it.
+          use_type_size_for_value = true;
+        } else if (const char *str = const_value_form.AsCString()) {
+          uint32_t string_length = strlen(str) + 1;
+          location = DWARFExpression(
+              module,
+              DataExtractor(str, string_length, die.GetCU()->GetByteOrder(),
+                            die.GetCU()->GetAddressByteSize()),
+              die.GetCU());
         }
       }
 
@@ -3415,12 +3418,12 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
       }
 
       if (symbol_context_scope) {
-        SymbolFileTypeSP type_sp(
-            new SymbolFileType(*this, GetUID(type_die_form.Reference())));
+        auto type_sp = std::make_shared<SymbolFileType>(
+            *this, GetUID(type_die_form.Reference()));
 
-        if (const_value.Form() && type_sp && type_sp->GetType())
+        if (use_type_size_for_value && type_sp->GetType())
           location.UpdateValue(
-              const_value.Unsigned(),
+              const_value_form.Unsigned(),
               type_sp->GetType()->GetByteSize(nullptr).getValueOr(0),
               die.GetCU()->GetAddressByteSize());
 
