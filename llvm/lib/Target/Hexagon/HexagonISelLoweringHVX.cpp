@@ -14,6 +14,10 @@
 
 using namespace llvm;
 
+static cl::opt<unsigned> HvxWidenThreshold("hexagon-hvx-widen",
+  cl::Hidden, cl::init(16),
+  cl::desc("Lower threshold (in bytes) for widening to HVX vectors"));
+
 static const MVT LegalV64[] =  { MVT::v64i8,  MVT::v32i16,  MVT::v16i32 };
 static const MVT LegalW64[] =  { MVT::v128i8, MVT::v64i16,  MVT::v32i32 };
 static const MVT LegalV128[] = { MVT::v128i8, MVT::v64i16,  MVT::v32i32 };
@@ -218,7 +222,54 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::SIGN_EXTEND_INREG, T, Legal);
   }
 
+  // Handle store widening for short vectors.
+  std::vector<MVT> ShortTys;
+  unsigned HwLen = Subtarget.getVectorLength();
+  for (MVT ElemTy : Subtarget.getHVXElementTypes()) {
+    if (ElemTy == MVT::i1)
+      continue;
+    int ElemWidth = ElemTy.getSizeInBits().getFixedSize();
+    int MaxElems = (8*HwLen) / ElemWidth;
+    for (int N = 2; N < MaxElems; N *= 2) {
+      MVT VecTy = MVT::getVectorVT(ElemTy, N);
+      auto Action = getPreferredVectorAction(VecTy);
+      if (Action == TargetLoweringBase::TypeWidenVector)
+        setOperationAction(ISD::STORE, VecTy, Custom);
+    }
+  }
+
   setTargetDAGCombine(ISD::VSELECT);
+}
+
+unsigned
+HexagonTargetLowering::getPreferredHvxVectorAction(MVT VecTy) const {
+  MVT ElemTy = VecTy.getVectorElementType();
+  unsigned VecLen = VecTy.getVectorNumElements();
+  unsigned HwLen = Subtarget.getVectorLength();
+
+  // Split vectors of i1 that correspond to (byte) vector pairs.
+  if (ElemTy == MVT::i1 && VecLen == 2*HwLen)
+    return TargetLoweringBase::TypeSplitVector;
+  // Treat i1 as i8 from now on.
+  if (ElemTy == MVT::i1)
+    ElemTy = MVT::i8;
+
+  // If the size of VecTy is at least half of the vector length,
+  // widen the vector. Note: the threshold was not selected in
+  // any scientific way.
+  ArrayRef<MVT> Tys = Subtarget.getHVXElementTypes();
+  if (llvm::find(Tys, ElemTy) != Tys.end()) {
+    unsigned VecWidth = VecTy.getSizeInBits();
+    bool HaveThreshold = HvxWidenThreshold.getNumOccurrences() > 0;
+    if (HaveThreshold && 8*HvxWidenThreshold <= VecWidth)
+      return TargetLoweringBase::TypeWidenVector;
+    unsigned HwWidth = 8*HwLen;
+    if (VecWidth >= HwWidth/2 && VecWidth < HwWidth)
+      return TargetLoweringBase::TypeWidenVector;
+  }
+
+  // Defer to default.
+  return ~0u;
 }
 
 SDValue
@@ -1802,6 +1853,39 @@ HexagonTargetLowering::SplitHvxMemOp(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue
+HexagonTargetLowering::WidenHvxStore(SDValue Op, SelectionDAG &DAG) const {
+  const SDLoc &dl(Op);
+  auto *StoreN = cast<StoreSDNode>(Op.getNode());
+  assert(StoreN->isUnindexed() && "Not widening indexed stores yet");
+  assert(StoreN->getMemoryVT().getVectorElementType() != MVT::i1 &&
+         "Not widening stores of i1 yet");
+
+  SDValue Chain = StoreN->getChain();
+  SDValue Base = StoreN->getBasePtr();
+  SDValue Offset = DAG.getUNDEF(MVT::i32);
+
+  SDValue Value = opCastElem(StoreN->getValue(), MVT::i8, DAG);
+  MVT ValueTy = ty(Value);
+  unsigned ValueLen = ValueTy.getVectorNumElements();
+  unsigned HwLen = Subtarget.getVectorLength();
+  assert(isPowerOf2_32(ValueLen));
+
+  for (unsigned Len = ValueLen; Len < HwLen; ) {
+    Value = opJoin({DAG.getUNDEF(ty(Value)), Value}, dl, DAG);
+    Len = ty(Value).getVectorNumElements(); // This is Len *= 2
+  }
+  assert(ty(Value).getVectorNumElements() == HwLen);  // Paranoia
+
+  MVT BoolTy = MVT::getVectorVT(MVT::i1, HwLen);
+  SDValue StoreQ = getInstr(Hexagon::V6_pred_scalar2, dl, BoolTy,
+                            {DAG.getConstant(ValueLen, dl, MVT::i32)}, DAG);
+  MachineFunction &MF = DAG.getMachineFunction();
+  auto *MOp = MF.getMachineMemOperand(StoreN->getMemOperand(), 0, HwLen);
+  return DAG.getMaskedStore(Chain, dl, Value, Base, Offset, StoreQ, ty(Value),
+                            MOp, ISD::UNINDEXED, false, false);
+}
+
+SDValue
 HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   bool IsPairOp = isHvxPairTy(ty(Op)) ||
@@ -1879,6 +1963,14 @@ HexagonTargetLowering::LowerHvxOperationWrapper(SDNode *N,
   SDValue Op(N, 0);
 
   switch (Opc) {
+    case ISD::STORE: {
+      SDValue Value = cast<StoreSDNode>(N)->getValue();
+      unsigned Action = getPreferredHvxVectorAction(ty(Value));
+      assert(Action == TargetLoweringBase::TypeWidenVector && "Not widening?");
+      SDValue Store = WidenHvxStore(SDValue(N, 0), DAG);
+      Results.push_back(Store);
+      break;
+    }
     case ISD::MLOAD:
       if (isHvxPairTy(ty(Op))) {
         SDValue S = SplitHvxMemOp(Op, DAG);
@@ -1939,6 +2031,16 @@ HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
 
 bool
 HexagonTargetLowering::isHvxOperation(SDNode *N) const {
+  if (N->getOpcode() == ISD::STORE) {
+    // If it's a store-to-be-widened, treat it as an HVX operation.
+    SDValue Val = cast<StoreSDNode>(N)->getValue();
+    MVT ValTy = ty(Val);
+    if (ValTy.isVector()) {
+      auto Action = getPreferredVectorAction(ValTy);
+      if (Action == TargetLoweringBase::TypeWidenVector)
+        return true;
+    }
+  }
   // If the type of any result, or any operand type are HVX vector types,
   // this is an HVX operation.
   auto IsHvxTy = [this] (EVT Ty) {
