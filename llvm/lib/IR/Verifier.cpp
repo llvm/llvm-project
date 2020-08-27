@@ -4841,9 +4841,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     auto *ElemTy = Call.getType()->getScalarType();
     Assert(ElemTy->isIntegerTy(1), "get_active_lane_mask: element type is not "
            "i1", Call);
-    if (auto *TripCount = dyn_cast<ConstantInt>(Call.getArgOperand(1)))
-      Assert(!TripCount->isZero(), "get_active_lane_mask: operand #2 "
-             "must be greater than 0", Call);
     break;
   }
   case Intrinsic::masked_load: {
