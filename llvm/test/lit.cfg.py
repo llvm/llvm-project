@@ -331,10 +331,9 @@ def have_ld64_plugin_support():
 if have_ld64_plugin_support():
     config.available_features.add('ld64_plugin')
 
-# Ask llvm-config about asserts and global-isel.
+# Ask llvm-config about asserts
 llvm_config.feature_config(
-    [('--assertion-mode', {'ON': 'asserts'}),
-     ('--has-global-isel', {'ON': 'global-isel'})])
+    [('--assertion-mode', {'ON': 'asserts'})])
 
 if lit.util.isMacOSTriple(config.target_triple):
     cmd = ['sysctl', 'hw.optional.fma']
