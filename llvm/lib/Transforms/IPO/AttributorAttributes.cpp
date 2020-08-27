@@ -7353,10 +7353,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     }
 
     if (isa<UndefValue>(&V)) {
-      // Collapse the undef state to 0.
-      unionAssumed(
-          APInt(/* numBits */ getAssociatedType()->getIntegerBitWidth(),
-                /* val */ 0));
+      unionAssumedWithUndef();
       indicateOptimisticFixpoint();
       return;
     }
@@ -7477,6 +7474,20 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     }
   }
 
+  bool calculateBinaryOperatorAndTakeUnion(const BinaryOperator *BinOp,
+                                           const APInt &LHS, const APInt &RHS) {
+    bool SkipOperation = false;
+    bool Unsupported = false;
+    APInt Result =
+        calculateBinaryOperator(BinOp, LHS, RHS, SkipOperation, Unsupported);
+    if (Unsupported)
+      return false;
+    // If SkipOperation is true, we can ignore this operand pair (L, R).
+    if (!SkipOperation)
+      unionAssumed(Result);
+    return isValidState();
+  }
+
   ChangeStatus updateWithICmpInst(Attributor &A, ICmpInst *ICI) {
     auto AssumedBefore = getAssumed();
     Value *LHS = ICI->getOperand(0);
@@ -7495,15 +7506,39 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     const DenseSet<APInt> &LHSAAPVS = LHSAA.getAssumedSet();
     const DenseSet<APInt> &RHSAAPVS = RHSAA.getAssumedSet();
 
-    // TODO: Handle undef correctly.
+    // TODO: make use of undef flag to limit potential values aggressively.
     bool MaybeTrue = false, MaybeFalse = false;
-    for (const APInt &L : LHSAAPVS) {
+    const APInt Zero(RHS->getType()->getIntegerBitWidth(), 0);
+    if (LHSAA.undefIsContained() && RHSAA.undefIsContained()) {
+      // The result of any comparison between undefs can be soundly replaced
+      // with undef.
+      unionAssumedWithUndef();
+    } else if (LHSAA.undefIsContained()) {
+      bool MaybeTrue = false, MaybeFalse = false;
       for (const APInt &R : RHSAAPVS) {
-        bool CmpResult = calculateICmpInst(ICI, L, R);
+        bool CmpResult = calculateICmpInst(ICI, Zero, R);
         MaybeTrue |= CmpResult;
         MaybeFalse |= !CmpResult;
         if (MaybeTrue & MaybeFalse)
           return indicatePessimisticFixpoint();
+      }
+    } else if (RHSAA.undefIsContained()) {
+      for (const APInt &L : LHSAAPVS) {
+        bool CmpResult = calculateICmpInst(ICI, L, Zero);
+        MaybeTrue |= CmpResult;
+        MaybeFalse |= !CmpResult;
+        if (MaybeTrue & MaybeFalse)
+          return indicatePessimisticFixpoint();
+      }
+    } else {
+      for (const APInt &L : LHSAAPVS) {
+        for (const APInt &R : RHSAAPVS) {
+          bool CmpResult = calculateICmpInst(ICI, L, R);
+          MaybeTrue |= CmpResult;
+          MaybeFalse |= !CmpResult;
+          if (MaybeTrue & MaybeFalse)
+            return indicatePessimisticFixpoint();
+        }
       }
     }
     if (MaybeTrue)
@@ -7530,8 +7565,13 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     if (!RHSAA.isValidState())
       return indicatePessimisticFixpoint();
 
-    unionAssumed(LHSAA);
-    unionAssumed(RHSAA);
+    if (LHSAA.undefIsContained() && RHSAA.undefIsContained())
+      // select i1 *, undef , undef => undef
+      unionAssumedWithUndef();
+    else {
+      unionAssumed(LHSAA);
+      unionAssumed(RHSAA);
+    }
     return AssumedBefore == getAssumed() ? ChangeStatus::UNCHANGED
                                          : ChangeStatus::CHANGED;
   }
@@ -7547,11 +7587,14 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     if (!SrcAA.isValidState())
       return indicatePessimisticFixpoint();
     const DenseSet<APInt> &SrcAAPVS = SrcAA.getAssumedSet();
-    for (const APInt &S : SrcAAPVS) {
-      APInt T = calculateCastInst(CI, S, ResultBitWidth);
-      unionAssumed(T);
+    if (SrcAA.undefIsContained())
+      unionAssumedWithUndef();
+    else {
+      for (const APInt &S : SrcAAPVS) {
+        APInt T = calculateCastInst(CI, S, ResultBitWidth);
+        unionAssumed(T);
+      }
     }
-    // TODO: Handle undef correctly.
     return AssumedBefore == getAssumed() ? ChangeStatus::UNCHANGED
                                          : ChangeStatus::CHANGED;
   }
@@ -7573,19 +7616,28 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
 
     const DenseSet<APInt> &LHSAAPVS = LHSAA.getAssumedSet();
     const DenseSet<APInt> &RHSAAPVS = RHSAA.getAssumedSet();
+    const APInt Zero = APInt(LHS->getType()->getIntegerBitWidth(), 0);
 
-    // TODO: Handle undef correctly
-    for (const APInt &L : LHSAAPVS) {
+    // TODO: make use of undef flag to limit potential values aggressively.
+    if (LHSAA.undefIsContained() && RHSAA.undefIsContained()) {
+      if (!calculateBinaryOperatorAndTakeUnion(BinOp, Zero, Zero))
+        return indicatePessimisticFixpoint();
+    } else if (LHSAA.undefIsContained()) {
       for (const APInt &R : RHSAAPVS) {
-        bool SkipOperation = false;
-        bool Unsupported = false;
-        APInt Result =
-            calculateBinaryOperator(BinOp, L, R, SkipOperation, Unsupported);
-        if (Unsupported)
+        if (!calculateBinaryOperatorAndTakeUnion(BinOp, Zero, R))
           return indicatePessimisticFixpoint();
-        // If SkipOperation is true, we can ignore this operand pair (L, R).
-        if (!SkipOperation)
-          unionAssumed(Result);
+      }
+    } else if (RHSAA.undefIsContained()) {
+      for (const APInt &L : LHSAAPVS) {
+        if (!calculateBinaryOperatorAndTakeUnion(BinOp, L, Zero))
+          return indicatePessimisticFixpoint();
+      }
+    } else {
+      for (const APInt &L : LHSAAPVS) {
+        for (const APInt &R : RHSAAPVS) {
+          if (!calculateBinaryOperatorAndTakeUnion(BinOp, L, R))
+            return indicatePessimisticFixpoint();
+        }
       }
     }
     return AssumedBefore == getAssumed() ? ChangeStatus::UNCHANGED
@@ -7600,7 +7652,10 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
           *this, IRPosition::value(*IncomingValue));
       if (!PotentialValuesAA.isValidState())
         return indicatePessimisticFixpoint();
-      unionAssumed(PotentialValuesAA.getAssumed());
+      if (PotentialValuesAA.undefIsContained())
+        unionAssumedWithUndef();
+      else
+        unionAssumed(PotentialValuesAA.getAssumed());
     }
     return AssumedBefore == getAssumed() ? ChangeStatus::UNCHANGED
                                          : ChangeStatus::CHANGED;
@@ -7688,10 +7743,7 @@ struct AAPotentialValuesCallSiteArgument : AAPotentialValuesFloating {
     }
 
     if (isa<UndefValue>(&V)) {
-      // Collapse the undef state to 0.
-      unionAssumed(
-          APInt(/* numBits */ getAssociatedType()->getIntegerBitWidth(),
-                /* val */ 0));
+      unionAssumedWithUndef();
       indicateOptimisticFixpoint();
       return;
     }

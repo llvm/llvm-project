@@ -3368,9 +3368,10 @@ template <typename MemberTy, typename KeyInfo = DenseMapInfo<MemberTy>>
 struct PotentialValuesState : AbstractState {
   using SetTy = DenseSet<MemberTy, KeyInfo>;
 
-  PotentialValuesState() : IsValidState(true) {}
+  PotentialValuesState() : IsValidState(true), UndefIsContained(false) {}
 
-  PotentialValuesState(bool IsValid) : IsValidState(IsValid) {}
+  PotentialValuesState(bool IsValid)
+      : IsValidState(IsValid), UndefIsContained(false) {}
 
   /// See AbstractState::isValidState(...)
   bool isValidState() const override { return IsValidState.isValidState(); }
@@ -3399,11 +3400,19 @@ struct PotentialValuesState : AbstractState {
     return Set;
   }
 
+  /// Returns whether this state contains an undef value or not.
+  bool undefIsContained() const {
+    assert(isValidState() && "This flag shoud not be used when it is invalid!");
+    return UndefIsContained;
+  }
+
   bool operator==(const PotentialValuesState &RHS) const {
     if (isValidState() != RHS.isValidState())
       return false;
     if (!isValidState() && !RHS.isValidState())
       return true;
+    if (undefIsContained() != RHS.undefIsContained())
+      return false;
     return Set == RHS.getAssumedSet();
   }
 
@@ -3431,6 +3440,9 @@ struct PotentialValuesState : AbstractState {
   /// Union assumed set with assumed set of the passed state \p PVS.
   void unionAssumed(const PotentialValuesState &PVS) { unionWith(PVS); }
 
+  /// Union assumed set with an undef value.
+  void unionAssumedWithUndef() { unionWithUndef(); }
+
   /// "Clamp" this state with \p PVS.
   PotentialValuesState operator^=(const PotentialValuesState &PVS) {
     IsValidState ^= PVS.IsValidState;
@@ -3452,6 +3464,10 @@ private:
       indicatePessimisticFixpoint();
   }
 
+  /// If this state contains both undef and not undef, we can reduce
+  /// undef to the not undef value.
+  void reduceUndefValue() { UndefIsContained = UndefIsContained & Set.empty(); }
+
   /// Insert an element into this set.
   void insert(const MemberTy &C) {
     if (!isValidState())
@@ -3472,7 +3488,15 @@ private:
     }
     for (const MemberTy &C : R.Set)
       Set.insert(C);
+    UndefIsContained |= R.undefIsContained();
+    reduceUndefValue();
     checkAndInvalidate();
+  }
+
+  /// Take union with an undef value.
+  void unionWithUndef() {
+    UndefIsContained = true;
+    reduceUndefValue();
   }
 
   /// Take intersection with R.
@@ -3491,6 +3515,8 @@ private:
         IntersectSet.insert(C);
     }
     Set = IntersectSet;
+    UndefIsContained &= R.undefIsContained();
+    reduceUndefValue();
   }
 
   /// A helper state which indicate whether this state is valid or not.
@@ -3498,6 +3524,9 @@ private:
 
   /// Container for potential values
   SetTy Set;
+
+  /// Flag for undef value
+  bool UndefIsContained;
 };
 
 using PotentialConstantIntValuesState = PotentialValuesState<APInt>;
@@ -3544,8 +3573,12 @@ struct AAPotentialValues
     if (getAssumedSet().size() == 1)
       return cast<ConstantInt>(ConstantInt::get(getAssociatedValue().getType(),
                                                 *(getAssumedSet().begin())));
-    if (getAssumedSet().size() == 0)
+    if (getAssumedSet().size() == 0) {
+      if (undefIsContained())
+        return cast<ConstantInt>(
+            ConstantInt::get(getAssociatedValue().getType(), 0));
       return llvm::None;
+    }
 
     return nullptr;
   }
