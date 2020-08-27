@@ -40,7 +40,7 @@ protected:
     return *Result;
   }
 
-  const std::string FileName = "fix.cpp";
+  std::string FileName = "fix.cpp";
   IncludeStyle Style = format::getLLVMStyle().IncludeStyle;
 };
 
@@ -102,6 +102,15 @@ TEST_F(HeaderIncludesTest, InsertAfterMainHeader) {
   Style = format::getGoogleStyle(format::FormatStyle::LanguageKind::LK_Cpp)
               .IncludeStyle;
   EXPECT_EQ(Expected, insert(Code, "<a>"));
+
+  FileName = "fix.cu.cpp";
+  EXPECT_EQ(Expected, insert(Code, "<a>"));
+
+  FileName = "fix_test.cu.cpp";
+  EXPECT_EQ(Expected, insert(Code, "<a>"));
+
+  FileName = "bar.cpp";
+  EXPECT_NE(Expected, insert(Code, "<a>")) << "Not main header";
 }
 
 TEST_F(HeaderIncludesTest, InsertBeforeSystemHeaderLLVM) {
