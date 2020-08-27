@@ -1207,13 +1207,21 @@ let Predicates = [IsISA3_1] in {
                         "vdivud $vD, $vA, $vB", IIC_VecGeneral,
                         [(set v2i64:$vD, (udiv v2i64:$vA, v2i64:$vB))]>;
   def VDIVESW : VXForm_1<907, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vdivesw $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vdivesw $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v4i32:$vD, (int_ppc_altivec_vdivesw v4i32:$vA,
+                               v4i32:$vB))]>;
   def VDIVEUW : VXForm_1<651, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vdiveuw $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vdiveuw $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v4i32:$vD, (int_ppc_altivec_vdiveuw v4i32:$vA,
+                               v4i32:$vB))]>;
   def VDIVESD : VXForm_1<971, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vdivesd $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vdivesd $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v2i64:$vD, (int_ppc_altivec_vdivesd v2i64:$vA,
+                               v2i64:$vB))]>;
   def VDIVEUD : VXForm_1<715, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vdiveud $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vdiveud $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v2i64:$vD, (int_ppc_altivec_vdiveud v2i64:$vA,
+                               v2i64:$vB))]>;
   def XVTLSBB : XX2_BF3_XO5_XB6_XO9<60, 2, 475, (outs crrc:$BF), (ins vsrc:$XB),
                                     "xvtlsbb $BF, $XB", IIC_VecGeneral, []>;
 
@@ -1285,6 +1293,15 @@ let Predicates = [IsISA3_1] in {
 
 //---------------------------- Anonymous Patterns ----------------------------//
 let Predicates = [IsISA3_1] in {
+  // Exploit the vector multiply high instructions using intrinsics.
+  def : Pat<(v4i32 (int_ppc_altivec_vmulhsw v4i32:$vA, v4i32:$vB)),
+            (v4i32 (VMULHSW $vA, $vB))>;
+  def : Pat<(v4i32 (int_ppc_altivec_vmulhuw v4i32:$vA, v4i32:$vB)),
+            (v4i32 (VMULHUW $vA, $vB))>;
+  def : Pat<(v2i64 (int_ppc_altivec_vmulhsd v2i64:$vA, v2i64:$vB)),
+            (v2i64 (VMULHSD $vA, $vB))>;
+  def : Pat<(v2i64 (int_ppc_altivec_vmulhud v2i64:$vA, v2i64:$vB)),
+            (v2i64 (VMULHUD $vA, $vB))>;
   def : Pat<(v16i8 (int_ppc_vsx_xxgenpcvbm v16i8:$VRB, imm:$IMM)),
             (v16i8 (COPY_TO_REGCLASS (XXGENPCVBM $VRB, imm:$IMM), VRRC))>;
   def : Pat<(v8i16 (int_ppc_vsx_xxgenpcvhm v8i16:$VRB, imm:$IMM)),
