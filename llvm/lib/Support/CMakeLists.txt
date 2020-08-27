@@ -60,6 +60,34 @@ if(LLVM_WITH_Z3)
   set(system_libs ${system_libs} ${Z3_LIBRARIES})
 endif()
 
+# Override the C runtime allocator on Windows and embed it into LLVM tools & libraries
+if(LLVM_INTEGRATED_CRT_ALLOC)
+  if (CMAKE_BUILD_TYPE AND NOT ${LLVM_USE_CRT_${uppercase_CMAKE_BUILD_TYPE}} MATCHES "^(MT|MTd)$")
+    message(FATAL_ERROR "LLVM_INTEGRATED_CRT_ALLOC only works with /MT or /MTd. Use LLVM_USE_CRT_${uppercase_CMAKE_BUILD_TYPE} to set the appropriate option.")
+  endif()
+
+  string(REGEX REPLACE "(/|\\\\)$" "" LLVM_INTEGRATED_CRT_ALLOC "${LLVM_INTEGRATED_CRT_ALLOC}")
+
+  if(NOT EXISTS "${LLVM_INTEGRATED_CRT_ALLOC}")
+    message(FATAL_ERROR "Cannot find the path to `git clone` for the CRT allocator! (${LLVM_INTEGRATED_CRT_ALLOC}). Currently, rpmalloc, snmalloc and mimalloc are supported.")
+  endif()
+
+  if(LLVM_INTEGRATED_CRT_ALLOC MATCHES "rpmalloc$")
+    add_definitions(-DENABLE_OVERRIDE -DENABLE_PRELOAD)
+    set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/rpmalloc/rpmalloc.c")
+  elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "snmalloc$")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17" PARENT_SCOPE)
+    set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/src/override/malloc.cc" "${LLVM_INTEGRATED_CRT_ALLOC}/src/override/new.cc")
+    set(system_libs ${system_libs} "mincore.lib" "-INCLUDE:malloc")
+  elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "mimalloc$")
+    set(MIMALLOC_LIB "${LLVM_INTEGRATED_CRT_ALLOC}/out/msvc-x64/Release/mimalloc-static.lib")
+    if(NOT EXISTS "${MIMALLOC_LIB}")
+	  message(FATAL_ERROR "Cannot find the mimalloc static library. To build it, first apply the patch from https://github.com/microsoft/mimalloc/issues/268 then build the Release x64 target through ${LLVM_INTEGRATED_CRT_ALLOC}\\ide\\vs2019\\mimalloc.sln")
+    endif()
+    set(system_libs ${system_libs} "${MIMALLOC_LIB}" "-INCLUDE:malloc")
+  endif()
+endif()
+
 add_llvm_component_library(LLVMSupport
   AArch64TargetParser.cpp
   ABIBreak.cpp
@@ -180,6 +208,8 @@ add_llvm_component_library(LLVMSupport
   regstrlcpy.c
   xxhash.cpp
   Z3Solver.cpp
+
+  ${ALLOCATOR_FILES}
 
 # System
   Atomic.cpp
