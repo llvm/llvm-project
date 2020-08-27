@@ -128,6 +128,9 @@ extern std::vector<InputFile *> inputFiles;
 
 llvm::Optional<MemoryBufferRef> readFile(StringRef path);
 
+const llvm::MachO::load_command *
+findCommand(const llvm::MachO::mach_header_64 *, uint32_t type);
+
 } // namespace macho
 
 std::string toString(const macho::InputFile *file);

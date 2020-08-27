@@ -10,6 +10,7 @@ add_lld_library(lldMachO2
   InputFiles.cpp
   InputSection.cpp
   MergedOutputSection.cpp
+  ObjC.cpp
   OutputSection.cpp
   OutputSegment.cpp
   SymbolTable.cpp

@@ -10,6 +10,7 @@
 #include "Config.h"
 #include "DriverUtils.h"
 #include "InputFiles.h"
+#include "ObjC.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
@@ -210,6 +211,29 @@ static void getFrameworkSearchPaths(opt::InputArgList &args,
                  {"/Library/Frameworks", "/System/Library/Frameworks"});
 }
 
+// Returns slices of MB by parsing MB as an archive file.
+// Each slice consists of a member file in the archive.
+static std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef mb) {
+  std::unique_ptr<Archive> file =
+      CHECK(Archive::create(mb),
+            mb.getBufferIdentifier() + ": failed to parse archive");
+
+  std::vector<MemoryBufferRef> v;
+  Error err = Error::success();
+  for (const Archive::Child &c : file->children(err)) {
+    MemoryBufferRef mbref =
+        CHECK(c.getMemoryBufferRef(),
+              mb.getBufferIdentifier() +
+                  ": could not get the buffer for a child of the archive");
+    v.push_back(mbref);
+  }
+  if (err)
+    fatal(mb.getBufferIdentifier() +
+          ": Archive::children failed: " + toString(std::move(err)));
+
+  return v;
+}
+
 static void addFile(StringRef path) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
@@ -223,6 +247,21 @@ static void addFile(StringRef path) {
 
     if (!file->isEmpty() && !file->hasSymbolTable())
       error(path + ": archive has no index; run ranlib to add one");
+
+    if (config->forceLoadObjC) {
+      for (const object::Archive::Symbol &sym : file->symbols())
+        if (sym.getName().startswith(objc::klass))
+          symtab->addUndefined(sym.getName());
+
+      // TODO: no need to look for ObjC sections for a given archive member if
+      // we already found that it contains an ObjC symbol. We should also
+      // consider creating a LazyObjFile class in order to avoid double-loading
+      // these files here and below (as part of the ArchiveFile).
+      if (Optional<MemoryBufferRef> buffer = readFile(path))
+        for (MemoryBufferRef member : getArchiveMembers(*buffer))
+          if (hasObjCSection(member))
+            inputFiles.push_back(make<ObjFile>(member));
+    }
 
     inputFiles.push_back(make<ArchiveFile>(std::move(file)));
     break;
@@ -252,29 +291,6 @@ static void addFileList(StringRef path) {
   MemoryBufferRef mbref = *buffer;
   for (StringRef path : args::getLines(mbref))
     addFile(path);
-}
-
-// Returns slices of MB by parsing MB as an archive file.
-// Each slice consists of a member file in the archive.
-static std::vector<MemoryBufferRef> getArchiveMembers(MemoryBufferRef mb) {
-  std::unique_ptr<Archive> file =
-      CHECK(Archive::create(mb),
-            mb.getBufferIdentifier() + ": failed to parse archive");
-
-  std::vector<MemoryBufferRef> v;
-  Error err = Error::success();
-  for (const Archive::Child &c : file->children(err)) {
-    MemoryBufferRef mbref =
-        CHECK(c.getMemoryBufferRef(),
-              mb.getBufferIdentifier() +
-                  ": could not get the buffer for a child of the archive");
-    v.push_back(mbref);
-  }
-  if (err)
-    fatal(mb.getBufferIdentifier() +
-          ": Archive::children failed: " + toString(std::move(err)));
-
-  return v;
 }
 
 static void forceLoadArchive(StringRef path) {
@@ -517,6 +533,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
 
   getLibrarySearchPaths(args, roots, config->librarySearchPaths);
   getFrameworkSearchPaths(args, roots, config->frameworkSearchPaths);
+  config->forceLoadObjC = args.hasArg(OPT_ObjC);
 
   if (args.hasArg(OPT_v)) {
     message(getLLDVersion());
@@ -571,6 +588,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     case OPT_e:
     case OPT_F:
     case OPT_L:
+    case OPT_ObjC:
     case OPT_headerpad:
     case OPT_install_name:
     case OPT_rpath:
