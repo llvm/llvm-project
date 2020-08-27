@@ -65,10 +65,11 @@ public:
 class LCDyldInfo : public LoadCommand {
 public:
   LCDyldInfo(BindingSection *bindingSection,
+             WeakBindingSection *weakBindingSection,
              LazyBindingSection *lazyBindingSection,
              ExportSection *exportSection)
-      : bindingSection(bindingSection), lazyBindingSection(lazyBindingSection),
-        exportSection(exportSection) {}
+      : bindingSection(bindingSection), weakBindingSection(weakBindingSection),
+        lazyBindingSection(lazyBindingSection), exportSection(exportSection) {}
 
   uint32_t getSize() const override { return sizeof(dyld_info_command); }
 
@@ -79,6 +80,10 @@ public:
     if (bindingSection->isNeeded()) {
       c->bind_off = bindingSection->fileOff;
       c->bind_size = bindingSection->getFileSize();
+    }
+    if (weakBindingSection->isNeeded()) {
+      c->weak_bind_off = weakBindingSection->fileOff;
+      c->weak_bind_size = weakBindingSection->getFileSize();
     }
     if (lazyBindingSection->isNeeded()) {
       c->lazy_bind_off = lazyBindingSection->fileOff;
@@ -91,6 +96,7 @@ public:
   }
 
   BindingSection *bindingSection;
+  WeakBindingSection *weakBindingSection;
   LazyBindingSection *lazyBindingSection;
   ExportSection *exportSection;
 };
@@ -321,8 +327,8 @@ void Writer::scanRelocations() {
 }
 
 void Writer::createLoadCommands() {
-  in.header->addLoadCommand(
-      make<LCDyldInfo>(in.binding, lazyBindingSection, exportSection));
+  in.header->addLoadCommand(make<LCDyldInfo>(
+      in.binding, in.weakBinding, lazyBindingSection, exportSection));
   in.header->addLoadCommand(make<LCSymtab>(symtabSection, stringTableSection));
   in.header->addLoadCommand(make<LCDysymtab>());
   for (StringRef path : config->runtimePaths)
@@ -414,7 +420,8 @@ static int sectionOrder(OutputSection *osec) {
       return -1;
   } else if (segname == segment_names::linkEdit) {
     return StringSwitch<int>(osec->name)
-        .Case(section_names::binding, -5)
+        .Case(section_names::binding, -6)
+        .Case(section_names::weakBinding, -5)
         .Case(section_names::lazyBinding, -4)
         .Case(section_names::export_, -3)
         .Case(section_names::symbolTable, -2)
@@ -577,6 +584,7 @@ void Writer::run() {
 
   // Fill __LINKEDIT contents.
   in.binding->finalizeContents();
+  in.weakBinding->finalizeContents();
   lazyBindingSection->finalizeContents();
   exportSection->finalizeContents();
   symtabSection->finalizeContents();
@@ -600,6 +608,7 @@ void macho::writeResult() { Writer().run(); }
 void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();
   in.binding = make<BindingSection>();
+  in.weakBinding = make<WeakBindingSection>();
   in.got = make<GotSection>();
   in.tlvPointers = make<TlvPointerSection>();
   in.lazyPointers = make<LazyPointerSection>();

@@ -57,6 +57,9 @@ public:
 
   virtual bool isTlv() const { llvm_unreachable("cannot be TLV"); }
 
+  // Whether this symbol is in the GOT or TLVPointer sections.
+  bool isInGot() const { return gotIndex != UINT32_MAX; }
+
   // The index of this symbol in the GOT or the TLVPointer section, depending
   // on whether it is a thread-local. A given symbol cannot be referenced by
   // both these sections at once.
@@ -71,13 +74,16 @@ protected:
 
 class Defined : public Symbol {
 public:
-  Defined(StringRefZ name, InputSection *isec, uint32_t value, bool isWeakDef)
-      : Symbol(DefinedKind, name), isec(isec), value(value),
-        weakDef(isWeakDef) {}
+  Defined(StringRefZ name, InputSection *isec, uint32_t value, bool isWeakDef,
+          bool isExternal)
+      : Symbol(DefinedKind, name), isec(isec), value(value), weakDef(isWeakDef),
+        external(isExternal) {}
 
   bool isWeakDef() const override { return weakDef; }
 
   bool isTlv() const override { return isThreadLocalVariables(isec->flags); }
+
+  bool isExternal() const { return external; }
 
   static bool classof(const Symbol *s) { return s->kind() == DefinedKind; }
 
@@ -92,6 +98,7 @@ public:
 
 private:
   const bool weakDef;
+  const bool external;
 };
 
 class Undefined : public Symbol {

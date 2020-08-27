@@ -236,7 +236,8 @@ void InputFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
       // Global defined symbol
       return symtab->addDefined(name, isec, value, sym.n_desc & N_WEAK_DEF);
     // Local defined symbol
-    return make<Defined>(name, isec, value, sym.n_desc & N_WEAK_DEF);
+    return make<Defined>(name, isec, value, sym.n_desc & N_WEAK_DEF,
+                         /*isExternal=*/false);
   };
 
   for (size_t i = 0, n = nList.size(); i < n; ++i) {
