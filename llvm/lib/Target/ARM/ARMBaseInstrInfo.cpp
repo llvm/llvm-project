@@ -317,8 +317,8 @@ bool ARMBaseInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   TBB = nullptr;
   FBB = nullptr;
 
-  MachineBasicBlock::iterator I = MBB.end();
-  if (I == MBB.begin())
+  MachineBasicBlock::instr_iterator I = MBB.instr_end();
+  if (I == MBB.instr_begin())
     return false; // Empty blocks are easy.
   --I;
 
@@ -332,7 +332,7 @@ bool ARMBaseInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 
     // Skip over DEBUG values and predicated nonterminators.
     while (I->isDebugInstr() || !I->isTerminator()) {
-      if (I == MBB.begin())
+      if (I == MBB.instr_begin())
         return false;
       --I;
     }
@@ -356,7 +356,7 @@ bool ARMBaseInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       Cond.push_back(I->getOperand(2));
     } else if (I->isReturn()) {
       // Returns can't be analyzed, but we should run cleanup.
-      CantAnalyze = !isPredicated(*I);
+      CantAnalyze = true;
     } else {
       // We encountered other unrecognized terminator. Bail out immediately.
       return true;
@@ -377,7 +377,7 @@ bool ARMBaseInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       // unconditional branch.
       if (AllowModify) {
         MachineBasicBlock::iterator DI = std::next(I);
-        while (DI != MBB.end()) {
+        while (DI != MBB.instr_end()) {
           MachineInstr &InstToDelete = *DI;
           ++DI;
           InstToDelete.eraseFromParent();
@@ -385,10 +385,19 @@ bool ARMBaseInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       }
     }
 
-    if (CantAnalyze)
+    if (CantAnalyze) {
+      // We may not be able to analyze the block, but we could still have
+      // an unconditional branch as the last instruction in the block, which
+      // just branches to layout successor. If this is the case, then just
+      // remove it if we're allowed to make modifications.
+      if (AllowModify && !isPredicated(MBB.back()) &&
+          isUncondBranchOpcode(MBB.back().getOpcode()) &&
+          TBB && MBB.isLayoutSuccessor(TBB))
+        removeBranch(MBB);
       return true;
+    }
 
-    if (I == MBB.begin())
+    if (I == MBB.instr_begin())
       return false;
 
     --I;
