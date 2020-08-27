@@ -786,12 +786,12 @@ def : Pat <
 
 def : Pat <
   (int_amdgcn_wqm_demote i1:$src),
-  (SI_DEMOTE_I1 $src, 0)
+  (SI_DEMOTE_I1 SCSrc_i1:$src, 0)
 >;
 
 def : Pat <
   (int_amdgcn_wqm_demote (i1 (not i1:$src))),
-  (SI_DEMOTE_I1 $src, -1)
+  (SI_DEMOTE_I1 SCSrc_i1:$src, -1)
 >;
 
 def : Pat <
