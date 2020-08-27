@@ -55,9 +55,9 @@ Scalar::PromotionKey Scalar::GetPromoKey() const {
   Category cat = GetCategory(m_type);
   switch (cat) {
   case Category::Void:
-    return {cat, 0, false};
+    return PromotionKey{cat, 0, false};
   case Category::Integral:
-    return {cat, m_integer.getBitWidth(), !IsSigned(m_type)};
+    return PromotionKey{cat, m_integer.getBitWidth(), !IsSigned(m_type)};
   case Category::Float:
     return GetFloatPromoKey(m_float.getSemantics());
   }
@@ -70,7 +70,7 @@ Scalar::PromotionKey Scalar::GetFloatPromoKey(const llvm::fltSemantics &sem) {
       &APFloat::x87DoubleExtended()};
   for (const auto &entry : llvm::enumerate(order)) {
     if (entry.value() == &sem)
-      return {Category::Float, entry.index(), false};
+      return PromotionKey{Category::Float, entry.index(), false};
   }
   llvm_unreachable("Unsupported semantics!");
 }
