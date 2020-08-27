@@ -1323,7 +1323,7 @@ ChangeStatus Attributor::cleanupIR() {
 ChangeStatus Attributor::run() {
   TimeTraceScope TimeScope("Attributor::run");
 
-  SeedingPeriod = false;
+  Phase = AttributorPhase::UPDATE;
   runTillFixpoint();
 
   // dump graphs on demand
@@ -1336,8 +1336,12 @@ ChangeStatus Attributor::run() {
   if (PrintDependencies)
     DG.print();
 
+  Phase = AttributorPhase::MANIFEST;
   ChangeStatus ManifestChange = manifestAttributes();
+
+  Phase = AttributorPhase::CLEANUP;
   ChangeStatus CleanupChange = cleanupIR();
+
   return ManifestChange | CleanupChange;
 }
 
