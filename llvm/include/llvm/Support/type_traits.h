@@ -186,6 +186,13 @@ template <typename T>
 class is_trivially_copyable<T*> : public std::true_type {
 };
 
+// Workaround the resolution to DR1734
+#if _MSVC_STL_UPDATE-0l > 202002l
+template <>
+class is_trivially_copyable<std::pair<void *, size_t>> : public std::true_type {
+};
+#endif
+
 
 } // end namespace llvm
 
