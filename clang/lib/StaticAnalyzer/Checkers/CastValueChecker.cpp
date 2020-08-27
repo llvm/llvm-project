@@ -106,7 +106,7 @@ static const NoteTag *getNoteTag(CheckerContext &C,
                                  QualType CastToTy, const Expr *Object,
                                  bool CastSucceeds, bool IsKnownCast) {
   std::string CastToName =
-      CastInfo ? CastInfo->to()->getPointeeCXXRecordDecl()->getNameAsString()
+      CastInfo ? CastInfo->to()->getAsCXXRecordDecl()->getNameAsString()
                : CastToTy->getPointeeCXXRecordDecl()->getNameAsString();
   Object = Object->IgnoreParenImpCasts();
 
