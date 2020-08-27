@@ -6,6 +6,7 @@ add_lldb_library(lldbUtilityHelpers
   LINK_LIBS
     lldbUtility
     lldbSymbolHelpers
+    gtest
 
   LINK_COMPONENTS
     Support
