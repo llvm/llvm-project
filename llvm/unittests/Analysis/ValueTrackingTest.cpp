@@ -1431,13 +1431,18 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
   }
 }
 
+struct FindAllocaForValueTestParams {
+  const char *IR;
+  bool Result;
+};
+
 class FindAllocaForValueTest
     : public ValueTrackingTest,
-      public ::testing::WithParamInterface<std::pair<const char *, bool>> {
+      public ::testing::WithParamInterface<FindAllocaForValueTestParams> {
 protected:
 };
 
-const std::pair<const char *, bool> FindAllocaForValueTests[] = {
+const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
     {R"(
       define void @test() {
         %a = alloca i64
@@ -1546,11 +1551,11 @@ const std::pair<const char *, bool> FindAllocaForValueTests[] = {
 };
 
 TEST_P(FindAllocaForValueTest, findAllocaForValue) {
-  auto M = parseModule(GetParam().first);
+  auto M = parseModule(GetParam().IR);
   Function *F = M->getFunction("test");
   Instruction *I = &findInstructionByName(F, "r");
   const AllocaInst *AI = findAllocaForValue(I);
-  EXPECT_EQ(!!AI, GetParam().second);
+  EXPECT_EQ(!!AI, GetParam().Result);
 }
 
 INSTANTIATE_TEST_CASE_P(FindAllocaForValueTest, FindAllocaForValueTest,
