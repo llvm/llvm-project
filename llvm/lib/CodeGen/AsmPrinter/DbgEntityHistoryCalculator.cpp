@@ -53,6 +53,55 @@ static Register isDescribedByReg(const MachineInstr &MI) {
                                        : Register();
 }
 
+/// Record instruction ordering so we can query their relative positions within
+/// a function. Meta instructions are given the same ordinal as the preceding
+/// non-meta instruction. Class state is invalid if MF is modified after
+/// calling initialize.
+class InstructionOrdering {
+public:
+  void initialize(const MachineFunction &MF);
+  void clear() { InstNumberMap.clear(); }
+
+  /// Check if instruction \p A comes before \p B, where \p A and \p B both
+  /// belong to the MachineFunction passed to initialize().
+  bool isBefore(const MachineInstr *A, const MachineInstr *B) const;
+
+private:
+  /// Each instruction is assigned an order number.
+  DenseMap<const MachineInstr *, unsigned> InstNumberMap;
+};
+
+void InstructionOrdering::initialize(const MachineFunction &MF) {
+  // We give meta instructions the same ordinal as the preceding instruction
+  // because this class is written for the task of comparing positions of
+  // variable location ranges against scope ranges. To reflect what we'll see
+  // in the binary, when we look at location ranges we must consider all
+  // DBG_VALUEs between two real instructions at the same position. And a
+  // scope range which ends on a meta instruction should be considered to end
+  // at the last seen real instruction. E.g.
+  //
+  //  1 instruction p      Both the variable location for x and for y start
+  //  1 DBG_VALUE for "x"  after instruction p so we give them all the same
+  //  1 DBG_VALUE for "y"  number. If a scope range ends at DBG_VALUE for "y",
+  //  2 instruction q      we should treat it as ending after instruction p
+  //                       because it will be the last real instruction in the
+  //                       range. DBG_VALUEs at or after this position for
+  //                       variables declared in the scope will have no effect.
+  clear();
+  unsigned Position = 0;
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB)
+      InstNumberMap[&MI] = MI.isMetaInstruction() ? Position : ++Position;
+}
+
+bool InstructionOrdering::isBefore(const MachineInstr *A,
+                                   const MachineInstr *B) const {
+  assert(A->getParent() && B->getParent() && "Operands must have a parent");
+  assert(A->getMF() == B->getMF() &&
+         "Operands must be in the same MachineFunction");
+  return InstNumberMap.lookup(A) < InstNumberMap.lookup(B);
+}
+
 bool DbgValueHistoryMap::startDbgValue(InlinedEntity Var,
                                        const MachineInstr &MI,
                                        EntryIndex &NewIndex) {
@@ -92,55 +141,21 @@ void DbgValueHistoryMap::Entry::endEntry(EntryIndex Index) {
   EndIndex = Index;
 }
 
-using OrderMap = DenseMap<const MachineInstr *, unsigned>;
-/// Number instructions so that we can compare instruction positions within MF.
-/// Meta instructions are given the same nubmer as the preceding instruction.
-/// Because the block ordering will not change it is possible (and safe) to
-/// compare instruction positions between blocks.
-static void numberInstructions(const MachineFunction &MF, OrderMap &Ordering) {
-  // We give meta instructions the same number as the peceding instruction
-  // because this function is written for the task of comparing positions of
-  // variable location ranges against scope ranges. To reflect what we'll see
-  // in the binary, when we look at location ranges we must consider all
-  // DBG_VALUEs between two real instructions at the same position. And a
-  // scope range which ends on a meta instruction should be considered to end
-  // at the last seen real instruction. E.g.
-  //
-  //  1 instruction p      Both the variable location for x and for y start
-  //  1 DBG_VALUE for "x"  after instruction p so we give them all the same
-  //  1 DBG_VALUE for "y"  number. If a scope range ends at DBG_VALUE for "y",
-  //  2 instruction q      we should treat it as ending after instruction p
-  //                       because it will be the last real instruction in the
-  //                       range. DBG_VALUEs at or after this position for
-  //                       variables declared in the scope will have no effect.
-  unsigned position = 0;
-  for (const MachineBasicBlock &MBB : MF)
-    for (const MachineInstr &MI : MBB)
-      Ordering[&MI] = MI.isMetaInstruction() ? position : ++position;
-}
-
-/// Check if instruction A comes before B. Meta instructions have the same
-/// position as the preceding non-meta instruction. See numberInstructions for
-/// more info.
-static bool isBefore(const MachineInstr *A, const MachineInstr *B,
-                     const OrderMap &Ordering) {
-  return Ordering.lookup(A) < Ordering.lookup(B);
-}
-
 /// Check if the instruction range [StartMI, EndMI] intersects any instruction
 /// range in Ranges. EndMI can be nullptr to indicate that the range is
 /// unbounded. Assumes Ranges is ordered and disjoint. Returns true and points
 /// to the first intersecting scope range if one exists.
 static Optional<ArrayRef<InsnRange>::iterator>
 intersects(const MachineInstr *StartMI, const MachineInstr *EndMI,
-           const ArrayRef<InsnRange> &Ranges, const OrderMap &Ordering) {
+           const ArrayRef<InsnRange> &Ranges,
+           const InstructionOrdering &Ordering) {
   for (auto RangesI = Ranges.begin(), RangesE = Ranges.end();
        RangesI != RangesE; ++RangesI) {
-    if (EndMI && isBefore(EndMI, RangesI->first, Ordering))
+    if (EndMI && Ordering.isBefore(EndMI, RangesI->first))
       return None;
-    if (EndMI && !isBefore(RangesI->second, EndMI, Ordering))
+    if (EndMI && !Ordering.isBefore(RangesI->second, EndMI))
       return RangesI;
-    if (isBefore(StartMI, RangesI->second, Ordering))
+    if (Ordering.isBefore(StartMI, RangesI->second))
       return RangesI;
   }
   return None;
@@ -148,8 +163,8 @@ intersects(const MachineInstr *StartMI, const MachineInstr *EndMI,
 
 void DbgValueHistoryMap::trimLocationRanges(const MachineFunction &MF,
                                             LexicalScopes &LScopes) {
-  OrderMap Ordering;
-  numberInstructions(MF, Ordering);
+  InstructionOrdering Ordering;
+  Ordering.initialize(MF);
 
   // The indices of the entries we're going to remove for each variable.
   SmallVector<EntryIndex, 4> ToRemove;
