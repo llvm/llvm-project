@@ -142,15 +142,6 @@ typedef struct atmi_device_s {
    */
   atmi_devtype_t type;
   /**
-   * The number of compute cores
-   */
-  unsigned int core_count;
-  /**
-   * The number of memory spaces/regions that are accessible
-   * from this device
-   */
-  unsigned int memory_count;
-  /**
    * Array of memory spaces/regions that are accessible
    * from this device.
    */
