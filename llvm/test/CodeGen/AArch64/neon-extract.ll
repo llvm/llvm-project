@@ -209,7 +209,7 @@ entry:
 
 define <4 x i16> @test_undef_vext_s16(<4 x i16> %a) {
 ; CHECK-LABEL: test_undef_vext_s16:
-; CHECK: ext {{v[0-9]+}}.8b, {{v[0-9]+}}.8b, {{v[0-9]+}}.8b, #{{0x4|4}}
+; CHECK: dup v{{[0-9]+}}.2s, {{v[0-9]+}}.s[1]
 entry:
   %vext = shufflevector <4 x i16> %a, <4 x i16> undef, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
   ret <4 x i16> %vext
