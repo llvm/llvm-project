@@ -25,7 +25,7 @@
 # OBJC-NEXT:  g     F __TEXT,__text _OBJC_CLASS_$_MyObject
 
 # RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -lSystem %t/test.o -o %t/test \
-# RUN:   -L%t -lHasObjCSymbol -lHasObjCCategory -lHasSwift
+# RUN:   -L%t -lHasSomeObjC
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=NO-OBJC
 
 # NO-OBJC:       Sections:
