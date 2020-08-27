@@ -55,7 +55,6 @@ public:
   uint64_t addr = 0;
   uint64_t fileOff = 0;
   MachHeaderSection *header = nullptr;
-  ExportSection *exportSection = nullptr;
   StringTableSection *stringTableSection = nullptr;
   SymtabSection *symtabSection = nullptr;
 };
@@ -326,8 +325,8 @@ void Writer::scanRelocations() {
 }
 
 void Writer::createLoadCommands() {
-  in.header->addLoadCommand(make<LCDyldInfo>(in.binding, in.weakBinding,
-                                             in.lazyBinding, exportSection));
+  in.header->addLoadCommand(
+      make<LCDyldInfo>(in.binding, in.weakBinding, in.lazyBinding, in.exports));
   in.header->addLoadCommand(make<LCSymtab>(symtabSection, stringTableSection));
   in.header->addLoadCommand(make<LCDysymtab>());
   for (StringRef path : config->runtimePaths)
@@ -474,7 +473,6 @@ void Writer::createOutputSections() {
   // First, create hidden sections
   stringTableSection = make<StringTableSection>();
   symtabSection = make<SymtabSection>(*stringTableSection);
-  exportSection = make<ExportSection>();
 
   switch (config->outputType) {
   case MH_EXECUTE:
@@ -584,7 +582,7 @@ void Writer::run() {
   in.binding->finalizeContents();
   in.weakBinding->finalizeContents();
   in.lazyBinding->finalizeContents();
-  exportSection->finalizeContents();
+  in.exports->finalizeContents();
   symtabSection->finalizeContents();
 
   // Now that __LINKEDIT is filled out, do a proper calculation of its
@@ -608,6 +606,7 @@ void macho::createSyntheticSections() {
   in.binding = make<BindingSection>();
   in.weakBinding = make<WeakBindingSection>();
   in.lazyBinding = make<LazyBindingSection>();
+  in.exports = make<ExportSection>();
   in.got = make<GotSection>();
   in.tlvPointers = make<TlvPointerSection>();
   in.lazyPointers = make<LazyPointerSection>();
