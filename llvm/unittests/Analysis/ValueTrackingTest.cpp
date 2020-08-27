@@ -1433,7 +1433,8 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
 
 struct FindAllocaForValueTestParams {
   const char *IR;
-  bool Result;
+  bool AnyOffsetResult;
+  bool ZeroOffsetResult;
 };
 
 class FindAllocaForValueTest
@@ -1449,7 +1450,7 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
         %r = bitcast i64* %a to i32*
         ret void
       })",
-     true},
+     true, true},
 
     {R"(
       define void @test() {
@@ -1457,7 +1458,15 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
         %r = getelementptr i32, i32* %a, i32 1
         ret void
       })",
-     true},
+     true, false},
+
+    {R"(
+      define void @test() {
+        %a = alloca i32
+        %r = getelementptr i32, i32* %a, i32 0
+        ret void
+      })",
+     true, true},
 
     {R"(
       define void @test(i1 %cond) {
@@ -1472,7 +1481,7 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
       exit:
         ret void
       })",
-     true},
+     true, true},
 
     {R"(
       define void @test(i1 %cond) {
@@ -1480,7 +1489,7 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
         %r = select i1 %cond, i32* %a, i32* %a
         ret void
       })",
-     true},
+     true, true},
 
     {R"(
       define void @test(i1 %cond) {
@@ -1489,7 +1498,7 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
         %r = select i1 %cond, i32* %a, i32* %b
         ret void
       })",
-     false},
+     false, false},
 
     {R"(
       define void @test(i1 %cond) {
@@ -1506,7 +1515,7 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
       exit:
         ret void
       })",
-     true},
+     true, false},
 
     {R"(
       define void @test(i1 %cond) {
@@ -1523,7 +1532,7 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
       exit:
         ret void
       })",
-     false},
+     false, false},
 
     {R"(
       define void @test(i1 %cond, i64* %a) {
@@ -1531,7 +1540,7 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
         %r = bitcast i64* %a to i32*
         ret void
       })",
-     false},
+     false, false},
 
     {R"(
       define void @test(i1 %cond) {
@@ -1547,7 +1556,7 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
       exit:
         ret void
       })",
-     false},
+     false, false},
 };
 
 TEST_P(FindAllocaForValueTest, findAllocaForValue) {
@@ -1555,7 +1564,15 @@ TEST_P(FindAllocaForValueTest, findAllocaForValue) {
   Function *F = M->getFunction("test");
   Instruction *I = &findInstructionByName(F, "r");
   const AllocaInst *AI = findAllocaForValue(I);
-  EXPECT_EQ(!!AI, GetParam().Result);
+  EXPECT_EQ(!!AI, GetParam().AnyOffsetResult);
+}
+
+TEST_P(FindAllocaForValueTest, findAllocaForValueZeroOffset) {
+  auto M = parseModule(GetParam().IR);
+  Function *F = M->getFunction("test");
+  Instruction *I = &findInstructionByName(F, "r");
+  const AllocaInst *AI = findAllocaForValue(I, true);
+  EXPECT_EQ(!!AI, GetParam().ZeroOffsetResult);
 }
 
 INSTANTIATE_TEST_CASE_P(FindAllocaForValueTest, FindAllocaForValueTest,
