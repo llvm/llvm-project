@@ -632,6 +632,63 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         return true;
       }
     }
+
+    // Changed in 12.0: bfdot accept v4bf16 and v8bf16 instead of v8i8 and v16i8
+    // respectively
+    if ((Name.startswith("arm.neon.bfdot.") ||
+         Name.startswith("aarch64.neon.bfdot.")) &&
+        Name.endswith("i8")) {
+      Intrinsic::ID IID =
+          StringSwitch<Intrinsic::ID>(Name)
+              .Cases("arm.neon.bfdot.v2f32.v8i8",
+                     "arm.neon.bfdot.v4f32.v16i8",
+                     Intrinsic::arm_neon_bfdot)
+              .Cases("aarch64.neon.bfdot.v2f32.v8i8",
+                     "aarch64.neon.bfdot.v4f32.v16i8",
+                     Intrinsic::aarch64_neon_bfdot)
+              .Default(Intrinsic::not_intrinsic);
+      if (IID == Intrinsic::not_intrinsic)
+        break;
+
+      size_t OperandWidth = F->getReturnType()->getPrimitiveSizeInBits();
+      assert((OperandWidth == 64 || OperandWidth == 128) &&
+             "Unexpected operand width");
+      LLVMContext &Ctx = F->getParent()->getContext();
+      std::array<Type *, 2> Tys {{
+        F->getReturnType(),
+        FixedVectorType::get(Type::getBFloatTy(Ctx), OperandWidth / 16)
+      }};
+      NewFn = Intrinsic::getDeclaration(F->getParent(), IID, Tys);
+      return true;
+    }
+
+    // Changed in 12.0: bfmmla, bfmlalb and bfmlalt are not polymorphic anymore
+    // and accept v8bf16 instead of v16i8
+    if ((Name.startswith("arm.neon.bfm") ||
+         Name.startswith("aarch64.neon.bfm")) &&
+        Name.endswith(".v4f32.v16i8")) {
+      Intrinsic::ID IID =
+          StringSwitch<Intrinsic::ID>(Name)
+              .Case("arm.neon.bfmmla.v4f32.v16i8",
+                    Intrinsic::arm_neon_bfmmla)
+              .Case("arm.neon.bfmlalb.v4f32.v16i8",
+                    Intrinsic::arm_neon_bfmlalb)
+              .Case("arm.neon.bfmlalt.v4f32.v16i8",
+                    Intrinsic::arm_neon_bfmlalt)
+              .Case("aarch64.neon.bfmmla.v4f32.v16i8",
+                    Intrinsic::aarch64_neon_bfmmla)
+              .Case("aarch64.neon.bfmlalb.v4f32.v16i8",
+                    Intrinsic::aarch64_neon_bfmlalb)
+              .Case("aarch64.neon.bfmlalt.v4f32.v16i8",
+                    Intrinsic::aarch64_neon_bfmlalt)
+              .Default(Intrinsic::not_intrinsic);
+      if (IID == Intrinsic::not_intrinsic)
+        break;
+
+      std::array<Type *, 0> Tys;
+      NewFn = Intrinsic::getDeclaration(F->getParent(), IID, Tys);
+      return true;
+    }
     break;
   }
 
@@ -3614,6 +3671,30 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
   case Intrinsic::arm_neon_vst4lane: {
     SmallVector<Value *, 4> Args(CI->arg_operands().begin(),
                                  CI->arg_operands().end());
+    NewCall = Builder.CreateCall(NewFn, Args);
+    break;
+  }
+
+  case Intrinsic::arm_neon_bfdot:
+  case Intrinsic::arm_neon_bfmmla:
+  case Intrinsic::arm_neon_bfmlalb:
+  case Intrinsic::arm_neon_bfmlalt:
+  case Intrinsic::aarch64_neon_bfdot:
+  case Intrinsic::aarch64_neon_bfmmla:
+  case Intrinsic::aarch64_neon_bfmlalb:
+  case Intrinsic::aarch64_neon_bfmlalt: {
+    SmallVector<Value *, 3> Args;
+    assert(CI->getNumArgOperands() == 3 &&
+           "Mismatch between function args and call args");
+    size_t OperandWidth =
+        CI->getArgOperand(1)->getType()->getPrimitiveSizeInBits();
+    assert((OperandWidth == 64 || OperandWidth == 128) &&
+           "Unexpected operand width");
+    Type *NewTy = FixedVectorType::get(Type::getBFloatTy(C), OperandWidth / 16);
+    auto Iter = CI->arg_operands().begin();
+    Args.push_back(*Iter++);
+    Args.push_back(Builder.CreateBitCast(*Iter++, NewTy));
+    Args.push_back(Builder.CreateBitCast(*Iter++, NewTy));
     NewCall = Builder.CreateCall(NewFn, Args);
     break;
   }

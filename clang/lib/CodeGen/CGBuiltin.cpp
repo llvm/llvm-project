@@ -6241,27 +6241,9 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vbfdot_v:
   case NEON::BI__builtin_neon_vbfdotq_v: {
     llvm::Type *InputTy =
-        llvm::FixedVectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
+        llvm::FixedVectorType::get(BFloatTy, Ty->getPrimitiveSizeInBits() / 16);
     llvm::Type *Tys[2] = { Ty, InputTy };
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vbfdot");
-  }
-  case NEON::BI__builtin_neon_vbfmmlaq_v: {
-    llvm::Type *InputTy =
-        llvm::FixedVectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
-    llvm::Type *Tys[2] = { Ty, InputTy };
-    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vbfmmla");
-  }
-  case NEON::BI__builtin_neon_vbfmlalbq_v: {
-    llvm::Type *InputTy =
-        llvm::FixedVectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
-    llvm::Type *Tys[2] = { Ty, InputTy };
-    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vbfmlalb");
-  }
-  case NEON::BI__builtin_neon_vbfmlaltq_v: {
-    llvm::Type *InputTy =
-        llvm::FixedVectorType::get(Int8Ty, Ty->getPrimitiveSizeInBits() / 8);
-    llvm::Type *Tys[2] = { Ty, InputTy };
-    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vbfmlalt");
   }
   case NEON::BI__builtin_neon___a32_vcvt_bf16_v: {
     llvm::Type *Tys[1] = { Ty };
