@@ -27,7 +27,7 @@ void foo() {}
 TranslationUnit Detached
 |-SimpleDeclaration
 | |-'int'
-| |-SimpleDeclarator SimpleDeclaration_declarator
+| |-SimpleDeclarator Declarator
 | | |-'main'
 | | `-ParametersAndQualifiers
 | |   |-'(' OpenParen
@@ -37,7 +37,7 @@ TranslationUnit Detached
 |   `-'}' CloseParen
 `-SimpleDeclaration
   |-'void'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'foo'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
@@ -58,12 +58,12 @@ int b = 42;
 TranslationUnit Detached
 |-SimpleDeclaration
 | |-'int'
-| |-SimpleDeclarator SimpleDeclaration_declarator
+| |-SimpleDeclarator Declarator
 | | `-'a'
 | `-';'
 `-SimpleDeclaration
   |-'int'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'b'
   | |-'='
   | `-IntegerLiteralExpression
@@ -81,19 +81,19 @@ void foo(int a, int b) {}
 TranslationUnit Detached
 `-SimpleDeclaration
   |-'void'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'foo'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
-  |   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-  |   | |-SimpleDeclaration List_element
+  |   |-ParameterDeclarationList Parameters
+  |   | |-SimpleDeclaration ListElement
   |   | | |-'int'
-  |   | | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   | | `-SimpleDeclarator Declarator
   |   | |   `-'a'
-  |   | |-',' List_delimiter
-  |   | `-SimpleDeclaration List_element
+  |   | |-',' ListDelimiter
+  |   | `-SimpleDeclaration ListElement
   |   |   |-'int'
-  |   |   `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   `-SimpleDeclarator Declarator
   |   |     `-'b'
   |   `-')' CloseParen
   `-CompoundStatement
@@ -111,34 +111,34 @@ void test() {
 }
 )cpp",
       {R"txt(
-IfStatement CompoundStatement_statement
+IfStatement Statement
 |-'if' IntroducerKeyword
 |-'('
 |-IntegerLiteralExpression
 | `-'1' LiteralToken
 |-')'
-`-CompoundStatement IfStatement_thenStatement
+`-CompoundStatement ThenStatement
   |-'{' OpenParen
   `-'}' CloseParen
   )txt",
        R"txt(
-IfStatement CompoundStatement_statement
+IfStatement Statement
 |-'if' IntroducerKeyword
 |-'('
 |-IntegerLiteralExpression
 | `-'1' LiteralToken
 |-')'
-|-CompoundStatement IfStatement_thenStatement
+|-CompoundStatement ThenStatement
 | |-'{' OpenParen
 | `-'}' CloseParen
-|-'else' IfStatement_elseKeyword
-`-IfStatement IfStatement_elseStatement
+|-'else' ElseKeyword
+`-IfStatement ElseStatement
   |-'if' IntroducerKeyword
   |-'('
   |-IntegerLiteralExpression
   | `-'0' LiteralToken
   |-')'
-  `-CompoundStatement IfStatement_thenStatement
+  `-CompoundStatement ThenStatement
     |-'{' OpenParen
     `-'}' CloseParen
 )txt"}));
@@ -152,7 +152,7 @@ void test() {
 }
 )cpp",
       {R"txt(
-ForStatement CompoundStatement_statement
+ForStatement Statement
 |-'for' IntroducerKeyword
 |-'('
 |-';'
@@ -177,16 +177,16 @@ void test() {
 }
 )cpp",
       {R"txt(
-RangeBasedForStatement CompoundStatement_statement
+RangeBasedForStatement Statement
 |-'for' IntroducerKeyword
 |-'('
 |-SimpleDeclaration
 | |-'int'
-| |-SimpleDeclarator SimpleDeclaration_declarator
+| |-SimpleDeclarator Declarator
 | | `-'x'
 | `-':'
 |-IdExpression
-| `-UnqualifiedId IdExpression_id
+| `-UnqualifiedId UnqualifiedId
 |   `-'a'
 |-')'
 `-EmptyStatement BodyStatement
@@ -202,10 +202,10 @@ void test() {
 }
 )cpp",
       {R"txt(
-DeclarationStatement CompoundStatement_statement
+DeclarationStatement Statement
 |-SimpleDeclaration
 | |-'int'
-| `-SimpleDeclarator SimpleDeclaration_declarator
+| `-SimpleDeclarator Declarator
 |   |-'a'
 |   |-'='
 |   `-IntegerLiteralExpression
@@ -225,7 +225,7 @@ void test() {
 }
 )cpp",
       {R"txt(
-SwitchStatement CompoundStatement_statement
+SwitchStatement Statement
 |-'switch' IntroducerKeyword
 |-'('
 |-IntegerLiteralExpression
@@ -233,9 +233,9 @@ SwitchStatement CompoundStatement_statement
 |-')'
 `-CompoundStatement BodyStatement
   |-'{' OpenParen
-  |-CaseStatement CompoundStatement_statement
+  |-CaseStatement Statement
   | |-'case' IntroducerKeyword
-  | |-IntegerLiteralExpression CaseStatement_value
+  | |-IntegerLiteralExpression CaseValue
   | | `-'0' LiteralToken
   | |-':'
   | `-DefaultStatement BodyStatement
@@ -255,7 +255,7 @@ void test() {
 }
 )cpp",
       {R"txt(
-WhileStatement CompoundStatement_statement
+WhileStatement Statement
 |-'while' IntroducerKeyword
 |-'('
 |-IntegerLiteralExpression
@@ -263,10 +263,10 @@ WhileStatement CompoundStatement_statement
 |-')'
 `-CompoundStatement BodyStatement
   |-'{' OpenParen
-  |-ContinueStatement CompoundStatement_statement
+  |-ContinueStatement Statement
   | |-'continue' IntroducerKeyword
   | `-';'
-  |-BreakStatement CompoundStatement_statement
+  |-BreakStatement Statement
   | |-'break' IntroducerKeyword
   | `-';'
   `-'}' CloseParen
@@ -284,12 +284,12 @@ int test() {
 }
 )cpp",
       {R"txt(
-UnknownStatement CompoundStatement_statement
+UnknownStatement Statement
 |-'foo'
 |-':'
 `-ReturnStatement
   |-'return' IntroducerKeyword
-  |-IntegerLiteralExpression ReturnStatement_value
+  |-IntegerLiteralExpression ReturnValue
   | `-'100' LiteralToken
   `-';'
 )txt"}));
@@ -309,40 +309,40 @@ void test() {
 TranslationUnit Detached
 `-SimpleDeclaration
   |-'void'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'test'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
   |   `-')' CloseParen
   `-CompoundStatement
     |-'{' OpenParen
-    |-ExpressionStatement CompoundStatement_statement
-    | |-CallExpression ExpressionStatement_expression
-    | | |-IdExpression CallExpression_callee
-    | | | `-UnqualifiedId IdExpression_id
+    |-ExpressionStatement Statement
+    | |-CallExpression Expression
+    | | |-IdExpression Callee
+    | | | `-UnqualifiedId UnqualifiedId
     | | |   `-'test'
     | | |-'(' OpenParen
     | | `-')' CloseParen
     | `-';'
-    |-IfStatement CompoundStatement_statement
+    |-IfStatement Statement
     | |-'if' IntroducerKeyword
     | |-'('
     | |-IntegerLiteralExpression
     | | `-'1' LiteralToken
     | |-')'
-    | |-ExpressionStatement IfStatement_thenStatement
-    | | |-CallExpression ExpressionStatement_expression
-    | | | |-IdExpression CallExpression_callee
-    | | | | `-UnqualifiedId IdExpression_id
+    | |-ExpressionStatement ThenStatement
+    | | |-CallExpression Expression
+    | | | |-IdExpression Callee
+    | | | | `-UnqualifiedId UnqualifiedId
     | | | |   `-'test'
     | | | |-'(' OpenParen
     | | | `-')' CloseParen
     | | `-';'
-    | |-'else' IfStatement_elseKeyword
-    | `-ExpressionStatement IfStatement_elseStatement
-    |   |-CallExpression ExpressionStatement_expression
-    |   | |-IdExpression CallExpression_callee
-    |   | | `-UnqualifiedId IdExpression_id
+    | |-'else' ElseKeyword
+    | `-ExpressionStatement ElseStatement
+    |   |-CallExpression Expression
+    |   | |-IdExpression Callee
+    |   | | `-UnqualifiedId UnqualifiedId
     |   | |   `-'test'
     |   | |-'(' OpenParen
     |   | `-')' CloseParen
@@ -359,8 +359,8 @@ void test(int a) {
 }
 )cpp",
       {R"txt(
-IdExpression ExpressionStatement_expression
-`-UnqualifiedId IdExpression_id
+IdExpression Expression
+`-UnqualifiedId UnqualifiedId
   `-'a'
 )txt"}));
 }
@@ -379,19 +379,19 @@ void test(X x) {
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-IdExpression CallExpression_callee
-| `-UnqualifiedId IdExpression_id
+CallExpression Expression
+|-IdExpression Callee
+| `-UnqualifiedId UnqualifiedId
 |   |-'operator'
 |   `-'+'
 |-'(' OpenParen
-|-CallArguments CallExpression_arguments
-| |-IdExpression List_element
-| | `-UnqualifiedId IdExpression_id
+|-CallArguments Arguments
+| |-IdExpression ListElement
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'x'
-| |-',' List_delimiter
-| `-IdExpression List_element
-|   `-UnqualifiedId IdExpression_id
+| |-',' ListDelimiter
+| `-IdExpression ListElement
+|   `-UnqualifiedId UnqualifiedId
 |     `-'x'
 `-')' CloseParen
 )txt"}));
@@ -411,14 +411,14 @@ void test(X x) {
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-MemberExpression CallExpression_callee
-| |-IdExpression MemberExpression_object
-| | `-UnqualifiedId IdExpression_id
+CallExpression Expression
+|-MemberExpression Callee
+| |-IdExpression Object
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'x'
-| |-'.' MemberExpression_accessToken
-| `-IdExpression MemberExpression_member
-|   `-UnqualifiedId IdExpression_id
+| |-'.' AccessToken
+| `-IdExpression Member
+|   `-UnqualifiedId UnqualifiedId
 |     |-'operator'
 |     `-'int'
 |-'(' OpenParen
@@ -438,15 +438,15 @@ void test() {
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-IdExpression CallExpression_callee
-| `-UnqualifiedId IdExpression_id
+CallExpression Expression
+|-IdExpression Callee
+| `-UnqualifiedId UnqualifiedId
 |   |-'operator'
 |   |-'""'
 |   `-'_w'
 |-'(' OpenParen
-|-CallArguments CallExpression_arguments
-| `-CharacterLiteralExpression List_element
+|-CallArguments Arguments
+| `-CharacterLiteralExpression ListElement
 |   `-''1'' LiteralToken
 `-')' CloseParen
 )txt"}));
@@ -464,14 +464,14 @@ void test(X x) {
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-MemberExpression CallExpression_callee
-| |-IdExpression MemberExpression_object
-| | `-UnqualifiedId IdExpression_id
+CallExpression Expression
+|-MemberExpression Callee
+| |-IdExpression Object
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'x'
-| |-'.' MemberExpression_accessToken
-| `-IdExpression MemberExpression_member
-|   `-UnqualifiedId IdExpression_id
+| |-'.' AccessToken
+| `-IdExpression Member
+|   `-UnqualifiedId UnqualifiedId
 |     |-'~'
 |     `-'X'
 |-'(' OpenParen
@@ -495,14 +495,14 @@ void test(X x) {
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-MemberExpression CallExpression_callee
-| |-IdExpression MemberExpression_object
-| | `-UnqualifiedId IdExpression_id
+CallExpression Expression
+|-MemberExpression Callee
+| |-IdExpression Object
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'x'
-| |-'.' MemberExpression_accessToken
-| `-IdExpression MemberExpression_member
-|   `-UnqualifiedId IdExpression_id
+| |-'.' AccessToken
+| `-IdExpression Member
+|   `-UnqualifiedId UnqualifiedId
 |     `-'~'
 |-'decltype'
 |-'('
@@ -526,9 +526,9 @@ void test() {
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-IdExpression CallExpression_callee
-| `-UnqualifiedId IdExpression_id
+CallExpression Expression
+|-IdExpression Callee
+| `-UnqualifiedId UnqualifiedId
 |   |-'f'
 |   |-'<'
 |   |-'int'
@@ -558,23 +558,23 @@ void test() {
       {R"txt(
 SimpleDeclaration
 |-NestedNameSpecifier
-| |-'::' List_delimiter
-| |-IdentifierNameSpecifier List_element
+| |-'::' ListDelimiter
+| |-IdentifierNameSpecifier ListElement
 | | `-'n'
-| `-'::' List_delimiter
+| `-'::' ListDelimiter
 |-'S'
-`-SimpleDeclarator SimpleDeclaration_declarator
+`-SimpleDeclarator Declarator
   `-UnknownExpression
     `-'s1'
 )txt",
        R"txt(
 SimpleDeclaration
 |-NestedNameSpecifier
-| |-IdentifierNameSpecifier List_element
+| |-IdentifierNameSpecifier ListElement
 | | `-'n'
-| `-'::' List_delimiter
+| `-'::' ListDelimiter
 |-'S'
-`-SimpleDeclarator SimpleDeclaration_declarator
+`-SimpleDeclarator Declarator
   `-UnknownExpression
     `-'s2'
 )txt"}));
@@ -598,31 +598,31 @@ void test() {
       {R"txt(
 SimpleDeclaration
 |-NestedNameSpecifier
-| |-'::' List_delimiter
-| |-SimpleTemplateNameSpecifier List_element
+| |-'::' ListDelimiter
+| |-SimpleTemplateNameSpecifier ListElement
 | | |-'template'
 | | |-'ST'
 | | |-'<'
 | | |-'int'
 | | `-'>'
-| `-'::' List_delimiter
+| `-'::' ListDelimiter
 |-'S'
-`-SimpleDeclarator SimpleDeclaration_declarator
+`-SimpleDeclarator Declarator
   `-UnknownExpression
     `-'s1'
 )txt",
        R"txt(
 SimpleDeclaration
 |-NestedNameSpecifier
-| |-'::' List_delimiter
-| |-SimpleTemplateNameSpecifier List_element
+| |-'::' ListDelimiter
+| |-SimpleTemplateNameSpecifier ListElement
 | | |-'ST'
 | | |-'<'
 | | |-'int'
 | | `-'>'
-| `-'::' List_delimiter
+| `-'::' ListDelimiter
 |-'S'
-`-SimpleDeclarator SimpleDeclaration_declarator
+`-SimpleDeclarator Declarator
   `-UnknownExpression
     `-'s2'
 )txt"}));
@@ -642,18 +642,18 @@ void test(S s) {
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-IdExpression CallExpression_callee
-| |-NestedNameSpecifier IdExpression_qualifier
-| | |-DecltypeNameSpecifier List_element
+CallExpression Expression
+|-IdExpression Callee
+| |-NestedNameSpecifier Qualifier
+| | |-DecltypeNameSpecifier ListElement
 | | | |-'decltype'
 | | | |-'('
 | | | |-IdExpression
-| | | | `-UnqualifiedId IdExpression_id
+| | | | `-UnqualifiedId UnqualifiedId
 | | | |   `-'s'
 | | | `-')'
-| | `-'::' List_delimiter
-| `-UnqualifiedId IdExpression_id
+| | `-'::' ListDelimiter
+| `-UnqualifiedId UnqualifiedId
 |   `-'f'
 |-'(' OpenParen
 `-')' CloseParen
@@ -676,13 +676,13 @@ void test() {
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-IdExpression CallExpression_callee
-| |-NestedNameSpecifier IdExpression_qualifier
-| | |-IdentifierNameSpecifier List_element
+CallExpression Expression
+|-IdExpression Callee
+| |-NestedNameSpecifier Qualifier
+| | |-IdentifierNameSpecifier ListElement
 | | | `-'S'
-| | `-'::' List_delimiter
-| `-UnqualifiedId IdExpression_id
+| | `-'::' ListDelimiter
+| `-UnqualifiedId UnqualifiedId
 |   |-'f'
 |   |-'<'
 |   |-'int'
@@ -691,14 +691,14 @@ CallExpression ExpressionStatement_expression
 `-')' CloseParen
 )txt",
        R"txt(
-CallExpression ExpressionStatement_expression
-|-IdExpression CallExpression_callee
-| |-NestedNameSpecifier IdExpression_qualifier
-| | |-IdentifierNameSpecifier List_element
+CallExpression Expression
+|-IdExpression Callee
+| |-NestedNameSpecifier Qualifier
+| | |-IdentifierNameSpecifier ListElement
 | | | `-'S'
-| | `-'::' List_delimiter
+| | `-'::' ListDelimiter
 | |-'template' TemplateKeyword
-| `-UnqualifiedId IdExpression_id
+| `-UnqualifiedId UnqualifiedId
 |   |-'f'
 |   |-'<'
 |   |-'int'
@@ -726,22 +726,22 @@ void test() {
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-IdExpression CallExpression_callee
-| |-NestedNameSpecifier IdExpression_qualifier
-| | |-'::' List_delimiter
-| | |-IdentifierNameSpecifier List_element
+CallExpression Expression
+|-IdExpression Callee
+| |-NestedNameSpecifier Qualifier
+| | |-'::' ListDelimiter
+| | |-IdentifierNameSpecifier ListElement
 | | | `-'n'
-| | |-'::' List_delimiter
-| | |-SimpleTemplateNameSpecifier List_element
+| | |-'::' ListDelimiter
+| | |-SimpleTemplateNameSpecifier ListElement
 | | | |-'template'
 | | | |-'ST'
 | | | |-'<'
 | | | |-'int'
 | | | `-'>'
-| | `-'::' List_delimiter
+| | `-'::' ListDelimiter
 | |-'template' TemplateKeyword
-| `-UnqualifiedId IdExpression_id
+| `-UnqualifiedId UnqualifiedId
 |   |-'f'
 |   |-'<'
 |   |-'int'
@@ -770,48 +770,48 @@ void test() {
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-IdExpression CallExpression_callee
-| |-NestedNameSpecifier IdExpression_qualifier
-| | |-IdentifierNameSpecifier List_element
+CallExpression Expression
+|-IdExpression Callee
+| |-NestedNameSpecifier Qualifier
+| | |-IdentifierNameSpecifier ListElement
 | | | `-'T'
-| | |-'::' List_delimiter
-| | |-SimpleTemplateNameSpecifier List_element
+| | |-'::' ListDelimiter
+| | |-SimpleTemplateNameSpecifier ListElement
 | | | |-'template'
 | | | |-'U'
 | | | |-'<'
 | | | |-'int'
 | | | `-'>'
-| | `-'::' List_delimiter
-| `-UnqualifiedId IdExpression_id
+| | `-'::' ListDelimiter
+| `-UnqualifiedId UnqualifiedId
 |   `-'f'
 |-'(' OpenParen
 `-')' CloseParen
 )txt",
        R"txt(
-CallExpression ExpressionStatement_expression
-|-IdExpression CallExpression_callee
-| |-NestedNameSpecifier IdExpression_qualifier
-| | |-IdentifierNameSpecifier List_element
+CallExpression Expression
+|-IdExpression Callee
+| |-NestedNameSpecifier Qualifier
+| | |-IdentifierNameSpecifier ListElement
 | | | `-'T'
-| | |-'::' List_delimiter
-| | |-IdentifierNameSpecifier List_element
+| | |-'::' ListDelimiter
+| | |-IdentifierNameSpecifier ListElement
 | | | `-'U'
-| | `-'::' List_delimiter
-| `-UnqualifiedId IdExpression_id
+| | `-'::' ListDelimiter
+| `-UnqualifiedId UnqualifiedId
 |   `-'f'
 |-'(' OpenParen
 `-')' CloseParen
 )txt",
        R"txt(
-CallExpression ExpressionStatement_expression
-|-IdExpression CallExpression_callee
-| |-NestedNameSpecifier IdExpression_qualifier
-| | |-IdentifierNameSpecifier List_element
+CallExpression Expression
+|-IdExpression Callee
+| |-NestedNameSpecifier Qualifier
+| | |-IdentifierNameSpecifier ListElement
 | | | `-'T'
-| | `-'::' List_delimiter
+| | `-'::' ListDelimiter
 | |-'template' TemplateKeyword
-| `-UnqualifiedId IdExpression_id
+| `-UnqualifiedId UnqualifiedId
 |   |-'f'
 |   |-'<'
 |   |-IntegerLiteralExpression
@@ -835,7 +835,7 @@ struct S {
 };
 )cpp",
       {R"txt(
-ThisExpression ReturnStatement_value
+ThisExpression ReturnValue
 `-'this' IntroducerKeyword
 )txt"}));
 }
@@ -854,12 +854,12 @@ struct S {
 };
 )cpp",
       {R"txt(
-MemberExpression ExpressionStatement_expression
-|-ThisExpression MemberExpression_object
+MemberExpression Expression
+|-ThisExpression Object
 | `-'this' IntroducerKeyword
-|-'->' MemberExpression_accessToken
-`-IdExpression MemberExpression_member
-  `-UnqualifiedId IdExpression_id
+|-'->' AccessToken
+`-IdExpression Member
+  `-UnqualifiedId UnqualifiedId
     `-'a'
 )txt"}));
 }
@@ -878,8 +878,8 @@ struct S {
 };
 )cpp",
       {R"txt(
-IdExpression ExpressionStatement_expression
-`-UnqualifiedId IdExpression_id
+IdExpression Expression
+`-UnqualifiedId UnqualifiedId
   `-'a'
 )txt"}));
 }
@@ -894,32 +894,32 @@ void test() {
 }
 )cpp",
       {R"txt(
-ParenExpression ExpressionStatement_expression
+ParenExpression Expression
 |-'(' OpenParen
-|-IntegerLiteralExpression ParenExpression_subExpression
+|-IntegerLiteralExpression SubExpression
 | `-'1' LiteralToken
 `-')' CloseParen
 )txt",
        R"txt(
-ParenExpression ExpressionStatement_expression
+ParenExpression Expression
 |-'(' OpenParen
-|-ParenExpression ParenExpression_subExpression
+|-ParenExpression SubExpression
 | |-'(' OpenParen
-| |-IntegerLiteralExpression ParenExpression_subExpression
+| |-IntegerLiteralExpression SubExpression
 | | `-'1' LiteralToken
 | `-')' CloseParen
 `-')' CloseParen
 )txt",
        R"txt(
-ParenExpression ExpressionStatement_expression
+ParenExpression Expression
 |-'(' OpenParen
-|-BinaryOperatorExpression ParenExpression_subExpression
-| |-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+|-BinaryOperatorExpression SubExpression
+| |-IntegerLiteralExpression LeftHandSide
 | | `-'1' LiteralToken
-| |-'+' OperatorExpression_operatorToken
-| `-ParenExpression BinaryOperatorExpression_rightHandSide
+| |-'+' OperatorToken
+| `-ParenExpression RightHandSide
 |   |-'(' OpenParen
-|   |-IntegerLiteralExpression ParenExpression_subExpression
+|   |-IntegerLiteralExpression SubExpression
 |   | `-'2' LiteralToken
 |   `-')' CloseParen
 `-')' CloseParen
@@ -938,7 +938,7 @@ void test() {
 }
     )cpp",
       {R"txt(
-CharUserDefinedLiteralExpression ExpressionStatement_expression
+CharUserDefinedLiteralExpression Expression
 `-''2'_c' LiteralToken
 )txt"}));
 }
@@ -958,7 +958,7 @@ void test() {
 }
     )cpp",
       {R"txt(
-StringUserDefinedLiteralExpression ExpressionStatement_expression
+StringUserDefinedLiteralExpression Expression
 `-'"12"_s' LiteralToken
 )txt"}));
 }
@@ -981,15 +981,15 @@ void test() {
 }
     )cpp",
       {R"txt(
-IntegerUserDefinedLiteralExpression ExpressionStatement_expression
+IntegerUserDefinedLiteralExpression Expression
 `-'12_i' LiteralToken
 )txt",
        R"txt(
-IntegerUserDefinedLiteralExpression ExpressionStatement_expression
+IntegerUserDefinedLiteralExpression Expression
 `-'12_r' LiteralToken
 )txt",
        R"txt(
-IntegerUserDefinedLiteralExpression ExpressionStatement_expression
+IntegerUserDefinedLiteralExpression Expression
 `-'12_t' LiteralToken
 )txt"}));
 }
@@ -1012,15 +1012,15 @@ void test() {
 }
     )cpp",
       {R"txt(
-FloatUserDefinedLiteralExpression ExpressionStatement_expression
+FloatUserDefinedLiteralExpression Expression
 `-'1.2_f' LiteralToken
 )txt",
        R"txt(
-FloatUserDefinedLiteralExpression ExpressionStatement_expression
+FloatUserDefinedLiteralExpression Expression
 `-'1.2_r' LiteralToken
 )txt",
        R"txt(
-FloatUserDefinedLiteralExpression ExpressionStatement_expression
+FloatUserDefinedLiteralExpression Expression
 `-'1.2_t' LiteralToken
 )txt"}));
 }
@@ -1037,11 +1037,11 @@ void test() {
 }
 )cpp",
       {R"txt(
-IntegerLiteralExpression ExpressionStatement_expression
+IntegerLiteralExpression Expression
 `-'12ll' LiteralToken
 )txt",
        R"txt(
-IntegerLiteralExpression ExpressionStatement_expression
+IntegerLiteralExpression Expression
 `-'12ull' LiteralToken
 )txt"}));
 }
@@ -1057,7 +1057,7 @@ void test() {
 }
 )cpp",
       {R"txt(
-IntegerLiteralExpression ExpressionStatement_expression
+IntegerLiteralExpression Expression
 `-'0b1100' LiteralToken
 )txt"}));
 }
@@ -1073,7 +1073,7 @@ void test() {
 }
 )cpp",
       {R"txt(
-IntegerLiteralExpression ExpressionStatement_expression
+IntegerLiteralExpression Expression
 `-'1'2'0ull' LiteralToken
 )txt"}));
 }
@@ -1091,27 +1091,27 @@ void test() {
 }
 )cpp",
       {R"txt(
-CharacterLiteralExpression ExpressionStatement_expression
+CharacterLiteralExpression Expression
 `-''a'' LiteralToken
 )txt",
        R"txt(
-CharacterLiteralExpression ExpressionStatement_expression
+CharacterLiteralExpression Expression
 `-''\n'' LiteralToken
 )txt",
        R"txt(
-CharacterLiteralExpression ExpressionStatement_expression
+CharacterLiteralExpression Expression
 `-''\x20'' LiteralToken
 )txt",
        R"txt(
-CharacterLiteralExpression ExpressionStatement_expression
+CharacterLiteralExpression Expression
 `-''\0'' LiteralToken
 )txt",
        R"txt(
-CharacterLiteralExpression ExpressionStatement_expression
+CharacterLiteralExpression Expression
 `-'L'a'' LiteralToken
 )txt",
        R"txt(
-CharacterLiteralExpression ExpressionStatement_expression
+CharacterLiteralExpression Expression
 `-'L'α'' LiteralToken
 )txt"}));
 }
@@ -1130,19 +1130,19 @@ void test() {
 }
 )cpp",
       {R"txt(
-CharacterLiteralExpression ExpressionStatement_expression
+CharacterLiteralExpression Expression
 `-'u'a'' LiteralToken
 )txt",
        R"txt(
-CharacterLiteralExpression ExpressionStatement_expression
+CharacterLiteralExpression Expression
 `-'u'構'' LiteralToken
 )txt",
        R"txt(
-CharacterLiteralExpression ExpressionStatement_expression
+CharacterLiteralExpression Expression
 `-'U'a'' LiteralToken
 )txt",
        R"txt(
-CharacterLiteralExpression ExpressionStatement_expression
+CharacterLiteralExpression Expression
 `-'U'🌲'' LiteralToken
 )txt"}));
 }
@@ -1159,11 +1159,11 @@ void test() {
 }
 )cpp",
       {R"txt(
-CharacterLiteralExpression ExpressionStatement_expression
+CharacterLiteralExpression Expression
 `-'u8'a'' LiteralToken
 )txt",
        R"txt(
-CharacterLiteralExpression ExpressionStatement_expression
+CharacterLiteralExpression Expression
 `-'u8'\x7f'' LiteralToken
 )txt"}));
 }
@@ -1179,19 +1179,19 @@ void test() {
 }
 )cpp",
       {R"txt(
-FloatingLiteralExpression ExpressionStatement_expression
+FloatingLiteralExpression Expression
 `-'1e-2' LiteralToken
 )txt",
        R"txt(
-FloatingLiteralExpression ExpressionStatement_expression
+FloatingLiteralExpression Expression
 `-'2.' LiteralToken
 )txt",
        R"txt(
-FloatingLiteralExpression ExpressionStatement_expression
+FloatingLiteralExpression Expression
 `-'.2' LiteralToken
 )txt",
        R"txt(
-FloatingLiteralExpression ExpressionStatement_expression
+FloatingLiteralExpression Expression
 `-'2.f' LiteralToken
 )txt"}));
 }
@@ -1210,19 +1210,19 @@ void test() {
 }
 )cpp",
       {R"txt(
-FloatingLiteralExpression ExpressionStatement_expression
+FloatingLiteralExpression Expression
 `-'0xfp1' LiteralToken
 )txt",
        R"txt(
-FloatingLiteralExpression ExpressionStatement_expression
+FloatingLiteralExpression Expression
 `-'0xf.p1' LiteralToken
 )txt",
        R"txt(
-FloatingLiteralExpression ExpressionStatement_expression
+FloatingLiteralExpression Expression
 `-'0x.fp1' LiteralToken
 )txt",
        R"txt(
-FloatingLiteralExpression ExpressionStatement_expression
+FloatingLiteralExpression Expression
 `-'0xf.fp1f' LiteralToken
 )txt"}));
 }
@@ -1236,11 +1236,11 @@ void test() {
 }
 )cpp",
       {R"txt(
-StringLiteralExpression ExpressionStatement_expression
+StringLiteralExpression Expression
 `-'"a\n\0\x20"' LiteralToken
 )txt",
        R"txt(
-StringLiteralExpression ExpressionStatement_expression
+StringLiteralExpression Expression
 `-'L"αβ"' LiteralToken
 )txt"}));
 }
@@ -1258,15 +1258,15 @@ void test() {
 }
 )cpp",
       {R"txt(
-StringLiteralExpression ExpressionStatement_expression
+StringLiteralExpression Expression
 `-'u8"a\x1f\x05"' LiteralToken
 )txt",
        R"txt(
-StringLiteralExpression ExpressionStatement_expression
+StringLiteralExpression Expression
 `-'u"C++抽象構文木"' LiteralToken
 )txt",
        R"txt(
-StringLiteralExpression ExpressionStatement_expression
+StringLiteralExpression Expression
 `-'U"📖🌲\n"' LiteralToken
 )txt"}));
 }
@@ -1288,15 +1288,15 @@ TEST_P(SyntaxTreeTest, StringLiteral_Raw) {
       "TranslationUnit Detached\n"
       "`-SimpleDeclaration\n"
       "  |-'void'\n"
-      "  |-SimpleDeclarator SimpleDeclaration_declarator\n"
+      "  |-SimpleDeclarator Declarator\n"
       "  | |-'test'\n"
       "  | `-ParametersAndQualifiers\n"
       "  |   |-'(' OpenParen\n"
       "  |   `-')' CloseParen\n"
       "  `-CompoundStatement\n"
       "    |-'{' OpenParen\n"
-      "    |-ExpressionStatement CompoundStatement_statement\n"
-      "    | |-StringLiteralExpression ExpressionStatement_expression\n"
+      "    |-ExpressionStatement Statement\n"
+      "    | |-StringLiteralExpression Expression\n"
       "    | | `-'R\"SyntaxTree(\n"
       "  Hello \"Syntax\" \\\"\n"
       "  )SyntaxTree\"' LiteralToken\n"
@@ -1316,11 +1316,11 @@ void test() {
 }
 )cpp",
       {R"txt(
-BoolLiteralExpression ExpressionStatement_expression
+BoolLiteralExpression Expression
 `-'true' LiteralToken
 )txt",
        R"txt(
-BoolLiteralExpression ExpressionStatement_expression
+BoolLiteralExpression Expression
 `-'false' LiteralToken
 )txt"}));
 }
@@ -1336,7 +1336,7 @@ void test() {
 }
 )cpp",
       {R"txt(
-CxxNullPtrExpression ExpressionStatement_expression
+CxxNullPtrExpression Expression
 `-'nullptr' LiteralToken
 )txt"}));
 }
@@ -1350,18 +1350,18 @@ void test(int a) {
 }
 )cpp",
       {R"txt(
-PostfixUnaryOperatorExpression ExpressionStatement_expression
-|-IdExpression UnaryOperatorExpression_operand
-| `-UnqualifiedId IdExpression_id
+PostfixUnaryOperatorExpression Expression
+|-IdExpression Operand
+| `-UnqualifiedId UnqualifiedId
 |   `-'a'
-`-'++' OperatorExpression_operatorToken
+`-'++' OperatorToken
 )txt",
        R"txt(
-PostfixUnaryOperatorExpression ExpressionStatement_expression
-|-IdExpression UnaryOperatorExpression_operand
-| `-UnqualifiedId IdExpression_id
+PostfixUnaryOperatorExpression Expression
+|-IdExpression Operand
+| `-UnqualifiedId UnqualifiedId
 |   `-'a'
-`-'--' OperatorExpression_operatorToken
+`-'--' OperatorToken
 )txt"}));
 }
 
@@ -1380,73 +1380,73 @@ void test(int a, int *ap) {
 }
 )cpp",
       {R"txt(
-PrefixUnaryOperatorExpression ExpressionStatement_expression
-|-'--' OperatorExpression_operatorToken
-`-IdExpression UnaryOperatorExpression_operand
-  `-UnqualifiedId IdExpression_id
+PrefixUnaryOperatorExpression Expression
+|-'--' OperatorToken
+`-IdExpression Operand
+  `-UnqualifiedId UnqualifiedId
     `-'a'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression ExpressionStatement_expression
-|-'++' OperatorExpression_operatorToken
-`-IdExpression UnaryOperatorExpression_operand
-  `-UnqualifiedId IdExpression_id
+PrefixUnaryOperatorExpression Expression
+|-'++' OperatorToken
+`-IdExpression Operand
+  `-UnqualifiedId UnqualifiedId
     `-'a'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression ExpressionStatement_expression
-|-'~' OperatorExpression_operatorToken
-`-IdExpression UnaryOperatorExpression_operand
-  `-UnqualifiedId IdExpression_id
+PrefixUnaryOperatorExpression Expression
+|-'~' OperatorToken
+`-IdExpression Operand
+  `-UnqualifiedId UnqualifiedId
     `-'a'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression ExpressionStatement_expression
-|-'-' OperatorExpression_operatorToken
-`-IdExpression UnaryOperatorExpression_operand
-  `-UnqualifiedId IdExpression_id
+PrefixUnaryOperatorExpression Expression
+|-'-' OperatorToken
+`-IdExpression Operand
+  `-UnqualifiedId UnqualifiedId
     `-'a'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression ExpressionStatement_expression
-|-'+' OperatorExpression_operatorToken
-`-IdExpression UnaryOperatorExpression_operand
-  `-UnqualifiedId IdExpression_id
+PrefixUnaryOperatorExpression Expression
+|-'+' OperatorToken
+`-IdExpression Operand
+  `-UnqualifiedId UnqualifiedId
     `-'a'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression ExpressionStatement_expression
-|-'&' OperatorExpression_operatorToken
-`-IdExpression UnaryOperatorExpression_operand
-  `-UnqualifiedId IdExpression_id
+PrefixUnaryOperatorExpression Expression
+|-'&' OperatorToken
+`-IdExpression Operand
+  `-UnqualifiedId UnqualifiedId
     `-'a'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression ExpressionStatement_expression
-|-'*' OperatorExpression_operatorToken
-`-IdExpression UnaryOperatorExpression_operand
-  `-UnqualifiedId IdExpression_id
+PrefixUnaryOperatorExpression Expression
+|-'*' OperatorToken
+`-IdExpression Operand
+  `-UnqualifiedId UnqualifiedId
     `-'ap'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression ExpressionStatement_expression
-|-'!' OperatorExpression_operatorToken
-`-IdExpression UnaryOperatorExpression_operand
-  `-UnqualifiedId IdExpression_id
+PrefixUnaryOperatorExpression Expression
+|-'!' OperatorToken
+`-IdExpression Operand
+  `-UnqualifiedId UnqualifiedId
     `-'a'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression ExpressionStatement_expression
-|-'__real' OperatorExpression_operatorToken
-`-IdExpression UnaryOperatorExpression_operand
-  `-UnqualifiedId IdExpression_id
+PrefixUnaryOperatorExpression Expression
+|-'__real' OperatorToken
+`-IdExpression Operand
+  `-UnqualifiedId UnqualifiedId
     `-'a'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression ExpressionStatement_expression
-|-'__imag' OperatorExpression_operatorToken
-`-IdExpression UnaryOperatorExpression_operand
-  `-UnqualifiedId IdExpression_id
+PrefixUnaryOperatorExpression Expression
+|-'__imag' OperatorToken
+`-IdExpression Operand
+  `-UnqualifiedId UnqualifiedId
     `-'a'
 )txt"}));
 }
@@ -1463,17 +1463,17 @@ void test(int a, bool b) {
 }
 )cpp",
       {R"txt(
-PrefixUnaryOperatorExpression ExpressionStatement_expression
-|-'compl' OperatorExpression_operatorToken
-`-IdExpression UnaryOperatorExpression_operand
-  `-UnqualifiedId IdExpression_id
+PrefixUnaryOperatorExpression Expression
+|-'compl' OperatorToken
+`-IdExpression Operand
+  `-UnqualifiedId UnqualifiedId
     `-'a'
 )txt",
        R"txt(
-PrefixUnaryOperatorExpression ExpressionStatement_expression
-|-'not' OperatorExpression_operatorToken
-`-IdExpression UnaryOperatorExpression_operand
-  `-UnqualifiedId IdExpression_id
+PrefixUnaryOperatorExpression Expression
+|-'not' OperatorToken
+`-IdExpression Operand
+  `-UnqualifiedId UnqualifiedId
     `-'b'
 )txt"}));
 }
@@ -1492,62 +1492,62 @@ void test(int a) {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+BinaryOperatorExpression Expression
+|-IntegerLiteralExpression LeftHandSide
 | `-'1' LiteralToken
-|-'-' OperatorExpression_operatorToken
-`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+|-'-' OperatorToken
+`-IntegerLiteralExpression RightHandSide
   `-'2' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+BinaryOperatorExpression Expression
+|-IntegerLiteralExpression LeftHandSide
 | `-'1' LiteralToken
-|-'==' OperatorExpression_operatorToken
-`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+|-'==' OperatorToken
+`-IntegerLiteralExpression RightHandSide
   `-'2' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-IdExpression BinaryOperatorExpression_leftHandSide
-| `-UnqualifiedId IdExpression_id
+BinaryOperatorExpression Expression
+|-IdExpression LeftHandSide
+| `-UnqualifiedId UnqualifiedId
 |   `-'a'
-|-'=' OperatorExpression_operatorToken
-`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+|-'=' OperatorToken
+`-IntegerLiteralExpression RightHandSide
   `-'1' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-IdExpression BinaryOperatorExpression_leftHandSide
-| `-UnqualifiedId IdExpression_id
+BinaryOperatorExpression Expression
+|-IdExpression LeftHandSide
+| `-UnqualifiedId UnqualifiedId
 |   `-'a'
-|-'<<=' OperatorExpression_operatorToken
-`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+|-'<<=' OperatorToken
+`-IntegerLiteralExpression RightHandSide
   `-'1' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+BinaryOperatorExpression Expression
+|-IntegerLiteralExpression LeftHandSide
 | `-'1' LiteralToken
-|-'||' OperatorExpression_operatorToken
-`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+|-'||' OperatorToken
+`-IntegerLiteralExpression RightHandSide
   `-'0' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+BinaryOperatorExpression Expression
+|-IntegerLiteralExpression LeftHandSide
 | `-'1' LiteralToken
-|-'&' OperatorExpression_operatorToken
-`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+|-'&' OperatorToken
+`-IntegerLiteralExpression RightHandSide
   `-'2' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-IdExpression BinaryOperatorExpression_leftHandSide
-| `-UnqualifiedId IdExpression_id
+BinaryOperatorExpression Expression
+|-IdExpression LeftHandSide
+| `-UnqualifiedId UnqualifiedId
 |   `-'a'
-|-'!=' OperatorExpression_operatorToken
-`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+|-'!=' OperatorToken
+`-IntegerLiteralExpression RightHandSide
   `-'3' LiteralToken
 )txt"}));
 }
@@ -1566,36 +1566,36 @@ void test(int a) {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-BoolLiteralExpression BinaryOperatorExpression_leftHandSide
+BinaryOperatorExpression Expression
+|-BoolLiteralExpression LeftHandSide
 | `-'true' LiteralToken
-|-'||' OperatorExpression_operatorToken
-`-BoolLiteralExpression BinaryOperatorExpression_rightHandSide
+|-'||' OperatorToken
+`-BoolLiteralExpression RightHandSide
   `-'false' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-BoolLiteralExpression BinaryOperatorExpression_leftHandSide
+BinaryOperatorExpression Expression
+|-BoolLiteralExpression LeftHandSide
 | `-'true' LiteralToken
-|-'or' OperatorExpression_operatorToken
-`-BoolLiteralExpression BinaryOperatorExpression_rightHandSide
+|-'or' OperatorToken
+`-BoolLiteralExpression RightHandSide
   `-'false' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+BinaryOperatorExpression Expression
+|-IntegerLiteralExpression LeftHandSide
 | `-'1' LiteralToken
-|-'bitand' OperatorExpression_operatorToken
-`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+|-'bitand' OperatorToken
+`-IntegerLiteralExpression RightHandSide
   `-'2' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-IdExpression BinaryOperatorExpression_leftHandSide
-| `-UnqualifiedId IdExpression_id
+BinaryOperatorExpression Expression
+|-IdExpression LeftHandSide
+| `-UnqualifiedId UnqualifiedId
 |   `-'a'
-|-'xor_eq' OperatorExpression_operatorToken
-`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+|-'xor_eq' OperatorToken
+`-IntegerLiteralExpression RightHandSide
   `-'3' LiteralToken
 )txt"}));
 }
@@ -1608,24 +1608,24 @@ void test() {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-ParenExpression BinaryOperatorExpression_leftHandSide
+BinaryOperatorExpression Expression
+|-ParenExpression LeftHandSide
 | |-'(' OpenParen
-| |-BinaryOperatorExpression ParenExpression_subExpression
-| | |-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+| |-BinaryOperatorExpression SubExpression
+| | |-IntegerLiteralExpression LeftHandSide
 | | | `-'1' LiteralToken
-| | |-'+' OperatorExpression_operatorToken
-| | `-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+| | |-'+' OperatorToken
+| | `-IntegerLiteralExpression RightHandSide
 | |   `-'2' LiteralToken
 | `-')' CloseParen
-|-'*' OperatorExpression_operatorToken
-`-ParenExpression BinaryOperatorExpression_rightHandSide
+|-'*' OperatorToken
+`-ParenExpression RightHandSide
   |-'(' OpenParen
-  |-BinaryOperatorExpression ParenExpression_subExpression
-  | |-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+  |-BinaryOperatorExpression SubExpression
+  | |-IntegerLiteralExpression LeftHandSide
   | | `-'4' LiteralToken
-  | |-'/' OperatorExpression_operatorToken
-  | `-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+  | |-'/' OperatorToken
+  | `-IntegerLiteralExpression RightHandSide
   |   `-'2' LiteralToken
   `-')' CloseParen
 )txt"}));
@@ -1640,31 +1640,31 @@ void test(int a, int b) {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-BinaryOperatorExpression BinaryOperatorExpression_leftHandSide
-| |-IdExpression BinaryOperatorExpression_leftHandSide
-| | `-UnqualifiedId IdExpression_id
+BinaryOperatorExpression Expression
+|-BinaryOperatorExpression LeftHandSide
+| |-IdExpression LeftHandSide
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'a'
-| |-'+' OperatorExpression_operatorToken
-| `-IdExpression BinaryOperatorExpression_rightHandSide
-|   `-UnqualifiedId IdExpression_id
+| |-'+' OperatorToken
+| `-IdExpression RightHandSide
+|   `-UnqualifiedId UnqualifiedId
 |     `-'b'
-|-'+' OperatorExpression_operatorToken
-`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+|-'+' OperatorToken
+`-IntegerLiteralExpression RightHandSide
   `-'42' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-IdExpression BinaryOperatorExpression_leftHandSide
-| `-UnqualifiedId IdExpression_id
+BinaryOperatorExpression Expression
+|-IdExpression LeftHandSide
+| `-UnqualifiedId UnqualifiedId
 |   `-'a'
-|-'=' OperatorExpression_operatorToken
-`-BinaryOperatorExpression BinaryOperatorExpression_rightHandSide
-  |-IdExpression BinaryOperatorExpression_leftHandSide
-  | `-UnqualifiedId IdExpression_id
+|-'=' OperatorToken
+`-BinaryOperatorExpression RightHandSide
+  |-IdExpression LeftHandSide
+  | `-UnqualifiedId UnqualifiedId
   |   `-'b'
-  |-'=' OperatorExpression_operatorToken
-  `-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+  |-'=' OperatorToken
+  `-IntegerLiteralExpression RightHandSide
     `-'42' LiteralToken
 )txt"}));
 }
@@ -1678,35 +1678,35 @@ void test() {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-BinaryOperatorExpression BinaryOperatorExpression_leftHandSide
-| |-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+BinaryOperatorExpression Expression
+|-BinaryOperatorExpression LeftHandSide
+| |-IntegerLiteralExpression LeftHandSide
 | | `-'1' LiteralToken
-| |-'+' OperatorExpression_operatorToken
-| `-BinaryOperatorExpression BinaryOperatorExpression_rightHandSide
-|   |-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+| |-'+' OperatorToken
+| `-BinaryOperatorExpression RightHandSide
+|   |-IntegerLiteralExpression LeftHandSide
 |   | `-'2' LiteralToken
-|   |-'*' OperatorExpression_operatorToken
-|   `-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+|   |-'*' OperatorToken
+|   `-IntegerLiteralExpression RightHandSide
 |     `-'3' LiteralToken
-|-'+' OperatorExpression_operatorToken
-`-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+|-'+' OperatorToken
+`-IntegerLiteralExpression RightHandSide
   `-'4' LiteralToken
 )txt",
        R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-BinaryOperatorExpression BinaryOperatorExpression_leftHandSide
-| |-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+BinaryOperatorExpression Expression
+|-BinaryOperatorExpression LeftHandSide
+| |-IntegerLiteralExpression LeftHandSide
 | | `-'1' LiteralToken
-| |-'%' OperatorExpression_operatorToken
-| `-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+| |-'%' OperatorToken
+| `-IntegerLiteralExpression RightHandSide
 |   `-'2' LiteralToken
-|-'+' OperatorExpression_operatorToken
-`-BinaryOperatorExpression BinaryOperatorExpression_rightHandSide
-  |-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide
+|-'+' OperatorToken
+`-BinaryOperatorExpression RightHandSide
+  |-IntegerLiteralExpression LeftHandSide
   | `-'3' LiteralToken
-  |-'*' OperatorExpression_operatorToken
-  `-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+  |-'*' OperatorToken
+  `-IntegerLiteralExpression RightHandSide
     `-'4' LiteralToken
 )txt"}));
 }
@@ -1725,13 +1725,13 @@ void test(X x, X y) {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-IdExpression BinaryOperatorExpression_leftHandSide
-| `-UnqualifiedId IdExpression_id
+BinaryOperatorExpression Expression
+|-IdExpression LeftHandSide
+| `-UnqualifiedId UnqualifiedId
 |   `-'x'
-|-'=' OperatorExpression_operatorToken
-`-IdExpression BinaryOperatorExpression_rightHandSide
-  `-UnqualifiedId IdExpression_id
+|-'=' OperatorToken
+`-IdExpression RightHandSide
+  `-UnqualifiedId UnqualifiedId
     `-'y'
 )txt"}));
 }
@@ -1753,14 +1753,14 @@ void test(X x, X y) {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-UnknownExpression BinaryOperatorExpression_leftHandSide
+BinaryOperatorExpression Expression
+|-UnknownExpression LeftHandSide
 | `-IdExpression
-|   `-UnqualifiedId IdExpression_id
+|   `-UnqualifiedId UnqualifiedId
 |     `-'x'
-|-'+' OperatorExpression_operatorToken
-`-IdExpression BinaryOperatorExpression_rightHandSide
-  `-UnqualifiedId IdExpression_id
+|-'+' OperatorToken
+`-IdExpression RightHandSide
+  `-UnqualifiedId UnqualifiedId
     `-'y'
 )txt"}));
 }
@@ -1779,13 +1779,13 @@ void test(X x, X y) {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-IdExpression BinaryOperatorExpression_leftHandSide
-| `-UnqualifiedId IdExpression_id
+BinaryOperatorExpression Expression
+|-IdExpression LeftHandSide
+| `-UnqualifiedId UnqualifiedId
 |   `-'x'
-|-'<' OperatorExpression_operatorToken
-`-IdExpression BinaryOperatorExpression_rightHandSide
-  `-UnqualifiedId IdExpression_id
+|-'<' OperatorToken
+`-IdExpression RightHandSide
+  `-UnqualifiedId UnqualifiedId
     `-'y'
 )txt"}));
 }
@@ -1804,13 +1804,13 @@ void test(X x, X y) {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-IdExpression BinaryOperatorExpression_leftHandSide
-| `-UnqualifiedId IdExpression_id
+BinaryOperatorExpression Expression
+|-IdExpression LeftHandSide
+| `-UnqualifiedId UnqualifiedId
 |   `-'x'
-|-'<<' OperatorExpression_operatorToken
-`-IdExpression BinaryOperatorExpression_rightHandSide
-  `-UnqualifiedId IdExpression_id
+|-'<<' OperatorToken
+`-IdExpression RightHandSide
+  `-UnqualifiedId UnqualifiedId
     `-'y'
 )txt"}));
 }
@@ -1829,13 +1829,13 @@ void test(X x, X y) {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-IdExpression BinaryOperatorExpression_leftHandSide
-| `-UnqualifiedId IdExpression_id
+BinaryOperatorExpression Expression
+|-IdExpression LeftHandSide
+| `-UnqualifiedId UnqualifiedId
 |   `-'x'
-|-',' OperatorExpression_operatorToken
-`-IdExpression BinaryOperatorExpression_rightHandSide
-  `-UnqualifiedId IdExpression_id
+|-',' OperatorToken
+`-IdExpression RightHandSide
+  `-UnqualifiedId UnqualifiedId
     `-'y'
 )txt"}));
 }
@@ -1854,13 +1854,13 @@ void test(X* xp, int X::* pmi) {
 }
 )cpp",
       {R"txt(
-BinaryOperatorExpression ExpressionStatement_expression
-|-IdExpression BinaryOperatorExpression_leftHandSide
-| `-UnqualifiedId IdExpression_id
+BinaryOperatorExpression Expression
+|-IdExpression LeftHandSide
+| `-UnqualifiedId UnqualifiedId
 |   `-'xp'
-|-'->*' OperatorExpression_operatorToken
-`-IdExpression BinaryOperatorExpression_rightHandSide
-  `-UnqualifiedId IdExpression_id
+|-'->*' OperatorToken
+`-IdExpression RightHandSide
+  `-UnqualifiedId UnqualifiedId
     `-'pmi'
 )txt"}));
 }
@@ -1879,10 +1879,10 @@ void test(X x) {
 }
 )cpp",
       {R"txt(
-PrefixUnaryOperatorExpression ExpressionStatement_expression
-|-'!' OperatorExpression_operatorToken
-`-IdExpression UnaryOperatorExpression_operand
-  `-UnqualifiedId IdExpression_id
+PrefixUnaryOperatorExpression Expression
+|-'!' OperatorToken
+`-IdExpression Operand
+  `-UnqualifiedId UnqualifiedId
     `-'x'
 )txt"}));
 }
@@ -1901,10 +1901,10 @@ void test(X x) {
 }
 )cpp",
       {R"txt(
-PrefixUnaryOperatorExpression ExpressionStatement_expression
-|-'&' OperatorExpression_operatorToken
-`-IdExpression UnaryOperatorExpression_operand
-  `-UnqualifiedId IdExpression_id
+PrefixUnaryOperatorExpression Expression
+|-'&' OperatorToken
+`-IdExpression Operand
+  `-UnqualifiedId UnqualifiedId
     `-'x'
 )txt"}));
 }
@@ -1923,10 +1923,10 @@ void test(X x) {
 }
 )cpp",
       {R"txt(
-PrefixUnaryOperatorExpression ExpressionStatement_expression
-|-'++' OperatorExpression_operatorToken
-`-IdExpression UnaryOperatorExpression_operand
-  `-UnqualifiedId IdExpression_id
+PrefixUnaryOperatorExpression Expression
+|-'++' OperatorToken
+`-IdExpression Operand
+  `-UnqualifiedId UnqualifiedId
     `-'x'
 )txt"}));
 }
@@ -1945,11 +1945,11 @@ void test(X x) {
 }
 )cpp",
       {R"txt(
-PostfixUnaryOperatorExpression ExpressionStatement_expression
-|-IdExpression UnaryOperatorExpression_operand
-| `-UnqualifiedId IdExpression_id
+PostfixUnaryOperatorExpression Expression
+|-IdExpression Operand
+| `-UnqualifiedId UnqualifiedId
 |   `-'x'
-`-'++' OperatorExpression_operatorToken
+`-'++' OperatorToken
 )txt"}));
 }
 
@@ -1964,13 +1964,13 @@ void test(struct S s) {
 }
 )cpp",
       {R"txt(
-MemberExpression ExpressionStatement_expression
-|-IdExpression MemberExpression_object
-| `-UnqualifiedId IdExpression_id
+MemberExpression Expression
+|-IdExpression Object
+| `-UnqualifiedId UnqualifiedId
 |   `-'s'
-|-'.' MemberExpression_accessToken
-`-IdExpression MemberExpression_member
-  `-UnqualifiedId IdExpression_id
+|-'.' AccessToken
+`-IdExpression Member
+  `-UnqualifiedId UnqualifiedId
     `-'a'
 )txt"}));
 }
@@ -1989,13 +1989,13 @@ void test(S s) {
 }
 )cpp",
       {R"txt(
-MemberExpression ExpressionStatement_expression
-|-IdExpression MemberExpression_object
-| `-UnqualifiedId IdExpression_id
+MemberExpression Expression
+|-IdExpression Object
+| `-UnqualifiedId UnqualifiedId
 |   `-'s'
-|-'.' MemberExpression_accessToken
-`-IdExpression MemberExpression_member
-  `-UnqualifiedId IdExpression_id
+|-'.' AccessToken
+`-IdExpression Member
+  `-UnqualifiedId UnqualifiedId
     `-'a'
 )txt"}));
 }
@@ -2011,13 +2011,13 @@ void test(struct S* sp) {
 }
 )cpp",
       {R"txt(
-MemberExpression ExpressionStatement_expression
-|-IdExpression MemberExpression_object
-| `-UnqualifiedId IdExpression_id
+MemberExpression Expression
+|-IdExpression Object
+| `-UnqualifiedId UnqualifiedId
 |   `-'sp'
-|-'->' MemberExpression_accessToken
-`-IdExpression MemberExpression_member
-  `-UnqualifiedId IdExpression_id
+|-'->' AccessToken
+`-IdExpression Member
+  `-UnqualifiedId UnqualifiedId
     `-'a'
 )txt"}));
 }
@@ -2033,18 +2033,18 @@ void test(struct S s){
 }
 )cpp",
       {R"txt(
-MemberExpression ExpressionStatement_expression
-|-MemberExpression MemberExpression_object
-| |-IdExpression MemberExpression_object
-| | `-UnqualifiedId IdExpression_id
+MemberExpression Expression
+|-MemberExpression Object
+| |-IdExpression Object
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'s'
-| |-'.' MemberExpression_accessToken
-| `-IdExpression MemberExpression_member
-|   `-UnqualifiedId IdExpression_id
+| |-'.' AccessToken
+| `-IdExpression Member
+|   `-UnqualifiedId UnqualifiedId
 |     `-'next'
-|-'->' MemberExpression_accessToken
-`-IdExpression MemberExpression_member
-  `-UnqualifiedId IdExpression_id
+|-'->' AccessToken
+`-IdExpression Member
+  `-UnqualifiedId UnqualifiedId
     `-'next'
 )txt"}));
 }
@@ -2063,14 +2063,14 @@ void test(S s) {
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-MemberExpression CallExpression_callee
-| |-IdExpression MemberExpression_object
-| | `-UnqualifiedId IdExpression_id
+CallExpression Expression
+|-MemberExpression Callee
+| |-IdExpression Object
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'s'
-| |-'.' MemberExpression_accessToken
-| `-IdExpression MemberExpression_member
-|   `-UnqualifiedId IdExpression_id
+| |-'.' AccessToken
+| `-IdExpression Member
+|   `-UnqualifiedId UnqualifiedId
 |     |-'operator'
 |     `-'!'
 |-'(' OpenParen
@@ -2097,14 +2097,14 @@ void test(S s) [[{
       {R"txt(
 CompoundStatement
 |-'{' OpenParen
-|-ExpressionStatement CompoundStatement_statement
-| `-MemberExpression ExpressionStatement_expression
-|   |-IdExpression MemberExpression_object
-|   | `-UnqualifiedId IdExpression_id
+|-ExpressionStatement Statement
+| `-MemberExpression Expression
+|   |-IdExpression Object
+|   | `-UnqualifiedId UnqualifiedId
 |   |   `-'s'
-|   |-'.' MemberExpression_accessToken
-|   `-IdExpression MemberExpression_member
-|     `-UnqualifiedId IdExpression_id
+|   |-'.' AccessToken
+|   `-IdExpression Member
+|     `-UnqualifiedId UnqualifiedId
 |       `-'x'
 |-'<'
 |-'int'
@@ -2129,14 +2129,14 @@ void test(S* sp){
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-MemberExpression CallExpression_callee
-| |-IdExpression MemberExpression_object
-| | `-UnqualifiedId IdExpression_id
+CallExpression Expression
+|-MemberExpression Callee
+| |-IdExpression Object
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'sp'
-| |-'->' MemberExpression_accessToken
-| `-IdExpression MemberExpression_member
-|   `-UnqualifiedId IdExpression_id
+| |-'->' AccessToken
+| `-IdExpression Member
+|   `-UnqualifiedId UnqualifiedId
 |     |-'f'
 |     |-'<'
 |     |-'int'
@@ -2161,15 +2161,15 @@ void test(S s){
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-MemberExpression CallExpression_callee
-| |-IdExpression MemberExpression_object
-| | `-UnqualifiedId IdExpression_id
+CallExpression Expression
+|-MemberExpression Callee
+| |-IdExpression Object
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'s'
-| |-'.' MemberExpression_accessToken
+| |-'.' AccessToken
 | |-'template'
-| `-IdExpression MemberExpression_member
-|   `-UnqualifiedId IdExpression_id
+| `-IdExpression Member
+|   `-UnqualifiedId UnqualifiedId
 |     |-'f'
 |     |-'<'
 |     |-'int'
@@ -2195,36 +2195,36 @@ void test(S s){
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-MemberExpression CallExpression_callee
-| |-IdExpression MemberExpression_object
-| | `-UnqualifiedId IdExpression_id
+CallExpression Expression
+|-MemberExpression Callee
+| |-IdExpression Object
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'s'
-| |-'.' MemberExpression_accessToken
-| `-IdExpression MemberExpression_member
-|   |-NestedNameSpecifier IdExpression_qualifier
-|   | |-IdentifierNameSpecifier List_element
+| |-'.' AccessToken
+| `-IdExpression Member
+|   |-NestedNameSpecifier Qualifier
+|   | |-IdentifierNameSpecifier ListElement
 |   | | `-'Base'
-|   | `-'::' List_delimiter
-|   `-UnqualifiedId IdExpression_id
+|   | `-'::' ListDelimiter
+|   `-UnqualifiedId UnqualifiedId
 |     `-'f'
 |-'(' OpenParen
 `-')' CloseParen
       )txt",
        R"txt(
-CallExpression ExpressionStatement_expression
-|-MemberExpression CallExpression_callee
-| |-IdExpression MemberExpression_object
-| | `-UnqualifiedId IdExpression_id
+CallExpression Expression
+|-MemberExpression Callee
+| |-IdExpression Object
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'s'
-| |-'.' MemberExpression_accessToken
-| `-IdExpression MemberExpression_member
-|   |-NestedNameSpecifier IdExpression_qualifier
-|   | |-'::' List_delimiter
-|   | |-IdentifierNameSpecifier List_element
+| |-'.' AccessToken
+| `-IdExpression Member
+|   |-NestedNameSpecifier Qualifier
+|   | |-'::' ListDelimiter
+|   | |-IdentifierNameSpecifier ListElement
 |   | | `-'S'
-|   | `-'::' List_delimiter
-|   `-UnqualifiedId IdExpression_id
+|   | `-'::' ListDelimiter
+|   `-UnqualifiedId UnqualifiedId
 |     |-'~'
 |     `-'S'
 |-'(' OpenParen
@@ -2256,31 +2256,31 @@ void test(S* sp) {
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-MemberExpression CallExpression_callee
-| |-CallExpression MemberExpression_object
-| | |-MemberExpression CallExpression_callee
-| | | |-IdExpression MemberExpression_object
-| | | | `-UnqualifiedId IdExpression_id
+CallExpression Expression
+|-MemberExpression Callee
+| |-CallExpression Object
+| | |-MemberExpression Callee
+| | | |-IdExpression Object
+| | | | `-UnqualifiedId UnqualifiedId
 | | | |   `-'sp'
-| | | |-'->' MemberExpression_accessToken
-| | | `-IdExpression MemberExpression_member
-| | |   `-UnqualifiedId IdExpression_id
+| | | |-'->' AccessToken
+| | | `-IdExpression Member
+| | |   `-UnqualifiedId UnqualifiedId
 | | |     `-'getU'
 | | |-'(' OpenParen
 | | `-')' CloseParen
-| |-'.' MemberExpression_accessToken
-| `-IdExpression MemberExpression_member
-|   |-NestedNameSpecifier IdExpression_qualifier
-|   | |-SimpleTemplateNameSpecifier List_element
+| |-'.' AccessToken
+| `-IdExpression Member
+|   |-NestedNameSpecifier Qualifier
+|   | |-SimpleTemplateNameSpecifier ListElement
 |   | | |-'template'
 |   | | |-'U'
 |   | | |-'<'
 |   | | |-'int'
 |   | | `-'>'
-|   | `-'::' List_delimiter
+|   | `-'::' ListDelimiter
 |   |-'template' TemplateKeyword
-|   `-UnqualifiedId IdExpression_id
+|   `-UnqualifiedId UnqualifiedId
 |     |-'f'
 |     |-'<'
 |     |-'int'
@@ -2304,14 +2304,14 @@ void test(S s) {
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-MemberExpression CallExpression_callee
-| |-IdExpression MemberExpression_object
-| | `-UnqualifiedId IdExpression_id
+CallExpression Expression
+|-MemberExpression Callee
+| |-IdExpression Object
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'s'
-| |-'.' MemberExpression_accessToken
-| `-IdExpression MemberExpression_member
-|   `-UnqualifiedId IdExpression_id
+| |-'.' AccessToken
+| `-IdExpression Member
+|   `-UnqualifiedId UnqualifiedId
 |     `-'f'
 |-'(' OpenParen
 `-')' CloseParen
@@ -2332,9 +2332,9 @@ void test(S s) {
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-IdExpression CallExpression_callee
-| `-UnqualifiedId IdExpression_id
+CallExpression Expression
+|-IdExpression Callee
+| `-UnqualifiedId UnqualifiedId
 |   `-'s'
 |-'(' OpenParen
 `-')' CloseParen
@@ -2355,10 +2355,10 @@ void test(S s) {
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-CallExpression CallExpression_callee
-| |-IdExpression CallExpression_callee
-| | `-UnqualifiedId IdExpression_id
+CallExpression Expression
+|-CallExpression Callee
+| |-IdExpression Callee
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'s'
 | |-'(' OpenParen
 | `-')' CloseParen
@@ -2386,37 +2386,37 @@ struct S: public Base {
 };
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-MemberExpression CallExpression_callee
-| |-ThisExpression MemberExpression_object
+CallExpression Expression
+|-MemberExpression Callee
+| |-ThisExpression Object
 | | `-'this' IntroducerKeyword
-| |-'->' MemberExpression_accessToken
-| `-IdExpression MemberExpression_member
-|   `-UnqualifiedId IdExpression_id
+| |-'->' AccessToken
+| `-IdExpression Member
+|   `-UnqualifiedId UnqualifiedId
 |     `-'f'
 |-'(' OpenParen
 `-')' CloseParen
       )txt",
        R"txt(
-CallExpression ExpressionStatement_expression
-|-IdExpression CallExpression_callee
-| `-UnqualifiedId IdExpression_id
+CallExpression Expression
+|-IdExpression Callee
+| `-UnqualifiedId UnqualifiedId
 |   `-'f'
 |-'(' OpenParen
 `-')' CloseParen
       )txt",
        R"txt(
-CallExpression ExpressionStatement_expression
-|-MemberExpression CallExpression_callee
-| |-ThisExpression MemberExpression_object
+CallExpression Expression
+|-MemberExpression Callee
+| |-ThisExpression Object
 | | `-'this' IntroducerKeyword
-| |-'->' MemberExpression_accessToken
-| `-IdExpression MemberExpression_member
-|   |-NestedNameSpecifier IdExpression_qualifier
-|   | |-IdentifierNameSpecifier List_element
+| |-'->' AccessToken
+| `-IdExpression Member
+|   |-NestedNameSpecifier Qualifier
+|   | |-IdentifierNameSpecifier ListElement
 |   | | `-'Base'
-|   | `-'::' List_delimiter
-|   `-UnqualifiedId IdExpression_id
+|   | `-'::' ListDelimiter
+|   `-UnqualifiedId UnqualifiedId
 |     `-'f'
 |-'(' OpenParen
 `-')' CloseParen
@@ -2436,21 +2436,21 @@ void test() {
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-IdExpression CallExpression_callee
-| `-UnqualifiedId IdExpression_id
+CallExpression Expression
+|-IdExpression Callee
+| `-UnqualifiedId UnqualifiedId
 |   `-'pf'
 |-'(' OpenParen
 `-')' CloseParen
 )txt",
        R"txt(
-CallExpression ExpressionStatement_expression
-|-ParenExpression CallExpression_callee
+CallExpression Expression
+|-ParenExpression Callee
 | |-'(' OpenParen
-| |-PrefixUnaryOperatorExpression ParenExpression_subExpression
-| | |-'*' OperatorExpression_operatorToken
-| | `-IdExpression UnaryOperatorExpression_operand
-| |   `-UnqualifiedId IdExpression_id
+| |-PrefixUnaryOperatorExpression SubExpression
+| | |-'*' OperatorToken
+| | `-IdExpression Operand
+| |   `-UnqualifiedId UnqualifiedId
 | |     `-'pf'
 | `-')' CloseParen
 |-'(' OpenParen
@@ -2474,16 +2474,16 @@ void test(S s) {
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-ParenExpression CallExpression_callee
+CallExpression Expression
+|-ParenExpression Callee
 | |-'(' OpenParen
-| |-BinaryOperatorExpression ParenExpression_subExpression
-| | |-IdExpression BinaryOperatorExpression_leftHandSide
-| | | `-UnqualifiedId IdExpression_id
+| |-BinaryOperatorExpression SubExpression
+| | |-IdExpression LeftHandSide
+| | | `-UnqualifiedId UnqualifiedId
 | | |   `-'s'
-| | |-'.*' OperatorExpression_operatorToken
-| | `-IdExpression BinaryOperatorExpression_rightHandSide
-| |   `-UnqualifiedId IdExpression_id
+| | |-'.*' OperatorToken
+| | `-IdExpression RightHandSide
+| |   `-UnqualifiedId UnqualifiedId
 | |     `-'pmf'
 | `-')' CloseParen
 |-'(' OpenParen
@@ -2503,10 +2503,10 @@ void test() {
 }
 )cpp",
       {R"txt(
-ExpressionStatement CompoundStatement_statement
-|-CallExpression ExpressionStatement_expression
-| |-IdExpression CallExpression_callee
-| | `-UnqualifiedId IdExpression_id
+ExpressionStatement Statement
+|-CallExpression Expression
+| |-IdExpression Callee
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'f'
 | |-'(' OpenParen
 | `-')' CloseParen
@@ -2526,14 +2526,14 @@ void test() {
 }
 )cpp",
       {R"txt(
-ExpressionStatement CompoundStatement_statement
-|-CallExpression ExpressionStatement_expression
-| |-IdExpression CallExpression_callee
-| | `-UnqualifiedId IdExpression_id
+ExpressionStatement Statement
+|-CallExpression Expression
+| |-IdExpression Callee
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'f'
 | |-'(' OpenParen
-| |-CallArguments CallExpression_arguments
-| | `-IntegerLiteralExpression List_element
+| |-CallArguments Arguments
+| | `-IntegerLiteralExpression ListElement
 | |   `-'1' LiteralToken
 | `-')' CloseParen
 `-';'
@@ -2552,20 +2552,20 @@ void test() {
 }
 )cpp",
       {R"txt(
-ExpressionStatement CompoundStatement_statement
-|-CallExpression ExpressionStatement_expression
-| |-IdExpression CallExpression_callee
-| | `-UnqualifiedId IdExpression_id
+ExpressionStatement Statement
+|-CallExpression Expression
+| |-IdExpression Callee
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'f'
 | |-'(' OpenParen
-| |-CallArguments CallExpression_arguments
-| | |-IntegerLiteralExpression List_element
+| |-CallArguments Arguments
+| | |-IntegerLiteralExpression ListElement
 | | | `-'1' LiteralToken
-| | |-',' List_delimiter
-| | |-CharacterLiteralExpression List_element
+| | |-',' ListDelimiter
+| | |-CharacterLiteralExpression ListElement
 | | | `-''2'' LiteralToken
-| | |-',' List_delimiter
-| | `-FloatingLiteralExpression List_element
+| | |-',' ListDelimiter
+| | `-FloatingLiteralExpression ListElement
 | |   `-'3.' LiteralToken
 | `-')' CloseParen
 `-';'
@@ -2584,19 +2584,19 @@ void test(int a) {
 }
 )cpp",
       {R"txt(
-ExpressionStatement CompoundStatement_statement
-|-CallExpression ExpressionStatement_expression
-| |-IdExpression CallExpression_callee
-| | `-UnqualifiedId IdExpression_id
+ExpressionStatement Statement
+|-CallExpression Expression
+| |-IdExpression Callee
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'f'
 | |-'(' OpenParen
-| |-CallArguments CallExpression_arguments
-| | `-BinaryOperatorExpression List_element
-| |   |-IdExpression BinaryOperatorExpression_leftHandSide
-| |   | `-UnqualifiedId IdExpression_id
+| |-CallArguments Arguments
+| | `-BinaryOperatorExpression ListElement
+| |   |-IdExpression LeftHandSide
+| |   | `-UnqualifiedId UnqualifiedId
 | |   |   `-'a'
-| |   |-'=' OperatorExpression_operatorToken
-| |   `-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide
+| |   |-'=' OperatorToken
+| |   `-IntegerLiteralExpression RightHandSide
 | |     `-'1' LiteralToken
 | `-')' CloseParen
 `-';'
@@ -2615,14 +2615,14 @@ void test() {
 }
 )cpp",
       {R"txt(
-ExpressionStatement CompoundStatement_statement
-|-CallExpression ExpressionStatement_expression
-| |-IdExpression CallExpression_callee
-| | `-UnqualifiedId IdExpression_id
+ExpressionStatement Statement
+|-CallExpression Expression
+| |-IdExpression Callee
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'f'
 | |-'(' OpenParen
-| |-CallArguments CallExpression_arguments
-| | `-UnknownExpression List_element
+| |-CallArguments Arguments
+| | `-UnknownExpression ListElement
 | |   `-UnknownExpression
 | |     |-'{'
 | |     `-'}'
@@ -2648,14 +2648,14 @@ void test() {
 }
 )cpp",
       {R"txt(
-ExpressionStatement CompoundStatement_statement
-|-CallExpression ExpressionStatement_expression
-| |-IdExpression CallExpression_callee
-| | `-UnqualifiedId IdExpression_id
+ExpressionStatement Statement
+|-CallExpression Expression
+| |-IdExpression Callee
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'f'
 | |-'(' OpenParen
-| |-CallArguments CallExpression_arguments
-| | `-UnknownExpression List_element
+| |-CallArguments Arguments
+| | `-UnknownExpression ListElement
 | |   `-UnknownExpression
 | |     |-'{'
 | |     |-IntegerLiteralExpression
@@ -2688,14 +2688,14 @@ void test() {
 }
 )cpp",
       {R"txt(
-ExpressionStatement CompoundStatement_statement
-|-CallExpression ExpressionStatement_expression
-| |-IdExpression CallExpression_callee
-| | `-UnqualifiedId IdExpression_id
+ExpressionStatement Statement
+|-CallExpression Expression
+| |-IdExpression Callee
+| | `-UnqualifiedId UnqualifiedId
 | |   `-'f'
 | |-'(' OpenParen
-| |-CallArguments CallExpression_arguments
-| | `-UnknownExpression List_element
+| |-CallArguments Arguments
+| | `-UnknownExpression ListElement
 | |   `-UnknownExpression
 | |     |-'{'
 | |     |-UnknownExpression
@@ -2730,14 +2730,14 @@ void test(T t, Args... args) {
 }
 )cpp",
       {R"txt(
-CallExpression ExpressionStatement_expression
-|-UnknownExpression CallExpression_callee
+CallExpression Expression
+|-UnknownExpression Callee
 | `-'test'
 |-'(' OpenParen
-|-CallArguments CallExpression_arguments
-| `-UnknownExpression List_element
+|-CallArguments Arguments
+| `-UnknownExpression ListElement
 |   |-IdExpression
-|   | `-UnqualifiedId IdExpression_id
+|   | `-UnqualifiedId UnqualifiedId
 |   |   `-'args'
 |   `-'...'
 `-')' CloseParen
@@ -2754,20 +2754,20 @@ int *c, d;
 TranslationUnit Detached
 |-SimpleDeclaration
 | |-'int'
-| |-SimpleDeclarator SimpleDeclaration_declarator
+| |-SimpleDeclarator Declarator
 | | |-'*'
 | | `-'a'
 | |-','
-| |-SimpleDeclarator SimpleDeclaration_declarator
+| |-SimpleDeclarator Declarator
 | | `-'b'
 | `-';'
 `-SimpleDeclaration
   |-'int'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'*'
   | `-'c'
   |-','
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | `-'d'
   `-';'
 )txt"));
@@ -2783,11 +2783,11 @@ TranslationUnit Detached
 `-SimpleDeclaration
   |-'typedef'
   |-'int'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'*'
   | `-'a'
   |-','
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | `-'b'
   `-';'
 )txt"));
@@ -2805,32 +2805,32 @@ void foo() {
 TranslationUnit Detached
 `-SimpleDeclaration
   |-'void'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'foo'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
   |   `-')' CloseParen
   `-CompoundStatement
     |-'{' OpenParen
-    |-DeclarationStatement CompoundStatement_statement
+    |-DeclarationStatement Statement
     | |-SimpleDeclaration
     | | |-'int'
-    | | |-SimpleDeclarator SimpleDeclaration_declarator
+    | | |-SimpleDeclarator Declarator
     | | | |-'*'
     | | | `-'a'
     | | |-','
-    | | `-SimpleDeclarator SimpleDeclaration_declarator
+    | | `-SimpleDeclarator Declarator
     | |   `-'b'
     | `-';'
-    |-DeclarationStatement CompoundStatement_statement
+    |-DeclarationStatement Statement
     | |-SimpleDeclaration
     | | |-'typedef'
     | | |-'int'
-    | | |-SimpleDeclarator SimpleDeclaration_declarator
+    | | |-SimpleDeclarator Declarator
     | | | |-'*'
     | | | `-'ta'
     | | |-','
-    | | `-SimpleDeclarator SimpleDeclaration_declarator
+    | | `-SimpleDeclarator Declarator
     | |   `-'tb'
     | `-';'
     `-'}' CloseParen
@@ -2858,7 +2858,7 @@ TranslationUnit Detached
   | |-'*'
   | `-')'
   |-')'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | `-'size_t'
   `-';'
 )txt"));
@@ -2957,7 +2957,7 @@ UsingNamespaceDirective
 |-'using'
 |-'namespace'
 |-NestedNameSpecifier
-| `-'::' List_delimiter
+| `-'::' ListDelimiter
 |-'ns'
 `-';'
 )txt"}));
@@ -2976,9 +2976,9 @@ namespace ns { int a; }
 UsingDeclaration
 |-'using'
 |-NestedNameSpecifier
-| |-IdentifierNameSpecifier List_element
+| |-IdentifierNameSpecifier ListElement
 | | `-'ns'
-| `-'::' List_delimiter
+| `-'::' ListDelimiter
 |-'a'
 `-';'
 )txt"}));
@@ -2999,9 +2999,9 @@ template <class T> struct X {
 UsingDeclaration
 |-'using'
 |-NestedNameSpecifier
-| |-IdentifierNameSpecifier List_element
+| |-IdentifierNameSpecifier ListElement
 | | `-'T'
-| `-'::' List_delimiter
+| `-'::' ListDelimiter
 |-'foo'
 `-';'
 )txt",
@@ -3010,9 +3010,9 @@ UsingDeclaration
 |-'using'
 |-'typename'
 |-NestedNameSpecifier
-| |-IdentifierNameSpecifier List_element
+| |-IdentifierNameSpecifier ListElement
 | | `-'T'
-| `-'::' List_delimiter
+| `-'::' ListDelimiter
 |-'bar'
 `-';'
 )txt"}));
@@ -3053,7 +3053,7 @@ SimpleDeclaration
 SimpleDeclaration
 |-'struct'
 |-'Y'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-'*'
 | `-'y1'
 `-';'
@@ -3081,7 +3081,7 @@ SimpleDeclaration
 |-'Y'
 |-'{'
 |-'}'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-'*'
 | `-'y2'
 `-';'
@@ -3091,7 +3091,7 @@ SimpleDeclaration
 |-'struct'
 |-'{'
 |-'}'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-'*'
 | `-'a1'
 `-';'
@@ -3112,7 +3112,7 @@ struct S {
 SimpleDeclaration
 |-'static'
 |-'void'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-'f'
 | `-ParametersAndQualifiers
 |   |-'(' OpenParen
@@ -3135,7 +3135,7 @@ struct X {
 )cpp",
       {R"txt(
 SimpleDeclaration
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-'operator'
 | |-'int'
 | `-ParametersAndQualifiers
@@ -3157,14 +3157,14 @@ unsigned operator "" _c(char);
 TranslationUnit Detached
 `-SimpleDeclaration
   |-'unsigned'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'operator'
   | |-'""'
   | |-'_c'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
-  |   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-  |   | `-SimpleDeclaration List_element
+  |   |-ParameterDeclarationList Parameters
+  |   | `-SimpleDeclaration ListElement
   |   |   `-'char'
   |   `-')' CloseParen
   `-';'
@@ -3182,7 +3182,7 @@ unsigned operator "" _t();
     )cpp",
       R"txt(
 TranslationUnit Detached
-`-TemplateDeclaration TemplateDeclaration_declaration
+`-TemplateDeclaration Declaration
   |-'template' IntroducerKeyword
   |-'<'
   |-SimpleDeclaration
@@ -3191,7 +3191,7 @@ TranslationUnit Detached
   |-'>'
   `-SimpleDeclaration
     |-'unsigned'
-    |-SimpleDeclarator SimpleDeclaration_declarator
+    |-SimpleDeclarator Declarator
     | |-'operator'
     | |-'""'
     | |-'_t'
@@ -3215,17 +3215,17 @@ struct X {
       {R"txt(
 SimpleDeclaration
 |-'X'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-'&'
 | |-'operator'
 | |-'='
 | `-ParametersAndQualifiers
 |   |-'(' OpenParen
-|   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-|   | `-SimpleDeclaration List_element
+|   |-ParameterDeclarationList Parameters
+|   | `-SimpleDeclaration ListElement
 |   |   |-'const'
 |   |   |-'X'
-|   |   `-SimpleDeclarator SimpleDeclaration_declarator
+|   |   `-SimpleDeclarator Declarator
 |   |     `-'&'
 |   `-')' CloseParen
 `-';'
@@ -3247,19 +3247,19 @@ UnknownDeclaration
 `-SimpleDeclaration
   |-'friend'
   |-'X'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'operator'
   | |-'+'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
-  |   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-  |   | |-SimpleDeclaration List_element
+  |   |-ParameterDeclarationList Parameters
+  |   | |-SimpleDeclaration ListElement
   |   | | `-'X'
-  |   | |-',' List_delimiter
-  |   | `-SimpleDeclaration List_element
+  |   | |-',' ListDelimiter
+  |   | `-SimpleDeclaration ListElement
   |   |   |-'const'
   |   |   |-'X'
-  |   |   `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   `-SimpleDeclarator Declarator
   |   |     `-'&'
   |   `-')' CloseParen
   `-';'
@@ -3277,7 +3277,7 @@ struct ST {};
 )cpp",
       R"txt(
 TranslationUnit Detached
-`-TemplateDeclaration TemplateDeclaration_declaration
+`-TemplateDeclaration Declaration
   |-'template' IntroducerKeyword
   |-'<'
   |-UnknownDeclaration
@@ -3304,7 +3304,7 @@ T f();
 )cpp",
       R"txt(
 TranslationUnit Detached
-`-TemplateDeclaration TemplateDeclaration_declaration
+`-TemplateDeclaration Declaration
   |-'template' IntroducerKeyword
   |-'<'
   |-UnknownDeclaration
@@ -3313,7 +3313,7 @@ TranslationUnit Detached
   |-'>'
   `-SimpleDeclaration
     |-'T'
-    |-SimpleDeclarator SimpleDeclaration_declarator
+    |-SimpleDeclarator Declarator
     | |-'f'
     | `-ParametersAndQualifiers
     |   |-'(' OpenParen
@@ -3332,7 +3332,7 @@ template <class T> T var = 10;
 )cpp",
       R"txt(
 TranslationUnit Detached
-`-TemplateDeclaration TemplateDeclaration_declaration
+`-TemplateDeclaration Declaration
   |-'template' IntroducerKeyword
   |-'<'
   |-UnknownDeclaration
@@ -3341,7 +3341,7 @@ TranslationUnit Detached
   |-'>'
   `-SimpleDeclaration
     |-'T'
-    |-SimpleDeclarator SimpleDeclaration_declarator
+    |-SimpleDeclarator Declarator
     | |-'var'
     | |-'='
     | `-IntegerLiteralExpression
@@ -3362,7 +3362,7 @@ struct S {
 };
 )cpp",
       {R"txt(
-TemplateDeclaration TemplateDeclaration_declaration
+TemplateDeclaration Declaration
 |-'template' IntroducerKeyword
 |-'<'
 |-UnknownDeclaration
@@ -3372,7 +3372,7 @@ TemplateDeclaration TemplateDeclaration_declaration
 `-SimpleDeclaration
   |-'static'
   |-'U'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'f'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
@@ -3395,7 +3395,7 @@ struct X {
 )cpp",
       R"txt(
 TranslationUnit Detached
-`-TemplateDeclaration TemplateDeclaration_declaration
+`-TemplateDeclaration Declaration
   |-'template' IntroducerKeyword
   |-'<'
   |-UnknownDeclaration
@@ -3406,7 +3406,7 @@ TranslationUnit Detached
     |-'struct'
     |-'X'
     |-'{'
-    |-TemplateDeclaration TemplateDeclaration_declaration
+    |-TemplateDeclaration Declaration
     | |-'template' IntroducerKeyword
     | |-'<'
     | |-UnknownDeclaration
@@ -3415,7 +3415,7 @@ TranslationUnit Detached
     | |-'>'
     | `-SimpleDeclaration
     |   |-'U'
-    |   |-SimpleDeclarator SimpleDeclaration_declarator
+    |   |-SimpleDeclarator Declarator
     |   | |-'foo'
     |   | `-ParametersAndQualifiers
     |   |   |-'(' OpenParen
@@ -3446,7 +3446,7 @@ TranslationUnit Detached
   |-'namespace'
   |-'n'
   |-'{'
-  |-TemplateDeclaration TemplateDeclaration_declaration
+  |-TemplateDeclaration Declaration
   | |-'template' IntroducerKeyword
   | |-'<'
   | |-UnknownDeclaration
@@ -3457,7 +3457,7 @@ TranslationUnit Detached
   |   |-'struct'
   |   |-'ST'
   |   |-'{'
-  |   |-TemplateDeclaration TemplateDeclaration_declaration
+  |   |-TemplateDeclaration Declaration
   |   | |-'template' IntroducerKeyword
   |   | |-'<'
   |   | |-UnknownDeclaration
@@ -3467,7 +3467,7 @@ TranslationUnit Detached
   |   | `-SimpleDeclaration
   |   |   |-'static'
   |   |   |-'U'
-  |   |   |-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   |-SimpleDeclarator Declarator
   |   |   | |-'f'
   |   |   | `-ParametersAndQualifiers
   |   |   |   |-'(' OpenParen
@@ -3489,7 +3489,7 @@ template <class T> struct X { struct Y; };
 [[template <class T> struct X<T>::Y {};]]
 )cpp",
       {R"txt(
-TemplateDeclaration TemplateDeclaration_declaration
+TemplateDeclaration Declaration
 |-'template' IntroducerKeyword
 |-'<'
 |-UnknownDeclaration
@@ -3499,12 +3499,12 @@ TemplateDeclaration TemplateDeclaration_declaration
 `-SimpleDeclaration
   |-'struct'
   |-NestedNameSpecifier
-  | |-SimpleTemplateNameSpecifier List_element
+  | |-SimpleTemplateNameSpecifier ListElement
   | | |-'X'
   | | |-'<'
   | | |-'T'
   | | `-'>'
-  | `-'::' List_delimiter
+  | `-'::' ListDelimiter
   |-'Y'
   |-'{'
   |-'}'
@@ -3524,7 +3524,7 @@ template <class T> struct X {};
       {R"txt(
 ExplicitTemplateInstantiation
 |-'template' IntroducerKeyword
-`-SimpleDeclaration ExplicitTemplateInstantiation_declaration
+`-SimpleDeclaration Declaration
   |-'struct'
   |-'X'
   |-'<'
@@ -3547,7 +3547,7 @@ template <class T> struct X {};
 ExplicitTemplateInstantiation
 |-'extern' ExternKeyword
 |-'template' IntroducerKeyword
-`-SimpleDeclaration ExplicitTemplateInstantiation_declaration
+`-SimpleDeclaration Declaration
   |-'struct'
   |-'X'
   |-'<'
@@ -3567,7 +3567,7 @@ template <class T> struct X {};
 [[template <class T> struct X<T*> {};]]
 )cpp",
       {R"txt(
-TemplateDeclaration TemplateDeclaration_declaration
+TemplateDeclaration Declaration
 |-'template' IntroducerKeyword
 |-'<'
 |-UnknownDeclaration
@@ -3597,7 +3597,7 @@ template <class T> struct X {};
 [[template <> struct X<int> {};]]
 )cpp",
       {R"txt(
-TemplateDeclaration TemplateDeclaration_declaration
+TemplateDeclaration Declaration
 |-'template' IntroducerKeyword
 |-'<'
 |-'>'
@@ -3638,10 +3638,10 @@ TranslationUnit Detached
 `-StaticAssertDeclaration
   |-'static_assert'
   |-'('
-  |-BoolLiteralExpression StaticAssertDeclaration_condition
+  |-BoolLiteralExpression Condition
   | `-'true' LiteralToken
   |-','
-  |-StringLiteralExpression StaticAssertDeclaration_message
+  |-StringLiteralExpression Message
   | `-'"message"' LiteralToken
   |-')'
   `-';'
@@ -3661,7 +3661,7 @@ TranslationUnit Detached
 `-StaticAssertDeclaration
   |-'static_assert'
   |-'('
-  |-BoolLiteralExpression StaticAssertDeclaration_condition
+  |-BoolLiteralExpression Condition
   | `-'true' LiteralToken
   |-')'
   `-';'
@@ -3684,7 +3684,7 @@ TranslationUnit Detached
 | |-'"C"'
 | `-SimpleDeclaration
 |   |-'int'
-|   |-SimpleDeclarator SimpleDeclaration_declarator
+|   |-SimpleDeclarator Declarator
 |   | `-'a'
 |   `-';'
 `-LinkageSpecificationDeclaration
@@ -3693,12 +3693,12 @@ TranslationUnit Detached
   |-'{'
   |-SimpleDeclaration
   | |-'int'
-  | |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-SimpleDeclarator Declarator
   | | `-'b'
   | `-';'
   |-SimpleDeclaration
   | |-'int'
-  | |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-SimpleDeclarator Declarator
   | | `-'c'
   | `-';'
   `-'}'
@@ -3718,28 +3718,28 @@ void test() {
 TranslationUnit Detached
 `-SimpleDeclaration
   |-'void'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'test'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
   |   `-')' CloseParen
   `-CompoundStatement
     |-'{' OpenParen
-    |-IfStatement CompoundStatement_statement
+    |-IfStatement Statement
     | |-'if' IntroducerKeyword unmodifiable
     | |-'(' unmodifiable
     | |-BinaryOperatorExpression unmodifiable
-    | | |-IntegerLiteralExpression BinaryOperatorExpression_leftHandSide unmodifiable
+    | | |-IntegerLiteralExpression LeftHandSide unmodifiable
     | | | `-'1' LiteralToken unmodifiable
-    | | |-'+' OperatorExpression_operatorToken unmodifiable
-    | | `-IntegerLiteralExpression BinaryOperatorExpression_rightHandSide unmodifiable
+    | | |-'+' OperatorToken unmodifiable
+    | | `-IntegerLiteralExpression RightHandSide unmodifiable
     | |   `-'1' LiteralToken unmodifiable
     | |-')' unmodifiable
-    | |-CompoundStatement IfStatement_thenStatement unmodifiable
+    | |-CompoundStatement ThenStatement unmodifiable
     | | |-'{' OpenParen unmodifiable
     | | `-'}' CloseParen unmodifiable
-    | |-'else' IfStatement_elseKeyword
-    | `-CompoundStatement IfStatement_elseStatement
+    | |-'else' ElseKeyword
+    | `-CompoundStatement ElseStatement
     |   |-'{' OpenParen
     |   `-'}' CloseParen
     `-'}' CloseParen
@@ -3767,24 +3767,24 @@ void test() {
 TranslationUnit Detached
 `-SimpleDeclaration
   |-'void'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'test'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
   |   `-')' CloseParen
   `-CompoundStatement
     |-'{' OpenParen
-    |-CompoundStatement CompoundStatement_statement
+    |-CompoundStatement Statement
     | |-'{' OpenParen
-    | |-ExpressionStatement CompoundStatement_statement
-    | | |-IntegerLiteralExpression ExpressionStatement_expression
+    | |-ExpressionStatement Statement
+    | | |-IntegerLiteralExpression Expression
     | | | `-'1' LiteralToken
     | | `-';'
     | `-'}' CloseParen
-    |-CompoundStatement CompoundStatement_statement
+    |-CompoundStatement Statement
     | |-'{' OpenParen
-    | |-ExpressionStatement CompoundStatement_statement
-    | | |-IntegerLiteralExpression ExpressionStatement_expression
+    | |-ExpressionStatement Statement
+    | | |-IntegerLiteralExpression Expression
     | | | `-'2' LiteralToken
     | | `-';'
     | `-'}' CloseParen
@@ -3801,11 +3801,11 @@ int a[10];
 TranslationUnit Detached
 `-SimpleDeclaration
   |-'int'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'a'
   | `-ArraySubscript
   |   |-'[' OpenParen
-  |   |-IntegerLiteralExpression ArraySubscript_sizeExpression
+  |   |-IntegerLiteralExpression Size
   |   | `-'10' LiteralToken
   |   `-']' CloseParen
   `-';'
@@ -3821,21 +3821,21 @@ int b[1][2][3];
 TranslationUnit Detached
 `-SimpleDeclaration
   |-'int'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'b'
   | |-ArraySubscript
   | | |-'[' OpenParen
-  | | |-IntegerLiteralExpression ArraySubscript_sizeExpression
+  | | |-IntegerLiteralExpression Size
   | | | `-'1' LiteralToken
   | | `-']' CloseParen
   | |-ArraySubscript
   | | |-'[' OpenParen
-  | | |-IntegerLiteralExpression ArraySubscript_sizeExpression
+  | | |-IntegerLiteralExpression Size
   | | | `-'2' LiteralToken
   | | `-']' CloseParen
   | `-ArraySubscript
   |   |-'[' OpenParen
-  |   |-IntegerLiteralExpression ArraySubscript_sizeExpression
+  |   |-IntegerLiteralExpression Size
   |   | `-'3' LiteralToken
   |   `-']' CloseParen
   `-';'
@@ -3851,7 +3851,7 @@ int c[] = {1,2,3};
 TranslationUnit Detached
 `-SimpleDeclaration
   |-'int'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'c'
   | |-ArraySubscript
   | | |-'[' OpenParen
@@ -3885,19 +3885,19 @@ void f(int xs[static 10]);
 TranslationUnit Detached
 `-SimpleDeclaration
   |-'void'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'f'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
-  |   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-  |   | `-SimpleDeclaration List_element
+  |   |-ParameterDeclarationList Parameters
+  |   | `-SimpleDeclaration ListElement
   |   |   |-'int'
-  |   |   `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   `-SimpleDeclarator Declarator
   |   |     |-'xs'
   |   |     `-ArraySubscript
   |   |       |-'[' OpenParen
   |   |       |-'static'
-  |   |       |-IntegerLiteralExpression ArraySubscript_sizeExpression
+  |   |       |-IntegerLiteralExpression Size
   |   |       | `-'10' LiteralToken
   |   |       `-']' CloseParen
   |   `-')' CloseParen
@@ -3914,7 +3914,7 @@ int func();
 TranslationUnit Detached
 `-SimpleDeclaration
   |-'int'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'func'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
@@ -3934,46 +3934,46 @@ int func3(int a, float b);
 TranslationUnit Detached
 |-SimpleDeclaration
 | |-'int'
-| |-SimpleDeclarator SimpleDeclaration_declarator
+| |-SimpleDeclarator Declarator
 | | |-'func1'
 | | `-ParametersAndQualifiers
 | |   |-'(' OpenParen
-| |   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-| |   | `-SimpleDeclaration List_element
+| |   |-ParameterDeclarationList Parameters
+| |   | `-SimpleDeclaration ListElement
 | |   |   |-'int'
-| |   |   `-SimpleDeclarator SimpleDeclaration_declarator
+| |   |   `-SimpleDeclarator Declarator
 | |   |     `-'a'
 | |   `-')' CloseParen
 | `-';'
 |-SimpleDeclaration
 | |-'int'
-| |-SimpleDeclarator SimpleDeclaration_declarator
+| |-SimpleDeclarator Declarator
 | | |-'func2'
 | | `-ParametersAndQualifiers
 | |   |-'(' OpenParen
-| |   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-| |   | `-SimpleDeclaration List_element
+| |   |-ParameterDeclarationList Parameters
+| |   | `-SimpleDeclaration ListElement
 | |   |   |-'int'
-| |   |   `-SimpleDeclarator SimpleDeclaration_declarator
+| |   |   `-SimpleDeclarator Declarator
 | |   |     |-'*'
 | |   |     `-'ap'
 | |   `-')' CloseParen
 | `-';'
 `-SimpleDeclaration
   |-'int'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'func3'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
-  |   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-  |   | |-SimpleDeclaration List_element
+  |   |-ParameterDeclarationList Parameters
+  |   | |-SimpleDeclaration ListElement
   |   | | |-'int'
-  |   | | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   | | `-SimpleDeclarator Declarator
   |   | |   `-'a'
-  |   | |-',' List_delimiter
-  |   | `-SimpleDeclaration List_element
+  |   | |-',' ListDelimiter
+  |   | `-SimpleDeclaration ListElement
   |   |   |-'float'
-  |   |   `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   `-SimpleDeclarator Declarator
   |   |     `-'b'
   |   `-')' CloseParen
   `-';'
@@ -3991,39 +3991,39 @@ int func3(int, float);
 TranslationUnit Detached
 |-SimpleDeclaration
 | |-'int'
-| |-SimpleDeclarator SimpleDeclaration_declarator
+| |-SimpleDeclarator Declarator
 | | |-'func1'
 | | `-ParametersAndQualifiers
 | |   |-'(' OpenParen
-| |   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-| |   | `-SimpleDeclaration List_element
+| |   |-ParameterDeclarationList Parameters
+| |   | `-SimpleDeclaration ListElement
 | |   |   `-'int'
 | |   `-')' CloseParen
 | `-';'
 |-SimpleDeclaration
 | |-'int'
-| |-SimpleDeclarator SimpleDeclaration_declarator
+| |-SimpleDeclarator Declarator
 | | |-'func2'
 | | `-ParametersAndQualifiers
 | |   |-'(' OpenParen
-| |   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-| |   | `-SimpleDeclaration List_element
+| |   |-ParameterDeclarationList Parameters
+| |   | `-SimpleDeclaration ListElement
 | |   |   |-'int'
-| |   |   `-SimpleDeclarator SimpleDeclaration_declarator
+| |   |   `-SimpleDeclarator Declarator
 | |   |     `-'*'
 | |   `-')' CloseParen
 | `-';'
 `-SimpleDeclaration
   |-'int'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'func3'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
-  |   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-  |   | |-SimpleDeclaration List_element
+  |   |-ParameterDeclarationList Parameters
+  |   | |-SimpleDeclaration ListElement
   |   | | `-'int'
-  |   | |-',' List_delimiter
-  |   | `-SimpleDeclaration List_element
+  |   | |-',' ListDelimiter
+  |   | `-SimpleDeclaration ListElement
   |   |   `-'float'
   |   `-')' CloseParen
   `-';'
@@ -4043,15 +4043,15 @@ template<typename T, typename... Args>
       {R"txt(
 SimpleDeclaration
 |-'void'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-'test'
 | `-ParametersAndQualifiers
 |   |-'(' OpenParen
-|   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-|   | |-SimpleDeclaration List_element
+|   |-ParameterDeclarationList Parameters
+|   | |-SimpleDeclaration ListElement
 |   | | `-'T'
-|   | |-',' List_delimiter
-|   | `-SimpleDeclaration List_element
+|   | |-',' ListDelimiter
+|   | `-SimpleDeclaration ListElement
 |   |   |-'Args'
 |   |   `-'...'
 |   `-')' CloseParen
@@ -4072,20 +4072,20 @@ template<typename T, typename... Args>
       {R"txt(
 SimpleDeclaration
 |-'void'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-'test'
 | `-ParametersAndQualifiers
 |   |-'(' OpenParen
-|   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-|   | |-SimpleDeclaration List_element
+|   |-ParameterDeclarationList Parameters
+|   | |-SimpleDeclaration ListElement
 |   | | |-'T'
-|   | | `-SimpleDeclarator SimpleDeclaration_declarator
+|   | | `-SimpleDeclarator Declarator
 |   | |   `-'t'
-|   | |-',' List_delimiter
-|   | `-SimpleDeclaration List_element
+|   | |-',' ListDelimiter
+|   | `-SimpleDeclaration ListElement
 |   |   |-'Args'
 |   |   |-'...'
-|   |   `-SimpleDeclarator SimpleDeclaration_declarator
+|   |   `-SimpleDeclarator Declarator
 |   |     `-'args'
 |   `-')' CloseParen
 `-';'
@@ -4105,15 +4105,15 @@ void test(int , char ...);
 TranslationUnit Detached
 `-SimpleDeclaration
   |-'void'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'test'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
-  |   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-  |   | |-SimpleDeclaration List_element
+  |   |-ParameterDeclarationList Parameters
+  |   | |-SimpleDeclaration ListElement
   |   | | `-'int'
-  |   | |-',' List_delimiter
-  |   | `-SimpleDeclaration List_element
+  |   | |-',' ListDelimiter
+  |   | `-SimpleDeclaration ListElement
   |   |   `-'char'
   |   |-'...'
   |   `-')' CloseParen
@@ -4134,28 +4134,28 @@ int func(const int a, volatile int b, const volatile int c);
 TranslationUnit Detached
 `-SimpleDeclaration
   |-'int'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'func'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
-  |   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-  |   | |-SimpleDeclaration List_element
+  |   |-ParameterDeclarationList Parameters
+  |   | |-SimpleDeclaration ListElement
   |   | | |-'const'
   |   | | |-'int'
-  |   | | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   | | `-SimpleDeclarator Declarator
   |   | |   `-'a'
-  |   | |-',' List_delimiter
-  |   | |-SimpleDeclaration List_element
+  |   | |-',' ListDelimiter
+  |   | |-SimpleDeclaration ListElement
   |   | | |-'volatile'
   |   | | |-'int'
-  |   | | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   | | `-SimpleDeclarator Declarator
   |   | |   `-'b'
-  |   | |-',' List_delimiter
-  |   | `-SimpleDeclaration List_element
+  |   | |-',' ListDelimiter
+  |   | `-SimpleDeclaration ListElement
   |   |   |-'const'
   |   |   |-'volatile'
   |   |   |-'int'
-  |   |   `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   `-SimpleDeclarator Declarator
   |   |     `-'c'
   |   `-')' CloseParen
   `-';'
@@ -4174,14 +4174,14 @@ int func(int& a);
 TranslationUnit Detached
 `-SimpleDeclaration
   |-'int'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'func'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
-  |   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-  |   | `-SimpleDeclaration List_element
+  |   |-ParameterDeclarationList Parameters
+  |   | `-SimpleDeclaration ListElement
   |   |   |-'int'
-  |   |   `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   `-SimpleDeclarator Declarator
   |   |     |-'&'
   |   |     `-'a'
   |   `-')' CloseParen
@@ -4201,14 +4201,14 @@ int func(int&& a);
 TranslationUnit Detached
 `-SimpleDeclaration
   |-'int'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'func'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
-  |   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-  |   | `-SimpleDeclaration List_element
+  |   |-ParameterDeclarationList Parameters
+  |   | `-SimpleDeclaration ListElement
   |   |   |-'int'
-  |   |   `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   `-SimpleDeclarator Declarator
   |   |     |-'&&'
   |   |     `-'a'
   |   `-')' CloseParen
@@ -4234,7 +4234,7 @@ TranslationUnit Detached
   |-'{'
   |-SimpleDeclaration
   | |-'int'
-  | |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-SimpleDeclarator Declarator
   | | |-'a'
   | | `-ParametersAndQualifiers
   | |   |-'(' OpenParen
@@ -4260,7 +4260,7 @@ struct Test {
       {R"txt(
 SimpleDeclaration
 |-'int'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-'b'
 | `-ParametersAndQualifiers
 |   |-'(' OpenParen
@@ -4271,7 +4271,7 @@ SimpleDeclaration
        R"txt(
 SimpleDeclaration
 |-'int'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-'c'
 | `-ParametersAndQualifiers
 |   |-'(' OpenParen
@@ -4282,7 +4282,7 @@ SimpleDeclaration
        R"txt(
 SimpleDeclaration
 |-'int'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-'d'
 | `-ParametersAndQualifiers
 |   |-'(' OpenParen
@@ -4306,7 +4306,7 @@ struct Test {
       {R"txt(
 SimpleDeclaration
 |-'int'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-'e'
 | `-ParametersAndQualifiers
 |   |-'(' OpenParen
@@ -4329,7 +4329,7 @@ struct Test {
       {R"txt(
 SimpleDeclaration
 |-'int'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-'f'
 | `-ParametersAndQualifiers
 |   |-'(' OpenParen
@@ -4351,12 +4351,12 @@ auto foo() -> int;
 TranslationUnit Detached
 `-SimpleDeclaration
   |-'auto'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'foo'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
   |   |-')' CloseParen
-  |   `-TrailingReturnType ParametersAndQualifiers_trailingReturn
+  |   `-TrailingReturnType TrailingReturn
   |     |-'->' ArrowToken
   |     `-'int'
   `-';'
@@ -4379,7 +4379,7 @@ struct MyException2 {};
       {R"txt(
 SimpleDeclaration
 |-'int'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-'a'
 | `-ParametersAndQualifiers
 |   |-'(' OpenParen
@@ -4392,7 +4392,7 @@ SimpleDeclaration
        R"txt(
 SimpleDeclaration
 |-'int'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-'b'
 | `-ParametersAndQualifiers
 |   |-'(' OpenParen
@@ -4406,7 +4406,7 @@ SimpleDeclaration
        R"txt(
 SimpleDeclaration
 |-'int'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-'c'
 | `-ParametersAndQualifiers
 |   |-'(' OpenParen
@@ -4420,7 +4420,7 @@ SimpleDeclaration
        R"txt(
 SimpleDeclaration
 |-'int'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-'d'
 | `-ParametersAndQualifiers
 |   |-'(' OpenParen
@@ -4448,7 +4448,7 @@ int b() noexcept(true);
 TranslationUnit Detached
 |-SimpleDeclaration
 | |-'int'
-| |-SimpleDeclarator SimpleDeclaration_declarator
+| |-SimpleDeclarator Declarator
 | | |-'a'
 | | `-ParametersAndQualifiers
 | |   |-'(' OpenParen
@@ -4457,7 +4457,7 @@ TranslationUnit Detached
 | `-';'
 `-SimpleDeclaration
   |-'int'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'b'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
@@ -4483,7 +4483,7 @@ int *(d)(int);
 TranslationUnit Detached
 |-SimpleDeclaration
 | |-'int'
-| |-SimpleDeclarator SimpleDeclaration_declarator
+| |-SimpleDeclarator Declarator
 | | `-ParenDeclarator
 | |   |-'(' OpenParen
 | |   |-'a'
@@ -4491,7 +4491,7 @@ TranslationUnit Detached
 | `-';'
 |-SimpleDeclaration
 | |-'int'
-| |-SimpleDeclarator SimpleDeclaration_declarator
+| |-SimpleDeclarator Declarator
 | | |-'*'
 | | `-ParenDeclarator
 | |   |-'(' OpenParen
@@ -4500,7 +4500,7 @@ TranslationUnit Detached
 | `-';'
 |-SimpleDeclaration
 | |-'int'
-| |-SimpleDeclarator SimpleDeclaration_declarator
+| |-SimpleDeclarator Declarator
 | | |-ParenDeclarator
 | | | |-'(' OpenParen
 | | | |-'*'
@@ -4508,14 +4508,14 @@ TranslationUnit Detached
 | | | `-')' CloseParen
 | | `-ParametersAndQualifiers
 | |   |-'(' OpenParen
-| |   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-| |   | `-SimpleDeclaration List_element
+| |   |-ParameterDeclarationList Parameters
+| |   | `-SimpleDeclaration ListElement
 | |   |   `-'int'
 | |   `-')' CloseParen
 | `-';'
 `-SimpleDeclaration
   |-'int'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'*'
   | |-ParenDeclarator
   | | |-'(' OpenParen
@@ -4523,8 +4523,8 @@ TranslationUnit Detached
   | | `-')' CloseParen
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
-  |   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-  |   | `-SimpleDeclaration List_element
+  |   |-ParameterDeclarationList Parameters
+  |   | `-SimpleDeclaration ListElement
   |   |   `-'int'
   |   `-')' CloseParen
   `-';'
@@ -4542,18 +4542,18 @@ TranslationUnit Detached
 |-SimpleDeclaration
 | |-'const'
 | |-'int'
-| |-SimpleDeclarator SimpleDeclaration_declarator
+| |-SimpleDeclarator Declarator
 | | |-'west'
 | | |-'='
 | | `-PrefixUnaryOperatorExpression
-| |   |-'-' OperatorExpression_operatorToken
-| |   `-IntegerLiteralExpression UnaryOperatorExpression_operand
+| |   |-'-' OperatorToken
+| |   `-IntegerLiteralExpression Operand
 | |     `-'1' LiteralToken
 | `-';'
 `-SimpleDeclaration
   |-'int'
   |-'const'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'east'
   | |-'='
   | `-IntegerLiteralExpression
@@ -4573,7 +4573,7 @@ TranslationUnit Detached
   |-'const'
   |-'int'
   |-'const'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'universal'
   | |-'='
   | `-IntegerLiteralExpression
@@ -4593,7 +4593,7 @@ TranslationUnit Detached
   |-'const'
   |-'int'
   |-'const'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'*'
   | |-'const'
   | |-'*'
@@ -4615,29 +4615,29 @@ auto foo() -> auto(*)(int) -> double*;
 TranslationUnit Detached
 `-SimpleDeclaration
   |-'auto'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'foo'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
   |   |-')' CloseParen
-  |   `-TrailingReturnType ParametersAndQualifiers_trailingReturn
+  |   `-TrailingReturnType TrailingReturn
   |     |-'->' ArrowToken
   |     |-'auto'
-  |     `-SimpleDeclarator TrailingReturnType_declarator
+  |     `-SimpleDeclarator Declarator
   |       |-ParenDeclarator
   |       | |-'(' OpenParen
   |       | |-'*'
   |       | `-')' CloseParen
   |       `-ParametersAndQualifiers
   |         |-'(' OpenParen
-  |         |-ParameterDeclarationList ParametersAndQualifiers_parameters
-  |         | `-SimpleDeclaration List_element
+  |         |-ParameterDeclarationList Parameters
+  |         | `-SimpleDeclaration ListElement
   |         |   `-'int'
   |         |-')' CloseParen
-  |         `-TrailingReturnType ParametersAndQualifiers_trailingReturn
+  |         `-TrailingReturnType TrailingReturn
   |           |-'->' ArrowToken
   |           |-'double'
-  |           `-SimpleDeclarator TrailingReturnType_declarator
+  |           `-SimpleDeclarator Declarator
   |             `-'*'
   `-';'
 )txt"));
@@ -4656,7 +4656,7 @@ struct X {};
       {R"txt(
 SimpleDeclaration
 |-'int'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-MemberPointer
 | | |-'X'
 | | |-'::'
@@ -4668,7 +4668,7 @@ SimpleDeclaration
 SimpleDeclaration
 |-'const'
 |-'int'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-MemberPointer
 | | |-'X'
 | | |-'::'
@@ -4696,7 +4696,7 @@ struct X {
       {R"txt(
 SimpleDeclaration
 |-'void'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-ParenDeclarator
 | | |-'(' OpenParen
 | | |-MemberPointer
@@ -4713,7 +4713,7 @@ SimpleDeclaration
        R"txt(
 SimpleDeclaration
 |-'void'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-ParenDeclarator
 | | |-'(' OpenParen
 | | |-MemberPointer
@@ -4725,11 +4725,11 @@ SimpleDeclaration
 | | `-')' CloseParen
 | `-ParametersAndQualifiers
 |   |-'(' OpenParen
-|   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-|   | `-SimpleDeclaration List_element
+|   |-ParameterDeclarationList Parameters
+|   | `-SimpleDeclaration ListElement
 |   |   |-'const'
 |   |   |-'int'
-|   |   `-SimpleDeclarator SimpleDeclaration_declarator
+|   |   `-SimpleDeclarator Declarator
 |   |     `-'*'
 |   `-')' CloseParen
 `-';'
@@ -4737,7 +4737,7 @@ SimpleDeclaration
        R"txt(
 SimpleDeclaration
 |-'void'
-|-SimpleDeclarator SimpleDeclaration_declarator
+|-SimpleDeclarator Declarator
 | |-ParenDeclarator
 | | |-'(' OpenParen
 | | |-'X'
@@ -4750,14 +4750,14 @@ SimpleDeclaration
 | | `-')' CloseParen
 | `-ParametersAndQualifiers
 |   |-'(' OpenParen
-|   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-|   | |-SimpleDeclaration List_element
+|   |-ParameterDeclarationList Parameters
+|   | |-SimpleDeclaration ListElement
 |   | | |-'const'
 |   | | |-'int'
-|   | | `-SimpleDeclarator SimpleDeclaration_declarator
+|   | | `-SimpleDeclarator Declarator
 |   | |   `-'*'
-|   | |-',' List_delimiter
-|   | `-SimpleDeclaration List_element
+|   | |-',' ListDelimiter
+|   | `-SimpleDeclaration ListElement
 |   |   `-'char'
 |   `-')' CloseParen
 `-';'
@@ -4773,19 +4773,19 @@ void x(char a, short (*b)(int));
 TranslationUnit Detached
 `-SimpleDeclaration
   |-'void'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'x'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
-  |   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-  |   | |-SimpleDeclaration List_element
+  |   |-ParameterDeclarationList Parameters
+  |   | |-SimpleDeclaration ListElement
   |   | | |-'char'
-  |   | | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   | | `-SimpleDeclarator Declarator
   |   | |   `-'a'
-  |   | |-',' List_delimiter
-  |   | `-SimpleDeclaration List_element
+  |   | |-',' ListDelimiter
+  |   | `-SimpleDeclaration ListElement
   |   |   |-'short'
-  |   |   `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   `-SimpleDeclarator Declarator
   |   |     |-ParenDeclarator
   |   |     | |-'(' OpenParen
   |   |     | |-'*'
@@ -4793,8 +4793,8 @@ TranslationUnit Detached
   |   |     | `-')' CloseParen
   |   |     `-ParametersAndQualifiers
   |   |       |-'(' OpenParen
-  |   |       |-ParameterDeclarationList ParametersAndQualifiers_parameters
-  |   |       | `-SimpleDeclaration List_element
+  |   |       |-ParameterDeclarationList Parameters
+  |   |       | `-SimpleDeclaration ListElement
   |   |       |   `-'int'
   |   |       `-')' CloseParen
   |   `-')' CloseParen
@@ -4811,19 +4811,19 @@ void x(char a, short (*b)(int), long (**c)(long long));
 TranslationUnit Detached
 `-SimpleDeclaration
   |-'void'
-  |-SimpleDeclarator SimpleDeclaration_declarator
+  |-SimpleDeclarator Declarator
   | |-'x'
   | `-ParametersAndQualifiers
   |   |-'(' OpenParen
-  |   |-ParameterDeclarationList ParametersAndQualifiers_parameters
-  |   | |-SimpleDeclaration List_element
+  |   |-ParameterDeclarationList Parameters
+  |   | |-SimpleDeclaration ListElement
   |   | | |-'char'
-  |   | | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   | | `-SimpleDeclarator Declarator
   |   | |   `-'a'
-  |   | |-',' List_delimiter
-  |   | |-SimpleDeclaration List_element
+  |   | |-',' ListDelimiter
+  |   | |-SimpleDeclaration ListElement
   |   | | |-'short'
-  |   | | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   | | `-SimpleDeclarator Declarator
   |   | |   |-ParenDeclarator
   |   | |   | |-'(' OpenParen
   |   | |   | |-'*'
@@ -4831,14 +4831,14 @@ TranslationUnit Detached
   |   | |   | `-')' CloseParen
   |   | |   `-ParametersAndQualifiers
   |   | |     |-'(' OpenParen
-  |   | |     |-ParameterDeclarationList ParametersAndQualifiers_parameters
-  |   | |     | `-SimpleDeclaration List_element
+  |   | |     |-ParameterDeclarationList Parameters
+  |   | |     | `-SimpleDeclaration ListElement
   |   | |     |   `-'int'
   |   | |     `-')' CloseParen
-  |   | |-',' List_delimiter
-  |   | `-SimpleDeclaration List_element
+  |   | |-',' ListDelimiter
+  |   | `-SimpleDeclaration ListElement
   |   |   |-'long'
-  |   |   `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   `-SimpleDeclarator Declarator
   |   |     |-ParenDeclarator
   |   |     | |-'(' OpenParen
   |   |     | |-'*'
@@ -4847,8 +4847,8 @@ TranslationUnit Detached
   |   |     | `-')' CloseParen
   |   |     `-ParametersAndQualifiers
   |   |       |-'(' OpenParen
-  |   |       |-ParameterDeclarationList ParametersAndQualifiers_parameters
-  |   |       | `-SimpleDeclaration List_element
+  |   |       |-ParameterDeclarationList Parameters
+  |   |       | `-SimpleDeclaration ListElement
   |   |       |   |-'long'
   |   |       |   `-'long'
   |   |       `-')' CloseParen
