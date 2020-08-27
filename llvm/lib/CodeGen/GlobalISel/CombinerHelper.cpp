@@ -1770,6 +1770,22 @@ bool CombinerHelper::matchUndefStore(MachineInstr &MI) {
                       MRI);
 }
 
+bool CombinerHelper::matchUndefSelectCmp(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_SELECT);
+  return getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MI.getOperand(1).getReg(),
+                      MRI);
+}
+
+bool CombinerHelper::matchConstantSelectCmp(MachineInstr &MI, unsigned &OpIdx) {
+  assert(MI.getOpcode() == TargetOpcode::G_SELECT);
+  if (auto MaybeCstCmp =
+          getConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI)) {
+    OpIdx = MaybeCstCmp->Value ? 2 : 3;
+    return true;
+  }
+  return false;
+}
+
 bool CombinerHelper::eraseInst(MachineInstr &MI) {
   MI.eraseFromParent();
   return true;
