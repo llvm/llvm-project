@@ -1,5 +1,4 @@
 # RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
-# REQUIRES: global-isel
 # Test that the MIR parser parses types on generic instructions correctly.
 
 --- |
