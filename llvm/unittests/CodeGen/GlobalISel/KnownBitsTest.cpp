@@ -671,3 +671,33 @@ TEST_F(AArch64GISelMITest, TestKnownBitsUnmergeValues) {
     EXPECT_EQ(static_cast<uint16_t>(~PartTestVal), PartKnown.Zero.getZExtValue());
   }
 }
+
+TEST_F(AArch64GISelMITest, TestKnownBitsBSwapBitReverse) {
+  StringRef MIRString = R"(
+   %const:_(s32) = G_CONSTANT i32 287454020
+   %bswap:_(s32) = G_BSWAP %const
+   %bitreverse:_(s32) = G_BITREVERSE %const
+   %copy_bswap:_(s32) = COPY %bswap
+   %copy_bitreverse:_(s32) = COPY %bitreverse
+)";
+  setUp(MIRString);
+  if (!TM)
+    return;
+
+  const uint32_t TestVal = 0x11223344;
+
+  Register CopyBSwap = Copies[Copies.size() - 2];
+  Register CopyBitReverse = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+
+  KnownBits BSwapKnown = Info.getKnownBits(CopyBSwap);
+  EXPECT_EQ(32u, BSwapKnown.getBitWidth());
+  EXPECT_EQ(TestVal, BSwapKnown.One.getZExtValue());
+  EXPECT_EQ(~TestVal, BSwapKnown.Zero.getZExtValue());
+
+  KnownBits BitReverseKnown = Info.getKnownBits(CopyBitReverse);
+  EXPECT_EQ(32u, BitReverseKnown.getBitWidth());
+  EXPECT_EQ(TestVal, BitReverseKnown.One.getZExtValue());
+  EXPECT_EQ(~TestVal, BitReverseKnown.Zero.getZExtValue());
+}
