@@ -39,7 +39,7 @@ define void @outline_constants2() {
 ; CHECK-NEXT:    store i32 2, i32* [[A]], align 4
 ; CHECK-NEXT:    store i32 3, i32* [[B]], align 4
 ; CHECK-NEXT:    store i32 4, i32* [[C]], align 4
-; CHECK-NEXT:    call void @[[FUNCTION_1:.*]](i32* [[A]], i32* [[B]], i32* [[C]])
+; CHECK-NEXT:    call void @[[FUNCTION_0]](i32* [[A]], i32* [[B]], i32* [[C]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

@@ -13,7 +13,7 @@ define void @function1() !dbg !6 {
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32* [[B]], [[META11:metadata !.*]], metadata !DIExpression()), [[DBG18]]
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4, [[DBG19:!dbg !.*]]
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32* [[C]], [[META12:metadata !.*]], metadata !DIExpression()), [[DBG19]]
-; CHECK-NEXT:    call void @function1.outlined(i32* [[A]], i32* [[B]], i32* [[C]]), [[DBG20:!dbg !.*]]
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]], i32* [[C]]), [[DBG20:!dbg !.*]]
 ; CHECK-NEXT:    ret void, [[DBG21:!dbg !.*]]
 ;
 entry:
@@ -44,7 +44,7 @@ define void @function2() !dbg !27 {
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32* [[B]], [[META25:metadata !.*]], metadata !DIExpression()), [[DBG31]]
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4, [[DBG32:!dbg !.*]]
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32* [[C]], [[META26:metadata !.*]], metadata !DIExpression()), [[DBG32]]
-; CHECK-NEXT:    call void @function2.outlined(i32* [[A]], i32* [[B]], i32* [[C]]), [[DBG33:!dbg !.*]]
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32* [[A]], i32* [[B]], i32* [[C]]), [[DBG33:!dbg !.*]]
 ; CHECK-NEXT:    ret void, [[DBG34:!dbg !.*]]
 ;
 entry:
