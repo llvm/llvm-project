@@ -4330,57 +4330,44 @@ bool llvm::getUnderlyingObjectsForCodeGen(const Value *V,
   return true;
 }
 
-static AllocaInst *
-findAllocaForValue(Value *V, DenseMap<Value *, AllocaInst *> &AllocaForValue,
-                   bool OffsetZero) {
-  if (AllocaInst *AI = dyn_cast<AllocaInst>(V))
-    return AI;
-  // See if we've already calculated (or started to calculate) alloca for a
-  // given value.
-  auto I = AllocaForValue.find(V);
-  if (I != AllocaForValue.end())
-    return I->second;
-  // Store 0 while we're calculating alloca for value V to avoid
-  // infinite recursion if the value references itself.
-  AllocaForValue[V] = nullptr;
-  AllocaInst *Res = nullptr;
-  if (CastInst *CI = dyn_cast<CastInst>(V))
-    Res = findAllocaForValue(CI->getOperand(0), AllocaForValue, OffsetZero);
-  else if (PHINode *PN = dyn_cast<PHINode>(V)) {
-    for (Value *IncValue : PN->incoming_values()) {
-      // Allow self-referencing phi-nodes.
-      if (IncValue == PN)
-        continue;
-      AllocaInst *IncValueAI =
-          findAllocaForValue(IncValue, AllocaForValue, OffsetZero);
-      // AI for incoming values should exist and should all be equal.
-      if (IncValueAI == nullptr || (Res != nullptr && IncValueAI != Res))
-        return nullptr;
-      Res = IncValueAI;
-    }
-  } else if (auto *SI = dyn_cast<SelectInst>(V)) {
-    Res = findAllocaForValue(SI->getTrueValue(), AllocaForValue, OffsetZero);
-    if (!Res)
-      return nullptr;
-    AllocaInst *F =
-        findAllocaForValue(SI->getFalseValue(), AllocaForValue, OffsetZero);
-    if (F != Res)
-      return nullptr;
-  } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(V)) {
-    if (OffsetZero && !GEP->hasAllZeroIndices())
-      return nullptr;
-    Res = findAllocaForValue(GEP->getPointerOperand(), AllocaForValue,
-                             OffsetZero);
-  }
-  if (Res)
-    AllocaForValue[V] = Res;
-  return Res;
-}
-
 AllocaInst *llvm::findAllocaForValue(Value *V, bool OffsetZero) {
-  DenseMap<Value *, AllocaInst *> AllocaForValue;
-  return ::findAllocaForValue(V, AllocaForValue, OffsetZero);
-}
+  AllocaInst *Result = nullptr;
+  SmallPtrSet<Value *, 4> Visited;
+  SmallVector<Value *, 4> Worklist;
+
+  auto AddWork = [&](Value *V) {
+    if (Visited.insert(V).second)
+      Worklist.push_back(V);
+  };
+
+  AddWork(V);
+  do {
+    V = Worklist.pop_back_val();
+    assert(Visited.count(V));
+
+    if (AllocaInst *AI = dyn_cast<AllocaInst>(V)) {
+      if (Result && Result != AI)
+        return nullptr;
+      Result = AI;
+    } else if (CastInst *CI = dyn_cast<CastInst>(V)) {
+      AddWork(CI->getOperand(0));
+    } else if (PHINode *PN = dyn_cast<PHINode>(V)) {
+      for (Value *IncValue : PN->incoming_values())
+        AddWork(IncValue);
+    } else if (auto *SI = dyn_cast<SelectInst>(V)) {
+      AddWork(SI->getTrueValue());
+      AddWork(SI->getFalseValue());
+    } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(V)) {
+      if (OffsetZero && !GEP->hasAllZeroIndices())
+        return nullptr;
+      AddWork(GEP->getPointerOperand());
+    } else {
+      return nullptr;
+    }
+  } while (!Worklist.empty());
+
+  return Result;
+};
 
 static bool onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
     const Value *V, bool AllowLifetime, bool AllowDroppable) {
