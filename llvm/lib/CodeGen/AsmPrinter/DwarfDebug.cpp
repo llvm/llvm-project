@@ -1531,27 +1531,30 @@ static bool validThroughout(LexicalScopes &LScopes,
   if (LSRange.size() == 0)
     return false;
 
-
-  // Determine if the DBG_VALUE is valid at the beginning of its lexical block.
   const MachineInstr *LScopeBegin = LSRange.front().first;
-  // Early exit if the lexical scope begins outside of the current block.
-  if (LScopeBegin->getParent() != MBB)
-    return false;
+  // If the scope starts before the DBG_VALUE then we may have a negative
+  // result. Otherwise the location is live coming into the scope and we
+  // can skip the following checks.
+  if (!Ordering.isBefore(DbgValue, LScopeBegin)) {
+    // Exit if the lexical scope begins outside of the current block.
+    if (LScopeBegin->getParent() != MBB)
+      return false;
 
-  MachineBasicBlock::const_reverse_iterator Pred(DbgValue);
-  for (++Pred; Pred != MBB->rend(); ++Pred) {
-    if (Pred->getFlag(MachineInstr::FrameSetup))
-      break;
-    auto PredDL = Pred->getDebugLoc();
-    if (!PredDL || Pred->isMetaInstruction())
-      continue;
-    // Check whether the instruction preceding the DBG_VALUE is in the same
-    // (sub)scope as the DBG_VALUE.
-    if (DL->getScope() == PredDL->getScope())
-      return false;
-    auto *PredScope = LScopes.findLexicalScope(PredDL);
-    if (!PredScope || LScope->dominates(PredScope))
-      return false;
+    MachineBasicBlock::const_reverse_iterator Pred(DbgValue);
+    for (++Pred; Pred != MBB->rend(); ++Pred) {
+      if (Pred->getFlag(MachineInstr::FrameSetup))
+        break;
+      auto PredDL = Pred->getDebugLoc();
+      if (!PredDL || Pred->isMetaInstruction())
+        continue;
+      // Check whether the instruction preceding the DBG_VALUE is in the same
+      // (sub)scope as the DBG_VALUE.
+      if (DL->getScope() == PredDL->getScope())
+        return false;
+      auto *PredScope = LScopes.findLexicalScope(PredDL);
+      if (!PredScope || LScope->dominates(PredScope))
+        return false;
+    }
   }
 
   // If the range of the DBG_VALUE is open-ended, report success.
