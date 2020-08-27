@@ -7805,6 +7805,15 @@ struct AANoUndefImpl : AANoUndef {
   const std::string getAsStr() const override {
     return getAssumed() ? "noundef" : "may-undef-or-poison";
   }
+
+  ChangeStatus manifest(Attributor &A) override {
+    // We don't manifest noundef attribute for dead positions because the
+    // associated values with dead positions would be replaced with undef
+    // values.
+    if (A.isAssumedDead(getIRPosition(), nullptr, nullptr))
+      return ChangeStatus::UNCHANGED;
+    return AANoUndef::manifest(A);
+  }
 };
 
 struct AANoUndefFloating : public AANoUndefImpl {
