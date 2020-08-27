@@ -286,7 +286,8 @@ static bool isCommutative(Instruction *I) {
 static Optional<TargetTransformInfo::ShuffleKind>
 isShuffle(ArrayRef<Value *> VL) {
   auto *EI0 = cast<ExtractElementInst>(VL[0]);
-  unsigned Size = EI0->getVectorOperandType()->getNumElements();
+  unsigned Size =
+      cast<FixedVectorType>(EI0->getVectorOperandType())->getNumElements();
   Value *Vec1 = nullptr;
   Value *Vec2 = nullptr;
   enum ShuffleMode { Unknown, Select, Permute };
@@ -295,7 +296,7 @@ isShuffle(ArrayRef<Value *> VL) {
     auto *EI = cast<ExtractElementInst>(VL[I]);
     auto *Vec = EI->getVectorOperand();
     // All vector operands must have the same number of vector elements.
-    if (cast<VectorType>(Vec->getType())->getNumElements() != Size)
+    if (cast<FixedVectorType>(Vec->getType())->getNumElements() != Size)
       return None;
     auto *Idx = dyn_cast<ConstantInt>(EI->getIndexOperand());
     if (!Idx)
@@ -1411,7 +1412,7 @@ private:
 
   /// \returns the scalarization cost for this type. Scalarization in this
   /// context means the creation of vectors from a group of scalars.
-  int getGatherCost(VectorType *Ty,
+  int getGatherCost(FixedVectorType *Ty,
                     const DenseSet<unsigned> &ShuffledIndices) const;
 
   /// \returns the scalarization cost for this list of values. Assuming that
@@ -1424,7 +1425,7 @@ private:
   void setInsertPointAfterBundle(TreeEntry *E);
 
   /// \returns a vector from a collection of scalars in \p VL.
-  Value *Gather(ArrayRef<Value *> VL, VectorType *Ty);
+  Value *Gather(ArrayRef<Value *> VL, FixedVectorType *Ty);
 
   /// \returns whether the VectorizableTree is fully vectorizable and will
   /// be beneficial even the tree height is tiny.
@@ -3166,7 +3167,7 @@ unsigned BoUpSLP::canMapToVector(Type *T, const DataLayout &DL) const {
       N *= AT->getNumElements();
       EltTy = AT->getElementType();
     } else {
-      auto *VT = cast<VectorType>(EltTy);
+      auto *VT = cast<FixedVectorType>(EltTy);
       N *= VT->getNumElements();
       EltTy = VT->getElementType();
     }
@@ -3204,7 +3205,7 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
     if (!LI || !LI->isSimple() || !LI->hasNUses(VL.size()))
       return false;
   } else {
-    NElts = cast<VectorType>(Vec->getType())->getNumElements();
+    NElts = cast<FixedVectorType>(Vec->getType())->getNumElements();
   }
 
   if (NElts != VL.size())
@@ -3255,8 +3256,8 @@ bool BoUpSLP::areAllUsersVectorized(Instruction *I) const {
 }
 
 static std::pair<unsigned, unsigned>
-getVectorCallCosts(CallInst *CI, VectorType *VecTy, TargetTransformInfo *TTI,
-                   TargetLibraryInfo *TLI) {
+getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
+                   TargetTransformInfo *TTI, TargetLibraryInfo *TLI) {
   Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
 
   // Calculate the cost of the scalar and vector calls.
@@ -3928,7 +3929,7 @@ int BoUpSLP::getTreeCost() {
   return Cost;
 }
 
-int BoUpSLP::getGatherCost(VectorType *Ty,
+int BoUpSLP::getGatherCost(FixedVectorType *Ty,
                            const DenseSet<unsigned> &ShuffledIndices) const {
   unsigned NumElts = Ty->getNumElements();
   APInt DemandedElts = APInt::getNullValue(NumElts);
@@ -4041,7 +4042,7 @@ void BoUpSLP::setInsertPointAfterBundle(TreeEntry *E) {
   Builder.SetCurrentDebugLocation(Front->getDebugLoc());
 }
 
-Value *BoUpSLP::Gather(ArrayRef<Value *> VL, VectorType *Ty) {
+Value *BoUpSLP::Gather(ArrayRef<Value *> VL, FixedVectorType *Ty) {
   Value *Vec = UndefValue::get(Ty);
   // Generate the 'InsertElement' instruction.
   for (unsigned i = 0; i < Ty->getNumElements(); ++i) {
