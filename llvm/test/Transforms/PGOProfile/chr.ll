@@ -1649,15 +1649,13 @@ define i32 @test_chr_18(i32* %i, i32 %sum0) !prof !14 {
 ; CHECK-NEXT:    [[SUM1:%.*]] = add i32 [[SUM0:%.*]], 42
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[LI]], 5
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 5
-; CHECK-NEXT:    br i1 [[TMP1]], label [[BB0_SPLIT:%.*]], label [[BB0_SPLIT_NONCHR:%.*]], !prof !15
-; CHECK:       bb0.split:
-; CHECK-NEXT:    [[INC2:%.*]] = add i32 [[INC1]], 1
+; CHECK-NEXT:    br i1 [[TMP1]], label [[BB1:%.*]], label [[BB0_SPLIT_NONCHR:%.*]], !prof !15
+; CHECK:       bb1:
 ; CHECK-NEXT:    [[SUM3:%.*]] = add i32 [[SUM0]], 86
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb0.split.nonchr:
 ; CHECK-NEXT:    [[A4_NONCHR:%.*]] = and i32 [[LI]], 4
 ; CHECK-NEXT:    [[CMP4_NONCHR:%.*]] = icmp eq i32 [[A4_NONCHR]], 0
-; CHECK-NEXT:    [[INC2_NONCHR:%.*]] = add i32 [[INC1]], 1
 ; CHECK-NEXT:    br i1 [[CMP4_NONCHR]], label [[BB2]], label [[BB1_NONCHR:%.*]], !prof !16
 ; CHECK:       bb1.nonchr:
 ; CHECK-NEXT:    [[A1:%.*]] = and i32 [[LI]], 1
@@ -1666,8 +1664,8 @@ define i32 @test_chr_18(i32* %i, i32 %sum0) !prof !14 {
 ; CHECK-NEXT:    [[SUM3_NONCHR:%.*]] = add i32 [[SUM2_NONCHR]], 44
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP2]] = phi i32 [ [[INC2]], [[BB0_SPLIT]] ], [ [[INC2_NONCHR]], [[BB1_NONCHR]] ], [ [[INC2_NONCHR]], [[BB0_SPLIT_NONCHR]] ]
-; CHECK-NEXT:    [[SUM4:%.*]] = phi i32 [ [[SUM3]], [[BB0_SPLIT]] ], [ [[SUM3_NONCHR]], [[BB1_NONCHR]] ], [ [[SUM1]], [[BB0_SPLIT_NONCHR]] ]
+; CHECK-NEXT:    [[SUM4:%.*]] = phi i32 [ [[SUM3]], [[BB1]] ], [ [[SUM1]], [[BB0_SPLIT_NONCHR]] ], [ [[SUM3_NONCHR]], [[BB1_NONCHR]] ]
+; CHECK-NEXT:    [[TMP2]] = add i32 [[INC1]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP2]], 100
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB3:%.*]], label [[BB0]], !prof !16
 ; CHECK:       bb3:
@@ -2008,15 +2006,8 @@ define i64 @test_chr_22(i1 %i, i64* %j, i64 %v0) !prof !14 {
 ; CHECK-NEXT:  bb0:
 ; CHECK-NEXT:    [[REASS_ADD:%.*]] = shl i64 [[V0:%.*]], 1
 ; CHECK-NEXT:    [[V2:%.*]] = add i64 [[REASS_ADD]], 3
-; CHECK-NEXT:    [[C1:%.*]] = icmp slt i64 [[V2]], 100
-; CHECK-NEXT:    br i1 [[C1]], label [[BB0_SPLIT:%.*]], label [[BB0_SPLIT_NONCHR:%.*]], !prof !15
-; CHECK:       bb0.split:
 ; CHECK-NEXT:    [[V299:%.*]] = mul i64 [[V2]], 7860086430977039991
 ; CHECK-NEXT:    store i64 [[V299]], i64* [[J:%.*]], align 4
-; CHECK-NEXT:    ret i64 99
-; CHECK:       bb0.split.nonchr:
-; CHECK-NEXT:    [[V299_NONCHR:%.*]] = mul i64 [[V2]], 7860086430977039991
-; CHECK-NEXT:    store i64 [[V299_NONCHR]], i64* [[J]], align 4
 ; CHECK-NEXT:    ret i64 99
 ;
 bb0:

@@ -2658,6 +2658,8 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     // Otherwise, the result of the cast is unused.
     if (CE->getCastKind() == CK_ConstructorConversion)
       return CE->getSubExpr()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+    if (CE->getCastKind() == CK_Dependent)
+      return false;
 
     WarnE = this;
     if (const CXXFunctionalCastExpr *CXXCE =

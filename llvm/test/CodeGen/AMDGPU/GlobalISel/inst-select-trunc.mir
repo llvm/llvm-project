@@ -381,6 +381,12 @@ regBankSelected: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
+    ; GCN-LABEL: name: trunc_sgpr_s32_to_s1_use
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GCN: $scc = COPY [[COPY]]
+    ; GCN: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY]], [[COPY1]], implicit $scc
+    ; GCN: S_ENDPGM 0, implicit [[S_CSELECT_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s1) = G_TRUNC %0

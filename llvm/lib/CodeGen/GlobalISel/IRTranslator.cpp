@@ -2030,7 +2030,7 @@ bool IRTranslator::translateInvoke(const User &U,
     return false;
 
   // FIXME: support Windows exception handling.
-  if (!isa<LandingPadInst>(EHPadBB->front()))
+  if (!isa<LandingPadInst>(EHPadBB->getFirstNonPHI()))
     return false;
 
   // Emit the actual call, bracketed by EH_LABELs so that the MF knows about

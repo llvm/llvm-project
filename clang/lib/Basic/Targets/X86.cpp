@@ -459,6 +459,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_IcelakeClient:
   case CK_IcelakeServer:
   case CK_Tigerlake:
+  case CK_SapphireRapids:
     // FIXME: Historically, we defined this legacy name, it would be nice to
     // remove it at some point. We've never exposed fine-grained names for
     // recent primary x86 CPUs, and we should keep it that way.
@@ -1269,6 +1270,7 @@ Optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_Cooperlake:
     case CK_Cannonlake:
     case CK_Tigerlake:
+    case CK_SapphireRapids:
     case CK_IcelakeClient:
     case CK_IcelakeServer:
     case CK_KNL:
@@ -1434,6 +1436,10 @@ std::string X86TargetInfo::convertConstraint(const char *&Constraint) const {
 void X86TargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
   bool Only64Bit = getTriple().getArch() != llvm::Triple::x86;
   llvm::X86::fillValidCPUArchList(Values, Only64Bit);
+}
+
+void X86TargetInfo::fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const {
+  llvm::X86::fillValidCPUArchList(Values);
 }
 
 ArrayRef<const char *> X86TargetInfo::getGCCRegNames() const {

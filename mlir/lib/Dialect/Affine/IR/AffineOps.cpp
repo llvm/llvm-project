@@ -2505,9 +2505,58 @@ OpBuilder AffineParallelOp::getBodyBuilder() {
   return OpBuilder(getBody(), std::prev(getBody()->end()));
 }
 
+void AffineParallelOp::setLowerBounds(ValueRange lbOperands, AffineMap map) {
+  assert(lbOperands.size() == map.getNumInputs() &&
+         "operands to map must match number of inputs");
+  assert(map.getNumResults() >= 1 && "bounds map has at least one result");
+
+  auto ubOperands = getUpperBoundsOperands();
+
+  SmallVector<Value, 4> newOperands(lbOperands);
+  newOperands.append(ubOperands.begin(), ubOperands.end());
+  getOperation()->setOperands(newOperands);
+
+  lowerBoundsMapAttr(AffineMapAttr::get(map));
+}
+
+void AffineParallelOp::setUpperBounds(ValueRange ubOperands, AffineMap map) {
+  assert(ubOperands.size() == map.getNumInputs() &&
+         "operands to map must match number of inputs");
+  assert(map.getNumResults() >= 1 && "bounds map has at least one result");
+
+  SmallVector<Value, 4> newOperands(getLowerBoundsOperands());
+  newOperands.append(ubOperands.begin(), ubOperands.end());
+  getOperation()->setOperands(newOperands);
+
+  upperBoundsMapAttr(AffineMapAttr::get(map));
+}
+
+void AffineParallelOp::setLowerBoundsMap(AffineMap map) {
+  AffineMap lbMap = lowerBoundsMap();
+  assert(lbMap.getNumDims() == map.getNumDims() &&
+         lbMap.getNumSymbols() == map.getNumSymbols());
+  (void)lbMap;
+  lowerBoundsMapAttr(AffineMapAttr::get(map));
+}
+
+void AffineParallelOp::setUpperBoundsMap(AffineMap map) {
+  AffineMap ubMap = upperBoundsMap();
+  assert(ubMap.getNumDims() == map.getNumDims() &&
+         ubMap.getNumSymbols() == map.getNumSymbols());
+  (void)ubMap;
+  upperBoundsMapAttr(AffineMapAttr::get(map));
+}
+
+SmallVector<int64_t, 8> AffineParallelOp::getSteps() {
+  SmallVector<int64_t, 8> result;
+  for (Attribute attr : steps()) {
+    result.push_back(attr.cast<IntegerAttr>().getInt());
+  }
+  return result;
+}
+
 void AffineParallelOp::setSteps(ArrayRef<int64_t> newSteps) {
-  assert(newSteps.size() == getNumDims() && "steps & num dims mismatch");
-  setAttr(getStepsAttrName(), getBodyBuilder().getI64ArrayAttr(newSteps));
+  stepsAttr(getBodyBuilder().getI64ArrayAttr(newSteps));
 }
 
 static LogicalResult verify(AffineParallelOp op) {
@@ -2541,6 +2590,41 @@ static LogicalResult verify(AffineParallelOp op) {
   return success();
 }
 
+LogicalResult AffineValueMap::canonicalize() {
+  SmallVector<Value, 4> newOperands{operands};
+  auto newMap = getAffineMap();
+  composeAffineMapAndOperands(&newMap, &newOperands);
+  if (newMap == getAffineMap() && newOperands == operands)
+    return failure();
+  reset(newMap, newOperands);
+  return success();
+}
+
+/// Canonicalize the bounds of the given loop.
+static LogicalResult canonicalizeLoopBounds(AffineParallelOp op) {
+  AffineValueMap lb = op.getLowerBoundsValueMap();
+  bool lbCanonicalized = succeeded(lb.canonicalize());
+
+  AffineValueMap ub = op.getUpperBoundsValueMap();
+  bool ubCanonicalized = succeeded(ub.canonicalize());
+
+  // Any canonicalization change always leads to updated map(s).
+  if (!lbCanonicalized && !ubCanonicalized)
+    return failure();
+
+  if (lbCanonicalized)
+    op.setLowerBounds(lb.getOperands(), lb.getAffineMap());
+  if (ubCanonicalized)
+    op.setUpperBounds(ub.getOperands(), ub.getAffineMap());
+
+  return success();
+}
+
+LogicalResult AffineParallelOp::fold(ArrayRef<Attribute> operands,
+                                     SmallVectorImpl<OpFoldResult> &results) {
+  return canonicalizeLoopBounds(*this);
+}
+
 static void print(OpAsmPrinter &p, AffineParallelOp op) {
   p << op.getOperationName() << " (" << op.getBody()->getArguments() << ") = (";
   p.printAffineMapOfSSAIds(op.lowerBoundsMapAttr(),
@@ -2549,13 +2633,8 @@ static void print(OpAsmPrinter &p, AffineParallelOp op) {
   p.printAffineMapOfSSAIds(op.upperBoundsMapAttr(),
                            op.getUpperBoundsOperands());
   p << ')';
-  SmallVector<int64_t, 4> steps;
-  bool elideSteps = true;
-  for (auto attr : op.steps()) {
-    auto step = attr.cast<IntegerAttr>().getInt();
-    elideSteps &= (step == 1);
-    steps.push_back(step);
-  }
+  SmallVector<int64_t, 8> steps = op.getSteps();
+  bool elideSteps = llvm::all_of(steps, [](int64_t step) { return step == 1; });
   if (!elideSteps) {
     p << " step (";
     llvm::interleaveComma(steps, p);
@@ -2641,7 +2720,7 @@ static ParseResult parseAffineParallelOp(OpAsmParser &parser,
   }
 
   // Parse optional clause of the form: `reduce ("addf", "maxf")`, where the
-  // quoted strings a member of the enum AtomicRMWKind.
+  // quoted strings are a member of the enum AtomicRMWKind.
   SmallVector<Attribute, 4> reductions;
   if (succeeded(parser.parseOptionalKeyword("reduce"))) {
     if (parser.parseLParen())

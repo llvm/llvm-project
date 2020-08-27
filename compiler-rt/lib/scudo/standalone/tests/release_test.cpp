@@ -190,9 +190,10 @@ template <class SizeClassMap> void testReleaseFreeMemoryToOS() {
     }
 
     // Release the memory.
+    auto SkipRegion = [](UNUSED scudo::uptr RegionIndex) { return false; };
     ReleasedPagesRecorder Recorder;
     releaseFreeMemoryToOS(FreeList, 0, MaxBlocks * BlockSize, 1U, BlockSize,
-                          &Recorder);
+                          &Recorder, SkipRegion);
 
     // Verify that there are no released pages touched by used chunks and all
     // ranges of free chunks big enough to contain the entire memory pages had

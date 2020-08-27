@@ -2,10 +2,10 @@ Make a DLL that exports a few functions, then make a DLL with PDBs that imports
 them. Check that the __imp_ pointer and the generated thunks appear in the
 publics stream.
 
-RUN: yaml2obj < %p/Inputs/export.yaml > %t1.obj
+RUN: yaml2obj %p/Inputs/export.yaml -o %t1.obj
 RUN: lld-link /out:%t1.dll /dll %t1.obj /implib:%t1.lib \
 RUN:   /export:exportfn1 /export:exportfn2
-RUN: yaml2obj < %p/Inputs/import.yaml > %t2.obj
+RUN: yaml2obj %p/Inputs/import.yaml -o %t2.obj
 RUN: lld-link /out:%t2.exe /pdb:%t2.pdb /pdbaltpath:test.pdb \
 RUN:   /debug /entry:main %t2.obj %t1.lib
 RUN: llvm-pdbutil dump %t2.pdb -all | FileCheck %s

@@ -621,11 +621,6 @@ def AffineParallelOp : Affine_Op<"parallel",
     /// Get the number of dimensions.
     unsigned getNumDims();
 
-    operand_range getLowerBoundsOperands();
-    operand_range getUpperBoundsOperands();
-
-    AffineValueMap getLowerBoundsValueMap();
-    AffineValueMap getUpperBoundsValueMap();
     AffineValueMap getRangesValueMap();
 
     /// Get ranges as constants, may fail in dynamic case.
@@ -636,6 +631,18 @@ def AffineParallelOp : Affine_Op<"parallel",
     MutableArrayRef<BlockArgument> getIVs() {
       return getBody()->getArguments();
     }
+
+    operand_range getLowerBoundsOperands();
+    AffineValueMap getLowerBoundsValueMap();
+    void setLowerBounds(ValueRange operands, AffineMap map);
+    void setLowerBoundsMap(AffineMap map);
+
+    operand_range getUpperBoundsOperands();
+    AffineValueMap getUpperBoundsValueMap();
+    void setUpperBounds(ValueRange operands, AffineMap map);
+    void setUpperBoundsMap(AffineMap map);
+
+    SmallVector<int64_t, 8> getSteps();
     void setSteps(ArrayRef<int64_t> newSteps);
 
     static StringRef getReductionsAttrName() { return "reductions"; }
@@ -643,6 +650,8 @@ def AffineParallelOp : Affine_Op<"parallel",
     static StringRef getUpperBoundsMapAttrName() { return "upperBoundsMap"; }
     static StringRef getStepsAttrName() { return "steps"; }
   }];
+
+  let hasFolder = 1;
 }
 
 def AffinePrefetchOp : Affine_Op<"prefetch"> {

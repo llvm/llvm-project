@@ -14,10 +14,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:    .gnu.version_d
     Type:    SHT_GNU_verdef
@@ -43,10 +42,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:     .gnu.version_d
     Type:     SHT_GNU_verdef
@@ -68,10 +66,9 @@ DynamicSymbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:    .gnu.version_d
     Type:    SHT_GNU_verdef
@@ -99,10 +96,9 @@ DynamicSymbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:    .gnu.version_d
     Type:    SHT_GNU_verdef
@@ -144,10 +140,9 @@ DynamicSymbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:    .gnu.version_d
     Type:    SHT_GNU_verdef
@@ -175,10 +170,9 @@ DynamicSymbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Type: Fill
     Size: 0x1
@@ -206,10 +200,9 @@ DynamicSymbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:  .gnu.version_d
     Type:  SHT_GNU_verdef
@@ -232,10 +225,9 @@ DynamicSymbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name: .gnu.version_d
     Type: SHT_GNU_verdef
@@ -274,10 +266,9 @@ DynamicSymbols:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:         .gnu.version
     Type:         SHT_GNU_versym

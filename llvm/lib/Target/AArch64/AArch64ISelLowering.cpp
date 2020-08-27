@@ -135,8 +135,10 @@ static bool isMergePassthruOpcode(unsigned Opc) {
   default:
     return false;
   case AArch64ISD::DUP_MERGE_PASSTHRU:
+  case AArch64ISD::FNEG_MERGE_PASSTHRU:
   case AArch64ISD::SIGN_EXTEND_INREG_MERGE_PASSTHRU:
   case AArch64ISD::ZERO_EXTEND_INREG_MERGE_PASSTHRU:
+  case AArch64ISD::FCEIL_MERGE_PASSTHRU:
     return true;
   }
 }
@@ -969,7 +971,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::FDIV, VT, Custom);
         setOperationAction(ISD::FMA, VT, Custom);
         setOperationAction(ISD::FMUL, VT, Custom);
+        setOperationAction(ISD::FNEG, VT, Custom);
         setOperationAction(ISD::FSUB, VT, Custom);
+        setOperationAction(ISD::FCEIL, VT, Custom);
       }
     }
 
@@ -997,6 +1001,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       // These operations are not supported on NEON but SVE can do them.
       setOperationAction(ISD::MUL, MVT::v1i64, Custom);
       setOperationAction(ISD::MUL, MVT::v2i64, Custom);
+      setOperationAction(ISD::SDIV, MVT::v8i8, Custom);
+      setOperationAction(ISD::SDIV, MVT::v16i8, Custom);
+      setOperationAction(ISD::SDIV, MVT::v4i16, Custom);
+      setOperationAction(ISD::SDIV, MVT::v8i16, Custom);
       setOperationAction(ISD::SDIV, MVT::v2i32, Custom);
       setOperationAction(ISD::SDIV, MVT::v4i32, Custom);
       setOperationAction(ISD::SDIV, MVT::v1i64, Custom);
@@ -1005,6 +1013,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SMAX, MVT::v2i64, Custom);
       setOperationAction(ISD::SMIN, MVT::v1i64, Custom);
       setOperationAction(ISD::SMIN, MVT::v2i64, Custom);
+      setOperationAction(ISD::UDIV, MVT::v8i8, Custom);
+      setOperationAction(ISD::UDIV, MVT::v16i8, Custom);
+      setOperationAction(ISD::UDIV, MVT::v4i16, Custom);
+      setOperationAction(ISD::UDIV, MVT::v8i16, Custom);
+      setOperationAction(ISD::UDIV, MVT::v2i32, Custom);
+      setOperationAction(ISD::UDIV, MVT::v4i32, Custom);
+      setOperationAction(ISD::UDIV, MVT::v1i64, Custom);
+      setOperationAction(ISD::UDIV, MVT::v2i64, Custom);
       setOperationAction(ISD::UMAX, MVT::v1i64, Custom);
       setOperationAction(ISD::UMAX, MVT::v2i64, Custom);
       setOperationAction(ISD::UMIN, MVT::v1i64, Custom);
@@ -1118,6 +1134,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::LOAD, VT, Custom);
   setOperationAction(ISD::MUL, VT, Custom);
   setOperationAction(ISD::OR, VT, Custom);
+  setOperationAction(ISD::SDIV, VT, Custom);
   setOperationAction(ISD::SETCC, VT, Custom);
   setOperationAction(ISD::SHL, VT, Custom);
   setOperationAction(ISD::SIGN_EXTEND, VT, Custom);
@@ -1130,14 +1147,11 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::STORE, VT, Custom);
   setOperationAction(ISD::SUB, VT, Custom);
   setOperationAction(ISD::TRUNCATE, VT, Custom);
+  setOperationAction(ISD::UDIV, VT, Custom);
   setOperationAction(ISD::UMAX, VT, Custom);
   setOperationAction(ISD::UMIN, VT, Custom);
   setOperationAction(ISD::XOR, VT, Custom);
   setOperationAction(ISD::ZERO_EXTEND, VT, Custom);
-
-  if (VT.getVectorElementType() == MVT::i32 ||
-      VT.getVectorElementType() == MVT::i64)
-    setOperationAction(ISD::SDIV, VT, Custom);
 }
 
 void AArch64TargetLowering::addDRTypeForNEON(MVT VT) {
@@ -1461,8 +1475,10 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::UDIV_PRED)
     MAKE_CASE(AArch64ISD::UMAX_PRED)
     MAKE_CASE(AArch64ISD::UMIN_PRED)
+    MAKE_CASE(AArch64ISD::FNEG_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::SIGN_EXTEND_INREG_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::ZERO_EXTEND_INREG_MERGE_PASSTHRU)
+    MAKE_CASE(AArch64ISD::FCEIL_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::SETCC_MERGE_ZERO)
     MAKE_CASE(AArch64ISD::ADC)
     MAKE_CASE(AArch64ISD::SBC)
@@ -3321,6 +3337,12 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::aarch64_sve_convert_from_svbool:
     return DAG.getNode(AArch64ISD::REINTERPRET_CAST, dl, Op.getValueType(),
                        Op.getOperand(1));
+  case Intrinsic::aarch64_sve_fneg:
+    return DAG.getNode(AArch64ISD::FNEG_MERGE_PASSTHRU, dl, Op.getValueType(),
+                       Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
+  case Intrinsic::aarch64_sve_frintp:
+    return DAG.getNode(AArch64ISD::FCEIL_MERGE_PASSTHRU, dl, Op.getValueType(),
+                       Op.getOperand(2), Op.getOperand(3), Op.getOperand(1));
   case Intrinsic::aarch64_sve_convert_to_svbool: {
     EVT OutVT = Op.getValueType();
     EVT InVT = Op.getOperand(1).getValueType();
@@ -3615,6 +3637,10 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     if (Op.getValueType() == MVT::f128)
       return LowerF128Call(Op, DAG, RTLIB::DIV_F128);
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FDIV_PRED);
+  case ISD::FNEG:
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FNEG_MERGE_PASSTHRU);
+  case ISD::FCEIL:
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FCEIL_MERGE_PASSTHRU);
   case ISD::FP_ROUND:
   case ISD::STRICT_FP_ROUND:
     return LowerFP_ROUND(Op, DAG);
@@ -4191,9 +4217,7 @@ SDValue AArch64TargetLowering::LowerCallResult(
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
     SDValue ThisVal) const {
-  CCAssignFn *RetCC = CallConv == CallingConv::WebKit_JS
-                          ? RetCC_AArch64_WebKit_JS
-                          : RetCC_AArch64_AAPCS;
+  CCAssignFn *RetCC = CCAssignFnForReturn(CallConv);
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
   DenseMap<unsigned, SDValue> CopiedRegs;
@@ -4903,9 +4927,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 bool AArch64TargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
-  CCAssignFn *RetCC = CallConv == CallingConv::WebKit_JS
-                          ? RetCC_AArch64_WebKit_JS
-                          : RetCC_AArch64_AAPCS;
+  CCAssignFn *RetCC = CCAssignFnForReturn(CallConv);
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC);
@@ -4920,9 +4942,7 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   auto &MF = DAG.getMachineFunction();
   auto *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
 
-  CCAssignFn *RetCC = CallConv == CallingConv::WebKit_JS
-                          ? RetCC_AArch64_WebKit_JS
-                          : RetCC_AArch64_AAPCS;
+  CCAssignFn *RetCC = CCAssignFnForReturn(CallConv);
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
                  *DAG.getContext());
@@ -8934,13 +8954,14 @@ SDValue AArch64TargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,
 
 SDValue AArch64TargetLowering::LowerDIV(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
+
+  if (useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true))
+    return LowerFixedLengthVectorIntDivideToSVE(Op, DAG);
+
+  assert(VT.isScalableVector() && "Expected a scalable vector.");
+
   bool Signed = Op.getOpcode() == ISD::SDIV;
   unsigned PredOpcode = Signed ? AArch64ISD::SDIV_PRED : AArch64ISD::UDIV_PRED;
-
-  if (useSVEForFixedLengthVectorVT(Op.getValueType(), /*OverrideNEON=*/true) &&
-      (VT.getVectorElementType() == MVT::i32 ||
-       VT.getVectorElementType() == MVT::i64))
-    return LowerToPredicatedOp(Op, DAG, PredOpcode, /*OverrideNEON=*/true);
 
   if (VT == MVT::nxv4i32 || VT == MVT::nxv2i64)
     return LowerToPredicatedOp(Op, DAG, PredOpcode);
@@ -11985,7 +12006,8 @@ static SDValue LowerSVEIntrinsicEXT(SDNode *N, SelectionDAG &DAG) {
 
   unsigned ElemSize = VT.getVectorElementType().getSizeInBits() / 8;
   unsigned ByteSize = VT.getSizeInBits().getKnownMinSize() / 8;
-  EVT ByteVT = EVT::getVectorVT(Ctx, MVT::i8, { ByteSize, true });
+  EVT ByteVT =
+      EVT::getVectorVT(Ctx, MVT::i8, ElementCount::getScalable(ByteSize));
 
   // Convert everything to the domain of EXT (i.e bytes).
   SDValue Op0 = DAG.getNode(ISD::BITCAST, dl, ByteVT, N->getOperand(1));
@@ -15346,6 +15368,56 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorStoreToSVE(
       getPredicateForFixedLengthVector(DAG, DL, VT), Store->getMemoryVT(),
       Store->getMemOperand(), Store->getAddressingMode(),
       Store->isTruncatingStore());
+}
+
+SDValue AArch64TargetLowering::LowerFixedLengthVectorIntDivideToSVE(
+    SDValue Op, SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+  EVT VT = Op.getValueType();
+  EVT EltVT = VT.getVectorElementType();
+
+  bool Signed = Op.getOpcode() == ISD::SDIV;
+  unsigned PredOpcode = Signed ? AArch64ISD::SDIV_PRED : AArch64ISD::UDIV_PRED;
+
+  // Scalable vector i32/i64 DIV is supported.
+  if (EltVT == MVT::i32 || EltVT == MVT::i64)
+    return LowerToPredicatedOp(Op, DAG, PredOpcode, /*OverrideNEON=*/true);
+
+  // Scalable vector i8/i16 DIV is not supported. Promote it to i32.
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+  EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+  EVT FixedWidenedVT = HalfVT.widenIntegerVectorElementType(*DAG.getContext());
+  EVT ScalableWidenedVT = getContainerForFixedLengthVector(DAG, FixedWidenedVT);
+
+  // Convert the operands to scalable vectors.
+  SDValue Op0 = convertToScalableVector(DAG, ContainerVT, Op.getOperand(0));
+  SDValue Op1 = convertToScalableVector(DAG, ContainerVT, Op.getOperand(1));
+
+  // Extend the scalable operands.
+  unsigned UnpkLo = Signed ? AArch64ISD::SUNPKLO : AArch64ISD::UUNPKLO;
+  unsigned UnpkHi = Signed ? AArch64ISD::SUNPKHI : AArch64ISD::UUNPKHI;
+  SDValue Op0Lo = DAG.getNode(UnpkLo, dl, ScalableWidenedVT, Op0);
+  SDValue Op1Lo = DAG.getNode(UnpkLo, dl, ScalableWidenedVT, Op1);
+  SDValue Op0Hi = DAG.getNode(UnpkHi, dl, ScalableWidenedVT, Op0);
+  SDValue Op1Hi = DAG.getNode(UnpkHi, dl, ScalableWidenedVT, Op1);
+
+  // Convert back to fixed vectors so the DIV can be further lowered.
+  Op0Lo = convertFromScalableVector(DAG, FixedWidenedVT, Op0Lo);
+  Op1Lo = convertFromScalableVector(DAG, FixedWidenedVT, Op1Lo);
+  Op0Hi = convertFromScalableVector(DAG, FixedWidenedVT, Op0Hi);
+  Op1Hi = convertFromScalableVector(DAG, FixedWidenedVT, Op1Hi);
+  SDValue ResultLo = DAG.getNode(Op.getOpcode(), dl, FixedWidenedVT,
+                                 Op0Lo, Op1Lo);
+  SDValue ResultHi = DAG.getNode(Op.getOpcode(), dl, FixedWidenedVT,
+                                 Op0Hi, Op1Hi);
+
+  // Convert again to scalable vectors to truncate.
+  ResultLo = convertToScalableVector(DAG, ScalableWidenedVT, ResultLo);
+  ResultHi = convertToScalableVector(DAG, ScalableWidenedVT, ResultHi);
+  SDValue ScalableResult = DAG.getNode(AArch64ISD::UZP1, dl, ContainerVT,
+                                       ResultLo, ResultHi);
+
+  return convertFromScalableVector(DAG, VT, ScalableResult);
 }
 
 SDValue AArch64TargetLowering::LowerFixedLengthVectorIntExtendToSVE(

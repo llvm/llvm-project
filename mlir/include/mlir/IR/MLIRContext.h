@@ -156,6 +156,12 @@ public:
   /// instances. This should not be used directly.
   StorageUniquer &getAttributeUniquer();
 
+  /// These APIs are tracking whether the context will be used in a
+  /// multithreading environment: this has no effect other than enabling
+  /// assertions on misuses of some APIs.
+  void enterMultiThreadedExecution();
+  void exitMultiThreadedExecution();
+
 private:
   const std::unique_ptr<MLIRContextImpl> impl;
 

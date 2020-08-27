@@ -94,10 +94,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    [[ENDIAN]]
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  [[ENDIAN]]
+  Type:  ET_EXEC
 DWARF:
   debug_loclists:
     - Lists:
@@ -257,10 +256,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    [[ENDIAN]]
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  [[ENDIAN]]
+  Type:  ET_EXEC
 DWARF:
   debug_loclists:
     - Format:  DWARF64
@@ -326,10 +324,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 DWARF:
   debug_loclists:
     - Length:              0x1234
@@ -387,10 +384,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 DWARF:
   debug_loclists:
     - Lists:
@@ -431,10 +427,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 DWARF:
   debug_loclists:
     - Lists:
@@ -455,10 +450,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 DWARF:
   debug_loclists:
     - AddressSize: 4
@@ -487,10 +481,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 DWARF:
   debug_loclists:
     - AddressSize: 3
@@ -533,10 +526,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 DWARF:
   debug_loclists:
     - Lists:
@@ -557,10 +549,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 DWARF:
   debug_loclists:
     - Lists:
@@ -587,10 +578,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 DWARF:
   debug_loclists:
     - Lists: []
@@ -607,10 +597,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:    .debug_loclists
     Type:    SHT_PROGBITS
@@ -628,10 +617,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name: .debug_loclists
     Type: SHT_PROGBITS
@@ -646,10 +634,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name: .debug_loclists
     Type: SHT_PROGBITS
@@ -665,10 +652,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:    .debug_loclists
     Type:    SHT_PROGBITS
@@ -689,10 +675,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:         .debug_loclists
     Type:         SHT_STRTAB  ## SHT_PROGBITS by default.
@@ -715,10 +700,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:         .debug_loclists
     Type:         SHT_STRTAB  ## SHT_PROGBITS by default.
@@ -747,10 +731,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 DWARF:
   debug_loclists: []
 
@@ -768,10 +751,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 DWARF:
   debug_loclists:
     - Lists:
@@ -808,10 +790,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 DWARF:
   debug_loclists:
     - Lists:
@@ -832,10 +813,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 DWARF:
   debug_loclists:
     - Lists:
@@ -866,10 +846,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 DWARF:
   debug_loclists:
     - OffsetEntryCount: [[OFFSETENTRIES=<none>]]

@@ -23,9 +23,6 @@ static const float nan = FPBits::buildNaN(1);
 static const float inf = FPBits::inf();
 static const float negInf = FPBits::negInf();
 
-// Zero tolerance; As in, exact match with MPFR result.
-static constexpr mpfr::Tolerance tolerance{mpfr::Tolerance::floatPrecision, 0,
-                                           0};
 TEST(RoundfTest, SpecialNumbers) {
   EXPECT_FP_EQ(zero, __llvm_libc::roundf(zero));
   EXPECT_FP_EQ(negZero, __llvm_libc::roundf(negZero));
@@ -78,7 +75,6 @@ TEST(RoundfTest, InFloatRange) {
     if (isnan(x) || isinf(x))
       continue;
 
-    ASSERT_MPFR_MATCH(mpfr::Operation::Round, x, __llvm_libc::roundf(x),
-                      tolerance);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Round, x, __llvm_libc::roundf(x), 0.0);
   }
 }

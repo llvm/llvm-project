@@ -1078,7 +1078,7 @@ to convert between the internal storage and the helper method.
 
 ### Attribute decorators
 
-There are a few important attribute adapters/decorators/modifers that can be
+There are a few important attribute adapters/decorators/modifiers that can be
 applied to ODS attributes to specify common additional properties like
 optionality, default values, etc.:
 

@@ -84,6 +84,7 @@ enum ProcessorSubtypes {
   INTEL_COREI7_CASCADELAKE,
   INTEL_COREI7_TIGERLAKE,
   INTEL_COREI7_COOPERLAKE,
+  INTEL_COREI7_SAPPHIRERAPIDS,
   CPU_SUBTYPE_MAX
 };
 
@@ -277,7 +278,7 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
                                 const unsigned *Features,
                                 unsigned *Type, unsigned *Subtype) {
 #define testFeature(F)                                                         \
-  (Features[F / 32] & (F % 32)) != 0
+  (Features[F / 32] & (1 << (F % 32))) != 0
 
   // We select CPU strings to match the code in Host.cpp, but we don't use them
   // in compiler-rt.
@@ -405,6 +406,13 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       CPU = "icelake-server";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_ICELAKE_SERVER;
+      break;
+
+    // Sapphire Rapids:
+    case 0x8f:
+      CPU = "sapphirerapids";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_SAPPHIRERAPIDS;
       break;
 
     case 0x1c: // Most 45 nm Intel Atom processors

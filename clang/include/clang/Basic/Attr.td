@@ -2346,11 +2346,10 @@ def Target : InheritableAttr {
         // accepting it weirdly.
         Feature = Feature.trim();
 
-        // We don't support cpu tuning this way currently.
         // TODO: Support the fpmath option. It will require checking
         // overall feature validity for the function with the rest of the
         // attributes on the function.
-        if (Feature.startswith("fpmath=") || Feature.startswith("tune="))
+        if (Feature.startswith("fpmath="))
           continue;
 
         if (Feature.startswith("branch-protection=")) {
@@ -2364,6 +2363,11 @@ def Target : InheritableAttr {
             Ret.DuplicateArchitecture = true;
           else
             Ret.Architecture = Feature.split("=").second.trim();
+        } else if (Feature.startswith("tune=")) {
+          if (!Ret.Tune.empty())
+            Ret.DuplicateTune = true;
+          else
+            Ret.Tune = Feature.split("=").second.trim();
         } else if (Feature.startswith("no-"))
           Ret.Features.push_back("-" + Feature.split("-").second.str());
         else
@@ -3326,13 +3330,15 @@ def OMPDeclareTargetDecl : InheritableAttr {
                  [ "MT_To", "MT_Link" ]>,
     EnumArgument<"DevType", "DevTypeTy",
                  [ "host", "nohost", "any" ],
-                 [ "DT_Host", "DT_NoHost", "DT_Any" ]>
+                 [ "DT_Host", "DT_NoHost", "DT_Any" ]>,
+    UnsignedArgument<"Level">
   ];
   let AdditionalMembers = [{
     void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const;
     static llvm::Optional<MapTypeTy>
     isDeclareTargetDeclaration(const ValueDecl *VD);
     static llvm::Optional<DevTypeTy> getDeviceType(const ValueDecl *VD);
+    static llvm::Optional<SourceLocation> getLocation(const ValueDecl *VD);
   }];
 }
 

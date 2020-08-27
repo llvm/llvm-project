@@ -682,10 +682,16 @@ class AMDGPUDimGetResInfoProfile<AMDGPUDimProps dim> : AMDGPUDimProfile<"GET_RES
 class AMDGPUImageDimIntrinsicEval<AMDGPUDimProfile P_> {
   int NumDataArgs = !size(P_.DataArgs);
   int NumDmaskArgs = !if(P_.IsAtomic, 0, 1);
+  int NumExtraAddrArgs = !size(P_.ExtraAddrArgs);
   int NumVAddrArgs = !size(P_.AddrArgs);
+  int NumGradientArgs = !if(P_.Gradients, !size(P_.Dim.GradientArgs), 0);
+  int NumCoordArgs = !if(P_.IsSample, !size(P_.Dim.CoordSliceArgs), !size(P_.Dim.CoordSliceIntArgs));
   int NumRSrcArgs = 1;
   int NumSampArgs = !if(P_.IsSample, 2, 0);
   int DmaskArgIndex = NumDataArgs;
+  int VAddrArgIndex = !add(NumDataArgs, NumDmaskArgs);
+  int GradientArgIndex = !add(NumDataArgs, NumDmaskArgs, NumExtraAddrArgs);
+  int CoordArgIndex = !add(NumDataArgs, NumDmaskArgs, NumExtraAddrArgs, NumGradientArgs);
   int UnormArgIndex = !add(NumDataArgs, NumDmaskArgs, NumVAddrArgs, NumRSrcArgs, 1);
   int TexFailCtrlArgIndex = !add(NumDataArgs, NumDmaskArgs, NumVAddrArgs, NumRSrcArgs, NumSampArgs);
   int CachePolicyArgIndex = !add(TexFailCtrlArgIndex, 1);

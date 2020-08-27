@@ -316,22 +316,20 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   case TargetOpcode::G_ANYEXT: {
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
                          Depth + 1);
-    Known = Known.zext(BitWidth);
+    Known = Known.anyext(BitWidth);
     break;
   }
   case TargetOpcode::G_LOAD: {
-    if (MI.hasOneMemOperand()) {
-      const MachineMemOperand *MMO = *MI.memoperands_begin();
-      if (const MDNode *Ranges = MMO->getRanges()) {
-        computeKnownBitsFromRangeMetadata(*Ranges, Known);
-      }
+    const MachineMemOperand *MMO = *MI.memoperands_begin();
+    if (const MDNode *Ranges = MMO->getRanges()) {
+      computeKnownBitsFromRangeMetadata(*Ranges, Known);
     }
+
     break;
   }
   case TargetOpcode::G_ZEXTLOAD: {
     // Everything above the retrieved bits is zero
-    if (MI.hasOneMemOperand())
-      Known.Zero.setBitsFrom((*MI.memoperands_begin())->getSizeInBits());
+    Known.Zero.setBitsFrom((*MI.memoperands_begin())->getSizeInBits());
     break;
   }
   case TargetOpcode::G_ASHR:

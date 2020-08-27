@@ -1,4 +1,4 @@
-# RUN: yaml2obj %S/Inputs/basic-elf.yaml > %T/symtab.out
+# RUN: yaml2obj %S/Inputs/basic-elf.yaml -o %T/symtab.out
 # RUN: %lldb %T/symtab.out -o "target symbols add -s symtab.out %S/Inputs/symtab.syms" \
 # RUN:   -s %s | FileCheck %s
 

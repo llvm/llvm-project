@@ -346,30 +346,20 @@ define void @callerB2() {
   ret void
 }
 define void @callerC1() {
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@callerC1()
-; NOT_CGSCC_NPM-NEXT:    [[UNKNOWN:%.*]] = call noundef i8* @unknown_ptr()
-; NOT_CGSCC_NPM-NEXT:    [[TMP1:%.*]] = call i8* @argmem_only(i8* noundef [[UNKNOWN]])
-; NOT_CGSCC_NPM-NEXT:    ret void
-;
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@callerC1()
-; IS__CGSCC_NPM-NEXT:    [[UNKNOWN:%.*]] = call i8* @unknown_ptr()
-; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = call i8* @argmem_only(i8* noundef [[UNKNOWN]])
-; IS__CGSCC_NPM-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@callerC1()
+; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @unknown_ptr()
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @argmem_only(i8* [[UNKNOWN]])
+; CHECK-NEXT:    ret void
 ;
   %unknown = call i8* @unknown_ptr()
   call i8* @argmem_only(i8* %unknown)
   ret void
 }
 define void @callerC2() {
-; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@callerC2()
-; NOT_CGSCC_OPM-NEXT:    [[UNKNOWN:%.*]] = call noundef i8* @unknown_ptr()
-; NOT_CGSCC_OPM-NEXT:    [[TMP1:%.*]] = call i8* @inaccesible_argmem_only_decl(i8* noundef [[UNKNOWN]])
-; NOT_CGSCC_OPM-NEXT:    ret void
-;
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@callerC2()
-; IS__CGSCC_OPM-NEXT:    [[UNKNOWN:%.*]] = call i8* @unknown_ptr()
-; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = call i8* @inaccesible_argmem_only_decl(i8* noundef [[UNKNOWN]])
-; IS__CGSCC_OPM-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@callerC2()
+; CHECK-NEXT:    [[UNKNOWN:%.*]] = call i8* @unknown_ptr()
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @inaccesible_argmem_only_decl(i8* [[UNKNOWN]])
+; CHECK-NEXT:    ret void
 ;
   %unknown = call i8* @unknown_ptr()
   call i8* @inaccesible_argmem_only_decl(i8* %unknown)

@@ -1,4 +1,4 @@
-# RUN: yaml2obj %S/Inputs/basic-elf.yaml > %T/line-table.out
+# RUN: yaml2obj %S/Inputs/basic-elf.yaml -o %T/line-table.out
 # RUN: %lldb %T/line-table.out -o "target symbols add -s line-table.out %S/Inputs/line-table.syms" \
 # RUN:   -s %s -o exit | FileCheck %s
 

@@ -183,7 +183,7 @@ isPhysicalRegCopy(MachineInstr *MI) {
   if (MI->getOpcode() != R600::COPY)
     return false;
 
-  return !Register::isVirtualRegister(MI->getOperand(1).getReg());
+  return !MI->getOperand(1).getReg().isVirtual();
 }
 
 void R600SchedStrategy::releaseTopNode(SUnit *SU) {
@@ -207,9 +207,9 @@ void R600SchedStrategy::releaseBottomNode(SUnit *SU) {
 
 }
 
-bool R600SchedStrategy::regBelongsToClass(unsigned Reg,
+bool R600SchedStrategy::regBelongsToClass(Register Reg,
                                           const TargetRegisterClass *RC) const {
-  if (!Register::isVirtualRegister(Reg)) {
+  if (!Reg.isVirtual()) {
     return RC->contains(Reg);
   } else {
     return MRI->getRegClass(Reg) == RC;

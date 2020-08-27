@@ -32,7 +32,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %next.gep = getelementptr float, float* %pSrcA, i32 %index
   %next.gep14 = getelementptr float, float* %pDst, i32 %index
-  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
   %0 = bitcast float* %next.gep to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %0, i32 4, <4 x i1> %active.lane.mask, <4 x float> undef)
   %1 = call fast <4 x float> @llvm.round.v4f32(<4 x float> %wide.masked.load)
@@ -77,7 +77,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %next.gep = getelementptr float, float* %pSrcA, i32 %index
   %next.gep14 = getelementptr float, float* %pDst, i32 %index
-  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
   %0 = bitcast float* %next.gep to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %0, i32 4, <4 x i1> %active.lane.mask, <4 x float> undef)
   %1 = call fast <4 x float> @llvm.rint.v4f32(<4 x float> %wide.masked.load)
@@ -122,7 +122,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %next.gep = getelementptr float, float* %pSrcA, i32 %index
   %next.gep14 = getelementptr float, float* %pDst, i32 %index
-  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
   %0 = bitcast float* %next.gep to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %0, i32 4, <4 x i1> %active.lane.mask, <4 x float> undef)
   %1 = call fast <4 x float> @llvm.trunc.v4f32(<4 x float> %wide.masked.load)
@@ -167,7 +167,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %next.gep = getelementptr float, float* %pSrcA, i32 %index
   %next.gep14 = getelementptr float, float* %pDst, i32 %index
-  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
   %0 = bitcast float* %next.gep to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %0, i32 4, <4 x i1> %active.lane.mask, <4 x float> undef)
   %1 = call fast <4 x float> @llvm.ceil.v4f32(<4 x float> %wide.masked.load)
@@ -212,7 +212,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %next.gep = getelementptr float, float* %pSrcA, i32 %index
   %next.gep14 = getelementptr float, float* %pDst, i32 %index
-  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
   %0 = bitcast float* %next.gep to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %0, i32 4, <4 x i1> %active.lane.mask, <4 x float> undef)
   %1 = call fast <4 x float> @llvm.floor.v4f32(<4 x float> %wide.masked.load)
@@ -236,25 +236,24 @@ define arm_aapcs_vfpcc void @nearbyint(float* noalias nocapture readonly %pSrcA,
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
 ; CHECK-NEXT:    adds r3, r2, #3
+; CHECK-NEXT:    vdup.32 q1, r2
 ; CHECK-NEXT:    bic r3, r3, #3
 ; CHECK-NEXT:    sub.w r12, r3, #4
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
 ; CHECK-NEXT:    adr r3, .LCPI5_0
-; CHECK-NEXT:    sub.w r12, r2, #1
 ; CHECK-NEXT:    vldrw.u32 q0, [r3]
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    vdup.32 q1, r12
+; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB5_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vadd.i32 q2, q0, r2
-; CHECK-NEXT:    vdup.32 q3, r2
+; CHECK-NEXT:    vadd.i32 q2, q0, r12
+; CHECK-NEXT:    vdup.32 q3, r12
 ; CHECK-NEXT:    vcmp.u32 hi, q3, q2
-; CHECK-NEXT:    adds r2, #4
+; CHECK-NEXT:    add.w r12, r12, #4
 ; CHECK-NEXT:    vpnot
 ; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vcmpt.u32 cs, q1, q2
+; CHECK-NEXT:    vcmpt.u32 hi, q1, q2
 ; CHECK-NEXT:    vldrwt.u32 q2, [r0], #16
 ; CHECK-NEXT:    vrintr.f32 s15, s11
 ; CHECK-NEXT:    vrintr.f32 s14, s10
@@ -286,7 +285,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %next.gep = getelementptr float, float* %pSrcA, i32 %index
   %next.gep14 = getelementptr float, float* %pDst, i32 %index
-  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
   %0 = bitcast float* %next.gep to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %0, i32 4, <4 x i1> %active.lane.mask, <4 x float> undef)
   %1 = call fast <4 x float> @llvm.nearbyint.v4f32(<4 x float> %wide.masked.load)

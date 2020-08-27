@@ -924,6 +924,26 @@ public:
     return success(parser.consumeIf(Token::arrow));
   }
 
+  /// Parse a '{' token.
+  ParseResult parseLBrace() override {
+    return parser.parseToken(Token::l_brace, "expected '{'");
+  }
+
+  /// Parse a '{' token if present
+  ParseResult parseOptionalLBrace() override {
+    return success(parser.consumeIf(Token::l_brace));
+  }
+
+  /// Parse a `}` token.
+  ParseResult parseRBrace() override {
+    return parser.parseToken(Token::r_brace, "expected '}'");
+  }
+
+  /// Parse a `}` token if present
+  ParseResult parseOptionalRBrace() override {
+    return success(parser.consumeIf(Token::r_brace));
+  }
+
   /// Parse a `:` token.
   ParseResult parseColon() override {
     return parser.parseToken(Token::colon, "expected ':'");
@@ -952,6 +972,11 @@ public:
   /// Parse a `=` token.
   ParseResult parseEqual() override {
     return parser.parseToken(Token::equal, "expected '='");
+  }
+
+  /// Parse a `=` token if present.
+  ParseResult parseOptionalEqual() override {
+    return success(parser.consumeIf(Token::equal));
   }
 
   /// Parse a '<' token.
@@ -984,6 +1009,11 @@ public:
     return success(parser.consumeIf(Token::r_paren));
   }
 
+  /// Parses a '?' if present.
+  ParseResult parseOptionalQuestion() override {
+    return success(parser.consumeIf(Token::question));
+  }
+
   /// Parse a `[` token.
   ParseResult parseLSquare() override {
     return parser.parseToken(Token::l_square, "expected '['");
@@ -1008,28 +1038,43 @@ public:
   // Attribute Parsing
   //===--------------------------------------------------------------------===//
 
-  /// Parse an arbitrary attribute of a given type and return it in result. This
-  /// also adds the attribute to the specified attribute list with the specified
-  /// name.
-  ParseResult parseAttribute(Attribute &result, Type type, StringRef attrName,
-                             NamedAttrList &attrs) override {
+  /// Parse an arbitrary attribute of a given type and return it in result.
+  ParseResult parseAttribute(Attribute &result, Type type) override {
     result = parser.parseAttribute(type);
-    if (!result)
-      return failure();
-
-    attrs.push_back(parser.builder.getNamedAttr(attrName, result));
-    return success();
+    return success(static_cast<bool>(result));
   }
 
   /// Parse an optional attribute.
-  OptionalParseResult parseOptionalAttribute(Attribute &result, Type type,
-                                             StringRef attrName,
-                                             NamedAttrList &attrs) override {
+  /// Template utilities to simplify specifying multiple derived overloads.
+  template <typename AttrT>
+  OptionalParseResult
+  parseOptionalAttributeAndAddToList(AttrT &result, Type type,
+                                     StringRef attrName, NamedAttrList &attrs) {
     OptionalParseResult parseResult =
         parser.parseOptionalAttribute(result, type);
     if (parseResult.hasValue() && succeeded(*parseResult))
       attrs.push_back(parser.builder.getNamedAttr(attrName, result));
     return parseResult;
+  }
+  template <typename AttrT>
+  OptionalParseResult parseOptionalAttributeAndAddToList(AttrT &result,
+                                                         StringRef attrName,
+                                                         NamedAttrList &attrs) {
+    OptionalParseResult parseResult = parser.parseOptionalAttribute(result);
+    if (parseResult.hasValue() && succeeded(*parseResult))
+      attrs.push_back(parser.builder.getNamedAttr(attrName, result));
+    return parseResult;
+  }
+
+  OptionalParseResult parseOptionalAttribute(Attribute &result, Type type,
+                                             StringRef attrName,
+                                             NamedAttrList &attrs) override {
+    return parseOptionalAttributeAndAddToList(result, type, attrName, attrs);
+  }
+  OptionalParseResult parseOptionalAttribute(ArrayAttr &result,
+                                             StringRef attrName,
+                                             NamedAttrList &attrs) override {
+    return parseOptionalAttributeAndAddToList(result, attrName, attrs);
   }
 
   /// Parse a named dictionary into 'result' if it is present.

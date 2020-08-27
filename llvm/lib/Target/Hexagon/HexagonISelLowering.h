@@ -469,8 +469,7 @@ namespace HexagonISD {
     SDValue LowerHvxExtend(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxShift(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerHvxStore(SDValue Op, SelectionDAG &DAG) const;
-    SDValue HvxVecPredBitcastComputation(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerHvxMaskedOp(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue SplitHvxPairOp(SDValue Op, SelectionDAG &DAG) const;
     SDValue SplitHvxMemOp(SDValue Op, SelectionDAG &DAG) const;
@@ -479,7 +478,6 @@ namespace HexagonISD {
     findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT)
         const override;
 
-    bool isHvxOperation(SDValue Op) const;
     bool isHvxOperation(SDNode *N) const;
     SDValue LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const;
     void LowerHvxOperationWrapper(SDNode *N, SmallVectorImpl<SDValue> &Results,

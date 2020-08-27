@@ -122,6 +122,11 @@ private:
   void CheckForProhibitedSpecifier(IoSpecKind, bool, const std::string &) const;
   void CheckForProhibitedSpecifier(bool, const std::string &, IoSpecKind) const;
 
+  template <typename A>
+  void CheckForDefinableVariable(const A &var, const std::string &s) const;
+
+  void CheckForPureSubprogram() const;
+
   void Init(IoStmtKind s) {
     stmt_ = s;
     specifierSet_.reset();
@@ -129,8 +134,6 @@ private:
   }
 
   void Done() { stmt_ = IoStmtKind::None; }
-
-  void CheckForPureSubprogram() const;
 
   SemanticsContext &context_;
   IoStmtKind stmt_{IoStmtKind::None};

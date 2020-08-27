@@ -504,6 +504,7 @@ multiclass 8LS_DForm_R_SI34_XT6_RA5_p<bits<5> opcode, dag OOL, dag IOL,
 def PrefixInstrs : Predicate<"Subtarget->hasPrefixInstrs()">;
 def IsISA3_1 : Predicate<"Subtarget->isISA3_1()">;
 def PairedVectorMemops : Predicate<"PPCSubTarget->pairedVectorMemops()">;
+def MMA : Predicate<"PPCSubTarget->hasMMA()">;
 
 let Predicates = [PrefixInstrs] in {
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
@@ -811,6 +812,9 @@ let Predicates = [PCRelativeMemops], AddedComplexity = 500 in {
   // If the PPCmatpcreladdr node is not caught by any other pattern it should be
   // caught here and turned into a paddi instruction to materialize the address.
   def : Pat<(PPCmatpcreladdr pcreladdr:$addr), (PADDI8pc 0, $addr)>;
+  // PPCtlsdynamatpcreladdr node is used for TLS dynamic models to materialize
+  // tls global address with paddi instruction.
+  def : Pat<(PPCtlsdynamatpcreladdr pcreladdr:$addr), (PADDI8pc 0, $addr)>;
 }
 
 let Predicates = [PrefixInstrs] in {

@@ -67,16 +67,16 @@ struct MlirNamedAttribute {
 };
 typedef struct MlirNamedAttribute MlirNamedAttribute;
 
-/** A callback for printing to IR objects.
+/** A callback for returning string referenes.
  *
- * This function is called back by the printing functions with the following
- * arguments:
+ * This function is called back by the functions that need to return a reference
+ * to the portion of the string with the following arguments:
  *   - a pointer to the beginning of a string;
  *   - the length of the string (the pointer may point to a larger buffer, not
  *     necessarily null-terminated);
  *   - a pointer to user data forwarded from the printing call.
  */
-typedef void (*MlirPrintCallback)(const char *, intptr_t, void *);
+typedef void (*MlirStringCallback)(const char *, intptr_t, void *);
 
 /*============================================================================*/
 /* Context API.                                                               */
@@ -103,7 +103,7 @@ MlirLocation mlirLocationUnknownGet(MlirContext context);
 /** Prints a location by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
  * several times with consecutive chunks of the string. */
-void mlirLocationPrint(MlirLocation location, MlirPrintCallback callback,
+void mlirLocationPrint(MlirLocation location, MlirStringCallback callback,
                        void *userData);
 
 /*============================================================================*/
@@ -115,6 +115,9 @@ MlirModule mlirModuleCreateEmpty(MlirLocation location);
 
 /** Parses a module from the string and transfers ownership to the caller. */
 MlirModule mlirModuleCreateParse(MlirContext context, const char *module);
+
+/** Checks whether a module is null. */
+inline int mlirModuleIsNull(MlirModule module) { return !module.ptr; }
 
 /** Takes a module owned by the caller and deletes it. */
 void mlirModuleDestroy(MlirModule module);
@@ -221,7 +224,7 @@ MlirAttribute mlirOperationGetAttributeByName(MlirOperation op,
 /** Prints an operation by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
  * several times with consecutive chunks of the string. */
-void mlirOperationPrint(MlirOperation op, MlirPrintCallback callback,
+void mlirOperationPrint(MlirOperation op, MlirStringCallback callback,
                         void *userData);
 
 /** Prints an operation to stderr. */
@@ -289,7 +292,7 @@ MlirValue mlirBlockGetArgument(MlirBlock block, intptr_t pos);
 /** Prints a block by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
  * several times with consecutive chunks of the string. */
-void mlirBlockPrint(MlirBlock block, MlirPrintCallback callback,
+void mlirBlockPrint(MlirBlock block, MlirStringCallback callback,
                     void *userData);
 
 /*============================================================================*/
@@ -302,7 +305,7 @@ MlirType mlirValueGetType(MlirValue value);
 /** Prints a value by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
  * several times with consecutive chunks of the string. */
-void mlirValuePrint(MlirValue value, MlirPrintCallback callback,
+void mlirValuePrint(MlirValue value, MlirStringCallback callback,
                     void *userData);
 
 /*============================================================================*/
@@ -312,13 +315,16 @@ void mlirValuePrint(MlirValue value, MlirPrintCallback callback,
 /** Parses a type. The type is owned by the context. */
 MlirType mlirTypeParseGet(MlirContext context, const char *type);
 
+/** Checks whether a type is null. */
+inline int mlirTypeIsNull(MlirType type) { return !type.ptr; }
+
 /** Checks if two types are equal. */
 int mlirTypeEqual(MlirType t1, MlirType t2);
 
 /** Prints a location by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
  * several times with consecutive chunks of the string. */
-void mlirTypePrint(MlirType type, MlirPrintCallback callback, void *userData);
+void mlirTypePrint(MlirType type, MlirStringCallback callback, void *userData);
 
 /** Prints the type to the standard error stream. */
 void mlirTypeDump(MlirType type);
@@ -330,10 +336,16 @@ void mlirTypeDump(MlirType type);
 /** Parses an attribute. The attribute is owned by the context. */
 MlirAttribute mlirAttributeParseGet(MlirContext context, const char *attr);
 
+/** Checks whether an attribute is null. */
+inline int mlirAttributeIsNull(MlirAttribute attr) { return !attr.ptr; }
+
+/** Checks if two attributes are equal. */
+int mlirAttributeEqual(MlirAttribute a1, MlirAttribute a2);
+
 /** Prints an attribute by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
  * several times with consecutive chunks of the string. */
-void mlirAttributePrint(MlirAttribute attr, MlirPrintCallback callback,
+void mlirAttributePrint(MlirAttribute attr, MlirStringCallback callback,
                         void *userData);
 
 /** Prints the attrbute to the standard error stream. */

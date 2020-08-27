@@ -36,7 +36,7 @@ define amdgpu_kernel void @memset_global_to_flat_no_md(i8 addrspace(1)* %global.
 ; CHECK: call void @llvm.memcpy.p0i8.p3i8.i64(i8* align 4 %dest, i8 addrspace(3)* align 4 %src.group.ptr, i64 %size, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
 define amdgpu_kernel void @memcpy_flat_to_flat_replace_src_with_group(i8* %dest, i8 addrspace(3)* %src.group.ptr, i64 %size) #0 {
   %cast.src = addrspacecast i8 addrspace(3)* %src.group.ptr to i8*
-  call void @llvm.memcpy.p4i8.p0i8.i64(i8* align 4 %dest, i8* align 4 %cast.src, i64 %size, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %dest, i8* align 4 %cast.src, i64 %size, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
   ret void
 }
 
@@ -44,7 +44,7 @@ define amdgpu_kernel void @memcpy_flat_to_flat_replace_src_with_group(i8* %dest,
 ; CHECK: call void @llvm.memcpy.p3i8.p0i8.i64(i8 addrspace(3)* align 4 %dest.group.ptr, i8* align 4 %src.ptr, i64 %size, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
 define amdgpu_kernel void @memcpy_flat_to_flat_replace_dest_with_group(i8 addrspace(3)* %dest.group.ptr, i8* %src.ptr, i64 %size) #0 {
   %cast.dest = addrspacecast i8 addrspace(3)* %dest.group.ptr to i8*
-  call void @llvm.memcpy.p4i8.p0i8.i64(i8* align 4 %cast.dest, i8* align 4 %src.ptr, i64 %size, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %cast.dest, i8* align 4 %src.ptr, i64 %size, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
   ret void
 }
 
@@ -53,7 +53,7 @@ define amdgpu_kernel void @memcpy_flat_to_flat_replace_dest_with_group(i8 addrsp
 define amdgpu_kernel void @memcpy_flat_to_flat_replace_dest_src_with_group(i8 addrspace(3)* %dest.group.ptr, i8 addrspace(3)* %src.group.ptr, i64 %size) #0 {
   %cast.src = addrspacecast i8 addrspace(3)* %src.group.ptr to i8*
   %cast.dest = addrspacecast i8 addrspace(3)* %src.group.ptr to i8*
-  call void @llvm.memcpy.p4i8.p0i8.i64(i8* align 4 %cast.dest, i8* align 4 %cast.src, i64 %size, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %cast.dest, i8* align 4 %cast.src, i64 %size, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
   ret void
 }
 
@@ -62,7 +62,7 @@ define amdgpu_kernel void @memcpy_flat_to_flat_replace_dest_src_with_group(i8 ad
 define amdgpu_kernel void @memcpy_flat_to_flat_replace_dest_group_src_global(i8 addrspace(3)* %dest.group.ptr, i8 addrspace(1)* %src.global.ptr, i64 %size) #0 {
   %cast.src = addrspacecast i8 addrspace(1)* %src.global.ptr to i8*
   %cast.dest = addrspacecast i8 addrspace(3)* %dest.group.ptr to i8*
-  call void @llvm.memcpy.p4i8.p0i8.i64(i8* align 4 %cast.dest, i8* align 4 %cast.src, i64 %size, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %cast.dest, i8* align 4 %cast.src, i64 %size, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
   ret void
 }
 
@@ -78,7 +78,7 @@ define amdgpu_kernel void @memcpy_group_to_flat_replace_dest_global(i8 addrspace
 ; CHECK: call void @llvm.memcpy.p0i8.p3i8.i64(i8* align 4 %dest, i8 addrspace(3)* align 4 %src.group.ptr, i64 %size, i1 false), !tbaa.struct !7
 define amdgpu_kernel void @memcpy_flat_to_flat_replace_src_with_group_tbaa_struct(i8* %dest, i8 addrspace(3)* %src.group.ptr, i64 %size) #0 {
   %cast.src = addrspacecast i8 addrspace(3)* %src.group.ptr to i8*
-  call void @llvm.memcpy.p4i8.p0i8.i64(i8* align 4 %dest, i8* align 4 %cast.src, i64 %size, i1 false), !tbaa.struct !7
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %dest, i8* align 4 %cast.src, i64 %size, i1 false), !tbaa.struct !7
   ret void
 }
 
@@ -86,7 +86,7 @@ define amdgpu_kernel void @memcpy_flat_to_flat_replace_src_with_group_tbaa_struc
 ; CHECK: call void @llvm.memcpy.p0i8.p3i8.i64(i8* align 4 %dest, i8 addrspace(3)* align 4 %src.group.ptr, i64 %size, i1 false){{$}}
 define amdgpu_kernel void @memcpy_flat_to_flat_replace_src_with_group_no_md(i8* %dest, i8 addrspace(3)* %src.group.ptr, i64 %size) #0 {
   %cast.src = addrspacecast i8 addrspace(3)* %src.group.ptr to i8*
-  call void @llvm.memcpy.p4i8.p0i8.i64(i8* align 4 %dest, i8* align 4 %cast.src, i64 %size, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %dest, i8* align 4 %cast.src, i64 %size, i1 false)
   ret void
 }
 
@@ -95,8 +95,8 @@ define amdgpu_kernel void @memcpy_flat_to_flat_replace_src_with_group_no_md(i8* 
 ; CHECK: call void @llvm.memcpy.p0i8.p3i8.i64(i8* align 4 %dest1, i8 addrspace(3)* align 4 %src.group.ptr, i64 %size, i1 false){{$}}
 define amdgpu_kernel void @multiple_memcpy_flat_to_flat_replace_src_with_group_no_md(i8* %dest0, i8* %dest1, i8 addrspace(3)* %src.group.ptr, i64 %size) #0 {
   %cast.src = addrspacecast i8 addrspace(3)* %src.group.ptr to i8*
-  call void @llvm.memcpy.p4i8.p0i8.i64(i8* align 4 %dest0, i8* align 4 %cast.src, i64 %size, i1 false)
-  call void @llvm.memcpy.p4i8.p0i8.i64(i8* align 4 %dest1, i8* align 4 %cast.src, i64 %size, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %dest0, i8* align 4 %cast.src, i64 %size, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %dest1, i8* align 4 %cast.src, i64 %size, i1 false)
   ret void
 }
 
@@ -105,21 +105,21 @@ define amdgpu_kernel void @multiple_memcpy_flat_to_flat_replace_src_with_group_n
 ; CHECK: call void @llvm.memcpy.p3i8.p3i8.i64(i8 addrspace(3)* align 4 %group.ptr, i8 addrspace(3)* align 4 %group.ptr, i64 32, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
 define amdgpu_kernel void @memcpy_group_flat_to_flat_self(i8 addrspace(3)* %group.ptr) #0 {
   %cast = addrspacecast i8 addrspace(3)* %group.ptr to i8*
-  call void @llvm.memcpy.p4i8.p0i8.i64(i8* align 4 %cast, i8* align 4 %cast, i64 32, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %cast, i8* align 4 %cast, i64 32, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
   ret void
 }
 ; CHECK-LABEL: @memmove_flat_to_flat_replace_src_with_group(
 ; CHECK: call void @llvm.memmove.p0i8.p3i8.i64(i8* align 4 %dest, i8 addrspace(3)* align 4 %src.group.ptr, i64 %size, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
 define amdgpu_kernel void @memmove_flat_to_flat_replace_src_with_group(i8* %dest, i8 addrspace(3)* %src.group.ptr, i64 %size) #0 {
   %cast.src = addrspacecast i8 addrspace(3)* %src.group.ptr to i8*
-  call void @llvm.memmove.p4i8.p0i8.i64(i8* align 4 %dest, i8* align 4 %cast.src, i64 %size, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
+  call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %dest, i8* align 4 %cast.src, i64 %size, i1 false), !tbaa !0, !alias.scope !3, !noalias !4
   ret void
 }
 
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) #1
-declare void @llvm.memcpy.p4i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
 declare void @llvm.memcpy.p0i8.p3i8.i32(i8* nocapture writeonly, i8 addrspace(3)* nocapture readonly, i32, i1) #1
-declare void @llvm.memmove.p4i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
+declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }

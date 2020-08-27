@@ -547,7 +547,8 @@ struct ProgramUnit {
   std::variant<common::Indirection<MainProgram>,
       common::Indirection<FunctionSubprogram>,
       common::Indirection<SubroutineSubprogram>, common::Indirection<Module>,
-      common::Indirection<Submodule>, common::Indirection<BlockData>>
+      common::Indirection<Submodule>, common::Indirection<BlockData>,
+      common::Indirection<CompilerDirective>>
       u;
 };
 
@@ -3840,8 +3841,10 @@ struct AccObjectListWithModifier {
 
 // 2.5.13: + | * | max | min | iand | ior | ieor | .and. | .or. | .eqv. | .neqv.
 struct AccReductionOperator {
-  UNION_CLASS_BOILERPLATE(AccReductionOperator);
-  std::variant<DefinedOperator, ProcedureDesignator> u;
+  ENUM_CLASS(
+      Operator, Plus, Multiply, Max, Min, Iand, Ior, Ieor, And, Or, Eqv, Neqv)
+  WRAPPER_CLASS_BOILERPLATE(AccReductionOperator, Operator);
+  CharBlock source;
 };
 
 struct AccObjectListWithReduction {

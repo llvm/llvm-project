@@ -21,6 +21,7 @@ class StringRef;
 } // namespace llvm
 
 namespace mlir {
+class DialectRegistry;
 struct LogicalResult;
 class MLIRContext;
 class ModuleOp;
@@ -75,8 +76,10 @@ struct TranslateToMLIRRegistration {
 };
 
 struct TranslateFromMLIRRegistration {
-  TranslateFromMLIRRegistration(llvm::StringRef name,
-                                const TranslateFromMLIRFunction &function);
+  TranslateFromMLIRRegistration(
+      llvm::StringRef name, const TranslateFromMLIRFunction &function,
+      std::function<void(DialectRegistry &)> dialectRegistration =
+          [](DialectRegistry &) {});
 };
 struct TranslateRegistration {
   TranslateRegistration(llvm::StringRef name,
@@ -91,6 +94,15 @@ struct TranslationParser : public llvm::cl::parser<const TranslateFunction *> {
   void printOptionInfo(const llvm::cl::Option &o,
                        size_t globalWidth) const override;
 };
+
+/// Translate to/from an MLIR module from/to an external representation (e.g.
+/// LLVM IR, SPIRV binary, ...). This is the entry point for the implementation
+/// of tools like `mlir-translate`. The translation to perform is parsed from
+/// the command line. The `toolName` argument is used for the header displayed
+/// by `--help`.
+LogicalResult mlirTranslateMain(int argc, char **argv,
+                                llvm::StringRef toolName);
+
 } // namespace mlir
 
 #endif // MLIR_TRANSLATION_H

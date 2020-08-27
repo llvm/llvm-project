@@ -1770,9 +1770,14 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     // the function.
     if (TD) {
       ParsedTargetAttr ParsedAttr = TD->parse();
-      if (ParsedAttr.Architecture != "" &&
-          getTarget().isValidCPUName(ParsedAttr.Architecture))
+      if (!ParsedAttr.Architecture.empty() &&
+          getTarget().isValidCPUName(ParsedAttr.Architecture)) {
         TargetCPU = ParsedAttr.Architecture;
+        TuneCPU = ""; // Clear the tune CPU.
+      }
+      if (!ParsedAttr.Tune.empty() &&
+          getTarget().isValidCPUName(ParsedAttr.Tune))
+        TuneCPU = ParsedAttr.Tune;
     }
   } else {
     // Otherwise just add the existing target cpu and target features to the
@@ -1780,11 +1785,11 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     Features = getTarget().getTargetOpts().Features;
   }
 
-  if (TargetCPU != "") {
+  if (!TargetCPU.empty()) {
     Attrs.addAttribute("target-cpu", TargetCPU);
     AddedAttr = true;
   }
-  if (TuneCPU != "") {
+  if (!TuneCPU.empty()) {
     Attrs.addAttribute("tune-cpu", TuneCPU);
     AddedAttr = true;
   }
@@ -1826,6 +1831,7 @@ void CodeGenModule::setNonAliasAttributes(GlobalDecl GD,
         // new ones should replace the old.
         F->removeFnAttr("target-cpu");
         F->removeFnAttr("target-features");
+        F->removeFnAttr("tune-cpu");
         F->addAttributes(llvm::AttributeList::FunctionIndex, Attrs);
       }
     }

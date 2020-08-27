@@ -163,17 +163,17 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     string(REPLACE ${CMAKE_CFG_INTDIR} "\$\{CMAKE_INSTALL_CONFIG_NAME\}" LLDB_PYTHON_INSTALL_PATH ${LLDB_PYTHON_INSTALL_PATH})
     string(REPLACE ${CMAKE_CFG_INTDIR} "\$\{CMAKE_INSTALL_CONFIG_NAME\}" lldb_python_target_dir ${lldb_python_target_dir})
   endif()
-  set(swig_scripts_target "${swig_target}_scripts")
-  set(swig_scripts_install_target "${swig_target}_scripts_install")
-  add_custom_target(${swig_scripts_target})
-  add_dependencies(${swig_scripts_target} ${swig_target})
+  set(python_scripts_target "${swig_target}-scripts")
+  set(python_scripts_install_target "install-${python_scripts_target}")
+  add_custom_target(${python_scripts_target})
+  add_dependencies(${python_scripts_target} ${swig_target})
   install(DIRECTORY ${lldb_python_target_dir}/../
           DESTINATION ${LLDB_PYTHON_INSTALL_PATH}
-          COMPONENT ${swig_scripts_target})
+          COMPONENT ${python_scripts_target})
   if (NOT LLVM_ENABLE_IDE)
-    add_llvm_install_targets(${swig_scripts_install_target}
-                             COMPONENT ${swig_scripts_target}
-                             DEPENDS ${swig_scripts_target})
+    add_llvm_install_targets(${python_scripts_install_target}
+                             COMPONENT ${python_scripts_target}
+                             DEPENDS ${python_scripts_target})
   endif()
 
   # Add a Post-Build Event to copy the custom Python DLL to the lldb binaries dir so that Windows can find it when launching

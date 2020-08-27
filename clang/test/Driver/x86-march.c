@@ -104,6 +104,10 @@
 // RUN:   | FileCheck %s -check-prefix=tremont
 // tremont: "-target-cpu" "tremont"
 //
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=sapphirerapids 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=sapphirerapids
+// sapphirerapids: "-target-cpu" "sapphirerapids"
+//
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=k8 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=k8
 // k8: "-target-cpu" "k8"

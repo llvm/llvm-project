@@ -27,10 +27,12 @@ using namespace lldb_private::repro;
 enum ReproducerProvider {
   eReproducerProviderCommands,
   eReproducerProviderFiles,
+  eReproducerProviderSymbolFiles,
   eReproducerProviderGDB,
   eReproducerProviderProcessInfo,
   eReproducerProviderVersion,
   eReproducerProviderWorkingDirectory,
+  eReproducerProviderHomeDirectory,
   eReproducerProviderNone
 };
 
@@ -44,6 +46,11 @@ static constexpr OptionEnumValueElement g_reproducer_provider_type[] = {
         eReproducerProviderFiles,
         "files",
         "Files",
+    },
+    {
+        eReproducerProviderSymbolFiles,
+        "symbol-files",
+        "Symbol Files",
     },
     {
         eReproducerProviderGDB,
@@ -64,6 +71,11 @@ static constexpr OptionEnumValueElement g_reproducer_provider_type[] = {
         eReproducerProviderWorkingDirectory,
         "cwd",
         "Working Directory",
+    },
+    {
+        eReproducerProviderHomeDirectory,
+        "home",
+        "Home Directory",
     },
     {
         eReproducerProviderNone,
@@ -421,6 +433,29 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return true;
     }
+    case eReproducerProviderSymbolFiles: {
+      Expected<std::string> symbol_files =
+          loader->LoadBuffer<SymbolFileProvider>();
+      if (!symbol_files) {
+        SetError(result, symbol_files.takeError());
+        return false;
+      }
+
+      std::vector<SymbolFileProvider::Entry> entries;
+      llvm::yaml::Input yin(*symbol_files);
+      yin >> entries;
+
+      for (const auto &entry : entries) {
+        result.AppendMessageWithFormat("- uuid:        %s\n",
+                                       entry.uuid.c_str());
+        result.AppendMessageWithFormat("  module path: %s\n",
+                                       entry.module_path.c_str());
+        result.AppendMessageWithFormat("  symbol path: %s\n",
+                                       entry.symbol_path.c_str());
+      }
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return true;
+    }
     case eReproducerProviderVersion: {
       Expected<std::string> version = loader->LoadBuffer<VersionProvider>();
       if (!version) {
@@ -433,12 +468,23 @@ protected:
     }
     case eReproducerProviderWorkingDirectory: {
       Expected<std::string> cwd =
-          loader->LoadBuffer<WorkingDirectoryProvider>();
+          repro::GetDirectoryFrom<WorkingDirectoryProvider>(loader);
       if (!cwd) {
         SetError(result, cwd.takeError());
         return false;
       }
       result.AppendMessage(*cwd);
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return true;
+    }
+    case eReproducerProviderHomeDirectory: {
+      Expected<std::string> home =
+          repro::GetDirectoryFrom<HomeDirectoryProvider>(loader);
+      if (!home) {
+        SetError(result, home.takeError());
+        return false;
+      }
+      result.AppendMessage(*home);
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return true;
     }

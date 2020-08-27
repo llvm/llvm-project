@@ -2983,19 +2983,19 @@ define <2 x i64> @v_uaddsat_v2i64(<2 x i64> %lhs, <2 x i64> %rhs) {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v10, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v11, v5
-; GFX10-NEXT:    v_mov_b32_e32 v8, v6
-; GFX10-NEXT:    v_mov_b32_e32 v9, v7
+; GFX10-NEXT:    v_mov_b32_e32 v15, v6
+; GFX10-NEXT:    v_mov_b32_e32 v16, v7
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, v0, v10
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v11, vcc_lo
-; GFX10-NEXT:    v_add_co_u32_e64 v2, vcc_lo, v2, v8
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v3, v9, vcc_lo
+; GFX10-NEXT:    v_add_co_u32_e64 v5, vcc_lo, v2, v15
+; GFX10-NEXT:    v_add_co_ci_u32_e32 v6, vcc_lo, v3, v16, vcc_lo
 ; GFX10-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[0:1], v[10:11]
-; GFX10-NEXT:    v_cmp_lt_u64_e64 s4, v[2:3], v[8:9]
+; GFX10-NEXT:    v_cmp_lt_u64_e64 s4, v[5:6], v[15:16]
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, v0, -1, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, -1, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, -1, s4
-; GFX10-NEXT:    v_cndmask_b32_e64 v3, v3, -1, s4
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, v5, -1, s4
+; GFX10-NEXT:    v_cndmask_b32_e64 v3, v6, -1, s4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %result = call <2 x i64> @llvm.uadd.sat.v2i64(<2 x i64> %lhs, <2 x i64> %rhs)
   ret <2 x i64> %result

@@ -15,7 +15,6 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/Predicate.h"
-#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-defines.h"
@@ -32,6 +31,9 @@
 
 namespace lldb_private {
 class Debugger;
+namespace repro {
+class DataRecorder;
+}
 }
 
 namespace curses {

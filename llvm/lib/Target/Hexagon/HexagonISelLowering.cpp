@@ -3025,7 +3025,7 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   if (Opc == ISD::INLINEASM || Opc == ISD::INLINEASM_BR)
     return LowerINLINEASM(Op, DAG);
 
-  if (isHvxOperation(Op)) {
+  if (isHvxOperation(Op.getNode())) {
     // If HVX lowering returns nothing, try the default lowering.
     if (SDValue V = LowerHvxOperation(Op, DAG))
       return V;
@@ -3132,13 +3132,15 @@ HexagonTargetLowering::ReplaceNodeResults(SDNode *N,
 SDValue
 HexagonTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
       const {
-  SDValue Op(N, 0);
-  if (isHvxOperation(Op)) {
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+  if (isHvxOperation(N)) {
     if (SDValue V = PerformHvxDAGCombine(N, DCI))
       return V;
     return SDValue();
   }
 
+  SDValue Op(N, 0);
   const SDLoc &dl(Op);
   unsigned Opc = Op.getOpcode();
 

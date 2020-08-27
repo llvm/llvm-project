@@ -525,3 +525,5 @@ define i32 @test_invariant_load_scope(i32* %p) {
   %sub = sub i32 %v1, %v2
   ret i32 %sub
 }
+
+; USE_ASSUME: declare void @llvm.assume(i1 noundef)

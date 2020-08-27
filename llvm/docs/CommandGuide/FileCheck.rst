@@ -430,7 +430,7 @@ from ``baz``. To fix this, you could add ``CHECK-NEXT`` matchers for every
    CHECK:      Value:
    CHECK-SAME:        {{ 1$}}
 
-This verifies that the *next* time "``Value:``" appears in the ouput, it has
+This verifies that the *next* time "``Value:``" appears in the output, it has
 the value ``1``.
 
 Note: a "``CHECK-SAME:``" cannot be the first directive in a file.

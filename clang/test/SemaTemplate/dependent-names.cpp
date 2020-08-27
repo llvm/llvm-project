@@ -173,7 +173,7 @@ namespace PR10053 {
 
 
   namespace O {
-    void f(char&); // expected-note {{candidate function not viable}}
+    int f(char&); // expected-note {{candidate function not viable}}
 
     template<typename T> struct C {
       static const int n = f(T()); // expected-error {{no matching function}}

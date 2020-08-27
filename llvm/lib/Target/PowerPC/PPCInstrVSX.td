@@ -769,50 +769,50 @@ let hasSideEffects = 0 in {
   def XSCVDPSXDS : XX2Form<60, 344,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvdpsxds $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (PPCfctidz f64:$XB))]>;
+                      [(set f64:$XT, (PPCany_fctidz f64:$XB))]>;
   let isCodeGenOnly = 1 in
   def XSCVDPSXDSs : XX2Form<60, 344,
                       (outs vssrc:$XT), (ins vssrc:$XB),
                       "xscvdpsxds $XT, $XB", IIC_VecFP,
-                      [(set f32:$XT, (PPCfctidz f32:$XB))]>;
+                      [(set f32:$XT, (PPCany_fctidz f32:$XB))]>;
   def XSCVDPSXWS : XX2Form<60, 88,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvdpsxws $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (PPCfctiwz f64:$XB))]>;
+                      [(set f64:$XT, (PPCany_fctiwz f64:$XB))]>;
   let isCodeGenOnly = 1 in
   def XSCVDPSXWSs : XX2Form<60, 88,
                       (outs vssrc:$XT), (ins vssrc:$XB),
                       "xscvdpsxws $XT, $XB", IIC_VecFP,
-                      [(set f32:$XT, (PPCfctiwz f32:$XB))]>;
+                      [(set f32:$XT, (PPCany_fctiwz f32:$XB))]>;
   def XSCVDPUXDS : XX2Form<60, 328,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvdpuxds $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (PPCfctiduz f64:$XB))]>;
+                      [(set f64:$XT, (PPCany_fctiduz f64:$XB))]>;
   let isCodeGenOnly = 1 in
   def XSCVDPUXDSs : XX2Form<60, 328,
                       (outs vssrc:$XT), (ins vssrc:$XB),
                       "xscvdpuxds $XT, $XB", IIC_VecFP,
-                      [(set f32:$XT, (PPCfctiduz f32:$XB))]>;
+                      [(set f32:$XT, (PPCany_fctiduz f32:$XB))]>;
   def XSCVDPUXWS : XX2Form<60, 72,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvdpuxws $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (PPCfctiwuz f64:$XB))]>;
+                      [(set f64:$XT, (PPCany_fctiwuz f64:$XB))]>;
   let isCodeGenOnly = 1 in
   def XSCVDPUXWSs : XX2Form<60, 72,
                       (outs vssrc:$XT), (ins vssrc:$XB),
                       "xscvdpuxws $XT, $XB", IIC_VecFP,
-                      [(set f32:$XT, (PPCfctiwuz f32:$XB))]>;
+                      [(set f32:$XT, (PPCany_fctiwuz f32:$XB))]>;
   def XSCVSPDP : XX2Form<60, 329,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvspdp $XT, $XB", IIC_VecFP, []>;
   def XSCVSXDDP : XX2Form<60, 376,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvsxddp $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (PPCfcfid f64:$XB))]>;
+                      [(set f64:$XT, (PPCany_fcfid f64:$XB))]>;
   def XSCVUXDDP : XX2Form<60, 360,
                       (outs vsfrc:$XT), (ins vsfrc:$XB),
                       "xscvuxddp $XT, $XB", IIC_VecFP,
-                      [(set f64:$XT, (PPCfcfidu f64:$XB))]>;
+                      [(set f64:$XT, (PPCany_fcfidu f64:$XB))]>;
 
   def XVCVDPSP : XX2Form<60, 393,
                       (outs vsrc:$XT), (ins vsrc:$XB),
@@ -821,7 +821,7 @@ let hasSideEffects = 0 in {
   def XVCVDPSXDS : XX2Form<60, 472,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvdpsxds $XT, $XB", IIC_VecFP,
-                      [(set v2i64:$XT, (fp_to_sint v2f64:$XB))]>;
+                      [(set v2i64:$XT, (any_fp_to_sint v2f64:$XB))]>;
   def XVCVDPSXWS : XX2Form<60, 216,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvdpsxws $XT, $XB", IIC_VecFP,
@@ -829,7 +829,7 @@ let hasSideEffects = 0 in {
   def XVCVDPUXDS : XX2Form<60, 456,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvdpuxds $XT, $XB", IIC_VecFP,
-                      [(set v2i64:$XT, (fp_to_uint v2f64:$XB))]>;
+                      [(set v2i64:$XT, (any_fp_to_uint v2f64:$XB))]>;
   def XVCVDPUXWS : XX2Form<60, 200,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvdpuxws $XT, $XB", IIC_VecFP,
@@ -845,18 +845,18 @@ let hasSideEffects = 0 in {
   def XVCVSPSXWS : XX2Form<60, 152,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvspsxws $XT, $XB", IIC_VecFP,
-                      [(set v4i32:$XT, (fp_to_sint v4f32:$XB))]>;
+                      [(set v4i32:$XT, (any_fp_to_sint v4f32:$XB))]>;
   def XVCVSPUXDS : XX2Form<60, 392,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvspuxds $XT, $XB", IIC_VecFP, []>;
   def XVCVSPUXWS : XX2Form<60, 136,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvspuxws $XT, $XB", IIC_VecFP,
-                      [(set v4i32:$XT, (fp_to_uint v4f32:$XB))]>;
+                      [(set v4i32:$XT, (any_fp_to_uint v4f32:$XB))]>;
   def XVCVSXDDP : XX2Form<60, 504,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvsxddp $XT, $XB", IIC_VecFP,
-                      [(set v2f64:$XT, (sint_to_fp v2i64:$XB))]>;
+                      [(set v2f64:$XT, (any_sint_to_fp v2i64:$XB))]>;
   def XVCVSXDSP : XX2Form<60, 440,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvsxdsp $XT, $XB", IIC_VecFP,
@@ -868,11 +868,11 @@ let hasSideEffects = 0 in {
   def XVCVSXWSP : XX2Form<60, 184,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvsxwsp $XT, $XB", IIC_VecFP,
-                      [(set v4f32:$XT, (sint_to_fp v4i32:$XB))]>;
+                      [(set v4f32:$XT, (any_sint_to_fp v4i32:$XB))]>;
   def XVCVUXDDP : XX2Form<60, 488,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvuxddp $XT, $XB", IIC_VecFP,
-                      [(set v2f64:$XT, (uint_to_fp v2i64:$XB))]>;
+                      [(set v2f64:$XT, (any_uint_to_fp v2i64:$XB))]>;
   def XVCVUXDSP : XX2Form<60, 424,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvuxdsp $XT, $XB", IIC_VecFP,
@@ -884,7 +884,7 @@ let hasSideEffects = 0 in {
   def XVCVUXWSP : XX2Form<60, 168,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvuxwsp $XT, $XB", IIC_VecFP,
-                      [(set v4f32:$XT, (uint_to_fp v4i32:$XB))]>;
+                      [(set v4f32:$XT, (any_uint_to_fp v4i32:$XB))]>;
 
   // Rounding Instructions respecting current rounding mode
   def XSRDPIC : XX2Form<60, 107,
@@ -1271,11 +1271,11 @@ let Predicates = [HasVSX, HasP8Vector] in {
   def XSCVSXDSP : XX2Form<60, 312,
                       (outs vssrc:$XT), (ins vsfrc:$XB),
                       "xscvsxdsp $XT, $XB", IIC_VecFP,
-                      [(set f32:$XT, (PPCfcfids f64:$XB))]>;
+                      [(set f32:$XT, (PPCany_fcfids f64:$XB))]>;
   def XSCVUXDSP : XX2Form<60, 296,
                       (outs vssrc:$XT), (ins vsfrc:$XB),
                       "xscvuxdsp $XT, $XB", IIC_VecFP,
-                      [(set f32:$XT, (PPCfcfidus f64:$XB))]>;
+                      [(set f32:$XT, (PPCany_fcfidus f64:$XB))]>;
 
   // Conversions between vector and scalar single precision
   def XSCVDPSPN : XX2Form<60, 267, (outs vsrc:$XT), (ins vssrc:$XB),
@@ -1479,9 +1479,8 @@ let Predicates = [HasVSX, HasP9Vector] in {
                                           f128:$vB))]>;
   }
 
-  // FIXME: Setting the hasSideEffects flag here to match current behaviour.
   // Truncate & Convert QP -> (Un)Signed (D)Word (dword[1] is set to zero)
-  let hasSideEffects = 1 in {
+  let mayRaiseFPException = 1 in {
     def XSCVQPSDZ : X_VT5_XO5_VB5<63, 25, 836, "xscvqpsdz", []>;
     def XSCVQPSWZ : X_VT5_XO5_VB5<63,  9, 836, "xscvqpswz", []>;
     def XSCVQPUDZ : X_VT5_XO5_VB5<63, 17, 836, "xscvqpudz", []>;
@@ -3572,25 +3571,25 @@ def : Pat<(fneg (PPCfnmsub f128:$A, f128:$B, f128:$C)),
 def : Pat<(PPCfnmsub f128:$A, f128:$B, (fneg f128:$C)),
           (XSNMADDQP $C, $A, $B)>;
 
-def : Pat<(f128 (sint_to_fp i64:$src)),
+def : Pat<(f128 (any_sint_to_fp i64:$src)),
           (f128 (XSCVSDQP (COPY_TO_REGCLASS $src, VFRC)))>;
-def : Pat<(f128 (sint_to_fp (i64 (PPCmfvsr f64:$src)))),
+def : Pat<(f128 (any_sint_to_fp (i64 (PPCmfvsr f64:$src)))),
           (f128 (XSCVSDQP $src))>;
-def : Pat<(f128 (sint_to_fp (i32 (PPCmfvsr f64:$src)))),
+def : Pat<(f128 (any_sint_to_fp (i32 (PPCmfvsr f64:$src)))),
           (f128 (XSCVSDQP (VEXTSW2Ds $src)))>;
-def : Pat<(f128 (uint_to_fp i64:$src)),
+def : Pat<(f128 (any_uint_to_fp i64:$src)),
           (f128 (XSCVUDQP (COPY_TO_REGCLASS $src, VFRC)))>;
-def : Pat<(f128 (uint_to_fp (i64 (PPCmfvsr f64:$src)))),
+def : Pat<(f128 (any_uint_to_fp (i64 (PPCmfvsr f64:$src)))),
           (f128 (XSCVUDQP $src))>;
 
 // Convert (Un)Signed Word -> QP.
-def : Pat<(f128 (sint_to_fp i32:$src)),
+def : Pat<(f128 (any_sint_to_fp i32:$src)),
           (f128 (XSCVSDQP (MTVSRWA $src)))>;
-def : Pat<(f128 (sint_to_fp (i32 (load xoaddr:$src)))),
+def : Pat<(f128 (any_sint_to_fp (i32 (load xoaddr:$src)))),
           (f128 (XSCVSDQP (LIWAX xoaddr:$src)))>;
-def : Pat<(f128 (uint_to_fp i32:$src)),
+def : Pat<(f128 (any_uint_to_fp i32:$src)),
           (f128 (XSCVUDQP (MTVSRWZ $src)))>;
-def : Pat<(f128 (uint_to_fp (i32 (load xoaddr:$src)))),
+def : Pat<(f128 (any_uint_to_fp (i32 (load xoaddr:$src)))),
           (f128 (XSCVUDQP (LIWZX xoaddr:$src)))>;
 
 // Pattern for matching Vector HP -> Vector SP intrinsic. Defined as a
@@ -3764,11 +3763,11 @@ def : Pat<(f128 (uint_to_fp ScalarLoads.ZELi8)),
           (f128 (XSCVUDQP (LXSIBZX xoaddr:$src)))>;
 
 // Truncate & Convert QP -> (Un)Signed (D)Word.
-def : Pat<(i64 (fp_to_sint f128:$src)), (i64 (MFVRD (XSCVQPSDZ $src)))>;
-def : Pat<(i64 (fp_to_uint f128:$src)), (i64 (MFVRD (XSCVQPUDZ $src)))>;
-def : Pat<(i32 (fp_to_sint f128:$src)),
+def : Pat<(i64 (any_fp_to_sint f128:$src)), (i64 (MFVRD (XSCVQPSDZ $src)))>;
+def : Pat<(i64 (any_fp_to_uint f128:$src)), (i64 (MFVRD (XSCVQPUDZ $src)))>;
+def : Pat<(i32 (any_fp_to_sint f128:$src)),
           (i32 (MFVSRWZ (COPY_TO_REGCLASS (XSCVQPSWZ $src), VFRC)))>;
-def : Pat<(i32 (fp_to_uint f128:$src)),
+def : Pat<(i32 (any_fp_to_uint f128:$src)),
           (i32 (MFVSRWZ (COPY_TO_REGCLASS (XSCVQPUWZ $src), VFRC)))>;
 
 // Instructions for store(fptosi).

@@ -32,12 +32,12 @@ isl_ctx *isl_constraint_get_ctx(__isl_keep isl_constraint *c)
 	return c ? isl_local_space_get_ctx(c->ls) : NULL;
 }
 
-static isl_size n(struct isl_constraint *c, enum isl_dim_type type)
+static isl_size n(__isl_keep isl_constraint *c, enum isl_dim_type type)
 {
 	return isl_local_space_dim(c->ls, type);
 }
 
-static unsigned offset(struct isl_constraint *c, enum isl_dim_type type)
+static unsigned offset(__isl_keep isl_constraint *c, enum isl_dim_type type)
 {
 	return isl_local_space_offset(c->ls, type);
 }
@@ -85,8 +85,8 @@ __isl_give isl_constraint *isl_constraint_alloc(int eq,
 	return isl_constraint_alloc_vec(eq, ls, v);
 }
 
-struct isl_constraint *isl_basic_map_constraint(struct isl_basic_map *bmap,
-	isl_int **line)
+__isl_give isl_constraint *isl_basic_map_constraint(
+	__isl_take isl_basic_map *bmap, isl_int **line)
 {
 	int eq;
 	isl_size dim;
@@ -119,8 +119,8 @@ error:
 	return NULL;
 }
 
-struct isl_constraint *isl_basic_set_constraint(struct isl_basic_set *bset,
-	isl_int **line)
+__isl_give isl_constraint *isl_basic_set_constraint(
+	__isl_take isl_basic_set *bset, isl_int **line)
 {
 	return isl_basic_map_constraint(bset_to_bmap(bset), line);
 }
@@ -137,7 +137,7 @@ __isl_give isl_constraint *isl_constraint_alloc_inequality(
 	return isl_constraint_alloc(0, ls);
 }
 
-struct isl_constraint *isl_constraint_dup(struct isl_constraint *c)
+__isl_give isl_constraint *isl_constraint_dup(__isl_keep isl_constraint *c)
 {
 	if (!c)
 		return NULL;
@@ -146,7 +146,7 @@ struct isl_constraint *isl_constraint_dup(struct isl_constraint *c)
 						isl_vec_copy(c->v));
 }
 
-struct isl_constraint *isl_constraint_cow(struct isl_constraint *c)
+__isl_give isl_constraint *isl_constraint_cow(__isl_take isl_constraint *c)
 {
 	if (!c)
 		return NULL;
@@ -157,7 +157,8 @@ struct isl_constraint *isl_constraint_cow(struct isl_constraint *c)
 	return isl_constraint_dup(c);
 }
 
-struct isl_constraint *isl_constraint_copy(struct isl_constraint *constraint)
+__isl_give isl_constraint *isl_constraint_copy(
+	__isl_keep isl_constraint *constraint)
 {
 	if (!constraint)
 		return NULL;
@@ -301,8 +302,8 @@ __isl_give isl_constraint_list *isl_basic_set_get_constraint_list(
 	return isl_basic_map_get_constraint_list(bset);
 }
 
-int isl_constraint_is_equal(struct isl_constraint *constraint1,
-	struct isl_constraint *constraint2)
+int isl_constraint_is_equal(__isl_keep isl_constraint *constraint1,
+	__isl_keep isl_constraint *constraint2)
 {
 	int equal;
 
@@ -316,8 +317,8 @@ int isl_constraint_is_equal(struct isl_constraint *constraint1,
 	return isl_vec_is_equal(constraint1->v, constraint2->v);
 }
 
-struct isl_basic_map *isl_basic_map_add_constraint(
-	struct isl_basic_map *bmap, struct isl_constraint *constraint)
+__isl_give isl_basic_map *isl_basic_map_add_constraint(
+	__isl_take isl_basic_map *bmap, __isl_take isl_constraint *constraint)
 {
 	isl_ctx *ctx;
 	isl_space *space;
@@ -341,8 +342,8 @@ error:
 	return NULL;
 }
 
-struct isl_basic_set *isl_basic_set_add_constraint(
-	struct isl_basic_set *bset, struct isl_constraint *constraint)
+__isl_give isl_basic_set *isl_basic_set_add_constraint(
+	__isl_take isl_basic_set *bset, __isl_take isl_constraint *constraint)
 {
 	return bset_from_bmap(isl_basic_map_add_constraint(bset_to_bmap(bset),
 							    constraint));
@@ -488,7 +489,7 @@ __isl_give isl_val *isl_constraint_get_constant_val(
 	return isl_val_int_from_isl_int(ctx, constraint->v->el[0]);
 }
 
-void isl_constraint_get_coefficient(struct isl_constraint *constraint,
+void isl_constraint_get_coefficient(__isl_keep isl_constraint *constraint,
 	enum isl_dim_type type, int pos, isl_int *v)
 {
 	if (isl_constraint_check_range(constraint, type, pos, 1) < 0)
@@ -635,7 +636,8 @@ __isl_give isl_constraint *isl_constraint_set_coefficient_si(
 	return constraint;
 }
 
-struct isl_constraint *isl_constraint_negate(struct isl_constraint *constraint)
+__isl_give isl_constraint *isl_constraint_negate(
+	__isl_take isl_constraint *constraint)
 {
 	isl_ctx *ctx;
 
@@ -1249,6 +1251,7 @@ __isl_give isl_aff *isl_constraint_get_bound(
 		isl_seq_neg(aff->v->el + 1, constraint->v->el, aff->v->size - 1);
 	isl_int_set_si(aff->v->el[1 + pos], 0);
 	isl_int_abs(aff->v->el[0], constraint->v->el[pos]);
+	aff = isl_aff_normalize(aff);
 
 	return aff;
 }

@@ -4,9 +4,8 @@
 
 # REQUIRES: x86
 
-# RUN: rm -rf %t
 # RUN: split-file %s %t
-# RUN: llvm-mc --triple x86_64-pc-linux %t/asm --filetype=obj > %t.o
+# RUN: llvm-mc --triple x86_64-pc-linux %t/asm --filetype=obj -o %t.o
 # RUN: %lldb -o "settings set interpreter.stop-command-source-on-error false" \
 # RUN:   -s %t/commands -o exit %t.o 2>&1 | FileCheck %s
 
@@ -29,6 +28,13 @@ expr b1
 # CHECK-LABEL: expr b1
 # CHECK: (B::B1) $0 = (ptr = 0x00000000baadf00d)
 
+target var c1
+# CHECK-LABEL: target var c1
+# CHECK: (C::C1) c1 = 424742
+
+expr c1
+# CHECK-LABEL: expr c1
+# CHECK: (C::C1) $1 = 424742
 #--- asm
         .text
 _ZN1AC2Ev:
@@ -43,6 +49,8 @@ a:
 
 b1:
         .quad   0xbaadf00d
+c1:
+        .long   42474247
 
         .section        .debug_abbrev,"",@progbits
         .byte   1                               # Abbreviation Code
@@ -119,6 +127,17 @@ b1:
         .byte   19                              # DW_FORM_ref4
         .byte   0                               # EOM(1)
         .byte   0                               # EOM(2)
+        .byte   9                               # Abbreviation Code
+        .byte   36                              # DW_TAG_base_type
+        .byte   0                               # DW_CHILDREN_no
+        .byte   3                               # DW_AT_name
+        .byte   8                               # DW_FORM_string
+        .byte   62                              # DW_AT_encoding
+        .byte   11                              # DW_FORM_data1
+        .byte   11                              # DW_AT_byte_size
+        .byte   11                              # DW_FORM_data1
+        .byte   0                               # EOM(1)
+        .byte   0                               # EOM(2)
         .byte   10                              # Abbreviation Code
         .byte   46                              # DW_TAG_subprogram
         .byte   1                               # DW_CHILDREN_yes
@@ -145,6 +164,15 @@ b1:
         .byte   19                              # DW_FORM_ref4
         .byte   52                              # DW_AT_artificial
         .byte   25                              # DW_FORM_flag_present
+        .byte   0                               # EOM(1)
+        .byte   0                               # EOM(2)
+        .byte   12                              # Abbreviation Code
+        .byte   22                              # DW_TAG_typedef
+        .byte   0                               # DW_CHILDREN_no
+        .byte   73                              # DW_AT_type
+        .byte   19                              # DW_FORM_ref4
+        .byte   3                               # DW_AT_name
+        .byte   8                               # DW_FORM_string
         .byte   0                               # EOM(1)
         .byte   0                               # EOM(2)
         .byte   0                               # EOM(3)
@@ -223,7 +251,6 @@ b1:
 .LB1:
         .byte   6                               # Abbrev [6] DW_TAG_class_type
         .asciz  "B1"                            # DW_AT_name
-                                                # DW_AT_declaration
         .byte   7                               # Abbrev [5] 0x58:0xc DW_TAG_member
         .asciz  "ptr"                           # DW_AT_name
         .long   .LAptr                          # DW_AT_type
@@ -237,6 +264,34 @@ b1:
         .byte   9                               # DW_AT_location
         .byte   3
         .quad   b1
+
+# Case 3: A typedef in DW_AT_declaration struct.
+# C++ equivalent:
+# struct C {
+#   virtual ~C(); // not defined here
+#   typedef int C1;
+# };
+# C::C1 c1;
+.Lint:
+        .byte   9                               # Abbrev [9] DW_TAG_base_type
+        .asciz  "int"                           # DW_AT_name
+        .byte   5                               # DW_AT_encoding
+        .byte   4                               # DW_AT_byte_size
+        .byte   3                               # Abbrev [3] DW_TAG_structure_type
+        .asciz  "C"                             # DW_AT_name
+                                                # DW_AT_declaration
+.LC1:
+        .byte   12                              # Abbrev [12] DW_TAG_typedef
+        .long   .Lint-.Lcu_begin0               # DW_AT_type
+        .asciz  "C1"                            # DW_AT_name
+        .byte   0                               # End Of Children Mark
+
+        .byte   2                               # Abbrev [2] DW_TAG_variable
+        .asciz  "c1"                            # DW_AT_name
+        .long   .LC1-.Lcu_begin0                # DW_AT_type
+        .byte   9                               # DW_AT_location
+        .byte   3
+        .quad   c1
 
         .byte   0                               # End Of Children Mark
 .Ldebug_info_end0:

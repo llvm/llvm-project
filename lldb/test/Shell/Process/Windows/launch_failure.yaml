@@ -4,7 +4,7 @@
 # REQUIRES: system-windows
 # REQUIRES: native && target-x86_64
 
-# RUN: yaml2obj %s > %t.exe
+# RUN: yaml2obj %s -o %t.exe
 # RUN: %lldb %t.exe -o run 2>&1 | FileCheck %s
 
 # CHECK: error: unknown error

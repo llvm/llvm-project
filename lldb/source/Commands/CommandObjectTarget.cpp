@@ -3421,9 +3421,34 @@ protected:
         continue;
 
       result.GetOutputStream().Printf(
-          "UNWIND PLANS for %s`%s (start addr 0x%" PRIx64 ")\n\n",
+          "UNWIND PLANS for %s`%s (start addr 0x%" PRIx64 ")\n",
           sc.module_sp->GetPlatformFileSpec().GetFilename().AsCString(),
           funcname.AsCString(), start_addr);
+
+      Args args;
+      target->GetUserSpecifiedTrapHandlerNames(args);
+      size_t count = args.GetArgumentCount();
+      for (size_t i = 0; i < count; i++) {
+        const char *trap_func_name = args.GetArgumentAtIndex(i);
+        if (strcmp(funcname.GetCString(), trap_func_name) == 0)
+          result.GetOutputStream().Printf(
+              "This function is "
+              "treated as a trap handler function via user setting.\n");
+      }
+      PlatformSP platform_sp(target->GetPlatform());
+      if (platform_sp) {
+        const std::vector<ConstString> trap_handler_names(
+            platform_sp->GetTrapHandlerSymbolNames());
+        for (ConstString trap_name : trap_handler_names) {
+          if (trap_name == funcname) {
+            result.GetOutputStream().Printf(
+                "This function's "
+                "name is listed by the platform as a trap handler.\n");
+          }
+        }
+      }
+
+      result.GetOutputStream().Printf("\n");
 
       UnwindPlanSP non_callsite_unwind_plan =
           func_unwinders_sp->GetUnwindPlanAtNonCallSite(*target, *thread);
@@ -4725,8 +4750,6 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    if (request.GetCursorIndex())
-      return;
     CommandCompletions::InvokeCommonCompletionCallbacks(
         GetCommandInterpreter(), CommandCompletions::eStopHookIDCompletion,
         request, nullptr);

@@ -81,11 +81,6 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   equivalenceBlock_.clear();
 }
 
-static bool InCommonBlock(const Symbol &symbol) {
-  const auto *details{symbol.detailsIf<ObjectEntityDetails>()};
-  return details && details->commonBlock();
-}
-
 void ComputeOffsetsHelper::DoScope(Scope &scope) {
   if (scope.symbol() && scope.IsParameterizedDerivedType()) {
     return; // only process instantiations of parameterized derived types
@@ -300,9 +295,8 @@ std::size_t ComputeOffsetsHelper::ComputeOffset(
 }
 
 void ComputeOffsetsHelper::DoSymbol(Symbol &symbol) {
-  if (symbol.has<TypeParamDetails>() || symbol.has<SubprogramDetails>() ||
-      symbol.has<UseDetails>() || symbol.has<ProcBindingDetails>()) {
-    return; // these have type but no size
+  if (!symbol.has<ObjectEntityDetails>() && !symbol.has<ProcEntityDetails>()) {
+    return;
   }
   SizeAndAlignment s{GetSizeAndAlignment(symbol)};
   if (s.size == 0) {
@@ -329,7 +323,7 @@ auto ComputeOffsetsHelper::GetSizeAndAlignment(const Symbol &symbol)
 auto ComputeOffsetsHelper::GetElementSize(const Symbol &symbol)
     -> SizeAndAlignment {
   const DeclTypeSpec *type{symbol.GetType()};
-  if (!type) {
+  if (!evaluate::DynamicType::From(type).has_value()) {
     return {};
   }
   // TODO: The size of procedure pointers is not yet known

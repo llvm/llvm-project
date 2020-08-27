@@ -2221,26 +2221,63 @@ QualType Sema::BuildExtIntType(bool IsUnsigned, Expr *BitWidth,
   return Context.getExtIntType(IsUnsigned, NumBits);
 }
 
-/// Check whether the specified array size makes the array type a VLA.  If so,
-/// return true, if not, return the size of the array in SizeVal.
-static bool isArraySizeVLA(Sema &S, Expr *ArraySize, llvm::APSInt &SizeVal) {
+/// Check whether the specified array bound can be evaluated using the relevant
+/// language rules. If so, returns the possibly-converted expression and sets
+/// SizeVal to the size. If not, but the expression might be a VLA bound,
+/// returns ExprResult(). Otherwise, produces a diagnostic and returns
+/// ExprError().
+static ExprResult checkArraySize(Sema &S, Expr *&ArraySize,
+                                 llvm::APSInt &SizeVal, unsigned VLADiag,
+                                 bool VLAIsError) {
+  if (S.getLangOpts().CPlusPlus14 &&
+      (VLAIsError ||
+       !ArraySize->getType()->isIntegralOrUnscopedEnumerationType())) {
+    // C++14 [dcl.array]p1:
+    //   The constant-expression shall be a converted constant expression of
+    //   type std::size_t.
+    //
+    // Don't apply this rule if we might be forming a VLA: in that case, we
+    // allow non-constant expressions and constant-folding. We only need to use
+    // the converted constant expression rules (to properly convert the source)
+    // when the source expression is of class type.
+    return S.CheckConvertedConstantExpression(
+        ArraySize, S.Context.getSizeType(), SizeVal, Sema::CCEK_ArrayBound);
+  }
+
   // If the size is an ICE, it certainly isn't a VLA. If we're in a GNU mode
   // (like gnu99, but not c99) accept any evaluatable value as an extension.
   class VLADiagnoser : public Sema::VerifyICEDiagnoser {
   public:
-    VLADiagnoser() : Sema::VerifyICEDiagnoser(true) {}
+    unsigned VLADiag;
+    bool VLAIsError;
+    bool IsVLA = false;
 
-    void diagnoseNotICE(Sema &S, SourceLocation Loc, SourceRange SR) override {
+    VLADiagnoser(unsigned VLADiag, bool VLAIsError)
+        : VLADiag(VLADiag), VLAIsError(VLAIsError) {}
+
+    Sema::SemaDiagnosticBuilder diagnoseNotICEType(Sema &S, SourceLocation Loc,
+                                                   QualType T) override {
+      return S.Diag(Loc, diag::err_array_size_non_int) << T;
     }
 
-    void diagnoseFold(Sema &S, SourceLocation Loc, SourceRange SR) override {
-      S.Diag(Loc, diag::ext_vla_folded_to_constant) << SR;
+    Sema::SemaDiagnosticBuilder diagnoseNotICE(Sema &S,
+                                               SourceLocation Loc) override {
+      IsVLA = !VLAIsError;
+      return S.Diag(Loc, VLADiag);
     }
-  } Diagnoser;
 
-  return S.VerifyIntegerConstantExpression(ArraySize, &SizeVal, Diagnoser,
-                                           S.LangOpts.GNUMode ||
-                                           S.LangOpts.OpenCL).isInvalid();
+    Sema::SemaDiagnosticBuilder diagnoseFold(Sema &S,
+                                             SourceLocation Loc) override {
+      return S.Diag(Loc, diag::ext_vla_folded_to_constant);
+    }
+  } Diagnoser(VLADiag, VLAIsError);
+
+  ExprResult R = S.VerifyIntegerConstantExpression(
+      ArraySize, &SizeVal, Diagnoser,
+      (S.LangOpts.GNUMode || S.LangOpts.OpenCL));
+  if (Diagnoser.IsVLA)
+    return ExprResult();
+  return R;
 }
 
 /// Build an array type.
@@ -2352,68 +2389,95 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
     return QualType();
   }
 
+  // VLAs always produce at least a -Wvla diagnostic, sometimes an error.
+  unsigned VLADiag;
+  bool VLAIsError;
+  if (getLangOpts().OpenCL) {
+    // OpenCL v1.2 s6.9.d: variable length arrays are not supported.
+    VLADiag = diag::err_opencl_vla;
+    VLAIsError = true;
+  } else if (getLangOpts().C99) {
+    VLADiag = diag::warn_vla_used;
+    VLAIsError = false;
+  } else if (isSFINAEContext()) {
+    VLADiag = diag::err_vla_in_sfinae;
+    VLAIsError = true;
+  } else {
+    VLADiag = diag::ext_vla;
+    VLAIsError = false;
+  }
+
   llvm::APSInt ConstVal(Context.getTypeSize(Context.getSizeType()));
   if (!ArraySize) {
-    if (ASM == ArrayType::Star)
+    if (ASM == ArrayType::Star) {
+      Diag(Loc, VLADiag);
+      if (VLAIsError)
+        return QualType();
+
       T = Context.getVariableArrayType(T, nullptr, ASM, Quals, Brackets);
-    else
+    } else {
       T = Context.getIncompleteArrayType(T, ASM, Quals);
+    }
   } else if (ArraySize->isTypeDependent() || ArraySize->isValueDependent()) {
     T = Context.getDependentSizedArrayType(T, ArraySize, ASM, Quals, Brackets);
-  } else if ((!T->isDependentType() && !T->isIncompleteType() &&
-              !T->isConstantSizeType()) ||
-             isArraySizeVLA(*this, ArraySize, ConstVal)) {
-    // Even in C++11, don't allow contextual conversions in the array bound
-    // of a VLA.
-    if (getLangOpts().CPlusPlus11 &&
-        !ArraySize->getType()->isIntegralOrUnscopedEnumerationType()) {
-      Diag(ArraySize->getBeginLoc(), diag::err_array_size_non_int)
-          << ArraySize->getType() << ArraySize->getSourceRange();
-      return QualType();
-    }
-
-    // C99: an array with an element type that has a non-constant-size is a VLA.
-    // C99: an array with a non-ICE size is a VLA.  We accept any expression
-    // that we can fold to a non-zero positive value as an extension.
-    T = Context.getVariableArrayType(T, ArraySize, ASM, Quals, Brackets);
   } else {
-    // C99 6.7.5.2p1: If the expression is a constant expression, it shall
-    // have a value greater than zero.
-    if (ConstVal.isSigned() && ConstVal.isNegative()) {
-      if (Entity)
-        Diag(ArraySize->getBeginLoc(), diag::err_decl_negative_array_size)
-            << getPrintableNameForEntity(Entity) << ArraySize->getSourceRange();
-      else
-        Diag(ArraySize->getBeginLoc(), diag::err_typecheck_negative_array_size)
-            << ArraySize->getSourceRange();
+    ExprResult R =
+        checkArraySize(*this, ArraySize, ConstVal, VLADiag, VLAIsError);
+    if (R.isInvalid())
       return QualType();
-    }
-    if (ConstVal == 0) {
-      // GCC accepts zero sized static arrays. We allow them when
-      // we're not in a SFINAE context.
-      Diag(ArraySize->getBeginLoc(), isSFINAEContext()
-                                         ? diag::err_typecheck_zero_array_size
-                                         : diag::ext_typecheck_zero_array_size)
-          << ArraySize->getSourceRange();
-    } else if (!T->isDependentType() && !T->isVariablyModifiedType() &&
-               !T->isIncompleteType() && !T->isUndeducedType()) {
+
+    if (!R.isUsable()) {
+      // C99: an array with a non-ICE size is a VLA. We accept any expression
+      // that we can fold to a non-zero positive value as a non-VLA as an
+      // extension.
+      T = Context.getVariableArrayType(T, ArraySize, ASM, Quals, Brackets);
+    } else if (!T->isDependentType() && !T->isIncompleteType() &&
+               !T->isConstantSizeType()) {
+      // C99: an array with an element type that has a non-constant-size is a
+      // VLA.
+      // FIXME: Add a note to explain why this isn't a VLA.
+      Diag(Loc, VLADiag);
+      if (VLAIsError)
+        return QualType();
+      T = Context.getVariableArrayType(T, ArraySize, ASM, Quals, Brackets);
+    } else {
+      // C99 6.7.5.2p1: If the expression is a constant expression, it shall
+      // have a value greater than zero.
+      // In C++, this follows from narrowing conversions being disallowed.
+      if (ConstVal.isSigned() && ConstVal.isNegative()) {
+        if (Entity)
+          Diag(ArraySize->getBeginLoc(), diag::err_decl_negative_array_size)
+              << getPrintableNameForEntity(Entity)
+              << ArraySize->getSourceRange();
+        else
+          Diag(ArraySize->getBeginLoc(),
+               diag::err_typecheck_negative_array_size)
+              << ArraySize->getSourceRange();
+        return QualType();
+      }
+      if (ConstVal == 0) {
+        // GCC accepts zero sized static arrays. We allow them when
+        // we're not in a SFINAE context.
+        Diag(ArraySize->getBeginLoc(),
+             isSFINAEContext() ? diag::err_typecheck_zero_array_size
+                               : diag::ext_typecheck_zero_array_size)
+            << ArraySize->getSourceRange();
+      }
+
       // Is the array too large?
-      unsigned ActiveSizeBits
-        = ConstantArrayType::getNumAddressingBits(Context, T, ConstVal);
+      unsigned ActiveSizeBits =
+          (!T->isDependentType() && !T->isVariablyModifiedType() &&
+           !T->isIncompleteType() && !T->isUndeducedType())
+              ? ConstantArrayType::getNumAddressingBits(Context, T, ConstVal)
+              : ConstVal.getActiveBits();
       if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context)) {
         Diag(ArraySize->getBeginLoc(), diag::err_array_too_large)
             << ConstVal.toString(10) << ArraySize->getSourceRange();
         return QualType();
       }
+
+      T = Context.getConstantArrayType(T, ConstVal, ArraySize, ASM, Quals);
     }
-
-    T = Context.getConstantArrayType(T, ConstVal, ArraySize, ASM, Quals);
-  }
-
-  // OpenCL v1.2 s6.9.d: variable length arrays are not supported.
-  if (getLangOpts().OpenCL && T->isVariableArrayType()) {
-    Diag(Loc, diag::err_opencl_vla);
-    return QualType();
   }
 
   if (T->isVariableArrayType() && !Context.getTargetInfo().isVLASupported()) {
@@ -2426,26 +2490,12 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
                 : CFT_InvalidTarget);
   }
 
-  // If this is not C99, extwarn about VLA's and C99 array size modifiers.
-  if (!getLangOpts().C99) {
-    if (T->isVariableArrayType()) {
-      // Prohibit the use of VLAs during template argument deduction.
-      if (isSFINAEContext()) {
-        Diag(Loc, diag::err_vla_in_sfinae);
-        return QualType();
-      }
-      // Just extwarn about VLAs.
-      else
-        Diag(Loc, diag::ext_vla);
-    } else if (ASM != ArrayType::Normal || Quals != 0)
-      Diag(Loc,
-           getLangOpts().CPlusPlus? diag::err_c99_array_usage_cxx
-                                  : diag::ext_c99_array_usage) << ASM;
-  }
-
-  if (T->isVariableArrayType()) {
-    // Warn about VLAs for -Wvla.
-    Diag(Loc, diag::warn_vla_used);
+  // If this is not C99, diagnose array size modifiers on non-VLAs.
+  if (!getLangOpts().C99 && !T->isVariableArrayType() &&
+      (ASM != ArrayType::Normal || Quals != 0)) {
+    Diag(Loc, getLangOpts().CPlusPlus ? diag::err_c99_array_usage_cxx
+                                      : diag::ext_c99_array_usage)
+        << ASM;
   }
 
   // OpenCL v2.0 s6.12.5 - Arrays of blocks are not supported.

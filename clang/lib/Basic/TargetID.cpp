@@ -98,7 +98,7 @@ parseTargetIDWithFormatCheckingOnly(llvm::StringRef TargetID,
     Features = Splits.second;
   }
   return Processor;
-};
+}
 
 llvm::Optional<llvm::StringRef>
 parseTargetID(const llvm::Triple &T, llvm::StringRef TargetID,
@@ -123,7 +123,7 @@ parseTargetID(const llvm::Triple &T, llvm::StringRef TargetID,
       return llvm::None;
 
   return Processor;
-};
+}
 
 // A canonical target ID is a target ID containing a canonical processor name
 // and features in alphabetical order.

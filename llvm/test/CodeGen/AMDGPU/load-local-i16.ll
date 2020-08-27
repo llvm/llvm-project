@@ -232,8 +232,10 @@ define amdgpu_kernel void @local_sextload_v2i16_to_v2i32(<2 x i32> addrspace(3)*
 ; SICIVI: s_mov_b32 m0
 
 ; GCN: ds_read_b64
-; GCN-DAG: ds_write_b32
-; GCN-DAG: ds_write_b64
+; SI-DAG: ds_write_b32
+; SI-DAG: ds_write_b64
+; CIVI-DAG: ds_write_b96
+; GFX9-DAG: ds_write_b96
 
 ; EG: LDS_USHORT_READ_RET
 ; EG: LDS_USHORT_READ_RET
@@ -251,8 +253,10 @@ entry:
 ; SICIVI: s_mov_b32 m0
 
 ; GCN: ds_read_b64
-; GCN-DAG: ds_write_b32
-; GCN-DAG: ds_write_b64
+; SI-DAG: ds_write_b32
+; SI-DAG: ds_write_b64
+; CIVI-DAG: ds_write_b96
+; GFX9-DAG: ds_write_b96
 
 ; EG: LDS_USHORT_READ_RET
 ; EG: LDS_USHORT_READ_RET

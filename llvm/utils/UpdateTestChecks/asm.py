@@ -78,7 +78,9 @@ ASM_FUNCTION_PPC_RE = re.compile(
     flags=(re.M | re.S))
 
 ASM_FUNCTION_RISCV_RE = re.compile(
-    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n(?:\s*\.?Lfunc_begin[^:\n]*:\n)?[^:]*?'
+    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n'
+    r'(?:\s*\.?L(?P=func)\$local:\n)?'  # optional .L<func>$local: due to -fno-semantic-interposition
+    r'(?:\s*\.?Lfunc_begin[^:\n]*:\n)?[^:]*?'
     r'(?P<body>^##?[ \t]+[^:]+:.*?)\s*'
     r'.Lfunc_end[0-9]+:\n',
     flags=(re.M | re.S))

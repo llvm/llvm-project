@@ -80,7 +80,7 @@ void derefOnSwappedNullPtr() {
 void derefOnStdSwappedNullPtr() {
   std::unique_ptr<A> P; // expected-note {{Default constructed smart pointer 'P' is null}}
   std::unique_ptr<A> PNull; // expected-note {{Default constructed smart pointer 'PNull' is null}}
-  std::swap(P, PNull); // expected-note@Inputs/system-header-simulator-cxx.h:978 {{Swapped null smart pointer 'PNull' with smart pointer 'P'}}
+  std::swap(P, PNull); // expected-note@Inputs/system-header-simulator-cxx.h:979 {{Swapped null smart pointer 'PNull' with smart pointer 'P'}}
   // expected-note@-1 {{Calling 'swap<A>'}}
   // expected-note@-2 {{Returning from 'swap<A>'}}
   P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
@@ -109,10 +109,64 @@ void noNoteTagsForNonInterestingRegion() {
   // expected-note@-1{{Dereference of null smart pointer 'P'}}
 }
 
-void noNoteTagsForNonMatchingBugType() {
-  std::unique_ptr<A> P; // No note.
-  std::unique_ptr<A> P1; // No note.
-  P1 = std::move(P); // expected-note {{Smart pointer 'P' of type 'std::unique_ptr' is reset to null when moved from}}
-  P->foo(); // expected-warning {{Dereference of null smart pointer 'P' of type 'std::unique_ptr' [cplusplus.Move]}}
-  // expected-note@-1 {{Dereference of null smart pointer 'P' of type 'std::unique_ptr'}}
+void derefOnRawPtrFromGetOnNullPtr() {
+  std::unique_ptr<A> P; // FIXME: add note "Default constructed smart pointer 'P' is null"
+  P.get()->foo(); // expected-warning {{Called C++ object pointer is null [core.CallAndMessage]}}
+  // expected-note@-1 {{Called C++ object pointer is null}}
+}
+
+void derefOnRawPtrFromGetOnValidPtr() {
+  std::unique_ptr<A> P(new A());
+  P.get()->foo(); // No warning.
+}
+
+void derefOnRawPtrFromGetOnUnknownPtr(std::unique_ptr<A> P) {
+  P.get()->foo(); // No warning.
+}
+
+void derefOnMovedFromValidPtr() {
+  std::unique_ptr<A> PToMove(new A());  // expected-note {{Smart pointer 'PToMove' is constructed}}
+  // FIXME: above note should go away once we fix marking region not interested. 
+  std::unique_ptr<A> P;
+  P = std::move(PToMove); // expected-note {{Smart pointer 'PToMove' is null after being moved to 'P'}}
+  PToMove->foo(); // expected-warning {{Dereference of null smart pointer 'PToMove' [alpha.cplusplus.SmartPtr]}}
+  // expected-note@-1 {{Dereference of null smart pointer 'PToMove'}}
+}
+
+void derefOnMovedToNullPtr() {
+  std::unique_ptr<A> PToMove(new A());
+  std::unique_ptr<A> P;
+  P = std::move(PToMove); // No note.
+  P->foo(); // No warning.
+}
+
+void derefOnNullPtrGotMovedFromValidPtr() {
+  std::unique_ptr<A> P(new A()); // expected-note {{Smart pointer 'P' is constructed}}
+  // FIXME: above note should go away once we fix marking region not interested. 
+  std::unique_ptr<A> PToMove; // expected-note {{Default constructed smart pointer 'PToMove' is null}}
+  P = std::move(PToMove); // expected-note {{Null pointer value move-assigned to 'P'}}
+  P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+  // expected-note@-1 {{Dereference of null smart pointer 'P'}}
+}
+
+void derefOnMovedUnknownPtr(std::unique_ptr<A> PToMove) {
+  std::unique_ptr<A> P;
+  P = std::move(PToMove); // expected-note {{Smart pointer 'PToMove' is null after; previous value moved to 'P'}}
+  PToMove->foo(); // expected-warning {{Dereference of null smart pointer 'PToMove' [alpha.cplusplus.SmartPtr]}}
+  // expected-note@-1 {{Dereference of null smart pointer 'PToMove'}}
+}
+
+void derefOnAssignedNullPtrToNullSmartPtr() {
+  std::unique_ptr<A> P; // expected-note {{Default constructed smart pointer 'P' is null}}
+  P = nullptr; // expected-note {{Smart pointer 'P' is assigned to null}}
+  P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+  // expected-note@-1 {{Dereference of null smart pointer 'P'}}
+}
+
+void derefOnAssignedZeroToNullSmartPtr() {
+  std::unique_ptr<A> P(new A()); // expected-note {{Smart pointer 'P' is constructed}}
+  // FIXME: above note should go away once we fix marking region not interested. 
+  P = 0; // expected-note {{Smart pointer 'P' is assigned to null}}
+  P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+  // expected-note@-1 {{Dereference of null smart pointer 'P'}}
 }

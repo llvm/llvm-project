@@ -181,6 +181,10 @@ static cl::opt<std::string> ThinLTOGeneratedObjectsDir(
     cl::desc("Save ThinLTO generated object files using filenames created in "
              "the given directory."));
 
+static cl::opt<bool> SaveLinkedModuleFile(
+    "save-linked-module", cl::init(false),
+    cl::desc("Write linked LTO module to file before optimize"));
+
 static cl::opt<bool>
     SaveModuleFile("save-merged-module", cl::init(false),
                    cl::desc("Write merged LTO module to file before CodeGen"));
@@ -1029,6 +1033,15 @@ int main(int argc, char **argv) {
     CodeGen.setFileType(FT.getValue());
 
   if (!OutputFilename.empty()) {
+    if (SaveLinkedModuleFile) {
+      std::string ModuleFilename = OutputFilename;
+      ModuleFilename += ".linked.bc";
+      std::string ErrMsg;
+
+      if (!CodeGen.writeMergedModules(ModuleFilename))
+        error("writing linked module failed.");
+    }
+
     if (!CodeGen.optimize(DisableVerify, DisableInline, DisableGVNLoadPRE,
                           DisableLTOVectorization)) {
       // Diagnostic messages should have been printed by the handler.

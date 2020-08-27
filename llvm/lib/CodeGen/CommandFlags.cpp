@@ -85,6 +85,7 @@ CGOPT(bool, EnableStackSizeSection)
 CGOPT(bool, EnableAddrsig)
 CGOPT(bool, EmitCallSiteInfo)
 CGOPT(bool, EnableDebugEntryValues)
+CGOPT(bool, ValueTrackingVariableLocations)
 CGOPT(bool, ForceDwarfFrameSection)
 CGOPT(bool, XRayOmitFunctionIndex)
 
@@ -400,6 +401,12 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(EnableDebugEntryValues);
 
+  static cl::opt<bool> ValueTrackingVariableLocations(
+      "experimental-debug-variable-locations",
+      cl::desc("Use experimental new value-tracking variable locations"),
+      cl::init(false));
+  CGBINDOPT(ValueTrackingVariableLocations);
+
   static cl::opt<bool> ForceDwarfFrameSection(
       "force-dwarf-frame-section",
       cl::desc("Always emit a debug frame section."), cl::init(false));
@@ -475,6 +482,7 @@ TargetOptions codegen::InitTargetOptionsFromCodeGenFlags() {
   Options.EmitAddrsig = getEnableAddrsig();
   Options.EmitCallSiteInfo = getEmitCallSiteInfo();
   Options.EnableDebugEntryValues = getEnableDebugEntryValues();
+  Options.ValueTrackingVariableLocations = getValueTrackingVariableLocations();
   Options.ForceDwarfFrameSection = getForceDwarfFrameSection();
   Options.XRayOmitFunctionIndex = getXRayOmitFunctionIndex();
 

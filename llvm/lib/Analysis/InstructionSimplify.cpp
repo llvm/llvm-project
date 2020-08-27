@@ -4302,7 +4302,7 @@ Value *llvm::SimplifyInsertElementInst(Value *Vec, Value *Val, Value *Idx,
   auto *ValC = dyn_cast<Constant>(Val);
   auto *IdxC = dyn_cast<Constant>(Idx);
   if (VecC && ValC && IdxC)
-    return ConstantFoldInsertElementInstruction(VecC, ValC, IdxC);
+    return ConstantExpr::getInsertElement(VecC, ValC, IdxC);
 
   // For fixed-length vector, fold into undef if index is out of bounds.
   if (auto *CI = dyn_cast<ConstantInt>(Idx)) {
@@ -4367,7 +4367,7 @@ static Value *SimplifyExtractElementInst(Value *Vec, Value *Idx,
   auto *VecVTy = cast<VectorType>(Vec->getType());
   if (auto *CVec = dyn_cast<Constant>(Vec)) {
     if (auto *CIdx = dyn_cast<Constant>(Idx))
-      return ConstantFoldExtractElementInstruction(CVec, CIdx);
+      return ConstantExpr::getExtractElement(CVec, CIdx);
 
     // The index is not relevant if our vector is a splat.
     if (auto *Splat = CVec->getSplatValue())
@@ -4565,8 +4565,8 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1,
   // If all operands are constant, constant fold the shuffle. This
   // transformation depends on the value of the mask which is not known at
   // compile time for scalable vectors
-  if (!Scalable && Op0Const && Op1Const)
-    return ConstantFoldShuffleVectorInstruction(Op0Const, Op1Const, Mask);
+  if (Op0Const && Op1Const)
+    return ConstantExpr::getShuffleVector(Op0Const, Op1Const, Mask);
 
   // Canonicalization: if only one input vector is constant, it shall be the
   // second one. This transformation depends on the value of the mask which
@@ -5232,6 +5232,16 @@ static APInt getMaxMinLimit(Intrinsic::ID IID, unsigned BitWidth) {
   }
 }
 
+static ICmpInst::Predicate getMaxMinPredicate(Intrinsic::ID IID) {
+  switch (IID) {
+  case Intrinsic::smax: return ICmpInst::ICMP_SGE;
+  case Intrinsic::smin: return ICmpInst::ICMP_SLE;
+  case Intrinsic::umax: return ICmpInst::ICMP_UGE;
+  case Intrinsic::umin: return ICmpInst::ICMP_ULE;
+  default: llvm_unreachable("Unexpected intrinsic");
+  }
+}
+
 /// Given a min/max intrinsic, see if it can be removed based on having an
 /// operand that is another min/max intrinsic with shared operand(s). The caller
 /// is expected to swap the operand arguments to handle commutation.
@@ -5323,6 +5333,12 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
       return V;
     if (Value *V = foldMinMaxSharedOp(IID, Op1, Op0))
       return V;
+
+    ICmpInst::Predicate Pred = getMaxMinPredicate(IID);
+    if (isICmpTrue(Pred, Op0, Op1, Q.getWithoutUndef(), RecursionLimit))
+      return Op0;
+    if (isICmpTrue(Pred, Op1, Op0, Q.getWithoutUndef(), RecursionLimit))
+      return Op1;
 
     break;
   }

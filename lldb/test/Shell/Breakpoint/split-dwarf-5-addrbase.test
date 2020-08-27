@@ -1,8 +1,8 @@
 # RUN: rm -rf %t.dir
 # RUN: mkdir %t.dir
 # RUN: cd %t.dir
-# RUN: yaml2obj %p/Inputs/split-dwarf-5-addrbase.dwo.yaml > %t.dir/test.dwo
-# RUN: yaml2obj %p/Inputs/split-dwarf-5-addrbase.yaml > %t.dir/test
+# RUN: yaml2obj %p/Inputs/split-dwarf-5-addrbase.dwo.yaml -o %t.dir/test.dwo
+# RUN: yaml2obj %p/Inputs/split-dwarf-5-addrbase.yaml -o %t.dir/test
 # RUN: lldb-test breakpoints %t.dir/test %s | FileCheck %s
 
 # This test checks that source code location is shown correctly

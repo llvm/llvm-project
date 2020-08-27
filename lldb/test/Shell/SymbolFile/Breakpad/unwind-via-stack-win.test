@@ -1,6 +1,6 @@
 # REQUIRES: x86
 
-# RUN: yaml2obj %S/Inputs/unwind-via-stack-win.yaml > %t
+# RUN: yaml2obj %S/Inputs/unwind-via-stack-win.yaml -o %t
 # RUN: %lldb -c %t \
 # RUN:   -o "target symbols add %S/Inputs/unwind-via-stack-win.syms" \
 # RUN:   -s %s -b | FileCheck %s
@@ -14,6 +14,7 @@ image show-unwind -n call_many
 # CHECK: This UnwindPlan originally sourced from breakpad STACK WIN
 # CHECK: This UnwindPlan is sourced from the compiler: yes.
 # CHECK: This UnwindPlan is valid at all instruction locations: no.
+# CHECK: This UnwindPlan is for a trap handler function: no.
 # CHECK: Address range of this UnwindPlan: [unwind-via-stack-win.exe..module_image + 4112-0x0000107d)
 # CHECK: row[0]:    0: CFA=DW_OP_breg7 +0, DW_OP_consts +80, DW_OP_plus  => esp=DW_OP_pick 0x0, DW_OP_consts +4, DW_OP_plus eip=DW_OP_pick 0x0, DW_OP_deref
 
@@ -42,6 +43,7 @@ image show-unwind -n temporary_var
 # CHECK: This UnwindPlan originally sourced from breakpad STACK WIN
 # CHECK: This UnwindPlan is sourced from the compiler: yes.
 # CHECK: This UnwindPlan is valid at all instruction locations: no.
+# CHECK: This UnwindPlan is for a trap handler function: no.
 # CHECK: Address range of this UnwindPlan: [unwind-via-stack-win.exe..module_image + 4400-0x00001134)
 # CHECK: row[0]:    0: CFA=DW_OP_breg7 +0 => esp=DW_OP_pick 0x0, DW_OP_consts +4, DW_OP_plus  eip=DW_OP_pick 0x0, DW_OP_deref
 

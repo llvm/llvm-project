@@ -163,7 +163,7 @@ E: foldr@codedgers.com
 D: Author of llvmc2
 
 N: Dan Gohman
-E: sunfish@mozilla.com
+E: llvm@sunfishcode.online
 D: Miscellaneous bug fixes
 D: WebAssembly Backend
 
@@ -522,9 +522,9 @@ N: Li Jia He
 E: hljhehlj@cn.ibm.com
 D: PowerPC Backend Developer
 
-N: Zixuan Wu
-E: wuzish@cn.ibm.com
-D: PowerPC Backend Developer
+N: Zi Xuan Wu
+N: Zeson
+E: zixuan.wu@linux.alibaba.com
 
 N: Kang Zhang
 E: shkzhang@cn.ibm.com

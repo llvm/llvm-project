@@ -1,6 +1,6 @@
 REQUIRES: diasdk
 
-RUN: yaml2obj %p/Inputs/generic.yaml > %t.obj
+RUN: yaml2obj %p/Inputs/generic.yaml -o %t.obj
 RUN: lld-link /DEBUG %t.obj /nodefaultlib /entry:main /NATVIS:%p/Inputs/natvis-1.natvis \
 RUN:   /NATVIS:%p/Inputs/natvis-2.natvis /NATVIS:%p/Inputs/natvis-3.natvis /OUT:%t.exe \
 RUN:   /PDB:%t.pdb

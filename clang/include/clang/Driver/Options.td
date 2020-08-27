@@ -704,7 +704,7 @@ def emit_ast : Flag<["-"], "emit-ast">,
 def emit_llvm : Flag<["-"], "emit-llvm">, Flags<[CC1Option]>, Group<Action_Group>,
   HelpText<"Use the LLVM representation for assembler and object files">;
 def emit_interface_stubs : Flag<["-"], "emit-interface-stubs">, Flags<[CC1Option]>, Group<Action_Group>,
-  HelpText<"Generate Inteface Stub Files.">;
+  HelpText<"Generate Interface Stub Files.">;
 def emit_merged_ifs : Flag<["-"], "emit-merged-ifs">,
   Flags<[CC1Option]>, Group<Action_Group>,
   HelpText<"Generate Interface Stub Files, emit merged text not binary.">;
@@ -1815,7 +1815,7 @@ def fstack_protector : Flag<["-"], "fstack-protector">, Group<f_Group>,
            "This uses a loose heuristic which considers functions vulnerable if they "
            "contain a char (or 8bit integer) array or constant sized calls to alloca "
            ", which are of greater size than ssp-buffer-size (default: 8 bytes). All "
-           "variable sized calls to alloca are considered vulnerable. A function with"
+           "variable sized calls to alloca are considered vulnerable. A function with "
            "a stack protector has a guard value added to the stack frame that is "
            "checked on function exit. The guard value must be positioned in the "
            "stack frame such that a buffer overflow from a vulnerable variable will "
@@ -2512,6 +2512,8 @@ def mlongcall: Flag<["-"], "mlongcall">,
     Group<m_ppc_Features_Group>;
 def mno_longcall : Flag<["-"], "mno-longcall">,
     Group<m_ppc_Features_Group>;
+def mmma: Flag<["-"], "mmma">, Group<m_ppc_Features_Group>;
+def mno_mma: Flag<["-"], "mno-mma">, Group<m_ppc_Features_Group>;
 def maix_struct_return : Flag<["-"], "maix-struct-return">,
   Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Return all structs in memory (PPC32 only)">;
@@ -4014,6 +4016,9 @@ def fdebug_pass_manager : Flag<["-"], "fdebug-pass-manager">,
     HelpText<"Prints debug information for the new pass manager">;
 def fno_debug_pass_manager : Flag<["-"], "fno-debug-pass-manager">,
     HelpText<"Disables debug printing for the new pass manager">;
+def fexperimental_debug_variable_locations : Flag<["-"],
+    "fexperimental-debug-variable-locations">,
+    HelpText<"Use experimental new value-tracking variable locations">;
 // The driver option takes the key as a parameter to the -msign-return-address=
 // and -mbranch-protection= options, but CC1 has a separate option so we
 // don't have to parse the parameter twice.
@@ -4189,8 +4194,7 @@ def frecovery_ast : Flag<["-"], "frecovery-ast">,
            "encountering semantic errors">;
 def fno_recovery_ast : Flag<["-"], "fno-recovery-ast">;
 def frecovery_ast_type : Flag<["-"], "frecovery-ast-type">,
-  HelpText<"Preserve the type for recovery expressions when possible "
-          "(experimental)">;
+  HelpText<"Preserve the type for recovery expressions when possible">;
 def fno_recovery_ast_type : Flag<["-"], "fno-recovery-ast-type">;
 
 let Group = Action_Group in {
@@ -4888,6 +4892,8 @@ def _SLASH_TC : CLCompileFlag<"TC">, HelpText<"Treat all source files as C">;
 def _SLASH_Tp : CLCompileJoinedOrSeparate<"Tp">,
   HelpText<"Treat <file> as C++ source file">, MetaVarName<"<file>">;
 def _SLASH_TP : CLCompileFlag<"TP">, HelpText<"Treat all source files as C++">;
+def _SLASH_vctoolsdir : CLJoinedOrSeparate<"vctoolsdir">,
+  HelpText<"Path to the VCToolChain">, MetaVarName<"<dir>">;
 def _SLASH_volatile_iso : Option<["/", "-"], "volatile:iso", KIND_FLAG>,
   Group<_SLASH_volatile_Group>, Flags<[CLOption, DriverOption]>,
   HelpText<"Volatile loads and stores have standard semantics">;

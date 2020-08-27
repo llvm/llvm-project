@@ -93,6 +93,10 @@ def gi_ds_64bit_4byte_aligned :
     GIComplexOperandMatcher<s64, "selectDS64Bit4ByteAligned">,
     GIComplexPatternEquiv<DS64Bit4ByteAligned>;
 
+def gi_ds_128bit_8byte_aligned :
+    GIComplexOperandMatcher<s64, "selectDS128Bit8ByteAligned">,
+    GIComplexPatternEquiv<DS128Bit8ByteAligned>;
+
 def gi_mubuf_addr64 :
     GIComplexOperandMatcher<s64, "selectMUBUFAddr64">,
     GIComplexPatternEquiv<MUBUFAddr64>;

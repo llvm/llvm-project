@@ -56,13 +56,9 @@ define void @nocapture(i8* %a){
 }
 
 define i8* @return_noalias_looks_like_capture(){
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@return_noalias_looks_like_capture()
-; NOT_CGSCC_NPM-NEXT:    [[TMP1:%.*]] = tail call noalias noundef i8* @malloc(i64 4)
-; NOT_CGSCC_NPM-NEXT:    ret i8* [[TMP1]]
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@return_noalias_looks_like_capture()
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @malloc(i64 4)
-; IS__CGSCC____-NEXT:    ret i8* [[TMP1]]
+; CHECK-LABEL: define {{[^@]+}}@return_noalias_looks_like_capture()
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    ret i8* [[TMP1]]
 ;
   %1 = tail call noalias i8* @malloc(i64 4)
   call void @nocapture(i8* %1)
@@ -357,23 +353,14 @@ define void @test11(i8* noalias %a) {
 declare void @use_nocapture(i8* nocapture)
 declare void @use(i8*)
 define void @test12_1() {
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test12_1()
-; NOT_CGSCC_NPM-NEXT:    [[A:%.*]] = alloca i8, align 4
-; NOT_CGSCC_NPM-NEXT:    [[B:%.*]] = tail call noalias noundef i8* @malloc(i64 4)
-; NOT_CGSCC_NPM-NEXT:    tail call void @use_nocapture(i8* noalias nocapture noundef nonnull align 4 dereferenceable(1) [[A]])
-; NOT_CGSCC_NPM-NEXT:    tail call void @use_nocapture(i8* noalias nocapture noundef nonnull align 4 dereferenceable(1) [[A]])
-; NOT_CGSCC_NPM-NEXT:    tail call void @use_nocapture(i8* noalias nocapture noundef [[B]])
-; NOT_CGSCC_NPM-NEXT:    tail call void @use_nocapture(i8* noalias nocapture noundef [[B]])
-; NOT_CGSCC_NPM-NEXT:    ret void
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@test12_1()
-; IS__CGSCC____-NEXT:    [[A:%.*]] = alloca i8, align 4
-; IS__CGSCC____-NEXT:    [[B:%.*]] = tail call noalias i8* @malloc(i64 4)
-; IS__CGSCC____-NEXT:    tail call void @use_nocapture(i8* noalias nocapture noundef nonnull align 4 dereferenceable(1) [[A]])
-; IS__CGSCC____-NEXT:    tail call void @use_nocapture(i8* noalias nocapture noundef nonnull align 4 dereferenceable(1) [[A]])
-; IS__CGSCC____-NEXT:    tail call void @use_nocapture(i8* noalias nocapture noundef [[B]])
-; IS__CGSCC____-NEXT:    tail call void @use_nocapture(i8* noalias nocapture noundef [[B]])
-; IS__CGSCC____-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@test12_1()
+; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 4
+; CHECK-NEXT:    [[B:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture noundef nonnull align 4 dereferenceable(1) [[A]])
+; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture noundef nonnull align 4 dereferenceable(1) [[A]])
+; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[B]])
+; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[B]])
+; CHECK-NEXT:    ret void
 ;
   %A = alloca i8, align 4
   %B = tail call noalias i8* @malloc(i64 4)
@@ -385,21 +372,13 @@ define void @test12_1() {
 }
 
 define void @test12_2(){
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test12_2()
-; NOT_CGSCC_NPM-NEXT:    [[A:%.*]] = tail call noalias noundef i8* @malloc(i64 4)
-; NOT_CGSCC_NPM-NEXT:    tail call void @use_nocapture(i8* noalias nocapture noundef [[A]])
-; NOT_CGSCC_NPM-NEXT:    tail call void @use_nocapture(i8* noalias nocapture noundef [[A]])
-; NOT_CGSCC_NPM-NEXT:    tail call void @use(i8* noundef [[A]])
-; NOT_CGSCC_NPM-NEXT:    tail call void @use_nocapture(i8* nocapture noundef [[A]])
-; NOT_CGSCC_NPM-NEXT:    ret void
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@test12_2()
-; IS__CGSCC____-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 4)
-; IS__CGSCC____-NEXT:    tail call void @use_nocapture(i8* noalias nocapture noundef [[A]])
-; IS__CGSCC____-NEXT:    tail call void @use_nocapture(i8* noalias nocapture noundef [[A]])
-; IS__CGSCC____-NEXT:    tail call void @use(i8* noundef [[A]])
-; IS__CGSCC____-NEXT:    tail call void @use_nocapture(i8* nocapture noundef [[A]])
-; IS__CGSCC____-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@test12_2()
+; CHECK-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[A]])
+; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[A]])
+; CHECK-NEXT:    tail call void @use(i8* [[A]])
+; CHECK-NEXT:    tail call void @use_nocapture(i8* nocapture [[A]])
+; CHECK-NEXT:    ret void
 ;
 ; FIXME: This should be @use_nocapture(i8* noalias [[A]])
 ; FIXME: This should be @use_nocapture(i8* noalias nocapture [[A]])
@@ -413,15 +392,10 @@ define void @test12_2(){
 
 declare void @two_args(i8* nocapture , i8* nocapture)
 define void @test12_3(){
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test12_3()
-; NOT_CGSCC_NPM-NEXT:    [[A:%.*]] = tail call noalias noundef i8* @malloc(i64 4)
-; NOT_CGSCC_NPM-NEXT:    tail call void @two_args(i8* nocapture noundef [[A]], i8* nocapture noundef [[A]])
-; NOT_CGSCC_NPM-NEXT:    ret void
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@test12_3()
-; IS__CGSCC____-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 4)
-; IS__CGSCC____-NEXT:    tail call void @two_args(i8* nocapture noundef [[A]], i8* nocapture noundef [[A]])
-; IS__CGSCC____-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@test12_3()
+; CHECK-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    tail call void @two_args(i8* nocapture [[A]], i8* nocapture [[A]])
+; CHECK-NEXT:    ret void
 ;
   %A = tail call noalias i8* @malloc(i64 4)
   tail call void @two_args(i8* %A, i8* %A)
@@ -430,40 +404,28 @@ define void @test12_3(){
 
 define void @test12_4(){
 ; IS________OPM-LABEL: define {{[^@]+}}@test12_4()
-; IS________OPM-NEXT:    [[A:%.*]] = tail call noalias noundef i8* @malloc(i64 4)
-; IS________OPM-NEXT:    [[B:%.*]] = tail call noalias noundef i8* @malloc(i64 4)
+; IS________OPM-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 4)
+; IS________OPM-NEXT:    [[B:%.*]] = tail call noalias i8* @malloc(i64 4)
 ; IS________OPM-NEXT:    [[A_0:%.*]] = getelementptr i8, i8* [[A]], i64 0
 ; IS________OPM-NEXT:    [[A_1:%.*]] = getelementptr i8, i8* [[A]], i64 1
 ; IS________OPM-NEXT:    [[B_0:%.*]] = getelementptr i8, i8* [[B]], i64 0
-; IS________OPM-NEXT:    tail call void @two_args(i8* nocapture noundef [[A]], i8* nocapture noundef [[B]])
-; IS________OPM-NEXT:    tail call void @two_args(i8* nocapture noundef [[A]], i8* nocapture noundef [[A_0]])
-; IS________OPM-NEXT:    tail call void @two_args(i8* nocapture noundef [[A]], i8* nocapture [[A_1]])
-; IS________OPM-NEXT:    tail call void @two_args(i8* nocapture noundef [[A_0]], i8* nocapture noundef [[B_0]])
+; IS________OPM-NEXT:    tail call void @two_args(i8* nocapture [[A]], i8* nocapture [[B]])
+; IS________OPM-NEXT:    tail call void @two_args(i8* nocapture [[A]], i8* nocapture [[A_0]])
+; IS________OPM-NEXT:    tail call void @two_args(i8* nocapture [[A]], i8* nocapture [[A_1]])
+; IS________OPM-NEXT:    tail call void @two_args(i8* nocapture [[A_0]], i8* nocapture [[B_0]])
 ; IS________OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@test12_4()
-; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = tail call noalias noundef i8* @malloc(i64 4)
-; IS__TUNIT_NPM-NEXT:    [[B:%.*]] = tail call noalias noundef i8* @malloc(i64 4)
-; IS__TUNIT_NPM-NEXT:    [[A_0:%.*]] = getelementptr i8, i8* [[A]], i64 0
-; IS__TUNIT_NPM-NEXT:    [[A_1:%.*]] = getelementptr i8, i8* [[A]], i64 1
-; IS__TUNIT_NPM-NEXT:    [[B_0:%.*]] = getelementptr i8, i8* [[B]], i64 0
-; IS__TUNIT_NPM-NEXT:    tail call void @two_args(i8* noalias nocapture noundef [[A]], i8* noalias nocapture noundef [[B]])
-; IS__TUNIT_NPM-NEXT:    tail call void @two_args(i8* nocapture noundef [[A]], i8* nocapture noundef [[A_0]])
-; IS__TUNIT_NPM-NEXT:    tail call void @two_args(i8* nocapture noundef [[A]], i8* nocapture [[A_1]])
-; IS__TUNIT_NPM-NEXT:    tail call void @two_args(i8* nocapture noundef [[A_0]], i8* nocapture noundef [[B_0]])
-; IS__TUNIT_NPM-NEXT:    ret void
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@test12_4()
-; IS__CGSCC____-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 4)
-; IS__CGSCC____-NEXT:    [[B:%.*]] = tail call noalias i8* @malloc(i64 4)
-; IS__CGSCC____-NEXT:    [[A_0:%.*]] = getelementptr i8, i8* [[A]], i64 0
-; IS__CGSCC____-NEXT:    [[A_1:%.*]] = getelementptr i8, i8* [[A]], i64 1
-; IS__CGSCC____-NEXT:    [[B_0:%.*]] = getelementptr i8, i8* [[B]], i64 0
-; IS__CGSCC____-NEXT:    tail call void @two_args(i8* noalias nocapture noundef [[A]], i8* noalias nocapture noundef [[B]])
-; IS__CGSCC____-NEXT:    tail call void @two_args(i8* nocapture noundef [[A]], i8* nocapture noundef [[A_0]])
-; IS__CGSCC____-NEXT:    tail call void @two_args(i8* nocapture noundef [[A]], i8* nocapture noundef [[A_1]])
-; IS__CGSCC____-NEXT:    tail call void @two_args(i8* nocapture noundef [[A_0]], i8* nocapture noundef [[B_0]])
-; IS__CGSCC____-NEXT:    ret void
+; NOT_TUNIT_OPM-LABEL: define {{[^@]+}}@test12_4()
+; NOT_TUNIT_OPM-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 4)
+; NOT_TUNIT_OPM-NEXT:    [[B:%.*]] = tail call noalias i8* @malloc(i64 4)
+; NOT_TUNIT_OPM-NEXT:    [[A_0:%.*]] = getelementptr i8, i8* [[A]], i64 0
+; NOT_TUNIT_OPM-NEXT:    [[A_1:%.*]] = getelementptr i8, i8* [[A]], i64 1
+; NOT_TUNIT_OPM-NEXT:    [[B_0:%.*]] = getelementptr i8, i8* [[B]], i64 0
+; NOT_TUNIT_OPM-NEXT:    tail call void @two_args(i8* noalias nocapture [[A]], i8* noalias nocapture [[B]])
+; NOT_TUNIT_OPM-NEXT:    tail call void @two_args(i8* nocapture [[A]], i8* nocapture [[A_0]])
+; NOT_TUNIT_OPM-NEXT:    tail call void @two_args(i8* nocapture [[A]], i8* nocapture [[A_1]])
+; NOT_TUNIT_OPM-NEXT:    tail call void @two_args(i8* nocapture [[A_0]], i8* nocapture [[B_0]])
+; NOT_TUNIT_OPM-NEXT:    ret void
 ;
   %A = tail call noalias i8* @malloc(i64 4)
   %B = tail call noalias i8* @malloc(i64 4)
@@ -494,19 +456,12 @@ define void @use_i8_internal(i8* %a) {
 }
 
 define void @test13_use_noalias(){
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test13_use_noalias()
-; NOT_CGSCC_NPM-NEXT:    [[M1:%.*]] = tail call noalias noundef i8* @malloc(i64 4)
-; NOT_CGSCC_NPM-NEXT:    [[C1:%.*]] = bitcast i8* [[M1]] to i16*
-; NOT_CGSCC_NPM-NEXT:    [[C2:%.*]] = bitcast i16* [[C1]] to i8*
-; NOT_CGSCC_NPM-NEXT:    call void @use_i8_internal(i8* noalias nocapture noundef [[C2]])
-; NOT_CGSCC_NPM-NEXT:    ret void
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@test13_use_noalias()
-; IS__CGSCC____-NEXT:    [[M1:%.*]] = tail call noalias i8* @malloc(i64 4)
-; IS__CGSCC____-NEXT:    [[C1:%.*]] = bitcast i8* [[M1]] to i16*
-; IS__CGSCC____-NEXT:    [[C2:%.*]] = bitcast i16* [[C1]] to i8*
-; IS__CGSCC____-NEXT:    call void @use_i8_internal(i8* noalias nocapture noundef [[C2]])
-; IS__CGSCC____-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@test13_use_noalias()
+; CHECK-NEXT:    [[M1:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    [[C1:%.*]] = bitcast i8* [[M1]] to i16*
+; CHECK-NEXT:    [[C2:%.*]] = bitcast i16* [[C1]] to i8*
+; CHECK-NEXT:    call void @use_i8_internal(i8* noalias nocapture [[C2]])
+; CHECK-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@test13_use_noalias()
 ; IS__CGSCC_OPM-NEXT:    [[M1:%.*]] = tail call noalias i8* @malloc(i64 4)
@@ -523,12 +478,12 @@ define void @test13_use_noalias(){
 
 define void @test13_use_alias(){
 ; CHECK-LABEL: define {{[^@]+}}@test13_use_alias()
-; CHECK-NEXT:    [[M1:%.*]] = tail call noalias noundef i8* @malloc(i64 4)
+; CHECK-NEXT:    [[M1:%.*]] = tail call noalias i8* @malloc(i64 4)
 ; CHECK-NEXT:    [[C1:%.*]] = bitcast i8* [[M1]] to i16*
 ; CHECK-NEXT:    [[C2A:%.*]] = bitcast i16* [[C1]] to i8*
 ; CHECK-NEXT:    [[C2B:%.*]] = bitcast i16* [[C1]] to i8*
-; CHECK-NEXT:    call void @use_i8_internal(i8* nocapture noundef [[C2A]])
-; CHECK-NEXT:    call void @use_i8_internal(i8* nocapture noundef [[C2B]])
+; CHECK-NEXT:    call void @use_i8_internal(i8* nocapture [[C2A]])
+; CHECK-NEXT:    call void @use_i8_internal(i8* nocapture [[C2B]])
 ; CHECK-NEXT:    ret void
 ;
   %m1 = tail call noalias i8* @malloc(i64 4)

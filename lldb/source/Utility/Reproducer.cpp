@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/ReproducerProvider.h"
 
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
@@ -70,6 +71,10 @@ llvm::Error Reproducer::Initialize(ReproducerMode mode,
   };
 
   return Error::success();
+}
+
+void Reproducer::Initialize() {
+  llvm::cantFail(Initialize(repro::ReproducerMode::Off, llvm::None));
 }
 
 bool Reproducer::Initialized() { return InstanceImpl().operator bool(); }
@@ -166,6 +171,7 @@ static FileSpec MakeAbsolute(const FileSpec &file_spec) {
 
 Generator::Generator(FileSpec root) : m_root(MakeAbsolute(std::move(root))) {
   GetOrCreate<repro::WorkingDirectoryProvider>();
+  GetOrCreate<repro::HomeDirectoryProvider>();
 }
 
 Generator::~Generator() {
@@ -262,64 +268,3 @@ bool Loader::HasFile(StringRef file) {
   auto it = std::lower_bound(m_files.begin(), m_files.end(), file.str());
   return (it != m_files.end()) && (*it == file);
 }
-
-llvm::Expected<std::unique_ptr<DataRecorder>>
-DataRecorder::Create(const FileSpec &filename) {
-  std::error_code ec;
-  auto recorder = std::make_unique<DataRecorder>(std::move(filename), ec);
-  if (ec)
-    return llvm::errorCodeToError(ec);
-  return std::move(recorder);
-}
-
-llvm::Expected<std::unique_ptr<YamlRecorder>>
-YamlRecorder::Create(const FileSpec &filename) {
-  std::error_code ec;
-  auto recorder = std::make_unique<YamlRecorder>(std::move(filename), ec);
-  if (ec)
-    return llvm::errorCodeToError(ec);
-  return std::move(recorder);
-}
-
-void VersionProvider::Keep() {
-  FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
-  std::error_code ec;
-  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
-  if (ec)
-    return;
-  os << m_version << "\n";
-}
-
-void WorkingDirectoryProvider::Keep() {
-  FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
-  std::error_code ec;
-  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
-  if (ec)
-    return;
-  os << m_cwd << "\n";
-}
-
-void FileProvider::RecordInterestingDirectory(const llvm::Twine &dir) {
-  if (m_collector)
-    m_collector->addFile(dir);
-}
-
-void FileProvider::RecordInterestingDirectoryRecursive(const llvm::Twine &dir) {
-  if (m_collector)
-    m_collector->addDirectory(dir);
-}
-
-void ProviderBase::anchor() {}
-char CommandProvider::ID = 0;
-char FileProvider::ID = 0;
-char ProviderBase::ID = 0;
-char VersionProvider::ID = 0;
-char WorkingDirectoryProvider::ID = 0;
-const char *CommandProvider::Info::file = "command-interpreter.yaml";
-const char *CommandProvider::Info::name = "command-interpreter";
-const char *FileProvider::Info::file = "files.yaml";
-const char *FileProvider::Info::name = "files";
-const char *VersionProvider::Info::file = "version.txt";
-const char *VersionProvider::Info::name = "version";
-const char *WorkingDirectoryProvider::Info::file = "cwd.txt";
-const char *WorkingDirectoryProvider::Info::name = "cwd";

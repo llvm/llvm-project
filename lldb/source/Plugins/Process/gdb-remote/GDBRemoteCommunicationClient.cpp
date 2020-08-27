@@ -1701,14 +1701,9 @@ Status GDBRemoteCommunicationClient::GetWatchpointSupportInfo(uint32_t &num) {
   // Set num to 0 first.
   num = 0;
   if (m_supports_watchpoint_support_info != eLazyBoolNo) {
-    char packet[64];
-    const int packet_len =
-        ::snprintf(packet, sizeof(packet), "qWatchpointSupportInfo:");
-    assert(packet_len < (int)sizeof(packet));
-    UNUSED_IF_ASSERT_DISABLED(packet_len);
     StringExtractorGDBRemote response;
-    if (SendPacketAndWaitForResponse(packet, response, false) ==
-        PacketResult::Success) {
+    if (SendPacketAndWaitForResponse("qWatchpointSupportInfo:", response,
+                                     false) == PacketResult::Success) {
       m_supports_watchpoint_support_info = eLazyBoolYes;
       llvm::StringRef name;
       llvm::StringRef value;
@@ -2980,6 +2975,31 @@ lldb::user_id_t GDBRemoteCommunicationClient::GetFileSize(
     return retcode;
   }
   return UINT64_MAX;
+}
+
+void GDBRemoteCommunicationClient::AutoCompleteDiskFileOrDirectory(
+    CompletionRequest &request, bool only_dir) {
+  lldb_private::StreamString stream;
+  stream.PutCString("qPathComplete:");
+  stream.PutHex32(only_dir ? 1 : 0);
+  stream.PutChar(',');
+  stream.PutStringAsRawHex8(request.GetCursorArgumentPrefix());
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(stream.GetString(), response, false) ==
+      PacketResult::Success) {
+    StreamString strm;
+    char ch = response.GetChar();
+    if (ch != 'M')
+      return;
+    while (response.Peek()) {
+      strm.Clear();
+      while ((ch = response.GetHexU8(0, false)) != '\0')
+        strm.PutChar(ch);
+      request.AddCompletion(strm.GetString());
+      if (response.GetChar() != ',')
+        break;
+    }
+  }
 }
 
 Status

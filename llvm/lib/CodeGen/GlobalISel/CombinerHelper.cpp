@@ -44,6 +44,10 @@ CombinerHelper::CombinerHelper(GISelChangeObserver &Observer,
   (void)this->KB;
 }
 
+const TargetLowering &CombinerHelper::getTargetLowering() const {
+  return *Builder.getMF().getSubtarget().getTargetLowering();
+}
+
 bool CombinerHelper::isLegalOrBeforeLegalizer(
     const LegalityQuery &Query) const {
   return !LI || LI->getAction(Query).Action == LegalizeActions::Legal;
@@ -1501,6 +1505,59 @@ bool CombinerHelper::applyCombineMulToShl(MachineInstr &MI,
   return true;
 }
 
+// shl ([sza]ext x), y => zext (shl x, y), if shift does not overflow source
+bool CombinerHelper::matchCombineShlOfExtend(MachineInstr &MI,
+                                             RegisterImmPair &MatchData) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHL && KB);
+
+  Register LHS = MI.getOperand(1).getReg();
+
+  Register ExtSrc;
+  if (!mi_match(LHS, MRI, m_GAnyExt(m_Reg(ExtSrc))) &&
+      !mi_match(LHS, MRI, m_GZExt(m_Reg(ExtSrc))) &&
+      !mi_match(LHS, MRI, m_GSExt(m_Reg(ExtSrc))))
+    return false;
+
+  // TODO: Should handle vector splat.
+  Register RHS = MI.getOperand(2).getReg();
+  auto MaybeShiftAmtVal = getConstantVRegValWithLookThrough(RHS, MRI);
+  if (!MaybeShiftAmtVal)
+    return false;
+
+  if (LI) {
+    LLT SrcTy = MRI.getType(ExtSrc);
+
+    // We only really care about the legality with the shifted value. We can
+    // pick any type the constant shift amount, so ask the target what to
+    // use. Otherwise we would have to guess and hope it is reported as legal.
+    LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(SrcTy);
+    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_SHL, {SrcTy, ShiftAmtTy}}))
+      return false;
+  }
+
+  int64_t ShiftAmt = MaybeShiftAmtVal->Value;
+  MatchData.Reg = ExtSrc;
+  MatchData.Imm = ShiftAmt;
+
+  unsigned MinLeadingZeros = KB->getKnownZeroes(ExtSrc).countLeadingOnes();
+  return MinLeadingZeros >= ShiftAmt;
+}
+
+bool CombinerHelper::applyCombineShlOfExtend(MachineInstr &MI,
+                                             const RegisterImmPair &MatchData) {
+  Register ExtSrcReg = MatchData.Reg;
+  int64_t ShiftAmtVal = MatchData.Imm;
+
+  LLT ExtSrcTy = MRI.getType(ExtSrcReg);
+  Builder.setInstrAndDebugLoc(MI);
+  auto ShiftAmt = Builder.buildConstant(ExtSrcTy, ShiftAmtVal);
+  auto NarrowShift =
+      Builder.buildShl(ExtSrcTy, ExtSrcReg, ShiftAmt, MI.getFlags());
+  Builder.buildZExt(MI.getOperand(0), NarrowShift);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool CombinerHelper::matchCombineShiftToUnmerge(MachineInstr &MI,
                                                 unsigned TargetShiftSize,
                                                 unsigned &ShiftVal) {
@@ -1644,6 +1701,51 @@ bool CombinerHelper::applyCombineP2IToI2P(MachineInstr &MI, Register &Reg) {
   return true;
 }
 
+bool CombinerHelper::matchCombineAddP2IToPtrAdd(
+    MachineInstr &MI, std::pair<Register, bool> &PtrReg) {
+  assert(MI.getOpcode() == TargetOpcode::G_ADD);
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  LLT IntTy = MRI.getType(LHS);
+
+  // G_PTR_ADD always has the pointer in the LHS, so we may need to commute the
+  // instruction.
+  PtrReg.second = false;
+  for (Register SrcReg : {LHS, RHS}) {
+    if (mi_match(SrcReg, MRI, m_GPtrToInt(m_Reg(PtrReg.first)))) {
+      // Don't handle cases where the integer is implicitly converted to the
+      // pointer width.
+      LLT PtrTy = MRI.getType(PtrReg.first);
+      if (PtrTy.getScalarSizeInBits() == IntTy.getScalarSizeInBits())
+        return true;
+    }
+
+    PtrReg.second = true;
+  }
+
+  return false;
+}
+
+bool CombinerHelper::applyCombineAddP2IToPtrAdd(
+    MachineInstr &MI, std::pair<Register, bool> &PtrReg) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+
+  const bool DoCommute = PtrReg.second;
+  if (DoCommute)
+    std::swap(LHS, RHS);
+  LHS = PtrReg.first;
+
+  LLT PtrTy = MRI.getType(LHS);
+
+  Builder.setInstrAndDebugLoc(MI);
+  auto PtrAdd = Builder.buildPtrAdd(PtrTy, LHS, RHS);
+  Builder.buildPtrToInt(Dst, PtrAdd);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool CombinerHelper::matchAnyExplicitUseIsUndef(MachineInstr &MI) {
   return any_of(MI.explicit_uses(), [this](const MachineOperand &MO) {
     return MO.isReg() &&
@@ -1760,6 +1862,16 @@ bool CombinerHelper::replaceSingleDefInstWithOperand(MachineInstr &MI,
   assert(MI.getNumExplicitDefs() == 1 && "Expected one explicit def?");
   Register OldReg = MI.getOperand(0).getReg();
   Register Replacement = MI.getOperand(OpIdx).getReg();
+  assert(canReplaceReg(OldReg, Replacement, MRI) && "Cannot replace register?");
+  MI.eraseFromParent();
+  replaceRegWith(MRI, OldReg, Replacement);
+  return true;
+}
+
+bool CombinerHelper::replaceSingleDefInstWithReg(MachineInstr &MI,
+                                                 Register Replacement) {
+  assert(MI.getNumExplicitDefs() == 1 && "Expected one explicit def?");
+  Register OldReg = MI.getOperand(0).getReg();
   assert(canReplaceReg(OldReg, Replacement, MRI) && "Cannot replace register?");
   MI.eraseFromParent();
   replaceRegWith(MRI, OldReg, Replacement);
@@ -1977,6 +2089,52 @@ bool CombinerHelper::applyAshShlToSextInreg(
   Builder.buildSExtInReg(MI.getOperand(0).getReg(), Src, Size - ShiftAmt);
   MI.eraseFromParent();
   return true;
+}
+
+bool CombinerHelper::matchAndWithTrivialMask(MachineInstr &MI,
+                                             Register &Replacement) {
+  // Given
+  //
+  // %mask:_(sN) = G_CONSTANT iN 000...0111...1
+  // %x:_(sN) = G_SOMETHING
+  // %y:_(sN) = G_AND %x, %mask
+  //
+  // Eliminate the G_AND when it is known that x & mask == x.
+  //
+  // Patterns like this can appear as a result of legalization. E.g.
+  //
+  // %cmp:_(s32) = G_ICMP intpred(pred), %x(s32), %y
+  // %one:_(s32) = G_CONSTANT i32 1
+  // %and:_(s32) = G_AND %cmp, %one
+  //
+  // In this case, G_ICMP only produces a single bit, so x & 1 == x.
+  assert(MI.getOpcode() == TargetOpcode::G_AND);
+  if (!KB)
+    return false;
+
+  // Replacement = %x, AndDst = %y. Check that we can replace AndDst with the
+  // LHS of the G_AND.
+  Replacement = MI.getOperand(1).getReg();
+  Register AndDst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(AndDst);
+
+  // FIXME: This should be removed once GISelKnownBits supports vectors.
+  if (DstTy.isVector())
+    return false;
+  if (!canReplaceReg(AndDst, Replacement, MRI))
+    return false;
+
+  // Check that we have a constant on the RHS of the G_AND, which is of the form
+  // 000...0111...1.
+  int64_t Cst;
+  if (!mi_match(MI.getOperand(2).getReg(), MRI, m_ICst(Cst)))
+    return false;
+  APInt Mask(DstTy.getSizeInBits(), Cst);
+  if (!Mask.isMask())
+    return false;
+
+  // Now, let's check that x & Mask == x. If this is true, then x & ~Mask == 0.
+  return KB->maskedValueIsZero(Replacement, ~Mask);
 }
 
 bool CombinerHelper::tryCombine(MachineInstr &MI) {

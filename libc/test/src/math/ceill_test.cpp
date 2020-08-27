@@ -23,9 +23,6 @@ static const long double nan = FPBits::buildNaN(1);
 static const long double inf = FPBits::inf();
 static const long double negInf = FPBits::negInf();
 
-// Zero tolerance; As in, exact match with MPFR result.
-static constexpr mpfr::Tolerance tolerance{mpfr::Tolerance::floatPrecision, 0,
-                                           0};
 TEST(CeillTest, SpecialNumbers) {
   EXPECT_FP_EQ(zero, __llvm_libc::ceill(zero));
   EXPECT_FP_EQ(negZero, __llvm_libc::ceill(negZero));
@@ -47,25 +44,25 @@ TEST(CeillTest, RoundedNumbers) {
 }
 
 TEST(CeillTest, Fractions) {
-  EXPECT_FP_EQ(0.0l, __llvm_libc::ceill(0.5l));
+  EXPECT_FP_EQ(1.0l, __llvm_libc::ceill(0.5l));
   EXPECT_FP_EQ(-0.0l, __llvm_libc::ceill(-0.5l));
-  EXPECT_FP_EQ(0.0l, __llvm_libc::ceill(0.115l));
+  EXPECT_FP_EQ(1.0l, __llvm_libc::ceill(0.115l));
   EXPECT_FP_EQ(-0.0l, __llvm_libc::ceill(-0.115l));
-  EXPECT_FP_EQ(0.0l, __llvm_libc::ceill(0.715l));
+  EXPECT_FP_EQ(1.0l, __llvm_libc::ceill(0.715l));
   EXPECT_FP_EQ(-0.0l, __llvm_libc::ceill(-0.715l));
-  EXPECT_FP_EQ(1.0l, __llvm_libc::ceill(1.3l));
+  EXPECT_FP_EQ(2.0l, __llvm_libc::ceill(1.3l));
   EXPECT_FP_EQ(-1.0l, __llvm_libc::ceill(-1.3l));
-  EXPECT_FP_EQ(1.0l, __llvm_libc::ceill(1.5l));
+  EXPECT_FP_EQ(2.0l, __llvm_libc::ceill(1.5l));
   EXPECT_FP_EQ(-1.0l, __llvm_libc::ceill(-1.5l));
-  EXPECT_FP_EQ(1.0l, __llvm_libc::ceill(1.75l));
+  EXPECT_FP_EQ(2.0l, __llvm_libc::ceill(1.75l));
   EXPECT_FP_EQ(-1.0l, __llvm_libc::ceill(-1.75l));
-  EXPECT_FP_EQ(10.0l, __llvm_libc::ceill(10.32l));
+  EXPECT_FP_EQ(11.0l, __llvm_libc::ceill(10.32l));
   EXPECT_FP_EQ(-10.0l, __llvm_libc::ceill(-10.32l));
-  EXPECT_FP_EQ(10.0l, __llvm_libc::ceill(10.65l));
+  EXPECT_FP_EQ(11.0l, __llvm_libc::ceill(10.65l));
   EXPECT_FP_EQ(-10.0l, __llvm_libc::ceill(-10.65l));
-  EXPECT_FP_EQ(1234.0l, __llvm_libc::ceill(1234.38l));
+  EXPECT_FP_EQ(1235.0l, __llvm_libc::ceill(1234.38l));
   EXPECT_FP_EQ(-1234.0l, __llvm_libc::ceill(-1234.38l));
-  EXPECT_FP_EQ(1234.0l, __llvm_libc::ceill(1234.96l));
+  EXPECT_FP_EQ(1235.0l, __llvm_libc::ceill(1234.96l));
   EXPECT_FP_EQ(-1234.0l, __llvm_libc::ceill(-1234.96l));
 }
 
@@ -78,7 +75,6 @@ TEST(CeillTest, InLongDoubleRange) {
     if (isnan(x) || isinf(x))
       continue;
 
-    ASSERT_MPFR_MATCH(mpfr::Operation::Ceil, x, __llvm_libc::ceill(x),
-                      tolerance);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Ceil, x, __llvm_libc::ceill(x), 0.0);
   }
 }

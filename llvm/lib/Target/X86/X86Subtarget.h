@@ -302,6 +302,9 @@ class X86Subtarget final : public X86GenSubtargetInfo {
   /// True if the processor has enhanced REP MOVSB/STOSB.
   bool HasERMSB = false;
 
+  /// True if the processor has fast short REP MOV.
+  bool HasFSRM = false;
+
   /// True if the short functions should be padded to prevent
   /// a stall when returning too early.
   bool PadShortFunctions = false;
@@ -694,6 +697,7 @@ public:
   bool hasMacroFusion() const { return HasMacroFusion; }
   bool hasBranchFusion() const { return HasBranchFusion; }
   bool hasERMSB() const { return HasERMSB; }
+  bool hasFSRM() const { return HasFSRM; }
   bool hasSlowDivide32() const { return HasSlowDivide32; }
   bool hasSlowDivide64() const { return HasSlowDivide64; }
   bool padShortFunctions() const { return PadShortFunctions; }

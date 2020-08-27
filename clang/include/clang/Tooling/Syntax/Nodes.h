@@ -55,6 +55,9 @@ enum class NodeKind : uint16_t {
   CharUserDefinedLiteralExpression,
   StringUserDefinedLiteralExpression,
   IdExpression,
+  MemberExpression,
+  ThisExpression,
+  CallExpression,
 
   // Statements.
   UnknownStatement,
@@ -96,12 +99,14 @@ enum class NodeKind : uint16_t {
   ParametersAndQualifiers,
   MemberPointer,
   UnqualifiedId,
+  ParameterDeclarationList,
   // Nested Name Specifiers.
   NestedNameSpecifier,
   GlobalNameSpecifier,
   DecltypeNameSpecifier,
   IdentifierNameSpecifier,
-  SimpleTemplateNameSpecifier
+  SimpleTemplateNameSpecifier,
+  CallArguments
 };
 /// For debugging purposes.
 raw_ostream &operator<<(raw_ostream &OS, NodeKind K);
@@ -169,11 +174,16 @@ enum class NodeRole : uint8_t {
   ExplicitTemplateInstantiation_declaration,
   ArraySubscript_sizeExpression,
   TrailingReturnType_declarator,
-  ParametersAndQualifiers_parameter,
+  ParametersAndQualifiers_parameters,
   ParametersAndQualifiers_trailingReturn,
   IdExpression_id,
   IdExpression_qualifier,
-  ParenExpression_subExpression
+  ParenExpression_subExpression,
+  MemberExpression_object,
+  MemberExpression_accessToken,
+  MemberExpression_member,
+  CallExpression_callee,
+  CallExpression_arguments,
 };
 /// For debugging purposes.
 raw_ostream &operator<<(raw_ostream &OS, NodeRole R);
@@ -309,6 +319,47 @@ public:
   }
 };
 
+/// Models a this expression `this`. C++ [expr.prim.this]
+class ThisExpression final : public Expression {
+public:
+  ThisExpression() : Expression(NodeKind::ThisExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::ThisExpression;
+  }
+  Leaf *thisKeyword();
+};
+
+/// Models arguments of a function call.
+///   call-arguments:
+///     delimited_list(expression, ',')
+/// Note: This construct is a simplification of the grammar rule for
+/// `expression-list`, that is used in the definition of `call-expression`
+class CallArguments final : public List {
+public:
+  CallArguments() : List(NodeKind::CallArguments) {}
+  static bool classof(const Node *N) {
+    return N->kind() <= NodeKind::CallArguments;
+  }
+  std::vector<Expression *> arguments();
+  std::vector<List::ElementAndDelimiter<Expression>> argumentsAndCommas();
+};
+
+/// A function call. C++ [expr.call]
+/// call-expression:
+///   expression '(' call-arguments ')'
+/// e.g `f(1, '2')` or `this->Base::f()`
+class CallExpression final : public Expression {
+public:
+  CallExpression() : Expression(NodeKind::CallExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::CallExpression;
+  }
+  Expression *callee();
+  Leaf *openParen();
+  CallArguments *arguments();
+  Leaf *closeParen();
+};
+
 /// Models a parenthesized expression `(E)`. C++ [expr.prim.paren]
 /// e.g. `(3 + 2)` in `a = 1 + (3 + 2);`
 class ParenExpression final : public Expression {
@@ -320,6 +371,26 @@ public:
   Leaf *openParen();
   Expression *subExpression();
   Leaf *closeParen();
+};
+
+/// Models a class member access. C++ [expr.ref]
+/// member-expression:
+///   expression -> template_opt id-expression
+///   expression .  template_opt id-expression
+/// e.g. `x.a`, `xp->a`
+///
+/// Note: An implicit member access inside a class, i.e. `a` instead of
+/// `this->a`, is an `id-expression`.
+class MemberExpression final : public Expression {
+public:
+  MemberExpression() : Expression(NodeKind::MemberExpression) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::MemberExpression;
+  }
+  Expression *object();
+  Leaf *accessToken();
+  Leaf *templateKeyword();
+  IdExpression *member();
 };
 
 /// Expression for literals. C++ [lex.literal]
@@ -918,6 +989,19 @@ public:
   SimpleDeclarator *declarator();
 };
 
+/// Models a `parameter-declaration-list` which appears within
+/// `parameters-and-qualifiers`. See C++ [dcl.fct]
+class ParameterDeclarationList final : public List {
+public:
+  ParameterDeclarationList() : List(NodeKind::ParameterDeclarationList) {}
+  static bool classof(const Node *N) {
+    return N->kind() == NodeKind::ParameterDeclarationList;
+  }
+  std::vector<SimpleDeclaration *> parameterDeclarations();
+  std::vector<List::ElementAndDelimiter<syntax::SimpleDeclaration>>
+  parametersAndCommas();
+};
+
 /// Parameter list for a function type and a trailing return type, if the
 /// function has one.
 /// E.g.:
@@ -936,8 +1020,7 @@ public:
     return N->kind() == NodeKind::ParametersAndQualifiers;
   }
   Leaf *lparen();
-  /// FIXME: use custom iterator instead of 'vector'.
-  std::vector<SimpleDeclaration *> parameters();
+  ParameterDeclarationList *parameters();
   Leaf *rparen();
   TrailingReturnType *trailingReturn();
 };

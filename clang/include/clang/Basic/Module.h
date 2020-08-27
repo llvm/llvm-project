@@ -62,6 +62,15 @@ struct ASTFileSignature : std::array<uint8_t, 20> {
 
   explicit operator bool() const { return *this != BaseT({{0}}); }
 
+  /// Returns the value truncated to the size of an uint64_t.
+  uint64_t truncatedValue() const {
+    uint64_t Value = 0;
+    static_assert(sizeof(*this) >= sizeof(uint64_t), "No need to truncate.");
+    for (unsigned I = 0; I < sizeof(uint64_t); ++I)
+      Value |= static_cast<uint64_t>((*this)[I]) << (I * 8);
+    return Value;
+  }
+
   static ASTFileSignature create(StringRef Bytes) {
     return create(Bytes.bytes_begin(), Bytes.bytes_end());
   }

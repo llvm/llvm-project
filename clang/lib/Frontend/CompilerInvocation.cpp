@@ -836,6 +836,9 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       llvm::is_contained(DebugEntryValueArchs, T.getArch()))
     Opts.EmitCallSiteInfo = true;
 
+  Opts.ValueTrackingVariableLocations =
+      Args.hasArg(OPT_fexperimental_debug_variable_locations);
+
   Opts.DisableO0ImplyOptNone = Args.hasArg(OPT_disable_O0_optnone);
   Opts.DisableRedZone = Args.hasArg(OPT_disable_red_zone);
   Opts.IndirectTlsSegRefs = Args.hasArg(OPT_mno_tls_direct_seg_refs);
@@ -2929,8 +2932,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   // Recovery AST still heavily relies on dependent-type machinery.
   Opts.RecoveryAST =
       Args.hasFlag(OPT_frecovery_ast, OPT_fno_recovery_ast, Opts.CPlusPlus);
-  Opts.RecoveryASTType =
-      Args.hasFlag(OPT_frecovery_ast_type, OPT_fno_recovery_ast_type, false);
+  Opts.RecoveryASTType = Args.hasFlag(
+      OPT_frecovery_ast_type, OPT_fno_recovery_ast_type, Opts.CPlusPlus);
   Opts.HeinousExtensions = Args.hasArg(OPT_fheinous_gnu_extensions);
   Opts.AccessControl = !Args.hasArg(OPT_fno_access_control);
   Opts.ElideConstructors = !Args.hasArg(OPT_fno_elide_constructors);

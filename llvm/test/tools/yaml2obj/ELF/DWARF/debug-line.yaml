@@ -66,10 +66,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    [[ENDIAN]]
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  [[ENDIAN]]
+  Type:  ET_EXEC
 DWARF:
   debug_line:
     - Length:         0x70
@@ -157,10 +156,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:    .debug_line
     Type:    SHT_PROGBITS
@@ -178,10 +176,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name: .debug_line
     Type: SHT_PROGBITS
@@ -196,10 +193,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name: .debug_line
     Type: SHT_PROGBITS
@@ -226,10 +222,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:    .debug_line
     Type:    SHT_PROGBITS
@@ -261,10 +256,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:         .debug_line
     Type:         SHT_STRTAB  # SHT_PROGBITS by default.
@@ -287,10 +281,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:         .debug_line
     Type:         SHT_STRTAB  # SHT_PROGBITS by default.
@@ -348,10 +341,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS[[BITS]]
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS[[BITS]]
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 DWARF:
   debug_line:
     - Length:                0x1234
@@ -432,10 +424,9 @@ DWARF:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 DWARF:
   debug_line:
     - Length:                0x1234
@@ -488,3 +479,115 @@ DWARF:
           ExtLen:    0x09
           SubOpcode: DW_LNE_set_discriminator
           Data:      0x1234
+
+## j) Test that yaml2obj is able to infer the length and header_length fields.
+
+# RUN: yaml2obj --docnum=10 %s -o %t10.o
+# RUN: llvm-readelf --hex-dump=.debug_line %t10.o | FileCheck %s --check-prefix=INFER-LENGTH
+
+#      INFER-LENGTH: Hex dump of section '.debug_line':
+# INFER-LENGTH-NEXT: 0x00000000 2e000000 04002500 00000101 01fb0e04 ......%.........
+##                              ^-------                            unit_length (4-byte) 0x2e
+##                                       ^---                       version (2-byte)
+##                                           ^--------              header_length (4-byte) 0x25
+##                                                    ^-            minimum_instruction_length (1-byte)
+##                                                      ^-          maximum_operations_per_instruction (1-byte)
+##                                                         ^-       default_is_stmt (1-byte)
+##                                                           ^-     line_base (1-byte) -5
+##                                                             ^-   line_range (1-byte)
+##                                                               ^- opcode_base (1-byte)
+# INFER-LENGTH-NEXT: 0x00000010 00010174 656d7031 0074656d 70320000 ...temp1.temp2..
+##                              ^-----                              standard_opcode_lengths (3-byte)
+##                                    ^-------------                include_directories[1] "temp1\0"
+##                                                  ^------------   include_directories[2] "temp1\0"
+##                                                               ^- include_directories null byte
+# INFER-LENGTH-NEXT: 0x00000020 612e6300 01000062 2e630002 00000000 a.c....b.c......
+##                              ^-------                            file_names[1] file name "a.c\0"
+##                                       ^-                         file_names[1] directory index (ULEB128) 0x01
+##                                         ^-                       file_names[1] file length (ULEB128) 0x00
+##                                           ^-                     file_names[1] modification time 0x00
+##                                             ^--------            file_names[2] file name "b.c\0"
+##                                                      ^-          file_names[2] directory index (ULEB128) 0x02
+##                                                         ^-       file_names[2] file length (ULEB128) 0x00
+##                                                           ^-     file_names[2] modification time 0x00
+##                                                             ^-   file_names null byte
+##                                                               ^- DW_LNS_extended_op
+# INFER-LENGTH-NEXT: 0x00000030 0101ffff ffff2500 00000000 00000400 ......%.........
+##                              ^-                                  extended op length (ULEB128) 0x01
+##                                ^-                                DW_LNE_end_sequence
+##                                  ^--------------------------     unit_length (12-byte)
+##                                                             ^--- version (2-byte)
+# INFER-LENGTH-NEXT: 0x00000040 18000000 00000000 010101fb 0e040001 ................
+##                              ^----------------                   header_length (8-byte)
+##                                                ^-                minimum_instruction_length (1-byte)
+##                                                  ^-              maximum_operations_per_instruction (1-byte)
+##                                                    ^-            default_is_stmt (1-byte)
+##                                                      ^-          line_base (1-byte) -5
+##                                                         ^-       line_range (1-byte)
+##                                                           ^-     opcode_base (1-byte)
+##                                                             ^--- standard_opcode_lengths (3-byte)
+# INFER-LENGTH-NEXT: 0x00000050 0174656d 70330000 632e6300 01000000 .temp3..c.c.....
+##                              --
+##                                ^------------                     include_directories[1] "temp3\0"
+##                                             ^-                   include_directories null byte
+##                                                ^-------          file_names[1] file name "a.c\0"
+##                                                         ^-       file_names[1] directory index (ULEB128) 0x01
+##                                                           ^-     file_names[1] file length (ULEB128) 0x00
+##                                                             ^-   file_names[1] modification time 0x00
+##                                                               ^- file_names null byte
+# INFER-LENGTH-NEXT: 0x00000060 000101                              ...
+##                              ^-                                  DW_LNS_extended_op
+##                                ^-                                extended op length (ULEB128) 0x01
+##                                  ^-                              DW_LNE_end_sequence
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_line:
+    - Version:               4
+      MinInstLength:         1
+      MaxOpsPerInst:         1
+      DefaultIsStmt:         1
+      LineBase:              251
+      LineRange:             14
+      OpcodeBase:            4
+      StandardOpcodeLengths: [ 0, 1, 1 ]
+      IncludeDirs:
+        - temp1
+        - temp2
+      Files:
+        - Name:    a.c
+          DirIdx:  1
+          ModTime: 0
+          Length:  0
+        - Name:    b.c
+          DirIdx:  2
+          ModTime: 0
+          Length:  0
+      Opcodes:
+        - Opcode:    DW_LNS_extended_op
+          ExtLen:    1
+          SubOpcode: DW_LNE_end_sequence
+    - Format:                DWARF64
+      Version:               4
+      MinInstLength:         1
+      MaxOpsPerInst:         1
+      DefaultIsStmt:         1
+      LineBase:              251
+      LineRange:             14
+      OpcodeBase:            4
+      StandardOpcodeLengths: [ 0, 1, 1 ]
+      IncludeDirs:
+        - temp3
+      Files:
+        - Name:    c.c
+          DirIdx:  1
+          ModTime: 0
+          Length:  0
+      Opcodes:
+        - Opcode:    DW_LNS_extended_op
+          ExtLen:    1
+          SubOpcode: DW_LNE_end_sequence

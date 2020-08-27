@@ -13,7 +13,7 @@ FileHeader:
   Class:   ELFCLASS64
   Data:    ELFDATA2LSB
   Type:    ET_REL
-  Machine: EM_X86_64
+  Machine: [[MACHINE=<none>]]
   OSABI:   [[OSABI]]
 
 ## EI_OSABI is set to ELFOSABI_HPUX.
@@ -159,3 +159,51 @@ FileHeader:
 
 # OSABI-UNKNOWN-LLVM: OS/ABI: 0xFE
 # OSABI-UNKNOWN-GNU:  OS/ABI: fe
+
+## Check all EM_AMDGPU specific values.
+
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_AMDGPU_HSA -DMACHINE=EM_AMDGPU -o %t.osabi.amd.hsa
+# RUN: llvm-readobj --file-headers %t.osabi.amd.hsa | FileCheck %s --match-full-lines --check-prefix=OSABI-AMDHSA-LLVM
+# RUN: llvm-readelf --file-headers %t.osabi.amd.hsa | FileCheck %s --match-full-lines --check-prefix=OSABI-AMDHSA-GNU
+
+# OSABI-AMDHSA-LLVM: OS/ABI: AMDGPU_HSA (0x40)
+# OSABI-AMDHSA-GNU:  OS/ABI: 40
+
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_AMDGPU_PAL -DMACHINE=EM_AMDGPU -o %t.osabi.amd.pal
+# RUN: llvm-readobj --file-headers %t.osabi.amd.pal | FileCheck %s --match-full-lines --check-prefix=OSABI-AMDPAL-LLVM
+# RUN: llvm-readelf --file-headers %t.osabi.amd.pal | FileCheck %s --match-full-lines --check-prefix=OSABI-AMDPAL-GNU
+
+# OSABI-AMDPAL-LLVM: OS/ABI: AMDGPU_PAL (0x41)
+# OSABI-AMDPAL-GNU:  OS/ABI: 41
+
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_AMDGPU_MESA3D -DMACHINE=EM_AMDGPU -o %t.osabi.amd.mesa3d
+# RUN: llvm-readobj --file-headers %t.osabi.amd.mesa3d | FileCheck %s --match-full-lines --check-prefix=OSABI-AMDMESA3D-LLVM
+# RUN: llvm-readelf --file-headers %t.osabi.amd.mesa3d | FileCheck %s --match-full-lines --check-prefix=OSABI-AMDMESA3D-GNU
+
+# OSABI-AMDMESA3D-LLVM: OS/ABI: AMDGPU_MESA3D (0x42)
+# OSABI-AMDMESA3D-GNU:  OS/ABI: 42
+
+# Check all EM_ARM specific values.
+
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_ARM -DMACHINE=EM_ARM -o %t.osabi.arm
+# RUN: llvm-readobj --file-headers %t.osabi.arm | FileCheck %s --match-full-lines --check-prefix=OSABI-ARM-LLVM
+# RUN: llvm-readelf --file-headers %t.osabi.arm | FileCheck %s --match-full-lines --check-prefix=OSABI-ARM-GNU
+
+# OSABI-ARM-LLVM: OS/ABI: ARM (0x61)
+# OSABI-ARM-GNU:  OS/ABI: 61
+
+## Check all EM_TI_C6000 specific values.
+
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_C6000_ELFABI -DMACHINE=EM_TI_C6000 -o %t.osabi.c6000.elfabi
+# RUN: llvm-readobj --file-headers %t.osabi.c6000.elfabi | FileCheck %s --match-full-lines --check-prefix=OSABI-C6000ELFABI-LLVM
+# RUN: llvm-readelf --file-headers %t.osabi.c6000.elfabi | FileCheck %s --match-full-lines --check-prefix=OSABI-C6000ELFABI-GNU
+
+# OSABI-C6000ELFABI-LLVM: OS/ABI: C6000_ELFABI (0x40)
+# OSABI-C6000ELFABI-GNU:  OS/ABI: 40
+
+# RUN: yaml2obj %s -DOSABI=ELFOSABI_C6000_LINUX -DMACHINE=EM_TI_C6000 -o %t.osabi.c6000.linux
+# RUN: llvm-readobj --file-headers %t.osabi.c6000.linux | FileCheck %s --match-full-lines --check-prefix=OSABI-C6000LINUX-LLVM
+# RUN: llvm-readelf --file-headers %t.osabi.c6000.linux | FileCheck %s --match-full-lines --check-prefix=OSABI-C6000LINUX-GNU
+
+# OSABI-C6000LINUX-LLVM: OS/ABI: C6000_LINUX (0x41)
+# OSABI-C6000LINUX-GNU:  OS/ABI: 41

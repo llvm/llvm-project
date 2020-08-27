@@ -78,7 +78,7 @@ static bool foldImmediates(MachineInstr &MI, const SIInstrInfo *TII,
   MachineOperand &Src0 = MI.getOperand(Src0Idx);
   if (Src0.isReg()) {
     Register Reg = Src0.getReg();
-    if (Register::isVirtualRegister(Reg) && MRI.hasOneUse(Reg)) {
+    if (Reg.isVirtual() && MRI.hasOneUse(Reg)) {
       MachineInstr *Def = MRI.getUniqueVRegDef(Reg);
       if (Def && Def->isMoveImmediate()) {
         MachineOperand &MovSrc = Def->getOperand(1);
@@ -367,7 +367,7 @@ static bool shrinkScalarLogicOp(const GCNSubtarget &ST,
   }
 
   if (NewImm != 0) {
-    if (Register::isVirtualRegister(Dest->getReg()) && SrcReg->isReg()) {
+    if (Dest->getReg().isVirtual() && SrcReg->isReg()) {
       MRI.setRegAllocationHint(Dest->getReg(), 0, SrcReg->getReg());
       MRI.setRegAllocationHint(SrcReg->getReg(), 0, Dest->getReg());
       return true;
@@ -397,17 +397,16 @@ static bool shrinkScalarLogicOp(const GCNSubtarget &ST,
 // This is the same as MachineInstr::readsRegister/modifiesRegister except
 // it takes subregs into account.
 static bool instAccessReg(iterator_range<MachineInstr::const_mop_iterator> &&R,
-                          unsigned Reg, unsigned SubReg,
+                          Register Reg, unsigned SubReg,
                           const SIRegisterInfo &TRI) {
   for (const MachineOperand &MO : R) {
     if (!MO.isReg())
       continue;
 
-    if (Register::isPhysicalRegister(Reg) &&
-        Register::isPhysicalRegister(MO.getReg())) {
+    if (Reg.isPhysical() && MO.getReg().isPhysical()) {
       if (TRI.regsOverlap(Reg, MO.getReg()))
         return true;
-    } else if (MO.getReg() == Reg && Register::isVirtualRegister(Reg)) {
+    } else if (MO.getReg() == Reg && Reg.isVirtual()) {
       LaneBitmask Overlap = TRI.getSubRegIndexLaneMask(SubReg) &
                             TRI.getSubRegIndexLaneMask(MO.getSubReg());
       if (Overlap.any())
@@ -430,10 +429,10 @@ static bool instModifiesReg(const MachineInstr *MI,
 }
 
 static TargetInstrInfo::RegSubRegPair
-getSubRegForIndex(unsigned Reg, unsigned Sub, unsigned I,
+getSubRegForIndex(Register Reg, unsigned Sub, unsigned I,
                   const SIRegisterInfo &TRI, const MachineRegisterInfo &MRI) {
   if (TRI.getRegSizeInBits(Reg, MRI) != 32) {
-    if (Register::isPhysicalRegister(Reg)) {
+    if (Reg.isPhysical()) {
       Reg = TRI.getSubReg(Reg, TRI.getSubRegFromChannel(I));
     } else {
       Sub = TRI.getSubRegFromChannel(I + TRI.getChannelFromSubReg(Sub));
@@ -589,8 +588,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         // optimizations happen because this will confuse them.
         // XXX - not exactly a check for post-regalloc run.
         MachineOperand &Src = MI.getOperand(1);
-        if (Src.isImm() &&
-            Register::isPhysicalRegister(MI.getOperand(0).getReg())) {
+        if (Src.isImm() && MI.getOperand(0).getReg().isPhysical()) {
           int32_t ReverseImm;
           if (isReverseInlineImm(TII, Src, ReverseImm)) {
             MI.setDesc(TII->get(AMDGPU::V_BFREV_B32_e32));
@@ -656,7 +654,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         // FIXME: This could work better if hints worked with subregisters. If
         // we have a vector add of a constant, we usually don't get the correct
         // allocation due to the subregister usage.
-        if (Register::isVirtualRegister(Dest->getReg()) && Src0->isReg()) {
+        if (Dest->getReg().isVirtual() && Src0->isReg()) {
           MRI.setRegAllocationHint(Dest->getReg(), 0, Src0->getReg());
           MRI.setRegAllocationHint(Src0->getReg(), 0, Dest->getReg());
           continue;
@@ -684,7 +682,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         const MachineOperand &Dst = MI.getOperand(0);
         MachineOperand &Src = MI.getOperand(1);
 
-        if (Src.isImm() && Register::isPhysicalRegister(Dst.getReg())) {
+        if (Src.isImm() && Dst.getReg().isPhysical()) {
           int32_t ReverseImm;
           if (isKImmOperand(TII, Src))
             MI.setDesc(TII->get(AMDGPU::S_MOVK_I32));
@@ -733,7 +731,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
 
       if (TII->isVOPC(Op32)) {
         Register DstReg = MI.getOperand(0).getReg();
-        if (Register::isVirtualRegister(DstReg)) {
+        if (DstReg.isVirtual()) {
           // VOPC instructions can only write to the VCC register. We can't
           // force them to use VCC here, because this is only one register and
           // cannot deal with sequences which would require multiple copies of
@@ -757,7 +755,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         if (!Src2->isReg())
           continue;
         Register SReg = Src2->getReg();
-        if (Register::isVirtualRegister(SReg)) {
+        if (SReg.isVirtual()) {
           MRI.setRegAllocationHint(SReg, 0, VCCReg);
           continue;
         }
@@ -777,7 +775,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         bool Next = false;
 
         if (SDst->getReg() != VCCReg) {
-          if (Register::isVirtualRegister(SDst->getReg()))
+          if (SDst->getReg().isVirtual())
             MRI.setRegAllocationHint(SDst->getReg(), 0, VCCReg);
           Next = true;
         }
@@ -785,7 +783,7 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         // All of the instructions with carry outs also have an SGPR input in
         // src2.
         if (Src2 && Src2->getReg() != VCCReg) {
-          if (Register::isVirtualRegister(Src2->getReg()))
+          if (Src2->getReg().isVirtual())
             MRI.setRegAllocationHint(Src2->getReg(), 0, VCCReg);
           Next = true;
         }

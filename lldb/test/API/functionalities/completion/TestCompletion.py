@@ -5,6 +5,7 @@ Test the lldb command line completion mechanism.
 
 
 import os
+from multiprocessing import Process
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -85,12 +86,69 @@ class CommandLineCompletionTestCase(TestBase):
                               ['mips',
                                'arm64'])
 
+    def test_process_load(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(self, '// Break here', lldb.SBFileSpec("main.cpp"))
+        self.complete_from_to('process load Makef', 'process load Makefile')
+
+    @skipUnlessPlatform(["linux"])
+    def test_process_unload(self):
+        """Test the completion for "process unload <index>" """
+        # This tab completion should not work without a running process.
+        self.complete_from_to('process unload ',
+                              'process unload ')
+
+        self.build()
+        lldbutil.run_to_source_breakpoint(self, '// Break here', lldb.SBFileSpec("main.cpp"))
+        err = lldb.SBError()
+        self.process().LoadImage(lldb.SBFileSpec(self.getBuildArtifact("libshared.so")), err)
+        self.assertSuccess(err)
+
+        self.complete_from_to('process unload ',
+                              'process unload 0')
+
+        self.process().UnloadImage(0)
+        self.complete_from_to('process unload ',
+                              'process unload ')
+
     def test_process_plugin_completion(self):
         subcommands = ['attach -P', 'connect -p', 'launch -p']
 
         for subcommand in subcommands:
             self.complete_from_to('process ' + subcommand + ' mac',
                                   'process ' + subcommand + ' mach-o-core')
+
+    def completions_contain_str(self, input, needle):
+        interp = self.dbg.GetCommandInterpreter()
+        match_strings = lldb.SBStringList()
+        num_matches = interp.HandleCompletion(input, len(input), 0, -1, match_strings)
+        found_needle = False
+        for match in match_strings:
+          if needle in match:
+            found_needle = True
+            break
+        self.assertTrue(found_needle, "Returned completions: " + "\n".join(match_strings))
+
+
+    @skipIfRemote
+    def test_common_completion_process_pid_and_name(self):
+        # The LLDB process itself and the process already attached to are both
+        # ignored by the process discovery mechanism, thus we need a process known 
+        # to us here.
+        self.build()
+        server = self.spawnSubprocess(
+            self.getBuildArtifact("a.out"),
+            ["-x"], # Arg "-x" makes the subprocess wait for input thus it won't be terminated too early
+            install_remote=False)
+        self.assertIsNotNone(server)
+        pid = server.pid
+
+        self.complete_from_to('process attach -p ', [str(pid)])
+        self.complete_from_to('platform process attach -p ', [str(pid)])
+        self.complete_from_to('platform process info ', [str(pid)])
+
+        self.completions_contain_str('process attach -n ', "a.out")
+        self.completions_contain_str('platform process attach -n ', "a.out")
 
     def test_process_signal(self):
         # The tab completion for "process signal"  won't work without a running process.
@@ -420,6 +478,12 @@ class CommandLineCompletionTestCase(TestBase):
         for subcommand in subcommands:
             self.complete_from_to('thread ' + subcommand + ' ', ['1'])
 
+    def test_common_completion_type_category_name(self):
+        subcommands = ['delete', 'list', 'enable', 'disable', 'define']
+        for subcommand in subcommands:
+            self.complete_from_to('type category ' + subcommand + ' ', ['default'])
+        self.complete_from_to('type filter add -w ', ['default'])
+
     def test_command_argument_completion(self):
         """Test completion of command arguments"""
         self.complete_from_to("watchpoint set variable -", ["-w", "-s"])
@@ -644,3 +708,21 @@ class CommandLineCompletionTestCase(TestBase):
                                   ['1',
                                    '2'])
 
+    def test_complete_breakpoint_with_names(self):
+        self.build()
+        target = self.dbg.CreateTarget(self.getBuildArtifact('a.out'))
+        self.assertTrue(target, VALID_TARGET)
+
+        # test breakpoint read dedicated
+        self.complete_from_to('breakpoint read -N ', 'breakpoint read -N ')
+        self.complete_from_to('breakpoint read -f breakpoints.json -N ', ['mm'])
+        self.complete_from_to('breakpoint read -f breakpoints.json -N n', 'breakpoint read -f breakpoints.json -N n')
+        self.complete_from_to('breakpoint read -f breakpoints_invalid.json -N ', 'breakpoint read -f breakpoints_invalid.json -N ')
+
+        # test common breapoint name completion
+        bp1 = target.BreakpointCreateByName('main', 'a.out')
+        self.assertTrue(bp1)
+        self.assertEqual(bp1.GetNumLocations(), 1)
+        self.complete_from_to('breakpoint set -N n', 'breakpoint set -N n')
+        self.assertTrue(bp1.AddNameWithErrorHandling("nn"))
+        self.complete_from_to('breakpoint set -N ', 'breakpoint set -N nn')

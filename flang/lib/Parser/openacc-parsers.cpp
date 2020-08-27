@@ -111,7 +111,7 @@ TYPE_PARSER("AUTO" >> construct<AccClause>(construct<AccClause::Auto>()) ||
         construct<AccClause>(construct<AccClause::Vector>(maybe(
             parenthesized(("LENGTH:" >> scalarIntExpr || scalarIntExpr))))) ||
     "WAIT" >> construct<AccClause>(construct<AccClause::Wait>(
-                  maybe(Parser<AccWaitArgument>{}))) ||
+                  maybe(parenthesized(Parser<AccWaitArgument>{})))) ||
     "WORKER" >>
         construct<AccClause>(construct<AccClause::Worker>(maybe(
             parenthesized(("NUM:" >> scalarIntExpr || scalarIntExpr))))) ||
@@ -125,8 +125,10 @@ TYPE_PARSER(construct<AccObjectList>(nonemptyList(Parser<AccObject>{})))
 TYPE_PARSER(construct<AccObjectListWithModifier>(
     maybe(Parser<AccDataModifier>{}), Parser<AccObjectList>{}))
 
-TYPE_PARSER(construct<AccWaitArgument>(
-    maybe("DEVNUM:" >> scalarIntExpr / ":"), nonemptyList(scalarIntExpr)))
+// 2.16.3 (2485) wait-argument is:
+//   [devnum : int-expr :] [queues :] int-expr-list
+TYPE_PARSER(construct<AccWaitArgument>(maybe("DEVNUM:" >> scalarIntExpr / ":"),
+    "QUEUES:" >> nonemptyList(scalarIntExpr) || nonemptyList(scalarIntExpr)))
 
 // 2.9 (1609) size-expr is one of:
 //   int-expr
@@ -143,8 +145,19 @@ TYPE_PARSER(construct<AccGangArgument>(maybe(scalarIntExpr),
         maybe(","_tok / "STATIC:" >> Parser<AccSizeExpr>{})))
 
 // 2.5.13 Reduction
-TYPE_PARSER(construct<AccReductionOperator>(Parser<DefinedOperator>{}) ||
-    construct<AccReductionOperator>(Parser<ProcedureDesignator>{}))
+// Operator for reduction
+TYPE_PARSER(sourced(construct<AccReductionOperator>(
+    first("+" >> pure(AccReductionOperator::Operator::Plus),
+        "*" >> pure(AccReductionOperator::Operator::Multiply),
+        "MAX" >> pure(AccReductionOperator::Operator::Max),
+        "MIN" >> pure(AccReductionOperator::Operator::Min),
+        "IAND" >> pure(AccReductionOperator::Operator::Iand),
+        "IOR" >> pure(AccReductionOperator::Operator::Ior),
+        "IEOR" >> pure(AccReductionOperator::Operator::Ieor),
+        ".AND." >> pure(AccReductionOperator::Operator::And),
+        ".OR." >> pure(AccReductionOperator::Operator::Or),
+        ".EQV." >> pure(AccReductionOperator::Operator::Eqv),
+        ".NEQV." >> pure(AccReductionOperator::Operator::Neqv)))))
 
 // 2.5.14 Default clause
 TYPE_PARSER(construct<AccDefaultClause>(

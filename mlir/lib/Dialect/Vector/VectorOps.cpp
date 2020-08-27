@@ -1949,6 +1949,7 @@ public:
     case MaskFormat::Unknown:
       return failure();
     }
+    llvm_unreachable("Unexpected 1DMaskFormat on MaskedLoad");
   }
 };
 } // namespace
@@ -1994,6 +1995,7 @@ public:
     case MaskFormat::Unknown:
       return failure();
     }
+    llvm_unreachable("Unexpected 1DMaskFormat on MaskedStore");
   }
 };
 } // namespace
@@ -2042,6 +2044,7 @@ public:
     case MaskFormat::Unknown:
       return failure();
     }
+    llvm_unreachable("Unexpected 1DMaskFormat on GatherFolder");
   }
 };
 } // namespace
@@ -2085,6 +2088,7 @@ public:
     case MaskFormat::Unknown:
       return failure();
     }
+    llvm_unreachable("Unexpected 1DMaskFormat on ScatterFolder");
   }
 };
 } // namespace
@@ -2134,6 +2138,7 @@ public:
     case MaskFormat::Unknown:
       return failure();
     }
+    llvm_unreachable("Unexpected 1DMaskFormat on ExpandLoadFolder");
   }
 };
 } // namespace
@@ -2180,6 +2185,7 @@ public:
     case MaskFormat::Unknown:
       return failure();
     }
+    llvm_unreachable("Unexpected 1DMaskFormat on CompressStoreFolder");
   }
 };
 } // namespace
@@ -2288,6 +2294,42 @@ OpFoldResult ShapeCastOp::fold(ArrayRef<Attribute> operands) {
 
   // Canceling shape casts.
   if (auto otherOp = source().getDefiningOp<ShapeCastOp>())
+    if (result().getType() == otherOp.source().getType())
+      return otherOp.source();
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// VectorBitCastOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(BitCastOp op) {
+  auto sourceVectorType = op.getSourceVectorType();
+  auto resultVectorType = op.getResultVectorType();
+
+  for (int64_t i = 0, e = sourceVectorType.getRank() - 1; i < e; i++) {
+    if (sourceVectorType.getDimSize(i) != resultVectorType.getDimSize(i))
+      return op.emitOpError("dimension size mismatch at: ") << i;
+  }
+
+  if (sourceVectorType.getElementTypeBitWidth() *
+          sourceVectorType.getShape().back() !=
+      resultVectorType.getElementTypeBitWidth() *
+          resultVectorType.getShape().back())
+    return op.emitOpError(
+        "source/result bitwidth of the minor 1-D vectors must be equal");
+
+  return success();
+}
+
+OpFoldResult BitCastOp::fold(ArrayRef<Attribute> operands) {
+  // Nop cast.
+  if (source().getType() == result().getType())
+    return source();
+
+  // Canceling bitcasts.
+  if (auto otherOp = source().getDefiningOp<BitCastOp>())
     if (result().getType() == otherOp.source().getType())
       return otherOp.source();
 

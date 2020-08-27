@@ -10,8 +10,8 @@
 
 namespace py = pybind11;
 
-pybind11::error_already_set mlir::python::SetPyError(PyObject *excClass,
-                                                     llvm::Twine message) {
+pybind11::error_already_set
+mlir::python::SetPyError(PyObject *excClass, const llvm::Twine &message) {
   auto messageStr = message.str();
   PyErr_SetString(excClass, messageStr.c_str());
   return pybind11::error_already_set();

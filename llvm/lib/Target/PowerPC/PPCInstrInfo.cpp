@@ -2272,7 +2272,11 @@ PPCInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
       {MO_PIC_FLAG, "ppc-pic"},
       {MO_PCREL_FLAG, "ppc-pcrel"},
       {MO_GOT_FLAG, "ppc-got"},
-      {MO_PCREL_OPT_FLAG, "ppc-opt-pcrel"}};
+      {MO_PCREL_OPT_FLAG, "ppc-opt-pcrel"},
+      {MO_TLSGD_FLAG, "ppc-tlsgd"},
+      {MO_TPREL_FLAG, "ppc-tprel"},
+      {MO_GOT_TLSGD_PCREL_FLAG, "ppc-got-tlsgd-pcrel"},
+      {MO_GOT_TPREL_PCREL_FLAG, "ppc-got-tprel-pcrel"}};
   return makeArrayRef(TargetFlags);
 }
 
@@ -3752,6 +3756,20 @@ bool PPCInstrInfo::simplifyToLI(MachineInstr &MI, MachineInstr &DefMI,
       ReplaceWithLI = true;
       Is64BitLI = Opc == PPC::ADDI8;
       NewImm = Addend + SExtImm;
+      break;
+    }
+    return false;
+  }
+  case PPC::SUBFIC:
+  case PPC::SUBFIC8: {
+    // Only transform this if the CARRY implicit operand is dead.
+    if (MI.getNumOperands() > 3 && !MI.getOperand(3).isDead())
+      return false;
+    int64_t Minuend = MI.getOperand(2).getImm();
+    if (isInt<16>(Minuend - SExtImm)) {
+      ReplaceWithLI = true;
+      Is64BitLI = Opc == PPC::SUBFIC8;
+      NewImm = Minuend - SExtImm;
       break;
     }
     return false;

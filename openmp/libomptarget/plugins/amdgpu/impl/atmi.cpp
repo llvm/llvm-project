@@ -33,8 +33,9 @@ atmi_status_t atmi_module_register_from_memory_to_place(void *module_bytes,
 /*
  * Data
  */
-atmi_status_t atmi_memcpy(void *dest, const void *src, size_t size) {
-  return core::Runtime::getInstance().Memcpy(dest, src, size);
+atmi_status_t atmi_memcpy(hsa_signal_t sig, void *dest, const void *src,
+                          size_t size) {
+  return core::Runtime::Memcpy(sig, dest, src, size);
 }
 
 atmi_status_t atmi_free(void *ptr) {

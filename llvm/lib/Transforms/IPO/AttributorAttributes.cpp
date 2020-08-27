@@ -1739,13 +1739,6 @@ struct AANonNullFloating : public AANonNullImpl {
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    if (!NullIsDefined) {
-      const auto &DerefAA =
-          A.getAAFor<AADereferenceable>(*this, getIRPosition());
-      if (DerefAA.getAssumedDereferenceableBytes())
-        return ChangeStatus::UNCHANGED;
-    }
-
     const DataLayout &DL = A.getDataLayout();
 
     DominatorTree *DT = nullptr;
@@ -3100,6 +3093,10 @@ struct AAIsDeadFunction : public AAIsDead {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override;
 
+  bool isEdgeDead(const BasicBlock *From, const BasicBlock *To) const override {
+    return !AssumedLiveEdges.count(std::make_pair(From, To));
+  }
+
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {}
 
@@ -3176,6 +3173,9 @@ struct AAIsDeadFunction : public AAIsDead {
 
   /// Collection of instructions that are known to not transfer control.
   SmallSetVector<const Instruction *, 8> KnownDeadEnds;
+
+  /// Collection of all assumed live edges
+  DenseSet<std::pair<const BasicBlock *, const BasicBlock *>> AssumedLiveEdges;
 
   /// Collection of all assumed live BasicBlocks.
   DenseSet<const BasicBlock *> AssumedLiveBlocks;
@@ -3292,18 +3292,23 @@ ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
     const Instruction *I = Worklist.pop_back_val();
     LLVM_DEBUG(dbgs() << "[AAIsDead] Exploration inst: " << *I << "\n");
 
+    // Fast forward for uninteresting instructions. We could look for UB here
+    // though.
+    while (!I->isTerminator() && !isa<CallBase>(I)) {
+      Change = ChangeStatus::CHANGED;
+      I = I->getNextNode();
+    }
+
     AliveSuccessors.clear();
 
     bool UsedAssumedInformation = false;
     switch (I->getOpcode()) {
     // TODO: look for (assumed) UB to backwards propagate "deadness".
     default:
-      if (I->isTerminator()) {
-        for (const BasicBlock *SuccBB : successors(I->getParent()))
-          AliveSuccessors.push_back(&SuccBB->front());
-      } else {
-        AliveSuccessors.push_back(I->getNextNode());
-      }
+      assert(I->isTerminator() &&
+             "Expected non-terminators to be handled already!");
+      for (const BasicBlock *SuccBB : successors(I->getParent()))
+        AliveSuccessors.push_back(&SuccBB->front());
       break;
     case Instruction::Call:
       UsedAssumedInformation = identifyAliveSuccessors(A, cast<CallInst>(*I),
@@ -3342,6 +3347,9 @@ ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
                "Non-terminator expected to have a single successor!");
         Worklist.push_back(AliveSuccessor);
       } else {
+        // record the assumed live edge
+        AssumedLiveEdges.insert(
+            std::make_pair(I->getParent(), AliveSuccessor->getParent()));
         if (assumeLive(A, *AliveSuccessor->getParent()))
           Worklist.push_back(AliveSuccessor);
       }
@@ -4707,9 +4715,75 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
       indicatePessimisticFixpoint();
   }
 
+  /// Check if \p ICmp is an equality comparison (==/!=) with at least one
+  /// nullptr. If so, try to simplify it using AANonNull on the other operand.
+  /// Return true if successful, in that case SimplifiedAssociatedValue will be
+  /// updated and \p Changed is set appropriately.
+  bool checkForNullPtrCompare(Attributor &A, ICmpInst *ICmp,
+                              ChangeStatus &Changed) {
+    if (!ICmp)
+      return false;
+    if (!ICmp->isEquality())
+      return false;
+
+    // This is a comparison with == or !-. We check for nullptr now.
+    bool Op0IsNull = isa<ConstantPointerNull>(ICmp->getOperand(0));
+    bool Op1IsNull = isa<ConstantPointerNull>(ICmp->getOperand(1));
+    if (!Op0IsNull && !Op1IsNull)
+      return false;
+
+    LLVMContext &Ctx = ICmp->getContext();
+    // Check for `nullptr ==/!= nullptr` first:
+    if (Op0IsNull && Op1IsNull) {
+      Value *NewVal = ConstantInt::get(
+          Type::getInt1Ty(Ctx), ICmp->getPredicate() == CmpInst::ICMP_EQ);
+      SimplifiedAssociatedValue = NewVal;
+      indicateOptimisticFixpoint();
+      assert(!SimplifiedAssociatedValue.hasValue() &&
+             "Did not expect non-fixed value for constant comparison");
+      Changed = ChangeStatus::CHANGED;
+      return true;
+    }
+
+    // Left is the nullptr ==/!= non-nullptr case. We'll use AANonNull on the
+    // non-nullptr operand and if we assume it's non-null we can conclude the
+    // result of the comparison.
+    assert((Op0IsNull || Op1IsNull) &&
+           "Expected nullptr versus non-nullptr comparison at this point");
+
+    // The index is the operand that we assume is not null.
+    unsigned PtrIdx = Op0IsNull;
+    auto &PtrNonNullAA = A.getAAFor<AANonNull>(
+        *this, IRPosition::value(*ICmp->getOperand(PtrIdx)));
+    if (!PtrNonNullAA.isAssumedNonNull())
+      return false;
+
+    // The new value depends on the predicate, true for != and false for ==.
+    Value *NewVal = ConstantInt::get(Type::getInt1Ty(Ctx),
+                                     ICmp->getPredicate() == CmpInst::ICMP_NE);
+
+    assert((!SimplifiedAssociatedValue.hasValue() ||
+            SimplifiedAssociatedValue == NewVal) &&
+           "Did not expect to change value for zero-comparison");
+
+    bool HasValueBefore = SimplifiedAssociatedValue.hasValue();
+    SimplifiedAssociatedValue = NewVal;
+
+    if (PtrNonNullAA.isKnownNonNull())
+      indicateOptimisticFixpoint();
+
+    Changed = HasValueBefore ? ChangeStatus::UNCHANGED : ChangeStatus ::CHANGED;
+    return true;
+  }
+
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     bool HasValueBefore = SimplifiedAssociatedValue.hasValue();
+
+    ChangeStatus Changed;
+    if (checkForNullPtrCompare(A, dyn_cast<ICmpInst>(&getAnchorValue()),
+                               Changed))
+      return Changed;
 
     auto VisitValueCB = [&](Value &V, const Instruction *CtxI, bool &,
                             bool Stripped) -> bool {
@@ -6374,6 +6448,13 @@ protected:
   using AccessSet = SmallSet<AccessInfo, 2, AccessInfo>;
   AccessSet *AccessKind2Accesses[llvm::CTLog2<VALID_STATE>()];
 
+  /// Categorize the pointer arguments of CB that might access memory in
+  /// AccessedLoc and update the state and access map accordingly.
+  void
+  categorizeArgumentPointerLocations(Attributor &A, CallBase &CB,
+                                     AAMemoryLocation::StateType &AccessedLocs,
+                                     bool &Changed);
+
   /// Return the kind(s) of location that may be accessed by \p V.
   AAMemoryLocation::MemoryLocationsKind
   categorizeAccessedLocations(Attributor &A, Instruction &I, bool &Changed);
@@ -6495,6 +6576,30 @@ void AAMemoryLocationImpl::categorizePtrValue(
   }
 }
 
+void AAMemoryLocationImpl::categorizeArgumentPointerLocations(
+    Attributor &A, CallBase &CB, AAMemoryLocation::StateType &AccessedLocs,
+    bool &Changed) {
+  for (unsigned ArgNo = 0, E = CB.getNumArgOperands(); ArgNo < E; ++ArgNo) {
+
+    // Skip non-pointer arguments.
+    const Value *ArgOp = CB.getArgOperand(ArgNo);
+    if (!ArgOp->getType()->isPtrOrPtrVectorTy())
+      continue;
+
+    // Skip readnone arguments.
+    const IRPosition &ArgOpIRP = IRPosition::callsite_argument(CB, ArgNo);
+    const auto &ArgOpMemLocationAA = A.getAAFor<AAMemoryBehavior>(
+        *this, ArgOpIRP, /* TrackDependence */ true, DepClassTy::OPTIONAL);
+
+    if (ArgOpMemLocationAA.isAssumedReadNone())
+      continue;
+
+    // Categorize potentially accessed pointer arguments as if there was an
+    // access instruction with them as pointer.
+    categorizePtrValue(A, CB, *ArgOp, AccessedLocs, Changed);
+  }
+}
+
 AAMemoryLocation::MemoryLocationsKind
 AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
                                                   bool &Changed) {
@@ -6556,28 +6661,8 @@ AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
 
     // Now handle argument memory if it might be accessed.
     bool HasArgAccesses = ((~CBAssumedNotAccessedLocs) & NO_ARGUMENT_MEM);
-    if (HasArgAccesses) {
-      for (unsigned ArgNo = 0, E = CB->getNumArgOperands(); ArgNo < E;
-           ++ArgNo) {
-
-        // Skip non-pointer arguments.
-        const Value *ArgOp = CB->getArgOperand(ArgNo);
-        if (!ArgOp->getType()->isPtrOrPtrVectorTy())
-          continue;
-
-        // Skip readnone arguments.
-        const IRPosition &ArgOpIRP = IRPosition::callsite_argument(*CB, ArgNo);
-        const auto &ArgOpMemLocationAA = A.getAAFor<AAMemoryBehavior>(
-            *this, ArgOpIRP, /* TrackDependence */ true, DepClassTy::OPTIONAL);
-
-        if (ArgOpMemLocationAA.isAssumedReadNone())
-          continue;
-
-        // Categorize potentially accessed pointer arguments as if there was an
-        // access instruction with them as pointer.
-        categorizePtrValue(A, I, *ArgOp, AccessedLocs, Changed);
-      }
-    }
+    if (HasArgAccesses)
+      categorizeArgumentPointerLocations(A, *CB, AccessedLocs, Changed);
 
     LLVM_DEBUG(
         dbgs() << "[AAMemoryLocation] Accessed state after argument handling: "
@@ -6947,6 +7032,9 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
       indicateOptimisticFixpoint();
       return;
     }
+
+    if (isa<CallBase>(&V))
+      return;
 
     if (isa<BinaryOperator>(&V) || isa<CmpInst>(&V) || isa<CastInst>(&V))
       return;
@@ -7637,7 +7725,8 @@ struct AANoUndefImpl : AANoUndef {
       indicatePessimisticFixpoint();
     else if (isa<FreezeInst>(V))
       indicateOptimisticFixpoint();
-    else if (isGuaranteedNotToBeUndefOrPoison(&V))
+    else if (getPositionKind() != IRPosition::IRP_RETURNED &&
+             isGuaranteedNotToBeUndefOrPoison(&V))
       indicateOptimisticFixpoint();
     else
       AANoUndef::initialize(A);

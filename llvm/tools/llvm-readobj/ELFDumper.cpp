@@ -243,24 +243,16 @@ private:
 
   TYPEDEF_ELF_TYPES(ELFT)
 
-  DynRegionInfo checkDRI(DynRegionInfo DRI) {
+  Expected<DynRegionInfo> createDRI(uint64_t Offset, uint64_t Size,
+                                    uint64_t EntSize) {
     const ELFFile<ELFT> *Obj = ObjF->getELFFile();
-    if (DRI.Addr < Obj->base() ||
-        reinterpret_cast<const uint8_t *>(DRI.Addr) + DRI.Size >
-            Obj->base() + Obj->getBufSize())
-      reportError(errorCodeToError(llvm::object::object_error::parse_failed),
-                  ObjF->getFileName());
-    return DRI;
-  }
-
-  DynRegionInfo createDRIFrom(const Elf_Phdr *P, uintX_t EntSize) {
-    return checkDRI({ObjF->getELFFile()->base() + P->p_offset, P->p_filesz,
-                     EntSize, ObjF->getFileName()});
-  }
-
-  DynRegionInfo createDRIFrom(const Elf_Shdr *S) {
-    return checkDRI({ObjF->getELFFile()->base() + S->sh_offset, S->sh_size,
-                     S->sh_entsize, ObjF->getFileName()});
+    if (Offset + Size < Offset || Offset + Size > Obj->getBufSize())
+      return createError("offset (0x" + Twine::utohexstr(Offset) +
+                         ") + size (0x" + Twine::utohexstr(Size) +
+                         ") is greater than the file size (0x" +
+                         Twine::utohexstr(Obj->getBufSize()) + ")");
+    return DynRegionInfo(Obj->base() + Offset, Size, EntSize,
+                         ObjF->getFileName());
   }
 
   void printAttributes();
@@ -1328,11 +1320,6 @@ static const EnumEntry<unsigned> ElfOSABI[] = {
   {"Standalone",   "Standalone App",       ELF::ELFOSABI_STANDALONE}
 };
 
-static const EnumEntry<unsigned> SymVersionFlags[] = {
-    {"Base", "BASE", VER_FLG_BASE},
-    {"Weak", "WEAK", VER_FLG_WEAK},
-    {"Info", "INFO", VER_FLG_INFO}};
-
 static const EnumEntry<unsigned> AMDGPUElfOSABI[] = {
   {"AMDGPU_HSA",    "AMDGPU - HSA",    ELF::ELFOSABI_AMDGPU_HSA},
   {"AMDGPU_PAL",    "AMDGPU - PAL",    ELF::ELFOSABI_AMDGPU_PAL},
@@ -1706,8 +1693,7 @@ static StringRef segmentTypeToString(unsigned Arch, unsigned Type) {
 
 static std::string getGNUPtType(unsigned Arch, unsigned Type) {
   StringRef Seg = segmentTypeToString(Arch, Type);
-  // GNU doesn't recognize PT_OPENBSD_*.
-  if (Seg.empty() || Seg.startswith("PT_OPENBSD_"))
+  if (Seg.empty())
     return std::string("<unknown>: ") + to_string(format_hex(Type, 1));
 
   // E.g. "PT_ARM_EXIDX" -> "EXIDX".
@@ -1892,8 +1878,10 @@ ELFDumper<ELFT>::findDynamic(const ELFFile<ELFT> *Obj) {
     break;
   }
 
-  if (DynamicPhdr && DynamicPhdr->p_offset + DynamicPhdr->p_filesz >
-                         ObjF->getMemoryBufferRef().getBufferSize()) {
+  if (DynamicPhdr && ((DynamicPhdr->p_offset + DynamicPhdr->p_filesz >
+                       ObjF->getMemoryBufferRef().getBufferSize()) ||
+                      (DynamicPhdr->p_offset + DynamicPhdr->p_filesz <
+                       DynamicPhdr->p_offset))) {
     reportUniqueWarning(createError(
         "PT_DYNAMIC segment offset (0x" +
         Twine::utohexstr(DynamicPhdr->p_offset) + ") + file size (0x" +
@@ -1936,10 +1924,12 @@ void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
   DynRegionInfo FromPhdr(ObjF->getFileName());
   bool IsPhdrTableValid = false;
   if (DynamicPhdr) {
-    FromPhdr = createDRIFrom(DynamicPhdr, sizeof(Elf_Dyn));
+    // Use cantFail(), because p_offset/p_filesz fields of a PT_DYNAMIC are
+    // validated in findDynamic() and so createDRI() is not expected to fail.
+    FromPhdr = cantFail(createDRI(DynamicPhdr->p_offset, DynamicPhdr->p_filesz,
+                                  sizeof(Elf_Dyn)));
     FromPhdr.SizePrintName = "PT_DYNAMIC size";
     FromPhdr.EntSizePrintName = "";
-
     IsPhdrTableValid = !FromPhdr.getAsArrayRef<Elf_Dyn>().empty();
   }
 
@@ -1950,13 +1940,18 @@ void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
   DynRegionInfo FromSec(ObjF->getFileName());
   bool IsSecTableValid = false;
   if (DynamicSec) {
-    FromSec =
-        checkDRI({ObjF->getELFFile()->base() + DynamicSec->sh_offset,
-                  DynamicSec->sh_size, sizeof(Elf_Dyn), ObjF->getFileName()});
-    FromSec.Context = describe(*DynamicSec);
-    FromSec.EntSizePrintName = "";
-
-    IsSecTableValid = !FromSec.getAsArrayRef<Elf_Dyn>().empty();
+    Expected<DynRegionInfo> RegOrErr =
+        createDRI(DynamicSec->sh_offset, DynamicSec->sh_size, sizeof(Elf_Dyn));
+    if (RegOrErr) {
+      FromSec = *RegOrErr;
+      FromSec.Context = describe(*DynamicSec);
+      FromSec.EntSizePrintName = "";
+      IsSecTableValid = !FromSec.getAsArrayRef<Elf_Dyn>().empty();
+    } else {
+      reportUniqueWarning(createError("unable to read the dynamic table from " +
+                                      describe(*DynamicSec) + ": " +
+                                      toString(RegOrErr.takeError())));
+    }
   }
 
   // When we only have information from one of the SHT_DYNAMIC section header or
@@ -2040,13 +2035,21 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> *ObjF,
         DotDynsymSec = &Sec;
 
       if (!DynSymRegion) {
-        DynSymRegion = createDRIFrom(&Sec);
-        DynSymRegion->Context = describe(Sec);
+        Expected<DynRegionInfo> RegOrErr =
+            createDRI(Sec.sh_offset, Sec.sh_size, Sec.sh_entsize);
+        if (RegOrErr) {
+          DynSymRegion = *RegOrErr;
+          DynSymRegion->Context = describe(Sec);
 
-        if (Expected<StringRef> E = Obj->getStringTableForSymtab(Sec))
-          DynamicStringTable = *E;
-        else
-          reportWarning(E.takeError(), ObjF->getFileName());
+          if (Expected<StringRef> E = Obj->getStringTableForSymtab(Sec))
+            DynamicStringTable = *E;
+          else
+            reportWarning(E.takeError(), ObjF->getFileName());
+        } else {
+          reportUniqueWarning(createError(
+              "unable to read dynamic symbols from " + describe(Sec) + ": " +
+              toString(RegOrErr.takeError())));
+        }
       }
       break;
     case ELF::SHT_SYMTAB_SHNDX:
@@ -6289,20 +6292,21 @@ void LLVMStyle<ELFT>::printSectionHeaders(const ELFO *Obj) {
 
     if (opts::SectionSymbols) {
       ListScope D(W, "Symbols");
-      const Elf_Shdr *Symtab = this->dumper()->getDotSymtabSec();
-      StringRef StrTable =
-          unwrapOrError(this->FileName, Obj->getStringTableForSymtab(*Symtab));
+      if (const Elf_Shdr *Symtab = this->dumper()->getDotSymtabSec()) {
+        StringRef StrTable = unwrapOrError(
+            this->FileName, Obj->getStringTableForSymtab(*Symtab));
 
-      for (const Elf_Sym &Sym :
-           unwrapOrError(this->FileName, Obj->symbols(Symtab))) {
-        const Elf_Shdr *SymSec = unwrapOrError(
-            this->FileName,
-            Obj->getSection(&Sym, Symtab, this->dumper()->getShndxTable()));
-        if (SymSec == &Sec)
-          printSymbol(
-              Obj, &Sym,
-              unwrapOrError(this->FileName, Obj->symbols(Symtab)).begin(),
-              StrTable, false, false);
+        for (const Elf_Sym &Sym :
+             unwrapOrError(this->FileName, Obj->symbols(Symtab))) {
+          const Elf_Shdr *SymSec = unwrapOrError(
+              this->FileName,
+              Obj->getSection(&Sym, Symtab, this->dumper()->getShndxTable()));
+          if (SymSec == &Sec)
+            printSymbol(
+                Obj, &Sym,
+                unwrapOrError(this->FileName, Obj->symbols(Symtab)).begin(),
+                StrTable, false, false);
+        }
       }
     }
 
@@ -6516,9 +6520,10 @@ void LLVMStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
 
   for (const Elf_Phdr &Phdr : *PhdrsOrErr) {
     DictScope P(W, "ProgramHeader");
-    W.printHex("Type",
-               segmentTypeToString(Obj->getHeader()->e_machine, Phdr.p_type),
-               Phdr.p_type);
+    StringRef Type =
+        segmentTypeToString(Obj->getHeader()->e_machine, Phdr.p_type);
+
+    W.printHex("Type", Type.empty() ? "Unknown" : Type, Phdr.p_type);
     W.printHex("Offset", Phdr.p_offset);
     W.printHex("VirtualAddress", Phdr.p_vaddr);
     W.printHex("PhysicalAddress", Phdr.p_paddr);
@@ -6555,6 +6560,11 @@ void LLVMStyle<ELFT>::printVersionSymbolSection(const ELFFile<ELFT> *Obj,
                               &Syms[I], StrTable, /*IsDynamic=*/true));
   }
 }
+
+static const EnumEntry<unsigned> SymVersionFlags[] = {
+    {"Base", "BASE", VER_FLG_BASE},
+    {"Weak", "WEAK", VER_FLG_WEAK},
+    {"Info", "INFO", VER_FLG_INFO}};
 
 template <class ELFT>
 void LLVMStyle<ELFT>::printVersionDefinitionSection(const ELFFile<ELFT> *Obj,

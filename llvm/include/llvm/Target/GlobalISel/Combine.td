@@ -167,6 +167,14 @@ def mul_to_shl : GICombineRule<
          [{ return Helper.matchCombineMulToShl(*${mi}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineMulToShl(*${mi}, ${matchinfo}); }])>;
 
+// shl ([asz]ext x), y => zext (shl x, y), if shift does not overflow int
+def reduce_shl_of_extend_matchdata : GIDefMatchData<"RegisterImmPair">;
+def reduce_shl_of_extend : GICombineRule<
+  (defs root:$dst, reduce_shl_of_extend_matchdata:$matchinfo),
+  (match (G_SHL $dst, $src0, $src1):$mi,
+         [{ return Helper.matchCombineShlOfExtend(*${mi}, ${matchinfo}); }]),
+  (apply [{ Helper.applyCombineShlOfExtend(*${mi}, ${matchinfo}); }])>;
+
 // [us]itofp(undef) = 0, because the result value is bounded.
 def undef_to_fp_zero : GICombineRule<
   (defs root:$root),
@@ -283,6 +291,16 @@ def i2p_to_p2i: GICombineRule<
   (apply [{ return Helper.applyCombineP2IToI2P(*${root}, ${info}); }])
 >;
 
+// Fold add ptrtoint(x), y -> ptrtoint (ptr_add x), y
+def add_p2i_to_ptradd_matchinfo : GIDefMatchData<"std::pair<Register, bool>">;
+def add_p2i_to_ptradd : GICombineRule<
+  (defs root:$root, add_p2i_to_ptradd_matchinfo:$info),
+  (match (wip_match_opcode G_ADD):$root,
+    [{ return Helper.matchCombineAddP2IToPtrAdd(*${root}, ${info}); }]),
+  (apply [{ return Helper.applyCombineAddP2IToPtrAdd(*${root}, ${info}); }])
+>;
+
+
 // Simplify: (logic_op (op x...), (op y...)) -> (op (logic_op x, y))
 def hoist_logic_op_with_same_opcode_hands: GICombineRule <
   (defs root:$root, instruction_steps_matchdata:$info),
@@ -299,6 +317,14 @@ def shl_ashr_to_sext_inreg : GICombineRule<
     [{ return Helper.matchAshrShlToSextInreg(*${root}, ${info}); }]),
   (apply [{ return Helper.applyAshShlToSextInreg(*${root}, ${info});}])
 >;
+// Fold (x & mask) -> x when (x & mask) is known to equal x.
+def and_trivial_mask_matchinfo : GIDefMatchData<"Register">;
+def and_trivial_mask: GICombineRule <
+  (defs root:$root, and_trivial_mask_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_AND):$root,
+         [{ return Helper.matchAndWithTrivialMask(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
+>;
 
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
@@ -313,9 +339,12 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         binop_right_to_zero, p2i_to_i2p,
                                         i2p_to_p2i]>;
 
-def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl]>;
+def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend]>;
+
+def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, add_p2i_to_ptradd]>;
 def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
     combines_for_extload, combine_indexed_load_store, undef_combines,
     identity_combines, simplify_add_to_sub,
     hoist_logic_op_with_same_opcode_hands,
-    shl_ashr_to_sext_inreg, sext_inreg_of_load]>;
+    shl_ashr_to_sext_inreg, sext_inreg_of_load,
+    width_reduction_combines]>;

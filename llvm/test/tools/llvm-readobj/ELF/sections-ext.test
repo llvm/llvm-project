@@ -1,110 +1,244 @@
 ## This is a test case for --section-symbols, --section-relocations and
 ## --section-data command line flags and their aliases.
 
-# RUN: llvm-readobj -S --st --sr --sd %p/Inputs/trivial.obj.elf-i386
+# RUN: yaml2obj %s -o %t
 
-## Check the two-letter aliases above (--st, --sr, --sd) are equivalent to their
-## full flag names.
+## Test --section-symbols (--st) displays symbols for each section.
+# RUN: llvm-readobj --sections --st %t > %t.readobj-st
+# RUN: llvm-readobj --sections --section-symbols %t > %t.readobj-st-no-alias
+# RUN: diff %t.readobj-st %t.readobj-st-no-alias
+# RUN: FileCheck %s --input-file=%t.readobj-st --check-prefixes=ALL,ST
 
-# RUN: llvm-readobj -S --st %p/Inputs/trivial.obj.elf-i386 > %t.readobj-st-alias
-# RUN: llvm-readobj -S --section-symbols %p/Inputs/trivial.obj.elf-i386 > %t.readobj-st-no-alias
-# RUN: diff %t.readobj-st-alias %t.readobj-st-no-alias
+## Test --section-relocations (--sr) displays relocations for each section.
+# RUN: llvm-readobj --sections --sr %t > %t.readobj-sr
+# RUN: llvm-readobj --sections --section-relocations %t > %t.readobj-sr-no-alias
+# RUN: diff %t.readobj-sr %t.readobj-sr-no-alias
+# RUN: FileCheck %s --input-file=%t.readobj-sr --check-prefixes=ALL,SR
 
-# RUN: llvm-readobj -S --sr %p/Inputs/trivial.obj.elf-i386 > %t.readobj-sr-alias
-# RUN: llvm-readobj -S --section-relocations %p/Inputs/trivial.obj.elf-i386 > %t.readobj-sr-no-alias
-# RUN: diff %t.readobj-sr-alias %t.readobj-sr-no-alias
+## Test --section-data (--sd) displays section data for each section except SHT_NOBITS sections.
+# RUN: llvm-readobj --sections --sd %t > %t.readobj-sd
+# RUN: llvm-readobj --sections --section-data %t > %t.readobj-sd-no-alias
+# RUN: diff %t.readobj-sd %t.readobj-sd-no-alias
+# RUN: FileCheck %s --input-file=%t.readobj-sd --check-prefixes=ALL,SD
 
-# RUN: llvm-readobj -S --sd %p/Inputs/trivial.obj.elf-i386 > %t.readobj-sd-alias
-# RUN: llvm-readobj -S --section-data %p/Inputs/trivial.obj.elf-i386 > %t.readobj-sd-no-alias
-# RUN: diff %t.readobj-sd-alias %t.readobj-sd-no-alias
+## Test all options together.
+# RUN: llvm-readobj --sections --section-symbols --section-relocations --section-data %t | \
+# RUN:   FileCheck %s --check-prefixes=ALL,ST,SR,SD
 
-# CHECK:      Sections [
-# CHECK-NEXT:   Section {
-# CHECK-NEXT:     Index: 0
-# CHECK-NEXT:     Name:  (0)
-# CHECK-NEXT:     Type: SHT_NULL (0x0)
-# CHECK-NEXT:     Flags [ (0x0)
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Address: 0x0
-# CHECK-NEXT:     Offset: 0x0
-# CHECK-NEXT:     Size: 0
-# CHECK-NEXT:     Link: 0
-# CHECK-NEXT:     Info: 0
-# CHECK-NEXT:     AddressAlignment: 0
-# CHECK-NEXT:     EntrySize: 0
-# CHECK-NEXT:     Relocations [
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Symbols [
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     SectionData (
-# CHECK-NEXT:     )
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Section {
-# CHECK-NEXT:     Index: 1
-# CHECK-NEXT:     Name: .text (5)
-# CHECK-NEXT:     Type: SHT_PROGBITS (0x1)
-# CHECK-NEXT:     Flags [ (0x6)
-# CHECK-NEXT:       SHF_ALLOC (0x2)
-# CHECK-NEXT:       SHF_EXECINSTR (0x4)
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Address: 0x0
-# CHECK-NEXT:     Offset: 0x40
-# CHECK-NEXT:     Size: 42
-# CHECK-NEXT:     Link: 0
-# CHECK-NEXT:     Info: 0
-# CHECK-NEXT:     AddressAlignment: 16
-# CHECK-NEXT:     EntrySize: 0
-# CHECK-NEXT:     Relocations [
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Symbols [
-# CHECK-NEXT:       Symbol {
-# CHECK-NEXT:         Name: .text (0)
-# CHECK-NEXT:         Value: 0x0
-# CHECK-NEXT:         Size: 0
-# CHECK-NEXT:         Binding: Local (0x0)
-# CHECK-NEXT:         Type: Section (0x3)
-# CHECK-NEXT:         Other: 0
-# CHECK-NEXT:         Section: .text (0x1)
-# CHECK-NEXT:       }
-# CHECK-NEXT:       Symbol {
-# CHECK-NEXT:         Name: main (12)
-# CHECK-NEXT:         Value: 0x0
-# CHECK-NEXT:         Size: 42
-# CHECK-NEXT:         Binding: Global (0x1)
-# CHECK-NEXT:         Type: Function (0x2)
-# CHECK-NEXT:         Other: 0
-# CHECK-NEXT:         Section: .text (0x1)
-# CHECK-NEXT:       }
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     SectionData (
-# CHECK-NEXT:       0000: 5383EC08 E8000000 005B81C3 03000000  |S........[......|
-# CHECK-NEXT:       0010: 8D830000 00008904 24E8FCFF FFFFE8FC  |........$.......|
-# CHECK-NEXT:       0020: FFFFFF31 C083C408 5BC3               |...1....[.|
-# CHECK-NEXT:     )
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Section {
-# CHECK-NEXT:     Index: 2
-# CHECK-NEXT:     Name: .rel.text (1)
-# CHECK-NEXT:     Type: SHT_REL (0x9)
-# CHECK-NEXT:     Flags [ (0x0)
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Address: 0x0
-# CHECK-NEXT:     Offset: 0x360
-# CHECK-NEXT:     Size: 32
-# CHECK-NEXT:     Link: 8
-# CHECK-NEXT:     Info: 1
-# CHECK-NEXT:     AddressAlignment: 4
-# CHECK-NEXT:     EntrySize: 8
-# CHECK-NEXT:     Relocations [
-# CHECK-NEXT:       0xC R_386_GOTPC _GLOBAL_OFFSET_TABLE_ 0x0
-# CHECK-NEXT:       0x12 R_386_GOTOFF .L.str 0x0
-# CHECK-NEXT:       0x1A R_386_PLT32 puts 0x0
-# CHECK-NEXT:       0x1F R_386_PLT32 SomeOtherFunction 0x0
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Symbols [
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     SectionData (
-# CHECK-NEXT:       0000: 0C000000 0A0A0000 12000000 09020000  |................|
-# CHECK-NEXT:       0010: 1A000000 040B0000 1F000000 04090000  |................|
-# CHECK-NEXT:     )
-# CHECK-NEXT:   }
+# ALL:      Sections [
+# ALL-NEXT:   Section {
+# ALL-NEXT:     Index: 0
+# ALL-NEXT:     Name:  (0)
+# ALL-NEXT:     Type: SHT_NULL (0x0)
+# ALL-NEXT:     Flags [ (0x0)
+# ALL-NEXT:     ]
+# ALL-NEXT:     Address: 0x0
+# ALL-NEXT:     Offset: 0x0
+# ALL-NEXT:     Size: 0
+# ALL-NEXT:     Link: 0
+# ALL-NEXT:     Info: 0
+# ALL-NEXT:     AddressAlignment: 0
+# ALL-NEXT:     EntrySize: 0
+# SR-NEXT:      Relocations [
+# SR-NEXT:      ]
+# ST-NEXT:      Symbols [
+# ST-NEXT:      ]
+# SD-NEXT:      SectionData (
+# SD-NEXT:      )
+# ALL-NEXT:   }
+# ALL-NEXT:   Section {
+# ALL-NEXT:     Index: 1
+# ALL-NEXT:     Name: .text (6)
+# ALL-NEXT:     Type: SHT_PROGBITS (0x1)
+# ALL-NEXT:     Flags [ (0x0)
+# ALL-NEXT:     ]
+# ALL-NEXT:     Address: 0x0
+# ALL-NEXT:     Offset: 0x40
+# ALL-NEXT:     Size: 0
+# ALL-NEXT:     Link: 0
+# ALL-NEXT:     Info: 0
+# ALL-NEXT:     AddressAlignment: 0
+# ALL-NEXT:     EntrySize: 0
+# SR-NEXT:      Relocations [
+# SR-NEXT:      ]
+# ST-NEXT:      Symbols [
+# ST-NEXT:        Symbol {
+# ST-NEXT:          Name: foo (1)
+# ST-NEXT:          Value: 0x0
+# ST-NEXT:          Size: 0
+# ST-NEXT:          Binding: Local (0x0)
+# ST-NEXT:          Type: None (0x0)
+# ST-NEXT:          Other: 0
+# ST-NEXT:          Section: .text (0x1)
+# ST-NEXT:        }
+# ST-NEXT:      ]
+# SD-NEXT:      SectionData (
+# SD-NEXT:      )
+# ALL-NEXT:   }
+# ALL-NEXT:   Section {
+# ALL-NEXT:     Index: 2
+# ALL-NEXT:     Name: .rela.text (1)
+# ALL-NEXT:     Type: SHT_RELA (0x4)
+# ALL-NEXT:     Flags [ (0x0)
+# ALL-NEXT:     ]
+# ALL-NEXT:     Address: 0x0
+# ALL-NEXT:     Offset: 0x40
+# ALL-NEXT:     Size: 24
+# ALL-NEXT:     Link: 4
+# ALL-NEXT:     Info: 1
+# ALL-NEXT:     AddressAlignment: 0
+# ALL-NEXT:     EntrySize: 24
+# SR-NEXT:      Relocations [
+# SR-NEXT:        0x0 R_X86_64_NONE - 0x0
+# SR-NEXT:      ]
+# ST-NEXT:      Symbols [
+# ST-NEXT:      ]
+# SD-NEXT:      SectionData (
+# SD-NEXT:        0000: 00000000 00000000 00000000 00000000  |................|
+# SD-NEXT:        0010: 00000000 00000000                    |........|
+# SD-NEXT:      )
+# ALL-NEXT:   }
+# ALL-NEXT:   Section {
+# ALL-NEXT:     Index: 3
+# ALL-NEXT:     Name: .bss (12)
+# ALL-NEXT:     Type: SHT_NOBITS (0x8)
+# ALL-NEXT:     Flags [ (0x0)
+# ALL-NEXT:     ]
+# ALL-NEXT:     Address: 0x0
+# ALL-NEXT:     Offset: 0x58
+# ALL-NEXT:     Size: 4096
+# ALL-NEXT:     Link: 0
+# ALL-NEXT:     Info: 0
+# ALL-NEXT:     AddressAlignment: 0
+# ALL-NEXT:     EntrySize: 0
+# SR-NEXT:      Relocations [
+# SR-NEXT:      ]
+# ST-NEXT:      Symbols [
+# ST-NEXT:      ]
+# ALL-NEXT:   }
+# ALL-NEXT:   Section {
+# ALL-NEXT:     Index: 4
+# ALL-NEXT:     Name: .symtab (35)
+# ALL-NEXT:     Type: SHT_SYMTAB (0x2)
+# ALL-NEXT:     Flags [ (0x0)
+# ALL-NEXT:     ]
+# ALL-NEXT:     Address: 0x0
+# ALL-NEXT:     Offset: 0x58
+# ALL-NEXT:     Size: 48
+# ALL-NEXT:     Link: 5
+# ALL-NEXT:     Info: 2
+# ALL-NEXT:     AddressAlignment: 8
+# ALL-NEXT:     EntrySize: 24
+# SR-NEXT:      Relocations [
+# SR-NEXT:      ]
+# ST-NEXT:      Symbols [
+# ST-NEXT:      ]
+# SD-NEXT:      SectionData (
+# SD-NEXT:        0000: 00000000 00000000 00000000 00000000  |................|
+# SD-NEXT:        0010: 00000000 00000000 01000000 00000100  |................|
+# SD-NEXT:        0020: 00000000 00000000 00000000 00000000  |................|
+# SD-NEXT:      )
+# ALL-NEXT:   }
+# ALL-NEXT:   Section {
+# ALL-NEXT:     Index: 5
+# ALL-NEXT:     Name: .strtab (27)
+# ALL-NEXT:     Type: SHT_STRTAB (0x3)
+# ALL-NEXT:     Flags [ (0x0)
+# ALL-NEXT:     ]
+# ALL-NEXT:     Address: 0x0
+# ALL-NEXT:     Offset: 0x88
+# ALL-NEXT:     Size: 5
+# ALL-NEXT:     Link: 0
+# ALL-NEXT:     Info: 0
+# ALL-NEXT:     AddressAlignment: 1
+# ALL-NEXT:     EntrySize: 0
+# SR-NEXT:      Relocations [
+# SR-NEXT:      ]
+# ST-NEXT:      Symbols [
+# ST-NEXT:      ]
+# SD-NEXT:      SectionData (
+# SD-NEXT:        0000: 00666F6F 00 |.foo.|
+# SD-NEXT:      )
+# ALL-NEXT:   }
+# ALL-NEXT:   Section {
+# ALL-NEXT:     Index: 6
+# ALL-NEXT:     Name: .shstrtab (17)
+# ALL-NEXT:     Type: SHT_STRTAB (0x3)
+# ALL-NEXT:     Flags [ (0x0)
+# ALL-NEXT:     ]
+# ALL-NEXT:     Address: 0x0
+# ALL-NEXT:     Offset: 0x8D
+# ALL-NEXT:     Size: 43
+# ALL-NEXT:     Link: 0
+# ALL-NEXT:     Info: 0
+# ALL-NEXT:     AddressAlignment: 1
+# ALL-NEXT:     EntrySize: 0
+# SR-NEXT:      Relocations [
+# SR-NEXT:      ]
+# ST-NEXT:      Symbols [
+# ST-NEXT:      ]
+# SD-NEXT:      SectionData (
+# SD-NEXT:        0000: 002E7265 6C612E74 65787400 2E627373 |..rela.text..bss|
+# SD-NEXT:        0010: 002E7368 73747274 6162002E 73747274 |..shstrtab..strt|
+# SD-NEXT:        0020: 6162002E 73796D74 616200            |ab..symtab.|
+# SD-NEXT:      )
+# ALL-NEXT:   }
+# ALL-NEXT: ]
+
+## Check that --section-symbols, --section-relocations and --section-data
+## options produce no output without --sections.
+# RUN: llvm-readobj --section-symbols --section-relocations --section-data %t | \
+# RUN:   FileCheck %s -DFILE=%t --check-prefix=NO-SECTIONS
+
+# NO-SECTIONS:      File: [[FILE]]
+# NO-SECTIONS-NEXT: Format: elf64-x86-64
+# NO-SECTIONS-NEXT: Arch: x86_64
+# NO-SECTIONS-NEXT: AddressSize: 64bit
+# NO-SECTIONS-NEXT: LoadName: <Not found>
+# NO-SECTIONS-NOT:  {{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Name: .rela.text
+    Type: SHT_RELA
+    Info: .text
+    Relocations:
+      - Type: R_X86_64_NONE
+  - Name: .bss
+    Type: SHT_NOBITS
+    Size: 0x1000
+Symbols:
+  - Name:    foo
+    Section: .text
+
+## Check the output for an arbitrary section when --section-symbols is requested,
+## but there is no symbol table in the object.
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj -S --section-symbols %t2 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not=warning: --check-prefix=NOSYMTAB
+
+# NOSYMTAB:      Section {
+# NOSYMTAB:        Index: 1
+# NOSYMTAB-NEXT:   Name: .foo
+# NOSYMTAB:        Symbols [
+# NOSYMTAB-NEXT:   ]
+# NOSYMTAB-NEXT: }
+# NOSYMTAB-NEXT: Section {
+# NOSYMTAB-NEXT:   Index: 2
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS

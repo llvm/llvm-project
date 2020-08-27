@@ -77,7 +77,7 @@ struct FileHeader {
   ELF_ELFOSABI OSABI;
   llvm::yaml::Hex8 ABIVersion;
   ELF_ET Type;
-  ELF_EM Machine;
+  Optional<ELF_EM> Machine;
   ELF_EF Flags;
   llvm::yaml::Hex64 Entry;
 
@@ -553,6 +553,8 @@ struct Object {
         Ret.push_back(S);
     return Ret;
   }
+
+  unsigned getMachine() const;
 };
 
 } // end namespace ELFYAML

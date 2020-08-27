@@ -1,7 +1,7 @@
 # Test behavior on unusual (and probably corrupt) object files. Check that we
 # drop the second PT_LOAD segment which overlaps with the first one.
 
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: lldb-test object-file %t | FileCheck %s
 
 # CHECK: Type: container

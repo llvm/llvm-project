@@ -38,32 +38,29 @@ void func3() { // CHECK-NEXT: File 0, [[@LINE]]:14 -> [[@LINE+3]]:2 = #0
 // CHECK-NEXT: File 2, 4:17 -> 4:22 = #0
 
 // CHECK-NEXT: func4
-void func4() { // CHECK-NEXT: File 0, [[@LINE]]:14 -> [[@LINE+7]]:2 = #0
+void func4() { // CHECK-NEXT: File 0, [[@LINE]]:14 -> [[@LINE+6]]:2 = #0
   int i = 0;
   while (i++ < 10) // CHECK-NEXT: File 0, [[@LINE]]:10 -> [[@LINE]]:18 = (#0 + #1)
-    if (i < 5) // CHECK: File 0, [[@LINE]]:5 -> [[@LINE+3]]:14 = #1
+    if (i < 5) // CHECK: File 0, [[@LINE]]:5 -> [[@LINE+2]]:14 = #1
                // CHECK-NEXT: File 0, [[@LINE-1]]:9 -> [[@LINE-1]]:14 = #1
-               // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:15 -> [[@LINE+1]]:7 = #2
       MACRO_2; // CHECK-NEXT: Expansion,File 0, [[@LINE]]:7 -> [[@LINE]]:14 = #2
 }
 // CHECK-NEXT: File 1, 4:17 -> 4:22 = #2
 // CHECK-NOT: File 1
 
 // CHECK-NEXT: func5
-void func5() { // CHECK-NEXT: File 0, [[@LINE]]:14 -> [[@LINE+5]]:2 = #0
+void func5() { // CHECK-NEXT: File 0, [[@LINE]]:14 -> [[@LINE+4]]:2 = #0
   int i = 0;
   if (i > 5) // CHECK-NEXT: File 0, [[@LINE]]:7 -> [[@LINE]]:12 = #0
-             // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:13 -> [[@LINE+1]]:5 = #1
     MACRO_3; // CHECK-NEXT: Expansion,File 0, [[@LINE]]:5 -> [[@LINE]]:12 = #1
 }
 // CHECK-NEXT: Expansion,File 1, 6:17 -> 6:24 = #1
 // CHECK-NEXT: File 2, 4:17 -> 4:22 = #1
 
 // CHECK-NEXT: func6
-void func6(unsigned count) { // CHECK-NEXT: File 0, [[@LINE]]:28 -> [[@LINE+5]]:2 = #0
-begin:                       // CHECK-NEXT: File 0, [[@LINE]]:1 -> [[@LINE+4]]:2 = #1
+void func6(unsigned count) { // CHECK-NEXT: File 0, [[@LINE]]:28 -> [[@LINE+4]]:2 = #0
+begin:                       // CHECK-NEXT: File 0, [[@LINE]]:1 -> [[@LINE+3]]:2 = #1
     if (count--)             // CHECK-NEXT: File 0, [[@LINE]]:9 -> [[@LINE]]:16 = #1
-                             // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:17 -> [[@LINE+1]]:9 = #2
         GOTO begin;          // CHECK-NEXT: File 0, [[@LINE]]:9 -> [[@LINE]]:19 = #2
 }
 // CHECK-NEXT: Expansion,File 0, [[@LINE-2]]:9 -> [[@LINE-2]]:13 = #2

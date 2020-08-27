@@ -470,7 +470,7 @@ void python_generator::print_get_method(const isl_class &clazz,
 void python_generator::print_method_call(int indent, const isl_class &clazz,
 	FunctionDecl *method, const char *fmt, int drop_ctx, int drop_user)
 {
-	string fullname = method->getName();
+	string fullname = method->getName().str();
 	int num_params = method->getNumParams();
 
 	if (drop_ctx) {
@@ -693,7 +693,7 @@ void python_generator::print_set_enum(const isl_class &clazz,
 	FunctionDecl *fd, int value, const string &name,
 	const vector<string> &super)
 {
-	string fullname = fd->getName();
+	string fullname = fd->getName().str();
 	int num_params = fd->getNumParams();
 
 	print_method_header(is_static(clazz, fd), name, num_params - 1);
@@ -738,7 +738,7 @@ void python_generator::print_set_enum(const isl_class &clazz,
 void python_generator::print_constructor(const isl_class &clazz,
 	FunctionDecl *cons)
 {
-	string fullname = cons->getName();
+	string fullname = cons->getName().str();
 	string cname = clazz.method_name(cons);
 	int num_params = cons->getNumParams();
 	int drop_ctx = first_arg_is_isl_ctx(cons);
@@ -817,7 +817,7 @@ void python_generator::print_class_header(const isl_class &clazz,
  */
 void python_generator::print_restype(FunctionDecl *fd)
 {
-	string fullname = fd->getName();
+	string fullname = fd->getName().str();
 	QualType type = fd->getReturnType();
 	if (is_isl_type(type))
 		printf("isl.%s.restype = c_void_p\n", fullname.c_str());
@@ -829,7 +829,7 @@ void python_generator::print_restype(FunctionDecl *fd)
  */
 void python_generator::print_argtypes(FunctionDecl *fd)
 {
-	string fullname = fd->getName();
+	string fullname = fd->getName().str();
 	int n = fd->getNumParams();
 	int drop_user = 0;
 

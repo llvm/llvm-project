@@ -1,4 +1,4 @@
-# RUN: yaml2obj < %p/Inputs/export.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/export.yaml -o %t.obj
 
 # RUN: lld-link -out:%t.dll -dll %t.obj 2>&1 \
 # RUN:   | FileCheck -allow-empty -check-prefix=NOWARN %s

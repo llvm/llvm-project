@@ -406,6 +406,30 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
           case Intrinsic::loop_decrement:
             return true;
 
+          // Binary operations on 128-bit value will use CTR.
+          case Intrinsic::experimental_constrained_fadd:
+          case Intrinsic::experimental_constrained_fsub:
+          case Intrinsic::experimental_constrained_fmul:
+          case Intrinsic::experimental_constrained_fdiv:
+          case Intrinsic::experimental_constrained_frem:
+            if (F->getType()->getScalarType()->isFP128Ty() ||
+                F->getType()->getScalarType()->isPPC_FP128Ty())
+              return true;
+            break;
+
+          case Intrinsic::experimental_constrained_fptosi:
+          case Intrinsic::experimental_constrained_fptoui:
+          case Intrinsic::experimental_constrained_sitofp:
+          case Intrinsic::experimental_constrained_uitofp: {
+            Type *SrcType = CI->getArgOperand(0)->getType()->getScalarType();
+            Type *DstType = CI->getType()->getScalarType();
+            if (SrcType->isPPC_FP128Ty() || DstType->isPPC_FP128Ty() ||
+                isLargeIntegerTy(!TM.isPPC64(), SrcType) ||
+                isLargeIntegerTy(!TM.isPPC64(), DstType))
+              return true;
+            break;
+          }
+
           // Exclude eh_sjlj_setjmp; we don't need to exclude eh_sjlj_longjmp
           // because, although it does clobber the counter register, the
           // control can't then return to inside the loop unless there is also
@@ -424,6 +448,15 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
           case Intrinsic::pow:
           case Intrinsic::sin:
           case Intrinsic::cos:
+          case Intrinsic::experimental_constrained_powi:
+          case Intrinsic::experimental_constrained_log:
+          case Intrinsic::experimental_constrained_log2:
+          case Intrinsic::experimental_constrained_log10:
+          case Intrinsic::experimental_constrained_exp:
+          case Intrinsic::experimental_constrained_exp2:
+          case Intrinsic::experimental_constrained_pow:
+          case Intrinsic::experimental_constrained_sin:
+          case Intrinsic::experimental_constrained_cos:
             return true;
           case Intrinsic::copysign:
             if (CI->getArgOperand(0)->getType()->getScalarType()->
@@ -445,6 +478,54 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
           case Intrinsic::llround:            Opcode = ISD::LLROUND;    break;
           case Intrinsic::minnum:             Opcode = ISD::FMINNUM;    break;
           case Intrinsic::maxnum:             Opcode = ISD::FMAXNUM;    break;
+          case Intrinsic::experimental_constrained_fcmp:
+            Opcode = ISD::STRICT_FSETCC;
+            break;
+          case Intrinsic::experimental_constrained_fcmps:
+            Opcode = ISD::STRICT_FSETCCS;
+            break;
+          case Intrinsic::experimental_constrained_fma:
+            Opcode = ISD::STRICT_FMA;
+            break;
+          case Intrinsic::experimental_constrained_sqrt:
+            Opcode = ISD::STRICT_FSQRT;
+            break;
+          case Intrinsic::experimental_constrained_floor:
+            Opcode = ISD::STRICT_FFLOOR;
+            break;
+          case Intrinsic::experimental_constrained_ceil:
+            Opcode = ISD::STRICT_FCEIL;
+            break;
+          case Intrinsic::experimental_constrained_trunc:
+            Opcode = ISD::STRICT_FTRUNC;
+            break;
+          case Intrinsic::experimental_constrained_rint:
+            Opcode = ISD::STRICT_FRINT;
+            break;
+          case Intrinsic::experimental_constrained_lrint:
+            Opcode = ISD::STRICT_LRINT;
+            break;
+          case Intrinsic::experimental_constrained_llrint:
+            Opcode = ISD::STRICT_LLRINT;
+            break;
+          case Intrinsic::experimental_constrained_nearbyint:
+            Opcode = ISD::STRICT_FNEARBYINT;
+            break;
+          case Intrinsic::experimental_constrained_round:
+            Opcode = ISD::STRICT_FROUND;
+            break;
+          case Intrinsic::experimental_constrained_lround:
+            Opcode = ISD::STRICT_LROUND;
+            break;
+          case Intrinsic::experimental_constrained_llround:
+            Opcode = ISD::STRICT_LLROUND;
+            break;
+          case Intrinsic::experimental_constrained_minnum:
+            Opcode = ISD::STRICT_FMINNUM;
+            break;
+          case Intrinsic::experimental_constrained_maxnum:
+            Opcode = ISD::STRICT_FMAXNUM;
+            break;
           case Intrinsic::umul_with_overflow: Opcode = ISD::UMULO;      break;
           case Intrinsic::smul_with_overflow: Opcode = ISD::SMULO;      break;
           }

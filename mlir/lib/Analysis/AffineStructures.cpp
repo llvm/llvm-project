@@ -1422,6 +1422,51 @@ void FlatAffineConstraints::removeRedundantInequalities() {
   inequalities.resize(numReservedCols * pos);
 }
 
+// A more complex check to eliminate redundant inequalities and equalities. Uses
+// Simplex to check if a constraint is redundant.
+void FlatAffineConstraints::removeRedundantConstraints() {
+  // First, we run GCDTightenInequalities. This allows us to catch some
+  // constraints which are not redundant when considering rational solutions
+  // but are redundant in terms of integer solutions.
+  GCDTightenInequalities();
+  Simplex simplex(*this);
+  simplex.detectRedundant();
+
+  auto copyInequality = [&](unsigned src, unsigned dest) {
+    if (src == dest)
+      return;
+    for (unsigned c = 0, e = getNumCols(); c < e; c++)
+      atIneq(dest, c) = atIneq(src, c);
+  };
+  unsigned pos = 0;
+  unsigned numIneqs = getNumInequalities();
+  // Scan to get rid of all inequalities marked redundant, in-place. In Simplex,
+  // the first constraints added are the inequalities.
+  for (unsigned r = 0; r < numIneqs; r++) {
+    if (!simplex.isMarkedRedundant(r))
+      copyInequality(r, pos++);
+  }
+  inequalities.resize(numReservedCols * pos);
+
+  // Scan to get rid of all equalities marked redundant, in-place. In Simplex,
+  // after the inequalities, a pair of constraints for each equality is added.
+  // An equality is redundant if both the inequalities in its pair are
+  // redundant.
+  auto copyEquality = [&](unsigned src, unsigned dest) {
+    if (src == dest)
+      return;
+    for (unsigned c = 0, e = getNumCols(); c < e; c++)
+      atEq(dest, c) = atEq(src, c);
+  };
+  pos = 0;
+  for (unsigned r = 0, e = getNumEqualities(); r < e; r++) {
+    if (!(simplex.isMarkedRedundant(numIneqs + 2 * r) &&
+          simplex.isMarkedRedundant(numIneqs + 2 * r + 1)))
+      copyEquality(r, pos++);
+  }
+  equalities.resize(numReservedCols * pos);
+}
+
 std::pair<AffineMap, AffineMap> FlatAffineConstraints::getLowerAndUpperBound(
     unsigned pos, unsigned offset, unsigned num, unsigned symStartPos,
     ArrayRef<AffineExpr> localExprs, MLIRContext *context) const {

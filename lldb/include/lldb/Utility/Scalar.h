@@ -45,8 +45,6 @@ public:
     e_sint,
     e_uint,
     e_float,
-    e_double,
-    e_long_double
   };
 
   // Constructors and Destructors
@@ -70,18 +68,14 @@ public:
       : m_type(e_uint), m_integer(sizeof(v) * 8, uint64_t(v), false),
         m_float(0.0f) {}
   Scalar(float v) : m_type(e_float), m_float(v) {}
-  Scalar(double v) : m_type(e_double), m_float(v) {}
-  Scalar(long double v) : m_type(e_long_double), m_float(double(v)) {
+  Scalar(double v) : m_type(e_float), m_float(v) {}
+  Scalar(long double v) : m_type(e_float), m_float(double(v)) {
     bool ignore;
     m_float.convert(llvm::APFloat::x87DoubleExtended(),
                     llvm::APFloat::rmNearestTiesToEven, &ignore);
   }
   Scalar(llvm::APInt v)
-      : m_type(GetBestTypeForBitSize(v.getBitWidth(), true)),
-        m_integer(std::move(v)), m_float(0.0f) {}
-
-  /// Return the most efficient Scalar::Type for the requested bit size.
-  static Type GetBestTypeForBitSize(size_t bit_size, bool sign);
+      : m_type(e_sint), m_integer(std::move(v)), m_float(0.0f) {}
 
   bool SignExtend(uint32_t bit_pos);
 
@@ -114,29 +108,19 @@ public:
 
   void GetValue(Stream *s, bool show_type) const;
 
-  bool IsValid() const {
-    return (m_type >= e_sint) && (m_type <= e_long_double);
-  }
+  bool IsValid() const { return (m_type >= e_sint) && (m_type <= e_float); }
 
   /// Convert to an integer with \p bits and the given signedness.
   void TruncOrExtendTo(uint16_t bits, bool sign);
 
   bool IntegralPromote(uint16_t bits, bool sign);
-  bool FloatPromote(Scalar::Type type);
+  bool FloatPromote(const llvm::fltSemantics &semantics);
 
   bool MakeSigned();
 
   bool MakeUnsigned();
 
   static const char *GetValueTypeAsCString(Scalar::Type value_type);
-
-  static Scalar::Type
-  GetValueTypeForSignedIntegerWithByteSize(size_t byte_size);
-
-  static Scalar::Type
-  GetValueTypeForUnsignedIntegerWithByteSize(size_t byte_size);
-
-  static Scalar::Type GetValueTypeForFloatWithByteSize(size_t byte_size);
 
   // All operators can benefits from the implicit conversions that will happen
   // automagically by the compiler, so no temporary objects will need to be
@@ -257,8 +241,13 @@ protected:
 
   static Type PromoteToMaxType(Scalar &lhs, Scalar &rhs);
 
-  using IntPromotionKey = std::pair<unsigned, bool>;
-  IntPromotionKey GetIntKey() const;
+  enum class Category { Void, Integral, Float };
+  static Category GetCategory(Scalar::Type type);
+
+  using PromotionKey = std::tuple<Category, unsigned, bool>;
+  PromotionKey GetPromoKey() const;
+
+  static PromotionKey GetFloatPromoKey(const llvm::fltSemantics &semantics);
 
 private:
   friend const Scalar operator+(const Scalar &lhs, const Scalar &rhs);

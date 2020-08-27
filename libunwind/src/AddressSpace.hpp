@@ -432,14 +432,17 @@ static bool checkAddrInSegment(const Elf_Phdr *phdr, size_t image_base,
   return false;
 }
 
-int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo, size_t pinfo_size,
-                             void *data) {
+static int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo,
+                                    size_t pinfo_size, void *data) {
   auto cbdata = static_cast<dl_iterate_cb_data *>(data);
   if (pinfo->dlpi_phnum == 0 || cbdata->targetAddr < pinfo->dlpi_addr)
     return 0;
 #if defined(_LIBUNWIND_USE_FRAME_HEADER_CACHE)
   if (ProcessFrameHeaderCache.find(pinfo, pinfo_size, data))
     return 1;
+#else
+  // Avoid warning about unused variable.
+  (void)pinfo_size;
 #endif
 
   Elf_Addr image_base = calculateImageBase(pinfo);
@@ -482,7 +485,8 @@ int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo, size_t pinfo_size,
 // Given all the #ifdef's above, the code here is for
 // defined(LIBUNWIND_ARM_EHABI)
 
-int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo, size_t, void *data) {
+static int findUnwindSectionsByPhdr(struct dl_phdr_info *pinfo, size_t,
+                                    void *data) {
   auto *cbdata = static_cast<dl_iterate_cb_data *>(data);
   bool found_obj = false;
   bool found_hdr = false;

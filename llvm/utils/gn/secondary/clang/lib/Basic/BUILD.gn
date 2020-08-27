@@ -55,7 +55,6 @@ static_library("Basic") {
     "ExpressionTraits.cpp",
     "FileManager.cpp",
     "FileSystemStatCache.cpp",
-    "FixedPoint.cpp",
     "IdentifierTable.cpp",
     "LangOptions.cpp",
     "LangStandards.cpp",

@@ -44,10 +44,16 @@ public:
     eStopHookIDCompletion = (1u << 16),
     eThreadIndexCompletion = (1u << 17),
     eWatchPointIDCompletion = (1u << 18),
+    eBreakpointNameCompletion = (1u << 19),
+    eProcessIDCompletion = (1u << 20),
+    eProcessNameCompletion = (1u << 21),
+    eRemoteDiskFileCompletion = (1u << 22),
+    eRemoteDiskDirectoryCompletion = (1u << 23),
+    eTypeCategoryNameCompletion = (1u << 24),
     // This item serves two purposes.  It is the last element in the enum, so
     // you can add custom enums starting from here in your Option class. Also
     // if you & in this bit the base code will not process the option.
-    eCustomCompletion = (1u << 19)
+    eCustomCompletion = (1u << 24)
   };
 
   static bool InvokeCommonCompletionCallbacks(
@@ -68,6 +74,14 @@ public:
   static void DiskDirectories(const llvm::Twine &partial_file_name,
                               StringList &matches,
                               TildeExpressionResolver &Resolver);
+
+  static void RemoteDiskFiles(CommandInterpreter &interpreter,
+                              CompletionRequest &request,
+                              SearchFilter *searcher);
+
+  static void RemoteDiskDirectories(CommandInterpreter &interpreter,
+                                    CompletionRequest &request,
+                                    SearchFilter *searcher);
 
   static void SourceFiles(CommandInterpreter &interpreter,
                           CompletionRequest &request, SearchFilter *searcher);
@@ -101,9 +115,19 @@ public:
   static void Breakpoints(CommandInterpreter &interpreter,
                           CompletionRequest &request, SearchFilter *searcher);
 
+  static void BreakpointNames(CommandInterpreter &interpreter,
+                              CompletionRequest &request,
+                              SearchFilter *searcher);
+
   static void ProcessPluginNames(CommandInterpreter &interpreter,
                                  CompletionRequest &request,
                                  SearchFilter *searcher);
+
+  static void ProcessIDs(CommandInterpreter &interpreter,
+                         CompletionRequest &request, SearchFilter *searcher);
+
+  static void ProcessNames(CommandInterpreter &interpreter,
+                           CompletionRequest &request, SearchFilter *searcher);
 
   static void DisassemblyFlavors(CommandInterpreter &interpreter,
                                  CompletionRequest &request,
@@ -123,6 +147,10 @@ public:
 
   static void WatchPointIDs(CommandInterpreter &interpreter,
                             CompletionRequest &request, SearchFilter *searcher);
+
+  static void TypeCategoryNames(CommandInterpreter &interpreter,
+                                CompletionRequest &request,
+                                SearchFilter *searcher);
 };
 
 } // namespace lldb_private

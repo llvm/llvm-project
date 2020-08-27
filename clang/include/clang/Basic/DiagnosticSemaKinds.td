@@ -91,8 +91,8 @@ def ext_cce_narrowing : ExtWarn<
   "evaluates to %2, which cannot be narrowed to type %3}1">,
   InGroup<CXX11Narrowing>, DefaultError, SFINAEFailure;
 def err_ice_not_integral : Error<
-  "integral constant expression must have integral or unscoped enumeration "
-  "type, not %0">;
+  "%select{integer|integral}1 constant expression must have "
+  "%select{integer|integral or unscoped enumeration}1 type, not %0">;
 def err_ice_incomplete_type : Error<
   "integral constant expression has incomplete class type %0">;
 def err_ice_explicit_conversion : Error<
@@ -2829,8 +2829,9 @@ def err_attribute_requires_opencl_version : Error<
 def err_invalid_branch_protection_spec : Error<
   "invalid or misplaced branch protection specification '%0'">;
 def warn_unsupported_target_attribute
-    : Warning<"%select{unsupported|duplicate}0%select{| architecture}1 '%2' in"
-              " the 'target' attribute string; 'target' attribute ignored">,
+    : Warning<"%select{unsupported|duplicate|unknown}0%select{| architecture|"
+              " tune CPU}1 '%2' in the 'target' attribute string; 'target' "
+              "attribute ignored">,
       InGroup<IgnoredAttributes>;
 def err_attribute_unsupported
     : Error<"%0 attribute is not supported for this target">;

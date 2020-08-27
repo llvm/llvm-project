@@ -1143,9 +1143,25 @@ public:
   /// Fill a SmallVectorImpl with the valid values to setCPU.
   virtual void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {}
 
+  /// Fill a SmallVectorImpl with the valid values for tuning CPU.
+  virtual void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const {
+    fillValidCPUList(Values);
+  }
+
   /// brief Determine whether this TargetInfo supports the given CPU name.
   virtual bool isValidCPUName(StringRef Name) const {
     return true;
+  }
+
+  /// brief Determine whether this TargetInfo supports the given CPU name for
+  // tuning.
+  virtual bool isValidTuneCPUName(StringRef Name) const {
+    return isValidCPUName(Name);
+  }
+
+  /// brief Determine whether this TargetInfo supports tune in target attribute.
+  virtual bool supportsTargetAttributeTune() const {
+    return false;
   }
 
   /// Use the specified ABI.

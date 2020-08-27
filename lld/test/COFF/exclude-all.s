@@ -23,7 +23,7 @@ _dataSym:
 # dllexport directive for some of the symbols. In this case, the dllexported
 # symbols are still exported.
 
-# RUN: yaml2obj < %p/Inputs/export.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/export.yaml -o %t.obj
 #
 # RUN: lld-link -safeseh:no -out:%t.dll -dll %t.obj -lldmingw -exclude-all-symbols -output-def:%t.def
 # RUN: llvm-readobj --coff-exports %t.dll | FileCheck -check-prefix=DLLEXPORT %s

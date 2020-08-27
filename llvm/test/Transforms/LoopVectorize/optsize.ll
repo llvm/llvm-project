@@ -186,6 +186,37 @@ exit:
   ret i32 %for
 }
 
+define i32 @pr45526_pgso() !prof !14 {
+;
+; CHECK-LABEL: @pr45526_pgso
+; CHECK-NEXT: entry:
+; CHECK-NEXT:   br label %loop
+; CHECK-EMPTY:
+; CHECK-NEXT: loop:
+; CHECK-NEXT:   %piv = phi i32 [ 0, %entry ], [ %pivPlus1, %loop ]
+; CHECK-NEXT:   %for = phi i32 [ 5, %entry ], [ %pivPlus1, %loop ]
+; CHECK-NEXT:   %pivPlus1 = add nuw nsw i32 %piv, 1
+; CHECK-NEXT:   %cond = icmp ult i32 %piv, 510
+; CHECK-NEXT:   br i1 %cond, label %loop, label %exit
+; CHECK-EMPTY:
+; CHECK-NEXT: exit:
+; CHECK-NEXT:   %for.lcssa = phi i32 [ %for, %loop ]
+; CHECK-NEXT:   ret i32 %for.lcssa
+;
+entry:
+  br label %loop
+
+loop:
+  %piv = phi i32 [ 0, %entry ], [ %pivPlus1, %loop ]
+  %for = phi i32 [ 5, %entry ], [ %pivPlus1, %loop ]
+  %pivPlus1 = add nuw nsw i32 %piv, 1
+  %cond = icmp ult i32 %piv, 510
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret i32 %for
+}
+
 ; PR46228: Vectorize w/o versioning for unit stride under optsize and enabled
 ; vectorization.
 
@@ -222,7 +253,7 @@ define void @stride1(i16* noalias %B, i32 %BStride) optsize {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], <i32 2, i32 2>
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1026
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !19
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !21
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -250,6 +281,60 @@ for.body:
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !15
 
 for.end:
+  ret void
+}
+
+; Vectorize with versioning for unit stride for PGSO and enabled vectorization.
+;
+define void @stride1_pgso(i16* noalias %B, i32 %BStride) !prof !14 {
+; CHECK-LABEL: @stride1_pgso(
+; CHECK: vector.body
+;
+; PGSO-LABEL: @stride1_pgso(
+; PGSO: vector.body
+;
+; NPGSO-LABEL: @stride1_pgso(
+; NPGSO: vector.body
+
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i32 [ %iv.next, %for.body ], [ 0, %entry ]
+  %mulB = mul nsw i32 %iv, %BStride
+  %gepOfB = getelementptr inbounds i16, i16* %B, i32 %mulB
+  store i16 42, i16* %gepOfB, align 4
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, 1025
+  br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !15
+
+for.end:
+  ret void
+}
+
+; PR46652: Check that the need for stride==1 check prevents vectorizing a loop
+; having tiny trip count, when compiling w/o -Os/-Oz.
+; CHECK-LABEL: @pr46652
+; CHECK-NOT: vector.scevcheck
+; CHECK-NOT: vector.body
+; CHECK-LABEL: for.body
+
+@g = external global [1 x i16], align 1
+
+define void @pr46652(i16 %stride) {
+entry:
+  br label %for.body
+
+for.body:                                        ; preds = %for.body, %entry
+  %l1.02 = phi i16 [ 1, %entry ], [ %inc9, %for.body ]
+  %mul = mul nsw i16 %l1.02, %stride
+  %arrayidx6 = getelementptr inbounds [1 x i16], [1 x i16]* @g, i16 0, i16 %mul
+  %0 = load i16, i16* %arrayidx6, align 1
+  %inc9 = add nuw nsw i16 %l1.02, 1
+  %exitcond.not = icmp eq i16 %inc9, 16
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:                                        ; preds = %for.body
   ret void
 }
 

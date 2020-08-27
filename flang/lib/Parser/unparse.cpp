@@ -1923,6 +1923,9 @@ public:
         x.u);
   }
   void Unparse(const AccObjectList &x) { Walk(x.v, ","); }
+  void Unparse(const AccReductionOperator::Operator &x) {
+    Word(AccReductionOperator::EnumToString(x));
+  }
   void Unparse(const AccObjectListWithReduction &x) {
     Walk(std::get<AccReductionOperator>(x.t));
     Put(":");
@@ -1936,6 +1939,10 @@ public:
     Put(")");
     Put("\n");
     EndOpenACC();
+  }
+  void Unparse(const AccWaitArgument &x) {
+    Walk("DEVNUM:", std::get<std::optional<ScalarIntExpr>>(x.t), ":");
+    Walk(std::get<std::list<ScalarIntExpr>>(x.t), ",");
   }
   void Unparse(const OpenACCWaitConstruct &x) {
     BeginOpenACC();

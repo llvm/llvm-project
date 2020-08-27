@@ -21,6 +21,8 @@
 
 using namespace llvm;
 
+void writeOutput(llvm::Module *M, llvm::StringRef Message);
+
 bool IsReduced(Module &M, TestRunner &Test, SmallString<128> &CurrentFilepath) {
   // Write Module to tmp file
   int FD;
@@ -149,6 +151,7 @@ void llvm::runDeltaPass(
       UninterestingChunks.insert(ChunkToCheckForUninterestingness);
       ReducedProgram = std::move(Clone);
       errs() << " **** SUCCESS | lines: " << getLines(CurrentFilepath) << "\n";
+      writeOutput(ReducedProgram.get(), "Saved new best reduction to ");
     }
     // Delete uninteresting chunks
     erase_if(ChunksStillConsideredInteresting,

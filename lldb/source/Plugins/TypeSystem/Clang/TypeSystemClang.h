@@ -679,7 +679,7 @@ public:
 
   /// Using the current type, create a new typedef to that type using
   /// "typedef_name" as the name and "decl_ctx" as the decl context.
-  /// \param payload is an opaque TypePayloadClang.
+  /// \param opaque_payload is an opaque TypePayloadClang.
   static CompilerType
   CreateTypedefType(const CompilerType &type, const char *typedef_name,
                     const CompilerDeclContext &compiler_decl_ctx,
