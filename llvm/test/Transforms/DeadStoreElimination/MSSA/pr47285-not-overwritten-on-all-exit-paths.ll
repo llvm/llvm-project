@@ -25,6 +25,7 @@ define void @test(i1 %c.0, i1 %c.2, i1 %c.3, i1 %c.4, i1 %c.5, i1 %c.6) {
 ; CHECK-NEXT:    store i32 99, i32* @b, align 4
 ; CHECK-NEXT:    br i1 [[C_3:%.*]], label [[BB_5]], label [[BB_2]]
 ; CHECK:       bb.6:
+; CHECK-NEXT:    store i32 91, i32* @b, align 4
 ; CHECK-NEXT:    br i1 [[C_5:%.*]], label [[SPLIT_CRIT_EDGE_2:%.*]], label [[BB_2]]
 ; CHECK:       split_crit_edge.2:
 ; CHECK-NEXT:    store i32 27, i32* @b, align 4
@@ -32,6 +33,7 @@ define void @test(i1 %c.0, i1 %c.2, i1 %c.3, i1 %c.4, i1 %c.5, i1 %c.6) {
 ; CHECK:       bb.7:
 ; CHECK-NEXT:    br i1 [[C_4]], label [[INTERESTING:%.*]], label [[BB_8:%.*]]
 ; CHECK:       interesting:
+; CHECK-NEXT:    store i32 9, i32* @b, align 4
 ; CHECK-NEXT:    br i1 [[C_6:%.*]], label [[KILLER:%.*]], label [[BB_2]]
 ; CHECK:       killer:
 ; CHECK-NEXT:    store i32 23, i32* @b, align 4
