@@ -248,7 +248,11 @@ static void addFile(StringRef path) {
     if (!file->isEmpty() && !file->hasSymbolTable())
       error(path + ": archive has no index; run ranlib to add one");
 
-    if (config->forceLoadObjC) {
+    if (config->allLoad) {
+      if (Optional<MemoryBufferRef> buffer = readFile(path))
+        for (MemoryBufferRef member : getArchiveMembers(*buffer))
+          inputFiles.push_back(make<ObjFile>(member));
+    } else if (config->forceLoadObjC) {
       for (const object::Archive::Symbol &sym : file->symbols())
         if (sym.getName().startswith(objc::klass))
           symtab->addUndefined(sym.getName());
@@ -519,6 +523,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
   config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
   config->outputType = args.hasArg(OPT_dylib) ? MH_DYLIB : MH_EXECUTE;
   config->runtimePaths = args::getStrings(args, OPT_rpath);
+  config->allLoad = args.hasArg(OPT_all_load);
 
   std::vector<StringRef> &roots = config->systemLibraryRoots;
   for (const Arg *arg : args.filtered(OPT_syslibroot))
@@ -583,6 +588,7 @@ bool macho::link(llvm::ArrayRef<const char *> argsArr, bool canExitEarly,
     case OPT_platform_version:
       handlePlatformVersion(arg);
       break;
+    case OPT_all_load:
     case OPT_o:
     case OPT_dylib:
     case OPT_e:
