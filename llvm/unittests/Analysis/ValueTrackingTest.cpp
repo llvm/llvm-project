@@ -1536,7 +1536,7 @@ const std::pair<const char *, bool> FindAllocaForValueTests[] = {
         br label %bb1
 
       bb1:
-        %x = phi i32* [ %a, %entry ], [ %b, %bb1 ]
+        %r = phi i32* [ %a, %entry ], [ %b, %bb1 ]
         br i1 %cond, label %bb1, label %exit
 
       exit:
