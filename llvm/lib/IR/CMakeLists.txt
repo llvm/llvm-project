@@ -47,6 +47,7 @@ add_llvm_component_library(LLVMCore
   SafepointIRVerifier.cpp
   ProfileSummary.cpp
   Statepoint.cpp
+  StructuralHash.cpp
   Type.cpp
   TypeFinder.cpp
   Use.cpp
