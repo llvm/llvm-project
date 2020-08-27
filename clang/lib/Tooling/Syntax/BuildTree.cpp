@@ -1132,6 +1132,14 @@ public:
     return true;
   }
 
+  bool WalkUpFromCXXConstructExpr(CXXConstructExpr *S) {
+    // Ignore the implicit calls to default constructors.
+    if ((S->getNumArgs() == 0 || isa<CXXDefaultArgExpr>(S->getArg(0))) &&
+        S->getParenOrBraceRange().isInvalid())
+      return true;
+    return RecursiveASTVisitor::WalkUpFromCXXConstructExpr(S);
+  }
+
   bool TraverseCXXOperatorCallExpr(CXXOperatorCallExpr *S) {
     // To construct a syntax tree of the same shape for calls to built-in and
     // user-defined operators, ignore the `DeclRefExpr` that refers to the

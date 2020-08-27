@@ -548,9 +548,6 @@ namespace n {
   struct S { };
 }
 void test() {
-  // FIXME: Remove the `UnknownExpression` wrapping `s1` and `s2`. This
-  // `UnknownExpression` comes from a leaf `CXXConstructExpr` in the
-  // ClangAST. We need to ignore leaf implicit nodes.
   [[::n::S s1]];
   [[n::S s2]];
 }
@@ -564,8 +561,7 @@ SimpleDeclaration
 | `-'::' ListDelimiter
 |-'S'
 `-SimpleDeclarator Declarator
-  `-UnknownExpression
-    `-'s1'
+  `-'s1'
 )txt",
        R"txt(
 SimpleDeclaration
@@ -575,8 +571,7 @@ SimpleDeclaration
 | `-'::' ListDelimiter
 |-'S'
 `-SimpleDeclarator Declarator
-  `-UnknownExpression
-    `-'s2'
+  `-'s2'
 )txt"}));
 }
 
@@ -608,8 +603,7 @@ SimpleDeclaration
 | `-'::' ListDelimiter
 |-'S'
 `-SimpleDeclarator Declarator
-  `-UnknownExpression
-    `-'s1'
+  `-'s1'
 )txt",
        R"txt(
 SimpleDeclaration
@@ -623,8 +617,7 @@ SimpleDeclaration
 | `-'::' ListDelimiter
 |-'S'
 `-SimpleDeclarator Declarator
-  `-UnknownExpression
-    `-'s2'
+  `-'s2'
 )txt"}));
 }
 
