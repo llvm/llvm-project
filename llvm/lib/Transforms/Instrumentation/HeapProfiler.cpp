@@ -414,8 +414,8 @@ void HeapProfiler::instrumentMaskedLoadOrStore(const DataLayout &DL,
                                                Value *Addr, unsigned Alignment,
                                                uint32_t TypeSize,
                                                bool IsWrite) {
-  auto *VTy =
-      cast<VectorType>(cast<PointerType>(Addr->getType())->getElementType());
+  auto *VTy = cast<FixedVectorType>(
+      cast<PointerType>(Addr->getType())->getElementType());
   uint64_t ElemTypeSize = DL.getTypeStoreSizeInBits(VTy->getScalarType());
   unsigned Num = VTy->getNumElements();
   auto *Zero = ConstantInt::get(IntptrTy, 0);
