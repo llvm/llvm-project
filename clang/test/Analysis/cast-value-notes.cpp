@@ -13,6 +13,8 @@ struct Shape {
   const T *getAs() const;
 };
 class Triangle : public Shape {};
+class Rectangle : public Shape {};
+class Hexagon : public Shape {};
 class Circle : public Shape {};
 } // namespace clang
 
@@ -27,7 +29,6 @@ void evalReferences(const Shape &S) {
 }
 
 void evalNonNullParamNonNullReturnReference(const Shape &S) {
-  // Unmodeled cast from reference to pointer.
   const auto *C = dyn_cast_or_null<Circle>(S);
   // expected-note@-1 {{'C' initialized here}}
 
@@ -43,13 +44,37 @@ void evalNonNullParamNonNullReturnReference(const Shape &S) {
     return;
   }
 
+  if (dyn_cast_or_null<Rectangle>(C)) {
+    // expected-note@-1 {{Assuming 'C' is not a 'Rectangle'}}
+    // expected-note@-2 {{Taking false branch}}
+    return;
+  }
+
+  if (dyn_cast_or_null<Hexagon>(C)) {
+    // expected-note@-1 {{Assuming 'C' is not a 'Hexagon'}}
+    // expected-note@-2 {{Taking false branch}}
+    return;
+  }
+
   if (isa<Triangle>(C)) {
     // expected-note@-1 {{'C' is not a 'Triangle'}}
     // expected-note@-2 {{Taking false branch}}
     return;
   }
 
-  if (isa<Circle>(C)) {
+  if (isa<Triangle, Rectangle>(C)) {
+    // expected-note@-1 {{'C' is neither a 'Triangle' nor a 'Rectangle'}}
+    // expected-note@-2 {{Taking false branch}}
+    return;
+  }
+
+  if (isa<Triangle, Rectangle, Hexagon>(C)) {
+    // expected-note@-1 {{'C' is neither a 'Triangle' nor a 'Rectangle' nor a 'Hexagon'}}
+    // expected-note@-2 {{Taking false branch}}
+    return;
+  }
+
+  if (isa<Circle, Rectangle, Hexagon>(C)) {
     // expected-note@-1 {{'C' is a 'Circle'}}
     // expected-note@-2 {{Taking true branch}}
 
@@ -65,22 +90,57 @@ void evalNonNullParamNonNullReturn(const Shape *S) {
   // expected-note@-1 {{'S' is a 'Circle'}}
   // expected-note@-2 {{'C' initialized here}}
 
-  if (!isa<Triangle>(C)) {
-    // expected-note@-1 {{Assuming 'C' is a 'Triangle'}}
+  if (!dyn_cast_or_null<Circle>(C)) {
+    // expected-note@-1 {{'C' is a 'Circle'}}
     // expected-note@-2 {{Taking false branch}}
     return;
   }
 
-  if (!isa<Triangle>(C)) {
-    // expected-note@-1 {{'C' is a 'Triangle'}}
+  if (dyn_cast_or_null<Triangle>(C)) {
+    // expected-note@-1 {{Assuming 'C' is not a 'Triangle'}}
     // expected-note@-2 {{Taking false branch}}
     return;
   }
 
-  (void)(1 / !C);
-  // expected-note@-1 {{'C' is non-null}}
-  // expected-note@-2 {{Division by zero}}
-  // expected-warning@-3 {{Division by zero}}
+  if (dyn_cast_or_null<Rectangle>(C)) {
+    // expected-note@-1 {{Assuming 'C' is not a 'Rectangle'}}
+    // expected-note@-2 {{Taking false branch}}
+    return;
+  }
+
+  if (dyn_cast_or_null<Hexagon>(C)) {
+    // expected-note@-1 {{Assuming 'C' is not a 'Hexagon'}}
+    // expected-note@-2 {{Taking false branch}}
+    return;
+  }
+
+  if (isa<Triangle>(C)) {
+    // expected-note@-1 {{'C' is not a 'Triangle'}}
+    // expected-note@-2 {{Taking false branch}}
+    return;
+  }
+
+  if (isa<Triangle, Rectangle>(C)) {
+    // expected-note@-1 {{'C' is neither a 'Triangle' nor a 'Rectangle'}}
+    // expected-note@-2 {{Taking false branch}}
+    return;
+  }
+
+  if (isa<Triangle, Rectangle, Hexagon>(C)) {
+    // expected-note@-1 {{'C' is neither a 'Triangle' nor a 'Rectangle' nor a 'Hexagon'}}
+    // expected-note@-2 {{Taking false branch}}
+    return;
+  }
+
+  if (isa<Circle, Rectangle, Hexagon>(C)) {
+    // expected-note@-1 {{'C' is a 'Circle'}}
+    // expected-note@-2 {{Taking true branch}}
+
+    (void)(1 / !C);
+    // expected-note@-1 {{'C' is non-null}}
+    // expected-note@-2 {{Division by zero}}
+    // expected-warning@-3 {{Division by zero}}
+  }
 }
 
 void evalNonNullParamNullReturn(const Shape *S) {
