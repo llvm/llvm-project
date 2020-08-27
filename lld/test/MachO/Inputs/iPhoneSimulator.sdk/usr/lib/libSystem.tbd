@@ -12,7 +12,7 @@ exports:
 archs:            [ i386, x86_64 ]
 uuids:            [ 'i386: 00000000-0000-0000-0000-000000000002', 'x86_64: 00000000-0000-0000-0000-000000000003' ]
 platform:         ios
-install-name:     '/usr/lib/libcache.dylib'
+install-name:     '/usr/lib/system/libcache.dylib'
 current-version:  83
 parent-umbrella:  System
 exports:
