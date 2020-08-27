@@ -499,14 +499,14 @@ static MachineInstr *foldPatchpoint(MachineFunction &MF, MachineInstr &MI,
   // Return false if any operands requested for folding are not foldable (not
   // part of the stackmap's live values).
   for (unsigned Op : Ops) {
-    // Caller is expected to avoid passing in tied operands
-    assert(!MI.getOperand(Op).isTied());
     if (Op < NumDefs) {
       assert(DefToFoldIdx == MI.getNumOperands() && "Folding multiple defs");
       DefToFoldIdx = Op;
     } else if (Op < StartIdx) {
       return nullptr;
     }
+    if (MI.getOperand(Op).isTied())
+      return nullptr;
   }
 
   MachineInstr *NewMI =
