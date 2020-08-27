@@ -200,12 +200,17 @@ define void @be_i32_to_i8_order(i32 %x, i8* %p0) {
 }
 
 define void @le_i32_to_i16(i32 %x, i16* %p0) {
-; CHECK-LABEL: le_i32_to_i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr w8, w0, #16
-; CHECK-NEXT:    strh w0, [x1]
-; CHECK-NEXT:    strh w8, [x1, #2]
-; CHECK-NEXT:    ret
+; LE-LABEL: le_i32_to_i16:
+; LE:       // %bb.0:
+; LE-NEXT:    str w0, [x1]
+; LE-NEXT:    ret
+;
+; BE-LABEL: le_i32_to_i16:
+; BE:       // %bb.0:
+; BE-NEXT:    lsr w8, w0, #16
+; BE-NEXT:    strh w0, [x1]
+; BE-NEXT:    strh w8, [x1, #2]
+; BE-NEXT:    ret
   %sh1 = lshr i32 %x, 16
   %t0 = trunc i32 %x to i16
   %t1 = trunc i32 %sh1 to i16
@@ -216,12 +221,17 @@ define void @le_i32_to_i16(i32 %x, i16* %p0) {
 }
 
 define void @le_i32_to_i16_order(i32 %x, i16* %p0) {
-; CHECK-LABEL: le_i32_to_i16_order:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr w8, w0, #16
-; CHECK-NEXT:    strh w8, [x1, #2]
-; CHECK-NEXT:    strh w0, [x1]
-; CHECK-NEXT:    ret
+; LE-LABEL: le_i32_to_i16_order:
+; LE:       // %bb.0:
+; LE-NEXT:    str w0, [x1]
+; LE-NEXT:    ret
+;
+; BE-LABEL: le_i32_to_i16_order:
+; BE:       // %bb.0:
+; BE-NEXT:    lsr w8, w0, #16
+; BE-NEXT:    strh w8, [x1, #2]
+; BE-NEXT:    strh w0, [x1]
+; BE-NEXT:    ret
   %sh1 = lshr i32 %x, 16
   %t0 = trunc i32 %x to i16
   %t1 = trunc i32 %sh1 to i16
@@ -232,12 +242,17 @@ define void @le_i32_to_i16_order(i32 %x, i16* %p0) {
 }
 
 define void @be_i32_to_i16(i32 %x, i16* %p0) {
-; CHECK-LABEL: be_i32_to_i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr w8, w0, #16
-; CHECK-NEXT:    strh w0, [x1, #2]
-; CHECK-NEXT:    strh w8, [x1]
-; CHECK-NEXT:    ret
+; LE-LABEL: be_i32_to_i16:
+; LE:       // %bb.0:
+; LE-NEXT:    lsr w8, w0, #16
+; LE-NEXT:    strh w0, [x1, #2]
+; LE-NEXT:    strh w8, [x1]
+; LE-NEXT:    ret
+;
+; BE-LABEL: be_i32_to_i16:
+; BE:       // %bb.0:
+; BE-NEXT:    str w0, [x1]
+; BE-NEXT:    ret
   %sh1 = lshr i32 %x, 16
   %t0 = trunc i32 %x to i16
   %t1 = trunc i32 %sh1 to i16
@@ -248,12 +263,17 @@ define void @be_i32_to_i16(i32 %x, i16* %p0) {
 }
 
 define void @be_i32_to_i16_order(i32 %x, i16* %p0) {
-; CHECK-LABEL: be_i32_to_i16_order:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr w8, w0, #16
-; CHECK-NEXT:    strh w8, [x1]
-; CHECK-NEXT:    strh w0, [x1, #2]
-; CHECK-NEXT:    ret
+; LE-LABEL: be_i32_to_i16_order:
+; LE:       // %bb.0:
+; LE-NEXT:    lsr w8, w0, #16
+; LE-NEXT:    strh w8, [x1]
+; LE-NEXT:    strh w0, [x1, #2]
+; LE-NEXT:    ret
+;
+; BE-LABEL: be_i32_to_i16_order:
+; BE:       // %bb.0:
+; BE-NEXT:    str w0, [x1]
+; BE-NEXT:    ret
   %sh1 = lshr i32 %x, 16
   %t0 = trunc i32 %x to i16
   %t1 = trunc i32 %sh1 to i16
@@ -440,16 +460,21 @@ define void @be_i64_to_i8_order(i64 %x, i8* %p0) {
 }
 
 define void @le_i64_to_i16(i64 %x, i16* %p0) {
-; CHECK-LABEL: le_i64_to_i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x0, #16
-; CHECK-NEXT:    lsr x9, x0, #32
-; CHECK-NEXT:    lsr x10, x0, #48
-; CHECK-NEXT:    strh w0, [x1]
-; CHECK-NEXT:    strh w8, [x1, #2]
-; CHECK-NEXT:    strh w9, [x1, #4]
-; CHECK-NEXT:    strh w10, [x1, #6]
-; CHECK-NEXT:    ret
+; LE-LABEL: le_i64_to_i16:
+; LE:       // %bb.0:
+; LE-NEXT:    str x0, [x1]
+; LE-NEXT:    ret
+;
+; BE-LABEL: le_i64_to_i16:
+; BE:       // %bb.0:
+; BE-NEXT:    lsr x8, x0, #16
+; BE-NEXT:    lsr x9, x0, #32
+; BE-NEXT:    lsr x10, x0, #48
+; BE-NEXT:    strh w0, [x1]
+; BE-NEXT:    strh w8, [x1, #2]
+; BE-NEXT:    strh w9, [x1, #4]
+; BE-NEXT:    strh w10, [x1, #6]
+; BE-NEXT:    ret
   %sh1 = lshr i64 %x, 16
   %sh2 = lshr i64 %x, 32
   %sh3 = lshr i64 %x, 48
@@ -468,16 +493,21 @@ define void @le_i64_to_i16(i64 %x, i16* %p0) {
 }
 
 define void @le_i64_to_i16_order(i64 %x, i16* %p0) {
-; CHECK-LABEL: le_i64_to_i16_order:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x0, #16
-; CHECK-NEXT:    lsr x9, x0, #32
-; CHECK-NEXT:    lsr x10, x0, #48
-; CHECK-NEXT:    strh w0, [x1]
-; CHECK-NEXT:    strh w8, [x1, #2]
-; CHECK-NEXT:    strh w10, [x1, #6]
-; CHECK-NEXT:    strh w9, [x1, #4]
-; CHECK-NEXT:    ret
+; LE-LABEL: le_i64_to_i16_order:
+; LE:       // %bb.0:
+; LE-NEXT:    str x0, [x1]
+; LE-NEXT:    ret
+;
+; BE-LABEL: le_i64_to_i16_order:
+; BE:       // %bb.0:
+; BE-NEXT:    lsr x8, x0, #16
+; BE-NEXT:    lsr x9, x0, #32
+; BE-NEXT:    lsr x10, x0, #48
+; BE-NEXT:    strh w0, [x1]
+; BE-NEXT:    strh w8, [x1, #2]
+; BE-NEXT:    strh w10, [x1, #6]
+; BE-NEXT:    strh w9, [x1, #4]
+; BE-NEXT:    ret
   %sh1 = lshr i64 %x, 16
   %sh2 = lshr i64 %x, 32
   %sh3 = lshr i64 %x, 48
@@ -496,16 +526,21 @@ define void @le_i64_to_i16_order(i64 %x, i16* %p0) {
 }
 
 define void @be_i64_to_i16(i64 %x, i16* %p0) {
-; CHECK-LABEL: be_i64_to_i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x0, #16
-; CHECK-NEXT:    lsr x9, x0, #32
-; CHECK-NEXT:    lsr x10, x0, #48
-; CHECK-NEXT:    strh w0, [x1, #6]
-; CHECK-NEXT:    strh w8, [x1, #4]
-; CHECK-NEXT:    strh w9, [x1, #2]
-; CHECK-NEXT:    strh w10, [x1]
-; CHECK-NEXT:    ret
+; LE-LABEL: be_i64_to_i16:
+; LE:       // %bb.0:
+; LE-NEXT:    lsr x8, x0, #16
+; LE-NEXT:    lsr x9, x0, #32
+; LE-NEXT:    lsr x10, x0, #48
+; LE-NEXT:    strh w0, [x1, #6]
+; LE-NEXT:    strh w8, [x1, #4]
+; LE-NEXT:    strh w9, [x1, #2]
+; LE-NEXT:    strh w10, [x1]
+; LE-NEXT:    ret
+;
+; BE-LABEL: be_i64_to_i16:
+; BE:       // %bb.0:
+; BE-NEXT:    str x0, [x1]
+; BE-NEXT:    ret
   %sh1 = lshr i64 %x, 16
   %sh2 = lshr i64 %x, 32
   %sh3 = lshr i64 %x, 48
@@ -524,16 +559,21 @@ define void @be_i64_to_i16(i64 %x, i16* %p0) {
 }
 
 define void @be_i64_to_i16_order(i64 %x, i16* %p0) {
-; CHECK-LABEL: be_i64_to_i16_order:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x0, #16
-; CHECK-NEXT:    lsr x9, x0, #32
-; CHECK-NEXT:    lsr x10, x0, #48
-; CHECK-NEXT:    strh w0, [x1, #6]
-; CHECK-NEXT:    strh w10, [x1]
-; CHECK-NEXT:    strh w9, [x1, #2]
-; CHECK-NEXT:    strh w8, [x1, #4]
-; CHECK-NEXT:    ret
+; LE-LABEL: be_i64_to_i16_order:
+; LE:       // %bb.0:
+; LE-NEXT:    lsr x8, x0, #16
+; LE-NEXT:    lsr x9, x0, #32
+; LE-NEXT:    lsr x10, x0, #48
+; LE-NEXT:    strh w0, [x1, #6]
+; LE-NEXT:    strh w10, [x1]
+; LE-NEXT:    strh w9, [x1, #2]
+; LE-NEXT:    strh w8, [x1, #4]
+; LE-NEXT:    ret
+;
+; BE-LABEL: be_i64_to_i16_order:
+; BE:       // %bb.0:
+; BE-NEXT:    str x0, [x1]
+; BE-NEXT:    ret
   %sh1 = lshr i64 %x, 16
   %sh2 = lshr i64 %x, 32
   %sh3 = lshr i64 %x, 48
@@ -552,11 +592,16 @@ define void @be_i64_to_i16_order(i64 %x, i16* %p0) {
 }
 
 define void @le_i64_to_i32(i64 %x, i32* %p0) {
-; CHECK-LABEL: le_i64_to_i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x0, #32
-; CHECK-NEXT:    stp w0, w8, [x1]
-; CHECK-NEXT:    ret
+; LE-LABEL: le_i64_to_i32:
+; LE:       // %bb.0:
+; LE-NEXT:    str x0, [x1]
+; LE-NEXT:    ret
+;
+; BE-LABEL: le_i64_to_i32:
+; BE:       // %bb.0:
+; BE-NEXT:    lsr x8, x0, #32
+; BE-NEXT:    stp w0, w8, [x1]
+; BE-NEXT:    ret
   %sh1 = lshr i64 %x, 32
   %t0 = trunc i64 %x to i32
   %t1 = trunc i64 %sh1 to i32
@@ -567,11 +612,16 @@ define void @le_i64_to_i32(i64 %x, i32* %p0) {
 }
 
 define void @le_i64_to_i32_order(i64 %x, i32* %p0) {
-; CHECK-LABEL: le_i64_to_i32_order:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x0, #32
-; CHECK-NEXT:    stp w0, w8, [x1]
-; CHECK-NEXT:    ret
+; LE-LABEL: le_i64_to_i32_order:
+; LE:       // %bb.0:
+; LE-NEXT:    str x0, [x1]
+; LE-NEXT:    ret
+;
+; BE-LABEL: le_i64_to_i32_order:
+; BE:       // %bb.0:
+; BE-NEXT:    lsr x8, x0, #32
+; BE-NEXT:    stp w0, w8, [x1]
+; BE-NEXT:    ret
   %sh1 = lshr i64 %x, 32
   %t0 = trunc i64 %x to i32
   %t1 = trunc i64 %sh1 to i32
@@ -582,11 +632,16 @@ define void @le_i64_to_i32_order(i64 %x, i32* %p0) {
 }
 
 define void @be_i64_to_i32(i64 %x, i32* %p0) {
-; CHECK-LABEL: be_i64_to_i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x0, #32
-; CHECK-NEXT:    stp w8, w0, [x1]
-; CHECK-NEXT:    ret
+; LE-LABEL: be_i64_to_i32:
+; LE:       // %bb.0:
+; LE-NEXT:    lsr x8, x0, #32
+; LE-NEXT:    stp w8, w0, [x1]
+; LE-NEXT:    ret
+;
+; BE-LABEL: be_i64_to_i32:
+; BE:       // %bb.0:
+; BE-NEXT:    str x0, [x1]
+; BE-NEXT:    ret
   %sh1 = lshr i64 %x, 32
   %t0 = trunc i64 %x to i32
   %t1 = trunc i64 %sh1 to i32
@@ -597,11 +652,16 @@ define void @be_i64_to_i32(i64 %x, i32* %p0) {
 }
 
 define void @be_i64_to_i32_order(i64 %x, i32* %p0) {
-; CHECK-LABEL: be_i64_to_i32_order:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x0, #32
-; CHECK-NEXT:    stp w8, w0, [x1]
-; CHECK-NEXT:    ret
+; LE-LABEL: be_i64_to_i32_order:
+; LE:       // %bb.0:
+; LE-NEXT:    lsr x8, x0, #32
+; LE-NEXT:    stp w8, w0, [x1]
+; LE-NEXT:    ret
+;
+; BE-LABEL: be_i64_to_i32_order:
+; BE:       // %bb.0:
+; BE-NEXT:    str x0, [x1]
+; BE-NEXT:    ret
   %sh1 = lshr i64 %x, 32
   %t0 = trunc i64 %x to i32
   %t1 = trunc i64 %sh1 to i32
@@ -610,6 +670,8 @@ define void @be_i64_to_i32_order(i64 %x, i32* %p0) {
   store i32 %t0, i32* %p1, align 4
   ret void
 }
+
+; Negative test - not consecutive addresses
 
 define void @i64_to_i32_wrong_addr(i64 %x, i32* %p0) {
 ; CHECK-LABEL: i64_to_i32_wrong_addr:
@@ -626,6 +688,8 @@ define void @i64_to_i32_wrong_addr(i64 %x, i32* %p0) {
   store i32 %t0, i32* %p0, align 4
   ret void
 }
+
+; Negative test - addresses don't line up with shift amounts
 
 define void @i64_to_i16_wrong_order(i64 %x, i16* %p0) {
 ; CHECK-LABEL: i64_to_i16_wrong_order:
@@ -655,6 +719,8 @@ define void @i64_to_i16_wrong_order(i64 %x, i16* %p0) {
   ret void
 }
 
+; Negative test - no store of 't1'
+
 define void @i32_to_i8_incomplete(i32 %x, i8* %p0) {
 ; CHECK-LABEL: i32_to_i8_incomplete:
 ; CHECK:       // %bb.0:
@@ -679,6 +745,8 @@ define void @i32_to_i8_incomplete(i32 %x, i8* %p0) {
   store i8 %t3, i8* %p3, align 1
   ret void
 }
+
+; Negative test - no store of 't3'
 
 define void @i64_to_i8_incomplete(i64 %x, i8* %p0) {
 ; CHECK-LABEL: i64_to_i8_incomplete:
@@ -729,6 +797,8 @@ define void @i64_to_i8_incomplete(i64 %x, i8* %p0) {
   ret void
 }
 
+; Negative test - not consecutive addresses
+
 define void @i32_to_i16_wrong_addr(i32 %x, i16* %p0) {
 ; CHECK-LABEL: i32_to_i16_wrong_addr:
 ; CHECK:       // %bb.0:
@@ -744,6 +814,8 @@ define void @i32_to_i16_wrong_addr(i32 %x, i16* %p0) {
   store i16 %t0, i16* %p0, align 2
   ret void
 }
+
+; Negative test - addresses don't line up with shift amounts
 
 define void @i32_to_i8_wrong_order(i32 %x, i8* %p0) {
 ; CHECK-LABEL: i32_to_i8_wrong_order:
