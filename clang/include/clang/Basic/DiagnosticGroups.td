@@ -45,6 +45,11 @@ def GNUCompoundLiteralInitializer : DiagGroup<"gnu-compound-literal-initializer"
 def BitFieldConstantConversion : DiagGroup<"bitfield-constant-conversion">;
 def BitFieldEnumConversion : DiagGroup<"bitfield-enum-conversion">;
 def BitFieldWidth : DiagGroup<"bitfield-width">;
+def CompoundTokenSplitByMacro : DiagGroup<"compound-token-split-by-macro">;
+def CompoundTokenSplitBySpace : DiagGroup<"compound-token-split-by-space">;
+def CompoundTokenSplit : DiagGroup<"compound-token-split",
+                                   [CompoundTokenSplitByMacro,
+                                    CompoundTokenSplitBySpace]>;
 def CoroutineMissingUnhandledException :
   DiagGroup<"coroutine-missing-unhandled-exception">;
 def Coroutine : DiagGroup<"coroutine", [CoroutineMissingUnhandledException]>;
@@ -943,7 +948,8 @@ def Consumed       : DiagGroup<"consumed">;
 // Note that putting warnings in -Wall will not disable them by default. If a
 // warning should be active _only_ when -Wall is passed in, mark it as
 // DefaultIgnore in addition to putting it here.
-def All : DiagGroup<"all", [Most, Parentheses, Switch, SwitchBool, MisleadingIndentation]>;
+def All : DiagGroup<"all", [Most, Parentheses, Switch, SwitchBool,
+                            MisleadingIndentation, CompoundTokenSplit]>;
 
 // Warnings that should be in clang-cl /w4.
 def : DiagGroup<"CL4", [All, Extra]>;
