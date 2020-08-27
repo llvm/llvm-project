@@ -238,7 +238,7 @@ func @undo_block_arg_replace() {
 
 // The op in this function is rewritten to itself (and thus remains illegal) by
 // a pattern that removes its second block after adding an operation into it.
-// Check that we can undo block removal succesfully.
+// Check that we can undo block removal successfully.
 // CHECK-LABEL: @undo_block_erase
 func @undo_block_erase() {
   // CHECK: test.undo_block_erase

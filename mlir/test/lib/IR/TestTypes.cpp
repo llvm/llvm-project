@@ -20,7 +20,7 @@ struct TestRecursiveTypesPass
   void runOnFunction() override {
     FuncOp func = getFunction();
 
-    // Just make sure recurisve types are printed and parsed.
+    // Just make sure recursive types are printed and parsed.
     if (func.getName() == "roundtrip")
       return;
 
