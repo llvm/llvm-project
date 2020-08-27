@@ -1518,7 +1518,8 @@ void DwarfDebug::collectVariableInfoFromMFTable(
 /// either open or otherwise rolls off the end of the scope.
 static bool validThroughout(LexicalScopes &LScopes,
                             const MachineInstr *DbgValue,
-                            const MachineInstr *RangeEnd) {
+                            const MachineInstr *RangeEnd,
+                            const InstructionOrdering &Ordering) {
   assert(DbgValue->getDebugLoc() && "DBG_VALUE without a debug location");
   auto MBB = DbgValue->getParent();
   auto DL = DbgValue->getDebugLoc();
@@ -1586,9 +1587,8 @@ static bool validThroughout(LexicalScopes &LScopes,
 
   // The location range and variable's enclosing scope are both contained within
   // MBB, test if location terminates before end of scope.
-  for (auto I = RangeEnd->getIterator(); I != MBB->end(); ++I)
-    if (&*I == LScopeEnd)
-      return false;
+  if (Ordering.isBefore(RangeEnd, LScopeEnd))
+    return false;
 
   // There's a single location which starts at the scope start, and ends at or
   // after the scope end.
@@ -1734,7 +1734,7 @@ bool DwarfDebug::buildLocationList(
     return false;
   if (VeryLargeBlocks.count(StartDebugMI->getParent()))
     return false;
-  return validThroughout(LScopes, StartDebugMI, EndMI);
+  return validThroughout(LScopes, StartDebugMI, EndMI, getInstOrdering());
 }
 
 DbgEntity *DwarfDebug::createConcreteEntity(DwarfCompileUnit &TheCU,
@@ -1810,7 +1810,7 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
       const auto *End =
           SingleValueWithClobber ? HistoryMapEntries[1].getInstr() : nullptr;
       if (VeryLargeBlocks.count(MInsn->getParent()) == 0 &&
-          validThroughout(LScopes, MInsn, End)) {
+          validThroughout(LScopes, MInsn, End, getInstOrdering())) {
         RegVar->initializeDbgValue(MInsn);
         continue;
       }
