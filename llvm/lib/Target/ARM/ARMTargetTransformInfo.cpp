@@ -1272,7 +1272,7 @@ unsigned ARMTTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
   // multiplied by the number of elements being loaded. This is possibly very
   // conservative, but even so we still end up vectorising loops because the
   // cost per iteration for many loops is lower than for scalar loops.
-  unsigned VectorCost = NumElems * LT.first;
+  unsigned VectorCost = NumElems * LT.first * ST->getMVEVectorCostFactor();
   // The scalarization cost should be a lot higher. We use the number of vector
   // elements plus the scalarization overhead.
   unsigned ScalarCost =
