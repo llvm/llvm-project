@@ -1090,8 +1090,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
         } else {
           assert(II->getOpcode() == AMDGPU::S_WAITCNT_VSCNT);
           assert(II->getOperand(0).getReg() == AMDGPU::SGPR_NULL);
-          ScoreBrackets.applyWaitcnt(
-              AMDGPU::Waitcnt(~0u, ~0u, ~0u, II->getOperand(1).getImm()));
+          auto W = TII->getNamedOperand(*II, AMDGPU::OpName::simm16)->getImm();
+          ScoreBrackets.applyWaitcnt(AMDGPU::Waitcnt(~0u, ~0u, ~0u, W));
         }
       }
     }
@@ -1139,12 +1139,13 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
         assert(II->getOpcode() == AMDGPU::S_WAITCNT_VSCNT);
         assert(II->getOperand(0).getReg() == AMDGPU::SGPR_NULL);
 
-        unsigned ICnt = II->getOperand(1).getImm();
+        unsigned ICnt = TII->getNamedOperand(*II, AMDGPU::OpName::simm16)
+                        ->getImm();
         OldWait.VsCnt = std::min(OldWait.VsCnt, ICnt);
         if (!TrackedWaitcntSet.count(&*II))
           Wait.VsCnt = std::min(Wait.VsCnt, ICnt);
         if (Wait.VsCnt != ICnt) {
-          II->getOperand(1).setImm(Wait.VsCnt);
+          TII->getNamedOperand(*II, AMDGPU::OpName::simm16)->setImm(Wait.VsCnt);
           Modified = true;
         }
         Wait.VsCnt = ~0u;
