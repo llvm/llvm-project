@@ -167,6 +167,16 @@ During this release ...
   avx512bw otherwise they would split into multiple YMM registers. This means
   vXi16/vXi8 vectors are consistently treated the same as
   vXi32/vXi64/vXf64/vXf32 vectors of the same total width.
+* Support was added for Intel AMX instructions.
+* Support was added for TSXLDTRK instructions.
+* A pass was added for mitigating the Load Value Injection vulnerability.
+* The Speculative Execution Side Effect Suppression pass was added which can
+  be used to as a last resort mitigation for speculative execution related
+  CPU vulnerabilities.
+* Improved recognition of boolean vector reductions with better MOVMSKB/PTEST
+  handling
+* Exteded recognition of rotation patterns to handle funnel shift as well,
+  allowing us to remove the existing x86-specific SHLD/SHRD combine.
 
 Changes to the AMDGPU Target
 -----------------------------
