@@ -148,7 +148,7 @@ static TargetInfo *createTargetInfo(opt::InputArgList &args) {
   }
 }
 
-static bool isDirectory(StringRef option, StringRef path) {
+static bool warnIfNotDirectory(StringRef option, StringRef path) {
   if (!fs::exists(path)) {
     warn("directory not found for option -" + option + path);
     return false;
@@ -163,21 +163,23 @@ static void getSearchPaths(std::vector<StringRef> &paths, unsigned optionCode,
                            opt::InputArgList &args,
                            const std::vector<StringRef> &roots,
                            const SmallVector<StringRef, 2> &systemPaths) {
-  StringRef optionLetter{(optionCode == OPT_F ? "F" : "L")};
-  for (auto const &path : args::getStrings(args, optionCode)) {
+  StringRef optionLetter{optionCode == OPT_F ? "F" : "L"};
+  for (StringRef path : args::getStrings(args, optionCode)) {
     // NOTE: only absolute paths are re-rooted to syslibroot(s)
-    if (llvm::sys::path::is_absolute(path, llvm::sys::path::Style::posix)) {
+    bool found = false;
+    if (path::is_absolute(path, path::Style::posix)) {
       for (StringRef root : roots) {
         SmallString<261> buffer(root);
-        llvm::sys::path::append(buffer, path);
+        path::append(buffer, path);
         // Do not warn about paths that are computed via the syslib roots
-        if (llvm::sys::fs::is_directory(buffer))
+        if (fs::is_directory(buffer)) {
           paths.push_back(saver.save(buffer.str()));
+          found = true;
+        }
       }
-    } else {
-      if (isDirectory(optionLetter, path))
-        paths.push_back(path);
     }
+    if (!found && warnIfNotDirectory(optionLetter, path))
+      paths.push_back(path);
   }
 
   // `-Z` suppresses the standard "system" search paths.
@@ -187,8 +189,8 @@ static void getSearchPaths(std::vector<StringRef> &paths, unsigned optionCode,
   for (auto const &path : systemPaths) {
     for (auto root : roots) {
       SmallString<261> buffer(root);
-      llvm::sys::path::append(buffer, path);
-      if (isDirectory(optionLetter, buffer))
+      path::append(buffer, path);
+      if (warnIfNotDirectory(optionLetter, buffer))
         paths.push_back(saver.save(buffer.str()));
     }
   }
