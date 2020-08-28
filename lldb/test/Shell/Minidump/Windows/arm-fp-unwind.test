@@ -12,6 +12,7 @@ CHECK: Assembly language inspection UnwindPlan:
 CHECK-NEXT: This UnwindPlan originally sourced from EmulateInstructionARM
 CHECK-NEXT: This UnwindPlan is sourced from the compiler: no.
 CHECK-NEXT: This UnwindPlan is valid at all instruction locations: yes.
+CHECK-NEXT: This UnwindPlan is for a trap handler function: no.
 CHECK-NEXT: row[0]:    0: CFA=sp +0 =>
 CHECK-NEXT: row[1]:    4: CFA=sp +8 => fp=[CFA-8] lr=[CFA-4]
 CHECK-NEXT: row[2]:    6: CFA=fp +8 => fp=[CFA-8] lr=[CFA-4]
