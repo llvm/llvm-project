@@ -13,22 +13,15 @@
 
 ################################################################################
 
-if(NOT LIBOMPTARGET_DEP_LIBELF_FOUND)
-  libomptarget_say("Not building AMDGPU plugin: LIBELF not found")
+# as of rocm-3.7, hsa is installed with cmake packages and kmt is found via hsa
+find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
+if (NOT ${hsa-runtime64_FOUND})
+  libomptarget_say("Not building HSA plugin: hsa-runtime64 not found")
   return()
 endif()
 
-# rocr cmake uses DHSAKMT_INC_PATH, DHSAKMT_LIB_PATH to find roct
-# following that, look for DHSA_INC_PATH, DHSA_LIB_PATH, which allows
-# builds to use source and library files from various locations
-
-if(ROCM_DIR)
-  set(HSA_INC_PATH ${ROCM_DIR}/hsa/include ${ROCM_DIR}/hsa/include/hsa)
-  set(HSA_LIB_PATH ${ROCM_DIR}/hsa/lib)
-  set(HSAKMT_INC_PATH "")
-  set(HSAKMT_LIB_PATH ${ROCM_DIR}/lib)
-elseif(NOT (HSA_INC_PATH AND HSA_LIB_PATH AND HSAKMT_INC_PATH AND HSAKMT_LIB_PATH))
-  libomptarget_say("Not building AMDGPU plugin: ROCM library paths unspecified")
+if(NOT LIBOMPTARGET_DEP_LIBELF_FOUND)
+  libomptarget_say("Not building AMDGPU plugin: LIBELF not found")
   return()
 endif()
 
@@ -37,11 +30,6 @@ if(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_
   return()
 endif()
 libomptarget_say("Building amdgpu offloading plugin")
-
-libomptarget_say("HSA plugin: HSA_INC_PATH: ${HSA_INC_PATH}")
-libomptarget_say("HSA plugin: HSA_LIB_PATH: ${HSA_LIB_PATH}")
-libomptarget_say("HSA plugin: HSAKMT_INC_PATH: ${HSAKMT_INC_PATH}")
-libomptarget_say("HSA plugin: HSAKMT_LIB_PATH: ${HSAKMT_LIB_PATH}")
 
 ################################################################################
 # Define the suffix for the runtime messaging dumps.
@@ -55,7 +43,6 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
 endif()
 
 include_directories(
-  ${HSA_INC_PATH}
   ${CMAKE_CURRENT_SOURCE_DIR}/impl
 )
 
@@ -74,12 +61,12 @@ add_library(omptarget.rtl.amdgpu SHARED
 # When we build for debug, OPENMP_LIBDIR_SUFFIX get set to -debug
 install(TARGETS omptarget.rtl.amdgpu LIBRARY DESTINATION "lib${OPENMP_LIBDIR_SUFFIX}")
 
-add_dependencies(omptarget.rtl.amdgpu hsa-runtime64 hsakmt)
+set_property(TARGET omptarget.rtl.amdgpu PROPERTY INSTALL_RPATH "$ORIGIN")
 target_link_libraries(
   omptarget.rtl.amdgpu
-  -lpthread -ldl -Wl,-rpath,${OPENMP_INSTALL_LIBDIR}
-  -L${HSA_LIB_PATH} -L${HSAKMT_LIB_PATH} -lhsa-runtime64 -lhsakmt -Wl,-rpath,${HSA_LIB_PATH},-rpath,${HSAKMT_LIB_PATH}
-  -lelf
+  PRIVATE
+  hsa-runtime64::hsa-runtime64
+  pthread dl elf
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
   "-Wl,-z,defs"
   )
