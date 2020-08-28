@@ -376,15 +376,15 @@ define <8 x i32> @casted_load_i32_insert_v8i32(<4 x i32>* align 4 dereferenceabl
 
 ; TODO: Should load v4f32.
 
-define <8 x float> @load_f32_insert_v8f32(float* align 16 dereferenceable(16) %p) {
-; CHECK-LABEL: @load_f32_insert_v8f32(
+define <16 x float> @load_f32_insert_v16f32(float* align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @load_f32_insert_v16f32(
 ; CHECK-NEXT:    [[S:%.*]] = load float, float* [[P:%.*]], align 4
-; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x float> undef, float [[S]], i32 0
-; CHECK-NEXT:    ret <8 x float> [[R]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <16 x float> undef, float [[S]], i32 0
+; CHECK-NEXT:    ret <16 x float> [[R]]
 ;
   %s = load float, float* %p, align 4
-  %r = insertelement <8 x float> undef, float %s, i32 0
-  ret <8 x float> %r
+  %r = insertelement <16 x float> undef, float %s, i32 0
+  ret <16 x float> %r
 }
 
 ; TODO: Should load v4f32.
