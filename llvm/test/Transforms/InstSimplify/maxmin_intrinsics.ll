@@ -2098,3 +2098,62 @@ define i8 @smax_assume_slt(i8 %x, i8 %y) {
   %m = call i8 @llvm.smax.i8(i8 %x, i8 %y)
   ret i8 %m
 }
+
+define i8 @umax_add_nuw_1(i8 %x) {
+; CHECK-LABEL: @umax_add_nuw_1(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.umax.i8(i8 [[ADD]], i8 [[X]])
+; CHECK-NEXT:    ret i8 [[MAX]]
+;
+  %add = add nuw i8 %x, 1
+  %max = call i8 @llvm.umax.i8(i8 %add, i8 %x)
+  ret i8 %max
+}
+
+define i8 @umax_add_nuw_2(i8 %x) {
+; CHECK-LABEL: @umax_add_nuw_2(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X:%.*]], 42
+; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.umax.i8(i8 [[ADD]], i8 42)
+; CHECK-NEXT:    ret i8 [[MAX]]
+;
+  %add = add nuw i8 %x, 42
+  %max = call i8 @llvm.umax.i8(i8 %add, i8 42)
+  ret i8 %max
+}
+
+define i8 @umax_range_metadata(i8* %p1, i8* %p2) {
+; CHECK-LABEL: @umax_range_metadata(
+; CHECK-NEXT:    [[X:%.*]] = load i8, i8* [[P1:%.*]], align 1, [[RNG0:!range !.*]]
+; CHECK-NEXT:    [[Y:%.*]] = load i8, i8* [[P2:%.*]], align 1, [[RNG1:!range !.*]]
+; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[MAX]]
+;
+  %x = load i8, i8* %p1, !range !{i8 0, i8 10}
+  %y = load i8, i8* %p2, !range !{i8 20, i8 30}
+  %max = call i8 @llvm.umax.i8(i8 %x, i8 %y)
+  ret i8 %max
+}
+
+define i8 @umax_zext_sext(i4 %x) {
+; CHECK-LABEL: @umax_zext_sext(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i4 [[X:%.*]] to i8
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i4 [[X]] to i8
+; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.umax.i8(i8 [[ZEXT]], i8 [[SEXT]])
+; CHECK-NEXT:    ret i8 [[MAX]]
+;
+  %zext = zext i4 %x to i8
+  %sext = sext i4 %x to i8
+  %max = call i8 @llvm.umax.i8(i8 %zext, i8 %sext)
+  ret i8 %max
+}
+
+define i8 @umax_lshr(i8 %x, i8 %y) {
+; CHECK-LABEL: @umax_lshr(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 [[SHR]])
+; CHECK-NEXT:    ret i8 [[MAX]]
+;
+  %shr = lshr i8 %x, %y
+  %max = call i8 @llvm.umax.i8(i8 %x, i8 %shr)
+  ret i8 %max
+}
