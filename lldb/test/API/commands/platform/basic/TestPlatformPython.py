@@ -79,3 +79,20 @@ class PlatformPythonTestCase(TestBase):
             self.assertEqual(
                 desc_data.GetType(), lldb.eStructuredDataTypeString,
                 'Platform description is a string')
+
+    @add_test_categories(['pyapi'])
+    @no_debug_info_test
+    def test_shell_interpreter(self):
+        """ Test a shell with a custom interpreter """
+        platform = self.dbg.GetSelectedPlatform()
+        self.assertTrue(platform.IsValid())
+
+        sh_cmd = lldb.SBPlatformShellCommand('/bin/zsh', 'echo $0')
+        self.assertIn('/bin/zsh', sh_cmd.GetShell())
+        self.assertIn('echo $0', sh_cmd.GetCommand())
+
+        self.build()
+        sh_cmd.SetShell(self.getBuildArtifact('a.out'))
+        err = platform.Run(sh_cmd)
+        self.assertTrue(err.Success())
+        self.assertIn("SUCCESS", sh_cmd.GetOutput())
