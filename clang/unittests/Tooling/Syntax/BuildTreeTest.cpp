@@ -2294,25 +2294,25 @@ int *a, b;
 int *c, d;
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 |-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-*
-| | `-a
-| |-,
-| |-SimpleDeclarator
-| | `-b
-| `-;
+| |-'int'
+| |-SimpleDeclarator SimpleDeclaration_declarator
+| | |-'*'
+| | `-'a'
+| |-','
+| |-SimpleDeclarator SimpleDeclaration_declarator
+| | `-'b'
+| `-';'
 `-SimpleDeclaration
-  |-int
-  |-SimpleDeclarator
-  | |-*
-  | `-c
-  |-,
-  |-SimpleDeclarator
-  | `-d
-  `-;
+  |-'int'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'*'
+  | `-'c'
+  |-','
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | `-'d'
+  `-';'
 )txt"));
 }
 
@@ -2322,17 +2322,17 @@ TEST_P(SyntaxTreeTest, MultipleDeclaratorsGroupingTypedef) {
 typedef int *a, b;
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-typedef
-  |-int
-  |-SimpleDeclarator
-  | |-*
-  | `-a
-  |-,
-  |-SimpleDeclarator
-  | `-b
-  `-;
+  |-'typedef'
+  |-'int'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'*'
+  | `-'a'
+  |-','
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | `-'b'
+  `-';'
 )txt"));
 }
 
@@ -2345,38 +2345,38 @@ void foo() {
 }
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-void
-  |-SimpleDeclarator
-  | |-foo
+  |-'void'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'foo'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   `-)
+  |   |-'(' OpenParen
+  |   `-')' CloseParen
   `-CompoundStatement
-    |-{
-    |-DeclarationStatement
+    |-'{' OpenParen
+    |-DeclarationStatement CompoundStatement_statement
     | |-SimpleDeclaration
-    | | |-int
-    | | |-SimpleDeclarator
-    | | | |-*
-    | | | `-a
-    | | |-,
-    | | `-SimpleDeclarator
-    | |   `-b
-    | `-;
-    |-DeclarationStatement
+    | | |-'int'
+    | | |-SimpleDeclarator SimpleDeclaration_declarator
+    | | | |-'*'
+    | | | `-'a'
+    | | |-','
+    | | `-SimpleDeclarator SimpleDeclaration_declarator
+    | |   `-'b'
+    | `-';'
+    |-DeclarationStatement CompoundStatement_statement
     | |-SimpleDeclaration
-    | | |-typedef
-    | | |-int
-    | | |-SimpleDeclarator
-    | | | |-*
-    | | | `-ta
-    | | |-,
-    | | `-SimpleDeclarator
-    | |   `-tb
-    | `-;
-    `-}
+    | | |-'typedef'
+    | | |-'int'
+    | | |-SimpleDeclarator SimpleDeclaration_declarator
+    | | | |-'*'
+    | | | `-'ta'
+    | | |-','
+    | | `-SimpleDeclarator SimpleDeclaration_declarator
+    | |   `-'tb'
+    | `-';'
+    `-'}' CloseParen
 )txt"));
 }
 
@@ -2389,21 +2389,21 @@ TEST_P(SyntaxTreeTest, SizeTTypedef) {
 typedef decltype(sizeof(void *)) size_t;
     )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-typedef
-  |-decltype
-  |-(
+  |-'typedef'
+  |-'decltype'
+  |-'('
   |-UnknownExpression
-  | |-sizeof
-  | |-(
-  | |-void
-  | |-*
-  | `-)
-  |-)
-  |-SimpleDeclarator
-  | `-size_t
-  `-;
+  | |-'sizeof'
+  | |-'('
+  | |-'void'
+  | |-'*'
+  | `-')'
+  |-')'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | `-'size_t'
+  `-';'
 )txt"));
 }
 
@@ -2417,24 +2417,24 @@ namespace a { namespace b {} }
 namespace a::b {}
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 |-NamespaceDefinition
-| |-namespace
-| |-a
-| |-{
+| |-'namespace'
+| |-'a'
+| |-'{'
 | |-NamespaceDefinition
-| | |-namespace
-| | |-b
-| | |-{
-| | `-}
-| `-}
+| | |-'namespace'
+| | |-'b'
+| | |-'{'
+| | `-'}'
+| `-'}'
 `-NamespaceDefinition
-  |-namespace
-  |-a
-  |-::
-  |-b
-  |-{
-  `-}
+  |-'namespace'
+  |-'a'
+  |-'::'
+  |-'b'
+  |-'{'
+  `-'}'
 )txt"));
 }
 
@@ -2447,11 +2447,11 @@ TEST_P(SyntaxTreeTest, Namespace_Unnamed) {
 namespace {}
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-NamespaceDefinition
-  |-namespace
-  |-{
-  `-}
+  |-'namespace'
+  |-'{'
+  `-'}'
 )txt"));
 }
 
@@ -2466,11 +2466,11 @@ namespace a {}
 )cpp",
       {R"txt(
 NamespaceAliasDefinition
-|-namespace
-|-foo
-|-=
-|-a
-`-;
+|-'namespace'
+|-'foo'
+|-'='
+|-'a'
+`-';'
 )txt"}));
 }
 
@@ -2485,12 +2485,12 @@ namespace ns {}
 )cpp",
       {R"txt(
 UsingNamespaceDirective
-|-using
-|-namespace
+|-'using'
+|-'namespace'
 |-NestedNameSpecifier
-| `-::
-|-ns
-`-;
+| `-'::' List_delimiter
+|-'ns'
+`-';'
 )txt"}));
 }
 
@@ -2505,13 +2505,13 @@ namespace ns { int a; }
 )cpp",
       {R"txt(
 UsingDeclaration
-|-using
+|-'using'
 |-NestedNameSpecifier
-| |-IdentifierNameSpecifier
-| | `-ns
-| `-::
-|-a
-`-;
+| |-IdentifierNameSpecifier List_element
+| | `-'ns'
+| `-'::' List_delimiter
+|-'a'
+`-';'
 )txt"}));
 }
 
@@ -2528,24 +2528,24 @@ template <class T> struct X {
 )cpp",
       {R"txt(
 UsingDeclaration
-|-using
+|-'using'
 |-NestedNameSpecifier
-| |-IdentifierNameSpecifier
-| | `-T
-| `-::
-|-foo
-`-;
+| |-IdentifierNameSpecifier List_element
+| | `-'T'
+| `-'::' List_delimiter
+|-'foo'
+`-';'
 )txt",
        R"txt(
 UsingDeclaration
-|-using
-|-typename
+|-'using'
+|-'typename'
 |-NestedNameSpecifier
-| |-IdentifierNameSpecifier
-| | `-T
-| `-::
-|-bar
-`-;
+| |-IdentifierNameSpecifier List_element
+| | `-'T'
+| `-'::' List_delimiter
+|-'bar'
+`-';'
 )txt"}));
 }
 
@@ -2558,13 +2558,13 @@ TEST_P(SyntaxTreeTest, UsingTypeAlias) {
 using type = int;
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-TypeAliasDeclaration
-  |-using
-  |-type
-  |-=
-  |-int
-  `-;
+  |-'using'
+  |-'type'
+  |-'='
+  |-'int'
+  `-';'
 )txt"));
 }
 
@@ -2576,18 +2576,18 @@ TEST_P(SyntaxTreeTest, FreeStandingClass_ForwardDeclaration) {
 )cpp",
       {R"txt(
 SimpleDeclaration
-|-struct
-|-X
-`-;
+|-'struct'
+|-'X'
+`-';'
 )txt",
        R"txt(
 SimpleDeclaration
-|-struct
-|-Y
-|-SimpleDeclarator
-| |-*
-| `-y1
-`-;
+|-'struct'
+|-'Y'
+|-SimpleDeclarator SimpleDeclaration_declarator
+| |-'*'
+| `-'y1'
+`-';'
 )txt"}));
 }
 
@@ -2600,32 +2600,32 @@ TEST_P(SyntaxTreeTest, FreeStandingClasses_Definition) {
 )cpp",
       {R"txt(
 SimpleDeclaration
-|-struct
-|-X
-|-{
-|-}
-`-;
+|-'struct'
+|-'X'
+|-'{'
+|-'}'
+`-';'
 )txt",
        R"txt(
 SimpleDeclaration
-|-struct
-|-Y
-|-{
-|-}
-|-SimpleDeclarator
-| |-*
-| `-y2
-`-;
+|-'struct'
+|-'Y'
+|-'{'
+|-'}'
+|-SimpleDeclarator SimpleDeclaration_declarator
+| |-'*'
+| `-'y2'
+`-';'
 )txt",
        R"txt(
 SimpleDeclaration
-|-struct
-|-{
-|-}
-|-SimpleDeclarator
-| |-*
-| `-a1
-`-;
+|-'struct'
+|-'{'
+|-'}'
+|-SimpleDeclarator SimpleDeclaration_declarator
+| |-'*'
+| `-'a1'
+`-';'
 )txt"}));
 }
 
@@ -2641,16 +2641,16 @@ struct S {
 )cpp",
       {R"txt(
 SimpleDeclaration
-|-static
-|-void
-|-SimpleDeclarator
-| |-f
+|-'static'
+|-'void'
+|-SimpleDeclarator SimpleDeclaration_declarator
+| |-'f'
 | `-ParametersAndQualifiers
-|   |-(
-|   `-)
+|   |-'(' OpenParen
+|   `-')' CloseParen
 `-CompoundStatement
-  |-{
-  `-}
+  |-'{' OpenParen
+  `-'}' CloseParen
 )txt"}));
 }
 
@@ -2666,13 +2666,13 @@ struct X {
 )cpp",
       {R"txt(
 SimpleDeclaration
-|-SimpleDeclarator
-| |-operator
-| |-int
+|-SimpleDeclarator SimpleDeclaration_declarator
+| |-'operator'
+| |-'int'
 | `-ParametersAndQualifiers
-|   |-(
-|   `-)
-`-;
+|   |-'(' OpenParen
+|   `-')' CloseParen
+`-';'
 )txt"}));
 }
 
@@ -2685,19 +2685,19 @@ TEST_P(SyntaxTreeTest, LiteralOperatorDeclaration) {
 unsigned operator "" _c(char);
     )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-unsigned
-  |-SimpleDeclarator
-  | |-operator
-  | |-""
-  | |-_c
+  |-'unsigned'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'operator'
+  | |-'""'
+  | |-'_c'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   |-SimpleDeclaration
-  |   | `-char
-  |   `-)
-  `-;
+  |   |-'(' OpenParen
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | `-'char'
+  |   `-')' CloseParen
+  `-';'
 )txt"));
 }
 
@@ -2711,24 +2711,24 @@ template <char...>
 unsigned operator "" _t();
     )cpp",
       R"txt(
-*: TranslationUnit
-`-TemplateDeclaration
-  |-template
-  |-<
+TranslationUnit Detached
+`-TemplateDeclaration TemplateDeclaration_declaration
+  |-'template' IntroducerKeyword
+  |-'<'
   |-SimpleDeclaration
-  | `-char
-  |-...
-  |->
+  | `-'char'
+  |-'...'
+  |-'>'
   `-SimpleDeclaration
-    |-unsigned
-    |-SimpleDeclarator
-    | |-operator
-    | |-""
-    | |-_t
+    |-'unsigned'
+    |-SimpleDeclarator SimpleDeclaration_declarator
+    | |-'operator'
+    | |-'""'
+    | |-'_t'
     | `-ParametersAndQualifiers
-    |   |-(
-    |   `-)
-    `-;
+    |   |-'(' OpenParen
+    |   `-')' CloseParen
+    `-';'
 )txt"));
 }
 
@@ -2744,24 +2744,24 @@ struct X {
 )cpp",
       {R"txt(
 SimpleDeclaration
-|-X
-|-SimpleDeclarator
-| |-&
-| |-operator
-| |-=
+|-'X'
+|-SimpleDeclarator SimpleDeclaration_declarator
+| |-'&'
+| |-'operator'
+| |-'='
 | `-ParametersAndQualifiers
-|   |-(
-|   |-SimpleDeclaration
-|   | |-const
-|   | |-X
-|   | `-SimpleDeclarator
-|   |   `-&
-|   `-)
-`-;
+|   |-'(' OpenParen
+|   |-SimpleDeclaration ParametersAndQualifiers_parameter
+|   | |-'const'
+|   | |-'X'
+|   | `-SimpleDeclarator SimpleDeclaration_declarator
+|   |   `-'&'
+|   `-')' CloseParen
+`-';'
 )txt"}));
 }
 
-TEST_P(SyntaxTreeTest, OverloadedOperatorFriendDeclarataion) {
+TEST_P(SyntaxTreeTest, OverloadedOperatorFriendDeclaration) {
   if (!GetParam().isCXX()) {
     return;
   }
@@ -2774,23 +2774,23 @@ struct X {
       {R"txt(
 UnknownDeclaration
 `-SimpleDeclaration
-  |-friend
-  |-X
-  |-SimpleDeclarator
-  | |-operator
-  | |-+
+  |-'friend'
+  |-'X'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'operator'
+  | |-'+'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   |-SimpleDeclaration
-  |   | `-X
-  |   |-,
-  |   |-SimpleDeclaration
-  |   | |-const
-  |   | |-X
-  |   | `-SimpleDeclarator
-  |   |   `-&
-  |   `-)
-  `-;
+  |   |-'(' OpenParen
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | `-'X'
+  |   |-','
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | |-'const'
+  |   | |-'X'
+  |   | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   `-'&'
+  |   `-')' CloseParen
+  `-';'
 )txt"}));
 }
 
@@ -2804,20 +2804,20 @@ template<typename T>
 struct ST {};
 )cpp",
       R"txt(
-*: TranslationUnit
-`-TemplateDeclaration
-  |-template
-  |-<
+TranslationUnit Detached
+`-TemplateDeclaration TemplateDeclaration_declaration
+  |-'template' IntroducerKeyword
+  |-'<'
   |-UnknownDeclaration
-  | |-typename
-  | `-T
-  |->
+  | |-'typename'
+  | `-'T'
+  |-'>'
   `-SimpleDeclaration
-    |-struct
-    |-ST
-    |-{
-    |-}
-    `-;
+    |-'struct'
+    |-'ST'
+    |-'{'
+    |-'}'
+    `-';'
 )txt"));
 }
 
@@ -2831,22 +2831,22 @@ template<typename T>
 T f();
 )cpp",
       R"txt(
-*: TranslationUnit
-`-TemplateDeclaration
-  |-template
-  |-<
+TranslationUnit Detached
+`-TemplateDeclaration TemplateDeclaration_declaration
+  |-'template' IntroducerKeyword
+  |-'<'
   |-UnknownDeclaration
-  | |-typename
-  | `-T
-  |->
+  | |-'typename'
+  | `-'T'
+  |-'>'
   `-SimpleDeclaration
-    |-T
-    |-SimpleDeclarator
-    | |-f
+    |-'T'
+    |-SimpleDeclarator SimpleDeclaration_declarator
+    | |-'f'
     | `-ParametersAndQualifiers
-    |   |-(
-    |   `-)
-    `-;
+    |   |-'(' OpenParen
+    |   `-')' CloseParen
+    `-';'
 )txt"));
 }
 
@@ -2859,22 +2859,22 @@ TEST_P(SyntaxTreeTest, VariableTemplateDeclaration) {
 template <class T> T var = 10;
 )cpp",
       R"txt(
-*: TranslationUnit
-`-TemplateDeclaration
-  |-template
-  |-<
+TranslationUnit Detached
+`-TemplateDeclaration TemplateDeclaration_declaration
+  |-'template' IntroducerKeyword
+  |-'<'
   |-UnknownDeclaration
-  | |-class
-  | `-T
-  |->
+  | |-'class'
+  | `-'T'
+  |-'>'
   `-SimpleDeclaration
-    |-T
-    |-SimpleDeclarator
-    | |-var
-    | |-=
+    |-'T'
+    |-SimpleDeclarator SimpleDeclaration_declarator
+    | |-'var'
+    | |-'='
     | `-IntegerLiteralExpression
-    |   `-10
-    `-;
+    |   `-'10' LiteralToken
+    `-';'
 )txt"));
 }
 
@@ -2890,22 +2890,22 @@ struct S {
 };
 )cpp",
       {R"txt(
-TemplateDeclaration
-|-template
-|-<
+TemplateDeclaration TemplateDeclaration_declaration
+|-'template' IntroducerKeyword
+|-'<'
 |-UnknownDeclaration
-| |-typename
-| `-U
-|->
+| |-'typename'
+| `-'U'
+|-'>'
 `-SimpleDeclaration
-  |-static
-  |-U
-  |-SimpleDeclarator
-  | |-f
+  |-'static'
+  |-'U'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'f'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   `-)
-  `-;
+  |   |-'(' OpenParen
+  |   `-')' CloseParen
+  `-';'
 )txt"}));
 }
 
@@ -2922,35 +2922,35 @@ struct X {
 };
 )cpp",
       R"txt(
-*: TranslationUnit
-`-TemplateDeclaration
-  |-template
-  |-<
+TranslationUnit Detached
+`-TemplateDeclaration TemplateDeclaration_declaration
+  |-'template' IntroducerKeyword
+  |-'<'
   |-UnknownDeclaration
-  | |-class
-  | `-T
-  |->
+  | |-'class'
+  | `-'T'
+  |-'>'
   `-SimpleDeclaration
-    |-struct
-    |-X
-    |-{
-    |-TemplateDeclaration
-    | |-template
-    | |-<
+    |-'struct'
+    |-'X'
+    |-'{'
+    |-TemplateDeclaration TemplateDeclaration_declaration
+    | |-'template' IntroducerKeyword
+    | |-'<'
     | |-UnknownDeclaration
-    | | |-class
-    | | `-U
-    | |->
+    | | |-'class'
+    | | `-'U'
+    | |-'>'
     | `-SimpleDeclaration
-    |   |-U
-    |   |-SimpleDeclarator
-    |   | |-foo
+    |   |-'U'
+    |   |-SimpleDeclarator SimpleDeclaration_declarator
+    |   | |-'foo'
     |   | `-ParametersAndQualifiers
-    |   |   |-(
-    |   |   `-)
-    |   `-;
-    |-}
-    `-;
+    |   |   |-'(' OpenParen
+    |   |   `-')' CloseParen
+    |   `-';'
+    |-'}'
+    `-';'
 )txt"));
 }
 
@@ -2969,41 +2969,41 @@ namespace n {
 }
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-NamespaceDefinition
-  |-namespace
-  |-n
-  |-{
-  |-TemplateDeclaration
-  | |-template
-  | |-<
+  |-'namespace'
+  |-'n'
+  |-'{'
+  |-TemplateDeclaration TemplateDeclaration_declaration
+  | |-'template' IntroducerKeyword
+  | |-'<'
   | |-UnknownDeclaration
-  | | |-typename
-  | | `-T
-  | |->
+  | | |-'typename'
+  | | `-'T'
+  | |-'>'
   | `-SimpleDeclaration
-  |   |-struct
-  |   |-ST
-  |   |-{
-  |   |-TemplateDeclaration
-  |   | |-template
-  |   | |-<
+  |   |-'struct'
+  |   |-'ST'
+  |   |-'{'
+  |   |-TemplateDeclaration TemplateDeclaration_declaration
+  |   | |-'template' IntroducerKeyword
+  |   | |-'<'
   |   | |-UnknownDeclaration
-  |   | | |-typename
-  |   | | `-U
-  |   | |->
+  |   | | |-'typename'
+  |   | | `-'U'
+  |   | |-'>'
   |   | `-SimpleDeclaration
-  |   |   |-static
-  |   |   |-U
-  |   |   |-SimpleDeclarator
-  |   |   | |-f
+  |   |   |-'static'
+  |   |   |-'U'
+  |   |   |-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   | |-'f'
   |   |   | `-ParametersAndQualifiers
-  |   |   |   |-(
-  |   |   |   `-)
-  |   |   `-;
-  |   |-}
-  |   `-;
-  `-}
+  |   |   |   |-'(' OpenParen
+  |   |   |   `-')' CloseParen
+  |   |   `-';'
+  |   |-'}'
+  |   `-';'
+  `-'}'
 )txt"));
 }
 
@@ -3017,26 +3017,26 @@ template <class T> struct X { struct Y; };
 [[template <class T> struct X<T>::Y {};]]
 )cpp",
       {R"txt(
-TemplateDeclaration
-|-template
-|-<
+TemplateDeclaration TemplateDeclaration_declaration
+|-'template' IntroducerKeyword
+|-'<'
 |-UnknownDeclaration
-| |-class
-| `-T
-|->
+| |-'class'
+| `-'T'
+|-'>'
 `-SimpleDeclaration
-  |-struct
+  |-'struct'
   |-NestedNameSpecifier
-  | |-SimpleTemplateNameSpecifier
-  | | |-X
-  | | |-<
-  | | |-T
-  | | `->
-  | `-::
-  |-Y
-  |-{
-  |-}
-  `-;
+  | |-SimpleTemplateNameSpecifier List_element
+  | | |-'X'
+  | | |-'<'
+  | | |-'T'
+  | | `-'>'
+  | `-'::' List_delimiter
+  |-'Y'
+  |-'{'
+  |-'}'
+  `-';'
 )txt"}));
 }
 
@@ -3051,14 +3051,14 @@ template <class T> struct X {};
 )cpp",
       {R"txt(
 ExplicitTemplateInstantiation
-|-template
-`-SimpleDeclaration
-  |-struct
-  |-X
-  |-<
-  |-double
-  |->
-  `-;
+|-'template' IntroducerKeyword
+`-SimpleDeclaration ExplicitTemplateInstantiation_declaration
+  |-'struct'
+  |-'X'
+  |-'<'
+  |-'double'
+  |-'>'
+  `-';'
 )txt"}));
 }
 
@@ -3073,15 +3073,15 @@ template <class T> struct X {};
 )cpp",
       {R"txt(
 ExplicitTemplateInstantiation
-|-extern
-|-template
-`-SimpleDeclaration
-  |-struct
-  |-X
-  |-<
-  |-float
-  |->
-  `-;
+|-'extern' ExternKeyword
+|-'template' IntroducerKeyword
+`-SimpleDeclaration ExplicitTemplateInstantiation_declaration
+  |-'struct'
+  |-'X'
+  |-'<'
+  |-'float'
+  |-'>'
+  `-';'
 )txt"}));
 }
 
@@ -3095,23 +3095,23 @@ template <class T> struct X {};
 [[template <class T> struct X<T*> {};]]
 )cpp",
       {R"txt(
-TemplateDeclaration
-|-template
-|-<
+TemplateDeclaration TemplateDeclaration_declaration
+|-'template' IntroducerKeyword
+|-'<'
 |-UnknownDeclaration
-| |-class
-| `-T
-|->
+| |-'class'
+| `-'T'
+|-'>'
 `-SimpleDeclaration
-  |-struct
-  |-X
-  |-<
-  |-T
-  |-*
-  |->
-  |-{
-  |-}
-  `-;
+  |-'struct'
+  |-'X'
+  |-'<'
+  |-'T'
+  |-'*'
+  |-'>'
+  |-'{'
+  |-'}'
+  `-';'
 )txt"}));
 }
 
@@ -3125,19 +3125,19 @@ template <class T> struct X {};
 [[template <> struct X<int> {};]]
 )cpp",
       {R"txt(
-TemplateDeclaration
-|-template
-|-<
-|->
+TemplateDeclaration TemplateDeclaration_declaration
+|-'template' IntroducerKeyword
+|-'<'
+|-'>'
 `-SimpleDeclaration
-  |-struct
-  |-X
-  |-<
-  |-int
-  |->
-  |-{
-  |-}
-  `-;
+  |-'struct'
+  |-'X'
+  |-'<'
+  |-'int'
+  |-'>'
+  |-'{'
+  |-'}'
+  `-';'
 )txt"}));
 }
 
@@ -3147,9 +3147,9 @@ TEST_P(SyntaxTreeTest, EmptyDeclaration) {
 ;
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-EmptyDeclaration
-  `-;
+  `-';'
 )txt"));
 }
 
@@ -3163,24 +3163,24 @@ static_assert(true, "message");
 static_assert(true);
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 |-StaticAssertDeclaration
-| |-static_assert
-| |-(
-| |-BoolLiteralExpression
-| | `-true
-| |-,
-| |-StringLiteralExpression
-| | `-"message"
-| |-)
-| `-;
+| |-'static_assert'
+| |-'('
+| |-BoolLiteralExpression StaticAssertDeclaration_condition
+| | `-'true' LiteralToken
+| |-','
+| |-StringLiteralExpression StaticAssertDeclaration_message
+| | `-'"message"' LiteralToken
+| |-')'
+| `-';'
 `-StaticAssertDeclaration
-  |-static_assert
-  |-(
-  |-BoolLiteralExpression
-  | `-true
-  |-)
-  `-;
+  |-'static_assert'
+  |-'('
+  |-BoolLiteralExpression StaticAssertDeclaration_condition
+  | `-'true' LiteralToken
+  |-')'
+  `-';'
 )txt"));
 }
 
@@ -3194,30 +3194,30 @@ extern "C" int a;
 extern "C" { int b; int c; }
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 |-LinkageSpecificationDeclaration
-| |-extern
-| |-"C"
+| |-'extern'
+| |-'"C"'
 | `-SimpleDeclaration
-|   |-int
-|   |-SimpleDeclarator
-|   | `-a
-|   `-;
+|   |-'int'
+|   |-SimpleDeclarator SimpleDeclaration_declarator
+|   | `-'a'
+|   `-';'
 `-LinkageSpecificationDeclaration
-  |-extern
-  |-"C"
-  |-{
+  |-'extern'
+  |-'"C"'
+  |-'{'
   |-SimpleDeclaration
-  | |-int
-  | |-SimpleDeclarator
-  | | `-b
-  | `-;
+  | |-'int'
+  | |-SimpleDeclarator SimpleDeclaration_declarator
+  | | `-'b'
+  | `-';'
   |-SimpleDeclaration
-  | |-int
-  | |-SimpleDeclarator
-  | | `-c
-  | `-;
-  `-}
+  | |-'int'
+  | |-SimpleDeclarator SimpleDeclaration_declarator
+  | | `-'c'
+  | `-';'
+  `-'}'
 )txt"));
 }
 
@@ -3314,17 +3314,17 @@ TEST_P(SyntaxTreeTest, ArrayDeclarator_Simple) {
 int a[10];
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-int
-  |-SimpleDeclarator
-  | |-a
+  |-'int'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'a'
   | `-ArraySubscript
-  |   |-[
-  |   |-IntegerLiteralExpression
-  |   | `-10
-  |   `-]
-  `-;
+  |   |-'[' OpenParen
+  |   |-IntegerLiteralExpression ArraySubscript_sizeExpression
+  |   | `-'10' LiteralToken
+  |   `-']' CloseParen
+  `-';'
 )txt"));
 }
 
@@ -3334,27 +3334,27 @@ TEST_P(SyntaxTreeTest, ArrayDeclarator_Multidimensional) {
 int b[1][2][3];
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-int
-  |-SimpleDeclarator
-  | |-b
+  |-'int'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'b'
   | |-ArraySubscript
-  | | |-[
-  | | |-IntegerLiteralExpression
-  | | | `-1
-  | | `-]
+  | | |-'[' OpenParen
+  | | |-IntegerLiteralExpression ArraySubscript_sizeExpression
+  | | | `-'1' LiteralToken
+  | | `-']' CloseParen
   | |-ArraySubscript
-  | | |-[
-  | | |-IntegerLiteralExpression
-  | | | `-2
-  | | `-]
+  | | |-'[' OpenParen
+  | | |-IntegerLiteralExpression ArraySubscript_sizeExpression
+  | | | `-'2' LiteralToken
+  | | `-']' CloseParen
   | `-ArraySubscript
-  |   |-[
-  |   |-IntegerLiteralExpression
-  |   | `-3
-  |   `-]
-  `-;
+  |   |-'[' OpenParen
+  |   |-IntegerLiteralExpression ArraySubscript_sizeExpression
+  |   | `-'3' LiteralToken
+  |   `-']' CloseParen
+  `-';'
 )txt"));
 }
 
@@ -3364,28 +3364,28 @@ TEST_P(SyntaxTreeTest, ArrayDeclarator_UnknownBound) {
 int c[] = {1,2,3};
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-int
-  |-SimpleDeclarator
-  | |-c
+  |-'int'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'c'
   | |-ArraySubscript
-  | | |-[
-  | | `-]
-  | |-=
+  | | |-'[' OpenParen
+  | | `-']' CloseParen
+  | |-'='
   | `-UnknownExpression
   |   `-UnknownExpression
-  |     |-{
+  |     |-'{'
   |     |-IntegerLiteralExpression
-  |     | `-1
-  |     |-,
+  |     | `-'1' LiteralToken
+  |     |-','
   |     |-IntegerLiteralExpression
-  |     | `-2
-  |     |-,
+  |     | `-'2' LiteralToken
+  |     |-','
   |     |-IntegerLiteralExpression
-  |     | `-3
-  |     `-}
-  `-;
+  |     | `-'3' LiteralToken
+  |     `-'}'
+  `-';'
 )txt"));
 }
 
@@ -3398,25 +3398,25 @@ TEST_P(SyntaxTreeTest, ArrayDeclarator_Static) {
 void f(int xs[static 10]);
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-void
-  |-SimpleDeclarator
-  | |-f
+  |-'void'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'f'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   |-SimpleDeclaration
-  |   | |-int
-  |   | `-SimpleDeclarator
-  |   |   |-xs
+  |   |-'(' OpenParen
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | |-'int'
+  |   | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   |-'xs'
   |   |   `-ArraySubscript
-  |   |     |-[
-  |   |     |-static
-  |   |     |-IntegerLiteralExpression
-  |   |     | `-10
-  |   |     `-]
-  |   `-)
-  `-;
+  |   |     |-'[' OpenParen
+  |   |     |-'static'
+  |   |     |-IntegerLiteralExpression ArraySubscript_sizeExpression
+  |   |     | `-'10' LiteralToken
+  |   |     `-']' CloseParen
+  |   `-')' CloseParen
+  `-';'
 )txt"));
 }
 
@@ -3426,15 +3426,15 @@ TEST_P(SyntaxTreeTest, ParametersAndQualifiers_InFreeFunctions_Empty) {
 int func();
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-int
-  |-SimpleDeclarator
-  | |-func
+  |-'int'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'func'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   `-)
-  `-;
+  |   |-'(' OpenParen
+  |   `-')' CloseParen
+  `-';'
 )txt"));
 }
 
@@ -3446,49 +3446,49 @@ int func2(int *ap);
 int func3(int a, float b);
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 |-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-func1
+| |-'int'
+| |-SimpleDeclarator SimpleDeclaration_declarator
+| | |-'func1'
 | | `-ParametersAndQualifiers
-| |   |-(
-| |   |-SimpleDeclaration
-| |   | |-int
-| |   | `-SimpleDeclarator
-| |   |   `-a
-| |   `-)
-| `-;
+| |   |-'(' OpenParen
+| |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+| |   | |-'int'
+| |   | `-SimpleDeclarator SimpleDeclaration_declarator
+| |   |   `-'a'
+| |   `-')' CloseParen
+| `-';'
 |-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-func2
+| |-'int'
+| |-SimpleDeclarator SimpleDeclaration_declarator
+| | |-'func2'
 | | `-ParametersAndQualifiers
-| |   |-(
-| |   |-SimpleDeclaration
-| |   | |-int
-| |   | `-SimpleDeclarator
-| |   |   |-*
-| |   |   `-ap
-| |   `-)
-| `-;
+| |   |-'(' OpenParen
+| |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+| |   | |-'int'
+| |   | `-SimpleDeclarator SimpleDeclaration_declarator
+| |   |   |-'*'
+| |   |   `-'ap'
+| |   `-')' CloseParen
+| `-';'
 `-SimpleDeclaration
-  |-int
-  |-SimpleDeclarator
-  | |-func3
+  |-'int'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'func3'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   |-SimpleDeclaration
-  |   | |-int
-  |   | `-SimpleDeclarator
-  |   |   `-a
-  |   |-,
-  |   |-SimpleDeclaration
-  |   | |-float
-  |   | `-SimpleDeclarator
-  |   |   `-b
-  |   `-)
-  `-;
+  |   |-'(' OpenParen
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | |-'int'
+  |   | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   `-'a'
+  |   |-','
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | |-'float'
+  |   | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   `-'b'
+  |   `-')' CloseParen
+  `-';'
 )txt"));
 }
 
@@ -3500,42 +3500,42 @@ int func2(int *);
 int func3(int, float);
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 |-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-func1
+| |-'int'
+| |-SimpleDeclarator SimpleDeclaration_declarator
+| | |-'func1'
 | | `-ParametersAndQualifiers
-| |   |-(
-| |   |-SimpleDeclaration
-| |   | `-int
-| |   `-)
-| `-;
+| |   |-'(' OpenParen
+| |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+| |   | `-'int'
+| |   `-')' CloseParen
+| `-';'
 |-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-func2
+| |-'int'
+| |-SimpleDeclarator SimpleDeclaration_declarator
+| | |-'func2'
 | | `-ParametersAndQualifiers
-| |   |-(
-| |   |-SimpleDeclaration
-| |   | |-int
-| |   | `-SimpleDeclarator
-| |   |   `-*
-| |   `-)
-| `-;
+| |   |-'(' OpenParen
+| |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+| |   | |-'int'
+| |   | `-SimpleDeclarator SimpleDeclaration_declarator
+| |   |   `-'*'
+| |   `-')' CloseParen
+| `-';'
 `-SimpleDeclaration
-  |-int
-  |-SimpleDeclarator
-  | |-func3
+  |-'int'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'func3'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   |-SimpleDeclaration
-  |   | `-int
-  |   |-,
-  |   |-SimpleDeclaration
-  |   | `-float
-  |   `-)
-  `-;
+  |   |-'(' OpenParen
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | `-'int'
+  |   |-','
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | `-'float'
+  |   `-')' CloseParen
+  `-';'
 )txt"));
 }
 
@@ -3549,33 +3549,33 @@ TEST_P(SyntaxTreeTest,
 int func(const int a, volatile int b, const volatile int c);
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-int
-  |-SimpleDeclarator
-  | |-func
+  |-'int'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'func'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   |-SimpleDeclaration
-  |   | |-const
-  |   | |-int
-  |   | `-SimpleDeclarator
-  |   |   `-a
-  |   |-,
-  |   |-SimpleDeclaration
-  |   | |-volatile
-  |   | |-int
-  |   | `-SimpleDeclarator
-  |   |   `-b
-  |   |-,
-  |   |-SimpleDeclaration
-  |   | |-const
-  |   | |-volatile
-  |   | |-int
-  |   | `-SimpleDeclarator
-  |   |   `-c
-  |   `-)
-  `-;
+  |   |-'(' OpenParen
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | |-'const'
+  |   | |-'int'
+  |   | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   `-'a'
+  |   |-','
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | |-'volatile'
+  |   | |-'int'
+  |   | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   `-'b'
+  |   |-','
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | |-'const'
+  |   | |-'volatile'
+  |   | |-'int'
+  |   | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   `-'c'
+  |   `-')' CloseParen
+  `-';'
 )txt"));
 }
 
@@ -3588,20 +3588,20 @@ TEST_P(SyntaxTreeTest, ParametersAndQualifiers_InFreeFunctions_Cxx_Ref) {
 int func(int& a);
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-int
-  |-SimpleDeclarator
-  | |-func
+  |-'int'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'func'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   |-SimpleDeclaration
-  |   | |-int
-  |   | `-SimpleDeclarator
-  |   |   |-&
-  |   |   `-a
-  |   `-)
-  `-;
+  |   |-'(' OpenParen
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | |-'int'
+  |   | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   |-'&'
+  |   |   `-'a'
+  |   `-')' CloseParen
+  `-';'
 )txt"));
 }
 
@@ -3614,20 +3614,20 @@ TEST_P(SyntaxTreeTest, ParametersAndQualifiers_InFreeFunctions_Cxx11_RefRef) {
 int func(int&& a);
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-int
-  |-SimpleDeclarator
-  | |-func
+  |-'int'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'func'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   |-SimpleDeclaration
-  |   | |-int
-  |   | `-SimpleDeclarator
-  |   |   |-&&
-  |   |   `-a
-  |   `-)
-  `-;
+  |   |-'(' OpenParen
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | |-'int'
+  |   | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   |-'&&'
+  |   |   `-'a'
+  |   `-')' CloseParen
+  `-';'
 )txt"));
 }
 
@@ -3642,21 +3642,21 @@ struct Test {
 };
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-struct
-  |-Test
-  |-{
+  |-'struct'
+  |-'Test'
+  |-'{'
   |-SimpleDeclaration
-  | |-int
-  | |-SimpleDeclarator
-  | | |-a
+  | |-'int'
+  | |-SimpleDeclarator SimpleDeclaration_declarator
+  | | |-'a'
   | | `-ParametersAndQualifiers
-  | |   |-(
-  | |   `-)
-  | `-;
-  |-}
-  `-;
+  | |   |-'(' OpenParen
+  | |   `-')' CloseParen
+  | `-';'
+  |-'}'
+  `-';'
 )txt"));
 }
 
@@ -3674,37 +3674,37 @@ struct Test {
 )cpp",
       {R"txt(
 SimpleDeclaration
-|-int
-|-SimpleDeclarator
-| |-b
+|-'int'
+|-SimpleDeclarator SimpleDeclaration_declarator
+| |-'b'
 | `-ParametersAndQualifiers
-|   |-(
-|   |-)
-|   `-const
-`-;
+|   |-'(' OpenParen
+|   |-')' CloseParen
+|   `-'const'
+`-';'
 )txt",
        R"txt(
 SimpleDeclaration
-|-int
-|-SimpleDeclarator
-| |-c
+|-'int'
+|-SimpleDeclarator SimpleDeclaration_declarator
+| |-'c'
 | `-ParametersAndQualifiers
-|   |-(
-|   |-)
-|   `-volatile
-`-;
+|   |-'(' OpenParen
+|   |-')' CloseParen
+|   `-'volatile'
+`-';'
 )txt",
        R"txt(
 SimpleDeclaration
-|-int
-|-SimpleDeclarator
-| |-d
+|-'int'
+|-SimpleDeclarator SimpleDeclaration_declarator
+| |-'d'
 | `-ParametersAndQualifiers
-|   |-(
-|   |-)
-|   |-const
-|   `-volatile
-`-;
+|   |-'(' OpenParen
+|   |-')' CloseParen
+|   |-'const'
+|   `-'volatile'
+`-';'
 )txt"}));
 }
 
@@ -3720,14 +3720,14 @@ struct Test {
 )cpp",
       {R"txt(
 SimpleDeclaration
-|-int
-|-SimpleDeclarator
-| |-e
+|-'int'
+|-SimpleDeclarator SimpleDeclaration_declarator
+| |-'e'
 | `-ParametersAndQualifiers
-|   |-(
-|   |-)
-|   `-&
-`-;
+|   |-'(' OpenParen
+|   |-')' CloseParen
+|   `-'&'
+`-';'
 )txt"}));
 }
 
@@ -3743,14 +3743,14 @@ struct Test {
 )cpp",
       {R"txt(
 SimpleDeclaration
-|-int
-|-SimpleDeclarator
-| |-f
+|-'int'
+|-SimpleDeclarator SimpleDeclaration_declarator
+| |-'f'
 | `-ParametersAndQualifiers
-|   |-(
-|   |-)
-|   `-&&
-`-;
+|   |-'(' OpenParen
+|   |-')' CloseParen
+|   `-'&&'
+`-';'
 )txt"}));
 }
 
@@ -3763,18 +3763,18 @@ TEST_P(SyntaxTreeTest, TrailingReturn) {
 auto foo() -> int;
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-auto
-  |-SimpleDeclarator
-  | |-foo
+  |-'auto'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'foo'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   |-)
-  |   `-TrailingReturnType
-  |     |-->
-  |     `-int
-  `-;
+  |   |-'(' OpenParen
+  |   |-')' CloseParen
+  |   `-TrailingReturnType ParametersAndQualifiers_trailingReturn
+  |     |-'->' ArrowToken
+  |     `-'int'
+  `-';'
 )txt"));
 }
 
@@ -3793,60 +3793,60 @@ struct MyException2 {};
 )cpp",
       {R"txt(
 SimpleDeclaration
-|-int
-|-SimpleDeclarator
-| |-a
+|-'int'
+|-SimpleDeclarator SimpleDeclaration_declarator
+| |-'a'
 | `-ParametersAndQualifiers
-|   |-(
-|   |-)
-|   |-throw
-|   |-(
-|   `-)
-`-;
+|   |-'(' OpenParen
+|   |-')' CloseParen
+|   |-'throw'
+|   |-'('
+|   `-')'
+`-';'
 )txt",
        R"txt(
 SimpleDeclaration
-|-int
-|-SimpleDeclarator
-| |-b
+|-'int'
+|-SimpleDeclarator SimpleDeclaration_declarator
+| |-'b'
 | `-ParametersAndQualifiers
-|   |-(
-|   |-)
-|   |-throw
-|   |-(
-|   |-...
-|   `-)
-`-;
+|   |-'(' OpenParen
+|   |-')' CloseParen
+|   |-'throw'
+|   |-'('
+|   |-'...'
+|   `-')'
+`-';'
 )txt",
        R"txt(
 SimpleDeclaration
-|-int
-|-SimpleDeclarator
-| |-c
+|-'int'
+|-SimpleDeclarator SimpleDeclaration_declarator
+| |-'c'
 | `-ParametersAndQualifiers
-|   |-(
-|   |-)
-|   |-throw
-|   |-(
-|   |-MyException1
-|   `-)
-`-;
+|   |-'(' OpenParen
+|   |-')' CloseParen
+|   |-'throw'
+|   |-'('
+|   |-'MyException1'
+|   `-')'
+`-';'
 )txt",
        R"txt(
 SimpleDeclaration
-|-int
-|-SimpleDeclarator
-| |-d
+|-'int'
+|-SimpleDeclarator SimpleDeclaration_declarator
+| |-'d'
 | `-ParametersAndQualifiers
-|   |-(
-|   |-)
-|   |-throw
-|   |-(
-|   |-MyException1
-|   |-,
-|   |-MyException2
-|   `-)
-`-;
+|   |-'(' OpenParen
+|   |-')' CloseParen
+|   |-'throw'
+|   |-'('
+|   |-'MyException1'
+|   |-','
+|   |-'MyException2'
+|   `-')'
+`-';'
 )txt"}));
 }
 
@@ -3860,29 +3860,29 @@ int a() noexcept;
 int b() noexcept(true);
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 |-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-a
+| |-'int'
+| |-SimpleDeclarator SimpleDeclaration_declarator
+| | |-'a'
 | | `-ParametersAndQualifiers
-| |   |-(
-| |   |-)
-| |   `-noexcept
-| `-;
+| |   |-'(' OpenParen
+| |   |-')' CloseParen
+| |   `-'noexcept'
+| `-';'
 `-SimpleDeclaration
-  |-int
-  |-SimpleDeclarator
-  | |-b
+  |-'int'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'b'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   |-)
-  |   |-noexcept
-  |   |-(
+  |   |-'(' OpenParen
+  |   |-')' CloseParen
+  |   |-'noexcept'
+  |   |-'('
   |   |-BoolLiteralExpression
-  |   | `-true
-  |   `-)
-  `-;
+  |   | `-'true' LiteralToken
+  |   `-')'
+  `-';'
 )txt"));
 }
 
@@ -3895,52 +3895,52 @@ int (*c)(int);
 int *(d)(int);
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 |-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
+| |-'int'
+| |-SimpleDeclarator SimpleDeclaration_declarator
 | | `-ParenDeclarator
-| |   |-(
-| |   |-a
-| |   `-)
-| `-;
+| |   |-'(' OpenParen
+| |   |-'a'
+| |   `-')' CloseParen
+| `-';'
 |-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
-| | |-*
+| |-'int'
+| |-SimpleDeclarator SimpleDeclaration_declarator
+| | |-'*'
 | | `-ParenDeclarator
-| |   |-(
-| |   |-b
-| |   `-)
-| `-;
+| |   |-'(' OpenParen
+| |   |-'b'
+| |   `-')' CloseParen
+| `-';'
 |-SimpleDeclaration
-| |-int
-| |-SimpleDeclarator
+| |-'int'
+| |-SimpleDeclarator SimpleDeclaration_declarator
 | | |-ParenDeclarator
-| | | |-(
-| | | |-*
-| | | |-c
-| | | `-)
+| | | |-'(' OpenParen
+| | | |-'*'
+| | | |-'c'
+| | | `-')' CloseParen
 | | `-ParametersAndQualifiers
-| |   |-(
-| |   |-SimpleDeclaration
-| |   | `-int
-| |   `-)
-| `-;
+| |   |-'(' OpenParen
+| |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+| |   | `-'int'
+| |   `-')' CloseParen
+| `-';'
 `-SimpleDeclaration
-  |-int
-  |-SimpleDeclarator
-  | |-*
+  |-'int'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'*'
   | |-ParenDeclarator
-  | | |-(
-  | | |-d
-  | | `-)
+  | | |-'(' OpenParen
+  | | |-'d'
+  | | `-')' CloseParen
   | `-ParametersAndQualifiers
-  |   |-(
-  |   |-SimpleDeclaration
-  |   | `-int
-  |   `-)
-  `-;
+  |   |-'(' OpenParen
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | `-'int'
+  |   `-')' CloseParen
+  `-';'
 )txt"));
 }
 
@@ -3951,27 +3951,27 @@ const int west = -1;
 int const east = 1;
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 |-SimpleDeclaration
-| |-const
-| |-int
-| |-SimpleDeclarator
-| | |-west
-| | |-=
+| |-'const'
+| |-'int'
+| |-SimpleDeclarator SimpleDeclaration_declarator
+| | |-'west'
+| | |-'='
 | | `-PrefixUnaryOperatorExpression
-| |   |--
-| |   `-IntegerLiteralExpression
-| |     `-1
-| `-;
+| |   |-'-' OperatorExpression_operatorToken
+| |   `-IntegerLiteralExpression UnaryOperatorExpression_operand
+| |     `-'1' LiteralToken
+| `-';'
 `-SimpleDeclaration
-  |-int
-  |-const
-  |-SimpleDeclarator
-  | |-east
-  | |-=
+  |-'int'
+  |-'const'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'east'
+  | |-'='
   | `-IntegerLiteralExpression
-  |   `-1
-  `-;
+  |   `-'1' LiteralToken
+  `-';'
 )txt"));
 }
 
@@ -3981,17 +3981,17 @@ TEST_P(SyntaxTreeTest, Declaration_ConstVolatileQualifiers_MultipleConst) {
 const int const universal = 0;
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-const
-  |-int
-  |-const
-  |-SimpleDeclarator
-  | |-universal
-  | |-=
+  |-'const'
+  |-'int'
+  |-'const'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'universal'
+  | |-'='
   | `-IntegerLiteralExpression
-  |   `-0
-  `-;
+  |   `-'0' LiteralToken
+  `-';'
 )txt"));
 }
 
@@ -4001,18 +4001,18 @@ TEST_P(SyntaxTreeTest, Declaration_ConstVolatileQualifiers_ConstAndVolatile) {
 const int const *const *volatile b;
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-const
-  |-int
-  |-const
-  |-SimpleDeclarator
-  | |-*
-  | |-const
-  | |-*
-  | |-volatile
-  | `-b
-  `-;
+  |-'const'
+  |-'int'
+  |-'const'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'*'
+  | |-'const'
+  | |-'*'
+  | |-'volatile'
+  | `-'b'
+  `-';'
 )txt"));
 }
 
@@ -4025,33 +4025,33 @@ TEST_P(SyntaxTreeTest, RangesOfDeclaratorsWithTrailingReturnTypes) {
 auto foo() -> auto(*)(int) -> double*;
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-auto
-  |-SimpleDeclarator
-  | |-foo
+  |-'auto'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'foo'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   |-)
-  |   `-TrailingReturnType
-  |     |-->
-  |     |-auto
-  |     `-SimpleDeclarator
+  |   |-'(' OpenParen
+  |   |-')' CloseParen
+  |   `-TrailingReturnType ParametersAndQualifiers_trailingReturn
+  |     |-'->' ArrowToken
+  |     |-'auto'
+  |     `-SimpleDeclarator TrailingReturnType_declarator
   |       |-ParenDeclarator
-  |       | |-(
-  |       | |-*
-  |       | `-)
+  |       | |-'(' OpenParen
+  |       | |-'*'
+  |       | `-')' CloseParen
   |       `-ParametersAndQualifiers
-  |         |-(
-  |         |-SimpleDeclaration
-  |         | `-int
-  |         |-)
-  |         `-TrailingReturnType
-  |           |-->
-  |           |-double
-  |           `-SimpleDeclarator
-  |             `-*
-  `-;
+  |         |-'(' OpenParen
+  |         |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |         | `-'int'
+  |         |-')' CloseParen
+  |         `-TrailingReturnType ParametersAndQualifiers_trailingReturn
+  |           |-'->' ArrowToken
+  |           |-'double'
+  |           `-SimpleDeclarator TrailingReturnType_declarator
+  |             `-'*'
+  `-';'
 )txt"));
 }
 
@@ -4067,26 +4067,26 @@ struct X {};
 )cpp",
       {R"txt(
 SimpleDeclaration
-|-int
-|-SimpleDeclarator
+|-'int'
+|-SimpleDeclarator SimpleDeclaration_declarator
 | |-MemberPointer
-| | |-X
-| | |-::
-| | `-*
-| `-a
-`-;
+| | |-'X'
+| | |-'::'
+| | `-'*'
+| `-'a'
+`-';'
 )txt",
        R"txt(
 SimpleDeclaration
-|-const
-|-int
-|-SimpleDeclarator
+|-'const'
+|-'int'
+|-SimpleDeclarator SimpleDeclaration_declarator
 | |-MemberPointer
-| | |-X
-| | |-::
-| | `-*
-| `-b
-`-;
+| | |-'X'
+| | |-'::'
+| | `-'*'
+| `-'b'
+`-';'
 )txt"}));
 }
 
@@ -4107,70 +4107,70 @@ struct X {
 )cpp",
       {R"txt(
 SimpleDeclaration
-|-void
-|-SimpleDeclarator
+|-'void'
+|-SimpleDeclarator SimpleDeclaration_declarator
 | |-ParenDeclarator
-| | |-(
+| | |-'(' OpenParen
 | | |-MemberPointer
-| | | |-X
-| | | |-::
-| | | `-*
-| | |-xp
-| | `-)
+| | | |-'X'
+| | | |-'::'
+| | | `-'*'
+| | |-'xp'
+| | `-')' CloseParen
 | `-ParametersAndQualifiers
-|   |-(
-|   `-)
-`-;
+|   |-'(' OpenParen
+|   `-')' CloseParen
+`-';'
 )txt",
        R"txt(
 SimpleDeclaration
-|-void
-|-SimpleDeclarator
+|-'void'
+|-SimpleDeclarator SimpleDeclaration_declarator
 | |-ParenDeclarator
-| | |-(
+| | |-'(' OpenParen
 | | |-MemberPointer
-| | | |-X
-| | | |-::
-| | | `-*
-| | |-*
-| | |-xpp
-| | `-)
+| | | |-'X'
+| | | |-'::'
+| | | `-'*'
+| | |-'*'
+| | |-'xpp'
+| | `-')' CloseParen
 | `-ParametersAndQualifiers
-|   |-(
-|   |-SimpleDeclaration
-|   | |-const
-|   | |-int
-|   | `-SimpleDeclarator
-|   |   `-*
-|   `-)
-`-;
+|   |-'(' OpenParen
+|   |-SimpleDeclaration ParametersAndQualifiers_parameter
+|   | |-'const'
+|   | |-'int'
+|   | `-SimpleDeclarator SimpleDeclaration_declarator
+|   |   `-'*'
+|   `-')' CloseParen
+`-';'
 )txt",
        R"txt(
 SimpleDeclaration
-|-void
-|-SimpleDeclarator
+|-'void'
+|-SimpleDeclarator SimpleDeclaration_declarator
 | |-ParenDeclarator
-| | |-(
-| | |-X
-| | |-::
+| | |-'(' OpenParen
+| | |-'X'
+| | |-'::'
 | | |-MemberPointer
-| | | |-Y
-| | | |-::
-| | | `-*
-| | |-xyp
-| | `-)
+| | | |-'Y'
+| | | |-'::'
+| | | `-'*'
+| | |-'xyp'
+| | `-')' CloseParen
 | `-ParametersAndQualifiers
-|   |-(
-|   |-SimpleDeclaration
-|   | |-const
-|   | |-int
-|   | `-SimpleDeclarator
-|   |   `-*
-|   |-,
-|   |-SimpleDeclaration
-|   | `-char
-|   `-)
-`-;
+|   |-'(' OpenParen
+|   |-SimpleDeclaration ParametersAndQualifiers_parameter
+|   | |-'const'
+|   | |-'int'
+|   | `-SimpleDeclarator SimpleDeclaration_declarator
+|   |   `-'*'
+|   |-','
+|   |-SimpleDeclaration ParametersAndQualifiers_parameter
+|   | `-'char'
+|   `-')' CloseParen
+`-';'
 )txt"}));
 }
 
@@ -4180,33 +4180,33 @@ TEST_P(SyntaxTreeTest, ComplexDeclarator) {
 void x(char a, short (*b)(int));
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-void
-  |-SimpleDeclarator
-  | |-x
+  |-'void'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'x'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   |-SimpleDeclaration
-  |   | |-char
-  |   | `-SimpleDeclarator
-  |   |   `-a
-  |   |-,
-  |   |-SimpleDeclaration
-  |   | |-short
-  |   | `-SimpleDeclarator
+  |   |-'(' OpenParen
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | |-'char'
+  |   | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   `-'a'
+  |   |-','
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | |-'short'
+  |   | `-SimpleDeclarator SimpleDeclaration_declarator
   |   |   |-ParenDeclarator
-  |   |   | |-(
-  |   |   | |-*
-  |   |   | |-b
-  |   |   | `-)
+  |   |   | |-'(' OpenParen
+  |   |   | |-'*'
+  |   |   | |-'b'
+  |   |   | `-')' CloseParen
   |   |   `-ParametersAndQualifiers
-  |   |     |-(
-  |   |     |-SimpleDeclaration
-  |   |     | `-int
-  |   |     `-)
-  |   `-)
-  `-;
+  |   |     |-'(' OpenParen
+  |   |     |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   |     | `-'int'
+  |   |     `-')' CloseParen
+  |   `-')' CloseParen
+  `-';'
 )txt"));
 }
 
@@ -4216,49 +4216,49 @@ TEST_P(SyntaxTreeTest, ComplexDeclarator2) {
 void x(char a, short (*b)(int), long (**c)(long long));
 )cpp",
       R"txt(
-*: TranslationUnit
+TranslationUnit Detached
 `-SimpleDeclaration
-  |-void
-  |-SimpleDeclarator
-  | |-x
+  |-'void'
+  |-SimpleDeclarator SimpleDeclaration_declarator
+  | |-'x'
   | `-ParametersAndQualifiers
-  |   |-(
-  |   |-SimpleDeclaration
-  |   | |-char
-  |   | `-SimpleDeclarator
-  |   |   `-a
-  |   |-,
-  |   |-SimpleDeclaration
-  |   | |-short
-  |   | `-SimpleDeclarator
+  |   |-'(' OpenParen
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | |-'char'
+  |   | `-SimpleDeclarator SimpleDeclaration_declarator
+  |   |   `-'a'
+  |   |-','
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | |-'short'
+  |   | `-SimpleDeclarator SimpleDeclaration_declarator
   |   |   |-ParenDeclarator
-  |   |   | |-(
-  |   |   | |-*
-  |   |   | |-b
-  |   |   | `-)
+  |   |   | |-'(' OpenParen
+  |   |   | |-'*'
+  |   |   | |-'b'
+  |   |   | `-')' CloseParen
   |   |   `-ParametersAndQualifiers
-  |   |     |-(
-  |   |     |-SimpleDeclaration
-  |   |     | `-int
-  |   |     `-)
-  |   |-,
-  |   |-SimpleDeclaration
-  |   | |-long
-  |   | `-SimpleDeclarator
+  |   |     |-'(' OpenParen
+  |   |     |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   |     | `-'int'
+  |   |     `-')' CloseParen
+  |   |-','
+  |   |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   | |-'long'
+  |   | `-SimpleDeclarator SimpleDeclaration_declarator
   |   |   |-ParenDeclarator
-  |   |   | |-(
-  |   |   | |-*
-  |   |   | |-*
-  |   |   | |-c
-  |   |   | `-)
+  |   |   | |-'(' OpenParen
+  |   |   | |-'*'
+  |   |   | |-'*'
+  |   |   | |-'c'
+  |   |   | `-')' CloseParen
   |   |   `-ParametersAndQualifiers
-  |   |     |-(
-  |   |     |-SimpleDeclaration
-  |   |     | |-long
-  |   |     | `-long
-  |   |     `-)
-  |   `-)
-  `-;
+  |   |     |-'(' OpenParen
+  |   |     |-SimpleDeclaration ParametersAndQualifiers_parameter
+  |   |     | |-'long'
+  |   |     | `-'long'
+  |   |     `-')' CloseParen
+  |   `-')' CloseParen
+  `-';'
 )txt"));
 }
 
