@@ -1701,14 +1701,9 @@ Status GDBRemoteCommunicationClient::GetWatchpointSupportInfo(uint32_t &num) {
   // Set num to 0 first.
   num = 0;
   if (m_supports_watchpoint_support_info != eLazyBoolNo) {
-    char packet[64];
-    const int packet_len =
-        ::snprintf(packet, sizeof(packet), "qWatchpointSupportInfo:");
-    assert(packet_len < (int)sizeof(packet));
-    UNUSED_IF_ASSERT_DISABLED(packet_len);
     StringExtractorGDBRemote response;
-    if (SendPacketAndWaitForResponse(packet, response, false) ==
-        PacketResult::Success) {
+    if (SendPacketAndWaitForResponse("qWatchpointSupportInfo:", response,
+                                     false) == PacketResult::Success) {
       m_supports_watchpoint_support_info = eLazyBoolYes;
       llvm::StringRef name;
       llvm::StringRef value;
