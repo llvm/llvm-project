@@ -313,6 +313,10 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   else
     add("-runtime-pseudo-reloc:no");
 
+  if (args.hasFlag(OPT_allow_multiple_definition,
+                   OPT_no_allow_multiple_definition, false))
+    add("-force:multiple");
+
   if (auto *a = args.getLastArg(OPT_icf)) {
     StringRef s = a->getValue();
     if (s == "all")
