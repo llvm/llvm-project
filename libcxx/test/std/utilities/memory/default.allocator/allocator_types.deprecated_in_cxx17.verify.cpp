@@ -8,16 +8,14 @@
 
 // <memory>
 
-// check nested types:
+// Check that the following nested types are deprecated in C++17:
 
 // template <class T>
 // class allocator
 // {
 // public:
-//     typedef size_t                                size_type;
-//     typedef ptrdiff_t                             difference_type;
-//     typedef T*                                    pointer;
-//     typedef const T*                              const_pointer;
+//     typedef T*                                           pointer;
+//     typedef const T*                                     const_pointer;
 //     typedef typename add_lvalue_reference<T>::type       reference;
 //     typedef typename add_lvalue_reference<const T>::type const_reference;
 //
@@ -25,28 +23,27 @@
 // ...
 // };
 
-// Deprecated in C++17
-
-// UNSUPPORTED: c++03, c++11, c++14
+// REQUIRES: c++17
 
 // Clang 6 does not handle the deprecated attribute on template members properly,
 // so the rebind<int> check below fails.
 // UNSUPPORTED: clang-6
-
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
 
 #include <memory>
 #include "test_macros.h"
 
 int main(int, char**)
 {
-    typedef std::allocator<char>::size_type AST;          // expected-warning {{'size_type' is deprecated}}
-    typedef std::allocator<char>::difference_type ADT;    // expected-warning {{'difference_type' is deprecated}}
     typedef std::allocator<char>::pointer AP;             // expected-warning {{'pointer' is deprecated}}
     typedef std::allocator<char>::const_pointer ACP;      // expected-warning {{'const_pointer' is deprecated}}
     typedef std::allocator<char>::reference AR;           // expected-warning {{'reference' is deprecated}}
     typedef std::allocator<char>::const_reference ACR;    // expected-warning {{'const_reference' is deprecated}}
     typedef std::allocator<char>::rebind<int>::other ARO; // expected-warning {{'rebind<int>' is deprecated}}
 
-  return 0;
+    typedef std::allocator<char const>::pointer AP2;             // expected-warning {{'pointer' is deprecated}}
+    typedef std::allocator<char const>::const_pointer ACP2;      // expected-warning {{'const_pointer' is deprecated}}
+    typedef std::allocator<char const>::reference AR2;           // expected-warning {{'reference' is deprecated}}
+    typedef std::allocator<char const>::const_reference ACR2;    // expected-warning {{'const_reference' is deprecated}}
+    typedef std::allocator<char const>::rebind<int>::other ARO2; // expected-warning {{'rebind<int>' is deprecated}}
+    return 0;
 }
