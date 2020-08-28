@@ -9,29 +9,27 @@ define dso_local void @mve_gather_qi_wb(i32* noalias nocapture readonly %A, i32*
 ; CHECK-NEXT:    add.w r12, r0, r3, lsl #2
 ; CHECK-NEXT:    adr r0, .LCPI0_0
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vmov.i32 q2, #0x0
-; CHECK-NEXT:    dlstp.32 lr, r3
+; CHECK-NEXT:    movw lr, #1250
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vadd.i32 q0, q0, r1
 ; CHECK-NEXT:    adds r1, r3, #4
-; CHECK-NEXT:  .LBB0_1: @ %vector.body
+; CHECK:  .LBB0_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r12], #16
-; CHECK-NEXT:    vldrw.u32 q3, [q0, #80]!
+; CHECK-NEXT:    vctp.32 r3
+; CHECK-NEXT:    vmov q2, q1
+; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vldrwt.u32 q1, [r12], #16
+; CHECK-NEXT:    vldrwt.u32 q3, [q0, #80]!
+; CHECK-NEXT:    subs r3, #4
 ; CHECK-NEXT:    vmul.i32 q1, q3, q1
-; CHECK-NEXT:    vadd.i32 q2, q2, q1
-; CHECK-NEXT:    letp lr, .LBB0_1
+; CHECK-NEXT:    vadd.i32 q1, q2, q1
+; CHECK-NEXT:    le lr, .LBB0_1
 ; CHECK-NEXT:  @ %bb.2: @ %middle.block
-; CHECK-NEXT:    vmov q0, q2
+; CHECK-NEXT:    vpsel q0, q1, q2
 ; CHECK-NEXT:    vaddv.u32 r0, q0
 ; CHECK-NEXT:    str.w r0, [r2, r1, lsl #2]
 ; CHECK-NEXT:    pop {r7, pc}
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.3:
-; CHECK-NEXT:  .LCPI0_0:
-; CHECK-NEXT:    .long 4294967228 @ 0xffffffbc
-; CHECK-NEXT:    .long 4294967248 @ 0xffffffd0
-; CHECK-NEXT:    .long 4294967268 @ 0xffffffe4
-; CHECK-NEXT:    .long 4294967288 @ 0xfffffff8
 entry:                                  ; preds = %middle.
   %add.us.us = add i32 4, %n
   %arrayidx.us.us = getelementptr inbounds i32, i32* %C, i32 %add.us.us
@@ -77,20 +75,26 @@ define dso_local void @mve_gatherscatter_offset(i32* noalias nocapture readonly 
 ; CHECK-NEXT:    adr r0, .LCPI1_0
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    add.w r12, r3, #4
-; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    movw lr, #1250
+; CHECK-NEXT:    vmov.i32 q2, #0x0
 ; CHECK-NEXT:    vmov.i32 q0, #0x14
-; CHECK-NEXT:    dlstp.32 lr, r3
-; CHECK-NEXT:  .LBB1_1: @ %vector.body
+; CHECK-NEXT:    dls lr, lr
+; CHECK:  .LBB1_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q2, [r1, q1, uxtw #2]
-; CHECK-NEXT:    vldrw.u32 q4, [r4], #16
+; CHECK-NEXT:    vctp.32 r3
+; CHECK-NEXT:    vmov q3, q2
+; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vldrwt.u32 q2, [r1, q1, uxtw #2]
+; CHECK-NEXT:    vldrwt.u32 q4, [r4], #16
+; CHECK-NEXT:    subs r3, #4
 ; CHECK-NEXT:    vmul.i32 q2, q2, q4
-; CHECK-NEXT:    vstrw.32 q2, [r1, q1, uxtw #2]
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vstrwt.32 q2, [r1, q1, uxtw #2]
 ; CHECK-NEXT:    vadd.i32 q1, q1, q0
-; CHECK-NEXT:    vadd.i32 q3, q3, q2
-; CHECK-NEXT:    letp lr, .LBB1_1
+; CHECK-NEXT:    vadd.i32 q2, q3, q2
+; CHECK-NEXT:    le lr, .LBB1_1
 ; CHECK-NEXT:  @ %bb.2: @ %middle.block
-; CHECK-NEXT:    vmov q0, q3
+; CHECK-NEXT:    vpsel q0, q2, q3
 ; CHECK-NEXT:    vaddv.u32 r0, q0
 ; CHECK-NEXT:    str.w r0, [r2, r12, lsl #2]
 ; CHECK-NEXT:    vpop {d8, d9}
@@ -144,20 +148,26 @@ define dso_local void @mve_scatter_qi(i32* noalias nocapture readonly %A, i32* n
 ; CHECK-NEXT:    add.w r12, r0, r3, lsl #2
 ; CHECK-NEXT:    adr r0, .LCPI2_0
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    movw lr, #1250
+; CHECK-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-NEXT:    vmov.i32 q2, #0x3
 ; CHECK-NEXT:    vadd.i32 q0, q0, r1
 ; CHECK-NEXT:    adds r1, r3, #4
-; CHECK-NEXT:    dlstp.32 lr, r3
-; CHECK-NEXT:  .LBB2_1: @ %vector.body
+; CHECK-NEXT:    dls lr, lr
+; CHECK:  .LBB2_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q1, [r12], #16
+; CHECK-NEXT:    vctp.32 r3
+; CHECK-NEXT:    vmov q3, q1
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vldrwt.u32 q1, [r12], #16
+; CHECK-NEXT:    subs r3, #4
 ; CHECK-NEXT:    vmul.i32 q1, q1, q2
-; CHECK-NEXT:    vstrw.32 q1, [q0, #80]!
-; CHECK-NEXT:    vadd.i32 q3, q3, q1
-; CHECK-NEXT:    letp lr, .LBB2_1
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vstrwt.32 q1, [q0, #80]!
+; CHECK-NEXT:    vadd.i32 q1, q3, q1
+; CHECK-NEXT:    le lr, .LBB2_1
 ; CHECK-NEXT:  @ %bb.2: @ %middle.block
-; CHECK-NEXT:    vmov q0, q3
+; CHECK-NEXT:    vpsel q0, q1, q3
 ; CHECK-NEXT:    vaddv.u32 r0, q0
 ; CHECK-NEXT:    str.w r0, [r2, r1, lsl #2]
 ; CHECK-NEXT:    pop {r7, pc}
