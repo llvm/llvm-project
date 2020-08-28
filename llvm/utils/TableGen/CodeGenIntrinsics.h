@@ -148,6 +148,7 @@ struct CodeGenIntrinsic {
   enum ArgAttrKind {
     NoCapture,
     NoAlias,
+    NoUndef,
     Returned,
     ReadOnly,
     WriteOnly,

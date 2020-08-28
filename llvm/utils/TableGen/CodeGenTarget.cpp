@@ -846,6 +846,9 @@ void CodeGenIntrinsic::setProperty(Record *R) {
   } else if (R->isSubClassOf("NoAlias")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     ArgumentAttributes.emplace_back(ArgNo, NoAlias, 0);
+  } else if (R->isSubClassOf("NoUndef")) {
+    unsigned ArgNo = R->getValueAsInt("ArgNo");
+    ArgumentAttributes.emplace_back(ArgNo, NoUndef, 0);
   } else if (R->isSubClassOf("Returned")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     ArgumentAttributes.emplace_back(ArgNo, Returned, 0);

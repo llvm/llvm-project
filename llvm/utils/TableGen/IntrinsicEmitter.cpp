@@ -687,6 +687,12 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
             OS << "Attribute::NoAlias";
             addComma = true;
             break;
+          case CodeGenIntrinsic::NoUndef:
+            if (addComma)
+              OS << ",";
+            OS << "Attribute::NoUndef";
+            addComma = true;
+            break;
           case CodeGenIntrinsic::Returned:
             if (addComma)
               OS << ",";
