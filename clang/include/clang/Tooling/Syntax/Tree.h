@@ -106,9 +106,9 @@ public:
   Node *nextSibling() { return NextSibling; }
 
   /// Dumps the structure of a subtree. For debugging and testing purposes.
-  std::string dump(const Arena &A) const;
+  std::string dump(const SourceManager &SM) const;
   /// Dumps the tokens forming this subtree.
-  std::string dumpTokens(const Arena &A) const;
+  std::string dumpTokens(const SourceManager &SM) const;
 
   /// Asserts invariants on this node of the tree and its immediate children.
   /// Will not recurse into the subtree. No-op if NDEBUG is set.

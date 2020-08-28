@@ -133,46 +133,45 @@ void syntax::Tree::replaceChildRangeLowLevel(Node *BeforeBegin, Node *End,
 }
 
 namespace {
-static void dumpTokens(raw_ostream &OS, ArrayRef<syntax::Token> Tokens,
-                       const SourceManager &SM) {
-  assert(!Tokens.empty());
-  bool First = true;
-  for (const auto &T : Tokens) {
-    if (!First)
-      OS << " ";
-    else
-      First = false;
-    // Handle 'eof' separately, calling text() on it produces an empty string.
-    if (T.kind() == tok::eof) {
-      OS << "<eof>";
-      continue;
-    }
-    OS << T.text(SM);
-  }
+static void dumpLeaf(raw_ostream &OS, const syntax::Leaf *L,
+                     const SourceManager &SM) {
+  assert(L);
+  const auto *Token = L->token();
+  assert(Token);
+  // Handle 'eof' separately, calling text() on it produces an empty string.
+  if (Token->kind() == tok::eof)
+    OS << "<eof>";
+  else
+    OS << Token->text(SM);
 }
 
-static void dumpTree(raw_ostream &OS, const syntax::Node *N,
-                     const syntax::Arena &A, std::vector<bool> IndentMask) {
-  std::string Marks;
-  if (!N->isOriginal())
-    Marks += "M";
-  if (N->role() == syntax::NodeRole::Detached)
-    Marks += "*"; // FIXME: find a nice way to print other roles.
-  if (!N->canModify())
-    Marks += "I";
-  if (!Marks.empty())
-    OS << Marks << ": ";
+static void dumpNode(raw_ostream &OS, const syntax::Node *N,
+                     const SourceManager &SM, std::vector<bool> IndentMask) {
+  auto dumpExtraInfo = [&OS](const syntax::Node *N) {
+    if (N->role() != syntax::NodeRole::Unknown)
+      OS << " " << N->role();
+    if (!N->isOriginal())
+      OS << " synthesized";
+    if (!N->canModify())
+      OS << " unmodifiable";
+  };
 
-  if (auto *L = dyn_cast<syntax::Leaf>(N)) {
-    dumpTokens(OS, *L->token(), A.sourceManager());
+  assert(N);
+  if (const auto *L = dyn_cast<syntax::Leaf>(N)) {
+    OS << "'";
+    dumpLeaf(OS, L, SM);
+    OS << "'";
+    dumpExtraInfo(N);
     OS << "\n";
     return;
   }
 
-  auto *T = cast<syntax::Tree>(N);
-  OS << T->kind() << "\n";
+  const auto *T = cast<syntax::Tree>(N);
+  OS << T->kind();
+  dumpExtraInfo(N);
+  OS << "\n";
 
-  for (auto It = T->firstChild(); It != nullptr; It = It->nextSibling()) {
+  for (const auto *It = T->firstChild(); It; It = It->nextSibling()) {
     for (bool Filled : IndentMask) {
       if (Filled)
         OS << "| ";
@@ -186,28 +185,27 @@ static void dumpTree(raw_ostream &OS, const syntax::Node *N,
       OS << "|-";
       IndentMask.push_back(true);
     }
-    dumpTree(OS, It, A, IndentMask);
+    dumpNode(OS, It, SM, IndentMask);
     IndentMask.pop_back();
   }
 }
 } // namespace
 
-std::string syntax::Node::dump(const Arena &A) const {
+std::string syntax::Node::dump(const SourceManager &SM) const {
   std::string Str;
   llvm::raw_string_ostream OS(Str);
-  dumpTree(OS, this, A, /*IndentMask=*/{});
+  dumpNode(OS, this, SM, /*IndentMask=*/{});
   return std::move(OS.str());
 }
 
-std::string syntax::Node::dumpTokens(const Arena &A) const {
+std::string syntax::Node::dumpTokens(const SourceManager &SM) const {
   std::string Storage;
   llvm::raw_string_ostream OS(Storage);
   traverse(this, [&](const syntax::Node *N) {
-    auto *L = dyn_cast<syntax::Leaf>(N);
-    if (!L)
-      return;
-    ::dumpTokens(OS, *L->token(), A.sourceManager());
-    OS << " ";
+    if (const auto *L = dyn_cast<syntax::Leaf>(N)) {
+      dumpLeaf(OS, L, SM);
+      OS << " ";
+    }
   });
   return OS.str();
 }
