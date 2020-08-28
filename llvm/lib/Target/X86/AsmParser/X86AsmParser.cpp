@@ -2670,6 +2670,13 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     break;
   }
 
+  // Support the suffix syntax for overriding displacement size as well.
+  if (Name.consume_back(".d32")) {
+    ForcedDispEncoding = DispEncoding_Disp32;
+  } else if (Name.consume_back(".d8")) {
+    ForcedDispEncoding = DispEncoding_Disp8;
+  }
+
   StringRef PatchedName = Name;
 
   // Hack to skip "short" following Jcc.
