@@ -11425,6 +11425,13 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
       Known.Zero.setHighBits(Size - getSubtarget()->getWavefrontSizeLog2());
       break;
     }
+    case Intrinsic::amdgcn_groupstaticsize: {
+      // We can report everything over the maximum size as 0. We can't report
+      // based on the actual size because we don't know if it's accurate or not
+      // at any given point.
+      Known.Zero.setHighBits(countLeadingZeros(getSubtarget()->getLocalMemorySize()));
+      break;
+    }
     default:
       break;
     }
