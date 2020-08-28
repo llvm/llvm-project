@@ -2181,32 +2181,32 @@ define i128 @test_insertelement_variable_v128i1(<128 x i8> %a, i8 %b, i32 %index
 define void @test_concat_v2i1(<2 x half>* %arg, <2 x half>* %arg1, <2 x half>* %arg2) {
 ; KNL-LABEL: test_concat_v2i1:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    movzwl (%rdi), %eax
-; KNL-NEXT:    movzwl 2(%rdi), %ecx
+; KNL-NEXT:    movzwl 2(%rdi), %eax
+; KNL-NEXT:    movzwl (%rdi), %ecx
 ; KNL-NEXT:    vmovd %ecx, %xmm0
 ; KNL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; KNL-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; KNL-NEXT:    vucomiss %xmm1, %xmm0
 ; KNL-NEXT:    setb %cl
+; KNL-NEXT:    andl $1, %ecx
 ; KNL-NEXT:    kmovw %ecx, %k0
-; KNL-NEXT:    kshiftlw $1, %k0, %k0
 ; KNL-NEXT:    vmovd %eax, %xmm2
 ; KNL-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; KNL-NEXT:    vucomiss %xmm1, %xmm2
 ; KNL-NEXT:    setb %al
-; KNL-NEXT:    andl $1, %eax
 ; KNL-NEXT:    kmovw %eax, %k1
-; KNL-NEXT:    korw %k0, %k1, %k0
+; KNL-NEXT:    kshiftlw $1, %k1, %k1
+; KNL-NEXT:    korw %k1, %k0, %k0
 ; KNL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; KNL-NEXT:    vucomiss %xmm1, %xmm0
 ; KNL-NEXT:    seta %al
+; KNL-NEXT:    andl $1, %eax
 ; KNL-NEXT:    kmovw %eax, %k1
-; KNL-NEXT:    kshiftlw $1, %k1, %k1
 ; KNL-NEXT:    vucomiss %xmm1, %xmm2
 ; KNL-NEXT:    seta %al
-; KNL-NEXT:    andl $1, %eax
 ; KNL-NEXT:    kmovw %eax, %k2
-; KNL-NEXT:    korw %k1, %k2, %k1
+; KNL-NEXT:    kshiftlw $1, %k2, %k2
+; KNL-NEXT:    korw %k2, %k1, %k1
 ; KNL-NEXT:    kandw %k1, %k0, %k0
 ; KNL-NEXT:    kshiftrw $1, %k0, %k1
 ; KNL-NEXT:    kmovw %k1, %ecx
