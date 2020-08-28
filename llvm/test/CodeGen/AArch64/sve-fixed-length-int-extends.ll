@@ -21,6 +21,48 @@ target triple = "aarch64-unknown-linux-gnu"
 ; NO_SVE-NOT: z{0-9}
 
 ;
+; sext i1 -> i32
+;
+
+; NOTE: Covers the scenario where a SIGN_EXTEND_INREG is required, whose inreg
+; type's element type is not byte based and thus cannot be lowered directly to
+; an SVE instruction.
+define void @sext_v8i1_v8i32(<8 x i1> %a, <8 x i32>* %out) #0 {
+; CHECK-LABEL: sext_v8i1_v8i32:
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
+; CHECK-NEXT: uunpklo [[A_HALFS:z[0-9]+]].h, z0.b
+; CHECK-NEXT: uunpklo [[A_WORDS:z[0-9]+]].s, [[A_HALFS]].h
+; CHECK-NEXT: lsl [[A_WORDS]].s, [[PG]]/m, [[A_WORDS]].s, #31
+; CHECK-NEXT: asr [[A_WORDS]].s, [[PG]]/m, [[A_WORDS]].s, #31
+; CHECK-NEXT: st1w { [[A_WORDS]].s }, [[PG]], [x0]
+; CHECK-NEXT: ret
+  %b = sext <8 x i1> %a to <8 x i32>
+  store <8 x i32> %b, <8 x i32>* %out
+  ret void
+}
+
+;
+; sext i3 -> i64
+;
+
+; NOTE: Covers the scenario where a SIGN_EXTEND_INREG is required, whose inreg
+; type's element type is not power-of-2 based and thus cannot be lowered
+; directly to an SVE instruction.
+define void @sext_v4i3_v4i64(<4 x i3> %a, <4 x i64>* %out) #0 {
+; CHECK-LABEL: sext_v4i3_v4i64:
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl4
+; CHECK-NEXT: uunpklo [[A_WORDS:z[0-9]+]].s, z0.h
+; CHECK-NEXT: uunpklo [[A_DWORDS:z[0-9]+]].d, [[A_WORDS]].s
+; CHECK-NEXT: lsl [[A_DWORDS]].d, [[PG]]/m, [[A_DWORDS]].d, #61
+; CHECK-NEXT: asr [[A_DWORDS]].d, [[PG]]/m, [[A_DWORDS]].d, #61
+; CHECK-NEXT: st1d { [[A_WORDS]].d }, [[PG]], [x0]
+; CHECK-NEXT: ret
+  %b = sext <4 x i3> %a to <4 x i64>
+  store <4 x i64> %b, <4 x i64>* %out
+  ret void
+}
+
+;
 ; sext i8 -> i16
 ;
 
