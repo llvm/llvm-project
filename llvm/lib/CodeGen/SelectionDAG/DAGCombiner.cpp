@@ -464,6 +464,7 @@ namespace {
     SDValue visitFREEZE(SDNode *N);
     SDValue visitBUILD_PAIR(SDNode *N);
     SDValue visitFADD(SDNode *N);
+    SDValue visitSTRICT_FADD(SDNode *N);
     SDValue visitFSUB(SDNode *N);
     SDValue visitFMUL(SDNode *N);
     SDValue visitFMA(SDNode *N);
@@ -1650,6 +1651,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::BITCAST:            return visitBITCAST(N);
   case ISD::BUILD_PAIR:         return visitBUILD_PAIR(N);
   case ISD::FADD:               return visitFADD(N);
+  case ISD::STRICT_FADD:        return visitSTRICT_FADD(N);
   case ISD::FSUB:               return visitFSUB(N);
   case ISD::FMUL:               return visitFMUL(N);
   case ISD::FMA:                return visitFMA(N);
@@ -12830,6 +12832,33 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
     AddToWorklist(Fused.getNode());
     return Fused;
   }
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitSTRICT_FADD(SDNode *N) {
+  SDValue Chain = N->getOperand(0);
+  SDValue N0 = N->getOperand(1);
+  SDValue N1 = N->getOperand(2);
+  EVT VT = N->getValueType(0);
+  EVT ChainVT = N->getValueType(1);
+  SDLoc DL(N);
+  const SDNodeFlags Flags = N->getFlags();
+
+  // fold (strict_fadd A, (fneg B)) -> (strict_fsub A, B)
+  if (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::STRICT_FSUB, VT))
+    if (SDValue NegN1 = TLI.getCheaperNegatedExpression(
+            N1, DAG, LegalOperations, ForCodeSize)) {
+      return DAG.getNode(ISD::STRICT_FSUB, DL, DAG.getVTList(VT, ChainVT),
+                         {Chain, N0, NegN1}, Flags);
+    }
+
+  // fold (strict_fadd (fneg A), B) -> (strict_fsub B, A)
+  if (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::STRICT_FSUB, VT))
+    if (SDValue NegN0 = TLI.getCheaperNegatedExpression(
+            N0, DAG, LegalOperations, ForCodeSize)) {
+      return DAG.getNode(ISD::STRICT_FSUB, DL, DAG.getVTList(VT, ChainVT),
+                         {Chain, N1, NegN0}, Flags);
+    }
   return SDValue();
 }
 
