@@ -11408,7 +11408,7 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
   const MachineInstr *MI = MRI.getVRegDef(R);
   switch (MI->getOpcode()) {
   case AMDGPU::G_INTRINSIC: {
-    switch (MI->getIntrinsicID())
+    switch (MI->getIntrinsicID()) {
     case Intrinsic::amdgcn_workitem_id_x:
       knownBitsForWorkitemID(*getSubtarget(), KB, Known, 0);
       break;
@@ -11427,6 +11427,7 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
     }
     default:
       break;
+    }
   }
   }
 }
