@@ -342,7 +342,7 @@ static Type *getMemInstValueType(Value *I) {
 /// type is irregular if its allocated size doesn't equal the store size of an
 /// element of the corresponding vector type at the given vectorization factor.
 static bool hasIrregularType(Type *Ty, const DataLayout &DL, ElementCount VF) {
-  assert(!VF.Scalable && "scalable vectors not yet supported.");
+  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   // Determine if an array of VF elements of type Ty is "bitcast compatible"
   // with a <VF x Ty> vector.
   if (VF.isVector()) {
@@ -899,8 +899,9 @@ void InnerLoopVectorizer::setDebugLocFromInst(IRBuilder<> &B, const Value *Ptr) 
     const DILocation *DIL = Inst->getDebugLoc();
     if (DIL && Inst->getFunction()->isDebugInfoForProfiling() &&
         !isa<DbgInfoIntrinsic>(Inst)) {
-      assert(!VF.Scalable && "scalable vectors not yet supported.");
-      auto NewDIL = DIL->cloneByMultiplyingDuplicationFactor(UF * VF.Min);
+      assert(!VF.isScalable() && "scalable vectors not yet supported.");
+      auto NewDIL =
+          DIL->cloneByMultiplyingDuplicationFactor(UF * VF.getKnownMinValue());
       if (NewDIL)
         B.SetCurrentDebugLocation(NewDIL.getValue());
       else
@@ -1216,7 +1217,7 @@ public:
   /// width \p VF. Return CM_Unknown if this instruction did not pass
   /// through the cost modeling.
   InstWidening getWideningDecision(Instruction *I, ElementCount VF) {
-    assert(!VF.Scalable && "scalable vectors not yet supported.");
+    assert(!VF.isScalable() && "scalable vectors not yet supported.");
     assert(VF.isVector() && "Expected VF >=2");
 
     // Cost model is not run in the VPlan-native path - return conservative
@@ -1837,7 +1838,8 @@ void InnerLoopVectorizer::createVectorIntOrFpInductionPHI(
 
   // Multiply the vectorization factor by the step using integer or
   // floating-point arithmetic as appropriate.
-  Value *ConstVF = getSignedIntOrFpConstant(Step->getType(), VF.Min);
+  Value *ConstVF =
+      getSignedIntOrFpConstant(Step->getType(), VF.getKnownMinValue());
   Value *Mul = addFastMathFlag(Builder.CreateBinOp(MulOp, Step, ConstVF));
 
   // Create a vector splat to use in the induction update.
@@ -1845,7 +1847,7 @@ void InnerLoopVectorizer::createVectorIntOrFpInductionPHI(
   // FIXME: If the step is non-constant, we create the vector splat with
   //        IRBuilder. IRBuilder can constant-fold the multiply, but it doesn't
   //        handle a constant vector splat.
-  assert(!VF.Scalable && "scalable vectors not yet supported.");
+  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   Value *SplatVF = isa<Constant>(Mul)
                        ? ConstantVector::getSplat(VF, cast<Constant>(Mul))
                        : Builder.CreateVectorSplat(VF, Mul);
@@ -1982,9 +1984,10 @@ void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, TruncInst *Trunc) {
   auto CreateSplatIV = [&](Value *ScalarIV, Value *Step) {
     Value *Broadcasted = getBroadcastInstrs(ScalarIV);
     for (unsigned Part = 0; Part < UF; ++Part) {
-      assert(!VF.Scalable && "scalable vectors not yet supported.");
-      Value *EntryPart = getStepVector(Broadcasted, VF.Min * Part, Step,
-                                       ID.getInductionOpcode());
+      assert(!VF.isScalable() && "scalable vectors not yet supported.");
+      Value *EntryPart =
+          getStepVector(Broadcasted, VF.getKnownMinValue() * Part, Step,
+                        ID.getInductionOpcode());
       VectorLoopValueMap.setVectorValue(EntryVal, Part, EntryPart);
       if (Trunc)
         addMetadata(EntryPart, Trunc);
@@ -2093,7 +2096,7 @@ void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
                                            const InductionDescriptor &ID) {
   // We shouldn't have to build scalar steps if we aren't vectorizing.
   assert(VF.isVector() && "VF should be greater than one");
-  assert(!VF.Scalable &&
+  assert(!VF.isScalable() &&
          "the code below assumes a fixed number of elements at compile time");
   // Get the value type and ensure it and the step have the same integer type.
   Type *ScalarIVTy = ScalarIV->getType()->getScalarType();
@@ -2118,12 +2121,12 @@ void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
   unsigned Lanes =
       Cost->isUniformAfterVectorization(cast<Instruction>(EntryVal), VF)
           ? 1
-          : VF.Min;
+          : VF.getKnownMinValue();
   // Compute the scalar steps and save the results in VectorLoopValueMap.
   for (unsigned Part = 0; Part < UF; ++Part) {
     for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
-      auto *StartIdx =
-          getSignedIntOrFpConstant(ScalarIVTy, VF.Min * Part + Lane);
+      auto *StartIdx = getSignedIntOrFpConstant(
+          ScalarIVTy, VF.getKnownMinValue() * Part + Lane);
       auto *Mul = addFastMathFlag(Builder.CreateBinOp(MulOp, StartIdx, Step));
       auto *Add = addFastMathFlag(Builder.CreateBinOp(AddOp, ScalarIV, Mul));
       VectorLoopValueMap.setScalarValue(EntryVal, {Part, Lane}, Add);
@@ -2166,9 +2169,10 @@ Value *InnerLoopVectorizer::getOrCreateVectorValue(Value *V, unsigned Part) {
     // is known to be uniform after vectorization, this corresponds to lane zero
     // of the Part unroll iteration. Otherwise, the last instruction is the one
     // we created for the last vector lane of the Part unroll iteration.
-    assert(!VF.Scalable && "scalable vectors not yet supported.");
-    unsigned LastLane =
-        Cost->isUniformAfterVectorization(I, VF) ? 0 : VF.Min - 1;
+    assert(!VF.isScalable() && "scalable vectors not yet supported.");
+    unsigned LastLane = Cost->isUniformAfterVectorization(I, VF)
+                            ? 0
+                            : VF.getKnownMinValue() - 1;
     auto *LastInst = cast<Instruction>(
         VectorLoopValueMap.getScalarValue(V, {Part, LastLane}));
 
@@ -2190,10 +2194,10 @@ Value *InnerLoopVectorizer::getOrCreateVectorValue(Value *V, unsigned Part) {
       VectorLoopValueMap.setVectorValue(V, Part, VectorValue);
     } else {
       // Initialize packing with insertelements to start from undef.
-      assert(!VF.Scalable && "VF is assumed to be non scalable.");
+      assert(!VF.isScalable() && "VF is assumed to be non scalable.");
       Value *Undef = UndefValue::get(VectorType::get(V->getType(), VF));
       VectorLoopValueMap.setVectorValue(V, Part, Undef);
-      for (unsigned Lane = 0; Lane < VF.Min; ++Lane)
+      for (unsigned Lane = 0; Lane < VF.getKnownMinValue(); ++Lane)
         packScalarIntoVectorValue(V, {Part, Lane});
       VectorValue = VectorLoopValueMap.getVectorValue(V, Part);
     }
@@ -2257,10 +2261,10 @@ void InnerLoopVectorizer::packScalarIntoVectorValue(
 
 Value *InnerLoopVectorizer::reverseVector(Value *Vec) {
   assert(Vec->getType()->isVectorTy() && "Invalid type");
-  assert(!VF.Scalable && "Cannot reverse scalable vectors");
+  assert(!VF.isScalable() && "Cannot reverse scalable vectors");
   SmallVector<int, 8> ShuffleMask;
-  for (unsigned i = 0; i < VF.Min; ++i)
-    ShuffleMask.push_back(VF.Min - i - 1);
+  for (unsigned i = 0; i < VF.getKnownMinValue(); ++i)
+    ShuffleMask.push_back(VF.getKnownMinValue() - i - 1);
 
   return Builder.CreateShuffleVector(Vec, UndefValue::get(Vec->getType()),
                                      ShuffleMask, "reverse");
@@ -2314,7 +2318,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
   // Prepare for the vector type of the interleaved load/store.
   Type *ScalarTy = getMemInstValueType(Instr);
   unsigned InterleaveFactor = Group->getFactor();
-  assert(!VF.Scalable && "scalable vectors not yet supported.");
+  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   auto *VecTy = VectorType::get(ScalarTy, VF * InterleaveFactor);
 
   // Prepare for the new pointers.
@@ -2331,10 +2335,10 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
   // pointer operand of the interleaved access is supposed to be uniform. For
   // uniform instructions, we're only required to generate a value for the
   // first vector lane in each unroll iteration.
-  assert(!VF.Scalable &&
+  assert(!VF.isScalable() &&
          "scalable vector reverse operation is not implemented");
   if (Group->isReverse())
-    Index += (VF.Min - 1) * Group->getFactor();
+    Index += (VF.getKnownMinValue() - 1) * Group->getFactor();
 
   for (unsigned Part = 0; Part < UF; Part++) {
     Value *AddrPart = State.get(Addr, {Part, 0});
@@ -2369,8 +2373,8 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
 
   Value *MaskForGaps = nullptr;
   if (Group->requiresScalarEpilogue() && !Cost->isScalarEpilogueAllowed()) {
-    assert(!VF.Scalable && "scalable vectors not yet supported.");
-    MaskForGaps = createBitMaskForGaps(Builder, VF.Min, *Group);
+    assert(!VF.isScalable() && "scalable vectors not yet supported.");
+    MaskForGaps = createBitMaskForGaps(Builder, VF.getKnownMinValue(), *Group);
     assert(MaskForGaps && "Mask for Gaps is required but it is null");
   }
 
@@ -2387,10 +2391,10 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
         if (BlockInMask) {
           Value *BlockInMaskPart = State.get(BlockInMask, Part);
           auto *Undefs = UndefValue::get(BlockInMaskPart->getType());
-          assert(!VF.Scalable && "scalable vectors not yet supported.");
+          assert(!VF.isScalable() && "scalable vectors not yet supported.");
           Value *ShuffledMask = Builder.CreateShuffleVector(
               BlockInMaskPart, Undefs,
-              createReplicatedMask(InterleaveFactor, VF.Min),
+              createReplicatedMask(InterleaveFactor, VF.getKnownMinValue()),
               "interleaved.mask");
           GroupMask = MaskForGaps
                           ? Builder.CreateBinOp(Instruction::And, ShuffledMask,
@@ -2417,15 +2421,16 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
       if (!Member)
         continue;
 
-      assert(!VF.Scalable && "scalable vectors not yet supported.");
-      auto StrideMask = createStrideMask(I, InterleaveFactor, VF.Min);
+      assert(!VF.isScalable() && "scalable vectors not yet supported.");
+      auto StrideMask =
+          createStrideMask(I, InterleaveFactor, VF.getKnownMinValue());
       for (unsigned Part = 0; Part < UF; Part++) {
         Value *StridedVec = Builder.CreateShuffleVector(
             NewLoads[Part], UndefVec, StrideMask, "strided.vec");
 
         // If this member has different type, cast the result type.
         if (Member->getType() != ScalarTy) {
-          assert(!VF.Scalable && "VF is assumed to be non scalable.");
+          assert(!VF.isScalable() && "VF is assumed to be non scalable.");
           VectorType *OtherVTy = VectorType::get(Member->getType(), VF);
           StridedVec = createBitOrPointerCast(StridedVec, OtherVTy, DL);
         }
@@ -2440,7 +2445,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
   }
 
   // The sub vector type for current instruction.
-  assert(!VF.Scalable && "VF is assumed to be non scalable.");
+  assert(!VF.isScalable() && "VF is assumed to be non scalable.");
   auto *SubVT = VectorType::get(ScalarTy, VF);
 
   // Vectorize the interleaved store group.
@@ -2469,9 +2474,10 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
     Value *WideVec = concatenateVectors(Builder, StoredVecs);
 
     // Interleave the elements in the wide vector.
-    assert(!VF.Scalable && "scalable vectors not yet supported.");
+    assert(!VF.isScalable() && "scalable vectors not yet supported.");
     Value *IVec = Builder.CreateShuffleVector(
-        WideVec, UndefVec, createInterleaveMask(VF.Min, InterleaveFactor),
+        WideVec, UndefVec,
+        createInterleaveMask(VF.getKnownMinValue(), InterleaveFactor),
         "interleaved.vec");
 
     Instruction *NewStoreInstr;
@@ -2480,7 +2486,8 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
       auto *Undefs = UndefValue::get(BlockInMaskPart->getType());
       Value *ShuffledMask = Builder.CreateShuffleVector(
           BlockInMaskPart, Undefs,
-          createReplicatedMask(InterleaveFactor, VF.Min), "interleaved.mask");
+          createReplicatedMask(InterleaveFactor, VF.getKnownMinValue()),
+          "interleaved.mask");
       NewStoreInstr = Builder.CreateMaskedStore(
           IVec, AddrParts[Part], Group->getAlign(), ShuffledMask);
     }
@@ -2514,7 +2521,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
 
   Type *ScalarDataTy = getMemInstValueType(Instr);
 
-  assert(!VF.Scalable && "scalable vectors not yet supported.");
+  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   auto *DataTy = VectorType::get(ScalarDataTy, VF);
   const Align Alignment = getLoadStoreAlignment(Instr);
 
@@ -2550,16 +2557,16 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
       // If the address is consecutive but reversed, then the
       // wide store needs to start at the last vector element.
       PartPtr = cast<GetElementPtrInst>(Builder.CreateGEP(
-          ScalarDataTy, Ptr, Builder.getInt32(-Part * VF.Min)));
+          ScalarDataTy, Ptr, Builder.getInt32(-Part * VF.getKnownMinValue())));
       PartPtr->setIsInBounds(InBounds);
       PartPtr = cast<GetElementPtrInst>(Builder.CreateGEP(
-          ScalarDataTy, PartPtr, Builder.getInt32(1 - VF.Min)));
+          ScalarDataTy, PartPtr, Builder.getInt32(1 - VF.getKnownMinValue())));
       PartPtr->setIsInBounds(InBounds);
       if (isMaskRequired) // Reverse of a null all-one mask is a null mask.
         BlockInMaskParts[Part] = reverseVector(BlockInMaskParts[Part]);
     } else {
       PartPtr = cast<GetElementPtrInst>(Builder.CreateGEP(
-          ScalarDataTy, Ptr, Builder.getInt32(Part * VF.Min)));
+          ScalarDataTy, Ptr, Builder.getInt32(Part * VF.getKnownMinValue())));
       PartPtr->setIsInBounds(InBounds);
     }
 
@@ -2756,8 +2763,8 @@ Value *InnerLoopVectorizer::getOrCreateVectorTripCount(Loop *L) {
 
   Type *Ty = TC->getType();
   // This is where we can make the step a runtime constant.
-  assert(!VF.Scalable && "scalable vectorization is not supported yet");
-  Constant *Step = ConstantInt::get(Ty, VF.Min * UF);
+  assert(!VF.isScalable() && "scalable vectorization is not supported yet");
+  Constant *Step = ConstantInt::get(Ty, VF.getKnownMinValue() * UF);
 
   // If the tail is to be folded by masking, round the number of iterations N
   // up to a multiple of Step instead of rounding down. This is done by first
@@ -2766,10 +2773,10 @@ Value *InnerLoopVectorizer::getOrCreateVectorTripCount(Loop *L) {
   // that it starts at zero and its Step is a power of two; the loop will then
   // exit, with the last early-exit vector comparison also producing all-true.
   if (Cost->foldTailByMasking()) {
-    assert(isPowerOf2_32(VF.Min * UF) &&
+    assert(isPowerOf2_32(VF.getKnownMinValue() * UF) &&
            "VF*UF must be a power of 2 when folding tail by masking");
-    TC = Builder.CreateAdd(TC, ConstantInt::get(Ty, VF.Min * UF - 1),
-                           "n.rnd.up");
+    TC = Builder.CreateAdd(
+        TC, ConstantInt::get(Ty, VF.getKnownMinValue() * UF - 1), "n.rnd.up");
   }
 
   // Now we need to generate the expression for the part of the loop that the
@@ -2846,9 +2853,10 @@ void InnerLoopVectorizer::emitMinimumIterationCountCheck(Loop *L,
   // If tail is to be folded, vector loop takes care of all iterations.
   Value *CheckMinIters = Builder.getFalse();
   if (!Cost->foldTailByMasking()) {
-    assert(!VF.Scalable && "scalable vectors not yet supported.");
+    assert(!VF.isScalable() && "scalable vectors not yet supported.");
     CheckMinIters = Builder.CreateICmp(
-        P, Count, ConstantInt::get(Count->getType(), VF.Min * UF),
+        P, Count,
+        ConstantInt::get(Count->getType(), VF.getKnownMinValue() * UF),
         "min.iters.check");
   }
   // Create new preheader for vector loop.
@@ -3303,8 +3311,8 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   Value *StartIdx = ConstantInt::get(IdxTy, 0);
   // The loop step is equal to the vectorization factor (num of SIMD elements)
   // times the unroll factor (num of SIMD instructions).
-  assert(!VF.Scalable && "scalable vectors not yet supported.");
-  Constant *Step = ConstantInt::get(IdxTy, VF.Min * UF);
+  assert(!VF.isScalable() && "scalable vectors not yet supported.");
+  Constant *Step = ConstantInt::get(IdxTy, VF.getKnownMinValue() * UF);
   Value *CountRoundDown = getOrCreateVectorTripCount(Lp);
   Induction =
       createInductionVariable(Lp, StartIdx, CountRoundDown, Step,
@@ -3438,7 +3446,7 @@ static void cse(BasicBlock *BB) {
 unsigned LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
                                                        ElementCount VF,
                                                        bool &NeedToScalarize) {
-  assert(!VF.Scalable && "scalable vectors not yet supported.");
+  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   Function *F = CI->getCalledFunction();
   Type *ScalarRetTy = CI->getType();
   SmallVector<Type *, 4> Tys, ScalarTys;
@@ -3463,7 +3471,7 @@ unsigned LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
   // packing the return values to a vector.
   unsigned ScalarizationCost = getScalarizationOverhead(CI, VF);
 
-  unsigned Cost = ScalarCallCost * VF.Min + ScalarizationCost;
+  unsigned Cost = ScalarCallCost * VF.getKnownMinValue() + ScalarizationCost;
 
   // If we can't emit a vector call for this function, then the currently found
   // cost is the cost we need to return.
@@ -3684,11 +3692,11 @@ void InnerLoopVectorizer::fixVectorizedLoop() {
   // profile is not inherently precise anyway. Note also possible bypass of
   // vector code caused by legality checks is ignored, assigning all the weight
   // to the vector loop, optimistically.
-  assert(!VF.Scalable &&
+  assert(!VF.isScalable() &&
          "cannot use scalable ElementCount to determine unroll factor");
-  setProfileInfoAfterUnrolling(LI->getLoopFor(LoopScalarBody),
-                               LI->getLoopFor(LoopVectorBody),
-                               LI->getLoopFor(LoopScalarBody), VF.Min * UF);
+  setProfileInfoAfterUnrolling(
+      LI->getLoopFor(LoopScalarBody), LI->getLoopFor(LoopVectorBody),
+      LI->getLoopFor(LoopScalarBody), VF.getKnownMinValue() * UF);
 }
 
 void InnerLoopVectorizer::fixCrossIterationPHIs() {
@@ -3769,10 +3777,10 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi) {
   auto *VectorInit = ScalarInit;
   if (VF.isVector()) {
     Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
-    assert(!VF.Scalable && "VF is assumed to be non scalable.");
+    assert(!VF.isScalable() && "VF is assumed to be non scalable.");
     VectorInit = Builder.CreateInsertElement(
         UndefValue::get(VectorType::get(VectorInit->getType(), VF)), VectorInit,
-        Builder.getInt32(VF.Min - 1), "vector.recur.init");
+        Builder.getInt32(VF.getKnownMinValue() - 1), "vector.recur.init");
   }
 
   // We constructed a temporary phi node in the first phase of vectorization.
@@ -3813,11 +3821,11 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi) {
 
   // We will construct a vector for the recurrence by combining the values for
   // the current and previous iterations. This is the required shuffle mask.
-  assert(!VF.Scalable);
-  SmallVector<int, 8> ShuffleMask(VF.Min);
-  ShuffleMask[0] = VF.Min - 1;
-  for (unsigned I = 1; I < VF.Min; ++I)
-    ShuffleMask[I] = I + VF.Min - 1;
+  assert(!VF.isScalable());
+  SmallVector<int, 8> ShuffleMask(VF.getKnownMinValue());
+  ShuffleMask[0] = VF.getKnownMinValue() - 1;
+  for (unsigned I = 1; I < VF.getKnownMinValue(); ++I)
+    ShuffleMask[I] = I + VF.getKnownMinValue() - 1;
 
   // The vector from which to take the initial value for the current iteration
   // (actual or unrolled). Initially, this is the vector phi node.
@@ -3846,7 +3854,8 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi) {
   if (VF.isVector()) {
     Builder.SetInsertPoint(LoopMiddleBlock->getTerminator());
     ExtractForScalar = Builder.CreateExtractElement(
-        ExtractForScalar, Builder.getInt32(VF.Min - 1), "vector.recur.extract");
+        ExtractForScalar, Builder.getInt32(VF.getKnownMinValue() - 1),
+        "vector.recur.extract");
   }
   // Extract the second last element in the middle block if the
   // Phi is used outside the loop. We need to extract the phi itself
@@ -3856,7 +3865,8 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi) {
   Value *ExtractForPhiUsedOutsideLoop = nullptr;
   if (VF.isVector())
     ExtractForPhiUsedOutsideLoop = Builder.CreateExtractElement(
-        Incoming, Builder.getInt32(VF.Min - 2), "vector.recur.extract.for.phi");
+        Incoming, Builder.getInt32(VF.getKnownMinValue() - 2),
+        "vector.recur.extract.for.phi");
   // When loop is unrolled without vectorizing, initialize
   // ExtractForPhiUsedOutsideLoop with the value just prior to unrolled value of
   // `Incoming`. This is analogous to the vectorized case above: extracting the
@@ -4013,7 +4023,7 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
   // entire expression in the smaller type.
   if (VF.isVector() && Phi->getType() != RdxDesc.getRecurrenceType()) {
     assert(!IsInLoopReductionPhi && "Unexpected truncated inloop reduction!");
-    assert(!VF.Scalable && "scalable vectors not yet supported.");
+    assert(!VF.isScalable() && "scalable vectors not yet supported.");
     Type *RdxVecTy = VectorType::get(RdxDesc.getRecurrenceType(), VF);
     Builder.SetInsertPoint(
         LI->getLoopFor(LoopVectorBody)->getLoopLatch()->getTerminator());
@@ -4145,7 +4155,7 @@ void InnerLoopVectorizer::clearReductionWrapFlags(
 }
 
 void InnerLoopVectorizer::fixLCSSAPHIs() {
-  assert(!VF.Scalable && "the code below assumes fixed width vectors");
+  assert(!VF.isScalable() && "the code below assumes fixed width vectors");
   for (PHINode &LCSSAPhi : LoopExitBlock->phis()) {
     if (LCSSAPhi.getNumIncomingValues() == 1) {
       auto *IncomingValue = LCSSAPhi.getIncomingValue(0);
@@ -4155,7 +4165,7 @@ void InnerLoopVectorizer::fixLCSSAPHIs() {
         LastLane = Cost->isUniformAfterVectorization(
                        cast<Instruction>(IncomingValue), VF)
                        ? 0
-                       : VF.Min - 1;
+                       : VF.getKnownMinValue() - 1;
       // Can be a loop invariant incoming value or the last scalar value to be
       // extracted from the vectorized loop.
       Builder.SetInsertPoint(LoopMiddleBlock->getTerminator());
@@ -4338,7 +4348,7 @@ void InnerLoopVectorizer::widenGEP(GetElementPtrInst *GEP, VPUser &Operands,
 
 void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,
                                               ElementCount VF) {
-  assert(!VF.Scalable && "scalable vectors not yet supported.");
+  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   PHINode *P = cast<PHINode>(PN);
   if (EnableVPlanNativePath) {
     // Currently we enter here in the VPlan-native path for non-induction
@@ -4403,11 +4413,12 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,
       // Determine the number of scalars we need to generate for each unroll
       // iteration. If the instruction is uniform, we only need to generate the
       // first lane. Otherwise, we generate all VF values.
-      unsigned Lanes = Cost->isUniformAfterVectorization(P, VF) ? 1 : VF.Min;
+      unsigned Lanes =
+          Cost->isUniformAfterVectorization(P, VF) ? 1 : VF.getKnownMinValue();
       for (unsigned Part = 0; Part < UF; ++Part) {
         for (unsigned Lane = 0; Lane < Lanes; ++Lane) {
-          Constant *Idx =
-              ConstantInt::get(PtrInd->getType(), Lane + Part * VF.Min);
+          Constant *Idx = ConstantInt::get(PtrInd->getType(),
+                                           Lane + Part * VF.getKnownMinValue());
           Value *GlobalIdx = Builder.CreateAdd(PtrInd, Idx);
           Value *SclrGep =
               emitTransformedIndex(Builder, GlobalIdx, PSE.getSE(), DL, II);
@@ -4437,8 +4448,9 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,
         Exp.expandCodeFor(ScalarStep, PhiType, InductionLoc);
     Value *InductionGEP = GetElementPtrInst::Create(
         ScStValueType->getPointerElementType(), NewPointerPhi,
-        Builder.CreateMul(ScalarStepValue,
-                          ConstantInt::get(PhiType, VF.Min * UF)),
+        Builder.CreateMul(
+            ScalarStepValue,
+            ConstantInt::get(PhiType, VF.getKnownMinValue() * UF)),
         "ptr.ind", InductionLoc);
     NewPointerPhi->addIncoming(InductionGEP, LoopLatch);
 
@@ -4448,15 +4460,17 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN, unsigned UF,
     for (unsigned Part = 0; Part < UF; ++Part) {
       SmallVector<Constant *, 8> Indices;
       // Create a vector of consecutive numbers from zero to VF.
-      for (unsigned i = 0; i < VF.Min; ++i)
-        Indices.push_back(ConstantInt::get(PhiType, i + Part * VF.Min));
+      for (unsigned i = 0; i < VF.getKnownMinValue(); ++i)
+        Indices.push_back(
+            ConstantInt::get(PhiType, i + Part * VF.getKnownMinValue()));
       Constant *StartOffset = ConstantVector::get(Indices);
 
       Value *GEP = Builder.CreateGEP(
           ScStValueType->getPointerElementType(), NewPointerPhi,
-          Builder.CreateMul(StartOffset,
-                            Builder.CreateVectorSplat(VF.Min, ScalarStepValue),
-                            "vector.gep"));
+          Builder.CreateMul(
+              StartOffset,
+              Builder.CreateVectorSplat(VF.getKnownMinValue(), ScalarStepValue),
+              "vector.gep"));
       VectorLoopValueMap.setVectorValue(P, Part, GEP);
     }
   }
@@ -4483,7 +4497,7 @@ static bool mayDivideByZero(Instruction &I) {
 
 void InnerLoopVectorizer::widenInstruction(Instruction &I, VPUser &User,
                                            VPTransformState &State) {
-  assert(!VF.Scalable && "scalable vectors not yet supported.");
+  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   switch (I.getOpcode()) {
   case Instruction::Call:
   case Instruction::Br:
@@ -4571,7 +4585,7 @@ void InnerLoopVectorizer::widenInstruction(Instruction &I, VPUser &User,
     setDebugLocFromInst(Builder, CI);
 
     /// Vectorize casts.
-    assert(!VF.Scalable && "VF is assumed to be non scalable.");
+    assert(!VF.isScalable() && "VF is assumed to be non scalable.");
     Type *DestTy =
         (VF.isScalar()) ? CI->getType() : VectorType::get(CI->getType(), VF);
 
@@ -4601,7 +4615,7 @@ void InnerLoopVectorizer::widenCallInstruction(CallInst &I, VPUser &ArgOperands,
 
   SmallVector<Type *, 4> Tys;
   for (Value *ArgOperand : CI->arg_operands())
-    Tys.push_back(ToVectorTy(ArgOperand->getType(), VF.Min));
+    Tys.push_back(ToVectorTy(ArgOperand->getType(), VF.getKnownMinValue()));
 
   Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
 
@@ -4633,7 +4647,7 @@ void InnerLoopVectorizer::widenCallInstruction(CallInst &I, VPUser &ArgOperands,
       // Use vector version of the intrinsic.
       Type *TysForDecl[] = {CI->getType()};
       if (VF.isVector()) {
-        assert(!VF.Scalable && "VF is assumed to be non scalable.");
+        assert(!VF.isScalable() && "VF is assumed to be non scalable.");
         TysForDecl[0] = VectorType::get(CI->getType()->getScalarType(), VF);
       }
       VectorF = Intrinsic::getDeclaration(M, ID, TysForDecl);
@@ -4872,7 +4886,7 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
 
 bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
                                                          ElementCount VF) {
-  assert(!VF.Scalable && "scalable vectors not yet supported.");
+  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   if (!blockNeedsPredication(I->getParent()))
     return false;
   switch(I->getOpcode()) {
@@ -5357,7 +5371,7 @@ LoopVectorizationCostModel::computeFeasibleMaxVF(unsigned ConstTripCount) {
           Selected = false;
       }
       if (Selected) {
-        MaxVF = VFs[i].Min;
+        MaxVF = VFs[i].getKnownMinValue();
         break;
       }
     }
@@ -5558,8 +5572,9 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   }
 
   // Clamp the interleave ranges to reasonable counts.
-  assert(!VF.Scalable && "scalable vectors not yet supported.");
-  unsigned MaxInterleaveCount = TTI.getMaxInterleaveFactor(VF.Min);
+  assert(!VF.isScalable() && "scalable vectors not yet supported.");
+  unsigned MaxInterleaveCount =
+      TTI.getMaxInterleaveFactor(VF.getKnownMinValue());
 
   // Check if the user has overridden the max.
   if (VF == 1) {
@@ -5573,7 +5588,8 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   // If trip count is known or estimated compile time constant, limit the
   // interleave count to be less than the trip count divided by VF.
   if (BestKnownTC) {
-    MaxInterleaveCount = std::min(*BestKnownTC / VF.Min, MaxInterleaveCount);
+    MaxInterleaveCount =
+        std::min(*BestKnownTC / VF.getKnownMinValue(), MaxInterleaveCount);
   }
 
   // If we did not calculate the cost for VF (because the user selected the VF)
@@ -5745,8 +5761,9 @@ LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
     if (Ty->isTokenTy())
       return 0U;
     unsigned TypeSize = DL.getTypeSizeInBits(Ty->getScalarType());
-    assert(!VF.Scalable && "scalable vectors not yet supported.");
-    return std::max<unsigned>(1, VF.Min * TypeSize / WidestRegister);
+    assert(!VF.isScalable() && "scalable vectors not yet supported.");
+    return std::max<unsigned>(1, VF.getKnownMinValue() * TypeSize /
+                                     WidestRegister);
   };
 
   for (unsigned int i = 0, s = IdxToInstr.size(); i < s; ++i) {
@@ -5973,19 +5990,20 @@ int LoopVectorizationCostModel::computePredInstDiscount(
     // the instruction as if it wasn't if-converted and instead remained in the
     // predicated block. We will scale this cost by block probability after
     // computing the scalarization overhead.
-    assert(!VF.Scalable && "scalable vectors not yet supported.");
+    assert(!VF.isScalable() && "scalable vectors not yet supported.");
     unsigned ScalarCost =
-        VF.Min * getInstructionCost(I, ElementCount::getFixed(1)).first;
+        VF.getKnownMinValue() *
+        getInstructionCost(I, ElementCount::getFixed(1)).first;
 
     // Compute the scalarization overhead of needed insertelement instructions
     // and phi nodes.
     if (isScalarWithPredication(I) && !I->getType()->isVoidTy()) {
       ScalarCost += TTI.getScalarizationOverhead(
           cast<VectorType>(ToVectorTy(I->getType(), VF)),
-          APInt::getAllOnesValue(VF.Min), true, false);
-      assert(!VF.Scalable && "scalable vectors not yet supported.");
+          APInt::getAllOnesValue(VF.getKnownMinValue()), true, false);
+      assert(!VF.isScalable() && "scalable vectors not yet supported.");
       ScalarCost +=
-          VF.Min *
+          VF.getKnownMinValue() *
           TTI.getCFInstrCost(Instruction::PHI, TTI::TCK_RecipThroughput);
     }
 
@@ -6000,10 +6018,10 @@ int LoopVectorizationCostModel::computePredInstDiscount(
         if (canBeScalarized(J))
           Worklist.push_back(J);
         else if (needsExtract(J, VF)) {
-          assert(!VF.Scalable && "scalable vectors not yet supported.");
+          assert(!VF.isScalable() && "scalable vectors not yet supported.");
           ScalarCost += TTI.getScalarizationOverhead(
               cast<VectorType>(ToVectorTy(J->getType(), VF)),
-              APInt::getAllOnesValue(VF.Min), false, true);
+              APInt::getAllOnesValue(VF.getKnownMinValue()), false, true);
         }
       }
 
@@ -6021,7 +6039,7 @@ int LoopVectorizationCostModel::computePredInstDiscount(
 
 LoopVectorizationCostModel::VectorizationCostTy
 LoopVectorizationCostModel::expectedCost(ElementCount VF) {
-  assert(!VF.Scalable && "scalable vectors not yet supported.");
+  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   VectorizationCostTy Cost;
 
   // For each block.
@@ -6104,7 +6122,7 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
                                                         ElementCount VF) {
   assert(VF.isVector() &&
          "Scalarization cost of instruction implies vectorization.");
-  assert(!VF.Scalable && "scalable vectors not yet supported.");
+  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   Type *ValTy = getMemInstValueType(I);
   auto SE = PSE.getSE();
 
@@ -6117,12 +6135,13 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   const SCEV *PtrSCEV = getAddressAccessSCEV(Ptr, Legal, PSE, TheLoop);
 
   // Get the cost of the scalar memory instruction and address computation.
-  unsigned Cost = VF.Min * TTI.getAddressComputationCost(PtrTy, SE, PtrSCEV);
+  unsigned Cost =
+      VF.getKnownMinValue() * TTI.getAddressComputationCost(PtrTy, SE, PtrSCEV);
 
   // Don't pass *I here, since it is scalar but will actually be part of a
   // vectorized loop where the user of it is a vectorized instruction.
   const Align Alignment = getLoadStoreAlignment(I);
-  Cost += VF.Min *
+  Cost += VF.getKnownMinValue() *
           TTI.getMemoryOpCost(I->getOpcode(), ValTy->getScalarType(), Alignment,
                               AS, TTI::TCK_RecipThroughput);
 
@@ -6190,9 +6209,10 @@ unsigned LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
   return TTI.getAddressComputationCost(ValTy) +
          TTI.getMemoryOpCost(Instruction::Store, ValTy, Alignment, AS,
                              CostKind) +
-         (isLoopInvariantStoreValue ? 0 : TTI.getVectorInstrCost(
-                                              Instruction::ExtractElement,
-                                              VectorTy, VF.Min - 1));
+         (isLoopInvariantStoreValue
+              ? 0
+              : TTI.getVectorInstrCost(Instruction::ExtractElement, VectorTy,
+                                       VF.getKnownMinValue() - 1));
 }
 
 unsigned LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
@@ -6218,7 +6238,7 @@ unsigned LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
   assert(Group && "Fail to get an interleaved access group.");
 
   unsigned InterleaveFactor = Group->getFactor();
-  assert(!VF.Scalable && "scalable vectors not yet supported.");
+  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   auto *WideVecTy = VectorType::get(ValTy, VF * InterleaveFactor);
 
   // Holds the indices of existing members in an interleaved load group.
@@ -6266,7 +6286,7 @@ unsigned LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
 LoopVectorizationCostModel::VectorizationCostTy
 LoopVectorizationCostModel::getInstructionCost(Instruction *I,
                                                ElementCount VF) {
-  assert(!VF.Scalable &&
+  assert(!VF.isScalable() &&
          "the cost model is not yet implemented for scalable vectorization");
   // If we know that this instruction will remain uniform, check the cost of
   // the scalar version.
@@ -6282,22 +6302,24 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     auto InstSet = ForcedScalar->second;
     if (InstSet.count(I))
       return VectorizationCostTy(
-          (getInstructionCost(I, ElementCount::getFixed(1)).first * VF.Min),
+          (getInstructionCost(I, ElementCount::getFixed(1)).first *
+           VF.getKnownMinValue()),
           false);
   }
 
   Type *VectorTy;
   unsigned C = getInstructionCost(I, VF, VectorTy);
 
-  bool TypeNotScalarized = VF.isVector() && VectorTy->isVectorTy() &&
-                           TTI.getNumberOfParts(VectorTy) < VF.Min;
+  bool TypeNotScalarized =
+      VF.isVector() && VectorTy->isVectorTy() &&
+      TTI.getNumberOfParts(VectorTy) < VF.getKnownMinValue();
   return VectorizationCostTy(C, TypeNotScalarized);
 }
 
 unsigned LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
                                                               ElementCount VF) {
 
-  assert(!VF.Scalable &&
+  assert(!VF.isScalable() &&
          "cannot compute scalarization overhead for scalable vectorization");
   if (VF.isScalar())
     return 0;
@@ -6307,7 +6329,8 @@ unsigned LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
   if (!RetTy->isVoidTy() &&
       (!isa<LoadInst>(I) || !TTI.supportsEfficientVectorElementLoadStore()))
     Cost += TTI.getScalarizationOverhead(
-        cast<VectorType>(RetTy), APInt::getAllOnesValue(VF.Min), true, false);
+        cast<VectorType>(RetTy), APInt::getAllOnesValue(VF.getKnownMinValue()),
+        true, false);
 
   // Some targets keep addresses scalar.
   if (isa<LoadInst>(I) && !TTI.prefersVectorizedAddressing())
@@ -6323,13 +6346,12 @@ unsigned LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
 
   // Skip operands that do not require extraction/scalarization and do not incur
   // any overhead.
-  return Cost +
-         TTI.getOperandsScalarizationOverhead(filterExtractingOperands(Ops, VF),
-                                              VF.Min);
+  return Cost + TTI.getOperandsScalarizationOverhead(
+                    filterExtractingOperands(Ops, VF), VF.getKnownMinValue());
 }
 
 void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
-  assert(!VF.Scalable && "scalable vectors not yet supported.");
+  assert(!VF.isScalable() && "scalable vectors not yet supported.");
   if (VF.isScalar())
     return;
   NumPredStores = 0;
@@ -6466,14 +6488,15 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         // Scalarize a widened load of address.
         setWideningDecision(
             I, VF, CM_Scalarize,
-            (VF.Min * getMemoryInstructionCost(I, ElementCount::getFixed(1))));
+            (VF.getKnownMinValue() *
+             getMemoryInstructionCost(I, ElementCount::getFixed(1))));
       else if (auto Group = getInterleavedAccessGroup(I)) {
         // Scalarize an interleave group of address loads.
         for (unsigned I = 0; I < Group->getFactor(); ++I) {
           if (Instruction *Member = Group->getMember(I))
             setWideningDecision(
                 Member, VF, CM_Scalarize,
-                (VF.Min *
+                (VF.getKnownMinValue() *
                  getMemoryInstructionCost(Member, ElementCount::getFixed(1))));
         }
       }
@@ -6515,12 +6538,14 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
 
     if (ScalarPredicatedBB) {
       // Return cost for branches around scalarized and predicated blocks.
-      assert(!VF.Scalable && "scalable vectors not yet supported.");
+      assert(!VF.isScalable() && "scalable vectors not yet supported.");
       auto *Vec_i1Ty =
           VectorType::get(IntegerType::getInt1Ty(RetTy->getContext()), VF);
       return (TTI.getScalarizationOverhead(
-                  Vec_i1Ty, APInt::getAllOnesValue(VF.Min), false, true) +
-              (TTI.getCFInstrCost(Instruction::Br, CostKind) * VF.Min));
+                  Vec_i1Ty, APInt::getAllOnesValue(VF.getKnownMinValue()),
+                  false, true) +
+              (TTI.getCFInstrCost(Instruction::Br, CostKind) *
+               VF.getKnownMinValue()));
     } else if (I->getParent() == TheLoop->getLoopLatch() || VF.isScalar())
       // The back-edge branch will remain, as will all scalar branches.
       return TTI.getCFInstrCost(Instruction::Br, CostKind);
@@ -6537,9 +6562,9 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     // First-order recurrences are replaced by vector shuffles inside the loop.
     // NOTE: Don't use ToVectorTy as SK_ExtractSubvector expects a vector type.
     if (VF.isVector() && Legal->isFirstOrderRecurrence(Phi))
-      return TTI.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
-                                cast<VectorType>(VectorTy), VF.Min - 1,
-                                FixedVectorType::get(RetTy, 1));
+      return TTI.getShuffleCost(
+          TargetTransformInfo::SK_ExtractSubvector, cast<VectorType>(VectorTy),
+          VF.getKnownMinValue() - 1, FixedVectorType::get(RetTy, 1));
 
     // Phi nodes in non-header blocks (not inductions, reductions, etc.) are
     // converted into select instructions. We require N - 1 selects per phi
@@ -6568,11 +6593,12 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       // that we will create. This cost is likely to be zero. The phi node
       // cost, if any, should be scaled by the block probability because it
       // models a copy at the end of each predicated block.
-      Cost += VF.Min * TTI.getCFInstrCost(Instruction::PHI, CostKind);
+      Cost += VF.getKnownMinValue() *
+              TTI.getCFInstrCost(Instruction::PHI, CostKind);
 
       // The cost of the non-predicated instruction.
-      Cost +=
-          VF.Min * TTI.getArithmeticInstrCost(I->getOpcode(), RetTy, CostKind);
+      Cost += VF.getKnownMinValue() *
+              TTI.getArithmeticInstrCost(I->getOpcode(), RetTy, CostKind);
 
       // The cost of insertelement and extractelement instructions needed for
       // scalarization.
@@ -6611,15 +6637,15 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       Op2VK = TargetTransformInfo::OK_UniformValue;
 
     SmallVector<const Value *, 4> Operands(I->operand_values());
-    unsigned N = isScalarAfterVectorization(I, VF) ? VF.Min : 1;
+    unsigned N = isScalarAfterVectorization(I, VF) ? VF.getKnownMinValue() : 1;
     return N * TTI.getArithmeticInstrCost(
                    I->getOpcode(), VectorTy, CostKind,
                    TargetTransformInfo::OK_AnyValue,
                    Op2VK, TargetTransformInfo::OP_None, Op2VP, Operands, I);
   }
   case Instruction::FNeg: {
-    assert(!VF.Scalable && "VF is assumed to be non scalable.");
-    unsigned N = isScalarAfterVectorization(I, VF) ? VF.Min : 1;
+    assert(!VF.isScalable() && "VF is assumed to be non scalable.");
+    unsigned N = isScalarAfterVectorization(I, VF) ? VF.getKnownMinValue() : 1;
     return N * TTI.getArithmeticInstrCost(
                    I->getOpcode(), VectorTy, CostKind,
                    TargetTransformInfo::OK_AnyValue,
@@ -6633,7 +6659,7 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     bool ScalarCond = (SE->isLoopInvariant(CondSCEV, TheLoop));
     Type *CondTy = SI->getCondition()->getType();
     if (!ScalarCond) {
-      assert(!VF.Scalable && "VF is assumed to be non scalable.");
+      assert(!VF.isScalable() && "VF is assumed to be non scalable.");
       CondTy = VectorType::get(CondTy, VF);
     }
     return TTI.getCmpSelInstrCost(I->getOpcode(), VectorTy, CondTy,
@@ -6745,8 +6771,8 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       }
     }
 
-    assert(!VF.Scalable && "VF is assumed to be non scalable");
-    unsigned N = isScalarAfterVectorization(I, VF) ? VF.Min : 1;
+    assert(!VF.isScalable() && "VF is assumed to be non scalable");
+    unsigned N = isScalarAfterVectorization(I, VF) ? VF.getKnownMinValue() : 1;
     return N *
            TTI.getCastInstrCost(Opcode, VectorTy, SrcVecTy, CCH, CostKind, I);
   }
@@ -6761,9 +6787,8 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   default:
     // The cost of executing VF copies of the scalar instruction. This opcode
     // is unknown. Assume that it is the same as 'mul'.
-    return VF.Min *
-               TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy,
-                                          CostKind) +
+    return VF.getKnownMinValue() * TTI.getArithmeticInstrCost(
+                                       Instruction::Mul, VectorTy, CostKind) +
            getScalarizationOverhead(I, VF);
   } // end of switch.
 }
@@ -6870,7 +6895,7 @@ static unsigned determineVPlanVF(const unsigned WidestVectorRegBits,
 
 VectorizationFactor
 LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
-  assert(!UserVF.Scalable && "scalable vectors not yet supported");
+  assert(!UserVF.isScalable() && "scalable vectors not yet supported");
   ElementCount VF = UserVF;
   // Outer loop handling: They may require CFG and instruction level
   // transformations before even evaluating whether vectorization is profitable.
@@ -6892,10 +6917,11 @@ LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
       }
     }
     assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
-    assert(isPowerOf2_32(VF.Min) && "VF needs to be a power of two");
+    assert(isPowerOf2_32(VF.getKnownMinValue()) &&
+           "VF needs to be a power of two");
     LLVM_DEBUG(dbgs() << "LV: Using " << (!UserVF.isZero() ? "user " : "")
                       << "VF " << VF << " to build VPlans.\n");
-    buildVPlans(VF.Min, VF.Min);
+    buildVPlans(VF.getKnownMinValue(), VF.getKnownMinValue());
 
     // For VPlan build stress testing, we bail out after VPlan construction.
     if (VPlanBuildStressTest)
@@ -6912,9 +6938,10 @@ LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
 
 Optional<VectorizationFactor>
 LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
-  assert(!UserVF.Scalable && "scalable vectorization not yet handled");
+  assert(!UserVF.isScalable() && "scalable vectorization not yet handled");
   assert(OrigLoop->empty() && "Inner loop expected.");
-  Optional<unsigned> MaybeMaxVF = CM.computeMaxVF(UserVF.Min, UserIC);
+  Optional<unsigned> MaybeMaxVF =
+      CM.computeMaxVF(UserVF.getKnownMinValue(), UserIC);
   if (!MaybeMaxVF) // Cases that should not to be vectorized nor interleaved.
     return None;
 
@@ -6934,12 +6961,14 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
 
   if (!UserVF.isZero()) {
     LLVM_DEBUG(dbgs() << "LV: Using user VF " << UserVF << ".\n");
-    assert(isPowerOf2_32(UserVF.Min) && "VF needs to be a power of two");
+    assert(isPowerOf2_32(UserVF.getKnownMinValue()) &&
+           "VF needs to be a power of two");
     // Collect the instructions (and their associated costs) that will be more
     // profitable to scalarize.
     CM.selectUserVectorizationFactor(UserVF);
     CM.collectInLoopReductions();
-    buildVPlansWithVPRecipes(UserVF.Min, UserVF.Min);
+    buildVPlansWithVPRecipes(UserVF.getKnownMinValue(),
+                             UserVF.getKnownMinValue());
     LLVM_DEBUG(printPlans(dbgs()));
     return {{UserVF, 0}};
   }
@@ -7228,7 +7257,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, VFRange &Range,
          "Must be called with either a load or store");
 
   auto willWiden = [&](ElementCount VF) -> bool {
-    assert(!VF.Scalable && "unexpected scalable ElementCount");
+    assert(!VF.isScalable() && "unexpected scalable ElementCount");
     if (VF.isScalar())
       return false;
     LoopVectorizationCostModel::InstWidening Decision =
@@ -7762,7 +7791,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   ElementCount VF = ElementCount::getFixed(Range.Start);
   Plan->addVF(VF);
   RSO << "Initial VPlan for VF={" << VF;
-  for (VF.Min *= 2; VF.Min < Range.End; VF.Min *= 2) {
+  for (VF *= 2; VF.getKnownMinValue() < Range.End; VF *= 2) {
     Plan->addVF(VF);
     RSO << "," << VF;
   }
@@ -7986,7 +8015,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
     if (AlsoPack && State.VF.isVector()) {
       // If we're constructing lane 0, initialize to start from undef.
       if (State.Instance->Lane == 0) {
-        assert(!State.VF.Scalable && "VF is assumed to be non scalable.");
+        assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
         Value *Undef =
             UndefValue::get(VectorType::get(Ingredient->getType(), State.VF));
         State.ValueMap.setVectorValue(Ingredient, State.Instance->Part, Undef);
@@ -7999,7 +8028,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   // Generate scalar instances for all VF lanes of all UF parts, unless the
   // instruction is uniform inwhich case generate only the first lane for each
   // of the UF parts.
-  unsigned EndLane = IsUniform ? 1 : State.VF.Min;
+  unsigned EndLane = IsUniform ? 1 : State.VF.getKnownMinValue();
   for (unsigned Part = 0; Part < State.UF; ++Part)
     for (unsigned Lane = 0; Lane < EndLane; ++Lane)
       State.ILV->scalarizeInstruction(Ingredient, User, {Part, Lane},

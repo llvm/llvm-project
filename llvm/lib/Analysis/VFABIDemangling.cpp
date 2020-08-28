@@ -442,7 +442,7 @@ Optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
     if (!F)
       return None;
     const ElementCount EC = getECFromSignature(F->getFunctionType());
-    VF = EC.Min;
+    VF = EC.getKnownMinValue();
   }
 
   // Sanity checks.
