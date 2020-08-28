@@ -426,6 +426,12 @@ public:
     return parseOptionalAttribute(result, Type(), attrName, attrs);
   }
 
+  /// Specialized variants of `parseOptionalAttribute` that remove potential
+  /// ambiguities in syntax.
+  virtual OptionalParseResult parseOptionalAttribute(ArrayAttr &result,
+                                                     StringRef attrName,
+                                                     NamedAttrList &attrs) = 0;
+
   /// Parse an arbitrary attribute of a given type and return it in result. This
   /// also adds the attribute to the specified attribute list with the specified
   /// name.

@@ -9,7 +9,7 @@ pdl.pattern : benefit(1) {
 
   // expected-error@below {{expected at least one argument}}
   "pdl.apply_constraint"() {name = "foo", params = []} : () -> ()
-  pdl.rewrite "rewriter"(%op)
+  pdl.rewrite %op with "rewriter"
 }
 
 // -----
@@ -25,14 +25,14 @@ pdl.pattern : benefit(1) {
   %attr = pdl.attribute : %type 10
 
   %op, %result = pdl.operation "foo.op" {"attr" = %attr} -> %type
-  pdl.rewrite "rewriter"(%op)
+  pdl.rewrite %op with "rewriter"
 }
 
 // -----
 
 pdl.pattern : benefit(1) {
   %op = pdl.operation "foo.op"
-  pdl.rewrite(%op) {
+  pdl.rewrite %op {
     %type = pdl.type
 
     // expected-error@below {{expected constant value when specified within a `pdl.rewrite`}}
@@ -44,7 +44,7 @@ pdl.pattern : benefit(1) {
 
 pdl.pattern : benefit(1) {
   %op = pdl.operation "foo.op"
-  pdl.rewrite(%op) {
+  pdl.rewrite %op {
     // expected-error@below {{expected constant value when specified within a `pdl.rewrite`}}
     %attr = pdl.attribute
   }
@@ -57,7 +57,7 @@ pdl.pattern : benefit(1) {
   %unused = pdl.attribute
 
   %op = pdl.operation "foo.op"
-  pdl.rewrite "rewriter"(%op)
+  pdl.rewrite %op with "rewriter"
 }
 
 // -----
@@ -71,7 +71,7 @@ pdl.pattern : benefit(1) {
   %unused = pdl.input
 
   %op = pdl.operation "foo.op"
-  pdl.rewrite "rewriter"(%op)
+  pdl.rewrite %op with "rewriter"
 }
 
 // -----
@@ -82,7 +82,7 @@ pdl.pattern : benefit(1) {
 
 pdl.pattern : benefit(1) {
   %op = pdl.operation "foo.op"
-  pdl.rewrite(%op) {
+  pdl.rewrite %op {
     // expected-error@below {{must have an operation name when nested within a `pdl.rewrite`}}
     %newOp = pdl.operation
   }
@@ -96,14 +96,14 @@ pdl.pattern : benefit(1) {
     attributeNames = ["attr"],
     operand_segment_sizes = dense<0> : vector<3xi32>
   } : () -> (!pdl.operation)
-  pdl.rewrite "rewriter"(%op)
+  pdl.rewrite %op with "rewriter"
 }
 
 // -----
 
 pdl.pattern : benefit(1) {
   %op = pdl.operation "foo.op"()
-  pdl.rewrite (%op) {
+  pdl.rewrite %op {
     %type = pdl.type
 
     // expected-error@below {{op must have inferable or constrained result types when nested within `pdl.rewrite`}}
@@ -119,7 +119,7 @@ pdl.pattern : benefit(1) {
   %unused = pdl.operation "foo.op"
 
   %op = pdl.operation "foo.op"
-  pdl.rewrite "rewriter"(%op)
+  pdl.rewrite %op with "rewriter"
 }
 
 // -----
@@ -142,7 +142,7 @@ pdl.pattern : benefit(1) {
   "foo.other_op"() : () -> ()
 
   %root = pdl.operation "foo.op"
-  pdl.rewrite "foo"(%root)
+  pdl.rewrite %root with "foo"
 }
 
 // -----
@@ -153,7 +153,7 @@ pdl.pattern : benefit(1) {
 
 pdl.pattern : benefit(1) {
   %root = pdl.operation "foo.op"
-  pdl.rewrite (%root) {
+  pdl.rewrite %root {
     %type = pdl.type : i32
     %newOp, %newResult = pdl.operation "foo.op" -> %type
 
@@ -167,7 +167,7 @@ pdl.pattern : benefit(1) {
 pdl.pattern : benefit(1) {
   %type = pdl.type : i32
   %root, %oldResult = pdl.operation "foo.op" -> %type
-  pdl.rewrite (%root) {
+  pdl.rewrite %root {
     %newOp, %newResult = pdl.operation "foo.op" -> %type
 
     // expected-error@below {{expected no replacement values to be provided when the replacement operation is present}}
@@ -181,13 +181,62 @@ pdl.pattern : benefit(1) {
 
 pdl.pattern : benefit(1) {
   %root = pdl.operation "foo.op"
-  pdl.rewrite (%root) {
+  pdl.rewrite %root {
     %type = pdl.type : i32
     %newOp, %newResult = pdl.operation "foo.op" -> %type
 
     // expected-error@below {{to have the same number of results as the provided replacement values}}
     pdl.replace %root with (%newResult)
   }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// pdl::RewriteOp
+//===----------------------------------------------------------------------===//
+
+pdl.pattern : benefit(1) {
+  %op = pdl.operation "foo.op"
+
+  // expected-error@below {{expected rewrite region to be non-empty if external name is not specified}}
+  "pdl.rewrite"(%op) ({}) : (!pdl.operation) -> ()
+}
+
+// -----
+
+pdl.pattern : benefit(1) {
+  %op = pdl.operation "foo.op"
+
+  // expected-error@below {{expected no external arguments when the rewrite is specified inline}}
+  "pdl.rewrite"(%op, %op) ({
+    ^bb1:
+      pdl.rewrite_end
+  }) : (!pdl.operation, !pdl.operation) -> ()
+}
+
+// -----
+
+pdl.pattern : benefit(1) {
+  %op = pdl.operation "foo.op"
+
+  // expected-error@below {{expected no external constant parameters when the rewrite is specified inline}}
+  "pdl.rewrite"(%op) ({
+    ^bb1:
+      pdl.rewrite_end
+  }) {externalConstParams = []} : (!pdl.operation) -> ()
+}
+
+// -----
+
+pdl.pattern : benefit(1) {
+  %op = pdl.operation "foo.op"
+
+  // expected-error@below {{expected rewrite region to be empty when rewrite is external}}
+  "pdl.rewrite"(%op) ({
+    ^bb1:
+      pdl.rewrite_end
+  }) {name = "foo"} : (!pdl.operation) -> ()
 }
 
 // -----
@@ -201,5 +250,5 @@ pdl.pattern : benefit(1) {
   %unused = pdl.type
 
   %op = pdl.operation "foo.op"
-  pdl.rewrite "rewriter"(%op)
+  pdl.rewrite %op with "rewriter"
 }
