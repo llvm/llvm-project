@@ -266,6 +266,16 @@ void WeakBindingSection::writeTo(uint8_t *buf) const {
   memcpy(buf, contents.data(), contents.size());
 }
 
+bool macho::needsBinding(const Symbol *sym) {
+  if (isa<DylibSymbol>(sym)) {
+    return true;
+  } else if (const auto *defined = dyn_cast<Defined>(sym)) {
+    if (defined->isWeakDef() && defined->isExternal())
+      return true;
+  }
+  return false;
+}
+
 void macho::addNonLazyBindingEntries(const Symbol *sym,
                                      SectionPointerUnion section,
                                      uint64_t offset, int64_t addend) {

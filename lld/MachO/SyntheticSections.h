@@ -234,6 +234,9 @@ private:
   SmallVector<char, 128> contents;
 };
 
+// Whether a given symbol's address can only be resolved at runtime.
+bool needsBinding(const Symbol *);
+
 // Add bindings for symbols that need weak or non-lazy bindings.
 void addNonLazyBindingEntries(const Symbol *, SectionPointerUnion,
                               uint64_t offset, int64_t addend = 0);
