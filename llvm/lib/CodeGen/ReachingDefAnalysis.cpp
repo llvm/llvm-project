@@ -423,7 +423,9 @@ MachineInstr *ReachingDefAnalysis::getUniqueReachingMIDef(MachineInstr *MI,
 
   SmallPtrSet<MachineBasicBlock*, 4> VisitedBBs;
   SmallPtrSet<MachineInstr*, 2> Incoming;
-  for (auto *Pred : MI->getParent()->predecessors())
+  MachineBasicBlock *Parent = MI->getParent();
+  VisitedBBs.insert(Parent);
+  for (auto *Pred : Parent->predecessors())
     getLiveOuts(Pred, PhysReg, Incoming, VisitedBBs);
 
   // If we have a local def and an incoming instruction, then there's not a
