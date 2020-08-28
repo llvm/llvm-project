@@ -214,7 +214,7 @@ operations.
 We allow `index` types in tensors and memrefs as a code generation strategy has
 to map `index` to an implementation type and hence needs to be able to
 materialize corresponding values. However, the target might lack support for
-`vector` values with the target specfic equivalent of the `index` type.
+`vector` values with the target specific equivalent of the `index` type.
 
 ### Bit width of a non-primitive type and `index` is undefined
 
