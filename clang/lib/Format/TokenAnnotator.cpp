@@ -1890,9 +1890,10 @@ private:
 
     const FormatToken *NextToken = Tok.getNextNonComment();
     if (!NextToken ||
-        NextToken->isOneOf(tok::arrow, tok::equal, tok::kw_const,
-                           tok::kw_restrict, tok::kw_volatile,
-                           tok::kw___attribute, tok::kw_noexcept) ||
+        NextToken->isOneOf(
+            tok::arrow, tok::equal, tok::kw_const, tok::kw_restrict,
+            tok::kw_volatile, tok::kw___attribute, tok::kw__Nonnull,
+            tok::kw__Nullable, tok::kw__Null_unspecified, tok::kw_noexcept) ||
         (NextToken->is(tok::l_brace) && !NextToken->getNextNonComment()))
       return TT_PointerOrReference;
 
