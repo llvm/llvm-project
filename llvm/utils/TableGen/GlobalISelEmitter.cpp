@@ -1271,8 +1271,13 @@ public:
       : OperandPredicateMatcher(OPM_PointerToAny, InsnVarID, OpIdx),
         SizeInBits(SizeInBits) {}
 
-  static bool classof(const OperandPredicateMatcher *P) {
+  static bool classof(const PredicateMatcher *P) {
     return P->getKind() == OPM_PointerToAny;
+  }
+
+  bool isIdentical(const PredicateMatcher &B) const override {
+    return OperandPredicateMatcher::isIdentical(B) &&
+           SizeInBits == cast<PointerToAnyOperandMatcher>(&B)->SizeInBits;
   }
 
   void emitPredicateOpcodes(MatchTable &Table,
