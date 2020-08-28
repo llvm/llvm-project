@@ -102,7 +102,7 @@ TYPE_PARSER("AUTO" >> construct<AccClause>(construct<AccClause::Auto>()) ||
                   maybe(parenthesized(scalarLogicalExpr)))) ||
     "SEQ" >> construct<AccClause>(construct<AccClause::Seq>()) ||
     "TILE" >> construct<AccClause>(construct<AccClause::Tile>(
-                  parenthesized(Parser<AccSizeExprList>{}))) ||
+                  parenthesized(Parser<AccTileExprList>{}))) ||
     "USE_DEVICE" >> construct<AccClause>(construct<AccClause::UseDevice>(
                         parenthesized(Parser<AccObjectList>{}))) ||
     "VECTOR_LENGTH" >> construct<AccClause>(construct<AccClause::VectorLength>(
@@ -131,10 +131,19 @@ TYPE_PARSER(construct<AccWaitArgument>(maybe("DEVNUM:" >> scalarIntExpr / ":"),
     "QUEUES:" >> nonemptyList(scalarIntExpr) || nonemptyList(scalarIntExpr)))
 
 // 2.9 (1609) size-expr is one of:
+//   * (represented as an empty std::optional<ScalarIntExpr>)
 //   int-expr
 TYPE_PARSER(construct<AccSizeExpr>(scalarIntExpr) ||
-    construct<AccSizeExpr>("*" >> maybe(scalarIntExpr)))
+    construct<AccSizeExpr>("*" >> construct<std::optional<ScalarIntExpr>>()))
 TYPE_PARSER(construct<AccSizeExprList>(nonemptyList(Parser<AccSizeExpr>{})))
+
+// tile size is one of:
+//   * (represented as an empty std::optional<ScalarIntExpr>)
+//   constant-int-expr
+TYPE_PARSER(construct<AccTileExpr>(scalarIntConstantExpr) ||
+    construct<AccTileExpr>(
+        "*" >> construct<std::optional<ScalarIntConstantExpr>>()))
+TYPE_PARSER(construct<AccTileExprList>(nonemptyList(Parser<AccTileExpr>{})))
 
 // 2.9 (1607) gang-arg is one of:
 //   [num:]int-expr
