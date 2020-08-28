@@ -23,6 +23,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "spirv-to-llvm-pattern"
 
@@ -1332,8 +1333,6 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       // TODO: Support EntryPoint/ExecutionMode properly.
       ErasePattern<spirv::EntryPointOp>, ErasePattern<spirv::ExecutionModeOp>,
 
-      // Function Call op
-
       // GLSL extended instruction set ops
       DirectConversionPattern<spirv::GLSLCeilOp, LLVM::FCeilOp>,
       DirectConversionPattern<spirv::GLSLCosOp, LLVM::CosOp>,
@@ -1385,4 +1384,43 @@ void mlir::populateSPIRVToLLVMModuleConversionPatterns(
     OwningRewritePatternList &patterns) {
   patterns.insert<ModuleConversionPattern, ModuleEndConversionPattern>(
       context, typeConverter);
+}
+
+//===----------------------------------------------------------------------===//
+// Pre-conversion hooks
+//===----------------------------------------------------------------------===//
+
+/// Hook for descriptor set and binding number encoding.
+static constexpr StringRef kBinding = "binding";
+static constexpr StringRef kDescriptorSet = "descriptor_set";
+void mlir::encodeBindAttribute(ModuleOp module) {
+  auto spvModules = module.getOps<spirv::ModuleOp>();
+  for (auto spvModule : spvModules) {
+    spvModule.walk([&](spirv::GlobalVariableOp op) {
+      IntegerAttr descriptorSet = op.getAttrOfType<IntegerAttr>(kDescriptorSet);
+      IntegerAttr binding = op.getAttrOfType<IntegerAttr>(kBinding);
+      // For every global variable in the module, get the ones with descriptor
+      // set and binding numbers.
+      if (descriptorSet && binding) {
+        // Encode these numbers into the variable's symbolic name. If the
+        // SPIR-V module has a name, add it at the beginning.
+        auto moduleAndName = spvModule.getName().hasValue()
+                                 ? spvModule.getName().getValue().str() + "_" +
+                                       op.sym_name().str()
+                                 : op.sym_name().str();
+        std::string name =
+            llvm::formatv("{0}_descriptor_set{1}_binding{2}", moduleAndName,
+                          std::to_string(descriptorSet.getInt()),
+                          std::to_string(binding.getInt()));
+
+        // Replace all symbol uses and set the new symbol name. Finally, remove
+        // descriptor set and binding attributes.
+        if (failed(SymbolTable::replaceAllSymbolUses(op, name, spvModule)))
+          op.emitError("unable to replace all symbol uses for ") << name;
+        SymbolTable::setSymbolName(op, name);
+        op.removeAttr(kDescriptorSet);
+        op.removeAttr(kBinding);
+      }
+    });
+  }
 }
