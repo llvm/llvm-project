@@ -53,7 +53,7 @@ body:             |
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = G_CONSTANT i64 32
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), %0(p0), %1(p0), %2(s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
     RET_ReallyLR
 
 ...
@@ -75,12 +75,12 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
-    ; CHECK: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[COPY]](p0), [[COPY1]](p0), [[C]](s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    ; CHECK: G_MEMCPY [[COPY]](p0), [[COPY1]](p0), [[C]](s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = G_CONSTANT i64 36
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), %0(p0), %1(p0), %2(s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    G_MEMCPY %0(p0), %1(p0), %2(s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
     RET_ReallyLR
 
 ...
