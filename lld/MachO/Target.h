@@ -54,7 +54,7 @@ public:
   // GOT/stubs entries, and resolveSymbolVA() will return the addresses of those
   // entries. resolveSymbolVA() may also relax the target instructions to save
   // on a level of address indirection.
-  virtual void prepareSymbolRelocation(Symbol &, const InputSection *,
+  virtual void prepareSymbolRelocation(Symbol *, const InputSection *,
                                        const Reloc &) = 0;
   virtual uint64_t resolveSymbolVA(uint8_t *buf, const Symbol &,
                                    uint8_t type) const = 0;
