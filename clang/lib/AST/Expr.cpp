@@ -21,6 +21,7 @@
 #include "clang/AST/DependenceFlags.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
@@ -2779,118 +2780,6 @@ QualType Expr::findBoundMemberType(const Expr *expr) {
   return QualType();
 }
 
-static Expr *IgnoreImpCastsSingleStep(Expr *E) {
-  if (auto *ICE = dyn_cast<ImplicitCastExpr>(E))
-    return ICE->getSubExpr();
-
-  if (auto *FE = dyn_cast<FullExpr>(E))
-    return FE->getSubExpr();
-
-  return E;
-}
-
-static Expr *IgnoreImpCastsExtraSingleStep(Expr *E) {
-  // FIXME: Skip MaterializeTemporaryExpr and SubstNonTypeTemplateParmExpr in
-  // addition to what IgnoreImpCasts() skips to account for the current
-  // behaviour of IgnoreParenImpCasts().
-  Expr *SubE = IgnoreImpCastsSingleStep(E);
-  if (SubE != E)
-    return SubE;
-
-  if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
-    return MTE->getSubExpr();
-
-  if (auto *NTTP = dyn_cast<SubstNonTypeTemplateParmExpr>(E))
-    return NTTP->getReplacement();
-
-  return E;
-}
-
-static Expr *IgnoreCastsSingleStep(Expr *E) {
-  if (auto *CE = dyn_cast<CastExpr>(E))
-    return CE->getSubExpr();
-
-  if (auto *FE = dyn_cast<FullExpr>(E))
-    return FE->getSubExpr();
-
-  if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
-    return MTE->getSubExpr();
-
-  if (auto *NTTP = dyn_cast<SubstNonTypeTemplateParmExpr>(E))
-    return NTTP->getReplacement();
-
-  return E;
-}
-
-static Expr *IgnoreLValueCastsSingleStep(Expr *E) {
-  // Skip what IgnoreCastsSingleStep skips, except that only
-  // lvalue-to-rvalue casts are skipped.
-  if (auto *CE = dyn_cast<CastExpr>(E))
-    if (CE->getCastKind() != CK_LValueToRValue)
-      return E;
-
-  return IgnoreCastsSingleStep(E);
-}
-
-static Expr *IgnoreBaseCastsSingleStep(Expr *E) {
-  if (auto *CE = dyn_cast<CastExpr>(E))
-    if (CE->getCastKind() == CK_DerivedToBase ||
-        CE->getCastKind() == CK_UncheckedDerivedToBase ||
-        CE->getCastKind() == CK_NoOp)
-      return CE->getSubExpr();
-
-  return E;
-}
-
-static Expr *IgnoreImplicitSingleStep(Expr *E) {
-  Expr *SubE = IgnoreImpCastsSingleStep(E);
-  if (SubE != E)
-    return SubE;
-
-  if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
-    return MTE->getSubExpr();
-
-  if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
-    return BTE->getSubExpr();
-
-  return E;
-}
-
-static Expr *IgnoreImplicitAsWrittenSingleStep(Expr *E) {
-  if (auto *ICE = dyn_cast<ImplicitCastExpr>(E))
-    return ICE->getSubExprAsWritten();
-
-  return IgnoreImplicitSingleStep(E);
-}
-
-static Expr *IgnoreParensOnlySingleStep(Expr *E) {
-  if (auto *PE = dyn_cast<ParenExpr>(E))
-    return PE->getSubExpr();
-  return E;
-}
-
-static Expr *IgnoreParensSingleStep(Expr *E) {
-  if (auto *PE = dyn_cast<ParenExpr>(E))
-    return PE->getSubExpr();
-
-  if (auto *UO = dyn_cast<UnaryOperator>(E)) {
-    if (UO->getOpcode() == UO_Extension)
-      return UO->getSubExpr();
-  }
-
-  else if (auto *GSE = dyn_cast<GenericSelectionExpr>(E)) {
-    if (!GSE->isResultDependent())
-      return GSE->getResultExpr();
-  }
-
-  else if (auto *CE = dyn_cast<ChooseExpr>(E)) {
-    if (!CE->isConditionDependent())
-      return CE->getChosenSubExpr();
-  }
-
-  return E;
-}
-
 static Expr *IgnoreNoopCastsSingleStep(const ASTContext &Ctx, Expr *E) {
   if (auto *CE = dyn_cast<CastExpr>(E)) {
     // We ignore integer <-> casts that are of the same width, ptr<->ptr and
@@ -2914,27 +2803,8 @@ static Expr *IgnoreNoopCastsSingleStep(const ASTContext &Ctx, Expr *E) {
   return E;
 }
 
-static Expr *IgnoreExprNodesImpl(Expr *E) { return E; }
-template <typename FnTy, typename... FnTys>
-static Expr *IgnoreExprNodesImpl(Expr *E, FnTy &&Fn, FnTys &&... Fns) {
-  return IgnoreExprNodesImpl(Fn(E), std::forward<FnTys>(Fns)...);
-}
-
-/// Given an expression E and functions Fn_1,...,Fn_n : Expr * -> Expr *,
-/// Recursively apply each of the functions to E until reaching a fixed point.
-/// Note that a null E is valid; in this case nothing is done.
-template <typename... FnTys>
-static Expr *IgnoreExprNodes(Expr *E, FnTys &&... Fns) {
-  Expr *LastE = nullptr;
-  while (E != LastE) {
-    LastE = E;
-    E = IgnoreExprNodesImpl(E, std::forward<FnTys>(Fns)...);
-  }
-  return E;
-}
-
 Expr *Expr::IgnoreImpCasts() {
-  return IgnoreExprNodes(this, IgnoreImpCastsSingleStep);
+  return IgnoreExprNodes(this, IgnoreImplicitCastsSingleStep);
 }
 
 Expr *Expr::IgnoreCasts() {
@@ -2955,7 +2825,7 @@ Expr *Expr::IgnoreParens() {
 
 Expr *Expr::IgnoreParenImpCasts() {
   return IgnoreExprNodes(this, IgnoreParensSingleStep,
-                         IgnoreImpCastsExtraSingleStep);
+                         IgnoreImplicitCastsExtraSingleStep);
 }
 
 Expr *Expr::IgnoreParenCasts() {
@@ -2993,7 +2863,7 @@ Expr *Expr::IgnoreUnlessSpelledInSource() {
   while (E != LastE) {
     LastE = E;
     E = IgnoreExprNodes(E, IgnoreImplicitSingleStep,
-                        IgnoreImpCastsExtraSingleStep,
+                        IgnoreImplicitCastsExtraSingleStep,
                         IgnoreParensOnlySingleStep);
 
     auto SR = E->getSourceRange();
