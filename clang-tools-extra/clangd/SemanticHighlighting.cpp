@@ -221,23 +221,51 @@ public:
       // the end of the Tokens).
       TokRef = TokRef.drop_front(Conflicting.size());
     }
-    // Add tokens indicating lines skipped by the preprocessor.
-    for (const Range &R : AST.getMacros().SkippedRanges) {
+    const auto &SM = AST.getSourceManager();
+    StringRef MainCode = SM.getBuffer(SM.getMainFileID())->getBuffer();
+
+    // Merge token stream with "inactive line" markers.
+    std::vector<HighlightingToken> WithInactiveLines;
+    auto SortedSkippedRanges = AST.getMacros().SkippedRanges;
+    llvm::sort(SortedSkippedRanges);
+    auto It = NonConflicting.begin();
+    for (const Range &R : SortedSkippedRanges) {
       // Create one token for each line in the skipped range, so it works
       // with line-based diffing.
       assert(R.start.line <= R.end.line);
       for (int Line = R.start.line; Line <= R.end.line; ++Line) {
-        // Don't bother computing the offset for the end of the line, just use
-        // zero. The client will treat this highlighting kind specially, and
-        // highlight the entire line visually (i.e. not just to where the text
-        // on the line ends, but to the end of the screen).
-        NonConflicting.push_back({HighlightingKind::InactiveCode,
-                                  {Position{Line, 0}, Position{Line, 0}}});
+        // Copy tokens before the inactive line
+        for (; It != NonConflicting.end() && It->R.start.line < Line; ++It)
+          WithInactiveLines.push_back(std::move(*It));
+        // Add a token for the inactive line itself.
+        auto StartOfLine = positionToOffset(MainCode, Position{Line, 0});
+        if (StartOfLine) {
+          StringRef LineText =
+              MainCode.drop_front(*StartOfLine).take_until([](char C) {
+                return C == '\n';
+              });
+          WithInactiveLines.push_back(
+              {HighlightingKind::InactiveCode,
+               {Position{Line, 0},
+                Position{Line, static_cast<int>(lspLength(LineText))}}});
+        } else {
+          elog("Failed to convert position to offset: {0}",
+               StartOfLine.takeError());
+        }
+
+        // Skip any other tokens on the inactive line. e.g.
+        // `#ifndef Foo` is considered as part of an inactive region when Foo is
+        // defined, and there is a Foo macro token.
+        // FIXME: we should reduce the scope of the inactive region to not
+        // include the directive itself.
+        while (It != NonConflicting.end() && It->R.start.line == Line)
+          ++It;
       }
     }
-    // Re-sort the tokens because that's what the diffing expects.
-    llvm::sort(NonConflicting);
-    return NonConflicting;
+    // Copy tokens after the last inactive line
+    for (; It != NonConflicting.end(); ++It)
+      WithInactiveLines.push_back(std::move(*It));
+    return WithInactiveLines;
   }
 
 private:
@@ -493,9 +521,6 @@ toSemanticTokens(llvm::ArrayRef<HighlightingToken> Tokens) {
   std::vector<SemanticToken> Result;
   const HighlightingToken *Last = nullptr;
   for (const HighlightingToken &Tok : Tokens) {
-    // FIXME: support inactive code - we need to provide the actual bounds.
-    if (Tok.Kind == HighlightingKind::InactiveCode)
-      continue;
     Result.emplace_back();
     SemanticToken &Out = Result.back();
     // deltaStart/deltaLine are relative if possible.
