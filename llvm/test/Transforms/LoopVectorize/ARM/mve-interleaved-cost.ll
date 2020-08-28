@@ -417,12 +417,12 @@ entry:
 ; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: store i32 0, i32* %tmp1, align 4
 ; VF_2-NEXT:     Found an estimated cost of 18 for VF 2 For instruction: store i32 0, i32* %tmp2, align 4
 ; VF_4-LABEL:  Checking a loop in "i32_factor_3"
-; VF_4:          Found an estimated cost of 108 for VF 4 For instruction: %tmp3 = load i32, i32* %tmp0, align 4
+; VF_4:          Found an estimated cost of 24 for VF 4 For instruction: %tmp3 = load i32, i32* %tmp0, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp4 = load i32, i32* %tmp1, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp5 = load i32, i32* %tmp2, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store i32 0, i32* %tmp0, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store i32 0, i32* %tmp1, align 4
-; VF_4-NEXT:     Found an estimated cost of 60 for VF 4 For instruction: store i32 0, i32* %tmp2, align 4
+; VF_4-NEXT:     Found an estimated cost of 24 for VF 4 For instruction: store i32 0, i32* %tmp2, align 4
 ; VF_8-LABEL:  Checking a loop in "i32_factor_3"
 ; VF_8:          Found an estimated cost of 408 for VF 8 For instruction: %tmp3 = load i32, i32* %tmp0, align 4
 ; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp4 = load i32, i32* %tmp1, align 4
@@ -573,12 +573,12 @@ entry:
 ; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: store float 0.000000e+00, float* %tmp1, align 4
 ; VF_2-NEXT:     Found an estimated cost of 18 for VF 2 For instruction: store float 0.000000e+00, float* %tmp2, align 4
 ; VF_4-LABEL:  Checking a loop in "f32_factor_3"
-; VF_4:          Found an estimated cost of 108 for VF 4 For instruction: %tmp3 = load float, float* %tmp0, align 4
+; VF_4:          Found an estimated cost of 24 for VF 4 For instruction: %tmp3 = load float, float* %tmp0, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp4 = load float, float* %tmp1, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp5 = load float, float* %tmp2, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store float 0.000000e+00, float* %tmp0, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store float 0.000000e+00, float* %tmp1, align 4
-; VF_4-NEXT:     Found an estimated cost of 60 for VF 4 For instruction: store float 0.000000e+00, float* %tmp2, align 4
+; VF_4-NEXT:     Found an estimated cost of 24 for VF 4 For instruction: store float 0.000000e+00, float* %tmp2, align 4
 ; VF_8-LABEL:  Checking a loop in "f32_factor_3"
 ; VF_8:          Found an estimated cost of 408 for VF 8 For instruction: %tmp3 = load float, float* %tmp0, align 4
 ; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp4 = load float, float* %tmp1, align 4
@@ -808,14 +808,14 @@ entry:
 ; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: store i32 0, i32* %tmp2, align 4
 ; VF_2-NEXT:     Found an estimated cost of 24 for VF 2 For instruction: store i32 0, i32* %tmp3, align 4
 ; VF_4-LABEL:  Checking a loop in "i32_factor_4"
-; VF_4:          Found an estimated cost of 144 for VF 4 For instruction: %tmp4 = load i32, i32* %tmp0, align 4
+; VF_4:          Found an estimated cost of 32 for VF 4 For instruction: %tmp4 = load i32, i32* %tmp0, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp5 = load i32, i32* %tmp1, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp6 = load i32, i32* %tmp2, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp7 = load i32, i32* %tmp3, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store i32 0, i32* %tmp0, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store i32 0, i32* %tmp1, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store i32 0, i32* %tmp2, align 4
-; VF_4-NEXT:     Found an estimated cost of 80 for VF 4 For instruction: store i32 0, i32* %tmp3, align 4
+; VF_4-NEXT:     Found an estimated cost of 32 for VF 4 For instruction: store i32 0, i32* %tmp3, align 4
 ; VF_8-LABEL:  Checking a loop in "i32_factor_4"
 ; VF_8:          Found an estimated cost of 544 for VF 8 For instruction: %tmp4 = load i32, i32* %tmp0, align 4
 ; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp5 = load i32, i32* %tmp1, align 4
@@ -997,14 +997,14 @@ entry:
 ; VF_2-NEXT:     Found an estimated cost of 0 for VF 2 For instruction: store float 0.000000e+00, float* %tmp2, align 4
 ; VF_2-NEXT:     Found an estimated cost of 24 for VF 2 For instruction: store float 0.000000e+00, float* %tmp3, align 4
 ; VF_4-LABEL:  Checking a loop in "f32_factor_4"
-; VF_4:          Found an estimated cost of 144 for VF 4 For instruction: %tmp4 = load float, float* %tmp0, align 4
+; VF_4:          Found an estimated cost of 32 for VF 4 For instruction: %tmp4 = load float, float* %tmp0, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp5 = load float, float* %tmp1, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp6 = load float, float* %tmp2, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: %tmp7 = load float, float* %tmp3, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store float 0.000000e+00, float* %tmp0, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store float 0.000000e+00, float* %tmp1, align 4
 ; VF_4-NEXT:     Found an estimated cost of 0 for VF 4 For instruction: store float 0.000000e+00, float* %tmp2, align 4
-; VF_4-NEXT:     Found an estimated cost of 80 for VF 4 For instruction: store float 0.000000e+00, float* %tmp3, align 4
+; VF_4-NEXT:     Found an estimated cost of 32 for VF 4 For instruction: store float 0.000000e+00, float* %tmp3, align 4
 ; VF_8-LABEL:  Checking a loop in "f32_factor_4"
 ; VF_8:          Found an estimated cost of 544 for VF 8 For instruction: %tmp4 = load float, float* %tmp0, align 4
 ; VF_8-NEXT:     Found an estimated cost of 0 for VF 8 For instruction: %tmp5 = load float, float* %tmp1, align 4

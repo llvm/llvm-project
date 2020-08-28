@@ -1,19 +1,23 @@
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf \
+; RUN:   -enable-arm-maskedgatscat=false \
 ; RUN:   -tail-predication=enabled -loop-vectorize -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,PREFER-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=-mve \
 ; RUN:   -tail-predication=enabled -loop-vectorize \
+; RUN:   -enable-arm-maskedgatscat=false \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve \
 ; RUN:   -tail-predication=enabled -loop-vectorize \
+; RUN:   -enable-arm-maskedgatscat=false \
 ; RUN:   -enable-arm-maskedldst=false -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve \
 ; RUN:   -tail-predication=disabled -loop-vectorize \
+; RUN:   -enable-arm-maskedgatscat=false \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
 
@@ -22,23 +26,27 @@
 ; these cases.
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve,-lob \
 ; RUN:   -tail-predication=enabled -loop-vectorize \
+; RUN:   -enable-arm-maskedgatscat=false \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp \
 ; RUN:   -tail-predication=enabled -loop-vectorize \
+; RUN:   -enable-arm-maskedgatscat=false \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,PREFER-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp \
 ; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue \
 ; RUN:   -tail-predication=enabled -loop-vectorize \
+; RUN:   -enable-arm-maskedgatscat=false \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp \
 ; RUN:   -prefer-predicate-over-epilogue=predicate-dont-vectorize \
 ; RUN:   -tail-predication=enabled -loop-vectorize \
+; RUN:   -enable-arm-maskedgatscat=false \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,FOLDING-OPT
 
