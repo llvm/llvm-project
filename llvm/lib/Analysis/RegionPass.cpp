@@ -135,7 +135,8 @@ bool RGPassManager::runOnFunction(Function &F) {
         verifyPreservedAnalysis(P);
       }
 
-      removeNotPreservedAnalysis(P);
+      if (LocalChanged)
+        removeNotPreservedAnalysis(P);
       recordAvailableAnalysis(P);
       removeDeadPasses(P,
                        (!isPassDebuggingExecutionsOrMore() || skipThisRegion) ?
