@@ -81,7 +81,9 @@ endif()
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins)
 add_subdirectory(deviceRTLs)
-add_subdirectory(hostrpc)
+if (OPENMP_ENABLE_LIBOMPTARGET_HSA)
+  add_subdirectory(hostrpc)
+endif()
 
 # Add tests.
 add_subdirectory(test)
