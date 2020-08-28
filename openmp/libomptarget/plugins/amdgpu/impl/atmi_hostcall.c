@@ -35,7 +35,7 @@ SOFTWARE.
 #include "atmi_interop_hsa.h"
 #include "atmi_runtime.h"
 #include "hostcall_impl.h"
-#include "hsa/hsa_ext_amd.h"
+#include <hsa_ext_amd.h>
 #include <stdio.h>
 #include <stdlib.h>
 

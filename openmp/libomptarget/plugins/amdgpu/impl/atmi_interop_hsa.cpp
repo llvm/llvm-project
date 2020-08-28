@@ -4,8 +4,8 @@
  * This file is distributed under the MIT License. See LICENSE.txt for details.
  *===------------------------------------------------------------------------*/
 #include "atmi_interop_hsa.h"
-#include "atmi_kl.h"
 #include "internal.h"
+
 using core::atl_is_atmi_initialized;
 using core::get_compute_agent;
 
@@ -30,7 +30,7 @@ atmi_status_t atmi_interop_hsa_get_symbol_info(atmi_mem_place_t place,
      size_t var_size;
      atmi_interop_hsa_get_symbol_addr(gpu_place, "symbol_name", &var_addr,
      &var_size);
-     atmi_memcpy(host_add, var_addr, var_size);
+     atmi_memcpy(signal, host_add, var_addr, var_size);
   */
 
   if (!atl_is_atmi_initialized())

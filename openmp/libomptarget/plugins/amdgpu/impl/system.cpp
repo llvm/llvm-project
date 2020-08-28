@@ -16,12 +16,9 @@
 
 #include "internal.h"
 #include "machine.h"
-#include "realtimer.h"
 #include "rt.h"
 
 #include "msgpack.h"
-
-using core::RealTimer;
 
 #define msgpackErrorCheck(msg, status)                                         \
   if (status != 0) {                                                           \
@@ -58,50 +55,6 @@ typedef struct {
 // using llvm::AMDGPU::HSAMD::AddressSpaceQualifier;
 // using llvm::AMDGPU::HSAMD::ValueKind;
 // using llvm::AMDGPU::HSAMD::ValueType;
-
-enum class ArgField : uint8_t {
-  Name = 0,
-  TypeName = 1,
-  Size = 2,
-  Align = 3,
-  ValueKind = 4,
-  ValueType = 5,
-  PointeeAlign = 6,
-  AddrSpaceQual = 7,
-  AccQual = 8,
-  ActualAccQual = 9,
-  IsConst = 10,
-  IsRestrict = 11,
-  IsVolatile = 12,
-  IsPipe = 13,
-  Offset = 14
-};
-
-static const std::map<std::string, ArgField> ArgFieldMap = {
-    // v2
-    {"Name", ArgField::Name},
-    {"TypeName", ArgField::TypeName},
-    {"Size", ArgField::Size},
-    {"Align", ArgField::Align},
-    {"ValueKind", ArgField::ValueKind},
-    {"ValueType", ArgField::ValueType},
-    {"PointeeAlign", ArgField::PointeeAlign},
-    {"AddrSpaceQual", ArgField::AddrSpaceQual},
-    {"AccQual", ArgField::AccQual},
-    {"ActualAccQual", ArgField::ActualAccQual},
-    {"IsConst", ArgField::IsConst},
-    {"IsRestrict", ArgField::IsRestrict},
-    {"IsVolatile", ArgField::IsVolatile},
-    {"IsPipe", ArgField::IsPipe},
-    // v3
-    {".type_name", ArgField::TypeName},
-    {".value_kind", ArgField::ValueKind},
-    {".address_space", ArgField::AddrSpaceQual},
-    {".is_const", ArgField::IsConst},
-    {".offset", ArgField::Offset},
-    {".size", ArgField::Size},
-    {".value_type", ArgField::ValueType},
-    {".name", ArgField::Name}};
 
 class KernelArgMD {
 public:
@@ -180,73 +133,19 @@ static const std::map<std::string, KernelArgMD::ValueKind> ArgValueKind = {
     {"hidden_hostcall_buffer", KernelArgMD::ValueKind::HiddenHostcallBuffer},
 };
 
-enum class CodePropField : uint8_t {
-  KernargSegmentSize = 0,
-  GroupSegmentFixedSize = 1,
-  PrivateSegmentFixedSize = 2,
-  KernargSegmentAlign = 3,
-  WavefrontSize = 4,
-  NumSGPRs = 5,
-  NumVGPRs = 6,
-  MaxFlatWorkGroupSize = 7,
-  IsDynamicCallStack = 8,
-  IsXNACKEnabled = 9,
-  NumSpilledSGPRs = 10,
-  NumSpilledVGPRs = 11
-};
-
-static const std::map<std::string, CodePropField> CodePropFieldMap = {
-    {"KernargSegmentSize", CodePropField::KernargSegmentSize},
-    {"GroupSegmentFixedSize", CodePropField::GroupSegmentFixedSize},
-    {"PrivateSegmentFixedSize", CodePropField::PrivateSegmentFixedSize},
-    {"KernargSegmentAlign", CodePropField::KernargSegmentAlign},
-    {"WavefrontSize", CodePropField::WavefrontSize},
-    {"NumSGPRs", CodePropField::NumSGPRs},
-    {"NumVGPRs", CodePropField::NumVGPRs},
-    {"MaxFlatWorkGroupSize", CodePropField::MaxFlatWorkGroupSize},
-    {"IsDynamicCallStack", CodePropField::IsDynamicCallStack},
-    {"IsXNACKEnabled", CodePropField::IsXNACKEnabled},
-    {"NumSpilledSGPRs", CodePropField::NumSpilledSGPRs},
-    {"NumSpilledVGPRs", CodePropField::NumSpilledVGPRs}};
-
 // public variables -- TODO(ashwinma) move these to a runtime object?
 atmi_machine_t g_atmi_machine;
 ATLMachine g_atl_machine;
 
-hsa_agent_t atl_cpu_agent;
-hsa_ext_program_t atl_hsa_program;
-hsa_region_t atl_hsa_primary_region;
 hsa_region_t atl_gpu_kernarg_region;
 std::vector<hsa_amd_memory_pool_t> atl_gpu_kernarg_pools;
 hsa_region_t atl_cpu_kernarg_region;
-hsa_agent_t atl_gpu_agent;
-hsa_profile_t atl_gpu_agent_profile;
 
 static std::vector<hsa_executable_t> g_executables;
 
 std::map<std::string, std::string> KernelNameMap;
 std::vector<std::map<std::string, atl_kernel_info_t>> KernelInfoTable;
 std::vector<std::map<std::string, atl_symbol_info_t>> SymbolInfoTable;
-
-SignalPoolT FreeSignalPool;
-pthread_mutex_t SignalPoolT::mutex = PTHREAD_MUTEX_INITIALIZER;
-
-RealTimer SignalAddTimer("Signal Time");
-RealTimer HandleSignalTimer("Handle Signal Time");
-
-RealTimer HandleSignalInvokeTimer("Handle Signal Invoke Time");
-RealTimer TaskWaitTimer("Task Wait Time");
-RealTimer TryLaunchTimer("Launch Time");
-RealTimer ParamsInitTimer("Params Init Time");
-RealTimer TryLaunchInitTimer("Launch Init Time");
-RealTimer ShouldDispatchTimer("Dispatch Eval Time");
-RealTimer RegisterCallbackTimer("Register Callback Time");
-RealTimer LockTimer("Lock/Unlock Time");
-RealTimer TryDispatchTimer("Dispatch Time");
-size_t max_ready_queue_sz = 0;
-size_t waiting_count = 0;
-size_t direct_dispatch = 0;
-size_t callback_dispatch = 0;
 
 bool g_atmi_initialized = false;
 bool g_atmi_hostcall_required = false;
@@ -255,8 +154,6 @@ struct timespec context_init_time;
 int context_init_time_init = 0;
 
 /*
-   All global values are defined here in one data structure.
-
    atlc is all internal global values.
    The structure atl_context_t is defined in atl_internal.h
    Most references will use the global structure prefix atlc.
@@ -266,10 +163,6 @@ int context_init_time_init = 0;
 
 atl_context_t atlc = {.struct_initialized = false};
 atl_context_t *atlc_p = NULL;
-
-hsa_signal_t IdentityORSignal;
-hsa_signal_t IdentityANDSignal;
-hsa_signal_t IdentityCopySignal;
 
 namespace core {
 /* Machine Info */
@@ -326,14 +219,6 @@ atmi_status_t Runtime::Finalize() {
     ErrorCheck(Destroying executable, err);
   }
 
-  // Finalize queues
-  for (auto &p : g_atl_machine.processors<ATLCPUProcessor>()) {
-    p.destroyQueues();
-  }
-  for (auto &p : g_atl_machine.processors<ATLGPUProcessor>()) {
-    p.destroyQueues();
-  }
-
   for (uint32_t i = 0; i < SymbolInfoTable.size(); i++) {
     SymbolInfoTable[i].clear();
   }
@@ -346,30 +231,6 @@ atmi_status_t Runtime::Finalize() {
   atl_reset_atmi_initialized();
   err = hsa_shut_down();
   ErrorCheck(Shutting down HSA, err);
-  std::cout << ParamsInitTimer;
-  std::cout << ParamsInitTimer;
-  std::cout << TryLaunchTimer;
-  std::cout << TryLaunchInitTimer;
-  std::cout << ShouldDispatchTimer;
-  std::cout << TryDispatchTimer;
-  std::cout << TaskWaitTimer;
-  std::cout << LockTimer;
-  std::cout << HandleSignalTimer;
-  std::cout << RegisterCallbackTimer;
-
-  ParamsInitTimer.reset();
-  TryLaunchTimer.reset();
-  TryLaunchInitTimer.reset();
-  ShouldDispatchTimer.reset();
-  HandleSignalTimer.reset();
-  HandleSignalInvokeTimer.reset();
-  TryDispatchTimer.reset();
-  LockTimer.reset();
-  RegisterCallbackTimer.reset();
-  max_ready_queue_sz = 0;
-  waiting_count = 0;
-  direct_dispatch = 0;
-  callback_dispatch = 0;
 
   return ATMI_STATUS_SUCCESS;
 }
@@ -579,7 +440,6 @@ static hsa_status_t init_compute_and_memory() {
   int proc_index = 0;
   for (int i = cpus_begin; i < cpus_end; i++) {
     all_devices[i].type = cpu_procs[proc_index].type();
-    all_devices[i].core_count = cpu_procs[proc_index].num_cus();
 
     std::vector<ATLMemory> memories = cpu_procs[proc_index].memories();
     int fine_memories_size = 0;
@@ -597,13 +457,11 @@ static hsa_status_t init_compute_and_memory() {
     }
     DEBUG_PRINT("\nFine Memories : %d", fine_memories_size);
     DEBUG_PRINT("\tCoarse Memories : %d\n", coarse_memories_size);
-    all_devices[i].memory_count = memories.size();
     proc_index++;
   }
   proc_index = 0;
   for (int i = gpus_begin; i < gpus_end; i++) {
     all_devices[i].type = gpu_procs[proc_index].type();
-    all_devices[i].core_count = gpu_procs[proc_index].num_cus();
 
     std::vector<ATLMemory> memories = gpu_procs[proc_index].memories();
     int fine_memories_size = 0;
@@ -621,7 +479,6 @@ static hsa_status_t init_compute_and_memory() {
     }
     DEBUG_PRINT("\nFine Memories : %d", fine_memories_size);
     DEBUG_PRINT("\tCoarse Memories : %d\n", coarse_memories_size);
-    all_devices[i].memory_count = memories.size();
     proc_index++;
   }
   proc_index = 0;
@@ -680,8 +537,6 @@ hsa_status_t init_hsa() {
 void init_tasks() {
   if (atlc.g_tasks_initialized != false)
     return;
-  hsa_status_t err;
-  int task_num;
   std::vector<hsa_agent_t> gpu_agents;
   int gpu_count = g_atl_machine.processorCount<ATLGPUProcessor>();
   for (int gpu = 0; gpu < gpu_count; gpu++) {
@@ -689,20 +544,6 @@ void init_tasks() {
     ATLGPUProcessor &proc = get_processor<ATLGPUProcessor>(place);
     gpu_agents.push_back(proc.agent());
   }
-  int max_signals = core::Runtime::getInstance().getMaxSignals();
-  for (task_num = 0; task_num < max_signals; task_num++) {
-    hsa_signal_t new_signal;
-    err = hsa_signal_create(0, 0, NULL, &new_signal);
-    ErrorCheck(Creating a HSA signal, err);
-    FreeSignalPool.push(new_signal);
-  }
-  err = hsa_signal_create(1, 0, NULL, &IdentityORSignal);
-  ErrorCheck(Creating a HSA signal, err);
-  err = hsa_signal_create(0, 0, NULL, &IdentityANDSignal);
-  ErrorCheck(Creating a HSA signal, err);
-  err = hsa_signal_create(0, 0, NULL, &IdentityCopySignal);
-  ErrorCheck(Creating a HSA signal, err);
-  DEBUG_PRINT("Signal Pool Size: %lu\n", FreeSignalPool.size());
   atlc.g_tasks_initialized = true;
 }
 
@@ -757,18 +598,6 @@ atmi_status_t atl_init_gpu_context() {
   if (err != HSA_STATUS_SUCCESS)
     return ATMI_STATUS_ERROR;
 
-  int gpu_count = g_atl_machine.processorCount<ATLGPUProcessor>();
-  for (int gpu = 0; gpu < gpu_count; gpu++) {
-    atmi_place_t place = ATMI_PLACE_GPU(0, gpu);
-    ATLGPUProcessor &proc = get_processor<ATLGPUProcessor>(place);
-    int num_gpu_queues = core::Runtime::getInstance().getNumGPUQueues();
-    if (num_gpu_queues == -1) {
-      num_gpu_queues = proc.num_cus();
-      num_gpu_queues = (num_gpu_queues > 8) ? 8 : num_gpu_queues;
-    }
-    proc.createQueues(num_gpu_queues);
-  }
-
   if (context_init_time_init == 0) {
     clock_gettime(CLOCK_MONOTONIC_RAW, &context_init_time);
     context_init_time_init = 1;
@@ -780,32 +609,6 @@ atmi_status_t atl_init_gpu_context() {
     init_tasks();
     atlc.g_gpu_initialized = true;
     return ATMI_STATUS_SUCCESS;
-}
-
-void *atl_read_binary_from_file(const char *module, size_t *module_size) {
-  // Open file.
-  std::ifstream file(module, std::ios::in | std::ios::binary);
-  if (!(file.is_open() && file.good())) {
-    fprintf(stderr, "File %s not found\n", module);
-    return NULL;
-  }
-
-  // Find out file size.
-  file.seekg(0, file.end);
-  size_t size = file.tellg();
-  file.seekg(0, file.beg);
-
-  // Allocate memory for raw code object.
-  void *raw_code_object = malloc(size);
-  assert(raw_code_object);
-
-  // Read file contents.
-  file.read(reinterpret_cast<char *>(raw_code_object), size);
-
-  // Close file.
-  file.close();
-  *module_size = size;
-  return raw_code_object;
 }
 
 bool isImplicit(KernelArgMD::ValueKind value_kind) {
@@ -1209,9 +1012,11 @@ static hsa_status_t populate_InfoTables(hsa_executable_t executable,
   return HSA_STATUS_SUCCESS;
 }
 
-atmi_status_t Runtime::RegisterModuleFromMemory(void *module_bytes,
-                                                size_t module_size,
-                                                atmi_place_t place) {
+atmi_status_t Runtime::RegisterModuleFromMemory(
+    void *module_bytes, size_t module_size, atmi_place_t place,
+    atmi_status_t (*on_deserialized_data)(void *data, size_t size,
+                                          void *cb_state),
+    void *cb_state) {
   hsa_status_t err;
   int gpu = place.device_id;
   assert(gpu >= 0);
@@ -1249,6 +1054,13 @@ atmi_status_t Runtime::RegisterModuleFromMemory(void *module_bytes,
       ErrorCheckAndContinue(Code Object Deserialization, err);
       assert(0 != code_object.handle);
 
+      // Mutating the device image here avoids another allocation & memcpy
+      void *code_object_alloc_data =
+          reinterpret_cast<void *>(code_object.handle);
+      atmi_status_t atmi_err =
+          on_deserialized_data(code_object_alloc_data, module_size, cb_state);
+      ATMIErrorCheck(Error in deserialized_data callback, atmi_err);
+
       /* Load the code object.  */
       err =
           hsa_executable_load_code_object(executable, agent, code_object, NULL);
@@ -1267,14 +1079,6 @@ atmi_status_t Runtime::RegisterModuleFromMemory(void *module_bytes,
     err = hsa_executable_iterate_symbols(executable, populate_InfoTables,
                                          static_cast<void *>(&gpu));
     ErrorCheck(Iterating over symbols for execuatable, err);
-
-    // err = hsa_executable_iterate_program_symbols(executable,
-    // iterate_program_symbols, &gpu);
-    // ErrorCheckAndContinue(Iterating over symbols for execuatable, err);
-
-    // err = hsa_executable_iterate_agent_symbols(executable,
-    // iterate_agent_symbols, &gpu);
-    // ErrorCheckAndContinue(Iterating over symbols for execuatable, err);
 
     // save the executable and destroy during finalize
     g_executables.push_back(executable);

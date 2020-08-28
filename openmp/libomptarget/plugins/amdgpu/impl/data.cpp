@@ -19,7 +19,6 @@
 
 using core::TaskImpl;
 extern ATLMachine g_atl_machine;
-extern hsa_signal_t IdentityCopySignal;
 
 namespace core {
 ATLPointerTracker g_data_map; // Track all am pointer allocations.
@@ -38,9 +37,9 @@ const char *getPlaceStr(atmi_devtype_t type) {
 
 std::ostream &operator<<(std::ostream &os, const ATLData *ap) {
   atmi_mem_place_t place = ap->place();
-  os << "hostPointer:" << ap->host_aliasptr() << " devicePointer:" << ap->ptr()
-     << " sizeBytes:" << ap->size() << " place:(" << getPlaceStr(place.dev_type)
-     << ", " << place.dev_id << ", " << place.mem_id << ")";
+  os << " devicePointer:" << ap->ptr() << " sizeBytes:" << ap->size()
+     << " place:(" << getPlaceStr(place.dev_type) << ", " << place.dev_id
+     << ", " << place.mem_id << ")";
   return os;
 }
 
@@ -101,7 +100,7 @@ hsa_amd_memory_pool_t get_memory_pool_by_mem_place(atmi_mem_place_t place) {
 }
 
 void register_allocation(void *ptr, size_t size, atmi_mem_place_t place) {
-  ATLData *data = new ATLData(ptr, NULL, size, place, ATMI_IN_OUT);
+  ATLData *data = new ATLData(ptr, size, place);
   g_data_map.insert(ptr, data);
   if (place.dev_type == ATMI_DEVTYPE_CPU)
     allow_access_to_all_gpu_agents(ptr);
@@ -144,76 +143,86 @@ atmi_status_t Runtime::Memfree(void *ptr) {
   return ret;
 }
 
-atmi_status_t Runtime::Memcpy(void *dest, const void *src, size_t size) {
-  atmi_status_t ret;
-  hsa_status_t err;
-  ATLData *volatile src_data = g_data_map.find(src);
-  ATLData *volatile dest_data = g_data_map.find(dest);
-  atmi_mem_place_t cpu = ATMI_MEM_PLACE_CPU_MEM(0, 0, 0);
-  hsa_agent_t cpu_agent = get_mem_agent(cpu);
-  hsa_agent_t src_agent;
-  hsa_agent_t dest_agent;
-  void *temp_host_ptr;
-  const void *src_ptr = src;
-  void *dest_ptr = dest;
-  volatile Direction type;
-  if (src_data && !dest_data) {
-    type = Direction::ATMI_D2H;
-    src_agent = get_mem_agent(src_data->place());
-    dest_agent = src_agent;
-    // dest_agent = cpu_agent; // FIXME: can the two agents be the GPU agent
-    // itself?
-    ret = atmi_malloc(&temp_host_ptr, size, cpu);
-    // err = hsa_amd_agents_allow_access(1, &src_agent, NULL, temp_host_ptr);
-    // ErrorCheck(Allow access to ptr, err);
-    src_ptr = src;
-    dest_ptr = temp_host_ptr;
-  } else if (!src_data && dest_data) {
-    type = Direction::ATMI_H2D;
-    dest_agent = get_mem_agent(dest_data->place());
-    // src_agent = cpu_agent; // FIXME: can the two agents be the GPU agent
-    // itself?
-    src_agent = dest_agent;
-    ret = atmi_malloc(&temp_host_ptr, size, cpu);
-    memcpy(temp_host_ptr, src, size);
-    // FIXME: ideally lock would be the better approach, but we need to try to
-    // understand why the h2d copy segfaults if we dont have the below lines
-    // err = hsa_amd_agents_allow_access(1, &dest_agent, NULL, temp_host_ptr);
-    // ErrorCheck(Allow access to ptr, err);
-    src_ptr = (const void *)temp_host_ptr;
-    dest_ptr = dest;
-  } else if (!src_data && !dest_data) {
-    type = Direction::ATMI_H2H;
-    src_agent = cpu_agent;
-    dest_agent = cpu_agent;
-    src_ptr = src;
-    dest_ptr = dest;
-  } else {
-    type = Direction::ATMI_D2D;
-    src_agent = get_mem_agent(src_data->place());
-    dest_agent = get_mem_agent(dest_data->place());
-    src_ptr = src;
-    dest_ptr = dest;
-  }
-  DEBUG_PRINT("Memcpy source agent: %lu\n", src_agent.handle);
-  DEBUG_PRINT("Memcpy dest agent: %lu\n", dest_agent.handle);
-  hsa_signal_store_release(IdentityCopySignal, 1);
-  err = hsa_amd_memory_async_copy(dest_ptr, dest_agent, src_ptr, src_agent,
-                                  size, 0, NULL, IdentityCopySignal);
-  ErrorCheck(Copy async between memory pools, err);
-  hsa_signal_wait_acquire(IdentityCopySignal, HSA_SIGNAL_CONDITION_EQ, 0,
-                          UINT64_MAX, ATMI_WAIT_STATE);
+static hsa_status_t invoke_hsa_copy(hsa_signal_t sig, void *dest,
+                                    const void *src, size_t size,
+                                    hsa_agent_t agent) {
+  const hsa_signal_value_t init = 1;
+  const hsa_signal_value_t success = 0;
+  hsa_signal_store_screlease(sig, init);
 
-  // cleanup for D2H and H2D
-  if (type == Direction::ATMI_D2H) {
-    memcpy(dest, temp_host_ptr, size);
-    ret = atmi_free(temp_host_ptr);
-  } else if (type == Direction::ATMI_H2D) {
-    ret = atmi_free(temp_host_ptr);
+  hsa_status_t err =
+      hsa_amd_memory_async_copy(dest, agent, src, agent, size, 0, NULL, sig);
+  if (err != HSA_STATUS_SUCCESS) {
+    return err;
   }
-  if (err != HSA_STATUS_SUCCESS || ret != ATMI_STATUS_SUCCESS)
-    ret = ATMI_STATUS_ERROR;
-  return ret;
+
+  // async_copy reports success by decrementing and failure by setting to < 0
+  hsa_signal_value_t got = init;
+  while (got == init) {
+    got = hsa_signal_wait_scacquire(sig, HSA_SIGNAL_CONDITION_NE, init,
+                                    UINT64_MAX, ATMI_WAIT_STATE);
+  }
+
+  if (got != success) {
+    return HSA_STATUS_ERROR;
+  }
+
+  return err;
+}
+
+struct atmiFreePtrDeletor {
+  void operator()(void *p) {
+    atmi_free(p); // ignore failure to free
+  }
+};
+
+atmi_status_t Runtime::Memcpy(hsa_signal_t sig, void *dest, const void *src,
+                              size_t size) {
+  ATLData *src_data = g_data_map.find(src);
+  ATLData *dest_data = g_data_map.find(dest);
+  atmi_mem_place_t cpu = ATMI_MEM_PLACE_CPU_MEM(0, 0, 0);
+
+  void *temp_host_ptr;
+  atmi_status_t ret = atmi_malloc(&temp_host_ptr, size, cpu);
+  if (ret != ATMI_STATUS_SUCCESS) {
+    return ret;
+  }
+  std::unique_ptr<void, atmiFreePtrDeletor> del(temp_host_ptr);
+
+  if (src_data && !dest_data) {
+    // Copy from device to scratch to host
+    hsa_agent_t agent = get_mem_agent(src_data->place());
+    DEBUG_PRINT("Memcpy D2H device agent: %lu\n", agent.handle);
+
+    if (invoke_hsa_copy(sig, temp_host_ptr, src, size, agent) !=
+        HSA_STATUS_SUCCESS) {
+      return ATMI_STATUS_ERROR;
+    }
+
+    memcpy(dest, temp_host_ptr, size);
+
+  } else if (!src_data && dest_data) {
+    // Copy from host to scratch to device
+    hsa_agent_t agent = get_mem_agent(dest_data->place());
+    DEBUG_PRINT("Memcpy H2D device agent: %lu\n", agent.handle);
+
+    memcpy(temp_host_ptr, src, size);
+
+    if (invoke_hsa_copy(sig, dest, temp_host_ptr, size, agent) !=
+        HSA_STATUS_SUCCESS) {
+      return ATMI_STATUS_ERROR;
+    }
+
+  } else if (!src_data && !dest_data) {
+    // would be host to host, just call memcpy, or missing metadata
+    DEBUG_PRINT("atmi_memcpy invoked without metadata\n");
+    return ATMI_STATUS_ERROR;
+  } else {
+    DEBUG_PRINT("atmi_memcpy unimplemented device to device copy\n");
+    return ATMI_STATUS_ERROR;
+  }
+
+  return ATMI_STATUS_SUCCESS;
 }
 
 } // namespace core

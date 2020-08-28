@@ -26,27 +26,27 @@
 #include "hsa_ext_finalize.h"
 
 #include "atmi.h"
-#include "atmi_kl.h"
 #include "atmi_runtime.h"
-#include "realtimer.h"
+#include "rt.h"
+
+#define MAX_NUM_KERNELS (1024 * 16)
+
+typedef struct atmi_implicit_args_s {
+  unsigned long offset_x;
+  unsigned long offset_y;
+  unsigned long offset_z;
+  unsigned long hostcall_ptr;
+  char num_gpu_queues;
+  unsigned long gpu_queue_ptr;
+  char num_cpu_queues;
+  unsigned long cpu_worker_signals;
+  unsigned long cpu_queue_ptr;
+  unsigned long kernarg_template_ptr;
+} atmi_implicit_args_t;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-// #define ATMI_MAX_TASKGROUPS            8
-// #define ATMI_MAX_TASKS_PER_TASKGROUP   125
-
-#define SNK_MAX_FUNCTIONS 100
-
-// #define SNK_MAX_TASKS 32 //100000 //((ATMI_MAX_TASKGROUPS) *
-// (ATMI_MAX_TASKS_PER_TASKGROUP))
-
-#define SNK_WAIT 1
-#define SNK_NOWAIT 0
-
-#define SNK_OR 1
-#define SNK_AND 0
 
 #define check(msg, status)                                                     \
   if (status != HSA_STATUS_SUCCESS) {                                          \
@@ -55,28 +55,12 @@ extern "C" {
   }
 
 #ifdef DEBUG
-#define DEBUG_SNK
-#define VERBOSE_SNK
-#endif
-
-#ifdef DEBUG_SNK
 #define DEBUG_PRINT(fmt, ...)                                                  \
   if (core::Runtime::getInstance().getDebugMode()) {                           \
     fprintf(stderr, "[%s:%d] " fmt, __FILE__, __LINE__, ##__VA_ARGS__);        \
   }
 #else
 #define DEBUG_PRINT(...)                                                       \
-  do {                                                                         \
-  } while (false)
-#endif
-
-#ifdef VERBOSE_SNK
-#define VERBOSE_PRINT(fmt, ...)                                                \
-  if (core::Runtime::getInstance().getDebugMode()) {                           \
-    fprintf(stderr, "[%s:%d] " fmt, __FILE__, __LINE__, ##__VA_ARGS__);        \
-  }
-#else
-#define VERBOSE_PRINT(...)                                                     \
   do {                                                                         \
   } while (false)
 #endif
@@ -93,7 +77,6 @@ typedef struct atl_context_s {
   bool g_hsa_initialized;
   bool g_gpu_initialized;
   bool g_tasks_initialized;
-  bool g_mutex_dag_initialized;
 } atl_context_t;
 extern atl_context_t atlc;
 extern atl_context_t *atlc_p;
@@ -106,32 +89,8 @@ extern atl_context_t *atlc_p;
  * Simulated CPU Data Structures and API
  * ---------------------------------------------------------------------------------
  */
-typedef void *ARG_TYPE;
-#define COMMA ,
-#define REPEAT(name) COMMA name
-#define REPEAT2(name) REPEAT(name) REPEAT(name)
-#define REPEAT4(name) REPEAT2(name) REPEAT2(name)
-#define REPEAT8(name) REPEAT4(name) REPEAT4(name)
-#define REPEAT16(name) REPEAT8(name) REPEAT8(name)
 
 #define ATMI_WAIT_STATE HSA_WAIT_STATE_BLOCKED
-// #define ATMI_WAIT_STATE HSA_WAIT_STATE_ACTIVE
-
-typedef struct atl_kernel_enqueue_args_s {
-  char num_gpu_queues;
-  void *gpu_queue_ptr;
-  char num_cpu_queues;
-  void *cpu_worker_signals;
-  void *cpu_queue_ptr;
-  int kernel_counter;
-  void *kernarg_template_ptr;
-  // ___________________________________________________________________________
-  // | num_kernels | GPU AQL k0 | CPU AQL k0 | kernarg | GPU AQL k1 | CPU AQL k1
-  // | ... |
-  // ___________________________________________________________________________
-} atl_kernel_enqueue_args_t;
-
-enum { PROCESS_PKT = 0, FINISH, IDLE };
 
 // ---------------------- Kernel Start -------------
 typedef struct atl_kernel_info_s {
@@ -155,19 +114,8 @@ extern std::vector<std::map<std::string, atl_symbol_info_t>> SymbolInfoTable;
 
 // ---------------------- Kernel End -------------
 
-typedef enum atl_task_type_s {
-  ATL_KERNEL_EXECUTION = 0,
-  ATL_DATA_MOVEMENT = 1
-} atl_task_type_t;
-
-typedef enum atl_dep_sync_s {
-  ATL_SYNC_BARRIER_PKT = 0,
-  ATL_SYNC_CALLBACK = 1
-} atl_dep_sync_t;
-
 extern struct timespec context_init_time;
-extern pthread_mutex_t mutex_all_tasks_;
-extern pthread_mutex_t mutex_readyq_;
+
 namespace core {
 class TaskgroupImpl;
 class TaskImpl;
@@ -175,35 +123,60 @@ class Kernel;
 class KernelImpl;
 } // namespace core
 
-extern std::vector<core::TaskgroupImpl *> AllTaskgroups;
-// atmi_task_table_t TaskTable[SNK_MAX_TASKS];
-extern std::vector<core::TaskImpl *> AllTasks;
-extern std::queue<core::TaskImpl *> ReadyTaskQueue;
-
 struct SignalPoolT {
-  SignalPoolT() = default;
+  SignalPoolT() {
+    // If no signals are created, and none can be created later,
+    // will ultimately fail at pop()
+
+    unsigned N = 1024; // default max pool size from atmi
+    for (unsigned i = 0; i < N; i++) {
+      hsa_signal_t new_signal;
+      hsa_status_t err = hsa_signal_create(0, 0, NULL, &new_signal);
+      if (err != HSA_STATUS_SUCCESS) {
+        break;
+      }
+      state.push(new_signal);
+    }
+    DEBUG_PRINT("Signal Pool Initial Size: %lu\n", state.size());
+  }
   SignalPoolT(const SignalPoolT &) = delete;
   SignalPoolT(SignalPoolT &&) = delete;
-
+  ~SignalPoolT() {
+    size_t N = state.size();
+    for (size_t i = 0; i < N; i++) {
+      hsa_signal_t signal = state.front();
+      state.pop();
+      hsa_status_t rc = hsa_signal_destroy(signal);
+      if (rc != HSA_STATUS_SUCCESS) {
+        DEBUG_PRINT("Signal pool destruction failed\n");
+      }
+    }
+  }
   size_t size() {
     lock l(&mutex);
     return state.size();
-  }
-  bool empty() {
-    lock l(&mutex);
-    return state.empty();
   }
   void push(hsa_signal_t s) {
     lock l(&mutex);
     state.push(s);
   }
-  hsa_signal_t front() {
+  hsa_signal_t pop(void) {
     lock l(&mutex);
-    return state.front();
-  }
-  void pop(void) {
-    lock l(&mutex);
-    state.pop();
+    if (!state.empty()) {
+      hsa_signal_t res = state.front();
+      state.pop();
+      return res;
+    }
+
+    // Pool empty, attempt to create another signal
+    hsa_signal_t new_signal;
+    hsa_status_t err = hsa_signal_create(0, 0, NULL, &new_signal);
+    if (err == HSA_STATUS_SUCCESS) {
+      return new_signal;
+    }
+
+    // Fail
+    return {0};
   }
 
 private:
@@ -216,7 +189,6 @@ private:
   };
 };
 
-extern SignalPoolT FreeSignalPool;
 extern std::vector<hsa_amd_memory_pool_t> atl_gpu_kernarg_pools;
 
 namespace core {
@@ -244,13 +216,6 @@ template <typename T> inline T *alignUp(T *value, size_t alignment) {
       alignDown((intptr_t)(value + alignment - 1), alignment));
 }
 
-template <typename T> void clear_container(T *q) {
-  T empty;
-  std::swap(*q, empty);
-}
-
-long int get_nanosecs(struct timespec start_time, struct timespec end_time);
-
 extern void register_allocation(void *addr, size_t size,
                                 atmi_mem_place_t place);
 extern hsa_agent_t get_compute_agent(atmi_place_t place);
@@ -271,8 +236,7 @@ void allow_access_to_all_gpu_agents(void *ptr);
 
 const char *get_error_string(hsa_status_t err);
 const char *get_atmi_error_string(atmi_status_t err);
-int cpu_bindthread(int cpu_index);
-atmi_status_t set_thread_affinity(int id);
+
 #define ATMIErrorCheck(msg, status)                                            \
   if (status != ATMI_STATUS_SUCCESS) {                                         \
     printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, #msg,                \
@@ -289,13 +253,6 @@ atmi_status_t set_thread_affinity(int id);
     exit(1);                                                                   \
   } else {                                                                     \
     /*  printf("%s succeeded.\n", #msg);*/                                     \
-  }
-
-#define ELFErrorReturn(msg, status)                                            \
-  {                                                                            \
-    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, #msg,                \
-           get_error_string(status));                                          \
-    return status;                                                             \
   }
 
 #define ErrorCheckAndContinue(msg, status)                                     \

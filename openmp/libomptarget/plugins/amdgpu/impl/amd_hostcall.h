@@ -258,7 +258,7 @@ AMD_HOSTCALL_API
 void
 amd_hostcall_enable_debug(void);
 
-#include "hsa/hsa_ext_amd.h"
+#include <hsa_ext_amd.h>
 AMD_HOSTCALL_API
 unsigned long atmi_hostcall_assign_buffer(
                 hsa_queue_t * this_Q,

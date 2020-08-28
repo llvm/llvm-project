@@ -17,6 +17,11 @@
 // global device environment
 ////////////////////////////////////////////////////////////////////////////////
 
+#ifdef __AMDGCN__
+// Keeping the variable out of bss allows it to be initialized before
+// loading the device image
+__attribute__((section(".data")))
+#endif
 DEVICE omptarget_device_environmentTy omptarget_device_environment;
 
 ////////////////////////////////////////////////////////////////////////////////

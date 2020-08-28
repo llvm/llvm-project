@@ -28,12 +28,13 @@
 
 // List of all plugins that can support offloading.
 static const char *RTLNames[] = {
-    /* SX-Aurora VE target  */ "libomptarget.rtl.ve.so",
     /* PowerPC target */ "libomptarget.rtl.ppc64.so",
     /* x86_64 target  */ "libomptarget.rtl.x86_64.so",
     /* CUDA target    */ "libomptarget.rtl.cuda.so",
-    /* HSA target     */ "libomptarget.rtl.hsa.so",
-    /* AArch64 target */ "libomptarget.rtl.aarch64.so"};
+    /* AArch64 target */ "libomptarget.rtl.aarch64.so",
+    /* SX-Aurora VE target  */ "libomptarget.rtl.ve.so",
+    /* HSA target     */ "libomptarget.rtl.amdgpu.so",
+};
 
 // Define the platform quick check files.
 // At least one must be found to attempt to load plugin for that platform.
@@ -43,13 +44,14 @@ static const char *RTLNames[] = {
 // below
 static const char *RTLQuickCheckFiles[][MAX_PLATFORM_CHECK_FILES] = {
     /* ppc64 has multiple quick check files */
-    /* SX-Aurora VE target         */ {"fixme.so"},
     {"/sys/firmware/devicetree/base/ibm,firmware-versions/open-power",
      "/sys/firmware/devicetree/base/cpus/ibm,powerpc-cpu-features"},
     /* acpi is unique to x86       */ {"/sys/firmware/acpi"},
     /* nvidia0 is unique with cuda */ {"/dev/nvidia0"},
+    /* More arm check files needed */ {"/sys/module/mdio_thunder/initstate"},
+    /* SX-Aurora VE target         */ {"fixme.so"},
     /* kfd is unique to amdgcn     */ {"/dev/kfd"},
-    /* More arm check files needed */ {"/sys/module/mdio_thunder/initstate"}};
+};
 
 RTLsTy *RTLs;
 std::mutex *RTLsMtx;

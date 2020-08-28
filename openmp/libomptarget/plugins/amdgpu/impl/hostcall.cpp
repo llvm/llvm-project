@@ -1,6 +1,6 @@
 #include "hostcall_impl.h"
 
-#include <hsa/hsa.h>
+#include <hsa.h>
 
 #include "amd_hostcall.h"
 #include <assert.h>

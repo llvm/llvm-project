@@ -222,11 +222,11 @@ static void hostrpc_handler_SERVICE_DEMO(uint64_t *payload) {
   int *A = (int *)malloc(N * sizeof(int));
   int *B = (int *)malloc(N * sizeof(int));
   int *C = (int *)malloc(N * sizeof(int));
-  copyerr = atmi_memcpy(A, A_D, N * sizeof(int));
-  copyerr = atmi_memcpy(B, B_D, N * sizeof(int));
+  copyerr = atmi_memcpy_no_signal(A, A_D, N * sizeof(int));
+  copyerr = atmi_memcpy_no_signal(B, B_D, N * sizeof(int));
 
   int num_zeros = vector_product_zeros(N, A, B, C);
-  copyerr = atmi_memcpy(C_D, C, N * sizeof(int));
+  copyerr = atmi_memcpy_no_signal(C_D, C, N * sizeof(int));
   payload[0] = (uint64_t)copyerr;
   payload[1] = (uint64_t)num_zeros;
 }

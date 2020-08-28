@@ -7,6 +7,7 @@
 #define INCLUDE_ATMI_RUNTIME_H_
 
 #include "atmi.h"
+#include "hsa.h"
 #include <inttypes.h>
 #include <stdlib.h>
 #ifndef __cplusplus
@@ -16,18 +17,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/** \defgroup handlers Function Handlers
- * This module includes all function handler types and handler
- * registration functions.
- * @{
- */
-/**
- * @brief A generic function pointer representing CPU tasks.
- */
-typedef void (*atmi_generic_fp)(void);
-
-/** @} */
 
 /** \defgroup context_functions ATMI Context Setup and Finalize
  *  @{
@@ -83,6 +72,11 @@ atmi_status_t atmi_finalize();
  * @param[in] place Denotes the execution place (device) on which the module
  * should be registered and loaded.
  *
+ * @param[in] on_deserialized_data Callback run on deserialized code object,
+ * before loading it
+ *
+ * @param[in] cb_state void* passed to on_deserialized_data callback
+ *
  * @retval ::ATMI_STATUS_SUCCESS The function has executed successfully.
  *
  * @retval ::ATMI_STATUS_ERROR The function encountered errors.
@@ -90,9 +84,11 @@ atmi_status_t atmi_finalize();
  * @retval ::ATMI_STATUS_UNKNOWN The function encountered errors.
  *
  */
-atmi_status_t atmi_module_register_from_memory_to_place(void *module_bytes,
-                                                        size_t module_size,
-                                                        atmi_place_t place);
+atmi_status_t atmi_module_register_from_memory_to_place(
+    void *module_bytes, size_t module_size, atmi_place_t place,
+    atmi_status_t (*on_deserialized_data)(void *data, size_t size,
+                                          void *cb_state),
+    void *cb_state);
 
 /** @} */
 
@@ -183,100 +179,30 @@ atmi_status_t atmi_free(void *ptr);
  * @retval ::ATMI_STATUS_UNKNOWN The function encountered errors.
  *
  */
-atmi_status_t atmi_memcpy(void *dest, const void *src, size_t size);
+atmi_status_t atmi_memcpy(hsa_signal_t sig, void *dest, const void *src,
+                          size_t size);
 
-/** @} */
+static inline atmi_status_t atmi_memcpy_no_signal(void *dest, const void *src,
+                                                  size_t size) {
+  hsa_signal_t sig;
+  hsa_status_t err = hsa_signal_create(0, 0, NULL, &sig);
+  if (err != HSA_STATUS_SUCCESS) {
+    return ATMI_STATUS_ERROR;
+  }
 
-/** \defgroup cpu_dev_runtime ATMI CPU Device Runtime
- * @{
- */
+  atmi_status_t r = atmi_memcpy(sig, dest, src, size);
+  hsa_status_t rc = hsa_signal_destroy(sig);
 
-/**
- * @brief Retrieve the global thread ID of
- * the currently running task. This function is valid
- * only within the body of a CPU task.
- *
- * @param[in] dim The dimension of the CPU task. Valid
- * dimensions are 0, 1 and 2.
- *
- * @return The global thread ID of the ATMI CPU task.
- *
- */
-unsigned long get_global_id(unsigned int dim);
+  if (r != ATMI_STATUS_SUCCESS) {
+    return r;
+  }
+  if (rc != HSA_STATUS_SUCCESS) {
+    return ATMI_STATUS_ERROR;
+  }
 
-/**
- * @brief Retrieve the global thread count of
- * the currently running task. This function is valid
- * only within the body of a CPU task.
- *
- * @param[in] dim The dimension of the CPU task. Valid
- * dimensions are 0, 1 and 2.
- *
- * @return The global thread count of the ATMI CPU task.
- *
- */
-unsigned long get_global_size(unsigned int dim);
+  return ATMI_STATUS_SUCCESS;
+}
 
-/**
- * @brief Retrieve the local thread ID of
- * the currently running task. This function is valid
- * only within the body of a CPU task.
- *
- * @param[in] dim The dimension of the CPU task. Valid
- * dimensions are 0, 1 and 2.
- *
- * @return The local thread ID of the ATMI CPU task. The
- * current ATMI CPU task model assumes the workgroup size
- * of 1 at all times for all dimensions, so this call
- * always returns 0.
- */
-unsigned long get_local_id(unsigned int dim);
-
-/**
- * @brief Retrieve the local thread count of
- * the currently running task. This function is valid
- * only within the body of a CPU task.
- *
- * @param[in] dim The dimension of the CPU task. Valid
- * dimensions are 0, 1 and 2.
- *
- * @return The local thread count of the ATMI CPU task. The
- * current ATMI CPU task model assumes the workgroup size
- * of 1 at all times for all dimensions, so this call
- * always returns 1.
- *
- */
-unsigned long get_local_size(unsigned int dim);
-
-/**
- * @brief Retrieve the thread workgroup ID of
- * the currently running task. This function is valid
- * only within the body of a CPU task.
- *
- * @param[in] dim The dimension of the CPU task. Valid
- * dimensions are 0, 1 and 2.
- *
- * @return The thread workgroup ID of the ATMI CPU task. The
- * current ATMI CPU task model assumes the workgroup size
- * of 1 at all times for all dimensions, so this call
- * is equivalent to calling @p get_global_id.
- */
-unsigned long get_group_id(unsigned int dim);
-
-/**
- * @brief Retrieve the thread workgroup count of
- * the currently running task. This function is valid
- * only within the body of a CPU task.
- *
- * @param[in] dim The dimension of the CPU task. Valid
- * dimensions are 0, 1 and 2.
- *
- * @return The thread workgroup count of the ATMI CPU task. The
- * current ATMI CPU task model assumes the workgroup size
- * of 1 at all times for all dimensions, so this call
- * is equivalent to calling @p get_global_size.
- */
-unsigned long get_num_groups(unsigned int dim);
 /** @} */
 
 #ifdef __cplusplus
