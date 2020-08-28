@@ -2151,6 +2151,14 @@ bool CombinerHelper::matchAndWithTrivialMask(MachineInstr &MI,
   return KB->maskedValueIsZero(Replacement, ~Mask);
 }
 
+bool CombinerHelper::matchRedundantSExtInReg(MachineInstr &MI) {
+  // If the input is already sign extended, just drop the extension.
+  Register Src = MI.getOperand(1).getReg();
+  unsigned ExtBits = MI.getOperand(2).getImm();
+  unsigned TypeSize = MRI.getType(Src).getScalarSizeInBits();
+  return KB->computeNumSignBits(Src) >= (TypeSize - ExtBits + 1);
+}
+
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))
     return true;
