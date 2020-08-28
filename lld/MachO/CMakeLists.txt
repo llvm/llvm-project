@@ -5,6 +5,7 @@ add_public_tablegen_target(MachOOptionsTableGen)
 add_lld_library(lldMachO2
   Arch/X86_64.cpp
   Driver.cpp
+  DriverUtils.cpp
   ExportTrie.cpp
   InputFiles.cpp
   InputSection.cpp

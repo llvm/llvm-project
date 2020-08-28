@@ -39,6 +39,7 @@ struct Configuration {
   llvm::MachO::Architecture arch;
   PlatformInfo platform;
   llvm::MachO::HeaderFileType outputType;
+  std::vector<llvm::StringRef> systemLibraryRoots;
   std::vector<llvm::StringRef> librarySearchPaths;
   std::vector<llvm::StringRef> frameworkSearchPaths;
   std::vector<llvm::StringRef> runtimePaths;
