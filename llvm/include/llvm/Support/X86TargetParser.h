@@ -100,6 +100,7 @@ enum CPUKind {
   CK_IcelakeClient,
   CK_IcelakeServer,
   CK_Tigerlake,
+  CK_SapphireRapids,
   CK_KNL,
   CK_KNM,
   CK_Lakemont,
