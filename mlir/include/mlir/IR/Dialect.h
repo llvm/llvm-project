@@ -287,10 +287,17 @@ private:
 /// transitionning the registration mechanism to a stateless approach.
 DialectRegistry &getGlobalDialectRegistry();
 
+/// This controls globally whether the dialect registry is / isn't enabled.
+/// This is deprecated and only intended to help the transition. It'll be
+/// removed soon.
+void enableGlobalDialectRegistry(bool);
+bool isGlobalDialectRegistryEnabled();
+
 /// Registers all dialects from the global registries with the
 /// specified MLIRContext. This won't load the dialects in the context,
 /// but only make them available for lazy loading by name.
 /// Note: This method is not thread-safe.
+/// Deprecated: this method will be deleted soon.
 void registerAllDialects(MLIRContext *context);
 
 /// Register and return the dialect with the given namespace in the provided
