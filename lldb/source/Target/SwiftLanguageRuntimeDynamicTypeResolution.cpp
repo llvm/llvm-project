@@ -1729,7 +1729,7 @@ SwiftLanguageRuntimeImpl::GetTypeInfo(CompilerType type) {
   swift::Demangle::Demangler Dem;
   auto demangled = Dem.demangleType(mangled_no_prefix);
   auto *type_ref = swift::Demangle::decodeMangledType(
-      reflection_ctx->getBuilder(), demangled);
+      reflection_ctx->getBuilder(), demangled).getType();
   if (!type_ref)
     return nullptr;
   return reflection_ctx->getBuilder().getTypeConverter().getTypeInfo(type_ref);
