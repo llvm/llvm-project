@@ -222,12 +222,14 @@ void X86_64::prepareSymbolRelocation(lld::macho::Symbol *sym,
   switch (r.type) {
   case X86_64_RELOC_GOT_LOAD:
     // TODO: implement mov -> lea relaxation for non-dynamic symbols
-  case X86_64_RELOC_GOT:
+  case X86_64_RELOC_GOT: {
     in.got->addEntry(sym);
+
     if (sym->isTlv())
       error("found GOT relocation referencing thread-local variable in " +
             toString(isec));
     break;
+  }
   case X86_64_RELOC_BRANCH: {
     // TODO: weak dysyms should go into the weak binding section instead
     if (auto *dysym = dyn_cast<DylibSymbol>(sym))
@@ -241,31 +243,26 @@ void X86_64::prepareSymbolRelocation(lld::macho::Symbol *sym,
               dysym->getName() + " must have r_length = 3");
         return;
       }
-      in.binding->addEntry(dysym, isec, r.offset, r.addend);
     }
+    addNonLazyBindingEntries(sym, isec, r.offset, r.addend);
     break;
   }
   case X86_64_RELOC_SIGNED:
   case X86_64_RELOC_SIGNED_1:
   case X86_64_RELOC_SIGNED_2:
   case X86_64_RELOC_SIGNED_4:
+    // TODO: warn if they refer to a weak global
     break;
-  case X86_64_RELOC_TLV:
-    if (isa<DylibSymbol>(sym)) {
+  case X86_64_RELOC_TLV: {
+    if (sym->isWeakDef() || isa<DylibSymbol>(sym))
       in.tlvPointers->addEntry(sym);
-    } else {
-      assert(isa<Defined>(sym));
-      // TLV relocations on x86_64 are always used with a movq opcode, which
-      // can be converted to leaq opcodes if they reference a defined symbol.
-      // (This is in contrast to GOT relocations, which can be used with
-      // non-movq opcodes.) As such, there is no need to add an entry to
-      // tlvPointers here.
-    }
+
     if (!sym->isTlv())
       error(
           "found X86_64_RELOC_TLV referencing a non-thread-local variable in " +
           toString(isec));
     break;
+  }
   case X86_64_RELOC_SUBTRACTOR:
     fatal("TODO: handle relocation type " + std::to_string(r.type));
     break;
@@ -291,7 +288,7 @@ uint64_t X86_64::resolveSymbolVA(uint8_t *buf, const lld::macho::Symbol &sym,
   case X86_64_RELOC_SIGNED_4:
     return sym.getVA();
   case X86_64_RELOC_TLV: {
-    if (isa<DylibSymbol>(&sym))
+    if (sym.isInGot())
       return in.tlvPointers->addr + sym.gotIndex * WordSize;
 
     // Convert the movq to a leaq.

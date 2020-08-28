@@ -53,7 +53,7 @@ Symbol *SymbolTable::addDefined(StringRef name, InputSection *isec,
     // of a name conflict, we fall through to the replaceSymbol() call below.
   }
 
-  replaceSymbol<Defined>(s, name, isec, value, isWeakDef);
+  replaceSymbol<Defined>(s, name, isec, value, isWeakDef, /*isExternal=*/true);
   return s;
 }
 
