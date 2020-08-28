@@ -1306,7 +1306,25 @@ ChangeStatus Attributor::cleanupIR() {
     CGUpdater.removeFunction(*Fn);
   }
 
+  if (!ToBeChangedUses.empty())
+    ManifestChange = ChangeStatus::CHANGED;
+
+  if (!ToBeChangedToUnreachableInsts.empty())
+    ManifestChange = ChangeStatus::CHANGED;
+
   if (!ToBeDeletedFunctions.empty())
+    ManifestChange = ChangeStatus::CHANGED;
+
+  if (!ToBeDeletedBlocks.empty())
+    ManifestChange = ChangeStatus::CHANGED;
+
+  if (!ToBeDeletedInsts.empty())
+    ManifestChange = ChangeStatus::CHANGED;
+
+  if (!InvokeWithDeadSuccessor.empty())
+    ManifestChange = ChangeStatus::CHANGED;
+
+  if (!DeadInsts.empty())
     ManifestChange = ChangeStatus::CHANGED;
 
   NumFnDeleted += ToBeDeletedFunctions.size();
