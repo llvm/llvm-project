@@ -212,8 +212,261 @@ end:                                 ; preds = %middle.block
   ret void
 }
 
+define void @justoffsets(i8* noalias nocapture readonly %r, i8* noalias nocapture %w, i32 %N) {
+; CHECK-LABEL: justoffsets:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
+; CHECK-NEXT:    .pad #248
+; CHECK-NEXT:    sub sp, #248
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    beq.w .LBB3_3
+; CHECK-NEXT:  @ %bb.1: @ %vector.ph
+; CHECK-NEXT:    adds r3, r2, #3
+; CHECK-NEXT:    adr r7, .LCPI3_6
+; CHECK-NEXT:    bic r3, r3, #3
+; CHECK-NEXT:    adr r6, .LCPI3_5
+; CHECK-NEXT:    sub.w r12, r3, #4
+; CHECK-NEXT:    movs r3, #1
+; CHECK-NEXT:    adr r5, .LCPI3_4
+; CHECK-NEXT:    adr r4, .LCPI3_3
+; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
+; CHECK-NEXT:    adr r3, .LCPI3_0
+; CHECK-NEXT:    vldrw.u32 q0, [r3]
+; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    adr r3, .LCPI3_2
+; CHECK-NEXT:    adr.w r8, .LCPI3_1
+; CHECK-NEXT:    vstrw.32 q0, [sp, #192] @ 16-byte Spill
+; CHECK-NEXT:    vdup.32 q0, r2
+; CHECK-NEXT:    vstrw.32 q0, [sp, #176] @ 16-byte Spill
+; CHECK-NEXT:    vmov.i32 q0, #0x8000
+; CHECK-NEXT:    adr r2, .LCPI3_7
+; CHECK-NEXT:    vstrw.32 q0, [sp, #160] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    adr r2, .LCPI3_8
+; CHECK-NEXT:    mov.w r12, #0
+; CHECK-NEXT:    vstrw.32 q0, [sp, #224] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q0, [r7]
+; CHECK-NEXT:    vstrw.32 q0, [sp, #208] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q0, [r6]
+; CHECK-NEXT:    vstrw.32 q0, [sp, #144] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q0, [r5]
+; CHECK-NEXT:    vstrw.32 q0, [sp, #128] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q0, [r4]
+; CHECK-NEXT:    adr r4, .LCPI3_11
+; CHECK-NEXT:    vstrw.32 q0, [sp, #112] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q0, [r3]
+; CHECK-NEXT:    adr r3, .LCPI3_10
+; CHECK-NEXT:    vstrw.32 q0, [sp, #96] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q0, [r8]
+; CHECK-NEXT:    vstrw.32 q0, [sp, #80] @ 16-byte Spill
+; CHECK-NEXT:    vmov.i32 q0, #0x7fff
+; CHECK-NEXT:    vstrw.32 q0, [sp, #64] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    adr r2, .LCPI3_9
+; CHECK-NEXT:    vstrw.32 q0, [sp, #48] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q0, [r4]
+; CHECK-NEXT:    vstrw.32 q0, [sp, #32] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q0, [r3]
+; CHECK-NEXT:    vstrw.32 q0, [sp, #16] @ 16-byte Spill
+; CHECK-NEXT:    vldrw.u32 q0, [r2]
+; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
+; CHECK-NEXT:  .LBB3_2: @ %vector.body
+; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vldrw.u32 q0, [sp, #192] @ 16-byte Reload
+; CHECK-NEXT:    vdup.32 q6, r12
+; CHECK-NEXT:    vldrw.u32 q1, [sp, #176] @ 16-byte Reload
+; CHECK-NEXT:    vadd.i32 q0, q0, r12
+; CHECK-NEXT:    add.w r12, r12, #4
+; CHECK-NEXT:    vcmp.u32 hi, q6, q0
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vcmpt.u32 hi, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [sp, #224] @ 16-byte Reload
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vldrbt.u32 q6, [r0, q0]
+; CHECK-NEXT:    vldrw.u32 q0, [sp, #208] @ 16-byte Reload
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vldrbt.u32 q1, [r0, q0]
+; CHECK-NEXT:    vldrw.u32 q0, [sp, #144] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q2, [sp, #128] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q7, [sp, #112] @ 16-byte Reload
+; CHECK-NEXT:    vmul.i32 q0, q1, q0
+; CHECK-NEXT:    vmul.i32 q5, q6, q2
+; CHECK-NEXT:    vadd.i32 q0, q5, q0
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vldrbt.u32 q5, [r0, q7]
+; CHECK-NEXT:    vldrw.u32 q2, [sp, #96] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q4, [sp, #64] @ 16-byte Reload
+; CHECK-NEXT:    adds r0, #12
+; CHECK-NEXT:    vmul.i32 q3, q5, q2
+; CHECK-NEXT:    vmul.i32 q4, q6, q4
+; CHECK-NEXT:    vadd.i32 q0, q0, q3
+; CHECK-NEXT:    vldrw.u32 q3, [sp, #80] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q2, [sp, #160] @ 16-byte Reload
+; CHECK-NEXT:    vmul.i32 q3, q1, q3
+; CHECK-NEXT:    vadd.i32 q3, q4, q3
+; CHECK-NEXT:    vldrw.u32 q4, [sp, #48] @ 16-byte Reload
+; CHECK-NEXT:    vadd.i32 q0, q0, q2
+; CHECK-NEXT:    vmul.i32 q4, q5, q4
+; CHECK-NEXT:    vshr.u32 q0, q0, #16
+; CHECK-NEXT:    vadd.i32 q3, q3, q4
+; CHECK-NEXT:    vldrw.u32 q4, [sp, #32] @ 16-byte Reload
+; CHECK-NEXT:    vadd.i32 q3, q3, q2
+; CHECK-NEXT:    vmul.i32 q1, q1, q4
+; CHECK-NEXT:    vldrw.u32 q4, [sp, #16] @ 16-byte Reload
+; CHECK-NEXT:    vshr.u32 q3, q3, #16
+; CHECK-NEXT:    vmul.i32 q4, q6, q4
+; CHECK-NEXT:    vadd.i32 q1, q4, q1
+; CHECK-NEXT:    vldrw.u32 q4, [sp] @ 16-byte Reload
+; CHECK-NEXT:    vmul.i32 q4, q5, q4
+; CHECK-NEXT:    vadd.i32 q1, q1, q4
+; CHECK-NEXT:    vadd.i32 q1, q1, q2
+; CHECK-NEXT:    vldrw.u32 q2, [sp, #224] @ 16-byte Reload
+; CHECK-NEXT:    vshr.u32 q1, q1, #16
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vstrbt.32 q1, [r1, q2]
+; CHECK-NEXT:    vldrw.u32 q1, [sp, #208] @ 16-byte Reload
+; CHECK-NEXT:    vpstt
+; CHECK-NEXT:    vstrbt.32 q3, [r1, q1]
+; CHECK-NEXT:    vstrbt.32 q0, [r1, q7]
+; CHECK-NEXT:    adds r1, #12
+; CHECK-NEXT:    le lr, .LBB3_2
+; CHECK-NEXT:  .LBB3_3: @ %for.cond.cleanup
+; CHECK-NEXT:    add sp, #248
+; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  @ %bb.4:
+; CHECK-NEXT:  .LCPI3_0:
+; CHECK-NEXT:    .long 0 @ 0x0
+; CHECK-NEXT:    .long 1 @ 0x1
+; CHECK-NEXT:    .long 2 @ 0x2
+; CHECK-NEXT:    .long 3 @ 0x3
+; CHECK-NEXT:  .LCPI3_1:
+; CHECK-NEXT:    .long 4294952177 @ 0xffffc4f1
+; CHECK-NEXT:    .long 4294952177 @ 0xffffc4f1
+; CHECK-NEXT:    .long 4294952177 @ 0xffffc4f1
+; CHECK-NEXT:    .long 4294952177 @ 0xffffc4f1
+; CHECK-NEXT:  .LCPI3_2:
+; CHECK-NEXT:    .long 19485 @ 0x4c1d
+; CHECK-NEXT:    .long 19485 @ 0x4c1d
+; CHECK-NEXT:    .long 19485 @ 0x4c1d
+; CHECK-NEXT:    .long 19485 @ 0x4c1d
+; CHECK-NEXT:  .LCPI3_3:
+; CHECK-NEXT:    .long 2 @ 0x2
+; CHECK-NEXT:    .long 5 @ 0x5
+; CHECK-NEXT:    .long 8 @ 0x8
+; CHECK-NEXT:    .long 11 @ 0xb
+; CHECK-NEXT:  .LCPI3_4:
+; CHECK-NEXT:    .long 13282 @ 0x33e2
+; CHECK-NEXT:    .long 13282 @ 0x33e2
+; CHECK-NEXT:    .long 13282 @ 0x33e2
+; CHECK-NEXT:    .long 13282 @ 0x33e2
+; CHECK-NEXT:  .LCPI3_5:
+; CHECK-NEXT:    .long 4294934529 @ 0xffff8001
+; CHECK-NEXT:    .long 4294934529 @ 0xffff8001
+; CHECK-NEXT:    .long 4294934529 @ 0xffff8001
+; CHECK-NEXT:    .long 4294934529 @ 0xffff8001
+; CHECK-NEXT:  .LCPI3_6:
+; CHECK-NEXT:    .long 1 @ 0x1
+; CHECK-NEXT:    .long 4 @ 0x4
+; CHECK-NEXT:    .long 7 @ 0x7
+; CHECK-NEXT:    .long 10 @ 0xa
+; CHECK-NEXT:  .LCPI3_7:
+; CHECK-NEXT:    .long 0 @ 0x0
+; CHECK-NEXT:    .long 3 @ 0x3
+; CHECK-NEXT:    .long 6 @ 0x6
+; CHECK-NEXT:    .long 9 @ 0x9
+; CHECK-NEXT:  .LCPI3_8:
+; CHECK-NEXT:    .long 4294949648 @ 0xffffbb10
+; CHECK-NEXT:    .long 4294949648 @ 0xffffbb10
+; CHECK-NEXT:    .long 4294949648 @ 0xffffbb10
+; CHECK-NEXT:    .long 4294949648 @ 0xffffbb10
+; CHECK-NEXT:  .LCPI3_9:
+; CHECK-NEXT:    .long 7471 @ 0x1d2f
+; CHECK-NEXT:    .long 7471 @ 0x1d2f
+; CHECK-NEXT:    .long 7471 @ 0x1d2f
+; CHECK-NEXT:    .long 7471 @ 0x1d2f
+; CHECK-NEXT:  .LCPI3_10:
+; CHECK-NEXT:    .long 19595 @ 0x4c8b
+; CHECK-NEXT:    .long 19595 @ 0x4c8b
+; CHECK-NEXT:    .long 19595 @ 0x4c8b
+; CHECK-NEXT:    .long 19595 @ 0x4c8b
+; CHECK-NEXT:  .LCPI3_11:
+; CHECK-NEXT:    .long 38470 @ 0x9646
+; CHECK-NEXT:    .long 38470 @ 0x9646
+; CHECK-NEXT:    .long 38470 @ 0x9646
+; CHECK-NEXT:    .long 38470 @ 0x9646
+entry:
+  %cmp47.not = icmp eq i32 %N, 0
+  br i1 %cmp47.not, label %for.cond.cleanup, label %vector.ph
+
+vector.ph:                                        ; preds = %vector.memcheck
+  %n.rnd.up = add i32 %N, 3
+  %n.vec = and i32 %n.rnd.up, -4
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %vector.ph
+  %pointer.phi = phi i8* [ %r, %vector.ph ], [ %ptr.ind, %vector.body ]
+  %pointer.phi55 = phi i8* [ %w, %vector.ph ], [ %ptr.ind56, %vector.body ]
+  %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+  %l1 = getelementptr i8, i8* %pointer.phi, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+  %l2 = getelementptr i8, i8* %pointer.phi55, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+  %l3 = getelementptr inbounds i8, <4 x i8*> %l1, i32 1
+  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %N)
+  %wide.masked.gather = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*> %l1, i32 1, <4 x i1> %active.lane.mask, <4 x i8> undef)
+  %l4 = getelementptr inbounds i8, <4 x i8*> %l1, i32 2
+  %wide.masked.gather57 = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*> %l3, i32 1, <4 x i1> %active.lane.mask, <4 x i8> undef)
+  %wide.masked.gather58 = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*> %l4, i32 1, <4 x i1> %active.lane.mask, <4 x i8> undef)
+  %l5 = zext <4 x i8> %wide.masked.gather to <4 x i32>
+  %l6 = mul nuw nsw <4 x i32> %l5, <i32 19595, i32 19595, i32 19595, i32 19595>
+  %l7 = zext <4 x i8> %wide.masked.gather57 to <4 x i32>
+  %l8 = mul nuw nsw <4 x i32> %l7, <i32 38470, i32 38470, i32 38470, i32 38470>
+  %l9 = zext <4 x i8> %wide.masked.gather58 to <4 x i32>
+  %l10 = mul nuw nsw <4 x i32> %l9, <i32 7471, i32 7471, i32 7471, i32 7471>
+  %l11 = add nuw nsw <4 x i32> %l6, <i32 32768, i32 32768, i32 32768, i32 32768>
+  %l12 = add nuw nsw <4 x i32> %l11, %l8
+  %l13 = add nuw nsw <4 x i32> %l12, %l10
+  %l14 = lshr <4 x i32> %l13, <i32 16, i32 16, i32 16, i32 16>
+  %l15 = trunc <4 x i32> %l14 to <4 x i8>
+  %l16 = mul nuw nsw <4 x i32> %l5, <i32 32767, i32 32767, i32 32767, i32 32767>
+  %l17 = mul nsw <4 x i32> %l7, <i32 -15119, i32 -15119, i32 -15119, i32 -15119>
+  %l18 = mul nsw <4 x i32> %l9, <i32 -17648, i32 -17648, i32 -17648, i32 -17648>
+  %l19 = add nuw nsw <4 x i32> %l16, <i32 32768, i32 32768, i32 32768, i32 32768>
+  %l20 = add nsw <4 x i32> %l19, %l17
+  %l21 = add nsw <4 x i32> %l20, %l18
+  %l22 = lshr <4 x i32> %l21, <i32 16, i32 16, i32 16, i32 16>
+  %l23 = trunc <4 x i32> %l22 to <4 x i8>
+  %l24 = mul nuw nsw <4 x i32> %l5, <i32 13282, i32 13282, i32 13282, i32 13282>
+  %l25 = mul nsw <4 x i32> %l7, <i32 -32767, i32 -32767, i32 -32767, i32 -32767>
+  %l26 = mul nuw nsw <4 x i32> %l9, <i32 19485, i32 19485, i32 19485, i32 19485>
+  %l27 = add nuw nsw <4 x i32> %l24, <i32 32768, i32 32768, i32 32768, i32 32768>
+  %l28 = add nsw <4 x i32> %l27, %l25
+  %l29 = add nsw <4 x i32> %l28, %l26
+  %l30 = lshr <4 x i32> %l29, <i32 16, i32 16, i32 16, i32 16>
+  %l31 = trunc <4 x i32> %l30 to <4 x i8>
+  %l32 = getelementptr inbounds i8, <4 x i8*> %l2, i32 1
+  call void @llvm.masked.scatter.v4i8.v4p0i8(<4 x i8> %l15, <4 x i8*> %l2, i32 1, <4 x i1> %active.lane.mask)
+  %l33 = getelementptr inbounds i8, <4 x i8*> %l2, i32 2
+  call void @llvm.masked.scatter.v4i8.v4p0i8(<4 x i8> %l23, <4 x i8*> %l32, i32 1, <4 x i1> %active.lane.mask)
+  call void @llvm.masked.scatter.v4i8.v4p0i8(<4 x i8> %l31, <4 x i8*> %l33, i32 1, <4 x i1> %active.lane.mask)
+  %index.next = add i32 %index, 4
+  %l34 = icmp eq i32 %index.next, %n.vec
+  %ptr.ind = getelementptr i8, i8* %pointer.phi, i32 12
+  %ptr.ind56 = getelementptr i8, i8* %pointer.phi55, i32 12
+  br i1 %l34, label %for.cond.cleanup, label %vector.body
+
+for.cond.cleanup:                                 ; preds = %vector.body, %for.body, %entry
+  ret void
+}
+
 declare i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32>)
 declare <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*>, i32, <4 x i1>, <4 x i32>)
+declare <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*>, i32, <4 x i1>, <4 x i8>)
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
 declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32, <4 x i1>, <4 x i32>)
 declare void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32>, <4 x i32*>, i32, <4 x i1>)
+declare void @llvm.masked.scatter.v4i8.v4p0i8(<4 x i8>, <4 x i8*>, i32, <4 x i1>)
