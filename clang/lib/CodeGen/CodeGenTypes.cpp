@@ -533,99 +533,60 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     case BuiltinType::OCLReserveID:
       ResultType = CGM.getOpenCLRuntime().convertOpenCLSpecificType(Ty);
       break;
-#define GET_SVE_INT_VEC(BITS, ELTS)                                            \
-  llvm::ScalableVectorType::get(                                               \
-      llvm::IntegerType::get(getLLVMContext(), BITS), ELTS);
     case BuiltinType::SveInt8:
     case BuiltinType::SveUint8:
-      return GET_SVE_INT_VEC(8, 16);
     case BuiltinType::SveInt8x2:
     case BuiltinType::SveUint8x2:
-      return GET_SVE_INT_VEC(8, 32);
     case BuiltinType::SveInt8x3:
     case BuiltinType::SveUint8x3:
-      return GET_SVE_INT_VEC(8, 48);
     case BuiltinType::SveInt8x4:
     case BuiltinType::SveUint8x4:
-      return GET_SVE_INT_VEC(8, 64);
     case BuiltinType::SveInt16:
     case BuiltinType::SveUint16:
-      return GET_SVE_INT_VEC(16, 8);
     case BuiltinType::SveInt16x2:
     case BuiltinType::SveUint16x2:
-      return GET_SVE_INT_VEC(16, 16);
     case BuiltinType::SveInt16x3:
     case BuiltinType::SveUint16x3:
-      return GET_SVE_INT_VEC(16, 24);
     case BuiltinType::SveInt16x4:
     case BuiltinType::SveUint16x4:
-      return GET_SVE_INT_VEC(16, 32);
     case BuiltinType::SveInt32:
     case BuiltinType::SveUint32:
-      return GET_SVE_INT_VEC(32, 4);
     case BuiltinType::SveInt32x2:
     case BuiltinType::SveUint32x2:
-      return GET_SVE_INT_VEC(32, 8);
     case BuiltinType::SveInt32x3:
     case BuiltinType::SveUint32x3:
-      return GET_SVE_INT_VEC(32, 12);
     case BuiltinType::SveInt32x4:
     case BuiltinType::SveUint32x4:
-      return GET_SVE_INT_VEC(32, 16);
     case BuiltinType::SveInt64:
     case BuiltinType::SveUint64:
-      return GET_SVE_INT_VEC(64, 2);
     case BuiltinType::SveInt64x2:
     case BuiltinType::SveUint64x2:
-      return GET_SVE_INT_VEC(64, 4);
     case BuiltinType::SveInt64x3:
     case BuiltinType::SveUint64x3:
-      return GET_SVE_INT_VEC(64, 6);
     case BuiltinType::SveInt64x4:
     case BuiltinType::SveUint64x4:
-      return GET_SVE_INT_VEC(64, 8);
     case BuiltinType::SveBool:
-      return GET_SVE_INT_VEC(1, 16);
-#undef GET_SVE_INT_VEC
-#define GET_SVE_FP_VEC(TY, ISFP16, ELTS)                                       \
-  llvm::ScalableVectorType::get(                                               \
-      getTypeForFormat(getLLVMContext(),                                       \
-                       Context.getFloatTypeSemantics(Context.TY),              \
-                       /* UseNativeHalf = */ ISFP16),                          \
-      ELTS);
     case BuiltinType::SveFloat16:
-      return GET_SVE_FP_VEC(HalfTy, true, 8);
     case BuiltinType::SveFloat16x2:
-      return GET_SVE_FP_VEC(HalfTy, true, 16);
     case BuiltinType::SveFloat16x3:
-      return GET_SVE_FP_VEC(HalfTy, true, 24);
     case BuiltinType::SveFloat16x4:
-      return GET_SVE_FP_VEC(HalfTy, true, 32);
     case BuiltinType::SveFloat32:
-      return GET_SVE_FP_VEC(FloatTy, false, 4);
     case BuiltinType::SveFloat32x2:
-      return GET_SVE_FP_VEC(FloatTy, false, 8);
     case BuiltinType::SveFloat32x3:
-      return GET_SVE_FP_VEC(FloatTy, false, 12);
     case BuiltinType::SveFloat32x4:
-      return GET_SVE_FP_VEC(FloatTy, false, 16);
     case BuiltinType::SveFloat64:
-      return GET_SVE_FP_VEC(DoubleTy, false, 2);
     case BuiltinType::SveFloat64x2:
-      return GET_SVE_FP_VEC(DoubleTy, false, 4);
     case BuiltinType::SveFloat64x3:
-      return GET_SVE_FP_VEC(DoubleTy, false, 6);
     case BuiltinType::SveFloat64x4:
-      return GET_SVE_FP_VEC(DoubleTy, false, 8);
     case BuiltinType::SveBFloat16:
-      return GET_SVE_FP_VEC(BFloat16Ty, false, 8);
     case BuiltinType::SveBFloat16x2:
-      return GET_SVE_FP_VEC(BFloat16Ty, false, 16);
     case BuiltinType::SveBFloat16x3:
-      return GET_SVE_FP_VEC(BFloat16Ty, false, 24);
-    case BuiltinType::SveBFloat16x4:
-      return GET_SVE_FP_VEC(BFloat16Ty, false, 32);
-#undef GET_SVE_FP_VEC
+    case BuiltinType::SveBFloat16x4: {
+      ASTContext::BuiltinVectorTypeInfo Info =
+          Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
+      return llvm::ScalableVectorType::get(ConvertType(Info.ElementType),
+                                           Info.EC.Min * Info.NumVectors);
+    }
     case BuiltinType::Dependent:
 #define BUILTIN_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) \
