@@ -382,10 +382,36 @@ C++1z Feature Support
 Objective-C Language Changes in Clang
 -------------------------------------
 
-OpenCL C Language Changes in Clang
-----------------------------------
+OpenCL Kernel Language Changes in Clang
+---------------------------------------
 
-...
+- Added extensions from `cl_khr_subgroup_extensions` to clang and the internal
+  header.
+
+- Added rocm device libs linking for AMDGPU.
+
+- Added diagnostic for OpenCL 2.0 blocks used in function arguments.
+
+- Fixed MS mangling for OpenCL 2.0 pipe type specifier.
+
+- Improved command line options for fast relaxed math.
+
+- Improved `atomic_fetch_min/max` functions in the internal header
+  (`opencl-c.h`).
+
+- Improved size of builtin function table for `TableGen`-based internal header
+  (enabled by `-fdeclare-opencl-builtins`) and added new functionality for
+  OpenCL 2.0 atomics, pipes, enqueue kernel, `cl_khr_subgroups`,
+  `cl_arm_integer_dot_product`.
+
+Changes related to C++ for OpenCL
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Added `addrspace_cast` operator.
+
+- Improved address space deduction in templates.
+
+- Improved diagnostics of address spaces in nested pointer conversions.
 
 ABI Changes in Clang
 --------------------
