@@ -282,3 +282,35 @@ end:
   %r = phi i32 [ %i0, %left ], [ %i1, %right ]
   ret i32 %r
 }
+
+; Also, unlike PHI-of-insertvalues, here the base aggregates of extractvalue
+; can have different types, and just checking the indicies is not enough.
+define i32 @test9({ i32, i32 } %agg_left, { i32, { i32, i32 } } %agg_right, i1 %c) {
+; CHECK-LABEL: @test9(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    [[I0:%.*]] = extractvalue { i32, i32 } [[AGG_LEFT:%.*]], 0
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       right:
+; CHECK-NEXT:    [[I1:%.*]] = extractvalue { i32, { i32, i32 } } [[AGG_RIGHT:%.*]], 0
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[I0]], [[LEFT]] ], [ [[I1]], [[RIGHT]] ]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  br i1 %c, label %left, label %right
+
+left:
+  %i0 = extractvalue { i32, i32 } %agg_left, 0
+  br label %end
+
+right:
+  %i1 = extractvalue { i32, { i32, i32 } } %agg_right, 0
+  br label %end
+
+end:
+  %r = phi i32 [ %i0, %left ], [ %i1, %right ]
+  ret i32 %r
+}
