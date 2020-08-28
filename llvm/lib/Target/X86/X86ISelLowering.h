@@ -749,6 +749,9 @@ namespace llvm {
     STRICT_CVTPS2PH,
     STRICT_CVTPH2PS,
 
+    // Mwaitx builtin is lowered to this if the base pointer needs saving.
+    MWAITX_DAG,
+
     // Compare and swap.
     LCMPXCHG_DAG = ISD::FIRST_TARGET_MEMORY_OPCODE,
     LCMPXCHG8_DAG,
