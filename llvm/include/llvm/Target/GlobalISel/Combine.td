@@ -344,6 +344,16 @@ def and_trivial_mask: GICombineRule <
   (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
+// If the input is already sign extended, just drop the extension.
+// sext_inreg x, K ->
+//   if computeNumSignBits(x) >= (x.getScalarSizeInBits() - K + 1)
+def redundant_sext_inreg: GICombineRule <
+  (defs root:$root),
+  (match (wip_match_opcode G_SEXT_INREG):$root,
+         [{ return Helper.matchRedundantSExtInReg(*${root}); }]),
+     (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
+>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -357,7 +367,8 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         binop_right_to_zero, p2i_to_i2p,
                                         i2p_to_p2i]>;
 
-def known_bits_simplifications : GICombineGroup<[and_trivial_mask]>;
+def known_bits_simplifications : GICombineGroup<[
+  and_trivial_mask, redundant_sext_inreg]>;
 
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend]>;
 
