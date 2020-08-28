@@ -44,7 +44,6 @@
 #include "swift/Basic/PrimarySpecificPaths.h"
 #include "swift/Basic/SourceManager.h"
 #include "swift/ClangImporter/ClangImporter.h"
-#include "swift/ClangImporter/ClangImporterOptions.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/ManglingMacros.h"
 #include "swift/Frontend/Frontend.h"
@@ -3254,6 +3253,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
 
   m_ast_context_ap.reset(swift::ASTContext::get(
       GetLanguageOptions(), GetTypeCheckerOptions(), GetSearchPathOptions(),
+      GetClangImporterOptions(),
       GetSourceManager(), GetDiagnosticEngine()));
   m_diagnostic_consumer_ap.reset(new StoringDiagnosticConsumer(*this));
 
@@ -3276,7 +3276,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
         m_dwarf_importer_delegate_up =
             std::make_unique<SwiftDWARFImporterDelegate>(*this);
       clang_importer_ap = swift::ClangImporter::create(
-          *m_ast_context_ap, clang_importer_options, "",
+          *m_ast_context_ap, "",
           m_dependency_tracker.get(), m_dwarf_importer_delegate_up.get());
 
       // Handle any errors.
