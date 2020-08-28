@@ -21,7 +21,7 @@ class TestIntelPTSimpleBinary(TestBase):
         if 'intel-pt' not in configuration.enabled_plugins:
             self.skipTest("The intel-pt test plugin is not enabled")
 
-        plugin_path = os.path.join(os.environ["LLDB_IMPLIB_DIR"], "liblldbIntelFeatures.so")
+        plugin_path = os.path.join(configuration.lldb_libs_dir, "liblldbIntelFeatures.so")
         self.runCmd("plugin load " + plugin_path)
 
     @skipIf(oslist=no_match(['linux']))
