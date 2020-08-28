@@ -173,7 +173,7 @@ func @return_var_memref(%arg0: memref<4x3xf32>) -> memref<*xf32> {
   // CHECK: %[[RANK:.*]] = llvm.extractvalue %[[DESC_2]][0] : !llvm.struct<(i64, ptr<i8>)>
   // CHECK: %[[NEW_DESC_1:.*]] = llvm.insertvalue %[[RANK]], %[[NEW_DESC]][0]
   // CHECK: %[[NEW_DESC_2:.*]] = llvm.insertvalue %[[ALLOCATED]], %[[NEW_DESC_1]][1]
-  // CHECL: llvm.return %[[NEW_DESC_2]]
+  // CHECK: llvm.return %[[NEW_DESC_2]]
   return %0 : memref<*xf32>
 }
 

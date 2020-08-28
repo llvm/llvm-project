@@ -56,7 +56,7 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:   ::mlir::Value a();
 // CHECK:   ::mlir::ValueRange b();
 // CHECK:   ::mlir::IntegerAttr attr1();
-// CHECL:   ::mlir::FloatAttr attr2();
+// CHECK:   ::mlir::FloatAttr attr2();
 // CHECK: private:
 // CHECK:   ::mlir::ValueRange odsOperands;
 // CHECK: };
