@@ -1559,6 +1559,8 @@ def ArmSveVectorBits : TypeAttr {
   let Args = [UnsignedArgument<"NumBits">];
   let Documentation = [ArmSveVectorBitsDocs];
   let PragmaAttributeSupport = 0;
+  // Represented as VectorType instead.
+  let ASTNode = 0;
 }
 
 def ArmMveStrictPolymorphism : TypeAttr, TargetSpecificAttr<TargetARM> {
