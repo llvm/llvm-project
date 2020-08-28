@@ -72,33 +72,213 @@ void checkFormatAndArch(const DataForTest &D, StringRef Fmt,
   EXPECT_EQ(Arch, File.getArch());
 }
 
+std::array<DataForTest, 4> generateData(uint16_t Machine) {
+  return {DataForTest(ELF::ELFCLASS32, ELF::ELFDATA2LSB, Machine),
+          DataForTest(ELF::ELFCLASS32, ELF::ELFDATA2MSB, Machine),
+          DataForTest(ELF::ELFCLASS64, ELF::ELFDATA2LSB, Machine),
+          DataForTest(ELF::ELFCLASS64, ELF::ELFDATA2MSB, Machine)};
+}
+
 } // namespace
 
+TEST(ELFObjectFileTest, MachineTestForNoneOrUnused) {
+  std::array<StringRef, 4> Formats = {"elf32-unknown", "elf32-unknown",
+                                      "elf64-unknown", "elf64-unknown"};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_NONE))
+    checkFormatAndArch(D, Formats[I++], Triple::UnknownArch);
+
+  // Test an arbitrary unused EM_* value (255).
+  I = 0;
+  for (const DataForTest &D : generateData(255))
+    checkFormatAndArch(D, Formats[I++], Triple::UnknownArch);
+}
+
 TEST(ELFObjectFileTest, MachineTestForVE) {
-  checkFormatAndArch({ELF::ELFCLASS64, ELF::ELFDATA2LSB, ELF::EM_VE},
-                     "elf64-ve", Triple::ve);
+  std::array<StringRef, 4> Formats = {"elf32-unknown", "elf32-unknown",
+                                      "elf64-ve", "elf64-ve"};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_VE))
+    checkFormatAndArch(D, Formats[I++], Triple::ve);
 }
 
 TEST(ELFObjectFileTest, MachineTestForX86_64) {
-  checkFormatAndArch({ELF::ELFCLASS64, ELF::ELFDATA2LSB, ELF::EM_X86_64},
-                     "elf64-x86-64", Triple::x86_64);
+  std::array<StringRef, 4> Formats = {"elf32-x86-64", "elf32-x86-64",
+                                      "elf64-x86-64", "elf64-x86-64"};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_X86_64))
+    checkFormatAndArch(D, Formats[I++], Triple::x86_64);
 }
 
 TEST(ELFObjectFileTest, MachineTestFor386) {
-  checkFormatAndArch({ELF::ELFCLASS32, ELF::ELFDATA2LSB, ELF::EM_386},
-                     "elf32-i386", Triple::x86);
+  std::array<StringRef, 4> Formats = {"elf32-i386", "elf32-i386", "elf64-i386",
+                                      "elf64-i386"};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_386))
+    checkFormatAndArch(D, Formats[I++], Triple::x86);
 }
 
 TEST(ELFObjectFileTest, MachineTestForMIPS) {
-  checkFormatAndArch({ELF::ELFCLASS64, ELF::ELFDATA2LSB, ELF::EM_MIPS},
-                     "elf64-mips", Triple::mips64el);
+  std::array<StringRef, 4> Formats = {"elf32-mips", "elf32-mips", "elf64-mips",
+                                      "elf64-mips"};
+  std::array<Triple::ArchType, 4> Archs = {Triple::mipsel, Triple::mips,
+                                           Triple::mips64el, Triple::mips64};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_MIPS)) {
+    checkFormatAndArch(D, Formats[I], Archs[I]);
+    ++I;
+  }
+}
 
-  checkFormatAndArch({ELF::ELFCLASS64, ELF::ELFDATA2MSB, ELF::EM_MIPS},
-                     "elf64-mips", Triple::mips64);
+TEST(ELFObjectFileTest, MachineTestForAMDGPU) {
+  std::array<StringRef, 4> Formats = {"elf32-amdgpu", "elf32-amdgpu",
+                                      "elf64-amdgpu", "elf64-amdgpu"};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_AMDGPU))
+    checkFormatAndArch(D, Formats[I++], Triple::UnknownArch);
+}
 
-  checkFormatAndArch({ELF::ELFCLASS32, ELF::ELFDATA2LSB, ELF::EM_MIPS},
-                     "elf32-mips", Triple::mipsel);
+TEST(ELFObjectFileTest, MachineTestForIAMCU) {
+  std::array<StringRef, 4> Formats = {"elf32-iamcu", "elf32-iamcu",
+                                      "elf64-unknown", "elf64-unknown"};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_IAMCU))
+    checkFormatAndArch(D, Formats[I++], Triple::x86);
+}
 
-  checkFormatAndArch({ELF::ELFCLASS32, ELF::ELFDATA2MSB, ELF::EM_MIPS},
-                     "elf32-mips", Triple::mips);
+TEST(ELFObjectFileTest, MachineTestForAARCH64) {
+  std::array<StringRef, 4> Formats = {"elf32-unknown", "elf32-unknown",
+                                      "elf64-littleaarch64",
+                                      "elf64-bigaarch64"};
+  std::array<Triple::ArchType, 4> Archs = {Triple::aarch64, Triple::aarch64_be,
+                                           Triple::aarch64, Triple::aarch64_be};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_AARCH64)) {
+    checkFormatAndArch(D, Formats[I], Archs[I]);
+    ++I;
+  }
+}
+
+TEST(ELFObjectFileTest, MachineTestForPPC64) {
+  std::array<StringRef, 4> Formats = {"elf32-unknown", "elf32-unknown",
+                                      "elf64-powerpcle", "elf64-powerpc"};
+  std::array<Triple::ArchType, 4> Archs = {Triple::ppc64le, Triple::ppc64,
+                                           Triple::ppc64le, Triple::ppc64};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_PPC64)) {
+    checkFormatAndArch(D, Formats[I], Archs[I]);
+    ++I;
+  }
+}
+
+TEST(ELFObjectFileTest, MachineTestForPPC) {
+  std::array<StringRef, 4> Formats = {"elf32-powerpc", "elf32-powerpc",
+                                      "elf64-unknown", "elf64-unknown"};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_PPC))
+    checkFormatAndArch(D, Formats[I++], Triple::ppc);
+}
+
+TEST(ELFObjectFileTest, MachineTestForRISCV) {
+  std::array<StringRef, 4> Formats = {"elf32-littleriscv", "elf32-littleriscv",
+                                      "elf64-littleriscv", "elf64-littleriscv"};
+  std::array<Triple::ArchType, 4> Archs = {Triple::riscv32, Triple::riscv32,
+                                           Triple::riscv64, Triple::riscv64};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_RISCV)) {
+    checkFormatAndArch(D, Formats[I], Archs[I]);
+    ++I;
+  }
+}
+
+TEST(ELFObjectFileTest, MachineTestForARM) {
+  std::array<StringRef, 4> Formats = {"elf32-littlearm", "elf32-bigarm",
+                                      "elf64-unknown", "elf64-unknown"};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_ARM))
+    checkFormatAndArch(D, Formats[I++], Triple::arm);
+}
+
+TEST(ELFObjectFileTest, MachineTestForS390) {
+  std::array<StringRef, 4> Formats = {"elf32-unknown", "elf32-unknown",
+                                      "elf64-s390", "elf64-s390"};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_S390))
+    checkFormatAndArch(D, Formats[I++], Triple::systemz);
+}
+
+TEST(ELFObjectFileTest, MachineTestForSPARCV9) {
+  std::array<StringRef, 4> Formats = {"elf32-unknown", "elf32-unknown",
+                                      "elf64-sparc", "elf64-sparc"};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_SPARCV9))
+    checkFormatAndArch(D, Formats[I++], Triple::sparcv9);
+}
+
+TEST(ELFObjectFileTest, MachineTestForSPARC) {
+  std::array<StringRef, 4> Formats = {"elf32-sparc", "elf32-sparc",
+                                      "elf64-unknown", "elf64-unknown"};
+  std::array<Triple::ArchType, 4> Archs = {Triple::sparcel, Triple::sparc,
+                                           Triple::sparcel, Triple::sparc};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_SPARC)) {
+    checkFormatAndArch(D, Formats[I], Archs[I]);
+    ++I;
+  }
+}
+
+TEST(ELFObjectFileTest, MachineTestForSPARC32PLUS) {
+  std::array<StringRef, 4> Formats = {"elf32-sparc", "elf32-sparc",
+                                      "elf64-unknown", "elf64-unknown"};
+  std::array<Triple::ArchType, 4> Archs = {Triple::sparcel, Triple::sparc,
+                                           Triple::sparcel, Triple::sparc};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_SPARC32PLUS)) {
+    checkFormatAndArch(D, Formats[I], Archs[I]);
+    ++I;
+  }
+}
+
+TEST(ELFObjectFileTest, MachineTestForBPF) {
+  std::array<StringRef, 4> Formats = {"elf32-unknown", "elf32-unknown",
+                                      "elf64-bpf", "elf64-bpf"};
+  std::array<Triple::ArchType, 4> Archs = {Triple::bpfel, Triple::bpfeb,
+                                           Triple::bpfel, Triple::bpfeb};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_BPF)) {
+    checkFormatAndArch(D, Formats[I], Archs[I]);
+    ++I;
+  }
+}
+
+TEST(ELFObjectFileTest, MachineTestForAVR) {
+  std::array<StringRef, 4> Formats = {"elf32-avr", "elf32-avr", "elf64-unknown",
+                                      "elf64-unknown"};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_AVR))
+    checkFormatAndArch(D, Formats[I++], Triple::avr);
+}
+
+TEST(ELFObjectFileTest, MachineTestForHEXAGON) {
+  std::array<StringRef, 4> Formats = {"elf32-hexagon", "elf32-hexagon",
+                                      "elf64-unknown", "elf64-unknown"};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_HEXAGON))
+    checkFormatAndArch(D, Formats[I++], Triple::hexagon);
+}
+
+TEST(ELFObjectFileTest, MachineTestForLANAI) {
+  std::array<StringRef, 4> Formats = {"elf32-lanai", "elf32-lanai",
+                                      "elf64-unknown", "elf64-unknown"};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_LANAI))
+    checkFormatAndArch(D, Formats[I++], Triple::lanai);
+}
+
+TEST(ELFObjectFileTest, MachineTestForMSP430) {
+  std::array<StringRef, 4> Formats = {"elf32-msp430", "elf32-msp430",
+                                      "elf64-unknown", "elf64-unknown"};
+  size_t I = 0;
+  for (const DataForTest &D : generateData(ELF::EM_MSP430))
+    checkFormatAndArch(D, Formats[I++], Triple::msp430);
 }
