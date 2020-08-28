@@ -1,6 +1,8 @@
 # RUN: yaml2obj %p/Inputs/i386-slice.yaml -o %t-i386.o
 # RUN: yaml2obj %p/Inputs/x86_64-slice.yaml -o %t-x86_64.o
 # RUN: yaml2obj %p/Inputs/i386-x86_64-universal.yaml -o %t-universal.o
+# RUN: llvm-as %p/Inputs/armv7-ios.ll -o %t-ir-armv7.o
+# RUN: llvm-as %p/Inputs/x64-osx.ll -o %t-ir-x86_64.o
 
 # RUN: llvm-ar cr %t.empty.a
 # RUN: not llvm-lipo %t.empty.a -create -output /dev/null 2>&1 | FileCheck --check-prefix=EMPTY-ARCHIVE %s
@@ -18,9 +20,25 @@
 # RUN: cmp %t-extracted-i386-lib.a %t-i386-lib.a
 # RUN: llvm-lipo %t-i386-x86_64-universal.o -thin x86_64 -output %t-extracted-x86_64.o
 # RUN: cmp %t-extracted-x86_64.o %t-x86_64.o
-#
+
+# RUN: llvm-ar cr %t-ir-armv7-lib.a %t-ir-armv7.o
+# RUN: llvm-lipo %t-ir-armv7-lib.a %t-ir-x86_64.o -create -output %t-ir-armv7-x86_64-universal.o
+# RUN: llvm-lipo %t-ir-armv7-x86_64-universal.o -thin armv7 -output %t-ir-extracted-armv7-lib.a
+# RUN: cmp %t-ir-extracted-armv7-lib.a %t-ir-armv7-lib.a
+# RUN: llvm-lipo %t-ir-armv7-x86_64-universal.o -thin x86_64 -output %t-ir-extracted-x86_64.o
+# RUN: cmp %t-ir-extracted-x86_64.o %t-ir-x86_64.o
+
+# RUN: llvm-ar cr %t.different_types0.a %t-i386.o %t-ir-x86_64.o
+# RUN: not llvm-lipo -create %t.different_types0.a -output /dev/null 2>&1 | FileCheck --check-prefix=ARCHIVE-WITH-MACHO-AND-IR %s
+# RUN: llvm-ar cr %t.different_types1.a %t-ir-x86_64.o %t-i386.o 
+# RUN: not llvm-lipo -create %t.different_types1.a -output /dev/null 2>&1 | FileCheck --check-prefix=ARCHIVE-WITH-IR-AND-MACHO %s
+# RUN: llvm-ar cr %t.different_architectures_ir.a %t-ir-x86_64.o %t-ir-armv7.o
+# RUN: not llvm-lipo -create %t.different_architectures_ir.a -output /dev/null 2>&1 | FileCheck --check-prefix=ARCHIVE-WITH-DIFFERENT-ARCHS %s
+
 # EMPTY-ARCHIVE: empty archive
 # ARCHIVE-WITH-DIFFERENT-ARCHS: all members must match
+# ARCHIVE-WITH-MACHO-AND-IR: is an LLVM IR object, while previous archive member {{.*}} was a MachO
+# ARCHIVE-WITH-IR-AND-MACHO: is a MachO, while previous archive member {{.*}} was an IR LLVM object
 # ARCHIVE-WITH-FAT-BINARY: fat file (not allowed in an archive)
 #
 # INFO-i386-x86_64: i386 x86_64
