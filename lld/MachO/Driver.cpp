@@ -379,12 +379,15 @@ static void parseOrderFile(StringRef path) {
 }
 
 // We expect sub-library names of the form "libfoo", which will match a dylib
-// with a path of .*/libfoo.dylib.
+// with a path of .*/libfoo.{dylib, tbd}.
+// XXX ld64 seems to ignore the extension entirely when matching sub-libraries;
+// I'm not sure what the use case for that is.
 static bool markSubLibrary(StringRef searchName) {
   for (InputFile *file : inputFiles) {
     if (auto *dylibFile = dyn_cast<DylibFile>(file)) {
       StringRef filename = path::filename(dylibFile->getName());
-      if (filename.consume_front(searchName) && filename == ".dylib") {
+      if (filename.consume_front(searchName) &&
+          (filename == ".dylib" || filename == ".tbd")) {
         dylibFile->reexport = true;
         return true;
       }
