@@ -1300,14 +1300,14 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
 }
 
 Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
-  if (!EC.Scalable) {
+  if (!EC.isScalable()) {
     // If this splat is compatible with ConstantDataVector, use it instead of
     // ConstantVector.
     if ((isa<ConstantFP>(V) || isa<ConstantInt>(V)) &&
         ConstantDataSequential::isElementTypeCompatible(V->getType()))
-      return ConstantDataVector::getSplat(EC.Min, V);
+      return ConstantDataVector::getSplat(EC.getKnownMinValue(), V);
 
-    SmallVector<Constant *, 32> Elts(EC.Min, V);
+    SmallVector<Constant *, 32> Elts(EC.getKnownMinValue(), V);
     return get(Elts);
   }
 
@@ -1324,7 +1324,7 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
   Constant *UndefV = UndefValue::get(VTy);
   V = ConstantExpr::getInsertElement(UndefV, V, ConstantInt::get(I32Ty, 0));
   // Build shuffle mask to perform the splat.
-  SmallVector<int, 8> Zeros(EC.Min, 0);
+  SmallVector<int, 8> Zeros(EC.getKnownMinValue(), 0);
   // Splat.
   return ConstantExpr::getShuffleVector(V, UndefV, Zeros);
 }
@@ -2264,7 +2264,7 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
       if (VectorType *VecTy = dyn_cast<VectorType>(Idx->getType()))
         EltCount = VecTy->getElementCount();
 
-  if (EltCount.Min != 0)
+  if (EltCount.isNonZero())
     ReqTy = VectorType::get(ReqTy, EltCount);
 
   if (OnlyIfReducedTy == ReqTy)
@@ -2284,7 +2284,7 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
 
     if (GTI.isStruct() && Idx->getType()->isVectorTy()) {
       Idx = Idx->getSplatValue();
-    } else if (GTI.isSequential() && EltCount.Min != 0 &&
+    } else if (GTI.isSequential() && EltCount.isNonZero() &&
                !Idx->getType()->isVectorTy()) {
       Idx = ConstantVector::getSplat(EltCount, Idx);
     }
