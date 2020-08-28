@@ -176,14 +176,30 @@ Symbols:
     Type:    STT_FUNC
     Binding: STB_GLOBAL
 
-## Check that we report an error when we find relocations whose offsets point outside
+## Check that we report a warning when we find relocations whose offsets point outside
 ## of the .stack_sizes section.
 
 # RUN: yaml2obj --docnum=3 %s -o %t03
-# RUN: not llvm-readelf --stack-sizes %t03 2>&1 | FileCheck %s --check-prefix=SHORT -DFILE=%t03
-# RUN: not llvm-readobj --stack-sizes %t03 2>&1 | FileCheck %s --check-prefix=SHORT -DFILE=%t03
+# RUN: llvm-readelf --stack-sizes %t03 2>&1 | FileCheck %s --check-prefix=SHORT-GNU -DFILE=%t03
+# RUN: llvm-readobj --stack-sizes %t03 2>&1 | FileCheck %s --check-prefix=SHORT-LLVM -DFILE=%t03
 
-# SHORT: error: '[[FILE]]': found invalid relocation offset into section .stack_sizes while trying to extract a stack size entry
+# SHORT-GNU:      Stack Sizes:
+# SHORT-GNU-NEXT:  Size     Function
+# SHORT-GNU-NEXT:     8     foo
+# SHORT-GNU-NEXT: warning: '[[FILE]]': found invalid relocation offset (0x1) into section .stack_sizes while trying to extract a stack size entry
+# SHORT-GNU-NEXT:     8     foo
+
+# SHORT-LLVM:     StackSizes [
+# SHORT-LLVM-NEXT:   Entry {
+# SHORT-LLVM-NEXT:     Function: foo
+# SHORT-LLVM-NEXT:     Size: 0x8
+# SHORT-LLVM-NEXT:   }
+# SHORT-LLVM-NEXT: warning: '[[FILE]]': found invalid relocation offset (0x1) into section .stack_sizes while trying to extract a stack size entry
+# SHORT-LLVM-NEXT:   Entry {
+# SHORT-LLVM-NEXT:     Function: foo
+# SHORT-LLVM-NEXT:     Size: 0x8
+# SHORT-LLVM-NEXT:   }
+# SHORT-LLVM-NEXT: ]
 
 --- !ELF
 FileHeader:
@@ -198,14 +214,24 @@ Sections:
     Size:    16
   - Name:    .stack_sizes
     Type:    SHT_PROGBITS
-    Content: "00"
     Link:    .text
+    Entries:
+      - Size: 0x8
   - Name:    .rela.stack_sizes
     Type:    SHT_RELA
     Info:    .stack_sizes
     Relocations:
-      - Offset: 1
-        Symbol: foo 
+      - Offset: 0x0
+        Symbol: foo
+        Type:   R_X86_64_64
+      - Offset: 0x1
+        Symbol: foo
+        Type:   R_X86_64_64
+      - Offset: 0x1
+        Symbol: foo
+        Type:   R_X86_64_64
+      - Offset: 0x0
+        Symbol: foo
         Type:   R_X86_64_64
 Symbols:
   - Name:    foo
@@ -271,45 +297,73 @@ Symbols:
     Type:    STT_FUNC
     Binding: STB_GLOBAL
 
-## Check that we report an error when a stack sizes section ends with an incomplete stack size entry.
+## Check that we report a warning when a stack sizes section ends with an incomplete stack size entry.
 
 # RUN: yaml2obj --docnum=5 %s -o %t05
-# RUN: not llvm-readelf --stack-sizes %t05 2>&1 | \
-# RUN:    FileCheck %s --check-prefix=SUDDENEND -DFILE=%t05
-# RUN: not llvm-readobj --stack-sizes %t05 2>&1 | \
-# RUN:    FileCheck %s --check-prefix=SUDDENEND -DFILE=%t05
+# RUN: llvm-readelf --stack-sizes %t05 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=SUDDENEND-GNU -DFILE=%t05
+# RUN: llvm-readobj --stack-sizes %t05 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=SUDDENEND-LLVM -DFILE=%t05
 
-# SUDDENEND: error: '[[FILE]]': section .stack_sizes ended while trying to extract a stack size entry
+# SUDDENEND-GNU:      Stack Sizes:
+# SUDDENEND-GNU-NEXT:  Size     Function
+# SUDDENEND-GNU-NEXT:     8     foo
+# SUDDENEND-GNU-NEXT: warning: '[[FILE]]': SHT_PROGBITS section with index 2 ended while trying to extract a stack size entry
+# SUDDENEND-GNU-NEXT:     8     foo
+# SUDDENEND-GNU-NEXT: warning: '[[FILE]]': SHT_PROGBITS section with index 3 ended while trying to extract a stack size entry
+
+# SUDDENEND-LLVM:      StackSizes [
+# SUDDENEND-LLVM-NEXT:   Entry {
+# SUDDENEND-LLVM-NEXT:     Function: foo
+# SUDDENEND-LLVM-NEXT:     Size: 0x8
+# SUDDENEND-LLVM-NEXT:   }
+# SUDDENEND-LLVM-NEXT: warning: '[[FILE]]': SHT_PROGBITS section with index 2 ended while trying to extract a stack size entry
+# SUDDENEND-LLVM-NEXT:   Entry {
+# SUDDENEND-LLVM-NEXT:     Function: foo
+# SUDDENEND-LLVM-NEXT:     Size: 0x8
+# SUDDENEND-LLVM-NEXT:   }
+# SUDDENEND-LLVM-NEXT: warning: '[[FILE]]': SHT_PROGBITS section with index 3 ended while trying to extract a stack size entry
+# SUDDENEND-LLVM-NEXT: ]
 
 --- !ELF
 FileHeader:
-  Class: ELFCLASS64
-  Data:  ELFDATA2LSB
-  Type:  ET_EXEC
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
 Sections:
-  - Name:    .text
-    Type:    SHT_PROGBITS
-    Flags:   [SHF_ALLOC]
-    Size:    16
-  - Name:    .stack_sizes
-    Type:    SHT_PROGBITS
-    Content: "10000000"
-    Link:    .text
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Name: .stack_sizes
+    Type: SHT_PROGBITS
+    Link: .text
+    Entries:
+      - Size: 0x8
+      - Size: 0x10
+## 0x11 == the normal size minus 1.
+    ShSize: 0x11
+  - Name: .stack_sizes (1)
+    Type: SHT_PROGBITS
+    Link: .text
+    Entries:
+      - Size: 0x8
+      - Size: 0x10
+    ShSize: 0x11
 Symbols:
   - Name:    foo
     Section: .text
-    Value:   0x10
     Type:    STT_FUNC
-    Binding: STB_GLOBAL
 
 ## Check that we report an invalid stack size, which is represented by a ULEB that
 ## ends in a byte with the high bit set.
 
 # RUN: yaml2obj --docnum=6 %s -o %t06
-# RUN: not llvm-readelf --stack-sizes %t06 2>&1 | FileCheck %s --check-prefix=BADSIZE -DFILE=%t06
-# RUN: not llvm-readobj --stack-sizes %t06 2>&1 | FileCheck %s --check-prefix=BADSIZE -DFILE=%t06
+# RUN: llvm-readelf --stack-sizes %t06 2>&1 | FileCheck %s --check-prefix=BADSIZE -DFILE=%t06
+# RUN: llvm-readobj --stack-sizes %t06 2>&1 | FileCheck %s --check-prefix=BADSIZE -DFILE=%t06
 
-# BADSIZE: error: '[[FILE]]': could not extract a valid stack size in section .stack_sizes
+## TODO: these messages should be improved to include section indices.
+# BADSIZE: warning: '[[FILE]]': could not extract a valid stack size in section .stack_sizes
+# BADSIZE: warning: '[[FILE]]': could not extract a valid stack size in section .stack_sizes
 
 --- !ELF
 FileHeader:
@@ -322,6 +376,10 @@ Sections:
     Flags:   [SHF_ALLOC]
     Size:    16
   - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Content: "100000000000000080"
+    Link:    .text
+  - Name:    .stack_sizes (1)
     Type:    SHT_PROGBITS
     Content: "100000000000000080"
     Link:    .text
@@ -525,7 +583,7 @@ Sections:
     Info: .stack_sizes
     Relocations:
       - Offset: 0
-        Symbol: foo 
+        Symbol: foo
         Type:   R_X86_64_64
 Symbols:
   - Name:    foo
@@ -533,14 +591,27 @@ Symbols:
     Type:    STT_OBJECT
     Binding: STB_GLOBAL
 
-## Check that we report an error when we find an unsupported relocation
+## Check that we report a warning when we find an unsupported relocation
 ## in the section that contains the stack size entries' relocations.
 
 # RUN: yaml2obj --docnum=10 %s -o %t15
-# RUN: not llvm-readelf --stack-sizes %t15 2>&1 | FileCheck %s --check-prefix=UNSUPPRELOC -DFILE=%t15
-# RUN: not llvm-readobj --stack-sizes %t15 2>&1 | FileCheck %s --check-prefix=UNSUPPRELOC -DFILE=%t15
+# RUN: llvm-readelf --stack-sizes %t15 2>&1 | FileCheck %s --check-prefix=UNSUPPRELOC-GNU -DFILE=%t15
+# RUN: llvm-readobj --stack-sizes %t15 2>&1 | FileCheck %s --check-prefix=UNSUPPRELOC-LLVM -DFILE=%t15
 
-# UNSUPPRELOC: error: '[[FILE]]': unsupported relocation type in section .rela.stack_sizes: R_X86_64_RELATIVE
+# UNSUPPRELOC-GNU:      Stack Sizes:
+# UNSUPPRELOC-GNU-NEXT:   Size     Function
+# UNSUPPRELOC-GNU-NEXT: warning: '[[FILE]]': SHT_RELA section with index 3 contains an unsupported relocation with index 1: R_X86_64_RELATIVE
+# UNSUPPRELOC-GNU-NEXT:      0     foo
+# UNSUPPRELOC-GNU-NEXT: warning: '[[FILE]]': SHT_RELA section with index 3 contains an unsupported relocation with index 3: R_X86_64_RELATIVE
+
+# UNSUPPRELOC-LLVM:      StackSizes [
+# UNSUPPRELOC-LLVM-NEXT: warning: '[[FILE]]': SHT_RELA section with index 3 contains an unsupported relocation with index 1: R_X86_64_RELATIVE
+# UNSUPPRELOC-LLVM-NEXT:   Entry {
+# UNSUPPRELOC-LLVM-NEXT:     Function: foo
+# UNSUPPRELOC-LLVM-NEXT:     Size: 0x0
+# UNSUPPRELOC-LLVM-NEXT:   }
+# UNSUPPRELOC-LLVM-NEXT: warning: '[[FILE]]': SHT_RELA section with index 3 contains an unsupported relocation with index 3: R_X86_64_RELATIVE
+# UNSUPPRELOC-LLVM-NEXT: ]
 
 --- !ELF
 FileHeader:
@@ -555,13 +626,20 @@ Sections:
   - Name: .stack_sizes
     Type: SHT_PROGBITS
     Link: .text
-    Entries: []
+    Entries:
+      - Size: 0
   - Name: .rela.stack_sizes
     Type: SHT_RELA
     Info: .stack_sizes
     Relocations:
       - Offset: 0
-        Symbol: foo 
+        Symbol: foo
+        Type:   R_X86_64_RELATIVE
+      - Offset: 0
+        Symbol: foo
+        Type:   R_X86_64_64
+      - Offset: 0
+        Symbol: foo
         Type:   R_X86_64_RELATIVE
 Symbols:
   - Name:    foo
@@ -648,14 +726,14 @@ Symbols:
     Type:    STT_FUNC
     Binding: STB_GLOBAL
 
-## Check that we report an error when we are unable to resolve a relocation for a given ELF architecture.
+## Check that we report a warning when we are unable to resolve a relocation for a given ELF architecture.
 ## Here we have a 64-bit relocation used in a 32-bit object.
 
 # RUN: yaml2obj --docnum=12 %s -o %t17
-# RUN: not llvm-readelf --stack-sizes %t17 2>&1 | FileCheck %s -DFILE=%t17 --check-prefix=UNSUPPRELOC2
-# RUN: not llvm-readobj --stack-sizes %t17 2>&1 | FileCheck %s -DFILE=%t17 --check-prefix=UNSUPPRELOC2
+# RUN: llvm-readelf --stack-sizes %t17 2>&1 | FileCheck %s -DFILE=%t17 --check-prefix=UNSUPPRELOC2
+# RUN: llvm-readobj --stack-sizes %t17 2>&1 | FileCheck %s -DFILE=%t17 --check-prefix=UNSUPPRELOC2
 
-# UNSUPPRELOC2: error: '[[FILE]]': unsupported relocation type in section .rela.stack_sizes: R_X86_64_64
+# UNSUPPRELOC2: warning: '[[FILE]]': SHT_RELA section with index 2 contains an unsupported relocation with index 1: R_X86_64_64
 
 --- !ELF
 FileHeader:
@@ -674,15 +752,18 @@ Sections:
       - Offset: 0
         Type:   R_X86_64_64
 
-## Check we report an error when dumping stack sizes if the relocated section
+## Check we report a warning when dumping stack sizes if the relocated section
 ## identified by the sh_info field is invalid. Here the sh_info value is larger than
 ## the number of sections.
 
 # RUN: yaml2obj --docnum=13 %s -o %t18
-# RUN: not llvm-readelf --stack-sizes %t18 2>&1 | FileCheck %s -DFILE=%t18 --check-prefix=INVALID-TARGET
-# RUN: not llvm-readobj --stack-sizes %t18 2>&1 | FileCheck %s -DFILE=%t18 --check-prefix=INVALID-TARGET
+# RUN: llvm-readelf --stack-sizes %t18 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not="warning:" -DFILE=%t18 --check-prefix=INVALID-TARGET
+# RUN: llvm-readobj --stack-sizes %t18 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not="warning:" -DFILE=%t18 --check-prefix=INVALID-TARGET
 
-# INVALID-TARGET: error: '[[FILE]]': .rela.stack_sizes: failed to get a relocated section: invalid section index: 255
+# INVALID-TARGET: warning: '[[FILE]]': SHT_RELA section with index 1: failed to get a relocated section: invalid section index: 255
+# INVALID-TARGET: warning: '[[FILE]]': SHT_RELA section with index 2: failed to get a relocated section: invalid section index: 255
 
 --- !ELF
 FileHeader:
@@ -691,6 +772,11 @@ FileHeader:
   Type:  ET_REL
 Sections:
   - Name: .rela.stack_sizes
+    Type: SHT_RELA
+    Link: 0
+    Info: 0xFF
+    Relocations: []
+  - Name: .rela.stack_sizes (1)
     Type: SHT_RELA
     Link: 0
     Info: 0xFF
