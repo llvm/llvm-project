@@ -18,6 +18,15 @@ def PPCxxsplti32dx : SDNode<"PPCISD::XXSPLTI32DX", SDT_PPCSplat32, []>;
 // address computations).
 class isPCRel { bit PCRel = 1; }
 
+// PowerPC specific type constraints.
+def SDT_PPCLXVRZX : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v1i128>, SDTCisPtrTy<1>, SDTCisPtrTy<2>
+]>;
+
+// PPC Specific DAG Nodes.
+def PPClxvrzx : SDNode<"PPCISD::LXVRZX", SDT_PPCLXVRZX,
+                       [SDNPHasChain, SDNPMayLoad]>;
+
 // Top-level class for prefixed instructions.
 class PI<bits<6> pref, bits<6> opcode, dag OOL, dag IOL, string asmstr,
          InstrItinClass itin> : Instruction {
@@ -1326,6 +1335,15 @@ let Predicates = [IsISA3_1] in {
             (v1i128 (VSRAQ v1i128:$VRA, v1i128:$VRB))>;
   def : Pat<(v1i128 (PPCsra v1i128:$VRA, v1i128:$VRB)),
             (v1i128 (VSRAQ v1i128:$VRA, v1i128:$VRB))>;
+
+  def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 8)),
+             (v1i128 (COPY_TO_REGCLASS (LXVRBX xoaddr:$src), VRRC))>;
+  def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 16)),
+             (v1i128 (COPY_TO_REGCLASS (LXVRHX xoaddr:$src), VRRC))>;
+  def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 32)),
+             (v1i128 (COPY_TO_REGCLASS (LXVRWX xoaddr:$src), VRRC))>;
+  def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 64)),
+             (v1i128 (COPY_TO_REGCLASS (LXVRDX xoaddr:$src), VRRC))>;
 }
 
 let AddedComplexity = 400, Predicates = [IsISA3_1] in {
