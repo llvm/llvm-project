@@ -48,6 +48,46 @@ Major New Features
 
 - ...
 
+Recovery AST
+^^^^^^^^^^^^
+
+clang's AST now improves support for representing broken C++ code. This improves
+the quality of subsequent diagnostics after an error is encountered. It also
+exposes more information to tools like clang-tidy and clangd that consume
+clang’s AST, allowing them to be more accurate on broken code.
+
+A RecoveryExpr is introduced in clang's AST, marking an expression containing
+semantic errors. This preserves the source range and subexpressions of the
+broken expression in the AST (rather than discarding the whole expression).
+
+For the following invalid code:
+
+  .. code-block:: c++
+
+     int NoArg(); // Line 1
+     int x = NoArg(42); // oops!
+
+clang-10 produces the minimal placeholder:
+
+  .. code-block:: c++
+
+     // VarDecl <line:2:1, col:5> col:5 x 'int'
+
+clang-11 produces a richer AST:
+
+  .. code-block:: c++
+
+     // VarDecl <line:2:1, col:16> col:5 x 'int' cinit
+     // `-RecoveryExpr <col:9, col:16> '<dependent type>' contains-errors lvalue
+     //    `-UnresolvedLookupExpr <col:9> '<overloaded function>' lvalue (ADL) = 'NoArg'
+     //    `-IntegerLiteral <col:15> 'int' 42
+
+Note that error-dependent types and values may now occur outside a template
+context. Tools may need to adjust assumptions about dependent code.
+
+This feature is on by default for C++ code, and can be explicitly controlled
+with `-Xclang -f[no-]recovery-ast`.
+
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
