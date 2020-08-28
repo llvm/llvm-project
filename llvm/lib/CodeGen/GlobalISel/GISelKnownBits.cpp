@@ -471,6 +471,13 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
     unsigned Tmp = DstTy.getScalarSizeInBits() - SrcTy.getScalarSizeInBits();
     return computeNumSignBits(Src, DemandedElts, Depth + 1) + Tmp;
   }
+  case TargetOpcode::G_SEXT_INREG: {
+    // Max of the input and what this extends.
+    Register Src = MI.getOperand(1).getReg();
+    unsigned SrcBits = MI.getOperand(2).getImm();
+    unsigned InRegBits = TyBits - SrcBits + 1;
+    return std::max(computeNumSignBits(Src, DemandedElts, Depth + 1), InRegBits);
+  }
   case TargetOpcode::G_TRUNC: {
     Register Src = MI.getOperand(1).getReg();
     LLT SrcTy = MRI.getType(Src);
