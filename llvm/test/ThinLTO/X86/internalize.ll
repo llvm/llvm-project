@@ -4,13 +4,13 @@
 ; prevailing the %t1.bc copy as non-prevailing.
 ; RUN: llvm-lto -thinlto-action=thinlink -o %t.index.bc %t2.bc %t1.bc
 ; RUN: llvm-lto -thinlto-action=internalize -thinlto-index %t.index.bc %t1.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=REGULAR
-; RUN: llvm-lto -thinlto-action=internalize -thinlto-index %t.index.bc %t1.bc -o -  --exported-symbol=foo | llvm-dis -o - | FileCheck %s --check-prefix=INTERNALIZE
+; RUN: llvm-lto -thinlto-action=internalize -thinlto-index %t.index.bc %t1.bc -o -  --exported-symbol=_foo | llvm-dis -o - | FileCheck %s --check-prefix=INTERNALIZE
 
 ; Test the enable-lto-internalization option by setting it to false.
 ; This makes sure indices are not marked as internallinkage and therefore
 ; internalization does not happen.
 ; RUN: llvm-lto -thinlto-action=internalize -thinlto-index %t.index.bc %t1.bc \
-; RUN:          -enable-lto-internalization=false --exported-symbol=foo
+; RUN:          -enable-lto-internalization=false --exported-symbol=_foo
 ; RUN: llvm-dis < %t1.bc.thinlto.internalized.bc | FileCheck %s --check-prefix=INTERNALIZE-OPTION-DISABLE
 
 ; RUN: llvm-lto2 run %t1.bc -o %t.o -save-temps \
