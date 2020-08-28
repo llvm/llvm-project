@@ -53,6 +53,10 @@ Improvements to Clang's diagnostics
 
 - ...
 
+- ``-Wimplicit-const-int-float-conversion`` (enabled by default) is a new
+  option controlled by ``-Wimplicit-int-float-conversion``.  It warns on
+  implicit conversion from a floating constant to an integer type.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -67,6 +71,21 @@ Non-comprehensive list of changes in this release
 - The builtin intrinsics ``__builtin_rotateright8``, ``__builtin_rotateright16``,
   ``__builtin_rotateright32`` and ``__builtin_rotateright64`` may now be used
   within constant expressions.
+
+- ``-O`` maps to ``-O1`` instead of ``-O2``.
+  (`D79916 <https://reviews.llvm.org/D79916>`_)
+
+- In a ``-flto={full,thin}`` link, ``-Os``, ``-Oz`` and ``-Og`` can be used
+  now. ``-Os`` and ``-Oz`` map to the -O2 pipe line while ``-Og`` maps to the
+  -O1 pipeline.
+  (`D79919 <https://reviews.llvm.org/D79919>`_)
+
+- ``--coverage`` (gcov) defaults to gcov [4.8,8) compatible format now.
+
+- On x86, ``-fpic/-fPIC -fno-semantic-interposition`` assumes a global
+  definition of default visibility non-interposable and allows interprocedural
+  optimizations. In produced assembly ``-Lfunc$local`` local aliases are created
+  for global symbols of default visibility.
 
 New Compiler Flags
 ------------------
@@ -86,6 +105,8 @@ New Compiler Flags
   For example, ``-fbinutils-version=2.35`` means compatibility with GNU as/ld
   before 2.35 is not needed: new features can be used and there is no need to
   work around old GNU as/ld bugs.
+
+- ``-fsanitize-coverage-allowlist`` and ``-fsanitize-coverage-blocklist`` are added.
 
 Deprecated Compiler Flags
 -------------------------
