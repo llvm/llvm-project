@@ -176,7 +176,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addDRTypeForNEON(MVT::v1i64);
     addDRTypeForNEON(MVT::v1f64);
     addDRTypeForNEON(MVT::v4f16);
-    addDRTypeForNEON(MVT::v4bf16);
+    if (Subtarget->hasBF16())
+      addDRTypeForNEON(MVT::v4bf16);
 
     addQRTypeForNEON(MVT::v4f32);
     addQRTypeForNEON(MVT::v2f64);
@@ -185,7 +186,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addQRTypeForNEON(MVT::v4i32);
     addQRTypeForNEON(MVT::v2i64);
     addQRTypeForNEON(MVT::v8f16);
-    addQRTypeForNEON(MVT::v8bf16);
+    if (Subtarget->hasBF16())
+      addQRTypeForNEON(MVT::v8bf16);
   }
 
   if (Subtarget->hasSVE()) {
@@ -1096,6 +1098,7 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT, MVT PromotedBitwiseVT) {
 
   // F[MIN|MAX][NUM|NAN] are available for all FP NEON types.
   if (VT.isFloatingPoint() &&
+      VT.getVectorElementType() != MVT::bf16 &&
       (VT.getVectorElementType() != MVT::f16 || Subtarget->hasFullFP16()))
     for (unsigned Opcode :
          {ISD::FMINIMUM, ISD::FMAXIMUM, ISD::FMINNUM, ISD::FMAXNUM})
