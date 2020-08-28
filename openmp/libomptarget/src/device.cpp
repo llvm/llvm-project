@@ -67,8 +67,8 @@ int DeviceTy::associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size) {
          "host ptr, nothing to do\n");
       return OFFLOAD_SUCCESS;
     } else {
-      DP("Not allowed to re-associate a different device ptr+offset with the "
-         "same host ptr\n");
+      REPORT("Not allowed to re-associate a different device ptr+offset with "
+             "the same host ptr\n");
       return OFFLOAD_FAIL;
     }
   }
@@ -103,14 +103,14 @@ int DeviceTy::disassociatePtr(void *HstPtrBegin) {
       DataMapMtx.unlock();
       return OFFLOAD_SUCCESS;
     } else {
-      DP("Trying to disassociate a pointer which was not mapped via "
-         "omp_target_associate_ptr\n");
+      REPORT("Trying to disassociate a pointer which was not mapped via "
+             "omp_target_associate_ptr\n");
     }
   }
 
   // Mapping not found
   DataMapMtx.unlock();
-  DP("Association not found\n");
+  REPORT("Association not found\n");
   return OFFLOAD_FAIL;
 }
 
@@ -348,8 +348,9 @@ int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size, bool ForceDelete,
     }
     rc = OFFLOAD_SUCCESS;
   } else {
-    DP("Section to delete (hst addr " DPxMOD ") does not exist in the allocated"
-       " memory\n", DPxPTR(HstPtrBegin));
+    REPORT("Section to delete (hst addr " DPxMOD ") does not exist in the"
+           " allocated memory\n",
+           DPxPTR(HstPtrBegin));
     rc = OFFLOAD_FAIL;
   }
 
