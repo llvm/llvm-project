@@ -205,7 +205,7 @@ void Value::dropDroppableUse(Use &U) {
     else {
       U.set(UndefValue::get(U.get()->getType()));
       CallInst::BundleOpInfo &BOI = Assume->getBundleOpInfoForOperand(OpNo);
-      BOI.Tag = getContext().pImpl->getOrInsertBundleTag("ignore");
+      BOI.Tag = Assume->getContext().pImpl->getOrInsertBundleTag("ignore");
     }
     return;
   }
