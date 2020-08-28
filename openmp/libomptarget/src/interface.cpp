@@ -11,8 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <omptarget.h>
-
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
@@ -62,7 +60,7 @@ static void HandleTargetOutcome(bool success) {
       break;
     case tgt_mandatory:
       if (!success) {
-        if (InfoLevel > 0)
+        if (getInfoLevel() > 0)
           MESSAGE0("LIBOMPTARGET_INFO is not supported yet");
         FATAL_MESSAGE0(1, "failure of target construct while offloading is mandatory");
       }
