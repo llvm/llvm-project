@@ -177,7 +177,8 @@ private:
 
 class EHFrameRegistrationPlugin : public ObjectLinkingLayer::Plugin {
 public:
-  EHFrameRegistrationPlugin(jitlink::EHFrameRegistrar &Registrar);
+  EHFrameRegistrationPlugin(
+      std::unique_ptr<jitlink::EHFrameRegistrar> Registrar);
   Error notifyEmitted(MaterializationResponsibility &MR) override;
   void modifyPassConfig(MaterializationResponsibility &MR, const Triple &TT,
                         jitlink::PassConfiguration &PassConfig) override;
@@ -192,7 +193,7 @@ private:
   };
 
   std::mutex EHFramePluginMutex;
-  jitlink::EHFrameRegistrar &Registrar;
+  std::unique_ptr<jitlink::EHFrameRegistrar> Registrar;
   DenseMap<MaterializationResponsibility *, EHFrameRange> InProcessLinks;
   DenseMap<VModuleKey, EHFrameRange> TrackedEHFrameRanges;
   std::vector<EHFrameRange> UntrackedEHFrameRanges;
