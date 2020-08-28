@@ -146,6 +146,8 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SHL:
   case ISD::SRA:
   case ISD::SRL:
+  case ISD::ROTL:
+  case ISD::ROTR:
     R = ScalarizeVecRes_BinOp(N);
     break;
   case ISD::FMA:
