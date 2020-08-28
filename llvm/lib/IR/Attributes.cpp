@@ -1087,10 +1087,10 @@ AttributeList::get(LLVMContext &C,
                            return LHS.first < RHS.first;
                          }) &&
          "Misordered Attributes list!");
-  assert(llvm::none_of(Attrs,
-                       [](const std::pair<unsigned, Attribute> &Pair) {
-                         return Pair.second.hasAttribute(Attribute::None);
-                       }) &&
+  assert(llvm::all_of(Attrs,
+                      [](const std::pair<unsigned, Attribute> &Pair) {
+                        return Pair.second.isValid();
+                      }) &&
          "Pointless attribute!");
 
   // Create a vector if (unsigned, AttributeSetNode*) pairs from the attributes
