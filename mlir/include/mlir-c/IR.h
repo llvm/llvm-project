@@ -85,6 +85,9 @@ typedef void (*MlirStringCallback)(const char *, intptr_t, void *);
 /** Creates an MLIR context and transfers its ownership to the caller. */
 MlirContext mlirContextCreate();
 
+/** Checks if two contexts are equal. */
+int mlirContextEqual(MlirContext ctx1, MlirContext ctx2);
+
 /** Takes an MLIR context owned by the caller and destroys it. */
 void mlirContextDestroy(MlirContext context);
 
@@ -314,6 +317,9 @@ void mlirValuePrint(MlirValue value, MlirStringCallback callback,
 
 /** Parses a type. The type is owned by the context. */
 MlirType mlirTypeParseGet(MlirContext context, const char *type);
+
+/** Gets the context that a type was created with. */
+MlirContext mlirTypeGetContext(MlirType type);
 
 /** Checks whether a type is null. */
 inline int mlirTypeIsNull(MlirType type) { return !type.ptr; }

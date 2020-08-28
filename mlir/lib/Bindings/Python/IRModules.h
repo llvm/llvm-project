@@ -28,6 +28,13 @@ public:
   MlirContext context;
 };
 
+/// Wrapper around an MlirLocation.
+class PyLocation {
+public:
+  PyLocation(MlirLocation loc) : loc(loc) {}
+  MlirLocation loc;
+};
+
 /// Wrapper around MlirModule.
 class PyModule {
 public:
@@ -43,6 +50,72 @@ public:
   }
 
   MlirModule module;
+};
+
+/// Wrapper around an MlirRegion.
+/// Note that region can exist in a detached state (where this instance is
+/// responsible for clearing) or an attached state (where its owner is
+/// responsible).
+///
+/// This python wrapper retains a redundant reference to its creating context
+/// in order to facilitate checking that parts of the operation hierarchy
+/// are only assembled from the same context.
+class PyRegion {
+public:
+  PyRegion(MlirContext context, MlirRegion region, bool detached)
+      : context(context), region(region), detached(detached) {}
+  PyRegion(PyRegion &&other)
+      : context(other.context), region(other.region), detached(other.detached) {
+    other.detached = false;
+  }
+  ~PyRegion() {
+    if (detached)
+      mlirRegionDestroy(region);
+  }
+
+  // Call prior to attaching the region to a parent.
+  // This will transition to the attached state and will throw an exception
+  // if already attached.
+  void attachToParent();
+
+  MlirContext context;
+  MlirRegion region;
+
+private:
+  bool detached;
+};
+
+/// Wrapper around an MlirBlock.
+/// Note that blocks can exist in a detached state (where this instance is
+/// responsible for clearing) or an attached state (where its owner is
+/// responsible).
+///
+/// This python wrapper retains a redundant reference to its creating context
+/// in order to facilitate checking that parts of the operation hierarchy
+/// are only assembled from the same context.
+class PyBlock {
+public:
+  PyBlock(MlirContext context, MlirBlock block, bool detached)
+      : context(context), block(block), detached(detached) {}
+  PyBlock(PyBlock &&other)
+      : context(other.context), block(other.block), detached(other.detached) {
+    other.detached = false;
+  }
+  ~PyBlock() {
+    if (detached)
+      mlirBlockDestroy(block);
+  }
+
+  // Call prior to attaching the block to a parent.
+  // This will transition to the attached state and will throw an exception
+  // if already attached.
+  void attachToParent();
+
+  MlirContext context;
+  MlirBlock block;
+
+private:
+  bool detached;
 };
 
 /// Wrapper around the generic MlirAttribute.
@@ -84,6 +157,7 @@ class PyType {
 public:
   PyType(MlirType type) : type(type) {}
   bool operator==(const PyType &other);
+  operator MlirType() const { return type; }
 
   MlirType type;
 };
