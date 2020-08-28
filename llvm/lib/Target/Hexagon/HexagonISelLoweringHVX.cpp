@@ -97,6 +97,8 @@ HexagonTargetLowering::initializeHVXLowering() {
 
     setOperationAction(ISD::CTTZ,               T, Custom);
     setOperationAction(ISD::LOAD,               T, Custom);
+    setOperationAction(ISD::MLOAD,              T, Custom);
+    setOperationAction(ISD::MSTORE,             T, Custom);
     setOperationAction(ISD::MUL,                T, Custom);
     setOperationAction(ISD::MULHS,              T, Custom);
     setOperationAction(ISD::MULHU,              T, Custom);
@@ -150,6 +152,8 @@ HexagonTargetLowering::initializeHVXLowering() {
 
     setOperationAction(ISD::LOAD,     T, Custom);
     setOperationAction(ISD::STORE,    T, Custom);
+    setOperationAction(ISD::MLOAD,    T, Custom);
+    setOperationAction(ISD::MSTORE,   T, Custom);
     setOperationAction(ISD::CTLZ,     T, Custom);
     setOperationAction(ISD::CTTZ,     T, Custom);
     setOperationAction(ISD::CTPOP,    T, Custom);
@@ -188,6 +192,9 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::AND,                BoolW, Custom);
     setOperationAction(ISD::OR,                 BoolW, Custom);
     setOperationAction(ISD::XOR,                BoolW, Custom);
+    // Masked load/store takes a mask that may need splitting.
+    setOperationAction(ISD::MLOAD,              BoolW, Custom);
+    setOperationAction(ISD::MSTORE,             BoolW, Custom);
   }
 
   for (MVT T : LegalV) {
@@ -1593,7 +1600,7 @@ HexagonTargetLowering::LowerHvxShift(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue
 HexagonTargetLowering::LowerHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const {
-  const SDLoc &dl(Op);
+      const SDLoc &dl(Op);
   MVT ResTy = ty(Op);
 
   unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
@@ -1611,6 +1618,75 @@ HexagonTargetLowering::LowerHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const {
   }
 
   return Op;
+}
+
+SDValue
+HexagonTargetLowering::LowerHvxMaskedOp(SDValue Op, SelectionDAG &DAG) const {
+  const SDLoc &dl(Op);
+  unsigned HwLen = Subtarget.getVectorLength();
+  auto *MaskN = cast<MaskedLoadStoreSDNode>(Op.getNode());
+  SDValue Mask = MaskN->getMask();
+  SDValue Chain = MaskN->getChain();
+  SDValue Base = MaskN->getBasePtr();
+  auto *MemOp = MaskN->getMemOperand();
+
+  unsigned Opc = Op->getOpcode();
+  assert(Opc == ISD::MLOAD || Opc == ISD::MSTORE);
+
+  if (Opc == ISD::MLOAD) {
+    MVT ValTy = ty(Op);
+    SDValue Load = DAG.getLoad(ValTy, dl, Chain, Base, MaskN->getMemOperand());
+    SDValue Thru = cast<MaskedLoadSDNode>(MaskN)->getPassThru();
+    if (isUndef(Thru))
+      return Load;
+    SDValue VSel = DAG.getNode(ISD::VSELECT, dl, ValTy, Mask, Load, Thru);
+    return DAG.getMergeValues({VSel, Load.getValue(1)}, dl);
+  }
+
+  // MSTORE
+  // HVX only has aligned masked stores.
+
+  // TODO: Fold negations of the mask into the store.
+  unsigned StoreOpc = Hexagon::V6_vS32b_qpred_ai;
+  SDValue Value = cast<MaskedStoreSDNode>(MaskN)->getValue();
+  SDValue Offset0 = DAG.getTargetConstant(0, dl, ty(Base));
+
+  if (MaskN->getAlign().value() % HwLen == 0) {
+    SDValue Store = getInstr(StoreOpc, dl, MVT::Other,
+                             {Mask, Base, Offset0, Value, Chain}, DAG);
+    DAG.setNodeMemRefs(cast<MachineSDNode>(Store.getNode()), {MemOp});
+    return Store;
+  }
+
+  // Unaligned case.
+  auto StoreAlign = [&](SDValue V, SDValue A) {
+    SDValue Z = getZero(dl, ty(V), DAG);
+    // TODO: use funnel shifts?
+    // vlalign(Vu,Vv,Rt) rotates the pair Vu:Vv left by Rt and takes the
+    // upper half.
+    SDValue LoV = getInstr(Hexagon::V6_vlalignb, dl, ty(V), {V, Z, A}, DAG);
+    SDValue HiV = getInstr(Hexagon::V6_vlalignb, dl, ty(V), {Z, V, A}, DAG);
+    return std::make_pair(LoV, HiV);
+  };
+
+  MVT ByteTy = MVT::getVectorVT(MVT::i8, HwLen);
+  MVT BoolTy = MVT::getVectorVT(MVT::i1, HwLen);
+  SDValue MaskV = DAG.getNode(HexagonISD::Q2V, dl, ByteTy, Mask);
+  VectorPair Tmp = StoreAlign(MaskV, Base);
+  VectorPair MaskU = {DAG.getNode(HexagonISD::V2Q, dl, BoolTy, Tmp.first),
+                      DAG.getNode(HexagonISD::V2Q, dl, BoolTy, Tmp.second)};
+  VectorPair ValueU = StoreAlign(Value, Base);
+
+  SDValue Offset1 = DAG.getTargetConstant(HwLen, dl, MVT::i32);
+  SDValue StoreLo =
+      getInstr(StoreOpc, dl, MVT::Other,
+               {MaskU.first, Base, Offset0, ValueU.first, Chain}, DAG);
+  SDValue StoreHi =
+      getInstr(StoreOpc, dl, MVT::Other,
+               {MaskU.second, Base, Offset1, ValueU.second, Chain}, DAG);
+  DAG.setNodeMemRefs(cast<MachineSDNode>(StoreLo.getNode()), {MemOp});
+  DAG.setNodeMemRefs(cast<MachineSDNode>(StoreHi.getNode()), {MemOp});
+  return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, {StoreLo, StoreHi});
 }
 
 SDValue
@@ -1648,45 +1724,81 @@ HexagonTargetLowering::SplitHvxPairOp(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue
 HexagonTargetLowering::SplitHvxMemOp(SDValue Op, SelectionDAG &DAG) const {
-  LSBaseSDNode *BN = cast<LSBaseSDNode>(Op.getNode());
-  assert(BN->isUnindexed());
-  MVT MemTy = BN->getMemoryVT().getSimpleVT();
+  auto *MemN = cast<MemSDNode>(Op.getNode());
+
+  MVT MemTy = MemN->getMemoryVT().getSimpleVT();
   if (!isHvxPairTy(MemTy))
     return Op;
 
   const SDLoc &dl(Op);
   unsigned HwLen = Subtarget.getVectorLength();
   MVT SingleTy = typeSplit(MemTy).first;
-  SDValue Chain = BN->getChain();
-  SDValue Base0 = BN->getBasePtr();
+  SDValue Chain = MemN->getChain();
+  SDValue Base0 = MemN->getBasePtr();
   SDValue Base1 = DAG.getMemBasePlusOffset(Base0, TypeSize::Fixed(HwLen), dl);
 
   MachineMemOperand *MOp0 = nullptr, *MOp1 = nullptr;
-  if (MachineMemOperand *MMO = BN->getMemOperand()) {
+  if (MachineMemOperand *MMO = MemN->getMemOperand()) {
     MachineFunction &MF = DAG.getMachineFunction();
     MOp0 = MF.getMachineMemOperand(MMO, 0, HwLen);
     MOp1 = MF.getMachineMemOperand(MMO, HwLen, HwLen);
   }
 
-  unsigned MemOpc = BN->getOpcode();
-  SDValue NewOp;
+  unsigned MemOpc = MemN->getOpcode();
 
   if (MemOpc == ISD::LOAD) {
+    assert(cast<LoadSDNode>(Op)->isUnindexed());
     SDValue Load0 = DAG.getLoad(SingleTy, dl, Chain, Base0, MOp0);
     SDValue Load1 = DAG.getLoad(SingleTy, dl, Chain, Base1, MOp1);
-    NewOp = DAG.getMergeValues(
-              { DAG.getNode(ISD::CONCAT_VECTORS, dl, MemTy, Load0, Load1),
-                DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
-                            Load0.getValue(1), Load1.getValue(1)) }, dl);
-  } else {
-    assert(MemOpc == ISD::STORE);
+    return DAG.getMergeValues(
+        { DAG.getNode(ISD::CONCAT_VECTORS, dl, MemTy, Load0, Load1),
+          DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
+                      Load0.getValue(1), Load1.getValue(1)) }, dl);
+  }
+  if (MemOpc == ISD::STORE) {
+    assert(cast<StoreSDNode>(Op)->isUnindexed());
     VectorPair Vals = opSplit(cast<StoreSDNode>(Op)->getValue(), dl, DAG);
     SDValue Store0 = DAG.getStore(Chain, dl, Vals.first, Base0, MOp0);
     SDValue Store1 = DAG.getStore(Chain, dl, Vals.second, Base1, MOp1);
-    NewOp = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Store0, Store1);
+    return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Store0, Store1);
   }
 
-  return NewOp;
+  assert(MemOpc == ISD::MLOAD || MemOpc == ISD::MSTORE);
+
+  auto MaskN = cast<MaskedLoadStoreSDNode>(Op);
+  assert(MaskN->isUnindexed());
+  VectorPair Masks = opSplit(MaskN->getMask(), dl, DAG);
+  SDValue Offset = DAG.getUNDEF(MVT::i32);
+
+  if (MemOpc == ISD::MLOAD) {
+    VectorPair Thru =
+        opSplit(cast<MaskedLoadSDNode>(Op)->getPassThru(), dl, DAG);
+    SDValue MLoad0 =
+        DAG.getMaskedLoad(SingleTy, dl, Chain, Base0, Offset, Masks.first,
+                          Thru.first, SingleTy, MOp0, ISD::UNINDEXED,
+                          ISD::NON_EXTLOAD, false);
+    SDValue MLoad1 =
+        DAG.getMaskedLoad(SingleTy, dl, Chain, Base1, Offset, Masks.second,
+                          Thru.second, SingleTy, MOp1, ISD::UNINDEXED,
+                          ISD::NON_EXTLOAD, false);
+    return DAG.getMergeValues(
+        { DAG.getNode(ISD::CONCAT_VECTORS, dl, MemTy, MLoad0, MLoad1),
+          DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
+                      MLoad0.getValue(1), MLoad1.getValue(1)) }, dl);
+  }
+  if (MemOpc == ISD::MSTORE) {
+    VectorPair Vals = opSplit(cast<MaskedStoreSDNode>(Op)->getValue(), dl, DAG);
+    SDValue MStore0 = DAG.getMaskedStore(Chain, dl, Vals.first, Base0, Offset,
+                                         Masks.first, SingleTy, MOp0,
+                                         ISD::UNINDEXED, false, false);
+    SDValue MStore1 = DAG.getMaskedStore(Chain, dl, Vals.second, Base1, Offset,
+                                         Masks.second, SingleTy, MOp1,
+                                         ISD::UNINDEXED, false, false);
+    return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, MStore0, MStore1);
+  }
+
+  std::string Name = "Unexpected operation: " + Op->getOperationName(&DAG);
+  llvm_unreachable(Name.c_str());
 }
 
 SDValue
@@ -1749,6 +1861,8 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::SETCC:
     case ISD::INTRINSIC_VOID:          return Op;
     case ISD::INTRINSIC_WO_CHAIN:      return LowerHvxIntrinsic(Op, DAG);
+    case ISD::MLOAD:
+    case ISD::MSTORE:                  return LowerHvxMaskedOp(Op, DAG);
     // Unaligned loads will be handled by the default lowering.
     case ISD::LOAD:                    return SDValue();
   }
@@ -1761,6 +1875,25 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
 void
 HexagonTargetLowering::LowerHvxOperationWrapper(SDNode *N,
       SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
+  unsigned Opc = N->getOpcode();
+  SDValue Op(N, 0);
+
+  switch (Opc) {
+    case ISD::MLOAD:
+      if (isHvxPairTy(ty(Op))) {
+        SDValue S = SplitHvxMemOp(Op, DAG);
+        assert(S->getOpcode() == ISD::MERGE_VALUES);
+        Results.push_back(S.getOperand(0));
+        Results.push_back(S.getOperand(1));
+      }
+      break;
+    case ISD::MSTORE:
+      if (isHvxPairTy(ty(Op->getOperand(1)))) {    // Stored value
+        SDValue S = SplitHvxMemOp(Op, DAG);
+        Results.push_back(S);
+      }
+      break;
+  }
 }
 
 void
@@ -1783,6 +1916,8 @@ HexagonTargetLowering::ReplaceHvxNodeResults(SDNode *N,
 SDValue
 HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
       const {
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
   const SDLoc &dl(N);
   SDValue Op(N, 0);
 
