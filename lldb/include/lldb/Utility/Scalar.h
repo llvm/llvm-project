@@ -20,18 +20,12 @@
 #include <utility>
 
 namespace lldb_private {
+
 class DataExtractor;
 class Stream;
-} // namespace lldb_private
 
 #define NUM_OF_WORDS_INT128 2
 #define BITWIDTH_INT128 128
-#define NUM_OF_WORDS_INT256 4
-#define BITWIDTH_INT256 256
-#define NUM_OF_WORDS_INT512 8
-#define BITWIDTH_INT512 512
-
-namespace lldb_private {
 
 // A class designed to hold onto values and their corresponding types.
 // Operators are defined and Scalar objects will correctly promote their types
@@ -48,7 +42,6 @@ class Scalar {
   }
 
 public:
-  // FIXME: These are host types which seems to be an odd choice.
   enum Type {
     e_void = 0,
     e_int,
@@ -219,21 +212,6 @@ public:
   }
 
 protected:
-  typedef char schar_t;
-  typedef unsigned char uchar_t;
-  typedef short sshort_t;
-  typedef unsigned short ushort_t;
-  typedef int sint_t;
-  typedef unsigned int uint_t;
-  typedef long slong_t;
-  typedef unsigned long ulong_t;
-  typedef long long slonglong_t;
-  typedef unsigned long long ulonglong_t;
-  typedef float float_t;
-  typedef double double_t;
-  typedef long double long_double_t;
-
-  // Classes that inherit from Scalar can see and modify these
   Scalar::Type m_type;
   llvm::APSInt m_integer;
   llvm::APFloat m_float;
@@ -242,10 +220,7 @@ protected:
 
   static Type PromoteToMaxType(Scalar &lhs, Scalar &rhs);
 
-  enum class Category { Void, Integral, Float };
-  static Category GetCategory(Scalar::Type type);
-
-  using PromotionKey = std::tuple<Category, unsigned, bool>;
+  using PromotionKey = std::tuple<Type, unsigned, bool>;
   PromotionKey GetPromoKey() const;
 
   static PromotionKey GetFloatPromoKey(const llvm::fltSemantics &semantics);
