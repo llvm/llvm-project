@@ -26,6 +26,7 @@ define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_offset %rbx, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rdi, (%rsp)
 ; CHECK-NEXT:    callq return_i1
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    movl %eax, %ebp
@@ -56,12 +57,17 @@ define void @test_mixed(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspac
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    subq $32, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset %rbx, -32
 ; CHECK-NEXT:    .cfi_offset %r14, -24
 ; CHECK-NEXT:    .cfi_offset %r15, -16
 ; CHECK-NEXT:    movq %rdx, %r14
 ; CHECK-NEXT:    movq %rsi, %r15
 ; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    callq func
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    movq %rbx, %rdi
@@ -70,6 +76,8 @@ define void @test_mixed(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspac
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    movq %r14, %r8
 ; CHECK-NEXT:    callq consume5
+; CHECK-NEXT:    addq $32, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    popq %r14
@@ -96,19 +104,20 @@ define i32 addrspace(1)* @test_alloca(i32 addrspace(1)* %ptr) gc "statepoint-exa
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset %rbx, -24
 ; CHECK-NEXT:    .cfi_offset %r14, -16
 ; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    movq %rdi, (%rsp)
+; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    callq return_i1
 ; CHECK-NEXT:  .Ltmp2:
-; CHECK-NEXT:    movq (%rsp), %r14
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r14
 ; CHECK-NEXT:    movq %rbx, %rdi
 ; CHECK-NEXT:    callq consume
 ; CHECK-NEXT:    movq %r14, %rax
-; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -161,6 +170,7 @@ define void @test_deopt_gcpointer(i32 addrspace(1)* %a, i32 addrspace(1)* %b) gc
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rsi, %rbx
+; CHECK-NEXT:    movq %rsi, (%rsp)
 ; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    callq func
 ; CHECK-NEXT:  .Ltmp4:
@@ -183,13 +193,18 @@ define void @test_gcrelocate_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-ex
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    subq $16, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    callq func
 ; CHECK-NEXT:  .Ltmp5:
 ; CHECK-NEXT:    movq %rbx, %rdi
 ; CHECK-NEXT:    movq %rbx, %rsi
 ; CHECK-NEXT:    callq consume2
+; CHECK-NEXT:    addq $16, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -206,13 +221,18 @@ define void @test_gcptr_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-example
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    subq $16, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    callq func
 ; CHECK-NEXT:  .Ltmp6:
 ; CHECK-NEXT:    movq %rbx, %rdi
 ; CHECK-NEXT:    movq %rbx, %rsi
 ; CHECK-NEXT:    callq use1
+; CHECK-NEXT:    addq $16, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -227,7 +247,6 @@ define void @test_gcptr_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-example
 
 ;
 ; Cross-basicblock relocates are handled with spilling for now.
-; No need to check post-RA output
 define i1 @test_cross_bb(i32 addrspace(1)* %a, i1 %external_cond) gc "statepoint-example" {
 ; CHECK-LABEL: test_cross_bb:
 ; CHECK:       # %bb.0: # %entry
@@ -237,11 +256,14 @@ define i1 @test_cross_bb(i32 addrspace(1)* %a, i1 %external_cond) gc "statepoint
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    subq $16, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset %rbx, -32
 ; CHECK-NEXT:    .cfi_offset %r14, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movl %esi, %ebp
 ; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    callq return_i1
 ; CHECK-NEXT:  .Ltmp7:
 ; CHECK-NEXT:    testb $1, %bpl
@@ -255,6 +277,8 @@ define i1 @test_cross_bb(i32 addrspace(1)* %a, i1 %external_cond) gc "statepoint
 ; CHECK-NEXT:  .LBB7_2: # %right
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:  .LBB7_3: # %right
+; CHECK-NEXT:    addq $16, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    popq %r14
@@ -336,8 +360,8 @@ define void @test_limit(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspac
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 40
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    subq $40, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    .cfi_offset %rbx, -40
 ; CHECK-NEXT:    .cfi_offset %r12, -32
 ; CHECK-NEXT:    .cfi_offset %r14, -24
@@ -346,6 +370,10 @@ define void @test_limit(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspac
 ; CHECK-NEXT:    movq %rcx, %r15
 ; CHECK-NEXT:    movq %rdx, %r12
 ; CHECK-NEXT:    movq %rsi, %rbx
+; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rdi, (%rsp)
 ; CHECK-NEXT:    callq func
 ; CHECK-NEXT:  .Ltmp11:
@@ -355,7 +383,7 @@ define void @test_limit(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspac
 ; CHECK-NEXT:    movq %r15, %rcx
 ; CHECK-NEXT:    movq %r14, %r8
 ; CHECK-NEXT:    callq consume5
-; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 40
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
@@ -384,12 +412,14 @@ define i64 addrspace(1)* @test_basic_invoke(i64 addrspace(1)* %obj,
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset %rbx, -24
 ; CHECK-NEXT:    .cfi_offset %r14, -16
 ; CHECK-NEXT:    movq %rsi, %r14
 ; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:  .Ltmp12:
 ; CHECK-NEXT:    callq some_call
 ; CHECK-NEXT:  .Ltmp15:
@@ -397,7 +427,7 @@ define i64 addrspace(1)* @test_basic_invoke(i64 addrspace(1)* %obj,
 ; CHECK-NEXT:  # %bb.1: # %normal_return
 ; CHECK-NEXT:    movq %rbx, %rax
 ; CHECK-NEXT:  .LBB11_2: # %normal_return
-; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -405,7 +435,7 @@ define i64 addrspace(1)* @test_basic_invoke(i64 addrspace(1)* %obj,
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB11_3: # %exceptional_return
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:  .Ltmp14:
 ; CHECK-NEXT:    movq %r14, %rax
 ; CHECK-NEXT:    jmp .LBB11_2
@@ -441,8 +471,8 @@ define i64 addrspace(1)* @test_invoke_same_val(i1 %cond, i64 addrspace(1)* %val1
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 40
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset %rbx, -40
 ; CHECK-NEXT:    .cfi_offset %r14, -32
 ; CHECK-NEXT:    .cfi_offset %r15, -24
@@ -453,6 +483,8 @@ define i64 addrspace(1)* @test_invoke_same_val(i1 %cond, i64 addrspace(1)* %val1
 ; CHECK-NEXT:    testb $1, %r14b
 ; CHECK-NEXT:    je .LBB12_2
 ; CHECK-NEXT:  # %bb.1: # %left
+; CHECK-NEXT:    movq %rbp, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rbx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:  .Ltmp19:
 ; CHECK-NEXT:    movq %rbp, %rdi
 ; CHECK-NEXT:    callq some_call
@@ -461,6 +493,8 @@ define i64 addrspace(1)* @test_invoke_same_val(i1 %cond, i64 addrspace(1)* %val1
 ; CHECK-NEXT:    jmp .LBB12_4
 ; CHECK-NEXT:  .LBB12_2: # %right
 ; CHECK-NEXT:    movq %rcx, %r15
+; CHECK-NEXT:    movq %rbx, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:  .Ltmp16:
 ; CHECK-NEXT:    movq %rbp, %rdi
 ; CHECK-NEXT:    callq some_call
@@ -474,7 +508,7 @@ define i64 addrspace(1)* @test_invoke_same_val(i1 %cond, i64 addrspace(1)* %val1
 ; CHECK-NEXT:  .LBB12_6: # %exceptional_return.left
 ; CHECK-NEXT:    movq %rbp, %rax
 ; CHECK-NEXT:  .LBB12_7: # %exceptional_return.left
-; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 40
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
@@ -486,7 +520,7 @@ define i64 addrspace(1)* @test_invoke_same_val(i1 %cond, i64 addrspace(1)* %val1
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB12_8: # %exceptional_return.right
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:  .Ltmp18:
 ; CHECK-NEXT:    movq %rbx, %rax
 ; CHECK-NEXT:    jmp .LBB12_7
