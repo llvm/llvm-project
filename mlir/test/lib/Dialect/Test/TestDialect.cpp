@@ -689,13 +689,6 @@ void RegionIfOp::getSuccessorRegions(
   regions.push_back(RegionSuccessor(&elseRegion(), getElseArgs()));
 }
 
-//===----------------------------------------------------------------------===//
-// Dialect Registration
-//===----------------------------------------------------------------------===//
-
-// Static initialization for Test dialect registration.
-static DialectRegistration<TestDialect> testDialect;
-
 #include "TestOpEnums.cpp.inc"
 #include "TestOpStructs.cpp.inc"
 #include "TestTypeInterfaces.cpp.inc"
