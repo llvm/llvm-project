@@ -19,7 +19,6 @@
 
 using core::TaskImpl;
 extern ATLMachine g_atl_machine;
-extern hsa_signal_t IdentityCopySignal;
 
 namespace core {
 ATLPointerTracker g_data_map; // Track all am pointer allocations.
@@ -130,41 +129,59 @@ atmi_status_t Runtime::Memfree(void *ptr) {
   return ret;
 }
 
-static hsa_status_t invoke_hsa_copy(void *dest, const void *src, size_t size,
+static hsa_status_t invoke_hsa_copy(hsa_signal_t sig, void *dest,
+                                    const void *src, size_t size,
                                     hsa_agent_t agent) {
-  // TODO: Use thread safe signal
-  hsa_signal_store_screlease(IdentityCopySignal, 1);
+  const hsa_signal_value_t init = 1;
+  const hsa_signal_value_t success = 0;
+  hsa_signal_store_screlease(sig, init);
 
-  hsa_status_t err = hsa_amd_memory_async_copy(dest, agent, src, agent, size, 0,
-                                               NULL, IdentityCopySignal);
-  ErrorCheck(Copy async between memory pools, err);
+  hsa_status_t err =
+      hsa_amd_memory_async_copy(dest, agent, src, agent, size, 0, NULL, sig);
+  if (err != HSA_STATUS_SUCCESS) {
+    return err;
+  }
 
-  // TODO: async reports errors in the signal, use NE 1
-  hsa_signal_wait_scacquire(IdentityCopySignal, HSA_SIGNAL_CONDITION_EQ, 0,
-                            UINT64_MAX, ATMI_WAIT_STATE);
+  // async_copy reports success by decrementing and failure by setting to < 0
+  hsa_signal_value_t got = init;
+  while (got == init) {
+    got = hsa_signal_wait_scacquire(sig, HSA_SIGNAL_CONDITION_NE, init,
+                                    UINT64_MAX, ATMI_WAIT_STATE);
+  }
+
+  if (got != success) {
+    return HSA_STATUS_ERROR;
+  }
 
   return err;
 }
 
-atmi_status_t Runtime::Memcpy(void *dest, const void *src, size_t size) {
-  atmi_status_t ret;
-  hsa_status_t err;
+struct atmiFreePtrDeletor {
+  void operator()(void *p) {
+    atmi_free(p); // ignore failure to free
+  }
+};
+
+atmi_status_t Runtime::Memcpy(hsa_signal_t sig, void *dest, const void *src,
+                              size_t size) {
   ATLData *src_data = g_data_map.find(src);
   ATLData *dest_data = g_data_map.find(dest);
   atmi_mem_place_t cpu = ATMI_MEM_PLACE_CPU_MEM(0, 0, 0);
+
   void *temp_host_ptr;
+  atmi_status_t ret = atmi_malloc(&temp_host_ptr, size, cpu);
+  if (ret != ATMI_STATUS_SUCCESS) {
+    return ret;
+  }
+  std::unique_ptr<void, atmiFreePtrDeletor> del(temp_host_ptr);
 
   if (src_data && !dest_data) {
     // Copy from device to scratch to host
     hsa_agent_t agent = get_mem_agent(src_data->place());
     DEBUG_PRINT("Memcpy D2H device agent: %lu\n", agent.handle);
-    ret = atmi_malloc(&temp_host_ptr, size, cpu);
-    if (ret != ATMI_STATUS_SUCCESS) {
-      return ret;
-    }
 
-    err = invoke_hsa_copy(temp_host_ptr, src, size, agent);
-    if (err != HSA_STATUS_SUCCESS) {
+    if (invoke_hsa_copy(sig, temp_host_ptr, src, size, agent) !=
+        HSA_STATUS_SUCCESS) {
       return ATMI_STATUS_ERROR;
     }
 
@@ -174,30 +191,24 @@ atmi_status_t Runtime::Memcpy(void *dest, const void *src, size_t size) {
     // Copy from host to scratch to device
     hsa_agent_t agent = get_mem_agent(dest_data->place());
     DEBUG_PRINT("Memcpy H2D device agent: %lu\n", agent.handle);
-    ret = atmi_malloc(&temp_host_ptr, size, cpu);
-    if (ret != ATMI_STATUS_SUCCESS) {
-      return ret;
-    }
 
     memcpy(temp_host_ptr, src, size);
 
-    DEBUG_PRINT("Memcpy device agent: %lu\n", agent.handle);
-    err = invoke_hsa_copy(dest, temp_host_ptr, size, agent);
+    if (invoke_hsa_copy(sig, dest, temp_host_ptr, size, agent) !=
+        HSA_STATUS_SUCCESS) {
+      return ATMI_STATUS_ERROR;
+    }
 
   } else if (!src_data && !dest_data) {
-    DEBUG_PRINT("atmi_memcpy invoked without metadata\n");
     // would be host to host, just call memcpy, or missing metadata
+    DEBUG_PRINT("atmi_memcpy invoked without metadata\n");
     return ATMI_STATUS_ERROR;
   } else {
     DEBUG_PRINT("atmi_memcpy unimplemented device to device copy\n");
     return ATMI_STATUS_ERROR;
   }
 
-  ret = atmi_free(temp_host_ptr);
-
-  if (err != HSA_STATUS_SUCCESS || ret != ATMI_STATUS_SUCCESS)
-    ret = ATMI_STATUS_ERROR;
-  return ret;
+  return ATMI_STATUS_SUCCESS;
 }
 
 } // namespace core

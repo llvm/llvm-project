@@ -7,6 +7,7 @@
 #define INCLUDE_ATMI_RUNTIME_H_
 
 #include "atmi.h"
+#include "hsa.h"
 #include <inttypes.h>
 #include <stdlib.h>
 #ifndef __cplusplus
@@ -178,13 +179,31 @@ atmi_status_t atmi_free(void *ptr);
  * @retval ::ATMI_STATUS_UNKNOWN The function encountered errors.
  *
  */
-atmi_status_t atmi_memcpy(void *dest, const void *src, size_t size);
+atmi_status_t atmi_memcpy(hsa_signal_t sig, void *dest, const void *src,
+                          size_t size);
+
+static inline atmi_status_t atmi_memcpy_no_signal(void *dest, const void *src,
+                                                  size_t size) {
+  hsa_signal_t sig;
+  hsa_status_t err = hsa_signal_create(0, 0, NULL, &sig);
+  if (err != HSA_STATUS_SUCCESS) {
+    return ATMI_STATUS_ERROR;
+  }
+
+  atmi_status_t r = atmi_memcpy(sig, dest, src, size);
+  hsa_status_t rc = hsa_signal_destroy(sig);
+
+  if (r != ATMI_STATUS_SUCCESS) {
+    return r;
+  }
+  if (rc != HSA_STATUS_SUCCESS) {
+    return ATMI_STATUS_ERROR;
+  }
+
+  return ATMI_STATUS_SUCCESS;
+}
 
 /** @} */
-
-/** \defgroup cpu_dev_runtime ATMI CPU Device Runtime
- * @{
- */
 
 #ifdef __cplusplus
 }
