@@ -8127,6 +8127,33 @@ TEST_F(FormatTest, UnderstandsAttributes) {
                AfterType);
 }
 
+TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {
+  // Check that qualifiers on pointers don't break parsing of casts.
+  verifyFormat("x = (foo *const)*v;");
+  verifyFormat("x = (foo *volatile)*v;");
+  verifyFormat("x = (foo *restrict)*v;");
+  verifyFormat("x = (foo *__attribute__((foo)))*v;");
+  verifyFormat("x = (foo *_Nonnull)*v;");
+  verifyFormat("x = (foo *_Nullable)*v;");
+  verifyFormat("x = (foo *_Null_unspecified)*v;");
+  verifyFormat("x = (foo *_Nonnull)*v;");
+
+  // Check that we handle multiple trailing qualifiers and skip them all to
+  // determine that the expression is a cast to a pointer type.
+  FormatStyle LongPointerRight = getLLVMStyleWithColumns(999);
+  FormatStyle LongPointerLeft = getLLVMStyleWithColumns(999);
+  LongPointerLeft.PointerAlignment = FormatStyle::PAS_Left;
+  StringRef AllQualifiers = "const volatile restrict __attribute__((foo)) "
+                            "_Nonnull _Null_unspecified _Nonnull";
+  verifyFormat(("x = (foo *" + AllQualifiers + ")*v;").str(), LongPointerRight);
+  verifyFormat(("x = (foo* " + AllQualifiers + ")*v;").str(), LongPointerLeft);
+
+  // Also check that address-of is not parsed as a binary bitwise-and:
+  verifyFormat("x = (foo *const)&v;");
+  verifyFormat(("x = (foo *" + AllQualifiers + ")&v;").str(), LongPointerRight);
+  verifyFormat(("x = (foo* " + AllQualifiers + ")&v;").str(), LongPointerLeft);
+}
+
 TEST_F(FormatTest, UnderstandsSquareAttributes) {
   verifyFormat("SomeType s [[unused]] (InitValue);");
   verifyFormat("SomeType s [[gnu::unused]] (InitValue);");
