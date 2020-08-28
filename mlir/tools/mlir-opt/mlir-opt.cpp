@@ -133,7 +133,9 @@ int main(int argc, char **argv) {
 #endif
   DialectRegistry registry;
   registerAllDialects(registry);
+#ifdef MLIR_INCLUDE_TESTS
   registerTestDialect(registry);
+#endif
   return failed(MlirOptMain(argc, argv, "MLIR modular optimizer driver\n",
                             registry,
                             /*preloadDialectsInContext=*/false));
