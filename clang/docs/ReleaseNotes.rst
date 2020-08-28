@@ -256,6 +256,12 @@ New Compiler Flags
 
 - ``-fsanitize-coverage-allowlist`` and ``-fsanitize-coverage-blocklist`` are added.
 
+- -mtls-size={12,24,32,48} allows selecting the size of the TLS (thread-local
+  storage) in the local exec TLS model of AArch64, which is the default TLS
+  model for non-PIC objects. Each value represents 4KB, 16MB (default), 4GB,
+  and 256TB (needs -mcmodel=large). This allows large/many thread local
+  variables or a compact/fast code in an executable.
+
 Deprecated Compiler Flags
 -------------------------
 
