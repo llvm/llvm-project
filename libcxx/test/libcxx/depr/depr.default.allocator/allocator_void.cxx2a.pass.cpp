@@ -8,6 +8,9 @@
 
 // <memory>
 
+// Check that the following member types of allocator<void> are provided
+// regardless of the Standard when we request them from libc++.
+
 // template <>
 // class allocator<void>
 // {
