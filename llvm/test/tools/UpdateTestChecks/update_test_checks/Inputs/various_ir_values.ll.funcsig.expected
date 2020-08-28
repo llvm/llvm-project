@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind uwtable
 define dso_local void @foo(i32* %A) #0 !dbg !7 {
 ; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: (i32* [[A:%.*]]) [[ATTR0:#.*]] [[DBG7:!dbg !.*]]
+; CHECK-SAME: (i32* [[A:%.*]]) [[ATTR0:#.*]] [[DBG7:!dbg !.*]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
@@ -99,7 +99,7 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #2
 ; Function Attrs: nounwind uwtable
 define dso_local void @bar(i32* %A) #0 !dbg !39 {
 ; CHECK-LABEL: define {{[^@]+}}@bar
-; CHECK-SAME: (i32* [[A:%.*]]) [[ATTR0]] [[DBG39:!dbg !.*]]
+; CHECK-SAME: (i32* [[A:%.*]]) [[ATTR0]] [[DBG39:!dbg !.*]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i32*, align 8
 ; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
