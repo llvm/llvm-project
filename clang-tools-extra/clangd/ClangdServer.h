@@ -131,7 +131,7 @@ public:
     bool BuildRecoveryAST = true;
 
     /// If true, turn on the `-frecovery-ast-type` clang flag.
-    bool PreserveRecoveryASTType = false;
+    bool PreserveRecoveryASTType = true;
 
     /// Clangd's workspace root. Relevant for "workspace" operations not bound
     /// to a particular file.
