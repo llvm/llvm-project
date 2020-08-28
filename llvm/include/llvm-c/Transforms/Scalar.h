@@ -125,9 +125,6 @@ void LLVMAddSimplifyLibCallsPass(LLVMPassManagerRef PM);
 /** See llvm::createTailCallEliminationPass function. */
 void LLVMAddTailCallEliminationPass(LLVMPassManagerRef PM);
 
-/** See llvm::createConstantPropagationPass function. */
-void LLVMAddConstantPropagationPass(LLVMPassManagerRef PM);
-
 /** See llvm::demotePromoteMemoryToRegisterPass function. */
 void LLVMAddDemoteMemoryToRegisterPass(LLVMPassManagerRef PM);
 
