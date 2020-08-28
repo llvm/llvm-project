@@ -40,7 +40,8 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
-* ...
+* The ConstantPropagation pass was removed. Users should use the InstSimplify
+  pass instead.
 
 
 .. NOTE
