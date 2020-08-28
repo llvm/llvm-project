@@ -63,6 +63,9 @@ static cl::opt<std::string> DefaultGCOVVersion("default-gcov-version",
                                                cl::init("408*"), cl::Hidden,
                                                cl::ValueRequired);
 
+static cl::opt<bool> AtomicCounter("gcov-atomic-counter", cl::Hidden,
+                                   cl::desc("Make counter updates atomic"));
+
 // Returns the number of words which will be used to represent this string.
 static unsigned wordsOfString(StringRef s) {
   // Length + NUL-terminated string + 0~3 padding NULs.
@@ -74,6 +77,7 @@ GCOVOptions GCOVOptions::getDefault() {
   Options.EmitNotes = true;
   Options.EmitData = true;
   Options.NoRedZone = false;
+  Options.Atomic = AtomicCounter;
 
   if (DefaultGCOVVersion.size() != 4) {
     llvm::report_fatal_error(std::string("Invalid -default-gcov-version: ") +
@@ -883,9 +887,15 @@ bool GCOVProfiler::emitProfileArcs() {
 
           // Skip phis, landingpads.
           IRBuilder<> Builder(&*BB.getFirstInsertionPt());
-          Value *Count = Builder.CreateLoad(Builder.getInt64Ty(), Phi);
-          Count = Builder.CreateAdd(Count, Builder.getInt64(1));
-          Builder.CreateStore(Count, Phi);
+          if (Options.Atomic) {
+            Builder.CreateAtomicRMW(AtomicRMWInst::Add, Phi,
+                                    Builder.getInt64(1),
+                                    AtomicOrdering::Monotonic);
+          } else {
+            Value *Count = Builder.CreateLoad(Builder.getInt64Ty(), Phi);
+            Count = Builder.CreateAdd(Count, Builder.getInt64(1));
+            Builder.CreateStore(Count, Phi);
+          }
 
           Instruction *TI = BB.getTerminator();
           if (isa<ReturnInst>(TI)) {
@@ -894,9 +904,15 @@ bool GCOVProfiler::emitProfileArcs() {
             const unsigned Edge = It->second;
             Value *Counter = Builder.CreateConstInBoundsGEP2_64(
                 Counters->getValueType(), Counters, 0, Edge);
-            Value *Count = Builder.CreateLoad(Builder.getInt64Ty(), Counter);
-            Count = Builder.CreateAdd(Count, Builder.getInt64(1));
-            Builder.CreateStore(Count, Counter);
+            if (Options.Atomic) {
+              Builder.CreateAtomicRMW(AtomicRMWInst::Add, Counter,
+                                      Builder.getInt64(1),
+                                      AtomicOrdering::Monotonic);
+            } else {
+              Value *Count = Builder.CreateLoad(Builder.getInt64Ty(), Counter);
+              Count = Builder.CreateAdd(Count, Builder.getInt64(1));
+              Builder.CreateStore(Count, Counter);
+            }
           }
         }
       }
