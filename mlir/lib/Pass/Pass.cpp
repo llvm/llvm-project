@@ -457,7 +457,7 @@ void OpToOpPassAdaptor::runOnOperationImpl() {
         // Run the held pipeline over the current operation.
         if (instrumentor)
           instrumentor->runBeforePipeline(mgr->getOpName(), parentInfo);
-        auto result = runPipeline(mgr->getPasses(), &op, am.slice(&op));
+        auto result = runPipeline(mgr->getPasses(), &op, am.nest(&op));
         if (instrumentor)
           instrumentor->runAfterPipeline(mgr->getOpName(), parentInfo);
 
@@ -496,7 +496,7 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl() {
       for (auto &op : block) {
         // Add this operation iff the name matches the any of the pass managers.
         if (findPassManagerFor(mgrs, op.getName()))
-          opAMPairs.emplace_back(&op, am.slice(&op));
+          opAMPairs.emplace_back(&op, am.nest(&op));
       }
     }
   }
@@ -803,7 +803,7 @@ PassInstrumentor *AnalysisManager::getPassInstrumentor() const {
 }
 
 /// Get an analysis manager for the given child operation.
-AnalysisManager AnalysisManager::slice(Operation *op) {
+AnalysisManager AnalysisManager::nest(Operation *op) {
   assert(op->getParentOp() == impl->getOperation() &&
          "'op' has a different parent operation");
   auto it = impl->childAnalyses.find(op);
