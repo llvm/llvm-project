@@ -71,6 +71,8 @@ struct PerFunctionStats {
 /// Holds accumulated global statistics about DIEs.
 struct GlobalStats {
   /// Total number of PC range bytes covered by DW_AT_locations.
+  unsigned TotalBytesCovered = 0;
+  /// Total number of parent DIE PC range bytes covered by DW_AT_Locations.
   unsigned ScopeBytesCovered = 0;
   /// Total number of PC range bytes in each variable's enclosing scope.
   unsigned ScopeBytes = 0;
@@ -143,20 +145,20 @@ struct LocationStats {
 } // namespace
 
 /// Collect debug location statistics for one DIE.
-static void collectLocStats(uint64_t BytesCovered, uint64_t BytesInScope,
+static void collectLocStats(uint64_t ScopeBytesCovered, uint64_t BytesInScope,
                             std::vector<unsigned> &VarParamLocStats,
                             std::vector<unsigned> &ParamLocStats,
                             std::vector<unsigned> &LocalVarLocStats,
                             bool IsParam, bool IsLocalVar) {
-  auto getCoverageBucket = [BytesCovered, BytesInScope]() -> unsigned {
+  auto getCoverageBucket = [ScopeBytesCovered, BytesInScope]() -> unsigned {
     // No debug location at all for the variable.
-    if (BytesCovered == 0)
+    if (ScopeBytesCovered == 0)
       return 0;
     // Fully covered variable within its scope.
-    if (BytesCovered >= BytesInScope)
+    if (ScopeBytesCovered >= BytesInScope)
       return NumOfCoverageCategories - 1;
     // Get covered range (e.g. 20%-29%).
-    unsigned LocBucket = 100 * (double)BytesCovered / BytesInScope;
+    unsigned LocBucket = 100 * (double)ScopeBytesCovered / BytesInScope;
     LocBucket /= 10;
     return LocBucket + 1;
   };
@@ -198,6 +200,15 @@ static std::string constructDieID(DWARFDie Die,
   return ID.str();
 }
 
+/// Return the number of bytes in the overlap of ranges A and B.
+static uint64_t calculateOverlap(DWARFAddressRange A, DWARFAddressRange B) {
+  uint64_t Lower = std::max(A.LowPC, B.LowPC);
+  uint64_t Upper = std::min(A.HighPC, B.HighPC);
+  if (Lower >= Upper)
+    return 0;
+  return Upper - Lower;
+}
+
 /// Collect debug info quality metrics for one DIE.
 static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
                                std::string VarPrefix, uint64_t BytesInScope,
@@ -208,7 +219,8 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
   bool HasLoc = false;
   bool HasSrcLoc = false;
   bool HasType = false;
-  uint64_t BytesCovered = 0;
+  uint64_t TotalBytesCovered = 0;
+  uint64_t ScopeBytesCovered = 0;
   uint64_t BytesEntryValuesCovered = 0;
   auto &FnStats = FnStatMap[FnPrefix];
   bool IsParam = Die.getTag() == dwarf::DW_TAG_formal_parameter;
@@ -261,7 +273,8 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
   if (Die.find(dwarf::DW_AT_const_value)) {
     // This catches constant members *and* variables.
     HasLoc = true;
-    BytesCovered = BytesInScope;
+    ScopeBytesCovered = BytesInScope;
+    TotalBytesCovered = BytesInScope;
   } else {
     // Handle variables and function arguments.
     Expected<std::vector<DWARFLocationExpression>> Loc =
@@ -275,13 +288,27 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
           *Loc, [](const DWARFLocationExpression &L) { return !L.Range; });
       if (Default != Loc->end()) {
         // Assume the entire range is covered by a single location.
-        BytesCovered = BytesInScope;
+        ScopeBytesCovered = BytesInScope;
+        TotalBytesCovered = BytesInScope;
       } else {
+        // Caller checks this Expected result already, it cannot fail.
+        auto ScopeRanges = cantFail(Die.getParent().getAddressRanges());
         for (auto Entry : *Loc) {
-          uint64_t BytesEntryCovered = Entry.Range->HighPC - Entry.Range->LowPC;
-          BytesCovered += BytesEntryCovered;
+          TotalBytesCovered += Entry.Range->HighPC - Entry.Range->LowPC;
+          uint64_t ScopeBytesCoveredByEntry = 0;
+          // Calculate how many bytes of the parent scope this entry covers.
+          // FIXME: In section 2.6.2 of the DWARFv5 spec it says that "The
+          // address ranges defined by the bounded location descriptions of a
+          // location list may overlap". So in theory a variable can have
+          // multiple simultaneous locations, which would make this calculation
+          // misleading because we will count the overlapped areas
+          // twice. However, clang does not currently emit DWARF like this.
+          for (DWARFAddressRange R : ScopeRanges) {
+            ScopeBytesCoveredByEntry += calculateOverlap(*Entry.Range, R);
+          }
+          ScopeBytesCovered += ScopeBytesCoveredByEntry;
           if (IsEntryValue(Entry.Expr))
-            BytesEntryValuesCovered += BytesEntryCovered;
+            BytesEntryValuesCovered += ScopeBytesCoveredByEntry;
         }
       }
     }
@@ -295,11 +322,11 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
     else if (IsLocalVar)
       LocStats.NumVar++;
 
-    collectLocStats(BytesCovered, BytesInScope, LocStats.VarParamLocStats,
+    collectLocStats(ScopeBytesCovered, BytesInScope, LocStats.VarParamLocStats,
                     LocStats.ParamLocStats, LocStats.LocalVarLocStats, IsParam,
                     IsLocalVar);
     // Non debug entry values coverage statistics.
-    collectLocStats(BytesCovered - BytesEntryValuesCovered, BytesInScope,
+    collectLocStats(ScopeBytesCovered - BytesEntryValuesCovered, BytesInScope,
                     LocStats.VarParamNonEntryValLocStats,
                     LocStats.ParamNonEntryValLocStats,
                     LocStats.LocalVarNonEntryValLocStats, IsParam, IsLocalVar);
@@ -313,19 +340,17 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
   std::string VarID = constructDieID(Die, VarPrefix);
   FnStats.VarsInFunction.insert(VarID);
 
+  GlobalStats.TotalBytesCovered += TotalBytesCovered;
   if (BytesInScope) {
-    // Turns out we have a lot of ranges that extend past the lexical scope.
-    GlobalStats.ScopeBytesCovered += std::min(BytesInScope, BytesCovered);
+    GlobalStats.ScopeBytesCovered += ScopeBytesCovered;
     GlobalStats.ScopeBytes += BytesInScope;
     GlobalStats.ScopeEntryValueBytesCovered += BytesEntryValuesCovered;
     if (IsParam) {
-      GlobalStats.ParamScopeBytesCovered +=
-          std::min(BytesInScope, BytesCovered);
+      GlobalStats.ParamScopeBytesCovered += ScopeBytesCovered;
       GlobalStats.ParamScopeBytes += BytesInScope;
       GlobalStats.ParamScopeEntryValueBytesCovered += BytesEntryValuesCovered;
     } else if (IsLocalVar) {
-      GlobalStats.LocalVarScopeBytesCovered +=
-          std::min(BytesInScope, BytesCovered);
+      GlobalStats.LocalVarScopeBytesCovered += ScopeBytesCovered;
       GlobalStats.LocalVarScopeBytes += BytesInScope;
       GlobalStats.LocalVarScopeEntryValueBytesCovered +=
           BytesEntryValuesCovered;
@@ -545,7 +570,7 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   /// The version number should be increased every time the algorithm is changed
   /// (including bug fixes). New metrics may be added without increasing the
   /// version.
-  unsigned Version = 5;
+  unsigned Version = 6;
   unsigned VarParamTotal = 0;
   unsigned VarParamUnique = 0;
   unsigned VarParamWithLoc = 0;
@@ -617,6 +642,9 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
 
   printDatum(J, "sum_all_variables(#bytes in parent scope)",
              GlobalStats.ScopeBytes);
+  printDatum(J,
+             "sum_all_variables(#bytes in any scope covered by DW_AT_location)",
+             GlobalStats.TotalBytesCovered);
   printDatum(J,
              "sum_all_variables(#bytes in parent scope covered by "
              "DW_AT_location)",
