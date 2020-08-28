@@ -6247,12 +6247,9 @@ bool TargetLowering::expandROT(SDNode *Node, SDValue &Result,
   EVT ShVT = Op1.getValueType();
   SDValue Zero = DAG.getConstant(0, DL, ShVT);
 
-  assert(isPowerOf2_32(EltSizeInBits) && EltSizeInBits > 1 &&
-         "Expecting the type bitwidth to be a power of 2");
-
   // If a rotate in the other direction is supported, use it.
   unsigned RevRot = IsLeft ? ISD::ROTR : ISD::ROTL;
-  if (isOperationLegalOrCustom(RevRot, VT)) {
+  if (isOperationLegalOrCustom(RevRot, VT) && isPowerOf2_32(EltSizeInBits)) {
     SDValue Sub = DAG.getNode(ISD::SUB, DL, ShVT, Zero, Op1);
     Result = DAG.getNode(RevRot, DL, VT, Op0, Sub);
     return true;
@@ -6265,18 +6262,31 @@ bool TargetLowering::expandROT(SDNode *Node, SDValue &Result,
                         !isOperationLegalOrCustomOrPromote(ISD::AND, VT)))
     return false;
 
-  // Otherwise,
-  //   (rotl x, c) -> (or (shl x, (and c, w-1)), (srl x, (and -c, w-1)))
-  //   (rotr x, c) -> (or (srl x, (and c, w-1)), (shl x, (and -c, w-1)))
-  //
   unsigned ShOpc = IsLeft ? ISD::SHL : ISD::SRL;
   unsigned HsOpc = IsLeft ? ISD::SRL : ISD::SHL;
   SDValue BitWidthMinusOneC = DAG.getConstant(EltSizeInBits - 1, DL, ShVT);
-  SDValue NegOp1 = DAG.getNode(ISD::SUB, DL, ShVT, Zero, Op1);
-  SDValue And0 = DAG.getNode(ISD::AND, DL, ShVT, Op1, BitWidthMinusOneC);
-  SDValue And1 = DAG.getNode(ISD::AND, DL, ShVT, NegOp1, BitWidthMinusOneC);
-  Result = DAG.getNode(ISD::OR, DL, VT, DAG.getNode(ShOpc, DL, VT, Op0, And0),
-                       DAG.getNode(HsOpc, DL, VT, Op0, And1));
+  SDValue ShVal;
+  SDValue HsVal;
+  if (isPowerOf2_32(EltSizeInBits)) {
+    // (rotl x, c) -> x << (c & (w - 1)) | x >> (-c & (w - 1))
+    // (rotr x, c) -> x >> (c & (w - 1)) | x << (-c & (w - 1))
+    SDValue NegOp1 = DAG.getNode(ISD::SUB, DL, ShVT, Zero, Op1);
+    SDValue ShAmt = DAG.getNode(ISD::AND, DL, ShVT, Op1, BitWidthMinusOneC);
+    ShVal = DAG.getNode(ShOpc, DL, VT, Op0, ShAmt);
+    SDValue HsAmt = DAG.getNode(ISD::AND, DL, ShVT, NegOp1, BitWidthMinusOneC);
+    HsVal = DAG.getNode(HsOpc, DL, VT, Op0, HsAmt);
+  } else {
+    // (rotl x, c) -> x << (c % w) | x >> 1 >> (w - 1 - (c % w))
+    // (rotr x, c) -> x >> (c % w) | x << 1 << (w - 1 - (c % w))
+    SDValue BitWidthC = DAG.getConstant(EltSizeInBits, DL, ShVT);
+    SDValue ShAmt = DAG.getNode(ISD::UREM, DL, ShVT, Op1, BitWidthC);
+    ShVal = DAG.getNode(ShOpc, DL, VT, Op0, ShAmt);
+    SDValue HsAmt = DAG.getNode(ISD::SUB, DL, ShVT, BitWidthMinusOneC, ShAmt);
+    SDValue One = DAG.getConstant(1, DL, ShVT);
+    HsVal =
+        DAG.getNode(HsOpc, DL, VT, DAG.getNode(HsOpc, DL, VT, Op0, One), HsAmt);
+  }
+  Result = DAG.getNode(ISD::OR, DL, VT, ShVal, HsVal);
   return true;
 }
 
