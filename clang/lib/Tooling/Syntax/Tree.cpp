@@ -276,14 +276,14 @@ syntax::List::getElementsAsNodesAndDelimiters() {
   syntax::Node *elementWithoutDelimiter = nullptr;
   for (auto *C = firstChild(); C; C = C->nextSibling()) {
     switch (C->role()) {
-    case syntax::NodeRole::List_element: {
+    case syntax::NodeRole::ListElement: {
       if (elementWithoutDelimiter) {
         children.push_back({elementWithoutDelimiter, nullptr});
       }
       elementWithoutDelimiter = C;
       break;
     }
-    case syntax::NodeRole::List_delimiter: {
+    case syntax::NodeRole::ListDelimiter: {
       children.push_back({elementWithoutDelimiter, cast<syntax::Leaf>(C)});
       elementWithoutDelimiter = nullptr;
       break;
@@ -321,14 +321,14 @@ std::vector<syntax::Node *> syntax::List::getElementsAsNodes() {
   syntax::Node *elementWithoutDelimiter = nullptr;
   for (auto *C = firstChild(); C; C = C->nextSibling()) {
     switch (C->role()) {
-    case syntax::NodeRole::List_element: {
+    case syntax::NodeRole::ListElement: {
       if (elementWithoutDelimiter) {
         children.push_back(elementWithoutDelimiter);
       }
       elementWithoutDelimiter = C;
       break;
     }
-    case syntax::NodeRole::List_delimiter: {
+    case syntax::NodeRole::ListDelimiter: {
       children.push_back(elementWithoutDelimiter);
       elementWithoutDelimiter = nullptr;
       break;
