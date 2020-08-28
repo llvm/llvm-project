@@ -922,7 +922,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayElement &ae) {
       if (const Symbol * symbol{GetLastSymbol(*baseExpr)}) {
         if (!context_.HasError(symbol)) {
           Say("'%s' is not an array"_err_en_US, symbol->name());
-          context_.SetError(const_cast<Symbol &>(*symbol));
+          context_.SetError(*symbol);
         }
       }
     } else if (std::optional<DataRef> dataRef{
@@ -1824,13 +1824,13 @@ bool ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
         // allowed in specification parts (10.1.11 para 5).
         Say("The module function '%s' may not be referenced recursively in a specification expression"_err_en_US,
             symbol.name());
-        context_.SetError(const_cast<Symbol &>(symbol));
+        context_.SetError(symbol);
         return false;
       }
     } else { // 10.1.11 para 4
       Say("The internal function '%s' may not be referenced in a specification expression"_err_en_US,
           symbol.name());
-      context_.SetError(const_cast<Symbol &>(symbol));
+      context_.SetError(symbol);
       return false;
     }
   }

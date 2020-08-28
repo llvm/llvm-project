@@ -131,7 +131,7 @@ public:
   bool HasError(const Symbol &);
   bool HasError(const Symbol *);
   bool HasError(const parser::Name &);
-  void SetError(Symbol &, bool = true);
+  void SetError(const Symbol &, bool = true);
 
   template <typename... A> parser::Message &Say(A &&...args) {
     CHECK(location_);
@@ -175,7 +175,7 @@ public:
 private:
   void CheckIndexVarRedefine(
       const parser::CharBlock &, const Symbol &, parser::MessageFixedText &&);
-  bool CheckError(bool);
+  void CheckError(const Symbol &);
 
   const common::IntrinsicTypeDefaultKinds &defaultKinds_;
   const common::LanguageFeatureControl languageFeatures_;
@@ -197,6 +197,7 @@ private:
     IndexVarKind kind;
   };
   std::map<SymbolRef, const IndexVarInfo> activeIndexVars_;
+  std::set<SymbolRef> errorSymbols_;
   std::vector<std::string> tempNames_;
 };
 
