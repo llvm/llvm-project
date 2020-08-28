@@ -292,15 +292,15 @@ TEST(ScalarTest, Division) {
 TEST(ScalarTest, Promotion) {
   Scalar a(47);
   EXPECT_TRUE(a.IntegralPromote(64, true));
-  EXPECT_EQ(Scalar::e_sint, a.GetType());
+  EXPECT_TRUE(a.IsSigned());
   EXPECT_EQ(APInt(64, 47), a.UInt128(APInt()));
 
   EXPECT_FALSE(a.IntegralPromote(32, true));
   EXPECT_FALSE(a.IntegralPromote(32, false));
-  EXPECT_EQ(Scalar::e_sint, a.GetType());
+  EXPECT_TRUE(a.IsSigned());
 
   EXPECT_TRUE(a.IntegralPromote(64, false));
-  EXPECT_EQ(Scalar::e_uint, a.GetType());
+  EXPECT_FALSE(a.IsSigned());
   EXPECT_EQ(APInt(64, 47), a.UInt128(APInt()));
 
   EXPECT_FALSE(a.IntegralPromote(64, true));
@@ -362,7 +362,8 @@ TEST(ScalarTest, SetValueFromCString) {
 TEST(ScalarTest, APIntConstructor) {
   for (auto &width : {8, 16, 32}) {
     Scalar A(APInt(width, 24));
-    EXPECT_EQ(A.GetType(), Scalar::e_sint);
+    EXPECT_TRUE(A.IsSigned());
+    EXPECT_EQ(A.GetType(), Scalar::e_int);
     EXPECT_EQ(APInt(width, 24), A.UInt128(APInt()));
   }
 }
@@ -374,15 +375,17 @@ TEST(ScalarTest, Scalar_512) {
   ASSERT_TRUE(Z.IsZero());
 
   Scalar S(APInt(512, 2000));
-  ASSERT_STREQ(S.GetTypeAsCString(), "signed int");
+  ASSERT_STREQ(S.GetTypeAsCString(), "int");
 
   ASSERT_TRUE(S.MakeUnsigned());
-  EXPECT_EQ(S.GetType(), Scalar::e_uint);
-  ASSERT_STREQ(S.GetTypeAsCString(), "unsigned int");
+  EXPECT_EQ(S.GetType(), Scalar::e_int);
+  EXPECT_FALSE(S.IsSigned());
+  ASSERT_STREQ(S.GetTypeAsCString(), "int");
   EXPECT_EQ(S.GetByteSize(), 64U);
 
   ASSERT_TRUE(S.MakeSigned());
-  EXPECT_EQ(S.GetType(), Scalar::e_sint);
+  EXPECT_EQ(S.GetType(), Scalar::e_int);
+  EXPECT_TRUE(S.IsSigned());
   EXPECT_EQ(S.GetByteSize(), 64U);
 }
 

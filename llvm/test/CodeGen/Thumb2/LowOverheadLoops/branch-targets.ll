@@ -23,13 +23,13 @@ define void @check_loop_dec_brcond_combine(i32* nocapture %a, i32* nocapture rea
 entry:
   call void @llvm.set.loop.iterations.i32(i32 %N)
   br label %for.body.preheader
-  
+
 for.body.preheader:
   %scevgep = getelementptr i32, i32* %a, i32 -1
   %scevgep4 = getelementptr i32, i32* %c, i32 -1
   %scevgep8 = getelementptr i32, i32* %b, i32 -1
   br label %for.header
- 
+
 for.body:
   %scevgep11 = getelementptr i32, i32* %lsr.iv9, i32 1
   %ld1 = load i32, i32* %scevgep11, align 4
@@ -66,13 +66,13 @@ define void @check_loop_dec_ugt_brcond_combine(i32* nocapture %a, i32* nocapture
 entry:
   call void @llvm.set.loop.iterations.i32(i32 %N)
   br label %for.body.preheader
-  
+
 for.body.preheader:
   %scevgep = getelementptr i32, i32* %a, i32 -1
   %scevgep4 = getelementptr i32, i32* %c, i32 -1
   %scevgep8 = getelementptr i32, i32* %b, i32 -1
   br label %for.header
- 
+
 for.body:
   %scevgep11 = getelementptr i32, i32* %lsr.iv9, i32 1
   %ld1 = load i32, i32* %scevgep11, align 4
@@ -109,13 +109,13 @@ define void @check_loop_dec_ult_brcond_combine(i32* nocapture %a, i32* nocapture
 entry:
   call void @llvm.set.loop.iterations.i32(i32 %N)
   br label %for.body.preheader
-  
+
 for.body.preheader:
   %scevgep = getelementptr i32, i32* %a, i32 -1
   %scevgep4 = getelementptr i32, i32* %c, i32 -1
   %scevgep8 = getelementptr i32, i32* %b, i32 -1
   br label %for.header
- 
+
 for.body:
   %scevgep11 = getelementptr i32, i32* %lsr.iv9, i32 1
   %ld1 = load i32, i32* %scevgep11, align 4
@@ -152,13 +152,13 @@ define void @check_loop_dec_ult_xor_brcond_combine(i32* nocapture %a, i32* nocap
 entry:
   call void @llvm.set.loop.iterations.i32(i32 %N)
   br label %for.body.preheader
-  
+
 for.body.preheader:
   %scevgep = getelementptr i32, i32* %a, i32 -1
   %scevgep4 = getelementptr i32, i32* %c, i32 -1
   %scevgep8 = getelementptr i32, i32* %b, i32 -1
   br label %for.header
- 
+
 for.body:
   %scevgep11 = getelementptr i32, i32* %lsr.iv9, i32 1
   %ld1 = load i32, i32* %scevgep11, align 4
@@ -196,13 +196,13 @@ define void @check_loop_dec_sgt_brcond_combine(i32* nocapture %a, i32* nocapture
 entry:
   call void @llvm.set.loop.iterations.i32(i32 %N)
   br label %for.body.preheader
-  
+
 for.body.preheader:
   %scevgep = getelementptr i32, i32* %a, i32 -1
   %scevgep4 = getelementptr i32, i32* %c, i32 -1
   %scevgep8 = getelementptr i32, i32* %b, i32 -1
   br label %for.header
- 
+
 for.body:
   %scevgep11 = getelementptr i32, i32* %lsr.iv9, i32 1
   %ld1 = load i32, i32* %scevgep11, align 4
@@ -239,13 +239,13 @@ define void @check_loop_dec_sge_brcond_combine(i32* nocapture %a, i32* nocapture
 entry:
   call void @llvm.set.loop.iterations.i32(i32 %N)
   br label %for.body.preheader
-  
+
 for.body.preheader:
   %scevgep = getelementptr i32, i32* %a, i32 -1
   %scevgep4 = getelementptr i32, i32* %c, i32 -1
   %scevgep8 = getelementptr i32, i32* %b, i32 -1
   br label %for.header
- 
+
 for.body:
   %scevgep11 = getelementptr i32, i32* %lsr.iv9, i32 1
   %ld1 = load i32, i32* %scevgep11, align 4
@@ -282,13 +282,13 @@ define void @check_loop_dec_sge_xor_brcond_combine(i32* nocapture %a, i32* nocap
 entry:
   call void @llvm.set.loop.iterations.i32(i32 %N)
   br label %for.body.preheader
-  
+
 for.body.preheader:
   %scevgep = getelementptr i32, i32* %a, i32 -1
   %scevgep4 = getelementptr i32, i32* %c, i32 -1
   %scevgep8 = getelementptr i32, i32* %b, i32 -1
   br label %for.header
- 
+
 for.body:
   %scevgep11 = getelementptr i32, i32* %lsr.iv9, i32 1
   %ld1 = load i32, i32* %scevgep11, align 4
@@ -326,13 +326,13 @@ define void @check_loop_dec_uge_brcond_combine(i32* nocapture %a, i32* nocapture
 entry:
   call void @llvm.set.loop.iterations.i32(i32 %N)
   br label %for.body.preheader
-  
+
 for.body.preheader:
   %scevgep = getelementptr i32, i32* %a, i32 -1
   %scevgep4 = getelementptr i32, i32* %c, i32 -1
   %scevgep8 = getelementptr i32, i32* %b, i32 -1
   br label %for.header
- 
+
 for.body:
   %scevgep11 = getelementptr i32, i32* %lsr.iv9, i32 1
   %ld1 = load i32, i32* %scevgep11, align 4
@@ -369,13 +369,13 @@ define void @check_loop_dec_uge_xor_brcond_combine(i32* nocapture %a, i32* nocap
 entry:
   call void @llvm.set.loop.iterations.i32(i32 %N)
   br label %for.body.preheader
-  
+
 for.body.preheader:
   %scevgep = getelementptr i32, i32* %a, i32 -1
   %scevgep4 = getelementptr i32, i32* %c, i32 -1
   %scevgep8 = getelementptr i32, i32* %b, i32 -1
   br label %for.header
- 
+
 for.body:
   %scevgep11 = getelementptr i32, i32* %lsr.iv9, i32 1
   %ld1 = load i32, i32* %scevgep11, align 4
@@ -416,10 +416,10 @@ entry:
   %wls = call i1 @llvm.test.set.loop.iterations.i32(i32 %N)
   %xor = xor i1 %wls, 1
   br i1 %xor, label %while.end, label %while.body.preheader
-  
+
 while.body.preheader:
   br label %while.body
-  
+
 while.body:
   %a.addr.06 = phi i16* [ %incdec.ptr1, %while.body ], [ %a, %while.body.preheader ]
   %b.addr.05 = phi i16* [ %incdec.ptr, %while.body ], [ %b, %while.body.preheader ]
@@ -431,7 +431,7 @@ while.body:
   %count.next = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %count, i32 1)
   %cmp = icmp ne i32 %count.next, 0
   br i1 %cmp, label %while.body, label %while.end
-  
+
 while.end:
   ret void
 }
@@ -449,10 +449,10 @@ entry:
   %wls = call i1 @llvm.test.set.loop.iterations.i32(i32 %N)
   %cmp = icmp ne i1 %wls, 1
   br i1 %cmp, label %while.end, label %while.body.preheader
-  
+
 while.body.preheader:
   br label %while.body
-  
+
 while.body:
   %a.addr.06 = phi i16* [ %incdec.ptr1, %while.body ], [ %a, %while.body.preheader ]
   %b.addr.05 = phi i16* [ %incdec.ptr, %while.body ], [ %b, %while.body.preheader ]
@@ -464,7 +464,7 @@ while.body:
   %count.next = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %count, i32 1)
   %cmp.1 = icmp ne i32 %count.next, 0
   br i1 %cmp.1, label %while.body, label %while.end
-  
+
 while.end:
   ret void
 }
@@ -482,10 +482,10 @@ while.end:
 define void @check_negated_reordered_wls(i16* nocapture %a, i16* nocapture readonly %b, i32 %N) {
 entry:
   br label %while
-  
+
 while.body.preheader:
   br label %while.body
-  
+
 while.body:
   %a.addr.06 = phi i16* [ %incdec.ptr1, %while.body ], [ %a, %while.body.preheader ]
   %b.addr.05 = phi i16* [ %incdec.ptr, %while.body ], [ %b, %while.body.preheader ]

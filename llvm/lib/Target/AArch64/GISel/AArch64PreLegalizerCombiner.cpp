@@ -96,24 +96,6 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
   CombinerHelper Helper(Observer, B, KB, MDT);
   AArch64GenPreLegalizerCombinerHelper Generated(GeneratedRuleCfg, Helper);
 
-  switch (MI.getOpcode()) {
-  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
-    switch (MI.getIntrinsicID()) {
-    case Intrinsic::memcpy:
-    case Intrinsic::memmove:
-    case Intrinsic::memset: {
-      // If we're at -O0 set a maxlen of 32 to inline, otherwise let the other
-      // heuristics decide.
-      unsigned MaxLen = EnableOpt ? 0 : 32;
-      // Try to inline memcpy type calls if optimizations are enabled.
-      return (!EnableMinSize) ? Helper.tryCombineMemCpyFamily(MI, MaxLen)
-                              : false;
-    }
-    default:
-      break;
-    }
-  }
-
   if (Generated.tryCombineAll(Observer, MI, B))
     return true;
 
@@ -122,6 +104,15 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
     return Helper.tryCombineConcatVectors(MI);
   case TargetOpcode::G_SHUFFLE_VECTOR:
     return Helper.tryCombineShuffleVector(MI);
+  case TargetOpcode::G_MEMCPY:
+  case TargetOpcode::G_MEMMOVE:
+  case TargetOpcode::G_MEMSET: {
+    // If we're at -O0 set a maxlen of 32 to inline, otherwise let the other
+    // heuristics decide.
+    unsigned MaxLen = EnableOpt ? 0 : 32;
+    // Try to inline memcpy type calls if optimizations are enabled.
+    return !EnableMinSize ? Helper.tryCombineMemCpyFamily(MI, MaxLen) : false;
+  }
   }
 
   return false;

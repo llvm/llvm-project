@@ -40,7 +40,7 @@ void AnalyzerOptions::printFormattedEntry(
   const size_t PadForDesc = InitialPad + EntryWidth;
 
   FOut.PadToColumn(InitialPad) << EntryDescPair.first;
-  // If the buffer's length is greater then PadForDesc, print a newline.
+  // If the buffer's length is greater than PadForDesc, print a newline.
   if (FOut.getColumn() > PadForDesc)
     FOut << '\n';
 

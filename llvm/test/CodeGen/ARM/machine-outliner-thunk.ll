@@ -7,10 +7,12 @@
 ; RUN: | FileCheck %s --check-prefix=MACHO
 ; RUN: llc -enable-machine-outliner -verify-machineinstrs -mtriple=thumbv5-- \
 ; RUN: --stop-after=machine-outliner < %s | FileCheck %s --check-prefix=THUMB1
+; RUN: llc -verify-machineinstrs -mtriple=thumbv8m.main \
+; RUN: --stop-after=machine-outliner < %s | FileCheck %s --check-prefix=THUMB
 
 declare i32 @thunk_called_fn(i32, i32, i32, i32)
 
-define i32 @a() {
+define i32 @a() #0 {
 ; ARM-LABEL: name:             a
 ; ARM:       bb.0.entry:
 ; ARM-NEXT:    liveins: $r11, $lr
@@ -52,7 +54,7 @@ entry:
   ret i32 %cx
 }
 
-define i32 @b() {
+define i32 @b() #0 {
 ; ARM-LABEL: name:             b
 ; ARM:       bb.0.entry:
 ; ARM-NEXT:    liveins: $r11, $lr
@@ -117,3 +119,5 @@ entry:
 ; MACHO-NEXT:   $r2, dead $cpsr = tMOVi8 3, 14 /* CC::al */, $noreg
 ; MACHO-NEXT:   $r3, dead $cpsr = tMOVi8 4, 14 /* CC::al */, $noreg
 ; MACHO-NEXT:   tTAILJMPd @thunk_called_fn, 14 /* CC::al */, $noreg, implicit $sp
+
+attributes #0 = { minsize optsize }

@@ -1,5 +1,5 @@
 # RUN: not --crash llc -verify-machineinstrs -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
-# REQUIRES: global-isel, aarch64-registered-target
+# REQUIRES: aarch64-registered-target
 
 --- |
 

@@ -130,7 +130,7 @@ TEST(FlatAffineConstraintsTest, FindSampleTest) {
 
   // The next two sets are large sets that should take a long time to sample
   // with a naive branch and bound algorithm but can be sampled efficiently with
-  // the GBR algroithm.
+  // the GBR algorithm.
   //
   // This is a triangle with vertices at (1/3, 0), (2/3, 0) and (10000, 10000).
   checkSample(

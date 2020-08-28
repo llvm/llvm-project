@@ -19,6 +19,8 @@
 
 namespace mlir {
 namespace detail {
+class OpToOpPassAdaptor;
+
 /// The state for a single execution of a pass. This provides a unified
 /// interface for accessing and initializing necessary state for pass execution.
 struct PassExecutionState {
@@ -249,9 +251,6 @@ protected:
   void copyOptionValuesFrom(const Pass *other);
 
 private:
-  /// Forwarding function to execute this pass on the given operation.
-  LLVM_NODISCARD
-  LogicalResult run(Operation *op, AnalysisManager am);
 
   /// Out of line virtual method to ensure vtables and metadata are emitted to a
   /// single .o file.
@@ -273,11 +272,11 @@ private:
   /// The pass options registered to this pass instance.
   detail::PassOptions passOptions;
 
-  /// Allow access to 'clone' and 'run'.
+  /// Allow access to 'clone'.
   friend class OpPassManager;
 
-  /// Allow access to 'run'.
-  friend class PassManager;
+  /// Allow access to 'passState'.
+  friend detail::OpToOpPassAdaptor;
 
   /// Allow access to 'passOptions'.
   friend class PassInfo;

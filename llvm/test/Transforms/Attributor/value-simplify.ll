@@ -644,12 +644,10 @@ for.end:
 }
 
 ; Check we merge undef and a constant properly.
-; FIXME fold the addition and return the constant.
 define i8 @caller0() {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@caller0()
-; IS__TUNIT____-NEXT:    [[C:%.*]] = call i8 @callee()
-; IS__TUNIT____-NEXT:    ret i8 [[C]]
+; IS__TUNIT____-NEXT:    ret i8 49
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller0()
@@ -662,8 +660,7 @@ define i8 @caller0() {
 define i8 @caller1() {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@caller1()
-; IS__TUNIT____-NEXT:    [[C:%.*]] = call i8 @callee()
-; IS__TUNIT____-NEXT:    ret i8 [[C]]
+; IS__TUNIT____-NEXT:    ret i8 49
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller1()
@@ -676,8 +673,7 @@ define i8 @caller1() {
 define i8 @caller2() {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@caller2()
-; IS__TUNIT____-NEXT:    [[C:%.*]] = call i8 @callee()
-; IS__TUNIT____-NEXT:    ret i8 [[C]]
+; IS__TUNIT____-NEXT:    ret i8 49
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller2()
@@ -690,8 +686,7 @@ define i8 @caller2() {
 define i8 @caller_middle() {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@caller_middle()
-; IS__TUNIT____-NEXT:    [[C:%.*]] = call i8 @callee()
-; IS__TUNIT____-NEXT:    ret i8 [[C]]
+; IS__TUNIT____-NEXT:    ret i8 49
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller_middle()
@@ -704,8 +699,7 @@ define i8 @caller_middle() {
 define i8 @caller3() {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@caller3()
-; IS__TUNIT____-NEXT:    [[C:%.*]] = call i8 @callee()
-; IS__TUNIT____-NEXT:    ret i8 [[C]]
+; IS__TUNIT____-NEXT:    ret i8 49
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller3()
@@ -718,8 +712,7 @@ define i8 @caller3() {
 define i8 @caller4() {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@caller4()
-; IS__TUNIT____-NEXT:    [[C:%.*]] = call i8 @callee()
-; IS__TUNIT____-NEXT:    ret i8 [[C]]
+; IS__TUNIT____-NEXT:    ret i8 49
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller4()
@@ -730,15 +723,9 @@ define i8 @caller4() {
   ret i8 %c
 }
 define internal i8 @callee(i8 %a) {
-; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
-; IS__TUNIT____-LABEL: define {{[^@]+}}@callee()
-; IS__TUNIT____-NEXT:    [[C:%.*]] = add i8 42, 7
-; IS__TUNIT____-NEXT:    ret i8 [[C]]
-;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@callee()
-; IS__CGSCC____-NEXT:    [[C:%.*]] = add i8 42, 7
-; IS__CGSCC____-NEXT:    ret i8 [[C]]
+; IS__CGSCC____-NEXT:    ret i8 49
 ;
   %c = add i8 %a, 7
   ret i8 %c

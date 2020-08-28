@@ -596,8 +596,6 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
   TII = ST.getInstrInfo();
   MDT = &getAnalysis<MachineDominatorTree>();
 
-  SmallVector<MachineInstr *, 16> Worklist;
-
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
                                                   BI != BE; ++BI) {
     MachineBasicBlock &MBB = *BI;

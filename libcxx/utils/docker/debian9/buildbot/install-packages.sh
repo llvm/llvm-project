@@ -36,5 +36,5 @@ apt-get update && \
 
 # Install a recent CMake
 yes | apt-get purge cmake
-wget https://github.com/Kitware/CMake/releases/download/v3.15.2/cmake-3.15.2-Linux-x86_64.sh -O /tmp/install-cmake.sh
+wget https://github.com/Kitware/CMake/releases/download/v3.18.2/cmake-3.18.2-Linux-x86_64.sh -O /tmp/install-cmake.sh
 bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license

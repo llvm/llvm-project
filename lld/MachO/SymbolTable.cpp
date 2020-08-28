@@ -40,6 +40,7 @@ Symbol *SymbolTable::addDefined(StringRef name, InputSection *isec,
                                 uint32_t value, bool isWeakDef) {
   Symbol *s;
   bool wasInserted;
+  bool overridesWeakDef = false;
   std::tie(s, wasInserted) = insert(name);
 
   if (!wasInserted) {
@@ -48,12 +49,16 @@ Symbol *SymbolTable::addDefined(StringRef name, InputSection *isec,
         return s;
       if (!defined->isWeakDef())
         error("duplicate symbol: " + name);
+    } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
+      overridesWeakDef = !isWeakDef && dysym->isWeakDef();
     }
     // Defined symbols take priority over other types of symbols, so in case
     // of a name conflict, we fall through to the replaceSymbol() call below.
   }
 
-  replaceSymbol<Defined>(s, name, isec, value, isWeakDef);
+  Defined *defined = replaceSymbol<Defined>(s, name, isec, value, isWeakDef,
+                                            /*isExternal=*/true);
+  defined->overridesWeakDef = overridesWeakDef;
   return s;
 }
 
@@ -74,6 +79,11 @@ Symbol *SymbolTable::addDylib(StringRef name, DylibFile *file, bool isWeakDef,
   Symbol *s;
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name);
+
+  if (!wasInserted && isWeakDef)
+    if (auto *defined = dyn_cast<Defined>(s))
+      if (!defined->isWeakDef())
+        defined->overridesWeakDef = true;
 
   if (wasInserted || isa<Undefined>(s) ||
       (isa<DylibSymbol>(s) && !isWeakDef && s->isWeakDef()))

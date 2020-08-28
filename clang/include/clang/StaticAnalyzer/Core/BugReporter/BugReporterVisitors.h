@@ -53,7 +53,7 @@ public:
   /// Note that this function does *not* get run on the very last node
   /// of the report, as the PathDiagnosticPiece associated with the
   /// last node should be unique.
-  /// Use {@code getEndPath} to customize the note associated with the report
+  /// Use \ref getEndPath to customize the note associated with the report
   /// end instead.
   ///
   /// The last parameter can be used to register a new visitor with the given

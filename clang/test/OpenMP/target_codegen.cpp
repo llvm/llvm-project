@@ -706,6 +706,8 @@ int bar(int n){
 
 // CHECK:       [[IFEND]]
 
+// OMP45: define internal void @__omp_offloading_{{.+}}_{{.+}}bar{{.+}}_l838(i[[SZ]] %{{.+}})
+
 // OMP45: define {{.*}}@{{.*}}zee{{.*}}
 
 // OMP45:       [[LOCAL_THIS:%.+]] = alloca [[S2]]*
@@ -803,6 +805,7 @@ int bar(int n){
 // CHECK-DAG:   load i16, i16* [[REF_AA]]
 // CHECK-DAG:   getelementptr inbounds [10 x i32], [10 x i32]* [[REF_B]], i[[SZ]] 0, i[[SZ]] 2
 
+// OMP50: define internal void @__omp_offloading_{{.+}}_{{.+}}bar{{.+}}_l838(i[[SZ]] %{{.+}})
 
 // OMP50: define {{.*}}@{{.*}}zee{{.*}}
 
@@ -833,7 +836,11 @@ int bar(int n){
 void bar () {
 #define pragma_target _Pragma("omp target")
 pragma_target
-{}
+{
+  global = 0;
+#pragma omp parallel shared(global)
+  global = 1;
+}
 }
 
 class S2 {

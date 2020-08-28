@@ -1,7 +1,6 @@
 ; RUN: llc < %s -mtriple=thumbv7-apple-ios -mcpu=cortex-a8 | FileCheck %s
 ; RUN: llc < %s -mtriple=thumbv8 | FileCheck -check-prefix=CHECK-V8 %s
 ; RUN: llc < %s -mtriple=thumbv7 -arm-restrict-it | FileCheck -check-prefix=CHECK-V8 %s
-; rdar://13782395
 
 define i32 @t1(i32 %a, i32 %b, i8** %retaddr) {
 ; CHECK-LABEL: t1:
@@ -101,7 +100,6 @@ return:                                           ; preds = %if.end5, %if.then4,
 ; B can be predicated with A.BrToBPredicate into A iff B.Predicate is less
 ; "permissive" than A.BrToBPredicate, i.e., iff A.BrToBPredicate subsumes
 ; B.Predicate. 
-; <rdar://problem/14379453>
 
 ; Hard-coded registers comes from the ABI.
 ; CHECK-LABEL: wrapDistance:
@@ -109,6 +107,7 @@ return:                                           ; preds = %if.end5, %if.then4,
 ; CHECK-NEXT: itt le
 ; CHECK-NEXT: suble r0, r2, #1
 ; CHECK-NEXT: bxle lr
+; CHECK-NEXT: LBB{{.*}}:
 ; CHECK-NEXT: subs [[REG:r[0-9]+]], #120
 ; CHECK-NEXT: cmp [[REG]], r1
 ; CHECK-NOT: it lt

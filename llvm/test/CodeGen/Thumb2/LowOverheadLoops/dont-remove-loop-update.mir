@@ -115,14 +115,17 @@ body:             |
   ; CHECK:   tCMPi8 renamable $r3, 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   t2IT 11, 8, implicit-def $itstate
   ; CHECK:   tPOP_RET 11 /* CC::lt */, killed $cpsr, def $r7, def $pc, implicit killed $itstate
+  ; CHECK: bb.1.vector.ph:
+  ; CHECK:   successors: %bb.2(0x80000000)
+  ; CHECK:   liveins: $r0, $r1, $r2, $r3
   ; CHECK:   renamable $r12 = t2ADDri renamable $r3, 3, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $lr = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r12 = t2BICri killed renamable $r12, 3, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r12 = t2SUBri killed renamable $r12, 4, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $lr = nuw nsw t2ADDrs killed renamable $lr, killed renamable $r12, 19, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $lr = t2DLS killed renamable $lr
-  ; CHECK: bb.1.vector.body:
-  ; CHECK:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  ; CHECK: bb.2.vector.body:
+  ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3
   ; CHECK:   renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg
   ; CHECK:   MVE_VPST 4, implicit $vpr
@@ -133,8 +136,8 @@ body:             |
   ; CHECK:   MVE_VPST 8, implicit $vpr
   ; CHECK:   renamable $r0 = MVE_VSTRWU32_post killed renamable $q0, killed renamable $r0, 16, 1, killed renamable $vpr :: (store 16 into %ir.lsr.iv1719, align 4)
   ; CHECK:   renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14 /* CC::al */, $noreg
-  ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.1
-  ; CHECK: bb.2.for.cond.cleanup:
+  ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
+  ; CHECK: bb.3.for.cond.cleanup:
   ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
   bb.0.entry:
     successors: %bb.1(0x80000000)
@@ -149,6 +152,11 @@ body:             |
     tCMPi8 renamable $r3, 1, 14, $noreg, implicit-def $cpsr
     t2IT 11, 8, implicit-def $itstate
     tPOP_RET 11, killed $cpsr, def $r7, def $pc, implicit killed $itstate
+
+  bb.1.vector.ph:
+    successors: %bb.2(0x80000000)
+    liveins: $r0, $r1, $r2, $r3, $r7, $lr
+
     renamable $r12 = t2ADDri renamable $r3, 3, 14, $noreg, $noreg
     renamable $lr = t2MOVi 1, 14, $noreg, $noreg
     renamable $r12 = t2BICri killed renamable $r12, 3, 14, $noreg, $noreg
@@ -156,8 +164,8 @@ body:             |
     renamable $lr = nuw nsw t2ADDrs killed renamable $lr, killed renamable $r12, 19, 14, $noreg, $noreg
     t2DoLoopStart renamable $lr
 
-  bb.1.vector.body:
-    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  bb.2.vector.body:
+    successors: %bb.2(0x7c000000), %bb.3(0x04000000)
     liveins: $lr, $r0, $r1, $r2, $r3
 
     renamable $vpr = MVE_VCTP32 renamable $r3, 0, $noreg
@@ -170,10 +178,10 @@ body:             |
     renamable $r0 = MVE_VSTRWU32_post killed renamable $q0, killed renamable $r0, 16, 1, killed renamable $vpr :: (store 16 into %ir.lsr.iv1719, align 4)
     renamable $lr = t2LoopDec killed renamable $lr, 1
     renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14, $noreg
-    t2LoopEnd renamable $lr, %bb.1, implicit-def dead $cpsr
-    tB %bb.2, 14, $noreg
+    t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
+    tB %bb.3, 14, $noreg
 
-  bb.2.for.cond.cleanup:
+  bb.3.for.cond.cleanup:
     tPOP_RET 14, $noreg, def $r7, def $pc
 
 ...

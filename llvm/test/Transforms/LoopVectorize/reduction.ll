@@ -504,7 +504,6 @@ exit:
 ;CHECK: add <4 x i32>
 ;CHECK: extractelement <4 x i32> %{{.*}}, i32 0
 ;CHECK: %sum.lcssa = phi i32 [ %[[SCALAR:.*]], %.lr.ph ], [ %[[VECTOR:.*]], %middle.block ]
-;CHECK: %sum.copy = phi i32 [ %[[SCALAR]], %.lr.ph ], [ %[[VECTOR]], %middle.block ]
 ;CHECK: ret i32
 define i32 @reduction_sum_multiuse(i32 %n, i32* noalias nocapture %A, i32* noalias nocapture %B) {
   %1 = icmp sgt i32 %n, 0

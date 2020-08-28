@@ -4,6 +4,7 @@
 #
 # RUN: llc -mtriple aarch64 -run-pass=aarch64-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
 
+---
 name:            remove_and_with_one_bit
 legalized:       true
 tracksRegLiveness: true

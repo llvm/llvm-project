@@ -3720,10 +3720,14 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
   if (Ops.LHS->getType() != RHS->getType())
     RHS = Builder.CreateIntCast(RHS, Ops.LHS->getType(), false, "sh_prom");
 
-  bool SanitizeBase = CGF.SanOpts.has(SanitizerKind::ShiftBase) &&
-                      Ops.Ty->hasSignedIntegerRepresentation() &&
-                      !CGF.getLangOpts().isSignedOverflowDefined() &&
-                      !CGF.getLangOpts().CPlusPlus20;
+  bool SanitizeSignedBase = CGF.SanOpts.has(SanitizerKind::ShiftBase) &&
+                            Ops.Ty->hasSignedIntegerRepresentation() &&
+                            !CGF.getLangOpts().isSignedOverflowDefined() &&
+                            !CGF.getLangOpts().CPlusPlus20;
+  bool SanitizeUnsignedBase =
+      CGF.SanOpts.has(SanitizerKind::UnsignedShiftBase) &&
+      Ops.Ty->hasUnsignedIntegerRepresentation();
+  bool SanitizeBase = SanitizeSignedBase || SanitizeUnsignedBase;
   bool SanitizeExponent = CGF.SanOpts.has(SanitizerKind::ShiftExponent);
   // OpenCL 6.3j: shift values are effectively % word size of LHS.
   if (CGF.getLangOpts().OpenCL)
@@ -3756,11 +3760,12 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
           Ops.LHS, Builder.CreateSub(PromotedWidthMinusOne, RHS, "shl.zeros",
                                      /*NUW*/ true, /*NSW*/ true),
           "shl.check");
-      if (CGF.getLangOpts().CPlusPlus) {
+      if (SanitizeUnsignedBase || CGF.getLangOpts().CPlusPlus) {
         // In C99, we are not permitted to shift a 1 bit into the sign bit.
         // Under C++11's rules, shifting a 1 bit into the sign bit is
         // OK, but shifting a 1 bit out of it is not. (C89 and C++03 don't
         // define signed left shifts, so we use the C99 and C++11 rules there).
+        // Unsigned shifts can always shift into the top bit.
         llvm::Value *One = llvm::ConstantInt::get(BitsShiftedOff->getType(), 1);
         BitsShiftedOff = Builder.CreateLShr(BitsShiftedOff, One);
       }
@@ -3770,7 +3775,9 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
       llvm::PHINode *BaseCheck = Builder.CreatePHI(ValidBase->getType(), 2);
       BaseCheck->addIncoming(Builder.getTrue(), Orig);
       BaseCheck->addIncoming(ValidBase, CheckShiftBase);
-      Checks.push_back(std::make_pair(BaseCheck, SanitizerKind::ShiftBase));
+      Checks.push_back(std::make_pair(
+          BaseCheck, SanitizeSignedBase ? SanitizerKind::ShiftBase
+                                        : SanitizerKind::UnsignedShiftBase));
     }
 
     assert(!Checks.empty());

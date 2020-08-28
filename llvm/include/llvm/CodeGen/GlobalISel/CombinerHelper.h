@@ -272,6 +272,13 @@ public:
   /// Return true if a G_STORE instruction \p MI is storing an undef value.
   bool matchUndefStore(MachineInstr &MI);
 
+  /// Return true if a G_SELECT instruction \p MI has an undef comparison.
+  bool matchUndefSelectCmp(MachineInstr &MI);
+
+  /// Return true if a G_SELECT instruction \p MI has a constant comparison. If
+  /// true, \p OpIdx will store the operand index of the known selected value.
+  bool matchConstantSelectCmp(MachineInstr &MI, unsigned &OpIdx);
+
   /// Replace an instruction with a G_FCONSTANT with value \p C.
   bool replaceInstWithFConstant(MachineInstr &MI, double C);
 

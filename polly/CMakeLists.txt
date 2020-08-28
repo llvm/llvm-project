@@ -30,17 +30,13 @@ if (NOT DEFINED LLVM_MAIN_SRC_DIR)
     if (NOT TARGET gtest)
       add_subdirectory(${UNITTEST_DIR} utils/unittest)
     endif()
-
-    # LLVM Doesn't export gtest's include directorys, so do that here
-    set_target_properties(gtest
-      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
-      "${UNITTEST_DIR}/googletest/include;${UNITTEST_DIR}/googlemock/include"
-      )
     set(POLLY_GTEST_AVAIL 1)
   endif()
 
-  # Make sure the isl c files are built as fPIC
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+  if (LLVM_ENABLE_PIC)
+    # Make sure the isl c files are built as fPIC if possible
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+  endif ()
 
   # Set directory for polly-isl-test.
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")

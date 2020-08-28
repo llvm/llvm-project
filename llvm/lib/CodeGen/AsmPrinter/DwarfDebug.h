@@ -598,10 +598,8 @@ class DwarfDebug : public DebugHandlerBase {
   /// function that describe the same variable. If the resulting 
   /// list has only one entry that is valid for entire variable's
   /// scope return true.
-  bool buildLocationList(
-      SmallVectorImpl<DebugLocEntry> &DebugLoc,
-      const DbgValueHistoryMap::Entries &Entries,
-      DenseSet<const MachineBasicBlock *> &VeryLargeBlocks);
+  bool buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
+                         const DbgValueHistoryMap::Entries &Entries);
 
   /// Collect variable information from the side table maintained by MF.
   void collectVariableInfoFromMFTable(DwarfCompileUnit &TheCU,

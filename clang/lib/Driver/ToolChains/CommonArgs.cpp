@@ -686,6 +686,11 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
         HelperStaticRuntimes.push_back("asan-preinit");
     }
+    if (SanArgs.needsHeapProfRt() && SanArgs.linkRuntimes()) {
+      SharedRuntimes.push_back("heapprof");
+      if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
+        HelperStaticRuntimes.push_back("heapprof-preinit");
+    }
     if (SanArgs.needsUbsanRt() && SanArgs.linkRuntimes()) {
       if (SanArgs.requiresMinimalRuntime())
         SharedRuntimes.push_back("ubsan_minimal");
@@ -719,6 +724,13 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     StaticRuntimes.push_back("asan");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("asan_cxx");
+  }
+
+  if (!SanArgs.needsSharedRt() && SanArgs.needsHeapProfRt() &&
+      SanArgs.linkRuntimes()) {
+    StaticRuntimes.push_back("heapprof");
+    if (SanArgs.linkCXXRuntimes())
+      StaticRuntimes.push_back("heapprof_cxx");
   }
 
   if (!SanArgs.needsSharedRt() && SanArgs.needsHwasanRt() && SanArgs.linkRuntimes()) {

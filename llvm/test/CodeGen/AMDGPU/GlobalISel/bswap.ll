@@ -514,7 +514,6 @@ define i64 @v_bswap_i48(i64 %src) {
 ; GFX7-NEXT:    v_alignbit_b32 v0, v0, v0, 24
 ; GFX7-NEXT:    v_bfi_b32 v2, s4, v0, v2
 ; GFX7-NEXT:    v_lshr_b64 v[0:1], v[1:2], 16
-; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_bswap_i48:
@@ -524,7 +523,6 @@ define i64 @v_bswap_i48(i64 %src) {
 ; GFX8-NEXT:    v_perm_b32 v1, 0, v1, s4
 ; GFX8-NEXT:    v_perm_b32 v2, 0, v0, s4
 ; GFX8-NEXT:    v_lshrrev_b64 v[0:1], 16, v[1:2]
-; GFX8-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_bswap_i48:
@@ -534,7 +532,6 @@ define i64 @v_bswap_i48(i64 %src) {
 ; GFX9-NEXT:    v_perm_b32 v1, 0, v1, s4
 ; GFX9-NEXT:    v_perm_b32 v2, 0, v0, s4
 ; GFX9-NEXT:    v_lshrrev_b64 v[0:1], 16, v[1:2]
-; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %trunc = trunc i64 %src to i48
   %bswap = call i48 @llvm.bswap.i48(i48 %trunc)

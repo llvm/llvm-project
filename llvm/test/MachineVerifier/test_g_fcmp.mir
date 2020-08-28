@@ -1,5 +1,5 @@
 #RUN: not --crash llc -o - -march=arm64 -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
-# REQUIRES: global-isel, aarch64-registered-target
+# REQUIRES: aarch64-registered-target
 
 ---
 name:            test_fcmp

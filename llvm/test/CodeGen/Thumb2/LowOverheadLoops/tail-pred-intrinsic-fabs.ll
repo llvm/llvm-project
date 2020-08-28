@@ -9,14 +9,15 @@ define arm_aapcs_vfpcc void @fabs(float* noalias nocapture readonly %pSrcA, floa
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
+; CHECK-NEXT:  .LBB0_1: @ %vector.ph
 ; CHECK-NEXT:    dlstp.32 lr, r2
-; CHECK-NEXT:  .LBB0_1: @ %vector.body
+; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    vabs.f32 q0, q0
 ; CHECK-NEXT:    vstrw.32 q0, [r1], #16
-; CHECK-NEXT:    letp lr, .LBB0_1
-; CHECK-NEXT:  @ %bb.2: @ %while.end
+; CHECK-NEXT:    letp lr, .LBB0_2
+; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp3 = icmp eq i32 %blockSize, 0

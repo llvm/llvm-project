@@ -225,6 +225,24 @@ def select_same_val: GICombineRule<
   (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 2); }])
 >;
 
+// Fold (undef ? x : y) -> y
+def select_undef_cmp: GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_SELECT):$root,
+    [{ return Helper.matchUndefSelectCmp(*${root}); }]),
+  (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 2); }])
+>;
+
+// Fold (true ? x : y) -> x
+// Fold (false ? x : y) -> y
+def select_constant_cmp_matchdata : GIDefMatchData<"unsigned">;
+def select_constant_cmp: GICombineRule<
+  (defs root:$root, select_constant_cmp_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SELECT):$root,
+    [{ return Helper.matchConstantSelectCmp(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, ${matchinfo}); }])
+>;
+
 // Fold x op 0 -> x
 def right_identity_zero: GICombineRule<
   (defs root:$root),
@@ -339,7 +357,11 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         binop_right_to_zero, p2i_to_i2p,
                                         i2p_to_p2i]>;
 
+def known_bits_simplifications : GICombineGroup<[and_trivial_mask]>;
+
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend]>;
+
+def select_combines : GICombineGroup<[select_undef_cmp, select_constant_cmp]>;
 
 def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, add_p2i_to_ptradd]>;
 def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
@@ -347,4 +369,5 @@ def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
     identity_combines, simplify_add_to_sub,
     hoist_logic_op_with_same_opcode_hands,
     shl_ashr_to_sext_inreg, sext_inreg_of_load,
-    width_reduction_combines]>;
+    width_reduction_combines, select_combines,
+    known_bits_simplifications]>;

@@ -1301,6 +1301,9 @@ ChangeStatus Attributor::cleanupIR() {
   for (Function *Fn : ToBeDeletedFunctions)
     CGUpdater.removeFunction(*Fn);
 
+  if (!ToBeDeletedFunctions.empty())
+    ManifestChange = ChangeStatus::CHANGED;
+
   NumFnDeleted += ToBeDeletedFunctions.size();
 
   LLVM_DEBUG(dbgs() << "[Attributor] Deleted " << NumFnDeleted
@@ -1320,7 +1323,7 @@ ChangeStatus Attributor::cleanupIR() {
 ChangeStatus Attributor::run() {
   TimeTraceScope TimeScope("Attributor::run");
 
-  SeedingPeriod = false;
+  Phase = AttributorPhase::UPDATE;
   runTillFixpoint();
 
   // dump graphs on demand
@@ -1333,13 +1336,19 @@ ChangeStatus Attributor::run() {
   if (PrintDependencies)
     DG.print();
 
+  Phase = AttributorPhase::MANIFEST;
   ChangeStatus ManifestChange = manifestAttributes();
+
+  Phase = AttributorPhase::CLEANUP;
   ChangeStatus CleanupChange = cleanupIR();
+
   return ManifestChange | CleanupChange;
 }
 
 ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
   TimeTraceScope TimeScope(AA.getName() + "::updateAA");
+  assert(Phase == AttributorPhase::UPDATE &&
+         "We can update AA only in the update stage!");
 
   // Use a new dependence vector for this update.
   DependenceVector DV;
@@ -2165,9 +2174,12 @@ raw_ostream &llvm::operator<<(raw_ostream &OS,
   OS << "set-state(< {";
   if (!S.isValidState())
     OS << "full-set";
-  else
+  else {
     for (auto &it : S.getAssumedSet())
       OS << it << ", ";
+    if (S.undefIsContained())
+      OS << "undef ";
+  }
   OS << "} >)";
 
   return OS;

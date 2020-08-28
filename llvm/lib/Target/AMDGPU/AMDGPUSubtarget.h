@@ -78,7 +78,7 @@ protected:
   bool EnablePromoteAlloca;
   bool HasTrigReducedRange;
   unsigned MaxWavesPerEU;
-  int LocalMemorySize;
+  unsigned LocalMemorySize;
   char WavefrontSizeLog2;
 
 public:
@@ -202,7 +202,7 @@ public:
     return WavefrontSizeLog2;
   }
 
-  int getLocalMemorySize() const {
+  unsigned getLocalMemorySize() const {
     return LocalMemorySize;
   }
 
@@ -243,7 +243,7 @@ public:
   /// 2) dimension.
   unsigned getMaxWorkitemID(const Function &Kernel, unsigned Dimension) const;
 
-  /// Creates value range metadata on an workitemid.* inrinsic call or load.
+  /// Creates value range metadata on an workitemid.* intrinsic call or load.
   bool makeLIDRangeMetadata(Instruction *I) const;
 
   /// \returns Number of bytes of arguments that are passed to a shader or

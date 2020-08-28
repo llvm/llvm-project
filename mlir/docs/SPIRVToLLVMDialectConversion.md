@@ -54,8 +54,9 @@ which is not known at compile time. In LLVM, it is possible to index beyond the
 end of the array. Therfore, runtime array can be implemented as a zero length
 array type.
 
-Moreover, SPIR-V supports the notion of array stride. Note that this is **not**
-supported by type conversion at the moment.
+Moreover, SPIR-V supports the notion of array stride. Currently only natural
+strides (based on [`VulkanLayoutUtils`](VulkanLayoutUtils)) are supported. They
+are also mapped to LLVM array.
 
 SPIR-V Dialect                        | LLVM Dialect
 :-----------------------------------: | :-----------------------------------:
@@ -77,8 +78,7 @@ at the moment. Hence, we adhere to the following mapping:
 
 *   Structs with natural offset (*i.e.* offset that equals to cumulative size of
     the previous struct elements or is a natural alignment) are mapped to
-    naturally padded structs. Nested structs with offset and structs with offset
-    containing arrays are **not** supported.
+    naturally padded structs.
 
 *   Structs with unnatural offset (*i.e.* offset that is not equal to cumulative
     size of the previous struct elements) are **not** supported. In this case,
@@ -783,3 +783,4 @@ to LLVM ops. At the moment, SPIR-V module attributes are ignored.
 
 [LLVMFunctionAttributes]: https://llvm.org/docs/LangRef.html#function-attributes
 [SPIRVFunctionAttributes]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#_a_id_function_control_a_function_control
+[VulkanLayoutUtils]: https://github.com/llvm/llvm-project/blob/master/mlir/include/mlir/Dialect/SPIRV/LayoutUtils.h

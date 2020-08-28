@@ -616,6 +616,12 @@ void JSONNodeDumper::VisitVectorType(const VectorType *VT) {
   case VectorType::NeonPolyVector:
     JOS.attribute("vectorKind", "neon poly");
     break;
+  case VectorType::SveFixedLengthDataVector:
+    JOS.attribute("vectorKind", "fixed-length sve data vector");
+    break;
+  case VectorType::SveFixedLengthPredicateVector:
+    JOS.attribute("vectorKind", "fixed-length sve predicate vector");
+    break;
   }
 }
 

@@ -1871,50 +1871,6 @@ TypeInfo ASTContext::getTypeInfo(const Type *T) const {
   return TI;
 }
 
-static unsigned getSveVectorWidth(const Type *T) {
-  // Get the vector size from the 'arm_sve_vector_bits' attribute via the
-  // AttributedTypeLoc associated with the typedef decl.
-  if (const auto *TT = T->getAs<TypedefType>()) {
-    const TypedefNameDecl *Typedef = TT->getDecl();
-    TypeSourceInfo *TInfo = Typedef->getTypeSourceInfo();
-    TypeLoc TL = TInfo->getTypeLoc();
-    if (AttributedTypeLoc ATL = TL.getAs<AttributedTypeLoc>())
-      if (const auto *Attr = ATL.getAttrAs<ArmSveVectorBitsAttr>())
-        return Attr->getNumBits();
-  }
-
-  llvm_unreachable("bad 'arm_sve_vector_bits' attribute!");
-}
-
-static unsigned getSvePredWidth(const ASTContext &Context, const Type *T) {
-  return getSveVectorWidth(T) / Context.getCharWidth();
-}
-
-unsigned ASTContext::getBitwidthForAttributedSveType(const Type *T) const {
-  assert(T->isVLST() &&
-         "getBitwidthForAttributedSveType called for non-attributed type!");
-
-  switch (T->castAs<BuiltinType>()->getKind()) {
-  default:
-    llvm_unreachable("unknown builtin type!");
-  case BuiltinType::SveInt8:
-  case BuiltinType::SveInt16:
-  case BuiltinType::SveInt32:
-  case BuiltinType::SveInt64:
-  case BuiltinType::SveUint8:
-  case BuiltinType::SveUint16:
-  case BuiltinType::SveUint32:
-  case BuiltinType::SveUint64:
-  case BuiltinType::SveFloat16:
-  case BuiltinType::SveFloat32:
-  case BuiltinType::SveFloat64:
-  case BuiltinType::SveBFloat16:
-    return getSveVectorWidth(T);
-  case BuiltinType::SveBool:
-    return getSvePredWidth(*this, T);
-  }
-}
-
 /// getTypeInfoImpl - Return the size of the specified type, in bits.  This
 /// method does not work on incomplete types.
 ///
@@ -1981,6 +1937,13 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     uint64_t TargetVectorAlign = Target->getMaxVectorAlign();
     if (TargetVectorAlign && TargetVectorAlign < Align)
       Align = TargetVectorAlign;
+    if (VT->getVectorKind() == VectorType::SveFixedLengthDataVector)
+      // Adjust the alignment for fixed-length SVE vectors. This is important
+      // for non-power-of-2 vector lengths.
+      Align = 128;
+    else if (VT->getVectorKind() == VectorType::SveFixedLengthPredicateVector)
+      // Adjust the alignment for fixed-length SVE predicates.
+      Align = 16;
     break;
   }
 
@@ -2319,10 +2282,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Align = Info.Align;
       AlignIsRequired = Info.AlignIsRequired;
     }
-    if (T->isVLST())
-      Width = getBitwidthForAttributedSveType(T);
-    else
-      Width = Info.Width;
+    Width = Info.Width;
     break;
   }
 
@@ -8538,6 +8498,31 @@ bool ASTContext::areCompatibleVectorTypes(QualType FirstVec,
     return true;
 
   return false;
+}
+
+bool ASTContext::areCompatibleSveTypes(QualType FirstType,
+                                       QualType SecondType) {
+  assert(((FirstType->isSizelessBuiltinType() && SecondType->isVectorType()) ||
+          (FirstType->isVectorType() && SecondType->isSizelessBuiltinType())) &&
+         "Expected SVE builtin type and vector type!");
+
+  auto IsValidCast = [this](QualType FirstType, QualType SecondType) {
+    if (const auto *BT = FirstType->getAs<BuiltinType>()) {
+      if (const auto *VT = SecondType->getAs<VectorType>()) {
+        // Predicates have the same representation as uint8 so we also have to
+        // check the kind to make these types incompatible.
+        if (VT->getVectorKind() == VectorType::SveFixedLengthPredicateVector)
+          return BT->getKind() == BuiltinType::SveBool;
+        else if (VT->getVectorKind() == VectorType::SveFixedLengthDataVector)
+          return VT->getElementType().getCanonicalType() ==
+                 FirstType->getSveEltType(*this);
+      }
+    }
+    return false;
+  };
+
+  return IsValidCast(FirstType, SecondType) ||
+         IsValidCast(SecondType, FirstType);
 }
 
 bool ASTContext::hasDirectOwnershipQualifier(QualType Ty) const {

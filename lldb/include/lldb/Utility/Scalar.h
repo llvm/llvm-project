@@ -14,59 +14,52 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-types.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APSInt.h"
 #include <cstddef>
 #include <cstdint>
 #include <utility>
 
 namespace lldb_private {
+
 class DataExtractor;
 class Stream;
-} // namespace lldb_private
 
 #define NUM_OF_WORDS_INT128 2
 #define BITWIDTH_INT128 128
-#define NUM_OF_WORDS_INT256 4
-#define BITWIDTH_INT256 256
-#define NUM_OF_WORDS_INT512 8
-#define BITWIDTH_INT512 512
-
-namespace lldb_private {
 
 // A class designed to hold onto values and their corresponding types.
 // Operators are defined and Scalar objects will correctly promote their types
 // and values before performing these operations. Type promotion currently
 // follows the ANSI C type promotion rules.
 class Scalar {
+  template<typename T>
+  static llvm::APSInt MakeAPSInt(T v) {
+    static_assert(std::is_integral<T>::value, "");
+    static_assert(sizeof(T) <= sizeof(uint64_t), "Conversion loses precision!");
+    return llvm::APSInt(
+        llvm::APInt(sizeof(T) * 8, uint64_t(v), std::is_signed<T>::value),
+        std::is_unsigned<T>::value);
+  }
+
 public:
-  // FIXME: These are host types which seems to be an odd choice.
   enum Type {
     e_void = 0,
-    e_sint,
-    e_uint,
+    e_int,
     e_float,
   };
 
   // Constructors and Destructors
   Scalar() : m_type(e_void), m_float(0.0f) {}
-  Scalar(int v)
-      : m_type(e_sint), m_integer(sizeof(v) * 8, uint64_t(v), true),
-        m_float(0.0f) {}
+  Scalar(int v) : m_type(e_int), m_integer(MakeAPSInt(v)), m_float(0.0f) {}
   Scalar(unsigned int v)
-      : m_type(e_uint), m_integer(sizeof(v) * 8, uint64_t(v), false),
-        m_float(0.0f) {}
-  Scalar(long v)
-      : m_type(e_sint), m_integer(sizeof(v) * 8, uint64_t(v), true),
-        m_float(0.0f) {}
+      : m_type(e_int), m_integer(MakeAPSInt(v)), m_float(0.0f) {}
+  Scalar(long v) : m_type(e_int), m_integer(MakeAPSInt(v)), m_float(0.0f) {}
   Scalar(unsigned long v)
-      : m_type(e_uint), m_integer(sizeof(v) * 8, uint64_t(v), false),
-        m_float(0.0f) {}
+      : m_type(e_int), m_integer(MakeAPSInt(v)), m_float(0.0f) {}
   Scalar(long long v)
-      : m_type(e_sint), m_integer(sizeof(v) * 8, uint64_t(v), true),
-        m_float(0.0f) {}
+      : m_type(e_int), m_integer(MakeAPSInt(v)), m_float(0.0f) {}
   Scalar(unsigned long long v)
-      : m_type(e_uint), m_integer(sizeof(v) * 8, uint64_t(v), false),
-        m_float(0.0f) {}
+      : m_type(e_int), m_integer(MakeAPSInt(v)), m_float(0.0f) {}
   Scalar(float v) : m_type(e_float), m_float(v) {}
   Scalar(double v) : m_type(e_float), m_float(v) {}
   Scalar(long double v) : m_type(e_float), m_float(double(v)) {
@@ -75,7 +68,7 @@ public:
                     llvm::APFloat::rmNearestTiesToEven, &ignore);
   }
   Scalar(llvm::APInt v)
-      : m_type(e_sint), m_integer(std::move(v)), m_float(0.0f) {}
+      : m_type(e_int), m_integer(std::move(v), false), m_float(0.0f) {}
 
   bool SignExtend(uint32_t bit_pos);
 
@@ -108,7 +101,7 @@ public:
 
   void GetValue(Stream *s, bool show_type) const;
 
-  bool IsValid() const { return (m_type >= e_sint) && (m_type <= e_float); }
+  bool IsValid() const { return (m_type >= e_int) && (m_type <= e_float); }
 
   /// Convert to an integer with \p bits and the given signedness.
   void TruncOrExtendTo(uint16_t bits, bool sign);
@@ -116,6 +109,7 @@ public:
   bool IntegralPromote(uint16_t bits, bool sign);
   bool FloatPromote(const llvm::fltSemantics &semantics);
 
+  bool IsSigned() const;
   bool MakeSigned();
 
   bool MakeUnsigned();
@@ -218,33 +212,15 @@ public:
   }
 
 protected:
-  typedef char schar_t;
-  typedef unsigned char uchar_t;
-  typedef short sshort_t;
-  typedef unsigned short ushort_t;
-  typedef int sint_t;
-  typedef unsigned int uint_t;
-  typedef long slong_t;
-  typedef unsigned long ulong_t;
-  typedef long long slonglong_t;
-  typedef unsigned long long ulonglong_t;
-  typedef float float_t;
-  typedef double double_t;
-  typedef long double long_double_t;
-
-  // Classes that inherit from Scalar can see and modify these
   Scalar::Type m_type;
-  llvm::APInt m_integer;
+  llvm::APSInt m_integer;
   llvm::APFloat m_float;
 
   template <typename T> T GetAs(T fail_value) const;
 
   static Type PromoteToMaxType(Scalar &lhs, Scalar &rhs);
 
-  enum class Category { Void, Integral, Float };
-  static Category GetCategory(Scalar::Type type);
-
-  using PromotionKey = std::tuple<Category, unsigned, bool>;
+  using PromotionKey = std::tuple<Type, unsigned, bool>;
   PromotionKey GetPromoKey() const;
 
   static PromotionKey GetFloatPromoKey(const llvm::fltSemantics &semantics);

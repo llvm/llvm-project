@@ -461,6 +461,23 @@ LLVM-specific variables
 **LLVM_PARALLEL_LINK_JOBS**:STRING
   Define the maximum number of concurrent link jobs.
 
+**LLVM_USE_CRT_{target}**:STRING
+  On Windows, tells which version of the C runtime library (CRT) should be used.
+  For example, -DLLVM_USE_CRT_RELEASE=MT would statically link the CRT into the
+  LLVM tools and library.
+
+**LLVM_INTEGRATED_CRT_ALLOC**:PATH
+  On Windows, allows embedding a different C runtime allocator into the LLVM
+  tools and libraries. Using a lock-free allocator such as the ones listed below
+  greatly decreases ThinLTO link time by about an order of magnitude. It also
+  midly improves Clang build times, by about 5-10%. At the moment, rpmalloc,
+  snmalloc and mimalloc are supported. Use the path to `git clone` to select
+  the respective allocator, for example:
+    D:\git> git clone https://github.com/mjansson/rpmalloc
+    D:\llvm-project> cmake ... -DLLVM_INTEGRATED_CRT_ALLOC=D:\git\rpmalloc
+  This flag needs to be used along with the static CRT, ie. if building the
+  Release target, add -DLLVM_USE_CRT_RELEASE=MT.
+
 **LLVM_BUILD_DOCS**:BOOL
   Adds all *enabled* documentation targets (i.e. Doxgyen and Sphinx targets) as
   dependencies of the default build targets.  This results in all of the (enabled)

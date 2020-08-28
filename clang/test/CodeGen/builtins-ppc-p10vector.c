@@ -61,6 +61,54 @@ vector unsigned long long test_vec_div_ull(void) {
   return vec_div(vulla, vullb);
 }
 
+vector signed int test_vec_dive_si(void) {
+  // CHECK: @llvm.ppc.altivec.vdivesw(<4 x i32> %{{.+}}, <4 x i32> %{{.+}})
+  // CHECK-NEXT: ret <4 x i32>
+  return vec_dive(vsia, vsib);
+}
+
+vector unsigned int test_vec_dive_ui(void) {
+  // CHECK: @llvm.ppc.altivec.vdiveuw(<4 x i32> %{{.+}}, <4 x i32> %{{.+}})
+  // CHECK-NEXT: ret <4 x i32>
+  return vec_dive(vuia, vuib);
+}
+
+vector signed long long test_vec_dive_sll(void) {
+  // CHECK: @llvm.ppc.altivec.vdivesd(<2 x i64> %{{.+}}, <2 x i64> %{{.+}})
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_dive(vslla, vsllb);
+}
+
+vector unsigned long long test_vec_dive_ull(void) {
+  // CHECK: @llvm.ppc.altivec.vdiveud(<2 x i64> %{{.+}}, <2 x i64> %{{.+}})
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_dive(vulla, vullb);
+}
+
+vector signed int test_vec_mulh_si(void) {
+  // CHECK: @llvm.ppc.altivec.vmulhsw(<4 x i32> %{{.+}}, <4 x i32> %{{.+}})
+  // CHECK-NEXT: ret <4 x i32>
+  return vec_mulh(vsia, vsib);
+}
+
+vector unsigned int test_vec_mulh_ui(void) {
+  // CHECK: @llvm.ppc.altivec.vmulhuw(<4 x i32> %{{.+}}, <4 x i32> %{{.+}})
+  // CHECK-NEXT: ret <4 x i32>
+  return vec_mulh(vuia, vuib);
+}
+
+vector signed long long test_vec_mulh_sll(void) {
+  // CHECK: @llvm.ppc.altivec.vmulhsd(<2 x i64> %{{.+}}, <2 x i64> %{{.+}})
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_mulh(vslla, vsllb);
+}
+
+vector unsigned long long test_vec_mulh_ull(void) {
+  // CHECK: @llvm.ppc.altivec.vmulhud(<2 x i64> %{{.+}}, <2 x i64> %{{.+}})
+  // CHECK-NEXT: ret <2 x i64>
+  return vec_mulh(vulla, vullb);
+}
+
 vector signed int test_vec_mod_si(void) {
   // CHECK: srem <4 x i32>
   // CHECK-NEXT: ret <4 x i32>

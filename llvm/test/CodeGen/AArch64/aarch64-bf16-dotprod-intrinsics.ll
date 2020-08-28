@@ -7,10 +7,8 @@ define <2 x float> @test_vbfdot_f32(<2 x float> %r, <4 x bfloat> %a, <4 x bfloat
 ; CHECK-NEXT:    bfdot v0.2s, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast <4 x bfloat> %a to <8 x i8>
-  %1 = bitcast <4 x bfloat> %b to <8 x i8>
-  %vbfdot1.i = tail call <2 x float> @llvm.aarch64.neon.bfdot.v2f32.v8i8(<2 x float> %r, <8 x i8> %0, <8 x i8> %1)
-  ret <2 x float> %vbfdot1.i
+  %vbfdot3.i = call <2 x float> @llvm.aarch64.neon.bfdot.v2f32.v4bf16(<2 x float> %r, <4 x bfloat> %a, <4 x bfloat> %b)
+  ret <2 x float> %vbfdot3.i
 }
 
 define <4 x float> @test_vbfdotq_f32(<4 x float> %r, <8 x bfloat> %a, <8 x bfloat> %b) {
@@ -19,24 +17,22 @@ define <4 x float> @test_vbfdotq_f32(<4 x float> %r, <8 x bfloat> %a, <8 x bfloa
 ; CHECK-NEXT:    bfdot v0.4s, v1.8h, v2.8h
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast <8 x bfloat> %a to <16 x i8>
-  %1 = bitcast <8 x bfloat> %b to <16 x i8>
-  %vbfdot1.i = tail call <4 x float> @llvm.aarch64.neon.bfdot.v4f32.v16i8(<4 x float> %r, <16 x i8> %0, <16 x i8> %1)
-  ret <4 x float> %vbfdot1.i
+  %vbfdot3.i = call <4 x float> @llvm.aarch64.neon.bfdot.v4f32.v8bf16(<4 x float> %r, <8 x bfloat> %a, <8 x bfloat> %b)
+  ret <4 x float> %vbfdot3.i
 }
 
 define <2 x float> @test_vbfdot_lane_f32(<2 x float> %r, <4 x bfloat> %a, <4 x bfloat> %b) {
 ; CHECK-LABEL: test_vbfdot_lane_f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK:    bfdot v0.2s, v1.4h, v2.2h[0]
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    bfdot v0.2s, v1.4h, v2.2h[0]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast <4 x bfloat> %b to <2 x float>
-  %shuffle = shufflevector <2 x float> %0, <2 x float> undef, <2 x i32> zeroinitializer
-  %1 = bitcast <4 x bfloat> %a to <8 x i8>
-  %2 = bitcast <2 x float> %shuffle to <8 x i8>
-  %vbfdot1.i = tail call <2 x float> @llvm.aarch64.neon.bfdot.v2f32.v8i8(<2 x float> %r, <8 x i8> %1, <8 x i8> %2)
-  ret <2 x float> %vbfdot1.i
+  %.cast = bitcast <4 x bfloat> %b to <2 x float>
+  %lane = shufflevector <2 x float> %.cast, <2 x float> undef, <2 x i32> zeroinitializer
+  %.cast1 = bitcast <2 x float> %lane to <4 x bfloat>
+  %vbfdot3.i = call <2 x float> @llvm.aarch64.neon.bfdot.v2f32.v4bf16(<2 x float> %r, <4 x bfloat> %a, <4 x bfloat> %.cast1)
+  ret <2 x float> %vbfdot3.i
 }
 
 define <4 x float> @test_vbfdotq_laneq_f32(<4 x float> %r, <8 x bfloat> %a, <8 x bfloat> %b) {
@@ -45,12 +41,11 @@ define <4 x float> @test_vbfdotq_laneq_f32(<4 x float> %r, <8 x bfloat> %a, <8 x
 ; CHECK-NEXT:    bfdot v0.4s, v1.8h, v2.2h[3]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast <8 x bfloat> %b to <4 x float>
-  %shuffle = shufflevector <4 x float> %0, <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
-  %1 = bitcast <8 x bfloat> %a to <16 x i8>
-  %2 = bitcast <4 x float> %shuffle to <16 x i8>
-  %vbfdot1.i = tail call <4 x float> @llvm.aarch64.neon.bfdot.v4f32.v16i8(<4 x float> %r, <16 x i8> %1, <16 x i8> %2)
-  ret <4 x float> %vbfdot1.i
+  %.cast = bitcast <8 x bfloat> %b to <4 x float>
+  %lane = shufflevector <4 x float> %.cast, <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %.cast1 = bitcast <4 x float> %lane to <8 x bfloat>
+  %vbfdot3.i = call <4 x float> @llvm.aarch64.neon.bfdot.v4f32.v8bf16(<4 x float> %r, <8 x bfloat> %a, <8 x bfloat> %.cast1)
+  ret <4 x float> %vbfdot3.i
 }
 
 define <2 x float> @test_vbfdot_laneq_f32(<2 x float> %r, <4 x bfloat> %a, <8 x bfloat> %b) {
@@ -59,26 +54,25 @@ define <2 x float> @test_vbfdot_laneq_f32(<2 x float> %r, <4 x bfloat> %a, <8 x 
 ; CHECK-NEXT:    bfdot v0.2s, v1.4h, v2.2h[3]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast <8 x bfloat> %b to <4 x float>
-  %shuffle = shufflevector <4 x float> %0, <4 x float> undef, <2 x i32> <i32 3, i32 3>
-  %1 = bitcast <4 x bfloat> %a to <8 x i8>
-  %2 = bitcast <2 x float> %shuffle to <8 x i8>
-  %vbfdot1.i = tail call <2 x float> @llvm.aarch64.neon.bfdot.v2f32.v8i8(<2 x float> %r, <8 x i8> %1, <8 x i8> %2)
-  ret <2 x float> %vbfdot1.i
+  %.cast = bitcast <8 x bfloat> %b to <4 x float>
+  %lane = shufflevector <4 x float> %.cast, <4 x float> undef, <2 x i32> <i32 3, i32 3>
+  %.cast1 = bitcast <2 x float> %lane to <4 x bfloat>
+  %vbfdot3.i = call <2 x float> @llvm.aarch64.neon.bfdot.v2f32.v4bf16(<2 x float> %r, <4 x bfloat> %a, <4 x bfloat> %.cast1)
+  ret <2 x float> %vbfdot3.i
 }
 
 define <4 x float> @test_vbfdotq_lane_f32(<4 x float> %r, <8 x bfloat> %a, <4 x bfloat> %b) {
 ; CHECK-LABEL: test_vbfdotq_lane_f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK:    bfdot v0.4s, v1.8h, v2.2h[0]
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    bfdot v0.4s, v1.8h, v2.2h[0]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast <4 x bfloat> %b to <2 x float>
-  %shuffle = shufflevector <2 x float> %0, <2 x float> undef, <4 x i32> zeroinitializer
-  %1 = bitcast <8 x bfloat> %a to <16 x i8>
-  %2 = bitcast <4 x float> %shuffle to <16 x i8>
-  %vbfdot1.i = tail call <4 x float> @llvm.aarch64.neon.bfdot.v4f32.v16i8(<4 x float> %r, <16 x i8> %1, <16 x i8> %2)
-  ret <4 x float> %vbfdot1.i
+  %.cast = bitcast <4 x bfloat> %b to <2 x float>
+  %lane = shufflevector <2 x float> %.cast, <2 x float> undef, <4 x i32> zeroinitializer
+  %.cast1 = bitcast <4 x float> %lane to <8 x bfloat>
+  %vbfdot3.i = call <4 x float> @llvm.aarch64.neon.bfdot.v4f32.v8bf16(<4 x float> %r, <8 x bfloat> %a, <8 x bfloat> %.cast1)
+  ret <4 x float> %vbfdot3.i
 }
 
 define <4 x float> @test_vbfmmlaq_f32(<4 x float> %r, <8 x bfloat> %a, <8 x bfloat> %b) {
@@ -87,10 +81,8 @@ define <4 x float> @test_vbfmmlaq_f32(<4 x float> %r, <8 x bfloat> %a, <8 x bflo
 ; CHECK-NEXT:    bfmmla v0.4s, v1.8h, v2.8h
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast <8 x bfloat> %a to <16 x i8>
-  %1 = bitcast <8 x bfloat> %b to <16 x i8>
-  %vbfmmla1.i = tail call <4 x float> @llvm.aarch64.neon.bfmmla.v4f32.v16i8(<4 x float> %r, <16 x i8> %0, <16 x i8> %1)
-  ret <4 x float> %vbfmmla1.i
+  %vbfmmlaq_v3.i = call <4 x float> @llvm.aarch64.neon.bfmmla(<4 x float> %r, <8 x bfloat> %a, <8 x bfloat> %b)
+  ret <4 x float> %vbfmmlaq_v3.i
 }
 
 define <4 x float> @test_vbfmlalbq_f32(<4 x float> %r, <8 x bfloat> %a, <8 x bfloat> %b) {
@@ -99,10 +91,8 @@ define <4 x float> @test_vbfmlalbq_f32(<4 x float> %r, <8 x bfloat> %a, <8 x bfl
 ; CHECK-NEXT:    bfmlalb v0.4s, v1.8h, v2.8h
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast <8 x bfloat> %a to <16 x i8>
-  %1 = bitcast <8 x bfloat> %b to <16 x i8>
-  %vbfmlalb1.i = tail call <4 x float> @llvm.aarch64.neon.bfmlalb.v4f32.v16i8(<4 x float> %r, <16 x i8> %0, <16 x i8> %1)
-  ret <4 x float> %vbfmlalb1.i
+  %vbfmlalbq_v3.i = call <4 x float> @llvm.aarch64.neon.bfmlalb(<4 x float> %r, <8 x bfloat> %a, <8 x bfloat> %b)
+  ret <4 x float> %vbfmlalbq_v3.i
 }
 
 define <4 x float> @test_vbfmlaltq_f32(<4 x float> %r, <8 x bfloat> %a, <8 x bfloat> %b) {
@@ -111,23 +101,20 @@ define <4 x float> @test_vbfmlaltq_f32(<4 x float> %r, <8 x bfloat> %a, <8 x bfl
 ; CHECK-NEXT:    bfmlalt v0.4s, v1.8h, v2.8h
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast <8 x bfloat> %a to <16 x i8>
-  %1 = bitcast <8 x bfloat> %b to <16 x i8>
-  %vbfmlalt1.i = tail call <4 x float> @llvm.aarch64.neon.bfmlalt.v4f32.v16i8(<4 x float> %r, <16 x i8> %0, <16 x i8> %1)
-  ret <4 x float> %vbfmlalt1.i
+  %vbfmlaltq_v3.i = call <4 x float> @llvm.aarch64.neon.bfmlalt(<4 x float> %r, <8 x bfloat> %a, <8 x bfloat> %b)
+  ret <4 x float> %vbfmlaltq_v3.i
 }
 
 define <4 x float> @test_vbfmlalbq_lane_f32(<4 x float> %r, <8 x bfloat> %a, <4 x bfloat> %b) {
 ; CHECK-LABEL: test_vbfmlalbq_lane_f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK:    bfmlalb v0.4s, v1.8h, v2.h[0]
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    bfmlalb v0.4s, v1.8h, v2.h[0]
 ; CHECK-NEXT:    ret
 entry:
   %vecinit35 = shufflevector <4 x bfloat> %b, <4 x bfloat> undef, <8 x i32> zeroinitializer
-  %0 = bitcast <8 x bfloat> %a to <16 x i8>
-  %1 = bitcast <8 x bfloat> %vecinit35 to <16 x i8>
-  %vbfmlalb1.i = tail call <4 x float> @llvm.aarch64.neon.bfmlalb.v4f32.v16i8(<4 x float> %r, <16 x i8> %0, <16 x i8> %1)
-  ret <4 x float> %vbfmlalb1.i
+  %vbfmlalbq_v3.i = call <4 x float> @llvm.aarch64.neon.bfmlalb(<4 x float> %r, <8 x bfloat> %a, <8 x bfloat> %vecinit35)
+  ret <4 x float> %vbfmlalbq_v3.i
 }
 
 define <4 x float> @test_vbfmlalbq_laneq_f32(<4 x float> %r, <8 x bfloat> %a, <8 x bfloat> %b) {
@@ -137,23 +124,20 @@ define <4 x float> @test_vbfmlalbq_laneq_f32(<4 x float> %r, <8 x bfloat> %a, <8
 ; CHECK-NEXT:    ret
 entry:
   %vecinit35 = shufflevector <8 x bfloat> %b, <8 x bfloat> undef, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
-  %0 = bitcast <8 x bfloat> %a to <16 x i8>
-  %1 = bitcast <8 x bfloat> %vecinit35 to <16 x i8>
-  %vbfmlalb1.i = tail call <4 x float> @llvm.aarch64.neon.bfmlalb.v4f32.v16i8(<4 x float> %r, <16 x i8> %0, <16 x i8> %1)
-  ret <4 x float> %vbfmlalb1.i
+  %vbfmlalbq_v3.i = call <4 x float> @llvm.aarch64.neon.bfmlalb(<4 x float> %r, <8 x bfloat> %a, <8 x bfloat> %vecinit35)
+  ret <4 x float> %vbfmlalbq_v3.i
 }
 
 define <4 x float> @test_vbfmlaltq_lane_f32(<4 x float> %r, <8 x bfloat> %a, <4 x bfloat> %b) {
 ; CHECK-LABEL: test_vbfmlaltq_lane_f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK:    bfmlalt v0.4s, v1.8h, v2.h[0]
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    bfmlalt v0.4s, v1.8h, v2.h[0]
 ; CHECK-NEXT:    ret
 entry:
   %vecinit35 = shufflevector <4 x bfloat> %b, <4 x bfloat> undef, <8 x i32> zeroinitializer
-  %0 = bitcast <8 x bfloat> %a to <16 x i8>
-  %1 = bitcast <8 x bfloat> %vecinit35 to <16 x i8>
-  %vbfmlalt1.i = tail call <4 x float> @llvm.aarch64.neon.bfmlalt.v4f32.v16i8(<4 x float> %r, <16 x i8> %0, <16 x i8> %1)
-  ret <4 x float> %vbfmlalt1.i
+  %vbfmlaltq_v3.i = call <4 x float> @llvm.aarch64.neon.bfmlalt(<4 x float> %r, <8 x bfloat> %a, <8 x bfloat> %vecinit35)
+  ret <4 x float> %vbfmlaltq_v3.i
 }
 
 define <4 x float> @test_vbfmlaltq_laneq_f32(<4 x float> %r, <8 x bfloat> %a, <8 x bfloat> %b) {
@@ -163,14 +147,12 @@ define <4 x float> @test_vbfmlaltq_laneq_f32(<4 x float> %r, <8 x bfloat> %a, <8
 ; CHECK-NEXT:    ret
 entry:
   %vecinit35 = shufflevector <8 x bfloat> %b, <8 x bfloat> undef, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
-  %0 = bitcast <8 x bfloat> %a to <16 x i8>
-  %1 = bitcast <8 x bfloat> %vecinit35 to <16 x i8>
-  %vbfmlalt1.i = tail call <4 x float> @llvm.aarch64.neon.bfmlalt.v4f32.v16i8(<4 x float> %r, <16 x i8> %0, <16 x i8> %1)
-  ret <4 x float> %vbfmlalt1.i
+  %vbfmlaltq_v3.i = call <4 x float> @llvm.aarch64.neon.bfmlalt(<4 x float> %r, <8 x bfloat> %a, <8 x bfloat> %vecinit35)
+  ret <4 x float> %vbfmlaltq_v3.i
 }
 
-declare <2 x float> @llvm.aarch64.neon.bfdot.v2f32.v8i8(<2 x float>, <8 x i8>, <8 x i8>) #2
-declare <4 x float> @llvm.aarch64.neon.bfdot.v4f32.v16i8(<4 x float>, <16 x i8>, <16 x i8>) #2
-declare <4 x float> @llvm.aarch64.neon.bfmmla.v4f32.v16i8(<4 x float>, <16 x i8>, <16 x i8>) #2
-declare <4 x float> @llvm.aarch64.neon.bfmlalb.v4f32.v16i8(<4 x float>, <16 x i8>, <16 x i8>) #2
-declare <4 x float> @llvm.aarch64.neon.bfmlalt.v4f32.v16i8(<4 x float>, <16 x i8>, <16 x i8>) #2
+declare <2 x float> @llvm.aarch64.neon.bfdot.v2f32.v4bf16(<2 x float>, <4 x bfloat>, <4 x bfloat>)
+declare <4 x float> @llvm.aarch64.neon.bfdot.v4f32.v8bf16(<4 x float>, <8 x bfloat>, <8 x bfloat>)
+declare <4 x float> @llvm.aarch64.neon.bfmmla(<4 x float>, <8 x bfloat>, <8 x bfloat>)
+declare <4 x float> @llvm.aarch64.neon.bfmlalb(<4 x float>, <8 x bfloat>, <8 x bfloat>)
+declare <4 x float> @llvm.aarch64.neon.bfmlalt(<4 x float>, <8 x bfloat>, <8 x bfloat>)

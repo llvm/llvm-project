@@ -2,19 +2,6 @@ if(LLVM_ENABLE_ZLIB)
   set(imported_libs ZLIB::ZLIB)
 endif()
 
-function(get_system_libname libpath libname)
-  get_filename_component(libpath ${libpath} NAME)
-  if( CMAKE_FIND_LIBRARY_PREFIXES )
-    string(REPLACE ";" "|" PREFIXES "${CMAKE_FIND_LIBRARY_PREFIXES}")
-    string(REGEX REPLACE "^(${PREFIXES})" "" libpath ${libpath})
-  endif()
-  if( CMAKE_FIND_LIBRARY_SUFFIXES )
-    string(REPLACE ";" "|" SUFFIXES "${CMAKE_FIND_LIBRARY_SUFFIXES}")
-    string(REGEX REPLACE "(${SUFFIXES})$" "" libpath ${libpath})
-  endif()
-  set(${libname} "${libpath}" PARENT_SCOPE)
-endfunction()
-
 if( MSVC OR MINGW )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
@@ -34,8 +21,10 @@ elseif( CMAKE_HOST_UNIX )
     STRING(REGEX REPLACE "^lib" "" Backtrace_LIBFILE ${Backtrace_LIBFILE})
     set(system_libs ${system_libs} ${Backtrace_LIBFILE})
   endif()
-  if( LLVM_ENABLE_TERMINFO )
-    set(imported_libs ${imported_libs} "${TERMINFO_LIB}")
+  if(LLVM_ENABLE_TERMINFO)
+    if(HAVE_TERMINFO)
+      set(system_libs ${system_libs} ${TERMINFO_LIBS})
+    endif()
   endif()
   if( LLVM_ENABLE_THREADS AND (HAVE_LIBATOMIC OR HAVE_CXX_LIBATOMICS64) )
     set(system_libs ${system_libs} atomic)
@@ -58,6 +47,34 @@ endif()
 # Link Z3 if the user wants to build it.
 if(LLVM_WITH_Z3)
   set(system_libs ${system_libs} ${Z3_LIBRARIES})
+endif()
+
+# Override the C runtime allocator on Windows and embed it into LLVM tools & libraries
+if(LLVM_INTEGRATED_CRT_ALLOC)
+  if (CMAKE_BUILD_TYPE AND NOT ${LLVM_USE_CRT_${uppercase_CMAKE_BUILD_TYPE}} MATCHES "^(MT|MTd)$")
+    message(FATAL_ERROR "LLVM_INTEGRATED_CRT_ALLOC only works with /MT or /MTd. Use LLVM_USE_CRT_${uppercase_CMAKE_BUILD_TYPE} to set the appropriate option.")
+  endif()
+
+  string(REGEX REPLACE "(/|\\\\)$" "" LLVM_INTEGRATED_CRT_ALLOC "${LLVM_INTEGRATED_CRT_ALLOC}")
+
+  if(NOT EXISTS "${LLVM_INTEGRATED_CRT_ALLOC}")
+    message(FATAL_ERROR "Cannot find the path to `git clone` for the CRT allocator! (${LLVM_INTEGRATED_CRT_ALLOC}). Currently, rpmalloc, snmalloc and mimalloc are supported.")
+  endif()
+
+  if(LLVM_INTEGRATED_CRT_ALLOC MATCHES "rpmalloc$")
+    add_definitions(-DENABLE_OVERRIDE -DENABLE_PRELOAD)
+    set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/rpmalloc/rpmalloc.c")
+  elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "snmalloc$")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17" PARENT_SCOPE)
+    set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/src/override/malloc.cc" "${LLVM_INTEGRATED_CRT_ALLOC}/src/override/new.cc")
+    set(system_libs ${system_libs} "mincore.lib" "-INCLUDE:malloc")
+  elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "mimalloc$")
+    set(MIMALLOC_LIB "${LLVM_INTEGRATED_CRT_ALLOC}/out/msvc-x64/Release/mimalloc-static.lib")
+    if(NOT EXISTS "${MIMALLOC_LIB}")
+	  message(FATAL_ERROR "Cannot find the mimalloc static library. To build it, first apply the patch from https://github.com/microsoft/mimalloc/issues/268 then build the Release x64 target through ${LLVM_INTEGRATED_CRT_ALLOC}\\ide\\vs2019\\mimalloc.sln")
+    endif()
+    set(system_libs ${system_libs} "${MIMALLOC_LIB}" "-INCLUDE:malloc")
+  endif()
 endif()
 
 add_llvm_component_library(LLVMSupport
@@ -181,6 +198,8 @@ add_llvm_component_library(LLVMSupport
   xxhash.cpp
   Z3Solver.cpp
 
+  ${ALLOCATOR_FILES}
+
 # System
   Atomic.cpp
   DynamicLibrary.cpp
@@ -218,13 +237,18 @@ if(LLVM_ENABLE_ZLIB)
   if(NOT zlib_library)
     get_property(zlib_library TARGET ZLIB::ZLIB PROPERTY LOCATION)
   endif()
-  get_system_libname(${zlib_library} zlib_library)
+  get_filename_component(zlib_library ${zlib_library} NAME)
+  if(CMAKE_STATIC_LIBRARY_PREFIX AND CMAKE_STATIC_LIBRARY_SUFFIX AND
+      zlib_library MATCHES "^${CMAKE_STATIC_LIBRARY_PREFIX}.*${CMAKE_STATIC_LIBRARY_SUFFIX}$")
+    STRING(REGEX REPLACE "^${CMAKE_STATIC_LIBRARY_PREFIX}" "" zlib_library ${zlib_library})
+    STRING(REGEX REPLACE "${CMAKE_STATIC_LIBRARY_SUFFIX}$" "" zlib_library ${zlib_library})
+  endif()
+  if(CMAKE_SHARED_LIBRARY_PREFIX AND CMAKE_SHARED_LIBRARY_SUFFIX AND
+      zlib_library MATCHES "^${CMAKE_SHARED_LIBRARY_PREFIX}.*${CMAKE_SHARED_LIBRARY_SUFFIX}$")
+    STRING(REGEX REPLACE "^${CMAKE_SHARED_LIBRARY_PREFIX}" "" zlib_library ${zlib_library})
+    STRING(REGEX REPLACE "${CMAKE_SHARED_LIBRARY_SUFFIX}$" "" zlib_library ${zlib_library})
+  endif()
   set(llvm_system_libs ${llvm_system_libs} "${zlib_library}")
-endif()
-
-if(LLVM_ENABLE_TERMINFO)
-  get_system_libname(${TERMINFO_LIB} terminfo_library)
-  set(llvm_system_libs ${llvm_system_libs} "${terminfo_library}")
 endif()
 
 set_property(TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS "${llvm_system_libs}")

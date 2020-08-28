@@ -279,7 +279,7 @@ LogicalResult mlir::replaceAllMemRefUsesWith(
       // Currently we support the following non-dereferencing ops to be a
       // candidate for replacement: Dealloc, CallOp and ReturnOp.
       // TODO: Add support for other kinds of ops.
-      if (!isa<DeallocOp, CallOp, ReturnOp>(*op))
+      if (!op->hasTrait<OpTrait::MemRefsNormalizable>())
         return failure();
     }
 

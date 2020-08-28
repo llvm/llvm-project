@@ -1511,7 +1511,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
   }
 
   if (isa<ConstantVector>(CV) || isa<ConstantDataVector>(CV)) {
-    auto *CVVTy = cast<VectorType>(CV->getType());
+    auto *CVVTy = cast<FixedVectorType>(CV->getType());
     Type *ETy = CVVTy->getElementType();
     Out << '<';
     TypePrinter.print(ETy, Out);

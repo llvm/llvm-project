@@ -69,11 +69,6 @@ struct Symbol {
   XCOFF::StorageClass getStorageClass() const {
     return MCSym->getStorageClass();
   }
-
-  XCOFF::VisibilityType getVisibilityType() const {
-    return MCSym->getVisibilityType();
-  }
-
   StringRef getSymbolTableName() const { return MCSym->getSymbolTableName(); }
   Symbol(const MCSymbolXCOFF *MCSym) : MCSym(MCSym), SymbolTableIndex(-1) {}
 };
@@ -574,12 +569,13 @@ void XCOFFObjectWriter::writeSymbolTableEntryForCsectMemberLabel(
   W.write<uint32_t>(CSectionRef.Address + SymbolOffset);
   W.write<int16_t>(SectionIndex);
   // Basic/Derived type. See the description of the n_type field for symbol
-  // table entries for a detailed description. Since we support visibility, and
-  // all other bits are either optionally set or reserved, we only set bits 0-3
-  // for symbol's visibility and leave other bits to zero.
+  // table entries for a detailed description. Since we don't yet support
+  // visibility, and all other bits are either optionally set or reserved, this
+  // is always zero.
+  // TODO FIXME How to assert a symbol's visibilty is default?
   // TODO Set the function indicator (bit 10, 0x0020) for functions
   // when debugging is enabled.
-  W.write<uint16_t>(SymbolRef.getVisibilityType());
+  W.write<uint16_t>(0);
   W.write<uint8_t>(SymbolRef.getStorageClass());
   // Always 1 aux entry for now.
   W.write<uint8_t>(1);
@@ -610,12 +606,13 @@ void XCOFFObjectWriter::writeSymbolTableEntryForControlSection(
   // n_scnum
   W.write<int16_t>(SectionIndex);
   // Basic/Derived type. See the description of the n_type field for symbol
-  // table entries for a detailed description. Since we support visibility, and
-  // all other bits are either optionally set or reserved, we only set bits 0-3
-  // for symbol's visibility and leave other bits to zero.
+  // table entries for a detailed description. Since we don't yet support
+  // visibility, and all other bits are either optionally set or reserved, this
+  // is always zero.
+  // TODO FIXME How to assert a symbol's visibilty is default?
   // TODO Set the function indicator (bit 10, 0x0020) for functions
   // when debugging is enabled.
-  W.write<uint16_t>(CSectionRef.MCCsect->getVisibilityType());
+  W.write<uint16_t>(0);
   // n_sclass
   W.write<uint8_t>(StorageClass);
   // Always 1 aux entry for now.

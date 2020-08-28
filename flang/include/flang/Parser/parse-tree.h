@@ -3857,6 +3857,16 @@ struct AccWaitArgument {
   std::tuple<std::optional<ScalarIntExpr>, std::list<ScalarIntExpr>> t;
 };
 
+struct AccTileExpr {
+  TUPLE_CLASS_BOILERPLATE(AccTileExpr);
+  CharBlock source;
+  std::tuple<std::optional<ScalarIntConstantExpr>> t; // if null then *
+};
+
+struct AccTileExprList {
+  WRAPPER_CLASS_BOILERPLATE(AccTileExprList, std::list<AccTileExpr>);
+};
+
 struct AccSizeExpr {
   TUPLE_CLASS_BOILERPLATE(AccSizeExpr);
   CharBlock source;

@@ -9,15 +9,15 @@ func @store_may_execute_before_load() {
   %m = alloc() : memref<10xf32>
   %cf7 = constant 7.0 : f32
   %c0 = constant 4 : index
-  // There is a dependence from store 0 to load 1 at depth 1 because the
-  // ancestor IfOp of the store, dominates the ancestor ForSmt of the load,
-  // and thus the store "may" conditionally execute before the load.
+  // There is no dependence from store 0 to load 1 at depth if we take into account
+  // the constraint introduced by the following `affine.if`, which indicates that
+  // the store 0 will never be executed.
   affine.if #set0(%c0) {
     affine.for %i0 = 0 to 10 {
       affine.store %cf7, %m[%i0] : memref<10xf32>
       // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
       // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}
-      // expected-remark@above {{dependence from 0 to 1 at depth 1 = true}}
+      // expected-remark@above {{dependence from 0 to 1 at depth 1 = false}}
     }
   }
   affine.for %i1 = 0 to 10 {
@@ -1044,7 +1044,7 @@ func @test_interleaved_affine_for_if() {
   %N = dim %0, %c0 : memref<101xf32>
   %cf7 = constant 7.0 : f32
 
-  affine.for %i0 = 0 to 100 {
+  affine.for %i0 = 0 to 101 {
     affine.if #set1(%i0)[%N] {
       %1 = affine.load %0[%i0] : memref<101xf32>
       // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}

@@ -100,19 +100,21 @@ enum class NodeKind : uint16_t {
   MemberPointer,
   UnqualifiedId,
   ParameterDeclarationList,
+  CallArguments,
   // Nested Name Specifiers.
   NestedNameSpecifier,
   GlobalNameSpecifier,
   DecltypeNameSpecifier,
   IdentifierNameSpecifier,
   SimpleTemplateNameSpecifier,
-  CallArguments
 };
 /// For debugging purposes.
 raw_ostream &operator<<(raw_ostream &OS, NodeKind K);
 
 /// A relation between a parent and child node, e.g. 'left-hand-side of
 /// a binary expression'. Used for implementing accessors.
+///
+/// In general `NodeRole`s should be named the same as their accessors.
 ///
 /// Some roles describe parent/child relations that occur multiple times in
 /// language grammar. We define only one role to describe all instances of such
@@ -124,12 +126,6 @@ raw_ostream &operator<<(raw_ostream &OS, NodeKind K);
 /// opening paren), we define a role for this token and use it across all
 /// grammar rules with the same requirement. Names of such reusable roles end
 /// with a ~Token or a ~Keyword suffix.
-///
-/// Some roles are assigned only to child nodes of one specific parent syntax
-/// node type. Names of such roles start with the name of the parent syntax tree
-/// node type. For example, a syntax node with a role
-/// BinaryOperatorExpression_leftHandSide can only appear as a child of a
-/// BinaryOperatorExpression node.
 enum class NodeRole : uint8_t {
   // Roles common to multiple node kinds.
   /// A node without a parent
@@ -144,7 +140,7 @@ enum class NodeRole : uint8_t {
   IntroducerKeyword,
   /// A token that represents a literal, e.g. 'nullptr', '1', 'true', etc.
   LiteralToken,
-  /// Tokens or Keywords
+  /// Tokens or Keywords.
   ArrowToken,
   ExternKeyword,
   TemplateKeyword,
@@ -152,38 +148,37 @@ enum class NodeRole : uint8_t {
   /// statement, e.g. loop body for while, for, etc; inner statement for case,
   /// default, etc.
   BodyStatement,
-  List_element,
-  List_delimiter,
+  /// List API roles.
+  ListElement,
+  ListDelimiter,
 
   // Roles specific to particular node kinds.
-  OperatorExpression_operatorToken,
-  UnaryOperatorExpression_operand,
-  BinaryOperatorExpression_leftHandSide,
-  BinaryOperatorExpression_rightHandSide,
-  CaseStatement_value,
-  IfStatement_thenStatement,
-  IfStatement_elseKeyword,
-  IfStatement_elseStatement,
-  ReturnStatement_value,
-  ExpressionStatement_expression,
-  CompoundStatement_statement,
-  StaticAssertDeclaration_condition,
-  StaticAssertDeclaration_message,
-  SimpleDeclaration_declarator,
-  TemplateDeclaration_declaration,
-  ExplicitTemplateInstantiation_declaration,
-  ArraySubscript_sizeExpression,
-  TrailingReturnType_declarator,
-  ParametersAndQualifiers_parameters,
-  ParametersAndQualifiers_trailingReturn,
-  IdExpression_id,
-  IdExpression_qualifier,
-  ParenExpression_subExpression,
-  MemberExpression_object,
-  MemberExpression_accessToken,
-  MemberExpression_member,
-  CallExpression_callee,
-  CallExpression_arguments,
+  OperatorToken,
+  Operand,
+  LeftHandSide,
+  RightHandSide,
+  ReturnValue,
+  CaseValue,
+  ThenStatement,
+  ElseKeyword,
+  ElseStatement,
+  Expression,
+  Statement,
+  Condition,
+  Message,
+  Declarator,
+  Declaration,
+  Size,
+  Parameters,
+  TrailingReturn,
+  UnqualifiedId,
+  Qualifier,
+  SubExpression,
+  Object,
+  AccessToken,
+  Member,
+  Callee,
+  Arguments,
 };
 /// For debugging purposes.
 raw_ostream &operator<<(raw_ostream &OS, NodeRole R);
@@ -276,9 +271,9 @@ public:
   static bool classof(const Node *N) {
     return N->kind() <= NodeKind::NestedNameSpecifier;
   }
-  std::vector<NameSpecifier *> specifiers();
+  std::vector<NameSpecifier *> getSpecifiers();
   std::vector<List::ElementAndDelimiter<syntax::NameSpecifier>>
-  specifiersAndDoubleColons();
+  getSpecifiersAndDoubleColons();
 };
 
 /// Models an `unqualified-id`. C++ [expr.prim.id.unqual]
@@ -304,9 +299,9 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::IdExpression;
   }
-  NestedNameSpecifier *qualifier();
-  Leaf *templateKeyword();
-  UnqualifiedId *unqualifiedId();
+  NestedNameSpecifier *getQualifier();
+  Leaf *getTemplateKeyword();
+  UnqualifiedId *getUnqualifiedId();
 };
 
 /// An expression of an unknown kind, i.e. one not currently handled by the
@@ -326,7 +321,7 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::ThisExpression;
   }
-  Leaf *thisKeyword();
+  Leaf *getThisKeyword();
 };
 
 /// Models arguments of a function call.
@@ -340,8 +335,8 @@ public:
   static bool classof(const Node *N) {
     return N->kind() <= NodeKind::CallArguments;
   }
-  std::vector<Expression *> arguments();
-  std::vector<List::ElementAndDelimiter<Expression>> argumentsAndCommas();
+  std::vector<Expression *> getArguments();
+  std::vector<List::ElementAndDelimiter<Expression>> getArgumentsAndCommas();
 };
 
 /// A function call. C++ [expr.call]
@@ -354,10 +349,10 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::CallExpression;
   }
-  Expression *callee();
-  Leaf *openParen();
-  CallArguments *arguments();
-  Leaf *closeParen();
+  Expression *getCallee();
+  Leaf *getOpenParen();
+  CallArguments *getArguments();
+  Leaf *getCloseParen();
 };
 
 /// Models a parenthesized expression `(E)`. C++ [expr.prim.paren]
@@ -368,9 +363,9 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::ParenExpression;
   }
-  Leaf *openParen();
-  Expression *subExpression();
-  Leaf *closeParen();
+  Leaf *getOpenParen();
+  Expression *getSubExpression();
+  Leaf *getCloseParen();
 };
 
 /// Models a class member access. C++ [expr.ref]
@@ -387,10 +382,10 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::MemberExpression;
   }
-  Expression *object();
-  Leaf *accessToken();
-  Leaf *templateKeyword();
-  IdExpression *member();
+  Expression *getObject();
+  Leaf *getAccessToken();
+  Leaf *getTemplateKeyword();
+  IdExpression *getMember();
 };
 
 /// Expression for literals. C++ [lex.literal]
@@ -409,7 +404,7 @@ public:
            N->kind() == NodeKind::CharUserDefinedLiteralExpression ||
            N->kind() == NodeKind::StringUserDefinedLiteralExpression;
   }
-  Leaf *literalToken();
+  Leaf *getLiteralToken();
 };
 
 /// Expression for integer literals. C++ [lex.icon]
@@ -544,8 +539,8 @@ public:
     return N->kind() == NodeKind::PrefixUnaryOperatorExpression ||
            N->kind() == NodeKind::PostfixUnaryOperatorExpression;
   }
-  Leaf *operatorToken();
-  Expression *operand();
+  Leaf *getOperatorToken();
+  Expression *getOperand();
 };
 
 /// <operator> <operand>
@@ -593,9 +588,9 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::BinaryOperatorExpression;
   }
-  Expression *lhs();
-  Leaf *operatorToken();
-  Expression *rhs();
+  Expression *getLhs();
+  Leaf *getOperatorToken();
+  Expression *getRhs();
 };
 
 /// An abstract node for C++ statements, e.g. 'while', 'if', etc.
@@ -644,8 +639,8 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::SwitchStatement;
   }
-  Leaf *switchKeyword();
-  Statement *body();
+  Leaf *getSwitchKeyword();
+  Statement *getBody();
 };
 
 /// case <value>: <body>
@@ -655,9 +650,9 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::CaseStatement;
   }
-  Leaf *caseKeyword();
-  Expression *value();
-  Statement *body();
+  Leaf *getCaseKeyword();
+  Expression *getCaseValue();
+  Statement *getBody();
 };
 
 /// default: <body>
@@ -667,8 +662,8 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::DefaultStatement;
   }
-  Leaf *defaultKeyword();
-  Statement *body();
+  Leaf *getDefaultKeyword();
+  Statement *getBody();
 };
 
 /// if (cond) <then-statement> else <else-statement>
@@ -679,10 +674,10 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::IfStatement;
   }
-  Leaf *ifKeyword();
-  Statement *thenStatement();
-  Leaf *elseKeyword();
-  Statement *elseStatement();
+  Leaf *getIfKeyword();
+  Statement *getThenStatement();
+  Leaf *getElseKeyword();
+  Statement *getElseStatement();
 };
 
 /// for (<init>; <cond>; <increment>) <body>
@@ -692,8 +687,8 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::ForStatement;
   }
-  Leaf *forKeyword();
-  Statement *body();
+  Leaf *getForKeyword();
+  Statement *getBody();
 };
 
 /// while (<cond>) <body>
@@ -703,8 +698,8 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::WhileStatement;
   }
-  Leaf *whileKeyword();
-  Statement *body();
+  Leaf *getWhileKeyword();
+  Statement *getBody();
 };
 
 /// continue;
@@ -714,7 +709,7 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::ContinueStatement;
   }
-  Leaf *continueKeyword();
+  Leaf *getContinueKeyword();
 };
 
 /// break;
@@ -724,7 +719,7 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::BreakStatement;
   }
-  Leaf *breakKeyword();
+  Leaf *getBreakKeyword();
 };
 
 /// return <expr>;
@@ -735,8 +730,8 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::ReturnStatement;
   }
-  Leaf *returnKeyword();
-  Expression *value();
+  Leaf *getReturnKeyword();
+  Expression *getReturnValue();
 };
 
 /// for (<decl> : <init>) <body>
@@ -746,8 +741,8 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::RangeBasedForStatement;
   }
-  Leaf *forKeyword();
-  Statement *body();
+  Leaf *getForKeyword();
+  Statement *getBody();
 };
 
 /// Expression in a statement position, e.g. functions calls inside compound
@@ -758,7 +753,7 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::ExpressionStatement;
   }
-  Expression *expression();
+  Expression *getExpression();
 };
 
 /// { statement1; statement2; … }
@@ -768,10 +763,10 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::CompoundStatement;
   }
-  Leaf *lbrace();
+  Leaf *getLbrace();
   /// FIXME: use custom iterator instead of 'vector'.
-  std::vector<Statement *> statements();
-  Leaf *rbrace();
+  std::vector<Statement *> getStatements();
+  Leaf *getRbrace();
 };
 
 /// A declaration that can appear at the top-level. Note that this does *not*
@@ -813,8 +808,8 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::StaticAssertDeclaration;
   }
-  Expression *condition();
-  Expression *message();
+  Expression *getCondition();
+  Expression *getMessage();
 };
 
 /// extern <string-literal> declaration
@@ -838,7 +833,7 @@ public:
     return N->kind() == NodeKind::SimpleDeclaration;
   }
   /// FIXME: use custom iterator instead of 'vector'.
-  std::vector<SimpleDeclarator *> declarators();
+  std::vector<SimpleDeclarator *> getDeclarators();
 };
 
 /// template <template-parameters> <declaration>
@@ -848,8 +843,8 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::TemplateDeclaration;
   }
-  Leaf *templateKeyword();
-  Declaration *declaration();
+  Leaf *getTemplateKeyword();
+  Declaration *getDeclaration();
 };
 
 /// template <declaration>
@@ -864,9 +859,9 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::ExplicitTemplateInstantiation;
   }
-  Leaf *templateKeyword();
-  Leaf *externKeyword();
-  Declaration *declaration();
+  Leaf *getTemplateKeyword();
+  Leaf *getExternKeyword();
+  Declaration *getDeclaration();
 };
 
 /// namespace <name> { <decls> }
@@ -956,8 +951,8 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::ParenDeclarator;
   }
-  Leaf *lparen();
-  Leaf *rparen();
+  Leaf *getLparen();
+  Leaf *getRparen();
 };
 
 /// Array size specified inside a declarator.
@@ -971,9 +966,9 @@ public:
     return N->kind() == NodeKind::ArraySubscript;
   }
   // TODO: add an accessor for the "static" keyword.
-  Leaf *lbracket();
-  Expression *sizeExpression();
-  Leaf *rbracket();
+  Leaf *getLbracket();
+  Expression *getSize();
+  Leaf *getRbracket();
 };
 
 /// Trailing return type after the parameter list, including the arrow token.
@@ -985,8 +980,10 @@ public:
     return N->kind() == NodeKind::TrailingReturnType;
   }
   // TODO: add accessors for specifiers.
-  Leaf *arrowToken();
-  SimpleDeclarator *declarator();
+  Leaf *getArrowToken();
+  // FIXME: This should be a `type-id` following the grammar. Fix this once we
+  // have a representation of `type-id`s.
+  SimpleDeclarator *getDeclarator();
 };
 
 /// Models a `parameter-declaration-list` which appears within
@@ -997,9 +994,9 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::ParameterDeclarationList;
   }
-  std::vector<SimpleDeclaration *> parameterDeclarations();
+  std::vector<SimpleDeclaration *> getParameterDeclarations();
   std::vector<List::ElementAndDelimiter<syntax::SimpleDeclaration>>
-  parametersAndCommas();
+  getParametersAndCommas();
 };
 
 /// Parameter list for a function type and a trailing return type, if the
@@ -1019,10 +1016,10 @@ public:
   static bool classof(const Node *N) {
     return N->kind() == NodeKind::ParametersAndQualifiers;
   }
-  Leaf *lparen();
-  ParameterDeclarationList *parameters();
-  Leaf *rparen();
-  TrailingReturnType *trailingReturn();
+  Leaf *getLparen();
+  ParameterDeclarationList *getParameters();
+  Leaf *getRparen();
+  TrailingReturnType *getTrailingReturn();
 };
 
 /// Member pointer inside a declarator

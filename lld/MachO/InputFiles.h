@@ -12,6 +12,7 @@
 #include "MachOStructs.h"
 
 #include "lld/Common/LLVM.h"
+#include "lld/Common/Memory.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Object/Archive.h"
@@ -45,7 +46,7 @@ public:
 
   virtual ~InputFile() = default;
   Kind kind() const { return fileKind; }
-  StringRef getName() const { return mb.getBufferIdentifier(); }
+  StringRef getName() const { return name; }
 
   MemoryBufferRef mb;
   std::vector<Symbol *> symbols;
@@ -53,7 +54,11 @@ public:
   std::vector<SubsectionMap> subsections;
 
 protected:
-  InputFile(Kind kind, MemoryBufferRef mb) : mb(mb), fileKind(kind) {}
+  InputFile(Kind kind, MemoryBufferRef mb)
+      : mb(mb), fileKind(kind), name(mb.getBufferIdentifier()) {}
+
+  InputFile(Kind kind, const llvm::MachO::InterfaceFile &interface)
+      : fileKind(kind), name(saver.save(interface.getPath())) {}
 
   void parseSections(ArrayRef<llvm::MachO::section_64>);
 
@@ -64,6 +69,7 @@ protected:
 
 private:
   const Kind fileKind;
+  const StringRef name;
 };
 
 // .o file
@@ -84,9 +90,6 @@ public:
 // .dylib file
 class DylibFile : public InputFile {
 public:
-  explicit DylibFile(const llvm::MachO::InterfaceFile &interface,
-                     DylibFile *umbrella = nullptr);
-
   // Mach-O dylibs can re-export other dylibs as sub-libraries, meaning that the
   // symbols in those sub-libraries will be available under the umbrella
   // library's namespace. Those sub-libraries can also have their own
@@ -95,6 +98,9 @@ public:
   // to the root. On the other hand, if a dylib is being directly loaded
   // (through an -lfoo flag), then `umbrella` should be a nullptr.
   explicit DylibFile(MemoryBufferRef mb, DylibFile *umbrella = nullptr);
+
+  explicit DylibFile(const llvm::MachO::InterfaceFile &interface,
+                     DylibFile *umbrella = nullptr);
 
   static bool classof(const InputFile *f) { return f->kind() == DylibKind; }
 
@@ -121,6 +127,9 @@ private:
 extern std::vector<InputFile *> inputFiles;
 
 llvm::Optional<MemoryBufferRef> readFile(StringRef path);
+
+const llvm::MachO::load_command *
+findCommand(const llvm::MachO::mach_header_64 *, uint32_t type);
 
 } // namespace macho
 

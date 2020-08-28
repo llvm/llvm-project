@@ -14,7 +14,7 @@ entry:
 define <4 x i16> @vext_6701_12(<4 x i16> %a1, <4 x i16> %a2) {
 entry:
 ; CHECK-LABEL: vext_6701_12:
-; CHECK: ext	v0.8b, v0.8b, v0.8b, #4
+; CHECK: dup v0.2s, v0.s[0]
   %x = shufflevector <4 x i16> %a1, <4 x i16> %a2, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
   ret <4 x i16> %x
 }
@@ -54,7 +54,7 @@ entry:
 define <4 x i16> @vext_6701_34(<4 x i16> %a1, <4 x i16> %a2) {
 entry:
 ; CHECK-LABEL: vext_6701_34:
-; CHECK: ext	v0.8b, v1.8b, v0.8b, #4
+; CHECK: dup  v0.2s, v1.s[1]
   %x = shufflevector <4 x i16> %a1, <4 x i16> %a2, <4 x i32> <i32 6, i32 7, i32 undef, i32 undef>
   ret <4 x i16> %x
 }

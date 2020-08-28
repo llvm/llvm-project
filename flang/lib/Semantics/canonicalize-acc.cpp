@@ -48,6 +48,40 @@ public:
   }
 
 private:
+  // Check constraint in 2.9.7
+  // If there are n tile sizes in the list, the loop construct must be
+  // immediately followed by n tightly-nested loops.
+  template <typename C, typename D>
+  void CheckTileClauseRestriction(const C &x) {
+    const auto &beginLoopDirective = std::get<D>(x.t);
+    const auto &accClauseList =
+        std::get<parser::AccClauseList>(beginLoopDirective.t);
+    for (const auto &clause : accClauseList.v) {
+      if (const auto *tileClause =
+              std::get_if<parser::AccClause::Tile>(&clause.u)) {
+        const parser::AccTileExprList &tileExprList = tileClause->v;
+        const std::list<parser::AccTileExpr> &listTileExpr = tileExprList.v;
+        std::size_t tileArgNb = listTileExpr.size();
+
+        const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
+        for (const parser::DoConstruct *loop{&*outer}; loop && tileArgNb > 0;
+             --tileArgNb) {
+          const auto &block{std::get<parser::Block>(loop->t)};
+          const auto it{block.begin()};
+          loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
+                                   : nullptr;
+        }
+
+        if (tileArgNb > 0) {
+          messages_.Say(beginLoopDirective.source,
+              "The loop construct with the TILE clause must be followed by %d "
+              "tightly-nested loops"_err_en_US,
+              listTileExpr.size());
+        }
+      }
+    }
+  }
+
   void RewriteOpenACCLoopConstruct(parser::OpenACCLoopConstruct &x,
       parser::Block &block, parser::Block::iterator it) {
     // Check the sequence of DoConstruct in the same iteration
@@ -78,6 +112,8 @@ private:
               "DO loop after the %s directive must have loop control"_err_en_US,
               parser::ToUpperCaseLetters(dir.source.ToString()));
         }
+        CheckTileClauseRestriction<parser::OpenACCLoopConstruct,
+            parser::AccBeginLoopDirective>(x);
         return; // found do-loop
       }
     }
@@ -127,6 +163,8 @@ private:
               "DO loop after the %s directive must have loop control"_err_en_US,
               parser::ToUpperCaseLetters(dir.source.ToString()));
         }
+        CheckTileClauseRestriction<parser::OpenACCCombinedConstruct,
+            parser::AccBeginCombinedDirective>(x);
         return; // found do-loop
       }
     }

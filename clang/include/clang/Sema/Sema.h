@@ -2003,10 +2003,7 @@ public:
   bool RequireCompleteSizedType(SourceLocation Loc, QualType T, unsigned DiagID,
                                 const Ts &... Args) {
     SizelessTypeDiagnoser<Ts...> Diagnoser(DiagID, Args...);
-    CompleteTypeKind Kind = CompleteTypeKind::Normal;
-    if (T->isVLST())
-      Kind = CompleteTypeKind::AcceptSizeless;
-    return RequireCompleteType(Loc, T, Kind, Diagnoser);
+    return RequireCompleteType(Loc, T, CompleteTypeKind::Normal, Diagnoser);
   }
 
   void completeExprArrayBound(Expr *E);
@@ -2024,10 +2021,7 @@ public:
   bool RequireCompleteSizedExprType(Expr *E, unsigned DiagID,
                                     const Ts &... Args) {
     SizelessTypeDiagnoser<Ts...> Diagnoser(DiagID, Args...);
-    CompleteTypeKind Kind = CompleteTypeKind::Normal;
-    if (E->getType()->isVLST())
-      Kind = CompleteTypeKind::AcceptSizeless;
-    return RequireCompleteExprType(E, Kind, Diagnoser);
+    return RequireCompleteExprType(E, CompleteTypeKind::Normal, Diagnoser);
   }
 
   bool RequireLiteralType(SourceLocation Loc, QualType T,

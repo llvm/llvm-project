@@ -8,7 +8,7 @@ module attributes {
      max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
 } {
   gpu.module @kernels {
-    // CHECK-LABEL: spv.module Physical64 OpenCL
+    // CHECK-LABEL: spv.module @{{.*}} Physical64 OpenCL
     //       CHECK:   spv.func
     //  CHECK-SAME:     {{%.*}}: f32
     //   CHECK-NOT:     spv.interface_var_abi

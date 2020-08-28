@@ -2064,20 +2064,9 @@ HexagonTargetLowering::getPreferredVectorAction(MVT VT) const {
     return TargetLoweringBase::TypeScalarizeVector;
 
   if (Subtarget.useHVXOps()) {
-    unsigned HwLen = Subtarget.getVectorLength();
-    // If the size of VT is at least half of the vector length,
-    // widen the vector. Note: the threshold was not selected in
-    // any scientific way.
-    ArrayRef<MVT> Tys = Subtarget.getHVXElementTypes();
-    if (llvm::find(Tys, ElemTy) != Tys.end()) {
-      unsigned HwWidth = 8*HwLen;
-      unsigned VecWidth = VT.getSizeInBits();
-      if (VecWidth >= HwWidth/2 && VecWidth < HwWidth)
-        return TargetLoweringBase::TypeWidenVector;
-    }
-    // Split vectors of i1 that correspond to (byte) vector pairs.
-    if (ElemTy == MVT::i1 && VecLen == 2*HwLen)
-      return TargetLoweringBase::TypeSplitVector;
+    unsigned Action = getPreferredHvxVectorAction(VT);
+    if (Action != ~0u)
+      return static_cast<TargetLoweringBase::LegalizeTypeAction>(Action);
   }
 
   // Always widen (remaining) vectors of i1.

@@ -1,5 +1,5 @@
 #RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -o - -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
-# REQUIRES: global-isel, amdgpu-registered-target
+# REQUIRES: amdgpu-registered-target
 
 ---
 name:            test_bitcast

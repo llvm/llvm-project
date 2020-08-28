@@ -212,7 +212,7 @@
 #cmakedefine HAVE_SYSEXITS_H ${HAVE_SYSEXITS_H}
 
 /* Define if the setupterm() function is supported this platform. */
-#cmakedefine LLVM_ENABLE_TERMINFO ${LLVM_ENABLE_TERMINFO}
+#cmakedefine HAVE_TERMINFO ${HAVE_TERMINFO}
 
 /* Define if the xar_open() function is supported this platform. */
 #cmakedefine HAVE_LIBXAR ${HAVE_LIBXAR}

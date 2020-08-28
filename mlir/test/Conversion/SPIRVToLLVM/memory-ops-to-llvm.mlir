@@ -37,10 +37,32 @@ spv.module Logical GLSL450 {
 spv.module Logical GLSL450 {
   //       CHECK: llvm.mlir.global private @struct() : !llvm.struct<packed (float, array<10 x float>)>
   // CHECK-LABEL: @func
-  //       CHECK: llvm.mlir.addressof @struct : !llvm.ptr<struct<packed (float, array<10 x float>)>>
+  //       CHECK:   llvm.mlir.addressof @struct : !llvm.ptr<struct<packed (float, array<10 x float>)>>
   spv.globalVariable @struct : !spv.ptr<!spv.struct<f32, !spv.array<10xf32>>, Private>
   spv.func @func() "None" {
     %0 = spv._address_of @struct : !spv.ptr<!spv.struct<f32, !spv.array<10xf32>>, Private>
+    spv.Return
+  }
+}
+
+spv.module Logical GLSL450 {
+  //       CHECK: llvm.mlir.global external @bar_descriptor_set0_binding0() : !llvm.i32
+  // CHECK-LABEL: @foo
+  //       CHECK:   llvm.mlir.addressof @bar_descriptor_set0_binding0 : !llvm.ptr<i32>
+  spv.globalVariable @bar bind(0, 0) : !spv.ptr<i32, StorageBuffer>
+  spv.func @foo() "None" {
+    %0 = spv._address_of @bar : !spv.ptr<i32, StorageBuffer>
+    spv.Return
+  }
+}
+
+spv.module @name Logical GLSL450 {
+  //       CHECK: llvm.mlir.global external @name_bar_descriptor_set0_binding0() : !llvm.i32
+  // CHECK-LABEL: @foo
+  //       CHECK:   llvm.mlir.addressof @name_bar_descriptor_set0_binding0 : !llvm.ptr<i32>
+  spv.globalVariable @bar bind(0, 0) : !spv.ptr<i32, StorageBuffer>
+  spv.func @foo() "None" {
+    %0 = spv._address_of @bar : !spv.ptr<i32, StorageBuffer>
     spv.Return
   }
 }

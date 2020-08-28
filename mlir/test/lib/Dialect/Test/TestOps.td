@@ -618,6 +618,16 @@ def OpM : TEST_Op<"op_m"> {
   let arguments = (ins I32, OptionalAttr<I32Attr>:$optional_attr);
   let results = (outs I32);
 }
+
+// Test for memrefs normalization of an op with normalizable memrefs.
+def OpNorm : TEST_Op<"op_norm", [MemRefsNormalizable]> {
+  let arguments = (ins AnyMemRef:$X, AnyMemRef:$Y);
+}
+// Test for memrefs normalization of an op without normalizable memrefs.
+def OpNonNorm : TEST_Op<"op_nonnorm"> {
+  let arguments = (ins AnyMemRef:$X, AnyMemRef:$Y);
+}
+
 // Pattern add the argument plus a increasing static number hidden in
 // OpMTest function. That value is set into the optional argument.
 // That way, we will know if operations is called once or twice.
@@ -1528,7 +1538,7 @@ def TableGenBuildOp3 : TEST_Op<"tblgen_build_3", [SameVariadicResultSize]> {
 }
 
 // Single variadic arg, non variadic results, with SameOperandsAndResultType.
-// Tests suppression of ambiguious build methods for operations with
+// Tests suppression of ambiguous build methods for operations with
 // SameOperandsAndResultType trait.
 def TableGenBuildOp4 : TEST_Op<"tblgen_build_4", [SameOperandsAndResultType]> {
   let arguments = (ins Variadic<AnyType>:$inputs);
@@ -1536,7 +1546,7 @@ def TableGenBuildOp4 : TEST_Op<"tblgen_build_4", [SameOperandsAndResultType]> {
 }
 
 // Single variadic arg with SameOperandsAndResultType and InferTypeOpInterface.
-// Tests suppression of ambiguious build methods for operations with
+// Tests suppression of ambiguous build methods for operations with
 // SameOperandsAndResultType and InferTypeOpInterface.
 def TableGenBuildOp5 : TEST_Op<"tblgen_build_5",
       [SameOperandsAndResultType, InferTypeOpInterface]> {

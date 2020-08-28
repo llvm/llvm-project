@@ -3154,8 +3154,9 @@ void ExprEngine::ViewGraph(bool trim) {
 #ifndef NDEBUG
   std::string Filename = DumpGraph(trim);
   llvm::DisplayGraph(Filename, false, llvm::GraphProgram::DOT);
-#endif
+#else
   llvm::errs() << "Warning: viewing graph requires assertions" << "\n";
+#endif
 }
 
 
@@ -3163,8 +3164,9 @@ void ExprEngine::ViewGraph(ArrayRef<const ExplodedNode*> Nodes) {
 #ifndef NDEBUG
   std::string Filename = DumpGraph(Nodes);
   llvm::DisplayGraph(Filename, false, llvm::GraphProgram::DOT);
-#endif
+#else
   llvm::errs() << "Warning: viewing graph requires assertions" << "\n";
+#endif
 }
 
 std::string ExprEngine::DumpGraph(bool trim, StringRef Filename) {
@@ -3201,15 +3203,17 @@ std::string ExprEngine::DumpGraph(ArrayRef<const ExplodedNode*> Nodes,
 
   if (!TrimmedG.get()) {
     llvm::errs() << "warning: Trimmed ExplodedGraph is empty.\n";
+    return "";
   } else {
     return llvm::WriteGraph(TrimmedG.get(), "TrimmedExprEngine",
                             /*ShortNames=*/false,
                             /*Title=*/"Trimmed Exploded Graph",
                             /*Filename=*/std::string(Filename));
   }
-#endif
+#else
   llvm::errs() << "Warning: dumping graph requires assertions" << "\n";
   return "";
+#endif
 }
 
 void *ProgramStateTrait<ReplayWithoutInlining>::GDMIndex() {

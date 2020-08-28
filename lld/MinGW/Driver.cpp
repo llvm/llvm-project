@@ -292,7 +292,8 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     add("-noseh");
 
   if (args.getLastArgValue(OPT_m) != "thumb2pe" &&
-      args.getLastArgValue(OPT_m) != "arm64pe" && !args.hasArg(OPT_dynamicbase))
+      args.getLastArgValue(OPT_m) != "arm64pe" &&
+      args.hasArg(OPT_no_dynamicbase))
     add("-dynamicbase:no");
 
   if (args.hasFlag(OPT_no_insert_timestamp, OPT_insert_timestamp, false))

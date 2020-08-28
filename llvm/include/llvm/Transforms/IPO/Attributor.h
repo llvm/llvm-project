@@ -969,6 +969,7 @@ struct Attributor {
   /// attribute. Using this after Attributor started running is restricted to
   /// only the Attributor itself. Initial seeding of AAs can be done via this
   /// function.
+  /// NOTE: ForceUpdate is ignored in any stage other than the update stage.
   template <typename AAType>
   const AAType &getOrCreateAAFor(const IRPosition &IRP,
                                  const AbstractAttribute *QueryingAA = nullptr,
@@ -976,7 +977,7 @@ struct Attributor {
                                  DepClassTy DepClass = DepClassTy::OPTIONAL,
                                  bool ForceUpdate = false) {
     if (AAType *AAPtr = lookupAAFor<AAType>(IRP, QueryingAA, TrackDependence)) {
-      if (ForceUpdate)
+      if (ForceUpdate && Phase == AttributorPhase::UPDATE)
         updateAA(*AAPtr);
       return *AAPtr;
     }
@@ -986,7 +987,7 @@ struct Attributor {
     auto &AA = AAType::createForPosition(IRP, *this);
 
     // If we are currenty seeding attributes, enforce seeding rules.
-    if (SeedingPeriod && !shouldSeedAttribute(AA)) {
+    if (Phase == AttributorPhase::SEEDING && !shouldSeedAttribute(AA)) {
       AA.getState().indicatePessimisticFixpoint();
       return AA;
     }
@@ -1020,14 +1021,21 @@ struct Attributor {
       return AA;
     }
 
+    // If this is queried in the manifest stage, we force the AA to indicate
+    // pessimistic fixpoint immediately.
+    if (Phase == AttributorPhase::MANIFEST) {
+      AA.getState().indicatePessimisticFixpoint();
+      return AA;
+    }
+
     // Allow seeded attributes to declare dependencies.
     // Remember the seeding state.
-    bool OldSeedingPeriod = SeedingPeriod;
-    SeedingPeriod = false;
+    AttributorPhase OldPhase = Phase;
+    Phase = AttributorPhase::UPDATE;
 
     updateAA(AA);
 
-    SeedingPeriod = OldSeedingPeriod;
+    Phase = OldPhase;
 
     if (TrackDependence && AA.getState().isValidState())
       recordDependence(AA, const_cast<AbstractAttribute &>(*QueryingAA),
@@ -1096,8 +1104,10 @@ struct Attributor {
     assert(!AAPtr && "Attribute already in map!");
     AAPtr = &AA;
 
-    DG.SyntheticRoot.Deps.push_back(
-        AADepGraphNode::DepTy(&AA, unsigned(DepClassTy::REQUIRED)));
+    // Register AA with the synthetic root only before the manifest stage.
+    if (Phase == AttributorPhase::SEEDING || Phase == AttributorPhase::UPDATE)
+      DG.SyntheticRoot.Deps.push_back(
+          AADepGraphNode::DepTy(&AA, unsigned(DepClassTy::REQUIRED)));
 
     return AA;
   }
@@ -1522,9 +1532,14 @@ private:
   /// Invoke instructions with at least a single dead successor block.
   SmallVector<WeakVH, 16> InvokeWithDeadSuccessor;
 
-  /// Wheather attributes are being `seeded`, always false after ::run function
-  /// gets called \see getOrCreateAAFor.
-  bool SeedingPeriod = true;
+  /// A flag that indicates which stage of the process we are in. Initially, the
+  /// phase is SEEDING. Phase is changed in `Attributor::run()`
+  enum class AttributorPhase {
+    SEEDING,
+    UPDATE,
+    MANIFEST,
+    CLEANUP,
+  } Phase = AttributorPhase::SEEDING;
 
   /// Functions, blocks, and instructions we delete after manifest is done.
   ///
@@ -3368,9 +3383,10 @@ template <typename MemberTy, typename KeyInfo = DenseMapInfo<MemberTy>>
 struct PotentialValuesState : AbstractState {
   using SetTy = DenseSet<MemberTy, KeyInfo>;
 
-  PotentialValuesState() : IsValidState(true) {}
+  PotentialValuesState() : IsValidState(true), UndefIsContained(false) {}
 
-  PotentialValuesState(bool IsValid) : IsValidState(IsValid) {}
+  PotentialValuesState(bool IsValid)
+      : IsValidState(IsValid), UndefIsContained(false) {}
 
   /// See AbstractState::isValidState(...)
   bool isValidState() const override { return IsValidState.isValidState(); }
@@ -3399,11 +3415,19 @@ struct PotentialValuesState : AbstractState {
     return Set;
   }
 
+  /// Returns whether this state contains an undef value or not.
+  bool undefIsContained() const {
+    assert(isValidState() && "This flag shoud not be used when it is invalid!");
+    return UndefIsContained;
+  }
+
   bool operator==(const PotentialValuesState &RHS) const {
     if (isValidState() != RHS.isValidState())
       return false;
     if (!isValidState() && !RHS.isValidState())
       return true;
+    if (undefIsContained() != RHS.undefIsContained())
+      return false;
     return Set == RHS.getAssumedSet();
   }
 
@@ -3431,6 +3455,9 @@ struct PotentialValuesState : AbstractState {
   /// Union assumed set with assumed set of the passed state \p PVS.
   void unionAssumed(const PotentialValuesState &PVS) { unionWith(PVS); }
 
+  /// Union assumed set with an undef value.
+  void unionAssumedWithUndef() { unionWithUndef(); }
+
   /// "Clamp" this state with \p PVS.
   PotentialValuesState operator^=(const PotentialValuesState &PVS) {
     IsValidState ^= PVS.IsValidState;
@@ -3452,6 +3479,10 @@ private:
       indicatePessimisticFixpoint();
   }
 
+  /// If this state contains both undef and not undef, we can reduce
+  /// undef to the not undef value.
+  void reduceUndefValue() { UndefIsContained = UndefIsContained & Set.empty(); }
+
   /// Insert an element into this set.
   void insert(const MemberTy &C) {
     if (!isValidState())
@@ -3472,7 +3503,15 @@ private:
     }
     for (const MemberTy &C : R.Set)
       Set.insert(C);
+    UndefIsContained |= R.undefIsContained();
+    reduceUndefValue();
     checkAndInvalidate();
+  }
+
+  /// Take union with an undef value.
+  void unionWithUndef() {
+    UndefIsContained = true;
+    reduceUndefValue();
   }
 
   /// Take intersection with R.
@@ -3491,6 +3530,8 @@ private:
         IntersectSet.insert(C);
     }
     Set = IntersectSet;
+    UndefIsContained &= R.undefIsContained();
+    reduceUndefValue();
   }
 
   /// A helper state which indicate whether this state is valid or not.
@@ -3498,6 +3539,9 @@ private:
 
   /// Container for potential values
   SetTy Set;
+
+  /// Flag for undef value
+  bool UndefIsContained;
 };
 
 using PotentialConstantIntValuesState = PotentialValuesState<APInt>;
@@ -3544,8 +3588,12 @@ struct AAPotentialValues
     if (getAssumedSet().size() == 1)
       return cast<ConstantInt>(ConstantInt::get(getAssociatedValue().getType(),
                                                 *(getAssumedSet().begin())));
-    if (getAssumedSet().size() == 0)
+    if (getAssumedSet().size() == 0) {
+      if (undefIsContained())
+        return cast<ConstantInt>(
+            ConstantInt::get(getAssociatedValue().getType(), 0));
       return llvm::None;
+    }
 
     return nullptr;
   }

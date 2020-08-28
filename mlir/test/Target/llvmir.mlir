@@ -1283,7 +1283,7 @@ llvm.func @volatile_store_and_load() {
 // -----
 
 // Check that nontemporal attribute is exported as metadata node.
-llvm.func @nontemoral_store_and_load() {
+llvm.func @nontemporal_store_and_load() {
   %val = llvm.mlir.constant(5 : i32) : !llvm.i32
   %size = llvm.mlir.constant(1 : i64) : !llvm.i64
   %0 = llvm.alloca %size x !llvm.i32 : (!llvm.i64) -> (!llvm.ptr<i32>)

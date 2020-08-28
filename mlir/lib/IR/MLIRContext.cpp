@@ -517,6 +517,8 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
 }
 
 void MLIRContext::loadAllGloballyRegisteredDialects() {
+  if (!isGlobalDialectRegistryEnabled())
+    return;
   getGlobalDialectRegistry().loadAll(this);
 }
 

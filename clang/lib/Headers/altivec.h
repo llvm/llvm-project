@@ -3288,6 +3288,30 @@ static __inline__ vector double __ATTRS_o_ai vec_div(vector double __a,
 }
 #endif
 
+/* vec_dive */
+
+#ifdef __POWER10_VECTOR__
+static __inline__ vector signed int __ATTRS_o_ai
+vec_dive(vector signed int __a, vector signed int __b) {
+  return __builtin_altivec_vdivesw(__a, __b);
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai
+vec_dive(vector unsigned int __a, vector unsigned int __b) {
+  return __builtin_altivec_vdiveuw(__a, __b);
+}
+
+static __inline__ vector signed long long __ATTRS_o_ai
+vec_dive(vector signed long long __a, vector signed long long __b) {
+  return __builtin_altivec_vdivesd(__a, __b);
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_dive(vector unsigned long long __a, vector unsigned long long __b) {
+  return __builtin_altivec_vdiveud(__a, __b);
+}
+#endif
+
 /* vec_dss */
 
 #define vec_dss __builtin_altivec_dss
@@ -5736,6 +5760,30 @@ vec_vmuleuh(vector unsigned short __a, vector unsigned short __b) {
   return __builtin_altivec_vmuleuh(__a, __b);
 #endif
 }
+
+/* vec_mulh */
+
+#ifdef __POWER10_VECTOR__
+static __inline__ vector signed int __ATTRS_o_ai
+vec_mulh(vector signed int __a, vector signed int __b) {
+  return __builtin_altivec_vmulhsw(__a, __b);
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai
+vec_mulh(vector unsigned int __a, vector unsigned int __b) {
+  return __builtin_altivec_vmulhuw(__a, __b);
+}
+
+static __inline__ vector signed long long __ATTRS_o_ai
+vec_mulh(vector signed long long __a, vector signed long long __b) {
+  return __builtin_altivec_vmulhsd(__a, __b);
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_mulh(vector unsigned long long __a, vector unsigned long long __b) {
+  return __builtin_altivec_vmulhud(__a, __b);
+}
+#endif
 
 /* vec_mulo */
 

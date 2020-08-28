@@ -52,7 +52,7 @@
 # RUN: rm -f %t/libgoodbye.dylib
 # RUN: not lld -flavor darwinnew -o %t/sub-library -Z -L%t -lsuper %t/sub-library.o 2>&1 \
 # RUN:  | FileCheck %s --check-prefix=MISSING-REEXPORT -DDIR=%t
-# MISSING-REEXPORT: error: unable to read re-exported dylib at [[DIR]]/libgoodbye.dylib
+# MISSING-REEXPORT: error: unable to locate re-export with install name [[DIR]]/libgoodbye.dylib
 
 .text
 .globl _main

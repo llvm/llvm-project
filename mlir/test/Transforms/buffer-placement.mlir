@@ -589,7 +589,7 @@ func @moving_invalid_dealloc_op_complex(
 
 // -----
 
-// Test Case: Iserting missing DeallocOp in a single block.
+// Test Case: Inserting missing DeallocOp in a single block.
 
 #map0 = affine_map<(d0) -> (d0)>
 

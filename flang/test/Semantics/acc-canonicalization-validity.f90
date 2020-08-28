@@ -92,4 +92,18 @@ program openacc_clause_validity
   do
   end do
 
+  !$acc parallel
+  !ERROR: The loop construct with the TILE clause must be followed by 2 tightly-nested loops
+  !$acc loop tile(2, 2)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !ERROR: The loop construct with the TILE clause must be followed by 2 tightly-nested loops
+  !$acc parallel loop tile(2, 2)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+
 end program openacc_clause_validity
