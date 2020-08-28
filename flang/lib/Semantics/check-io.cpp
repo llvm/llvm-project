@@ -155,7 +155,8 @@ void IoChecker::Enter(const parser::ConnectSpec::CharExpr &spec) {
   }
 }
 
-void IoChecker::Enter(const parser::ConnectSpec::Newunit &) {
+void IoChecker::Enter(const parser::ConnectSpec::Newunit &var) {
+  CheckForDefinableVariable(var, "NEWUNIT");
   SetSpecifier(IoSpecKind::Newunit);
 }
 
@@ -266,10 +267,11 @@ void IoChecker::Enter(const parser::IdExpr &) { SetSpecifier(IoSpecKind::Id); }
 
 void IoChecker::Enter(const parser::IdVariable &spec) {
   SetSpecifier(IoSpecKind::Id);
-  auto expr{GetExpr(spec)};
+  const auto *expr{GetExpr(spec)};
   if (!expr || !expr->GetType()) {
     return;
   }
+  CheckForDefinableVariable(spec, "ID");
   int kind{expr->GetType()->kind()};
   int defaultKind{context_.GetDefaultKind(TypeCategory::Integer)};
   if (kind < defaultKind) {
@@ -281,21 +283,18 @@ void IoChecker::Enter(const parser::IdVariable &spec) {
 
 void IoChecker::Enter(const parser::InputItem &spec) {
   flags_.set(Flag::DataList);
-  if (const parser::Variable * var{std::get_if<parser::Variable>(&spec.u)}) {
-    const parser::Name &name{GetLastName(*var)};
-    if (name.symbol) {
-      if (auto *details{name.symbol->detailsIf<ObjectEntityDetails>()}) {
-        // TODO: Determine if this check is needed at all, and if so, replace
-        // the false subcondition with a check for a whole array.  Otherwise,
-        // the check incorrectly flags array element and section references.
-        if (details->IsAssumedSize() && false) {
-          // This check may be superseded by C928 or C1002.
-          context_.Say(name.source,
-              "'%s' must not be a whole assumed size array"_err_en_US,
-              name.source); // C1231
-        }
-      }
-    }
+  const parser::Variable *var{std::get_if<parser::Variable>(&spec.u)};
+  if (!var) {
+    return;
+  }
+  CheckForDefinableVariable(*var, "Input");
+  const auto &name{GetLastName(*var)};
+  const auto *expr{GetExpr(*var)};
+  if (name.symbol && IsAssumedSizeArray(*name.symbol) && expr &&
+      !evaluate::IsArrayElement(*GetExpr(*var))) {
+    context_.Say(name.source,
+        "Whole assumed size array '%s' may not be an input item"_err_en_US,
+        name.source); // C1231
   }
 }
 
@@ -386,6 +385,8 @@ void IoChecker::Enter(const parser::InquireSpec::CharVar &spec) {
     specKind = IoSpecKind::Dispose;
     break;
   }
+  CheckForDefinableVariable(std::get<parser::ScalarDefaultCharVariable>(spec.t),
+      parser::ToUpperCaseLetters(common::EnumToString(specKind)));
   SetSpecifier(specKind);
 }
 
@@ -412,6 +413,8 @@ void IoChecker::Enter(const parser::InquireSpec::IntVar &spec) {
     specKind = IoSpecKind::Size;
     break;
   }
+  CheckForDefinableVariable(std::get<parser::ScalarIntVariable>(spec.t),
+      parser::ToUpperCaseLetters(common::EnumToString(specKind)));
   SetSpecifier(specKind);
 }
 
@@ -500,17 +503,23 @@ void IoChecker::Enter(const parser::IoControlSpec::Rec &) {
   SetSpecifier(IoSpecKind::Rec);
 }
 
-void IoChecker::Enter(const parser::IoControlSpec::Size &) {
+void IoChecker::Enter(const parser::IoControlSpec::Size &var) {
+  CheckForDefinableVariable(var, "SIZE");
   SetSpecifier(IoSpecKind::Size);
 }
 
 void IoChecker::Enter(const parser::IoUnit &spec) {
   if (const parser::Variable * var{std::get_if<parser::Variable>(&spec.u)}) {
-    // TODO: C1201 - internal file variable must not be an array section ...
-    if (auto expr{GetExpr(*var)}) {
-      if (!ExprTypeKindIsDefault(*expr, context_)) {
+    if (stmt_ == IoStmtKind::Write) {
+      CheckForDefinableVariable(*var, "Internal file");
+    }
+    if (const auto *expr{GetExpr(*var)}) {
+      if (HasVectorSubscript(*expr)) {
+        context_.Say(parser::FindSourceLocation(*var), // C1201
+            "Internal file must not have a vector subscript"_err_en_US);
+      } else if (!ExprTypeKindIsDefault(*expr, context_)) {
         // This may be too restrictive; other kinds may be valid.
-        context_.Say( // C1202
+        context_.Say(parser::FindSourceLocation(*var), // C1202
             "Invalid character kind for an internal file variable"_err_en_US);
       }
     }
@@ -522,13 +531,26 @@ void IoChecker::Enter(const parser::IoUnit &spec) {
   }
 }
 
-void IoChecker::Enter(const parser::MsgVariable &) {
+void IoChecker::Enter(const parser::MsgVariable &var) {
+  if (stmt_ == IoStmtKind::None) {
+    // allocate, deallocate, image control
+    CheckForDefinableVariable(var, "ERRMSG");
+    return;
+  }
+  CheckForDefinableVariable(var, "IOMSG");
   SetSpecifier(IoSpecKind::Iomsg);
 }
 
-void IoChecker::Enter(const parser::OutputItem &) {
+void IoChecker::Enter(const parser::OutputItem &item) {
   flags_.set(Flag::DataList);
-  // TODO: C1233 - output item must not be a procedure pointer
+  if (const auto *x{std::get_if<parser::Expr>(&item.u)}) {
+    if (const auto *expr{GetExpr(*x)}) {
+      if (IsProcedurePointer(*expr)) {
+        context_.Say(parser::FindSourceLocation(*x),
+            "Output item must not be a procedure pointer"_err_en_US); // C1233
+      }
+    }
+  }
 }
 
 void IoChecker::Enter(const parser::StatusExpr &spec) {
@@ -555,12 +577,14 @@ void IoChecker::Enter(const parser::StatusExpr &spec) {
   }
 }
 
-void IoChecker::Enter(const parser::StatVariable &) {
+void IoChecker::Enter(const parser::StatVariable &var) {
   if (stmt_ == IoStmtKind::None) {
-    // ALLOCATE & DEALLOCATE
-  } else {
-    SetSpecifier(IoSpecKind::Iostat);
+    // allocate, deallocate, image control
+    CheckForDefinableVariable(var, "STAT");
+    return;
   }
+  CheckForDefinableVariable(var, "IOSTAT");
+  SetSpecifier(IoSpecKind::Iostat);
 }
 
 void IoChecker::Leave(const parser::BackspaceStmt &) {
@@ -808,7 +832,7 @@ void IoChecker::CheckStringValue(IoSpecKind specKind, const std::string &value,
 
 // CheckForRequiredSpecifier and CheckForProhibitedSpecifier functions
 // need conditions to check, and string arguments to insert into a message.
-// A IoSpecKind provides both an absence/presence condition and a string
+// An IoSpecKind provides both an absence/presence condition and a string
 // argument (its name).  A (condition, string) pair provides an arbitrary
 // condition and an arbitrary string.
 
@@ -890,6 +914,17 @@ void IoChecker::CheckForProhibitedSpecifier(
   if (condition && specifierSet_.test(specKind)) {
     context_.Say("If %s appears, %s must not appear"_err_en_US, s,
         parser::ToUpperCaseLetters(common::EnumToString(specKind)));
+  }
+}
+
+template <typename A>
+void IoChecker::CheckForDefinableVariable(
+    const A &var, const std::string &s) const {
+  const Symbol *sym{
+      GetFirstName(*parser::Unwrap<parser::Variable>(var)).symbol};
+  if (WhyNotModifiable(*sym, context_.FindScope(*context_.location()))) {
+    context_.Say(parser::FindSourceLocation(var),
+        "%s variable '%s' must be definable"_err_en_US, s, sym->name());
   }
 }
 
