@@ -221,7 +221,7 @@ void X86_64::prepareSymbolRelocation(lld::macho::Symbol *sym,
                                      const InputSection *isec, const Reloc &r) {
   switch (r.type) {
   case X86_64_RELOC_GOT_LOAD: {
-    if (sym->isWeakDef() || isa<DylibSymbol>(sym))
+    if (needsBinding(sym))
       in.got->addEntry(sym);
 
     if (sym->isTlv())
@@ -275,7 +275,7 @@ void X86_64::prepareSymbolRelocation(lld::macho::Symbol *sym,
     // TODO: warn if they refer to a weak global
     break;
   case X86_64_RELOC_TLV: {
-    if (sym->isWeakDef() || isa<DylibSymbol>(sym))
+    if (needsBinding(sym))
       in.tlvPointers->addEntry(sym);
 
     if (!sym->isTlv())
