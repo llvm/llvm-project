@@ -820,7 +820,7 @@ public:
   }
 
   syntax::NameSpecifier *
-  BuildNameSpecifier(const NestedNameSpecifierLoc &NNSLoc) {
+  buildNameSpecifier(const NestedNameSpecifierLoc &NNSLoc) {
     assert(NNSLoc.hasQualifier());
     auto NameSpecifierTokens =
         Builder.getRange(getLocalSourceRange(NNSLoc)).drop_back();
@@ -870,7 +870,7 @@ public:
     if (!QualifierLoc)
       return true;
     for (auto it = QualifierLoc; it; it = it.getPrefix()) {
-      auto *NS = BuildNameSpecifier(it);
+      auto *NS = buildNameSpecifier(it);
       if (!NS)
         return false;
       Builder.markChild(NS, syntax::NodeRole::ListElement);
@@ -1221,7 +1221,7 @@ public:
     if (!L.getTypePtr()->hasTrailingReturn())
       return WalkUpFromFunctionTypeLoc(L);
 
-    auto *TrailingReturnTokens = BuildTrailingReturn(L);
+    auto *TrailingReturnTokens = buildTrailingReturn(L);
     // Finish building the node for parameters.
     Builder.markChild(TrailingReturnTokens, syntax::NodeRole::TrailingReturn);
     return WalkUpFromFunctionTypeLoc(L);
@@ -1459,7 +1459,7 @@ private:
   }
 
   /// Returns the range of the built node.
-  syntax::TrailingReturnType *BuildTrailingReturn(FunctionProtoTypeLoc L) {
+  syntax::TrailingReturnType *buildTrailingReturn(FunctionProtoTypeLoc L) {
     assert(L.getTypePtr()->hasTrailingReturn());
 
     auto ReturnedType = L.getReturnLoc();
