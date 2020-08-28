@@ -513,3 +513,42 @@ add_fp_unittest(
     libc.src.math.fmaxl
     libc.utils.FPUtil.fputil
 )
+
+add_fp_unittest(
+  sqrtf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    sqrtf_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.sqrtf
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  sqrt_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    sqrt_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.sqrt
+    libc.utils.FPUtil.fputil
+)
+
+add_fp_unittest(
+  sqrtl_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    sqrtl_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.sqrtl
+    libc.utils.FPUtil.fputil
+)
