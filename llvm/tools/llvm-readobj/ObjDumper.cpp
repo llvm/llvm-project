@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ObjDumper.h"
-#include "Error.h"
 #include "llvm-readobj.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"

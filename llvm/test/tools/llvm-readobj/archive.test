@@ -96,5 +96,5 @@ symbols: []
 # RUN: llvm-readelf --all %t2.a 2>&1 | FileCheck %s -DARFILE="%t2.a" --check-prefix=BROKEN
 
 # BROKEN: File: [[ARFILE]](trivial.obj.elf-x86-64)
-# BROKEN: warning: '[[ARFILE]]': Unrecognized file type.
+# BROKEN: warning: '[[ARFILE]]': broken.a has an unsupported file type
 # BROKEN: File: [[ARFILE]](trivial.obj.elf-x86-64)

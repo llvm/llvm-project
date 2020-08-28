@@ -9,7 +9,6 @@
 #ifndef LLVM_TOOLS_LLVM_READOBJ_ARMEHABIPRINTER_H
 #define LLVM_TOOLS_LLVM_READOBJ_ARMEHABIPRINTER_H
 
-#include "Error.h"
 #include "llvm-readobj.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Object/ELF.h"
@@ -367,7 +366,7 @@ ErrorOr<StringRef>
 PrinterContext<ET>::FunctionAtAddress(unsigned Section,
                                       uint64_t Address) const {
   if (!Symtab)
-    return readobj_error::unknown_symbol;
+    return inconvertibleErrorCode();
   auto StrTableOrErr = ELF->getStringTableForSymtab(*Symtab);
   if (!StrTableOrErr)
     reportError(StrTableOrErr.takeError(), FileName);
@@ -380,11 +379,11 @@ PrinterContext<ET>::FunctionAtAddress(unsigned Section,
       if (!NameOrErr) {
         // TODO: Actually report errors helpfully.
         consumeError(NameOrErr.takeError());
-        return readobj_error::unknown_symbol;
+        return inconvertibleErrorCode();
       }
       return *NameOrErr;
     }
-  return readobj_error::unknown_symbol;
+  return inconvertibleErrorCode();
 }
 
 template <typename ET>

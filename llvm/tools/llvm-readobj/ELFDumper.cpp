@@ -13,7 +13,6 @@
 
 #include "ARMEHABIPrinter.h"
 #include "DwarfCFIEHPrinter.h"
-#include "Error.h"
 #include "ObjDumper.h"
 #include "StackMapPrinter.h"
 #include "llvm-readobj.h"
