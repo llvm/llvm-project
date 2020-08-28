@@ -200,6 +200,7 @@ static syntax::NodeKind getOperatorNodeKind(const CXXOperatorCallExpr &E) {
 /// Get the start of the qualified name. In the examples below it gives the
 /// location of the `^`:
 ///     `int ^a;`
+///     `int *^a;`
 ///     `int ^a::S::f(){}`
 static SourceLocation getQualifiedNameStart(NamedDecl *D) {
   assert((isa<DeclaratorDecl, TypedefNameDecl>(D)) &&
@@ -242,7 +243,7 @@ static SourceRange getInitializerRange(Decl *D) {
 ///     `int a[1][2][3];` -> range of `a[1][2][3]`,
 ///     `int *a = nullptr` -> range of `*a = nullptr`.
 ///     `int S::f(){}` -> range of `S::f()`.
-/// FIXME: \p Name must be a source range, e.g. for `operator+`.
+/// FIXME: \p Name must be a source range.
 static SourceRange getDeclaratorRange(const SourceManager &SM, TypeLoc T,
                                       SourceLocation Name,
                                       SourceRange Initializer) {

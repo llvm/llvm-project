@@ -3123,6 +3123,35 @@ SimpleDeclaration
 )txt"}));
 }
 
+TEST_P(SyntaxTreeTest, OutOfLineMemberFunctionDefinition) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+struct S {
+  void f();
+};
+[[void S::f(){}]]
+)cpp",
+      {R"txt(
+SimpleDeclaration
+|-'void'
+|-SimpleDeclarator Declarator
+| |-NestedNameSpecifier
+| | |-IdentifierNameSpecifier ListElement
+| | | `-'S'
+| | `-'::' ListDelimiter
+| |-'f'
+| `-ParametersAndQualifiers
+|   |-'(' OpenParen
+|   `-')' CloseParen
+`-CompoundStatement
+  |-'{' OpenParen
+  `-'}' CloseParen
+)txt"}));
+}
+
 TEST_P(SyntaxTreeTest, ConversionMemberFunction) {
   if (!GetParam().isCXX()) {
     return;
@@ -3790,6 +3819,53 @@ TranslationUnit Detached
     | `-'}' CloseParen
     `-'}' CloseParen
 )txt"));
+}
+
+TEST_P(SyntaxTreeTest, InitDeclarator_Brace) {
+  if (!GetParam().isCXX11OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqual(
+      R"cpp(
+int a {};
+)cpp",
+      R"txt(
+TranslationUnit Detached
+`-SimpleDeclaration
+  |-'int'
+  |-SimpleDeclarator Declarator
+  | |-'a'
+  | `-UnknownExpression
+  |   `-UnknownExpression
+  |     |-'{'
+  |     `-'}'
+  `-';'
+)txt"));
+}
+
+TEST_P(SyntaxTreeTest, InitDeclarator_Paren) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+struct S {
+  S(int);
+};
+[[S s(1);]]
+)cpp",
+      {R"txt(
+SimpleDeclaration
+|-'S'
+|-SimpleDeclarator Declarator
+| `-UnknownExpression
+|   |-'s'
+|   |-'('
+|   |-IntegerLiteralExpression
+|   | `-'1' LiteralToken
+|   `-')'
+`-';'
+)txt"}));
 }
 
 TEST_P(SyntaxTreeTest, ArrayDeclarator_Simple) {
