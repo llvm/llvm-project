@@ -184,7 +184,8 @@ void Prescanner::Statement() {
     case LineClassification::Kind::PreprocessorDirective:
       Say(preprocessed->GetProvenanceRange(),
           "Preprocessed line resembles a preprocessor directive"_en_US);
-      preprocessed->ToLowerCase().Emit(cooked_);
+      preprocessed->ToLowerCase().CheckBadFortranCharacters(messages_).Emit(
+          cooked_);
       break;
     case LineClassification::Kind::CompilerDirective:
       if (preprocessed->HasRedundantBlanks()) {
@@ -193,7 +194,9 @@ void Prescanner::Statement() {
       NormalizeCompilerDirectiveCommentMarker(*preprocessed);
       preprocessed->ToLowerCase();
       SourceFormChange(preprocessed->ToString());
-      preprocessed->ClipComment(true /* skip first ! */).Emit(cooked_);
+      preprocessed->ClipComment(true /* skip first ! */)
+          .CheckBadFortranCharacters(messages_)
+          .Emit(cooked_);
       break;
     case LineClassification::Kind::Source:
       if (inFixedForm_) {
@@ -205,7 +208,10 @@ void Prescanner::Statement() {
           preprocessed->RemoveRedundantBlanks();
         }
       }
-      preprocessed->ToLowerCase().ClipComment().Emit(cooked_);
+      preprocessed->ToLowerCase()
+          .ClipComment()
+          .CheckBadFortranCharacters(messages_)
+          .Emit(cooked_);
       break;
     }
   } else {
@@ -213,7 +219,7 @@ void Prescanner::Statement() {
     if (line.kind == LineClassification::Kind::CompilerDirective) {
       SourceFormChange(tokens.ToString());
     }
-    tokens.Emit(cooked_);
+    tokens.CheckBadFortranCharacters(messages_).Emit(cooked_);
   }
   if (omitNewline_) {
     omitNewline_ = false;
