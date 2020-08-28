@@ -277,15 +277,17 @@ uint64_t StubsSection::getSize() const {
 
 void StubsSection::writeTo(uint8_t *buf) const {
   size_t off = 0;
-  for (const DylibSymbol *sym : in.stubs->getEntries()) {
+  for (const Symbol *sym : entries) {
     target->writeStub(buf + off, *sym);
     off += target->stubSize;
   }
 }
 
-void StubsSection::addEntry(DylibSymbol *sym) {
-  if (entries.insert(sym))
+bool StubsSection::addEntry(Symbol *sym) {
+  bool inserted = entries.insert(sym);
+  if (inserted)
     sym->stubsIndex = entries.size() - 1;
+  return inserted;
 }
 
 StubHelperSection::StubHelperSection()
@@ -293,17 +295,15 @@ StubHelperSection::StubHelperSection()
 
 uint64_t StubHelperSection::getSize() const {
   return target->stubHelperHeaderSize +
-         in.stubs->getEntries().size() * target->stubHelperEntrySize;
+         in.lazyBinding->getEntries().size() * target->stubHelperEntrySize;
 }
 
-bool StubHelperSection::isNeeded() const {
-  return !in.stubs->getEntries().empty();
-}
+bool StubHelperSection::isNeeded() const { return in.lazyBinding->isNeeded(); }
 
 void StubHelperSection::writeTo(uint8_t *buf) const {
   target->writeStubHelperHeader(buf);
   size_t off = target->stubHelperHeaderSize;
-  for (const DylibSymbol *sym : in.stubs->getEntries()) {
+  for (const DylibSymbol *sym : in.lazyBinding->getEntries()) {
     target->writeStubHelperEntry(buf + off, *sym, addr + off);
     off += target->stubHelperEntrySize;
   }
@@ -347,10 +347,17 @@ bool LazyPointerSection::isNeeded() const {
 
 void LazyPointerSection::writeTo(uint8_t *buf) const {
   size_t off = 0;
-  for (const DylibSymbol *sym : in.stubs->getEntries()) {
-    uint64_t stubHelperOffset = target->stubHelperHeaderSize +
-                                sym->stubsIndex * target->stubHelperEntrySize;
-    write64le(buf + off, in.stubHelper->addr + stubHelperOffset);
+  for (const Symbol *sym : in.stubs->getEntries()) {
+    if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
+      if (dysym->hasStubsHelper()) {
+        uint64_t stubHelperOffset =
+            target->stubHelperHeaderSize +
+            dysym->stubsHelperIndex * target->stubHelperEntrySize;
+        write64le(buf + off, in.stubHelper->addr + stubHelperOffset);
+      }
+    } else {
+      write64le(buf + off, sym->getVA());
+    }
     off += WordSize;
   }
 }
@@ -358,17 +365,20 @@ void LazyPointerSection::writeTo(uint8_t *buf) const {
 LazyBindingSection::LazyBindingSection()
     : LinkEditSection(segment_names::linkEdit, section_names::lazyBinding) {}
 
-bool LazyBindingSection::isNeeded() const { return in.stubs->isNeeded(); }
-
 void LazyBindingSection::finalizeContents() {
   // TODO: Just precompute output size here instead of writing to a temporary
   // buffer
-  for (DylibSymbol *sym : in.stubs->getEntries())
+  for (DylibSymbol *sym : entries)
     sym->lazyBindOffset = encode(*sym);
 }
 
 void LazyBindingSection::writeTo(uint8_t *buf) const {
   memcpy(buf, contents.data(), contents.size());
+}
+
+void LazyBindingSection::addEntry(DylibSymbol *dysym) {
+  if (entries.insert(dysym))
+    dysym->stubsHelperIndex = entries.size() - 1;
 }
 
 // Unlike the non-lazy binding section, the bind opcodes in this section aren't

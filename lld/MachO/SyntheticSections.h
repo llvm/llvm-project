@@ -222,13 +222,15 @@ void addNonLazyBindingEntries(const Symbol *, SectionPointerUnion,
 // The following sections implement lazy symbol binding -- very similar to the
 // PLT mechanism in ELF.
 //
-// ELF's .plt section is broken up into two sections in Mach-O: StubsSection and
-// StubHelperSection. Calls to functions in dylibs will end up calling into
+// ELF's .plt section is broken up into two sections in Mach-O: StubsSection
+// and StubHelperSection. Calls to functions in dylibs will end up calling into
 // StubsSection, which contains indirect jumps to addresses stored in the
 // LazyPointerSection (the counterpart to ELF's .plt.got).
 //
-// Initially, the LazyPointerSection contains addresses that point into one of
-// the entry points in the middle of the StubHelperSection. The code in
+// We will first describe how non-weak symbols are handled.
+//
+// At program start, the LazyPointerSection contains addresses that point into
+// one of the entry points in the middle of the StubHelperSection. The code in
 // StubHelperSection will push on the stack an offset into the
 // LazyBindingSection. The push is followed by a jump to the beginning of the
 // StubHelperSection (similar to PLT0), which then calls into dyld_stub_binder.
@@ -236,10 +238,17 @@ void addNonLazyBindingEntries(const Symbol *, SectionPointerUnion,
 // the GOT.
 //
 // The stub binder will look up the bind opcodes in the LazyBindingSection at
-// the given offset. The bind opcodes will tell the binder to update the address
-// in the LazyPointerSection to point to the symbol, so that subsequent calls
-// don't have to redo the symbol resolution. The binder will then jump to the
-// resolved symbol.
+// the given offset. The bind opcodes will tell the binder to update the
+// address in the LazyPointerSection to point to the symbol, so that subsequent
+// calls don't have to redo the symbol resolution. The binder will then jump to
+// the resolved symbol.
+//
+// With weak symbols, the situation is slightly different. Since there is no
+// "weak lazy" lookup, function calls to weak symbols are always non-lazily
+// bound. We emit both regular non-lazy bindings as well as weak bindings, in
+// order that the weak bindings may overwrite the non-lazy bindings if an
+// appropriate symbol is found at runtime. However, the bound addresses will
+// still be written (non-lazily) into the LazyPointerSection.
 
 class StubsSection : public SyntheticSection {
 public:
@@ -247,13 +256,13 @@ public:
   uint64_t getSize() const override;
   bool isNeeded() const override { return !entries.empty(); }
   void writeTo(uint8_t *buf) const override;
-
-  const llvm::SetVector<DylibSymbol *> &getEntries() const { return entries; }
-
-  void addEntry(DylibSymbol *sym);
+  const llvm::SetVector<Symbol *> &getEntries() const { return entries; }
+  // Returns whether the symbol was added. Note that every stubs entry will
+  // have a corresponding entry in the LazyPointerSection.
+  bool addEntry(Symbol *);
 
 private:
-  llvm::SetVector<DylibSymbol *> entries;
+  llvm::SetVector<Symbol *> entries;
 };
 
 class StubHelperSection : public SyntheticSection {
@@ -278,6 +287,8 @@ public:
   uint64_t getSize() const override { return WordSize; }
 };
 
+// Note that this section may also be targeted by non-lazy bindings. In
+// particular, this happens when branch relocations target weak symbols.
 class LazyPointerSection : public SyntheticSection {
 public:
   LazyPointerSection();
@@ -291,15 +302,21 @@ public:
   LazyBindingSection();
   void finalizeContents();
   uint64_t getRawSize() const override { return contents.size(); }
-  uint32_t encode(const DylibSymbol &);
   // Like other sections in __LINKEDIT, the lazy binding section is special: its
   // offsets are recorded in the LC_DYLD_INFO_ONLY load command, instead of in
   // section headers.
   bool isHidden() const override { return true; }
-  bool isNeeded() const override;
+  bool isNeeded() const override { return !entries.empty(); }
   void writeTo(uint8_t *buf) const override;
+  // Note that every entry here will by referenced by a corresponding entry in
+  // the StubHelperSection.
+  void addEntry(DylibSymbol *dysym);
+  const llvm::SetVector<DylibSymbol *> &getEntries() const { return entries; }
 
 private:
+  uint32_t encode(const DylibSymbol &);
+
+  llvm::SetVector<DylibSymbol *> entries;
   SmallVector<char, 128> contents;
   llvm::raw_svector_ostream os{contents};
 };
@@ -368,6 +385,7 @@ struct InStruct {
   MachHeaderSection *header = nullptr;
   BindingSection *binding = nullptr;
   WeakBindingSection *weakBinding = nullptr;
+  LazyBindingSection *lazyBinding = nullptr;
   GotSection *got = nullptr;
   TlvPointerSection *tlvPointers = nullptr;
   LazyPointerSection *lazyPointers = nullptr;
