@@ -719,23 +719,39 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   case BuiltinType::Id: \
     return getOrCreateStructPtrType("opencl_" #ExtType, Id##Ty);
 #include "clang/Basic/OpenCLExtensionTypes.def"
-  // TODO: real support for SVE types requires more infrastructure
-  // to be added first.  The types have a variable length and are
-  // represented in debug info as types whose length depends on a
-  // target-specific pseudo register.
-#define SVE_TYPE(Name, Id, SingletonId) \
-  case BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
-  {
-    unsigned DiagID = CGM.getDiags().getCustomDiagID(
-        DiagnosticsEngine::Error,
-        "cannot yet generate debug info for SVE type '%0'");
-    auto Name = BT->getName(CGM.getContext().getPrintingPolicy());
-    CGM.getDiags().Report(DiagID) << Name;
-    // Return something safe.
-    return CreateType(cast<const BuiltinType>(CGM.getContext().IntTy));
-  }
 
+#define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AArch64SVEACLETypes.def"
+    {
+      ASTContext::BuiltinVectorTypeInfo Info =
+          CGM.getContext().getBuiltinVectorTypeInfo(BT);
+      unsigned NumElemsPerVG = (Info.EC.Min * Info.NumVectors) / 2;
+
+      // Debuggers can't extract 1bit from a vector, so will display a
+      // bitpattern for svbool_t instead.
+      if (Info.ElementType == CGM.getContext().BoolTy) {
+        NumElemsPerVG /= 8;
+        Info.ElementType = CGM.getContext().UnsignedCharTy;
+      }
+
+      auto *LowerBound =
+          llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
+              llvm::Type::getInt64Ty(CGM.getLLVMContext()), 0));
+      SmallVector<int64_t, 9> Expr(
+          {llvm::dwarf::DW_OP_constu, NumElemsPerVG, llvm::dwarf::DW_OP_bregx,
+           /* AArch64::VG */ 46, 0, llvm::dwarf::DW_OP_mul,
+           llvm::dwarf::DW_OP_constu, 1, llvm::dwarf::DW_OP_minus});
+      auto *UpperBound = DBuilder.createExpression(Expr);
+
+      llvm::Metadata *Subscript = DBuilder.getOrCreateSubrange(
+          /*count*/ nullptr, LowerBound, UpperBound, /*stride*/ nullptr);
+      llvm::DINodeArray SubscriptArray = DBuilder.getOrCreateArray(Subscript);
+      llvm::DIType *ElemTy =
+          getOrCreateType(Info.ElementType, TheCU->getFile());
+      auto Align = getTypeAlignIfRequired(BT, CGM.getContext());
+      return DBuilder.createVectorType(/*Size*/ 0, Align, ElemTy,
+                                       SubscriptArray);
+    }
   case BuiltinType::UChar:
   case BuiltinType::Char_U:
     Encoding = llvm::dwarf::DW_ATE_unsigned_char;
