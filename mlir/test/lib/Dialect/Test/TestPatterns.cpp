@@ -63,7 +63,7 @@ public:
     // upon construction. The operation being created through the folder has an
     // in-place folder, and it should be still present in the output.
     // Furthermore, the folder should not crash when attempting to recover the
-    // (unchanged) opeation result.
+    // (unchanged) operation result.
     OperationFolder folder(op->getContext());
     Value result = folder.create<TestOpInPlaceFold>(
         rewriter, op->getLoc(), rewriter.getIntegerType(32), op->getOperand(0),
@@ -254,7 +254,7 @@ struct TestCreateBlock : public RewritePattern {
   }
 };
 
-/// A simple pattern that creates a block containing an invalid operaiton in
+/// A simple pattern that creates a block containing an invalid operation in
 /// order to trigger the block creation undo mechanism.
 struct TestCreateIllegalBlock : public RewritePattern {
   TestCreateIllegalBlock(MLIRContext *ctx)

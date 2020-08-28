@@ -205,7 +205,7 @@ TEST_F(OpBuildGenTest,
   verifyOp(std::move(op), {i32Ty, f32Ty}, {cstI32}, attrs);
 }
 
-// The next 2 tests test supression of ambiguious build methods for ops that
+// The next 2 tests test supression of ambiguous build methods for ops that
 // have a single variadic input, and single non-variadic result, and which
 // support the SameOperandsAndResultType trait and and optionally the
 // InferOpTypeInterface interface. For such ops, the ODS framework generates
