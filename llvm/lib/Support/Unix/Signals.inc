@@ -553,7 +553,7 @@ static int unwindBacktrace(void **StackTrace, int MaxEntries) {
 //
 // On glibc systems we have the 'backtrace' function, which works nicely, but
 // doesn't demangle symbols.
-void llvm::sys::PrintStackTrace(raw_ostream &OS) {
+void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
 #if ENABLE_BACKTRACES
   static void *StackTrace[256];
   int depth = 0;
@@ -570,8 +570,11 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS) {
 #endif
   if (!depth)
     return;
-
-  if (printSymbolizedStackTrace(Argv0, StackTrace, depth, OS))
+  // If "Depth" is not provided by the caller, use the return value of
+  // backtrace() for printing a symbolized stack trace.
+  if (!Depth)
+    Depth = depth;
+  if (printSymbolizedStackTrace(Argv0, StackTrace, Depth, OS))
     return;
 #if HAVE_DLFCN_H && HAVE_DLADDR
   int width = 0;
@@ -614,7 +617,7 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS) {
     OS << '\n';
   }
 #elif defined(HAVE_BACKTRACE)
-  backtrace_symbols_fd(StackTrace, depth, STDERR_FILENO);
+  backtrace_symbols_fd(StackTrace, Depth, STDERR_FILENO);
 #endif
 #endif
 }
