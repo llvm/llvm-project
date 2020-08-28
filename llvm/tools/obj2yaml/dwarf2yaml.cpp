@@ -317,13 +317,15 @@ void dumpDebugLines(DWARFContext &DCtx, DWARFYAML::Data &Y) {
         DebugLines.Format = dwarf::DWARF32;
         DebugLines.Length = LengthOrDWARF64Prefix;
       }
-      uint64_t LineTableLength = DebugLines.Length;
+      assert(DebugLines.Length);
+      uint64_t LineTableLength = *DebugLines.Length;
       uint64_t SizeOfPrologueLength =
           DebugLines.Format == dwarf::DWARF64 ? 8 : 4;
       DebugLines.Version = LineData.getU16(&Offset);
       DebugLines.PrologueLength =
           LineData.getUnsigned(&Offset, SizeOfPrologueLength);
-      const uint64_t EndPrologue = DebugLines.PrologueLength + Offset;
+      assert(DebugLines.PrologueLength);
+      const uint64_t EndPrologue = *DebugLines.PrologueLength + Offset;
 
       DebugLines.MinInstLength = LineData.getU8(&Offset);
       if (DebugLines.Version >= 4)
