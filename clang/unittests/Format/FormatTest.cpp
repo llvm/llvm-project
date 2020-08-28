@@ -8053,6 +8053,9 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyIndependentOfContext("MACRO(auto *a);");
   verifyIndependentOfContext("MACRO(const A *a);");
   verifyIndependentOfContext("MACRO(A *const a);");
+  verifyIndependentOfContext("MACRO(A *restrict a);");
+  verifyIndependentOfContext("MACRO(A *__restrict__ a);");
+  verifyIndependentOfContext("MACRO(A *__restrict a);");
   verifyIndependentOfContext("MACRO(A *volatile a);");
   verifyIndependentOfContext("MACRO(A *__volatile a);");
   verifyIndependentOfContext("MACRO(A *__volatile__ a);");
