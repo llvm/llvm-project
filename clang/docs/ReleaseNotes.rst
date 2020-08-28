@@ -58,6 +58,10 @@ Improvements to Clang's diagnostics
   -Wuninitialized. It warns on cases where uninitialized variables are passed
   as const reference arguments to a function.
 
+- ``-Wimplicit-const-int-float-conversion`` (enabled by default) is a new
+  option controlled by ``-Wimplicit-int-float-conversion``.  It warns on
+  implicit conversion from a floating constant to an integer type.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -144,6 +148,21 @@ Non-comprehensive list of changes in this release
   provided through shared libraries, avoid using lazy binding. If you
   use lazy binding, the results could be corrupted.
 
+- ``-O`` maps to ``-O1`` instead of ``-O2``.
+  (`D79916 <https://reviews.llvm.org/D79916>`_)
+
+- In a ``-flto={full,thin}`` link, ``-Os``, ``-Oz`` and ``-Og`` can be used
+  now. ``-Os`` and ``-Oz`` map to the -O2 pipe line while ``-Og`` maps to the
+  -O1 pipeline.
+  (`D79919 <https://reviews.llvm.org/D79919>`_)
+
+- ``--coverage`` (gcov) defaults to gcov [4.8,8) compatible format now.
+
+- On x86, ``-fpic/-fPIC -fno-semantic-interposition`` assumes a global
+  definition of default visibility non-interposable and allows interprocedural
+  optimizations. In produced assembly ``-Lfunc$local`` local aliases are created
+  for global symbols of default visibility.
+
 New Compiler Flags
 ------------------
 
@@ -194,6 +213,8 @@ New Compiler Flags
     -Wl,--gc-sections on ELF platforms to the linking command, and possibly
     adding -fdata-sections -ffunction-sections to the command generating
     the shared object).
+
+- ``-fsanitize-coverage-allowlist`` and ``-fsanitize-coverage-blocklist`` are added.
 
 Deprecated Compiler Flags
 -------------------------
