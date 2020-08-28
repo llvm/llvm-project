@@ -13,7 +13,7 @@ define <4 x i32> @v4i32(i32 %index, i32 %BTC, <4 x i32> %V1, <4 x i32> %V2) {
 ; CHECK-NEXT:    vdup.32 q1, r1
 ; CHECK-NEXT:    vpnot
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vcmpt.u32 cs, q1, q0
+; CHECK-NEXT:    vcmpt.u32 hi, q1, q0
 ; CHECK-NEXT:    vmov d0, r2, r3
 ; CHECK-NEXT:    vldr d1, [sp]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
@@ -43,7 +43,7 @@ define <8 x i16> @v8i16(i32 %index, i32 %BTC, <8 x i16> %V1, <8 x i16> %V2) {
 ; CHECK-NEXT:    vmov.i8 q1, #0x0
 ; CHECK-NEXT:    vmov.i8 q2, #0xff
 ; CHECK-NEXT:    vadd.i32 q3, q0, r0
-; CHECK-NEXT:    vcmp.u32 cs, q5, q3
+; CHECK-NEXT:    vcmp.u32 hi, q5, q3
 ; CHECK-NEXT:    vpsel q4, q2, q1
 ; CHECK-NEXT:    vmov r1, s16
 ; CHECK-NEXT:    vmov.16 q0[0], r1
@@ -56,7 +56,7 @@ define <8 x i16> @v8i16(i32 %index, i32 %BTC, <8 x i16> %V1, <8 x i16> %V2) {
 ; CHECK-NEXT:    adr r1, .LCPI1_1
 ; CHECK-NEXT:    vldrw.u32 q4, [r1]
 ; CHECK-NEXT:    vadd.i32 q4, q4, r0
-; CHECK-NEXT:    vcmp.u32 cs, q5, q4
+; CHECK-NEXT:    vcmp.u32 hi, q5, q4
 ; CHECK-NEXT:    vpsel q5, q2, q1
 ; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    vmov.16 q0[4], r1
@@ -128,7 +128,7 @@ define <16 x i8> @v16i8(i32 %index, i32 %BTC, <16 x i8> %V1, <16 x i8> %V2) {
 ; CHECK-NEXT:    vmov.i8 q5, #0x0
 ; CHECK-NEXT:    vmov.i8 q4, #0xff
 ; CHECK-NEXT:    vadd.i32 q1, q0, r0
-; CHECK-NEXT:    vcmp.u32 cs, q7, q1
+; CHECK-NEXT:    vcmp.u32 hi, q7, q1
 ; CHECK-NEXT:    vpsel q0, q4, q5
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    vmov.16 q2[0], r1
@@ -141,7 +141,7 @@ define <16 x i8> @v16i8(i32 %index, i32 %BTC, <16 x i8> %V1, <16 x i8> %V2) {
 ; CHECK-NEXT:    adr r1, .LCPI2_1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vadd.i32 q3, q0, r0
-; CHECK-NEXT:    vcmp.u32 cs, q7, q3
+; CHECK-NEXT:    vcmp.u32 hi, q7, q3
 ; CHECK-NEXT:    vpsel q0, q4, q5
 ; CHECK-NEXT:    vmov r1, s0
 ; CHECK-NEXT:    vmov.16 q2[4], r1
@@ -172,7 +172,7 @@ define <16 x i8> @v16i8(i32 %index, i32 %BTC, <16 x i8> %V1, <16 x i8> %V2) {
 ; CHECK-NEXT:    adr r1, .LCPI2_2
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vadd.i32 q0, q0, r0
-; CHECK-NEXT:    vcmp.u32 cs, q7, q0
+; CHECK-NEXT:    vcmp.u32 hi, q7, q0
 ; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
 ; CHECK-NEXT:    vpsel q6, q4, q5
 ; CHECK-NEXT:    vmov r1, s24
@@ -186,7 +186,7 @@ define <16 x i8> @v16i8(i32 %index, i32 %BTC, <16 x i8> %V1, <16 x i8> %V2) {
 ; CHECK-NEXT:    adr r1, .LCPI2_3
 ; CHECK-NEXT:    vldrw.u32 q6, [r1]
 ; CHECK-NEXT:    vadd.i32 q6, q6, r0
-; CHECK-NEXT:    vcmp.u32 cs, q7, q6
+; CHECK-NEXT:    vcmp.u32 hi, q7, q6
 ; CHECK-NEXT:    vpsel q7, q4, q5
 ; CHECK-NEXT:    vmov r1, s28
 ; CHECK-NEXT:    vmov.16 q0[4], r1

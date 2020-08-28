@@ -253,7 +253,7 @@ define arm_aapcs_vfpcc void @nearbyint(float* noalias nocapture readonly %pSrcA,
 ; CHECK-NEXT:    add.w r12, r12, #4
 ; CHECK-NEXT:    vpnot
 ; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vcmpt.u32 cs, q1, q2
+; CHECK-NEXT:    vcmpt.u32 hi, q1, q2
 ; CHECK-NEXT:    vldrwt.u32 q2, [r0], #16
 ; CHECK-NEXT:    vrintr.f32 s15, s11
 ; CHECK-NEXT:    vrintr.f32 s14, s10
