@@ -250,6 +250,13 @@ static void WorkerThread(const Command &BaseCmd, std::atomic<unsigned> *Counter,
   }
 }
 
+static void ValidateDirectoryExists(const std::string &Path) {
+  if (!Path.empty() && !IsDirectory(Path)) {
+    Printf("ERROR: The required directory \"%s\" does not exist\n", Path.c_str());
+    exit(1);
+  }
+}
+
 std::string CloneArgsWithoutX(const Vector<std::string> &Args,
                               const char *X1, const char *X2) {
   std::string Cmd;
@@ -678,13 +685,32 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Options.MallocLimitMb = Options.RssLimitMb;
   if (Flags.runs >= 0)
     Options.MaxNumberOfRuns = Flags.runs;
-  if (!Inputs->empty() && !Flags.minimize_crash_internal_step)
-    Options.OutputCorpus = (*Inputs)[0];
+  if (!Inputs->empty() && !Flags.minimize_crash_internal_step) {
+    // Ensure output corpus assumed to be the first arbitrary argument input
+    // is not a path to an existing file.
+    std::string OutputCorpusDir = (*Inputs)[0];
+    if (!IsFile(OutputCorpusDir)) {
+      Options.OutputCorpus = OutputCorpusDir;
+      ValidateDirectoryExists(Options.OutputCorpus);
+    }
+  }
   Options.ReportSlowUnits = Flags.report_slow_units;
-  if (Flags.artifact_prefix)
+  if (Flags.artifact_prefix) {
     Options.ArtifactPrefix = Flags.artifact_prefix;
-  if (Flags.exact_artifact_path)
+
+    // Since the prefix could be a full path to a file name prefix, assume
+    // that if the path ends with the platform's separator that a directory
+    // is desired
+    std::string ArtifactPathDir = Options.ArtifactPrefix;
+    if (!IsSeparator(ArtifactPathDir[ArtifactPathDir.length() - 1])) {
+      ArtifactPathDir = DirName(ArtifactPathDir);
+    }
+    ValidateDirectoryExists(ArtifactPathDir);
+  }
+  if (Flags.exact_artifact_path) {
     Options.ExactArtifactPath = Flags.exact_artifact_path;
+    ValidateDirectoryExists(DirName(Options.ExactArtifactPath));
+  }
   Vector<Unit> Dictionary;
   if (Flags.dict)
     if (!ParseDictionaryFile(FileToString(Flags.dict), &Dictionary))
@@ -707,8 +733,10 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Options.FocusFunction = Flags.focus_function;
   if (Flags.data_flow_trace)
     Options.DataFlowTrace = Flags.data_flow_trace;
-  if (Flags.features_dir)
+  if (Flags.features_dir) {
     Options.FeaturesDir = Flags.features_dir;
+    ValidateDirectoryExists(Options.FeaturesDir);
+  }
   if (Flags.collect_data_flow)
     Options.CollectDataFlow = Flags.collect_data_flow;
   if (Flags.stop_file)
