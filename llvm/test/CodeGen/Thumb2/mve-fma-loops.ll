@@ -44,7 +44,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -106,7 +106,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -169,7 +169,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -231,7 +231,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -296,7 +296,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -361,7 +361,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -426,7 +426,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -491,7 +491,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -556,7 +556,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -619,7 +619,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -683,7 +683,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
@@ -747,7 +747,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds float, float* %x, i32 %index
 
   ; %1 = icmp ule <4 x i32> %induction, %broadcast.splat11
-  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %1 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
 
   %2 = bitcast float* %0 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %2, i32 4, <4 x i1> %1, <4 x float> undef)
