@@ -12,6 +12,7 @@ include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 include(CheckSymbolExists)
 include(CMakeDependentOption)
+include(LLVMProcessSources)
 
 if(CMAKE_LINKER MATCHES "lld-link" OR (MSVC AND (LLVM_USE_LINKER STREQUAL "lld" OR LLVM_ENABLE_LLD)))
   set(LINKER_IS_LLD_LINK TRUE)
@@ -290,6 +291,15 @@ if( LLVM_ENABLE_PIC )
   if(CMAKE_COMPILER_IS_GNUCXX AND LLVM_NATIVE_ARCH STREQUAL "Mips" AND
          NOT Uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
     add_flag_or_print_warning("-fno-shrink-wrap" FNO_SHRINK_WRAP)
+  endif()
+  # gcc with -O3 -fPIC generates TLS sequences that violate the spec on
+  # Solaris/sparcv9, causing executables created with the system linker
+  # to SEGV (GCC PR target/96607).
+  # clang with -O3 -fPIC generates code that SEGVs.
+  # Both can be worked around by compiling with -O instead.
+  if(${CMAKE_SYSTEM_NAME} STREQUAL "SunOS" AND LLVM_NATIVE_ARCH STREQUAL "Sparc")
+    llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELEASE "-O[23]" "-O")
+    llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O[23]" "-O")
   endif()
 endif()
 
