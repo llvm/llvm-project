@@ -446,7 +446,6 @@ DWARF:
         - Code:       1
           Tag:        DW_TAG_compile_unit
           Children:   DW_CHILDREN_no
-          Attributes: []
   debug_info:
     - Length:     0x1234
       Version:    5
@@ -474,7 +473,6 @@ DWARF:
         - Code:       1
           Tag:        DW_TAG_compile_unit
           Children:   DW_CHILDREN_no
-          Attributes: []
   debug_info:
     - Length:     0x1234
       Version:    5
@@ -540,7 +538,6 @@ DWARF:
         - Code:       1
           Tag:        DW_TAG_compile_unit
           Children:   DW_CHILDREN_no
-          Attributes: []
   debug_info:
     - Length:     0x1234
       Version:    5

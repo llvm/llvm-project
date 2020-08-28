@@ -116,7 +116,7 @@ void MappingTraits<DWARFYAML::Abbrev>::mapping(IO &IO,
   IO.mapOptional("Code", Abbrev.Code);
   IO.mapRequired("Tag", Abbrev.Tag);
   IO.mapRequired("Children", Abbrev.Children);
-  IO.mapRequired("Attributes", Abbrev.Attributes);
+  IO.mapOptional("Attributes", Abbrev.Attributes);
 }
 
 void MappingTraits<DWARFYAML::AttributeAbbrev>::mapping(
