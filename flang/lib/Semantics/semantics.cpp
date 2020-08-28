@@ -221,23 +221,28 @@ bool SemanticsContext::AnyFatalError() const {
       (warningsAreErrors_ || messages_.AnyFatalError());
 }
 bool SemanticsContext::HasError(const Symbol &symbol) {
-  return CheckError(symbol.test(Symbol::Flag::Error));
+  return errorSymbols_.count(symbol) > 0;
 }
 bool SemanticsContext::HasError(const Symbol *symbol) {
-  return CheckError(!symbol || HasError(*symbol));
+  return !symbol || HasError(*symbol);
 }
 bool SemanticsContext::HasError(const parser::Name &name) {
   return HasError(name.symbol);
 }
-void SemanticsContext::SetError(Symbol &symbol, bool value) {
+void SemanticsContext::SetError(const Symbol &symbol, bool value) {
   if (value) {
-    CHECK(AnyFatalError());
-    symbol.set(Symbol::Flag::Error);
+    CheckError(symbol);
+    errorSymbols_.emplace(symbol);
   }
 }
-bool SemanticsContext::CheckError(bool error) {
-  CHECK(!error || AnyFatalError());
-  return error;
+void SemanticsContext::CheckError(const Symbol &symbol) {
+  if (!AnyFatalError()) {
+    std::string buf;
+    llvm::raw_string_ostream ss{buf};
+    ss << symbol;
+    common::die(
+        "No error was reported but setting error on: %s", ss.str().c_str());
+  }
 }
 
 const Scope &SemanticsContext::FindScope(parser::CharBlock source) const {

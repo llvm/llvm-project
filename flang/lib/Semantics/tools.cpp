@@ -965,8 +965,7 @@ SymbolVector OrderParameterDeclarations(const Symbol &typeSymbol) {
 const DeclTypeSpec &FindOrInstantiateDerivedType(Scope &scope,
     DerivedTypeSpec &&spec, SemanticsContext &semanticsContext,
     DeclTypeSpec::Category category) {
-  spec.CookParameters(semanticsContext.foldingContext());
-  spec.EvaluateParameters(semanticsContext.foldingContext());
+  spec.EvaluateParameters(semanticsContext);
   if (const DeclTypeSpec *
       type{scope.FindInstantiatedDerivedType(spec, category)}) {
     return *type;
