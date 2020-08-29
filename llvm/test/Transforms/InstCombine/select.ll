@@ -1926,7 +1926,10 @@ define i32 @select_dominance_chain(i1 %cond, i32 %x, i32 %y) {
 ; CHECK-NEXT:    br label [[MERGE_3]]
 ; CHECK:       merge.3:
 ; CHECK-NEXT:    [[S_3:%.*]] = phi i32 [ [[Y:%.*]], [[IF_FALSE_3]] ], [ [[X:%.*]], [[IF_TRUE_3]] ]
-; CHECK-NEXT:    [[SUM_2:%.*]] = mul i32 [[S_3]], 3
+; CHECK-NEXT:    [[S_2:%.*]] = phi i32 [ [[Y]], [[IF_FALSE_3]] ], [ [[X]], [[IF_TRUE_3]] ]
+; CHECK-NEXT:    [[S_1:%.*]] = phi i32 [ [[Y]], [[IF_FALSE_3]] ], [ [[X]], [[IF_TRUE_3]] ]
+; CHECK-NEXT:    [[SUM_1:%.*]] = add i32 [[S_1]], [[S_2]]
+; CHECK-NEXT:    [[SUM_2:%.*]] = add i32 [[SUM_1]], [[S_3]]
 ; CHECK-NEXT:    ret i32 [[SUM_2]]
 ;
 entry:
