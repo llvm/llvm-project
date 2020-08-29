@@ -7812,6 +7812,13 @@ struct AANoUndefImpl : AANoUndef {
     // values.
     if (A.isAssumedDead(getIRPosition(), nullptr, nullptr))
       return ChangeStatus::UNCHANGED;
+    // A position whose simplified value does not have any value is
+    // considered to be dead. We don't manifest noundef in such positions for
+    // the same reason above.
+    auto &ValueSimplifyAA = A.getAAFor<AAValueSimplify>(
+        *this, getIRPosition(), /* TrackDependence */ false);
+    if (!ValueSimplifyAA.getAssumedSimplifiedValue(A).hasValue())
+      return ChangeStatus::UNCHANGED;
     return AANoUndef::manifest(A);
   }
 };
