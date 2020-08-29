@@ -59,50 +59,8 @@ class ModuleManager {
   // to implement short-circuiting logic when running DFS over the dependencies.
   SmallVector<ModuleFile *, 2> Roots;
 
-  /// An \c EntryKey is a thin wrapper around a \c FileEntry that implements
-  /// a richer notion of identity.
-  ///
-  /// A plain \c FileEntry has its identity tied to inode numbers. When the
-  /// module cache regenerates a PCM, some filesystem allocators may reuse
-  /// inode numbers for distinct modules, which can cause the cache to return
-  /// mismatched entries. An \c EntryKey ensures that the size and modification
-  /// time are taken into account when determining the identity of a key, which
-  /// significantly decreases - but does not eliminate - the chance of
-  /// a collision.
-  struct EntryKey {
-    const FileEntry *Entry;
-
-    struct Info {
-      static inline EntryKey getEmptyKey() {
-        return EntryKey{llvm::DenseMapInfo<const FileEntry *>::getEmptyKey()};
-      }
-      static inline EntryKey getTombstoneKey() {
-        return EntryKey{
-            llvm::DenseMapInfo<const FileEntry *>::getTombstoneKey()};
-      }
-      static unsigned getHashValue(const EntryKey &Val) {
-        return llvm::DenseMapInfo<const FileEntry *>::getHashValue(Val.Entry);
-      }
-      static bool isEqual(const EntryKey &LHS, const EntryKey &RHS) {
-        if (LHS.Entry == getEmptyKey().Entry ||
-            LHS.Entry == getTombstoneKey().Entry ||
-            RHS.Entry == getEmptyKey().Entry ||
-            RHS.Entry == getTombstoneKey().Entry) {
-          return LHS.Entry == RHS.Entry;
-        }
-        if (LHS.Entry == nullptr || RHS.Entry == nullptr) {
-          return LHS.Entry == RHS.Entry;
-        }
-        return LHS.Entry == RHS.Entry &&
-               LHS.Entry->getSize() == RHS.Entry->getSize() &&
-               LHS.Entry->getModificationTime() ==
-                   RHS.Entry->getModificationTime();
-      }
-    };
-  };
-
   /// All loaded modules, indexed by name.
-  llvm::DenseMap<EntryKey, ModuleFile *, EntryKey::Info> Modules;
+  llvm::DenseMap<const FileEntry *, ModuleFile *> Modules;
 
   /// FileManager that handles translating between filenames and
   /// FileEntry *.
@@ -118,7 +76,7 @@ class ModuleManager {
   const HeaderSearch &HeaderSearchInfo;
 
   /// A lookup of in-memory (virtual file) buffers
-  llvm::DenseMap<EntryKey, std::unique_ptr<llvm::MemoryBuffer>, EntryKey::Info>
+  llvm::DenseMap<const FileEntry *, std::unique_ptr<llvm::MemoryBuffer>>
       InMemoryBuffers;
 
   /// The visitation order.
