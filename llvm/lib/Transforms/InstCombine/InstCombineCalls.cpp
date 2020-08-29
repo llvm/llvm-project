@@ -1900,7 +1900,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
         !CalleeF->isDeclaration()) {
       Instruction *OldCall = &Call;
       CreateNonTerminatorUnreachable(OldCall);
-      // If OldCall does not return void then replaceAllUsesWith undef.
+      // If OldCall does not return void then replaceInstUsesWith undef.
       // This allows ValueHandlers and custom metadata to adjust itself.
       if (!OldCall->getType()->isVoidTy())
         replaceInstUsesWith(*OldCall, UndefValue::get(OldCall->getType()));
@@ -1919,7 +1919,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   if ((isa<ConstantPointerNull>(Callee) &&
        !NullPointerIsDefined(Call.getFunction())) ||
       isa<UndefValue>(Callee)) {
-    // If Call does not return void then replaceAllUsesWith undef.
+    // If Call does not return void then replaceInstUsesWith undef.
     // This allows ValueHandlers and custom metadata to adjust itself.
     if (!Call.getType()->isVoidTy())
       replaceInstUsesWith(Call, UndefValue::get(Call.getType()));
