@@ -59,13 +59,13 @@ entry:
 define internal i32 @cb1(i32 %unknown) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@cb1
-; IS__TUNIT____-SAME: (i32 returned [[UNKNOWN:%.*]]) [[ATTR0]] {
+; IS__TUNIT____-SAME: (i32 noundef returned [[UNKNOWN:%.*]]) [[ATTR0]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    ret i32 [[UNKNOWN]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@cb1
-; IS__CGSCC____-SAME: (i32 returned [[UNKNOWN:%.*]]) [[ATTR0]] {
+; IS__CGSCC____-SAME: (i32 noundef returned [[UNKNOWN:%.*]]) [[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    ret i32 [[UNKNOWN]]
 ;
@@ -76,13 +76,13 @@ entry:
 define internal i32 @cb2(i32 %unknown) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@cb2
-; IS__TUNIT____-SAME: (i32 returned [[UNKNOWN:%.*]]) [[ATTR0]] {
+; IS__TUNIT____-SAME: (i32 noundef returned [[UNKNOWN:%.*]]) [[ATTR0]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    ret i32 [[UNKNOWN]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@cb2
-; IS__CGSCC____-SAME: (i32 returned [[UNKNOWN:%.*]]) [[ATTR0]] {
+; IS__CGSCC____-SAME: (i32 noundef returned [[UNKNOWN:%.*]]) [[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    ret i32 [[UNKNOWN]]
 ;
@@ -94,13 +94,13 @@ entry:
 define internal i32 @cb3(i32 %unknown) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@cb3
-; IS__TUNIT____-SAME: (i32 returned [[UNKNOWN:%.*]]) [[ATTR0]] {
+; IS__TUNIT____-SAME: (i32 noundef returned [[UNKNOWN:%.*]]) [[ATTR0]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    ret i32 [[UNKNOWN]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@cb3
-; IS__CGSCC____-SAME: (i32 returned [[UNKNOWN:%.*]]) [[ATTR0]] {
+; IS__CGSCC____-SAME: (i32 noundef returned [[UNKNOWN:%.*]]) [[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    ret i32 [[UNKNOWN]]
 ;
@@ -111,13 +111,13 @@ entry:
 define internal i32 @cb4(i32 %unknown) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@cb4
-; IS__TUNIT____-SAME: (i32 returned [[UNKNOWN:%.*]]) [[ATTR0]] {
+; IS__TUNIT____-SAME: (i32 noundef returned [[UNKNOWN:%.*]]) [[ATTR0]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    ret i32 [[UNKNOWN]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@cb4
-; IS__CGSCC____-SAME: (i32 returned [[UNKNOWN:%.*]]) [[ATTR0]] {
+; IS__CGSCC____-SAME: (i32 noundef returned [[UNKNOWN:%.*]]) [[ATTR0]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    ret i32 [[UNKNOWN]]
 ;
@@ -128,10 +128,10 @@ entry:
 define void @foo() {
 ; CHECK-LABEL: define {{[^@]+}}@foo() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @broker(i32 (i32)* noundef nonnull @cb0, i32 (i32)* noundef nonnull @cb1, i32 (i32)* noundef nonnull @cb0, i32 0, i32 1)
-; CHECK-NEXT:    call void @broker(i32 (i32)* noundef nonnull @cb1, i32 (i32)* noundef nonnull @cb2, i32 (i32)* noundef nonnull @cb2, i32 0, i32 1)
-; CHECK-NEXT:    call void @broker(i32 (i32)* noundef nonnull @cb3, i32 (i32)* noundef nonnull @cb2, i32 (i32)* noundef nonnull @cb3, i32 0, i32 1)
-; CHECK-NEXT:    call void @broker(i32 (i32)* noundef nonnull @cb4, i32 (i32)* noundef nonnull @cb4, i32 (i32)* noundef nonnull @cb4, i32 0, i32 1)
+; CHECK-NEXT:    call void @broker(i32 (i32)* noundef nonnull @cb0, i32 (i32)* noundef nonnull @cb1, i32 (i32)* noundef nonnull @cb0, i32 noundef 0, i32 noundef 1)
+; CHECK-NEXT:    call void @broker(i32 (i32)* noundef nonnull @cb1, i32 (i32)* noundef nonnull @cb2, i32 (i32)* noundef nonnull @cb2, i32 noundef 0, i32 noundef 1)
+; CHECK-NEXT:    call void @broker(i32 (i32)* noundef nonnull @cb3, i32 (i32)* noundef nonnull @cb2, i32 (i32)* noundef nonnull @cb3, i32 noundef 0, i32 noundef 1)
+; CHECK-NEXT:    call void @broker(i32 (i32)* noundef nonnull @cb4, i32 (i32)* noundef nonnull @cb4, i32 (i32)* noundef nonnull @cb4, i32 noundef 0, i32 noundef 1)
 ; CHECK-NEXT:    ret void
 ;
 entry:

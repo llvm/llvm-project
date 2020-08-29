@@ -1960,6 +1960,9 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     // Every function might be simplified.
     getOrCreateAAFor<AAValueSimplify>(RetPos);
 
+    // Every returned value might be marked noundef.
+    getOrCreateAAFor<AANoUndef>(RetPos);
+
     if (ReturnType->isPointerTy()) {
 
       // Every function with pointer return type might be marked align.
@@ -1974,9 +1977,6 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       // Every function with pointer return type might be marked
       // dereferenceable.
       getOrCreateAAFor<AADereferenceable>(RetPos);
-
-      // Every function with pointer return type might be marked noundef.
-      getOrCreateAAFor<AANoUndef>(RetPos);
     }
   }
 
@@ -1988,6 +1988,9 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
     // Every argument might be dead.
     getOrCreateAAFor<AAIsDead>(ArgPos);
+
+    // Every argument might be marked noundef.
+    getOrCreateAAFor<AANoUndef>(ArgPos);
 
     if (Arg.getType()->isPointerTy()) {
       // Every argument with pointer type might be marked nonnull.
@@ -2014,9 +2017,6 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
       // Every argument with pointer type might be privatizable (or promotable)
       getOrCreateAAFor<AAPrivatizablePtr>(ArgPos);
-
-      // Every argument with pointer type might be marked noundef.
-      getOrCreateAAFor<AANoUndef>(ArgPos);
     }
   }
 
@@ -2059,6 +2059,9 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       // Call site argument might be simplified.
       getOrCreateAAFor<AAValueSimplify>(CBArgPos);
 
+      // Every call site argument might be marked "noundef".
+      getOrCreateAAFor<AANoUndef>(CBArgPos);
+
       if (!CB.getArgOperand(I)->getType()->isPointerTy())
         continue;
 
@@ -2083,9 +2086,6 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
       // Call site argument attribute "nofree".
       getOrCreateAAFor<AANoFree>(CBArgPos);
-
-      // Call site argument attribute "noundef".
-      getOrCreateAAFor<AANoUndef>(CBArgPos);
     }
     return true;
   };

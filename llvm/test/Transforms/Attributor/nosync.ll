@@ -404,7 +404,7 @@ define i32 @memcpy_volatile(i8* %ptr1, i8* %ptr2) {
 ; CHECK: Function Attrs: argmemonly nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@memcpy_volatile
 ; CHECK-SAME: (i8* nocapture writeonly [[PTR1:%.*]], i8* nocapture readonly [[PTR2:%.*]]) [[ATTR10:#.*]] {
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly [[PTR1]], i8* noalias nocapture readonly [[PTR2]], i32 8, i1 true) [[ATTR19:#.*]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly [[PTR1]], i8* noalias nocapture readonly [[PTR2]], i32 noundef 8, i1 noundef true) [[ATTR19:#.*]]
 ; CHECK-NEXT:    ret i32 4
 ;
   call void @llvm.memcpy(i8* %ptr1, i8* %ptr2, i32 8, i1 1)
@@ -419,7 +419,7 @@ define i32 @memset_non_volatile(i8* %ptr1, i8 %val) {
 ; CHECK: Function Attrs: argmemonly nosync nounwind willreturn writeonly
 ; CHECK-LABEL: define {{[^@]+}}@memset_non_volatile
 ; CHECK-SAME: (i8* nocapture writeonly [[PTR1:%.*]], i8 [[VAL:%.*]]) [[ATTR11:#.*]] {
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* nocapture writeonly [[PTR1]], i8 [[VAL]], i32 8, i1 false) [[ATTR20:#.*]]
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* nocapture writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false) [[ATTR20:#.*]]
 ; CHECK-NEXT:    ret i32 4
 ;
   call void @llvm.memset(i8* %ptr1, i8 %val, i32 8, i1 0)

@@ -24,7 +24,7 @@ define internal void @test(i32** %X) !dbg !2 {
 
 define internal void @test_byval(%struct.pair* byval %P) {
 ; CHECK-LABEL: define {{[^@]+}}@test_byval() {
-; CHECK-NEXT:    call void @sink(i32 0)
+; CHECK-NEXT:    call void @sink(i32 noundef 0)
 ; CHECK-NEXT:    ret void
 ;
   call void @sink(i32 0)

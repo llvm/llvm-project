@@ -34,13 +34,13 @@ define internal void @callee_t0f(i8* nocapture readnone %tp13, i8* nocapture rea
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@callee_t0f
 ; IS__TUNIT____-SAME: (i8* noalias nocapture nofree nonnull readnone [[TP13:%.*]], i8* noalias nocapture nofree nonnull readnone [[TP14:%.*]], i8* noalias nocapture nofree nonnull readnone [[TP15:%.*]], i8* noalias nocapture nofree nonnull readnone [[TP16:%.*]], i8* noalias nocapture nofree nonnull readnone [[TP17:%.*]], ...) {
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    call void @sink(i32 0)
+; IS__TUNIT____-NEXT:    call void @sink(i32 noundef 0)
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@callee_t0f
 ; IS__CGSCC____-SAME: (i8* nocapture nofree nonnull readnone [[TP13:%.*]], i8* nocapture nofree nonnull readnone [[TP14:%.*]], i8* nocapture nofree nonnull readnone [[TP15:%.*]], i8* nocapture nofree nonnull readnone [[TP16:%.*]], i8* nocapture nofree nonnull readnone [[TP17:%.*]], ...) {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    call void @sink(i32 0)
+; IS__CGSCC____-NEXT:    call void @sink(i32 noundef 0)
 ; IS__CGSCC____-NEXT:    ret void
 ;
 entry:

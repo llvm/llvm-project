@@ -1478,8 +1478,8 @@ define i32 @exact(i32* align 8 %a, i32* align 8 %b) {
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@exact
 ; NOT_CGSCC_NPM-SAME: (i32* align 8 [[A:%.*]], i32* align 8 [[B:%.*]]) {
 ; NOT_CGSCC_NPM-NEXT:    [[C0:%.*]] = call i32 @non_exact_0()
-; NOT_CGSCC_NPM-NEXT:    [[C1:%.*]] = call i32 @non_exact_1(i32 1)
-; NOT_CGSCC_NPM-NEXT:    [[C2:%.*]] = call i32 @non_exact_2(i32 2)
+; NOT_CGSCC_NPM-NEXT:    [[C1:%.*]] = call i32 @non_exact_1(i32 noundef 1)
+; NOT_CGSCC_NPM-NEXT:    [[C2:%.*]] = call i32 @non_exact_2(i32 noundef 2)
 ; NOT_CGSCC_NPM-NEXT:    [[C3:%.*]] = call align 32 i32* @non_exact_3(i32* align 32 [[A]])
 ; NOT_CGSCC_NPM-NEXT:    [[C4:%.*]] = call align 16 i32* @non_exact_4(i32* align 32 [[B]])
 ; NOT_CGSCC_NPM-NEXT:    [[C3L:%.*]] = load i32, i32* [[C3]], align 32
@@ -1493,8 +1493,8 @@ define i32 @exact(i32* align 8 %a, i32* align 8 %b) {
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@exact
 ; IS__CGSCC_NPM-SAME: (i32* align 8 [[A:%.*]], i32* align 8 [[B:%.*]]) {
 ; IS__CGSCC_NPM-NEXT:    [[C0:%.*]] = call i32 @non_exact_0()
-; IS__CGSCC_NPM-NEXT:    [[C1:%.*]] = call i32 @non_exact_1(i32 1)
-; IS__CGSCC_NPM-NEXT:    [[C2:%.*]] = call i32 @non_exact_2(i32 2)
+; IS__CGSCC_NPM-NEXT:    [[C1:%.*]] = call i32 @non_exact_1(i32 noundef 1)
+; IS__CGSCC_NPM-NEXT:    [[C2:%.*]] = call i32 @non_exact_2(i32 noundef 2)
 ; IS__CGSCC_NPM-NEXT:    [[C3:%.*]] = call align 32 i32* @non_exact_3(i32* align 32 [[A]])
 ; IS__CGSCC_NPM-NEXT:    [[C4:%.*]] = call align 16 i32* @non_exact_4(i32* align 32 [[B]])
 ; IS__CGSCC_NPM-NEXT:    [[C3L:%.*]] = load i32, i32* [[C3]], align 32

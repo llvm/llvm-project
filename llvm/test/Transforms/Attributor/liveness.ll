@@ -2437,7 +2437,7 @@ define i32 @main() {
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[G_0]], 1
 ; CHECK-NEXT:    br label [[FOR_COND_0]]
 ; CHECK:       for.end.0:
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @malloc(i64 8)
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @malloc(i64 noundef 8)
 ; CHECK-NEXT:    store i8* [[CALL]], i8** bitcast (%struct.a** @e to i8**), align 8
 ; CHECK-NEXT:    [[B:%.*]] = bitcast i8* [[CALL]] to %struct.a**
 ; CHECK-NEXT:    store %struct.a* null, %struct.a** [[B]], align 8
@@ -2515,7 +2515,7 @@ define void @bad_gep() {
 ; NOT_CGSCC_NPM-NEXT:  entry:
 ; NOT_CGSCC_NPM-NEXT:    [[N:%.*]] = alloca i8, align 1
 ; NOT_CGSCC_NPM-NEXT:    [[M:%.*]] = alloca i8, align 1
-; NOT_CGSCC_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* noalias nocapture noundef nonnull dereferenceable(1) [[N]]) [[ATTR16:#.*]]
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 1, i8* noalias nocapture noundef nonnull dereferenceable(1) [[N]]) [[ATTR16:#.*]]
 ; NOT_CGSCC_NPM-NEXT:    br label [[EXIT:%.*]]
 ; NOT_CGSCC_NPM:       while.body:
 ; NOT_CGSCC_NPM-NEXT:    unreachable
@@ -2524,7 +2524,7 @@ define void @bad_gep() {
 ; NOT_CGSCC_NPM:       if.end:
 ; NOT_CGSCC_NPM-NEXT:    unreachable
 ; NOT_CGSCC_NPM:       exit:
-; NOT_CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* noalias nocapture noundef nonnull dereferenceable(1) [[N]]) [[ATTR16]]
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 1, i8* noalias nocapture noundef nonnull dereferenceable(1) [[N]]) [[ATTR16]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nounwind readnone willreturn
@@ -2533,7 +2533,7 @@ define void @bad_gep() {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[N:%.*]] = alloca i8, align 1
 ; IS__CGSCC____-NEXT:    [[M:%.*]] = alloca i8, align 1
-; IS__CGSCC____-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* noalias nocapture noundef nonnull dereferenceable(1) [[N]]) [[ATTR17:#.*]]
+; IS__CGSCC____-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 1, i8* noalias nocapture noundef nonnull dereferenceable(1) [[N]]) [[ATTR17:#.*]]
 ; IS__CGSCC____-NEXT:    br label [[EXIT:%.*]]
 ; IS__CGSCC____:       while.body:
 ; IS__CGSCC____-NEXT:    unreachable
@@ -2542,7 +2542,7 @@ define void @bad_gep() {
 ; IS__CGSCC____:       if.end:
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       exit:
-; IS__CGSCC____-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* noalias nocapture noundef nonnull dereferenceable(1) [[N]]) [[ATTR17]]
+; IS__CGSCC____-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 1, i8* noalias nocapture noundef nonnull dereferenceable(1) [[N]]) [[ATTR17]]
 ; IS__CGSCC____-NEXT:    ret void
 ;
 entry:

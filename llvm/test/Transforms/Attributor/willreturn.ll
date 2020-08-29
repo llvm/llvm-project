@@ -296,7 +296,7 @@ define void @mutual_recursion1(i1 %c) #0 {
 ; IS__TUNIT_NPM-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
 ; IS__TUNIT_NPM:       rec:
 ; IS__TUNIT_NPM-NEXT:    call void @sink() [[ATTR12:#.*]]
-; IS__TUNIT_NPM-NEXT:    call void @mutual_recursion2(i1 [[C]]) [[ATTR19:#.*]]
+; IS__TUNIT_NPM-NEXT:    call void @mutual_recursion2(i1 noundef [[C]]) [[ATTR19:#.*]]
 ; IS__TUNIT_NPM-NEXT:    br label [[END]]
 ; IS__TUNIT_NPM:       end:
 ; IS__TUNIT_NPM-NEXT:    ret void
@@ -318,7 +318,7 @@ define void @mutual_recursion1(i1 %c) #0 {
 ; IS__CGSCC_NPM-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
 ; IS__CGSCC_NPM:       rec:
 ; IS__CGSCC_NPM-NEXT:    call void @sink() [[ATTR14:#.*]]
-; IS__CGSCC_NPM-NEXT:    call void @mutual_recursion2(i1 [[C]]) [[ATTR22:#.*]]
+; IS__CGSCC_NPM-NEXT:    call void @mutual_recursion2(i1 noundef [[C]]) [[ATTR22:#.*]]
 ; IS__CGSCC_NPM-NEXT:    br label [[END]]
 ; IS__CGSCC_NPM:       end:
 ; IS__CGSCC_NPM-NEXT:    ret void
@@ -373,13 +373,13 @@ define void @only_exit() local_unnamed_addr #0 {
 ; IS__TUNIT____: Function Attrs: noinline noreturn nounwind uwtable
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@only_exit
 ; IS__TUNIT____-SAME: () local_unnamed_addr [[ATTR5:#.*]] {
-; IS__TUNIT____-NEXT:    tail call void @exit(i32 0) [[ATTR4:#.*]]
+; IS__TUNIT____-NEXT:    tail call void @exit(i32 noundef 0) [[ATTR4:#.*]]
 ; IS__TUNIT____-NEXT:    unreachable
 ;
 ; IS__CGSCC____: Function Attrs: noinline noreturn nounwind uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@only_exit
 ; IS__CGSCC____-SAME: () local_unnamed_addr [[ATTR6:#.*]] {
-; IS__CGSCC____-NEXT:    tail call void @exit(i32 0) [[ATTR5:#.*]]
+; IS__CGSCC____-NEXT:    tail call void @exit(i32 noundef 0) [[ATTR5:#.*]]
 ; IS__CGSCC____-NEXT:    unreachable
 ;
   tail call void @exit(i32 0)
@@ -403,14 +403,14 @@ define void @conditional_exit(i32 %0, i32* nocapture readonly %1) local_unnamed_
 ; IS__TUNIT____-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0]], 0
 ; IS__TUNIT____-NEXT:    br i1 [[TMP3]], label [[TMP5:%.*]], label [[TMP4:%.*]]
 ; IS__TUNIT____:       4:
-; IS__TUNIT____-NEXT:    tail call void @exit(i32 0) [[ATTR4]]
+; IS__TUNIT____-NEXT:    tail call void @exit(i32 noundef 0) [[ATTR4]]
 ; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       5:
 ; IS__TUNIT____-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP1]], align 4
 ; IS__TUNIT____-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 0
 ; IS__TUNIT____-NEXT:    br i1 [[TMP7]], label [[TMP9:%.*]], label [[TMP8:%.*]]
 ; IS__TUNIT____:       8:
-; IS__TUNIT____-NEXT:    tail call void @exit(i32 1) [[ATTR4]]
+; IS__TUNIT____-NEXT:    tail call void @exit(i32 noundef 1) [[ATTR4]]
 ; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       9:
 ; IS__TUNIT____-NEXT:    ret void
@@ -421,14 +421,14 @@ define void @conditional_exit(i32 %0, i32* nocapture readonly %1) local_unnamed_
 ; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0]], 0
 ; IS__CGSCC____-NEXT:    br i1 [[TMP3]], label [[TMP5:%.*]], label [[TMP4:%.*]]
 ; IS__CGSCC____:       4:
-; IS__CGSCC____-NEXT:    tail call void @exit(i32 0) [[ATTR5]]
+; IS__CGSCC____-NEXT:    tail call void @exit(i32 noundef 0) [[ATTR5]]
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       5:
 ; IS__CGSCC____-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP1]], align 4
 ; IS__CGSCC____-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 0
 ; IS__CGSCC____-NEXT:    br i1 [[TMP7]], label [[TMP9:%.*]], label [[TMP8:%.*]]
 ; IS__CGSCC____:       8:
-; IS__CGSCC____-NEXT:    tail call void @exit(i32 1) [[ATTR5]]
+; IS__CGSCC____-NEXT:    tail call void @exit(i32 noundef 1) [[ATTR5]]
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       9:
 ; IS__CGSCC____-NEXT:    ret void
@@ -1155,7 +1155,7 @@ define void @unreachable_exit_negative1() #0 {
 ; IS__TUNIT____: Function Attrs: noinline noreturn nounwind uwtable
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@unreachable_exit_negative1
 ; IS__TUNIT____-SAME: () [[ATTR5]] {
-; IS__TUNIT____-NEXT:    tail call void @exit(i32 0) [[ATTR4]]
+; IS__TUNIT____-NEXT:    tail call void @exit(i32 noundef 0) [[ATTR4]]
 ; IS__TUNIT____-NEXT:    unreachable
 ; IS__TUNIT____:       unreachable_label:
 ; IS__TUNIT____-NEXT:    unreachable
@@ -1163,7 +1163,7 @@ define void @unreachable_exit_negative1() #0 {
 ; IS__CGSCC____: Function Attrs: noinline noreturn nounwind uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@unreachable_exit_negative1
 ; IS__CGSCC____-SAME: () [[ATTR6]] {
-; IS__CGSCC____-NEXT:    tail call void @exit(i32 0) [[ATTR5]]
+; IS__CGSCC____-NEXT:    tail call void @exit(i32 noundef 0) [[ATTR5]]
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       unreachable_label:
 ; IS__CGSCC____-NEXT:    unreachable

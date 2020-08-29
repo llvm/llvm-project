@@ -915,7 +915,7 @@ define dso_local void @rec-branch-2(i32 %a, i32 %b, i32 %c, i32* %ptr) {
 ; IS__TUNIT_OPM-NEXT:    store i32 3, i32* [[PTR]], align 4
 ; IS__TUNIT_OPM-NEXT:    br label [[IF_END8]]
 ; IS__TUNIT_OPM:       if.else6:
-; IS__TUNIT_OPM-NEXT:    tail call void @rec-branch-2(i32 1, i32 1, i32 1, i32* nocapture nofree writeonly [[PTR]]) [[ATTR5]]
+; IS__TUNIT_OPM-NEXT:    tail call void @rec-branch-2(i32 noundef 1, i32 noundef 1, i32 noundef 1, i32* nocapture nofree writeonly [[PTR]]) [[ATTR5]]
 ; IS__TUNIT_OPM-NEXT:    br label [[IF_END8]]
 ; IS__TUNIT_OPM:       if.end8:
 ; IS__TUNIT_OPM-NEXT:    ret void
@@ -942,7 +942,7 @@ define dso_local void @rec-branch-2(i32 %a, i32 %b, i32 %c, i32* %ptr) {
 ; IS________NPM-NEXT:    store i32 3, i32* [[PTR]], align 4
 ; IS________NPM-NEXT:    br label [[IF_END8]]
 ; IS________NPM:       if.else6:
-; IS________NPM-NEXT:    tail call void @rec-branch-2(i32 1, i32 1, i32 1, i32* nocapture nofree writeonly [[PTR]]) [[ATTR6:#.*]]
+; IS________NPM-NEXT:    tail call void @rec-branch-2(i32 noundef 1, i32 noundef 1, i32 noundef 1, i32* nocapture nofree writeonly [[PTR]]) [[ATTR6:#.*]]
 ; IS________NPM-NEXT:    br label [[IF_END8]]
 ; IS________NPM:       if.end8:
 ; IS________NPM-NEXT:    ret void
@@ -969,7 +969,7 @@ define dso_local void @rec-branch-2(i32 %a, i32 %b, i32 %c, i32* %ptr) {
 ; IS__CGSCC_OPM-NEXT:    store i32 3, i32* [[PTR]], align 4
 ; IS__CGSCC_OPM-NEXT:    br label [[IF_END8]]
 ; IS__CGSCC_OPM:       if.else6:
-; IS__CGSCC_OPM-NEXT:    tail call void @rec-branch-2(i32 1, i32 1, i32 1, i32* nocapture nofree writeonly [[PTR]]) [[ATTR7:#.*]]
+; IS__CGSCC_OPM-NEXT:    tail call void @rec-branch-2(i32 noundef 1, i32 noundef 1, i32 noundef 1, i32* nocapture nofree writeonly [[PTR]]) [[ATTR7:#.*]]
 ; IS__CGSCC_OPM-NEXT:    br label [[IF_END8]]
 ; IS__CGSCC_OPM:       if.end8:
 ; IS__CGSCC_OPM-NEXT:    ret void
@@ -1016,19 +1016,19 @@ define void @nonnull_assume_pos(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4) {
 ;
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@nonnull_assume_pos
 ; IS__TUNIT_OPM-SAME: (i8* nocapture nofree nonnull readnone dereferenceable(101) [[ARG1:%.*]], i8* nocapture nofree readnone dereferenceable_or_null(31) [[ARG2:%.*]], i8* nocapture nofree nonnull readnone [[ARG3:%.*]], i8* nocapture nofree readnone dereferenceable_or_null(42) [[ARG4:%.*]]) {
-; IS__TUNIT_OPM-NEXT:    call void @llvm.assume(i1 true) [[ATTR6:#.*]] [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i8* [[ARG1]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
+; IS__TUNIT_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [[ATTR6:#.*]] [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i8* [[ARG1]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
 ; IS__TUNIT_OPM-NEXT:    call void @unknown()
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@nonnull_assume_pos
 ; IS________NPM-SAME: (i8* nocapture nofree nonnull readnone dereferenceable(101) [[ARG1:%.*]], i8* nocapture nofree readnone dereferenceable_or_null(31) [[ARG2:%.*]], i8* nocapture nofree nonnull readnone [[ARG3:%.*]], i8* nocapture nofree readnone dereferenceable_or_null(42) [[ARG4:%.*]]) {
-; IS________NPM-NEXT:    call void @llvm.assume(i1 true) [[ATTR7:#.*]] [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i8* [[ARG1]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
+; IS________NPM-NEXT:    call void @llvm.assume(i1 noundef true) [[ATTR7:#.*]] [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i8* [[ARG1]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
 ; IS________NPM-NEXT:    call void @unknown()
 ; IS________NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@nonnull_assume_pos
 ; IS__CGSCC_OPM-SAME: (i8* nocapture nofree nonnull readnone dereferenceable(101) [[ARG1:%.*]], i8* nocapture nofree readnone dereferenceable_or_null(31) [[ARG2:%.*]], i8* nocapture nofree nonnull readnone [[ARG3:%.*]], i8* nocapture nofree readnone dereferenceable_or_null(42) [[ARG4:%.*]]) {
-; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [[ATTR8:#.*]] [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i8* [[ARG1]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [[ATTR8:#.*]] [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i8* [[ARG1]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
 ; IS__CGSCC_OPM-NEXT:    call void @unknown()
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
@@ -1046,7 +1046,7 @@ define void @nonnull_assume_neg(i8* %arg1, i8* %arg2, i8* %arg3) {
 ; CHECK-LABEL: define {{[^@]+}}@nonnull_assume_neg
 ; CHECK-SAME: (i8* nocapture nofree readnone [[ARG1:%.*]], i8* nocapture nofree readnone [[ARG2:%.*]], i8* nocapture nofree readnone [[ARG3:%.*]]) {
 ; CHECK-NEXT:    call void @unknown()
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i8* [[ARG1]], i64 101), "dereferenceable"(i8* [[ARG2]], i64 -2), "dereferenceable_or_null"(i8* [[ARG3]], i64 31) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) [ "dereferenceable"(i8* [[ARG1]], i64 101), "dereferenceable"(i8* [[ARG2]], i64 -2), "dereferenceable_or_null"(i8* [[ARG3]], i64 31) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @unknown()
@@ -1081,7 +1081,7 @@ define void @nonnull_assume_call(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4) {
 ; IS__TUNIT_OPM-NEXT:    call void @unknown_use8(i8* nonnull [[ARG3]]) [[ATTR7]]
 ; IS__TUNIT_OPM-NEXT:    call void @unknown_use8(i8* dereferenceable_or_null(31) [[ARG2]]) [[ATTR7]]
 ; IS__TUNIT_OPM-NEXT:    call void @unknown_use8(i8* nonnull dereferenceable(2) [[ARG1]]) [[ATTR7]]
-; IS__TUNIT_OPM-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i32* [[P]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
+; IS__TUNIT_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i32* [[P]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
 ; IS__TUNIT_OPM-NEXT:    call void @unknown_use8(i8* nonnull dereferenceable(2) [[ARG1]]) [[ATTR7]]
 ; IS__TUNIT_OPM-NEXT:    call void @unknown_use8(i8* dereferenceable_or_null(31) [[ARG2]]) [[ATTR7]]
 ; IS__TUNIT_OPM-NEXT:    call void @unknown_use8(i8* nonnull [[ARG3]]) [[ATTR7]]
@@ -1099,7 +1099,7 @@ define void @nonnull_assume_call(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4) {
 ; IS________NPM-NEXT:    call void @unknown_use8(i8* nonnull [[ARG3]]) [[ATTR8]]
 ; IS________NPM-NEXT:    call void @unknown_use8(i8* dereferenceable_or_null(31) [[ARG2]]) [[ATTR8]]
 ; IS________NPM-NEXT:    call void @unknown_use8(i8* nonnull dereferenceable(2) [[ARG1]]) [[ATTR8]]
-; IS________NPM-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i32* [[P]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
+; IS________NPM-NEXT:    call void @llvm.assume(i1 noundef true) [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i32* [[P]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
 ; IS________NPM-NEXT:    call void @unknown_use8(i8* nonnull dereferenceable(2) [[ARG1]]) [[ATTR8]]
 ; IS________NPM-NEXT:    call void @unknown_use8(i8* dereferenceable_or_null(31) [[ARG2]]) [[ATTR8]]
 ; IS________NPM-NEXT:    call void @unknown_use8(i8* nonnull [[ARG3]]) [[ATTR8]]
@@ -1117,7 +1117,7 @@ define void @nonnull_assume_call(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4) {
 ; IS__CGSCC_OPM-NEXT:    call void @unknown_use8(i8* nonnull [[ARG3]]) [[ATTR9]]
 ; IS__CGSCC_OPM-NEXT:    call void @unknown_use8(i8* dereferenceable_or_null(31) [[ARG2]]) [[ATTR9]]
 ; IS__CGSCC_OPM-NEXT:    call void @unknown_use8(i8* nonnull dereferenceable(2) [[ARG1]]) [[ATTR9]]
-; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i32* [[P]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [ "nonnull"(i8* [[ARG3]]), "dereferenceable"(i8* [[ARG1]], i64 1), "dereferenceable"(i8* [[ARG1]], i64 2), "dereferenceable"(i32* [[P]], i64 101), "dereferenceable_or_null"(i8* [[ARG2]], i64 31), "dereferenceable_or_null"(i8* [[ARG4]], i64 42) ]
 ; IS__CGSCC_OPM-NEXT:    call void @unknown_use8(i8* nonnull dereferenceable(2) [[ARG1]]) [[ATTR9]]
 ; IS__CGSCC_OPM-NEXT:    call void @unknown_use8(i8* dereferenceable_or_null(31) [[ARG2]]) [[ATTR9]]
 ; IS__CGSCC_OPM-NEXT:    call void @unknown_use8(i8* nonnull [[ARG3]]) [[ATTR9]]
