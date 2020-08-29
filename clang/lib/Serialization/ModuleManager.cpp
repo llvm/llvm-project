@@ -59,7 +59,7 @@ ModuleFile *ModuleManager::lookupByModuleName(StringRef Name) const {
 }
 
 ModuleFile *ModuleManager::lookup(const FileEntry *File) const {
-  auto Known = Modules.find(EntryKey{File});
+  auto Known = Modules.find(File);
   if (Known == Modules.end())
     return nullptr;
 
@@ -72,7 +72,7 @@ ModuleManager::lookupBuffer(StringRef Name) {
                                /*CacheFailure=*/false);
   if (!Entry)
     return nullptr;
-  return std::move(InMemoryBuffers[EntryKey{*Entry}]);
+  return std::move(InMemoryBuffers[*Entry]);
 }
 
 static bool checkSignature(ASTFileSignature Signature,
@@ -132,15 +132,38 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     return Missing;
   }
 
-  // Check whether we already loaded this module, before
-  if (ModuleFile *ModuleEntry = Modules.lookup(EntryKey{Entry})) {
-    // Check the stored signature.
-    if (checkSignature(ModuleEntry->Signature, ExpectedSignature, ErrorStr))
-      return OutOfDate;
+  // The ModuleManager's use of FileEntry nodes as the keys for its map of
+  // loaded modules is less than ideal. Uniqueness for FileEntry nodes is
+  // maintained by FileManager, which in turn uses inode numbers on hosts
+  // that support that. When coupled with the module cache's proclivity for
+  // turning over and deleting stale PCMs, this means entries for different
+  // module files can wind up reusing the same underlying inode. When this
+  // happens, subsequent accesses to the Modules map will disagree on the
+  // ModuleFile associated with a given file. In general, it is not sufficient
+  // to resolve this conundrum with a type like FileEntryRef that stores the
+  // name of the FileEntry node on first access because of path canonicalization
+  // issues. However, the paths constructed for implicit module builds are
+  // fully under Clang's control. We *can*, therefore, rely on their structure
+  // being consistent across operating systems and across subsequent accesses
+  // to the Modules map.
+  auto implicitModuleNamesMatch = [](ModuleKind Kind, const ModuleFile *MF,
+                                     const FileEntry *Entry) -> bool {
+    if (Kind != MK_ImplicitModule)
+      return true;
+    return Entry->getName() == MF->FileName;
+  };
 
-    Module = ModuleEntry;
-    updateModuleImports(*ModuleEntry, ImportedBy, ImportLoc);
-    return AlreadyLoaded;
+  // Check whether we already loaded this module, before
+  if (ModuleFile *ModuleEntry = Modules.lookup(Entry)) {
+    if (implicitModuleNamesMatch(Type, ModuleEntry, Entry)) {
+      // Check the stored signature.
+      if (checkSignature(ModuleEntry->Signature, ExpectedSignature, ErrorStr))
+        return OutOfDate;
+
+      Module = ModuleEntry;
+      updateModuleImports(*ModuleEntry, ImportedBy, ImportLoc);
+      return AlreadyLoaded;
+    }
   }
 
   // Allocate a new module.
@@ -208,7 +231,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     return OutOfDate;
 
   // We're keeping this module.  Store it everywhere.
-  Module = Modules[EntryKey{Entry}] = NewModule.get();
+  Module = Modules[Entry] = NewModule.get();
 
   updateModuleImports(*NewModule, ImportedBy, ImportLoc);
 
@@ -255,7 +278,7 @@ void ModuleManager::removeModules(ModuleIterator First, ModuleMap *modMap) {
 
   // Delete the modules and erase them from the various structures.
   for (ModuleIterator victim = First; victim != Last; ++victim) {
-    Modules.erase(EntryKey{victim->File});
+    Modules.erase(victim->File);
 
     if (modMap) {
       StringRef ModuleName = victim->ModuleName;
@@ -274,7 +297,7 @@ ModuleManager::addInMemoryBuffer(StringRef FileName,
                                  std::unique_ptr<llvm::MemoryBuffer> Buffer) {
   const FileEntry *Entry =
       FileMgr.getVirtualFile(FileName, Buffer->getBufferSize(), 0);
-  InMemoryBuffers[EntryKey{Entry}] = std::move(Buffer);
+  InMemoryBuffers[Entry] = std::move(Buffer);
 }
 
 ModuleManager::VisitState *ModuleManager::allocateVisitState() {
