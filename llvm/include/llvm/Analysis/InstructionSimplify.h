@@ -26,6 +26,10 @@
 // same call context of that function (and not split between caller and callee
 // contexts of a directly recursive call, for example).
 //
+// Additionally, these routines can't simplify to the instructions that are not
+// def-reachable, meaning we can't just scan the basic block for instructions
+// to simplify to.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ANALYSIS_INSTRUCTIONSIMPLIFY_H
