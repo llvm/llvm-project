@@ -34,6 +34,7 @@ STATISTIC(NumPHIsOfInsertValues,
           "Number of phi-of-insertvalue turned into insertvalue-of-phis");
 STATISTIC(NumPHIsOfExtractValues,
           "Number of phi-of-extractvalue turned into extractvalue-of-phi");
+STATISTIC(NumPHICSEs, "Number of PHI's that got CSE'd");
 
 /// The PHI arguments will be folded into a single operation with a PHI node
 /// as input. The debug location of the single operation will be the merged
@@ -1425,6 +1426,32 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
         // this in this case.
       }
     }
+
+  // Is there an identical PHI node in this basic block?
+  for (PHINode &IdenticalPN : PN.getParent()->phis()) {
+    // Ignore the PHI node itself.
+    if (&IdenticalPN == &PN)
+      continue;
+    // Note that even though we've just canonicalized this PHI, due to the
+    // worklist visitation order, there are no guarantess that *every* PHI
+    // has been canonicalized, so we can't just compare operands ranges.
+    if (!PN.isIdenticalToWhenDefined(&IdenticalPN))
+      continue;
+    // Just use that PHI instead then.
+    ++NumPHICSEs;
+    // Note that we can't necessarily just replace the PN with IdenticalPN,
+    // because IdenticalPN might be *after* PN, and PN might have uses
+    // in PHI nodes inbetween the two.
+    // So we need to pick the earliest PHI node as being the canonical one.
+    Instruction *OldPN = &PN;
+    Instruction *NewPN = &IdenticalPN;
+    if (!NewPN->comesBefore(OldPN))
+      std::swap(OldPN, NewPN);
+    replaceInstUsesWith(*OldPN, NewPN);
+    // Also, just to be extra safe, make sure the non-canonical PHI goes away.
+    eraseInstFromFunction(*OldPN);
+    return nullptr; // Signal that thange happened.
+  }
 
   // If this is an integer PHI and we know that it has an illegal type, see if
   // it is only used by trunc or trunc(lshr) operations.  If so, we split the
