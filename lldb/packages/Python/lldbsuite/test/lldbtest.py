@@ -916,28 +916,18 @@ class Base(unittest2.TestCase):
         self.setPlatformWorkingDir()
         self.enableLogChannelsForCurrentTest()
 
-        lib_dir = os.environ["LLDB_LIB_DIR"]
-        self.dsym = None
+        self.lib_lldb = None
         self.framework_dir = None
-        self.darwinWithFramework = self.platformIsDarwin()
-        if sys.platform.startswith("darwin"):
-            # Handle the framework environment variable if it is set
-            if hasattr(lldbtest_config, 'lldb_framework_path'):
-                framework_path = lldbtest_config.lldb_framework_path
-                # Framework dir should be the directory containing the framework
-                self.framework_dir = framework_path[:framework_path.rfind('LLDB.framework')]
-            # If a framework dir was not specified assume the Xcode build
-            # directory layout where the framework is in LLDB_LIB_DIR.
-            else:
-                self.framework_dir = lib_dir
-            self.dsym = os.path.join(self.framework_dir, 'LLDB.framework', 'LLDB')
-            # If the framework binary doesn't exist, assume we didn't actually
-            # build a framework, and fallback to standard *nix behavior by
-            # setting framework_dir and dsym to None.
-            if not os.path.exists(self.dsym):
-                self.framework_dir = None
-                self.dsym = None
-                self.darwinWithFramework = False
+        self.darwinWithFramework = False
+
+        if sys.platform.startswith("darwin") and configuration.lldb_framework_path:
+            framework = configuration.lldb_framework_path
+            lib = os.path.join(framework, 'LLDB')
+            if os.path.exists(lib):
+                self.framework_dir = os.path.dirname(framework)
+                self.lib_lldb = lib
+                self.darwinWithFramework = self.platformIsDarwin()
+
         self.makeBuildDir()
 
     def setAsync(self, value):
@@ -1499,7 +1489,7 @@ class Base(unittest2.TestCase):
                  'EXE': exe_name,
                  'CFLAGS_EXTRAS': "%s %s" % (stdflag, stdlibflag),
                  'FRAMEWORK_INCLUDES': "-F%s" % self.framework_dir,
-                 'LD_EXTRAS': "%s -Wl,-rpath,%s" % (self.dsym, self.framework_dir),
+                 'LD_EXTRAS': "%s -Wl,-rpath,%s" % (self.lib_lldb, self.framework_dir),
                  }
         elif sys.platform.startswith('win'):
             d = {
@@ -1510,7 +1500,7 @@ class Base(unittest2.TestCase):
                                                  os.path.join(
                                                      os.environ["LLDB_SRC"],
                                                      "include")),
-                'LD_EXTRAS': "-L%s -lliblldb" % os.environ["LLDB_IMPLIB_DIR"]}
+                'LD_EXTRAS': "-L%s -lliblldb" % lib_dir}
         else:
             d = {
                 'CXX_SOURCES': sources,
@@ -1539,7 +1529,7 @@ class Base(unittest2.TestCase):
                  'DYLIB_NAME': lib_name,
                  'CFLAGS_EXTRAS': "%s -stdlib=libc++" % stdflag,
                  'FRAMEWORK_INCLUDES': "-F%s" % self.framework_dir,
-                 'LD_EXTRAS': "%s -Wl,-rpath,%s -dynamiclib" % (self.dsym, self.framework_dir),
+                 'LD_EXTRAS': "%s -Wl,-rpath,%s -dynamiclib" % (self.lib_lldb, self.framework_dir),
                  }
         elif self.getPlatform() == 'windows':
             d = {
@@ -1549,7 +1539,7 @@ class Base(unittest2.TestCase):
                                                os.path.join(
                                                    os.environ["LLDB_SRC"],
                                                    "include")),
-                'LD_EXTRAS': "-shared -l%s\liblldb.lib" % self.os.environ["LLDB_IMPLIB_DIR"]}
+                'LD_EXTRAS': "-shared -l%s\liblldb.lib" % lib_dir}
         else:
             d = {
                 'DYLIB_CXX_SOURCES': sources,
@@ -1759,13 +1749,11 @@ class Base(unittest2.TestCase):
         """
         existing_library_path = os.environ[
             self.dylibPath] if self.dylibPath in os.environ else None
-        lib_dir = os.environ["LLDB_LIB_DIR"]
         if existing_library_path:
-            return "%s:%s" % (existing_library_path, lib_dir)
-        elif sys.platform.startswith("darwin"):
-            return os.path.join(lib_dir, 'LLDB.framework')
-        else:
-            return lib_dir
+            return "%s:%s" % (existing_library_path, configuration.lldb_libs_dir)
+        if sys.platform.startswith("darwin") and configuration.lldb_framework_path:
+            return configuration.lldb_framework_path
+        return configuration.lldb_libs_dir
 
     def getLibcPlusPlusLibs(self):
         if self.getPlatform() in ('freebsd', 'linux', 'netbsd', 'openbsd'):
