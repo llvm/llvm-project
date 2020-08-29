@@ -5306,7 +5306,7 @@ static ICmpInst *canonicalizeCmpWithConstant(ICmpInst &I) {
 
 /// If we have a comparison with a non-canonical predicate, if we can update
 /// all the users, invert the predicate and adjust all the users.
-static CmpInst *canonicalizeICmpPredicate(CmpInst &I) {
+CmpInst *InstCombinerImpl::canonicalizeICmpPredicate(CmpInst &I) {
   // Is the predicate already canonical?
   CmpInst::Predicate Pred = I.getPredicate();
   if (InstCombiner::isCanonicalPredicate(Pred))
@@ -5334,7 +5334,7 @@ static CmpInst *canonicalizeICmpPredicate(CmpInst &I) {
       cast<BranchInst>(U)->swapSuccessors(); // swaps prof metadata too
       break;
     case Instruction::Xor:
-      U->replaceAllUsesWith(&I);
+      replaceInstUsesWith(cast<Instruction>(*U), &I);
       break;
     default:
       llvm_unreachable("Got unexpected user - out of sync with "
