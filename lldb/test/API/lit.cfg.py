@@ -203,6 +203,9 @@ if is_configured('yaml2obj'):
 if is_configured('lldb_libs_dir'):
   dotest_cmd += ['--lldb-libs-dir', config.lldb_libs_dir]
 
+if is_configured('lldb_framework_dir'):
+  dotest_cmd += ['--framework', config.lldb_framework_dir]
+
 if 'lldb-repro-capture' in config.available_features or \
     'lldb-repro-replay' in config.available_features:
   dotest_cmd += ['--skip-category=lldb-vscode', '--skip-category=std-module']
