@@ -191,6 +191,19 @@ static bool matchSelectWithOptionalNotCond(Value *V, Value *&Cond, Value *&A,
     Pred = ICmpInst::getSwappedPredicate(Pred);
   }
 
+  // Check for inverted variants of min/max by swapping operands.
+  switch (Pred) {
+  case CmpInst::ICMP_ULE:
+  case CmpInst::ICMP_UGE:
+  case CmpInst::ICMP_SLE:
+  case CmpInst::ICMP_SGE:
+    Pred = CmpInst::getInversePredicate(Pred);
+    std::swap(A, B);
+    break;
+  default:
+    break;
+  }
+
   switch (Pred) {
   case CmpInst::ICMP_UGT: Flavor = SPF_UMAX; break;
   case CmpInst::ICMP_ULT: Flavor = SPF_UMIN; break;
