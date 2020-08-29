@@ -3924,12 +3924,18 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
   if (!match(CondVal, m_ICmp(Pred, m_Value(CmpLHS), m_Value(CmpRHS))))
     return nullptr;
 
-  if (ICmpInst::isEquality(Pred) && match(CmpRHS, m_Zero())) {
+  // Canonicalize ne to eq predicate.
+  if (Pred == ICmpInst::ICMP_NE) {
+    Pred = ICmpInst::ICMP_EQ;
+    std::swap(TrueVal, FalseVal);
+  }
+
+  if (Pred == ICmpInst::ICMP_EQ && match(CmpRHS, m_Zero())) {
     Value *X;
     const APInt *Y;
     if (match(CmpLHS, m_And(m_Value(X), m_APInt(Y))))
       if (Value *V = simplifySelectBitTest(TrueVal, FalseVal, X, Y,
-                                           Pred == ICmpInst::ICMP_EQ))
+                                           /*TrueWhenUnset=*/true))
         return V;
 
     // Test for a bogus zero-shift-guard-op around funnel-shift or rotate.
@@ -3940,13 +3946,7 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
                                                           m_Value(ShAmt)));
     // (ShAmt == 0) ? fshl(X, *, ShAmt) : X --> X
     // (ShAmt == 0) ? fshr(*, X, ShAmt) : X --> X
-    if (match(TrueVal, isFsh) && FalseVal == X && CmpLHS == ShAmt &&
-        Pred == ICmpInst::ICMP_EQ)
-      return X;
-    // (ShAmt != 0) ? X : fshl(X, *, ShAmt) --> X
-    // (ShAmt != 0) ? X : fshr(*, X, ShAmt) --> X
-    if (match(FalseVal, isFsh) && TrueVal == X && CmpLHS == ShAmt &&
-        Pred == ICmpInst::ICMP_NE)
+    if (match(TrueVal, isFsh) && FalseVal == X && CmpLHS == ShAmt)
       return X;
 
     // Test for a zero-shift-guard-op around rotates. These are used to
@@ -3960,11 +3960,6 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
                                 m_Intrinsic<Intrinsic::fshr>(m_Value(X),
                                                              m_Deferred(X),
                                                              m_Value(ShAmt)));
-    // (ShAmt != 0) ? fshl(X, X, ShAmt) : X --> fshl(X, X, ShAmt)
-    // (ShAmt != 0) ? fshr(X, X, ShAmt) : X --> fshr(X, X, ShAmt)
-    if (match(TrueVal, isRotate) && FalseVal == X && CmpLHS == ShAmt &&
-        Pred == ICmpInst::ICMP_NE)
-      return TrueVal;
     // (ShAmt == 0) ? X : fshl(X, X, ShAmt) --> fshl(X, X, ShAmt)
     // (ShAmt == 0) ? X : fshr(X, X, ShAmt) --> fshr(X, X, ShAmt)
     if (match(FalseVal, isRotate) && TrueVal == X && CmpLHS == ShAmt &&
@@ -3991,17 +3986,6 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
         SimplifyWithOpReplaced(TrueVal, CmpRHS, CmpLHS, Q, MaxRecurse) ==
             FalseVal)
       return FalseVal;
-  } else if (Pred == ICmpInst::ICMP_NE) {
-    if (SimplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, Q, MaxRecurse) ==
-            FalseVal ||
-        SimplifyWithOpReplaced(TrueVal, CmpRHS, CmpLHS, Q, MaxRecurse) ==
-            FalseVal)
-      return TrueVal;
-    if (SimplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q, MaxRecurse) ==
-            TrueVal ||
-        SimplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, Q, MaxRecurse) ==
-            TrueVal)
-      return TrueVal;
   }
 
   return nullptr;
