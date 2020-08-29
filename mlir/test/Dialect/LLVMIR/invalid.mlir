@@ -48,7 +48,7 @@ func @alloca_missing_input_type() {
 
 // -----
 
-func @alloca_mising_result_type() {
+func @alloca_missing_result_type() {
   // expected-error@+1 {{expected trailing function type with one argument and one result}}
   llvm.alloca %size x !llvm.i32 : (!llvm.i64) -> ()
 }

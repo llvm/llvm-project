@@ -33,6 +33,9 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
   ModuleOp module = getOperation();
   LLVMTypeConverter converter(&getContext());
 
+  // Encode global variable's descriptor set and binding if they exist.
+  encodeBindAttribute(module);
+
   OwningRewritePatternList patterns;
 
   populateSPIRVToLLVMTypeConversion(converter);
@@ -45,7 +48,7 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
   target.addIllegalDialect<spirv::SPIRVDialect>();
   target.addLegalDialect<LLVM::LLVMDialect>();
 
-  // set `ModuleOp` and `ModuleTerminatorOp` as legal for `spv.module`
+  // Set `ModuleOp` and `ModuleTerminatorOp` as legal for `spv.module`
   // conversion.
   target.addLegalOp<ModuleOp>();
   target.addLegalOp<ModuleTerminatorOp>();

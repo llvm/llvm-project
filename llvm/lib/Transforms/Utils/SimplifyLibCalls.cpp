@@ -693,8 +693,6 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
                            Offset);
       }
     }
-
-    return nullptr;
   }
 
   // strlen(x?"foo":"bars") --> x ? 3 : 4

@@ -19,7 +19,7 @@ define float @test_return_f1(float %f.coerce) {
   ; ALL:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; ALL:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.f
   ; ALL:   G_STORE [[TRUNC]](s32), [[FRAME_INDEX1]](p0) :: (store 4 into %ir.coerce.dive2)
-  ; ALL:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+  ; ALL:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
   ; ALL:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load 4 from %ir.coerce.dive13)
   ; ALL:   [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[LOAD]](s32)
   ; ALL:   $xmm0 = COPY [[ANYEXT]](s128)
@@ -49,7 +49,7 @@ define double @test_return_d1(double %d.coerce) {
   ; ALL:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; ALL:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.d
   ; ALL:   G_STORE [[TRUNC]](s64), [[FRAME_INDEX1]](p0) :: (store 8 into %ir.coerce.dive2)
-  ; ALL:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store 1 into %ir.0, align 8), (load 1 from %ir.1, align 8)
+  ; ALL:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store 1 into %ir.0, align 8), (load 1 from %ir.1, align 8)
   ; ALL:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load 8 from %ir.coerce.dive13)
   ; ALL:   [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[LOAD]](s64)
   ; ALL:   $xmm0 = COPY [[ANYEXT]](s128)
@@ -82,7 +82,7 @@ define { double, double } @test_return_d2(double %d.coerce0, double %d.coerce1) 
   ; ALL:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; ALL:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C1]](s64)
   ; ALL:   G_STORE [[TRUNC1]](s64), [[PTR_ADD]](p0) :: (store 8 into %ir.2)
-  ; ALL:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store 1 into %ir.3, align 8), (load 1 from %ir.4, align 8)
+  ; ALL:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store 1 into %ir.3, align 8), (load 1 from %ir.4, align 8)
   ; ALL:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load 8 from %ir.5)
   ; ALL:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C1]](s64)
   ; ALL:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD1]](p0) :: (dereferenceable load 8 from %ir.5 + 8)
@@ -116,7 +116,7 @@ define i32 @test_return_i1(i32 %i.coerce) {
   ; ALL:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; ALL:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.i
   ; ALL:   G_STORE [[COPY]](s32), [[FRAME_INDEX1]](p0) :: (store 4 into %ir.coerce.dive2)
-  ; ALL:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+  ; ALL:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
   ; ALL:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load 4 from %ir.coerce.dive13)
   ; ALL:   $eax = COPY [[LOAD]](s32)
   ; ALL:   RET 0, implicit $eax
@@ -142,7 +142,7 @@ define i64 @test_return_i2(i64 %i.coerce) {
   ; ALL:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; ALL:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.i
   ; ALL:   G_STORE [[COPY]](s64), [[FRAME_INDEX1]](p0) :: (store 8 into %ir.0, align 4)
-  ; ALL:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store 1 into %ir.1, align 4), (load 1 from %ir.2, align 4)
+  ; ALL:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store 1 into %ir.1, align 4), (load 1 from %ir.2, align 4)
   ; ALL:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load 8 from %ir.3, align 4)
   ; ALL:   $rax = COPY [[LOAD]](s64)
   ; ALL:   RET 0, implicit $rax
@@ -174,9 +174,9 @@ define { i64, i32 } @test_return_i3(i64 %i.coerce0, i32 %i.coerce1) {
   ; ALL:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; ALL:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX2]], [[C1]](s64)
   ; ALL:   G_STORE [[COPY1]](s32), [[PTR_ADD]](p0) :: (store 4 into %ir.1)
-  ; ALL:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[FRAME_INDEX1]](p0), [[FRAME_INDEX2]](p0), [[C]](s64), 0 :: (store 1 into %ir.2, align 4), (load 1 from %ir.3, align 4)
-  ; ALL:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store 1 into %ir.4, align 4), (load 1 from %ir.5, align 4)
-  ; ALL:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[FRAME_INDEX3]](p0), [[FRAME_INDEX]](p0), [[C]](s64), 0 :: (store 1 into %ir.6, align 8), (load 1 from %ir.7, align 4)
+  ; ALL:   G_MEMCPY [[FRAME_INDEX1]](p0), [[FRAME_INDEX2]](p0), [[C]](s64), 0 :: (store 1 into %ir.2, align 4), (load 1 from %ir.3, align 4)
+  ; ALL:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store 1 into %ir.4, align 4), (load 1 from %ir.5, align 4)
+  ; ALL:   G_MEMCPY [[FRAME_INDEX3]](p0), [[FRAME_INDEX]](p0), [[C]](s64), 0 :: (store 1 into %ir.6, align 8), (load 1 from %ir.7, align 4)
   ; ALL:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX3]](p0) :: (dereferenceable load 8 from %ir.tmp)
   ; ALL:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX3]], [[C1]](s64)
   ; ALL:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (dereferenceable load 4 from %ir.tmp + 8, align 8)
@@ -218,7 +218,7 @@ define { i64, i64 } @test_return_i4(i64 %i.coerce0, i64 %i.coerce1) {
   ; ALL:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; ALL:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX1]], [[C1]](s64)
   ; ALL:   G_STORE [[COPY1]](s64), [[PTR_ADD]](p0) :: (store 8 into %ir.2, align 4)
-  ; ALL:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store 1 into %ir.3, align 4), (load 1 from %ir.4, align 4)
+  ; ALL:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store 1 into %ir.3, align 4), (load 1 from %ir.4, align 4)
   ; ALL:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load 8 from %ir.5, align 4)
   ; ALL:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C1]](s64)
   ; ALL:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD1]](p0) :: (dereferenceable load 8 from %ir.5 + 8, align 4)

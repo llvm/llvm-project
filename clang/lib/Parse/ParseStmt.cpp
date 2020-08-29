@@ -1135,9 +1135,17 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
   SourceLocation CloseLoc = Tok.getLocation();
 
   // We broke out of the while loop because we found a '}' or EOF.
-  if (!T.consumeClose())
+  if (!T.consumeClose()) {
+    // If this is the '})' of a statement expression, check that it's written
+    // in a sensible way.
+    if (isStmtExpr && Tok.is(tok::r_paren))
+      checkCompoundToken(CloseLoc, tok::r_brace, CompoundToken::StmtExprEnd);
+  } else {
     // Recover by creating a compound statement with what we parsed so far,
-    // instead of dropping everything and returning StmtError();
+    // instead of dropping everything and returning StmtError().
+  }
+
+  if (T.getCloseLocation().isValid())
     CloseLoc = T.getCloseLocation();
 
   return Actions.ActOnCompoundStmt(T.getOpenLocation(), CloseLoc,

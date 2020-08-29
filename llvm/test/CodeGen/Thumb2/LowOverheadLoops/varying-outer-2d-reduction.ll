@@ -53,24 +53,33 @@ define dso_local void @varying_outer_2d_reduction(i16* nocapture readonly %Input
 ; ENABLED-NEXT:    movs r7, #1
 ; ENABLED-NEXT:    subs r0, #4
 ; ENABLED-NEXT:    subs r4, r2, r6
-; ENABLED-NEXT:    vmov.i32 q0, #0x0
+; ENABLED-NEXT:    vmov.i32 q1, #0x0
 ; ENABLED-NEXT:    add.w r8, r7, r0, lsr #2
+; ENABLED-NEXT:    sub.w r0, r12, r6
+; ENABLED-NEXT:    bic r0, r0, #3
+; ENABLED-NEXT:    subs r0, #4
+; ENABLED-NEXT:    add.w r0, r7, r0, lsr #2
 ; ENABLED-NEXT:    mov r7, r10
-; ENABLED-NEXT:    dlstp.32 lr, r4
+; ENABLED-NEXT:    dls lr, r0
 ; ENABLED-NEXT:    ldr r0, [sp] @ 4-byte Reload
-; ENABLED-NEXT:  .LBB0_6: @ %vector.body
+; ENABLED:  .LBB0_6: @ %vector.body
 ; ENABLED-NEXT:    @ Parent Loop BB0_4 Depth=1
 ; ENABLED-NEXT:    @ => This Inner Loop Header: Depth=2
-; ENABLED-NEXT:    vldrh.s32 q1, [r0], #8
-; ENABLED-NEXT:    vldrh.s32 q2, [r7], #8
+; ENABLED-NEXT:    vctp.32 r4
+; ENABLED-NEXT:    vmov q0, q1
+; ENABLED-NEXT:    vpstt
+; ENABLED-NEXT:    vldrht.s32 q1, [r0], #8
+; ENABLED-NEXT:    vldrht.s32 q2, [r7], #8
 ; ENABLED-NEXT:    mov lr, r8
 ; ENABLED-NEXT:    vmul.i32 q1, q2, q1
 ; ENABLED-NEXT:    sub.w r8, r8, #1
 ; ENABLED-NEXT:    vshl.s32 q1, r5
-; ENABLED-NEXT:    vadd.i32 q0, q1, q0
-; ENABLED-NEXT:    letp lr, .LBB0_6
+; ENABLED-NEXT:    subs r4, #4
+; ENABLED-NEXT:    vadd.i32 q1, q1, q0
+; ENABLED-NEXT:    le lr, .LBB0_6
 ; ENABLED-NEXT:  @ %bb.7: @ %middle.block
 ; ENABLED-NEXT:    @ in Loop: Header=BB0_4 Depth=1
+; ENABLED-NEXT:    vpsel q0, q1, q0
 ; ENABLED-NEXT:    vaddv.u32 r0, q0
 ; ENABLED-NEXT:    b .LBB0_3
 ; ENABLED-NEXT:  .LBB0_8: @ %for.end17
@@ -103,7 +112,7 @@ define dso_local void @varying_outer_2d_reduction(i16* nocapture readonly %Input
 ; NOREDUCTIONS-NEXT:    adds r6, #1
 ; NOREDUCTIONS-NEXT:    add.w r10, r10, #2
 ; NOREDUCTIONS-NEXT:    cmp r6, r3
-; NOREDUCTIONS-NEXT:    beq .LBB0_8
+; NOREDUCTIONS:         beq .LBB0_8
 ; NOREDUCTIONS-NEXT:  .LBB0_4: @ %for.body
 ; NOREDUCTIONS-NEXT:    @ =>This Loop Header: Depth=1
 ; NOREDUCTIONS-NEXT:    @ Child Loop BB0_6 Depth 2
@@ -115,24 +124,33 @@ define dso_local void @varying_outer_2d_reduction(i16* nocapture readonly %Input
 ; NOREDUCTIONS-NEXT:    movs r7, #1
 ; NOREDUCTIONS-NEXT:    subs r0, #4
 ; NOREDUCTIONS-NEXT:    subs r4, r2, r6
-; NOREDUCTIONS-NEXT:    vmov.i32 q0, #0x0
+; NOREDUCTIONS-NEXT:    vmov.i32 q1, #0x0
 ; NOREDUCTIONS-NEXT:    add.w r8, r7, r0, lsr #2
+; NOREDUCTIONS-NEXT:    sub.w r0, r12, r6
+; NOREDUCTIONS-NEXT:    bic r0, r0, #3
+; NOREDUCTIONS-NEXT:    subs r0, #4
+; NOREDUCTIONS-NEXT:    add.w r0, r7, r0, lsr #2
 ; NOREDUCTIONS-NEXT:    mov r7, r10
-; NOREDUCTIONS-NEXT:    dlstp.32 lr, r4
-; NOREDUCTIONS-NEXT:    ldr r0, [sp] @ 4-byte Reload
+; NOREDUCTIONS-NEXT:    dls lr, r0
+; NOREDUCTIONS:         ldr r0, [sp] @ 4-byte Reload
 ; NOREDUCTIONS-NEXT:  .LBB0_6: @ %vector.body
 ; NOREDUCTIONS-NEXT:    @ Parent Loop BB0_4 Depth=1
 ; NOREDUCTIONS-NEXT:    @ => This Inner Loop Header: Depth=2
-; NOREDUCTIONS-NEXT:    vldrh.s32 q1, [r0], #8
-; NOREDUCTIONS-NEXT:    vldrh.s32 q2, [r7], #8
+; NOREDUCTIONS-NEXT:    vctp.32 r4
+; NOREDUCTIONS-NEXT:    vmov q0, q1
+; NOREDUCTIONS-NEXT:    vpstt
+; NOREDUCTIONS-NEXT:    vldrht.s32 q1, [r0], #8
+; NOREDUCTIONS-NEXT:    vldrht.s32 q2, [r7], #8
 ; NOREDUCTIONS-NEXT:    mov lr, r8
 ; NOREDUCTIONS-NEXT:    vmul.i32 q1, q2, q1
 ; NOREDUCTIONS-NEXT:    sub.w r8, r8, #1
 ; NOREDUCTIONS-NEXT:    vshl.s32 q1, r5
-; NOREDUCTIONS-NEXT:    vadd.i32 q0, q1, q0
-; NOREDUCTIONS-NEXT:    letp lr, .LBB0_6
+; NOREDUCTIONS-NEXT:    subs r4, #4
+; NOREDUCTIONS-NEXT:    vadd.i32 q1, q1, q0
+; NOREDUCTIONS-NEXT:    le lr, .LBB0_6
 ; NOREDUCTIONS-NEXT:  @ %bb.7: @ %middle.block
 ; NOREDUCTIONS-NEXT:    @ in Loop: Header=BB0_4 Depth=1
+; NOREDUCTIONS-NEXT:    vpsel q0, q1, q0
 ; NOREDUCTIONS-NEXT:    vaddv.u32 r0, q0
 ; NOREDUCTIONS-NEXT:    b .LBB0_3
 ; NOREDUCTIONS-NEXT:  .LBB0_8: @ %for.end17

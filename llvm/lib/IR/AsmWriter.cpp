@@ -656,9 +656,9 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
     VectorType *PTy = cast<VectorType>(Ty);
     ElementCount EC = PTy->getElementCount();
     OS << "<";
-    if (EC.Scalable)
+    if (EC.isScalable())
       OS << "vscale x ";
-    OS << EC.Min << " x ";
+    OS << EC.getKnownMinValue() << " x ";
     print(PTy->getElementType(), OS);
     OS << '>';
     return;
@@ -1511,7 +1511,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
   }
 
   if (isa<ConstantVector>(CV) || isa<ConstantDataVector>(CV)) {
-    auto *CVVTy = cast<VectorType>(CV->getType());
+    auto *CVVTy = cast<FixedVectorType>(CV->getType());
     Type *ETy = CVVTy->getElementType();
     Out << '<';
     TypePrinter.print(ETy, Out);

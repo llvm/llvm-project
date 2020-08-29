@@ -285,6 +285,7 @@ define arm_aapcs_vfpcc i32 @t10(float %x) nounwind {
 ; CHECK-NEXT:  cmp	r0, #0
 ; CHECK-NEXT:  movne	r0, #0
 ; CHECK-NEXT:  bxne	lr
+; CHECK-NEXT:  LBB9_1:
 ; CHECK-NEXT:  trap
 entry:
   %0 = shufflevector <4 x float> zeroinitializer, <4 x float> undef, <4 x i32> zeroinitializer ; <<4 x float>> [#uses=1]

@@ -2044,7 +2044,12 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
     switch (II->getIntrinsicID()) {
     default: break;
     case Intrinsic::assume: {
+      Value *Operand = II->getOperand(0);
       II->eraseFromParent();
+      // Prune the operand, it's most likely dead.
+      RecursivelyDeleteTriviallyDeadInstructions(
+          Operand, TLInfo, nullptr,
+          [&](Value *V) { removeAllAssertingVHReferences(V); });
       return true;
     }
 
@@ -6957,10 +6962,10 @@ class VectorPromoteHelper {
     if (UseSplat)
       return ConstantVector::getSplat(EC, Val);
 
-    if (!EC.Scalable) {
+    if (!EC.isScalable()) {
       SmallVector<Constant *, 4> ConstVec;
       UndefValue *UndefVal = UndefValue::get(Val->getType());
-      for (unsigned Idx = 0; Idx != EC.Min; ++Idx) {
+      for (unsigned Idx = 0; Idx != EC.getKnownMinValue(); ++Idx) {
         if (Idx == ExtractIdx)
           ConstVec.push_back(Val);
         else

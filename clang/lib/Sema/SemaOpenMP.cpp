@@ -2417,17 +2417,20 @@ bool Sema::isOpenMPGlobalCapturedDecl(ValueDecl *D, unsigned Level,
 
   if (const auto *VD = dyn_cast<VarDecl>(D)) {
     if (!VD->hasLocalStorage()) {
+      if (isInOpenMPTargetExecutionDirective())
+        return true;
       DSAStackTy::DSAVarData TopDVar =
           DSAStack->getTopDSA(D, /*FromParent=*/false);
       unsigned NumLevels =
           getOpenMPCaptureLevels(DSAStack->getDirective(Level));
       if (Level == 0)
         return (NumLevels == CaptureLevel + 1) && TopDVar.CKind != OMPC_shared;
-      DSAStackTy::DSAVarData DVar = DSAStack->getImplicitDSA(D, Level - 1);
-      return DVar.CKind != OMPC_shared ||
-             isOpenMPGlobalCapturedDecl(
-                 D, Level - 1,
-                 getOpenMPCaptureLevels(DSAStack->getDirective(Level - 1)) - 1);
+      do {
+        --Level;
+        DSAStackTy::DSAVarData DVar = DSAStack->getImplicitDSA(D, Level);
+        if (DVar.CKind != OMPC_shared)
+          return true;
+      } while (Level >= 0);
     }
   }
   return true;

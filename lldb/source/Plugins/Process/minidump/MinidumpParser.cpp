@@ -267,6 +267,88 @@ llvm::ArrayRef<minidump::Module> MinidumpParser::GetModuleList() {
   return {};
 }
 
+static bool
+CreateRegionsCacheFromLinuxMaps(MinidumpParser &parser,
+                                std::vector<MemoryRegionInfo> &regions) {
+  auto data = parser.GetStream(StreamType::LinuxMaps);
+  if (data.empty())
+    return false;
+  ParseLinuxMapRegions(llvm::toStringRef(data),
+                       [&](const lldb_private::MemoryRegionInfo &region,
+                           const lldb_private::Status &status) -> bool {
+                         if (status.Success())
+                           regions.push_back(region);
+                         return true;
+                       });
+  return !regions.empty();
+}
+
+/// Check for the memory regions starting at \a load_addr for a contiguous
+/// section that has execute permissions that matches the module path.
+///
+/// When we load a breakpad generated minidump file, we might have the
+/// /proc/<pid>/maps text for a process that details the memory map of the
+/// process that the minidump is describing. This checks the sorted memory
+/// regions for a section that has execute permissions. A sample maps files
+/// might look like:
+///
+/// 00400000-00401000 r--p 00000000 fd:01 2838574           /tmp/a.out
+/// 00401000-00402000 r-xp 00001000 fd:01 2838574           /tmp/a.out
+/// 00402000-00403000 r--p 00002000 fd:01 2838574           /tmp/a.out
+/// 00403000-00404000 r--p 00002000 fd:01 2838574           /tmp/a.out
+/// 00404000-00405000 rw-p 00003000 fd:01 2838574           /tmp/a.out
+/// ...
+///
+/// This function should return true when given 0x00400000 and "/tmp/a.out"
+/// is passed in as the path since it has a consecutive memory region for
+/// "/tmp/a.out" that has execute permissions at 0x00401000. This will help us
+/// differentiate if a file has been memory mapped into a process for reading
+/// and breakpad ends up saving a minidump file that has two module entries for
+/// a given file: one that is read only for the entire file, and then one that
+/// is the real executable that is loaded into memory for execution. For memory
+/// mapped files they will typically show up and r--p permissions and a range
+/// matcning the entire range of the file on disk:
+///
+/// 00800000-00805000 r--p 00000000 fd:01 2838574           /tmp/a.out
+/// 00805000-00806000 r-xp 00001000 fd:01 1234567           /usr/lib/libc.so
+///
+/// This function should return false when asked about 0x00800000 with
+/// "/tmp/a.out" as the path.
+///
+/// \param[in] path
+///   The path to the module to check for in the memory regions. Only sequential
+///   memory regions whose paths match this path will be considered when looking
+///   for execute permissions.
+///
+/// \param[in] regions
+///   A sorted list of memory regions obtained from a call to
+///   CreateRegionsCacheFromLinuxMaps.
+///
+/// \param[in] base_of_image
+///   The load address of this module from BaseOfImage in the modules list.
+///
+/// \return
+///   True if a contiguous region of memory belonging to the module with a
+///   matching path exists that has executable permissions. Returns false if
+///   \a regions is empty or if there are no regions with execute permissions
+///   that match \a path.
+
+static bool CheckForLinuxExecutable(ConstString path,
+                                    const MemoryRegionInfos &regions,
+                                    lldb::addr_t base_of_image) {
+  if (regions.empty())
+    return false;
+  lldb::addr_t addr = base_of_image;
+  MemoryRegionInfo region = MinidumpParser::GetMemoryRegionInfo(regions, addr);
+  while (region.GetName() == path) {
+    if (region.GetExecutable() == MemoryRegionInfo::eYes)
+      return true;
+    addr += region.GetRange().GetByteSize();
+    region = MinidumpParser::GetMemoryRegionInfo(regions, addr);
+  }
+  return false;
+}
+
 std::vector<const minidump::Module *> MinidumpParser::GetFilteredModuleList() {
   Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES);
   auto ExpectedModules = GetMinidumpFile().getModuleList();
@@ -275,6 +357,15 @@ std::vector<const minidump::Module *> MinidumpParser::GetFilteredModuleList() {
                    "Failed to read module list: {0}");
     return {};
   }
+
+  // Create memory regions from the linux maps only. We do this to avoid issues
+  // with breakpad generated minidumps where if someone has mmap'ed a shared
+  // library into memory to accesss its data in the object file, we can get a
+  // minidump with two mappings for a binary: one whose base image points to a
+  // memory region that is read + execute and one that is read only.
+  MemoryRegionInfos linux_regions;
+  if (CreateRegionsCacheFromLinuxMaps(*this, linux_regions))
+    llvm::sort(linux_regions);
 
   // map module_name -> filtered_modules index
   typedef llvm::StringMap<size_t> MapType;
@@ -304,10 +395,25 @@ std::vector<const minidump::Module *> MinidumpParser::GetFilteredModuleList() {
       // "filtered_modules.size()" above.
       filtered_modules.push_back(&module);
     } else {
+      // We have a duplicate module entry. Check the linux regions to see if
+      // the module we already have is not really a mapped executable. If it
+      // isn't check to see if the current duplicate module entry is a real
+      // mapped executable, and if so, replace it. This can happen when a
+      // process mmap's in the file for an executable in order to read bytes
+      // from the executable file. A memory region mapping will exist for the
+      // mmap'ed version and for the loaded executable, but only one will have
+      // a consecutive region that is executable in the memory regions.
+      auto dup_module = filtered_modules[iter->second];
+      ConstString name(*ExpectedName);
+      if (!CheckForLinuxExecutable(name, linux_regions,
+                                   dup_module->BaseOfImage) &&
+          CheckForLinuxExecutable(name, linux_regions, module.BaseOfImage)) {
+        filtered_modules[iter->second] = &module;
+        continue;
+      }
       // This module has been seen. Modules are sometimes mentioned multiple
       // times when they are mapped discontiguously, so find the module with
       // the lowest "base_of_image" and use that as the filtered module.
-      auto dup_module = filtered_modules[iter->second];
       if (module.BaseOfImage < dup_module->BaseOfImage)
         filtered_modules[iter->second] = &module;
     }
@@ -412,22 +518,6 @@ llvm::ArrayRef<uint8_t> MinidumpParser::GetMemory(lldb::addr_t addr,
 }
 
 static bool
-CreateRegionsCacheFromLinuxMaps(MinidumpParser &parser,
-                                std::vector<MemoryRegionInfo> &regions) {
-  auto data = parser.GetStream(StreamType::LinuxMaps);
-  if (data.empty())
-    return false;
-  ParseLinuxMapRegions(llvm::toStringRef(data),
-                       [&](const lldb_private::MemoryRegionInfo &region,
-                           const lldb_private::Status &status) -> bool {
-    if (status.Success())
-      regions.push_back(region);
-    return true;
-  });
-  return !regions.empty();
-}
-
-static bool
 CreateRegionsCacheFromMemoryInfoList(MinidumpParser &parser,
                                      std::vector<MemoryRegionInfo> &regions) {
   Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES);
@@ -500,10 +590,10 @@ CreateRegionsCacheFromMemory64List(MinidumpParser &parser,
   uint64_t base_rva;
   std::tie(memory64_list, base_rva) =
       MinidumpMemoryDescriptor64::ParseMemory64List(data);
-  
+
   if (memory64_list.empty())
     return false;
-    
+
   regions.reserve(memory64_list.size());
   for (const auto &memory_desc : memory64_list) {
     if (memory_desc.data_size == 0)
@@ -596,4 +686,31 @@ MinidumpParser::GetStreamTypeAsString(StreamType stream_type) {
     ENUM_TO_CSTR(FacebookLogcat);
   }
   return "unknown stream type";
+}
+
+MemoryRegionInfo
+MinidumpParser::GetMemoryRegionInfo(const MemoryRegionInfos &regions,
+                                    lldb::addr_t load_addr) {
+  MemoryRegionInfo region;
+  auto pos = llvm::upper_bound(regions, load_addr);
+  if (pos != regions.begin() &&
+      std::prev(pos)->GetRange().Contains(load_addr)) {
+    return *std::prev(pos);
+  }
+
+  if (pos == regions.begin())
+    region.GetRange().SetRangeBase(0);
+  else
+    region.GetRange().SetRangeBase(std::prev(pos)->GetRange().GetRangeEnd());
+
+  if (pos == regions.end())
+    region.GetRange().SetRangeEnd(UINT64_MAX);
+  else
+    region.GetRange().SetRangeEnd(pos->GetRange().GetRangeBase());
+
+  region.SetReadable(MemoryRegionInfo::eNo);
+  region.SetWritable(MemoryRegionInfo::eNo);
+  region.SetExecutable(MemoryRegionInfo::eNo);
+  region.SetMapped(MemoryRegionInfo::eNo);
+  return region;
 }

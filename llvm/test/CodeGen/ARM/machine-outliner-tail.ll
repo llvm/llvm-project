@@ -7,6 +7,8 @@
 ; RUN: | FileCheck %s --check-prefix=MACHO
 ; RUN: llc -enable-machine-outliner -verify-machineinstrs -mtriple=thumbv5-- \
 ; RUN: --stop-after=machine-outliner < %s | FileCheck %s --check-prefix=THUMB1
+; RUN: llc -verify-machineinstrs -mtriple=thumbv8m.main \
+; RUN: --stop-after=machine-outliner < %s | FileCheck %s --check-prefix=THUMB
 
 ; ARM-LABEL: name:            OUTLINED_FUNCTION_0
 ; ARM: $r0 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
@@ -31,7 +33,7 @@
 
 ; THUMB1-NOT: OUTLINED_FUNCTION_0
 
-define void @a() {
+define void @a() #0 {
 entry:
   tail call void @z(i32 1, i32 2, i32 3, i32 4)
   ret void
@@ -39,8 +41,10 @@ entry:
 
 declare void @z(i32, i32, i32, i32)
 
-define dso_local void @b(i32* nocapture readnone %p) {
+define dso_local void @b(i32* nocapture readnone %p) #0 {
 entry:
   tail call void @z(i32 1, i32 2, i32 3, i32 4)
   ret void
 }
+
+attributes #0 = { minsize optsize }

@@ -43,16 +43,20 @@
 
 #include "InputFiles.h"
 #include "Config.h"
+#include "DriverUtils.h"
 #include "ExportTrie.h"
 #include "InputSection.h"
 #include "MachOStructs.h"
+#include "ObjC.h"
 #include "OutputSection.h"
+#include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Target.h"
 
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -114,7 +118,7 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
   return None;
 }
 
-static const load_command *findCommand(const mach_header_64 *hdr,
+const load_command *macho::findCommand(const mach_header_64 *hdr,
                                        uint32_t type) {
   const uint8_t *p =
       reinterpret_cast<const uint8_t *>(hdr) + sizeof(mach_header_64);
@@ -135,8 +139,10 @@ void InputFile::parseSections(ArrayRef<section_64> sections) {
   for (const section_64 &sec : sections) {
     InputSection *isec = make<InputSection>();
     isec->file = this;
-    isec->name = StringRef(sec.sectname, strnlen(sec.sectname, 16));
-    isec->segname = StringRef(sec.segname, strnlen(sec.segname, 16));
+    isec->name =
+        StringRef(sec.sectname, strnlen(sec.sectname, sizeof(sec.sectname)));
+    isec->segname =
+        StringRef(sec.segname, strnlen(sec.segname, sizeof(sec.segname)));
     isec->data = {isZeroFill(sec.flags) ? nullptr : buf + sec.offset,
                   static_cast<size_t>(sec.size)};
     if (sec.align >= 32)
@@ -230,7 +236,8 @@ void InputFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
       // Global defined symbol
       return symtab->addDefined(name, isec, value, sym.n_desc & N_WEAK_DEF);
     // Local defined symbol
-    return make<Defined>(name, isec, value, sym.n_desc & N_WEAK_DEF);
+    return make<Defined>(name, isec, value, sym.n_desc & N_WEAK_DEF,
+                         /*isExternal=*/false);
   };
 
   for (size_t i = 0, n = nList.size(); i < n; ++i) {
@@ -340,6 +347,60 @@ ObjFile::ObjFile(MemoryBufferRef mb) : InputFile(ObjKind, mb) {
     parseRelocations(sectionHeaders[i], subsections[i]);
 }
 
+// The path can point to either a dylib or a .tbd file.
+static Optional<DylibFile *> loadDylib(StringRef path, DylibFile *umbrella) {
+  Optional<MemoryBufferRef> mbref = readFile(path);
+  if (!mbref) {
+    error("could not read dylib file at " + path);
+    return {};
+  }
+
+  file_magic magic = identify_magic(mbref->getBuffer());
+  if (magic == file_magic::tapi_file)
+    return makeDylibFromTAPI(*mbref, umbrella);
+  assert(magic == file_magic::macho_dynamically_linked_shared_lib);
+  return make<DylibFile>(*mbref, umbrella);
+}
+
+// TBD files are parsed into a series of TAPI documents (InterfaceFiles), with
+// the first document storing child pointers to the rest of them. When we are
+// processing a given TBD file, we store that top-level document here. When
+// processing re-exports, we search its children for potentially matching
+// documents in the same TBD file. Note that the children themselves don't
+// point to further documents, i.e. this is a two-level tree.
+//
+// ld64 allows a TAPI re-export to reference documents nested within other TBD
+// files, but that seems like a strange design, so this is an intentional
+// deviation.
+const InterfaceFile *currentTopLevelTapi = nullptr;
+
+// Re-exports can either refer to on-disk files, or to documents within .tbd
+// files.
+static Optional<DylibFile *> loadReexport(StringRef path, DylibFile *umbrella) {
+  if (path::is_absolute(path, path::Style::posix))
+    for (StringRef root : config->systemLibraryRoots)
+      if (Optional<std::string> dylibPath =
+              resolveDylibPath((root + path).str()))
+        return loadDylib(*dylibPath, umbrella);
+
+  // TODO: Expand @loader_path, @executable_path etc
+
+  if (currentTopLevelTapi != nullptr) {
+    for (InterfaceFile &child :
+         make_pointee_range(currentTopLevelTapi->documents())) {
+      if (path == child.getInstallName())
+        return make<DylibFile>(child, umbrella);
+      assert(child.documents().empty());
+    }
+  }
+
+  if (Optional<std::string> dylibPath = resolveDylibPath(path))
+    return loadDylib(*dylibPath, umbrella);
+
+  error("unable to locate re-export with install name " + path);
+  return {};
+}
+
 DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
     : InputFile(DylibKind, mb) {
   if (umbrella == nullptr)
@@ -358,6 +419,9 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
   }
 
   // Initialize symbols.
+  // TODO: if a re-exported dylib is public (lives in /usr/lib or
+  // /System/Library/Frameworks), we should bind to its symbols directly
+  // instead of the re-exporting umbrella library.
   if (const load_command *cmd = findCommand(hdr, LC_DYLD_INFO_ONLY)) {
     auto *c = reinterpret_cast<const dyld_info_command *>(cmd);
     parseTrie(buf + c->export_off, c->export_size,
@@ -386,18 +450,13 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella)
     auto *c = reinterpret_cast<const dylib_command *>(cmd);
     StringRef reexportPath =
         reinterpret_cast<const char *>(c) + read32le(&c->dylib.name);
-    // TODO: Expand @loader_path, @executable_path etc in reexportPath
-    Optional<MemoryBufferRef> buffer = readFile(reexportPath);
-    if (!buffer) {
-      error("unable to read re-exported dylib at " + reexportPath);
-      return;
-    }
-    reexported.push_back(make<DylibFile>(*buffer, umbrella));
+    if (Optional<DylibFile *> reexport = loadReexport(reexportPath, umbrella))
+      reexported.push_back(*reexport);
   }
 }
 
 DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella)
-    : InputFile(DylibKind, MemoryBufferRef()) {
+    : InputFile(DylibKind, interface) {
   if (umbrella == nullptr)
     umbrella = this;
 
@@ -420,22 +479,31 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella)
     case SymbolKind::ObjectiveCClass:
       // XXX ld64 only creates these symbols when -ObjC is passed in. We may
       // want to emulate that.
-      addSymbol("_OBJC_CLASS_$_" + symbol->getName());
-      addSymbol("_OBJC_METACLASS_$_" + symbol->getName());
+      addSymbol(objc::klass + symbol->getName());
+      addSymbol(objc::metaclass + symbol->getName());
       break;
     case SymbolKind::ObjectiveCClassEHType:
-      addSymbol("_OBJC_EHTYPE_$_" + symbol->getName());
+      addSymbol(objc::ehtype + symbol->getName());
       break;
     case SymbolKind::ObjectiveCInstanceVariable:
-      addSymbol("_OBJC_IVAR_$_" + symbol->getName());
+      addSymbol(objc::ivar + symbol->getName());
       break;
     }
   }
-  // TODO(compnerd) properly represent the hierarchy of the documents as it is
-  // in theory possible to have re-exported dylibs from re-exported dylibs which
-  // should be parent'ed to the child.
-  for (const std::shared_ptr<InterfaceFile> &intf : interface.documents())
-    reexported.push_back(make<DylibFile>(*intf, umbrella));
+
+  bool isTopLevelTapi = false;
+  if (currentTopLevelTapi == nullptr) {
+    currentTopLevelTapi = &interface;
+    isTopLevelTapi = true;
+  }
+
+  for (InterfaceFileRef intfRef : interface.reexportedLibraries())
+    if (Optional<DylibFile *> reexport =
+            loadReexport(intfRef.getInstallName(), umbrella))
+      reexported.push_back(*reexport);
+
+  if (isTopLevelTapi)
+    currentTopLevelTapi = nullptr;
 }
 
 ArchiveFile::ArchiveFile(std::unique_ptr<llvm::object::Archive> &&f)

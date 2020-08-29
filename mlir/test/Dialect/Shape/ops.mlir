@@ -221,7 +221,7 @@ func @num_elements_shape(%arg : !shape.shape) -> !shape.size {
   return %result : !shape.size
 }
 
-// Testing nvoking shape function from another. shape_equal_shapes is merely
+// Testing invoking shape function from another. shape_equal_shapes is merely
 // a trivial helper function to invoke elsewhere.
 func @shape_equal_shapes(%a : !shape.value_shape, %b : !shape.value_shape) -> !shape.shape {
   %0 = shape.shape_of %a : !shape.value_shape -> !shape.shape

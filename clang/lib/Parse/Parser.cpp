@@ -227,6 +227,39 @@ bool Parser::expectIdentifier() {
   return true;
 }
 
+void Parser::checkCompoundToken(SourceLocation FirstTokLoc,
+                                tok::TokenKind FirstTokKind, CompoundToken Op) {
+  if (FirstTokLoc.isInvalid())
+    return;
+  SourceLocation SecondTokLoc = Tok.getLocation();
+
+  // We expect both tokens to come from the same FileID.
+  FileID FirstID = PP.getSourceManager().getFileID(FirstTokLoc);
+  FileID SecondID = PP.getSourceManager().getFileID(SecondTokLoc);
+  if (FirstID != SecondID) {
+    Diag(FirstTokLoc, (FirstTokLoc.isMacroID() || SecondTokLoc.isMacroID())
+                          ? diag::warn_compound_token_split_by_macro
+                          : diag::warn_compound_token_split_by_file)
+        << (FirstTokKind == Tok.getKind()) << FirstTokKind << Tok.getKind()
+        << static_cast<int>(Op) << SourceRange(FirstTokLoc);
+    Diag(SecondTokLoc, diag::note_compound_token_split_second_token_here)
+        << (FirstTokKind == Tok.getKind()) << Tok.getKind()
+        << SourceRange(SecondTokLoc);
+    return;
+  }
+
+  // We expect the tokens to abut.
+  if (Tok.hasLeadingSpace()) {
+    SourceLocation SpaceLoc = PP.getLocForEndOfToken(FirstTokLoc);
+    if (SpaceLoc.isInvalid())
+      SpaceLoc = FirstTokLoc;
+    Diag(SpaceLoc, diag::warn_compound_token_split_by_whitespace)
+        << (FirstTokKind == Tok.getKind()) << FirstTokKind << Tok.getKind()
+        << static_cast<int>(Op) << SourceRange(FirstTokLoc, SecondTokLoc);
+    return;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Error recovery.
 //===----------------------------------------------------------------------===//

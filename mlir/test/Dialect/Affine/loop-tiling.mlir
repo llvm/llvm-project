@@ -208,7 +208,7 @@ func @trip_count_one(%arg0: memref<196608x1xf32>, %arg1: memref<196608x1xf32>)
   // CHECK: affine.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<196608x1xf32>
   return %arg1 : memref<196608x1xf32>
 }
-// To make sure SEPRATE-DAGs further below do not match with something above.
+// To make sure SEPARATE-DAGs further below do not match with something above.
 // SEPARATE: return
 
 // -----

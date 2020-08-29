@@ -1283,16 +1283,33 @@ bool IRTranslator::translateGetElementPtr(const User &U,
 
 bool IRTranslator::translateMemFunc(const CallInst &CI,
                                     MachineIRBuilder &MIRBuilder,
-                                    Intrinsic::ID ID) {
+                                    unsigned Opcode) {
 
   // If the source is undef, then just emit a nop.
   if (isa<UndefValue>(CI.getArgOperand(1)))
     return true;
 
-  ArrayRef<Register> Res;
-  auto ICall = MIRBuilder.buildIntrinsic(ID, Res, true);
-  for (auto AI = CI.arg_begin(), AE = CI.arg_end(); std::next(AI) != AE; ++AI)
-    ICall.addUse(getOrCreateVReg(**AI));
+  SmallVector<Register, 3> SrcRegs;
+
+  unsigned MinPtrSize = UINT_MAX;
+  for (auto AI = CI.arg_begin(), AE = CI.arg_end(); std::next(AI) != AE; ++AI) {
+    Register SrcReg = getOrCreateVReg(**AI);
+    LLT SrcTy = MRI->getType(SrcReg);
+    if (SrcTy.isPointer())
+      MinPtrSize = std::min(SrcTy.getSizeInBits(), MinPtrSize);
+    SrcRegs.push_back(SrcReg);
+  }
+
+  LLT SizeTy = LLT::scalar(MinPtrSize);
+
+  // The size operand should be the minimum of the pointer sizes.
+  Register &SizeOpReg = SrcRegs[SrcRegs.size() - 1];
+  if (MRI->getType(SizeOpReg) != SizeTy)
+    SizeOpReg = MIRBuilder.buildZExtOrTrunc(SizeTy, SizeOpReg).getReg(0);
+
+  auto ICall = MIRBuilder.buildInstr(Opcode);
+  for (Register SrcReg : SrcRegs)
+    ICall.addUse(SrcReg);
 
   Align DstAlign;
   Align SrcAlign;
@@ -1321,7 +1338,7 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
   ICall.addMemOperand(MF->getMachineMemOperand(
       MachinePointerInfo(CI.getArgOperand(0)),
       MachineMemOperand::MOStore | VolFlag, 1, DstAlign));
-  if (ID != Intrinsic::memset)
+  if (Opcode != TargetOpcode::G_MEMSET)
     ICall.addMemOperand(MF->getMachineMemOperand(
         MachinePointerInfo(CI.getArgOperand(1)),
         MachineMemOperand::MOLoad | VolFlag, 1, SrcAlign));
@@ -1713,9 +1730,11 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                             MachineInstr::copyFlagsFromInstruction(CI));
     return true;
   case Intrinsic::memcpy:
+    return translateMemFunc(CI, MIRBuilder, TargetOpcode::G_MEMCPY);
   case Intrinsic::memmove:
+    return translateMemFunc(CI, MIRBuilder, TargetOpcode::G_MEMMOVE);
   case Intrinsic::memset:
-    return translateMemFunc(CI, MIRBuilder, ID);
+    return translateMemFunc(CI, MIRBuilder, TargetOpcode::G_MEMSET);
   case Intrinsic::eh_typeid_for: {
     GlobalValue *GV = ExtractTypeInfo(CI.getArgOperand(0));
     Register Reg = getOrCreateVReg(CI);

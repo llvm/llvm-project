@@ -77,7 +77,7 @@ define float @test_v16f32(<16 x float> %a) nounwind {
 ; CHECK-NEXT:    fmaxnm v1.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    fmaxnm v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    fmaxnm v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    dup v1.2d, v0.d[1]
 ; CHECK-NEXT:    fmaxnm v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    dup v1.4s, v0.s[1]
 ; CHECK-NEXT:    fmaxnm v0.4s, v0.4s, v1.4s

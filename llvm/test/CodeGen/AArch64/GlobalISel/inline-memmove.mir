@@ -55,12 +55,12 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memmove), [[COPY]](p0), [[COPY1]](p0), [[COPY2]](s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    ; CHECK: G_MEMMOVE [[COPY]](p0), [[COPY1]](p0), [[COPY2]](s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = COPY $x2
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memmove), %0(p0), %1(p0), %2(s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    G_MEMMOVE %0(p0), %1(p0), %2(s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
     RET_ReallyLR
 
 ...
@@ -94,7 +94,7 @@ body:             |
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = G_CONSTANT i64 48
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memmove), %0(p0), %1(p0), %2(s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    G_MEMMOVE %0(p0), %1(p0), %2(s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
     RET_ReallyLR
 
 ...
@@ -111,12 +111,12 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 96
-    ; CHECK: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memmove), [[COPY]](p0), [[COPY1]](p0), [[C]](s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    ; CHECK: G_MEMMOVE [[COPY]](p0), [[COPY1]](p0), [[C]](s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
     ; CHECK: RET_ReallyLR
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = G_CONSTANT i64 96
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memmove), %0(p0), %1(p0), %2(s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    G_MEMMOVE %0(p0), %1(p0), %2(s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
     RET_ReallyLR
 
 ...
@@ -156,7 +156,7 @@ body:             |
     %0:_(p0) = COPY $x0
     %1:_(p0) = COPY $x1
     %2:_(s64) = G_CONSTANT i64 52
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memmove), %0(p0), %1(p0), %2(s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
+    G_MEMMOVE %0(p0), %1(p0), %2(s64), 1 :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
     RET_ReallyLR
 
 ...

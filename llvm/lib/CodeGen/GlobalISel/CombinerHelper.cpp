@@ -1385,13 +1385,11 @@ bool CombinerHelper::optimizeMemmove(MachineInstr &MI, Register Dst,
 }
 
 bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
+  const unsigned Opc = MI.getOpcode();
   // This combine is fairly complex so it's not written with a separate
   // matcher function.
-  assert(MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS);
-  Intrinsic::ID ID = (Intrinsic::ID)MI.getIntrinsicID();
-  assert((ID == Intrinsic::memcpy || ID == Intrinsic::memmove ||
-          ID == Intrinsic::memset) &&
-         "Expected a memcpy like intrinsic");
+  assert((Opc == TargetOpcode::G_MEMCPY || Opc == TargetOpcode::G_MEMMOVE ||
+          Opc == TargetOpcode::G_MEMSET) && "Expected memcpy like instruction");
 
   auto MMOIt = MI.memoperands_begin();
   const MachineMemOperand *MemOp = *MMOIt;
@@ -1402,11 +1400,11 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
 
   Align DstAlign = MemOp->getBaseAlign();
   Align SrcAlign;
-  Register Dst = MI.getOperand(1).getReg();
-  Register Src = MI.getOperand(2).getReg();
-  Register Len = MI.getOperand(3).getReg();
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  Register Len = MI.getOperand(2).getReg();
 
-  if (ID != Intrinsic::memset) {
+  if (Opc != TargetOpcode::G_MEMSET) {
     assert(MMOIt != MI.memoperands_end() && "Expected a second MMO on MI");
     MemOp = *(++MMOIt);
     SrcAlign = MemOp->getBaseAlign();
@@ -1426,11 +1424,11 @@ bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   if (MaxLen && KnownLen > MaxLen)
     return false;
 
-  if (ID == Intrinsic::memcpy)
+  if (Opc == TargetOpcode::G_MEMCPY)
     return optimizeMemcpy(MI, Dst, Src, KnownLen, DstAlign, SrcAlign, IsVolatile);
-  if (ID == Intrinsic::memmove)
+  if (Opc == TargetOpcode::G_MEMMOVE)
     return optimizeMemmove(MI, Dst, Src, KnownLen, DstAlign, SrcAlign, IsVolatile);
-  if (ID == Intrinsic::memset)
+  if (Opc == TargetOpcode::G_MEMSET)
     return optimizeMemset(MI, Dst, Src, KnownLen, DstAlign, IsVolatile);
   return false;
 }
@@ -1770,6 +1768,22 @@ bool CombinerHelper::matchUndefStore(MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::G_STORE);
   return getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MI.getOperand(0).getReg(),
                       MRI);
+}
+
+bool CombinerHelper::matchUndefSelectCmp(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_SELECT);
+  return getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MI.getOperand(1).getReg(),
+                      MRI);
+}
+
+bool CombinerHelper::matchConstantSelectCmp(MachineInstr &MI, unsigned &OpIdx) {
+  assert(MI.getOpcode() == TargetOpcode::G_SELECT);
+  if (auto MaybeCstCmp =
+          getConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI)) {
+    OpIdx = MaybeCstCmp->Value ? 2 : 3;
+    return true;
+  }
+  return false;
 }
 
 bool CombinerHelper::eraseInst(MachineInstr &MI) {
@@ -2135,6 +2149,14 @@ bool CombinerHelper::matchAndWithTrivialMask(MachineInstr &MI,
 
   // Now, let's check that x & Mask == x. If this is true, then x & ~Mask == 0.
   return KB->maskedValueIsZero(Replacement, ~Mask);
+}
+
+bool CombinerHelper::matchRedundantSExtInReg(MachineInstr &MI) {
+  // If the input is already sign extended, just drop the extension.
+  Register Src = MI.getOperand(1).getReg();
+  unsigned ExtBits = MI.getOperand(2).getImm();
+  unsigned TypeSize = MRI.getType(Src).getScalarSizeInBits();
+  return KB->computeNumSignBits(Src) >= (TypeSize - ExtBits + 1);
 }
 
 bool CombinerHelper::tryCombine(MachineInstr &MI) {

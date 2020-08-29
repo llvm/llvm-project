@@ -131,7 +131,9 @@ bool AMDGPULowerIntrinsics::makeLIDRangeMetadata(Function &F) const {
     if (!CI)
       continue;
 
-    Changed |= AMDGPUSubtarget::get(TM, F).makeLIDRangeMetadata(CI);
+    Function *Caller = CI->getParent()->getParent();
+    const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, *Caller);
+    Changed |= ST.makeLIDRangeMetadata(CI);
   }
   return Changed;
 }

@@ -372,6 +372,9 @@ spv.module Logical GLSL450 {
 // CHECK: spv.module Logical GLSL450
 spv.module Logical GLSL450 { }
 
+// Module with a name
+// CHECK: spv.module @{{.*}} Logical GLSL450
+spv.module @name Logical GLSL450 { }
 
 // Module with (version, capabilities, extensions) triple
 // CHECK: spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], [SPV_KHR_16bit_storage]>

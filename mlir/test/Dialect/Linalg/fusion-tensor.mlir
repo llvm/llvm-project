@@ -222,6 +222,40 @@ func @generic_op_reshape_consumer_nofusion(%arg0 : tensor<?x?x?x5xf32>,
 
 // -----
 
+#map0 = affine_map<(d0, d1) -> (d0, d1)>
+#map1 = affine_map<(d0, d1, d2) -> (d0, d1)>
+#map2 = affine_map<(d0, d1, d2) -> (d2)>
+
+func @generic_op_reshape_consumer_expanding(%arg0: tensor<264x4xf32>)
+                                            -> tensor<8x33x4xf32> {
+  %cst = constant dense<2.000000e+00> : tensor<264x4xf32>
+  %0 = linalg.generic
+    {args_in = 2 : i64, args_out = 1 : i64,
+     indexing_maps = [#map0, #map0, #map0],
+     iterator_types = ["parallel", "parallel"]}
+    %arg0, %cst {
+    ^bb0(%arg1: f32, %arg2: f32):  // no predecessors
+      %2 = mulf %arg1, %arg2 : f32
+      linalg.yield %2 : f32
+    }: tensor<264x4xf32>, tensor<264x4xf32> -> tensor<264x4xf32>
+  %1 = linalg.tensor_reshape %0 [#map1, #map2] :
+    tensor<264x4xf32> into tensor<8x33x4xf32>
+  return %1 : tensor<8x33x4xf32>
+}
+
+// The reshape op in `%arg0` is folded into the indexing map of generic op.
+//   CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2) -> (d0 * 33 + d1, d2)>
+//   CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+//       CHECK: func @generic_op_reshape_consumer_expanding
+//   CHECK-NOT:   linalg.tensor_reshape
+//       CHECK:   %[[CST:.*]] = constant {{.*}} : f32
+//       CHECK:   linalg.generic
+//  CHECK-SAME:     indexing_maps = [#[[MAP0]], #[[MAP1]]]
+//       CHECK:   tensor<264x4xf32> -> tensor<8x33x4xf32>
+//   CHECK-NOT:   linalg.tensor_reshape
+
+// -----
+
 #map0 = affine_map<(d0, d1, d2) -> (d0)>
 #map1 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 func @generic_op_constant_fusion(%arg0 : tensor<5x?x?xf32>) -> tensor<5x?x?xf32>

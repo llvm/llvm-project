@@ -632,6 +632,63 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         return true;
       }
     }
+
+    // Changed in 12.0: bfdot accept v4bf16 and v8bf16 instead of v8i8 and v16i8
+    // respectively
+    if ((Name.startswith("arm.neon.bfdot.") ||
+         Name.startswith("aarch64.neon.bfdot.")) &&
+        Name.endswith("i8")) {
+      Intrinsic::ID IID =
+          StringSwitch<Intrinsic::ID>(Name)
+              .Cases("arm.neon.bfdot.v2f32.v8i8",
+                     "arm.neon.bfdot.v4f32.v16i8",
+                     Intrinsic::arm_neon_bfdot)
+              .Cases("aarch64.neon.bfdot.v2f32.v8i8",
+                     "aarch64.neon.bfdot.v4f32.v16i8",
+                     Intrinsic::aarch64_neon_bfdot)
+              .Default(Intrinsic::not_intrinsic);
+      if (IID == Intrinsic::not_intrinsic)
+        break;
+
+      size_t OperandWidth = F->getReturnType()->getPrimitiveSizeInBits();
+      assert((OperandWidth == 64 || OperandWidth == 128) &&
+             "Unexpected operand width");
+      LLVMContext &Ctx = F->getParent()->getContext();
+      std::array<Type *, 2> Tys {{
+        F->getReturnType(),
+        FixedVectorType::get(Type::getBFloatTy(Ctx), OperandWidth / 16)
+      }};
+      NewFn = Intrinsic::getDeclaration(F->getParent(), IID, Tys);
+      return true;
+    }
+
+    // Changed in 12.0: bfmmla, bfmlalb and bfmlalt are not polymorphic anymore
+    // and accept v8bf16 instead of v16i8
+    if ((Name.startswith("arm.neon.bfm") ||
+         Name.startswith("aarch64.neon.bfm")) &&
+        Name.endswith(".v4f32.v16i8")) {
+      Intrinsic::ID IID =
+          StringSwitch<Intrinsic::ID>(Name)
+              .Case("arm.neon.bfmmla.v4f32.v16i8",
+                    Intrinsic::arm_neon_bfmmla)
+              .Case("arm.neon.bfmlalb.v4f32.v16i8",
+                    Intrinsic::arm_neon_bfmlalb)
+              .Case("arm.neon.bfmlalt.v4f32.v16i8",
+                    Intrinsic::arm_neon_bfmlalt)
+              .Case("aarch64.neon.bfmmla.v4f32.v16i8",
+                    Intrinsic::aarch64_neon_bfmmla)
+              .Case("aarch64.neon.bfmlalb.v4f32.v16i8",
+                    Intrinsic::aarch64_neon_bfmlalb)
+              .Case("aarch64.neon.bfmlalt.v4f32.v16i8",
+                    Intrinsic::aarch64_neon_bfmlalt)
+              .Default(Intrinsic::not_intrinsic);
+      if (IID == Intrinsic::not_intrinsic)
+        break;
+
+      std::array<Type *, 0> Tys;
+      NewFn = Intrinsic::getDeclaration(F->getParent(), IID, Tys);
+      return true;
+    }
     break;
   }
 
@@ -931,7 +988,7 @@ GlobalVariable *llvm::UpgradeGlobalVariable(GlobalVariable *GV) {
 // to byte shuffles.
 static Value *UpgradeX86PSLLDQIntrinsics(IRBuilder<> &Builder,
                                          Value *Op, unsigned Shift) {
-  auto *ResultTy = cast<VectorType>(Op->getType());
+  auto *ResultTy = cast<FixedVectorType>(Op->getType());
   unsigned NumElts = ResultTy->getNumElements() * 8;
 
   // Bitcast from a 64-bit element type to a byte element type.
@@ -965,7 +1022,7 @@ static Value *UpgradeX86PSLLDQIntrinsics(IRBuilder<> &Builder,
 // to byte shuffles.
 static Value *UpgradeX86PSRLDQIntrinsics(IRBuilder<> &Builder, Value *Op,
                                          unsigned Shift) {
-  auto *ResultTy = cast<VectorType>(Op->getType());
+  auto *ResultTy = cast<FixedVectorType>(Op->getType());
   unsigned NumElts = ResultTy->getNumElements() * 8;
 
   // Bitcast from a 64-bit element type to a byte element type.
@@ -1023,7 +1080,7 @@ static Value *EmitX86Select(IRBuilder<> &Builder, Value *Mask,
       return Op0;
 
   Mask = getX86MaskVec(Builder, Mask,
-                       cast<VectorType>(Op0->getType())->getNumElements());
+                       cast<FixedVectorType>(Op0->getType())->getNumElements());
   return Builder.CreateSelect(Mask, Op0, Op1);
 }
 
@@ -1050,7 +1107,7 @@ static Value *UpgradeX86ALIGNIntrinsics(IRBuilder<> &Builder, Value *Op0,
                                         bool IsVALIGN) {
   unsigned ShiftVal = cast<llvm::ConstantInt>(Shift)->getZExtValue();
 
-  unsigned NumElts = cast<VectorType>(Op0->getType())->getNumElements();
+  unsigned NumElts = cast<FixedVectorType>(Op0->getType())->getNumElements();
   assert((IsVALIGN || NumElts % 16 == 0) && "Illegal NumElts for PALIGNR!");
   assert((!IsVALIGN || NumElts <= 16) && "NumElts too large for VALIGN!");
   assert(isPowerOf2_32(NumElts) && "NumElts not a power of 2!");
@@ -1181,7 +1238,7 @@ static Value *upgradeX86Rotate(IRBuilder<> &Builder, CallInst &CI,
   // Funnel shifts amounts are treated as modulo and types are all power-of-2 so
   // we only care about the lowest log2 bits anyway.
   if (Amt->getType() != Ty) {
-    unsigned NumElts = cast<VectorType>(Ty)->getNumElements();
+    unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
     Amt = Builder.CreateIntCast(Amt, Ty->getScalarType(), false);
     Amt = Builder.CreateVectorSplat(NumElts, Amt);
   }
@@ -1251,7 +1308,7 @@ static Value *upgradeX86ConcatShift(IRBuilder<> &Builder, CallInst &CI,
   // Funnel shifts amounts are treated as modulo and types are all power-of-2 so
   // we only care about the lowest log2 bits anyway.
   if (Amt->getType() != Ty) {
-    unsigned NumElts = cast<VectorType>(Ty)->getNumElements();
+    unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
     Amt = Builder.CreateIntCast(Amt, Ty->getScalarType(), false);
     Amt = Builder.CreateVectorSplat(NumElts, Amt);
   }
@@ -1288,7 +1345,7 @@ static Value *UpgradeMaskedStore(IRBuilder<> &Builder,
       return Builder.CreateAlignedStore(Data, Ptr, Alignment);
 
   // Convert the mask from an integer type to a vector of i1.
-  unsigned NumElts = cast<VectorType>(Data->getType())->getNumElements();
+  unsigned NumElts = cast<FixedVectorType>(Data->getType())->getNumElements();
   Mask = getX86MaskVec(Builder, Mask, NumElts);
   return Builder.CreateMaskedStore(Data, Ptr, Alignment, Mask);
 }
@@ -1311,7 +1368,8 @@ static Value *UpgradeMaskedLoad(IRBuilder<> &Builder,
       return Builder.CreateAlignedLoad(ValTy, Ptr, Alignment);
 
   // Convert the mask from an integer type to a vector of i1.
-  unsigned NumElts = cast<VectorType>(Passthru->getType())->getNumElements();
+  unsigned NumElts =
+      cast<FixedVectorType>(Passthru->getType())->getNumElements();
   Mask = getX86MaskVec(Builder, Mask, NumElts);
   return Builder.CreateMaskedLoad(Ptr, Alignment, Mask, Passthru);
 }
@@ -1375,7 +1433,7 @@ static Value *upgradePMULDQ(IRBuilder<> &Builder, CallInst &CI, bool IsSigned) {
 // Applying mask on vector of i1's and make sure result is at least 8 bits wide.
 static Value *ApplyX86MaskOn1BitsVec(IRBuilder<> &Builder, Value *Vec,
                                      Value *Mask) {
-  unsigned NumElts = cast<VectorType>(Vec->getType())->getNumElements();
+  unsigned NumElts = cast<FixedVectorType>(Vec->getType())->getNumElements();
   if (Mask) {
     const auto *C = dyn_cast<Constant>(Mask);
     if (!C || !C->isAllOnesValue())
@@ -1398,7 +1456,7 @@ static Value *ApplyX86MaskOn1BitsVec(IRBuilder<> &Builder, Value *Vec,
 static Value *upgradeMaskedCompare(IRBuilder<> &Builder, CallInst &CI,
                                    unsigned CC, bool Signed) {
   Value *Op0 = CI.getArgOperand(0);
-  unsigned NumElts = cast<VectorType>(Op0->getType())->getNumElements();
+  unsigned NumElts = cast<FixedVectorType>(Op0->getType())->getNumElements();
 
   Value *Cmp;
   if (CC == 3) {
@@ -1453,7 +1511,7 @@ static Value* upgradeMaskedMove(IRBuilder<> &Builder, CallInst &CI) {
 static Value* UpgradeMaskToInt(IRBuilder<> &Builder, CallInst &CI) {
   Value* Op = CI.getArgOperand(0);
   Type* ReturnOp = CI.getType();
-  unsigned NumElts = cast<VectorType>(CI.getType())->getNumElements();
+  unsigned NumElts = cast<FixedVectorType>(CI.getType())->getNumElements();
   Value *Mask = getX86MaskVec(Builder, Op, NumElts);
   return Builder.CreateSExt(Mask, ReturnOp, "vpmovm2");
 }
@@ -1902,8 +1960,8 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Rep = Builder.CreateICmp(Pred, Rep, Zero);
       Rep = ApplyX86MaskOn1BitsVec(Builder, Rep, Mask);
     } else if (IsX86 && (Name.startswith("avx512.mask.pbroadcast"))){
-      unsigned NumElts =
-          cast<VectorType>(CI->getArgOperand(1)->getType())->getNumElements();
+      unsigned NumElts = cast<FixedVectorType>(CI->getArgOperand(1)->getType())
+                             ->getNumElements();
       Rep = Builder.CreateVectorSplat(NumElts, CI->getArgOperand(0));
       Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
                           CI->getArgOperand(1));
@@ -2151,9 +2209,9 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                          Name == "avx.cvt.ps2.pd.256" ||
                          Name == "avx512.mask.cvtps2pd.128" ||
                          Name == "avx512.mask.cvtps2pd.256")) {
-      auto *DstTy = cast<VectorType>(CI->getType());
+      auto *DstTy = cast<FixedVectorType>(CI->getType());
       Rep = CI->getArgOperand(0);
-      auto *SrcTy = cast<VectorType>(Rep->getType());
+      auto *SrcTy = cast<FixedVectorType>(Rep->getType());
 
       unsigned NumDstElts = DstTy->getNumElements();
       if (NumDstElts < SrcTy->getNumElements()) {
@@ -2183,9 +2241,9 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                             CI->getArgOperand(1));
     } else if (IsX86 && (Name.startswith("avx512.mask.vcvtph2ps.") ||
                          Name.startswith("vcvtph2ps."))) {
-      auto *DstTy = cast<VectorType>(CI->getType());
+      auto *DstTy = cast<FixedVectorType>(CI->getType());
       Rep = CI->getArgOperand(0);
-      auto *SrcTy = cast<VectorType>(Rep->getType());
+      auto *SrcTy = cast<FixedVectorType>(Rep->getType());
       unsigned NumDstElts = DstTy->getNumElements();
       if (NumDstElts != SrcTy->getNumElements()) {
         assert(NumDstElts == 4 && "Unexpected vector size");
@@ -2206,7 +2264,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                               CI->getArgOperand(1),CI->getArgOperand(2),
                               /*Aligned*/true);
     } else if (IsX86 && Name.startswith("avx512.mask.expand.load.")) {
-      auto *ResultTy = cast<VectorType>(CI->getType());
+      auto *ResultTy = cast<FixedVectorType>(CI->getType());
       Type *PtrTy = ResultTy->getElementType();
 
       // Cast the pointer to element type.
@@ -2228,8 +2286,9 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Value *Ptr = Builder.CreateBitCast(CI->getOperand(0),
                                          llvm::PointerType::getUnqual(PtrTy));
 
-      Value *MaskVec = getX86MaskVec(Builder, CI->getArgOperand(2),
-                                     ResultTy->getNumElements());
+      Value *MaskVec =
+          getX86MaskVec(Builder, CI->getArgOperand(2),
+                        cast<FixedVectorType>(ResultTy)->getNumElements());
 
       Function *CSt = Intrinsic::getDeclaration(F->getParent(),
                                                 Intrinsic::masked_compressstore,
@@ -2237,7 +2296,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Rep = Builder.CreateCall(CSt, { CI->getArgOperand(1), Ptr, MaskVec });
     } else if (IsX86 && (Name.startswith("avx512.mask.compress.") ||
                          Name.startswith("avx512.mask.expand."))) {
-      auto *ResultTy = cast<VectorType>(CI->getType());
+      auto *ResultTy = cast<FixedVectorType>(CI->getType());
 
       Value *MaskVec = getX86MaskVec(Builder, CI->getArgOperand(2),
                                      ResultTy->getNumElements());
@@ -2317,7 +2376,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     } else if (IsX86 && (Name.startswith("avx.vbroadcast.s") ||
                          Name.startswith("avx512.vbroadcast.s"))) {
       // Replace broadcasts with a series of insertelements.
-      auto *VecTy = cast<VectorType>(CI->getType());
+      auto *VecTy = cast<FixedVectorType>(CI->getType());
       Type *EltTy = VecTy->getElementType();
       unsigned EltNum = VecTy->getNumElements();
       Value *Cast = Builder.CreateBitCast(CI->getArgOperand(0),
@@ -2334,8 +2393,8 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                          Name.startswith("avx2.pmovzx") ||
                          Name.startswith("avx512.mask.pmovsx") ||
                          Name.startswith("avx512.mask.pmovzx"))) {
-      VectorType *SrcTy = cast<VectorType>(CI->getArgOperand(0)->getType());
-      VectorType *DstTy = cast<VectorType>(CI->getType());
+      auto *SrcTy = cast<FixedVectorType>(CI->getArgOperand(0)->getType());
+      auto *DstTy = cast<FixedVectorType>(CI->getType());
       unsigned NumDstElts = DstTy->getNumElements();
 
       // Extract a subvector of the first NumDstElts lanes and sign/zero extend.
@@ -2402,8 +2461,10 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     }else if (IsX86 && (Name.startswith("avx512.mask.broadcastf") ||
                          Name.startswith("avx512.mask.broadcasti"))) {
       unsigned NumSrcElts =
-          cast<VectorType>(CI->getArgOperand(0)->getType())->getNumElements();
-      unsigned NumDstElts = cast<VectorType>(CI->getType())->getNumElements();
+          cast<FixedVectorType>(CI->getArgOperand(0)->getType())
+              ->getNumElements();
+      unsigned NumDstElts =
+          cast<FixedVectorType>(CI->getType())->getNumElements();
 
       SmallVector<int, 8> ShuffleMask(NumDstElts);
       for (unsigned i = 0; i != NumDstElts; ++i)
@@ -2492,7 +2553,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Value *Op0 = CI->getArgOperand(0);
       Value *Op1 = CI->getArgOperand(1);
       unsigned Imm = cast <ConstantInt>(CI->getArgOperand(2))->getZExtValue();
-      VectorType *VecTy = cast<VectorType>(CI->getType());
+      auto *VecTy = cast<FixedVectorType>(CI->getType());
       unsigned NumElts = VecTy->getNumElements();
 
       SmallVector<int, 16> Idxs(NumElts);
@@ -2506,8 +2567,10 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Value *Op0 = CI->getArgOperand(0);
       Value *Op1 = CI->getArgOperand(1);
       unsigned Imm = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
-      unsigned DstNumElts = cast<VectorType>(CI->getType())->getNumElements();
-      unsigned SrcNumElts = cast<VectorType>(Op1->getType())->getNumElements();
+      unsigned DstNumElts =
+          cast<FixedVectorType>(CI->getType())->getNumElements();
+      unsigned SrcNumElts =
+          cast<FixedVectorType>(Op1->getType())->getNumElements();
       unsigned Scale = DstNumElts / SrcNumElts;
 
       // Mask off the high bits of the immediate value; hardware ignores those.
@@ -2550,8 +2613,10 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                          Name.startswith("avx512.mask.vextract"))) {
       Value *Op0 = CI->getArgOperand(0);
       unsigned Imm = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      unsigned DstNumElts = cast<VectorType>(CI->getType())->getNumElements();
-      unsigned SrcNumElts = cast<VectorType>(Op0->getType())->getNumElements();
+      unsigned DstNumElts =
+          cast<FixedVectorType>(CI->getType())->getNumElements();
+      unsigned SrcNumElts =
+          cast<FixedVectorType>(Op0->getType())->getNumElements();
       unsigned Scale = SrcNumElts / DstNumElts;
 
       // Mask off the high bits of the immediate value; hardware ignores those.
@@ -2574,7 +2639,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                          Name.startswith("avx512.mask.perm.di."))) {
       Value *Op0 = CI->getArgOperand(0);
       unsigned Imm = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      VectorType *VecTy = cast<VectorType>(CI->getType());
+      auto *VecTy = cast<FixedVectorType>(CI->getType());
       unsigned NumElts = VecTy->getNumElements();
 
       SmallVector<int, 8> Idxs(NumElts);
@@ -2598,7 +2663,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
 
       uint8_t Imm = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
 
-      unsigned NumElts = cast<VectorType>(CI->getType())->getNumElements();
+      unsigned NumElts = cast<FixedVectorType>(CI->getType())->getNumElements();
       unsigned HalfSize = NumElts / 2;
       SmallVector<int, 8> ShuffleMask(NumElts);
 
@@ -2628,7 +2693,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                          Name.startswith("avx512.mask.pshuf.d."))) {
       Value *Op0 = CI->getArgOperand(0);
       unsigned Imm = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      VectorType *VecTy = cast<VectorType>(CI->getType());
+      auto *VecTy = cast<FixedVectorType>(CI->getType());
       unsigned NumElts = VecTy->getNumElements();
       // Calculate the size of each index in the immediate.
       unsigned IdxSize = 64 / VecTy->getScalarSizeInBits();
@@ -2650,7 +2715,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                          Name.startswith("avx512.mask.pshufl.w."))) {
       Value *Op0 = CI->getArgOperand(0);
       unsigned Imm = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      unsigned NumElts = cast<VectorType>(CI->getType())->getNumElements();
+      unsigned NumElts = cast<FixedVectorType>(CI->getType())->getNumElements();
 
       SmallVector<int, 16> Idxs(NumElts);
       for (unsigned l = 0; l != NumElts; l += 8) {
@@ -2669,7 +2734,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                          Name.startswith("avx512.mask.pshufh.w."))) {
       Value *Op0 = CI->getArgOperand(0);
       unsigned Imm = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      unsigned NumElts = cast<VectorType>(CI->getType())->getNumElements();
+      unsigned NumElts = cast<FixedVectorType>(CI->getType())->getNumElements();
 
       SmallVector<int, 16> Idxs(NumElts);
       for (unsigned l = 0; l != NumElts; l += 8) {
@@ -2688,7 +2753,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Value *Op0 = CI->getArgOperand(0);
       Value *Op1 = CI->getArgOperand(1);
       unsigned Imm = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
-      unsigned NumElts = cast<VectorType>(CI->getType())->getNumElements();
+      unsigned NumElts = cast<FixedVectorType>(CI->getType())->getNumElements();
 
       unsigned NumLaneElts = 128/CI->getType()->getScalarSizeInBits();
       unsigned HalfLaneElts = NumLaneElts / 2;
@@ -2713,7 +2778,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                          Name.startswith("avx512.mask.movshdup") ||
                          Name.startswith("avx512.mask.movsldup"))) {
       Value *Op0 = CI->getArgOperand(0);
-      unsigned NumElts = cast<VectorType>(CI->getType())->getNumElements();
+      unsigned NumElts = cast<FixedVectorType>(CI->getType())->getNumElements();
       unsigned NumLaneElts = 128/CI->getType()->getScalarSizeInBits();
 
       unsigned Offset = 0;
@@ -2735,7 +2800,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                          Name.startswith("avx512.mask.unpckl."))) {
       Value *Op0 = CI->getArgOperand(0);
       Value *Op1 = CI->getArgOperand(1);
-      int NumElts = cast<VectorType>(CI->getType())->getNumElements();
+      int NumElts = cast<FixedVectorType>(CI->getType())->getNumElements();
       int NumLaneElts = 128/CI->getType()->getScalarSizeInBits();
 
       SmallVector<int, 64> Idxs(NumElts);
@@ -2751,7 +2816,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                          Name.startswith("avx512.mask.unpckh."))) {
       Value *Op0 = CI->getArgOperand(0);
       Value *Op1 = CI->getArgOperand(1);
-      int NumElts = cast<VectorType>(CI->getType())->getNumElements();
+      int NumElts = cast<FixedVectorType>(CI->getType())->getNumElements();
       int NumLaneElts = 128/CI->getType()->getScalarSizeInBits();
 
       SmallVector<int, 64> Idxs(NumElts);
@@ -3319,7 +3384,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
         Rep = Builder.CreateCall(Intrinsic::getDeclaration(F->getParent(), IID),
                                  Ops);
       } else {
-        int NumElts = cast<VectorType>(CI->getType())->getNumElements();
+        int NumElts = cast<FixedVectorType>(CI->getType())->getNumElements();
 
         Value *Ops[] = { CI->getArgOperand(0), CI->getArgOperand(1),
                          CI->getArgOperand(2) };
@@ -3618,6 +3683,30 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     break;
   }
 
+  case Intrinsic::arm_neon_bfdot:
+  case Intrinsic::arm_neon_bfmmla:
+  case Intrinsic::arm_neon_bfmlalb:
+  case Intrinsic::arm_neon_bfmlalt:
+  case Intrinsic::aarch64_neon_bfdot:
+  case Intrinsic::aarch64_neon_bfmmla:
+  case Intrinsic::aarch64_neon_bfmlalb:
+  case Intrinsic::aarch64_neon_bfmlalt: {
+    SmallVector<Value *, 3> Args;
+    assert(CI->getNumArgOperands() == 3 &&
+           "Mismatch between function args and call args");
+    size_t OperandWidth =
+        CI->getArgOperand(1)->getType()->getPrimitiveSizeInBits();
+    assert((OperandWidth == 64 || OperandWidth == 128) &&
+           "Unexpected operand width");
+    Type *NewTy = FixedVectorType::get(Type::getBFloatTy(C), OperandWidth / 16);
+    auto Iter = CI->arg_operands().begin();
+    Args.push_back(*Iter++);
+    Args.push_back(Builder.CreateBitCast(*Iter++, NewTy));
+    Args.push_back(Builder.CreateBitCast(*Iter++, NewTy));
+    NewCall = Builder.CreateCall(NewFn, Args);
+    break;
+  }
+
   case Intrinsic::bitreverse:
     NewCall = Builder.CreateCall(NewFn, {CI->getArgOperand(0)});
     break;
@@ -3751,7 +3840,8 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
   case Intrinsic::x86_avx512_mask_cmp_ps_512: {
     SmallVector<Value *, 4> Args(CI->arg_operands().begin(),
                                  CI->arg_operands().end());
-    unsigned NumElts = cast<VectorType>(Args[0]->getType())->getNumElements();
+    unsigned NumElts =
+        cast<FixedVectorType>(Args[0]->getType())->getNumElements();
     Args[3] = getX86MaskVec(Builder, Args[3], NumElts);
 
     NewCall = Builder.CreateCall(NewFn, Args);

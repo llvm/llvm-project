@@ -40,6 +40,5 @@ func (pm PassManager) AddScalarReplAggregatesPassWithThreshold(threshold int) {
 }
 func (pm PassManager) AddSimplifyLibCallsPass()       { C.LLVMAddSimplifyLibCallsPass(pm.C) }
 func (pm PassManager) AddTailCallEliminationPass()    { C.LLVMAddTailCallEliminationPass(pm.C) }
-func (pm PassManager) AddConstantPropagationPass()    { C.LLVMAddConstantPropagationPass(pm.C) }
 func (pm PassManager) AddDemoteMemoryToRegisterPass() { C.LLVMAddDemoteMemoryToRegisterPass(pm.C) }
 func (pm PassManager) AddVerifierPass()               { C.LLVMAddVerifierPass(pm.C) }

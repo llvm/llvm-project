@@ -47,6 +47,7 @@ struct OpPassManagerImpl;
 /// other OpPassManagers or the top-level PassManager.
 class OpPassManager {
 public:
+  OpPassManager(OperationName name, bool verifyPasses);
   OpPassManager(OpPassManager &&rhs);
   OpPassManager(const OpPassManager &rhs);
   ~OpPassManager();
@@ -54,21 +55,18 @@ public:
 
   /// Iterator over the passes in this pass manager.
   using pass_iterator =
-      llvm::pointee_iterator<std::vector<std::unique_ptr<Pass>>::iterator>;
+      llvm::pointee_iterator<MutableArrayRef<std::unique_ptr<Pass>>::iterator>;
   pass_iterator begin();
   pass_iterator end();
   iterator_range<pass_iterator> getPasses() { return {begin(), end()}; }
 
-  using const_pass_iterator = llvm::pointee_iterator<
-      std::vector<std::unique_ptr<Pass>>::const_iterator>;
+  using const_pass_iterator =
+      llvm::pointee_iterator<ArrayRef<std::unique_ptr<Pass>>::const_iterator>;
   const_pass_iterator begin() const;
   const_pass_iterator end() const;
   iterator_range<const_pass_iterator> getPasses() const {
     return {begin(), end()};
   }
-
-  /// Run the held passes over the given operation.
-  LogicalResult run(Operation *op, AnalysisManager am);
 
   /// Nest a new operation pass manager for the given operation kind under this
   /// pass manager.
@@ -115,8 +113,6 @@ public:
   void getDependentDialects(DialectRegistry &dialects) const;
 
 private:
-  OpPassManager(OperationName name, bool verifyPasses);
-
   /// A pointer to an internal implementation instance.
   std::unique_ptr<detail::OpPassManagerImpl> impl;
 

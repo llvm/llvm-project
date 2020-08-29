@@ -448,6 +448,19 @@ public:
     return ++DI == def_end();
   }
 
+  /// Returns the defining operand if there is exactly one operand defining the
+  /// specified register, otherwise nullptr.
+  MachineOperand *getOneDef(Register Reg) const {
+    def_iterator DI = def_begin(Reg);
+    if (DI == def_end()) // No defs.
+      return nullptr;
+
+    def_iterator OneDef = DI;
+    if (++DI == def_end())
+      return &*OneDef;
+    return nullptr; // Multiple defs.
+  }
+
   /// use_iterator/use_begin/use_end - Walk all uses of the specified register.
   using use_iterator =
       defusechain_iterator<true, false, false, true, false, false>;

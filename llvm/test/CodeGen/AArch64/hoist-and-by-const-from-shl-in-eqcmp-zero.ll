@@ -316,20 +316,14 @@ define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
   ret i1 %res
 }
 
-;------------------------------------------------------------------------------;
-; A few negative tests
-;------------------------------------------------------------------------------;
-
-define i1 @negative_scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
-; CHECK-LABEL: negative_scalar_i8_bitsinmiddle_slt:
+define i1 @scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
+; CHECK-LABEL: scalar_i8_bitsinmiddle_slt:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #24
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    lsl w8, w8, w1
 ; CHECK-NEXT:    and w8, w8, w0
-; CHECK-NEXT:    sxtb w8, w8
-; CHECK-NEXT:    cmp w8, #0 // =0
-; CHECK-NEXT:    cset w0, lt
+; CHECK-NEXT:    ubfx w0, w8, #7, #1
 ; CHECK-NEXT:    ret
   %t0 = shl i8 24, %y
   %t1 = and i8 %t0, %x

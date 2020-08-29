@@ -1827,10 +1827,30 @@ private:
       return true;
 
     // Heuristically try to determine whether the parentheses contain a type.
-    bool ParensAreType =
-        !Tok.Previous ||
-        Tok.Previous->isOneOf(TT_PointerOrReference, TT_TemplateCloser) ||
-        Tok.Previous->isSimpleTypeSpecifier();
+    auto IsQualifiedPointerOrReference = [](FormatToken *T) {
+      // This is used to handle cases such as x = (foo *const)&y;
+      assert(!T->isSimpleTypeSpecifier() && "Should have already been checked");
+      // Strip trailing qualifiers such as const or volatile when checking
+      // whether the parens could be a cast to a pointer/reference type.
+      while (T) {
+        if (T->is(TT_AttributeParen)) {
+          // Handle `x = (foo *__attribute__((foo)))&v;`:
+          if (T->MatchingParen && T->MatchingParen->Previous &&
+              T->MatchingParen->Previous->is(tok::kw___attribute)) {
+            T = T->MatchingParen->Previous->Previous;
+            continue;
+          }
+        } else if (T->canBePointerOrReferenceQualifier()) {
+          T = T->Previous;
+          continue;
+        }
+        break;
+      }
+      return T && T->is(TT_PointerOrReference);
+    };
+    bool ParensAreType = !Tok.Previous || Tok.Previous->is(TT_TemplateCloser) ||
+                         Tok.Previous->isSimpleTypeSpecifier() ||
+                         IsQualifiedPointerOrReference(Tok.Previous);
     bool ParensCouldEndDecl =
         Tok.Next->isOneOf(tok::equal, tok::semi, tok::l_brace, tok::greater);
     if (ParensAreType && !ParensCouldEndDecl)
@@ -1890,8 +1910,8 @@ private:
 
     const FormatToken *NextToken = Tok.getNextNonComment();
     if (!NextToken ||
-        NextToken->isOneOf(tok::arrow, tok::equal, tok::kw_const,
-                           tok::kw_noexcept) ||
+        NextToken->isOneOf(tok::arrow, tok::equal, tok::kw_noexcept) ||
+        NextToken->canBePointerOrReferenceQualifier() ||
         (NextToken->is(tok::l_brace) && !NextToken->getNextNonComment()))
       return TT_PointerOrReference;
 

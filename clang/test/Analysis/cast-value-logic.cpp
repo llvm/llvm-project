@@ -19,6 +19,8 @@ struct Shape {
   virtual double area();
 };
 class Triangle : public Shape {};
+class Rectangle : public Shape {};
+class Hexagon : public Shape {};
 class Circle : public Shape {
 public:
   ~Circle();
@@ -36,6 +38,23 @@ void test_regions_dyn_cast(const Shape *A, const Shape *B) {
 
 void test_regions_isa(const Shape *A, const Shape *B) {
   if (isa<Circle>(A) && !isa<Circle>(B))
+    clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+}
+
+void test_regions_isa_variadic(const Shape *A, const Shape *B) {
+  if (isa<Triangle, Rectangle, Hexagon>(A) &&
+      !isa<Rectangle, Hexagon, Circle>(B))
+    clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+}
+
+void test_regions_isa_and_nonnull(const Shape *A, const Shape *B) {
+  if (isa_and_nonnull<Circle>(A) && !isa_and_nonnull<Circle>(B))
+    clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+}
+
+void test_regions_isa_and_nonnull_variadic(const Shape *A, const Shape *B) {
+  if (isa_and_nonnull<Triangle, Rectangle, Hexagon>(A) &&
+      !isa_and_nonnull<Rectangle, Hexagon, Circle>(B))
     clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }
 

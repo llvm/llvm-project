@@ -190,6 +190,11 @@ X86 Support in Clang
 
 - Support for -march=sapphirerapids was added.
 
+- The -mtune command line option is no longer ignored for X86. This can be used
+  to request microarchitectural optimizations independent on -march. -march=<cpu>
+  implies -mtune=<cpu>. -mtune=generic is the default with no -march or -mtune
+  specified.
+
 Internal API Changes
 --------------------
 

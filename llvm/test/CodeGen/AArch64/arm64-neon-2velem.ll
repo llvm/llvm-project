@@ -1966,7 +1966,7 @@ define <4 x i16> @test_vadd_laneq5_i16_bitcast(<4 x i16> %a, <2 x double> %v) {
 define <4 x i16> @test_vadd_lane2_i16_bitcast_bigger_aligned(<4 x i16> %a, <16 x i8> %v) {
 ; CHECK-LABEL: test_vadd_lane2_i16_bitcast_bigger_aligned:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.8b, v1.8b, v0.8b, #2
+; CHECK-NEXT:    dup v1.4h, v1.h[2]
 ; CHECK-NEXT:    dup v1.4h, v1.h[1]
 ; CHECK-NEXT:    add v0.4h, v1.4h, v0.4h
 ; CHECK-NEXT:    ret

@@ -1,11 +1,11 @@
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm-bc %s -o %t-x86-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c -triple nvptx-unknown-unknown -aux-triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -fsyntax-only -Wuninitialized
+// RUN: %clang_cc1 -verify -DDIAGS -DIMMEDIATE -fopenmp -fopenmp-version=45 -x c -triple nvptx-unknown-unknown -aux-triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -fsyntax-only -Wuninitialized
+// RUN: %clang_cc1 -verify -DDIAGS -DDELAYED -fopenmp -fopenmp-version=45 -x c -triple nvptx-unknown-unknown -aux-triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -fsyntax-only -Wuninitialized
 // RUN: %clang_cc1 -fopenmp -x c -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -x c -triple nvptx-unknown-unknown -aux-triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -fsyntax-only -Wuninitialized
-// RUN: %clang_cc1 -verify -DDIAGS -DIMMEDIATE -fopenmp -x c -triple nvptx-unknown-unknown -aux-triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -fsyntax-only -Wuninitialized
-// RUN: %clang_cc1 -verify -DDIAGS -DDELAYED -fopenmp -x c -triple nvptx-unknown-unknown -aux-triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -fsyntax-only -Wuninitialized
-// RUN: %clang_cc1 -fopenmp -x c -triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -fopenmp-version=50 -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -verify=expected,omp5 -fopenmp -x c -triple nvptx-unknown-unknown -aux-triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda -fopenmp-version=50 %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -fsyntax-only -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp5 -DDIAGS -DOMP5 -DIMMEDIATE -fopenmp -fopenmp-version=50 -x c -triple nvptx-unknown-unknown -aux-triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -fsyntax-only -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp5 -DDIAGS -DOMP5 -DDELAYED -fopenmp -fopenmp-version=50 -x c -triple nvptx-unknown-unknown -aux-triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -fsyntax-only -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5 -fopenmp -x c -triple nvptx-unknown-unknown -aux-triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -fsyntax-only -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5 -DDIAGS -DOMP5 -DIMMEDIATE -fopenmp -x c -triple nvptx-unknown-unknown -aux-triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -fsyntax-only -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp5 -DDIAGS -DOMP5 -DDELAYED -fopenmp -x c -triple nvptx-unknown-unknown -aux-triple i386-unknown-unknown -fopenmp-targets=nvptx-nvidia-cuda %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -fsyntax-only -Wuninitialized
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 

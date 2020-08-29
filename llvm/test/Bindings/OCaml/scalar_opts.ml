@@ -70,7 +70,6 @@ let test_transforms () =
            ++ add_scalar_repl_aggregation_with_threshold 4
            ++ add_lib_call_simplification
            ++ add_tail_call_elimination
-           ++ add_constant_propagation
            ++ add_memory_to_register_demotion
            ++ add_verifier
            ++ add_correlated_value_propagation

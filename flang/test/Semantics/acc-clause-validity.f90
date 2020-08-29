@@ -18,16 +18,17 @@ program openacc_clause_validity
 
   implicit none
 
-  integer :: i, j, b
+  integer :: i, j, b, gang_size, vector_size, worker_size
   integer, parameter :: N = 256
   integer, dimension(N) :: c
   logical, dimension(N) :: d, e
   real :: reduction_r
   logical :: reduction_l
+  real(8), dimension(N, N) :: aa
 
   !ERROR: At least one clause is required on the DECLARE directive
   !$acc declare
-  real(8) :: a(256)
+  real(8), dimension(N) :: a
 
   !ERROR: At least one of ATTACH, COPYIN, CREATE clause must appear on the ENTER DATA directive
   !$acc enter data
@@ -83,10 +84,164 @@ program openacc_clause_validity
   end do
   !$acc end parallel
 
+  !$acc parallel
+  !$acc loop tile(2)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel loop tile(2)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+
+  !$acc parallel loop tile(2, 2)
+  do i = 1, N
+    do j = 1, N
+      aa(i, j) = 3.14
+    end do
+  end do
+
   !$acc parallel device_type(*) num_gangs(2)
   !$acc loop
   do i = 1, N
     a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop seq
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop independent
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop auto
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop vector
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop vector(10)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop vector(vector_size)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop vector(length: vector_size)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop worker
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop worker(10)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop worker(worker_size)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop worker(num: worker_size)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop gang(gang_size)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop gang(num: gang_size)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop gang(gang_size, static:*)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop gang(num: gang_size, static:*)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop gang(num: gang_size, static: gang_size)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop private(b, a(:))
+  do i = 1, N
+    a(i) = b
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop tile(*)
+  do i = 1, N
+    a(i) = b
+  end do
+  !$acc end parallel
+
+  !$acc parallel
+  !$acc loop tile(2, 2)
+  do i = 1, N
+    do j = 1, N
+      a(i) = b
+    end do
   end do
   !$acc end parallel
 

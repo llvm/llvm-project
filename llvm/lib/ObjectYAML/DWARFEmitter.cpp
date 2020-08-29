@@ -95,8 +95,8 @@ Error DWARFYAML::emitDebugStr(raw_ostream &OS, const DWARFYAML::Data &DI) {
 }
 
 Error DWARFYAML::emitDebugAbbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
-  uint64_t AbbrevCode = 0;
   for (const DWARFYAML::AbbrevTable &AbbrevTable : DI.DebugAbbrev) {
+    uint64_t AbbrevCode = 0;
     for (const DWARFYAML::Abbrev &AbbrevDecl : AbbrevTable.Table) {
       AbbrevCode =
           AbbrevDecl.Code ? (uint64_t)*AbbrevDecl.Code : AbbrevCode + 1;

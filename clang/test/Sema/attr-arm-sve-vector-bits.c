@@ -102,8 +102,11 @@ void f(int c) {
   svint8_t ss8;
 
   void *sel __attribute__((unused));
-  sel = c ? ss8 : fs8; // expected-error {{incompatible operand types ('svint8_t' (aka '__SVInt8_t') and 'fixed_int8_t' (aka '__SVInt8_t'))}}
-  sel = c ? fs8 : ss8; // expected-error {{incompatible operand types ('fixed_int8_t' (aka '__SVInt8_t') and 'svint8_t' (aka '__SVInt8_t'))}}
+  sel = c ? ss8 : fs8; // expected-error {{cannot convert between a fixed-length and a sizeless vector}}
+  sel = c ? fs8 : ss8; // expected-error {{cannot convert between a fixed-length and a sizeless vector}}
+
+  sel = fs8 + ss8; // expected-error {{cannot convert between a fixed-length and a sizeless vector}}
+  sel = ss8 + fs8; // expected-error {{cannot convert between a fixed-length and a sizeless vector}}
 }
 
 // --------------------------------------------------------------------------//
@@ -192,14 +195,18 @@ TEST_CAST(bfloat16)
 TEST_CAST(bool)
 
 // Test the implicit conversion only applies to valid types
-fixed_int8_t to_fixed_int8_t__from_svuint8_t(svuint8_t x) { return x; } // expected-error {{returning 'svuint8_t' (aka '__SVUint8_t') from a function with incompatible result type 'fixed_int8_t' (aka '__SVInt8_t')}}
-fixed_bool_t to_fixed_bool_t__from_svint32_t(svint32_t x) { return x; } // expected-error {{returning 'svint32_t' (aka '__SVInt32_t') from a function with incompatible result type 'fixed_bool_t' (aka '__SVBool_t')}}
+fixed_int8_t to_fixed_int8_t__from_svuint8_t(svuint8_t x) { return x; } // expected-error-re {{returning 'svuint8_t' (aka '__SVUint8_t') from a function with incompatible result type 'fixed_int8_t' (vector of {{[0-9]+}} 'signed char' values)}}
+fixed_bool_t to_fixed_bool_t__from_svint32_t(svint32_t x) { return x; } // expected-error-re {{returning 'svint32_t' (aka '__SVInt32_t') from a function with incompatible result type 'fixed_bool_t' (vector of {{[0-9]+}} 'unsigned char' values)}}
+
+// Test conversion between predicate and uint8 is invalid, both have the same
+// memory representation.
+fixed_bool_t to_fixed_bool_t__from_svuint8_t(svuint8_t x) { return x; } // expected-error-re {{returning 'svuint8_t' (aka '__SVUint8_t') from a function with incompatible result type 'fixed_bool_t' (vector of {{[0-9]+}} 'unsigned char' values)}}
 
 // Test the implicit conversion only applies to fixed-length types
 typedef signed int vSInt32 __attribute__((__vector_size__(16)));
-svint32_t to_svint32_t_from_gnut(vSInt32 x) { return x; } // expected-error {{returning 'vSInt32' (vector of 4 'int' values) from a function with incompatible result type 'svint32_t' (aka '__SVInt32_t')}}
+svint32_t to_svint32_t_from_gnut(vSInt32 x) { return x; } // expected-error-re {{returning 'vSInt32' (vector of {{[0-9]+}} 'int' values) from a function with incompatible result type 'svint32_t' (aka '__SVInt32_t')}}
 
-vSInt32 to_gnut_from_svint32_t(svint32_t x) { return x; } // expected-error {{returning 'svint32_t' (aka '__SVInt32_t') from a function with incompatible result type 'vSInt32' (vector of 4 'int' values)}}
+vSInt32 to_gnut_from_svint32_t(svint32_t x) { return x; } // expected-error-re {{returning 'svint32_t' (aka '__SVInt32_t') from a function with incompatible result type 'vSInt32' (vector of {{[0-9]+}} 'int' values)}}
 
 // --------------------------------------------------------------------------//
 // Test the scalable and fixed-length types can be used interchangeably

@@ -86,6 +86,8 @@ public:
   NODE(parser, AccSizeExpr)
   NODE(parser, AccSizeExprList)
   NODE(parser, AccStandaloneDirective)
+  NODE(parser, AccTileExpr)
+  NODE(parser, AccTileExprList)
   NODE(parser, AccLoopDirective)
   NODE(parser, AccWaitArgument)
   static std::string GetNodeName(const llvm::acc::Directive &x) {

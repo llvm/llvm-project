@@ -1021,8 +1021,7 @@ define i24 @v_saddsat_i24(i24 %lhs, i24 %rhs) {
 ; GFX8-NEXT:    v_bfe_i32 v0, v0, 0, 24
 ; GFX8-NEXT:    v_cmp_lt_i32_e64 s[4:5], v3, v0
 ; GFX8-NEXT:    v_bfe_i32 v0, v1, 0, 24
-; GFX8-NEXT:    s_bfe_i32 s6, 0, 0x180000
-; GFX8-NEXT:    v_cmp_gt_i32_e64 s[6:7], s6, v0
+; GFX8-NEXT:    v_cmp_gt_i32_e64 s[6:7], 0, v0
 ; GFX8-NEXT:    v_ashrrev_i32_e32 v0, 23, v3
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 0xff800000, v0
 ; GFX8-NEXT:    s_xor_b64 vcc, s[6:7], s[4:5]
@@ -1079,8 +1078,7 @@ define amdgpu_ps i24 @s_saddsat_i24(i24 inreg %lhs, i24 inreg %rhs) {
 ; GFX8-NEXT:    s_cmp_lt_i32 s3, s0
 ; GFX8-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX8-NEXT:    s_bfe_i32 s1, s1, 0x180000
-; GFX8-NEXT:    s_bfe_i32 s4, 0, 0x180000
-; GFX8-NEXT:    s_cmp_lt_i32 s1, s4
+; GFX8-NEXT:    s_cmp_lt_i32 s1, 0
 ; GFX8-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX8-NEXT:    s_xor_b32 s0, s1, s0
 ; GFX8-NEXT:    s_ashr_i32 s1, s3, 23

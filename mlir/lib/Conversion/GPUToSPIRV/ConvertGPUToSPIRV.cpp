@@ -19,6 +19,8 @@
 
 using namespace mlir;
 
+static constexpr const char kSPIRVModule[] = "__spv__";
+
 namespace {
 /// Pattern lowering GPU block/thread size/id to loading SPIR-V invocation
 /// builtin variables.
@@ -285,8 +287,11 @@ LogicalResult GPUModuleConversion::matchAndRewrite(
     return moduleOp.emitRemark("match failure: could not selected memory model "
                                "based on 'spv.target_env'");
 
+  // Add a keyword to the module name to avoid symbolic conflict.
+  std::string spvModuleName = (kSPIRVModule + moduleOp.getName()).str();
   auto spvModule = rewriter.create<spirv::ModuleOp>(
-      moduleOp.getLoc(), addressingModel, memoryModel.getValue());
+      moduleOp.getLoc(), addressingModel, memoryModel.getValue(),
+      StringRef(spvModuleName));
 
   // Move the region from the module op into the SPIR-V module.
   Region &spvModuleRegion = spvModule.body();

@@ -731,8 +731,11 @@ void FlatAffineConstraints::addAffineIfOpDomain(AffineIfOp ifOp) {
   SmallVector<Value, 4> operands = ifOp.getOperands();
   cst.setIdValues(0, cst.getNumDimAndSymbolIds(), operands);
 
-  // Merge the constraints from ifOp to the current domain.
+  // Merge the constraints from ifOp to the current domain. We need first merge
+  // and align the IDs from both constraints, and then append the constraints
+  // from the ifOp into the current one.
   mergeAndAlignIdsWithOther(0, &cst);
+  append(cst);
 }
 
 // Searches for a constraint with a non-zero coefficient at 'colIdx' in

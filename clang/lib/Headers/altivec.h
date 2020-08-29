@@ -3288,6 +3288,30 @@ static __inline__ vector double __ATTRS_o_ai vec_div(vector double __a,
 }
 #endif
 
+/* vec_dive */
+
+#ifdef __POWER10_VECTOR__
+static __inline__ vector signed int __ATTRS_o_ai
+vec_dive(vector signed int __a, vector signed int __b) {
+  return __builtin_altivec_vdivesw(__a, __b);
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai
+vec_dive(vector unsigned int __a, vector unsigned int __b) {
+  return __builtin_altivec_vdiveuw(__a, __b);
+}
+
+static __inline__ vector signed long long __ATTRS_o_ai
+vec_dive(vector signed long long __a, vector signed long long __b) {
+  return __builtin_altivec_vdivesd(__a, __b);
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_dive(vector unsigned long long __a, vector unsigned long long __b) {
+  return __builtin_altivec_vdiveud(__a, __b);
+}
+#endif
+
 /* vec_dss */
 
 #define vec_dss __builtin_altivec_dss
@@ -3300,23 +3324,19 @@ static __inline__ void __attribute__((__always_inline__)) vec_dssall(void) {
 
 /* vec_dst */
 #define vec_dst(__PTR, __CW, __STR) \
-  __extension__(                    \
-      { __builtin_altivec_dst((const void *)(__PTR), (__CW), (__STR)); })
+  __builtin_altivec_dst((const void *)(__PTR), (__CW), (__STR))
 
 /* vec_dstst */
 #define vec_dstst(__PTR, __CW, __STR) \
-  __extension__(                      \
-      { __builtin_altivec_dstst((const void *)(__PTR), (__CW), (__STR)); })
+  __builtin_altivec_dstst((const void *)(__PTR), (__CW), (__STR))
 
 /* vec_dststt */
 #define vec_dststt(__PTR, __CW, __STR) \
-  __extension__(                       \
-      { __builtin_altivec_dststt((const void *)(__PTR), (__CW), (__STR)); })
+  __builtin_altivec_dststt((const void *)(__PTR), (__CW), (__STR))
 
 /* vec_dstt */
 #define vec_dstt(__PTR, __CW, __STR) \
-  __extension__(                     \
-      { __builtin_altivec_dstt((const void *)(__PTR), (__CW), (__STR)); })
+  __builtin_altivec_dstt((const void *)(__PTR), (__CW), (__STR))
 
 /* vec_eqv */
 
@@ -5736,6 +5756,30 @@ vec_vmuleuh(vector unsigned short __a, vector unsigned short __b) {
   return __builtin_altivec_vmuleuh(__a, __b);
 #endif
 }
+
+/* vec_mulh */
+
+#ifdef __POWER10_VECTOR__
+static __inline__ vector signed int __ATTRS_o_ai
+vec_mulh(vector signed int __a, vector signed int __b) {
+  return __builtin_altivec_vmulhsw(__a, __b);
+}
+
+static __inline__ vector unsigned int __ATTRS_o_ai
+vec_mulh(vector unsigned int __a, vector unsigned int __b) {
+  return __builtin_altivec_vmulhuw(__a, __b);
+}
+
+static __inline__ vector signed long long __ATTRS_o_ai
+vec_mulh(vector signed long long __a, vector signed long long __b) {
+  return __builtin_altivec_vmulhsd(__a, __b);
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_mulh(vector unsigned long long __a, vector unsigned long long __b) {
+  return __builtin_altivec_vmulhud(__a, __b);
+}
+#endif
 
 /* vec_mulo */
 
@@ -16507,6 +16551,54 @@ vec_xl_be(signed long long  __offset, unsigned __int128 *__ptr) {
 #endif
 #else
   #define vec_xl_be vec_xl
+#endif
+
+#if defined(__POWER10_VECTOR__) && defined(__VSX__)
+
+/* vect_xl_sext */
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_xl_sext(signed long long __offset, signed char *__pointer) {
+  return (vector unsigned __int128)*(__pointer + __offset);
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_xl_sext(signed long long __offset, signed short *__pointer) {
+  return (vector unsigned __int128)*(__pointer + __offset);
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_xl_sext(signed long long __offset, signed int *__pointer) {
+  return (vector unsigned __int128)*(__pointer + __offset);
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_xl_sext(signed long long __offset, signed long long *__pointer) {
+  return (vector unsigned __int128)*(__pointer + __offset);
+}
+
+/* vec_xl_zext */
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_xl_zext(signed long long __offset, unsigned char *__pointer) {
+  return (vector unsigned __int128)*(__pointer + __offset);
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_xl_zext(signed long long __offset, unsigned short *__pointer) {
+  return (vector unsigned __int128)*(__pointer + __offset);
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_xl_zext(signed long long __offset, unsigned int *__pointer) {
+  return (vector unsigned __int128)*(__pointer + __offset);
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_xl_zext(signed long long __offset, unsigned long long *__pointer) {
+  return (vector unsigned __int128)*(__pointer + __offset);
+}
+
 #endif
 
 /* vec_xst */

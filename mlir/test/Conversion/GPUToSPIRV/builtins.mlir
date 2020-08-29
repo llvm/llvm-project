@@ -7,7 +7,7 @@ module attributes {gpu.container_module} {
     return
   }
 
-  // CHECK-LABEL:  spv.module Logical GLSL450
+  // CHECK-LABEL:  spv.module @{{.*}} Logical GLSL450
   // CHECK: spv.globalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId")
   gpu.module @kernels {
     gpu.func @builtin_workgroup_id_x() kernel
@@ -30,7 +30,7 @@ module attributes {gpu.container_module} {
     return
   }
 
-  // CHECK-LABEL:  spv.module Logical GLSL450
+  // CHECK-LABEL:  spv.module @{{.*}} Logical GLSL450
   // CHECK: spv.globalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId")
   gpu.module @kernels {
     gpu.func @builtin_workgroup_id_y() kernel
@@ -53,7 +53,7 @@ module attributes {gpu.container_module} {
     return
   }
 
-  // CHECK-LABEL:  spv.module Logical GLSL450
+  // CHECK-LABEL:  spv.module @{{.*}} Logical GLSL450
   // CHECK: spv.globalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId")
   gpu.module @kernels {
     gpu.func @builtin_workgroup_id_z() kernel
@@ -76,7 +76,7 @@ module attributes {gpu.container_module} {
     return
   }
 
-  // CHECK-LABEL:  spv.module Logical GLSL450
+  // CHECK-LABEL:  spv.module @{{.*}} Logical GLSL450
   gpu.module @kernels {
     gpu.func @builtin_workgroup_size_x() kernel
       attributes {spv.entry_point_abi = {local_size = dense<[32, 1, 1]>: vector<3xi32>}} {
@@ -100,7 +100,7 @@ module attributes {gpu.container_module} {
     return
   }
 
-  // CHECK-LABEL:  spv.module Logical GLSL450
+  // CHECK-LABEL:  spv.module @{{.*}} Logical GLSL450
   gpu.module @kernels {
     gpu.func @builtin_workgroup_size_y() kernel
       attributes {spv.entry_point_abi = {local_size = dense<[32, 4, 1]>: vector<3xi32>}} {
@@ -121,7 +121,7 @@ module attributes {gpu.container_module} {
     return
   }
 
-  // CHECK-LABEL:  spv.module Logical GLSL450
+  // CHECK-LABEL:  spv.module @{{.*}} Logical GLSL450
   gpu.module @kernels {
     gpu.func @builtin_workgroup_size_z() kernel
       attributes {spv.entry_point_abi = {local_size = dense<[32, 4, 1]>: vector<3xi32>}} {
@@ -142,7 +142,7 @@ module attributes {gpu.container_module} {
     return
   }
 
-  // CHECK-LABEL:  spv.module Logical GLSL450
+  // CHECK-LABEL:  spv.module @{{.*}} Logical GLSL450
   // CHECK: spv.globalVariable [[LOCALINVOCATIONID:@.*]] built_in("LocalInvocationId")
   gpu.module @kernels {
     gpu.func @builtin_local_id_x() kernel
@@ -165,7 +165,7 @@ module attributes {gpu.container_module} {
     return
   }
 
-  // CHECK-LABEL:  spv.module Logical GLSL450
+  // CHECK-LABEL:  spv.module @{{.*}} Logical GLSL450
   // CHECK: spv.globalVariable [[NUMWORKGROUPS:@.*]] built_in("NumWorkgroups")
   gpu.module @kernels {
     gpu.func @builtin_num_workgroups_x() kernel
@@ -182,7 +182,7 @@ module attributes {gpu.container_module} {
 // -----
 
 module attributes {gpu.container_module} {
-  // CHECK-LABEL:  spv.module Logical GLSL450
+  // CHECK-LABEL:  spv.module @{{.*}} Logical GLSL450
   // CHECK: spv.globalVariable [[SUBGROUPID:@.*]] built_in("SubgroupId")
   gpu.module @kernels {
     gpu.func @builtin_subgroup_id() kernel
@@ -198,7 +198,7 @@ module attributes {gpu.container_module} {
 // -----
 
 module attributes {gpu.container_module} {
-  // CHECK-LABEL:  spv.module Logical GLSL450
+  // CHECK-LABEL:  spv.module @{{.*}} Logical GLSL450
   // CHECK: spv.globalVariable [[NUMSUBGROUPS:@.*]] built_in("NumSubgroups")
   gpu.module @kernels {
     gpu.func @builtin_num_subgroups() kernel
@@ -214,7 +214,7 @@ module attributes {gpu.container_module} {
 // -----
 
 module attributes {gpu.container_module} {
-  // CHECK-LABEL:  spv.module Logical GLSL450
+  // CHECK-LABEL:  spv.module @{{.*}} Logical GLSL450
   // CHECK: spv.globalVariable [[SUBGROUPSIZE:@.*]] built_in("SubgroupSize")
   gpu.module @kernels {
     gpu.func @builtin_subgroup_size() kernel

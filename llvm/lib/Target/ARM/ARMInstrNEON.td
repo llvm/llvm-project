@@ -9079,11 +9079,11 @@ multiclass BF16VDOTI<bit Q, RegisterClass RegTy, string opc, ValueType AccumTy,
     (!cast<Instruction>(NAME) RegTy:$Vd, RegTy:$Vn, RHS, VectorIndex32:$lane)>;
 }
 
-def BF16VDOTS_VDOTD : BF16VDOTS<0, DPR, "vdot", v2f32, v8i8>;
-def BF16VDOTS_VDOTQ : BF16VDOTS<1, QPR, "vdot", v4f32, v16i8>;
+def BF16VDOTS_VDOTD : BF16VDOTS<0, DPR, "vdot", v2f32, v4bf16>;
+def BF16VDOTS_VDOTQ : BF16VDOTS<1, QPR, "vdot", v4f32, v8bf16>;
 
-defm BF16VDOTI_VDOTD : BF16VDOTI<0, DPR, "vdot", v2f32, v8i8, (v2f32 DPR_VFP2:$Vm)>;
-defm BF16VDOTI_VDOTQ : BF16VDOTI<1, QPR, "vdot", v4f32, v16i8, (EXTRACT_SUBREG QPR:$Vm, dsub_0)>;
+defm BF16VDOTI_VDOTD : BF16VDOTI<0, DPR, "vdot", v2f32, v4bf16, (v2f32 DPR_VFP2:$Vm)>;
+defm BF16VDOTI_VDOTQ : BF16VDOTI<1, QPR, "vdot", v4f32, v8bf16, (EXTRACT_SUBREG QPR:$Vm, dsub_0)>;
 
 class BF16MM<bit Q, RegisterClass RegTy,
              string opc>
@@ -9091,8 +9091,8 @@ class BF16MM<bit Q, RegisterClass RegTy,
            (outs RegTy:$dst), (ins RegTy:$Vd, RegTy:$Vn, RegTy:$Vm),
            N3RegFrm, IIC_VDOTPROD, "", "",
                 [(set (v4f32 QPR:$dst), (int_arm_neon_bfmmla (v4f32 QPR:$Vd),
-                                                (v16i8 QPR:$Vn),
-                                                (v16i8 QPR:$Vm)))]> {
+                                                (v8bf16 QPR:$Vn),
+                                                (v8bf16 QPR:$Vm)))]> {
    let Constraints = "$dst = $Vd";
    let AsmString = !strconcat(opc, ".bf16", "\t$Vd, $Vn, $Vm");
    let DecoderNamespace = "VFPV8";
@@ -9106,8 +9106,8 @@ class VBF16MALQ<bit T, string suffix, SDPatternOperator OpNode>
            NoItinerary, "vfma" # suffix, "bf16", "$Vd, $Vn, $Vm", "",
                 [(set (v4f32 QPR:$dst),
                       (OpNode (v4f32 QPR:$Vd),
-                              (v16i8 QPR:$Vn),
-                              (v16i8 QPR:$Vm)))]> {
+                              (v8bf16 QPR:$Vn),
+                              (v8bf16 QPR:$Vm)))]> {
   let Constraints = "$dst = $Vd";
   let DecoderNamespace = "VFPV8";
 }
@@ -9128,9 +9128,9 @@ multiclass VBF16MALQI<bit T, string suffix, SDPatternOperator OpNode> {
 
   def : Pat<
     (v4f32 (OpNode (v4f32 QPR:$Vd),
-                   (v16i8 QPR:$Vn),
-                   (v16i8 (bitconvert (v8bf16 (ARMvduplane (v8bf16 QPR:$Vm),
-                                                           VectorIndex16:$lane)))))),
+                   (v8bf16 QPR:$Vn),
+                   (v8bf16 (ARMvduplane (v8bf16 QPR:$Vm),
+                            VectorIndex16:$lane)))),
     (!cast<Instruction>(NAME) QPR:$Vd,
                               QPR:$Vn,
                               (EXTRACT_SUBREG QPR:$Vm,

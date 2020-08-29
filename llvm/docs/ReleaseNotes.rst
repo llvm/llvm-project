@@ -101,6 +101,11 @@ During this release ...
 * The assembler now has support for {disp32} and {disp8} pseudo prefixes for
   controlling displacement size for memory operands and jump displacements. The
   assembler also supports the .d32 and .d8 mnemonic suffixes to do the same.
+* A new function attribute "tune-cpu" has been added to support -mtune like gcc.
+  This allows microarchitectural optimizations to be applied independent from
+  the "target-cpu" attribute or TargetMachine CPU which will be used to select
+  Instruction Set. If the attribute is not present, the tune CPU will follow
+  the target CPU.
 
 Changes to the AMDGPU Target
 -----------------------------
@@ -151,6 +156,14 @@ Changes to the LLVM tools
 
 Changes to LLDB
 ---------------------------------
+
+Changes to Sanitizers
+---------------------
+
+The integer sanitizer `-fsanitize=integer` now has a new sanitizer:
+`-fsanitize=unsigned-shift-base`. It's not undefined behavior for an unsigned
+left shift to overflow (i.e. to shift bits out), but it has been the source of
+bugs and exploits in certain codebases in the past.
 
 External Open Source Projects Using LLVM 12
 ===========================================

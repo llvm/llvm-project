@@ -21,10 +21,10 @@
 // Platform specific configuration defines.
 #ifdef __APPLE__
   #if defined(FOR_DYLD)
-    #define _LIBUNWIND_SUPPORT_COMPACT_UNWIND
+    #define _LIBUNWIND_SUPPORT_COMPACT_UNWIND 1
   #else
-    #define _LIBUNWIND_SUPPORT_COMPACT_UNWIND
-    #define _LIBUNWIND_SUPPORT_DWARF_UNWIND   1
+    #define _LIBUNWIND_SUPPORT_COMPACT_UNWIND 1
+    #define _LIBUNWIND_SUPPORT_DWARF_UNWIND 1
   #endif
 #elif defined(_WIN32)
   #ifdef __SEH__

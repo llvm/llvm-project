@@ -112,7 +112,7 @@ define float @v_constained_fadd_f32_fpexcept_strict_fneg_fabs_lhs(float %x, floa
 ; GCN-LABEL: v_constained_fadd_f32_fpexcept_strict_fneg_fabs_lhs:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_add_f32_e64 v0, -|v0|, v1
+; GCN-NEXT:    v_sub_f32_e64 v0, v1, |v0|
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %fabs.x = call float @llvm.fabs.f32(float %x)
   %neg.fabs.x = fneg float %fabs.x

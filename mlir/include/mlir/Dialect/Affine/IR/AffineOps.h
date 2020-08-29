@@ -80,8 +80,9 @@ bool isTopLevelValue(Value value);
 // multiple stride levels (possibly using AffineMaps to specify multiple levels
 // of striding).
 // TODO: Consider replacing src/dst memref indices with view memrefs.
-class AffineDmaStartOp : public Op<AffineDmaStartOp, OpTrait::VariadicOperands,
-                                   OpTrait::ZeroResult> {
+class AffineDmaStartOp
+    : public Op<AffineDmaStartOp, OpTrait::MemRefsNormalizable,
+                OpTrait::VariadicOperands, OpTrait::ZeroResult> {
 public:
   using Op::Op;
 
@@ -268,8 +269,9 @@ public:
 //   ...
 //   affine.dma_wait %tag[%index], %num_elements : memref<1xi32, 2>
 //
-class AffineDmaWaitOp : public Op<AffineDmaWaitOp, OpTrait::VariadicOperands,
-                                  OpTrait::ZeroResult> {
+class AffineDmaWaitOp
+    : public Op<AffineDmaWaitOp, OpTrait::MemRefsNormalizable,
+                OpTrait::VariadicOperands, OpTrait::ZeroResult> {
 public:
   using Op::Op;
 

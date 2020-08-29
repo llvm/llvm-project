@@ -272,6 +272,13 @@ public:
   /// Return true if a G_STORE instruction \p MI is storing an undef value.
   bool matchUndefStore(MachineInstr &MI);
 
+  /// Return true if a G_SELECT instruction \p MI has an undef comparison.
+  bool matchUndefSelectCmp(MachineInstr &MI);
+
+  /// Return true if a G_SELECT instruction \p MI has a constant comparison. If
+  /// true, \p OpIdx will store the operand index of the known selected value.
+  bool matchConstantSelectCmp(MachineInstr &MI, unsigned &OpIdx);
+
   /// Replace an instruction with a G_FCONSTANT with value \p C.
   bool replaceInstWithFConstant(MachineInstr &MI, double C);
 
@@ -334,6 +341,9 @@ public:
   /// \param [out] Replacement - A register the G_AND should be replaced with on
   /// success.
   bool matchAndWithTrivialMask(MachineInstr &MI, Register &Replacement);
+
+  /// \return true if \p MI is a G_SEXT_INREG that can be erased.
+  bool matchRedundantSExtInReg(MachineInstr &MI);
 
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.

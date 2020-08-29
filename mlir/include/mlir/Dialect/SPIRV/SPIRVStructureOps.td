@@ -361,7 +361,7 @@ def SPV_GlobalVariableOp : SPV_Op<"globalVariable", [InModuleScope, Symbol]> {
 def SPV_ModuleOp : SPV_Op<"module",
                           [IsolatedFromAbove,
                            SingleBlockImplicitTerminator<"ModuleEndOp">,
-                           SymbolTable]> {
+                           SymbolTable, Symbol]> {
   let summary = "The top-level op that defines a SPIR-V module";
 
   let description = [{
@@ -409,7 +409,8 @@ def SPV_ModuleOp : SPV_Op<"module",
   let arguments = (ins
     SPV_AddressingModelAttr:$addressing_model,
     SPV_MemoryModelAttr:$memory_model,
-    OptionalAttr<SPV_VerCapExtAttr>:$vce_triple
+    OptionalAttr<SPV_VerCapExtAttr>:$vce_triple,
+    OptionalAttr<StrAttr>:$sym_name
   );
 
   let results = (outs);
@@ -417,10 +418,12 @@ def SPV_ModuleOp : SPV_Op<"module",
   let regions = (region SizedRegion<1>:$body);
 
   let builders = [
-    OpBuilder<[{OpBuilder &, OperationState &state}]>,
+    OpBuilder<[{OpBuilder &, OperationState &state,
+                Optional<StringRef> name = llvm::None}]>,
     OpBuilder<[{OpBuilder &, OperationState &state,
                 spirv::AddressingModel addressing_model,
-                spirv::MemoryModel memory_model}]>
+                spirv::MemoryModel memory_model,
+                Optional<StringRef> name = llvm::None}]>
   ];
 
   // We need to ensure the block inside the region is properly terminated;
@@ -432,6 +435,11 @@ def SPV_ModuleOp : SPV_Op<"module",
   let autogenSerialization = 0;
 
   let extraClassDeclaration = [{
+
+    bool isOptionalSymbol() { return true; }
+
+    Optional<StringRef> getName() { return sym_name(); }
+
     static StringRef getVCETripleAttrName() { return "vce_triple"; }
 
     Block& getBlock() {
