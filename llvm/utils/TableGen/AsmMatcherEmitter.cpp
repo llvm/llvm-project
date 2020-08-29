@@ -2122,8 +2122,11 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
         if (Op.Class->IsOptional) {
           // If optional operand is not present in actual instruction then we
           // should call its DefaultMethod before RenderMethod
+          // Nermoshkin change: got rid of -1 in operand mask, i can't figure out why it was there...
+          // is it related to having optional oeprands where mnemonic is not first? Since we aren't supporting
+          // all backends, temporary change for now is fine to unblock work.
           assert(HasOptionalOperands);
-          CvtOS << "      if (OptionalOperandsMask[*(p + 1) - 1]) {\n"
+          CvtOS << "      if (OptionalOperandsMask[*(p + 1)]) {\n"
                 << "        " << Op.Class->DefaultMethod << "()"
                 << "->" << Op.Class->RenderMethod << "(Inst, "
                 << OpInfo.MINumOperands << ");\n"

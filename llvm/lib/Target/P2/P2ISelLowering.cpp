@@ -16,7 +16,7 @@
 #include "P2MachineFunctionInfo.h"
 #include "P2TargetMachine.h"
 #include "P2TargetObjectFile.h"
-
+#include "MCTargetDesc/P2BaseInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -164,7 +164,10 @@ SDValue P2TargetLowering::lowerVAARG(SDValue Op, SelectionDAG &DAG) const {
     // decrement the pointer, VAList, to the next vaarg,
     // store the decremented VAList to the legalized pointer,
     // and load the actual argument out of the pointer VAList
-    SDValue adj = SDValue(DAG.getMachineNode(P2::SUBri, DL, vt, VAList, DAG.getIntPtrConstant(VT.getSizeInBits()/8, DL, true)), 0);
+    SDValue cond = DAG.getTargetConstant(P2::ALWAYS, DL, MVT::i32);
+    SDValue eff = DAG.getTargetConstant(P2::NOEFF, DL, MVT::i32);
+    SDValue ops[] = {VAList, DAG.getIntPtrConstant(VT.getSizeInBits()/8, DL, true), cond, eff};
+    SDValue adj = SDValue(DAG.getMachineNode(P2::SUBri, DL, vt, ops), 0);
     Chain = DAG.getStore(VAList.getValue(1), DL, adj, VAListPtr, MachinePointerInfo(SV));
 
     return DAG.getLoad(VT, DL, Chain, VAList, MachinePointerInfo(), std::min(vt.getSizeInBits(), VT.getSizeInBits())/8);
@@ -290,7 +293,10 @@ SDValue P2TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
             int off = VA.getLocMemOffset()+4;
             LLVM_DEBUG(errs() << "stack offset for argument: " << off << "\n");
             EVT vt = getPointerTy(DAG.getDataLayout());
-            PtrOff = SDValue(DAG.getMachineNode(P2::SUBri, DL, vt, StackPtr, DAG.getConstant(off, DL, MVT::i32, true)), 0);
+            SDValue cond = DAG.getTargetConstant(P2::ALWAYS, DL, MVT::i32);
+            SDValue eff = DAG.getTargetConstant(P2::NOEFF, DL, MVT::i32);
+            SDValue ops[] = {StackPtr, DAG.getConstant(off, DL, MVT::i32, true), cond, eff};
+            PtrOff = SDValue(DAG.getMachineNode(P2::SUBri, DL, vt, ops), 0);
 
             SDValue mem_op;
             ISD::ArgFlagsTy Flags = Outs[i].Flags;
@@ -514,8 +520,6 @@ SDValue P2TargetLowering::LowerFormalArguments(SDValue Chain,
     }
 
     if (IsVarArg) {
-        //fi = MFI->CreateFixedObject(4, CCInfo.getNextStackOffset(), true); // frame index for var arg pointer
-        //P2FI->setVarArgsFrameOffset(CCInfo.getNextStackOffset()); // TODO: make this work
         P2FI->setVarArgsFrameIndex(MFI->CreateFixedObject(4, last_formal_arg_offset-4, true));
     }
 

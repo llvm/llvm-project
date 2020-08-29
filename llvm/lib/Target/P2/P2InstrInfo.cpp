@@ -15,6 +15,7 @@
 
 #include "P2TargetMachine.h"
 #include "P2MachineFunctionInfo.h"
+#include "MCTargetDesc/P2BaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -56,7 +57,9 @@ void P2InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock
 
     BuildMI(MBB, MI, DL, get(Opcode), DestReg)
         .addFrameIndex(FrameIndex)
-        .addMemOperand(MMO);
+        .addMemOperand(MMO)
+        .addImm(P2::ALWAYS)
+        .addImm(P2::NOEFF);
 
     LLVM_DEBUG(errs() << ">> load reg " << DestReg << " from stack " << FrameIndex << "\n");
 }
@@ -67,11 +70,14 @@ void P2InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MCRegister SrcReg, bool KillSrc) const {
 
     if (SrcReg == P2::QX) {
-        BuildMI(MBB, MI, DL, get(P2::GETQX), DestReg);
+        BuildMI(MBB, MI, DL, get(P2::GETQX), DestReg).addReg(P2::QX).addImm(P2::ALWAYS).addImm(P2::NOEFF);
     } else if (SrcReg == P2::QY) {
-        BuildMI(MBB, MI, DL, get(P2::GETQY), DestReg);
+        BuildMI(MBB, MI, DL, get(P2::GETQY), DestReg).addReg(P2::QY).addImm(P2::ALWAYS).addImm(P2::NOEFF);
     } else {
-        BuildMI(MBB, MI, DL, get(P2::MOVrr), DestReg).addReg(SrcReg, getKillRegState(KillSrc));
+        BuildMI(MBB, MI, DL, get(P2::MOVrr), DestReg)
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addImm(P2::ALWAYS)
+        .addImm(P2::NOEFF);
     }
 }
 
@@ -105,7 +111,8 @@ void P2InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     BuildMI(MBB, MI, DL, get(Opcode))
         .addReg(SrcReg, getKillRegState(isKill))
         .addFrameIndex(FrameIndex)
-        .addMemOperand(MMO);
+        .addMemOperand(MMO)
+        .addImm(P2::ALWAYS);
 
     LLVM_DEBUG(errs() << ">> store reg " << SrcReg << " to stack frame index " << FrameIndex << "\n");
 }
@@ -125,23 +132,20 @@ void P2InstrInfo::adjustStackPtr(unsigned SP, int64_t amount, MachineBasicBlock 
     if (isInt<32>(amount)) {
         if (!isInt<9>(amount)) {
             // if we need more than 9 bits to store amount, augment the next source immediate (which will be added below)
-            BuildMI(MBB, I, DL, get(P2::AUGS)).addImm(amount>>9);
+            BuildMI(MBB, I, DL, get(P2::AUGS)).addImm(amount>>9).addImm(P2::ALWAYS);
         }
 
-        BuildMI(MBB, I, DL, get(inst), SP).addReg(SP).addImm(amount&0x1ff);
+        BuildMI(MBB, I, DL, get(inst), SP).addReg(SP).addImm(amount&0x1ff).addImm(P2::ALWAYS).addImm(P2::NOEFF);
     } else {
         llvm_unreachable("Cannot adjust stack pointer by more than 32 bits (and adjusting by more than 20 bits never makes sense!)");
     }
 }
 
-static bool isCondBranchOpcode(int op) {
-    return
-    (op == P2::JMPeq) ||
-    (op == P2::JMPne) ||
-    (op == P2::JMPlt) ||
-    (op == P2::JMPgte) ||
-    (op == P2::JMPgt) ||
-    (op == P2::JMPlte);
+static bool isCondBranchOpcode(MachineInstr &I) {
+    if (I.getOpcode() != P2::JMP) return false; // not a branch.
+    LLVM_DEBUG(errs() << "is cond branch? ");
+    LLVM_DEBUG(I.dump());
+    return I.getOperand(2).getImm() != P2::ALWAYS;
 }
 
 /// Analyze the branching code at the end of MBB, returning
@@ -176,7 +180,7 @@ static bool isCondBranchOpcode(int op) {
 bool P2InstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB, MachineBasicBlock *&FBB,
                                    SmallVectorImpl<MachineOperand> &Cond, bool AllowModify) const {
 
-    LLVM_DEBUG(errs() << "Analyze Branch MBB: ");
+    LLVM_DEBUG(errs() << "P2 Analyze Branch MBB: ");
     LLVM_DEBUG(MBB.dump());
     int old_br_code;
 
@@ -200,7 +204,7 @@ bool P2InstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
             return true;
 
         // Handle unconditional branches.
-        if (I->getOpcode() == P2::JMP) {
+        if (!isCondBranchOpcode(*I)) {
             if (!AllowModify) {
                 TBB = I->getOperand(0).getMBB();
                 continue;
@@ -225,15 +229,19 @@ bool P2InstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
         }
 
         // Handle conditional branches.
-        assert(isCondBranchOpcode(I->getOpcode()) && "Invalid conditional branch");
-        int BranchCode = I->getOpcode();
+        assert(isCondBranchOpcode(*I) && "Invalid conditional branch");
+        LLVM_DEBUG(errs() << "jmp instruction: ");
+        LLVM_DEBUG(I->dump());
+        int BranchCode = I->getOperand(2).getImm();
+
+        LLVM_DEBUG(errs() << "Got a conditional branch\n");
 
         // Working from the bottom, handle the first conditional branch.
         if (Cond.empty()) {
             FBB = TBB;
             TBB = I->getOperand(0).getMBB();
-            Cond.push_back(MachineOperand::CreateImm(BranchCode)); // create an immediate with the branch op code
             Cond.push_back(I->getOperand(1));
+            Cond.push_back(MachineOperand::CreateImm(BranchCode)); // create an immediate with the branch op code
             old_br_code = BranchCode;
             continue;
         }
@@ -261,7 +269,7 @@ unsigned P2InstrInfo::insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TB
                                     ArrayRef<MachineOperand> Cond, const DebugLoc &dl, int *BytesAdded) const {
 
 
-    LLVM_DEBUG(errs() << "Insert Branch MBB: ");
+    LLVM_DEBUG(errs() << "P2 Insert Branch MBB: ");
     LLVM_DEBUG(MBB.dump());
 
     // Shouldn't be a fall through.
@@ -272,18 +280,23 @@ unsigned P2InstrInfo::insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TB
     if (Cond.empty()) {
         // Unconditional branch?
         assert(!FBB && "Unconditional branch with multiple successors!");
-        BuildMI(&MBB, dl, get(P2::JMP)).addMBB(TBB);
+        BuildMI(&MBB, dl, get(P2::JMP)).addMBB(TBB).addImm(1).addImm(P2::ALWAYS);
         return 1;
+    }
+
+    for (int i = 0; i < Cond.size(); i++) {
+        LLVM_DEBUG(errs() << "cond operand: ");
+        LLVM_DEBUG(Cond[i].dump());
     }
 
     // Conditional branch.
     unsigned Count = 0;
-    BuildMI(&MBB, dl, get(Cond[0].getImm())).addMBB(TBB).add(Cond[1]);
+    BuildMI(&MBB, dl, get(P2::JMP)).addMBB(TBB).add(Cond[0]).add(Cond[1]);
     ++Count;
 
     if (FBB) {
         // Two-way Conditional branch. Insert the second branch.
-        BuildMI(&MBB, dl, get(P2::JMP)).addMBB(FBB);
+        BuildMI(&MBB, dl, get(P2::JMP)).addMBB(FBB).addImm(1).addImm(P2::ALWAYS);
         ++Count;
     }
 
@@ -300,7 +313,7 @@ unsigned P2InstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved) co
         --I;
         if (I->isDebugInstr()) continue;
 
-        if (!isCondBranchOpcode(I->getOpcode()) &&
+        if (!isCondBranchOpcode(*I) &&
             I->getOpcode() != P2::JMPr &&
             I->getOpcode() != P2::JMP) break;
 

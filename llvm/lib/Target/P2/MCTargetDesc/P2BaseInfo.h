@@ -15,36 +15,35 @@
 #define LLVM_LIB_TARGET_P2_MCTARGETDESC_P2BASEINFO_H
 
 #include "P2MCTargetDesc.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <map>
 
 namespace llvm {
 
     namespace P2 {
-        /*
-        def _ret_           : P2Effect<"_ret_", 0b0000>;
-        def if_nc_and_nz    : P2Effect<"if_nc_and_nz", 0b0001>;
-        def if_nc_and_z     : P2Effect<"if_nc_and_z", 0b0010>;
-        def if_nc           : P2Effect<"if_nc", 0b0011>;
-        def if_c_and_nz     : P2Effect<"if_c_and_nz", 0b0100>;
-        def if_nz           : P2Effect<"if_nz", 0b0101>;
-        def if_c_ne_z       : P2Effect<"if_c_ne_z", 0b0110>;
-        def if_nc_or_nz     : P2Effect<"if_nc_or_nz", 0b0111>;
-        def if_c_and_z      : P2Effect<"if_c_and_z", 0b1000>;
-        def if_c_eq_z       : P2Effect<"if_c_eq_z", 0b1001>;
-        def if_z            : P2Effect<"if_z", 0b1010>;
-        def if_nc_or_z      : P2Effect<"if_nc_or_z", 0b1011>;
-        def if_c            : P2Effect<"if_c", 0b1100>;
-        def if_c_or_nz      : P2Effect<"if_c_or_nz", 0b1101>;
-        def if_c_or_z       : P2Effect<"if_c_or_z", 0b1110>;
-        def always          : P2Effect<"", 0b1111>;
-        */
-
         // special immediates for rd/wrbyte/word/long that will modify PTRx
         enum name {
             PTRA_POSTINC = 0x161,
             PTRA_PREDEC = 0x15f
+        };
+
+        // Map LLVM's condition code to immediate operands for expanding instructions with condition codes
+        enum {
+            SETUEQ = 0,
+            SETUNE,
+            SETULE,
+            SETULT,
+            SETUGT,
+            SETUGE,
+            SETEQ,
+            SETNE,
+            SETLE,
+            SETLT,
+            SETGT,
+            SETGE
         };
 
         enum {
@@ -64,6 +63,13 @@ namespace llvm {
             IF_C_OR_NZ,
             IF_C_OR_Z,
             ALWAYS
+        };
+
+        enum {
+            NOEFF = 0,
+            WZ,
+            WC,
+            WCZ
         };
 
         enum {
@@ -88,6 +94,11 @@ namespace llvm {
             P2InstWRA,
             P2InstN
         };
+
+        extern const char *cond_string_lut[];
+        extern const char *effect_string_lut[];
+        extern std::map<StringRef, int> cond_string_map;
+        extern std::map<StringRef, int> effect_string_map;
     }
 
 }

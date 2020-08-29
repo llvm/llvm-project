@@ -29,6 +29,7 @@ namespace llvm {
         virtual void anchor();
 
     public:
+
         explicit P2InstrInfo();
 
         /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As

@@ -72,12 +72,9 @@ namespace {
         return false;
     }
 
-    // Implemented by targets that want to run passes immediately before
-    // machine code is emitted. return true if -print-machineinstrs should
-    // print out the code after the passes.
     void P2PassConfig::addPreEmitPass() {
         P2TargetMachine &TM = getP2TargetMachine();
-        addPass(createP2DelJmpPass(TM));
+        //addPass(createP2DelJmpPass(TM));
     }
 
     void P2PassConfig::addPreRegAlloc() {

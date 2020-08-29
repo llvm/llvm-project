@@ -14,7 +14,7 @@
 #include "P2MachineFunctionInfo.h"
 #include "P2RegisterInfo.h"
 #include "P2TargetMachine.h"
-
+#include "MCTargetDesc/P2BaseInfo.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -111,13 +111,17 @@ void P2RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II, int SPA
     if (MI.getOpcode() == P2::FRMIDX) {
         MI.setDesc(inst_info.get(P2::MOVrr)); // change our psesudo instruction to a mov
         MI.getOperand(FIOperandNum).ChangeToRegister(P2::PTRA, false); // change the abstract frame index register to our real stack pointer register
+        MI.addOperand(MachineOperand::CreateImm(P2::ALWAYS));
+        MI.addOperand(MachineOperand::CreateImm(P2::NOEFF));
 
         Register dst_reg = MI.getOperand(0).getReg();
         II++; // skip forward by 1 instruction
 
         BuildMI(*MI.getParent(), II, dl, inst_info.get(P2::SUBri), dst_reg)
                                 .addReg(dst_reg, RegState::Kill)
-                                .addImm(offset);
+                                .addImm(offset)
+                                .addImm(P2::ALWAYS)
+                                .addImm(P2::NOEFF);
     } else if ((op == P2::WRLONGri) || (op == P2::RDLONGri)) {
         int imm = 0x4;
 
@@ -152,11 +156,15 @@ void P2RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II, int SPA
         }
 
         BuildMI(*MI.getParent(), II, dl, inst_info.get(P2::MOVrr), reg)
-                                .addReg(P2::PTRA); // save the SP to an unused register
+                                .addReg(P2::PTRA)
+                                .addImm(P2::ALWAYS)
+                                .addImm(P2::NOEFF); // save the SP to an unused register
 
         BuildMI(*MI.getParent(), II, dl, inst_info.get(P2::SUBri), reg)
                                 .addReg(reg, RegState::Kill)
-                                .addImm(offset); // adjust saved SP by frame index offset
+                                .addImm(offset)
+                                .addImm(P2::ALWAYS)
+                                .addImm(P2::NOEFF); // adjust saved SP by frame index offset
 
         MI.getOperand(FIOperandNum).ChangeToRegister(reg, false);
 

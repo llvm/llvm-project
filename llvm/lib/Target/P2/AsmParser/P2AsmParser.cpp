@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -30,8 +31,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
-
-#include <set>
 
 using namespace llvm;
 
@@ -59,59 +58,6 @@ namespace {
 }
 
 namespace {
-    class P2AsmParser : public MCTargetAsmParser {
-        MCAsmParser &Parser;
-        P2AssemblerOptions Options;
-
-        std::set<StringRef> cond_strings {
-            "_ret_",
-            "if_nc_and_nz",
-            "if_nc_and_z",
-            "if_nc",
-            "if_c_and_nz",
-            "if_nz",
-            "if_c_ne_z",
-            "if_nc_or_nz",
-            "if_c_and_z",
-            "if_c_eq_z",
-            "if_z",
-            "if_nc_or_z",
-            "if_c",
-            "if_c_or_nz",
-            "if_c_or_z",
-            ""
-        };
-
-    #define GET_ASSEMBLER_HEADER
-    #include "P2GenAsmMatcher.inc"
-
-        bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode, OperandVector &Operands, MCStreamer &Out,
-                                        uint64_t &ErrorInfo, bool MatchingInlineAsm) override;
-        bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-        bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name, SMLoc NameLoc, OperandVector &Operands) override;
-        bool ParseDirective(AsmToken DirectiveID) override;
-        OperandMatchResultTy tryParseRegister(unsigned &reg_no, SMLoc &start, SMLoc &end) override;
-
-        bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
-        int parseRegister(StringRef Mnemonic);
-        bool tryParseRegisterOperand(OperandVector &Operands, StringRef Mnemonic);
-        int matchRegisterName(StringRef Symbol);
-        int matchRegisterByNumber(unsigned RegNum, StringRef Mnemonic);
-        unsigned getReg(int RC,int RegNo);
-
-    public:
-        P2AsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser, const MCInstrInfo &MII, const MCTargetOptions &Options)
-                    : MCTargetAsmParser(Options, sti, MII), Parser(parser) {
-            // Initialize the set of available features.
-            setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
-        }
-
-        MCAsmParser &getParser() const { return Parser; }
-        MCAsmLexer &getLexer() const { return Parser.getLexer(); }
-    };
-}
-
-namespace {
 
     /// P2Operand - Instances of this class represent a parsed P2 machine
     /// instruction.
@@ -127,10 +73,6 @@ namespace {
     public:
         P2Operand(KindTy K) : MCParsedAsmOperand(), Kind(K) {}
 
-        struct Token {
-            const char *Data;
-            unsigned Length;
-        };
         struct PhysRegOp {
             unsigned RegNum; /// Register Number
         };
@@ -143,7 +85,7 @@ namespace {
         };
 
         union {
-            struct Token Tok;
+            StringRef Tok;
             struct PhysRegOp Reg;
             struct ImmOp Imm;
             struct MemOp Mem;
@@ -189,7 +131,7 @@ namespace {
 
         StringRef getToken() const {
             assert(Kind == k_Token && "Invalid access!");
-            return StringRef(Tok.Data, Tok.Length);
+            return Tok;
         }
 
         unsigned getReg() const override {
@@ -214,8 +156,7 @@ namespace {
 
         static std::unique_ptr<P2Operand> CreateToken(StringRef Str, SMLoc S) {
             auto Op = std::make_unique<P2Operand>(k_Token);
-            Op->Tok.Data = Str.data();
-            Op->Tok.Length = Str.size();
+            Op->Tok = Str;
             Op->StartLoc = S;
             Op->EndLoc = S;
             return Op;
@@ -270,11 +211,55 @@ namespace {
                 OS << "Register<" << Reg.RegNum << ">";
                 break;
             case k_Token:
-                OS << Tok.Data;
+                OS << Tok;
                 break;
             }
         }
     };
+
+    class P2AsmParser : public MCTargetAsmParser {
+        MCAsmParser &Parser;
+        P2AssemblerOptions Options;
+
+    #define GET_ASSEMBLER_HEADER
+    #include "P2GenAsmMatcher.inc"
+
+        bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode, OperandVector &Operands, MCStreamer &Out,
+                                        uint64_t &ErrorInfo, bool MatchingInlineAsm) override;
+        bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
+        bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name, SMLoc NameLoc, OperandVector &Operands) override;
+        bool ParseDirective(AsmToken DirectiveID) override;
+        OperandMatchResultTy tryParseRegister(unsigned &reg_no, SMLoc &start, SMLoc &end) override;
+
+        bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
+        //bool parseConditionOperand(OperandVector &Operands, StringRef Mnemonic);
+        //bool parseEffectOperand(OperandVector &Operands, StringRef Mnemonic);
+        int parseRegister(StringRef Mnemonic);
+        bool tryParseRegisterOperand(OperandVector &Operands, StringRef Mnemonic);
+        int matchRegisterName(StringRef Symbol);
+        int matchRegisterByNumber(unsigned RegNum, StringRef Mnemonic);
+        unsigned getReg(int RC,int RegNo);
+
+    public:
+        P2AsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser, const MCInstrInfo &MII, const MCTargetOptions &Options)
+                    : MCTargetAsmParser(Options, sti, MII), Parser(parser) {
+            // Initialize the set of available features.
+            setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
+        }
+
+        MCAsmParser &getParser() const { return Parser; }
+        MCAsmLexer &getLexer() const { return Parser.getLexer(); }
+
+        std::unique_ptr<P2Operand> defaultEffectOperands() {
+            const MCConstantExpr *eff_expr = MCConstantExpr::create(0, getContext());
+            return P2Operand::CreateImm(eff_expr, SMLoc(), SMLoc());
+        };
+    };
+}
+
+namespace {
+
+
 }
 
 void printP2Operands(OperandVector &Operands) {
@@ -302,7 +287,6 @@ bool P2AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode, Operand
             break;
         case Match_Success: {
             Inst.setLoc(IDLoc);
-            Inst.setFlags(Inst.getFlags() | P2::ALWAYS); // don't try to parse conditional instructions yet
             LLVM_DEBUG(Inst.dump());
             Out.emitInstruction(Inst, getSTI());
             return false;
@@ -320,6 +304,8 @@ bool P2AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode, Operand
                 ErrorLoc = ((P2Operand &)*Operands[ErrorInfo]).getStartLoc();
                 if (ErrorLoc == SMLoc()) ErrorLoc = IDLoc;
             }
+
+            LLVM_DEBUG(errs() << "error: " << ErrorInfo << "\n");
 
             return Error(ErrorLoc, "invalid operand for instruction");
         }
@@ -348,51 +334,103 @@ bool P2AsmParser::ParseRegister(unsigned &reg_no, SMLoc &start, SMLoc &end) {
     return (reg_no == (unsigned)-1);
 }
 
+/*
+ * Every assembly instruction has the following format:
+ *
+ * [cond code] <inst mnemonic> [0-3 operands, comma list] [wc/wz/wcz].
+ *
+ * so the parse this, we will start by lexing the first token and seeing what it is. If it's a conditional code, save an MCConstantExpr
+ * and move on. Then, assume the next token is the instruction. If we didn't find a condition code, assume the token is an instruction.
+ *
+ * then, loop over the comma separated list of operands and call parseOperand() for each token.
+ *
+ * at the end of the comma separated list, assume the next token (if one exists) is the effect flag. if it's not, error out.
+ *
+ */
 bool P2AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name, SMLoc NameLoc, OperandVector &Operands) {
 
     LLVM_DEBUG(errs() << "=== Parse Instruction ===\n");
-    size_t start = 0, next = Name.find('\t');
-    StringRef inst = Name.slice(start, next);
-    StringRef condition;
-    if (cond_strings.find(inst) != cond_strings.end()) {
-        // we have a condition, save it, and we'll put it as the last operand
-        // also read the next operand which is the actual instruction
-        start = next;
-        next = Name.find(' ');
-        condition = inst;
-        inst = Name.slice(start, next);
+
+    LLVM_DEBUG(errs() << "name: \"" << Name << "\"\n");
+
+    SMLoc cond_loc = getLexer().getLoc();
+    SMLoc effect_loc;
+
+    StringRef condition = "";
+
+    // check if it's a condition string, and if it is, continue and get the instruction mnemonic
+    if (P2::cond_string_map.find(Name) != P2::cond_string_map.end()) {
+        condition = Name;
+        NameLoc = getLexer().getLoc();
+        Name = getLexer().getTok().getString();
+        Parser.Lex(); // eat the token
+
+        LLVM_DEBUG(errs() << "got a condition, next token is " << Name << " of size " << Name.size() << "\n");
     }
 
-    LLVM_DEBUG(errs() << "inst: " << inst << "\n");
+    // append the condition code first
+    SMLoc e = SMLoc::getFromPointer(cond_loc.getPointer() - 1);
+    const MCConstantExpr *cond_expr = MCConstantExpr::create(P2::cond_string_map[condition], getContext());
+    Operands.push_back(P2Operand::CreateImm(cond_expr, cond_loc, e));
 
-    Operands.push_back(P2Operand::CreateToken(inst, NameLoc));
+    Operands.push_back(P2Operand::CreateToken(Name, NameLoc));
 
-    // Read the operands.
+    // if there are operands, parse them
     if (getLexer().isNot(AsmToken::EndOfStatement)) {
-        // Read the first operand.
+
+        // get the first operand
         if (parseOperand(Operands, Name)) {
             SMLoc Loc = getLexer().getLoc();
             Parser.eatToEndOfStatement();
             return Error(Loc, "unexpected token in argument list");
         }
 
-        while (getLexer().is(AsmToken::Comma) ) {
-            Parser.Lex();  // Eat the comma.
+        // get the remaining operands
+        while (getLexer().is(AsmToken::Comma)) {
+           Parser.Lex();  // Eat the comma
+
+           LLVM_DEBUG(errs() << "got another operand\n");
 
             // Parse and remember the operand.
             if (parseOperand(Operands, Name)) {
                 SMLoc Loc = getLexer().getLoc();
                 Parser.eatToEndOfStatement();
-                return Error(Loc, "unexpected token in argument list");
+                return Error(Loc, "unexpected token in operand list");
             }
         }
     }
 
+    effect_loc = getLexer().getLoc();
+    // if there's another token, see if it's the effect flag.
+    StringRef effect_flag = "";
+    if (getLexer().isNot(AsmToken::EndOfStatement)) {
+        effect_flag = getLexer().getTok().getString();
+        effect_loc = getLexer().getLoc();
+        Parser.Lex(); // eat the effect flag
+
+        if (P2::effect_string_map.find(effect_flag) == P2::effect_string_map.end()) {
+            SMLoc Loc = getLexer().getLoc();
+            Parser.eatToEndOfStatement();
+            return Error(Loc, "unexpected token for effect flag");
+        }
+
+        LLVM_DEBUG(errs() << "got effect flag\n");
+        e = SMLoc::getFromPointer(effect_loc.getPointer() - 1);
+        const MCConstantExpr *eff_expr = MCConstantExpr::create(P2::effect_string_map[effect_flag], getContext());
+        Operands.push_back(P2Operand::CreateImm(eff_expr, effect_loc, e));
+    } /*else {
+        // PROBLEM: we don't know if we should be adding this operand or not at this stage, and if it's not included when it should be, the matcher errors.
+        e = SMLoc::getFromPointer(effect_loc.getPointer() - 1);
+        const MCConstantExpr *eff_expr = MCConstantExpr::create(0, getContext());
+        Operands.push_back(P2Operand::CreateImm(eff_expr, effect_loc, e));
+    }*/
+
+    // if we still haven't reached the end of the statement, error out.
     if (getLexer().isNot(AsmToken::EndOfStatement)) {
         SMLoc Loc = getLexer().getLoc();
         Parser.eatToEndOfStatement();
         LLVM_DEBUG(errs() << "haven't found the end of the statement\n");
-        return Error(Loc, "unexpected token in argument list");
+        return Error(Loc, "unexpected token after effect flags");
     }
 
     Parser.Lex(); // Consume the EndOfStatement
@@ -403,7 +441,6 @@ bool P2AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name, S
 
 bool P2AsmParser::ParseDirective(llvm::AsmToken DirectiveID) {
     LLVM_DEBUG(errs() << "Parse directive: " << DirectiveID.getString() << "\n");
-
     return true;
 }
 
@@ -439,7 +476,7 @@ int P2AsmParser::matchRegisterByNumber(unsigned RegNum, StringRef Mnemonic) {
 
 int P2AsmParser::matchRegisterName(StringRef Name) {
 
-    int CC = StringSwitch<unsigned>(Name)
+    int reg = StringSwitch<unsigned>(Name)
             .Case("r0",     P2::R0)
             .Case("r1",     P2::R1)
             .Case("r2",     P2::R2)
@@ -490,7 +527,7 @@ int P2AsmParser::matchRegisterName(StringRef Name) {
             .Case("inb",    P2::INB)
             .Default(-1);
 
-    return CC;
+    return reg;
 }
 
 bool P2AsmParser::tryParseRegisterOperand(OperandVector &Operands, StringRef Mnemonic) {
@@ -503,7 +540,6 @@ bool P2AsmParser::tryParseRegisterOperand(OperandVector &Operands, StringRef Mne
         return true;
     }
 
-    //Operands.push_back(P2Operand::CreateReg(RegNo, S, Parser.getTok().getLoc()));
     Operands.push_back(P2Operand::CreateReg(RegNo, S, E));
     Parser.Lex(); // Eat register token.
     return false;
@@ -515,13 +551,12 @@ bool P2AsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
 
     AsmToken::TokenKind tok_kind = getLexer().getKind();
 
-    LLVM_DEBUG(errs() << tok_kind << "\n");
-
     switch (tok_kind) {
         default:
             Error(Parser.getTok().getLoc(), "unexpected token in operand");
             return true;
         case AsmToken::Dollar: {
+            LLVM_DEBUG(errs() << "operand token is a $\n");
             // parse register
             SMLoc S = Parser.getTok().getLoc();
             Parser.Lex(); // Eat dollar token.
@@ -547,6 +582,7 @@ bool P2AsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
         }
 
         case AsmToken::Hash: {
+            LLVM_DEBUG(errs() << "operand token is a #\n");
             // is an immediate expression, so first create the token for the #
             SMLoc S = Parser.getTok().getLoc();
             Parser.Lex(); // eat the pound sign

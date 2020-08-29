@@ -64,6 +64,11 @@ namespace llvm {
         // record the relocation and return zero.
         unsigned encodeCallTarget(const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const;
 
+        // Return binary encoding of the condition operand
+        // unsigned encodeCondition(const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const;
+        // Return binary encoding of the effect operand (C/Z flags)
+        // unsigned encodeEffect(const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const;
+
         // getMachineOpValue - Return binary encoding of operand. If the machin
         // operand requires relocation, record the relocation and return zero.
         unsigned getMachineOpValue(const MCInst &MI, const MCOperand &MO, SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const;

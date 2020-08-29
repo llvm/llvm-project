@@ -76,8 +76,14 @@ static DecodeStatus DecodeIOInstruction(MCInst &Inst, unsigned Insn, uint64_t Ad
 static DecodeStatus DecodeJumpInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeCmpInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeCordicInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeGetQInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
 
 #include "P2GenDisassemblerTables.inc"
+
+static MCOperand getConditionOperand(unsigned inst) {
+    int c = fieldFromInstruction(inst, 28, 4);
+    return MCOperand::createImm(c);
+}
 
 static DecodeStatus DecodeP2GPRRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address, const void *Decoder) {
 	unsigned Register = getRegForField(RegNo);
@@ -93,7 +99,9 @@ static DecodeStatus DecodeJumpInstruction(MCInst &Inst, unsigned Insn, uint64_t 
     if (a_field > 0x7ffff) {
         a_field = -((~a_field & 0xfffff) + 1);
     }
-    Inst.addOperand(MCOperand::createImm(a_field));
+    Inst.addOperand(MCOperand::createImm(a_field)); // turn this into a symbol instead of immediate. make a decoder for calls and do the same
+    Inst.addOperand(MCOperand::createReg(P2::SW));
+    Inst.addOperand(getConditionOperand(Insn));
 
     return MCDisassembler::Success;
 }
@@ -117,6 +125,10 @@ static DecodeStatus DecodeIOInstruction(MCInst &Inst, unsigned Insn, uint64_t Ad
         Inst.addOperand(MCOperand::createReg(getRegForField(d_field)));
     }
 
+    Inst.addOperand(getConditionOperand(Insn));
+    int eff = fieldFromInstruction(Insn, 19, 2);
+    Inst.addOperand(MCOperand::createImm(eff));
+
     return MCDisassembler::Success;
 }
 
@@ -139,6 +151,10 @@ static DecodeStatus DecodeCmpInstruction(MCInst &Inst, unsigned Insn, uint64_t A
     } else {
         Inst.addOperand(MCOperand::createReg(getRegForField(s_field)));
     }
+
+    Inst.addOperand(getConditionOperand(Insn));
+    int eff = fieldFromInstruction(Insn, 19, 2);
+    Inst.addOperand(MCOperand::createImm(eff));
 
     return MCDisassembler::Success;
 }
@@ -165,6 +181,25 @@ static DecodeStatus DecodeCordicInstruction(MCInst &Inst, unsigned Insn, uint64_
     } else {
         Inst.addOperand(MCOperand::createReg(getRegForField(s_field)));
     }
+
+    Inst.addOperand(getConditionOperand(Insn));
+    int eff = fieldFromInstruction(Insn, 19, 2);
+    Inst.addOperand(MCOperand::createImm(eff));
+
+    return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeGetQInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder) {
+    LLVM_DEBUG(errs() << "getq decode\n");
+
+    unsigned d_field = fieldFromInstruction(Insn, 9, 9);
+
+    Inst.addOperand(MCOperand::createReg(getRegForField(d_field)));
+    Inst.addOperand(MCOperand::createReg(P2::GETQX));
+
+    Inst.addOperand(getConditionOperand(Insn));
+    int eff = fieldFromInstruction(Insn, 19, 2);
+    Inst.addOperand(MCOperand::createImm(eff));
 
     return MCDisassembler::Success;
 }

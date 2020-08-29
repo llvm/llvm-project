@@ -211,6 +211,7 @@ bool P2FrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB, MachineB
                 // if we have more than 1 reg to write, add setq.
                 BuildMI(MBB, MI, DL, TII.get(P2::SETQi))
                     .addImm(block_size)
+                    .addImm(P2::ALWAYS)
                     .setMIFlag(MachineInstr::FrameSetup);
             }
 
@@ -218,6 +219,7 @@ bool P2FrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB, MachineB
             // a block of registers.
             BuildMI(MBB, MI, DL, TII.get(P2::WRLONGri), block_first_reg)
                 .addImm(P2::PTRA_POSTINC)
+                .addImm(P2::ALWAYS)
                 .setMIFlag(MachineInstr::FrameSetup);
 
             LLVM_DEBUG(errs() << "New block transfer to reg " << block_first_reg << "\n");
@@ -234,11 +236,13 @@ bool P2FrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB, MachineB
     if (block_size) {
         BuildMI(MBB, MI, DL, TII.get(P2::SETQi))
             .addImm(block_size)
+            .addImm(P2::ALWAYS)
             .setMIFlag(MachineInstr::FrameSetup);
     }
 
     BuildMI(MBB, MI, DL, TII.get(P2::WRLONGri), block_first_reg)
         .addImm(P2::PTRA_POSTINC)
+        .addImm(P2::ALWAYS)
         .setMIFlag(MachineInstr::FrameSetup);
 
     LLVM_DEBUG(errs() << "New block transfer to reg " << block_first_reg << "\n");
@@ -296,11 +300,14 @@ bool P2FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB, Machin
             if (block_size) {
                 BuildMI(MBB, MI, DL, TII.get(P2::SETQi))
                     .addImm(block_size)
+                    .addImm(P2::ALWAYS)
                     .setMIFlag(MachineInstr::FrameDestroy);
             }
 
             BuildMI(MBB, MI, DL, TII.get(P2::RDLONGri), block_first_reg)
                 .addImm(P2::PTRA_PREDEC)
+                .addImm(P2::ALWAYS)
+                .addImm(P2::NOEFF)
                 .setMIFlag(MachineInstr::FrameDestroy);
 
             block_size = 0;
@@ -315,11 +322,14 @@ bool P2FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB, Machin
     if (block_size) {
         BuildMI(MBB, MI, DL, TII.get(P2::SETQi))
             .addImm(block_size)
+            .addImm(P2::ALWAYS)
             .setMIFlag(MachineInstr::FrameDestroy);
     }
 
     BuildMI(MBB, MI, DL, TII.get(P2::RDLONGri), block_first_reg)
         .addImm(P2::PTRA_PREDEC)
+        .addImm(P2::ALWAYS)
+        .addImm(P2::NOEFF)
         .setMIFlag(MachineInstr::FrameDestroy);
 
     return true;

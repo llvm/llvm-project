@@ -17,6 +17,7 @@
 #include "P2MachineFunctionInfo.h"
 #include "P2RegisterInfo.h"
 #include "P2TargetMachine.h"
+#include "MCTargetDesc/P2BaseInfo.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -47,11 +48,13 @@ void P2DAGToDAGISel::selectMultiplication(SDNode *N) {
 
     assert(vt == MVT::i32 && "unexpected value type");
     bool isSigned = N->getOpcode() == ISD::SMUL_LOHI;
-    unsigned op = isSigned ? P2::QMULrr : P2::QMULrr; // FIXME: replace with signed multiplication node (which will be a pseudo maybe?)
+    unsigned op = isSigned ? P2::QMULrr : P2::QMULrr; // FIXME: replace with signed multiplication node (which will be a pseudo maybe?) (it might not be needed)
+
+    SDValue cond = CurDAG->getTargetConstant(P2::ALWAYS, DL, vt);
 
     SDValue lhs = N->getOperand(0);
     SDValue rhs = N->getOperand(1);
-    SDNode *mul = CurDAG->getMachineNode(op, DL, MVT::Glue, lhs, rhs);
+    SDNode *mul = CurDAG->getMachineNode(op, DL, MVT::Glue, lhs, rhs, cond);
     SDValue in_chain = CurDAG->getEntryNode();
     SDValue in_glue = SDValue(mul, 0);
 
@@ -105,8 +108,12 @@ bool P2DAGToDAGISel::selectAddr(SDValue addr, SDValue &addr_result) {
             LLVM_DEBUG(errs() << "...base is: ");
             LLVM_DEBUG(base.dump());
 
-            SDValue off = CurDAG->getTargetConstant(CN->getZExtValue(), DL, vt);
-            add = CurDAG->getMachineNode(P2::ADDri, DL, vt, base, off);
+            SDValue off = CurDAG->getTargetConstant(CN->getZExtValue(), DL, MVT::i32);
+            SDValue cond = CurDAG->getTargetConstant(P2::ALWAYS, DL, MVT::i32);
+            SDValue eff = CurDAG->getTargetConstant(P2::NOEFF, DL, MVT::i32);
+            SDValue ops[] = {base, off, cond, eff};
+
+            add = CurDAG->getMachineNode(P2::ADDri, DL, vt, ops);
             addr_result = SDValue(add, 0);
 
             return true;

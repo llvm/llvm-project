@@ -24,9 +24,10 @@ namespace llvm {
         void printOperand(const MCInst *MI, unsigned OpNum, raw_ostream &O);
         void printOperand(const MCInst *MI, uint64_t addr, unsigned OpNo,raw_ostream &O);
 
-    public:
+        void printCondition(const MCInst *MI, int OpNum, raw_ostream &O);
+        void printEffect(const MCInst *MI, int OpNum, raw_ostream &O);
 
-        static const char* cond_lut[16];
+    public:
 
         P2InstPrinter(const MCAsmInfo &MAI,
                         const MCInstrInfo &MII,

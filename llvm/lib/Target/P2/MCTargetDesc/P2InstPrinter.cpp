@@ -31,9 +31,19 @@ void P2InstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
     OS << StringRef(getRegisterName(RegNo)).lower();
 }
 
+void P2InstPrinter::printCondition(const MCInst *MI, int OpNum, raw_ostream &O) {
+    O << P2::cond_string_lut[MI->getOperand(OpNum).getImm() & 0xf];
+}
+
+void P2InstPrinter::printEffect(const MCInst *MI, int OpNum, raw_ostream &O) {
+    O << P2::effect_string_lut[MI->getOperand(OpNum).getImm() & 0x3];
+}
+
+
 void P2InstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                 StringRef Annot, const MCSubtargetInfo &STI,
                                 raw_ostream &O) {
+    LLVM_DEBUG(MI->dump());
     printInstruction(MI, Address, O);
     printAnnotation(O, Annot);
 }
@@ -59,8 +69,6 @@ static void printExpr(const MCExpr *Expr, const MCAsmInfo *MAI, raw_ostream &OS)
     }
     assert(SRE->getKind() == MCSymbolRefExpr::VK_None);
 
-    // Symbols are prefixed with '#'. we do this in tablegen already
-    // OS << '#';
     SRE->getSymbol().print(OS, MAI);
 }
 

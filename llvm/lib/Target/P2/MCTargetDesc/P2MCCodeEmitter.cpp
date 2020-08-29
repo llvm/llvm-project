@@ -77,7 +77,8 @@ void P2MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS, Small
     LLVM_DEBUG(errs() << "==== end encode ====\n");
 }
 
-unsigned P2MCCodeEmitter::getJumpTargetOpValue(const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+unsigned P2MCCodeEmitter::getJumpTargetOpValue(const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
+                                                const MCSubtargetInfo &STI) const {
     const MCOperand &MO = MI.getOperand(OpNo);
     // If the destination is an immediate, we have nothing to do.
     if (MO.isImm()) return MO.getImm();
@@ -123,6 +124,80 @@ unsigned P2MCCodeEmitter::encodeCallTarget(const MCInst &MI, unsigned OpNo, Smal
     auto Target = MO.getImm();
     return Target;
 }
+
+// unsigned P2MCCodeEmitter::encodeCondition(const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
+//                                             const MCSubtargetInfo &STI) const {
+//     const MCOperand &MO = MI.getOperand(OpNo);
+
+//     LLVM_DEBUG(errs() << "--- encode condition for operand: ");
+//     LLVM_DEBUG(MO.dump());
+
+//     llvm_unreachable("can't encode yet!");
+
+//     return 0;
+
+//     // if (MO.isExpr()) {
+//     //     LLVM_DEBUG(errs() << "call target for operand is an expression of kind: ");
+//     //     LLVM_DEBUG(errs() << (unsigned)MO.getExpr()->getKind() << "\n");
+//     //     MCFixupKind FixupKind;
+//     //     const MCSymbolRefExpr* expr = static_cast<const MCSymbolRefExpr*>(MO.getExpr());
+
+//     //     LLVM_DEBUG(expr->dump());
+
+//     //     if (expr->getSymbol().isExternal()) {
+//     //         LLVM_DEBUG(errs() << "creating COG fixup\n");
+//     //         FixupKind = static_cast<MCFixupKind>(P2::fixup_P2_COG9);
+//     //     } else {
+//     //         LLVM_DEBUG(errs() << "creating normal fixup\n");
+//     //         FixupKind = static_cast<MCFixupKind>(P2::fixup_P2_20);
+//     //     }
+
+//     //     Fixups.push_back(MCFixup::create(0, MO.getExpr(), FixupKind, MI.getLoc()));
+//     //     return 0;
+//     // }
+
+//     // assert(MO.isImm() && "non-immediate expression not handled by encodeCallTarget");
+
+//     // auto Target = MO.getImm();
+//     // return Target;
+// }
+
+// unsigned P2MCCodeEmitter::encodeEffect(const MCInst &MI, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
+//                                             const MCSubtargetInfo &STI) const {
+//     const MCOperand &MO = MI.getOperand(OpNo);
+
+//     LLVM_DEBUG(errs() << "--- encode effect for operand: ");
+//     LLVM_DEBUG(MO.dump());
+
+//     llvm_unreachable("can't encode yet!");
+
+//     return 0;
+
+//     // if (MO.isExpr()) {
+//     //     LLVM_DEBUG(errs() << "call target for operand is an expression of kind: ");
+//     //     LLVM_DEBUG(errs() << (unsigned)MO.getExpr()->getKind() << "\n");
+//     //     MCFixupKind FixupKind;
+//     //     const MCSymbolRefExpr* expr = static_cast<const MCSymbolRefExpr*>(MO.getExpr());
+
+//     //     LLVM_DEBUG(expr->dump());
+
+//     //     if (expr->getSymbol().isExternal()) {
+//     //         LLVM_DEBUG(errs() << "creating COG fixup\n");
+//     //         FixupKind = static_cast<MCFixupKind>(P2::fixup_P2_COG9);
+//     //     } else {
+//     //         LLVM_DEBUG(errs() << "creating normal fixup\n");
+//     //         FixupKind = static_cast<MCFixupKind>(P2::fixup_P2_20);
+//     //     }
+
+//     //     Fixups.push_back(MCFixup::create(0, MO.getExpr(), FixupKind, MI.getLoc()));
+//     //     return 0;
+//     // }
+
+//     // assert(MO.isImm() && "non-immediate expression not handled by encodeCallTarget");
+
+//     // auto Target = MO.getImm();
+//     // return Target;
+// }
 
 unsigned P2MCCodeEmitter::getExprOpValue(const MCInst &MI, const MCExpr *Expr, SmallVectorImpl<MCFixup> &Fixups,
                                             const MCSubtargetInfo &STI) const {
