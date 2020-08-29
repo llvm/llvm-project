@@ -94,28 +94,45 @@ Error DWARFYAML::emitDebugStr(raw_ostream &OS, const DWARFYAML::Data &DI) {
   return Error::success();
 }
 
-Error DWARFYAML::emitDebugAbbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
-  for (const DWARFYAML::AbbrevTable &AbbrevTable : DI.DebugAbbrev) {
-    uint64_t AbbrevCode = 0;
-    for (const DWARFYAML::Abbrev &AbbrevDecl : AbbrevTable.Table) {
-      AbbrevCode =
-          AbbrevDecl.Code ? (uint64_t)*AbbrevDecl.Code : AbbrevCode + 1;
-      encodeULEB128(AbbrevCode, OS);
-      encodeULEB128(AbbrevDecl.Tag, OS);
-      OS.write(AbbrevDecl.Children);
-      for (auto Attr : AbbrevDecl.Attributes) {
-        encodeULEB128(Attr.Attribute, OS);
-        encodeULEB128(Attr.Form, OS);
-        if (Attr.Form == dwarf::DW_FORM_implicit_const)
-          encodeSLEB128(Attr.Value, OS);
-      }
-      encodeULEB128(0, OS);
-      encodeULEB128(0, OS);
-    }
+StringRef DWARFYAML::Data::getAbbrevTableContentByIndex(uint64_t Index) const {
+  assert(Index < DebugAbbrev.size() &&
+         "Index should be less than the size of DebugAbbrev array");
+  auto It = AbbrevTableContents.find(Index);
+  if (It != AbbrevTableContents.cend())
+    return It->second;
 
-    // The abbreviations for a given compilation unit end with an entry
-    // consisting of a 0 byte for the abbreviation code.
-    OS.write_zeros(1);
+  std::string AbbrevTableBuffer;
+  raw_string_ostream OS(AbbrevTableBuffer);
+
+  uint64_t AbbrevCode = 0;
+  for (const DWARFYAML::Abbrev &AbbrevDecl : DebugAbbrev[Index].Table) {
+    AbbrevCode = AbbrevDecl.Code ? (uint64_t)*AbbrevDecl.Code : AbbrevCode + 1;
+    encodeULEB128(AbbrevCode, OS);
+    encodeULEB128(AbbrevDecl.Tag, OS);
+    OS.write(AbbrevDecl.Children);
+    for (auto Attr : AbbrevDecl.Attributes) {
+      encodeULEB128(Attr.Attribute, OS);
+      encodeULEB128(Attr.Form, OS);
+      if (Attr.Form == dwarf::DW_FORM_implicit_const)
+        encodeSLEB128(Attr.Value, OS);
+    }
+    encodeULEB128(0, OS);
+    encodeULEB128(0, OS);
+  }
+
+  // The abbreviations for a given compilation unit end with an entry
+  // consisting of a 0 byte for the abbreviation code.
+  OS.write_zeros(1);
+
+  AbbrevTableContents.insert({Index, AbbrevTableBuffer});
+
+  return AbbrevTableContents[Index];
+}
+
+Error DWARFYAML::emitDebugAbbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
+  for (uint64_t I = 0; I < DI.DebugAbbrev.size(); ++I) {
+    StringRef AbbrevTableContent = DI.getAbbrevTableContentByIndex(I);
+    OS.write(AbbrevTableContent.data(), AbbrevTableContent.size());
   }
 
   return Error::success();
@@ -257,16 +274,16 @@ static Expected<uint64_t> writeDIE(const DWARFYAML::Data &DI, uint64_t CUIndex,
   if (AbbrCode == 0 || Entry.Values.empty())
     return OS.tell() - EntryBegin;
 
-  Expected<uint64_t> AbbrevTableIndexOrErr =
-      DI.getAbbrevTableIndexByID(AbbrevTableID);
-  if (!AbbrevTableIndexOrErr)
+  Expected<DWARFYAML::Data::AbbrevTableInfo> AbbrevTableInfoOrErr =
+      DI.getAbbrevTableInfoByID(AbbrevTableID);
+  if (!AbbrevTableInfoOrErr)
     return createStringError(errc::invalid_argument,
-                             toString(AbbrevTableIndexOrErr.takeError()) +
+                             toString(AbbrevTableInfoOrErr.takeError()) +
                                  " for compilation unit with index " +
                                  utostr(CUIndex));
 
   ArrayRef<DWARFYAML::Abbrev> AbbrevDecls(
-      DI.DebugAbbrev[*AbbrevTableIndexOrErr].Table);
+      DI.DebugAbbrev[AbbrevTableInfoOrErr->Index].Table);
 
   if (AbbrCode > AbbrevDecls.size())
     return createStringError(
@@ -425,12 +442,28 @@ Error DWARFYAML::emitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
 
     writeInitialLength(Unit.Format, Length, OS, DI.IsLittleEndian);
     writeInteger((uint16_t)Unit.Version, OS, DI.IsLittleEndian);
+
+    uint64_t AbbrevTableOffset = 0;
+    if (Unit.AbbrOffset) {
+      AbbrevTableOffset = *Unit.AbbrOffset;
+    } else {
+      if (Expected<DWARFYAML::Data::AbbrevTableInfo> AbbrevTableInfoOrErr =
+              DI.getAbbrevTableInfoByID(AbbrevTableID)) {
+        AbbrevTableOffset = AbbrevTableInfoOrErr->Offset;
+      } else {
+        // The current compilation unit may not have DIEs and it will not be
+        // able to find the associated abbrev table. We consume the error and
+        // assign 0 to the debug_abbrev_offset in such circumstances.
+        consumeError(AbbrevTableInfoOrErr.takeError());
+      }
+    }
+
     if (Unit.Version >= 5) {
       writeInteger((uint8_t)Unit.Type, OS, DI.IsLittleEndian);
       writeInteger((uint8_t)AddrSize, OS, DI.IsLittleEndian);
-      writeDWARFOffset(Unit.AbbrOffset, Unit.Format, OS, DI.IsLittleEndian);
+      writeDWARFOffset(AbbrevTableOffset, Unit.Format, OS, DI.IsLittleEndian);
     } else {
-      writeDWARFOffset(Unit.AbbrOffset, Unit.Format, OS, DI.IsLittleEndian);
+      writeDWARFOffset(AbbrevTableOffset, Unit.Format, OS, DI.IsLittleEndian);
       writeInteger((uint8_t)AddrSize, OS, DI.IsLittleEndian);
     }
 

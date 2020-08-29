@@ -55,25 +55,31 @@ SetVector<StringRef> DWARFYAML::Data::getNonEmptySectionNames() const {
   return SecNames;
 }
 
-Expected<uint64_t> DWARFYAML::Data::getAbbrevTableIndexByID(uint64_t ID) const {
-  if (AbbrevTableID2Index.empty()) {
+Expected<DWARFYAML::Data::AbbrevTableInfo>
+DWARFYAML::Data::getAbbrevTableInfoByID(uint64_t ID) const {
+  if (AbbrevTableInfoMap.empty()) {
+    uint64_t AbbrevTableOffset = 0;
     for (auto &AbbrevTable : enumerate(DebugAbbrev)) {
       // If the abbrev table's ID isn't specified, we use the index as its ID.
       uint64_t AbbrevTableID =
           AbbrevTable.value().ID.getValueOr(AbbrevTable.index());
-      auto It =
-          AbbrevTableID2Index.insert({AbbrevTableID, AbbrevTable.index()});
+      auto It = AbbrevTableInfoMap.insert(
+          {AbbrevTableID, AbbrevTableInfo{/*Index=*/AbbrevTable.index(),
+                                          /*Offset=*/AbbrevTableOffset}});
       if (!It.second)
         return createStringError(
             errc::invalid_argument,
             "the ID (%" PRIu64 ") of abbrev table with index %zu has been used "
             "by abbrev table with index %" PRIu64,
-            AbbrevTableID, AbbrevTable.index(), It.first->second);
+            AbbrevTableID, AbbrevTable.index(), It.first->second.Index);
+
+      AbbrevTableOffset +=
+          getAbbrevTableContentByIndex(AbbrevTable.index()).size();
     }
   }
 
-  auto It = AbbrevTableID2Index.find(ID);
-  if (It == AbbrevTableID2Index.end())
+  auto It = AbbrevTableInfoMap.find(ID);
+  if (It == AbbrevTableInfoMap.end())
     return createStringError(errc::invalid_argument,
                              "cannot find abbrev table whose ID is %" PRIu64,
                              ID);
@@ -182,7 +188,7 @@ void MappingTraits<DWARFYAML::Unit>::mapping(IO &IO, DWARFYAML::Unit &Unit) {
   if (Unit.Version >= 5)
     IO.mapRequired("UnitType", Unit.Type);
   IO.mapOptional("AbbrevTableID", Unit.AbbrevTableID);
-  IO.mapRequired("AbbrOffset", Unit.AbbrOffset);
+  IO.mapOptional("AbbrOffset", Unit.AbbrOffset);
   IO.mapOptional("AddrSize", Unit.AddrSize);
   IO.mapOptional("Entries", Unit.Entries);
 }

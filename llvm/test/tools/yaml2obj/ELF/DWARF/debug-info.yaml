@@ -902,7 +902,8 @@ DWARF:
             - Value: 0x1234
 
 ## o) Test that yaml2obj is able to generate compilation units according to the
-## associated abbrev table that is referenced by the 'AbbrevTableID'.
+## associated abbrev table that is referenced by the 'AbbrevTableID' and infer
+## the value of the debug_abbrev_offset field.
 
 # RUN: yaml2obj --docnum=17 %s -o %t17.o
 # RUN: llvm-readelf --hex-dump=.debug_info %t17.o | FileCheck %s --check-prefix=MULTI-TABLES
@@ -972,29 +973,54 @@ DWARF:
   debug_info:
     - Version:       4
       AbbrevTableID: 2
-      AbbrOffset:    8
       Entries:
         - AbbrCode: 1
           Values:
             - Value: 0x1234
     - Version:       4
       AbbrevTableID: 2
-      AbbrOffset:    8
       Entries:
         - AbbrCode: 1
           Values:
             - Value: 0x4321
     - Version:       4
       AbbrevTableID: 0
-      AbbrOffset:    0
       Entries:
         - AbbrCode: 1
           Values:
             - Value: 0x5678
     - Version:       4
       AbbrevTableID: 1
-      AbbrOffset:    16
       Entries:
         - AbbrCode: 1
           Values:
             - Value: 0x8765
+
+## p) Test that when the debug_abbrev_offset field isn't specified and there is no associated
+## abbrev table, yaml2obj will assign 0 to the debug_abbrev_offset field.
+
+# RUN: yaml2obj --docnum=18 %s -o %t18.o
+# RUN: llvm-readelf --hex-dump=.debug_info %t18.o | FileCheck %s --check-prefix=ZERO-OFFSET
+
+#      ZERO-OFFSET: Hex dump of section '.debug_info':
+# ZERO-OFFSET-NEXT: 0x00000000 07000000 04000000 000008            ...........
+##                             ^-------                            unit_length (4-byte)
+##                                      ^---                       version (2-byte)
+##                                          ^--------              debug_abbrev_offset (4-byte)
+##                                                   ^-            address_size (1-byte)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+DWARF:
+  debug_info:
+    - Version:       4
+      AbbrevTableID: [[ABBREVID=<none>]]
+
+## q) Test that when we assign an invalid 'AbbrevTableID' that doesn't point to an abbrev table,
+## yaml2obj will assign 0 to the debug_abbrev_offset field.
+
+# RUN: yaml2obj --docnum=18 -DABBREVID=2 %s -o %t18.o
+# RUN: llvm-readelf --hex-dump=.debug_info %t18.o | FileCheck %s --check-prefix=ZERO-OFFSET
