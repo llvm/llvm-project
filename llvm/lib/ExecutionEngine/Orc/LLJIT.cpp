@@ -261,23 +261,23 @@ private:
       return std::move(Err);
 
     DenseMap<JITDylib *, SymbolLookupSet> LookupSymbols;
-    std::vector<JITDylib *> DFSLinkOrder;
+    std::vector<std::shared_ptr<JITDylib>> DFSLinkOrder;
 
     getExecutionSession().runSessionLocked([&]() {
-        DFSLinkOrder = getDFSLinkOrder(JD);
+      DFSLinkOrder = JD.getDFSLinkOrder();
 
-        for (auto *NextJD : DFSLinkOrder) {
-          auto IFItr = InitFunctions.find(NextJD);
-          if (IFItr != InitFunctions.end()) {
-            LookupSymbols[NextJD] = std::move(IFItr->second);
-            InitFunctions.erase(IFItr);
-          }
+      for (auto &NextJD : DFSLinkOrder) {
+        auto IFItr = InitFunctions.find(NextJD.get());
+        if (IFItr != InitFunctions.end()) {
+          LookupSymbols[NextJD.get()] = std::move(IFItr->second);
+          InitFunctions.erase(IFItr);
         }
-      });
+      }
+    });
 
     LLVM_DEBUG({
       dbgs() << "JITDylib init order is [ ";
-      for (auto *JD : llvm::reverse(DFSLinkOrder))
+      for (auto &JD : llvm::reverse(DFSLinkOrder))
         dbgs() << "\"" << JD->getName() << "\" ";
       dbgs() << "]\n";
       dbgs() << "Looking up init functions:\n";
@@ -311,26 +311,26 @@ private:
     auto LLJITRunAtExits = J.mangleAndIntern("__lljit_run_atexits");
 
     DenseMap<JITDylib *, SymbolLookupSet> LookupSymbols;
-    std::vector<JITDylib *> DFSLinkOrder;
+    std::vector<std::shared_ptr<JITDylib>> DFSLinkOrder;
 
     ES.runSessionLocked([&]() {
-        DFSLinkOrder = getDFSLinkOrder(JD);
+      DFSLinkOrder = JD.getDFSLinkOrder();
 
-        for (auto *NextJD : DFSLinkOrder) {
-          auto &JDLookupSymbols = LookupSymbols[NextJD];
-          auto DIFItr = DeInitFunctions.find(NextJD);
-          if (DIFItr != DeInitFunctions.end()) {
-            LookupSymbols[NextJD] = std::move(DIFItr->second);
-            DeInitFunctions.erase(DIFItr);
-          }
-          JDLookupSymbols.add(LLJITRunAtExits,
+      for (auto &NextJD : DFSLinkOrder) {
+        auto &JDLookupSymbols = LookupSymbols[NextJD.get()];
+        auto DIFItr = DeInitFunctions.find(NextJD.get());
+        if (DIFItr != DeInitFunctions.end()) {
+          LookupSymbols[NextJD.get()] = std::move(DIFItr->second);
+          DeInitFunctions.erase(DIFItr);
+        }
+        JDLookupSymbols.add(LLJITRunAtExits,
                             SymbolLookupFlags::WeaklyReferencedSymbol);
       }
     });
 
     LLVM_DEBUG({
       dbgs() << "JITDylib deinit order is [ ";
-      for (auto *JD : DFSLinkOrder)
+      for (auto &JD : DFSLinkOrder)
         dbgs() << "\"" << JD->getName() << "\" ";
       dbgs() << "]\n";
       dbgs() << "Looking up deinit functions:\n";
@@ -344,8 +344,8 @@ private:
       return LookupResult.takeError();
 
     std::vector<JITTargetAddress> DeInitializers;
-    for (auto *NextJD : DFSLinkOrder) {
-      auto DeInitsItr = LookupResult->find(NextJD);
+    for (auto &NextJD : DFSLinkOrder) {
+      auto DeInitsItr = LookupResult->find(NextJD.get());
       assert(DeInitsItr != LookupResult->end() &&
              "Every JD should have at least __lljit_run_atexits");
 
@@ -361,46 +361,23 @@ private:
     return DeInitializers;
   }
 
-  // Returns a DFS traversal order of the JITDylibs reachable (via
-  // links-against edges) from JD, starting with JD itself.
-  static std::vector<JITDylib *> getDFSLinkOrder(JITDylib &JD) {
-    std::vector<JITDylib *> DFSLinkOrder;
-    std::vector<JITDylib *> WorkStack({&JD});
-    DenseSet<JITDylib *> Visited;
-
-    while (!WorkStack.empty()) {
-      auto &NextJD = *WorkStack.back();
-      WorkStack.pop_back();
-      if (Visited.count(&NextJD))
-        continue;
-      Visited.insert(&NextJD);
-      DFSLinkOrder.push_back(&NextJD);
-      NextJD.withLinkOrderDo([&](const JITDylibSearchOrder &LinkOrder) {
-        for (auto &KV : LinkOrder)
-          WorkStack.push_back(KV.first);
-      });
-    }
-
-    return DFSLinkOrder;
-  }
-
   /// Issue lookups for all init symbols required to initialize JD (and any
   /// JITDylibs that it depends on).
   Error issueInitLookups(JITDylib &JD) {
     DenseMap<JITDylib *, SymbolLookupSet> RequiredInitSymbols;
-    std::vector<JITDylib *> DFSLinkOrder;
+    std::vector<std::shared_ptr<JITDylib>> DFSLinkOrder;
 
     getExecutionSession().runSessionLocked([&]() {
-        DFSLinkOrder = getDFSLinkOrder(JD);
+      DFSLinkOrder = JD.getDFSLinkOrder();
 
-        for (auto *NextJD : DFSLinkOrder) {
-          auto ISItr = InitSymbols.find(NextJD);
-          if (ISItr != InitSymbols.end()) {
-            RequiredInitSymbols[NextJD] = std::move(ISItr->second);
-            InitSymbols.erase(ISItr);
-          }
+      for (auto &NextJD : DFSLinkOrder) {
+        auto ISItr = InitSymbols.find(NextJD.get());
+        if (ISItr != InitSymbols.end()) {
+          RequiredInitSymbols[NextJD.get()] = std::move(ISItr->second);
+          InitSymbols.erase(ISItr);
         }
-      });
+      }
+    });
 
     return Platform::lookupInitSymbols(getExecutionSession(),
                                        RequiredInitSymbols)
