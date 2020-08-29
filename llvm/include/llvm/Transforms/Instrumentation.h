@@ -66,6 +66,9 @@ struct GCOVOptions {
   // Add the 'noredzone' attribute to added runtime library calls.
   bool NoRedZone;
 
+  // Use atomic profile counter increments.
+  bool Atomic = false;
+
   // Regexes separated by a semi-colon to filter the files to instrument.
   std::string Filter;
 
