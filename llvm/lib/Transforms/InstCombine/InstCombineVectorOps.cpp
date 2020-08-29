@@ -975,10 +975,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     PHI->addIncoming(SourceAggregates[Pred], Pred);
 
   ++NumAggregateReconstructionsSimplified;
-  replaceInstUsesWith(OrigIVI, PHI);
-
-  // Just signal that the fold happened, we've already inserted instructions.
-  return &OrigIVI;
+  return replaceInstUsesWith(OrigIVI, PHI);
 }
 
 /// Try to find redundant insertvalue instructions, like the following ones:

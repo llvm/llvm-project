@@ -1439,8 +1439,7 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
         continue;
       // Just use that PHI instead then.
       ++NumPHICSEs;
-      replaceInstUsesWith(PN, &Src);
-      return &PN;
+      return replaceInstUsesWith(PN, &Src);
     }
   }
 
