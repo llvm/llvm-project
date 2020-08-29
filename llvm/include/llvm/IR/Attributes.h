@@ -753,7 +753,14 @@ public:
   void clear();
 
   /// Add an attribute to the builder.
-  AttrBuilder &addAttribute(Attribute::AttrKind Val);
+  AttrBuilder &addAttribute(Attribute::AttrKind Val) {
+    assert((unsigned)Val < Attribute::EndAttrKinds &&
+           "Attribute out of range!");
+    assert(!Attribute::doesAttrKindHaveArgument(Val) &&
+           "Adding integer attribute without adding a value!");
+    Attrs[Val] = true;
+    return *this;
+  }
 
   /// Add the Attribute object to the builder.
   AttrBuilder &addAttribute(Attribute A);
