@@ -495,13 +495,12 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
     LLVM_DEBUG(llvm::dbgs()
                << "Load new dialect in Context" << dialectNamespace);
 #ifndef NDEBUG
-    if (impl.multiThreadedExecutionContext != 0) {
-      llvm::errs() << "Loading a dialect (" << dialectNamespace
-                   << ") while in a multi-threaded execution context (maybe "
-                      "the PassManager): this can indicate a "
-                      "missing `dependentDialects` in a pass for example.";
-      abort();
-    }
+    if (impl.multiThreadedExecutionContext != 0)
+      llvm::report_fatal_error(
+          "Loading a dialect (" + dialectNamespace +
+          ") while in a multi-threaded execution context (maybe "
+          "the PassManager): this can indicate a "
+          "missing `dependentDialects` in a pass for example.");
 #endif
     dialect = ctor();
     assert(dialect && "dialect ctor failed");
