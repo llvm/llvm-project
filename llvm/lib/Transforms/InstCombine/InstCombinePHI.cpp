@@ -34,6 +34,7 @@ STATISTIC(NumPHIsOfInsertValues,
           "Number of phi-of-insertvalue turned into insertvalue-of-phis");
 STATISTIC(NumPHIsOfExtractValues,
           "Number of phi-of-extractvalue turned into extractvalue-of-phi");
+STATISTIC(NumPHICSEs, "Number of PHI's that got CSE'd");
 
 /// The PHI arguments will be folded into a single operation with a PHI node
 /// as input. The debug location of the single operation will be the merged
@@ -1407,7 +1408,7 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
   // by other passes. Other passes shouldn't depend on this for correctness
   // however.
   PHINode *FirstPN = cast<PHINode>(PN.getParent()->begin());
-  if (&PN != FirstPN)
+  if (&PN != FirstPN) {
     for (unsigned i = 0, e = FirstPN->getNumIncomingValues(); i != e; ++i) {
       BasicBlock *BBA = PN.getIncomingBlock(i);
       BasicBlock *BBB = FirstPN->getIncomingBlock(i);
@@ -1425,6 +1426,23 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
         // this in this case.
       }
     }
+
+    // Is there an identical PHI node before this one in this basic block?
+    for (PHINode &Src : PN.getParent()->phis()) {
+      // Once we've reached the PHI node we've been asked about, stop looking.
+      if (&Src == &PN)
+        break;
+      // Note that even though we've just canonicalized this PHI, due to the
+      // worklist visitation order, there are no guarantess that *every* PHI
+      // has been canonicalized, so we can't just compare operands ranges.
+      if (!PN.isIdenticalToWhenDefined(&Src))
+        continue;
+      // Just use that PHI instead then.
+      ++NumPHICSEs;
+      PN.replaceAllUsesWith(&Src);
+      return &PN;
+    }
+  }
 
   // If this is an integer PHI and we know that it has an illegal type, see if
   // it is only used by trunc or trunc(lshr) operations.  If so, we split the
