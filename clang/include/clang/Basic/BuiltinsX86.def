@@ -150,8 +150,8 @@ TARGET_BUILTIN(__builtin_ia32_pmovmskb, "iV8c", "ncV:64:", "mmx,sse")
 TARGET_BUILTIN(__builtin_ia32_pmulhuw, "V4sV4sV4s", "ncV:64:", "mmx,sse")
 TARGET_BUILTIN(__builtin_ia32_psadbw, "V4sV8cV8c", "ncV:64:", "mmx,sse")
 TARGET_BUILTIN(__builtin_ia32_pshufw, "V4sV4sIc", "ncV:64:", "mmx,sse")
-TARGET_BUILTIN(__builtin_ia32_vec_ext_v4hi, "iV4sIi", "ncV:64:", "mmx,sse")
-TARGET_BUILTIN(__builtin_ia32_vec_set_v4hi, "V4sV4siIi", "ncV:64:", "mmx,sse")
+TARGET_BUILTIN(__builtin_ia32_vec_ext_v4hi, "sV4sIi", "ncV:64:", "sse")
+TARGET_BUILTIN(__builtin_ia32_vec_set_v4hi, "V4sV4ssIi", "ncV:64:", "sse")
 
 // MMX+SSE2
 TARGET_BUILTIN(__builtin_ia32_cvtpd2pi, "V2iV2d", "ncV:64:", "mmx,sse2")

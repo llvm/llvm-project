@@ -2626,11 +2626,11 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
                             [llvm_x86mmx_ty, llvm_x86mmx_ty, llvm_i8_ty],
                             [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
-  def int_x86_mmx_pextr_w : ClangBuiltin<"__builtin_ia32_vec_ext_v4hi">,
+  def int_x86_mmx_pextr_w :
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_x86mmx_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
-  def int_x86_mmx_pinsr_w : ClangBuiltin<"__builtin_ia32_vec_set_v4hi">,
+  def int_x86_mmx_pinsr_w :
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty],
                             [llvm_x86mmx_ty, llvm_i32_ty, llvm_i32_ty],
                             [IntrNoMem, ImmArg<ArgIndex<2>>]>;
