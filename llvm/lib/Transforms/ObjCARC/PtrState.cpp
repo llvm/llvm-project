@@ -232,7 +232,7 @@ bool BottomUpPtrState::HandlePotentialAlterRefCount(Instruction *Inst,
   Sequence S = GetSeq();
 
   // Check for possible releases.
-  if (!CanAlterRefCount(Inst, Ptr, PA, Class))
+  if (!CanDecrementRefCount(Inst, Ptr, PA, Class))
     return false;
 
   LLVM_DEBUG(dbgs() << "            CanAlterRefCount: Seq: " << S << "; "
@@ -383,7 +383,7 @@ bool TopDownPtrState::HandlePotentialAlterRefCount(Instruction *Inst,
                                                    ARCInstKind Class) {
   // Check for possible releases. Treat clang.arc.use as a releasing instruction
   // to prevent sinking a retain past it.
-  if (!CanAlterRefCount(Inst, Ptr, PA, Class) &&
+  if (!CanDecrementRefCount(Inst, Ptr, PA, Class) &&
       Class != ARCInstKind::IntrinsicUser)
     return false;
 
