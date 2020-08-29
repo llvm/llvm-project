@@ -147,7 +147,7 @@ else:
   lit_config.warning("Could not set a default per-test timeout. " + errormsg)
 
 # Build dotest command.
-dotest_cmd = [config.dotest_path]
+dotest_cmd = [os.path.join(config.lldb_src_root, 'test', 'API', 'dotest.py')]
 dotest_cmd += ['--arch', config.test_arch]
 dotest_cmd.extend(config.dotest_args_str.split(';'))
 
