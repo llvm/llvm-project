@@ -232,7 +232,7 @@ class function_body(object):
         arg_names.add(match.group(3))
         return match.group(1) + match.group(match.lastindex)
     def repl_arg_names(match):
-        if match.group(3) in arg_names:
+        if match.group(3) is not None and match.group(3) in arg_names:
             return match.group(1) + match.group(match.lastindex)
         return match.group(1) + match.group(2) + match.group(match.lastindex)
     if self.attrs != attrs:
