@@ -1,3 +1,7 @@
+## The test as-is needs a large heap size.
+## Disabled until we know how to check for that prerequisite.
+# UNSUPPORTED: ppc
+
 # REQUIRES: ppc
 # RUN: echo 'SECTIONS { \
 # RUN:       .text_low 0x2000: { *(.text_low) } \
