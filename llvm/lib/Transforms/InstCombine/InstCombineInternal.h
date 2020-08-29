@@ -120,6 +120,7 @@ public:
   Instruction *visitLShr(BinaryOperator &I);
   Instruction *commonShiftTransforms(BinaryOperator &I);
   Instruction *visitFCmpInst(FCmpInst &I);
+  CmpInst *canonicalizeICmpPredicate(CmpInst &I);
   Instruction *visitICmpInst(ICmpInst &I);
   Instruction *FoldShiftByConstant(Value *Op0, Constant *Op1,
                                    BinaryOperator &I);
