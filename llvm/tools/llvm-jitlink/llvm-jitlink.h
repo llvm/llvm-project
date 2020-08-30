@@ -6,32 +6,50 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Utilities for remote-JITing with LLI.
+// llvm-jitlink Session class and tool utilities.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TOOLS_LLVM_JITLINK_LLVM_JITLINK_H
 #define LLVM_TOOLS_LLVM_JITLINK_LLVM_JITLINK_H
 
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcessControl.h"
 #include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <vector>
 
 namespace llvm {
 
+struct Session;
+
+/// ObjectLinkingLayer with additional support for symbol promotion.
+class LLVMJITLinkObjectLinkingLayer : public orc::ObjectLinkingLayer {
+public:
+  LLVMJITLinkObjectLinkingLayer(Session &S,
+                                jitlink::JITLinkMemoryManager &MemMgr);
+
+  Error add(orc::JITDylib &JD, std::unique_ptr<MemoryBuffer> O,
+            orc::VModuleKey K = orc::VModuleKey()) override;
+
+private:
+  Session &S;
+};
+
 struct Session {
   orc::ExecutionSession ES;
+  std::unique_ptr<orc::TargetProcessControl> TPC;
   orc::JITDylib *MainJD;
-  orc::ObjectLinkingLayer ObjLayer;
+  LLVMJITLinkObjectLinkingLayer ObjLayer;
   std::vector<orc::JITDylib *> JDSearchOrder;
-  Triple TT;
 
-  Session(Triple TT);
   static Expected<std::unique_ptr<Session>> Create(Triple TT);
   void dumpSessionInfo(raw_ostream &OS);
   void modifyPassConfig(const Triple &FTT,
@@ -65,8 +83,13 @@ struct Session {
   uint64_t SizeBeforePruning = 0;
   uint64_t SizeAfterFixups = 0;
 
+  StringSet<> HarnessFiles;
+  StringSet<> HarnessExternals;
+  StringSet<> HarnessDefinitions;
+  DenseMap<StringRef, StringRef> CanonicalWeakDefs;
+
 private:
-  Session(Triple TT, Error &Err);
+  Session(Triple TT, uint64_t PageSize, Error &Err);
 };
 
 /// Record symbols, GOT entries, stubs, and sections for ELF file.

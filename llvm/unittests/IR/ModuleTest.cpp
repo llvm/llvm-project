@@ -56,7 +56,7 @@ TEST(ModuleTest, randomNumberGenerator) {
   static char ID;
   struct DummyPass : ModulePass {
     DummyPass() : ModulePass(ID) {}
-    bool runOnModule(Module &) { return true; }
+    bool runOnModule(Module &) override { return true; }
   } DP;
 
   Module M("R", Context);

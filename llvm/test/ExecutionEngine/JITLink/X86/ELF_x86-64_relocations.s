@@ -28,6 +28,7 @@ test_pcrel32:
 
         .type   named_data,@object
         .data
+	.globl named_data
         .p2align        2
 named_data:
         .long   42

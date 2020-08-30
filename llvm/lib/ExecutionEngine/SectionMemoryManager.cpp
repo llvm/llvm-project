@@ -112,6 +112,15 @@ uint8_t *SectionMemoryManager::allocateSection(
   // Save this address as the basis for our next request
   MemGroup.Near = MB;
 
+  // Copy the address to all the other groups, if they have not
+  // been initialized.
+  if (CodeMem.Near.base() == 0)
+    CodeMem.Near = MB;
+  if (RODataMem.Near.base() == 0)
+    RODataMem.Near = MB;
+  if (RWDataMem.Near.base() == 0)
+    RWDataMem.Near = MB;
+
   // Remember that we allocated this memory
   MemGroup.AllocatedMem.push_back(MB);
   Addr = (uintptr_t)MB.base();
@@ -152,8 +161,7 @@ bool SectionMemoryManager::finalizeMemory(std::string *ErrMsg) {
   }
 
   // Make read-only data memory read-only.
-  ec = applyMemoryGroupPermissions(RODataMem,
-                                   sys::Memory::MF_READ | sys::Memory::MF_EXEC);
+  ec = applyMemoryGroupPermissions(RODataMem, sys::Memory::MF_READ);
   if (ec) {
     if (ErrMsg) {
       *ErrMsg = ec.message();

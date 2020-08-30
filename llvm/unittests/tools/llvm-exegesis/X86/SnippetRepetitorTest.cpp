@@ -29,7 +29,7 @@ using testing::UnorderedElementsAre;
 
 class X86SnippetRepetitorTest : public X86TestBase {
 protected:
-  void SetUp() {
+  void SetUp() override {
     TM = State.createTargetMachine();
     Context = std::make_unique<LLVMContext>();
     Mod = std::make_unique<Module>("X86SnippetRepetitorTest", *Context);

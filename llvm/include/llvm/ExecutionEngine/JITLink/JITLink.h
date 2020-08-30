@@ -395,6 +395,10 @@ public:
     return Name;
   }
 
+  /// Rename this symbol. The client is responsible for updating scope and
+  /// linkage if this name-change requires it.
+  void setName(StringRef Name) { this->Name = Name; }
+
   /// Returns true if this Symbol has content (potentially) defined within this
   /// object file (i.e. is anything but an external or absolute symbol).
   bool isDefined() const {
@@ -959,7 +963,7 @@ public:
       Section &Sec = Sym.getBlock().getSection();
       Sec.removeSymbol(Sym);
     }
-    Sym.makeExternal(createAddressable(false));
+    Sym.makeExternal(createAddressable(0, false));
     ExternalSymbols.insert(&Sym);
   }
 
@@ -1279,7 +1283,11 @@ public:
   /// their final memory locations in the target process. At this point the
   /// LinkGraph can be inspected to build a symbol table, however the block
   /// content will not generally have been copied to the target location yet.
-  virtual void notifyResolved(LinkGraph &G) = 0;
+  ///
+  /// If the client detects an error in the LinkGraph state (e.g. unexpected or
+  /// missing symbols) they may return an error here. The error will be
+  /// propagated to notifyFailed and the linker will bail out.
+  virtual Error notifyResolved(LinkGraph &G) = 0;
 
   /// Called by JITLink to notify the context that the object has been
   /// finalized (i.e. emitted to memory and memory permissions set). If all of

@@ -40,6 +40,9 @@ public:
   using NotifyResolvedFunction =
       unique_function<Error(JITTargetAddress ResolvedAddr)>;
 
+  LazyCallThroughManager(ExecutionSession &ES,
+                         JITTargetAddress ErrorHandlerAddr, TrampolinePool *TP);
+
   // Return a free call-through trampoline and bind it to look up and call
   // through to the given symbol.
   Expected<JITTargetAddress>
@@ -55,9 +58,6 @@ public:
 protected:
   using NotifyLandingResolvedFunction =
       TrampolinePool::NotifyLandingResolvedFunction;
-
-  LazyCallThroughManager(ExecutionSession &ES,
-                         JITTargetAddress ErrorHandlerAddr, TrampolinePool *TP);
 
   struct ReexportsEntry {
     JITDylib *SourceJD;

@@ -14,6 +14,7 @@
 
 #include "llvm-jitlink.h"
 
+#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -86,6 +87,11 @@ static cl::list<std::string> AbsoluteDefs(
     cl::desc("Inject absolute symbol definitions (syntax: <name>=<addr>)"),
     cl::ZeroOrMore);
 
+static cl::list<std::string> TestHarnesses("harness", cl::Positional,
+                                           cl::desc("Test harness files"),
+                                           cl::ZeroOrMore,
+                                           cl::PositionalEatsArgs);
+
 static cl::opt<bool> ShowInitialExecutionSessionState(
     "show-init-es",
     cl::desc("Print ExecutionSession state before resolving entry point"),
@@ -127,6 +133,11 @@ static cl::opt<bool> ShowRelocatedSectionContents(
     cl::desc("show section contents after fixups have been applied"),
     cl::init(false));
 
+static cl::opt<bool> PhonyExternals(
+    "phony-externals",
+    cl::desc("resolve all otherwise unresolved externals to null"),
+    cl::init(false));
+
 ExitOnError ExitOnErr;
 
 namespace llvm {
@@ -164,6 +175,57 @@ operator<<(raw_ostream &OS, const Session::FileInfoMap &FIM) {
   for (auto &FIKV : FIM)
     OS << "File \"" << FIKV.first() << "\":\n" << FIKV.second;
   return OS;
+}
+
+static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
+
+  // If this graph is part of the test harness there's nothing to do.
+  if (S.HarnessFiles.empty() || S.HarnessFiles.count(G.getName()))
+    return Error::success();
+
+  LLVM_DEBUG(dbgs() << "Appling promotions to graph " << G.getName() << "\n");
+
+  // If this graph is part of the test then promote any symbols referenced by
+  // the harness to default scope, remove all symbols that clash with harness
+  // definitions.
+  std::vector<Symbol *> DefinitionsToRemove;
+  for (auto *Sym : G.defined_symbols()) {
+
+    if (!Sym->hasName())
+      continue;
+
+    if (Sym->getLinkage() == Linkage::Weak) {
+      if (!S.CanonicalWeakDefs.count(Sym->getName()) ||
+          S.CanonicalWeakDefs[Sym->getName()] != G.getName()) {
+        LLVM_DEBUG({
+          dbgs() << "  Externalizing weak symbol " << Sym->getName() << "\n";
+        });
+        DefinitionsToRemove.push_back(Sym);
+      } else {
+        LLVM_DEBUG({
+          dbgs() << "  Making weak symbol " << Sym->getName() << " strong\n";
+        });
+        if (S.HarnessExternals.count(Sym->getName()))
+          Sym->setScope(Scope::Default);
+        else
+          Sym->setScope(Scope::Hidden);
+        Sym->setLinkage(Linkage::Strong);
+      }
+    } else if (S.HarnessExternals.count(Sym->getName())) {
+      LLVM_DEBUG(dbgs() << "  Promoting " << Sym->getName() << "\n");
+      Sym->setScope(Scope::Default);
+      Sym->setLive(true);
+      continue;
+    } else if (S.HarnessDefinitions.count(Sym->getName())) {
+      LLVM_DEBUG(dbgs() << "  Externalizing " << Sym->getName() << "\n");
+      DefinitionsToRemove.push_back(Sym);
+    }
+  }
+
+  for (auto *Sym : DefinitionsToRemove)
+    G.makeExternal(*Sym);
+
+  return Error::success();
 }
 
 static uint64_t computeTotalBlockSizes(LinkGraph &G) {
@@ -408,17 +470,117 @@ Expected<uint64_t> getSlabAllocSize(StringRef SizeString) {
   return SlabSize * Units;
 }
 
-static std::unique_ptr<jitlink::JITLinkMemoryManager> createMemoryManager() {
+static std::unique_ptr<JITLinkMemoryManager> createMemoryManager() {
   if (!SlabAllocateSizeString.empty()) {
     auto SlabSize = ExitOnErr(getSlabAllocSize(SlabAllocateSizeString));
     return ExitOnErr(JITLinkSlabAllocator::Create(SlabSize));
   }
-  return std::make_unique<jitlink::InProcessMemoryManager>();
+  return std::make_unique<InProcessMemoryManager>();
 }
+
+LLVMJITLinkObjectLinkingLayer::LLVMJITLinkObjectLinkingLayer(
+    Session &S, JITLinkMemoryManager &MemMgr)
+    : ObjectLinkingLayer(S.ES, MemMgr), S(S) {}
+
+Error LLVMJITLinkObjectLinkingLayer::add(JITDylib &JD,
+                                         std::unique_ptr<MemoryBuffer> O,
+                                         VModuleKey K) {
+
+  if (S.HarnessFiles.empty() || S.HarnessFiles.count(O->getBufferIdentifier()))
+    return ObjectLinkingLayer::add(JD, std::move(O), std::move(K));
+
+  // Use getObjectSymbolInfo to compute the init symbol, but ignore
+  // the symbols field. We'll handle that manually to include promotion.
+  auto ObjSymInfo =
+      getObjectSymbolInfo(getExecutionSession(), O->getMemBufferRef());
+
+  if (!ObjSymInfo)
+    return ObjSymInfo.takeError();
+
+  auto &InitSymbol = ObjSymInfo->second;
+
+  // If creating an object file was going to fail it would have happened above,
+  // so we can 'cantFail' this.
+  auto Obj =
+      cantFail(object::ObjectFile::createObjectFile(O->getMemBufferRef()));
+
+  SymbolFlagsMap SymbolFlags;
+
+  // The init symbol must be included in the SymbolFlags map if present.
+  if (InitSymbol)
+    SymbolFlags[InitSymbol] = JITSymbolFlags::MaterializationSideEffectsOnly;
+
+  for (auto &Sym : Obj->symbols()) {
+    Expected<uint32_t> SymFlagsOrErr = Sym.getFlags();
+    if (!SymFlagsOrErr)
+      // TODO: Test this error.
+      return SymFlagsOrErr.takeError();
+
+    // Skip symbols not defined in this object file.
+    if ((*SymFlagsOrErr & object::BasicSymbolRef::SF_Undefined))
+      continue;
+
+    auto Name = Sym.getName();
+    if (!Name)
+      return Name.takeError();
+
+    // Skip symbols that have type SF_File.
+    if (auto SymType = Sym.getType()) {
+      if (*SymType == object::SymbolRef::ST_File)
+        continue;
+    } else
+      return SymType.takeError();
+
+    auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
+    if (!SymFlags)
+      return SymFlags.takeError();
+
+    if (SymFlags->isWeak()) {
+      // If this is a weak symbol that's not defined in the harness then we
+      // need to either mark it as strong (if this is the first definition
+      // that we've seen) or discard it.
+      if (S.HarnessDefinitions.count(*Name) || S.CanonicalWeakDefs.count(*Name))
+        continue;
+      S.CanonicalWeakDefs[*Name] = O->getBufferIdentifier();
+      *SymFlags &= ~JITSymbolFlags::Weak;
+      if (!S.HarnessExternals.count(*Name))
+        *SymFlags &= ~JITSymbolFlags::Exported;
+    } else if (S.HarnessExternals.count(*Name)) {
+      *SymFlags |= JITSymbolFlags::Exported;
+    } else if (S.HarnessDefinitions.count(*Name) ||
+               !(*SymFlagsOrErr & object::BasicSymbolRef::SF_Global))
+      continue;
+
+    auto InternedName = S.ES.intern(*Name);
+    SymbolFlags[InternedName] = std::move(*SymFlags);
+  }
+
+  auto MU = std::make_unique<BasicObjectLayerMaterializationUnit>(
+      *this, K, std::move(O), std::move(SymbolFlags), std::move(InitSymbol));
+
+  return JD.define(std::move(MU));
+}
+
+class PhonyExternalsGenerator : public JITDylib::DefinitionGenerator {
+public:
+  Error tryToGenerate(LookupKind K, JITDylib &JD,
+                      JITDylibLookupFlags JDLookupFlags,
+                      const SymbolLookupSet &LookupSet) override {
+    SymbolMap PhonySymbols;
+    for (auto &KV : LookupSet)
+      PhonySymbols[KV.first] = JITEvaluatedSymbol(0, JITSymbolFlags::Exported);
+    return JD.define(absoluteSymbols(std::move(PhonySymbols)));
+  }
+};
 
 Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
   Error Err = Error::success();
-  std::unique_ptr<Session> S(new Session(std::move(TT), Err));
+
+  auto PageSize = sys::Process::getPageSize();
+  if (!PageSize)
+    return PageSize.takeError();
+
+  std::unique_ptr<Session> S(new Session(std::move(TT), *PageSize, Err));
   if (Err)
     return std::move(Err);
   return std::move(S);
@@ -426,8 +588,10 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
 
 // FIXME: Move to createJITDylib if/when we start using Platform support in
 // llvm-jitlink.
-Session::Session(Triple TT, Error &Err)
-    : ObjLayer(ES, createMemoryManager()), TT(std::move(TT)) {
+Session::Session(Triple TT, uint64_t PageSize, Error &Err)
+    : TPC(std::make_unique<SelfTargetProcessControl>(std::move(TT), PageSize,
+                                                     createMemoryManager())),
+      ObjLayer(*this, TPC->getMemMgr()) {
 
   /// Local ObjectLinkingLayer::Plugin class to forward modifyPassConfig to the
   /// Session.
@@ -435,7 +599,7 @@ Session::Session(Triple TT, Error &Err)
   public:
     JITLinkSessionPlugin(Session &S) : S(S) {}
     void modifyPassConfig(MaterializationResponsibility &MR, const Triple &TT,
-                          PassConfiguration &PassConfig) {
+                          PassConfiguration &PassConfig) override {
       S.modifyPassConfig(TT, PassConfig);
     }
 
@@ -457,21 +621,53 @@ Session::Session(Triple TT, Error &Err)
         InProcessEHFrameRegistrar::getInstance()));
 
   ObjLayer.addPlugin(std::make_unique<JITLinkSessionPlugin>(*this));
+
+  // Process any harness files.
+  for (auto &HarnessFile : TestHarnesses) {
+    HarnessFiles.insert(HarnessFile);
+
+    auto ObjBuffer =
+        ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(HarnessFile)));
+
+    auto ObjSymbolInfo =
+        ExitOnErr(getObjectSymbolInfo(ES, ObjBuffer->getMemBufferRef()));
+
+    for (auto &KV : ObjSymbolInfo.first)
+      HarnessDefinitions.insert(*KV.first);
+
+    auto Obj = ExitOnErr(
+        object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef()));
+
+    for (auto &Sym : Obj->symbols()) {
+      uint32_t SymFlags = ExitOnErr(Sym.getFlags());
+      auto Name = ExitOnErr(Sym.getName());
+
+      if (Name.empty())
+        continue;
+
+      if (SymFlags & object::BasicSymbolRef::SF_Undefined)
+        HarnessExternals.insert(Name);
+    }
+  }
+
+  // If a name is defined by some harness file then it's a definition, not an
+  // external.
+  for (auto &DefName : HarnessDefinitions)
+    HarnessExternals.erase(DefName.getKey());
 }
 
 void Session::dumpSessionInfo(raw_ostream &OS) {
   OS << "Registered addresses:\n" << SymbolInfos << FileInfos;
 }
 
-void Session::modifyPassConfig(const Triple &FTT,
+void Session::modifyPassConfig(const Triple &TT,
                                PassConfiguration &PassConfig) {
   if (!CheckFiles.empty())
     PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) {
-
-      if (TT.getObjectFormat() == Triple::ELF)
+      if (TPC->getTargetTriple().getObjectFormat() == Triple::ELF)
         return registerELFGraphInfo(*this, G);
 
-      if (TT.getObjectFormat() == Triple::MachO)
+      if (TPC->getTargetTriple().getObjectFormat() == Triple::MachO)
         return registerMachOGraphInfo(*this, G);
 
       return make_error<StringError>("Unsupported object format for GOT/stub "
@@ -481,10 +677,13 @@ void Session::modifyPassConfig(const Triple &FTT,
 
   if (ShowLinkGraph)
     PassConfig.PostFixupPasses.push_back([](LinkGraph &G) -> Error {
-      outs() << "Link graph post-fixup:\n";
+      outs() << "Link graph \"" << G.getName() << "\" post-fixup:\n";
       G.dump(outs());
       return Error::success();
     });
+
+  PassConfig.PrePrunePasses.push_back(
+      [this](LinkGraph &G) { return applyHarnessPromotions(*this, G); });
 
   if (ShowSizes) {
     PassConfig.PrePrunePasses.push_back([this](LinkGraph &G) -> Error {
@@ -582,7 +781,7 @@ Triple getFirstFileTriple() {
 
 Error sanitizeArguments(const Session &S) {
   if (EntryPointName.empty()) {
-    if (S.TT.getObjectFormat() == Triple::MachO)
+    if (S.TPC->getTargetTriple().getObjectFormat() == Triple::MachO)
       EntryPointName = "_main";
     else
       EntryPointName = "main";
@@ -607,7 +806,8 @@ Error loadProcessSymbols(Session &S) {
   if (sys::DynamicLibrary::LoadLibraryPermanently(nullptr, &ErrMsg))
     return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
 
-  char GlobalPrefix = S.TT.getObjectFormat() == Triple::MachO ? '_' : '\0';
+  char GlobalPrefix =
+      S.TPC->getTargetTriple().getObjectFormat() == Triple::MachO ? '_' : '\0';
   auto InternedEntryPointName = S.ES.intern(EntryPointName);
   auto FilterMainEntryPoint = [InternedEntryPointName](SymbolStringPtr Name) {
     return Name != InternedEntryPointName;
@@ -631,6 +831,10 @@ Error loadDylibs() {
   }
 
   return Error::success();
+}
+
+void addPhonyExternalsGenerator(Session &S) {
+  S.MainJD->addGenerator(std::make_unique<PhonyExternalsGenerator>());
 }
 
 Error loadObjects(Session &S) {
@@ -672,19 +876,34 @@ Error loadObjects(Session &S) {
     }
   }
 
+  LLVM_DEBUG(dbgs() << "Adding test harness objects...\n");
+  for (auto HarnessFile : TestHarnesses) {
+    LLVM_DEBUG(dbgs() << "  " << HarnessFile << "\n");
+    auto ObjBuffer =
+        ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(HarnessFile)));
+    ExitOnErr(S.ObjLayer.add(*S.MainJD, std::move(ObjBuffer)));
+  }
+
   // Load each object into the corresponding JITDylib..
   LLVM_DEBUG(dbgs() << "Adding objects...\n");
   for (auto InputFileItr = InputFiles.begin(), InputFileEnd = InputFiles.end();
        InputFileItr != InputFileEnd; ++InputFileItr) {
     unsigned InputFileArgIdx =
         InputFiles.getPosition(InputFileItr - InputFiles.begin());
-    StringRef InputFile = *InputFileItr;
+    const std::string &InputFile = *InputFileItr;
     auto &JD = *std::prev(IdxToJLD.lower_bound(InputFileArgIdx))->second;
     LLVM_DEBUG(dbgs() << "  " << InputFileArgIdx << ": \"" << InputFile
                       << "\" to " << JD.getName() << "\n";);
     auto ObjBuffer =
         ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(InputFile)));
-    ExitOnErr(S.ObjLayer.add(JD, std::move(ObjBuffer)));
+
+    auto Magic = identify_magic(ObjBuffer->getBuffer());
+    if (Magic == file_magic::archive ||
+        Magic == file_magic::macho_universal_binary)
+      JD.addGenerator(ExitOnErr(StaticLibraryDefinitionGenerator::Load(
+          S.ObjLayer, InputFile.c_str(), S.TPC->getTargetTriple())));
+    else
+      ExitOnErr(S.ObjLayer.add(JD, std::move(ObjBuffer)));
   }
 
   // Define absolute symbols.
@@ -730,9 +949,9 @@ Error loadObjects(Session &S) {
 
 Error runChecks(Session &S) {
 
-  auto TripleName = S.TT.str();
+  auto TripleName = S.TPC->getTargetTriple().str();
   std::string ErrorStr;
-  const Target *TheTarget = TargetRegistry::lookupTarget("", S.TT, ErrorStr);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, ErrorStr);
   if (!TheTarget)
     ExitOnErr(make_error<StringError>("Error accessing target '" + TripleName +
                                           "': " + ErrorStr,
@@ -796,7 +1015,8 @@ Error runChecks(Session &S) {
 
   RuntimeDyldChecker Checker(
       IsSymbolValid, GetSymbolInfo, GetSectionInfo, GetStubInfo, GetGOTInfo,
-      S.TT.isLittleEndian() ? support::little : support::big,
+      S.TPC->getTargetTriple().isLittleEndian() ? support::little
+                                                : support::big,
       Disassembler.get(), InstPrinter.get(), dbgs());
 
   std::string CheckLineStart = "# " + CheckName + ":";
@@ -847,14 +1067,18 @@ int main(int argc, char *argv[]) {
 
   ExitOnErr(sanitizeArguments(*S));
 
-  if (!NoProcessSymbols)
-    ExitOnErr(loadProcessSymbols(*S));
-  ExitOnErr(loadDylibs());
-
   {
     TimeRegion TR(Timers ? &Timers->LoadObjectsTimer : nullptr);
     ExitOnErr(loadObjects(*S));
   }
+
+  if (!NoProcessSymbols)
+    ExitOnErr(loadProcessSymbols(*S));
+  ExitOnErr(loadDylibs());
+
+  if (PhonyExternals)
+    addPhonyExternalsGenerator(*S);
+
 
   if (ShowInitialExecutionSessionState)
     S->ES.dump(outs());
