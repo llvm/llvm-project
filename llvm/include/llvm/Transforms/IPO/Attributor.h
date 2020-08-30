@@ -722,7 +722,10 @@ struct InformationCache {
             [&](const Function &F) {
               return AG.getAnalysis<PostDominatorTreeAnalysis>(F);
             }),
-        AG(AG), CGSCC(CGSCC) {}
+        AG(AG), CGSCC(CGSCC) {
+    if (CGSCC)
+      initializeModuleSlice(*CGSCC);
+  }
 
   ~InformationCache() {
     // The FunctionInfo objects are allocated via a BumpPtrAllocator, we call
@@ -730,6 +733,68 @@ struct InformationCache {
     for (auto &It : FuncInfoMap)
       It.getSecond()->~FunctionInfo();
   }
+
+  /// Apply \p CB to all uses of \p F. If \p LookThroughConstantExprUses is
+  /// true, constant expression users are not given to \p CB but their uses are
+  /// traversed transitively.
+  template <typename CBTy>
+  static void foreachUse(Function &F, CBTy CB,
+                         bool LookThroughConstantExprUses = true) {
+    SmallVector<Use *, 8> Worklist(make_pointer_range(F.uses()));
+
+    for (unsigned Idx = 0; Idx < Worklist.size(); ++Idx) {
+      Use &U = *Worklist[Idx];
+
+      // Allow use in constant bitcasts and simply look through them.
+      if (LookThroughConstantExprUses && isa<ConstantExpr>(U.getUser())) {
+        for (Use &CEU : cast<ConstantExpr>(U.getUser())->uses())
+          Worklist.push_back(&CEU);
+        continue;
+      }
+
+      CB(U);
+    }
+  }
+
+  /// Initialize the ModuleSlice member based on \p SCC. ModuleSlices contains
+  /// (a subset of) all functions that we can look at during this SCC traversal.
+  /// This includes functions (transitively) called from the SCC and the
+  /// (transitive) callers of SCC functions. We also can look at a function if
+  /// there is a "reference edge", i.a., if the function somehow uses (!=calls)
+  /// a function in the SCC or a caller of a function in the SCC.
+  void initializeModuleSlice(SetVector<Function *> &SCC) {
+    ModuleSlice.insert(SCC.begin(), SCC.end());
+
+    SmallPtrSet<Function *, 16> Seen;
+    SmallVector<Function *, 16> Worklist(SCC.begin(), SCC.end());
+    while (!Worklist.empty()) {
+      Function *F = Worklist.pop_back_val();
+      ModuleSlice.insert(F);
+
+      for (Instruction &I : instructions(*F))
+        if (auto *CB = dyn_cast<CallBase>(&I))
+          if (Function *Callee = CB->getCalledFunction())
+            if (Seen.insert(Callee).second)
+              Worklist.push_back(Callee);
+    }
+
+    Seen.clear();
+    Worklist.append(SCC.begin(), SCC.end());
+    while (!Worklist.empty()) {
+      Function *F = Worklist.pop_back_val();
+      ModuleSlice.insert(F);
+
+      // Traverse all transitive uses.
+      foreachUse(*F, [&](Use &U) {
+        if (auto *UsrI = dyn_cast<Instruction>(U.getUser()))
+          if (Seen.insert(UsrI->getFunction()).second)
+            Worklist.push_back(UsrI->getFunction());
+      });
+    }
+  }
+
+  /// The slice of the module we are allowed to look at.
+  SmallPtrSet<Function *, 8> ModuleSlice;
 
   /// A vector type to hold instructions.
   using InstructionVectorTy = SmallVector<Instruction *, 8>;
@@ -802,6 +867,11 @@ struct InformationCache {
         AG.getAnalysis<LoopAnalysis>(F));
     PotentiallyReachableMap.insert(std::make_pair(KeyPair, Result));
     return Result;
+  }
+
+  /// Check whether \p F is part of module slice.
+  bool isInModuleSlice(const Function &F) {
+    return ModuleSlice.count(const_cast<Function *>(&F));
   }
 
 private:
@@ -1013,12 +1083,16 @@ struct Attributor {
       TimeTraceScope TimeScope(AA.getName() + "::initialize");
       AA.initialize(*this);
     }
-    // We can initialize (=look at) code outside the current function set but
-    // not call update because that would again spawn new abstract attributes in
-    // potentially unconnected code regions (=SCCs).
+
+    // Initialize and update is allowed for code outside of the current function
+    // set, but only if it is part of module slice we are allowed to look at.
+    // Only exception is AAIsDeadFunction whose initialization is prevented
+    // directly, since we don't to compute it twice.
     if (FnScope && !Functions.count(const_cast<Function *>(FnScope))) {
-      AA.getState().indicatePessimisticFixpoint();
-      return AA;
+      if (!getInfoCache().isInModuleSlice(*FnScope)) {
+        AA.getState().indicatePessimisticFixpoint();
+        return AA;
+      }
     }
 
     // If this is queried in the manifest stage, we force the AA to indicate

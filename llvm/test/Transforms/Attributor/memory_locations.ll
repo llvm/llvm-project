@@ -558,7 +558,7 @@ define internal i8 @recursive_not_readnone_internal(i8* %ptr, i1 %c) {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree nosync nounwind
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@recursive_not_readnone_internal
-; IS__CGSCC____-SAME: (i8* nocapture nofree noundef nonnull writeonly dereferenceable(1) [[PTR:%.*]], i1 [[C:%.*]]) [[ATTR8]] {
+; IS__CGSCC____-SAME: (i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[PTR:%.*]], i1 [[C:%.*]]) [[ATTR8]] {
 ; IS__CGSCC____-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; IS__CGSCC____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC____:       t:
@@ -616,7 +616,7 @@ define internal i8 @recursive_not_readnone_internal2(i8* %ptr, i1 %c) {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree nosync nounwind
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@recursive_not_readnone_internal2
-; IS__CGSCC____-SAME: (i8* nocapture nofree nonnull writeonly [[PTR:%.*]], i1 [[C:%.*]]) [[ATTR8]] {
+; IS__CGSCC____-SAME: (i8* noalias nocapture nofree nonnull writeonly [[PTR:%.*]], i1 [[C:%.*]]) [[ATTR8]] {
 ; IS__CGSCC____-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; IS__CGSCC____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC____:       t:

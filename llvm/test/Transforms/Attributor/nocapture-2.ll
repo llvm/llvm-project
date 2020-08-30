@@ -472,10 +472,10 @@ define void @test_not_captured_but_returned_calls(i64* %a) #0 {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_not_captured_but_returned_calls
-; IS__CGSCC____-SAME: (i64* nofree nonnull writeonly align 8 dereferenceable(16) [[A:%.*]]) [[ATTR4]] {
+; IS__CGSCC____-SAME: (i64* nocapture nofree nonnull writeonly align 8 dereferenceable(16) [[A:%.*]]) [[ATTR4]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree nonnull writeonly align 8 dereferenceable(16) [[A]]) [[ATTR9:#.*]]
-; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i64* @not_captured_but_returned_1(i64* nofree nonnull writeonly align 8 dereferenceable(16) [[A]]) [[ATTR9]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A]]) [[ATTR9:#.*]]
+; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call i64* @not_captured_but_returned_1(i64* nofree nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A]]) [[ATTR9]]
 ; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
@@ -501,9 +501,9 @@ define i64* @negative_test_not_captured_but_returned_call_0a(i64* %a) #0 {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_0a
-; IS__CGSCC____-SAME: (i64* nofree nonnull returned writeonly align 8 dereferenceable(8) [[A:%.*]]) [[ATTR4]] {
+; IS__CGSCC____-SAME: (i64* nofree nonnull returned writeonly align 8 dereferenceable(8) "no-capture-maybe-returned" [[A:%.*]]) [[ATTR4]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree nonnull writeonly align 8 dereferenceable(8) [[A]]) [[ATTR9]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree nonnull writeonly align 8 dereferenceable(8) "no-capture-maybe-returned" [[A]]) [[ATTR9]]
 ; IS__CGSCC____-NEXT:    ret i64* [[CALL]]
 ;
 entry:
@@ -532,7 +532,7 @@ define void @negative_test_not_captured_but_returned_call_0b(i64* %a) #0 {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_0b
 ; IS__CGSCC____-SAME: (i64* nofree nonnull writeonly align 8 dereferenceable(8) [[A:%.*]]) [[ATTR4]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree nonnull writeonly align 8 dereferenceable(8) [[A]]) [[ATTR9]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i64* @not_captured_but_returned_0(i64* nofree nonnull writeonly align 8 dereferenceable(8) "no-capture-maybe-returned" [[A]]) [[ATTR9]]
 ; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = ptrtoint i64* [[CALL]] to i64
 ; IS__CGSCC____-NEXT:    store i64 [[TMP0]], i64* [[A]], align 8
 ; IS__CGSCC____-NEXT:    ret void
@@ -561,9 +561,9 @@ define i64* @negative_test_not_captured_but_returned_call_1a(i64* %a) #0 {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind uwtable willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_1a
-; IS__CGSCC____-SAME: (i64* nofree nonnull writeonly align 8 dereferenceable(16) [[A:%.*]]) [[ATTR4]] {
+; IS__CGSCC____-SAME: (i64* nofree nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A:%.*]]) [[ATTR4]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(8) i64* @not_captured_but_returned_1(i64* nofree nonnull writeonly align 8 dereferenceable(16) [[A]]) [[ATTR9]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call nonnull align 8 dereferenceable(8) i64* @not_captured_but_returned_1(i64* nofree nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A]]) [[ATTR9]]
 ; IS__CGSCC____-NEXT:    ret i64* [[CALL]]
 ;
 entry:
@@ -592,7 +592,7 @@ define void @negative_test_not_captured_but_returned_call_1b(i64* %a) #0 {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@negative_test_not_captured_but_returned_call_1b
 ; IS__CGSCC____-SAME: (i64* nofree nonnull writeonly align 8 dereferenceable(16) [[A:%.*]]) [[ATTR5:#.*]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call align 8 i64* @not_captured_but_returned_1(i64* nofree nonnull writeonly align 8 dereferenceable(16) [[A]]) [[ATTR9]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call align 8 i64* @not_captured_but_returned_1(i64* nofree nonnull writeonly align 8 dereferenceable(16) "no-capture-maybe-returned" [[A]]) [[ATTR9]]
 ; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = ptrtoint i64* [[CALL]] to i64
 ; IS__CGSCC____-NEXT:    store i64 [[TMP0]], i64* [[CALL]], align 8
 ; IS__CGSCC____-NEXT:    ret void

@@ -3032,8 +3032,14 @@ struct AAIsDeadFunction : public AAIsDead {
   void initialize(Attributor &A) override {
     const Function *F = getAnchorScope();
     if (F && !F->isDeclaration()) {
-      ToBeExploredFrom.insert(&F->getEntryBlock().front());
-      assumeLive(A, F->getEntryBlock());
+      // We only want to compute liveness once. If the function is not part of
+      // the SCC, skip it.
+      if (A.isRunOn(*const_cast<Function *>(F))) {
+        ToBeExploredFrom.insert(&F->getEntryBlock().front());
+        assumeLive(A, F->getEntryBlock());
+      } else {
+        indicatePessimisticFixpoint();
+      }
     }
   }
 

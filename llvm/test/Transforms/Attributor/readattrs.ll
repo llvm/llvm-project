@@ -145,9 +145,9 @@ define void @test8_2(i32* %p) {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test8_2
-; IS__CGSCC____-SAME: (i32* nofree writeonly [[P:%.*]]) [[ATTR3]] {
+; IS__CGSCC____-SAME: (i32* nocapture nofree writeonly [[P:%.*]]) [[ATTR3]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call align 4 i32* @test8_1(i32* noalias nofree readnone [[P]]) [[ATTR11:#.*]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call align 4 i32* @test8_1(i32* noalias nofree readnone "no-capture-maybe-returned" [[P]]) [[ATTR11:#.*]]
 ; IS__CGSCC____-NEXT:    store i32 10, i32* [[CALL]], align 4
 ; IS__CGSCC____-NEXT:    ret void
 ;
