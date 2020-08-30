@@ -31,7 +31,7 @@ define internal void @bar(%pair* byval %Data) {
 ; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) {
 ; IS__CGSCC_NPM-NEXT:    [[DATA_PRIV:%.*]] = alloca [[PAIR:%.*]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[DATA_PRIV_CAST:%.*]] = bitcast %pair* [[DATA_PRIV]] to i32*
-; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32* [[DATA_PRIV_CAST]], align 4
+; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32* [[DATA_PRIV_CAST]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[DATA_PRIV_0_1:%.*]] = getelementptr [[PAIR]], %pair* [[DATA_PRIV]], i32 0, i32 1
 ; IS__CGSCC_NPM-NEXT:    store i32 [[TMP1]], i32* [[DATA_PRIV_0_1]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = call i8* @foo(%pair* noundef nonnull align 8 dereferenceable(8) [[DATA_PRIV]])

@@ -31,16 +31,27 @@ define internal void @add({i32, i32}* %this, i32* sret %r) {
 ; IS__TUNIT_NPM-NEXT:    store i32 [[AB]], i32* [[R]], align 4
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@add
-; IS__CGSCC____-SAME: ({ i32, i32 }* nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[THIS:%.*]], i32* nocapture nofree noundef nonnull sret writeonly align 4 dereferenceable(4) [[R:%.*]]) [[ATTR0:#.*]] {
-; IS__CGSCC____-NEXT:    [[AP:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[THIS]], i32 0, i32 0
-; IS__CGSCC____-NEXT:    [[BP:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[THIS]], i32 0, i32 1
-; IS__CGSCC____-NEXT:    [[A:%.*]] = load i32, i32* [[AP]], align 8
-; IS__CGSCC____-NEXT:    [[B:%.*]] = load i32, i32* [[BP]], align 4
-; IS__CGSCC____-NEXT:    [[AB:%.*]] = add i32 [[A]], [[B]]
-; IS__CGSCC____-NEXT:    store i32 [[AB]], i32* [[R]], align 4
-; IS__CGSCC____-NEXT:    ret void
+; IS__CGSCC_OPM: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@add
+; IS__CGSCC_OPM-SAME: ({ i32, i32 }* nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[THIS:%.*]], i32* nocapture nofree noundef nonnull sret writeonly align 4 dereferenceable(4) [[R:%.*]]) [[ATTR0:#.*]] {
+; IS__CGSCC_OPM-NEXT:    [[AP:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[THIS]], i32 0, i32 0
+; IS__CGSCC_OPM-NEXT:    [[BP:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[THIS]], i32 0, i32 1
+; IS__CGSCC_OPM-NEXT:    [[A:%.*]] = load i32, i32* [[AP]], align 8
+; IS__CGSCC_OPM-NEXT:    [[B:%.*]] = load i32, i32* [[BP]], align 4
+; IS__CGSCC_OPM-NEXT:    [[AB:%.*]] = add i32 [[A]], [[B]]
+; IS__CGSCC_OPM-NEXT:    store i32 [[AB]], i32* [[R]], align 4
+; IS__CGSCC_OPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@add
+; IS__CGSCC_NPM-SAME: ({ i32, i32 }* noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[THIS:%.*]], i32* noalias nocapture nofree noundef nonnull sret writeonly align 4 dereferenceable(4) [[R:%.*]]) [[ATTR0:#.*]] {
+; IS__CGSCC_NPM-NEXT:    [[AP:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[THIS]], i32 0, i32 0
+; IS__CGSCC_NPM-NEXT:    [[BP:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[THIS]], i32 0, i32 1
+; IS__CGSCC_NPM-NEXT:    [[A:%.*]] = load i32, i32* [[AP]], align 8
+; IS__CGSCC_NPM-NEXT:    [[B:%.*]] = load i32, i32* [[BP]], align 4
+; IS__CGSCC_NPM-NEXT:    [[AB:%.*]] = add i32 [[A]], [[B]]
+; IS__CGSCC_NPM-NEXT:    store i32 [[AB]], i32* [[R]], align 4
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   %ap = getelementptr {i32, i32}, {i32, i32}* %this, i32 0, i32 0
   %bp = getelementptr {i32, i32}, {i32, i32}* %this, i32 0, i32 1

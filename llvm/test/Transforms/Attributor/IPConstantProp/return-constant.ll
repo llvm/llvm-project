@@ -52,9 +52,9 @@ define internal i32 @foo(i1 %C) {
 ; IS__CGSCC____-SAME: (i1 [[C:%.*]]) [[ATTR0]] {
 ; IS__CGSCC____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC____:       T:
-; IS__CGSCC____-NEXT:    ret i32 52
+; IS__CGSCC____-NEXT:    ret i32 undef
 ; IS__CGSCC____:       F:
-; IS__CGSCC____-NEXT:    ret i32 52
+; IS__CGSCC____-NEXT:    ret i32 undef
 ;
   br i1 %C, label %T, label %F
 

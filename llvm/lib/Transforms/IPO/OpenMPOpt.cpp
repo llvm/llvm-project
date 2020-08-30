@@ -67,28 +67,6 @@ STATISTIC(
 static constexpr auto TAG = "[" DEBUG_TYPE "]";
 #endif
 
-/// Apply \p CB to all uses of \p F. If \p LookThroughConstantExprUses is
-/// true, constant expression users are not given to \p CB but their uses are
-/// traversed transitively.
-template <typename CBTy>
-static void foreachUse(Function &F, CBTy CB,
-                       bool LookThroughConstantExprUses = true) {
-  SmallVector<Use *, 8> Worklist(make_pointer_range(F.uses()));
-
-  for (unsigned idx = 0; idx < Worklist.size(); ++idx) {
-    Use &U = *Worklist[idx];
-
-    // Allow use in constant bitcasts and simply look through them.
-    if (LookThroughConstantExprUses && isa<ConstantExpr>(U.getUser())) {
-      for (Use &CEU : cast<ConstantExpr>(U.getUser())->uses())
-        Worklist.push_back(&CEU);
-      continue;
-    }
-
-    CB(U);
-  }
-}
-
 /// Helper struct to store tracked ICV values at specif instructions.
 struct ICVValue {
   Instruction *Inst;
@@ -138,7 +116,6 @@ struct OMPInformationCache : public InformationCache {
                       SmallPtrSetImpl<Kernel> &Kernels)
       : InformationCache(M, AG, Allocator, &CGSCC), OMPBuilder(M),
         Kernels(Kernels) {
-    initializeModuleSlice(CGSCC);
 
     OMPBuilder.initialize();
     initializeRuntimeFunctions();
@@ -264,46 +241,6 @@ struct OMPInformationCache : public InformationCache {
     /// them.
     DenseMap<Function *, std::shared_ptr<UseVector>> UsesMap;
   };
-
-  /// Initialize the ModuleSlice member based on \p SCC. ModuleSlices contains
-  /// (a subset of) all functions that we can look at during this SCC traversal.
-  /// This includes functions (transitively) called from the SCC and the
-  /// (transitive) callers of SCC functions. We also can look at a function if
-  /// there is a "reference edge", i.a., if the function somehow uses (!=calls)
-  /// a function in the SCC or a caller of a function in the SCC.
-  void initializeModuleSlice(SetVector<Function *> &SCC) {
-    ModuleSlice.insert(SCC.begin(), SCC.end());
-
-    SmallPtrSet<Function *, 16> Seen;
-    SmallVector<Function *, 16> Worklist(SCC.begin(), SCC.end());
-    while (!Worklist.empty()) {
-      Function *F = Worklist.pop_back_val();
-      ModuleSlice.insert(F);
-
-      for (Instruction &I : instructions(*F))
-        if (auto *CB = dyn_cast<CallBase>(&I))
-          if (Function *Callee = CB->getCalledFunction())
-            if (Seen.insert(Callee).second)
-              Worklist.push_back(Callee);
-    }
-
-    Seen.clear();
-    Worklist.append(SCC.begin(), SCC.end());
-    while (!Worklist.empty()) {
-      Function *F = Worklist.pop_back_val();
-      ModuleSlice.insert(F);
-
-      // Traverse all transitive uses.
-      foreachUse(*F, [&](Use &U) {
-        if (auto *UsrI = dyn_cast<Instruction>(U.getUser()))
-          if (Seen.insert(UsrI->getFunction()).second)
-            Worklist.push_back(UsrI->getFunction());
-      });
-    }
-  }
-
-  /// The slice of the module we are allowed to look at.
-  SmallPtrSet<Function *, 8> ModuleSlice;
 
   /// An OpenMP-IR-Builder instance
   OpenMPIRBuilder OMPBuilder;
@@ -1106,7 +1043,7 @@ Kernel OpenMPOpt::getUniqueKernelFor(Function &F) {
 
   // TODO: In the future we want to track more than just a unique kernel.
   SmallPtrSet<Kernel, 2> PotentialKernels;
-  foreachUse(F, [&](const Use &U) {
+  OMPInformationCache::foreachUse(F, [&](const Use &U) {
     PotentialKernels.insert(GetUniqueKernelForUse(U));
   });
 
@@ -1137,7 +1074,7 @@ bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
     unsigned NumDirectCalls = 0;
 
     SmallVector<Use *, 2> ToBeReplacedStateMachineUses;
-    foreachUse(*F, [&](Use &U) {
+    OMPInformationCache::foreachUse(*F, [&](Use &U) {
       if (auto *CB = dyn_cast<CallBase>(U.getUser()))
         if (CB->isCallee(&U)) {
           ++NumDirectCalls;
@@ -1475,7 +1412,6 @@ PreservedAnalyses OpenMPOptPass::run(LazyCallGraph::SCC &C,
 
   Attributor A(Functions, InfoCache, CGUpdater);
 
-  // TODO: Compute the module slice we are allowed to look at.
   OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
   bool Changed = OMPOpt.run();
   if (Changed)
@@ -1552,7 +1488,6 @@ struct OpenMPOptLegacyPass : public CallGraphSCCPass {
 
     Attributor A(Functions, InfoCache, CGUpdater);
 
-    // TODO: Compute the module slice we are allowed to look at.
     OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
     return OMPOpt.run();
   }

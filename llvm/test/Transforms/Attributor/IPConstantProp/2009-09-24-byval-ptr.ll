@@ -27,7 +27,7 @@ define internal void @vfu1(%struct.MYstr* byval align 4 %u) nounwind {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[U_PRIV:%.*]] = alloca [[STRUCT_MYSTR:%.*]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[U_PRIV_CAST:%.*]] = bitcast %struct.MYstr* [[U_PRIV]] to i8*
-; IS__CGSCC_NPM-NEXT:    store i8 [[TMP0]], i8* [[U_PRIV_CAST]], align 1
+; IS__CGSCC_NPM-NEXT:    store i8 [[TMP0]], i8* [[U_PRIV_CAST]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[U_PRIV_0_1:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
 ; IS__CGSCC_NPM-NEXT:    store i32 [[TMP1]], i32* [[U_PRIV_0_1]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
@@ -187,7 +187,7 @@ define internal i32 @vfu2_v2(%struct.MYstr* byval align 4 %u) nounwind readonly 
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[U_PRIV:%.*]] = alloca [[STRUCT_MYSTR:%.*]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[U_PRIV_CAST:%.*]] = bitcast %struct.MYstr* [[U_PRIV]] to i8*
-; IS__CGSCC_NPM-NEXT:    store i8 [[TMP0]], i8* [[U_PRIV_CAST]], align 1
+; IS__CGSCC_NPM-NEXT:    store i8 [[TMP0]], i8* [[U_PRIV_CAST]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[U_PRIV_0_1:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
 ; IS__CGSCC_NPM-NEXT:    store i32 [[TMP1]], i32* [[U_PRIV_0_1]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[Z:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1

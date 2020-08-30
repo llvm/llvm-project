@@ -512,7 +512,7 @@ define internal i32 @p2i(i32* %arg) {
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@p2i
-; IS__CGSCC____-SAME: (i32* nofree readnone [[ARG:%.*]]) [[ATTR0]] {
+; IS__CGSCC____-SAME: (i32* noalias nofree readnone [[ARG:%.*]]) [[ATTR0]] {
 ; IS__CGSCC____-NEXT:    [[P2I:%.*]] = ptrtoint i32* [[ARG]] to i32
 ; IS__CGSCC____-NEXT:    ret i32 [[P2I]]
 ;
@@ -572,17 +572,29 @@ define internal i32 @ret(i32* %arg) {
 
 ; Function Attrs: nounwind optsize
 define internal fastcc double @strtox(i8* %s, i8** %p, i32 %prec) unnamed_addr {
-; CHECK-LABEL: define {{[^@]+}}@strtox
-; CHECK-SAME: (i8* [[S:%.*]]) unnamed_addr {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT__IO_FILE:%.*]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast %struct._IO_FILE* [[F]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 144, i8* nocapture noundef nonnull align 8 dereferenceable(240) [[TMP0]]) [[ATTR10:#.*]]
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 bitcast (i32 (...)* @sh_fromstring to i32 (%struct._IO_FILE*, i8*)*)(%struct._IO_FILE* nonnull align 8 dereferenceable(240) [[F]], i8* [[S]])
-; CHECK-NEXT:    call void @__shlim(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i64 noundef 0)
-; CHECK-NEXT:    [[CALL1:%.*]] = call double @__floatscan(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i32 noundef 1, i32 noundef 1)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 144, i8* nocapture noundef nonnull align 8 dereferenceable(240) [[TMP0]])
-; CHECK-NEXT:    ret double [[CALL1]]
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@strtox
+; NOT_CGSCC_NPM-SAME: (i8* [[S:%.*]]) unnamed_addr {
+; NOT_CGSCC_NPM-NEXT:  entry:
+; NOT_CGSCC_NPM-NEXT:    [[F:%.*]] = alloca [[STRUCT__IO_FILE:%.*]], align 8
+; NOT_CGSCC_NPM-NEXT:    [[TMP0:%.*]] = bitcast %struct._IO_FILE* [[F]] to i8*
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 144, i8* nocapture noundef nonnull align 8 dereferenceable(240) [[TMP0]]) [[ATTR10:#.*]]
+; NOT_CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32 bitcast (i32 (...)* @sh_fromstring to i32 (%struct._IO_FILE*, i8*)*)(%struct._IO_FILE* nonnull align 8 dereferenceable(240) [[F]], i8* [[S]])
+; NOT_CGSCC_NPM-NEXT:    call void @__shlim(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i64 noundef 0)
+; NOT_CGSCC_NPM-NEXT:    [[CALL1:%.*]] = call double @__floatscan(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i32 noundef 1, i32 noundef 1)
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 144, i8* nocapture noundef nonnull align 8 dereferenceable(240) [[TMP0]])
+; NOT_CGSCC_NPM-NEXT:    ret double [[CALL1]]
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@strtox
+; IS__CGSCC____-SAME: (i8* noalias [[S:%.*]]) unnamed_addr {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[F:%.*]] = alloca [[STRUCT__IO_FILE:%.*]], align 8
+; IS__CGSCC____-NEXT:    [[TMP0:%.*]] = bitcast %struct._IO_FILE* [[F]] to i8*
+; IS__CGSCC____-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 144, i8* nocapture noundef nonnull align 8 dereferenceable(240) [[TMP0]]) [[ATTR10]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call i32 bitcast (i32 (...)* @sh_fromstring to i32 (%struct._IO_FILE*, i8*)*)(%struct._IO_FILE* nonnull align 8 dereferenceable(240) [[F]], i8* [[S]])
+; IS__CGSCC____-NEXT:    call void @__shlim(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i64 noundef 0)
+; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call double @__floatscan(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i32 noundef 1, i32 noundef 1)
+; IS__CGSCC____-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 144, i8* nocapture noundef nonnull align 8 dereferenceable(240) [[TMP0]])
+; IS__CGSCC____-NEXT:    ret double [[CALL1]]
 ;
 entry:
   %f = alloca %struct._IO_FILE, align 8

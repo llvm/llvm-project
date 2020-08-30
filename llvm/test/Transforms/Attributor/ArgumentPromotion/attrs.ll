@@ -63,7 +63,7 @@ define internal i32 @f(%struct.ss* byval %b, i32* byval %X, i32 %i) nounwind {
 ; IS__CGSCC_NPM-NEXT:    store i32 [[TMP2]], i32* [[X_PRIV]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[B_PRIV:%.*]] = alloca [[STRUCT_SS:%.*]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[B_PRIV_CAST:%.*]] = bitcast %struct.ss* [[B_PRIV]] to i32*
-; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32* [[B_PRIV_CAST]], align 4
+; IS__CGSCC_NPM-NEXT:    store i32 [[TMP0]], i32* [[B_PRIV_CAST]], align 8
 ; IS__CGSCC_NPM-NEXT:    [[B_PRIV_0_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B_PRIV]], i32 0, i32 1
 ; IS__CGSCC_NPM-NEXT:    store i64 [[TMP1]], i64* [[B_PRIV_0_1]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[B_PRIV]], i32 0, i32 0
