@@ -1325,4 +1325,110 @@ TEST_F(CoreAPIsStandardTest, TestMaterializeWeakSymbol) {
   cantFail(FooResponsibility->notifyEmitted());
 }
 
+static bool linkOrdersEqual(const std::vector<std::shared_ptr<JITDylib>> &LHS,
+                            ArrayRef<JITDylib *> RHS) {
+  if (LHS.size() != RHS.size())
+    return false;
+  auto *RHSE = RHS.begin();
+  for (auto &LHSE : LHS)
+    if (LHSE.get() != *RHSE)
+      return false;
+    else
+      ++RHSE;
+  return true;
+};
+
+TEST(JITDylibTest, GetDFSLinkOrderTree) {
+  // Test that DFS ordering behaves as expected when the linkage relationships
+  // form a tree.
+
+  ExecutionSession ES;
+
+  auto &LibA = ES.createBareJITDylib("A");
+  auto &LibB = ES.createBareJITDylib("B");
+  auto &LibC = ES.createBareJITDylib("C");
+  auto &LibD = ES.createBareJITDylib("D");
+  auto &LibE = ES.createBareJITDylib("E");
+  auto &LibF = ES.createBareJITDylib("F");
+
+  // Linkage relationships:
+  // A --- B -- D
+  //  \      \- E
+  //    \- C -- F
+  LibA.setLinkOrder(makeJITDylibSearchOrder({&LibB, &LibC}));
+  LibB.setLinkOrder(makeJITDylibSearchOrder({&LibD, &LibE}));
+  LibC.setLinkOrder(makeJITDylibSearchOrder({&LibF}));
+
+  auto DFSOrderFromB = JITDylib::getDFSLinkOrder({LibB.shared_from_this()});
+  EXPECT_TRUE(linkOrdersEqual(DFSOrderFromB, {&LibB, &LibD, &LibE}))
+      << "Incorrect DFS link order for LibB";
+
+  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({LibA.shared_from_this()});
+  EXPECT_TRUE(linkOrdersEqual(DFSOrderFromA,
+                              {&LibA, &LibB, &LibD, &LibE, &LibC, &LibF}))
+      << "Incorrect DFS link order for libA";
+
+  auto DFSOrderFromAB = JITDylib::getDFSLinkOrder(
+      {LibA.shared_from_this(), LibB.shared_from_this()});
+  EXPECT_TRUE(linkOrdersEqual(DFSOrderFromAB,
+                              {&LibA, &LibB, &LibD, &LibE, &LibC, &LibF}))
+      << "Incorrect DFS link order for { libA, libB }";
+
+  auto DFSOrderFromBA = JITDylib::getDFSLinkOrder(
+      {LibB.shared_from_this(), LibA.shared_from_this()});
+  EXPECT_TRUE(linkOrdersEqual(DFSOrderFromBA,
+                              {&LibB, &LibD, &LibE, &LibA, &LibC, &LibF}))
+      << "Incorrect DFS link order for { libB, libA }";
+}
+
+TEST(JITDylibTest, GetDFSLinkOrderDiamond) {
+  // Test that DFS ordering behaves as expected when the linkage relationships
+  // contain a diamond.
+
+  ExecutionSession ES;
+  auto &LibA = ES.createBareJITDylib("A");
+  auto &LibB = ES.createBareJITDylib("B");
+  auto &LibC = ES.createBareJITDylib("C");
+  auto &LibD = ES.createBareJITDylib("D");
+
+  // Linkage relationships:
+  // A -- B --- D
+  //  \-- C --/
+  LibA.setLinkOrder(makeJITDylibSearchOrder({&LibB, &LibC}));
+  LibB.setLinkOrder(makeJITDylibSearchOrder({&LibD}));
+  LibC.setLinkOrder(makeJITDylibSearchOrder({&LibD}));
+
+  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({LibA.shared_from_this()});
+  EXPECT_TRUE(linkOrdersEqual(DFSOrderFromA, {&LibA, &LibB, &LibD, &LibC}))
+      << "Incorrect DFS link order for libA";
+}
+
+TEST(JITDylibTest, GetDFSLinkOrderCycle) {
+  // Test that DFS ordering behaves as expected when the linkage relationships
+  // contain a cycle.
+
+  ExecutionSession ES;
+  auto &LibA = ES.createBareJITDylib("A");
+  auto &LibB = ES.createBareJITDylib("B");
+  auto &LibC = ES.createBareJITDylib("C");
+
+  // Linkage relationships:
+  // A -- B --- C -- A
+  LibA.setLinkOrder(makeJITDylibSearchOrder({&LibB}));
+  LibB.setLinkOrder(makeJITDylibSearchOrder({&LibC}));
+  LibC.setLinkOrder(makeJITDylibSearchOrder({&LibA}));
+
+  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({LibA.shared_from_this()});
+  EXPECT_TRUE(linkOrdersEqual(DFSOrderFromA, {&LibA, &LibB, &LibC}))
+      << "Incorrect DFS link order for libA";
+
+  auto DFSOrderFromB = JITDylib::getDFSLinkOrder({LibB.shared_from_this()});
+  EXPECT_TRUE(linkOrdersEqual(DFSOrderFromB, {&LibB, &LibC, &LibA}))
+      << "Incorrect DFS link order for libB";
+
+  auto DFSOrderFromC = JITDylib::getDFSLinkOrder({LibC.shared_from_this()});
+  EXPECT_TRUE(linkOrdersEqual(DFSOrderFromC, {&LibC, &LibA, &LibB}))
+      << "Incorrect DFS link order for libC";
+}
+
 } // namespace
