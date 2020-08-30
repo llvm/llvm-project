@@ -37,6 +37,7 @@ declare void @g(i32, i32)
 ; CHECK:    f:
 ; CHECK:    .seh_proc f
 ; CHECK:    b g
+; CHECK-NEXT:  .seh_endfunclet
 ; CHECK-NEXT: .p2align  2
 ; CHECK-NEXT: .LJTI0_0:
 ; CHECK:    .word .LBB0_2-.LJTI0_0
