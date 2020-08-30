@@ -29,6 +29,8 @@ define void @cmp(i32 %x, i32 %y) {
   ret void
 }
 
+declare i32 @llvm.umax.i32(i32, i32)
+
 define void @intrinsic(i32 %x, i32 %y) {
 ; CHECK-LABEL: @intrinsic(
 ; CHECK-NEXT:    [[M1:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
@@ -42,4 +44,27 @@ define void @intrinsic(i32 %x, i32 %y) {
   ret void
 }
 
-declare i32 @llvm.umax.i32(i32, i32)
+declare { i32, i1 } @llvm.umul.with.overflow.i32(i32, i32)
+
+define { i32, i1 } @intrinsic2(i32 %x, i32 %y, i1 %cond) {
+; CHECK-LABEL: @intrinsic2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    unreachable
+; CHECK:       if.end:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[UMUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[X:%.*]], i32 [[Y]])
+; CHECK-NEXT:    ret { i32, i1 } [[UMUL]]
+;
+entry:
+  br i1 %cond, label %if.then, label %if.end
+
+if.then:
+  unreachable
+
+if.end:
+  %cmp = icmp eq i32 0, %y
+  %umul = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 %x, i32 %y)
+  ret { i32, i1 } %umul
+}
