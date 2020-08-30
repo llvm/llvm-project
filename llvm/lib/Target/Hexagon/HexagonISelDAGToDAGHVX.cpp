@@ -1895,16 +1895,34 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
     }
   }
 
+  // From the cycles, construct the sequence of values that will
+  // then form the control values for vdealvdd/vshuffvdd, i.e.
+  // (M a1 a2)(M a3 a4 a5)... -> a1 a2 a3 a4 a5
+  // This essentially strips the M value from the cycles where
+  // it's present, and performs the insertion of M (then stripping)
+  // for cycles without M (as described in an earlier comment).
   SmallVector<unsigned,8> SwapElems;
-  if (HwLen == unsigned(VecLen))
+  // When the input is extended (i.e. single vector becomes a pair),
+  // this is done by using an "undef" vector as the second input.
+  // However, then we get
+  //   input 1: GOODBITS
+  //   input 2: ........
+  // but we need
+  //   input 1: ....BITS
+  //   input 2: ....GOOD
+  // Then at the end, this needs to be undone. To accomplish this,
+  // artificially add "LogLen-1" at both ends of the sequence.
+  if (Extend)
     SwapElems.push_back(LogLen-1);
-
   for (const CycleType &C : Cycles) {
+    // Do the transformation: (a1..an) -> (M a1..an)(M a1).
     unsigned First = (C[0] == LogLen-1) ? 1 : 0;
     SwapElems.append(C.begin()+First, C.end());
     if (First == 0)
       SwapElems.push_back(C[0]);
   }
+  if (Extend)
+    SwapElems.push_back(LogLen-1);
 
   const SDLoc &dl(Results.InpNode);
   OpRef Arg = !Extend ? Va
