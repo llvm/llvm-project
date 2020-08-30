@@ -60,7 +60,7 @@ define i64 @fn2c() {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@fn2c
 ; IS__TUNIT____-SAME: () [[ATTR0]] {
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 42) [[ATTR0]], [[RNG0]]
+; IS__TUNIT____-NEXT:    [[CALL2:%.*]] = call i64 @fn1(i64 noundef 42) [[ATTR0]], [[RNG0]]
 ; IS__TUNIT____-NEXT:    ret i64 [[CALL2]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn

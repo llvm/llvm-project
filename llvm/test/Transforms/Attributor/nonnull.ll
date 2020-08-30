@@ -42,10 +42,10 @@ define i8* @test2A(i1 %c, i8* %ret) {
 ; NOT_CGSCC_OPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned "no-capture-maybe-returned" [[RET:%.*]]) [[ATTR0:#.*]] {
 ; NOT_CGSCC_OPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
 ; NOT_CGSCC_OPM:       A:
-; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [[ATTR11:#.*]] [ "nonnull"(i8* [[RET]]) ]
+; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [[ATTR11:#.*]] [ "nonnull"(i8* [[RET]]) ]
 ; NOT_CGSCC_OPM-NEXT:    ret i8* [[RET]]
 ; NOT_CGSCC_OPM:       B:
-; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [[ATTR11]] [ "nonnull"(i8* [[RET]]) ]
+; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [[ATTR11]] [ "nonnull"(i8* [[RET]]) ]
 ; NOT_CGSCC_OPM-NEXT:    ret i8* [[RET]]
 ;
 ; IS__CGSCC_OPM: Function Attrs: nounwind willreturn
@@ -53,10 +53,10 @@ define i8* @test2A(i1 %c, i8* %ret) {
 ; IS__CGSCC_OPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned "no-capture-maybe-returned" [[RET:%.*]]) [[ATTR0:#.*]] {
 ; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
 ; IS__CGSCC_OPM:       A:
-; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [[ATTR12:#.*]] [ "nonnull"(i8* [[RET]]) ]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [[ATTR12:#.*]] [ "nonnull"(i8* [[RET]]) ]
 ; IS__CGSCC_OPM-NEXT:    ret i8* [[RET]]
 ; IS__CGSCC_OPM:       B:
-; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [[ATTR12]] [ "nonnull"(i8* [[RET]]) ]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [[ATTR12]] [ "nonnull"(i8* [[RET]]) ]
 ; IS__CGSCC_OPM-NEXT:    ret i8* [[RET]]
 ;
   br i1 %c, label %A, label %B
@@ -75,10 +75,10 @@ define i8* @test2B(i1 %c, i8* %ret) {
 ; NOT_CGSCC_OPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[RET:%.*]]) [[ATTR0]] {
 ; NOT_CGSCC_OPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
 ; NOT_CGSCC_OPM:       A:
-; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [[ATTR11]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
+; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [[ATTR11]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
 ; NOT_CGSCC_OPM-NEXT:    ret i8* [[RET]]
 ; NOT_CGSCC_OPM:       B:
-; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [[ATTR11]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
+; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [[ATTR11]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
 ; NOT_CGSCC_OPM-NEXT:    ret i8* [[RET]]
 ;
 ; IS__CGSCC_OPM: Function Attrs: nounwind willreturn
@@ -86,10 +86,10 @@ define i8* @test2B(i1 %c, i8* %ret) {
 ; IS__CGSCC_OPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[RET:%.*]]) [[ATTR0]] {
 ; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
 ; IS__CGSCC_OPM:       A:
-; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [[ATTR12]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [[ATTR12]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
 ; IS__CGSCC_OPM-NEXT:    ret i8* [[RET]]
 ; IS__CGSCC_OPM:       B:
-; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [[ATTR12]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [[ATTR12]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
 ; IS__CGSCC_OPM-NEXT:    ret i8* [[RET]]
 ;
   br i1 %c, label %A, label %B
@@ -104,14 +104,23 @@ B:
 ; Given an SCC where one of the functions can not be marked nonnull,
 ; can we still mark the other one which is trivially nonnull
 define i8* @scc_binder(i1 %c) {
-; CHECK-LABEL: define {{[^@]+}}@scc_binder
-; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
-; CHECK:       rec:
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @test3(i1 [[C]])
-; CHECK-NEXT:    br label [[END]]
-; CHECK:       end:
-; CHECK-NEXT:    ret i8* null
+; IS________OPM-LABEL: define {{[^@]+}}@scc_binder
+; IS________OPM-SAME: (i1 [[C:%.*]]) {
+; IS________OPM-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
+; IS________OPM:       rec:
+; IS________OPM-NEXT:    [[TMP1:%.*]] = call i8* @test3(i1 [[C]])
+; IS________OPM-NEXT:    br label [[END]]
+; IS________OPM:       end:
+; IS________OPM-NEXT:    ret i8* null
+;
+; IS________NPM-LABEL: define {{[^@]+}}@scc_binder
+; IS________NPM-SAME: (i1 [[C:%.*]]) {
+; IS________NPM-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
+; IS________NPM:       rec:
+; IS________NPM-NEXT:    [[TMP1:%.*]] = call i8* @test3(i1 noundef [[C]])
+; IS________NPM-NEXT:    br label [[END]]
+; IS________NPM:       end:
+; IS________NPM-NEXT:    ret i8* null
 ;
   br i1 %c, label %rec, label %end
 rec:
@@ -312,14 +321,14 @@ define i8* @test10(i8* %a, i64 %n) {
 ; NOT_CGSCC_OPM: Function Attrs: nounwind willreturn
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@test10
 ; NOT_CGSCC_OPM-SAME: (i8* nofree readnone "no-capture-maybe-returned" [[A:%.*]], i64 [[N:%.*]]) [[ATTR0]] {
-; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [[ATTR11]]
+; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [[ATTR11]]
 ; NOT_CGSCC_OPM-NEXT:    [[B:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 [[N]]
 ; NOT_CGSCC_OPM-NEXT:    ret i8* [[B]]
 ;
 ; IS__CGSCC_OPM: Function Attrs: nounwind willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@test10
 ; IS__CGSCC_OPM-SAME: (i8* nofree readnone "no-capture-maybe-returned" [[A:%.*]], i64 [[N:%.*]]) [[ATTR0]] {
-; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [[ATTR12]]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [[ATTR12]]
 ; IS__CGSCC_OPM-NEXT:    [[B:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 [[N]]
 ; IS__CGSCC_OPM-NEXT:    ret i8* [[B]]
 ;
@@ -1464,7 +1473,7 @@ define i8* @mybasename(i8* nofree readonly %str) {
 ; NOT_CGSCC_OPM: Function Attrs: nofree nounwind readonly
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@mybasename
 ; NOT_CGSCC_OPM-SAME: (i8* nofree readonly [[STR:%.*]]) [[ATTR10:#.*]] {
-; NOT_CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i8* @strrchr(i8* nofree readonly [[STR]], i32 47) [[ATTR13]]
+; NOT_CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i8* @strrchr(i8* nofree readonly [[STR]], i32 noundef 47) [[ATTR13]]
 ; NOT_CGSCC_OPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i8* [[CALL]], null
 ; NOT_CGSCC_OPM-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 1
 ; NOT_CGSCC_OPM-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i8* [[ADD_PTR]], i8* [[STR]]
@@ -1473,7 +1482,7 @@ define i8* @mybasename(i8* nofree readonly %str) {
 ; IS__CGSCC_OPM: Function Attrs: nofree nounwind readonly
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@mybasename
 ; IS__CGSCC_OPM-SAME: (i8* nofree readonly [[STR:%.*]]) [[ATTR11:#.*]] {
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i8* @strrchr(i8* nofree readonly [[STR]], i32 47) [[ATTR14]]
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i8* @strrchr(i8* nofree readonly [[STR]], i32 noundef 47) [[ATTR14]]
 ; IS__CGSCC_OPM-NEXT:    [[TOBOOL:%.*]] = icmp ne i8* [[CALL]], null
 ; IS__CGSCC_OPM-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[CALL]], i64 1
 ; IS__CGSCC_OPM-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i8* [[ADD_PTR]], i8* [[STR]]
@@ -1496,14 +1505,14 @@ define void @nonnull_assume_pos(i8* %arg) {
 ;
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@nonnull_assume_pos
 ; NOT_CGSCC_OPM-SAME: (i8* nocapture nofree nonnull readnone [[ARG:%.*]]) {
-; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [[ATTR11]] [ "nonnull"(i8* [[ARG]]) ]
+; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [[ATTR11]] [ "nonnull"(i8* [[ARG]]) ]
 ; NOT_CGSCC_OPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[ARG]]) [[ATTR4]]
 ; NOT_CGSCC_OPM-NEXT:    [[TMP1:%.*]] = call i8* @unknown()
 ; NOT_CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@nonnull_assume_pos
 ; IS__CGSCC_OPM-SAME: (i8* nocapture nofree nonnull readnone [[ARG:%.*]]) {
-; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [[ATTR12]] [ "nonnull"(i8* [[ARG]]) ]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [[ATTR12]] [ "nonnull"(i8* [[ARG]]) ]
 ; IS__CGSCC_OPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[ARG]]) [[ATTR5]]
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = call i8* @unknown()
 ; IS__CGSCC_OPM-NEXT:    ret void
@@ -1530,11 +1539,11 @@ define void @nonnull_assume_neg(i8* %arg) {
 ; NOT_CGSCC_OPM-SAME: (i8* nocapture nofree readnone [[ARG:%.*]]) {
 ; NOT_CGSCC_OPM-NEXT:    [[TMP1:%.*]] = call i8* @unknown()
 ; NOT_CGSCC_OPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[ARG]]) [[ATTR4]]
-; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i8* [[ARG]]) ]
+; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [ "nonnull"(i8* [[ARG]]) ]
 ; NOT_CGSCC_OPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[ARG]]) [[ATTR4]]
 ; NOT_CGSCC_OPM-NEXT:    [[TMP2:%.*]] = call i8* @unknown()
 ; NOT_CGSCC_OPM-NEXT:    call void @use_i8_ptr_ret(i8* noalias nocapture nofree nonnull readnone [[ARG]]) [[ATTR4]]
-; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i8* [[ARG]]) ]
+; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [ "nonnull"(i8* [[ARG]]) ]
 ; NOT_CGSCC_OPM-NEXT:    call void @use_i8_ptr_ret(i8* noalias nocapture nofree nonnull readnone [[ARG]]) [[ATTR4]]
 ; NOT_CGSCC_OPM-NEXT:    ret void
 ;
@@ -1542,11 +1551,11 @@ define void @nonnull_assume_neg(i8* %arg) {
 ; IS__CGSCC_OPM-SAME: (i8* nocapture nofree readnone [[ARG:%.*]]) {
 ; IS__CGSCC_OPM-NEXT:    [[TMP1:%.*]] = call i8* @unknown()
 ; IS__CGSCC_OPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree readnone [[ARG]]) [[ATTR5]]
-; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i8* [[ARG]]) ]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [ "nonnull"(i8* [[ARG]]) ]
 ; IS__CGSCC_OPM-NEXT:    call void @use_i8_ptr(i8* noalias nocapture nofree nonnull readnone [[ARG]]) [[ATTR5]]
 ; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = call i8* @unknown()
 ; IS__CGSCC_OPM-NEXT:    call void @use_i8_ptr_ret(i8* noalias nocapture nofree nonnull readnone [[ARG]]) [[ATTR5]]
-; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i8* [[ARG]]) ]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) [ "nonnull"(i8* [[ARG]]) ]
 ; IS__CGSCC_OPM-NEXT:    call void @use_i8_ptr_ret(i8* noalias nocapture nofree nonnull readnone [[ARG]]) [[ATTR5]]
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;

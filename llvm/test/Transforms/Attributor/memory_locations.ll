@@ -196,7 +196,7 @@ define dso_local i8* @internal_argmem_only_write(i32* %arg) {
 ; CHECK-SAME: (i32* nocapture nonnull writeonly align 4 dereferenceable(4) [[ARG:%.*]]) [[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 10, i32* [[ARG]], align 4
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias dereferenceable_or_null(10) i8* @malloc(i64 10)
+; CHECK-NEXT:    [[CALL:%.*]] = call noalias dereferenceable_or_null(10) i8* @malloc(i64 noundef 10)
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
 entry:
@@ -511,7 +511,7 @@ define i8 @recursive_not_readnone(i8* %ptr, i1 %c) {
 ; IS__TUNIT____-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; IS__TUNIT____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__TUNIT____:       t:
-; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 false) [[ATTR10:#.*]]
+; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) [[ATTR10:#.*]]
 ; IS__TUNIT____-NEXT:    [[R:%.*]] = load i8, i8* [[ALLOC]], align 1
 ; IS__TUNIT____-NEXT:    ret i8 [[R]]
 ; IS__TUNIT____:       f:
@@ -524,7 +524,7 @@ define i8 @recursive_not_readnone(i8* %ptr, i1 %c) {
 ; IS__CGSCC____-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; IS__CGSCC____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC____:       t:
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 false) [[ATTR11:#.*]]
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) [[ATTR11:#.*]]
 ; IS__CGSCC____-NEXT:    [[R:%.*]] = load i8, i8* [[ALLOC]], align 1
 ; IS__CGSCC____-NEXT:    ret i8 [[R]]
 ; IS__CGSCC____:       f:
@@ -549,7 +549,7 @@ define internal i8 @recursive_not_readnone_internal(i8* %ptr, i1 %c) {
 ; IS__TUNIT____-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; IS__TUNIT____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__TUNIT____:       t:
-; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 false) [[ATTR10]]
+; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) [[ATTR10]]
 ; IS__TUNIT____-NEXT:    [[R:%.*]] = load i8, i8* [[ALLOC]], align 1
 ; IS__TUNIT____-NEXT:    ret i8 [[R]]
 ; IS__TUNIT____:       f:
@@ -562,7 +562,7 @@ define internal i8 @recursive_not_readnone_internal(i8* %ptr, i1 %c) {
 ; IS__CGSCC____-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; IS__CGSCC____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC____:       t:
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 false) [[ATTR11]]
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) [[ATTR11]]
 ; IS__CGSCC____-NEXT:    [[R:%.*]] = load i8, i8* [[ALLOC]], align 1
 ; IS__CGSCC____-NEXT:    ret i8 [[R]]
 ; IS__CGSCC____:       f:
@@ -607,7 +607,7 @@ define internal i8 @recursive_not_readnone_internal2(i8* %ptr, i1 %c) {
 ; IS__TUNIT____-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; IS__TUNIT____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__TUNIT____:       t:
-; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal2(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 false) [[ATTR10]]
+; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal2(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) [[ATTR10]]
 ; IS__TUNIT____-NEXT:    [[R:%.*]] = load i8, i8* [[ALLOC]], align 1
 ; IS__TUNIT____-NEXT:    ret i8 [[R]]
 ; IS__TUNIT____:       f:
@@ -620,7 +620,7 @@ define internal i8 @recursive_not_readnone_internal2(i8* %ptr, i1 %c) {
 ; IS__CGSCC____-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
 ; IS__CGSCC____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC____:       t:
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal2(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 false) [[ATTR11]]
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i8 @recursive_not_readnone_internal2(i8* noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 noundef false) [[ATTR11]]
 ; IS__CGSCC____-NEXT:    [[R:%.*]] = load i8, i8* [[ALLOC]], align 1
 ; IS__CGSCC____-NEXT:    ret i8 [[R]]
 ; IS__CGSCC____:       f:

@@ -81,13 +81,13 @@ define void @intrinsic(i8* %dest, i8* %src, i32 %len) {
 ; NOT_CGSCC_NPM: Function Attrs: argmemonly nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@intrinsic
 ; NOT_CGSCC_NPM-SAME: (i8* nocapture writeonly [[DEST:%.*]], i8* nocapture readonly [[SRC:%.*]], i32 [[LEN:%.*]]) [[ATTR5:#.*]] {
-; NOT_CGSCC_NPM-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly [[DEST]], i8* noalias nocapture readonly [[SRC]], i32 [[LEN]], i1 false) [[ATTR11:#.*]]
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly [[DEST]], i8* noalias nocapture readonly [[SRC]], i32 [[LEN]], i1 noundef false) [[ATTR11:#.*]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM: Function Attrs: argmemonly nosync nounwind willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@intrinsic
 ; IS__CGSCC_NPM-SAME: (i8* nocapture writeonly [[DEST:%.*]], i8* nocapture readonly [[SRC:%.*]], i32 [[LEN:%.*]]) [[ATTR4:#.*]] {
-; IS__CGSCC_NPM-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly [[DEST]], i8* noalias nocapture readonly [[SRC]], i32 [[LEN]], i1 false) [[ATTR8:#.*]]
+; IS__CGSCC_NPM-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly [[DEST]], i8* noalias nocapture readonly [[SRC]], i32 [[LEN]], i1 noundef false) [[ATTR8:#.*]]
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 %len, i1 false)
@@ -244,7 +244,7 @@ define void @g() norecurse {
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@g
 ; IS__CGSCC_OPM-SAME: () [[ATTR9:#.*]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    call void @f(i32 0) [[ATTR8]]
+; IS__CGSCC_OPM-NEXT:    call void @f(i32 noundef 0) [[ATTR8]]
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
