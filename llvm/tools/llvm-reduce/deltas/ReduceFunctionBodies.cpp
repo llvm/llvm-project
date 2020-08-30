@@ -13,6 +13,7 @@
 
 #include "ReduceFunctionBodies.h"
 #include "Delta.h"
+#include "llvm/IR/GlobalValue.h"
 
 using namespace llvm;
 
@@ -26,8 +27,10 @@ extractFunctionBodiesFromModule(const std::vector<Chunk> &ChunksToKeep,
   // Delete out-of-chunk function bodies
   std::vector<Function *> FuncDefsToReduce;
   for (auto &F : *Program)
-    if (!F.isDeclaration() && !O.shouldKeep())
+    if (!F.isDeclaration() && !O.shouldKeep()) {
       F.deleteBody();
+      F.setComdat(nullptr);
+    }
 }
 
 /// Counts the amount of non-declaration functions and prints their
