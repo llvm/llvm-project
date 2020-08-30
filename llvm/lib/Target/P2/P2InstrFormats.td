@@ -246,11 +246,12 @@ class P2InstCIDS<bits<8> op, bits<1> i, dag outs, dag inputs, string asmstr> :
     bits<9> d;
     bits<9> s;
     bits<4> cc;
-    bits<1> c;
+    bits<2> c; // treat as 2 bits as if it's a cz flag, so that wc (which == 2), just sets this bit
+               // preventing needing to determine the type of instruction for the flag.
 
     let Inst{31-28} = cc;
     let Inst{27-21} = op{7-1};
-    let Inst{20} = c;
+    let Inst{20} = c{1};
     let Inst{19} = op{0};
     let Inst{18} = i;
     let Inst{17-9} = d;
@@ -294,11 +295,11 @@ class P2InstCLIDS<bits<7> op, bits<2> li, dag outs, dag inputs, string asmstr> :
     bits<9> d;
     bits<9> s;
     bits<4> cc;
-    bits<1> c;
+    bits<2> c;
 
     let Inst{31-28} = cc;
     let Inst{27-21} = op;
-    let Inst{20} = c;
+    let Inst{20} = c{1};
     let Inst{19-18} = li;
     let Inst{17-9} = d;
     let Inst{8-0} = s;
@@ -325,11 +326,11 @@ class P2InstCLD<bits<7> op, bits<9> s, bits<1> l, dag outs, dag inputs, string a
 
     bits<9> d;
     bits<4> cc;
-    bits<1> c;
+    bits<2> c;
 
     let Inst{31-28} = cc;
     let Inst{27-21} = op;
-    let Inst{20} = c;
+    let Inst{20} = c{1};
     let Inst{19} = 0b0;
     let Inst{18} = l;
     let Inst{17-9} = d;

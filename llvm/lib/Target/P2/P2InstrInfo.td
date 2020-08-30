@@ -249,7 +249,7 @@ let DecoderMethod = "DecodeCmpInstruction" in {
 def JMPr    : P2InstCZD<0b1101011, 0b000101100, (outs), (ins P2GPR:$d), "jmp $d">;
 
 let DecoderMethod = "DecodeJumpInstruction", isBarrier = 1, isBranch = 1, isTerminator = 1 in {
-    def JMP     : P2InstRA<0b1101100, 0b0, (outs), (ins jmptarget:$d, P2Implicit:$cmp), "jmp #$d">;
+    def JMP     : P2InstRA<0b1101100, 0b1, (outs), (ins jmptarget:$d, P2Implicit:$cmp), "jmp #$d">;
     /*
     def JMPeq   : P2BranchInst<(ins jmptarget:$target, P2Implicit:$cmp), if_z>;
     def JMPne   : P2BranchInst<(ins jmptarget:$target, P2Implicit:$cmp), if_nz>;
@@ -500,6 +500,17 @@ def WYPINrr     : P2InstLIDS<0b11000010, 0b00, (outs), (ins P2GPR:$d, P2GPR:$s),
 def WYPINii     : P2InstLIDS<0b11000010, 0b11, (outs), (ins s9imm:$d, s9imm:$s), "wypin #$d, #$s">;
 def WYPINri     : P2InstLIDS<0b11000010, 0b01, (outs), (ins P2GPR:$d, s9imm:$s), "wypin $d, #$s">;
 def WYPINir     : P2InstLIDS<0b11000010, 0b10, (outs), (ins s9imm:$d, P2GPR:$s), "wypin #$d, $s">;
+
+def LOCKNEW     : P2InstCLD<0b1101011, 0b000000100, 0b0, (outs P2GPR:$d), (ins), "locknew $d">; // this instruction has no L=1 variant
+
+def LOCKRETr    : P2InstLD<0b1101011, 0b000000101, 0b0, (outs), (ins P2GPR:$d), "lockret $d">;
+def LOCKRETi    : P2InstLD<0b1101011, 0b000000101, 0b1, (outs), (ins s9imm:$d), "lockret #$d">;
+
+def LOCKTRYr    : P2InstCLD<0b1101011, 0b000000110, 0b0, (outs), (ins P2GPR:$d), "locktry $d">;
+def LOCKTRYi    : P2InstCLD<0b1101011, 0b000000110, 0b1, (outs), (ins s9imm:$d), "locktry #$d">;
+
+def LOCKRELr    : P2InstCLD<0b1101011, 0b000000111, 0b0, (outs), (ins P2GPR:$d), "lockrel $d">;
+def LOCKRELi    : P2InstCLD<0b1101011, 0b000000111, 0b1, (outs), (ins s9imm:$d), "lockrel #$d">;
 
 /*--------------------------------*/
 /* Interrupts and events          */

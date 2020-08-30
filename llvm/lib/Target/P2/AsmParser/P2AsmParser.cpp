@@ -418,12 +418,7 @@ bool P2AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name, S
         e = SMLoc::getFromPointer(effect_loc.getPointer() - 1);
         const MCConstantExpr *eff_expr = MCConstantExpr::create(P2::effect_string_map[effect_flag], getContext());
         Operands.push_back(P2Operand::CreateImm(eff_expr, effect_loc, e));
-    } /*else {
-        // PROBLEM: we don't know if we should be adding this operand or not at this stage, and if it's not included when it should be, the matcher errors.
-        e = SMLoc::getFromPointer(effect_loc.getPointer() - 1);
-        const MCConstantExpr *eff_expr = MCConstantExpr::create(0, getContext());
-        Operands.push_back(P2Operand::CreateImm(eff_expr, effect_loc, e));
-    }*/
+    }
 
     // if we still haven't reached the end of the statement, error out.
     if (getLexer().isNot(AsmToken::EndOfStatement)) {
