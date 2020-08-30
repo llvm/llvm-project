@@ -1087,3 +1087,61 @@ define void @callsite_noundef_2() {
   call void @callee_ptr_arg(i32* noundef undef)
   ret void
 }
+
+define i32 @argument_noundef1(i32 noundef %c) {
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@argument_noundef1
+; IS__TUNIT____-SAME: (i32 noundef returned [[C:%.*]]) [[ATTR0]] {
+; IS__TUNIT____-NEXT:    ret i32 [[C]]
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@argument_noundef1
+; IS__CGSCC____-SAME: (i32 noundef returned [[C:%.*]]) [[ATTR0]] {
+; IS__CGSCC____-NEXT:    ret i32 [[C]]
+;
+  ret i32 %c
+}
+
+define i32 @violate_noundef_nonpointer() {
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@violate_noundef_nonpointer
+; IS__TUNIT____-SAME: () [[ATTR0]] {
+; IS__TUNIT____-NEXT:    unreachable
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@violate_noundef_nonpointer
+; IS__CGSCC____-SAME: () [[ATTR0]] {
+; IS__CGSCC____-NEXT:    unreachable
+;
+  %ret = call i32 @argument_noundef1(i32 undef)
+  ret i32 %ret
+}
+
+define i32* @argument_noundef2(i32* noundef %c) {
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@argument_noundef2
+; IS__TUNIT____-SAME: (i32* nofree noundef readnone returned "no-capture-maybe-returned" [[C:%.*]]) [[ATTR0]] {
+; IS__TUNIT____-NEXT:    ret i32* [[C]]
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@argument_noundef2
+; IS__CGSCC____-SAME: (i32* nofree noundef readnone returned "no-capture-maybe-returned" [[C:%.*]]) [[ATTR0]] {
+; IS__CGSCC____-NEXT:    ret i32* [[C]]
+;
+  ret i32* %c
+}
+
+define i32* @violate_noundef_pointer() {
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@violate_noundef_pointer
+; IS__TUNIT____-SAME: () [[ATTR0]] {
+; IS__TUNIT____-NEXT:    unreachable
+;
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@violate_noundef_pointer
+; IS__CGSCC____-SAME: () [[ATTR0]] {
+; IS__CGSCC____-NEXT:    unreachable
+;
+  %ret = call i32* @argument_noundef2(i32* undef)
+  ret i32* %ret
+}

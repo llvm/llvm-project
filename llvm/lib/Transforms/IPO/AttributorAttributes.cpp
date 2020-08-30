@@ -2019,34 +2019,35 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
         if (idx >= Callee->arg_size())
           break;
         Value *ArgVal = CB.getArgOperand(idx);
-        if (!ArgVal || !ArgVal->getType()->isPointerTy())
-          continue;
-        IRPosition CalleeArgumentIRP = IRPosition::callsite_argument(CB, idx);
-        if (!CalleeArgumentIRP.hasAttr({Attribute::NoUndef}))
-          continue;
-        auto &NonNullAA = A.getAAFor<AANonNull>(*this, CalleeArgumentIRP,
-                                                /* TrackDependence */ false);
-        if (!NonNullAA.isKnownNonNull())
-          continue;
-        const auto &ValueSimplifyAA = A.getAAFor<AAValueSimplify>(
-            *this, IRPosition::value(*ArgVal), /* TrackDependence */ false);
-        Optional<Value *> SimplifiedVal =
-            ValueSimplifyAA.getAssumedSimplifiedValue(A);
-
-        if (!ValueSimplifyAA.isKnown())
+        if (!ArgVal)
           continue;
         // Here, we handle three cases.
         //   (1) Not having a value means it is dead. (we can replace the value
         //       with undef)
-        //   (2) Simplified to null pointer. The argument is a poison value and
-        //       violate noundef attribute.
-        //   (3) Simplified to undef. The argument violate noundef attriubte.
+        //   (2) Simplified to undef. The argument violate noundef attriubte.
+        //   (3) Simplified to null pointer where known to be nonnull.
+        //       The argument is a poison value and violate noundef attribute.
+        IRPosition CalleeArgumentIRP = IRPosition::callsite_argument(CB, idx);
+        if (!CalleeArgumentIRP.hasAttr({Attribute::NoUndef}))
+          continue;
+        auto &ValueSimplifyAA = A.getAAFor<AAValueSimplify>(
+            *this, IRPosition::value(*ArgVal), /* TrackDependence */ false);
+        if (!ValueSimplifyAA.isKnown())
+          continue;
+        Optional<Value *> SimplifiedVal =
+            ValueSimplifyAA.getAssumedSimplifiedValue(A);
         if (!SimplifiedVal.hasValue() ||
-            isa<ConstantPointerNull>(*SimplifiedVal.getValue()) ||
             isa<UndefValue>(*SimplifiedVal.getValue())) {
           KnownUBInsts.insert(&I);
-          return true;
+          continue;
         }
+        if (!ArgVal->getType()->isPointerTy() ||
+            !isa<ConstantPointerNull>(*SimplifiedVal.getValue()))
+          continue;
+        auto &NonNullAA = A.getAAFor<AANonNull>(*this, CalleeArgumentIRP,
+                                                /* TrackDependence */ false);
+        if (NonNullAA.isKnownNonNull())
+          KnownUBInsts.insert(&I);
       }
       return true;
     };
