@@ -2024,11 +2024,12 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
         IRPosition CalleeArgumentIRP = IRPosition::callsite_argument(CB, idx);
         if (!CalleeArgumentIRP.hasAttr({Attribute::NoUndef}))
           continue;
-        auto &NonNullAA = A.getAAFor<AANonNull>(*this, CalleeArgumentIRP);
+        auto &NonNullAA = A.getAAFor<AANonNull>(*this, CalleeArgumentIRP,
+                                                /* TrackDependence */ false);
         if (!NonNullAA.isKnownNonNull())
           continue;
-        const auto &ValueSimplifyAA =
-            A.getAAFor<AAValueSimplify>(*this, IRPosition::value(*ArgVal));
+        const auto &ValueSimplifyAA = A.getAAFor<AAValueSimplify>(
+            *this, IRPosition::value(*ArgVal), /* TrackDependence */ false);
         Optional<Value *> SimplifiedVal =
             ValueSimplifyAA.getAssumedSimplifiedValue(A);
 
@@ -2071,7 +2072,8 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
           } else {
             if (isa<ConstantPointerNull>(V)) {
               auto &NonNullAA = A.getAAFor<AANonNull>(
-                  *this, IRPosition::returned(*getAnchorScope()));
+                  *this, IRPosition::returned(*getAnchorScope()),
+                  /* TrackDependence */ false);
               if (NonNullAA.isKnownNonNull())
                 FoundUB = true;
             }
