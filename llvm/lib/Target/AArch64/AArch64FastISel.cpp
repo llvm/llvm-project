@@ -3415,8 +3415,7 @@ bool AArch64FastISel::foldXALUIntrinsic(AArch64CC::CondCode &CC,
   const Value *RHS = II->getArgOperand(1);
 
   // Canonicalize immediate to the RHS.
-  if (isa<ConstantInt>(LHS) && !isa<ConstantInt>(RHS) &&
-      isCommutativeIntrinsic(II))
+  if (isa<ConstantInt>(LHS) && !isa<ConstantInt>(RHS) && II->isCommutative())
     std::swap(LHS, RHS);
 
   // Simplify multiplies.
@@ -3703,8 +3702,7 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     const Value *LHS = II->getArgOperand(0);
     const Value *RHS = II->getArgOperand(1);
     // Canonicalize immediate to the RHS.
-    if (isa<ConstantInt>(LHS) && !isa<ConstantInt>(RHS) &&
-        isCommutativeIntrinsic(II))
+    if (isa<ConstantInt>(LHS) && !isa<ConstantInt>(RHS) && II->isCommutative())
       std::swap(LHS, RHS);
 
     // Simplify multiplies.

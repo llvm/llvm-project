@@ -54,7 +54,7 @@ public:
 
   /// Return true if swapping the first two arguments to the intrinsic produces
   /// the same result.
-  bool isCommutative() {
+  bool isCommutative() const {
     switch (getIntrinsicID()) {
     case Intrinsic::maxnum:
     case Intrinsic::minnum:
