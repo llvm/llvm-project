@@ -54,9 +54,6 @@ add_library(omptarget.rtl.amdgpu SHARED
       impl/system.cpp
       impl/utils.cpp
       impl/msgpack.cpp
-      impl/atmi_hostcall.c
-      impl/hostcall.cpp
-      impl/hostrpc_handlers.c
       src/rtl.cpp
       )
 
@@ -67,9 +64,12 @@ install(TARGETS omptarget.rtl.amdgpu LIBRARY DESTINATION "lib${OPENMP_LIBDIR_SUF
 set_property(TARGET omptarget.rtl.amdgpu PROPERTY INSTALL_RPATH "$ORIGIN")
 target_link_libraries(
   omptarget.rtl.amdgpu
+  PUBLIC
+  hostrpc_services
   PRIVATE
   hsa-runtime64::hsa-runtime64
   pthread dl elf
+  # -Wl,-rpath,${LLVM_LIBDIR}${OPENMP_LIBDIR_SUFFIX}
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
   "-Wl,-z,defs"
   )

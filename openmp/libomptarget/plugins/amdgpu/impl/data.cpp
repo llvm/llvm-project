@@ -66,16 +66,6 @@ ATLData *ATLPointerTracker::find(const void *pointer) {
   return ret;
 }
 
-ATLProcessor &get_processor_by_compute_place(atmi_place_t place) {
-  int dev_id = place.device_id;
-  switch (place.type) {
-  case ATMI_DEVTYPE_CPU:
-    return g_atl_machine.processors<ATLCPUProcessor>()[dev_id];
-  case ATMI_DEVTYPE_GPU:
-    return g_atl_machine.processors<ATLGPUProcessor>()[dev_id];
-  }
-}
-
 ATLProcessor &get_processor_by_mem_place(atmi_mem_place_t place) {
   int dev_id = place.dev_id;
   switch (place.dev_type) {
@@ -84,10 +74,6 @@ ATLProcessor &get_processor_by_mem_place(atmi_mem_place_t place) {
   case ATMI_DEVTYPE_GPU:
     return g_atl_machine.processors<ATLGPUProcessor>()[dev_id];
   }
-}
-
-hsa_agent_t get_compute_agent(atmi_place_t place) {
-  return get_processor_by_compute_place(place).agent();
 }
 
 static hsa_agent_t get_mem_agent(atmi_mem_place_t place) {

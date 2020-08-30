@@ -16,27 +16,6 @@ extern "C" {
 /** \defgroup interop_hsa_functions ATMI-HSA Interop
  *  @{
  */
-/**
- * @brief Get the HSA compute agent from the ATMI compute place.
- *
- * @detail Use this function to query more details about the underlying HSA
- * agent.
- *
- * @param[in] proc The ATMI compute place
- *
- * @param[in] agent Pointer to a non-NULL @p hsa_agent_t structure that will
- * hold the
- * return value.
- *
- * @retval ::ATMI_STATUS_SUCCESS The function has executed successfully.
- *
- * @retval ::ATMI_STATUS_ERROR If @p proc is an invalid location in the current
- * node, or
- * if ATMI is not initialized.
- *
- * @retval ::ATMI_STATUS_UNKNOWN The function encountered errors.
- */
-atmi_status_t atmi_interop_hsa_get_agent(atmi_place_t proc, hsa_agent_t *agent);
 
 /**
  * @brief Get the device address and size of an HSA global symbol

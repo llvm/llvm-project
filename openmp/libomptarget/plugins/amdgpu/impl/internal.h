@@ -218,7 +218,6 @@ template <typename T> inline T *alignUp(T *value, size_t alignment) {
 
 extern void register_allocation(void *addr, size_t size,
                                 atmi_mem_place_t place);
-extern hsa_agent_t get_compute_agent(atmi_place_t place);
 extern hsa_amd_memory_pool_t
 get_memory_pool_by_mem_place(atmi_mem_place_t place);
 extern bool atl_is_atmi_initialized();

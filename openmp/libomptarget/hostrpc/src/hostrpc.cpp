@@ -171,6 +171,7 @@ EXTERN uint32_t __strlen_max(char *instr, uint32_t maxstrlen) {
       return (uint32_t)(i + 1);
   return maxstrlen;
 }
+
 // ---------------------------------------------------
 #else
 // ---------------------------------------------------
@@ -261,5 +262,6 @@ EXTERN int global_free(char *ptr) {
   printf("HOST FALLBACK EXECUTION OF global_free not yet implemented\n");
   return 0;
 }
+
 #endif
 #pragma omp end declare target

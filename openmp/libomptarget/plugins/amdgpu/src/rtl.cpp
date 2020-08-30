@@ -32,8 +32,14 @@
 // Header from ATMI interface
 #include "atmi_interop_hsa.h"
 #include "atmi_runtime.h"
-// Header from hostcall
-#include "amd_hostcall.h"
+
+
+// hostrpc interface, FIXME: consider moving to its own include
+extern "C" unsigned long hostrpc_assign_buffer(hsa_agent_t agent,
+                                               hsa_queue_t *this_Q,
+                                               uint32_t device_id);
+extern "C" hsa_status_t hostrpc_init();
+extern "C" hsa_status_t hostrpc_terminate();
 
 #include "internal.h"
 
@@ -43,6 +49,10 @@
 // in the header file llvm/Frontend/OpenMP/OMPGridValues.h
 // Copied verbatim to meet the requirement that libomptarget builds without
 // a copy of llvm checked out nearby
+
+// could also be:
+// #include "llvm/Frontend/OpenMP/OMPGridValues.h"
+
 namespace llvm {
 namespace omp {
 enum GVIDX {
@@ -500,7 +510,7 @@ public:
       return;
     }
     // Init hostcall soon after initializing ATMI
-    atmi_hostcall_init();
+    hostrpc_init();
 
     HSAAgents = find_gpu_agents();
     NumberOfDevices = (int)HSAAgents.size();
@@ -590,8 +600,8 @@ public:
     // atmi_finalize removes access to it
     deviceStateStore.clear();
     KernelArgPoolMap.clear();
-    // Terminate hostcall before finalizing ATMI
-    atmi_hostcall_terminate();
+    // Terminate hostrpc before finalizing ATMI
+    hostrpc_terminate();
     atmi_finalize();
   }
 };
@@ -1775,8 +1785,9 @@ int32_t __tgt_rtl_run_target_team_region_locked(
       // assign a hostcall buffer for the selected Q
       if (g_atmi_hostcall_required) {
         {
-          impl_args->hostcall_ptr =
-              atmi_hostcall_assign_buffer(queue, device_id);
+
+          impl_args->hostcall_ptr = hostrpc_assign_buffer(
+              DeviceInfo.HSAAgents[device_id], queue, device_id);
         }
       }
 

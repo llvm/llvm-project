@@ -7,18 +7,6 @@
 #include "internal.h"
 
 using core::atl_is_atmi_initialized;
-using core::get_compute_agent;
-
-atmi_status_t atmi_interop_hsa_get_agent(atmi_place_t proc,
-                                         hsa_agent_t *agent) {
-  if (!atl_is_atmi_initialized())
-    return ATMI_STATUS_ERROR;
-  if (!agent)
-    return ATMI_STATUS_ERROR;
-
-  *agent = get_compute_agent(proc);
-  return ATMI_STATUS_SUCCESS;
-}
 
 atmi_status_t atmi_interop_hsa_get_symbol_info(atmi_mem_place_t place,
                                                const char *symbol,

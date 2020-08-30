@@ -205,7 +205,7 @@ typedef struct {
     uint32_t index_size;
 } buffer_t;
 
-#include "../../plugins/amdgpu/impl/atmi_interop_hsa.h"
+#include "../../plugins/amdgpu/impl/atmi_runtime.h"
 
 #ifdef __cplusplus
 } // extern "C"
