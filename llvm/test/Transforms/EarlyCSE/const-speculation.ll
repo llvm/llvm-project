@@ -1,4 +1,4 @@
-; RUN: opt -early-cse -S %s | FileCheck %s
+; RUN: opt -early-cse -earlycse-debug-hash -S %s | FileCheck %s
 
 %mystruct = type { i32 }
 

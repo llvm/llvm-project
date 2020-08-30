@@ -1,4 +1,4 @@
-; RUN: opt -early-cse -S < %s | FileCheck %s
+; RUN: opt -early-cse -earlycse-debug-hash -S < %s | FileCheck %s
 ; RUN: opt -basic-aa -early-cse-memssa -S < %s | FileCheck %s
 
 declare void @use(i1)
