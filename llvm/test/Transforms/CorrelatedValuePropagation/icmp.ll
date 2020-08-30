@@ -381,8 +381,7 @@ define i1 @test12(i32 %x) {
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[ZEXT]], 7
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[MUL]], 32
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[SHR]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TRUNC]], 7
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %zext = zext i32 %x to i64
   %mul = mul nuw i64 %zext, 7
@@ -396,9 +395,8 @@ define i1 @test13(i8 %x, i64* %p) {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[ZEXT]], 128
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[ADD]], 384
 ; CHECK-NEXT:    store i64 [[ADD]], i64* [[P:%.*]], align 8
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %zext = zext i8 %x to i64
   %add = add nuw nsw i64 %zext, 128
@@ -627,8 +625,7 @@ define i1 @test_br_cmp_with_offset(i64 %idx) {
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
 ; CHECK-NEXT:    [[IDX_OFF2:%.*]] = add nsw i64 [[IDX]], -1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[IDX_OFF2]], 10
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       if.false:
 ; CHECK-NEXT:    ret i1 undef
 ;
