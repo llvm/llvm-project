@@ -50,9 +50,9 @@ public:
   }
   void preserve(TypeID id) { preservedIDs.insert(id); }
 
-  /// Returns if the given analysis has been marked as preserved. Note that this
-  /// simply checks for the presence of a given analysis ID and should not be
-  /// used as a general preservation checker.
+  /// Returns true if the given analysis has been marked as preserved. Note that
+  /// this simply checks for the presence of a given analysis ID and should not
+  /// be used as a general preservation checker.
   template <typename AnalysisT> bool isPreserved() const {
     return isPreserved(TypeID::get<AnalysisT>());
   }

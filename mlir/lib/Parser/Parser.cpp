@@ -1106,7 +1106,7 @@ public:
   // Identifier Parsing
   //===--------------------------------------------------------------------===//
 
-  /// Returns if the current token corresponds to a keyword.
+  /// Returns true if the current token corresponds to a keyword.
   bool isCurrentTokenAKeyword() const {
     return parser.getToken().is(Token::bare_identifier) ||
            parser.getToken().isKeyword();

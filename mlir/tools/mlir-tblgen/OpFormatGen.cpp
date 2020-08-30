@@ -356,8 +356,8 @@ struct OperationFormat {
 //===----------------------------------------------------------------------===//
 // Parser Gen
 
-/// Returns if we can format the given attribute as an EnumAttr in the parser
-/// format.
+/// Returns true if we can format the given attribute as an EnumAttr in the
+/// parser format.
 static bool canFormatEnumAttr(const NamedAttribute *attr) {
   const EnumAttr *enumAttr = dyn_cast<EnumAttr>(&attr->attr);
   if (!enumAttr)

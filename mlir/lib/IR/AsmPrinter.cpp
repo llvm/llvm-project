@@ -1143,8 +1143,8 @@ void ModulePrinter::printLocation(LocationAttr loc) {
   }
 }
 
-/// Returns if the given dialect symbol data is simple enough to print in the
-/// pretty form, i.e. without the enclosing "".
+/// Returns true if the given dialect symbol data is simple enough to print in
+/// the pretty form, i.e. without the enclosing "".
 static bool isDialectSymbolSimpleEnoughForPrettyForm(StringRef symName) {
   // The name must start with an identifier.
   if (symName.empty() || !isalpha(symName.front()))
@@ -1233,7 +1233,7 @@ static void printDialectSymbol(raw_ostream &os, StringRef symPrefix,
   os << "<\"" << symString << "\">";
 }
 
-/// Returns if the given string can be represented as a bare identifier.
+/// Returns true if the given string can be represented as a bare identifier.
 static bool isBareIdentifier(StringRef name) {
   assert(!name.empty() && "invalid name");
 
