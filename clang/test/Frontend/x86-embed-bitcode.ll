@@ -43,17 +43,17 @@
 ; CHECK: section "__LLVM,__cmdline"
 
 ; CHECK-ELF: @llvm.embedded.module
-; CHECK-ELF: section ".llvmbc"
+; CHECK-ELF-SAME: section ".llvmbc", align 1
 ; CHECK-ELF: @llvm.cmdline
-; CHECK-ELF: section ".llvmcmd"
+; CHECK-ELF-SAME: section ".llvmcmd", align 1
 
 ; CHECK-ELF-MARKER: @llvm.embedded.module
 ; CHECK-ELF-MARKER: constant [0 x i8] zeroinitializer
 ; CHECK-ELF-MARKER: @llvm.cmdline
-; CHECK-ELF-MARKER: section ".llvmcmd"
+; CHECK-ELF-MARKER: section ".llvmcmd", align 1
 
 ; CHECK-ELF-ONLY-BITCODE: @llvm.embedded.module
-; CHECK-ELF-ONLY-BITCODE: section ".llvmbc"
+; CHECK-ELF-ONLY-BITCODE-SAME: section ".llvmbc", align 1
 ; CHECK-ELF-ONLY-BITCODE-NOT: @llvm.cmdline
 ; CHECK-ELF-ONLY-BITCODE-NOT: section ".llvmcmd"
 
