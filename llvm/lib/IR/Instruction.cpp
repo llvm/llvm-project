@@ -483,32 +483,17 @@ bool Instruction::isIdenticalToWhenDefined(const Instruction *I) const {
   if (getNumOperands() == 0 && I->getNumOperands() == 0)
     return haveSameSpecialState(this, I);
 
-  // PHI nodes are special.
-  if (const PHINode *thisPHI = dyn_cast<PHINode>(this)) {
-    const PHINode *otherPHI = cast<PHINode>(I);
-    // PHI nodes don't necessarily have their operands in the same order,
-    // so we shouldn't just compare ranges of incoming blocks/values.
-
-    // If both PHI's are in the same basic block, which is the most interesting
-    // case, we know they must have identical predecessor list,
-    // so we only need to check the incoming values.
-    if (thisPHI->getParent() == otherPHI->getParent()) {
-      return all_of(thisPHI->blocks(), [thisPHI, otherPHI](BasicBlock *PredBB) {
-        return thisPHI->getIncomingValueForBlock(PredBB) ==
-               otherPHI->getIncomingValueForBlock(PredBB);
-      });
-    }
-
-    // Otherwise, let's just naively compare operands/blocks.
-    return std::equal(op_begin(), op_end(), I->op_begin()) &&
-           std::equal(thisPHI->block_begin(), thisPHI->block_end(),
-                      otherPHI->block_begin());
-  }
-
   // We have two instructions of identical opcode and #operands.  Check to see
   // if all operands are the same.
   if (!std::equal(op_begin(), op_end(), I->op_begin()))
     return false;
+
+  // WARNING: this logic must be kept in sync with EliminateDuplicatePHINodes()!
+  if (const PHINode *thisPHI = dyn_cast<PHINode>(this)) {
+    const PHINode *otherPHI = cast<PHINode>(I);
+    return std::equal(thisPHI->block_begin(), thisPHI->block_end(),
+                      otherPHI->block_begin());
+  }
 
   return haveSameSpecialState(this, I);
 }
