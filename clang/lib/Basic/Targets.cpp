@@ -411,8 +411,6 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new SolarisTargetInfo<SparcV8TargetInfo>(Triple, Opts);
     case llvm::Triple::NetBSD:
       return new NetBSDTargetInfo<SparcV8TargetInfo>(Triple, Opts);
-    case llvm::Triple::OpenBSD:
-      return new OpenBSDTargetInfo<SparcV8TargetInfo>(Triple, Opts);
     case llvm::Triple::RTEMS:
       return new RTEMSTargetInfo<SparcV8TargetInfo>(Triple, Opts);
     default:
@@ -426,8 +424,6 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new LinuxTargetInfo<SparcV8elTargetInfo>(Triple, Opts);
     case llvm::Triple::NetBSD:
       return new NetBSDTargetInfo<SparcV8elTargetInfo>(Triple, Opts);
-    case llvm::Triple::OpenBSD:
-      return new OpenBSDTargetInfo<SparcV8elTargetInfo>(Triple, Opts);
     case llvm::Triple::RTEMS:
       return new RTEMSTargetInfo<SparcV8elTargetInfo>(Triple, Opts);
     default:
