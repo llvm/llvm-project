@@ -1896,9 +1896,13 @@ struct DSEState {
         continue;
       }
 
+      // If Current does not have an analyzable write location, skip it
       auto CurrentLoc = getLocForWriteEx(CurrentI);
-      if (!CurrentLoc)
-        break;
+      if (!CurrentLoc) {
+        StepAgain = true;
+        Current = CurrentDef->getDefiningAccess();
+        continue;
+      }
 
       if (IsMemTerm) {
         // If the killing def is a memory terminator (e.g. lifetime.end), check
