@@ -140,7 +140,7 @@ public:
     return interfaceMap.lookup<T>();
   }
 
-  /// Returns if the operation has a particular trait.
+  /// Returns true if the operation has a particular trait.
   template <template <typename T> class Trait> bool hasTrait() const {
     return hasRawTrait(TypeID::get<Trait>());
   }
