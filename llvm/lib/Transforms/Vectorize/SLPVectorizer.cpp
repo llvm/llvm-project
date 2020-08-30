@@ -235,11 +235,16 @@ static bool isSplat(ArrayRef<Value *> VL) {
   return true;
 }
 
-/// \returns True if \p I is commutative, handles CmpInst as well as Instruction.
+/// \returns True if \p I is commutative, handles CmpInst and BinaryOperator.
 static bool isCommutative(Instruction *I) {
-  if (auto *IC = dyn_cast<CmpInst>(I))
-    return IC->isCommutative();
-  return I->isCommutative();
+  if (auto *Cmp = dyn_cast<CmpInst>(I))
+    return Cmp->isCommutative();
+  if (auto *BO = dyn_cast<BinaryOperator>(I))
+    return BO->isCommutative();
+  // TODO: This should check for generic Instruction::isCommutative(), but
+  //       we need to confirm that the caller code correctly handles Intrinsics
+  //       for example (does not have 2 operands).
+  return false;
 }
 
 /// Checks if the vector of instructions can be represented as a shuffle, like:
