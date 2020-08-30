@@ -526,6 +526,101 @@ define double @sqrt_fdiv_common_operand_extra_use(double %x, double* %p) nounwin
   ret double %r
 }
 
+define double @sqrt_simplify_before_recip_3_uses(double %x, double* %p1, double* %p2) nounwind {
+; FAULT-LABEL: sqrt_simplify_before_recip_3_uses:
+; FAULT:       // %bb.0:
+; FAULT-NEXT:    fsqrt d1, d0
+; FAULT-NEXT:    fmov d2, #1.00000000
+; FAULT-NEXT:    mov x8, #4631107791820423168
+; FAULT-NEXT:    fdiv d1, d2, d1
+; FAULT-NEXT:    fmov d2, x8
+; FAULT-NEXT:    fmul d2, d1, d2
+; FAULT-NEXT:    fmul d0, d0, d1
+; FAULT-NEXT:    str d1, [x0]
+; FAULT-NEXT:    str d2, [x1]
+; FAULT-NEXT:    ret
+;
+; CHECK-LABEL: sqrt_simplify_before_recip_3_uses:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    frsqrte d1, d0
+; CHECK-NEXT:    fmul d2, d1, d1
+; CHECK-NEXT:    frsqrts d2, d0, d2
+; CHECK-NEXT:    fmul d1, d1, d2
+; CHECK-NEXT:    fmul d2, d1, d1
+; CHECK-NEXT:    frsqrts d2, d0, d2
+; CHECK-NEXT:    fmul d1, d1, d2
+; CHECK-NEXT:    fmul d2, d1, d1
+; CHECK-NEXT:    mov x8, #4631107791820423168
+; CHECK-NEXT:    frsqrts d2, d0, d2
+; CHECK-NEXT:    fmul d1, d1, d2
+; CHECK-NEXT:    fmov d2, x8
+; CHECK-NEXT:    fmul d2, d1, d2
+; CHECK-NEXT:    fmul d0, d0, d1
+; CHECK-NEXT:    str d1, [x0]
+; CHECK-NEXT:    str d2, [x1]
+; CHECK-NEXT:    ret
+  %sqrt = tail call fast double @llvm.sqrt.f64(double %x)
+  %rsqrt = fdiv fast double 1.0, %sqrt
+  %r = fdiv fast double 42.0, %sqrt
+  %sqrt_fast = fdiv fast double %x, %sqrt
+  store double %rsqrt, double* %p1, align 8
+  store double %r, double* %p2, align 8
+  ret double %sqrt_fast
+}
+
+define double @sqrt_simplify_before_recip_4_uses(double %x, double* %p1, double* %p2, double* %p3) nounwind {
+; FAULT-LABEL: sqrt_simplify_before_recip_4_uses:
+; FAULT:       // %bb.0:
+; FAULT-NEXT:    mov x8, #4631107791820423168
+; FAULT-NEXT:    fmov d3, x8
+; FAULT-NEXT:    mov x8, #140737488355328
+; FAULT-NEXT:    fsqrt d1, d0
+; FAULT-NEXT:    fmov d2, #1.00000000
+; FAULT-NEXT:    movk x8, #16453, lsl #48
+; FAULT-NEXT:    fdiv d1, d2, d1
+; FAULT-NEXT:    fmov d2, x8
+; FAULT-NEXT:    fmul d3, d1, d3
+; FAULT-NEXT:    fmul d2, d1, d2
+; FAULT-NEXT:    fmul d0, d0, d1
+; FAULT-NEXT:    str d1, [x0]
+; FAULT-NEXT:    str d3, [x1]
+; FAULT-NEXT:    str d2, [x2]
+; FAULT-NEXT:    ret
+;
+; CHECK-LABEL: sqrt_simplify_before_recip_4_uses:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    frsqrte d1, d0
+; CHECK-NEXT:    fmul d3, d1, d1
+; CHECK-NEXT:    frsqrts d3, d0, d3
+; CHECK-NEXT:    fmul d1, d1, d3
+; CHECK-NEXT:    fmul d3, d1, d1
+; CHECK-NEXT:    frsqrts d3, d0, d3
+; CHECK-NEXT:    mov x8, #4631107791820423168
+; CHECK-NEXT:    fmul d1, d1, d3
+; CHECK-NEXT:    fmov d2, x8
+; CHECK-NEXT:    mov x8, #140737488355328
+; CHECK-NEXT:    fmul d3, d1, d1
+; CHECK-NEXT:    movk x8, #16453, lsl #48
+; CHECK-NEXT:    frsqrts d3, d0, d3
+; CHECK-NEXT:    fmul d1, d1, d3
+; CHECK-NEXT:    fmov d3, x8
+; CHECK-NEXT:    fmul d2, d1, d2
+; CHECK-NEXT:    fmul d3, d1, d3
+; CHECK-NEXT:    fmul d0, d0, d1
+; CHECK-NEXT:    str d1, [x0]
+; CHECK-NEXT:    str d2, [x1]
+; CHECK-NEXT:    str d3, [x2]
+; CHECK-NEXT:    ret
+  %sqrt = tail call fast double @llvm.sqrt.f64(double %x)
+  %rsqrt = fdiv fast double 1.0, %sqrt
+  %r1 = fdiv fast double 42.0, %sqrt
+  %r2 = fdiv fast double 43.0, %sqrt
+  %sqrt_fast = fdiv fast double %x, %sqrt
+  store double %rsqrt, double* %p1, align 8
+  store double %r1, double* %p2, align 8
+  store double %r2, double* %p3, align 8
+  ret double %sqrt_fast
+}
+
 attributes #0 = { "unsafe-fp-math"="true" }
 attributes #1 = { "unsafe-fp-math"="true" "denormal-fp-math"="ieee" }
-
