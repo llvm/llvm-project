@@ -9240,7 +9240,7 @@ value of a type like ``i20`` with a size that is not an integral number
 of bytes, the result is undefined if the value was not originally
 written using a store of the same type.
 If the value being loaded is of aggregate type, the bytes that correspond to
-padding may be accessed but is ignored, because it is impossible to observe
+padding may be accessed but are ignored, because it is impossible to observe
 padding from the loaded aggregate value.
 
 Examples:
