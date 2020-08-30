@@ -337,7 +337,7 @@ define i1 @test_store_same_block(i8* %arg) {
 ; CHECK-LABEL: @test_store_same_block(
 ; CHECK-NEXT:    store i8 0, i8* [[ARG:%.*]], align 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8* [[ARG]], null
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   store i8 0, i8* %arg
   %cmp = icmp ne i8* %arg, null
