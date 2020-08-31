@@ -413,10 +413,12 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   bool getUnderlyingObjectsForCodeGen(const Value *V,
                                       SmallVectorImpl<Value *> &Objects);
 
-  /// Finds alloca where the value comes from.
-  AllocaInst *findAllocaForValue(Value *V);
-  inline const AllocaInst *findAllocaForValue(const Value *V) {
-    return findAllocaForValue(const_cast<Value *>(V));
+  /// Returns unique alloca where the value comes from, or nullptr.
+  /// If OffsetZero is true check that V points to the begining of the alloca.
+  AllocaInst *findAllocaForValue(Value *V, bool OffsetZero = false);
+  inline const AllocaInst *findAllocaForValue(const Value *V,
+                                              bool OffsetZero = false) {
+    return findAllocaForValue(const_cast<Value *>(V), OffsetZero);
   }
 
   /// Return true if the only users of this pointer are lifetime markers.
