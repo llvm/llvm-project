@@ -16,10 +16,10 @@ define void @test1(i64 %tmp35) {
 ; CHECK-NEXT:    [[TMP36:%.*]] = icmp sgt i64 [[TMP35:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TMP36]], label [[BB_TRUE:%.*]], label [[BB_FALSE:%.*]]
 ; CHECK:       bb_true:
-; CHECK-NEXT:    tail call void @check1(i1 false) #0
+; CHECK-NEXT:    tail call void @check1(i1 false) [[ATTR0:#.*]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb_false:
-; CHECK-NEXT:    tail call void @check2(i1 true) #0
+; CHECK-NEXT:    tail call void @check2(i1 true) [[ATTR0]]
 ; CHECK-NEXT:    unreachable
 ;
 bb:
@@ -55,7 +55,7 @@ define void @test2(i64 %tmp35, i1 %inner_cmp) {
 ; CHECK-NEXT:    tail call void @check1(i1 false)
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb_false:
-; CHECK-NEXT:    tail call void @check2(i1 true) #0
+; CHECK-NEXT:    tail call void @check2(i1 true) [[ATTR0]]
 ; CHECK-NEXT:    unreachable
 ;
 bb:
