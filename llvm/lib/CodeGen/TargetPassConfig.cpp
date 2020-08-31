@@ -212,6 +212,12 @@ static cl::opt<std::string>
                   cl::desc("Stop compilation before a specific pass"),
                   cl::value_desc("pass-name"), cl::init(""), cl::Hidden);
 
+/// Enable the machine function splitter pass.
+static cl::opt<bool> EnableMachineFunctionSplitter(
+    "enable-split-machine-functions", cl::Hidden,
+    cl::desc("Split out cold blocks from machine functions based on profile "
+             "information."));
+
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
 /// i.e. -disable-mypass=false has no effect.
@@ -1014,8 +1020,14 @@ void TargetPassConfig::addMachinePasses() {
       addPass(createMachineOutlinerPass(RunOnAllFunctions));
   }
 
-  if (TM->getBBSectionsType() != llvm::BasicBlockSection::None)
+  // Machine function splitter uses the basic block sections feature. Both
+  // cannot be enabled at the same time.
+  if (TM->Options.EnableMachineFunctionSplitter ||
+      EnableMachineFunctionSplitter) {
+    addPass(createMachineFunctionSplitterPass());
+  } else if (TM->getBBSectionsType() != llvm::BasicBlockSection::None) {
     addPass(llvm::createBasicBlockSectionsPass(TM->getBBSectionsFuncListBuf()));
+  }
 
   // Add passes that directly emit MI after all other MI passes.
   addPreEmitPass2();
