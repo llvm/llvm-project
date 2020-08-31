@@ -1464,16 +1464,29 @@ HexagonTargetLowering::LowerHvxMul(SDValue Op, SelectionDAG &DAG) const {
       // V6_vmpybv.)
       return getInstr(Hexagon::V6_vmpyih, dl, ResTy, {Vs, Vt}, DAG);
     case MVT::i32: {
-      // Use the following sequence for signed word multiply:
-      // T0 = V6_vmpyiowh Vs, Vt
-      // T1 = V6_vaslw T0, 16
-      // T2 = V6_vmpyiewuh_acc T1, Vs, Vt
-      SDValue S16 = DAG.getConstant(16, dl, MVT::i32);
-      SDValue T0 = getInstr(Hexagon::V6_vmpyiowh, dl, ResTy, {Vs, Vt}, DAG);
-      SDValue T1 = getInstr(Hexagon::V6_vaslw, dl, ResTy, {T0, S16}, DAG);
-      SDValue T2 = getInstr(Hexagon::V6_vmpyiewuh_acc, dl, ResTy,
-                            {T1, Vs, Vt}, DAG);
-      return T2;
+      auto MulL_V60 = [&](SDValue Vs, SDValue Vt) {
+        // Use the following sequence for signed word multiply:
+        // T0 = V6_vmpyiowh Vs, Vt
+        // T1 = V6_vaslw T0, 16
+        // T2 = V6_vmpyiewuh_acc T1, Vs, Vt
+        SDValue S16 = DAG.getConstant(16, dl, MVT::i32);
+        SDValue T0 = getInstr(Hexagon::V6_vmpyiowh, dl, ResTy, {Vs, Vt}, DAG);
+        SDValue T1 = getInstr(Hexagon::V6_vaslw, dl, ResTy, {T0, S16}, DAG);
+        SDValue T2 = getInstr(Hexagon::V6_vmpyiewuh_acc, dl, ResTy,
+                              {T1, Vs, Vt}, DAG);
+        return T2;
+      };
+      auto MulL_V62 = [&](SDValue Vs, SDValue Vt) {
+        MVT PairTy = typeJoin({ResTy, ResTy});
+        SDValue T0 = getInstr(Hexagon::V6_vmpyewuh_64, dl, PairTy,
+                              {Vs, Vt}, DAG);
+        SDValue T1 = getInstr(Hexagon::V6_vmpyowh_64_acc, dl, PairTy,
+                              {T0, Vs, Vt}, DAG);
+        return opSplit(T1, dl, DAG).first;
+      };
+      if (Subtarget.useHVXV62Ops())
+        return MulL_V62(Vs, Vt);
+      return MulL_V60(Vs, Vt);
     }
     default:
       break;
@@ -1520,7 +1533,7 @@ HexagonTargetLowering::LowerHvxMulh(SDValue Op, SelectionDAG &DAG) const {
   assert(ElemTy == MVT::i32);
   SDValue S16 = DAG.getConstant(16, dl, MVT::i32);
 
-  if (IsSigned) {
+  auto MulHS_V60 = [&](SDValue Vs, SDValue Vt) {
     // mulhs(Vs,Vt) =
     //   = [(Hi(Vs)*2^16 + Lo(Vs)) *s (Hi(Vt)*2^16 + Lo(Vt))] >> 32
     //   = [Hi(Vs)*2^16 *s Hi(Vt)*2^16 + Hi(Vs) *su Lo(Vt)*2^16
@@ -1547,6 +1560,20 @@ HexagonTargetLowering::LowerHvxMulh(SDValue Op, SelectionDAG &DAG) const {
     // Add:
     SDValue T3 = DAG.getNode(ISD::ADD, dl, ResTy, {S2, T2});
     return T3;
+  };
+
+  auto MulHS_V62 = [&](SDValue Vs, SDValue Vt) {
+    MVT PairTy = typeJoin({ResTy, ResTy});
+    SDValue T0 = getInstr(Hexagon::V6_vmpyewuh_64, dl, PairTy, {Vs, Vt}, DAG);
+    SDValue T1 = getInstr(Hexagon::V6_vmpyowh_64_acc, dl, PairTy,
+                          {T0, Vs, Vt}, DAG);
+    return opSplit(T1, dl, DAG).second;
+  };
+
+  if (IsSigned) {
+    if (Subtarget.useHVXV62Ops())
+      return MulHS_V62(Vs, Vt);
+    return MulHS_V60(Vs, Vt);
   }
 
   // Unsigned mulhw. (Would expansion using signed mulhw be better?)
