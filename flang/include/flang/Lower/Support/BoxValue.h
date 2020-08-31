@@ -14,6 +14,7 @@
 #define LOWER_SUPPORT_BOXVALUE_H
 
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Support/Matcher.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
@@ -53,8 +54,8 @@ class AbstractBox {
 public:
   AbstractBox() = delete;
   AbstractBox(mlir::Value addr) : addr{addr} {
-    // FIXME: enable the assert!
-    // assert(fir::isa_passbyref_type(addr.getType()));
+    assert(isa_passbyref_type(addr.getType()) &&
+           "box values must be references");
   }
 
   /// An abstract box always contains a memory reference to a value.
@@ -219,17 +220,25 @@ ExtendedValue substBase(const ExtendedValue &exv, mlir::Value base);
 /// example, an entity may have an address in memory that contains its value(s)
 /// as well as various attribute values that describe the shape and starting
 /// indices if it is an array entity.
-class ExtendedValue {
+class ExtendedValue : public details::matcher<ExtendedValue> {
 public:
+  using VT = std::variant<UnboxedValue, CharBoxValue, ArrayBoxValue,
+                          CharArrayBoxValue, BoxValue, ProcBoxValue>;
+
   template <typename A>
   constexpr ExtendedValue(A &&box) : box{std::forward<A>(box)} {}
 
+  template <typename A>
+  constexpr const A *getBoxOf() const {
+    return std::get_if<A>(&box);
+  }
+
   constexpr const CharBoxValue *getCharBox() const {
-    return std::get_if<CharBoxValue>(&box);
+    return getBoxOf<CharBoxValue>();
   }
 
   constexpr const UnboxedValue *getUnboxed() const {
-    return std::get_if<UnboxedValue>(&box);
+    return getBoxOf<UnboxedValue>();
   }
 
   /// LLVM style debugging of extended values
@@ -241,10 +250,10 @@ public:
   friend mlir::Value getLen(const ExtendedValue &exv);
   friend ExtendedValue substBase(const ExtendedValue &exv, mlir::Value base);
 
+  const VT &matchee() const { return box; }
+
 private:
-  std::variant<UnboxedValue, CharBoxValue, ArrayBoxValue, CharArrayBoxValue,
-               BoxValue, ProcBoxValue>
-      box;
+  VT box;
 };
 } // namespace fir
 

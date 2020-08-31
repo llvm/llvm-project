@@ -172,6 +172,20 @@ struct SymbolBox {
 /// etc.
 class SymMap {
 public:
+  /// Add an extended value to the symbol table.
+  void addSymbol(semantics::SymbolRef sym, const fir::ExtendedValue &ext,
+                 bool force = false) {
+    ext.match([&](const fir::UnboxedValue &v) { addSymbol(sym, v, force); },
+              [&](const fir::CharBoxValue &v) { makeSym(sym, v, force); },
+              [&](const fir::ArrayBoxValue &v) { makeSym(sym, v, force); },
+              [&](const fir::CharArrayBoxValue &v) { makeSym(sym, v, force); },
+              [&](const fir::BoxValue &v) { makeSym(sym, v, force); },
+              [](auto) {
+                llvm::report_fatal_error(
+                    "box value should not be added to symbol table");
+              });
+  }
+
   /// Add a trivial symbol mapping to an address.
   void addSymbol(semantics::SymbolRef sym, mlir::Value value,
                  bool force = false) {
