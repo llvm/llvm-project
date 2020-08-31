@@ -395,6 +395,11 @@ static bool canFormatEnumAttr(const NamedAttribute *attr) {
          !enumAttr->getConstBuilderTemplate().empty();
 }
 
+/// Returns if we should format the given attribute as an SymbolNameAttr.
+static bool shouldFormatSymbolNameAttr(const NamedAttribute *attr) {
+  return attr->attr.getBaseAttr().getAttrDefName() == "SymbolNameAttr";
+}
+
 /// The code snippet used to generate a parser call for an attribute.
 ///
 /// {0}: The name of the attribute.
@@ -410,6 +415,19 @@ const char *const optionalAttrParserCode = R"(
     if (parseResult.hasValue() && failed(*parseResult))
       return failure();
   }
+)";
+
+/// The code snippet used to generate a parser call for a symbol name attribute.
+///
+/// {0}: The name of the attribute.
+const char *const symbolNameAttrParserCode = R"(
+  if (parser.parseSymbolName({0}Attr, "{0}", result.attributes))
+    return failure();
+)";
+const char *const optionalSymbolNameAttrParserCode = R"(
+  // Parsing an optional symbol name doesn't fail, so no need to check the
+  // result.
+  (void)parser.parseOptionalSymbolName({0}Attr, "{0}", result.attributes);
 )";
 
 /// The code snippet used to generate a parser call for an enum attribute.
@@ -858,6 +876,14 @@ static void genElementParser(Element *element, OpMethodBody &body,
                                              : enumAttrParserCode,
                       var->name, enumAttr.getCppNamespace(),
                       enumAttr.getStringToSymbolFnName(), attrBuilderStr);
+      return;
+    }
+
+    // Check to see if we should parse this as a symbol name attribute.
+    if (shouldFormatSymbolNameAttr(var)) {
+      body << formatv(var->attr.isOptional() ? optionalSymbolNameAttrParserCode
+                                             : symbolNameAttrParserCode,
+                      var->name);
       return;
     }
 
@@ -1336,6 +1362,12 @@ static void genElementPrinter(Element *element, OpMethodBody &body,
       const EnumAttr &enumAttr = cast<EnumAttr>(var->attr);
       body << "  p << \"\\\"\" << " << enumAttr.getSymbolToStringFnName() << "("
            << var->name << "()) << \"\\\"\";\n";
+      return;
+    }
+
+    // If we are formatting as a symbol name, handle it as a symbol name.
+    if (shouldFormatSymbolNameAttr(var)) {
+      body << "  p.printSymbolName(" << var->name << "Attr().getValue());\n";
       return;
     }
 

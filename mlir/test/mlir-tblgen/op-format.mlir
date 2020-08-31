@@ -22,6 +22,15 @@ test.format_opt_attr_op_a
 test.format_opt_attr_op_b 10
 test.format_opt_attr_op_b
 
+// CHECK: test.format_symbol_name_attr_op @name
+// CHECK-NOT: {attr
+test.format_symbol_name_attr_op @name
+
+// CHECK: test.format_symbol_name_attr_op @opt_name
+// CHECK-NOT: {attr
+test.format_symbol_name_attr_op @opt_name
+test.format_opt_symbol_name_attr_op
+
 // CHECK: test.format_attr_dict_w_keyword attributes {attr = 10 : i64}
 test.format_attr_dict_w_keyword attributes {attr = 10 : i64}
 
