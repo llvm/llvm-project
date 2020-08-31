@@ -63,7 +63,7 @@ TEST(AnalysisManagerTest, FineGrainFunctionAnalysisPreservation) {
   // Test fine grain invalidation of the function analysis manager.
   ModuleAnalysisManager mam(*module, /*passInstrumentor=*/nullptr);
   AnalysisManager am = mam;
-  AnalysisManager fam = am.slice(func1);
+  AnalysisManager fam = am.nest(func1);
 
   // Query two different analyses, but only preserve one before invalidating.
   fam.getAnalysis<MyAnalysis>();

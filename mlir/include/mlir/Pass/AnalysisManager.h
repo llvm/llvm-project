@@ -265,14 +265,14 @@ public:
 
   /// Query for an analysis of a child operation, constructing it if necessary.
   template <typename AnalysisT> AnalysisT &getChildAnalysis(Operation *op) {
-    return slice(op).template getAnalysis<AnalysisT>();
+    return nest(op).template getAnalysis<AnalysisT>();
   }
 
   /// Query for an analysis of a child operation of a specifc derived operation
   /// type, constructing it if necessary.
   template <typename AnalysisT, typename OpT>
   AnalysisT &getChildAnalysis(OpT child) {
-    return slice(child).template getAnalysis<AnalysisT, OpT>();
+    return nest(child).template getAnalysis<AnalysisT, OpT>();
   }
 
   /// Query for a cached analysis of a child operation, or return null.
@@ -287,7 +287,7 @@ public:
   }
 
   /// Get an analysis manager for the given child operation.
-  AnalysisManager slice(Operation *op);
+  AnalysisManager nest(Operation *op);
 
   /// Invalidate any non preserved analyses,
   void invalidate(const PreservedAnalyses &pa) { impl->invalidate(pa); }
