@@ -484,7 +484,7 @@ public:
   void dropDroppableUsesIn(User &Usr);
 
   /// Remove the droppable use \p U.
-  void dropDroppableUse(Use &U);
+  static void dropDroppableUse(Use &U);
 
   /// Check if this value is used in the specified basic block.
   bool isUsedInBasicBlock(const BasicBlock *BB) const;
