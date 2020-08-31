@@ -89,15 +89,6 @@ public:
     while (MBBI != I) forward();
   }
 
-  /// Invert the behavior of forward() on the current instruction (undo the
-  /// changes to the available registers made by forward()).
-  void unprocess();
-
-  /// Unprocess instructions until you reach the provided iterator.
-  void unprocess(MachineBasicBlock::iterator I) {
-    while (MBBI != I) unprocess();
-  }
-
   /// Update internal register state and move MBB iterator backwards.
   /// Contrary to unprocess() this method gives precise results even in the
   /// absence of kill flags.
