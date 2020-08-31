@@ -94,6 +94,9 @@ CHECK-NEXT:    -Wdangling-else
 CHECK-NEXT:  -Wswitch
 CHECK-NEXT:  -Wswitch-bool
 CHECK-NEXT:  -Wmisleading-indentation
+CHECK-NEXT:  -Wcompound-token-split
+CHECK-NEXT:    -Wcompound-token-split-by-macro
+CHECK-NEXT:    -Wcompound-token-split-by-space
 
 
 CHECK-NOT:-W

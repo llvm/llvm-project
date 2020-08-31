@@ -3324,23 +3324,19 @@ static __inline__ void __attribute__((__always_inline__)) vec_dssall(void) {
 
 /* vec_dst */
 #define vec_dst(__PTR, __CW, __STR) \
-  __extension__(                    \
-      { __builtin_altivec_dst((const void *)(__PTR), (__CW), (__STR)); })
+  __builtin_altivec_dst((const void *)(__PTR), (__CW), (__STR))
 
 /* vec_dstst */
 #define vec_dstst(__PTR, __CW, __STR) \
-  __extension__(                      \
-      { __builtin_altivec_dstst((const void *)(__PTR), (__CW), (__STR)); })
+  __builtin_altivec_dstst((const void *)(__PTR), (__CW), (__STR))
 
 /* vec_dststt */
 #define vec_dststt(__PTR, __CW, __STR) \
-  __extension__(                       \
-      { __builtin_altivec_dststt((const void *)(__PTR), (__CW), (__STR)); })
+  __builtin_altivec_dststt((const void *)(__PTR), (__CW), (__STR))
 
 /* vec_dstt */
 #define vec_dstt(__PTR, __CW, __STR) \
-  __extension__(                     \
-      { __builtin_altivec_dstt((const void *)(__PTR), (__CW), (__STR)); })
+  __builtin_altivec_dstt((const void *)(__PTR), (__CW), (__STR))
 
 /* vec_eqv */
 
