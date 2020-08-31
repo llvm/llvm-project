@@ -140,7 +140,9 @@ body:             |
     ; CHECK: %load0:_(s32) = G_LOAD %ptr0(p1) :: (load 4, addrspace 1)
     ; CHECK: %load1:_(s32) = G_ZEXTLOAD %ptr1(p1) :: (load 1, addrspace 1)
     ; CHECK: %smin:_(s32) = G_SMIN %load0, %load1
-    ; CHECK: $vgpr0 = COPY %smin(s32)
+    ; CHECK: %mask:_(s32) = G_CONSTANT i32 255
+    ; CHECK: %and:_(s32) = G_AND %smin, %mask
+    ; CHECK: $vgpr0 = COPY %and(s32)
     %ptr0:_(p1) = COPY $vgpr0_vgpr1
     %ptr1:_(p1) = COPY $vgpr2_vgpr3
     %load0:_(s32) = G_LOAD %ptr0 :: (load 4, addrspace 1, align 4)
