@@ -387,6 +387,18 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
       Known.Zero.setBitsFrom(SrcBitWidth);
     break;
   }
+  case TargetOpcode::G_MERGE_VALUES: {
+    Register NumOps = MI.getNumOperands();
+    unsigned OpSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+
+    for (unsigned I = 0; I != NumOps - 1; ++I) {
+      KnownBits SrcOpKnown;
+      computeKnownBitsImpl(MI.getOperand(I + 1).getReg(), SrcOpKnown,
+                           DemandedElts, Depth + 1);
+      Known.insertBits(SrcOpKnown, I * OpSize);
+    }
+    break;
+  }
   }
 
   assert(!Known.hasConflict() && "Bits known to be one AND zero?");

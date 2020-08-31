@@ -555,3 +555,26 @@ TEST_F(AArch64GISelMITest, TestKnownBitsExt) {
   EXPECT_EQ((uint64_t)0, Res.One.getZExtValue());
   EXPECT_EQ((uint64_t)0xfffffffe, Res.Zero.getZExtValue());
 }
+
+TEST_F(AArch64GISelMITest, TestKnownBitsMergeValues) {
+  StringRef MIRString = R"(
+   %val0:_(s16) = G_CONSTANT i16 35224
+   %val1:_(s16) = G_CONSTANT i16 17494
+   %val2:_(s16) = G_CONSTANT i16 4659
+   %val3:_(s16) = G_CONSTANT i16 43981
+   %merge:_(s64) = G_MERGE_VALUES %val0, %val1, %val2, %val3
+   %mergecopy:_(s64) = COPY %merge
+)";
+  setUp(MIRString);
+  if (!TM)
+    return;
+
+  const uint64_t TestVal = UINT64_C(0xabcd123344568998);
+  Register CopyMerge = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+  KnownBits Res = Info.getKnownBits(CopyMerge);
+  EXPECT_EQ(64u, Res.getBitWidth());
+  EXPECT_EQ(TestVal, Res.One.getZExtValue());
+  EXPECT_EQ(~TestVal, Res.Zero.getZExtValue());
+}
