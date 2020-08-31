@@ -85,4 +85,18 @@ define <4 x i32> @global_struct_splat() {
   ret <4 x i32> %4
 }
 
+define void @splat_ptr(i32* %ptr, <4 x i1> %mask, <4 x i32> %val) {
+; CHECK-LABEL: @splat_ptr(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32*> undef, i32* [[PTR:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32*> [[TMP1]], <4 x i32*> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> [[VAL:%.*]], <4 x i32*> [[TMP2]], i32 4, <4 x i1> [[MASK:%.*]])
+; CHECK-NEXT:    ret void
+;
+  %1 = insertelement <4 x i32*> undef, i32* %ptr, i32 0
+  %2 = shufflevector <4 x i32*> %1, <4 x i32*> undef, <4 x i32> zeroinitializer
+  call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %val, <4 x i32*> %2, i32 4, <4 x i1> %mask)
+  ret void
+}
+
 declare <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*>, i32, <4 x i1>, <4 x i32>)
+declare void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32>, <4 x i32*>, i32, <4 x i1>)
