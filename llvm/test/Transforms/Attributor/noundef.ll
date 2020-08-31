@@ -20,3 +20,47 @@ define void @foo() {
   call void @bar(i32* %x)
   ret void
 }
+
+define internal i8* @returned_dead() {
+; CHECK-LABEL: define internal noalias align 536870912 i8* @returned_dead(
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    ret i8* undef
+;
+  call void @unknown()
+  ret i8* null
+}
+
+define void @caller1() {
+; CHECK-LABEL: @caller1(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @returned_dead()
+; CHECK-NEXT:    ret void
+;
+  call i8* @returned_dead()
+  ret void
+}
+
+define internal void @argument_dead_callback_callee(i8* %c) {
+; CHECK-LABEL: @argument_dead_callback_callee(
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    ret void
+;
+  call void @unknown()
+  ret void
+}
+
+define void @callback_caller() {
+; IS__TUNIT____-LABEL: @callback_caller(
+; IS__TUNIT____-NEXT:    call void @callback_broker(void (i8*)* noundef @argument_dead_callback_callee, i8* noalias nocapture nofree readnone align 536870912 undef)
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____-LABEL: @callback_caller(
+; IS__CGSCC____-NEXT:    call void @callback_broker(void (i8*)* noundef @argument_dead_callback_callee, i8* noalias nocapture nofree noundef readnone align 536870912 null)
+; IS__CGSCC____-NEXT:    ret void
+;
+  call void @callback_broker(void (i8*)* @argument_dead_callback_callee, i8* null)
+  ret void
+}
+
+declare !callback !0 void @callback_broker(void (i8*)*, i8*)
+!1 = !{i64 0, i64 1, i1 false}
+!0 = !{!1}
