@@ -12,3 +12,7 @@
 # DUMP: uuid: AD52358C-94F8-3796-ADD6-B20FFAC00E5C
 # DUMP-NEXT: module path: /path/to/unstripped/executable
 # DUMP-NEXT: symbol path: /path/to/foo.dSYM/Contents/Resources/DWARF/foo
+
+# RUN: not %lldb -b -o 'reproducer verify -f %t.repro' 2>&1 | FileCheck %s --check-prefix VERIFY
+# VERIFY: warning: '/path/to/unstripped/executable': module path for AD52358C-94F8-3796-ADD6-B20FFAC00E5C not in VFS
+# VERIFY: warning: '/path/to/foo.dSYM/Contents/Resources/DWARF/foo': symbol path for AD52358C-94F8-3796-ADD6-B20FFAC00E5C not in VFS
