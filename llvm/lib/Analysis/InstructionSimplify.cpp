@@ -4550,7 +4550,7 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1,
   unsigned MaskNumElts = Mask.size();
   ElementCount InVecEltCount = InVecTy->getElementCount();
 
-  bool Scalable = InVecEltCount.Scalable;
+  bool Scalable = InVecEltCount.isScalable();
 
   SmallVector<int, 32> Indices;
   Indices.assign(Mask.begin(), Mask.end());
@@ -4559,7 +4559,7 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1,
   // replace that input vector with undef.
   if (!Scalable) {
     bool MaskSelects0 = false, MaskSelects1 = false;
-    unsigned InVecNumElts = InVecEltCount.Min;
+    unsigned InVecNumElts = InVecEltCount.getKnownMinValue();
     for (unsigned i = 0; i != MaskNumElts; ++i) {
       if (Indices[i] == -1)
         continue;
@@ -4588,7 +4588,8 @@ static Value *SimplifyShuffleVectorInst(Value *Op0, Value *Op1,
   // is not known at compile time for scalable vectors
   if (!Scalable && Op0Const && !Op1Const) {
     std::swap(Op0, Op1);
-    ShuffleVectorInst::commuteShuffleMask(Indices, InVecEltCount.Min);
+    ShuffleVectorInst::commuteShuffleMask(Indices,
+                                          InVecEltCount.getKnownMinValue());
   }
 
   // A splat of an inserted scalar constant becomes a vector constant:

@@ -27,6 +27,10 @@ template <typename T> struct DenseMapInfo;
 
 class ElementCount {
 private:
+  unsigned Min;  // Minimum number of vector elements.
+  bool Scalable; // If true, NumElements is a multiple of 'Min' determined
+                 // at runtime rather than compile time.
+
   /// Prevent code from using initializer-list contructors like
   /// ElementCount EC = {<unsigned>, <bool>}. The static `get*`
   /// methods below are preferred, as users should always make a
@@ -35,10 +39,6 @@ private:
   ElementCount(unsigned Min, bool Scalable) : Min(Min), Scalable(Scalable) {}
 
 public:
-  unsigned Min;  // Minimum number of vector elements.
-  bool Scalable; // If true, NumElements is a multiple of 'Min' determined
-                 // at runtime rather than compile time.
-
   ElementCount() = default;
 
   ElementCount operator*(unsigned RHS) {
@@ -57,6 +57,16 @@ public:
   }
   bool operator==(unsigned RHS) const { return Min == RHS && !Scalable; }
   bool operator!=(unsigned RHS) const { return !(*this == RHS); }
+
+  ElementCount &operator*=(unsigned RHS) {
+    Min *= RHS;
+    return *this;
+  }
+
+  ElementCount &operator/=(unsigned RHS) {
+    Min /= RHS;
+    return *this;
+  }
 
   ElementCount NextPowerOf2() const {
     return {(unsigned)llvm::NextPowerOf2(Min), Scalable};
@@ -81,11 +91,21 @@ public:
   ///
   ///@{ No elements..
   bool isZero() const { return Min == 0; }
+  /// At least one element.
+  bool isNonZero() const { return Min != 0; }
+  /// A return value of true indicates we know at compile time that the number
+  /// of elements (vscale * Min) is definitely even. However, returning false
+  /// does not guarantee that the total number of elements is odd.
+  bool isKnownEven() const { return (Min & 0x1) == 0; }
   /// Exactly one element.
   bool isScalar() const { return !Scalable && Min == 1; }
   /// One or more elements.
   bool isVector() const { return (Scalable && Min != 0) || Min > 1; }
   ///@}
+
+  unsigned getKnownMinValue() const { return Min; }
+
+  bool isScalable() const { return Scalable; }
 };
 
 /// Stream operator function for `ElementCount`.
@@ -322,10 +342,11 @@ template <> struct DenseMapInfo<ElementCount> {
     return ElementCount::getFixed(~0U - 1);
   }
   static unsigned getHashValue(const ElementCount& EltCnt) {
-    if (EltCnt.Scalable)
-      return (EltCnt.Min * 37U) - 1U;
+    unsigned HashVal = EltCnt.getKnownMinValue() * 37U;
+    if (EltCnt.isScalable())
+      return (HashVal - 1U);
 
-    return EltCnt.Min * 37U;
+    return HashVal;
   }
 
   static bool isEqual(const ElementCount& LHS, const ElementCount& RHS) {

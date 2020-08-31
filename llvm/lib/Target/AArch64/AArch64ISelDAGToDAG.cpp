@@ -5017,7 +5017,8 @@ static EVT getPackedVectorTypeFromPredicateType(LLVMContext &Ctx, EVT PredVT,
     return EVT();
 
   ElementCount EC = PredVT.getVectorElementCount();
-  EVT ScalarVT = EVT::getIntegerVT(Ctx, AArch64::SVEBitsPerBlock / EC.Min);
+  EVT ScalarVT =
+      EVT::getIntegerVT(Ctx, AArch64::SVEBitsPerBlock / EC.getKnownMinValue());
   EVT MemVT = EVT::getVectorVT(Ctx, ScalarVT, EC * NumVec);
 
   return MemVT;

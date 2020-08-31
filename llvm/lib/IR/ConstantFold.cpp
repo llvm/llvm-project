@@ -931,7 +931,7 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
   // If the mask is all zeros this is a splat, no need to go through all
   // elements.
   if (all_of(Mask, [](int Elt) { return Elt == 0; }) &&
-      !MaskEltCount.Scalable) {
+      !MaskEltCount.isScalable()) {
     Type *Ty = IntegerType::get(V1->getContext(), 32);
     Constant *Elt =
         ConstantExpr::getExtractElement(V1, ConstantInt::get(Ty, 0));
@@ -942,7 +942,7 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
   if (isa<ScalableVectorType>(V1VTy))
     return nullptr;
 
-  unsigned SrcNumElts = V1VTy->getElementCount().Min;
+  unsigned SrcNumElts = V1VTy->getElementCount().getKnownMinValue();
 
   // Loop over the shuffle mask, evaluating each element.
   SmallVector<Constant*, 32> Result;
@@ -2056,11 +2056,12 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
     SmallVector<Constant*, 4> ResElts;
     Type *Ty = IntegerType::get(C1->getContext(), 32);
     // Compare the elements, producing an i1 result or constant expr.
-    for (unsigned i = 0, e = C1VTy->getElementCount().Min; i != e; ++i) {
+    for (unsigned I = 0, E = C1VTy->getElementCount().getKnownMinValue();
+         I != E; ++I) {
       Constant *C1E =
-        ConstantExpr::getExtractElement(C1, ConstantInt::get(Ty, i));
+          ConstantExpr::getExtractElement(C1, ConstantInt::get(Ty, I));
       Constant *C2E =
-        ConstantExpr::getExtractElement(C2, ConstantInt::get(Ty, i));
+          ConstantExpr::getExtractElement(C2, ConstantInt::get(Ty, I));
 
       ResElts.push_back(ConstantExpr::getCompare(pred, C1E, C2E));
     }

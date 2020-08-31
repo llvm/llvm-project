@@ -119,8 +119,8 @@ TEST(VectorTypesTest, FixedLength) {
   EXPECT_EQ(ConvTy->getElementType()->getScalarSizeInBits(), 64U);
 
   EltCnt = V8Int64Ty->getElementCount();
-  EXPECT_EQ(EltCnt.Min, 8U);
-  ASSERT_FALSE(EltCnt.Scalable);
+  EXPECT_EQ(EltCnt.getKnownMinValue(), 8U);
+  ASSERT_FALSE(EltCnt.isScalable());
 }
 
 TEST(VectorTypesTest, Scalable) {
@@ -215,8 +215,8 @@ TEST(VectorTypesTest, Scalable) {
   EXPECT_EQ(ConvTy->getElementType()->getScalarSizeInBits(), 64U);
 
   EltCnt = ScV8Int64Ty->getElementCount();
-  EXPECT_EQ(EltCnt.Min, 8U);
-  ASSERT_TRUE(EltCnt.Scalable);
+  EXPECT_EQ(EltCnt.getKnownMinValue(), 8U);
+  ASSERT_TRUE(EltCnt.isScalable());
 }
 
 TEST(VectorTypesTest, BaseVectorType) {
@@ -250,7 +250,7 @@ TEST(VectorTypesTest, BaseVectorType) {
     // test I == J
     VectorType *VI = VTys[I];
     ElementCount ECI = VI->getElementCount();
-    EXPECT_EQ(isa<ScalableVectorType>(VI), ECI.Scalable);
+    EXPECT_EQ(isa<ScalableVectorType>(VI), ECI.isScalable());
 
     for (size_t J = I + 1, JEnd = VTys.size(); J < JEnd; ++J) {
       // test I < J
