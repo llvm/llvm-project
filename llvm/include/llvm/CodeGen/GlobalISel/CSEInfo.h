@@ -182,6 +182,8 @@ public:
 
   const GISelInstProfileBuilder &addNodeIDRegNum(Register Reg) const;
 
+  const GISelInstProfileBuilder &addNodeIDReg(Register Reg) const;
+
   const GISelInstProfileBuilder &addNodeIDImmediate(int64_t Imm) const;
   const GISelInstProfileBuilder &
   addNodeIDMBB(const MachineBasicBlock *MBB) const;
