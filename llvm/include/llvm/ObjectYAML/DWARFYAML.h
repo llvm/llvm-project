@@ -113,7 +113,7 @@ struct Unit {
   Optional<uint8_t> AddrSize;
   llvm::dwarf::UnitType Type; // Added in DWARF 5
   Optional<uint64_t> AbbrevTableID;
-  yaml::Hex64 AbbrOffset;
+  Optional<yaml::Hex64> AbbrOffset;
   std::vector<Entry> Entries;
 };
 
@@ -231,10 +231,17 @@ struct Data {
   bool isEmpty() const;
 
   SetVector<StringRef> getNonEmptySectionNames() const;
-  Expected<uint64_t> getAbbrevTableIndexByID(uint64_t ID) const;
+
+  struct AbbrevTableInfo {
+    uint64_t Index;
+    uint64_t Offset;
+  };
+  Expected<AbbrevTableInfo> getAbbrevTableInfoByID(uint64_t ID) const;
+  StringRef getAbbrevTableContentByIndex(uint64_t Index) const;
 
 private:
-  mutable std::unordered_map<uint64_t, uint64_t> AbbrevTableID2Index;
+  mutable std::unordered_map<uint64_t, AbbrevTableInfo> AbbrevTableInfoMap;
+  mutable std::unordered_map<uint64_t, std::string> AbbrevTableContents;
 };
 
 } // end namespace DWARFYAML
