@@ -540,6 +540,7 @@ namespace {
     SDValue convertSelectOfFPConstantsToLoadOffset(
         const SDLoc &DL, SDValue N0, SDValue N1, SDValue N2, SDValue N3,
         ISD::CondCode CC);
+    SDValue foldSignChangeInBitcast(SDNode *N);
     SDValue foldSelectCCToShiftAnd(const SDLoc &DL, SDValue N0, SDValue N1,
                                    SDValue N2, SDValue N3, ISD::CondCode CC);
     SDValue foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
@@ -13972,7 +13973,6 @@ SDValue DAGCombiner::visitFFLOOR(SDNode *N) {
   return SDValue();
 }
 
-// FIXME: FNEG and FABS have a lot in common; refactor.
 SDValue DAGCombiner::visitFNEG(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
@@ -13996,31 +13996,8 @@ SDValue DAGCombiner::visitFNEG(SDNode *N) {
                        N0.getOperand(0), N->getFlags());
   }
 
-  // Transform fneg(bitconvert(x)) -> bitconvert(x ^ sign) to avoid loading
-  // constant pool values.
-  if (!TLI.isFNegFree(VT) &&
-      N0.getOpcode() == ISD::BITCAST &&
-      N0.getNode()->hasOneUse()) {
-    SDValue Int = N0.getOperand(0);
-    EVT IntVT = Int.getValueType();
-    if (IntVT.isInteger() && !IntVT.isVector()) {
-      APInt SignMask;
-      if (N0.getValueType().isVector()) {
-        // For a vector, get a mask such as 0x80... per scalar element
-        // and splat it.
-        SignMask = APInt::getSignMask(N0.getScalarValueSizeInBits());
-        SignMask = APInt::getSplat(IntVT.getSizeInBits(), SignMask);
-      } else {
-        // For a scalar, just generate 0x80...
-        SignMask = APInt::getSignMask(IntVT.getSizeInBits());
-      }
-      SDLoc DL0(N0);
-      Int = DAG.getNode(ISD::XOR, DL0, IntVT, Int,
-                        DAG.getConstant(SignMask, DL0, IntVT));
-      AddToWorklist(Int.getNode());
-      return DAG.getBitcast(VT, Int);
-    }
-  }
+  if (SDValue Cast = foldSignChangeInBitcast(N))
+    return Cast;
 
   return SDValue();
 }
@@ -14080,28 +14057,8 @@ SDValue DAGCombiner::visitFABS(SDNode *N) {
   if (N0.getOpcode() == ISD::FNEG || N0.getOpcode() == ISD::FCOPYSIGN)
     return DAG.getNode(ISD::FABS, SDLoc(N), VT, N0.getOperand(0));
 
-  // fabs(bitcast(x)) -> bitcast(x & ~sign) to avoid constant pool loads.
-  if (!TLI.isFAbsFree(VT) && N0.getOpcode() == ISD::BITCAST && N0.hasOneUse()) {
-    SDValue Int = N0.getOperand(0);
-    EVT IntVT = Int.getValueType();
-    if (IntVT.isInteger() && !IntVT.isVector()) {
-      APInt SignMask;
-      if (N0.getValueType().isVector()) {
-        // For a vector, get a mask such as 0x7f... per scalar element
-        // and splat it.
-        SignMask = ~APInt::getSignMask(N0.getScalarValueSizeInBits());
-        SignMask = APInt::getSplat(IntVT.getSizeInBits(), SignMask);
-      } else {
-        // For a scalar, just generate 0x7f...
-        SignMask = ~APInt::getSignMask(IntVT.getSizeInBits());
-      }
-      SDLoc DL(N0);
-      Int = DAG.getNode(ISD::AND, DL, IntVT, Int,
-                        DAG.getConstant(SignMask, DL, IntVT));
-      AddToWorklist(Int.getNode());
-      return DAG.getBitcast(N->getValueType(0), Int);
-    }
-  }
+  if (SDValue Cast = foldSignChangeInBitcast(N))
+    return Cast;
 
   return SDValue();
 }
@@ -21306,6 +21263,46 @@ SDValue DAGCombiner::foldSelectCCToShiftAnd(const SDLoc &DL, SDValue N0,
     Shift = DAG.getNOT(DL, Shift, AType);
 
   return DAG.getNode(ISD::AND, DL, AType, Shift, N2);
+}
+
+// Transform (fneg/fabs (bitconvert x)) to avoid loading constant pool values.
+SDValue DAGCombiner::foldSignChangeInBitcast(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  bool IsFabs = N->getOpcode() == ISD::FABS;
+  bool IsFree = IsFabs ? TLI.isFAbsFree(VT) : TLI.isFNegFree(VT);
+
+  if (IsFree || N0.getOpcode() != ISD::BITCAST || !N0.hasOneUse())
+    return SDValue();
+
+  SDValue Int = N0.getOperand(0);
+  EVT IntVT = Int.getValueType();
+
+  // The operand to cast should be integer.
+  if (!IntVT.isInteger() || IntVT.isVector())
+    return SDValue();
+
+  // (fneg (bitconvert x)) -> (bitconvert (xor x sign))
+  // (fabs (bitconvert x)) -> (bitconvert (and x ~sign))
+  APInt SignMask;
+  if (N0.getValueType().isVector()) {
+    // For vector, create a sign mask (0x80...) or its inverse (for fabs,
+    // 0x7f...) per element and splat it.
+    SignMask = APInt::getSignMask(N0.getScalarValueSizeInBits());
+    if (IsFabs)
+      SignMask = ~SignMask;
+    SignMask = APInt::getSplat(IntVT.getSizeInBits(), SignMask);
+  } else {
+    // For scalar, just use the sign mask (0x80... or the inverse, 0x7f...)
+    SignMask = APInt::getSignMask(IntVT.getSizeInBits());
+    if (IsFabs)
+      SignMask = ~SignMask;
+  }
+  SDLoc DL(N0);
+  Int = DAG.getNode(IsFabs ? ISD::AND : ISD::XOR, DL, IntVT, Int,
+                    DAG.getConstant(SignMask, DL, IntVT));
+  AddToWorklist(Int.getNode());
+  return DAG.getBitcast(VT, Int);
 }
 
 /// Turn "(a cond b) ? 1.0f : 2.0f" into "load (tmp + ((a cond b) ? 0 : 4)"
