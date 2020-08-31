@@ -21,9 +21,10 @@
 # CHECK:      <_main>:
 # CHECK-NEXT: movq	[[#]](%rip), %rax  # [[#%X,WEAK_DY_GOT_ADDR:]]
 # CHECK-NEXT: movq	[[#]](%rip), %rax  # [[#%X,WEAK_EXT_GOT_ADDR:]]
+# CHECK-NEXT: leaq	[[#]](%rip), %rax  # [[#%X,WEAK_INT_GOT_ADDR:]]
 # CHECK-NEXT: movq	[[#]](%rip), %rax  # [[#%X,WEAK_TLV_ADDR:]]
 # CHECK-NEXT: movq	[[#]](%rip), %rax  # [[#%X,WEAK_DY_TLV_ADDR:]]
-# CHECK-NEXT: movq	[[#]](%rip), %rax  # [[#%X,WEAK_INT_TLV_ADDR:]]
+# CHECK-NEXT: leaq	[[#]](%rip), %rax  # [[#%X,WEAK_INT_TLV_ADDR:]]
 # CHECK-NEXT: callq 0x{{[0-9a-f]*}}
 # CHECK-NEXT: callq 0x{{[0-9a-f]*}}
 # CHECK-NEXT: callq 0x{{[0-9a-f]*}}
@@ -86,11 +87,12 @@ _weak_dysym_tlv:
 #--- test.s
 
 .globl _main, _weak_external, _weak_external_for_gotpcrel, _weak_external_fn
-.weak_definition _weak_external, _weak_external_for_gotpcrel, _weak_external_fn, _weak_internal, _weak_internal_fn
+.weak_definition _weak_external, _weak_external_for_gotpcrel, _weak_external_fn, _weak_internal, _weak_internal_for_gotpcrel, _weak_internal_fn
 
 _main:
   mov _weak_dysym_for_gotpcrel@GOTPCREL(%rip), %rax
   mov _weak_external_for_gotpcrel@GOTPCREL(%rip), %rax
+  mov _weak_internal_for_gotpcrel@GOTPCREL(%rip), %rax
   mov _weak_tlv@TLVP(%rip), %rax
   mov _weak_dysym_tlv@TLVP(%rip), %rax
   mov _weak_internal_tlv@TLVP(%rip), %rax
@@ -110,6 +112,9 @@ _weak_external_fn:
   ret
 
 _weak_internal:
+  .quad 0x1234
+
+_weak_internal_for_gotpcrel:
   .quad 0x1234
 
 _weak_internal_fn:
