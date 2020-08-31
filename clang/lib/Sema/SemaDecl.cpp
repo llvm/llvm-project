@@ -1763,25 +1763,20 @@ static bool ShouldDiagnoseUnusedDecl(const NamedDecl *D) {
   if (D->isInvalidDecl())
     return false;
 
-  bool Referenced = false;
   if (auto *DD = dyn_cast<DecompositionDecl>(D)) {
     // For a decomposition declaration, warn if none of the bindings are
     // referenced, instead of if the variable itself is referenced (which
     // it is, by the bindings' expressions).
-    for (auto *BD : DD->bindings()) {
-      if (BD->isReferenced()) {
-        Referenced = true;
-        break;
-      }
-    }
+    for (auto *BD : DD->bindings())
+      if (BD->isReferenced())
+        return false;
   } else if (!D->getDeclName()) {
     return false;
   } else if (D->isReferenced() || D->isUsed()) {
-    Referenced = true;
+    return false;
   }
 
-  if (Referenced || D->hasAttr<UnusedAttr>() ||
-      D->hasAttr<ObjCPreciseLifetimeAttr>())
+  if (D->hasAttr<UnusedAttr>() || D->hasAttr<ObjCPreciseLifetimeAttr>())
     return false;
 
   if (isa<LabelDecl>(D))
