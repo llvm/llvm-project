@@ -8059,6 +8059,8 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyIndependentOfContext("MACRO(A *volatile a);");
   verifyIndependentOfContext("MACRO(A *__volatile a);");
   verifyIndependentOfContext("MACRO(A *__volatile__ a);");
+  verifyIndependentOfContext("MACRO(A *__attribute__((foo)) a);");
+  verifyIndependentOfContext("MACRO(A *__attribute((foo)) a);");
   verifyIndependentOfContext("MACRO('0' <= c && c <= '9');");
   verifyFormat("void f() { f(float{1}, a * a); }");
   // FIXME: Is there a way to make this work?
