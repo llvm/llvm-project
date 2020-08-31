@@ -91,6 +91,7 @@ using namespace llvm::PatternMatch;
 #define DEBUG_TYPE "local"
 
 STATISTIC(NumRemoved, "Number of unreachable basic blocks removed");
+STATISTIC(NumPHICSEs, "Number of PHI's that got CSE'd");
 
 static cl::opt<bool> PHICSEDebugHash(
     "phicse-debug-hash",
@@ -1194,6 +1195,7 @@ bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
     auto Inserted = PHISet.insert(PN);
     if (!Inserted.second) {
       // A duplicate. Replace this PHI with its duplicate.
+      ++NumPHICSEs;
       PN->replaceAllUsesWith(*Inserted.first);
       PN->eraseFromParent();
       Changed = true;
