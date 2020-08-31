@@ -120,19 +120,19 @@ static void *ReallocFromLocalPool(void *ptr, uptr size) {
 }
 
 INTERCEPTOR(void, free, void *ptr) {
-  GET_STACK_TRACE_FREE;
   if (UNLIKELY(IsInDlsymAllocPool(ptr))) {
     DeallocateFromLocalPool(ptr);
     return;
   }
+  GET_STACK_TRACE_FREE;
   asan_free(ptr, &stack, FROM_MALLOC);
 }
 
 #if SANITIZER_INTERCEPT_CFREE
 INTERCEPTOR(void, cfree, void *ptr) {
-  GET_STACK_TRACE_FREE;
   if (UNLIKELY(IsInDlsymAllocPool(ptr)))
     return;
+  GET_STACK_TRACE_FREE;
   asan_free(ptr, &stack, FROM_MALLOC);
 }
 #endif // SANITIZER_INTERCEPT_CFREE
