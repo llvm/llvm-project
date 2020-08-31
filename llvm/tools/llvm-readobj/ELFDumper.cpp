@@ -987,33 +987,27 @@ private:
 namespace llvm {
 
 template <class ELFT>
-static std::error_code createELFDumper(const ELFObjectFile<ELFT> *Obj,
-                                       ScopedPrinter &Writer,
-                                       std::unique_ptr<ObjDumper> &Result) {
-  Result.reset(new ELFDumper<ELFT>(Obj, Writer));
-  return readobj_error::success;
+static std::unique_ptr<ObjDumper> createELFDumper(const ELFObjectFile<ELFT> &Obj,
+                                           ScopedPrinter &Writer) {
+  return std::make_unique<ELFDumper<ELFT>>(&Obj, Writer);
 }
 
-std::error_code createELFDumper(const object::ObjectFile *Obj,
-                                ScopedPrinter &Writer,
-                                std::unique_ptr<ObjDumper> &Result) {
+std::unique_ptr<ObjDumper> createELFDumper(const object::ELFObjectFileBase &Obj,
+                                           ScopedPrinter &Writer) {
   // Little-endian 32-bit
-  if (const ELF32LEObjectFile *ELFObj = dyn_cast<ELF32LEObjectFile>(Obj))
-    return createELFDumper(ELFObj, Writer, Result);
+  if (const ELF32LEObjectFile *ELFObj = dyn_cast<ELF32LEObjectFile>(&Obj))
+    return createELFDumper(*ELFObj, Writer);
 
   // Big-endian 32-bit
-  if (const ELF32BEObjectFile *ELFObj = dyn_cast<ELF32BEObjectFile>(Obj))
-    return createELFDumper(ELFObj, Writer, Result);
+  if (const ELF32BEObjectFile *ELFObj = dyn_cast<ELF32BEObjectFile>(&Obj))
+    return createELFDumper(*ELFObj, Writer);
 
   // Little-endian 64-bit
-  if (const ELF64LEObjectFile *ELFObj = dyn_cast<ELF64LEObjectFile>(Obj))
-    return createELFDumper(ELFObj, Writer, Result);
+  if (const ELF64LEObjectFile *ELFObj = dyn_cast<ELF64LEObjectFile>(&Obj))
+    return createELFDumper(*ELFObj, Writer);
 
   // Big-endian 64-bit
-  if (const ELF64BEObjectFile *ELFObj = dyn_cast<ELF64BEObjectFile>(Obj))
-    return createELFDumper(ELFObj, Writer, Result);
-
-  return readobj_error::unsupported_obj_file_format;
+  return createELFDumper(*cast<ELF64BEObjectFile>(&Obj), Writer);
 }
 
 } // end namespace llvm

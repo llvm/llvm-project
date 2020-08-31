@@ -241,14 +241,9 @@ void WasmDumper::printSymbol(const SymbolRef &Sym) {
 
 namespace llvm {
 
-std::error_code createWasmDumper(const object::ObjectFile *Obj,
-                                 ScopedPrinter &Writer,
-                                 std::unique_ptr<ObjDumper> &Result) {
-  const auto *WasmObj = dyn_cast<WasmObjectFile>(Obj);
-  assert(WasmObj && "createWasmDumper called with non-wasm object");
-
-  Result.reset(new WasmDumper(WasmObj, Writer));
-  return readobj_error::success;
+std::unique_ptr<ObjDumper> createWasmDumper(const object::WasmObjectFile &Obj,
+                                            ScopedPrinter &Writer) {
+  return std::make_unique<WasmDumper>(&Obj, Writer);
 }
 
 } // namespace llvm
