@@ -4403,6 +4403,10 @@ Value *llvm::SimplifyExtractElementInst(Value *Vec, Value *Idx,
 
 /// See if we can fold the given phi. If not, returns null.
 static Value *SimplifyPHINode(PHINode *PN, const SimplifyQuery &Q) {
+  // WARNING: no matter how worthwhile it may seem, we can not perform PHI CSE
+  //          here, because the PHI we may succeed simplifying to was not
+  //          def-reachable from the original PHI!
+
   // If all of the PHI's incoming values are the same then replace the PHI node
   // with the common value.
   Value *CommonValue = nullptr;
