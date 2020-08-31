@@ -673,6 +673,13 @@ bool Instruction::isAssociative() const {
   }
 }
 
+bool Instruction::isCommutative() const {
+  if (auto *II = dyn_cast<IntrinsicInst>(this))
+    return II->isCommutative();
+  // TODO: Should allow icmp/fcmp?
+  return isCommutative(getOpcode());
+}
+
 unsigned Instruction::getNumSuccessors() const {
   switch (getOpcode()) {
 #define HANDLE_TERM_INST(N, OPC, CLASS)                                        \
