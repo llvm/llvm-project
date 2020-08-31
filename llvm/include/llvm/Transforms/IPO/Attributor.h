@@ -986,7 +986,7 @@ struct Attributor {
     auto &AA = AAType::createForPosition(IRP, *this);
 
     // If we are currenty seeding attributes, enforce seeding rules.
-    if (SeedingPeriod && !shouldSeedAttribute(AA)) {
+    if (Phase == AttributorPhase::SEEDING && !shouldSeedAttribute(AA)) {
       AA.getState().indicatePessimisticFixpoint();
       return AA;
     }
@@ -1022,12 +1022,12 @@ struct Attributor {
 
     // Allow seeded attributes to declare dependencies.
     // Remember the seeding state.
-    bool OldSeedingPeriod = SeedingPeriod;
-    SeedingPeriod = false;
+    AttributorPhase OldPhase = Phase;
+    Phase = AttributorPhase::UPDATE;
 
     updateAA(AA);
 
-    SeedingPeriod = OldSeedingPeriod;
+    Phase = OldPhase;
 
     if (TrackDependence && AA.getState().isValidState())
       recordDependence(AA, const_cast<AbstractAttribute &>(*QueryingAA),
@@ -1522,9 +1522,14 @@ private:
   /// Invoke instructions with at least a single dead successor block.
   SmallVector<WeakVH, 16> InvokeWithDeadSuccessor;
 
-  /// Wheather attributes are being `seeded`, always false after ::run function
-  /// gets called \see getOrCreateAAFor.
-  bool SeedingPeriod = true;
+  /// A flag that indicates which stage of the process we are in. Initially, the
+  /// phase is SEEDING. Phase is changed in `Attributor::run()`
+  enum class AttributorPhase {
+    SEEDING,
+    UPDATE,
+    MANIFEST,
+    CLEANUP,
+  } Phase = AttributorPhase::SEEDING;
 
   /// Functions, blocks, and instructions we delete after manifest is done.
   ///
