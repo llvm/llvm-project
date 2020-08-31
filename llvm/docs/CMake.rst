@@ -473,8 +473,12 @@ LLVM-specific variables
   midly improves Clang build times, by about 5-10%. At the moment, rpmalloc,
   snmalloc and mimalloc are supported. Use the path to `git clone` to select
   the respective allocator, for example:
-    D:\git> git clone https://github.com/mjansson/rpmalloc
-    D:\llvm-project> cmake ... -DLLVM_INTEGRATED_CRT_ALLOC=D:\git\rpmalloc
+
+  .. code-block:: console
+
+    $ D:\git> git clone https://github.com/mjansson/rpmalloc
+    $ D:\llvm-project> cmake ... -DLLVM_INTEGRATED_CRT_ALLOC=D:\git\rpmalloc
+  
   This flag needs to be used along with the static CRT, ie. if building the
   Release target, add -DLLVM_USE_CRT_RELEASE=MT.
 
