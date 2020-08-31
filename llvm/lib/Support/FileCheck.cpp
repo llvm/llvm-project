@@ -43,16 +43,28 @@ StringRef ExpressionFormat::toString() const {
   llvm_unreachable("unknown expression format");
 }
 
-Expected<StringRef> ExpressionFormat::getWildcardRegex() const {
+Expected<std::string> ExpressionFormat::getWildcardRegex() const {
+  auto CreatePrecisionRegex = [this](StringRef S) {
+    return (S + Twine('{') + Twine(Precision) + "}").str();
+  };
+
   switch (Value) {
   case Kind::Unsigned:
-    return StringRef("[0-9]+");
+    if (Precision)
+      return CreatePrecisionRegex("([1-9][0-9]*)?[0-9]");
+    return std::string("[0-9]+");
   case Kind::Signed:
-    return StringRef("-?[0-9]+");
+    if (Precision)
+      return CreatePrecisionRegex("-?([1-9][0-9]*)?[0-9]");
+    return std::string("-?[0-9]+");
   case Kind::HexUpper:
-    return StringRef("[0-9A-F]+");
+    if (Precision)
+      return CreatePrecisionRegex("([1-9A-F][0-9A-F]*)?[0-9A-F]");
+    return std::string("[0-9A-F]+");
   case Kind::HexLower:
-    return StringRef("[0-9a-f]+");
+    if (Precision)
+      return CreatePrecisionRegex("([1-9a-f][0-9a-f]*)?[0-9a-f]");
+    return std::string("[0-9a-f]+");
   default:
     return createStringError(std::errc::invalid_argument,
                              "trying to match value with invalid format");
@@ -61,27 +73,47 @@ Expected<StringRef> ExpressionFormat::getWildcardRegex() const {
 
 Expected<std::string>
 ExpressionFormat::getMatchingString(ExpressionValue IntegerValue) const {
+  uint64_t AbsoluteValue;
+  StringRef SignPrefix = IntegerValue.isNegative() ? "-" : "";
+
   if (Value == Kind::Signed) {
     Expected<int64_t> SignedValue = IntegerValue.getSignedValue();
     if (!SignedValue)
       return SignedValue.takeError();
-    return itostr(*SignedValue);
+    if (*SignedValue < 0)
+      AbsoluteValue = cantFail(IntegerValue.getAbsolute().getUnsignedValue());
+    else
+      AbsoluteValue = *SignedValue;
+  } else {
+    Expected<uint64_t> UnsignedValue = IntegerValue.getUnsignedValue();
+    if (!UnsignedValue)
+      return UnsignedValue.takeError();
+    AbsoluteValue = *UnsignedValue;
   }
 
-  Expected<uint64_t> UnsignedValue = IntegerValue.getUnsignedValue();
-  if (!UnsignedValue)
-    return UnsignedValue.takeError();
+  std::string AbsoluteValueStr;
   switch (Value) {
   case Kind::Unsigned:
-    return utostr(*UnsignedValue);
+  case Kind::Signed:
+    AbsoluteValueStr = utostr(AbsoluteValue);
+    break;
   case Kind::HexUpper:
-    return utohexstr(*UnsignedValue, /*LowerCase=*/false);
   case Kind::HexLower:
-    return utohexstr(*UnsignedValue, /*LowerCase=*/true);
+    AbsoluteValueStr = utohexstr(AbsoluteValue, Value == Kind::HexLower);
+    break;
   default:
     return createStringError(std::errc::invalid_argument,
                              "trying to match value with invalid format");
   }
+
+  if (Precision > AbsoluteValueStr.size()) {
+    unsigned LeadingZeros = Precision - AbsoluteValueStr.size();
+    return (Twine(SignPrefix) + std::string(LeadingZeros, '0') +
+            AbsoluteValueStr)
+        .str();
+  }
+
+  return (Twine(SignPrefix) + AbsoluteValueStr).str();
 }
 
 Expected<ExpressionValue>
@@ -720,41 +752,59 @@ Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
   StringRef DefExpr = StringRef();
   DefinedNumericVariable = None;
   ExpressionFormat ExplicitFormat = ExpressionFormat();
+  unsigned Precision = 0;
 
   // Parse format specifier (NOTE: ',' is also an argument seperator).
   size_t FormatSpecEnd = Expr.find(',');
   size_t FunctionStart = Expr.find('(');
   if (FormatSpecEnd != StringRef::npos && FormatSpecEnd < FunctionStart) {
-    Expr = Expr.ltrim(SpaceChars);
-    if (!Expr.consume_front("%"))
+    StringRef FormatExpr = Expr.take_front(FormatSpecEnd);
+    Expr = Expr.drop_front(FormatSpecEnd + 1);
+    FormatExpr = FormatExpr.trim(SpaceChars);
+    if (!FormatExpr.consume_front("%"))
       return ErrorDiagnostic::get(
-          SM, Expr, "invalid matching format specification in expression");
+          SM, FormatExpr,
+          "invalid matching format specification in expression");
 
-    // Check for unknown matching format specifier and set matching format in
-    // class instance representing this expression.
-    SMLoc fmtloc = SMLoc::getFromPointer(Expr.data());
-    switch (popFront(Expr)) {
-    case 'u':
-      ExplicitFormat = ExpressionFormat(ExpressionFormat::Kind::Unsigned);
-      break;
-    case 'd':
-      ExplicitFormat = ExpressionFormat(ExpressionFormat::Kind::Signed);
-      break;
-    case 'x':
-      ExplicitFormat = ExpressionFormat(ExpressionFormat::Kind::HexLower);
-      break;
-    case 'X':
-      ExplicitFormat = ExpressionFormat(ExpressionFormat::Kind::HexUpper);
-      break;
-    default:
-      return ErrorDiagnostic::get(SM, fmtloc,
-                                  "invalid format specifier in expression");
+    // Parse precision.
+    if (FormatExpr.consume_front(".")) {
+      if (FormatExpr.consumeInteger(10, Precision))
+        return ErrorDiagnostic::get(SM, FormatExpr,
+                                    "invalid precision in format specifier");
     }
 
-    Expr = Expr.ltrim(SpaceChars);
-    if (!Expr.consume_front(","))
+    if (!FormatExpr.empty()) {
+      // Check for unknown matching format specifier and set matching format in
+      // class instance representing this expression.
+      SMLoc FmtLoc = SMLoc::getFromPointer(FormatExpr.data());
+      switch (popFront(FormatExpr)) {
+      case 'u':
+        ExplicitFormat =
+            ExpressionFormat(ExpressionFormat::Kind::Unsigned, Precision);
+        break;
+      case 'd':
+        ExplicitFormat =
+            ExpressionFormat(ExpressionFormat::Kind::Signed, Precision);
+        break;
+      case 'x':
+        ExplicitFormat =
+            ExpressionFormat(ExpressionFormat::Kind::HexLower, Precision);
+        break;
+      case 'X':
+        ExplicitFormat =
+            ExpressionFormat(ExpressionFormat::Kind::HexUpper, Precision);
+        break;
+      default:
+        return ErrorDiagnostic::get(SM, FmtLoc,
+                                    "invalid format specifier in expression");
+      }
+    }
+
+    FormatExpr = FormatExpr.ltrim(SpaceChars);
+    if (!FormatExpr.empty())
       return ErrorDiagnostic::get(
-          SM, Expr, "invalid matching format specification in expression");
+          SM, FormatExpr,
+          "invalid matching format specification in expression");
   }
 
   // Save variable definition expression if any.
@@ -814,7 +864,7 @@ Expected<std::unique_ptr<Expression>> Pattern::parseNumericSubstitutionBlock(
     Format = *ImplicitFormat;
   }
   if (!Format)
-    Format = ExpressionFormat(ExpressionFormat::Kind::Unsigned);
+    Format = ExpressionFormat(ExpressionFormat::Kind::Unsigned, Precision);
 
   std::unique_ptr<Expression> ExpressionPointer =
       std::make_unique<Expression>(std::move(ExpressionASTPointer), Format);
@@ -948,7 +998,7 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
       bool IsLegacyLineExpr = false;
       StringRef DefName;
       StringRef SubstStr;
-      StringRef MatchRegexp;
+      std::string MatchRegexp;
       size_t SubstInsertIdx = RegExStr.size();
 
       // Parse string variable or legacy @LINE expression.
@@ -992,7 +1042,7 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
             return true;
           }
           DefName = Name;
-          MatchRegexp = MatchStr;
+          MatchRegexp = MatchStr.str();
         } else {
           if (IsPseudo) {
             MatchStr = OrigMatchStr;
