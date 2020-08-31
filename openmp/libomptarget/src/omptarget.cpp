@@ -1062,7 +1062,10 @@ int processDataBefore(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
       TgtBaseOffset = 0;
     } else if (ArgTypes[I] & OMP_TGT_MAPTYPE_PRIVATE) {
       TgtBaseOffset = (intptr_t)HstPtrBase - (intptr_t)HstPtrBegin;
-      const bool IsFirstPrivate = ArgTypes[I] & OMP_TGT_MAPTYPE_TO;
+      // Can be marked for optimization if the next argument(s) do(es) not
+      // depend on this one.
+      const bool IsFirstPrivate =
+          (I >= ArgNum - 1 || !(ArgTypes[I + 1] & OMP_TGT_MAPTYPE_MEMBER_OF));
       Ret = PrivateArgumentManager.addArg(HstPtrBegin, ArgSizes[I],
                                           TgtBaseOffset, IsFirstPrivate,
                                           TgtPtrBegin, TgtArgs.size());
