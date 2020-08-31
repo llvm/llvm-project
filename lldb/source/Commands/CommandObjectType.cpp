@@ -37,6 +37,9 @@
 #include <functional>
 #include <memory>
 
+#define CHECK_FORMATTER_KIND_MASK(VAL)                                         \
+  ((m_formatter_kind_mask & (VAL)) == (VAL))
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -776,6 +779,39 @@ public:
   }
 
   ~CommandObjectTypeFormatterDelete() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (request.GetCursorIndex())
+      return;
+
+    DataVisualization::Categories::ForEach(
+        [this, &request](const lldb::TypeCategoryImplSP &category_sp) {
+          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemValue))
+            category_sp->GetTypeFormatsContainer()->AutoComplete(request);
+          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemRegexValue))
+            category_sp->GetRegexTypeFormatsContainer()->AutoComplete(request);
+
+          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemSummary))
+            category_sp->GetTypeSummariesContainer()->AutoComplete(request);
+          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemRegexSummary))
+            category_sp->GetRegexTypeSummariesContainer()->AutoComplete(
+                request);
+
+          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemFilter))
+            category_sp->GetTypeFiltersContainer()->AutoComplete(request);
+          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemRegexFilter))
+            category_sp->GetRegexTypeFiltersContainer()->AutoComplete(request);
+
+          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemSynth))
+            category_sp->GetTypeSyntheticsContainer()->AutoComplete(request);
+          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemRegexSynth))
+            category_sp->GetRegexTypeSyntheticsContainer()->AutoComplete(
+                request);
+          return true;
+        });
+  }
 
 protected:
   virtual bool FormatterSpecificDeletion(ConstString typeCS) { return false; }
