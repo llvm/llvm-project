@@ -195,6 +195,13 @@ module LLVM_ExecutionEngine {
 
 }
 
+module LLVM_FileCheck {
+  requires cplusplus
+
+  umbrella "FileCheck"
+  module * { export * }
+}
+
 // Orc utilities that don't depend only on Support (not ExecutionEngine or
 // IR). This is a workaround for ExecutionEngine's broken layering, and will
 // be removed in the future.
