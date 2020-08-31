@@ -333,6 +333,8 @@ public:
   bool isHidden() const override { return true; }
   void writeTo(uint8_t *buf) const override;
 
+  bool hasWeakSymbol = false;
+
 private:
   TrieBuilder trieBuilder;
   size_t size = 0;
@@ -386,6 +388,7 @@ struct InStruct {
   BindingSection *binding = nullptr;
   WeakBindingSection *weakBinding = nullptr;
   LazyBindingSection *lazyBinding = nullptr;
+  ExportSection *exports = nullptr;
   GotSection *got = nullptr;
   TlvPointerSection *tlvPointers = nullptr;
   LazyPointerSection *lazyPointers = nullptr;

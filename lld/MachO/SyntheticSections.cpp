@@ -63,6 +63,14 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
   if (config->outputType == MachO::MH_DYLIB && !config->hasReexports)
     hdr->flags |= MachO::MH_NO_REEXPORTED_DYLIBS;
 
+  // TODO: ld64 also sets this flag if we have defined a non-weak symbol that
+  // overrides a weak symbol from an imported dylib.
+  if (in.exports->hasWeakSymbol)
+    hdr->flags |= MachO::MH_WEAK_DEFINES;
+
+  if (in.exports->hasWeakSymbol || in.weakBinding->isNeeded())
+    hdr->flags |= MachO::MH_BINDS_TO_WEAK;
+
   for (OutputSegment *seg : outputSegments) {
     for (OutputSection *osec : seg->getSections()) {
       if (isThreadLocalVariables(osec->flags)) {
@@ -415,9 +423,12 @@ ExportSection::ExportSection()
 
 void ExportSection::finalizeContents() {
   // TODO: We should check symbol visibility.
-  for (const Symbol *sym : symtab->getSymbols())
-    if (auto *defined = dyn_cast<Defined>(sym))
+  for (const Symbol *sym : symtab->getSymbols()) {
+    if (const auto *defined = dyn_cast<Defined>(sym)) {
       trieBuilder.addSymbol(*defined);
+      hasWeakSymbol = hasWeakSymbol || sym->isWeakDef();
+    }
+  }
   size = trieBuilder.build();
 }
 
