@@ -703,6 +703,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       else
         SharedRuntimes.push_back("scudo");
     }
+    if (SanArgs.needsTsanRt() && SanArgs.linkRuntimes())
+      SharedRuntimes.push_back("tsan");
     if (SanArgs.needsHwasanRt() && SanArgs.linkRuntimes())
       SharedRuntimes.push_back("hwasan");
   }
@@ -747,7 +749,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("msan_cxx");
   }
-  if (SanArgs.needsTsanRt() && SanArgs.linkRuntimes()) {
+  if (!SanArgs.needsSharedRt() && SanArgs.needsTsanRt() &&
+      SanArgs.linkRuntimes()) {
     StaticRuntimes.push_back("tsan");
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("tsan_cxx");
