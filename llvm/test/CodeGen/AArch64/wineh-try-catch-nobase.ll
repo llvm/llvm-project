@@ -7,12 +7,17 @@
 ; Check that we compute the address relative to fp.
 ; CHECK-LABEL: "?catch$2@?0??a@@YAXXZ@4HA":
 ; CHECK:             stp     x29, x30, [sp, #-16]!   ; 16-byte Folded Spill
+; CHECK-NEXT:        .seh_save_fplr_x 16
+; CHECK-NEXT:        .seh_endprologue
 ; CHECK-NEXT:        sub     x0, x29, #16            ; =16
 ; CHECK-NEXT:        mov     x1, xzr
 ; CHECK-NEXT:        bl      "?bb@@YAXPEAHH@Z"
 ; CHECK-NEXT:        adrp    x0, .LBB0_1
 ; CHECK-NEXT:        add     x0, x0, .LBB0_1
+; CHECK-NEXT:        .seh_startepilogue
 ; CHECK-NEXT:        ldp     x29, x30, [sp], #16     ; 16-byte Folded Reload
+; CHECK-NEXT:        .seh_save_fplr_x 16
+; CHECK-NEXT:        .seh_endepilogue
 ; CHECK-NEXT:        ret
 
 target datalayout = "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128"

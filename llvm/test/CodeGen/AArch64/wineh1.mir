@@ -6,6 +6,10 @@
 # documented at:
 # https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling
 
+# Also test the generated assembler SEH directives.
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog -filetype=asm  \
+# RUN:   | FileCheck %s --check-prefix=ASM
+
 # We expect to see the following in the .xdata section:
 
 # CHECK: 	 ExceptionData {
@@ -47,6 +51,33 @@
 # CHECK-LDSTOPT: name: test
 # CHECK-LDSTOPT: frame-setup STRXui killed $x21, $sp, 6
 # CHECK-LDSTOPT: frame-setup STRXui killed $x22, $sp, 7
+
+# ASM-LABEL: test:
+# ASM: .seh_proc test
+# ASM: .seh_save_regp_x x27, 80
+# ASM: .seh_save_regp x25, 16
+# ASM: .seh_save_regp x23, 32
+# ASM: .seh_save_reg x21, 48
+# ASM: .seh_save_reg x22, 56
+# ASM: .seh_save_regp x19, 64
+# ASM: .seh_endprologue
+
+# ASM: .seh_startepilogue
+# ASM: .seh_save_regp x19, 64
+# ASM: .seh_save_reg x21, 48
+# ASM: .seh_nop
+# ASM: .seh_save_reg x22, 56
+# ASM: .seh_save_regp x23, 32
+# ASM: .seh_save_regp x25, 16
+# ASM: .seh_save_regp_x x27, 80
+# ASM: .seh_endepilogue
+
+# ASM: .seh_endfunclet
+# ASM: .section .xdata,"dr"
+# ASM: .seh_handlerdata
+# ASM: .text
+# ASM: .seh_endproc
+
 ...
 ---
 name:            test
