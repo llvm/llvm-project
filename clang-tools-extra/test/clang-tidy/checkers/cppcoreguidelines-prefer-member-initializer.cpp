@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-prefer-member-initializer %t
+// RUN: %check_clang_tidy %s cppcoreguidelines-prefer-member-initializer %t -- -- -fcxx-exceptions
 
 class Simple1 {
   int n;
