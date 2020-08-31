@@ -91,6 +91,7 @@ public:
   static ConstString GetPluginNameStatic();
   /// \}
 
+  static LanguageSet GetSupportedLanguagesForTypes();
   virtual Module *GetModule() const = 0;
   virtual lldb::TypeSP GetCachedType(ConstString mangled) = 0;
   virtual void SetCachedType(ConstString mangled,

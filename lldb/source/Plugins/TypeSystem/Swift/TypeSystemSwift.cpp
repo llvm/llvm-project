@@ -41,10 +41,15 @@ static lldb::TypeSystemSP CreateTypeSystemInstance(lldb::LanguageType language,
   llvm_unreachable("Neither type nor module given to CreateTypeSystemInstance");
 }
 
-void TypeSystemSwift::Initialize() {
+LanguageSet TypeSystemSwift::GetSupportedLanguagesForTypes() {
   LanguageSet swift;
-  SwiftLanguageRuntime::Initialize();
   swift.Insert(lldb::eLanguageTypeSwift);
+  return swift;
+}
+
+void TypeSystemSwift::Initialize() {
+  SwiftLanguageRuntime::Initialize();
+  LanguageSet swift = GetSupportedLanguagesForTypes();
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 "Swift type system and AST context plug-in",
                                 CreateTypeSystemInstance, swift, swift);
