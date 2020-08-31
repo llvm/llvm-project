@@ -1,0 +1,9 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("FileCheckTests") {
+  deps = [
+    "//llvm/lib/FileCheck",
+    "//llvm/lib/Support",
+  ]
+  sources = [ "FileCheckTest.cpp" ]
+}

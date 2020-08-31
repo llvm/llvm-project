@@ -1,4 +1,4 @@
-//==-- llvm/Support/FileCheck.h ---------------------------*- C++ -*-==//
+//==-- llvm/FileCheck/FileCheck.h --------------------------------*- C++ -*-==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_FILECHECK_H
-#define LLVM_SUPPORT_FILECHECK_H
+#ifndef LLVM_FILECHECK_FILECHECK_H
+#define LLVM_FILECHECK_FILECHECK_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
