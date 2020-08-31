@@ -1559,14 +1559,6 @@ void AttrBuilder::clear() {
   PreallocatedType = nullptr;
 }
 
-AttrBuilder &AttrBuilder::addAttribute(Attribute::AttrKind Val) {
-  assert((unsigned)Val < Attribute::EndAttrKinds && "Attribute out of range!");
-  assert(!Attribute::doesAttrKindHaveArgument(Val) &&
-         "Adding integer attribute without adding a value!");
-  Attrs[Val] = true;
-  return *this;
-}
-
 AttrBuilder &AttrBuilder::addAttribute(Attribute Attr) {
   if (Attr.isStringAttribute()) {
     addAttribute(Attr.getKindAsString(), Attr.getValueAsString());
