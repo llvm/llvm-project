@@ -24,6 +24,7 @@ program openacc_clause_validity
   logical, dimension(N) :: d, e
   real :: reduction_r
   logical :: reduction_l
+  real(8), dimension(N, N) :: aa
 
   !ERROR: At least one clause is required on the DECLARE directive
   !$acc declare
@@ -82,6 +83,25 @@ program openacc_clause_validity
     a(i) = 3.14
   end do
   !$acc end parallel
+
+  !$acc parallel
+  !$acc loop tile(2)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+  !$acc end parallel
+
+  !$acc parallel loop tile(2)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+
+  !$acc parallel loop tile(2, 2)
+  do i = 1, N
+    do j = 1, N
+      aa(i, j) = 3.14
+    end do
+  end do
 
   !$acc parallel device_type(*) num_gangs(2)
   !$acc loop
