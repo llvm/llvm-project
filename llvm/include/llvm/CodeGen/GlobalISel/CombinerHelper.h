@@ -342,6 +342,9 @@ public:
   /// success.
   bool matchAndWithTrivialMask(MachineInstr &MI, Register &Replacement);
 
+  /// \return true if \p MI is a G_SEXT_INREG that can be erased.
+  bool matchRedundantSExtInReg(MachineInstr &MI);
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI);
