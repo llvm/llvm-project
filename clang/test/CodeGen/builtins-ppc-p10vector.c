@@ -20,10 +20,14 @@ vector unsigned long long vulla, vullb, vullc;
 vector unsigned __int128 vui128a, vui128b, vui128c;
 vector float vfa, vfb;
 vector double vda, vdb;
-unsigned int uia, uib;
-unsigned char uca;
-unsigned short usa;
-unsigned long long ulla;
+signed int *iap;
+unsigned int uia, uib, *uiap;
+signed char *cap;
+unsigned char uca, *ucap;
+signed short *sap;
+unsigned short usa, *usap;
+signed long long *llap, llb;
+unsigned long long ulla, *ullap;
 
 vector signed long long test_vec_mul_sll(void) {
   // CHECK: mul <2 x i64>
@@ -910,4 +914,60 @@ int test_vec_test_lsbb_all_zeros(void) {
   // CHECK: @llvm.ppc.vsx.xvtlsbb(<16 x i8> %{{.+}}, i32 0
   // CHECK-NEXT: ret i32
   return vec_test_lsbb_all_zeros(vuca);
+}
+
+vector signed __int128 test_vec_xl_sext_i8(void) {
+  // CHECK: load i8
+  // CHECK: sext i8
+  // CHECK: ret <1 x i128>
+  return vec_xl_sext(llb, cap);
+}
+
+vector signed __int128 test_vec_xl_sext_i16(void) {
+  // CHECK: load i16
+  // CHECK: sext i16
+  // CHECK: ret <1 x i128>
+  return vec_xl_sext(llb, sap);
+}
+
+vector signed __int128 test_vec_xl_sext_i32(void) {
+  // CHECK: load i32
+  // CHECK: sext i32
+  // CHECK: ret <1 x i128>
+  return vec_xl_sext(llb, iap);
+}
+
+vector signed __int128 test_vec_xl_sext_i64(void) {
+  // CHECK: load i64
+  // CHECK: sext i64
+  // CHECK: ret <1 x i128>
+  return vec_xl_sext(llb, llap);
+}
+
+vector unsigned __int128 test_vec_xl_zext_i8(void) {
+  // CHECK: load i8
+  // CHECK: zext i8
+  // CHECK: ret <1 x i128>
+  return vec_xl_zext(llb, ucap);
+}
+
+vector unsigned __int128 test_vec_xl_zext_i16(void) {
+  // CHECK: load i16
+  // CHECK: zext i16
+  // CHECK: ret <1 x i128>
+  return vec_xl_zext(llb, usap);
+}
+
+vector unsigned __int128 test_vec_xl_zext_i32(void) {
+  // CHECK: load i32
+  // CHECK: zext i32
+  // CHECK: ret <1 x i128>
+  return vec_xl_zext(llb, uiap);
+}
+
+vector unsigned __int128 test_vec_xl_zext_i64(void) {
+  // CHECK: load i64
+  // CHECK: zext i64
+  // CHECK: ret <1 x i128>
+  return vec_xl_zext(llb, ullap);
 }

@@ -16557,6 +16557,54 @@ vec_xl_be(signed long long  __offset, unsigned __int128 *__ptr) {
   #define vec_xl_be vec_xl
 #endif
 
+#if defined(__POWER10_VECTOR__) && defined(__VSX__)
+
+/* vect_xl_sext */
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_xl_sext(signed long long __offset, signed char *__pointer) {
+  return (vector unsigned __int128)*(__pointer + __offset);
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_xl_sext(signed long long __offset, signed short *__pointer) {
+  return (vector unsigned __int128)*(__pointer + __offset);
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_xl_sext(signed long long __offset, signed int *__pointer) {
+  return (vector unsigned __int128)*(__pointer + __offset);
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_xl_sext(signed long long __offset, signed long long *__pointer) {
+  return (vector unsigned __int128)*(__pointer + __offset);
+}
+
+/* vec_xl_zext */
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_xl_zext(signed long long __offset, unsigned char *__pointer) {
+  return (vector unsigned __int128)*(__pointer + __offset);
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_xl_zext(signed long long __offset, unsigned short *__pointer) {
+  return (vector unsigned __int128)*(__pointer + __offset);
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_xl_zext(signed long long __offset, unsigned int *__pointer) {
+  return (vector unsigned __int128)*(__pointer + __offset);
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_xl_zext(signed long long __offset, unsigned long long *__pointer) {
+  return (vector unsigned __int128)*(__pointer + __offset);
+}
+
+#endif
+
 /* vec_xst */
 
 static inline __ATTRS_o_ai void vec_xst(vector signed char __vec,
