@@ -58,7 +58,6 @@ TEST_F(DWARFASTParserClangTests,
       "            Form:            DW_FORM_data1\n"
       "debug_info:\n"
       "  - Version:         4\n"
-      "    AbbrOffset:      0\n"
       "    AddrSize:        8\n"
       "    Entries:\n"
       "      - AbbrCode:        0x00000001\n"
@@ -84,9 +83,7 @@ TEST_F(DWARFASTParserClangTests,
       "        Values:\n"
       "          - Value:           0x0000000000000008\n" // DW_ATE_unsigned_char
       "          - Value:           0x0000000000000001\n"
-      ""
-      "      - AbbrCode:        0x00000000\n"
-      "        Values:          []\n";
+      "      - AbbrCode:        0x00000000\n";
 
   YAMLModuleTester t(yamldata, "i386-unknown-linux");
   ASSERT_TRUE((bool)t.GetDwarfUnit());

@@ -573,9 +573,7 @@ DWARF:
       - DieOffset:       0x000000D8
         Name:            char
   debug_info:
-    - Length:          220
-      Version:         4
-      AbbrOffset:      0
+    - Version:         4
       AddrSize:        8
       Entries:
         - AbbrCode:        0x00000001
@@ -601,7 +599,6 @@ DWARF:
               BlockData:       [ 0x91, 0x7C ]
             - Value:           0x0000000000000056
         - AbbrCode:        0x00000000
-          Values:          []
         - AbbrCode:        0x00000004
           Values:
             - Value:           0x000000000000003F
@@ -618,7 +615,6 @@ DWARF:
             - Value:           0x0000000000000001
             - Value:           0x0000000000000062
         - AbbrCode:        0x00000000
-          Values:          []
         - AbbrCode:        0x00000006
           Values:
             - Value:           0x000000000000004D
@@ -672,9 +668,7 @@ DWARF:
               BlockData:       [ 0x91, 0x7C ]
             - Value:           0x0000000000000056
         - AbbrCode:        0x00000000
-          Values:          []
         - AbbrCode:        0x00000000
-          Values:          []
         - AbbrCode:        0x0000000B
           Values:
             - Value:           0x00000000000000CE
@@ -690,7 +684,6 @@ DWARF:
             - Value:           0x0000000000000006
             - Value:           0x0000000000000001
         - AbbrCode:        0x00000000
-          Values:          []
   debug_line:
     - Length:          102
       Version:         4
