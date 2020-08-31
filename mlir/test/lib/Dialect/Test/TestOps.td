@@ -1308,6 +1308,18 @@ def FormatOptAttrBOp : TEST_Op<"format_opt_attr_op_b"> {
   let assemblyFormat = "($opt_attr^)? attr-dict";
 }
 
+// Test that we format symbol name attributes properly.
+def FormatSymbolNameAttrOp : TEST_Op<"format_symbol_name_attr_op"> {
+  let arguments = (ins SymbolNameAttr:$attr);
+  let assemblyFormat = "$attr attr-dict";
+}
+
+// Test that we format optional symbol name attributes properly.
+def FormatOptSymbolNameAttrOp : TEST_Op<"format_opt_symbol_name_attr_op"> {
+  let arguments = (ins OptionalAttr<SymbolNameAttr>:$opt_attr);
+  let assemblyFormat = "($opt_attr^)? attr-dict";
+}
+
 // Test that we elide attributes that are within the syntax.
 def FormatAttrDictWithKeywordOp : TEST_Op<"format_attr_dict_w_keyword"> {
   let arguments = (ins I64Attr:$attr, OptionalAttr<I64Attr>:$opt_attr);
