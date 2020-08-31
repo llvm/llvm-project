@@ -224,9 +224,7 @@ DWARF:
         - LowOffset:       0x0000000000001000
           HighOffset:      0x0000000000002000
   debug_info:
-    - Length:          99
-      Version:         4
-      AbbrOffset:      0
+    - Version:         4
       AddrSize:        8
       Entries:
         - AbbrCode:        0x00000001
@@ -256,5 +254,4 @@ DWARF:
             - Value:           0x0000000000002000
             - Value:           0x0000000000001000
         - AbbrCode:        0x00000000
-          Values:          []
 ...
