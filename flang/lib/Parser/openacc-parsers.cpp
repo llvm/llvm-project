@@ -145,13 +145,11 @@ TYPE_PARSER(construct<AccTileExpr>(scalarIntConstantExpr) ||
         "*" >> construct<std::optional<ScalarIntConstantExpr>>()))
 TYPE_PARSER(construct<AccTileExprList>(nonemptyList(Parser<AccTileExpr>{})))
 
-// 2.9 (1607) gang-arg is one of:
-//   [num:]int-expr
-//   static:size-expr
-TYPE_PARSER(construct<AccGangArgument>(maybe(scalarIntExpr),
-                maybe(","_tok / "STATIC:" >> Parser<AccSizeExpr>{})) ||
-    construct<AccGangArgument>(maybe("NUM:" >> scalarIntExpr),
-        maybe(","_tok / "STATIC:" >> Parser<AccSizeExpr>{})))
+// 2.9 (1607) gang-arg is:
+//   [[num:]int-expr][[,]static:size-expr]
+TYPE_PARSER(construct<AccGangArgument>(
+    maybe(("NUM:"_tok >> scalarIntExpr || scalarIntExpr)),
+    maybe(", STATIC:" >> Parser<AccSizeExpr>{})))
 
 // 2.5.13 Reduction
 // Operator for reduction
