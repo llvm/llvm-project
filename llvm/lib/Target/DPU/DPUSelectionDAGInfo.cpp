@@ -104,12 +104,26 @@ SDValue DPUSelectionDAGInfo::EmitTargetCodeForMemset(
     SDValue Size, unsigned Align, bool isVolatile,
     MachinePointerInfo DstPtrInfo) const {
   bool DstIsMramPtr = DstPtrInfo.getAddrSpace() == DPUADDR_SPACE::MRAM;
+  uint64_t Length;
 
   if (DstIsMramPtr) {
-    return EmitMemFnCall("__memset_m", DAG, dl, Chain, Dst, Src, Size,
-                         RTLIB::MEMSET);
+    const uint32_t MramAlignment = 8;
+    if ((getSDValueAlignment(Dst) % MramAlignment == 0) &&
+        canFetchConstantTo(Size, &Length) && (Length % MramAlignment == 0)) {
+      return EmitMemFnCall("__memset_mram_8align", DAG, dl, Chain, Dst, Src,
+                           Size, RTLIB::MEMSET);
+    } else {
+      return EmitMemFnCall("__memset_mram", DAG, dl, Chain, Dst, Src, Size,
+                           RTLIB::MEMSET);
+    }
+  } else {
+    const uint32_t WramAlignment = 4;
+    if ((getSDValueAlignment(Dst) % WramAlignment == 0) &&
+        canFetchConstantTo(Size, &Length) && (Length % WramAlignment == 0)) {
+      return EmitMemFnCall("__memset_wram_4align", DAG, dl, Chain, Dst, Src,
+                           Size, RTLIB::MEMSET);
+    }
   }
-
   return SDValue();
 }
 
