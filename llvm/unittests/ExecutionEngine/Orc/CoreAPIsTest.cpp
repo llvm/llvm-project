@@ -1336,7 +1336,7 @@ static bool linkOrdersEqual(const std::vector<std::shared_ptr<JITDylib>> &LHS,
     else
       ++RHSE;
   return true;
-};
+}
 
 TEST(JITDylibTest, GetDFSLinkOrderTree) {
   // Test that DFS ordering behaves as expected when the linkage relationships
