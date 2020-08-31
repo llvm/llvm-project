@@ -264,7 +264,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
     pm.addPass(mlir::createCanonicalizerPass());
     pm.addPass(fir::createCSEPass());
-    pm.addPass(fir::createPromoteToAffinePass());
+    // pm.addPass(fir::createPromoteToAffinePass());
     pm.addPass(fir::createFirToCfgPass());
     pm.addPass(fir::createControlFlowLoweringPass());
     pm.addPass(mlir::createLowerToCFGPass());

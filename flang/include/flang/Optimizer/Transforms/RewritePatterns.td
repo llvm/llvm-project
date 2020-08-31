@@ -51,8 +51,9 @@ def createConstantOp
                      "rewriter.getIndexAttr($1.dyn_cast<IntegerAttr>().getInt()))">;
 
 def ForwardConstantConvertPattern
-    : Pat<(fir_ConvertOp:$res (ConstantOp $attr)),
+    : Pat<(fir_ConvertOp:$res (ConstantOp:$cnt $attr)),
           (createConstantOp $res, $attr),
-          [(IndexTypePred $res)]>;
+          [(IndexTypePred $res)
+          ,(IntegerTypePred $cnt)]>;
 
 #endif // FIR_REWRITE_PATTERNS

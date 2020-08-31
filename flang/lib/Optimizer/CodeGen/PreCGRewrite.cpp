@@ -453,7 +453,7 @@ public:
     if (fnTy.getResults().size() == 1) {
       mlir::Type ty = fnTy.getResult(0);
       llvm::TypeSwitch<mlir::Type>(ty)
-        .template Case<fir::ComplexType>([&](fir::ComplexType cmplx) {
+          .template Case<fir::ComplexType>([&](fir::ComplexType cmplx) {
             wrap = rewriteCallComplexResultType(cmplx, newResTys, newInTys,
                                                 newOpers);
           })
@@ -506,13 +506,16 @@ public:
               }
             }
           })
-        .template Case<fir::ComplexType>([&](fir::ComplexType cmplx) {
+          .template Case<fir::ComplexType>([&](fir::ComplexType cmplx) {
             rewriteCallComplexInputType(cmplx, oper, newInTys, newOpers);
           })
           .template Case<mlir::ComplexType>([&](mlir::ComplexType cmplx) {
             rewriteCallComplexInputType(cmplx, oper, newInTys, newOpers);
           })
-          .Default([&](mlir::Type ty) { newInTys.push_back(ty); });
+          .Default([&](mlir::Type ty) {
+            newInTys.push_back(ty);
+            newOpers.push_back(oper);
+          });
     }
     newInTys.insert(newInTys.end(), trailingInTys.begin(), trailingInTys.end());
     newOpers.insert(newOpers.end(), trailingOpers.begin(), trailingOpers.end());
@@ -564,7 +567,7 @@ public:
     llvm::SmallVector<mlir::Type, 8> newInTys;
     for (mlir::Type ty : addrTy.getResults()) {
       llvm::TypeSwitch<mlir::Type>(ty)
-        .Case<fir::ComplexType>([&](fir::ComplexType ty) {
+          .Case<fir::ComplexType>([&](fir::ComplexType ty) {
             lowerComplexSignatureRes(ty, newResTys, newInTys);
           })
           .Case<mlir::ComplexType>([&](mlir::ComplexType ty) {
@@ -587,8 +590,9 @@ public:
               }
             }
           })
-        .Case<fir::ComplexType>(
-            [&](fir::ComplexType ty) { lowerComplexSignatureArg(ty, newInTys); })
+          .Case<fir::ComplexType>([&](fir::ComplexType ty) {
+            lowerComplexSignatureArg(ty, newInTys);
+          })
           .Case<mlir::ComplexType>([&](mlir::ComplexType ty) {
             lowerComplexSignatureArg(ty, newInTys);
           })
@@ -647,7 +651,7 @@ public:
     // Convert return value(s)
     for (auto ty : funcTy.getResults())
       llvm::TypeSwitch<mlir::Type>(ty)
-        .Case<fir::ComplexType>([&](fir::ComplexType cmplx) {
+          .Case<fir::ComplexType>([&](fir::ComplexType cmplx) {
             if (noComplexConversion)
               newResTys.push_back(cmplx);
             else
@@ -696,7 +700,7 @@ public:
               }
             }
           })
-        .Case<fir::ComplexType>([&](fir::ComplexType cmplx) {
+          .Case<fir::ComplexType>([&](fir::ComplexType cmplx) {
             if (noComplexConversion)
               newInTys.push_back(cmplx);
             else
