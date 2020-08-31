@@ -31,8 +31,8 @@ class Demangler;
 } // namespace swift
 
 namespace lldb_private {
-class SwiftASTContext;
 class ClangExternalASTSourceCallbacks;
+class SwiftASTContext;
 
 /// A Swift TypeSystem that does not own a swift::ASTContext.
 class TypeSystemSwiftTypeRef : public TypeSystemSwift {
@@ -237,6 +237,9 @@ public:
   void SetCachedType(ConstString mangled, const lldb::TypeSP &type_sp) override;
   bool IsImportedType(lldb::opaque_compiler_type_t type,
                       CompilerType *original_type) override;
+  /// Like \p IsImportedType(), but even returns Clang types that are also Swift
+  /// builtins (int <-> Swift.Int) as Clang types.
+  CompilerType GetAsClangTypeOrNull(lldb::opaque_compiler_type_t type);
   CompilerType GetErrorType() override;
   CompilerType GetReferentType(lldb::opaque_compiler_type_t type) override;
   CompilerType GetInstanceType(lldb::opaque_compiler_type_t type) override;
@@ -259,6 +262,10 @@ public:
                            swift::Demangle::Demangler &Dem,
                            llvm::StringRef mangled_name);
 
+  /// Use API notes to determine the swiftified name of \p clang_decl.
+  std::string GetSwiftName(const clang::Decl *clang_decl,
+                           TypeSystemClang &clang_typesystem) override;
+
   /// Wrap \p node as \p Global(TypeMangling(node)), remangle the type
   /// and create a CompilerType from it.
   CompilerType RemangleAsType(swift::Demangle::Demangler &Dem,
@@ -278,6 +285,21 @@ private:
   DemangleCanonicalType(swift::Demangle::Demangler &Dem,
                         lldb::opaque_compiler_type_t type);
 
+  /// Replace all "__C" module names with their actual Clang module
+  /// names.  This is the recursion step of \p
+  /// GetDemangleTreeForPrinting(). Don't call it directly.
+  swift::Demangle::NodePointer
+  GetNodeForPrintingImpl(swift::Demangle::Demangler &Dem,
+                         swift::Demangle::NodePointer node,
+                         bool resolve_objc_module, bool desugar = true);
+
+  /// Return the demangle tree representation with all "__C" module
+  /// names with their actual Clang module names.
+  swift::Demangle::NodePointer
+  GetDemangleTreeForPrinting(swift::Demangle::Demangler &Dem,
+                             const char *mangled_name,
+                             bool resolve_objc_module);
+
   /// Return an APINotes manager for the module with module id \id.
   /// APINotes are used to get at the SDK swiftification annotations.
   clang::api_notes::APINotesManager *
@@ -290,7 +312,7 @@ private:
   llvm::DenseMap<clang::Module *,
                  std::unique_ptr<clang::api_notes::APINotesManager>>
       m_apinotes_manager;
-};
+  };
 
 } // namespace lldb_private
 #endif

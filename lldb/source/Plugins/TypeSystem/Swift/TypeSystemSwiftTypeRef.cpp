@@ -89,12 +89,40 @@ GetClangTypeNode(CompilerType clang_type, swift::Demangle::Demangler &Dem) {
   return structure;
 }
 
+/// \return the child of the \p Type node.
+static swift::Demangle::NodePointer GetType(swift::Demangle::Demangler &Dem,
+                                            swift::Demangle::NodePointer n) {
+  using namespace swift::Demangle;
+  if (!n || n->getKind() != Node::Kind::Global || !n->hasChildren())
+    return nullptr;
+  n = n->getFirstChild();
+  if (!n || n->getKind() != Node::Kind::TypeMangling || !n->hasChildren())
+    return nullptr;
+  n = n->getFirstChild();
+  if (!n || n->getKind() != Node::Kind::Type || !n->hasChildren())
+    return nullptr;
+  n = n->getFirstChild();
+  return n;
+}
+
+/// Demangle a mangled type name and return the child of the \p Type node.
+static swift::Demangle::NodePointer
+GetDemangledType(swift::Demangle::Demangler &Dem, StringRef name) {
+  NodePointer n = Dem.demangleSymbol(name);
+  return GetType(Dem, n);
+}
+
 /// Resolve a type alias node and return a demangle tree for the
 /// resolved type. If the type alias resolves to a Clang type, return
 /// a Clang CompilerType.
+///
+/// \param prefer_clang_types if this is true, type aliases in the
+///                           __C module are resolved as Clang types.
+///
 static std::pair<swift::Demangle::NodePointer, CompilerType>
 ResolveTypeAlias(lldb_private::Module *M, swift::Demangle::Demangler &Dem,
-                 swift::Demangle::NodePointer node) {
+                 swift::Demangle::NodePointer node,
+                 bool prefer_clang_types = false) {
   // Try to look this up as a Swift type alias. For each *Swift*
   // type alias there is a debug info entry that has the mangled
   // name as name and the aliased type as a type.
@@ -104,11 +132,13 @@ ResolveTypeAlias(lldb_private::Module *M, swift::Demangle::Demangler &Dem,
               "No module. Couldn't resolve type alias %s", mangled.AsCString());
     return {{}, {}};
   }
-  llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
   TypeList types;
-  M->FindTypes({mangled}, false, 1, searched_symbol_files, types);
-  if (types.Empty()) {
-    // No Swift type found -- this could be a Clang typdef.  This
+  if (!prefer_clang_types) {
+    llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
+    M->FindTypes({mangled}, false, 1, searched_symbol_files, types);
+  }
+  if (prefer_clang_types || types.Empty()) {
+    // No Swift type found -- this could be a Clang typedef.  This
     // check is not done earlier because a Clang typedef that points
     // to a builtin type, e.g., "typedef unsigned uint32_t", could
     // end up pointing to a *Swift* type!
@@ -120,7 +150,7 @@ ResolveTypeAlias(lldb_private::Module *M, swift::Demangle::Demangler &Dem,
           LookupClangForwardType(*M, node->getChild(1)->getText());
       if (!clang_type)
         return {{}, {}};
-      return {{}, clang_type};
+      return {{}, clang_type.GetCanonicalType()};
     }
 
     LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
@@ -142,13 +172,7 @@ ResolveTypeAlias(lldb_private::Module *M, swift::Demangle::Demangler &Dem,
               "Found non-Swift type alias %s", mangled.AsCString());
     return {{}, {}};
   }
-  NodePointer n = Dem.demangleSymbol(desugared_name.GetStringRef());
-  if (n && n->getKind() == Node::Kind::Global && n->hasChildren())
-    n = n->getFirstChild();
-  if (n && n->getKind() == Node::Kind::TypeMangling && n->hasChildren())
-    n = n->getFirstChild();
-  if (n && n->getKind() == Node::Kind::Type && n->hasChildren())
-    n = n->getFirstChild();
+  NodePointer n = GetDemangledType(Dem, desugared_name.GetStringRef());
   if (!n) {
     LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
              "Unrecognized demangling %s", desugared_name.AsCString());
@@ -270,7 +294,7 @@ GetCanonicalNode(lldb_private::Module *M, swift::Demangle::Demangler &Dem,
   case Node::Kind::TypeAlias: {
     auto node_clangtype = ResolveTypeAlias(M, Dem, node);
     if (CompilerType clang_type = node_clangtype.second)
-      return getCanonicalNode(GetClangTypeNode(clang_type.GetCanonicalType(), Dem));
+      return getCanonicalNode(GetClangTypeNode(clang_type, Dem));
     if (node_clangtype.first)
       return getCanonicalNode(node_clangtype.first);
     return node;
@@ -397,26 +421,79 @@ static swift::Demangle::NodePointer Desugar(swift::Demangle::Demangler &Dem,
   return desugared;
 }
 
-using GetAPINotesManagerFn = std::function<clang::api_notes::APINotesManager *(
-    ClangExternalASTSourceCallbacks *source, unsigned id)>;
-using GetClangImporterFn = std::function<swift::ClangImporter *()>;
+/// Helper for \p GetSwiftName.
+static template <typename ContextInfo>
+std::string ExtractSwiftName(
+    clang::api_notes::APINotesReader::VersionedInfo<ContextInfo> info) {
+  if (auto version = info.getSelected()) {
+    ContextInfo context_info = info[*version].second;
+    if (!context_info.SwiftName.empty())
+      return context_info.SwiftName;
+  }
+  return {};
+};
 
-/// Replace all "__C" module names with their actual Clang module names.
-static swift::Demangle::NodePointer
-GetNodeForPrinting(const std::string &m_description, lldb_private::Module &M,
-                   GetAPINotesManagerFn get_apinotes_manager,
-                   GetClangImporterFn get_clangimporter,
-                   swift::Demangle::Demangler &Dem,
-                   swift::Demangle::NodePointer node,
-                   bool resolve_objc_module,
-                   bool desugar = true) {
+std::string
+TypeSystemSwiftTypeRef::GetSwiftName(const clang::Decl *clang_decl,
+                                     TypeSystemClang &clang_typesystem) {
+  auto *named_decl = dyn_cast_or_null<const clang::NamedDecl>(clang_decl);
+  if (!named_decl)
+    return {};
+  StringRef default_name = named_decl->getName();
+  unsigned id = clang_decl->getOwningModuleID();
+  if (!id)
+    return default_name.str();
+  auto *ast_source = llvm::dyn_cast_or_null<ClangExternalASTSourceCallbacks>(
+      clang_typesystem.getASTContext().getExternalSource());
+  auto *apinotes_manager = GetAPINotesManager(ast_source, id);
+  if (!apinotes_manager)
+    return default_name.str();
+
+  // Read the Swift name from the API notes.
+  for (auto reader : apinotes_manager->getCurrentModuleReaders()) {
+    std::string swift_name;
+    // The order is significant since some of these decl kinds are also TagDecls.
+    if (llvm::isa<clang::TypedefNameDecl>(clang_decl))
+      swift_name = ExtractSwiftName(reader->lookupTypedef(default_name));
+    else if (llvm::isa<clang::EnumConstantDecl>(clang_decl))
+      swift_name = ExtractSwiftName(reader->lookupEnumConstant(default_name));
+    else if (llvm::isa<clang::ObjCInterfaceDecl>(clang_decl))
+      swift_name = ExtractSwiftName(reader->lookupObjCClassInfo(default_name));
+    else if (llvm::isa<clang::ObjCProtocolDecl>(clang_decl))
+      swift_name =
+          ExtractSwiftName(reader->lookupObjCProtocolInfo(default_name));
+    else if (llvm::isa<clang::TagDecl>(clang_decl))
+      swift_name = ExtractSwiftName(reader->lookupTag(default_name));
+    else
+      assert(false && "unhandled clang decl kind");
+    if (!swift_name.empty())
+      return swift_name;
+  }
+  // Else we must go through ClangImporter to apply the automatic
+  // swiftification rules.
+  //
+  // TODO: Separate ClangImporter::ImportDecl into a freestanding
+  // class, so we don't need a SwiftASTContext for this!
+  return m_swift_ast_context->ImportName(named_decl);
+}
+
+/// Determine whether \p node is an Objective-C type and return its name.
+static StringRef GetObjCTypeName(swift::Demangle::NodePointer node) {
+  if (node && node->getNumChildren() == 2 && node->getChild(0)->hasText() &&
+      node->getChild(0)->getText() == swift::MANGLING_MODULE_OBJC &&
+      node->getChild(1)->hasText())
+    return node->getChild(1)->getText();
+  return {};
+}
+
+swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetNodeForPrintingImpl(
+    swift::Demangle::Demangler &Dem, swift::Demangle::NodePointer node,
+    bool resolve_objc_module, bool desugar) {
   if (!node)
     return node;
   using namespace swift::Demangle;
   auto getNodeForPrinting = [&](NodePointer node) -> NodePointer {
-    return GetNodeForPrinting(m_description, M, get_apinotes_manager,
-                              get_clangimporter, Dem, node, resolve_objc_module,
-                              desugar);
+    return GetNodeForPrintingImpl(Dem, node, resolve_objc_module, desugar);
   };
 
   NodePointer canonical = nullptr;
@@ -425,14 +502,17 @@ GetNodeForPrinting(const std::string &m_description, lldb_private::Module &M,
   case Node::Kind::Class:
   case Node::Kind::Structure:
   case Node::Kind::TypeAlias: {
-    if (node->getNumChildren() != 2 || !node->getChild(0)->hasText() ||
-        node->getChild(0)->getText() != swift::MANGLING_MODULE_OBJC ||
-        !node->getChild(1)->hasText())
-      break;
+    StringRef ident = GetObjCTypeName(node);
+    if (ident.empty())
+      return node;
 
-    // This is an imported Objective-C type; look it up in the debug info.
-    StringRef ident = node->getChild(1)->getText();
-    TypeSP clang_type = LookupClangType(M, ident);
+    auto *Module = GetModule();
+    if (!Module)
+      return node;
+
+    // This is an imported Objective-C type; look it up in the
+    // debug info.
+    TypeSP clang_type = LookupClangType(*Module, ident);
     if (!clang_type)
       return node;
 
@@ -458,15 +538,16 @@ GetNodeForPrinting(const std::string &m_description, lldb_private::Module &M,
         Dem.createNode(Node::Kind::Module, toplevel_module);
     renamed->addChild(module, Dem);
 
-    // This is unfortunate performance-wise, but only ClangImporter
-    // knows how to translate a clang::Decl's name into a Swift name.
-
     // This order is significant, because of `typedef tag`.
     swift::ClangTypeKind kinds[] = {swift::ClangTypeKind::Typedef,
                                     swift::ClangTypeKind::Tag,
                                     swift::ClangTypeKind::ObjCProtocol};
     clang::NamedDecl *clang_decl = nullptr;
     CompilerType compiler_type = clang_type->GetForwardCompilerType();
+    auto *clang_ts =
+        llvm::dyn_cast_or_null<TypeSystemClang>(compiler_type.GetTypeSystem());
+    if (!clang_ts)
+      break;
     clang::QualType qual_type = ClangUtil::GetQualType(compiler_type);
     for (auto kind : kinds) {
       clang_decl = llvm::dyn_cast_or_null<clang::NamedDecl>(
@@ -477,69 +558,7 @@ GetNodeForPrinting(const std::string &m_description, lldb_private::Module &M,
     if (!clang_decl)
       break;
 
-    // Read the Swift name from the APINotes.
-    std::string swift_name = std::string(ident);
-    if (unsigned id = clang_decl->getOwningModuleID()) {
-      auto *clang_typesystem = llvm::dyn_cast_or_null<TypeSystemClang>(
-          compiler_type.GetTypeSystem());
-      if (!clang_typesystem)
-        break;
-      auto *ast_source =
-          llvm::dyn_cast_or_null<ClangExternalASTSourceCallbacks>(
-              clang_typesystem->getASTContext().getExternalSource());
-      if (auto *apinotes_manager = get_apinotes_manager(ast_source, id)) {
-        for (auto reader : apinotes_manager->getCurrentModuleReaders()) {
-          if (llvm::isa<clang::TypedefNameDecl>(clang_decl)) {
-            auto info = reader->lookupTypedef(ident);
-            if (auto version = info.getSelected()) {
-              clang::api_notes::TypedefInfo typedef_info =
-                  info[*version].second;
-              if (!typedef_info.SwiftName.empty())
-                swift_name = typedef_info.SwiftName;
-              break;
-            }
-          }
-          if (llvm::isa<clang::TagDecl>(clang_decl)) {
-            auto info = reader->lookupTag(ident);
-            if (auto version = info.getSelected()) {
-              clang::api_notes::TagInfo tag_info = info[*version].second;
-              if (!tag_info.SwiftName.empty())
-                swift_name = tag_info.SwiftName;
-              break;
-            }
-          }
-          auto extract_context_info =
-              [&](clang::api_notes::APINotesReader::VersionedInfo<
-                  clang::api_notes::ObjCContextInfo>
-                      info) -> bool {
-            if (auto version = info.getSelected()) {
-              clang::api_notes::ObjCContextInfo context_info =
-                  info[*version].second;
-              if (!context_info.SwiftName.empty())
-                swift_name = context_info.SwiftName;
-              return true;
-            }
-            return false;
-          };
-          if (llvm::isa<clang::ObjCInterfaceDecl>(clang_decl)) {
-            auto info = reader->lookupObjCClassInfo(ident);
-            if (extract_context_info(info))
-              break;
-          }
-          if (llvm::isa<clang::ObjCProtocolDecl>(clang_decl)) {
-            auto info = reader->lookupObjCProtocolInfo(ident);
-            if (extract_context_info(info))
-              break;
-          }
-        }
-      }
-    }
-      
-    auto clang_importer = get_clangimporter();
-    if (!clang_importer)
-      break;
-    //swift::DeclName imported_name = clang_importer->importName(clang_decl, {});
-    //imported_name.getBaseName().userFacingName()
+    std::string swift_name = GetSwiftName(clang_decl, *clang_ts);
     NodePointer identifier = Dem.createNode(Node::Kind::Identifier, swift_name);
     renamed->addChild(identifier, Dem);
     return renamed;
@@ -655,17 +674,12 @@ GetNodeForPrinting(const std::string &m_description, lldb_private::Module &M,
 
 /// Return the demangle tree representation with all "__C" module
 /// names with their actual Clang module names.
-static swift::Demangle::NodePointer GetDemangleTreeForPrinting(
-    const std::string &m_description, lldb_private::Module *Module,
-    GetAPINotesManagerFn get_apinotes_manager,
-    GetClangImporterFn get_clangimporter, swift::Demangle::Demangler &Dem,
-    const char *mangled_name, bool resolve_objc_module) {
+swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetDemangleTreeForPrinting(
+    swift::Demangle::Demangler &Dem, const char *mangled_name,
+     bool resolve_objc_module) {
   NodePointer node = Dem.demangleSymbol(mangled_name);
-  if (!Module)
-    return node;
   NodePointer canonical =
-      GetNodeForPrinting(m_description, *Module, get_apinotes_manager,
-                         get_clangimporter, Dem, node, resolve_objc_module);
+      GetNodeForPrintingImpl(Dem, node, resolve_objc_module);
   return canonical;
 }
 
@@ -871,7 +885,7 @@ static uint32_t collectTypeInfo(Module *M, swift::Demangle::Demangler &Dem,
       // swift_flags |= eTypeIsTypedef;
       auto node_clangtype = ResolveTypeAlias(M, Dem, node);
       if (CompilerType clang_type = node_clangtype.second) {
-        collect_clang_type(clang_type.GetCanonicalType());
+        collect_clang_type(clang_type);
         return swift_flags;
       }
       swift_flags |= collectTypeInfo(M, Dem, node_clangtype.first, generic_walk);
@@ -890,6 +904,42 @@ static uint32_t collectTypeInfo(Module *M, swift::Demangle::Demangler &Dem,
     swift_flags |= collectTypeInfo(M, Dem, node->getChild(i), generic_walk);
 
   return swift_flags;
+}
+
+/// Return a pair of modulename, type name for the outermost nominal type.
+llvm::Optional<std::pair<StringRef, StringRef>>
+GetNominal(swift::Demangle::Demangler &Dem, swift::Demangle::NodePointer node) {
+  if (!node)
+    return {};
+  using namespace swift::Demangle;
+  switch (node->getKind()) {
+    case Node::Kind::Structure:
+    case Node::Kind::Class:
+    case Node::Kind::Enum:
+    case Node::Kind::Protocol:
+    case Node::Kind::ProtocolList:
+    case Node::Kind::ProtocolListWithClass:
+    case Node::Kind::ProtocolListWithAnyObject:
+    case Node::Kind::BoundGenericClass:
+    case Node::Kind::BoundGenericEnum:
+    case Node::Kind::BoundGenericStructure:
+    case Node::Kind::BoundGenericProtocol:
+    case Node::Kind::BoundGenericOtherNominalType:
+    case Node::Kind::BoundGenericTypeAlias: {
+    if (node->getNumChildren() != 2)
+      return {};
+    auto *m = node->getChild(0);
+    if (!m || m->getKind() != Node::Kind::Module || !m->hasText())
+      return {};
+    auto *n = node->getChild(1);
+    if (!n || n->getKind() != Node::Kind::Identifier || !n->hasText())
+      return {};
+    return {{m->getText(), n->getText()}};
+  }
+  default:
+    break;
+  }
+  return {};
 }
 
 CompilerType TypeSystemSwift::GetInstanceType(CompilerType compiler_type) {
@@ -1205,19 +1255,7 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::DemangleCanonicalType(
   using namespace swift::Demangle;
   NodePointer node =
       GetCanonicalDemangleTree(GetModule(), Dem, AsMangledName(opaque_type));
-
-  if (!node || node->getNumChildren() != 1 ||
-      node->getKind() != Node::Kind::Global)
-    return nullptr;
-  node = node->getFirstChild();
-  if (node->getNumChildren() != 1 ||
-      node->getKind() != Node::Kind::TypeMangling)
-    return nullptr;
-  node = node->getFirstChild();
-  if (node->getNumChildren() != 1 || node->getKind() != Node::Kind::Type)
-    return nullptr;
-  node = node->getFirstChild();
-  return node;
+  return GetType(Dem, node);
 }
 
 bool TypeSystemSwiftTypeRef::IsArrayType(opaque_compiler_type_t type,
@@ -1448,13 +1486,8 @@ ConstString TypeSystemSwiftTypeRef::GetTypeName(opaque_compiler_type_t type) {
   auto impl = [&]() {
     using namespace swift::Demangle;
     Demangler Dem;
-    NodePointer print_node = GetDemangleTreeForPrinting(
-        m_description, GetModule(),
-        [&](ClangExternalASTSourceCallbacks *source, unsigned id) {
-          return GetAPINotesManager(source, id);
-        },
-        [&]() { return m_swift_ast_context->GetClangImporter(); }, Dem,
-        AsMangledName(type), true);
+    NodePointer print_node =
+        GetDemangleTreeForPrinting(Dem, AsMangledName(type), true);
     std::string remangled = mangleNode(print_node);
     return ConstString(SwiftLanguageRuntime::DemangleSymbolAsString(
         remangled, SwiftLanguageRuntime::eTypeName));
@@ -1467,13 +1500,8 @@ TypeSystemSwiftTypeRef::GetDisplayTypeName(opaque_compiler_type_t type,
   auto impl = [&]() {
     using namespace swift::Demangle;
     Demangler Dem;
-    NodePointer print_node = GetDemangleTreeForPrinting(
-        m_description, GetModule(),
-        [&](ClangExternalASTSourceCallbacks *source, unsigned id) {
-          return GetAPINotesManager(source, id);
-        },
-        [&]() { return m_swift_ast_context->GetClangImporter(); }, Dem,
-        AsMangledName(type), false);
+    NodePointer print_node =
+        GetDemangleTreeForPrinting(Dem, AsMangledName(type), false);
     std::string remangled = mangleNode(print_node);
     return ConstString(SwiftLanguageRuntime::DemangleSymbolAsString(
         remangled, SwiftLanguageRuntime::eDisplayTypeName, sc));
@@ -1618,15 +1646,60 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
     // Bug-for-bug compatibility. See comment in SwiftASTContext::GetBitSize().
     if (IsFunctionType(type, nullptr))
       return GetPointerByteSize() * 8;
-    if (!exe_scope)
+
+    // Clang types can be resolved even without a process.
+    if (CompilerType clang_type = GetAsClangTypeOrNull(type)) {
+      // Swift doesn't know pointers: return the size of the object
+      // pointer instead of the underlying object.
+      if (Flags(clang_type.GetTypeInfo()).AllSet(eTypeIsObjC | eTypeIsClass))
+        return GetPointerByteSize() * 8;
+      return clang_type.GetBitSize(exe_scope);
+    }
+    if (!exe_scope) {
+      LLDB_LOGF(
+          GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+          "Couldn't compute size of type %s without an execution context.",
+          AsMangledName(type));
       return {};
+    }
     if (auto *runtime =
             SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
       return runtime->GetBitSize({this, type}, exe_scope);
+
+    // If there is no process, we can still try to get the static size
+    // information out of DWARF. Because it is stored in the Type
+    // object we need to look that up by name again.
+    if (auto *M = GetModule()) {
+      swift::Demangle::Demangler Dem;
+      auto node = GetDemangledType(Dem, AsMangledName(type));
+      if (auto module_type = GetNominal(Dem, node)) {
+        // DW_AT_linkage_name is not part of the accelerator table, so
+        // we need to search by module+name.
+        ConstString module(module_type->first);
+        ConstString type(module_type->second);
+        llvm::SmallVector<CompilerContext, 2> decl_context;
+        decl_context.push_back({CompilerContextKind::Module, module});
+        decl_context.push_back({CompilerContextKind::AnyType, type});
+        llvm::DenseSet<SymbolFile *> searched_symbol_files;
+        TypeMap types;
+        M->FindTypes(decl_context,
+                     TypeSystemSwift::GetSupportedLanguagesForTypes(),
+                     searched_symbol_files, types);
+        if (!types.Empty())
+          if (auto type = types.GetTypeAtIndex(0))
+            return type->GetByteSize(nullptr);
+      }
+    }
+    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+              "Couldn't compute size of type %s without a process.",
+              AsMangledName(type));
     return {};
   };
-  VALIDATE_AND_RETURN(impl, GetBitSize, type,
-                      (ReconstructType(type), exe_scope));
+  if (exe_scope && exe_scope->CalculateProcess())
+    VALIDATE_AND_RETURN(impl, GetBitSize, type,
+                        (ReconstructType(type), exe_scope));
+  else
+    return impl();
 }
 llvm::Optional<uint64_t>
 TypeSystemSwiftTypeRef::GetByteStride(opaque_compiler_type_t type,
@@ -1704,10 +1777,47 @@ bool TypeSystemSwiftTypeRef::IsMeaninglessWithoutDynamicResolution(
   return m_swift_ast_context->IsMeaninglessWithoutDynamicResolution(
       ReconstructType(type));
 }
+
+CompilerType TypeSystemSwiftTypeRef::GetAsClangTypeOrNull(
+    lldb::opaque_compiler_type_t type) {
+  CompilerType clang_type;
+  using namespace swift::Demangle;
+  Demangler Dem;
+  NodePointer node = GetDemangledType(Dem, AsMangledName(type));
+  // Directly resolve Clang typedefs into Clang types.  Imported
+  // type aliases that point to Clang type that are also Swift builtins, like
+  // Swift.Int, otherwise would resolved to Swift types.
+  if (node && node->getKind() == Node::Kind::TypeAlias &&
+      node->getNumChildren() == 2 && node->getChild(0)->hasText() &&
+      node->getChild(0)->getText() == swift::MANGLING_MODULE_OBJC &&
+      node->getChild(1)->hasText()) {
+    auto node_clangtype = ResolveTypeAlias(GetModule(), Dem, node,
+                                           /*prefer_clang_types*/ true);
+    if (clang_type = node_clangtype.second)
+      return clang_type;
+  }
+  IsImportedType(type, &clang_type);
+  return clang_type;
+}
+
 bool TypeSystemSwiftTypeRef::IsImportedType(opaque_compiler_type_t type,
                                             CompilerType *original_type) {
-  return m_swift_ast_context->IsImportedType(ReconstructType(type),
-                                             original_type);
+  auto impl = [&]() -> bool {
+    using namespace swift::Demangle;
+    Demangler Dem;
+    NodePointer node = DemangleCanonicalType(Dem, type);
+
+    // This is an imported Objective-C type; look it up in the debug info.
+    StringRef ident = GetObjCTypeName(node);
+    if (ident.empty())
+      return {};
+    if (original_type && GetModule())
+      if (TypeSP clang_type = LookupClangType(*GetModule(), ident))
+        *original_type = clang_type->GetForwardCompilerType();
+    return true;
+  };
+  VALIDATE_AND_RETURN(impl, IsImportedType, type,
+                      (ReconstructType(type), nullptr));
 }
 CompilerType TypeSystemSwiftTypeRef::GetErrorType() {
   return m_swift_ast_context->GetErrorType();
