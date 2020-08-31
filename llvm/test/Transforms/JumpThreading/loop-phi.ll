@@ -9,7 +9,7 @@
 
 ; CHECK:      latch1:
 ; CHECK-NEXT: %tmp165 = phi i32 [ %tmp163, %body2.thread ], [ %tmp16, %body2 ]
-; CHECK-NEXT: %tmp154 = phi i32 [ %tmp165, %body2.thread ], [ %tmp14, %body2 ]
+; CHECK-NEXT: %tmp154 = phi i32 [ %tmp165, %body2.thread ], [ %tmp15, %body2 ]
 
 define i32 @test(i1 %ARG1, i1 %ARG2, i32 %n) {
 entry:
