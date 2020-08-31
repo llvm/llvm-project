@@ -143,9 +143,9 @@ class CommandLineCompletionTestCase(TestBase):
         self.assertIsNotNone(server)
         pid = server.pid
 
-        self.complete_from_to('process attach -p ', [str(pid)])
-        self.complete_from_to('platform process attach -p ', [str(pid)])
-        self.complete_from_to('platform process info ', [str(pid)])
+        self.completions_contain('process attach -p ', [str(pid)])
+        self.completions_contain('platform process attach -p ', [str(pid)])
+        self.completions_contain('platform process info ', [str(pid)])
 
         self.completions_contain_str('process attach -n ', "a.out")
         self.completions_contain_str('platform process attach -n ', "a.out")
