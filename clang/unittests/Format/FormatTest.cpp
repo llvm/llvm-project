@@ -8025,6 +8025,10 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("vector<int *const> v;");
   verifyFormat("vector<int *const **const *> v;");
   verifyFormat("vector<int *volatile> v;");
+  verifyFormat("vector<a *_Nonnull> v;");
+  verifyFormat("vector<a *_Nullable> v;");
+  verifyFormat("vector<a *_Null_unspecified> v;");
+  verifyFormat("vector<a * _NotAQualifier> v;");
   verifyFormat("vector<a * b> v;");
   verifyFormat("foo<b && false>();");
   verifyFormat("foo<b & 1>();");
@@ -8059,6 +8063,9 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyIndependentOfContext("MACRO(A *volatile a);");
   verifyIndependentOfContext("MACRO(A *__volatile a);");
   verifyIndependentOfContext("MACRO(A *__volatile__ a);");
+  verifyIndependentOfContext("MACRO(A *_Nonnull a);");
+  verifyIndependentOfContext("MACRO(A *_Nullable a);");
+  verifyIndependentOfContext("MACRO(A *_Null_unspecified a);");
   verifyIndependentOfContext("MACRO(A *__attribute__((foo)) a);");
   verifyIndependentOfContext("MACRO(A *__attribute((foo)) a);");
   verifyIndependentOfContext("MACRO('0' <= c && c <= '9');");
