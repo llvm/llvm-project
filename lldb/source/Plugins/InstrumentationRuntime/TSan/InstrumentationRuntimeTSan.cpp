@@ -833,7 +833,9 @@ bool InstrumentationRuntimeTSan::NotifyBreakpointHit(
 
   StructuredData::ObjectSP report =
       instance->RetrieveReportData(context->exe_ctx_ref);
-  std::string stop_reason_description;
+  std::string stop_reason_description =
+      "unknown thread sanitizer fault (unable to extract thread sanitizer "
+      "report)";
   if (report) {
     bool is_swift_access_race = false;
     std::string issue_description =
