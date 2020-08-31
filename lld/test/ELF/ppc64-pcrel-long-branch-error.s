@@ -5,14 +5,14 @@
 # RUN:       }' > %t.script
 
 # RUN: llvm-mc -filetype=obj -triple=ppc64le %s -o %t.o
-# RUN: not ld.lld -T %t.script %t.o -o %t 2>&1 >/dev/null | FileCheck %s
+# RUN: not ld.lld -T %t.script %t.o -o /dev/null 2>&1 | FileCheck %s
 # RUN: llvm-mc -filetype=obj -triple=ppc64le -defsym HIDDEN=1 %s -o %t.o
-# RUN: not ld.lld -shared -T %t.script %t.o -o %t.so 2>&1 >/dev/null | FileCheck %s
+# RUN: not ld.lld -shared -T %t.script %t.o -o /dev/null 2>&1 | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=ppc64 %s -o %t.o
-# RUN: not ld.lld -T %t.script %t.o -o %t 2>&1 >/dev/null | FileCheck %s
+# RUN: not ld.lld -T %t.script %t.o -o /dev/null 2>&1 | FileCheck %s
 # RUN: llvm-mc -filetype=obj -triple=ppc64 -defsym HIDDEN=1 %s -o %t.o
-# RUN: not ld.lld -shared -T %t.script %t.o -o %t.so 2>&1 >/dev/null | FileCheck %s
+# RUN: not ld.lld -shared -T %t.script %t.o -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK: error: offset overflow 34 bits, please compile using the large code model
 

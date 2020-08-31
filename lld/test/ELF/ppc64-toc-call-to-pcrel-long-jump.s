@@ -5,10 +5,10 @@
 # RUN:       }' > %t.script
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %s -o %t.o
-# RUN: not ld.lld -T %t.script %t.o -o %t 2>&1 >/dev/null | FileCheck %s
+# RUN: not ld.lld -T %t.script %t.o -o /dev/null 2>&1 | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s -o %t.o
-# RUN: not ld.lld -T %t.script %t.o -o %t 2>&1 >/dev/null | FileCheck %s
+# RUN: not ld.lld -T %t.script %t.o -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK: error: R2 save stub branch offset is too large: -268501028
 
