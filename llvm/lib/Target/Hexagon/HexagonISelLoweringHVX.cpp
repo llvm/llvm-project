@@ -1964,10 +1964,10 @@ HexagonTargetLowering::LowerHvxOperationWrapper(SDNode *N,
 
   switch (Opc) {
     case ISD::STORE: {
-      SDValue Value = cast<StoreSDNode>(N)->getValue();
-      assert(getPreferredHvxVectorAction(ty(Value)) ==
-                 TargetLoweringBase::TypeWidenVector &&
-             "Not widening?");
+      assert(
+          getPreferredHvxVectorAction(ty(cast<StoreSDNode>(N)->getValue())) ==
+              TargetLoweringBase::TypeWidenVector &&
+          "Not widening?");
       SDValue Store = WidenHvxStore(SDValue(N, 0), DAG);
       Results.push_back(Store);
       break;
