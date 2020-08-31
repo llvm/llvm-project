@@ -742,10 +742,10 @@ The syntax to capture a numeric value is
 The syntax of ``<fmtspec>`` is: ``.<precision><conversion specifier>`` where:
 
 * ``.<precision>`` is an optional printf-style precision specifier in which
- ``<precision>`` indicates the minimum number of digits that the value matched
- must have, expecting leading zeros if needed.
+  ``<precision>`` indicates the minimum number of digits that the value matched
+  must have, expecting leading zeros if needed.
 
-*  ``<conversion specifier>`` is an optional scanf-style conversion specifier
+* ``<conversion specifier>`` is an optional scanf-style conversion specifier
   to indicate what number format to match (e.g. hex number).  Currently
   accepted format specifiers are ``%u``, ``%d``, ``%x`` and ``%X``.  If absent,
   the format specifier defaults to ``%u``.
