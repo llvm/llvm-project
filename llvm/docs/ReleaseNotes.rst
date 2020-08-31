@@ -157,6 +157,14 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+Changes to Sanitizers
+---------------------
+
+The integer sanitizer `-fsanitize=integer` now has a new sanitizer:
+`-fsanitize=unsigned-shift-base`. It's not undefined behavior for an unsigned
+left shift to overflow (i.e. to shift bits out), but it has been the source of
+bugs and exploits in certain codebases in the past.
+
 External Open Source Projects Using LLVM 12
 ===========================================
 
