@@ -277,9 +277,12 @@ DWARF:
 ##                                            ^-            abbreviation code (ULEB128) 0x04
 ##                                                       ^- abbreviation code (ULEB128) 0x04
 ##
-# CODE-NEXT: 0x00000010 2e000000 052e0000 00062e00 0000
-##                               ^-                     abbreviation code ULEB128
-##                                          ^-          abbreviation code ULEB128
+# CODE-NEXT: 0x00000010 2e000000 052e0000 00062e00 00000001
+##                               ^-                         abbreviation code ULEB128
+##                                          ^-              abbreviation code ULEB128
+##                                                       ^- abbreviation code ULEB128
+# CODE-NEXT: 0x00000020 11000000 022e0000 0000
+##                               ^-                         abbreviation code ULEB128
 
 --- !ELF
 FileHeader:
@@ -300,6 +303,12 @@ DWARF:
           Tag:        DW_TAG_subprogram
           Children:   DW_CHILDREN_no
         - Tag:        DW_TAG_subprogram
+          Children:   DW_CHILDREN_no
+        - Tag:        DW_TAG_subprogram
+          Children:   DW_CHILDREN_no
+    - Table:
+        ## Test that the abbrev codes in a new table start from 1 by default.
+        - Tag:        DW_TAG_compile_unit
           Children:   DW_CHILDREN_no
         - Tag:        DW_TAG_subprogram
           Children:   DW_CHILDREN_no
