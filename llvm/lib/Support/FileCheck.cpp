@@ -13,7 +13,7 @@
 // as well as various unittests.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/FileCheck/FileCheck.h"
+#include "llvm/Support/FileCheck.h"
 #include "FileCheckImpl.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
