@@ -4367,7 +4367,7 @@ AllocaInst *llvm::findAllocaForValue(Value *V, bool OffsetZero) {
   } while (!Worklist.empty());
 
   return Result;
-};
+}
 
 static bool onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
     const Value *V, bool AllowLifetime, bool AllowDroppable) {
