@@ -883,22 +883,22 @@ define internal void @middle() {
 ; IS__CGSCC____-NEXT:    call void @non_dead_b3() [[ATTR16]]
 ; IS__CGSCC____-NEXT:    br label [[BB1:%.*]]
 ; IS__CGSCC____:       bb1:
-; IS__CGSCC____-NEXT:    call void @non_dead_b4() [[ATTR2:#.*]]
-; IS__CGSCC____-NEXT:    call void @non_dead_b5() [[ATTR2]]
-; IS__CGSCC____-NEXT:    call void @non_dead_b6() [[ATTR2]]
-; IS__CGSCC____-NEXT:    call void @non_dead_b7() [[ATTR2]]
+; IS__CGSCC____-NEXT:    call void @non_dead_b4() [[ATTR16]]
+; IS__CGSCC____-NEXT:    call void @non_dead_b5() [[ATTR16]]
+; IS__CGSCC____-NEXT:    call void @non_dead_b6() [[ATTR16]]
+; IS__CGSCC____-NEXT:    call void @non_dead_b7() [[ATTR16]]
 ; IS__CGSCC____-NEXT:    br label [[BB2:%.*]]
 ; IS__CGSCC____:       bb2:
-; IS__CGSCC____-NEXT:    call void @non_dead_b8() [[ATTR2]]
-; IS__CGSCC____-NEXT:    call void @non_dead_b9() [[ATTR2]]
-; IS__CGSCC____-NEXT:    call void @non_dead_b10() [[ATTR2]]
-; IS__CGSCC____-NEXT:    call void @non_dead_b11() [[ATTR2]]
+; IS__CGSCC____-NEXT:    call void @non_dead_b8() [[ATTR16]]
+; IS__CGSCC____-NEXT:    call void @non_dead_b9() [[ATTR16]]
+; IS__CGSCC____-NEXT:    call void @non_dead_b10() [[ATTR16]]
+; IS__CGSCC____-NEXT:    call void @non_dead_b11() [[ATTR16]]
 ; IS__CGSCC____-NEXT:    br label [[BB3:%.*]]
 ; IS__CGSCC____:       bb3:
-; IS__CGSCC____-NEXT:    call void @non_dead_b12() [[ATTR2]]
-; IS__CGSCC____-NEXT:    call void @non_dead_b13() [[ATTR2]]
-; IS__CGSCC____-NEXT:    call void @non_dead_b14() [[ATTR2]]
-; IS__CGSCC____-NEXT:    call void @non_dead_b15() [[ATTR2]]
+; IS__CGSCC____-NEXT:    call void @non_dead_b12() [[ATTR16]]
+; IS__CGSCC____-NEXT:    call void @non_dead_b13() [[ATTR16]]
+; IS__CGSCC____-NEXT:    call void @non_dead_b14() [[ATTR16]]
+; IS__CGSCC____-NEXT:    call void @non_dead_b15() [[ATTR16]]
 ; IS__CGSCC____-NEXT:    br label [[BB4:%.*]]
 ; IS__CGSCC____:       bb4:
 ; IS__CGSCC____-NEXT:    call void @non_exact2()
@@ -2186,7 +2186,7 @@ define internal i32 @switch_default(i64 %i) nounwind {
 ; IS__CGSCC____-NEXT:    ]
 ; IS__CGSCC____:       sw.default:
 ; IS__CGSCC____-NEXT:    call void @sink() [[ATTR16]]
-; IS__CGSCC____-NEXT:    ret i32 123
+; IS__CGSCC____-NEXT:    ret i32 undef
 ; IS__CGSCC____:       return:
 ; IS__CGSCC____-NEXT:    unreachable
 ;
@@ -2231,7 +2231,7 @@ define internal i32 @switch_default_dead(i64 %i) nounwind {
 ; IS__CGSCC____-NEXT:    i64 10, label [[RETURN]]
 ; IS__CGSCC____-NEXT:    ]
 ; IS__CGSCC____:       sw.default:
-; IS__CGSCC____-NEXT:    ret i32 123
+; IS__CGSCC____-NEXT:    ret i32 undef
 ; IS__CGSCC____:       return:
 ; IS__CGSCC____-NEXT:    unreachable
 ;

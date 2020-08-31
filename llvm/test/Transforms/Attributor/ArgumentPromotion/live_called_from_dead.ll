@@ -48,7 +48,7 @@ define internal i32 @caller(i32* %B) {
 ; IS__CGSCC_OPM-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; IS__CGSCC_OPM-NEXT:    store i32 1, i32* [[A]], align 4
 ; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) [[ATTR3:#.*]]
-; IS__CGSCC_OPM-NEXT:    ret i32 0
+; IS__CGSCC_OPM-NEXT:    ret i32 undef
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@caller
@@ -56,7 +56,7 @@ define internal i32 @caller(i32* %B) {
 ; IS__CGSCC_NPM-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; IS__CGSCC_NPM-NEXT:    store i32 1, i32* [[A]], align 4
 ; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) [[ATTR2:#.*]]
-; IS__CGSCC_NPM-NEXT:    ret i32 undef
+; IS__CGSCC_NPM-NEXT:    unreachable
 ;
   %A = alloca i32
   store i32 1, i32* %A

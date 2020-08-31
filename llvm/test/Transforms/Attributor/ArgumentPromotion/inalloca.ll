@@ -23,7 +23,7 @@ define internal i32 @f(%struct.ss* inalloca  %s) {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@f
-; IS__CGSCC____-SAME: (%struct.ss* inalloca nocapture nofree noundef nonnull align 4 dereferenceable(8) [[S:%.*]]) [[ATTR0:#.*]] {
+; IS__CGSCC____-SAME: (%struct.ss* inalloca noalias nocapture nofree noundef nonnull align 4 dereferenceable(8) [[S:%.*]]) [[ATTR0:#.*]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[F0:%.*]] = getelementptr [[STRUCT_SS:%.*]], %struct.ss* [[S]], i32 0, i32 0
 ; IS__CGSCC____-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
@@ -80,7 +80,7 @@ entry:
 define internal i1 @g(%struct.ss* %a, %struct.ss* inalloca %b) nounwind  {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@g
-; IS__CGSCC____-SAME: (%struct.ss* nocapture nofree nonnull readnone align 4 dereferenceable(8) [[A:%.*]], %struct.ss* inalloca nocapture nofree nonnull writeonly align 4 dereferenceable(8) [[B:%.*]]) [[ATTR1]] {
+; IS__CGSCC____-SAME: (%struct.ss* noalias nocapture nofree nonnull readnone align 4 dereferenceable(8) [[A:%.*]], %struct.ss* inalloca noalias nocapture nofree nonnull writeonly align 4 dereferenceable(8) [[B:%.*]]) [[ATTR1]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    ret i1 undef
 ;

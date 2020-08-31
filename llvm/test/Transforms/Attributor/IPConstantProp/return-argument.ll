@@ -22,7 +22,7 @@ define internal i32* @incdec(i1 %C, i32* %V) {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@incdec
-; IS__CGSCC____-SAME: (i1 [[C:%.*]], i32* nofree noundef nonnull returned align 4 dereferenceable(4) "no-capture-maybe-returned" [[V:%.*]]) [[ATTR0:#.*]] {
+; IS__CGSCC____-SAME: (i1 [[C:%.*]], i32* noalias nofree noundef nonnull returned align 4 dereferenceable(4) "no-capture-maybe-returned" [[V:%.*]]) [[ATTR0:#.*]] {
 ; IS__CGSCC____-NEXT:    [[X:%.*]] = load i32, i32* [[V]], align 4
 ; IS__CGSCC____-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; IS__CGSCC____:       T:
@@ -97,7 +97,7 @@ define void @caller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller
 ; IS__CGSCC____-SAME: (i1 [[C:%.*]]) [[ATTR1]] personality i32 (...)* @__gxx_personality_v0 {
 ; IS__CGSCC____-NEXT:    [[Q:%.*]] = alloca i32, align 4
-; IS__CGSCC____-NEXT:    [[W:%.*]] = call align 4 i32* @incdec(i1 [[C]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) [[Q]]) [[ATTR2:#.*]]
+; IS__CGSCC____-NEXT:    [[W:%.*]] = call align 4 i32* @incdec(i1 [[C]], i32* noalias nofree noundef nonnull align 4 dereferenceable(4) "no-capture-maybe-returned" [[Q]]) [[ATTR2:#.*]]
 ; IS__CGSCC____-NEXT:    [[S1:%.*]] = call { i32, i32 } @foo(i32 noundef 1, i32 noundef 2) [[ATTR3:#.*]]
 ; IS__CGSCC____-NEXT:    [[X1:%.*]] = extractvalue { i32, i32 } [[S1]], 0
 ; IS__CGSCC____-NEXT:    [[S2:%.*]] = call { i32, i32 } @foo(i32 noundef 3, i32 noundef 4) [[ATTR4:#.*]]

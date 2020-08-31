@@ -249,13 +249,12 @@ define i32 @scc_rX(i32 %a, i32 %b, i32 %r) #0 {
 ; IS__CGSCC____-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_END12:%.*]]
 ; IS__CGSCC____:       if.then3:
 ; IS__CGSCC____-NEXT:    [[CALL4:%.*]] = call i32 @sink_r0(i32 [[B]])
-; IS__CGSCC____-NEXT:    [[CALL5:%.*]] = call i32 @scc_r1(i32 [[A]], i32 [[B]], i32 [[R]])
+; IS__CGSCC____-NEXT:    [[CALL5:%.*]] = call i32 @scc_r1(i32 [[A]], i32 [[B]], i32 undef)
 ; IS__CGSCC____-NEXT:    [[CALL6:%.*]] = call i32 @scc_r2(i32 [[R]], i32 [[R]], i32 [[R]])
-; IS__CGSCC____-NEXT:    [[CALL7:%.*]] = call i32 @scc_r1(i32 [[A]], i32 [[CALL6]], i32 [[R]])
-; IS__CGSCC____-NEXT:    [[CALL8:%.*]] = call i32 @scc_r1(i32 [[A]], i32 [[B]], i32 [[R]])
+; IS__CGSCC____-NEXT:    [[CALL7:%.*]] = call i32 @scc_r1(i32 [[A]], i32 [[CALL6]], i32 undef)
+; IS__CGSCC____-NEXT:    [[CALL8:%.*]] = call i32 @scc_r1(i32 [[A]], i32 [[B]], i32 undef)
 ; IS__CGSCC____-NEXT:    [[CALL9:%.*]] = call i32 @scc_r2(i32 [[CALL5]], i32 [[CALL7]], i32 [[CALL8]])
-; IS__CGSCC____-NEXT:    [[CALL10:%.*]] = call i32 @scc_r1(i32 [[A]], i32 [[B]], i32 [[R]])
-; IS__CGSCC____-NEXT:    [[CALL11:%.*]] = call i32 @scc_r1(i32 [[CALL4]], i32 [[CALL9]], i32 [[CALL10]])
+; IS__CGSCC____-NEXT:    [[CALL11:%.*]] = call i32 @scc_r1(i32 [[CALL4]], i32 [[CALL9]], i32 undef)
 ; IS__CGSCC____-NEXT:    br label [[RETURN]]
 ; IS__CGSCC____:       if.end12:
 ; IS__CGSCC____-NEXT:    [[CMP13:%.*]] = icmp eq i32 [[A]], [[B]]
@@ -367,7 +366,7 @@ define double* @ptr_scc_r1(double* %a, double* %r, double* %b) #0 {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@ptr_scc_r1
 ; IS__CGSCC____-SAME: (double* nofree readnone [[A:%.*]], double* nofree readnone returned [[R:%.*]], double* nocapture nofree readnone [[B:%.*]]) [[ATTR1]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call double* @ptr_sink_r0(double* noalias nofree readnone [[R]]) [[ATTR6]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call double* @ptr_sink_r0(double* noalias nofree readnone "no-capture-maybe-returned" [[R]]) [[ATTR6]]
 ; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call double* @ptr_scc_r2(double* noalias nofree readnone [[R]], double* noalias nofree readnone [[A]], double* noalias nofree readnone [[CALL]]) [[ATTR7]]
 ; IS__CGSCC____-NEXT:    ret double* [[CALL1]]
 ;
@@ -422,14 +421,14 @@ define double* @ptr_scc_r2(double* %a, double* %b, double* %r) #0 {
 ; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp ugt double* [[A]], [[B]]
 ; IS__CGSCC____-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; IS__CGSCC____:       if.then:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call double* @ptr_sink_r0(double* noalias nofree readnone [[R]]) [[ATTR6]]
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call double* @ptr_sink_r0(double* noalias nofree readnone "no-capture-maybe-returned" [[R]]) [[ATTR6]]
 ; IS__CGSCC____-NEXT:    [[CALL1:%.*]] = call double* @ptr_scc_r2(double* noalias nofree readnone [[B]], double* noalias nofree readnone [[A]], double* noalias nofree readnone [[CALL]]) [[ATTR7]]
 ; IS__CGSCC____-NEXT:    br label [[RETURN:%.*]]
 ; IS__CGSCC____:       if.end:
 ; IS__CGSCC____-NEXT:    [[CMP2:%.*]] = icmp ult double* [[A]], [[B]]
 ; IS__CGSCC____-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_END12:%.*]]
 ; IS__CGSCC____:       if.then3:
-; IS__CGSCC____-NEXT:    [[CALL4:%.*]] = call double* @ptr_sink_r0(double* noalias nofree readnone [[B]])
+; IS__CGSCC____-NEXT:    [[CALL4:%.*]] = call double* @ptr_sink_r0(double* noalias nofree readnone "no-capture-maybe-returned" [[B]])
 ; IS__CGSCC____-NEXT:    [[CALL5:%.*]] = call double* @ptr_scc_r1(double* noalias nofree readnone [[A]], double* noalias nofree readnone [[B]], double* noalias nocapture nofree readnone undef) [[ATTR7]]
 ; IS__CGSCC____-NEXT:    [[CALL6:%.*]] = call double* @ptr_scc_r2(double* noalias nofree readnone [[R]], double* noalias nofree readnone [[R]], double* noalias nofree readnone [[R]]) [[ATTR7]]
 ; IS__CGSCC____-NEXT:    [[CALL7:%.*]] = call double* @ptr_scc_r1(double* noalias nofree readnone [[A]], double* noalias nofree readnone [[CALL6]], double* noalias nocapture nofree readnone undef) [[ATTR7]]
@@ -1475,35 +1474,20 @@ define weak_odr align 16 i32* @non_exact_4(i32* align 32 %a) {
 ; We can use the return information of the weak function non_exact_4.
 ; FIXME: %c2 and %c3 should be replaced but not %c0 or %c1!
 define i32 @exact(i32* align 8 %a, i32* align 8 %b) {
-; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@exact
-; NOT_CGSCC_NPM-SAME: (i32* align 8 [[A:%.*]], i32* align 8 [[B:%.*]]) {
-; NOT_CGSCC_NPM-NEXT:    [[C0:%.*]] = call i32 @non_exact_0()
-; NOT_CGSCC_NPM-NEXT:    [[C1:%.*]] = call i32 @non_exact_1(i32 noundef 1)
-; NOT_CGSCC_NPM-NEXT:    [[C2:%.*]] = call i32 @non_exact_2(i32 noundef 2)
-; NOT_CGSCC_NPM-NEXT:    [[C3:%.*]] = call align 32 i32* @non_exact_3(i32* align 32 [[A]])
-; NOT_CGSCC_NPM-NEXT:    [[C4:%.*]] = call align 16 i32* @non_exact_4(i32* align 32 [[B]])
-; NOT_CGSCC_NPM-NEXT:    [[C3L:%.*]] = load i32, i32* [[C3]], align 32
-; NOT_CGSCC_NPM-NEXT:    [[C4L:%.*]] = load i32, i32* [[C4]], align 16
-; NOT_CGSCC_NPM-NEXT:    [[ADD1:%.*]] = add i32 [[C0]], [[C1]]
-; NOT_CGSCC_NPM-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[C2]]
-; NOT_CGSCC_NPM-NEXT:    [[ADD3:%.*]] = add i32 [[ADD2]], [[C3L]]
-; NOT_CGSCC_NPM-NEXT:    [[ADD4:%.*]] = add i32 [[ADD3]], [[C4L]]
-; NOT_CGSCC_NPM-NEXT:    ret i32 [[ADD4]]
-;
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@exact
-; IS__CGSCC_NPM-SAME: (i32* align 8 [[A:%.*]], i32* align 8 [[B:%.*]]) {
-; IS__CGSCC_NPM-NEXT:    [[C0:%.*]] = call i32 @non_exact_0()
-; IS__CGSCC_NPM-NEXT:    [[C1:%.*]] = call i32 @non_exact_1(i32 noundef 1)
-; IS__CGSCC_NPM-NEXT:    [[C2:%.*]] = call i32 @non_exact_2(i32 noundef 2)
-; IS__CGSCC_NPM-NEXT:    [[C3:%.*]] = call align 32 i32* @non_exact_3(i32* align 32 [[A]])
-; IS__CGSCC_NPM-NEXT:    [[C4:%.*]] = call align 16 i32* @non_exact_4(i32* align 32 [[B]])
-; IS__CGSCC_NPM-NEXT:    [[C3L:%.*]] = load i32, i32* [[C3]], align 32
-; IS__CGSCC_NPM-NEXT:    [[C4L:%.*]] = load i32, i32* [[C4]], align 16
-; IS__CGSCC_NPM-NEXT:    [[ADD1:%.*]] = add i32 [[C0]], [[C1]]
-; IS__CGSCC_NPM-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], 2
-; IS__CGSCC_NPM-NEXT:    [[ADD3:%.*]] = add i32 [[ADD2]], [[C3L]]
-; IS__CGSCC_NPM-NEXT:    [[ADD4:%.*]] = add i32 [[ADD3]], [[C4L]]
-; IS__CGSCC_NPM-NEXT:    ret i32 [[ADD4]]
+; CHECK-LABEL: define {{[^@]+}}@exact
+; CHECK-SAME: (i32* align 8 [[A:%.*]], i32* align 8 [[B:%.*]]) {
+; CHECK-NEXT:    [[C0:%.*]] = call i32 @non_exact_0()
+; CHECK-NEXT:    [[C1:%.*]] = call i32 @non_exact_1(i32 noundef 1)
+; CHECK-NEXT:    [[C2:%.*]] = call i32 @non_exact_2(i32 noundef 2)
+; CHECK-NEXT:    [[C3:%.*]] = call align 32 i32* @non_exact_3(i32* align 32 [[A]])
+; CHECK-NEXT:    [[C4:%.*]] = call align 16 i32* @non_exact_4(i32* align 32 [[B]])
+; CHECK-NEXT:    [[C3L:%.*]] = load i32, i32* [[C3]], align 32
+; CHECK-NEXT:    [[C4L:%.*]] = load i32, i32* [[C4]], align 16
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[C0]], [[C1]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[C2]]
+; CHECK-NEXT:    [[ADD3:%.*]] = add i32 [[ADD2]], [[C3L]]
+; CHECK-NEXT:    [[ADD4:%.*]] = add i32 [[ADD3]], [[C4L]]
+; CHECK-NEXT:    ret i32 [[ADD4]]
 ;
   %c0 = call i32 @non_exact_0()
   %c1 = call i32 @non_exact_1(i32 1)
@@ -1560,7 +1544,7 @@ define i32* @dont_use_const() #0 {
 ; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@dont_use_const
 ; IS__CGSCC____-SAME: () [[ATTR0]] {
-; IS__CGSCC____-NEXT:    [[C:%.*]] = musttail call noundef nonnull dereferenceable(1) i32* @ret_const() [[ATTR6]]
+; IS__CGSCC____-NEXT:    [[C:%.*]] = musttail call i32* @ret_const() [[ATTR6]]
 ; IS__CGSCC____-NEXT:    ret i32* [[C]]
 ;
   %c = musttail call i32* @ret_const()

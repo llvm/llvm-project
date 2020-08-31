@@ -30,16 +30,16 @@ define i8* @start(i8 %v) {
 ; IS__CGSCC____-NEXT:    [[C1:%.*]] = icmp eq i8 [[V]], 0
 ; IS__CGSCC____-NEXT:    br i1 [[C1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; IS__CGSCC____:       true:
-; IS__CGSCC____-NEXT:    [[CA:%.*]] = musttail call noalias noundef align 536870912 i8* @side_effects(i8 [[V]])
+; IS__CGSCC____-NEXT:    [[CA:%.*]] = musttail call i8* @side_effects(i8 [[V]])
 ; IS__CGSCC____-NEXT:    ret i8* [[CA]]
 ; IS__CGSCC____:       false:
 ; IS__CGSCC____-NEXT:    [[C2:%.*]] = icmp eq i8 [[V]], 1
 ; IS__CGSCC____-NEXT:    br i1 [[C2]], label [[C2_TRUE:%.*]], label [[C2_FALSE:%.*]]
 ; IS__CGSCC____:       c2_true:
-; IS__CGSCC____-NEXT:    [[CA1:%.*]] = musttail call noalias noundef align 536870912 i8* @no_side_effects(i8 [[V]])
+; IS__CGSCC____-NEXT:    [[CA1:%.*]] = musttail call i8* @no_side_effects(i8 undef)
 ; IS__CGSCC____-NEXT:    ret i8* [[CA1]]
 ; IS__CGSCC____:       c2_false:
-; IS__CGSCC____-NEXT:    [[CA2:%.*]] = musttail call noalias noundef align 536870912 i8* @dont_zap_me(i8 [[V]])
+; IS__CGSCC____-NEXT:    [[CA2:%.*]] = musttail call i8* @dont_zap_me(i8 undef)
 ; IS__CGSCC____-NEXT:    ret i8* [[CA2]]
 ;
   %c1 = icmp eq i8 %v, 0
@@ -61,17 +61,11 @@ c2_false:
 }
 
 define internal i8* @side_effects(i8 %v) {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@side_effects
-; IS__TUNIT____-SAME: (i8 [[V:%.*]]) {
-; IS__TUNIT____-NEXT:    [[I1:%.*]] = call i32 @external()
-; IS__TUNIT____-NEXT:    [[CA:%.*]] = musttail call i8* @start(i8 [[V]])
-; IS__TUNIT____-NEXT:    ret i8* [[CA]]
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@side_effects
-; IS__CGSCC____-SAME: (i8 [[V:%.*]]) {
-; IS__CGSCC____-NEXT:    [[I1:%.*]] = call i32 @external()
-; IS__CGSCC____-NEXT:    [[CA:%.*]] = musttail call noalias noundef align 536870912 i8* @start(i8 [[V]])
-; IS__CGSCC____-NEXT:    ret i8* [[CA]]
+; CHECK-LABEL: define {{[^@]+}}@side_effects
+; CHECK-SAME: (i8 [[V:%.*]]) {
+; CHECK-NEXT:    [[I1:%.*]] = call i32 @external()
+; CHECK-NEXT:    [[CA:%.*]] = musttail call i8* @start(i8 [[V]])
+; CHECK-NEXT:    ret i8* [[CA]]
 ;
   %i1 = call i32 @external()
 
@@ -89,21 +83,16 @@ define internal i8* @no_side_effects(i8 %v) readonly nounwind {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@no_side_effects
 ; IS__CGSCC____-SAME: (i8 [[V:%.*]]) [[ATTR0:#.*]] {
-; IS__CGSCC____-NEXT:    ret i8* null
+; IS__CGSCC____-NEXT:    ret i8* undef
 ;
   ret i8* null
 }
 
 define internal i8* @dont_zap_me(i8 %v) {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@dont_zap_me
-; IS__TUNIT____-SAME: (i8 [[V:%.*]]) {
-; IS__TUNIT____-NEXT:    [[I1:%.*]] = call i32 @external()
-; IS__TUNIT____-NEXT:    ret i8* undef
-;
-; IS__CGSCC____-LABEL: define {{[^@]+}}@dont_zap_me
-; IS__CGSCC____-SAME: (i8 [[V:%.*]]) {
-; IS__CGSCC____-NEXT:    [[I1:%.*]] = call i32 @external()
-; IS__CGSCC____-NEXT:    ret i8* null
+; CHECK-LABEL: define {{[^@]+}}@dont_zap_me
+; CHECK-SAME: (i8 [[V:%.*]]) {
+; CHECK-NEXT:    [[I1:%.*]] = call i32 @external()
+; CHECK-NEXT:    ret i8* undef
 ;
   %i1 = call i32 @external()
   ret i8* null

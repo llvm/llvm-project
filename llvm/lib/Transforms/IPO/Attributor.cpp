@@ -1298,8 +1298,11 @@ ChangeStatus Attributor::cleanupIR() {
   for (Function *Fn : CGModifiedFunctions)
     CGUpdater.reanalyzeFunction(*Fn);
 
-  for (Function *Fn : ToBeDeletedFunctions)
+  for (Function *Fn : ToBeDeletedFunctions) {
+    if (!Functions.count(Fn))
+      continue;
     CGUpdater.removeFunction(*Fn);
+  }
 
   if (!ToBeDeletedFunctions.empty())
     ManifestChange = ChangeStatus::CHANGED;
@@ -1607,7 +1610,7 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
     Function *OldFn = It.getFirst();
 
     // Deleted functions do not require rewrites.
-    if (ToBeDeletedFunctions.count(OldFn))
+    if (!Functions.count(OldFn) || ToBeDeletedFunctions.count(OldFn))
       continue;
 
     const SmallVectorImpl<std::unique_ptr<ArgumentReplacementInfo>> &ARIs =

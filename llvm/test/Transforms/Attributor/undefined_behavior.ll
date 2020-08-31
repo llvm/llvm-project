@@ -92,7 +92,7 @@ define internal i32* @ret_null() {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@ret_null
 ; IS__CGSCC____-SAME: () [[ATTR0]] {
-; IS__CGSCC____-NEXT:    ret i32* null
+; IS__CGSCC____-NEXT:    ret i32* undef
 ;
   ret i32* null
 }
@@ -596,7 +596,7 @@ define internal i32 @callee(i1 %C, i32* %A) {
 ; IS__CGSCC____:       T:
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       F:
-; IS__CGSCC____-NEXT:    ret i32 1
+; IS__CGSCC____-NEXT:    ret i32 undef
 ;
 entry:
   %A.0 = load i32, i32* null
