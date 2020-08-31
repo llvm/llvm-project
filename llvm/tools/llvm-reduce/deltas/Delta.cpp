@@ -14,6 +14,7 @@
 
 #include "Delta.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <fstream>
@@ -105,6 +106,9 @@ void llvm::runDeltaPass(
       errs() << "\nInput isn't interesting! Verify interesting-ness test\n";
       exit(1);
     }
+
+    assert(!verifyModule(*Program, &errs()) &&
+           "input module is broken before making changes");
   }
 
   std::vector<Chunk> ChunksStillConsideredInteresting = {{1, Targets}};
@@ -134,6 +138,13 @@ void llvm::runDeltaPass(
       std::unique_ptr<Module> Clone = CloneModule(*Test.getProgram());
       // Generate Module with only Targets inside Current Chunks
       ExtractChunksFromModule(CurrentChunks, Clone.get());
+
+      // Some reductions may result in invalid IR. Skip such reductions.
+      if (verifyModule(*Clone.get(), &errs())) {
+        errs() << " **** WARNING | reduction resulted in invalid module, "
+                  "skipping\n";
+        continue;
+      }
 
       errs() << "Ignoring: ";
       ChunkToCheckForUninterestingness.print();
