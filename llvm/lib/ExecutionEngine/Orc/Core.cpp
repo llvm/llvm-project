@@ -1918,7 +1918,7 @@ JITDylib::getDFSLinkOrder(ArrayRef<std::shared_ptr<JITDylib>> JDs) {
     }
     return Result;
   });
-};
+}
 
 std::vector<std::shared_ptr<JITDylib>>
 JITDylib::getReverseDFSLinkOrder(ArrayRef<std::shared_ptr<JITDylib>> JDs) {
