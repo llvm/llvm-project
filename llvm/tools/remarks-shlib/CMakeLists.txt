@@ -10,6 +10,11 @@ set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/Remarks.exports)
 
 add_llvm_library(Remarks SHARED INSTALL_WITH_TOOLCHAIN ${SOURCES})
 
+if (LLVM_INTEGRATED_CRT_ALLOC AND MSVC)
+  # Make sure we search LLVMSupport first, before the CRT libs
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -INCLUDE:malloc")
+endif()
+  
 install(FILES ${LLVM_MAIN_INCLUDE_DIR}/llvm-c/Remarks.h
   DESTINATION include/llvm-c
   COMPONENT Remarks)

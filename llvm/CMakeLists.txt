@@ -567,6 +567,19 @@ option (LLVM_BUILD_EXTERNAL_COMPILER_RT
 option (LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO
   "Show target and host info when tools are invoked with --version." ON)
 
+option(LLVM_INTEGRATED_CRT_ALLOC "Replace the Windows CRT allocator with any of {rpmalloc|mimalloc|snmalloc}. Only works with /MT enabled." OFF)
+if(LLVM_INTEGRATED_CRT_ALLOC)
+  if(NOT WIN32)
+    message(FATAL_ERROR "LLVM_INTEGRATED_CRT_ALLOC is only supported on Windows.")
+  endif()
+  if(LLVM_USE_SANITIZER)
+    message(FATAL_ERROR "LLVM_INTEGRATED_CRT_ALLOC cannot be used along with LLVM_USE_SANITIZER!")
+  endif()
+  if(CMAKE_BUILD_TYPE AND uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+    message(FATAL_ERROR "The Debug target isn't supported along with LLVM_INTEGRATED_CRT_ALLOC!")
+  endif()
+endif()
+
 # You can configure which libraries from LLVM you want to include in the
 # shared library by setting LLVM_DYLIB_COMPONENTS to a semi-colon delimited
 # list of LLVM components. All component names handled by llvm-config are valid.
