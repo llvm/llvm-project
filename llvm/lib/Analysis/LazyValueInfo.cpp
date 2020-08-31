@@ -656,7 +656,7 @@ bool LazyValueInfoImpl::isNonNullAtEndOfBlock(Value *Val, BasicBlock *BB) {
     return false;
 
   Val = getUnderlyingObject(Val);
-  return TheCache.isNonNullAtEndOfBlock(Val, BB, [this](BasicBlock *BB) {
+  return TheCache.isNonNullAtEndOfBlock(Val, BB, [](BasicBlock *BB) {
     NonNullPointerSet NonNullPointers;
     for (Instruction &I : *BB)
       AddNonNullPointersByInstruction(&I, NonNullPointers);
