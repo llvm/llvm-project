@@ -81,8 +81,8 @@ class Defined : public Symbol {
 public:
   Defined(StringRefZ name, InputSection *isec, uint32_t value, bool isWeakDef,
           bool isExternal)
-      : Symbol(DefinedKind, name), isec(isec), value(value), weakDef(isWeakDef),
-        external(isExternal) {}
+      : Symbol(DefinedKind, name), isec(isec), value(value),
+        overridesWeakDef(false), weakDef(isWeakDef), external(isExternal) {}
 
   bool isWeakDef() const override { return weakDef; }
 
@@ -101,9 +101,11 @@ public:
   InputSection *isec;
   uint32_t value;
 
+  bool overridesWeakDef : 1;
+
 private:
-  const bool weakDef;
-  const bool external;
+  const bool weakDef : 1;
+  const bool external : 1;
 };
 
 class Undefined : public Symbol {
@@ -182,14 +184,14 @@ union SymbolUnion {
 };
 
 template <typename T, typename... ArgT>
-void replaceSymbol(Symbol *s, ArgT &&... arg) {
+T *replaceSymbol(Symbol *s, ArgT &&... arg) {
   static_assert(sizeof(T) <= sizeof(SymbolUnion), "SymbolUnion too small");
   static_assert(alignof(T) <= alignof(SymbolUnion),
                 "SymbolUnion not aligned enough");
   assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr &&
          "Not a Symbol");
 
-  new (s) T(std::forward<ArgT>(arg)...);
+  return new (s) T(std::forward<ArgT>(arg)...);
 }
 
 } // namespace macho

@@ -9,12 +9,20 @@
 # RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -L%t -lweak-defines -o %t/binds-to-weak %t/binds-to-weak.o
 # RUN: llvm-readobj --file-headers %t/binds-to-weak | FileCheck %s --check-prefix=WEAK-BINDS-ONLY
 
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/overrides-weak.s -o %t/overrides-weak.o
+# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -L%t -lweak-defines -o %t/overrides-weak %t/overrides-weak.o
+# RUN: llvm-readobj --file-headers %t/overrides-weak | FileCheck %s --check-prefix=WEAK-DEFINES-ONLY
+
 # WEAK-DEFINES-AND-BINDS: MH_BINDS_TO_WEAK
 # WEAK-DEFINES-AND-BINDS: MH_WEAK_DEFINES
 
 # WEAK-BINDS-ONLY-NOT:    MH_WEAK_DEFINES
 # WEAK-BINDS-ONLY:        MH_BINDS_TO_WEAK
 # WEAK-BINDS-ONLY-NOT:    MH_WEAK_DEFINES
+
+# WEAK-DEFINES-ONLY-NOT:  MH_BINDS_TO_WEAK
+# WEAK-DEFINES-ONLY:      MH_WEAK_DEFINES
+# WEAK-DEFINES-ONLY-NOT:  MH_BINDS_TO_WEAK
 
 #--- libweak-defines.s
 
@@ -33,3 +41,11 @@ _main:
 ## Don't generate MH_WEAK_DEFINES for weak locals
 .weak_definition _weak_local
 _weak_local:
+
+#--- overrides-weak.s
+
+.globl _main, _foo
+_foo:
+
+_main:
+  ret

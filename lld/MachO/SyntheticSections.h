@@ -38,6 +38,7 @@ constexpr const char threadPtrs[] = "__thread_ptrs";
 
 } // namespace section_names
 
+class Defined;
 class DylibSymbol;
 class LoadCommand;
 
@@ -189,9 +190,16 @@ struct WeakBindingEntry {
       : symbol(symbol), target(std::move(target)) {}
 };
 
-// Stores bind opcodes for telling dyld which weak symbols to load. Note that
-// the bind opcodes will only refer to these symbols by name, but will not
-// specify which dylib to load them from.
+// Stores bind opcodes for telling dyld which weak symbols need coalescing.
+// There are two types of entries in this section:
+//
+//   1) Non-weak definitions: This is a symbol definition that weak symbols in
+//   other dylibs should coalesce to.
+//
+//   2) Weak bindings: These tell dyld that a given symbol reference should
+//   coalesce to a non-weak definition if one is found. Note that unlike in the
+//   entries in the BindingSection, the bindings here only refer to these
+//   symbols by name, but do not specify which dylib to load them from.
 class WeakBindingSection : public LinkEditSection {
 public:
   WeakBindingSection();
@@ -201,7 +209,9 @@ public:
   // offsets are recorded in the LC_DYLD_INFO_ONLY load command, instead of in
   // section headers.
   bool isHidden() const override { return true; }
-  bool isNeeded() const override { return !bindings.empty(); }
+  bool isNeeded() const override {
+    return !bindings.empty() || !definitions.empty();
+  }
 
   void writeTo(uint8_t *buf) const override;
 
@@ -210,8 +220,17 @@ public:
     bindings.emplace_back(symbol, BindingTarget(section, offset, addend));
   }
 
+  bool hasEntry() const { return !bindings.empty(); }
+
+  void addNonWeakDefinition(const Defined *defined) {
+    definitions.emplace_back(defined);
+  }
+
+  bool hasNonWeakDefinition() const { return !definitions.empty(); }
+
 private:
   std::vector<WeakBindingEntry> bindings;
+  std::vector<const Defined *> definitions;
   SmallVector<char, 128> contents;
 };
 
