@@ -26,6 +26,7 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
+#include "llvm/Analysis/ValueTracking.h"
 
 using namespace llvm;
 using namespace omp;
@@ -379,6 +380,87 @@ struct OMPInformationCache : public InformationCache {
   SmallPtrSetImpl<Kernel> &Kernels;
 };
 
+/// Used to map the values physically (in the IR) stored in an offload
+/// array, to a vector in memory.
+struct OffloadArray {
+  /// Physical array (in the IR).
+  AllocaInst *Array = nullptr;
+  /// Mapped values.
+  SmallVector<Value *, 8> StoredValues;
+  /// Last stores made in the offload array.
+  SmallVector<StoreInst *, 8> LastAccesses;
+
+  OffloadArray() = default;
+
+  /// Initializes the OffloadArray with the values stored in \p Array before
+  /// instruction \p Before is reached. Returns false if the initialization
+  /// fails.
+  /// This MUST be used immediately after the construction of the object.
+  bool initialize(AllocaInst &Array, Instruction &Before) {
+    if (!Array.getAllocatedType()->isArrayTy())
+      return false;
+
+    if (!getValues(Array, Before))
+      return false;
+
+    this->Array = &Array;
+    return true;
+  }
+
+private:
+  /// Traverses the BasicBlock where \p Array is, collecting the stores made to
+  /// \p Array, leaving StoredValues with the values stored before the
+  /// instruction \p Before is reached.
+  bool getValues(AllocaInst &Array, Instruction &Before) {
+    // Initialize container.
+    const uint64_t NumValues =
+        Array.getAllocatedType()->getArrayNumElements();
+    StoredValues.assign(NumValues, nullptr);
+    LastAccesses.assign(NumValues, nullptr);
+
+    // TODO: This assumes the instruction \p Before is in the same
+    //  BasicBlock as Array. Make it general, for any control flow graph.
+    BasicBlock *BB = Array.getParent();
+    if (BB != Before.getParent())
+      return false;
+
+    const DataLayout &DL = Array.getModule()->getDataLayout();
+    const unsigned int PointerSize = DL.getPointerSize();
+
+    for (Instruction &I : *BB) {
+      if (&I == &Before)
+        break;
+
+      if (!isa<StoreInst>(&I))
+        continue;
+
+      auto *S = cast<StoreInst>(&I);
+      int64_t Offset = -1;
+      auto *Dst = GetPointerBaseWithConstantOffset(S->getPointerOperand(),
+                                                   Offset, DL);
+      if (Dst == &Array) {
+        int64_t Idx = Offset / PointerSize;
+        StoredValues[Idx] = getUnderlyingObject(S->getValueOperand());
+        LastAccesses[Idx] = S;
+      }
+    }
+
+    return isFilled();
+  }
+
+  /// Returns true if all values in StoredValues and
+  /// LastAccesses are not nullptrs.
+  bool isFilled() {
+    const unsigned NumValues = StoredValues.size();
+    for (unsigned I = 0; I < NumValues; ++I) {
+      if (!StoredValues[I] || !LastAccesses[I])
+        return false;
+    }
+
+    return true;
+  }
+};
+
 struct OpenMPOpt {
 
   using OptimizationRemarkGetter =
@@ -589,6 +671,12 @@ private:
       if (!RTCall)
         return false;
 
+      OffloadArray OffloadArrays[3];
+      if (!getValuesInOffloadArrays(*RTCall, OffloadArrays))
+        return false;
+
+      LLVM_DEBUG(dumpValuesInOffloadArrays(OffloadArrays));
+
       // TODO: Check if can be moved upwards.
       bool WasSplit = false;
       Instruction *WaitMovementPoint = canBeMovedDownwards(*RTCall);
@@ -601,6 +689,93 @@ private:
     RFI.foreachUse(SCC, SplitMemTransfers);
 
     return Changed;
+  }
+
+  /// Maps the values stored in the offload arrays passed as arguments to
+  /// \p RuntimeCall into the offload arrays in \p OAs.
+  bool getValuesInOffloadArrays(CallInst &RuntimeCall,
+                                MutableArrayRef<OffloadArray> OAs) {
+    assert(OAs.size() == 3 && "Need space for three offload arrays!");
+
+    // A runtime call that involves memory offloading looks something like:
+    // call void @__tgt_target_data_begin_mapper(arg0, arg1,
+    //   i8** %offload_baseptrs, i8** %offload_ptrs, i64* %offload_sizes,
+    // ...)
+    // So, the idea is to access the allocas that allocate space for these
+    // offload arrays, offload_baseptrs, offload_ptrs, offload_sizes.
+    // Therefore:
+    // i8** %offload_baseptrs.
+    const unsigned BasePtrsArgNum = 2;
+    Value *BasePtrsArg = RuntimeCall.getArgOperand(BasePtrsArgNum);
+    // i8** %offload_ptrs.
+    const unsigned PtrsArgNum = 3;
+    Value *PtrsArg = RuntimeCall.getArgOperand(PtrsArgNum);
+    // i8** %offload_sizes.
+    const unsigned SizesArgNum = 4;
+    Value *SizesArg = RuntimeCall.getArgOperand(SizesArgNum);
+
+    // Get values stored in **offload_baseptrs.
+    auto *V = getUnderlyingObject(BasePtrsArg);
+    if (!isa<AllocaInst>(V))
+      return false;
+    auto *BasePtrsArray = cast<AllocaInst>(V);
+    if (!OAs[0].initialize(*BasePtrsArray, RuntimeCall))
+      return false;
+
+    // Get values stored in **offload_baseptrs.
+    V = getUnderlyingObject(PtrsArg);
+    if (!isa<AllocaInst>(V))
+      return false;
+    auto *PtrsArray = cast<AllocaInst>(V);
+    if (!OAs[1].initialize(*PtrsArray, RuntimeCall))
+      return false;
+
+    // Get values stored in **offload_sizes.
+    V = getUnderlyingObject(SizesArg);
+    // If it's a [constant] global array don't analyze it.
+    if (isa<GlobalValue>(V))
+      return isa<Constant>(V);
+    if (!isa<AllocaInst>(V))
+      return false;
+
+    auto *SizesArray = cast<AllocaInst>(V);
+    if (!OAs[2].initialize(*SizesArray, RuntimeCall))
+      return false;
+
+    return true;
+  }
+
+  /// Prints the values in the OffloadArrays \p OAs using LLVM_DEBUG.
+  /// For now this is a way to test that the function getValuesInOffloadArrays
+  /// is working properly.
+  /// TODO: Move this to a unittest when unittests are available for OpenMPOpt.
+  void dumpValuesInOffloadArrays(ArrayRef<OffloadArray> OAs) {
+    assert(OAs.size() == 3 && "There are three offload arrays to debug!");
+
+    LLVM_DEBUG(dbgs() << TAG << " Successfully got offload values:\n");
+    std::string ValuesStr;
+    raw_string_ostream Printer(ValuesStr);
+    std::string Separator = " --- ";
+
+    for (auto *BP : OAs[0].StoredValues) {
+      BP->print(Printer);
+      Printer << Separator;
+    }
+    LLVM_DEBUG(dbgs() << "\t\toffload_baseptrs: " << Printer.str() << "\n");
+    ValuesStr.clear();
+
+    for (auto *P : OAs[1].StoredValues) {
+      P->print(Printer);
+      Printer << Separator;
+    }
+    LLVM_DEBUG(dbgs() << "\t\toffload_ptrs: " << Printer.str() << "\n");
+    ValuesStr.clear();
+
+    for (auto *S : OAs[2].StoredValues) {
+      S->print(Printer);
+      Printer << Separator;
+    }
+    LLVM_DEBUG(dbgs() << "\t\toffload_sizes: " << Printer.str() << "\n");
   }
 
   /// Returns the instruction where the "wait" counterpart \p RuntimeCall can be
