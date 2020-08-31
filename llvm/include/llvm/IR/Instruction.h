@@ -532,7 +532,7 @@ public:
   /// In LLVM, these are the commutative operators, plus SetEQ and SetNE, when
   /// applied to any type.
   ///
-  bool isCommutative() const { return isCommutative(getOpcode()); }
+  bool isCommutative() const LLVM_READONLY;
   static bool isCommutative(unsigned Opcode) {
     switch (Opcode) {
     case Add: case FAdd:
