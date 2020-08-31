@@ -171,9 +171,13 @@ public:
 
   uint64_t getFileOffset() const override;
 
+  bool isWeakDef() const override { return false; }
+
+  bool isTlv() const override { return false; }
+
   static constexpr StringRef name = "___dso_handle";
 
-  static bool classof(const Symbol *s) { return s->kind() == DefinedKind; }
+  static bool classof(const Symbol *s) { return s->kind() == DSOHandleKind; }
 };
 
 union SymbolUnion {
