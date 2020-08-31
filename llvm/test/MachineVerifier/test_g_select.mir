@@ -1,5 +1,5 @@
 #RUN: not --crash llc -march=aarch64 -run-pass=none -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
-# REQUIRES: global-isel, aarch64-registered-target
+# REQUIRES: aarch64-registered-target
 
 ---
 name:            test_select
