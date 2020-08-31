@@ -70,6 +70,12 @@ Improvements to clang-tidy
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- New :doc:`cppcoreguidelines-prefer-member-initializer
+  <clang-tidy/checks/cppcoreguidelines-prefer-member-initializer>` check.
+
+  Finds member initializations in the constructor body which can be placed into
+  the initialization list instead.
+
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability-identifier-naming>` check.
 
