@@ -46,6 +46,12 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
 
+// CHECK-NEXT: UnwindInformation [
+// CHECK-NEXT:   RuntimeFunction {
+// CHECK-NEXT:     Function: func
+// CHECK-NEXT:     ExceptionRecord: .xdata
+// CHECK-NEXT:     ExceptionData {
+// CHECK-NEXT:       FunctionLength: 8
 
     .text
     .globl func
