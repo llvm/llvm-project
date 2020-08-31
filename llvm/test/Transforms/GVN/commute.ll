@@ -34,8 +34,7 @@ declare i32 @llvm.umax.i32(i32, i32)
 define void @intrinsic(i32 %x, i32 %y) {
 ; CHECK-LABEL: @intrinsic(
 ; CHECK-NEXT:    [[M1:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
-; CHECK-NEXT:    [[M2:%.*]] = call i32 @llvm.umax.i32(i32 [[Y]], i32 [[X]])
-; CHECK-NEXT:    call void @use(i32 [[M1]], i32 [[M2]])
+; CHECK-NEXT:    call void @use(i32 [[M1]], i32 [[M1]])
 ; CHECK-NEXT:    ret void
 ;
   %m1 = call i32 @llvm.umax.i32(i32 %x, i32 %y)
