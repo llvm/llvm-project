@@ -2935,13 +2935,6 @@ void InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass) {
   const auto &RtPtrChecking = *LAI->getRuntimePointerChecking();
   if (!RtPtrChecking.Need)
     return;
-  Instruction *FirstCheckInst;
-  Instruction *MemRuntimeCheck;
-  std::tie(FirstCheckInst, MemRuntimeCheck) =
-      addRuntimeChecks(MemCheckBlock->getTerminator(), OrigLoop,
-                       RtPtrChecking.getChecks(), RtPtrChecking.getSE());
-  assert(MemRuntimeCheck && "no RT checks generated although RtPtrChecking "
-                            "claimed checks are required");
 
   if (MemCheckBlock->getParent()->hasOptSize() || OptForSizeBasedOnProfile) {
     assert(Cost->Hints->getForce() == LoopVectorizeHints::FK_Enabled &&
@@ -2956,6 +2949,14 @@ void InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass) {
                 "(e.g., adding 'restrict').";
     });
   }
+
+  Instruction *FirstCheckInst;
+  Instruction *MemRuntimeCheck;
+  std::tie(FirstCheckInst, MemRuntimeCheck) =
+      addRuntimeChecks(MemCheckBlock->getTerminator(), OrigLoop,
+                       RtPtrChecking.getChecks(), RtPtrChecking.getSE());
+  assert(MemRuntimeCheck && "no RT checks generated although RtPtrChecking "
+                            "claimed checks are required");
 
   MemCheckBlock->setName("vector.memcheck");
   // Create new preheader for vector loop.
