@@ -85,10 +85,6 @@ define i32 @test_memcmp_const_size(i8* noalias %foo) {
 ; CHECK-NEXT:    store i8 49, i8* [[STACK_PTR]], align 1
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, i8* [[STACK_PTR]], i64 1
 ; CHECK-NEXT:    store i8 50, i8* [[GEP_1]], align 1
-; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr i8, i8* [[STACK_PTR]], i64 2
-; CHECK-NEXT:    store i8 51, i8* [[GEP_2]], align 1
-; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr i8, i8* [[STACK_PTR]], i64 3
-; CHECK-NEXT:    store i8 52, i8* [[GEP_3]], align 1
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @memcmp(i8* nonnull dereferenceable(2) [[FOO:%.*]], i8* nonnull dereferenceable(2) [[STACK_PTR]], i64 2)
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
