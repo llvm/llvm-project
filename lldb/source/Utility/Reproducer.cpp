@@ -268,3 +268,94 @@ bool Loader::HasFile(StringRef file) {
   auto it = std::lower_bound(m_files.begin(), m_files.end(), file.str());
   return (it != m_files.end()) && (*it == file);
 }
+
+void Verifier::Verify(
+    llvm::function_ref<void(llvm::StringRef)> error_callback,
+    llvm::function_ref<void(llvm::StringRef)> warning_callback,
+    llvm::function_ref<void(llvm::StringRef)> note_callack) const {
+  if (!m_loader) {
+    error_callback("invalid loader");
+    return;
+  }
+
+  FileSpec vfs_mapping = m_loader->GetFile<FileProvider::Info>();
+  ErrorOr<std::unique_ptr<MemoryBuffer>> buffer =
+      vfs::getRealFileSystem()->getBufferForFile(vfs_mapping.GetPath());
+  if (!buffer) {
+    error_callback("unable to read files: " + buffer.getError().message());
+    return;
+  }
+
+  IntrusiveRefCntPtr<vfs::FileSystem> vfs = vfs::getVFSFromYAML(
+      std::move(buffer.get()), nullptr, vfs_mapping.GetPath());
+  if (!vfs) {
+    error_callback("unable to initialize the virtual file system");
+    return;
+  }
+
+  auto &redirecting_vfs = static_cast<vfs::RedirectingFileSystem &>(*vfs);
+  redirecting_vfs.setFallthrough(false);
+
+  {
+    llvm::Expected<std::string> working_dir =
+        GetDirectoryFrom<WorkingDirectoryProvider>(m_loader);
+    if (working_dir) {
+      if (!vfs->exists(*working_dir))
+        warning_callback("working directory '" + *working_dir + "' not in VFS");
+      vfs->setCurrentWorkingDirectory(*working_dir);
+    } else {
+      warning_callback("no working directory in reproducer: " +
+                       toString(working_dir.takeError()));
+    }
+  }
+
+  {
+    llvm::Expected<std::string> home_dir =
+        GetDirectoryFrom<HomeDirectoryProvider>(m_loader);
+    if (home_dir) {
+      if (!vfs->exists(*home_dir))
+        warning_callback("home directory '" + *home_dir + "' not in VFS");
+    } else {
+      warning_callback("no home directory in reproducer: " +
+                       toString(home_dir.takeError()));
+    }
+  }
+
+  {
+    Expected<std::string> symbol_files =
+        m_loader->LoadBuffer<SymbolFileProvider>();
+    if (symbol_files) {
+      std::vector<SymbolFileProvider::Entry> entries;
+      llvm::yaml::Input yin(*symbol_files);
+      yin >> entries;
+      for (const auto &entry : entries) {
+        if (!entry.module_path.empty() && !vfs->exists(entry.module_path)) {
+          warning_callback("'" + entry.module_path + "': module path for " +
+                           entry.uuid + " not in VFS");
+        }
+        if (!entry.symbol_path.empty() && !vfs->exists(entry.symbol_path)) {
+          warning_callback("'" + entry.symbol_path + "': symbol path for " +
+                           entry.uuid + " not in VFS");
+        }
+      }
+    } else {
+      llvm::consumeError(symbol_files.takeError());
+    }
+  }
+
+  // Missing files in the VFS are notes rather than warnings. Because the VFS
+  // is a snapshot, temporary files could have been removed between when they
+  // were recorded and when the reproducer was generated.
+  std::vector<llvm::StringRef> roots = redirecting_vfs.getRoots();
+  for (llvm::StringRef root : roots) {
+    std::error_code ec;
+    vfs::recursive_directory_iterator iter(*vfs, root, ec);
+    vfs::recursive_directory_iterator end;
+    for (; iter != end && !ec; iter.increment(ec)) {
+      ErrorOr<vfs::Status> status = vfs->status(iter->path());
+      if (!status)
+        note_callack("'" + iter->path().str() +
+                     "': " + status.getError().message());
+    }
+  }
+}
