@@ -254,7 +254,8 @@ bool LPPassManager::runOnFunction(Function &F) {
         F.getContext().yield();
       }
 
-      removeNotPreservedAnalysis(P);
+      if (LocalChanged)
+        removeNotPreservedAnalysis(P);
       recordAvailableAnalysis(P);
       removeDeadPasses(P,
                        CurrentLoopDeleted ? "<deleted>"

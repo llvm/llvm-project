@@ -489,7 +489,8 @@ bool CGPassManager::RunAllPassesOnSCC(CallGraphSCC &CurSCC, CallGraph &CG,
     dumpPreservedSet(P);
 
     verifyPreservedAnalysis(P);
-    removeNotPreservedAnalysis(P);
+    if (LocalChanged)
+      removeNotPreservedAnalysis(P);
     recordAvailableAnalysis(P);
     removeDeadPasses(P, "", ON_CG_MSG);
   }
