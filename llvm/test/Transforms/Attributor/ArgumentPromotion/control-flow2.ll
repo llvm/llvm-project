@@ -9,7 +9,7 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 define internal i32 @callee(i1 %C, i32* %P) {
 ; IS__TUNIT_OPM: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@callee
-; IS__TUNIT_OPM-SAME: (i1 [[C:%.*]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P:%.*]]) [[ATTR0:#.*]] {
+; IS__TUNIT_OPM-SAME: (i1 noundef [[C:%.*]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P:%.*]]) [[ATTR0:#.*]] {
 ; IS__TUNIT_OPM-NEXT:    br label [[F:%.*]]
 ; IS__TUNIT_OPM:       T:
 ; IS__TUNIT_OPM-NEXT:    unreachable
@@ -19,7 +19,7 @@ define internal i32 @callee(i1 %C, i32* %P) {
 ;
 ; IS__TUNIT_NPM: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@callee
-; IS__TUNIT_NPM-SAME: (i1 [[C:%.*]], i32 [[TMP0:%.*]]) [[ATTR0:#.*]] {
+; IS__TUNIT_NPM-SAME: (i1 noundef [[C:%.*]], i32 [[TMP0:%.*]]) [[ATTR0:#.*]] {
 ; IS__TUNIT_NPM-NEXT:    [[P_PRIV:%.*]] = alloca i32, align 4
 ; IS__TUNIT_NPM-NEXT:    store i32 [[TMP0]], i32* [[P_PRIV]], align 4
 ; IS__TUNIT_NPM-NEXT:    br label [[F:%.*]]
@@ -55,7 +55,7 @@ define i32 @foo() {
 ; IS__TUNIT_OPM-SAME: () [[ATTR1:#.*]] {
 ; IS__TUNIT_OPM-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; IS__TUNIT_OPM-NEXT:    store i32 17, i32* [[A]], align 4
-; IS__TUNIT_OPM-NEXT:    [[X:%.*]] = call i32 @callee(i1 false, i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]]) [[ATTR2:#.*]]
+; IS__TUNIT_OPM-NEXT:    [[X:%.*]] = call i32 @callee(i1 noundef false, i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]]) [[ATTR2:#.*]]
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[X]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
@@ -64,7 +64,7 @@ define i32 @foo() {
 ; IS__TUNIT_NPM-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; IS__TUNIT_NPM-NEXT:    store i32 17, i32* [[A]], align 4
 ; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A]], align 4
-; IS__TUNIT_NPM-NEXT:    [[X:%.*]] = call i32 @callee(i1 false, i32 [[TMP1]]) [[ATTR2:#.*]]
+; IS__TUNIT_NPM-NEXT:    [[X:%.*]] = call i32 @callee(i1 noundef false, i32 [[TMP1]]) [[ATTR2:#.*]]
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[X]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn

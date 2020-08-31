@@ -18,7 +18,7 @@
 
 define i8* @foo() {
 ; CHECK-LABEL: define {{[^@]+}}@foo() {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
 ; CHECK-NEXT:    store i8* [[TMP1]], i8** @G, align 8
 ; CHECK-NEXT:    ret i8* [[TMP1]]
 ;
@@ -34,7 +34,7 @@ declare noalias i8* @malloc(i64)
 
 define i8* @return_noalias(){
 ; CHECK-LABEL: define {{[^@]+}}@return_noalias() {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
 ; CHECK-NEXT:    ret i8* [[TMP1]]
 ;
   %1 = tail call noalias i8* @malloc(i64 4)
@@ -57,7 +57,7 @@ define void @nocapture(i8* %a){
 
 define i8* @return_noalias_looks_like_capture(){
 ; CHECK-LABEL: define {{[^@]+}}@return_noalias_looks_like_capture() {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
 ; CHECK-NEXT:    ret i8* [[TMP1]]
 ;
   %1 = tail call noalias i8* @malloc(i64 4)
@@ -67,7 +67,7 @@ define i8* @return_noalias_looks_like_capture(){
 
 define i16* @return_noalias_casted(){
 ; CHECK-LABEL: define {{[^@]+}}@return_noalias_casted() {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
 ; CHECK-NEXT:    [[C:%.*]] = bitcast i8* [[TMP1]] to i16*
 ; CHECK-NEXT:    ret i16* [[C]]
 ;
@@ -124,7 +124,7 @@ define i8* @foo1(i32 %0) nounwind uwtable {
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call i8* (...) @baz() [[ATTR2]]
 ; CHECK-NEXT:    br label [[TMP5]]
 ; CHECK:       5:
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
 ; CHECK-NEXT:    ret i8* [[TMP6]]
 ;
   %2 = icmp eq i32 %0, 0
@@ -205,7 +205,7 @@ define i8* @test7() nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@test7
 ; CHECK-SAME: () [[ATTR2]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = call noalias i8* @malloc(i64 4) [[ATTR2]]
+; CHECK-NEXT:    [[A:%.*]] = call noalias i8* @malloc(i64 noundef 4) [[ATTR2]]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i8* [[A]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[RETURN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
@@ -235,7 +235,7 @@ define i8* @test8(i32* %0) nounwind uwtable {
 ; CHECK: Function Attrs: nounwind uwtable
 ; CHECK-LABEL: define {{[^@]+}}@test8
 ; CHECK-SAME: (i32* [[TMP0:%.*]]) [[ATTR1]] {
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32* [[TMP0]], null
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP5:%.*]]
 ; CHECK:       4:
@@ -362,7 +362,7 @@ declare void @use(i8*)
 define void @test12_1() {
 ; CHECK-LABEL: define {{[^@]+}}@test12_1() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 4
-; CHECK-NEXT:    [[B:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    [[B:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
 ; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture noundef nonnull align 4 dereferenceable(1) [[A]])
 ; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture noundef nonnull align 4 dereferenceable(1) [[A]])
 ; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[B]])
@@ -380,7 +380,7 @@ define void @test12_1() {
 
 define void @test12_2(){
 ; CHECK-LABEL: define {{[^@]+}}@test12_2() {
-; CHECK-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
 ; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[A]])
 ; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[A]])
 ; CHECK-NEXT:    tail call void @use(i8* [[A]])
@@ -400,7 +400,7 @@ define void @test12_2(){
 declare void @two_args(i8* nocapture , i8* nocapture)
 define void @test12_3(){
 ; CHECK-LABEL: define {{[^@]+}}@test12_3() {
-; CHECK-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
 ; CHECK-NEXT:    tail call void @two_args(i8* nocapture [[A]], i8* nocapture [[A]])
 ; CHECK-NEXT:    ret void
 ;
@@ -411,8 +411,8 @@ define void @test12_3(){
 
 define void @test12_4(){
 ; IS________OPM-LABEL: define {{[^@]+}}@test12_4() {
-; IS________OPM-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 4)
-; IS________OPM-NEXT:    [[B:%.*]] = tail call noalias i8* @malloc(i64 4)
+; IS________OPM-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
+; IS________OPM-NEXT:    [[B:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
 ; IS________OPM-NEXT:    [[A_0:%.*]] = getelementptr i8, i8* [[A]], i64 0
 ; IS________OPM-NEXT:    [[A_1:%.*]] = getelementptr i8, i8* [[A]], i64 1
 ; IS________OPM-NEXT:    [[B_0:%.*]] = getelementptr i8, i8* [[B]], i64 0
@@ -423,8 +423,8 @@ define void @test12_4(){
 ; IS________OPM-NEXT:    ret void
 ;
 ; NOT_TUNIT_OPM-LABEL: define {{[^@]+}}@test12_4() {
-; NOT_TUNIT_OPM-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 4)
-; NOT_TUNIT_OPM-NEXT:    [[B:%.*]] = tail call noalias i8* @malloc(i64 4)
+; NOT_TUNIT_OPM-NEXT:    [[A:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
+; NOT_TUNIT_OPM-NEXT:    [[B:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
 ; NOT_TUNIT_OPM-NEXT:    [[A_0:%.*]] = getelementptr i8, i8* [[A]], i64 0
 ; NOT_TUNIT_OPM-NEXT:    [[A_1:%.*]] = getelementptr i8, i8* [[A]], i64 1
 ; NOT_TUNIT_OPM-NEXT:    [[B_0:%.*]] = getelementptr i8, i8* [[B]], i64 0
@@ -464,7 +464,7 @@ define void @use_i8_internal(i8* %a) {
 
 define void @test13_use_noalias(){
 ; CHECK-LABEL: define {{[^@]+}}@test13_use_noalias() {
-; CHECK-NEXT:    [[M1:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    [[M1:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
 ; CHECK-NEXT:    [[C1:%.*]] = bitcast i8* [[M1]] to i16*
 ; CHECK-NEXT:    [[C2:%.*]] = bitcast i16* [[C1]] to i8*
 ; CHECK-NEXT:    call void @use_i8_internal(i8* noalias nocapture [[C2]])
@@ -485,7 +485,7 @@ define void @test13_use_noalias(){
 
 define void @test13_use_alias(){
 ; CHECK-LABEL: define {{[^@]+}}@test13_use_alias() {
-; CHECK-NEXT:    [[M1:%.*]] = tail call noalias i8* @malloc(i64 4)
+; CHECK-NEXT:    [[M1:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
 ; CHECK-NEXT:    [[C1:%.*]] = bitcast i8* [[M1]] to i16*
 ; CHECK-NEXT:    [[C2A:%.*]] = bitcast i16* [[C1]] to i8*
 ; CHECK-NEXT:    [[C2B:%.*]] = bitcast i16* [[C1]] to i8*
@@ -577,11 +577,11 @@ define internal fastcc double @strtox(i8* %s, i8** %p, i32 %prec) unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT__IO_FILE:%.*]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast %struct._IO_FILE* [[F]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 144, i8* nocapture noundef nonnull align 8 dereferenceable(240) [[TMP0]]) [[ATTR10:#.*]]
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 144, i8* nocapture noundef nonnull align 8 dereferenceable(240) [[TMP0]]) [[ATTR10:#.*]]
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 bitcast (i32 (...)* @sh_fromstring to i32 (%struct._IO_FILE*, i8*)*)(%struct._IO_FILE* nonnull align 8 dereferenceable(240) [[F]], i8* [[S]])
-; CHECK-NEXT:    call void @__shlim(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i64 0)
-; CHECK-NEXT:    [[CALL1:%.*]] = call double @__floatscan(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i32 1, i32 1)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 144, i8* nocapture noundef nonnull align 8 dereferenceable(240) [[TMP0]])
+; CHECK-NEXT:    call void @__shlim(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i64 noundef 0)
+; CHECK-NEXT:    [[CALL1:%.*]] = call double @__floatscan(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i32 noundef 1, i32 noundef 1)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 144, i8* nocapture noundef nonnull align 8 dereferenceable(240) [[TMP0]])
 ; CHECK-NEXT:    ret double [[CALL1]]
 ;
 entry:
