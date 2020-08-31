@@ -486,7 +486,7 @@ bool Instruction::isIdenticalToWhenDefined(const Instruction *I) const {
   // PHI nodes are special.
   if (const PHINode *thisPHI = dyn_cast<PHINode>(this)) {
     const PHINode *otherPHI = cast<PHINode>(I);
-    // PHI nodes don't nessesairly have their operands in the same order,
+    // PHI nodes don't necessarily have their operands in the same order,
     // so we shouldn't just compare ranges of incoming blocks/values.
 
     // If both PHI's are in the same basic block, which is the most interesting
