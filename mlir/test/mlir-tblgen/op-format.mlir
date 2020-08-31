@@ -41,6 +41,72 @@ test.format_attr_dict_w_keyword attributes {attr = 10 : i64, opt_attr = 10 : i64
 %ignored = test.format_buildable_type_op %i64
 
 //===----------------------------------------------------------------------===//
+// Format regions
+//===----------------------------------------------------------------------===//
+
+// CHECK: test.format_region_a_op {
+// CHECK-NEXT: test.return
+test.format_region_a_op {
+  "test.return"() : () -> ()
+}
+
+// CHECK: test.format_region_b_op {
+// CHECK-NEXT: test.return
+test.format_region_b_op {
+  "test.return"() : () -> ()
+}
+
+// CHECK: test.format_region_c_op region {
+// CHECK-NEXT: test.return
+test.format_region_c_op region {
+  "test.return"() : () -> ()
+}
+// CHECK: test.format_region_c_op
+// CHECK-NOT: region {
+test.format_region_c_op
+
+// CHECK: test.format_variadic_region_a_op {
+// CHECK-NEXT: test.return
+// CHECK-NEXT: }, {
+// CHECK-NEXT: test.return
+// CHECK-NEXT: }
+test.format_variadic_region_a_op {
+  "test.return"() : () -> ()
+}, {
+  "test.return"() : () -> ()
+}
+// CHECK: test.format_variadic_region_b_op {
+// CHECK-NEXT: test.return
+// CHECK-NEXT: }, {
+// CHECK-NEXT: test.return
+// CHECK-NEXT: } found_regions
+test.format_variadic_region_b_op {
+  "test.return"() : () -> ()
+}, {
+  "test.return"() : () -> ()
+} found_regions
+// CHECK: test.format_variadic_region_b_op
+// CHECK-NOT: {
+// CHECK-NOT: found_regions
+test.format_variadic_region_b_op
+
+// CHECK: test.format_implicit_terminator_region_a_op {
+// CHECK-NEXT: }
+test.format_implicit_terminator_region_a_op {
+  "test.return"() : () -> ()
+}
+// CHECK: test.format_implicit_terminator_region_a_op {
+// CHECK-NEXT: test.return"() {foo.attr
+test.format_implicit_terminator_region_a_op {
+  "test.return"() {foo.attr} : () -> ()
+}
+// CHECK: test.format_implicit_terminator_region_a_op {
+// CHECK-NEXT: test.return"(%[[I64]]) : (i64)
+test.format_implicit_terminator_region_a_op {
+  "test.return"(%i64) : (i64) -> ()
+}
+
+//===----------------------------------------------------------------------===//
 // Format results
 //===----------------------------------------------------------------------===//
 
@@ -146,6 +212,24 @@ test.format_custom_directive_operands_and_types %i64, %i64 -> (%i64) : i64, i64 
 
 // CHECK: test.format_custom_directive_operands_and_types %[[I64]] -> (%[[I64]]) : i64 -> (i64)
 test.format_custom_directive_operands_and_types %i64 -> (%i64) : i64 -> (i64)
+
+// CHECK: test.format_custom_directive_regions {
+// CHECK-NEXT: test.return
+// CHECK-NEXT: }
+test.format_custom_directive_regions {
+  "test.return"() : () -> ()
+}
+
+// CHECK: test.format_custom_directive_regions {
+// CHECK-NEXT: test.return
+// CHECK-NEXT: }, {
+// CHECK-NEXT: test.return
+// CHECK-NEXT: }
+test.format_custom_directive_regions {
+  "test.return"() : () -> ()
+}, {
+  "test.return"() : () -> ()
+}
 
 // CHECK: test.format_custom_directive_results : i64, i64 -> (i64)
 test.format_custom_directive_results : i64, i64 -> (i64)
