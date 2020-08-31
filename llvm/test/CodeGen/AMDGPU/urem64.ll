@@ -218,14 +218,16 @@ define amdgpu_kernel void @s_test_urem_i64(i64 addrspace(1)* %out, i64 %x, i64 %
 ; GCN-IR-NEXT:    v_mul_hi_u32 v2, s2, v0
 ; GCN-IR-NEXT:    v_mul_lo_u32 v3, s3, v0
 ; GCN-IR-NEXT:    v_mul_lo_u32 v0, s2, v0
+; GCN-IR-NEXT:    s_mov_b32 s11, 0xf000
 ; GCN-IR-NEXT:    v_add_i32_e32 v1, vcc, v2, v1
 ; GCN-IR-NEXT:    v_add_i32_e32 v1, vcc, v1, v3
 ; GCN-IR-NEXT:    v_mov_b32_e32 v2, s7
 ; GCN-IR-NEXT:    v_sub_i32_e32 v0, vcc, s6, v0
+; GCN-IR-NEXT:    s_mov_b32 s10, -1
+; GCN-IR-NEXT:    s_mov_b32 s8, s4
+; GCN-IR-NEXT:    s_mov_b32 s9, s5
 ; GCN-IR-NEXT:    v_subb_u32_e32 v1, vcc, v2, v1, vcc
-; GCN-IR-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-IR-NEXT:    s_mov_b32 s6, -1
-; GCN-IR-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
+; GCN-IR-NEXT:    buffer_store_dwordx2 v[0:1], off, s[8:11], 0
 ; GCN-IR-NEXT:    s_endpgm
   %result = urem i64 %x, %y
   store i64 %result, i64 addrspace(1)* %out
@@ -938,13 +940,15 @@ define amdgpu_kernel void @s_test_urem_k_num_i64(i64 addrspace(1)* %out, i64 %x)
 ; GCN-IR-NEXT:    v_mul_hi_u32 v2, s6, v0
 ; GCN-IR-NEXT:    v_mul_lo_u32 v3, s7, v0
 ; GCN-IR-NEXT:    v_mul_lo_u32 v0, s6, v0
-; GCN-IR-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-IR-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-IR-NEXT:    v_add_i32_e32 v1, vcc, v2, v1
 ; GCN-IR-NEXT:    v_add_i32_e32 v1, vcc, v1, v3
 ; GCN-IR-NEXT:    v_sub_i32_e32 v0, vcc, 24, v0
+; GCN-IR-NEXT:    s_mov_b32 s2, -1
+; GCN-IR-NEXT:    s_mov_b32 s0, s4
+; GCN-IR-NEXT:    s_mov_b32 s1, s5
 ; GCN-IR-NEXT:    v_subb_u32_e32 v1, vcc, 0, v1, vcc
-; GCN-IR-NEXT:    s_mov_b32 s6, -1
-; GCN-IR-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
+; GCN-IR-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GCN-IR-NEXT:    s_endpgm
   %result = urem i64 24, %x
   store i64 %result, i64 addrspace(1)* %out
@@ -1136,13 +1140,15 @@ define amdgpu_kernel void @s_test_urem_k_den_i64(i64 addrspace(1)* %out, i64 %x)
 ; GCN-IR-NEXT:    v_mul_hi_u32 v2, v0, 24
 ; GCN-IR-NEXT:    v_mul_lo_u32 v1, v1, 24
 ; GCN-IR-NEXT:    v_mul_lo_u32 v0, v0, 24
+; GCN-IR-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-IR-NEXT:    s_mov_b32 s2, -1
 ; GCN-IR-NEXT:    v_add_i32_e32 v1, vcc, v2, v1
 ; GCN-IR-NEXT:    v_mov_b32_e32 v2, s7
 ; GCN-IR-NEXT:    v_sub_i32_e32 v0, vcc, s6, v0
+; GCN-IR-NEXT:    s_mov_b32 s0, s4
+; GCN-IR-NEXT:    s_mov_b32 s1, s5
 ; GCN-IR-NEXT:    v_subb_u32_e32 v1, vcc, v2, v1, vcc
-; GCN-IR-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-IR-NEXT:    s_mov_b32 s6, -1
-; GCN-IR-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
+; GCN-IR-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GCN-IR-NEXT:    s_endpgm
   %result = urem i64 %x, 24
   store i64 %result, i64 addrspace(1)* %out
