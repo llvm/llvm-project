@@ -45,7 +45,10 @@ static void replaceBranchTerminator(BasicBlock &BB,
   Term->eraseFromParent();
 
   if (ChunkSucessors.empty()) {
-    ReturnInst::Create(BB.getContext(), nullptr, &BB);
+    auto *FnRetTy = BB.getParent()->getReturnType();
+    ReturnInst::Create(BB.getContext(),
+                       FnRetTy->isVoidTy() ? nullptr : UndefValue::get(FnRetTy),
+                       &BB);
     return;
   }
 
@@ -66,7 +69,10 @@ static void replaceBranchTerminator(BasicBlock &BB,
 static void removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
                                              std::set<BasicBlock *> BBsToKeep) {
   if (!BBsToKeep.count(SwInst.getDefaultDest())) {
-    ReturnInst::Create(SwInst.getContext(), nullptr, SwInst.getParent());
+    auto *FnRetTy = SwInst.getParent()->getParent()->getReturnType();
+    ReturnInst::Create(SwInst.getContext(),
+                       FnRetTy->isVoidTy() ? nullptr : UndefValue::get(FnRetTy),
+                       SwInst.getParent());
     SwInst.eraseFromParent();
   } else
     for (int I = 0, E = SwInst.getNumCases(); I != E; ++I) {
