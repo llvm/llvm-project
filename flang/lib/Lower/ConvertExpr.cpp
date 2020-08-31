@@ -844,6 +844,8 @@ private:
              &con) {
     // TODO:
     // - derived type constant
+    //   ?? derived type cannot match the above template, can it? looks like it
+    //   would have to be Constant<SomeType<TC::Derived>> instead
     if (con.Rank() > 0)
       return genArrayLit(con);
     auto opt = con.GetScalarValue();
@@ -1263,16 +1265,16 @@ private:
     return std::visit([&](const auto &x) { return genval(x); }, des.u);
   }
 
-  // call a function
   template <typename A>
-  fir::ExtendedValue gen(const Fortran::evaluate::FunctionRef<A> &funRef) {
-    TODO();
-  }
-  template <typename A>
-  fir::ExtendedValue genval(const Fortran::evaluate::FunctionRef<A> &funRef) {
-    TODO(); // Derived type functions (user + intrinsics)
+  fir::ExtendedValue gen(const Fortran::evaluate::FunctionRef<A> &func) {
+    auto resTy = converter.genType(*func.proc().GetSymbol());
+    auto retVal = genProcedureRef(func, llvm::ArrayRef<mlir::Type>{resTy});
+    auto mem = builder.create<fir::AllocaOp>(getLoc(), resTy);
+    builder.create<fir::StoreOp>(getLoc(), fir::getBase(retVal), mem);
+    return mem.getResult();
   }
 
+  /// Generate a call to an intrinsic function.
   fir::ExtendedValue
   genIntrinsicRef(const Fortran::evaluate::ProcedureRef &procRef,
                   const Fortran::evaluate::SpecificIntrinsic &intrinsic,
@@ -1289,11 +1291,10 @@ private:
     // lowering facility should control argument lowering.
     for (const auto &arg : procRef.arguments()) {
       if (auto *expr = Fortran::evaluate::UnwrapExpr<
-              Fortran::evaluate::Expr<Fortran::evaluate::SomeType>>(arg)) {
+              Fortran::evaluate::Expr<Fortran::evaluate::SomeType>>(arg))
         operands.emplace_back(genval(*expr));
-      } else {
-        operands.emplace_back(mlir::Value{}); // absent optional
-      }
+      else
+        operands.emplace_back(fir::UnboxedValue{}); // absent optional
     }
     // Let the intrinsic library lower the intrinsic procedure call
     llvm::StringRef name = intrinsic.name;
@@ -1340,15 +1341,9 @@ private:
       // allowed, probably because nobody thought of restricting this usage.
       // gfortran/ifort compiles this.
       assert(expr && "assumed type used as statement function argument");
-      auto argVal = genval(*expr);
-      if (auto *charBox = argVal.getCharBox()) {
-        symMap.addCharSymbol(dummySymbol, charBox->getBuffer(),
-                             charBox->getLen());
-      } else {
-        // As per Fortran 2018 C1580, statement function arguments can only be
-        // scalars, so just pass the base address.
-        symMap.addSymbol(dummySymbol, fir::getBase(argVal));
-      }
+      // As per Fortran 2018 C1580, statement function arguments can only be
+      // scalars, so just pass the box with the address.
+      symMap.addSymbol(dummySymbol, genExtAddr(*expr));
     }
     auto result = genval(details.stmtFunction().value());
     LLVM_DEBUG(llvm::errs() << "stmt-function: " << result << '\n');
@@ -1565,7 +1560,12 @@ private:
     if constexpr (inRefSet<std::decay_t<decltype(a)>>) {
       return gen(a);
     } else {
-      llvm_unreachable("expression error");
+      // Since `a` is not itself a valid referent, determine its value and
+      // create a temporary location for referencing.
+      auto val = fir::getBase(genval(a));
+      auto mem = builder.create<fir::AllocaOp>(getLoc(), val.getType());
+      builder.create<fir::StoreOp>(getLoc(), val, mem);
+      return mem.getResult();
     }
   }
 
