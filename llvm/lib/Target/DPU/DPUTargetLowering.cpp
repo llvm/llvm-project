@@ -1258,23 +1258,6 @@ static bool isArgumentExtended(SDValue Op, MVT::SimpleValueType initialType,
   return false;
 }
 
-// Tries to convert a SDValue to a constant, if possible.
-//
-// Checks whether the provided SDValue represents a constant which can be used
-// as an immediate for an operation, without checking the constant size (since
-// the length of immediate operands depends on the opcodes). Returns NULL if the
-// conversion is not applicable, the constant value otherwise.
-static bool canFetchConstantTo(SDValue Value, uint64_t *pValue) {
-  if (Value.getOpcode() == ISD::Constant) {
-    ConstantSDNode *Constant = cast<ConstantSDNode>(Value);
-    if ((!Constant->isOpaque()) && (Constant->getConstantIntValue() != NULL)) {
-      *pValue = *(Constant->getConstantIntValue()->getValue().getRawData());
-      return true;
-    }
-  }
-  return false;
-}
-
 static bool canUseMulX(SDValue firstOperand, SDValue secondOperand,
                        MVT::SimpleValueType initialType,
                        MVT::SimpleValueType resultType, unsigned int mulSS,
@@ -1842,17 +1825,15 @@ SDValue DPUTargetLowering::LowerDMA(SDValue Op, SelectionDAG &DAG,
   SDValue immDma = Op.getOperand(4);
 
   if (!STInfo->hasFeature(DPU::FeatureDPUDisableMramCheck)) {
-    if (auto *GVa = dyn_cast<GlobalAddressSDNode>(ra)) {
-      if (GVa->getGlobal()->getAlignment() % 8) {
-        LowerUnsupported(
-            ra, DAG, "WRAM buffer of DMA transfer needs to be 8-byte aligned");
-      }
+    int32_t RaAlignment = getSDValueAlignment(ra);
+    if ((RaAlignment != -1) && (RaAlignment % 8)) {
+      LowerUnsupported(
+          ra, DAG, "WRAM buffer of DMA transfer needs to be 8-byte aligned");
     }
-    if (auto *GVb = dyn_cast<GlobalAddressSDNode>(rb)) {
-      if (GVb->getGlobal()->getAlignment() % 8) {
-        LowerUnsupported(
-            rb, DAG, "MRAM buffer of DMA transfer needs to be 8-byte aligned");
-      }
+    int32_t RbAlignment = getSDValueAlignment(ra);
+    if ((RbAlignment != -1) && (RbAlignment % 8)) {
+      LowerUnsupported(
+          rb, DAG, "MRAM buffer of DMA transfer needs to be 8-byte aligned");
     }
   }
 

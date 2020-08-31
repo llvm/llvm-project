@@ -168,6 +168,53 @@ enum {
   TEST_NODE
 };
 }
+
+// Tries to convert a SDValue to a constant, if possible.
+//
+// Checks whether the provided SDValue represents a constant which can be used
+// as an immediate for an operation, without checking the constant size (since
+// the length of immediate operands depends on the opcodes). Returns NULL if the
+// conversion is not applicable, the constant value otherwise.
+static bool canFetchConstantTo(SDValue Value, uint64_t *pValue) {
+  if (Value.getOpcode() == ISD::Constant) {
+    ConstantSDNode *Constant = cast<ConstantSDNode>(Value);
+    if ((!Constant->isOpaque()) && (Constant->getConstantIntValue() != NULL)) {
+      *pValue = *(Constant->getConstantIntValue()->getValue().getRawData());
+      return true;
+    }
+  }
+  return false;
+}
+
+__attribute__((used)) static int32_t getSDValueAlignment(SDValue Op) {
+  if (auto *GV = dyn_cast<GlobalAddressSDNode>(Op)) {
+    return GV->getGlobal()->getAlignment();
+  } else if (Op.getOpcode() == ISD::ADD) {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+    uint64_t Size;
+    if (auto *GV = dyn_cast<GlobalAddressSDNode>(Op0)) {
+      if (canFetchConstantTo(Op1, &Size)) {
+        return GV->getGlobal()->getAlignment() + Size;
+      }
+    } else if (auto *GV = dyn_cast<GlobalAddressSDNode>(Op1)) {
+      if (canFetchConstantTo(Op0, &Size)) {
+        return GV->getGlobal()->getAlignment() + Size;
+      }
+    }
+  } else if (Op.getOpcode() == ISD::AND) {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+    uint64_t Size;
+    if (canFetchConstantTo(Op1, &Size)) {
+      return 1 << __builtin_ctz(Size);
+    } else if (canFetchConstantTo(Op0, &Size)) {
+      return 1 << __builtin_ctz(Size);
+    }
+  }
+  return -1;
+}
+
 } // namespace llvm
 
 #endif
