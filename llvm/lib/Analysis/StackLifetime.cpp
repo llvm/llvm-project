@@ -64,10 +64,36 @@ bool StackLifetime::isAliveAfter(const AllocaInst *AI,
   return getLiveRange(AI).test(InstNum);
 }
 
+// Returns unique alloca annotated by lifetime marker only if
+// markers has the same size and points to the alloca start.
+static const AllocaInst *findMatchingAlloca(const IntrinsicInst &II,
+                                            const DataLayout &DL) {
+  const AllocaInst *AI = findAllocaForValue(II.getArgOperand(1), true);
+  if (!AI)
+    return nullptr;
+
+  auto AllocaSizeInBits = AI->getAllocationSizeInBits(DL);
+  if (!AllocaSizeInBits)
+    return nullptr;
+  int64_t AllocaSize = AllocaSizeInBits.getValue() / 8;
+
+  auto *Size = dyn_cast<ConstantInt>(II.getArgOperand(0));
+  if (!Size)
+    return nullptr;
+  int64_t LifetimeSize = Size->getSExtValue();
+
+  if (LifetimeSize != -1 && LifetimeSize != AllocaSize)
+    return nullptr;
+
+  return AI;
+}
+
 void StackLifetime::collectMarkers() {
   InterestingAllocas.resize(NumAllocas);
   DenseMap<const BasicBlock *, SmallDenseMap<const IntrinsicInst *, Marker>>
       BBMarkerSet;
+
+  const DataLayout &DL = F.getParent()->getDataLayout();
 
   // Compute the set of start/end markers per basic block.
   for (const BasicBlock *BB : depth_first(&F)) {
@@ -75,7 +101,7 @@ void StackLifetime::collectMarkers() {
       const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
       if (!II || !II->isLifetimeStartOrEnd())
         continue;
-      const AllocaInst *AI = llvm::findAllocaForValue(II->getArgOperand(1));
+      const AllocaInst *AI = findMatchingAlloca(*II, DL);
       if (!AI) {
         HasUnknownLifetimeStartOrEnd = true;
         continue;
