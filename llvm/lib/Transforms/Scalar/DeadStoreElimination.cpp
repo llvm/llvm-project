@@ -1847,8 +1847,10 @@ struct DSEState {
         return None;
       WalkerStepLimit -= StepCost;
 
+      // Return for MemoryPhis. They cannot be eliminated directly and the
+      // caller is responsible for traversing them.
       if (isa<MemoryPhi>(Current))
-        break;
+        return Current;
 
       // Below, check if CurrentDef is a valid candidate to be eliminated by
       // KillingDef. If it is not, check the next candidate.
