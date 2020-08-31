@@ -951,19 +951,17 @@ define double @sqrt_fdiv_common_operand_extra_use(double %x, double* %p) nounwin
 define double @sqrt_simplify_before_recip(double %x, double* %p) nounwind {
 ; SSE-LABEL: sqrt_simplify_before_recip:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    sqrtsd %xmm0, %xmm1
-; SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; SSE-NEXT:    divsd %xmm1, %xmm2
-; SSE-NEXT:    mulsd %xmm2, %xmm0
-; SSE-NEXT:    movsd %xmm2, (%rdi)
+; SSE-NEXT:    sqrtsd %xmm0, %xmm0
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    divsd %xmm0, %xmm1
+; SSE-NEXT:    movsd %xmm1, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sqrt_simplify_before_recip:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm1
-; AVX-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX-NEXT:    vdivsd %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vmulsd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vdivsd %xmm0, %xmm1, %xmm1
 ; AVX-NEXT:    vmovsd %xmm1, (%rdi)
 ; AVX-NEXT:    retq
   %sqrt = tail call fast double @llvm.sqrt.f64(double %x)
@@ -976,19 +974,17 @@ define double @sqrt_simplify_before_recip(double %x, double* %p) nounwind {
 define <2 x double> @sqrt_simplify_before_recip_vec(<2 x double> %x, <2 x double>* %p) nounwind {
 ; SSE-LABEL: sqrt_simplify_before_recip_vec:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    sqrtpd %xmm0, %xmm1
-; SSE-NEXT:    movapd {{.*#+}} xmm2 = [1.0E+0,1.0E+0]
-; SSE-NEXT:    divpd %xmm1, %xmm2
-; SSE-NEXT:    mulpd %xmm2, %xmm0
-; SSE-NEXT:    movupd %xmm2, (%rdi)
+; SSE-NEXT:    sqrtpd %xmm0, %xmm0
+; SSE-NEXT:    movapd {{.*#+}} xmm1 = [1.0E+0,1.0E+0]
+; SSE-NEXT:    divpd %xmm0, %xmm1
+; SSE-NEXT:    movupd %xmm1, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sqrt_simplify_before_recip_vec:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vsqrtpd %xmm0, %xmm1
-; AVX-NEXT:    vmovapd {{.*#+}} xmm2 = [1.0E+0,1.0E+0]
-; AVX-NEXT:    vdivpd %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vsqrtpd %xmm0, %xmm0
+; AVX-NEXT:    vmovapd {{.*#+}} xmm1 = [1.0E+0,1.0E+0]
+; AVX-NEXT:    vdivpd %xmm0, %xmm1, %xmm1
 ; AVX-NEXT:    vmovupd %xmm1, (%rdi)
 ; AVX-NEXT:    retq
   %sqrt = tail call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> %x)

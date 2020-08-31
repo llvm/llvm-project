@@ -13230,14 +13230,18 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
     return SDValue();
 
   // Skip if current node is a reciprocal/fneg-reciprocal.
-  SDValue N0 = N->getOperand(0);
+  SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
   ConstantFPSDNode *N0CFP = isConstOrConstSplatFP(N0, /* AllowUndefs */ true);
   if (N0CFP && (N0CFP->isExactlyValue(1.0) || N0CFP->isExactlyValue(-1.0)))
     return SDValue();
 
+  // Skip X/sqrt(X) that has not been simplified to sqrt(X) yet.
+  if (N1.getOpcode() == ISD::FSQRT && N1.getOperand(0) == N0 &&
+      Flags.hasAllowReassociation() && Flags.hasNoSignedZeros())
+    return SDValue();
+
   // Exit early if the target does not want this transform or if there can't
   // possibly be enough uses of the divisor to make the transform worthwhile.
-  SDValue N1 = N->getOperand(1);
   unsigned MinUses = TLI.combineRepeatedFPDivisors();
 
   // For splat vectors, scale the number of uses by the splat factor. If we can

@@ -529,13 +529,12 @@ define double @sqrt_fdiv_common_operand_extra_use(double %x, double* %p) nounwin
 define double @sqrt_simplify_before_recip_3_uses(double %x, double* %p1, double* %p2) nounwind {
 ; FAULT-LABEL: sqrt_simplify_before_recip_3_uses:
 ; FAULT:       // %bb.0:
-; FAULT-NEXT:    fsqrt d1, d0
-; FAULT-NEXT:    fmov d2, #1.00000000
 ; FAULT-NEXT:    mov x8, #4631107791820423168
-; FAULT-NEXT:    fdiv d1, d2, d1
+; FAULT-NEXT:    fsqrt d0, d0
+; FAULT-NEXT:    fmov d1, #1.00000000
 ; FAULT-NEXT:    fmov d2, x8
-; FAULT-NEXT:    fmul d2, d1, d2
-; FAULT-NEXT:    fmul d0, d0, d1
+; FAULT-NEXT:    fdiv d1, d1, d0
+; FAULT-NEXT:    fdiv d2, d2, d0
 ; FAULT-NEXT:    str d1, [x0]
 ; FAULT-NEXT:    str d2, [x1]
 ; FAULT-NEXT:    ret
@@ -572,19 +571,18 @@ define double @sqrt_simplify_before_recip_4_uses(double %x, double* %p1, double*
 ; FAULT-LABEL: sqrt_simplify_before_recip_4_uses:
 ; FAULT:       // %bb.0:
 ; FAULT-NEXT:    mov x8, #4631107791820423168
-; FAULT-NEXT:    fmov d3, x8
-; FAULT-NEXT:    mov x8, #140737488355328
-; FAULT-NEXT:    fsqrt d1, d0
-; FAULT-NEXT:    fmov d2, #1.00000000
-; FAULT-NEXT:    movk x8, #16453, lsl #48
-; FAULT-NEXT:    fdiv d1, d2, d1
 ; FAULT-NEXT:    fmov d2, x8
-; FAULT-NEXT:    fmul d3, d1, d3
+; FAULT-NEXT:    mov x8, #140737488355328
+; FAULT-NEXT:    fsqrt d0, d0
+; FAULT-NEXT:    fmov d1, #1.00000000
+; FAULT-NEXT:    movk x8, #16453, lsl #48
+; FAULT-NEXT:    fdiv d1, d1, d0
+; FAULT-NEXT:    fmov d3, x8
 ; FAULT-NEXT:    fmul d2, d1, d2
-; FAULT-NEXT:    fmul d0, d0, d1
+; FAULT-NEXT:    fmul d3, d1, d3
 ; FAULT-NEXT:    str d1, [x0]
-; FAULT-NEXT:    str d3, [x1]
-; FAULT-NEXT:    str d2, [x2]
+; FAULT-NEXT:    str d2, [x1]
+; FAULT-NEXT:    str d3, [x2]
 ; FAULT-NEXT:    ret
 ;
 ; CHECK-LABEL: sqrt_simplify_before_recip_4_uses:
