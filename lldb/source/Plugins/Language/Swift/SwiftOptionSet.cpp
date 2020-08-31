@@ -29,39 +29,41 @@ using namespace lldb_private::formatters;
 using namespace lldb_private::formatters::swift;
 
 /// If this is a Clang enum wrapped in a Swift type, return the clang::EnumDecl.
-static clang::EnumDecl *GetAsEnumDecl(CompilerType swift_type) {
+static std::pair<clang::EnumDecl *, TypeSystemClang *>
+GetAsEnumDecl(CompilerType swift_type) {
   if (!swift_type)
-    return nullptr;
+    return {nullptr, nullptr};
 
   TypeSystemSwift *swift_ast_ctx =
       llvm::dyn_cast_or_null<TypeSystemSwift>(swift_type.GetTypeSystem());
   if (!swift_ast_ctx)
-    return nullptr;
+    return {nullptr, nullptr};
 
   CompilerType clang_type;
   if (!swift_ast_ctx->IsImportedType(swift_type.GetOpaqueQualType(),
                                      &clang_type))
-    return nullptr;
+    return {nullptr, nullptr};
 
   if (!clang_type.IsValid())
-    return nullptr;
+    return {nullptr, nullptr};
 
-  if (!llvm::isa<TypeSystemClang>(clang_type.GetTypeSystem()))
-    return nullptr;
+  auto *clang_ts = llvm::dyn_cast<TypeSystemClang>(clang_type.GetTypeSystem());
+  if (!clang_ts)
+    return {nullptr, nullptr};
 
   auto qual_type =
       clang::QualType::getFromOpaquePtr(clang_type.GetOpaqueQualType());
   if (qual_type->getTypeClass() != clang::Type::TypeClass::Enum)
-    return nullptr;
+    return {nullptr, nullptr};
 
   if (const clang::EnumType *enum_type = qual_type->getAs<clang::EnumType>())
-    return enum_type->getDecl();
-  return nullptr;
+    return {enum_type->getDecl(), clang_ts};
+  return {nullptr, nullptr};
 }
 
 bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
     WouldEvenConsiderFormatting(CompilerType swift_type) {
-  return GetAsEnumDecl(swift_type);
+  return GetAsEnumDecl(swift_type).first;
 }
 
 lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
@@ -70,33 +72,33 @@ lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
                       TypeSummaryImpl::Flags()),
       m_type(clang_type), m_cases() {}
 
-static ConstString GetDisplayCaseName(::swift::ClangImporter *clang_importer,
-                                      clang::EnumConstantDecl *case_decl) {
-  if (clang_importer) {
-    ::swift::Identifier imported_identifier =
-        clang_importer->getEnumConstantName(case_decl);
-    if (false == imported_identifier.empty())
-      return ConstString(imported_identifier.str());
-  }
-  return ConstString(case_decl->getName());
-}
-
 void lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
     FillCasesIfNeeded() {
   if (m_cases.hasValue())
     return;
 
   m_cases = CasesVector();
-  clang::EnumDecl *enum_decl = GetAsEnumDecl(m_type);
+  auto decl_ts = GetAsEnumDecl(m_type);
+  clang::EnumDecl *enum_decl = decl_ts.first;
   if (!enum_decl)
     return;
 
-  if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
-          m_type.GetTypeSystem()))
-    m_type = ts->ReconstructType(m_type);
+  // FIXME: Delete this type reconstruction block. For GetSwiftName() to
+  // fully work, ClangImporter's ImportName class needs to be made
+  // standalone and provided with a callback to read the APINote
+  // information.
+  auto *ts = llvm::cast<TypeSystemSwift>(m_type.GetTypeSystem());
+  if (auto *trts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(ts)) {
+    m_type = trts->ReconstructType(m_type);
+    ts = llvm::cast<SwiftASTContext>(m_type.GetTypeSystem());
+    decl_ts = GetAsEnumDecl(m_type);
+    enum_decl = decl_ts.first;
+    if (!enum_decl)
+      return;
+  }
+
   SwiftASTContext *swift_ast_ctx =
       llvm::dyn_cast_or_null<SwiftASTContext>(m_type.GetTypeSystem());
-  ::swift::ClangImporter *clang_importer = swift_ast_ctx->GetClangImporter();
   auto iter = enum_decl->enumerator_begin(), end = enum_decl->enumerator_end();
   for (; iter != end; ++iter) {
     clang::EnumConstantDecl *case_decl = *iter;
@@ -109,7 +111,7 @@ void lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
         case_init_val = case_init_val.zext(64);
       if (case_init_val.getBitWidth() > 64)
         continue;
-      ConstString case_name(GetDisplayCaseName(clang_importer, case_decl));
+      ConstString case_name(ts->GetSwiftName(case_decl, *decl_ts.second));
       m_cases->push_back({case_init_val, case_name});
     }
   }

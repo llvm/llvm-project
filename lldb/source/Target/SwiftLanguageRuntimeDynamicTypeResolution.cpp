@@ -1187,9 +1187,16 @@ ForEachGenericParameter(swift::Demangle::NodePointer node,
 CompilerType SwiftLanguageRuntimeImpl::DoArchetypeBindingForTypeRef(
     StackFrame &stack_frame, TypeSystemSwiftTypeRef &ts,
     ConstString mangled_name) {
+  Status error;
+  auto &target = m_process.GetTarget();
+  auto scratch_ctx = target.GetScratchSwiftASTContext(error, stack_frame);
   auto *reflection_ctx = GetReflectionContext();
-  if (!reflection_ctx)
+  if (!scratch_ctx || !reflection_ctx) {
+    LLDB_LOG(
+        GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS | LIBLLDB_LOG_TYPES),
+        "No scratch/reflection context available.");
     return ts.GetTypeFromMangledTypename(mangled_name);
+  }
 
   swift::Demangle::Demangler Dem;
   swift::Demangle::NodePointer canonical =
@@ -1236,10 +1243,7 @@ CompilerType SwiftLanguageRuntimeImpl::DoArchetypeBindingForTypeRef(
   // function, we don't want to do this earlier, because the
   // canonicalization in GetCanonicalDemangleTree() must be performed in
   // the original context as to resolve type aliases correctly.
-  Status error;
-  auto &target = m_process.GetTarget();
-  if (auto scratch_ctx = target.GetScratchSwiftASTContext(error, stack_frame))
-    bound_type = scratch_ctx->get()->ImportType(bound_type, error);
+  bound_type = scratch_ctx->get()->ImportType(bound_type, error);
   
   LLDB_LOG(
       GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS | LIBLLDB_LOG_TYPES),

@@ -21,7 +21,12 @@
 #include "lldb/Utility/Flags.h"
 #include "lldb/lldb-private.h"
 
+namespace clang {
+class Decl;
+}
+
 namespace lldb_private {
+class TypeSystemClang;
 
 /// The implementation of lldb::Type's m_payload field for TypeSystemSwift.
 class TypePayloadSwift {
@@ -125,6 +130,11 @@ public:
   GetTypeFromMangledTypename(ConstString mangled_typename) = 0;
   virtual CompilerType GetGenericArgumentType(lldb::opaque_compiler_type_t type,
                                               size_t idx) = 0;
+
+  /// Use API notes or ClangImporter to determine the swiftified name
+  /// of \p clang_decl.
+  virtual std::string GetSwiftName(const clang::Decl *clang_decl,
+                                   TypeSystemClang &clang_typesystem) = 0;
 
   /// Unavailable hardcoded functions that don't make sense for Swift.
   /// \{

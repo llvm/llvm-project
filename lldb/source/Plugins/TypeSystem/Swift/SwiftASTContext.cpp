@@ -7808,6 +7808,21 @@ bool SwiftASTContext::IsImportedType(opaque_compiler_type_t type,
   return success;
 }
 
+std::string SwiftASTContext::GetSwiftName(const clang::Decl *clang_decl,
+                                          TypeSystemClang &clang_typesystem) {
+  if (auto name_decl = llvm::dyn_cast<clang::NamedDecl>(clang_decl))
+    return ImportName(name_decl);
+  return {};
+}
+
+std::string SwiftASTContext::ImportName(const clang::NamedDecl *clang_decl) {
+  if (auto clang_importer = GetClangImporter()) {
+    swift::DeclName imported_name = clang_importer->importName(clang_decl, {});
+    return imported_name.getBaseName().userFacingName().str();
+  }
+  return clang_decl->getName().str();
+}
+
 void SwiftASTContext::DumpSummary(opaque_compiler_type_t type,
                                   ExecutionContext *exe_ctx, Stream *s,
                                   const lldb_private::DataExtractor &data,

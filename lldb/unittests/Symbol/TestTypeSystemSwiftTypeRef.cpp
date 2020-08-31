@@ -431,3 +431,22 @@ TEST_F(TestTypeSystemSwiftTypeRef, TypeClass) {
     ASSERT_EQ(t.GetTypeClass(), lldb::eTypeClassOther);
   }
 }
+
+TEST_F(TestTypeSystemSwiftTypeRef, ImportedType) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodeBuilder b(dem);
+  {
+    NodePointer node = b.GlobalTypeMangling(b.IntType());
+    CompilerType type = GetCompilerType(b.Mangle(node));
+    ASSERT_FALSE(m_swift_ts.IsImportedType(type.GetOpaqueQualType(), nullptr));
+  }
+  {
+    NodePointer node = b.GlobalType(
+        b.Node(Node::Kind::Structure,
+               b.Node(Node::Kind::Module, swift::MANGLING_MODULE_OBJC),
+               b.Node(Node::Kind::Identifier, "NSDecimal")));
+    CompilerType type = GetCompilerType(b.Mangle(node));
+    ASSERT_TRUE(m_swift_ts.IsImportedType(type.GetOpaqueQualType(), nullptr));
+  }
+}
