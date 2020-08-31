@@ -220,8 +220,15 @@ void X86_64::writeStubHelperEntry(uint8_t *buf, const DylibSymbol &sym,
 void X86_64::prepareSymbolRelocation(lld::macho::Symbol *sym,
                                      const InputSection *isec, const Reloc &r) {
   switch (r.type) {
-  case X86_64_RELOC_GOT_LOAD:
-    // TODO: implement mov -> lea relaxation for non-dynamic symbols
+  case X86_64_RELOC_GOT_LOAD: {
+    if (sym->isWeakDef() || isa<DylibSymbol>(sym))
+      in.got->addEntry(sym);
+
+    if (sym->isTlv())
+      error("found GOT relocation referencing thread-local variable in " +
+            toString(isec));
+    break;
+  }
   case X86_64_RELOC_GOT: {
     in.got->addEntry(sym);
 
@@ -288,7 +295,15 @@ void X86_64::prepareSymbolRelocation(lld::macho::Symbol *sym,
 uint64_t X86_64::resolveSymbolVA(uint8_t *buf, const lld::macho::Symbol &sym,
                                  uint8_t type) const {
   switch (type) {
-  case X86_64_RELOC_GOT_LOAD:
+  case X86_64_RELOC_GOT_LOAD: {
+    if (!sym.isInGot()) {
+      if (buf[-2] != 0x8b)
+        error("X86_64_RELOC_GOT_LOAD must be used with movq instructions");
+      buf[-2] = 0x8d;
+      return sym.getVA();
+    }
+    LLVM_FALLTHROUGH;
+  }
   case X86_64_RELOC_GOT:
     return in.got->addr + sym.gotIndex * WordSize;
   case X86_64_RELOC_BRANCH: {
