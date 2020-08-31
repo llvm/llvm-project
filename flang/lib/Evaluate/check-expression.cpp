@@ -310,7 +310,7 @@ public:
 
   Result operator()(const TypeParamInquiry &inq) const {
     if (scope_.IsDerivedType() && !IsConstantExpr(inq) &&
-        inq.parameter().owner() != scope_) { // C750, C754
+        inq.base() /* X%T, not local T */) { // C750, C754
       return "non-constant reference to a type parameter inquiry not "
              "allowed for derived type components or type parameter values";
     }

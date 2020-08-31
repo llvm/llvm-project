@@ -225,8 +225,8 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
             rhsType->type().AsFortran(), lhsType_->type().AsFortran()};
 
       } else if (!isBoundsRemapping_) {
-        std::size_t lhsRank{lhsType_->shape().size()};
-        std::size_t rhsRank{rhsType->shape().size()};
+        int lhsRank{evaluate::GetRank(lhsType_->shape())};
+        int rhsRank{evaluate::GetRank(rhsType->shape())};
         if (lhsRank != rhsRank) {
           msg = MessageFormattedText{
               "Pointer has rank %d but target has rank %d"_err_en_US, lhsRank,
