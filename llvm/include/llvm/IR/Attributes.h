@@ -139,6 +139,9 @@ public:
   /// Return true if the attribute is a type attribute.
   bool isTypeAttribute() const;
 
+  /// Return true if the attribute is any kind of attribute.
+  bool isValid() const { return pImpl; }
+
   /// Return true if the attribute is present.
   bool hasAttribute(AttrKind Val) const;
 
