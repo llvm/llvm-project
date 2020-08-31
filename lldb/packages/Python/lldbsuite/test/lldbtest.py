@@ -2296,6 +2296,17 @@ class TestBase(Base):
         self.assertItemsEqual(completions, list(match_strings)[1:],
                               "List of returned completion is wrong")
 
+    def completions_contain(self, command, completions):
+        """Checks that the completions for the given command contain the given
+        list of completions."""
+        interp = self.dbg.GetCommandInterpreter()
+        match_strings = lldb.SBStringList()
+        interp.HandleCompletion(command, len(command), 0, -1, match_strings)
+        for completion in completions:
+            # match_strings is a 1-indexed list, so we have to slice...
+            self.assertIn(completion, list(match_strings)[1:],
+                          "Couldn't find expected completion")
+
     def filecheck(
             self,
             command,
