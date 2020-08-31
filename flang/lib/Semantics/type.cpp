@@ -97,8 +97,8 @@ void DerivedTypeSpec::CookParameters(evaluate::FoldingContext &foldingContext) {
   }
 }
 
-void DerivedTypeSpec::EvaluateParameters(
-    evaluate::FoldingContext &foldingContext) {
+void DerivedTypeSpec::EvaluateParameters(SemanticsContext &context) {
+  evaluate::FoldingContext &foldingContext{context.foldingContext()};
   CookParameters(foldingContext);
   if (evaluated_) {
     return;
@@ -123,7 +123,7 @@ void DerivedTypeSpec::EvaluateParameters(
             continue;
           }
         }
-        if (!symbol.test(Symbol::Flag::Error)) {
+        if (!context.HasError(symbol)) {
           evaluate::SayWithDeclaration(messages, symbol,
               "Value of type parameter '%s' (%s) is not convertible to its"
               " type"_err_en_US,
@@ -150,7 +150,7 @@ void DerivedTypeSpec::EvaluateParameters(
         auto expr{
             evaluate::Fold(foldingContext, common::Clone(details.init()))};
         AddParamValue(name, ParamValue{std::move(*expr), details.attr()});
-      } else if (!symbol.test(Symbol::Flag::Error)) {
+      } else if (!context.HasError(symbol)) {
         messages.Say(name_,
             "Type parameter '%s' lacks a value and has no default"_err_en_US,
             name);
@@ -220,8 +220,7 @@ void DerivedTypeSpec::Instantiate(
         typeSymbol_.name());
     return;
   }
-  CookParameters(foldingContext);
-  EvaluateParameters(foldingContext);
+  EvaluateParameters(context);
   const Scope &typeScope{DEREF(typeSymbol_.scope())};
   if (!MightBeParameterized()) {
     scope_ = &typeScope;
