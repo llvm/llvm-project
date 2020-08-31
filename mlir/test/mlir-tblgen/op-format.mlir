@@ -123,6 +123,40 @@ test.format_optional_operand_result_b_op( : ) : i64
 test.format_optional_operand_result_b_op : i64
 
 //===----------------------------------------------------------------------===//
+// Format custom directives
+//===----------------------------------------------------------------------===//
+
+// CHECK: test.format_custom_directive_operands %[[I64]], %[[I64]] -> (%[[I64]])
+test.format_custom_directive_operands %i64, %i64 -> (%i64)
+
+// CHECK: test.format_custom_directive_operands %[[I64]] -> (%[[I64]])
+test.format_custom_directive_operands %i64 -> (%i64)
+
+// CHECK: test.format_custom_directive_operands_and_types %[[I64]], %[[I64]] -> (%[[I64]]) : i64, i64 -> (i64)
+test.format_custom_directive_operands_and_types %i64, %i64 -> (%i64) : i64, i64 -> (i64)
+
+// CHECK: test.format_custom_directive_operands_and_types %[[I64]] -> (%[[I64]]) : i64 -> (i64)
+test.format_custom_directive_operands_and_types %i64 -> (%i64) : i64 -> (i64)
+
+// CHECK: test.format_custom_directive_results : i64, i64 -> (i64)
+test.format_custom_directive_results : i64, i64 -> (i64)
+
+// CHECK: test.format_custom_directive_results : i64 -> (i64)
+test.format_custom_directive_results : i64 -> (i64)
+
+func @foo() {
+  // CHECK: test.format_custom_directive_successors ^bb1, ^bb2
+  test.format_custom_directive_successors ^bb1, ^bb2
+
+^bb1:
+  // CHECK: test.format_custom_directive_successors ^bb2
+  test.format_custom_directive_successors ^bb2
+
+^bb2:
+  return
+}
+
+//===----------------------------------------------------------------------===//
 // Format trait type inference
 //===----------------------------------------------------------------------===//
 

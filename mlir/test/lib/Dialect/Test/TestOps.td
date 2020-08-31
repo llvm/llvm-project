@@ -1414,8 +1414,60 @@ def FormatOptionalUnitAttrNoElide
 }
 
 //===----------------------------------------------------------------------===//
-// AllTypesMatch type inference
+// Custom Directives
+
+def FormatCustomDirectiveOperands
+    : TEST_Op<"format_custom_directive_operands", [AttrSizedOperandSegments]> {
+  let arguments = (ins I64:$operand, Optional<I64>:$optOperand,
+                       Variadic<I64>:$varOperands);
+  let assemblyFormat = [{
+    custom<CustomDirectiveOperands>(
+      $operand, $optOperand, $varOperands
+    )
+    attr-dict
+  }];
+}
+
+def FormatCustomDirectiveOperandsAndTypes
+    : TEST_Op<"format_custom_directive_operands_and_types",
+              [AttrSizedOperandSegments]> {
+  let arguments = (ins AnyType:$operand, Optional<AnyType>:$optOperand,
+                       Variadic<AnyType>:$varOperands);
+  let assemblyFormat = [{
+    custom<CustomDirectiveOperandsAndTypes>(
+      $operand, $optOperand, $varOperands,
+      type($operand), type($optOperand), type($varOperands)
+    )
+    attr-dict
+  }];
+}
+
+def FormatCustomDirectiveResults
+    : TEST_Op<"format_custom_directive_results", [AttrSizedResultSegments]> {
+  let results = (outs AnyType:$result, Optional<AnyType>:$optResult,
+                      Variadic<AnyType>:$varResults);
+  let assemblyFormat = [{
+    custom<CustomDirectiveResults>(
+      type($result), type($optResult), type($varResults)
+    )
+    attr-dict
+  }];
+}
+
+def FormatCustomDirectiveSuccessors
+    : TEST_Op<"format_custom_directive_successors", [Terminator]> {
+  let successors = (successor AnySuccessor:$successor,
+                              VariadicSuccessor<AnySuccessor>:$successors);
+  let assemblyFormat = [{
+    custom<CustomDirectiveSuccessors>(
+      $successor, $successors
+    )
+    attr-dict
+  }];
+}
+
 //===----------------------------------------------------------------------===//
+// AllTypesMatch type inference
 
 def FormatAllTypesMatchVarOp : TEST_Op<"format_all_types_match_var", [
     AllTypesMatch<["value1", "value2", "result"]>
@@ -1435,7 +1487,6 @@ def FormatAllTypesMatchAttrOp : TEST_Op<"format_all_types_match_attr", [
 
 //===----------------------------------------------------------------------===//
 // TypesMatchWith type inference
-//===----------------------------------------------------------------------===//
 
 def FormatTypesMatchVarOp : TEST_Op<"format_types_match_var", [
     TypesMatchWith<"result type matches operand", "value", "result", "$_self">
