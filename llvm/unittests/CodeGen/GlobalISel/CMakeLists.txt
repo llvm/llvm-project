@@ -2,7 +2,6 @@ set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   CodeGen
   Core
-  FileCheck
   GlobalISel
   MC
   MIRParser

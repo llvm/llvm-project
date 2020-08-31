@@ -20,7 +20,6 @@ group("unittests") {
     "ExecutionEngine/JITLink:JITLinkTests",
     "ExecutionEngine/MCJIT:MCJITTests",
     "ExecutionEngine/Orc:OrcJITTests",
-    "FileCheck:FileCheckTests",
     "Frontend:LLVMFrontendTests",
     "FuzzMutate:FuzzMutateTests",
     "IR:IRTests",

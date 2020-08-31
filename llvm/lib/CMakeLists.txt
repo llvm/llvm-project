@@ -3,7 +3,6 @@
 
 add_subdirectory(IR)
 add_subdirectory(FuzzMutate)
-add_subdirectory(FileCheck)
 add_subdirectory(InterfaceStub)
 add_subdirectory(IRReader)
 add_subdirectory(CodeGen)
