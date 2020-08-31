@@ -4,7 +4,7 @@
 
 ; CHECK: vdeal
 ; CHECK: vdeal
-; CHECK: v[[V1:[0-9]+]]:[[V0:[0-9]+]] = vdeal
+; CHECK: v[[V1:[0-9]+]]:[[V0:[0-9]+]] = vshuff
 ; CHECK-NEXT: }
 ; CHECK-NEXT: {
 ; CHECK-NEXT: vmem(r[[RA:[0-9]+]]+#0) = v[[V0]]
