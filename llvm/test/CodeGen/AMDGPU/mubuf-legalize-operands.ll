@@ -239,10 +239,10 @@ entry:
 ; W64-O0-DAG: buffer_store_dword [[IDX_V]], off, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offset:[[IDX_OFF:[0-9]+]] ; 4-byte Folded Spill
 
 ; W64-O0: [[LOOPBB0:BB[0-9]+_[0-9]+]]:
-; W64-O0: buffer_load_dword v[[VRSRC0:[0-9]+]], {{.*}} ; 4-byte Folded Reload
-; W64-O0: buffer_load_dword v[[VRSRC1:[0-9]+]], {{.*}} ; 4-byte Folded Reload
-; W64-O0: buffer_load_dword v[[VRSRC2:[0-9]+]], {{.*}} ; 4-byte Folded Reload
-; W64-O0: buffer_load_dword v[[VRSRC3:[0-9]+]], {{.*}} ; 4-byte Folded Reload
+; W64-O0: buffer_load_dword v[[VRSRC0:[0-9]+]], off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; W64-O0: buffer_load_dword v[[VRSRC1:[0-9]+]], off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
+; W64-O0: buffer_load_dword v[[VRSRC2:[0-9]+]], off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
+; W64-O0: buffer_load_dword v[[VRSRC3:[0-9]+]], off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
 ; W64-O0: s_waitcnt vmcnt(0)
 ; W64-O0-DAG: v_readfirstlane_b32 s[[SRSRCTMP0:[0-9]+]], v[[VRSRC0]]
 ; W64-O0-DAG: v_readfirstlane_b32 s[[SRSRCTMP1:[0-9]+]], v[[VRSRC1]]
@@ -278,10 +278,10 @@ entry:
 ; W64-O0: v_writelane_b32 [[VSAVEEXEC:v[0-9]+]], s[[SAVEEXEC1]], [[SAVEEXEC_IDX1:[0-9]+]]
 
 ; W64-O0: [[LOOPBB1:BB[0-9]+_[0-9]+]]:
-; W64-O0: buffer_load_dword v[[VRSRC0:[0-9]+]], {{.*}} ; 4-byte Folded Reload
-; W64-O0: buffer_load_dword v[[VRSRC1:[0-9]+]], {{.*}} ; 4-byte Folded Reload
-; W64-O0: buffer_load_dword v[[VRSRC2:[0-9]+]], {{.*}} ; 4-byte Folded Reload
-; W64-O0: buffer_load_dword v[[VRSRC3:[0-9]+]], {{.*}} ; 4-byte Folded Reload
+; W64-O0: buffer_load_dword v[[VRSRC0:[0-9]+]], off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
+; W64-O0: buffer_load_dword v[[VRSRC1:[0-9]+]], off, s[0:3], s32 offset:32 ; 4-byte Folded Reload
+; W64-O0: buffer_load_dword v[[VRSRC2:[0-9]+]], off, s[0:3], s32 offset:36 ; 4-byte Folded Reload
+; W64-O0: buffer_load_dword v[[VRSRC3:[0-9]+]], off, s[0:3], s32 offset:40 ; 4-byte Folded Reload
 ; W64-O0: s_waitcnt vmcnt(0)
 ; W64-O0-DAG: v_readfirstlane_b32 s[[SRSRCTMP0:[0-9]+]], v[[VRSRC0]]
 ; W64-O0-DAG: v_readfirstlane_b32 s[[SRSRCTMP1:[0-9]+]], v[[VRSRC1]]
