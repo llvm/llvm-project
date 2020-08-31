@@ -144,7 +144,7 @@ void derefOnNullPtrGotMovedFromValidPtr() {
   std::unique_ptr<A> P(new A()); // expected-note {{Smart pointer 'P' is constructed}}
   // FIXME: above note should go away once we fix marking region not interested. 
   std::unique_ptr<A> PToMove; // expected-note {{Default constructed smart pointer 'PToMove' is null}}
-  P = std::move(PToMove); // expected-note {{Null pointer value move-assigned to 'P'}}
+  P = std::move(PToMove); // expected-note {{A null pointer value is moved to 'P'}}
   P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
   // expected-note@-1 {{Dereference of null smart pointer 'P'}}
 }
@@ -169,4 +169,33 @@ void derefOnAssignedZeroToNullSmartPtr() {
   P = 0; // expected-note {{Smart pointer 'P' is assigned to null}}
   P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
   // expected-note@-1 {{Dereference of null smart pointer 'P'}}
+}
+
+void derefMoveConstructedWithNullPtr() {
+  std::unique_ptr<A> PToMove; // expected-note {{Default constructed smart pointer 'PToMove' is null}}
+  std::unique_ptr<A> P(std::move(PToMove)); // expected-note {{A null pointer value is moved to 'P'}}
+  P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+  // expected-note@-1{{Dereference of null smart pointer 'P'}}
+}
+
+void derefValidPtrMovedToConstruct() {
+  std::unique_ptr<A> PToMove(new A()); // expected-note {{Smart pointer 'PToMove' is constructed}}
+  // FIXME: above note should go away once we fix marking region not interested. 
+  std::unique_ptr<A> P(std::move(PToMove)); // expected-note {{Smart pointer 'PToMove' is null after being moved to 'P'}}
+  PToMove->foo(); // expected-warning {{Dereference of null smart pointer 'PToMove' [alpha.cplusplus.SmartPtr]}}
+  // expected-note@-1{{Dereference of null smart pointer 'PToMove'}}
+}
+
+void derefNullPtrMovedToConstruct() {
+  std::unique_ptr<A> PToMove; // expected-note {{Default constructed smart pointer 'PToMove' is null}}
+  // FIXME: above note should go away once we fix marking region not interested. 
+  std::unique_ptr<A> P(std::move(PToMove)); // expected-note {{Smart pointer 'PToMove' is null after being moved to 'P'}}
+  PToMove->foo(); // expected-warning {{Dereference of null smart pointer 'PToMove' [alpha.cplusplus.SmartPtr]}}
+  // expected-note@-1{{Dereference of null smart pointer 'PToMove'}}
+}
+
+void derefUnknownPtrMovedToConstruct(std::unique_ptr<A> PToMove) {
+  std::unique_ptr<A> P(std::move(PToMove)); // expected-note {{Smart pointer 'PToMove' is null after; previous value moved to 'P'}}
+  PToMove->foo(); // expected-warning {{Dereference of null smart pointer 'PToMove' [alpha.cplusplus.SmartPtr]}}
+  // expected-note@-1{{Dereference of null smart pointer 'PToMove'}}
 }
