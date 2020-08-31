@@ -187,7 +187,7 @@ public:
   /// Parse an optional attribute with the provided type.
   OptionalParseResult parseOptionalAttribute(Attribute &attribute,
                                              Type type = {});
-  OptionalParseResult parseOptionalAttribute(ArrayAttr &attribute);
+  OptionalParseResult parseOptionalAttribute(ArrayAttr &attribute, Type type);
 
   /// Parse an optional attribute that is demarcated by a specific token.
   template <typename AttributeT>
@@ -197,8 +197,8 @@ public:
     if (getToken().isNot(kind))
       return llvm::None;
 
-    if (Attribute parsedAttr = parseAttribute()) {
-      attr = parsedAttr.cast<ArrayAttr>();
+    if (Attribute parsedAttr = parseAttribute(type)) {
+      attr = parsedAttr.cast<AttributeT>();
       return success();
     }
     return failure();

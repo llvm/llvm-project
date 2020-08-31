@@ -319,6 +319,19 @@ static ParseResult parseCustomDirectiveOperandsAndTypes(
     return failure();
   return success();
 }
+static ParseResult parseCustomDirectiveRegions(
+    OpAsmParser &parser, Region &region,
+    SmallVectorImpl<std::unique_ptr<Region>> &varRegions) {
+  if (parser.parseRegion(region))
+    return failure();
+  if (failed(parser.parseOptionalComma()))
+    return success();
+  std::unique_ptr<Region> varRegion = std::make_unique<Region>();
+  if (parser.parseRegion(*varRegion))
+    return failure();
+  varRegions.emplace_back(std::move(varRegion));
+  return success();
+}
 static ParseResult
 parseCustomDirectiveSuccessors(OpAsmParser &parser, Block *&successor,
                                SmallVectorImpl<Block *> &varSuccessors) {
@@ -360,6 +373,15 @@ printCustomDirectiveOperandsAndTypes(OpAsmPrinter &printer, Value operand,
   printCustomDirectiveOperands(printer, operand, optOperand, varOperands);
   printCustomDirectiveResults(printer, operandType, optOperandType,
                               varOperandTypes);
+}
+static void printCustomDirectiveRegions(OpAsmPrinter &printer, Region &region,
+                                        MutableArrayRef<Region> varRegions) {
+  printer.printRegion(region);
+  if (!varRegions.empty()) {
+    printer << ", ";
+    for (Region &region : varRegions)
+      printer.printRegion(region);
+  }
 }
 static void printCustomDirectiveSuccessors(OpAsmPrinter &printer,
                                            Block *successor,
