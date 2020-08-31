@@ -935,6 +935,12 @@ void CheckScopeConstraints(const SourceStmtList &stmts,
           parser::MessageFormattedText{
               "Label '%u' was not found"_err_en_US, SayLabel(label)});
     } else if (!InInclusiveScope(scopes, scope, target.proxyForScope)) {
+      // Clause 11.1.2.1 prohibits transfer of control to the interior of a
+      // block from outside the block, but this does not apply to formats.
+      if (target.labeledStmtClassificationSet.test(
+              TargetStatementEnum::Format)) {
+        continue;
+      }
       context.Say(position,
           parser::MessageFormattedText{
               "Label '%u' is not in scope"_en_US, SayLabel(label)});
