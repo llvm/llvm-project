@@ -997,21 +997,17 @@ define <2 x double> @sqrt_simplify_before_recip_vec(<2 x double> %x, <2 x double
 define double @sqrt_simplify_before_recip_order(double %x, double* %p) nounwind {
 ; SSE-LABEL: sqrt_simplify_before_recip_order:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    sqrtsd %xmm0, %xmm1
-; SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; SSE-NEXT:    divsd %xmm1, %xmm2
-; SSE-NEXT:    mulsd %xmm2, %xmm0
-; SSE-NEXT:    mulsd {{.*}}(%rip), %xmm2
-; SSE-NEXT:    movsd %xmm2, (%rdi)
+; SSE-NEXT:    sqrtsd %xmm0, %xmm0
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    divsd %xmm0, %xmm1
+; SSE-NEXT:    movsd %xmm1, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sqrt_simplify_before_recip_order:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm1
-; AVX-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX-NEXT:    vdivsd %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vmulsd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmulsd {{.*}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vdivsd %xmm0, %xmm1, %xmm1
 ; AVX-NEXT:    vmovsd %xmm1, (%rdi)
 ; AVX-NEXT:    retq
   %sqrt = tail call fast double @llvm.sqrt.f64(double %x)

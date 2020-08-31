@@ -13235,11 +13235,6 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
   if (N0CFP && (N0CFP->isExactlyValue(1.0) || N0CFP->isExactlyValue(-1.0)))
     return SDValue();
 
-  // Skip X/sqrt(X) that has not been simplified to sqrt(X) yet.
-  if (N1.getOpcode() == ISD::FSQRT && N1.getOperand(0) == N0 &&
-      Flags.hasAllowReassociation() && Flags.hasNoSignedZeros())
-    return SDValue();
-
   // Exit early if the target does not want this transform or if there can't
   // possibly be enough uses of the divisor to make the transform worthwhile.
   unsigned MinUses = TLI.combineRepeatedFPDivisors();
@@ -13259,6 +13254,13 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
   SetVector<SDNode *> Users;
   for (auto *U : N1->uses()) {
     if (U->getOpcode() == ISD::FDIV && U->getOperand(1) == N1) {
+      // Skip X/sqrt(X) that has not been simplified to sqrt(X) yet.
+      if (U->getOperand(1).getOpcode() == ISD::FSQRT &&
+          U->getOperand(0) == U->getOperand(1).getOperand(0) &&
+          U->getFlags().hasAllowReassociation() &&
+          U->getFlags().hasNoSignedZeros())
+        continue;
+
       // This division is eligible for optimization only if global unsafe math
       // is enabled or if this division allows reciprocal formation.
       if (UnsafeMath || U->getFlags().hasAllowReciprocal())
@@ -13470,6 +13472,10 @@ SDValue DAGCombiner::visitFSQRT(SDNode *N) {
     return SDValue();
 
   // FSQRT nodes have flags that propagate to the created nodes.
+  // TODO: If this is N0/sqrt(N0), and we reach this node before trying to
+  //       transform the fdiv, we may produce a sub-optimal estimate sequence
+  //       because the reciprocal calculation may not have to filter out a
+  //       0.0 input.
   return buildSqrtEstimate(N0, Flags);
 }
 
