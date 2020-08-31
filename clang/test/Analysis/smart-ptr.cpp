@@ -17,7 +17,8 @@ void derefAfterMove(std::unique_ptr<int> P) {
   if (P)
     clang_analyzer_warnIfReached(); // no-warning
   // TODO: Report a null dereference (instead).
-  *P.get() = 1; // expected-warning {{Method called on moved-from object 'P'}}
+  *P.get() = 1; // expected-warning {{Method called on moved-from object 'P' [cplusplus.Move]}}
+  // expected-warning@-1 {{Dereference of null pointer [core.NullDereference]}}
 }
 
 // Don't crash when attempting to model a call with unknown callee.
@@ -332,4 +333,45 @@ void drefOnAssignedNullFromMethodPtrValidSmartPtr() {
   std::unique_ptr<A> P(new A());
   P = returnRValRefOfUniquePtr();
   P->foo(); // No warning. 
+}
+
+void derefMoveConstructedWithValidPtr() {
+  std::unique_ptr<A> PToMove(new A());
+  std::unique_ptr<A> P(std::move(PToMove));
+  P->foo(); // No warning.
+}
+
+void derefMoveConstructedWithNullPtr() {
+  std::unique_ptr<A> PToMove;
+  std::unique_ptr<A> P(std::move(PToMove));
+  P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefMoveConstructedWithUnknownPtr(std::unique_ptr<A> PToMove) {
+  std::unique_ptr<A> P(std::move(PToMove));
+  P->foo(); // No warning.
+}
+
+void derefValidPtrMovedToConstruct() {
+  std::unique_ptr<A> PToMove(new A());
+  std::unique_ptr<A> P(std::move(PToMove));
+  PToMove->foo(); // expected-warning {{Dereference of null smart pointer 'PToMove' [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefNullPtrMovedToConstruct() {
+  std::unique_ptr<A> PToMove;
+  std::unique_ptr<A> P(std::move(PToMove));
+  PToMove->foo(); // expected-warning {{Dereference of null smart pointer 'PToMove' [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefUnknownPtrMovedToConstruct(std::unique_ptr<A> PToMove) {
+  std::unique_ptr<A> P(std::move(PToMove));
+  PToMove->foo(); // expected-warning {{Dereference of null smart pointer 'PToMove' [alpha.cplusplus.SmartPtr]}}
+}
+
+std::unique_ptr<A> &&functionReturnsRValueRef();
+
+void derefMoveConstructedWithRValueRefReturn() {
+  std::unique_ptr<A> P(functionReturnsRValueRef());
+  P->foo();  // No warning.
 }

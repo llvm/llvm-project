@@ -58,6 +58,10 @@ private:
   void handleSwap(const CallEvent &Call, CheckerContext &C) const;
   void handleGet(const CallEvent &Call, CheckerContext &C) const;
   bool handleAssignOp(const CallEvent &Call, CheckerContext &C) const;
+  bool handleMoveCtr(const CallEvent &Call, CheckerContext &C,
+                     const MemRegion *ThisRegion) const;
+  bool updateMovedSmartPointers(CheckerContext &C, const MemRegion *ThisRegion,
+                                const MemRegion *OtherSmartPtrRegion) const;
 
   using SmartPtrMethodHandlerFn =
       void (SmartPtrModeling::*)(const CallEvent &Call, CheckerContext &) const;
@@ -160,12 +164,15 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
     return false;
 
   if (const auto *CC = dyn_cast<CXXConstructorCall>(&Call)) {
-    if (CC->getDecl()->isCopyOrMoveConstructor())
+    if (CC->getDecl()->isCopyConstructor())
       return false;
 
     const MemRegion *ThisRegion = CC->getCXXThisVal().getAsRegion();
     if (!ThisRegion)
       return false;
+
+    if (CC->getDecl()->isMoveConstructor())
+      return handleMoveCtr(Call, C, ThisRegion);
 
     if (Call.getNumArgs() == 0) {
       auto NullVal = C.getSValBuilder().makeNull();
@@ -410,6 +417,22 @@ bool SmartPtrModeling::handleAssignOp(const CallEvent &Call,
     return true;
   }
 
+  return updateMovedSmartPointers(C, ThisRegion, OtherSmartPtrRegion);
+}
+
+bool SmartPtrModeling::handleMoveCtr(const CallEvent &Call, CheckerContext &C,
+                                     const MemRegion *ThisRegion) const {
+  const auto *OtherSmartPtrRegion = Call.getArgSVal(0).getAsRegion();
+  if (!OtherSmartPtrRegion)
+    return false;
+
+  return updateMovedSmartPointers(C, ThisRegion, OtherSmartPtrRegion);
+}
+
+bool SmartPtrModeling::updateMovedSmartPointers(
+    CheckerContext &C, const MemRegion *ThisRegion,
+    const MemRegion *OtherSmartPtrRegion) const {
+  ProgramStateRef State = C.getState();
   const auto *OtherInnerPtr = State->get<TrackedRegionMap>(OtherSmartPtrRegion);
   if (OtherInnerPtr) {
     State = State->set<TrackedRegionMap>(ThisRegion, *OtherInnerPtr);
@@ -430,7 +453,7 @@ bool SmartPtrModeling::handleAssignOp(const CallEvent &Call,
             ThisRegion->printPretty(OS);
           }
           if (BR.isInteresting(ThisRegion) && IsArgValNull) {
-            OS << "Null pointer value move-assigned to ";
+            OS << "A null pointer value is moved to ";
             ThisRegion->printPretty(OS);
             BR.markInteresting(OtherSmartPtrRegion);
           }
