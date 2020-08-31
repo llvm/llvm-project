@@ -349,6 +349,11 @@ bool LoopIdiomRecognize::runOnLoop(Loop *L) {
   if (Name == "memset" || Name == "memcpy")
     return false;
 
+  // UPMEM: also disable loop idiom recognition for internal memset/memcpy
+  // functions
+  if (Name.startswith("__memset_") || Name.startswith("__memcpy_"))
+    return false;
+
   // Determine if code size heuristics need to be applied.
   ApplyCodeSizeHeuristics =
       L->getHeader()->getParent()->hasOptSize() && UseLIRCodeSizeHeurs;
