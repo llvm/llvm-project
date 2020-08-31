@@ -43,6 +43,49 @@ def DirectiveAttrDictValidB : TestFormat_Op<"attrdict_valid_b", [{
 }]>;
 
 //===----------------------------------------------------------------------===//
+// custom
+
+// CHECK: error: expected '<' before custom directive name
+def DirectiveCustomInvalidA : TestFormat_Op<"custom_invalid_a", [{
+  custom(
+}]>;
+// CHECK: error: expected custom directive name identifier
+def DirectiveCustomInvalidB : TestFormat_Op<"custom_invalid_b", [{
+  custom<>
+}]>;
+// CHECK: error: expected '>' after custom directive name
+def DirectiveCustomInvalidC : TestFormat_Op<"custom_invalid_c", [{
+  custom<MyDirective(
+}]>;
+// CHECK: error: expected '(' before custom directive parameters
+def DirectiveCustomInvalidD : TestFormat_Op<"custom_invalid_d", [{
+  custom<MyDirective>)
+}]>;
+// CHECK: error: only variables and types may be used as parameters to a custom directive
+def DirectiveCustomInvalidE : TestFormat_Op<"custom_invalid_e", [{
+  custom<MyDirective>(operands)
+}]>;
+// CHECK: error: expected ')' after custom directive parameters
+def DirectiveCustomInvalidF : TestFormat_Op<"custom_invalid_f", [{
+  custom<MyDirective>($operand<
+}]>, Arguments<(ins I64:$operand)>;
+// CHECK: error: type directives within a custom directive may only refer to variables
+def DirectiveCustomInvalidH : TestFormat_Op<"custom_invalid_h", [{
+  custom<MyDirective>(type(operands))
+}]>;
+
+// CHECK-NOT: error
+def DirectiveCustomValidA : TestFormat_Op<"custom_valid_a", [{
+  custom<MyDirective>($operand) attr-dict
+}]>, Arguments<(ins Optional<I64>:$operand)>;
+def DirectiveCustomValidB : TestFormat_Op<"custom_valid_b", [{
+  custom<MyDirective>($operand, type($operand), type($result)) attr-dict
+}]>, Arguments<(ins I64:$operand)>, Results<(outs I64:$result)>;
+def DirectiveCustomValidC : TestFormat_Op<"custom_valid_c", [{
+  custom<MyDirective>($attr) attr-dict
+}]>, Arguments<(ins I64Attr:$attr)>;
+
+//===----------------------------------------------------------------------===//
 // functional-type
 
 // CHECK: error: 'functional-type' is only valid as a top-level directive
@@ -238,6 +281,10 @@ def OptionalInvalidJ : TestFormat_Op<"optional_invalid_j", [{
 def OptionalInvalidK : TestFormat_Op<"optional_invalid_k", [{
   ($arg^)
 }]>, Arguments<(ins Variadic<I64>:$arg)>;
+// CHECK: error: only variables can be used to anchor an optional group
+def OptionalInvalidL : TestFormat_Op<"optional_invalid_l", [{
+  (custom<MyDirective>($arg)^)?
+}]>, Arguments<(ins I64:$arg)>;
 
 //===----------------------------------------------------------------------===//
 // Variables

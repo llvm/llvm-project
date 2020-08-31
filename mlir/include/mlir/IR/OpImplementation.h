@@ -202,6 +202,10 @@ inline OpAsmPrinter &operator<<(OpAsmPrinter &p,
   llvm::interleaveComma(types, p);
   return p;
 }
+inline OpAsmPrinter &operator<<(OpAsmPrinter &p, const TypeRange &types) {
+  llvm::interleaveComma(types, p);
+  return p;
+}
 inline OpAsmPrinter &operator<<(OpAsmPrinter &p, ArrayRef<Type> types) {
   llvm::interleaveComma(types, p);
   return p;

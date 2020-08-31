@@ -664,6 +664,12 @@ The available directives are as follows:
     -   Represents the attribute dictionary of the operation, but prefixes the
         dictionary with an `attributes` keyword.
 
+*   `custom` < UserDirective > ( Params )
+
+    -   Represents a custom directive implemented by the user in C++.
+    -   See the [Custom Directives](#custom-directives) section below for more
+        details.
+
 *   `functional-type` ( inputs , results )
 
     -   Formats the `inputs` and `results` arguments as a
@@ -705,6 +711,75 @@ example above, the variables would be `$callee` and `$args`.
 Attribute variables are printed with their respective value type, unless that
 value type is buildable. In those cases, the type of the attribute is elided.
 
+#### Custom Directives
+
+The declarative assembly format specification allows for handling a large
+majority of the common cases when formatting an operation. For the operations
+that require or desire specifying parts of the operation in a form not supported
+by the declarative syntax, custom directives may be specified. A custom
+directive essentially allows for users to use C++ for printing and parsing
+subsections of an otherwise declaratively specified format. Looking at the
+specification of a custom directive above:
+
+```
+custom-directive ::= `custom` `<` UserDirective `>` `(` Params `)`
+```
+
+A custom directive has two main parts: The `UserDirective` and the `Params`. A
+custom directive is transformed into a call to a `print*` and a `parse*` method
+when generating the C++ code for the format. The `UserDirective` is an
+identifier used as a suffix to these two calls, i.e., `custom<MyDirective>(...)`
+would result in calls to `parseMyDirective` and `printMyDirective` wihtin the
+parser and printer respectively. `Params` may be any combination of variables
+(i.e. Attribute, Operand, Successor, etc.) and type directives. The type
+directives must refer to a variable, but that variable need not also be a
+parameter to the custom directive.
+
+The arguments to the `parse<UserDirective>` method is firstly a reference to the
+`OpAsmParser`(`OpAsmParser &`), and secondly a set of output parameters
+corresponding to the parameters specified in the format. The mapping of
+declarative parameter to `parse` method argument is detailed below:
+
+*   Attribute Variables
+    -   Single: `<Attribute-Storage-Type>(e.g. Attribute) &`
+    -   Optional: `<Attribute-Storage-Type>(e.g. Attribute) &`
+*   Operand Variables
+    -   Single: `OpAsmParser::OperandType &`
+    -   Optional: `Optional<OpAsmParser::OperandType> &`
+    -   Variadic: `SmallVectorImpl<OpAsmParser::OperandType> &`
+*   Successor Variables
+    -   Single: `Block *&`
+    -   Variadic: `SmallVectorImpl<Block *> &`
+*   Type Directives
+    -   Single: `Type &`
+    -   Optional: `Type &`
+    -   Variadic: `SmallVectorImpl<Type> &`
+
+When a variable is optional, the value should only be specified if the variable
+is present. Otherwise, the value should remain `None` or null.
+
+The arguments to the `print<UserDirective>` method is firstly a reference to the
+`OpAsmPrinter`(`OpAsmPrinter &`), and secondly a set of output parameters
+corresponding to the parameters specified in the format. The mapping of
+declarative parameter to `print` method argument is detailed below:
+
+*   Attribute Variables
+    -   Single: `<Attribute-Storage-Type>(e.g. Attribute)`
+    -   Optional: `<Attribute-Storage-Type>(e.g. Attribute)`
+*   Operand Variables
+    -   Single: `Value`
+    -   Optional: `Value`
+    -   Variadic: `OperandRange`
+*   Successor Variables
+    -   Single: `Block *`
+    -   Variadic: `SuccessorRange`
+*   Type Directives
+    -   Single: `Type`
+    -   Optional: `Type`
+    -   Variadic: `TypeRange`
+
+When a variable is optional, the provided value may be null.
+
 #### Optional Groups
 
 In certain situations operations may have "optional" information, e.g.
@@ -722,8 +797,8 @@ information. An optional group is defined by wrapping a set of elements within
         should be printed/parsed.
     -   An element is marked as the anchor by adding a trailing `^`.
     -   The first element is *not* required to be the anchor of the group.
-*   Literals, variables, and type directives are the only valid elements within
-    the group.
+*   Literals, variables, custom directives, and type directives are the only
+    valid elements within the group.
     -   Any attribute variable may be used, but only optional attributes can be
         marked as the anchor.
     -   Only variadic or optional operand arguments can be used.
