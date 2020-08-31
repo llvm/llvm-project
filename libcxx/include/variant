@@ -537,25 +537,32 @@ static constexpr auto __make_vtable(_Fp __f) {
 }
 
 struct __base {
+  template <class _Vis, class... _Vs>
+  struct __dispatch {
+    template <size_t... _Is>
+    inline _LIBCPP_INLINE_VISIBILITY
+    constexpr auto operator()(integral_constant<size_t, _Is>...) const noexcept {
+      return +[](_Vis&& __vis, _Vs&&... __vs) -> decltype(auto) {
+        return __invoke_constexpr(
+            _VSTD::forward<_Vis>(__vis),
+            __access::__base::__get_alt<_Is>(_VSTD::forward<_Vs>(__vs))...);
+      };
+    }
+  };
+
   template <class _Vis, class _Vp, class _Wp>
   inline _LIBCPP_INLINE_VISIBILITY
   static constexpr decltype(auto)
   __visit_alt_at(size_t __index, _Vis&& __vis, _Vp&& __v, _Wp&& __w) {
     constexpr size_t __size = __uncvref_t<_Vp>::__size();
     static_assert(__size == __uncvref_t<_Wp>::__size());
-    constexpr auto __dispatch = [](auto __i) {
-      return +[](_Vis&& __vis_, _Vp&& __v_, _Wp&& __w_) -> decltype(auto) {
-        constexpr size_t _Ip = decltype(__i)::value;
-        return __invoke_constexpr(
-            _VSTD::forward<_Vis>(__vis_),
-            __access::__base::__get_alt<_Ip>(_VSTD::forward<_Vp>(__v_)),
-            __access::__base::__get_alt<_Ip>(_VSTD::forward<_Wp>(__w_)));
-      };
+    constexpr auto __dispatch_at = [](auto __i) {
+      return __dispatch<_Vis, _Vp, _Wp>{}(__i, __i);
     };
 #define _LIBCPP_VARIANT_CASE(_Ip)                                              \
   case _Ip: {                                                                  \
     if constexpr (_Ip < __size) {                                              \
-      return __dispatch(integral_constant<size_t, _Ip>{})(                     \
+      return __dispatch_at(integral_constant<size_t, _Ip>{})(                  \
           _VSTD::forward<_Vis>(__vis),                                         \
           _VSTD::forward<_Vp>(__v),                                            \
           _VSTD::forward<_Wp>(__w));                                           \
@@ -569,7 +576,7 @@ struct __base {
         default: __throw_bad_variant_access();
       }
     } else {
-      constexpr auto __vtable = __make_vtable<__size>(__dispatch);
+      constexpr auto __vtable = __make_vtable<__size>(__dispatch_at);
       return __vtable[__index + 1](_VSTD::forward<_Vis>(__vis),
                                    _VSTD::forward<_Vp>(__v),
                                    _VSTD::forward<_Wp>(__w));
@@ -594,14 +601,7 @@ struct __base {
   static constexpr decltype(auto)
   __visit_alt_impl(index_sequence<_Is...>, _Vis&& __vis, _Vs&&... __vs) {
     using __multi = __multi<__uncvref_t<_Vs>::__size()...>;
-    constexpr auto __dispatch = [](auto... __is) {
-      return +[](_Vis&& __vis_, _Vs&&... __vs_) -> decltype(auto) {
-        return __invoke_constexpr(
-            _VSTD::forward<_Vis>(__vis_),
-            __access::__base::__get_alt<decltype(__is)::value>(
-                _VSTD::forward<_Vs>(__vs_))...);
-      };
-    };
+    constexpr __dispatch<_Vis, _Vs...> __dispatch;
 #define _LIBCPP_VARIANT_CASE(_Ip)                                              \
   case _Ip: {                                                                  \
     if constexpr (_Ip < __multi::__size) {                                     \
@@ -874,9 +874,9 @@ protected:
   template <size_t _Ip, class _Tp, class... _Args>
   inline _LIBCPP_INLINE_VISIBILITY
   static _Tp& __construct_alt(__alt<_Ip, _Tp>& __a, _Args&&... __args) {
-    auto* result = ::new ((void*)_VSTD::addressof(__a))
+    auto* __result = ::new ((void*)_VSTD::addressof(__a))
         __alt<_Ip, _Tp>(in_place, _VSTD::forward<_Args>(__args)...);
-    return result->__value;
+    return __result->__value;
   }
 
   template <class _Rhs>
