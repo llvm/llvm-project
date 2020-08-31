@@ -129,6 +129,8 @@ public:
   bool IsIntrinsicNumeric(NumericOperator) const;
   bool IsIntrinsicConcat() const;
 
+  bool CheckConformance() const;
+
   // Find and return a user-defined operator or report an error.
   // The provided message is used if there is no such operator.
   MaybeExpr TryDefinedOp(
@@ -2236,6 +2238,7 @@ MaybeExpr NumericBinaryHelper(ExpressionAnalyzer &context, NumericOperator opr,
   if (analyzer.fatalErrors()) {
     return std::nullopt;
   } else if (analyzer.IsIntrinsicNumeric(opr)) {
+    analyzer.CheckConformance();
     return NumericOperation<OPR>(context.GetContextualMessages(),
         analyzer.MoveExpr(0), analyzer.MoveExpr(1),
         context.GetDefaultKind(TypeCategory::Real));
@@ -2788,6 +2791,23 @@ bool ArgumentAnalyzer::IsIntrinsicConcat() const {
       *GetType(0), GetRank(0), *GetType(1), GetRank(1));
 }
 
+bool ArgumentAnalyzer::CheckConformance() const {
+  if (actuals_.size() == 2) {
+    const auto *lhs{actuals_.at(0).value().UnwrapExpr()};
+    const auto *rhs{actuals_.at(1).value().UnwrapExpr()};
+    if (lhs && rhs) {
+      auto &foldingContext{context_.GetFoldingContext()};
+      auto lhShape{GetShape(foldingContext, *lhs)};
+      auto rhShape{GetShape(foldingContext, *rhs)};
+      if (lhShape && rhShape) {
+        return evaluate::CheckConformance(foldingContext.messages(), *lhShape,
+            *rhShape, "left operand", "right operand");
+      }
+    }
+  }
+  return true; // no proven problem
+}
+
 MaybeExpr ArgumentAnalyzer::TryDefinedOp(
     const char *opr, parser::MessageFixedText &&error, bool isUserOp) {
   if (AnyUntypedOperand()) {
@@ -2847,6 +2867,7 @@ MaybeExpr ArgumentAnalyzer::TryBoundOp(const Symbol &symbol, int passIndex) {
     proc = &symbol;
     localActuals.at(passIndex).value().set_isPassedObject();
   }
+  CheckConformance();
   return context_.MakeFunctionRef(
       source_, ProcedureDesignator{*proc}, std::move(localActuals));
 }
