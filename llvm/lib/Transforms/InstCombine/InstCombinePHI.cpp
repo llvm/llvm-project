@@ -1439,18 +1439,7 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
       continue;
     // Just use that PHI instead then.
     ++NumPHICSEs;
-    // Note that we can't necessarily just replace the PN with IdenticalPN,
-    // because IdenticalPN might be *after* PN, and PN might have uses
-    // in PHI nodes inbetween the two.
-    // So we need to pick the earliest PHI node as being the canonical one.
-    Instruction *OldPN = &PN;
-    Instruction *NewPN = &IdenticalPN;
-    if (!NewPN->comesBefore(OldPN))
-      std::swap(OldPN, NewPN);
-    replaceInstUsesWith(*OldPN, NewPN);
-    // Also, just to be extra safe, make sure the non-canonical PHI goes away.
-    eraseInstFromFunction(*OldPN);
-    return nullptr; // Signal that thange happened.
+    return replaceInstUsesWith(PN, &IdenticalPN);
   }
 
   // If this is an integer PHI and we know that it has an illegal type, see if
