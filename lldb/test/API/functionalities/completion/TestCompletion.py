@@ -581,6 +581,27 @@ class CommandLineCompletionTestCase(TestBase):
         # (anonymous namespace)::Quux().
         self.complete_from_to('breakpoint set -n Qu', '')
 
+    def test_completion_type_formatter_delete(self):
+        self.runCmd('type filter add --child a Aoo')
+        self.complete_from_to('type filter delete ', ['Aoo'])
+        self.runCmd('type filter add --child b -x Boo')
+        self.complete_from_to('type filter delete ', ['Boo'])
+
+        self.runCmd('type format add -f hex Coo')
+        self.complete_from_to('type format delete ', ['Coo'])
+        self.runCmd('type format add -f hex -x Doo')
+        self.complete_from_to('type format delete ', ['Doo'])
+
+        self.runCmd('type summary add -c Eoo')
+        self.complete_from_to('type summary delete ', ['Eoo'])
+        self.runCmd('type summary add -x -c Foo')
+        self.complete_from_to('type summary delete ', ['Foo'])
+
+        self.runCmd('type synthetic add Goo -l test')
+        self.complete_from_to('type synthetic delete ', ['Goo'])
+        self.runCmd('type synthetic add -x Hoo -l test')
+        self.complete_from_to('type synthetic delete ', ['Hoo'])
+
     @skipIf(archs=no_match(['x86_64']))
     def test_register_read_and_write_on_x86(self):
         """Test the completion of the commands register read and write on x86"""
