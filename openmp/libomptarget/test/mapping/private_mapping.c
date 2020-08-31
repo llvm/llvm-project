@@ -1,22 +1,8 @@
-// RUN: %libomptarget-compile-aarch64-unknown-linux-gnu
-// RUN: %libomptarget-run-fail-aarch64-unknown-linux-gnu 2>&1 \
-// RUN: | %fcheck-aarch64-unknown-linux-gnu
-
-// RUN: %libomptarget-compile-powerpc64-ibm-linux-gnu
-// RUN: %libomptarget-run-fail-powerpc64-ibm-linux-gnu 2>&1 \
-// RUN: | %fcheck-powerpc64-ibm-linux-gnu
-
-// RUN: %libomptarget-compile-powerpc64le-ibm-linux-gnu
-// RUN: %libomptarget-run-fail-powerpc64le-ibm-linux-gnu 2>&1 \
-// RUN: | %fcheck-powerpc64le-ibm-linux-gnu
-
-// RUN: %libomptarget-compile-x86_64-pc-linux-gnu
-// RUN: %libomptarget-run-fail-x86_64-pc-linux-gnu 2>&1 \
-// RUN: | %fcheck-x86_64-pc-linux-gnu
-
-// RUN: %libomptarget-compile-nvptx64-nvidia-cuda
-// RUN: %libomptarget-run-fail-nvptx64-nvidia-cuda 2>&1 \
-// RUN: | %fcheck-nvptx64-nvidia-cuda
+// RUN: %libomptarget-compile-run-and-check-aarch64-unknown-linux-gnu
+// RUN: %libomptarget-compile-run-and-check-powerpc64-ibm-linux-gnu
+// RUN: %libomptarget-compile-run-and-check-powerpc64le-ibm-linux-gnu
+// RUN: %libomptarget-compile-run-and-check-x86_64-pc-linux-gnu
+// RUN: %libomptarget-compile-run-and-check-nvptx64-nvidia-cuda
 
 #include <assert.h>
 #include <stdio.h>
