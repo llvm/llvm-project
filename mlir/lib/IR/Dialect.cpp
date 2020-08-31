@@ -31,7 +31,7 @@ static llvm::ManagedStatic<DialectRegistry> dialectRegistry;
 DialectRegistry &mlir::getGlobalDialectRegistry() { return *dialectRegistry; }
 
 // Note: deprecated, will be removed soon.
-static bool isGlobalDialectRegistryEnabledFlag = true;
+static bool isGlobalDialectRegistryEnabledFlag = false;
 void mlir::enableGlobalDialectRegistry(bool enable) {
   isGlobalDialectRegistryEnabledFlag = enable;
 }
