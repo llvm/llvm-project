@@ -2035,7 +2035,7 @@ void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, TruncInst *Trunc) {
 Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx, Value *Step,
                                           Instruction::BinaryOps BinOp) {
   // Create and check the types.
-  auto *ValVTy = cast<VectorType>(Val->getType());
+  auto *ValVTy = cast<FixedVectorType>(Val->getType());
   int VLen = ValVTy->getNumElements();
 
   Type *STy = Val->getType()->getScalarType();
@@ -2799,19 +2799,18 @@ Value *InnerLoopVectorizer::getOrCreateVectorTripCount(Loop *L) {
 Value *InnerLoopVectorizer::createBitOrPointerCast(Value *V, VectorType *DstVTy,
                                                    const DataLayout &DL) {
   // Verify that V is a vector type with same number of elements as DstVTy.
-  assert(isa<FixedVectorType>(DstVTy) &&
-         "Vector type is assumed to be fixed width.");
-  unsigned VF = DstVTy->getNumElements();
-  VectorType *SrcVecTy = cast<VectorType>(V->getType());
+  auto *DstFVTy = cast<FixedVectorType>(DstVTy);
+  unsigned VF = DstFVTy->getNumElements();
+  auto *SrcVecTy = cast<FixedVectorType>(V->getType());
   assert((VF == SrcVecTy->getNumElements()) && "Vector dimensions do not match");
   Type *SrcElemTy = SrcVecTy->getElementType();
-  Type *DstElemTy = DstVTy->getElementType();
+  Type *DstElemTy = DstFVTy->getElementType();
   assert((DL.getTypeSizeInBits(SrcElemTy) == DL.getTypeSizeInBits(DstElemTy)) &&
          "Vector elements must have same size");
 
   // Do a direct cast if element types are castable.
   if (CastInst::isBitOrNoopPointerCastable(SrcElemTy, DstElemTy, DL)) {
-    return Builder.CreateBitOrPointerCast(V, DstVTy);
+    return Builder.CreateBitOrPointerCast(V, DstFVTy);
   }
   // V cannot be directly casted to desired vector type.
   // May happen when V is a floating point vector but DstVTy is a vector of
@@ -2825,7 +2824,7 @@ Value *InnerLoopVectorizer::createBitOrPointerCast(Value *V, VectorType *DstVTy,
       IntegerType::getIntNTy(V->getContext(), DL.getTypeSizeInBits(SrcElemTy));
   auto *VecIntTy = FixedVectorType::get(IntTy, VF);
   Value *CastVal = Builder.CreateBitOrPointerCast(V, VecIntTy);
-  return Builder.CreateBitOrPointerCast(CastVal, DstVTy);
+  return Builder.CreateBitOrPointerCast(CastVal, DstFVTy);
 }
 
 void InnerLoopVectorizer::emitMinimumIterationCountCheck(Loop *L,
@@ -3526,7 +3525,8 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths() {
       Type *ScalarTruncatedTy =
           IntegerType::get(OriginalTy->getContext(), KV.second);
       auto *TruncatedTy = FixedVectorType::get(
-          ScalarTruncatedTy, cast<VectorType>(OriginalTy)->getNumElements());
+          ScalarTruncatedTy,
+          cast<FixedVectorType>(OriginalTy)->getNumElements());
       if (TruncatedTy == OriginalTy)
         continue;
 
@@ -3576,13 +3576,13 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths() {
           break;
         }
       } else if (auto *SI = dyn_cast<ShuffleVectorInst>(I)) {
-        auto Elements0 =
-            cast<VectorType>(SI->getOperand(0)->getType())->getNumElements();
+        auto Elements0 = cast<FixedVectorType>(SI->getOperand(0)->getType())
+                             ->getNumElements();
         auto *O0 = B.CreateZExtOrTrunc(
             SI->getOperand(0),
             FixedVectorType::get(ScalarTruncatedTy, Elements0));
-        auto Elements1 =
-            cast<VectorType>(SI->getOperand(1)->getType())->getNumElements();
+        auto Elements1 = cast<FixedVectorType>(SI->getOperand(1)->getType())
+                             ->getNumElements();
         auto *O1 = B.CreateZExtOrTrunc(
             SI->getOperand(1),
             FixedVectorType::get(ScalarTruncatedTy, Elements1));
@@ -3592,16 +3592,16 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths() {
         // Don't do anything with the operands, just extend the result.
         continue;
       } else if (auto *IE = dyn_cast<InsertElementInst>(I)) {
-        auto Elements =
-            cast<VectorType>(IE->getOperand(0)->getType())->getNumElements();
+        auto Elements = cast<FixedVectorType>(IE->getOperand(0)->getType())
+                            ->getNumElements();
         auto *O0 = B.CreateZExtOrTrunc(
             IE->getOperand(0),
             FixedVectorType::get(ScalarTruncatedTy, Elements));
         auto *O1 = B.CreateZExtOrTrunc(IE->getOperand(1), ScalarTruncatedTy);
         NewI = B.CreateInsertElement(O0, O1, IE->getOperand(2));
       } else if (auto *EE = dyn_cast<ExtractElementInst>(I)) {
-        auto Elements =
-            cast<VectorType>(EE->getOperand(0)->getType())->getNumElements();
+        auto Elements = cast<FixedVectorType>(EE->getOperand(0)->getType())
+                            ->getNumElements();
         auto *O0 = B.CreateZExtOrTrunc(
             EE->getOperand(0),
             FixedVectorType::get(ScalarTruncatedTy, Elements));
