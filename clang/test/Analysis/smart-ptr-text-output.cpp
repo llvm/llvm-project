@@ -199,3 +199,108 @@ void derefUnknownPtrMovedToConstruct(std::unique_ptr<A> PToMove) {
   PToMove->foo(); // expected-warning {{Dereference of null smart pointer 'PToMove' [alpha.cplusplus.SmartPtr]}}
   // expected-note@-1{{Dereference of null smart pointer 'PToMove'}}
 }
+
+void derefConditionOnNullPtrFalseBranch() {
+  std::unique_ptr<A> P; // expected-note {{Default constructed smart pointer 'P' is null}}
+  if (P) { // expected-note {{Taking false branch}}
+    P->foo(); // No warning.
+  } else {
+    P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+    // expected-note@-1{{Dereference of null smart pointer 'P'}}
+  }
+}
+
+void derefConditionOnNullPtrTrueBranch() {
+  std::unique_ptr<A> P; // expected-note {{Default constructed smart pointer 'P' is null}}
+  if (!P) { // expected-note {{Taking true branch}}
+    P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+    // expected-note@-1{{Dereference of null smart pointer 'P'}}
+  }
+}
+
+void derefConditionOnValidPtrTrueBranch() {
+  std::unique_ptr<A> P(new A());
+  std::unique_ptr<A> PNull; // expected-note {{Default constructed smart pointer 'PNull' is null}}
+  if (P) { // expected-note {{Taking true branch}}
+    PNull->foo(); // expected-warning {{Dereference of null smart pointer 'PNull' [alpha.cplusplus.SmartPtr]}}
+    // expected-note@-1{{Dereference of null smart pointer 'PNull'}}
+  } else {
+    PNull->foo(); // No warning
+  }
+}
+
+void derefConditionOnValidPtrFalseBranch() {
+  std::unique_ptr<A> P(new A());
+  std::unique_ptr<A> PNull; // expected-note {{Default constructed smart pointer 'PNull' is null}}
+  if (!P) { // expected-note {{Taking false branch}}
+    PNull->foo(); // No warning
+  } else {
+    PNull->foo(); // expected-warning {{Dereference of null smart pointer 'PNull' [alpha.cplusplus.SmartPtr]}}
+    // expected-note@-1{{Dereference of null smart pointer 'PNull'}}
+  }
+}
+
+void derefConditionOnNotValidPtr() {
+  std::unique_ptr<A> P(new A());
+  std::unique_ptr<A> PNull;
+  if (!P)
+    PNull->foo(); // No warning.
+}
+
+void derefConditionOnUnKnownPtrAssumeNull(std::unique_ptr<A> P) {
+  std::unique_ptr<A> PNull; // expected-note {{Default constructed smart pointer 'PNull' is null}}
+  if (!P) { // expected-note {{Taking true branch}}
+    // expected-note@-1{{Assuming smart pointer 'P' is null}}
+    PNull->foo(); // expected-warning {{Dereference of null smart pointer 'PNull' [alpha.cplusplus.SmartPtr]}}
+    // expected-note@-1{{Dereference of null smart pointer 'PNull'}}
+  }
+}
+
+void derefConditionOnUnKnownPtrAssumeNonNull(std::unique_ptr<A> P) {
+  std::unique_ptr<A> PNull; // expected-note {{Default constructed smart pointer 'PNull' is null}}
+  if (P) { // expected-note {{Taking true branch}}
+    // expected-note@-1{{Assuming smart pointer 'P' is non-null}}
+    PNull->foo(); // expected-warning {{Dereference of null smart pointer 'PNull' [alpha.cplusplus.SmartPtr]}}
+    // expected-note@-1{{Dereference of null smart pointer 'PNull'}}
+  }
+}
+
+void derefOnValidPtrAfterReset(std::unique_ptr<A> P) {
+  P.reset(new A());
+  if (!P)
+    P->foo(); // No warning.
+  else
+    P->foo(); // No warning.
+}
+
+struct S {
+  std::unique_ptr<int> P;
+
+  void foo() {
+    if (!P) { // No-note because foo() is pruned
+      return;
+    }
+  }
+
+  int callingFooWithNullPointer() {
+    foo(); // No note on Calling 'S::foo'
+    P.reset(new int(0)); // expected-note {{Assigning 0}}
+    return 1 / *(P.get()); // expected-warning {{Division by zero [core.DivideZero]}}
+    // expected-note@-1 {{Division by zero}}
+  }
+
+  int callingFooWithValidPointer() {
+    P.reset(new int(0)); // expected-note {{Assigning 0}}
+    foo(); // No note on Calling 'S::foo'
+    return 1 / *(P.get()); // expected-warning {{Division by zero [core.DivideZero]}}
+    // expected-note@-1 {{Division by zero}}
+  }
+
+  int callingFooWithUnknownPointer(std::unique_ptr<int> PUnknown) {
+    P.swap(PUnknown);
+    foo(); // No note on Calling 'S::foo'
+    P.reset(new int(0)); // expected-note {{Assigning 0}}
+    return 1 / *(P.get()); // expected-warning {{Division by zero [core.DivideZero]}}
+    // expected-note@-1 {{Division by zero}}
+  }
+};
