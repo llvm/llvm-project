@@ -414,6 +414,10 @@ public:
   /// region is null, a new empty region will be attached to the Operation.
   void addRegion(std::unique_ptr<Region> &&region);
 
+  /// Take ownership of a set of regions that should be attached to the
+  /// Operation.
+  void addRegions(MutableArrayRef<std::unique_ptr<Region>> regions);
+
   /// Get the context held by this operation state.
   MLIRContext *getContext() const { return location->getContext(); }
 };
