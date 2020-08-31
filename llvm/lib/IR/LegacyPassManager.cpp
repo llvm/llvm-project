@@ -20,6 +20,7 @@
 #include "llvm/IR/LegacyPassNameParser.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassTimingInfo.h"
+#include "llvm/IR/StructuralHash.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -1475,75 +1476,6 @@ void FPPassManager::dumpPassStructure(unsigned Offset) {
   }
 }
 
-#ifdef EXPENSIVE_CHECKS
-namespace {
-namespace details {
-
-// Basic hashing mechanism to detect structural change to the IR, used to verify
-// pass return status consistency with actual change. Loosely copied from
-// llvm/lib/Transforms/Utils/FunctionComparator.cpp
-
-class StructuralHash {
-  uint64_t Hash = 0x6acaa36bef8325c5ULL;
-
-  void update(uint64_t V) { Hash = hashing::detail::hash_16_bytes(Hash, V); }
-
-public:
-  StructuralHash() = default;
-
-  void update(Function &F) {
-    if (F.empty())
-      return;
-
-    update(F.isVarArg());
-    update(F.arg_size());
-
-    SmallVector<const BasicBlock *, 8> BBs;
-    SmallPtrSet<const BasicBlock *, 16> VisitedBBs;
-
-    BBs.push_back(&F.getEntryBlock());
-    VisitedBBs.insert(BBs[0]);
-    while (!BBs.empty()) {
-      const BasicBlock *BB = BBs.pop_back_val();
-      update(45798); // Block header
-      for (auto &Inst : *BB)
-        update(Inst.getOpcode());
-
-      const Instruction *Term = BB->getTerminator();
-      for (unsigned i = 0, e = Term->getNumSuccessors(); i != e; ++i) {
-        if (!VisitedBBs.insert(Term->getSuccessor(i)).second)
-          continue;
-        BBs.push_back(Term->getSuccessor(i));
-      }
-    }
-  }
-
-  void update(Module &M) {
-    for (Function &F : M)
-      update(F);
-  }
-
-  uint64_t getHash() const { return Hash; }
-};
-
-} // namespace details
-
-uint64_t StructuralHash(Function &F) {
-  details::StructuralHash H;
-  H.update(F);
-  return H.getHash();
-}
-
-uint64_t StructuralHash(Module &M) {
-  details::StructuralHash H;
-  H.update(M);
-  return H.getHash();
-}
-
-} // end anonymous namespace
-
-#endif
-
 /// Execute all of the passes scheduled for execution by invoking
 /// runOnFunction method.  Keep track of whether any of the passes modifies
 /// the function, and if so, return true.
@@ -1590,7 +1522,7 @@ bool FPPassManager::runOnFunction(Function &F) {
       if (!LocalChanged && (RefHash != StructuralHash(F))) {
         llvm::errs() << "Pass modifies its input and doesn't report it: "
                      << FP->getPassName() << "\n";
-        assert(false && "Pass modifies its input and doesn't report it.");
+        llvm_unreachable("Pass modifies its input and doesn't report it");
       }
 #endif
 
