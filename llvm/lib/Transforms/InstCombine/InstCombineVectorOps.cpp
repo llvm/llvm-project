@@ -975,7 +975,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
     PHI->addIncoming(SourceAggregates[Pred], Pred);
 
   ++NumAggregateReconstructionsSimplified;
-  OrigIVI.replaceAllUsesWith(PHI);
+  replaceInstUsesWith(OrigIVI, PHI);
 
   // Just signal that the fold happened, we've already inserted instructions.
   return &OrigIVI;
