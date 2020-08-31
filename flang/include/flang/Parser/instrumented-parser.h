@@ -31,7 +31,7 @@ public:
   bool Fails(const char *at, const MessageFixedText &tag, ParseState &);
   void Note(const char *at, const MessageFixedText &tag, bool pass,
       const ParseState &);
-  void Dump(llvm::raw_ostream &, const CookedSource &) const;
+  void Dump(llvm::raw_ostream &, const AllCookedSources &) const;
 
 private:
   struct LogForPosition {

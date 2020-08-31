@@ -17,12 +17,12 @@
 
 namespace Fortran::parser {
 
-Parsing::Parsing(AllSources &s) : cooked_{s} {}
+Parsing::Parsing(AllCookedSources &allCooked) : allCooked_{allCooked} {}
 Parsing::~Parsing() {}
 
 const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   options_ = options;
-  AllSources &allSources{cooked_.allSources()};
+  AllSources &allSources{allCooked_.allSources()};
   if (options.isModuleFile) {
     for (const auto &path : options.searchDirectories) {
       allSources.PushSearchPathDirectory(path);
@@ -63,7 +63,9 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
       preprocessor.Undefine(predef.first);
     }
   }
-  Prescanner prescanner{messages_, cooked_, preprocessor, options.features};
+  currentCooked_ = &allCooked_.NewCookedSource();
+  Prescanner prescanner{
+      messages_, *currentCooked_, allSources, preprocessor, options.features};
   prescanner.set_fixedForm(options.isFixedForm)
       .set_fixedFormColumnLimit(options.fixedFormColumns)
       .AddCompilerDirectiveSentinel("dir$");
@@ -77,21 +79,21 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   ProvenanceRange range{allSources.AddIncludedFile(
       *sourceFile, ProvenanceRange{}, options.isModuleFile)};
   prescanner.Prescan(range);
-  if (cooked_.BufferedBytes() == 0 && !options.isModuleFile) {
+  if (currentCooked_->BufferedBytes() == 0 && !options.isModuleFile) {
     // Input is empty.  Append a newline so that any warning
     // message about nonstandard usage will have provenance.
-    cooked_.Put('\n', range.start());
+    currentCooked_->Put('\n', range.start());
   }
-  cooked_.Marshal();
+  currentCooked_->Marshal(allSources);
   if (options.needProvenanceRangeToCharBlockMappings) {
-    cooked_.CompileProvenanceRangeToOffsetMappings();
+    currentCooked_->CompileProvenanceRangeToOffsetMappings(allSources);
   }
   return sourceFile;
 }
 
 void Parsing::DumpCookedChars(llvm::raw_ostream &out) const {
-  UserState userState{cooked_, common::LanguageFeatureControl{}};
-  ParseState parseState{cooked_};
+  UserState userState{allCooked_, common::LanguageFeatureControl{}};
+  ParseState parseState{cooked()};
   parseState.set_inFixedForm(options_.isFixedForm).set_userState(&userState);
   while (std::optional<const char *> p{parseState.GetNextChar()}) {
     out << **p;
@@ -99,19 +101,19 @@ void Parsing::DumpCookedChars(llvm::raw_ostream &out) const {
 }
 
 void Parsing::DumpProvenance(llvm::raw_ostream &out) const {
-  cooked_.Dump(out);
+  allCooked_.Dump(out);
 }
 
 void Parsing::DumpParsingLog(llvm::raw_ostream &out) const {
-  log_.Dump(out, cooked_);
+  log_.Dump(out, allCooked_);
 }
 
 void Parsing::Parse(llvm::raw_ostream &out) {
-  UserState userState{cooked_, options_.features};
+  UserState userState{allCooked_, options_.features};
   userState.set_debugOutput(out)
       .set_instrumentedParse(options_.instrumentedParse)
       .set_log(&log_);
-  ParseState parseState{cooked_};
+  ParseState parseState{cooked()};
   parseState.set_inFixedForm(options_.isFixedForm).set_userState(&userState);
   parseTree_ = program.Parse(parseState);
   CHECK(

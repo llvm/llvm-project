@@ -751,7 +751,7 @@ Scope *ModFileReader::Read(const SourceName &name, Scope *ancestor) {
       return it->second->scope();
     }
   }
-  parser::Parsing parsing{context_.allSources()};
+  parser::Parsing parsing{context_.allCookedSources()};
   parser::Options options;
   options.isModuleFile = true;
   options.features.Enable(common::LanguageFeature::BackslashEscapes);
@@ -796,7 +796,6 @@ Scope *ModFileReader::Read(const SourceName &name, Scope *ancestor) {
   }
   auto &modSymbol{*it->second};
   modSymbol.set(Symbol::Flag::ModFile);
-  modSymbol.scope()->set_chars(parsing.cooked());
   return modSymbol.scope();
 }
 
