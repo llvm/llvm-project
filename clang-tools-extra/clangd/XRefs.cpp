@@ -1479,30 +1479,39 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
   if (!CXXRD)
     return llvm::None;
 
+  bool WantParents = Direction == TypeHierarchyDirection::Parents ||
+                     Direction == TypeHierarchyDirection::Both;
+  bool WantChildren = Direction == TypeHierarchyDirection::Children ||
+                      Direction == TypeHierarchyDirection::Both;
+
+  // If we're looking for children, we're doing the lookup in the index.
+  // The index does not store relationships between implicit
+  // specializations, so if we have one, use the template pattern instead.
+  // Note that this needs to be done before the declToTypeHierarchyItem(),
+  // otherwise the type hierarchy item would misleadingly contain the
+  // specialization parameters, while the children would involve classes
+  // that derive from other specializations of the template.
+  if (WantChildren) {
+    if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(CXXRD))
+      CXXRD = CTSD->getTemplateInstantiationPattern();
+  }
+
   Optional<TypeHierarchyItem> Result =
       declToTypeHierarchyItem(AST.getASTContext(), *CXXRD);
   if (!Result)
     return Result;
 
-  if (Direction == TypeHierarchyDirection::Parents ||
-      Direction == TypeHierarchyDirection::Both) {
+  if (WantParents) {
     Result->parents.emplace();
 
     RecursionProtectionSet RPSet;
     fillSuperTypes(*CXXRD, AST.getASTContext(), *Result->parents, RPSet);
   }
 
-  if ((Direction == TypeHierarchyDirection::Children ||
-       Direction == TypeHierarchyDirection::Both) &&
-      ResolveLevels > 0) {
+  if (WantChildren && ResolveLevels > 0) {
     Result->children.emplace();
 
     if (Index) {
-      // The index does not store relationships between implicit
-      // specializations, so if we have one, use the template pattern instead.
-      if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(CXXRD))
-        CXXRD = CTSD->getTemplateInstantiationPattern();
-
       if (Optional<SymbolID> ID = getSymbolID(CXXRD))
         fillSubTypes(*ID, *Result->children, Index, ResolveLevels, TUPath);
     }
