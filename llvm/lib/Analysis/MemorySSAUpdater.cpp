@@ -543,6 +543,20 @@ void MemorySSAUpdater::removeDuplicatePhiEdgesBetween(const BasicBlock *From,
   }
 }
 
+/// If all arguments of a MemoryPHI are defined by the same incoming
+/// argument, return that argument.
+static MemoryAccess *onlySingleValue(MemoryPhi *MP) {
+  MemoryAccess *MA = nullptr;
+
+  for (auto &Arg : MP->operands()) {
+    if (!MA)
+      MA = cast<MemoryAccess>(Arg);
+    else if (MA != Arg)
+      return nullptr;
+  }
+  return MA;
+}
+
 static MemoryAccess *getNewDefiningAccessForClone(MemoryAccess *MA,
                                                   const ValueToValueMapTy &VMap,
                                                   PhiToDefMap &MPhiMap,
@@ -698,6 +712,10 @@ void MemorySSAUpdater::updateForClonedLoop(const LoopBlocksRPO &LoopBlocks,
         else
           NewPhi->addIncoming(IncPhi, IncBB);
       }
+    }
+    if (onlySingleValue(NewPhi)) {
+      MPhiMap[Phi] = nullptr;
+      removeMemoryAccess(NewPhi);
     }
   };
 
@@ -1229,20 +1247,6 @@ void MemorySSAUpdater::moveAllAfterMergeBlocks(BasicBlock *From, BasicBlock *To,
   for (BasicBlock *Succ : successors(From))
     if (MemoryPhi *MPhi = MSSA->getMemoryAccess(Succ))
       MPhi->setIncomingBlock(MPhi->getBasicBlockIndex(From), To);
-}
-
-/// If all arguments of a MemoryPHI are defined by the same incoming
-/// argument, return that argument.
-static MemoryAccess *onlySingleValue(MemoryPhi *MP) {
-  MemoryAccess *MA = nullptr;
-
-  for (auto &Arg : MP->operands()) {
-    if (!MA)
-      MA = cast<MemoryAccess>(Arg);
-    else if (MA != Arg)
-      return nullptr;
-  }
-  return MA;
 }
 
 void MemorySSAUpdater::wireOldPredecessorsToNewImmediatePredecessor(
