@@ -809,7 +809,9 @@ bool InstrumentationRuntimeTSan::NotifyBreakpointHit(
 
   StructuredData::ObjectSP report =
       instance->RetrieveReportData(context->exe_ctx_ref);
-  std::string stop_reason_description;
+  std::string stop_reason_description =
+      "unknown thread sanitizer fault (unable to extract thread sanitizer "
+      "report)";
   if (report) {
     std::string issue_description = instance->FormatDescription(report);
     report->GetAsDictionary()->AddStringItem("description", issue_description);
