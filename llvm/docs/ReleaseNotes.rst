@@ -119,10 +119,25 @@ Changes to the AArch64 Backend
   ``00bet5``). For more information, see the ``clang`` 11 release
   notes.
 
+* Added support for Armv8.6-A:
+
+  Assembly support for the following extensions:
+  - Enhanced Counter Virtualization (ARMv8.6-ECV).
+  - Fine Grained Traps (ARMv8.6-FGT).
+  - Activity Monitors virtualization (ARMv8.6-AMU).
+  - Data gathering hint (ARMv8.0-DGH).
+
+  Assembly and intrinsics support for the Armv8.6-A Matrix Multiply extension
+  for Neon and SVE vectors.
+
+  Support for the ARMv8.2-BF16 BFloat16 extension. This includes a new C-level
+  storage-only `__bf16` type, a `BFloat` IR type, a `bf16` MVT, and assembly
+  and intrinsics support.
+
+* Added support for Cortex-A34, Cortex-A77, Cortex-A78 and Cortex-X1 cores.
+
 Changes to the ARM Backend
 --------------------------
-
-During this release ...
 
 * Implemented C-language intrinsics for the full Arm v8.1-M MVE instruction
   set. ``<arm_mve.h>`` now supports the complete API defined in the Arm C
@@ -138,6 +153,19 @@ During this release ...
   previously not specifying a value and relying on the implicit compiler
   default may wish to specify ``-fno-omit-frame-pointer`` to get the old
   behavior. This improves compatibility with GCC.
+
+* Added support for Armv8.6-A:
+
+  Assembly and intrinsics support for the Armv8.6-A Matrix Multiply extension
+  for Neon vectors.
+
+  Support for the ARMv8.2-AA32BF16 BFloat16 extension. This includes a new
+  C-level storage-only `__bf16` type, a `BFloat` IR type, a `bf16` MVT, and
+  assembly and intrinsics support.
+
+* Added support for CMSE.
+
+* Added support for Cortex-M55, Cortex-A77, Cortex-A78 and Cortex-X1 cores.
 
 Changes to the MIPS Target
 --------------------------
