@@ -10,6 +10,9 @@
 #define ERROR __attribute__((swift_error_result))
 #define CONTEXT __attribute__((swift_context))
 
+// CHECK-DAG: %struct.atomic_padded = type { { %struct.packed, [7 x i8] } }
+// CHECK-DAG: %struct.packed = type <{ i64, i8 }>
+//
 // CHECK: [[STRUCT2_RESULT:@.*]] = private {{.*}} constant [[STRUCT2_TYPE:%.*]] { i32 0, i8 0, i8 undef, i8 0, i32 0, i32 0 }
 
 /*****************************************************************************/
@@ -1042,3 +1045,27 @@ void no_lifetime_markers() {
   // CHECK-NOT: call void @llvm.lifetime.
   take_int5(return_int5());
 }
+
+typedef struct {
+  unsigned long long a;
+  unsigned long long b;
+} double_word;
+
+typedef struct {
+  _Atomic(double_word) a;
+} atomic_double_word;
+
+// CHECK-LABEL: use_atomic(i64 %0, i64 %1)
+SWIFTCALL void use_atomic(atomic_double_word a) {}
+
+typedef struct {
+  unsigned long long a;
+  unsigned char b;
+} __attribute__((packed)) packed;
+
+typedef struct {
+  _Atomic(packed) a;
+} atomic_padded;
+
+// CHECK-LABEL: use_atomic_padded(i64 %0, i64 %1)
+SWIFTCALL void use_atomic_padded(atomic_padded a) {}
