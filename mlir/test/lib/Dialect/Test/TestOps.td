@@ -618,6 +618,16 @@ def OpM : TEST_Op<"op_m"> {
   let arguments = (ins I32, OptionalAttr<I32Attr>:$optional_attr);
   let results = (outs I32);
 }
+
+// Test for memrefs normalization of an op with normalizable memrefs.
+def OpNorm : TEST_Op<"op_norm", [MemRefsNormalizable]> {
+  let arguments = (ins AnyMemRef:$X, AnyMemRef:$Y);
+}
+// Test for memrefs normalization of an op without normalizable memrefs.
+def OpNonNorm : TEST_Op<"op_nonnorm"> {
+  let arguments = (ins AnyMemRef:$X, AnyMemRef:$Y);
+}
+
 // Pattern add the argument plus a increasing static number hidden in
 // OpMTest function. That value is set into the optional argument.
 // That way, we will know if operations is called once or twice.
