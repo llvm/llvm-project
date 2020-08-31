@@ -377,11 +377,10 @@ fuseProducerOfDep(OpBuilder &b, LinalgOp consumer, unsigned consumerIdx,
 Optional<FusionInfo> mlir::linalg::fuseProducerOf(
     OpBuilder &b, LinalgOp consumer, unsigned consumerIdx,
     const LinalgDependenceGraph &graph, OperationFolder *folder) {
-  SmallVector<LinalgDependenceGraph::DependenceType, 4> deps = {
-      LinalgDependenceGraph::DependenceType::RAW,
-      LinalgDependenceGraph::DependenceType::WAW,
-  };
-  for (auto dep : deps) {
+  for (auto dep : {
+           LinalgDependenceGraph::DependenceType::RAW,
+           LinalgDependenceGraph::DependenceType::WAW,
+       }) {
     if (auto res =
             fuseProducerOfDep(b, consumer, consumerIdx, graph, folder, dep))
       return res;
