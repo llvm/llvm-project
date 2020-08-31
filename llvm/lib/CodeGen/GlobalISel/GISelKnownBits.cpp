@@ -94,6 +94,25 @@ dumpResult(const MachineInstr &MI, const KnownBits &Known, unsigned Depth) {
          << "\n";
 }
 
+/// Compute known bits for the intersection of \p Src0 and \p Src1
+void GISelKnownBits::computeKnownBitsMin(Register Src0, Register Src1,
+                                         KnownBits &Known,
+                                         const APInt &DemandedElts,
+                                         unsigned Depth) {
+  // Test src1 first, since we canonicalize simpler expressions to the RHS.
+  computeKnownBitsImpl(Src1, Known, DemandedElts, Depth);
+
+  // If we don't know any bits, early out.
+  if (Known.isUnknown())
+    return;
+
+  KnownBits Known2;
+  computeKnownBitsImpl(Src0, Known2, DemandedElts, Depth);
+
+  // Only known if known in both the LHS and RHS.
+  Known &= Known2;
+}
+
 void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                                           const APInt &DemandedElts,
                                           unsigned Depth) {
@@ -284,15 +303,16 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_SELECT: {
-    computeKnownBitsImpl(MI.getOperand(3).getReg(), Known, DemandedElts,
-                         Depth + 1);
-    // If we don't know any bits, early out.
-    if (Known.isUnknown())
-      break;
-    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
-                         Depth + 1);
-    // Only known if known in both the LHS and RHS.
-    Known &= Known2;
+    computeKnownBitsMin(MI.getOperand(2).getReg(), MI.getOperand(3).getReg(),
+                        Known, DemandedElts, Depth + 1);
+    break;
+  }
+  case TargetOpcode::G_SMIN:
+  case TargetOpcode::G_SMAX:
+  case TargetOpcode::G_UMIN:
+  case TargetOpcode::G_UMAX: {
+    computeKnownBitsMin(MI.getOperand(1).getReg(), MI.getOperand(2).getReg(),
+                        Known, DemandedElts, Depth + 1);
     break;
   }
   case TargetOpcode::G_FCMP:
