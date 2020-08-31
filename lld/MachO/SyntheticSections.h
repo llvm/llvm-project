@@ -62,6 +62,11 @@ public:
     align = WordSize;
   }
 
+  // Sections in __LINKEDIT are special: their offsets are recorded in the
+  // load commands like LC_DYLD_INFO_ONLY and LC_SYMTAB, instead of in section
+  // headers.
+  bool isHidden() const override final { return true; }
+
   virtual uint64_t getRawSize() const = 0;
 
   // codesign (or more specifically libstuff) checks that each section in
@@ -166,10 +171,6 @@ public:
   BindingSection();
   void finalizeContents();
   uint64_t getRawSize() const override { return contents.size(); }
-  // Like other sections in __LINKEDIT, the binding section is special: its
-  // offsets are recorded in the LC_DYLD_INFO_ONLY load command, instead of in
-  // section headers.
-  bool isHidden() const override { return true; }
   bool isNeeded() const override { return !bindings.empty(); }
   void writeTo(uint8_t *buf) const override;
 
@@ -205,10 +206,6 @@ public:
   WeakBindingSection();
   void finalizeContents();
   uint64_t getRawSize() const override { return contents.size(); }
-  // Like other sections in __LINKEDIT, the binding section is special: its
-  // offsets are recorded in the LC_DYLD_INFO_ONLY load command, instead of in
-  // section headers.
-  bool isHidden() const override { return true; }
   bool isNeeded() const override {
     return !bindings.empty() || !definitions.empty();
   }
@@ -324,10 +321,6 @@ public:
   LazyBindingSection();
   void finalizeContents();
   uint64_t getRawSize() const override { return contents.size(); }
-  // Like other sections in __LINKEDIT, the lazy binding section is special: its
-  // offsets are recorded in the LC_DYLD_INFO_ONLY load command, instead of in
-  // section headers.
-  bool isHidden() const override { return true; }
   bool isNeeded() const override { return !entries.empty(); }
   void writeTo(uint8_t *buf) const override;
   // Note that every entry here will by referenced by a corresponding entry in
@@ -349,10 +342,6 @@ public:
   ExportSection();
   void finalizeContents();
   uint64_t getRawSize() const override { return size; }
-  // Like other sections in __LINKEDIT, the export section is special: its
-  // offsets are recorded in the LC_DYLD_INFO_ONLY load command, instead of in
-  // section headers.
-  bool isHidden() const override { return true; }
   void writeTo(uint8_t *buf) const override;
 
   bool hasWeakSymbol = false;
@@ -369,10 +358,6 @@ public:
   // Returns the start offset of the added string.
   uint32_t addString(StringRef);
   uint64_t getRawSize() const override { return size; }
-  // Like other sections in __LINKEDIT, the string table section is special: its
-  // offsets are recorded in the LC_SYMTAB load command, instead of in section
-  // headers.
-  bool isHidden() const override { return true; }
   void writeTo(uint8_t *buf) const override;
 
 private:
@@ -388,16 +373,12 @@ struct SymtabEntry {
   size_t strx;
 };
 
-class SymtabSection : public SyntheticSection {
+class SymtabSection : public LinkEditSection {
 public:
   SymtabSection(StringTableSection &);
   void finalizeContents();
   size_t getNumSymbols() const { return symbols.size(); }
-  uint64_t getSize() const override;
-  // Like other sections in __LINKEDIT, the symtab section is special: its
-  // offsets are recorded in the LC_SYMTAB load command, instead of in section
-  // headers.
-  bool isHidden() const override { return true; }
+  uint64_t getRawSize() const override;
   void writeTo(uint8_t *buf) const override;
 
 private:

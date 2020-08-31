@@ -454,10 +454,10 @@ void ExportSection::finalizeContents() {
 void ExportSection::writeTo(uint8_t *buf) const { trieBuilder.writeTo(buf); }
 
 SymtabSection::SymtabSection(StringTableSection &stringTableSection)
-    : SyntheticSection(segment_names::linkEdit, section_names::symbolTable),
+    : LinkEditSection(segment_names::linkEdit, section_names::symbolTable),
       stringTableSection(stringTableSection) {}
 
-uint64_t SymtabSection::getSize() const {
+uint64_t SymtabSection::getRawSize() const {
   return symbols.size() * sizeof(structs::nlist_64);
 }
 
