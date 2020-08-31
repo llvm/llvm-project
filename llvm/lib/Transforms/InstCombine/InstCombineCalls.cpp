@@ -538,7 +538,7 @@ static Value *simplifyNeonTbl1(const IntrinsicInst &II,
   if (!C)
     return nullptr;
 
-  auto *VecTy = cast<VectorType>(II.getType());
+  auto *VecTy = cast<FixedVectorType>(II.getType());
   unsigned NumElts = VecTy->getNumElements();
 
   // Only perform this transformation for <8 x i8> vector types.
