@@ -407,6 +407,10 @@ struct OffloadArray {
     return true;
   }
 
+  static const unsigned BasePtrsArgNum = 2;
+  static const unsigned PtrsArgNum = 3;
+  static const unsigned SizesArgNum = 4;
+
 private:
   /// Traverses the BasicBlock where \p Array is, collecting the stores made to
   /// \p Array, leaving StoredValues with the values stored before the
@@ -705,14 +709,12 @@ private:
     // offload arrays, offload_baseptrs, offload_ptrs, offload_sizes.
     // Therefore:
     // i8** %offload_baseptrs.
-    const unsigned BasePtrsArgNum = 2;
-    Value *BasePtrsArg = RuntimeCall.getArgOperand(BasePtrsArgNum);
+    Value *BasePtrsArg =
+        RuntimeCall.getArgOperand(OffloadArray::BasePtrsArgNum);
     // i8** %offload_ptrs.
-    const unsigned PtrsArgNum = 3;
-    Value *PtrsArg = RuntimeCall.getArgOperand(PtrsArgNum);
+    Value *PtrsArg = RuntimeCall.getArgOperand(OffloadArray::PtrsArgNum);
     // i8** %offload_sizes.
-    const unsigned SizesArgNum = 4;
-    Value *SizesArg = RuntimeCall.getArgOperand(SizesArgNum);
+    Value *SizesArg = RuntimeCall.getArgOperand(OffloadArray::SizesArgNum);
 
     // Get values stored in **offload_baseptrs.
     auto *V = getUnderlyingObject(BasePtrsArg);
