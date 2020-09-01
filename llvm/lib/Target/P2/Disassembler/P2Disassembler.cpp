@@ -14,6 +14,7 @@
 #include "P2RegisterInfo.h"
 #include "P2Subtarget.h"
 #include "MCTargetDesc/P2MCTargetDesc.h"
+#include "MCTargetDesc/P2BaseInfo.h"
 
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -77,6 +78,7 @@ static DecodeStatus DecodeJumpInstruction(MCInst &Inst, unsigned Insn, uint64_t 
 static DecodeStatus DecodeCmpInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeCordicInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeGetQInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeCallInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder);
 
 #include "P2GenDisassemblerTables.inc"
 
@@ -89,6 +91,32 @@ static DecodeStatus DecodeP2GPRRegisterClass(MCInst &Inst, unsigned RegNo, uint6
 	unsigned Register = getRegForField(RegNo);
 	Inst.addOperand(MCOperand::createReg(Register));
 	return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeCallInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder) {
+    int32_t a_field = fieldFromInstruction(Insn, 0, 20);
+    int32_t d_field = fieldFromInstruction(Insn, 9, 9);
+
+    unsigned opc = Inst.getOpcode();
+    if (opc == P2::CALLa || opc == P2::CALLAa) {
+        // FIXME: make this work.
+        const MCDisassembler *Dis = static_cast<const MCDisassembler*>(Decoder);
+        if (!Dis->tryAddingSymbolicOperand(Inst, a_field, Address, false, 0, 32)) {
+            LLVM_DEBUG(errs() << "unabled to add symbol\n");
+            Inst.addOperand(MCOperand::createImm(a_field));
+        }
+    } else {
+        Inst.addOperand(MCOperand::createReg(getRegForField(d_field)));
+    }
+
+    Inst.addOperand(getConditionOperand(Insn));
+
+    if (opc == P2::CALLr || opc == P2::CALLAr) {
+        unsigned eff = fieldFromInstruction(Insn, 19, 2);
+        Inst.addOperand(MCOperand::createImm(eff));
+    }
+
+    return MCDisassembler::Success;
 }
 
 static DecodeStatus DecodeJumpInstruction(MCInst &Inst, unsigned Insn, uint64_t Address, const void *Decoder) {
@@ -110,14 +138,23 @@ static DecodeStatus DecodeIOInstruction(MCInst &Inst, unsigned Insn, uint64_t Ad
 
     LLVM_DEBUG(errs() << "decode IO instruction\n");
 
+    //unsigned s_field = fieldFromInstruction(Insn, 0, 9);
     unsigned d_field = fieldFromInstruction(Insn, 9, 9);
     unsigned is_imm = fieldFromInstruction(Insn, 18, 1);
+    unsigned eff = fieldFromInstruction(Insn, 19, 2);
 
-    // first add the operand that is getting implicitly written, which is either DIRA/B or OUTA/B.
-    // FIXME: we don't actually care what that is, so for now, always write to OUTA. this could eventually be a problem, but TBD how
-    // (probably when optimization becomes involved.) Should actually look at the opcode and set the register to an implicit 64-bit
-    // "register" that is the combination of A and B portions of OUT, DIR, and IN.
-    Inst.addOperand(MCOperand::createReg(P2::OUTA));
+    // if we have wc or wz, this is the "testpx" instruction, which has the same op codes as other pin
+    // instructions, and it uses wc/wz as part of the opcode. check for the opposite of that here, if effect
+    // is wcz or nothing.
+    if (eff == (unsigned)P2::effect_string_map["wcz"] || eff == (unsigned)P2::effect_string_map[""]) {
+        // this is a normal pin instruction, not a test instruction, so do things for normal pins
+
+        // first add the operand that is getting implicitly written, which is either DIRA/B or OUTA/B.
+        // FIXME: we don't actually care what that is, so for now, always write to OUTA. this could eventually be a problem, but TBD how
+        // (probably when optimization becomes involved.) Should actually look at the opcode and set the register to an implicit 64-bit
+        // "register" that is the combination of A and B portions of OUT, DIR, and IN.
+        Inst.addOperand(MCOperand::createReg(P2::OUTA));
+    }
 
     if (is_imm) {
         Inst.addOperand(MCOperand::createImm(d_field));
@@ -126,7 +163,6 @@ static DecodeStatus DecodeIOInstruction(MCInst &Inst, unsigned Insn, uint64_t Ad
     }
 
     Inst.addOperand(getConditionOperand(Insn));
-    int eff = fieldFromInstruction(Insn, 19, 2);
     Inst.addOperand(MCOperand::createImm(eff));
 
     return MCDisassembler::Success;
@@ -235,6 +271,7 @@ DecodeStatus P2Disassembler::getInstruction(MCInst &Instr, uint64_t &Size, Array
 	Result = decodeInstruction(DecoderTableP232, Instr, Insn, Address, this, STI);
 
 	if (Result != MCDisassembler::Fail) {
+        LLVM_DEBUG(errs() << Result << "\n");
 		return Result;
 	}
 
