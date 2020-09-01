@@ -1300,6 +1300,11 @@ let Predicates = [IsISA3_1] in {
   def XSCVSQQP : X_VT5_XO5_VB5<63, 11, 836, "xscvsqqp", []>;
 }
 
+let Predicates = [IsISA3_1, HasVSX] in {
+  def XVCVSPBF16 : XX2_XT6_XO5_XB6<60, 17, 475, "xvcvspbf16", vsrc, []>;
+  def XVCVBF16SPN : XX2_XT6_XO5_XB6<60, 16, 475, "xvcvbf16spn", vsrc, []>;
+}
+
 //---------------------------- Anonymous Patterns ----------------------------//
 let Predicates = [IsISA3_1] in {
   // Exploit the vector multiply high instructions using intrinsics.
