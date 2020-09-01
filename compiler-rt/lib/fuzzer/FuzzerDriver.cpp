@@ -250,26 +250,11 @@ static void WorkerThread(const Command &BaseCmd, std::atomic<unsigned> *Counter,
   }
 }
 
-static void ValidateDirectoryExists(const std::string &Path,
-                                    bool CreateDirectory) {
-  if (Path.empty()) {
-    Printf("ERROR: Provided directory path is an empty string\n");
+static void ValidateDirectoryExists(const std::string &Path) {
+  if (!Path.empty() && !IsDirectory(Path)) {
+    Printf("ERROR: The required directory \"%s\" does not exist\n", Path.c_str());
     exit(1);
   }
-
-  if (IsDirectory(Path))
-    return;
-
-  if (CreateDirectory) {
-    if (!MkDirRecursive(Path)) {
-      Printf("ERROR: Failed to create directory \"%s\"\n", Path.c_str());
-      exit(1);
-    }
-    return;
-  }
-
-  Printf("ERROR: The required directory \"%s\" does not exist\n", Path.c_str());
-  exit(1);
 }
 
 std::string CloneArgsWithoutX(const Vector<std::string> &Args,
@@ -706,7 +691,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     std::string OutputCorpusDir = (*Inputs)[0];
     if (!IsFile(OutputCorpusDir)) {
       Options.OutputCorpus = OutputCorpusDir;
-      ValidateDirectoryExists(Options.OutputCorpus, Flags.create_missing_dirs);
+      ValidateDirectoryExists(Options.OutputCorpus);
     }
   }
   Options.ReportSlowUnits = Flags.report_slow_units;
@@ -720,12 +705,11 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     if (!IsSeparator(ArtifactPathDir[ArtifactPathDir.length() - 1])) {
       ArtifactPathDir = DirName(ArtifactPathDir);
     }
-    ValidateDirectoryExists(ArtifactPathDir, Flags.create_missing_dirs);
+    ValidateDirectoryExists(ArtifactPathDir);
   }
   if (Flags.exact_artifact_path) {
     Options.ExactArtifactPath = Flags.exact_artifact_path;
-    ValidateDirectoryExists(DirName(Options.ExactArtifactPath),
-                            Flags.create_missing_dirs);
+    ValidateDirectoryExists(DirName(Options.ExactArtifactPath));
   }
   Vector<Unit> Dictionary;
   if (Flags.dict)
@@ -751,7 +735,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Options.DataFlowTrace = Flags.data_flow_trace;
   if (Flags.features_dir) {
     Options.FeaturesDir = Flags.features_dir;
-    ValidateDirectoryExists(Options.FeaturesDir, Flags.create_missing_dirs);
+    ValidateDirectoryExists(Options.FeaturesDir);
   }
   if (Flags.collect_data_flow)
     Options.CollectDataFlow = Flags.collect_data_flow;
