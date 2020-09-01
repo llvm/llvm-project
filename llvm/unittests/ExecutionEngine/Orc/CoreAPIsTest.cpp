@@ -110,7 +110,7 @@ TEST_F(CoreAPIsStandardTest, ResolveUnrequestedSymbol) {
   EXPECT_TRUE(Result.count(Foo)) << "Expected result for \"Foo\"";
 }
 
-TEST_F(CoreAPIsStandardTest, MaterializationSideEffctsOnlyTest) {
+TEST_F(CoreAPIsStandardTest, MaterializationSideEffctsOnlyBasic) {
   // Test that basic materialization-side-effects-only symbols work as expected:
   // that they can be emitted without being resolved, that queries for them
   // don't return until they're emitted, and that they don't appear in query
@@ -145,6 +145,24 @@ TEST_F(CoreAPIsStandardTest, MaterializationSideEffctsOnlyTest) {
 
   EXPECT_TRUE(Result) << "Lookup failed to return";
   EXPECT_TRUE(Result->empty()) << "Lookup result contained unexpected value";
+}
+
+TEST_F(CoreAPIsStandardTest, MaterializationSideEffectsOnlyFailuresPersist) {
+  // Test that when a MaterializationSideEffectsOnly symbol is failed it
+  // remains in the failure state rather than vanishing.
+
+  cantFail(JD.define(std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap(
+          {{Foo, JITSymbolFlags::Exported |
+                     JITSymbolFlags::MaterializationSideEffectsOnly}}),
+      [&](MaterializationResponsibility R) { R.failMaterialization(); })));
+
+  EXPECT_THAT_EXPECTED(
+      ES.lookup(makeJITDylibSearchOrder(&JD), SymbolLookupSet({Foo})),
+      Failed());
+  EXPECT_THAT_EXPECTED(
+      ES.lookup(makeJITDylibSearchOrder(&JD), SymbolLookupSet({Foo})),
+      Failed());
 }
 
 TEST_F(CoreAPIsStandardTest, RemoveSymbolsTest) {
