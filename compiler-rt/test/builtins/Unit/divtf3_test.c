@@ -146,6 +146,13 @@ int main()
                      UINT64_C(0xfffe000000000000)))
         return 1;
 
+    // smallest normal value divided by 2.0
+    if (test__divtf3(0x1.0p-16382L, 2.L, UINT64_C(0x0000800000000000), UINT64_C(0x0)))
+      return 1;
+    // smallest subnormal result
+    if (test__divtf3(0x1.0p-1022L, 0x1p+52L, UINT64_C(0x0), UINT64_C(0x1)))
+      return 1;
+
     // any / any
     if (test__divtf3(0x1.a23b45362464523375893ab4cdefp+5L,
                      0x1.eedcbaba3a94546558237654321fp-1L,

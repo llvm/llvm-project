@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <omptarget.h>
-
 #include "device.h"
 #include "private.h"
 #include "rtl.h"

@@ -3442,8 +3442,8 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
 
   // First emit non-scalable frame offsets, or a simple 'mov'.
   if (Bytes || (!Offset && SrcReg != DestReg)) {
-    assert((DestReg != AArch64::SP || Bytes % 16 == 0) &&
-           "SP increment/decrement not 16-byte aligned");
+    assert((DestReg != AArch64::SP || Bytes % 8 == 0) &&
+           "SP increment/decrement not 8-byte aligned");
     unsigned Opc = SetNZCV ? AArch64::ADDSXri : AArch64::ADDXri;
     if (Bytes < 0) {
       Bytes = -Bytes;

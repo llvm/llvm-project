@@ -9,6 +9,7 @@
 #include "check-case.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/reference.h"
+#include "flang/Common/template.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/parse-tree.h"
@@ -201,6 +202,22 @@ private:
   bool hasErrors_{false};
 };
 
+template <TypeCategory CAT> struct TypeVisitor {
+  using Result = bool;
+  using Types = evaluate::CategoryTypes<CAT>;
+  template <typename T> Result Test() {
+    if (T::kind == exprType.kind()) {
+      CaseValues<T>(context, exprType).Check(caseList);
+      return true;
+    } else {
+      return false;
+    }
+  }
+  SemanticsContext &context;
+  const evaluate::DynamicType &exprType;
+  const std::list<parser::CaseConstruct::Case> &caseList;
+};
+
 void CaseChecker::Enter(const parser::CaseConstruct &construct) {
   const auto &selectCaseStmt{
       std::get<parser::Statement<parser::SelectCaseStmt>>(construct.t)};
@@ -216,32 +233,17 @@ void CaseChecker::Enter(const parser::CaseConstruct &construct) {
         std::get<std::list<parser::CaseConstruct::Case>>(construct.t)};
     switch (exprType->category()) {
     case TypeCategory::Integer:
-      CaseValues<evaluate::Type<TypeCategory::Integer, 16>>{context_, *exprType}
-          .Check(caseList);
+      common::SearchTypes(
+          TypeVisitor<TypeCategory::Integer>{context_, *exprType, caseList});
       return;
     case TypeCategory::Logical:
       CaseValues<evaluate::Type<TypeCategory::Logical, 1>>{context_, *exprType}
           .Check(caseList);
       return;
     case TypeCategory::Character:
-      switch (exprType->kind()) {
-        SWITCH_COVERS_ALL_CASES
-      case 1:
-        CaseValues<evaluate::Type<TypeCategory::Character, 1>>{
-            context_, *exprType}
-            .Check(caseList);
-        return;
-      case 2:
-        CaseValues<evaluate::Type<TypeCategory::Character, 2>>{
-            context_, *exprType}
-            .Check(caseList);
-        return;
-      case 4:
-        CaseValues<evaluate::Type<TypeCategory::Character, 4>>{
-            context_, *exprType}
-            .Check(caseList);
-        return;
-      }
+      common::SearchTypes(
+          TypeVisitor<TypeCategory::Character>{context_, *exprType, caseList});
+      return;
     default:
       break;
     }

@@ -35,6 +35,7 @@
 
 #include "internal.h"
 
+#include "Debug.h"
 #include "omptargetplugin.h"
 
 // Get static gpu grid values from clang target-specific constants managed
@@ -101,27 +102,12 @@ static constexpr unsigned AMDGPUGpuGridValues[] = {
 #ifndef TARGET_NAME
 #define TARGET_NAME AMDHSA
 #endif
+#define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
 
 int print_kernel_trace;
 
 // Size of the target call stack struture
 uint32_t TgtStackItemSize = 0;
-
-#ifdef OMPTARGET_DEBUG
-static int DebugLevel = 0;
-
-#define GETNAME2(name) #name
-#define GETNAME(name) GETNAME2(name)
-#define DP(...)                                                                \
-  do {                                                                         \
-    if (DebugLevel > 0) {                                                      \
-      DEBUGP("Target " GETNAME(TARGET_NAME) " RTL", __VA_ARGS__);              \
-    }                                                                          \
-  } while (false)
-#else // OMPTARGET_DEBUG
-#define DP(...)                                                                \
-  {}
-#endif // OMPTARGET_DEBUG
 
 #undef check // Drop definition from internal.h
 #ifdef OMPTARGET_DEBUG
@@ -476,11 +462,6 @@ public:
   }
 
   RTLDeviceInfoTy() {
-#ifdef OMPTARGET_DEBUG
-    if (char *envStr = getenv("LIBOMPTARGET_DEBUG"))
-      DebugLevel = std::stoi(envStr);
-#endif // OMPTARGET_DEBUG
-
     // LIBOMPTARGET_KERNEL_TRACE provides a kernel launch trace to stderr
     // anytime. You do not need a debug library build.
     //  0 => no tracing
