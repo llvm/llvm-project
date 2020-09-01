@@ -863,26 +863,18 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
 
   int FPOffset = 0;
   if (HasFP) {
-    if (isSVR4ABI) {
-      MachineFrameInfo &MFI = MF.getFrameInfo();
-      int FPIndex = FI->getFramePointerSaveIndex();
-      assert(FPIndex && "No Frame Pointer Save Slot!");
-      FPOffset = MFI.getObjectOffset(FPIndex);
-    } else {
-      FPOffset = getFramePointerSaveOffset();
-    }
+    MachineFrameInfo &MFI = MF.getFrameInfo();
+    int FPIndex = FI->getFramePointerSaveIndex();
+    assert(FPIndex && "No Frame Pointer Save Slot!");
+    FPOffset = MFI.getObjectOffset(FPIndex);
   }
 
   int BPOffset = 0;
   if (HasBP) {
-    if (isSVR4ABI) {
-      MachineFrameInfo &MFI = MF.getFrameInfo();
-      int BPIndex = FI->getBasePointerSaveIndex();
-      assert(BPIndex && "No Base Pointer Save Slot!");
-      BPOffset = MFI.getObjectOffset(BPIndex);
-    } else {
-      BPOffset = getBasePointerSaveOffset();
-    }
+    MachineFrameInfo &MFI = MF.getFrameInfo();
+    int BPIndex = FI->getBasePointerSaveIndex();
+    assert(BPIndex && "No Base Pointer Save Slot!");
+    BPOffset = MFI.getObjectOffset(BPIndex);
   }
 
   int PBPOffset = 0;
@@ -1551,8 +1543,6 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
 
   // Get processor type.
   bool isPPC64 = Subtarget.isPPC64();
-  // Get the ABI.
-  bool isSVR4ABI = Subtarget.isSVR4ABI();
 
   // Check if the link register (LR) has been saved.
   PPCFunctionInfo *FI = MF.getInfo<PPCFunctionInfo>();
@@ -1600,24 +1590,16 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
   SingleScratchReg = ScratchReg == TempReg;
 
   if (HasFP) {
-    if (isSVR4ABI) {
-      int FPIndex = FI->getFramePointerSaveIndex();
-      assert(FPIndex && "No Frame Pointer Save Slot!");
-      FPOffset = MFI.getObjectOffset(FPIndex);
-    } else {
-      FPOffset = getFramePointerSaveOffset();
-    }
+    int FPIndex = FI->getFramePointerSaveIndex();
+    assert(FPIndex && "No Frame Pointer Save Slot!");
+    FPOffset = MFI.getObjectOffset(FPIndex);
   }
 
   int BPOffset = 0;
   if (HasBP) {
-    if (isSVR4ABI) {
       int BPIndex = FI->getBasePointerSaveIndex();
       assert(BPIndex && "No Base Pointer Save Slot!");
       BPOffset = MFI.getObjectOffset(BPIndex);
-    } else {
-      BPOffset = getBasePointerSaveOffset();
-    }
   }
 
   int PBPOffset = 0;
