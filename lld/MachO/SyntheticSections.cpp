@@ -473,10 +473,11 @@ void SymtabSection::writeTo(uint8_t *buf) const {
   for (const SymtabEntry &entry : symbols) {
     nList->n_strx = entry.strx;
     // TODO support other symbol types
-    // TODO populate n_desc
+    // TODO populate n_desc with more flags
     if (auto *defined = dyn_cast<Defined>(entry.sym)) {
       nList->n_type = MachO::N_EXT | MachO::N_SECT;
       nList->n_sect = defined->isec->parent->index;
+      nList->n_desc |= defined->isWeakDef() ? MachO::N_WEAK_DEF : 0;
       // For the N_SECT symbol type, n_value is the address of the symbol
       nList->n_value = defined->value + defined->isec->getVA();
     }
