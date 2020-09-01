@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
 #include "llvm/Support/MachineValueType.h"
@@ -227,6 +228,10 @@ LLT getGCDType(LLT OrigTy, LLT TargetTy);
 /// If \p MI is not a splat, returns None.
 Optional<int> getSplatIndex(MachineInstr &MI);
 
+/// Returns a scalar constant of a G_BUILD_VECTOR splat if it exists.
+Optional<int64_t> getBuildVectorConstantSplat(const MachineInstr &MI,
+                                              const MachineRegisterInfo &MRI);
+
 /// Return true if the specified instruction is a G_BUILD_VECTOR or
 /// G_BUILD_VECTOR_TRUNC where all of the elements are 0 or undef.
 bool isBuildVectorAllZeros(const MachineInstr &MI,
@@ -237,5 +242,9 @@ bool isBuildVectorAllZeros(const MachineInstr &MI,
 bool isBuildVectorAllOnes(const MachineInstr &MI,
                           const MachineRegisterInfo &MRI);
 
+/// Returns true if given the TargetLowering's boolean contents information,
+/// the value \p Val contains a true value.
+bool isConstTrueVal(const TargetLowering &TLI, int64_t Val, bool IsVector,
+                    bool IsFP);
 } // End namespace llvm.
 #endif
