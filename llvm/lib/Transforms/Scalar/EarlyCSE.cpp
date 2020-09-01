@@ -688,29 +688,35 @@ private:
   public:
     ParseMemoryInst(Instruction *Inst, const TargetTransformInfo &TTI)
       : Inst(Inst) {
-      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst))
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
         if (TTI.getTgtMemIntrinsic(II, Info))
-          IsTargetMemInst = true;
+          IntrID = II->getIntrinsicID();
+      }
     }
 
+    Instruction *get() { return Inst; }
+    const Instruction *get() const { return Inst; }
+
     bool isLoad() const {
-      if (IsTargetMemInst) return Info.ReadMem;
+      if (IntrID != 0)
+        return Info.ReadMem;
       return isa<LoadInst>(Inst);
     }
 
     bool isStore() const {
-      if (IsTargetMemInst) return Info.WriteMem;
+      if (IntrID != 0)
+        return Info.WriteMem;
       return isa<StoreInst>(Inst);
     }
 
     bool isAtomic() const {
-      if (IsTargetMemInst)
+      if (IntrID != 0)
         return Info.Ordering != AtomicOrdering::NotAtomic;
       return Inst->isAtomic();
     }
 
     bool isUnordered() const {
-      if (IsTargetMemInst)
+      if (IntrID != 0)
         return Info.isUnordered();
 
       if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
@@ -723,7 +729,7 @@ private:
     }
 
     bool isVolatile() const {
-      if (IsTargetMemInst)
+      if (IntrID != 0)
         return Info.IsVolatile;
 
       if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
@@ -753,27 +759,31 @@ private:
     // field in the MemIntrinsicInfo structure.  That field contains
     // non-negative values only.
     int getMatchingId() const {
-      if (IsTargetMemInst) return Info.MatchingId;
+      if (IntrID != 0)
+        return Info.MatchingId;
       return -1;
     }
 
     Value *getPointerOperand() const {
-      if (IsTargetMemInst) return Info.PtrVal;
+      if (IntrID != 0)
+        return Info.PtrVal;
       return getLoadStorePointerOperand(Inst);
     }
 
     bool mayReadFromMemory() const {
-      if (IsTargetMemInst) return Info.ReadMem;
+      if (IntrID != 0)
+        return Info.ReadMem;
       return Inst->mayReadFromMemory();
     }
 
     bool mayWriteToMemory() const {
-      if (IsTargetMemInst) return Info.WriteMem;
+      if (IntrID != 0)
+        return Info.WriteMem;
       return Inst->mayWriteToMemory();
     }
 
   private:
-    bool IsTargetMemInst = false;
+    Intrinsic::ID IntrID = 0;
     MemIntrinsicInfo Info;
     Instruction *Inst;
   };
@@ -782,6 +792,9 @@ private:
 
   bool handleBranchCondition(Instruction *CondInst, const BranchInst *BI,
                              const BasicBlock *BB, const BasicBlock *Pred);
+
+  Value *getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
+                          unsigned CurrentGeneration);
 
   Value *getOrCreateResult(Value *Inst, Type *ExpectedType) const {
     if (auto *LI = dyn_cast<LoadInst>(Inst))
@@ -943,6 +956,33 @@ bool EarlyCSE::handleBranchCondition(Instruction *CondInst,
   }
 
   return MadeChanges;
+}
+
+Value *EarlyCSE::getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
+                                  unsigned CurrentGeneration) {
+  if (InVal.DefInst == nullptr)
+    return nullptr;
+  if (InVal.MatchingId != MemInst.getMatchingId())
+    return nullptr;
+  // We don't yet handle removing loads with ordering of any kind.
+  if (MemInst.isVolatile() || !MemInst.isUnordered())
+    return nullptr;
+  // We can't replace an atomic load with one which isn't also atomic.
+  if (MemInst.isLoad() && !InVal.IsAtomic && MemInst.isAtomic())
+    return nullptr;
+  // The value V returned from this function is used differently depending
+  // on whether MemInst is a load or a store. If it's a load, we will replace
+  // MemInst with V, if it's a store, we will check if V is the same as the
+  // available value.
+  bool MemInstMatching = !MemInst.isLoad();
+  Instruction *Matching = MemInstMatching ? MemInst.get() : InVal.DefInst;
+  Instruction *Other = MemInstMatching ? InVal.DefInst : MemInst.get();
+
+  if (!isOperatingOnInvariantMemAt(MemInst.get(), InVal.Generation) &&
+      !isSameMemGeneration(InVal.Generation, CurrentGeneration, InVal.DefInst,
+                           MemInst.get()))
+    return nullptr;
+  return getOrCreateResult(Matching, Other->getType());
 }
 
 bool EarlyCSE::processNode(DomTreeNode *Node) {
@@ -1161,32 +1201,21 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       // we can assume the current load loads the same value as the dominating
       // load.
       LoadValue InVal = AvailableLoads.lookup(MemInst.getPointerOperand());
-      if (InVal.DefInst != nullptr &&
-          InVal.MatchingId == MemInst.getMatchingId() &&
-          // We don't yet handle removing loads with ordering of any kind.
-          !MemInst.isVolatile() && MemInst.isUnordered() &&
-          // We can't replace an atomic load with one which isn't also atomic.
-          InVal.IsAtomic >= MemInst.isAtomic() &&
-          (isOperatingOnInvariantMemAt(&Inst, InVal.Generation) ||
-           isSameMemGeneration(InVal.Generation, CurrentGeneration,
-                               InVal.DefInst, &Inst))) {
-        Value *Op = getOrCreateResult(InVal.DefInst, Inst.getType());
-        if (Op != nullptr) {
-          LLVM_DEBUG(dbgs() << "EarlyCSE CSE LOAD: " << Inst
-                            << "  to: " << *InVal.DefInst << '\n');
-          if (!DebugCounter::shouldExecute(CSECounter)) {
-            LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
-            continue;
-          }
-          if (!Inst.use_empty())
-            Inst.replaceAllUsesWith(Op);
-          salvageKnowledge(&Inst, &AC);
-          removeMSSA(Inst);
-          Inst.eraseFromParent();
-          Changed = true;
-          ++NumCSELoad;
+      if (Value *Op = getMatchingValue(InVal, MemInst, CurrentGeneration)) {
+        LLVM_DEBUG(dbgs() << "EarlyCSE CSE LOAD: " << Inst
+                          << "  to: " << *InVal.DefInst << '\n');
+        if (!DebugCounter::shouldExecute(CSECounter)) {
+          LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
           continue;
         }
+        if (!Inst.use_empty())
+          Inst.replaceAllUsesWith(Op);
+        salvageKnowledge(&Inst, &AC);
+        removeMSSA(Inst);
+        Inst.eraseFromParent();
+        Changed = true;
+        ++NumCSELoad;
+        continue;
       }
 
       // Otherwise, remember that we have this instruction.
@@ -1256,13 +1285,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     if (MemInst.isValid() && MemInst.isStore()) {
       LoadValue InVal = AvailableLoads.lookup(MemInst.getPointerOperand());
       if (InVal.DefInst &&
-          InVal.DefInst == getOrCreateResult(&Inst, InVal.DefInst->getType()) &&
-          InVal.MatchingId == MemInst.getMatchingId() &&
-          // We don't yet handle removing stores with ordering of any kind.
-          !MemInst.isVolatile() && MemInst.isUnordered() &&
-          (isOperatingOnInvariantMemAt(&Inst, InVal.Generation) ||
-           isSameMemGeneration(InVal.Generation, CurrentGeneration,
-                               InVal.DefInst, &Inst))) {
+          InVal.DefInst == getMatchingValue(InVal, MemInst, CurrentGeneration)) {
         // It is okay to have a LastStore to a different pointer here if MemorySSA
         // tells us that the load and store are from the same memory generation.
         // In that case, LastStore should keep its present value since we're
