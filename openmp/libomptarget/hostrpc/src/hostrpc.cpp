@@ -29,7 +29,6 @@ EXTERN char *printf_allocate(uint32_t bufsz) {
   hostrpc_result_t result =
       hostrpc_invoke(PACK_VERS(HOSTRPC_SERVICE_MALLOC_PRINTF), arg0, arg1, arg2,
                      arg3, arg4, arg5, arg6, arg7);
-#pragma omp barrier
   return (char *)result.arg1;
 }
 EXTERN char *hostrpc_varfn_uint_allocate(uint32_t bufsz) {
@@ -38,7 +37,6 @@ EXTERN char *hostrpc_varfn_uint_allocate(uint32_t bufsz) {
   hostrpc_result_t result =
       hostrpc_invoke(PACK_VERS(HOSTRPC_SERVICE_MALLOC_PRINTF), arg0, arg1, arg2,
                      arg3, arg4, arg5, arg6, arg7);
-#pragma omp barrier
   return (char *)result.arg1;
 }
 EXTERN char *hostrpc_varfn_uint64_allocate(uint32_t bufsz) {
@@ -47,7 +45,6 @@ EXTERN char *hostrpc_varfn_uint64_allocate(uint32_t bufsz) {
   hostrpc_result_t result =
       hostrpc_invoke(PACK_VERS(HOSTRPC_SERVICE_MALLOC_PRINTF), arg0, arg1, arg2,
                      arg3, arg4, arg5, arg6, arg7);
-#pragma omp barrier
   return (char *)result.arg1;
 }
 EXTERN char *hostrpc_varfn_double_allocate(uint32_t bufsz) {
@@ -56,7 +53,6 @@ EXTERN char *hostrpc_varfn_double_allocate(uint32_t bufsz) {
   hostrpc_result_t result =
       hostrpc_invoke(PACK_VERS(HOSTRPC_SERVICE_MALLOC_PRINTF), arg0, arg1, arg2,
                      arg3, arg4, arg5, arg6, arg7);
-#pragma omp barrier
   return (char *)result.arg1;
 }
 
@@ -66,7 +62,6 @@ EXTERN char *global_allocate(uint32_t bufsz) {
   hostrpc_result_t result =
       hostrpc_invoke(PACK_VERS(HOSTRPC_SERVICE_MALLOC), arg0, arg1, arg2, arg3,
                      arg4, arg5, arg6, arg7);
-#pragma omp barrier
   return (char *)result.arg1;
 }
 EXTERN int global_free(char *ptr) {
@@ -88,7 +83,6 @@ EXTERN void hostrpc_fptr0(void *fptr) {
 
 EXTERN int printf_execute(char *print_buffer, uint32_t bufsz) {
   uint64_t arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7;
-#pragma omp barrier
   arg0 = (uint64_t)bufsz;
   arg1 = (uint64_t)print_buffer;
   hostrpc_result_t result =
@@ -99,7 +93,6 @@ EXTERN int printf_execute(char *print_buffer, uint32_t bufsz) {
 
 EXTERN uint32_t hostrpc_varfn_uint_execute(char *print_buffer, uint32_t bufsz) {
   uint64_t arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7;
-#pragma omp barrier
   arg0 = (uint64_t)bufsz;
   arg1 = (uint64_t)print_buffer;
   hostrpc_result_t result =
@@ -110,7 +103,6 @@ EXTERN uint32_t hostrpc_varfn_uint_execute(char *print_buffer, uint32_t bufsz) {
 EXTERN uint64_t hostrpc_varfn_uint64_execute(char *print_buffer,
                                              uint32_t bufsz) {
   uint64_t arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7;
-#pragma omp barrier
   arg0 = (uint64_t)bufsz;
   arg1 = (uint64_t)print_buffer;
   hostrpc_result_t result =
@@ -120,7 +112,6 @@ EXTERN uint64_t hostrpc_varfn_uint64_execute(char *print_buffer,
 }
 EXTERN double hostrpc_varfn_double_execute(char *print_buffer, uint32_t bufsz) {
   uint64_t arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7;
-#pragma omp barrier
   arg0 = (uint64_t)bufsz;
   arg1 = (uint64_t)print_buffer;
   hostrpc_result_t result =
