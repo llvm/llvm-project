@@ -1528,7 +1528,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(
                 AttachDeclaration(
                     Say(expr.source,
                         "Rank-%d array value is not compatible with scalar component '%s'"_err_en_US,
-                        symbol->name()),
+                        GetRank(*valueShape), symbol->name()),
                     *symbol);
               } else if (CheckConformance(messages, *componentShape,
                              *valueShape, "component", "value")) {
