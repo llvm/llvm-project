@@ -10944,6 +10944,12 @@ static bool CheckTautologicalComparison(Sema &S, BinaryOperator *E,
   if (InRange && IsEnumConstOrFromMacro(S, Constant))
     return false;
 
+  // A comparison of an unsigned bit-field against 0 is really a type problem,
+  // even though at the type level the bit-field might promote to 'signed int'.
+  if (Other->refersToBitField() && InRange && Value == 0 &&
+      Other->getType()->isUnsignedIntegerOrEnumerationType())
+    TautologicalTypeCompare = true;
+
   // If this is a comparison to an enum constant, include that
   // constant in the diagnostic.
   const EnumConstantDecl *ED = nullptr;
