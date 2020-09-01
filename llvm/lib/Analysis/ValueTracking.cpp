@@ -2568,11 +2568,13 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     const Value *Vec = EEI->getVectorOperand();
     const Value *Idx = EEI->getIndexOperand();
     auto *CIdx = dyn_cast<ConstantInt>(Idx);
-    unsigned NumElts = cast<FixedVectorType>(Vec->getType())->getNumElements();
-    APInt DemandedVecElts = APInt::getAllOnesValue(NumElts);
-    if (CIdx && CIdx->getValue().ult(NumElts))
-      DemandedVecElts = APInt::getOneBitSet(NumElts, CIdx->getZExtValue());
-    return isKnownNonZero(Vec, DemandedVecElts, Depth, Q);
+    if (auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType())) {
+      unsigned NumElts = VecTy->getNumElements();
+      APInt DemandedVecElts = APInt::getAllOnesValue(NumElts);
+      if (CIdx && CIdx->getValue().ult(NumElts))
+        DemandedVecElts = APInt::getOneBitSet(NumElts, CIdx->getZExtValue());
+      return isKnownNonZero(Vec, DemandedVecElts, Depth, Q);
+    }
   }
 
   KnownBits Known(BitWidth);
