@@ -129,7 +129,7 @@ define void @constrained_if_register_class() {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, external_constant@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, external_constant@gotpcrel32@hi+4
+; CHECK-NEXT:    s_addc_u32 s5, s5, external_constant@gotpcrel32@hi+12
 ; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_load_dword s4, s[4:5], 0x0
@@ -142,7 +142,7 @@ define void @constrained_if_register_class() {
 ; CHECK-NEXT:  ; %bb.1: ; %bb2
 ; CHECK-NEXT:    s_getpc_b64 s[6:7]
 ; CHECK-NEXT:    s_add_u32 s6, s6, const.ptr@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s7, s7, const.ptr@gotpcrel32@hi+4
+; CHECK-NEXT:    s_addc_u32 s7, s7, const.ptr@gotpcrel32@hi+12
 ; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
 ; CHECK-NEXT:    s_mov_b32 s4, -1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
