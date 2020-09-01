@@ -1,5 +1,4 @@
 SWIFT_SOURCES := main.swift
-TRIPLE := x86_64-awesomevendor-linux
-SWIFTFLAGS_EXTRAS := -parse-stdlib
+SWIFTFLAGS_EXTRAS := -parse-stdlib -target x86_64-awesomevendor-linux
 
 include Makefile.rules
