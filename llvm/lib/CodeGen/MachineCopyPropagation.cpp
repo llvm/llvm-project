@@ -338,10 +338,8 @@ static bool isNopCopy(const MachineInstr &PreviousCopy, unsigned Src,
                       unsigned Def, const TargetRegisterInfo *TRI) {
   Register PreviousSrc = PreviousCopy.getOperand(1).getReg();
   Register PreviousDef = PreviousCopy.getOperand(0).getReg();
-  if (Src == PreviousSrc) {
-    assert(Def == PreviousDef);
+  if (Src == PreviousSrc && Def == PreviousDef)
     return true;
-  }
   if (!TRI->isSubRegister(PreviousSrc, Src))
     return false;
   unsigned SubIdx = TRI->getSubRegIndex(PreviousSrc, Src);
