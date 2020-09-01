@@ -211,8 +211,8 @@ contains
 
     END SELECT
 
-    !ERROR: Selector 'arr(1:3)+ arr(4:5)' is not an assumed-rank array variable
-    SELECT RANK(arr(1:3)+ arr(4:5))
+    !ERROR: Selector 'arr(1:2)+ arr(4:5)' is not an assumed-rank array variable
+    SELECT RANK(arr(1:2)+ arr(4:5))
 
     END SELECT
 
